@@ -26,10 +26,24 @@ genuinely not applicable._
 
 ## Test plan
 
+_Tests below are written to fail first (TDD), then implemented to green._
+
 - [ ] Online path
 - [ ] Offline path
 - [ ] Reconnect / manual sync path (if applicable)
 
+## Verification
+
+- [ ] Sandbox run performed:
+- [ ] Screenshots (UI stories only) — golden path:
+- [ ] Screenshots (UI stories only) — edge cases:
+
 ## Dev notes
+
+## Code review
+
+- Reviewer (separate agent/session):
+- Findings:
+- Resolution:
 
 ## QA notes
