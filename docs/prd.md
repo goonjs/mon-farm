@@ -39,7 +39,9 @@ have but the primary mode; see
    rather than after the money moves.
 3. **The counting step is fast, simple, and hard to get wrong** — the
    counter screen is the heart of the product, used outdoors, at speed, by
-   people whose hands are busy.
+   people whose hands are busy. It **counts out loud in Thai** and runs the
+   weighing as a call-and-response with the scale team, so the count is
+   shared by everyone present rather than trapped on one person's screen.
 4. **Money is fully explainable**: from counted baskets → net rubber weight
    → gross value → adjustments → owner/worker split, every number is
    traceable to the step that produced it.
@@ -183,18 +185,20 @@ prone**.
   events with a reason, never as a silent decrement. The audit trail must
   make "counted 41, corrected to 40" visible.
 - FR-5.5 **Accidental-tap resistance**: the design must make double-counts
-  and stray taps unlikely (e.g. tap target placement, minimum interval
-  between counts, confirmation for large jumps). ❓ (which mechanism the
-  owner prefers is a design decision to settle with a prototype — see Open
-  question 4.)
+  and stray taps unlikely. The primary safeguard is the voice
+  call-and-response loop (FR-11): recording a basket and requesting the
+  next one are **two separate actions**, so a stray double-tap on the
+  counter cannot book two baskets. Tap target placement and confirmation
+  for large jumps are secondary safeguards.
 - FR-5.6 **Off-standard baskets**: a basket that does not hit the standard
   net weight (short-filled last basket of a pile, overweight basket) is
   recorded with its **actual scale reading**, and the app derives its net
   weight from the tare. These are counted and totalled alongside standard
   baskets without distorting the net-weight maths.
-- FR-5.7 **Confirmation feedback** on each count (visual, and audible or
-  haptic) so the operator knows the tap registered without looking away
-  from the scale. ❓
+- FR-5.7 **Confirmation feedback** on each count so the operator knows the
+  tap registered without looking away from the scale. The spoken count
+  (FR-11) is the primary confirmation; visual and haptic feedback back it
+  up for when audio is unavailable or inaudible.
 - FR-5.8 The counter works fully offline (see NFR-1) and never loses a
   count to app backgrounding, screen lock, or battery/app restart.
 
@@ -266,6 +270,77 @@ prone**.
   month", "what has the worker lead been paid". ❓ (is reporting v1 or
   later?)
 
+### FR-11 — Voice announcement and call-and-response
+
+The app **speaks out loud, in Thai, in a clear voice**, and drives the
+weighing as a call-and-response rhythm between the app and the people at
+the scale. This is not an accessibility extra — it is how the count stays
+synchronised between the owner side, the ล้ง side, and whoever is lifting
+baskets. The app becomes the neutral announcer that everyone hears, which
+is exactly the role the brief describes when it says all parties announce
+the count together.
+
+Because the operator's eyes are on the scale and their hands are busy, the
+voice — not the screen — carries the moment-to-moment state.
+
+**On entering a new level (pile / zone) and tapping Ready:**
+
+- FR-11.1 The app **reads the level's information aloud in Thai** — the
+  farm, zone and pile being counted, the empty basket (tare) weight, the
+  standard rubber weight per basket, and the expected scale reading. This
+  is a deliberate read-back so both sides hear the terms before a single
+  basket is weighed. ❓ (exact wording and which fields are read — to be
+  settled with the owner against a prototype.)
+- FR-11.2 A separate **"พร้อมค่ะ" button** announces readiness aloud — the
+  explicit go-signal to the scale team that counting is starting. It is a
+  distinct action from the read-back, so the operator can let the read-back
+  finish, let the parties confirm, and only then signal.
+
+**During counting:**
+
+- FR-11.3 On each recorded basket the app **speaks the count in Thai** —
+  "หนึ่ง", "สอง", "สาม" — so the number is heard by everyone present, not
+  just seen by the person holding the phone.
+- FR-11.4 After speaking the count the app **waits**. It does not accept
+  the next basket until the operator gives the next-basket signal. The
+  waiting state must be unmistakable on screen as well as by the absence of
+  the voice.
+- FR-11.5 A **"ต่อไปค่ะ" button** announces aloud that the next basket
+  should be weighed, and returns the counter to the ready-to-count state.
+- FR-11.6 The result is a fixed, auditable cadence per basket: *basket on
+  scale → all parties see the expected reading → tap count → app speaks the
+  number → tap next → app says "ต่อไปค่ะ"*. The rhythm is the error
+  control (FR-5.5).
+
+**Quality and reliability:**
+
+- FR-11.7 **Speech must work fully offline** (NFR-1). No sale-critical
+  announcement may depend on a network call to a cloud speech service.
+- FR-11.8 The voice must be **clear and natural in Thai, including correct
+  number pronunciation** — Thai numerals are irregular in compounds
+  (ยี่สิบเอ็ด, not สองสิบหนึ่ง), and a wrong-sounding count destroys the
+  trust the feature exists to create. Counts run well past 100 in a large
+  sale, so this must hold across the whole range actually used.
+- FR-11.9 The voice must be **audible in the field** — outdoors, near a
+  truck, over the noise of a working yard. Volume control and a repeat/
+  replay of the last announcement are required.
+- FR-11.10 **Audio failure must never block or corrupt the count.** If the
+  device is muted, the speech engine fails, or a voice is unavailable, the
+  app keeps counting correctly with visual and haptic feedback, and makes
+  the degraded state visible rather than silently dropping to a mute
+  counter.
+- FR-11.11 Speech can be **turned off** by the user without changing the
+  counting logic — the two-step count/next rhythm (FR-11.4) stays.
+
+### FR-12 — Recording the announcements ❓
+
+- FR-12.1 ❓ Should each spoken announcement be part of the audit trail
+  (i.e. the record shows "the app announced 41 at 14:32"), so a later
+  dispute can establish what was said aloud at the time? This is cheap to
+  add while the events are already being recorded, and is a meaningful
+  trust artefact — but it is an addition to the brief, not something you
+  asked for, so it needs your call.
+
 ## Non-functional requirements
 
 ### NFR-1 — Offline behavior (primary mode)
@@ -277,6 +352,11 @@ prone**.
   and trust lost. Counts must survive app backgrounding, screen lock, force
   quit, and device restart.
 - No feature in the sale flow may block on a network call.
+- **Thai speech (FR-11) is part of the offline surface.** The voice is
+  central to how counting is conducted, so it cannot rely on a cloud
+  speech service. This constrains the implementation to on-device speech
+  or audio bundled with the app — an architecture decision, but the
+  product constraint is fixed here.
 
 ### NFR-2 — Sync behavior
 
@@ -303,6 +383,11 @@ prone**.
 
 - Readable in direct sunlight; usable one-handed, standing, possibly with
   dirty or gloved hands.
+- **Audible in a working yard**: the spoken count (FR-11) must carry over
+  ambient noise — engines, wind, people — to everyone standing at the
+  scale, not just the phone holder. Device speaker volume may be the
+  limiting factor. ❓ (is an external/bluetooth speaker realistic in your
+  setup, or must it work off the phone alone?)
 - Thai-first UI. ❓ (is any English/other-language support needed for
   buyers or staff?)
 - Must tolerate low-end Android devices and poor battery. ❓ (target device
@@ -338,11 +423,13 @@ prone**.
    offline, with no fallback to paper.
 2. The counter screen keeps up with the physical weighing pace, and the
    final basket count matches the ล้ง's independent count.
-3. The settlement figure is agreed by both parties without recomputing it
+3. The spoken count is clear enough that the people at the scale work to
+   the app's voice — and nobody asks "what number are we on?"
+4. The settlement figure is agreed by both parties without recomputing it
    by hand — and when they do check it by hand, it matches.
-4. A dispute over count or money is resolved by looking at the app's
+5. A dispute over count or money is resolved by looking at the app's
    record, at least once.
-5. A second tenant (another farm) can be onboarded without code changes.
+6. A second tenant (another farm) can be onboarded without code changes.
 
 ## Open questions
 
@@ -364,10 +451,12 @@ These block "PRD agreed"; each materially changes the design or the build.
    a straight ฿/kg on net weight, or does it involve a %DRC / grade
    deduction? The counter and settlement maths are simple in the first
    case and materially different in the second.
-4. **Counter screen error-prevention.** Which safeguard do you want:
-   confirm-every-count (slow but safest), free tapping with prominent undo
-   (fastest), or a middle option like a minimum interval plus a "did you
-   mean 2 taps?" prompt? Best settled against a prototype.
+4. **Counter screen error-prevention.** _Largely answered_ by the voice
+   call-and-response loop (FR-11): count and next-basket are separate
+   actions, which is itself the safeguard. Remaining sub-question — should
+   the count tap *also* require confirmation when the operator taps it
+   twice in an implausibly short interval, or is the two-step rhythm
+   enough on its own?
 5. **Split basis.** Does the 60/40 or 50/50 apply to gross value or to the
    final amount after bargained adjustments (FR-8.4)? And is the split
    configured per zone, per worker contract, or per sale (FR-1.4)?
@@ -377,6 +466,22 @@ These block "PRD agreed"; each materially changes the design or the build.
 7. **Reporting scope for v1.** Is per-zone / per-worker history and
    reporting (FR-10.3) in the first release, or is v1 strictly "run and
    settle one sale correctly"?
+8. **The voice itself (FR-11).** The "ค่ะ" in "พร้อมค่ะ" / "ต่อไปค่ะ"
+   implies a female voice — confirmed? And do you want a **bundled
+   recorded voice** (consistent, guaranteed-clear, same on every device,
+   but a fixed vocabulary and app download size) or the **device's own
+   Thai text-to-speech** (says anything, no bundle, but quality varies by
+   phone and some devices ship no Thai voice at all)? This is the single
+   biggest decision in the feature and it is worth hearing both before you
+   choose.
+9. **What the read-back says (FR-11.1).** Which fields should be read
+   aloud on Ready — is farm/zone/pile plus tare, standard weight and
+   expected reading the right set, too much to listen to every pile, or
+   missing something the parties need to hear?
+10. **Who else hears it.** Does the ล้ง side's own device also announce
+    (two voices in the yard, possibly out of step), or does exactly one
+    device speak while the other stays silent and cross-checks?
+11. **Announcements in the audit trail** — FR-12.1 above.
 
 ---
 
