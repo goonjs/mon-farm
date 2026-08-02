@@ -134,7 +134,8 @@ stand up CI in the same story.
 ## Status so far
 
 - [x] Process defined (this doc)
-- [ ] PRD (`docs/prd.md`) — to be authored together
+- [~] PRD (`docs/prd.md`) — draft v0.1 written from the owner's product
+      brief; 7 open questions outstanding before it counts as agreed
 - [ ] Architecture / SDD (`docs/architecture.md`) — to be authored together,
       after PRD
 - [ ] First epic/story breakdown
