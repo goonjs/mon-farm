@@ -1,6 +1,6 @@
 # PRD — mon-farm
 
-> Status: **Draft v0.3** — authored from the owner's product brief
+> Status: **Draft v0.4** — authored from the owner's product brief
 > (2026-08-02), updated with the owner's decisions of 2026-08-03.
 > Everything here traces back to those. Items marked **❓** are assumptions
 > or gaps still needing the owner's confirmation before this PRD is
@@ -188,8 +188,10 @@ they map to.
   zone, so it rolls up (FR-6) and splits (FR-8) correctly per zone. The
   parties run one sale for what feels to them like one transaction, and
   the zone attribution does the bookkeeping underneath.
-- FR-4.4 The timestamp of every significant sale event (start, tare check,
-  first/last count per pile, adjustment, settlement) is recorded.
+- FR-4.4 **Every sale event is timestamped** — start, tare check, each
+  individual count, each spoken announcement, every correction, every
+  adjustment, and settlement. See FR-12 for the full event log and for why
+  ordering does not rely on the device clock.
 
 ### FR-5 — The counter screen
 
@@ -420,14 +422,41 @@ voice — not the screen — carries the moment-to-moment state.
 - FR-11.11 Speech can be **turned off** by the user without changing the
   counting logic — the two-step count/next rhythm (FR-11.4) stays.
 
-### FR-12 — Recording the announcements ❓
+### FR-12 — Event timestamps and the audit trail
 
-- FR-12.1 ❓ Should each spoken announcement be part of the audit trail
-  (i.e. the record shows "the app announced 41 at 14:32"), so a later
-  dispute can establish what was said aloud at the time? This is cheap to
-  add while the events are already being recorded, and is a meaningful
-  trust artefact — but it is an addition to the brief, not something you
-  asked for, so it needs your call.
+**Decided 2026-08-03.** Every count and every spoken announcement is
+recorded with a timestamp — not just the milestones. The sale's record is
+a complete, ordered event log of what happened and what was said.
+
+- FR-12.1 **Every counted basket carries its own timestamp** — all of
+  them, not merely the first and last of a pile (FR-4.4).
+- FR-12.2 **Every announcement the app speaks is recorded**, with what was
+  said and when: the level read-back (FR-11.1), "พร้อมค่ะ" (FR-11.2), each
+  spoken count (FR-11.3), and each "ต่อไปค่ะ" (FR-11.5). The record can
+  therefore establish what was said aloud at the sale, and when.
+- FR-12.3 Corrections and voided counts are timestamped the same way, so
+  the log shows both the mistake and the fix in the order they occurred
+  (NFR-3).
+- FR-12.4 The timestamped log gives the sale a **reconstructable pace**.
+  This is worth more than an audit record: intervals between counts are
+  evidence. Two counts 0.3 seconds apart are almost certainly a double-tap
+  rather than two baskets, and a gap of twenty minutes mid-pile is a break
+  that someone may need to explain. It also gives the anti-mistap work
+  (Open question 1) real data to be designed against instead of guesses.
+- FR-12.5 **Ordering must not depend on the device clock.** In an
+  offline-first app the wall clock can drift, be wrong, or be changed by
+  the user — and two tenants' devices will not agree with each other.
+  Every event therefore carries a **monotonic per-sale sequence number**
+  alongside its timestamp, so the *order* of events is trustworthy even
+  when the *time* is not. Sequence settles "what happened first";
+  timestamps answer "when, roughly".
+- FR-12.6 ❓ Should a clock that is obviously wrong (device time earlier
+  than the sale's start, or jumping backwards mid-count) be **flagged in
+  the record** rather than silently trusted? Cheap to detect given
+  FR-12.5, and it prevents a bad clock quietly undermining a record
+  someone later relies on.
+- FR-12.7 The timestamps and the announcement log are part of what syncs
+  (NFR-2), so the record survives beyond the device that captured it.
 
 ## Non-functional requirements
 
@@ -584,6 +613,10 @@ Recorded so the reasoning is not lost once the questions disappear.
 - **2026-08-03 — Worker lead does not log in.** Name recorded only.
 - **2026-08-03 — v1 is "run and settle one sale correctly."** Reporting
   and the buyer-side app are deferred.
+- **2026-08-03 — Every count and every announcement is timestamped**
+  (FR-12), giving the sale a reconstructable pace as well as an audit
+  trail. Order is carried by a per-sale sequence number, because an
+  offline device's clock cannot be trusted to be right or even monotonic.
 - **2026-08-03 — Voice sourcing is deferred to the prototype** (FR-11.7):
   bundled recordings and device Thai TTS both get tried at a real scale.
 - **2026-08-03 — "ต่อไปค่ะ" is optional** (FR-11.5), which removed the
@@ -617,7 +650,7 @@ rather than by decision up front.
    aloud on Ready — is farm/zone/pile plus tare, standard weight and
    expected reading the right set, too much to hear at every pile, or
    missing something the parties need?
-7. **Announcements in the audit trail** — FR-12.1.
+7. **Flagging an obviously wrong device clock** (FR-12.6).
 8. **Different splits across zones in one sale** (FR-8.6) — assumed to
    apply per zone against that zone's contribution; confirm.
 9. **Sale export format** (FR-10.2) — printed slip, PDF, LINE share?
