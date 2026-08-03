@@ -1,6 +1,6 @@
 # PRD — mon-farm
 
-> Status: **Draft v0.2** — authored from the owner's product brief
+> Status: **Draft v0.3** — authored from the owner's product brief
 > (2026-08-02), updated with the owner's decisions of 2026-08-03.
 > Everything here traces back to those. Items marked **❓** are assumptions
 > or gaps still needing the owner's confirmation before this PRD is
@@ -19,10 +19,12 @@ a buyer (ล้ง) so that both sides can trust the numbers**. Selling rubber
 today is a verbal, fast-moving, outdoor process: baskets go on a scale one
 after another, people call out counts aloud, and the money is worked out
 afterwards from a tally that may exist only on paper or in someone's head.
-mon-farm replaces that tally with a shared, auditable record that **both
-the owner's side and the ล้ง side can operate from their own perspective**,
-so the count and the settlement can be cross-checked instead of argued
-over.
+mon-farm replaces that tally with an auditable record, and — crucially —
+makes the counting **public while it happens**: the count is spoken aloud
+in Thai and shown large enough for the other party to read from across the
+yard. The cross-check is therefore social rather than technical. Nobody has
+to trust the software, or even hold a phone, to satisfy themselves the
+count is honest; they only have to watch and listen.
 
 Rubber selling happens where there is no reliable signal — in the field, at
 the pile, at the farm gate. Offline operation is therefore not a nice-to-
@@ -35,9 +37,10 @@ have but the primary mode; see
 
 1. **A sale can be run end-to-end in the field with no network**, from
    price agreement through counting to final settlement figures.
-2. **Both parties (owner side and ล้ง side) can record the same sale** and
-   compare, so counting errors and disputes surface at the time of the sale
-   rather than after the money moves.
+2. **The count is public while it happens** — displayed so the other party
+   can follow it from across the yard and spoken aloud in Thai — so
+   counting errors surface at the scale, while the rubber is still there to
+   recount, rather than after the money moves.
 3. **The counting step is fast, simple, and hard to get wrong** — the
    counter screen is the heart of the product, used outdoors, at speed, by
    people whose hands are busy. It **counts out loud in Thai** and runs the
@@ -66,8 +69,8 @@ have but the primary mode; see
 | --- | --- | --- |
 | **Farm owner** | Owner | Tenant admin. Sets up farms, zones, contracts and splits. Starts sales, oversees counting, approves settlement. |
 | **Farm manager (ผู้จัดการ)** | Owner | Named as a prerequisite on every sale. May run the sale on the owner's behalf. |
-| **Worker lead (หัวหน้าคนงาน / คนกรีด)** | Owner | Named as a prerequisite on every sale; the rubber's proceeds are split with the worker side per contract. ❓ (does the worker lead *use* the app, or is the name recorded only?) |
-| **ล้ง (buyer / dealer)** | Buyer | Weighs the baskets, provides and tares the scale and empty containers, agrees the price, counts along. Uses the app from the buyer's perspective for cross-checking. |
+| **Worker lead (หัวหน้าคนงาน / คนกรีด)** | Owner | Named as a prerequisite on every sale; the rubber's proceeds are split with the worker side per contract. **Does not log in** — the name is recorded, nothing more (decided 2026-08-03). They are present at the sale and see the count like everyone else (FR-9). |
+| **ล้ง (buyer / dealer)** | Buyer | Weighs the baskets, provides and tares the scale and empty containers, agrees the price, counts along. In v1 they need no device — they watch and hear the count (FR-9). The model keeps them as a tenant in their own right for a later buyer-side app. |
 
 ### Primary use cases
 
@@ -75,8 +78,10 @@ have but the primary mode; see
   weighing happens on the buyer's scale.
 - **UC-2 — Buyer comes to the farm**: the ล้ง brings a truck and scale to
   the farm; weighing happens at the zone or farm gate.
-- **UC-3 — Cross-check**: both sides run the same sale in their own app and
-  compare totals before settling.
+- **UC-3 — Cross-check**: the ล้ง (and the worker lead, and anyone else
+  present) watches the count on the owner's screen as it happens and hears
+  it announced, and challenges it on the spot if it looks wrong. No second
+  device required.
 - **UC-4 — Multi-zone sale**: one sale covers several piles, several zones,
   possibly several farms; the parties want per-pile, per-zone, per-farm and
   grand totals, plus totals for an ad-hoc selection.
@@ -172,17 +177,17 @@ they map to.
 
 ### FR-4 — Starting a sale
 
-- FR-4.1 A sale is started against a **zone**, and requires, as
-  prerequisites: manager name, worker lead name, buyer (ล้ง), agreed price
-  (FR-2), tare check (FR-3), and a start timestamp.
+- FR-4.1 A sale requires, as prerequisites: manager name, worker lead name,
+  buyer (ล้ง), agreed price (FR-2), pricing mode (FR-2.5), tare check
+  (FR-3), and a start timestamp.
 - FR-4.2 The sale records **where** the weighing happens — at the ล้ง or at
   the farm (UC-1 / UC-2).
-- FR-4.3 A sale may span **multiple piles, multiple zones, and multiple
-  farms**; each count is always attributed to exactly one pile in one zone,
-  so it can be rolled up (FR-6) and split correctly (FR-8). ❓ (see Open
-  question 1 — "a sale is per zone" and "a sale can cover many zones" need
-  reconciling; the model above assumes a sale is a *document* that can span
-  zones while every count is *attributed* to one zone.)
+- FR-4.3 **A sale is one trading event that may span multiple piles,
+  multiple zones, and multiple farms** (decided 2026-08-03) — one buyer,
+  one agreed price. Every count is attributed to exactly one pile in one
+  zone, so it rolls up (FR-6) and splits (FR-8) correctly per zone. The
+  parties run one sale for what feels to them like one transaction, and
+  the zone attribution does the bookkeeping underneath.
 - FR-4.4 The timestamp of every significant sale event (start, tare check,
   first/last count per pile, adjustment, settlement) is recorded.
 
@@ -193,8 +198,10 @@ pace baskets come off the scale, by someone who may be holding something
 else. It must balance **simplicity and speed** against **not being error-
 prone**.
 
-- FR-5.1 The screen counts **up** — 1, 2, 3 — one tap per basket, with the
-  current count shown large enough to read at arm's length in sunlight.
+- FR-5.1 The screen counts **up** — 1, 2, 3 — one tap per basket. The
+  current count is displayed for the **other party at ~10 m**, not for the
+  operator at arm's length (FR-9.1); this is the screen's single most
+  demanding layout constraint and it outranks everything else on it.
 - FR-5.2 The screen shows the **expected scale reading** prominently (tare
   + standard net, e.g. `52 กก.`), because the process is that all parties
   see that number on the scale and announce the count together.
@@ -277,32 +284,61 @@ prone**.
   the split is applied per zone against that zone's contribution —
   assumed, to be confirmed.
 
-### FR-9 — Two-party cross-check
+### FR-9 — Cross-check by social transparency
 
-- FR-9.1 The same sale can be recorded by the **owner side and the ล้ง
-  side**, each from their own perspective.
-- FR-9.2 The two records can be **compared**, surfacing differences in
-  basket counts (per pile), tare, agreed price, adjustments, and final
-  amount.
-- FR-9.3 Differences are surfaced **at the sale**, in time to be resolved
-  by recounting or re-weighing, not discovered afterwards.
-- FR-9.4 **The ล้ง is a tenant in their own right** (decided 2026-08-03).
-  The buyer has their own account and their own records across every farm
-  they buy from — they are not a guest on the owner's sale. Both sides own
-  their copy of the sale independently, which is what makes the
-  cross-check meaningful.
-- FR-9.5 The two independent records are **paired** to a common sale so
-  they can be compared. ❓ How the pairing is established — scanning a code
-  at the start of the sale, buyer/farm identifiers agreed up front, or
-  matching after the fact — is an architecture decision.
-- FR-9.6 **The at-the-sale comparison still needs a transport.** Two
-  separate tenants, both offline, cannot compare through the backend at
-  the moment it matters (FR-9.3). Either the devices exchange directly
-  (QR/local), or the comparison degrades to post-sync — which weakens
-  FR-9.3 from "resolve at the scale" to "discover later". ❓ This tension
-  is Open question 2b and needs resolving before the sync design is
-  settled; it is the one place where the tenant-account model and the
-  offline-first requirement pull against each other.
+**Decided 2026-08-03, and settled.** The cross-check is done **by eye, at
+the scale, by the people standing there** — not by two devices reconciling
+records. The app's job is to make the count so visible that the other
+party can follow it without holding anything, and would notice
+immediately if it were wrong.
+
+This is the cheapest possible mechanism and the most robust one: it needs
+no connectivity, no pairing, no second device, and no trust in software.
+It also matches what already happens at a sale — people call the count out
+loud and watch each other. The app makes that existing social practice
+harder to fudge instead of replacing it with a system both sides would
+have to trust.
+
+Together with the spoken count (FR-11) it gives the sale a public record
+in two senses at once: **heard** by everyone present, and **seen** by
+everyone present.
+
+- FR-9.1 The running count is displayed so it is **readable by the other
+  party from about 10 metres away** — large numerals, maximum contrast,
+  and colour used to make state obvious at a glance.
+- FR-9.2 **The count is the only thing that has to carry 10 metres.**
+  Operating detail — pile name, expected reading, running weight, controls
+  — is read at arm's length by the operator. The screen therefore has two
+  distinct reading distances, and the design must not let arm's-length
+  detail crowd out the number that has to travel. See FR-9.7 for what this
+  costs.
+- FR-9.3 **On the first count of a sale**, a popup and animation prompt
+  the operator to turn the screen towards the other party, establishing at
+  the start that the count is theirs to watch too. Setting the norm on
+  basket 1 is what makes it hold for the remaining hundred.
+- FR-9.4 **The ล้ง is a tenant in their own right.** The buyer has their
+  own account and their own records across every farm they buy from — they
+  are not a guest on the owner's sale. Each side keeps its own record; the
+  reconciliation between them happens visually at the sale, and through
+  their own records afterwards.
+- FR-9.5 Because the cross-check is visual and immediate, **the buyer does
+  not need the app at the sale** for the count to be trustworthy. This is
+  what makes an owner-side-only v1 coherent (see Success criteria).
+- FR-9.6 Colour must not be the *only* carrier of meaning — state is
+  distinguishable without relying on colour discrimination, both for
+  colour-blind users and because colour fidelity suffers in direct
+  sunlight.
+- FR-9.7 **Physical constraint, to be respected rather than wished away.**
+  Comfortable reading at 10 m needs a numeral roughly 50–80 mm tall. On a
+  typical phone that is achievable **only** in landscape, with the number
+  effectively filling the screen — a three-digit count at 50 mm is about
+  as much as a phone can carry. Consequences the design must accept: the
+  counting screen's public state is close to *just the number*; 10 m is
+  realistic for one or two digits and optimistic for three on a small
+  phone; a tablet would carry further if the sale warrants it. ❓ Worth
+  checking against your own eyes and your own phone during prototype
+  testing — the number that matters is what your ล้ง can actually read
+  across your yard, not a formula.
 
 ### FR-10 — Records and history
 
@@ -433,8 +469,12 @@ voice — not the screen — carries the moment-to-moment state.
 
 ### NFR-4 — Field usability
 
-- Readable in direct sunlight; usable one-handed, standing, possibly with
-  dirty or gloved hands.
+- **Readable in direct sunlight — now load-bearing, not a nicety.** The
+  count is the cross-check mechanism (FR-9), so a screen that washes out
+  in the sun does not merely annoy the operator, it removes the product's
+  guarantee of a fair count. Maximum contrast, high brightness, and
+  sunlight legibility are requirements of the trust model.
+- Usable one-handed, standing, possibly with dirty or gloved hands.
 - **Audible in a working yard**: the spoken count (FR-11) must carry over
   ambient noise — engines, wind, people — to everyone standing at the
   scale, not just the phone holder. Device speaker volume may be the
@@ -462,6 +502,20 @@ voice — not the screen — carries the moment-to-moment state.
 
 ## Out of scope (v1)
 
+**v1 is "run and settle one sale correctly"** (decided 2026-08-03) — zones,
+a sale, the counter with voice, totals, settlement and split. The goal is
+to have it at a real scale in the next selling season, because that is
+where the remaining questions get answered.
+
+- **The ล้ง-side app.** The buyer remains a separate tenant in the model
+  (FR-9.4), but their app is not built in v1. This is affordable precisely
+  because the cross-check is visual (FR-9.5) — the buyer does not need a
+  device for the count to be trustworthy.
+- **Per-zone / per-worker reporting** (FR-10.3). Deferred: it is a second
+  product surface, and it can only be designed well once there are real
+  sales to shape it. History in v1 is a list of past sales.
+- **Worker lead login.** Name recorded only; no account, no permissions
+  model in v1.
 - Payments/disbursement of money.
 - Live market price index feeds (price index is entered manually, FR-2.3).
 - Production/agronomy tracking (tapping records, yield, inputs).
@@ -478,11 +532,14 @@ voice — not the screen — carries the moment-to-moment state.
    final basket count matches the ล้ง's independent count.
 3. The spoken count is clear enough that the people at the scale work to
    the app's voice — and nobody asks "what number are we on?"
-4. The settlement figure is agreed by both parties without recomputing it
+4. **The ล้ง actually watches the screen.** The clearest signal the
+   transparency model works is the buyer following the count from where
+   they stand, and challenging a basket when they think it is wrong.
+5. The settlement figure is agreed by both parties without recomputing it
    by hand — and when they do check it by hand, it matches.
-5. A dispute over count or money is resolved by looking at the app's
+6. A dispute over count or money is resolved by looking at the app's
    record, at least once.
-6. A second tenant (another farm) can be onboarded without code changes.
+7. A second tenant (another farm) can be onboarded without code changes.
 
 ## UX decisions are settled by testing, not by this document
 
@@ -508,46 +565,36 @@ in `docs/process.md`.
 
 ## Decided
 
-Recorded here so the reasoning is not lost once the questions disappear.
+Recorded so the reasoning is not lost once the questions disappear.
 
-- **2026-08-03 — The ล้ง is a full tenant, not a guest** (FR-9.4). The
-  buyer keeps their own records across every farm they buy from. Trade-off
-  accepted: two independent tenants both offline cannot compare through
-  the backend at the moment it matters — see open question 2 below, which
-  this decision creates rather than closes.
-- **2026-08-03 — ยางก้อนถ้วย, in both pricing modes** (FR-2.5). Straight
-  ฿/kg *and* %DRC / grade deduction are both supported and chosen per
-  sale. Other products are out of scope for v1.
-- **2026-08-03 — Split basis is per-contract** (FR-8.4). Gross or
-  post-adjustment is a recorded property of each worker contract; there is
-  no default, because guessing wrong changes the worker's pay.
-- **2026-08-03 — Voice sourcing is deferred to the prototype** (FR-11.7).
-  Bundled recordings and device Thai TTS both get built and tried at a
-  real scale before one is chosen.
+- **2026-08-03 — Cross-check is social, by eye, not digital** (FR-9). The
+  count is displayed to be read by the other party from ~10 m, and a popup
+  on the first basket sets the norm that the screen is theirs to watch.
+  This removes an entire class of problem — no pairing, no device-to-device
+  transport, no dependency on signal — and it is why an owner-only v1
+  still delivers a trustworthy count.
+- **2026-08-03 — A sale is one trading event spanning zones** (FR-4.3),
+  with every count attributed to its pile and zone underneath.
+- **2026-08-03 — The ล้ง is a full tenant, not a guest** (FR-9.4), though
+  their app is not built in v1.
+- **2026-08-03 — ยางก้อนถ้วย, in both pricing modes** (FR-2.5): straight
+  ฿/kg and %DRC / grade, chosen per sale.
+- **2026-08-03 — Split basis is per-contract** (FR-8.4), with no default,
+  because guessing wrong changes the worker's pay.
+- **2026-08-03 — Worker lead does not log in.** Name recorded only.
+- **2026-08-03 — v1 is "run and settle one sale correctly."** Reporting
+  and the buyer-side app are deferred.
+- **2026-08-03 — Voice sourcing is deferred to the prototype** (FR-11.7):
+  bundled recordings and device Thai TTS both get tried at a real scale.
 - **2026-08-03 — "ต่อไปค่ะ" is optional** (FR-11.5), which removed the
   two-tap gate and reopened the anti-mistap question below.
 
 ## Open questions
 
-These block "PRD agreed"; each materially changes the design or the build.
 Questions tagged **[UX]** are expected to be answered by prototype testing
 rather than by decision up front.
 
-1. **Sale scope vs. zone scope.** The brief says selling is *per zone*, and
-   also that one sale can cover *multiple farms, zones and piles*. The PRD
-   currently assumes: a sale is a document that can span zones, while every
-   count is attributed to exactly one pile in one zone (needed for the
-   split in FR-8). Is that right, or is a "sale" strictly per zone with a
-   higher-level grouping above it?
-2. **How the two tenants compare their records at the sale** (FR-9.6).
-   Now that the ล้ง is a separate tenant, comparison through the backend
-   needs both sides online — which is exactly what a field sale does not
-   have. Either the devices exchange directly (QR scan, local transport),
-   or the cross-check slips from "resolve at the scale" to "discover after
-   sync". This is the biggest remaining architecture question.
-3. **How the two records are paired** (FR-9.5) — scan a code at the start,
-   agreed identifiers up front, or matched after the fact?
-4. **Counter screen error-prevention.** [UX] The sharpest UX question in
+1. **Counter screen error-prevention.** [UX] The sharpest UX question in
    the product. With "ต่อไปค่ะ" optional (FR-11.5) there is one tap per
    basket and nothing structurally preventing a stray tap from booking a
    basket that was never weighed. Candidates: minimum interval between
@@ -555,27 +602,25 @@ rather than by decision up front.
    designed against accidental brushes, or accepting the risk and relying
    on prominent undo plus the spoken count as after-the-fact detection.
    **To be resolved by testing variants, not chosen on paper.**
-5. **%DRC applied to weight or to price** (FR-2.8) — same arithmetic,
+2. **Actual readable distance** (FR-9.7). [UX] 10 m is the goal; what a
+   phone can really deliver for a three-digit count in your yard, in your
+   sun, is a measurement to take during prototype testing — and it may
+   argue for a tablet as the counting device.
+3. **%DRC applied to weight or to price** (FR-2.8) — same arithmetic,
    different derivation on screen; it should read the way you actually
    negotiate.
-6. **Worker lead as a user.** Does the worker lead log into the app (see
-   their share, confirm counts), or is their name simply recorded on the
-   sale?
-7. **Reporting scope for v1.** Is per-zone / per-worker history and
-   reporting (FR-10.3) in the first release, or is v1 strictly "run and
-   settle one sale correctly"?
-8. **Voice persona.** The "ค่ะ" in "พร้อมค่ะ" / "ต่อไปค่ะ" implies a
+4. **Mid-sale re-tare** (FR-3.4) — is weighing more than one basket type
+   in a single sale a real scenario?
+5. **Voice persona.** The "ค่ะ" in "พร้อมค่ะ" / "ต่อไปค่ะ" implies a
    female voice — confirmed?
-9. **What the read-back says (FR-11.1).** [UX] Which fields should be read
+6. **What the read-back says (FR-11.1).** [UX] Which fields should be read
    aloud on Ready — is farm/zone/pile plus tare, standard weight and
-   expected reading the right set, too much to listen to every pile, or
-   missing something the parties need to hear?
-10. **Who else hears it.** Does the ล้ง side's own device also announce
-    (two voices in the yard, possibly out of step), or does exactly one
-    device speak while the other stays silent and cross-checks?
-11. **Announcements in the audit trail** — FR-12.1 above.
-12. **Different splits across zones in one sale** (FR-8.6) — assumed to
-    apply per zone against that zone's contribution; confirm.
+   expected reading the right set, too much to hear at every pile, or
+   missing something the parties need?
+7. **Announcements in the audit trail** — FR-12.1.
+8. **Different splits across zones in one sale** (FR-8.6) — assumed to
+   apply per zone against that zone's contribution; confirm.
+9. **Sale export format** (FR-10.2) — printed slip, PDF, LINE share?
 
 ---
 
