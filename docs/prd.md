@@ -1,10 +1,11 @@
 # PRD — mon-farm
 
-> Status: **Draft v0.1** — authored from the owner's product brief
-> (2026-08-02). Everything here traces back to that brief. Items marked
-> **❓** are assumptions or gaps that need the owner's confirmation before
-> this PRD is "agreed" and epics are sharded from it. See
-> [Open questions](#open-questions).
+> Status: **Draft v0.2** — authored from the owner's product brief
+> (2026-08-02), updated with the owner's decisions of 2026-08-03.
+> Everything here traces back to those. Items marked **❓** are assumptions
+> or gaps still needing the owner's confirmation before this PRD is
+> "agreed" and epics are sharded from it. See [Decided](#decided) for
+> settled calls and [Open questions](#open-questions) for what remains.
 
 ## Overview
 
@@ -121,9 +122,10 @@ they map to.
   **zones**.
 - FR-1.3 A tenant maintains a roster of people (owner, managers, worker
   leads) that can be named on a sale, and a list of buyers (ล้ง).
-- FR-1.4 A zone carries the **contract terms** that apply to rubber from
-  it — notably the owner/worker split (FR-8). ❓ (is the split held on the
-  zone, on the worker contract, or per-sale?)
+- FR-1.4 A tenant maintains **worker contracts**, each carrying the
+  owner/worker split percentage *and* the basis that split applies to
+  (FR-8.4). A zone is associated with the contract that governs rubber
+  from it, so a sale can resolve the right terms per zone.
 
 ### FR-2 — Price agreement
 
@@ -135,6 +137,25 @@ they map to.
   app does not fetch a live index. ❓ (should a later version pull an index
   feed, and from where?)
 - FR-2.4 A sale cannot begin counting without an agreed price recorded.
+- FR-2.5 **Two pricing modes are supported for ยางก้อนถ้วย** (decided
+  2026-08-03), chosen per sale:
+  - **Straight ฿/kg** — the agreed price applies directly to net rubber
+    weight.
+  - **With %DRC / grade deduction** — a dry-rubber-content percentage or
+    grade is agreed at the sale and reduces the payable quantity or the
+    effective price.
+- FR-2.6 In DRC/grade mode the app records **the agreed %DRC or grade, who
+  assessed it, and who on each side agreed it** — with the same weight as
+  the price itself. Grade assessment is a judgement call made by the buyer
+  and is a well-known source of dispute, so it is exactly the kind of
+  figure this app exists to pin down.
+- FR-2.7 The pricing mode is **fixed before counting begins** and changing
+  it afterwards is a recorded adjustment (FR-7.3), not a silent edit.
+- FR-2.8 ❓ In DRC mode, does the percentage apply to the **weight** (net
+  weight × %DRC × price) or as a **price reduction** (net weight × reduced
+  price)? These produce the same number if applied consistently, but the
+  settlement must show whichever way you actually negotiate it, so the
+  derivation reads the way the conversation went.
 
 ### FR-3 — Scale calibration and tare check
 
@@ -221,14 +242,17 @@ prone**.
   quantity money is calculated on. Standard baskets contribute the agreed
   standard net; off-standard baskets contribute their measured net
   (FR-5.6).
-- FR-7.2 **Gross value = total net rubber weight × agreed price per kg**.
+- FR-7.2 **Gross value = total net rubber weight × agreed price per kg**,
+  with the %DRC / grade step applied in between when the sale uses that
+  pricing mode (FR-2.5).
 - FR-7.3 **Adjustments** — a bargained price change or a lump-sum
   deduction/addition agreed after counting — are supported, and each
   adjustment records its amount/new price, reason, and who agreed it.
 - FR-7.4 The settlement screen shows the **full derivation, step by step**,
   in terms a non-technical user can follow and check by hand: basket count
-  → gross weight → tare deducted → net weight → × price → gross value →
-  adjustments → final amount. No single opaque total.
+  → gross weight → tare deducted → net weight → (%DRC / grade applied, if
+  used) → × price → gross value → adjustments → final amount → split. No
+  single opaque total.
 - FR-7.5 The derivation is presented per level as well (FR-6), so the
   contribution of each zone and pile to the final amount is visible.
 
@@ -240,12 +264,18 @@ prone**.
   settlement, and applied to produce each side's amount.
 - FR-8.3 The split calculation is shown as transparently as the rest of the
   settlement (FR-7.4).
-- FR-8.4 ❓ The split applies to **gross value or to the post-adjustment
-  final amount** — needs confirmation; the two give different worker
-  payouts whenever there is a bargain.
-- FR-8.5 ❓ Where a sale spans multiple zones with **different splits**, the
-  split is applied per zone against that zone's contribution — assumed, to
-  be confirmed.
+- FR-8.4 **The basis the split applies to is configurable per contract**
+  (decided 2026-08-03) — either gross value or the post-adjustment final
+  amount, because contracts differ. The basis is recorded on the contract
+  alongside the percentage, and is shown on the settlement so both sides
+  can see which rule was applied.
+- FR-8.5 Because the basis is a per-contract choice, **every contract must
+  have it set explicitly** — there is no safe default, since guessing
+  wrong changes what the worker is paid whenever a bargain happens. The
+  app must not let a contract exist without a basis recorded.
+- FR-8.6 ❓ Where a sale spans multiple zones with **different splits**,
+  the split is applied per zone against that zone's contribution —
+  assumed, to be confirmed.
 
 ### FR-9 — Two-party cross-check
 
@@ -256,11 +286,23 @@ prone**.
   amount.
 - FR-9.3 Differences are surfaced **at the sale**, in time to be resolved
   by recounting or re-weighing, not discovered afterwards.
-- FR-9.4 ❓ The mechanism of pairing the two records — separate ล้ง tenant
-  account, a guest/join-by-code session, live shared session, or an offline
-  exchange (QR/export) after the fact — is a major architecture decision
-  and is Open question 2. Offline-first (NFR-1) means it cannot depend on
-  both devices being online at the same time.
+- FR-9.4 **The ล้ง is a tenant in their own right** (decided 2026-08-03).
+  The buyer has their own account and their own records across every farm
+  they buy from — they are not a guest on the owner's sale. Both sides own
+  their copy of the sale independently, which is what makes the
+  cross-check meaningful.
+- FR-9.5 The two independent records are **paired** to a common sale so
+  they can be compared. ❓ How the pairing is established — scanning a code
+  at the start of the sale, buyer/farm identifiers agreed up front, or
+  matching after the fact — is an architecture decision.
+- FR-9.6 **The at-the-sale comparison still needs a transport.** Two
+  separate tenants, both offline, cannot compare through the backend at
+  the moment it matters (FR-9.3). Either the devices exchange directly
+  (QR/local), or the comparison degrades to post-sync — which weakens
+  FR-9.3 from "resolve at the scale" to "discover later". ❓ This tension
+  is Open question 2b and needs resolving before the sync design is
+  settled; it is the one place where the tenant-account model and the
+  offline-first requirement pull against each other.
 
 ### FR-10 — Records and history
 
@@ -320,6 +362,12 @@ voice — not the screen — carries the moment-to-moment state.
 
 - FR-11.7 **Speech must work fully offline** (NFR-1). No sale-critical
   announcement may depend on a network call to a cloud speech service.
+  Where the audio comes from — bundled recordings or the device's own Thai
+  text-to-speech — is **deliberately undecided**: the prototype carries
+  both and the choice is made from how they actually sound at a scale
+  (decided 2026-08-03). Both satisfy the offline constraint; they differ
+  in consistency, download size, and whether a given phone can speak Thai
+  at all.
 - FR-11.8 The voice must be **clear and natural in Thai, including correct
   number pronunciation** — Thai numerals are irregular in compounds
   (ยี่สิบเอ็ด, not สองสิบหนึ่ง), and a wrong-sounding count destroys the
@@ -419,7 +467,8 @@ voice — not the screen — carries the moment-to-moment state.
 - Production/agronomy tracking (tapping records, yield, inputs).
 - Buyer marketplace or price discovery across buyers.
 - Multi-currency; THB only.
-- ❓ Rubber grades / DRC-based pricing — see Open question 3.
+- Products other than ยางก้อนถ้วย (ยางแผ่น, น้ำยางสด, เศษยาง) — v1 covers
+  cup lump only, in both pricing modes (FR-2.5).
 
 ## Success criteria
 
@@ -457,6 +506,27 @@ learning, exempt from the full story/TDD ceremony — but nothing learned
 from them reaches production without going back through the normal loop
 in `docs/process.md`.
 
+## Decided
+
+Recorded here so the reasoning is not lost once the questions disappear.
+
+- **2026-08-03 — The ล้ง is a full tenant, not a guest** (FR-9.4). The
+  buyer keeps their own records across every farm they buy from. Trade-off
+  accepted: two independent tenants both offline cannot compare through
+  the backend at the moment it matters — see open question 2 below, which
+  this decision creates rather than closes.
+- **2026-08-03 — ยางก้อนถ้วย, in both pricing modes** (FR-2.5). Straight
+  ฿/kg *and* %DRC / grade deduction are both supported and chosen per
+  sale. Other products are out of scope for v1.
+- **2026-08-03 — Split basis is per-contract** (FR-8.4). Gross or
+  post-adjustment is a recorded property of each worker contract; there is
+  no default, because guessing wrong changes the worker's pay.
+- **2026-08-03 — Voice sourcing is deferred to the prototype** (FR-11.7).
+  Bundled recordings and device Thai TTS both get built and tried at a
+  real scale before one is chosen.
+- **2026-08-03 — "ต่อไปค่ะ" is optional** (FR-11.5), which removed the
+  two-tap gate and reopened the anti-mistap question below.
+
 ## Open questions
 
 These block "PRD agreed"; each materially changes the design or the build.
@@ -469,41 +539,33 @@ rather than by decision up front.
    count is attributed to exactly one pile in one zone (needed for the
    split in FR-8). Is that right, or is a "sale" strictly per zone with a
    higher-level grouping above it?
-2. **How the ล้ง uses the app.** Own tenant account, guest access to the
-   owner's sale via a code, a live shared session, or an after-the-fact
-   record exchange (QR/file)? This drives the sync design, the security
-   model, and the SaaS shape (does the buyer become a paying tenant too?).
-   It must work when neither device has signal.
-3. **Rubber product and pricing basis.** Which product is being sold —
-   ยางก้อนถ้วย (cup lump), ยางแผ่น (sheet), เศษยาง? And is the agreed price
-   a straight ฿/kg on net weight, or does it involve a %DRC / grade
-   deduction? The counter and settlement maths are simple in the first
-   case and materially different in the second.
-4. **Counter screen error-prevention.** [UX] Still open, and now the sharpest
-   UX question in the product. With "ต่อไปค่ะ" optional (FR-11.5) there is
-   one tap per basket and nothing structurally preventing a stray tap from
-   booking a basket that was never weighed. Candidates: minimum interval
-   between accepted counts, confirmation on implausibly fast repeats, a
-   tap target designed against accidental brushes, or accepting the risk
-   and relying on prominent undo plus the spoken count as after-the-fact
-   detection. **To be resolved by testing variants, not chosen on paper.**
-5. **Split basis.** Does the 60/40 or 50/50 apply to gross value or to the
-   final amount after bargained adjustments (FR-8.4)? And is the split
-   configured per zone, per worker contract, or per sale (FR-1.4)?
+2. **How the two tenants compare their records at the sale** (FR-9.6).
+   Now that the ล้ง is a separate tenant, comparison through the backend
+   needs both sides online — which is exactly what a field sale does not
+   have. Either the devices exchange directly (QR scan, local transport),
+   or the cross-check slips from "resolve at the scale" to "discover after
+   sync". This is the biggest remaining architecture question.
+3. **How the two records are paired** (FR-9.5) — scan a code at the start,
+   agreed identifiers up front, or matched after the fact?
+4. **Counter screen error-prevention.** [UX] The sharpest UX question in
+   the product. With "ต่อไปค่ะ" optional (FR-11.5) there is one tap per
+   basket and nothing structurally preventing a stray tap from booking a
+   basket that was never weighed. Candidates: minimum interval between
+   accepted counts, confirmation on implausibly fast repeats, a tap target
+   designed against accidental brushes, or accepting the risk and relying
+   on prominent undo plus the spoken count as after-the-fact detection.
+   **To be resolved by testing variants, not chosen on paper.**
+5. **%DRC applied to weight or to price** (FR-2.8) — same arithmetic,
+   different derivation on screen; it should read the way you actually
+   negotiate.
 6. **Worker lead as a user.** Does the worker lead log into the app (see
    their share, confirm counts), or is their name simply recorded on the
    sale?
 7. **Reporting scope for v1.** Is per-zone / per-worker history and
    reporting (FR-10.3) in the first release, or is v1 strictly "run and
    settle one sale correctly"?
-8. **The voice itself (FR-11).** The "ค่ะ" in "พร้อมค่ะ" / "ต่อไปค่ะ"
-   implies a female voice — confirmed? And do you want a **bundled
-   recorded voice** (consistent, guaranteed-clear, same on every device,
-   but a fixed vocabulary and app download size) or the **device's own
-   Thai text-to-speech** (says anything, no bundle, but quality varies by
-   phone and some devices ship no Thai voice at all)? This is the single
-   biggest decision in the feature and it is worth hearing both before you
-   choose.
+8. **Voice persona.** The "ค่ะ" in "พร้อมค่ะ" / "ต่อไปค่ะ" implies a
+   female voice — confirmed?
 9. **What the read-back says (FR-11.1).** [UX] Which fields should be read
    aloud on Ready — is farm/zone/pile plus tare, standard weight and
    expected reading the right set, too much to listen to every pile, or
@@ -512,6 +574,8 @@ rather than by decision up front.
     (two voices in the yard, possibly out of step), or does exactly one
     device speak while the other stays silent and cross-checks?
 11. **Announcements in the audit trail** — FR-12.1 above.
+12. **Different splits across zones in one sale** (FR-8.6) — assumed to
+    apply per zone against that zone's contribution; confirm.
 
 ---
 
