@@ -185,11 +185,14 @@ prone**.
   events with a reason, never as a silent decrement. The audit trail must
   make "counted 41, corrected to 40" visible.
 - FR-5.5 **Accidental-tap resistance**: the design must make double-counts
-  and stray taps unlikely. The primary safeguard is the voice
-  call-and-response loop (FR-11): recording a basket and requesting the
-  next one are **two separate actions**, so a stray double-tap on the
-  counter cannot book two baskets. Tap target placement and confirmation
-  for large jumps are secondary safeguards.
+  and stray taps unlikely. Since the next-basket cue is optional (FR-11.5),
+  counting is **one tap per basket** and the safeguard has to live on the
+  count tap itself — candidates are tap target placement, a minimum
+  interval between accepted counts, and confirmation for implausibly fast
+  repeats. The spoken count (FR-11.3) helps catch an error *after* it
+  happens, since a wrong number is heard by everyone at the scale, but it
+  does not prevent one. ❓ Open question 4 — to be settled by testing
+  variants, not by picking on paper.
 - FR-5.6 **Off-standard baskets**: a basket that does not hit the standard
   net weight (short-filled last basket of a pile, overweight basket) is
   recorded with its **actual scale reading**, and the app derives its net
@@ -301,16 +304,17 @@ voice — not the screen — carries the moment-to-moment state.
 - FR-11.3 On each recorded basket the app **speaks the count in Thai** —
   "หนึ่ง", "สอง", "สาม" — so the number is heard by everyone present, not
   just seen by the person holding the phone.
-- FR-11.4 After speaking the count the app **waits**. It does not accept
-  the next basket until the operator gives the next-basket signal. The
-  waiting state must be unmistakable on screen as well as by the absence of
-  the voice.
-- FR-11.5 A **"ต่อไปค่ะ" button** announces aloud that the next basket
-  should be weighed, and returns the counter to the ready-to-count state.
-- FR-11.6 The result is a fixed, auditable cadence per basket: *basket on
-  scale → all parties see the expected reading → tap count → app speaks the
-  number → tap next → app says "ต่อไปค่ะ"*. The rhythm is the error
-  control (FR-5.5).
+- FR-11.4 After speaking the count the app is **immediately ready for the
+  next basket**. It does not gate the next count behind any further action.
+- FR-11.5 **"ต่อไปค่ะ" is an optional action.** A button announces aloud
+  that the next basket should be weighed, for when the operator wants to
+  cue the scale team explicitly. Counting never depends on it: the
+  operator may ignore it entirely and simply keep counting.
+- FR-11.6 The cadence per basket is therefore: *basket on scale → all
+  parties see the expected reading → tap count → app speaks the number*,
+  with an optional "ต่อไปค่ะ" cue whenever the operator wants one. Because
+  the flow is a single tap per basket, the **count tap needs its own
+  accidental-tap protection** — the rhythm does not provide it (FR-5.5).
 
 **Quality and reliability:**
 
@@ -431,9 +435,33 @@ voice — not the screen — carries the moment-to-moment state.
    record, at least once.
 6. A second tenant (another farm) can be onboarded without code changes.
 
+## UX decisions are settled by testing, not by this document
+
+The owner's stated preference: **try several UX variants before committing
+to one.** That applies most to the counter screen (FR-5) and the voice
+loop (FR-11) — the surfaces used at speed, outdoors, by people who cannot
+afford to think about the app.
+
+So this PRD deliberately **specifies what the counter must achieve and
+leaves how it looks and feels open**. Requirements like "one tap per
+basket", "net weight excludes tare", and "corrections never rewrite
+history" are fixed. Layout, tap-target design, the exact anti-mistap
+safeguard, and the read-back wording are not — those are answered by
+building variants and using them against a real scale.
+
+Practically, this means the counter prototype comes **before** the
+architecture is finalised and before the counter's stories are written:
+what we learn from handling it in the field may change the requirements
+above, which is the point. Prototype variants are throwaway code for
+learning, exempt from the full story/TDD ceremony — but nothing learned
+from them reaches production without going back through the normal loop
+in `docs/process.md`.
+
 ## Open questions
 
 These block "PRD agreed"; each materially changes the design or the build.
+Questions tagged **[UX]** are expected to be answered by prototype testing
+rather than by decision up front.
 
 1. **Sale scope vs. zone scope.** The brief says selling is *per zone*, and
    also that one sale can cover *multiple farms, zones and piles*. The PRD
@@ -451,12 +479,14 @@ These block "PRD agreed"; each materially changes the design or the build.
    a straight ฿/kg on net weight, or does it involve a %DRC / grade
    deduction? The counter and settlement maths are simple in the first
    case and materially different in the second.
-4. **Counter screen error-prevention.** _Largely answered_ by the voice
-   call-and-response loop (FR-11): count and next-basket are separate
-   actions, which is itself the safeguard. Remaining sub-question — should
-   the count tap *also* require confirmation when the operator taps it
-   twice in an implausibly short interval, or is the two-step rhythm
-   enough on its own?
+4. **Counter screen error-prevention.** [UX] Still open, and now the sharpest
+   UX question in the product. With "ต่อไปค่ะ" optional (FR-11.5) there is
+   one tap per basket and nothing structurally preventing a stray tap from
+   booking a basket that was never weighed. Candidates: minimum interval
+   between accepted counts, confirmation on implausibly fast repeats, a
+   tap target designed against accidental brushes, or accepting the risk
+   and relying on prominent undo plus the spoken count as after-the-fact
+   detection. **To be resolved by testing variants, not chosen on paper.**
 5. **Split basis.** Does the 60/40 or 50/50 apply to gross value or to the
    final amount after bargained adjustments (FR-8.4)? And is the split
    configured per zone, per worker contract, or per sale (FR-1.4)?
@@ -474,7 +504,7 @@ These block "PRD agreed"; each materially changes the design or the build.
    phone and some devices ship no Thai voice at all)? This is the single
    biggest decision in the feature and it is worth hearing both before you
    choose.
-9. **What the read-back says (FR-11.1).** Which fields should be read
+9. **What the read-back says (FR-11.1).** [UX] Which fields should be read
    aloud on Ready — is farm/zone/pile plus tare, standard weight and
    expected reading the right set, too much to listen to every pile, or
    missing something the parties need to hear?
