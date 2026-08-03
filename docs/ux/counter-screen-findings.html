@@ -1,0 +1,711 @@
+<title>Counter Screen — UX Findings</title>
+
+<div class="rule-strip" aria-hidden="true"></div>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">mon-farm · docs/ux · findings for owner review</p>
+    <h1>The counting screen has room for<br><span class="hl">one</span> number.</h1>
+    <p class="standfirst">
+      The PRD asks the counter to be fast, public, and hard to get wrong. Read
+      FR&#8209;5, FR&#8209;9, FR&#8209;11 and FR&#8209;12 against each other and they compete for
+      the same three resources: screen area, the operator's attention, and the
+      one tap per basket. Here is where they collide, and what it costs.
+    </p>
+    <dl class="tally">
+      <div><dt>findings</dt><dd>18</dd></div>
+      <div><dt>gaps needing your call</dt><dd class="is-index">7</dd></div>
+      <div><dt>settled by testing</dt><dd>7</dd></div>
+      <div><dt>consequences</dt><dd>4</dd></div>
+    </dl>
+  </header>
+
+  <section class="sec">
+    <p class="kicker">The binding constraint</p>
+    <h2>A phone cannot reach the size FR&#8209;9.7 asks for</h2>
+    <div class="prose">
+      <p>
+        FR&#8209;9.1 requires the ล้ง to read the count from about 10&nbsp;metres.
+        The signage rule of thumb is roughly 25&nbsp;mm of character height per
+        3&nbsp;m for <em>comfortable</em> reading — about <strong>83&nbsp;mm at
+        10&nbsp;m</strong>. Bare legibility threshold is near distance/250, about
+        <strong>40&nbsp;mm</strong>. So the PRD's own 50–80&nbsp;mm range spans
+        "marginal" to "comfortable", which matters when choosing where in it to land.
+      </p>
+      <p>
+        In landscape the ceiling is the screen's short dimension, less margins.
+        Work it through and the phone tops out below the comfortable figure —
+        on every phone.
+      </p>
+    </div>
+
+    <figure class="chart">
+      <div class="chart-head">
+        <span class="mono-label">usable numeral height, millimetres</span>
+      </div>
+      <div class="bars">
+        <div class="bar-row" style="--pct:42">
+          <span class="bar-name">6.1&Prime; phone</span>
+          <div class="bar-track"><div class="bar-fill is-short"></div></div>
+          <span class="bar-val">59</span>
+        </div>
+        <div class="bar-row" style="--pct:46">
+          <span class="bar-name">6.7&Prime; phone</span>
+          <div class="bar-track"><div class="bar-fill is-short"></div></div>
+          <span class="bar-val">65</span>
+        </div>
+        <div class="bar-row" style="--pct:79">
+          <span class="bar-name">8.7&Prime; tablet</span>
+          <div class="bar-track"><div class="bar-fill is-clear"></div></div>
+          <span class="bar-val">110</span>
+        </div>
+        <div class="bar-row" style="--pct:100">
+          <span class="bar-name">11&Prime; tablet</span>
+          <div class="bar-track"><div class="bar-fill is-clear"></div></div>
+          <span class="bar-val">140</span>
+        </div>
+        <div class="axis">
+          <span class="tick" style="--pct:28.5"><i></i><b>40</b><small>threshold</small></span>
+          <span class="tick is-index" style="--pct:59"><i></i><b>83</b><small>comfortable at 10&nbsp;m</small></span>
+        </div>
+      </div>
+      <figcaption>
+        Every phone lands between the two markers: legible, never comfortable.
+        Both tablets clear the comfortable line with headroom.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="sec">
+    <p class="kicker">See it at true size</p>
+    <h2>Then walk backwards until it fails</h2>
+    <div class="prose">
+      <p>
+        Screens lie about millimetres, so calibrate first: drag until the bar
+        below matches a bank card's long edge — every card is exactly
+        85.6&nbsp;mm. Then pick a device, stand back, and find the distance
+        where you stop being sure.
+      </p>
+    </div>
+
+    <div class="demo">
+      <div class="calib">
+        <label class="mono-label" for="cal">calibrate — match a bank card, 85.6 mm</label>
+        <div class="card-strip"><div class="card-bar" id="cardBar"><span>85.6 mm</span></div></div>
+        <input type="range" id="cal" min="2.4" max="6.4" step="0.01" value="3.7795"
+               aria-label="Calibration: pixels per millimetre">
+      </div>
+
+      <div class="controls">
+        <div class="ctl-group" role="group" aria-label="Device">
+          <span class="mono-label">device</span>
+          <div class="chips" id="devChips">
+            <button type="button" class="chip is-on" data-mm="59">6.1&Prime; phone · 59 mm</button>
+            <button type="button" class="chip" data-mm="65">6.7&Prime; phone · 65 mm</button>
+            <button type="button" class="chip" data-mm="110">8.7&Prime; tablet · 110 mm</button>
+            <button type="button" class="chip" data-mm="140">11&Prime; tablet · 140 mm</button>
+          </div>
+        </div>
+        <div class="ctl-group" role="group" aria-label="Count">
+          <span class="mono-label">count</span>
+          <div class="chips" id="numChips">
+            <button type="button" class="chip" data-n="7">7</button>
+            <button type="button" class="chip is-on" data-n="42">42</button>
+            <button type="button" class="chip" data-n="187">187</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-numeral" id="numeral">42</div>
+        <span class="stage-note mono-label" id="stageNote">59 mm — 6.1&Prime; phone ceiling</span>
+      </div>
+    </div>
+    <p class="aside">
+      Rendered at nominal CSS millimetres and adjusted by your calibration;
+      digit height is approximated at 0.72 of the type size. Treat it as
+      indicative. The real test is on paper, in your yard, in your sun —
+      see the sequence at the end.
+    </p>
+  </section>
+
+  <section class="sec">
+    <p class="kicker">Finding F-1 · the fix that resolves F-1 to F-4</p>
+    <h2>Three registers, and every element belongs to exactly one</h2>
+    <div class="prose">
+      <p>
+        FR&#8209;5.1, FR&#8209;5.2 and FR&#8209;5.3 each ask to be prominent. At
+        59&nbsp;mm the numeral claims the full height and about 100&nbsp;mm of
+        the phone's 143&nbsp;mm width — leaving a <strong>35&nbsp;mm
+        column</strong> for everything else. That is a strip, not a panel. The
+        way out is that anything the other party needs but cannot read at
+        10&nbsp;m can be <em>heard</em> instead of shown. FR&#8209;11 already built
+        that channel.
+      </p>
+    </div>
+
+    <div class="registers">
+      <figure class="device-fig">
+        <div class="device">
+          <div class="dev-public"><span>42</span></div>
+          <div class="dev-strip">
+            <i class="strip-line"></i><i class="strip-line short"></i>
+            <i class="strip-line"></i><i class="strip-line short"></i>
+          </div>
+        </div>
+        <figcaption><span class="mono-label">143 mm × 65 mm · landscape</span></figcaption>
+      </figure>
+
+      <ol class="reg-list">
+        <li>
+          <p class="reg-name">Public</p>
+          <p class="reg-who">the ล้ง, the worker lead, anyone standing there · ~10 m</p>
+          <p class="reg-what">The basket count. Nothing else.</p>
+        </li>
+        <li>
+          <p class="reg-name">Operator</p>
+          <p class="reg-who">the person tapping · ~0.4 m, when they can look</p>
+          <p class="reg-what">Pile, expected reading, running weight, sale total, controls, state.</p>
+        </li>
+        <li>
+          <p class="reg-name">Announced</p>
+          <p class="reg-who">everyone present · audible</p>
+          <p class="reg-what">Read-back, พร้อมค่ะ, each count, corrections, pile totals.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec">
+    <p class="kicker">Finding F-8 · PRD open question 1</p>
+    <h2>Five variants for the one tap per basket</h2>
+    <div class="prose">
+      <p>
+        Errors made <em>in rhythm</em> are caught socially within a basket or
+        two — the spoken count stops matching what the people at the scale are
+        tracking. Errors made <em>out of rhythm</em> — a pocket tap, a brush
+        while repositioning — are caught by nobody. Spend the prevention budget
+        there, and leave in-rhythm counting frictionless.
+      </p>
+    </div>
+
+    <div class="table-wrap">
+      <table class="variants">
+        <thead>
+          <tr><th>Variant</th><th>Why it might win</th><th>What it costs</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="vid">V1</span> Minimum interval lockout</td>
+            <td>Trivial; kills the double-tap, the most common mistap</td>
+            <td>Rejects genuinely fast piles; the threshold is a guess until you have interval data</td>
+          </tr>
+          <tr>
+            <td><span class="vid">V2</span> Count now, prominent undo on fast repeats</td>
+            <td>Never blocks a real basket; leans on the spoken count as detector</td>
+            <td>Needs the operator to act during a window while their hands are busy</td>
+          </tr>
+          <tr>
+            <td><span class="vid">V3</span> Tap-target geometry</td>
+            <td>Dead margins stop edge brushes from the grip</td>
+            <td>The margin competes with the 35 mm the operator strip already needs</td>
+          </tr>
+          <tr>
+            <td><span class="vid">V4</span> Swipe to count</td>
+            <td>Brush-resistant; no precise aim; survives gloves</td>
+            <td>Slower per basket; untested on a wet or dirty screen</td>
+          </tr>
+          <tr class="is-pick">
+            <td><span class="vid">V5</span> Hardware volume key</td>
+            <td>Eyes-free and tactile — and it frees the <em>whole</em> screen for the numeral, fixing the layout squeeze and the tap problem at once</td>
+            <td>Unavailable to a web app or PWA. Needs a native wrapper</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="aside">
+      <strong>F&#8209;9 — this reaches past UX.</strong> If V5 wins, pure&#8209;PWA leaves the
+      option set. NFR&#8209;5 has not settled packaging and
+      <code>docs/architecture.md</code> is unwritten, so try V5 before that
+      decision hardens rather than after.
+    </p>
+  </section>
+
+  <section class="sec">
+    <p class="kicker">The seven gaps</p>
+    <h2>What the PRD does not currently answer</h2>
+    <ul class="gaps">
+      <li><span class="fid">F-1</span><p>Three requirements claim prominence on a surface with room for one number.</p></li>
+      <li><span class="fid">F-4</span><p>At pile change the public number falls <b>87 → 1</b> with nothing on screen to explain it. From 10 m that reads as data loss.</p></li>
+      <li><span class="fid">F-7</span><p>A silently rejected tap turns a phantom count into a missed count — the more expensive error. Rejection must be as loud as acceptance, and different from it.</p></li>
+      <li><span class="fid">F-9</span><p>The best-looking tap variant is unavailable on the packaging the architecture may otherwise pick.</p></li>
+      <li class="is-hole"><span class="fid">F-11</span><p>Corrections are timestamped but never <em>spoken</em>. Undo basket 42 and the room has heard "สี่สิบสอง" while the record says 41 — then the next count announces "สี่สิบสอง" again, which sounds like a double-count. The transparency model fails at the exact moment a suspicious counterparty is paying attention.</p></li>
+      <li class="is-hole"><span class="fid">F-14</span><p>The app is blind to the scale. A basket that is off-standard and <em>unnoticed</em> is recorded as standard — and the settlement then asserts, with a full audit trail, a weight nobody measured. Make <b>ไม่ตรง</b> a sibling of the count button, not a mode in a menu.</p></li>
+      <li><span class="fid">F-16</span><p>Five states need non-colour encoding and the strip is 35 mm wide. The clock flag and sync status have not earned a place on the counting screen.</p></li>
+    </ul>
+    <p class="aside">
+      F&#8209;11 and F&#8209;14 look like genuine holes in the transparency model rather
+      than matters of taste. They are the two worth deciding before epics are
+      sharded.
+    </p>
+  </section>
+
+  <section class="sec sec-last">
+    <p class="kicker">Suggested sequence</p>
+    <h2>One of these needs a printer, not a prototype</h2>
+    <ol class="steps">
+      <li>
+        <p class="step-when">this week · no code</p>
+        <p class="step-what">Print <b>1</b>, <b>42</b>, <b>187</b> at 40, 50, 60, 80 and 110 mm. Take
+        them to your yard, in the sun, and have your ล้ง read them from where
+        they actually stand. That settles whether the counting device is a
+        phone or a tablet — which governs the tap work and feeds the packaging
+        decision.</p>
+      </li>
+      <li>
+        <p class="step-when">then</p>
+        <p class="step-what">Build the five variants on whatever device step 1 selected. Log
+        <code>(sequence, timestamp, accepted/rejected, variant)</code> in all of
+        them, and give every one of them loud rejection feedback.</p>
+      </li>
+      <li>
+        <p class="step-when">at a real sale</p>
+        <p class="step-what">Set the interval threshold from the histogram of what the weighing
+        rhythm actually was — not from a number chosen beforehand.</p>
+      </li>
+      <li>
+        <p class="step-when">at least once</p>
+        <p class="step-what">Run it with the volume off. If the counter is trustworthy silent,
+        it is comfortable with sound. The reverse does not hold.</p>
+      </li>
+    </ol>
+  </section>
+
+  <footer class="foot">
+    <p>Analysis of <code>docs/prd.md</code> v0.4 — not an amendment to it. Full
+    write-up in <code>docs/ux/counter-screen-findings.md</code>.</p>
+  </footer>
+</div>
+
+<style>
+  :root {
+    --ground:      #F0EFEA;
+    --ground-sunk: #E4E3DC;
+    --ink:         #16181A;
+    --ink-soft:    #5C6169;
+    --rule:        #C9C7BE;
+    --rule-faint:  #DBD9D1;
+    --index:       #B93A2C;
+    --clear:       #2F6B4F;
+    --card:        #FBFAF6;
+
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+    --mmpx: 3.7795;
+    --measure: 66ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:      #15171A;
+      --ground-sunk: #1D2024;
+      --ink:         #E9E8E2;
+      --ink-soft:    #9AA1AA;
+      --rule:        #363B42;
+      --rule-faint:  #262A30;
+      --index:       #E4695A;
+      --clear:       #6BB994;
+      --card:        #1A1D21;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:      #15171A;
+    --ground-sunk: #1D2024;
+    --ink:         #E9E8E2;
+    --ink-soft:    #9AA1AA;
+    --rule:        #363B42;
+    --rule-faint:  #262A30;
+    --index:       #E4695A;
+    --clear:       #6BB994;
+    --card:        #1A1D21;
+  }
+  :root[data-theme="light"] {
+    --ground:      #F0EFEA;
+    --ground-sunk: #E4E3DC;
+    --ink:         #16181A;
+    --ink-soft:    #5C6169;
+    --rule:        #C9C7BE;
+    --rule-faint:  #DBD9D1;
+    --index:       #B93A2C;
+    --clear:       #2F6B4F;
+    --card:        #FBFAF6;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .rule-strip {
+    position: fixed; inset: 0 auto 0 0; width: 14px;
+    background: repeating-linear-gradient(
+      to bottom, var(--rule) 0 1px, transparent 1px 8px);
+    opacity: .55; pointer-events: none;
+  }
+  @media (max-width: 720px) { .rule-strip { display: none; } }
+
+  .page {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: clamp(2.5rem, 7vw, 5.5rem) clamp(1.1rem, 5vw, 3rem) 4rem;
+    display: flex; flex-direction: column;
+    gap: clamp(3.2rem, 7vw, 5rem);
+  }
+
+  .mono-label {
+    font-family: var(--mono);
+    font-size: .68rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .eyebrow, .kicker {
+    font-family: var(--mono);
+    font-size: .69rem;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+  .kicker { color: var(--index); }
+
+  .masthead { display: flex; flex-direction: column; gap: 1.1rem; }
+  .masthead h1 {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: clamp(2.1rem, 6.4vw, 3.7rem);
+    line-height: 1.02;
+    letter-spacing: -.033em;
+    text-wrap: balance;
+    margin: .2rem 0 0;
+  }
+  .hl {
+    color: var(--index);
+    border-bottom: .1em solid currentColor;
+    padding-bottom: .02em;
+  }
+  .standfirst {
+    max-width: var(--measure);
+    font-size: 1.09rem;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  .tally {
+    display: flex; flex-wrap: wrap; gap: 0 2.6rem;
+    margin: 1rem 0 0; padding-top: 1.2rem;
+    border-top: 1px solid var(--rule);
+  }
+  .tally div { display: flex; flex-direction: column-reverse; gap: .1rem; }
+  .tally dt {
+    font-family: var(--mono); font-size: .66rem;
+    letter-spacing: .09em; text-transform: uppercase; color: var(--ink-soft);
+  }
+  .tally dd {
+    margin: 0; font-family: var(--sans); font-weight: 750;
+    font-size: 1.85rem; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tally .is-index { color: var(--index); }
+
+  .sec { display: flex; flex-direction: column; gap: 1.15rem; }
+  .sec h2 {
+    font-family: var(--sans); font-weight: 730;
+    font-size: clamp(1.4rem, 3.3vw, 1.95rem);
+    line-height: 1.16; letter-spacing: -.021em;
+    text-wrap: balance; margin: 0; max-width: 22ch;
+  }
+  .prose { max-width: var(--measure); display: flex; flex-direction: column; gap: .85rem; }
+  .prose p { margin: 0; }
+  .prose strong { font-weight: 700; }
+
+  .aside {
+    max-width: var(--measure);
+    margin: .3rem 0 0; padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+    font-size: .93rem; color: var(--ink-soft);
+  }
+  code {
+    font-family: var(--mono); font-size: .86em;
+    background: var(--ground-sunk); padding: .12em .34em; border-radius: 2px;
+  }
+
+  /* ---- ceiling chart ---- */
+  .chart {
+    margin: .6rem 0 0; padding: 1.4rem 1.3rem 1.1rem;
+    background: var(--card); border: 1px solid var(--rule-faint);
+  }
+  .chart-head { margin-bottom: 1.1rem; }
+  .bars { display: flex; flex-direction: column; gap: .6rem; }
+  .bar-row {
+    display: grid; grid-template-columns: 8.5rem 1fr 2.4rem;
+    align-items: center; gap: .8rem;
+  }
+  .bar-name { font-family: var(--sans); font-size: .87rem; }
+  .bar-track { height: 15px; background: var(--ground-sunk); position: relative; }
+  .bar-fill {
+    position: absolute; inset: 0 auto 0 0;
+    width: calc(var(--pct) * 1%);
+  }
+  .is-short { background: var(--index); opacity: .82; }
+  .is-clear { background: var(--clear); opacity: .82; }
+  .bar-val {
+    font-family: var(--mono); font-size: .82rem;
+    font-variant-numeric: tabular-nums; text-align: right;
+  }
+  .axis {
+    position: relative; height: 3.1rem;
+    margin: .35rem 0 0 9.3rem; margin-right: 3.2rem;
+    border-top: 1px solid var(--rule);
+  }
+  .tick { position: absolute; top: 0; left: calc(var(--pct) * 1%); }
+  .tick i {
+    position: absolute; top: -1.15rem; left: 0;
+    width: 1px; height: 1.15rem; background: var(--rule);
+  }
+  .tick.is-index i { background: var(--index); top: -6.2rem; height: 6.2rem; }
+  .tick b, .tick small {
+    display: block; font-family: var(--mono); padding-left: .35rem;
+    white-space: nowrap;
+  }
+  .tick b { font-size: .8rem; font-weight: 500; padding-top: .2rem; }
+  .tick small { font-size: .63rem; letter-spacing: .06em;
+                text-transform: uppercase; color: var(--ink-soft); }
+  .tick.is-index b { color: var(--index); }
+  figcaption {
+    margin-top: 1.1rem; padding-top: .85rem;
+    border-top: 1px solid var(--rule-faint);
+    font-size: .89rem; color: var(--ink-soft); max-width: 60ch;
+  }
+
+  /* ---- true-size demo ---- */
+  .demo {
+    display: flex; flex-direction: column; gap: 1.4rem;
+    padding: 1.4rem 1.3rem 1.5rem; margin-top: .6rem;
+    background: var(--card); border: 1px solid var(--rule-faint);
+  }
+  .calib { display: flex; flex-direction: column; gap: .55rem; }
+  .card-strip { overflow-x: auto; padding-bottom: 2px; }
+  .card-bar {
+    height: 34px; width: calc(var(--mmpx) * 85.6px);
+    min-width: 60px;
+    border: 1.5px solid var(--ink); border-radius: 4px;
+    background: var(--ground-sunk);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card-bar span {
+    font-family: var(--mono); font-size: .68rem;
+    letter-spacing: .08em; color: var(--ink-soft);
+  }
+  input[type="range"] { width: min(100%, 330px); accent-color: var(--index); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 1.5rem 2.6rem; }
+  .ctl-group { display: flex; flex-direction: column; gap: .5rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .chip {
+    font-family: var(--mono); font-size: .74rem;
+    padding: .42rem .7rem; cursor: pointer;
+    color: var(--ink-soft); background: transparent;
+    border: 1px solid var(--rule); border-radius: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip:hover { border-color: var(--ink-soft); color: var(--ink); }
+  .chip.is-on {
+    background: var(--ink); color: var(--ground);
+    border-color: var(--ink);
+  }
+  .chip:focus-visible, input[type="range"]:focus-visible {
+    outline: 2px solid var(--index); outline-offset: 2px;
+  }
+
+  .stage {
+    background: #fff; border: 1px solid var(--rule);
+    padding: 1.2rem; overflow: auto;
+    display: flex; flex-direction: column; align-items: center; gap: .9rem;
+  }
+  .stage-numeral {
+    color: #000;
+    font-family: var(--sans); font-weight: 800;
+    letter-spacing: -.03em; line-height: 1;
+    font-variant-numeric: tabular-nums;
+    font-size: calc(var(--mmpx) * var(--digit, 59) / 0.72 * 1px);
+  }
+  .stage-note { color: #6A6A66; }
+
+  /* ---- registers ---- */
+  .registers {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: 2rem; align-items: start; margin-top: .5rem;
+  }
+  @media (max-width: 760px) { .registers { grid-template-columns: 1fr; } }
+  .device-fig { margin: 0; }
+  .device {
+    aspect-ratio: 143 / 65;
+    border: 2px solid var(--ink); border-radius: 7px;
+    padding: 5px; display: flex; gap: 5px; background: var(--card);
+  }
+  .dev-public {
+    flex: 0 0 70%;
+    border: 1px dashed var(--index);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dev-public span {
+    font-family: var(--sans); font-weight: 800;
+    font-size: clamp(2.6rem, 12vw, 4.4rem); line-height: 1;
+    letter-spacing: -.04em;
+  }
+  .dev-strip {
+    flex: 1; border: 1px dashed var(--ink-soft);
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 7px; padding: 6px;
+  }
+  .strip-line { height: 3px; background: var(--rule); display: block; }
+  .strip-line.short { width: 58%; }
+
+  .reg-list {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column;
+  }
+  .reg-list li {
+    padding: .95rem 0; border-top: 1px solid var(--rule);
+    display: flex; flex-direction: column; gap: .18rem;
+  }
+  .reg-list li:first-child { border-top: 2px solid var(--index); }
+  .reg-name {
+    margin: 0; font-family: var(--sans); font-weight: 700; font-size: 1.02rem;
+  }
+  .reg-who {
+    margin: 0; font-family: var(--mono); font-size: .68rem;
+    letter-spacing: .05em; color: var(--ink-soft);
+  }
+  .reg-what { margin: .25rem 0 0; font-size: .95rem; }
+
+  /* ---- variants table ---- */
+  .table-wrap { overflow-x: auto; margin-top: .5rem; }
+  .variants { border-collapse: collapse; width: 100%; min-width: 620px; }
+  .variants th {
+    text-align: left; padding: 0 1rem .6rem 0;
+    border-bottom: 1.5px solid var(--ink);
+    font-family: var(--mono); font-size: .66rem;
+    letter-spacing: .1em; text-transform: uppercase;
+    font-weight: 500; color: var(--ink-soft);
+  }
+  .variants td {
+    padding: .95rem 1rem .95rem 0;
+    border-bottom: 1px solid var(--rule-faint);
+    font-size: .93rem; vertical-align: top;
+  }
+  .variants td:first-child { font-family: var(--sans); font-weight: 620; width: 30%; }
+  .variants tr.is-pick td { background: var(--card); }
+  .variants tr.is-pick td:first-child { box-shadow: inset 3px 0 0 var(--index); padding-left: .8rem; }
+  .vid {
+    display: inline-block; font-family: var(--mono); font-weight: 400;
+    font-size: .68rem; color: var(--index);
+    letter-spacing: .06em; margin-right: .45rem;
+  }
+
+  /* ---- gaps ---- */
+  .gaps { list-style: none; padding: 0; margin: .4rem 0 0;
+          display: flex; flex-direction: column; }
+  .gaps li {
+    display: grid; grid-template-columns: 3.4rem 1fr; gap: .9rem;
+    padding: 1rem 0; border-top: 1px solid var(--rule);
+    align-items: baseline;
+  }
+  .gaps li:last-child { border-bottom: 1px solid var(--rule); }
+  .gaps p { margin: 0; font-size: .96rem; max-width: 62ch; }
+  .fid {
+    font-family: var(--mono); font-size: .74rem;
+    letter-spacing: .06em; color: var(--ink-soft);
+  }
+  .gaps li.is-hole .fid { color: var(--index); font-weight: 700; }
+  .gaps li.is-hole { background: var(--card); }
+
+  /* ---- steps ---- */
+  .steps { list-style: none; padding: 0; margin: .4rem 0 0;
+           display: flex; flex-direction: column; gap: 0; }
+  .steps li {
+    display: grid; grid-template-columns: 9rem 1fr; gap: 1rem;
+    padding: 1.1rem 0; border-top: 1px solid var(--rule);
+  }
+  @media (max-width: 640px) {
+    .steps li, .gaps li { grid-template-columns: 1fr; gap: .35rem; }
+  }
+  .step-when {
+    margin: 0; font-family: var(--mono); font-size: .68rem;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--index);
+  }
+  .step-what { margin: 0; font-size: .96rem; max-width: 60ch; }
+
+  .foot {
+    padding-top: 1.6rem; border-top: 1px solid var(--rule);
+    font-size: .85rem; color: var(--ink-soft);
+  }
+  .foot p { margin: 0; max-width: var(--measure); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var cal = document.getElementById('cal');
+    var numeral = document.getElementById('numeral');
+    var note = document.getElementById('stageNote');
+    var devChips = document.getElementById('devChips');
+    var numChips = document.getElementById('numChips');
+
+    var state = { mm: 59, label: '6.1″ phone ceiling' };
+
+    function paint() {
+      numeral.style.setProperty('--digit', state.mm);
+      note.textContent = state.mm + ' mm — ' + state.label;
+    }
+
+    cal.addEventListener('input', function () {
+      root.style.setProperty('--mmpx', cal.value);
+    });
+
+    devChips.addEventListener('click', function (e) {
+      var btn = e.target.closest('.chip');
+      if (!btn) return;
+      devChips.querySelectorAll('.chip').forEach(function (c) {
+        c.classList.toggle('is-on', c === btn);
+      });
+      state.mm = Number(btn.dataset.mm);
+      state.label = btn.textContent.split('·')[0].trim() + ' ceiling';
+      paint();
+    });
+
+    numChips.addEventListener('click', function (e) {
+      var btn = e.target.closest('.chip');
+      if (!btn) return;
+      numChips.querySelectorAll('.chip').forEach(function (c) {
+        c.classList.toggle('is-on', c === btn);
+      });
+      numeral.textContent = btn.dataset.n;
+    });
+
+    paint();
+  })();
+</script>
