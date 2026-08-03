@@ -206,6 +206,30 @@ cannot be brushed.
 V5 is the one most worth prototyping early, because it is the only variant
 that improves the layout problem and the error problem at the same time.
 
+**Tested 2026-08-03 — V3 and V4 rejected by the owner.** Neither survived a
+hands-on trial: a discrete tap and a short swipe both still read as easy to
+trigger by accident, and neither gave the operator a way to see a count
+coming before it landed. The mechanism now on trial instead:
+
+- **V6 — Press-and-hold, 3.0 s, animated.** The operator holds; a ring
+  fills over three seconds so the count is visible while it's arming, not
+  just at the moment it lands. Releasing before the ring closes cancels the
+  count — logged as "released early", not as an error, since it is often
+  the operator changing their mind rather than a caught mistake. This makes
+  brush contact self-defeating: a stray touch essentially never sustains
+  three continuous seconds, so V3's dead-margin geometry stops being
+  necessary and the whole screen can be the target again.
+- **V5's lockout, sharpened.** The volume key remains the one exception to
+  hold-to-count — a single press still counts immediately, since a
+  deliberate physical-button press already carries more intent than a
+  touchscreen contact. But a second press within the same 3.0 s window is
+  now explicitly **blocked**, not merely debounced: it is rejected loudly,
+  with an on-screen message naming the reason ("blocked — pressed again
+  within 3 s"), so the operator understands why nothing happened instead of
+  assuming the button failed.
+
+See `docs/ux/counter-variant-simulator.html` for a working version of both.
+
 ### F-9 [GAP] The hardware-key variant depends on a packaging decision that has not been made
 
 Intercepting hardware volume keys is **not available to a web app or
@@ -287,6 +311,19 @@ entry rather than covering it, announce the entered figure aloud ("ใบ
 that *offers* the final-basket reading as a step — turning the most
 predictable exception into part of the path rather than an interruption to
 it.
+
+**Tested 2026-08-03 — a concrete shape for this.** The short-filled last
+basket gets its own action, always present beside the counter rather than
+behind a menu: **"Log short basket"** opens an inline stepper below the
+count, never over it, so the public number stays visible the whole time an
+operator is entering a reading. Confirming it does two things at once — it
+adds one to the pile's physical basket count, the same as a standard hold,
+and it contributes *its own* entered weight to the pile's running total in
+place of the standard net, so a short basket is counted like any other but
+never priced like one it wasn't. That running total — standard baskets at
+the agreed net, short baskets at their logged weight — is what rolls up and
+sums with the other piles at settlement (FR-6, FR-7.1). Prototyped in
+`docs/ux/counter-variant-simulator.html`.
 
 ### F-14 [GAP] The app is blind to the scale — this is the largest remaining money-accuracy gap, and it is not a technical one
 

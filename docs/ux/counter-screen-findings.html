@@ -19,6 +19,11 @@
       <div><dt>settled by testing</dt><dd>7</dd></div>
       <div><dt>consequences</dt><dd>4</dd></div>
     </dl>
+    <p class="update-note">
+      Tested 2026&#8209;08&#8209;03 — V3 and V4 (row 1, row 2 below) were rejected
+      hands-on. Press-and-hold now stands in their place, and the volume-key
+      lockout got sharper: see <code>counter-variant-simulator.html</code>.
+    </p>
   </header>
 
   <section class="sec">
@@ -425,6 +430,11 @@
     font-variant-numeric: tabular-nums;
   }
   .tally .is-index { color: var(--index); }
+  .update-note {
+    margin: .3rem 0 0; padding: .7rem .9rem; max-width: var(--measure);
+    background: var(--card); border-left: 2px solid var(--index);
+    font-size: .88rem; color: var(--ink-soft);
+  }
 
   .sec { display: flex; flex-direction: column; gap: 1.15rem; }
   .sec h2 {
