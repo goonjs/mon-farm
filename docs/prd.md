@@ -450,13 +450,22 @@ a complete, ordered event log of what happened and what was said.
   alongside its timestamp, so the *order* of events is trustworthy even
   when the *time* is not. Sequence settles "what happened first";
   timestamps answer "when, roughly".
-- FR-12.6 ❓ Should a clock that is obviously wrong (device time earlier
-  than the sale's start, or jumping backwards mid-count) be **flagged in
-  the record** rather than silently trusted? Cheap to detect given
-  FR-12.5, and it prevents a bad clock quietly undermining a record
-  someone later relies on.
-- FR-12.7 The timestamps and the announcement log are part of what syncs
-  (NFR-2), so the record survives beyond the device that captured it.
+- FR-12.6 **An obviously wrong clock is flagged in the record** (decided
+  2026-08-03) rather than silently trusted. Detectable cases: device time
+  earlier than the sale's own start, time jumping backwards mid-count, or
+  an implausible forward jump. The anomaly is recorded as an event on the
+  sale, so anyone reading the record later can see that the timestamps
+  around it are unreliable instead of drawing conclusions from them.
+- FR-12.7 **A bad clock never blocks or invalidates a sale.** Counting
+  continues normally; the sequence number (FR-12.5) still carries the
+  order, so only the wall-clock precision is degraded, never the count or
+  the money. The operator is shown a non-blocking indicator — a wrong
+  clock is not worth interrupting a weighing for, and a modal mid-count
+  would cause exactly the kind of error the counter screen exists to
+  prevent.
+- FR-12.8 The timestamps, the announcement log, and any clock-anomaly
+  flags are part of what syncs (NFR-2), so the record survives beyond the
+  device that captured it.
 
 ## Non-functional requirements
 
@@ -617,6 +626,9 @@ Recorded so the reasoning is not lost once the questions disappear.
   (FR-12), giving the sale a reconstructable pace as well as an audit
   trail. Order is carried by a per-sale sequence number, because an
   offline device's clock cannot be trusted to be right or even monotonic.
+- **2026-08-03 — A wrong device clock is flagged, not hidden** (FR-12.6),
+  and never blocks a sale — the sequence number keeps the order sound, so
+  only timestamp precision suffers.
 - **2026-08-03 — Voice sourcing is deferred to the prototype** (FR-11.7):
   bundled recordings and device Thai TTS both get tried at a real scale.
 - **2026-08-03 — "ต่อไปค่ะ" is optional** (FR-11.5), which removed the
@@ -650,10 +662,9 @@ rather than by decision up front.
    aloud on Ready — is farm/zone/pile plus tare, standard weight and
    expected reading the right set, too much to hear at every pile, or
    missing something the parties need?
-7. **Flagging an obviously wrong device clock** (FR-12.6).
-8. **Different splits across zones in one sale** (FR-8.6) — assumed to
+7. **Different splits across zones in one sale** (FR-8.6) — assumed to
    apply per zone against that zone's contribution; confirm.
-9. **Sale export format** (FR-10.2) — printed slip, PDF, LINE share?
+8. **Sale export format** (FR-10.2) — printed slip, PDF, LINE share?
 
 ---
 
