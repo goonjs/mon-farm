@@ -8,10 +8,17 @@
     <p class="standfirst">
       Everything a sale needs while counting: zone and pile, the timers,
       bucket and rubber weight, the validated hold-to-count, the
-      short-basket log, and closing a pile or a zone. Built and reviewed as
-      a pair — a UX pass on what each screen needs to do, a QA pass on what
-      breaks it — with the disagreements kept, not smoothed over. Notes are
-      below the device; the device is real enough to operate.
+      short-basket log, and closing a pile or a zone. Now with a zero and
+      tare check ahead of every pile, and weight entry you can drag, nudge,
+      or type. Notes are below the device; the device is real enough to
+      operate.
+    </p>
+    <p class="bugnote">
+      <b>Fixed since last round —</b> the zone/pile switcher (and the
+      short-basket panel) had <code>hidden</code> attributes that a
+      <code>display: flex</code> rule silently overrode, so both showed up
+      empty on load before any data existed to put in them. Root cause and
+      fix are in the notes below.
     </p>
   </header>
 
@@ -37,6 +44,7 @@
         </button>
         <button type="button" class="pill is-flag" id="btnClock" title="Clock anomaly flag (demo — click to toggle)">⏱ clock</button>
         <button type="button" class="pill" id="btnMute" title="Audio on/off">🔇 muted</button>
+        <button type="button" class="icon-btn lg" id="btnSettings" title="Settings" aria-label="Settings">⚙</button>
       </div>
     </div>
 
@@ -48,6 +56,26 @@
           <button type="button" class="icon-btn" id="btnSwitcherClose" aria-label="Close">✕</button>
         </div>
         <div id="switcherBody"></div>
+      </div>
+    </div>
+
+    <!-- settings overlay -->
+    <div class="switcher" id="settingsPanel" hidden>
+      <div class="switcher-card">
+        <div class="switcher-head">
+          <p class="mono-label">settings</p>
+          <button type="button" class="icon-btn" id="btnSettingsClose" aria-label="Close">✕</button>
+        </div>
+        <label class="setting-row">
+          <span>Check scale zero &amp; bucket weight before every pile</span>
+          <button type="button" class="toggle" id="toggleRecheck" role="switch" aria-checked="true">
+            <span class="toggle-track" aria-hidden="true"><span class="toggle-knob"></span></span>
+          </button>
+        </label>
+        <p class="setting-note">Default: on, for every user — this is what makes each pile's
+          numbers trustworthy on their own, not just at sale start. Turning it off checks once,
+          at the sale's first pile, and reuses whatever was last confirmed after that.</p>
+        <p class="setting-note mono-label">weight input — last used this session: <span id="lastModeTxt">—</span></p>
       </div>
     </div>
 
@@ -69,11 +97,37 @@
         </div>
         <div class="expected-chip mono-label" id="expectedChip">2 + 50 = 52 กก. · last —</div>
 
+        <!-- pre-count wizard: zero check -> tare check -> ready -->
         <div class="ready-gate" id="readyGate">
-          <p class="rg-pile" id="rgPileName">กอง 1</p>
-          <p class="rg-hint">Check bucket &amp; rubber weight on the <b>Pile &amp; Zone</b> tab, then
-            begin. This reads the terms aloud before the first basket.</p>
-          <button type="button" class="ready-btn" id="btnReady">พร้อมค่ะ — start counting</button>
+
+          <div class="wiz-step" id="wizZero">
+            <p class="wiz-step-label mono-label">step 1 of 3 · scale zero check</p>
+            <p class="rg-pile" id="rgPileNameZero">กอง 1</p>
+            <p class="rg-hint">Nothing on the scale. Does it read <b>zero</b>?</p>
+            <div class="wiz-actions">
+              <button type="button" class="ready-btn" id="btnZeroYes">ใช่ ศูนย์ — yes, zero</button>
+              <button type="button" class="ghost-btn" id="btnZeroNo">ไม่ใช่ — not zero</button>
+            </div>
+            <div class="wiz-flagbox" id="zeroFlagBox" hidden>
+              <p class="mono-label">what does it read instead?</p>
+              <div id="zeroWgtHost"></div>
+              <button type="button" class="ghost-btn is-warn" id="btnZeroFlagConfirm">Flag it &amp; continue anyway</button>
+            </div>
+          </div>
+
+          <div class="wiz-step" id="wizTare" hidden>
+            <p class="wiz-step-label mono-label">step 2 of 3 · bucket weight (tare)</p>
+            <p class="rg-hint">Weigh the empty bucket. What does the scale show?</p>
+            <div id="tareWgtHost"></div>
+            <button type="button" class="ready-btn" id="btnTareConfirm">Confirm bucket weight</button>
+          </div>
+
+          <div class="wiz-step" id="wizReady" hidden>
+            <p class="wiz-step-label mono-label">step 3 of 3 · read back &amp; go</p>
+            <p class="rg-pile" id="rgPileName">กอง 1</p>
+            <p class="rg-hint" id="rgReadyHint">2 + 50 = 52 กก. — read aloud before the first basket.</p>
+            <button type="button" class="ready-btn" id="btnReady">พร้อมค่ะ — start counting</button>
+          </div>
         </div>
 
         <div class="transition-card" id="transitionCard" hidden>
@@ -107,15 +161,12 @@
       </div>
 
       <div class="partial-panel" id="partialPanel" hidden>
-        <p class="mono-label">short basket — scale reading, kg</p>
-        <div class="stepper">
-          <button type="button" class="step-btn" id="stepDown" aria-label="Decrease">&minus;</button>
-          <div class="step-val"><span id="stepNum">30</span><span class="step-unit">kg</span></div>
-          <button type="button" class="step-btn" id="stepUp" aria-label="Increase">+</button>
-        </div>
+        <p class="mono-label">short basket — scale reading (gross), kg</p>
+        <div id="shortWgtHost"></div>
+        <p class="short-net">net rubber = reading − tare = <b id="shortNetPreview">28</b> kg</p>
         <div class="partial-actions">
           <button type="button" class="ghost-btn" id="btnPartialCancel">Cancel</button>
-          <button type="button" class="primary-btn" id="btnPartialConfirm">Log <span id="confirmVal">30</span> kg</button>
+          <button type="button" class="primary-btn" id="btnPartialConfirm">Log it</button>
         </div>
       </div>
     </div>
@@ -126,28 +177,21 @@
       <div class="card">
         <p class="mono-label">this pile</p>
         <div class="weight-row">
-          <label class="wfield">
-            <span class="mono-label">bucket / tare</span>
-            <div class="wstep">
-              <button type="button" class="step-btn sm" data-adj="tare" data-dir="-1">&minus;</button>
-              <span id="tareVal">2</span> <span class="step-unit">kg</span>
-              <button type="button" class="step-btn sm" data-adj="tare" data-dir="1">+</button>
-            </div>
-          </label>
-          <label class="wfield">
-            <span class="mono-label">rubber / standard net</span>
-            <div class="wstep">
-              <button type="button" class="step-btn sm" data-adj="std" data-dir="-1">&minus;</button>
-              <span id="stdVal">50</span> <span class="step-unit">kg</span>
-              <button type="button" class="step-btn sm" data-adj="std" data-dir="1">+</button>
-            </div>
-          </label>
+          <div class="wfield">
+            <span class="mono-label">bucket / tare — confirmed at zero check</span>
+            <p class="wexpect-lock" id="tareDisplay">2 kg</p>
+          </div>
+          <div class="wfield">
+            <span class="mono-label">rubber / standard net — agreed, editable pre-ready</span>
+            <div id="stdWgtHost"></div>
+          </div>
           <div class="wfield">
             <span class="mono-label">expected scale reading</span>
             <p class="wexpect" id="wExpect">52 กก.</p>
           </div>
         </div>
-        <p class="lock-note" id="lockNote" hidden>Locked once counting starts (FR&#8209;3.4) — recorded at Ready, not silently editable.</p>
+        <p class="lock-note" id="lockNote" hidden>Standard net locks once counting starts (FR&#8209;3.4) —
+          recorded at Ready, not silently editable.</p>
       </div>
 
       <div class="card">
@@ -244,111 +288,102 @@
     </p>
 
     <div class="note-grid">
-      <article class="note">
-        <p class="note-h">Topbar &amp; hierarchy</p>
-        <p class="note-ux"><b>UX —</b> Breadcrumb is a button, not decoration; the switcher it opens
-          is the only place piles are picked, so counting context is never ambiguous.
-          Sync and clock state sit here because they're non-blocking (NFR&#8209;2, FR&#8209;12.7) —
-          informative, never interrupting a weighing.</p>
-        <p class="note-qa"><b>QA —</b> Cycle the sync pill through all three states (synced / pending
-          / error) — try it. None of them should be able to block a count. The clock flag is the
-          same: toggle it mid-hold and the hold must keep running. Both are demo-toggleable here
-          specifically so this is checkable without faking real drift or a dropped connection.</p>
+      <article class="note is-bug">
+        <p class="note-h">The bug you found</p>
+        <p class="note-ux"><b>What happened —</b> the switcher opened with a header and nothing
+          under it; the short-basket panel was visible before anyone pressed "Log short basket."
+          Both use <code>hidden</code> to stay closed, and both have a class rule setting
+          <code>display: flex</code>. Browsers apply origin before specificity — an author
+          stylesheet rule beats the browser's built-in <code>[hidden]{display:none}</code>
+          <em>regardless of whose selector is more specific</em>, so the moment either element got
+          a <code>display</code> value in CSS, the <code>hidden</code> attribute stopped doing
+          anything. It looked like a data problem; it was a visibility problem hiding a real one
+          underneath — the switcher genuinely was empty, because it's only ever populated inside
+          the same click handler that reveals it, and that handler had never run.</p>
+        <p class="note-qa"><b>Fix —</b> one rule, <code>[hidden]{display:none!important}</code>,
+          added once near the top of the stylesheet, ahead of every component rule, so no future
+          overlay can reintroduce this by picking `display:flex` for its own layout. Also patched
+          the same latent bug in <code>counter-variant-simulator.html</code>'s short-basket panel,
+          which had it too but hadn't been clicked into yet.</p>
       </article>
 
       <article class="note">
-        <p class="note-h">Count tab</p>
-        <p class="note-ux"><b>UX —</b> One thing lives here: the hold-to-count ring, validated
-          separately before this page existed. The expected reading is one small line, not a
-          second hero — it's fixed for the whole pile, so it doesn't compete with the number
-          that changes every basket (finding F&#8209;2).</p>
-        <p class="note-qa"><b>QA —</b> Three states worth breaking on purpose: hold and release at
-          49% (must cancel, must log "released early", must <em>not</em> count); hold to 100% and
-          keep holding without releasing (must not double-fire — try it, it won't); switch tabs
-          mid-hold (the hold should abandon cleanly, not leave a ghost ring on return).</p>
+        <p class="note-h">Zero &amp; tare, before every pile</p>
+        <p class="note-ux"><b>UX —</b> FR&#8209;3 only required this once, at sale start. Doing it
+          again before each pile — nothing on the scale reads zero, then the empty bucket gets its
+          own weighed reading — costs a few seconds and buys the same thing the public count buys:
+          nobody has to take the number on faith, because they watched it get measured for <em>this</em>
+          pile, not assumed from the first one. Default on, for every user; the settings panel
+          (gear icon, top right) is where a tenant relaxes it to once-per-sale.</p>
+        <p class="note-qa"><b>QA —</b> "Not zero" must never block — it flags (a system log entry,
+          same non-blocking pattern as the clock anomaly) and still lets the operator continue to
+          the tare step. Turn the setting off mid-sale and check the *next* new pile skips straight
+          to step 3 — but the pile already mid-count when you flipped the setting must be
+          unaffected, since its own check already happened or is already running.</p>
       </article>
 
       <article class="note">
-        <p class="note-h">Undo &amp; the short-basket log</p>
-        <p class="note-ux"><b>UX —</b> Both are siblings of the counter, not menu items (F&#8209;13,
-          F&#8209;14) — a short basket is common enough, at the end of nearly every pile, that
-          hiding it costs real accuracy. Undo is one tap, no prompt, because it's used in-rhythm;
-          voiding a specific basket is on the Log tab instead, where there's time to give a reason
-          (F&#8209;12).</p>
-        <p class="note-qa"><b>QA —</b> Undo must disable itself the instant there's nothing left to
-          undo in the <em>current pile</em> — check it doesn't reach into a different pile's last
-          count after switching context. A short basket still increments the public count (it's a
-          real basket) but must contribute its own logged weight, not the standard 50&nbsp;kg —
-          confirm the pile total math after logging one, by hand, against what's on screen.</p>
+        <p class="note-h">Weight entry — drag, nudge, or type</p>
+        <p class="note-ux"><b>UX —</b> Plus-and-minus alone doesn't scale — going from 2&nbsp;kg to
+          43&nbsp;kg one click at a time is exactly the kind of friction that gets a feature
+          ignored in the field. Now there are three ways into the same value: a native range slider
+          for a fast coarse drag, &plusmn; buttons stepping 0.5&nbsp;kg for a fine nudge, and a
+          plain text field for typing an exact number directly. They all write to the same value
+          live, so nobody has to pick a "mode."</p>
+        <p class="note-qa"><b>QA —</b> Typed values aren't forced to the 0.5&nbsp;kg step — 43.3 is
+          a legitimate scale reading and rounding it would misreport real money. All three inputs
+          are clamped to sane physical bounds (a bucket isn't 40&nbsp;kg; a short basket can't read
+          under its own tare) so a mistyped digit can't silently corrupt a total. "Default to last
+          use" is implemented honestly at session scope only — the field that matches whichever
+          input you used most recently gets focus on the next entry; nothing is written to
+          storage, and the settings panel says so rather than implying a persistence that isn't
+          there yet.</p>
       </article>
 
       <article class="note">
-        <p class="note-h">Pile &amp; Zone tab</p>
-        <p class="note-ux"><b>UX —</b> Tare and standard weight are editable only before Ready,
-          then visibly lock (FR&#8209;3.4) — changing a number that money depends on should never
-          be one accidental tap away once baskets are already on record against it.</p>
-        <p class="note-qa"><b>QA —</b> Try to edit tare after starting a pile — the stepper must be
-          inert, and the lock note must say why, not just silently ignore the tap. Rollups (zone,
-          sale) must move the instant a basket is counted, not only when a pile closes
-          (FR&#8209;6.4) — watch the numbers on this tab while counting on the other tab.</p>
-      </article>
-
-      <article class="note">
-        <p class="note-h">Closing a pile</p>
-        <p class="note-ux"><b>UX —</b> Closing is a confirmation, not a silent action — it shows the
-          pile's own numbers back before committing, and the next screen is a full-bleed
-          transition card, not a number that quietly resets from 87 to 1 (finding F&#8209;4). The
-          ล้ง should never see the public register do something they can't explain.</p>
-        <p class="note-qa"><b>QA —</b> Close a pile with <b>zero baskets counted</b> — it must still
-          work, worded honestly ("0 baskets — close anyway?"), not block the operator from
-          correcting an accidental zone pick. Confirm the transition card requires a tap to
-          dismiss — it should never auto-advance while the ล้ง is mid-read of the closing total.</p>
-      </article>
-
-      <article class="note">
-        <p class="note-h">Closing a zone</p>
-        <p class="note-ux"><b>UX —</b> A closed zone locks its piles against further counting, but
-          its total keeps rolling up into the sale exactly as before — closing is a workflow
-          marker, not a data cutoff.</p>
-        <p class="note-qa"><b>QA — this is where the two teams disagreed.</b> UX wanted zone-close
-          to always be one tap, matching pile-close. QA pushed back: closing a zone while one of
-          its piles is still mid-count would strand that pile — counted so far, but with no way
-          back in. The resolution kept here is a warning, not a block: if any pile in the zone is
-          still <code>counting</code>, the confirmation says so by name before letting the tap
-          through. Try closing a zone with an open pile in it and check the warning actually
-          names that pile.</p>
+        <p class="note-h">Every log line shows its own arithmetic</p>
+        <p class="note-ux"><b>UX —</b> A bare "counted" told you nothing you could check. Every
+          standard-basket row now carries its own derivation — tare + standard net = expected
+          reading — and every short basket shows the actual triple: scale reading, tare, and the
+          net that's left once you subtract it. Closing a pile shows the same split at pile scale.
+          This is FR&#8209;7.4's "no single opaque total" applied down to the finest-grained row in
+          the record, not just the settlement screen.</p>
+        <p class="note-qa"><b>QA —</b> The short-basket number was previously ambiguous — was it a
+          net figure or a scale reading? It's now explicitly the gross reading (matching FR&#8209;5.6
+          exactly: "recorded with its actual scale reading, and the app derives its net weight from
+          the tare"), with net computed and shown live as you adjust it, before you ever confirm.
+          Check the math by hand against a couple of entries — reading minus this pile's own tare,
+          not a stale one from a previous pile.</p>
       </article>
     </div>
 
     <div class="finding-block">
-      <p class="kicker">Two findings this assembly surfaced</p>
+      <p class="kicker">New findings from this round</p>
       <ul class="finding-list">
         <li>
-          <span class="fid">F-19</span>
-          <p>Everything on this page does not fit one phone screen at a size anyone could use
-            standing up — that's why it's tabbed rather than stacked. But FR&#8209;9.1 doesn't
-            stop applying just because the operator is looking at the Log tab, so the count
-            persists as a small pill in the topbar whenever the Count tab isn't active. A tablet
-            has room to show Count and Pile&nbsp;&amp;&nbsp;Zone side by side without tabs at all
-            — worth trying once the phone-vs-tablet question (F&#8209;9.7, open question 2) is
-            settled.</p>
+          <span class="fid">F-21</span>
+          <p>Zero and tare checking, repeated before every pile rather than once per sale,
+            generalises what Open question 4 in the original findings only asked about
+            hypothetically (different basket types mid-sale). Made configurable rather than fixed,
+            since the right default for a two-person sale and a large crew sale may differ —
+            defaulting on, letting it relax per tenant.</p>
         </li>
         <li>
-          <span class="fid">F-20</span>
-          <p>Closing a zone needed a guard the original findings didn't anticipate: nothing
-            previously covered what happens to a pile still being counted when its zone closes
-            around it. Recommendation implemented here — warn by naming the pile, don't block —
-            keeps the one-tap close from becoming a trap while still making the risk visible.</p>
+          <span class="fid">F-22</span>
+          <p>Stepper-only weight entry (&plusmn;1&nbsp;kg per tap) doesn't scale to real bucket and
+            rubber weights. A drag-slider, a coarser &plusmn;0.5&nbsp;kg nudge, and direct typing
+            now coexist on the same value rather than forcing a mode choice — and surfaced a
+            correctness gap in the short-basket flow: it was logging a bare number where FR&#8209;5.6
+            specifies a scale reading with the net derived from tare, now fixed.</p>
         </li>
       </ul>
     </div>
 
     <p class="foot">
-      Extends <code>docs/ux/counter-screen-findings.md</code> (F&#8209;19, F&#8209;20 added there
-      too) and reuses the validated interaction from
-      <code>docs/ux/counter-variant-simulator.html</code> unchanged. Demo data only — one farm,
-      two zones, a handful of piles. Nothing here is a decision; it's something to walk through
-      end to end before choosing on paper.
+      Extends <code>docs/ux/counter-screen-findings.md</code> (F&#8209;21, F&#8209;22 added there) and
+      reuses the validated hold-to-count from <code>docs/ux/counter-variant-simulator.html</code>
+      unchanged. Demo data only. Nothing here is a decision; it's something to walk through end to
+      end before choosing on paper.
     </p>
   </section>
 </div>
@@ -391,6 +426,10 @@
     --warn:#9A6300; --warn-bg:#F1E0B8; --clear-bg:#D7E8DD; --card-bg:#FBFAF6;
   }
 
+  /* CSS author rules beat the UA [hidden] rule regardless of specificity —
+     restore native hidden behaviour once, here, before any component sets display. */
+  [hidden] { display: none !important; }
+
   body { background: var(--ground); color: var(--ink); font-family: var(--serif); font-size: 17px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
   .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 
@@ -406,6 +445,8 @@
   .masthead h1 { font-family: var(--sans); font-weight:800; font-size:clamp(1.9rem,5.4vw,3rem); line-height:1.05; letter-spacing:-.03em; text-wrap:balance; margin:.2rem 0 0; }
   .standfirst { max-width: var(--measure); font-size:1.05rem; color: var(--ink-soft); margin:0; }
   .standfirst strong { color: var(--ink); font-weight:700; }
+  .bugnote { max-width: var(--measure); margin:0; padding:.7rem .9rem; background: var(--warn-bg); color: var(--warn); border-left:2px solid var(--warn); font-size:.87rem; }
+  .bugnote code { background: rgba(0,0,0,.08); }
 
   /* ================= DEVICE SHELL ================= */
   .device {
@@ -445,11 +486,16 @@
   .pill.is-flag[data-on="true"] { border-color: var(--warn); color: var(--warn); }
   .pill:focus-visible { outline:2px solid var(--index); outline-offset:2px; }
 
-  /* switcher overlay */
-  .switcher { position:absolute; inset:0; z-index:10; background: rgba(0,0,0,.32); display:flex; align-items:flex-start; justify-content:center; padding-top:3rem; }
-  .switcher-card { width:min(90%,420px); background: var(--card-bg); border:1px solid var(--rule); border-radius:10px; padding:1rem; box-shadow:0 8px 28px rgba(0,0,0,.25); }
-  .switcher-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:.7rem; }
   .icon-btn { background:none; border:none; cursor:pointer; color: var(--ink-soft); font-size:1rem; }
+  .icon-btn.lg { font-size:1.1rem; padding:.15rem .3rem; }
+  .icon-btn:hover { color: var(--ink); }
+  .icon-btn:focus-visible { outline:2px solid var(--index); outline-offset:2px; }
+
+  /* switcher / settings overlay */
+  .switcher { position:absolute; inset:0; z-index:10; background: rgba(0,0,0,.32); align-items:flex-start; justify-content:center; padding-top:3rem; }
+  .switcher:not([hidden]) { display:flex; }
+  .switcher-card { width:min(90%,420px); max-height:80%; overflow-y:auto; background: var(--card-bg); border:1px solid var(--rule); border-radius:10px; padding:1rem; box-shadow:0 8px 28px rgba(0,0,0,.25); display:flex; flex-direction:column; gap:.8rem; }
+  .switcher-head { display:flex; justify-content:space-between; align-items:center; }
   .zg { margin-bottom:.9rem; }
   .zg:last-child { margin-bottom:0; }
   .zg-name { font-family: var(--sans); font-weight:700; font-size:.88rem; margin:0 0 .4rem; display:flex; align-items:center; gap:.4rem; }
@@ -462,7 +508,9 @@
   }
   .pilechip.is-cur { background: var(--ink); color: var(--ground); border-color: var(--ink); }
   .pilechip[data-status="closed"] { color: var(--ink-soft); text-decoration: line-through; }
-  .pilechip:disabled { opacity:.5; cursor:not-allowed; }
+
+  .setting-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; font-family: var(--sans); font-size:.88rem; cursor:pointer; }
+  .setting-note { margin:0; font-size:.82rem; color: var(--ink-soft); }
 
   /* tabs */
   .tabbar { display:flex; border-bottom:1px solid var(--rule-faint); }
@@ -474,7 +522,8 @@
   .tab.is-on { color: var(--ink); border-bottom-color: var(--index); }
   .tab:focus-visible { outline:2px solid var(--index); outline-offset:-2px; }
 
-  .tabpanel { display:none; padding:1rem; flex-direction:column; gap:1rem; }
+  .tabpanel { padding:1rem; flex-direction:column; gap:1rem; }
+  .tabpanel:not(.is-on) { display:none; }
   .tabpanel.is-on { display:flex; }
 
   /* ---- count tab ---- */
@@ -496,9 +545,11 @@
 
   .ready-gate {
     position:absolute; inset:0; z-index:5; background: var(--card-bg);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.6rem; padding:1rem; text-align:center;
+    flex-direction:column; align-items:center; justify-content:center; gap:.5rem; padding:1rem; text-align:center; overflow-y:auto;
   }
-  .ready-gate[hidden] { display:none; }
+  .ready-gate:not([hidden]) { display:flex; }
+  .wiz-step:not([hidden]) { display:flex; flex-direction:column; align-items:center; gap:.55rem; max-width:36ch; }
+  .wiz-step-label { color: var(--index); }
   .rg-pile { font-family: var(--sans); font-weight:800; font-size:1.3rem; margin:0; }
   .rg-hint { font-size:.85rem; color: var(--ink-soft); max-width:34ch; margin:0; }
   .ready-btn {
@@ -506,12 +557,14 @@
     padding:.7rem 1.2rem; background: var(--clear); color:#fff; border:none; border-radius:6px; cursor:pointer;
   }
   .ready-btn:focus-visible { outline:2px solid var(--index); outline-offset:2px; }
+  .wiz-actions { display:flex; gap:.6rem; flex-wrap:wrap; justify-content:center; }
+  .wiz-flagbox:not([hidden]) { display:flex; flex-direction:column; align-items:center; gap:.5rem; margin-top:.3rem; padding:.7rem; background: var(--warn-bg); border-radius:6px; }
 
   .transition-card {
     position:absolute; inset:0; z-index:6; background: var(--ink); color: var(--ground);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem;
+    flex-direction:column; align-items:center; justify-content:center; gap:.5rem;
   }
-  .transition-card[hidden] { display:none; }
+  .transition-card:not([hidden]) { display:flex; }
   .tc-title { font-family: var(--sans); font-weight:800; font-size:1.4rem; margin:0; }
   .tc-sub { font-family: var(--mono); font-size:.85rem; opacity:.8; margin:0; }
 
@@ -542,6 +595,7 @@
   .ghost-btn { background:transparent; border:1px solid var(--rule); color: var(--ink-soft); }
   .ghost-btn:hover { color: var(--ink); border-color: var(--ink-soft); }
   .ghost-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .ghost-btn.is-warn { border-color: var(--warn); color: var(--warn); }
   .primary-btn { background: var(--clear); border:none; color:#fff; }
   .primary-btn.is-warn { background: var(--warn); }
   .primary-btn:disabled { opacity:.45; cursor:not-allowed; }
@@ -562,28 +616,40 @@
   .toggle[aria-checked="true"] .toggle-knob { transform:translateX(.85rem); }
   .toggle:focus-visible { outline:2px solid var(--index); outline-offset:2px; }
 
-  .rocker { display:none; align-items:center; gap:.3rem; }
+  .rocker { align-items:center; gap:.3rem; }
   .rocker[data-on="true"] { display:flex; }
+  .rocker[data-on="false"] { display:none; }
   .rocker-btn { width:1.9rem; height:1.9rem; border-radius:5px; border:1.5px solid var(--ink); background: var(--card-bg); color: var(--ink); font-size:1rem; font-weight:700; cursor:pointer; }
   .rocker[data-locked="true"] .rocker-btn { opacity:.4; }
   .rocker-count { font-family: var(--mono); font-size:.6rem; color: var(--warn); min-width:2.2em; }
 
-  .partial-panel { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; padding:.9rem; background: var(--ground-sunk); border-radius:6px; }
-  .stepper { display:flex; align-items:center; gap:.6rem; }
-  .step-btn { width:2.1rem; height:2.1rem; border-radius:50%; border:1.5px solid var(--ink); background: var(--card-bg); color: var(--ink); font-size:1.05rem; font-weight:700; cursor:pointer; }
-  .step-btn.sm { width:1.7rem; height:1.7rem; font-size:.9rem; border-radius:5px; }
-  .step-btn:focus-visible { outline:2px solid var(--index); outline-offset:2px; }
-  .step-val { display:flex; align-items:baseline; gap:.25rem; min-width:4.6rem; justify-content:center; }
-  .step-val span:first-child { font-family: var(--sans); font-weight:800; font-size:1.6rem; font-variant-numeric: tabular-nums; }
-  .step-unit { font-family: var(--mono); font-size:.72rem; color: var(--ink-soft); }
-  .partial-actions { display:flex; gap:.6rem; margin-left:auto; }
+  .partial-panel:not([hidden]) { display:flex; }
+  .partial-panel { flex-direction:column; gap:.8rem; padding:.9rem; background: var(--ground-sunk); border-radius:6px; }
+  .short-net { margin:0; font-size:.85rem; color: var(--ink-soft); }
+  .short-net b { color: var(--index); font-variant-numeric: tabular-nums; }
+  .partial-actions { display:flex; gap:.6rem; }
+
+  /* ---- weight input component ---- */
+  .wgt { display:flex; flex-direction:column; gap:.5rem; width:100%; max-width:22rem; }
+  .wgt-top { display:flex; align-items:center; gap:.6rem; }
+  .wgt-btn { width:2.1rem; height:2.1rem; border-radius:50%; border:1.5px solid var(--ink); background: var(--card-bg); color: var(--ink); font-size:1.05rem; font-weight:700; cursor:pointer; flex:none; }
+  .wgt-btn:focus-visible { outline:2px solid var(--index); outline-offset:2px; }
+  .wgt-input {
+    flex:1; min-width:0; font-family: var(--sans); font-weight:800; font-size:1.5rem;
+    font-variant-numeric: tabular-nums; text-align:center; padding:.3rem .4rem;
+    border:2px solid var(--index); border-radius:6px; background: var(--card-bg); color: var(--ink);
+  }
+  .wgt-input:focus { outline:none; box-shadow:0 0 0 3px var(--clear-bg); }
+  .wgt-unit { font-family: var(--mono); font-size:.78rem; color: var(--ink-soft); flex:none; }
+  .wgt-range { width:100%; accent-color: var(--clear); }
+  .wgt.is-locked .wgt-input, .wgt.is-locked .wgt-btn, .wgt.is-locked .wgt-range { opacity:.5; pointer-events:none; }
 
   /* ---- pile & zone tab ---- */
   .card { display:flex; flex-direction:column; gap:.7rem; padding:.9rem; background: var(--ground-sunk); border-radius:8px; }
-  .weight-row { display:flex; flex-wrap:wrap; gap:1.2rem; }
-  .wfield { display:flex; flex-direction:column; gap:.3rem; }
-  .wstep { display:flex; align-items:center; gap:.4rem; font-family: var(--sans); font-weight:700; font-size:1rem; font-variant-numeric: tabular-nums; }
+  .weight-row { display:flex; flex-wrap:wrap; gap:1.4rem; align-items:flex-start; }
+  .wfield { display:flex; flex-direction:column; gap:.4rem; }
   .wexpect { margin:0; font-family: var(--sans); font-weight:800; font-size:1.15rem; color: var(--index); }
+  .wexpect-lock { margin:0; font-family: var(--sans); font-weight:700; font-size:1.15rem; }
   .lock-note { margin:0; font-size:.78rem; color: var(--warn); }
 
   .timer-row, .rollup-row { display:flex; gap:1.6rem; flex-wrap:wrap; }
@@ -599,12 +665,12 @@
   .close-actions { display:flex; gap:.6rem; flex-wrap:wrap; }
   .close-hint { margin:0; font-size:.8rem; color: var(--ink-soft); }
 
-  .confirm-panel { display:flex; flex-direction:column; gap:.5rem; padding:.9rem; background: var(--card-bg); border:1px solid var(--rule); border-radius:8px; }
-  .confirm-panel[hidden] { display:none; }
+  .confirm-panel:not([hidden]) { display:flex; }
+  .confirm-panel { flex-direction:column; gap:.5rem; padding:.9rem; background: var(--card-bg); border:1px solid var(--rule); border-radius:8px; }
   .cp-title { margin:0; font-family: var(--sans); font-weight:750; font-size:1rem; }
   .cp-body { margin:0; font-family: var(--mono); font-size:.82rem; color: var(--ink-soft); }
+  .cp-warn:not([hidden]) { display:block; }
   .cp-warn { margin:0; font-size:.82rem; color: var(--warn); font-weight:600; }
-  .cp-warn[hidden] { display:none; }
 
   /* ---- log tab ---- */
   .log-legend { display:flex; flex-wrap:wrap; gap: .9rem; font-family: var(--mono); font-size:.68rem; color: var(--ink-soft); align-items:center; }
@@ -617,13 +683,13 @@
   .log li.is-voidable { cursor:pointer; }
   .log li.is-voidable:hover { background: var(--ground-sunk); }
   .log li.is-voided .note { text-decoration: line-through; color: var(--ink-soft); }
-  .log .seq { color: var(--ink-soft); font-size:.66rem; }
   .log .note { color: var(--ink); font-weight:600; }
   .log .src { color: var(--ink-soft); }
   .log .dt { color: var(--ink-soft); text-align:right; }
   .log:empty::after { content:"no events yet"; display:block; padding:.8rem 0; color: var(--ink-soft); font-family: var(--serif); font-size:.85rem; }
 
-  .void-panel { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; padding:.9rem; background: var(--ground-sunk); border-radius:6px; }
+  .void-panel:not([hidden]) { display:flex; }
+  .void-panel { flex-wrap:wrap; align-items:center; gap:1rem; padding:.9rem; background: var(--ground-sunk); border-radius:6px; }
   .chips { display:flex; flex-wrap:wrap; gap:.4rem; }
   .chip { font-family: var(--mono); font-size:.74rem; padding:.4rem .7rem; border:1px solid var(--rule); border-radius:3px; background:transparent; color: var(--ink-soft); cursor:pointer; }
   .chip.is-on { background: var(--ink); color: var(--ground); border-color: var(--ink); }
@@ -638,9 +704,11 @@
   .note-grid { display:grid; grid-template-columns: 1fr 1fr; gap:1.1rem; }
   @media (max-width:760px) { .note-grid { grid-template-columns:1fr; } }
   .note { display:flex; flex-direction:column; gap:.55rem; padding:1rem 1.1rem; background: var(--card-bg); border:1px solid var(--rule-faint); }
+  .note.is-bug { border-color: var(--warn); border-width:1px; grid-column: 1 / -1; }
   .note-h { margin:0; font-family: var(--sans); font-weight:750; font-size:.96rem; }
   .note-ux, .note-qa { margin:0; font-size:.89rem; color: var(--ink-soft); }
   .note-ux b, .note-qa b { color: var(--ink); }
+  .note code { font-size: .84em; }
 
   .finding-block { display:flex; flex-direction:column; gap:.8rem; padding-top:.4rem; }
   .finding-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
@@ -659,7 +727,7 @@
   /* ---------- demo data ---------- */
   var FARM = 'ไร่คุณพ่อ';
   function mkPile(name, tare, std) {
-    return { name: name, tare: tare, std: std, status: 'not-started', events: [], readyAt: null, closedAt: null };
+    return { name: name, tare: tare, std: std, status: 'not-started', events: [], readyAt: null, closedAt: null, zeroTareDone: false };
   }
   var ZONES = [
     { name: 'โซน A', status: 'open', piles: [mkPile('กอง 1', 2, 50), mkPile('กอง 2', 2, 50)] },
@@ -669,6 +737,9 @@
   var seq = 0;
   var muted = true;
   var saleStart = performance.now();
+  var settings = { recheckEveryPile: true };
+  var saleTareEverChecked = false;
+  var lastInputMode = null; // 'drag' | 'step' | 'type'
 
   function curZone() { return ZONES[cur.zi]; }
   function curPile() { return ZONES[cur.zi].piles[cur.pi]; }
@@ -679,7 +750,7 @@
     var std = ev.filter(function (e) { return e.kind === 'accept'; }).length;
     var shortEv = ev.filter(function (e) { return e.kind === 'short'; });
     var shortW = shortEv.reduce(function (s, e) { return s + e.weight; }, 0);
-    return { count: ev.length, stdCount: std, shortCount: shortEv.length, shortW: shortW, weight: std * pile.std + shortW };
+    return { count: ev.length, stdCount: std, shortCount: shortEv.length, shortW: round1(shortW), weight: round1(std * pile.std + shortW) };
   }
   function zoneTotals(zone) {
     return zone.piles.reduce(function (acc, p) {
@@ -693,29 +764,36 @@
       acc.count += t.count; acc.weight += t.weight; return acc;
     }, { count: 0, weight: 0 });
   }
+  function round1(n) { return Math.round(n * 10) / 10; }
 
   /* ---------- dom refs ---------- */
   var $ = function (id) { return document.getElementById(id); };
   var stage = $('stage'), pubNum = $('pubNum'), holdRing = $('holdRing'), holdHint = $('holdHint');
   var flash = $('flash'), toast = $('toast'), expectedChip = $('expectedChip');
-  var readyGate = $('readyGate'), rgPileName = $('rgPileName'), btnReady = $('btnReady');
+  var readyGate = $('readyGate');
+  var wizZero = $('wizZero'), rgPileNameZero = $('rgPileNameZero'), btnZeroYes = $('btnZeroYes'), btnZeroNo = $('btnZeroNo');
+  var zeroFlagBox = $('zeroFlagBox'), zeroWgtHost = $('zeroWgtHost'), btnZeroFlagConfirm = $('btnZeroFlagConfirm');
+  var wizTare = $('wizTare'), tareWgtHost = $('tareWgtHost'), btnTareConfirm = $('btnTareConfirm');
+  var wizReady = $('wizReady'), rgPileName = $('rgPileName'), rgReadyHint = $('rgReadyHint'), btnReady = $('btnReady');
   var transitionCard = $('transitionCard'), tcTitle = $('tcTitle'), tcSub = $('tcSub'), btnTransitionGo = $('btnTransitionGo');
   var miniCount = $('miniCount'), miniCountNum = $('miniCountNum');
   var crumbFarm = $('crumbFarm'), crumbZone = $('crumbZone'), crumbPile = $('crumbPile');
   var btnCrumb = $('btnCrumb'), switcher = $('switcher'), switcherBody = $('switcherBody'), btnSwitcherClose = $('btnSwitcherClose');
   var btnSync = $('btnSync'), syncTxt = $('syncTxt'), btnClock = $('btnClock'), btnMute = $('btnMute');
+  var btnSettings = $('btnSettings'), settingsPanel = $('settingsPanel'), btnSettingsClose = $('btnSettingsClose');
+  var toggleRecheck = $('toggleRecheck'), lastModeTxt = $('lastModeTxt');
   var saleTimerEl = $('saleTimer');
 
   var tabBtnCount = $('tabBtnCount'), tabBtnPile = $('tabBtnPile'), tabBtnLog = $('tabBtnLog');
   var panelCount = $('panelCount'), panelPile = $('panelPile'), panelLog = $('panelLog');
 
   var btnUndo = $('btnUndo'), btnPartialOpen = $('btnPartialOpen'), partialPanel = $('partialPanel');
-  var stepNum = $('stepNum'), confirmVal = $('confirmVal'), stepUp = $('stepUp'), stepDown = $('stepDown');
+  var shortWgtHost = $('shortWgtHost'), shortNetPreview = $('shortNetPreview');
   var btnPartialCancel = $('btnPartialCancel'), btnPartialConfirm = $('btnPartialConfirm');
 
   var btnV5 = $('btnV5'), rocker = $('rocker'), rockerCount = $('rockerCount'), rockUp = $('rockUp'), rockDown = $('rockDown');
 
-  var tareVal = $('tareVal'), stdVal = $('stdVal'), wExpect = $('wExpect'), lockNote = $('lockNote');
+  var tareDisplay = $('tareDisplay'), stdWgtHost = $('stdWgtHost'), wExpect = $('wExpect'), lockNote = $('lockNote');
   var tSale = $('tSale'), tPile = $('tPile'), tLast = $('tLast');
   var ptStd = $('ptStd'), ptShort = $('ptShort'), ptTotal = $('ptTotal');
   var rZone = $('rZone'), rSale = $('rSale');
@@ -730,11 +808,60 @@
 
   var lastEventTs = null, lastOkTs = null;
   var holdState = null, rockerLockUntil = null, rockerRaf = null;
-  var partialVal = 30;
   var voidTarget = null, voidReason = null;
   var v5On = false;
   var syncStates = ['synced', 'pending', 'error'];
   var clockFlagged = false;
+
+  var stdWgt = null, tareWgt = null, zeroWgt = null, shortWgt = null;
+  var pendingTareVal = null;
+
+  /* ---------- weight input component ---------- */
+  function createWeightInput(mount, opts) {
+    mount.innerHTML =
+      '<div class="wgt">' +
+        '<div class="wgt-top">' +
+          '<button type="button" class="wgt-btn" data-dir="-1" aria-label="Decrease 0.5kg">&minus;</button>' +
+          '<input type="text" inputmode="decimal" class="wgt-input" aria-label="' + (opts.label || 'weight') + ', kg" />' +
+          '<span class="wgt-unit">kg</span>' +
+          '<button type="button" class="wgt-btn" data-dir="1" aria-label="Increase 0.5kg">+</button>' +
+        '</div>' +
+        '<input type="range" class="wgt-range" min="' + opts.min + '" max="' + opts.max + '" step="0.5" aria-label="' + (opts.label || 'weight') + ' — drag" />' +
+      '</div>';
+    var root = mount.querySelector('.wgt');
+    var input = mount.querySelector('.wgt-input');
+    var range = mount.querySelector('.wgt-range');
+    var btns = mount.querySelectorAll('.wgt-btn');
+    var val = opts.value;
+
+    function set(v, source) {
+      v = Math.max(opts.min, Math.min(opts.max, v));
+      val = round1(v);
+      input.value = val;
+      range.value = val;
+      if (source && source !== 'init') { lastInputMode = source; lastModeTxt.textContent = source; }
+      if (opts.onChange) opts.onChange(val);
+    }
+    set(val, 'init');
+
+    range.addEventListener('input', function () { set(Number(range.value), 'drag'); });
+    btns.forEach(function (b) {
+      b.addEventListener('click', function () { set(val + Number(b.dataset.dir) * 0.5, 'step'); });
+    });
+    input.addEventListener('change', function () {
+      var n = parseFloat(String(input.value).replace(',', '.'));
+      if (!isNaN(n)) set(n, 'type'); else input.value = val;
+    });
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') input.blur(); });
+
+    if (lastInputMode === 'type') { setTimeout(function () { input.focus(); input.select(); }, 0); }
+
+    return {
+      get: function () { return val; },
+      set: function (v) { set(v, 'api'); },
+      setLocked: function (locked) { root.classList.toggle('is-locked', locked); input.disabled = locked; range.disabled = locked; btns.forEach(function (b) { b.disabled = locked; }); }
+    };
+  }
 
   /* ---------- logging ---------- */
   function fmtClock(ms) {
@@ -744,12 +871,10 @@
 
   function pushEvent(pile, kind, source, note, extra) {
     seq += 1;
-    var now = performance.now();
-    var e = Object.assign({ seq: seq, ts: now, kind: kind, source: source, note: note, voided: false }, extra || {});
+    var e = Object.assign({ seq: seq, ts: performance.now(), kind: kind, source: source, note: note, voided: false }, extra || {});
     pile.events.push(e);
     return e;
   }
-
   function pushSystemEvent(pile, note) { seq += 1; pile.events.push({ seq: seq, ts: performance.now(), kind: 'sys', source: 'system', note: note, voided: false }); }
 
   /* ---------- render: log ---------- */
@@ -761,7 +886,7 @@
   }
 
   function renderLog() {
-    var rows = allSaleEvents().slice(0, 40);
+    var rows = allSaleEvents().slice(0, 50);
     logEl.innerHTML = rows.map(function (row) {
       var e = row.e;
       var dotClass = e.kind === 'reject' ? 'rej' : (e.kind === 'sys' || e.kind === 'correction' ? 'sys' : 'ok');
@@ -771,7 +896,7 @@
       return '<li data-seq="' + e.seq + '" class="' + (voidable ? 'is-voidable' : '') + (e.voided ? ' is-voided' : '') + '">' +
         '<span class="dot ' + dotClass + '" aria-hidden="true"></span>' +
         '<span><span class="note">' + label + '</span> <span class="src">' + row.pile.name + ' · ' + e.source + detail + '</span></span>' +
-        '<span class="dt seq">#' + e.seq + '</span>' +
+        '<span class="dt">#' + e.seq + '</span>' +
         '</li>';
     }).join('');
   }
@@ -815,13 +940,21 @@
 
   function renderWeights() {
     var p = curPile();
-    tareVal.textContent = p.tare;
-    stdVal.textContent = p.std;
+    tareDisplay.textContent = p.zeroTareDone ? (p.tare + ' kg') : (p.tare + ' kg (not yet confirmed)');
     wExpect.textContent = (p.tare + p.std) + ' กก.';
     var locked = p.status !== 'not-started';
-    document.querySelectorAll('[data-adj]').forEach(function (b) { b.disabled = locked; });
+    if (stdWgt) stdWgt.setLocked(locked);
     lockNote.hidden = !locked;
     expectedChip.textContent = p.tare + ' + ' + p.std + ' = ' + (p.tare + p.std) + ' กก. · last ' + lastCountAgoText();
+  }
+
+  function mountStdWgt() {
+    var p = curPile();
+    stdWgt = createWeightInput(stdWgtHost, {
+      min: 5, max: 100, value: p.std, label: 'standard net',
+      onChange: function (v) { p.std = v; renderWeights(); renderCounts(); }
+    });
+    stdWgt.setLocked(p.status !== 'not-started');
   }
 
   function lastCountAgoText() {
@@ -835,7 +968,7 @@
     var t = pileTotals(p);
     pubNum.textContent = t.count;
     miniCountNum.textContent = t.count;
-    ptStd.textContent = t.stdCount + ' × ' + p.std + ' kg = ' + (t.stdCount * p.std) + ' kg';
+    ptStd.textContent = t.stdCount + ' × ' + p.std + ' kg = ' + round1(t.stdCount * p.std) + ' kg';
     ptShort.textContent = t.shortW + ' kg' + (t.shortCount ? ' (' + t.shortCount + ')' : '');
     ptTotal.textContent = t.weight + ' kg';
     var zt = zoneTotals(curZone()), st = saleTotals();
@@ -844,18 +977,35 @@
     btnPartialOpen.disabled = p.status !== 'counting';
   }
 
-  function renderReadyGate() {
+  function needsCheck(p) { return !p.zeroTareDone && (settings.recheckEveryPile || !saleTareEverChecked); }
+
+  function showWizStep(name) {
+    wizZero.hidden = name !== 'zero';
+    wizTare.hidden = name !== 'tare';
+    wizReady.hidden = name !== 'ready';
+    zeroFlagBox.hidden = true;
+  }
+
+  function renderPreCountGate() {
     var p = curPile();
     var showGate = p.status === 'not-started';
     readyGate.hidden = !showGate;
-    rgPileName.textContent = curZone().name + ' · ' + p.name;
     stage.setAttribute('aria-disabled', showGate ? 'true' : 'false');
+    if (!showGate) return;
+    if (needsCheck(p)) {
+      rgPileNameZero.textContent = curZone().name + ' · ' + p.name;
+      showWizStep('zero');
+    } else {
+      rgPileName.textContent = curZone().name + ' · ' + p.name;
+      rgReadyHint.textContent = p.tare + ' + ' + p.std + ' = ' + (p.tare + p.std) + ' กก. — read aloud before the first basket.';
+      showWizStep('ready');
+    }
   }
 
   function renderCloseHint() {
     var p = curPile(), z = curZone();
     if (p.status === 'closed') { closeHint.textContent = 'This pile is closed.'; btnClosePile.disabled = true; }
-    else if (p.status === 'not-started') { closeHint.textContent = 'Press พร้อมค่ะ on the Count tab before closing.'; btnClosePile.disabled = true; }
+    else if (p.status === 'not-started') { closeHint.textContent = 'Complete the pre-count check on the Count tab before closing.'; btnClosePile.disabled = true; }
     else { closeHint.textContent = ''; btnClosePile.disabled = false; }
     btnCloseZone.disabled = z.status === 'closed';
   }
@@ -864,15 +1014,13 @@
     tSale.textContent = fmtClock(performance.now() - saleStart);
     var p = curPile();
     tPile.textContent = p.readyAt ? fmtClock(performance.now() - p.readyAt) : '—';
-    tLast.textContent = lastCountAgoText() === '—' ? '—' : lastCountAgoText();
+    tLast.textContent = lastCountAgoText();
   }
 
-  function renderMiniCountVisibility() {
-    miniCount.hidden = panelCount.classList.contains('is-on');
-  }
+  function renderMiniCountVisibility() { miniCount.hidden = panelCount.classList.contains('is-on'); }
 
   function renderAll() {
-    renderCrumb(); renderWeights(); renderCounts(); renderReadyGate(); renderLog(); renderCloseHint(); renderMiniCountVisibility();
+    renderCrumb(); renderWeights(); renderCounts(); renderPreCountGate(); renderLog(); renderCloseHint(); renderMiniCountVisibility();
   }
 
   /* ---------- tabs ---------- */
@@ -880,7 +1028,7 @@
     [panelCount, panelPile, panelLog].forEach(function (p) { p.classList.remove('is-on'); });
     [tabBtnCount, tabBtnPile, tabBtnLog].forEach(function (b) { b.classList.remove('is-on'); b.setAttribute('aria-selected', 'false'); });
     if (name === 'count') { panelCount.classList.add('is-on'); tabBtnCount.classList.add('is-on'); tabBtnCount.setAttribute('aria-selected', 'true'); }
-    if (name === 'pile') { panelPile.classList.add('is-on'); tabBtnPile.classList.add('is-on'); tabBtnPile.setAttribute('aria-selected', 'true'); }
+    if (name === 'pile') { panelPile.classList.add('is-on'); tabBtnPile.classList.add('is-on'); tabBtnPile.setAttribute('aria-selected', 'true'); mountStdWgt(); }
     if (name === 'log') { panelLog.classList.add('is-on'); tabBtnLog.classList.add('is-on'); tabBtnLog.setAttribute('aria-selected', 'true'); renderLog(); }
     if (name !== 'count' && holdState) endHold();
     renderMiniCountVisibility();
@@ -901,8 +1049,9 @@
   }
   btnCrumb.addEventListener('click', function () { renderSwitcher(); switcher.hidden = false; });
   btnSwitcherClose.addEventListener('click', function () { switcher.hidden = true; });
+
   function closeTransientPanels() {
-    partialPanel.hidden = true; btnPartialOpen.hidden = false;
+    partialPanel.hidden = true;
     voidPanel.hidden = true; voidTarget = null;
     if (holdState) endHold();
   }
@@ -913,6 +1062,15 @@
     switcher.hidden = true;
     transitionCard.hidden = true;
     setTab('count');
+    renderAll();
+  });
+
+  /* ---------- settings ---------- */
+  btnSettings.addEventListener('click', function () { settingsPanel.hidden = false; });
+  btnSettingsClose.addEventListener('click', function () { settingsPanel.hidden = true; });
+  toggleRecheck.addEventListener('click', function () {
+    settings.recheckEveryPile = !settings.recheckEveryPile;
+    toggleRecheck.setAttribute('aria-checked', settings.recheckEveryPile);
     renderAll();
   });
 
@@ -927,10 +1085,7 @@
     btnClock.dataset.on = clockFlagged;
     btnClock.title = clockFlagged ? 'Clock anomaly flagged (non-blocking, FR-12.7)' : 'Clock anomaly flag (demo — click to toggle)';
   });
-  btnMute.addEventListener('click', function () {
-    muted = !muted;
-    btnMute.textContent = muted ? '🔇 muted' : '🔊 on';
-  });
+  btnMute.addEventListener('click', function () { muted = !muted; btnMute.textContent = muted ? '🔇 muted' : '🔊 on'; });
 
   function announce(text) {
     if (muted) return;
@@ -943,7 +1098,46 @@
     } catch (err) { /* audio must never block counting — swallow and rely on the visual toast */ }
   }
 
-  /* ---------- ready gate ---------- */
+  /* ---------- zero check ---------- */
+  btnZeroYes.addEventListener('click', function () {
+    var p = curPile();
+    pushSystemEvent(p, 'zero check · confirmed 0 kg');
+    mountTareStep();
+    showWizStep('tare');
+  });
+  btnZeroNo.addEventListener('click', function () {
+    zeroFlagBox.hidden = false;
+    zeroWgt = createWeightInput(zeroWgtHost, { min: 0, max: 5, value: 0.5, label: 'scale reading' });
+  });
+  btnZeroFlagConfirm.addEventListener('click', function () {
+    var p = curPile();
+    var reading = zeroWgt ? zeroWgt.get() : 0;
+    pushSystemEvent(p, '⚠ zero check · scale read ' + reading + ' kg with nothing on it, not 0 — flagged, non-blocking');
+    mountTareStep();
+    showWizStep('tare');
+  });
+
+  function mountTareStep() {
+    var p = curPile();
+    pendingTareVal = p.tare;
+    tareWgt = createWeightInput(tareWgtHost, {
+      min: 0, max: 15, value: p.tare, label: 'bucket weight',
+      onChange: function (v) { pendingTareVal = v; }
+    });
+  }
+  btnTareConfirm.addEventListener('click', function () {
+    var p = curPile();
+    p.tare = pendingTareVal !== null ? pendingTareVal : p.tare;
+    p.zeroTareDone = true;
+    saleTareEverChecked = true;
+    pushSystemEvent(p, 'tare confirmed · ' + p.tare + ' kg empty bucket');
+    rgPileName.textContent = curZone().name + ' · ' + p.name;
+    rgReadyHint.textContent = p.tare + ' + ' + p.std + ' = ' + (p.tare + p.std) + ' กก. — read aloud before the first basket.';
+    showWizStep('ready');
+    renderAll();
+  });
+
+  /* ---------- ready gate: final step ---------- */
   btnReady.addEventListener('click', function () {
     var p = curPile();
     p.status = 'counting';
@@ -976,7 +1170,8 @@
     if (pct >= 100 && !holdState.done) {
       holdState.done = true;
       var p = curPile();
-      var e = pushEvent(p, 'accept', holdState.source === 'key' ? 'hold·kbd' : 'hold', null);
+      var breakdown = p.tare + '+' + p.std + '=' + (p.tare + p.std) + ' กก. (standard)';
+      pushEvent(p, 'accept', holdState.source === 'key' ? 'hold·kbd' : 'hold', breakdown);
       var fast = lastOkTs !== null && (performance.now() - lastOkTs) < 300;
       lastOkTs = performance.now(); lastEventTs = lastOkTs;
       if (fast) announce('นับเร็วผิดปกติ');
@@ -1029,7 +1224,8 @@
       renderAll();
       return;
     }
-    pushEvent(p, 'accept', 'rocker', label);
+    var breakdown = p.tare + '+' + p.std + '=' + (p.tare + p.std) + ' กก. (standard)';
+    pushEvent(p, 'accept', 'rocker', breakdown, { label: label });
     lastOkTs = now; lastEventTs = now;
     flashState(true);
     rockerLockUntil = now + ROCKER_LOCK_MS;
@@ -1061,40 +1257,39 @@
   });
 
   /* ---------- short basket panel ---------- */
-  function setPartialVal(v) { partialVal = Math.max(1, Math.min(60, v)); stepNum.textContent = partialVal; confirmVal.textContent = partialVal; }
+  var pendingShortReading = null;
+  function mountShortWgt() {
+    var p = curPile();
+    var seed = round1(p.tare + p.std * 0.6);
+    pendingShortReading = seed;
+    shortWgt = createWeightInput(shortWgtHost, {
+      min: p.tare, max: p.tare + p.std, value: seed, label: 'scale reading',
+      onChange: function (v) { pendingShortReading = v; shortNetPreview.textContent = round1(v - p.tare); }
+    });
+    shortNetPreview.textContent = round1(seed - p.tare);
+  }
   btnPartialOpen.addEventListener('click', function () {
     if (curPile().status !== 'counting') return;
-    partialPanel.hidden = false; btnPartialOpen.hidden = true;
+    mountShortWgt();
+    partialPanel.hidden = false;
   });
-  btnPartialCancel.addEventListener('click', function () { partialPanel.hidden = true; btnPartialOpen.hidden = false; });
-  stepUp.addEventListener('click', function () { setPartialVal(partialVal + 1); });
-  stepDown.addEventListener('click', function () { setPartialVal(partialVal - 1); });
+  btnPartialCancel.addEventListener('click', function () { partialPanel.hidden = true; });
   btnPartialConfirm.addEventListener('click', function () {
     var p = curPile();
-    pushEvent(p, 'short', 'panel', partialVal + ' kg', { weight: partialVal });
+    var reading = pendingShortReading;
+    var net = round1(reading - p.tare);
+    pushEvent(p, 'short', 'panel', 'scale ' + reading + ' − tare ' + p.tare + ' = net ' + net + ' กก.', { weight: net, reading: reading });
     lastOkTs = performance.now(); lastEventTs = lastOkTs;
-    announce('ใบสุดท้าย ' + partialVal + ' กิโล');
-    partialPanel.hidden = true; btnPartialOpen.hidden = false;
+    announce('ใบสุดท้าย อ่านได้ ' + reading + ' กิโล');
+    partialPanel.hidden = true;
     renderAll();
-  });
-
-  /* ---------- weight steppers (pile & zone tab) ---------- */
-  document.querySelectorAll('[data-adj]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var p = curPile();
-      if (p.status !== 'not-started') return;
-      var field = btn.dataset.adj, dir = Number(btn.dataset.dir);
-      if (field === 'tare') p.tare = Math.max(1, Math.min(10, p.tare + dir));
-      if (field === 'std') p.std = Math.max(5, Math.min(100, p.std + dir));
-      renderWeights();
-    });
   });
 
   /* ---------- close pile / zone ---------- */
   btnClosePile.addEventListener('click', function () {
     var p = curPile(); var t = pileTotals(p);
     cpPileName.textContent = curZone().name + ' · ' + p.name;
-    cpBody.textContent = t.count + ' baskets · ' + t.weight + ' kg · ' + (p.readyAt ? fmtClock(performance.now() - p.readyAt) : '0:00') + ' elapsed';
+    cpBody.textContent = t.stdCount + ' × ' + p.std + ' + ' + t.shortW + ' short = ' + t.weight + ' kg · ' + (p.readyAt ? fmtClock(performance.now() - p.readyAt) : '0:00') + ' elapsed';
     cpWarn.hidden = t.count > 0;
     if (!t.count) { cpWarn.hidden = false; cpWarn.textContent = '0 baskets counted in this pile.'; }
     closePileConfirm.hidden = false;
@@ -1103,7 +1298,7 @@
   btnCpConfirm.addEventListener('click', function () {
     var p = curPile(); var t = pileTotals(p);
     p.status = 'closed'; p.closedAt = performance.now();
-    pushSystemEvent(p, 'pile closed · ' + t.count + ' baskets · ' + t.weight + ' kg');
+    pushSystemEvent(p, 'pile closed · ' + t.stdCount + '×' + p.std + '+' + t.shortW + ' short = ' + t.weight + ' kg');
     closePileConfirm.hidden = true;
     tcTitle.textContent = 'ปิด' + p.name + 'แล้ว';
     tcSub.textContent = t.count + ' เข่ง · ' + t.weight.toLocaleString() + ' กก.';
@@ -1146,10 +1341,10 @@
   });
 
   /* ---------- ticking display timers ---------- */
-  setInterval(function () { saleTimerEl.textContent = fmtClock(performance.now() - saleStart); renderTimers(); renderWeights(); }, 500);
+  setInterval(function () { saleTimerEl.textContent = fmtClock(performance.now() - saleStart); renderTimers(); expectedChip.textContent = curPile().tare + ' + ' + curPile().std + ' = ' + (curPile().tare + curPile().std) + ' กก. · last ' + lastCountAgoText(); }, 500);
 
   renderAll();
   setV5(false);
-  setPartialVal(30);
+  mountStdWgt();
 })();
 </script>

@@ -170,6 +170,10 @@
     --warn: #9A6300; --warn-bg: #F1E0B8; --clear-bg: #D7E8DD; --card: #FBFAF6;
   }
 
+  /* CSS author rules beat the UA [hidden] rule regardless of specificity —
+     restore native hidden behaviour once, here, before any component sets display. */
+  [hidden] { display: none !important; }
+
   body {
     background: var(--ground); color: var(--ink);
     font-family: var(--serif); font-size: 17px; line-height: 1.6;

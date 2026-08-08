@@ -13,7 +13,7 @@
 > by testing, not by this document"*), and are written as variants to try,
 > not as recommendations to adopt.
 >
-> 20 findings: 7 gaps, 7 to settle by testing, and 6 design consequences
+> 22 findings: 7 gaps, 7 to settle by testing, and 8 design consequences
 > that follow from constraints already agreed.
 
 ## Method
@@ -465,6 +465,70 @@ a zone closed early is recoverable data-wise — but the confirmation must
 name which pile(s) are still being counted, so the operator closes with
 eyes open rather than by reflex. Implemented and testable in
 `docs/ux/counter-screen-full.html`.
+
+## Group G — What a working build day surfaced
+
+Two more rounds of hands-on use against the assembled screen — one a bug
+report, one a set of real gaps in the counting/weighing model — produced
+one correctness fix and two new findings.
+
+### Correction — the short-basket entry was recording an ambiguous number
+
+F-13's original recommendation didn't specify **what** the entered figure
+for a short basket meant, and the first prototype treated it as a bare
+kilogram amount added straight to the pile's weight. FR-5.6 is explicit
+that this should be **the actual scale reading**, with net weight derived
+by subtracting tare — not a number the operator supplies pre-derived. Two
+different operators could easily disagree about which the field meant, and
+get the same pile's total wrong in opposite directions. Fixed in
+`docs/ux/counter-screen-full.html`: the field is labelled and bounded as a
+gross scale reading (from the pile's tare up to a full standard reading),
+with the net computed and shown live — "scale 43 − tare 2 = net 41 กก." —
+before the operator ever confirms it, and both numbers are kept in the log
+line, not just the derived one.
+
+### F-21 Zero and tare, checked before every pile, not once per sale
+
+FR-3.1 only requires the empty-container weigh-in once, at the sale's
+start. Repeating it before every pile — confirm the empty scale reads
+zero, then weigh the empty bucket fresh — costs a few seconds and buys the
+same thing the public count buys: nobody has to take a number on faith,
+because they watched it get measured for *this* pile specifically, not
+inherited from the first one an hour ago. This also finally answers Open
+question 4 (mid-sale re-tare) in the affirmative by default, rather than
+leaving it assumed: different basket types mid-sale are handled for free
+if the check just runs every time.
+
+**Recommendation — default on, but make it a per-tenant setting.** A
+two-person sale and a large-crew sale plausibly want different answers
+here, and forcing the stricter default on everyone who'd rather relax it
+is its own kind of harm. "Not zero" must never block the sale — it flags
+(the same non-blocking pattern already established for the clock anomaly,
+FR-12.6/12.7) and lets the operator continue to the tare step regardless.
+Implemented as a settings toggle in `docs/ux/counter-screen-full.html`
+("check every pile" vs. "once per sale"); real persistence of that
+preference across sessions is a backend/storage decision for later, not
+answered here.
+
+### F-22 Plus-and-minus alone doesn't scale to real weights
+
+A ±1 kg stepper for a bucket weight is fine. The same stepper for
+adjusting a 50 kg standard net, or a short basket's scale reading anywhere
+in a 0–50 kg range, means dozens of taps for a single number — exactly the
+kind of friction a field operator abandons under pace. **Recommendation —
+three input modes on the same value, not a mode to choose between:** a
+native range slider for a fast coarse drag, ± buttons stepping 0.5 kg for
+a fine nudge, and a plain text field for typing an exact figure directly.
+None are gated behind the others.
+
+One open point: **which mode a given operator prefers is itself a
+preference worth remembering**, so the next field they touch can default
+to it (e.g. auto-focusing the text field for someone who's been typing).
+Implemented at session scope only in the prototype — nothing persists
+across a reload — flagged honestly in its own settings note rather than
+implying a persistence that isn't built yet. Whether that preference
+should live per-device, per-user, or per-tenant is a real product question
+for `docs/architecture.md`'s local data layer, not decided here.
 
 ## Suggested testing sequence
 
