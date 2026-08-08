@@ -13,7 +13,7 @@
 > by testing, not by this document"*), and are written as variants to try,
 > not as recommendations to adopt.
 >
-> 18 findings: 7 gaps, 7 to settle by testing, and 4 design consequences
+> 20 findings: 7 gaps, 7 to settle by testing, and 6 design consequences
 > that follow from constraints already agreed.
 
 ## Method
@@ -426,6 +426,45 @@ establish on basket 1 that the screen is theirs to watch — is better served
 by doing it just *before* basket 1 than by interrupting it.
 
 ---
+
+## Group F — Assembling the whole screen
+
+Putting the pieces above together into one operable screen surfaced two
+findings neither piece raised on its own — the kind of thing that only
+shows up once layout, hierarchy, and the close-out flow have to coexist.
+
+### F-19 Everything doesn't fit one phone screen at once, and FR-9.1 doesn't pause while you're elsewhere on it
+
+The counter, the pile/zone hierarchy, the tare/standard editor, the
+timers, the running totals, and the event log are all real requirements,
+but a phone in landscape — per the Group A arithmetic — has roughly a
+35 mm strip left after the public numeral. None of that fits legibly at
+once. The screen has to be organised into sections reached one at a time,
+not a single dense composite.
+
+That immediately creates a second problem: FR-9.1 requires the count to be
+visible to the other party, and that requirement does not go away because
+the operator has navigated to check a timer or void a log entry.
+**Recommendation:** organise the screen into a primary counting view plus
+secondary views (pile/zone detail, log), reached by switching, with a
+small persistent readout of the current count shown whenever a secondary
+view is active — so the public number is never fully absent, only smaller.
+A tablet has enough room to show the counter and the pile/zone detail side
+by side without switching at all, which is one more argument for settling
+the phone-vs-tablet question (F-9.7, open question 2) before this is built
+for real.
+
+### F-20 Closing a zone needs a guard the original findings didn't cover
+
+None of the findings above considered what happens to a pile that is still
+mid-count when its zone gets closed around it — closing a zone is a
+workflow marker (FR-6.4 already makes rollups live regardless of open/
+closed status), but a pile with no zone left to belong to, mid-weighing,
+is a real way to strand work. **Recommendation:** don't block the close —
+a zone closed early is recoverable data-wise — but the confirmation must
+name which pile(s) are still being counted, so the operator closes with
+eyes open rather than by reflex. Implemented and testable in
+`docs/ux/counter-screen-full.html`.
 
 ## Suggested testing sequence
 
