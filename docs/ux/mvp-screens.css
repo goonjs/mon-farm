@@ -1,0 +1,410 @@
+/* ============================================================================
+ * mon-farm — MVP screen designs, shared chrome.
+ *
+ * Every value here resolves to a token in tokens.css. If you find yourself
+ * typing a hex code or a raw pixel size in this file, the token is missing —
+ * add it to design/tokens.ts rather than hard-coding it here.
+ *
+ * Landscape phone only. The device frame is locked to the 844 × 390 reference
+ * viewport; a `.device.floor` variant renders the 740 × 360 low-end Android
+ * floor so both can be reviewed side by side.
+ * ==========================================================================*/
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Ahead of every component rule on purpose: an author `display` rule beats the
+   UA `[hidden]` rule regardless of specificity, because CSS compares origin
+   before specificity. This bit the earlier prototypes twice. */
+[hidden] { display: none !important; }
+
+:root { --doc-serif: Georgia, "Iowan Old Style", "Times New Roman", serif; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--doc-serif);
+  font-size: 17px;
+  line-height: var(--font-line-height-body);
+}
+
+/* ---------------------------------------------------------------- doc shell */
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 2.5rem) 6rem;
+  display: flex; flex-direction: column;
+  gap: clamp(2.5rem, 5vw, 4rem);
+}
+
+h1, h2, h3 { font-family: var(--font-family-sans); }
+h1 {
+  font-size: clamp(2rem, 5.4vw, 3rem); font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.05; margin: 0.2em 0 0;
+  text-wrap: balance;
+}
+h2 {
+  font-size: clamp(1.25rem, 2.6vw, 1.6rem); font-weight: 700;
+  letter-spacing: -0.02em; margin: 0 0 var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: var(--border-thick) solid var(--color-ink);
+}
+h3 { font-size: var(--font-size-lead); font-weight: 700; margin: var(--space-xl) 0 var(--space-sm); }
+p { margin: 0 0 1em; max-width: 68ch; }
+a { color: var(--color-action); }
+code {
+  font-family: var(--font-family-mono); font-size: 0.86em;
+  background: var(--color-surface-sunk); padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+}
+
+.eyebrow {
+  font-family: var(--font-family-mono); font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--color-action); margin: 0;
+}
+.standfirst {
+  font-size: 1.2rem; line-height: 1.5; color: var(--color-ink-soft);
+  margin-top: var(--space-md);
+}
+.mono-label {
+  font-family: var(--font-family-mono); font-size: var(--font-size-micro);
+  letter-spacing: var(--font-tracking-wide); text-transform: uppercase;
+  color: var(--color-ink-soft); margin: 0;
+}
+
+.toolbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap;
+  background: var(--color-surface);
+  padding: var(--space-sm) 0;
+  border-bottom: var(--border-hair) solid var(--color-rule);
+}
+.btn {
+  font-family: var(--font-family-sans); font-size: var(--font-size-small);
+  font-weight: 500; min-height: 36px; padding: 0 var(--space-md);
+  border: var(--border-hair) solid var(--color-rule-strong);
+  background: var(--color-surface-raised); color: var(--color-ink);
+  border-radius: var(--radius-md); cursor: pointer;
+}
+.btn:hover { background: var(--color-surface-sunk); }
+.btn[aria-pressed="true"] { background: var(--color-action); color: var(--color-ink-inverse); border-color: var(--color-action); }
+
+:focus-visible { outline: var(--border-thick) solid var(--color-action); outline-offset: 2px; }
+
+/* Screen caption block above each device */
+.screen-head { display: flex; align-items: baseline; gap: var(--space-md); flex-wrap: wrap; margin-bottom: var(--space-md); }
+.screen-num {
+  font-family: var(--font-family-mono); font-size: var(--font-size-small);
+  font-weight: 700; color: var(--color-ink-inverse);
+  background: var(--color-ink); border-radius: var(--radius-sm);
+  padding: 2px 8px;
+}
+
+/* Register annotation strip under each device */
+.annot { display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-top: var(--space-lg); }
+.annot-item {
+  border-left: 4px solid var(--color-rule);
+  padding-left: var(--space-md);
+  font-family: var(--font-family-sans); font-size: var(--font-size-small);
+  line-height: 1.45; color: var(--color-ink-soft);
+}
+.annot-item.public    { border-left-color: var(--color-ink); }
+.annot-item.operator  { border-left-color: var(--color-action); }
+.annot-item.announced { border-left-color: var(--color-accept); }
+.annot-item.events    { border-left-color: var(--color-warn); }
+.annot-item b { color: var(--color-ink); font-weight: 700; display: block; margin-bottom: 2px; }
+
+.callout {
+  border-left: var(--border-ring) solid var(--color-warn);
+  background: var(--color-warn-sunk);
+  padding: var(--space-lg); border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.callout p { font-family: var(--font-family-sans); font-size: var(--font-size-small); margin: 0; max-width: none; }
+.callout p + p { margin-top: var(--space-sm); }
+
+/* ============================================================== THE DEVICE */
+
+/* Fixed, never fluid. A landscape phone frame that reflows to fit the document
+   is a lie about the layout — the whole point is that 844 × 390 is all the room
+   there is. `.device-scroll` scrolls instead. */
+.device {
+  width: 844px; height: 390px; flex: none;
+  border: var(--border-thick) solid var(--color-ink);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface);
+  display: flex; flex-direction: column;
+  container-type: size;
+  font-family: var(--font-family-sans);
+  line-height: var(--font-line-height-snug);
+  color: var(--color-ink);
+}
+.device.floor { width: 740px; height: 360px; }
+
+/* Devices scroll horizontally on a narrow doc rather than squashing — a
+   squashed landscape phone is a lie about the layout. */
+.device-scroll { overflow-x: auto; padding-bottom: var(--space-sm); }
+
+/* ---- topbar ---- */
+.topbar {
+  flex: none;
+  display: flex; align-items: center; gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: var(--border-hair) solid var(--color-rule);
+  background: var(--color-surface);
+  min-height: 34px;
+}
+.crumb {
+  font-family: inherit; font-size: var(--font-size-small); font-weight: 700;
+  background: none; border: 0; padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm); color: var(--color-ink); cursor: pointer;
+  display: flex; align-items: center; gap: 5px; white-space: nowrap;
+}
+.crumb:hover { background: var(--color-surface-sunk); }
+.crumb-sep, .crumb-caret { color: var(--color-ink-soft); font-weight: 400; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: var(--space-xs); }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-family-mono); font-size: var(--font-size-micro);
+  letter-spacing: var(--font-tracking-wide); text-transform: uppercase;
+  padding: 3px 8px; border-radius: var(--radius-pill);
+  background: var(--color-surface-sunk); color: var(--color-ink-soft);
+  border: 0; white-space: nowrap;
+}
+.pill.warn { background: var(--color-warn-sunk); color: var(--color-warn); }
+.pill.accept { background: var(--color-accept-sunk); color: var(--color-accept); }
+.pill.count { background: var(--color-ink); color: var(--color-ink-inverse); font-weight: 700; }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.dot.filled { background: currentColor; }
+.dot.hollow { border: 2px solid currentColor; }
+.dot.half   { background: linear-gradient(90deg, currentColor 50%, transparent 50%); border: 1.5px solid currentColor; }
+
+/* ---- tabs ---- */
+.tabbar {
+  flex: none; display: flex; gap: 0;
+  border-bottom: var(--border-hair) solid var(--color-rule);
+  background: var(--color-surface);
+}
+/* Chrome is kept deliberately thin. Every pixel spent on the tab bar is a
+   pixel taken off the numeral, and §4 of the design system makes numeral height
+   the tightest constraint in the product. */
+.tab {
+  font-family: inherit; font-size: var(--font-size-small); font-weight: 500;
+  background: none; border: 0; cursor: pointer;
+  padding: var(--space-xs) var(--space-lg);
+  color: var(--color-ink-soft);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+}
+.tab[aria-selected="true"] { color: var(--color-action); border-bottom-color: var(--color-action); font-weight: 700; }
+
+.panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* ---- the stage (Public register) ---- */
+/* The stage is its own container so the numeral can be sized against the space
+   it actually has, not against the whole device. Sizing off the device height
+   made the glyph exactly as tall as the stage — it filled it edge to edge with
+   no room for the expected-reading chip. */
+.stage {
+  flex: 1; position: relative; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-stage);
+  container-type: size;
+}
+.bezel { position: absolute; inset: 0; pointer-events: none; }
+.bezel svg { width: 100%; height: 100%; display: block; }
+.bezel rect { fill: none; vector-effect: non-scaling-stroke; }
+.bezel-track { stroke: var(--color-rule-faint); stroke-width: var(--bezel-width); }
+.bezel-fill {
+  stroke: var(--color-accept); stroke-width: var(--bezel-width); stroke-linecap: butt;
+  transition: stroke-dashoffset 80ms linear;
+}
+.stage.is-rejected .bezel-fill { stroke: var(--color-reject); transition: stroke-dashoffset 200ms ease-in; }
+
+.pub-num {
+  position: relative; z-index: 2;
+  font-weight: var(--font-weight-black);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--font-tracking-tight);
+  line-height: var(--font-line-height-solid);
+  color: var(--color-ink);
+  /* Of the stage, not the device.
+     Chrome is a fixed ~106px, so it eats a larger fraction of the 360px floor
+     device than of the 390px reference — the floor is the binding case.
+     Measured against tokens.publicNumeral.minHeightRatio (0.62):
+       88cqh → 0.616 reference / 0.594 floor   under
+       92cqh → 0.644 reference / 0.621 floor   clears by 0.001, not meaningful
+       94cqh → 0.658 reference / 0.634 floor   ← real margin on both
+     None of these are round numbers by accident. */
+  font-size: 94cqh;
+}
+.stage-foot {
+  position: absolute; left: 0; right: 0; bottom: 3cqh;
+  display: flex; justify-content: center; gap: var(--space-md);
+  z-index: 2; pointer-events: none;
+}
+.expected-chip {
+  font-family: var(--font-family-mono); font-size: var(--font-size-micro);
+  letter-spacing: var(--font-tracking-wide);
+  color: var(--color-ink-soft);
+  background: var(--color-surface);
+  padding: 3px 10px; border-radius: var(--radius-pill);
+}
+
+/* ---- operator action row under the stage ---- */
+.action-row {
+  flex: none; display: flex; align-items: center; gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-top: var(--border-hair) solid var(--color-rule);
+  background: var(--color-surface);
+}
+.action-row .spacer { margin-left: auto; }
+
+.ui-btn {
+  font-family: inherit; font-size: var(--font-size-small); font-weight: 500;
+  min-height: 40px; padding: 0 var(--space-md);
+  border-radius: var(--radius-md); cursor: pointer;
+  border: var(--border-hair) solid transparent;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.ui-btn.primary { background: var(--color-action); color: var(--color-ink-inverse); }
+.ui-btn.ghost { background: transparent; color: var(--color-action); border-color: var(--color-rule-strong); }
+.ui-btn.destructive { background: transparent; color: var(--color-reject); border-color: var(--color-reject); }
+.ui-btn.big { min-height: var(--target-comfortable); font-size: var(--font-size-body); padding: 0 var(--space-xl); }
+.ui-btn[disabled] { opacity: var(--opacity-disabled); cursor: not-allowed; }
+
+/* ---- overlays over the stage ---- */
+.overlay {
+  position: absolute; inset: 0; z-index: 5;
+  background: var(--color-stage);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--space-md); padding: var(--space-lg);
+  text-align: center;
+}
+.overlay.scrim { background: color-mix(in srgb, var(--color-stage) 94%, transparent); }
+.wiz-step-label { color: var(--color-action); }
+.overlay h4 {
+  font-size: var(--font-size-title); font-weight: 800; margin: 0;
+  letter-spacing: -0.02em;
+}
+.overlay .lead { font-size: var(--font-size-lead); margin: 0; color: var(--color-ink); }
+.overlay .sub { font-size: var(--font-size-small); margin: 0; color: var(--color-ink-soft); max-width: 46ch; }
+.overlay-actions { display: flex; gap: var(--space-sm); flex-wrap: wrap; justify-content: center; }
+
+/* ---- generic panel content (Pile / Log / Setup / Settlement) ---- */
+.pad { padding: var(--space-md); overflow: auto; flex: 1; min-height: 0; }
+.cols { display: grid; gap: var(--space-md); grid-template-columns: repeat(3, 1fr); align-items: start; }
+.cols.two { grid-template-columns: 1.1fr 1fr; }
+
+.card {
+  border: var(--border-hair) solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  padding: var(--space-md);
+}
+.card + .card { margin-top: var(--space-sm); }
+.card h5 { margin: 0 0 var(--space-sm); font-size: var(--font-size-micro); font-family: var(--font-family-mono); letter-spacing: var(--font-tracking-wide); text-transform: uppercase; color: var(--color-ink-soft); font-weight: 400; }
+
+.stat { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); padding: 3px 0; font-size: var(--font-size-small); }
+.stat dt { color: var(--color-ink-soft); }
+.stat dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 700; }
+.stat.big dd { font-size: var(--font-size-lead); }
+.stat.total { border-top: var(--border-hair) solid var(--color-rule); margin-top: var(--space-sm); padding-top: var(--space-sm); }
+dl { margin: 0; }
+
+.figure { font-size: var(--font-size-figure); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: var(--font-tracking-tight); line-height: 1; }
+
+/* ---- log ---- */
+.log { display: flex; flex-direction: column; }
+.log-row {
+  display: grid; grid-template-columns: 18px 52px 1fr auto;
+  gap: var(--space-sm); align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: var(--border-hair) solid var(--color-rule-faint);
+  font-size: var(--font-size-small);
+}
+.log-seq { font-family: var(--font-family-mono); font-size: var(--font-size-micro); color: var(--color-ink-soft); font-variant-numeric: tabular-nums; }
+.log-mark { font-weight: 700; text-align: center; }
+.log-row.accept .log-mark { color: var(--color-accept); }
+.log-row.reject .log-mark { color: var(--color-reject); }
+.log-row.warnk .log-mark { color: var(--color-warn); }
+.log-row.sys   .log-mark { color: var(--color-ink-soft); }
+.log-row.voided .log-body { text-decoration: line-through; color: var(--color-ink-soft); }
+.log-time { font-family: var(--font-family-mono); font-size: var(--font-size-micro); color: var(--color-ink-soft); font-variant-numeric: tabular-nums; }
+.log-body b { font-weight: 700; }
+.log-note { color: var(--color-ink-soft); font-size: var(--font-size-micro); }
+
+/* ---- form bits (setup) ---- */
+.field { display: flex; flex-direction: column; gap: 3px; margin-bottom: var(--space-sm); }
+.field > label { font-family: var(--font-family-mono); font-size: var(--font-size-micro); letter-spacing: var(--font-tracking-wide); text-transform: uppercase; color: var(--color-ink-soft); }
+.input {
+  font-family: inherit; font-size: var(--font-size-small);
+  min-height: 34px; padding: 0 var(--space-sm);
+  border: var(--border-hair) solid var(--color-rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised); color: var(--color-ink);
+  width: 100%;
+}
+.input.strong { font-size: var(--font-size-lead); font-weight: 700; font-variant-numeric: tabular-nums; min-height: 42px; }
+.seg { display: flex; gap: 0; border: var(--border-hair) solid var(--color-rule-strong); border-radius: var(--radius-sm); overflow: hidden; }
+.seg button {
+  flex: 1; font-family: inherit; font-size: var(--font-size-small);
+  min-height: 34px; border: 0; background: var(--color-surface-raised);
+  color: var(--color-ink); cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--color-action); color: var(--color-ink-inverse); font-weight: 700; }
+.seg button + button { border-left: var(--border-hair) solid var(--color-rule-strong); }
+
+.row-list { display: flex; flex-direction: column; gap: var(--space-xs); }
+.row-item {
+  display: flex; align-items: center; gap: var(--space-sm);
+  padding: var(--space-sm); border-radius: var(--radius-sm);
+  background: var(--color-surface-sunk);
+  font-size: var(--font-size-small);
+}
+.row-item .grow { flex: 1; }
+.row-item .num { font-family: var(--font-family-mono); font-variant-numeric: tabular-nums; color: var(--color-ink-soft); font-size: var(--font-size-micro); }
+
+.zone-tag {
+  font-family: var(--font-family-mono); font-size: var(--font-size-micro);
+  letter-spacing: var(--font-tracking-wide);
+  background: var(--color-ink); color: var(--color-ink-inverse);
+  padding: 2px 7px; border-radius: var(--radius-sm); font-weight: 700;
+}
+
+/* ---- settlement derivation ---- */
+.derivation { display: flex; flex-direction: column; }
+.deriv-step {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: var(--space-md); align-items: baseline;
+  padding: var(--space-sm) 0;
+  border-bottom: var(--border-hair) solid var(--color-rule-faint);
+  font-size: var(--font-size-small);
+}
+.deriv-step .label { color: var(--color-ink-soft); }
+.deriv-step .label b { color: var(--color-ink); font-weight: 700; }
+.deriv-step .val { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.deriv-step.result { border-bottom: 0; border-top: var(--border-thick) solid var(--color-ink); margin-top: var(--space-xs); padding-top: var(--space-sm); }
+.deriv-step.result .val { font-size: var(--font-size-lead); }
+.deriv-step.share { background: var(--color-action-sunk); border-radius: var(--radius-sm); padding: var(--space-sm); border-bottom: 0; margin-top: var(--space-xs); }
+.deriv-step.share .val { color: var(--color-action); font-size: var(--font-size-lead); }
+
+.split-bar { display: flex; height: 10px; border-radius: var(--radius-pill); overflow: hidden; margin: var(--space-sm) 0; }
+.split-bar .owner  { background: var(--color-action); }
+.split-bar .worker { background: var(--color-ink-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+.foot {
+  border-top: var(--border-hair) solid var(--color-rule);
+  padding-top: var(--space-lg); color: var(--color-ink-soft);
+  font-size: var(--font-size-small); font-family: var(--font-family-sans);
+}

@@ -1,0 +1,723 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mon-farm — MVP screens</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="mvp-screens.css">
+
+<div class="page">
+
+  <div class="toolbar">
+    <button type="button" class="btn" id="btnTheme">Theme: light</button>
+    <button type="button" class="btn" id="btnSize" aria-pressed="false">Size: 844 × 390</button>
+    <span class="mono-label">landscape phone · every value from design/tokens.ts</span>
+  </div>
+
+  <header>
+    <p class="eyebrow">mon-farm · docs/ux · MVP screen designs draft v0.1</p>
+    <h1>One sale, end to end.</h1>
+    <p class="standfirst">
+      Seven screens covering the first MVP: set up a sale across several zones
+      and piles, count baskets, correct mistakes without erasing them, close
+      piles and zones, and settle — with the total broken down per zone and each
+      side's share shown as arithmetic anyone can check by hand.
+    </p>
+    <p>
+      Content is a worked example, not a decision: <b>ไร่คุณพ่อ</b> selling cup
+      lump to <b>ล้งเจริญทรัพย์</b> at ฿26.50/kg, 60/40 owner/worker, bucket
+      2&nbsp;kg, standard basket 50&nbsp;kg. The numbers reconcile — the
+      settlement in screen 7 is derived from the counts in screens 3–5, so it's
+      a real check on the money chain, not placeholder text.
+    </p>
+  </header>
+
+  <!-- ============================================================ SCREEN 1 -->
+  <section>
+    <div class="screen-head">
+      <span class="screen-num">1</span>
+      <h2 style="border:0;padding:0;margin:0">Sale setup</h2>
+    </div>
+    <p>
+      Everything that must be agreed <i>before</i> the first basket. Price and
+      split basis are both required — FR-8.5 says there is no safe default for
+      whose share applies to what, so the app refuses to start counting until
+      someone has said.
+    </p>
+
+    <div class="device-scroll"><div class="device">
+      <div class="topbar">
+        <button type="button" class="crumb">ไร่คุณพ่อ <span class="crumb-caret">▾</span></button>
+        <div class="topbar-right">
+          <span class="pill"><span class="dot hollow"></span>ยังไม่เริ่ม</span>
+          <span class="pill">⚙</span>
+        </div>
+      </div>
+
+      <div class="panel"><div class="pad">
+        <div class="cols">
+
+          <div>
+            <div class="card">
+              <h5>ผู้ซื้อ · buyer &amp; people</h5>
+              <div class="field"><label for="s1a">ล้ง · buyer</label>
+                <input class="input" id="s1a" value="ล้งเจริญทรัพย์" readonly></div>
+              <div class="field"><label for="s1b">ผู้จัดการ · manager</label>
+                <input class="input" id="s1b" value="สมชาย" readonly></div>
+              <div class="field"><label for="s1c">หัวหน้าคนงาน · worker lead</label>
+                <input class="input" id="s1c" value="ประยุทธ" readonly></div>
+              <div class="field"><label>สถานที่ · where</label>
+                <div class="seg">
+                  <button type="button" aria-pressed="true">ที่ไร่ · at farm</button>
+                  <button type="button" aria-pressed="false">ที่ล้ง · at buyer</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <h5>ราคา · agreed price</h5>
+              <div class="field"><label for="s1d">฿ ต่อ กก. · baht per kg</label>
+                <input class="input strong" id="s1d" value="26.50" readonly></div>
+              <div class="field"><label for="s1e">อ้างอิงราคากลาง · market index reference</label>
+                <input class="input" id="s1e" value="ตลาดกลางหาดใหญ่ 9 ส.ค. — 26.80" readonly></div>
+              <p class="mono-label" style="margin-top:var(--space-sm);text-transform:none;letter-spacing:0">
+                Entered by hand. The app never fetches a price — it records what
+                the two of you agreed and what you agreed it against.
+              </p>
+            </div>
+
+            <div class="card">
+              <h5>ส่วนแบ่ง · split</h5>
+              <div class="field"><label>เจ้าของ / คนงาน · owner / worker</label>
+                <div class="seg">
+                  <button type="button" aria-pressed="true">60 / 40</button>
+                  <button type="button" aria-pressed="false">50 / 50</button>
+                  <button type="button" aria-pressed="false">อื่น ๆ</button>
+                </div>
+              </div>
+              <div class="field"><label>คิดจาก · applies to</label>
+                <div class="seg">
+                  <button type="button" aria-pressed="true">ยอดรวม · gross</button>
+                  <button type="button" aria-pressed="false">ยอดสุทธิ · final</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <h5>โซนและกอง · zones &amp; piles</h5>
+              <div class="row-list">
+                <div class="row-item"><span class="zone-tag">โซน A</span><span class="grow">กอง 1</span><span class="num">2 + 50</span></div>
+                <div class="row-item"><span class="zone-tag">โซน A</span><span class="grow">กอง 2</span><span class="num">2 + 50</span></div>
+                <div class="row-item"><span class="zone-tag">โซน B</span><span class="grow">กอง 3</span><span class="num">2 + 50</span></div>
+              </div>
+              <button type="button" class="ui-btn ghost" style="margin-top:var(--space-sm);width:100%;justify-content:center">+ เพิ่มกอง · add pile</button>
+            </div>
+          </div>
+
+        </div>
+      </div></div>
+
+      <div class="action-row">
+        <span class="mono-label">ทุกอย่างพร้อม · price, split basis and 3 piles set</span>
+        <span class="spacer"></span>
+        <button type="button" class="ui-btn primary big">เริ่มขาย — start the sale →</button>
+      </div>
+    </div></div>
+
+    <div class="annot">
+      <div class="annot-item operator"><b>Operator</b>Everything here. Setup happens before anyone is watching a count, so the whole screen is arm's-length.</div>
+      <div class="annot-item events"><b>Writes</b><code>sale_started</code>, <code>price_set</code>, <code>split_set</code>, <code>zone_added</code> ×2, <code>pile_added</code> ×3 — each its own event, so changing the price later is visible as a change.</div>
+      <div class="annot-item"><b>Gate</b>The start button stays disabled until price <i>and</i> split basis exist. Not a warning — a gate.</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ SCREEN 2 -->
+  <section>
+    <div class="screen-head">
+      <span class="screen-num">2</span>
+      <h2 style="border:0;padding:0;margin:0">Zero check &amp; tare, before every pile</h2>
+    </div>
+    <p>
+      Three steps stand between arriving at a pile and counting it: does the
+      empty scale read zero, what does the empty bucket weigh, and a read-back
+      of the expected reading spoken aloud. A failed zero check is
+      <b>flagged and recorded, never blocking</b> — the person in the yard
+      decides whether to carry on, not the app.
+    </p>
+
+    <div class="device-scroll"><div class="device">
+      <div class="topbar">
+        <button type="button" class="crumb">ไร่คุณพ่อ <span class="crumb-sep">▸</span> โซน A <span class="crumb-sep">▸</span> กอง 1 <span class="crumb-caret">▾</span></button>
+        <div class="topbar-right">
+          <span class="pill"><span class="dot hollow"></span>หยุด</span>
+          <span class="pill">0:00</span>
+          <span class="pill accept"><span class="dot filled"></span>synced</span>
+        </div>
+      </div>
+      <div class="tabbar" role="tablist">
+        <button type="button" class="tab" role="tab" aria-selected="true">นับ · Count</button>
+        <button type="button" class="tab" role="tab" aria-selected="false">กอง · Pile</button>
+        <button type="button" class="tab" role="tab" aria-selected="false">บันทึก · Log</button>
+      </div>
+
+      <div class="panel">
+        <div class="stage">
+          <div class="overlay">
+            <p class="mono-label wiz-step-label">ขั้นที่ 1 จาก 3 · scale zero check</p>
+            <h4>กอง 1</h4>
+            <p class="lead">ไม่มีอะไรบนตาชั่ง — ขึ้นศูนย์ไหม?</p>
+            <p class="sub">Nothing on the scale. Does it read zero?</p>
+            <div class="overlay-actions">
+              <button type="button" class="ui-btn primary big">ใช่ ศูนย์ — yes, zero</button>
+              <button type="button" class="ui-btn ghost big">ไม่ใช่ — not zero</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+
+    <div class="annot">
+      <div class="annot-item public"><b>Public</b>Nothing yet. The count doesn't appear until the pile is ready — an unstarted pile showing "0" invites someone to think counting has begun.</div>
+      <div class="annot-item operator"><b>Operator</b>The whole wizard. One question per step, phrased as the physical action, not the data field.</div>
+      <div class="annot-item announced"><b>Announced</b>Step 3 speaks the read-back: <i>"โซน A กอง 1 ตาชั่งเปล่า 2 กิโล บวกยาง 50 กิโล เท่ากับ 52 กิโล"</i></div>
+      <div class="annot-item events"><b>Writes</b><code>zero_check</code> (with the reading if it wasn't zero), <code>tare_confirmed</code>, <code>ready</code>, <code>announced</code>.</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ SCREEN 3 -->
+  <section>
+    <div class="screen-head">
+      <span class="screen-num">3</span>
+      <h2 style="border:0;padding:0;margin:0">Counting — the Public register</h2>
+    </div>
+    <p>
+      The screen the buyer is looking at. One number, as large as the device can
+      physically make it, and a stroke travelling the perimeter as the
+      three-second hold completes. Press and hold the stage to try it.
+    </p>
+
+    <div class="device-scroll"><div class="device" id="dev3">
+      <div class="topbar">
+        <button type="button" class="crumb">ไร่คุณพ่อ <span class="crumb-sep">▸</span> โซน A <span class="crumb-sep">▸</span> กอง 1 <span class="crumb-caret">▾</span></button>
+        <div class="topbar-right">
+          <span class="pill accept"><span class="dot filled"></span>กำลังนับ</span>
+          <span class="pill">12:04</span>
+          <span class="pill warn">🔇 ไม่มีเสียง</span>
+          <span class="pill"><span class="dot half"></span>ค้าง 12</span>
+        </div>
+      </div>
+      <div class="tabbar" role="tablist">
+        <button type="button" class="tab" role="tab" aria-selected="true">นับ · Count</button>
+        <button type="button" class="tab" role="tab" aria-selected="false">กอง · Pile</button>
+        <button type="button" class="tab" role="tab" aria-selected="false">บันทึก · Log</button>
+      </div>
+
+      <div class="panel">
+        <div class="stage" id="stage3" tabindex="0" role="application"
+             aria-label="ตัวนับ. กดค้างสามวินาทีเพื่อนับหนึ่งเข่ง. Counter, press and hold three seconds to count one basket.">
+          <div class="bezel">
+            <svg viewBox="0 0 844 322" preserveAspectRatio="none" aria-hidden="true">
+              <rect class="bezel-track" x="6" y="6" width="832" height="310" rx="8"></rect>
+              <rect class="bezel-fill" id="fill3" x="6" y="6" width="832" height="310" rx="8"
+                    pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></rect>
+            </svg>
+          </div>
+          <span class="pub-num" id="num3">87</span>
+          <div class="stage-foot">
+            <span class="expected-chip" id="chip3">2 + 50 = 52 กก. · ล่าสุด 8 วิ</span>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button type="button" class="ui-btn ghost" id="undo3">↺ ยกเลิกเข่งล่าสุด · undo last</button>
+          <button type="button" class="ui-btn ghost">⚖ เข่งไม่เต็ม · short basket</button>
+          <span class="spacer"></span>
+          <button type="button" class="ui-btn destructive">ปิดกอง · close pile</button>
+        </div>
+      </div>
+    </div></div>
+
+    <div class="annot">
+      <div class="annot-item public"><b>Public</b>The numeral and the bezel. Nothing else — this is a fixed budget and it is already spent.</div>
+      <div class="annot-item operator"><b>Operator</b>Breadcrumb, timers, state pills, the expected-reading chip, and the action row. All at arm's length, none of it competing with the count.</div>
+      <div class="annot-item announced"><b>Announced</b>Each accepted basket speaks its number in Thai — <i>แปดสิบเจ็ด</i>, not digit-by-digit.</div>
+      <div class="annot-item events"><b>Writes</b><code>accept</code> on a completed hold, <code>reject</code> with the held duration on an early release. A rejection is recorded because a silently dropped tap becomes a missed count.</div>
+    </div>
+
+    <div class="callout" style="margin-top:var(--space-lg)">
+      <p><b>Close pile sits at the far end of the action row, away from undo.</b>
+      Destructive and irreversible controls are never adjacent to each other or
+      to the stage, and always take a second confirm.</p>
+      <p>The three state pills top-right — muted audio, unsynced count, and (not
+      shown here) a clock anomaly — all <b>report without blocking</b>. A screen
+      that stops you counting because its clock is wrong has misunderstood which
+      of the two matters more.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ SCREEN 4 -->
+  <section>
+    <div class="screen-head">
+      <span class="screen-num">4</span>
+      <h2 style="border:0;padding:0;margin:0">Pile &amp; Zone — where the totals live</h2>
+    </div>
+    <p>
+      The answer to "can we show a running total next to the count" is this tab.
+      Note the count stays visible in the topbar as <code>นับ 87</code> — leaving
+      the Count tab must never mean losing sight of the number.
+    </p>
+
+    <div class="device-scroll"><div class="device">
+      <div class="topbar">
+        <button type="button" class="crumb">ไร่คุณพ่อ <span class="crumb-sep">▸</span> โซน A <span class="crumb-sep">▸</span> กอง 1 <span class="crumb-caret">▾</span></button>
+        <div class="topbar-right">
+          <span class="pill count">นับ 87</span>
+          <span class="pill accept"><span class="dot filled"></span>กำลังนับ</span>
+          <span class="pill">12:04</span>
+        </div>
+      </div>
+      <div class="tabbar" role="tablist">
+        <button type="button" class="tab" role="tab" aria-selected="false">นับ · Count</button>
+        <button type="button" class="tab" role="tab" aria-selected="true">กอง · Pile</button>
+        <button type="button" class="tab" role="tab" aria-selected="false">บันทึก · Log</button>
+      </div>
+
+      <div class="panel"><div class="pad">
+        <div class="cols">
+          <div>
+            <div class="card">
+              <h5>กอง 1 · this pile</h5>
+              <dl>
+                <div class="stat big"><dt>เข่งมาตรฐาน · standard</dt><dd>87</dd></div>
+                <div class="stat"><dt>เข่งไม่เต็ม · short</dt><dd>2</dd></div>
+                <div class="stat total"><dt>น้ำหนักรวม · weight</dt><dd>4,429 กก.</dd></div>
+              </dl>
+            </div>
+            <div class="card">
+              <h5>ตาชั่ง · scale</h5>
+              <dl>
+                <div class="stat"><dt>ถังเปล่า · tare</dt><dd>2.0 กก.</dd></div>
+                <div class="stat"><dt>ยางต่อเข่ง · standard net</dt><dd>50.0 กก. 🔒</dd></div>
+                <div class="stat total"><dt>ต้องอ่านได้ · expected</dt><dd>52.0 กก.</dd></div>
+              </dl>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <h5>โซน A · this zone</h5>
+              <dl>
+                <div class="stat"><dt>กอง 1 <span class="pill accept" style="margin-left:4px"><span class="dot filled"></span>นับอยู่</span></dt><dd>4,429 กก.</dd></div>
+                <div class="stat"><dt>กอง 2 <span class="pill" style="margin-left:4px"><span class="dot hollow"></span>ยังไม่เริ่ม</span></dt><dd>—</dd></div>
+                <div class="stat total big"><dt>รวมโซน A</dt><dd>4,429 กก.</dd></div>
+              </dl>
+            </div>
+            <div class="card">
+              <h5>ทั้งการขาย · whole sale</h5>
+              <dl>
+                <div class="stat"><dt>เข่งทั้งหมด</dt><dd>89</dd></div>
+                <div class="stat total big"><dt>รวมทั้งหมด</dt><dd>4,429 กก.</dd></div>
+              </dl>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <h5>เวลา · timers</h5>
+              <dl>
+                <div class="stat"><dt>ทั้งการขาย</dt><dd>12:04</dd></div>
+                <div class="stat"><dt>กองนี้</dt><dd>9:41</dd></div>
+                <div class="stat"><dt>เข่งล่าสุด</dt><dd>8 วิ</dd></div>
+              </dl>
+            </div>
+            <div class="card">
+              <h5>ปิด · close</h5>
+              <button type="button" class="ui-btn destructive" style="width:100%;justify-content:center">ปิดกอง 1 · close pile</button>
+              <button type="button" class="ui-btn destructive" style="width:100%;justify-content:center;margin-top:var(--space-sm)">ปิดโซน A · close zone</button>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div></div>
+
+    <div class="annot">
+      <div class="annot-item operator"><b>Operator</b>All of it. This tab is entirely arm's-length by design.</div>
+      <div class="annot-item"><b>Locked after Ready</b>Standard net shows a padlock once counting starts (FR-3.4). Changing what a basket weighs mid-pile would retroactively rewrite money already agreed.</div>
+      <div class="annot-item"><b>Rollups are derived</b>Nothing here is stored. Pile, zone and sale totals are all folds over the same event log, so they cannot disagree with each other or with the settlement.</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ SCREEN 5 -->
+  <section>
+    <div class="screen-head">
+      <span class="screen-num">5</span>
+      <h2 style="border:0;padding:0;margin:0">Log — corrections that don't erase</h2>
+    </div>
+    <p>
+      Every event in sequence order, including the ones that didn't count. A
+      voided basket stays on the record, struck through, with the correction
+      appended below it — you can see <i>that</i> something was changed, <i>what</i>
+      it was, and <i>why</i>.
+    </p>
+
+    <div class="device-scroll"><div class="device">
+      <div class="topbar">
+        <button type="button" class="crumb">ไร่คุณพ่อ <span class="crumb-sep">▸</span> โซน A <span class="crumb-sep">▸</span> กอง 1 <span class="crumb-caret">▾</span></button>
+        <div class="topbar-right">
+          <span class="pill count">นับ 87</span>
+          <span class="pill accept"><span class="dot filled"></span>กำลังนับ</span>
+        </div>
+      </div>
+      <div class="tabbar" role="tablist">
+        <button type="button" class="tab" role="tab" aria-selected="false">นับ · Count</button>
+        <button type="button" class="tab" role="tab" aria-selected="false">กอง · Pile</button>
+        <button type="button" class="tab" role="tab" aria-selected="true">บันทึก · Log</button>
+      </div>
+
+      <div class="panel"><div class="log" style="overflow:auto">
+        <div class="log-row accept">
+          <span class="log-mark">✓</span><span class="log-seq">#118</span>
+          <span class="log-body"><b>เข่งที่ 87</b> · 50 กก. <span class="log-note">— กดค้าง 3.0 วิ</span></span>
+          <span class="log-time">14:32:08</span>
+        </div>
+        <div class="log-row reject">
+          <span class="log-mark">✗</span><span class="log-seq">#117</span>
+          <span class="log-body"><b>ไม่นับ</b> <span class="log-note">— ปล่อยเร็วไป 0.8 วิ จาก 3.0 วิ</span></span>
+          <span class="log-time">14:32:01</span>
+        </div>
+        <div class="log-row warnk">
+          <span class="log-mark">⚖</span><span class="log-seq">#116</span>
+          <span class="log-body"><b>เข่งไม่เต็ม</b> · ชั่งได้ 43 − ถัง 2 = <b>41 กก.</b></span>
+          <span class="log-time">14:31:22</span>
+        </div>
+        <div class="log-row sys">
+          <span class="log-mark">↩</span><span class="log-seq">#115</span>
+          <span class="log-body"><b>แก้ไข</b> — ยกเลิก #113 <span class="log-note">— เหตุผล: กดพลาด</span></span>
+          <span class="log-time">14:31:04</span>
+        </div>
+        <div class="log-row accept voided">
+          <span class="log-mark">✓</span><span class="log-seq">#113</span>
+          <span class="log-body"><b>เข่งที่ 86</b> · 50 กก.</span>
+          <span class="log-time">14:30:58</span>
+        </div>
+        <div class="log-row accept">
+          <span class="log-mark">✓</span><span class="log-seq">#112</span>
+          <span class="log-body"><b>เข่งที่ 85</b> · 50 กก.</span>
+          <span class="log-time">14:30:41</span>
+        </div>
+        <div class="log-row sys">
+          <span class="log-mark">🔊</span><span class="log-seq">#111</span>
+          <span class="log-body"><b>ประกาศ</b> — "แปดสิบห้า" <span class="log-note">— ไม่มีเสียงในเครื่อง, บันทึกไว้</span></span>
+          <span class="log-time">14:30:41</span>
+        </div>
+      </div></div>
+
+      <div class="action-row">
+        <span class="mono-label">แตะแถวเพื่อยกเลิก · tap a counted row to void it</span>
+        <span class="spacer"></span>
+        <button type="button" class="ui-btn ghost">ส่งออก · export</button>
+      </div>
+    </div></div>
+
+    <div class="annot">
+      <div class="annot-item operator"><b>Operator</b>The whole log. Sequence numbers carry the order, not timestamps — the device clock can't be trusted (FR-12.5).</div>
+      <div class="annot-item announced"><b>Announced</b>Corrections are spoken too. Finding F-11 caught this gap: if a void is silent, the heard record and the stored record diverge, and the buyer's memory is of a number that no longer exists.</div>
+      <div class="annot-item events"><b>Never destructive</b>A void appends a <code>correction</code> pointing at a sequence number. The original event is never mutated or removed — <code>#113</code> is still there, struck through.</div>
+      <div class="annot-item"><b>Row #111</b>An announcement that failed still writes an event, flagged as not heard. The log records what was <i>attempted</i>, which is what makes silence auditable.</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ SCREEN 6 -->
+  <section>
+    <div class="screen-head">
+      <span class="screen-num">6</span>
+      <h2 style="border:0;padding:0;margin:0">Pile closed — the decision point</h2>
+    </div>
+    <p>
+      Closing a pile is the moment the earlier prototype handled worst: it
+      offered a single "continue" button and left the operator guessing where it
+      went. The alternatives are all visible, and the total is read aloud before
+      anyone moves on.
+    </p>
+
+    <div class="device-scroll"><div class="device">
+      <div class="topbar">
+        <button type="button" class="crumb">ไร่คุณพ่อ <span class="crumb-sep">▸</span> โซน A <span class="crumb-sep">▸</span> กอง 1 <span class="crumb-caret">▾</span></button>
+        <div class="topbar-right">
+          <span class="pill">14:22</span>
+          <span class="pill accept"><span class="dot filled"></span>synced</span>
+        </div>
+      </div>
+      <div class="tabbar" role="tablist">
+        <button type="button" class="tab" role="tab" aria-selected="true">นับ · Count</button>
+        <button type="button" class="tab" role="tab" aria-selected="false">กอง · Pile</button>
+        <button type="button" class="tab" role="tab" aria-selected="false">บันทึก · Log</button>
+      </div>
+
+      <div class="panel">
+        <div class="stage">
+          <div class="overlay">
+            <p class="mono-label wiz-step-label">ปิดกองแล้ว · pile closed</p>
+            <h4>กอง 1 — 89 เข่ง · 4,429 กก.</h4>
+            <p class="sub">อ่านออกเสียงแล้ว · read aloud: "กอง 1 แปดสิบเก้าเข่ง สี่พันสี่ร้อยยี่สิบเก้ากิโล"</p>
+            <div class="overlay-actions">
+              <button type="button" class="ui-btn primary big">กอง 2 ในโซน A →</button>
+              <button type="button" class="ui-btn ghost big">เปลี่ยนโซน · switch zone</button>
+              <button type="button" class="ui-btn ghost big">ปิดโซน A</button>
+              <button type="button" class="ui-btn destructive big">ปิดการขาย · close sale</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+
+    <div class="annot">
+      <div class="annot-item public"><b>Public</b>The pile total, at title size. The buyer should be able to read the closing figure from where they're standing, not just hear it.</div>
+      <div class="annot-item announced"><b>Announced</b>The total is spoken before the options appear. Closing a pile is a number both sides should agree on out loud.</div>
+      <div class="annot-item"><b>Four visible options</b>Next pile here, switch zone, close zone, close sale. No hidden default — the previous "continue" button chose for you and told you afterwards.</div>
+      <div class="annot-item events"><b>Writes</b><code>pile_closed</code>, <code>announced</code>. Reopening later appends <code>pile_reopened</code> with a typed reason and is announced publicly too — the mechanism that makes the original count trustworthy has to cover its own correction.</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ SCREEN 7 -->
+  <section>
+    <div class="screen-head">
+      <span class="screen-num">7</span>
+      <h2 style="border:0;padding:0;margin:0">Settlement — total, per zone, per share</h2>
+    </div>
+    <p>
+      The screen the MVP exists for. Not one opaque total: the chain from
+      baskets to each person's share, laid out so it can be checked by hand
+      with a calculator. The per-zone figures add up to the sale total exactly —
+      each zone is rounded once and then summed, never apportioned from a
+      sale-wide figure, because a one-satang discrepancy in front of a buyer
+      costs more trust than it saves effort.
+    </p>
+
+    <div class="device-scroll"><div class="device">
+      <div class="topbar">
+        <button type="button" class="crumb">ไร่คุณพ่อ <span class="crumb-sep">▸</span> ปิดการขายแล้ว <span class="crumb-caret">▾</span></button>
+        <div class="topbar-right">
+          <span class="pill">2:41:07</span>
+          <span class="pill accept"><span class="dot filled"></span>synced</span>
+        </div>
+      </div>
+      <div class="tabbar" role="tablist">
+        <button type="button" class="tab" role="tab" aria-selected="true">สรุป · Settlement</button>
+        <button type="button" class="tab" role="tab" aria-selected="false">แยกตามโซน · By zone</button>
+        <button type="button" class="tab" role="tab" aria-selected="false">บันทึก · Log</button>
+      </div>
+
+      <div class="panel"><div class="pad">
+        <div class="cols two">
+
+          <div class="card">
+            <h5>ที่มาของยอด · how the total was reached</h5>
+            <div class="derivation">
+              <div class="deriv-step">
+                <span class="label"><b>226</b> เข่ง — 223 มาตรฐาน + 3 ไม่เต็ม</span>
+                <span class="val">226</span>
+              </div>
+              <div class="deriv-step">
+                <span class="label">223 × 50 กก. <span style="color:var(--color-ink-soft)">มาตรฐาน</span></span>
+                <span class="val">11,150 กก.</span>
+              </div>
+              <div class="deriv-step">
+                <span class="label">3 เข่งไม่เต็ม — 41 + 38 + 44</span>
+                <span class="val">123 กก.</span>
+              </div>
+              <div class="deriv-step">
+                <span class="label"><b>น้ำหนักยางสุทธิ</b> — หักถังแล้วทุกเข่ง</span>
+                <span class="val">11,273 กก.</span>
+              </div>
+              <div class="deriv-step">
+                <span class="label">× ฿26.50 ต่อ กก. <span style="color:var(--color-ink-soft)">ตกลงกันก่อนเริ่ม</span></span>
+                <span class="val">฿ 298,734.50</span>
+              </div>
+              <div class="deriv-step result">
+                <span class="label"><b>ยอดรวม · total</b></span>
+                <span class="val">฿ 298,734.50</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <h5>ส่วนแบ่ง · each side's share</h5>
+              <div class="split-bar" title="60 / 40">
+                <span class="owner" style="width:60%"></span>
+                <span class="worker" style="width:40%"></span>
+              </div>
+              <div class="stat"><dt>เจ้าของ · owner <span class="num">60%</span></dt></div>
+              <p class="figure" style="color:var(--color-action);margin:0 0 var(--space-sm)">฿ 179,240.70</p>
+              <div class="stat"><dt>คนงาน · worker <span class="num">40%</span></dt></div>
+              <p class="figure" style="margin:0">฿ 119,493.80</p>
+            </div>
+
+            <div class="card">
+              <h5>แยกตามโซน · per zone</h5>
+              <dl>
+                <div class="stat"><dt><span class="zone-tag">โซน A</span> 152 เข่ง · 7,573 กก.</dt><dd>฿ 200,684.50</dd></div>
+                <div class="stat"><dt style="padding-left:var(--space-md)">เจ้าของ 60%</dt><dd style="color:var(--color-action)">฿ 120,410.70</dd></div>
+                <div class="stat"><dt style="padding-left:var(--space-md)">คนงาน 40%</dt><dd>฿ 80,273.80</dd></div>
+                <div class="stat" style="margin-top:var(--space-sm)"><dt><span class="zone-tag">โซน B</span> 74 เข่ง · 3,700 กก.</dt><dd>฿ 98,050.00</dd></div>
+                <div class="stat"><dt style="padding-left:var(--space-md)">เจ้าของ 60%</dt><dd style="color:var(--color-action)">฿ 58,830.00</dd></div>
+                <div class="stat"><dt style="padding-left:var(--space-md)">คนงาน 40%</dt><dd>฿ 39,220.00</dd></div>
+                <div class="stat total big"><dt>รวม</dt><dd>฿ 298,734.50</dd></div>
+              </dl>
+            </div>
+
+            <div class="card">
+              <h5>ตรวจสอบ · reconciles</h5>
+              <p style="font-size:var(--font-size-small);color:var(--color-ink-soft);margin:0">
+                200,684.50 + 98,050.00 = 298,734.50 ✓<br>
+                179,240.70 + 119,493.80 = 298,734.50 ✓
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div></div>
+
+      <div class="action-row">
+        <span class="mono-label">ปิดการขายแล้ว · sale closed — piles and zones locked until the sale is reopened</span>
+        <span class="spacer"></span>
+        <button type="button" class="ui-btn ghost">ส่งออก · export</button>
+        <button type="button" class="ui-btn primary">เสร็จสิ้น · done</button>
+      </div>
+    </div></div>
+
+    <div class="annot">
+      <div class="annot-item operator"><b>Operator</b>All of it, and it is the one screen designed to be read <i>together</i> — owner and worker lead looking at the same panel.</div>
+      <div class="annot-item"><b>Every step shown</b>FR-7.4 forbids a single opaque total. Each line is one arithmetic operation, so a disagreement can be localised to a step rather than to "the app".</div>
+      <div class="annot-item"><b>MVP boundary</b>Straight ฿/kg and one split for the sale. No %DRC or grade deduction, no adjustments, no per-zone contracts — deliberately out of scope, tracked in epic 1.</div>
+      <div class="annot-item events"><b>Writes</b><code>sale_closed</code>. Settlement itself stores nothing: it is a pure function of the log, so it can be recomputed from the record at any time and cannot drift from it.</div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>
+      Chrome and tokens: <a href="design-system.html">design-system.html</a> ·
+      <a href="design-system.md">design-system.md</a>. Findings these screens
+      answer to: <a href="counter-screen-findings.html">counter-screen-findings</a>.
+      State model: <a href="pile-zone-sale-lifecycle.html">pile-zone-sale-lifecycle</a>.
+    </p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var root = document.documentElement;
+  var btnTheme = document.getElementById('btnTheme');
+  var btnSize = document.getElementById('btnSize');
+
+  function setTheme(name) {
+    root.setAttribute('data-theme', name);
+    btnTheme.textContent = 'Theme: ' + name;
+  }
+  setTheme(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  btnTheme.addEventListener('click', function () {
+    setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+
+  /* Toggle every device between the reference viewport and the low-end floor,
+     so the layout can be reviewed at both without a second set of mockups. */
+  btnSize.addEventListener('click', function () {
+    var floor = btnSize.getAttribute('aria-pressed') !== 'true';
+    btnSize.setAttribute('aria-pressed', String(floor));
+    btnSize.textContent = 'Size: ' + (floor ? '740 × 360' : '844 × 390');
+    Array.prototype.forEach.call(document.querySelectorAll('.device'), function (d) {
+      d.classList.toggle('floor', floor);
+    });
+  });
+
+  /* ---------- screen 3: a real press-and-hold ----------
+     Completion is driven by a timer, not by the animation frame. rAF is
+     throttled in background tabs and stops on screen lock, so a hold in
+     progress when the screen sleeps would otherwise behave unpredictably.
+     The frame loop only paints. */
+  var stage = document.getElementById('stage3');
+  var fill = document.getElementById('fill3');
+  var num = document.getElementById('num3');
+  var chip = document.getElementById('chip3');
+  var undo = document.getElementById('undo3');
+
+  var HOLD = parseInt(getComputedStyle(root).getPropertyValue('--duration-hold'), 10) || 3000;
+  var timer = null, raf = null, startedAt = 0, history = [];
+
+  function paint(pct) { fill.setAttribute('stroke-dashoffset', String(100 * (1 - pct))); }
+
+  function begin(e) {
+    if (timer) return;
+    if (e && e.cancelable) e.preventDefault();
+    stage.classList.remove('is-rejected');
+    startedAt = performance.now();
+    chip.textContent = 'กดค้างไว้… · holding';
+
+    timer = setTimeout(complete, HOLD);
+    (function frame(now) {
+      paint(Math.min(1, (now - startedAt) / HOLD));
+      raf = requestAnimationFrame(frame);
+    })(startedAt);
+  }
+
+  function stop() {
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+  }
+
+  function complete() {
+    stop();
+    paint(1);
+    var n = parseInt(num.textContent, 10) + 1;
+    history.push(n);
+    num.textContent = String(n);
+    undo.disabled = false;
+    chip.textContent = '✓ นับแล้ว · counted — 2 + 50 = 52 กก.';
+    setTimeout(function () {
+      paint(0);
+      chip.textContent = '2 + 50 = 52 กก. · ล่าสุด 0 วิ';
+    }, 700);
+  }
+
+  /* Cancel on every way a hold can end, not just pointerup. react-native-web
+     and browsers both drop onPressOut when the pointer leaves the element, and
+     a hold left armed would complete into a phantom count. */
+  function cancel() {
+    if (!timer) return;
+    var held = Math.round(performance.now() - startedAt);
+    stop();
+    stage.classList.add('is-rejected');
+    paint(0);
+    chip.textContent = '✗ ไม่นับ · released early — ' + (held / 1000).toFixed(1) + ' วิ จาก 3.0 วิ';
+    setTimeout(function () { stage.classList.remove('is-rejected'); }, 900);
+  }
+
+  stage.addEventListener('pointerdown', begin);
+  stage.addEventListener('pointerup', cancel);
+  stage.addEventListener('pointercancel', cancel);
+  stage.addEventListener('pointerleave', cancel);
+  stage.addEventListener('keydown', function (e) {
+    if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) begin(e);
+  });
+  stage.addEventListener('keyup', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') cancel();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) cancel();
+  });
+
+  undo.addEventListener('click', function () {
+    if (!history.length) return;
+    history.pop();
+    num.textContent = String(parseInt(num.textContent, 10) - 1);
+    chip.textContent = '↩ ยกเลิกแล้ว · undone — เหตุผล: กดพลาด';
+    if (!history.length) undo.disabled = true;
+  });
+  undo.disabled = true;
+})();
+</script>
