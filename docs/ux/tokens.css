@@ -1,0 +1,178 @@
+/* ============================================================================
+ * GENERATED FILE — DO NOT EDIT.
+ *
+ * Source:    design/tokens.ts
+ * Regenerate: node scripts/emit-tokens.mjs
+ *
+ * CI fails if this file is out of date with its source. Edit the source.
+ * ==========================================================================*/
+
+:root {
+  color-scheme: light dark;
+
+  /* ---- structural: identical in both themes ---- */
+  --space-xxs                              : 2px;
+  --space-xs                               : 4px;
+  --space-sm                               : 8px;
+  --space-md                               : 12px;
+  --space-lg                               : 16px;
+  --space-xl                               : 24px;
+  --space-xxl                              : 40px;
+  --radius-sm                              : 4px;
+  --radius-md                              : 8px;
+  --radius-lg                              : 14px;
+  --radius-pill                            : 999px;
+  --border-hair                            : 1px;
+  --border-thick                           : 2px;
+  --border-ring                            : 10px;
+  --font-family-sans                       : ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans Thai", sans-serif;
+  --font-family-mono                       : ui-monospace, SFMono-Regular, Menlo, "Roboto Mono", monospace;
+  --font-size-micro                        : 11px;
+  --font-size-small                        : 13px;
+  --font-size-body                         : 15px;
+  --font-size-lead                         : 19px;
+  --font-size-title                        : 26px;
+  --font-size-figure                       : 44px;
+  --font-weight-regular                    : 400;
+  --font-weight-medium                     : 500;
+  --font-weight-bold                       : 700;
+  --font-weight-black                      : 800;
+  --font-tracking-tight                    : -0.04em;
+  --font-tracking-normal                   : 0em;
+  --font-tracking-wide                     : 0.09em;
+  --font-line-height-solid                 : 1;
+  --font-line-height-snug                  : 1.25;
+  --font-line-height-body                  : 1.5;
+  --public-numeral-height-ratio-one-digit  : 0.72;
+  --public-numeral-height-ratio-two-digit  : 0.72;
+  --public-numeral-height-ratio-three-digit: 0.66;
+  --public-numeral-height-ratio-four-digit : 0.5;
+  --public-numeral-min-height-ratio        : 0.62;
+  --dial-size-ratio                        : 0.86;
+  --dial-tick-count                        : 24;
+  --dial-tick-length                       : 12px;
+  --dial-tick-length-major                 : 20px;
+  --dial-major-every                       : 6;
+  --duration-flash                         : 180ms;
+  --duration-hold                          : 3000ms;
+  --duration-undo-window                   : 8000ms;
+  --duration-toast                         : 2400ms;
+  --duration-move                          : 160ms;
+  --target-min                             : 48px;
+  --target-comfortable                     : 56px;
+  --viewport-reference-width               : 844px;
+  --viewport-reference-height              : 390px;
+  --viewport-floor-width                   : 740px;
+  --viewport-floor-height                  : 360px;
+  --opacity-disabled                       : 0.38;
+  --opacity-muted                          : 0.62;
+  --opacity-scrim                          : 0.72;
+  --opacity-flash                          : 0.85;
+  --elevation-none                         : 0;
+  --elevation-card                         : 0;
+  --elevation-overlay                      : 0;
+
+  /* ---- colour: light (default — the field mode, see F-15) ---- */
+  --color-stage         : #FFFFFF;
+  --color-surface       : #F2F3F4;
+  --color-surface-sunk  : #E4E6E8;
+  --color-surface-raised: #FFFFFF;
+  --color-ink           : #0A0B0C;
+  --color-ink-soft      : #55595E;
+  --color-ink-faint     : #8A9096;
+  --color-ink-inverse   : #FFFFFF;
+  --color-rule          : #C4C8CC;
+  --color-rule-faint    : #DDE0E3;
+  --color-rule-strong   : #7E858C;
+  --color-action        : #17458C;
+  --color-action-hover  : #0F3068;
+  --color-action-sunk   : #E7EDF7;
+  --color-accept        : #06542C;
+  --color-accept-sunk   : #E0EFE6;
+  --color-reject        : #9E2015;
+  --color-reject-sunk   : #FAE4E1;
+  --color-warn          : #6F4000;
+  --color-warn-sunk     : #F7EBD6;
+  --color-flash-accept  : #06542C;
+  --color-flash-reject  : #9E2015;
+}
+
+/* Dark is opt-in for evening and indoor weighing at the ล้ง. Two selectors:
+   the media query is the signal, the data-theme attribute is the override, and
+   the attribute must win in both directions. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-stage         : #000000;
+    --color-surface       : #15171A;
+    --color-surface-sunk  : #0D0F11;
+    --color-surface-raised: #1D2024;
+    --color-ink           : #F4F5F6;
+    --color-ink-soft      : #A0A6AC;
+    --color-ink-faint     : #6B7278;
+    --color-ink-inverse   : #0A0B0C;
+    --color-rule          : #3A4046;
+    --color-rule-faint    : #24282D;
+    --color-rule-strong   : #79818A;
+    --color-action        : #7FA8E8;
+    --color-action-hover  : #9BBDF0;
+    --color-action-sunk   : #152239;
+    --color-accept        : #4FBF85;
+    --color-accept-sunk   : #0E2A1B;
+    --color-reject        : #F0796A;
+    --color-reject-sunk   : #331310;
+    --color-warn          : #E0A03C;
+    --color-warn-sunk     : #2E2109;
+    --color-flash-accept  : #4FBF85;
+    --color-flash-reject  : #F0796A;
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-stage         : #000000;
+  --color-surface       : #15171A;
+  --color-surface-sunk  : #0D0F11;
+  --color-surface-raised: #1D2024;
+  --color-ink           : #F4F5F6;
+  --color-ink-soft      : #A0A6AC;
+  --color-ink-faint     : #6B7278;
+  --color-ink-inverse   : #0A0B0C;
+  --color-rule          : #3A4046;
+  --color-rule-faint    : #24282D;
+  --color-rule-strong   : #79818A;
+  --color-action        : #7FA8E8;
+  --color-action-hover  : #9BBDF0;
+  --color-action-sunk   : #152239;
+  --color-accept        : #4FBF85;
+  --color-accept-sunk   : #0E2A1B;
+  --color-reject        : #F0796A;
+  --color-reject-sunk   : #331310;
+  --color-warn          : #E0A03C;
+  --color-warn-sunk     : #2E2109;
+  --color-flash-accept  : #4FBF85;
+  --color-flash-reject  : #F0796A;
+}
+
+:root[data-theme='light'] {
+  --color-stage         : #FFFFFF;
+  --color-surface       : #F2F3F4;
+  --color-surface-sunk  : #E4E6E8;
+  --color-surface-raised: #FFFFFF;
+  --color-ink           : #0A0B0C;
+  --color-ink-soft      : #55595E;
+  --color-ink-faint     : #8A9096;
+  --color-ink-inverse   : #FFFFFF;
+  --color-rule          : #C4C8CC;
+  --color-rule-faint    : #DDE0E3;
+  --color-rule-strong   : #7E858C;
+  --color-action        : #17458C;
+  --color-action-hover  : #0F3068;
+  --color-action-sunk   : #E7EDF7;
+  --color-accept        : #06542C;
+  --color-accept-sunk   : #E0EFE6;
+  --color-reject        : #9E2015;
+  --color-reject-sunk   : #FAE4E1;
+  --color-warn          : #6F4000;
+  --color-warn-sunk     : #F7EBD6;
+  --color-flash-accept  : #06542C;
+  --color-flash-reject  : #9E2015;
+}
