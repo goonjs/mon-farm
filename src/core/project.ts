@@ -1,0 +1,306 @@
+/**
+ * Folds the event log into current state.
+ *
+ * There is no `piles` table and no `zones` table. Entities, statuses and every
+ * rollup are projections of the log — one fold, one place to be wrong. A stored
+ * `pile.status` would need invalidating on close, on reopen, on zone close and
+ * on sale close, and each of those is a chance for the app to assert something
+ * the record does not support.
+ *
+ * Implements the transition table in `docs/ux/pile-zone-sale-lifecycle.md` §8.
+ */
+
+import type {
+  OpenClosed,
+  Pile,
+  PileId,
+  SaleEvent,
+  SaleState,
+  SysEvent,
+  Zone,
+  ZoneId,
+} from './types';
+
+/** A wall clock that moves more than this between two events is not credible. */
+const IMPLAUSIBLE_JUMP_MS = 6 * 60 * 60 * 1000;
+
+export function emptySale(id: string): SaleState {
+  return {
+    id,
+    status: 'open',
+    startedTs: null,
+    parties: null,
+    price: null,
+    split: null,
+    zones: [],
+    piles: [],
+    clockSuspect: false,
+  };
+}
+
+interface MutPile {
+  id: PileId;
+  zoneId: ZoneId;
+  name: string;
+  tareG: number;
+  stdNetG: number;
+  status: Pile['status'];
+  zeroChecked: boolean;
+  tareConfirmed: boolean;
+  locked: boolean;
+}
+
+interface MutZone {
+  id: ZoneId;
+  name: string;
+  status: OpenClosed;
+  pileIds: ZoneId[];
+}
+
+/**
+ * Pure, total, and order-defining: events are folded in `seq` order, never in
+ * timestamp order. An event with an out-of-order `seq` is a programming error
+ * upstream, so this throws rather than guessing.
+ */
+export function projectSale(events: readonly SaleEvent[], saleId?: string): SaleState {
+  const id = saleId ?? events[0]?.saleId ?? '';
+  const base = emptySale(id);
+
+  const ordered = [...events].sort((a, b) => a.seq - b.seq);
+  assertSequence(ordered);
+
+  const piles = new Map<PileId, MutPile>();
+  const zones = new Map<ZoneId, MutZone>();
+
+  let status: OpenClosed = base.status;
+  let startedTs: number | null = null;
+  let parties = base.parties;
+  let price = base.price;
+  let split = base.split;
+  let clockSuspect = false;
+
+  for (const e of ordered) {
+    // Baskets and rejections carry no state beyond the totals, except that the
+    // first basket in a pile locks its configuration.
+    if (e.kind === 'accept' || e.kind === 'short') {
+      const p = piles.get(e.pileId);
+      if (p) p.locked = true;
+      continue;
+    }
+    if (e.kind === 'reject' || e.kind === 'correction') continue;
+
+    const { payload } = e as SysEvent;
+
+    switch (payload.t) {
+      case 'sale_started':
+        startedTs = e.ts;
+        parties = {
+          farmName: payload.farmName,
+          buyer: payload.buyer,
+          manager: payload.manager,
+          workerLead: payload.workerLead,
+          where: payload.where,
+        };
+        break;
+
+      case 'price_set':
+        price = { satangPerKg: payload.satangPerKg, indexRef: payload.indexRef };
+        break;
+
+      case 'split_set':
+        split = { ownerPct: payload.ownerPct, basis: payload.basis };
+        break;
+
+      case 'zone_added':
+        zones.set(payload.zoneId, {
+          id: payload.zoneId,
+          name: payload.name,
+          status: 'open',
+          pileIds: [],
+        });
+        break;
+
+      case 'pile_added': {
+        piles.set(payload.pileId, {
+          id: payload.pileId,
+          zoneId: payload.zoneId,
+          name: payload.name,
+          tareG: payload.tareG,
+          stdNetG: payload.stdNetG,
+          status: 'not-started',
+          zeroChecked: false,
+          tareConfirmed: false,
+          locked: false,
+        });
+        zones.get(payload.zoneId)?.pileIds.push(payload.pileId);
+        break;
+      }
+
+      case 'zero_check': {
+        const p = piles.get(payload.pileId);
+        // A failed check still counts as *checked*: it was performed and its
+        // result recorded. Blocking here would put the app in charge of a
+        // judgement that belongs to the person standing at the scale.
+        if (p) p.zeroChecked = true;
+        break;
+      }
+
+      case 'tare_confirmed': {
+        const p = piles.get(payload.pileId);
+        if (p) {
+          p.tareG = payload.tareG;
+          p.tareConfirmed = true;
+        }
+        break;
+      }
+
+      case 'ready': {
+        const p = piles.get(payload.pileId);
+        if (p) p.status = 'counting';
+        break;
+      }
+
+      case 'pile_closed': {
+        const p = piles.get(payload.pileId);
+        if (p) p.status = 'closed';
+        break;
+      }
+
+      case 'pile_reopened': {
+        const p = piles.get(payload.pileId);
+        if (p) p.status = 'counting';
+        break;
+      }
+
+      case 'zone_closed': {
+        const z = zones.get(payload.zoneId);
+        if (z) z.status = 'closed';
+        // Force-closing the zone force-closes any pile still counting in it.
+        for (const pid of payload.forcedPiles) {
+          const p = piles.get(pid);
+          if (p) p.status = 'closed';
+        }
+        break;
+      }
+
+      case 'zone_reopened': {
+        const z = zones.get(payload.zoneId);
+        if (z) z.status = 'open';
+        // Deliberately does NOT cascade into its closed piles. Reopening a zone
+        // means "more piles may be added or reopened here", not "undo
+        // everything that was agreed in it".
+        break;
+      }
+
+      case 'sale_closed':
+        status = 'closed';
+        break;
+
+      case 'sale_reopened':
+        status = 'open';
+        break;
+
+      case 'clock_anomaly':
+        clockSuspect = true;
+        break;
+
+      case 'announced':
+        break;
+    }
+  }
+
+  return {
+    id,
+    status,
+    startedTs,
+    parties,
+    price,
+    split,
+    zones: [...zones.values()].map(
+      (z): Zone => ({ id: z.id, name: z.name, status: z.status, pileIds: [...z.pileIds] }),
+    ),
+    piles: [...piles.values()].map(
+      (p): Pile => ({
+        id: p.id,
+        zoneId: p.zoneId,
+        name: p.name,
+        tareG: p.tareG,
+        stdNetG: p.stdNetG,
+        status: p.status,
+        zeroChecked: p.zeroChecked,
+        tareConfirmed: p.tareConfirmed,
+        locked: p.locked,
+      }),
+    ),
+    clockSuspect,
+  };
+}
+
+function assertSequence(ordered: readonly SaleEvent[]): void {
+  for (let i = 1; i < ordered.length; i++) {
+    if (ordered[i].seq === ordered[i - 1].seq) {
+      throw new Error(
+        `Duplicate sequence number ${ordered[i].seq}. The log is the record of ` +
+          `what happened; two events cannot occupy one position in it.`,
+      );
+    }
+  }
+}
+
+// ── Guards. Each answers a question the UI asks before offering an action. ──
+
+/** Counting requires a pile that has been made ready, in an open zone and sale. */
+export function canCount(state: SaleState, pileId: PileId): boolean {
+  const pile = state.piles.find((p) => p.id === pileId);
+  if (!pile || pile.status !== 'counting') return false;
+  if (state.status !== 'open') return false;
+  const zone = state.zones.find((z) => z.id === pile.zoneId);
+  return zone?.status === 'open';
+}
+
+/** Ready requires both pre-count checks to have been performed. */
+export function canReady(state: SaleState, pileId: PileId): boolean {
+  const pile = state.piles.find((p) => p.id === pileId);
+  if (!pile || pile.status !== 'not-started') return false;
+  if (state.status !== 'open') return false;
+  return pile.zeroChecked && pile.tareConfirmed;
+}
+
+/**
+ * A closed sale is a hard boundary: nothing beneath it reopens until the sale
+ * itself does. Without this, "the sale is settled" would mean nothing.
+ */
+export function canReopenPile(state: SaleState, pileId: PileId): boolean {
+  if (state.status !== 'open') return false;
+  const pile = state.piles.find((p) => p.id === pileId);
+  if (!pile || pile.status !== 'closed') return false;
+  const zone = state.zones.find((z) => z.id === pile.zoneId);
+  return zone?.status === 'open';
+}
+
+/** Piles still counting when a zone closes — named in the warning, then forced. */
+export function pilesStillCounting(state: SaleState, zoneId: ZoneId): readonly Pile[] {
+  return state.piles.filter((p) => p.zoneId === zoneId && p.status === 'counting');
+}
+
+/**
+ * FR-12.6. Returns the anomaly to record, or null.
+ *
+ * Note what this does NOT do: it never reorders anything. A wrong clock is
+ * flagged and displayed; `seq` still decides what happened first.
+ */
+export function detectClockAnomaly(
+  prev: SaleEvent | null,
+  ts: number,
+  startedTs: number | null,
+): { anomaly: 'backwards' | 'before-sale-start' | 'implausible-jump'; deltaMs: number } | null {
+  if (startedTs !== null && ts < startedTs) {
+    return { anomaly: 'before-sale-start', deltaMs: ts - startedTs };
+  }
+  if (prev) {
+    const delta = ts - prev.ts;
+    if (delta < 0) return { anomaly: 'backwards', deltaMs: delta };
+    if (delta > IMPLAUSIBLE_JUMP_MS) return { anomaly: 'implausible-jump', deltaMs: delta };
+  }
+  return null;
+}
