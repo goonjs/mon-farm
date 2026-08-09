@@ -1,0 +1,603 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mon-farm — Design system</title>
+<link rel="stylesheet" href="tokens.css">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  /* Declared ahead of every component rule: an author display rule beats the UA
+     [hidden] rule regardless of specificity, because CSS compares origin before
+     specificity. This bit the prototypes twice. */
+  [hidden] { display: none !important; }
+
+  :root { --measure: 68ch; --doc-serif: Georgia, "Iowan Old Style", "Times New Roman", serif; }
+
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--doc-serif);
+    font-size: 17px;
+    line-height: var(--font-line-height-body);
+  }
+
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 2.5rem) 6rem;
+    display: flex; flex-direction: column;
+    gap: clamp(2.5rem, 5vw, 3.5rem);
+  }
+
+  h1, h2, h3, .ui { font-family: var(--font-family-sans); }
+  h1 {
+    font-size: clamp(2rem, 5.4vw, 3rem); font-weight: 800;
+    letter-spacing: -0.03em; line-height: 1.05; margin: 0.2em 0 0;
+    text-wrap: balance;
+  }
+  h2 {
+    font-size: clamp(1.25rem, 2.6vw, 1.6rem); font-weight: 700;
+    letter-spacing: -0.02em; margin: 0 0 var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: var(--border-thick) solid var(--color-ink);
+  }
+  h3 {
+    font-size: var(--font-size-lead); font-weight: 700;
+    margin: var(--space-xl) 0 var(--space-sm);
+  }
+  p { margin: 0 0 1em; max-width: var(--measure); }
+  section > p:last-child { margin-bottom: 0; }
+  code {
+    font-family: var(--font-family-mono); font-size: 0.86em;
+    background: var(--color-surface-sunk); padding: 0.1em 0.35em;
+    border-radius: var(--radius-sm);
+  }
+  a { color: var(--color-action); }
+
+  .mono-label {
+    font-family: var(--font-family-mono); font-size: var(--font-size-micro);
+    letter-spacing: var(--font-tracking-wide); text-transform: uppercase;
+    color: var(--color-ink-soft); margin: 0;
+  }
+
+  .masthead .eyebrow {
+    font-family: var(--font-family-mono); font-size: 0.68rem;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--color-action); margin: 0;
+  }
+  .standfirst {
+    font-size: 1.2rem; line-height: 1.5; color: var(--color-ink-soft);
+    margin-top: var(--space-md);
+  }
+
+  .topbar-tools {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; gap: var(--space-sm); align-items: center;
+    background: var(--color-surface);
+    padding: var(--space-sm) 0; margin-bottom: -1rem;
+    border-bottom: var(--border-hair) solid var(--color-rule);
+  }
+  .btn {
+    font-family: var(--font-family-sans); font-size: var(--font-size-small);
+    font-weight: 500;
+    min-height: 36px; padding: 0 var(--space-md);
+    border: var(--border-hair) solid var(--color-rule-strong);
+    background: var(--color-surface-raised); color: var(--color-ink);
+    border-radius: var(--radius-md); cursor: pointer;
+  }
+  .btn:hover { background: var(--color-surface-sunk); }
+  :focus-visible {
+    outline: var(--border-thick) solid var(--color-action);
+    outline-offset: 2px;
+  }
+
+  /* ---------- swatches ---------- */
+  .swatch-grid {
+    display: grid; gap: var(--space-md);
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  }
+  .swatch {
+    border: var(--border-hair) solid var(--color-rule);
+    border-radius: var(--radius-md); overflow: hidden;
+    background: var(--color-surface-raised);
+  }
+  .swatch-chip { height: 62px; display: block; }
+  .swatch-body { padding: var(--space-sm) var(--space-md) var(--space-md); }
+  .swatch-name {
+    font-family: var(--font-family-mono); font-size: var(--font-size-small);
+    font-weight: 700; margin: 0;
+  }
+  .swatch-hex {
+    font-family: var(--font-family-mono); font-size: var(--font-size-micro);
+    color: var(--color-ink-soft); margin: 2px 0 0; text-transform: uppercase;
+  }
+  .swatch-note {
+    font-family: var(--font-family-sans); font-size: var(--font-size-small);
+    color: var(--color-ink-soft); margin: var(--space-sm) 0 0; line-height: 1.35;
+  }
+
+  /* ---------- contrast table ---------- */
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-family: var(--font-family-sans); font-size: var(--font-size-small); }
+  th, td { text-align: left; padding: var(--space-sm) var(--space-md); border-bottom: var(--border-hair) solid var(--color-rule-faint); white-space: nowrap; }
+  th { font-family: var(--font-family-mono); font-size: var(--font-size-micro); letter-spacing: var(--font-tracking-wide); text-transform: uppercase; color: var(--color-ink-soft); border-bottom: var(--border-hair) solid var(--color-rule); }
+  td.num { font-family: var(--font-family-mono); font-variant-numeric: tabular-nums; }
+  .grade { font-family: var(--font-family-mono); font-size: var(--font-size-micro); font-weight: 700; padding: 2px 6px; border-radius: var(--radius-sm); }
+  .grade.aaa { background: var(--color-accept-sunk); color: var(--color-accept); }
+  .grade.aa  { background: var(--color-action-sunk); color: var(--color-action); }
+  .grade.ui  { background: var(--color-warn-sunk);   color: var(--color-warn); }
+  .grade.no  { background: var(--color-reject-sunk); color: var(--color-reject); }
+
+  /* ---------- registers ---------- */
+  .registers { display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .register {
+    border: var(--border-hair) solid var(--color-rule);
+    border-left: var(--border-ring) solid var(--color-ink);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg); background: var(--color-surface-raised);
+  }
+  .register.public   { border-left-color: var(--color-ink); }
+  .register.operator { border-left-color: var(--color-action); }
+  .register.announced { border-left-color: var(--color-accept); }
+  .register h3 { margin-top: 0; }
+  .register p { font-family: var(--font-family-sans); font-size: var(--font-size-small); }
+
+  /* ---------- type ramp ---------- */
+  .ramp-row {
+    display: flex; align-items: baseline; gap: var(--space-lg);
+    padding: var(--space-md) 0;
+    border-bottom: var(--border-hair) solid var(--color-rule-faint);
+  }
+  .ramp-meta { flex: 0 0 132px; }
+  .ramp-sample { font-family: var(--font-family-sans); color: var(--color-ink); line-height: var(--font-line-height-snug); }
+
+  /* ---------- device / dial ---------- */
+  .device-frame {
+    width: 100%; max-width: 844px; aspect-ratio: 844 / 390;
+    border: var(--border-thick) solid var(--color-ink);
+    border-radius: var(--radius-lg); overflow: hidden;
+    background: var(--color-stage);
+    display: flex; flex-direction: column;
+    container-type: size;
+  }
+  .stage {
+    flex: 1; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--color-stage);
+  }
+  /* The hold indicator travels the stage perimeter, so it takes no width from
+     the numeral. pathLength="100" normalises the geometry, which means the
+     dash maths is the same at any viewport — no per-size recalculation. */
+  .bezel { position: absolute; inset: 0; pointer-events: none; }
+  .bezel svg { width: 100%; height: 100%; display: block; }
+  .bezel rect { fill: none; vector-effect: non-scaling-stroke; }
+  .bezel-track { stroke: var(--color-rule-faint); stroke-width: var(--bezel-width); }
+  .bezel-fill {
+    stroke: var(--color-accept); stroke-width: var(--bezel-width);
+    stroke-linecap: butt;
+    transition: stroke-dashoffset 80ms linear;
+  }
+  .stage.is-rejected .bezel-fill { stroke: var(--color-reject); transition: stroke-dashoffset 200ms ease-in; }
+  .pub-num {
+    position: relative; z-index: 2;
+    font-family: var(--font-family-sans); font-weight: var(--font-weight-black);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--font-tracking-tight); line-height: var(--font-line-height-solid);
+    color: var(--color-ink);
+    font-size: 66cqh;
+  }
+  .stage-caption {
+    position: absolute; bottom: 4cqh; left: 0; right: 0; text-align: center;
+  }
+
+  /* ---------- component specimens ---------- */
+  .specimens { display: grid; gap: var(--space-lg); grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .spec {
+    border: var(--border-hair) solid var(--color-rule); border-radius: var(--radius-md);
+    padding: var(--space-lg); background: var(--color-surface-raised);
+  }
+  .spec-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin-top: var(--space-md); }
+
+  .ui-btn {
+    font-family: var(--font-family-sans); font-size: var(--font-size-body); font-weight: 500;
+    min-height: var(--target-min); padding: 0 var(--space-lg);
+    border-radius: var(--radius-md); cursor: pointer;
+    border: var(--border-hair) solid transparent;
+  }
+  .ui-btn.primary { background: var(--color-action); color: var(--color-ink-inverse); }
+  .ui-btn.ghost { background: transparent; color: var(--color-action); border-color: var(--color-rule-strong); }
+  .ui-btn.destructive { background: transparent; color: var(--color-reject); border-color: var(--color-reject); }
+  .ui-btn[disabled] { opacity: var(--opacity-disabled); cursor: not-allowed; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-family-mono); font-size: var(--font-size-micro);
+    letter-spacing: var(--font-tracking-wide); text-transform: uppercase;
+    padding: 5px 10px; border-radius: var(--radius-pill);
+  }
+  .chip.accept { background: var(--color-accept-sunk); color: var(--color-accept); }
+  .chip.reject { background: var(--color-reject-sunk); color: var(--color-reject); }
+  .chip.warn   { background: var(--color-warn-sunk);   color: var(--color-warn); }
+  .chip.neutral{ background: var(--color-surface-sunk); color: var(--color-ink-soft); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .dot.filled { background: currentColor; }
+  .dot.hollow { border: 2px solid currentColor; }
+  .dot.half   { background: linear-gradient(90deg, currentColor 50%, transparent 50%); border: 2px solid currentColor; }
+
+  .state-list { list-style: none; padding: 0; margin: var(--space-md) 0 0; }
+  .state-list li {
+    display: flex; align-items: center; gap: var(--space-md);
+    padding: var(--space-sm) 0; border-bottom: var(--border-hair) solid var(--color-rule-faint);
+    font-family: var(--font-family-sans); font-size: var(--font-size-small);
+  }
+  .state-list li:last-child { border-bottom: 0; }
+
+  .callout {
+    border-left: var(--border-ring) solid var(--color-warn);
+    background: var(--color-warn-sunk);
+    padding: var(--space-lg); border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  }
+  .callout p { font-family: var(--font-family-sans); font-size: var(--font-size-small); margin: 0; max-width: none; }
+
+  .foot {
+    border-top: var(--border-hair) solid var(--color-rule);
+    padding-top: var(--space-lg); color: var(--color-ink-soft);
+    font-size: var(--font-size-small); font-family: var(--font-family-sans);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+
+<div class="page">
+
+  <div class="topbar-tools">
+    <button type="button" class="btn" id="btnTheme">Theme: light</button>
+    <button type="button" class="btn" id="btnSweep">Run a hold</button>
+    <span class="mono-label" id="toolNote">tokens.css — generated from design/tokens.ts</span>
+  </div>
+
+  <header class="masthead">
+    <p class="eyebrow">mon-farm · docs/ux · design system draft v0.1</p>
+    <h1>An instrument, not a document.</h1>
+    <p class="standfirst">
+      Two people stand around a scale and watch a number that decides how much
+      money changes hands. The buyer never touches the device. Everything here
+      follows from that one fact.
+    </p>
+  </header>
+
+  <!-- ================= REGISTERS ================= -->
+  <section>
+    <h2>1 · The three registers</h2>
+    <p>
+      Every element on screen belongs to exactly one register, decided by who
+      it's for and from how far away. If you can't name an element's register,
+      it doesn't belong on the screen.
+    </p>
+    <div class="registers">
+      <div class="register public">
+        <h3>Public</h3>
+        <p class="mono-label">the buyer · ~10 m</p>
+        <p>The count. The dial. Accept and reject feedback. <b>Nothing else.</b></p>
+        <p>This is a fixed budget and it is already spent. Three digits at the
+          largest numeral a 6.1″ phone can physically produce leave about 35 mm
+          of width for everything else — which is why operator information lives
+          behind tabs.</p>
+      </div>
+      <div class="register operator">
+        <h3>Operator</h3>
+        <p class="mono-label">the person counting · ~0.4 m</p>
+        <p>Pile identity, expected reading, running totals, every control, every
+          state indicator.</p>
+        <p>When someone asks to "just add a small total under the number," the
+          answer is the Pile tab. That is what it is for.</p>
+      </div>
+      <div class="register announced">
+        <h3>Announced</h3>
+        <p class="mono-label">both parties · by ear</p>
+        <p>Spoken count, read-back, corrections, pile totals.</p>
+        <p>Designed here, not bolted on. Every announcement writes an event
+          whether or not audio succeeded — and the screen must be trustworthy
+          in silence, because audio is the likeliest thing to fail.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SIGNATURE ================= -->
+  <section>
+    <h2>2 · The bezel sweep</h2>
+    <p>
+      The three-second hold is drawn as a stroke travelling the stage's
+      perimeter. It costs the numeral nothing — which matters, because the
+      numeral's height is the tightest constraint in the product — and the
+      perimeter is the longest path on the screen, so progress stays visible at
+      the distance the buyer is standing. An early release collapses the stroke
+      back to the start, so rejection is as loud as acceptance. This is the one
+      place the system spends any boldness.
+    </p>
+
+    <div class="device-frame">
+      <div class="stage">
+        <div class="bezel">
+          <svg viewBox="0 0 844 390" preserveAspectRatio="none" aria-hidden="true">
+            <rect class="bezel-track" x="6" y="6" width="832" height="378" rx="8"></rect>
+            <rect class="bezel-fill" id="bezelFill" x="6" y="6" width="832" height="378" rx="8"
+                  pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></rect>
+          </svg>
+        </div>
+        <span class="pub-num" id="pubNum">42</span>
+        <div class="stage-caption">
+          <p class="mono-label" id="stageCaption">press and hold · 3 seconds</p>
+        </div>
+      </div>
+    </div>
+    <p class="mono-label" style="margin-top:var(--space-sm)">
+      844 × 390 — reference landscape phone. Numeral is 66% of viewport height at three digits.
+    </p>
+  </section>
+
+  <!-- ================= COLOUR ================= -->
+  <section>
+    <h2>3 · Colour</h2>
+    <p>
+      Four signal hues, and <b>no hue does double duty</b>. This is the
+      load-bearing decision in the palette: because the hues are disjoint, the
+      non-colour encodings in §5 agree with colour instead of competing with it.
+    </p>
+    <div class="swatch-grid" id="swatches"></div>
+  </section>
+
+  <section>
+    <h2>4 · Contrast, measured</h2>
+    <p>
+      Computed live in this page from the same token values the app ships, by
+      the same formula <code>scripts/check-contrast.mjs</code> uses in CI. Each
+      pairing has a floor chosen for its use — AAA for the count and primary
+      text, AA for secondary, 3:1 for control boundaries per WCAG 1.4.11.
+    </p>
+    <div class="tbl-wrap"><table id="contrastTable">
+      <thead><tr><th>Pairing</th><th>Ratio</th><th>Needs</th><th>Grade</th><th>What it is</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="mono-label" style="margin-top:var(--space-md)" id="contrastSummary"></p>
+  </section>
+
+  <!-- ================= TYPE ================= -->
+  <section>
+    <h2>5 · Type</h2>
+    <p>
+      System stacks only. The app must be fully usable offline on first launch —
+      a font that fails to load is a count nobody can read. Thai and Latin share
+      one stack, with <code>Noto Sans Thai</code> ahead of the generic fallback
+      so Thai doesn't render lighter beside Latin.
+    </p>
+    <div id="ramp"></div>
+    <div class="callout" style="margin-top:var(--space-xl)">
+      <p><b>The public numeral is not in this ramp.</b> It's sized as a fraction
+      of the short viewport dimension, never in points — finding F-9.7 is
+      arithmetic about physical millimetres, and fixing the size in points
+      silently gives back the millimetres the cross-check depends on. There's an
+      automated assertion against exactly that regression.</p>
+    </div>
+  </section>
+
+  <!-- ================= STATES ================= -->
+  <section>
+    <h2>6 · States that never rely on colour</h2>
+    <p>
+      Five states need non-colour encoding. Each gets a shape, a position and a
+      word; colour is the fourth channel, never the first.
+    </p>
+    <div class="specimens">
+      <div class="spec">
+        <p class="mono-label">state indicators</p>
+        <ul class="state-list">
+          <li><span class="chip accept"><span class="dot filled"></span>กำลังนับ</span> <span>Counting</span></li>
+          <li><span class="chip neutral"><span class="dot hollow"></span>หยุด</span> <span>Paused / not ready</span></li>
+          <li><span class="chip warn">🔇 ไม่มีเสียง</span> <span>Audio degraded</span></li>
+          <li><span class="chip warn">⏱ เวลาผิด</span> <span>Clock anomaly</span></li>
+          <li><span class="chip neutral"><span class="dot half"></span>ค้าง 12</span> <span>Unsynced</span></li>
+        </ul>
+        <p class="swatch-note">The last three are non-blocking by design. They
+          report; they never gate counting. A screen that stops you counting
+          because its clock is wrong has misunderstood which of the two
+          matters more.</p>
+      </div>
+
+      <div class="spec">
+        <p class="mono-label">basket outcomes</p>
+        <div class="spec-row">
+          <span class="chip accept">✓ นับแล้ว · counted</span>
+          <span class="chip reject">✗ ไม่นับ · not counted</span>
+          <span class="chip warn">⚖ สั้น · short basket</span>
+        </div>
+        <p class="swatch-note">A rejected basket is red <i>and</i> struck through
+          <i>and</i> marked ✗ <i>and</i> announced. Any one of those four
+          channels alone carries the meaning — which is what finding F-7
+          requires, since a silently rejected tap turns a phantom count into a
+          missed count.</p>
+      </div>
+
+      <div class="spec">
+        <p class="mono-label">controls</p>
+        <div class="spec-row">
+          <button type="button" class="ui-btn primary">พร้อมค่ะ — start counting</button>
+        </div>
+        <div class="spec-row">
+          <button type="button" class="ui-btn ghost">↺ Undo last</button>
+          <button type="button" class="ui-btn ghost" disabled>↺ Undo last</button>
+        </div>
+        <div class="spec-row">
+          <button type="button" class="ui-btn destructive">ปิดกอง — close pile</button>
+        </div>
+        <p class="swatch-note">Nothing green is pressable and nothing blue
+          reports state. Destructive controls are never adjacent to the stage or
+          to each other, and always take a second confirm.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>
+      Values generated from <code>design/tokens.ts</code> →
+      <code>docs/ux/tokens.css</code>. Written companion:
+      <a href="design-system.md">design-system.md</a>. Findings this system
+      answers to: <a href="counter-screen-findings.html">counter-screen-findings</a>.
+    </p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var css = getComputedStyle(document.documentElement);
+  var v = function (name) { return css.getPropertyValue('--' + name).trim(); };
+
+  /* ---------- theme ----------
+     Pin data-theme on load rather than leaving it to the media query. Otherwise
+     the toggle's label claims "light" while the OS is rendering dark, and every
+     contrast number below is attributed to the wrong theme. */
+  var btnTheme = document.getElementById('btnTheme');
+  function setTheme(name) {
+    document.documentElement.setAttribute('data-theme', name);
+    btnTheme.textContent = 'Theme: ' + name;
+    build();
+  }
+  btnTheme.addEventListener('click', function () {
+    setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+
+  /* ---------- hold sweep demo ----------
+     pathLength="100" on the rect means the dash values are percentages, so this
+     maths never has to know the real perimeter. */
+  var fill = document.getElementById('bezelFill');
+  var pubNum = document.getElementById('pubNum');
+  var caption = document.getElementById('stageCaption');
+  var stage = document.querySelector('.stage');
+  var sweeping = false;
+
+  document.getElementById('btnSweep').addEventListener('click', function () {
+    if (sweeping) return;
+    sweeping = true;
+    stage.classList.remove('is-rejected');
+
+    var HOLD = parseInt(v('duration-hold'), 10) || 3000;
+    var start = performance.now();
+    caption.textContent = 'holding…';
+
+    (function frame(now) {
+      var pct = Math.min(1, (now - start) / HOLD);
+      fill.setAttribute('stroke-dashoffset', String(100 * (1 - pct)));
+      if (pct < 1) { requestAnimationFrame(frame); return; }
+
+      pubNum.textContent = String(parseInt(pubNum.textContent, 10) + 1);
+      caption.textContent = '✓ นับแล้ว · counted';
+      setTimeout(function () {
+        fill.setAttribute('stroke-dashoffset', '100');
+        caption.textContent = 'press and hold · 3 seconds';
+        sweeping = false;
+      }, 900);
+    })(start);
+  });
+
+  /* ---------- contrast maths (mirrors scripts/check-contrast.mjs) ---------- */
+  function srgb(c) { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+  function lum(hex) {
+    var n = parseInt(hex.replace('#', ''), 16);
+    return 0.2126 * srgb((n >> 16) & 255) + 0.7152 * srgb((n >> 8) & 255) + 0.0722 * srgb(n & 255);
+  }
+  function ratio(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+
+  var SWATCHES = [
+    ['stage',       'The public stage. Pure white — maximum luminance, nothing warmer.'],
+    ['surface',     'Operator panels. Slightly cool so it recedes behind the stage.'],
+    ['surface-sunk','Recessed: inputs, wells, code.'],
+    ['ink',         'The count, and anything that must survive glare.'],
+    ['ink-soft',    'Secondary text and mono labels.'],
+    ['rule',        'Decorative dividers. Below 3:1 on purpose — carries no meaning.'],
+    ['rule-strong', 'Boundaries that define a control. Must clear 3:1.'],
+    ['action',      'blue — interactive. Never reports a state.'],
+    ['accept',      'green — counted. Nothing green is pressable.'],
+    ['reject',      'red — not counted: rejected, voided, destructive.'],
+    ['warn',        'amber — flagged. Recorded, visible, never blocking.']
+  ];
+
+  var PAIRINGS = [
+    ['ink','stage',7,'THE COUNT — public numeral'],
+    ['ink','surface',7,'operator body text'],
+    ['ink-soft','surface',4.5,'mono labels, secondary text'],
+    ['action','surface',4.5,'links and controls'],
+    ['accept','surface',4.5,'counted-basket log rows'],
+    ['reject','surface',4.5,'rejected/voided log rows'],
+    ['warn','surface',4.5,'flag text'],
+    ['ink-inverse','action',4.5,'primary button label'],
+    ['ink-inverse','reject',4.5,'destructive button label'],
+    ['rule-strong','surface',3,'input and control borders'],
+    ['rule-strong','stage',3,'the dial track'],
+    ['accept','stage',3,'the dial fill against the stage']
+  ];
+
+  function build() {
+    css = getComputedStyle(document.documentElement);
+
+    var host = document.getElementById('swatches');
+    host.innerHTML = SWATCHES.map(function (s) {
+      var hex = v('color-' + s[0]);
+      return '<div class="swatch">' +
+        '<span class="swatch-chip" style="background:' + hex + '"></span>' +
+        '<div class="swatch-body">' +
+          '<p class="swatch-name">' + s[0] + '</p>' +
+          '<p class="swatch-hex">' + hex + '</p>' +
+          '<p class="swatch-note">' + s[1] + '</p>' +
+        '</div></div>';
+    }).join('');
+
+    var pass = 0;
+    var rows = PAIRINGS.map(function (p) {
+      var fg = v('color-' + p[0]), bg = v('color-' + p[1]);
+      var r = ratio(fg, bg), need = p[2], ok = r >= need;
+      if (ok) pass++;
+      var g = r >= 7 ? ['aaa','AAA'] : r >= 4.5 ? ['aa','AA'] : r >= 3 ? ['ui','3:1'] : ['no','FAIL'];
+      return '<tr>' +
+        '<td><code>' + p[0] + '</code> on <code>' + p[1] + '</code></td>' +
+        '<td class="num">' + r.toFixed(2) + ':1</td>' +
+        '<td class="num">' + need + '</td>' +
+        '<td><span class="grade ' + (ok ? g[0] : 'no') + '">' + (ok ? g[1] : 'FAIL') + '</span></td>' +
+        '<td>' + p[3] + '</td></tr>';
+    }).join('');
+    document.querySelector('#contrastTable tbody').innerHTML = rows;
+    document.getElementById('contrastSummary').textContent =
+      pass + ' of ' + PAIRINGS.length + ' pairings clear their floor in this theme · ' +
+      'full 46-pairing check runs in CI';
+
+    var RAMP = [
+      ['micro', 'Mono labels, tick captions'],
+      ['small', 'Secondary operator text'],
+      ['body',  'Default operator body'],
+      ['lead',  'Running totals, panel headings'],
+      ['title', 'Pile identity on transition cards'],
+      ['figure','Settlement figures, pile totals']
+    ];
+    document.getElementById('ramp').innerHTML = RAMP.map(function (r) {
+      var size = v('font-size-' + r[0]);
+      return '<div class="ramp-row">' +
+        '<div class="ramp-meta">' +
+          '<p class="mono-label">' + r[0] + ' · ' + size + '</p>' +
+          '<p class="swatch-note" style="margin-top:2px">' + r[1] + '</p>' +
+        '</div>' +
+        '<div class="ramp-sample" style="font-size:' + size + '">กอง 1 · 187 เข่ง · 9,350 กก.</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Runs last: build() reads SWATCHES/PAIRINGS, which are assigned above.
+  setTheme(
+    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark' : 'light'
+  );
+})();
+</script>

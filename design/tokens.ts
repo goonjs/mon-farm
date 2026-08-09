@@ -245,16 +245,20 @@ export const tokens = {
     minHeightRatio: 0.62,
   },
 
-  /** The hold ring, rendered as a scale dial. */
-  dial: {
-    /** Outer diameter as a fraction of the short viewport dimension. */
-    sizeRatio: 0.86,
-    /** Tick marks around the arc — echoes the scale face both parties read. */
-    tickCount: 24,
-    tickLength: 12,
-    tickLengthMajor: 20,
-    /** Every Nth tick is major. */
-    majorEvery: 6,
+  /**
+   * The hold indicator: a stroke that travels the stage's perimeter.
+   *
+   * It was a centred dial first. A dial competes with the numeral for width —
+   * at three digits they collide — and F-9.7 says every millimetre of numeral
+   * is load-bearing. The perimeter costs the numeral nothing, and it is the
+   * longest path available on the screen, so progress stays visible from the
+   * public distance where a small centred ring would not be.
+   */
+  bezel: {
+    /** Stroke width. Thick enough to read at ~10 m. */
+    width: 12,
+    /** Inset from the stage edge. */
+    inset: 6,
   },
 
   duration: {

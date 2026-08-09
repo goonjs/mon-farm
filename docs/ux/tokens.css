@@ -48,11 +48,8 @@
   --public-numeral-height-ratio-three-digit: 0.66;
   --public-numeral-height-ratio-four-digit : 0.5;
   --public-numeral-min-height-ratio        : 0.62;
-  --dial-size-ratio                        : 0.86;
-  --dial-tick-count                        : 24;
-  --dial-tick-length                       : 12px;
-  --dial-tick-length-major                 : 20px;
-  --dial-major-every                       : 6;
+  --bezel-width                            : 12px;
+  --bezel-inset                            : 6px;
   --duration-flash                         : 180ms;
   --duration-hold                          : 3000ms;
   --duration-undo-window                   : 8000ms;
