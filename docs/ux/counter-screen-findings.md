@@ -530,6 +530,16 @@ implying a persistence that isn't built yet. Whether that preference
 should live per-device, per-user, or per-tenant is a real product question
 for `docs/architecture.md`'s local data layer, not decided here.
 
+## Group H — Beyond one pile: see `pile-zone-sale-lifecycle.md`
+
+F-19 and F-20 (Group F) touched what happens across piles and zones but
+didn't design it. That grew large enough to need its own document:
+**`docs/ux/pile-zone-sale-lifecycle.md`** — the full state model for
+pile/zone/sale, the decision point after closing a pile (next pile / next
+zone / close the zone / close the sale), closing the sale itself, and a
+complete reopen-and-audit design for closed piles and zones. Not
+prototyped yet; written for review before it is.
+
 ## Suggested testing sequence
 
 The PRD is right that these are settled at a scale, not on paper. Two of

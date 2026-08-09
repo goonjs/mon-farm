@@ -110,7 +110,7 @@
             </div>
             <div class="wiz-flagbox" id="zeroFlagBox" hidden>
               <p class="mono-label">what does it read instead?</p>
-              <div id="zeroWgtHost"></div>
+              <div id="zeroWgtHost" class="wgt-host"></div>
               <button type="button" class="ghost-btn is-warn" id="btnZeroFlagConfirm">Flag it &amp; continue anyway</button>
             </div>
           </div>
@@ -118,7 +118,7 @@
           <div class="wiz-step" id="wizTare" hidden>
             <p class="wiz-step-label mono-label">step 2 of 3 · bucket weight (tare)</p>
             <p class="rg-hint">Weigh the empty bucket. What does the scale show?</p>
-            <div id="tareWgtHost"></div>
+            <div id="tareWgtHost" class="wgt-host"></div>
             <button type="button" class="ready-btn" id="btnTareConfirm">Confirm bucket weight</button>
           </div>
 
@@ -162,7 +162,7 @@
 
       <div class="partial-panel" id="partialPanel" hidden>
         <p class="mono-label">short basket — scale reading (gross), kg</p>
-        <div id="shortWgtHost"></div>
+        <div id="shortWgtHost" class="wgt-host"></div>
         <p class="short-net">net rubber = reading − tare = <b id="shortNetPreview">28</b> kg</p>
         <div class="partial-actions">
           <button type="button" class="ghost-btn" id="btnPartialCancel">Cancel</button>
@@ -429,6 +429,7 @@
   /* CSS author rules beat the UA [hidden] rule regardless of specificity —
      restore native hidden behaviour once, here, before any component sets display. */
   [hidden] { display: none !important; }
+  *, *::before, *::after { box-sizing: border-box; }
 
   body { background: var(--ground); color: var(--ink); font-family: var(--serif); font-size: 17px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
   .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
@@ -545,10 +546,11 @@
 
   .ready-gate {
     position:absolute; inset:0; z-index:5; background: var(--card-bg);
-    flex-direction:column; align-items:center; justify-content:center; gap:.5rem; padding:1rem; text-align:center; overflow-y:auto;
+    flex-direction:column; align-items:center; justify-content:center; gap:.5rem; padding:1rem; text-align:center;
+    overflow-y:auto; overflow-x:hidden;
   }
   .ready-gate:not([hidden]) { display:flex; }
-  .wiz-step:not([hidden]) { display:flex; flex-direction:column; align-items:center; gap:.55rem; max-width:36ch; }
+  .wiz-step:not([hidden]) { display:flex; flex-direction:column; align-items:center; gap:.55rem; width:100%; max-width:36ch; }
   .wiz-step-label { color: var(--index); }
   .rg-pile { font-family: var(--sans); font-weight:800; font-size:1.3rem; margin:0; }
   .rg-hint { font-size:.85rem; color: var(--ink-soft); max-width:34ch; margin:0; }
@@ -630,8 +632,9 @@
   .partial-actions { display:flex; gap:.6rem; }
 
   /* ---- weight input component ---- */
-  .wgt { display:flex; flex-direction:column; gap:.5rem; width:100%; max-width:22rem; }
-  .wgt-top { display:flex; align-items:center; gap:.6rem; }
+  .wgt-host { width:100%; }
+  .wgt { display:flex; flex-direction:column; gap:.5rem; width:100%; max-width:min(22rem, 100%); }
+  .wgt-top { display:flex; align-items:center; gap:.4rem; min-width:0; }
   .wgt-btn { width:2.1rem; height:2.1rem; border-radius:50%; border:1.5px solid var(--ink); background: var(--card-bg); color: var(--ink); font-size:1.05rem; font-weight:700; cursor:pointer; flex:none; }
   .wgt-btn:focus-visible { outline:2px solid var(--index); outline-offset:2px; }
   .wgt-input {
