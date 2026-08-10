@@ -33,11 +33,18 @@ implementer reading `docs/prd.md` will otherwise reasonably build them.
 |---|---|
 | **%DRC / grade deduction** pricing (FR-2.5) | Straight ฿/kg only. Grade assessment brings a second party's judgment into the money chain and needs its own agreement UI. |
 | **Adjustments** — later deductions or additions (FR-7.3) | The settlement is a pure function of counts and one price. Adjustments make it a function of counts, price, and an editable list, which changes the audit story. |
-| **Per-zone worker contracts** (FR-8.6) | One split for the whole sale. Different splits per zone is the realistic case eventually, but it needs the contract/roster model (FR-1) which this epic does not build. |
 | **Backend and sync** (NFR-2) | Local-only. The event log is shaped so a sync layer can be added without reshaping data — every event carries a `synced_at` column — but nothing is sent anywhere. |
 | **Multi-tenancy, RBAC** (NFR-6) | One farm, one device. |
-| **Tablet layout** | Phone landscape only. |
 | **Hardware volume-key counting (V5)** | Press-and-hold only. |
+
+~~Per-zone worker contracts (FR-8.6)~~ — **built in S15**, per owner instruction:
+multiple zones now resolve independent worker contracts, with a sale-level
+default (50/50) as fallback. ~~Tablet layout~~ / ~~phone landscape only~~ —
+**built in S19**: orientation is unlocked (phone and tablet, both
+orientations); the one screen with a real physical constraint (the counter's
+public numeral, phone portrait past two digits) measures it at runtime and
+shows a non-blocking hint rather than being excluded from the format
+entirely. See `docs/ux/design-system.md` §9.
 
 `settle()` carries this boundary in its own doc comment, because that is where
 the implementer is actually looking.
@@ -75,11 +82,10 @@ At `Review` — implemented, verified in a browser, awaiting sign-off and CI:
 - [x] `docs/stories/s15-per-zone-contracts.md` — workers per zone, not one sale split
 - [x] `docs/stories/s16-people-store.md` — reusable people list + picker
 - [x] `docs/stories/s17-remove-seed-and-sale-list.md` — no app-side seed; sale list front door
+- [x] `docs/stories/s19-orientation-and-tablet.md` — orientation unlocked; numeral legibility measured, not assumed
 
 Not started — no story file written yet:
 
-- [ ] **S19** orientation + tablet support — currently landscape-locked on
-      native; portrait must work on phone and tablet, per owner instruction.
 - [ ] **S6** sale setup (real screen). A stub exists at `/sale/[id]/setup`
       (S17) that writes nothing; the real screen — parties, price, zones each
       with a worker picked from the people list (S16) and split, piles with
