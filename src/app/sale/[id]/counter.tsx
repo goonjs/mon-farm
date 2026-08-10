@@ -12,6 +12,7 @@ import { Link } from 'expo-router';
 
 import { Button, Pill, Tabs, TopBar } from '../../../components/chrome';
 import { HoldStage } from '../../../components/HoldStage';
+import { ShortBasketPanel } from '../../../components/ShortBasketPanel';
 import { ZeroTareGate } from '../../../components/ZeroTareGate';
 import { canCount } from '../../../core/project';
 import { formatBaht, formatKg } from '../../../core/settle';
@@ -33,6 +34,8 @@ export default function CounterScreen() {
   const { toggle, scheme } = useThemeControls();
   const { saleId, events, state, append, ready } = useSale();
   const [tab, setTab] = useState<TabKey>('count');
+  const [shortOpen, setShortOpen] = useState(false);
+  const [shortReadingG, setShortReadingG] = useState(0);
 
   // The pile being counted: the first one in a counting state.
   const pile = useMemo(
@@ -72,10 +75,17 @@ export default function CounterScreen() {
     });
   };
 
-  const onShort = () => {
-    // MVP: logs a representative off-standard basket. The three-way input
-    // (slider / ±0.5kg / typed) from finding F-22 is story S11.
-    append({ kind: 'short', pileId: pile.id, readingG: 43_000, tareG: pile.tareG });
+  const openShort = () => {
+    // Starts at the full expected reading — the operator drags/types DOWN
+    // from there, which matches how a short basket is actually noticed (the
+    // scale reads less than expected, not more).
+    setShortReadingG(pile.tareG + pile.stdNetG);
+    setShortOpen(true);
+  };
+
+  const confirmShort = () => {
+    append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG });
+    setShortOpen(false);
   };
 
   const onZeroChecked = (ok: boolean, readingG: number) =>
@@ -145,7 +155,7 @@ export default function CounterScreen() {
             <Button testID="undo" onPress={onUndo} disabled={!lastBasket}>
               ↺ ยกเลิกเข่งล่าสุด · undo last
             </Button>
-            <Button testID="short" onPress={onShort} disabled={!countable}>
+            <Button testID="short" onPress={openShort} disabled={!countable || shortOpen}>
               ⚖ เข่งไม่เต็ม · short basket
             </Button>
             <View style={{ flex: 1 }} />
@@ -153,6 +163,16 @@ export default function CounterScreen() {
               <Button testID="to-settlement" variant="destructive">ปิดการขาย · close sale</Button>
             </Link>
           </View>
+          {shortOpen ? (
+            <ShortBasketPanel
+              tareG={pile.tareG}
+              stdNetG={pile.stdNetG}
+              readingG={shortReadingG}
+              onChangeReading={setShortReadingG}
+              onConfirm={confirmShort}
+              onCancel={() => setShortOpen(false)}
+            />
+          ) : null}
         </>
       ) : null}
 

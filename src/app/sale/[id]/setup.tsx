@@ -35,7 +35,7 @@ import type { Zone } from '../../../core/types';
 export default function SetupScreen() {
   const t = useTheme();
   const router = useRouter();
-  const { saleId, state, append, ready } = useSale();
+  const { saleId, state, ready } = useSale();
 
   const splitResolvable = state.zones.length > 0 && state.zones.every((z) => z.contract || state.split);
   const hasPile = state.piles.length > 0;
@@ -123,7 +123,6 @@ export default function SetupScreen() {
 }
 
 function PartiesCard() {
-  const t = useTheme();
   const { state, append } = useSale();
   const p = state.parties;
   const [farmName, setFarmName] = useState(p?.farmName ?? '');
@@ -175,7 +174,6 @@ function PartiesCard() {
 }
 
 function PriceCard() {
-  const t = useTheme();
   const { state, append } = useSale();
   const [baht, setBaht] = useState(state.price ? String(state.price.satangPerKg / 100) : '');
   const [indexRef, setIndexRef] = useState(state.price?.indexRef ?? '');

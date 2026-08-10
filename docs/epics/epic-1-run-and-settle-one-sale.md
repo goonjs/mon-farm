@@ -87,14 +87,14 @@ At `Review` — implemented, verified in a browser, awaiting sign-off and CI:
       a worker picked from the people list, piles — replaces the S17 stub
 - [x] `docs/stories/s9-zero-tare-gate.md` — the pre-count wizard now gates the
       stage; a failed zero check flags and continues rather than blocking
+- [x] `docs/stories/s11-short-basket.md` — real F-22 three-way weight input
+      (drag / ± / typed), replacing the hard-coded 43 kg placeholder
 
 Not started — no story file written yet:
 
 - [ ] **S10** Thai speech — `expo-speech` is installed (no longer blocked) but
       nothing imports it yet. **The announced register does not exist**, which
       means half the cross-check the product is built around is missing.
-- [ ] **S11** short basket with the three-way weight input. A button logs a
-      hard-coded 43 kg reading as a placeholder.
 - [ ] **S13** close lifecycle (screens 5 and 6) — closing a pile, the decision
       point, closing a zone, reopen-and-announce. The core model supports all
       of it; no UI reaches it.
