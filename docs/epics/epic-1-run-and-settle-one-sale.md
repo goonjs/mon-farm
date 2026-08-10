@@ -90,14 +90,10 @@ Not started — no story file written yet:
 
 ## Known blockers
 
-- **S10** needs `expo-speech`, which is outside the dependency list authorized
-  for this work. It is a first-party Expo module and speech is core to FR-11,
-  but the rule is that anything outside the list is a written blocker rather
-  than an install. Needs the owner's go-ahead.
-- **F-7 feedback** ideally uses haptics (`expo-haptics`) so acceptance and
-  rejection are distinguishable without sound or sight. Same situation.
-  Implemented as colour + shape + text in the meantime, which satisfies the
-  finding but is weaker one-handed.
+~~S10 needs `expo-speech`~~ and ~~F-7 needs `expo-haptics`~~ — **both authorized
+and installed 2026-08-10** at `~57.0.1`. Neither is wired into anything yet;
+the announced register (FR-11) and haptic accept/reject feedback (F-7) are
+still unimplemented, but they are no longer blocked.
 
 ## Definition of done for the epic
 
