@@ -250,8 +250,29 @@ export const tokens = {
     /**
      * Playwright asserts measured height ≥ this × DEVICE height, at both two
      * and three digits, on both reference and floor viewports.
+     *
+     * Valid WITHIN one device-density class (phone vs. phone), not across
+     * classes. A ratio of logical points is only a stand-in for physical
+     * millimetres if points-per-mm is roughly constant between the devices
+     * being compared — true for phone vs. phone (~160 points/inch on both
+     * historically), false for phone vs. tablet (an iPad's points map to
+     * roughly 20% more physical mm each than an iPhone's do, since tablets
+     * show more content rather than scaling content up). Measured directly:
+     * a tablet in portrait at three digits computes to ratio ≈0.54 here —
+     * below this floor — while working the same geometry in real millimetres
+     * puts the glyph at ~85mm, past even the "comfortable" 83mm target. The
+     * ratio undersells the tablet; `tabletBreakpointPx` below is what
+     * corrects for it, rather than papering over the gap by lowering this
+     * floor and weakening what it verifies for phones.
      */
     minHeightRatio: 0.62,
+    /**
+     * Short-dimension CSS px above which a device is treated as tablet-class
+     * for the rotate-hint decision, regardless of `minHeightRatio`. 600 is
+     * Material Design's own phone/tablet breakpoint — a defensible, already
+     * externally-documented line, not a number invented for this app.
+     */
+    tabletBreakpointPx: 600,
   },
 
   /**
@@ -291,12 +312,29 @@ export const tokens = {
     comfortable: 56,
   },
 
-  /** Landscape phone reference viewports. Playwright projects mirror these. */
+  /**
+   * Reference viewports. Playwright projects mirror these.
+   *
+   * Orientation is no longer locked (S19) — portrait is genuinely better for
+   * row-heavy screens (setup, log, settlement), and only one screen has a real
+   * physical constraint against it: see `publicNumeral` above and
+   * `docs/ux/design-system.md` §9/§4 for the millimetre arithmetic. That
+   * constraint is what `minHeightRatio` measures at runtime, not a hardcoded
+   * "portrait phones are bad" rule — a phone in portrait is fine up to two
+   * digits, and a tablet is fine in portrait at any digit count in this MVP's
+   * range.
+   */
   viewport: {
     /** Modern 6.1" phone, landscape. */
     reference: { width: 844, height: 390 },
     /** The NFR-4 low-end Android floor. Layout must hold here. */
     floor: { width: 740, height: 360 },
+    /** Same phone, portrait. The binding case for the numeral floor at 3+ digits. */
+    portrait: { width: 390, height: 844 },
+    /** Common ~10.9" tablet, portrait. Clears the numeral floor at any digit count in range. */
+    tabletPortrait: { width: 820, height: 1180 },
+    /** Same tablet, landscape — smoke-checked only; shares the phone landscape layout. */
+    tabletLandscape: { width: 1180, height: 820 },
   },
 
   /** Opacity steps, so "slightly faded" is a decision made once. */

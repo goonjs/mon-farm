@@ -97,7 +97,6 @@ export default function SaleListScreen() {
 }
 
 function SaleRow({ sale }: { sale: SaleState }) {
-  const t = useTheme();
   const href: Href = sale.status === 'closed'
     ? { pathname: '/sale/[id]/settlement', params: { id: sale.id } }
     : { pathname: '/sale/[id]/counter', params: { id: sale.id } };

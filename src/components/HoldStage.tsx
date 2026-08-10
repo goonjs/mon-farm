@@ -21,7 +21,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 
 import { Bezel } from './Bezel';
 import { useTheme } from '../theme';
@@ -51,6 +51,7 @@ export function HoldStage({
 }: HoldStageProps) {
   const t = useTheme();
   const HOLD = holdMs ?? t.duration.hold;
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   const [pct, setPct] = useState(0);
   /**
@@ -242,6 +243,41 @@ export function HoldStage({
   const byWidth = box.width / (t.publicNumeral.digitWidthEm * Math.max(1, digits));
   const fontSize = Math.max(24, Math.min(byHeight, byWidth));
 
+  /**
+   * The rotate hint (S19), and why it is a MEASUREMENT rather than an
+   * orientation check.
+   *
+   * A phone's physical short edge is the same length whether it's held in
+   * landscape or portrait — only which dimension of the viewport it maps to
+   * changes. `minHeightRatio` was calibrated against that short edge (see
+   * docs/ux/design-system.md §4), so comparing the achieved numeral size
+   * against `min(windowWidth, windowHeight)` — not against orientation, not
+   * against a hardcoded digit count — is what makes this condition true for
+   * "a phone in portrait past two digits" and false for "a tablet in
+   * portrait" or "two digits on a phone in portrait", without special-casing
+   * any of those as their own rule. It is also honest under resize: rotate
+   * the device and the hint appears or disappears based on what actually
+   * changed, the physical legibility, not a label that says "portrait" and
+   * stops being true the moment the constraint does.
+   *
+   * Never blocks. Someone mid-sale must not be stopped by a layout opinion —
+   * see docs/ux/design-system.md §9 and the plan's rejected alternatives
+   * (shrinking the numeral hides the F-14 accuracy problem; rotating the
+   * glyph 90° produces a count nobody can agree on at a glance).
+   */
+  const shortDeviceDim = Math.min(windowWidth, windowHeight);
+  /**
+   * The ratio floor alone under-calls tablets: it computes ~0.54 for a
+   * portrait tablet at three digits, below the 0.62 floor, even though the
+   * real geometry there is ~85mm — past the 83mm "comfortable" target. That
+   * is a density-class mismatch, not a legibility problem — see the note on
+   * `minHeightRatio` in design/tokens.ts. A device past the tablet breakpoint
+   * is treated as clearing the floor unconditionally.
+   */
+  const isTabletClass = shortDeviceDim >= t.publicNumeral.tabletBreakpointPx;
+  const clearsLegibilityFloor =
+    isTabletClass || fontSize / shortDeviceDim >= t.publicNumeral.minHeightRatio;
+
   return (
     <Pressable
       ref={attachStage}
@@ -282,6 +318,26 @@ export function HoldStage({
       }}
     >
       <Bezel pct={pct} width={box.width} height={box.height} rejected={rejected} />
+
+      {!clearsLegibilityFloor ? (
+        <View style={{ position: 'absolute', top: t.space.sm, alignItems: 'center' }} pointerEvents="none">
+          <Text
+            testID="rotate-hint"
+            style={{
+              fontFamily: t.font.family.mono,
+              fontSize: t.font.size.micro,
+              letterSpacing: t.font.tracking.wide,
+              color: t.color.warn,
+              backgroundColor: t.color.warnSunk,
+              paddingHorizontal: t.space.sm,
+              paddingVertical: 2,
+              borderRadius: t.radius.sm,
+            }}
+          >
+            หมุนจอเพื่อดูตัวเลขชัดขึ้น · turn the phone for a clearer count
+          </Text>
+        </View>
+      ) : null}
 
       <Text
         testID="count"

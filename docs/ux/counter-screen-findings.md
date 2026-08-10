@@ -56,12 +56,44 @@ FR-9.7's own range. Even a large phone tops out around 65 mm, which is
 adequate-but-marginal at 10 m and gets worse in glare, at an angle, or for
 an older ล้ง's eyes. A small tablet clears it with room to spare.
 
-**Width is not the binding constraint; height is.** At 59 mm tall, a digit
-in a tabular/condensed face is ~33 mm wide, so three digits need ~100 mm
-of the phone's 143 mm long dimension. Three digits fit. But that leaves
-only **~35 mm of width** for everything else on the screen — the operator
-strip on a phone is a narrow column, not a panel. This is what forces the
-findings in Group A.
+**Width is not the binding constraint in landscape; height is.** At 59 mm
+tall, a digit in a tabular/condensed face is ~33 mm wide, so three digits
+need ~100 mm of the phone's 143 mm long dimension. Three digits fit. But
+that leaves only **~35 mm of width** for everything else on the screen —
+the operator strip on a phone is a narrow column, not a panel. This is
+what forces the findings in Group A.
+
+**Update (S19) — orientation was unlocked, so the table above needed
+redoing per orientation, not just per device.** A device's short physical
+edge is the same length regardless of which way it's held, but which
+dimension of the viewport it becomes — and therefore which one width
+depends on — flips:
+
+| Device | Landscape (height-bound) | Portrait (width-bound, 3 digits) |
+| --- | --- | --- |
+| 6.1" phone | ~59 mm | **~35 mm — below the 40 mm threshold** |
+| 6.7" phone | ~65 mm | **~38 mm — below the 40 mm threshold** |
+| 8.7" tablet | ~110 mm | ~63 mm |
+| 11" tablet | ~140 mm | ~79 mm |
+
+**A phone in portrait cannot reach the legibility threshold once a pile
+passes two digits.** In portrait, three digits are now competing for the
+phone's *short* edge instead of its long one, and there isn't enough of it.
+One and two digit counts are unaffected (they were never close to the
+threshold in either orientation) — this is specifically the 100+-basket
+case. Tablets clear the threshold in both orientations across this MVP's
+digit range.
+
+This did **not** become a new blocking requirement ("portrait forbidden on
+phone"). The counter screen measures the achieved numeral size against the
+device's short edge at runtime and shows a small, non-blocking hint — "turn
+the phone for a clearer count" — exactly when the measurement says the
+threshold isn't met, rather than excluding an entire orientation to avoid
+one bad case within it. See `docs/ux/design-system.md` §9 and
+`src/components/HoldStage.tsx`. Rejected alternatives, for the record:
+silently shrinking the numeral (hides the accuracy problem F-7/F-14 warn
+about) and rotating the glyph 90° (a sideways count is not one two people
+can agree on at a glance).
 
 ---
 

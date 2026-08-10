@@ -6,7 +6,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "monfarm",
     "userInterfaceStyle": "light",
-    "orientation": "landscape",
+    "orientation": "default",
     "ios": {
       "icon": "./assets/expo.icon"
     },

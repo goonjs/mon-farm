@@ -260,20 +260,55 @@ a second confirm.
 
 ---
 
-## 9. Layout: landscape, tabbed
+## 9. Layout: tabbed, any orientation
 
-Landscape only, locked on native. Reference viewports:
+**As of S19, both orientations are allowed on phone and tablet** —
+`app.json`'s orientation lock is `"default"`, not `"landscape"`. Portrait is
+genuinely better for most of this app: setup, log and settlement are row-heavy
+and were being crammed into ~390px of height in landscape.
 
-- `844 × 390` — modern 6.1″ phone
-- `740 × 360` — the NFR-4 low-end Android floor; layout must hold here
+Reference viewports:
+
+- `844 × 390` — modern 6.1″ phone, landscape
+- `740 × 360` — the NFR-4 low-end Android floor, landscape; layout must hold here
+- `390 × 844` — the same phone, portrait
+- `820 × 1180` — a ~10.9″ tablet, portrait
+- Tablet landscape is not separately verified — nothing in this layout is
+  viewport-driven in a way orientation could break for a device that size, so
+  it shares the phone-landscape layout rather than getting its own case.
 
 Three tabs (F-19): **Count** / **Pile & Zone** / **Log**. When any tab other
 than Count is active, a persistent mini-count stays in the topbar — leaving the
 Count tab must never mean losing sight of the number.
 
-Web has no orientation lock. A portrait browser window gets an explicit "rotate
-your device" state rather than a collapsed layout, so a human opening it in the
-wrong shape sees an explanation instead of a bug.
+### The one screen orientation actually constrains
+
+F-9.7's arithmetic is about physical millimetres, so it was re-run per
+orientation rather than assumed to carry over from §4. **A phone in portrait
+cannot reach the legibility threshold at three digits** — the count becomes
+width-limited, and a phone in portrait is not wide enough, regardless of its
+height. Tablets clear the threshold in both orientations across this MVP's
+digit range; one and two digit counts clear it on a phone in portrait too — it
+is specifically 100+ baskets in a pile.
+
+The counter screen measures this directly at runtime (`HoldStage.tsx`) rather
+than branching on orientation: it compares the numeral's achieved size against
+the device's short physical edge, and shows a small, **non-blocking** hint —
+"turn the phone for a clearer count" — exactly when that comparison fails.
+Nothing is ever blocked by it; someone mid-sale must not be stopped by a layout
+opinion. Two rejected alternatives, for the record: silently shrinking the
+numeral (hides a money-accuracy problem — the exact thing F-7 and F-14 warn
+against), and rotating the glyph 90° in portrait (a count that reads sideways
+is not one two people can agree on at a glance).
+
+One caveat worth naming: the ratio this measurement uses (rendered numeral
+height ÷ device short edge) is calibrated against phone point-density and does
+not transfer directly to a tablet's — an iPad's logical points map to more
+physical millimetres each than an iPhone's do. The rotate-hint logic accounts
+for this with a size-based tablet threshold (Material Design's own 600px
+breakpoint) rather than trusting the ratio across device classes; see the
+comment on `tokens.publicNumeral.minHeightRatio` for the measured numbers that
+motivated it.
 
 ---
 
