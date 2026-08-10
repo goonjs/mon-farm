@@ -1,49 +1,57 @@
 import { expect, test } from '@playwright/test';
 
+import { seedSale, testSaleId } from './fixtures';
+import { workedExample } from '../src/core/fixtures';
+
 /**
  * The settlement figures are checked against a hand calculation in
- * `src/core/settle.test.ts` and against the design document in
- * `docs/ux/mvp-screens.html`. What this tier adds is that the numbers actually
+ * `src/core/settle.test.ts`. What this tier adds is that the numbers actually
  * reach the screen, and that the per-zone rows visibly add up — because that
  * addition happening in front of a buyer is the entire trust mechanism.
+ *
+ * `workedExample()` is the same fixture the unit tests check to the satang:
+ * two zones, each with its own worker at 50/50 (ประยุทธ in zone A, มานพ in
+ * zone B). Reusing it here means these figures cannot drift from what
+ * settle.test.ts already proved correct.
  */
 
-test('settlement renders the derivation and each side’s share', async ({ page }, testInfo) => {
-  await page.addInitScript(() => window.localStorage.clear());
-  await page.goto('/');
-  await expect(page.getByTestId('count')).toBeVisible();
-
-  await page.getByTestId('to-settlement').click();
+async function openSettlement(page: import('@playwright/test').Page) {
+  const saleId = testSaleId('settlement');
+  await seedSale(page, saleId, workedExample(saleId));
+  await page.goto(`/sale/${saleId}/settlement`);
   await expect(page.getByTestId('owner-share')).toBeVisible();
+  return saleId;
+}
 
-  // Demo seed: 41 standard × 50 kg + one short (43 − 2 = 41 kg) = 2,091 kg,
-  // in zone A, which has no contract of its own — the 60% sale default
-  // applies. 2,091 × ฿26.50 = ฿55,411.50 · owner 60% = ฿33,246.90 · zone A's
-  // worker share (40%) = ฿22,164.60. Owner total equals zone A's owner share
-  // here because it is the only zone with any baskets in it.
-  await expect(page.getByTestId('step-net-weight')).toContainText('2,091');
-  await expect(page.getByTestId('step-gross')).toContainText('55,411.50');
-  await expect(page.getByTestId('owner-share')).toContainText('33,246.90');
-  await expect(page.getByTestId('zone-zA')).toContainText('22,164.60');
+test('settlement renders the derivation and the owner total', async ({ page }, testInfo) => {
+  await openSettlement(page);
+
+  // net = 11,273 kg; gross = ฿298,734.50; owner total (both zones at 50%) = ฿149,367.25
+  await expect(page.getByTestId('step-net-weight')).toContainText('11,273');
+  await expect(page.getByTestId('step-gross')).toContainText('298,734.50');
+  await expect(page.getByTestId('owner-share')).toContainText('149,367.25');
 
   await page.screenshot({ path: `docs/ux/screenshots/${testInfo.project.name}/settlement.png` });
 });
 
 test('every step of the money chain is shown, not just the total (FR-7.4)', async ({ page }) => {
-  await page.addInitScript(() => window.localStorage.clear());
-  await page.goto('/');
-  await page.getByTestId('to-settlement').click();
+  await openSettlement(page);
 
   for (const key of ['baskets', 'standard-weight', 'short-weight', 'net-weight', 'price', 'gross']) {
     await expect(page.getByTestId(`step-${key}`)).toBeVisible();
   }
 });
 
-test('per-zone rows are present for every zone in the sale', async ({ page }) => {
-  await page.addInitScript(() => window.localStorage.clear());
-  await page.goto('/');
-  await page.getByTestId('to-settlement').click();
+test('per-zone rows show each zone’s own worker and figures', async ({ page }) => {
+  await openSettlement(page);
 
-  await expect(page.getByTestId('zone-zA')).toContainText('โซน A');
-  await expect(page.getByTestId('zone-zB')).toContainText('โซน B');
+  const zoneA = page.getByTestId('zone-zA');
+  await expect(zoneA).toContainText('โซน A');
+  await expect(zoneA).toContainText('ประยุทธ');
+  await expect(zoneA).toContainText('100,342.25'); // zone A's own worker share at 50%
+
+  const zoneB = page.getByTestId('zone-zB');
+  await expect(zoneB).toContainText('โซน B');
+  await expect(zoneB).toContainText('มานพ');
+  await expect(zoneB).toContainText('49,025.00'); // zone B's own worker share at 50%
 });
