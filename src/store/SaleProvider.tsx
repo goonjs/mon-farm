@@ -24,7 +24,11 @@ import {
 
 import { detectClockAnomaly, projectSale } from '../core/project';
 import type { SaleEvent, SaleState, SysPayload } from '../core/types';
-import { store } from './store.web';
+// Bare specifier, not './store.web' — Metro resolves this to store.native.ts
+// on iOS/Android and store.web.ts on web. A literal '.web' import here would
+// silently pull the localStorage adapter into native builds too, which is
+// exactly the least-durable path NFR-1 exists to avoid.
+import { store } from './store';
 
 /** Every event minus the fields the provider stamps. */
 type NewEvent =

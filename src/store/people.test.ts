@@ -1,0 +1,60 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import { MemoryPeopleStore } from './people-memory';
+
+/**
+ * MemoryPeopleStore only — the platform adapters (people.web.ts,
+ * people.native.ts) touch localStorage / expo-sqlite and are exercised via
+ * Playwright once a real screen uses them (S6), not here.
+ */
+describe('MemoryPeopleStore', () => {
+  let store: MemoryPeopleStore;
+  beforeEach(() => {
+    store = new MemoryPeopleStore();
+  });
+
+  it('starts empty', async () => {
+    expect(await store.list()).toEqual([]);
+  });
+
+  it('creates a person with a name, an id, and no archive date', async () => {
+    const p = await store.create('ประยุทธ');
+    expect(p.name).toBe('ประยุทธ');
+    expect(p.id).toBeTruthy();
+    expect(p.archivedTs).toBeNull();
+    expect(await store.get(p.id)).toEqual(p);
+  });
+
+  it('lists active people alphabetically', async () => {
+    await store.create('สมหญิง');
+    await store.create('ประยุทธ');
+    await store.create('มานพ');
+    const names = (await store.list()).map((p) => p.name);
+    // Thai collation order — not insertion order.
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'th')));
+    expect(names).toHaveLength(3);
+  });
+
+  it('rename changes the name but not the id', async () => {
+    const p = await store.create('ประยุทธ');
+    await store.rename(p.id, 'ประยุทธ์');
+    const after = await store.get(p.id);
+    expect(after?.id).toBe(p.id);
+    expect(after?.name).toBe('ประยุทธ์');
+  });
+
+  it('archive removes a person from list() but not from get()', async () => {
+    const p = await store.create('ประยุทธ');
+    await store.archive(p.id);
+
+    expect(await store.list()).toEqual([]);
+    const after = await store.get(p.id);
+    expect(after?.archivedTs).not.toBeNull();
+    expect(after?.name).toBe('ประยุทธ'); // still resolvable — a past settlement can still show the name
+  });
+
+  it('rename or archive on an unknown id is a no-op, not an error', async () => {
+    await expect(store.rename('nope', 'x')).resolves.toBeUndefined();
+    await expect(store.archive('nope')).resolves.toBeUndefined();
+  });
+});

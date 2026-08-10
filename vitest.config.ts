@@ -13,12 +13,16 @@ import { defineConfig } from 'vitest/config';
  */
 export default defineConfig({
   test: {
-    include: ['src/core/**/*.test.ts'],
+    // `src/store/*.test.ts` (not `**`) is deliberate: it picks up the pure
+    // port files (people.ts, store.ts — no RN/web-only globals) but never the
+    // platform adapters (people.web.ts, people.native.ts, ...), which touch
+    // localStorage / expo-sqlite and belong to the component or e2e tier.
+    include: ['src/core/**/*.test.ts', 'src/store/*.test.ts'],
     environment: 'node',
     globals: false,
     coverage: {
-      include: ['src/core/**/*.ts'],
-      exclude: ['src/core/**/*.test.ts', 'src/core/fixtures.ts'],
+      include: ['src/core/**/*.ts', 'src/store/*.ts'],
+      exclude: ['src/core/**/*.test.ts', 'src/core/fixtures.ts', 'src/store/*.test.ts'],
     },
   },
 });
