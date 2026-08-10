@@ -33,6 +33,20 @@ export interface EventStore {
   listSales(): Promise<string[]>;
 }
 
+/**
+ * Ambient declaration only — never implemented here, never emitted (this whole
+ * project builds with `noEmit`; Metro strips types via Babel).
+ *
+ * `store.native.ts` and `store.web.ts` each export the real `store` constant,
+ * and Metro's platform-extension resolution picks whichever one matches the
+ * build target for a bare `import { store } from './store'`. But `tsc` itself
+ * has no such resolution — `moduleSuffixes` only supports one fixed suffix per
+ * compilation, not "try each platform and fall back" — so a project-wide
+ * `tsc --noEmit` sees the literal `store.ts` file and needs something to
+ * resolve `store` against. This line is that something.
+ */
+export declare const store: EventStore;
+
 export class DuplicateSeqError extends Error {
   constructor(saleId: string, seq: number) {
     super(`Event ${saleId}#${seq} already exists. The log is append-only.`);
