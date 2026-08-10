@@ -29,13 +29,13 @@ Concretely, one person can:
 These are in the PRD and are **not** in the MVP. Named here because an
 implementer reading `docs/prd.md` will otherwise reasonably build them.
 
-| Excluded | Why, and where it goes |
-|---|---|
-| **%DRC / grade deduction** pricing (FR-2.5) | Straight ฿/kg only. Grade assessment brings a second party's judgment into the money chain and needs its own agreement UI. |
-| **Adjustments** — later deductions or additions (FR-7.3) | The settlement is a pure function of counts and one price. Adjustments make it a function of counts, price, and an editable list, which changes the audit story. |
-| **Backend and sync** (NFR-2) | Local-only. The event log is shaped so a sync layer can be added without reshaping data — every event carries a `synced_at` column — but nothing is sent anywhere. |
-| **Multi-tenancy, RBAC** (NFR-6) | One farm, one device. |
-| **Hardware volume-key counting (V5)** | Press-and-hold only. |
+| Excluded                                                 | Why, and where it goes                                                                                                                                             |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **%DRC / grade deduction** pricing (FR-2.5)              | Straight ฿/kg only. Grade assessment brings a second party's judgment into the money chain and needs its own agreement UI.                                         |
+| **Adjustments** — later deductions or additions (FR-7.3) | The settlement is a pure function of counts and one price. Adjustments make it a function of counts, price, and an editable list, which changes the audit story.   |
+| **Backend and sync** (NFR-2)                             | Local-only. The event log is shaped so a sync layer can be added without reshaping data — every event carries a `synced_at` column — but nothing is sent anywhere. |
+| **Multi-tenancy, RBAC** (NFR-6)                          | One farm, one device.                                                                                                                                              |
+| **Hardware volume-key counting (V5)**                    | Press-and-hold only.                                                                                                                                               |
 
 ~~Per-zone worker contracts (FR-8.6)~~ — **built in S15**, per owner instruction:
 multiple zones now resolve independent worker contracts, with a sale-level
@@ -83,13 +83,11 @@ At `Review` — implemented, verified in a browser, awaiting sign-off and CI:
 - [x] `docs/stories/s16-people-store.md` — reusable people list + picker
 - [x] `docs/stories/s17-remove-seed-and-sale-list.md` — no app-side seed; sale list front door
 - [x] `docs/stories/s19-orientation-and-tablet.md` — orientation unlocked; numeral legibility measured, not assumed
+- [x] `docs/stories/s6-sale-setup.md` — parties, price, split, zones each with
+      a worker picked from the people list, piles — replaces the S17 stub
 
 Not started — no story file written yet:
 
-- [ ] **S6** sale setup (real screen). A stub exists at `/sale/[id]/setup`
-      (S17) that writes nothing; the real screen — parties, price, zones each
-      with a worker picked from the people list (S16) and split, piles with
-      tare/standard net — is not built.
 - [ ] **S9** zero and tare gate (screen 2). e2e fixtures seed piles already
       ready, so the pre-count check exists in the core model and is tested
       there, but no screen reaches it.
