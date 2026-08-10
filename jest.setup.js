@@ -1,2 +1,2 @@
-// Testing Library's RN matchers (toBeOnTheScreen, toHaveTextContent, ...).
-require('@testing-library/react-native/extend-expect');
+// Testing Library v13 ships its jest matchers built in — there is no
+// `extend-expect` entry point to require any more.

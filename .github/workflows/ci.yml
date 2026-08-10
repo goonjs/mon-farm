@@ -1,0 +1,82 @@
+name: CI
+
+# docs/process.md: every push and PR must run build, unit tests and lint, and a
+# red pipeline blocks merge. The order below is deliberate -- the cheapest gates
+# that catch the most common breakage run first, so a token drift or a type
+# error fails in seconds rather than after a five-minute browser download.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Design tokens have two consumers: the app imports design/tokens.ts, and
+      # the docs/ux prototypes import the generated tokens.css. This is what
+      # stops them drifting -- change a token without regenerating and CI is red.
+      - name: Tokens are in sync with their source
+        run: npm run tokens:check
+
+      # "High contrast" is a claim about a palette, and a claim about a palette
+      # is checkable. Fails if any pairing drops below its required ratio.
+      - name: Contrast ratios hold
+        run: npm run contrast
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # Pure money model. No React Native transform in the path, so this is the
+      # fastest and highest-value suite in the project.
+      - name: Core tests
+        run: npm run test:core
+
+      - name: Component tests
+        run: npm run test:ui
+
+      # Doubles as the build gate: a bundling failure exits non-zero here rather
+      # than turning into a blank screenshot in the e2e job.
+      - name: Build web
+        run: npm run build:web
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end
+        run: npm run test:e2e
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: docs/ux/screenshots/
+          if-no-files-found: warn
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: e2e/.results/

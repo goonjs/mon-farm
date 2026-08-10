@@ -1,18 +1,16 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { Stack } from 'expo-router';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { DEMO_SALE_ID, demoSeed } from '../demo';
+import { SaleProvider } from '../store/SaleProvider';
+import { ThemeProvider } from '../theme';
 
-SplashScreen.preventAutoHideAsync();
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
+    // Light is the default and the field mode — see docs/ux/design-system.md §3.
+    <ThemeProvider initial="light">
+      <SaleProvider saleId={DEMO_SALE_ID} seed={demoSeed()}>
+        <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
+      </SaleProvider>
     </ThemeProvider>
   );
 }
