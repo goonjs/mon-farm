@@ -16,6 +16,16 @@ export function openPileScenario(saleId: string, standardBaskets = 0): SaleEvent
 }
 
 /**
+ * A sale with one zone and one pile that is genuinely `not-started` — no
+ * zero check, no tare confirmed, no ready. For the S9 gate tests, which exist
+ * specifically to prove the gate itself, `readyPile()` would defeat the point
+ * by skipping straight past it.
+ */
+export function unreadyPileScenario(saleId: string): SaleEvent[] {
+  return setUpSale(new LogBuilder(saleId)).build();
+}
+
+/**
  * Writes a sale's events directly into the browser's localStorage before the
  * app boots, mirroring `src/store/store.web.ts`'s exact schema. This is the
  * ENTIRE seeding mechanism for e2e now — there is no app-side seed any more

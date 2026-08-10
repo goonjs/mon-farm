@@ -12,6 +12,7 @@ import { Link } from 'expo-router';
 
 import { Button, Pill, Tabs, TopBar } from '../../../components/chrome';
 import { HoldStage } from '../../../components/HoldStage';
+import { ZeroTareGate } from '../../../components/ZeroTareGate';
 import { canCount } from '../../../core/project';
 import { formatBaht, formatKg } from '../../../core/settle';
 import { basketNetG, lastLiveBasket, liveBaskets, pileTotals, saleTotals, zoneTotals } from '../../../core/totals';
@@ -77,6 +78,14 @@ export default function CounterScreen() {
     append({ kind: 'short', pileId: pile.id, readingG: 43_000, tareG: pile.tareG });
   };
 
+  const onZeroChecked = (ok: boolean, readingG: number) =>
+    append({ kind: 'sys', payload: { t: 'zero_check', pileId: pile.id, ok, readingG } });
+
+  const onTareConfirmed = (confirmedTareG: number) =>
+    append({ kind: 'sys', payload: { t: 'tare_confirmed', pileId: pile.id, tareG: confirmedTareG } });
+
+  const onGateReady = () => append({ kind: 'sys', payload: { t: 'ready', pileId: pile.id } });
+
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <TopBar
@@ -101,14 +110,27 @@ export default function CounterScreen() {
 
       {tab === 'count' ? (
         <>
-          <HoldStage
-            count={totals?.baskets ?? 0}
-            onCount={onCount}
-            onReject={onReject}
-            enabled={countable}
-            caption={countable ? expected : 'กองยังไม่พร้อม · pile not ready'}
-            holdMs={holdMsOverride()}
-          />
+          {pile.status === 'not-started' ? (
+            <ZeroTareGate
+              pileName={pile.name}
+              tareG={pile.tareG}
+              stdNetG={pile.stdNetG}
+              zeroChecked={pile.zeroChecked}
+              tareConfirmed={pile.tareConfirmed}
+              onZeroChecked={onZeroChecked}
+              onTareConfirmed={onTareConfirmed}
+              onReady={onGateReady}
+            />
+          ) : (
+            <HoldStage
+              count={totals?.baskets ?? 0}
+              onCount={onCount}
+              onReject={onReject}
+              enabled={countable}
+              caption={countable ? expected : 'กองยังไม่พร้อม · pile not ready'}
+              holdMs={holdMsOverride()}
+            />
+          )}
           <View
             style={{
               flexDirection: 'row',

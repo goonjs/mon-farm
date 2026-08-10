@@ -85,12 +85,11 @@ At `Review` — implemented, verified in a browser, awaiting sign-off and CI:
 - [x] `docs/stories/s19-orientation-and-tablet.md` — orientation unlocked; numeral legibility measured, not assumed
 - [x] `docs/stories/s6-sale-setup.md` — parties, price, split, zones each with
       a worker picked from the people list, piles — replaces the S17 stub
+- [x] `docs/stories/s9-zero-tare-gate.md` — the pre-count wizard now gates the
+      stage; a failed zero check flags and continues rather than blocking
 
 Not started — no story file written yet:
 
-- [ ] **S9** zero and tare gate (screen 2). e2e fixtures seed piles already
-      ready, so the pre-count check exists in the core model and is tested
-      there, but no screen reaches it.
 - [ ] **S10** Thai speech — `expo-speech` is installed (no longer blocked) but
       nothing imports it yet. **The announced register does not exist**, which
       means half the cross-check the product is built around is missing.
