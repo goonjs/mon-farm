@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { LogBuilder, readyPile, setUpSale, workedExample } from './fixtures';
+import { LogBuilder, readyPile, setUpSale, withZoneContract, workedExample } from './fixtures';
 import { projectSale } from './project';
 import { saleTotals, zoneTotals } from './totals';
 import { settle, SettlementUnavailable } from './settle';
@@ -20,27 +20,123 @@ describe('settle — the worked example from the design docs', () => {
     expect(s.totals.netG).toBe(11_273_000);
   });
 
-  it('reaches the gross the design document shows', () => {
+  it('reaches the gross the design document shows — unaffected by per-zone splits', () => {
     // 11,273 kg × ฿26.50 = ฿298,734.50 = 29,873,450 satang
     expect(s.grossSatang).toBe(29_873_450);
   });
 
-  it('splits 60/40 to the figures the design document shows', () => {
-    expect(s.ownerSatang).toBe(17_924_070); // ฿179,240.70
-    expect(s.workerSatang).toBe(11_949_380); // ฿119,493.80
+  it('each zone applies its own 50/50 contract, not one sale-wide split', () => {
+    expect(s.ownerSatang).toBe(14_936_725); // ฿149,367.25
+    expect(s.workerSatang).toBe(14_936_725); // exactly equal at 50/50
   });
 
-  it('breaks down per zone to the figures the design document shows', () => {
+  it('breaks down per zone with each zone’s own worker and percentage', () => {
     const [a, b] = s.perZone;
+    expect(a.zoneName).toBe('โซน A');
+    expect(a.workerName).toBe('ประยุทธ');
+    expect(a.personId).toBe('person-prayuth');
+    expect(a.ownerPct).toBe(50);
+    expect(a.fromSaleDefault).toBe(false);
     expect(a.totals.netG).toBe(7_573_000);
     expect(a.grossSatang).toBe(20_068_450); // ฿200,684.50
-    expect(a.ownerSatang).toBe(12_041_070); // ฿120,410.70
-    expect(a.workerSatang).toBe(8_027_380); // ฿ 80,273.80
+    expect(a.ownerSatang).toBe(10_034_225); // ฿100,342.25
+    expect(a.workerSatang).toBe(10_034_225);
 
+    expect(b.zoneName).toBe('โซน B');
+    expect(b.workerName).toBe('มานพ');
     expect(b.totals.netG).toBe(3_700_000);
     expect(b.grossSatang).toBe(9_805_000); // ฿ 98,050.00
-    expect(b.ownerSatang).toBe(5_883_000); // ฿ 58,830.00
-    expect(b.workerSatang).toBe(3_922_000); // ฿ 39,220.00
+    expect(b.ownerSatang).toBe(4_902_500); // ฿ 49,025.00
+    expect(b.workerSatang).toBe(4_902_500);
+  });
+
+  it('groups per-worker totals by personId, one row per named worker', () => {
+    expect(s.perWorker).toHaveLength(2);
+    const prayuth = s.perWorker.find((w) => w.personId === 'person-prayuth')!;
+    expect(prayuth.workerName).toBe('ประยุทธ');
+    expect(prayuth.zoneIds).toEqual(['zA']);
+    expect(prayuth.workerSatang).toBe(10_034_225);
+
+    const manop = s.perWorker.find((w) => w.personId === 'person-manop')!;
+    expect(manop.zoneIds).toEqual(['zB']);
+    expect(manop.workerSatang).toBe(4_902_500);
+  });
+});
+
+describe('settle — per-zone contracts actually vary', () => {
+  it('a zone with its own contract overrides the sale default', () => {
+    const b = setUpSale(); // sale default is 50/50
+    withZoneContract(b, 'zA', 'p1', 'สมหญิง', 70); // zone A pays the owner 70%
+    // zone B gets no contract — uses the 50/50 default
+    readyPile(b, 'p1');
+    b.accept('p1', 100_000); // 100 kg net
+    readyPile(b, 'p3');
+    b.accept('p3', 100_000); // 100 kg net, same weight, different zone
+
+    const events = b.build();
+    const s = settle(events, projectSale(events));
+    const [a, other] = s.perZone;
+
+    expect(a.ownerPct).toBe(70);
+    expect(a.fromSaleDefault).toBe(false);
+    expect(other.ownerPct).toBe(50);
+    expect(other.fromSaleDefault).toBe(true);
+    expect(other.personId).toBeNull();
+    expect(other.workerName).toBeNull();
+
+    // Same net weight, same price, different split -> different owner share.
+    expect(a.ownerSatang).toBeGreaterThan(other.ownerSatang);
+  });
+
+  it('a zone using the sale default is excluded from perWorker (no one was named)', () => {
+    const b = setUpSale();
+    readyPile(b, 'p1');
+    b.accept('p1');
+    const events = b.build();
+    const s = settle(events, projectSale(events));
+    expect(s.perWorker).toHaveLength(0);
+  });
+
+  it('two zones paid to the same person are grouped into one worker total', () => {
+    const b = setUpSale();
+    withZoneContract(b, 'zA', 'shared-person', 'บุญมี', 50);
+    withZoneContract(b, 'zB', 'shared-person', 'บุญมี', 50);
+    readyPile(b, 'p1');
+    b.accept('p1', 100_000);
+    readyPile(b, 'p3');
+    b.accept('p3', 100_000);
+
+    const events = b.build();
+    const s = settle(events, projectSale(events));
+
+    expect(s.perWorker).toHaveLength(1);
+    expect([...s.perWorker[0].zoneIds].sort()).toEqual(['zA', 'zB']);
+    expect(s.perWorker[0].workerSatang).toBe(s.workerSatang);
+  });
+
+  it('refuses when a zone has neither its own contract nor a sale default', () => {
+    const b = new LogBuilder()
+      .sys({ t: 'sale_started', farmName: 'f', buyer: 'b', manager: 'm', workerLead: 'w', where: 'farm' })
+      .sys({ t: 'price_set', satangPerKg: 2650, indexRef: 'x' })
+      .sys({ t: 'zone_added', zoneId: 'zA', name: 'โซน A' })
+      .sys({ t: 'pile_added', pileId: 'p1', zoneId: 'zA', name: 'กอง 1', tareG: 2_000, stdNetG: 50_000 });
+    // No split_set, no zone_contract_set — zA cannot be settled.
+    const events = b.build();
+    expect(() => settle(events, projectSale(events))).toThrow(SettlementUnavailable);
+    expect(() => settle(events, projectSale(events))).toThrow(/โซน A/);
+  });
+
+  it('settles fine with per-zone contracts alone, no sale-level split at all', () => {
+    const b = new LogBuilder()
+      .sys({ t: 'sale_started', farmName: 'f', buyer: 'b', manager: 'm', workerLead: 'w', where: 'farm' })
+      .sys({ t: 'price_set', satangPerKg: 2650, indexRef: 'x' })
+      .sys({ t: 'zone_added', zoneId: 'zA', name: 'โซน A' })
+      .sys({ t: 'pile_added', pileId: 'p1', zoneId: 'zA', name: 'กอง 1', tareG: 2_000, stdNetG: 50_000 });
+    withZoneContract(b, 'zA', 'p1', 'worker', 60);
+    readyPile(b, 'p1');
+    b.accept('p1');
+    const events = b.build();
+    expect(() => settle(events, projectSale(events))).not.toThrow();
   });
 });
 
@@ -93,16 +189,10 @@ describe('settle — refuses rather than guesses', () => {
     expect(() => settle(events, projectSale(events))).toThrow(SettlementUnavailable);
   });
 
-  it('throws when no split basis was recorded (FR-8.5 — no safe default)', () => {
-    const b = new LogBuilder()
-      .sys({
-        t: 'sale_started',
-        farmName: 'f', buyer: 'b', manager: 'm', workerLead: 'w', where: 'farm',
-      })
-      .sys({ t: 'price_set', satangPerKg: 2650, indexRef: 'x' });
-    const events = b.build();
-    expect(() => settle(events, projectSale(events))).toThrow(SettlementUnavailable);
-  });
+  // The "no split recorded" case is now necessarily per-zone — a sale with no
+  // zones at all has nothing to refuse. See "settle — per-zone contracts
+  // actually vary > refuses when a zone has neither its own contract nor a
+  // sale default" below, which is the FR-8.5 case with a real zone in it.
 });
 
 describe('settle — voided baskets leave the money', () => {

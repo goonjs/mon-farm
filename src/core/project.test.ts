@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { readyPile, setUpSale, workedExample } from './fixtures';
+import { readyPile, setUpSale, withZoneContract, workedExample } from './fixtures';
 import {
   canCount,
   canReady,
@@ -74,6 +74,29 @@ describe('pile lifecycle — docs/ux/pile-zone-sale-lifecycle.md §8', () => {
     expect(pile(projectSale(b.build()), 'p1').locked).toBe(false);
     b.accept('p1');
     expect(pile(projectSale(b.build()), 'p1').locked).toBe(true);
+  });
+});
+
+describe('per-zone contracts', () => {
+  it('a new zone has no contract — settle() falls back to the sale default', () => {
+    const s = projectSale(setUpSale().build());
+    expect(zone(s, 'zA').contract).toBeNull();
+  });
+
+  it('zone_contract_set records the contract on that zone only', () => {
+    const b = setUpSale();
+    withZoneContract(b, 'zA', 'p1', 'ประยุทธ', 70);
+    const s = projectSale(b.build());
+    expect(zone(s, 'zA').contract).toEqual({ personId: 'p1', workerName: 'ประยุทธ', ownerPct: 70 });
+    expect(zone(s, 'zB').contract).toBeNull();
+  });
+
+  it('a later zone_contract_set replaces the earlier one for the same zone', () => {
+    const b = setUpSale();
+    withZoneContract(b, 'zA', 'p1', 'ประยุทธ', 70);
+    withZoneContract(b, 'zA', 'p2', 'สมหญิง', 60); // renegotiated before counting started
+    const s = projectSale(b.build());
+    expect(zone(s, 'zA').contract).toEqual({ personId: 'p2', workerName: 'สมหญิง', ownerPct: 60 });
   });
 });
 
