@@ -13,16 +13,27 @@
  */
 
 import { ScrollView, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 
-import { Button, TopBar } from '../components/chrome';
-import { formatBaht, formatKg, settle, SettlementUnavailable } from '../core/settle';
-import { useSale } from '../store/SaleProvider';
-import { useTheme } from '../theme';
+import { Button, TopBar } from '../../../components/chrome';
+import { formatBaht, formatKg, settle, SettlementUnavailable } from '../../../core/settle';
+import { useSale } from '../../../store/SaleProvider';
+import { useTheme } from '../../../theme';
 
 export default function SettlementScreen() {
   const t = useTheme();
   const { events, state } = useSale();
+  const router = useRouter();
+  /**
+   * router.back(), not a Link to the counter route. This screen is reached
+   * two ways: pushed from the counter screen ("close sale"), or resumed
+   * directly from the sale list for an already-closed sale. Either way, the
+   * screen the user actually came from is already on the navigation stack —
+   * a Link (even with `replace`) would add or swap in a NEW entry on top of
+   * it rather than reusing it, so toggling settlement <-> counter repeatedly
+   * would leave a hidden screen instance behind on every round trip.
+   */
+  const backToCounting = () => router.back();
 
   let result;
   try {
@@ -50,9 +61,7 @@ export default function SettlementScreen() {
             {why}
           </Text>
           <View style={{ flexDirection: 'row', marginTop: t.space.lg }}>
-            <Link href="/" asChild>
-              <Button variant="primary">← กลับไปนับ · back to counting</Button>
-            </Link>
+            <Button variant="primary" onPress={backToCounting}>← กลับไปนับ · back to counting</Button>
           </View>
         </View>
       </View>
@@ -152,9 +161,9 @@ export default function SettlementScreen() {
         <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft, flex: 1 }}>
           สรุปนี้คำนวณจากบันทึกทั้งหมด — ไม่ได้เก็บเป็นตัวเลขตายตัว
         </Text>
-        <Link href="/" asChild>
-          <Button variant="primary" testID="back-to-count">← กลับไปนับ · back to counting</Button>
-        </Link>
+        <Button variant="primary" testID="back-to-count" onPress={backToCounting}>
+          ← กลับไปนับ · back to counting
+        </Button>
       </View>
     </View>
   );

@@ -8,7 +8,7 @@
 
 import type { SaleEvent, SysPayload } from './types';
 
-const SALE = 'sale-1';
+const DEFAULT_SALE_ID = 'sale-1';
 
 export class LogBuilder {
   private events: SaleEvent[] = [];
@@ -16,11 +16,18 @@ export class LogBuilder {
   private ts = 1_770_000_000_000;
   private mono = 0;
 
+  /**
+   * Defaults to a fixed id so existing unit tests are unaffected. e2e fixtures
+   * pass a real sale id here so the events they seed carry the same id the
+   * route/store actually key by, rather than a fixture placeholder.
+   */
+  constructor(private saleId: string = DEFAULT_SALE_ID) {}
+
   private base() {
     this.seq += 1;
     this.ts += 1_000;
     this.mono += 1_000;
-    return { saleId: SALE, seq: this.seq, ts: this.ts, mono: this.mono, actor: 'somchai' };
+    return { saleId: this.saleId, seq: this.seq, ts: this.ts, mono: this.mono, actor: 'somchai' };
   }
 
   sys(payload: SysPayload): this {
@@ -140,9 +147,12 @@ export function readyPile(b: LogBuilder, pileId: string, tareG = 2_000): LogBuil
  *
  * These figures are on a screen the owner has reviewed. If a change to the
  * money code breaks this test, the design document is now lying.
+ *
+ * `saleId` is exposed so e2e fixtures can seed this exact scenario under a
+ * real, per-test sale id instead of the fixture's internal default.
  */
-export function workedExample(): SaleEvent[] {
-  const b = setUpSale();
+export function workedExample(saleId?: string): SaleEvent[] {
+  const b = setUpSale(new LogBuilder(saleId));
   withZoneContract(b, 'zA', 'person-prayuth', 'ประยุทธ', 50);
   withZoneContract(b, 'zB', 'person-manop', 'มานพ', 50);
 

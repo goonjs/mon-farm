@@ -55,16 +55,7 @@ interface SaleContextValue {
 
 const SaleContext = createContext<SaleContextValue | null>(null);
 
-export function SaleProvider({
-  saleId,
-  children,
-  seed,
-}: {
-  saleId: string;
-  children: ReactNode;
-  /** Events written once if the store has none — the demo sale. */
-  seed?: readonly SaleEvent[];
-}) {
+export function SaleProvider({ saleId, children }: { saleId: string; children: ReactNode }) {
   const [events, setEvents] = useState<readonly SaleEvent[]>([]);
   const [ready, setReady] = useState(false);
   const actor = useRef('somchai');
@@ -72,11 +63,10 @@ export function SaleProvider({
   useEffect(() => {
     let live = true;
     (async () => {
-      let loaded = await store.load(saleId);
-      if (loaded.length === 0 && seed?.length) {
-        for (const e of seed) await store.append(e);
-        loaded = await store.load(saleId);
-      }
+      // No seeding: a sale with no events is a real, legitimate state (one
+      // that hasn't been set up yet), not a placeholder waiting to be filled
+      // by demo data. See docs/stories/s17-remove-seed-and-sale-list.md.
+      const loaded = await store.load(saleId);
       if (live) {
         setEvents(loaded);
         setReady(true);
@@ -85,9 +75,6 @@ export function SaleProvider({
     return () => {
       live = false;
     };
-    // `seed` is a fixture and intentionally not a dependency: re-seeding on
-    // every render would append the demo sale repeatedly.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saleId]);
 
   const append = useCallback((incoming: NewEvent) => {

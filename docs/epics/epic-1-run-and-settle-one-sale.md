@@ -72,21 +72,32 @@ At `Review` — implemented, verified in a browser, awaiting sign-off and CI:
 - [x] `docs/stories/s8-hold-to-count.md` — the hold, accept and reject
 - [x] `docs/stories/s12-undo-and-void.md` — undo tier only
 - [x] `docs/stories/s14-settlement-screen.md` — the derivation and shares
+- [x] `docs/stories/s15-per-zone-contracts.md` — workers per zone, not one sale split
+- [x] `docs/stories/s16-people-store.md` — reusable people list + picker
+- [x] `docs/stories/s17-remove-seed-and-sale-list.md` — no app-side seed; sale list front door
 
 Not started — no story file written yet:
 
-- [ ] **S6** sale setup (screen 1). The demo sale is seeded in code instead, so
-      price, split and piles cannot yet be entered by a person.
-- [ ] **S9** zero and tare gate (screen 2). Piles are seeded ready, so the
-      pre-count check is bypassed entirely.
-- [ ] **S10** Thai speech — blocked on `expo-speech`. **The announced register
-      does not exist**, which means half the cross-check the product is built
-      around is missing.
+- [ ] **S19** orientation + tablet support — currently landscape-locked on
+      native; portrait must work on phone and tablet, per owner instruction.
+- [ ] **S6** sale setup (real screen). A stub exists at `/sale/[id]/setup`
+      (S17) that writes nothing; the real screen — parties, price, zones each
+      with a worker picked from the people list (S16) and split, piles with
+      tare/standard net — is not built.
+- [ ] **S9** zero and tare gate (screen 2). e2e fixtures seed piles already
+      ready, so the pre-count check exists in the core model and is tested
+      there, but no screen reaches it.
+- [ ] **S10** Thai speech — `expo-speech` is installed (no longer blocked) but
+      nothing imports it yet. **The announced register does not exist**, which
+      means half the cross-check the product is built around is missing.
 - [ ] **S11** short basket with the three-way weight input. A button logs a
       hard-coded 43 kg reading as a placeholder.
 - [ ] **S13** close lifecycle (screens 5 and 6) — closing a pile, the decision
       point, closing a zone, reopen-and-announce. The core model supports all
       of it; no UI reaches it.
+- [ ] **S18** settlement screen rework — per-zone worker rows exist (S15's
+      compile-fix), but the dedicated per-worker payout view
+      (`Settlement.perWorker`, already computed and tested) has no screen yet.
 
 ## Known blockers
 
