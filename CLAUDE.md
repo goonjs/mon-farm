@@ -8,7 +8,11 @@ database when connectivity returns or when the user triggers a manual sync.
 This constraint shapes architecture decisions (local storage, sync engine,
 conflict resolution) and must be considered in every story that touches data.
 
-Tech stack: TBD — will be recorded here and in `docs/architecture.md` once decided.
+Tech stack: **Expo SDK 57** (managed) + expo-router + React Native 0.86 +
+React 19 + TypeScript strict. Local persistence is an append-only event log —
+expo-sqlite on device, localStorage on web. No backend yet. Phone, landscape
+locked. Full rationale and the rejected alternatives are in
+`docs/architecture.md`.
 
 ## Development process
 

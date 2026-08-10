@@ -61,20 +61,32 @@ tooling risk while the money model is being proven, and it means the valuable,
 hard-to-redo half exists before anything renders. Stopping between stories
 leaves a green tree; stopping mid-story does not.
 
-- [ ] `docs/stories/s1-tech-stack-and-ci.md` — scaffold, test tooling, CI
-- [ ] `docs/stories/s2-design-tokens-in-app.md` — tokens shared with the app, dev gallery
-- [ ] `docs/stories/s3-event-log-and-projection.md` — types, log, lifecycle transitions
-- [ ] `docs/stories/s4-totals-and-settlement.md` — rollups, split, Thai numerals
-- [ ] `docs/stories/s5-persistence.md` — EventStore port, native + web adapters
-- [ ] `docs/stories/s6-sale-setup.md` — screen 1
-- [ ] `docs/stories/s7-counter-shell.md` — screen 3 layout, tabs, mini-count
-- [ ] `docs/stories/s8-hold-to-count.md` — the hold, accept and reject
-- [ ] `docs/stories/s9-zero-tare-gate.md` — screen 2
-- [ ] `docs/stories/s10-thai-speech.md` — announcements **(blocked: needs `expo-speech`)**
-- [ ] `docs/stories/s11-short-basket.md` — off-standard baskets
-- [ ] `docs/stories/s12-undo-and-void.md` — corrections
-- [ ] `docs/stories/s13-close-lifecycle.md` — screens 5 and 6, reopen
-- [ ] `docs/stories/s14-settlement-screen.md` — screen 7
+At `Review` — implemented, verified in a browser, awaiting sign-off and CI:
+
+- [x] `docs/stories/s1-tech-stack-and-ci.md` — scaffold, test tooling, CI
+- [x] `docs/stories/s2-design-tokens-in-app.md` — tokens shared with the app
+- [x] `docs/stories/s3-event-log-and-projection.md` — types, log, lifecycle
+- [x] `docs/stories/s4-totals-and-settlement.md` — rollups, split, derivation
+- [x] `docs/stories/s5-persistence.md` — EventStore port + adapters
+- [x] `docs/stories/s7-counter-shell.md` — tabs, numeral, mini-count
+- [x] `docs/stories/s8-hold-to-count.md` — the hold, accept and reject
+- [x] `docs/stories/s12-undo-and-void.md` — undo tier only
+- [x] `docs/stories/s14-settlement-screen.md` — the derivation and shares
+
+Not started — no story file written yet:
+
+- [ ] **S6** sale setup (screen 1). The demo sale is seeded in code instead, so
+      price, split and piles cannot yet be entered by a person.
+- [ ] **S9** zero and tare gate (screen 2). Piles are seeded ready, so the
+      pre-count check is bypassed entirely.
+- [ ] **S10** Thai speech — blocked on `expo-speech`. **The announced register
+      does not exist**, which means half the cross-check the product is built
+      around is missing.
+- [ ] **S11** short basket with the three-way weight input. A button logs a
+      hard-coded 43 kg reading as a placeholder.
+- [ ] **S13** close lifecycle (screens 5 and 6) — closing a pile, the decision
+      point, closing a zone, reopen-and-announce. The core model supports all
+      of it; no UI reaches it.
 
 ## Known blockers
 

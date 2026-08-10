@@ -234,14 +234,23 @@ export const tokens = {
    * millimetres that the entire cross-check depends on.
    */
   publicNumeral: {
-    /** Cap height as a fraction of the short viewport dimension, by digit count. */
-    heightRatio: {
-      oneDigit: 0.72,
-      twoDigit: 0.72,
-      threeDigit: 0.66,
-      fourDigit: 0.5,
-    },
-    /** Playwright asserts measured height ≥ this × viewport height at 3 digits. */
+    /**
+     * Font size as a fraction of the STAGE's height (not the device's — chrome
+     * takes roughly 106px, and the stage is what the glyph actually has).
+     */
+    stageHeightRatio: 0.94,
+    /**
+     * Approximate advance width of one tabular digit, in ems. Used to cap the
+     * size when a wide count would otherwise overflow: the real size is
+     * min(height-driven, width-driven), so digit count never needs its own
+     * hard-coded step. Per-digit steps were tried and quietly under-sized three
+     * digits to 0.589 of the viewport — below the floor below.
+     */
+    digitWidthEm: 0.62,
+    /**
+     * Playwright asserts measured height ≥ this × DEVICE height, at both two
+     * and three digits, on both reference and floor viewports.
+     */
     minHeightRatio: 0.62,
   },
 

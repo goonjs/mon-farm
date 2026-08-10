@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { LogBuilder, readyPile, setUpSale, workedExample } from './fixtures';
+import { readyPile, setUpSale, workedExample } from './fixtures';
 import {
   canCount,
   canReady,
