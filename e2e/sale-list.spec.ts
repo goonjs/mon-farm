@@ -46,9 +46,13 @@ test('starting a new sale navigates to a fresh, unrecorded setup screen', async 
   await page.getByTestId('new-sale').click();
 
   await expect(page).toHaveURL(/\/sale\/sale-[a-z0-9]+\/setup$/);
-  await expect(page.getByTestId('setup-stub-note')).toBeVisible();
+  // Nothing has been saved for it yet, so start-counting is disabled.
+  await expect(page.getByTestId('start-counting')).toBeDisabled();
 
-  // Nothing was written for it — going back to the list must not show it.
-  await page.getByText(/กลับไปรายการ/).click();
+  // Nothing was written for it either — leaving without saving anything must
+  // not make it appear on the list (see src/app/sale/[id]/setup.tsx's header:
+  // a sale that never gets a `sale_started` event never existed as far as the
+  // store is concerned).
+  await page.getByTestId('back-to-list').click();
   await expect(page.getByTestId('empty-state')).toBeVisible();
 });
