@@ -74,7 +74,12 @@ export class LogBuilder {
   }
 }
 
-/** Sale setup shared by most tests: two zones, three piles, price and split. */
+/**
+ * Sale setup shared by most tests: two zones, three piles, price and a
+ * SALE-LEVEL DEFAULT split of 50/50. No zone has its own contract — callers
+ * that want per-zone variance add `zone_contract_set` on top (see
+ * `withZoneContract`).
+ */
 export function setUpSale(b = new LogBuilder()): LogBuilder {
   return b
     .sys({
@@ -86,12 +91,23 @@ export function setUpSale(b = new LogBuilder()): LogBuilder {
       where: 'farm',
     })
     .sys({ t: 'price_set', satangPerKg: 2650, indexRef: 'ตลาดกลางหาดใหญ่' })
-    .sys({ t: 'split_set', ownerPct: 60, basis: 'gross' })
+    .sys({ t: 'split_set', ownerPct: 50, basis: 'gross' })
     .sys({ t: 'zone_added', zoneId: 'zA', name: 'โซน A' })
     .sys({ t: 'zone_added', zoneId: 'zB', name: 'โซน B' })
     .sys({ t: 'pile_added', pileId: 'p1', zoneId: 'zA', name: 'กอง 1', tareG: 2_000, stdNetG: 50_000 })
     .sys({ t: 'pile_added', pileId: 'p2', zoneId: 'zA', name: 'กอง 2', tareG: 2_000, stdNetG: 50_000 })
     .sys({ t: 'pile_added', pileId: 'p3', zoneId: 'zB', name: 'กอง 3', tareG: 2_000, stdNetG: 50_000 });
+}
+
+/** Gives one zone its own worker contract, overriding the sale default. */
+export function withZoneContract(
+  b: LogBuilder,
+  zoneId: string,
+  personId: string,
+  workerName: string,
+  ownerPct: number,
+): LogBuilder {
+  return b.sys({ t: 'zone_contract_set', zoneId, personId, workerName, ownerPct });
 }
 
 /** Takes a pile from not-started to counting. */
@@ -103,23 +119,32 @@ export function readyPile(b: LogBuilder, pileId: string, tareG = 2_000): LogBuil
 }
 
 /**
- * The worked example from docs/ux/mvp-screens.html screen 7.
+ * The worked example, formerly shown in docs/ux/mvp-screens.html screen 7
+ * (that mockup predates per-zone contracts and is refreshed in S18).
  *
  * Zone A: กอง 1 = 87 standard + 2 short (41 kg, 38 kg);  กอง 2 = 62 standard + 1 short (44 kg)
  * Zone B: กอง 3 = 74 standard
  *
+ * Each zone has ITS OWN contract, naming a different worker, both at 50/50 —
+ * "same split for everyone today, but it has to vary" is proven by the fact
+ * that these are two independent `zone_contract_set` events, not one sale-wide
+ * split. `perZoneContractVariance` below is the fixture that actually varies
+ * the percentage.
+ *
  * Expected, by hand:
  *   net    = (87+62+74) × 50 + 41 + 38 + 44 = 11,150 + 123 = 11,273 kg
- *   gross  = 11,273 × 26.50                                = ฿ 298,734.50
- *   zone A = 7,573 kg → ฿ 200,684.50   owner ฿ 120,410.70  worker ฿ 80,273.80
- *   zone B = 3,700 kg → ฿  98,050.00   owner ฿  58,830.00  worker ฿ 39,220.00
- *   owner  = ฿ 179,240.70            worker = ฿ 119,493.80
+ *   gross  = 11,273 × 26.50                                = ฿ 298,734.50   (unaffected by the split)
+ *   zone A = 7,573 kg → ฿ 200,684.50   ประยุทธ 50%  → owner ฿ 100,342.25  worker ฿ 100,342.25
+ *   zone B = 3,700 kg → ฿  98,050.00   มานพ    50%  → owner ฿  49,025.00  worker ฿  49,025.00
+ *   owner total = ฿ 149,367.25
  *
  * These figures are on a screen the owner has reviewed. If a change to the
  * money code breaks this test, the design document is now lying.
  */
 export function workedExample(): SaleEvent[] {
   const b = setUpSale();
+  withZoneContract(b, 'zA', 'person-prayuth', 'ประยุทธ', 50);
+  withZoneContract(b, 'zB', 'person-manop', 'มานพ', 50);
 
   readyPile(b, 'p1');
   for (let i = 0; i < 87; i++) b.accept('p1');

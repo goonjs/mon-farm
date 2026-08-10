@@ -5,9 +5,11 @@
  * `settle()` produces: each line is one arithmetic operation, so a
  * disagreement can be localised to a step rather than to "the app".
  *
- * Each side's share leads, on the right. It used to sit under the derivation,
- * which put the one number the screen exists to produce below the fold on a
- * 390px-tall device.
+ * NOTE: this is the S15 compile-fix, not the S18 redesign. Workers are now per
+ * zone, so the old single "owner N% / worker N%" card no longer describes the
+ * sale — it shows an aggregate owner total instead, and per-zone rows carry
+ * each zone's own worker and percentage. The dedicated per-worker view
+ * (`Settlement.perWorker`, already computed) is S18's screen.
  */
 
 import { ScrollView, Text, View } from 'react-native';
@@ -101,23 +103,12 @@ export default function SettlementScreen() {
           ))}
         </View>
 
-        {/* ---- each side's share, leading ---- */}
+        {/* ---- owner total, leading ---- */}
         <View style={{ flex: 1, gap: t.space.md }}>
           <View style={card(t)}>
-            <CardTitle>ส่วนแบ่ง · each side&apos;s share</CardTitle>
-
-            {/* Proportion shown as well as stated — the split is easier to sanity
-                check as a length than as two percentages. */}
-            <View style={{ flexDirection: 'row', height: 10, borderRadius: t.radius.pill, overflow: 'hidden', marginVertical: t.space.sm }}>
-              <View style={{ flex: s.ownerPct, backgroundColor: t.color.action }} />
-              <View style={{ flex: 100 - s.ownerPct, backgroundColor: t.color.inkSoft }} />
-            </View>
-
-            <ShareLabel>{`เจ้าของ · owner ${s.ownerPct}%`}</ShareLabel>
+            <CardTitle>รวมส่วนเจ้าของ · owner total</CardTitle>
             <Figure testID="owner-share" colour={t.color.action}>{formatBaht(s.ownerSatang)}</Figure>
-
-            <ShareLabel>{`คนงาน · worker ${100 - s.ownerPct}%`}</ShareLabel>
-            <Figure testID="worker-share" colour={t.color.ink}>{formatBaht(s.workerSatang)}</Figure>
+            <ShareLabel>รวมทุกโซน · summed across every zone below, each at its own %</ShareLabel>
           </View>
 
           <View style={card(t)}>
@@ -129,8 +120,15 @@ export default function SettlementScreen() {
                   value={formatBaht(z.grossSatang)}
                   bold
                 />
-                <Row label="  เจ้าของ" value={formatBaht(z.ownerSatang)} colour={t.color.action} />
-                <Row label="  คนงาน" value={formatBaht(z.workerSatang)} />
+                <Row
+                  label={`  เจ้าของ ${z.ownerPct}%`}
+                  value={formatBaht(z.ownerSatang)}
+                  colour={t.color.action}
+                />
+                <Row
+                  label={`  ${z.workerName ?? 'คนงาน (ค่าเริ่มต้น)'} ${100 - z.ownerPct}%`}
+                  value={formatBaht(z.workerSatang)}
+                />
               </View>
             ))}
             <View style={{ borderTopWidth: t.border.hair, borderTopColor: t.color.rule, paddingTop: t.space.sm }}>

@@ -18,6 +18,7 @@ import type {
   SaleState,
   SysEvent,
   Zone,
+  ZoneContract,
   ZoneId,
 } from './types';
 
@@ -55,6 +56,7 @@ interface MutZone {
   name: string;
   status: OpenClosed;
   pileIds: ZoneId[];
+  contract: ZoneContract | null;
 }
 
 /**
@@ -117,8 +119,21 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
           name: payload.name,
           status: 'open',
           pileIds: [],
+          contract: null,
         });
         break;
+
+      case 'zone_contract_set': {
+        const z = zones.get(payload.zoneId);
+        if (z) {
+          z.contract = {
+            personId: payload.personId,
+            workerName: payload.workerName,
+            ownerPct: payload.ownerPct,
+          };
+        }
+        break;
+      }
 
       case 'pile_added': {
         piles.set(payload.pileId, {
@@ -217,7 +232,13 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
     price,
     split,
     zones: [...zones.values()].map(
-      (z): Zone => ({ id: z.id, name: z.name, status: z.status, pileIds: [...z.pileIds] }),
+      (z): Zone => ({
+        id: z.id,
+        name: z.name,
+        status: z.status,
+        pileIds: [...z.pileIds],
+        contract: z.contract,
+      }),
     ),
     piles: [...piles.values()].map(
       (p): Pile => ({

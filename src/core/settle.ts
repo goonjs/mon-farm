@@ -1,11 +1,17 @@
 /**
  * Settlement (FR-7, FR-8).
  *
- * MVP SCOPE: straight ฿/kg and ONE owner/worker split for the whole sale.
- * %DRC / grade deduction (FR-2.5), adjustments (FR-7.3) and per-zone contracts
- * (FR-8.6) are deliberately out of scope — see
+ * MVP SCOPE: straight ฿/kg pricing. %DRC / grade deduction (FR-2.5) and
+ * adjustments (FR-7.3) are deliberately out of scope — see
  * `docs/epics/epic-1-run-and-settle-one-sale.md`. The `SettlementStep[]` shape
- * leaves room for all three later without changing any caller.
+ * leaves room for both later without changing any caller.
+ *
+ * Workers ARE per zone (FR-8.6): each zone resolves its own owner/worker split
+ * from a `zone_contract_set` event, falling back to the sale-level
+ * `split_set` default when a zone has none of its own. `basis` (gross vs
+ * final) does not vary per zone — with no adjustments in the MVP the two
+ * modes are identical, so this only matters once adjustments exist, but the
+ * event shape is fixed now rather than migrated later.
  *
  * FR-7.4 forbids a single opaque total, so this returns the DERIVATION, not
  * just the number. Each step is one arithmetic operation, rendered verbatim on
@@ -14,7 +20,7 @@
  */
 
 import { saleTotals, zoneTotals } from './totals';
-import type { SaleEvent, SaleState, Totals, ZoneId } from './types';
+import type { PersonId, SaleEvent, SaleState, Totals, ZoneId } from './types';
 
 export interface SettlementStep {
   /** Machine-readable, for tests and for the announced register. */
@@ -28,20 +34,36 @@ export interface SettlementStep {
 export interface ZoneSettlement {
   readonly zoneId: ZoneId;
   readonly zoneName: string;
+  /** null when the zone has no contract of its own and used the sale default. */
+  readonly personId: PersonId | null;
+  readonly workerName: string | null;
+  /** The percentage actually applied, after fallback. */
+  readonly ownerPct: number;
+  /** True when this zone had no contract of its own. */
+  readonly fromSaleDefault: boolean;
   readonly totals: Totals;
   readonly grossSatang: number;
   readonly ownerSatang: number;
   readonly workerSatang: number;
 }
 
+/** One worker's total across every zone with a contract naming them. */
+export interface WorkerSettlement {
+  readonly personId: PersonId;
+  readonly workerName: string;
+  readonly zoneIds: readonly ZoneId[];
+  readonly workerSatang: number;
+}
+
 export interface Settlement {
   readonly totals: Totals;
   readonly satangPerKg: number;
-  readonly ownerPct: number;
   readonly grossSatang: number;
   readonly ownerSatang: number;
   readonly workerSatang: number;
   readonly perZone: readonly ZoneSettlement[];
+  /** Grouped by personId. Zones that fell back to the sale default are excluded — no worker was named to attribute them to. */
+  readonly perWorker: readonly WorkerSettlement[];
   readonly steps: readonly SettlementStep[];
 }
 
@@ -72,7 +94,10 @@ const baht = (satang: number) =>
  * it is read as the app being wrong about money, and every other number on the
  * screen loses its credibility with it.
  *
- * The same rule applies one level down to the split.
+ * The same rule applies one level down to each zone's own split: the worker
+ * takes the remainder of that zone's gross, so owner + worker is exactly
+ * gross for every zone regardless of what the percentage does to the last
+ * satang.
  */
 export function settle(events: readonly SaleEvent[], state: SaleState): Settlement {
   if (!state.price) {
@@ -80,28 +105,36 @@ export function settle(events: readonly SaleEvent[], state: SaleState): Settleme
       'No agreed price. A sale cannot be settled against a price nobody recorded.',
     );
   }
-  if (!state.split) {
-    throw new SettlementUnavailable(
-      'No split recorded. FR-8.5: the basis has no safe default — guessing whose ' +
-        'share applies to what is exactly the assumption this app exists to remove.',
-    );
-  }
 
   const { satangPerKg } = state.price;
-  const { ownerPct } = state.split;
   const totals = saleTotals(events);
 
   const perZone: ZoneSettlement[] = state.zones.map((zone) => {
+    // FR-8.5: no safe default. A zone with neither its own contract nor a
+    // sale-level fallback cannot be settled — refusing here is what keeps
+    // that rule true per zone, not just per sale.
+    const ownerPct = zone.contract?.ownerPct ?? state.split?.ownerPct;
+    if (ownerPct === undefined) {
+      throw new SettlementUnavailable(
+        `${zone.name} has no split — no zone contract and no sale default. ` +
+          `FR-8.5: guessing whose share applies to what is exactly the ` +
+          `assumption this app exists to remove.`,
+      );
+    }
+
     const zt = zoneTotals(events, state, zone.id);
     const grossSatang = valueOf(zt.netG, satangPerKg);
     const ownerSatang = Math.round((grossSatang * ownerPct) / 100);
+
     return {
       zoneId: zone.id,
       zoneName: zone.name,
+      personId: zone.contract?.personId ?? null,
+      workerName: zone.contract?.workerName ?? null,
+      ownerPct,
+      fromSaleDefault: !zone.contract,
       totals: zt,
       grossSatang,
-      // The worker takes the remainder, so owner + worker is exactly gross for
-      // every zone, whatever the percentage does to the last satang.
       ownerSatang,
       workerSatang: grossSatang - ownerSatang,
     };
@@ -110,6 +143,23 @@ export function settle(events: readonly SaleEvent[], state: SaleState): Settleme
   const grossSatang = perZone.reduce((sum, z) => sum + z.grossSatang, 0);
   const ownerSatang = perZone.reduce((sum, z) => sum + z.ownerSatang, 0);
   const workerSatang = perZone.reduce((sum, z) => sum + z.workerSatang, 0);
+
+  // Grouped so a worker paid from two zones sees one number, without losing
+  // the per-zone rows that make each contribution checkable by hand.
+  const byWorker = new Map<PersonId, { workerName: string; zoneIds: ZoneId[]; workerSatang: number }>();
+  for (const z of perZone) {
+    if (!z.personId) continue; // no worker was named; nothing to group under
+    const entry = byWorker.get(z.personId) ?? { workerName: z.workerName ?? '', zoneIds: [], workerSatang: 0 };
+    entry.zoneIds.push(z.zoneId);
+    entry.workerSatang += z.workerSatang;
+    byWorker.set(z.personId, entry);
+  }
+  const perWorker: WorkerSettlement[] = [...byWorker.entries()].map(([personId, w]) => ({
+    personId,
+    workerName: w.workerName,
+    zoneIds: w.zoneIds,
+    workerSatang: w.workerSatang,
+  }));
 
   const steps: SettlementStep[] = [
     {
@@ -148,28 +198,19 @@ export function settle(events: readonly SaleEvent[], state: SaleState): Settleme
       english: 'total',
       value: baht(grossSatang),
     },
-    {
-      key: 'owner',
-      thai: `เจ้าของ ${ownerPct}%`,
-      english: `owner ${ownerPct}%`,
-      value: baht(ownerSatang),
-    },
-    {
-      key: 'worker',
-      thai: `คนงาน ${100 - ownerPct}%`,
-      english: `worker ${100 - ownerPct}%`,
-      value: baht(workerSatang),
-    },
+    // No single owner/worker step here — the split varies per zone now.
+    // perZone and perWorker (below) carry that breakdown, each zone showing
+    // its own percentage rather than one figure standing in for all of them.
   ];
 
   return {
     totals,
     satangPerKg,
-    ownerPct,
     grossSatang,
     ownerSatang,
     workerSatang,
     perZone,
+    perWorker,
     steps,
   };
 }

@@ -18,6 +18,7 @@
 export type SaleId = string;
 export type ZoneId = string;
 export type PileId = string;
+export type PersonId = string;
 
 export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys';
 
@@ -116,9 +117,36 @@ export type SysPayload =
       readonly where: 'farm' | 'buyer';
     }
   | { readonly t: 'price_set'; readonly satangPerKg: number; readonly indexRef: string }
-  /** FR-8.5: the basis has no safe default. `settle()` refuses to run without it. */
+  /**
+   * FR-8.5: the basis has no safe default. `settle()` refuses to run without
+   * one being resolvable for every zone — either this sale-level default or a
+   * `zone_contract_set` override (below).
+   *
+   * `ownerPct` here is the DEFAULT applied to any zone that never gets its own
+   * contract. `basis` (gross vs final) is sale-level only — it does not vary
+   * per zone, unlike the percentage.
+   */
   | { readonly t: 'split_set'; readonly ownerPct: number; readonly basis: 'gross' | 'final' }
   | { readonly t: 'zone_added'; readonly zoneId: ZoneId; readonly name: string }
+  /**
+   * Overrides the sale default for one zone. Workers are per zone (multiple
+   * zones can pay different people different percentages), which `split_set`
+   * alone cannot express.
+   *
+   * `personId` references the people store (src/store/people.ts) — that is
+   * what lets settlement group two zones paying the same worker into one
+   * total. `workerName` is a SNAPSHOT of that person's name at the moment the
+   * contract was agreed, for the same reason `accept` snapshots `netG`:
+   * renaming a person next month must not silently rewrite what a past
+   * settlement says. The reference groups; the snapshot records.
+   */
+  | {
+      readonly t: 'zone_contract_set';
+      readonly zoneId: ZoneId;
+      readonly personId: PersonId;
+      readonly workerName: string;
+      readonly ownerPct: number;
+    }
   | {
       readonly t: 'pile_added';
       readonly pileId: PileId;
@@ -178,11 +206,19 @@ export interface Pile {
   readonly locked: boolean;
 }
 
+export interface ZoneContract {
+  readonly personId: PersonId;
+  readonly workerName: string;
+  readonly ownerPct: number;
+}
+
 export interface Zone {
   readonly id: ZoneId;
   readonly name: string;
   readonly status: OpenClosed;
   readonly pileIds: readonly PileId[];
+  /** null when the zone has no override — settle() falls back to the sale default. */
+  readonly contract: ZoneContract | null;
 }
 
 export interface SaleState {

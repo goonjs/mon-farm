@@ -16,12 +16,15 @@ test('settlement renders the derivation and each side’s share', async ({ page 
   await page.getByTestId('to-settlement').click();
   await expect(page.getByTestId('owner-share')).toBeVisible();
 
-  // Demo seed: 41 standard × 50 kg + one short (43 − 2 = 41 kg) = 2,091 kg.
-  // 2,091 × ฿26.50 = ฿55,411.50 · owner 60% = ฿33,246.90 · worker = ฿22,164.60
+  // Demo seed: 41 standard × 50 kg + one short (43 − 2 = 41 kg) = 2,091 kg,
+  // in zone A, which has no contract of its own — the 60% sale default
+  // applies. 2,091 × ฿26.50 = ฿55,411.50 · owner 60% = ฿33,246.90 · zone A's
+  // worker share (40%) = ฿22,164.60. Owner total equals zone A's owner share
+  // here because it is the only zone with any baskets in it.
   await expect(page.getByTestId('step-net-weight')).toContainText('2,091');
   await expect(page.getByTestId('step-gross')).toContainText('55,411.50');
   await expect(page.getByTestId('owner-share')).toContainText('33,246.90');
-  await expect(page.getByTestId('worker-share')).toContainText('22,164.60');
+  await expect(page.getByTestId('zone-zA')).toContainText('22,164.60');
 
   await page.screenshot({ path: `docs/ux/screenshots/${testInfo.project.name}/settlement.png` });
 });
