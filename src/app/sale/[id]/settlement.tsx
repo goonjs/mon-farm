@@ -14,7 +14,7 @@
 
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 
 import { Button, TopBar } from '../../../components/chrome';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
@@ -28,9 +28,24 @@ export default function SettlementScreen() {
   const router = useRouter();
   const [reopening, setReopening] = useState(false);
 
+  /**
+   * Reopening IS "back to counting" — there is nothing else to do with a
+   * closed sale on this screen, so a separate "back to counting" button next
+   * to "reopen" was two names for paths that only make sense together (a
+   * closed sale can't actually be counted into until it's reopened). One
+   * action, doing both: write `sale_reopened`, then land on the counter.
+   *
+   * `router.back()`, not a push to the counter route — this screen was
+   * reached BY pushing from the counter (`doCloseSale` in counter.tsx), so
+   * the counter screen is already the previous entry on the stack. Pushing
+   * again here would stack a second, new instance of it on top of the first
+   * rather than returning to it — the same duplicate-screen trap documented
+   * on `backToCounting` just below.
+   */
   const reopenSale = (reason: string) => {
     append({ kind: 'sys', payload: { t: 'sale_reopened', reason } });
     setReopening(false);
+    router.back();
   };
   /**
    * router.back(), not a Link to the counter route. This screen is reached
@@ -40,6 +55,10 @@ export default function SettlementScreen() {
    * a Link (even with `replace`) would add or swap in a NEW entry on top of
    * it rather than reusing it, so toggling settlement <-> counter repeatedly
    * would leave a hidden screen instance behind on every round trip.
+   *
+   * Only used from the "cannot settle yet" error branch below — once a sale
+   * has actually closed and settled, the only way back into counting is
+   * through reopening it (see `reopenSale` above).
    */
   const backToCounting = () => router.back();
 
@@ -53,7 +72,14 @@ export default function SettlementScreen() {
         : 'Something in the log could not be settled.';
     return (
       <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-        <TopBar crumb="สรุป · settlement" />
+        <TopBar
+          crumb="สรุป · settlement"
+          right={
+            <Link href="/" asChild>
+              <Button testID="to-sale-list">รายการ · list</Button>
+            </Link>
+          }
+        />
         <View style={{ flex: 1, padding: t.space.xl, justifyContent: 'center' }}>
           <Text
             style={{
@@ -90,7 +116,14 @@ export default function SettlementScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar crumb={`${state.parties?.farmName ?? ''} ▸ สรุป · settlement`} />
+      <TopBar
+        crumb={`${state.parties?.farmName ?? ''} ▸ สรุป · settlement`}
+        right={
+          <Link href="/" asChild>
+            <Button testID="to-sale-list">รายการ · list</Button>
+          </Link>
+        }
+      />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, flexDirection: 'row', gap: t.space.md }}>
         {/* ---- the derivation ---- */}
@@ -203,13 +236,17 @@ export default function SettlementScreen() {
           สรุปนี้คำนวณจากบันทึกทั้งหมด — ไม่ได้เก็บเป็นตัวเลขตายตัว
         </Text>
         {state.status === 'closed' ? (
-          <Button testID="reopen-sale" onPress={() => setReopening(true)}>
-            เปิดการขายอีกครั้ง · reopen sale
+          <Button variant="primary" testID="reopen-sale" onPress={() => setReopening(true)}>
+            ↺ เปิดการขายอีกครั้ง — กลับไปนับ · reopen — back to counting
           </Button>
-        ) : null}
-        <Button variant="primary" testID="back-to-count" onPress={backToCounting}>
-          ← กลับไปนับ · back to counting
-        </Button>
+        ) : (
+          // Unreachable through normal navigation — settlement is only ever
+          // pushed to after `sale_closed`, or resumed for an already-closed
+          // sale. Kept as a safe fallback rather than assumed away.
+          <Button variant="primary" testID="back-to-count" onPress={backToCounting}>
+            ← กลับไปนับ · back to counting
+          </Button>
+        )}
       </View>
 
       {reopening ? (

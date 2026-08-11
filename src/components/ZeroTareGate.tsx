@@ -162,7 +162,7 @@ function TareStep({ tareG, onTareConfirmed }: { tareG: number; onTareConfirmed: 
   return (
     <>
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.lead, color: t.color.ink, textAlign: 'center' }}>
-        ชั่งถังเปล่า ตาชั่งขึ้นเท่าไหร่?{'\n'}
+        ชั่งตะกร้าเปล่า ตาชั่งขึ้นเท่าไหร่?{'\n'}
         <Text style={{ fontSize: t.font.size.small, color: t.color.inkSoft }}>
           Weigh the empty bucket. What does the scale show?
         </Text>
@@ -193,7 +193,7 @@ function TareStep({ tareG, onTareConfirmed }: { tareG: number; onTareConfirmed: 
         disabled={!(Number(kgStr) >= 0)}
         onPress={() => onTareConfirmed(Math.round((Number(kgStr) || 0) * 1000))}
       >
-        ยืนยันน้ำหนักถัง · confirm bucket weight
+        ยืนยันน้ำหนักตะกร้า · confirm bucket weight
       </Button>
     </>
   );

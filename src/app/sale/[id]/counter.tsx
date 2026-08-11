@@ -27,7 +27,7 @@ import { ZonePileSwitcher } from '../../../components/ZonePileSwitcher';
 import { canCount, canReopenPile, pilesStillCounting } from '../../../core/project';
 import { formatBaht, formatKg } from '../../../core/settle';
 import { basketNetG, lastLiveBasket, liveBaskets, pileTotals, saleTotals, zoneTotals } from '../../../core/totals';
-import type { Pile, SaleEvent, SaleState, Zone } from '../../../core/types';
+import type { BasketEvent, Pile, SaleEvent, SaleState, Zone } from '../../../core/types';
 import { useSale } from '../../../store/SaleProvider';
 import { useTheme, useThemeControls } from '../../../theme';
 
@@ -61,6 +61,8 @@ export default function CounterScreen() {
   const [shortReadingG, setShortReadingG] = useState(0);
   const [selectedPileId, setSelectedPileId] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' });
+  const [confirmUndo, setConfirmUndo] = useState(false);
+  const [confirmCloseSale, setConfirmCloseSale] = useState(false);
 
   // The pile in view: whatever the operator explicitly picked (switcher),
   // falling back to the one being counted, falling back to the first pile —
@@ -99,7 +101,7 @@ export default function CounterScreen() {
   const onReject = (heldMs: number) =>
     append({ kind: 'reject', pileId: pile.id, source: 'hold', reason: 'released-early', heldMs });
 
-  const onUndo = () => {
+  const doUndo = () => {
     if (!lastBasket) return;
     append({
       kind: 'correction',
@@ -108,6 +110,7 @@ export default function CounterScreen() {
       mode: 'undo-last',
       reason: 'กดพลาด · mistap',
     });
+    setConfirmUndo(false);
   };
 
   const openShort = () => {
@@ -137,8 +140,9 @@ export default function CounterScreen() {
   // ── Decision point after a pile closes ──────────────────────────────────
   const nextPileInZone = state.piles.find((p) => p.zoneId === zone.id && p.status === 'not-started');
 
-  const closeSale = () => {
+  const doCloseSale = () => {
     if (state.status === 'open') append({ kind: 'sys', payload: { t: 'sale_closed' } });
+    setConfirmCloseSale(false);
     router.push({ pathname: '/sale/[id]/settlement', params: { id: saleId } });
   };
 
@@ -186,7 +190,7 @@ export default function CounterScreen() {
               onNextPile={() => nextPileInZone && pickPile(nextPileInZone.id)}
               onSwitchZone={() => setOverlay({ kind: 'switcher' })}
               onCloseZone={closeZoneFromTransition}
-              onCloseSale={closeSale}
+              onCloseSale={() => setConfirmCloseSale(true)}
             />
           ) : pile.status === 'not-started' ? (
             <ZeroTareGate
@@ -221,16 +225,22 @@ export default function CounterScreen() {
                 borderTopColor: t.color.rule,
               }}
             >
-              <Button testID="undo" onPress={onUndo} disabled={!lastBasket}>
-                ↺ ยกเลิกเข่งล่าสุด · undo last
-              </Button>
-              <Button testID="short" onPress={openShort} disabled={!countable || shortOpen}>
-                ⚖ เข่งไม่เต็ม · short basket
-              </Button>
-              <View style={{ flex: 1 }} />
-              <Button testID="to-settlement" variant="destructive" onPress={closeSale}>
-                ปิดการขาย · close sale
-              </Button>
+              {confirmUndo && lastBasket ? (
+                <UndoConfirmRow event={lastBasket} onConfirm={doUndo} onCancel={() => setConfirmUndo(false)} />
+              ) : (
+                <>
+                  <Button testID="undo" onPress={() => setConfirmUndo(true)} disabled={!lastBasket}>
+                    ↺ ยกเลิกเข่งล่าสุด · undo last
+                  </Button>
+                  <Button testID="short" onPress={openShort} disabled={!countable || shortOpen}>
+                    ⚖ เข่งไม่เต็ม · short basket
+                  </Button>
+                  <View style={{ flex: 1 }} />
+                  <Button testID="to-settlement" variant="destructive" onPress={() => setConfirmCloseSale(true)}>
+                    ปิดการขาย · close sale
+                  </Button>
+                </>
+              )}
             </View>
           ) : null}
           {shortOpen ? (
@@ -285,6 +295,15 @@ export default function CounterScreen() {
           onCancel={() => setOverlay({ kind: 'none' })}
         />
       ) : null}
+
+      {confirmCloseSale ? (
+        <CloseSaleConfirmOverlay
+          state={state}
+          events={events}
+          onConfirm={doCloseSale}
+          onCancel={() => setConfirmCloseSale(false)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -299,6 +318,108 @@ function ReopenPromptOverlay(props: {
   return (
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: t.color.stage, zIndex: 10 }}>
       <ReopenPrompt {...props} />
+    </View>
+  );
+}
+
+/**
+ * Undo has an 8-second window and is meant to stay quick — a full-screen,
+ * typed-reason confirm (like reopen's) would defeat that. But it also had
+ * ZERO confirmation before this: one tap, no way back except another manual
+ * correction. This names exactly what's about to be voided — which basket,
+ * what it weighed — inline, in place of the action row, so a second glance
+ * is enough without leaving the screen.
+ */
+function UndoConfirmRow({
+  event,
+  onConfirm,
+  onCancel,
+}: {
+  event: BasketEvent;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const t = useTheme();
+  const kindLabel = event.kind === 'accept' ? 'เข่งมาตรฐาน · standard' : 'เข่งไม่เต็ม · short';
+  return (
+    <>
+      <Text
+        testID="undo-confirm-detail"
+        style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}
+      >
+        {`ยกเลิกเข่ง #${event.seq} — ${kindLabel} — ${formatKg(basketNetG(event))} กก. จะกลายเป็นรายการที่ถูกยกเลิกในบันทึก ไม่ใช่การลบ · undo basket #${event.seq} (${formatKg(basketNetG(event))} kg) — shown as voided in the log, not deleted.`}
+      </Text>
+      <Button testID="undo-confirm" variant="destructive" onPress={onConfirm}>
+        ยืนยันยกเลิก · confirm
+      </Button>
+      <Button testID="undo-cancel" onPress={onCancel}>
+        พัก · cancel
+      </Button>
+    </>
+  );
+}
+
+/**
+ * Closing the sale had NO confirmation at all before this, from either entry
+ * point (the action row's own button, or the decision point after a pile
+ * closes) — one tap ended counting for the whole sale. Names the actual
+ * scope (zones, piles, baskets, weight so far) rather than a bare "are you
+ * sure?", and says plainly that closing does not force-close piles still
+ * counting — it only stops them from being countable (`canCount` gates on
+ * sale status), which is easy to assume incorrectly otherwise.
+ */
+function CloseSaleConfirmOverlay({
+  state,
+  events,
+  onConfirm,
+  onCancel,
+}: {
+  state: SaleState;
+  events: readonly SaleEvent[];
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const t = useTheme();
+  const st = saleTotals(events);
+  const stillCounting = state.piles.filter((p) => p.status === 'counting');
+
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: t.color.stage,
+        zIndex: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: t.space.xl,
+        gap: t.space.md,
+      }}
+    >
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.reject }}>
+        ปิดการขาย? · close the sale?
+      </Text>
+      <Text
+        testID="close-sale-detail"
+        style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}
+      >
+        {`${state.zones.length} โซน ${state.piles.length} กอง — นับได้ ${st.baskets} เข่ง ${formatKg(st.netG)} กก. · ${state.zones.length} zones, ${state.piles.length} piles — ${st.baskets} baskets, ${formatKg(st.netG)} kg counted so far.`}
+        {stillCounting.length > 0
+          ? `\n${stillCounting.length} กองยังนับอยู่ จะหยุดนับทันที (ไม่ได้ถูกปิดให้อัตโนมัติ) · ${stillCounting.length} pile(s) still counting stop being countable immediately — they are not auto-closed.`
+          : ''}
+        {'\nจะคำนวณผลสรุปทันที และเปิดการขายใหม่ได้ภายหลัง · settlement is calculated immediately; the sale can be reopened later.'}
+      </Text>
+      <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+        <Button testID="close-sale-confirm" variant="destructive" onPress={onConfirm}>
+          ยืนยันปิดการขาย · confirm close sale
+        </Button>
+        <Button testID="close-sale-cancel" onPress={onCancel}>
+          ยกเลิก · cancel
+        </Button>
+      </View>
     </View>
   );
 }
@@ -364,7 +485,7 @@ function PilePanel({
       </Card>
 
       <Card title="ตาชั่ง · scale">
-        <Stat label="ถังเปล่า · tare" value={`${formatKg(pile.tareG)} กก.`} />
+        <Stat label="ตะกร้าเปล่า · tare" value={`${formatKg(pile.tareG)} กก.`} />
         <Stat
           label="ยางต่อเข่ง · standard net"
           value={`${formatKg(pile.stdNetG)} กก.${pile.locked ? ' 🔒' : ''}`}
@@ -386,8 +507,8 @@ function PilePanel({
             </Button>
           ) : (
             <View style={{ gap: t.space.xs }}>
-              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}>
-                แน่ใจนะ? · are you sure?
+              <Text testID="close-pile-detail" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}>
+                {`ปิด ${pile.name} — ${pt.baskets} เข่ง ${formatKg(pt.netG)} กก. จะหยุดนับทันที · close ${pile.name} — ${pt.baskets} baskets, ${formatKg(pt.netG)} kg. Counting stops immediately.`}
               </Text>
               <View style={{ flexDirection: 'row', gap: t.space.xs }}>
                 <Button testID="close-pile-confirm" variant="destructive" onPress={closePile}>
@@ -418,14 +539,14 @@ function PilePanel({
             </Button>
           ) : (
             <View style={{ gap: t.space.xs }}>
+              <Text testID="close-zone-detail" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}>
+                {`ปิด ${zone.name} — ${zt.baskets} เข่ง ${formatKg(zt.netG)} กก. · close ${zone.name} — ${zt.baskets} baskets, ${formatKg(zt.netG)} kg.`}
+              </Text>
               {stillCounting.length > 0 ? (
                 <Text testID="close-zone-warning" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.warn }}>
-                  {`ยังนับอยู่ ${stillCounting.length} กอง จะถูกปิดไปด้วย: ${stillCounting.map((p) => p.name).join(', ')}`}
+                  {`ยังนับอยู่ ${stillCounting.length} กอง จะถูกปิดไปด้วย: ${stillCounting.map((p) => p.name).join(', ')} · ${stillCounting.length} pile(s) still counting will be force-closed too.`}
                 </Text>
               ) : null}
-              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}>
-                แน่ใจนะ? · are you sure?
-              </Text>
               <View style={{ flexDirection: 'row', gap: t.space.xs }}>
                 <Button testID="close-zone-confirm" variant="destructive" onPress={closeZone}>
                   ยืนยันปิดโซน · confirm
@@ -507,7 +628,7 @@ function describe(e: SaleEvent, t: ReturnType<typeof useTheme>) {
       return {
         mark: '⚖',
         colour: t.color.warn,
-        body: `เข่งไม่เต็ม · ชั่งได้ ${formatKg(e.readingG)} − ถัง ${formatKg(e.tareG)} = ${formatKg(basketNetG(e))} กก.`,
+        body: `เข่งไม่เต็ม · ชั่งได้ ${formatKg(e.readingG)} − ตะกร้า ${formatKg(e.tareG)} = ${formatKg(basketNetG(e))} กก.`,
       };
     case 'reject':
       return {
@@ -531,7 +652,7 @@ function sysLabel(p: { t: string } & Record<string, unknown>): string {
     case 'zone_contract_set': return `สัญญาโซน — ${String(p.workerName)} ${String(p.ownerPct)}%`;
     case 'pile_added': return `เพิ่มกอง ${String(p.name)}`;
     case 'zero_check': return p.ok ? 'ตาชั่งขึ้นศูนย์ ✓' : `ตาชั่งไม่ศูนย์ ⚠ ${formatKg(Number(p.readingG))} กก.`;
-    case 'tare_confirmed': return `ถังเปล่า ${formatKg(Number(p.tareG))} กก.`;
+    case 'tare_confirmed': return `ตะกร้าเปล่า ${formatKg(Number(p.tareG))} กก.`;
     case 'ready': return 'พร้อมนับ';
     case 'pile_closed': return 'ปิดกอง';
     case 'pile_reopened': return `เปิดกองอีกครั้ง — ${String(p.reason)}`;

@@ -114,6 +114,11 @@ test('closing the sale writes a real event and settlement offers reopening it', 
   await openCounter(page);
 
   await page.getByTestId('to-settlement').click();
+  // Closing the sale gets the same verbose, two-step confirm as undo now —
+  // no confirmation at all was a real gap, since this ends counting for
+  // every zone and pile at once.
+  await expect(page.getByTestId('close-sale-detail')).toContainText('เข่ง');
+  await page.getByTestId('close-sale-confirm').click();
   await expect(page.getByTestId('owner-share')).toBeVisible();
   await expect(page.getByTestId('reopen-sale')).toBeVisible();
 
@@ -122,10 +127,8 @@ test('closing the sale writes a real event and settlement offers reopening it', 
   await page.getByTestId('reopen-prompt-next').click();
   await page.getByTestId('reopen-prompt-confirm').click();
 
-  await expect(page.getByTestId('reopen-sale')).toHaveCount(0);
-
-  // Closing again from the counter screen re-appends the close (not a no-op
-  // on an already-closed sale) and settlement still resolves.
-  await page.getByTestId('back-to-count').click();
+  // Reopening IS "back to counting" now — one action does both, landing
+  // straight on the counter screen rather than leaving a second, separate
+  // "back to counting" button that would do nothing useful on a closed sale.
   await expect(page.getByTestId('to-settlement')).toBeVisible();
 });

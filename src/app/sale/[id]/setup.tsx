@@ -441,7 +441,7 @@ function ZoneEditor({ zone }: { zone: Zone }) {
             testID={`pile-${p.id}`}
             style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}
           >
-            {p.name} · ถัง {p.tareG / 1000} + มาตรฐาน {p.stdNetG / 1000} กก.
+            {p.name} · ตะกร้า {p.tareG / 1000} + มาตรฐาน {p.stdNetG / 1000} กก.
           </Text>
         ))}
       </View>
@@ -459,7 +459,7 @@ function ZoneEditor({ zone }: { zone: Zone }) {
           testID={`pile-tare-${zone.id}`}
           value={tareKg}
           onChangeText={setTareKg}
-          placeholder="ถัง กก."
+          placeholder="ตะกร้า กก."
           placeholderTextColor={t.color.inkFaint}
           keyboardType="decimal-pad"
           style={[inputStyle(t), { width: 70 }]}

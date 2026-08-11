@@ -111,12 +111,26 @@ test('a hold cancelled by the pointer leaving does not become a phantom count', 
   await expect(count).toHaveText('5');
 });
 
-test('undo removes the last basket without erasing the record', async ({ page }) => {
+test('undo requires a confirmation naming the basket before it removes it', async ({ page }) => {
   const { count } = await openCounter(page, 5);
   await hold(page, FAST_HOLD + 150);
   await expect(count).toHaveText('6');
 
   await page.getByTestId('undo').click();
+  // Zero-confirmation undo was a real gap found from testing — it now names
+  // the specific basket about to be voided before anything happens. The seq
+  // is whatever the log assigned (setup events consume seqs too), not the
+  // displayed count — so this checks the weight and kind, not a seq number.
+  await expect(page.getByTestId('undo-confirm-detail')).toContainText('เข่งมาตรฐาน');
+  await expect(page.getByTestId('undo-confirm-detail')).toContainText('50');
+  await expect(count).toHaveText('6'); // nothing changed yet
+
+  await page.getByTestId('undo-cancel').click();
+  await expect(page.getByTestId('undo-confirm-detail')).toHaveCount(0);
+  await expect(count).toHaveText('6'); // cancel undid nothing
+
+  await page.getByTestId('undo').click();
+  await page.getByTestId('undo-confirm').click();
   await expect(count).toHaveText('5');
 
   // The void and its target are both still in the log.
