@@ -552,13 +552,24 @@ where the remaining questions get answered.
   (FR-9.4), but their app is not built in v1. This is affordable precisely
   because the cross-check is visual (FR-9.5) — the buyer does not need a
   device for the count to be trustworthy.
-- **Per-zone / per-worker reporting** (FR-10.3). Deferred: it is a second
-  product surface, and it can only be designed well once there are real
-  sales to shape it. History in v1 is a list of past sales.
+- ~~**Per-zone / per-worker reporting** (FR-10.3)~~ — **brought into scope
+  2026-08-11** by the owner, after running the app against the real flow.
+  The original reasoning (a second surface, best designed once real sales
+  exist) has been overtaken: real sales now exist, and they are what asked
+  for it. Narrower than the deferred item was: a report for a **completed
+  sale**, broken down to pile level and readable on the device. Export and
+  sharing (FR-10.2) stay deferred — the format is still open question 8.
+  Carried by S28.
 - **Worker lead login.** Name recorded only; no account, no permissions
   model in v1.
 - Payments/disbursement of money.
-- Live market price index feeds (price index is entered manually, FR-2.3).
+- ~~Live market price index feeds (price index is entered manually,
+  FR-2.3)~~ — **brought into scope 2026-08-11**, with a hard limit: the
+  fetched number is a **reference shown beside the price field**, never a
+  value the app depends on having. Manual entry stays the primary path,
+  because the price is agreed between two people at a scale and the
+  network can be absent exactly then. Carried by S30, which is blocked
+  until a source is named — see open question 9.
 - Production/agronomy tracking (tapping records, yield, inputs).
 - Buyer marketplace or price discovery across buyers.
 - Multi-currency; THB only.
@@ -636,6 +647,25 @@ Recorded so the reasoning is not lost once the questions disappear.
   bundled recordings and device Thai TTS both get tried at a real scale.
 - **2026-08-03 — "ต่อไปค่ะ" is optional** (FR-11.5), which removed the
   two-tap gate and reopened the anti-mistap question below.
+- **2026-08-11 — Three v1 exclusions reversed**, after the owner ran the
+  built app against the real flow: per-zone/per-pile reporting (FR-10.3),
+  adjustments as worker deductions (FR-7.3), and a market price reference
+  (FR-2.3). Each is narrowed rather than adopted wholesale — see the
+  out-of-scope list above and `docs/epics/epic-2-second-field-round.md`.
+- **2026-08-11 — Deductions come off AFTER the split** (FR-7.3, FR-8.4).
+  A zone's gross is split first; each worker's own deductions then come
+  off their share. The owner bears none of the deducted cost, and the
+  buyer-facing total does not move — a deduction shifts money between the
+  two parties to the contract, and nothing else. This is what `basis`
+  resolves to, and it is the first time that field has been load-bearing.
+- **2026-08-11 — A pile can be entered in bulk instead of counted.**
+  Where the app was not running for the count, the pile is opened into a
+  bulk-entry form — how many baskets, plus the weight of what is left
+  over — rather than into the counter. That keeps one honest shape: whole
+  baskets stay whole baskets, and the remainder is recorded as a weight
+  rather than being rounded into a basket count nobody counted. Bulk
+  entries are marked in the log as entered-after-the-fact, because they
+  are not evidence of anything anyone watched.
 
 ## Open questions
 
@@ -668,6 +698,13 @@ rather than by decision up front.
 7. **Different splits across zones in one sale** (FR-8.6) — assumed to
    apply per zone against that zone's contribution; confirm.
 8. **Sale export format** (FR-10.2) — printed slip, PDF, LINE share?
+9. **Which price reference** (FR-2.3), now that a price feed is in scope.
+   Investing.com is ruled out — no public API, and scraping breaks its
+   terms of use. Candidates: the Rubber Authority of Thailand's published
+   daily cup-lump price, the Thai Rubber Association, TFEX rubber futures
+   — or the ล้ง's own quoted board, if that is what is actually compared
+   against. S30 cannot start until this is answered; building against the
+   wrong number is worse than not building it.
 
 ---
 
