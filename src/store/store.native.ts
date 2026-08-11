@@ -19,7 +19,8 @@
 
 import * as SQLite from 'expo-sqlite';
 
-import { DuplicateSeqError, type EventStore } from './store';
+import { DuplicateSeqError } from './errors';
+import type { EventStore } from './store';
 import type { SaleEvent } from '../core/types';
 
 const DB_NAME = 'mon-farm.db';

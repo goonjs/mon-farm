@@ -16,7 +16,12 @@
  * Do not "simplify" this to one adapter.
  */
 
+import { DuplicateSeqError } from './errors';
 import type { SaleEvent } from '../core/types';
+
+// Re-exported for existing importers — the class itself lives in ./errors,
+// off the platform-suffix path (see that file's header).
+export { DuplicateSeqError } from './errors';
 
 export interface EventStore {
   /**
@@ -46,12 +51,6 @@ export interface EventStore {
  * resolve `store` against. This line is that something.
  */
 export declare const store: EventStore;
-
-export class DuplicateSeqError extends Error {
-  constructor(saleId: string, seq: number) {
-    super(`Event ${saleId}#${seq} already exists. The log is append-only.`);
-  }
-}
 
 /**
  * In-memory store. Used by tests, and as the fallback when no persistent

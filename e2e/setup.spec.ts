@@ -63,6 +63,25 @@ test('saving parties, price and a zone contract actually persists (survives a re
   await expect(page.getByTestId('buyer')).toHaveValue('ล้งทดสอบ');
 });
 
+test('saving shows a confirmation, which clears the moment the form is edited again', async ({ page }) => {
+  // A real bug, found by clicking through the app: every save button wrote
+  // its event correctly but gave zero visible feedback, so a working save
+  // and a no-op looked identical.
+  await openSetup(page);
+
+  await expect(page.getByTestId('saved-price')).toHaveCount(0);
+  await fillAndSave(page, 'price-baht', '26.5', 'save-price');
+  await expect(page.getByTestId('saved-price')).toBeVisible();
+
+  // Touching the form again means the saved event no longer describes what's
+  // on screen — the badge must go away, not keep claiming it's saved.
+  await page.getByTestId('price-baht').fill('27');
+  await expect(page.getByTestId('saved-price')).toHaveCount(0);
+
+  await page.getByTestId('save-price').click();
+  await expect(page.getByTestId('saved-price')).toBeVisible();
+});
+
 test('a zone with its own worker picked from the people list overrides the default', async ({ page }) => {
   await openSetup(page);
 
