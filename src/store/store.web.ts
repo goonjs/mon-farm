@@ -17,7 +17,8 @@
  * where a lost demo costs nothing, it is the right trade.
  */
 
-import { DuplicateSeqError, type EventStore } from './store';
+import { DuplicateSeqError } from './errors';
+import type { EventStore } from './store';
 import type { SaleEvent } from '../core/types';
 
 const KEY = (saleId: string) => `mon-farm:events:${saleId}`;

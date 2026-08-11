@@ -24,7 +24,7 @@ import { useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Button, TopBar } from '../../../components/chrome';
+import { Button, Pill, TopBar } from '../../../components/chrome';
 import { PeoplePicker } from '../../../components/PeoplePicker';
 import { newId } from '../../../lib/id';
 import { useSale } from '../../../store/SaleProvider';
@@ -130,15 +130,26 @@ function PartiesCard() {
   const [manager, setManager] = useState(p?.manager ?? '');
   const [workerLead, setWorkerLead] = useState(p?.workerLead ?? '');
   const [where, setWhere] = useState<'farm' | 'buyer'>(p?.where ?? 'farm');
+  const [saved, setSaved] = useState(!!p);
+
+  const dirty = <V,>(setter: (v: V) => void) => (v: V) => {
+    setSaved(false);
+    setter(v);
+  };
 
   const canSave = farmName.trim().length > 0 && buyer.trim().length > 0;
 
   return (
     <Card title="ผู้ซื้อและคน · buyer & people">
-      <LabeledInput testID="farm-name" label="ไร่ · farm" value={farmName} onChangeText={setFarmName} />
-      <LabeledInput testID="buyer" label="ล้ง · buyer" value={buyer} onChangeText={setBuyer} />
-      <LabeledInput testID="manager" label="ผู้จัดการ · manager" value={manager} onChangeText={setManager} />
-      <LabeledInput testID="worker-lead" label="หัวหน้าคนงาน · worker lead" value={workerLead} onChangeText={setWorkerLead} />
+      <LabeledInput testID="farm-name" label="ไร่ · farm" value={farmName} onChangeText={dirty(setFarmName)} />
+      <LabeledInput testID="buyer" label="ล้ง · buyer" value={buyer} onChangeText={dirty(setBuyer)} />
+      <LabeledInput testID="manager" label="ผู้จัดการ · manager" value={manager} onChangeText={dirty(setManager)} />
+      <LabeledInput
+        testID="worker-lead"
+        label="หัวหน้าคนงาน · worker lead"
+        value={workerLead}
+        onChangeText={dirty(setWorkerLead)}
+      />
       <Field label="สถานที่ · where">
         <Segmented
           options={[
@@ -146,29 +157,33 @@ function PartiesCard() {
             { value: 'buyer' as const, label: 'ที่ล้ง · at buyer' },
           ]}
           value={where}
-          onChange={setWhere}
+          onChange={dirty(setWhere)}
         />
       </Field>
-      <Button
-        testID="save-parties"
-        variant="primary"
-        disabled={!canSave}
-        onPress={() =>
-          append({
-            kind: 'sys',
-            payload: {
-              t: 'sale_started',
-              farmName: farmName.trim(),
-              buyer: buyer.trim(),
-              manager: manager.trim(),
-              workerLead: workerLead.trim(),
-              where,
-            },
-          })
-        }
-      >
-        บันทึก · save
-      </Button>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Button
+          testID="save-parties"
+          variant="primary"
+          disabled={!canSave}
+          onPress={() => {
+            append({
+              kind: 'sys',
+              payload: {
+                t: 'sale_started',
+                farmName: farmName.trim(),
+                buyer: buyer.trim(),
+                manager: manager.trim(),
+                workerLead: workerLead.trim(),
+                where,
+              },
+            });
+            setSaved(true);
+          }}
+        >
+          บันทึก · save
+        </Button>
+        {saved ? <SavedBadge testID="saved-parties" /> : null}
+      </View>
     </Card>
   );
 }
@@ -177,6 +192,7 @@ function PriceCard() {
   const { state, append } = useSale();
   const [baht, setBaht] = useState(state.price ? String(state.price.satangPerKg / 100) : '');
   const [indexRef, setIndexRef] = useState(state.price?.indexRef ?? '');
+  const [saved, setSaved] = useState(!!state.price);
 
   const parsed = Number(baht);
   const canSave = Number.isFinite(parsed) && parsed > 0;
@@ -187,28 +203,38 @@ function PriceCard() {
         testID="price-baht"
         label="฿ ต่อ กก. · baht per kg"
         value={baht}
-        onChangeText={setBaht}
+        onChangeText={(v) => {
+          setSaved(false);
+          setBaht(v);
+        }}
         keyboardType="decimal-pad"
       />
       <LabeledInput
         testID="price-index-ref"
         label="อ้างอิงราคากลาง · market index reference"
         value={indexRef}
-        onChangeText={setIndexRef}
+        onChangeText={(v) => {
+          setSaved(false);
+          setIndexRef(v);
+        }}
       />
-      <Button
-        testID="save-price"
-        variant="primary"
-        disabled={!canSave}
-        onPress={() =>
-          append({
-            kind: 'sys',
-            payload: { t: 'price_set', satangPerKg: Math.round(parsed * 100), indexRef: indexRef.trim() },
-          })
-        }
-      >
-        บันทึก · save
-      </Button>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Button
+          testID="save-price"
+          variant="primary"
+          disabled={!canSave}
+          onPress={() => {
+            append({
+              kind: 'sys',
+              payload: { t: 'price_set', satangPerKg: Math.round(parsed * 100), indexRef: indexRef.trim() },
+            });
+            setSaved(true);
+          }}
+        >
+          บันทึก · save
+        </Button>
+        {saved ? <SavedBadge testID="saved-price" /> : null}
+      </View>
     </Card>
   );
 }
@@ -218,6 +244,7 @@ function SplitCard() {
   const { state, append } = useSale();
   const [ownerPct, setOwnerPct] = useState(state.split?.ownerPct ?? 50);
   const [basis, setBasis] = useState<'gross' | 'final'>(state.split?.basis ?? 'gross');
+  const [saved, setSaved] = useState(!!state.split);
 
   return (
     <Card title="ส่วนแบ่งเริ่มต้น · default split">
@@ -232,7 +259,10 @@ function SplitCard() {
             { value: 70, label: '70 / 30' },
           ]}
           value={ownerPct}
-          onChange={setOwnerPct}
+          onChange={(v) => {
+            setSaved(false);
+            setOwnerPct(v);
+          }}
         />
       </Field>
       <Field label="คิดจาก · applies to">
@@ -242,16 +272,25 @@ function SplitCard() {
             { value: 'final' as const, label: 'ยอดสุทธิ · final' },
           ]}
           value={basis}
-          onChange={setBasis}
+          onChange={(v) => {
+            setSaved(false);
+            setBasis(v);
+          }}
         />
       </Field>
-      <Button
-        testID="save-split"
-        variant="primary"
-        onPress={() => append({ kind: 'sys', payload: { t: 'split_set', ownerPct, basis } })}
-      >
-        บันทึก · save
-      </Button>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Button
+          testID="save-split"
+          variant="primary"
+          onPress={() => {
+            append({ kind: 'sys', payload: { t: 'split_set', ownerPct, basis } });
+            setSaved(true);
+          }}
+        >
+          บันทึก · save
+        </Button>
+        {saved ? <SavedBadge testID="saved-split" /> : null}
+      </View>
     </Card>
   );
 }
@@ -301,6 +340,7 @@ function ZoneEditor({ zone }: { zone: Zone }) {
     zone.contract ? { id: zone.contract.personId, name: zone.contract.workerName, createdTs: 0, archivedTs: null } : null,
   );
   const [ownerPct, setOwnerPct] = useState(zone.contract?.ownerPct ?? 50);
+  const [contractSaved, setContractSaved] = useState(!!zone.contract);
 
   const [pileName, setPileName] = useState('');
   const [tareKg, setTareKg] = useState('2');
@@ -343,7 +383,14 @@ function ZoneEditor({ zone }: { zone: Zone }) {
 
       <View style={{ marginTop: t.space.sm }}>
         <Field label="คนงาน · worker (leave unset to use the default split)">
-          <PeoplePicker testID={`zone-worker-${zone.id}`} value={worker} onChange={setWorker} />
+          <PeoplePicker
+            testID={`zone-worker-${zone.id}`}
+            value={worker}
+            onChange={(v) => {
+              setContractSaved(false);
+              setWorker(v);
+            }}
+          />
         </Field>
         {worker ? (
           <>
@@ -355,27 +402,34 @@ function ZoneEditor({ zone }: { zone: Zone }) {
                   { value: 70, label: '70 / 30' },
                 ]}
                 value={ownerPct}
-                onChange={setOwnerPct}
+                onChange={(v) => {
+                  setContractSaved(false);
+                  setOwnerPct(v);
+                }}
               />
             </Field>
-            <Button
-              testID={`save-contract-${zone.id}`}
-              variant="primary"
-              onPress={() =>
-                append({
-                  kind: 'sys',
-                  payload: {
-                    t: 'zone_contract_set',
-                    zoneId: zone.id,
-                    personId: worker.id,
-                    workerName: worker.name,
-                    ownerPct,
-                  },
-                })
-              }
-            >
-              บันทึกสัญญา · save contract
-            </Button>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Button
+                testID={`save-contract-${zone.id}`}
+                variant="primary"
+                onPress={() => {
+                  append({
+                    kind: 'sys',
+                    payload: {
+                      t: 'zone_contract_set',
+                      zoneId: zone.id,
+                      personId: worker.id,
+                      workerName: worker.name,
+                      ownerPct,
+                    },
+                  });
+                  setContractSaved(true);
+                }}
+              >
+                บันทึกสัญญา · save contract
+              </Button>
+              {contractSaved ? <SavedBadge testID={`saved-contract-${zone.id}`} /> : null}
+            </View>
           </>
         ) : null}
       </View>
@@ -454,6 +508,22 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       </Text>
       {children}
     </View>
+  );
+}
+
+/**
+ * Every save button here writes an event immediately and silently — the
+ * screen never re-renders around a field to prove it. Without this, a
+ * successful save and a no-op look identical, which is exactly what led
+ * someone testing the app to conclude the button did nothing. Shown until
+ * the form is touched again, so it reads as "this state is saved," not as a
+ * toast that could be missed.
+ */
+function SavedBadge({ testID }: { testID?: string }) {
+  return (
+    <Pill testID={testID} tone="accept" dot="filled">
+      ✓ บันทึกแล้ว · saved
+    </Pill>
   );
 }
 
