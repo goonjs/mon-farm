@@ -94,9 +94,25 @@ At `Review` — implemented, verified in a browser, awaiting sign-off and CI:
       reopen for a pile, a zone, and the sale
 - [x] `docs/stories/s18-settlement-per-worker.md` — the per-worker payout
       card, summing each worker's total across every zone that names them
+- [x] `docs/stories/s21-testing-feedback-polish.md` — verbose confirmations
+      for undo/close, settlement→list navigation, reopen simplified to one
+      action, ถัง→ตะกร้า, `WeightInput` focus/slider polish
+- [x] Auto-save on the setup screen (no story number — amended into
+      `docs/stories/s6-sale-setup.md` directly, since it changes S6's own
+      acceptance criteria rather than adding new ones)
 
 Not started — no story file written yet:
 
+- [ ] **S22** short-basket visibility — a more explicit, inline-visible
+      breakdown of short baskets (on the stage and in the close report), from
+      the same testing round as S21. Currently short baskets are only fully
+      visible in the Log tab.
+- [ ] **S23** late/catch-up basket entry — a way to log a basket count
+      already counted before opening the app (arriving mid-count, or using
+      the app without a live show), per the owner: quick basket-count entry
+      per pile, appending that many `accept` events at once with a distinct
+      `source` so they're auditable as entered-after-the-fact rather than
+      live-held.
 - [ ] **S10** Thai speech — `expo-speech` is installed (no longer blocked) but
       nothing imports it yet. **The announced register does not exist**, which
       means half the cross-check the product is built around is missing.
