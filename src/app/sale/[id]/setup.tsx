@@ -7,20 +7,29 @@
  * piles being sold — each zone optionally naming its own worker and
  * percentage, picked from the people list (S16) rather than typed.
  *
- * Every save button here writes exactly one event immediately (matching how
- * the counter screen already works — an action is committed the moment it
- * happens, not held in a big unsaved form). Re-saving parties/price/split
- * appends another `sys` event rather than mutating one; the projection takes
- * the latest, and the earlier one stays in the log as a record that it was
- * changed — the same "last write wins, nothing is silently overwritten"
- * pattern `tare_confirmed` and `zone_contract_set` already use.
+ * Parties, price, split and each zone's contract auto-save, debounced —
+ * there is no Save button on this screen any more. A round of testing found
+ * the explicit-save version genuinely confusing: every save button wrote its
+ * event correctly, but gave zero visible feedback, so a working save and a
+ * no-op looked identical ("I just saw the save didn't give anything"). The
+ * fix isn't a toast someone can miss — it's not making them ask "did that
+ * work?" in the first place. Debounced (900ms after the last change to that
+ * card), not per-keystroke: typing "ไร่จันทรเซลม" character by character
+ * must not append eleven `sale_started` events to an append-only log.
+ * `useAutoSaveStatus`-style `pending`/`saved` state per card is the
+ * replacement for the old "saved" badge, shown continuously rather than
+ * only after a tap. Re-saving parties/price/split still appends another
+ * `sys` event rather than mutating one — the projection takes the latest,
+ * and the earlier one stays in the log as a record that it was changed, the
+ * same "last write wins, nothing is silently overwritten" pattern
+ * `tare_confirmed` and `zone_contract_set` already use.
  *
  * "Start counting" stays disabled until FR-8.5's requirement is actually met:
  * a price, and a split resolvable for every zone (its own contract or the
  * sale default), and at least one pile to count into.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -130,14 +139,32 @@ function PartiesCard() {
   const [manager, setManager] = useState(p?.manager ?? '');
   const [workerLead, setWorkerLead] = useState(p?.workerLead ?? '');
   const [where, setWhere] = useState<'farm' | 'buyer'>(p?.where ?? 'farm');
-  const [saved, setSaved] = useState(!!p);
+  const [touched, setTouched] = useState(false);
+  const canSave = farmName.trim().length > 0 && buyer.trim().length > 0;
+
+  const status = useAutoSave(
+    [farmName, buyer, manager, workerLead, where],
+    touched,
+    canSave,
+    !!p,
+    () =>
+      append({
+        kind: 'sys',
+        payload: {
+          t: 'sale_started',
+          farmName: farmName.trim(),
+          buyer: buyer.trim(),
+          manager: manager.trim(),
+          workerLead: workerLead.trim(),
+          where,
+        },
+      }),
+  );
 
   const dirty = <V,>(setter: (v: V) => void) => (v: V) => {
-    setSaved(false);
+    setTouched(true);
     setter(v);
   };
-
-  const canSave = farmName.trim().length > 0 && buyer.trim().length > 0;
 
   return (
     <Card title="ผู้ซื้อและคน · buyer & people">
@@ -160,30 +187,7 @@ function PartiesCard() {
           onChange={dirty(setWhere)}
         />
       </Field>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Button
-          testID="save-parties"
-          variant="primary"
-          disabled={!canSave}
-          onPress={() => {
-            append({
-              kind: 'sys',
-              payload: {
-                t: 'sale_started',
-                farmName: farmName.trim(),
-                buyer: buyer.trim(),
-                manager: manager.trim(),
-                workerLead: workerLead.trim(),
-                where,
-              },
-            });
-            setSaved(true);
-          }}
-        >
-          บันทึก · save
-        </Button>
-        {saved ? <SavedBadge testID="saved-parties" /> : null}
-      </View>
+      <SaveStatusRow status={status} testID="saved-parties" incompleteHint="ต้องมีชื่อไร่และล้ง · farm and buyer are required" />
     </Card>
   );
 }
@@ -192,10 +196,17 @@ function PriceCard() {
   const { state, append } = useSale();
   const [baht, setBaht] = useState(state.price ? String(state.price.satangPerKg / 100) : '');
   const [indexRef, setIndexRef] = useState(state.price?.indexRef ?? '');
-  const [saved, setSaved] = useState(!!state.price);
+  const [touched, setTouched] = useState(false);
 
   const parsed = Number(baht);
   const canSave = Number.isFinite(parsed) && parsed > 0;
+
+  const status = useAutoSave([baht, indexRef], touched, canSave, !!state.price, () =>
+    append({
+      kind: 'sys',
+      payload: { t: 'price_set', satangPerKg: Math.round(parsed * 100), indexRef: indexRef.trim() },
+    }),
+  );
 
   return (
     <Card title="ราคา · agreed price">
@@ -204,7 +215,7 @@ function PriceCard() {
         label="฿ ต่อ กก. · baht per kg"
         value={baht}
         onChangeText={(v) => {
-          setSaved(false);
+          setTouched(true);
           setBaht(v);
         }}
         keyboardType="decimal-pad"
@@ -214,27 +225,11 @@ function PriceCard() {
         label="อ้างอิงราคากลาง · market index reference"
         value={indexRef}
         onChangeText={(v) => {
-          setSaved(false);
+          setTouched(true);
           setIndexRef(v);
         }}
       />
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Button
-          testID="save-price"
-          variant="primary"
-          disabled={!canSave}
-          onPress={() => {
-            append({
-              kind: 'sys',
-              payload: { t: 'price_set', satangPerKg: Math.round(parsed * 100), indexRef: indexRef.trim() },
-            });
-            setSaved(true);
-          }}
-        >
-          บันทึก · save
-        </Button>
-        {saved ? <SavedBadge testID="saved-price" /> : null}
-      </View>
+      <SaveStatusRow status={status} testID="saved-price" incompleteHint="ต้องใส่ราคามากกว่า 0 · price must be greater than 0" />
     </Card>
   );
 }
@@ -244,7 +239,11 @@ function SplitCard() {
   const { state, append } = useSale();
   const [ownerPct, setOwnerPct] = useState(state.split?.ownerPct ?? 50);
   const [basis, setBasis] = useState<'gross' | 'final'>(state.split?.basis ?? 'gross');
-  const [saved, setSaved] = useState(!!state.split);
+  const [touched, setTouched] = useState(false);
+
+  const status = useAutoSave([ownerPct, basis], touched, true, !!state.split, () =>
+    append({ kind: 'sys', payload: { t: 'split_set', ownerPct, basis } }),
+  );
 
   return (
     <Card title="ส่วนแบ่งเริ่มต้น · default split">
@@ -260,7 +259,7 @@ function SplitCard() {
           ]}
           value={ownerPct}
           onChange={(v) => {
-            setSaved(false);
+            setTouched(true);
             setOwnerPct(v);
           }}
         />
@@ -273,26 +272,100 @@ function SplitCard() {
           ]}
           value={basis}
           onChange={(v) => {
-            setSaved(false);
+            setTouched(true);
             setBasis(v);
           }}
         />
       </Field>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Button
-          testID="save-split"
-          variant="primary"
-          onPress={() => {
-            append({ kind: 'sys', payload: { t: 'split_set', ownerPct, basis } });
-            setSaved(true);
-          }}
-        >
-          บันทึก · save
-        </Button>
-        {saved ? <SavedBadge testID="saved-split" /> : null}
-      </View>
+      <SaveStatusRow status={status} testID="saved-split" incompleteHint="" />
     </Card>
   );
+}
+
+type SaveStatus = 'idle' | 'pending' | 'saved';
+
+const AUTOSAVE_DELAY_MS = 900;
+
+/**
+ * Auto-save, debounced: fires `save` once `AUTOSAVE_DELAY_MS` after the last
+ * change to any of `deps`, and only once the card has actually been
+ * `touched` — an already-saved card must never re-fire an identical,
+ * redundant event just because the screen mounted (`touched` starts false
+ * and is set by the caller's own onChange handlers, not by this hook).
+ *
+ * `status` is derived during render, not tracked as its own piece of state —
+ * only `savedKey` (which snapshot was last actually written) is real state,
+ * and it is only ever set from inside the timer's callback, a genuine async
+ * event. Deriving 'idle'/'pending' synchronously in an effect body instead
+ * (the first version of this) is exactly the pattern this repo's ESLint
+ * config (`react-hooks/set-state-in-effect`) forbids, for the same reason
+ * the counter screen's pile-selection fix and `WeightInput` both use
+ * render-time derivation instead of effect-driven state elsewhere in this
+ * codebase.
+ *
+ * `save` is deliberately NOT in the effect's own dependency list: it is a
+ * fresh closure every render (it captures the current field values by
+ * design), so depending on it would restart the timer on every render
+ * regardless of whether anything actually changed — `deps` is the real
+ * change signal this debounce exists to watch.
+ */
+function useAutoSave(
+  deps: readonly unknown[],
+  touched: boolean,
+  canSave: boolean,
+  initiallySaved: boolean,
+  save: () => void,
+): SaveStatus {
+  const key = JSON.stringify(deps);
+  // Seeded from `initiallySaved`, NOT `canSave` — they answer different
+  // questions. `canSave` is "would this be valid to write" (true for the
+  // split card even before anything was ever saved, since 50/50 gross is
+  // always a valid default); `initiallySaved` is "did loading this sale
+  // actually find a saved value here." Conflating them was a real bug: the
+  // split card showed "✓ saved" on a brand-new sale that had never written
+  // a `split_set` event, purely because its default happened to be valid.
+  const [savedKey, setSavedKey] = useState<string | null>(initiallySaved ? key : null);
+
+  useEffect(() => {
+    if (!touched || !canSave) return;
+    const id = setTimeout(() => {
+      save();
+      setSavedKey(key);
+    }, AUTOSAVE_DELAY_MS);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `deps`/`key` are the intended change signal; `save` is excluded by design, see the doc comment above.
+  }, [...deps, touched, canSave]);
+
+  if (!canSave) return 'idle';
+  return savedKey === key ? 'saved' : 'pending';
+}
+
+/**
+ * Replaces the old explicit Save button + "saved" badge. Always mounted (not
+ * conditionally shown only on success) so there's never a moment where the
+ * card gives no indication of its state — "did that just save?" was the
+ * exact confusion this exists to remove.
+ */
+function SaveStatusRow({ status, testID, incompleteHint }: { status: SaveStatus; testID: string; incompleteHint: string }) {
+  if (status === 'saved') {
+    return (
+      <Pill testID={testID} tone="accept" dot="filled">
+        ✓ บันทึกแล้ว · saved
+      </Pill>
+    );
+  }
+  if (status === 'pending') {
+    return (
+      <Pill testID={testID} tone="warn" dot="half">
+        กำลังบันทึก… · saving…
+      </Pill>
+    );
+  }
+  return incompleteHint ? (
+    <Pill testID={testID} tone="neutral" dot="hollow">
+      {incompleteHint}
+    </Pill>
+  ) : null;
 }
 
 function ZonesCard() {
@@ -340,7 +413,21 @@ function ZoneEditor({ zone }: { zone: Zone }) {
     zone.contract ? { id: zone.contract.personId, name: zone.contract.workerName, createdTs: 0, archivedTs: null } : null,
   );
   const [ownerPct, setOwnerPct] = useState(zone.contract?.ownerPct ?? 50);
-  const [contractSaved, setContractSaved] = useState(!!zone.contract);
+  const [contractTouched, setContractTouched] = useState(false);
+
+  const contractStatus = useAutoSave(
+    [worker?.id ?? null, ownerPct],
+    contractTouched,
+    !!worker,
+    !!zone.contract,
+    () => {
+      if (!worker) return;
+      append({
+        kind: 'sys',
+        payload: { t: 'zone_contract_set', zoneId: zone.id, personId: worker.id, workerName: worker.name, ownerPct },
+      });
+    },
+  );
 
   const [pileName, setPileName] = useState('');
   const [tareKg, setTareKg] = useState('2');
@@ -387,7 +474,7 @@ function ZoneEditor({ zone }: { zone: Zone }) {
             testID={`zone-worker-${zone.id}`}
             value={worker}
             onChange={(v) => {
-              setContractSaved(false);
+              setContractTouched(true);
               setWorker(v);
             }}
           />
@@ -403,33 +490,12 @@ function ZoneEditor({ zone }: { zone: Zone }) {
                 ]}
                 value={ownerPct}
                 onChange={(v) => {
-                  setContractSaved(false);
+                  setContractTouched(true);
                   setOwnerPct(v);
                 }}
               />
             </Field>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Button
-                testID={`save-contract-${zone.id}`}
-                variant="primary"
-                onPress={() => {
-                  append({
-                    kind: 'sys',
-                    payload: {
-                      t: 'zone_contract_set',
-                      zoneId: zone.id,
-                      personId: worker.id,
-                      workerName: worker.name,
-                      ownerPct,
-                    },
-                  });
-                  setContractSaved(true);
-                }}
-              >
-                บันทึกสัญญา · save contract
-              </Button>
-              {contractSaved ? <SavedBadge testID={`saved-contract-${zone.id}`} /> : null}
-            </View>
+            <SaveStatusRow status={contractStatus} testID={`saved-contract-${zone.id}`} incompleteHint="" />
           </>
         ) : null}
       </View>
@@ -508,22 +574,6 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       </Text>
       {children}
     </View>
-  );
-}
-
-/**
- * Every save button here writes an event immediately and silently — the
- * screen never re-renders around a field to prove it. Without this, a
- * successful save and a no-op look identical, which is exactly what led
- * someone testing the app to conclude the button did nothing. Shown until
- * the form is touched again, so it reads as "this state is saved," not as a
- * toast that could be missed.
- */
-function SavedBadge({ testID }: { testID?: string }) {
-  return (
-    <Pill testID={testID} tone="accept" dot="filled">
-      ✓ บันทึกแล้ว · saved
-    </Pill>
   );
 }
 

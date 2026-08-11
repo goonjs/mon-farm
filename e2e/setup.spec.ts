@@ -1,12 +1,16 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * The real sale setup screen (S6), replacing S17's stub. Each save button
- * writes one event immediately — these tests verify that write actually
- * lands (by reading the effect back through the UI, not by inspecting
- * localStorage directly) and that "start counting" stays disabled until
- * FR-8.5's requirement is genuinely met: a price, a split resolvable for
- * every zone, and at least one pile.
+ * The real sale setup screen (S6), replacing S17's stub. Parties, price,
+ * split and each zone's contract auto-save (debounced, no Save button) —
+ * these tests verify the write actually lands, by reading the effect back
+ * through the UI rather than inspecting localStorage directly, and that
+ * "start counting" stays disabled until FR-8.5's requirement is genuinely
+ * met: a price, a split resolvable for every zone, and at least one pile.
+ *
+ * `expect(...).toContainText(...)` / `toBeVisible()` already retry for up to
+ * Playwright's default timeout, which comfortably covers the auto-save
+ * debounce (900ms) — no manual `waitForTimeout` needed anywhere here.
  */
 
 async function openSetup(page: Page) {
@@ -16,24 +20,23 @@ async function openSetup(page: Page) {
   return page;
 }
 
-async function fillAndSave(page: Page, testId: string, value: string, saveTestId: string) {
-  await page.getByTestId(testId).fill(value);
-  await page.getByTestId(saveTestId).click();
-}
-
 test('start counting is disabled until price, split and a pile all exist', async ({ page }) => {
   await openSetup(page);
   await expect(page.getByTestId('start-counting')).toBeDisabled();
   await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่ได้ตั้งราคา');
 
-  await fillAndSave(page, 'price-baht', '26.5', 'save-price');
+  await page.getByTestId('price-baht').fill('26.5');
+  await expect(page.getByTestId('saved-price')).toContainText('บันทึกแล้ว');
   await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีโซน'); // price set, no zone yet
 
   await page.getByTestId('new-zone-name').fill('โซน A');
   await page.getByTestId('add-zone').click();
   await expect(page.getByTestId('start-blocker')).toContainText('บางโซนยังไม่มีส่วนแบ่ง'); // zone exists, no split resolvable yet
 
-  await page.getByTestId('save-split').click(); // default 50/50, gross
+  // The default split (50/50, gross) still has to be touched once to be
+  // written — untouched defaults are never silently assumed as saved.
+  await page.getByTestId('seg-50').click();
+  await expect(page.getByTestId('saved-split')).toContainText('บันทึกแล้ว');
   await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีกอง'); // split resolved, still no pile
 
   const zoneEditor = page.locator('[data-testid^="zone-editor-"]');
@@ -44,42 +47,47 @@ test('start counting is disabled until price, split and a pile all exist', async
   await expect(page.getByTestId('start-blocker')).toContainText('ทุกอย่างพร้อม');
 });
 
-test('saving parties, price and a zone contract actually persists (survives a reload)', async ({ page }) => {
+test('parties and price auto-save without a button, and persist across a reload', async ({ page }) => {
   await openSetup(page);
 
-  // Buyer is still empty at this point — save must stay disabled rather than
-  // writing an incomplete `sale_started`. Not clicking it: Playwright's
-  // .click() waits for an element to become enabled, so clicking a
-  // deliberately-disabled button here would just hang until timeout.
+  // Buyer is still empty at this point — must stay unsaved (idle) rather
+  // than writing an incomplete `sale_started`.
   await page.getByTestId('farm-name').fill('ไร่ทดสอบ');
-  await expect(page.getByTestId('save-parties')).toBeDisabled();
+  await expect(page.getByTestId('saved-parties')).toContainText('ล้ง'); // the "farm and buyer required" hint
 
   await page.getByTestId('buyer').fill('ล้งทดสอบ');
-  await expect(page.getByTestId('save-parties')).toBeEnabled();
-  await page.getByTestId('save-parties').click();
+  await expect(page.getByTestId('saved-parties')).toContainText('บันทึกแล้ว');
+
+  await page.getByTestId('price-baht').fill('26.5');
+  await expect(page.getByTestId('saved-price')).toContainText('บันทึกแล้ว');
 
   await page.reload();
   await expect(page.getByTestId('farm-name')).toHaveValue('ไร่ทดสอบ');
   await expect(page.getByTestId('buyer')).toHaveValue('ล้งทดสอบ');
+  await expect(page.getByTestId('price-baht')).toHaveValue('26.5');
 });
 
-test('saving shows a confirmation, which clears the moment the form is edited again', async ({ page }) => {
+test('save status shows saving, then saved, and reverts to saving on the next edit', async ({ page }) => {
   // A real bug, found by clicking through the app: every save button wrote
   // its event correctly but gave zero visible feedback, so a working save
-  // and a no-op looked identical.
+  // and a no-op looked identical. This is the auto-save replacement for
+  // that button — no click, no missable toast, just a status that's always
+  // showing something true.
   await openSetup(page);
 
-  await expect(page.getByTestId('saved-price')).toHaveCount(0);
-  await fillAndSave(page, 'price-baht', '26.5', 'save-price');
-  await expect(page.getByTestId('saved-price')).toBeVisible();
+  await page.getByTestId('price-baht').fill('26.5');
+  await expect(page.getByTestId('saved-price')).toContainText('กำลังบันทึก'); // saving…
+  await expect(page.getByTestId('saved-price')).toContainText('บันทึกแล้ว'); // saved
 
-  // Touching the form again means the saved event no longer describes what's
-  // on screen — the badge must go away, not keep claiming it's saved.
+  // Touching the form again means the saved event no longer describes
+  // what's on screen — the status must go back to "saving", not keep
+  // claiming it's saved.
   await page.getByTestId('price-baht').fill('27');
-  await expect(page.getByTestId('saved-price')).toHaveCount(0);
+  await expect(page.getByTestId('saved-price')).toContainText('กำลังบันทึก');
+  await expect(page.getByTestId('saved-price')).toContainText('บันทึกแล้ว');
 
-  await page.getByTestId('save-price').click();
-  await expect(page.getByTestId('saved-price')).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId('price-baht')).toHaveValue('27');
 });
 
 test('a zone with its own worker picked from the people list overrides the default', async ({ page }) => {
@@ -93,10 +101,9 @@ test('a zone with its own worker picked from the people list overrides the defau
   await picker.getByTestId(/-new-name$/).fill('ประยุทธ');
   await picker.getByTestId(/-confirm-new$/).click();
 
-  // Picking a worker reveals the per-zone percentage and its own save button.
+  // Picking a worker reveals the per-zone percentage, which auto-saves too.
   const zoneEditor = page.locator('[data-testid^="zone-editor-"]');
-  await expect(zoneEditor.getByTestId(/^save-contract-/)).toBeVisible();
-  await zoneEditor.getByTestId(/^save-contract-/).click();
+  await expect(zoneEditor.getByTestId(/^saved-contract-/)).toContainText('บันทึกแล้ว');
 
   await page.reload();
   await expect(page.locator('[data-testid^="zone-worker-"]').getByTestId(/-selected$/)).toContainText('ประยุทธ');
