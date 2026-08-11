@@ -106,22 +106,37 @@ export function WeightInput({ testID = 'weight-input', label, valueG, minG, maxG
         testID={`${testID}-track`}
         onLayout={onLayout}
         {...panResponder.panHandlers}
-        style={{ height: 32, justifyContent: 'center' }}
+        // Generous hit area — the visible track is thin, but the drag
+        // gesture shouldn't require hitting it pixel-perfectly (F-22, and
+        // finding from testing: the slider "wasn't easy to notice" partly
+        // because it was hard to actually grab).
+        hitSlop={{ top: 16, bottom: 16 }}
+        style={{ height: 40, justifyContent: 'center' }}
       >
-        <View style={{ height: 6, borderRadius: t.radius.pill, backgroundColor: t.color.surfaceSunk }} />
+        <View style={{ height: 8, borderRadius: t.radius.pill, backgroundColor: t.color.surfaceSunk, overflow: 'hidden' }}>
+          {/* Filled portion up to the thumb — a bare thin bar read as
+              decorative, not draggable; a visibly "used up" fill is the
+              standard slider affordance. */}
+          <View style={{ width: `${pct * 100}%`, height: '100%', backgroundColor: t.color.action }} />
+        </View>
         <View
           testID={`${testID}-thumb`}
           style={{
             position: 'absolute',
             left: `${pct * 100}%`,
-            marginLeft: -10,
-            width: 20,
-            height: 20,
-            borderRadius: 10,
+            marginLeft: -12,
+            width: 24,
+            height: 24,
+            borderRadius: 12,
             backgroundColor: t.color.action,
+            borderWidth: 3,
+            borderColor: t.color.surfaceRaised,
           }}
         />
       </View>
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.inkFaint }}>
+        ลากเพื่อปรับ · drag to adjust
+      </Text>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
         <Button testID={`${testID}-minus`} onPress={() => commit(valueG - stepG)}>
@@ -135,6 +150,12 @@ export function WeightInput({ testID = 'weight-input', label, valueG, minG, maxG
             const parsed = Number(v);
             if (Number.isFinite(parsed)) commit(Math.round(parsed * 1000), true);
           }}
+          // Tapping in to correct a reading is the common case, and typing a
+          // fresh number should replace it outright — without this, the
+          // operator has to select the old text manually (double-tap) before
+          // the first keystroke does anything, which is exactly the friction
+          // reported from testing.
+          selectTextOnFocus
           keyboardType="decimal-pad"
           style={{
             flex: 1,

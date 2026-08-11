@@ -41,6 +41,23 @@ test('a closed sale resumes into settlement, not the counter', async ({ page }) 
   await expect(page.getByTestId('owner-share')).toBeVisible();
 });
 
+test('settlement has a way back to the list — and from there, to a new sale', async ({ page }) => {
+  // A real gap, found from testing: after closing a sale there was no path
+  // off the settlement screen except "reopen" or a browser back button —
+  // no way to reach the list, and so no way to start a new sale.
+  const saleId = testSaleId('list-from-settlement');
+  await seedSale(page, saleId, workedExample(saleId));
+  await page.goto(`/sale/${saleId}/settlement`);
+  await expect(page.getByTestId('owner-share')).toBeVisible();
+
+  await page.getByTestId('to-sale-list').click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByTestId(`sale-${saleId}`)).toBeVisible();
+
+  await page.getByTestId('new-sale').click();
+  await expect(page).toHaveURL(/\/sale\/sale-[a-z0-9]+\/setup$/);
+});
+
 test('starting a new sale navigates to a fresh, unrecorded setup screen', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('new-sale').click();

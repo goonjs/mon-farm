@@ -101,8 +101,11 @@ they map to.
   it.
 - **Pile (กอง)** — a physical heap of rubber staged for weighing within a
   zone. A zone can have several piles in one sale.
-- **Basket / bucket (เข่ง / ถัง)** — the container the rubber is weighed
-  in. Has a **tare weight** (e.g. 2 kg).
+- **Basket (เข่ง)** — the counting unit: one basket-load of rubber weighed
+  and logged. **Container (ตะกร้า)** — the physical basket the rubber is
+  weighed in, same object, named for its role as an empty vessel with its
+  own **tare weight** (e.g. 2 kg). (Renamed from ถัง 2026-08-11, per the
+  owner: ตะกร้า is the word actually used in the field.)
 - **Standard basket weight** — the agreed *net* rubber weight per basket
   (e.g. 50 kg). Together with tare this gives the **expected scale
   reading** all parties call out (e.g. 52 kg).

@@ -61,7 +61,7 @@ export function ShortBasketPanel({
       />
 
       <Text testID="short-preview" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>
-        {`ยางสุทธิ = ชั่งได้ ${kg(readingG)} − ถัง ${kg(tareG)} = ${kg(netG)} กก. · net rubber = reading − tare = ${kg(netG)} kg`}
+        {`ยางสุทธิ = ชั่งได้ ${kg(readingG)} − ตะกร้า ${kg(tareG)} = ${kg(netG)} กก. · net rubber = reading − tare = ${kg(netG)} kg`}
       </Text>
 
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>

@@ -176,13 +176,13 @@ export function settle(events: readonly SaleEvent[], state: SaleState): Settleme
     },
     {
       key: 'short-weight',
-      thai: `${totals.shortBaskets} เข่งไม่เต็ม — ชั่งได้ลบถัง`,
+      thai: `${totals.shortBaskets} เข่งไม่เต็ม — ชั่งได้ลบตะกร้า`,
       english: `${totals.shortBaskets} short baskets — reading minus tare`,
       value: `${kg(totals.shortNetG)} กก.`,
     },
     {
       key: 'net-weight',
-      thai: 'น้ำหนักยางสุทธิ — หักถังแล้วทุกเข่ง',
+      thai: 'น้ำหนักยางสุทธิ — หักตะกร้าแล้วทุกเข่ง',
       english: 'net rubber — tare deducted from every basket',
       value: `${kg(totals.netG)} กก.`,
     },
