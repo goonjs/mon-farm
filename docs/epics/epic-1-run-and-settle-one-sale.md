@@ -89,15 +89,15 @@ At `Review` — implemented, verified in a browser, awaiting sign-off and CI:
       stage; a failed zero check flags and continues rather than blocking
 - [x] `docs/stories/s11-short-basket.md` — real F-22 three-way weight input
       (drag / ± / typed), replacing the hard-coded 43 kg placeholder
+- [x] `docs/stories/s13-close-lifecycle.md` — pile close → decision point →
+      zone close → sale close, the zone/pile switcher, and typed-reason
+      reopen for a pile, a zone, and the sale
 
 Not started — no story file written yet:
 
 - [ ] **S10** Thai speech — `expo-speech` is installed (no longer blocked) but
       nothing imports it yet. **The announced register does not exist**, which
       means half the cross-check the product is built around is missing.
-- [ ] **S13** close lifecycle (screens 5 and 6) — closing a pile, the decision
-      point, closing a zone, reopen-and-announce. The core model supports all
-      of it; no UI reaches it.
 - [ ] **S18** settlement screen rework — per-zone worker rows exist (S15's
       compile-fix), but the dedicated per-worker payout view
       (`Settlement.perWorker`, already computed and tested) has no screen yet.

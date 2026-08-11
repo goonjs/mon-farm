@@ -12,18 +12,26 @@
  * (`Settlement.perWorker`, already computed) is S18's screen.
  */
 
+import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { Button, TopBar } from '../../../components/chrome';
+import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { formatBaht, formatKg, settle, SettlementUnavailable } from '../../../core/settle';
 import { useSale } from '../../../store/SaleProvider';
 import { useTheme } from '../../../theme';
 
 export default function SettlementScreen() {
   const t = useTheme();
-  const { events, state } = useSale();
+  const { events, state, append } = useSale();
   const router = useRouter();
+  const [reopening, setReopening] = useState(false);
+
+  const reopenSale = (reason: string) => {
+    append({ kind: 'sys', payload: { t: 'sale_reopened', reason } });
+    setReopening(false);
+  };
   /**
    * router.back(), not a Link to the counter route. This screen is reached
    * two ways: pushed from the counter screen ("close sale"), or resumed
@@ -64,6 +72,16 @@ export default function SettlementScreen() {
             <Button variant="primary" onPress={backToCounting}>← กลับไปนับ · back to counting</Button>
           </View>
         </View>
+        {reopening ? (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: t.color.stage, zIndex: 10 }}>
+            <ReopenPrompt
+              targetLabel="การขาย"
+              consequence="การขายนี้จะเปิดอีกครั้ง สามารถนับและปิดกองต่อได้ · the sale reopens; counting and closing can continue."
+              onConfirm={reopenSale}
+              onCancel={() => setReopening(false)}
+            />
+          </View>
+        ) : null}
       </View>
     );
   }
@@ -161,10 +179,26 @@ export default function SettlementScreen() {
         <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft, flex: 1 }}>
           สรุปนี้คำนวณจากบันทึกทั้งหมด — ไม่ได้เก็บเป็นตัวเลขตายตัว
         </Text>
+        {state.status === 'closed' ? (
+          <Button testID="reopen-sale" onPress={() => setReopening(true)}>
+            เปิดการขายอีกครั้ง · reopen sale
+          </Button>
+        ) : null}
         <Button variant="primary" testID="back-to-count" onPress={backToCounting}>
           ← กลับไปนับ · back to counting
         </Button>
       </View>
+
+      {reopening ? (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: t.color.stage, zIndex: 10 }}>
+          <ReopenPrompt
+            targetLabel="การขาย"
+            consequence="การขายนี้จะเปิดอีกครั้ง สามารถนับและปิดกองต่อได้ · the sale reopens; counting and closing can continue."
+            onConfirm={reopenSale}
+            onCancel={() => setReopening(false)}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
