@@ -16,6 +16,20 @@ export function openPileScenario(saleId: string, standardBaskets = 0): SaleEvent
 }
 
 /**
+ * `setUpSale`'s two zones (A: p1, p2 · B: p3), with p1 and p3 both readied and
+ * p1 given `standardBaskets` already counted. p2 stays `not-started`, so
+ * closing p1 has a real "next pile in this zone" to offer, and p3 in zone B
+ * gives the switcher and switch-zone paths somewhere real to go.
+ */
+export function closeLifecycleScenario(saleId: string, standardBaskets = 3): SaleEvent[] {
+  const b = setUpSale(new LogBuilder(saleId));
+  readyPile(b, 'p1');
+  readyPile(b, 'p3');
+  for (let i = 0; i < standardBaskets; i++) b.accept('p1');
+  return b.build();
+}
+
+/**
  * A sale with one zone and one pile that is genuinely `not-started` — no
  * zero check, no tare confirmed, no ready. For the S9 gate tests, which exist
  * specifically to prove the gate itself, `readyPile()` would defeat the point

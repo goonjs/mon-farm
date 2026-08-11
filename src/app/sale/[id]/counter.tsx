@@ -4,20 +4,30 @@
  * Three tabs (finding F-19): Count / Pile / Log. When any tab other than Count
  * is active a mini-count stays in the topbar: leaving the Count tab must never
  * mean losing sight of the number.
+ *
+ * Pile/zone/sale lifecycle (S13, docs/ux/pile-zone-sale-lifecycle.md): closing
+ * a pile hands off to `PileClosedTransition`'s decision point rather than a
+ * bare "continue"; closing a zone force-closes any pile still counting in it,
+ * named in the warning first; closing the sale is a real event, not just a
+ * navigation, and reopening anything is a typed-reason, publicly-shown act —
+ * never a silent undo.
  */
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 import { Button, Pill, Tabs, TopBar } from '../../../components/chrome';
 import { HoldStage } from '../../../components/HoldStage';
+import { PileClosedTransition } from '../../../components/PileClosedTransition';
+import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { ShortBasketPanel } from '../../../components/ShortBasketPanel';
 import { ZeroTareGate } from '../../../components/ZeroTareGate';
-import { canCount } from '../../../core/project';
+import { ZonePileSwitcher } from '../../../components/ZonePileSwitcher';
+import { canCount, canReopenPile, pilesStillCounting } from '../../../core/project';
 import { formatBaht, formatKg } from '../../../core/settle';
 import { basketNetG, lastLiveBasket, liveBaskets, pileTotals, saleTotals, zoneTotals } from '../../../core/totals';
-import type { SaleEvent } from '../../../core/types';
+import type { Pile, SaleEvent, SaleState, Zone } from '../../../core/types';
 import { useSale } from '../../../store/SaleProvider';
 import { useTheme, useThemeControls } from '../../../theme';
 
@@ -29,20 +39,45 @@ const TABS = [
   { key: 'log' as const, label: 'บันทึก · Log' },
 ];
 
+/**
+ * What's on top of the stage right now, besides the ordinary tab content.
+ * Reopening the sale itself lives on the settlement screen, not here — that's
+ * the screen you land on once the sale closes, and the hard boundary
+ * (docs/ux/pile-zone-sale-lifecycle.md) belongs where it's actually crossed.
+ */
+type Overlay =
+  | { kind: 'none' }
+  | { kind: 'switcher' }
+  | { kind: 'reopen-pile'; pileId: string }
+  | { kind: 'reopen-zone'; zoneId: string };
+
 export default function CounterScreen() {
   const t = useTheme();
+  const router = useRouter();
   const { toggle, scheme } = useThemeControls();
   const { saleId, events, state, append, ready } = useSale();
   const [tab, setTab] = useState<TabKey>('count');
   const [shortOpen, setShortOpen] = useState(false);
   const [shortReadingG, setShortReadingG] = useState(0);
+  const [selectedPileId, setSelectedPileId] = useState<string | null>(null);
+  const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' });
 
-  // The pile being counted: the first one in a counting state.
-  const pile = useMemo(
-    () => state.piles.find((p) => p.status === 'counting') ?? state.piles[0],
-    [state.piles],
-  );
+  // The pile in view: whatever the operator explicitly picked (switcher),
+  // falling back to the one being counted, falling back to the first pile —
+  // same default as before S13, now overridable.
+  const fallbackPile = state.piles.find((p) => p.status === 'counting') ?? state.piles[0];
+  const pile = (selectedPileId && state.piles.find((x) => x.id === selectedPileId)) || fallbackPile;
   const zone = state.zones.find((z) => z.id === pile?.zoneId);
+
+  // Lock the very first auto-selected pile to its id (React's "adjust state
+  // during render" pattern — no ref, no effect). Without this, closing the
+  // pile currently in view would change its status away from 'counting' and
+  // the fallback above would silently re-target a DIFFERENT counting pile on
+  // the very same render — the decision point would never appear, because
+  // the screen would already be looking at something else.
+  if (!selectedPileId && fallbackPile) {
+    setSelectedPileId(fallbackPile.id);
+  }
 
   const totals = pile ? pileTotals(events, pile.id) : null;
   const countable = pile ? canCount(state, pile.id) : false;
@@ -76,9 +111,6 @@ export default function CounterScreen() {
   };
 
   const openShort = () => {
-    // Starts at the full expected reading — the operator drags/types DOWN
-    // from there, which matches how a short basket is actually noticed (the
-    // scale reads less than expected, not more).
     setShortReadingG(pile.tareG + pile.stdNetG);
     setShortOpen(true);
   };
@@ -96,6 +128,28 @@ export default function CounterScreen() {
 
   const onGateReady = () => append({ kind: 'sys', payload: { t: 'ready', pileId: pile.id } });
 
+  const pickPile = (pileId: string) => {
+    setSelectedPileId(pileId);
+    setOverlay({ kind: 'none' });
+    setTab('count');
+  };
+
+  // ── Decision point after a pile closes ──────────────────────────────────
+  const nextPileInZone = state.piles.find((p) => p.zoneId === zone.id && p.status === 'not-started');
+
+  const closeSale = () => {
+    if (state.status === 'open') append({ kind: 'sys', payload: { t: 'sale_closed' } });
+    router.push({ pathname: '/sale/[id]/settlement', params: { id: saleId } });
+  };
+
+  const closeZoneFromTransition = () => {
+    const stillCounting = pilesStillCounting(state, zone.id);
+    append({
+      kind: 'sys',
+      payload: { t: 'zone_closed', zoneId: zone.id, forcedPiles: stillCounting.map((p) => p.id) },
+    });
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <TopBar
@@ -109,6 +163,9 @@ export default function CounterScreen() {
               {countable ? 'กำลังนับ' : 'หยุด'}
             </Pill>
             {state.clockSuspect ? <Pill tone="warn">⏱ เวลาผิด</Pill> : null}
+            <Pill testID="open-switcher">
+              <Text onPress={() => setOverlay({ kind: 'switcher' })}>โซน/กอง ▾</Text>
+            </Pill>
             <Pill testID="theme-toggle">
               <Text onPress={toggle}>{scheme === 'light' ? '◐ light' : '◑ dark'}</Text>
             </Pill>
@@ -120,7 +177,18 @@ export default function CounterScreen() {
 
       {tab === 'count' ? (
         <>
-          {pile.status === 'not-started' ? (
+          {pile.status === 'closed' ? (
+            <PileClosedTransition
+              pileName={pile.name}
+              baskets={totals?.baskets ?? 0}
+              netG={totals?.netG ?? 0}
+              hasNextPileInZone={!!nextPileInZone}
+              onNextPile={() => nextPileInZone && pickPile(nextPileInZone.id)}
+              onSwitchZone={() => setOverlay({ kind: 'switcher' })}
+              onCloseZone={closeZoneFromTransition}
+              onCloseSale={closeSale}
+            />
+          ) : pile.status === 'not-started' ? (
             <ZeroTareGate
               pileName={pile.name}
               tareG={pile.tareG}
@@ -141,28 +209,30 @@ export default function CounterScreen() {
               holdMs={holdMsOverride()}
             />
           )}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: t.space.sm,
-              padding: t.space.xs,
-              paddingHorizontal: t.space.sm,
-              borderTopWidth: t.border.hair,
-              borderTopColor: t.color.rule,
-            }}
-          >
-            <Button testID="undo" onPress={onUndo} disabled={!lastBasket}>
-              ↺ ยกเลิกเข่งล่าสุด · undo last
-            </Button>
-            <Button testID="short" onPress={openShort} disabled={!countable || shortOpen}>
-              ⚖ เข่งไม่เต็ม · short basket
-            </Button>
-            <View style={{ flex: 1 }} />
-            <Link href={{ pathname: '/sale/[id]/settlement', params: { id: saleId } }} asChild>
-              <Button testID="to-settlement" variant="destructive">ปิดการขาย · close sale</Button>
-            </Link>
-          </View>
+          {pile.status === 'counting' ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: t.space.sm,
+                padding: t.space.xs,
+                paddingHorizontal: t.space.sm,
+                borderTopWidth: t.border.hair,
+                borderTopColor: t.color.rule,
+              }}
+            >
+              <Button testID="undo" onPress={onUndo} disabled={!lastBasket}>
+                ↺ ยกเลิกเข่งล่าสุด · undo last
+              </Button>
+              <Button testID="short" onPress={openShort} disabled={!countable || shortOpen}>
+                ⚖ เข่งไม่เต็ม · short basket
+              </Button>
+              <View style={{ flex: 1 }} />
+              <Button testID="to-settlement" variant="destructive" onPress={closeSale}>
+                ปิดการขาย · close sale
+              </Button>
+            </View>
+          ) : null}
           {shortOpen ? (
             <ShortBasketPanel
               tareG={pile.tareG}
@@ -176,8 +246,59 @@ export default function CounterScreen() {
         </>
       ) : null}
 
-      {tab === 'pile' ? <PilePanel /> : null}
+      {tab === 'pile' ? (
+        <PilePanel
+          pile={pile}
+          zone={zone}
+          state={state}
+          onCloseZone={() => setOverlay({ kind: 'switcher' })}
+          onReopenPile={(pileId) => setOverlay({ kind: 'reopen-pile', pileId })}
+          onReopenZone={(zoneId) => setOverlay({ kind: 'reopen-zone', zoneId })}
+        />
+      ) : null}
       {tab === 'log' ? <LogPanel /> : null}
+
+      {overlay.kind === 'switcher' ? (
+        <ZonePileSwitcher state={state} onPick={pickPile} onClose={() => setOverlay({ kind: 'none' })} />
+      ) : null}
+
+      {overlay.kind === 'reopen-pile' ? (
+        <ReopenPromptOverlay
+          targetLabel={state.piles.find((p) => p.id === overlay.pileId)?.name ?? ''}
+          consequence="กองนี้จะกลับมานับต่อได้ · this pile becomes countable again. บันทึกเดิมยังอยู่ครบ · nothing already recorded is erased."
+          onConfirm={(reason) => {
+            append({ kind: 'sys', payload: { t: 'pile_reopened', pileId: overlay.pileId, reason } });
+            setOverlay({ kind: 'none' });
+          }}
+          onCancel={() => setOverlay({ kind: 'none' })}
+        />
+      ) : null}
+
+      {overlay.kind === 'reopen-zone' ? (
+        <ReopenPromptOverlay
+          targetLabel={state.zones.find((z) => z.id === overlay.zoneId)?.name ?? ''}
+          consequence="โซนนี้จะเปิดอีกครั้ง แต่กองที่ปิดไว้จะยังปิดอยู่ · the zone reopens, but piles already closed inside it stay closed."
+          onConfirm={(reason) => {
+            append({ kind: 'sys', payload: { t: 'zone_reopened', zoneId: overlay.zoneId, reason } });
+            setOverlay({ kind: 'none' });
+          }}
+          onCancel={() => setOverlay({ kind: 'none' })}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+function ReopenPromptOverlay(props: {
+  targetLabel: string;
+  consequence: string;
+  onConfirm: (reason: string) => void;
+  onCancel: () => void;
+}) {
+  const t = useTheme();
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: t.color.stage, zIndex: 10 }}>
+      <ReopenPrompt {...props} />
     </View>
   );
 }
@@ -195,19 +316,47 @@ function holdMsOverride(): number | undefined {
   return v ? Number(v) : undefined;
 }
 
-function PilePanel() {
+function PilePanel({
+  pile,
+  zone,
+  state,
+  onCloseZone,
+  onReopenPile,
+  onReopenZone,
+}: {
+  pile: Pile;
+  zone: Zone;
+  state: SaleState;
+  onCloseZone: () => void;
+  onReopenPile: (pileId: string) => void;
+  onReopenZone: (zoneId: string) => void;
+}) {
   const t = useTheme();
-  const { events, state } = useSale();
-  const pile = state.piles.find((p) => p.status === 'counting') ?? state.piles[0];
-  if (!pile) return null;
+  const { events, append } = useSale();
+  const [closePileConfirm, setClosePileConfirm] = useState(false);
+  const [closeZoneConfirm, setCloseZoneConfirm] = useState(false);
 
   const pt = pileTotals(events, pile.id);
   const zt = zoneTotals(events, state, pile.zoneId);
   const st = saleTotals(events);
-  const zone = state.zones.find((z) => z.id === pile.zoneId);
+  const stillCounting = pilesStillCounting(state, zone.id);
+
+  const closePile = () => {
+    append({ kind: 'sys', payload: { t: 'pile_closed', pileId: pile.id, forced: false } });
+    setClosePileConfirm(false);
+  };
+
+  const closeZone = () => {
+    append({
+      kind: 'sys',
+      payload: { t: 'zone_closed', zoneId: zone.id, forcedPiles: stillCounting.map((p) => p.id) },
+    });
+    setCloseZoneConfirm(false);
+    onCloseZone();
+  };
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, gap: t.space.md, flexDirection: 'row' }}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, gap: t.space.md, flexDirection: 'row', flexWrap: 'wrap' }}>
       <Card title={`${pile.name} · this pile`}>
         <Stat label="เข่งมาตรฐาน · standard" value={String(pt.standardBaskets)} big />
         <Stat label="เข่งไม่เต็ม · short" value={String(pt.shortBaskets)} />
@@ -224,9 +373,74 @@ function PilePanel() {
       </Card>
 
       <Card title="รวม · rollups">
-        <Stat label={`${zone?.name ?? 'zone'}`} value={`${formatKg(zt.netG)} กก.`} />
+        <Stat label={zone.name} value={`${formatKg(zt.netG)} กก.`} />
         <Stat label="ทั้งการขาย · whole sale" value={`${formatKg(st.netG)} กก.`} big rule />
         <Stat label="เข่งทั้งหมด" value={String(st.baskets)} />
+      </Card>
+
+      <Card title="ปิด / เปิดอีกครั้ง · close / reopen">
+        {pile.status === 'counting' ? (
+          !closePileConfirm ? (
+            <Button testID="close-pile" onPress={() => setClosePileConfirm(true)} disabled={pt.baskets === 0}>
+              ปิดกอง · close pile
+            </Button>
+          ) : (
+            <View style={{ gap: t.space.xs }}>
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}>
+                แน่ใจนะ? · are you sure?
+              </Text>
+              <View style={{ flexDirection: 'row', gap: t.space.xs }}>
+                <Button testID="close-pile-confirm" variant="destructive" onPress={closePile}>
+                  ยืนยันปิดกอง · confirm
+                </Button>
+                <Button testID="close-pile-cancel" onPress={() => setClosePileConfirm(false)}>
+                  ยกเลิก
+                </Button>
+              </View>
+            </View>
+          )
+        ) : pile.status === 'closed' ? (
+          <Button testID="reopen-pile" onPress={() => onReopenPile(pile.id)} disabled={!canReopenPile(state, pile.id)}>
+            เปิดกองอีกครั้ง · reopen pile
+          </Button>
+        ) : (
+          <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
+            กองยังไม่เริ่ม · not started yet
+          </Text>
+        )}
+
+        <View style={{ height: t.space.md }} />
+
+        {zone.status === 'open' ? (
+          !closeZoneConfirm ? (
+            <Button testID="close-zone" onPress={() => setCloseZoneConfirm(true)}>
+              ปิดโซน · close zone
+            </Button>
+          ) : (
+            <View style={{ gap: t.space.xs }}>
+              {stillCounting.length > 0 ? (
+                <Text testID="close-zone-warning" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.warn }}>
+                  {`ยังนับอยู่ ${stillCounting.length} กอง จะถูกปิดไปด้วย: ${stillCounting.map((p) => p.name).join(', ')}`}
+                </Text>
+              ) : null}
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}>
+                แน่ใจนะ? · are you sure?
+              </Text>
+              <View style={{ flexDirection: 'row', gap: t.space.xs }}>
+                <Button testID="close-zone-confirm" variant="destructive" onPress={closeZone}>
+                  ยืนยันปิดโซน · confirm
+                </Button>
+                <Button testID="close-zone-cancel" onPress={() => setCloseZoneConfirm(false)}>
+                  ยกเลิก
+                </Button>
+              </View>
+            </View>
+          )
+        ) : (
+          <Button testID="reopen-zone" onPress={() => onReopenZone(zone.id)} disabled={state.status !== 'open'}>
+            เปิดโซนอีกครั้ง · reopen zone
+          </Button>
+        )}
       </Card>
     </ScrollView>
   );
@@ -314,11 +528,17 @@ function sysLabel(p: { t: string } & Record<string, unknown>): string {
     case 'price_set': return `ราคา ${formatBaht(Number(p.satangPerKg))} ต่อ กก.`;
     case 'split_set': return `ส่วนแบ่ง ${String(p.ownerPct)}/${100 - Number(p.ownerPct)}`;
     case 'zone_added': return `เพิ่มโซน ${String(p.name)}`;
+    case 'zone_contract_set': return `สัญญาโซน — ${String(p.workerName)} ${String(p.ownerPct)}%`;
     case 'pile_added': return `เพิ่มกอง ${String(p.name)}`;
     case 'zero_check': return p.ok ? 'ตาชั่งขึ้นศูนย์ ✓' : `ตาชั่งไม่ศูนย์ ⚠ ${formatKg(Number(p.readingG))} กก.`;
     case 'tare_confirmed': return `ถังเปล่า ${formatKg(Number(p.tareG))} กก.`;
     case 'ready': return 'พร้อมนับ';
     case 'pile_closed': return 'ปิดกอง';
+    case 'pile_reopened': return `เปิดกองอีกครั้ง — ${String(p.reason)}`;
+    case 'zone_closed': return 'ปิดโซน';
+    case 'zone_reopened': return `เปิดโซนอีกครั้ง — ${String(p.reason)}`;
+    case 'sale_closed': return 'ปิดการขาย';
+    case 'sale_reopened': return `เปิดการขายอีกครั้ง — ${String(p.reason)}`;
     case 'clock_anomaly': return `⏱ เวลาเครื่องผิด (${String(p.anomaly)})`;
     default: return p.t;
   }
@@ -330,6 +550,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
     <View
       style={{
         flex: 1,
+        minWidth: 220,
         borderWidth: t.border.hair,
         borderColor: t.color.rule,
         borderRadius: t.radius.md,

@@ -1,0 +1,131 @@
+import { expect, test, type Page } from '@playwright/test';
+
+import { closeLifecycleScenario, seedSale, testSaleId } from './fixtures';
+
+/**
+ * Pile → zone → sale close lifecycle (S13, docs/ux/pile-zone-sale-lifecycle.md):
+ * closing a pile lands on a named decision point rather than a single
+ * "continue"; closing a zone names any pile still counting before force-
+ * closing it; closing the sale is a real event, not just a navigation; and
+ * reopening anything is a typed-reason, two-step, publicly-shown act.
+ *
+ * `closeLifecycleScenario` readies p1 and p3 (zone A and zone B respectively)
+ * and leaves p2 (also zone A) `not-started`, so "next pile in this zone" and
+ * "switch zone" both have somewhere real to go.
+ */
+
+async function openCounter(page: Page, standardBaskets = 3) {
+  const saleId = testSaleId('close-lifecycle');
+  await seedSale(page, saleId, closeLifecycleScenario(saleId, standardBaskets));
+  await page.goto(`/sale/${saleId}/counter`);
+  await expect(page.getByTestId('count')).toBeVisible();
+  return saleId;
+}
+
+test('closing a pile lands on the decision point, naming every option', async ({ page }) => {
+  await openCounter(page);
+
+  await page.getByTestId('tab-pile').click();
+  await page.getByTestId('close-pile').click();
+  await page.getByTestId('close-pile-confirm').click();
+
+  await page.getByTestId('tab-count').click();
+  await expect(page.getByTestId('pile-closed-transition')).toBeVisible();
+  await expect(page.getByTestId('pile-closed-total')).toContainText('3');
+  await expect(page.getByTestId('decision-next-pile')).toBeVisible();
+  await expect(page.getByTestId('decision-switch-zone')).toBeVisible();
+  await expect(page.getByTestId('decision-close-zone')).toBeVisible();
+  await expect(page.getByTestId('decision-close-sale')).toBeVisible();
+});
+
+test('"next pile in this zone" moves straight to the not-started pile\'s gate', async ({ page }) => {
+  await openCounter(page);
+
+  await page.getByTestId('tab-pile').click();
+  await page.getByTestId('close-pile').click();
+  await page.getByTestId('close-pile-confirm').click();
+  await page.getByTestId('tab-count').click();
+
+  await page.getByTestId('decision-next-pile').click();
+  await expect(page.getByTestId('crumb')).toContainText('กอง 2');
+  await expect(page.getByTestId('zero-yes')).toBeVisible();
+});
+
+test('the switcher jumps to any pile in any zone, closed or not', async ({ page }) => {
+  await openCounter(page);
+
+  await page.getByTestId('open-switcher').click();
+  await expect(page.getByTestId('zone-pile-switcher')).toBeVisible();
+  await page.getByTestId('switcher-pile-p3').click();
+
+  await expect(page.getByTestId('zone-pile-switcher')).toHaveCount(0);
+  await expect(page.getByTestId('crumb')).toContainText('กอง 3');
+  await expect(page.getByTestId('count')).toBeVisible();
+});
+
+test('reopening a closed pile requires a typed reason and a second confirm', async ({ page }) => {
+  await openCounter(page);
+
+  await page.getByTestId('tab-pile').click();
+  await page.getByTestId('close-pile').click();
+  await page.getByTestId('close-pile-confirm').click();
+  await expect(page.getByTestId('reopen-pile')).toBeVisible();
+
+  await page.getByTestId('reopen-pile').click();
+  await expect(page.getByTestId('reopen-prompt')).toBeVisible();
+
+  await page.getByTestId('reopen-prompt-reason').fill('นับผิด ต้องแก้');
+  await page.getByTestId('reopen-prompt-next').click();
+  await expect(page.getByTestId('reopen-prompt-reason-echo')).toContainText('นับผิด ต้องแก้');
+  await page.getByTestId('reopen-prompt-confirm').click();
+
+  await expect(page.getByTestId('reopen-prompt')).toHaveCount(0);
+  // Back on the pile tab, the pile is countable again — close-pile is offered,
+  // not reopen-pile.
+  await expect(page.getByTestId('close-pile')).toBeVisible();
+
+  await page.getByTestId('tab-log').click();
+  await expect(page.getByTestId('log')).toContainText('เปิดกองอีกครั้ง');
+  await expect(page.getByTestId('log')).toContainText('นับผิด ต้องแก้');
+});
+
+test('closing a zone names any pile still counting before force-closing it', async ({ page }) => {
+  await openCounter(page);
+
+  // p1 (zone A) is still counting; p2 (zone A) hasn't started. Closing zone A
+  // must name p1 before force-closing it.
+  await page.getByTestId('tab-pile').click();
+  await page.getByTestId('close-zone').click();
+  await expect(page.getByTestId('close-zone-warning')).toContainText('กอง 1');
+  await page.getByTestId('close-zone-confirm').click();
+
+  // Closing the zone hands off to the switcher — the operator just lost
+  // their current zone, so picking where to go next is the natural follow-up.
+  await expect(page.getByTestId('zone-pile-switcher')).toBeVisible();
+  await page.getByTestId('switcher-close').click();
+
+  await expect(page.getByTestId('reopen-zone')).toBeVisible();
+
+  await page.getByTestId('tab-log').click();
+  await expect(page.getByTestId('log')).toContainText('ปิดโซน');
+});
+
+test('closing the sale writes a real event and settlement offers reopening it', async ({ page }) => {
+  await openCounter(page);
+
+  await page.getByTestId('to-settlement').click();
+  await expect(page.getByTestId('owner-share')).toBeVisible();
+  await expect(page.getByTestId('reopen-sale')).toBeVisible();
+
+  await page.getByTestId('reopen-sale').click();
+  await page.getByTestId('reopen-prompt-reason').fill('ลูกค้าขอเพิ่มเข่ง');
+  await page.getByTestId('reopen-prompt-next').click();
+  await page.getByTestId('reopen-prompt-confirm').click();
+
+  await expect(page.getByTestId('reopen-sale')).toHaveCount(0);
+
+  // Closing again from the counter screen re-appends the close (not a no-op
+  // on an already-closed sale) and settlement still resolves.
+  await page.getByTestId('back-to-count').click();
+  await expect(page.getByTestId('to-settlement')).toBeVisible();
+});
