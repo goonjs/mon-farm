@@ -295,7 +295,7 @@ export const tokens = {
     /** Accept/reject flash. Long enough to register, short enough not to gate. */
     flash: 180,
     /** Ring sweep and the hold itself. The anti-mistap budget (F-6). */
-    hold: 3000,
+    hold: 1500,
     /** Undo-last stays available this long after a basket lands (F-12). */
     undoWindow: 8000,
     toast: 2400,
