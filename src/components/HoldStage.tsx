@@ -229,6 +229,34 @@ export function HoldStage({
   };
 
   /**
+   * The advance width of one rendered digit, in ems — read back off the glyph
+   * the device actually drew, so the width cap below is true for whatever face
+   * the system stack resolved to rather than for the one it was calibrated on.
+   *
+   * Converges in a single extra paint and then holds: the ratio is
+   * scale-invariant, so a numeral redrawn at the corrected size reproduces the
+   * same ratio, and re-applying it changes nothing.
+   *
+   * The two directions get different thresholds, because they are not the same
+   * kind of error. Overflow is corrected against the box in pixels and to the
+   * pixel — the numeral spilling off screen is the defect, and a proportional
+   * tolerance here is exactly what left a tablet 1.8px over. Growing back is
+   * only ever a lost-millimetres optimisation, so it takes a proportional
+   * epsilon, which is what stops sub-pixel jitter in a reported width from
+   * re-rendering forever.
+   */
+  const [advanceEm, setAdvanceEm] = useState<number>(t.publicNumeral.digitWidthEm);
+  const onCountLayout = (e: LayoutChangeEvent) => {
+    const { width } = e.nativeEvent.layout;
+    if (!width || !fontSize) return;
+    const measured = width / fontSize / Math.max(1, digits);
+    if (measured <= 0) return;
+    const overflowsStage = box.width > 0 && width > box.width + 0.5;
+    const underusesStage = measured < advanceEm * 0.995;
+    if (overflowsStage || underusesStage) setAdvanceEm(measured);
+  };
+
+  /**
    * Sized against the stage, not the device. See docs/ux/design-system.md §4:
    * the constraint is physical millimetres, so the numeral is a proportion of
    * the space it actually has. Never convert this to a fixed size.
@@ -237,10 +265,20 @@ export function HoldStage({
    * per-digit steps were tried first and quietly under-sized three digits to
    * 0.589 of the viewport, below the 0.62 floor — deriving it means the floor
    * holds at any digit count without anyone remembering to add a step.
+   *
+   * The width half of that needs the digit's advance in ems, and `advanceEm`
+   * below is measured rather than assumed. `t.font.family.sans` is a system
+   * stack: the face that renders the numeral is whatever the device happens to
+   * have, and its digits are not the token's estimated width on every one of
+   * them. Guessing low overflows the viewport (CI's Linux face measures 0.6558
+   * against the token's 0.62, which put a portrait numeral 22px past a 390px
+   * screen); guessing high gives back millimetres F-9.7 says the count cannot
+   * spare. So the token is the first paint's estimate, and every paint after
+   * it uses the ratio the glyph actually achieved.
    */
   const digits = String(count).length;
   const byHeight = box.height * t.publicNumeral.stageHeightRatio;
-  const byWidth = box.width / (t.publicNumeral.digitWidthEm * Math.max(1, digits));
+  const byWidth = box.width / (advanceEm * Math.max(1, digits));
   const fontSize = Math.max(24, Math.min(byHeight, byWidth));
 
   /**
@@ -342,6 +380,7 @@ export function HoldStage({
       <Text
         testID="count"
         accessibilityLiveRegion="polite"
+        onLayout={onCountLayout}
         style={{
           fontFamily: t.font.family.sans,
           fontWeight: t.font.weight.black,
