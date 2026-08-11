@@ -240,11 +240,20 @@ export const tokens = {
      */
     stageHeightRatio: 0.94,
     /**
-     * Approximate advance width of one tabular digit, in ems. Used to cap the
-     * size when a wide count would otherwise overflow: the real size is
-     * min(height-driven, width-driven), so digit count never needs its own
-     * hard-coded step. Per-digit steps were tried and quietly under-sized three
-     * digits to 0.589 of the viewport — below the floor below.
+     * STARTING estimate for the advance width of one tabular digit, in ems.
+     * Used to cap the size when a wide count would otherwise overflow: the real
+     * size is min(height-driven, width-driven), so digit count never needs its
+     * own hard-coded step. Per-digit steps were tried and quietly under-sized
+     * three digits to 0.589 of the viewport — below the floor below.
+     *
+     * It is only the first guess, and it is deliberately not trusted after the
+     * first paint. `sans` is a system stack, so which font actually renders the
+     * numeral depends on the device: this value is right for the macOS system
+     * face it was calibrated against and 5.8% low for the one CI's Linux
+     * runner picks, which put a width-bound numeral 22px outside a 390px
+     * portrait viewport. HoldStage re-derives the true advance from the glyph
+     * it actually drew (see `advanceEm` there) — a constant cannot be correct
+     * for every system stack, so it is measured rather than assumed.
      */
     digitWidthEm: 0.62,
     /**
