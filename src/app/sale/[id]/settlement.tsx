@@ -5,11 +5,11 @@
  * `settle()` produces: each line is one arithmetic operation, so a
  * disagreement can be localised to a step rather than to "the app".
  *
- * NOTE: this is the S15 compile-fix, not the S18 redesign. Workers are now per
- * zone, so the old single "owner N% / worker N%" card no longer describes the
- * sale — it shows an aggregate owner total instead, and per-zone rows carry
- * each zone's own worker and percentage. The dedicated per-worker view
- * (`Settlement.perWorker`, already computed) is S18's screen.
+ * Workers are per zone, so there is no single "owner N% / worker N%" card —
+ * the leading figure is an aggregate owner total, the per-zone card carries
+ * each zone's own worker and percentage, and the per-worker card (S18) sums
+ * across zones for whoever gets paid, which is the number a worker actually
+ * wants to see: not "what did zone A make" but "what do I get, total".
  */
 
 import { useState } from 'react';
@@ -161,6 +161,29 @@ export default function SettlementScreen() {
             <View style={{ borderTopWidth: t.border.hair, borderTopColor: t.color.rule, paddingTop: t.space.sm }}>
               <Row label="รวม · total" value={formatBaht(s.grossSatang)} bold />
             </View>
+          </View>
+
+          <View style={card(t)}>
+            <CardTitle>แยกตามคนงาน · per worker</CardTitle>
+            {s.perWorker.length === 0 ? (
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+                ยังไม่มีการระบุคนงานประจำโซน · no zone has a worker named yet
+              </Text>
+            ) : (
+              s.perWorker.map((w) => {
+                const zoneNames = w.zoneIds
+                  .map((zoneId) => s.perZone.find((z) => z.zoneId === zoneId)?.zoneName ?? zoneId)
+                  .join(', ');
+                return (
+                  <View key={w.personId} testID={`worker-${w.personId}`} style={{ marginBottom: t.space.sm }}>
+                    <Row label={w.workerName} value={formatBaht(w.workerSatang)} bold />
+                    <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
+                      {zoneNames}
+                    </Text>
+                  </View>
+                );
+              })
+            )}
           </View>
         </View>
       </ScrollView>

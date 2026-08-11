@@ -92,15 +92,14 @@ At `Review` — implemented, verified in a browser, awaiting sign-off and CI:
 - [x] `docs/stories/s13-close-lifecycle.md` — pile close → decision point →
       zone close → sale close, the zone/pile switcher, and typed-reason
       reopen for a pile, a zone, and the sale
+- [x] `docs/stories/s18-settlement-per-worker.md` — the per-worker payout
+      card, summing each worker's total across every zone that names them
 
 Not started — no story file written yet:
 
 - [ ] **S10** Thai speech — `expo-speech` is installed (no longer blocked) but
       nothing imports it yet. **The announced register does not exist**, which
       means half the cross-check the product is built around is missing.
-- [ ] **S18** settlement screen rework — per-zone worker rows exist (S15's
-      compile-fix), but the dedicated per-worker payout view
-      (`Settlement.perWorker`, already computed and tested) has no screen yet.
 
 ## Known blockers
 
