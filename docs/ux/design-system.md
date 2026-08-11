@@ -320,13 +320,17 @@ Motion is functional here, and there is very little of it.
 |---|---|---|
 | `flash` | 180ms | Accept/reject wash |
 | `move` | 160ms | Tab and panel transitions |
-| `hold` | 3000ms | The dial sweep — this *is* the anti-mistap budget |
+| `hold` | 1500ms | The dial sweep — this *is* the anti-mistap budget |
 | `toast` | 2400ms | Transient confirmations |
 
 `prefers-reduced-motion` removes the dial's sweep animation but **not the
-3-second delay** — the delay is a safety mechanism, not decoration. Under
-reduced motion the dial steps through discrete tick states instead of sweeping
+hold delay** — the delay is a safety mechanism, not decoration. Under reduced
+motion the dial steps through discrete tick states instead of sweeping
 continuously, so duration stays visible without continuous animation.
+
+`hold` shipped at 3000ms and was lowered to 1500ms on 2026-08-11 after
+hands-on testing found 3 seconds too slow for a real counting rhythm — still
+long enough to be a deliberate hold rather than a stray tap, per F-6.
 
 ---
 
