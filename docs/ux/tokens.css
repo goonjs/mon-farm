@@ -50,7 +50,7 @@
   --bezel-width                        : 12px;
   --bezel-inset                        : 6px;
   --duration-flash                     : 180ms;
-  --duration-hold                      : 3000ms;
+  --duration-hold                      : 1500ms;
   --duration-undo-window               : 8000ms;
   --duration-toast                     : 2400ms;
   --duration-move                      : 160ms;
