@@ -78,6 +78,12 @@ Commit subject ≤ 50 characters, imperative mood; explain *why* in the body.
 One logical, medium-sized change per commit. Full detail in
 `docs/process.md`.
 
+**Never commit ahead of an unanswered question.** If a change depends on
+something the owner has been asked and has not yet answered, it stays in
+the working tree — uncommitted — until the answer arrives. Do not commit a
+best guess intending to amend it later. Same rule for pushing: an open
+question blocks the commit, and the commit is what a push is waiting on.
+
 ## Conventions
 
 - Docs are versioned in this repo under `docs/` and reviewed like code.
