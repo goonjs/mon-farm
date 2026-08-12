@@ -12,11 +12,11 @@ yet — stories are written and worked one at a time from here.
 | --- | --- |
 | S28 reports — build it? | **Yes.** PRD out-of-scope entry reversed and narrowed to a completed-sale report, pile-deep, on-device. Export stays deferred. |
 | S29 worker deductions — build it? | **Yes.** Epic 1's exclusion moved here. |
-| S30 price reference — build it? | **Yes**, as a reference only, never blocking. **Blocked until a source is named** — PRD open question 9. |
+| S30 price reference — build it? | **Yes**, as a reference only, never blocking. |
 | Deductions before or after the split? | **After.** Gross splits first; each worker's deductions come off their own share. The owner bears none of it and the buyer-facing total does not move. |
 | Item 9 — a weight with no basket count? | **Bulk entry.** A pile that was not counted live opens a form — baskets, plus the weight of what is left over — instead of the counter. See S23. |
 | Does bulk entry still need the zero/tare gate? | **No — skipped, and the skip is logged as an event. A typed reason is required.** |
-| S30 — what does the fetched price do? | **Recorded as a reference only** (`indexRef`), optional, never auto-filled and never in the money chain. Source POC commissioned. |
+| S30 — fetch the price programmatically? | **No — out of scope** (researched 2026-08-11; nothing publishes cup lump honestly). The app keeps a list of **sources** — name, note, URL — surfaced on the sale-setup screen to open by hand, and logs each observed price, plus the ล้ง's own, as a reference. Never in the money chain. |
 
 ## Where this came from
 
@@ -48,7 +48,7 @@ way the money was actually earned — by zone and by pile.
 | 7 | Sale reports, broken down by zone and pile | **S28** | Scope change — **agreed** |
 | 8 | Per-worker deductions (ค่าปุ๋ย, ค่าใช้จ่ายอื่นๆ) | **S29** | Scope change — **agreed** |
 | 9 | Bulk entry for a pile that was not counted live | **S23** | Correction |
-| 10 | Rubber price from an API | **S30** | Scope change — **agreed, blocked on a source** |
+| 10 | Rubber price from an API | **S30** | Scope change — **agreed, redesigned: record, don't fetch** |
 
 ---
 
@@ -306,88 +306,71 @@ session.
 
 ---
 
-## S30 — Price from a data source (scope change — agreed, blocked)
+## S30 — Named price sources, checked by hand and logged
 
-**Item 10.** The PRD lists **"Live market price index feeds"** under out of
-scope for v1, with price entered manually (FR-2.3). There are three separate
-problems here and they should not be collapsed:
+**Item 10, redesigned 2026-08-11** after the research below. The app records
+where a price came from; it does not go and get it.
 
-**1. It conflicts with the product's first constraint.** The app is
-offline-first, and the price is agreed *before the first basket* between two
-people standing at a scale. A price that arrives over the network can be
-absent exactly when it is needed. Whatever is built, manual entry stays the
-primary path and the fetched number is a *reference*, never a value the app
-depends on having.
+### What the research found
 
-**2. Investing.com specifically is the wrong source.** It has no public API
-for this, and scraping it is against its terms of use — I am not going to
-build that. Legitimate alternatives worth checking, in rough order of
-fitness: the Rubber Authority of Thailand (การยางแห่งประเทศไทย) published
-daily cup-lump prices, the Thai Rubber Association, and TFEX's rubber
-futures settlement. What the owner actually compares against in practice —
-which may be none of these, and may be the ล้ง's own quoted board — should
-decide it. FR-2.3's `indexRef` field already exists to record *which*
-reference was used, and is currently free text.
-
-**3. It trips two gates in `CLAUDE.md`.** A network client is very likely a
-new dependency (permission + rationale + a vulnerability/maintainer check
-presented *before* the ask), and outbound network access from the app is a
-new architectural surface that `docs/architecture.md` currently does not
-have — there is no backend at all today.
-
-**Agreed 2026-08-11, in the smallest honest version**: fetch on demand from
-one agreed source, show it beside the price field as a reference with its
-timestamp and its source recorded into `indexRef`, cache the last value, and
-never block or auto-fill. That is one screen's worth of work and does not
-commit the architecture to anything.
-
-**Confirmed by the owner 2026-08-11**, and the limits are the story:
-
-- The fetched number is **recorded as a reference only**. It is never used
-  in the money chain, never auto-fills the price field, and never blocks
-  anything. What it feeds is `indexRef` — the field FR-2.3 already has for
-  recording *which* reference a price was agreed against.
-- The whole feature is **optional**. The app is complete and correct with
-  the fetch failing, disabled, or never configured.
-
-### Source: investigated 2026-08-11, and the finding is "none yet"
-
-A proof-of-concept looked at the two sources the owner named, plus RAOT,
-asking one question: does any of them publish **ยางก้อนถ้วย** — cup lump,
-what this app actually prices — in a machine-readable form under terms that
-permit automated access?
+The question put to it was narrow: does anything publish **ยางก้อนถ้วย** —
+cup lump, what this app prices — machine-readably, under terms permitting
+automated access?
 
 | Source | Verdict |
 | --- | --- |
-| **TFEX** | **Ruled out on relevance, not availability.** RSS3/RSS3D futures are ribbed smoked sheet — a different commodity at a different point in the chain — and TFEX's rubber futures settle off the **Osaka** RSS3 benchmark, which is a Japanese export price twice removed from a Thai farmgate one. Showing it beside a cup-lump entry would mislead even labelled as a reference. |
-| **Thai Rubber Association** | **No evidence it publishes cup lump at all.** Its orientation is export/RSS grades. Not a candidate on current evidence. |
-| **RAOT** (การยางแห่งประเทศไทย) | **The only source that demonstrably prices cup lump** — its own column is `ยางก้อนถ้วย (DRC100%)`. But it publishes **periodic bulk spreadsheets, not a daily feed**, and the basis is DRC 100%. |
+| **TFEX** | **Ruled out on relevance, not availability.** RSS3/RSS3D futures are ribbed smoked sheet, and TFEX's rubber futures settle off the **Osaka** benchmark — a Japanese export price twice removed from a Thai farmgate one. Showing it beside a cup-lump entry would mislead even labelled as a reference. |
+| **Thai Rubber Association** | **No evidence it publishes cup lump at all.** Its orientation is export/RSS grades. |
+| **RAOT** | **The only source that demonstrably prices cup lump** — its own column is `ยางก้อนถ้วย (DRC100%)`. But it publishes periodic bulk spreadsheets rather than a daily feed, on a **DRC 100%** basis, which is not the price paid at the gate. Its site is also a legacy CMS showing signs of compromise, so anything parsed from it would be untrusted input. |
 
-Two caveats on RAOT that matter more than the plumbing:
+Reachability was never verified — the research sandbox's proxy blocked all
+three sites, so no robots.txt or terms were read. That half stays honestly
+unanswered, and it stopped mattering: the blocking problem is not access but
+**relevance**. Cup lump is a *local* price varying by district, buyer and
+DRC. A national DRC-100% figure would sit next to the agreed price looking
+authoritative while being materially different from it — in an app whose
+premise is that the agreed number is the one that counts, that is a harm,
+not a convenience.
 
-- **DRC 100% is not what a farmer is paid at the gate.** A national
-  reference on a different basis could read as authoritative while being
-  materially different from the price actually agreed — in an app whose
-  entire premise is that the agreed number is the one that counts, that is a
-  harm, not a convenience.
-- The site is a legacy CMS showing signs of compromise (unrelated spam pages
-  served from it). Anything parsed from it is untrusted input and must never
-  reach the event log unvalidated.
+### What is built instead
 
-**Recommendation: build nothing yet.** Not "it is hard" — cup lump is a
-*local* farmgate price that varies by district, buyer and DRC, and no
-national daily figure represents it honestly. The reachability question is
-genuinely unanswered (this sandbox's proxy blocked all three sites, so
-nothing was verified live, and robots.txt / terms were never read), but it
-is the second question. The first is whether any published number is the
-number the owner actually compares against — and on the evidence, the
-honest answer is the ล้ง's own board.
+The insight the research forces: the number actually negotiated against is
+**the ล้ง's own board**, and no API will ever carry it. So the app stops
+trying to be the thing that knows the price and becomes the thing that
+records where a price came from.
 
-**S30 therefore stays last and stays blocked.** PRD open question 9 remains
-open. A probe script is saved outside the repo for running from a Thai
-network if the owner wants the reachability half answered properly.
+- **Sources are configuration**: a list the owner maintains, each with a
+  **name**, a **note**, and a **URL**. Device settings, not sale data —
+  same home as S27's farm profile.
+- **The sale-setup screen surfaces them**, so a source can be opened and
+  checked by hand at the moment the price is being agreed. The app's job
+  here is to put the link where it is needed, not to follow it.
+- **Observed prices are logged as references against the sale** — what the
+  source said, when it was looked at, and a note. The ล้ง's own quoted
+  price is logged the same way, as a first-class reference rather than a
+  special case, because it is the one that matters most.
+- **References never enter the money chain.** The agreed price
+  (`price_set`) remains the only number settlement uses. A reference is
+  context printed beside it — the same discipline FR-7.4 applies to every
+  other figure on that screen.
 
----
+### What this costs, which is the point
+
+Nothing. No dependency, no outbound connection, no fetch to fail at the
+scale, no parsing of an untrusted CMS, no terms-of-use question. The two
+`CLAUDE.md` gates this story used to trip — dependency install and network
+egress — do not apply to it any more, and neither does the offline-first
+tension: there was never anything to be offline from.
+
+**Model impact**: a new `sys` event for a logged reference, carrying a
+snapshot of the source name (the same reason `zone_contract_set` snapshots
+`workerName` — renaming a source next month must not rewrite what a past
+sale recorded), the observed price, a note and when it was observed. The
+source list itself stays out of the log, being device configuration.
+
+**Still open**: nothing blocking. This can be built whenever it comes up in
+the order below.
+
 
 ## Order of work
 
@@ -404,14 +387,12 @@ built once against the final money model.
 6. **S27** — farm profile prefills setup
 7. **S29** — worker deductions
 8. **S28** — reports, by zone and pile
-9. **S30** — price reference — **blocked on PRD open question 9** (source POC in flight)
+9. **S30** — named price sources, logged by hand — no longer blocked
 
 ## Still open
 
-- **Which price source** (PRD open question 9). S30 does not start without
-  it. A proof-of-concept against the Thai Rubber Association and TFEX is
-  underway; the question is whether either publishes cup-lump prices
-  machine-readably under terms that allow it.
+Nothing blocking. Every question raised when this epic was drafted has been
+answered — see the decisions table at the top.
 
 ## Definition of done for the epic
 
