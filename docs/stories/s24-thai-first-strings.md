@@ -1,6 +1,6 @@
 # Story: One language at a time, Thai first
 
-Status: Draft
+Status: In Progress — acceptance criteria agreed by the owner 2026-08-11.
 
 ## Context
 
