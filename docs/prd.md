@@ -369,6 +369,19 @@ the count together.
 Because the operator's eyes are on the scale and their hands are busy, the
 voice — not the screen — carries the moment-to-moment state.
 
+**FR-11.12 — The announced register is always Thai, whatever the UI is set
+to** (decided 2026-08-11, when the UI became switchable in S24). The
+interface language is a preference of the person holding the phone; the
+voice is aimed at everyone else — the ล้ง's people, whoever is lifting
+baskets, anyone within earshot — and they are Thai speakers. FR-9's
+cross-check depends on the other party being able to follow a count without
+holding anything, so a count announced in English because the operator
+changed their own labels would break the cross-check silently, for everyone
+except the one person who changed the setting. Spoken phrases and spoken
+numerals therefore do not follow the locale, and are not translated at all.
+On screen, numerals stay Arabic digits in both locales for a separate
+reason: the log and the settlement are documents two parties check by hand.
+
 **On entering a new level (pile / zone) and tapping Ready:**
 
 - FR-11.1 The app **reads the level's information aloud in Thai** — the
@@ -563,13 +576,22 @@ where the remaining questions get answered.
 - **Worker lead login.** Name recorded only; no account, no permissions
   model in v1.
 - Payments/disbursement of money.
-- ~~Live market price index feeds (price index is entered manually,
-  FR-2.3)~~ — **brought into scope 2026-08-11**, with a hard limit: the
-  fetched number is a **reference shown beside the price field**, never a
-  value the app depends on having. Manual entry stays the primary path,
-  because the price is agreed between two people at a scale and the
-  network can be absent exactly then. Carried by S30, which is blocked
-  until a source is named — see open question 9.
+- **Fetching a market price programmatically** (FR-2.3) — still out, and
+  now for a researched reason rather than an assumed one (2026-08-11).
+  Nothing published carries ยางก้อนถ้วย at the price a farm is actually
+  paid: TFEX is ribbed smoked sheet off the Osaka benchmark, the Thai
+  Rubber Association shows no cup-lump publication, and RAOT's cup-lump
+  column is bulk spreadsheets on a DRC 100% basis. Cup lump is a *local*
+  price varying by district, buyer and DRC, so a national figure would
+  read as authoritative while differing from what was agreed.
+
+  **What replaced it, in scope as S30**: the owner keeps a list of price
+  **sources** — name, note and URL — and checks them by hand. Each
+  observed price is logged against the sale as a reference, alongside the
+  ล้ง's own quoted price. The app records where a number came from; it
+  never goes and gets it. This keeps the ล้ง's board — which is what is
+  actually negotiated against, and is not fetchable by anyone — a
+  first-class reference rather than the one source the app cannot see.
 - Production/agronomy tracking (tapping records, yield, inputs).
 - Buyer marketplace or price discovery across buyers.
 - Multi-currency; THB only.
@@ -658,6 +680,17 @@ Recorded so the reasoning is not lost once the questions disappear.
   buyer-facing total does not move — a deduction shifts money between the
   two parties to the contract, and nothing else. This is what `basis`
   resolves to, and it is the first time that field has been load-bearing.
+- **2026-08-11 — The app records price references; it does not fetch
+  them** (FR-2.3). Research found nothing publishing ยางก้อนถ้วย at a
+  local farmgate price, so automated fetching is out of scope — see the
+  out-of-scope list. Instead the owner keeps **named sources** (name,
+  note, URL), surfaced on the sale-setup screen so they can be opened and
+  checked by hand, and logs what each one said as a reference against the
+  sale, together with the ล้ง's own quoted price. The agreed price stays
+  the one both parties set; references are context beside it and never
+  enter the money chain. This also keeps the ล้ง's board — the number
+  actually negotiated against, and fetchable by nobody — a first-class
+  reference instead of the one source the app structurally cannot see.
 - **2026-08-11 — A pile can be entered in bulk instead of counted.**
   Where the app was not running for the count, the pile is opened into a
   bulk-entry form — how many baskets, plus the weight of what is left
@@ -698,21 +731,14 @@ rather than by decision up front.
 7. **Different splits across zones in one sale** (FR-8.6) — assumed to
    apply per zone against that zone's contribution; confirm.
 8. **Sale export format** (FR-10.2) — printed slip, PDF, LINE share?
-9. **Which price reference** (FR-2.3), now that a price feed is in scope.
-   Investing.com is ruled out — no public API, and scraping breaks its
-   terms of use. **Investigated 2026-08-11**: TFEX is ruled out on
-   relevance (RSS3 futures are ribbed smoked sheet, settled off the Osaka
-   benchmark — not cup lump, and not Thai farmgate); the Thai Rubber
-   Association shows no evidence of publishing cup lump; RAOT does publish
-   `ยางก้อนถ้วย`, but as periodic bulk spreadsheets on a **DRC 100%**
-   basis rather than a daily feed at the price a farmer is actually paid.
-   The open question is therefore sharper than "which API": **is there any
-   published figure that honestly represents a local cup-lump price?** Cup
-   lump varies by district, buyer and DRC, which is what makes a national
-   reference potentially misleading rather than merely imprecise. The
-   ล้ง's own quoted board may be the real answer, and it is not fetchable.
-   S30 stays blocked; building against the wrong number is worse than not
-   building it.
+9. ~~**Which price reference** (FR-2.3)~~ — **answered 2026-08-11: none,
+   programmatically.** The research is recorded in the out-of-scope list
+   above and in `docs/epics/epic-2-second-field-round.md` §S30. No
+   published source carries a local cup-lump price honestly, so the app
+   stops trying to be the one that knows and becomes the one that records
+   where the number came from. Sources are a configurable list the owner
+   maintains and checks by hand; observed prices are logged as references
+   against the sale. See the Decided entry below.
 
 ---
 
