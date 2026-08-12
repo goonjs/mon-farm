@@ -700,11 +700,19 @@ rather than by decision up front.
 8. **Sale export format** (FR-10.2) — printed slip, PDF, LINE share?
 9. **Which price reference** (FR-2.3), now that a price feed is in scope.
    Investing.com is ruled out — no public API, and scraping breaks its
-   terms of use. Candidates: the Rubber Authority of Thailand's published
-   daily cup-lump price, the Thai Rubber Association, TFEX rubber futures
-   — or the ล้ง's own quoted board, if that is what is actually compared
-   against. S30 cannot start until this is answered; building against the
-   wrong number is worse than not building it.
+   terms of use. **Investigated 2026-08-11**: TFEX is ruled out on
+   relevance (RSS3 futures are ribbed smoked sheet, settled off the Osaka
+   benchmark — not cup lump, and not Thai farmgate); the Thai Rubber
+   Association shows no evidence of publishing cup lump; RAOT does publish
+   `ยางก้อนถ้วย`, but as periodic bulk spreadsheets on a **DRC 100%**
+   basis rather than a daily feed at the price a farmer is actually paid.
+   The open question is therefore sharper than "which API": **is there any
+   published figure that honestly represents a local cup-lump price?** Cup
+   lump varies by district, buyer and DRC, which is what makes a national
+   reference potentially misleading rather than merely imprecise. The
+   ล้ง's own quoted board may be the real answer, and it is not fetchable.
+   S30 stays blocked; building against the wrong number is worse than not
+   building it.
 
 ---
 
