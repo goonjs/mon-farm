@@ -350,15 +350,42 @@ commit the architecture to anything.
 - The whole feature is **optional**. The app is complete and correct with
   the fetch failing, disabled, or never configured.
 
-**Source: being established.** A proof-of-concept was commissioned
-2026-08-11 against the two sources the owner named — the Thai Rubber
-Association and TFEX — asking specifically whether either publishes
-**ยางก้อนถ้วย** (cup lump, what this app prices) in a machine-readable form,
-under terms that permit automated access. RSS3 futures are not cup lump,
-and a source that only carries them is not a match however convenient its
-API is. PRD open question 9 stays open until that comes back; the
-dependency and network-egress approvals are separate asks made when the
-story starts, not now.
+### Source: investigated 2026-08-11, and the finding is "none yet"
+
+A proof-of-concept looked at the two sources the owner named, plus RAOT,
+asking one question: does any of them publish **ยางก้อนถ้วย** — cup lump,
+what this app actually prices — in a machine-readable form under terms that
+permit automated access?
+
+| Source | Verdict |
+| --- | --- |
+| **TFEX** | **Ruled out on relevance, not availability.** RSS3/RSS3D futures are ribbed smoked sheet — a different commodity at a different point in the chain — and TFEX's rubber futures settle off the **Osaka** RSS3 benchmark, which is a Japanese export price twice removed from a Thai farmgate one. Showing it beside a cup-lump entry would mislead even labelled as a reference. |
+| **Thai Rubber Association** | **No evidence it publishes cup lump at all.** Its orientation is export/RSS grades. Not a candidate on current evidence. |
+| **RAOT** (การยางแห่งประเทศไทย) | **The only source that demonstrably prices cup lump** — its own column is `ยางก้อนถ้วย (DRC100%)`. But it publishes **periodic bulk spreadsheets, not a daily feed**, and the basis is DRC 100%. |
+
+Two caveats on RAOT that matter more than the plumbing:
+
+- **DRC 100% is not what a farmer is paid at the gate.** A national
+  reference on a different basis could read as authoritative while being
+  materially different from the price actually agreed — in an app whose
+  entire premise is that the agreed number is the one that counts, that is a
+  harm, not a convenience.
+- The site is a legacy CMS showing signs of compromise (unrelated spam pages
+  served from it). Anything parsed from it is untrusted input and must never
+  reach the event log unvalidated.
+
+**Recommendation: build nothing yet.** Not "it is hard" — cup lump is a
+*local* farmgate price that varies by district, buyer and DRC, and no
+national daily figure represents it honestly. The reachability question is
+genuinely unanswered (this sandbox's proxy blocked all three sites, so
+nothing was verified live, and robots.txt / terms were never read), but it
+is the second question. The first is whether any published number is the
+number the owner actually compares against — and on the evidence, the
+honest answer is the ล้ง's own board.
+
+**S30 therefore stays last and stays blocked.** PRD open question 9 remains
+open. A probe script is saved outside the repo for running from a Thai
+network if the owner wants the reachability half answered properly.
 
 ---
 
