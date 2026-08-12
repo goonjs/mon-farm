@@ -53,6 +53,36 @@ Ask again, every time.
 
 - **No push to remote** (including branch creation, force-push, tags)
   without explicit confirmation for that specific push.
+
+  **Reconsidered and deliberately kept, 2026-08-11. Do not propose
+  relaxing this again.** It was argued that the gate had become redundant
+  once "never commit ahead of an unanswered question" was added below —
+  if nothing is committed without the owner's answer, a push cannot carry
+  anything unapproved, so the check appears to be catching a second time
+  what commit time already caught.
+
+  That argument misses what the gate is for. It is not primarily a filter
+  on content; it is the point at which the owner is *conscious of the
+  concern, acknowledges it, and takes ownership of it*. Pushing is when
+  work stops being local and becomes something CI runs, reviewers read
+  and a merge can carry into `main` — the owner intends to be the one who
+  decides that moment, every time, and to have registered that they
+  decided it.
+
+  Two consequences worth being explicit about, because they are the usual
+  counter-arguments:
+
+  - **The friction is the feature.** A confirmation that becomes
+    automatic has stopped being a decision. The cost — one word, once per
+    push — is what keeps the acknowledgement real rather than ceremonial.
+  - **A rule an agent follows is weaker than a gate it cannot pass.** The
+    commit-time rule depends on the agent correctly judging that a
+    question was answered. This gate does not depend on that judgement
+    being right.
+
+  So: still ask, every time, however obvious the answer seems and however
+  many times in a row it has been yes. Asking is not a failure to read the
+  room — it is the mechanism working.
 - **No file deletion** without explicit confirmation for that specific
   deletion.
 - **No access outside the working directory** (reading, writing, or
