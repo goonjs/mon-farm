@@ -15,6 +15,8 @@ yet — stories are written and worked one at a time from here.
 | S30 price reference — build it? | **Yes**, as a reference only, never blocking. **Blocked until a source is named** — PRD open question 9. |
 | Deductions before or after the split? | **After.** Gross splits first; each worker's deductions come off their own share. The owner bears none of it and the buyer-facing total does not move. |
 | Item 9 — a weight with no basket count? | **Bulk entry.** A pile that was not counted live opens a form — baskets, plus the weight of what is left over — instead of the counter. See S23. |
+| Does bulk entry still need the zero/tare gate? | **No — skipped, and the skip is logged as an event. A typed reason is required.** |
+| S30 — what does the fetched price do? | **Recorded as a reference only** (`indexRef`), optional, never auto-filled and never in the money chain. Source POC commissioned. |
 
 ## Where this came from
 
@@ -159,10 +161,25 @@ is invented.
 - Totals and settlement need no change: both already sum `accept` and
   `short`.
 
-**Open**: whether a bulk-entered pile should still require the zero/tare
-gate. It has no scale reading to check, so the gate has nothing to verify —
-I'd propose bulk entry bypasses it and the pile is marked as never zeroed,
-rather than asking someone to confirm a check they did not perform.
+**The zero/tare gate is skipped, and the skip is recorded** (owner,
+2026-08-11). A pile entered in bulk has no scale reading to check, so the
+gate has nothing to verify and asking someone to confirm a check they did
+not perform would put a false record in the log. Instead:
+
+- Bulk entry bypasses the gate.
+- **A `sys` event records the skip**, so the log says the check was skipped
+  rather than staying silent about it. Silence would be indistinguishable
+  from a pile that was checked — the same reasoning as the `reject` event
+  in F-7: a thing that did not happen has to be visible as *not having
+  happened*, not merely absent.
+- **A reason is required** to enter a pile in bulk, typed by the person
+  doing it, and carried on the event. This is the same bar `pile_reopened`
+  and `void` already meet: an action that puts numbers into the record
+  without anyone watching them being produced has to say why.
+
+That combination is what keeps a bulk-entered pile honestly distinguishable
+from a counted one at every level — the baskets carry a distinct `source`,
+the gate skip is on the record, and the reason says why.
 
 ---
 
@@ -324,11 +341,23 @@ timestamp and its source recorded into `indexRef`, cache the last value, and
 never block or auto-fill. That is one screen's worth of work and does not
 commit the architecture to anything.
 
-**Still blocked**, and deliberately last in the sequence: no source has been
-named (PRD open question 9). This story does not start until one is — and
-if none of the public sources matches what the owner actually prices
-against, dropping the item beats building it against the wrong number. The
-dependency and network-egress approvals are separate asks, made when the
+**Confirmed by the owner 2026-08-11**, and the limits are the story:
+
+- The fetched number is **recorded as a reference only**. It is never used
+  in the money chain, never auto-fills the price field, and never blocks
+  anything. What it feeds is `indexRef` — the field FR-2.3 already has for
+  recording *which* reference a price was agreed against.
+- The whole feature is **optional**. The app is complete and correct with
+  the fetch failing, disabled, or never configured.
+
+**Source: being established.** A proof-of-concept was commissioned
+2026-08-11 against the two sources the owner named — the Thai Rubber
+Association and TFEX — asking specifically whether either publishes
+**ยางก้อนถ้วย** (cup lump, what this app prices) in a machine-readable form,
+under terms that permit automated access. RSS3 futures are not cup lump,
+and a source that only carries them is not a match however convenient its
+API is. PRD open question 9 stays open until that comes back; the
+dependency and network-egress approvals are separate asks made when the
 story starts, not now.
 
 ---
@@ -348,14 +377,14 @@ built once against the final money model.
 6. **S27** — farm profile prefills setup
 7. **S29** — worker deductions
 8. **S28** — reports, by zone and pile
-9. **S30** — price reference — **blocked on PRD open question 9**
+9. **S30** — price reference — **blocked on PRD open question 9** (source POC in flight)
 
 ## Still open
 
 - **Which price source** (PRD open question 9). S30 does not start without
-  it.
-- **Whether bulk entry bypasses the zero/tare gate** (S23). Proposal in that
-  section; to settle when the story is written.
+  it. A proof-of-concept against the Thai Rubber Association and TFEX is
+  underway; the question is whether either publishes cup-lump prices
+  machine-readably under terms that allow it.
 
 ## Definition of done for the epic
 
