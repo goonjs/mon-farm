@@ -76,13 +76,15 @@ const th = {
   'gate.tareConfirm': 'ยืนยันน้ำหนักตะกร้า',
   'gate.expected': '{tare} + {std} = {expected} กก.',
   'gate.ready': 'เริ่มนับได้',
-  /**
-   * The spoken read-back phrase itself (FR-11.1), quoted on the button that
-   * commits `ready`. It is what the app will SAY, so it stays Thai in every
-   * locale — translating a quotation of speech would make the button and the
-   * voice disagree.
-   */
-  'gate.spokenReady': 'พร้อมค่ะ',
+
+  // ── The announced register (FR-11) — ALWAYS THAI ─────────────────────────
+  //
+  // Everything under `say.` is spoken aloud, or is a quotation on screen of
+  // something spoken aloud. It does NOT follow the UI locale, and there is no
+  // English column for any of it — see the note at the foot of this file.
+  'say.ready': 'พร้อมค่ะ',
+  'say.count': '{n}',
+  'say.next': 'ต่อไปค่ะ',
 
   // ── Reopen (lifecycle §7.2) ──────────────────────────────────────────────
   'reopen.title': 'เปิด {target} อีกครั้ง',
@@ -262,6 +264,30 @@ export const messages = { th, en } as const;
 export type MessageId = keyof typeof th;
 
 /**
+ * True for the announced register (FR-11): everything the app SAYS, and every
+ * on-screen quotation of it.
+ *
+ * ── The announced register is always Thai ───────────────────────────────────
+ *
+ * The UI locale is about the person holding the phone. The voice is not — it
+ * is aimed at the people standing around the scale, and they are Thai
+ * speakers. FR-9's whole cross-check rests on the other party hearing a count
+ * they can follow without holding anything; a count announced in English
+ * because the operator switched their own labels would break exactly that,
+ * silently, for everyone except the one person who changed the setting.
+ *
+ * So `say.*` never takes a locale and never gets an English column. It is not
+ * an untranslated backlog item — translating it is the bug.
+ *
+ * The spoken numerals are Thai for the same reason and stay Arabic digits on
+ * screen for a different one: the log and the settlement are documents two
+ * parties check by hand.
+ */
+export function isAnnounced(id: MessageId): boolean {
+  return id.startsWith('say.');
+}
+
+/**
  * Ids knowingly shown in Thai even to an English reader.
  *
  * Not a to-do list — an explicit decision, per id, that translating it would
@@ -269,4 +295,7 @@ export type MessageId = keyof typeof th;
  * from `en` that is not listed here, which is what stops the catalogue rotting
  * quietly as stories add strings.
  */
-export const untranslated: readonly MessageId[] = ['gate.spokenReady', 'common.language'];
+export const untranslated: readonly MessageId[] = [
+  ...(Object.keys(th) as MessageId[]).filter(isAnnounced),
+  'common.language',
+];

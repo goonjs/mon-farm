@@ -51,6 +51,13 @@ number in is not a fact about the sale.
       through `formatKg` / `formatBaht` and stay Arabic digits in both
       locales. (Thai numerals are not used on the scale, the log, or in
       any document either party signs.)
+- [ ] **The announced register stays Thai in every locale** (FR-11.12,
+      added by the owner 2026-08-11). Spoken phrases and the spoken count
+      do not follow the UI language and have no English form. Enforced by
+      the catalogue rather than by convention: everything under `say.` is
+      resolved as Thai regardless of locale, and a test fails if any `say.`
+      id ever acquires an English translation. S10 will consume these when
+      speech is wired; nothing speaks yet.
 - [ ] No web font is introduced. Both locales render from the existing
       system stack — NFR-1, and the constraint stated at the top of
       `design/tokens.ts`.
