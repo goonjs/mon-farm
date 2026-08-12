@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { messages, untranslated } from './messages';
+import { isAnnounced, messages, untranslated } from './messages';
 import { interpolate, resolve } from './resolve';
 
 /**
@@ -84,6 +84,43 @@ describe('the catalogue itself', () => {
       .filter(([, s]) => !allowed.test(s))
       .map(([id]) => id);
     expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * The announced register (FR-11) is aimed at the people around the scale, not
+ * at whoever is holding the phone — so it does not follow their locale. These
+ * tests are what make that a property of the code rather than a note somebody
+ * has to remember while adding a string.
+ */
+describe('the announced register', () => {
+  const spoken = (Object.keys(messages.th) as (keyof typeof messages.th)[]).filter(isAnnounced);
+
+  it('has something in it', () => {
+    expect(spoken.length).toBeGreaterThan(0);
+  });
+
+  it('is Thai in every locale', () => {
+    for (const id of spoken) {
+      expect(resolve('en', id)).toBe(messages.th[id]);
+    }
+  });
+
+  it('has no English column at all — translating it is the bug, not the fix', () => {
+    for (const id of spoken) {
+      expect(messages.en[id]).toBeUndefined();
+    }
+  });
+
+  /**
+   * Placeholders are stripped first: `{n}` is a slot for a number, not a word
+   * anyone says. What must be free of Latin letters is the part that gets
+   * pronounced.
+   */
+  it('says no Latin words — it is read aloud by a Thai voice', () => {
+    for (const id of spoken) {
+      expect(messages.th[id].replace(/\{\w+\}/g, '')).not.toMatch(/[A-Za-z]/);
+    }
   });
 });
 
