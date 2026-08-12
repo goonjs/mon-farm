@@ -17,7 +17,10 @@ export default defineConfig({
     // port files (people.ts, store.ts — no RN/web-only globals) but never the
     // platform adapters (people.web.ts, people.native.ts, ...), which touch
     // localStorage / expo-sqlite and belong to the component or e2e tier.
-    include: ['src/core/**/*.test.ts', 'src/store/*.test.ts'],
+    // `src/i18n/*.test.ts` joins on the same terms: the catalogue and its
+    // resolver are plain data and a pure function, with the React binding kept
+    // in a separate file precisely so the rules can be proven without a tree.
+    include: ['src/core/**/*.test.ts', 'src/store/*.test.ts', 'src/i18n/*.test.ts'],
     environment: 'node',
     globals: false,
     coverage: {
