@@ -83,7 +83,19 @@ its own sake.
    implementation, update `docs/prd.md` / `docs/architecture.md` / the story
    file *in the same working session*, not as cleanup afterward. The docs
    should never lag behind what was actually decided or built.
-6. **Commit** following the git conventions below.
+6. **Commit** following the git conventions below — but **never ahead of an
+   unanswered question**. If the change depends on something the owner has
+   been asked and has not answered yet, it stays in the working tree until
+   the answer arrives.
+
+   A commit made on a guess is not neutral. Its message states reasoning
+   that was wrong the moment it was written, and the record then has to be
+   fixed by amending, rebasing or reverting — all of which either rewrite
+   history or leave a misleading trail through it. Waiting costs a working
+   tree that stays dirty for a while; guessing costs a rewrite plus a
+   commit whose stated *why* was never true. The same applies to pushing,
+   which is downstream of this: an open question blocks the commit, and the
+   commit is what the push was waiting for.
 7. **Push** — CI (see below) runs build, unit tests, and style/lint checks.
    Must be green.
 8. **Independent code review**: a separate agent/session from the one that
