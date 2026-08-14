@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { PanResponder, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
 
 import { Button } from './chrome';
+import { useT } from '../i18n';
 import { useTheme } from '../theme';
 
 export interface WeightInputProps {
@@ -36,6 +37,7 @@ const kg = (g: number) => (g / 1000).toLocaleString('en-US', { maximumFractionDi
 
 export function WeightInput({ testID = 'weight-input', label, valueG, minG, maxG, stepG = 500, onChange }: WeightInputProps) {
   const t = useTheme();
+  const msg = useT();
   const [text, setText] = useState(kg(valueG));
   const [trackWidth, setTrackWidth] = useState(0);
   const range = Math.max(1, maxG - minG);
@@ -135,7 +137,7 @@ export function WeightInput({ testID = 'weight-input', label, valueG, minG, maxG
         />
       </View>
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.inkFaint }}>
-        ลากเพื่อปรับ · drag to adjust
+        {msg('weight.dragHint')}
       </Text>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
