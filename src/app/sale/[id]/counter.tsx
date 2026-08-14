@@ -183,7 +183,9 @@ export default function CounterScreen() {
               <Text onPress={() => setOverlay({ kind: 'switcher' })}>{`${msg('counter.switcher')} ▾`}</Text>
             </Pill>
             <Pill testID="theme-toggle">
-              <Text onPress={toggle}>{scheme === 'light' ? '◐ light' : '◑ dark'}</Text>
+              <Text onPress={toggle}>
+                {scheme === 'light' ? `◐ ${msg('common.themeLight')}` : `◑ ${msg('common.themeDark')}`}
+              </Text>
             </Pill>
           </>
         }
