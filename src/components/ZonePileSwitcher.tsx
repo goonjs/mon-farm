@@ -7,7 +7,8 @@
 import { ScrollView, Text, View } from 'react-native';
 
 import { Button } from './chrome';
-import type { SaleState } from '../core/types';
+import type { PileStatus, SaleState } from '../core/types';
+import { useT, type MessageId } from '../i18n';
 import { useTheme } from '../theme';
 
 export interface ZonePileSwitcherProps {
@@ -16,14 +17,20 @@ export interface ZonePileSwitcherProps {
   onClose: () => void;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  'not-started': 'ยังไม่เริ่ม',
-  counting: 'กำลังนับ',
-  closed: 'ปิดแล้ว',
+/**
+ * Status → message id, not status → Thai. Typed as `PileStatus` rather than
+ * `string` so a status added to the model without a label here fails to
+ * compile, instead of rendering an empty cell in the switcher.
+ */
+const STATUS_LABEL: Record<PileStatus, MessageId> = {
+  'not-started': 'status.notStarted',
+  counting: 'status.counting',
+  closed: 'status.closed',
 };
 
 export function ZonePileSwitcher({ state, onPick, onClose }: ZonePileSwitcherProps) {
   const t = useTheme();
+  const msg = useT();
 
   return (
     <View
@@ -48,7 +55,7 @@ export function ZonePileSwitcher({ state, onPick, onClose }: ZonePileSwitcherPro
         }}
       >
         <Text style={{ flex: 1, fontFamily: t.font.family.mono, fontSize: t.font.size.micro, letterSpacing: t.font.tracking.wide, color: t.color.inkSoft }}>
-          เลือกโซนและกอง · pick a zone and pile
+          {msg('switcher.title')}
         </Text>
         <Button testID="switcher-close" onPress={onClose}>
           ✕
@@ -59,14 +66,17 @@ export function ZonePileSwitcher({ state, onPick, onClose }: ZonePileSwitcherPro
         {state.zones.map((zone) => (
           <View key={zone.id}>
             <Text style={{ fontFamily: t.font.family.sans, fontWeight: t.font.weight.bold, fontSize: t.font.size.small, color: t.color.ink, marginBottom: t.space.xs }}>
-              {`${zone.name} · ${zone.status === 'closed' ? 'ปิดแล้ว' : 'เปิดอยู่'}`}
+              {msg('switcher.zoneRow', {
+                name: zone.name,
+                status: msg(zone.status === 'closed' ? 'status.closed' : 'status.open'),
+              })}
             </Text>
             <View style={{ gap: t.space.xs }}>
               {state.piles
                 .filter((p) => p.zoneId === zone.id)
                 .map((pile) => (
                   <Button key={pile.id} testID={`switcher-pile-${pile.id}`} onPress={() => onPick(pile.id)}>
-                    {`${pile.name} · ${STATUS_LABEL[pile.status]}`}
+                    {msg('switcher.pileRow', { name: pile.name, status: msg(STATUS_LABEL[pile.status]) })}
                   </Button>
                 ))}
             </View>

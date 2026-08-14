@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { peopleStore, type Person } from '../store/people';
+import { useT } from '../i18n';
 import { useTheme } from '../theme';
 import { Button } from './chrome';
 
@@ -28,6 +29,7 @@ export interface PeoplePickerProps {
 
 export function PeoplePicker({ value, onChange, testID = 'people-picker' }: PeoplePickerProps) {
   const t = useTheme();
+  const msg = useT();
   const [people, setPeople] = useState<Person[] | null>(null); // null = still loading
   const [adding, setAdding] = useState(false);
   const [draftName, setDraftName] = useState('');
@@ -53,7 +55,7 @@ export function PeoplePicker({ value, onChange, testID = 'people-picker' }: Peop
   if (people === null) {
     return (
       <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
-        กำลังโหลดรายชื่อ…
+        {msg('people.loading')}
       </Text>
     );
   }
@@ -84,14 +86,14 @@ export function PeoplePicker({ value, onChange, testID = 'people-picker' }: Peop
             {value.name}
           </Text>
           <Button testID={`${testID}-change`} onPress={() => onChange(null)}>
-            เปลี่ยน · change
+            {msg('people.change')}
           </Button>
         </View>
       ) : (
         <>
           {people.length === 0 && !adding ? (
             <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
-              ยังไม่มีรายชื่อ · no one on the list yet
+              {msg('people.empty')}
             </Text>
           ) : null}
 
@@ -121,7 +123,7 @@ export function PeoplePicker({ value, onChange, testID = 'people-picker' }: Peop
                 testID={`${testID}-new-name`}
                 value={draftName}
                 onChangeText={setDraftName}
-                placeholder="ชื่อคนงาน · worker's name"
+                placeholder={msg('people.namePlaceholder')}
                 placeholderTextColor={t.color.inkFaint}
                 autoFocus
                 onSubmitEditing={createAndSelect}
@@ -138,15 +140,15 @@ export function PeoplePicker({ value, onChange, testID = 'people-picker' }: Peop
                 }}
               />
               <Button testID={`${testID}-confirm-new`} variant="primary" onPress={createAndSelect} disabled={!draftName.trim()}>
-                เพิ่ม · add
+                {msg('people.add')}
               </Button>
               <Button testID={`${testID}-cancel-new`} onPress={() => { setAdding(false); setDraftName(''); }}>
-                ยกเลิก
+                {msg('common.cancel')}
               </Button>
             </View>
           ) : (
             <Button testID={`${testID}-add`} onPress={() => setAdding(true)}>
-              + เพิ่มคนงานใหม่ · add a new worker
+              {msg('people.addNew')}
             </Button>
           )}
         </>

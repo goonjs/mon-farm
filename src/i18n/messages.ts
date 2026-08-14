@@ -142,6 +142,34 @@ const th = {
   'zone.closeConfirm': 'ยืนยันปิดโซน',
   'zone.reopen': 'เปิดโซนอีกครั้ง',
 
+  // ── The zone / pile switcher ─────────────────────────────────────────────
+  'switcher.title': 'เลือกโซนและกอง',
+  'switcher.close': '✕',
+  'switcher.zoneRow': '{name} · {status}',
+  'switcher.pileRow': '{name} · {status}',
+  'status.notStarted': 'ยังไม่เริ่ม',
+  'status.counting': 'กำลังนับ',
+  'status.closed': 'ปิดแล้ว',
+  'status.open': 'เปิดอยู่',
+
+  // ── The people picker (S16) ──────────────────────────────────────────────
+  'people.loading': 'กำลังโหลดรายชื่อ…',
+  'people.change': 'เปลี่ยน',
+  'people.empty': 'ยังไม่มีรายชื่อ',
+  'people.namePlaceholder': 'ชื่อคนงาน',
+  'people.add': 'เพิ่ม',
+  'people.addNew': '+ เพิ่มคนงานใหม่',
+
+  // ── The weight input (F-22) ──────────────────────────────────────────────
+  'weight.dragHint': 'ลากเพื่อปรับ',
+
+  // ── The pile-closed decision point (S13) ─────────────────────────────────
+  'closed.title': 'ปิดกองแล้ว',
+  'closed.total': '{name} — {baskets} เข่ง · {weight} กก.',
+  'closed.nextPile': 'กองถัดไปในโซนนี้ →',
+  'closed.switchZone': 'เปลี่ยนโซน',
+  'closed.closeZone': 'ปิดโซนนี้',
+
   // ── The log tab ──────────────────────────────────────────────────────────
   'log.accept': 'เข่งมาตรฐาน {weight} กก.',
   'log.short': 'เข่งไม่เต็ม ชั่งได้ {reading} − ตะกร้า {tare} = {net} กก.',
@@ -249,6 +277,30 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'zone.closeWarning': '{n} pile(s) still counting will be force-closed too: {names}',
   'zone.closeConfirm': 'confirm close zone',
   'zone.reopen': 'reopen zone',
+
+  'switcher.title': 'pick a zone and pile',
+  'switcher.close': '✕',
+  'switcher.zoneRow': '{name} · {status}',
+  'switcher.pileRow': '{name} · {status}',
+  'status.notStarted': 'not started',
+  'status.counting': 'counting',
+  'status.closed': 'closed',
+  'status.open': 'open',
+
+  'people.loading': 'loading the list…',
+  'people.change': 'change',
+  'people.empty': 'no one on the list yet',
+  'people.namePlaceholder': "worker's name",
+  'people.add': 'add',
+  'people.addNew': '+ add a new worker',
+
+  'weight.dragHint': 'drag to adjust',
+
+  'closed.title': 'pile closed',
+  'closed.total': '{name} — {baskets} baskets · {weight} kg',
+  'closed.nextPile': 'next pile in this zone →',
+  'closed.switchZone': 'switch zone',
+  'closed.closeZone': 'close this zone',
 
   'log.accept': 'standard basket {weight} kg',
   'log.short': 'short basket — reading {reading} − tare {tare} = {net} kg',

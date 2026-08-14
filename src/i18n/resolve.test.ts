@@ -77,9 +77,12 @@ describe('the catalogue itself', () => {
   it('carries no characters outside Thai, Latin and the symbols already in use', () => {
     // Thai block, printable ASCII, and the symbols the design system already
     // uses on screen — the ✓/✗ marks (F-16's non-colour encoding), the ⚖ on
-    // the short-basket action, the arrows on undo/correction rows, and the
-    // typographic dashes and true minus the derivations are set with.
-    const allowed = /^[฀-๿ -~·—–−…×✓✗↺↩⚖\n]*$/u;
+    // the short-basket action, the ✕ that dismisses the switcher, the arrows
+    // on undo/correction/next-pile rows, and the typographic dashes and true
+    // minus the derivations are set with. Anything outside this set is a
+    // glyph the system stack may not carry, and a box on the counter screen
+    // is a label nobody can read in any language.
+    const allowed = /^[฀-๿ -~·—–−…×✓✗↺↩→✕⚖\n]*$/u;
     const offenders = Object.entries({ ...messages.th, ...messages.en })
       .filter(([, s]) => !allowed.test(s))
       .map(([id]) => id);

@@ -12,6 +12,7 @@
 import { Text, View } from 'react-native';
 
 import { Button } from './chrome';
+import { useT } from '../i18n';
 import { useTheme } from '../theme';
 
 const kg = (g: number) => (g / 1000).toLocaleString('en-US', { maximumFractionDigits: 3 });
@@ -39,6 +40,7 @@ export function PileClosedTransition({
   onCloseSale,
 }: PileClosedTransitionProps) {
   const t = useTheme();
+  const msg = useT();
 
   return (
     <View
@@ -53,29 +55,29 @@ export function PileClosedTransition({
       }}
     >
       <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, letterSpacing: t.font.tracking.wide, color: t.color.accept }}>
-        ปิดกองแล้ว · pile closed
+        {msg('closed.title')}
       </Text>
       <Text
         testID="pile-closed-total"
         style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.ink, textAlign: 'center' }}
       >
-        {`${pileName} — ${baskets} เข่ง · ${kg(netG)} กก.`}
+        {msg('closed.total', { name: pileName, baskets, weight: kg(netG) })}
       </Text>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm, justifyContent: 'center' }}>
         {hasNextPileInZone ? (
           <Button testID="decision-next-pile" variant="primary" onPress={onNextPile}>
-            กองถัดไปในโซนนี้ → · next pile in this zone
+            {msg('closed.nextPile')}
           </Button>
         ) : null}
         <Button testID="decision-switch-zone" onPress={onSwitchZone}>
-          เปลี่ยนโซน · switch zone
+          {msg('closed.switchZone')}
         </Button>
         <Button testID="decision-close-zone" onPress={onCloseZone}>
-          ปิดโซนนี้ · close this zone
+          {msg('closed.closeZone')}
         </Button>
         <Button testID="decision-close-sale" variant="destructive" onPress={onCloseSale}>
-          ปิดการขาย · close sale
+          {msg('counter.closeSale')}
         </Button>
       </View>
     </View>
