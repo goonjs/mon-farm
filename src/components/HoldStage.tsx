@@ -24,6 +24,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 
 import { Bezel } from './Bezel';
+import { useT } from '../i18n';
 import { useTheme } from '../theme';
 
 export interface HoldStageProps {
@@ -50,6 +51,7 @@ export function HoldStage({
   testID = 'stage',
 }: HoldStageProps) {
   const t = useTheme();
+  const msg = useT();
   const HOLD = holdMs ?? t.duration.hold;
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
@@ -110,17 +112,17 @@ export function HoldStage({
       // basket nobody performed (F-6), so this is a rejection, loudly.
       setPct(0);
       const held = Date.now() - startedAt.current;
-      setFeedback({ tone: 'reject', text: '✗ ไม่นับ · นิ้วเลื่อนออก · moved off the stage' });
+      setFeedback({ tone: 'reject', text: msg('hold.movedOff') });
       onReject(held);
       setTimeout(() => setFeedback(null), 1400);
       return;
     }
     setPct(1);
     onCount();
-    setFeedback({ tone: 'accept', text: '✓ นับแล้ว · counted' });
+    setFeedback({ tone: 'accept', text: msg('hold.counted') });
     setTimeout(() => setPct(0), 260);
     setTimeout(() => setFeedback(null), 900);
-  }, [onCount, onReject, pointerIsOnStage, stop]);
+  }, [msg, onCount, onReject, pointerIsOnStage, stop]);
 
   const begin = useCallback(() => {
     if (!enabled || holding.current) return;
@@ -145,11 +147,11 @@ export function HoldStage({
     setPct(0);
     setFeedback({
       tone: 'reject',
-      text: `✗ ไม่นับ · released early — ${(held / 1000).toFixed(1)} วิ`,
+      text: msg('hold.releasedEarly', { seconds: (held / 1000).toFixed(1) }),
     });
     onReject(held);
     setTimeout(() => setFeedback(null), 1400);
-  }, [onReject, stop]);
+  }, [msg, onReject, stop]);
 
   // A hold must not survive unmount or the app going to the background.
   useEffect(() => stop, [stop]);
@@ -321,7 +323,7 @@ export function HoldStage({
       ref={attachStage}
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel="ตัวนับ กดค้างสามวินาทีเพื่อนับหนึ่งเข่ง. Counter, press and hold three seconds to count one basket."
+      accessibilityLabel={msg('hold.label')}
       onLayout={onLayout}
       onPressIn={begin}
       /**
@@ -372,7 +374,7 @@ export function HoldStage({
               borderRadius: t.radius.sm,
             }}
           >
-            หมุนจอเพื่อดูตัวเลขชัดขึ้น · turn the phone for a clearer count
+            {msg('hold.rotate')}
           </Text>
         </View>
       ) : null}

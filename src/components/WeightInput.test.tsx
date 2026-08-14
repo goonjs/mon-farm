@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 
 import { WeightInput } from './WeightInput';
-import { ThemeProvider } from '../theme';
+import { wrap } from '../test/render';
 
-const wrap = (ui: React.ReactElement) => render(<ThemeProvider initial="light">{ui}</ThemeProvider>);
 
 describe('WeightInput', () => {
   it('shows the value formatted as kg in the typed field', () => {

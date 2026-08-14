@@ -1,8 +1,8 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 
 import { PeoplePicker } from './PeoplePicker';
 import { peopleStore as mockStore } from '../store/people';
-import { ThemeProvider } from '../theme';
+import { wrap } from '../test/render';
 
 /**
  * The bare `../store/people` import that `PeoplePicker` uses resolves to a
@@ -30,7 +30,6 @@ jest.mock('../store/people', () => {
   return { ...actual, peopleStore: new MemoryPeopleStore() };
 });
 
-const wrap = (ui: React.ReactElement) => render(<ThemeProvider initial="light">{ui}</ThemeProvider>);
 
 async function flush() {
   await act(async () => {

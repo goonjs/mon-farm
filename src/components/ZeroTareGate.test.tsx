@@ -1,9 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 
 import { ZeroTareGate } from './ZeroTareGate';
-import { ThemeProvider } from '../theme';
+import { wrap } from '../test/render';
 
-const wrap = (ui: React.ReactElement) => render(<ThemeProvider initial="light">{ui}</ThemeProvider>);
 
 const baseProps = {
   pileName: 'กอง 1',
