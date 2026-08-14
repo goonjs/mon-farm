@@ -76,6 +76,7 @@ const th = {
   'gate.tareConfirm': 'ยืนยันน้ำหนักตะกร้า',
   'gate.expected': '{tare} + {std} = {expected} กก.',
   'gate.ready': 'เริ่มนับได้',
+  'gate.readAloud': 'อ่านออกเสียงก่อนเข่งแรก',
 
   // ── The announced register (FR-11) — ALWAYS THAI ─────────────────────────
   //
@@ -195,6 +196,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'gate.tareConfirm': 'confirm basket weight',
   'gate.expected': '{tare} + {std} = {expected} kg',
   'gate.ready': 'start counting',
+  'gate.readAloud': 'read aloud before the first basket',
 
   'reopen.title': 'reopening {target}',
   'reopen.reasonPlaceholder': 'reason for reopening',

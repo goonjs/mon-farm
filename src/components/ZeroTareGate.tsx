@@ -20,6 +20,7 @@ import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 import { Button } from './chrome';
+import { useT } from '../i18n';
 import { useTheme } from '../theme';
 
 export interface ZeroTareGateProps {
@@ -47,6 +48,7 @@ export function ZeroTareGate({
   onReady,
 }: ZeroTareGateProps) {
   const t = useTheme();
+  const msg = useT();
   const step = !zeroChecked ? 1 : !tareConfirmed ? 2 : 3;
 
   return (
@@ -69,7 +71,7 @@ export function ZeroTareGate({
           color: t.color.action,
         }}
       >
-        {`ขั้นที่ ${step} จาก 3 · step ${step} of 3`}
+        {msg('gate.step', { step })}
       </Text>
 
       {step === 1 ? (
@@ -91,6 +93,7 @@ function ZeroStep({
   onZeroChecked: (ok: boolean, readingG: number) => void;
 }) {
   const t = useTheme();
+  const msg = useT();
   const [flagging, setFlagging] = useState(false);
   const [reading, setReading] = useState('0');
 
@@ -100,25 +103,22 @@ function ZeroStep({
         {pileName}
       </Text>
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.lead, color: t.color.ink, textAlign: 'center' }}>
-        ไม่มีอะไรบนตาชั่ง — ขึ้นศูนย์ไหม?{'\n'}
-        <Text style={{ fontSize: t.font.size.small, color: t.color.inkSoft }}>
-          Nothing on the scale. Does it read zero?
-        </Text>
+        {msg('gate.zeroQuestion')}
       </Text>
 
       {!flagging ? (
         <View style={{ flexDirection: 'row', gap: t.space.sm }}>
           <Button testID="zero-yes" variant="primary" onPress={() => onZeroChecked(true, 0)}>
-            ใช่ ศูนย์ — yes, zero
+            {msg('gate.zeroYes')}
           </Button>
           <Button testID="zero-no" onPress={() => setFlagging(true)}>
-            ไม่ใช่ — not zero
+            {msg('gate.zeroNo')}
           </Button>
         </View>
       ) : (
         <View style={{ alignItems: 'center', gap: t.space.sm }}>
           <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
-            ขึ้นเลขอะไร (กก.) · what does it read instead? (kg)
+            {msg('gate.zeroReading')}
           </Text>
           <TextInput
             testID="zero-reading"
@@ -147,7 +147,7 @@ function ZeroStep({
               onZeroChecked(false, g);
             }}
           >
-            บันทึกและดำเนินการต่อ · flag it & continue anyway
+            {msg('gate.flagAndContinue')}
           </Button>
         </View>
       )}
@@ -157,15 +157,13 @@ function ZeroStep({
 
 function TareStep({ tareG, onTareConfirmed }: { tareG: number; onTareConfirmed: (tareG: number) => void }) {
   const t = useTheme();
+  const msg = useT();
   const [kgStr, setKgStr] = useState(kg(tareG));
 
   return (
     <>
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.lead, color: t.color.ink, textAlign: 'center' }}>
-        ชั่งตะกร้าเปล่า ตาชั่งขึ้นเท่าไหร่?{'\n'}
-        <Text style={{ fontSize: t.font.size.small, color: t.color.inkSoft }}>
-          Weigh the empty bucket. What does the scale show?
-        </Text>
+        {msg('gate.tareQuestion')}
       </Text>
       <TextInput
         testID="tare-input"
@@ -193,7 +191,7 @@ function TareStep({ tareG, onTareConfirmed }: { tareG: number; onTareConfirmed: 
         disabled={!(Number(kgStr) >= 0)}
         onPress={() => onTareConfirmed(Math.round((Number(kgStr) || 0) * 1000))}
       >
-        ยืนยันน้ำหนักตะกร้า · confirm bucket weight
+        {msg('gate.tareConfirm')}
       </Button>
     </>
   );
@@ -211,6 +209,7 @@ function ReadyStep({
   onReady: () => void;
 }) {
   const t = useTheme();
+  const msg = useT();
   const expectedG = tareG + stdNetG;
 
   return (
@@ -219,12 +218,12 @@ function ReadyStep({
         {pileName}
       </Text>
       <Text testID="read-back" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.lead, color: t.color.ink, textAlign: 'center' }}>
-        {`${kg(tareG)} + ${kg(stdNetG)} = ${kg(expectedG)} กก.`}
+        {msg('gate.expected', { tare: kg(tareG), std: kg(stdNetG), expected: kg(expectedG) })}
         {'\n'}
-        <Text style={{ fontSize: t.font.size.small, color: t.color.inkSoft }}>read aloud before the first basket</Text>
+        <Text style={{ fontSize: t.font.size.small, color: t.color.inkSoft }}>{msg('gate.readAloud')}</Text>
       </Text>
       <Button testID="ready-button" variant="primary" onPress={onReady}>
-        พร้อมค่ะ — start counting
+        {`${msg('say.ready')} — ${msg('gate.ready')}`}
       </Button>
     </>
   );

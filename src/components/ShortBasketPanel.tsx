@@ -12,6 +12,7 @@ import { Text, View } from 'react-native';
 
 import { Button } from './chrome';
 import { WeightInput } from './WeightInput';
+import { useT } from '../i18n';
 import { useTheme } from '../theme';
 
 const kg = (g: number) => (g / 1000).toLocaleString('en-US', { maximumFractionDigits: 3 });
@@ -34,6 +35,7 @@ export function ShortBasketPanel({
   onCancel,
 }: ShortBasketPanelProps) {
   const t = useTheme();
+  const msg = useT();
   const netG = readingG - tareG;
 
   return (
@@ -48,12 +50,12 @@ export function ShortBasketPanel({
       }}
     >
       <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, letterSpacing: t.font.tracking.wide, color: t.color.inkSoft }}>
-        เข่งไม่เต็ม · short basket — ชั่งได้เท่าไหร่ (กก.), น้ำหนักรวม
+        {msg('short.title')}
       </Text>
 
       <WeightInput
         testID="short-reading"
-        label="ตาชั่งอ่านได้ · scale reading (gross), kg"
+        label={msg('short.readingLabel')}
         valueG={readingG}
         minG={tareG}
         maxG={tareG + stdNetG}
@@ -61,15 +63,15 @@ export function ShortBasketPanel({
       />
 
       <Text testID="short-preview" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>
-        {`ยางสุทธิ = ชั่งได้ ${kg(readingG)} − ตะกร้า ${kg(tareG)} = ${kg(netG)} กก. · net rubber = reading − tare = ${kg(netG)} kg`}
+        {msg('short.derivation', { reading: kg(readingG), tare: kg(tareG), net: kg(netG) })}
       </Text>
 
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
         <Button testID="short-confirm" variant="primary" onPress={onConfirm} disabled={netG < 0}>
-          บันทึก · log this basket
+          {msg('short.log')}
         </Button>
         <Button testID="short-cancel" onPress={onCancel}>
-          ยกเลิก · cancel
+          {msg('common.cancel')}
         </Button>
       </View>
     </View>

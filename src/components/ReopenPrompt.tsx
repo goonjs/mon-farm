@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 import { Button } from './chrome';
+import { useT } from '../i18n';
 import { useTheme } from '../theme';
 
 export interface ReopenPromptProps {
@@ -28,6 +29,7 @@ export interface ReopenPromptProps {
 
 export function ReopenPrompt({ testID = 'reopen-prompt', targetLabel, consequence, onConfirm, onCancel }: ReopenPromptProps) {
   const t = useTheme();
+  const msg = useT();
   const [reason, setReason] = useState('');
   const [confirming, setConfirming] = useState(false);
 
@@ -46,7 +48,7 @@ export function ReopenPrompt({ testID = 'reopen-prompt', targetLabel, consequenc
       }}
     >
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.warn }}>
-        {`เปิด ${targetLabel} อีกครั้ง — reopening`}
+        {msg('reopen.title', { target: targetLabel })}
       </Text>
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}>
         {consequence}
@@ -58,7 +60,7 @@ export function ReopenPrompt({ testID = 'reopen-prompt', targetLabel, consequenc
             testID={`${testID}-reason`}
             value={reason}
             onChangeText={setReason}
-            placeholder="เหตุผลที่เปิดอีกครั้ง · reason for reopening"
+            placeholder={msg('reopen.reasonPlaceholder')}
             placeholderTextColor={t.color.inkFaint}
             style={{
               width: '100%',
@@ -76,10 +78,10 @@ export function ReopenPrompt({ testID = 'reopen-prompt', targetLabel, consequenc
           />
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>
             <Button testID={`${testID}-next`} variant="destructive" disabled={!canSubmit} onPress={() => setConfirming(true)}>
-              ต่อไป · next
+              {msg('common.next')}
             </Button>
             <Button testID={`${testID}-cancel`} onPress={onCancel}>
-              ยกเลิก · cancel
+              {msg('common.cancel')}
             </Button>
           </View>
         </>
@@ -89,14 +91,14 @@ export function ReopenPrompt({ testID = 'reopen-prompt', targetLabel, consequenc
             {`"${reason.trim()}"`}
           </Text>
           <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject, textAlign: 'center' }}>
-            แน่ใจนะ? การเปิดอีกครั้งจะถูกบันทึกไว้ · are you sure? reopening will be recorded.
+            {msg('reopen.areYouSure')}
           </Text>
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>
             <Button testID={`${testID}-confirm`} variant="destructive" onPress={() => onConfirm(reason.trim())}>
-              ยืนยันเปิดอีกครั้ง · confirm reopen
+              {msg('reopen.confirm')}
             </Button>
             <Button testID={`${testID}-back`} onPress={() => setConfirming(false)}>
-              กลับ · back
+              {msg('common.back')}
             </Button>
           </View>
         </>
