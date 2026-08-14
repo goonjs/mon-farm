@@ -1,7 +1,7 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 
 import { HoldStage } from './HoldStage';
-import { ThemeProvider } from '../theme';
+import { wrap } from '../test/render';
 
 /**
  * Component-tier tests: behaviour that needs a React tree but not a browser.
@@ -11,7 +11,6 @@ import { ThemeProvider } from '../theme';
  * numeral's height ratio is measured in Playwright, against a real viewport.
  */
 
-const wrap = (ui: React.ReactElement) => render(<ThemeProvider initial="light">{ui}</ThemeProvider>);
 
 describe('HoldStage', () => {
   beforeEach(() => jest.useFakeTimers());

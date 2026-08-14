@@ -1,11 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 
 import { ZonePileSwitcher } from './ZonePileSwitcher';
 import { LogBuilder, setUpSale } from '../core/fixtures';
 import { projectSale } from '../core/project';
-import { ThemeProvider } from '../theme';
+import { wrap } from '../test/render';
 
-const wrap = (ui: React.ReactElement) => render(<ThemeProvider initial="light">{ui}</ThemeProvider>);
 
 describe('ZonePileSwitcher', () => {
   it('lists every zone with its piles, grouped', () => {
