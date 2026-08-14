@@ -170,6 +170,29 @@ const th = {
   'closed.switchZone': 'เปลี่ยนโซน',
   'closed.closeZone': 'ปิดโซนนี้',
 
+  // ── Settlement (S14, S18) ────────────────────────────────────────────────
+  'settle.title': 'สรุป',
+  'settle.list': 'รายการ',
+  'settle.cannotSettle': 'ยังสรุปไม่ได้',
+  'settle.backToCounting': '← กลับไปนับ',
+  'settle.saleConsequence': 'การขายนี้จะเปิดอีกครั้ง สามารถนับและปิดกองต่อได้',
+  'settle.derivation': 'ที่มาของยอด',
+  'settle.ownerTotal': 'รวมส่วนเจ้าของ',
+  'settle.ownerNote': 'รวมทุกโซน แต่ละโซนคิดตาม % ของตัวเอง',
+  'settle.perZone': 'แยกตามโซน',
+  'settle.zoneRow': '{name} — {baskets} เข่ง · {weight} กก.',
+  'settle.total': 'รวม',
+  'settle.perWorker': 'แยกตามคนงาน',
+  'settle.noWorker': 'ยังไม่มีการระบุคนงานประจำโซน',
+  'settle.reopen': '↺ เปิดการขายอีกครั้ง — กลับไปนับ',
+
+  // ── The sale list (S17) ──────────────────────────────────────────────────
+  'sales.title': 'การขาย',
+  'sales.empty': 'ยังไม่มีการขาย — เริ่มการขายใหม่ด้านล่าง',
+  'sales.new': '+ เริ่มการขายใหม่',
+  'sales.unnamed': 'ยังไม่ได้ตั้งค่า',
+  'sales.row': '{name} · {status} · {zones} โซน',
+
   // ── The log tab ──────────────────────────────────────────────────────────
   'log.accept': 'เข่งมาตรฐาน {weight} กก.',
   'log.short': 'เข่งไม่เต็ม ชั่งได้ {reading} − ตะกร้า {tare} = {net} กก.',
@@ -313,6 +336,27 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'closed.nextPile': 'next pile in this zone →',
   'closed.switchZone': 'switch zone',
   'closed.closeZone': 'close this zone',
+
+  'settle.title': 'settlement',
+  'settle.list': 'list',
+  'settle.cannotSettle': 'cannot settle yet',
+  'settle.backToCounting': '← back to counting',
+  'settle.saleConsequence': 'the sale reopens; counting and closing can continue.',
+  'settle.derivation': 'how the total was reached',
+  'settle.ownerTotal': 'owner total',
+  'settle.ownerNote': 'summed across every zone below, each at its own %',
+  'settle.perZone': 'per zone',
+  'settle.zoneRow': '{name} — {baskets} baskets · {weight} kg',
+  'settle.total': 'total',
+  'settle.perWorker': 'per worker',
+  'settle.noWorker': 'no zone has a worker named yet',
+  'settle.reopen': '↺ reopen — back to counting',
+
+  'sales.title': 'sales',
+  'sales.empty': 'no sales yet — start one below.',
+  'sales.new': '+ start a new sale',
+  'sales.unnamed': 'not set up yet',
+  'sales.row': '{name} · {status} · {zones} zones',
 
   'log.accept': 'standard basket {weight} kg',
   'log.short': 'short basket — reading {reading} − tare {tare} = {net} kg',
