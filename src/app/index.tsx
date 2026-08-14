@@ -19,10 +19,12 @@ import type { SaleState } from '../core/types';
 import { newId } from '../lib/id';
 // Bare specifier — see the note in SaleProvider.tsx for why this matters.
 import { store } from '../store/store';
+import { useT } from '../i18n';
 import { useTheme } from '../theme';
 
 export default function SaleListScreen() {
   const t = useTheme();
+  const msg = useT();
   const [sales, setSales] = useState<SaleState[] | null>(null); // null = loading
 
   const reload = useCallback(() => {
@@ -62,7 +64,7 @@ export default function SaleListScreen() {
           mon-farm
         </Text>
         <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
-          การขาย · sales
+          {msg('sales.title')}
         </Text>
       </View>
 
@@ -74,7 +76,7 @@ export default function SaleListScreen() {
             testID="empty-state"
             style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}
           >
-            ยังไม่มีการขาย · no sales yet — start one below.
+            {msg('sales.empty')}
           </Text>
         ) : (
           sales.map((s) => <SaleRow key={s.id} sale={s} />)
@@ -89,7 +91,7 @@ export default function SaleListScreen() {
         }}
       >
         <Link href={newSaleHref} asChild>
-          <Button testID="new-sale" variant="primary">+ เริ่มการขายใหม่ · start a new sale</Button>
+          <Button testID="new-sale" variant="primary">{msg('sales.new')}</Button>
         </Link>
       </View>
     </View>
@@ -97,16 +99,21 @@ export default function SaleListScreen() {
 }
 
 function SaleRow({ sale }: { sale: SaleState }) {
+  const msg = useT();
   const href: Href = sale.status === 'closed'
     ? { pathname: '/sale/[id]/settlement', params: { id: sale.id } }
     : { pathname: '/sale/[id]/counter', params: { id: sale.id } };
 
-  const label = sale.parties?.farmName || sale.parties?.buyer || 'ยังไม่ได้ตั้งค่า · not set up yet';
+  const label = sale.parties?.farmName || sale.parties?.buyer || msg('sales.unnamed');
 
   return (
     <Link href={href} asChild>
       <Button testID={`sale-${sale.id}`}>
-        {`${label} · ${sale.status === 'closed' ? 'ปิดแล้ว' : 'เปิดอยู่'} · ${sale.zones.length} โซน`}
+        {msg('sales.row', {
+          name: label,
+          status: msg(sale.status === 'closed' ? 'status.closed' : 'status.open'),
+          zones: sale.zones.length,
+        })}
       </Button>
     </Link>
   );

@@ -20,10 +20,12 @@ import { Button, TopBar } from '../../../components/chrome';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { formatBaht, formatKg, settle, SettlementUnavailable } from '../../../core/settle';
 import { useSale } from '../../../store/SaleProvider';
+import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 
 export default function SettlementScreen() {
   const t = useTheme();
+  const msg = useT();
   const { events, state, append } = useSale();
   const router = useRouter();
   const [reopening, setReopening] = useState(false);
@@ -73,10 +75,10 @@ export default function SettlementScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: t.color.surface }}>
         <TopBar
-          crumb="สรุป · settlement"
+          crumb={msg('settle.title')}
           right={
             <Link href="/" asChild>
-              <Button testID="to-sale-list">รายการ · list</Button>
+              <Button testID="to-sale-list">{msg('settle.list')}</Button>
             </Link>
           }
         />
@@ -89,20 +91,20 @@ export default function SettlementScreen() {
               marginBottom: t.space.sm,
             }}
           >
-            ยังสรุปไม่ได้ · cannot settle yet
+            {msg('settle.cannotSettle')}
           </Text>
           <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
             {why}
           </Text>
           <View style={{ flexDirection: 'row', marginTop: t.space.lg }}>
-            <Button variant="primary" onPress={backToCounting}>← กลับไปนับ · back to counting</Button>
+            <Button variant="primary" onPress={backToCounting}>{msg('settle.backToCounting')}</Button>
           </View>
         </View>
         {reopening ? (
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: t.color.stage, zIndex: 10 }}>
             <ReopenPrompt
               targetLabel="การขาย"
-              consequence="การขายนี้จะเปิดอีกครั้ง สามารถนับและปิดกองต่อได้ · the sale reopens; counting and closing can continue."
+              consequence={msg('settle.saleConsequence')}
               onConfirm={reopenSale}
               onCancel={() => setReopening(false)}
             />
@@ -117,10 +119,10 @@ export default function SettlementScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <TopBar
-        crumb={`${state.parties?.farmName ?? ''} ▸ สรุป · settlement`}
+        crumb={`${state.parties?.farmName ?? ''} ▸ ${msg('settle.title')}`}
         right={
           <Link href="/" asChild>
-            <Button testID="to-sale-list">รายการ · list</Button>
+            <Button testID="to-sale-list">{msg('settle.list')}</Button>
           </Link>
         }
       />
@@ -128,7 +130,7 @@ export default function SettlementScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, flexDirection: 'row', gap: t.space.md }}>
         {/* ---- the derivation ---- */}
         <View style={[card(t), { flex: 1.1 }]}>
-          <CardTitle>ที่มาของยอด · how the total was reached</CardTitle>
+          <CardTitle>{msg('settle.derivation')}</CardTitle>
           {s.steps.slice(0, 6).map((step) => (
             <View
               key={step.key}
@@ -166,17 +168,21 @@ export default function SettlementScreen() {
         {/* ---- owner total, leading ---- */}
         <View style={{ flex: 1, gap: t.space.md }}>
           <View style={card(t)}>
-            <CardTitle>รวมส่วนเจ้าของ · owner total</CardTitle>
+            <CardTitle>{msg('settle.ownerTotal')}</CardTitle>
             <Figure testID="owner-share" colour={t.color.action}>{formatBaht(s.ownerSatang)}</Figure>
-            <ShareLabel>รวมทุกโซน · summed across every zone below, each at its own %</ShareLabel>
+            <ShareLabel>{msg('settle.ownerNote')}</ShareLabel>
           </View>
 
           <View style={card(t)}>
-            <CardTitle>แยกตามโซน · per zone</CardTitle>
+            <CardTitle>{msg('settle.perZone')}</CardTitle>
             {s.perZone.map((z) => (
               <View key={z.zoneId} testID={`zone-${z.zoneId}`} style={{ marginBottom: t.space.sm }}>
                 <Row
-                  label={`${z.zoneName} — ${z.totals.baskets} เข่ง · ${formatKg(z.totals.netG)} กก.`}
+                  label={msg('settle.zoneRow', {
+                    name: z.zoneName,
+                    baskets: z.totals.baskets,
+                    weight: formatKg(z.totals.netG),
+                  })}
                   value={formatBaht(z.grossSatang)}
                   bold
                 />
@@ -192,15 +198,15 @@ export default function SettlementScreen() {
               </View>
             ))}
             <View style={{ borderTopWidth: t.border.hair, borderTopColor: t.color.rule, paddingTop: t.space.sm }}>
-              <Row label="รวม · total" value={formatBaht(s.grossSatang)} bold />
+              <Row label={msg('settle.total')} value={formatBaht(s.grossSatang)} bold />
             </View>
           </View>
 
           <View style={card(t)}>
-            <CardTitle>แยกตามคนงาน · per worker</CardTitle>
+            <CardTitle>{msg('settle.perWorker')}</CardTitle>
             {s.perWorker.length === 0 ? (
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
-                ยังไม่มีการระบุคนงานประจำโซน · no zone has a worker named yet
+                {msg('settle.noWorker')}
               </Text>
             ) : (
               s.perWorker.map((w) => {
@@ -237,14 +243,14 @@ export default function SettlementScreen() {
         </Text>
         {state.status === 'closed' ? (
           <Button variant="primary" testID="reopen-sale" onPress={() => setReopening(true)}>
-            ↺ เปิดการขายอีกครั้ง — กลับไปนับ · reopen — back to counting
+            {msg('settle.reopen')}
           </Button>
         ) : (
           // Unreachable through normal navigation — settlement is only ever
           // pushed to after `sale_closed`, or resumed for an already-closed
           // sale. Kept as a safe fallback rather than assumed away.
           <Button variant="primary" testID="back-to-count" onPress={backToCounting}>
-            ← กลับไปนับ · back to counting
+            {msg('settle.backToCounting')}
           </Button>
         )}
       </View>
@@ -253,7 +259,7 @@ export default function SettlementScreen() {
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: t.color.stage, zIndex: 10 }}>
           <ReopenPrompt
             targetLabel="การขาย"
-            consequence="การขายนี้จะเปิดอีกครั้ง สามารถนับและปิดกองต่อได้ · the sale reopens; counting and closing can continue."
+            consequence={msg('settle.saleConsequence')}
             onConfirm={reopenSale}
             onCancel={() => setReopening(false)}
           />
