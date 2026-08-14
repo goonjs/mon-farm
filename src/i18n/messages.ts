@@ -180,6 +180,18 @@ const th = {
   'log.splitSet': 'ส่วนแบ่ง {owner}/{worker}',
   'log.zoneAdded': 'เพิ่มโซน {name}',
   'log.zoneContractSet': 'สัญญาโซน — {worker} {pct}%',
+  'log.pileAdded': 'เพิ่มกอง {name}',
+  'log.zeroOk': 'ตาชั่งขึ้นศูนย์ ✓',
+  'log.zeroNotOk': 'ตาชั่งไม่ศูนย์ {reading} กก.',
+  'log.tareConfirmed': 'ตะกร้าเปล่า {tare} กก.',
+  'log.ready': 'พร้อมนับ',
+  'log.pileClosed': 'ปิดกอง',
+  'log.pileReopened': 'เปิดกองอีกครั้ง — {reason}',
+  'log.zoneClosed': 'ปิดโซน',
+  'log.zoneReopened': 'เปิดโซนอีกครั้ง — {reason}',
+  'log.saleClosed': 'ปิดการขาย',
+  'log.saleReopened': 'เปิดการขายอีกครั้ง — {reason}',
+  'log.clockAnomaly': 'เวลาเครื่องผิด ({anomaly})',
 } as const;
 
 /**
@@ -311,6 +323,18 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'log.splitSet': 'split {owner}/{worker}',
   'log.zoneAdded': 'zone added — {name}',
   'log.zoneContractSet': 'zone contract — {worker} {pct}%',
+  'log.pileAdded': 'pile added — {name}',
+  'log.zeroOk': 'scale read zero ✓',
+  'log.zeroNotOk': 'scale did not read zero — {reading} kg',
+  'log.tareConfirmed': 'empty basket {tare} kg',
+  'log.ready': 'ready to count',
+  'log.pileClosed': 'pile closed',
+  'log.pileReopened': 'pile reopened — {reason}',
+  'log.zoneClosed': 'zone closed',
+  'log.zoneReopened': 'zone reopened — {reason}',
+  'log.saleClosed': 'sale closed',
+  'log.saleReopened': 'sale reopened — {reason}',
+  'log.clockAnomaly': "device clock looks wrong ({anomaly})",
 };
 
 export const messages = { th, en } as const;
