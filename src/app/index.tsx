@@ -43,11 +43,17 @@ export default function SaleListScreen() {
   useFocusEffect(reload);
 
   const newSaleHref = { pathname: '/sale/[id]/setup', params: { id: newId('sale-') } } as const;
+  // Settings live off the front door rather than off a working screen — see
+  // the header comment in src/app/settings.tsx.
+  const SETTINGS = '/settings' as const;
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <View
         style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: t.space.sm,
           padding: t.space.md,
           borderBottomWidth: t.border.hair,
           borderBottomColor: t.color.rule,
@@ -66,11 +72,15 @@ export default function SaleListScreen() {
         <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
           {msg('sales.title')}
         </Text>
+        <View style={{ flex: 1 }} />
+        <Link href={SETTINGS} asChild>
+          <Button testID="open-settings">{msg('settings.open')}</Button>
+        </Link>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, gap: t.space.sm }}>
         {sales === null ? (
-          <Text style={{ fontFamily: t.font.family.mono, color: t.color.inkSoft }}>กำลังโหลด…</Text>
+          <Text style={{ fontFamily: t.font.family.mono, color: t.color.inkSoft }}>{msg('counter.loading')}</Text>
         ) : sales.length === 0 ? (
           <Text
             testID="empty-state"

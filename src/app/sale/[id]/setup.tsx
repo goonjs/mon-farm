@@ -38,11 +38,13 @@ import { PeoplePicker } from '../../../components/PeoplePicker';
 import { newId } from '../../../lib/id';
 import { useSale } from '../../../store/SaleProvider';
 import type { Person } from '../../../store/people';
+import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import type { Zone } from '../../../core/types';
 
 export default function SetupScreen() {
   const t = useTheme();
+  const msg = useT();
   const router = useRouter();
   const { saleId, state, ready } = useSale();
 
@@ -53,7 +55,7 @@ export default function SetupScreen() {
   if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: t.color.surface, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontFamily: t.font.family.mono, color: t.color.inkSoft }}>กำลังโหลด…</Text>
+        <Text style={{ fontFamily: t.font.family.mono, color: t.color.inkSoft }}>{msg('counter.loading')}</Text>
       </View>
     );
   }
@@ -61,14 +63,14 @@ export default function SetupScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <TopBar
-        crumb="ตั้งค่าการขาย · sale setup"
+        crumb={msg('setup.title')}
         right={
           // router.back(), not a Link — see the same note on the counter and
           // settlement screens. The list screen this was pushed from is
           // already on the stack; reusing it is what keeps repeated
           // list → setup → list round trips from stacking up hidden screens.
           <Button testID="back-to-list" onPress={() => router.back()}>
-            ← รายการ · list
+            {msg('setup.backToList')}
           </Button>
         }
       />
@@ -109,14 +111,14 @@ export default function SetupScreen() {
           style={{ flex: 1, fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}
         >
           {canStart
-            ? 'ทุกอย่างพร้อม · price, split and at least one pile are set'
+            ? msg('setup.ready')
             : !state.price
-              ? 'ยังไม่ได้ตั้งราคา · price not set yet'
+              ? msg('setup.needPrice')
               : state.zones.length === 0
-                ? 'ยังไม่มีโซน · add a zone'
+                ? msg('setup.needZone')
                 : !splitResolvable
-                  ? 'บางโซนยังไม่มีส่วนแบ่ง · a zone has no split, and there is no default'
-                  : 'ยังไม่มีกอง · add at least one pile'}
+                  ? msg('setup.needSplit')
+                  : msg('setup.needPile')}
         </Text>
         <Button
           testID="start-counting"
@@ -124,7 +126,7 @@ export default function SetupScreen() {
           disabled={!canStart}
           onPress={() => router.replace({ pathname: '/sale/[id]/counter', params: { id: saleId } })}
         >
-          เริ่มนับ — start counting →
+          {msg('setup.startCounting')}
         </Button>
       </View>
     </View>
@@ -132,6 +134,7 @@ export default function SetupScreen() {
 }
 
 function PartiesCard() {
+  const msg = useT();
   const { state, append } = useSale();
   const p = state.parties;
   const [farmName, setFarmName] = useState(p?.farmName ?? '');
@@ -167,32 +170,33 @@ function PartiesCard() {
   };
 
   return (
-    <Card title="ผู้ซื้อและคน · buyer & people">
-      <LabeledInput testID="farm-name" label="ไร่ · farm" value={farmName} onChangeText={dirty(setFarmName)} />
-      <LabeledInput testID="buyer" label="ล้ง · buyer" value={buyer} onChangeText={dirty(setBuyer)} />
-      <LabeledInput testID="manager" label="ผู้จัดการ · manager" value={manager} onChangeText={dirty(setManager)} />
+    <Card title={msg('setup.parties')}>
+      <LabeledInput testID="farm-name" label={msg('setup.farm')} value={farmName} onChangeText={dirty(setFarmName)} />
+      <LabeledInput testID="buyer" label={msg('setup.buyer')} value={buyer} onChangeText={dirty(setBuyer)} />
+      <LabeledInput testID="manager" label={msg('setup.manager')} value={manager} onChangeText={dirty(setManager)} />
       <LabeledInput
         testID="worker-lead"
-        label="หัวหน้าคนงาน · worker lead"
+        label={msg('setup.workerLead')}
         value={workerLead}
         onChangeText={dirty(setWorkerLead)}
       />
-      <Field label="สถานที่ · where">
+      <Field label={msg('setup.where')}>
         <Segmented
           options={[
-            { value: 'farm' as const, label: 'ที่ไร่ · at farm' },
-            { value: 'buyer' as const, label: 'ที่ล้ง · at buyer' },
+            { value: 'farm' as const, label: msg('setup.atFarm') },
+            { value: 'buyer' as const, label: msg('setup.atBuyer') },
           ]}
           value={where}
           onChange={dirty(setWhere)}
         />
       </Field>
-      <SaveStatusRow status={status} testID="saved-parties" incompleteHint="ต้องมีชื่อไร่และล้ง · farm and buyer are required" />
+      <SaveStatusRow status={status} testID="saved-parties" incompleteHint={msg('setup.partiesHint')} />
     </Card>
   );
 }
 
 function PriceCard() {
+  const msg = useT();
   const { state, append } = useSale();
   const [baht, setBaht] = useState(state.price ? String(state.price.satangPerKg / 100) : '');
   const [indexRef, setIndexRef] = useState(state.price?.indexRef ?? '');
@@ -209,10 +213,10 @@ function PriceCard() {
   );
 
   return (
-    <Card title="ราคา · agreed price">
+    <Card title={msg('setup.price')}>
       <LabeledInput
         testID="price-baht"
-        label="฿ ต่อ กก. · baht per kg"
+        label={msg('setup.bahtPerKg')}
         value={baht}
         onChangeText={(v) => {
           setTouched(true);
@@ -222,20 +226,21 @@ function PriceCard() {
       />
       <LabeledInput
         testID="price-index-ref"
-        label="อ้างอิงราคากลาง · market index reference"
+        label={msg('setup.indexRef')}
         value={indexRef}
         onChangeText={(v) => {
           setTouched(true);
           setIndexRef(v);
         }}
       />
-      <SaveStatusRow status={status} testID="saved-price" incompleteHint="ต้องใส่ราคามากกว่า 0 · price must be greater than 0" />
+      <SaveStatusRow status={status} testID="saved-price" incompleteHint={msg('setup.priceHint')} />
     </Card>
   );
 }
 
 function SplitCard() {
   const t = useTheme();
+  const msg = useT();
   const { state, append } = useSale();
   const [ownerPct, setOwnerPct] = useState(state.split?.ownerPct ?? 50);
   const [basis, setBasis] = useState<'gross' | 'final'>(state.split?.basis ?? 'gross');
@@ -246,11 +251,11 @@ function SplitCard() {
   );
 
   return (
-    <Card title="ส่วนแบ่งเริ่มต้น · default split">
+    <Card title={msg('setup.split')}>
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, marginBottom: t.space.sm }}>
-        ใช้กับโซนที่ไม่ได้ตั้งคนงานของตัวเอง · applies to any zone with no worker of its own
+        {msg('setup.splitNote')}
       </Text>
-      <Field label="เจ้าของ / คนงาน · owner / worker">
+      <Field label={msg('setup.ownerWorker')}>
         <Segmented
           options={[
             { value: 50, label: '50 / 50' },
@@ -264,11 +269,11 @@ function SplitCard() {
           }}
         />
       </Field>
-      <Field label="คิดจาก · applies to">
+      <Field label={msg('setup.appliesTo')}>
         <Segmented
           options={[
-            { value: 'gross' as const, label: 'ยอดรวม · gross' },
-            { value: 'final' as const, label: 'ยอดสุทธิ · final' },
+            { value: 'gross' as const, label: msg('setup.gross') },
+            { value: 'final' as const, label: msg('setup.final') },
           ]}
           value={basis}
           onChange={(v) => {
@@ -347,17 +352,18 @@ function useAutoSave(
  * exact confusion this exists to remove.
  */
 function SaveStatusRow({ status, testID, incompleteHint }: { status: SaveStatus; testID: string; incompleteHint: string }) {
+  const msg = useT();
   if (status === 'saved') {
     return (
       <Pill testID={testID} tone="accept" dot="filled">
-        ✓ บันทึกแล้ว · saved
+        {msg('setup.saved')}
       </Pill>
     );
   }
   if (status === 'pending') {
     return (
       <Pill testID={testID} tone="warn" dot="half">
-        กำลังบันทึก… · saving…
+        {msg('setup.saving')}
       </Pill>
     );
   }
@@ -370,6 +376,7 @@ function SaveStatusRow({ status, testID, incompleteHint }: { status: SaveStatus;
 
 function ZonesCard() {
   const t = useTheme();
+  const msg = useT();
   const { state, append } = useSale();
   const [newZoneName, setNewZoneName] = useState('');
 
@@ -381,7 +388,7 @@ function ZonesCard() {
   };
 
   return (
-    <Card title="โซนและกอง · zones & piles">
+    <Card title={msg('setup.zonesPiles')}>
       {state.zones.map((zone) => (
         <ZoneEditor key={zone.id} zone={zone} />
       ))}
@@ -391,13 +398,13 @@ function ZonesCard() {
           testID="new-zone-name"
           value={newZoneName}
           onChangeText={setNewZoneName}
-          placeholder="ชื่อโซน · zone name"
+          placeholder={msg('setup.zoneNamePlaceholder')}
           placeholderTextColor={t.color.inkFaint}
           onSubmitEditing={addZone}
           style={inputStyle(t)}
         />
         <Button testID="add-zone" variant="primary" onPress={addZone} disabled={!newZoneName.trim()}>
-          + เพิ่มโซน · add zone
+          {msg('setup.addZone')}
         </Button>
       </View>
     </Card>
@@ -406,6 +413,7 @@ function ZonesCard() {
 
 function ZoneEditor({ zone }: { zone: Zone }) {
   const t = useTheme();
+  const msg = useT();
   const { state, append } = useSale();
   const piles = state.piles.filter((p) => p.zoneId === zone.id);
 
@@ -469,7 +477,7 @@ function ZoneEditor({ zone }: { zone: Zone }) {
       </Text>
 
       <View style={{ marginTop: t.space.sm }}>
-        <Field label="คนงาน · worker (leave unset to use the default split)">
+        <Field label={msg('setup.zoneWorker')}>
           <PeoplePicker
             testID={`zone-worker-${zone.id}`}
             value={worker}
@@ -481,7 +489,7 @@ function ZoneEditor({ zone }: { zone: Zone }) {
         </Field>
         {worker ? (
           <>
-            <Field label="เจ้าของ % · owner %">
+            <Field label={msg('setup.ownerPct')}>
               <Segmented
                 options={[
                   { value: 50, label: '50 / 50' },
@@ -507,7 +515,7 @@ function ZoneEditor({ zone }: { zone: Zone }) {
             testID={`pile-${p.id}`}
             style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}
           >
-            {p.name} · ตะกร้า {p.tareG / 1000} + มาตรฐาน {p.stdNetG / 1000} กก.
+            {msg('setup.pileRow', { name: p.name, tare: p.tareG / 1000, std: p.stdNetG / 1000 })}
           </Text>
         ))}
       </View>
@@ -517,7 +525,7 @@ function ZoneEditor({ zone }: { zone: Zone }) {
           testID={`pile-name-${zone.id}`}
           value={pileName}
           onChangeText={setPileName}
-          placeholder="ชื่อกอง · pile name"
+          placeholder={msg('setup.pileNamePlaceholder')}
           placeholderTextColor={t.color.inkFaint}
           style={[inputStyle(t), { flexBasis: 100, flexGrow: 1 }]}
         />
@@ -525,7 +533,7 @@ function ZoneEditor({ zone }: { zone: Zone }) {
           testID={`pile-tare-${zone.id}`}
           value={tareKg}
           onChangeText={setTareKg}
-          placeholder="ตะกร้า กก."
+          placeholder={msg('setup.tarePlaceholder')}
           placeholderTextColor={t.color.inkFaint}
           keyboardType="decimal-pad"
           style={[inputStyle(t), { width: 70 }]}
@@ -534,13 +542,13 @@ function ZoneEditor({ zone }: { zone: Zone }) {
           testID={`pile-std-${zone.id}`}
           value={stdKg}
           onChangeText={setStdKg}
-          placeholder="มาตรฐาน กก."
+          placeholder={msg('setup.stdPlaceholder')}
           placeholderTextColor={t.color.inkFaint}
           keyboardType="decimal-pad"
           style={[inputStyle(t), { width: 70 }]}
         />
         <Button testID={`add-pile-${zone.id}`} onPress={addPile} disabled={!pileName.trim()}>
-          + เพิ่มกอง
+          {msg('setup.addPile')}
         </Button>
       </View>
     </View>
