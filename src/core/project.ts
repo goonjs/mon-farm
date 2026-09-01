@@ -36,6 +36,7 @@ export function emptySale(id: string): SaleState {
     zones: [],
     piles: [],
     clockSuspect: false,
+    speechOn: true,
   };
 }
 
@@ -80,6 +81,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
   let price = base.price;
   let split = base.split;
   let clockSuspect = false;
+  let speechOn = base.speechOn;
 
   for (const e of ordered) {
     // Baskets and rejections carry no state beyond the totals, except that the
@@ -221,6 +223,10 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
 
       case 'announced':
         break;
+
+      case 'speech_set':
+        speechOn = payload.on;
+        break;
     }
   }
 
@@ -254,6 +260,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
       }),
     ),
     clockSuspect,
+    speechOn,
   };
 }
 
@@ -302,6 +309,25 @@ export function canReopenPile(state: SaleState, pileId: PileId): boolean {
 /** Piles still counting when a zone closes — named in the warning, then forced. */
 export function pilesStillCounting(state: SaleState, zoneId: ZoneId): readonly Pile[] {
   return state.piles.filter((p) => p.zoneId === zoneId && p.status === 'counting');
+}
+
+/**
+ * The outcome of the most recent `announced` event, or `null` before any
+ * attempt has been made. Drives the counter's degraded-speech pill (S10,
+ * FR-11.10) — derived from the log rather than kept as separate React state,
+ * the same reasoning as everything else in this module: one fold, one place
+ * to be wrong.
+ */
+export function lastAnnounceOk(events: readonly SaleEvent[]): boolean | null {
+  let result: boolean | null = null;
+  let atSeq = -Infinity;
+  for (const e of events) {
+    if (e.kind === 'sys' && e.payload.t === 'announced' && e.seq > atSeq) {
+      result = e.payload.ok;
+      atSeq = e.seq;
+    }
+  }
+  return result;
 }
 
 /**

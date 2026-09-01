@@ -20,12 +20,21 @@ export default defineConfig({
     // `src/i18n/*.test.ts` joins on the same terms: the catalogue and its
     // resolver are plain data and a pure function, with the React binding kept
     // in a separate file precisely so the rules can be proven without a tree.
-    include: ['src/core/**/*.test.ts', 'src/store/*.test.ts', 'src/i18n/*.test.ts'],
+    // `src/speech/*.test.ts` (S10) is the port and the announcer — pure, no RN
+    // import — never the `speaker.web.ts` / `speaker.native.ts` adapters,
+    // which belong to the component/e2e tier exactly as `store.web.ts` /
+    // `store.native.ts` do.
+    include: ['src/core/**/*.test.ts', 'src/store/*.test.ts', 'src/i18n/*.test.ts', 'src/speech/*.test.ts'],
     environment: 'node',
     globals: false,
     coverage: {
-      include: ['src/core/**/*.ts', 'src/store/*.ts'],
-      exclude: ['src/core/**/*.test.ts', 'src/core/fixtures.ts', 'src/store/*.test.ts'],
+      include: ['src/core/**/*.ts', 'src/store/*.ts', 'src/speech/*.ts'],
+      exclude: [
+        'src/core/**/*.test.ts',
+        'src/core/fixtures.ts',
+        'src/store/*.test.ts',
+        'src/speech/*.test.ts',
+      ],
     },
   },
 });

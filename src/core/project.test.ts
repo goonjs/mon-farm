@@ -6,6 +6,7 @@ import {
   canReady,
   canReopenPile,
   detectClockAnomaly,
+  lastAnnounceOk,
   pilesStillCounting,
   projectSale,
 } from './project';
@@ -195,6 +196,56 @@ describe('ordering', () => {
   it('is idempotent — projecting twice gives the same state', () => {
     const events = workedExample();
     expect(projectSale(events)).toEqual(projectSale(events));
+  });
+});
+
+describe('speech preference (S10, FR-11.11) — logged when toggled mid-sale', () => {
+  it('defaults to on before any speech_set event', () => {
+    const s = projectSale(setUpSale().build());
+    expect(s.speechOn).toBe(true);
+  });
+
+  it('speech_set flips the projected flag', () => {
+    const b = setUpSale().sys({ t: 'speech_set', on: false });
+    expect(projectSale(b.build()).speechOn).toBe(false);
+  });
+
+  it('the latest speech_set wins', () => {
+    const b = setUpSale()
+      .sys({ t: 'speech_set', on: false })
+      .sys({ t: 'speech_set', on: true });
+    expect(projectSale(b.build()).speechOn).toBe(true);
+  });
+
+  it('announced events never affect projected state — evidence only', () => {
+    const withAnnounce = setUpSale().sys({ t: 'announced', thai: 'หนึ่ง', ok: true }).build();
+    const without = setUpSale().build();
+    expect(projectSale(withAnnounce)).toEqual(projectSale(without));
+  });
+});
+
+describe('lastAnnounceOk — derives the degraded-speech pill from the log', () => {
+  it('is null before any announce attempt', () => {
+    expect(lastAnnounceOk(setUpSale().build())).toBeNull();
+  });
+
+  it('reflects the most recent attempt, not the first', () => {
+    const b = setUpSale()
+      .sys({ t: 'announced', thai: 'หนึ่ง', ok: true })
+      .sys({ t: 'announced', thai: 'สอง', ok: false });
+    expect(lastAnnounceOk(b.build())).toBe(false);
+
+    b.sys({ t: 'announced', thai: 'สาม', ok: true });
+    expect(lastAnnounceOk(b.build())).toBe(true);
+  });
+
+  it('goes by seq, not array order', () => {
+    const b = setUpSale()
+      .sys({ t: 'announced', thai: 'หนึ่ง', ok: true })
+      .sys({ t: 'announced', thai: 'สอง', ok: false });
+    const events = b.build();
+    const reversed = [...events].reverse();
+    expect(lastAnnounceOk(reversed)).toBe(false);
   });
 });
 

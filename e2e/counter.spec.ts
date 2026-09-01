@@ -52,6 +52,44 @@ async function hold(page: Page, ms: number) {
   await page.mouse.up();
 }
 
+/**
+ * Makes SpeechSynthesis deterministic, injected before the bundle boots so
+ * `src/speech/speaker.web.ts`'s availability check (evaluated once at module
+ * load) sees it. Real Web Speech API behaviour in headless Chromium is not
+ * deterministic enough for a CI assertion — no guaranteed voices, no
+ * guaranteed `onend` — so `speak()` is replaced with one that always
+ * resolves promptly (S10).
+ *
+ * `window.speechSynthesis` is a read-only accessor in real browsers —
+ * `window.speechSynthesis = {...}` silently no-ops, which was caught only by
+ * looking at an actual screenshot: `speaker.web.ts` still called the REAL
+ * `speechSynthesis.speak()` with a fake utterance object, which threw inside
+ * that native call and was swallowed by its own `catch { resolve(false) }`,
+ * logging a convincingly-real-looking "not heard" for every basket. This
+ * patches the existing native object's OWN `speak` method instead of
+ * replacing the binding, which works regardless of that.
+ */
+async function stubSpeechSynthesis(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    if (!window.speechSynthesis) {
+      class FakeUtterance {
+        lang = '';
+        onend: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        constructor(public text: string) {}
+      }
+      // @ts-expect-error — test-only global, not the real DOM type.
+      window.SpeechSynthesisUtterance = FakeUtterance;
+      // @ts-expect-error — same.
+      window.speechSynthesis = { speak: (u: FakeUtterance) => setTimeout(() => u.onend?.(), 0) };
+      return;
+    }
+    window.speechSynthesis.speak = (utterance: SpeechSynthesisUtterance) => {
+      setTimeout(() => (utterance.onend as unknown as (() => void) | null)?.(), 0);
+    };
+  });
+}
+
 test('the exported build boots and shows the seeded count', async ({ page }) => {
   const { count } = await openCounter(page, 5);
   await expect(count).toHaveText('5');
@@ -154,6 +192,47 @@ test('counts survive a reload (NFR-1)', async ({ page }) => {
 
   await page.reload();
   await expect(page.getByTestId('count')).toHaveText('7');
+});
+
+test('a completed hold speaks the new count and logs it (S10, FR-11.3)', async ({ page }) => {
+  await stubSpeechSynthesis(page);
+  const { count } = await openCounter(page, 5);
+  await hold(page, FAST_HOLD + 150);
+  await expect(count).toHaveText('6');
+
+  await page.getByTestId('tab-log').click();
+  await expect(page.getByTestId('log')).toContainText('พูด');
+  await expect(page.getByTestId('log')).toContainText('หก'); // six, spoken
+  // Not just "an announcement happened" — it must have succeeded. A row
+  // reading "พูด ... — ไม่ได้ยิน" would satisfy the two assertions above too.
+  await expect(page.getByTestId('log')).not.toContainText('ไม่ได้ยิน');
+});
+
+test('speech still fires with the browser offline (NFR-1, FR-11.7)', async ({ page, context }) => {
+  await stubSpeechSynthesis(page);
+  const { count } = await openCounter(page, 5);
+  await context.setOffline(true);
+
+  await hold(page, FAST_HOLD + 150);
+  await expect(count).toHaveText('6');
+
+  await page.getByTestId('tab-log').click();
+  await expect(page.getByTestId('log')).toContainText('พูด');
+  await expect(page.getByTestId('log')).not.toContainText('ไม่ได้ยิน');
+  await context.setOffline(false);
+});
+
+test('turning speech off stops announcements and logs the toggle (FR-11.11)', async ({ page }) => {
+  await stubSpeechSynthesis(page);
+  const { count } = await openCounter(page, 5);
+
+  await page.getByTestId('speech-toggle').click();
+  await hold(page, FAST_HOLD + 150);
+  await expect(count).toHaveText('6'); // counting is unaffected
+
+  await page.getByTestId('tab-log').click();
+  await expect(page.getByTestId('log')).toContainText('เสียงนับ ปิด');
+  await expect(page.getByTestId('log')).not.toContainText('พูด');
 });
 
 test('screenshots — counter, pile, log', async ({ page }, testInfo) => {

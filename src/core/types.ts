@@ -171,6 +171,15 @@ export type SysPayload =
    * auditable rather than invisible.
    */
   | { readonly t: 'announced'; readonly thai: string; readonly ok: boolean }
+  /**
+   * FR-11.11: speech can be turned off without changing the counting logic.
+   * Logged only while a sale is open — a device-level toggle flipped before
+   * any sale starts has no log to append to. Without this, a sale with no
+   * `announced` events would be indistinguishable from one where the voice
+   * failed silently throughout; this is what makes the silence deliberate on
+   * the record, the same reasoning as `clock_anomaly` and the S23 gate-skip.
+   */
+  | { readonly t: 'speech_set'; readonly on: boolean }
   | {
       readonly t: 'clock_anomaly';
       readonly anomaly: 'backwards' | 'before-sale-start' | 'implausible-jump';
@@ -238,6 +247,8 @@ export interface SaleState {
   readonly piles: readonly Pile[];
   /** FR-12.7 — surfaced as a non-blocking indicator, never a gate. */
   readonly clockSuspect: boolean;
+  /** FR-11.11. Defaults on; flipped by `speech_set` events. */
+  readonly speechOn: boolean;
 }
 
 export interface Totals {
