@@ -10,7 +10,8 @@ import { expect, test, type Page } from '@playwright/test';
  *
  * `expect(...).toContainText(...)` / `toBeVisible()` already retry for up to
  * Playwright's default timeout, which comfortably covers the auto-save
- * debounce (900ms) — no manual `waitForTimeout` needed anywhere here.
+ * debounce (300ms on web, where this suite runs) — no manual
+ * `waitForTimeout` needed anywhere here.
  */
 
 async function openSetup(page: Page) {
@@ -25,19 +26,19 @@ test('start counting is disabled until price, split and a pile all exist', async
   await expect(page.getByTestId('start-counting')).toBeDisabled();
   await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่ได้ตั้งราคา');
 
+  // The default split (50/50, gross) is always a valid value — it auto-saves
+  // on its own from the moment the setup screen mounts, with no decoy click
+  // needed to "confirm" a value that already shows as selected. By the time
+  // a zone exists below, the split is already resolved for it.
+  await expect(page.getByTestId('saved-split')).toContainText('บันทึกแล้ว');
+
   await page.getByTestId('price-baht').fill('26.5');
   await expect(page.getByTestId('saved-price')).toContainText('บันทึกแล้ว');
   await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีโซน'); // price set, no zone yet
 
   await page.getByTestId('new-zone-name').fill('โซน A');
   await page.getByTestId('add-zone').click();
-  await expect(page.getByTestId('start-blocker')).toContainText('บางโซนยังไม่มีส่วนแบ่ง'); // zone exists, no split resolvable yet
-
-  // The default split (50/50, gross) still has to be touched once to be
-  // written — untouched defaults are never silently assumed as saved.
-  await page.getByTestId('seg-50').click();
-  await expect(page.getByTestId('saved-split')).toContainText('บันทึกแล้ว');
-  await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีกอง'); // split resolved, still no pile
+  await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีกอง'); // zone + split resolved, still no pile
 
   const zoneEditor = page.locator('[data-testid^="zone-editor-"]');
   await zoneEditor.getByTestId(/^pile-name-/).fill('กอง 1');
@@ -45,6 +46,20 @@ test('start counting is disabled until price, split and a pile all exist', async
 
   await expect(page.getByTestId('start-counting')).toBeEnabled();
   await expect(page.getByTestId('start-blocker')).toContainText('ทุกอย่างพร้อม');
+});
+
+test('the default split saves on its own, with no click required (field report)', async ({ page }) => {
+  // A real bug: the split card only ever wrote `split_set` from inside a
+  // Segmented onChange, so an owner happy with 50/50 gross — which is
+  // already showing as selected — had no way to actually persist it short
+  // of clicking a different option and clicking back. `splitResolvable`
+  // requires that event to exist, so this silently blocked "start counting"
+  // on nothing but an undiscoverable UI trick.
+  await openSetup(page);
+  await expect(page.getByTestId('saved-split')).toContainText('บันทึกแล้ว');
+
+  await page.reload();
+  await expect(page.getByTestId('saved-split')).toContainText('บันทึกแล้ว');
 });
 
 test('parties and price auto-save without a button, and persist across a reload', async ({ page }) => {

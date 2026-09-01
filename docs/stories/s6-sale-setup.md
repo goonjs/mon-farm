@@ -177,3 +177,39 @@ reading the code:**
 Zone percentage selector is presently fixed to three options (50/60/70). A
 custom/typed percentage is not offered — worth revisiting if a real sale needs
 a split outside those three.
+
+## Amendment, 2026-09-01 — field-reported fixes from real phone testing
+
+Three real bugs, reported by the owner testing the app on their own phone
+(not caught by the automated suite):
+
+1. **The default split (50/50 gross) could never actually be saved without a
+   decoy click.** `SplitCard` only ever scheduled its autosave from inside a
+   `Segmented` `onChange`, and 50/50 is what the control already shows as
+   selected — so an owner happy with the default had no way to discover they
+   needed to touch it at all. Since `splitResolvable` requires a real
+   `split_set` event for any zone without its own contract, this silently
+   blocked "start counting" on nothing but an undiscoverable UI trick ("I
+   have to change it and change it back," in the owner's words). Worse: the
+   status pill was already showing "กำลังบันทึก… / saving…" the whole time,
+   because `useAutoSave`'s displayed status never actually depended on
+   `touched` — it was lying about a save that was never scheduled. Fixed by
+   seeding `touched = !state.split`: a sale that has never saved a split
+   starts touched, so the always-valid default saves on its own the moment
+   the card mounts, with no interaction required.
+2. **The tare and standard-weight fields had no persistent label** — only a
+   placeholder, which disappears the instant a number is typed, leaving two
+   bare numbers with no indication which was which. Fixed by wrapping both
+   (and the pile-name field, for consistency) in the same `Field` label
+   pattern already used everywhere else on this screen, reusing the existing
+   `pile.tare` / `pile.stdNet` message ids rather than adding new ones.
+3. **The autosave debounce was one fixed 900ms for every field, on every
+   platform.** Per the owner's request: `AUTOSAVE_DELAY_MS` is now
+   `Platform.OS === 'web' ? 300 : 600` — web is the verification surface
+   (see `store.web.ts`), native is the real field target on a touch
+   keyboard, where a shorter debounce risks saving mid-word.
+
+`e2e/setup.spec.ts` updated to match: the "must click seg-50 first" step is
+gone from the main flow test, and a dedicated regression test
+(`the default split saves on its own, with no click required`) proves the
+default survives a reload without ever being touched.
