@@ -54,3 +54,58 @@ appended event, so the record of what the operator did survives offline.
 
 Unchecked boxes above are real gaps, not oversights. They are the honest
 boundary of what this story delivered.
+
+## Amendment, 2026-09-01 — a real multi-touch bug, found on a real phone
+
+The QA note above flagged it exactly: "Never run on a device or emulator.
+Web only." This is the gap that let it through.
+
+**Field report**: on a real phone, attempting to pinch-zoom the counter
+screen sometimes left the app "still counting" after release, needing
+several undos to recover from.
+
+**Root cause, confirmed with real touch input** (mouse-event simulation
+cannot reproduce this, and neither can a script-dispatched `TouchEvent` — see
+below): every cancellation path in `HoldStage` — the window-level
+`pointerup` listener, and the `pointermove`/`pointerdown` listener that feeds
+`pointerIsOnStage()` — reacted to **any** pointer, with no identity check.
+An ordinary second finger touching down and lifting (exactly what an
+aborted pinch attempt looks like) fires a genuine `pointerup`, which
+cancelled whatever hold happened to be in progress from a completely
+different, still-down finger that never moved and never lifted.
+
+**Fix**: a hold now claims the `pointerId` of the finger that started it
+(`activePointerId`, captured via a raw `onPointerDown` on the stage,
+guarded so a second finger touching down mid-hold can never steal
+ownership), and every window-level listener ignores events from any other
+pointer. Cleared on `stop()` so the next hold picks up whichever pointer
+starts it.
+
+**How this was actually verified — worth recording, since it's the reusable
+part.** `page.mouse.*` only ever fires mouse events, even under a "mobile"
+device profile. A script-dispatched `new TouchEvent(...)` looked like the
+right tool but produced *nothing* — no `onPressIn`, no hold at all — because
+the browser's own touch-to-pointer-event derivation, and RNW's
+native-event-bound Responder system, only run for genuine input, never for
+`element.dispatchEvent()`. What actually reproduces this class of bug is
+Chrome DevTools Protocol's `Input.dispatchTouchEvent`, driven directly via
+`context.newCDPSession(page)` — real input injection at the browser-engine
+level. `e2e/counter.spec.ts`'s new test (`a second finger touching down and
+lifting mid-hold does not cancel it`) uses exactly this, and was confirmed
+to fail against the pre-fix code (reverted locally, re-run, restored) before
+being kept as a permanent regression test — the first test in this repo
+that exercises a real multi-touch sequence rather than a single simulated
+pointer.
+
+**Not fully closed by this fix**: a genuine *simultaneous* two-finger pinch
+(rather than a sequential touch-and-lift) is untested — the fix should
+handle it the same way (the second pointer is simply ignored throughout),
+but it hasn't been separately verified. Also worth noting: the real
+packaged app blocks pinch-zoom outright via `+html.tsx`'s
+`user-scalable=no`, which the Artifact-preview build used for phone testing
+does not carry (a known limitation of using an Artifact as a preview
+vehicle, not of the app) — so an intentional zoom gesture is less likely to
+reach this code path in production than it was in the environment this bug
+was actually found in. The underlying pointerId-blindness was real
+regardless, and any incidental second touch (adjusting grip, a second hand
+steadying the phone) could have triggered it.
