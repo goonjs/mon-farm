@@ -83,6 +83,31 @@ Ask again, every time.
   So: still ask, every time, however obvious the answer seems and however
   many times in a row it has been yes. Asking is not a failure to read the
   room — it is the mechanism working.
+
+  **Amendment, 2026-09-01 — who speaks first, not whether the gate stands.**
+  The gate above is unchanged: no push happens without the owner's explicit
+  confirmation for that specific push, every time, never carried forward.
+  What changes is that the agent no longer waits to be asked. The moment
+  work is push-ready — CI has run and is green, or no CI ran and the agent
+  judges the work stands on its own — the agent must raise it rather than
+  let it sit finished and unpushed in the working tree.
+
+  Raising it means proposing, never pushing pre-emptively, and a proposal
+  is not valid without a **mandatory brief**, every time:
+
+  1. branch, and what it is being pushed to
+  2. commit subjects going up
+  3. what changed, in a short paragraph
+  4. why it is ready now — CI state, what was run, what was seen
+  5. what this does **not** cover, and what is still open
+  6. anything irreversible or outward-facing
+
+  This is not the relaxation refused above. The acknowledgement moment is
+  untouched — the owner still says yes to each push, consciously, every
+  time — and the friction is untouched — one word, once per push. Only the
+  obligation to *raise* it moved, from the owner remembering to ask, to the
+  agent remembering to offer. A gate the agent cannot pass is still a gate
+  whichever side opens the conversation.
 - **No file deletion** without explicit confirmation for that specific
   deletion.
 - **No access outside the working directory** (reading, writing, or
