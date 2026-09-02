@@ -70,6 +70,17 @@ export function HoldStage({
   const holding = useRef(false);
   const stageEl = useRef<HTMLElement | null>(null);
   const lastPointer = useRef<{ x: number; y: number } | null>(null);
+  /**
+   * The one pointer (finger) a hold belongs to (F-9.7, real-device field
+   * report). Every window-level listener below used to react to ANY
+   * pointer's up/move, with no identity check — confirmed live, with real
+   * CDP-level touch input (not just simulated mouse events), that a second,
+   * completely unrelated finger touching down and lifting mid-hold —
+   * exactly what an attempted pinch-to-zoom looks like — fires a genuine
+   * `pointerup` that cancelled the FIRST finger's still-in-progress hold,
+   * even though that finger never moved or lifted. `null` between holds.
+   */
+  const activePointerId = useRef<number | null>(null);
 
   const rejected = feedback?.tone === 'reject';
 
@@ -83,6 +94,7 @@ export function HoldStage({
       frame.current = null;
     }
     holding.current = false;
+    activePointerId.current = null;
   }, []);
 
   /**
@@ -189,7 +201,31 @@ export function HoldStage({
     if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
     if (typeof document === 'undefined' || typeof document.addEventListener !== 'function') return;
 
-    const onEnd = () => cancelRef.current();
+    // A pointerId mismatch means this event belongs to a DIFFERENT finger
+    // than the one holding — ignore it entirely. `null` (no hold owns a
+    // pointer right now) never filters anything, which matters for the very
+    // first pointerdown of a new hold: that event reaches this
+    // capture-phase window listener before the Pressable's own
+    // `onPointerDown` below has had a chance to claim `activePointerId`.
+    const belongsToActivePointer = (e: PointerEvent) =>
+      activePointerId.current === null || e.pointerId === activePointerId.current;
+
+    const onEnd = (e: PointerEvent) => {
+      if (!belongsToActivePointer(e)) return;
+      cancelRef.current();
+    };
+    /**
+     * S32, field report: a real two-finger pinch is not always a clean
+     * `pointerup`. When the browser claims the gesture as its own native
+     * pinch-zoom (the Artifact-preview build used for phone testing does not
+     * carry `+html.tsx`'s `user-scalable=no`, unlike the real packaged app),
+     * the touches involved end as `pointercancel`, never `pointerup` — so the
+     * anchor finger's hold kept running to completion, uninterrupted, even
+     * though both fingers had already left the screen. Confirmed with real
+     * CDP touch input (`Input.dispatchTouchEvent` type `touchCancel`) before
+     * this listener was added: without it, the count wrongly incremented.
+     */
+    const onCancel = onEnd;
     const onHide = () => {
       if (document.hidden) cancelRef.current();
     };
@@ -197,16 +233,19 @@ export function HoldStage({
     // the stage itself. Recording the position is what lets completion check
     // where the pointer is rather than trusting a boundary event to arrive.
     const onMove = (e: PointerEvent) => {
+      if (!belongsToActivePointer(e)) return;
       lastPointer.current = { x: e.clientX, y: e.clientY };
     };
     window.addEventListener('pointermove', onMove, true);
     window.addEventListener('pointerdown', onMove, true);
     window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onCancel);
     document.addEventListener('visibilitychange', onHide);
     return () => {
       window.removeEventListener('pointermove', onMove, true);
       window.removeEventListener('pointerdown', onMove, true);
       window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onCancel);
       document.removeEventListener('visibilitychange', onHide);
     };
   }, []);
@@ -326,6 +365,20 @@ export function HoldStage({
       accessibilityLabel={msg('hold.label')}
       onLayout={onLayout}
       onPressIn={begin}
+      /**
+       * Claims the pointer for this hold, guarded on `!holding.current` so a
+       * SECOND finger touching down mid-hold can never steal ownership away
+       * from the one already counting — RNW's own responder system already
+       * no-ops `begin()` for that second touch, but this ref is read by the
+       * window listeners below independently of that, so it needs its own
+       * guard. Raw native event, same as `onPointerMove` below — RNW's
+       * `onPressIn` does not reliably carry a `pointerId`.
+       */
+      onPointerDown={(e) => {
+        if (holding.current) return;
+        const n = e.nativeEvent as unknown as { pointerId?: number };
+        if (typeof n.pointerId === 'number') activePointerId.current = n.pointerId;
+      }}
       /**
        * The load-bearing one, and it has to be onPointerMove rather than
        * anything simpler.

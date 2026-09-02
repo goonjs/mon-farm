@@ -100,6 +100,12 @@ At `Review` — implemented, verified in a browser, awaiting sign-off and CI:
 - [x] Auto-save on the setup screen (no story number — amended into
       `docs/stories/s6-sale-setup.md` directly, since it changes S6's own
       acceptance criteria rather than adding new ones)
+- [x] `docs/stories/s10-thai-speech.md` — the spoken count only (FR-11.3,
+      FR-11.4, FR-11.11); the read-back and พร้อมค่ะ/ต่อไปค่ะ move to S31,
+      blocked on PRD open questions 5 and 6
+- [x] `docs/stories/s32-pinch-counts-a-basket.md` — a browser-cancelled
+      pinch touch (`pointercancel`, not `pointerup`) now cancels the hold
+      it belongs to, closing the gap S8's fix named but left open
 
 Not started — no story file written yet:
 
@@ -113,16 +119,17 @@ Not started — no story file written yet:
       per pile, appending that many `accept` events at once with a distinct
       `source` so they're auditable as entered-after-the-fact rather than
       live-held.
-- [ ] **S10** Thai speech — `expo-speech` is installed (no longer blocked) but
-      nothing imports it yet. **The announced register does not exist**, which
-      means half the cross-check the product is built around is missing.
-
+- [ ] **S31** the rest of FR-11 — level read-back (FR-11.1), พร้อมค่ะ
+      (FR-11.2), ต่อไปค่ะ (FR-11.5). Blocked on PRD open questions 5 (voice
+      persona) and 6 (which fields the read-back says). S10 built the spoken
+      count only.
 ## Known blockers
 
 ~~S10 needs `expo-speech`~~ and ~~F-7 needs `expo-haptics`~~ — **both authorized
-and installed 2026-08-10** at `~57.0.1`. Neither is wired into anything yet;
-the announced register (FR-11) and haptic accept/reject feedback (F-7) are
-still unimplemented, but they are no longer blocked.
+and installed 2026-08-10** at `~57.0.1`. **S10 (spoken count) built
+2026-09-01** — the announced register exists for the count. F-7 (haptic
+accept/reject feedback) and S31 (the rest of FR-11) are still unimplemented,
+but neither is blocked.
 
 ## Definition of done for the epic
 

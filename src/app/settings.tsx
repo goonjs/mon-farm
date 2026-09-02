@@ -24,16 +24,20 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { Button, TopBar } from '../components/chrome';
 import { useI18n, useT, type Locale } from '../i18n';
+import { useSpeech } from '../speech';
 import { useTheme, useThemeControls } from '../theme';
 import type { ColorScheme } from '../../design/tokens';
 
 const LIST: Href = '/';
+
+type OnOff = 'on' | 'off';
 
 export default function SettingsScreen() {
   const t = useTheme();
   const msg = useT();
   const { locale, setLocale } = useI18n();
   const { scheme, setScheme } = useThemeControls();
+  const { speechOn, setSpeechOn } = useSpeech();
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
@@ -72,6 +76,18 @@ export default function SettingsScreen() {
           options={[
             { value: 'light', label: msg('common.themeLight') },
             { value: 'dark', label: msg('common.themeDark') },
+          ]}
+        />
+
+        <Choice<OnOff>
+          testID="speech"
+          label={msg('settings.speech')}
+          note={msg('settings.speechNote')}
+          value={speechOn ? 'on' : 'off'}
+          onChange={(v) => setSpeechOn(v === 'on')}
+          options={[
+            { value: 'on', label: msg('common.speechOn') },
+            { value: 'off', label: msg('common.speechOff') },
           ]}
         />
       </ScrollView>

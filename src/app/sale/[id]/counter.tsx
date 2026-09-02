@@ -24,11 +24,14 @@ import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { ShortBasketPanel } from '../../../components/ShortBasketPanel';
 import { ZeroTareGate } from '../../../components/ZeroTareGate';
 import { ZonePileSwitcher } from '../../../components/ZonePileSwitcher';
-import { canCount, canReopenPile, pilesStillCounting } from '../../../core/project';
+import { canCount, canReopenPile, lastAnnounceOk, pilesStillCounting } from '../../../core/project';
 import { formatBaht, formatKg } from '../../../core/settle';
 import { basketNetG, lastLiveBasket, liveBaskets, pileTotals, saleTotals, zoneTotals } from '../../../core/totals';
 import type { BasketEvent, Pile, SaleEvent, SaleState, Zone } from '../../../core/types';
 import { useT, type Translate } from '../../../i18n';
+import { announceCount } from '../../../speech/announcer';
+import { speaker } from '../../../speech/speaker';
+import { useSpeech } from '../../../speech';
 import { useSale } from '../../../store/SaleProvider';
 import { useTheme, useThemeControls } from '../../../theme';
 
@@ -63,6 +66,7 @@ export default function CounterScreen() {
   const msg = useT();
   const router = useRouter();
   const { toggle, scheme } = useThemeControls();
+  const { speechOn, setSpeechOn } = useSpeech();
   const { saleId, events, state, append, ready } = useSale();
   const [tab, setTab] = useState<TabKey>('count');
   const [shortOpen, setShortOpen] = useState(false);
@@ -107,8 +111,15 @@ export default function CounterScreen() {
     expected: formatKg(pile.tareG + pile.stdNetG),
   });
 
-  const onCount = () =>
+  // The count about to exist once this basket lands — `totals` here is a
+  // closure over state from before the append below, so this is the number
+  // that needs speaking, not the one currently on screen (FR-11.3).
+  const nextCount = (totals?.baskets ?? 0) + 1;
+
+  const onCount = () => {
     append({ kind: 'accept', pileId: pile.id, source: 'hold', netG: pile.stdNetG, tareG: pile.tareG });
+    if (speechOn) announceCount(nextCount, speaker, append);
+  };
 
   const onReject = (heldMs: number) =>
     append({ kind: 'reject', pileId: pile.id, source: 'hold', reason: 'released-early', heldMs });
@@ -132,6 +143,7 @@ export default function CounterScreen() {
 
   const confirmShort = () => {
     append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG });
+    if (speechOn) announceCount(nextCount, speaker, append);
     setShortOpen(false);
   };
 
@@ -142,6 +154,19 @@ export default function CounterScreen() {
     append({ kind: 'sys', payload: { t: 'tare_confirmed', pileId: pile.id, tareG: confirmedTareG } });
 
   const onGateReady = () => append({ kind: 'sys', payload: { t: 'ready', pileId: pile.id } });
+
+  // FR-11.11: the on/off switch is the live device preference (reactive
+  // everywhere, exactly like theme/locale — see src/speech/index.tsx). The
+  // `speech_set` event is an audit-trail entry, not the gate: it is what
+  // lets the log explain, later, why a stretch of the sale has no
+  // `announced` events, the same reasoning as `clock_anomaly` and the S23
+  // gate-skip event.
+  const onToggleSpeech = () => {
+    const next = !speechOn;
+    setSpeechOn(next);
+    append({ kind: 'sys', payload: { t: 'speech_set', on: next } });
+  };
+  const speechDegraded = speechOn && lastAnnounceOk(events) === false;
 
   const pickPile = (pileId: string) => {
     setSelectedPileId(pileId);
@@ -179,8 +204,14 @@ export default function CounterScreen() {
               {countable ? msg('counter.counting') : msg('counter.stopped')}
             </Pill>
             {state.clockSuspect ? <Pill tone="warn">{msg('counter.clockSuspect')}</Pill> : null}
+            {speechDegraded ? <Pill tone="warn">{msg('counter.speechDegraded')}</Pill> : null}
             <Pill testID="open-switcher">
               <Text onPress={() => setOverlay({ kind: 'switcher' })}>{`${msg('counter.switcher')} ▾`}</Text>
+            </Pill>
+            <Pill testID="speech-toggle" tone={speechOn ? 'accept' : 'neutral'} dot={speechOn ? 'filled' : 'hollow'}>
+              <Text onPress={onToggleSpeech}>
+                {speechOn ? msg('common.speechOn') : msg('common.speechOff')}
+              </Text>
             </Pill>
             <Pill testID="theme-toggle">
               <Text onPress={toggle}>
@@ -722,6 +753,13 @@ function sysLabel(p: { t: string } & Record<string, unknown>, msg: Translate): s
     case 'sale_closed': return msg('log.saleClosed');
     case 'sale_reopened': return msg('log.saleReopened', { reason: String(p.reason) });
     case 'clock_anomaly': return msg('log.clockAnomaly', { anomaly: String(p.anomaly) });
+    case 'announced':
+      return msg('log.announced', {
+        thai: String(p.thai),
+        note: p.ok === false ? msg('log.announceFailed') : '',
+      });
+    case 'speech_set':
+      return msg('log.speechSet', { state: p.on ? msg('common.speechOn') : msg('common.speechOff') });
     default: return p.t;
   }
 }

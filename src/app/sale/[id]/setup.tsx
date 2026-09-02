@@ -13,8 +13,9 @@
  * event correctly, but gave zero visible feedback, so a working save and a
  * no-op looked identical ("I just saw the save didn't give anything"). The
  * fix isn't a toast someone can miss — it's not making them ask "did that
- * work?" in the first place. Debounced (900ms after the last change to that
- * card), not per-keystroke: typing "ไร่จันทรเซลม" character by character
+ * work?" in the first place. Debounced (per `AUTOSAVE_DELAY_MS`, below —
+ * shorter on web, longer on native touch keyboards) after the last change to
+ * that card, not per-keystroke: typing "ไร่จันทรเซลม" character by character
  * must not append eleven `sale_started` events to an append-only log.
  * `useAutoSaveStatus`-style `pending`/`saved` state per card is the
  * replacement for the old "saved" badge, shown continuously rather than
@@ -30,7 +31,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { Button, Pill, TopBar } from '../../../components/chrome';
@@ -244,7 +245,11 @@ function SplitCard() {
   const { state, append } = useSale();
   const [ownerPct, setOwnerPct] = useState(state.split?.ownerPct ?? 50);
   const [basis, setBasis] = useState<'gross' | 'final'>(state.split?.basis ?? 'gross');
-  const [touched, setTouched] = useState(false);
+  // 50/50 gross is always a valid split (unlike farm name or price, which
+  // have no valid empty/default value) — a sale that has never saved one yet
+  // starts "touched" so the default itself auto-saves, rather than needing a
+  // decoy click on a control that already visibly shows it as selected.
+  const [touched, setTouched] = useState(!state.split);
 
   const status = useAutoSave([ownerPct, basis], touched, true, !!state.split, () =>
     append({ kind: 'sys', payload: { t: 'split_set', ownerPct, basis } }),
@@ -289,7 +294,14 @@ function SplitCard() {
 
 type SaveStatus = 'idle' | 'pending' | 'saved';
 
-const AUTOSAVE_DELAY_MS = 900;
+/**
+ * The real deployment target is native — phone, per CLAUDE.md — so a native
+ * build is field use on a touch keyboard, where a shorter debounce risks
+ * autosaving mid-word on every pause between taps. Web is the verification
+ * surface, not the field surface (see `store.web.ts`), so it can afford the
+ * snappier value a developer typing on a real keyboard expects.
+ */
+const AUTOSAVE_DELAY_MS = Platform.OS === 'web' ? 300 : 600;
 
 /**
  * Auto-save, debounced: fires `save` once `AUTOSAVE_DELAY_MS` after the last
@@ -520,33 +532,45 @@ function ZoneEditor({ zone }: { zone: Zone }) {
         ))}
       </View>
 
-      <View style={{ flexDirection: 'row', gap: t.space.xs, marginTop: t.space.sm, flexWrap: 'wrap' }}>
-        <TextInput
-          testID={`pile-name-${zone.id}`}
-          value={pileName}
-          onChangeText={setPileName}
-          placeholder={msg('setup.pileNamePlaceholder')}
-          placeholderTextColor={t.color.inkFaint}
-          style={[inputStyle(t), { flexBasis: 100, flexGrow: 1 }]}
-        />
-        <TextInput
-          testID={`pile-tare-${zone.id}`}
-          value={tareKg}
-          onChangeText={setTareKg}
-          placeholder={msg('setup.tarePlaceholder')}
-          placeholderTextColor={t.color.inkFaint}
-          keyboardType="decimal-pad"
-          style={[inputStyle(t), { width: 70 }]}
-        />
-        <TextInput
-          testID={`pile-std-${zone.id}`}
-          value={stdKg}
-          onChangeText={setStdKg}
-          placeholder={msg('setup.stdPlaceholder')}
-          placeholderTextColor={t.color.inkFaint}
-          keyboardType="decimal-pad"
-          style={[inputStyle(t), { width: 70 }]}
-        />
+      <View style={{ flexDirection: 'row', gap: t.space.xs, marginTop: t.space.sm, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <View style={{ flexBasis: 100, flexGrow: 1 }}>
+          <Field label={msg('setup.pileNamePlaceholder')}>
+            <TextInput
+              testID={`pile-name-${zone.id}`}
+              value={pileName}
+              onChangeText={setPileName}
+              placeholder={msg('setup.pileNamePlaceholder')}
+              placeholderTextColor={t.color.inkFaint}
+              style={inputStyle(t)}
+            />
+          </Field>
+        </View>
+        <View style={{ width: 70 }}>
+          <Field label={msg('pile.tare')}>
+            <TextInput
+              testID={`pile-tare-${zone.id}`}
+              value={tareKg}
+              onChangeText={setTareKg}
+              placeholder={msg('setup.tarePlaceholder')}
+              placeholderTextColor={t.color.inkFaint}
+              keyboardType="decimal-pad"
+              style={inputStyle(t)}
+            />
+          </Field>
+        </View>
+        <View style={{ width: 70 }}>
+          <Field label={msg('pile.stdNet')}>
+            <TextInput
+              testID={`pile-std-${zone.id}`}
+              value={stdKg}
+              onChangeText={setStdKg}
+              placeholder={msg('setup.stdPlaceholder')}
+              placeholderTextColor={t.color.inkFaint}
+              keyboardType="decimal-pad"
+              style={inputStyle(t)}
+            />
+          </Field>
+        </View>
         <Button testID={`add-pile-${zone.id}`} onPress={addPile} disabled={!pileName.trim()}>
           {msg('setup.addPile')}
         </Button>

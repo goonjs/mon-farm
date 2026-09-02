@@ -97,7 +97,12 @@ its own sake.
    which is downstream of this: an open question blocks the commit, and the
    commit is what the push was waiting for.
 7. **Push** — CI (see below) runs build, unit tests, and style/lint checks.
-   Must be green.
+   Must be green. Per `CLAUDE.md`'s security gates, the agent proposes the
+   push the moment work is ready rather than waiting to be asked, but never
+   pushes without the owner's explicit go-ahead for that specific push. The
+   proposal always carries a brief: branch and target, commit subjects,
+   what changed, why it's ready (CI state / what was run), what it does
+   not cover, and anything irreversible or outward-facing.
 8. **Independent code review**: a separate agent/session from the one that
    implemented the story reviews the diff — correctness, test coverage,
    YAGNI/KISS/SOLID adherence, and whether the offline/sync gate was

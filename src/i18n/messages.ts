@@ -102,6 +102,7 @@ const th = {
   'counter.counting': 'กำลังนับ',
   'counter.stopped': 'หยุด',
   'counter.clockSuspect': 'เวลาผิด',
+  'counter.speechDegraded': 'เสียงพูดไม่ทำงาน',
   'counter.switcher': 'โซน/กอง',
   'counter.pileNotReady': 'กองยังไม่พร้อม',
   'counter.undo': 'ยกเลิกเข่งล่าสุด',
@@ -124,8 +125,8 @@ const th = {
   'pile.short': 'เข่งไม่เต็ม',
   'pile.weight': 'น้ำหนักรวม',
   'pile.scale': 'ตาชั่ง',
-  'pile.tare': 'ตะกร้าเปล่า',
-  'pile.stdNet': 'ยางต่อเข่ง',
+  'pile.tare': 'นน. ตะกร้าเปล่า',
+  'pile.stdNet': 'นน. ยางต่อเข่ง',
   'pile.expected': 'ต้องอ่านได้',
   'pile.rollups': 'รวม',
   'pile.wholeSale': 'ทั้งการขาย',
@@ -178,6 +179,10 @@ const th = {
   'settings.languageNote': 'เปลี่ยนเฉพาะตัวหนังสือบนหน้าจอ เสียงพูดยังเป็นภาษาไทยเสมอ',
   'settings.theme': 'สีจอ',
   'settings.themeNote': 'สว่างสำหรับกลางแดด มืดสำหรับตอนเย็นหรือในร่ม',
+  'settings.speech': 'เสียงนับ',
+  'settings.speechNote': 'พูดออกเสียงทุกครั้งที่นับเข่งได้ — ปิดได้โดยไม่กระทบการนับ',
+  'common.speechOn': 'เปิด',
+  'common.speechOff': 'ปิด',
 
   // ── Sale setup (S6) ──────────────────────────────────────────────────────
   'setup.title': 'ตั้งค่าการขาย',
@@ -265,6 +270,13 @@ const th = {
   'log.saleClosed': 'ปิดการขาย',
   'log.saleReopened': 'เปิดการขายอีกครั้ง — {reason}',
   'log.clockAnomaly': 'เวลาเครื่องผิด ({anomaly})',
+  // `note` and `state` are precomputed by the caller (sysLabel in counter.tsx)
+  // rather than expressed as conditional logic here — the resolver's
+  // `interpolate()` is deliberately a plain `{name}` substitution (see
+  // resolve.ts), not an ICU MessageFormat engine.
+  'log.announced': 'พูด "{thai}"{note}',
+  'log.announceFailed': ' — ไม่ได้ยิน',
+  'log.speechSet': 'เสียงนับ {state}',
 } as const;
 
 /**
@@ -324,6 +336,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'counter.counting': 'counting',
   'counter.stopped': 'stopped',
   'counter.clockSuspect': 'clock looks wrong',
+  'counter.speechDegraded': 'speech is not working',
   'counter.switcher': 'zone/pile',
   'counter.pileNotReady': 'pile not ready',
   'counter.undo': 'undo last',
@@ -394,6 +407,10 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'settings.languageNote': 'changes the text on screen only — the spoken count is always Thai',
   'settings.theme': 'screen',
   'settings.themeNote': 'light for direct sun, dark for evening or indoors',
+  'settings.speech': 'spoken count',
+  'settings.speechNote': 'speaks each basket count aloud — turning it off does not change the counting itself',
+  'common.speechOn': 'on',
+  'common.speechOff': 'off',
 
   'setup.title': 'sale setup',
   'setup.backToList': '← list',
@@ -477,6 +494,9 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'log.saleClosed': 'sale closed',
   'log.saleReopened': 'sale reopened — {reason}',
   'log.clockAnomaly': "device clock looks wrong ({anomaly})",
+  'log.announced': 'said "{thai}"{note}',
+  'log.announceFailed': ' — not heard',
+  'log.speechSet': 'spoken count {state}',
 };
 
 export const messages = { th, en } as const;

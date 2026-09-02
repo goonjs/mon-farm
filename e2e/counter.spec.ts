@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type CDPSession, type Page } from '@playwright/test';
 
 import { tokens } from '../design/tokens';
 import { openPileScenario, seedSale, testSaleId } from './fixtures';
@@ -50,6 +50,44 @@ async function hold(page: Page, ms: number) {
   await page.mouse.down();
   await page.waitForTimeout(ms);
   await page.mouse.up();
+}
+
+/**
+ * Makes SpeechSynthesis deterministic, injected before the bundle boots so
+ * `src/speech/speaker.web.ts`'s availability check (evaluated once at module
+ * load) sees it. Real Web Speech API behaviour in headless Chromium is not
+ * deterministic enough for a CI assertion — no guaranteed voices, no
+ * guaranteed `onend` — so `speak()` is replaced with one that always
+ * resolves promptly (S10).
+ *
+ * `window.speechSynthesis` is a read-only accessor in real browsers —
+ * `window.speechSynthesis = {...}` silently no-ops, which was caught only by
+ * looking at an actual screenshot: `speaker.web.ts` still called the REAL
+ * `speechSynthesis.speak()` with a fake utterance object, which threw inside
+ * that native call and was swallowed by its own `catch { resolve(false) }`,
+ * logging a convincingly-real-looking "not heard" for every basket. This
+ * patches the existing native object's OWN `speak` method instead of
+ * replacing the binding, which works regardless of that.
+ */
+async function stubSpeechSynthesis(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    if (!window.speechSynthesis) {
+      class FakeUtterance {
+        lang = '';
+        onend: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        constructor(public text: string) {}
+      }
+      // @ts-expect-error — test-only global, not the real DOM type.
+      window.SpeechSynthesisUtterance = FakeUtterance;
+      // @ts-expect-error — same.
+      window.speechSynthesis = { speak: (u: FakeUtterance) => setTimeout(() => u.onend?.(), 0) };
+      return;
+    }
+    window.speechSynthesis.speak = (utterance: SpeechSynthesisUtterance) => {
+      setTimeout(() => (utterance.onend as unknown as (() => void) | null)?.(), 0);
+    };
+  });
 }
 
 test('the exported build boots and shows the seeded count', async ({ page }) => {
@@ -154,6 +192,149 @@ test('counts survive a reload (NFR-1)', async ({ page }) => {
 
   await page.reload();
   await expect(page.getByTestId('count')).toHaveText('7');
+});
+
+/**
+ * Real, CDP-level touch input (`Input.dispatchTouchEvent`) — not
+ * `page.mouse.*`, which fires mouse events even on a "mobile" device
+ * profile, and not JS `dispatchEvent(new TouchEvent(...))`, which does not
+ * trigger the browser's own touch handling at all (proven while chasing the
+ * bug below: a script-dispatched TouchEvent produced no `onPressIn`, no
+ * hold, nothing). This is what it actually takes to exercise the code path
+ * a real finger on a real phone drives.
+ */
+async function cdpTouch(
+  cdp: CDPSession,
+  type: 'touchStart' | 'touchMove' | 'touchEnd' | 'touchCancel',
+  points: { x: number; y: number; id: number }[],
+) {
+  await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+}
+
+test('a second finger touching down and lifting mid-hold does not cancel it (field report)', async ({ page, context }) => {
+  // A real field report: attempting to pinch-zoom on the counter screen
+  // sometimes left the app "still counting" confusingly after release.
+  // Root cause, found with real touch input (not mouse simulation): every
+  // window-level pointerup/pointermove listener in HoldStage reacted to ANY
+  // pointer, with no identity check — so a second, unrelated finger's
+  // ordinary touchdown-and-lift (exactly what a failed pinch attempt looks
+  // like) fired a genuine pointerup that cancelled the FIRST finger's
+  // still-in-progress, never-released hold.
+  const { count } = await openCounter(page, 5, 1200); // a real hold duration, not FAST_HOLD — this needs room for a second touch to land mid-hold
+  const cdp = await context.newCDPSession(page);
+  const box = (await page.getByTestId('stage').boundingBox())!;
+  const ax = box.x + box.width / 2;
+  const ay = box.y + box.height / 2;
+  const bx = ax + 80;
+  const by = ay - 60;
+
+  await cdpTouch(cdp, 'touchStart', [{ x: ax, y: ay, id: 1 }]);
+  await page.waitForTimeout(300);
+
+  // A second finger touches down alongside the first (the start of a pinch
+  // attempt) and lifts shortly after, while the first finger never moves.
+  await cdpTouch(cdp, 'touchStart', [{ x: ax, y: ay, id: 1 }, { x: bx, y: by, id: 2 }]);
+  await page.waitForTimeout(150);
+  await cdpTouch(cdp, 'touchEnd', [{ x: bx, y: by, id: 2 }]);
+
+  // The first finger's hold must still be running, not rejected.
+  await page.waitForTimeout(200);
+  await expect(page.getByTestId('caption')).not.toContainText('ปล่อยเร็วไป');
+
+  // It completes on its own schedule, counting exactly once.
+  await page.waitForTimeout(900);
+  await expect(count).toHaveText('6');
+
+  await cdpTouch(cdp, 'touchEnd', []);
+  await page.waitForTimeout(300);
+  await expect(count).toHaveText('6'); // lifting the first finger afterward changes nothing
+});
+
+test('a browser-cancelled pinch touch does not count a basket (S32, field report)', async ({ page, context }) => {
+  // Confirmed root cause, established empirically (not assumed from reading
+  // the code): a plain sequential two-finger touchStart/touchMove/touchEnd,
+  // dispatched via CDP exactly like the "does not cancel it" test above,
+  // already behaves correctly with NO code change — the anchor finger's own
+  // touchend still fires a normal `pointerup` matching its `activePointerId`,
+  // and the existing window listener already cancels the hold. That is NOT
+  // the field-reported bug.
+  //
+  // What real pinch-to-zoom does differently: when a browser recognizes a
+  // multi-touch gesture as its own native pinch-zoom (exactly the case for
+  // the Artifact-preview build used for phone testing, which — unlike the
+  // real packaged app's `+html.tsx` `user-scalable=no` — does not suppress
+  // it), the touches involved are terminated with `touchcancel`, not
+  // `touchend`. Chrome derives a `pointercancel` PointerEvent from that, not
+  // `pointerup`. `HoldStage`'s window listener only ever listened for
+  // `pointerup` — so a hold whose owning pointer is cancelled this way keeps
+  // its timer running, `pointerIsOnStage()` still reports true (nothing ever
+  // told it the pointer left), and it completes and counts, exactly matching
+  // the field report of "still counting" after a brief pinch.
+  const { count } = await openCounter(page, 5, 1200);
+  const cdp = await context.newCDPSession(page);
+  const box = (await page.getByTestId('stage').boundingBox())!;
+  const ax = box.x + box.width / 2;
+  const ay = box.y + box.height / 2;
+  const bx = ax + 80;
+  const by = ay - 60;
+
+  // Anchor finger down first, second finger joins within a short window —
+  // the start of a pinch.
+  await cdpTouch(cdp, 'touchStart', [{ x: ax, y: ay, id: 1 }]);
+  await page.waitForTimeout(80);
+  await cdpTouch(cdp, 'touchStart', [{ x: ax, y: ay, id: 1 }, { x: bx, y: by, id: 2 }]);
+  await page.waitForTimeout(60);
+  await cdpTouch(cdp, 'touchMove', [{ x: ax + 5, y: ay - 5, id: 1 }, { x: bx - 10, y: by + 8, id: 2 }]);
+  await page.waitForTimeout(60);
+
+  // The browser claims the gesture as native pinch-zoom and cancels both
+  // touches — `touchCancel` per CDP, must carry no points (empty ends all
+  // active touches).
+  await cdpTouch(cdp, 'touchCancel', []);
+  await page.waitForTimeout(1300);
+
+  await expect(count).toHaveText('5'); // unchanged — no basket was counted
+});
+
+test('a completed hold speaks the new count and logs it (S10, FR-11.3)', async ({ page }) => {
+  await stubSpeechSynthesis(page);
+  const { count } = await openCounter(page, 5);
+  await hold(page, FAST_HOLD + 150);
+  await expect(count).toHaveText('6');
+
+  await page.getByTestId('tab-log').click();
+  await expect(page.getByTestId('log')).toContainText('พูด');
+  await expect(page.getByTestId('log')).toContainText('หก'); // six, spoken
+  // Not just "an announcement happened" — it must have succeeded. A row
+  // reading "พูด ... — ไม่ได้ยิน" would satisfy the two assertions above too.
+  await expect(page.getByTestId('log')).not.toContainText('ไม่ได้ยิน');
+});
+
+test('speech still fires with the browser offline (NFR-1, FR-11.7)', async ({ page, context }) => {
+  await stubSpeechSynthesis(page);
+  const { count } = await openCounter(page, 5);
+  await context.setOffline(true);
+
+  await hold(page, FAST_HOLD + 150);
+  await expect(count).toHaveText('6');
+
+  await page.getByTestId('tab-log').click();
+  await expect(page.getByTestId('log')).toContainText('พูด');
+  await expect(page.getByTestId('log')).not.toContainText('ไม่ได้ยิน');
+  await context.setOffline(false);
+});
+
+test('turning speech off stops announcements and logs the toggle (FR-11.11)', async ({ page }) => {
+  await stubSpeechSynthesis(page);
+  const { count } = await openCounter(page, 5);
+
+  await page.getByTestId('speech-toggle').click();
+  await hold(page, FAST_HOLD + 150);
+  await expect(count).toHaveText('6'); // counting is unaffected
+
+  await page.getByTestId('tab-log').click();
+  await expect(page.getByTestId('log')).toContainText('เสียงนับ ปิด');
+  await expect(page.getByTestId('log')).not.toContainText('พูด');
 });
 
 test('screenshots — counter, pile, log', async ({ page }, testInfo) => {
