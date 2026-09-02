@@ -103,6 +103,9 @@ At `Review` — implemented, verified in a browser, awaiting sign-off and CI:
 - [x] `docs/stories/s10-thai-speech.md` — the spoken count only (FR-11.3,
       FR-11.4, FR-11.11); the read-back and พร้อมค่ะ/ต่อไปค่ะ move to S31,
       blocked on PRD open questions 5 and 6
+- [x] `docs/stories/s32-pinch-counts-a-basket.md` — a browser-cancelled
+      pinch touch (`pointercancel`, not `pointerup`) now cancels the hold
+      it belongs to, closing the gap S8's fix named but left open
 
 Not started — no story file written yet:
 
@@ -120,7 +123,6 @@ Not started — no story file written yet:
       (FR-11.2), ต่อไปค่ะ (FR-11.5). Blocked on PRD open questions 5 (voice
       persona) and 6 (which fields the read-back says). S10 built the spoken
       count only.
-
 ## Known blockers
 
 ~~S10 needs `expo-speech`~~ and ~~F-7 needs `expo-haptics`~~ — **both authorized

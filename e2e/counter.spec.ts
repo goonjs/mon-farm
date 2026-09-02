@@ -205,7 +205,7 @@ test('counts survive a reload (NFR-1)', async ({ page }) => {
  */
 async function cdpTouch(
   cdp: CDPSession,
-  type: 'touchStart' | 'touchMove' | 'touchEnd',
+  type: 'touchStart' | 'touchMove' | 'touchEnd' | 'touchCancel',
   points: { x: number; y: number; id: number }[],
 ) {
   await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
@@ -248,6 +248,52 @@ test('a second finger touching down and lifting mid-hold does not cancel it (fie
   await cdpTouch(cdp, 'touchEnd', []);
   await page.waitForTimeout(300);
   await expect(count).toHaveText('6'); // lifting the first finger afterward changes nothing
+});
+
+test('a browser-cancelled pinch touch does not count a basket (S32, field report)', async ({ page, context }) => {
+  // Confirmed root cause, established empirically (not assumed from reading
+  // the code): a plain sequential two-finger touchStart/touchMove/touchEnd,
+  // dispatched via CDP exactly like the "does not cancel it" test above,
+  // already behaves correctly with NO code change — the anchor finger's own
+  // touchend still fires a normal `pointerup` matching its `activePointerId`,
+  // and the existing window listener already cancels the hold. That is NOT
+  // the field-reported bug.
+  //
+  // What real pinch-to-zoom does differently: when a browser recognizes a
+  // multi-touch gesture as its own native pinch-zoom (exactly the case for
+  // the Artifact-preview build used for phone testing, which — unlike the
+  // real packaged app's `+html.tsx` `user-scalable=no` — does not suppress
+  // it), the touches involved are terminated with `touchcancel`, not
+  // `touchend`. Chrome derives a `pointercancel` PointerEvent from that, not
+  // `pointerup`. `HoldStage`'s window listener only ever listened for
+  // `pointerup` — so a hold whose owning pointer is cancelled this way keeps
+  // its timer running, `pointerIsOnStage()` still reports true (nothing ever
+  // told it the pointer left), and it completes and counts, exactly matching
+  // the field report of "still counting" after a brief pinch.
+  const { count } = await openCounter(page, 5, 1200);
+  const cdp = await context.newCDPSession(page);
+  const box = (await page.getByTestId('stage').boundingBox())!;
+  const ax = box.x + box.width / 2;
+  const ay = box.y + box.height / 2;
+  const bx = ax + 80;
+  const by = ay - 60;
+
+  // Anchor finger down first, second finger joins within a short window —
+  // the start of a pinch.
+  await cdpTouch(cdp, 'touchStart', [{ x: ax, y: ay, id: 1 }]);
+  await page.waitForTimeout(80);
+  await cdpTouch(cdp, 'touchStart', [{ x: ax, y: ay, id: 1 }, { x: bx, y: by, id: 2 }]);
+  await page.waitForTimeout(60);
+  await cdpTouch(cdp, 'touchMove', [{ x: ax + 5, y: ay - 5, id: 1 }, { x: bx - 10, y: by + 8, id: 2 }]);
+  await page.waitForTimeout(60);
+
+  // The browser claims the gesture as native pinch-zoom and cancels both
+  // touches — `touchCancel` per CDP, must carry no points (empty ends all
+  // active touches).
+  await cdpTouch(cdp, 'touchCancel', []);
+  await page.waitForTimeout(1300);
+
+  await expect(count).toHaveText('5'); // unchanged — no basket was counted
 });
 
 test('a completed hold speaks the new count and logs it (S10, FR-11.3)', async ({ page }) => {

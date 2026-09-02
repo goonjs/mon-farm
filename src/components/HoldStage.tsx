@@ -214,6 +214,18 @@ export function HoldStage({
       if (!belongsToActivePointer(e)) return;
       cancelRef.current();
     };
+    /**
+     * S32, field report: a real two-finger pinch is not always a clean
+     * `pointerup`. When the browser claims the gesture as its own native
+     * pinch-zoom (the Artifact-preview build used for phone testing does not
+     * carry `+html.tsx`'s `user-scalable=no`, unlike the real packaged app),
+     * the touches involved end as `pointercancel`, never `pointerup` — so the
+     * anchor finger's hold kept running to completion, uninterrupted, even
+     * though both fingers had already left the screen. Confirmed with real
+     * CDP touch input (`Input.dispatchTouchEvent` type `touchCancel`) before
+     * this listener was added: without it, the count wrongly incremented.
+     */
+    const onCancel = onEnd;
     const onHide = () => {
       if (document.hidden) cancelRef.current();
     };
@@ -227,11 +239,13 @@ export function HoldStage({
     window.addEventListener('pointermove', onMove, true);
     window.addEventListener('pointerdown', onMove, true);
     window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onCancel);
     document.addEventListener('visibilitychange', onHide);
     return () => {
       window.removeEventListener('pointermove', onMove, true);
       window.removeEventListener('pointerdown', onMove, true);
       window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onCancel);
       document.removeEventListener('visibilitychange', onHide);
     };
   }, []);

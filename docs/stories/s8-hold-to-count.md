@@ -97,10 +97,16 @@ being kept as a permanent regression test — the first test in this repo
 that exercises a real multi-touch sequence rather than a single simulated
 pointer.
 
-**Not fully closed by this fix**: a genuine *simultaneous* two-finger pinch
-(rather than a sequential touch-and-lift) is untested — the fix should
-handle it the same way (the second pointer is simply ignored throughout),
-but it hasn't been separately verified. Also worth noting: the real
+**Not fully closed by this fix, and since confirmed as its own bug, and
+since fixed**: a genuine *simultaneous* two-finger pinch (rather than a
+sequential touch-and-lift) was untested at the time this fix landed. It was
+reported the same day: a brief pinch can still register a count. The actual
+mechanism turned out not to be this fix's "ignore the second finger" choice
+at all (that hypothesis was tested and ruled out) — it was that a real
+browser-recognized pinch-zoom gesture ends its touches with `pointercancel`,
+which this fix's window listener never listened for, only `pointerup`.
+Fixed in `docs/stories/s32-pinch-counts-a-basket.md`, which added exactly
+that listener. Also worth noting: the real
 packaged app blocks pinch-zoom outright via `+html.tsx`'s
 `user-scalable=no`, which the Artifact-preview build used for phone testing
 does not carry (a known limitation of using an Artifact as a preview
