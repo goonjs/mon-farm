@@ -136,6 +136,44 @@ weight beside it.
 - `Totals` already carries `shortBaskets` and `shortNetG` separately, so
   this is presentation. No model change, no new events.
 
+### Open defect, found 2026-09-03 — the panel squeezes the numeral to nothing
+
+Found by hand-driving the built app at 844×390, the phone-landscape viewport
+this screen is designed for. **Reproduces on `main` alone** (`37b21f4`), so it
+is S22/S25's to fix rather than a merge artifact of any other branch — it was
+found from a branch that touches none of this, and confirmed by rebuilding
+`main` on its own and repeating the steps.
+
+**Repro**: start a sale, ready a pile, count one basket, tap `เข่งไม่เต็ม`.
+
+**Seen**: `HoldStage` is `flex: 1`, and on a 390 px-tall screen the TopBar,
+tabs, button row and the short-basket panel together exceed the height. The
+stage collapses to **7 px** — measured, not estimated — so the count numeral
+is an unreadable sliver, and the rotate hint, which is absolutely positioned
+inside the stage, renders on top of the undo / short / close-pile row.
+
+Screenshot: `docs/ux/screenshots/defect-short-panel-collapses-stage.png`.
+
+**Why the e2e suite is green over it.** `e2e/short-basket.spec.ts:18`
+("opening the panel never covers the count") asserts only that the panel's
+top edge is below the numeral's bottom edge, with a comment explicitly
+allowing the stage to shrink. A numeral squeezed to 7 px satisfies that
+perfectly. The assertion is geometric where the requirement is about
+legibility — F-9.7 is that the count is readable across a farm yard, and
+nothing tests the property the screen exists for.
+
+That is the same shape of gap that let a bug through in S29: a test that
+checked the figures but not the name. Worth treating as a pattern rather
+than two coincidences — a geometry assertion that permits the failure mode
+it was written to catch is not a test, it is a comment.
+
+**Suggested fix, not applied** (this is another session's file and its story
+is still in flight): while the short panel is open the stage cannot be used —
+you cannot hold to count and type a reading at once — so it can be hidden
+rather than squeezed, or given a minimum height with the panel scrolling.
+Whichever way, the guard should assert the numeral stays above a legible
+size, not merely that nothing overlaps it.
+
 ---
 
 ## S23 — Bulk entry, for a pile nobody counted live
