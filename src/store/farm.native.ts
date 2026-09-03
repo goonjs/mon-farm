@@ -71,10 +71,18 @@ export class SqliteFarmStore implements FarmStore {
 
   async listZones(): Promise<ProfileZone[]> {
     const db = await this.open();
+    // Ordered in JS, not in SQL. SQLite's NOCASE only case-folds ASCII and has
+    // no Thai dictionary collation, so it cannot apply the vowel-reordering
+    // rule: a zone named ไก่ sorts under ก, not under ไ. `COLLATE NOCASE` puts
+    // it after ขา; `localeCompare(..., 'th')` puts it before, which is the
+    // order a Thai reader expects and the order the web and memory stores
+    // already produce. Sorting here is what keeps the three adapters agreeing
+    // — the list is a handful of zones, so the cost is nothing.
     const rows = await db.getAllAsync<ZoneRow>(
-      `SELECT * FROM farm_zones WHERE archived_ts IS NULL ORDER BY name COLLATE NOCASE`,
+      `SELECT * FROM farm_zones WHERE archived_ts IS NULL`,
     );
-    return Promise.all(rows.map((r) => this.assemble(db, r)));
+    const zones = await Promise.all(rows.map((r) => this.assemble(db, r)));
+    return zones.sort((a, b) => a.name.localeCompare(b.name, 'th'));
   }
 
   async getZone(id: ZoneId): Promise<ProfileZone | null> {
@@ -103,6 +111,12 @@ export class SqliteFarmStore implements FarmStore {
   async addPile(zoneId: ZoneId, name: string, tareG: number, stdNetG: number): Promise<ProfilePile> {
     const db = await this.open();
     const pile: ProfilePile = { id: newId('pile-'), name, tareG, stdNetG };
+    // An unknown zoneId is a no-op here, as it is in the web and memory
+    // stores. Without this guard the INSERT succeeds and leaves an orphan row
+    // nothing ever joins to — a silently accumulating garbage row instead of
+    // the port's stated "unknown id is a no-op, not a throw".
+    const zone = await db.getFirstAsync<ZoneRow>(`SELECT id FROM farm_zones WHERE id = ?`, zoneId);
+    if (!zone) return pile;
     await db.runAsync(
       `INSERT INTO farm_piles (id, zone_id, name, tare_g, std_net_g) VALUES (?, ?, ?, ?, ?)`,
       pile.id,

@@ -3,8 +3,10 @@
 Status: Review — implemented 2026-09-03, acceptance criteria agreed with the
 owner the same day alongside the design decisions below. **Every stage of
 `npm run verify` is green, e2e included** (122 Playwright tests across four
-projects; screenshots captured). Awaiting the independent code review by a
-separate agent/session, which is the one remaining gate before `Done`.
+projects; screenshots captured). **Independent code review done 2026-09-03 —
+no blocking findings.** Two should-fix and one nit; two fixed, one open (test
+files shipping as routes in the web bundle) because the fix needs a file move
+and the owner's word. See Code review.
 
 ## Context
 
@@ -262,8 +264,62 @@ referenced from the profile.
 
 ## Code review
 
-- Reviewer (separate agent/session):
-- Findings:
-- Resolution:
+- **Reviewer (separate agent/session)**: independent review agent, 2026-09-03,
+  against commit `d49c014`. Worked `docs/checklists/code-review-checklist.md`,
+  traced the identity guarantee through all three adapters and the projection
+  by hand, and re-ran `typecheck`, `lint`, `test:core`, `test:ui`,
+  `build:web` and the e2e suite itself rather than reading assertions.
+
+- **The identity guarantee was checked hardest, and holds.** `newId` is minted
+  exactly once, at creation time, in all three adapters, and is never
+  re-minted by `renameZone`, `editPile` or `archiveZone`. `usePrefill` never
+  calls it. `FarmStore` has no `deleteZone` at all, so no code path can drop a
+  zone id a past sale's log references. The reviewer confirmed both identity
+  tests would actually fail if prefill minted fresh ids — which is the
+  question worth asking of any test, and the one this story could not afford
+  to get wrong.
+
+- **Findings**: no blocking. Two should-fix, one nit.
+
+  1. *(should-fix — **NOT yet fixed**, needs the owner)* `src/app` is the
+     expo-router routes directory, so `farm-profile.test.tsx` and
+     `sale/[id]/setup.test.tsx` **ship as real, servable pages** in the
+     production web bundle: `dist/farm-profile.test.html` and
+     `dist/sale/[id]/setup.test.html` both exist after `npm run build:web`
+     (verified independently). Every other `.test.tsx` in this repo lives
+     outside `src/app`; these two are the first inside it, and nothing
+     excludes them from route generation. It ships test scaffolding and mock
+     wiring as public pages — dead weight at best, a description of internal
+     test seams at worst.
+
+     The fix is to move both files out of `src/app`. Moving deletes their
+     current paths, and `CLAUDE.md`'s file-deletion gate has no carve-out for
+     files the agent created itself, so this is **left undone pending the
+     owner's explicit confirmation** rather than interpreted around. It should
+     be fixed before `Done`.
+
+  2. *(should-fix — fixed)* `farm.native.ts` ordered zones with SQL
+     `ORDER BY name COLLATE NOCASE`, which only case-folds ASCII and has no
+     Thai dictionary collation — so a zone named ไก่ sorted after ขา instead
+     of before it, the vowel-reordering rule the web and memory stores get
+     from `localeCompare(..., 'th')`. A real divergence on the five prefixed
+     vowels, which are common in Thai place names, and one that would only
+     ever surface on the device, since no tier tests the native adapter.
+     Zones are now ordered in JS after the read, so all three adapters agree.
+
+  3. *(nit — fixed)* `addPile` with an unknown `zoneId` was a silent no-op in
+     the web and memory stores but an unconditional `INSERT` in
+     `farm.native.ts`, leaving an orphan row nothing joins to. No current UI
+     path reaches it, but it contradicted the port's stated contract. Guarded.
+
+- **Resolution**: findings 2 and 3 fixed in the same session as the review.
+  Finding 1 is recorded as open and blocking `Done`, not deferred — it needs
+  a file move, which needs the owner's word.
+
+  Worth recording alongside the fixes: finding 2 landed in exactly the place
+  this story's own Dev notes had already flagged as untested. The gap was
+  identified honestly and then a real bug appeared in it. That is an argument
+  for the repo growing a native-adapter test tier, not just for this one
+  patch — raised here rather than filed away.
 
 ## QA notes
