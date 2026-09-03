@@ -1,8 +1,11 @@
 # Story: Piles are editable
 
-Status: **Review** — implemented 2026-09-03. Cannot reach `Done` without an
-independent code review and a push to CI (`docs/process.md` steps 7–9),
-neither of which is authorized here.
+Status: **Review** — implemented 2026-09-03; independently reviewed by QA the
+same day (see **Code review** / **QA notes**). Three defects were found;
+findings 1–3 are fixed in the working tree with fail-first tests, finding 4 is
+left for the dev and finding 5 needs a PO word. Cannot reach `Done` without
+those two answers and a push to CI (`docs/process.md` steps 7–9), neither of
+which is authorized here.
 
 ## Context
 
@@ -97,6 +100,9 @@ basket event to do it.
       removed pile as a counting target; the pile's row and its baskets
       remain visible in the event log view (`counter.tsx` log renderer) with
       a `pile_removed` line naming the reason.
+      *(QA: failed as shipped for the post-close decision point's "next pile
+      in this zone" affordance, which is a counting target by another name —
+      fixed, see Code review finding 2.)*
 - [x] Removing a pile that is currently `counting` or `closed` is allowed
       (removal is a statement about "this pile should never have counted, or
       is being retired", independent of lifecycle status) — it still goes
@@ -244,6 +250,16 @@ alongside `canCount`/`canReady`/`canReopenPile`)**
       `06-log-after-removal.png` — the void path and what survives it;
       `07-removed-empty.png` — the one-tap path;
       `08-zone-blocked.png`, `09-zone-removed.png` — the zone rule.
+- [x] **Independently re-verified by QA (2026-09-03).** The whole gate re-run
+      from a clean tree at `6dc1e6d` — 174 passed / 6 skipped, exactly as
+      claimed — plus a second real-browser walk driven by QA with its own seed
+      log and its own assertions (101 checks, 0 failures, at 844×390 and at
+      the 740×360 floor), and the fail-first claim confirmed in a throwaway
+      clone. Three defects were found and two of the story's ACs did not hold
+      as written; see **Code review** and **QA notes**. The gate was re-run
+      green after the fixes (140 vitest / 84 jest / 174 e2e).
+- [ ] Pushed, CI green — **still open.** Not authorised in this session, and
+      the QA fixes are uncommitted in the working tree.
 
 ## Dev notes
 
@@ -391,8 +407,239 @@ then the switcher case failing on a removed pile still being offered, then the
 
 ## Code review
 
-- Reviewer (separate agent/session):
-- Findings:
-- Resolution:
+- **Reviewer (separate agent/session):** QA session, 2026-09-03, reviewing
+  `6dc1e6d` against `docs/checklists/code-review-checklist.md` and
+  `docs/checklists/definition-of-done.md`. Nothing the dev notes claimed was
+  taken on trust: every load-bearing claim was re-derived from a harness
+  written here, and every gate was re-run from a clean tree.
+
+- **Findings**
+
+  1. **`settle()` ignored `Zone.removed` — a retired zone stayed on the
+     settlement sheet, and a mistyped one could block the sale from settling
+     at all.** (Medium. Fixed here, `src/core/settle.ts`.) S26 added
+     `Zone.removed` and every other consumer honours it — the setup screen,
+     `ZonePileSwitcher`, `canRemoveZone` — but `settle()` still mapped over
+     `state.zones` unfiltered. Two consequences, both reproduced in a real
+     browser:
+     - a retired zone printed a `฿ 0.00` per-zone row, and its named worker
+       appeared in **แยกตามคนงาน** owed `฿ 0.00`, on the sheet the buyer and
+       the owner read together (`qa-16-removed-zone-on-settlement.png`);
+     - worse, a zone added by mistake and then removed with one tap — S26's
+       own "typo" path — went on refusing to settle the whole sale under
+       FR-8.5 ("โซนพิมพ์ผิด has no split…"), while the setup screen, which
+       *does* filter removed zones out of the same check
+       (`setup.tsx`'s `splitResolvable`), said the sale was ready to count.
+       The app said ready and then would not pay out
+       (`qa-17-settlement-blocked-by-removed-zone.png`).
+     Fixed by filtering removed zones in `settle()`, with three tests in
+     `src/core/settle.test.ts` (seen to fail against `6dc1e6d` first: 2 of 3
+     red). After: `qa-18-removed-zone-after-fix.png`,
+     `qa-19-settles-after-fix.png`.
+
+  2. **The counter offered "next pile in this zone" on the strength of a
+     removed pile.** (Medium. Fixed here, `counter.tsx:257`.) `nextPileInZone`
+     was the one pile lookup on that screen the S26 sweep missed. With zone
+     A's only other pile removed, closing กอง 1 still showed
+     `กองถัดไปในโซนนี้ →`, and tapping it was a dead end: `pickPile` selects an
+     id that the live-pile resolution immediately falls back away from, so the
+     operator is told there is more to count here and then left on the same
+     closed pile (`qa-20-next-pile-offers-removed-pile.png`,
+     `qa-21-next-pile-dead-end.png`). This is the AC "the counter's pile
+     switcher no longer offer[s] a removed pile as a counting target" —
+     the switcher was fixed, its sibling path was not. After:
+     `qa-22-next-pile-after-fix.png`.
+
+  3. **The close-sale confirm counted removed zones and piles in its scope
+     line.** (Low. Fixed here, `counter.tsx`.) `{zones} โซน {piles} กอง` read
+     off `state.zones.length` / `state.piles.length`, so a sale with one live
+     zone and one live pile announced "2 โซน 3 กอง" at the moment of closing.
+     S25 added that line specifically to make the scope of the confirm honest;
+     S26 made it capable of lying. Both counts now filter `removed`.
+
+     Findings 2 and 3 are covered by three tests in
+     `src/test/counter-screen.test.tsx`, seen to fail against `6dc1e6d` first
+     (2 red — the third is the "still offers it when the zone has a live pile"
+     control, which must pass both before and after).
+
+  4. **`canRemovePile` is dead code.** (Low. NOT fixed — left for the dev.)
+     `src/core/project.ts:452` exports it; nothing in `src/`, `e2e/` or any
+     test calls it. The two guards the UI actually asks are
+     `pileNeedsVoidReason` and `canEditPileNet`. YAGNI, and the DoD's "no
+     dead code left behind". Either wire it into `PileRow` (it is the honest
+     answer to "may this row offer a remove control at all") or drop it.
+
+  5. **Not gated on sale status — the dev's deferred question.** Answered in
+     QA notes below: **the reviewer agrees with the dev, with one caveat.**
+
+- **Resolution:** findings 1, 2 and 3 fixed in the working tree by the QA
+  session, each with a test written to fail first and the full gate re-run
+  green afterwards. Finding 4 is left for the dev to decide (wire or drop) —
+  it changes no behaviour. Finding 5 needs a PO word, not a code change.
+  **The fixes are uncommitted and unpushed** — this session is not authorised
+  to commit, and the repo's push gate is untouched.
 
 ## QA notes
+
+Verified independently by a separate QA session on 2026-09-03 against
+`6dc1e6d`, working tree otherwise clean.
+
+### Per acceptance criterion
+
+Every AC in this story was re-checked. **All pass** except the two noted:
+
+- *Editing a pile* — all five ACs pass. `pile_edited` is append-only and
+  `pile_added` is never rewritten; the fold applies the latest edit by `seq`;
+  rename works at `not-started`, `counting` and `closed`; tare/std apply only
+  while unlocked; and `canEditPileNet` refuses the write before the append.
+- *Removing a pile* — all six ACs pass, including "a removed pile cannot be
+  re-added under the same id" (the fold's `if (piles.has(...)) break;`).
+- *Zones* — the rename, the reason rule and the `canRemoveZone` block all
+  pass. The AC "a removed pile is excluded from `settle()`'s per-zone and
+  per-worker figures" passes **for piles**; the zone-level analogue was not
+  in the ACs and was **broken in the code** — see Code review finding 1.
+- *Counter* — "no longer offer a removed pile as a counting target" **failed**
+  for the decision point's next-pile affordance — Code review finding 2.
+- *Offline* — no network path is touched; the append path is unchanged. The
+  browser walk reloads mid-flow and every removal and edit survives it.
+
+### The two claims that guard money — attacked directly, both hold
+
+**1. The lock cannot be bypassed.** A `pile_edited` was appended *directly to
+the log*, bypassing the form and `canEditPileNet` entirely, for:
+
+- a pile counting right now (`stdNetG: 90 kg`, `tareG: 0.1 kg`),
+- a pile filled by S23 bulk entry,
+- and, in a real browser, by forcing a value into the read-only field with a
+  native `value` setter and pressing Save.
+
+In every case the projection took the **name only**; `tareG`/`stdNetG` did
+not move, and the settlement — sale gross, owner, worker, every per-zone row
+and every per-worker payout — was byte-identical before and after. The fold's
+`if (!p.locked)` is the enforcement that a direct append cannot get past, and
+it does hold. An unlocked pile's edit does apply, and a second edit replaces
+the first (latest-by-seq).
+
+**2. Removal equals voiding every basket.** Built a sale with two zones on
+different contracts (70/30 and 55/45), counted 3 standard + 1 short into a
+pile, and compared removing that pile against voiding each of its four
+baskets individually. The comparison was made on the **whole settlement
+object**, not the headline: `totals`, sale gross/owner/worker, every per-zone
+row (net, gross, owner, worker, pct) and every per-worker payout. Identical.
+`liveBaskets` still returns all four of the removed pile's baskets,
+`pileTotals` still shows its 72 kg, the raw `accept` events are all still in
+the log, and the Log tab renders them **not struck through** — because they
+were not voided. `zoneTotals`, `saleTotals` and `subsetTotals` all drop it.
+
+### Gate — re-run from a clean tree, then again after the QA fixes
+
+| | at `6dc1e6d` | after the QA fixes |
+|---|---|---|
+| `tokens:check` · `contrast` · `typecheck` · `lint` | pass | pass |
+| `test:core` (vitest) | 137 passed | 140 passed |
+| `test:ui` (jest) | 81 passed | 84 passed |
+| `build:web` | pass | pass |
+| `test:e2e` (playwright) | **174 passed / 6 skipped** | **174 passed / 6 skipped** |
+
+The dev's "174 passed / 6 skipped" is exact.
+
+**Fail-first, verified in a throwaway clone** (never in the working tree):
+reverting `project.ts`/`totals.ts`/`types.ts` to `6dc1e6d^` and keeping the
+new tests gives **29 failures across `project`/`totals`/`settle`**, matching
+the dev's claim exactly; removing `PileEditor.tsx`/`RemoveControl.tsx` makes
+both jest suites fail to resolve, and the `ZonePileSwitcher` removed-pile case
+fails on a removed pile still being offered. The claim is honest.
+
+### A real browser, driven by QA
+
+`npm run build:web`, served by `scripts/serve-dist.mjs`, driven through real
+Chromium (playwright-core, `/opt/pw-browsers/chromium-1194`) at **844×390**
+and at the **740×360 floor**. Not the dev's spec — a separate walk with its
+own seed log, its own assertions, and the event log read back out of
+`localStorage` after every step to check each event's *shape*, not just the
+screen. **101 checks, 0 failures.**
+
+Every control was measured against the viewport box (`boundingBox()` inside
+`0,0 → w,h`, plus a document-level horizontal-overflow check), not merely
+asserted `toBeVisible()` — that miss is what the S25 pass caught.
+
+Walked: rename a pile mid-count · edit a tare before any basket · try to edit
+the standard net after counting starts (fields read-only, explanation on
+screen, forced value ignored on save) · remove an empty pile in one tap ·
+remove a pile with baskets (confirm disabled on empty **and on
+whitespace-only** reason; reason trimmed into the event) · rename a zone · try
+to remove a zone that still has piles (blocked, `เอากองในโซนออกให้หมดก่อน`
+shown) · empty it and remove it (which then demands its own reason) · re-add
+a pile under a removed pile's name (new id, name reused freely) · reload ·
+and read the Log tab back.
+
+Event shapes confirmed from `localStorage`:
+`pile_edited {pileId,name,tareG,stdNetG}` · `pile_removed {pileId,reason:''}`
+and `{pileId,reason:'ชั่งผิดกอง'}` · `zone_edited {zoneId,name}` ·
+`zone_removed {zoneId,reason}`. No `accept` event was mutated or dropped by
+any of it.
+
+**Screenshots** (all `qa-` prefixed; the dev's are untouched, and were
+regenerated byte-identically by the e2e re-run):
+
+- Golden path — `screenshots/s26/qa-00-setup.png`,
+  `qa-01-edit-unlocked.png`, `qa-02-tare-edited.png`
+- The FR-3.4 lock on screen — `qa-03-locked.png`,
+  `qa-04-renamed-midcount.png`
+- Removal, both registers — `qa-05-remove-empty.png`,
+  `qa-06-remove-needs-reason.png`, `qa-07-removed.png`
+- Zones — `qa-08-zone-renamed.png`, `qa-09-zone-blocked.png`,
+  `qa-10-zone-removed.png`, `qa-11-readded.png`
+- What survives — `qa-12-log.png`
+- The 740×360 floor — `qa-13-editor-floor.png`, `qa-14-remove-floor.png`,
+  `qa-15-zone-floor.png`
+- Defects found, before and after the QA fix —
+  `qa-16-removed-zone-on-settlement.png`,
+  `qa-17-settlement-blocked-by-removed-zone.png`,
+  `qa-18-removed-zone-after-fix.png`, `qa-19-settles-after-fix.png`,
+  `qa-20-next-pile-offers-removed-pile.png`,
+  `qa-21-next-pile-dead-end.png`, `qa-22-next-pile-after-fix.png`
+
+### On the dev's deferred question — edit/removal are not gated on sale status
+
+The dev left this open rather than inventing an answer, which was right. The
+reviewer's view, for the PO to confirm:
+
+**Leave it ungated. Editing and removing a pile should not require the sale
+to be open.** Three reasons, in order of weight:
+
+1. **It cannot move settled money anyway.** Every `accept` snapshots its own
+   `netG`/`tareG`, and the lock stops a counted pile's config being edited at
+   all. On a closed sale every pile has either counted (locked) or has no
+   baskets to be wrong about. So the only edit available on a closed sale is
+   a rename — and a name carries no money, which is the story's own rule.
+2. **Removal on a closed sale is a real need, not a hypothetical.** The case
+   that will actually happen is the one that is only discovered at
+   settlement, with the buyer standing there: "that pile is not in this
+   sale." Forcing a reopen for that turns a one-line correction into a
+   lifecycle event, and `pile_reopened` means something else entirely.
+3. **The record stays honest either way.** `pile_removed` is appended with
+   its `seq` after `sale_closed`, so the log shows the removal happened after
+   the sale closed, and the settlement screen recomputes rather than storing
+   a frozen number (the app already says so on screen). Nothing is quietly
+   rewritten.
+
+**The caveat, and it is the PO's actual decision:** a removal after
+`sale_closed` silently changes a settlement figure that two people may have
+already read out loud and agreed. That is the one thing this app exists to
+prevent — not because the arithmetic is wrong, but because the number moved
+after the handshake. So: keep it ungated, but if the PO wants a guard, the
+right one is **not** a status gate on the verb; it is a *warning on the
+removal* — the confirm on a closed sale should say the settlement will change
+and by how much. That is a small, separate story, and it is worth writing.
+
+### Not verified here
+
+- **CI.** Nothing was pushed (repo push gate), so "CI green" in the DoD is
+  still open. Every gate CI runs was run locally instead, twice.
+- **On-device.** Web build only. `expo-sqlite` was not exercised; S26 adds no
+  new storage path, so the risk is the same as every prior story's.
+- **Long-log behaviour.** The Log tab caps at 60 events, newest first. On a
+  long sale a `pile_removed` will scroll out of the visible log like any
+  other event. Pre-existing, not S26's doing, but it is the one place "the
+  history stays readable" is readable *only if it is recent*.

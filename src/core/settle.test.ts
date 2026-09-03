@@ -331,3 +331,75 @@ describe('settle — a removed pile and an individually-voided one agree', () =>
     expect(after.perZone.map((z) => z.zoneId)).toEqual(before.perZone.map((z) => z.zoneId));
   });
 });
+
+/**
+ * S26, found in QA review of 6dc1e6d. `Zone.removed` existed and every other
+ * consumer honoured it — the setup screen, the switcher, `canRemoveZone` —
+ * but `settle()` still mapped over every zone in the projection. That made a
+ * retired zone a row on the sheet the buyer and the owner sign, and, worse,
+ * let a zone removed *because it was a typo* go on refusing to settle the
+ * whole sale under FR-8.5 while the setup screen (which does filter removed
+ * zones out of the same check) said the sale was ready to count.
+ */
+describe('settle — a removed zone is off the sheet (S26)', () => {
+  /** zB retired the only way S26 allows: its pile removed first, then the zone. */
+  const retiredZoneB = () => {
+    const b = readyPile(setUpSale(new LogBuilder()), 'p1');
+    withZoneContract(b, 'zB', 'person-manop', 'มานพ', 60);
+    b.accept('p1');
+    b.accept('p1');
+    b.sys({ t: 'pile_removed', pileId: 'p3', reason: '' });
+    b.sys({ t: 'zone_removed', zoneId: 'zB', reason: 'ไม่ได้ขายโซนนี้' });
+    return b;
+  };
+
+  it('drops the retired zone from perZone and from perWorker', () => {
+    const b = retiredZoneB();
+    const s = settle(b.build(), projectSale(b.build()));
+
+    expect(s.perZone.map((z) => z.zoneId)).toEqual(['zA']);
+    // มานพ was named on zB alone. A retired zone owes nobody, so nobody is
+    // listed owed nothing.
+    expect(s.perWorker.map((w) => w.personId)).not.toContain('person-manop');
+  });
+
+  it('leaves the money it was already contributing — none — exactly where it was', () => {
+    const b = retiredZoneB();
+    const s = settle(b.build(), projectSale(b.build()));
+
+    // 2 × 50 kg × ฿26.50
+    expect(s.totals.netG).toBe(100_000);
+    expect(s.grossSatang).toBe(265_000);
+    expect(s.ownerSatang + s.workerSatang).toBe(s.grossSatang);
+  });
+
+  it('a zone removed as a typo stops blocking settlement (FR-8.5)', () => {
+    // No sale-level `split_set` at all: zA carries its own contract, so it is
+    // settleable, and the mistyped zC is only settleable if it is skipped.
+    const b = new LogBuilder()
+      .sys({
+        t: 'sale_started',
+        farmName: 'ไร่คุณพ่อ',
+        buyer: 'ล้งเจริญทรัพย์',
+        manager: 'สมชาย',
+        workerLead: 'ประยุทธ',
+        where: 'farm',
+      })
+      .sys({ t: 'price_set', satangPerKg: 2650, indexRef: 'ตลาดกลางหาดใหญ่' })
+      .sys({ t: 'zone_added', zoneId: 'zA', name: 'โซน A' })
+      .sys({ t: 'zone_contract_set', zoneId: 'zA', personId: 'person-a', workerName: 'สมหญิง', ownerPct: 60 })
+      .sys({ t: 'pile_added', pileId: 'p1', zoneId: 'zA', name: 'กอง 1', tareG: 2_000, stdNetG: 50_000 });
+    readyPile(b, 'p1');
+    b.accept('p1');
+    b.sys({ t: 'zone_added', zoneId: 'zC', name: 'โซนพิมพ์ผิด' });
+
+    // Before it is removed, the mistyped zone is a genuine FR-8.5 refusal…
+    expect(() => settle(b.build(), projectSale(b.build()))).toThrow(SettlementUnavailable);
+
+    // …and removing it is what the operator has to correct it with.
+    b.sys({ t: 'zone_removed', zoneId: 'zC', reason: '' });
+    const s = settle(b.build(), projectSale(b.build()));
+    expect(s.perZone.map((z) => z.zoneId)).toEqual(['zA']);
+    expect(s.grossSatang).toBe(132_500);
+  });
+});

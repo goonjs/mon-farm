@@ -109,36 +109,47 @@ export function settle(events: readonly SaleEvent[], state: SaleState): Settleme
   const { satangPerKg } = state.price;
   const totals = saleTotals(events);
 
-  const perZone: ZoneSettlement[] = state.zones.map((zone) => {
-    // FR-8.5: no safe default. A zone with neither its own contract nor a
-    // sale-level fallback cannot be settled — refusing here is what keeps
-    // that rule true per zone, not just per sale.
-    const ownerPct = zone.contract?.ownerPct ?? state.split?.ownerPct;
-    if (ownerPct === undefined) {
-      throw new SettlementUnavailable(
-        `${zone.name} has no split — no zone contract and no sale default. ` +
-          `FR-8.5: guessing whose share applies to what is exactly the ` +
-          `assumption this app exists to remove.`,
-      );
-    }
+  // S26. A retired zone is not a row on the sheet the two parties sign. It
+  // contributes nothing (`canRemoveZone` will not let a zone go while any
+  // live pile sits under it, so its net is always zero), and leaving it in
+  // did two wrong things: it printed a ฿0.00 line — and a ฿0.00 worker — for
+  // a zone somebody explicitly retired, and it let a zone that was removed
+  // BECAUSE it was a typo go on refusing to settle the whole sale under
+  // FR-8.5. The setup screen already excludes removed zones from the very
+  // "can this be settled" blocker that FR-8.5 check mirrors; the two have to
+  // agree, or the app says ready and then will not pay out.
+  const perZone: ZoneSettlement[] = state.zones
+    .filter((zone) => !zone.removed)
+    .map((zone) => {
+      // FR-8.5: no safe default. A zone with neither its own contract nor a
+      // sale-level fallback cannot be settled — refusing here is what keeps
+      // that rule true per zone, not just per sale.
+      const ownerPct = zone.contract?.ownerPct ?? state.split?.ownerPct;
+      if (ownerPct === undefined) {
+        throw new SettlementUnavailable(
+          `${zone.name} has no split — no zone contract and no sale default. ` +
+            `FR-8.5: guessing whose share applies to what is exactly the ` +
+            `assumption this app exists to remove.`,
+        );
+      }
 
-    const zt = zoneTotals(events, state, zone.id);
-    const grossSatang = valueOf(zt.netG, satangPerKg);
-    const ownerSatang = Math.round((grossSatang * ownerPct) / 100);
+      const zt = zoneTotals(events, state, zone.id);
+      const grossSatang = valueOf(zt.netG, satangPerKg);
+      const ownerSatang = Math.round((grossSatang * ownerPct) / 100);
 
-    return {
-      zoneId: zone.id,
-      zoneName: zone.name,
-      personId: zone.contract?.personId ?? null,
-      workerName: zone.contract?.workerName ?? null,
-      ownerPct,
-      fromSaleDefault: !zone.contract,
-      totals: zt,
-      grossSatang,
-      ownerSatang,
-      workerSatang: grossSatang - ownerSatang,
-    };
-  });
+      return {
+        zoneId: zone.id,
+        zoneName: zone.name,
+        personId: zone.contract?.personId ?? null,
+        workerName: zone.contract?.workerName ?? null,
+        ownerPct,
+        fromSaleDefault: !zone.contract,
+        totals: zt,
+        grossSatang,
+        ownerSatang,
+        workerSatang: grossSatang - ownerSatang,
+      };
+    });
 
   const grossSatang = perZone.reduce((sum, z) => sum + z.grossSatang, 0);
   const ownerSatang = perZone.reduce((sum, z) => sum + z.ownerSatang, 0);

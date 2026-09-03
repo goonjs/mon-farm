@@ -284,3 +284,56 @@ describe('close pile first, close sale last (S25)', () => {
     expect(screen.queryByTestId('pile-close-sale')).toBeNull();
   });
 });
+
+/**
+ * S26, found in QA review of 6dc1e6d. Removal was applied to `canCount`,
+ * `canReady`, `canReopenPile`, `pilesStillCounting`, `canOfferCloseSale` and
+ * the switcher — but two places on this screen still read the unfiltered
+ * projection, and both of them speak to the operator about what is left to
+ * do.
+ */
+describe('a removed pile is nobody’s next step (S26)', () => {
+  it('does not offer “next pile in this zone” on the strength of a removed one', async () => {
+    await renderCounter(
+      scenario((b) => {
+        b.accept('p1');
+        // p2 is zone A's only other pile, and it is retired.
+        b.sys({ t: 'pile_removed', pileId: 'p2', reason: '' });
+        b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+      }),
+    );
+
+    expect(screen.getByTestId('pile-closed-transition')).toBeTruthy();
+    expect(screen.queryByTestId('decision-next-pile')).toBeNull();
+  });
+
+  it('still offers it when the zone has a live not-started pile', async () => {
+    await renderCounter(
+      scenario((b) => {
+        b.accept('p1');
+        b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+      }),
+    );
+
+    expect(screen.getByTestId('decision-next-pile')).toBeTruthy();
+  });
+
+  it('counts only live zones and piles in the close-sale scope line', async () => {
+    await renderCounter(
+      scenario((b) => {
+        b.accept('p1');
+        b.sys({ t: 'pile_removed', pileId: 'p2', reason: '' });
+        b.sys({ t: 'pile_removed', pileId: 'p3', reason: '' });
+        b.sys({ t: 'zone_removed', zoneId: 'zB', reason: 'ไม่ได้ขายโซนนี้' });
+        b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+      }),
+    );
+    fireEvent.press(screen.getByTestId('tab-pile'));
+    fireEvent.press(screen.getByTestId('pile-close-sale'));
+
+    // One zone and one pile survive: โซน A with กอง 1. The setup screen has
+    // already stopped showing the other three; the confirm must not claim
+    // them either.
+    expect(screen.getByTestId('close-sale-detail')).toHaveTextContent(/1 โซน 1 กอง/);
+  });
+});

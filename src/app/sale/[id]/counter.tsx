@@ -254,7 +254,16 @@ export default function CounterScreen() {
   };
 
   // ── Decision point after a pile closes ──────────────────────────────────
-  const nextPileInZone = state.piles.find((p) => p.zoneId === zone.id && p.status === 'not-started');
+  // `!p.removed` alongside the status, for the same reason the switcher
+  // filters (S26): a retired pile is nobody's next step. Without it the
+  // decision point offers "next pile in this zone" on the strength of a pile
+  // that was removed, and the tap is a dead end — `pickPile` selects an id
+  // that the live-pile resolution above immediately falls back away from, so
+  // the operator is told there is more to count in this zone and then left on
+  // the same closed pile.
+  const nextPileInZone = state.piles.find(
+    (p) => p.zoneId === zone.id && !p.removed && p.status === 'not-started',
+  );
 
   // Closing the pile you're actively counting into is the single most
   // frequent close action in the whole lifecycle, and touches nothing but
@@ -781,9 +790,12 @@ function CloseSaleConfirmOverlay({
         testID="close-sale-detail"
         style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}
       >
+        {/* Removed zones and piles are not part of what is being closed —
+            counting them would overstate the scope of the very confirm S25
+            added to make that scope honest (S26). */}
         {msg('counter.closeSaleDetail', {
-          zones: state.zones.length,
-          piles: state.piles.length,
+          zones: state.zones.filter((z) => !z.removed).length,
+          piles: state.piles.filter((p) => !p.removed).length,
           baskets: st.baskets,
           weight: formatKg(st.netG),
         })}
