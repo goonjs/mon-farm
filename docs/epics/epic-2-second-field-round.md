@@ -18,6 +18,20 @@ yet — stories are written and worked one at a time from here.
 | Does bulk entry still need the zero/tare gate? | **No — skipped, and the skip is logged as an event. A typed reason is required.** |
 | S30 — fetch the price programmatically? | **No — out of scope** (researched 2026-08-11; nothing publishes cup lump honestly). The app keeps a list of **sources** — name, note, URL — surfaced on the sale-setup screen to open by hand, and logs each observed price, plus the ล้ง's own, as a reference. Never in the money chain. |
 
+## Decisions taken, 2026-09-03
+
+Taken while planning S29 and S27, which are being built in parallel with the
+counter-side corrections.
+
+| Question | Owner's answer |
+| --- | --- |
+| S29 — is `basis` load-bearing once deductions exist? | **No. It stays inert**, and the claim above that it stops being inert was wrong. Deductions come off after the split, so the split is always on gross. Recorded in `types.ts` beside the field. |
+| S29 — how is a deduction recorded and voided? | **Two `sys` payloads**, `deduction_added` and `deduction_voided`. Not a new top-level event kind, and not a widened `CorrectionEvent` — whose `pileId` is required and whose voids apply only to baskets. Same route `price_set` and `split_set` take. |
+| S27 — do profile zones and piles get ids that survive across sales? | **Yes, and the profile's ids go into the log.** Prefill writes `zone_added` / `pile_added` carrying the profile's id, not a fresh random one. Today every sale mints throwaway ids, so nothing can be rolled up across sales except by matching names — which fails silently and undetectably. |
+| S27 — where does long-run, cross-sale reporting live? | **A new story, S31**, after S28. S27 lays the identity groundwork only. |
+| S27 — how is the profile stored? | **Full platform split**, following `src/store/people.ts`: port + web + native + memory. The phone is the real target; a web-only profile removes no retyping. |
+| S27 — how does the profile reach a sale? | **An explicit button.** Nothing enters the event log because a screen was opened, and undoing an auto-prefill would need pile removal, which is S26 and not built. |
+
 ## Where this came from
 
 Epic 1 is built and running. The owner ran the app against the real flow and
@@ -281,9 +295,13 @@ own step in the derivation, and never silently folded into a total.
   the owner and the worker; it does not change what the buyer pays. Keeping
   that separation explicit is what stops a deduction from looking like a
   weight error.
-- `basis` (`'gross' | 'final'`) already exists on the split and is currently
-  inert because there are no adjustments. Once deductions exist it stops
-  being inert — FR-8.4/8.5.
+- `basis` (`'gross' | 'final'`) already exists on the split and is inert.
+  **It stays inert** (owner, 2026-09-03) — this line previously claimed the
+  opposite and was wrong. Because deductions come off *after* the split,
+  `settle()` always splits on gross and there is no arithmetic for `'final'`
+  to select. FR-8.5 still forces the choice at setup, which under this
+  design is a question with no consequence; removing it is an event-shape
+  change against logs that already exist and belongs in its own story.
 
 **Agreed 2026-08-11: deductions come off AFTER the split.** Each zone's
 gross is split first, then each worker's own deductions come off their own
@@ -372,6 +390,31 @@ source list itself stays out of the log, being device configuration.
 the order below.
 
 
+## S31 — Cross-sale reporting (added 2026-09-03)
+
+**Not one of the owner's original ten.** It came out of planning S27: asked
+how the farm profile should prefill a sale, the owner said the thing that
+actually matters is being able to see *which zone performs how in the long
+run*. That is a different question from S28, which reports one completed
+sale.
+
+S27 makes it possible by giving each profile zone and pile an id that
+persists across sales (see the decisions table above). S31 is the report
+itself: a zone's and a pile's earnings across a date range, over every sale
+whose log carries that id.
+
+**Deliberately after S28**, so it is designed once against a money model that
+already includes deductions, and against a single-sale report that already
+exists to be aggregated. Nothing about it is designed yet — this section
+records that it exists and why, not how it works.
+
+**A boundary to keep honest**: a sale set up by hand, without the profile,
+carries throwaway ids and cannot join the rollup. That is the correct
+outcome — nobody said those piles were the same piles — but the report has
+to say so rather than quietly reporting a smaller number.
+
+---
+
 ## Order of work
 
 Corrections before capabilities; deductions before reports, so the report is
@@ -388,6 +431,8 @@ built once against the final money model.
 7. **S29** — worker deductions
 8. **S28** — reports, by zone and pile
 9. **S30** — named price sources, logged by hand — no longer blocked
+10. **S31** — cross-sale reporting, added 2026-09-03. Depends on S27 for
+    stable ids and on S28 for the single-sale report it aggregates.
 
 ## Still open
 

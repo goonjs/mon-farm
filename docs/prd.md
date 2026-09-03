@@ -285,6 +285,16 @@ prone**.
   have it set explicitly** — there is no safe default, since guessing
   wrong changes what the worker is paid whenever a bargain happens. The
   app must not let a contract exist without a basis recorded.
+
+  **Note, 2026-09-03 (S29):** with deductions coming off *after* the split
+  (the 2026-08-11 decision), the split is always applied to gross and
+  `basis` selects no arithmetic. It is recorded and shown, and it changes
+  nothing. The choice is still forced at setup per this requirement, which
+  makes it a question with no consequence today. That is left standing
+  rather than quietly removed: dropping it is an event-shape change against
+  logs that already exist, and it needs its own story. The first adjustment
+  that is *not* a per-worker deduction — a bargained price change, FR-7.3 —
+  would make the field load-bearing again.
 - FR-8.6 ❓ Where a sale spans multiple zones with **different splits**,
   the split is applied per zone against that zone's contribution —
   assumed, to be confirmed.
@@ -353,8 +363,13 @@ everyone present.
   summary both parties can keep. ❓ (format — printed slip, PDF, share
   sheet, LINE?)
 - FR-10.3 Historical sales support answering "what did zone X earn this
-  month", "what has the worker lead been paid". ❓ (is reporting v1 or
-  later?)
+  month", "what has the worker lead been paid". **Answered 2026-09-03: in
+  scope, carried by S31** (cross-sale reporting), after S28's single-sale
+  report. What made it answerable at all is S27, which gives each farm-profile
+  zone and pile an id that persists across sales — before that, every sale
+  minted throwaway ids and nothing could be rolled up except by matching
+  names. A sale set up by hand, without the profile, carries throwaway ids
+  and stays outside the rollup.
 
 ### FR-11 — Voice announcement and call-and-response
 
