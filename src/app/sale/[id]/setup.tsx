@@ -39,6 +39,12 @@ import { PeoplePicker } from '../../../components/PeoplePicker';
 import { newId } from '../../../lib/id';
 import { useSale } from '../../../store/SaleProvider';
 import type { Person } from '../../../store/people';
+// Bare specifier — Metro resolves this to farm.native.ts / farm.web.ts, same
+// as the `store` import in SaleProvider.tsx. Read-only here: this screen
+// never writes the farm profile, only copies its ids into ordinary events
+// (S27, Decision 1 in docs/stories/s27-farm-profile.md).
+import { farmStore } from '../../../store/farm';
+import type { ProfileZone } from '../../../store/farm';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import type { Zone } from '../../../core/types';
@@ -451,6 +457,8 @@ function ZonesCard() {
 
   return (
     <Card title={msg('setup.zonesPiles')}>
+      {state.zones.length === 0 ? <FarmProfilePrefillCard /> : null}
+
       {state.zones.map((zone) => (
         <ZoneEditor key={zone.id} zone={zone} />
       ))}
@@ -470,6 +478,86 @@ function ZonesCard() {
         </Button>
       </View>
     </Card>
+  );
+}
+
+/**
+ * Offered only while the sale has no zones yet (the caller gates on
+ * `state.zones.length === 0`), and only ever an offer: opening this screen
+ * appends nothing. One button appends one `zone_added` and one `pile_added`
+ * per profile pile — the SAME payloads setup already writes for a hand-typed
+ * zone/pile, carrying the profile's own ids rather than fresh ones. That is
+ * S27's whole point: the same profile used in two different sales produces
+ * the same zone/pile ids in both logs.
+ */
+function FarmProfilePrefillCard() {
+  const t = useTheme();
+  const msg = useT();
+  const { append } = useSale();
+  const [zones, setZones] = useState<ProfileZone[] | null>(null); // null = loading
+
+  useEffect(() => {
+    let live = true;
+    farmStore.listZones().then((z) => {
+      if (live) setZones(z);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  if (!zones || zones.length === 0) return null;
+
+  const usePrefill = () => {
+    for (const zone of zones) {
+      append({ kind: 'sys', payload: { t: 'zone_added', zoneId: zone.id, name: zone.name } });
+      for (const pile of zone.piles) {
+        append({
+          kind: 'sys',
+          payload: {
+            t: 'pile_added',
+            pileId: pile.id,
+            zoneId: zone.id,
+            name: pile.name,
+            tareG: pile.tareG,
+            stdNetG: pile.stdNetG,
+          },
+        });
+      }
+    }
+  };
+
+  return (
+    <View
+      style={{
+        borderWidth: t.border.hair,
+        borderColor: t.color.rule,
+        borderRadius: t.radius.sm,
+        padding: t.space.sm,
+        marginBottom: t.space.md,
+        backgroundColor: t.color.surfaceSunk,
+        gap: t.space.xs,
+      }}
+    >
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>
+        {msg('setup.useFarmProfileTitle')}
+      </Text>
+      {zones.map((zone) => (
+        <View key={zone.id} style={{ gap: 2 }}>
+          <Text style={{ fontFamily: t.font.family.sans, fontWeight: t.font.weight.bold, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
+            {zone.name}
+          </Text>
+          {zone.piles.map((pile) => (
+            <Text key={pile.id} style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkFaint }}>
+              {msg('setup.pileRow', { name: pile.name, tare: pile.tareG / 1000, std: pile.stdNetG / 1000 })}
+            </Text>
+          ))}
+        </View>
+      ))}
+      <Button testID="use-farm-profile" variant="primary" onPress={usePrefill}>
+        {msg('setup.useFarmProfileButton')}
+      </Button>
+    </View>
   );
 }
 

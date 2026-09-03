@@ -1,7 +1,10 @@
 # Story: A farm is not re-typed every sale
 
-Status: Ready — acceptance criteria agreed with the owner 2026-09-03,
-alongside the design decisions recorded under "Decisions" below.
+Status: Review — implemented 2026-09-03, acceptance criteria agreed with the
+owner the same day alongside the design decisions below. **Every stage of
+`npm run verify` is green, e2e included** (122 Playwright tests across four
+projects; screenshots captured). Awaiting the independent code review by a
+separate agent/session, which is the one remaining gate before `Done`.
 
 ## Context
 
@@ -138,53 +141,124 @@ _Tests below are written to fail first (TDD), then implemented to green._
 
 Unit (Vitest, `src/store/farm.test.ts`, against the memory store):
 
-- [ ] Starts empty; a created zone round-trips
-- [ ] Ids are stable across reads and across writes to other zones
-- [ ] Zone listing is Thai-collated, not insertion-ordered
-- [ ] Archiving hides a zone from the list but keeps it resolvable
-- [ ] Piles add, edit and remove within a zone
-- [ ] An unknown zone or pile id is a no-op, not a throw
+- [x] Starts empty; a created zone round-trips
+- [x] Ids are stable across reads and across writes to other zones
+- [x] Zone listing is Thai-collated, not insertion-ordered
+- [x] Archiving hides a zone from the list but keeps it resolvable
+- [x] Renaming a zone keeps its id
+- [x] Piles add, edit and remove within a zone
+- [x] An unknown zone or pile id is a no-op, not a throw
 
 Component (Jest, `.test.tsx`):
 
-- [ ] The profile screen adds a zone and a pile, and converts kg to grams
-- [ ] Setup's prefill card appears only when the sale has no zones
-- [ ] Pressing prefill appends one `zone_added` per zone and one `pile_added`
-      per pile, carrying the profile's ids
+- [x] The profile screen adds a zone and a pile, and converts kg to grams
+      (`src/app/farm-profile.test.tsx`)
+- [x] Archiving a zone removes it from the list
+- [x] The empty profile offers to seed from the most recent sale
+- [x] Setup's prefill card appears only when the sale has no zones, and
+      appends nothing until pressed (`src/app/sale/[id]/setup.test.tsx`)
+- [x] Pressing prefill appends one `zone_added` per zone and one `pile_added`
+      per pile, **carrying the profile's ids** — asserted on the appended
+      payloads, not just on what renders
 
-End-to-end (Playwright, `e2e/farm-profile.spec.ts`):
+End-to-end (Playwright, `e2e/farm-profile.spec.ts`, 6 tests):
 
-- [ ] Build a profile through the UI, reload, and find it intact
-- [ ] Start a sale, prefill, and see the piles with the right tare
-- [ ] **Two sales from the same profile carry the same zone id** — the
-      identity guarantee, proved across sales
+- [x] An empty profile shows the empty state, not a blank screen
+- [x] Build a profile through the UI, reload, and find it intact
+- [x] Archiving a zone removes it from the profile but the id stays resolvable
+- [x] Start a sale, prefill, and see the piles with the right tare
+- [x] **Two sales built from the same profile carry the same zone and pile
+      ids** — the identity guarantee, proved across two separate sales' logs
+- [x] The prefill card does not appear on a sale that already has zones
 
 ## Verification
 
-- [ ] Sandbox run performed:
-- [ ] Screenshots (UI stories only) — golden path:
-- [ ] Screenshots (UI stories only) — edge cases: an empty profile; a sale
-      that already has zones, where the prefill card must not appear
+- [x] Sandbox run performed: **yes, in full.** Every stage of `npm run verify`
+      ran for real and is green — `tokens:check`, `contrast`, `typecheck`,
+      `lint`, `test:core`, `test:ui`, `build:web`, and the e2e suite
+      (**122 passed, 6 skipped** across all four Playwright projects; the 6
+      are viewport-specific orientation tests that only run in their own
+      projects by design).
+- [x] Screenshots (UI stories only) — golden path:
+      `docs/ux/screenshots/{phone-landscape,phone-landscape-floor}/farm-profile-golden.png`
+      — the zone `โซนบน` with its rename and archive controls, the pile
+      `กองที่ 1 · ตะกร้า 2.5 + มาตรฐาน 50 กก.` with edit and remove, and the
+      add-pile row beneath.
+- [x] Screenshots (UI stories only) — edge cases: `farm-profile-empty.png`
+      (an empty profile showing its empty state rather than a blank screen)
+      and `farm-profile-no-prefill.png` (a sale that already has zones, where
+      the prefill card must not appear).
+
+**On running Playwright here**: the image ships Chromium at `/opt/pw-browsers`
+but the repo pins a newer build than it carries, so the default executable
+path misses and `npx playwright install` is blocked by the egress proxy. The
+suite runs when passed the installed binary via `launchOptions.executablePath`
+from a scratchpad config outside the repo. `playwright.config.ts` is
+deliberately NOT changed — this is a property of one sandbox, not of the
+project. Same note as S29.
 
 ## Dev notes
 
-New files: `src/store/farm.ts` (port, with the `export declare const
-farmStore` ambient declaration that lets project-wide `tsc` resolve a name
-Metro picks per platform), `src/store/farm.web.ts`, `src/store/farm.native.ts`,
-`src/store/farm-memory.ts`, `src/app/farm-profile.tsx`,
-`src/store/farm.test.ts`.
+New files:
 
-The profile editor is a **separate route**, not a section inside
-`src/app/settings.tsx`. That screen's only primitive is `Choice`, an
-enumerated string picker; a zone and pile editor is a list. A sibling route
-keeps settings.tsx's shape intact and gives the editor room. It is named
-`farm-profile.tsx` rather than `settings/farm.tsx` so nothing depends on
-expo-router resolving a file and a directory of the same name.
+- `src/store/farm.ts` — the port: `ProfileZone` / `ProfilePile`, the
+  `FarmStore` interface, the `export declare const farmStore` ambient
+  declaration (Metro resolves per platform; project-wide `tsc` cannot — the
+  reasoning is in `people.ts:42-47`), and the `MemoryFarmStore` re-export with
+  the same Jest-vs-Vitest warning.
+- `src/store/farm.web.ts` — one JSON document under `mon-farm:farm-profile`,
+  every read and write in `try/catch` behind `globalThis.localStorage?.`,
+  degrading to empty/no-op exactly as `people.web.ts` does.
+- `src/store/farm.native.ts` — `farm_zones` / `farm_piles` in the existing
+  `mon-farm.db`, lazy memoised `open()` with `CREATE TABLE IF NOT EXISTS`.
+  The `events` table and `src/store/store*.ts` are untouched.
+- `src/store/farm-memory.ts`, `src/store/farm.test.ts`.
+- `src/app/farm-profile.tsx` — the editor, a sibling route rather than a
+  section inside `settings.tsx` (whose only primitive is `Choice`, an
+  enumerated picker; this is a list). Nothing on it writes to the event log.
+- `src/app/farm-profile.test.tsx`, `src/app/sale/[id]/setup.test.tsx`,
+  `e2e/farm-profile.spec.ts`.
 
-Changed: `src/app/sale/[id]/setup.tsx` (the prefill card in `ZonesCard`; the
-hard-coded `'2'` / `'50'` kg defaults stay as the fallback for a hand-typed
-pile), `src/app/settings.tsx` (one link), `src/i18n/messages.ts`,
-`e2e/fixtures.ts` (a profile-seeding helper; none exists today).
+Changed: `src/app/sale/[id]/setup.tsx` (the prefill card and `usePrefill`),
+`src/app/settings.tsx` (one link), `src/i18n/messages.ts` (`farm.*` ids, `th`
+first then `en`), `e2e/fixtures.ts` (a `seedFarmProfile` helper, mirroring
+`seedPeople`).
+
+**Ids are the load-bearing part.** `usePrefill` appends the existing
+`zone_added` / `pile_added` payloads carrying `zone.id` and `pile.id`
+straight from the profile — no new event kind, no new field, no change to
+`types.ts`. That is Decision 1, and it is what makes S31's cross-sale rollup
+possible. It is asserted twice, at two tiers that fail for different reasons:
+the component test checks the appended payloads directly, and the e2e test
+prefills two separate sales from one profile and finds the same ids resolving
+in both.
+
+**Not directly tested, by deliberate convention**: `farm.web.ts` and
+`farm.native.ts`. `vitest.config.ts` includes `src/store/*.test.ts` with a
+single star specifically so the platform adapters — which touch
+`localStorage` and `expo-sqlite` — stay out of the node-environment tier.
+The web adapter is exercised for real by the Playwright tests, which run
+against the exported web build; the native adapter is not exercised by any
+tier in this repo, exactly as `people.native.ts` is not. The corrupt-profile
+acceptance criterion is therefore satisfied by construction (the same
+`try/catch` shape as `people.web.ts`) rather than by a test of its own, which
+is worth stating plainly rather than checking off.
+
+**Implementation was interrupted.** The agent implementing this story was
+killed partway by a rate limit, after the code and tests were written but
+before it updated this file. The gate was re-run from scratch and the story
+record written from what the tests and screenshots actually show, not from
+the agent's account of them.
+
+`docs/checklists/offline-sync-checklist.md` — completed: fully offline, no
+network call added anywhere. The profile is device configuration and is
+deliberately outside the sync story — no `seq`, never marked synced, never
+uploaded; two devices each keep their own, which is correct for a description
+of how a device is set up. The one place it touches sale data is the prefill
+button, which produces ordinary events through `SaleProvider.append`; those
+sync like any other event, and the sale's log stays complete on its own —
+which is exactly why the ids are copied INTO the events rather than
+referenced from the profile.
 
 ## Code review
 
