@@ -105,6 +105,9 @@ const th = {
   'counter.speechDegraded': 'เสียงพูดไม่ทำงาน',
   'counter.switcher': 'โซน/กอง',
   'counter.pileNotReady': 'กองยังไม่พร้อม',
+  // The operator register only (F-9.7 keeps the public numeral to itself):
+  // what the pile in view already carries in short baskets, count and weight.
+  'counter.shortSoFar': '{n} เข่งไม่เต็ม · สั้น {net} กก.',
   'counter.undo': 'ยกเลิกเข่งล่าสุด',
   'counter.mistapReason': 'กดพลาด',
   'counter.undoDetail':
@@ -123,7 +126,9 @@ const th = {
   'pile.thisPile': '{name}',
   'pile.standard': 'เข่งมาตรฐาน',
   'pile.short': 'เข่งไม่เต็ม',
+  'pile.shortWithWeight': '{n} · {net} กก.',
   'pile.weight': 'น้ำหนักรวม',
+  'pile.netBreakdown': '{standard} + {short} = {total} กก.',
   'pile.scale': 'ตาชั่ง',
   'pile.tare': 'นน. ตะกร้าเปล่า',
   'pile.stdNet': 'นน. ยางต่อเข่ง',
@@ -340,6 +345,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'counter.speechDegraded': 'speech is not working',
   'counter.switcher': 'zone/pile',
   'counter.pileNotReady': 'pile not ready',
+  'counter.shortSoFar': '{n} short · {net} kg short',
   'counter.undo': 'undo last',
   'counter.mistapReason': 'mistap',
   'counter.undoDetail':
@@ -357,7 +363,9 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'pile.thisPile': '{name}',
   'pile.standard': 'standard',
   'pile.short': 'short',
+  'pile.shortWithWeight': '{n} · {net} kg',
   'pile.weight': 'weight',
+  'pile.netBreakdown': '{standard} + {short} = {total} kg',
   'pile.scale': 'scale',
   'pile.tare': 'tare',
   'pile.stdNet': 'standard net',

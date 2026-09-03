@@ -187,6 +187,14 @@ Playwright runs against `expo export` output served statically, **not** the dev
 server: a bundling failure then exits non-zero before a browser opens, instead
 of becoming a blank screenshot.
 
+**A screen's component test never lives beside the screen.** Everything under
+`src/app/` is a route to expo-router, file-name and all, so an
+`app/sale/[id]/counter.test.tsx` is exported by `expo export` as a real,
+reachable `/sale/[id]/counter.test` page with its test doubles bundled into the
+app. Screen-level tests go in `src/test/` and import the screen by path
+(`src/test/counter-screen.test.tsx`, S22). Component tests for anything in
+`src/components/` are unaffected — that tree is not routed.
+
 **No pixel-diff screenshot comparison.** Font rendering differs between macOS
 and CI's Linux runner; the golden-file churn would cost more than it catches.
 Screenshots are evidence for a human, plus computed geometry assertions.

@@ -8,10 +8,20 @@ import type { SaleEvent } from '../src/core/types';
  * baskets already counted into it. Everything the counter-screen interaction
  * tests need (hold, undo, reject, tab-switch, reload) and nothing else.
  */
-export function openPileScenario(saleId: string, standardBaskets = 0): SaleEvent[] {
+export function openPileScenario(
+  saleId: string,
+  standardBaskets = 0,
+  /**
+   * Gross scale readings, in grams, for short baskets in the same pile — each
+   * one nets `reading − tare` (S22). Optional and empty by default, so every
+   * existing caller sees exactly the log it saw before.
+   */
+  shortReadingsG: readonly number[] = [],
+): SaleEvent[] {
   const b = setUpSale(new LogBuilder(saleId));
   readyPile(b, 'p1');
   for (let i = 0; i < standardBaskets; i++) b.accept('p1');
+  for (const readingG of shortReadingsG) b.short('p1', readingG);
   return b.build();
 }
 

@@ -20,7 +20,7 @@
  * complete, producing a phantom count nobody performed (finding F-6/F-7).
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Pressable, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 
 import { Bezel } from './Bezel';
@@ -35,6 +35,17 @@ export interface HoldStageProps {
   onReject: (heldMs: number) => void;
   /** Shown under the numeral — the operator register's expected reading. */
   caption: string;
+  /**
+   * A second operator-register line, under the caption (S22).
+   *
+   * A slot rather than another string prop: what goes here is the caller's
+   * business (today, the pile's short-basket figure), and the stage stays a
+   * component that knows about a numeral and a bezel. It shares the caption's
+   * absolutely-positioned strip at the bottom of the stage, so nothing it
+   * renders can push, resize or overlap the public numeral — F-9.7's space is
+   * not negotiable.
+   */
+  register?: ReactNode;
   /** When false, the stage does not accept holds (pile not ready, sale closed). */
   enabled?: boolean;
   holdMs?: number;
@@ -46,6 +57,7 @@ export function HoldStage({
   onCount,
   onReject,
   caption,
+  register,
   enabled = true,
   holdMs,
   testID = 'stage',
@@ -449,7 +461,7 @@ export function HoldStage({
         {count}
       </Text>
 
-      <View style={{ position: 'absolute', bottom: t.space.sm }}>
+      <View style={{ position: 'absolute', bottom: t.space.sm, alignItems: 'center' }}>
         <Text
           testID="caption"
           style={{
@@ -467,6 +479,7 @@ export function HoldStage({
         >
           {feedback ? feedback.text : caption}
         </Text>
+        {register}
       </View>
     </Pressable>
   );

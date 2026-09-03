@@ -71,3 +71,59 @@ test('plus and minus buttons move the reading by 0.5 kg', async ({ page }) => {
   await page.getByTestId('short-reading-minus').click();
   await expect(page.getByTestId('short-reading-typed')).toHaveValue('39.5');
 });
+
+/**
+ * S22 — the short figure in the operator register, in the real build.
+ *
+ * The component tier already proves the arithmetic and the zero case; what
+ * only a browser can show is that the line is genuinely on the Count tab of
+ * the exported build, and that it stays out of the public numeral's space
+ * (F-9.7) rather than merely being positioned to look like it does.
+ */
+test('the operator register carries the pile short weight, summed, and gives it back on undo', async ({
+  page,
+}, testInfo) => {
+  await openCounter(page, 5);
+  await expect(page.getByTestId('short-so-far')).toHaveCount(0); // nothing shorted yet
+  const numeralBefore = (await page.getByTestId('count').boundingBox())!;
+
+  await page.getByTestId('short').click();
+  await page.getByTestId('short-reading-typed').fill('14.4');
+  await page.getByTestId('short-confirm').click();
+
+  // 14.4 − 2 = 12.4 kg, one short basket.
+  const line = page.getByTestId('short-so-far');
+  await expect(line).toBeVisible();
+  await expect(line).toContainText('12.4');
+  await expect(line).toContainText('1 เข่งไม่เต็ม');
+
+  // It shares the CAPTION's strip and nothing else (F-9.7): it sits under the
+  // caption, and the public numeral is the same size in the same place it was
+  // before the line existed — the line neither pushes nor resizes it.
+  const captionBox = (await page.getByTestId('caption').boundingBox())!;
+  const lineBox = (await line.boundingBox())!;
+  expect(lineBox.y).toBeGreaterThanOrEqual(captionBox.y + captionBox.height);
+  expect(await page.getByTestId('count').boundingBox()).toEqual(numeralBefore);
+
+  await page.getByTestId('short').click();
+  await page.getByTestId('short-reading-typed').fill('10');
+  await page.getByTestId('short-confirm').click();
+
+  // The SUM — 12.4 + 8 — not the basket most recently logged.
+  await expect(line).toContainText('20.4');
+  await expect(line).toContainText('2 เข่งไม่เต็ม');
+  await page.screenshot({
+    path: `docs/ux/screenshots/${testInfo.project.name}/counter-short-so-far.png`,
+  });
+
+  // Undoing that second short basket takes its weight straight back out.
+  await page.getByTestId('undo').click();
+  await page.getByTestId('undo-confirm').click();
+  await expect(line).toContainText('12.4');
+  await expect(line).toContainText('1 เข่งไม่เต็ม');
+
+  // And undoing the last one leaves no line at all.
+  await page.getByTestId('undo').click();
+  await page.getByTestId('undo-confirm').click();
+  await expect(page.getByTestId('short-so-far')).toHaveCount(0);
+});

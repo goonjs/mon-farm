@@ -54,6 +54,7 @@ const PAIRINGS = [
   // Operator register, secondary.
   ['inkSoft', 'surface', 4.5, 'mono labels, secondary text'],
   ['inkSoft', 'stage', 4.5, 'the expected-reading chip'],
+  ['warn', 'stage', 4.5, 'the short-basket line in the operator register'],
 
   // Signal hues as text.
   ['action', 'stage', 4.5, 'links and controls on stage'],

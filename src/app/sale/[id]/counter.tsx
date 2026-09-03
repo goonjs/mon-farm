@@ -27,7 +27,7 @@ import { ZonePileSwitcher } from '../../../components/ZonePileSwitcher';
 import { canCount, canReopenPile, lastAnnounceOk, pilesStillCounting } from '../../../core/project';
 import { formatBaht, formatKg } from '../../../core/settle';
 import { basketNetG, lastLiveBasket, liveBaskets, pileTotals, saleTotals, zoneTotals } from '../../../core/totals';
-import type { BasketEvent, Pile, SaleEvent, SaleState, Zone } from '../../../core/types';
+import type { BasketEvent, Pile, SaleEvent, SaleState, Totals, Zone } from '../../../core/types';
 import { useT, type Translate } from '../../../i18n';
 import { announceCount } from '../../../speech/announcer';
 import { speaker } from '../../../speech/speaker';
@@ -276,6 +276,7 @@ export default function CounterScreen() {
               onReject={onReject}
               enabled={countable}
               caption={countable ? expected : msg('counter.pileNotReady')}
+              register={<ShortSoFar totals={totals} />}
               holdMs={holdMsOverride()}
             />
           )}
@@ -397,6 +398,38 @@ export default function CounterScreen() {
         />
       ) : null}
     </View>
+  );
+}
+
+/**
+ * The short-basket figure for the pile in view, in the operator register (S22).
+ *
+ * Renders nothing at all when the pile has no short baskets: a `0 กก.` line on
+ * a pile nobody has shorted reads as if something had happened, and the
+ * register is scarce space. It is the SUM (`shortNetG`), never the last basket
+ * logged, and it is per pile because `pileTotals` is — switching pile switches
+ * the figure with it, and an undo that voids the last short basket takes its
+ * weight back out on the next render with nothing here to remember.
+ */
+function ShortSoFar({ totals }: { totals: Totals | null }) {
+  const t = useTheme();
+  const msg = useT();
+  if (!totals || totals.shortBaskets === 0) return null;
+
+  return (
+    <Text
+      testID="short-so-far"
+      style={{
+        fontFamily: t.font.family.mono,
+        fontSize: t.font.size.micro,
+        letterSpacing: t.font.tracking.wide,
+        color: t.color.warn,
+        backgroundColor: t.color.stage,
+        paddingHorizontal: t.space.sm,
+      }}
+    >
+      {msg('counter.shortSoFar', { n: totals.shortBaskets, net: formatKg(totals.shortNetG) })}
+    </Text>
   );
 }
 
@@ -712,8 +745,32 @@ function PilePanel({
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, gap: t.space.md, flexDirection: 'row', flexWrap: 'wrap' }}>
       <Card title={pile.name}>
         <Stat label={msg('pile.standard')} value={String(pt.standardBaskets)} big />
-        <Stat label={msg('pile.short')} value={String(pt.shortBaskets)} />
-        <Stat label={msg('pile.weight')} value={`${formatKg(pt.netG)} ${msg('common.kg')}`} rule />
+        {/* Count AND weight once there is a short basket to weigh — the count
+            alone left the Log tab as the only place the weight existed. At
+            zero the row stays a bare `0`: a weight suffix there would read as
+            if something had been shorted. */}
+        <Stat
+          testID="pile-short-weight"
+          label={msg('pile.short')}
+          value={
+            pt.shortBaskets > 0
+              ? msg('pile.shortWithWeight', { n: pt.shortBaskets, net: formatKg(pt.shortNetG) })
+              : String(pt.shortBaskets)
+          }
+        />
+        {/* standard + short = total, in `gate.expected`'s shape, including the
+            zero term: the number reads the same way whether or not anyone has
+            shorted a basket in this pile. */}
+        <Stat
+          testID="pile-weight-breakdown"
+          label={msg('pile.weight')}
+          value={msg('pile.netBreakdown', {
+            standard: formatKg(pt.standardNetG),
+            short: formatKg(pt.shortNetG),
+            total: formatKg(pt.netG),
+          })}
+          rule
+        />
       </Card>
 
       <Card title={msg('pile.scale')}>
@@ -970,7 +1027,19 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function Stat({ label, value, big, rule }: { label: string; value: string; big?: boolean; rule?: boolean }) {
+function Stat({
+  label,
+  value,
+  big,
+  rule,
+  testID,
+}: {
+  label: string;
+  value: string;
+  big?: boolean;
+  rule?: boolean;
+  testID?: string;
+}) {
   const t = useTheme();
   return (
     <View
@@ -990,6 +1059,7 @@ function Stat({ label, value, big, rule }: { label: string; value: string; big?:
         {label}
       </Text>
       <Text
+        testID={testID}
         style={{
           fontFamily: t.font.family.sans,
           fontSize: big ? t.font.size.lead : t.font.size.small,

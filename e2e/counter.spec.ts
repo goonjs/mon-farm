@@ -337,6 +337,31 @@ test('turning speech off stops announcements and logs the toggle (FR-11.11)', as
   await expect(page.getByTestId('log')).not.toContainText('พูด');
 });
 
+/**
+ * S22 — the Pile tab reads standard + short, not one merged figure.
+ */
+test('the Pile tab shows the short weight and a net breakdown that adds up', async ({ page }, testInfo) => {
+  const saleId = testSaleId('pile-short');
+  // 3 standard (50 kg each) + 12.4 kg and 8 kg short.
+  await seedSale(page, saleId, openPileScenario(saleId, 3, [14_400, 10_000]));
+  await page.goto(`/sale/${saleId}/counter`);
+  await page.getByTestId('tab-pile').click();
+
+  await expect(page.getByTestId('pile-short-weight')).toHaveText('2 · 20.4 กก.');
+  await expect(page.getByTestId('pile-weight-breakdown')).toHaveText('150 + 20.4 = 170.4 กก.');
+  await page.screenshot({ path: `${SHOTS}/${testInfo.project.name}/counter-pile-short.png` });
+});
+
+test('the Pile tab keeps the breakdown shape when nothing has been shorted', async ({ page }) => {
+  const saleId = testSaleId('pile-no-short');
+  await seedSale(page, saleId, openPileScenario(saleId, 3));
+  await page.goto(`/sale/${saleId}/counter`);
+  await page.getByTestId('tab-pile').click();
+
+  await expect(page.getByTestId('pile-short-weight')).toHaveText('0');
+  await expect(page.getByTestId('pile-weight-breakdown')).toHaveText('150 + 0 = 150 กก.');
+});
+
 test('screenshots — counter, pile, log', async ({ page }, testInfo) => {
   const dir = `${SHOTS}/${testInfo.project.name}`;
   await openCounter(page, 5);
