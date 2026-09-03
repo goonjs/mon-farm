@@ -239,3 +239,22 @@ test('a reopened bulk pile counts live, both kinds of basket in one log', async 
   await expect(page.getByTestId('log').getByText('เข่งมาตรฐาน 50 กก.', { exact: true })).toHaveCount(1);
   await shot(page, testInfo, '09-reopened-bulk-and-live-in-one-log');
 });
+
+test('switching pile closes the bulk form — coming back shows the gate, not the form', async ({ page }) => {
+  const saleId = testSaleId('bulk-switch');
+  await seedSale(page, saleId, unreadyPileScenario(saleId));
+  await pileTab(page, saleId);
+
+  // Open the form on กอง 1, then walk away to กอง 2 without confirming.
+  await fillBulk(page, '12', '8.4', 'นับไว้ในกระดาษ');
+  await page.getByTestId('open-switcher').click();
+  await page.getByTestId('switcher-pile-p2').click();
+  await expect(page.getByTestId('zero-tare-gate')).toBeVisible();
+
+  // Coming back to กอง 1 must show its own gate — the bulk form is a thing
+  // the operator opened for one pile, not a mode the screen stays in.
+  await page.getByTestId('open-switcher').click();
+  await page.getByTestId('switcher-pile-p1').click();
+  await expect(page.getByTestId('zero-tare-gate')).toBeVisible();
+  await expect(page.getByTestId('bulk-entry-form')).toHaveCount(0);
+});

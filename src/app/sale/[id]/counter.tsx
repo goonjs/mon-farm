@@ -241,6 +241,11 @@ export default function CounterScreen() {
     setSelectedPileId(pileId);
     setOverlay({ kind: 'none' });
     setTab('count');
+    // The bulk form belongs to the pile it was opened for. Leaving the id set
+    // while looking at another pile means coming back re-opens the form
+    // instead of that pile's zero/tare gate — the operator asked for a
+    // different pile, not to stay in a mode (S23 review, finding 6).
+    setBulkPileId(null);
   };
 
   // ── Decision point after a pile closes ──────────────────────────────────

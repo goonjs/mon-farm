@@ -1,7 +1,10 @@
 # Story: Bulk entry, for a pile nobody counted live
 
-Status: **Review** — implemented 2026-09-03. Cannot reach `Done` without a
-push to CI and an independent review, neither authorized.
+Status: **Review** — implemented 2026-09-03; independently reviewed and
+QA'd the same day (**approved**, six findings, none blocking); review
+follow-up applied 2026-09-03 (findings 1, 5, 6 closed; 2, 3, 4 recorded as
+deliberately open, with reasons under each). Cannot reach `Done` without a
+push to CI, which is not authorized.
 
 ## Context
 
@@ -195,6 +198,14 @@ to explain; this way nothing is rounded and nothing is invented.
   - Reopen the bulk-closed pile, count one basket live via the ordinary
     stage, and see both a `source: 'bulk'`-labelled line and a
     plain-labelled live line in the same pile's log.
+- [x] Added in the review follow-up:
+  - **vitest**, new `src/store/store.web.test.ts` and
+    `src/store/store.native.test.ts` — the two shipping adapters' `appendAll`
+    (finding 1).
+  - **jest**, `src/components/BulkEntryForm.test.tsx` — the 999/1000 basket
+    boundary (finding 5).
+  - **playwright**, `e2e/bulk-entry.spec.ts` — opening the bulk form, switching
+    pile and coming back shows the gate, not the form (finding 6).
 
 ## New event-model surface (as built)
 
@@ -215,6 +226,9 @@ to explain; this way nothing is rounded and nothing is invented.
     accept (parallel to `log.accept`, taking the same `{ weight }`).
   - `log.bulkGateSkipped` — the Log-tab line for the `bulk_gate_skipped`
     sys event (parallel to `log.pileReopened`, taking `{ reason }`).
+  - `bulk.tooMany` — added in the review follow-up: the named blocker when the
+    typed basket count is above the 999 cap, taking `{max}` so the limit is
+    stated rather than implied.
   - `pile.bulkBadge` — the marker shown next to a bulk-entered pile's status
     in the Pile tab, and `pile.bulkStatus` (`{status} · …`) for the
     switcher's one-line row.
@@ -249,6 +263,23 @@ to explain; this way nothing is rounded and nothing is invented.
       `06-blocked-reason-required.png` (+ `-floor`),
       `07-blocked-nothing-to-enter.png`, `08-switcher-bulk-marker.png`,
       `09-reopened-bulk-and-live-in-one-log.png`.
+
+### Gate after the review follow-up (2026-09-03, at HEAD `f0e3ba6` + this pass)
+
+Whole gate re-run from this working tree, in order:
+
+- `tokens:check`, `contrast`, `typecheck`, `lint` — green.
+- `test:core` — **106 passed** (10 files), up from 98: +5 `WebStore` and +3
+  `SqliteStore` cases.
+- `test:ui` — **67 passed** (11 suites), up from 64: the three basket-cap
+  cases.
+- `build:web` — exported clean.
+- `test:e2e` — **158 passed, 6 skipped**, up from 156: the pile-switch case in
+  both landscape projects.
+- The twelve dev screenshots and fifteen QA screenshots were rewritten by the
+  e2e run and `git status` stayed clean on `screenshots/` — nothing this pass
+  changed is visible on the golden path (the cap message only appears above
+  999 baskets, which no screenshot enters).
 
 ### Independent QA re-run (separate agent, 2026-09-03, at HEAD `03cb18d`)
 
@@ -374,6 +405,39 @@ No other caller changed behaviour: a single append is a batch of one, and
   That field existed and nothing read it before; `log.acceptBulk` is the
   first thing that does, which is the point of the field.
 
+### Review follow-up (2026-09-03) — the three findings closed
+
+The QA pass approved the story and raised six findings, none blocking. Three
+were cheap and are now closed; three are recorded as open under their own
+entries above, with the reason each stays open. Nothing here changes what the
+story does — no event kind, no payload, no order of writes.
+
+- **Coverage for the two adapters that actually ship** (finding 1).
+  `store.test.ts` proved the port on `MemoryStore`, the implementation nothing
+  runs. `store.web.test.ts` now proves `WebStore` against a fake
+  `localStorage`, including by *counting writes* — the "one `setItem`, no torn
+  batch" claim is measured, not commented. `store.native.test.ts` proves what
+  a fake `expo-sqlite` can honestly prove about `SqliteStore`: the wiring
+  around the transaction. It cannot prove SQLite's atomicity, and its header
+  says so in as many words rather than leaving a reader to assume the native
+  path is covered. `vitest.config.ts`'s comment, which said the adapters
+  belong to the component/e2e tier, is amended to match — it now says which
+  ones have unit tests here and why a fake suffices for them.
+- **A bound on the basket count** (finding 5): 999, blocked with a named
+  message, never clamped. The number is argued from the domain — 50 kg a
+  basket, a 400-basket *sale* as the architecture's big case — in the finding
+  above, along with why a cap belongs on a typed count and not on live
+  counting.
+- **`bulkPileId` cleared on a pile switch** (finding 6): one line in
+  `pickPile`, so the form stays a per-pile action rather than a mode.
+
+Deliberately not done in this pass: a mixed-sale guard on `appendAll` that no
+caller can reach (finding 2), surfacing store write failures (finding 3 — its
+own story, whose stakes S23 raises and which should say so), and moving the
+persist side effect out of the `setEvents` updater (finding 4 — dormant until
+StrictMode, and it should be fixed by whoever turns StrictMode on, with the
+hazard actually observable).
+
 ### TDD trail
 
 Every criterion had its failing test first:
@@ -389,6 +453,18 @@ Every criterion had its failing test first:
 - `ZonePileSwitcher`'s marker case: red against the un-marked switcher
   (verified by reverting the marker line, running, restoring).
 - `e2e/bulk-entry.spec.ts`: written against testIDs nothing rendered yet.
+
+Review follow-up, same rule:
+
+- The basket cap: `bulk-too-many` did not exist and confirm was enabled — two
+  of the three new jest cases red before the form knew about `MAX_BASKETS`.
+  The 999 boundary case is green on both sides on purpose.
+- The pile-switch case: red in both landscape projects (`bulk-entry-form`
+  still on screen coming back to กอง 1) before `pickPile` cleared the id.
+- The two adapter suites test code that already existed, so fail-first meant
+  breaking the code: `appendAll` reduced to N single appends (web) and its
+  transaction removed (native), each seen red on exactly the cases that carry
+  the guarantee, then reverted.
 
 ## Code review
 
@@ -451,12 +527,56 @@ shows `pile-bulk-badge`; the switcher row reads `กอง 1 · ปิดแล�
    The native transaction is not exercised anywhere. Recommend a `WebStore`
    test against a fake `localStorage`; the native one is a standing gap in
    this repo, not this story's.
+
+   **Closed, 2026-09-03.** Both adapters now have unit tests, under vitest
+   (`src/store/store.web.test.ts`, `src/store/store.native.test.ts`).
+
+   - **Web — proven, not asserted.** `WebStore` runs against a fake
+     `localStorage` object (the adapter reads `globalThis.localStorage` at
+     call time, so no jsdom and no environment change). Five cases: the batch
+     lands whole; the whole batch is **one** `setItem` on the log key, counted
+     through the fake rather than read off the comment; a batch that collides
+     on `seq` rejects and performs **zero** writes, leaving the earlier log
+     exactly as it was; an empty batch writes nothing; the sale index is
+     registered once across a batch plus a later single append.
+   - **Native — honest about its limits.** There is no device or emulator
+     here, so SQLite does not run. `store.native.test.ts` mocks `expo-sqlite`
+     with a fake whose `runAsync` enforces `PRIMARY KEY (sale_id, seq)` and
+     whose `withTransactionAsync` counts entries, and proves the adapter's
+     **wiring**: one transaction per batch, every event inserted inside it in
+     seq order, a constraint violation surfacing as `DuplicateSeqError` and
+     **propagating out of** the transaction body (the signal a real
+     transaction rolls back on), and no transaction opened for an empty batch.
+     It does **not** prove SQLite's atomicity or WAL durability — that is the
+     engine's contract; what is testable here is the part this code is
+     responsible for. A genuine force-quit-mid-transaction test needs a device
+     and stays open, as the QA notes below already say.
+   - **Fail-first, for tests written against code that already existed:** each
+     was run against a deliberately broken `appendAll` (the batch replaced
+     with N single `append` calls; the transaction removed) and seen red, then
+     green against the shipped one. Web: the single-`setItem` case and the
+     writes-nothing-on-collision case both failed (3 writes where 0 was
+     expected). Native: the one-transaction case and the `DuplicateSeqError`
+     case both failed. Both mutations were reverted immediately. The remaining
+     cases in each file are characterisation and stayed green throughout,
+     which is what they are for.
 2. **`WebStore.appendAll` assumes a single-sale batch.** It keys off
    `events[0].saleId` for both the log key and the duplicate scan, so a
    mixed-sale batch would be written to the wrong key and mis-validated. No
    caller can produce one today (`appendMany` stamps one `saleId`), so this is
    an undefended invariant rather than a live bug — but the port's contract
    does not say batches are single-sale.
+
+   **Left open, deliberately.** There is exactly one caller of `appendAll`
+   (`SaleProvider.appendMany`), and it stamps every event in a batch with the
+   provider's own `saleId` — a mixed-sale batch is not reachable from any code
+   path that exists. Defending it would mean a guard whose only exercise is
+   its own test, which is what YAGNI forbids here. The honest gap is
+   documentation, not code: the port's comment says "atomic" without saying
+   "one sale per batch". Whoever gives `appendAll` a second caller — a sync
+   layer replaying across sales being the obvious one — inherits this, and
+   that is the story that should either state the invariant on the port or
+   make the adapter key per sale.
 3. **A store write failure is still invisible.** `void store.appendAll(batch)`
    has no `.catch`, and React state is updated regardless. If the write
    rejects (`DuplicateSeqError`) or `write()` swallows a quota error, the UI
@@ -464,18 +584,95 @@ shows `pile-bulk-badge`; the switcher row reads `กอง 1 · ปิดแล�
    and deliberate ("a storage failure must never block counting"), unchanged
    in kind by this story — but S23 raises the stakes, since one lost write is
    now a whole pile.
+
+   **Left open — and it is a story of its own, which should be written.**
+   This is pre-existing behaviour of the single write path, not something S23
+   introduced, and fixing it properly is not a line of code: it needs a
+   decision about what the operator sees when a write fails (a banner, a
+   retry, a refusal to advance), which of the current fire-and-forget swallows
+   are the right ones to keep, and how projected state is reconciled with a
+   log that never took the event. Doing that inside S23 would be a second
+   story bundled into this one; doing it cheaply — a `.catch` logging to a
+   console nobody is holding — would be worse than the honest gap.
+
+   What S23 legitimately changes is the **stakes**, and that is now on the
+   record for whoever picks it up: before this story a lost write was one
+   basket; after it, one lost write is an entire pile — gate-skip, baskets,
+   leftover and close — displayed as complete and gone after a reload.
 4. **The side effect still lives inside a `setEvents` updater.** Pre-existing.
    Nothing enables StrictMode today, so the double-invoke hazard is dormant;
    if it is ever turned on, every batch would be persisted twice and the
    second `appendAll` would reject unhandled.
+
+   **Left open, deliberately.** Nothing in the repo enables StrictMode, so the
+   double-invoke hazard cannot fire today; moving the stamping out of the
+   updater is a change to the one write path every event in the app goes
+   through, and it would be made here on a hazard no test can currently
+   observe. It belongs with finding 3 — both are about how the write path
+   behaves when something goes wrong with it — and should be done by whoever
+   turns StrictMode on, with the double-invoke actually running to prove the
+   fix. Recorded here so that switch is not flipped unaware: with StrictMode
+   on, every batch would be persisted twice and the second `appendAll` would
+   reject unhandled.
 5. **No cap on the basket count.** `parseBaskets` accepts any integer, so a
    fat-fingered `99999` writes ~100k events in one batch. YAGNI-acceptable,
    and the summary line states the number before confirm; noting it because
    the Dev notes reason about a "200-basket bulk entry" as the large case.
+
+   **Closed, 2026-09-03 — capped at 999 baskets, blocked rather than
+   clamped.**
+
+   *Why 999, from the domain.* A standard basket is 50 kg net (`docs/prd.md`
+   glossary; the fixtures' `stdNetG: 50_000`), and `docs/architecture.md`
+   sizes the big case as a **400-basket sale** — every pile, every zone, a
+   whole day's counting. One pile at 999 baskets is ~50 tonnes: more than
+   twice that entire sale, in a single pile, entered from one tally. So the
+   cap cannot exclude a pile anybody will really enter, while still catching
+   the fat-finger class the review names — a typed count is one stray
+   keystroke from an order of magnitude, and 999 is the largest number a
+   decimal slip cannot reach without visibly becoming four digits. Being a
+   whole-digit boundary also makes the rule sayable to an operator: hundreds,
+   not thousands.
+
+   *Why a cap is the right shape here, and only here.* Live counting has no
+   cap and must not get one: every basket there costs a real press-and-hold
+   against a real scale reading, so a big number is evidence, not a typo. A
+   bulk count is the opposite — one keypress can assert a thousand baskets
+   with nothing in its history to argue with, and each basket is an event in
+   an append-only log that corrections can only void, never delete. That
+   asymmetry is what makes a bound belong on this field specifically.
+
+   *Blocked, never clamped.* Silently recording 999 when someone typed 99999
+   writes a number nobody typed, which is the one thing this form exists not
+   to do. Over the cap, confirm is disabled and `bulk-too-many` names both the
+   reason and the limit (`bulk.tooMany`, th + en) — the same pattern as the
+   empty-reason and nothing-to-enter blocks, not a dim button with no stated
+   cause.
+
+   *Tested at the boundary, fail-first.* Three new jest cases in
+   `BulkEntryForm.test.tsx`: **999 confirms** and reports `baskets: 999` with
+   no error shown; **1000 blocks**, shows `bulk-too-many`, and a forced press
+   never calls `onConfirm`; and a leftover cannot rescue an over-cap count
+   (`99999` + 8.4 kg stays blocked). The 1000 and 99999 cases were red before
+   the change (`bulk-too-many` did not exist and confirm was enabled); the 999
+   case passed before and after, which is exactly its job — the cap must not
+   move the boundary down onto a pile someone might really have.
 6. **`bulkPileId` is not cleared when the operator switches pile.** Switching
    away correctly shows the other pile its own gate, but switching *back*
    re-opens the bulk form (with the fields cleared) instead of the gate. No
    events are involved and nothing is lost; cosmetic.
+
+   **Closed, 2026-09-03.** `pickPile` now clears `bulkPileId`. The form
+   belongs to the pile it was opened for; leaving the id set while the
+   operator looks at another pile turns a per-pile action into a mode the
+   screen quietly stays in. Cleared in `pickPile` rather than in an effect
+   keyed on the selected pile, because picking a pile *is* the event — an
+   effect would re-derive it and run on renders that are not a switch.
+   Fail-first: a new e2e case, `switching pile closes the bulk form — coming
+   back shows the gate, not the form`, opens the form on กอง 1, switches to
+   กอง 2 (its own gate — correct even before the fix), switches back, and
+   expects the gate with no `bulk-entry-form`. Red in both landscape projects
+   before the change (the form was on screen), green after.
 
 ### Checklist verdict
 

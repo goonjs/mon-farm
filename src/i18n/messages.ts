@@ -105,6 +105,7 @@ const th = {
   'bulk.confirm': 'บันทึกทั้งกอง',
   'bulk.reasonRequired': 'ต้องบอกเหตุผลก่อนบันทึก',
   'bulk.emptyError': 'ต้องมีอย่างน้อยเข่งเดียว หรือยางที่เหลือมากกว่า 0',
+  'bulk.tooMany': 'เกิน {max} เข่ง — กองเดียวไม่น่าจะมากขนาดนี้ ตรวจตัวเลขอีกครั้ง',
   // Says what confirming actually writes — including that the pile closes,
   // which is the part nobody would guess from two number fields.
   'bulk.summary': 'จะบันทึก {baskets} เข่ง · ยางที่เหลือ {leftover} กก. แล้วปิดกองนี้',
@@ -336,6 +337,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'bulk.confirm': 'record the whole pile',
   'bulk.reasonRequired': 'a reason is required before recording',
   'bulk.emptyError': 'needs at least one basket, or a leftover above 0',
+  'bulk.tooMany': 'over {max} baskets — no single pile is that big; check the number',
   'bulk.summary': 'records {baskets} baskets · {leftover} kg left over, then closes this pile',
   'bulk.gateNote': 'the zero and tare checks are skipped — there is no scale reading to check — and the skip is logged with your reason',
   'short.title': 'short basket — what does the scale read (kg), gross',

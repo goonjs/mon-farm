@@ -24,6 +24,14 @@ export default defineConfig({
     // import — never the `speaker.web.ts` / `speaker.native.ts` adapters,
     // which belong to the component/e2e tier exactly as `store.web.ts` /
     // `store.native.ts` do.
+    //
+    // Amended (S23 review, finding 1): the two STORE adapters now have unit
+    // tests here after all — `store.web.test.ts` and `store.native.test.ts`.
+    // They import the adapter and hand it a fake of the one global it touches
+    // (a `localStorage` object; a mocked `expo-sqlite` module), which needs no
+    // browser, no device and no environment change. The rule above still holds
+    // for everything else: this tier gets what a fake can honestly stand in
+    // for, and durability itself stays a device concern.
     include: ['src/core/**/*.test.ts', 'src/store/*.test.ts', 'src/i18n/*.test.ts', 'src/speech/*.test.ts'],
     environment: 'node',
     globals: false,

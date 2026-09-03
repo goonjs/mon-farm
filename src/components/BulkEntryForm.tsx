@@ -43,6 +43,23 @@ export interface BulkEntryFormProps {
   onCancel: () => void;
 }
 
+/**
+ * The most baskets one bulk entry will record.
+ *
+ * A standard basket is 50 kg net, and `docs/architecture.md` sizes the big
+ * case as a 400-basket SALE — every pile, every zone, a whole day. 999 in one
+ * pile is ~50 tonnes: more than twice that whole sale, so the cap cannot
+ * exclude a pile anyone will actually enter. What it does exclude is the typo
+ * this number is exposed to — the count is typed, not counted, so `99999` is
+ * one stray keystroke from `999`, and every basket is an event: a slip would
+ * write ~100k events in one batch, out of one keypress, with no scale reading
+ * or held button anywhere in its history to argue with.
+ *
+ * Blocked, not clamped. Clamping would record a number nobody typed, which is
+ * exactly what this form exists not to do (see the header).
+ */
+const MAX_BASKETS = 999;
+
 /** Digits only: baskets are counted things, never 2.5 of one. */
 function parseBaskets(raw: string): number {
   const n = Number.parseInt(raw.replace(/[^0-9]/g, ''), 10);
@@ -65,6 +82,7 @@ export function BulkEntryForm({ pileName, tareG, stdNetG, onConfirm, onCancel }:
   const baskets = parseBaskets(basketsRaw);
   const leftoverG = parseLeftoverG(leftoverRaw);
   const hasSomething = baskets > 0 || leftoverG > 0;
+  const tooMany = baskets > MAX_BASKETS;
   const hasReason = reason.trim().length > 0;
 
   const field = {
@@ -175,7 +193,11 @@ export function BulkEntryForm({ pileName, tareG, stdNetG, onConfirm, onCancel }:
 
           {/* Named blockers rather than a button that is dim for no stated
               reason — the same bar `ReopenPrompt` sets for a typed reason. */}
-          {!hasSomething ? (
+          {tooMany ? (
+            <Text testID="bulk-too-many" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.reject }}>
+              {msg('bulk.tooMany', { max: String(MAX_BASKETS) })}
+            </Text>
+          ) : !hasSomething ? (
             <Text testID="bulk-empty-error" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.reject }}>
               {msg('bulk.emptyError')}
             </Text>
@@ -191,7 +213,7 @@ export function BulkEntryForm({ pileName, tareG, stdNetG, onConfirm, onCancel }:
             <Button
               testID="bulk-confirm"
               variant="primary"
-              disabled={!hasSomething || !hasReason}
+              disabled={!hasSomething || tooMany || !hasReason}
               onPress={() => onConfirm({ baskets, leftoverG, reason: reason.trim() })}
             >
               {msg('bulk.confirm')}
