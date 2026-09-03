@@ -70,6 +70,15 @@ export default function SetupScreen() {
           // settlement screens. The list screen this was pushed from is
           // already on the stack; reusing it is what keeps repeated
           // list → setup → list round trips from stacking up hidden screens.
+          //
+          // Deliberately does NOT flush pending saves: leaving to the list is
+          // the abandon path (S17 — "starting a new sale writes no event;
+          // leaving the stub loses nothing"), and the split card auto-saves
+          // its 50/50 default with no interaction at all, so a completely
+          // untouched sale can still have a save pending in its first
+          // AUTOSAVE_DELAY_MS. Flushing here would write that default for a
+          // sale the operator never touched, and it would then wrongly stop
+          // appearing as empty. Only the forward path (start counting) flushes.
           <Button testID="back-to-list" onPress={() => router.back()}>
             {msg('setup.backToList')}
           </Button>
@@ -125,7 +134,10 @@ export default function SetupScreen() {
           testID="start-counting"
           variant="primary"
           disabled={!canStart}
-          onPress={() => router.replace({ pathname: '/sale/[id]/counter', params: { id: saleId } })}
+          onPress={() => {
+            flushPendingSaves();
+            router.replace({ pathname: '/sale/[id]/counter', params: { id: saleId } });
+          }}
         >
           {msg('setup.startCounting')}
         </Button>
@@ -304,6 +316,28 @@ type SaveStatus = 'idle' | 'pending' | 'saved';
 const AUTOSAVE_DELAY_MS = Platform.OS === 'web' ? 300 : 600;
 
 /**
+ * Every debounce currently waiting to fire, so leaving the screen can write
+ * them instead of dropping them.
+ *
+ * Unmounting cancels a card's timer (that is what the effect's cleanup is
+ * for), and both ways off this screen — "start counting" and "← list" —
+ * unmount every card at once. An edit made inside the debounce window was
+ * therefore discarded silently, and because `canStart` reads the log-derived
+ * state rather than the on-screen draft, correcting the price and starting
+ * the count in the same breath ran the whole sale at the *old* price with
+ * nothing shown to say so. Draining this before navigating is what stops
+ * that; the set is module-scoped because only one setup screen is ever
+ * mounted, and every entry is removed on fire or unmount.
+ */
+const pendingSaves = new Set<() => void>();
+
+function flushPendingSaves(): void {
+  const fns = [...pendingSaves];
+  pendingSaves.clear();
+  for (const fire of fns) fire();
+}
+
+/**
  * Auto-save, debounced: fires `save` once `AUTOSAVE_DELAY_MS` after the last
  * change to any of `deps`, and only once the card has actually been
  * `touched` — an already-saved card must never re-fire an identical,
@@ -345,16 +379,32 @@ function useAutoSave(
 
   useEffect(() => {
     if (!touched || !canSave) return;
-    const id = setTimeout(() => {
+    let fired = false;
+    const fire = () => {
+      if (fired) return;
+      fired = true;
       save();
       setSavedKey(key);
+    };
+    const id = setTimeout(() => {
+      pendingSaves.delete(fire);
+      fire();
     }, AUTOSAVE_DELAY_MS);
-    return () => clearTimeout(id);
+    pendingSaves.add(fire);
+    return () => {
+      clearTimeout(id);
+      pendingSaves.delete(fire);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `deps`/`key` are the intended change signal; `save` is excluded by design, see the doc comment above.
   }, [...deps, touched, canSave]);
 
   if (!canSave) return 'idle';
-  return savedKey === key ? 'saved' : 'pending';
+  if (savedKey === key) return 'saved';
+  // 'pending' means "a timer is actually scheduled", which requires `touched`
+  // — the effect above will not schedule anything without it. Reporting
+  // 'pending' on an untouched card was how the split card came to show
+  // "saving…" indefinitely for a save that was never coming.
+  return touched ? 'pending' : 'idle';
 }
 
 /**
@@ -496,6 +546,16 @@ function ZoneEditor({ zone }: { zone: Zone }) {
             onChange={(v) => {
               setContractTouched(true);
               setWorker(v);
+              // Clearing the worker has to be written, not merely reflected on
+              // screen: the log is append-only, so an earlier
+              // `zone_contract_set` stays authoritative for the payout until
+              // something says otherwise. Without this the zone kept paying
+              // the old worker while showing none. Written immediately rather
+              // than through the debounce — this is one deliberate tap, not
+              // typing, so there is nothing to wait for.
+              if (!v && zone.contract) {
+                append({ kind: 'sys', payload: { t: 'zone_contract_cleared', zoneId: zone.id } });
+              }
             }}
           />
         </Field>

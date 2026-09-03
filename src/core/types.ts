@@ -147,6 +147,19 @@ export type SysPayload =
       readonly workerName: string;
       readonly ownerPct: number;
     }
+  /**
+   * Drops a zone's own contract, putting it back on the sale-level default.
+   *
+   * Needed because the log is append-only: clearing the worker in the UI
+   * cannot un-write the `zone_contract_set` that came before it, so without
+   * this the old contract stayed authoritative for the payout while the
+   * screen showed no worker at all — the zone quietly kept paying someone
+   * the operator believed they had removed.
+   */
+  | {
+      readonly t: 'zone_contract_cleared';
+      readonly zoneId: ZoneId;
+    }
   | {
       readonly t: 'pile_added';
       readonly pileId: PileId;

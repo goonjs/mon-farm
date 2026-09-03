@@ -110,6 +110,66 @@ test('closing a zone names any pile still counting before force-closing it', asy
   await expect(page.getByTestId('log')).toContainText('ปิดโซน');
 });
 
+test('closing the current pile is reachable from the count tab itself', async ({ page }) => {
+  await openCounter(page);
+
+  // No tab switch: the button lives in the same row as undo and short-basket
+  // on the tab the operator is already on, since a pile close is exactly as
+  // frequent as those and touches nothing but the pile in front of them.
+  await expect(page.getByTestId('tab-pile')).toBeVisible();
+  await page.getByTestId('row-close-pile').click();
+  await expect(page.getByTestId('row-close-pile-detail')).toContainText('3');
+
+  // Cancelling leaves the pile counting, right where it was.
+  await page.getByTestId('row-close-pile-cancel').click();
+  await expect(page.getByTestId('count')).toBeVisible();
+  await expect(page.getByTestId('row-close-pile')).toBeVisible();
+
+  // Confirming lands on the same named decision point the Pile-tab close
+  // already reaches — one event, two doors.
+  await page.getByTestId('row-close-pile').click();
+  await page.getByTestId('row-close-pile-confirm').click();
+  await expect(page.getByTestId('pile-closed-transition')).toBeVisible();
+
+  // Closing the sale directly, without closing whatever pile happens to be
+  // in view first, is a separate and still-real path — adding the pile
+  // button must not have displaced it.
+  await page.getByTestId('decision-switch-zone').click();
+  await page.getByTestId('switcher-pile-p3').click();
+  await expect(page.getByTestId('to-settlement')).toBeVisible();
+});
+
+test('closing a zone from the decision point also takes two steps, not one', async ({ page }) => {
+  await openCounter(page);
+
+  // Reach the decision point by closing p1 the ordinary way.
+  await page.getByTestId('tab-pile').click();
+  await page.getByTestId('close-pile').click();
+  await page.getByTestId('close-pile-confirm').click();
+  await page.getByTestId('tab-count').click();
+  await expect(page.getByTestId('pile-closed-transition')).toBeVisible();
+
+  // The first tap must only ask. Wiring this straight to the append was a
+  // real bug: one tap here force-closed every pile still counting in the
+  // zone, with no warning and nothing to cancel, while the same action on
+  // the Pile tab correctly took two steps.
+  await page.getByTestId('decision-close-zone').click();
+  await expect(page.getByTestId('decision-close-zone-detail')).toBeVisible();
+
+  // Cancelling leaves the zone open and puts the operator back where they were.
+  await page.getByTestId('decision-close-zone-cancel').click();
+  await expect(page.getByTestId('pile-closed-transition')).toBeVisible();
+  await page.getByTestId('tab-log').click();
+  await expect(page.getByTestId('log')).not.toContainText('ปิดโซน');
+
+  // Only the second, explicit confirm actually closes it.
+  await page.getByTestId('tab-count').click();
+  await page.getByTestId('decision-close-zone').click();
+  await page.getByTestId('decision-close-zone-confirm').click();
+  await page.getByTestId('tab-log').click();
+  await expect(page.getByTestId('log')).toContainText('ปิดโซน');
+});
+
 test('closing the sale writes a real event and settlement offers reopening it', async ({ page }) => {
   await openCounter(page);
 

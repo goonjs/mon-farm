@@ -62,6 +62,34 @@ test('the default split saves on its own, with no click required (field report)'
   await expect(page.getByTestId('saved-split')).toContainText('บันทึกแล้ว');
 });
 
+test('an edit made just before leaving is written, not dropped', async ({ page }) => {
+  await openSetup(page);
+  await page.getByTestId('price-baht').fill('26.5');
+  await page.getByTestId('new-zone-name').fill('โซน A');
+  await page.getByTestId('add-zone').click();
+  const zoneEditor = page.locator('[data-testid^="zone-editor-"]');
+  await zoneEditor.getByTestId(/^pile-name-/).fill('กอง 1');
+  await zoneEditor.getByTestId(/^add-pile-/).click();
+  await expect(page.getByTestId('start-counting')).toBeEnabled();
+
+  // Correct the price and start the count in the same breath, without
+  // waiting for the debounce. Unmounting used to cancel the pending save,
+  // and because the start gate reads the log rather than the on-screen
+  // draft, the whole sale then ran at the old price with nothing shown.
+  //
+  // A pile added here has never been through the zero/tare gate, so the
+  // counter screen shows that gate rather than the count numeral — this
+  // test is about the flushed price, not the gate, so it asserts on the
+  // route rather than on `count`.
+  await page.getByTestId('price-baht').fill('27');
+  await page.getByTestId('start-counting').click();
+  await expect(page).toHaveURL(/\/sale\/sale-[a-z0-9]+\/counter$/);
+
+  const saleId = new URL(page.url()).pathname.split('/')[2];
+  await page.goto(`/sale/${saleId}/setup`);
+  await expect(page.getByTestId('price-baht')).toHaveValue('27');
+});
+
 test('parties and price auto-save without a button, and persist across a reload', async ({ page }) => {
   await openSetup(page);
 
@@ -122,4 +150,27 @@ test('a zone with its own worker picked from the people list overrides the defau
 
   await page.reload();
   await expect(page.locator('[data-testid^="zone-worker-"]').getByTestId(/-selected$/)).toContainText('ประยุทธ');
+});
+
+test('clearing a zone worker really drops the contract, not just the display', async ({ page }) => {
+  await openSetup(page);
+
+  await page.getByTestId('new-zone-name').fill('โซน A');
+  await page.getByTestId('add-zone').click();
+
+  const picker = page.locator('[data-testid^="zone-worker-"]');
+  await picker.getByTestId(/-add$/).click();
+  await picker.getByTestId(/-new-name$/).fill('ประยุทธ');
+  await picker.getByTestId(/-confirm-new$/).click();
+  await expect(page.locator('[data-testid^="zone-editor-"]').getByTestId(/^saved-contract-/)).toContainText('บันทึกแล้ว');
+
+  // "Change" with nobody picked afterwards means "put this zone back on the
+  // sale default". The log is append-only, so hiding the worker on screen
+  // is not enough — without an event of its own the old contract stayed
+  // authoritative and the zone kept paying him.
+  await picker.getByTestId(/-change$/).click();
+  await expect(picker.getByTestId(/-selected$/)).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.locator('[data-testid^="zone-worker-"]').getByTestId(/-selected$/)).toHaveCount(0);
 });
