@@ -693,8 +693,12 @@ Recorded so the reasoning is not lost once the questions disappear.
   A zone's gross is split first; each worker's own deductions then come
   off their share. The owner bears none of the deducted cost, and the
   buyer-facing total does not move — a deduction shifts money between the
-  two parties to the contract, and nothing else. This is what `basis`
-  resolves to, and it is the first time that field has been load-bearing.
+  two parties to the contract, and nothing else. **Corrected 2026-09-03:**
+  this entry originally read that the decision was "what `basis` resolves
+  to, and the first time that field has been load-bearing". That was the
+  wrong inference from the right decision. Deducting *after* the split means
+  the split is always applied to gross, so `basis` selects no arithmetic and
+  stays inert — see the note on FR-8.5 above.
 - **2026-08-11 — The app records price references; it does not fetch
   them** (FR-2.3). Research found nothing publishing ยางก้อนถ้วย at a
   local farmgate price, so automated fetching is out of scope — see the

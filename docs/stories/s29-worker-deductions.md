@@ -3,8 +3,9 @@
 Status: Review — implemented 2026-09-03. TDD throughout (see Dev notes for
 per-tier detail). **Every stage of `npm run verify` is green, e2e included**
 (110 Playwright tests, screenshots captured — see Verification). All eight
-acceptance criteria are met and proved. Awaiting the independent code review
-by a separate agent/session, which is the one remaining gate before `Done`.
+acceptance criteria are met and proved. **Independent code review done
+2026-09-03 — no blocking or should-fix findings; two documentation nits,
+both fixed** (see Code review). Ready for the owner's sign-off and a push.
 
 ## Context
 
@@ -147,15 +148,11 @@ seen. `docs/checklists/offline-sync-checklist.md` is completed for this story.
 _Tests below are written to fail first (TDD), then implemented to green._
 
 - [x] Online path — n/a in the usual sense; the app has no online path. Read
-      as: the normal in-app flow, driven for real in a browser. **Could not be
-      driven for real in this sandbox — see Dev notes; the flow is exercised
-      by the Jest component tests and by `e2e/deductions.spec.ts`, which is
-      written and passes typecheck/lint but has not been run against a real
-      browser.**
+      as: the normal in-app flow, **driven for real in a browser** by
+      `e2e/deductions.spec.ts`, which runs green — see Verification.
 - [x] Offline path — the whole story. Add and void a deduction with no
-      network, reload, and confirm both survive. Written into
-      `e2e/deductions.spec.ts` (reload assertion) — not run for real, per
-      above.
+      network, reload, and confirm both survive. Asserted in
+      `e2e/deductions.spec.ts` and run green.
 - [x] Reconnect / manual sync path — n/a, no backend exists yet.
 
 Unit (Vitest, `src/core/`):
@@ -180,11 +177,11 @@ Component (Jest, `.test.tsx`):
 
 End-to-end (Playwright, `e2e/deductions.spec.ts`):
 
-- [x] Written: add a deduction on a settled sale; the owner total and zone
-      rows do not move; the payout does. **Not run** — see Dev notes.
-- [x] Written: void it; the payout returns to the share. **Not run.**
-- [x] Written: reload; both events survive, and both render in Thai on the
-      log tab. **Not run.**
+- [x] Add a deduction on a settled sale; the owner total and zone rows do not
+      move; the payout does. Run green.
+- [x] Void it; the payout returns to the share. Run green.
+- [x] Reload; both events survive, and both render in Thai on the log tab.
+      Run green.
 
 ## Verification
 
@@ -325,10 +322,41 @@ arriving before the deduction it names or a scrambled replay order (proved in
 
 ## Code review
 
-- Reviewer (separate agent/session): not yet performed — required before
-  `Done` per the Definition of Done.
-- Findings:
-- Resolution:
+- **Reviewer (separate agent/session)**: independent review agent, 2026-09-03,
+  against commit `4ccc6fd` only (the working tree had already moved on to
+  S27). Worked `docs/checklists/code-review-checklist.md`, re-ran
+  `settle.test.ts`, `project.test.ts`, the i18n suite, both new Jest suites,
+  `tsc --noEmit` and `eslint` against the commit's own files, and visually
+  checked two committed screenshots against the claimed figures.
+
+- **Findings**: no blocking and no should-fix issues. Two documentation nits.
+
+  1. *(nit, fixed)* This story's Test plan section still said the e2e tier
+     "has not been run", contradicting the Verification section directly
+     below it. Corrected — the bullets now match what actually happened.
+  2. *(nit, fixed)* `docs/prd.md`'s 2026-08-11 decision-log entry still
+     concluded that deducting after the split is "what `basis` resolves to,
+     and the first time that field has been load-bearing" — the opposite of
+     the FR-8.5 note added the same day. Pre-existing (it came in with
+     `d05e63a`, not with this story's code), but a live contradiction about
+     this story's own central decision, so corrected rather than deferred.
+
+- **Resolution**: both fixed in the same session as the review; nothing
+  deferred. What the reviewer verified independently, rather than taking on
+  trust, is worth recording, because it is what this gate is for:
+  - `perZone`, `grossSatang`, `ownerSatang` and the sale-level `workerSatang`
+    are all finalised *before* `state.deductions` is read anywhere, and the
+    `{...w}` spread introduces no aliasing — so a deduction provably cannot
+    move the buyer-facing total or any zone row.
+  - No new rounding enters the money path: `payoutSatang` is integer
+    subtraction, and the only `Math.round` is the baht→satang entry
+    conversion, matching the existing price field.
+  - Voids are idempotent (first void wins), an unknown `deductionId` is a
+    silent no-op, and the fold is seq-sorted before processing, so replay
+    order genuinely does not matter.
+  - `counter.tsx` received exactly the two `case` lines and nothing else.
+
+  Verdict: fit to move toward `Done`.
 
 ## QA notes
 
