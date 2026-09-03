@@ -75,6 +75,7 @@ export default function CounterScreen() {
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' });
   const [confirmUndo, setConfirmUndo] = useState(false);
   const [confirmCloseSale, setConfirmCloseSale] = useState(false);
+  const [confirmCloseZone, setConfirmCloseZone] = useState(false);
 
   // The pile in view: whatever the operator explicitly picked (switcher),
   // falling back to the one being counted, falling back to the first pile —
@@ -183,12 +184,19 @@ export default function CounterScreen() {
     router.push({ pathname: '/sale/[id]/settlement', params: { id: saleId } });
   };
 
+  // Force-closing every pile still counting in a zone is destructive and
+  // irreversible-except-by-an-appended-reopen, so it goes through the same
+  // two-step, names-every-pile confirm the Pile tab's `close-zone` uses. It
+  // was previously wired straight to the append: one tap from the decision
+  // point silently stopped every other pile in the zone, which is exactly
+  // the silent close docs/ux/pile-zone-sale-lifecycle.md §4/§7.1 rules out.
   const closeZoneFromTransition = () => {
     const stillCounting = pilesStillCounting(state, zone.id);
     append({
       kind: 'sys',
       payload: { t: 'zone_closed', zoneId: zone.id, forcedPiles: stillCounting.map((p) => p.id) },
     });
+    setConfirmCloseZone(false);
   };
 
   return (
@@ -234,7 +242,7 @@ export default function CounterScreen() {
               hasNextPileInZone={!!nextPileInZone}
               onNextPile={() => nextPileInZone && pickPile(nextPileInZone.id)}
               onSwitchZone={() => setOverlay({ kind: 'switcher' })}
-              onCloseZone={closeZoneFromTransition}
+              onCloseZone={() => setConfirmCloseZone(true)}
               onCloseSale={() => setConfirmCloseSale(true)}
             />
           ) : pile.status === 'not-started' ? (
@@ -341,6 +349,16 @@ export default function CounterScreen() {
         />
       ) : null}
 
+      {confirmCloseZone ? (
+        <CloseZoneConfirmOverlay
+          zone={zone}
+          state={state}
+          events={events}
+          onConfirm={closeZoneFromTransition}
+          onCancel={() => setConfirmCloseZone(false)}
+        />
+      ) : null}
+
       {confirmCloseSale ? (
         <CloseSaleConfirmOverlay
           state={state}
@@ -418,6 +436,75 @@ function UndoConfirmRow({
  * counting — it only stops them from being countable (`canCount` gates on
  * sale status), which is easy to assume incorrectly otherwise.
  */
+/**
+ * The decision point's "close this zone" confirm. Deliberately the same two
+ * steps, the same warning and the same message ids as the Pile tab's
+ * `close-zone` — one destructive action reached from two places must not
+ * behave differently depending on which one you came in through.
+ */
+function CloseZoneConfirmOverlay({
+  zone,
+  state,
+  events,
+  onConfirm,
+  onCancel,
+}: {
+  zone: SaleState['zones'][number];
+  state: SaleState;
+  events: readonly SaleEvent[];
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const t = useTheme();
+  const msg = useT();
+  const zt = zoneTotals(events, state, zone.id);
+  const stillCounting = pilesStillCounting(state, zone.id);
+
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: t.color.stage,
+        zIndex: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: t.space.xl,
+        gap: t.space.md,
+      }}
+    >
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.reject }}>
+        {msg('zone.close')}
+      </Text>
+      <Text
+        testID="decision-close-zone-detail"
+        style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}
+      >
+        {msg('zone.closeDetail', { name: zone.name, baskets: zt.baskets, weight: formatKg(zt.netG) })}
+      </Text>
+      {stillCounting.length > 0 ? (
+        <Text
+          testID="decision-close-zone-warning"
+          style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.warn, textAlign: 'center', maxWidth: 480 }}
+        >
+          {msg('zone.closeWarning', { n: stillCounting.length, names: stillCounting.map((p) => p.name).join(', ') })}
+        </Text>
+      ) : null}
+      <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+        <Button testID="decision-close-zone-confirm" variant="destructive" onPress={onConfirm}>
+          {msg('zone.closeConfirm')}
+        </Button>
+        <Button testID="decision-close-zone-cancel" onPress={onCancel}>
+          {msg('common.cancel')}
+        </Button>
+      </View>
+    </View>
+  );
+}
+
 function CloseSaleConfirmOverlay({
   state,
   events,

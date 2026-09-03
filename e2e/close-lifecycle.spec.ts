@@ -110,6 +110,37 @@ test('closing a zone names any pile still counting before force-closing it', asy
   await expect(page.getByTestId('log')).toContainText('ปิดโซน');
 });
 
+test('closing a zone from the decision point also takes two steps, not one', async ({ page }) => {
+  await openCounter(page);
+
+  // Reach the decision point by closing p1 the ordinary way.
+  await page.getByTestId('tab-pile').click();
+  await page.getByTestId('close-pile').click();
+  await page.getByTestId('close-pile-confirm').click();
+  await page.getByTestId('tab-count').click();
+  await expect(page.getByTestId('pile-closed-transition')).toBeVisible();
+
+  // The first tap must only ask. Wiring this straight to the append was a
+  // real bug: one tap here force-closed every pile still counting in the
+  // zone, with no warning and nothing to cancel, while the same action on
+  // the Pile tab correctly took two steps.
+  await page.getByTestId('decision-close-zone').click();
+  await expect(page.getByTestId('decision-close-zone-detail')).toBeVisible();
+
+  // Cancelling leaves the zone open and puts the operator back where they were.
+  await page.getByTestId('decision-close-zone-cancel').click();
+  await expect(page.getByTestId('pile-closed-transition')).toBeVisible();
+  await page.getByTestId('tab-log').click();
+  await expect(page.getByTestId('log')).not.toContainText('ปิดโซน');
+
+  // Only the second, explicit confirm actually closes it.
+  await page.getByTestId('tab-count').click();
+  await page.getByTestId('decision-close-zone').click();
+  await page.getByTestId('decision-close-zone-confirm').click();
+  await page.getByTestId('tab-log').click();
+  await expect(page.getByTestId('log')).toContainText('ปิดโซน');
+});
+
 test('closing the sale writes a real event and settlement offers reopening it', async ({ page }) => {
   await openCounter(page);
 
