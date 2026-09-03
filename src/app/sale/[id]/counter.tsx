@@ -76,6 +76,7 @@ export default function CounterScreen() {
   const [confirmUndo, setConfirmUndo] = useState(false);
   const [confirmCloseSale, setConfirmCloseSale] = useState(false);
   const [confirmCloseZone, setConfirmCloseZone] = useState(false);
+  const [confirmClosePile, setConfirmClosePile] = useState(false);
 
   // The pile in view: whatever the operator explicitly picked (switcher),
   // falling back to the one being counted, falling back to the first pile —
@@ -177,6 +178,18 @@ export default function CounterScreen() {
 
   // ── Decision point after a pile closes ──────────────────────────────────
   const nextPileInZone = state.piles.find((p) => p.zoneId === zone.id && p.status === 'not-started');
+
+  // Closing the pile you're actively counting into is the single most
+  // frequent close action in the whole lifecycle, and touches nothing but
+  // itself — unlike zone-close, it has no other pile or worker to warn about.
+  // It belongs beside undo/short on the live-counting row it was previously
+  // missing from, not one tab away, matching how PilePanel's own equivalent
+  // button already behaves.
+  const doClosePile = () => {
+    if (!pile) return;
+    append({ kind: 'sys', payload: { t: 'pile_closed', pileId: pile.id, forced: false } });
+    setConfirmClosePile(false);
+  };
 
   const doCloseSale = () => {
     if (state.status === 'open') append({ kind: 'sys', payload: { t: 'sale_closed' } });
@@ -288,6 +301,13 @@ export default function CounterScreen() {
                   <Button testID="short" onPress={openShort} disabled={!countable || shortOpen}>
                     {`⚖ ${msg('short.open')}`}
                   </Button>
+                  <Button
+                    testID="row-close-pile"
+                    onPress={() => setConfirmClosePile(true)}
+                    disabled={!totals?.baskets}
+                  >
+                    {msg('pile.close')}
+                  </Button>
                   <View style={{ flex: 1 }} />
                   <Button testID="to-settlement" variant="destructive" onPress={() => setConfirmCloseSale(true)}>
                     {msg('counter.closeSale')}
@@ -346,6 +366,15 @@ export default function CounterScreen() {
             setOverlay({ kind: 'none' });
           }}
           onCancel={() => setOverlay({ kind: 'none' })}
+        />
+      ) : null}
+
+      {confirmClosePile && pile ? (
+        <ClosePileConfirmOverlay
+          pile={pile}
+          events={events}
+          onConfirm={doClosePile}
+          onCancel={() => setConfirmClosePile(false)}
         />
       ) : null}
 
@@ -436,6 +465,65 @@ function UndoConfirmRow({
  * counting — it only stops them from being countable (`canCount` gates on
  * sale status), which is easy to assume incorrectly otherwise.
  */
+/**
+ * The live-counting row's "close this pile" confirm. A separate overlay from
+ * PilePanel's own inline close-pile card on the Pile tab — same event, same
+ * two-step shape, but this entry point is reached from a screen with other
+ * live controls around it, so it takes over the screen the same way
+ * close-sale's confirm already does, rather than expanding in place.
+ */
+function ClosePileConfirmOverlay({
+  pile,
+  events,
+  onConfirm,
+  onCancel,
+}: {
+  pile: Pile;
+  events: readonly SaleEvent[];
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const t = useTheme();
+  const msg = useT();
+  const pt = pileTotals(events, pile.id);
+
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: t.color.stage,
+        zIndex: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: t.space.xl,
+        gap: t.space.md,
+      }}
+    >
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.reject }}>
+        {msg('pile.close')}
+      </Text>
+      <Text
+        testID="row-close-pile-detail"
+        style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}
+      >
+        {msg('pile.closeDetail', { name: pile.name, baskets: pt.baskets, weight: formatKg(pt.netG) })}
+      </Text>
+      <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+        <Button testID="row-close-pile-confirm" variant="destructive" onPress={onConfirm}>
+          {msg('pile.closeConfirm')}
+        </Button>
+        <Button testID="row-close-pile-cancel" onPress={onCancel}>
+          {msg('common.cancel')}
+        </Button>
+      </View>
+    </View>
+  );
+}
+
 /**
  * The decision point's "close this zone" confirm. Deliberately the same two
  * steps, the same warning and the same message ids as the Pile tab's
