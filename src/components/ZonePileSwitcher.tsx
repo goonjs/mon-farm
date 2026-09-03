@@ -69,7 +69,10 @@ export function ZonePileSwitcher({ state, bulkPileIds, onPick, onClose }: ZonePi
       </View>
 
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.md }}>
-        {state.zones.map((zone) => (
+        {/* A removed zone or pile (S26) is still in the projection — its
+            history has to stay readable in the log — but it is not a place
+            anything can be counted into any more, so it is not offered here. */}
+        {state.zones.filter((z) => !z.removed).map((zone) => (
           <View key={zone.id}>
             <Text style={{ fontFamily: t.font.family.sans, fontWeight: t.font.weight.bold, fontSize: t.font.size.small, color: t.color.ink, marginBottom: t.space.xs }}>
               {msg('switcher.zoneRow', {
@@ -79,7 +82,7 @@ export function ZonePileSwitcher({ state, bulkPileIds, onPick, onClose }: ZonePi
             </Text>
             <View style={{ gap: t.space.xs }}>
               {state.piles
-                .filter((p) => p.zoneId === zone.id)
+                .filter((p) => p.zoneId === zone.id && !p.removed)
                 .map((pile) => (
                   <Button key={pile.id} testID={`switcher-pile-${pile.id}`} onPress={() => onPick(pile.id)}>
                     {msg('switcher.pileRow', {

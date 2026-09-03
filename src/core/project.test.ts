@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { readyPile, setUpSale, withZoneContract, workedExample } from './fixtures';
+import { LogBuilder, readyPile, setUpSale, withZoneContract, workedExample } from './fixtures';
 import {
   canBulkEnter,
   canCount,
+  canEditPileNet,
   canReady,
   canReopenPile,
+  canRemoveZone,
+  pileNeedsVoidReason,
+  zoneNeedsVoidReason,
   detectClockAnomaly,
   lastAnnounceOk,
   pilesStillCounting,
@@ -344,5 +348,245 @@ describe('bulk entry (S23) — the one deliberate way past the zero/tare gate', 
     expect(pile(s, 'p1').status).toBe('counting');
     expect(canCount(s, 'p1')).toBe(true);
     expect(pile(s, 'p1').zeroChecked).toBe(false);
+  });
+});
+
+/**
+ * S26 — editing and removing piles and zones.
+ *
+ * The whole point of these events is that they are appended, never applied to
+ * `pile_added` in place. So every test below asserts on the PROJECTION while
+ * the original event stays where it was in the log.
+ */
+describe('pile_edited (S26) — a rename is a new event, never a rewrite', () => {
+  it('renames a not-started pile and touches nothing else', () => {
+    const b = setUpSale().sys({
+      t: 'pile_edited',
+      pileId: 'p1',
+      name: 'กองหน้าบ้าน',
+      tareG: 2_000,
+      stdNetG: 50_000,
+    });
+    const p = pile(projectSale(b.build()), 'p1');
+    expect(p.name).toBe('กองหน้าบ้าน');
+    expect(p.tareG).toBe(2_000);
+    expect(p.stdNetG).toBe(50_000);
+    expect(p.status).toBe('not-started');
+  });
+
+  it('renames a counting, locked pile, leaving tare and std as counted', () => {
+    const b = readyPile(setUpSale(), 'p1');
+    b.accept('p1');
+    b.sys({ t: 'pile_edited', pileId: 'p1', name: 'กองใหม่', tareG: 9_000, stdNetG: 30_000 });
+
+    const p = pile(projectSale(b.build()), 'p1');
+    expect(p.name).toBe('กองใหม่');
+    // FR-3.4: the lock holds even against an event that asks otherwise.
+    expect(p.locked).toBe(true);
+    expect(p.tareG).toBe(2_000);
+    expect(p.stdNetG).toBe(50_000);
+  });
+
+  it('changes tare and std on an unlocked pile', () => {
+    const b = setUpSale().sys({
+      t: 'pile_edited',
+      pileId: 'p1',
+      name: 'กอง 1',
+      tareG: 2_500,
+      stdNetG: 45_000,
+    });
+    const p = pile(projectSale(b.build()), 'p1');
+    expect(p.tareG).toBe(2_500);
+    expect(p.stdNetG).toBe(45_000);
+  });
+
+  it('takes the latest edit by seq, and leaves pile_added in the log untouched', () => {
+    const b = setUpSale()
+      .sys({ t: 'pile_edited', pileId: 'p1', name: 'ก', tareG: 2_100, stdNetG: 46_000 })
+      .sys({ t: 'pile_edited', pileId: 'p1', name: 'ข', tareG: 2_200, stdNetG: 47_000 });
+    const events = b.build();
+
+    const p = pile(projectSale(events), 'p1');
+    expect(p.name).toBe('ข');
+    expect(p.tareG).toBe(2_200);
+
+    const added = events.find((e) => e.kind === 'sys' && e.payload.t === 'pile_added');
+    expect(added && added.kind === 'sys' && added.payload.t === 'pile_added' && added.payload.name).toBe('กอง 1');
+  });
+
+  it('an edit before the first basket does not pre-empt the zero/tare gate', () => {
+    const b = setUpSale().sys({
+      t: 'pile_edited',
+      pileId: 'p1',
+      name: 'กอง 1',
+      tareG: 2_500,
+      stdNetG: 50_000,
+    });
+    const s = projectSale(b.build());
+    expect(s.piles.find((p) => p.id === 'p1')!.zeroChecked).toBe(false);
+    expect(canReady(s, 'p1')).toBe(false);
+  });
+});
+
+describe('canEditPileNet (S26) — FR-3.4 enforced in code, not only in the UI', () => {
+  it('is true before the first basket and false after it', () => {
+    const b = readyPile(setUpSale(), 'p1');
+    expect(canEditPileNet(projectSale(b.build()), 'p1')).toBe(true);
+
+    b.accept('p1');
+    expect(canEditPileNet(projectSale(b.build()), 'p1')).toBe(false);
+  });
+
+  it('stays false once a locked pile is closed, and for an unknown or removed pile', () => {
+    const b = readyPile(setUpSale(), 'p1');
+    b.accept('p1');
+    b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+    expect(canEditPileNet(projectSale(b.build()), 'p1')).toBe(false);
+    expect(canEditPileNet(projectSale(b.build()), 'nope')).toBe(false);
+
+    const removed = setUpSale().sys({ t: 'pile_removed', pileId: 'p2', reason: '' });
+    expect(canEditPileNet(projectSale(removed.build()), 'p2')).toBe(false);
+  });
+});
+
+describe('pile_removed (S26) — a void with a reason, never a delete', () => {
+  it('flags an empty pile removed with no reason, and keeps it in the projection', () => {
+    const b = setUpSale().sys({ t: 'pile_removed', pileId: 'p2', reason: '' });
+    const s = projectSale(b.build());
+    expect(s.piles.map((p) => p.id)).toContain('p2');
+    expect(pile(s, 'p2').removed).toBe(true);
+    expect(pile(s, 'p1').removed).toBe(false);
+  });
+
+  it('leaves a removed pile’s baskets in the raw log, untouched', () => {
+    const b = readyPile(setUpSale(), 'p1');
+    b.accept('p1', 50_000);
+    b.sys({ t: 'pile_removed', pileId: 'p1', reason: 'นับซ้ำกับกอง 2' });
+    const events = b.build();
+
+    expect(pile(projectSale(events), 'p1').removed).toBe(true);
+    const accepts = events.filter((e) => e.kind === 'accept');
+    expect(accepts).toHaveLength(1);
+    expect(accepts[0].kind === 'accept' && accepts[0].netG).toBe(50_000);
+  });
+
+  it('removal is allowed from any status and survives it', () => {
+    const b = readyPile(setUpSale(), 'p1');
+    b.accept('p1');
+    b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+    b.sys({ t: 'pile_removed', pileId: 'p1', reason: 'กองนี้ไม่ได้ขาย' });
+    const p = pile(projectSale(b.build()), 'p1');
+    expect(p.removed).toBe(true);
+    expect(p.status).toBe('closed');
+  });
+
+  it('cannot be brought back by re-adding the same id — a new pile needs a new id', () => {
+    const b = setUpSale()
+      .sys({ t: 'pile_removed', pileId: 'p2', reason: '' })
+      .sys({ t: 'pile_added', pileId: 'p2', zoneId: 'zA', name: 'กอง 2 อีกที', tareG: 2_000, stdNetG: 50_000 });
+    const s = projectSale(b.build());
+    expect(pile(s, 'p2').removed).toBe(true);
+    expect(pile(s, 'p2').name).toBe('กอง 2');
+    expect(canCount(s, 'p2')).toBe(false);
+  });
+
+  it('a removed pile can never be counted into again', () => {
+    const b = readyPile(setUpSale(), 'p1');
+    expect(canCount(projectSale(b.build()), 'p1')).toBe(true);
+    b.sys({ t: 'pile_removed', pileId: 'p1', reason: 'ผิดกอง' });
+    expect(canCount(projectSale(b.build()), 'p1')).toBe(false);
+    expect(canReopenPile(projectSale(b.build()), 'p1')).toBe(false);
+    expect(canBulkEnter(projectSale(b.build()), 'p1')).toBe(false);
+  });
+});
+
+describe('pileNeedsVoidReason (S26) — which removal path the UI must offer', () => {
+  it('is false for a pile that never had a basket', () => {
+    const b = readyPile(setUpSale(), 'p1');
+    expect(pileNeedsVoidReason(b.build(), 'p1')).toBe(false);
+  });
+
+  it('is true once any basket has been counted into it', () => {
+    const b = readyPile(setUpSale(), 'p1');
+    b.accept('p1');
+    expect(pileNeedsVoidReason(b.build(), 'p1')).toBe(true);
+  });
+
+  it('is true for a short basket too, and stays true after it is voided', () => {
+    const b = readyPile(setUpSale(), 'p1');
+    const target = b.nextSeq();
+    b.short('p1', 10_000);
+    b.void('p1', target, 'กดพลาด');
+    // The basket happened. Voiding it does not un-happen it.
+    expect(pileNeedsVoidReason(b.build(), 'p1')).toBe(true);
+  });
+
+  it('is per pile, not per sale', () => {
+    const b = readyPile(setUpSale(), 'p1');
+    b.accept('p1');
+    expect(pileNeedsVoidReason(b.build(), 'p2')).toBe(false);
+  });
+
+  it('is true for a pile filled in bulk (S23), the same as one counted live', () => {
+    const b = setUpSale().sys({ t: 'bulk_gate_skipped', pileId: 'p2', reason: 'นับในกระดาษ' });
+    b.accept('p2', 50_000, 2_000, 'bulk');
+    expect(pileNeedsVoidReason(b.build(), 'p2')).toBe(true);
+  });
+});
+
+describe('zone_edited / zone_removed (S26)', () => {
+  it('renames a zone without touching its piles', () => {
+    const b = setUpSale().sys({ t: 'zone_edited', zoneId: 'zA', name: 'โซนหลัง' });
+    const s = projectSale(b.build());
+    expect(zone(s, 'zA').name).toBe('โซนหลัง');
+    expect(zone(s, 'zA').pileIds).toEqual(['p1', 'p2']);
+  });
+
+  it('flags a removed zone without deleting it', () => {
+    const b = new LogBuilder()
+      .sys({ t: 'zone_added', zoneId: 'zEmpty', name: 'โซนว่าง' })
+      .sys({ t: 'zone_removed', zoneId: 'zEmpty', reason: '' });
+    const s = projectSale(b.build());
+    expect(s.zones.map((z) => z.id)).toContain('zEmpty');
+    expect(zone(s, 'zEmpty').removed).toBe(true);
+  });
+});
+
+describe('canRemoveZone (S26) — a zone is emptied of piles first, never cascaded', () => {
+  it('is false while the zone still has a live pile', () => {
+    const s = projectSale(setUpSale().build());
+    expect(canRemoveZone(s, 'zA')).toBe(false);
+  });
+
+  it('is true once every pile under it has been removed', () => {
+    const b = setUpSale()
+      .sys({ t: 'pile_removed', pileId: 'p1', reason: '' })
+      .sys({ t: 'pile_removed', pileId: 'p2', reason: '' });
+    expect(canRemoveZone(projectSale(b.build()), 'zA')).toBe(true);
+    // zB still has กอง 3.
+    expect(canRemoveZone(projectSale(b.build()), 'zB')).toBe(false);
+  });
+
+  it('is true for a zone that never had a pile, and false for an unknown or already-removed zone', () => {
+    const b = new LogBuilder().sys({ t: 'zone_added', zoneId: 'zEmpty', name: 'โซนว่าง' });
+    expect(canRemoveZone(projectSale(b.build()), 'zEmpty')).toBe(true);
+    expect(canRemoveZone(projectSale(b.build()), 'nope')).toBe(false);
+
+    b.sys({ t: 'zone_removed', zoneId: 'zEmpty', reason: '' });
+    expect(canRemoveZone(projectSale(b.build()), 'zEmpty')).toBe(false);
+  });
+});
+
+describe('zoneNeedsVoidReason (S26) — the same fork as piles, one level up', () => {
+  it('is false for a zone that never held a pile', () => {
+    const b = new LogBuilder().sys({ t: 'zone_added', zoneId: 'zEmpty', name: 'โซนว่าง' });
+    expect(zoneNeedsVoidReason(projectSale(b.build()), 'zEmpty')).toBe(false);
+  });
+
+  it('is true for a zone whose piles were removed to empty it', () => {
+    const b = setUpSale()
+      .sys({ t: 'pile_removed', pileId: 'p1', reason: '' })
+      .sys({ t: 'pile_removed', pileId: 'p2', reason: '' });
+    expect(zoneNeedsVoidReason(projectSale(b.build()), 'zA')).toBe(true);
   });
 });

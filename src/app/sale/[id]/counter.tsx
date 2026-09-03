@@ -61,7 +61,9 @@ type TabKey = 'count' | 'pile' | 'log';
  * and the sale-level question spans every zone.
  */
 function canOfferCloseSale(state: SaleState): boolean {
-  return state.status === 'open' && !state.piles.some((p) => p.status === 'counting');
+  // A removed pile (S26) is nobody's next step, whatever status it was left
+  // in — it cannot hold the end of the sale open.
+  return state.status === 'open' && !state.piles.some((p) => !p.removed && p.status === 'counting');
 }
 
 /**
@@ -111,8 +113,11 @@ export default function CounterScreen() {
   // The pile in view: whatever the operator explicitly picked (switcher),
   // falling back to the one being counted, falling back to the first pile —
   // same default as before S13, now overridable.
-  const fallbackPile = state.piles.find((p) => p.status === 'counting') ?? state.piles[0];
-  const pile = (selectedPileId && state.piles.find((x) => x.id === selectedPileId)) || fallbackPile;
+  // A removed pile (S26) is not a counting target — not as the fallback, and
+  // not as a selection carried over from before it was removed.
+  const livePiles = state.piles.filter((p) => !p.removed);
+  const fallbackPile = livePiles.find((p) => p.status === 'counting') ?? livePiles[0];
+  const pile = (selectedPileId && livePiles.find((x) => x.id === selectedPileId)) || fallbackPile;
   const zone = state.zones.find((z) => z.id === pile?.zoneId);
 
   // Lock the very first auto-selected pile to its id (React's "adjust state
@@ -916,7 +921,13 @@ function PilePanel({
 
         <Card title={msg('pile.rollups')}>
           <Stat label={zone.name} value={`${formatKg(zt.netG)} กก.`} />
-          <Stat label={msg('pile.wholeSale')} value={`${formatKg(st.netG)} ${msg('common.kg')}`} big rule />
+          <Stat
+            testID="pile-whole-sale"
+            label={msg('pile.wholeSale')}
+            value={`${formatKg(st.netG)} ${msg('common.kg')}`}
+            big
+            rule
+          />
           <Stat label="เข่งทั้งหมด" value={String(st.baskets)} />
         </Card>
 
@@ -1166,6 +1177,19 @@ function sysLabel(p: { t: string } & Record<string, unknown>, msg: Translate): s
       return msg('log.zoneContractSet', { worker: String(p.workerName), pct: String(p.ownerPct) });
     case 'zone_contract_cleared': return msg('log.zoneContractCleared');
     case 'pile_added': return msg('log.pileAdded', { name: String(p.name) });
+    case 'pile_edited':
+      return msg('log.pileEdited', {
+        name: String(p.name),
+        tare: formatKg(Number(p.tareG)),
+        std: formatKg(Number(p.stdNetG)),
+      });
+    // One event, two registers — the reason is what tells them apart, exactly
+    // as `correction` does for undo-last versus void.
+    case 'pile_removed':
+      return p.reason ? msg('log.pileVoided', { reason: String(p.reason) }) : msg('log.pileRemoved');
+    case 'zone_edited': return msg('log.zoneEdited', { name: String(p.name) });
+    case 'zone_removed':
+      return p.reason ? msg('log.zoneVoided', { reason: String(p.reason) }) : msg('log.zoneRemoved');
     case 'zero_check':
       return p.ok
         ? msg('log.zeroOk')

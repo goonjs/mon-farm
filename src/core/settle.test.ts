@@ -272,3 +272,62 @@ describe('totals — the rollups agree with each other', () => {
     expect(t.standardBaskets).toBe(0);
   });
 });
+
+/**
+ * S26 — "as if every basket in it had been voided" is the story's own words
+ * for what removing a pile does to the money. This is that sentence as a
+ * test: the two paths have to land on the same settlement, or removal is
+ * quietly a different arithmetic from voiding.
+ */
+describe('settle — a removed pile and an individually-voided one agree', () => {
+  const base = () => {
+    const b = readyPile(setUpSale(new LogBuilder()), 'p1');
+    readyPile(b, 'p2');
+    b.accept('p1');
+    b.accept('p1');
+    return b;
+  };
+
+  it('produces the same figures either way', () => {
+    const voided = base();
+    readyPile(voided, 'p2');
+    const first = voided.nextSeq();
+    voided.accept('p2');
+    const second = voided.nextSeq();
+    voided.accept('p2');
+    voided.void('p2', first, 'ยกเลิก');
+    voided.void('p2', second, 'ยกเลิก');
+
+    const removed = base();
+    readyPile(removed, 'p2');
+    removed.accept('p2');
+    removed.accept('p2');
+    removed.sys({ t: 'pile_removed', pileId: 'p2', reason: 'กองนี้ไม่ได้ขาย' });
+
+    const a = settle(voided.build(), projectSale(voided.build()));
+    const b = settle(removed.build(), projectSale(removed.build()));
+
+    expect(b.totals).toEqual(a.totals);
+    expect(b.grossSatang).toBe(a.grossSatang);
+    expect(b.ownerSatang).toBe(a.ownerSatang);
+    expect(b.workerSatang).toBe(a.workerSatang);
+    expect(b.perZone.map((z) => [z.zoneId, z.grossSatang, z.workerSatang])).toEqual(
+      a.perZone.map((z) => [z.zoneId, z.grossSatang, z.workerSatang]),
+    );
+  });
+
+  it('drops the removed pile out of its zone and its worker, not out of the sale record', () => {
+    const b = readyPile(setUpSale(new LogBuilder()), 'p3');
+    withZoneContract(b, 'zB', 'person-manop', 'มานพ', 50);
+    b.accept('p3');
+    const before = settle(b.build(), projectSale(b.build()));
+    expect(before.perWorker[0].workerSatang).toBeGreaterThan(0);
+
+    b.sys({ t: 'pile_removed', pileId: 'p3', reason: 'ยังไม่ได้ขายกองนี้' });
+    const after = settle(b.build(), projectSale(b.build()));
+    expect(after.totals.netG).toBe(0);
+    expect(after.perWorker[0].workerSatang).toBe(0);
+    // The zone itself is still on the settlement — it was not deleted either.
+    expect(after.perZone.map((z) => z.zoneId)).toEqual(before.perZone.map((z) => z.zoneId));
+  });
+});

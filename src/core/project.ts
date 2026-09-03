@@ -50,6 +50,7 @@ interface MutPile {
   zeroChecked: boolean;
   tareConfirmed: boolean;
   locked: boolean;
+  removed: boolean;
 }
 
 interface MutZone {
@@ -58,6 +59,7 @@ interface MutZone {
   status: OpenClosed;
   pileIds: ZoneId[];
   contract: ZoneContract | null;
+  removed: boolean;
 }
 
 /**
@@ -116,12 +118,16 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
         break;
 
       case 'zone_added':
+        // Same rule as `pile_added` below: an id the log already knows is
+        // never re-created from scratch.
+        if (zones.has(payload.zoneId)) break;
         zones.set(payload.zoneId, {
           id: payload.zoneId,
           name: payload.name,
           status: 'open',
           pileIds: [],
           contract: null,
+          removed: false,
         });
         break;
 
@@ -144,6 +150,12 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
       }
 
       case 'pile_added': {
+        // Never overwrites an existing pile. A `pile_added` naming an id the
+        // log already knows is either an upstream id collision or an attempt
+        // to bring a removed pile back by re-adding it, and neither may quietly
+        // reset a pile's history — S26 is explicit that the way back in is a
+        // new pile with a new id.
+        if (piles.has(payload.pileId)) break;
         piles.set(payload.pileId, {
           id: payload.pileId,
           zoneId: payload.zoneId,
@@ -154,8 +166,54 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
           zeroChecked: false,
           tareConfirmed: false,
           locked: false,
+          removed: false,
         });
         zones.get(payload.zoneId)?.pileIds.push(payload.pileId);
+        break;
+      }
+
+      /**
+       * S26. The name always applies; the weights apply only while the pile
+       * is unlocked.
+       *
+       * That second half is the fold's own enforcement of FR-3.4, not a
+       * duplicate of `canEditPileNet`'s. The guard stops the UI writing such
+       * an event; this stops one that got into the log anyway — by a direct
+       * append, a future screen, or a bug — from moving money that has
+       * already been agreed out loud. Every `accept` snapshots the net it was
+       * counted at, so the past is safe either way; what this protects is the
+       * pile's live config, which is what the NEXT basket would be counted
+       * against.
+       */
+      case 'pile_edited': {
+        const p = piles.get(payload.pileId);
+        if (p) {
+          p.name = payload.name;
+          if (!p.locked) {
+            p.tareG = payload.tareG;
+            p.stdNetG = payload.stdNetG;
+          }
+        }
+        break;
+      }
+
+      // Retired, not deleted — see the payload's own note in types.ts. There
+      // is no un-remove event, so this flag only ever goes one way.
+      case 'pile_removed': {
+        const p = piles.get(payload.pileId);
+        if (p) p.removed = true;
+        break;
+      }
+
+      case 'zone_edited': {
+        const z = zones.get(payload.zoneId);
+        if (z) z.name = payload.name;
+        break;
+      }
+
+      case 'zone_removed': {
+        const z = zones.get(payload.zoneId);
+        if (z) z.removed = true;
         break;
       }
 
@@ -255,6 +313,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
         status: z.status,
         pileIds: [...z.pileIds],
         contract: z.contract,
+        removed: z.removed,
       }),
     ),
     piles: [...piles.values()].map(
@@ -268,6 +327,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
         zeroChecked: p.zeroChecked,
         tareConfirmed: p.tareConfirmed,
         locked: p.locked,
+        removed: p.removed,
       }),
     ),
     clockSuspect,
@@ -291,7 +351,7 @@ function assertSequence(ordered: readonly SaleEvent[]): void {
 /** Counting requires a pile that has been made ready, in an open zone and sale. */
 export function canCount(state: SaleState, pileId: PileId): boolean {
   const pile = state.piles.find((p) => p.id === pileId);
-  if (!pile || pile.status !== 'counting') return false;
+  if (!pile || pile.removed || pile.status !== 'counting') return false;
   if (state.status !== 'open') return false;
   const zone = state.zones.find((z) => z.id === pile.zoneId);
   return zone?.status === 'open';
@@ -300,7 +360,7 @@ export function canCount(state: SaleState, pileId: PileId): boolean {
 /** Ready requires both pre-count checks to have been performed. */
 export function canReady(state: SaleState, pileId: PileId): boolean {
   const pile = state.piles.find((p) => p.id === pileId);
-  if (!pile || pile.status !== 'not-started') return false;
+  if (!pile || pile.removed || pile.status !== 'not-started') return false;
   if (state.status !== 'open') return false;
   return pile.zeroChecked && pile.tareConfirmed;
 }
@@ -316,7 +376,7 @@ export function canReady(state: SaleState, pileId: PileId): boolean {
  */
 export function canBulkEnter(state: SaleState, pileId: PileId): boolean {
   const pile = state.piles.find((p) => p.id === pileId);
-  if (!pile || pile.status !== 'not-started') return false;
+  if (!pile || pile.removed || pile.status !== 'not-started') return false;
   if (state.status !== 'open') return false;
   const zone = state.zones.find((z) => z.id === pile.zoneId);
   return zone?.status === 'open';
@@ -344,14 +404,91 @@ export function bulkEnteredPileIds(events: readonly SaleEvent[]): ReadonlySet<Pi
 export function canReopenPile(state: SaleState, pileId: PileId): boolean {
   if (state.status !== 'open') return false;
   const pile = state.piles.find((p) => p.id === pileId);
-  if (!pile || pile.status !== 'closed') return false;
+  if (!pile || pile.removed || pile.status !== 'closed') return false;
   const zone = state.zones.find((z) => z.id === pile.zoneId);
   return zone?.status === 'open';
 }
 
 /** Piles still counting when a zone closes — named in the warning, then forced. */
 export function pilesStillCounting(state: SaleState, zoneId: ZoneId): readonly Pile[] {
-  return state.piles.filter((p) => p.zoneId === zoneId && p.status === 'counting');
+  return state.piles.filter((p) => p.zoneId === zoneId && !p.removed && p.status === 'counting');
+}
+
+// ── S26. Editing and removing what was set up. ──────────────────────────────
+
+/**
+ * The piles that have been retired (S26), read straight off the log.
+ *
+ * Derived here rather than taken from `state.piles` so the rollups in
+ * `totals.ts` — which are handed a log, not always a state — cannot forget to
+ * apply it. There is no un-remove event, so this set only ever grows: a
+ * `pile_removed` at any position in the log means the same thing as one at
+ * the end, and the derived set can never disagree with the projected
+ * `Pile.removed` about ordering.
+ */
+export function removedPileIds(events: readonly SaleEvent[]): ReadonlySet<PileId> {
+  const out = new Set<PileId>();
+  for (const e of events) {
+    if (e.kind === 'sys' && e.payload.t === 'pile_removed') out.add(e.payload.pileId);
+  }
+  return out;
+}
+
+/**
+ * FR-3.4, as a question the UI has to ask before offering the tare/std
+ * fields: may this pile's weights still be changed?
+ *
+ * A rename is deliberately not covered — a name carries no money and is
+ * editable at any status, locked or not. What locks here is only what the
+ * next basket would be counted against.
+ */
+export function canEditPileNet(state: SaleState, pileId: PileId): boolean {
+  const pile = state.piles.find((p) => p.id === pileId);
+  if (!pile || pile.removed) return false;
+  return !pile.locked;
+}
+
+/** A pile that has not already been retired can be retired. */
+export function canRemovePile(state: SaleState, pileId: PileId): boolean {
+  const pile = state.piles.find((p) => p.id === pileId);
+  return !!pile && !pile.removed;
+}
+
+/**
+ * Which of the two removal paths this pile gets: one tap, or a typed reason.
+ *
+ * Asked of the LOG, not of the pile's current status or totals. A basket that
+ * was counted and then voided still means someone counted into this pile, and
+ * removing it is still a statement about numbers that were said out loud — so
+ * it earns the S12 void register, not a one-tap confirm. A pile whose baskets
+ * were all entered in bulk (S23) is no different: they are baskets.
+ */
+export function pileNeedsVoidReason(events: readonly SaleEvent[], pileId: PileId): boolean {
+  return events.some((e) => (e.kind === 'accept' || e.kind === 'short') && e.pileId === pileId);
+}
+
+/**
+ * A zone is emptied of piles before it can be removed — never cascaded.
+ *
+ * "Empty" means no pile under it that has not itself been removed. The
+ * alternative, removing a zone and sweeping its piles away with it, would
+ * decide on the operator's behalf that every one of those piles was a
+ * mistake, when each is its own statement with its own reason. Nothing in the
+ * story or the epic asks for a cascade, so there is not one (YAGNI).
+ */
+export function canRemoveZone(state: SaleState, zoneId: ZoneId): boolean {
+  const zone = state.zones.find((z) => z.id === zoneId);
+  if (!zone || zone.removed) return false;
+  return !state.piles.some((p) => p.zoneId === zoneId && !p.removed);
+}
+
+/**
+ * The pile rule, one level up: a zone that never held a pile is a typo and
+ * goes in one tap; a zone whose piles had to be removed to empty it is a real
+ * part of the sale being retired, and says why.
+ */
+export function zoneNeedsVoidReason(state: SaleState, zoneId: ZoneId): boolean {
+  return state.piles.some((p) => p.zoneId === zoneId);
 }
 
 /**

@@ -36,12 +36,20 @@ import { useRouter } from 'expo-router';
 
 import { Button, Pill, TopBar } from '../../../components/chrome';
 import { PeoplePicker } from '../../../components/PeoplePicker';
+import { PileEditor, type PileEdit } from '../../../components/PileEditor';
+import { RemoveControl } from '../../../components/RemoveControl';
+import {
+  canEditPileNet,
+  canRemoveZone,
+  pileNeedsVoidReason,
+  zoneNeedsVoidReason,
+} from '../../../core/project';
 import { newId } from '../../../lib/id';
 import { useSale } from '../../../store/SaleProvider';
 import type { Person } from '../../../store/people';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import type { Zone } from '../../../core/types';
+import type { Pile, Zone } from '../../../core/types';
 
 export default function SetupScreen() {
   const t = useTheme();
@@ -49,8 +57,12 @@ export default function SetupScreen() {
   const router = useRouter();
   const { saleId, state, ready } = useSale();
 
-  const splitResolvable = state.zones.length > 0 && state.zones.every((z) => z.contract || state.split);
-  const hasPile = state.piles.length > 0;
+  // Removed zones and piles (S26) are still in the projection — their history
+  // stays readable — but they are not part of the sale being set up, so
+  // neither the blocker text nor "start counting" may count them.
+  const zones = state.zones.filter((z) => !z.removed);
+  const splitResolvable = zones.length > 0 && zones.every((z) => z.contract || state.split);
+  const hasPile = state.piles.some((p) => !p.removed);
   const canStart = !!state.price && splitResolvable && hasPile;
 
   if (!ready) {
@@ -124,7 +136,7 @@ export default function SetupScreen() {
             ? msg('setup.ready')
             : !state.price
               ? msg('setup.needPrice')
-              : state.zones.length === 0
+              : zones.length === 0
                 ? msg('setup.needZone')
                 : !splitResolvable
                   ? msg('setup.needSplit')
@@ -451,7 +463,7 @@ function ZonesCard() {
 
   return (
     <Card title={msg('setup.zonesPiles')}>
-      {state.zones.map((zone) => (
+      {state.zones.filter((z) => !z.removed).map((zone) => (
         <ZoneEditor key={zone.id} zone={zone} />
       ))}
 
@@ -477,7 +489,9 @@ function ZoneEditor({ zone }: { zone: Zone }) {
   const t = useTheme();
   const msg = useT();
   const { state, append } = useSale();
-  const piles = state.piles.filter((p) => p.zoneId === zone.id);
+  const piles = state.piles.filter((p) => p.zoneId === zone.id && !p.removed);
+  const [renaming, setRenaming] = useState(false);
+  const [zoneName, setZoneName] = useState(zone.name);
 
   const [worker, setWorker] = useState<Person | null>(
     zone.contract ? { id: zone.contract.personId, name: zone.contract.workerName, createdTs: 0, archivedTs: null } : null,
@@ -534,9 +548,58 @@ function ZoneEditor({ zone }: { zone: Zone }) {
         backgroundColor: t.color.surfaceSunk,
       }}
     >
-      <Text style={{ fontFamily: t.font.family.sans, fontWeight: t.font.weight.bold, fontSize: t.font.size.small, color: t.color.ink }}>
-        {zone.name}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
+        <Text
+          style={{
+            flex: 1,
+            fontFamily: t.font.family.sans,
+            fontWeight: t.font.weight.bold,
+            fontSize: t.font.size.small,
+            color: t.color.ink,
+          }}
+        >
+          {zone.name}
+        </Text>
+        <Button testID={`edit-zone-${zone.id}`} onPress={() => { setZoneName(zone.name); setRenaming(true); }}>
+          {msg('setup.editZone')}
+        </Button>
+      </View>
+
+      {/*
+       * A rename is a `zone_edited` event, appended like everything else —
+       * and an explicit Save rather than this screen's debounced autosave.
+       * The autosave exists for a card being typed into for the first time;
+       * this is a deliberate correction of something already agreed, opened
+       * on purpose and closed on purpose, and a rename that lands 300 ms
+       * after the last keystroke would be indistinguishable from one that
+       * did not land at all.
+       */}
+      {renaming ? (
+        <View style={{ flexDirection: 'row', gap: t.space.xs, marginTop: t.space.xs }}>
+          <TextInput
+            testID={`zone-name-${zone.id}`}
+            value={zoneName}
+            onChangeText={setZoneName}
+            style={{ ...inputStyle(t), flex: 1 }}
+          />
+          <Button
+            testID={`zone-name-save-${zone.id}`}
+            variant="primary"
+            disabled={!zoneName.trim()}
+            onPress={() => {
+              const name = zoneName.trim();
+              if (!name) return;
+              append({ kind: 'sys', payload: { t: 'zone_edited', zoneId: zone.id, name } });
+              setRenaming(false);
+            }}
+          >
+            {msg('common.save')}
+          </Button>
+          <Button testID={`zone-name-cancel-${zone.id}`} onPress={() => setRenaming(false)}>
+            {msg('common.cancel')}
+          </Button>
+        </View>
+      ) : null}
 
       <View style={{ marginTop: t.space.sm }}>
         <Field label={msg('setup.zoneWorker')}>
@@ -580,15 +643,9 @@ function ZoneEditor({ zone }: { zone: Zone }) {
         ) : null}
       </View>
 
-      <View style={{ marginTop: t.space.md, gap: 2 }}>
+      <View style={{ marginTop: t.space.md, gap: t.space.xs }}>
         {piles.map((p) => (
-          <Text
-            key={p.id}
-            testID={`pile-${p.id}`}
-            style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}
-          >
-            {msg('setup.pileRow', { name: p.name, tare: p.tareG / 1000, std: p.stdNetG / 1000 })}
-          </Text>
+          <PileRow key={p.id} pile={p} />
         ))}
       </View>
 
@@ -635,6 +692,110 @@ function ZoneEditor({ zone }: { zone: Zone }) {
           {msg('setup.addPile')}
         </Button>
       </View>
+
+      {/*
+       * S26: no cascade. A zone is removable only once every pile under it
+       * has been removed on its own terms — `canRemoveZone` says whether, and
+       * the blocked line says why, because a disabled button with no
+       * explanation is a dead end rather than an instruction.
+       */}
+      <View style={{ marginTop: t.space.sm }}>
+        <RemoveControl
+          testID={`remove-zone-${zone.id}`}
+          label={msg('setup.removeZone')}
+          detail={msg('setup.removeZoneDetail', { name: zone.name })}
+          needsReason={zoneNeedsVoidReason(state, zone.id)}
+          blockedReason={canRemoveZone(state, zone.id) ? null : msg('setup.removeZoneBlocked')}
+          onRemove={(reason) =>
+            append({ kind: 'sys', payload: { t: 'zone_removed', zoneId: zone.id, reason } })
+          }
+        />
+      </View>
+    </View>
+  );
+}
+
+/**
+ * One pile, as the setup screen lets it be corrected (S26): its row, an edit
+ * form behind a tap, and a remove control that takes the one-tap or the
+ * typed-reason path depending on whether this pile has ever counted.
+ *
+ * The edit form is opened and closed here rather than being always-on,
+ * because the common case is reading the row, not rewriting it — and because
+ * three always-visible inputs per pile would bury the "+ add pile" row this
+ * card mostly exists for.
+ */
+function PileRow({ pile }: { pile: Pile }) {
+  const t = useTheme();
+  const msg = useT();
+  const { events, state, append } = useSale();
+  const [editing, setEditing] = useState(false);
+
+  const save = ({ name, tareG, stdNetG }: PileEdit) => {
+    // The guard, at the write path rather than only on the fields: an edit
+    // that would move a locked pile's weights is refused here, and the fold
+    // in `projectSale` refuses it a second time for anything that reaches the
+    // log by another route (FR-3.4).
+    const netEditable = canEditPileNet(state, pile.id);
+    append({
+      kind: 'sys',
+      payload: {
+        t: 'pile_edited',
+        pileId: pile.id,
+        name,
+        tareG: netEditable ? tareG : pile.tareG,
+        stdNetG: netEditable ? stdNetG : pile.stdNetG,
+      },
+    });
+    setEditing(false);
+  };
+
+  return (
+    <View style={{ gap: t.space.xs }}>
+      {/* Top-aligned, not centred: the remove control grows downwards when it
+          opens, and centring floated the pile's own name to the middle of a
+          tall cell, above the row it names. */}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: t.space.xs, flexWrap: 'wrap' }}>
+        <Text
+          testID={`pile-${pile.id}`}
+          style={{
+            flexBasis: 140,
+            flexGrow: 2,
+            paddingTop: 10,
+            fontFamily: t.font.family.mono,
+            fontSize: t.font.size.micro,
+            color: t.color.inkSoft,
+          }}
+        >
+          {msg('setup.pileRow', { name: pile.name, tare: pile.tareG / 1000, std: pile.stdNetG / 1000 })}
+        </Text>
+        <Button testID={`edit-pile-${pile.id}`} onPress={() => setEditing((v) => !v)}>
+          {msg('setup.editPile')}
+        </Button>
+        <View style={{ flexBasis: 150, flexGrow: 1 }}>
+          <RemoveControl
+            testID={`remove-pile-${pile.id}`}
+            label={msg('setup.removePile')}
+            detail={msg('setup.removePileDetail', { name: pile.name })}
+            // Asked of the log, not of the pile's status: a basket that was
+            // counted and later voided still happened, and removing the pile
+            // it was counted into is still a void, not a tidy-up.
+            needsReason={pileNeedsVoidReason(events, pile.id)}
+            onRemove={(reason) =>
+              append({ kind: 'sys', payload: { t: 'pile_removed', pileId: pile.id, reason } })
+            }
+          />
+        </View>
+      </View>
+
+      {editing ? (
+        <PileEditor
+          pile={pile}
+          canEditNet={canEditPileNet(state, pile.id)}
+          onSave={save}
+          onCancel={() => setEditing(false)}
+        />
+      ) : null}
     </View>
   );
 }

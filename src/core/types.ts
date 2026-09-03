@@ -174,6 +174,50 @@ export type SysPayload =
       readonly tareG: number;
       readonly stdNetG: number;
     }
+  /**
+   * S26. A correction to a pile's own setup — appended, never a rewrite of
+   * the `pile_added` it corrects. Carries the WHOLE configuration rather than
+   * only the changed field, so one event is the complete answer to "what is
+   * this pile now" and the fold never has to merge two partial edits.
+   *
+   * `tareG`/`stdNetG` are honoured only while the pile is unlocked (FR-3.4).
+   * Once the first basket is counted they are ignored by the projection and
+   * refused by `canEditPileNet` before the event is ever appended — the same
+   * rule stated twice, deliberately, so no write path can move money that has
+   * already been agreed out loud. A name carries no money and is editable at
+   * any status.
+   */
+  | {
+      readonly t: 'pile_edited';
+      readonly pileId: PileId;
+      readonly name: string;
+      readonly tareG: number;
+      readonly stdNetG: number;
+    }
+  /**
+   * S26. Retires a pile. Never a delete: the pile, its baskets and every
+   * event about it stay in the log, and what changes is only what the pile
+   * contributes from here on — it drops out of every rollup exactly as if
+   * each of its baskets had been voided, without touching one of them.
+   *
+   * ONE event kind for both removal paths, with `reason` carrying the
+   * difference: `''` for a pile that never held a basket (a typo, removed
+   * with one tap) and a typed sentence for one that did (a void, in the S12
+   * register). `CorrectionEvent` already folds `undo-last` and `void` into
+   * one shape for the same reason — the fact recorded is identical, and only
+   * how much ceremony it deserved differs.
+   */
+  | { readonly t: 'pile_removed'; readonly pileId: PileId; readonly reason: string }
+  /** S26. Renames a zone. Zones carry no weights, so there is nothing to lock. */
+  | { readonly t: 'zone_edited'; readonly zoneId: ZoneId; readonly name: string }
+  /**
+   * S26. Retires a zone, which is only possible once every pile under it has
+   * been removed through `pile_removed` first (`canRemoveZone`). There is
+   * deliberately no cascade: a zone removal that swept its piles away with it
+   * would decide, on the operator's behalf, that every one of those piles was
+   * a mistake — and each of them is its own statement, with its own reason.
+   */
+  | { readonly t: 'zone_removed'; readonly zoneId: ZoneId; readonly reason: string }
   /** Non-blocking by design: a failed zero check flags and continues. */
   | { readonly t: 'zero_check'; readonly pileId: PileId; readonly ok: boolean; readonly readingG: number }
   | { readonly t: 'tare_confirmed'; readonly pileId: PileId; readonly tareG: number }
@@ -246,6 +290,11 @@ export interface Pile {
   readonly tareConfirmed: boolean;
   /** True once counting has begun — `stdNetG` locks at this point (FR-3.4). */
   readonly locked: boolean;
+  /**
+   * S26. Retired: still here, still readable, contributing nothing. Never
+   * true for a pile that was deleted, because nothing is ever deleted.
+   */
+  readonly removed: boolean;
 }
 
 export interface ZoneContract {
@@ -261,6 +310,8 @@ export interface Zone {
   readonly pileIds: readonly PileId[];
   /** null when the zone has no override — settle() falls back to the sale default. */
   readonly contract: ZoneContract | null;
+  /** S26. Retired, the same way a pile is: kept, not deleted. */
+  readonly removed: boolean;
 }
 
 export interface SaleState {

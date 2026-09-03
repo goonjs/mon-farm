@@ -44,6 +44,25 @@ describe('ZonePileSwitcher', () => {
     expect(screen.getByTestId('switcher-pile-p1')).not.toHaveTextContent(/กรอกย้อนหลัง/);
   });
 
+  /**
+   * S26: a removed pile is not a counting target any more. It stays in the
+   * projection (and in the log tab), but the place you pick what to count
+   * into must not offer it.
+   */
+  it('does not offer a removed pile, or a zone whose piles are all removed', () => {
+    const b = setUpSale(new LogBuilder())
+      .sys({ t: 'pile_removed', pileId: 'p2', reason: '' })
+      .sys({ t: 'pile_removed', pileId: 'p3', reason: 'ไม่ได้ขายโซนนี้' })
+      .sys({ t: 'zone_removed', zoneId: 'zB', reason: '' });
+    const state = projectSale(b.build());
+    wrap(<ZonePileSwitcher state={state} bulkPileIds={new Set()} onPick={jest.fn()} onClose={jest.fn()} />);
+
+    expect(screen.getByTestId('switcher-pile-p1')).toBeTruthy();
+    expect(screen.queryByTestId('switcher-pile-p2')).toBeNull();
+    expect(screen.queryByTestId('switcher-pile-p3')).toBeNull();
+    expect(screen.queryByText(/โซน B/)).toBeNull();
+  });
+
   it('close calls onClose', () => {
     const state = projectSale(setUpSale(new LogBuilder()).build());
     const onClose = jest.fn();

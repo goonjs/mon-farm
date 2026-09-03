@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { LogBuilder, readyPile, setUpSale } from './fixtures';
-import { pileTotals } from './totals';
+import { projectSale } from './project';
+import { liveBaskets, pileTotals, saleTotals, subsetTotals, zoneTotals } from './totals';
 
 /**
  * The short half of `pileTotals`, pinned.
@@ -127,5 +128,67 @@ describe('pileTotals — bulk-entered piles settle identically (S23)', () => {
     expect(t.standardBaskets).toBe(0);
     expect(t.baskets).toBe(1);
     expect(t.netG).toBe(20_000);
+  });
+});
+
+/**
+ * S26 — a removed pile stops contributing, without a single basket event
+ * being touched.
+ *
+ * The pair of assertions in the first test is the whole design: `liveBaskets`
+ * over the raw log still hands back the removed pile's baskets (they happened,
+ * and the log tab still shows them), while every rollup above it leaves them
+ * out. Removal is an exclusion at the rollup, not a mutation of the record.
+ */
+describe('removed piles (S26) — excluded from every rollup, kept in the log', () => {
+  const removedSale = () => {
+    const b = readyPile(setUpSale(new LogBuilder()), 'p1');
+    readyPile(b, 'p2'); // same zone as p1
+    readyPile(b, 'p3'); // zone B
+    b.accept('p1'); // 50 kg
+    b.accept('p2'); // 50 kg
+    b.accept('p3'); // 50 kg
+    b.sys({ t: 'pile_removed', pileId: 'p2', reason: 'นับซ้ำ' });
+    return b;
+  };
+
+  it('liveBaskets over the raw log still returns them — the log is not rewritten', () => {
+    const events = removedSale().build();
+    expect(liveBaskets(events).map((e) => e.pileId)).toEqual(['p1', 'p2', 'p3']);
+    expect(liveBaskets(events, 'p2')).toHaveLength(1);
+  });
+
+  it('saleTotals drops the removed pile', () => {
+    const t = saleTotals(removedSale().build());
+    expect(t.baskets).toBe(2);
+    expect(t.netG).toBe(100_000);
+  });
+
+  it('zoneTotals drops it from its own zone and leaves the other zone alone', () => {
+    const events = removedSale().build();
+    const state = projectSale(events);
+    expect(zoneTotals(events, state, 'zA').netG).toBe(50_000);
+    expect(zoneTotals(events, state, 'zB').netG).toBe(50_000);
+  });
+
+  it('subsetTotals drops it even when its id is asked for by name', () => {
+    const events = removedSale().build();
+    expect(subsetTotals(events, ['p1', 'p2']).netG).toBe(50_000);
+    expect(subsetTotals(events, ['p2']).baskets).toBe(0);
+  });
+
+  it('removing a bulk-entered pile (S23) drops it exactly the same way', () => {
+    const b = setUpSale(new LogBuilder()).sys({
+      t: 'bulk_gate_skipped',
+      pileId: 'p2',
+      reason: 'นับไว้ในกระดาษ',
+    });
+    for (let i = 0; i < 12; i++) b.accept('p2', 50_000, 2_000, 'bulk');
+    b.short('p2', 10_400);
+    expect(saleTotals(b.build()).netG).toBe(608_400);
+
+    b.sys({ t: 'pile_removed', pileId: 'p2', reason: 'กระดาษผิดกอง' });
+    expect(saleTotals(b.build()).netG).toBe(0);
+    expect(liveBaskets(b.build(), 'p2')).toHaveLength(13);
   });
 });
