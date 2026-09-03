@@ -2,7 +2,12 @@
 
 Status: **Review** — 2026-09-03, implemented (TDD, whole gate green:
 tokens/contrast/typecheck/lint/core/ui/build + e2e 130 passed, 6 skipped).
-Awaiting the QA browser pass and an independent code review.
+QA browser pass and independent code review **done** (2026-09-03): every
+acceptance criterion verified in a real browser, gate and fail-first
+reproduced independently, **approved with two open findings** (F-1 the Pile
+tab's close-sale sits below the fold; F-2 a keyboard-only path can still
+reach the confirm overlay with a pile counting) — see Code review. Still
+open before Done: those findings' disposition, plus push + CI green.
 
 ## Context
 
@@ -204,11 +209,26 @@ _Tests below are written to fail first (TDD), then implemented to green._
       `test:ui` (55), `build:web`, `test:e2e` (**130 passed, 6 skipped**, up
       from 122/6 at HEAD: four new close-lifecycle cases across the two
       landscape projects). Every new test was seen red first — see Dev notes.
-- [ ] Screenshots (UI stories only) — golden path: pending the QA agent's
-      real-browser pass (counting row without close-sale; decision point with
-      and without it; the Pile tab's secondary control).
-- [ ] Screenshots (UI stories only) — edge cases: pending the same pass
-      (single-pile sale, reopened pile).
+- [x] Independent QA re-ran the whole gate on the committed tree (19178c5):
+      `tokens:check` ✓, `contrast` ✓, `typecheck` ✓, `lint` ✓, `test:core`
+      **85 passed**, `test:ui` **55 passed**, `build:web` ✓, `test:e2e`
+      **130 passed, 6 skipped** — the dev's numbers reproduce exactly.
+- [x] Fail-first independently confirmed (see QA notes): the three new unit
+      cases go red against the pre-change production files, and
+      `close-lifecycle.spec.ts` goes **6 cases red per project (12 total)**
+      against a pre-change build — matching the dev's claim.
+- [x] Screenshots (UI stories only) — golden path: real Chromium at 844×390,
+      sale built through the setup UI, baskets counted with real
+      press-and-hold — `screenshots/s25/02-counting-footer-close-pile-only.png`,
+      `05-decision-point-close-sale-offered.png`,
+      `06-pile-tab-secondary-close-sale.png`,
+      `09-close-sale-confirm-overlay.png`,
+      `10-settlement-after-close-sale.png`.
+- [x] Screenshots (UI stories only) — edge cases: other pile still counting
+      (`03`, `04`), reopened pile (`07`, `08`), already-closed sale (`11`,
+      `12`), single-pile sale (`13`, `14`, `15`), 740×360 floor (`16`, `17`,
+      `18`), below-the-fold measurement (`19-*`, `20-*`), overlay reachability
+      probes (`21`, `22`).
 
 ## Dev notes
 
@@ -303,8 +323,197 @@ or pushed — everything is in the working tree.
 
 ## Code review
 
-- Reviewer (separate agent/session):
-- Findings:
-- Resolution:
+- **Reviewer (separate agent/session):** QA/review agent, 2026-09-03,
+  independent of the implementing session. Reviewed `git show 19178c5`
+  against `docs/checklists/code-review-checklist.md` and
+  `docs/checklists/definition-of-done.md`, re-ran the whole gate, verified
+  fail-first in an isolated clone, and drove the real exported build in
+  Chromium (see QA notes).
+
+- **Findings:**
+
+  1. **Every acceptance criterion is met** — verified in the real browser,
+     not only in tests. See the per-AC table in QA notes.
+
+  2. **F-1 (medium, not fixed — usability).** The Pile tab's new
+     `pile-close-sale` control renders **below the fold on both target
+     viewports**. Measured on the simplest possible sale (one zone, one
+     pile, one basket, pile closed): its box is at `y = 389` in a 390 px
+     viewport and at `y = 389` in the 360 px floor viewport — entirely
+     off-screen in both, with no affordance saying the card scrolls
+     (`19-phone-…png`, `19-floor-…png`; scrolled into view in `20-*`). The
+     AC's "reachable independent of which tab the operator is on" holds
+     only after a scroll the operator has no reason to attempt. The e2e
+     case does not catch this: Playwright's `toBeVisible()` is satisfied by
+     a non-empty box in the DOM, not by being inside the viewport. Suggest
+     either moving the control above the close/reopen card's fold, or
+     adding an in-viewport assertion (e.g. compare `boundingBox()` against
+     `viewportSize()`) so it cannot silently drift below it.
+
+  3. **F-2 (low, not fixed — the deleted warning's residual gap).** The
+     dev-notes justification for deleting `counter.closeSaleStillCounting`
+     states that "nothing can start counting between opening the overlay
+     and confirming … the overlay is a full-screen absolute layer over the
+     whole counter, so no hold, gate or reopen is reachable underneath it".
+     That is true for **pointer** input — QA verified a click aimed at
+     `tab-pile` while the overlay is up does nothing (`21-…png`) — but not
+     for **focus**. Elements beneath the overlay stay in the tab order (RN
+     Web sets no `aria-hidden`/inertness), and QA drove this to completion
+     with the keyboard alone: with the confirm overlay open, focus
+     `tab-pile` → Enter, focus `reopen-pile` → Enter, complete the reopen
+     prompt (all beneath the overlay) — `pile_reopened` is appended, the
+     pile is `counting` again, and `close-sale-confirm` is still there and
+     still fires (`22-…png`). So a sale *can* still be closed with a pile
+     counting, on web, by keyboard only.
+
+     Practical risk is very low: the product is a landscape-locked, touch,
+     phone-first app, the sequence is deliberate blind tabbing, and the
+     resulting state is the same one S13 always allowed (`sale_closed` does
+     not force-close anything; `canCount` simply stops the pile). But the
+     claim "no path can reach it" is stronger than what holds, and the
+     cheapest close is one line: have `doCloseSale` re-assert
+     `canOfferCloseSale(state)` before appending (a guard, not copy), which
+     keeps the warning deleted and makes the docblock's claim true by
+     construction. Recorded rather than fixed — see "not fixed here" below.
+
+  4. **F-3 (informational, no action).** Piles that are `not-started` do not
+     hold close-sale back — `canOfferCloseSale` tests `'counting'` only.
+     This matches the AC's wording and is documented in the function's
+     docblock, and QA confirmed it in the browser (a sale with an untouched
+     second pile offers close-sale as soon as the counting pile closes,
+     `17-floor-decision-point.png`). Flagged only because "the sale is over"
+     and "no pile is mid-count" are not the same statement in the field —
+     a PO call, not a defect.
+
+  5. **F-4 (informational, pre-existing, out of scope).** On an
+     already-closed sale the decision point still renders
+     `decision-next-pile` as an enabled button (`11-…png`). That is S13
+     behaviour untouched by this story; close-sale itself is correctly
+     absent.
+
+  6. **Quality.** YAGNI/KISS/SOLID hold: one shared `canOfferCloseSale`
+     feeds both surfaces (so they cannot drift), `PileClosedTransition`
+     stays presentational with a computed-at-the-call-site
+     `noPileStillCounting` prop matching the existing `hasNextPileInZone`,
+     and the choice *not* to widen the zone-scoped `pilesStillCounting`
+     is right — a one-line `some()` beats changing a core S13 helper. No
+     dead code left: `to-settlement` and `counter.closeSaleStillCounting`
+     are gone from both catalogues and no reference survives anywhere in
+     `src/` or `e2e/`. No unrelated refactor is bundled; the only
+     collateral edits are the two regenerated `docs/ux/screenshots`
+     captures (produced by the e2e run, showing the footer change) and the
+     `renderCounter` harness switch from `count` to `tab-count`, which is
+     required by the new already-closed scenarios. Commit subject is 43
+     characters, imperative, with the *why* in the body.
+
+  7. **Docs.** The story records the two judgment calls and the deliberate
+     `CloseSaleConfirmOverlay` deviation from its own Out-of-scope list.
+     Reviewed and accepted: the story's offline/sync section had itself
+     flagged that string for a dead-or-alive re-check, and the deviation is
+     declared rather than slipped in. No PRD/architecture change is needed.
+
+- **Resolution:** **Approved with findings.** F-1 and F-2 are recorded here
+  as open, and are *not fixed in this pass* for a concrete reason: while QA
+  was running, another session began implementing S23 (bulk entry) in this
+  same working tree — `src/app/sale/[id]/counter.tsx`, `src/core/project.ts`,
+  `src/i18n/messages.ts` and others are all dirty with in-flight work that
+  does not compile yet (`canBulkEnter` is referenced by tests but does not
+  exist). Editing `counter.tsx` now would collide with that work, and no
+  clean gate could be run to prove the fix. Both findings are small and
+  self-contained; they belong in a follow-up commit on a clean tree (or in
+  S26, which already reopens `PilePanel`). Nothing else blocks Done except
+  the standing gates: push + CI green.
 
 ## QA notes
+
+**Who/when.** Independent QA pass, 2026-09-03, against commit `19178c5`.
+Nothing was committed, pushed, installed or deleted.
+
+**Gate, re-run from scratch on the committed tree**
+
+| step | result |
+| --- | --- |
+| `npm run tokens:check` | ✓ tokens.css up to date |
+| `npm run contrast` | ✓ strict, all pairs pass |
+| `npm run typecheck` | ✓ |
+| `npm run lint` | ✓ |
+| `npm run test:core` | ✓ 85 passed |
+| `npm run test:ui` | ✓ 55 passed (10 suites) |
+| `npm run build:web` | ✓ exported |
+| `npm run test:e2e` | ✓ **130 passed, 6 skipped** |
+
+**Fail-first, verified independently.** Not taken on trust. With only the
+three production files (`counter.tsx`, `PileClosedTransition.tsx`,
+`messages.ts`) reverted to their pre-S25 state and the new tests left in
+place, `test:ui` goes red on exactly three cases —
+`PileClosedTransition › withholds "close sale" while any pile in the sale is
+still counting`, `close pile first, close sale last (S25) › offers no
+close-sale control on the live-counting row`, and `… › offers it on the Pile
+tab once nothing is counting, opening the shared confirm`. The other two new
+unit cases (reopened pile, already-closed sale) pass trivially pre-change,
+exactly as the dev notes say. Against a pre-change **build** (built in an
+isolated clone so the working tree was never disturbed),
+`e2e/close-lifecycle.spec.ts` fails **6 distinct cases × 2 landscape projects
+= 12** — the two reworked cases plus the four new ones, matching the claimed
+"6 failed".
+
+**Real browser walk-through (not a test-runner run).** `npm run build:web`,
+served by `node scripts/serve-dist.mjs` on :8080, driven with `playwright-core`
+against `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` at **844×390**
+(and re-checked at **740×360**). The sale was built through the real setup UI
+(two zones, three piles: กอง 1 / กอง 2 in โซน A, กอง 3 in โซน B), the gate was
+walked, and every basket was counted with a real pointer press-and-hold on the
+stage. Event counts were read back out of `localStorage`, not inferred from the
+UI.
+
+Per acceptance criterion:
+
+| AC | verdict | evidence |
+| --- | --- | --- |
+| live-counting row has no close-sale, only undo/short/close-pile | **PASS** | `02-counting-footer-close-pile-only.png` — footer is ยกเลิกเข่งล่าสุด / เข่งไม่เต็ม / ปิดกอง; `to-settlement` absent from the DOM |
+| `decision-close-sale` withheld while any pile anywhere still counts | **PASS** | closed กอง 3 (โซน B) while กอง 1 (โซน A) counted — `03-decision-point-no-close-sale-other-pile-counting.png`, cross-zone; Pile tab likewise `04-…png` |
+| appears on the last closing pile's own decision point, no reopen/refresh | **PASS** | `05-decision-point-close-sale-offered.png` — appeared on the same render, no navigation |
+| Pile tab secondary control, lighter than close-pile, same gate | **PASS** (with F-1) | `06-pile-tab-secondary-close-sale.png`, `20-*`; computed style `border-bottom-width: 0px`, `font-size: 13px`, `color: rgb(85,89,94)`, no min-height, vs close-pile's `1px` border, `13.33px`, `rgb(0,0,0)`, `min-height: 40px` — but it sits below the fold, see F-1 |
+| confirming appends exactly one `sale_closed`, lands on settlement, reuses the S13 overlay | **PASS** | `09`/`10`; log read back: one `s:sale_closed`, and still one after returning to the counter. Same via the Pile-tab control on the single-pile sale (`15`) |
+| edge — reopened pile withdraws the offer on both surfaces | **PASS** | `07-pile-tab-close-sale-withdrawn-after-reopen.png`, `08-count-tab-after-reopen-no-close-sale.png`; closing it again brought the offer back |
+| edge — single-pile sale | **PASS** | `13-single-pile-counting-no-close-sale.png`, `14-single-pile-decision-point-close-sale.png` — close-sale present, `decision-next-pile` absent |
+| edge — already-closed sale offers nothing | **PASS** | `11-closed-sale-count-tab-no-offer.png`, `12-closed-sale-pile-tab-no-offer.png` |
+
+**Guard audit (the two decisions QA was asked to press on).**
+
+- `canOfferCloseSale(state)` is the single gate for both surfaces, so the
+  decision point and the Pile tab cannot disagree — confirmed by reading the
+  call sites and by the browser: every state change flipped both together.
+  Reopened pile, second zone, and navigating back to a closed sale's counter
+  all behave correctly (`07`, `03`, `11`).
+- The deleted `counter.closeSaleStillCounting` branch: unreachable by pointer
+  — the overlay really is opaque and swallows clicks aimed at the UI beneath
+  it (`21-overlay-blocks-the-screen-beneath.png`) — but **reachable by
+  keyboard**, which is finding F-2 above and its screenshot `22-…png`. The
+  confirm overlay's own text was checked in-browser and no longer mentions
+  ยังนับอยู่.
+
+**Layout / Thai rendering.** Thai renders cleanly at both 844×390 and
+740×360 — topbar crumb, tabs, decision-point buttons, the Pile card and the
+new ปิดการขาย label all set correctly with no clipping or tofu, and
+`document.body.scrollWidth === window.innerWidth` at the floor viewport (no
+horizontal overflow). `16-floor-counting-footer.png`, `17-floor-decision-point.png`,
+`18-floor-pile-tab.png`.
+
+**Could not verify / not covered here.**
+
+- **CI.** Not run — QA has no push rights and the repo's gate forbids pushing
+  without the owner's explicit per-push confirmation. "Pushed, CI green"
+  remains open on the DoD.
+- **Native.** Web export only. The Pile-tab control's below-the-fold position
+  (F-1) may differ on a real device with a different font scale; unverified.
+- **Contended working tree.** From ~16:40 onward another session's S23
+  bulk-entry work has been landing in this same tree (`counter.tsx`,
+  `project.ts`, `messages.ts`, `store/*`, new `BulkEntryForm.*`). Every
+  number above was produced from the clean `19178c5` tree: the gate ran before
+  those edits appeared, `dist/` was exported at 16:38:23 (before the first
+  foreign edit at 16:40:03) and was deliberately **not** rebuilt afterwards, and
+  the fail-first check was done in a throwaway clone rather than in-place. QA
+  made no source edits; the only files QA wrote in the repo are this story and
+  `docs/stories/screenshots/s25/`. A re-run of the gate *right now* will be
+  red for S23 reasons that have nothing to do with S25.
