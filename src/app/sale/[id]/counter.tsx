@@ -258,8 +258,27 @@ export default function CounterScreen() {
     setConfirmClosePile(false);
   };
 
+  // The commit path re-asserts the very gate both entry points are offered
+  // under, rather than trusting that the offer is still valid by the time the
+  // confirm is pressed. It is not always: the overlay stops POINTER input
+  // reaching the screen beneath it, but react-native-web leaves that screen in
+  // the tab order, so a keyboard operator can reopen a pile underneath an open
+  // confirm and then close a sale with a pile counting.
+  //
+  // Failing the re-assert DISMISSES the overlay and appends nothing. The
+  // alternative — leaving it up with a "piles are still counting" warning —
+  // would resurrect copy for a state the operator cannot see themselves into:
+  // the screen behind the overlay has already changed under them, and the
+  // confirm's own scope line ("N zones, N piles, N baskets") is now stale.
+  // Dropping them back on a screen that shows what is actually true is the
+  // honest answer, and re-offering close-sale is one press away once the
+  // reopened pile closes again.
   const doCloseSale = () => {
-    if (state.status === 'open') append({ kind: 'sys', payload: { t: 'sale_closed' } });
+    if (!canOfferCloseSale(state)) {
+      setConfirmCloseSale(false);
+      return;
+    }
+    append({ kind: 'sys', payload: { t: 'sale_closed' } });
     setConfirmCloseSale(false);
     router.push({ pathname: '/sale/[id]/settlement', params: { id: saleId } });
   };
@@ -577,8 +596,14 @@ function UndoConfirmRow({
  * Its "N piles still counting" warning is gone with S25: both entry points
  * (the decision point, the Pile tab's secondary action) are now gated on
  * `canOfferCloseSale`, which is exactly the negation of the condition that
- * warning tested, and nothing can start counting while this full-screen
- * overlay is up. Dead copy in a destructive confirm is worse than none.
+ * warning tested. Dead copy in a destructive confirm is worse than none.
+ *
+ * That gate is not enough on its own, though — this overlay swallows POINTER
+ * input aimed at the screen beneath it, but RN Web leaves that screen in the
+ * tab order, so a pile CAN be reopened underneath an open confirm by keyboard
+ * (QA finding F-2). `doCloseSale` re-asserts `canOfferCloseSale` before
+ * appending and dismisses this overlay if it fails, which makes the claim true
+ * by construction rather than by copy.
  */
 /**
  * The live-counting row's "close this pile" confirm. A separate overlay from
@@ -827,170 +852,192 @@ function PilePanel({
   };
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, gap: t.space.md, flexDirection: 'row', flexWrap: 'wrap' }}>
-      <Card title={pile.name}>
-        {/* A bulk-entered pile has to read as one at a glance, not only in
-            the log — a closed pile whose baskets nobody watched is a
-            different kind of record from a closed pile whose baskets were
-            counted one at a time. */}
-        {bulkEntered ? (
-          <Text
-            testID="pile-bulk-badge"
-            style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, letterSpacing: t.font.tracking.wide, color: t.color.warn, marginBottom: t.space.xs }}
-          >
-            {msg('pile.bulkBadge')}
-          </Text>
-        ) : null}
-        <Stat label={msg('pile.standard')} value={String(pt.standardBaskets)} big />
-        {/* Count AND weight once there is a short basket to weigh — the count
-            alone left the Log tab as the only place the weight existed. At
-            zero the row stays a bare `0`: a weight suffix there would read as
-            if something had been shorted. */}
-        <Stat
-          testID="pile-short-weight"
-          label={msg('pile.short')}
-          value={
-            pt.shortBaskets > 0
-              ? msg('pile.shortWithWeight', { n: pt.shortBaskets, net: formatKg(pt.shortNetG) })
-              : String(pt.shortBaskets)
-          }
-        />
-        {/* standard + short = total, in `gate.expected`'s shape, including the
-            zero term: the number reads the same way whether or not anyone has
-            shorted a basket in this pile. */}
-        <Stat
-          testID="pile-weight-breakdown"
-          label={msg('pile.weight')}
-          value={msg('pile.netBreakdown', {
-            standard: formatKg(pt.standardNetG),
-            short: formatKg(pt.shortNetG),
-            total: formatKg(pt.netG),
-          })}
-          rule
-        />
-      </Card>
-
-      <Card title={msg('pile.scale')}>
-        <Stat label={msg('pile.tare')} value={`${formatKg(pile.tareG)} ${msg('common.kg')}`} />
-        <Stat
-          label={msg('pile.stdNet')}
-          value={`${formatKg(pile.stdNetG)} กก.${pile.locked ? ' 🔒' : ''}`}
-        />
-        <Stat
-          label={msg('pile.expected')}
-          value={`${formatKg(pile.tareG + pile.stdNetG)} ${msg('common.kg')}`}
-          rule
-        />
-      </Card>
-
-      <Card title={msg('pile.rollups')}>
-        <Stat label={zone.name} value={`${formatKg(zt.netG)} กก.`} />
-        <Stat label={msg('pile.wholeSale')} value={`${formatKg(st.netG)} ${msg('common.kg')}`} big rule />
-        <Stat label="เข่งทั้งหมด" value={String(st.baskets)} />
-      </Card>
-
-      <Card title={msg('pile.closeReopen')}>
-        {pile.status === 'counting' ? (
-          !closePileConfirm ? (
-            <Button testID="close-pile" onPress={() => setClosePileConfirm(true)} disabled={pt.baskets === 0}>
-              {msg('pile.close')}
-            </Button>
-          ) : (
-            <View style={{ gap: t.space.xs }}>
-              <Text testID="close-pile-detail" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}>
-                {msg('pile.closeDetail', {
-                  name: pile.name,
-                  baskets: pt.baskets,
-                  weight: formatKg(pt.netG),
-                })}
-              </Text>
-              <View style={{ flexDirection: 'row', gap: t.space.xs }}>
-                <Button testID="close-pile-confirm" variant="destructive" onPress={closePile}>
-                  {msg('pile.closeConfirm')}
-                </Button>
-                <Button testID="close-pile-cancel" onPress={() => setClosePileConfirm(false)}>
-                  ยกเลิก
-                </Button>
-              </View>
-            </View>
-          )
-        ) : pile.status === 'closed' ? (
-          <Button testID="reopen-pile" onPress={() => onReopenPile(pile.id)} disabled={!canReopenPile(state, pile.id)}>
-            {msg('pile.reopen')}
-          </Button>
-        ) : (
-          <View style={{ gap: t.space.xs }}>
-            <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
-              {msg('pile.notStarted')}
+    <View style={{ flex: 1 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, gap: t.space.md, flexDirection: 'row', flexWrap: 'wrap' }}>
+        <Card title={pile.name}>
+          {/* A bulk-entered pile has to read as one at a glance, not only in
+              the log — a closed pile whose baskets nobody watched is a
+              different kind of record from a closed pile whose baskets were
+              counted one at a time. */}
+          {bulkEntered ? (
+            <Text
+              testID="pile-bulk-badge"
+              style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, letterSpacing: t.font.tracking.wide, color: t.color.warn, marginBottom: t.space.xs }}
+            >
+              {msg('pile.bulkBadge')}
             </Text>
-            {/* The second entry point onto a not-started pile (S23): the
-                counter for a pile being watched, this for one that was not.
-                Offered on exactly the statuses `canBulkEnter` allows, which
-                is the same question `canReady` asks minus the two checks
-                there is no scale to perform. */}
-            {canBulkEnter(state, pile.id) ? (
-              <Button testID="bulk-count" onPress={onBulkCount}>
-                {msg('pile.bulkCount')}
+          ) : null}
+          <Stat label={msg('pile.standard')} value={String(pt.standardBaskets)} big />
+          {/* Count AND weight once there is a short basket to weigh — the count
+              alone left the Log tab as the only place the weight existed. At
+              zero the row stays a bare `0`: a weight suffix there would read as
+              if something had been shorted. */}
+          <Stat
+            testID="pile-short-weight"
+            label={msg('pile.short')}
+            value={
+              pt.shortBaskets > 0
+                ? msg('pile.shortWithWeight', { n: pt.shortBaskets, net: formatKg(pt.shortNetG) })
+                : String(pt.shortBaskets)
+            }
+          />
+          {/* standard + short = total, in `gate.expected`'s shape, including the
+              zero term: the number reads the same way whether or not anyone has
+              shorted a basket in this pile. */}
+          <Stat
+            testID="pile-weight-breakdown"
+            label={msg('pile.weight')}
+            value={msg('pile.netBreakdown', {
+              standard: formatKg(pt.standardNetG),
+              short: formatKg(pt.shortNetG),
+              total: formatKg(pt.netG),
+            })}
+            rule
+          />
+        </Card>
+
+        <Card title={msg('pile.scale')}>
+          <Stat label={msg('pile.tare')} value={`${formatKg(pile.tareG)} ${msg('common.kg')}`} />
+          <Stat
+            label={msg('pile.stdNet')}
+            value={`${formatKg(pile.stdNetG)} กก.${pile.locked ? ' 🔒' : ''}`}
+          />
+          <Stat
+            label={msg('pile.expected')}
+            value={`${formatKg(pile.tareG + pile.stdNetG)} ${msg('common.kg')}`}
+            rule
+          />
+        </Card>
+
+        <Card title={msg('pile.rollups')}>
+          <Stat label={zone.name} value={`${formatKg(zt.netG)} กก.`} />
+          <Stat label={msg('pile.wholeSale')} value={`${formatKg(st.netG)} ${msg('common.kg')}`} big rule />
+          <Stat label="เข่งทั้งหมด" value={String(st.baskets)} />
+        </Card>
+
+        <Card title={msg('pile.closeReopen')}>
+          {pile.status === 'counting' ? (
+            !closePileConfirm ? (
+              <Button testID="close-pile" onPress={() => setClosePileConfirm(true)} disabled={pt.baskets === 0}>
+                {msg('pile.close')}
               </Button>
-            ) : null}
-          </View>
-        )}
-
-        <View style={{ height: t.space.md }} />
-
-        {zone.status === 'open' ? (
-          !closeZoneConfirm ? (
-            <Button testID="close-zone" onPress={() => setCloseZoneConfirm(true)}>
-              {msg('zone.close')}
-            </Button>
-          ) : (
-            <View style={{ gap: t.space.xs }}>
-              <Text testID="close-zone-detail" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}>
-                {msg('zone.closeDetail', {
-                  name: zone.name,
-                  baskets: zt.baskets,
-                  weight: formatKg(zt.netG),
-                })}
-              </Text>
-              {stillCounting.length > 0 ? (
-                <Text testID="close-zone-warning" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.warn }}>
-                  {msg('zone.closeWarning', {
-                    n: stillCounting.length,
-                    names: stillCounting.map((p) => p.name).join(', '),
+            ) : (
+              <View style={{ gap: t.space.xs }}>
+                <Text testID="close-pile-detail" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}>
+                  {msg('pile.closeDetail', {
+                    name: pile.name,
+                    baskets: pt.baskets,
+                    weight: formatKg(pt.netG),
                   })}
                 </Text>
-              ) : null}
-              <View style={{ flexDirection: 'row', gap: t.space.xs }}>
-                <Button testID="close-zone-confirm" variant="destructive" onPress={closeZone}>
-                  {msg('zone.closeConfirm')}
-                </Button>
-                <Button testID="close-zone-cancel" onPress={() => setCloseZoneConfirm(false)}>
-                  ยกเลิก
-                </Button>
+                <View style={{ flexDirection: 'row', gap: t.space.xs }}>
+                  <Button testID="close-pile-confirm" variant="destructive" onPress={closePile}>
+                    {msg('pile.closeConfirm')}
+                  </Button>
+                  <Button testID="close-pile-cancel" onPress={() => setClosePileConfirm(false)}>
+                    ยกเลิก
+                  </Button>
+                </View>
               </View>
+            )
+          ) : pile.status === 'closed' ? (
+            <Button testID="reopen-pile" onPress={() => onReopenPile(pile.id)} disabled={!canReopenPile(state, pile.id)}>
+              {msg('pile.reopen')}
+            </Button>
+          ) : (
+            <View style={{ gap: t.space.xs }}>
+              <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
+                {msg('pile.notStarted')}
+              </Text>
+              {/* The second entry point onto a not-started pile (S23): the
+                  counter for a pile being watched, this for one that was not.
+                  Offered on exactly the statuses `canBulkEnter` allows, which
+                  is the same question `canReady` asks minus the two checks
+                  there is no scale to perform. */}
+              {canBulkEnter(state, pile.id) ? (
+                <Button testID="bulk-count" onPress={onBulkCount}>
+                  {msg('pile.bulkCount')}
+                </Button>
+              ) : null}
             </View>
-          )
-        ) : (
-          <Button testID="reopen-zone" onPress={() => onReopenZone(zone.id)} disabled={state.status !== 'open'}>
-            {msg('zone.reopen')}
-          </Button>
-        )}
+          )}
 
-        {/* Close sale, secondary (S25). Deliberately NOT a Button: every
-            variant Button has — even ghost — carries a border and reads at
-            the same weight as close-pile above it, and the sale ends once
-            while piles close all day. A plain pressable label, appearing
-            only once nothing anywhere is still counting, is the whole
-            control. It opens the counter screen's own
-            CloseSaleConfirmOverlay — the same two steps the decision point
-            goes through, not a second implementation. */}
-        {canOfferCloseSale(state) ? (
+          <View style={{ height: t.space.md }} />
+
+          {zone.status === 'open' ? (
+            !closeZoneConfirm ? (
+              <Button testID="close-zone" onPress={() => setCloseZoneConfirm(true)}>
+                {msg('zone.close')}
+              </Button>
+            ) : (
+              <View style={{ gap: t.space.xs }}>
+                <Text testID="close-zone-detail" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}>
+                  {msg('zone.closeDetail', {
+                    name: zone.name,
+                    baskets: zt.baskets,
+                    weight: formatKg(zt.netG),
+                  })}
+                </Text>
+                {stillCounting.length > 0 ? (
+                  <Text testID="close-zone-warning" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.warn }}>
+                    {msg('zone.closeWarning', {
+                      n: stillCounting.length,
+                      names: stillCounting.map((p) => p.name).join(', '),
+                    })}
+                  </Text>
+                ) : null}
+                <View style={{ flexDirection: 'row', gap: t.space.xs }}>
+                  <Button testID="close-zone-confirm" variant="destructive" onPress={closeZone}>
+                    {msg('zone.closeConfirm')}
+                  </Button>
+                  <Button testID="close-zone-cancel" onPress={() => setCloseZoneConfirm(false)}>
+                    ยกเลิก
+                  </Button>
+                </View>
+              </View>
+            )
+          ) : (
+            <Button testID="reopen-zone" onPress={() => onReopenZone(zone.id)} disabled={state.status !== 'open'}>
+              {msg('zone.reopen')}
+            </Button>
+          )}
+        </Card>
+      </ScrollView>
+
+      {/* Close sale, secondary (S25). Deliberately NOT a Button: every
+          variant Button has — even ghost — carries a border and reads at
+          the same weight as close-pile does, and the sale ends once while
+          piles close all day. A plain pressable label, appearing only once
+          nothing anywhere is still counting, is the whole control. It opens
+          the counter screen's own CloseSaleConfirmOverlay — the same two
+          steps the decision point goes through, not a second implementation.
+
+          It sits in the tab's own footer, OUTSIDE the scrolling card stack,
+          because inside it it was unreachable (QA finding F-1): at the foot
+          of the close/reopen card its box measured 389–410px down a 390px
+          screen, off-screen at both landscape sizes, behind a scroll the
+          card advertises nowhere. Out here the ScrollView takes the slack
+          and this line is on screen at any viewport height, without being
+          promoted to a heavier control to get there. */}
+      {canOfferCloseSale(state) ? (
+        <View
+          style={{
+            paddingHorizontal: t.space.md,
+            paddingBottom: t.space.sm,
+            paddingTop: t.space.xs,
+            // A decorative divider, not a control outline: it says the cards
+            // above scroll under a fixed foot, so the card clipped at that
+            // edge does not read as the screen ending there.
+            borderTopWidth: t.border.hair,
+            borderTopColor: t.color.rule,
+            backgroundColor: t.color.surface,
+          }}
+        >
           <Text
             testID="pile-close-sale"
             accessibilityRole="button"
             onPress={onCloseSale}
             style={{
-              marginTop: t.space.md,
               fontFamily: t.font.family.sans,
               fontSize: t.font.size.small,
               color: t.color.inkSoft,
@@ -999,9 +1046,9 @@ function PilePanel({
           >
             {msg('counter.closeSale')}
           </Text>
-        ) : null}
-      </Card>
-    </ScrollView>
+        </View>
+      ) : null}
+    </View>
   );
 }
 

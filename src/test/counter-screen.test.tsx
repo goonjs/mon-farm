@@ -238,6 +238,39 @@ describe('close pile first, close sale last (S25)', () => {
     expect(screen.queryByTestId('pile-close-sale')).toBeNull();
   });
 
+  /**
+   * F-2 (QA): the confirm overlay covers the screen for a pointer, but RN Web
+   * leaves what is beneath it in the tab order — a keyboard operator can
+   * reopen a pile under the open overlay and then confirm. The commit path
+   * re-asserts the same gate the control was offered under, so the confirm
+   * cannot close a sale that has started counting again.
+   */
+  it('refuses the confirm when a pile was reopened beneath the overlay', async () => {
+    await renderCounter(
+      scenario((b) => {
+        b.accept('p1');
+        b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+      }),
+    );
+    fireEvent.press(screen.getByTestId('tab-pile'));
+    fireEvent.press(screen.getByTestId('pile-close-sale'));
+    expect(screen.getByTestId('close-sale-confirm')).toBeTruthy();
+
+    // Everything below is reachable underneath the overlay by focus alone.
+    fireEvent.press(screen.getByTestId('reopen-pile'));
+    fireEvent.changeText(screen.getByTestId('reopen-prompt-reason'), 'ชั่งซ้ำ');
+    fireEvent.press(screen.getByTestId('reopen-prompt-next'));
+    fireEvent.press(screen.getByTestId('reopen-prompt-confirm'));
+
+    fireEvent.press(screen.getByTestId('close-sale-confirm'));
+
+    const log = (await store.load(sale)) as SaleEvent[];
+    expect(log.filter((e) => e.kind === 'sys' && e.payload.t === 'sale_closed')).toHaveLength(0);
+    // ...and the overlay is dismissed rather than left standing over a sale
+    // it can no longer close.
+    expect(screen.queryByTestId('close-sale-confirm')).toBeNull();
+  });
+
   it('does not offer close-sale again once the sale is already closed', async () => {
     await renderCounter(
       scenario((b) => {

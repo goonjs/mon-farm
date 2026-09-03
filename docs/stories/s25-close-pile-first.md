@@ -1,13 +1,15 @@
 # Story: The close flow follows the piles
 
-Status: **Review** — 2026-09-03, implemented (TDD, whole gate green:
-tokens/contrast/typecheck/lint/core/ui/build + e2e 130 passed, 6 skipped).
-QA browser pass and independent code review **done** (2026-09-03): every
-acceptance criterion verified in a real browser, gate and fail-first
-reproduced independently, **approved with two open findings** (F-1 the Pile
-tab's close-sale sits below the fold; F-2 a keyboard-only path can still
-reach the confirm overlay with a pile counting) — see Code review. Still
-open before Done: those findings' disposition, plus push + CI green.
+Status: **Review** — 2026-09-03. Implemented (TDD), QA browser pass and
+independent code review done, **and both open review findings now closed**
+(2026-09-03, follow-up pass on a clean tree): F-1 the Pile tab's close-sale
+control now sits inside the viewport at both landscape sizes, measured not
+merely `toBeVisible()`; F-2 the close-sale commit path re-asserts
+`canOfferCloseSale` so the keyboard-only reopen-beneath-the-overlay path can
+no longer close a sale with a pile counting. Whole gate green after the fix:
+tokens/contrast/typecheck/lint/core/ui/build + e2e **156 passed, 6 skipped**.
+F-3 and F-4 stay open by design — both are informational and belong to the
+PO / S13, not to this story. Still open before Done: push + CI green.
 
 ## Context
 
@@ -321,6 +323,74 @@ needed no edit (it never referenced `to-settlement`).
 pass; the independent code review is still outstanding. Nothing was committed
 or pushed — everything is in the working tree.
 
+### Dev notes — follow-up pass, 2026-09-03 (closing F-1 and F-2)
+
+A second, separate pass on a clean tree (HEAD `7434408`, S23 landed), after
+the contended-working-tree situation that made the reviewer defer both.
+
+**Files changed**
+
+- `src/app/sale/[id]/counter.tsx` — (a) `PilePanel` now returns a `View
+  flex: 1` wrapping its `ScrollView` plus a footer holding `pile-close-sale`,
+  so the control is laid out in the tab's fixed foot instead of at the end of
+  the scrolling card stack (F-1); (b) `doCloseSale` re-asserts
+  `canOfferCloseSale(state)` and dismisses the overlay instead of appending
+  when it fails (F-2); (c) the `CloseSaleConfirmOverlay` docblock's claim that
+  "nothing can start counting while this overlay is up" is corrected — it is
+  true of pointer input only, and the guard is what makes it true overall.
+- `e2e/close-lifecycle.spec.ts` — two new cases (below).
+- `src/test/counter-screen.test.tsx` — one new case (below).
+- `docs/stories/screenshots/s25/23-fix-on-screen-phone.png`,
+  `24-fix-on-screen-floor.png` — taken by the new e2e case itself, following
+  the convention `bulk-entry.spec.ts` already uses, so the evidence
+  regenerates with the suite rather than rotting as a hand capture.
+
+**TDD, both red first.**
+
+- F-1, `the Pile tab close-sale control sits inside the viewport, not below
+  the fold` — measures `boundingBox()` against `viewportSize()`, because
+  `toBeVisible()` is satisfied by an off-screen box and that is precisely how
+  the defect survived the first pass. Red at both landscape projects: the
+  control's bottom was **410 px** against a 390 px and a 360 px viewport.
+  Green after: **382 px** and **352 px**.
+- F-2, at two tiers. `refuses the confirm when a pile was reopened beneath
+  the overlay` (`counter-screen.test.tsx`) drives reopen-under-the-overlay
+  and reads the event log back out of the store — red, one `sale_closed`
+  written; green, none. And `confirming close-sale is refused if a pile was
+  reopened beneath the overlay` (e2e) reproduces QA's actual finding on the
+  real build: `.press('Enter')` focuses and keys without hit-testing, so it
+  reaches `reopen-pile` and the whole reopen prompt *underneath* the open
+  confirm exactly as a keyboard operator does. Red at both projects (one
+  `sale_closed`, and the app on settlement); green after, with the overlay
+  dismissed and the log empty of `sale_closed`.
+
+**Judgment call 3 — the footer, not "move it higher in the card".** Putting
+the control above the close/reopen card's other controls would have fixed
+today's 410 px and left the same class of defect one card-content change
+away; the AC's "reachable independent of which tab the operator is on" is a
+statement about the screen, so the fix belongs in the screen's layout. The
+`ScrollView` keeps `flex: 1` and yields the ~30 px the foot needs, so no card
+content is lost — the stack simply scrolls under a fixed foot, and the
+hairline `rule` divider says so. The control's own styling is untouched, and
+the existing `border-bottom-width: 0px` assertion still guards it against
+being re-inflated into a `Button`.
+
+**Judgment call 4 — dismiss, do not warn, when the re-assert fails.**
+Recorded in full under F-2's resolution: no message id comes back, because
+the overlay's remaining copy would be stale the moment the guard trips.
+
+**Not changed:** no event, guard, projection or message id; `PilePanel`'s
+cards, `PileClosedTransition`, `ZonePileSwitcher`, `ReopenPrompt` and
+settlement are all untouched. **F-3 and F-4 were deliberately not acted on** —
+a PO call and pre-existing S13 behaviour respectively; both stay open in the
+Code review section with that note.
+
+**Deferred:** nothing was committed or pushed (per `CLAUDE.md`); push + CI
+green remains the last DoD item, and needs the owner's per-push confirmation.
+Native was not re-verified — the fix is a react-native flexbox layout with no
+web-only primitive in it, but the measurement evidence is the web export, as
+QA's was.
+
 ## Code review
 
 - **Reviewer (separate agent/session):** QA/review agent, 2026-09-03,
@@ -350,6 +420,31 @@ or pushed — everything is in the working tree.
      adding an in-viewport assertion (e.g. compare `boundingBox()` against
      `viewportSize()`) so it cannot silently drift below it.
 
+     **Resolution (2026-09-03, follow-up pass): fixed.** Both of QA's
+     suggestions were taken, because they answer different halves of the
+     finding. The control moved out of the scrolling card stack into
+     `PilePanel`'s own footer — a `View` below the `ScrollView`, which keeps
+     `flex: 1` and takes the slack, so the label is on screen at any viewport
+     height rather than at whatever offset the cards happen to end at. It is
+     unchanged as a control: the same pressable `Text`
+     (`testID="pile-close-sale"`, `accessibilityRole="button"`, `inkSoft`,
+     small sans, no border, no min-height), *not* promoted to a `Button` —
+     that promotion is exactly what the AC rules out. The footer carries a
+     hairline `rule` divider and the surface background so the card clipped at
+     that edge reads as "this scrolls under a fixed foot" rather than as the
+     screen ending. And the e2e case now *measures*: `boundingBox()` against
+     `viewportSize()` at both landscape projects, since `toBeVisible()` is
+     satisfied by an off-screen box. Measured on the same simplest-possible
+     sale QA used (one zone, one pile, one basket, pile closed):
+
+     | viewport | control's bottom, before | after |
+     | --- | --- | --- |
+     | 844×390 (`phone-landscape`) | 410 px — 20 px past the fold | **382 px** |
+     | 740×360 (`phone-landscape-floor`) | 410 px — 50 px past the fold | **352 px** |
+
+     Evidence: `23-fix-on-screen-phone.png`, `24-fix-on-screen-floor.png`
+     (both regenerated by the e2e suite itself, not captured by hand).
+
   3. **F-2 (low, not fixed — the deleted warning's residual gap).** The
      dev-notes justification for deleting `counter.closeSaleStillCounting`
      states that "nothing can start counting between opening the overlay
@@ -375,6 +470,26 @@ or pushed — everything is in the working tree.
      `canOfferCloseSale(state)` before appending (a guard, not copy), which
      keeps the warning deleted and makes the docblock's claim true by
      construction. Recorded rather than fixed — see "not fixed here" below.
+
+     **Resolution (2026-09-03, follow-up pass): fixed, the cheap way QA
+     suggested.** `doCloseSale` now re-asserts `canOfferCloseSale(state)`
+     before appending `sale_closed` — the same single gate both entry points
+     are offered under, so the commit cannot outlive the offer. The deleted
+     `counter.closeSaleStillCounting` id was **not** resurrected: judgment
+     call 2's conclusion still holds, and holds harder now. The warning is
+     copy for a state the operator can no longer confirm their way out of,
+     and no UI path renders it — the guard replaces it rather than needing it.
+
+     **What the UI does when the re-assert fails: it dismisses the overlay and
+     appends nothing.** Why, rather than keeping it up with a warning: by that
+     point the screen behind the overlay has already changed under the
+     operator (a pile is counting again), and the confirm's own scope line —
+     "N zones, N piles, N baskets, N kg" — is stale copy describing a sale
+     that no longer matches. Putting them back on a screen that shows what is
+     actually true is the honest answer, it needs no new message id, and
+     re-offering close-sale costs one press once the reopened pile closes
+     again. The alternative (leave it up, explain) would have re-introduced
+     exactly the dead-warning shape this story removed.
 
   4. **F-3 (informational, no action).** Piles that are `not-started` do not
      hold close-sale back — `canOfferCloseSale` tests `'counting'` only.
@@ -412,8 +527,17 @@ or pushed — everything is in the working tree.
      flagged that string for a dead-or-alive re-check, and the deviation is
      declared rather than slipped in. No PRD/architecture change is needed.
 
-- **Resolution:** **Approved with findings.** F-1 and F-2 are recorded here
-  as open, and are *not fixed in this pass* for a concrete reason: while QA
+- **Resolution:** **Approved with findings — F-1 and F-2 now closed** in a
+  follow-up pass on a clean tree (2026-09-03); see the resolution under each.
+  **F-3 and F-4 are deliberately left open and were not acted on:** F-3 is a
+  PO call on what "the sale is over" should mean for `not-started` piles, and
+  F-4 is pre-existing S13 decision-point behaviour on an already-closed sale.
+  Neither is a defect in S25's own change, and folding either into this story
+  would be scope this story never agreed. The original reviewer's note follows,
+  unedited.
+
+  F-1 and F-2 were *not fixed in the review pass itself* for a concrete
+  reason: while QA
   was running, another session began implementing S23 (bulk entry) in this
   same working tree — `src/app/sale/[id]/counter.tsx`, `src/core/project.ts`,
   `src/i18n/messages.ts` and others are all dirty with in-flight work that
