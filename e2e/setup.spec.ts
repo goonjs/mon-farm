@@ -76,9 +76,14 @@ test('an edit made just before leaving is written, not dropped', async ({ page }
   // waiting for the debounce. Unmounting used to cancel the pending save,
   // and because the start gate reads the log rather than the on-screen
   // draft, the whole sale then ran at the old price with nothing shown.
+  //
+  // A pile added here has never been through the zero/tare gate, so the
+  // counter screen shows that gate rather than the count numeral — this
+  // test is about the flushed price, not the gate, so it asserts on the
+  // route rather than on `count`.
   await page.getByTestId('price-baht').fill('27');
   await page.getByTestId('start-counting').click();
-  await expect(page.getByTestId('count')).toBeVisible();
+  await expect(page).toHaveURL(/\/sale\/sale-[a-z0-9]+\/counter$/);
 
   const saleId = new URL(page.url()).pathname.split('/')[2];
   await page.goto(`/sale/${saleId}/setup`);

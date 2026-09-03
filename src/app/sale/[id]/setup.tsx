@@ -70,13 +70,16 @@ export default function SetupScreen() {
           // settlement screens. The list screen this was pushed from is
           // already on the stack; reusing it is what keeps repeated
           // list → setup → list round trips from stacking up hidden screens.
-          <Button
-            testID="back-to-list"
-            onPress={() => {
-              flushPendingSaves();
-              router.back();
-            }}
-          >
+          //
+          // Deliberately does NOT flush pending saves: leaving to the list is
+          // the abandon path (S17 — "starting a new sale writes no event;
+          // leaving the stub loses nothing"), and the split card auto-saves
+          // its 50/50 default with no interaction at all, so a completely
+          // untouched sale can still have a save pending in its first
+          // AUTOSAVE_DELAY_MS. Flushing here would write that default for a
+          // sale the operator never touched, and it would then wrongly stop
+          // appearing as empty. Only the forward path (start counting) flushes.
+          <Button testID="back-to-list" onPress={() => router.back()}>
             {msg('setup.backToList')}
           </Button>
         }
