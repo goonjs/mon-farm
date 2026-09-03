@@ -1,7 +1,7 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
-import FarmProfileScreen from './farm-profile';
+import FarmProfileScreen from '../app/farm-profile';
 import { farmStore as mockFarmStore } from '../store/farm';
 import { store as mockStore } from '../store/store';
 import { wrap } from '../test/render';

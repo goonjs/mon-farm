@@ -292,11 +292,20 @@ referenced from the profile.
      wiring as public pages — dead weight at best, a description of internal
      test seams at worst.
 
-     The fix is to move both files out of `src/app`. Moving deletes their
-     current paths, and `CLAUDE.md`'s file-deletion gate has no carve-out for
-     files the agent created itself, so this is **left undone pending the
-     owner's explicit confirmation** rather than interpreted around. It should
-     be fixed before `Done`.
+     **Fixed 2026-09-03**, with the owner's explicit confirmation for that
+     specific deletion — moving the files deletes their current paths, and
+     `CLAUDE.md`'s gate has no carve-out for files the agent created itself,
+     so it was asked rather than interpreted around. Both now live in
+     `src/__tests__/`, which Jest's `src/**/*.test.tsx` still matches; the
+     build ships nine routes and no `*.test.html`.
+
+     A config-only fix was looked for first and does not exist. expo-router
+     57's route matcher (`node_modules/expo-router/_ctx.web.js`) excludes only
+     `+api`, `+html`, `+middleware` and `+native-intent`; `__tests__` and
+     `*.test.*` are not excluded, the plugin exposes no `ignore` option, and
+     the upstream request for one (expo/expo#44696) is marked won't-fix.
+     Moving the files is the only available fix, which is worth recording so
+     nobody re-searches for a switch that isn't there.
 
   2. *(should-fix — fixed)* `farm.native.ts` ordered zones with SQL
      `ORDER BY name COLLATE NOCASE`, which only case-folds ASCII and has no
@@ -312,9 +321,9 @@ referenced from the profile.
      `farm.native.ts`, leaving an orphan row nothing joins to. No current UI
      path reaches it, but it contradicted the port's stated contract. Guarded.
 
-- **Resolution**: findings 2 and 3 fixed in the same session as the review.
-  Finding 1 is recorded as open and blocking `Done`, not deferred — it needs
-  a file move, which needs the owner's word.
+- **Resolution**: all three fixed in the same session as the review; nothing
+  deferred. Finding 1 needed the owner's confirmation for a file deletion and
+  got it.
 
   Worth recording alongside the fixes: finding 2 landed in exactly the place
   this story's own Dev notes had already flagged as untested. The gap was

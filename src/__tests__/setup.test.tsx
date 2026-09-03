@@ -1,19 +1,19 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
-import SetupScreen from './setup';
-import { farmStore as mockFarmStore } from '../../../store/farm';
-import { SaleProvider } from '../../../store/SaleProvider';
-import { wrap } from '../../../test/render';
+import SetupScreen from '../app/sale/[id]/setup';
+import { farmStore as mockFarmStore } from '../store/farm';
+import { SaleProvider } from '../store/SaleProvider';
+import { wrap } from '../test/render';
 
 /**
  * Same jest.mock pattern as PeoplePicker.test.tsx — the instance is built
  * INSIDE the factory, not captured from an outer const. See that file's
  * header for why the ordering matters.
  */
-jest.mock('../../../store/farm', () => {
-  const actual = jest.requireActual('../../../store/farm');
-  const { MemoryFarmStore } = jest.requireActual('../../../store/farm-memory');
+jest.mock('../store/farm', () => {
+  const actual = jest.requireActual('../store/farm');
+  const { MemoryFarmStore } = jest.requireActual('../store/farm-memory');
   return { ...actual, farmStore: new MemoryFarmStore() };
 });
 
@@ -21,9 +21,9 @@ jest.mock('../../../store/farm', () => {
 // whose bare `../store/people` import would otherwise resolve to the real
 // SqlitePeopleStore under jest-expo's platform resolution and blow up with
 // no native module present — same jest.mock pattern as PeoplePicker.test.tsx.
-jest.mock('../../../store/people', () => {
-  const actual = jest.requireActual('../../../store/people');
-  const { MemoryPeopleStore } = jest.requireActual('../../../store/people-memory');
+jest.mock('../store/people', () => {
+  const actual = jest.requireActual('../store/people');
+  const { MemoryPeopleStore } = jest.requireActual('../store/people-memory');
   return { ...actual, peopleStore: new MemoryPeopleStore() };
 });
 
@@ -31,7 +31,7 @@ jest.mock('../../../store/people', () => {
 // saleId, same shape SaleProvider expects from './store'. See the comment on
 // the equivalent mock in farm-profile.test.tsx for why this is hand-rolled
 // rather than importing the real MemoryStore under Jest.
-jest.mock('../../../store/store', () => {
+jest.mock('../store/store', () => {
   const rows = new Map<string, unknown[]>();
   return {
     store: {
