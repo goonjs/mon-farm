@@ -59,16 +59,21 @@ export interface ProfileZone {
 export interface FarmProfile {
   readonly zones: readonly ProfileZone[];
   /**
-   * When the profile was seeded from a past sale, or null if it never has
-   * been. Needed because "empty" and "never seeded" are different states: a
-   * profile the owner has deliberately emptied must not un-empty itself the
-   * next time the screen is opened.
+   * When this profile first came into existence — seeded from a past sale, or
+   * a zone added by hand on its own screen — and null only if it never has.
+   *
+   * Needed because "empty" and "never existed" are different states: a profile
+   * the owner has deliberately emptied must not un-empty itself the next time
+   * the screen is opened. It covers BOTH ways a profile is established, not
+   * just the seed: a profile typed by hand and then cleared out was cleared
+   * out just as deliberately, and re-seeding it from the last sale would be
+   * the app overruling a decision the owner just made.
    */
-  readonly seededTs: number | null;
+  readonly establishedTs: number | null;
 }
 
 export interface FarmProfileStore {
-  /** Always a profile — `{ zones: [], seededTs: null }` when there is none yet. */
+  /** Always a profile — `{ zones: [], establishedTs: null }` when there is none yet. */
   get(): Promise<FarmProfile>;
   addZone(name: string): Promise<ProfileZone>;
   renameZone(id: string, name: string): Promise<void>;

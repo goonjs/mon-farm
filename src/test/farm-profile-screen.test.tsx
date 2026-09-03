@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import FarmProfileScreen from '../app/farm-profile';
 import { LogBuilder } from '../core/fixtures';
 import type { SaleEvent } from '../core/types';
+import * as farmProfileModule from '../store/farmProfile';
 import { farmProfileStore } from '../store/farmProfile';
 import { store } from '../store/store';
 import { wrap } from './render';
@@ -26,7 +27,19 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn() }) }));
 jest.mock('../store/farmProfile', () => {
   const actual = jest.requireActual('../store/farmProfile');
   const { MemoryFarmProfileStore } = jest.requireActual('../store/farmProfile-memory');
-  return { ...actual, farmProfileStore: new MemoryFarmProfileStore() };
+  // One instance (import sites bind it once), plus a way to put it back to a
+  // genuinely untouched document between tests. `establishedTs` is not
+  // resettable through the port by design — that is the whole point of it — so
+  // emptying the zones is NOT a reset, and a test that must start from a
+  // never-established profile has to reach past the port to get one.
+  const instance = new MemoryFarmProfileStore();
+  return {
+    ...actual,
+    farmProfileStore: instance,
+    __resetProfileStore: () => {
+      (instance as unknown as { doc: unknown }).doc = { zones: [], establishedTs: null };
+    },
+  };
 });
 
 jest.mock('../store/store', () => {
@@ -45,12 +58,14 @@ jest.mock('../store/store', () => {
   };
 });
 
-/** The mocked profile store, emptied between tests (the factory runs once). */
-async function resetProfile() {
-  const p = await farmProfileStore.get();
-  for (const z of p.zones) await farmProfileStore.removeZone(z.id);
-  // `seededTs` is not resettable through the port by design, so tests that
-  // need a never-seeded profile use a fresh instance instead.
+/**
+ * A brand-new profile store between tests. Emptying the old one is not enough:
+ * `establishedTs` deliberately outlives the zones, so a store another test has
+ * added a zone to would refuse to seed — which is the behaviour under test one
+ * describe below, and would otherwise pass or fail on test ORDER.
+ */
+function resetProfile() {
+  (farmProfileModule as unknown as { __resetProfileStore: () => void }).__resetProfileStore();
 }
 
 function saleLog(saleId: string, dayOffset: number, zoneName: string): SaleEvent[] {
@@ -80,8 +95,8 @@ async function renderScreen() {
   return view;
 }
 
-beforeEach(async () => {
-  await resetProfile();
+beforeEach(() => {
+  resetProfile();
 });
 
 describe('the farm profile screen', () => {
@@ -160,7 +175,7 @@ describe('seeding the profile from a past sale', () => {
     // Tares came across; the worker/split contract deliberately did not.
     expect(seeded.zones[0].piles[0]).toMatchObject({ tareG: 2_000, stdNetG: 50_000 });
     expect(JSON.stringify(seeded)).not.toContain('สมหญิง');
-    expect(seeded.seededTs).not.toBeNull();
+    expect(seeded.establishedTs).not.toBeNull();
 
     // Emptied by the owner, then re-opened: it stays empty.
     for (const z of seeded.zones) await farmProfileStore.removeZone(z.id);
@@ -168,5 +183,23 @@ describe('seeding the profile from a past sale', () => {
     await renderScreen();
     await waitFor(() => expect(screen.getByTestId('profile-empty')).toBeTruthy());
     expect((await farmProfileStore.get()).zones).toEqual([]);
+  });
+
+  it('does not seed over a HAND-BUILT profile the owner has since emptied', async () => {
+    // The other half of "an intentionally emptied profile stays empty": a
+    // profile that was never seeded because the owner typed it themselves,
+    // then cleared it out, with a past sale sitting there to seed from.
+    // Regression for the QA finding of 2026-09-03 — this screen used to
+    // re-seed it from that sale on the next visit, silently.
+    await seedSale(saleLog('sale-x', 0, 'โซนจากการขาย'));
+
+    const zone = await farmProfileStore.addZone('โซนมือ');
+    await farmProfileStore.removeZone(zone.id);
+    expect((await farmProfileStore.get()).zones).toEqual([]);
+
+    await renderScreen();
+    await waitFor(() => expect(screen.getByTestId('profile-empty')).toBeTruthy());
+    expect((await farmProfileStore.get()).zones).toEqual([]);
+    expect(screen.queryByText('โซนจากการขาย')).toBeNull();
   });
 });

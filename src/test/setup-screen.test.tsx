@@ -153,6 +153,22 @@ describe('the farm profile offered as a starting point', () => {
     expect(JSON.stringify(await farmProfileStore.get())).toBe(before);
   });
 
+  it('will not accept an offered zone whose name has been blanked', async () => {
+    // A hand-typed zone can never be nameless (the form returns early and the
+    // button is disabled), and the offer writes the same events, so it must
+    // not be able to write one either — an append-only log has no way to take
+    // a nameless zone back out. Regression for the QA finding of 2026-09-03.
+    const { zone } = await profileWithOneZone();
+    await renderSetup();
+    await waitFor(() => expect(screen.getByTestId('profile-offer')).toBeTruthy());
+
+    fireEvent.changeText(screen.getByTestId(`offer-zone-name-${zone.id}`), '   ');
+    fireEvent.press(screen.getByTestId('offer-accept'));
+
+    expect((await saleState()).zones).toEqual([]);
+    expect(screen.getByTestId('profile-offer')).toBeTruthy();
+  });
+
   it('is not offered once the sale already has a zone of its own', async () => {
     await profileWithOneZone();
     const events = new LogBuilder(sale)

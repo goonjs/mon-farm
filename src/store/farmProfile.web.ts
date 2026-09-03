@@ -15,7 +15,7 @@ export class WebFarmProfileStore extends DocFarmProfileStore {
       const raw = globalThis.localStorage?.getItem(KEY);
       if (!raw) return EMPTY_PROFILE;
       const doc = JSON.parse(raw) as Partial<FarmProfile>;
-      return { zones: doc.zones ?? [], seededTs: doc.seededTs ?? null };
+      return { zones: doc.zones ?? [], establishedTs: doc.establishedTs ?? null };
     } catch {
       return EMPTY_PROFILE;
     }

@@ -527,12 +527,20 @@ function ProfileOffer() {
 
   if (!draft || draft.length === 0) return null;
 
+  // The hand-typed path cannot produce a nameless zone — `addZone` returns
+  // early on a blank name and its button is disabled — so the offer must not
+  // be able to either. Blanking an offered name and accepting used to write a
+  // `zone_added` with an empty name straight into an append-only log, where
+  // nothing can take it back out. (QA, 2026-09-03.)
+  const acceptable = draft.every((z) => z.name.trim().length > 0);
+
   const accept = () => {
+    if (!acceptable) return;
     appendMany(
       draft.flatMap((zone) => {
         const zoneId = newId('zone-');
         return [
-          { kind: 'sys' as const, payload: { t: 'zone_added' as const, zoneId, name: zone.name } },
+          { kind: 'sys' as const, payload: { t: 'zone_added' as const, zoneId, name: zone.name.trim() } },
           ...zone.piles.map((p) => ({
             kind: 'sys' as const,
             payload: {
@@ -603,7 +611,7 @@ function ProfileOffer() {
         />
       ))}
 
-      <Button testID="offer-accept" variant="primary" onPress={accept}>
+      <Button testID="offer-accept" variant="primary" disabled={!acceptable} onPress={accept}>
         {msg('setup.profileAccept')}
       </Button>
     </View>

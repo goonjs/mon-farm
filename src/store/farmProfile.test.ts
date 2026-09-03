@@ -17,8 +17,8 @@ describe('MemoryFarmProfileStore', () => {
     store = new MemoryFarmProfileStore();
   });
 
-  it('starts empty, and has never been seeded', async () => {
-    expect(await store.get()).toEqual({ zones: [], seededTs: null });
+  it('starts empty, and has never been established', async () => {
+    expect(await store.get()).toEqual({ zones: [], establishedTs: null });
   });
 
   it('adds a zone and a pile under it', async () => {
@@ -71,7 +71,7 @@ describe('MemoryFarmProfileStore', () => {
 
     const seeded = await store.get();
     expect(seeded.zones).toEqual(zones);
-    expect(seeded.seededTs).not.toBeNull();
+    expect(seeded.establishedTs).not.toBeNull();
 
     await store.seed([{ id: 'pz2', name: 'โซน B', piles: [] }]);
     expect((await store.get()).zones.map((z) => z.name)).toEqual(['โซน A']);
@@ -82,8 +82,8 @@ describe('MemoryFarmProfileStore', () => {
     await store.removeZone('pz1');
     expect((await store.get()).zones).toEqual([]);
 
-    // An intentionally emptied profile stays empty: `seededTs` outlives the
-    // zones, so "empty" and "never seeded" are not the same state.
+    // An intentionally emptied profile stays empty: `establishedTs` outlives
+    // the zones, so "empty" and "never existed" are not the same state.
     await store.seed([{ id: 'pz2', name: 'โซน B', piles: [] }]);
     expect((await store.get()).zones).toEqual([]);
   });
@@ -94,7 +94,21 @@ describe('MemoryFarmProfileStore', () => {
 
     const after = await store.get();
     expect(after.zones.map((z) => z.name)).toEqual(['โซน มือ']);
-    expect(after.seededTs).toBeNull();
+  });
+
+  it('does not re-seed a HAND-BUILT profile the owner has since emptied', async () => {
+    // The seed guard is about whether a profile ever existed, not about
+    // whether it was seeded: a profile typed by hand and then cleared out was
+    // cleared out just as deliberately as a seeded one. Regression for the QA
+    // finding on 2026-09-03 — before the fix, this profile re-seeded itself
+    // from the last sale on the next visit to its own screen.
+    const z = await store.addZone('โซน มือ');
+    expect((await store.get()).establishedTs).not.toBeNull();
+    await store.removeZone(z.id);
+    expect((await store.get()).zones).toEqual([]);
+
+    await store.seed([{ id: 'pz1', name: 'โซน A', piles: [] }]);
+    expect((await store.get()).zones).toEqual([]);
   });
 
   it('edit, rename or remove on an unknown id is a no-op, not an error', async () => {
@@ -103,7 +117,7 @@ describe('MemoryFarmProfileStore', () => {
     await expect(store.editPile('nope', { name: 'x' })).resolves.toBeUndefined();
     await expect(store.removePile('nope')).resolves.toBeUndefined();
     await expect(store.addPile('nope', { name: 'x', tareG: 1, stdNetG: 2 })).resolves.toBeNull();
-    expect(await store.get()).toEqual({ zones: [], seededTs: null });
+    expect(await store.get()).toEqual({ zones: [], establishedTs: null });
   });
 });
 

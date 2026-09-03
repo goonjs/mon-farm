@@ -138,6 +138,34 @@ test('a profile the owner has emptied stays empty, and setup falls back to the b
   await expect(page.getByTestId('profile-empty')).toBeVisible();
 });
 
+test('a hand-built profile emptied on purpose is not re-seeded from the last sale', async ({ page }) => {
+  // The case above empties a profile while the only sale in existence has no
+  // zones, so nothing could have been seeded either way. This is the one that
+  // actually bites: a profile typed by hand (never seeded, so `establishedTs`
+  // has to be set by the hand-build), a real sale with real zones to seed
+  // from, and the owner clearing the profile out on purpose. Regression for
+  // the QA finding of 2026-09-03.
+  await buildProfile(page, 'โซนมือ', '2');
+
+  await startNewSale(page);
+  await page.locator('[data-testid^="offer-reject-"]').click();
+  await page.getByTestId('new-zone-name').fill('โซนจากการขาย');
+  await page.getByTestId('add-zone').click();
+  await page.locator('[data-testid^="pile-name-"]').fill('กองจากการขาย');
+  await page.locator('[data-testid^="pile-tare-"]').fill('9.9');
+  await page.locator('[data-testid^="add-pile-"]').click();
+  await expect(page.locator('[data-testid^="pile-pile-"]')).toContainText('กองจากการขาย');
+
+  await openProfileScreen(page);
+  await page.locator('[data-testid^="profile-remove-zone-"]').first().click();
+  await page.locator('[data-testid^="profile-remove-zone-"][data-testid$="-confirm"]').click();
+  await expect(page.getByTestId('profile-empty')).toBeVisible();
+
+  await openProfileScreen(page);
+  await expect(page.getByTestId('profile-empty')).toBeVisible();
+  await expect(page.getByTestId('farm-profile')).not.toContainText('โซนจากการขาย');
+});
+
 test('the profile seeds itself once from the last sale, then stops', async ({ page }) => {
   // No profile yet: the first sale is typed by hand, exactly as before S27.
   await startNewSale(page);

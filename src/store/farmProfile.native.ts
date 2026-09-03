@@ -40,7 +40,7 @@ export class SqliteFarmProfileStore extends DocFarmProfileStore {
     if (!row) return EMPTY_PROFILE;
     try {
       const doc = JSON.parse(row.doc) as Partial<FarmProfile>;
-      return { zones: doc.zones ?? [], seededTs: doc.seededTs ?? null };
+      return { zones: doc.zones ?? [], establishedTs: doc.establishedTs ?? null };
     } catch {
       return EMPTY_PROFILE;
     }

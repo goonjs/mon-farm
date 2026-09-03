@@ -24,7 +24,8 @@
  * this screen is opened with a profile that is empty AND has never been
  * seeded, it is filled in from the most recently started sale — so the first
  * profile does not have to be typed either. A profile the owner has since
- * emptied stays empty (`seededTs` outlives the zones).
+ * emptied — whether it was seeded or typed by hand — stays empty
+ * (`establishedTs` outlives the zones).
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -60,7 +61,7 @@ export default function FarmProfileScreen() {
       // The seed is offered, not forced: `seed()` itself refuses a profile
       // that already has zones or has been seeded before, so this can only
       // ever fill in a genuinely empty, never-seeded one.
-      if (current.seededTs === null && current.zones.length === 0) {
+      if (current.establishedTs === null && current.zones.length === 0) {
         const zones = await lastSaleProfileZones();
         if (zones.length) await farmProfileStore.seed(zones);
       }

@@ -17,8 +17,8 @@
  * The profile is stored as ONE document rather than relational rows — unlike
  * `people`, which is listed, sorted and looked up by id. Nothing queries a
  * profile: it is read whole when a screen opens and written whole when the
- * owner changes something, it is a handful of zones, and `seededTs` has to
- * stay consistent with the zone list it describes. A single document is the
+ * owner changes something, it is a handful of zones, and `establishedTs` has
+ * to stay consistent with the zone list it describes. A single document is the
  * simplest thing that is correct here (KISS), and it keeps the SQLite adapter
  * to one row.
  */
@@ -27,7 +27,7 @@ import { newId } from '../lib/id';
 import type { FarmProfile, FarmProfileStore, ProfilePile, ProfileZone } from './farmProfile';
 import type { Pile, Zone } from '../core/types';
 
-export const EMPTY_PROFILE: FarmProfile = { zones: [], seededTs: null };
+export const EMPTY_PROFILE: FarmProfile = { zones: [], establishedTs: null };
 
 /**
  * A past sale's live zones and piles, as profile zones.
@@ -71,7 +71,17 @@ export abstract class DocFarmProfileStore implements FarmProfileStore {
 
   async addZone(name: string): Promise<ProfileZone> {
     const zone: ProfileZone = { id: newId('pzone-'), name, piles: [] };
-    await this.update((p) => ({ ...p, zones: [...p.zones, zone] }));
+    // Adding the first zone by hand ESTABLISHES the profile, exactly as a seed
+    // would. Without this, a profile the owner typed themselves and later
+    // emptied is indistinguishable from one that never existed, and the next
+    // visit to this screen re-seeds it from the last sale — the app overruling
+    // a decision the owner just made, which is the failure mode S27 exists to
+    // prevent. (QA, 2026-09-03.)
+    await this.update((p) => ({
+      ...p,
+      zones: [...p.zones, zone],
+      establishedTs: p.establishedTs ?? Date.now(),
+    }));
     return zone;
   }
 
@@ -123,9 +133,9 @@ export abstract class DocFarmProfileStore implements FarmProfileStore {
   async seed(zones: readonly ProfileZone[]): Promise<void> {
     const before = await this.read();
     // Two separate guards, both required by S27's acceptance criteria: a
-    // profile with zones in it is already the owner's, and a profile that was
-    // seeded once and then emptied stays empty.
-    if (before.seededTs !== null || before.zones.length > 0) return;
-    await this.write({ zones: [...zones], seededTs: Date.now() });
+    // profile with zones in it is already the owner's, and a profile that once
+    // existed — seeded or typed by hand — and was then emptied stays empty.
+    if (before.establishedTs !== null || before.zones.length > 0) return;
+    await this.write({ zones: [...zones], establishedTs: Date.now() });
   }
 }

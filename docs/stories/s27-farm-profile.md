@@ -272,6 +272,17 @@ Written to fail first (TDD), per criterion above.
       version) — proves the profile only changes via its own settings
       surface.
 
+**Added by QA, 2026-09-03** (see Code review findings 1 and 2):
+- [x] Store: a HAND-BUILT profile the owner has since emptied is not
+      re-seeded — the other half of the no-re-seed criterion, which the
+      original cases only covered for a *seeded* profile.
+- [x] Screen: opening the profile screen on an emptied hand-built profile,
+      with a past sale sitting there to seed from, seeds nothing.
+- [x] e2e: the same, driven through the UI end to end.
+- [x] Setup form: an offered zone whose name has been blanked cannot be
+      accepted — a hand-typed zone can never be nameless, so the offer must
+      not be able to write one either.
+
 **Existing e2e assertions likely needing an update, now that setup is no
 longer blank when a profile exists:**
 - `e2e/setup.spec.ts`'s progression tests currently assume a brand-new sale
@@ -315,6 +326,19 @@ longer blank when a profile exists:**
       still holding the original 2 kg tare — the no-mutation guarantee, on
       screen), `07-offer-rejected-blank-form.png` (offer rejected; setup falls
       back to the blank form).
+
+### QA re-verification (independent, 2026-09-03)
+
+Every figure above was re-run from a clean tree at `19557f3` and matched:
+`tokens:check`, `contrast`, `typecheck`, `lint` clean; `test:core` 151/11
+files; `test:ui` 94/15 suites; `build:web` exports `/farm-profile`;
+`test:e2e` **188 passed / 6 skipped**. Nothing the dev claimed about the gate
+was overstated.
+
+After the two QA fixes below the gate was re-run in full and is green:
+`test:core` **152 passed** (+1 store case), `test:ui` **96 passed** (+2
+component cases), `test:e2e` **190 passed / 6 skipped** (+1 e2e case, run
+across both phone-landscape projects).
 
 ## Dev notes
 
@@ -535,8 +559,272 @@ when this moves to `In Progress`.
 
 ## Code review
 
-- Reviewer (separate agent/session):
-- Findings:
-- Resolution:
+- **Reviewer (separate agent/session):** QA/review session, 2026-09-03,
+  independent of the implementing session. Reviewed `19557f3` against this
+  story, the epic's §S27, `docs/checklists/code-review-checklist.md` and
+  `docs/checklists/definition-of-done.md`.
+
+- **Overall:** the story's central claim holds. The profile is written from
+  exactly one place, the offer's draft is local React state, and no path from
+  a sale reaches a profile mutator — checked by grep (`farmProfileStore` is
+  imported by `farm-profile.tsx` and `setup.tsx` only), by reading the diff,
+  and by driving the app and reading both localStorage keys before and after
+  every sale-side action. No event kind was added; `src/core/types.ts` is not
+  in the diff at all. Two defects found, both fixed here; four smaller
+  findings left for the dev/PO.
+
+- **Findings:**
+
+  1. **An emptied HAND-BUILT profile re-seeds itself. (High. FIXED here.)**
+     `seededTs` was set only by `seed()`, so a profile the owner typed
+     themselves and later cleared out was indistinguishable from one that
+     never existed, and the next visit to the profile screen re-seeded it from
+     the last sale. Driven in a real browser: hand-build a profile → run a
+     sale with different zones → empty the profile on purpose → reopen the
+     screen → the sale's zone is sitting there
+     (`screenshots/s27/qa-10-defect-reseed-after-empty.png`). That is exactly
+     the "app decides behind the owner's back" failure this story exists to
+     prevent, and it violates the acceptance criterion "an intentionally
+     emptied profile stays empty, it does not un-empty itself."
+
+     The existing e2e case for that criterion passed only by accident: it
+     empties the profile at a moment when the only sale in existence has no
+     zones, so `lastSaleProfileZones()` returns `[]` and nothing could have
+     been seeded either way. The store-tier test covered only the
+     seeded-then-emptied half.
+
+     **Fix:** `seededTs` → `establishedTs`, meaning "this profile has existed
+     before, by seed OR by hand", and `addZone` sets it when null. The seed
+     guard is otherwise unchanged. Regression cases added at all three tiers:
+     store (`does not re-seed a HAND-BUILT profile the owner has since
+     emptied`), screen (`does not seed over a HAND-BUILT profile the owner has
+     since emptied`), and e2e (`a hand-built profile emptied on purpose is not
+     re-seeded from the last sale`).
+
+     One test-isolation problem surfaced with it: `farm-profile-screen.test.tsx`
+     shares a single `MemoryFarmProfileStore` across tests and "reset" by
+     removing zones — which no longer resets `establishedTs`, so the seeding
+     test would have passed or failed on test order. The mock now exposes a
+     `__resetProfileStore()` that puts the document back to untouched, and the
+     `beforeEach` uses it.
+
+  2. **The offer can write a nameless zone into the log. (Medium. FIXED
+     here.)** Blanking an offered zone's name and pressing accept wrote
+     `{t:'zone_added', name:''}` — proven in the browser
+     (`qa-14-empty-name-accepted.png`). The hand-typed path cannot do this
+     (`addZone` returns early and its button is disabled), and this story's
+     own criterion is that accepting writes *exactly* what a hand-typed zone
+     writes. The log is append-only, so a nameless zone cannot be taken back
+     out. **Fix:** accept is guarded and its button disabled while any draft
+     zone name is blank; names are trimmed on write. Component test added.
+
+  3. **A rejection is not persisted; a reload re-offers the rejected zone.
+     (Low. NOT fixed — a PO call.)** `setDraft` is component state, so
+     rejecting a zone and then reloading (or leaving and returning to setup)
+     brings the whole offer back. Verified in a browser: offer count 0 after
+     reject, 1 after reload. Nothing is written either way, so this is not a
+     data problem, and the AC as written ("left out of this sale entirely") is
+     met in the moment. But it does mean the app re-proposes a decision the
+     operator already made — the same thing the code comment above
+     `<ProfileOffer />` says it exists to avoid, one level down. Persisting a
+     rejection needs somewhere to persist it (a sale event would put profile
+     mechanics into the log, which this story forbids), so it is a design
+     call, not a patch.
+
+  4. **The "most recently started" rule degrades to adapter order when no sale
+     has a `sale_started` event. (Low. NOT fixed.)** `lastSaleProfileZones()`
+     reduces with `(s.startedTs ?? 0) > (best.startedTs ?? 0)`, so sales that
+     all have `startedTs === null` tie and the first in `listSales()` order
+     wins — the exact dependency the dev's note says was avoided. This is
+     reachable: `sale_started` is only written once the farm name and buyer are
+     filled in, so a sale whose zones were typed before its parties has no
+     `startedTs`. Both adapters happen to list newest-first (web prepends to
+     `mon-farm:sales`, native `ORDER BY MIN(ts) DESC`), so the observable
+     result is still the newest sale — the rule is correct by luck, not by
+     construction. Worth a `?? MIN(ts)` fallback if this is ever load-bearing.
+
+     The rule itself was verified positively: two sales with real
+     `sale_started` timestamps, with `mon-farm:sales` reversed by hand so the
+     adapter lists the older first, still seeded from the newer
+     (`qa-13-seed-most-recently-started.png`).
+
+  5. **`canRemovePile`'s deletion is bundled into this commit. (Low. NOT
+     fixed.)** `19557f3` removes `canRemovePile` from `src/core/project.ts` —
+     an S26 review finding, resolved with a good argument and recorded in
+     `s26-editable-piles.md`. The reasoning is right and the function is
+     genuinely dead (no caller anywhere). But that note says "kept as its own
+     change, separate from S27's work" and it is not: it is in the S27 commit,
+     against `docs/process.md`'s one-logical-change rule and the DoD's "no
+     unrelated refactors bundled in". Cosmetic; noted rather than unpicked.
+
+  6. **The profile screen's destructive controls are visually louder than the
+     edit ones. (Low, observation.)** On the profile screen a pile row puts a
+     narrow `แก้ไข` next to a full-width red `ลบกองออกจากโปรไฟล์`
+     (`qa-11-profile-740x360.png`). Both removals are two-tap via
+     `RemoveControl`, so nothing is lost in one slip, and the weighting is
+     the same one `PileRow` uses in-sale — flagging it as a UX read for the
+     PO, not a defect.
+
+- **Resolution:** findings 1 and 2 fixed in the working tree by the reviewer,
+  with tests, and the full gate re-run green. Findings 3–6 left open above for
+  the dev/PO, none of them blocking. The rest of the checklist passes: the
+  story's edge cases are covered rather than only the golden path, the
+  offline/sync section is answered honestly (there is no network path in this
+  story at all), the store shape follows `people.ts` without inventing a new
+  pattern, and `DocFarmProfileStore` is the simpler answer than three copies
+  of the same read-modify-write — KISS as claimed, not layering.
 
 ## QA notes
+
+**QA session, 2026-09-03 — independent of the implementing session.** Verified
+`19557f3` by re-running the whole gate, by re-deriving the fail-first claim in
+a throwaway clone, and by driving the exported web build in real Chromium at
+844×390 and the 740×360 NFR-4 floor, reading `mon-farm:farm-profile` and
+`mon-farm:events:*` out of localStorage at every step rather than trusting the
+screen.
+
+### Acceptance criteria, one by one
+
+| AC | Result | How |
+| --- | --- | --- |
+| `FarmProfileStore` mirrors `people.ts`; web + native adapters | **Pass** | Read the port and all three adapters; the mutators live once on `DocFarmProfileStore`, the adapters implement `read`/`write`. Native is code-reviewed only (see "not verified"). |
+| Not seeded on install; seeded **once** from the most recently started sale on first opening the screen | **Pass** | Fresh context: no `mon-farm:farm-profile` key at all until the screen is opened. Seed happens on first open, `establishedTs` set. |
+| …and never re-seeds, even after the owner empties it | **Pass, after a fix** | Failed as shipped for a hand-built profile (Code review finding 1). Fixed and covered at three tiers. |
+| Settings surface can view/add/rename/remove a zone and add/edit/remove a pile | **Pass** | All six driven through the UI in a real browser; each change read back out of localStorage. |
+| Setup offers the profile when the sale has zero zones; accepting writes ordinary `zone_added`/`pile_added` | **Pass** | Log after accept: `zone_added` payload keys exactly `[t, zoneId, name]`, `pile_added` exactly `[t, pileId, zoneId, name, tareG, stdNetG]` — identical to the manual path. No occurrence of "profile" anywhere in the sale's log. |
+| Each offered zone/pile editable before acceptance and rejectable, without changing the profile | **Pass** | Stored profile JSON byte-identical before/after: opening the editor, saving an edited tare, accepting, rejecting. |
+| Offer stops applying once the sale has a zone | **Pass** | Offer gone after accept; gone after a hand-typed zone; and only *live* zones count, so removing the sale's only zone does not re-offer. |
+| Profile never read by `settle()`, the report, or any other log consumer | **Pass** | `farmProfileStore` is imported by `farm-profile.tsx` and `setup.tsx` only. No new event kind — `src/core/types.ts` is untouched by the commit. |
+
+### The five things the epic actually cares about
+
+- **(a) Editing an offered zone before accepting does not mutate the profile.**
+  Proven: profile JSON identical before the edit, after the `PileEditor` save,
+  and after accept. `qa-06-offer-edit-before-accept.png`,
+  `qa-09-profile-unchanged.png`.
+- **(b) Rejecting an offer does not mutate it.** Proven: identical JSON after
+  a per-zone reject and after typing a different zone by hand instead.
+  `qa-08-offer-rejected-blank-form.png`.
+- **(c) An in-sale pile edit or removal (S26) never writes back.** Proven:
+  accepted a profile zone, then ran S26's `pile_edited` and the pile removal
+  path against it. Profile JSON unchanged after both.
+- **(d) An accepted zone is indistinguishable from a hand-typed one.** Proven
+  from the raw log, by payload key set, not by absence of a marker string —
+  see the table above.
+- **(e) Seeds once; an emptied profile is not re-seeded.** Half-true as
+  shipped. Seeded-then-emptied held; **hand-built-then-emptied did not** and
+  re-seeded silently. Fixed here.
+
+Also checked: **no zone contract leaks into the profile.** A seeded zone's key
+set is exactly `[id, name, piles]`, and a `zone_contract_set` worker's name
+appears nowhere in the stored document — asserted in the browser against real
+localStorage, not only in the unit test.
+
+### Screenshots (this session, `qa-` prefixed)
+
+Golden path: `screenshots/s27/qa-01-profile-empty-first-run.png`,
+`qa-02-setup-blank-empty-profile.png` (setup still works with no profile),
+`qa-03-profile-seeded-from-sale.png`, `qa-04-profile-filled-by-hand.png`,
+`qa-05-setup-offer.png`, `qa-07-accepted-into-sale.png`.
+
+Edge cases and evidence: `qa-06-offer-edit-before-accept.png`,
+`qa-08-offer-rejected-blank-form.png`, `qa-09-profile-unchanged.png`,
+`qa-10-defect-reseed-after-empty.png` (finding 1, before the fix),
+`qa-13-seed-most-recently-started.png` (the seed rule, with the sale index
+reversed by hand), `qa-14-empty-name-accepted.png` (finding 2, before the fix).
+
+After the fixes, re-driven against the rebuilt web export:
+`qa-15-emptied-stays-empty.png` (a hand-built profile emptied on purpose,
+still empty on reopening, with a sale sitting there to seed from) and
+`qa-16-blank-name-accept-blocked.png` (accept disabled while an offered zone
+name is blank; forcing the click writes nothing, and typing a name back
+re-enables it).
+
+Layout: `qa-11-profile-844x390.png`, `qa-11-profile-740x360.png`,
+`qa-12-setup-offer-844x390.png`, `qa-12-setup-offer-740x360.png`. At both
+viewports every `data-testid` element's box was measured against the viewport
+rather than trusted to `toBeVisible()`: no element extends past either edge,
+and the page has no horizontal overflow. Thai renders cleanly at both sizes —
+no clipped ascenders on the stacked vowels in ตั้งค่าการขาย / โปรไฟล์ไร่, and
+the two-line field labels (นน. ตะกร้าเปล่า) wrap rather than truncate.
+
+### The dev's e2e-isolation reasoning — checked, and it holds
+
+`playwright.config.ts` sets no `storageState` and there is no `globalSetup`,
+so every test gets its own browser context with empty storage; nothing writes
+`mon-farm:farm-profile` except the profile screen and nothing else opens it.
+`e2e/fixtures.ts`'s `seedSale` only ever writes sale keys. Both suites the
+story flagged (`setup.spec.ts`, `sale-list.spec.ts`) pass unchanged. The
+decision *not* to add a `localStorage.clear()` fixture was right — there is no
+leak for it to paper over.
+
+The isolation weakness is one tier down, in Jest, where a single mocked store
+**is** shared across tests in a file (see Code review finding 1); fixed.
+
+### Fail-first, re-derived in a throwaway clone
+
+Reverting the production files at `19557f3` leaves every new test red, but
+only in the trivial "module not found" way a new-module story produces, which
+proves little. So the tests were checked for bite instead, by mutating the
+shipped code in the clone:
+
+- dropping the `establishedTs` guard from `seed()` → `does not re-seed a
+  profile the owner has since emptied` fails, alone.
+- letting `profileZonesFromSale` carry `z.contract` → `carries no worker or
+  split` fails, alone.
+- making the offer's accept write back to the profile → `an edited tare goes
+  into the sale and leaves the profile alone` fails.
+
+The suite discriminates the behaviours it claims to. Its one blind spot was
+the hand-built-then-emptied path, now closed.
+
+### What could not be verified here
+
+- **The native (expo-sqlite) adapter.** Read and reviewed only — this sandbox
+  runs the exported web build, so `SqliteFarmProfileStore`, its
+  `CREATE TABLE … CHECK (id = 1)` and the `ON CONFLICT DO UPDATE` upsert have
+  never executed. It is thin (`read`/`write` around JSON) and shares all its
+  logic with the web path, which is exercised end to end, but "shares the
+  logic" is not "ran on a device". Same standing gap as `people.native.ts`.
+- **Any migration of an already-stored profile.** The `seededTs` →
+  `establishedTs` rename means a document written by a build of `19557f3`
+  reads back with `establishedTs: null`, i.e. it would seed once more. Nothing
+  has shipped, so no real device holds one — but if a build of `19557f3` did
+  reach a phone, that phone needs its profile checked after the update.
+- **CI.** Not run from here; the gate was run locally, in this sandbox only.
+- **Anything about a second farm** — see the ambiguity below.
+
+### The open ambiguity: per-device or per-farm
+
+Asked, and answered as a view rather than a decision, because it is the
+owner's to make.
+
+**Recommendation: leave it per-device and single-farm for now, but stop
+letting the schema be the thing that says so.** The `CHECK (id = 1)` is
+honest about today's model and it is the right amount of code for what the
+epic asked. Widening it now would mean a farm-selection concept on the
+setup screen, in the profile screen and in the seed rule — three surfaces, for
+a second farm nobody has said exists. That is the YAGNI call and it looks
+right.
+
+Two things worth the owner registering while it stays this way:
+
+1. **The cost of being wrong is not symmetric.** If one device is later used
+   for two farms, the failure is quiet, not loud: the second farm's setup gets
+   offered the first farm's zones and tares, and the offer is *editable*, so
+   the wrong tare can be accepted with a small correction rather than
+   rejected. A wrong tare that looks plausible is the one error class this
+   whole story was written to remove. If there is any real chance of a second
+   farm, the cheap insurance is not a second profile — it is showing the farm
+   name the profile was seeded from on the profile screen and on the offer, so
+   a mismatch is visible at the moment of acceptance.
+2. **The migration is easy, later, precisely because of the choices made
+   here.** The profile is one document, it is device configuration, and it is
+   out of the event log — so becoming per-farm is a keyed document
+   (`CHECK (id = 1)` → a `farm_key` primary key) plus a picker, and no past
+   sale's record changes, because no past sale's record ever depended on it.
+   Nothing about deferring this decision makes it more expensive to revisit.
+
+So: confirm single-farm-per-device is real, and if it is only *probably* real,
+take the insurance in point 1 — say on screen which farm the profile came
+from — rather than building the second profile now.
