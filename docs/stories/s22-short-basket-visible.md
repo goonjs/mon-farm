@@ -4,8 +4,11 @@ Status: Review — implemented 2026-09-03. Acceptance criteria drafted the same
 day by the PO agent from the owner's agreed epic-2 scope
 (`docs/epics/epic-2-second-field-round.md`, S22). Every check below is green
 locally (tokens, contrast, typecheck, lint, vitest, jest, web export,
-playwright); awaiting the independent code review and the tester agent's
-browser pass.
+playwright). Independent code review and QA browser pass completed
+2026-09-03 — **approved with findings**; every acceptance criterion passes
+in a real browser, and one medium finding (the register strip squeezes the
+caption against the public numeral at the 740×360 floor) is open for the
+dev/owner before this moves to `Done`. See **Code review** and **QA notes**.
 
 ## Context
 
@@ -257,6 +260,16 @@ the *value* rendered beside them changes.
       this run — the Count tab shows no short line at all, and the Pile tab
       shows `เข่งไม่เต็ม 0` with the zero-term breakdown.
 
+**Independently re-verified by QA (separate session, 2026-09-03).** The
+full gate was re-run from scratch and reproduces the numbers above exactly
+(48 contrast pairings, 85 vitest, 48 jest, 8 exported routes with no
+`counter.test` among them, 120 e2e passed / 6 skipped). Separately from the
+suite, the flow was walked by hand in a real Chromium at 844×390 and at the
+740×360 floor — sale created through the UI, piles opened through the real
+zero/tare gate, baskets counted with real press-and-hold — and all eleven
+acceptance criteria confirmed by eye and by measurement. Full table,
+screenshots and two findings in **QA notes** and **Code review** below.
+
 ## Dev notes
 
 **Shape of the change.** Presentation only, as scoped: `src/core/totals.ts`
@@ -317,8 +330,233 @@ will render through this same path with no further work here.
 
 ## Code review
 
-- Reviewer (separate agent/session):
-- Findings:
-- Resolution:
+- **Reviewer (separate agent/session):** QA agent (independent session,
+  2026-09-03). Reviewed `29b7fc3` against
+  `docs/checklists/code-review-checklist.md` and
+  `docs/checklists/definition-of-done.md`, plus a hand-driven browser pass
+  (see QA notes).
+
+- **Correctness.** The diff does what the acceptance criteria ask, and it
+  does it in the place the story said it would. `pileTotals` is untouched;
+  `ShortSoFar` reads the same `totals` the numeral and the mini-count
+  already read, so per-pile behaviour and undo/void fall out of the
+  projection rather than being re-derived. All eleven ACs verified live in
+  a real browser (table in QA notes), not only through the suite.
+
+- **TDD.** Independently confirmed rather than taken on trust: the three
+  screen files were reverted to `d26f54a` (pre-S22) with
+  `src/test/counter-screen.test.tsx` left in place — **6 of its 7 tests
+  fail**, and the one that passes is the "no line at zero" case, which
+  cannot fail against a tree where the line does not exist. So the
+  component tests genuinely pin the new behaviour. `src/core/totals.test.ts`
+  passes against the pre-S22 tree by design — the story scoped it as
+  regression cover for existing `Totals` behaviour, not as a fail-first
+  test, and it says so.
+
+- **Quality.** YAGNI/KISS hold. `register?: ReactNode` is one optional slot
+  and no more; `ShortSoFar` returns `null` at zero rather than rendering a
+  hidden node; `Stat` gained one optional `testID`. No dead code, no debug
+  logging, no commented-out work, no speculative props. The one incidental
+  edit — `alignItems: 'center'` on the caption strip — is required by the
+  second line and is not a drive-by refactor. Scope holds: the Log tab,
+  the numeral, `gate.expected` and the close/reopen row are all untouched.
+
+- **Docs.** Story and `docs/architecture.md` both updated in the same
+  change; the architecture note (a screen's component test never lives
+  beside the screen) is a genuinely useful finding and is in the right
+  document. Commit subject is 47 chars, imperative, body explains why.
+
+- **Findings:**
+
+  1. **[Medium — layout, F-9.7 robustness] The register strip is
+     bottom-anchored, so the new line pushes the *caption* up into the
+     public numeral's glyph.** The numeral is sized from stage height
+     (`byHeight = box.height * stageHeightRatio` in `HoldStage`) and knows
+     nothing about how tall the caption strip is, so a second line does not
+     make room — it consumes the gap. Measured by hand (Chromium, 2× DPR,
+     one-digit count, one short basket logged):
+
+     | viewport | numeral ink bottom | caption top | clearance | clearance before S22 |
+     |---|---|---|---|---|
+     | 844×390 | 295.0 px | 297.0 px | **≈2 px** | ≈20 px |
+     | 740×360 (NFR-4 floor) | 266.5 px | 267.0 px | **≈0.5 px** | ≈18.5 px |
+
+     Nothing overlaps today, and the AC as written passes: the numeral's
+     box is byte-identical before and after the first short basket
+     (`{"x":337.234375,"y":74.25,"width":169.53125,"height":258.5}` at
+     844×390, unchanged), so the line neither covers nor resizes it. But
+     the margin that used to absorb font variation is now gone. On the
+     floor viewport the digit ink and the caption are half a pixel apart:
+     any face whose digits sit lower in the em box, a larger OS text
+     scale, or a future third register line lands *on* the public numeral —
+     the exact thing F-9.7 exists to prevent. See
+     `screenshots/s22/13-floor-740x360-count.png` and
+     `screenshots/s22/15-floor-29-baskets-count.png` (the `9`'s tail is the
+     binding glyph).
+
+     The e2e assertion cannot catch this: it compares the numeral's *box*
+     before and after, and the box never moves — what moved is the caption,
+     into the numeral's line-box slack. Suggested fixes, either of which is
+     small: subtract the measured strip height from `byHeight` (costs a few
+     px of numeral, needs re-checking against the 0.62 legibility floor), or
+     put the short figure *beside* the caption on one row — which the AC
+     already permits ("beside/under") and which restores the strip to its
+     old height. **Not fixed by QA:** both are visual-design decisions that
+     belong to the owner/dev, and either one invalidates the e2e assertion
+     `lineBox.y >= captionBox.y + captionBox.height`.
+
+  2. **[Low — cosmetic] `pile.netBreakdown` wraps at realistic pile
+     weights, on both viewports.** A 26-basket pile with three short
+     baskets renders `1,300 + 51.7 = 1,351.7 กก.` — which wraps onto a
+     second line and drags the `น้ำหนักรวม` label into wrapping too, at
+     844×390 *and* at 740×360. Before S22 the same row read `1,351.7 กก.`
+     on one line. Nothing clips or overflows, so the layout holds, but the
+     card's headline number is now its least legible row exactly when the
+     pile is big. Evidence:
+     `screenshots/s22/16-phone-pile-large-weights.png`,
+     `screenshots/s22/16-floor-pile-large-weights-wrap.png`. Worth a
+     shorter form (drop the unit from inside the breakdown, or put the
+     breakdown on its own line under the total). Left for the dev/PO — it
+     is a string/layout choice, not a defect in this diff's logic.
+
+  3. **[Low — string nit] The English `counter.shortSoFar` reads
+     redundantly:** `'{n} short · {net} kg short'` renders as
+     `1 short · 12.4 kg short`. The Thai (`1 เข่งไม่เต็ม · สั้น 12.4 กก.`)
+     is fine. The story specified this exact text, so it is not a deviation
+     — but it should probably be `{n} short · {net} kg` before anyone runs
+     the app in English.
+
+  4. **[Low — hygiene, not a defect] The change carries screenshot churn
+     for screens S22 does not touch** — `settings.png`, `settlement.png`,
+     `sale-list.png` across four device folders, re-captured because the
+     e2e suite rewrites them on every run. Harmless, but it means the diff
+     is larger than the story and hides which screenshots are actually S22
+     evidence.
+
+  5. **[Observation] `pileTotals` is exercised, but `zoneTotals`/`saleTotals`
+     still show the merged figure.** The Pile tab's `รวม` card and the
+     top-bar mini-count keep summing standard + short silently. That is
+     correct per Out of scope (this story is two screens), and it is
+     consistent — just noting that the "read it as standard + short"
+     treatment now stops at the pile boundary, which a later story may want
+     to carry up.
+
+- **Resolution:** **Approved with findings.** Nothing found is a blocker
+  for the acceptance criteria as written — all eleven pass on real
+  hardware-equivalent browser runs. Finding 1 is the one that matters and
+  is deferred to the dev/owner rather than fixed here, because both
+  remedies are design decisions with a knock-on to the e2e geometry
+  assertion; it should be resolved before this story is marked `Done`,
+  since it erodes the guarantee the story was written to protect. Findings
+  2–4 are cosmetic/hygiene and can be taken or explicitly waived. QA made
+  no code changes: the only working-tree edits from this review are this
+  story file and `docs/stories/screenshots/s22/`.
 
 ## QA notes
+
+Independent QA pass, 2026-09-03, separate session from the implementer.
+Nothing below is taken from the dev's write-up — every figure was
+re-measured.
+
+### The gate, re-run end to end
+
+Run in the order the process requires, all from a clean working tree at
+`29b7fc3`:
+
+| step | result |
+|---|---|
+| `npm run tokens:check` | ✅ `tokens.css` up to date |
+| `npm run contrast` | ✅ 48/48 pairings; the new `warn` on `stage` clears at **8.72:1** light / **9.26:1** dark |
+| `npm run typecheck` | ✅ clean |
+| `npm run lint` | ✅ clean |
+| `npm run test:core` | ✅ 7 files, 85 tests — including the new `src/core/totals.test.ts` (4) |
+| `npm run test:ui` | ✅ 10 suites, 48 tests — including `src/test/counter-screen.test.tsx` (7) |
+| `npm run build:web` | ✅ 8 static routes exported; **no `counter.test` route in the manifest**, confirming the deviation-1 fix actually holds |
+| `npm run test:e2e` | ✅ 120 passed, 6 skipped (the pre-existing project-skipped orientation cases) |
+
+The dev's claimed numbers reproduce exactly.
+
+### The hand-driven browser pass
+
+Not the suite: a real Chromium (`/opt/pw-browsers/chromium-1194`) driven
+step by step against `npm run build:web` output served by
+`scripts/serve-dist.mjs`, phone-landscape **844×390** at 2× DPR, then the
+**740×360** low-end floor. The sale was **created through the UI** — new
+sale, parties, price, one zone, two piles — then each pile opened through
+the real zero/tare gate and counted with real press-and-hold on the stage.
+Nothing was seeded for the golden path.
+
+| # | Acceptance criterion | Result | Evidence |
+|---|---|---|---|
+| 1 | Zero short baskets → only `gate.expected`, no short line | ✅ `short-so-far` absent; caption `2 + 50 = 52 กก.` | `02-count-three-standard-no-short-line.png` |
+| 2 | One short basket → count **and** summed weight | ✅ `1 เข่งไม่เต็ม · สั้น 12.4 กก.` (14.4 − 2 tare) | `03-count-one-short-basket.png` |
+| 3 | Second short basket → the **sum**, not the last | ✅ `2 เข่งไม่เต็ม · สั้น 20.4 กก.` (12.4 + 8.0) | `04-count-two-short-baskets-summed.png` |
+| 4 | Per-pile, not per-sale | ✅ switched to กอง 2: line absent at its gate, then its **own** `1 เข่งไม่เต็ม · สั้น 4 กก.`; switching back to กอง 1 restores `2 · 20.4` | `06-`, `07-`, `09-` |
+| 5 | Stable `testID` `short-so-far` | ✅ located by test id throughout | — |
+| 6 | Never overlaps/resizes the public numeral | ⚠️ **passes, but with no margin left** — numeral box identical before/after (see Code review finding 1) | `13-`, `15-` |
+| 7 | Pile tab short row = count + weight | ✅ `2 · 20.4 กก.` | `05-pile-tab-short-and-breakdown.png` |
+| 8 | Zero short baskets → bare `0`, no unit | ✅ `0` | `12-pile-tab-zero-case-breakdown.png` |
+| 9 | Weight row reads standard + short | ✅ `150 + 20.4 = 170.4 กก.`; zero case keeps the shape as `150 + 0 = 150 กก.` | `05-`, `12-` |
+| 10 | `pile-short-weight` / `pile-weight-breakdown` test ids | ✅ both resolve | — |
+| 11 | Undo/void takes the weight straight back out | ✅ `20.4 → 12.4` on the first undo, **line disappears entirely** on the second, Pile tab back to `0` and `150 + 0 = 150 กก.` | `10-`, `11-`, `12-` |
+
+Cross-checks the ACs do not name, run anyway:
+
+- **Thai renders correctly.** No tofu, no clipping, no ellipsis, at either
+  viewport: `scrollWidth === clientWidth` (173 px) on `short-so-far`, and
+  the glyphs (`เข่งไม่เต็ม`, `สั้น`, `กก.`, tone marks included) are intact
+  under 3× magnification of the floor capture. The line renders in the mono
+  stack at 11 px in `rgb(111,64,0)` — the `warn` token the contrast script
+  now covers.
+- **Arithmetic is genuinely derived, not displayed.** Every weight shown
+  was reached by entering a gross reading through the panel
+  (14.4 / 10.0 / 6.0 kg against a 2 kg tare) and matched net exactly —
+  including the second pile, where `50 + 4 = 54 กก.`.
+- **The floor holds.** At 740×360 the line stays inside the stage
+  (`line 285→303` within `stage 66→311`), inside the viewport, and the Pile
+  tab card grows to fit rather than clipping. It does **wrap** on large
+  weights — Code review finding 2.
+- **Offline.** The whole pass ran against a static export with no backend
+  and no network calls; the sale was created, counted, undone and re-read
+  entirely from `localStorage`.
+
+### Screenshots (this QA pass)
+
+All under `docs/stories/screenshots/s22/`:
+
+**Golden path** — `00-setup-complete.png`, `01-zero-tare-gate.png`,
+`02-count-three-standard-no-short-line.png`,
+`03-count-one-short-basket.png`,
+`04-count-two-short-baskets-summed.png`,
+`05-pile-tab-short-and-breakdown.png`.
+
+**Per-pile** — `06-pile2-gate-no-short-line.png`,
+`07-pile2-own-short-figure.png`, `08-pile2-tab-own-figures.png`,
+`09-back-on-pile1-figure-restored.png`.
+
+**Undo / zero** — `10-after-undo-one-short.png`,
+`11-after-undo-line-gone.png`, `12-pile-tab-zero-case-breakdown.png`.
+
+**Low-end floor (740×360)** — `13-floor-740x360-count.png`,
+`14-floor-740x360-pile.png`.
+
+**Stress: 26 standard + 3 short baskets** —
+`15-floor-29-baskets-count.png`, `15-phone-29-baskets-count.png`,
+`16-floor-pile-large-weights-wrap.png`,
+`16-phone-pile-large-weights.png` (the evidence for findings 1 and 2).
+
+### What QA could not verify
+
+- **That the tests were literally written before the code.** The commit
+  landed as one commit, so ordering is not in the history. What *is*
+  verified is the property TDD is for: the component tests fail against the
+  pre-S22 tree (6/7), so they pin behaviour rather than describe it after
+  the fact.
+- **A real device.** Everything here is desktop Chromium at phone
+  viewports. The 0.5 px clearance in finding 1 is measured against this
+  machine's font stack; on an actual low-end Android with a different
+  system face the sign of that gap is exactly what is unknown, which is why
+  the finding is filed as medium rather than cosmetic.
+- **Speech/announcement interaction.** Out of this story's scope and not
+  exercised beyond the suite (`เสียงพูดไม่ทำงาน` shows in the captures
+  because the sandbox has no speech synthesis — pre-existing, unrelated).
