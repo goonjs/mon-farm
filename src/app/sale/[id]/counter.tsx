@@ -826,6 +826,7 @@ function sysLabel(p: { t: string } & Record<string, unknown>, msg: Translate): s
     case 'zone_added': return msg('log.zoneAdded', { name: String(p.name) });
     case 'zone_contract_set':
       return msg('log.zoneContractSet', { worker: String(p.workerName), pct: String(p.ownerPct) });
+    case 'zone_contract_cleared': return msg('log.zoneContractCleared');
     case 'pile_added': return msg('log.pileAdded', { name: String(p.name) });
     case 'zero_check':
       return p.ok

@@ -138,6 +138,28 @@ describe('settle — per-zone contracts actually vary', () => {
     const events = b.build();
     expect(() => settle(events, projectSale(events))).not.toThrow();
   });
+
+  it('a cleared zone contract pays by the sale default, and nobody by name', () => {
+    const b = setUpSale(new LogBuilder());
+    withZoneContract(b, 'zA', 'somying', 'สมหญิง', 70);
+    readyPile(b, 'p1');
+    b.accept('p1');
+
+    const withContract = settle(b.build(), projectSale(b.build()));
+    expect(withContract.perZone.find((z) => z.zoneId === 'zA')?.workerName).toBe('สมหญิง');
+    expect(withContract.perWorker.map((w) => w.personId)).toContain('somying');
+
+    // Clearing is an appended event, never an erasure — but from here on the
+    // zone must settle on the sale-level 50/50 and attribute nothing to her.
+    b.sys({ t: 'zone_contract_cleared', zoneId: 'zA' });
+    const events = b.build();
+    const s = settle(events, projectSale(events));
+    const zA = s.perZone.find((z) => z.zoneId === 'zA');
+
+    expect(zA?.workerName).toBeNull();
+    expect(zA?.ownerSatang).toBe(zA!.workerSatang); // the sale default is 50/50
+    expect(s.perWorker.map((w) => w.personId)).not.toContain('somying');
+  });
 });
 
 describe('settle — rounding closes exactly', () => {

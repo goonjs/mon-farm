@@ -137,6 +137,12 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
         break;
       }
 
+      case 'zone_contract_cleared': {
+        const z = zones.get(payload.zoneId);
+        if (z) z.contract = null;
+        break;
+      }
+
       case 'pile_added': {
         piles.set(payload.pileId, {
           id: payload.pileId,
