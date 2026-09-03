@@ -360,6 +360,56 @@ arriving before the deduction it names or a scrambled replay order (proved in
 
 ## QA notes
 
+**Two rounds of exploratory manual QA, 2026-09-03/04**, after rebasing onto
+main — so S29 and S27 met main's S25/S22 and the new `zone_contract_cleared`
+event for the first time. Both rounds drove the built app in real Chromium at
+844×390, the phone-landscape viewport this app is locked to. The automated
+suite (130 Playwright tests) was green throughout; these rounds exist to find
+what it does not assert.
+
+**Round 1 — every S29 and S27 flow passed**, including the five interaction
+cases that looked riskiest after the rebase. The one worth naming: clearing a
+zone's contract with main's new event and *then* deducting against that former
+worker shows a ฿0.00 share and a negative payout on its own card — the money
+is visible rather than misattributed or silently dropped, which is the
+behaviour S29's design section argues for.
+
+Round 1's one blocking defect belongs to S22/S25, not here: it reproduces on
+`main` alone. Recorded in the epic beside the story that owns it, with the
+measurement and a proposed fix, and deliberately not fixed from this branch.
+
+**Round 2 — multi-zone, multi-worker money, all correct to the satang.**
+Three zones with mixed contracted and default splits; one worker contracted in
+two zones at two *different* percentages (a single combined card, summed once);
+stacked deductions on two workers at once with no leakage between cards; a void
+of one of two deductions landing exactly between; a deduction larger than a
+worker's whole share showing −฿419.75 rather than clamping; deliberately
+non-dividing figures (฿26.53/kg at 33% and 47%) where owner + worker still
+equalled gross exactly per zone and the zone rows still summed to the sale
+gross; and zones closed out of order, which changed nothing. Sale gross and
+owner total never moved for any deduction or void.
+
+Two cosmetic findings, both on the settlement screen:
+
+1. *(fixed)* The two columns sat in a row with the default
+   `alignItems: 'stretch'`, so the short derivation card was stretched to the
+   height of the tall right-hand column. With three zones and a few deductions
+   that left half a screen of empty bordered box beside the money, which reads
+   as a broken screen. The row now aligns to the top and each column takes its
+   own height.
+2. *(not fixed, recorded)* `formatKg` uses `minimumFractionDigits: 0`, so
+   trailing zeros are stripped per value and one zone can read `113.5 กก.`
+   beside another reading `157.13 กก.` — inconsistent decimal places side by
+   side. It is real, but `formatKg` is shared by every weight in the app,
+   including the counter, and changing it would move numbers on screens this
+   story does not own and assertions in specs another session is editing. It
+   is cosmetic, the underlying figures are exact, and it predates both S29 and
+   S27. It belongs in its own change rather than smuggled into this one.
+
+**Not covered by either round**: the native build. Everything here is the web
+export. That matters more than usual for S27, whose SQLite adapter no tier in
+this repo exercises — see its Dev notes.
+
 Not yet performed by QA. Flagging for whoever picks this up: the one thing
 this session could not do is a real browser run (Playwright's Chromium could
 not be downloaded — org egress policy blocks `cdn.playwright.dev`). Please

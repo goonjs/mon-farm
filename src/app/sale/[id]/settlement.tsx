@@ -151,7 +151,20 @@ export default function SettlementScreen() {
         }
       />
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, flexDirection: 'row', gap: t.space.md }}>
+      {/* alignItems: 'flex-start' so each column is as tall as its own content.
+          The row's default is 'stretch', which sized the short derivation card
+          to the tall right-hand column — once a sale has three zones and a few
+          deductions, that left half a screen of empty bordered box next to the
+          money, which reads as a broken screen rather than a finished one. */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          padding: t.space.md,
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: t.space.md,
+        }}
+      >
         {/* ---- the derivation ---- */}
         <View style={[card(t), { flex: 1.1 }]}>
           <CardTitle>{msg('settle.derivation')}</CardTitle>
