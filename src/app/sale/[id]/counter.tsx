@@ -929,6 +929,9 @@ function sysLabel(p: { t: string } & Record<string, unknown>, msg: Translate): s
     case 'sale_closed': return msg('log.saleClosed');
     case 'sale_reopened': return msg('log.saleReopened', { reason: String(p.reason) });
     case 'clock_anomaly': return msg('log.clockAnomaly', { anomaly: String(p.anomaly) });
+    case 'deduction_added':
+      return msg('log.deductionAdded', { amount: formatBaht(Number(p.satang)), reason: String(p.reason) });
+    case 'deduction_voided': return msg('log.deductionVoided', { reason: String(p.reason) });
     case 'announced':
       return msg('log.announced', {
         thai: String(p.thai),

@@ -249,6 +249,79 @@ describe('lastAnnounceOk — derives the degraded-speech pill from the log', () 
   });
 });
 
+describe('deductions (S29) — projected, voided by mark not removal', () => {
+  it('a deduction_added projects onto state.deductions', () => {
+    const b = setUpSale();
+    b.deduction('person-prayuth', 5_000, 'ค่าปุ๋ย', 'สมชาย');
+    const s = projectSale(b.build());
+    expect(s.deductions).toHaveLength(1);
+    expect(s.deductions[0]).toEqual({
+      id: b.lastDeductionId(),
+      personId: 'person-prayuth',
+      personName: 'person-prayuth',
+      satang: 5_000,
+      reason: 'ค่าปุ๋ย',
+      agreedBy: 'สมชาย',
+      voided: false,
+      voidReason: null,
+    });
+  });
+
+  it('voiding marks the deduction rather than removing it', () => {
+    const b = setUpSale();
+    b.deduction('person-prayuth', 5_000, 'ค่าปุ๋ย', 'สมชาย');
+    const id = b.lastDeductionId();
+    b.voidDeduction('จ่ายผิดคน');
+    const s = projectSale(b.build());
+    expect(s.deductions).toHaveLength(1); // still present
+    expect(s.deductions[0]).toEqual({
+      id,
+      personId: 'person-prayuth',
+      personName: 'person-prayuth',
+      satang: 5_000,
+      reason: 'ค่าปุ๋ย',
+      agreedBy: 'สมชาย',
+      voided: true,
+      voidReason: 'จ่ายผิดคน',
+    });
+  });
+
+  it('voiding an unknown deductionId is a silent no-op', () => {
+    const b = setUpSale();
+    b.sys({ t: 'deduction_voided', deductionId: 'no-such-id', reason: 'whatever' });
+    const s = projectSale(b.build());
+    expect(s.deductions).toEqual([]);
+  });
+
+  it('voiding twice is a no-op — the second void changes nothing further', () => {
+    const b = setUpSale();
+    b.deduction('person-prayuth', 5_000, 'ค่าปุ๋ย', 'สมชาย');
+    b.voidDeduction('เหตุผลแรก');
+    b.voidDeduction('เหตุผลที่สอง');
+    const s = projectSale(b.build());
+    expect(s.deductions).toHaveLength(1);
+    expect(s.deductions[0].voided).toBe(true);
+    expect(s.deductions[0].voidReason).toBe('เหตุผลแรก'); // first void wins, not last
+  });
+
+  it('a new sale has an empty deductions list', () => {
+    expect(projectSale(setUpSale().build()).deductions).toEqual([]);
+  });
+
+  it('projection is identical under scrambled timestamps, deductions included', () => {
+    const b = setUpSale();
+    b.deduction('person-prayuth', 5_000, 'ค่าปุ๋ย', 'สมชาย');
+    b.voidDeduction('เหตุผล');
+    b.deduction('person-manop', 3_000, 'ค่าน้ำมัน', 'สมชาย');
+    const events = b.build();
+    const scrambled = events.map((e, i) => ({ ...e, ts: 1_000_000 - i * 7 }));
+
+    const { startedTs: _a, ...fromScrambled } = projectSale(scrambled);
+    const { startedTs: _b, ...fromOriginal } = projectSale(events);
+    expect(fromScrambled).toEqual(fromOriginal);
+  });
+});
+
 describe('clock anomalies (FR-12.6) — flagged, never ordering', () => {
   const ev = (ts: number) =>
     ({ saleId: 's', seq: 1, ts, mono: 0, actor: 'a', kind: 'reject', pileId: 'p',

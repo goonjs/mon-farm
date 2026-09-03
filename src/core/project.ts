@@ -11,6 +11,7 @@
  */
 
 import type {
+  Deduction,
   OpenClosed,
   Pile,
   PileId,
@@ -37,6 +38,7 @@ export function emptySale(id: string): SaleState {
     piles: [],
     clockSuspect: false,
     speechOn: true,
+    deductions: [],
   };
 }
 
@@ -74,6 +76,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
 
   const piles = new Map<PileId, MutPile>();
   const zones = new Map<ZoneId, MutZone>();
+  const deductions = new Map<string, Deduction>();
 
   let status: OpenClosed = base.status;
   let startedTs: number | null = null;
@@ -227,6 +230,31 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
         clockSuspect = true;
         break;
 
+      case 'deduction_added':
+        deductions.set(payload.deductionId, {
+          id: payload.deductionId,
+          personId: payload.personId,
+          personName: payload.personName,
+          satang: payload.satang,
+          reason: payload.reason,
+          agreedBy: payload.agreedBy,
+          voided: false,
+          voidReason: null,
+        });
+        break;
+
+      case 'deduction_voided': {
+        // An unresolvable reference is ignored elsewhere in this fold too
+        // (e.g. zero_check/tare_confirmed on an unknown pileId) — a void
+        // naming a deductionId this log has never seen, or one already
+        // voided, changes nothing.
+        const d = deductions.get(payload.deductionId);
+        if (d && !d.voided) {
+          deductions.set(payload.deductionId, { ...d, voided: true, voidReason: payload.reason });
+        }
+        break;
+      }
+
       case 'announced':
         break;
 
@@ -267,6 +295,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
     ),
     clockSuspect,
     speechOn,
+    deductions: [...deductions.values()],
   };
 }
 
