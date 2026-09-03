@@ -30,6 +30,12 @@ import { tokens } from './design/tokens';
  * own: it shares the phone landscape layout (nothing in it is viewport-driven
  * in a way orientation could break), so it is asserted, not separately tested.
  */
+// Sandboxes that ship a pre-installed Chromium (and no egress to download the
+// build this Playwright version pins) point at it with
+// PLAYWRIGHT_CHROMIUM_EXECUTABLE. Unset everywhere else, so CI keeps using the
+// browser `npx playwright install` puts in place.
+const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
+
 export default defineConfig({
   testDir: './e2e',
   outputDir: './e2e/.results',
@@ -42,6 +48,7 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:8080',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    ...(chromiumExecutable ? { launchOptions: { executablePath: chromiumExecutable } } : {}),
   },
 
   webServer: {
