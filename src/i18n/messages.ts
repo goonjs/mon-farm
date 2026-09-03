@@ -117,8 +117,6 @@ const th = {
   'counter.closeSale': 'ปิดการขาย',
   'counter.closeSaleTitle': 'ปิดการขาย?',
   'counter.closeSaleDetail': '{zones} โซน {piles} กอง — นับได้ {baskets} เข่ง {weight} กก.',
-  'counter.closeSaleStillCounting':
-    'ยังนับอยู่ {n} กอง จะหยุดนับทันที (ไม่ได้ถูกปิดให้อัตโนมัติ)',
   'counter.closeSaleAfter': 'จะคำนวณผลสรุปทันที และเปิดการขายใหม่ได้ภายหลัง',
   'counter.closeSaleConfirm': 'ยืนยันปิดการขาย',
 
@@ -355,8 +353,6 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'counter.closeSale': 'close sale',
   'counter.closeSaleTitle': 'close the sale?',
   'counter.closeSaleDetail': '{zones} zones, {piles} piles — {baskets} baskets, {weight} kg counted so far.',
-  'counter.closeSaleStillCounting':
-    '{n} pile(s) still counting stop being countable immediately — they are not auto-closed.',
   'counter.closeSaleAfter': 'settlement is calculated immediately; the sale can be reopened later.',
   'counter.closeSaleConfirm': 'confirm close sale',
 

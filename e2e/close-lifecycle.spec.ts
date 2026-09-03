@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { closeLifecycleScenario, seedSale, testSaleId } from './fixtures';
+import { closeLifecycleScenario, seedSale, singlePileScenario, testSaleId } from './fixtures';
 
 /**
  * Pile → zone → sale close lifecycle (S13, docs/ux/pile-zone-sale-lifecycle.md):
@@ -14,9 +14,9 @@ import { closeLifecycleScenario, seedSale, testSaleId } from './fixtures';
  * "switch zone" both have somewhere real to go.
  */
 
-async function openCounter(page: Page, standardBaskets = 3) {
+async function openCounter(page: Page, standardBaskets = 3, p3Baskets = 0) {
   const saleId = testSaleId('close-lifecycle');
-  await seedSale(page, saleId, closeLifecycleScenario(saleId, standardBaskets));
+  await seedSale(page, saleId, closeLifecycleScenario(saleId, standardBaskets, p3Baskets));
   await page.goto(`/sale/${saleId}/counter`);
   await expect(page.getByTestId('count')).toBeVisible();
   return saleId;
@@ -35,7 +35,10 @@ test('closing a pile lands on the decision point, naming every option', async ({
   await expect(page.getByTestId('decision-next-pile')).toBeVisible();
   await expect(page.getByTestId('decision-switch-zone')).toBeVisible();
   await expect(page.getByTestId('decision-close-zone')).toBeVisible();
-  await expect(page.getByTestId('decision-close-sale')).toBeVisible();
+  // Close-sale is NOT among them here (S25): p3 in zone B is still counting,
+  // so the operator's real next step is a pile, not the end of the sale. Its
+  // own appearance rule has its own cases below.
+  await expect(page.getByTestId('decision-close-sale')).toHaveCount(0);
 });
 
 test('"next pile in this zone" moves straight to the not-started pile\'s gate', async ({ page }) => {
@@ -117,6 +120,9 @@ test('closing the current pile is reachable from the count tab itself', async ({
   // on the tab the operator is already on, since a pile close is exactly as
   // frequent as those and touches nothing but the pile in front of them.
   await expect(page.getByTestId('tab-pile')).toBeVisible();
+  // S25: close-pile is the row's only close-type action — no close-sale
+  // button sits beside it while the pile is still counting.
+  await expect(page.getByTestId('to-settlement')).toHaveCount(0);
   await page.getByTestId('row-close-pile').click();
   await expect(page.getByTestId('row-close-pile-detail')).toContainText('3');
 
@@ -131,12 +137,13 @@ test('closing the current pile is reachable from the count tab itself', async ({
   await page.getByTestId('row-close-pile-confirm').click();
   await expect(page.getByTestId('pile-closed-transition')).toBeVisible();
 
-  // Closing the sale directly, without closing whatever pile happens to be
-  // in view first, is a separate and still-real path — adding the pile
-  // button must not have displaced it.
+  // ...and the sale itself is not closable from here at all (S25): the row
+  // never offered a way out of the whole sale while a pile is still counting.
   await page.getByTestId('decision-switch-zone').click();
   await page.getByTestId('switcher-pile-p3').click();
-  await expect(page.getByTestId('to-settlement')).toBeVisible();
+  await expect(page.getByTestId('count')).toBeVisible();
+  await expect(page.getByTestId('to-settlement')).toHaveCount(0);
+  await expect(page.getByTestId('row-close-pile')).toBeVisible();
 });
 
 test('closing a zone from the decision point also takes two steps, not one', async ({ page }) => {
@@ -171,9 +178,16 @@ test('closing a zone from the decision point also takes two steps, not one', asy
 });
 
 test('closing the sale writes a real event and settlement offers reopening it', async ({ page }) => {
-  await openCounter(page);
+  const saleId = await openCounter(page, 3, 2);
 
-  await page.getByTestId('to-settlement').click();
+  // S25: the sale can only be closed once nothing is still counting, so both
+  // piles close first — close pile, then close pile, then close sale.
+  await closeCurrentPile(page);
+  await page.getByTestId('decision-switch-zone').click();
+  await page.getByTestId('switcher-pile-p3').click();
+  await closeCurrentPile(page);
+
+  await page.getByTestId('decision-close-sale').click();
   // Closing the sale gets the same verbose, two-step confirm as undo now —
   // no confirmation at all was a real gap, since this ends counting for
   // every zone and pile at once.
@@ -181,6 +195,7 @@ test('closing the sale writes a real event and settlement offers reopening it', 
   await page.getByTestId('close-sale-confirm').click();
   await expect(page.getByTestId('owner-share')).toBeVisible();
   await expect(page.getByTestId('reopen-sale')).toBeVisible();
+  expect(await saleClosedCount(page, saleId)).toBe(1);
 
   await page.getByTestId('reopen-sale').click();
   await page.getByTestId('reopen-prompt-reason').fill('ลูกค้าขอเพิ่มเข่ง');
@@ -190,5 +205,113 @@ test('closing the sale writes a real event and settlement offers reopening it', 
   // Reopening IS "back to counting" now — one action does both, landing
   // straight on the counter screen rather than leaving a second, separate
   // "back to counting" button that would do nothing useful on a closed sale.
-  await expect(page.getByTestId('to-settlement')).toBeVisible();
+  // Both piles are still closed, so the pile in view is on its decision
+  // point, where close-sale is offered again.
+  await expect(page.getByTestId('pile-closed-transition')).toBeVisible();
+  await expect(page.getByTestId('decision-close-sale')).toBeVisible();
+});
+
+/** Closes the pile in view from the live-counting row, via its confirm. */
+async function closeCurrentPile(page: Page) {
+  await page.getByTestId('row-close-pile').click();
+  await page.getByTestId('row-close-pile-confirm').click();
+  await expect(page.getByTestId('pile-closed-transition')).toBeVisible();
+}
+
+/** How many `sale_closed` events the seeded log actually holds. */
+async function saleClosedCount(page: Page, saleId: string): Promise<number> {
+  return page.evaluate((id) => {
+    const raw = window.localStorage.getItem(`mon-farm:events:${id}`) ?? '[]';
+    return (JSON.parse(raw) as { kind: string; payload?: { t?: string } }[]).filter(
+      (e) => e.kind === 'sys' && e.payload?.t === 'sale_closed',
+    ).length;
+  }, saleId);
+}
+
+test('close sale waits until no pile anywhere in the sale is still counting', async ({ page }) => {
+  await openCounter(page, 3, 2);
+
+  // p1 (zone A) and p3 (zone B) are both counting. Closing p1 is not the end
+  // of the sale — the operator's real next step is the other pile.
+  await closeCurrentPile(page);
+  await expect(page.getByTestId('decision-close-sale')).toHaveCount(0);
+  await expect(page.getByTestId('decision-switch-zone')).toBeVisible();
+  await expect(page.getByTestId('decision-close-zone')).toBeVisible();
+
+  // Nor from the Pile tab, while p3 counts elsewhere.
+  await page.getByTestId('tab-pile').click();
+  await expect(page.getByTestId('pile-close-sale')).toHaveCount(0);
+  await page.getByTestId('tab-count').click();
+
+  // Close the last counting pile: its own decision point now offers it, with
+  // no reopen, refresh or navigation in between.
+  await page.getByTestId('decision-switch-zone').click();
+  await page.getByTestId('switcher-pile-p3').click();
+  await closeCurrentPile(page);
+  await expect(page.getByTestId('decision-close-sale')).toBeVisible();
+});
+
+test('a single-pile sale offers close sale the moment its only pile closes', async ({ page }) => {
+  const saleId = testSaleId('single-pile');
+  await seedSale(page, saleId, singlePileScenario(saleId));
+  await page.goto(`/sale/${saleId}/counter`);
+  await expect(page.getByTestId('count')).toBeVisible();
+
+  // Nothing sale-ending while it counts.
+  await expect(page.getByTestId('to-settlement')).toHaveCount(0);
+
+  await closeCurrentPile(page);
+  await expect(page.getByTestId('decision-close-sale')).toBeVisible();
+  // No sibling pile in the zone, so no "next pile" — the zone can still be
+  // closed explicitly, per the existing S13 rules.
+  await expect(page.getByTestId('decision-next-pile')).toHaveCount(0);
+});
+
+test('reopening a pile takes close sale away again on both surfaces', async ({ page }) => {
+  await openCounter(page, 3, 2);
+
+  await closeCurrentPile(page);
+  await page.getByTestId('decision-switch-zone').click();
+  await page.getByTestId('switcher-pile-p3').click();
+  await closeCurrentPile(page);
+  await expect(page.getByTestId('decision-close-sale')).toBeVisible();
+
+  // p3 goes back to counting — the sale is not over after all.
+  await page.getByTestId('tab-pile').click();
+  await page.getByTestId('reopen-pile').click();
+  await page.getByTestId('reopen-prompt-reason').fill('ชั่งซ้ำ');
+  await page.getByTestId('reopen-prompt-next').click();
+  await page.getByTestId('reopen-prompt-confirm').click();
+
+  await expect(page.getByTestId('pile-close-sale')).toHaveCount(0);
+  await page.getByTestId('tab-count').click();
+  await expect(page.getByTestId('to-settlement')).toHaveCount(0);
+
+  // Closing it a second time brings close-sale back.
+  await closeCurrentPile(page);
+  await expect(page.getByTestId('decision-close-sale')).toBeVisible();
+});
+
+test('the Pile tab offers close sale as a secondary, lighter-weight action', async ({ page }) => {
+  const saleId = await openCounter(page, 3, 2);
+
+  await closeCurrentPile(page);
+  await page.getByTestId('decision-switch-zone').click();
+  await page.getByTestId('switcher-pile-p3').click();
+  await closeCurrentPile(page);
+
+  await page.getByTestId('tab-pile').click();
+  const closeSale = page.getByTestId('pile-close-sale');
+  await expect(closeSale).toBeVisible();
+  // Lighter than the pile card's own controls: a plain pressable label with
+  // no button border at all, rather than the bordered destructive button
+  // close-pile's confirm uses.
+  await expect(closeSale).toHaveCSS('border-bottom-width', '0px');
+
+  await closeSale.click();
+  await expect(page.getByTestId('close-sale-detail')).toBeVisible();
+  await page.getByTestId('close-sale-confirm').click();
+
+  await expect(page.getByTestId('owner-share')).toBeVisible();
+  expect(await saleClosedCount(page, saleId)).toBe(1);
 });

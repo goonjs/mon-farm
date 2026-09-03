@@ -31,10 +31,44 @@ export function openPileScenario(
  * closing p1 has a real "next pile in this zone" to offer, and p3 in zone B
  * gives the switcher and switch-zone paths somewhere real to go.
  */
-export function closeLifecycleScenario(saleId: string, standardBaskets = 3): SaleEvent[] {
+export function closeLifecycleScenario(
+  saleId: string,
+  standardBaskets = 3,
+  /**
+   * Baskets counted into p3 (zone B) as well. Default 0, so every existing
+   * caller sees the log it saw before; S25's "two piles counting at once"
+   * cases need p3 closable in its own right, which needs a basket in it.
+   */
+  p3Baskets = 0,
+): SaleEvent[] {
   const b = setUpSale(new LogBuilder(saleId));
   readyPile(b, 'p1');
   readyPile(b, 'p3');
+  for (let i = 0; i < standardBaskets; i++) b.accept('p1');
+  for (let i = 0; i < p3Baskets; i++) b.accept('p3');
+  return b.build();
+}
+
+/**
+ * One zone, one pile, readied and counting — the S25 single-pile edge, where
+ * the closed pile has no sibling to move to and its zone has nothing else to
+ * force-close, so close-sale is the only real next step.
+ */
+export function singlePileScenario(saleId: string, standardBaskets = 3): SaleEvent[] {
+  const b = new LogBuilder(saleId)
+    .sys({
+      t: 'sale_started',
+      farmName: 'ไร่คุณพ่อ',
+      buyer: 'ล้งเจริญทรัพย์',
+      manager: 'สมชาย',
+      workerLead: 'ประยุทธ',
+      where: 'farm',
+    })
+    .sys({ t: 'price_set', satangPerKg: 2650, indexRef: 'ตลาดกลางหาดใหญ่' })
+    .sys({ t: 'split_set', ownerPct: 50, basis: 'gross' })
+    .sys({ t: 'zone_added', zoneId: 'zA', name: 'โซน A' })
+    .sys({ t: 'pile_added', pileId: 'p1', zoneId: 'zA', name: 'กอง 1', tareG: 2_000, stdNetG: 50_000 });
+  readyPile(b, 'p1');
   for (let i = 0; i < standardBaskets; i++) b.accept('p1');
   return b.build();
 }

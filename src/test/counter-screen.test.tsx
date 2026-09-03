@@ -63,7 +63,9 @@ async function renderCounter(events: readonly SaleEvent[]) {
       </SaleProvider>
     </SpeechProvider>,
   );
-  await waitFor(() => expect(screen.getByTestId('count')).toBeTruthy());
+  // The tab bar, not the numeral: a scenario whose pile is already closed
+  // lands on the decision point, where there is no `count` to wait for.
+  await waitFor(() => expect(screen.getByTestId('tab-count')).toBeTruthy());
   return view;
 }
 
@@ -170,5 +172,78 @@ describe('the Pile tab — short weight and the net breakdown', () => {
     expect(short).toHaveTextContent(/^1 · /);
     expect(short).toHaveTextContent(/12\.4/);
     expect(screen.getByTestId('pile-weight-breakdown')).toHaveTextContent('50 + 12.4 = 62.4 กก.');
+  });
+});
+
+/**
+ * S25 — the close flow follows the piles.
+ *
+ * A pile closes many times per sale; the sale closes once, at the end. So the
+ * live-counting row carries close-pile and nothing sale-ending, and close-sale
+ * is only offered once no pile anywhere in the sale is still counting.
+ */
+describe('close pile first, close sale last (S25)', () => {
+  it('offers no close-sale control on the live-counting row', async () => {
+    await renderCounter(scenario((b) => b.accept('p1')));
+
+    expect(screen.getByTestId('row-close-pile')).toBeTruthy();
+    expect(screen.getByTestId('undo')).toBeTruthy();
+    expect(screen.getByTestId('short')).toBeTruthy();
+    expect(screen.queryByTestId('to-settlement')).toBeNull();
+    expect(screen.queryByTestId('pile-close-sale')).toBeNull();
+  });
+
+  it('withholds the Pile tab close-sale action while a pile is still counting', async () => {
+    await renderCounter(scenario((b) => b.accept('p1')));
+    fireEvent.press(screen.getByTestId('tab-pile'));
+
+    expect(screen.getByTestId('close-pile')).toBeTruthy();
+    expect(screen.queryByTestId('pile-close-sale')).toBeNull();
+  });
+
+  it('offers it on the Pile tab once nothing is counting, opening the shared confirm', async () => {
+    await renderCounter(
+      scenario((b) => {
+        b.accept('p1');
+        b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+      }),
+    );
+    fireEvent.press(screen.getByTestId('tab-pile'));
+
+    const closeSale = screen.getByTestId('pile-close-sale');
+    // Secondary weight: a plain pressable label, not the destructive button
+    // the pile's own close-pile confirm uses.
+    expect(closeSale.props.accessibilityRole).toBe('button');
+    fireEvent.press(closeSale);
+
+    // The same two-step CloseSaleConfirmOverlay the decision point opens.
+    expect(screen.getByTestId('close-sale-detail')).toBeTruthy();
+    expect(screen.getByTestId('close-sale-confirm')).toBeTruthy();
+  });
+
+  it('takes close-sale away again when a closed pile is reopened', async () => {
+    await renderCounter(
+      scenario((b) => {
+        b.accept('p1');
+        b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+        b.sys({ t: 'pile_reopened', pileId: 'p1', reason: 'นับผิด' });
+      }),
+    );
+    fireEvent.press(screen.getByTestId('tab-pile'));
+
+    expect(screen.queryByTestId('pile-close-sale')).toBeNull();
+  });
+
+  it('does not offer close-sale again once the sale is already closed', async () => {
+    await renderCounter(
+      scenario((b) => {
+        b.accept('p1');
+        b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+        b.sys({ t: 'sale_closed' });
+      }),
+    );
+    fireEvent.press(screen.getByTestId('tab-pile'));
+
+    expect(screen.queryByTestId('pile-close-sale')).toBeNull();
   });
 });

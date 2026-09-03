@@ -23,6 +23,17 @@ export interface PileClosedTransitionProps {
   netG: number;
   /** Only offered when another not-started pile exists in the same zone. */
   hasNextPileInZone: boolean;
+  /**
+   * True when nothing anywhere in the sale is still `counting` (S25). A pile
+   * closes many times per sale, the sale closes once — so close-sale is only
+   * offered here once it is genuinely the next step. While another pile is
+   * still counting, in this zone or any other, the operator's next move is
+   * that pile, and the option is not shown at all.
+   *
+   * Stated as a fact computed at the call site, like `hasNextPileInZone`
+   * above: this component knows about buttons, not about the projection.
+   */
+  noPileStillCounting: boolean;
   onNextPile: () => void;
   onSwitchZone: () => void;
   onCloseZone: () => void;
@@ -34,6 +45,7 @@ export function PileClosedTransition({
   baskets,
   netG,
   hasNextPileInZone,
+  noPileStillCounting,
   onNextPile,
   onSwitchZone,
   onCloseZone,
@@ -76,9 +88,11 @@ export function PileClosedTransition({
         <Button testID="decision-close-zone" onPress={onCloseZone}>
           {msg('closed.closeZone')}
         </Button>
-        <Button testID="decision-close-sale" variant="destructive" onPress={onCloseSale}>
-          {msg('counter.closeSale')}
-        </Button>
+        {noPileStillCounting ? (
+          <Button testID="decision-close-sale" variant="destructive" onPress={onCloseSale}>
+            {msg('counter.closeSale')}
+          </Button>
+        ) : null}
       </View>
     </View>
   );

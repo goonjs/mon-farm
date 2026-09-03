@@ -9,6 +9,7 @@ const baseProps = {
   baskets: 12,
   netG: 480_000,
   hasNextPileInZone: true,
+  noPileStillCounting: true,
   onNextPile: jest.fn(),
   onSwitchZone: jest.fn(),
   onCloseZone: jest.fn(),
@@ -26,6 +27,20 @@ describe('PileClosedTransition', () => {
   it('offers "next pile" only when another pile in the zone is waiting', () => {
     wrap(<PileClosedTransition {...baseProps} hasNextPileInZone={false} />);
     expect(screen.queryByTestId('decision-next-pile')).toBeNull();
+  });
+
+  it('withholds "close sale" while any pile in the sale is still counting', () => {
+    wrap(<PileClosedTransition {...baseProps} noPileStillCounting={false} />);
+
+    // The operator's real next step is another pile, not the sale.
+    expect(screen.queryByTestId('decision-close-sale')).toBeNull();
+    expect(screen.getByTestId('decision-switch-zone')).toBeTruthy();
+    expect(screen.getByTestId('decision-close-zone')).toBeTruthy();
+  });
+
+  it('offers "close sale" once nothing anywhere is still counting', () => {
+    wrap(<PileClosedTransition {...baseProps} noPileStillCounting />);
+    expect(screen.getByTestId('decision-close-sale')).toBeTruthy();
   });
 
   it('names all four options as one-tap buttons, not a single continue', () => {

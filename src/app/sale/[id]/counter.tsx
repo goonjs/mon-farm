@@ -38,6 +38,25 @@ import { useTheme, useThemeControls } from '../../../theme';
 type TabKey = 'count' | 'pile' | 'log';
 
 /**
+ * Whether closing the sale is the operator's real next step (S25).
+ *
+ * A pile closes many times per sale; the sale closes once, at the very end.
+ * So close-sale is only offered — on the pile-closed decision point and as
+ * the Pile tab's secondary action — once nothing anywhere in the sale is
+ * still `counting`, and never once the sale is already closed. Piles that
+ * have not started yet do not hold it back: nobody is counting into them,
+ * and `sale_closed` does not force-close anything (see
+ * `CloseSaleConfirmOverlay`).
+ *
+ * Deliberately not `pilesStillCounting(state, zoneId)`: that helper answers a
+ * zone-scoped question (which piles a `zone_closed` is about to force-close),
+ * and the sale-level question spans every zone.
+ */
+function canOfferCloseSale(state: SaleState): boolean {
+  return state.status === 'open' && !state.piles.some((p) => p.status === 'counting');
+}
+
+/**
  * Message ids, resolved at the call site rather than here. `Tabs` stays a
  * presentational component that renders whatever string it is handed — it has
  * no business knowing about locales, and a module-level constant cannot call a
@@ -253,6 +272,7 @@ export default function CounterScreen() {
               baskets={totals?.baskets ?? 0}
               netG={totals?.netG ?? 0}
               hasNextPileInZone={!!nextPileInZone}
+              noPileStillCounting={canOfferCloseSale(state)}
               onNextPile={() => nextPileInZone && pickPile(nextPileInZone.id)}
               onSwitchZone={() => setOverlay({ kind: 'switcher' })}
               onCloseZone={() => setConfirmCloseZone(true)}
@@ -309,10 +329,6 @@ export default function CounterScreen() {
                   >
                     {msg('pile.close')}
                   </Button>
-                  <View style={{ flex: 1 }} />
-                  <Button testID="to-settlement" variant="destructive" onPress={() => setConfirmCloseSale(true)}>
-                    {msg('counter.closeSale')}
-                  </Button>
                 </>
               )}
             </View>
@@ -335,6 +351,7 @@ export default function CounterScreen() {
           pile={pile}
           zone={zone}
           state={state}
+          onCloseSale={() => setConfirmCloseSale(true)}
           onCloseZone={() => setOverlay({ kind: 'switcher' })}
           onReopenPile={(pileId) => setOverlay({ kind: 'reopen-pile', pileId })}
           onReopenZone={(zoneId) => setOverlay({ kind: 'reopen-zone', zoneId })}
@@ -491,12 +508,14 @@ function UndoConfirmRow({
 
 /**
  * Closing the sale had NO confirmation at all before this, from either entry
- * point (the action row's own button, or the decision point after a pile
- * closes) — one tap ended counting for the whole sale. Names the actual
- * scope (zones, piles, baskets, weight so far) rather than a bare "are you
- * sure?", and says plainly that closing does not force-close piles still
- * counting — it only stops them from being countable (`canCount` gates on
- * sale status), which is easy to assume incorrectly otherwise.
+ * point — one tap ended counting for the whole sale. Names the actual scope
+ * (zones, piles, baskets, weight so far) rather than a bare "are you sure?".
+ *
+ * Its "N piles still counting" warning is gone with S25: both entry points
+ * (the decision point, the Pile tab's secondary action) are now gated on
+ * `canOfferCloseSale`, which is exactly the negation of the condition that
+ * warning tested, and nothing can start counting while this full-screen
+ * overlay is up. Dead copy in a destructive confirm is worse than none.
  */
 /**
  * The live-counting row's "close this pile" confirm. A separate overlay from
@@ -640,7 +659,6 @@ function CloseSaleConfirmOverlay({
   const t = useTheme();
   const msg = useT();
   const st = saleTotals(events);
-  const stillCounting = state.piles.filter((p) => p.status === 'counting');
 
   return (
     <View
@@ -671,9 +689,6 @@ function CloseSaleConfirmOverlay({
           baskets: st.baskets,
           weight: formatKg(st.netG),
         })}
-        {stillCounting.length > 0
-          ? `\n${msg('counter.closeSaleStillCounting', { n: stillCounting.length })}`
-          : ''}
         {`\n${msg('counter.closeSaleAfter')}`}
       </Text>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
@@ -705,6 +720,7 @@ function PilePanel({
   pile,
   zone,
   state,
+  onCloseSale,
   onCloseZone,
   onReopenPile,
   onReopenZone,
@@ -712,6 +728,7 @@ function PilePanel({
   pile: Pile;
   zone: Zone;
   state: SaleState;
+  onCloseSale: () => void;
   onCloseZone: () => void;
   onReopenPile: (pileId: string) => void;
   onReopenZone: (zoneId: string) => void;
@@ -866,6 +883,31 @@ function PilePanel({
             {msg('zone.reopen')}
           </Button>
         )}
+
+        {/* Close sale, secondary (S25). Deliberately NOT a Button: every
+            variant Button has — even ghost — carries a border and reads at
+            the same weight as close-pile above it, and the sale ends once
+            while piles close all day. A plain pressable label, appearing
+            only once nothing anywhere is still counting, is the whole
+            control. It opens the counter screen's own
+            CloseSaleConfirmOverlay — the same two steps the decision point
+            goes through, not a second implementation. */}
+        {canOfferCloseSale(state) ? (
+          <Text
+            testID="pile-close-sale"
+            accessibilityRole="button"
+            onPress={onCloseSale}
+            style={{
+              marginTop: t.space.md,
+              fontFamily: t.font.family.sans,
+              fontSize: t.font.size.small,
+              color: t.color.inkSoft,
+              textAlign: 'center',
+            }}
+          >
+            {msg('counter.closeSale')}
+          </Text>
+        ) : null}
       </Card>
     </ScrollView>
   );
