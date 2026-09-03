@@ -1,6 +1,6 @@
 # Story: A farm is not re-typed every sale
 
-Status: **Ready** — 2026-09-03
+Status: **Review** — 2026-09-03
 
 ## Context
 
@@ -80,40 +80,40 @@ and nothing else changes it.
 
 ## Acceptance criteria
 
-- [ ] `FarmProfileStore` exists (`src/store/farmProfile.ts`, mirroring
+- [x] `FarmProfileStore` exists (`src/store/farmProfile.ts`, mirroring
       `people.ts`'s shape) with `get()` (returns the current profile —
       `null`/empty when none exists yet), `setZones()` or equivalent
       mutators to add/rename/remove a zone in the profile, and
       add/edit/remove a pile within a zone. Native and web adapters both
       implement it against the same interface; native shares `mon-farm.db`
       via its own table(s).
-- [ ] The profile is **not seeded automatically on install** — it starts
+- [x] The profile is **not seeded automatically on install** — it starts
       empty. It is seeded **once**, from the most recently *started* sale's
       zones and piles, the first time the farm-profile settings surface is
       opened while the profile is still empty and at least one sale exists.
       Opening it again after that never re-seeds, even if the profile was
       since edited down to nothing — an intentionally emptied profile stays
       empty, it does not un-empty itself.
-- [ ] A settings surface lets the owner view, add, rename, and remove a
+- [x] A settings surface lets the owner view, add, rename, and remove a
       profile zone, and add, edit (tare, standard net, name), and remove a
       pile within a profile zone — independent of any sale being open.
-- [ ] On sale setup (`ZonesCard`), when the current sale has **zero zones**
+- [x] On sale setup (`ZonesCard`), when the current sale has **zero zones**
       and the profile is non-empty, the screen offers the profile's zones
       and piles as a prefilled starting point rather than the current blank
       "type a zone name" form alone. Accepting a zone writes the same
       `zone_added`/`pile_added` events a manually-typed zone would write —
       no event distinguishes a profile-sourced zone from a hand-typed one.
-- [ ] Each offered zone (and each of its piles) can be **edited before
+- [x] Each offered zone (and each of its piles) can be **edited before
       acceptance** (e.g. a different tare for this sale) and can be
       **rejected** — left out of this sale entirely — without changing the
       farm profile. Rejecting-then-accepting-differently must not silently
       rewrite the profile; only the settings surface does that.
-- [ ] Once the sale has at least one zone (whether from the profile or typed
+- [x] Once the sale has at least one zone (whether from the profile or typed
       by hand), the profile prefill no longer applies to that sale — adding
       a further zone goes through the existing manual "add zone" form, not a
       second offer of the same profile. (Prevents re-offering already-used
       or already-rejected profile zones as the sale progresses.)
-- [ ] The profile is never read by `settle()`, the report (S28), or any
+- [x] The profile is never read by `settle()`, the report (S28), or any
       other consumer of the event log — confirmed by there being no new
       event kind and no store other than `farmProfile.ts` importing from it
       outside `setup.tsx` and the settings surface.
@@ -213,61 +213,61 @@ Written to fail first (TDD), per criterion above.
 
 **Vitest — the store (`src/store/farmProfile.test.ts`, mirroring
 `people.test.ts`'s structure against `MemoryFarmProfileStore`):**
-- [ ] Empty start: `get()` returns null/empty on a fresh store.
-- [ ] Add a zone, add a pile to it; `get()` reflects both.
-- [ ] Rename a zone; edit a pile's tare/standard net/name; both keep their
+- [x] Empty start: `get()` returns null/empty on a fresh store.
+- [x] Add a zone, add a pile to it; `get()` reflects both.
+- [x] Rename a zone; edit a pile's tare/standard net/name; both keep their
       identity (id) across the edit.
-- [ ] Remove a zone (removes its piles with it) and remove a single pile,
+- [x] Remove a zone (removes its piles with it) and remove a single pile,
       independently.
-- [ ] Seeding: given a set of "last sale" zones/piles handed to a seed
+- [x] Seeding: given a set of "last sale" zones/piles handed to a seed
       function/method, an empty profile is populated once; calling seed
       again on an already-non-empty (even if since-emptied-by-the-user)
       profile is a no-op. Cover both "never seeded" and
       "seeded-then-emptied-by-user" as distinct cases, since the acceptance
       criterion explicitly requires the second not to re-seed.
-- [ ] Edit/remove on an unknown zone/pile id is a no-op, not an error
+- [x] Edit/remove on an unknown zone/pile id is a no-op, not an error
       (matching `people.ts`'s `rename`/`archive` convention).
 
 **Jest (jest-expo) — the settings surface and the prefilled setup form:**
-- [ ] Farm-profile settings surface: empty state renders; add/rename/remove
+- [x] Farm-profile settings surface: empty state renders; add/rename/remove
       a zone; add/edit/remove a pile within a zone — each against a mocked
       `farmProfileStore` (constructed inside the mock factory, per the
       lesson recorded in `docs/stories/s16-people-store.md` Dev notes #4,
       not captured as an outer `const`).
-- [ ] `ZonesCard`/setup form, against a mocked `farmProfileStore` returning
+- [x] `ZonesCard`/setup form, against a mocked `farmProfileStore` returning
       a non-empty profile and a sale with zero zones: profile zones/piles
       render as a prefilled, editable, per-zone acceptable/rejectable
       offer, not as already-committed sale state.
-- [ ] Accepting an offered zone calls `append` with `zone_added` /
+- [x] Accepting an offered zone calls `appendMany` with `zone_added` /
       `pile_added` payloads matching the profile's (possibly edited)
       values — same event shape a manually-typed zone produces, asserted by
       comparing payload shape, not by a special-cased "from profile" field
       (there isn't one).
-- [ ] Rejecting an offered zone, or editing its tare before accepting, does
+- [x] Rejecting an offered zone, or editing its tare before accepting, does
       **not** call any `farmProfileStore` mutator — only `append` (or
       nothing, for a pure rejection).
-- [ ] Once the sale already has one zone (real state, not the profile),
+- [x] Once the sale already has one zone (real state, not the profile),
       the prefill offer no longer renders; only the existing manual
       add-zone form does.
 
 **Playwright e2e (`e2e/farm-profile.spec.ts`, new file):**
-- [ ] Seed a profile (via the settings surface, driven through the UI, not
+- [x] Seed a profile (via the settings surface, driven through the UI, not
       injected directly) with one zone and one pile; start a **new** sale;
       assert the setup screen shows the profile's zone/pile as an
       offer/prefill rather than an empty zones list.
-- [ ] Accept the offer as-is; assert the resulting sale state (after
+- [x] Accept the offer as-is; assert the resulting sale state (after
       reload, matching the existing `e2e/setup.spec.ts` reload-survival
       pattern) has the same zone/pile the profile held, written as real
       `zone_added`/`pile_added` events.
-- [ ] Edit the tare on the offered pile before accepting; accept; assert
+- [x] Edit the tare on the offered pile before accepting; accept; assert
       the sale's pile carries the *edited* tare, and — reading the farm
       profile settings screen afterward — the stored profile still shows
       the *original* tare (the specific no-mutation guarantee from the
       Edge cases section).
-- [ ] Reject the offered zone entirely for one sale, add a different zone by
+- [x] Reject the offered zone entirely for one sale, add a different zone by
       hand instead; assert the profile (checked via the settings screen)
       is unchanged.
-- [ ] A second, brand-new sale after the above still offers the *original*
+- [x] A second, brand-new sale after the above still offers the *original*
       unedited profile (not the previous sale's edited or rejected
       version) — proves the profile only changes via its own settings
       surface.
@@ -294,11 +294,145 @@ longer blank when a profile exists:**
 
 ## Verification
 
-- [ ] Sandbox run performed:
-- [ ] Screenshots (UI stories only) — golden path:
-- [ ] Screenshots (UI stories only) — edge cases:
+- [x] Sandbox run performed: full gate on 2026-09-03 —
+      `tokens:check`, `contrast`, `typecheck`, `lint`, `test:core`
+      (151 passed, 11 files), `test:ui` (94 passed, 15 suites),
+      `build:web` (exports `/farm-profile`), `test:e2e`
+      (**188 passed / 6 skipped**, up from 174/6: 14 new farm-profile cases
+      across the two phone-landscape projects, every pre-existing case
+      unchanged and still green). Screens driven by hand through the exported
+      web build for the screenshots below.
+- [x] Screenshots (UI stories only) — golden path:
+      `screenshots/s27/00-settings-row.png` (the new row on settings),
+      `01-profile-empty.png` (empty state, first ever run),
+      `02-profile-filled.png` (a zone and pile added by hand),
+      `03-setup-offer.png` (the offer on a new sale),
+      `05-accepted-into-sale.png` (accepted — a real `zone_added`/`pile_added`
+      zone editor, indistinguishable from a hand-typed one).
+- [x] Screenshots (UI stories only) — edge cases:
+      `04-offer-edit-before-accept.png` (an offered tare being corrected for
+      this sale only), `06-profile-unchanged.png` (the profile afterwards,
+      still holding the original 2 kg tare — the no-mutation guarantee, on
+      screen), `07-offer-rejected-blank-form.png` (offer rejected; setup falls
+      back to the blank form).
 
 ## Dev notes
+
+**Implemented 2026-09-03, on top of S26 (`4258434`).** What shipped, then the
+three calls the PO left open, then the deviations.
+
+### What shipped
+
+- `src/store/farmProfile.ts` — types and the `FarmProfileStore` port, plus the
+  ambient `farmProfileStore` declaration and the `MemoryFarmProfileStore`
+  re-export, exactly the shape `people.ts` has.
+- `src/store/farmProfile-doc.ts` — **one deviation from the proposed shape,
+  and the only structural one**: every mutator is implemented once, on an
+  abstract `DocFarmProfileStore` over a single profile document, and the three
+  adapters (`farmProfile-memory.ts`, `farmProfile.web.ts`,
+  `farmProfile.native.ts`) implement only `read()`/`write()`. Three copies of
+  eight read-modify-write mutators would have been three chances to get the
+  seeding rule wrong; SQLite stores the document in a one-row `farm_profile`
+  table (`CHECK (id = 1)`), which also keeps `seededTs` and the zone list
+  atomically consistent. It lives in its own file for the same
+  platform-shadowing reason `people-memory.ts` does — a runtime value exported
+  from `farmProfile.ts` is unreachable under Metro and jest-expo, though types
+  are fine because they are erased.
+- `src/app/farm-profile.tsx` — the profile's own screen, linked from a new row
+  on `settings.tsx`. `src/app/sale/[id]/setup.tsx` gains `ProfileOffer` /
+  `OfferedZone` inside `ZonesCard`.
+- `seedFromSale(zones, piles)` became `seed(zones)` on the port, with the
+  sale→profile mapping as a pure `profileZonesFromSale()` beside it. The store
+  then knows nothing about `SaleState`, and the mapping is unit-testable on its
+  own (it is where "no contract" and "no removed zones/piles" are enforced).
+- `PileEditor`'s prop type widened from `Pile` to a structural
+  `PileEditorTarget` (`id`, `name`, `tareG`, `stdNetG`). A sale's `Pile` still
+  satisfies it, and the profile screen and the pre-acceptance offer now reuse
+  the same edit form rather than growing a second one. Smallest change that
+  removed a duplicate; no behaviour change for S26's callers.
+
+### The three open calls
+
+1. **"Seeded from the last sale" = most recently STARTED.** Taken as written
+   in the story, and it is also the better rule on the merits: a sale's zones
+   and piles are fully typed at *setup*, before a single basket, so an open
+   sale carries just as complete a farm shape as a closed one — waiting for a
+   close would leave an owner who sets up their first sale and opens the
+   profile screen the same evening with an empty offer, which is the exact
+   retyping this story removes. Implemented as "project every sale, take the
+   greatest `startedTs`" rather than "take the first id `listSales()` hands
+   back": newest-first is an adapter's documented behaviour, and this is a
+   rule the story states, so it is decided from the sale's own data. The
+   component test seeds two sales and has the mock list the OLDER one first,
+   so a `listSales()`-order implementation fails it.
+2. **The profile carries zone name + each pile's tare and standard net, and
+   NOT the zone contract.** Confirmed as the epic's own scope ("zones, and
+   each zone's usual piles with their tare and standard net"), and it is the
+   reading that matches how a contract is agreed: a worker and a split are
+   agreed with a person, per sale, and `PeoplePicker` already exists to pick
+   one fresh. A remembered worker would also be the story's own failure mode
+   one field over — last month's split quietly becoming this month's default
+   with no screen saying so. Enforced, not just intended:
+   `profileZonesFromSale` builds `{id, name, piles}` and a test asserts both
+   the exact key set and that a `zone_contract_set` worker's name appears
+   nowhere in the seeded profile.
+3. **The profile editor is its own routed screen** (`/farm-profile`), linked
+   from a new row on `settings.tsx` — the PO's recommendation, taken.
+   `settings.tsx` says of itself "language and theme — nothing about a sale",
+   and every control on it is a two-option `Choice`; zones, piles and tares
+   are nearer `ZonesCard` in size. Settings keeps one row (a door, not a
+   control) and its own framing.
+
+### Interaction with S26, checked against what actually shipped
+
+S26 landed first (`6dc1e6d`, `4258434`), so the story's "if S26 lands first"
+branch is the live one, and it holds: the offer writes ordinary
+`zone_added`/`pile_added` events, and S26's `ZoneEditor`/`PileRow` editing
+then applies to them with no special case — nothing anywhere asks where a pile
+came from. Two things the story could not have known, now that S26 is real:
+
+- **Removed zones/piles are filtered in three places, and all three matter.**
+  The offer renders only when the sale has zero *live* zones
+  (`state.zones.filter(z => !z.removed)`), so a sale whose only zone was
+  removed mid-setup does not suddenly get re-offered the profile — that would
+  be the app arguing with a decision just made. `profileZonesFromSale` drops
+  removed zones and piles when seeding, for the same reason one level up.
+- **`pile_edited` never writes back.** S26's in-sale edit path
+  (`PileRow` → `append('pile_edited')`) is untouched by this story and imports
+  no profile mutator; the e2e case "the next sale is offered the profile, not
+  the previous sale's edited version" proves it from the outside.
+
+The pre-acceptance edit is what the story's second branch describes anyway: it
+edits an unwritten draft in React state, and the accept writes one `appendMany`
+batch (zone + its piles together — a half-written zone is not a state the log
+should be able to hold).
+
+### Where the profile is read from
+
+Exactly two modules import `farmProfileStore`: `src/app/farm-profile.tsx` and
+`src/app/sale/[id]/setup.tsx`. `settle()`, `totals.ts`, the projection and the
+settlement screen import nothing from it, and no event kind was added — the
+last acceptance criterion, verifiable with a grep.
+
+### e2e isolation — checked, and it already holds
+
+The story flagged `e2e/setup.spec.ts` and `e2e/sale-list.spec.ts` as likely to
+break once a profile exists. Investigated before writing anything: Playwright
+gives every test its own browser context, so `localStorage` — and with it both
+`mon-farm:sales` and `mon-farm:farm-profile` — starts empty in each one, and
+the profile is only ever seeded by *opening the farm-profile screen*, which
+neither suite does. So there was nothing to weaken and nothing to fix: both
+suites pass unchanged, and the reasoning is recorded in
+`e2e/farm-profile.spec.ts`'s header so the next reader does not re-derive it.
+Deliberately NOT done: adding a `localStorage.clear()` fixture, which would
+have implied a leak that does not exist.
+
+### Ambiguity 1 (per-device or per-farm) — still open, unchanged
+
+Followed literally: one profile per device, no farm-selection concept, and the
+SQLite schema says so out loud (`CHECK (id = 1)`). Still worth the owner
+confirming single-farm-per-device before this ships.
+
 
 **Proposed store shape**, to keep in step with `people.ts`'s pattern rather
 than inventing a new one:

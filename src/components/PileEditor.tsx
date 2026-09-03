@@ -19,7 +19,6 @@ import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 import { Button } from './chrome';
-import type { Pile } from '../core/types';
 import { useT } from '../i18n';
 import { useTheme } from '../theme';
 
@@ -29,8 +28,21 @@ export interface PileEdit {
   stdNetG: number;
 }
 
+/**
+ * What this form needs of a pile, and nothing more: an id and the three
+ * editable fields. A sale's `Pile` satisfies it, and so does a farm-profile
+ * pile (S27) — the form is the same correction either way, so it is typed on
+ * the shape it actually touches rather than on the sale's record.
+ */
+export interface PileEditorTarget {
+  readonly id: string;
+  readonly name: string;
+  readonly tareG: number;
+  readonly stdNetG: number;
+}
+
 export interface PileEditorProps {
-  pile: Pile;
+  pile: PileEditorTarget;
   canEditNet: boolean;
   onSave: (edit: PileEdit) => void;
   onCancel: () => void;

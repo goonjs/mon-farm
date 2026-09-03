@@ -202,6 +202,24 @@ const th = {
   'settings.themeNote': 'สว่างสำหรับกลางแดด มืดสำหรับตอนเย็นหรือในร่ม',
   'settings.speech': 'เสียงนับ',
   'settings.speechNote': 'พูดออกเสียงทุกครั้งที่นับเข่งได้ — ปิดได้โดยไม่กระทบการนับ',
+  'settings.farmProfile': 'โปรไฟล์ไร่',
+  'settings.farmProfileNote': 'โซนและกองที่ใช้ประจำ ใส่ให้ล่วงหน้าเวลาตั้งการขายใหม่',
+  'settings.openFarmProfile': 'แก้โปรไฟล์ไร่',
+
+  // ── The farm profile (S27) — device configuration, never sale data ───────
+  'farmProfile.title': 'โปรไฟล์ไร่',
+  'farmProfile.back': '← ตั้งค่า',
+  'farmProfile.intro': 'ใช้เป็นค่าตั้งต้นของการขายครั้งต่อไป แก้ในการขายไม่กระทบที่บันทึกไว้ตรงนี้',
+  'farmProfile.empty': 'ยังไม่มีโซนที่บันทึกไว้',
+  'farmProfile.loading': 'กำลังโหลดโปรไฟล์…',
+  'farmProfile.addZone': '+ เพิ่มโซน',
+  'farmProfile.addPile': '+ เพิ่มกอง',
+  'farmProfile.rename': 'แก้ชื่อโซน',
+  'farmProfile.editPile': 'แก้ไข',
+  'farmProfile.removeZone': 'ลบโซนออกจากโปรไฟล์',
+  'farmProfile.removeZoneDetail': 'ลบ {name} ออกจากโปรไฟล์ การขายที่ผ่านมาไม่เปลี่ยน',
+  'farmProfile.removePile': 'ลบกองออกจากโปรไฟล์',
+  'farmProfile.removePileDetail': 'ลบ {name} ออกจากโปรไฟล์ การขายที่ผ่านมาไม่เปลี่ยน',
   'common.speechOn': 'เปิด',
   'common.speechOff': 'ปิด',
 
@@ -257,6 +275,12 @@ const th = {
   'setup.removeConfirm': 'ยืนยันเอาออก',
   'setup.voidConfirm': 'ยืนยันยกเลิกทั้งกอง',
   'setup.editZone': 'แก้ชื่อโซน',
+
+  // ── The farm profile offered as a starting point (S27) ───────────────────
+  'setup.profileOffer': 'ใช้โซนและกองจากโปรไฟล์ไร่ไหม',
+  'setup.profileEditHint': 'แก้ตรงนี้ใช้เฉพาะการขายครั้งนี้ ไม่กระทบโปรไฟล์ที่บันทึกไว้',
+  'setup.profileAccept': 'ใช้โซนเหล่านี้',
+  'setup.profileReject': 'ไม่เอาโซนนี้',
 
   // ── Settlement (S14, S18) ────────────────────────────────────────────────
   'settle.title': 'สรุป',
@@ -466,6 +490,23 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'settings.themeNote': 'light for direct sun, dark for evening or indoors',
   'settings.speech': 'spoken count',
   'settings.speechNote': 'speaks each basket count aloud — turning it off does not change the counting itself',
+  'settings.farmProfile': 'farm profile',
+  'settings.farmProfileNote': 'the zones and piles this farm sells — filled in for you when a new sale is set up',
+  'settings.openFarmProfile': 'edit the farm profile',
+
+  'farmProfile.title': 'farm profile',
+  'farmProfile.back': '← settings',
+  'farmProfile.intro': 'the starting point for the next sale — editing a sale never changes what is saved here',
+  'farmProfile.empty': 'no zones saved yet',
+  'farmProfile.loading': 'loading the profile…',
+  'farmProfile.addZone': '+ add zone',
+  'farmProfile.addPile': '+ add pile',
+  'farmProfile.rename': 'rename zone',
+  'farmProfile.editPile': 'edit',
+  'farmProfile.removeZone': 'remove zone from the profile',
+  'farmProfile.removeZoneDetail': 'remove {name} from the profile — past sales are unchanged',
+  'farmProfile.removePile': 'remove pile from the profile',
+  'farmProfile.removePileDetail': 'remove {name} from the profile — past sales are unchanged',
   'common.speechOn': 'on',
   'common.speechOff': 'off',
 
@@ -519,6 +560,11 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'setup.removeConfirm': 'confirm remove',
   'setup.voidConfirm': 'confirm — void the pile',
   'setup.editZone': 'rename zone',
+
+  'setup.profileOffer': 'use the zones and piles from the farm profile?',
+  'setup.profileEditHint': 'edits here apply to this sale only — the saved profile is untouched',
+  'setup.profileAccept': 'use these zones',
+  'setup.profileReject': 'not this zone',
 
   'settle.title': 'settlement',
   'settle.list': 'list',

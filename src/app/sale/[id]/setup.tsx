@@ -46,6 +46,7 @@ import {
 } from '../../../core/project';
 import { newId } from '../../../lib/id';
 import { useSale } from '../../../store/SaleProvider';
+import { farmProfileStore, type ProfileZone } from '../../../store/farmProfile';
 import type { Person } from '../../../store/people';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
@@ -453,6 +454,7 @@ function ZonesCard() {
   const msg = useT();
   const { state, append } = useSale();
   const [newZoneName, setNewZoneName] = useState('');
+  const liveZones = state.zones.filter((z) => !z.removed);
 
   const addZone = () => {
     const name = newZoneName.trim();
@@ -463,9 +465,18 @@ function ZonesCard() {
 
   return (
     <Card title={msg('setup.zonesPiles')}>
-      {state.zones.filter((z) => !z.removed).map((zone) => (
+      {liveZones.map((zone) => (
         <ZoneEditor key={zone.id} zone={zone} />
       ))}
+
+      {/*
+       * The offer applies to a sale that has no zones yet, and stops applying
+       * the moment it has one — whether that zone came from the offer or was
+       * typed by hand. Re-offering the profile as the sale fills up would
+       * mean putting a zone back that was rejected a minute ago, which is the
+       * app arguing with a decision the operator already made (S27).
+       */}
+      {liveZones.length === 0 ? <ProfileOffer /> : null}
 
       <View style={{ flexDirection: 'row', gap: t.space.xs, marginTop: state.zones.length ? t.space.md : 0 }}>
         <TextInput
@@ -482,6 +493,191 @@ function ZonesCard() {
         </Button>
       </View>
     </Card>
+  );
+}
+
+/**
+ * The farm profile, offered as this sale's starting point (S27).
+ *
+ * What this is NOT: a second way for a zone to enter a sale. Accepting writes
+ * exactly the `zone_added` / `pile_added` events the form below writes, with
+ * no field marking them as profile-sourced — for the sale's own record, where
+ * a zone was typed from is not a fact about the sale.
+ *
+ * The draft here is local state and stays local. Editing a tare or rejecting
+ * a zone changes what THIS sale gets and nothing else; the stored profile is
+ * only ever written on its own screen. That is the story's central rule, and
+ * the reason this component never imports a profile mutator.
+ */
+function ProfileOffer() {
+  const t = useTheme();
+  const msg = useT();
+  const { appendMany } = useSale();
+  const [draft, setDraft] = useState<readonly ProfileZone[] | null>(null); // null = still loading
+
+  useEffect(() => {
+    let live = true;
+    farmProfileStore.get().then((p) => {
+      if (live) setDraft(p.zones);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  if (!draft || draft.length === 0) return null;
+
+  const accept = () => {
+    appendMany(
+      draft.flatMap((zone) => {
+        const zoneId = newId('zone-');
+        return [
+          { kind: 'sys' as const, payload: { t: 'zone_added' as const, zoneId, name: zone.name } },
+          ...zone.piles.map((p) => ({
+            kind: 'sys' as const,
+            payload: {
+              t: 'pile_added' as const,
+              pileId: newId('pile-'),
+              zoneId,
+              name: p.name,
+              tareG: p.tareG,
+              stdNetG: p.stdNetG,
+            },
+          })),
+        ];
+      }),
+    );
+  };
+
+  const editZoneName = (zoneId: string, name: string) =>
+    setDraft((d) => (d ?? []).map((z) => (z.id === zoneId ? { ...z, name } : z)));
+
+  const editPile = (zoneId: string, edit: PileEdit & { id: string }) =>
+    setDraft((d) =>
+      (d ?? []).map((z) =>
+        z.id === zoneId
+          ? { ...z, piles: z.piles.map((p) => (p.id === edit.id ? { ...p, ...edit } : p)) }
+          : z,
+      ),
+    );
+
+  return (
+    <View
+      testID="profile-offer"
+      style={{
+        borderWidth: t.border.hair,
+        borderColor: t.color.ruleStrong,
+        borderRadius: t.radius.sm,
+        padding: t.space.sm,
+        marginBottom: t.space.sm,
+        gap: t.space.xs,
+        backgroundColor: t.color.surfaceSunk,
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: t.font.family.sans,
+          fontWeight: t.font.weight.bold,
+          fontSize: t.font.size.small,
+          color: t.color.ink,
+        }}
+      >
+        {msg('setup.profileOffer')}
+      </Text>
+      {/* The no-mutation guarantee, said to the owner rather than only to the
+          test suite: an edit here is for today, not for good. */}
+      <Text
+        testID="offer-hint"
+        style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}
+      >
+        {msg('setup.profileEditHint')}
+      </Text>
+
+      {draft.map((zone) => (
+        <OfferedZone
+          key={zone.id}
+          zone={zone}
+          onRename={(name) => editZoneName(zone.id, name)}
+          onEditPile={(edit) => editPile(zone.id, edit)}
+          onReject={() => setDraft((d) => (d ?? []).filter((z) => z.id !== zone.id))}
+        />
+      ))}
+
+      <Button testID="offer-accept" variant="primary" onPress={accept}>
+        {msg('setup.profileAccept')}
+      </Button>
+    </View>
+  );
+}
+
+function OfferedZone({
+  zone,
+  onRename,
+  onEditPile,
+  onReject,
+}: {
+  zone: ProfileZone;
+  onRename: (name: string) => void;
+  onEditPile: (edit: PileEdit & { id: string }) => void;
+  onReject: () => void;
+}) {
+  const t = useTheme();
+  const msg = useT();
+  const [editingPileId, setEditingPileId] = useState<string | null>(null);
+
+  return (
+    <View style={{ gap: t.space.xs, marginTop: t.space.xs }}>
+      <View style={{ flexDirection: 'row', gap: t.space.xs, alignItems: 'center' }}>
+        <TextInput
+          testID={`offer-zone-name-${zone.id}`}
+          value={zone.name}
+          onChangeText={onRename}
+          style={{ ...inputStyle(t), flex: 1 }}
+        />
+        <Button testID={`offer-reject-${zone.id}`} variant="destructive" onPress={onReject}>
+          {msg('setup.profileReject')}
+        </Button>
+      </View>
+
+      {zone.piles.map((pile) => (
+        <View key={pile.id} style={{ gap: t.space.xs }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: t.space.xs, flexWrap: 'wrap' }}>
+            <Text
+              testID={`offer-pile-${pile.id}`}
+              style={{
+                flexBasis: 140,
+                flexGrow: 2,
+                paddingTop: 10,
+                fontFamily: t.font.family.mono,
+                fontSize: t.font.size.micro,
+                color: t.color.inkSoft,
+              }}
+            >
+              {msg('setup.pileRow', { name: pile.name, tare: pile.tareG / 1000, std: pile.stdNetG / 1000 })}
+            </Text>
+            <Button
+              testID={`offer-edit-pile-${pile.id}`}
+              onPress={() => setEditingPileId((v) => (v === pile.id ? null : pile.id))}
+            >
+              {msg('setup.editPile')}
+            </Button>
+          </View>
+          {editingPileId === pile.id ? (
+            // Nothing has been counted against an unaccepted pile, so both
+            // weights are editable — the FR-3.4 lock has nothing to lock yet.
+            <PileEditor
+              pile={pile}
+              canEditNet
+              onSave={(edit) => {
+                onEditPile({ ...edit, id: pile.id });
+                setEditingPileId(null);
+              }}
+              onCancel={() => setEditingPileId(null)}
+            />
+          ) : null}
+        </View>
+      ))}
+    </View>
   );
 }
 

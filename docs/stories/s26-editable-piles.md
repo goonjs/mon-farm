@@ -462,12 +462,27 @@ then the switcher case failing on a removed pile still being offered, then the
      (2 red — the third is the "still offers it when the zone has a live pile"
      control, which must pass both before and after).
 
-  4. **`canRemovePile` is dead code.** (Low. NOT fixed — left for the dev.)
+  4. **`canRemovePile` is dead code.** (Low. **Removed**, in the S27 session —
+     see the resolution note below.)
      `src/core/project.ts:452` exports it; nothing in `src/`, `e2e/` or any
      test calls it. The two guards the UI actually asks are
      `pileNeedsVoidReason` and `canEditPileNet`. YAGNI, and the DoD's "no
      dead code left behind". Either wire it into `PileRow` (it is the honest
      answer to "may this row offer a remove control at all") or drop it.
+
+     **Dev's answer (2026-09-03, while in `project.ts` for S27): dropped, not
+     wired.** Wiring it into `PileRow` was the other option the reviewer
+     offered, and it was considered first — but `PileRow` only ever renders a
+     pile that `ZoneEditor` has already filtered to `!p.removed`, so
+     `canRemovePile(state, pile.id)` is `true` at every call site it could
+     have. A guard whose false branch is unreachable is not a guard; it is a
+     second, weaker copy of the filter above it, and the next reader would
+     have to prove that to themselves before touching either. The two guards
+     the removal path actually needs — `pileNeedsVoidReason` (which register)
+     and `canEditPileNet` (what may still change) — are both asked and both
+     tested. So: deleted from `src/core/project.ts`, no behaviour change, no
+     test lost (it had none), YAGNI and the DoD's "no dead code left behind"
+     both satisfied. Kept as its own change, separate from S27's work.
 
   5. **Not gated on sale status — the dev's deferred question.** Answered in
      QA notes below: **the reviewer agrees with the dev, with one caveat.**

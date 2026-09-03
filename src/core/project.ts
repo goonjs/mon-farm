@@ -448,12 +448,6 @@ export function canEditPileNet(state: SaleState, pileId: PileId): boolean {
   return !pile.locked;
 }
 
-/** A pile that has not already been retired can be retired. */
-export function canRemovePile(state: SaleState, pileId: PileId): boolean {
-  const pile = state.piles.find((p) => p.id === pileId);
-  return !!pile && !pile.removed;
-}
-
 /**
  * Which of the two removal paths this pile gets: one tap, or a typed reason.
  *

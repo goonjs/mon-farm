@@ -29,6 +29,9 @@ import { useTheme, useThemeControls } from '../theme';
 import type { ColorScheme } from '../../design/tokens';
 
 const LIST: Href = '/';
+// The farm profile gets a screen of its own rather than a section here — see
+// the header of src/app/farm-profile.tsx for why (S27).
+const FARM_PROFILE: Href = '/farm-profile';
 
 type OnOff = 'on' | 'off';
 
@@ -90,6 +93,33 @@ export default function SettingsScreen() {
             { value: 'off', label: msg('common.speechOff') },
           ]}
         />
+        {/*
+         * The one row on this screen that is about a farm rather than a
+         * device preference — and it is a door, not a control. What is behind
+         * it (zones, piles, tares) is nearer to the setup screen's ZonesCard
+         * in size than to a two-option toggle, and folding it in here would
+         * make this screen the catch-all its own header says it is not.
+         */}
+        <View style={{ gap: t.space.xs }}>
+          <Text
+            style={{
+              fontFamily: t.font.family.mono,
+              fontSize: t.font.size.micro,
+              letterSpacing: t.font.tracking.wide,
+              color: t.color.inkSoft,
+            }}
+          >
+            {msg('settings.farmProfile')}
+          </Text>
+          <View style={{ flexDirection: 'row' }}>
+            <Link href={FARM_PROFILE} asChild>
+              <Button testID="open-farm-profile">{msg('settings.openFarmProfile')}</Button>
+            </Link>
+          </View>
+          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkFaint }}>
+            {msg('settings.farmProfileNote')}
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
