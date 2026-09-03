@@ -36,14 +36,16 @@ export interface HoldStageProps {
   /** Shown under the numeral — the operator register's expected reading. */
   caption: string;
   /**
-   * A second operator-register line, under the caption (S22).
+   * A second operator-register figure, BESIDE the caption (S22).
    *
    * A slot rather than another string prop: what goes here is the caller's
    * business (today, the pile's short-basket figure), and the stage stays a
    * component that knows about a numeral and a bezel. It shares the caption's
-   * absolutely-positioned strip at the bottom of the stage, so nothing it
-   * renders can push, resize or overlap the public numeral — F-9.7's space is
-   * not negotiable.
+   * absolutely-positioned strip at the bottom of the stage, on the same row,
+   * so nothing it renders can push, resize or overlap the public numeral, and
+   * nothing it renders makes the strip taller and eats into the numeral's
+   * clearance either — F-9.7's space is not negotiable. See the strip itself
+   * for what happened when this sat under the caption instead.
    */
   register?: ReactNode;
   /** When false, the stage does not accept holds (pile not ready, sale closed). */
@@ -461,7 +463,35 @@ export function HoldStage({
         {count}
       </Text>
 
-      <View style={{ position: 'absolute', bottom: t.space.sm, alignItems: 'center' }}>
+      {/*
+        The operator register: caption and, when the caller supplies one, a
+        second figure BESIDE it on the same row — never under it.
+
+        Under it was the first shape, and it quietly spent the numeral's
+        margin. The strip is bottom-anchored and the numeral is sized from
+        stage height alone (`byHeight`), so a second line does not push the
+        stage's contents apart — it grows upward into the gap between the
+        caption and the glyph. Measured: the clearance between the numeral's
+        ink and the caption fell from ~20px to ~0px at 844x390 and went
+        NEGATIVE at the 740x360 floor, with every existing check still green
+        because the numeral's own box never moved.
+
+        One row keeps the strip exactly one line tall however many figures the
+        caller puts in it, so the clearance is the same as it was before any of
+        them existed — and it needs no measurement of the strip, no feedback
+        into the numeral's size, and no risk to the 0.62 legibility floor,
+        which subtracting the strip's height from `byHeight` would have had.
+        Pinned by e2e (`the register keeps its distance from the public
+        numeral`) at both viewports.
+      */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: t.space.sm,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+      >
         <Text
           testID="caption"
           style={{

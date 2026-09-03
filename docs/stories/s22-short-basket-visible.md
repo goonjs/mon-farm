@@ -1,14 +1,15 @@
 # Story: Short baskets are visible where the counting happens
 
-Status: Review — implemented 2026-09-03. Acceptance criteria drafted the same
-day by the PO agent from the owner's agreed epic-2 scope
-(`docs/epics/epic-2-second-field-round.md`, S22). Every check below is green
+Status: Review — implemented 2026-09-03, QA finding 1 closed the same day.
+Acceptance criteria drafted by the PO agent from the owner's agreed epic-2
+scope (`docs/epics/epic-2-second-field-round.md`, S22). Every check is green
 locally (tokens, contrast, typecheck, lint, vitest, jest, web export,
 playwright). Independent code review and QA browser pass completed
-2026-09-03 — **approved with findings**; every acceptance criterion passes
-in a real browser, and one medium finding (the register strip squeezes the
-caption against the public numeral at the 740×360 floor) is open for the
-dev/owner before this moves to `Done`. See **Code review** and **QA notes**.
+2026-09-03 — **approved with findings**; the one medium finding (the register
+strip squeezed the caption against the public numeral) is now **fixed and
+pinned by a test that fails against the pre-fix tree** — see finding 1's
+**Resolution** and the F-9.7 clearance section of Dev notes. Findings 2–5 are
+recorded as deferred, with reasons. Ready for the owner's `Done` call.
 
 ## Context
 
@@ -23,8 +24,8 @@ dev/owner before this moves to `Done`. See **Code review** and **QA notes**.
 - Touches: `src/app/sale/[id]/counter.tsx` (`HoldStage`'s `caption` prop,
   and `PilePanel`'s `Card title={pile.name}` stat block), `src/core/totals.ts`
   (read-only — no changes expected, see Out of scope). As implemented it also
-  touched `src/components/HoldStage.tsx` (one optional `register` slot under
-  the caption), `src/i18n/messages.ts`, `scripts/check-contrast.mjs` (the new
+  touched `src/components/HoldStage.tsx` (one optional `register` slot beside
+  the caption — under it, until QA finding 1), `src/i18n/messages.ts`, `scripts/check-contrast.mjs` (the new
   `warn`-on-`stage` pairing) and `e2e/fixtures.ts` — see Dev notes.
 
 ## Description
@@ -277,7 +278,8 @@ is untouched, no event kind changed, nothing new is appended.
 
 - `HoldStage` gained one optional prop, `register?: ReactNode` — a slot in
   the caption's absolutely-positioned strip at the bottom of the stage,
-  rendered under the caption. A slot rather than a second string prop
+  rendered beside the caption on the same row (it was rendered *under* the
+  caption as first written — see the F-9.7 clearance note below). A slot rather than a second string prop
   because what goes in it is the caller's business; the stage keeps knowing
   only about a numeral, a bezel and a caption. Because the strip is
   absolutely positioned, nothing rendered into it can push or resize the
@@ -323,6 +325,60 @@ is untouched, no event kind changed, nothing new is appended.
    either and no existing fixture produced a short basket in a pile that is
    still counting. Default is empty, so every existing caller sees the log
    it saw before.
+
+**F-9.7 clearance — closing QA finding 1 (2026-09-03).**
+
+*The remedy: the short figure now sits BESIDE the caption, on the caption
+strip's one row, not under it.* Both remedies QA named were legal under the
+AC ("beside/under"); this is the one that costs nothing. Subtracting the
+strip's measured height from `byHeight` means measuring the strip, feeding
+that measurement back into the numeral's size (a second convergence loop
+beside `advanceEm`'s), spending a few px of the numeral, and then re-checking
+the 0.62 legibility floor at both viewports — a mechanism, to solve a problem
+that only exists because the strip got taller. Keeping the strip one line
+tall removes the cause: the numeral is sized from stage height and the strip
+is bottom-anchored, so as long as the strip's height does not change, the gap
+it leaves cannot change either, however many figures the caller puts in it.
+KISS, and no new numbers to calibrate.
+
+*Test first, and it fails against the pre-fix tree.* `e2e/short-basket.spec.ts`
+gained `the register keeps its distance from the public numeral (F-9.7)`,
+which runs in both the `phone-landscape` (844×390) and `phone-landscape-floor`
+(740×360) projects. It measures what actually moved: the clearance between the
+bottom of the numeral's **ink** — derived from the face's own metrics and the
+drawn glyphs' `actualBoundingBoxDescent`, not the line box, which is taller and
+which the caption has always sat inside — and the top of the operator register,
+asserted with no short line, with one, and with two. Written before the fix,
+against `29b7fc3`, it failed at both viewports on the "one short basket" case:
+
+| viewport | no short line | one short basket (pre-fix) | one short basket (post-fix) | two (post-fix) |
+|---|---|---|---|---|
+| 844×390 | 17.96 px | **−0.04 px** ❌ | **17.96 px** ✅ | 22.0 px |
+| 740×360 floor | 13.51 px | **−4.49 px** ❌ | **13.51 px** ✅ | 17.51 px |
+
+(These are stricter than QA's hand measurement of ~2 px / ~0.5 px because
+this metric ends at the ink rather than at the reported box edge; the sign of
+the change is the same, and the pre-fix floor case is genuinely negative —
+the caption's box already overlapped the digit's ink.) Post-fix the clearance
+with a short line is **identical to the clearance without one**, which is the
+property the fix claims. Screenshots: `screenshots/s22/17-fix-clearance-phone.png`
+and `screenshots/s22/18-fix-clearance-floor.png`, both with two short baskets.
+
+*The floor the test asserts is one micro line* (`tokens.font.size.micro`,
+11 px — the register's own font size). Justification: the strip must be able
+to grow by a full line's worth — a larger OS text scale, a system face whose
+digits sit lower in the em box, a future third figure — and still not land on
+the public numeral. It is a floor, not a pin: the measured 13.5–22 px sit
+comfortably above it, so ordinary font-rendering differences between this
+machine and CI cannot make it flap.
+
+*The existing geometry assertion changed, deliberately.* `lineBox.y >=
+captionBox.y + captionBox.height` asserted the very layout that caused the
+finding, so it is now `lineBox.x >= captionBox.x + captionBox.width` plus a
+same-row bottom check. The numeral-box assertion (`count` box identical
+before and after) is **unchanged and still passes** — the remedy does not
+resize the numeral, which is the other reason it was preferred over the
+`byHeight` subtraction, which would have invalidated it.
 
 **Not done, deliberately.** No change to the Log tab, the public numeral,
 `gate.expected`, or the close/reopen row; S23's bulk-entry `short` events
@@ -405,6 +461,16 @@ will render through this same path with no further work here.
      belong to the owner/dev, and either one invalidates the e2e assertion
      `lineBox.y >= captionBox.y + captionBox.height`.
 
+     **Resolution (dev, 2026-09-03): fixed.** Taken the second way — the
+     short figure moved onto the caption's row instead of under it, so the
+     strip is one line tall again and the numeral's clearance is what it was
+     before S22 (17.96 px at 844×390, 13.51 px at the 740×360 floor —
+     measured, table in Dev notes). Pinned first by a new e2e test that fails
+     on `29b7fc3` at both viewports (−0.04 px and −4.49 px against an 11 px
+     floor). The `lineBox.y` assertion was replaced with the
+     beside-the-caption equivalent; the numeral-box assertion stands
+     unchanged, because this remedy does not touch the numeral's size.
+
   2. **[Low — cosmetic] `pile.netBreakdown` wraps at realistic pile
      weights, on both viewports.** A 26-basket pile with three short
      baskets renders `1,300 + 51.7 = 1,351.7 กก.` — which wraps onto a
@@ -418,6 +484,18 @@ will render through this same path with no further work here.
      shorter form (drop the unit from inside the breakdown, or put the
      breakdown on its own line under the total). Left for the dev/PO — it
      is a string/layout choice, not a defect in this diff's logic.
+
+     **Resolution (dev, 2026-09-03): deferred, not fixed.** Neither candidate
+     is small *and* obviously right. Dropping `กก.` from inside the breakdown
+     contradicts the AC that asked this row to read in `gate.expected`'s
+     shape, unit included, and leaves the pile card's headline weight as the
+     only figure on the screen with no unit on it. Putting the breakdown on
+     its own line under the total changes what the row *is* — a second row,
+     a second label, a Pile-tab layout decision — which is PO/design work,
+     not a defect fix. Nothing clips or overflows and no number is wrong;
+     the cost is legibility at four-digit weights. Left for the owner as a
+     string/layout call, deliberately not taken here so this change stays
+     the one thing that blocks `Done`.
 
   3. **[Low — string nit] The English `counter.shortSoFar` reads
      redundantly:** `'{n} short · {net} kg short'` renders as
@@ -451,6 +529,17 @@ will render through this same path with no further work here.
   2–4 are cosmetic/hygiene and can be taken or explicitly waived. QA made
   no code changes: the only working-tree edits from this review are this
   story file and `docs/stories/screenshots/s22/`.
+
+  **Dev follow-up, 2026-09-03.** Finding 1 is closed (see its Resolution and
+  Dev notes). Finding 2 is explicitly deferred with a reason (see its
+  Resolution). Findings 3–5 are left as they stand: 3 is an English-string
+  change to text the story itself specified, so it belongs to the PO with the
+  rest of the English catalogue and nobody runs the app in English yet; 4 is
+  suite behaviour (the e2e run rewrites every screenshot), unrelated to this
+  diff and not worth changing under a story; 5 is an observation about a
+  later story's scope, not a finding against this one. The working-tree
+  changes for this follow-up are `src/components/HoldStage.tsx`,
+  `e2e/short-basket.spec.ts`, this story file, and two new screenshots.
 
 ## QA notes
 
@@ -544,6 +633,12 @@ All under `docs/stories/screenshots/s22/`:
 `15-floor-29-baskets-count.png`, `15-phone-29-baskets-count.png`,
 `16-floor-pile-large-weights-wrap.png`,
 `16-phone-pile-large-weights.png` (the evidence for findings 1 and 2).
+
+**Finding 1, after the fix (dev, same day)** —
+`17-fix-clearance-phone.png` (844×390) and `18-fix-clearance-floor.png`
+(740×360), both showing two short baskets with the figure beside the caption
+on one row: `2 + 50 = 52 กก.   2 เข่งไม่เต็ม · สั้น 20.4 กก.` These
+supersede nothing above — 13–16 remain the record of the defect.
 
 ### What QA could not verify
 

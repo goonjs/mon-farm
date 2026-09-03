@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { tokens } from '../design/tokens';
 import { openPileScenario, seedSale, testSaleId } from './fixtures';
 
 /**
@@ -97,12 +98,15 @@ test('the operator register carries the pile short weight, summed, and gives it 
   await expect(line).toContainText('12.4');
   await expect(line).toContainText('1 เข่งไม่เต็ม');
 
-  // It shares the CAPTION's strip and nothing else (F-9.7): it sits under the
-  // caption, and the public numeral is the same size in the same place it was
-  // before the line existed — the line neither pushes nor resizes it.
+  // It shares the CAPTION's strip and nothing else (F-9.7): it sits BESIDE the
+  // caption on the same row (it used to sit under it, which cost the numeral
+  // its clearance — see the clearance test below), and the public numeral is
+  // the same size in the same place it was before the line existed, so the
+  // line neither pushes nor resizes it.
   const captionBox = (await page.getByTestId('caption').boundingBox())!;
   const lineBox = (await line.boundingBox())!;
-  expect(lineBox.y).toBeGreaterThanOrEqual(captionBox.y + captionBox.height);
+  expect(lineBox.x).toBeGreaterThanOrEqual(captionBox.x + captionBox.width);
+  expect(lineBox.y + lineBox.height).toBeLessThanOrEqual(captionBox.y + captionBox.height + 1);
   expect(await page.getByTestId('count').boundingBox()).toEqual(numeralBefore);
 
   await page.getByTestId('short').click();
@@ -126,4 +130,76 @@ test('the operator register carries the pile short weight, summed, and gives it 
   await page.getByTestId('undo').click();
   await page.getByTestId('undo-confirm').click();
   await expect(page.getByTestId('short-so-far')).toHaveCount(0);
+});
+
+/**
+ * S22 finding 1 — the register strip must MAKE room, not eat it.
+ *
+ * The assertion above (the numeral's box is identical before and after) is
+ * true and stays true even when the register grows, because what a second
+ * register line moves is the CAPTION, upward into the numeral's line-box
+ * slack — the box never budges. QA measured the consequence by hand: the gap
+ * between the numeral's ink and the caption fell from ~20px to ~2px at
+ * 844×390 and from ~18.5px to ~0.5px at the 740×360 floor. Nothing overlapped,
+ * so every existing check passed while F-9.7's safety margin was gone.
+ *
+ * So this measures the thing that actually moved: the clearance between the
+ * bottom of the numeral's INK (the drawn glyph, not its line box, which is
+ * taller and which the caption has always sat inside) and the top of the
+ * operator register. The floor is one micro line — the register's own font
+ * size — so the strip can gain a full line's worth of height from a larger OS
+ * text scale, or a face whose digits sit lower in the em box, before anything
+ * lands on the public numeral.
+ */
+async function registerClearance(page: import('@playwright/test').Page) {
+  return page.evaluate(() => {
+    const q = (id: string) => document.querySelector(`[data-testid="${id}"]`) as HTMLElement | null;
+    const numeral = q('count');
+    if (!numeral) throw new Error('no numeral');
+
+    // Where the ink ends. The element's box is the LINE box (lineHeight), so
+    // the baseline is derived from the face's own metrics and the ink's
+    // descent is read off the glyphs the browser actually drew.
+    const box = numeral.getBoundingClientRect();
+    const cs = getComputedStyle(numeral);
+    const ctx = document.createElement('canvas').getContext('2d')!;
+    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const m = ctx.measureText(numeral.textContent ?? '');
+    const contentHeight = m.fontBoundingBoxAscent + m.fontBoundingBoxDescent;
+    const baseline = box.top + (box.height - contentHeight) / 2 + m.fontBoundingBoxAscent;
+    const inkBottom = baseline + m.actualBoundingBoxDescent;
+
+    const strip = [q('caption'), q('short-so-far')]
+      .filter((el): el is HTMLElement => el !== null)
+      .map((el) => el.getBoundingClientRect().top);
+    if (strip.length === 0) throw new Error('no operator register');
+
+    return { inkBottom, registerTop: Math.min(...strip), clearance: Math.min(...strip) - inkBottom };
+  });
+}
+
+test('the register keeps its distance from the public numeral (F-9.7)', async ({ page }, testInfo) => {
+  await openCounter(page, 5);
+
+  const floor = tokens.font.size.micro; // one micro line of slack, justified above
+  const before = await registerClearance(page);
+  expect(before.clearance, `clearance with no short line (${testInfo.project.name})`).toBeGreaterThanOrEqual(floor);
+
+  // One short basket: the register gains a figure. It must take that space out
+  // of its own row, not out of the numeral's margin.
+  await page.getByTestId('short').click();
+  await page.getByTestId('short-reading-typed').fill('14.4');
+  await page.getByTestId('short-confirm').click();
+  await expect(page.getByTestId('short-so-far')).toBeVisible();
+
+  const after = await registerClearance(page);
+  expect(after.clearance, `clearance with the short line (${testInfo.project.name})`).toBeGreaterThanOrEqual(floor);
+
+  // And a second short basket (a wider line, more digits) changes nothing.
+  await page.getByTestId('short').click();
+  await page.getByTestId('short-reading-typed').fill('10');
+  await page.getByTestId('short-confirm').click();
+  await expect(page.getByTestId('short-so-far')).toContainText('20.4');
+  const summed = await registerClearance(page);
+  expect(summed.clearance, `clearance at two short baskets (${testInfo.project.name})`).toBeGreaterThanOrEqual(floor);
 });
