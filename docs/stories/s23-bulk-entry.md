@@ -250,6 +250,36 @@ to explain; this way nothing is rounded and nothing is invented.
       `07-blocked-nothing-to-enter.png`, `08-switcher-bulk-marker.png`,
       `09-reopened-bulk-and-live-in-one-log.png`.
 
+### Independent QA re-run (separate agent, 2026-09-03, at HEAD `03cb18d`)
+
+Every gate below was re-run from a clean working tree, not taken on trust.
+
+- [x] `tokens:check`, `contrast`, `typecheck`, `lint` — all green.
+- [x] `test:core` — **98 passed** (8 files).
+- [x] `test:ui` — **64 passed** (11 suites). The story's "63" was true at
+      `7434408`; `03cb18d` added one.
+- [x] `build:web` — exported clean.
+- [x] `test:e2e` — **156 passed, 6 skipped**. The story's "152 passed" was
+      true at `7434408`; `03cb18d` (S25) added four.
+- [x] **Screenshots proven genuine.** The e2e re-run rewrote all twelve
+      committed S23 screenshots and `git status` came back clean — they
+      reproduce byte-for-byte from a real browser run.
+- [x] **TDD (fail-first) verified in a throwaway clone** at `7434408^` with
+      only this story's *test* files checked out forward:
+      - vitest: **6 failed / 92 passed** — `canBulkEnter is not a function`
+        (3 in `project.test.ts`), `store.appendAll is not a function` (3 in
+        `store.test.ts`).
+      - `tsc`: **23 errors** — `bulk_gate_skipped` absent from `SysPayload`,
+        `accept()` taking a 4th argument, `bulkPileIds` not on
+        `ZonePileSwitcherProps`, `appendAll` not on `MemoryStore`.
+      - jest: **2 suites failed** — `BulkEntryForm.test.tsx` (module does not
+        resolve) and `ZonePileSwitcher`'s marker case (`Received: กอง 2 ·
+        ยังไม่เริ่ม`).
+      - Caveat: the four `totals.test.ts` parity cases are red under `tsc`
+        only. At runtime the 4th `source` argument is ignored at the parent
+        commit, so they pass — inherent to a test whose point is that totals
+        *ignore* `source`, but worth stating plainly.
+
 ## Dev notes
 
 ### The two calls the PO left open
@@ -362,8 +392,186 @@ Every criterion had its failing test first:
 
 ## Code review
 
-- Reviewer (separate agent/session):
-- Findings:
-- Resolution:
+- **Reviewer**: separate QA/reviewer agent/session, 2026-09-03, reviewing
+  `7434408` at HEAD `03cb18d` against
+  `docs/checklists/code-review-checklist.md` and
+  `docs/checklists/definition-of-done.md`.
+- **Outcome: approved.** Every acceptance criterion above was verified
+  independently — by reading the diff, by re-running the whole gate, and by
+  driving the exported web build in a real Chromium and reading the persisted
+  event log back out of `localStorage`. No defect was found that warranted a
+  fix in this pass. Six findings are recorded below, all minor or
+  pre-existing; none is a blocker and none was fixed here.
+
+### The two risky claims, checked directly
+
+**1. The append really is atomic on web.** Not taken from the comment:
+`Storage.prototype.setItem` was wrapped from the page's first script and the
+calls counted across one confirm of **40 baskets + leftover** (43 events).
+Result: **exactly one** `setItem` on `mon-farm:events:<saleId>`, 8,620 bytes,
+and all 43 events present afterwards. There is no window in which half the
+batch is stored, so no torn write. Reading the code confirms why: `appendAll`
+on `WebStore` reads the log, validates every `seq` in the batch *before*
+writing, and writes the whole array in one call; `SaleProvider.appendMany`
+computes the batch inside the `setEvents` updater and calls `appendAll`
+synchronously (the method has no `await` before its write), so concurrent
+appends cannot interleave.
+
+**`append(e)` via `appendAll([e])` is unchanged.** Verified three ways: seq
+assignment in the diff is arithmetically identical (old: flag gets `seq`, the
+event gets `last.seq + 1`; new: `seq++` twice), `ts`/`mono`/`actor` stamping
+is the same expression, and in the browser three live-counted baskets
+produced six events (`accept` + `announced` each) in **six separate writes** —
+one per `append`, exactly as before. The whole 156-test e2e suite, which is
+almost entirely single-append flows, is green.
+
+The one real behaviour change on the single-event path is an improvement: a
+clock anomaly and the event it flags used to be two `store.append` calls and
+are now one `appendAll`.
+
+**2. A bulk pile is honestly distinguishable.** All three markers are in the
+*persisted* log, read back out of `localStorage` rather than off the screen:
+`sys:bulk_gate_skipped` carrying `{pileId, reason}` as the batch's first
+event, twelve `accept` events each with `source: 'bulk'` and the pile's
+snapshotted `netG: 50000 / tareG: 2000`, and `sys:pile_closed {forced:
+false}` last. The reason cannot be bypassed: confirm is `aria-disabled` with
+a blank reason *and* with a whitespace-only one, and a **forced** click on it
+wrote zero events both times. The Log tab renders `เข่งมาตรฐาน 50 กก.
+(กรอกย้อนหลัง)` for a bulk basket versus the plain string for a live one, and
+the skip as `ข้ามเช็คศูนย์/ตะกร้า — กรอกทั้งกอง — <reason>`; the Pile tab
+shows `pile-bulk-badge`; the switcher row reads `กอง 1 · ปิดแล้ว ·
+กรอกย้อนหลัง` while an ordinarily-closed pile does not.
+
+### Findings (all minor; none fixed in this pass)
+
+1. **`WebStore.appendAll` and `SqliteStore.appendAll` have no unit test.**
+   `store.test.ts` covers `MemoryStore` only, so the two implementations that
+   actually ship — the single `setItem` and the SQLite transaction — are
+   proven by comment and, on web, by this QA pass's instrumented browser run.
+   The native transaction is not exercised anywhere. Recommend a `WebStore`
+   test against a fake `localStorage`; the native one is a standing gap in
+   this repo, not this story's.
+2. **`WebStore.appendAll` assumes a single-sale batch.** It keys off
+   `events[0].saleId` for both the log key and the duplicate scan, so a
+   mixed-sale batch would be written to the wrong key and mis-validated. No
+   caller can produce one today (`appendMany` stamps one `saleId`), so this is
+   an undefended invariant rather than a live bug — but the port's contract
+   does not say batches are single-sale.
+3. **A store write failure is still invisible.** `void store.appendAll(batch)`
+   has no `.catch`, and React state is updated regardless. If the write
+   rejects (`DuplicateSeqError`) or `write()` swallows a quota error, the UI
+   shows a completed bulk entry that a reload has lost, silently. Pre-existing
+   and deliberate ("a storage failure must never block counting"), unchanged
+   in kind by this story — but S23 raises the stakes, since one lost write is
+   now a whole pile.
+4. **The side effect still lives inside a `setEvents` updater.** Pre-existing.
+   Nothing enables StrictMode today, so the double-invoke hazard is dormant;
+   if it is ever turned on, every batch would be persisted twice and the
+   second `appendAll` would reject unhandled.
+5. **No cap on the basket count.** `parseBaskets` accepts any integer, so a
+   fat-fingered `99999` writes ~100k events in one batch. YAGNI-acceptable,
+   and the summary line states the number before confirm; noting it because
+   the Dev notes reason about a "200-basket bulk entry" as the large case.
+6. **`bulkPileId` is not cleared when the operator switches pile.** Switching
+   away correctly shows the other pile its own gate, but switching *back*
+   re-opens the bulk form (with the fields cleared) instead of the gate. No
+   events are involved and nothing is lost; cosmetic.
+
+### Checklist verdict
+
+- Correctness — diff implements the ACs (read against the story, not just the
+  diff); TDD proven fail-first; edge cases covered, not just the golden path;
+  offline behaviour exercised for real, not asserted.
+- Verification — sandbox run confirms the feature; screenshots are genuine
+  (they regenerate byte-identically).
+- Quality — no speculative code; `appendAll` is the smallest thing that buys
+  the guarantee the story's own offline AC demands; no unrelated refactor
+  bundled in; commit subject is 45 chars, imperative, with the *why* in the
+  body.
+- Docs — story updated live, with deviations explained. Two stale numbers
+  corrected above (`test:ui` 63→64, `test:e2e` 152→156), both caused by the
+  later commit `03cb18d`, not by an inaccurate claim at the time.
 
 ## QA notes
+
+**Independent QA, 2026-09-03** — separate agent/session from the implementer.
+Nothing below is taken from the dev's claims; each line was observed.
+
+### The real-browser walk
+
+Driven with `playwright-core` against the exported build
+(`npm run build:web` + `node scripts/serve-dist.mjs`) in the sandbox's real
+Chromium at **844×390**, with the form and a full confirm re-checked at the
+**740×360** floor. The sale was **built through the UI** (new sale → price →
+zone → four piles → start counting), not seeded, and every event assertion
+reads `localStorage` directly rather than trusting the screen.
+
+**46 checks, 44 passed; the two "failures" were wrong expectations in the QA
+script, not app defects** (the pile count badge legitimately reads 14 for
+12 bulk + 1 short + 1 live, and the log tab is sale-wide so it legitimately
+showed 15 bulk-labelled lines across two bulk piles, not 12).
+
+Per acceptance criterion:
+
+| AC | Result |
+| --- | --- |
+| Bulk count offered only on `not-started` | **Pass** — offered on the fresh pile; absent (`count() === 0`) on a `counting` pile and on a `closed` one |
+| Opens in place of the gate | **Pass** — `bulk-entry-form` replaces `zero-tare-gate`; the pile is never routed through it |
+| Two fields + required typed reason | **Pass** — blank reason and whitespace-only reason both leave confirm `aria-disabled`, both show `bulk-reason-error`, and a **forced** click on the disabled confirm wrote **0 events** in each case |
+| Both zero blocked | **Pass** — `bulk-empty-error` shown, confirm disabled |
+| Cancel appends nothing | **Pass** — event count unchanged (7 → 7), pile still `not-started`, gate back on screen, bulk still offered |
+| Confirm writes the exact sequence, in order | **Pass** — 12 baskets + 8.4 kg wrote exactly **15** events: `sys:bulk_gate_skipped`, 12 × `accept{source:'bulk', netG:50000, tareG:2000}`, `short{readingG:10400, tareG:2000}`, `sys:pile_closed{forced:false}`. Seqs contiguous; all 15 share one `ts` |
+| Leftover → one `short`; zero leftover → none | **Pass** — the 3-basket / 0-leftover pile wrote `skip, accept×3, pile_closed` and no `short` |
+| Zero baskets → no `accept` | **Pass** — the 0-basket / 20 kg pile wrote `skip, short, pile_closed` |
+| Pile ends closed | **Pass** — `pile-closed-transition` in every confirm |
+| Log tab distinguishes bulk | **Pass** — 12 lines reading `เข่งมาตรฐาน 50 กก. (กรอกย้อนหลัง)`, plus the skip line carrying the typed reason verbatim |
+| Pile tab / switcher marker | **Pass** — `pile-bulk-badge` visible; switcher row `กอง 1 · ปิดแล้ว · กรอกย้อนหลัง` vs `กอง 2 · ยังไม่เริ่ม` |
+| Totals unchanged | **Pass** — a bulk pile and a **live-counted** pile with the same 12 baskets and the same 8.4 kg leftover (counted live through the gate, twelve real press-and-holds and a short-basket entry) both read `600 + 8.4 = 608.4 กก.`, and their summed net grams are equal (608,400 = 608,400) |
+| Reopen and count live | **Pass** — the reopened bulk pile mounts the stage with no gate, one live hold lands, and the pile's log then holds **12 `source:'bulk'` and 1 `source:'hold'`** accepts side by side; totals move to `650 + 8.4 = 658.4 กก.`; the bulk badge stays |
+| Landscape floor | **Pass** — at 740×360 the confirm button is fully above the fold (y+h = 348 ≤ 360) and a full bulk entry completes |
+
+### Beyond the ACs
+
+- **Atomicity, measured:** one 43-event confirm = **one** `localStorage.setItem`
+  (instrumented). Single appends still write once each.
+- **Offline, exercised not assumed:** with the browser context set offline, a
+  full bulk entry (5 baskets + 3.2 kg) wrote all 8 events locally and, back
+  online, survived a reload with its badge intact. (Reloading *while* offline
+  fails to fetch the app shell — there is no service worker. Out of S23's
+  scope, but it means "offline-first" today covers the write path, not a cold
+  start with no network.)
+- **Double-press:** two mouse-downs on confirm in the same gesture wrote one
+  bulk entry, not two.
+
+### QA screenshots
+
+Added alongside the dev's twelve, under `screenshots/s23/`, all `qa-`
+prefixed so nothing of theirs is overwritten:
+
+- `qa-01-pile-tab-bulk-offered.png` — bulk count offered on a `not-started` pile
+- `qa-02-blank-reason-blocks.png` — confirm blocked, reason-required message
+- `qa-03-both-zero-blocks.png` — nothing-to-enter blocked
+- `qa-04-form-filled-844x390.png` — the filled form, summary and gate note
+- `qa-05-pile-closed-after-bulk.png` — the pile closed by the confirm
+- `qa-06-log-bulk-and-skip.png` — bulk-labelled baskets and the leftover line
+- `qa-07-pile-tab-bulk-badge.png` — the Pile tab badge and totals
+- `qa-08-switcher-bulk-marker.png` — the switcher's bulk marker
+- `qa-09-live-pile-parity.png` — the live-counted pile with identical figures
+- `qa-10-reopened-bulk-plus-live-log.png` — both sources in one pile's log
+- `qa-11-mixed-pile-tab.png` — the mixed pile's totals, badge retained
+- `qa-12-form-740x360-floor.png` — the form at the landscape floor
+- `qa-13-closed-740x360-floor.png` — a completed bulk entry at the floor
+- `qa-14-offline-bulk-entry.png` — a bulk entry made with the network off
+- `qa-15-offline-reload-persisted.png` — that entry after a reload
+
+### What QA could NOT verify
+
+- **The native (expo-sqlite) atomicity path.** `SqliteStore.appendAll`'s
+  `withTransactionAsync` was read, not run — there is no device or emulator in
+  this sandbox and no test covers it. The all-or-nothing guarantee is proven
+  on web and in `MemoryStore` only.
+- **A genuine crash mid-write.** The "force quit part-way through" scenario
+  was reasoned about and the single-`setItem` shape measured; the process was
+  never actually killed mid-append.
+- **CI.** Nothing has been pushed, so the DoD's "pushed, CI green" line is
+  still open — as the story's own status says.
