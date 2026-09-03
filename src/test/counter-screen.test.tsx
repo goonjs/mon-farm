@@ -26,7 +26,7 @@ import { wrap } from './render';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
-// A four-method in-memory adapter. `MemoryStore` itself cannot be reached
+// A five-method in-memory adapter. `MemoryStore` itself cannot be reached
 // from here: jest resolves the bare './store' specifier to the platform file
 // (store.web.ts), exactly as Metro does, and that file exports only `store`.
 jest.mock('../store/store', () => {
@@ -34,6 +34,10 @@ jest.mock('../store/store', () => {
   return {
     store: {
       append: async (e: { saleId: string }) => void rows.push(e),
+      // S23: batches are the provider's primitive now, and this stands in for
+      // the real adapters' all-or-nothing write (one localStorage key on web,
+      // one SQLite transaction on device).
+      appendAll: async (batch: { saleId: string }[]) => void rows.push(...batch),
       load: async (saleId: string) => rows.filter((e) => e.saleId === saleId),
       pending: async () => [],
       markSynced: async () => {},

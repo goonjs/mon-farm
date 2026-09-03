@@ -30,6 +30,19 @@ export interface EventStore {
    * cannot occupy one position in it.
    */
   append(event: SaleEvent): Promise<void>;
+  /**
+   * Appends several events ATOMICALLY: either every event lands or none does,
+   * and a duplicate (saleId, seq) anywhere in the batch rejects the whole
+   * batch without writing any of it.
+   *
+   * Added for bulk entry (S23), where one action writes a gate-skip, N
+   * baskets, a leftover and a close. Written one at a time, a crash part-way
+   * through leaves a pile carrying baskets that the log says was never
+   * started — numbers with nothing to say where they came from, which is the
+   * one thing this log exists to prevent. `append` remains the primitive;
+   * this is the transaction around it.
+   */
+  appendAll(events: readonly SaleEvent[]): Promise<void>;
   load(saleId: string): Promise<SaleEvent[]>;
   /** Unsynced rows. The outbox query for a sync layer that does not exist yet. */
   pending(): Promise<SaleEvent[]>;
@@ -67,6 +80,18 @@ export class MemoryStore implements EventStore {
     }
     list.push(event);
     this.rows.set(event.saleId, list);
+  }
+
+  async appendAll(events: readonly SaleEvent[]): Promise<void> {
+    // Check every event BEFORE writing any of them: the all-or-nothing
+    // promise is the whole reason this method exists.
+    for (const event of events) {
+      const list = this.rows.get(event.saleId) ?? [];
+      if (list.some((e) => e.seq === event.seq)) {
+        throw new DuplicateSeqError(event.saleId, event.seq);
+      }
+    }
+    for (const event of events) await this.append(event);
   }
 
   async load(saleId: string): Promise<SaleEvent[]> {

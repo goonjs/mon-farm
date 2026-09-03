@@ -57,7 +57,13 @@ export interface EventBase {
 export interface AcceptEvent extends EventBase {
   readonly kind: 'accept';
   readonly pileId: PileId;
-  readonly source: 'hold' | 'hold-kbd';
+  /**
+   * How the basket got into the log. `hold`/`hold-kbd` are watched events —
+   * someone was at the scale. `bulk` (S23) is not: it is a basket entered
+   * afterwards from a tally, and the whole point of keeping it a separate
+   * value is that the log must never let the two look alike.
+   */
+  readonly source: 'hold' | 'hold-kbd' | 'bulk';
   readonly netG: number;
   readonly tareG: number;
 }
@@ -174,6 +180,20 @@ export type SysPayload =
   | { readonly t: 'ready'; readonly pileId: PileId }
   | { readonly t: 'pile_closed'; readonly pileId: PileId; readonly forced: boolean }
   | { readonly t: 'pile_reopened'; readonly pileId: PileId; readonly reason: string }
+  /**
+   * S23. A pile entered in bulk has no scale reading to check, so the
+   * zero/tare gate is skipped rather than answered — and the skip is
+   * recorded, with a typed reason, for the same reason `reject` exists: a
+   * thing that did not happen has to be visible as not having happened, not
+   * merely absent. Silence would be indistinguishable from a pile that was
+   * checked.
+   *
+   * Deliberately carries no projected state of its own. It does not set
+   * `zeroChecked`/`tareConfirmed` — that would fake the result of a check
+   * nobody performed — and the "this pile was entered in bulk" marker the UI
+   * shows is derived from the presence of this event in the log.
+   */
+  | { readonly t: 'bulk_gate_skipped'; readonly pileId: PileId; readonly reason: string }
   | { readonly t: 'zone_closed'; readonly zoneId: ZoneId; readonly forcedPiles: readonly PileId[] }
   | { readonly t: 'zone_reopened'; readonly zoneId: ZoneId; readonly reason: string }
   | { readonly t: 'sale_closed' }

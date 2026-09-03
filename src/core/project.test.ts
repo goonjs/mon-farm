@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { readyPile, setUpSale, withZoneContract, workedExample } from './fixtures';
 import {
+  canBulkEnter,
   canCount,
   canReady,
   canReopenPile,
@@ -278,5 +279,70 @@ describe('clock anomalies (FR-12.6) — flagged, never ordering', () => {
     expect(s.clockSuspect).toBe(true);
     // The whole point: a suspect clock does not stop anyone counting.
     expect(canCount(s, 'p1')).toBe(true);
+  });
+});
+
+describe('bulk entry (S23) — the one deliberate way past the zero/tare gate', () => {
+  it('canBulkEnter is true only for a not-started pile in an open zone and sale', () => {
+    const b = setUpSale();
+    expect(canBulkEnter(projectSale(b.build()), 'p1')).toBe(true);
+
+    // Unknown pile.
+    expect(canBulkEnter(projectSale(b.build()), 'nope')).toBe(false);
+  });
+
+  it('is false once the pile is counting or closed', () => {
+    const b = readyPile(setUpSale(), 'p1');
+    expect(canBulkEnter(projectSale(b.build()), 'p1')).toBe(false);
+
+    b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+    expect(canBulkEnter(projectSale(b.build()), 'p1')).toBe(false);
+  });
+
+  it('is false once the zone or the sale is closed', () => {
+    const zoneClosed = setUpSale().sys({ t: 'zone_closed', zoneId: 'zA', forcedPiles: [] });
+    expect(canBulkEnter(projectSale(zoneClosed.build()), 'p1')).toBe(false);
+
+    const saleClosed = setUpSale().sys({ t: 'sale_closed' });
+    expect(canBulkEnter(projectSale(saleClosed.build()), 'p1')).toBe(false);
+  });
+
+  it('projecting bulk_gate_skipped changes no pile field — it is evidence, not state', () => {
+    const without = setUpSale().build();
+    const withSkip = setUpSale()
+      .sys({ t: 'bulk_gate_skipped', pileId: 'p1', reason: 'นับไว้ในกระดาษ' })
+      .build();
+
+    // Same pile, gate flags included: the skip records that the check did not
+    // happen, and must not fake its result.
+    expect(projectSale(withSkip).piles).toEqual(projectSale(without).piles);
+    expect(pile(projectSale(withSkip), 'p1').zeroChecked).toBe(false);
+    expect(pile(projectSale(withSkip), 'p1').tareConfirmed).toBe(false);
+  });
+
+  it('the full bulk sequence leaves the pile closed and locked, like any counted pile', () => {
+    const b = setUpSale().sys({ t: 'bulk_gate_skipped', pileId: 'p1', reason: 'ไม่ได้เปิดแอป' });
+    for (let i = 0; i < 12; i++) b.accept('p1', 50_000, 2_000, 'bulk');
+    b.short('p1', 10_400); // 8.4 kg leftover
+    b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+
+    const s = projectSale(b.build());
+    expect(pile(s, 'p1').status).toBe('closed');
+    expect(pile(s, 'p1').locked).toBe(true);
+    expect(canCount(s, 'p1')).toBe(false);
+    // S13's reopen is the way back in, unchanged by how the pile was filled.
+    expect(canReopenPile(s, 'p1')).toBe(true);
+  });
+
+  it('a reopened bulk pile counts live again, gate untouched', () => {
+    const b = setUpSale().sys({ t: 'bulk_gate_skipped', pileId: 'p1', reason: 'มาสาย' });
+    b.accept('p1', 50_000, 2_000, 'bulk');
+    b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+    b.sys({ t: 'pile_reopened', pileId: 'p1', reason: 'ตกไปเข่งหนึ่ง' });
+
+    const s = projectSale(b.build());
+    expect(pile(s, 'p1').status).toBe('counting');
+    expect(canCount(s, 'p1')).toBe(true);
+    expect(pile(s, 'p1').zeroChecked).toBe(false);
   });
 });

@@ -230,6 +230,11 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
       case 'announced':
         break;
 
+      // Evidence only: the gate was skipped, and skipping it must not look
+      // like passing it. See the payload's own note in types.ts.
+      case 'bulk_gate_skipped':
+        break;
+
       case 'speech_set':
         speechOn = payload.on;
         break;
@@ -298,6 +303,38 @@ export function canReady(state: SaleState, pileId: PileId): boolean {
   if (!pile || pile.status !== 'not-started') return false;
   if (state.status !== 'open') return false;
   return pile.zeroChecked && pile.tareConfirmed;
+}
+
+/**
+ * Bulk entry (S23) — the one deliberate way past the zero/tare gate.
+ *
+ * The same status question `canReady` asks, minus the two checks: a pile
+ * entered from a tally has no scale reading to check, so requiring
+ * `zeroChecked`/`tareConfirmed` here would demand a record of something
+ * nobody did. Everything else is identical, because everything else is about
+ * whether this pile is still open for numbers at all.
+ */
+export function canBulkEnter(state: SaleState, pileId: PileId): boolean {
+  const pile = state.piles.find((p) => p.id === pileId);
+  if (!pile || pile.status !== 'not-started') return false;
+  if (state.status !== 'open') return false;
+  const zone = state.zones.find((z) => z.id === pile.zoneId);
+  return zone?.status === 'open';
+}
+
+/**
+ * The piles whose numbers were entered in bulk rather than watched (S23).
+ *
+ * Derived at read time from the presence of a `bulk_gate_skipped` event,
+ * deliberately not projected onto `Pile`: the marker is a fact about the log,
+ * and a projected flag would be a second place for it to be wrong.
+ */
+export function bulkEnteredPileIds(events: readonly SaleEvent[]): ReadonlySet<PileId> {
+  const out = new Set<PileId>();
+  for (const e of events) {
+    if (e.kind === 'sys' && e.payload.t === 'bulk_gate_skipped') out.add(e.payload.pileId);
+  }
+  return out;
 }
 
 /**

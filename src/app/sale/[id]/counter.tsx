@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { BulkEntryForm, type BulkEntry } from '../../../components/BulkEntryForm';
 import { Button, Pill, Tabs, TopBar } from '../../../components/chrome';
 import { HoldStage } from '../../../components/HoldStage';
 import { PileClosedTransition } from '../../../components/PileClosedTransition';
@@ -24,7 +25,14 @@ import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { ShortBasketPanel } from '../../../components/ShortBasketPanel';
 import { ZeroTareGate } from '../../../components/ZeroTareGate';
 import { ZonePileSwitcher } from '../../../components/ZonePileSwitcher';
-import { canCount, canReopenPile, lastAnnounceOk, pilesStillCounting } from '../../../core/project';
+import {
+  bulkEnteredPileIds,
+  canBulkEnter,
+  canCount,
+  canReopenPile,
+  lastAnnounceOk,
+  pilesStillCounting,
+} from '../../../core/project';
 import { formatBaht, formatKg } from '../../../core/settle';
 import { basketNetG, lastLiveBasket, liveBaskets, pileTotals, saleTotals, zoneTotals } from '../../../core/totals';
 import type { BasketEvent, Pile, SaleEvent, SaleState, Totals, Zone } from '../../../core/types';
@@ -86,7 +94,7 @@ export default function CounterScreen() {
   const router = useRouter();
   const { toggle, scheme } = useThemeControls();
   const { speechOn, setSpeechOn } = useSpeech();
-  const { saleId, events, state, append, ready } = useSale();
+  const { saleId, events, state, append, appendMany, ready } = useSale();
   const [tab, setTab] = useState<TabKey>('count');
   const [shortOpen, setShortOpen] = useState(false);
   const [shortReadingG, setShortReadingG] = useState(0);
@@ -96,6 +104,9 @@ export default function CounterScreen() {
   const [confirmCloseSale, setConfirmCloseSale] = useState(false);
   const [confirmCloseZone, setConfirmCloseZone] = useState(false);
   const [confirmClosePile, setConfirmClosePile] = useState(false);
+  // Which pile the bulk form is open for — by id, not a boolean, so switching
+  // pile while it is open cannot leave the form pointed at the wrong log.
+  const [bulkPileId, setBulkPileId] = useState<string | null>(null);
 
   // The pile in view: whatever the operator explicitly picked (switcher),
   // falling back to the one being counted, falling back to the first pile —
@@ -114,6 +125,7 @@ export default function CounterScreen() {
     setSelectedPileId(fallbackPile.id);
   }
 
+  const bulkPiles = bulkEnteredPileIds(events);
   const totals = pile ? pileTotals(events, pile.id) : null;
   const countable = pile ? canCount(state, pile.id) : false;
   const lastBasket = pile ? lastLiveBasket(events, pile.id) : null;
@@ -166,6 +178,42 @@ export default function CounterScreen() {
     append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG });
     if (speechOn) announceCount(nextCount, speaker, append);
     setShortOpen(false);
+  };
+
+  /**
+   * The whole bulk entry, in one write (S23).
+   *
+   * Order is the record's order: the skipped gate first, so the log says how
+   * these numbers got in before it says what they are; then the baskets; then
+   * the leftover; then the close. Nothing is invented — a zero leftover
+   * writes no `short` (a phantom zero-weight basket nobody weighed) and zero
+   * baskets write no `accept`.
+   *
+   * `appendMany` rather than N calls to `append`: the sequence only means
+   * anything whole, and a crash part-way through would otherwise leave a pile
+   * carrying baskets the log says was never started.
+   */
+  const confirmBulk = ({ baskets, leftoverG, reason }: BulkEntry) => {
+    const batch: Parameters<typeof appendMany>[0][number][] = [
+      { kind: 'sys', payload: { t: 'bulk_gate_skipped', pileId: pile.id, reason } },
+    ];
+    for (let i = 0; i < baskets; i++) {
+      // Snapshotting the pile's current net/tare, exactly as a live accept
+      // does — a later edit to the standard net must not move these baskets.
+      batch.push({ kind: 'accept', pileId: pile.id, source: 'bulk', netG: pile.stdNetG, tareG: pile.tareG });
+    }
+    if (leftoverG > 0) {
+      batch.push({ kind: 'short', pileId: pile.id, readingG: pile.tareG + leftoverG, tareG: pile.tareG });
+    }
+    batch.push({ kind: 'sys', payload: { t: 'pile_closed', pileId: pile.id, forced: false } });
+
+    appendMany(batch);
+    setBulkPileId(null);
+  };
+
+  const openBulk = () => {
+    setBulkPileId(pile.id);
+    setTab('count');
   };
 
   const onZeroChecked = (ok: boolean, readingG: number) =>
@@ -278,6 +326,14 @@ export default function CounterScreen() {
               onCloseZone={() => setConfirmCloseZone(true)}
               onCloseSale={() => setConfirmCloseSale(true)}
             />
+          ) : pile.status === 'not-started' && bulkPileId === pile.id ? (
+            <BulkEntryForm
+              pileName={pile.name}
+              tareG={pile.tareG}
+              stdNetG={pile.stdNetG}
+              onConfirm={confirmBulk}
+              onCancel={() => setBulkPileId(null)}
+            />
           ) : pile.status === 'not-started' ? (
             <ZeroTareGate
               pileName={pile.name}
@@ -351,6 +407,8 @@ export default function CounterScreen() {
           pile={pile}
           zone={zone}
           state={state}
+          bulkEntered={bulkPiles.has(pile.id)}
+          onBulkCount={openBulk}
           onCloseSale={() => setConfirmCloseSale(true)}
           onCloseZone={() => setOverlay({ kind: 'switcher' })}
           onReopenPile={(pileId) => setOverlay({ kind: 'reopen-pile', pileId })}
@@ -360,7 +418,12 @@ export default function CounterScreen() {
       {tab === 'log' ? <LogPanel /> : null}
 
       {overlay.kind === 'switcher' ? (
-        <ZonePileSwitcher state={state} onPick={pickPile} onClose={() => setOverlay({ kind: 'none' })} />
+        <ZonePileSwitcher
+          state={state}
+          bulkPileIds={bulkPiles}
+          onPick={pickPile}
+          onClose={() => setOverlay({ kind: 'none' })}
+        />
       ) : null}
 
       {overlay.kind === 'reopen-pile' ? (
@@ -720,6 +783,8 @@ function PilePanel({
   pile,
   zone,
   state,
+  bulkEntered,
+  onBulkCount,
   onCloseSale,
   onCloseZone,
   onReopenPile,
@@ -728,6 +793,9 @@ function PilePanel({
   pile: Pile;
   zone: Zone;
   state: SaleState;
+  /** This pile's numbers were entered in bulk, not watched (S23). */
+  bulkEntered: boolean;
+  onBulkCount: () => void;
   onCloseSale: () => void;
   onCloseZone: () => void;
   onReopenPile: (pileId: string) => void;
@@ -761,6 +829,18 @@ function PilePanel({
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, gap: t.space.md, flexDirection: 'row', flexWrap: 'wrap' }}>
       <Card title={pile.name}>
+        {/* A bulk-entered pile has to read as one at a glance, not only in
+            the log — a closed pile whose baskets nobody watched is a
+            different kind of record from a closed pile whose baskets were
+            counted one at a time. */}
+        {bulkEntered ? (
+          <Text
+            testID="pile-bulk-badge"
+            style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, letterSpacing: t.font.tracking.wide, color: t.color.warn, marginBottom: t.space.xs }}
+          >
+            {msg('pile.bulkBadge')}
+          </Text>
+        ) : null}
         <Stat label={msg('pile.standard')} value={String(pt.standardBaskets)} big />
         {/* Count AND weight once there is a short basket to weigh — the count
             alone left the Log tab as the only place the weight existed. At
@@ -839,9 +919,21 @@ function PilePanel({
             {msg('pile.reopen')}
           </Button>
         ) : (
-          <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
-            {msg('pile.notStarted')}
-          </Text>
+          <View style={{ gap: t.space.xs }}>
+            <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
+              {msg('pile.notStarted')}
+            </Text>
+            {/* The second entry point onto a not-started pile (S23): the
+                counter for a pile being watched, this for one that was not.
+                Offered on exactly the statuses `canBulkEnter` allows, which
+                is the same question `canReady` asks minus the two checks
+                there is no scale to perform. */}
+            {canBulkEnter(state, pile.id) ? (
+              <Button testID="bulk-count" onPress={onBulkCount}>
+                {msg('pile.bulkCount')}
+              </Button>
+            ) : null}
+          </View>
         )}
 
         <View style={{ height: t.space.md }} />
@@ -977,7 +1069,14 @@ function LogRow({ event: e, voided }: { event: SaleEvent; voided: boolean }) {
 function describe(e: SaleEvent, t: ReturnType<typeof useTheme>, msg: Translate) {
   switch (e.kind) {
     case 'accept':
-      return { mark: '✓', colour: t.color.accept, body: msg('log.accept', { weight: formatKg(e.netG) }) };
+      // `source` is the whole point of the field: a bulk basket is not
+      // evidence of anything anyone watched, and the log must not let the two
+      // read alike (S23).
+      return {
+        mark: '✓',
+        colour: t.color.accept,
+        body: msg(e.source === 'bulk' ? 'log.acceptBulk' : 'log.accept', { weight: formatKg(e.netG) }),
+      };
     case 'short':
       return {
         mark: '⚖',
@@ -1023,6 +1122,7 @@ function sysLabel(p: { t: string } & Record<string, unknown>, msg: Translate): s
     case 'ready': return msg('log.ready');
     case 'pile_closed': return msg('log.pileClosed');
     case 'pile_reopened': return msg('log.pileReopened', { reason: String(p.reason) });
+    case 'bulk_gate_skipped': return msg('log.bulkGateSkipped', { reason: String(p.reason) });
     case 'zone_closed': return msg('log.zoneClosed');
     case 'zone_reopened': return msg('log.zoneReopened', { reason: String(p.reason) });
     case 'sale_closed': return msg('log.saleClosed');

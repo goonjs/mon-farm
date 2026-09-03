@@ -6,7 +6,7 @@
  * timestamps here are deliberately arbitrary.
  */
 
-import type { SaleEvent, SysPayload } from './types';
+import type { AcceptEvent, SaleEvent, SysPayload } from './types';
 
 const DEFAULT_SALE_ID = 'sale-1';
 
@@ -35,9 +35,20 @@ export class LogBuilder {
     return this;
   }
 
-  /** A standard basket. Weights in grams. */
-  accept(pileId: string, netG = 50_000, tareG = 2_000): this {
-    this.events.push({ ...this.base(), kind: 'accept', pileId, source: 'hold', netG, tareG });
+  /**
+   * A standard basket. Weights in grams.
+   *
+   * `source` defaults to `hold` — a basket someone watched — so every caller
+   * written before S23 keeps the log it had. Pass `'bulk'` for a basket
+   * entered from a tally afterwards.
+   */
+  accept(
+    pileId: string,
+    netG = 50_000,
+    tareG = 2_000,
+    source: AcceptEvent['source'] = 'hold',
+  ): this {
+    this.events.push({ ...this.base(), kind: 'accept', pileId, source, netG, tareG });
     return this;
   }
 

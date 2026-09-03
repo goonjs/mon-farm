@@ -109,6 +109,19 @@ export class SqliteStore implements EventStore {
     }
   }
 
+  /**
+   * One transaction, so a force quit part-way through a bulk entry rolls the
+   * whole batch back rather than leaving a half-written pile. WAL gives that
+   * its durability; `withTransactionAsync` gives it its atomicity.
+   */
+  async appendAll(events: readonly SaleEvent[]): Promise<void> {
+    if (!events.length) return;
+    const db = await this.open();
+    await db.withTransactionAsync(async () => {
+      for (const event of events) await this.append(event);
+    });
+  }
+
   async load(saleId: string): Promise<SaleEvent[]> {
     const db = await this.open();
     const rows = await db.getAllAsync<Row>(

@@ -57,6 +57,25 @@ export class WebStore implements EventStore {
     if (!index.includes(event.saleId)) write(INDEX, [event.saleId, ...index]);
   }
 
+  /**
+   * Atomic for free here: the whole log is one localStorage key, so a batch is
+   * one `setItem` — there is no window in which half of it is stored.
+   */
+  async appendAll(events: readonly SaleEvent[]): Promise<void> {
+    if (!events.length) return;
+    const saleId = events[0].saleId;
+    const list = read<SaleEvent[]>(KEY(saleId), []);
+    const seqs = new Set(list.map((e) => e.seq));
+    for (const event of events) {
+      if (seqs.has(event.seq)) throw new DuplicateSeqError(event.saleId, event.seq);
+      seqs.add(event.seq);
+    }
+    write(KEY(saleId), [...list, ...events]);
+
+    const index = read<string[]>(INDEX, []);
+    if (!index.includes(saleId)) write(INDEX, [saleId, ...index]);
+  }
+
   async load(saleId: string): Promise<SaleEvent[]> {
     return read<SaleEvent[]>(KEY(saleId), []).sort((a, b) => a.seq - b.seq);
   }

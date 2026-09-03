@@ -84,6 +84,36 @@ export function unreadyPileScenario(saleId: string): SaleEvent[] {
 }
 
 /**
+ * One zone-A pile counted live and then closed the ordinary way (กอง 2), with
+ * กอง 1 left genuinely `not-started` for a bulk entry to land in (S23).
+ *
+ * The live pile carries exactly the numbers the bulk entry will: twelve
+ * standard baskets and an 8.4 kg leftover. That is what makes "a bulk pile
+ * and a live pile carrying the same numbers total identically" a real
+ * comparison rather than an assertion about one pile.
+ */
+export function bulkParityScenario(saleId: string): SaleEvent[] {
+  const b = setUpSale(new LogBuilder(saleId));
+  readyPile(b, 'p2');
+  for (let i = 0; i < 12; i++) b.accept('p2');
+  b.short('p2', 10_400); // 10.4 − 2 = 8.4 kg
+  b.sys({ t: 'pile_closed', pileId: 'p2', forced: false });
+  return b.build();
+}
+
+/**
+ * One pile counted and closed — the status bulk entry must NOT be offered on,
+ * alongside `openPileScenario`'s counting pile.
+ */
+export function closedPileScenario(saleId: string, standardBaskets = 3): SaleEvent[] {
+  const b = setUpSale(new LogBuilder(saleId));
+  readyPile(b, 'p1');
+  for (let i = 0; i < standardBaskets; i++) b.accept('p1');
+  b.sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+  return b.build();
+}
+
+/**
  * Writes a sale's events directly into the browser's localStorage before the
  * app boots, mirroring `src/store/store.web.ts`'s exact schema. This is the
  * ENTIRE seeding mechanism for e2e now — there is no app-side seed any more

@@ -7,12 +7,18 @@
 import { ScrollView, Text, View } from 'react-native';
 
 import { Button } from './chrome';
-import type { PileStatus, SaleState } from '../core/types';
+import type { PileId, PileStatus, SaleState } from '../core/types';
 import { useT, type MessageId } from '../i18n';
 import { useTheme } from '../theme';
 
 export interface ZonePileSwitcherProps {
   state: SaleState;
+  /**
+   * Piles whose numbers were entered in bulk (S23) — derived from the log by
+   * `bulkEnteredPileIds`, not from `state`, because the marker is a fact
+   * about the log rather than a projected pile field.
+   */
+  bulkPileIds: ReadonlySet<PileId>;
   onPick: (pileId: string) => void;
   onClose: () => void;
 }
@@ -28,7 +34,7 @@ const STATUS_LABEL: Record<PileStatus, MessageId> = {
   closed: 'status.closed',
 };
 
-export function ZonePileSwitcher({ state, onPick, onClose }: ZonePileSwitcherProps) {
+export function ZonePileSwitcher({ state, bulkPileIds, onPick, onClose }: ZonePileSwitcherProps) {
   const t = useTheme();
   const msg = useT();
 
@@ -76,7 +82,16 @@ export function ZonePileSwitcher({ state, onPick, onClose }: ZonePileSwitcherPro
                 .filter((p) => p.zoneId === zone.id)
                 .map((pile) => (
                   <Button key={pile.id} testID={`switcher-pile-${pile.id}`} onPress={() => onPick(pile.id)}>
-                    {msg('switcher.pileRow', { name: pile.name, status: msg(STATUS_LABEL[pile.status]) })}
+                    {msg('switcher.pileRow', {
+                      name: pile.name,
+                      // One entry with a placeholder rather than two strings
+                      // joined here — a closed pile and a bulk-entered one
+                      // must not read the same, and the catalogue is where
+                      // that sentence is allowed to be assembled.
+                      status: bulkPileIds.has(pile.id)
+                        ? msg('pile.bulkStatus', { status: msg(STATUS_LABEL[pile.status]) })
+                        : msg(STATUS_LABEL[pile.status]),
+                    })}
                   </Button>
                 ))}
             </View>
