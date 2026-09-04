@@ -80,4 +80,21 @@ describe('RemoveControl', () => {
     wrap(<RemoveControl {...props} needsReason={false} />);
     expect(screen.queryByTestId('remove-pile-p1-blocked')).toBeNull();
   });
+
+  /**
+   * The trigger sits beside "แก้ไข" on every pile row. A full-width
+   * destructive button there reads as the loudest thing on the screen for
+   * the row's least common action — it should be icon-sized instead, with
+   * the real label carried for anyone not reading the glyph.
+   */
+  it('collapses to a small icon, not a full-width labelled button', () => {
+    wrap(<RemoveControl {...props} needsReason={false} />);
+    const trigger = screen.getByTestId('remove-pile-p1');
+
+    expect(trigger).not.toHaveTextContent(props.label);
+    expect(trigger.props.accessibilityLabel).toBe(props.label);
+
+    const style = Array.isArray(trigger.props.style) ? Object.assign({}, ...trigger.props.style) : trigger.props.style;
+    expect(style.width).toBeLessThanOrEqual(40);
+  });
 });

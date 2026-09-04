@@ -658,3 +658,28 @@ and by how much. That is a small, separate story, and it is worth writing.
   long sale a `pile_removed` will scroll out of the visible log like any
   other event. Pre-existing, not S26's doing, but it is the one place "the
   history stays readable" is readable *only if it is recent*.
+
+### Follow-up, 2026-09-04 — the remove control shrunk to an icon
+
+Owner feedback on the built app: `RemoveControl`'s collapsed trigger — a
+full-width `destructive` `Button` reading "เอากองออก" — read as the loudest
+thing on a pile row, sitting beside a plain "แก้ไข" for the row's least
+common action. This is the same shape QA's S27 finding 6 named as an
+observation ("the full-width red remove-pile button dwarfs the edit
+control") and left open as cosmetic.
+
+Changed to a small icon-only trigger (36×36, "✕" in `t.color.reject`,
+`accessibilityLabel` carrying the real Thai label for anyone not reading the
+glyph) with `alignSelf: 'flex-start'` so it no longer stretches to fill a
+flex-grow parent. **The confirmation step is unchanged** — tapping the icon
+still opens the same detail line, typed-reason field (when required), and
+confirm/cancel pair; only the collapsed state changed. Failing-first test:
+`RemoveControl.test.tsx` — "collapses to a small icon, not a full-width
+labelled button", red against the pre-change component (asserted no text
+content, an `accessibilityLabel`, and width ≤ 40), green after. Verified in
+a real browser at 844×390 — screenshot evidence is the regenerated
+`docs/stories/screenshots/s26/*.png` files, which is why several are dated
+today rather than 2026-09-03.
+
+Full gate re-run: tokens/contrast/typecheck/lint clean, 152 vitest, 97 jest,
+190 e2e (unchanged pass count — no test asserted on the old label text).

@@ -13,10 +13,17 @@
  * just `disabled`: a zone that still has piles cannot be removed at all, and
  * a dead button with no explanation is exactly the dead end the story rules
  * out ("remove its piles first", said on screen).
+ *
+ * The collapsed trigger is a small icon, not a labelled button: this sits
+ * beside "แก้ไข" on every pile row, and a full-width destructive button
+ * there reads as the loudest thing on the screen for the row's least common
+ * action. `accessibilityLabel` carries the real label for anyone not reading
+ * the glyph, and the confirm step underneath is unchanged — the icon only
+ * replaces the collapsed state, never skips the confirmation.
  */
 
 import { useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { Button } from './chrome';
 import { useT } from '../i18n';
@@ -60,15 +67,26 @@ export function RemoveControl({
 
   if (!open) {
     return (
-      <View style={{ gap: 2 }}>
-        <Button
+      <View style={{ gap: 2, alignSelf: 'flex-start' }}>
+        <Pressable
           testID={testID}
-          variant="destructive"
+          accessibilityRole="button"
+          accessibilityLabel={label}
           disabled={!!blockedReason}
           onPress={() => setOpen(true)}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: t.radius.md,
+            borderWidth: t.border.hair,
+            borderColor: t.color.reject,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: blockedReason ? t.opacity.disabled : 1,
+          }}
         >
-          {label}
-        </Button>
+          <Text style={{ fontSize: t.font.size.small, color: t.color.reject }}>✕</Text>
+        </Pressable>
         {blockedReason ? (
           <Text
             testID={`${testID}-blocked`}
