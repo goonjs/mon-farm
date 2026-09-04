@@ -17,8 +17,11 @@ import { ScrollView, Text, View } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 
 import { Button, TopBar } from '../../../components/chrome';
+import { DeductionForm, type DeductionFormInput } from '../../../components/DeductionForm';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
+import { WorkerPayoutCard } from '../../../components/WorkerPayoutCard';
 import { formatBaht, formatKg, settle, SettlementUnavailable } from '../../../core/settle';
+import { newId } from '../../../lib/id';
 import { useSale } from '../../../store/SaleProvider';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
@@ -63,6 +66,27 @@ export default function SettlementScreen() {
    * through reopening it (see `reopenSale` above).
    */
   const backToCounting = () => router.back();
+
+  /** Money leaving one worker's own share (S29) — see the comment on `deduction_added` in types.ts. */
+  const addDeduction = (input: DeductionFormInput) => {
+    append({
+      kind: 'sys',
+      payload: {
+        t: 'deduction_added',
+        deductionId: newId('deduction-'),
+        personId: input.personId,
+        personName: input.personName,
+        satang: input.satang,
+        reason: input.reason,
+        agreedBy: input.agreedBy,
+      },
+    });
+  };
+
+  /** Append-only: a void marks the deduction, it never edits or removes it. */
+  const voidDeduction = (deductionId: string, reason: string) => {
+    append({ kind: 'sys', payload: { t: 'deduction_voided', deductionId, reason } });
+  };
 
   let result;
   try {
@@ -127,7 +151,20 @@ export default function SettlementScreen() {
         }
       />
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, flexDirection: 'row', gap: t.space.md }}>
+      {/* alignItems: 'flex-start' so each column is as tall as its own content.
+          The row's default is 'stretch', which sized the short derivation card
+          to the tall right-hand column — once a sale has three zones and a few
+          deductions, that left half a screen of empty bordered box next to the
+          money, which reads as a broken screen rather than a finished one. */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          padding: t.space.md,
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: t.space.md,
+        }}
+      >
         {/* ---- the derivation ---- */}
         <View style={[card(t), { flex: 1.1 }]}>
           <CardTitle>{msg('settle.derivation')}</CardTitle>
@@ -187,12 +224,15 @@ export default function SettlementScreen() {
                   bold
                 />
                 <Row
-                  label={`  เจ้าของ ${z.ownerPct}%`}
+                  label={msg('settle.zoneOwnerRow', { pct: z.ownerPct })}
                   value={formatBaht(z.ownerSatang)}
                   colour={t.color.action}
                 />
                 <Row
-                  label={`  ${z.workerName ?? 'คนงาน (ค่าเริ่มต้น)'} ${100 - z.ownerPct}%`}
+                  label={msg('settle.zoneWorkerRow', {
+                    name: z.workerName ?? msg('settle.zoneWorkerDefaultName'),
+                    pct: 100 - z.ownerPct,
+                  })}
                   value={formatBaht(z.workerSatang)}
                 />
               </View>
@@ -214,15 +254,17 @@ export default function SettlementScreen() {
                   .map((zoneId) => s.perZone.find((z) => z.zoneId === zoneId)?.zoneName ?? zoneId)
                   .join(', ');
                 return (
-                  <View key={w.personId} testID={`worker-${w.personId}`} style={{ marginBottom: t.space.sm }}>
-                    <Row label={w.workerName} value={formatBaht(w.workerSatang)} bold />
-                    <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
-                      {zoneNames}
-                    </Text>
+                  <View key={w.personId} style={{ marginBottom: t.space.sm }}>
+                    <WorkerPayoutCard worker={w} onVoidDeduction={voidDeduction} zoneNames={zoneNames} />
                   </View>
                 );
               })
             )}
+          </View>
+
+          <View style={card(t)}>
+            <CardTitle>{msg('settle.deductionAdd')}</CardTitle>
+            <DeductionForm onAdd={addDeduction} />
           </View>
         </View>
       </ScrollView>

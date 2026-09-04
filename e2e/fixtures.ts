@@ -69,3 +69,49 @@ export async function seedSale(page: Page, saleId: string, events: readonly Sale
 export function testSaleId(label: string): string {
   return `e2e-${label}-${Math.random().toString(36).slice(2, 8)}`;
 }
+
+/**
+ * Seeds the reusable people list (src/store/people.web.ts's localStorage
+ * schema) before the app boots — same idempotent-by-key pattern as
+ * `seedSale`. Needed so `PeoplePicker` (used by the S29 deduction form) has
+ * someone to pick — a `zone_contract_set` event only snapshots a name against
+ * a `personId`, it never populates this list.
+ */
+export async function seedPeople(
+  page: Page,
+  people: readonly { id: string; name: string }[],
+): Promise<void> {
+  await page.addInitScript(
+    ({ key, people }) => {
+      if (window.localStorage.getItem(key) !== null) return;
+      const rows = people.map((p) => ({ id: p.id, name: p.name, createdTs: Date.now(), archivedTs: null }));
+      window.localStorage.setItem(key, JSON.stringify(rows));
+    },
+    { key: 'mon-farm:people', people },
+  );
+}
+
+/**
+ * Seeds the farm profile (S27) — `src/store/farm.web.ts`'s exact
+ * `mon-farm:farm-profile` localStorage schema, one JSON document holding
+ * every zone. Same idempotent-by-key pattern as `seedSale` / `seedPeople`:
+ * only writes if the key is empty, so a `page.reload()` mid-test does not
+ * stomp on profile edits the test itself made through the UI.
+ */
+export async function seedFarmProfile(
+  page: Page,
+  zones: readonly {
+    id: string;
+    name: string;
+    piles: readonly { id: string; name: string; tareG: number; stdNetG: number }[];
+  }[],
+): Promise<void> {
+  await page.addInitScript(
+    ({ key, zones }) => {
+      if (window.localStorage.getItem(key) !== null) return;
+      const rows = zones.map((z) => ({ id: z.id, name: z.name, piles: z.piles, archivedTs: null }));
+      window.localStorage.setItem(key, JSON.stringify(rows));
+    },
+    { key: 'mon-farm:farm-profile', zones },
+  );
+}

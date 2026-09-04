@@ -5,6 +5,16 @@ import { projectSale } from './project';
 import { saleTotals, zoneTotals } from './totals';
 import { settle, SettlementUnavailable } from './settle';
 
+/** Deep-clones the sale-level and per-zone shape settle() derives from `perZone` (~:143-145) — the surface a deduction must never touch. */
+function saleLevelSnapshot(s: ReturnType<typeof settle>) {
+  return {
+    grossSatang: s.grossSatang,
+    ownerSatang: s.ownerSatang,
+    workerSatang: s.workerSatang,
+    perZone: s.perZone,
+  };
+}
+
 describe('settle — the worked example from the design docs', () => {
   const events = workedExample();
   const state = projectSale(events);
@@ -233,6 +243,100 @@ describe('settle — voided baskets leave the money', () => {
     expect(before.totals.baskets - after.totals.baskets).toBe(1);
     expect(before.totals.netG - after.totals.netG).toBe(50_000);
     expect(before.grossSatang - after.grossSatang).toBe(Math.round((50_000 * 2650) / 1000));
+  });
+});
+
+/**
+ * A base scenario for the deduction tests below: one zone, one worker with a
+ * real contract and share, so there is money to deduct from. Fresh each call
+ * — a scenario builder, not a shared mutable log — so "with" and "without" a
+ * deduction start from byte-identical zone/gross numbers.
+ *
+ * net = 100 kg -> gross = 100 × ฿26.50 = ฿2,650.00 = 265,000 satang
+ * 50/50 split -> owner ฿1,325.00 = 132,500 satang, worker the same.
+ */
+function baseWorkerScenario(): LogBuilder {
+  const b = setUpSale();
+  withZoneContract(b, 'zA', 'person-prayuth', 'ประยุทธ', 50);
+  readyPile(b, 'p1');
+  b.accept('p1', 100_000);
+  return b;
+}
+
+describe("settle — worker deductions (S29), off each worker's own share", () => {
+  it('the sale gross, owner total and every zone row are byte-identical with and without a deduction', () => {
+    const before = settle(baseWorkerScenario().build(), projectSale(baseWorkerScenario().build()));
+
+    const withDeduction = baseWorkerScenario();
+    withDeduction.deduction('person-prayuth', 5_000, 'ค่าปุ๋ย', 'สมชาย'); // ฿50.00
+    const after = settle(withDeduction.build(), projectSale(withDeduction.build()));
+
+    expect(saleLevelSnapshot(after)).toEqual(saleLevelSnapshot(before));
+  });
+
+  it('payout equals share minus deductions, hand-worked', () => {
+    const b = baseWorkerScenario();
+    b.deduction('person-prayuth', 5_000, 'ค่าปุ๋ย', 'สมชาย'); // ฿50.00
+    b.deduction('person-prayuth', 2_500, 'ค่าน้ำมัน', 'สมชาย'); // ฿25.00
+    const events = b.build();
+    const s = settle(events, projectSale(events));
+
+    const w = s.perWorker.find((w) => w.personId === 'person-prayuth')!;
+    // share ฿1,325.00 − (฿50.00 + ฿25.00) = ฿1,250.00 = 125,000 satang
+    expect(w.workerSatang).toBe(132_500);
+    expect(w.deductionSatang).toBe(7_500);
+    expect(w.payoutSatang).toBe(125_000);
+    expect(w.deductions).toHaveLength(2);
+    expect(w.deductions.map((d) => d.reason)).toEqual(['ค่าปุ๋ย', 'ค่าน้ำมัน']); // log order
+  });
+
+  it('a voided deduction leaves the money exactly as it was', () => {
+    const b = baseWorkerScenario();
+    b.deduction('person-prayuth', 5_000, 'ค่าปุ๋ย', 'สมชาย');
+    b.voidDeduction('จ่ายผิด');
+    const events = b.build();
+    const s = settle(events, projectSale(events));
+
+    const w = s.perWorker.find((w) => w.personId === 'person-prayuth')!;
+    expect(w.deductions).toHaveLength(0); // voided ones are not itemised
+    expect(w.deductionSatang).toBe(0);
+    expect(w.payoutSatang).toBe(w.workerSatang);
+    expect(w.payoutSatang).toBe(132_500);
+  });
+
+  it('owner + worker still equals gross, per zone and overall, with deductions present', () => {
+    const b = baseWorkerScenario();
+    b.deduction('person-prayuth', 5_000, 'ค่าปุ๋ย', 'สมชาย');
+    const events = b.build();
+    const s = settle(events, projectSale(events));
+
+    for (const z of s.perZone) {
+      expect(z.ownerSatang + z.workerSatang).toBe(z.grossSatang);
+    }
+    expect(s.ownerSatang + s.workerSatang).toBe(s.grossSatang);
+  });
+
+  it('a person with a deduction but no zone contract in this sale is shown, not dropped', () => {
+    const b = baseWorkerScenario(); // only person-prayuth holds a contract
+    b.deduction('person-outsider', 3_000, 'ค่าปรับ', 'สมชาย', 'คนนอกโซน'); // ฿30.00, no contract anywhere
+    const events = b.build();
+    const s = settle(events, projectSale(events));
+
+    const outsider = s.perWorker.find((w) => w.personId === 'person-outsider');
+    expect(outsider).toBeDefined();
+    expect(outsider!.workerSatang).toBe(0);
+    expect(outsider!.zoneIds).toEqual([]);
+    expect(outsider!.deductionSatang).toBe(3_000);
+    expect(outsider!.payoutSatang).toBe(-3_000); // negative, not clamped to zero
+    // ...and NAMED. There is no zone contract to read a name from, so it comes
+    // from the snapshot on the deduction event. Without it the row renders
+    // nameless: money left the record attributed to nobody, which is worse
+    // than not showing it at all.
+    expect(outsider!.workerName).toBe('คนนอกโซน');
+
+    // The contracted worker is unaffected by the outsider's deduction.
+    const prayuth = s.perWorker.find((w) => w.personId === 'person-prayuth')!;
+    expect(prayuth.payoutSatang).toBe(132_500);
   });
 });
 

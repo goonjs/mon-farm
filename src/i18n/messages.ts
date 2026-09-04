@@ -183,6 +183,7 @@ const th = {
   'settings.speechNote': 'พูดออกเสียงทุกครั้งที่นับเข่งได้ — ปิดได้โดยไม่กระทบการนับ',
   'common.speechOn': 'เปิด',
   'common.speechOff': 'ปิด',
+  'settings.farmProfile': 'ข้อมูลฟาร์ม (โซนและกอง)',
 
   // ── Sale setup (S6) ──────────────────────────────────────────────────────
   'setup.title': 'ตั้งค่าการขาย',
@@ -240,6 +241,18 @@ const th = {
   'settle.perWorker': 'แยกตามคนงาน',
   'settle.noWorker': 'ยังไม่มีการระบุคนงานประจำโซน',
   'settle.reopen': '↺ เปิดการขายอีกครั้ง — กลับไปนับ',
+  'settle.zoneOwnerRow': '  เจ้าของ {pct}%',
+  'settle.zoneWorkerRow': '  {name} {pct}%',
+  'settle.zoneWorkerDefaultName': 'คนงาน (ค่าเริ่มต้น)',
+  'settle.payout': 'ยอดจ่ายจริง',
+  'settle.deductionRow': '{reason} — {agreedBy}',
+  'settle.deductionAdd': '+ เพิ่มรายการหัก',
+  'settle.deductionAmount': 'จำนวนเงิน (บาท)',
+  'settle.deductionReason': 'เหตุผล',
+  'settle.deductionAgreedBy': 'ผู้ตกลง',
+  'settle.deductionVoid': 'ยกเลิก',
+  'settle.deductionVoidReason': 'เหตุผลที่ยกเลิก',
+  'settle.deductionVoidConfirm': 'ยืนยันยกเลิก',
 
   // ── The sale list (S17) ──────────────────────────────────────────────────
   'sales.title': 'การขาย',
@@ -271,6 +284,8 @@ const th = {
   'log.saleClosed': 'ปิดการขาย',
   'log.saleReopened': 'เปิดการขายอีกครั้ง — {reason}',
   'log.clockAnomaly': 'เวลาเครื่องผิด ({anomaly})',
+  'log.deductionAdded': 'หักเงิน {amount} — {reason}',
+  'log.deductionVoided': 'ยกเลิกรายการหัก — {reason}',
   // `note` and `state` are precomputed by the caller (sysLabel in counter.tsx)
   // rather than expressed as conditional logic here — the resolver's
   // `interpolate()` is deliberately a plain `{name}` substitution (see
@@ -278,6 +293,31 @@ const th = {
   'log.announced': 'พูด "{thai}"{note}',
   'log.announceFailed': ' — ไม่ได้ยิน',
   'log.speechSet': 'เสียงนับ {state}',
+
+  // ── Farm profile (S27) ───────────────────────────────────────────────────
+  'farmProfile.title': 'ข้อมูลฟาร์ม',
+  'farmProfile.back': '← ตั้งค่า',
+  'farmProfile.empty': 'ยังไม่มีโซนที่บันทึกไว้',
+  'farmProfile.seedPrompt': 'พบการขายก่อนหน้า — ใช้โซนและกองจากการขายล่าสุดเป็นจุดเริ่มต้นไหม',
+  'farmProfile.seedButton': 'ใช้จากการขายล่าสุด',
+  'farmProfile.addZone': '+ เพิ่มโซน',
+  'farmProfile.zoneNamePlaceholder': 'ชื่อโซน',
+  'farmProfile.renameZone': 'บันทึกชื่อ',
+  'farmProfile.archiveZone': 'เก็บโซนนี้',
+  'farmProfile.noPiles': 'ยังไม่มีกองในโซนนี้',
+  'farmProfile.pileRow': '{name} · ตะกร้า {tare} + มาตรฐาน {std} กก.',
+  'farmProfile.addPile': '+ เพิ่มกอง',
+  'farmProfile.pileNamePlaceholder': 'ชื่อกอง',
+  'farmProfile.tarePlaceholder': 'ตะกร้า กก.',
+  'farmProfile.stdPlaceholder': 'มาตรฐาน กก.',
+  'farmProfile.editPile': 'แก้ไข',
+  'farmProfile.savePile': 'บันทึก',
+  'farmProfile.cancelEdit': 'ยกเลิก',
+  'farmProfile.removePile': 'ลบ',
+
+  // ── Setup: prefill from the farm profile (S27) ──────────────────────────
+  'setup.useFarmProfileTitle': 'ใช้ข้อมูลฟาร์มที่บันทึกไว้',
+  'setup.useFarmProfileButton': 'ใช้โซนและกองจากฟาร์ม',
 } as const;
 
 /**
@@ -412,6 +452,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'settings.speechNote': 'speaks each basket count aloud — turning it off does not change the counting itself',
   'common.speechOn': 'on',
   'common.speechOff': 'off',
+  'settings.farmProfile': 'farm profile (zones and piles)',
 
   'setup.title': 'sale setup',
   'setup.backToList': '← list',
@@ -467,6 +508,18 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'settle.perWorker': 'per worker',
   'settle.noWorker': 'no zone has a worker named yet',
   'settle.reopen': '↺ reopen — back to counting',
+  'settle.zoneOwnerRow': '  owner {pct}%',
+  'settle.zoneWorkerRow': '  {name} {pct}%',
+  'settle.zoneWorkerDefaultName': 'worker (default)',
+  'settle.payout': 'payout',
+  'settle.deductionRow': '{reason} — {agreedBy}',
+  'settle.deductionAdd': '+ add a deduction',
+  'settle.deductionAmount': 'amount (baht)',
+  'settle.deductionReason': 'reason',
+  'settle.deductionAgreedBy': 'agreed by',
+  'settle.deductionVoid': 'void',
+  'settle.deductionVoidReason': 'reason for voiding',
+  'settle.deductionVoidConfirm': 'confirm void',
 
   'sales.title': 'sales',
   'sales.empty': 'no sales yet — start one below.',
@@ -496,9 +549,34 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'log.saleClosed': 'sale closed',
   'log.saleReopened': 'sale reopened — {reason}',
   'log.clockAnomaly': "device clock looks wrong ({anomaly})",
+  'log.deductionAdded': 'deduction {amount} — {reason}',
+  'log.deductionVoided': 'deduction voided — {reason}',
   'log.announced': 'said "{thai}"{note}',
   'log.announceFailed': ' — not heard',
   'log.speechSet': 'spoken count {state}',
+
+  'farmProfile.title': 'farm profile',
+  'farmProfile.back': '← settings',
+  'farmProfile.empty': 'no zones saved yet',
+  'farmProfile.seedPrompt': 'found a past sale — use its zones and piles as a starting point?',
+  'farmProfile.seedButton': 'use the last sale',
+  'farmProfile.addZone': '+ add zone',
+  'farmProfile.zoneNamePlaceholder': 'zone name',
+  'farmProfile.renameZone': 'save name',
+  'farmProfile.archiveZone': 'archive this zone',
+  'farmProfile.noPiles': 'no piles in this zone yet',
+  'farmProfile.pileRow': '{name} · tare {tare} + standard {std} kg',
+  'farmProfile.addPile': '+ add pile',
+  'farmProfile.pileNamePlaceholder': 'pile name',
+  'farmProfile.tarePlaceholder': 'tare kg',
+  'farmProfile.stdPlaceholder': 'standard kg',
+  'farmProfile.editPile': 'edit',
+  'farmProfile.savePile': 'save',
+  'farmProfile.cancelEdit': 'cancel',
+  'farmProfile.removePile': 'remove',
+
+  'setup.useFarmProfileTitle': 'use the saved farm profile',
+  'setup.useFarmProfileButton': 'use zones and piles from the farm',
 };
 
 export const messages = { th, en } as const;

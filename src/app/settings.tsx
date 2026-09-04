@@ -90,6 +90,10 @@ export default function SettingsScreen() {
             { value: 'off', label: msg('common.speechOff') },
           ]}
         />
+
+        <Link href="/farm-profile" asChild>
+          <Button testID="open-farm-profile">{msg('settings.farmProfile')}</Button>
+        </Link>
       </ScrollView>
     </View>
   );

@@ -15,6 +15,7 @@ export class LogBuilder {
   private seq = 0;
   private ts = 1_770_000_000_000;
   private mono = 0;
+  private lastDeductionIdValue: string | undefined;
 
   /**
    * Defaults to a fixed id so existing unit tests are unaffected. e2e fixtures
@@ -67,6 +68,45 @@ export class LogBuilder {
       targetSeq,
       mode: 'void',
       reason,
+    });
+    return this;
+  }
+
+  /**
+   * Records a deduction against a worker's own share. `satang` is positive —
+   * the sign lives in the arithmetic, not the event. The id is generated here
+   * (deterministic, seq-based) and remembered so `voidDeduction()` can target
+   * "the deduction just added" without the caller having to invent an id.
+   */
+  deduction(
+    personId: string,
+    satang: number,
+    reason: string,
+    agreedBy: string,
+    personName = personId,
+  ): this {
+    const deductionId = `ded-${this.seq + 1}`;
+    this.lastDeductionIdValue = deductionId;
+    this.events.push({
+      ...this.base(),
+      kind: 'sys',
+      payload: { t: 'deduction_added', deductionId, personId, personName, satang, reason, agreedBy },
+    });
+    return this;
+  }
+
+  /** The id of the most recently added deduction — for targeting a void. */
+  lastDeductionId(): string {
+    if (!this.lastDeductionIdValue) throw new Error('No deduction added yet.');
+    return this.lastDeductionIdValue;
+  }
+
+  /** Voids a deduction by id (default: the one just added), naming a reason. */
+  voidDeduction(reason = 'reversed', deductionId = this.lastDeductionId()): this {
+    this.events.push({
+      ...this.base(),
+      kind: 'sys',
+      payload: { t: 'deduction_voided', deductionId, reason },
     });
     return this;
   }
