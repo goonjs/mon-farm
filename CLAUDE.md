@@ -10,9 +10,18 @@ conflict resolution) and must be considered in every story that touches data.
 
 Tech stack: **Expo SDK 57** (managed) + expo-router + React Native 0.86 +
 React 19 + TypeScript strict. Local persistence is an append-only event log —
-expo-sqlite on device, localStorage on web. No backend yet. Phone, landscape
-locked. Full rationale and the rejected alternatives are in
-`docs/architecture.md`.
+expo-sqlite on device, localStorage on web. No backend yet. Phone-first,
+designed landscape.
+
+**Portrait is supported on every screen (owner decision, 2026-09-04.)** The
+app is used in a mobile browser, where a native orientation lock does not
+apply and the browser hands the app whatever the phone is holding — so
+"landscape locked" described the intent and not the reality, and two defects
+lived in the gap. Landscape is still what the counting screen is designed
+around; portrait is not allowed to be broken. See
+`docs/checklists/mobile-checklist.md`.
+
+Full rationale and the rejected alternatives are in `docs/architecture.md`.
 
 ## Development process
 
@@ -25,9 +34,11 @@ This repo follows a lightweight, doc-driven development cycle. Full details:
 2. **Breakdown**: PRD is sharded into epics (`docs/epics/`), epics into
    stories (`docs/stories/`), using the templates in `docs/templates/`.
 3. **Implementation loop**: one story at a time — implement, self-check
-   against `docs/checklists/definition-of-done.md`, and against
+   against `docs/checklists/definition-of-done.md`, against
    `docs/checklists/offline-sync-checklist.md` if the story touches local
-   data, sync, or connectivity state.
+   data, sync, or connectivity state, and against
+   `docs/checklists/mobile-checklist.md` if it touches a screen, a control,
+   or a rendered figure.
 4. **Status**: each story file tracks its own status (Draft / Ready / In
    Progress / Review / Done) at the top of the file.
 
