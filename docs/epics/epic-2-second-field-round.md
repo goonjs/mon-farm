@@ -372,6 +372,58 @@ source list itself stays out of the log, being device configuration.
 the order below.
 
 
+## Amendment, 2026-09-04 — the money around the sale
+
+The owner ran the built app (S22–S27 done) and asked for three more things:
+an expense log, deductions for staff, and reports. Before any of it was
+modelled, three practitioners were consulted — a rubber operations advisor, a
+bookkeeper, and a reporting designer. Their written advice is in
+`docs/consults/`; it is advice, not scope. What follows is scope, because the
+owner answered the questions the consults raised.
+
+### Decisions taken, 2026-09-04
+
+| Question | Owner's answer |
+| --- | --- |
+| Are expenses and worker deductions one concept or two? | **Two.** A deduction moves money between the owner and a named worker against what that worker earned. An expense is the farm's own cost and never touches a settlement line. The test all three consults converged on: *whose money was this before today?* |
+| Does the agreed split rate already price in shared input costs? | **Some inputs in, some out.** The rate covers certain inputs implicitly; specific ones — fertiliser bought at a worker's request, chemicals for their zone — are agreed separately and deducted. **So the contract has to record which basis it is on.** Assuming one basis farm-wide would silently double-charge a worker on every input the rate already covers. |
+| Advance against a sale, or a standing debt? | **Both happen**, and they must be distinguishable on the record: a short advance settled at the next sale, and a longer-running balance that carries for months. |
+| Which reports? | Sale settlement by zone → pile; a per-worker payout slip; an expense log filterable by date; and a per-worker running balance covering borrowing, debt and payback. |
+
+### What this changes
+
+- **S29 grows.** It is no longer only "a deduction event with an amount and a
+  reason". It gains a **category** (advance / repayment / input charged to a
+  worker / tool or loss / other — not a free-text box), a **basis on the zone
+  contract** saying which inputs the rate already covers, and the rule that a
+  deduction is **shown to the worker at settlement**. That last one is not
+  decoration: the worker lead never logs in, and a deduction typed in
+  privately reproduces exactly the "it exists only in someone's head" problem
+  this product was built to end (FR-9's reasoning, one level up from the
+  count).
+- **S34 is new — the worker account.** Borrowing, debt and payback across
+  sales, with a running balance. A per-sale advance and a carried debt are
+  the same money moving but not the same record, and the log has to say
+  which.
+- **S35 is new — the expense log.** The farm's own costs, **sale-independent**.
+  Expenses run on three clocks — per-sale (fuel, food), per-month, per-season
+  (fertiliser, rent, weeks with no sale at all). Requiring an open sale to log
+  one would push the owner into backdating entries, which corrodes the audit
+  trail the whole app exists to protect.
+- **S28 grows** to the four reports named above, and **needs cross-sale reads**
+  — the running balance and the date-filtered expense log both span sales.
+  That read layer is load-bearing for two must-have reports; it is built once,
+  deliberately, in the first story that needs it, rather than half-built three
+  times.
+
+### Still open, 2026-09-04
+
+- Whether the per-zone contract's input basis needs to name *which* inputs the
+  rate covers, or only carry a flag plus a note. To be settled when S29 is
+  written, from how the owner actually words the agreement.
+- Evidence and receipts on an expense record. The bookkeeper called it
+  valuable but deferrable; nothing depends on it yet.
+
 ## Order of work
 
 Corrections before capabilities; deductions before reports, so the report is
@@ -385,9 +437,13 @@ built once against the final money model.
 4. **S23** — bulk entry for a pile nobody counted live
 5. **S26** — editable piles and zones
 6. **S27** — farm profile prefills setup
-7. **S29** — worker deductions
-8. **S28** — reports, by zone and pile
-9. **S30** — named price sources, logged by hand — no longer blocked
+7. **S33** — portrait works everywhere (added 2026-09-04; the app is used in a
+   mobile browser, where the landscape lock does not apply — see the story)
+8. **S29** — worker deductions, with category and contract basis
+9. **S34** — the worker account: borrowing, debt, payback
+10. **S35** — the expense log, sale-independent
+11. **S28** — the four reports, built against the final money model
+12. **S30** — named price sources, logged by hand — no longer blocked
 
 ## Still open
 
