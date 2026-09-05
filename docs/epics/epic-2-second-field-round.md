@@ -416,13 +416,22 @@ owner answered the questions the consults raised.
   deliberately, in the first story that needs it, rather than half-built three
   times.
 
-### Still open, 2026-09-04
+### Answered 2026-09-05, when the stories were written
 
-- Whether the per-zone contract's input basis needs to name *which* inputs the
-  rate covers, or only carry a flag plus a note. To be settled when S29 is
-  written, from how the owner actually words the agreement.
+| Question | Owner's answer |
+| --- | --- |
+| Does the contract name *which* inputs the rate covers, or carry a flag? | **A three-state flag plus a note** — covered / not covered / **mixed**, with the note required when mixed. Two states would have been unusable here: this farm's arrangement *is* the third one, so the first contract ever recorded would have carried a value that was not true. The structured alternative — the contract listing each input, letting the app itself catch a double-charge instead of relying on someone reading a note — was offered and not taken; it is where to start if the note proves not to be enough in the field. |
+| What happens when a deduction exceeds what the worker earned this sale? | **Whatever the two of them agreed, recorded as agreed.** The owner's words: *"upon agreement between owner and worker, but don't do thing exceed or too complex."* So no cap, no clamp, no automatic carry-forward, and no refusal to record. A negative payout is shown plainly; carrying a shortfall between sales is S34's job and is not half-built in S29. |
+| Where does a device-level, append-only record log live? | **Its own store** (S35's Option A), following the same port/adapter shape as the sale event log but keyed at the device. Rejected: overloading the per-sale log with a sentinel sale id, which would make `settle()`, `listSales()` and the projection all special-case a sale that is not one. |
+
+### Still open
+
 - Evidence and receipts on an expense record. The bookkeeper called it
   valuable but deferrable; nothing depends on it yet.
+- Whether an expense's optional zone is a free-text label or a hard
+  reference to a profile zone. Defaulted to free text so an expense is never
+  unloggable for want of a zone; worth confirming before S28 reports across
+  it.
 
 ## Order of work
 

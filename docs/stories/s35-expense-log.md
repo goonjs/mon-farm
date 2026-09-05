@@ -57,7 +57,7 @@ This story is the **record and its own screen only**. It does not touch
 the expense report (that is S28, which reads this log by date range once it
 exists — per the epic, S28 is sequenced after S35 for exactly this reason).
 
-## Architecture question — needs the owner's decision before a dev builds this
+## Where the expense log lives — decided 2026-09-05
 
 `CLAUDE.md` is explicit: no architecture content is invented ahead of the
 owner, and a story does not start implementation without an agreed shape.
@@ -132,22 +132,21 @@ overloads of the sale log — and an expense is closer to those two in scope
 *write discipline* (append-only, evidence-grade). Option A is the only one
 of the two that keeps both properties true without a special case.
 
-**This is not decided.** Before implementation starts on this story:
+**Decided by the owner, 2026-09-05: Option A.** The expense log gets its
+own device-level append-only store, following the same port/adapter shape
+as `store.ts` but keyed at the device rather than per sale.
 
-1. The owner says yes to Option A (or picks Option B, or another shape).
-2. `docs/architecture.md` §Local data layer is updated in the same session
-   the decision is made (per `CLAUDE.md`'s "docs are live documents" rule)
-   to describe the new store, exactly as it currently documents the
-   sale-event table and the (implicit, undocumented today) device-config
-   stores. That gap — `people.ts`/`farmProfile.ts` are not yet named in
-   `docs/architecture.md` at all — should probably be closed at the same
-   time, as a small addition, not as scope creep into this story's code.
+One thing follows from that and is part of this story's Definition of Done:
+`docs/architecture.md` §Local data layer must describe the new store in the
+same session it is built (per `CLAUDE.md`'s "docs are live documents"
+rule). While there, close the related gap the same way — `people.ts` and
+`farmProfile.ts` are device-level stores that exist in code and are named
+nowhere in the architecture doc, so a reader of that doc today would
+believe the sale event log is the only local store there is.
 
-Everything below is written against Option A, since it is the
-recommendation, but the acceptance criteria that describe *behavior* (what
-an expense record contains, where the screen lives, what is out of scope)
-hold regardless of which option is chosen — only the Test plan's adapter
-tests would change shape under Option B.
+Everything below is written against Option A, which is now the decision.
+Option B is kept above as the rejected alternative and the reasoning
+against it, not as a live choice.
 
 ## Fields on an expense record
 

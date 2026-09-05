@@ -38,11 +38,13 @@ reasoning, not treated as agreed on their own).
   60/40 the same as produce, because the contract's percentage was set
   *assuming* that cost-sharing) — the ops consult (§2) flags this as
   possibly real on this farm but explicitly recommends not building it
-  speculatively. This story asks the owner whether it exists (see "Still
-  open" below) rather than modelling it. If the answer is yes, it is a
-  different mechanism — an adjustment to a zone's gross, shared at the
-  split ratio, applied *before* the split — and it gets its own event kind
-  in a future story, never forced through `deduction_added`.
+  speculatively. **Asked and answered, 2026-09-05:** the owner's rate covers
+  some inputs and not others, which `inputsBasis: 'mixed'` plus a note
+  describes honestly — nothing they described needs a pre-split mechanism,
+  so it stays out. If one is ever needed, it is a different mechanism — an
+  adjustment to a zone's gross, shared at the split ratio, applied *before*
+  the split — and it gets its own event kind in a future story, never
+  forced through `deduction_added`.
 
 ## Description
 
@@ -117,28 +119,36 @@ so a discrepancy can be localised to a specific deduction line rather than
 read as a miscounted basket (the failure mode epic 1's original exclusion
 was protecting against, and the reason this money model exists at all).
 
-### The contract basis — settled here, pending the owner's yes
+### The contract basis — decided by the owner, 2026-09-05
 
-The epic leaves open whether `ZoneContract` should name *which* inputs the
-rate covers, or carry a flag plus a note. **Recommendation: flag plus
-note**, not an enumerated list of input types:
+Three states, not two, plus a note that is required for the third:
 
 - A new field on `ZoneContract` (and the `zone_contract_set` payload):
-  `inputsBasis: 'rate-inclusive' | 'rate-exclusive'`, plus `inputsNote:
-  string` (may be empty).
+  `inputsBasis: 'rate-inclusive' | 'rate-exclusive' | 'mixed'`, plus
+  `inputsNote: string`.
   - `rate-inclusive` — this zone's agreed percentage already prices in
     routine inputs for it; a separate `input_charged` deduction on this
     zone is probably double-charging the worker unless the note says
     otherwise.
   - `rate-exclusive` — the split is produce-only; inputs are handled
     entirely through separate deductions.
+  - `mixed` — **the owner's own arrangement**: the rate covers some inputs
+    and not others. `inputsNote` is **required** in this state and says
+    which is which, in the owner's own words.
 - The deduction form reads the target worker's zone contract(s) and, when
   the category is `input_charged` **and** any of those zones is
-  `rate-inclusive`, shows a warning naming the zone and its `inputsNote`
-  before the deduction can be confirmed. It does not block the deduction —
-  the owner may still be right that this specific input is genuinely
-  outside what the rate covers — it makes the person creating the
+  `rate-inclusive` **or** `mixed`, shows a warning naming the zone and its
+  `inputsNote` before the deduction can be confirmed. It does not block the
+  deduction — the owner may still be right that this specific input is
+  genuinely outside what the rate covers — it makes the person creating the
   deduction see the fact rather than guess it.
+
+**Why the third state matters more than it looks.** With only two values,
+this farm's real arrangement is unrepresentable, so the first contract ever
+created would be recorded under a value that is not true — and every
+double-charge warning built on it would then be firing, or staying silent,
+on a false premise. `mixed` costs one enum value and makes the note
+load-bearing exactly when it is the only honest description available.
 
 **Why flag + note, not a structured input list.** The category enum above
 needed structure because three different reports (S28's deduction log,
@@ -210,9 +220,14 @@ price change) — not before.
       log" pattern `removedPileIds`/`bulkEnteredPileIds` already use in
       `project.ts`, not a stored/mutated flag.
 - [ ] `ZoneContract` (and the `zone_contract_set` payload) gains
-      `inputsBasis: 'rate-inclusive' | 'rate-exclusive'` and `inputsNote:
-      string`, both required on the event (no safe default, matching
-      FR-8.5's own pattern for exactly this kind of per-contract choice).
+      `inputsBasis: 'rate-inclusive' | 'rate-exclusive' | 'mixed'` and
+      `inputsNote: string`, both required on the event (no safe default,
+      matching FR-8.5's own pattern for exactly this kind of per-contract
+      choice).
+- [ ] `inputsNote` must be non-empty when `inputsBasis` is `'mixed'`,
+      enforced by a guard and not only by the form: `mixed` without a note
+      says a rate covers some inputs and refuses to say which, which is
+      less use than no field at all.
 
 **The money chain — the property that stops a deduction reading like a weighing error**
 
@@ -263,9 +278,9 @@ price change) — not before.
       before it can be confirmed — mirroring how the bulk-entry form (S23)
       already refuses to save without its required reason.
 - [ ] Choosing `input_charged` against a worker whose zone contract(s)
-      include one with `inputsBasis: 'rate-inclusive'` shows that zone's
-      `inputsNote` as a warning before the deduction can be confirmed. It
-      does not block confirmation.
+      include one with `inputsBasis` of `'rate-inclusive'` or `'mixed'`
+      shows that zone's `inputsNote` as a warning before the deduction can
+      be confirmed. It does not block confirmation.
 - [ ] The zone-contract setup screen requires `inputsBasis` to be chosen
       (no default) before a `zone_contract_set` can be recorded, the same
       "no safe default" bar `ownerPct` and `basis` already meet.
@@ -363,6 +378,8 @@ Written to fail first, then implemented to green, per `docs/process.md`.
       — nothing throws, nothing is silently invented).
 - [ ] `isValidDeductionAmount(0)` and `isValidDeductionAmount(-100)` are
       `false`; `isValidDeductionAmount(1)` is `true`.
+- [ ] `zone_contract_set` with `inputsBasis: 'mixed'` and an empty
+      `inputsNote` is rejected by the guard.
 - [ ] `zone_contract_set` without `inputsBasis`/`inputsNote` fails to
       type-check (compile-time — no runtime test needed, matches how
       `ownerPct` already has no runtime "missing" test).
@@ -402,7 +419,7 @@ Written to fail first, then implemented to green, per `docs/process.md`.
       `category`, `reason`, `amountSatang`, or `agreedBy` is empty/zero.
 - [ ] Selecting `category: input_charged` against a worker whose zone
       contract is `inputsBasis: 'rate-inclusive'` renders the warning
-      copy including that zone's `inputsNote`.
+      copy including that zone's `inputsNote`, and the same for `'mixed'`.
 
 **e2e (Playwright, both viewports per existing convention)**
 
@@ -450,31 +467,61 @@ file's own rules — no `·` bilingual pairs, one entry per id.
 | `contract.inputsBasisLabel` | อัตราแบ่งนี้รวมค่าปัจจัยการผลิตหรือไม่ | does this rate already include input costs? |
 | `contract.inputsBasisInclusive` | รวมแล้ว | rate-inclusive |
 | `contract.inputsBasisExclusive` | ไม่รวม แยกหักต่างหาก | rate-exclusive |
+| `contract.inputsBasisMixed` | รวมบางอย่าง | some inputs included, some not |
 | `contract.inputsNoteLabel` | หมายเหตุ (รวมอะไร ไม่รวมอะไร) | note (what's covered, what isn't) |
 
-## Still open — needs the owner's decision before the dev builds it
+## Answered by the owner, 2026-09-05 — build to these
 
-1. **The contract-basis mechanism itself** (this story's own recommendation,
-   above): flag (`inputsBasis` + `inputsNote`) rather than a structured list
-   of covered inputs. Proceed on the flag unless the owner says otherwise.
-2. **Whether a genuinely shared/split-cost arrangement exists on any zone**
-   (ops consult §2, two direct questions to ask): if the split percentage on
-   any zone was set *assuming* the worker already carries a share of
-   fertiliser or other input costs, `inputsBasis: 'rate-inclusive'` plus a
-   note is a stopgap, not a fix — the real fix is the separate pre-split
-   adjustment mechanism explicitly kept out of this story's scope. Needs a
-   direct answer, not inferred from silence.
-3. **Negative payout, landing point.** Confirmed above under "edge cases":
-   this story shows a negative number and does nothing else with it. If the
-   owner needs it handled differently before S34 exists (e.g., a hard stop
-   requiring the deduction be capped to the remaining share, with the
-   remainder handled off-app for now), that changes an acceptance criterion
-   above and should be said before implementation starts.
-4. **Whether every worker arrangement on this farm is uniform** (ops
-   consult §6.5) — not blocking for this story (the category enum and
-   `inputsBasis` are per-zone already, so a mix is representable), but
-   worth confirming so the deduction-entry warning copy doesn't sound wrong
-   for a farm that turns out to be uniform.
+1. **The contract basis is three-valued, with a note required when mixed.**
+   `inputsBasis: 'rate-inclusive' | 'rate-exclusive' | 'mixed'`, plus
+   `inputsNote`. Not the two-valued flag this story first proposed.
+
+   The reason is that the owner's own arrangement *is* the third state: the
+   agreed rate covers some inputs implicitly and not others — fertiliser
+   bought at a worker's request, or chemicals for one zone, are agreed and
+   deducted separately. A two-valued flag would have been filled in wrongly
+   on the first contract ever created, because neither value is true, and
+   the note would have quietly become the only honest field on the record.
+
+   `inputsNote` is **required when the basis is `mixed`** and optional
+   otherwise, and it is shown to whoever is entering a deduction, at the
+   moment they enter it. That is the whole job of the field: no report
+   filters on it, no guard reads it. One person, once, needs to see what the
+   rate already covers before they charge a worker for it again.
+
+   The structured alternative — the contract carrying a list of which inputs
+   the rate covers, so the app could warn on a double-charge itself — was
+   put to the owner and not taken. Recorded here because it is the only
+   option under which the app catches the double-charge rather than relying
+   on the person to read the note, and it is where to start if the note
+   turns out not to be enough in the field.
+
+2. **A deduction is whatever the owner and the worker agree**, and the app's
+   job is to record it, not to arbitrate it. The owner's words: *"upon
+   agreement between owner and worker, but don't do thing exceed or too
+   complex."*
+
+   So: no cap, no clamp, no automatic carry-forward, and no refusal to
+   record a deduction larger than the share. If a payout comes out negative,
+   it is shown plainly as a negative number, and nothing further happens to
+   it in this story — carrying a shortfall between sales is S34's job and is
+   not to be half-built here. A gentle inline note beside a negative payout
+   is in scope; any mechanism that moves the money is not.
+
+3. **Uniformity across the farm** is no longer an open question for this
+   story: `inputsBasis` is per-zone-contract, so a farm with different
+   arrangements per zone is already representable, and the copy is written
+   per contract rather than as a farm-wide statement.
+
+## Still open
+
+Nothing blocking. One thing is deliberately deferred rather than unanswered:
+a genuine **pre-split** cost-sharing mechanism, where a zone's gross is
+reduced before it is split. Nothing the owner described needs it — their
+arrangement is a rate that prices some inputs in, which `mixed` plus a note
+describes honestly — and it stays out of scope until something real asks
+for it (YAGNI). `basis: 'gross' | 'final'` on the split remains inert for
+the same reason, and this story does not activate it.
 
 ## Verification
 
