@@ -1,19 +1,19 @@
-# Epic E12: Weather
+# Epic E12: สภาพอากาศ
 
-Status: Draft
+สถานะ: Draft
 PRD: WX
 
-## Goal
-- Actual and forecast weather per farm, stored for later analysis.
+## เป้าหมาย
+- อากาศจริงและพยากรณ์ต่อสวน เก็บไว้วิเคราะห์ภายหลัง
 
-## Scope
-- Provider abstraction (history vs forecast)
-- Store actual weather daily per farm coordinates
-- Forecast view; never mixed with actual
-- Rule alerts (heavy rain, dry spell) → suggested task
+## ขอบเขต
+- แยกผู้ให้บริการ (ข้อมูลย้อนหลัง vs พยากรณ์) เปลี่ยนได้
+- เก็บอากาศจริงรายวันตามพิกัดสวน
+- หน้าพยากรณ์; ไม่ปนกับข้อมูลจริง
+- แจ้งเตือนตามกฎ (ฝนหนัก, แล้งนาน) → แนะนำงาน
 
-## Out
-- Windy production integration
+## ไม่รวม
+- เชื่อม Windy ใช้งานจริง
 
-## Open
-- Provider choice + licensing
+## ประเด็นค้าง
+- เลือกผู้ให้บริการ + สิทธิ์การใช้

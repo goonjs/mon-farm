@@ -1,22 +1,22 @@
-# Epic E14: AI assistance (basic)
+# Epic E14: AI ช่วยวิเคราะห์ (พื้นฐาน)
 
-Status: Draft
+สถานะ: Draft
 PRD: AI
 
-## Goal
-- Ask about the farm in Thai and get answers that show their evidence.
+## เป้าหมาย
+- ถามเรื่องสวนเป็นภาษาไทย ได้คำตอบที่บอกหลักฐาน
 
-## Scope
-- Server-side AI endpoint (key never on device)
-- Chart Explain / Trace / Ask follow-up
-- Chat with conversation context; DB is the truth
-- Fact / pattern / interpretation / recommendation / unknown labels
-- "ไม่รู้ / ข้อมูลไม่เพียงพอ" behaviour
-- Prepared actions shown as diff, run only on confirm
-- Classify observations → AI suggested / Needs Review
+## ขอบเขต
+- AI ทำงานผ่าน server (key ไม่อยู่ในเครื่อง)
+- กราฟมีปุ่ม อธิบาย / ดูที่มา / ถามต่อ
+- แชทจำบริบทในบทสนทนา; ฐานข้อมูลคือความจริง
+- ติดป้าย ข้อเท็จจริง / รูปแบบ / การตีความ / ข้อแนะนำ / ไม่รู้
+- ตอบ "ไม่รู้ / ข้อมูลไม่เพียงพอ" เมื่อข้อมูลไม่พอ
+- คำสั่งที่ AI เตรียมให้ แสดงสิ่งที่จะเปลี่ยน ทำเมื่อยืนยันเท่านั้น
+- จัดประเภทการตรวจสวน → AI แนะนำ / รอตรวจ
 
-## Out
-- Proactive monitoring, learned preferences
+## ไม่รวม
+- เฝ้าระวังเชิงรุก, เรียนรู้ความชอบเอง
 
-## Open
-- Model + cost budget
+## ประเด็นค้าง
+- เลือกโมเดล + งบค่าใช้จ่าย

@@ -1,22 +1,22 @@
-# Epic E13: Dashboard, timeline & analytics
+# Epic E13: หน้าแรก, timeline & การวิเคราะห์
 
-Status: Draft
+สถานะ: Draft
 PRD: ANA
 
-## Goal
-- "ตอนนี้มีอะไรที่ฉันควรรู้หรือควรจัดการ?" on one screen, with drill-down.
+## เป้าหมาย
+- "ตอนนี้มีอะไรที่ฉันควรรู้หรือควรจัดการ?" ในหน้าเดียว เจาะลงดูได้
 
-## Scope
-- Today view: due tasks, expiries, incidents, weather, latest sale, money owed, low stock
-- Timeline of all events, linking to records
-- Charts: kg, kg/rai, price, revenue — by farm / tapper / point / period
-- Comparison presets + custom range
-- Sale interval + reason chips
-- Drill-down everywhere
-- Replaces old S28 / S31 reports
+## ขอบเขต
+- หน้าวันนี้: งานถึงกำหนด, เอกสารใกล้หมด, เหตุการณ์, อากาศ, การขายล่าสุด, เงินค้าง, สต็อกใกล้หมด
+- Timeline ทุกเหตุการณ์ กดไปดูรายการได้
+- กราฟ: กก., กก./ไร่, ราคา, รายได้ — ตามสวน / คนกรีด / จุดชั่ง / ช่วงเวลา
+- ช่วงเปรียบเทียบสำเร็จรูป + กำหนดเอง
+- ระยะห่างระหว่างการขาย + เหตุผลแบบกดเลือก
+- เจาะลงได้ทุกที่
+- แทนรายงาน S28 / S31 เดิม
 
-## Out
-- Market price chart (until a source is confirmed)
+## ไม่รวม
+- กราฟราคาตลาด (จนกว่าจะได้แหล่งข้อมูล)
 
-## Open
+## ประเด็นค้าง
 - 

@@ -1,21 +1,21 @@
-# Epic E05: Reconciliation & settlement
+# Epic E05: กระทบยอด & สรุปเงิน
 
-Status: Draft
+สถานะ: Draft
 PRD: SET
 
-## Goal
-- Totals agree with the buyer and every baht to Daeng, Nat and owner is explainable.
+## เป้าหมาย
+- ยอดตรงกับผู้ซื้อ และเงินทุกบาทของแดง นัด และเจ้าของ อธิบายได้
 
-## Scope
-- Auto totals: basket → point → tapper → farm → sale
-- Verify once: owner vs buyer side-by-side; drill down to baskets
-- Fix at basket; close as Difference found + reason
-- Per tapper: kg, amount, share, fertilizer deduction, cash
-- Owner: shares + combined, bank transfer
-- Rounding asked each time, last choice remembered, own line
-- Independent statuses (verification, Daeng cash, Nat cash, owner transfer, closed)
-- Sale history list + detail
-- Retire hard-coded rounding (settle.ts)
+## ขอบเขต
+- รวมยอดอัตโนมัติ: เข่ง → จุดชั่ง → คนกรีด → สวน → การขาย
+- ตรวจครั้งเดียว: ยอดเรา vs ยอดผู้ซื้อ เทียบข้างกัน; เจาะลงถึงเข่ง
+- แก้ที่เข่ง; ปิดเป็น "พบยอดต่าง" + เหตุผลได้
+- ต่อคนกรีด: กก., ยอดเงิน, ส่วนแบ่ง, หักค่าปุ๋ย, เงินสด
+- เจ้าของ: ส่วนแบ่งแต่ละคน + รวม, โอนเข้าบัญชี
+- ปัดเศษ: ถามทุกครั้ง จำค่าล่าสุด แยกเป็นบรรทัดของตัวเอง
+- สถานะแยกกัน (ตรวจยอด, เงินสดแดง, เงินสดนัด, โอนเจ้าของ, ปิดการขาย)
+- รายการการขายย้อนหลัง + รายละเอียด
+- เลิกใช้การปัดเศษแบบ hard-code (settle.ts)
 
-## Open
+## ประเด็นค้าง
 - 

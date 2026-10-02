@@ -1,15 +1,15 @@
-# Epic E10: Inventory
+# Epic E10: สต็อก
 
-Status: Draft
+สถานะ: Draft
 PRD: INV
 
-## Goal
-- Know fuel and herbicide stock before it runs out.
+## เป้าหมาย
+- รู้สต็อกน้ำมันตัดหญ้าและยาฆ่าหญ้าก่อนหมด
 
-## Scope
-- Items: grass-cutting fuel, herbicide (extensible)
-- In / out / count transactions
-- Low-stock threshold → dashboard
+## ขอบเขต
+- รายการ: น้ำมันตัดหญ้า, ยาฆ่าหญ้า (เพิ่มได้)
+- รับเข้า / ใช้ออก / นับสต็อก
+- เกณฑ์ใกล้หมด → แสดงที่หน้าแรก
 
-## Open
+## ประเด็นค้าง
 - 

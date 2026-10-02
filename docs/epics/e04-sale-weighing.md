@@ -1,28 +1,28 @@
-# Epic E04: Sale weighing
+# Epic E04: การชั่งขาย
 
-Status: Draft
+สถานะ: Draft
 PRD: SALE, SYNC-5…7
 
-## Goal
-- Weigh a whole sale offline without ever losing the basket number.
+## เป้าหมาย
+- ชั่งทั้งการขายแบบออฟไลน์ โดยไม่หลงเลขเข่ง
 
-## Scope
-- Start: Farm → Zone/Tapper → point; multi-farm; any point order
-- Sale header: buyer, date, manager auto, start time, notes, photos
-- Price ฿/kg any time before settlement
-- Zero/tare check per setting (every point / first per farm / skip, logged)
-- Hold ~0.5–1 s = full basket; partial = scale reading − tare
-- Continuous basket numbers across the sale
-- Open partial basket; same tapper only; continue-or-start-new prompt
-- "จบเข่งแล้ว / เป็นเศษ"; bridge display (20 + 30)
-- Recorder mode (6 figures, portrait) ↔ public mode (big number, may rotate)
-- Thai voice for basket numbers (toggle)
-- Undo / edit / void baskets as events
-- Bulk entry per point, marked บันทึกย้อนหลัง, photo of paper
-- Handoff ส่งต่อ/รับช่วง offline; QR merge at close
-- Duplicate detection (7–10 s) + overlap timeline
-- Draft / Completed / Cancelled; edit Completed with reason if money changes
-- Fix S32 multi-finger count bug
+## ขอบเขต
+- เริ่ม: สวน → โซน/คนกรีด → จุดชั่ง; ได้หลายสวน; ลำดับจุดชั่งอิสระ
+- หัวการขาย: ผู้ซื้อ, วันที่, ผู้จัดการ (เติมอัตโนมัติ), เวลาเริ่ม, หมายเหตุ, รูป
+- ราคา ฿/กก. ใส่เมื่อไหร่ก็ได้ก่อนสรุปเงิน
+- ตรวจศูนย์/ตะกร้าตามตั้งค่า (ทุกจุด / จุดแรกของสวน / ข้าม — บันทึกไว้)
+- กดค้าง ~0.5–1 วิ = เข่งเต็ม; เข่งไม่เต็ม = ค่าตาชั่ง − ตะกร้า
+- เลขเข่งต่อเนื่องทั้งการขาย
+- เข่งไม่เต็มเปิดค้าง; ต่อได้เฉพาะคนกรีดเดียวกัน; ถาม "เติมต่อ" หรือ "เริ่มเข่งใหม่"
+- ปุ่ม "จบเข่งแล้ว / เป็นเศษ"; แสดงเข่งเชื่อม (20 + 30)
+- โหมดผู้บันทึก (6 ค่า, แนวตั้ง) ↔ โหมดสาธารณะ (ตัวเลขใหญ่, หมุนได้)
+- เสียงไทยนับเลขเข่ง (ปิดได้)
+- ย้อนกลับ / แก้ / ยกเลิกเข่ง เก็บเป็น event
+- บันทึกแบบรวม (bulk) ต่อจุดชั่ง ติดป้าย "บันทึกย้อนหลัง" แนบรูปกระดาษได้
+- ส่งต่อ/รับช่วงแบบออฟไลน์; รวมข้อมูลด้วย QR ตอนปิดการขาย
+- จับนับซ้ำ (7–10 วิ) + timeline ช่วงเวลาที่ทับกัน
+- Draft / Completed / Cancelled; แก้ Completed ได้ ใส่เหตุผลถ้าเงินเปลี่ยน
+- แก้บั๊กสองนิ้วแตะแล้วนับ (S32)
 
-## Open
+## ประเด็นค้าง
 - 

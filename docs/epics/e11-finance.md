@@ -1,23 +1,23 @@
-# Epic E11: Farm finance
+# Epic E11: การเงินสวน
 
-Status: Draft
+สถานะ: Draft
 PRD: FIN
 
-## Goal
-- See what the farm costs, who paid, who is owed, and what's coming.
+## เป้าหมาย
+- เห็นว่าสวนใช้เงินเท่าไหร่ ใครจ่าย ค้างใคร และอะไรกำลังจะมา
 
-## Scope
-- Expense: category, property, payer, Actual / Committed / Planned
-- Reimbursements: owed to whom, repayments, balance
-- Manager salary (recurring 15,000/month)
-- Worker special payments
-- Travel trip: multi-purpose, multi-property, optional allocation
-- Income streams: rubber (from sales), durian rent, future share
-- Durian leases (terms as known; Unknown otherwise)
-- Basic monthly cash-flow + reserve view with assumptions
+## ขอบเขต
+- ค่าใช้จ่าย: หมวด, สวน, ผู้จ่ายจริง, เกิดจริง / ผูกพันแล้ว / วางแผน
+- เงินที่ต้องคืน: ค้างใคร, การคืน, ยอดคงเหลือ
+- เงินเดือนผู้จัดการ (15,000/เดือน)
+- เงินช่วยเหลือพิเศษคนงาน
+- การเดินทาง: หลายวัตถุประสงค์, หลายสวน, แบ่งต้นทุนได้ถ้าต้องการ
+- รายได้: ยาง (จากการขาย), ค่าเช่าทุเรียน, ส่วนแบ่งในอนาคต
+- สัญญาเช่าทุเรียน (เท่าที่รู้; ไม่รู้ = Unknown)
+- กระแสเงินสดรายเดือน + เงินสำรอง พร้อมสมมติฐาน
 
-## Out
-- JotWai, advanced forecasting
+## ไม่รวม
+- JotWai, การพยากรณ์ขั้นสูง
 
-## Open
+## ประเด็นค้าง
 - 

@@ -1,28 +1,28 @@
-Epics live here, one file per epic, sharded from `docs/prd.md`. Use
-`docs/templates/epic-template.md` as the starting point.
+Epic เก็บที่นี่ ไฟล์ละ 1 epic แตกมาจาก `docs/prd.md` ใช้
+`docs/templates/epic-template.md` เป็นแม่แบบ
 
-## PRD v1.0 epics (2026-10-03) — short form, owner edits directly
+## Epic ของ PRD v1.0 (2026-10-03) — แบบสั้น เจ้าของแก้ได้ตรงๆ
 
-Suggested order: E01 → E02 → E03 → E04 → E05 → E06, then E07–E14.
+ลำดับที่แนะนำ: E01 → E02 → E03 → E04 → E05 → E06 แล้วต่อ E07–E14
 
-| Epic | Module |
+| Epic | โมดูล |
 |---|---|
-| [E01 Foundation — sync, backend, CI](e01-foundation-sync.md) | SYNC, NFR |
-| [E02 Access & Farm Groups](e02-access-farm-groups.md) | ACC |
-| [E03 Master data](e03-master-data.md) | MD |
-| [E04 Sale weighing](e04-sale-weighing.md) | SALE |
-| [E05 Reconciliation & settlement](e05-reconciliation-settlement.md) | SET |
-| [E06 Fertilizer ledger](e06-fertilizer.md) | FERT |
-| [E07 Field operations](e07-field-operations.md) | OPS |
-| [E08 Tasks & notifications](e08-tasks-notifications.md) | TASK |
-| [E09 Worker documents](e09-worker-documents.md) | DOC |
-| [E10 Inventory](e10-inventory.md) | INV |
-| [E11 Finance](e11-finance.md) | FIN |
-| [E12 Weather](e12-weather.md) | WX |
-| [E13 Dashboard & analytics](e13-dashboard-analytics.md) | ANA |
-| [E14 AI assistance](e14-ai-assistance.md) | AI |
+| [E01 ฐานระบบ — sync, backend, CI](e01-foundation-sync.md) | SYNC, NFR |
+| [E02 การเข้าใช้ & กลุ่มฟาร์ม](e02-access-farm-groups.md) | ACC |
+| [E03 ข้อมูลหลัก](e03-master-data.md) | MD |
+| [E04 การชั่งขาย](e04-sale-weighing.md) | SALE |
+| [E05 กระทบยอด & สรุปเงิน](e05-reconciliation-settlement.md) | SET |
+| [E06 บัญชีปุ๋ย](e06-fertilizer.md) | FERT |
+| [E07 งานในสวน](e07-field-operations.md) | OPS |
+| [E08 งาน & การแจ้งเตือน](e08-tasks-notifications.md) | TASK |
+| [E09 เอกสารคนงาน](e09-worker-documents.md) | DOC |
+| [E10 สต็อก](e10-inventory.md) | INV |
+| [E11 การเงินสวน](e11-finance.md) | FIN |
+| [E12 สภาพอากาศ](e12-weather.md) | WX |
+| [E13 หน้าแรก & การวิเคราะห์](e13-dashboard-analytics.md) | ANA |
+| [E14 AI ช่วยวิเคราะห์](e14-ai-assistance.md) | AI |
 
-## Historical (PRD v0.4, superseded)
+## ประวัติ (PRD v0.4, ถูกแทนแล้ว)
 
-- `epic-1-run-and-settle-one-sale.md`, `epic-2-second-field-round.md` — kept
-  for their decision history; scope now lives in E03–E06.
+- `epic-1-run-and-settle-one-sale.md`, `epic-2-second-field-round.md` — เก็บไว้
+  เป็นประวัติการตัดสินใจ ขอบเขตย้ายไปอยู่ E03–E06 แล้ว

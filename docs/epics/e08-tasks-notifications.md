@@ -1,21 +1,21 @@
-# Epic E08: Tasks & notifications
+# Epic E08: งาน & การแจ้งเตือน
 
-Status: Draft
+สถานะ: Draft
 PRD: TASK
 
-## Goal
-- Low-friction tasks; reminders only where the owner wants them.
+## เป้าหมาย
+- งานที่ใช้ง่าย; แจ้งเตือนเฉพาะที่เจ้าของต้องการ
 
-## Scope
-- Task: name required, rest optional; simple status flow
-- Link to source record (incident, observation, document …)
-- Suggested task → Create / Not needed / View more (never automatic)
-- Opt-in reminders per task; owner default recipient; add Ajarn Somwang per task
-- Push notifications (FCM); scheduled sender on server
-- De-duplicate; documents repeat until handled
+## ขอบเขต
+- งาน: บังคับแค่ชื่อ ที่เหลือไม่บังคับ; สถานะแบบง่าย
+- ผูกกับต้นเรื่อง (เหตุการณ์, การตรวจสวน, เอกสาร …)
+- งานที่ระบบแนะนำ → สร้าง / ไม่จำเป็น / ดูข้อมูลเพิ่ม (ไม่สร้างเอง)
+- เลือกแจ้งเตือนรายงาน; เจ้าของรับเป็นค่าเริ่มต้น; เพิ่มอาจารย์สมหวังได้รายงาน
+- Push notification (FCM); ตัวส่งตามเวลาอยู่ฝั่ง server
+- ไม่แจ้งซ้ำซ้อน; เอกสารเตือนซ้ำจนกว่าจะจัดการ
 
-## Out
-- LINE notifications (spike first), learned seasonal suggestions
+## ไม่รวม
+- แจ้งเตือนผ่าน LINE (ต้องทดลองก่อน), งานแนะนำตามฤดูที่เรียนรู้เอง
 
-## Open
+## ประเด็นค้าง
 - 

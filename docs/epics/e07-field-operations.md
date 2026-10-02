@@ -1,22 +1,22 @@
-# Epic E07: Field operations
+# Epic E07: งานในสวน
 
-Status: Draft
+สถานะ: Draft
 PRD: OPS
 
-## Goal
-- Capture what happens on the farm, once, with evidence.
+## เป้าหมาย
+- บันทึกสิ่งที่เกิดในสวนครั้งเดียว พร้อมหลักฐาน
 
-## Scope
-- Inspection: note/audio, photos/videos, GPS, property/zone/point
-- Health checklist (standard + custom fields)
-- Tree counts: estimate → verified, change history
-- Incidents (zero-cost allowed) + incident timeline
-- GPS: created-at vs happened-at; optional when remote
-- Contextual notes / farm change log
-- Create Incident / Task from observation
+## ขอบเขต
+- ตรวจสวน: ข้อความ/เสียง, รูป/วิดีโอ, GPS, สวน/โซน/จุด
+- เช็กลิสต์สุขภาพต้นยาง (มาตรฐาน + เพิ่มเองได้)
+- จำนวนต้น: ประมาณ → ยืนยัน มีประวัติการเปลี่ยน
+- เหตุการณ์ (ไม่มีค่าใช้จ่ายก็ได้) + timeline เหตุการณ์
+- GPS: ที่บันทึก vs ที่เกิดจริง; ไม่บังคับเมื่อบันทึกจากที่อื่น
+- บันทึกบริบท / log การเปลี่ยนแปลงในสวน
+- สร้างเหตุการณ์ / งาน จากการตรวจสวน
 
-## Out
-- AI classification of observations (E14)
+## ไม่รวม
+- AI จัดประเภทการตรวจสวน (อยู่ E14)
 
-## Open
+## ประเด็นค้าง
 - 

@@ -1,22 +1,22 @@
-# Epic E03: Farm structure & master data
+# Epic E03: โครงสร้างสวน & ข้อมูลหลัก
 
-Status: Draft
+สถานะ: Draft
 PRD: MD
 
-## Goal
-- Farms, points, people and settings shared by the group, set once, reused every sale.
+## เป้าหมาย
+- สวน จุดชั่ง คน และการตั้งค่า ใช้ร่วมกันทั้งกลุ่ม ตั้งครั้งเดียว ใช้ซ้ำทุกการขาย
 
-## Scope
-- Properties (rubber/durian), area history, optional GPS
-- Zones optional: add / retire / split / merge, with history
-- Weighing points (= pile) per farm; seed Chanthakhem (Daeng 3, Nat 1), Khlong Phlu (Nat 1)
-- Time-bounded tapper ↔ point/zone assignment
-- People: tappers, manager, payers, lessees; buyers (default last)
-- Settings: basket net presets (50/60), tare presets, defaults
-- Settings: zero/tare check mode, hold duration, voice, duplicate window
-- Tapper share per tapper, time-bounded, default 50/50
-- Migrate S27 farm profile + S16 people store → synced master data
-- Retire per-zone contracts + `basis` (S15)
+## ขอบเขต
+- สวน (ยาง/ทุเรียน), ประวัติพื้นที่ (ไร่), GPS ไม่บังคับ
+- โซนไม่บังคับ: เพิ่ม / เลิกใช้ / แยก / รวม พร้อมประวัติ
+- จุดชั่ง (= กอง) ต่อสวน; ข้อมูลตั้งต้น สวนจันทเขลม (แดง 3, นัด 1), สวนฝั่งคลองพลู (นัด 1)
+- การมอบหมายคนกรีด ↔ จุดชั่ง/โซน มีช่วงเวลา
+- คน: คนกรีด, ผู้จัดการ, ผู้จ่ายเงิน, ผู้เช่า; ผู้ซื้อ (ค่าเริ่มต้น = รายล่าสุด)
+- ตั้งค่า: น้ำหนักเข่งสุทธิ (50/60), น้ำหนักตะกร้า, ค่าเริ่มต้น
+- ตั้งค่า: โหมดตรวจศูนย์/ตะกร้า, เวลากดค้าง, เสียง, ช่วงเวลาจับนับซ้ำ
+- สัดส่วนแบ่งต่อคนกรีด มีช่วงเวลา ค่าเริ่มต้น 50/50
+- ย้าย farm profile (S27) + people store (S16) → ข้อมูลหลักที่ sync
+- เลิกใช้สัญญาต่อโซน + ช่อง `basis` (S15)
 
-## Open
+## ประเด็นค้าง
 - 

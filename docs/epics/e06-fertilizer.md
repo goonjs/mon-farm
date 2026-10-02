@@ -1,19 +1,19 @@
-# Epic E06: Fertilizer ledger
+# Epic E06: บัญชีปุ๋ย
 
-Status: Draft
+สถานะ: Draft
 PRD: FERT
 
-## Goal
-- Know what each tapper owes for fertilizer, and deduct it fairly.
+## เป้าหมาย
+- รู้ว่าคนกรีดแต่ละคนค้างค่าปุ๋ยเท่าไหร่ และหักอย่างเป็นธรรม
 
-## Scope
-- Purchase: type, sacks, cost, shop, ordered by, paid by, invoice
-- Optional plan (→ Planned expense)
-- Allocation by sacks per worker
-- Worker 50% liability; owner 50% = farm expense
-- Ledger per worker: balance, instalment plan, history
-- Deduction at settlement, capped at share, remainder carries
-- Retire S29 per-sale deductions (migrate existing)
+## ขอบเขต
+- การซื้อ: ชนิด, จำนวนกระสอบ, ราคา, ร้าน, ใครสั่ง, ใครจ่าย, ใบเสร็จ
+- แผนปุ๋ย ไม่บังคับ (→ ค่าใช้จ่ายแบบวางแผน)
+- แบ่งตามจำนวนกระสอบต่อคนกรีด
+- คนกรีดรับ 50%; เจ้าของ 50% = ค่าใช้จ่ายสวน
+- บัญชีต่อคนกรีด: ยอดค้าง, แผนผ่อน, ประวัติ
+- หักตอนสรุปเงิน ไม่เกินส่วนแบ่ง ที่เหลือยกไป
+- เลิกใช้การหักต่อการขายแบบ S29 (ย้ายข้อมูลเดิม)
 
-## Open
+## ประเด็นค้าง
 - 

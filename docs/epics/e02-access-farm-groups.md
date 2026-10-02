@@ -1,21 +1,21 @@
-# Epic E02: Access & Farm Groups
+# Epic E02: การเข้าใช้ & กลุ่มฟาร์ม
 
-Status: Draft
+สถานะ: Draft
 PRD: ACC
 
-## Goal
-- Three owners sign in and share one farm's data.
+## เป้าหมาย
+- เจ้าของ 3 คน login แล้วใช้ข้อมูลฟาร์มชุดเดียวกัน
 
-## Scope
-- Google Login (web + Android); stays signed in offline
-- User ↔ multiple identities (ready for LINE)
-- Create Farm Group; invite → accept; leave (data stays)
-- One group → enter directly; many → choose
-- Membership `role` field (always owner in V1)
+## ขอบเขต
+- Google Login (เว็บ + Android); ออฟไลน์แล้วยังอยู่ในระบบ
+- 1 user ผูกได้หลายบัญชี login (พร้อมสำหรับ LINE)
+- สร้างกลุ่มฟาร์ม; เชิญ → ตอบรับ; ออกจากกลุ่ม (ข้อมูลยังอยู่)
+- อยู่กลุ่มเดียว → เข้าเลย; หลายกลุ่ม → ให้เลือก
+- สมาชิกมีช่อง `role` (V1 เป็น owner ทั้งหมด)
 
-## Out
-- LINE Login (integration-dependent, after first field test)
-- Permission UI, group delete
+## ไม่รวม
+- LINE Login (ขึ้นกับการเชื่อมต่อ ทำหลังทดสอบในสวนครั้งแรก)
+- หน้าจัดการสิทธิ์, ลบกลุ่มฟาร์ม
 
-## Open
+## ประเด็นค้าง
 - 

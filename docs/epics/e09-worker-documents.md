@@ -1,17 +1,17 @@
-# Epic E09: Worker & family documents
+# Epic E09: เอกสารคนงาน & ครอบครัว
 
-Status: Draft
+สถานะ: Draft
 PRD: DOC
 
-## Goal
-- Never miss a pink card, passport, visa or insurance expiry.
+## เป้าหมาย
+- ไม่พลาดวันหมดอายุบัตรชมพู พาสปอร์ต วีซ่า ประกัน
 
-## Scope
-- Family → members → documents (Daeng 5, Nat 2)
-- Document: type, holder, issue, expiry, status, photo, notes, responsible
-- Reminders 90/60/30/7 days (editable), repeat until handled
-- Renewal → new current doc; old kept in history
-- Propose task on expiry (owner confirms)
+## ขอบเขต
+- ครอบครัว → สมาชิก → เอกสาร (แดง 5 คน, นัด 2 คน)
+- เอกสาร: ชนิด, ผู้ถือ, วันออก, วันหมดอายุ, สถานะ, รูป, หมายเหตุ, ผู้รับผิดชอบ
+- เตือนก่อน 90/60/30/7 วัน (แก้ได้) เตือนซ้ำจนจัดการ
+- ต่ออายุ → เอกสารใหม่เป็นฉบับปัจจุบัน; ฉบับเก่าเก็บในประวัติ
+- เสนองานเมื่อใกล้หมดอายุ (เจ้าของยืนยัน)
 
-## Open
+## ประเด็นค้าง
 - 
