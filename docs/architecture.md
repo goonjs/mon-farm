@@ -18,7 +18,7 @@ Decision log D-1…D-21):
 | Area | Decision | Why |
 |---|---|---|
 | Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert, asia-southeast1, separate `dev` and `prod` projects | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
-| Sync unit | **Keep the append-only event log as source of truth and sync unit.** Each event = one immutable Firestore doc (`groups/{gid}/events/{eventId}`), create-only security rules → idempotent re-push, nothing overwritten. Edits are new events carrying `targetId` + `baseEventId`; two edits on the same base = **Conflict** surfaced to the user. | Firestore is last-write-wins per document and transactions fail offline, so platform defaults can't satisfy "never silently overwrite money". Basket events are additive → different devices merge for free. |
+| Sync unit | **Keep the append-only event log as source of truth and sync unit.** Each event = one immutable Firestore doc (`groups/{gid}/events/{eventId}`), create-only security rules → idempotent re-push, nothing overwritten. Edits are new events carrying `targetId` + `baseEventId`; concurrent edits merge only when they touch different non-money/weight/count/status fields, otherwise **Conflict** surfaced to the user (see §Sync engine). | Firestore is last-write-wins per document and transactions fail offline, so platform defaults can't satisfy "never silently overwrite money". Basket events are additive → different devices merge for free. |
 | Pending Sync | Our own outbox (`synced_at IS NULL`), not Firestore's cache | JS SDK persistence on React Native is memory-only; our SQLite store owns durability. Avoids `@react-native-firebase`. |
 | IDs & ordering | Globally unique event ids (**UUIDv7**, owner 2026-10-03) + per-device sequence; causal order only, no clock ordering; `(sale_id, seq)` PK retired; `actor` → user id + device id | Two offline phones would collide on per-sale `seq`. |
 | Handoff | `handoff`/`claim` events; QR payload carries the sale's event delta at close; duplicate detection on merge (7–10 s window, basket number cross-check) | PRD SYNC-5…7. |
@@ -37,7 +37,7 @@ location, notifications, camera/QR) each go through the dependency gate in
 ## System overview
 
 > สถานะ: **v1.0 สำหรับ E01-S01 — รอเจ้าของอ่านและตกลงทั้งฉบับ** (เขียน 2026-10-03) แทนที่ภาพรวม v0.1
-> ข้อตัดสินใจที่ใช้: PRD D-1, D-3, D-19, D-22…D-29 และคำตอบเจ้าของ 2026-10-03 (UUIDv7, ลำดับเชิงเหตุผล,
+> ข้อตัดสินใจที่ใช้: PRD D-1, D-3, D-19, D-22…D-33 และคำตอบเจ้าของ 2026-10-03 (UUIDv7, ลำดับเชิงเหตุผล,
 > ไม่ย้ายข้อมูลเก่า, รวมอัตโนมัติเฉพาะฟิลด์ที่ไม่ใช่เงิน/น้ำหนัก/จำนวน/สถานะ, รหัสเชิญผ่าน Cloud Functions,
 > ไม่เข้ารหัสข้อมูลในเครื่องใน MVP)
 
@@ -91,7 +91,7 @@ Firestore document หนึ่งตัว ที่สร้างได้อ
    การ login ด้วย LINE ผ่าน custom token อยู่หลัง MVP — ในเอกสารนี้เป็นแค่ pointer
 
 ลำดับการเปิดแอปครั้งแรก: ยังไม่ login → เห็นแค่หน้า login (ครั้งแรกต้องมีเน็ต) → login ด้วย Google →
-ไม่มีกลุ่ม → สร้างกลุ่ม หรือเข้าร่วมด้วยรหัสเชิญ (ต้องมีเน็ต) → มีกลุ่มเดียวเข้าเลย / หลายกลุ่มให้เลือก (ACC-3)
+ไม่มีกลุ่ม → สร้างกลุ่ม (ทำออฟไลน์ได้) หรือเข้าร่วมด้วยรหัสเชิญ (ต้องมีเน็ต) → มีกลุ่มเดียวเข้าเลย / หลายกลุ่มให้เลือก (ACC-3)
 → บันทึกได้ และหลังจากนี้ใช้ออฟไลน์ได้ทั้งหมด (ACC-6) MVP ไม่มี logout
 
 ตำแหน่งโค้ด:
@@ -212,6 +212,7 @@ interface EventEnvelope<K extends EventKind = EventKind, P = unknown> {
 
 `alsoBasedOn` ขยายจากโมเดล `targetId` + `baseEventId` ที่เจ้าของตกลง: `baseEventId` ตัวเดียวชี้ได้แค่ head เดียว
 ถ้าไม่มีฟิลด์นี้ event `resolve` หรือการแก้ต่อหลัง merge อัตโนมัติจะปิด fork ไม่ได้ และ Conflict จะค้างตลอดไป
+(เจ้าของตกลง 2026-10-03)
 
 event มีสองตระกูล และ registry ใน `src/core/merge-policy.ts` กำหนดให้แต่ละ `kind` ว่าอยู่ตระกูลไหน:
 
@@ -259,21 +260,21 @@ CREATE TABLE events (
   base_event_id TEXT,
   sale_id       TEXT,
   ts            INTEGER NOT NULL,
-  body          TEXT NOT NULL,             -- canonical JSON ของ envelope ทั้งตัว = สิ่งที่ส่งขึ้น
+  body          TEXT NOT NULL,             -- canonical JSON ของ envelope ทั้งตัว = สิ่งที่ส่งขึ้น (นิยามด้านล่าง)
   synced_at     INTEGER,                   -- NULL = อยู่ใน outbox (เฉพาะ event ของเครื่องนี้)
-  received_at   INTEGER,                   -- เวลาเซิร์ฟเวอร์ (receivedAt) เมื่อรู้แล้ว
-  UNIQUE (device_id, device_seq)
+  received_at   INTEGER                    -- เวลาเซิร์ฟเวอร์ (receivedAt) เมื่อรู้แล้ว
 );
 CREATE INDEX events_outbox ON events(group_id, device_seq) WHERE synced_at IS NULL;
 CREATE INDEX events_target ON events(group_id, target_id);
 CREATE INDEX events_sale   ON events(group_id, sale_id);
+-- ไม่มี UNIQUE (device_id, device_seq) ทั้งตาราง: ความไม่ซ้ำของ seq บังคับใน transaction ของ append (เฉพาะแถวของเครื่องนี้)
 
 CREATE TABLE meta        (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   -- device_id, next_device_seq, pull_cursor:<gid>, session (userId, activeGroupId)
 CREATE TABLE memberships (group_id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL,
                           member_count INTEGER, state TEXT NOT NULL);   -- 'active' | 'leaving'
 CREATE TABLE pending_ops (id TEXT PRIMARY KEY, group_id TEXT NOT NULL, op TEXT NOT NULL,
-                          body TEXT NOT NULL, error TEXT);              -- 'create_group' | 'leave_group'
+                          body TEXT NOT NULL, error TEXT);              -- 'create_group' (การออกกลุ่มใช้ memberships.state)
 CREATE TABLE media_queue (media_id TEXT PRIMARY KEY, group_id TEXT NOT NULL, local_uri TEXT NOT NULL,
                           content_type TEXT NOT NULL, bytes INTEGER NOT NULL, uploaded_at INTEGER);
 ```
@@ -281,10 +282,19 @@ CREATE TABLE media_queue (media_id TEXT PRIMARY KEY, group_id TEXT NOT NULL, loc
 การทำ seq + insert ให้เป็น transaction แบบ exclusive บน expo-sqlite ต้องตรวจกับเอกสาร expo-sqlite ใน E01-S02
 (เขียนไว้จากความจำ ยังไม่ยืนยัน)
 
+**ทำไมไม่บังคับ `(device_id, device_seq)` unique ทั้งตาราง**: ถ้าสองการติดตั้งเคยได้ `deviceId` เดียวกัน (เช่น
+Android Auto Backup restore ลงเครื่องใหม่ขณะเครื่องเก่ายังใช้) `insertPulled` จะชน constraint และ pull ค้างถาวร
+จึงบังคับเฉพาะแถวของเครื่องนี้ใน append; ข้อมูลที่ดึงมาซ้ำ `(deviceId, deviceSeq)` แต่ id ต่างกัน → เก็บไว้และ log
+เตือน ไม่หยุด pull และตั้ง `android.allowBackup: false` ใน `app.json` (E01-S06) เพื่อกัน `deviceId` ถูกโคลน
+
+**canonical JSON** (ใช้เทียบ "เนื้อหาเท่ากัน" ทั้งในเครื่องและกับ Firestore): key เรียงตามตัวอักษรทุกระดับ, ฟิลด์
+optional ที่ไม่มีค่า **ไม่ใส่** (ห้ามเป็น `null`/`undefined` — Firestore ไม่รับ `undefined`), ตัวเลขเป็นจำนวนเต็ม
+เท่านั้น, ไม่นับ `receivedAt` Firestore ไม่รักษาลำดับ key ของ map จึงต้อง canonicalize ทั้งสองฝั่งก่อนเทียบ
+
 ### Schema — เว็บ (IndexedDB, D-19)
 
 ฐานข้อมูล `mon-farm-v1` มี object store ชุดเดียวกับ native: `events` (keyPath `id`; index `outbox` บน
-`[groupId, pending]` — IndexedDB index ค่า null ไม่ได้ จึงเก็บ `pending: 1|0`; index unique บน
+`[groupId, pending]` — IndexedDB index ค่า null ไม่ได้ จึงเก็บ `pending: 1|0`; index (ไม่ unique) บน
 `[deviceId, deviceSeq]`; index `[groupId, saleId]` และ `[groupId, targetId]`), `meta`, `memberships`,
 `pendingOps`, `mediaQueue` (เก็บไฟล์เป็น Blob)
 
@@ -298,8 +308,12 @@ CREATE TABLE media_queue (media_id TEXT PRIMARY KEY, group_id TEXT NOT NULL, loc
   `IntegrityError`** ห้ามเขียนทับ (แทน `DuplicateSeqError`)
 - `insertPulled(events)`: กติกาเดียวกัน ใส่ `synced_at` / `received_at` และไม่เข้า outbox
 - `pending(groupId?)`: เรียงตาม `device_seq` · `markSynced(ids, receivedAt)` ทำหลังเซิร์ฟเวอร์ยืนยันแล้วเท่านั้น
-- `purgeGroup(gid)`: ลบทุก table ของกลุ่มนั้นใน transaction เดียว เรียกได้ **เฉพาะ** จาก flow ออกจากกลุ่ม หลัง
-  outbox และ media queue ของกลุ่มว่างแล้ว (E02-S04, D-26) — การลบแถวจริงกรณีเดียวใน store
+- `purgeGroup(gid)`: ลบทุก table ของกลุ่มนั้น + `pull_cursor:<gid>` ใน transaction เดียว แล้วลบไฟล์สื่อของกลุ่ม
+  บนดิสก์ เรียกได้ **เฉพาะ** เมื่อเครื่องรู้ว่าผู้ใช้ไม่เป็นสมาชิกกลุ่มนั้นแล้ว (§การดำเนินการด้านสมาชิกภาพ, E02-S04,
+  D-26) — การลบแถวจริงกรณีเดียวใน store
+- **ความเข้ากันได้ไปข้างหน้า**: event ที่ `kind` หรือฟิลด์ใน payload ไม่รู้จัก (มาจากแอปรุ่นใหม่กว่า) → **เก็บไว้
+  เสมอ ห้ามทิ้ง** ข้ามใน projection แล้วแสดง "มีข้อมูลจากแอปรุ่นใหม่ — อัปเดตแอป"; registry ถือ kind/ฟิลด์ที่
+  ไม่รู้จักเป็น `strict`
 - query ทุกตัวกรองด้วย `group_id` ของกลุ่มที่เปิดอยู่ ข้อมูลกลุ่มอื่นไม่ปนบนหน้าจอ (ACC-5)
 - write path รับ `Session` ที่ไม่เป็น null เท่านั้น — ไม่มี session compile ไม่ผ่าน และมี runtime guard ซ้ำ
   (D-23, D-24)
@@ -334,8 +348,11 @@ localStorage `mon-farm:events:*`, `mon-farm:sales`, `mon-farm:synced`, `mon-farm
 
 1. store ใหม่ใช้ชื่อใหม่ทั้งหมด (`mon-farm-v1.db`, IDB `mon-farm-v1`) โค้ดใหม่จึงไม่อ่าน schema เก่าและไม่ล่ม
    เพราะ schema เก่า
-2. เปิดแอปครั้งแรก ลบของเก่าแบบ best-effort (`deleteDatabaseAsync('mon-farm.db')` และ `removeItem` ของคีย์
-   ข้างบน) ครอบ try/catch ล้มเหลว → log แล้วไปต่อ `mon-farm:speech-on` เป็นค่าตั้งของเครื่อง จึงเก็บไว้
+2. ล้าง **เฉพาะ log การขายของ v0.4** ครั้งเดียว (ธง `legacy_cleanup_v1` ใน `meta` ของ store ใหม่): เว็บลบคีย์
+   `mon-farm:events:*`, `mon-farm:sales`, `mon-farm:synced`, `mon-farm:locale`; native ไม่แตะ `mon-farm.db`
+   เพราะ store farm/people ชั่วคราว (ข้อ 4) ยังใช้ไฟล์นั้นและคีย์ `mon-farm:farm-profile`/`mon-farm:people` อยู่ —
+   E03 เป็นผู้ลบ `mon-farm.db` และคีย์ farm/people ครั้งเดียวเมื่อแทนที่ด้วยข้อมูลหลักที่ sync ทุกขั้นครอบ
+   try/catch ล้มเหลว → log แล้วไปต่อ `mon-farm:speech-on` เป็นค่าตั้งของเครื่อง จึงเก็บไว้
 3. ขั้นนี้ **ย้อนกลับไม่ได้** ในทางปฏิบัติ ของเก่ามีแค่ localStorage บนเบราว์เซอร์ (native ยังไม่เคยรัน)
 4. ระหว่าง E01–E02 store farm/people แบบเครื่องเดียวของ v0.4 (ไม่มี group id) อยู่เป็นโครงชั่วคราวที่ไม่ sync
    จนกว่า E03 จะแทนที่ด้วยข้อมูลหลักที่ sync; การใช้งานในสวนจริงเริ่มหลัง E03/E04
@@ -360,12 +377,12 @@ memory อยู่แล้ว; บนเว็บถ้าเปิดจะ�
    ยอดรวม เลขเข่ง หรือการตัดสิน Conflict ดังนั้น **เลขเข่งต้องเป็นฟิลด์บน event** ไม่ใช่ตำแหน่งใน log
    (ข้อบังคับสำหรับ E04-S01)
 5. heuristic ที่แค่ *ถามผู้ใช้* (หน้าต่าง 7–10 วินาทีของการนับซ้ำ E04-S14 ที่ตรวจซ้ำกับเลขเข่ง) หรือแค่ *เสนอ
-   ค่าเริ่มต้น* (D-5) ใช้ `ts` ได้ แต่ห้ามตัดสินค่าที่บันทึกแล้ว
+   ค่าเริ่มต้น* (เช่น จำตัวเลือกปัดเศษล่าสุด — D-5) ใช้ `ts` ได้ แต่ห้ามตัดสินค่าที่บันทึกแล้ว
 6. การตรวจนาฬิกาผิดปกติ (`clock_anomaly`) ทำต่อเครื่อง เทียบตาม `deviceSeq` ของเครื่องนั้นเอง
 
 ### ตาราง: อะไรรวมอัตโนมัติ อะไรเป็น Conflict (SYNC-4)
 
-กฎหลัก (เจ้าของตกลง 2026-10-03): **การแก้พร้อมกันบน record เดียวกันรวมอัตโนมัติได้ก็ต่อเมื่อแก้คนละฟิลด์ และไม่มี
+กฎหลัก (เจ้าของตกลง 2026-10-03, D-30): **การแก้พร้อมกันบน record เดียวกันรวมอัตโนมัติได้ก็ต่อเมื่อแก้คนละฟิลด์ และไม่มี
 ฟิลด์ไหนเป็นเงิน น้ำหนัก จำนวน หรือสถานะ** การแก้ที่ได้ผลเหมือนกันทุกประการรวมได้เสมอ นอกนั้นเป็น Conflict
 แต่ละฟิลด์ติดธง `strict` (เงิน/น้ำหนัก/จำนวน/สถานะ) ใน registry
 
@@ -386,16 +403,21 @@ memory อยู่แล้ว; บนเว็บถ้าเปิดจะ�
 
 ### ตรวจ Conflict และตัดสิน (E01-S11)
 
+ภาษาง่าย: ถ้าสองเครื่องแก้รายการเดียวกันโดยไม่เห็นการแก้ของกันและกัน ระบบรู้ได้จากการที่ทั้งสองการแก้อ้างถึง
+"ค่าก่อนแก้" ตัวเดียวกัน — ถ้าแก้คนละช่องที่ไม่ใช่เงิน/น้ำหนัก/จำนวน/สถานะ ก็รวมให้เอง ไม่อย่างนั้นถามเจ้าของ
+
 - ฟังก์ชัน pure ใน `src/core/conflicts.ts` ทำงานเหมือนกันทุกเครื่อง ไม่พึ่งเซิร์ฟเวอร์: แต่ละ `targetId` สร้าง
-  กราฟจาก `baseEventId` + `alsoBasedOn` แล้วหา **head** (change ที่ไม่มีใครชี้ถึง)
+  กราฟจาก `baseEventId` + `alsoBasedOn` ("ตามหลัง" ถ่ายทอดได้: A ← B ← C แปลว่า C ตามหลัง A) แล้วหา **head**
+  = event ของ record นั้น (รวม create ที่ยังไม่มี change) ที่ไม่มี event ใดชี้ถึง
   - head เดียว → ค่า = fold ตามสาย
   - หลาย head → ใช้ตารางข้างบน: รวมได้ → ใส่ทุก patch; รวมไม่ได้ → **Conflict** บนฟิลด์ที่ขัดกัน (ฟิลด์อื่นที่
     รวมได้ยังรวมตามปกติ)
-- **ระหว่างยังไม่ตัดสิน (D-29)**: ฟิลด์ที่ขัดกันแสดง **ค่า base** (ค่าที่ ancestor ร่วมล่าสุดของ head) พร้อมธง
+- **ระหว่างยังไม่ตัดสิน (D-29)**: ฟิลด์ที่ขัดกันแสดง **ค่า base** = ผล fold ของชุด event ที่เป็น ancestor ของ
+  **ทุก** head (ชุดนี้ปิดลงล่างจึง fold ได้ผลแน่นอนแม้หลัง merge ไขว้กัน) พร้อมธง
   Conflict ทั้งที่ record (เช่น เข่ง) และที่การขาย ยอดรวมคำนวณด้วยค่า base ส่วน delete-vs-edit แสดงเป็น
   "ยังไม่ลบ ค่าก่อนแก้"
 - **ปิดกั้น**: `blockingConflicts(saleId)` ใน core ทำให้การปิด/สรุปเงินการขาย และการบันทึกการจ่ายเงิน ถูก
-  ปฏิเสธพร้อมข้อความไทยและทางไปหน้าตัดสิน (E05-S05 ใช้ guard นี้)
+  ปฏิเสธเมื่อมี Conflict **ใดก็ได้** ในการขายนั้น รวมฟิลด์บรรยาย เช่น หมายเหตุ (เจ้าของ 2026-10-03)พร้อมข้อความไทยและทางไปหน้าตัดสิน (E05-S05 ใช้ guard นี้)
 - `resolve` = change ที่ `baseEventId` = head หนึ่ง, `alsoBasedOn` = head ที่เหลือ, payload = ค่าที่เลือก →
   เป็น head ใหม่ตัวเดียว ตัดสินได้ออฟไลน์ เครื่องที่แก้ต่อหลังรวมอัตโนมัติก็ใส่ `alsoBasedOn` แบบเดียวกัน
 - change ที่มาถึงก่อน base ของมัน → record เป็น "รอข้อมูล" แสดงค่าล่าสุดที่รู้จนกว่า base มาถึง (รูปแบบเดียวกับที่
@@ -405,14 +427,16 @@ memory อยู่แล้ว; บนเว็บถ้าเปิดจะ�
 
 ### Push (outbox → Firestore)
 
-1. อ่าน `pending()` ตามกลุ่ม เรียงตาม `deviceSeq` และส่ง `pending_ops` ของกลุ่มก่อนเสมอ (`create_group` ต้อง
-   เสร็จก่อน event ของกลุ่ม เพราะ rules ต้องการสมาชิกภาพ)
+1. ทำ **ทุกกลุ่มที่มีของค้าง** (ไม่ใช่แค่กลุ่มที่เปิดอยู่ — กลุ่ม `leaving` ถูกซ่อนแต่ยังต้องส่ง) ต่อกลุ่ม: ถ้ามี
+   `pending_ops.create_group` ส่งก่อน (rules ต้องการสมาชิกภาพ) → ส่ง `pending()` เรียงตาม `deviceSeq` → ส่ง
+   `media_queue` ส่วนการออกจากกลุ่ม **ไม่อยู่ใน `pending_ops`** แต่ขับด้วย `memberships.state = 'leaving'`
+   และเริ่มได้หลัง outbox + `media_queue` ของกลุ่มนั้นว่างแล้วเท่านั้น (§การดำเนินการด้านสมาชิกภาพ)
 2. ส่งทีละ `writeBatch` (≤ 500 document ตามขีดจำกัด Firestore) และ **มี batch ส่งอยู่ได้ทีละอัน** แต่ละ doc =
    `body` + `receivedAt: serverTimestamp()`
 3. รอเซิร์ฟเวอร์ยืนยัน (timeout 30 วินาที) แล้วจึง `markSynced` ใน transaction ของเครื่อง timeout → ยังค้างใน
    outbox (คิว memory ของ SDK หายตอน kill ได้โดยไม่เสียอะไร)
-4. **idempotent**: batch ถูกปฏิเสธด้วย `permission-denied` → ส่งทีละ doc แล้วตรวจแต่ละตัว: `getDoc(id)` → มีอยู่
-   และเนื้อหาเท่ากัน (ไม่นับ `receivedAt`) = สำเร็จ (ack หายระหว่างทาง); มีอยู่แต่เนื้อหาต่าง = **error ด้าน
+4. **idempotent**: batch ถูกปฏิเสธด้วย `permission-denied` → ส่งทีละ doc แล้วตรวจแต่ละตัว: `getDocFromServer(id)` → มีอยู่
+   และ canonical JSON เท่ากัน = สำเร็จ (ack หายระหว่างทาง); มีอยู่แต่เนื้อหาต่าง = **error ด้าน
    ความถูกต้อง** (ห้ามทับ แสดงปุ่มลองใหม่); ไม่มี = rules ปฏิเสธจริง (เช่น ไม่ได้เป็นสมาชิกแล้ว) วิธีนี้ทำให้ rules
    คง `update: false` ได้แบบเข้มงวด
 5. ชนิด error:
@@ -430,7 +454,8 @@ memory อยู่แล้ว; บนเว็บถ้าเปิดจะ�
 
 - `onSnapshot(query(groups/{gid}/events, where('receivedAt', '>=', cursor − 10 นาที), orderBy('receivedAt')))`
   realtime สำหรับกลุ่มที่เปิดอยู่; กลุ่มอื่นดึงต่อจาก cursor ตอนสลับไป
-- เก็บด้วย `insertPulled` (idempotent ตาม id) id ตรงแต่เนื้อหาต่าง → error ด้านความถูกต้อง
+- เก็บด้วย `insertPulled` (idempotent ตาม id) id ตรงแต่เนื้อหาต่าง → บันทึก error ด้านความถูกต้อง (แสดงที่
+  สถานะ sync) **ข้าม doc นั้นแล้วเลื่อน cursor ต่อ** — doc เสียตัวเดียวต้องไม่ทำให้ pull ค้างทั้งกลุ่ม
 - เลื่อน cursor ไปที่ `receivedAt` สูงสุด **หลัง** transaction ในเครื่อง commit แล้วเท่านั้น และข้าม doc ที่
   `receivedAt` ยังเป็น null ช่วงซ้อน 10 นาทีกันเวลาเซิร์ฟเวอร์ที่ไม่เรียงตามลำดับ commit; ที่ได้ซ้ำไม่เป็นปัญหา
 - เข้ากลุ่มครั้งแรก: cursor = 0 → ดาวน์โหลดทั้งกลุ่มครั้งเดียว
@@ -439,7 +464,7 @@ memory อยู่แล้ว; บนเว็บถ้าเปิดจะ�
 ### สื่อ (E01-S12)
 
 `media.add` เป็น event ปกติ ส่งขึ้นผ่าน outbox ไฟล์อัปโหลดแยกไปที่ `groups/{gid}/media/{mediaId}` ด้วย
-retry/backoff ชุดเดียวกัน ถ้า object มีอยู่แล้วขนาดเท่ากัน = สำเร็จ (idempotent) เครื่องอื่นเห็น metadata ก่อน
+retry/backoff ชุดเดียวกัน ถ้า object มีอยู่แล้วและ `md5Hash` ตรงกัน = สำเร็จ (idempotent) เครื่องอื่นเห็น metadata ก่อน
 แสดง "ไฟล์รอส่ง" จนไฟล์ขึ้นเสร็จ ไฟล์ที่ยังไม่ขึ้นนับเป็น Pending Sync
 
 ### สถานะ sync (E01-S10, D-28)
@@ -455,10 +480,23 @@ retry/backoff ชุดเดียวกัน ถ้า object มีอยู
 - **สร้างกลุ่ม**: ทำออฟไลน์ได้ `gid` = UUIDv7 สร้างในเครื่อง → แถว `memberships` + `pending_ops.create_group`
   มีเน็ตแล้วส่ง batch `{groups/{gid}, members/{uid}}` (ส่งซ้ำ → ตรวจแบบข้อ 4 ด้วย `getDoc` ของ members/{uid})
 - **เข้าร่วม**: ต้องมีเน็ต (callable `acceptInvite`) เสร็จแล้วดึงข้อมูลทั้งกลุ่มลงมา
-- **ออกจากกลุ่ม (D-26)**: ปิดปุ่มเมื่อ `memberCount ≤ 1` (เซิร์ฟเวอร์บังคับซ้ำ) → `state = 'leaving'` (ซ่อนกลุ่ม,
-  ห้ามบันทึกเพิ่ม) → ส่ง outbox + media queue ของกลุ่มให้ครบ (ยังเป็นสมาชิก rules จึงยอม) → batch
-  `{delete members/{uid}, groups/{gid}.memberCount − 1}` → เซิร์ฟเวอร์ยืนยัน → `purgeGroup(gid)` ถูกปฏิเสธเพราะ
-  เป็นคนสุดท้าย (สองคนกดพร้อมกัน) → กลับเป็น `active` + ข้อความไทย ออฟไลน์ค้างที่ `leaving` จนมีเน็ต
+- **รีเฟรชรายการกลุ่ม**: ตอนเปิดแอปและทุกครั้งที่กลับมาออนไลน์ query collection-group `members` (`uid == me`)
+  แล้วอ่าน `groups/{gid}` ของแต่ละกลุ่ม → อัปเดต `memberships` (ชื่อ, `member_count` ที่ใช้คุมปุ่มออก, กลุ่มที่
+  เข้าร่วมจากเครื่องอื่นของผู้ใช้เดียวกัน — ACC-3, E02-S04)
+- **ออกจากกลุ่ม (D-26)**: ปิดปุ่มเมื่อ `memberCount ≤ 1` (เซิร์ฟเวอร์บังคับซ้ำ) → **หน้ายืนยันเตือนชัดเจน** ว่า
+  ข้อมูลที่ยังไม่ได้ส่งจากเครื่องอื่นของคุณในกลุ่มนี้จะหาย (เจ้าของ 2026-10-03) → `state = 'leaving'` (ซ่อนกลุ่ม,
+  ห้ามบันทึกเพิ่ม) → ส่ง outbox + media queue ของกลุ่มให้ครบ (ยังเป็นสมาชิก rules จึงยอม)
+  - ระหว่างนั้นเจอ error ถาวร → แสดงกลุ่มกลับมาเป็น `active` พร้อม error และปุ่ม "ลองใหม่" (ไม่ซ่อนค้างตลอดไป)
+  - ว่างแล้ว → batch `{delete members/{uid}, update groups/{gid} memberCount: increment(-1)}` (ใช้ `increment`
+    ไม่คำนวณจากค่าใน cache ที่อาจเก่า)
+  - เซิร์ฟเวอร์ยืนยัน → `purgeGroup(gid)`
+  - ถ้าถูกปฏิเสธ (หรือ ack หาย แอปถูก kill แล้วลองใหม่) → อ่าน `getDocFromServer(members/{me})`:
+    ไม่มี doc = ออกสำเร็จไปแล้ว → `purgeGroup(gid)`; มี doc และ `memberCount ≤ 1` = เป็นคนสุดท้ายจริง (สองคน
+    กดพร้อมกัน) → กลับเป็น `active` + ข้อความไทย; นอกนั้น → error + ปุ่ม "ลองใหม่"
+  - ออฟไลน์ → ค้างที่ `leaving` จนมีเน็ต
+- **เครื่องอื่นของผู้ใช้เดียวกัน**: เครื่องที่รู้ (จากการรีเฟรช หรือ push ถูกปฏิเสธแล้วตรวจแบบเดียวกัน) ว่าผู้ใช้ไม่เป็น
+  สมาชิกกลุ่มนั้นแล้ว → แจ้งเป็นภาษาไทย แล้ว `purgeGroup(gid)` รวมรายการที่ยังไม่ได้ส่ง — ความเสี่ยงที่เจ้าของรับแล้ว
+  (D-33) โดยมีคำเตือนตอนกดออกเป็นตัวกัน
 
 ### คำตอบต่อ `docs/checklists/offline-sync-checklist.md` (ระดับออกแบบ)
 
@@ -471,7 +509,7 @@ retry/backoff ชุดเดียวกัน ถ้า object มีอยู
 | Conflict จัดการตามกลยุทธ์ ไม่ทับเงียบ | ตารางรวม/Conflict; ค่า base + ธงระหว่างรอ; ปิดกั้นการปิดการขาย/การจ่าย; event สร้างได้อย่างเดียว |
 | sync ล้มกลางทางแล้วยังสอดคล้องและลองใหม่ได้ | batch สำเร็จหรือล้มทั้งก้อน; `markSynced` หลังยืนยันเท่านั้น; ส่งซ้ำ/ดึงซ้ำ idempotent; cursor เลื่อนหลัง commit; purge หลัง outbox ว่างเท่านั้น |
 | เห็นสถานะ sync | ต่อการขาย + ภาพรวม + ธงที่เข่ง |
-| ไม่มีกรณีข้อมูลหาย | ไม่มีการลบในเครื่องนอกจาก purge ตอนออกจากกลุ่มหลัง outbox ว่าง; เนื้อหาไม่ตรง → error ไม่ทับ; การทิ้งโดยเจตนาครั้งเดียวคือการล้าง store v0.4 (เจ้าของตัดสินแล้ว) |
+| ไม่มีกรณีข้อมูลหาย | ไม่มีการลบในเครื่องนอกจาก purge เมื่อไม่เป็นสมาชิกแล้ว (เครื่องที่กดออก purge หลัง outbox ว่าง); เนื้อหาไม่ตรง → error ไม่ทับ ไม่ค้าง pull; การทิ้งโดยเจตนามีสองกรณีที่เจ้าของตัดสินแล้ว: ล้าง log การขาย v0.4 และรายการค้างส่งบนเครื่องอื่นของผู้ใช้ที่ออกจากกลุ่ม (มีคำเตือนตอนกดออก) |
 
 **นอกขอบเขต (pointer)**: ส่งต่อ/รับช่วง (E04-S12), QR delta merge ตอนปิดการขาย (E04-S13), ตรวจนับซ้ำ +
 ไทม์ไลน์รายเครื่อง (E04-S14), Bluetooth (SYNC-8, หลัง MVP), snapshot/compaction ของ log (YAGNI — วัดก่อน)
@@ -502,7 +540,7 @@ inviteAttempts/{uid}            { failures, windowStart }                       
 `groups/{gid}/media/{mediaId}` (`mediaId` = UUIDv7 มี random 74 bit เดาไม่ได้) อ่านผ่าน SDK ที่ยืนยันตัวตน
 แล้วเท่านั้น **ห้ามเก็บหรือแชร์ download URL** (URL แบบมี token ใครถือก็เปิดได้ — NFR-5)
 
-### Callable functions — รหัสเชิญ (เจ้าของตกลง 2026-10-03, E02-S03)
+### Callable functions — รหัสเชิญ (เจ้าของตกลง 2026-10-03, D-31, E02-S03)
 
 **ใช้ Cloud Functions สองตัว (`createInvite`, `acceptInvite`, asia-southeast1, min instances 0) ไม่ใช่ rules
 อย่างเดียว**
@@ -515,9 +553,10 @@ inviteAttempts/{uid}            { failures, windowStart }                       
   (NFR-5)
 - **function**: `acceptInvite({code})` จำกัดความพยายามที่ล้มต่อ uid (5 ครั้ง/ชั่วโมง — ปรับได้) แล้วทำ
   transaction (Admin SDK): ตรวจว่ามี/ยังไม่หมดอายุ/ยังไม่ถูกใช้/ผู้เรียกยังไม่เป็นสมาชิก → สร้าง `members/{uid}` +
-  `memberCount + 1` + ตั้ง `usedBy` คืนรหัส error (`not-found` / `expired` / `used` / `too-many-attempts`) ให้
+  `memberCount + 1` + ตั้ง `usedBy` คืนรหัส error (`not-found` / `expired` / `used` / `already-member` / `too-many-attempts`) ให้
   client แปลเป็นภาษาไทย `createInvite({groupId})` ตรวจสมาชิกภาพ สุ่ม 6 หลักด้วย CSPRNG ฝั่งเซิร์ฟเวอร์ กันชนกับ
-  รหัสที่ยังใช้งานอยู่ ตั้งอายุ 7 วัน ไม่จำกัดจำนวนเจ้าของ (D-25) client อ่าน/เขียน `invites` ไม่ได้เลย
+  รหัสที่ยังใช้งานอยู่ ตั้งอายุ 7 วัน ไม่จำกัดจำนวนเจ้าของ (D-25) client อ่าน/เขียน `invites` ไม่ได้เลย การจำกัดต่อ uid หลบได้ด้วยหลายบัญชี Google จึงมีเพดานความพยายามที่ล้ม
+  รวมทั้งระบบต่อชั่วโมงอีกชั้น
 - ผลที่ตามมา: **การสร้างและตอบรับคำเชิญต้องมีเน็ต**; deploy functions และ dependency ฝั่งเซิร์ฟเวอร์
   (`firebase-functions`, `firebase-admin` ใน `functions/package.json` แยก) ผ่าน gate ตอนทำ E02-S03;
   `httpsCallable` อยู่ใน `firebase` JS SDK อยู่แล้ว
@@ -547,7 +586,8 @@ Java นอก repo — ขออนุญาตใน E01-S08)
 - **การแยกกลุ่มบังคับที่เซิร์ฟเวอร์** (ACC-5, NFR-5): deny ทุกอย่างเป็นค่าเริ่มต้น แล้วเปิดสิทธิ์ตามสมาชิกภาพ
   `groups/{gid}/members/{uid}` UI ไม่ใช่ขอบเขตความปลอดภัย
 - **ตัวตน**: Firebase Auth (Google) ต้อง login ก่อนใช้ครั้งแรก `userId` = auth uid ตัวตนที่ผูกเก็บแยกใน
-  `users/{uid}` เพื่อผูก LINE ภายหลังได้โดยไม่สร้างผู้ใช้ใหม่ (ACC-1) session ต้องคงอยู่หลัง force-close: บน RN
+  `users/{uid}` เพื่อผูก LINE ภายหลังได้โดยไม่สร้างผู้ใช้ใหม่ (ACC-1) — รายการนี้ client เขียนได้ จึง function ของ
+  LINE ในอนาคตห้ามเชื่อถือ ต้องตรวจจาก Firebase Auth `providerData` เอง session ต้องคงอยู่หลัง force-close: บน RN
   ต้องมี persistence adapter (ผ่าน gate ใน E02-S01) ไม่มี logout ใน MVP บันทึกออฟไลน์ไม่ต้องใช้ ID token ที่ยัง
   ไม่หมดอายุ — token refresh เองเมื่อมีเน็ต
 - **`deviceId` ไม่ใช่ตัวตน**: rules ผูก event กับ `actor.userId == request.auth.uid` เท่านั้น
@@ -556,6 +596,10 @@ Java นอก repo — ขออนุญาตใน E01-S08)
 ### โครงร่าง Firestore rules (ให้ E01-S08 / E02-S02…S04 แปลงเป็น test บน emulator)
 
 ```
+rules_version = '2';            // จำเป็นสำหรับ collection-group rule {path=**}
+service cloud.firestore {
+match /databases/{database}/documents {
+
 function signedIn()        { return request.auth != null; }
 function me()              { return request.auth.uid; }
 function groupDoc(gid)     { return /databases/$(database)/documents/groups/$(gid); }
@@ -576,6 +620,7 @@ match /groups/{gid} {
 
   match /members/{uid} {
     allow read:   if isMember(gid);
+    allow get:    if signedIn() && uid == me();   // อ่าน doc ของตัวเอง (หรือรู้ว่าไม่มี) หลังออกกลุ่ม
     // สร้างได้เฉพาะตัวเอง และเฉพาะใน batch ที่สร้างกลุ่มนั้น (คนอื่นเข้าทาง acceptInvite เท่านั้น)
     allow create: if signedIn() && uid == me() && !exists(groupDoc(gid))
                 && getAfter(groupDoc(gid)).data.createdBy == me()
@@ -600,7 +645,12 @@ match /{path=**}/members/{uid} { allow read: if signedIn() && resource.data.uid 
 match /users/{uid}             { allow read, write: if signedIn() && uid == me(); }
 match /invites/{code}          { allow read, write: if false; }      // Admin SDK ใน functions เท่านั้น
 match /inviteAttempts/{uid}    { allow read, write: if false; }
+}
+}
 ```
+
+E01-S08 ต้องมี test บน emulator ยืนยันว่า batch 500 event ที่ทุกตัวเรียก `isMember` ไม่ชนเพดาน 20 access call
+(การ `exists` doc เดียวกันซ้ำนับครั้งเดียว — ต้องยืนยัน)
 
 สองคนกดออกพร้อมกันตอนเหลือ 2 คน: commit บน `groups/{gid}` ทำทีละตัว ตัวที่สองเห็น `memberCount == 1` แล้ว
 ถูกปฏิเสธ (E02-S04 ต้องมี test บน emulator)
@@ -610,12 +660,12 @@ match /inviteAttempts/{uid}    { allow read, write: if false; }
 `groups/{gid}/media/{mediaId}`: อ่านและสร้างได้เมื่อ
 `firestore.exists(/databases/(default)/documents/groups/$(gid)/members/$(request.auth.uid))` พร้อมเพดานขนาด
 + ชนิดไฟล์ (image/video/audio/pdf; ตัวเลขเพดานกำหนดใน E01-S12) `update, delete: if false` (การตรวจข้ามไป
-Firestore นับเป็น Firestore read)
+Firestore นับเป็น Firestore read; ต้องให้สิทธิ์ Storage service agent อ่าน Firestore)
 
 ### ข้อมูลในเครื่อง
 
 - SQLite/IndexedDB **ไม่เข้ารหัสระดับแอปใน MVP** — พึ่งการล็อกหน้าจอโทรศัพท์ (YAGNI) **เจ้าของรับทราบความเสี่ยง
-  2026-10-03** รวมรูปเอกสารคนงาน; ทบทวนอีกครั้งก่อน E09
+  2026-10-03 (D-32)** รวมรูปเอกสารคนงาน; ทบทวนอีกครั้งก่อน E09
 - ออกจากกลุ่ม → ลบสำเนาของกลุ่มนั้นหลัง outbox ว่าง (ACC-5) การสลับกลุ่มกรองด้วย `group_id` ทุก query
 
 ### สภาพแวดล้อมและความลับ

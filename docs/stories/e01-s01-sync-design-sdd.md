@@ -1,6 +1,6 @@
 # Story E01-S01: เขียนการออกแบบ sync ใน architecture.md (SDD)
 
-Status: Ready
+Status: Review
 
 ## Context
 
@@ -16,7 +16,7 @@ story เอกสารล้วน: เขียนหัวข้อที่
 
 ## Acceptance criteria
 
-- [ ] หัวข้อ System overview, Local data layer, Sync engine, Backend API, Security เขียนใหม่ ตรงกับ Direction 2026-10-02 และไม่ขัด D-1…D-22
+- [ ] หัวข้อ System overview, Local data layer, Sync engine, Backend API, Security เขียนใหม่ ตรงกับ Direction 2026-10-02 และไม่ขัด D-1…D-33
 - [ ] schema ของ event ใหม่: `id` = **UUIDv7** (พร้อมเหตุผล), เลขลำดับต่อเครื่อง, `actor` = user id + device id, group id, `targetId` + `baseEventId` สำหรับการแก้ (SYNC-9)
 - [ ] ตารางว่า event ชนิดใด **รวมอัตโนมัติ** และชนิดใดเป็น **Conflict** — ครอบคลุมเงิน น้ำหนัก จำนวน ห้าม last-write-wins (SYNC-4)
 - [ ] กฎลำดับ event ข้ามเครื่อง: ไม่มีลำดับรวมทั้งระบบ ไม่พึ่งนาฬิกาเครื่อง — ใช้ `seq` ต่อเครื่อง + `baseEventId`; เวลาใช้แสดงผลเท่านั้น (NFR-3)
@@ -44,15 +44,43 @@ story เอกสารล้วน: เขียนหัวข้อที่
 
 - ต้อง login ก่อนใช้งานครั้งแรกไหม
 - ข้อมูลที่บันทึกก่อนมีกลุ่มฟาร์มไปอยู่กลุ่มไหน
+- รูปแบบ event id: UUIDv7 หรือ ULID
+- ย้ายข้อมูลแอปเดิมในเครื่องไหม
+- กฎลำดับ event ข้ามเครื่อง
+- ภาษาของ architecture.md ส่วนที่เขียนใหม่
 
 **คำตอบเจ้าของ (2026-10-03):**
 - ต้อง login ก่อนใช้งานครั้งแรก (ครั้งแรกต้องมีเน็ต); ยังไม่ login บันทึกไม่ได้ (E02-S01)
 - ต้องสร้างหรือเข้าร่วมกลุ่มก่อนบันทึก จึงไม่มีข้อมูลก่อนมีกลุ่ม; event ทุกตัวมี group id ตั้งแต่แรก (E02-S02)
+- event id = **UUIDv7**
+- ไม่ย้าย — แอปเดิมที่เก็บแค่ในเครื่อง พอทำ MVP นี้ไม่ต้องย้ายเลย
+- อ้าง `baseEventId` + `seq` ต่อเครื่อง (ไม่ใช้ Hybrid Logical Clock)
+- ภาษาไทย
+
+**คำตอบเจ้าของระหว่างทบทวนร่าง (2026-10-03):**
+- แก้พร้อมกันคนละฟิลด์ที่ไม่ใช่เงิน/น้ำหนัก/จำนวน/สถานะ → รวมอัตโนมัติ (D-30)
+- รหัสเชิญ → Cloud Functions 2 ตัว (D-31)
+- ไม่เข้ารหัสข้อมูลในเครื่องใน MVP → รับได้ (D-32)
+- ออกกลุ่มขณะเครื่องอื่นของตัวเองยังมีรายการค้าง → ลบเลย แต่ต้องเตือนชัดเจนก่อนกดออก (D-33)
+- Conflict ใดก็ได้ (รวมหมายเหตุ) บล็อกการปิดยอด/จ่ายเงิน (D-29)
+- เพิ่มฟิลด์ `alsoBasedOn` ใน event → ตกลง
 
 ## Verification
 
 ## Dev notes
 
+- solution-architect ร่าง 5 หัวข้อเป็นภาษาไทย แล้วนำลง `docs/architecture.md` (2026-10-03)
+- ตรวจ ID ด้วยสคริปต์: ทุก D-/ACC-/SYNC-/NFR-/SET-/MD- และ E0x-Sxx ใน architecture.md มีอยู่จริงใน `docs/prd.md` / `docs/stories/`
+- หัวข้อ v0.1 "Client architecture" ยังพูดถึง `seq` ต่อการขาย — ติดหมายเหตุว่าถูกแทนแล้ว ลบเมื่อ E01-S02 เขียนโค้ดใหม่
+- ข้อมูล quota มาจาก search excerpt (firebase.google.com ถูก proxy บล็อก) ต้องตรวจซ้ำใน E01-S07
+
 ## Code review
+
+รอบที่ 1 (agent แยก, 2026-10-03): blocking 2 ข้อ (ลำดับ `pending_ops` ตอนออกกลุ่ม; การลองออกกลุ่มซ้ำไม่ idempotent)
++ should-fix 12 ข้อ + nit — แก้ครบในเอกสาร: ออกกลุ่มขับด้วย `memberships.state` และอ่าน doc สมาชิกของตัวเองจาก
+เซิร์ฟเวอร์เมื่อถูกปฏิเสธ (+ rule `allow get` ของตัวเอง), `increment(-1)`, ความไม่ซ้ำ `deviceSeq` เฉพาะแถวของเครื่องนี้
++ `allowBackup: false`, นิยาม canonical JSON + pull ไม่ค้างเพราะ doc เสีย, กฎ forward-compat, นิยาม head/base,
+รีเฟรชรายการกลุ่ม + push ทุกกลุ่ม, ล้างของเก่าไม่ชน store farm/people ชั่วคราว, `rules_version = '2'` + wrapper,
+ตาราง Direction ตรงกฎรวมใหม่, บันทึก D-30…D-33, ปรับ E01-S08/S10/S11, E02-S03/S04 ให้ตรง
 
 ## QA notes

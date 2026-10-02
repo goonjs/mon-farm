@@ -19,7 +19,8 @@ Status: Draft
 - [ ] สมาชิกที่ login แล้วสร้าง event ในกลุ่มตัวเองได้; update/delete event ถูกปฏิเสธเสมอ (SYNC-4)
 - [ ] ผู้ที่ไม่ใช่สมาชิก หรือไม่ login อ่าน/เขียนกลุ่มนั้นไม่ได้ (ACC-5, NFR-5)
 - [ ] rule ตรวจ `actor.userId == request.auth.uid` และ document id ตรงกับ `id` ใน event
-- [ ] client ถือว่า "มีเอกสารนี้อยู่แล้ว" = ส่งสำเร็จ (push ซ้ำ idempotent)
+- [ ] client ถือว่า "มีเอกสารนี้อยู่แล้ว **และ canonical JSON เท่ากัน**" = ส่งสำเร็จ (push ซ้ำ idempotent); มีอยู่แต่เนื้อหาต่าง = error ด้านความถูกต้อง ห้ามทับ (architecture §Sync engine)
+- [ ] batch 500 event ที่ทุกตัวเรียก `isMember` ไม่ชนเพดาน 20 access call ของ rules (test บน emulator)
 - [ ] rules + index อยู่ใน repo, deploy เข้า dev ผ่านสคริปต์; prod ต้องเจ้าของอนุมัติ
 
 ## Offline / sync behavior
