@@ -7,12 +7,13 @@ name: CI
 
 #
 # Triggers: a branch with a PR is verified by the pull_request run alone, and
-# main is verified again on merge. Running on push to every branch as well
+# the long-lived branches (dev, where work lands, and main) are verified again
+# on merge. Running on push to every branch as well
 # doubled every PR's minutes, since the two runs never shared a concurrency
 # group (owner rule 2026-10-02: save Actions minutes).
 on:
   push:
-    branches: [main]
+    branches: [dev, main]
   pull_request:
 
 concurrency:
