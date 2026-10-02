@@ -205,8 +205,11 @@ Both are web-only and documented where they are read:
 
 Two long-lived branches, two environments with separate domains: `dev`
 (default branch, daily-use MVP environment) and `main` (production). Release
-flow is in `docs/process.md` ("Branches and releases"). **No hosting target is
-chosen yet** — `scripts/deploy.sh` fails closed until it is. Locally,
+flow is in `docs/process.md` ("Branches and releases"). **Hosting is Firebase Hosting**
+(one project, a `dev` site and a `prod` site, PR preview channels with 7-day
+expiry) — see `docs/adr/0001-firebase-hosting.md`. It is decided but **not
+wired yet**: `scripts/deploy.sh` fails closed until the project, domains and
+deploy credential exist. Locally,
 `npm run build:web` produces a static `dist/`. No native build has
 been produced and no device has run this yet — **the app has only ever been
 exercised in a browser.**

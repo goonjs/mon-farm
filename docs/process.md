@@ -181,8 +181,8 @@ release's changelog will therefore only list commits made under this rule.
   **Back-merge** workflow (`hotfix-backmerge.yml`) carries `main` back into
   `dev` automatically; on conflict it opens a PR and fails loudly. Deploy Prod
   refuses to run while `main` has commits `dev` lacks.
-- Status: the workflows exist, but `scripts/deploy.sh` is not wired to a
-  hosting target yet (architecture "Deployment / environments"), so Deploy
+- Status: the workflows exist, but `scripts/deploy.sh` is not wired to
+  Firebase yet (ADR 0001; architecture "Deployment / environments"), so Deploy
   Prod currently fails at the deploy step by design — nothing reaches `main`.
 
 ## Status so far
