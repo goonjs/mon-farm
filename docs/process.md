@@ -140,13 +140,50 @@ stand up CI in the same story.
 
 ## Git conventions
 
-- **Commit subject line: 50 characters or fewer.** Imperative mood ("Add
-  sync retry backoff", not "Added" or "Adds").
+### Commit messages — Conventional Commits
+
+Format: `type(scope)?: description`, e.g. `feat(sale): add basket total`.
+
+- **Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`,
+  `build`, `ci`, `chore`, `revert`. Scope is optional, lowercase.
+- **Breaking change:** `type!:` in the subject, or a `BREAKING CHANGE:` footer.
+- **Subject line: 50 characters or fewer** including the type prefix.
+  Imperative mood, lowercase first letter after the colon ("fix: stop double
+  tap", not "Fixed" / "Fix").
 - **Body** (when the change needs explaining): why, not what — the diff
   already shows what. Wrap at ~72 characters.
 - **One logical change per commit** — medium-sized: not a whole epic in one
   commit, not a commit per line. A commit should be the unit a reviewer could
   revert on its own without breaking the build.
+- **Enforced** by CI on pull requests (`scripts/release.mjs lint`), and the same
+  rules drive the release: `feat` -> minor, `fix`/everything else -> patch,
+  breaking -> major.
+
+History before 2026-10-03 is free-form and is not retro-linted; the first
+release's changelog will therefore only list commits made under this rule.
+
+### Branches and releases
+
+- **`dev`** is the default branch and where work lands. For the MVP the owner
+  and team use the `dev` deployment daily, so they are its real testers.
+- **`main`** is production — what we sell. It has its own domain, separate
+  from `dev`'s.
+- Feature work: branch from `dev`, PR into `dev`.
+- **`main` is never pushed to by hand.** It moves only through the
+  **Deploy Prod** workflow (`.github/workflows/deploy-prod.yml`, manual
+  trigger, run from `dev`). It plans the version from Conventional Commits
+  since the last tag, deploys, and **only if the deploy succeeds** commits the
+  version bump + `CHANGELOG.md`, tags `vX.Y.Z`, updates `dev` and `main`, and
+  publishes a GitHub release whose notes are collected from the commits.
+  Agents may trigger it if they have access, but each run needs the owner's
+  explicit go-ahead (CLAUDE.md security gates).
+- **Hotfix:** may be merged to `main` directly (the one exception). The
+  **Back-merge** workflow (`hotfix-backmerge.yml`) carries `main` back into
+  `dev` automatically; on conflict it opens a PR and fails loudly. Deploy Prod
+  refuses to run while `main` has commits `dev` lacks.
+- Status: the workflows exist, but `scripts/deploy.sh` is not wired to a
+  hosting target yet (architecture "Deployment / environments"), so Deploy
+  Prod currently fails at the deploy step by design — nothing reaches `main`.
 
 ## Status so far
 

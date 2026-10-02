@@ -203,7 +203,11 @@ Both are web-only and documented where they are read:
 
 ## Deployment / environments
 
-Local only. `npm run build:web` produces a static `dist/`. No native build has
+Two long-lived branches, two environments with separate domains: `dev`
+(default branch, daily-use MVP environment) and `main` (production). Release
+flow is in `docs/process.md` ("Branches and releases"). **No hosting target is
+chosen yet** — `scripts/deploy.sh` fails closed until it is. Locally,
+`npm run build:web` produces a static `dist/`. No native build has
 been produced and no device has run this yet — **the app has only ever been
 exercised in a browser.**
 
