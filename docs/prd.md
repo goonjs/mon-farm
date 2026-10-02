@@ -588,9 +588,9 @@ mon-farm คือ **แอปบริหารฟาร์มที่ทำ�
 - **Firebase แพ็กเกจ Blaze พร้อมการแจ้งเตือนงบประมาณ** (≈ $5/เดือน), region
   asia-southeast1; Firestore เป็นฐานข้อมูล backend, Cloud Storage สำหรับสื่อ
   (D-1) ค่าใช้จ่ายที่คาดไว้สำหรับผู้ใช้ 3 คน ≈ ฿0–30/เดือน
-- **PR preview บน Google Cloud Run**: ทุก PR ได้ลิงก์ preview; ลบเมื่อปิด PR
-  หรือ **7 วันหลัง deploy ล่าสุด**; เก็บ container image **ไม่เกิน 2 เวอร์ชัน
-  หรือ 30 วัน** (D-21)
+- **PR preview บน Firebase Hosting preview channel** (ADR 0001): ทุก PR ได้ลิงก์
+  preview; ลบเมื่อปิด PR หรือ **7 วันหลัง deploy ล่าสุด** (D-21); ไม่มี container
+  image ให้เก็บ; preview ใช้โปรเจกต์ **dev** เท่านั้น (D-22)
 - **นาที GitHub Actions คืองบประมาณ**: CI ต้องเร็วและ fail-fast; ไม่รัน push+PR
   ซ้ำกัน; การเปลี่ยนเฉพาะเอกสารข้าม build/e2e/preview
 - ออกแบบโดยละเอียด: `docs/architecture.md`
@@ -686,6 +686,7 @@ v0.4 / architecture v0.1 / epics 1–2 / stories S1–S32
 | D-19 | เว็บ | ใช้ตรวจสอบเท่านั้น (localStorage) | **ช่องทางใช้งานจริง ทำงานออฟไลน์ (IndexedDB)** | NFR-1 |
 | D-20 | ภาษา | สลับไทย + อังกฤษ (S24) | **ภาษาไทยเท่านั้น** | NFR-1 |
 | D-21 | อายุ preview | — | **7 วันนับจาก deploy ล่าสุด; ลบเมื่อปิด PR** | NFR-6 |
+| D-22 | Hosting & โปรเจกต์ (2026-10-03) | Cloud Run preview (กฎข้อ 2); ADR 0001 เดิม: 1 โปรเจกต์ 2 site บน Spark | **Firebase Hosting + preview channel ตาม ADR 0001; แยก 2 โปรเจกต์ dev/prod บน Blaze** (dev = site dev + preview + ข้อมูลทดสอบ; prod = site prod + ข้อมูลจริง) | NFR-5, NFR-6 |
 
 ถูกแทนที่โดยไม่ต้องถาม (SSOT ระบุชัดแล้ว): SaaS แบบ multi-tenant และ
 ผู้ซื้อเป็น tenant (→ กลุ่มฟาร์ม, SaaS สาธารณะเลื่อนออกไป); บทบาทเจ้าของ/
