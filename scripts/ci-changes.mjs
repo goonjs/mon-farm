@@ -21,9 +21,15 @@ const isDoc = (path) =>
 
 export const needsVerify = (files) => files.length === 0 || !files.every(isDoc);
 
+// --no-renames: a rename otherwise lists only its new path, so moving code
+// into docs/ would look docs-only. quotePath=false: Thai doc names stay plain.
+export const diffArgs = (base, head) => [
+  '-c', 'core.quotePath=false', 'diff', '--no-renames', '--name-only', `${base}...${head}`,
+];
+
 function changedFiles(base, head) {
   try {
-    const out = execFileSync('git', ['diff', '--name-only', `${base}...${head}`], { encoding: 'utf8' });
+    const out = execFileSync('git', diffArgs(base, head), { encoding: 'utf8' });
     return out.split('\n').filter(Boolean);
   } catch {
     return [];

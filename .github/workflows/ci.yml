@@ -21,9 +21,12 @@ on:
     branches: [dev, main]
   pull_request:
 
+# Only PR runs cancel each other. A push run on dev/main must finish: the next
+# push diffs from its own `before`, so a cancelled code merge followed by a
+# docs merge would otherwise never be verified.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # No install: plain git plus the runner's preinstalled node, so a docs-only
@@ -109,6 +112,8 @@ jobs:
           name: dist
           path: dist/
           if-no-files-found: error
+          # The export ships _expo/.routes.json; keep the artifact identical.
+          include-hidden-files: true
           retention-days: 1
 
   e2e:

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { needsVerify } from './ci-changes.mjs';
+import { diffArgs, needsVerify } from './ci-changes.mjs';
 
 describe('needsVerify', () => {
   it('skips a change made only of docs and markdown', () => {
@@ -28,5 +28,22 @@ describe('needsVerify', () => {
   // An empty list means the diff could not be read; fail safe and verify.
   it('runs when the changed list is empty', () => {
     expect(needsVerify([])).toBe(true);
+  });
+});
+
+describe('diffArgs', () => {
+  // With rename detection a `git mv src/x.ts docs/x.md` lists only the new,
+  // docs-looking path and would skip verify.
+  it('lists both sides of a rename', () => {
+    expect(diffArgs('a', 'b')).toContain('--no-renames');
+  });
+
+  // A quoted "docs/\340..." path would not start with docs/.
+  it('prints non-ASCII paths unquoted', () => {
+    expect(diffArgs('a', 'b').join(' ')).toContain('core.quotePath=false');
+  });
+
+  it('diffs from the merge base', () => {
+    expect(diffArgs('a', 'b').at(-1)).toBe('a...b');
   });
 });
