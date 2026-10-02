@@ -7,6 +7,7 @@ Status: Draft
 - Epic: `docs/epics/e14-ai-assistance.md`
 - PRD: AI-1, AI-2, ANA-9, SYNC-12
 - ขึ้นกับ: E14-S01, E13-S07 (เจาะลงถึงต้นทาง)
+- ใช้ป้ายจาก E01-S15 (สถานะข้อมูลรายฟิลด์ SYNC-12)
 
 ## คำอธิบาย
 

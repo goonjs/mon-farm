@@ -7,6 +7,7 @@ Status: Draft
 - Epic: `docs/epics/e11-finance.md`
 - PRD: FIN-1, FIN-2, SYNC-9, SYNC-10, SYNC-12, NFR-3, NFR-5
 - ขึ้นกับ: E01 (event log + sync), E03 (สวน)
+- ใช้ป้ายจาก E01-S15 (สถานะข้อมูลรายฟิลด์ SYNC-12)
 
 ## คำอธิบาย
 

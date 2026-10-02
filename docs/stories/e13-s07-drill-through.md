@@ -7,6 +7,7 @@ Status: Draft
 - Epic: `docs/epics/e13-dashboard-analytics.md`
 - PRD: ANA-3, NFR-3, SYNC-12
 - ขึ้นกับ: E13-S03, E13-S06, E05-S06 (รายละเอียดการขาย)
+- ใช้ป้ายจาก E01-S15 (สถานะข้อมูลรายฟิลด์ SYNC-12)
 
 ## คำอธิบาย
 

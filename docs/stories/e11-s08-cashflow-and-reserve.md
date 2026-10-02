@@ -7,6 +7,7 @@ Status: Draft
 - Epic: `docs/epics/e11-finance.md`
 - PRD: FIN-2, FIN-9, ANA-1
 - ขึ้นกับ: E11-S01 ถึง E11-S07
+- ใช้ป้ายจาก E01-S15 (สถานะข้อมูลรายฟิลด์ SYNC-12)
 
 ## คำอธิบาย
 

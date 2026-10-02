@@ -18,9 +18,9 @@ Status: Draft
 
 - [ ] append 1 event = เขียน 1 record ใน IndexedDB ไม่เขียนทั้ง log ใหม่
 - [ ] `load` / `pending` / `markSynced` / `listSales` ให้ผลเหมือน adapter native
-- [ ] ข้อมูลเดิมใน localStorage ย้ายเข้า IndexedDB ตอนเปิดครั้งแรก; ข้อมูลเดิมไม่ถูกลบจนนับตรงกันแล้ว (NFR-2)
+- [ ] ไม่ย้ายข้อมูลเดิมใน localStorage (เจ้าของ 2026-10-03): คีย์ v0.4 ถูกล้างแบบ best-effort ตอนเปิดครั้งแรก ไม่ crash
 - [ ] IndexedDB ใช้ไม่ได้ (เช่น private mode) → ยังนับเข่งได้ และขึ้นเตือนเป็นภาษาไทยว่าไม่ได้บันทึกถาวร
-- [ ] farm/people web store ย้ายตามที่ S01 ตัดสิน
+- [ ] farm/people web store เดิมไม่ย้าย — ถูกแทนด้วยข้อมูลหลักที่ sync ใน E03
 - [ ] ข้อมูลยังอยู่หลัง reload/ปิดแท็บ ที่การขาย 400 เข่ง
 
 ## Offline / sync behavior
@@ -30,7 +30,7 @@ Status: Draft
 ## Test plan
 
 - [ ] jest-expo: contract test ชุดเดียวรันกับ `MemoryStore` และ web adapter
-- [ ] Playwright: นับเข่ง → reload → ครบ; seed localStorage เก่า → ย้ายแล้วครบ; โหมด storage ปิด → เตือน
+- [ ] Playwright: นับเข่ง → reload → ครบ; seed localStorage เก่า → เปิดได้ เริ่มว่าง; โหมด storage ปิด → เตือน
 
 ## ต้องให้เจ้าของทำ/อนุมัติ
 

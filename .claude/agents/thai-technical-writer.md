@@ -39,3 +39,11 @@ Inspection = การตรวจสวน · Task = งาน · Epic = Epic �
   per-number occurrence count (Thai count ≥ English) catch drops that a
   read-through misses; for owner-question lists keep every option's detail,
   moving caveats ("needs a story…") into the เหตุผล: line rather than cutting.
+- 2026-10-03 — Recorded owner answers for E01/E02/E03-S06 into stories +
+  PRD (D-23…D-28) + new E01-S15. Lessons: (1) grep the whole `docs/` for
+  each answered topic, not just the named stories — placeholders that an
+  answer resolves also hide in neighbouring stories (E01-S01 owner-to-do,
+  E01-S02 "userId ก่อน login", E08-S04 logout, E05-S05 close); (2) when an
+  answer forces a new label/value with no source (e.g. Thai for "Not
+  recorded"), propose it as an open คำถามเจ้าของ, never write it as decided;
+  (3) script edits with `assert old in s` so a silent no-op replace fails loudly.

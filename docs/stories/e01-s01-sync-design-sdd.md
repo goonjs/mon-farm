@@ -1,6 +1,6 @@
 # Story E01-S01: เขียนการออกแบบ sync ใน architecture.md (SDD)
 
-Status: Draft
+Status: Ready
 
 ## Context
 
@@ -17,11 +17,14 @@ story เอกสารล้วน: เขียนหัวข้อที่
 ## Acceptance criteria
 
 - [ ] หัวข้อ System overview, Local data layer, Sync engine, Backend API, Security เขียนใหม่ ตรงกับ Direction 2026-10-02 และไม่ขัด D-1…D-22
-- [ ] schema ของ event ใหม่: `id` (เลือก UUIDv7 หรือ ULID พร้อมเหตุผล), เลขลำดับต่อเครื่อง, `actor` = user id + device id, group id, `targetId` + `baseEventId` สำหรับการแก้ (SYNC-9)
+- [ ] schema ของ event ใหม่: `id` = **UUIDv7** (พร้อมเหตุผล), เลขลำดับต่อเครื่อง, `actor` = user id + device id, group id, `targetId` + `baseEventId` สำหรับการแก้ (SYNC-9)
 - [ ] ตารางว่า event ชนิดใด **รวมอัตโนมัติ** และชนิดใดเป็น **Conflict** — ครอบคลุมเงิน น้ำหนัก จำนวน ห้าม last-write-wins (SYNC-4)
-- [ ] กฎลำดับ event ข้ามเครื่องที่ไม่พึ่งนาฬิกาเครื่องอย่างเดียว (NFR-3)
-- [ ] แผนย้ายข้อมูลในเครื่องเดิม (log `(sale_id, seq)`, farm/people store ที่อยู่นอก log) โดยไม่ทำข้อมูลหาย (NFR-2)
-- [ ] โครง Firestore/Storage (`groups/{gid}/events/{eventId}`, members, media) + หลัก security rules (ACC-5, NFR-5)
+- [ ] กฎลำดับ event ข้ามเครื่อง: ไม่มีลำดับรวมทั้งระบบ ไม่พึ่งนาฬิกาเครื่อง — ใช้ `seq` ต่อเครื่อง + `baseEventId`; เวลาใช้แสดงผลเท่านั้น (NFR-3)
+- [ ] ไม่ย้ายข้อมูลแอปเดิมที่เก็บในเครื่อง (log `(sale_id, seq)`, farm/people store) — MVP เริ่มใหม่; ระบุว่า store เก่าถูกล้าง/ข้ามอย่างปลอดภัยตอนอัปเกรด ไม่ crash
+- [ ] โครง Firestore/Storage (`groups/{gid}/events/{eventId}`, members, invites, media) + หลัก security rules (ACC-5, NFR-5) — รวมว่ารหัสเชิญ 6 หลักตรวจด้วย rules อย่างเดียวได้ไหม หรือต้องใช้ Cloud Function
+- [ ] สอดคล้องคำตอบเจ้าของ 2026-10-03: บังคับ login + มีกลุ่มก่อนบันทึก, Soft Delete ทุกบันทึก, Conflict แสดงค่าก่อนแก้ + บล็อกปิดยอด, สถานะ sync รายการขาย, ออกกลุ่มลบสำเนาในเครื่อง, SYNC-12 อยู่ที่ E01-S15
+- [ ] เขียนเป็นภาษาไทย (คำเทคนิค/code เป็นอังกฤษ)
+- [ ] ระบุว่า event ทุกตัวมี `actor.userId` และ group id เสมอ — ต้อง login และมีกลุ่มฟาร์มก่อนบันทึก ไม่มีข้อมูลก่อน login/ก่อนมีกลุ่ม (D-23, D-24)
 - [ ] เจ้าของอ่านและตกลง — บันทึกวันที่ตกลงในเอกสาร
 
 ## Offline / sync behavior
@@ -36,7 +39,15 @@ story เอกสารล้วน: เขียนหัวข้อที่
 ## ต้องให้เจ้าของทำ/อนุมัติ
 
 - ตกลงการออกแบบทั้งหมดก่อนเริ่ม E01-S02
-- ตอบประเด็นค้าง: ต้อง login ก่อนใช้งานครั้งแรกไหม; ข้อมูลที่บันทึกก่อนมีกลุ่มฟาร์มไปอยู่กลุ่มไหน
+
+## คำถามเจ้าของ
+
+- ต้อง login ก่อนใช้งานครั้งแรกไหม
+- ข้อมูลที่บันทึกก่อนมีกลุ่มฟาร์มไปอยู่กลุ่มไหน
+
+**คำตอบเจ้าของ (2026-10-03):**
+- ต้อง login ก่อนใช้งานครั้งแรก (ครั้งแรกต้องมีเน็ต); ยังไม่ login บันทึกไม่ได้ (E02-S01)
+- ต้องสร้างหรือเข้าร่วมกลุ่มก่อนบันทึก จึงไม่มีข้อมูลก่อนมีกลุ่ม; event ทุกตัวมี group id ตั้งแต่แรก (E02-S02)
 
 ## Verification
 
