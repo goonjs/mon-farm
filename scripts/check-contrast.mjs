@@ -44,9 +44,10 @@ const ratio = (a, b) => {
 const PAIRINGS = [
   // The public register. This is the number two parties are trusting; it gets
   // the highest floor in the system and is checked first.
-  ['ink', 'stage', 7, 'THE COUNT — public numeral on stage'],
+  ['numeral', 'stage', 7, 'THE COUNT — public numeral on stage (AAA)'],
 
   // Operator register, primary.
+  ['ink', 'stage', 7, 'primary text on stage / white screens'],
   ['ink', 'surface', 7, 'operator body text'],
   ['ink', 'surfaceSunk', 7, 'text in wells and inputs'],
   ['ink', 'surfaceRaised', 7, 'text on cards'],
@@ -71,12 +72,28 @@ const PAIRINGS = [
   ['inkInverse', 'reject', 4.5, 'destructive button label'],
   ['inkInverse', 'warn', 4.5, 'flag banner label'],
 
+  // Sync status as text (SYNC-3) — always paired with a shape and a word.
+  ['statusSynced', 'surface', 4.5, 'synced status text'],
+  ['statusPending', 'surface', 4.5, 'pending-sync status text'],
+  ['statusConflict', 'surface', 4.5, 'conflict status text'],
+  ['statusConflict', 'rejectSunk', 4.5, 'conflict chip'],
+  ['statusPending', 'warnSunk', 4.5, 'pending chip'],
+
+  // Text on cards and on the selected-row wash.
+  ['inkSoft', 'surfaceRaised', 4.5, 'secondary text on cards'],
+  ['inkSoft', 'surfaceSunk', 4.5, 'secondary text in wells'],
+  ['ink', 'actionSunk', 7, 'text on selected rows'],
+  ['ink', 'warnSunk', 7, 'text on highlight (yellow) cards'],
+  ['ink', 'acceptSunk', 7, 'text on green-tint cards'],
+
   // Non-text: boundaries that define where a control is (WCAG 1.4.11).
   ['ruleStrong', 'surface', 3, 'input and control borders'],
   ['ruleStrong', 'stage', 3, 'the dial track'],
   ['action', 'stage', 3, 'focus ring on stage'],
   ['action', 'surface', 3, 'focus ring on panels'],
   ['accept', 'stage', 3, 'the dial fill against the stage'],
+  ['inkInverse', 'brandStrong', 3, 'glyph on a filled brand control (FAB)'],
+  ['ruleStrong', 'surfaceRaised', 3, 'control borders on cards'],
 ];
 
 const grade = (r) => (r >= 7 ? 'AAA' : r >= 4.5 ? 'AA' : r >= 3 ? '3:1' : '—');
