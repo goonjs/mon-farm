@@ -5,13 +5,18 @@ name: CI
 # that catch the most common breakage run first, so a token drift or a type
 # error fails in seconds rather than after a five-minute browser download.
 
+#
+# Triggers: a branch with a PR is verified by the pull_request run alone, and
+# main is verified again on merge. Running on push to every branch as well
+# doubled every PR's minutes, since the two runs never shared a concurrency
+# group (owner rule 2026-10-02: save Actions minutes).
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:

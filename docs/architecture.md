@@ -5,6 +5,33 @@
 > unblock implementation, not agreed in advance, so treat every one as a
 > proposal with its reasoning attached rather than as settled.
 
+## 2026-10-02 — Direction for PRD v1.0 (supersedes parts of v0.1 below)
+
+PRD v1.0 widens scope to a multi-device, multi-module farm app. The sections
+below this one describe what was built for v0.4 and are **partly superseded**;
+a full rewrite of System overview, Local data layer, Sync engine, Backend and
+Security comes before the first sync story. Agreed with the owner (PRD
+Decision log D-1…D-21):
+
+| Area | Decision | Why |
+|---|---|---|
+| Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert, asia-southeast1, separate `dev` and `prod` projects | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
+| Sync unit | **Keep the append-only event log as source of truth and sync unit.** Each event = one immutable Firestore doc (`groups/{gid}/events/{eventId}`), create-only security rules → idempotent re-push, nothing overwritten. Edits are new events carrying `targetId` + `baseEventId`; two edits on the same base = **Conflict** surfaced to the user. | Firestore is last-write-wins per document and transactions fail offline, so platform defaults can't satisfy "never silently overwrite money". Basket events are additive → different devices merge for free. |
+| Pending Sync | Our own outbox (`synced_at IS NULL`), not Firestore's cache | JS SDK persistence on React Native is memory-only; our SQLite store owns durability. Avoids `@react-native-firebase`. |
+| IDs & ordering | Globally unique event ids (UUIDv7/ULID) + per-device sequence; `(sale_id, seq)` PK retired; `actor` → user id + device id | Two offline phones would collide on per-sale `seq`. |
+| Handoff | `handoff`/`claim` events; QR payload carries the sale's event delta at close; duplicate detection on merge (7–10 s window, basket number cross-check) | PRD SYNC-5…7. |
+| Web store | IndexedDB replaces localStorage | Web is now a real surface (D-19); localStorage ~5 MB, whole-blob writes, no media. |
+| Media | Local file queue → Cloud Storage via the outbox | Offline capture. |
+| Auth | Firebase Auth: Google now; LINE later via custom token from a small Cloud Run endpoint (or OIDC if a spike passes); `linkWithCredential` for one user | LINE is not a built-in provider. |
+| Orientation | Portrait primary; weighing public mode may rotate | D-17; `app.json` is already `default` (S19). |
+| PR previews | GitHub Actions → `expo export` → nginx image → **one Cloud Run service per PR** (`mon-farm-pr-N`, min 0 / max 1), Workload Identity Federation (no JSON keys), points at the **dev** Firebase project. Deleted on PR close + daily sweep of services whose last deploy is > 7 days old. Artifact Registry cleanup: keep 2 most recent, delete older than 30 days. | Owner rule (2026-10-02). |
+| CI minutes | Trigger `push: main` + `pull_request` only (today every PR runs twice); docs-only changes skip heavy jobs via a cheap `changes` gate; graph `changes → verify → e2e → preview`, sequential, each with `timeout-minutes`; cache Playwright browsers; e2e reuses the built `dist/`. | Owner rule: save minutes, fail fast. |
+
+Risks carried: native has never run on a device (top risk with Android-first);
+new dependencies (firebase, expo-dev-client for Google sign-in, image picker,
+location, notifications, camera/QR) each go through the dependency gate in
+`CLAUDE.md`; the `npm audit` baseline must be redone.
+
 ## System overview
 
 A single-device, offline-first app for running one rubber sale end to end. All
@@ -205,8 +232,11 @@ Both are web-only and documented where they are read:
 
 Two long-lived branches, two environments with separate domains: `dev`
 (default branch, daily-use MVP environment) and `main` (production). Release
-flow is in `docs/process.md` ("Branches and releases"). **No hosting target is
-chosen yet** — `scripts/deploy.sh` fails closed until it is. Locally,
+flow is in `docs/process.md` ("Branches and releases"). **Hosting is Firebase Hosting**
+(one project, a `dev` site and a `prod` site, PR preview channels with 7-day
+expiry) — see `docs/adr/0001-firebase-hosting.md`. It is decided but **not
+wired yet**: `scripts/deploy.sh` fails closed until the project, domains and
+deploy credential exist. Locally,
 `npm run build:web` produces a static `dist/`. No native build has
 been produced and no device has run this yet — **the app has only ever been
 exercised in a browser.**

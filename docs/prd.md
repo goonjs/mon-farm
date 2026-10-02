@@ -1,766 +1,694 @@
-# PRD — mon-farm
-
-> Status: **Draft v0.4** — authored from the owner's product brief
-> (2026-08-02), updated with the owner's decisions of 2026-08-03.
-> Everything here traces back to those. Items marked **❓** are assumptions
-> or gaps still needing the owner's confirmation before this PRD is
-> "agreed" and epics are sharded from it. See [Decided](#decided) for
-> settled calls and [Open questions](#open-questions) for what remains.
-
-## Overview
-
-mon-farm is an offline-first SaaS for **ยางพารา (para rubber) selling
-operations** on medium-to-large Thai farms. It is built tenant-first: the
-first tenant is the owner's own family farm, and the product generalises
-from there.
-
-The core job it does is **run a sale (การขาย) of rubber from a farm zone to
-a buyer (ล้ง) so that both sides can trust the numbers**. Selling rubber
-today is a verbal, fast-moving, outdoor process: baskets go on a scale one
-after another, people call out counts aloud, and the money is worked out
-afterwards from a tally that may exist only on paper or in someone's head.
-mon-farm replaces that tally with an auditable record, and — crucially —
-makes the counting **public while it happens**: the count is spoken aloud
-in Thai and shown large enough for the other party to read from across the
-yard. The cross-check is therefore social rather than technical. Nobody has
-to trust the software, or even hold a phone, to satisfy themselves the
-count is honest; they only have to watch and listen.
-
-Rubber selling happens where there is no reliable signal — in the field, at
-the pile, at the farm gate. Offline operation is therefore not a nice-to-
-have but the primary mode; see
-[Non-functional requirements](#non-functional-requirements).
-
-## Goals / Non-goals
-
-### Goals
-
-1. **A sale can be run end-to-end in the field with no network**, from
-   price agreement through counting to final settlement figures.
-2. **The count is public while it happens** — displayed so the other party
-   can follow it from across the yard and spoken aloud in Thai — so
-   counting errors surface at the scale, while the rubber is still there to
-   recount, rather than after the money moves.
-3. **The counting step is fast, simple, and hard to get wrong** — the
-   counter screen is the heart of the product, used outdoors, at speed, by
-   people whose hands are busy. It **counts out loud in Thai** and runs the
-   weighing as a call-and-response with the scale team, so the count is
-   shared by everyone present rather than trapped on one person's screen.
-4. **Money is fully explainable**: from counted baskets → net rubber weight
-   → gross value → adjustments → owner/worker split, every number is
-   traceable to the step that produced it.
-5. **Multi-level structure is supported**: a tenant has multiple farms,
-   farms have zones, a sale covers piles within zones, and totals roll up
-   at each level (and for a user-selected subset).
-
-### Non-goals (v1)
-
-- Not an accounting/bookkeeping system, not a tax filing tool.
-- Not a payments product — mon-farm computes what is owed; it does not move
-  money. ❓
-- Not a tapping/production management or agronomy tool (yield tracking,
-  fertiliser, tree records). Sale-side only for v1.
-- Not a marketplace — it does not match owners to buyers, and does not
-  itself publish or broker prices.
-
-## Users & use cases
-
-| Role | Side | What they do in the app |
-| --- | --- | --- |
-| **Farm owner** | Owner | Tenant admin. Sets up farms, zones, contracts and splits. Starts sales, oversees counting, approves settlement. |
-| **Farm manager (ผู้จัดการ)** | Owner | Named as a prerequisite on every sale. May run the sale on the owner's behalf. |
-| **Worker lead (หัวหน้าคนงาน / คนกรีด)** | Owner | Named as a prerequisite on every sale; the rubber's proceeds are split with the worker side per contract. **Does not log in** — the name is recorded, nothing more (decided 2026-08-03). They are present at the sale and see the count like everyone else (FR-9). |
-| **ล้ง (buyer / dealer)** | Buyer | Weighs the baskets, provides and tares the scale and empty containers, agrees the price, counts along. In v1 they need no device — they watch and hear the count (FR-9). The model keeps them as a tenant in their own right for a later buyer-side app. |
-
-### Primary use cases
-
-- **UC-1 — Sell at the ล้ง**: farm transports rubber to the buyer's yard;
-  weighing happens on the buyer's scale.
-- **UC-2 — Buyer comes to the farm**: the ล้ง brings a truck and scale to
-  the farm; weighing happens at the zone or farm gate.
-- **UC-3 — Cross-check**: the ล้ง (and the worker lead, and anyone else
-  present) watches the count on the owner's screen as it happens and hears
-  it announced, and challenges it on the spot if it looks wrong. No second
-  device required.
-- **UC-4 — Multi-zone sale**: one sale covers several piles, several zones,
-  possibly several farms; the parties want per-pile, per-zone, per-farm and
-  grand totals, plus totals for an ad-hoc selection.
-- **UC-5 — Settle**: agreed price is applied to net rubber weight,
-  small bargained adjustments are applied and shown transparently, and the
-  owner/worker split is calculated.
-
-## Domain model & vocabulary
-
-The product's language is Thai-first; these are the entities and the terms
-they map to.
-
-- **Tenant** — one farm business. First tenant: the owner's family farm.
-- **Farm** — a titled property/holding belonging to a tenant.
-- **Zone** — a subdivision of a farm. Selling is organised per zone: a
-  zone is the unit that ties rubber to the worker/contract that produced
-  it.
-- **Pile (กอง)** — a physical heap of rubber staged for weighing within a
-  zone. A zone can have several piles in one sale.
-- **Basket (เข่ง)** — the counting unit: one basket-load of rubber weighed
-  and logged. **Container (ตะกร้า)** — the physical basket the rubber is
-  weighed in, same object, named for its role as an empty vessel with its
-  own **tare weight** (e.g. 2 kg). (Renamed from ถัง 2026-08-11, per the
-  owner: ตะกร้า is the word actually used in the field.)
-- **Standard basket weight** — the agreed *net* rubber weight per basket
-  (e.g. 50 kg). Together with tare this gives the **expected scale
-  reading** all parties call out (e.g. 52 kg).
-- **Count** — the running tally of baskets in a pile: 1, 2, 3, …
-- **Tare check / scale calibration** — the ล้ง weighs the empty containers
-  in front of the owner at the start; both sides record the result.
-- **Agreed price** — price per kg of net rubber, agreed by both parties
-  with reference to the market price index, **before the first basket is
-  weighed**.
-- **Adjustment** — a later, mutually agreed change to the money: a
-  bargained price change or a lump-sum deduction/addition.
-- **Split** — the owner/worker share of the proceeds per contract, e.g.
-  60/40 or 50/50.
-
-## Functional requirements
-
-### FR-1 — Tenancy and farm structure
-
-- FR-1.1 The app is multi-tenant SaaS; all data belongs to exactly one
-  tenant.
-- FR-1.2 A tenant has one or more **farms**; a farm has one or more
-  **zones**.
-- FR-1.3 A tenant maintains a roster of people (owner, managers, worker
-  leads) that can be named on a sale, and a list of buyers (ล้ง).
-- FR-1.4 A tenant maintains **worker contracts**, each carrying the
-  owner/worker split percentage *and* the basis that split applies to
-  (FR-8.4). A zone is associated with the contract that governs rubber
-  from it, so a sale can resolve the right terms per zone.
-
-### FR-2 — Price agreement
-
-- FR-2.1 Before the first weighing, both parties agree a **price per kg of
-  net rubber**, with reference to the market price index.
-- FR-2.2 The sale records the agreed price, the index reference it was
-  based on, and who agreed it on each side.
-- FR-2.3 The price index reference is **entered by the user** for v1 — the
-  app does not fetch a live index. ❓ (should a later version pull an index
-  feed, and from where?)
-- FR-2.4 A sale cannot begin counting without an agreed price recorded.
-- FR-2.5 **Two pricing modes are supported for ยางก้อนถ้วย** (decided
-  2026-08-03), chosen per sale:
-  - **Straight ฿/kg** — the agreed price applies directly to net rubber
-    weight.
-  - **With %DRC / grade deduction** — a dry-rubber-content percentage or
-    grade is agreed at the sale and reduces the payable quantity or the
-    effective price.
-- FR-2.6 In DRC/grade mode the app records **the agreed %DRC or grade, who
-  assessed it, and who on each side agreed it** — with the same weight as
-  the price itself. Grade assessment is a judgement call made by the buyer
-  and is a well-known source of dispute, so it is exactly the kind of
-  figure this app exists to pin down.
-- FR-2.7 The pricing mode is **fixed before counting begins** and changing
-  it afterwards is a recorded adjustment (FR-7.3), not a silent edit.
-- FR-2.8 ❓ In DRC mode, does the percentage apply to the **weight** (net
-  weight × %DRC × price) or as a **price reduction** (net weight × reduced
-  price)? These produce the same number if applied consistently, but the
-  settlement must show whichever way you actually negotiate it, so the
-  derivation reads the way the conversation went.
-
-### FR-3 — Scale calibration and tare check
-
-- FR-3.1 At the start of a sale the ล้ง weighs the **empty containers** and
-  shows the reading; this both verifies the scale and establishes the tare.
-- FR-3.2 The app records the tare check: container type, empty weight,
-  timestamp, and that the owner side observed it.
-- FR-3.3 The owner side records the same tare check independently, for
-  cross-check (FR-9).
-- FR-3.4 The recorded tare is what the counter screen uses to compute the
-  expected scale reading (FR-5.2). Changing the tare mid-sale is an
-  explicit, recorded event — never a silent edit. ❓ (is mid-sale re-tare a
-  real scenario, e.g. different basket types in one sale?)
-
-### FR-4 — Starting a sale
-
-- FR-4.1 A sale requires, as prerequisites: manager name, worker lead name,
-  buyer (ล้ง), agreed price (FR-2), pricing mode (FR-2.5), tare check
-  (FR-3), and a start timestamp.
-- FR-4.2 The sale records **where** the weighing happens — at the ล้ง or at
-  the farm (UC-1 / UC-2).
-- FR-4.3 **A sale is one trading event that may span multiple piles,
-  multiple zones, and multiple farms** (decided 2026-08-03) — one buyer,
-  one agreed price. Every count is attributed to exactly one pile in one
-  zone, so it rolls up (FR-6) and splits (FR-8) correctly per zone. The
-  parties run one sale for what feels to them like one transaction, and
-  the zone attribution does the bookkeeping underneath.
-- FR-4.4 **Every sale event is timestamped** — start, tare check, each
-  individual count, each spoken announcement, every correction, every
-  adjustment, and settlement. See FR-12 for the full event log and for why
-  ordering does not rely on the device clock.
-
-### FR-5 — The counter screen
-
-This is the product's core screen. It is used outdoors, standing, at the
-pace baskets come off the scale, by someone who may be holding something
-else. It must balance **simplicity and speed** against **not being error-
-prone**.
-
-- FR-5.1 The screen counts **up** — 1, 2, 3 — one tap per basket. The
-  current count is displayed for the **other party at ~10 m**, not for the
-  operator at arm's length (FR-9.1); this is the screen's single most
-  demanding layout constraint and it outranks everything else on it.
-- FR-5.2 The screen shows the **expected scale reading** prominently (tare
-  + standard net, e.g. `52 กก.`), because the process is that all parties
-  see that number on the scale and announce the count together.
-- FR-5.3 Counting is **per pile**; the operator selects/creates the pile
-  before counting, and the pile's running count and running net weight are
-  visible at all times.
-- FR-5.4 **Correction without rewriting history**: an operator can undo the
-  last count or void a specific count, but corrections are recorded as
-  events with a reason, never as a silent decrement. The audit trail must
-  make "counted 41, corrected to 40" visible.
-- FR-5.5 **Accidental-tap resistance**: the design must make double-counts
-  and stray taps unlikely. Since the next-basket cue is optional (FR-11.5),
-  counting is **one tap per basket** and the safeguard has to live on the
-  count tap itself — candidates are tap target placement, a minimum
-  interval between accepted counts, and confirmation for implausibly fast
-  repeats. The spoken count (FR-11.3) helps catch an error *after* it
-  happens, since a wrong number is heard by everyone at the scale, but it
-  does not prevent one. ❓ Open question 4 — to be settled by testing
-  variants, not by picking on paper.
-- FR-5.6 **Off-standard baskets**: a basket that does not hit the standard
-  net weight (short-filled last basket of a pile, overweight basket) is
-  recorded with its **actual scale reading**, and the app derives its net
-  weight from the tare. These are counted and totalled alongside standard
-  baskets without distorting the net-weight maths.
-- FR-5.7 **Confirmation feedback** on each count so the operator knows the
-  tap registered without looking away from the scale. The spoken count
-  (FR-11) is the primary confirmation; visual and haptic feedback back it
-  up for when audio is unavailable or inaudible.
-- FR-5.8 The counter works fully offline (see NFR-1) and never loses a
-  count to app backgrounding, screen lock, or battery/app restart.
-
-### FR-6 — Hierarchy and totals
-
-- FR-6.1 Totals are available at every level: **pile → zone → farm →
-  sale**, each showing basket count and net rubber weight.
-- FR-6.2 Every level shows the **sum of the levels beneath it**.
-- FR-6.3 **Selective totals**: the user can select an arbitrary subset
-  (e.g. two piles in one zone, or all zones of one farm) and see the
-  total for just that selection.
-- FR-6.4 Totals are live during counting, not only at the end.
-
-### FR-7 — Settlement and money
-
-- FR-7.1 **Net rubber weight excludes basket/tare weight** — this is the
-  quantity money is calculated on. Standard baskets contribute the agreed
-  standard net; off-standard baskets contribute their measured net
-  (FR-5.6).
-- FR-7.2 **Gross value = total net rubber weight × agreed price per kg**,
-  with the %DRC / grade step applied in between when the sale uses that
-  pricing mode (FR-2.5).
-- FR-7.3 **Adjustments** — a bargained price change or a lump-sum
-  deduction/addition agreed after counting — are supported, and each
-  adjustment records its amount/new price, reason, and who agreed it.
-- FR-7.4 The settlement screen shows the **full derivation, step by step**,
-  in terms a non-technical user can follow and check by hand: basket count
-  → gross weight → tare deducted → net weight → (%DRC / grade applied, if
-  used) → × price → gross value → adjustments → final amount → split. No
-  single opaque total.
-- FR-7.5 The derivation is presented per level as well (FR-6), so the
-  contribution of each zone and pile to the final amount is visible.
-
-### FR-8 — Owner / worker split
-
-- FR-8.1 Proceeds are split between owner and worker per the contract that
-  applies — commonly **60/40 or 50/50**.
-- FR-8.2 The applicable split is configured (FR-1.4), shown on the
-  settlement, and applied to produce each side's amount.
-- FR-8.3 The split calculation is shown as transparently as the rest of the
-  settlement (FR-7.4).
-- FR-8.4 **The basis the split applies to is configurable per contract**
-  (decided 2026-08-03) — either gross value or the post-adjustment final
-  amount, because contracts differ. The basis is recorded on the contract
-  alongside the percentage, and is shown on the settlement so both sides
-  can see which rule was applied.
-- FR-8.5 Because the basis is a per-contract choice, **every contract must
-  have it set explicitly** — there is no safe default, since guessing
-  wrong changes what the worker is paid whenever a bargain happens. The
-  app must not let a contract exist without a basis recorded.
-
-  **Note, 2026-09-03 (S29):** with deductions coming off *after* the split
-  (the 2026-08-11 decision), the split is always applied to gross and
-  `basis` selects no arithmetic. It is recorded and shown, and it changes
-  nothing. The choice is still forced at setup per this requirement, which
-  makes it a question with no consequence today. That is left standing
-  rather than quietly removed: dropping it is an event-shape change against
-  logs that already exist, and it needs its own story. The first adjustment
-  that is *not* a per-worker deduction — a bargained price change, FR-7.3 —
-  would make the field load-bearing again.
-- FR-8.6 ❓ Where a sale spans multiple zones with **different splits**,
-  the split is applied per zone against that zone's contribution —
-  assumed, to be confirmed.
-
-### FR-9 — Cross-check by social transparency
-
-**Decided 2026-08-03, and settled.** The cross-check is done **by eye, at
-the scale, by the people standing there** — not by two devices reconciling
-records. The app's job is to make the count so visible that the other
-party can follow it without holding anything, and would notice
-immediately if it were wrong.
-
-This is the cheapest possible mechanism and the most robust one: it needs
-no connectivity, no pairing, no second device, and no trust in software.
-It also matches what already happens at a sale — people call the count out
-loud and watch each other. The app makes that existing social practice
-harder to fudge instead of replacing it with a system both sides would
-have to trust.
-
-Together with the spoken count (FR-11) it gives the sale a public record
-in two senses at once: **heard** by everyone present, and **seen** by
-everyone present.
-
-- FR-9.1 The running count is displayed so it is **readable by the other
-  party from about 10 metres away** — large numerals, maximum contrast,
-  and colour used to make state obvious at a glance.
-- FR-9.2 **The count is the only thing that has to carry 10 metres.**
-  Operating detail — pile name, expected reading, running weight, controls
-  — is read at arm's length by the operator. The screen therefore has two
-  distinct reading distances, and the design must not let arm's-length
-  detail crowd out the number that has to travel. See FR-9.7 for what this
-  costs.
-- FR-9.3 **On the first count of a sale**, a popup and animation prompt
-  the operator to turn the screen towards the other party, establishing at
-  the start that the count is theirs to watch too. Setting the norm on
-  basket 1 is what makes it hold for the remaining hundred.
-- FR-9.4 **The ล้ง is a tenant in their own right.** The buyer has their
-  own account and their own records across every farm they buy from — they
-  are not a guest on the owner's sale. Each side keeps its own record; the
-  reconciliation between them happens visually at the sale, and through
-  their own records afterwards.
-- FR-9.5 Because the cross-check is visual and immediate, **the buyer does
-  not need the app at the sale** for the count to be trustworthy. This is
-  what makes an owner-side-only v1 coherent (see Success criteria).
-- FR-9.6 Colour must not be the *only* carrier of meaning — state is
-  distinguishable without relying on colour discrimination, both for
-  colour-blind users and because colour fidelity suffers in direct
-  sunlight.
-- FR-9.7 **Physical constraint, to be respected rather than wished away.**
-  Comfortable reading at 10 m needs a numeral roughly 50–80 mm tall. On a
-  typical phone that is achievable **only** in landscape, with the number
-  effectively filling the screen — a three-digit count at 50 mm is about
-  as much as a phone can carry. Consequences the design must accept: the
-  counting screen's public state is close to *just the number*; 10 m is
-  realistic for one or two digits and optimistic for three on a small
-  phone; a tablet would carry further if the sale warrants it. ❓ Worth
-  checking against your own eyes and your own phone during prototype
-  testing — the number that matters is what your ล้ง can actually read
-  across your yard, not a formula.
-
-### FR-10 — Records and history
-
-- FR-10.1 Completed sales are retained and browsable per farm and zone,
-  with their full derivation and audit trail intact.
-- FR-10.2 A sale's record can be **exported/shared** as a human-readable
-  summary both parties can keep. ❓ (format — printed slip, PDF, share
-  sheet, LINE?)
-- FR-10.3 Historical sales support answering "what did zone X earn this
-  month", "what has the worker lead been paid". **Answered 2026-09-03: in
-  scope, carried by S31** (cross-sale reporting), after S28's single-sale
-  report. What made it answerable at all is S27, which gives each farm-profile
-  zone and pile an id that persists across sales — before that, every sale
-  minted throwaway ids and nothing could be rolled up except by matching
-  names. A sale set up by hand, without the profile, carries throwaway ids
-  and stays outside the rollup.
-
-### FR-11 — Voice announcement and call-and-response
-
-The app **speaks out loud, in Thai, in a clear voice**, and drives the
-weighing as a call-and-response rhythm between the app and the people at
-the scale. This is not an accessibility extra — it is how the count stays
-synchronised between the owner side, the ล้ง side, and whoever is lifting
-baskets. The app becomes the neutral announcer that everyone hears, which
-is exactly the role the brief describes when it says all parties announce
-the count together.
-
-Because the operator's eyes are on the scale and their hands are busy, the
-voice — not the screen — carries the moment-to-moment state.
-
-**FR-11.12 — The announced register is always Thai, whatever the UI is set
-to** (decided 2026-08-11, when the UI became switchable in S24). The
-interface language is a preference of the person holding the phone; the
-voice is aimed at everyone else — the ล้ง's people, whoever is lifting
-baskets, anyone within earshot — and they are Thai speakers. FR-9's
-cross-check depends on the other party being able to follow a count without
-holding anything, so a count announced in English because the operator
-changed their own labels would break the cross-check silently, for everyone
-except the one person who changed the setting. Spoken phrases and spoken
-numerals therefore do not follow the locale, and are not translated at all.
-On screen, numerals stay Arabic digits in both locales for a separate
-reason: the log and the settlement are documents two parties check by hand.
-
-**On entering a new level (pile / zone) and tapping Ready:**
-
-- FR-11.1 The app **reads the level's information aloud in Thai** — the
-  farm, zone and pile being counted, the empty basket (tare) weight, the
-  standard rubber weight per basket, and the expected scale reading. This
-  is a deliberate read-back so both sides hear the terms before a single
-  basket is weighed. ❓ (exact wording and which fields are read — to be
-  settled with the owner against a prototype.)
-- FR-11.2 A separate **"พร้อมค่ะ" button** announces readiness aloud — the
-  explicit go-signal to the scale team that counting is starting. It is a
-  distinct action from the read-back, so the operator can let the read-back
-  finish, let the parties confirm, and only then signal.
-
-**During counting:**
-
-- FR-11.3 On each recorded basket the app **speaks the count in Thai** —
-  "หนึ่ง", "สอง", "สาม" — so the number is heard by everyone present, not
-  just seen by the person holding the phone.
-- FR-11.4 After speaking the count the app is **immediately ready for the
-  next basket**. It does not gate the next count behind any further action.
-- FR-11.5 **"ต่อไปค่ะ" is an optional action.** A button announces aloud
-  that the next basket should be weighed, for when the operator wants to
-  cue the scale team explicitly. Counting never depends on it: the
-  operator may ignore it entirely and simply keep counting.
-- FR-11.6 The cadence per basket is therefore: *basket on scale → all
-  parties see the expected reading → tap count → app speaks the number*,
-  with an optional "ต่อไปค่ะ" cue whenever the operator wants one. Because
-  the flow is a single tap per basket, the **count tap needs its own
-  accidental-tap protection** — the rhythm does not provide it (FR-5.5).
-
-**Quality and reliability:**
-
-- FR-11.7 **Speech must work fully offline** (NFR-1). No sale-critical
-  announcement may depend on a network call to a cloud speech service.
-  Where the audio comes from — bundled recordings or the device's own Thai
-  text-to-speech — is **deliberately undecided**: the prototype carries
-  both and the choice is made from how they actually sound at a scale
-  (decided 2026-08-03). Both satisfy the offline constraint; they differ
-  in consistency, download size, and whether a given phone can speak Thai
-  at all.
-- FR-11.8 The voice must be **clear and natural in Thai, including correct
-  number pronunciation** — Thai numerals are irregular in compounds
-  (ยี่สิบเอ็ด, not สองสิบหนึ่ง), and a wrong-sounding count destroys the
-  trust the feature exists to create. Counts run well past 100 in a large
-  sale, so this must hold across the whole range actually used.
-- FR-11.9 The voice must be **audible in the field** — outdoors, near a
-  truck, over the noise of a working yard. Volume control and a repeat/
-  replay of the last announcement are required.
-- FR-11.10 **Audio failure must never block or corrupt the count.** If the
-  device is muted, the speech engine fails, or a voice is unavailable, the
-  app keeps counting correctly with visual and haptic feedback, and makes
-  the degraded state visible rather than silently dropping to a mute
-  counter.
-- FR-11.11 Speech can be **turned off** by the user without changing the
-  counting logic — the two-step count/next rhythm (FR-11.4) stays.
-
-### FR-12 — Event timestamps and the audit trail
-
-**Decided 2026-08-03.** Every count and every spoken announcement is
-recorded with a timestamp — not just the milestones. The sale's record is
-a complete, ordered event log of what happened and what was said.
-
-- FR-12.1 **Every counted basket carries its own timestamp** — all of
-  them, not merely the first and last of a pile (FR-4.4).
-- FR-12.2 **Every announcement the app speaks is recorded**, with what was
-  said and when: the level read-back (FR-11.1), "พร้อมค่ะ" (FR-11.2), each
-  spoken count (FR-11.3), and each "ต่อไปค่ะ" (FR-11.5). The record can
-  therefore establish what was said aloud at the sale, and when.
-- FR-12.3 Corrections and voided counts are timestamped the same way, so
-  the log shows both the mistake and the fix in the order they occurred
-  (NFR-3).
-- FR-12.4 The timestamped log gives the sale a **reconstructable pace**.
-  This is worth more than an audit record: intervals between counts are
-  evidence. Two counts 0.3 seconds apart are almost certainly a double-tap
-  rather than two baskets, and a gap of twenty minutes mid-pile is a break
-  that someone may need to explain. It also gives the anti-mistap work
-  (Open question 1) real data to be designed against instead of guesses.
-- FR-12.5 **Ordering must not depend on the device clock.** In an
-  offline-first app the wall clock can drift, be wrong, or be changed by
-  the user — and two tenants' devices will not agree with each other.
-  Every event therefore carries a **monotonic per-sale sequence number**
-  alongside its timestamp, so the *order* of events is trustworthy even
-  when the *time* is not. Sequence settles "what happened first";
-  timestamps answer "when, roughly".
-- FR-12.6 **An obviously wrong clock is flagged in the record** (decided
-  2026-08-03) rather than silently trusted. Detectable cases: device time
-  earlier than the sale's own start, time jumping backwards mid-count, or
-  an implausible forward jump. The anomaly is recorded as an event on the
-  sale, so anyone reading the record later can see that the timestamps
-  around it are unreliable instead of drawing conclusions from them.
-- FR-12.7 **A bad clock never blocks or invalidates a sale.** Counting
-  continues normally; the sequence number (FR-12.5) still carries the
-  order, so only the wall-clock precision is degraded, never the count or
-  the money. The operator is shown a non-blocking indicator — a wrong
-  clock is not worth interrupting a weighing for, and a modal mid-count
-  would cause exactly the kind of error the counter screen exists to
-  prevent.
-- FR-12.8 The timestamps, the announcement log, and any clock-anomaly
-  flags are part of what syncs (NFR-2), so the record survives beyond the
-  device that captured it.
-
-## Non-functional requirements
-
-### NFR-1 — Offline behavior (primary mode)
-
-- The **entire sale flow must work with zero connectivity**: starting a
-  sale, tare check, counting, totals, adjustments, settlement figures, and
-  viewing prior sales stored on the device.
-- Counting is the highest-stakes offline path: a lost count is money lost
-  and trust lost. Counts must survive app backgrounding, screen lock, force
-  quit, and device restart.
-- No feature in the sale flow may block on a network call.
-- **Thai speech (FR-11) is part of the offline surface.** The voice is
-  central to how counting is conducted, so it cannot rely on a cloud
-  speech service. This constrains the implementation to on-device speech
-  or audio bundled with the app — an architecture decision, but the
-  product constraint is fixed here.
-
-### NFR-2 — Sync behavior
-
-- Local data syncs to the backend **automatically when connectivity
-  returns**, and **on manual user trigger**.
-- The user can see sync status — pending / synced / error — at least at the
-  sale level.
-- Conflict resolution strategy is an architecture decision
-  (`docs/architecture.md`), but the product constraint is: **a recorded
-  count or agreed figure is never silently overwritten**. Conflicts on a
-  sale's numbers must surface to a human.
-- ❓ Two-party cross-check (FR-9) sync semantics depend on Open question 2.
-
-### NFR-3 — Trust and auditability
-
-- Every number in the settlement must be traceable to the recorded events
-  that produced it.
-- Corrections and adjustments are **append-only events with reason and
-  actor**, not destructive edits.
-- This is a product requirement, not just a technical one: the app's value
-  is that two parties who don't fully trust each other can both rely on it.
-
-### NFR-4 — Field usability
-
-- **Readable in direct sunlight — now load-bearing, not a nicety.** The
-  count is the cross-check mechanism (FR-9), so a screen that washes out
-  in the sun does not merely annoy the operator, it removes the product's
-  guarantee of a fair count. Maximum contrast, high brightness, and
-  sunlight legibility are requirements of the trust model.
-- Usable one-handed, standing, possibly with dirty or gloved hands.
-- **Audible in a working yard**: the spoken count (FR-11) must carry over
-  ambient noise — engines, wind, people — to everyone standing at the
-  scale, not just the phone holder. Device speaker volume may be the
-  limiting factor. ❓ (is an external/bluetooth speaker realistic in your
-  setup, or must it work off the phone alone?)
-- Thai-first UI. ❓ (is any English/other-language support needed for
-  buyers or staff?)
-- Must tolerate low-end Android devices and poor battery. ❓ (target device
-  floor to be confirmed.)
-
-### NFR-5 — Platform
-
-- Web app that also runs as a mobile app (per `CLAUDE.md`). Exact packaging
-  approach is an architecture decision.
-- ❓ Target platforms in priority order (Android first, given the field
-  users?).
-
-### NFR-6 — Multi-tenancy and security
-
-- Tenant data isolation is mandatory: one farm business must never see
-  another's sales.
-- Role-based access within a tenant (owner vs. manager vs. worker lead).
-  ❓ (what exactly each role may see and do — especially whether a worker
-  lead can see money.)
-
-## Out of scope (v1)
-
-**v1 is "run and settle one sale correctly"** (decided 2026-08-03) — zones,
-a sale, the counter with voice, totals, settlement and split. The goal is
-to have it at a real scale in the next selling season, because that is
-where the remaining questions get answered.
-
-- **The ล้ง-side app.** The buyer remains a separate tenant in the model
-  (FR-9.4), but their app is not built in v1. This is affordable precisely
-  because the cross-check is visual (FR-9.5) — the buyer does not need a
-  device for the count to be trustworthy.
-- ~~**Per-zone / per-worker reporting** (FR-10.3)~~ — **brought into scope
-  2026-08-11** by the owner, after running the app against the real flow.
-  The original reasoning (a second surface, best designed once real sales
-  exist) has been overtaken: real sales now exist, and they are what asked
-  for it. Narrower than the deferred item was: a report for a **completed
-  sale**, broken down to pile level and readable on the device. Export and
-  sharing (FR-10.2) stay deferred — the format is still open question 8.
-  Carried by S28.
-- **Worker lead login.** Name recorded only; no account, no permissions
-  model in v1.
-- Payments/disbursement of money.
-- **Fetching a market price programmatically** (FR-2.3) — still out, and
-  now for a researched reason rather than an assumed one (2026-08-11).
-  Nothing published carries ยางก้อนถ้วย at the price a farm is actually
-  paid: TFEX is ribbed smoked sheet off the Osaka benchmark, the Thai
-  Rubber Association shows no cup-lump publication, and RAOT's cup-lump
-  column is bulk spreadsheets on a DRC 100% basis. Cup lump is a *local*
-  price varying by district, buyer and DRC, so a national figure would
-  read as authoritative while differing from what was agreed.
-
-  **What replaced it, in scope as S30**: the owner keeps a list of price
-  **sources** — name, note and URL — and checks them by hand. Each
-  observed price is logged against the sale as a reference, alongside the
-  ล้ง's own quoted price. The app records where a number came from; it
-  never goes and gets it. This keeps the ล้ง's board — which is what is
-  actually negotiated against, and is not fetchable by anyone — a
-  first-class reference rather than the one source the app cannot see.
-- Production/agronomy tracking (tapping records, yield, inputs).
-- Buyer marketplace or price discovery across buyers.
-- Multi-currency; THB only.
-- Products other than ยางก้อนถ้วย (ยางแผ่น, น้ำยางสด, เศษยาง) — v1 covers
-  cup lump only, in both pricing modes (FR-2.5).
-
-## Success criteria
-
-1. A real sale on the owner's own farm is run end-to-end in the app,
-   offline, with no fallback to paper.
-2. The counter screen keeps up with the physical weighing pace, and the
-   final basket count matches the ล้ง's independent count.
-3. The spoken count is clear enough that the people at the scale work to
-   the app's voice — and nobody asks "what number are we on?"
-4. **The ล้ง actually watches the screen.** The clearest signal the
-   transparency model works is the buyer following the count from where
-   they stand, and challenging a basket when they think it is wrong.
-5. The settlement figure is agreed by both parties without recomputing it
-   by hand — and when they do check it by hand, it matches.
-6. A dispute over count or money is resolved by looking at the app's
-   record, at least once.
-7. A second tenant (another farm) can be onboarded without code changes.
-
-## UX decisions are settled by testing, not by this document
-
-The owner's stated preference: **try several UX variants before committing
-to one.** That applies most to the counter screen (FR-5) and the voice
-loop (FR-11) — the surfaces used at speed, outdoors, by people who cannot
-afford to think about the app.
-
-So this PRD deliberately **specifies what the counter must achieve and
-leaves how it looks and feels open**. Requirements like "one tap per
-basket", "net weight excludes tare", and "corrections never rewrite
-history" are fixed. Layout, tap-target design, the exact anti-mistap
-safeguard, and the read-back wording are not — those are answered by
-building variants and using them against a real scale.
-
-Practically, this means the counter prototype comes **before** the
-architecture is finalised and before the counter's stories are written:
-what we learn from handling it in the field may change the requirements
-above, which is the point. Prototype variants are throwaway code for
-learning, exempt from the full story/TDD ceremony — but nothing learned
-from them reaches production without going back through the normal loop
-in `docs/process.md`.
-
-## Decided
-
-Recorded so the reasoning is not lost once the questions disappear.
-
-- **2026-08-03 — Cross-check is social, by eye, not digital** (FR-9). The
-  count is displayed to be read by the other party from ~10 m, and a popup
-  on the first basket sets the norm that the screen is theirs to watch.
-  This removes an entire class of problem — no pairing, no device-to-device
-  transport, no dependency on signal — and it is why an owner-only v1
-  still delivers a trustworthy count.
-- **2026-08-03 — A sale is one trading event spanning zones** (FR-4.3),
-  with every count attributed to its pile and zone underneath.
-- **2026-08-03 — The ล้ง is a full tenant, not a guest** (FR-9.4), though
-  their app is not built in v1.
-- **2026-08-03 — ยางก้อนถ้วย, in both pricing modes** (FR-2.5): straight
-  ฿/kg and %DRC / grade, chosen per sale.
-- **2026-08-03 — Split basis is per-contract** (FR-8.4), with no default,
-  because guessing wrong changes the worker's pay.
-- **2026-08-03 — Worker lead does not log in.** Name recorded only.
-- **2026-08-03 — v1 is "run and settle one sale correctly."** Reporting
-  and the buyer-side app are deferred.
-- **2026-08-03 — Every count and every announcement is timestamped**
-  (FR-12), giving the sale a reconstructable pace as well as an audit
-  trail. Order is carried by a per-sale sequence number, because an
-  offline device's clock cannot be trusted to be right or even monotonic.
-- **2026-08-03 — A wrong device clock is flagged, not hidden** (FR-12.6),
-  and never blocks a sale — the sequence number keeps the order sound, so
-  only timestamp precision suffers.
-- **2026-08-03 — Voice sourcing is deferred to the prototype** (FR-11.7):
-  bundled recordings and device Thai TTS both get tried at a real scale.
-- **2026-08-03 — "ต่อไปค่ะ" is optional** (FR-11.5), which removed the
-  two-tap gate and reopened the anti-mistap question below.
-- **2026-08-11 — Three v1 exclusions reversed**, after the owner ran the
-  built app against the real flow: per-zone/per-pile reporting (FR-10.3),
-  adjustments as worker deductions (FR-7.3), and a market price reference
-  (FR-2.3). Each is narrowed rather than adopted wholesale — see the
-  out-of-scope list above and `docs/epics/epic-2-second-field-round.md`.
-- **2026-08-11 — Deductions come off AFTER the split** (FR-7.3, FR-8.4).
-  A zone's gross is split first; each worker's own deductions then come
-  off their share. The owner bears none of the deducted cost, and the
-  buyer-facing total does not move — a deduction shifts money between the
-  two parties to the contract, and nothing else. **Corrected 2026-09-03:**
-  this entry originally read that the decision was "what `basis` resolves
-  to, and the first time that field has been load-bearing". That was the
-  wrong inference from the right decision. Deducting *after* the split means
-  the split is always applied to gross, so `basis` selects no arithmetic and
-  stays inert — see the note on FR-8.5 above.
-- **2026-08-11 — The app records price references; it does not fetch
-  them** (FR-2.3). Research found nothing publishing ยางก้อนถ้วย at a
-  local farmgate price, so automated fetching is out of scope — see the
-  out-of-scope list. Instead the owner keeps **named sources** (name,
-  note, URL), surfaced on the sale-setup screen so they can be opened and
-  checked by hand, and logs what each one said as a reference against the
-  sale, together with the ล้ง's own quoted price. The agreed price stays
-  the one both parties set; references are context beside it and never
-  enter the money chain. This also keeps the ล้ง's board — the number
-  actually negotiated against, and fetchable by nobody — a first-class
-  reference instead of the one source the app structurally cannot see.
-- **2026-08-11 — A pile can be entered in bulk instead of counted.**
-  Where the app was not running for the count, the pile is opened into a
-  bulk-entry form — how many baskets, plus the weight of what is left
-  over — rather than into the counter. That keeps one honest shape: whole
-  baskets stay whole baskets, and the remainder is recorded as a weight
-  rather than being rounded into a basket count nobody counted. Bulk
-  entries are marked in the log as entered-after-the-fact, because they
-  are not evidence of anything anyone watched.
-
-## Open questions
-
-Questions tagged **[UX]** are expected to be answered by prototype testing
-rather than by decision up front.
-
-1. **Counter screen error-prevention.** [UX] The sharpest UX question in
-   the product. With "ต่อไปค่ะ" optional (FR-11.5) there is one tap per
-   basket and nothing structurally preventing a stray tap from booking a
-   basket that was never weighed. Candidates: minimum interval between
-   accepted counts, confirmation on implausibly fast repeats, a tap target
-   designed against accidental brushes, or accepting the risk and relying
-   on prominent undo plus the spoken count as after-the-fact detection.
-   **To be resolved by testing variants, not chosen on paper.**
-2. **Actual readable distance** (FR-9.7). [UX] 10 m is the goal; what a
-   phone can really deliver for a three-digit count in your yard, in your
-   sun, is a measurement to take during prototype testing — and it may
-   argue for a tablet as the counting device.
-3. **%DRC applied to weight or to price** (FR-2.8) — same arithmetic,
-   different derivation on screen; it should read the way you actually
-   negotiate.
-4. **Mid-sale re-tare** (FR-3.4) — is weighing more than one basket type
-   in a single sale a real scenario?
-5. **Voice persona.** The "ค่ะ" in "พร้อมค่ะ" / "ต่อไปค่ะ" implies a
-   female voice — confirmed?
-6. **What the read-back says (FR-11.1).** [UX] Which fields should be read
-   aloud on Ready — is farm/zone/pile plus tare, standard weight and
-   expected reading the right set, too much to hear at every pile, or
-   missing something the parties need?
-7. **Different splits across zones in one sale** (FR-8.6) — assumed to
-   apply per zone against that zone's contribution; confirm.
-8. **Sale export format** (FR-10.2) — printed slip, PDF, LINE share?
-9. ~~**Which price reference** (FR-2.3)~~ — **answered 2026-08-11: none,
-   programmatically.** The research is recorded in the out-of-scope list
-   above and in `docs/epics/epic-2-second-field-round.md` §S30. No
-   published source carries a local cup-lump price honestly, so the app
-   stops trying to be the one that knows and becomes the one that records
-   where the number came from. Sources are a configurable list the owner
-   maintains and checks by hand; observed prices are logged as references
-   against the sale. See the Decided entry below.
+# PRD — mon-farm (แอปบริหารสวนยาง, MVP V1)
+
+> สถานะ: **ฉบับภาษาไทยของ PRD v1.0 (2026-10-03)** — นับจากนี้ภาษาไทยเป็น
+> ภาษาทำงานของเอกสารในโปรเจกต์นี้ เนื้อหาเท่ากับ **Draft v1.0 — PRD
+> ฉบับสมบูรณ์ฉบับแรก อยู่ระหว่างเจ้าของตรวจ** (ต้นฉบับอังกฤษดูใน git history)
+> แหล่งอ้างอิงข้อกำหนด: *Rubber Farm App MVP V1 — Single Source of Truth*
+> ของเจ้าของ (2026-10-02; Q1–Q109 + Q111–Q137) ด้านล่างเรียกว่า **[SSOT]**
+> สเปกทางเทคนิคที่ยกมาจาก PRD v0.4 / `docs/architecture.md` v0.1 ทำเครื่องหมาย
+> **[carried]** จุดที่สองแหล่งขัดกัน ได้ถามเจ้าของทีละโมดูล และบันทึกคำตอบไว้ใน
+> [Decision log](#decision-log)
+> ฉบับที่ถูกแทนที่: PRD v0.4 (ขอบเขตเฉพาะตัวนับการขาย) — ดู git history
+
+## วิธีอ่าน
+
+- รหัสข้อกำหนดแยกตามโมดูล: `ACC` การเข้าใช้, `SYNC` ออฟไลน์/ซิงก์, `MD`
+  ข้อมูลหลัก, `SALE` การชั่ง, `SET` กระทบยอดและสรุปเงิน, `FERT` ปุ๋ย,
+  `OPS` งานในสวน, `TASK` งานและการแจ้งเตือน, `DOC` เอกสารคนงาน, `INV`
+  สต็อก, `FIN` การเงิน, `WX` สภาพอากาศ, `ANA` การวิเคราะห์, `AI` ผู้ช่วย AI,
+  `INT` การเชื่อมต่อระบบอื่น, `NFR` ข้อกำหนดที่ไม่ใช่ฟังก์ชัน
+- **MVP** = ต้องใช้งานได้ก่อนทดสอบในสวนจริง (ดู [Acceptance](#mvp-acceptance-checklist))
+  **Deferred** = ออกแบบเผื่อไว้ แต่ไม่สร้างใน V1
+- ⏳ = รอคำตอบจากเจ้าของ; สิ่งใดที่มี ⏳ จะไม่ถูกสร้างจากการเดา
 
 ---
 
-_Next step per `docs/process.md`: once the open questions above are
-answered and this PRD is agreed, write `docs/architecture.md` against it,
-then shard into epics and stories._
+## 1. ภาพรวมผลิตภัณฑ์
+
+mon-farm คือ **แอปบริหารฟาร์มที่ทำเพื่อเจ้าของเป็นหลัก (personal-first)**
+สำหรับสวนยางของเจ้าของและที่ดินทุเรียนที่เกี่ยวข้อง แทนการจดกระดาษ/สมุด
+ในการขายยาง และเป็นที่เดียวสำหรับงานในสวน การเงิน และการวิเคราะห์ —
+**ใช้งานได้เต็มที่แบบออฟไลน์ที่สวน** และซิงก์ข้ามโทรศัพท์ได้สูงสุดสามเครื่อง
+เมื่อสัญญาณกลับมา
+
+ตั้งใจให้ไม่ใช่แพลตฟอร์มระยะยาวที่ครบทุกอย่าง: V1 คือระบบที่เล็กที่สุดแต่
+แข็งแรง ที่แทนกระดาษได้และเก็บข้อมูลจริงที่เชื่อถือได้ [SSOT §0] SaaS
+สาธารณะแบบ multi-tenant เลื่อนออกไป; โมเดลข้อมูลยังคงสะอาดพอจะไปถึงตรงนั้น
+และเชื่อมกับผลิตภัณฑ์การเงิน JotWai ของเจ้าของได้ในภายหลัง [SSOT §1, §29]
+
+### เป้าหมาย
+
+1. การขายยางทำได้ครบตั้งแต่ต้นจนจบที่สวนโดยไม่มีเครือข่าย — ชั่งทุกกอง
+   เลขเข่งต่อเนื่อง เข่งเชื่อม กระทบยอดกับผู้ซื้อ และสรุปเงินแยกรายคนกรีด
+2. นับเข่งผิดได้ยาก: เข่งปัจจุบัน จุดชั่ง น้ำหนักเข่งไม่เต็ม และยอดรวม
+   แสดงอยู่ตลอด [SSOT §5.3]
+3. ทุกตัวเลขอธิบายได้และย้อนไปถึงบันทึกต้นทางได้
+4. งานในสวน (การตรวจสวน เหตุการณ์ งาน สต็อก เอกสาร สภาพอากาศ) และการเงิน
+   (ค่าใช้จ่าย ผู้จ่ายจริง เงินที่ต้องคืน กระแสเงินสด) บันทึกครั้งเดียว และ
+   ยังมีประโยชน์แม้ข้อมูลไม่ครบ
+5. AI ช่วยวิเคราะห์และแนะนำ แต่เจ้าของเป็นผู้ตัดสินใจ — AI ไม่สร้างหรือ
+   เปลี่ยนอะไรเองแบบเงียบ ๆ [SSOT §48]
+
+### สิ่งที่ไม่ทำ (V1)
+
+- SaaS สาธารณะ / ทำเป็นผลิตภัณฑ์ multi-tenant; UI จัดการบทบาท/สิทธิ์ที่ซับซ้อน
+- โอนเงินจริง (แอปบันทึกการจ่ายเงิน ไม่ได้จ่ายเงินเอง)
+- การเชื่อม JotWai, การดึงข้อมูลจาก LINE อัตโนมัติ, การเชื่อม TradingView/Windy
+  ระดับใช้งานจริง, การเฝ้าระวัง/เรียนรู้ของ AI ขั้นสูง, วิธีคำนวณเงินสำรองขั้นสูง,
+  ระบบกฎหมาย/การปฏิบัติตามกฎเต็มรูปแบบ, แผนที่ระดับต้น, การย้ายประวัติจากกระดาษ
+  [SSOT Deferred list]
+
+### หลักการหลัก [SSOT §2, §40]
+
+1. ป้อนข้อมูลให้น้อยที่สุด; จำค่าเริ่มต้น; คำนวณแทนการถามซ้ำ
+2. **ห้ามแต่งข้อมูลที่ขาด** — ใช้สถานะที่ชัดเจน: Unknown · Not recorded
+   · Estimated · User provided · System calculated · AI suggested / Needs
+   Review
+3. แยกข้อเท็จจริงออกจากค่าประมาณ การพยากรณ์ คำแนะนำ และการตีความของ AI
+4. เก็บหลักฐานต้นทางและ metadata สำหรับตรวจสอบ; ไม่เขียนทับประวัติ
+5. เจาะลึก (drill-down) ได้ทุกที่: แดชบอร์ด → ที่ดิน → โซน → จุดชั่ง → บันทึก
+6. ออฟไลน์ก่อน (offline-first) เป็นข้อบังคับ
+7. เจ้าของเป็นผู้ตัดสินใจ
+8. ไม่ทำให้อาจารย์สมหวัง (76 ปี) ต้องเรียนรู้ขั้นตอนเทคโนโลยีใหม่
+
+## 2. ผู้ใช้และบริบท
+
+| ใคร | บทบาทใน V1 | ใช้แอปไหม? |
+| --- | --- | --- |
+| เจ้าของ (Product Owner) | เจ้าของ | ใช้ — ผู้บันทึกหลัก |
+| น้องของเจ้าของ | เจ้าของ (สิทธิ์เท่ากัน) | ใช้ |
+| เพื่อนของเจ้าของ | เจ้าของ (สิทธิ์เท่ากัน) | ใช้ |
+| อาจารย์สมหวัง วิเชียรฉันท์ — ผู้จัดการสวน, 76 ปี, ที่ปรึกษา, ไม่ได้กรีดยาง | บันทึกบุคคล; ผู้รับการแจ้งเตือนได้ (ไม่บังคับ); อาจสำรองจ่ายเงิน | ไม่มีการล็อกอิน สื่อสารทางโทรศัพท์/LINE/เจอตัว; อนาคตดึงจาก LINE → Needs Review |
+| แดง (Daeng), นัด (Nat) — คนกรีดยาง, แรงงานต่างด้าว | บันทึกบุคคล; คู่สัญญาในการสรุปเงิน; ผู้ถือเอกสาร | ไม่มีการล็อกอิน |
+| ครอบครัวคนงาน — แดง 5 คน, นัด 2 คน | บันทึกบุคคลสำหรับติดตามเอกสาร | ไม่ใช้ |
+| ผู้ซื้อ — รายหลักหนึ่งราย, เปลี่ยนได้ | บันทึกผู้ซื้อ | ไม่ใช้ |
+| คุณหนึ่ง / คุณพนม ครองแก้ว — ผู้เช่าสวนทุเรียน | บันทึกคู่สัญญา | ไม่ใช้ |
+
+### ข้อเท็จจริงของสวนที่ยืนยันแล้ว [SSOT §0.1, §3, §14, §49]
+
+- **สวนจันทเขลม** (สะกดตามนี้) — ~125 ไร่, อายุ ~15 ปี แดง: 3 จุดชั่ง;
+  นัด: 1 จุดชั่ง
+- **สวนฝั่งคลองพลู** (ยาง) — ~30 ไร่, อายุ ~15 ปี นัดกรีดคนเดียว; 1 จุดชั่ง
+- ต้นยางรวม ~7,000 ต้น (ประมาณ; ไม่ทราบตัวเลขแน่นอน)
+- ทุเรียน คลองพลู — 30 ไร่, ปลูกครั้งแรก 5 ธ.ค. 2024, ให้คุณหนึ่งเช่า,
+  คาดว่าได้ค่าเช่าตั้งแต่ปี 2029 (พ.ศ. 2572) + % ของยอดขาย; เงื่อนไขตาม
+  สัญญาเช่า (ไม่แต่งขึ้นเอง)
+- ทุเรียน ตะเคียนทอง — 76 ไร่, ให้คุณพนม ครองแก้วเช่า, ค่าเช่า
+  1,000,000 บาท/ปี, ค่าเช่าอย่างเดียว
+- สินค้า: ยางก้อนถ้วย (cup lump rubber); ผู้ซื้อมารับที่สวน
+- การขาย: พ.ค.–ต.ค. ประมาณเดือนละครั้ง (1.5–2 เดือนช่วงฝนหนัก); พ.ย.–ก.พ.
+  ประมาณเดือนละสองครั้ง; มี.ค.–เม.ย. หยุดกรีด แดงกับนัดปกติขายพร้อมกัน
+
+---
+
+## 3. โมดูล ACC — ตัวตน กลุ่มฟาร์ม และการเข้าใช้ [SSOT §0.2, Q112, Q118–Q123]
+
+**MVP**
+- ACC-1 **Google Login** ใน V1 **LINE Login ขึ้นกับการเชื่อมต่อระบบ** และ
+  ตามมาหลังการทดสอบภาคสนามครั้งแรกของ V1 (D-2) โมเดลบัญชีผูกตัวตนการล็อกอิน
+  หลายแบบเข้ากับ **ผู้ใช้เชิงตรรกะคนเดียว (one logical User)** เพื่อให้การเพิ่ม
+  LINE ภายหลังไม่สร้างผู้ใช้ซ้ำ
+- ACC-2 ผู้ใช้หนึ่งคนอยู่ได้ **หลายกลุ่มฟาร์ม** เจ้าของคนใดก็สร้างกลุ่มได้;
+  ผู้สร้างเชิญ ผู้ถูกเชิญตอบรับ สมาชิกออกจากกลุ่มได้ — กลุ่มและข้อมูลยังอยู่
+  การลบกลุ่มฟาร์มทั้งกลุ่มไม่ใช่การทำงานใน MVP
+- ACC-3 การเลือกฟาร์ม: มีกลุ่มเดียว → เข้าเลย; มีหลายกลุ่ม → ให้เลือก
+- ACC-4 MVP มี **เจ้าของ 3 คนสิทธิ์เท่ากัน** (เจ้าของ, น้อง, เพื่อน) ที่ดู/
+  สร้าง/แก้/ลบ/กู้คืนได้ทุกอย่าง ไม่มีการล็อกอินของผู้จัดการ/คนงาน ไม่มี UI
+  จัดการสิทธิ์ การเป็นสมาชิกมีฟิลด์ `role` (เป็น `owner` เสมอใน V1) เพื่อให้
+  เพิ่มบทบาทที่ตั้งค่าได้ (Q90) ภายหลังโดยไม่ต้องย้ายข้อมูล (data migration)
+- ACC-5 ข้อมูลกลุ่มฟาร์มแยกกันเด็ดขาด: ผู้ใช้เห็นเฉพาะกลุ่มที่ตนเป็นสมาชิก
+- ACC-6 หลังล็อกอินครั้งแรกบนเครื่อง แอปทำงาน **ออฟไลน์ได้โดยไม่ต้องล็อกอินใหม่**
+  ตลอดการไปสวนครั้งนั้น
+
+## 4. โมดูล SYNC — ออฟไลน์ก่อน ซิงก์ และความถูกต้องของข้อมูล [SSOT §0.3–0.4, §34–35, Q91, Q113–Q117, Q124–Q126]
+
+**MVP**
+
+### ออฟไลน์และซิงก์
+- SYNC-1 ทุกขั้นตอนใน MVP ทำงานได้โดยไม่มีเครือข่าย บันทึกที่บันทึกตอนออฟไลน์
+  **เป็นบันทึกจริงทันที** ใช้ได้เลย และมีสถานะ **Pending Sync**
+- SYNC-2 ซิงก์ทำงาน **อัตโนมัติ** เมื่อการเชื่อมต่อกลับมา และลองใหม่อัตโนมัติ
+  เมื่อล้มเหลว; ไม่ทิ้งข้อมูลในเครื่องเด็ดขาด **ใช้งานปกติไม่มีปุ่ม Sync**;
+  **ปุ่ม "ลองใหม่" (retry) จะแสดงเฉพาะเมื่อซิงก์ล้มเหลว หรือมี Conflict
+  ที่ต้องจัดการ** (D-3)
+- SYNC-3 แสดงสถานะทั้งรายบันทึกและภาพรวม: **Synced · Pending Sync ·
+  Conflict**
+- SYNC-4 โทรศัพท์สูงสุด 3 เครื่อง (รวมเว็บ) ใช้ **ชุดข้อมูลเชิงตรรกะชุดเดียว**
+  บันทึกต่างรายการรวมกันอัตโนมัติ การแก้บันทึกเชิงตรรกะเดียวกันที่ระบบรวมอย่าง
+  ปลอดภัยไม่ได้ จะกลายเป็น **Conflict ให้เจ้าของตัดสิน** — ห้ามใช้
+  last-write-wins แบบไม่ดูข้อมูลกับเงิน น้ำหนัก หรือจำนวนเด็ดขาด
+
+### การส่งต่อการขายระหว่างเครื่อง (D-4)
+ปกติบันทึกทีละคน แต่การขายอาจย้ายไปอีกเครื่องกลางการชั่ง (แบตเตอรี่ สัญญาณ
+หรือเปลี่ยนคน)
+- SYNC-5 **ส่งต่อแบบชัดเจน ทำได้ออฟไลน์ (MVP):** เครื่องปัจจุบันกด
+  **"ส่งต่อ"** — บันทึกการส่งต่อและล็อกการบันทึกของตัวเองสำหรับการขายนั้น
+  เครื่องที่รับกด **"รับช่วง"** แล้วต่อจากเลขเข่งถัดไป โดยไม่ต้องใช้เครือข่าย
+  log ของทั้งสองเครื่องรวมกันเมื่อฝั่งใดฝั่งหนึ่งมีสัญญาณ หรือ **ตอนปิดการขาย
+  ผ่าน QR code** ที่แสดงบนเครื่องหนึ่งแล้วอีกเครื่องสแกน ต้องเร็ว (≤ 2 แตะ
+  ต่อฝั่ง) และกันพลาด (แสดงเลขเข่งที่จะต่อจากนั้น)
+- SYNC-6 **โหมดอิสระพร้อมการตรวจจับ:** บันทึกโดยไม่ส่งต่อก็ได้ ตอนรวมข้อมูล
+  ถ้าเข่งของการขายเดียวกันถูกบันทึกจากต่างเครื่องภายใน **ช่วง 7–10 วินาที**
+  (ตั้งค่าได้; ทนต่อนาฬิกาเครื่องคลาดเคลื่อน, ตรวจซ้ำกับเลขเข่ง) จะขึ้นคำถาม
+  "นี่คือการนับซ้ำไหม?"
+- SYNC-7 ช่วงที่ทับกันแสดงเป็น **ไทม์ไลน์รายเครื่อง** แบบง่าย ให้เจ้าของเห็น
+  ทันทีว่าการบันทึกใดสลับกัน แล้วตัดสินใจ
+- SYNC-8 *Deferred:* ส่งต่อระหว่างเครื่องผ่าน Bluetooth
+
+### การแก้ไข การลบ และที่มาของข้อมูล
+- SYNC-9 เจ้าของคนใดก็แก้บันทึกได้โดยตรง เบื้องหลัง ทุกการเปลี่ยนแปลงถูกเก็บ
+  เป็น event (ใคร เมื่อไร เครื่องไหน แหล่งที่มา) ประวัติจึงไม่หาย แม้ V1
+  **ไม่มี UI ดูประวัติเวอร์ชัน** [Q126]
+- SYNC-10 **ลบแบบกู้คืนได้ (Soft Delete)** สำหรับบันทึกสำคัญ: ซ่อนจากรายการ
+  ปกติ เจ้าของคนใดก็กู้คืนได้ [Q124–Q125] Soft Delete ≠ Cancelled (ซึ่งเป็น
+  สถานะทางธุรกิจ)
+- SYNC-11 ที่มาของข้อมูล (provenance) ในบันทึกสำคัญ: สร้างโดย/เมื่อ,
+  แก้โดย/เมื่อ, ช่องทางต้นทาง (แอป / LINE / นำเข้าเอง / AI), ข้อความ/รูป/เสียง
+  ต้นฉบับ, สถานะการยืนยัน [§35]
+- SYNC-12 สถานะความครบของข้อมูลรายฟิลด์ (ตามที่เกี่ยวข้อง): Unknown · Not
+  recorded · Estimated · User provided · System calculated · AI suggested /
+  Needs Review
+
+## 5. โมดูล MD — โครงสร้างฟาร์มและข้อมูลหลัก [SSOT §0.1, §3, §38, Q93–Q95, Q137]
+
+**MVP** ข้อมูลหลัก **ใช้ร่วมกันและซิงก์** ทั้งกลุ่มฟาร์ม (แทนที่โปรไฟล์ฟาร์ม
+ที่เก็บในเครื่อง S27 และที่เก็บรายชื่อคน S16 เดิม — แต่คงกฎ stable-id ไว้)
+
+- MD-1 **ที่ดิน (Properties)**: สวนยางและสวนทุเรียน; ชื่อ, ประเภท, พื้นที่เป็นไร่
+  **พร้อมประวัติตามวันที่** (การวิเคราะห์ใช้พื้นที่ที่ใช้อยู่ ณ เวลานั้น), อายุ,
+  GPS (ไม่บังคับ, เป็น Unknown จนกว่าจะใส่), ลิงก์สัญญาเช่าสำหรับทุเรียน
+- MD-2 **โซน**: ไม่บังคับ เพิ่ม เลิกใช้ แยก รวม ได้; เก็บประวัติโครงสร้าง
+  เพื่อให้บันทึกในอดีตคงโครงสร้าง ณ ตอนนั้น กำหนดโซนให้บันทึกย้อนหลังได้
+  ไม่บังคับให้เจ้าของต้องแต่งโซนขึ้นมา
+- MD-3 **จุดชั่ง (= กองยาง)**: entity เดียวสำหรับสถานที่จริง — ไม่มี entity
+  "กอง" แยก [§0.1] อยู่ภายใต้ที่ดิน; โซนไม่บังคับ; ใช้ซ้ำได้ข้ามการขาย;
+  ติดตามตั้งแต่วันแรก ข้อมูลเริ่มต้น: จันทเขลม — แดง 3 จุด, นัด 1 จุด;
+  คลองพลู — นัด 1 จุด (ชื่อให้เจ้าของเป็นผู้ใส่)
+- MD-4 **การมอบหมายมีช่วงเวลา**: คนกรีด ↔ จุดชั่ง / โซน มี valid-from/to;
+  การวิเคราะห์ใช้การมอบหมายที่มีผล ณ เวลานั้น [Q94]
+- MD-5 **บุคคล**: คนกรีด (แดง, นัด), ครอบครัว/สมาชิก (DOC), ผู้จัดการสวน
+  (อาจารย์สมหวัง), ผู้จ่าย (เจ้าของ, น้อง), ผู้เช่า บุคคลอาจไม่มีการล็อกอิน
+- MD-6 **ผู้ซื้อ**: รายหลักหนึ่งราย เปลี่ยนได้; ค่าเริ่มต้นคือรายที่ใช้ล่าสุด
+- MD-7 **ค่าตั้งต้นเข่ง (Basket presets)** (ตั้งค่ากลุ่มฟาร์ม, D-6): น้ำหนักเข่ง
+  **สุทธิ** มาตรฐาน (50 กก., 60 กก., เพิ่มได้) และค่า **น้ำหนักภาชนะ (tare)**;
+  อย่างละหนึ่งค่าเป็นค่าเริ่มต้นของการขายใหม่ และเปลี่ยนได้รายการขาย/รายจุด
+- MD-8 **ส่วนแบ่งคนกรีด** รายคนกรีด มีช่วงเวลา **ค่าเริ่มต้น 50/50** (เจ้าของ /
+  คนกรีด) คิดจากมูลค่าขายรวม (gross) สัญญารายโซนแบบเดิมและฟิลด์ `basis`
+  ที่ไม่ได้ใช้ถูกเอาออก (D-12)
+- MD-9 **ตั้งค่าวันขาย**: โหมดตรวจศูนย์/tare (D-6), ระยะเวลากดค้าง (D-7),
+  เปิด/ปิดเสียง (D-8), ช่วงเวลาตรวจจับการนับซ้ำ (SYNC-6)
+
+## 6. โมดูล SALE — การบันทึกการขายและการชั่ง [SSOT §0.5, §4.3–4.4, §5, Q96–Q97, Q130–Q137]
+
+**MVP** หัวใจของผลิตภัณฑ์: ใช้ขณะยืน กลางแจ้ง มือเดียว และมักออฟไลน์
+หน้าที่คือทำให้หลงเลขเข่งได้ยาก [§5.3]
+
+### เริ่มและกำหนดรูปแบบการขาย
+- SALE-1 เริ่ม: **ฟาร์ม → บริบทโซน/คนกรีด → จุดชั่ง** แล้วชั่ง (Q130)
+  การขายหนึ่งครั้งครอบคลุม **หลายฟาร์ม** ได้ (ผู้ซื้อมารับหนึ่งครั้ง = การขาย
+  หนึ่งครั้ง) (D-9) และกี่จุดชั่งก็ได้ เลือก **ลำดับใดก็ได้** ต่างกันทุกการขาย
+  [§0.1]
+- SALE-2 หัวการขาย: วันที่, ผู้ซื้อ (ค่าเริ่มต้นคือรายล่าสุด), ฟาร์ม, เวลาเริ่มชั่ง
+  (ไม่บังคับ), ผู้จัดการสวน **เติมอัตโนมัติจากข้อมูลหลัก**, หมายเหตุ,
+  รูป/เอกสาร การขายเกิด **ที่สวน** เท่านั้น (กรณีขายที่ลานล้งแบบเดิมถูกตัดออก;
+  D-10) ไม่มีฟิลด์หัวหน้าคนงาน — คนกรีดมาจากจุดชั่ง
+- SALE-3 **ราคา ฿/กก. ใส่เองทุกการขาย** — ไม่ดึงจากการขายครั้งก่อนหรือจาก
+  ข้อมูลตลาด ใส่ได้ **ทุกเมื่อก่อนสรุปเงิน**; การชั่งไม่ต้องรอราคา (D-11)
+  มีโหมดราคาเดียว (฿/กก. ตรง ๆ); ตัด %DRC ออก
+- SALE-4 ยางของแดงและนัด **ไม่ปนกันเด็ดขาด** — ทุกน้ำหนักระบุได้ว่ามาจาก
+  จุดชั่งเดียว จึงเป็นของคนกรีดคนเดียว [Q96]
+- SALE-5 กองยางมีอยู่เฉพาะวันขาย; ไม่ใช่สต็อกระยะยาว [Q97]
+
+### ตรวจศูนย์/tare (D-6)
+- SALE-6 ก่อนชั่งที่จุดชั่ง แอปถามให้ **ตรวจศูนย์/tare** (ตาชั่งอ่านศูนย์;
+  ยืนยันน้ำหนักภาชนะ) ตั้งค่าได้: **ทุกจุด** (ค่าเริ่มต้น) · **เฉพาะจุดแรกของ
+  แต่ละฟาร์ม** · **ข้ามทั้งหมด** การข้ามถูกบันทึกไว้ในการขาย
+
+### การนับเข่ง
+- SALE-7 ตัวเลือกขนาดเข่ง: น้ำหนัก **สุทธิ** ค่าเริ่มต้นของการขาย (50 / 60 กก. …)
+  พร้อม tare ของภาชนะ; หน้าจอแสดงค่าที่ตาชั่งควรอ่านได้ (สุทธิ + tare)
+- SALE-8 เข่งเต็ม: **กดค้างสั้น ๆ (~0.5–1 วินาที, ตั้งค่าได้)** บันทึกเข่งเต็ม
+  หนึ่งเข่งตามน้ำหนักสุทธิที่เลือก (D-7) การแตะครั้งเดียว การปัด และการแตะ
+  หลายนิ้ว ไม่นับเด็ดขาด (ข้อค้นพบภาคสนามเดิม, 2026-08-03; S32)
+- SALE-9 เข่งไม่เต็ม: พิมพ์ **ค่าที่ตาชั่งอ่านได้**; สุทธิ = ค่าที่อ่าน − tare;
+  เก็บและแสดงทั้งสองค่า [carried]
+- SALE-10 **เลขเข่งกำหนดอัตโนมัติและต่อเนื่องตลอดทั้งการขาย** ข้ามจุดชั่ง
+  และข้ามฟาร์ม — ไม่เริ่มใหม่ต่อจุด [Q133–Q134]
+- SALE-11 **เข่งไม่เต็มที่ยังเปิดอยู่ (เข่งเชื่อม)**: เข่งไม่เต็มเปิดค้างไว้เป็น
+  ค่าเริ่มต้น เมื่อผู้ใช้ย้ายไป **จุดชั่งอื่นของคนกรีดคนเดิม** แอปถามว่า
+  **"เติมเข่ง N ต่อ"** (ต่อ) หรือ **"เริ่มเข่งใหม่"** (เริ่มใหม่ — เข่งที่เปิดอยู่
+  ปิดเป็นเศษ) แต่ละส่วนคงจุดชั่งของตัวเอง; แสดง
+  **"เข่ง 11 — (20 + 30) กก. = 50 กก."**; ยอดย่อยของแต่ละจุดรวมเฉพาะส่วน
+  ของตัวเอง [§5.2, D-13]
+- SALE-12 เข่งไม่เต็มต่อได้ **เฉพาะ** ที่จุดชั่งของ **คนกรีดคนเดิม** เท่านั้น
+  การย้ายไปจุดของคนกรีดคนอื่นจะปิดเข่งนั้นเป็นเศษก่อน
+- SALE-13 ปุ่ม **"จบเข่งแล้ว / เป็นเศษ"** ปิดเข่งไม่เต็มเป็นเศษสุดท้าย;
+  ไม่เสนอให้ต่ออีก; เลขถัดไปพร้อมใช้ [Q135]
+
+### หน้าจอชั่ง (D-8, D-17)
+- SALE-14 **โหมดผู้บันทึก (Recorder mode — ค่าเริ่มต้น, แนวตั้ง)** แสดงเด่นชัด:
+  เลขเข่งปัจจุบัน · จุดชั่งปัจจุบัน (และคนกรีด) · น้ำหนักเข่งไม่เต็มที่เปิดอยู่ ·
+  กก. สะสม · จำนวนเข่งที่เสร็จแล้ว · เลขเข่งถัดไป [§5.3]
+- SALE-15 **โหมดสาธารณะ (Public mode)** (แตะครั้งเดียวเพื่อสลับ; หมุนเป็น
+  แนวนอนได้): เลขเข่งใหญ่ที่สุดเท่าที่จอจะรองรับ ให้ผู้ซื้ออ่าน [carried
+  FR-9]
+- SALE-16 **เสียงพูดภาษาไทย** อ่านเลขเข่งทุกเข่ง (และเหตุการณ์เศษ/ปิดเข่ง) —
+  เป็นภาษาไทยเสมอ ทำงานออฟไลน์ ปิดได้; เสียงเสียไม่ขวางการนับเด็ดขาด
+  [carried FR-11]
+
+### การแก้ไขและการบันทึกย้อนหลัง
+- SALE-17 ย้อนกลับ (undo) เข่งล่าสุด (มีการยืนยัน) และแก้/ยกเลิก (void) เข่งหรือส่วนใดก็ได้;
+  ทุกการแก้ไขเก็บไว้ในประวัติ event [carried]
+- SALE-18 **บันทึกรวมรายจุดชั่ง** (D-14) สำหรับการชั่งที่ไม่ได้บันทึกสด (เช่น
+  โน้ตกระดาษของอาจารย์สมหวังเมื่อเจ้าของมาถึงช้า): **เข่งเต็ม N เข่ง + เศษ
+  กก.**; แอปกำหนดเลขเข่งต่อเนื่องให้; ทำเครื่องหมาย **"บันทึกย้อนหลัง"**;
+  แนบรูปกระดาษได้
+- SALE-19 รูปกองยาง ใบชั่ง หลักฐานเงินสด/โอน แนบกับการขายหรือจุดชั่งได้
+
+### สถานะการขาย [Q127–Q129]
+- SALE-20 **Draft → Completed** หรือ **Cancelled** (ผลทางธุรกิจ เก็บไว้เป็น
+  ประวัติ) การขายที่ Cancelled ยังเก็บเข่งไว้ แต่ไม่นับรวมในยอด
+- SALE-21 **การขายที่ Completed ยังแก้ได้โดยตรง** โดยเจ้าของคนใดก็ได้ ถ้าการแก้
+  เปลี่ยนตัวเลขเงินใด ๆ (ยอดคนกรีด ส่วนแบ่งเจ้าของ ยอดรวม) แอปจะขอ
+  **เหตุผลสั้น ๆ** (เลือกจากรายการหรือพิมพ์) และติดธงสถานะการจ่ายเงินที่
+  ได้รับผลกระทบให้ตรวจใหม่ (D-16)
+
+## 7. โมดูล SET — กระทบยอดและสรุปเงิน [SSOT §0.6, §4.5, §6, Q98–Q101]
+
+**MVP**
+- SET-1 ยอดรวมคำนวณอัตโนมัติ: รายเข่ง → จุดชั่ง → คนกรีด → ฟาร์ม → การขาย;
+  กก. รวม, จำนวนเข่ง, ยอดเงิน = ราคา × กก. [Q98]
+- SET-2 **ตรวจสอบครั้งเดียว หลังชั่งครบทุกจุด** (ไม่ตรวจรายกอง) [Q99]:
+  ยอดของเจ้าของวางเทียบข้างกับ กก. / ยอดเงิน **ที่ผู้ซื้อแจ้ง** (และจำนวนเข่ง
+  ถ้ามี) ไม่ถือว่าใบของผู้ซื้อถูกต้องเสมอ
+- SET-3 **เงินคำนวณจากเข่งที่บันทึกไว้เสมอ** (D-15) ถ้าไม่ตรงกัน เจ้าของเจาะลึก
+  จุดชั่ง → เข่ง → ส่วน และแก้เข่งที่ผิด ถ้ายังต่างอยู่ ปิดการขายเป็น
+  **Difference found** พร้อมเหตุผลได้; บันทึกส่วนต่างไว้ ไม่เกลี่ยแบบเงียบ ๆ
+- SET-4 หน้าสรุปเงิน [Q100]:
+  - **รายคนกรีด** (แดง, นัด แยกกัน): กก., ยอดขาย, ส่วนแบ่งคนกรีด,
+    หักค่าปุ๋ย, **เงินสดที่ต้องจ่าย**
+  - **เจ้าของ**: ส่วนแบ่งจากคนกรีดแต่ละคน, ส่วนแบ่งรวม, **โอนเข้าบัญชีธนาคาร**
+- SET-5 **การปัดเศษ** [§0.6, D-5]: เมื่อการแบ่งเกิดเศษสตางค์ แอปถามก่อนสรุปเงิน
+  — *ปัดเป็นบาทเต็มให้คนกรีดได้ประโยชน์* · *ให้เจ้าของได้ประโยชน์* ·
+  *ไม่ปัด (เก็บสตางค์)* — ค่าเริ่มต้นคือตัวเลือกล่าสุด ส่วนปรับจากการปัดเศษเก็บเป็น
+  บรรทัดแยกของตัวเอง ไม่ hard-code อะไร (แทนกฎที่สร้างไว้เดิมว่าเจ้าของปัดเศษ
+  และคนกรีดรับส่วนที่เหลือ)
+- SET-6 **สถานะแยกอิสระ** ไม่ใช่ธง "Paid" อันเดียว [Q101]: การตรวจสอบ
+  (Pending · Weight verified · Sale total verified · Difference found);
+  แดง ได้รับ/จ่ายเงินสดแล้ว; นัด ได้รับ/จ่ายเงินสดแล้ว; เจ้าของได้รับเงินโอนแล้ว;
+  ปิดการขายแล้ว
+- SET-7 บันทึกการขายเก็บ: วันที่, ราคา/กก., จำนวนเข่ง, กก. รวม, ยอดเงิน,
+  กฎส่วนแบ่ง, เงินสดให้คนกรีดแต่ละคน, เงินโอนให้เจ้าของ, ส่วนปรับจากการ
+  ปัดเศษ, การหักค่าปุ๋ยและยอดคงเหลือ, ผู้ซื้อ, สถานที่, เวลาเริ่ม, สื่อ,
+  สถานะการตรวจสอบ [§4.4]
+- SET-8 การเปลี่ยนราคาจากการต่อรอง / การปรับเป็นก้อน (FR-7.3 เดิม) **ไม่อยู่**
+  ใน V1 (D-11)
+
+## 8. โมดูล FERT — ปุ๋ย [SSOT §0.7, §4.6, §8]
+
+**MVP**
+- FERT-1 **การซื้อ**: ชนิด (เคมี / ขี้ไก่ / อื่น ๆ), จำนวน (กระสอบ), ราคา,
+  ร้าน, วันที่, ใครสั่ง, **ใครจ่าย** (→ ผู้จ่ายจริงและเงินที่ต้องคืนใน FIN),
+  ใบแจ้งหนี้/รูป ปกติซื้อมาใช้ทันที (ไม่มีสต็อก)
+- FERT-2 **แผน** (ไม่บังคับ): ชนิด, จำนวน, ช่วงเวลา, การแบ่งตามโซน/
+  คนงาน — ปกติเป็นแผนของอาจารย์สมหวัง ที่เจ้าของบันทึก; แผนเป็นค่าใช้จ่าย
+  Planned ใน FIN
+- FERT-3 **การแบ่ง** เป็นกระสอบรายคนงาน (โซนไม่บังคับ) ต้นทุนรายคนงานคิดตาม
+  จำนวนกระสอบที่แบ่งให้; ขยายกฎได้ภายหลัง [§8.3]
+- FERT-4 **ภาระ**: คนงานแต่ละคนรับ **50%** ของต้นทุนที่แบ่งให้; อีก 50%
+  ของเจ้าของเป็นค่าใช้จ่ายฟาร์ม
+- FERT-5 **บัญชีรายคนงาน ข้ามการขาย**: ภาระ, การหัก, การจ่ายอื่น ๆ,
+  **ยอดค้าง**, **แผนผ่อนชำระ** (ไม่บังคับ), ประวัติทั้งหมด
+- FERT-6 **หักตอนสรุปเงิน**: แอปเสนอยอดหักของการขายนี้ (งวดผ่อนหรือยอดค้าง
+  ทั้งหมด) แก้ได้ **ไม่เกินส่วนแบ่งของคนกรีด** ในการขายนั้น; ส่วนที่ขาด
+  **ยกไปงวดถัดไป** — เงินสดที่จ่ายไม่ติดลบเด็ดขาด (D-18) แทนการหักรายการขาย
+  แบบเดิม S29 (ซึ่งยอมให้ยอดจ่ายติดลบ และเจ้าของไม่รับต้นทุนเลย)
+
+---
+
+## 9. โมดูล OPS — งานในสวน [SSOT §15–21, §18, §37, Q86]
+
+**MVP** OPS ทั้งหมดทำงานออฟไลน์ [SSOT §34]
+
+### การตรวจสวนและการสังเกต
+- OPS-1 บันทึกการตรวจสวนแบบอิสระ: พิมพ์โน้ตและ/หรืออัดเสียง; เก็บโน้ต/
+  เสียงต้นฉบับไว้ [SSOT §17]
+- OPS-2 แนบรูป/วิดีโอ; เก็บ GPS ถ้ามี; ระบุที่ดิน / โซน / จุด (โซนไม่บังคับ)
+- OPS-3 (AI, เมื่อออนไลน์) จัดประเภทการสังเกตและเสนอฟิลด์แบบมีโครงสร้าง;
+  เจ้าของยืนยัน/แก้ ผลลัพธ์ AI ที่ยังไม่ยืนยันคงเป็น **AI suggested**
+  ไม่เป็นข้อเท็จจริง [SSOT §17, §21]
+- OPS-4 จากการสังเกต เจ้าของสร้างเหตุการณ์หรืองานได้ (เป็นการกระทำที่ชัดเจน)
+
+### สุขภาพต้นยาง
+- OPS-5 ประเมินสุขภาพด้วย **checklist มาตรฐาน** (สุขภาพโดยรวม, สภาพใบ,
+  ใบร่วง, ใบใหม่, โรค/แมลง, ความเสียหาย, น้ำ/ดิน, เรื่องที่เกี่ยวกับการกรีด)
+  และ **ฟิลด์กำหนดเอง**; checklist ตั้งค่าได้ตามฟาร์ม / โซน / ฤดู / ประเภท
+  การตรวจ [SSOT §20]
+- OPS-6 ภาพรวมระดับโซนและรายละเอียดระดับจุด เจาะลึกถึงรูป/GPS/ประวัติได้
+  [SSOT §19]
+- OPS-7 จำนวนต้น: ประมาณก่อน ยืนยันทีหลัง พร้อม **ประวัติการเปลี่ยนแปลง**
+  (ต้นที่เสีย, ปลูกใหม่) — ไม่เขียนทับ [SSOT §19]
+
+### เหตุการณ์ (Incidents)
+- OPS-8 บันทึกเหตุการณ์: วันที่/เวลา, ที่ดิน, โซน, จุด, GPS, ประเภท,
+  ความรุนแรง, รายละเอียด, พื้นที่/ต้นที่ได้รับผล, รูป/วิดีโอ, ผู้แจ้ง, การดำเนินการ
+  ที่ทำ, งานที่เกี่ยวข้อง, ค่าใช้จ่ายที่เกี่ยวข้อง, สถานะ [SSOT §15] ประเภท
+  ได้แก่ ฝนหนัก, ดินกัดเซาะ, ตลิ่งพัง, น้ำท่วม, น้ำขัง, ภัยแล้ง, ลมแรง,
+  ต้นยาง/ทุเรียนล้ม, โรคหลังสภาพอากาศชื้น, ดิน/ถนนเสียหาย, อื่น ๆ
+- OPS-9 เหตุการณ์มีได้แม้ **ไม่มีค่าใช้จ่ายเลย** และเก็บไว้ระยะยาว
+- OPS-10 **ไทม์ไลน์เหตุการณ์**: เหตุการณ์ติดตามผลตามวันที่ (พบ → แย่ลง →
+  หารือ → จ้างผู้รับเหมา → ซ่อมแล้ว) เชื่อมการสังเกต สื่อ งาน ค่าใช้จ่าย
+  สภาพอากาศ และการตรวจติดตามผล [SSOT §16]
+
+### GPS
+- OPS-11 GPS ไม่บังคับ ทั้งระดับที่ดิน โซน จุดตรวจ เหตุการณ์ และการสังเกต
+  เก็บ **ตำแหน่งที่สร้างบันทึก** แยกจาก **ตำแหน่งที่เหตุเกิดขึ้นจริง**;
+  การบันทึกจากที่อื่น (จากกรุงเทพฯ, จาก LINE) ต้องไม่ถูกบังคับให้มี GPS
+  [SSOT §18]
+
+### บันทึกบริบท / Farm Change Log
+- OPS-12 เจ้าของเพิ่มโน้ต/เหตุการณ์บริบทแบบข้อความอิสระได้ทุกเมื่อ (ฝนหนัก,
+  เรื่องคนงาน, นัดผู้ซื้อ, การซ่อม …) โน้ตป้อนเข้า Timeline, รายงาน, การเปรียบเทียบ
+  และ AI [SSOT Q86–Q87, Q92]
+
+### สื่อ
+- OPS-13 รูป วิดีโอ ใบเสร็จ ใบชั่ง ใบแจ้งหนี้ปุ๋ย เอกสารคนงาน หลักฐานเหตุการณ์
+  — แต่ละรายการเก็บวันที่/เวลา, แหล่งที่มา, entity ที่เกี่ยวข้อง, GPS เมื่อมี
+  [SSOT §37] บันทึกได้ออฟไลน์; อัปโหลดตอนซิงก์
+
+## 10. โมดูล TASK — งานและการแจ้งเตือน [SSOT §24–25, Q52–Q58]
+
+**MVP:** งานที่สร้างเอง, งานที่ระบบแนะนำและเจ้าของยืนยัน, การเตือนเอกสาร
+และการเตือนงานที่เลือกเปิดไว้ **Deferred:** คำแนะนำตามฤดูที่เรียนรู้เองเกินกว่า
+กฎง่าย ๆ
+
+- TASK-1 ฟิลด์ของงาน (ค่าเริ่มต้นที่แนะนำ, **ฟิลด์บังคับให้น้อยที่สุด**):
+  ชื่อ, ที่ดิน, โซน/จุด, เหตุผล/บริบท, บันทึกต้นทางที่เชื่อม
+  (การสังเกต/เหตุการณ์/เอกสาร/สภาพอากาศ/การวิเคราะห์), ผู้รับผิดชอบ, วันครบกำหนด
+  หรือช่วงเวลา, ความสำคัญ, ค่าใช้จ่ายประมาณ, ค่าใช้จ่ายจริง, สถานะ, หมายเหตุ,
+  ไฟล์แนบ บังคับเฉพาะชื่อ; ที่เหลือไม่บังคับทั้งหมด (ค่าเริ่มต้นที่สมเหตุสมผลตาม
+  SSOT "อย่าถามทุกรายละเอียด")
+- TASK-2 ระบบแนะนำขั้นตอนสถานะที่สมเหตุสมผล (เช่น To do → In
+  progress → Done / Not needed); เจ้าของไม่ต้องออกแบบเอง
+- TASK-3 **ไม่มีงานใดถูกสร้างโดยไม่มีการอนุมัติชัดเจนจากเจ้าของ**
+  คำแนะนำ (จากการสังเกต เหตุการณ์ สภาพอากาศ เอกสาร การวิเคราะห์ ฤดูกาล)
+  มีตัวเลือก **Create Task · Not needed · View more data** และอธิบายเหตุผล
+  [SSOT Q63]
+- TASK-4 การแจ้งเตือน **เลือกเปิดแยกตามงาน (opt-in per task)**; เอกสารแจ้งเตือนเสมอ
+  (DOC) ระบบอาจ *แนะนำ* ให้ตั้งเตือนได้; เจ้าของเป็นผู้ตัดสินใจ [Q53]
+- TASK-5 ผู้รับ: **เจ้าของเป็นผู้รับค่าเริ่มต้นของทุกการแจ้งเตือน**; เจ้าของ
+  เพิ่มอาจารย์สมหวังได้เป็นงาน ๆ / เรื่อง ๆ ไป; ไม่เพิ่มท่านโดยอัตโนมัติเด็ดขาด
+  [Q56]
+- TASK-6 ช่องทาง: push ในแอปและ LINE โดย LINE ขึ้นกับการตรวจสอบ API [Q57]
+- TASK-7 ความถี่: ระบบแนะนำตามประเภทการแจ้งเตือน แก้ภายหลังได้; เอกสาร
+  เตือนซ้ำจนกว่าจะจัดการ; งานทั่วไปไม่เตือนซ้ำเว้นแต่เลือกไว้; ตัดรายการซ้ำ
+  [Q58]
+
+## 11. โมดูล DOC — เอกสารคนงานและครอบครัว [SSOT §26, Q54–Q55]
+
+**MVP — ฟังก์ชันการเตือนเป็นข้อบังคับ**
+
+- DOC-1 โมเดล **ครอบครัว → สมาชิก → เอกสาร** สมาชิก: ชื่อ, ชื่อเรียก,
+  ความสัมพันธ์กับคนงานหลัก, วันเกิด/อายุเมื่อมีประโยชน์, บทบาทคนงานหรือ
+  ครอบครัว, หมายเหตุ ไม่ใช่ทะเบียนราษฎร์; ข้อมูลสมาชิกไม่ครบได้
+- DOC-2 เอกสาร: ประเภท (บัตรชมพู, หนังสือเดินทาง, วีซ่า, ประกันสุขภาพ,
+  เพิ่มได้), ผู้ถือ, วันออก (ถ้าทราบ), วันหมดอายุ, สถานะ, รูป/ไฟล์,
+  หมายเหตุการต่ออายุ, ผู้รับผิดชอบ, กำหนดการเตือน
+- DOC-3 เตือนก่อนหมดอายุ; ระยะเตือนล่วงหน้าค่าเริ่มต้นที่แนะนำ **90 / 60 /
+  30 / 7 วัน** แก้ได้; เตือนซ้ำจนกว่าจะจัดการ
+- DOC-4 วงจร: ใช้งานอยู่ → ใกล้หมดอายุ → เตือน → เจ้าของตัดสินใจ →
+  เสนองาน (ไม่บังคับ) → เจ้าของยืนยัน → เอกสารที่ต่ออายุแล้วเป็นฉบับปัจจุบัน;
+  **เก็บฉบับก่อนหน้าไว้ในประวัติ**
+- DOC-5 แอปไม่อนุมานสถานะทางกฎหมาย; กฎหมายต้องตรวจสอบจากแหล่งที่เชื่อถือได้
+  ก่อนสร้างตรรกะด้านการปฏิบัติตามกฎใด ๆ
+
+## 12. โมดูล INV — สต็อก [SSOT §9]
+
+**MVP**
+- INV-1 รายการสต็อก: ตอนนี้คือน้ำมันตัดหญ้าและยาฆ่าหญ้า; หมวดหมู่เพิ่มได้
+  วัสดุกรีดยางที่คนงานจ่ายเอง (กรด/น้ำ) ไม่ใช่สต็อกของเจ้าของ
+- INV-2 ธุรกรรมสต็อก: ซื้อ/รับเข้า, ใช้/เบิกออก, ตรวจนับ พร้อมวันที่,
+  จำนวน, หน่วย, ต้นทุน (ถ้าทราบ), ผู้แจ้ง
+- INV-3 ธงสต็อกต่ำ ตามเกณฑ์ที่เจ้าของตั้งรายรายการ; แสดงบนแดชบอร์ด
+  (ความจริง: คนงานบอกอาจารย์สมหวัง แล้วท่านบอกเจ้าของ — ผู้บันทึกคือเจ้าของ)
+
+## 13. โมดูล FIN — การเงินฟาร์ม [SSOT §10–13, §27–30, §42]
+
+**MVP:** ค่าใช้จ่าย, ผู้จ่ายจริง, เงินที่ต้องคืน, วงจรค่าใช้จ่าย, เงินเดือน, การจ่าย
+พิเศษ, การเดินทาง, แหล่งรายได้, มุมมองกระแสเงินสด/เงินสำรองพื้นฐาน
+**Deferred:** การพยากรณ์ขั้นสูงและวิธีคำนวณเงินสำรอง
+
+- FIN-1 **ห้ามรวมเป็นฟิลด์เดียว** [§42]: ค่าใช้จ่ายคืออะไร (หมวดหมู่), เป็นของ
+  ที่ดินใด, ใครจ่ายจริง, วงจร (Actual / Committed / Planned), ใครติดเงินใคร,
+  ยอดที่คืนแล้ว, ยอดคงเหลือ
+- FIN-2 วงจร: **Actual (เกิดจริง)** (เกิดขึ้นแล้ว + จ่ายแล้ว) · **Committed
+  (ผูกพันแล้ว)** (สั่งแล้ว ยังไม่จำเป็นต้องจ่าย) · **Planned/Forecast (วางแผน)**
+  (คาดว่าจะเกิด) Planned แสดงในการวางแผนเงินสด ไม่อยู่ในยอดเกิดจริงเด็ดขาด [§11]
+- FIN-3 ผู้จ่ายจริง: เจ้าของ · อาจารย์สมหวัง · น้องของเจ้าของ ·
+  คนงานกรีดยาง · เพิ่มได้
+- FIN-4 **เงินที่ต้องคืน / เงินค้าง**: เมื่อคนอื่นที่ไม่ใช่เงินของฟาร์มเป็นผู้จ่าย
+  จะสร้างรายการค้างจ่าย — ต้องคืนใคร, ค่าใช้จ่ายที่เชื่อม, ยอดเดิม,
+  การคืนเงิน (ทั้งหมด/บางส่วน/ผ่อน/ภายหลัง), ยอดคงเหลือ, วันที่, สถานะ
+  [§10.1–10.2] ค่าใช้จ่ายฟาร์มที่เจ้าของจ่ายเป็นค่าใช้จ่ายฟาร์มที่ต้องคืนเจ้าของ
+  ไม่ใช่รายจ่ายครัวเรือน
+- FIN-5 เงินเดือนผู้จัดการสวน: 15,000 บาท/เดือน ประจำ, เจ้าของจ่าย, แยกจาก
+  เงินที่ท่านสำรองจ่าย [§12]
+- FIN-6 การจ่ายพิเศษให้คนงาน (ช่วยเหลืออุบัติเหตุ, ช่วยเหลือทั่วไป, อาหาร/ของ,
+  อื่น ๆ) บันทึกแยกจากส่วนแบ่งการขาย 50% [§12]
+- FIN-7 การเดินทาง: วันที่, ต้นทาง/ปลายทาง, **วัตถุประสงค์เลือกได้หลายข้อ**,
+  ที่ดินที่เกี่ยวข้อง, ค่าใช้จ่าย (น้ำมัน, ทางด่วน, ที่พัก, อาหาร, อื่น ๆ),
+  ใบเสร็จ/รูป, หมายเหตุ บันทึกเป็นต้นทุนรวมก้อนเดียว; การแบ่งให้ที่ดิน
+  **ไม่บังคับ** และไม่แต่งขึ้นเอง [§13]
+- FIN-8 แหล่งรายได้: การขายยาง (จาก SET), ค่าเช่าตะเคียนทอง, ส่วนแบ่งกำไร/
+  ค่าเช่าทุเรียนคลองพลูในอนาคต; แท็กการใช้เงินที่ตั้งใจ (ค่าใช้จ่ายครอบครัว,
+  ประกัน, เงินสำรองฟาร์ม) [§30]
+- FIN-9 มุมมองกระแสเงินสดพื้นฐาน: เงินเข้า/ออกที่คาดไว้รายเดือน, สุทธิ,
+  ภาระที่จะมาถึง (เงินเดือน, Committed, Planned, เงินที่ต้องคืน) และตัวเลข
+  เงินสำรองที่ระบุสมมติฐานและแหล่งที่มา เจ้าของเป็นผู้กำหนดเงินสำรอง [§27–28]
+- FIN-10 บันทึกสัญญาเช่าทุเรียนเก็บเฉพาะสิ่งที่สัญญาระบุ; เงื่อนไขที่ไม่ทราบเป็น
+  Unknown [§14]
+
+## 14. โมดูล WX — สภาพอากาศ [SSOT §22–23, Q106]
+
+**MVP:** พยากรณ์ + เก็บสภาพอากาศจริงตามพิกัดฟาร์ม, การแจ้งเตือนตามกฎ →
+งานที่แนะนำ **Deferred:** การเชื่อม Windy ระดับใช้งานจริง
+
+- WX-1 สภาพอากาศผูกกับพิกัด GPS ของฟาร์ม (พิกัดให้เจ้าของใส่;
+  ตอนนี้ยังไม่ทราบ — ไม่แต่งขึ้นเอง)
+- WX-2 แยกชั้นผู้ให้บริการ (provider abstraction): ผู้ให้บริการข้อมูลย้อนหลังและ
+  พยากรณ์เปลี่ยนได้อิสระจากกัน อย่าถือว่า Windy Premium ให้สิทธิ์ใช้ API
+- WX-3 สภาพอากาศจริง/ย้อนหลัง **เก็บในฐานข้อมูลของแอปเอง** (เท่าที่สัญญา
+  อนุญาต); ไม่ปนพยากรณ์กับค่าจริงเด็ดขาด
+- WX-4 ตัวแปร: ปริมาณฝน, ฝนสะสม, จำนวนวันฝนตก, อุณหภูมิ, ความชื้น, ลม,
+  ฝนหนัก/พายุ, ช่วงแล้ง
+- WX-5 สภาพอากาศ → คำแนะนำตามกฎ/AI → เจ้าของเลือกว่าจะสร้างงานหรือไม่
+  (เช่น ฝนหนัก → ตรวจตลิ่ง/ทางระบายน้ำ/ถนน) ไม่ทำเงียบ ๆ เด็ดขาด
+
+## 15. โมดูล ANA — แดชบอร์ด ไทม์ไลน์ และการวิเคราะห์ [SSOT §31–33, Q59–Q61, Q70–Q109]
+
+**MVP:** มุมมองวันนี้, ไทม์ไลน์, กราฟพื้นฐานพร้อมช่วงเปรียบเทียบ, การเจาะลึก
+**Deferred:** ดีไซน์แดชบอร์ดขั้นสุดท้าย, การเชื่อมราคาตลาด
+
+- ANA-1 **หน้าแรก = "ตอนนี้มีอะไรที่ฉันควรรู้หรือควรจัดการ?"** — รายการเรียง
+  ตามความสำคัญ: ปัญหาเร่งด่วน, งานที่ถึงกำหนด, เอกสารใกล้หมดอายุ, เหตุการณ์ที่ยัง
+  เปิดอยู่, การแจ้งเตือนสภาพอากาศ, การขาย/ผลผลิตล่าสุด, รายการการเงิน (เงินที่
+  ต้องคืน, ค่าใช้จ่ายที่จะมาถึง), สต็อกต่ำ ยังไม่ล็อกเลย์เอาต์; ต้องเจาะลึกได้
+- ANA-2 **ไทม์ไลน์**: เรียงตามเวลา การขาย, เหตุการณ์สภาพอากาศ, ปุ๋ย,
+  การตรวจสวน, เหตุการณ์, งาน, ค่าใช้จ่าย, โน้ต, รูป, เอกสาร; แต่ละรายการ
+  ลิงก์ไปยังบันทึกของตัวเอง [Q60, Q84]
+- ANA-3 รายงาน/กราฟ เลือกตัวชี้วัด ช่วงเวลา ซูม เจาะลึก เปรียบเทียบ และเข้าถึง
+  ข้อมูลต้นทางได้ [Q76] มีมุมมองค่าเริ่มต้นที่สมเหตุสมผล
+- ANA-4 ช่วงเปรียบเทียบ: ค่าตั้งต้น (การขายครั้งก่อน, 3 การขายก่อนหน้า, เดือนก่อน,
+  ช่วงเดียวกันปีที่แล้ว, ตามฤดู) + ช่วงกำหนดเอง; ระบบแนะนำได้ เจ้าของเลือก
+  [Q61, Q78, Q102]
+- ANA-5 มิติ: ฟาร์ม, โซน, คนงาน, จุดชั่ง, การขาย, ช่วงเวลา, ปี
+  [Q73] การมอบหมายคนงาน→โซนมีช่วงเวลา และการวิเคราะห์ใช้การมอบหมายที่มีผล
+  ณ เวลานั้น [Q94]
+- ANA-6 KPI: ผลผลิต กก., **กก./ไร่** (ใช้พื้นที่ที่ถูกต้องตามประวัติ),
+  ราคา, รายได้, ต้นทุนต่อ กก. เมื่อข้อมูลรองรับ, ปุ๋ยเทียบผลผลิต,
+  ยอดเงินที่ต้องคืนคงเหลือ, รายได้เทียบรายจ่าย [§32, Q103]
+- ANA-7 **ระยะห่างการขาย** (จำนวนวันระหว่างการขาย) เป็นตัววัดบริบท; ไม่แสดงเป็น
+  จำนวนวันกรีดเด็ดขาด ระยะห่างที่ยาวให้ใส่เหตุผลแบบเร็ว (ฝน, สภาพสวน,
+  แรงงาน, หยุดตามฤดู, นัดผู้ซื้อ, ตั้งใจ, ไม่ทราบ, อื่น ๆ) + ข้อความอิสระ
+  [Q104–Q105]
+- ANA-8 กราฟราคาตลาดเทียบราคาขายของฟาร์ม มีโหมด **ค่าจริง (actual-value)** และ
+  **ดัชนี (indexed =100)** [Q107–Q108] — **Deferred** จนกว่าจะยืนยันแหล่ง
+  ราคาตลาด; กราฟประวัติราคาของฟาร์มเป็น MVP
+- ANA-9 ไม่นำเสนอสหสัมพันธ์ (correlation) ว่าเป็นเหตุและผลเด็ดขาด [Q88]
+
+## 16. โมดูล AI — ผู้ช่วย AI [SSOT §21, Q62–Q71, Q82–Q89, Q109]
+
+**MVP: พื้นฐาน** — อธิบายกราฟ/ตัวเลข, ตอบคำถามในแชต, แนะนำงาน;
+ออนไลน์เท่านั้น (AI ไม่อยู่ในเส้นทางสำคัญที่ต้องทำงานออฟไลน์เด็ดขาด)
+**Deferred:** การเฝ้าระวังความผิดปกติเชิงรุก, การเรียนรู้ความชอบ
+
+- AI-1 ผลลัพธ์แยก **Fact · Pattern/Correlation · Interpretation
+  · Recommendation · Unknown** เสมอ และอ้างอิงบันทึกต้นทาง (drill-through)
+- AI-2 ข้อมูลไม่พอ → ตอบ **"ไม่รู้ / ข้อมูลไม่เพียงพอ"** ระบุว่าขาดอะไร
+  และอะไรจะช่วยได้ [Q66, Q89]
+- AI-3 กราฟมีตัวเลือก **Explain · Trace · Ask follow-up** [Q109]
+- AI-4 แชตภาษาธรรมชาติ มีบริบทในบทสนทนา; ฐานข้อมูลคือแหล่งความจริง ไม่ใช่
+  ความจำของแชต; ถามกลับเมื่อกำกวม [Q67, Q69]
+- AI-5 แชต **เตรียม** การกระทำได้ (สร้าง/แก้งาน, การเตือน, การเปลี่ยนข้อมูล,
+  ผู้รับการแจ้งเตือน) — แสดงเป็น diff และทำจริงเฉพาะเมื่อเจ้าของยืนยันชัดเจน
+  [Q68]
+- AI-6 AI ไม่เปลี่ยนความชอบ/กฎแบบเงียบ ๆ เด็ดขาด; กฎที่เรียนรู้และเสนอมา
+  ต้องให้เจ้าของยอมรับ/ปฏิเสธ/แก้ [Q64]
+
+## 17. โมดูล INT — การเชื่อมต่อระบบอื่น
+
+ทั้งหมด **Deferred** ใน V1 แต่ออกแบบเผื่อไว้:
+- INT-1 ดึงข้อความ/รูป/วิดีโอ/เสียงของอาจารย์สมหวังจาก LINE → บันทึก
+  สถานะ **Needs Review** [§36] ต้องตรวจสอบ LINE Official Account / Messaging API
+  ก่อน
+- INT-2 สัญญาข้อมูล (data contract) กับ JotWai: รายได้ฟาร์ม, ค่าใช้จ่ายฟาร์ม,
+  เงินที่ต้องคืน, ค่าเช่า → JotWai [§29]
+- INT-3 แหล่งราคาตลาด (สัญลักษณ์ TradingView ยังไม่กำหนด — TBD) [§7]
+- INT-4 Windy / สิทธิ์การใช้งานของผู้ให้บริการสภาพอากาศ [§22]
+
+---
+
+## 18. ข้อกำหนดที่ไม่ใช่ฟังก์ชัน
+
+### NFR-1 แพลตฟอร์มและรูปแบบอุปกรณ์
+- โทรศัพท์ Android ก่อน (มือเดียว, ยืน, แดด, ใส่ถุงมือ); iOS ยังใช้ได้ผ่าน
+  Expo **แนวตั้งเป็นแนวหลัก**; เฉพาะโหมดสาธารณะของหน้าจอชั่งที่หมุนเป็น
+  แนวนอนได้ (D-17) แทนการล็อกแนวนอนแบบเดิม
+- **เว็บเป็นช่องทางใช้งานจริง** (D-19): แดชบอร์ด การเงิน รายงาน และ AI จาก
+  คอมพิวเตอร์/แท็บเล็ต และทำงานออฟไลน์ได้ด้วย (IndexedDB ไม่ใช่ localStorage)
+- **UI ภาษาไทยเท่านั้น** (D-20) เอา locale ภาษาอังกฤษที่สร้างใน S24 ออก;
+  เสียงพูดเป็นภาษาไทย ตัวเลขยังเป็นเลขอารบิก
+
+### NFR-2 ออฟไลน์ ความคงทนของข้อมูล และซิงก์
+- ไม่มีขั้นตอนใดใน MVP ที่ต้องรอเครือข่าย (AI และการดึงสภาพอากาศเป็นฟีเจอร์
+  ออนไลน์อย่างเดียวเท่านั้น และลดระดับการทำงานอย่างนุ่มนวล)
+- เข่งที่บันทึกแล้วต้องรอดเมื่อแอปถูกปิด, ล็อกจอ, บังคับปิด และเปิดใหม่
+- สื่อถูกเก็บเข้าคิวในเครื่องก่อน และ sync engine เป็นผู้อัปโหลด
+
+### NFR-3 ความน่าเชื่อถือและการตรวจสอบย้อนหลัง
+- ทุกตัวเลขเงินย้อนไปถึงเข่ง ราคา ส่วนแบ่ง การหัก และบรรทัดปัดเศษที่บันทึกไว้ได้
+  น้ำหนักเป็นกรัมจำนวนเต็ม เงินเป็นสตางค์จำนวนเต็ม; ปัดเศษเฉพาะที่ขั้นตอน
+  ปัดเศษที่ชัดเจน หรือเพื่อการแสดงผลเท่านั้น [carried]
+- ลำดับไม่ขึ้นกับนาฬิกาเครื่องอย่างเดียว; นาฬิกาผิดจะถูกติดธง แต่ไม่ขวางการทำงาน
+  [carried FR-12]
+
+### NFR-4 การใช้งานในภาคสนาม
+- อ่านได้ใต้แดดจัด (ธีมสว่างคอนทราสต์สูงเป็นค่าเริ่มต้นภาคสนาม);
+  สีไม่เป็นตัวบอกสถานะเพียงอย่างเดียว [carried design system]
+- พิมพ์ให้น้อยที่สุด; จำค่าเริ่มต้น; สถานะซิงก์ชัดเจน; ปุ่มกดใหญ่
+
+### NFR-5 ความปลอดภัยและความเป็นส่วนตัว
+- การแยกข้อมูลกลุ่มฟาร์มบังคับที่ฝั่งเซิร์ฟเวอร์ (security rules) ไม่ใช่แค่ใน UI
+- แยกสภาพแวดล้อม **dev** (CI, PR preview, seed data เท่านั้น) และ **prod**
+  (ข้อมูลสวนจริง); ลิงก์ preview สาธารณะเข้าถึงข้อมูล prod ไม่ได้เด็ดขาด
+- เอกสารคนงานและการเงินเป็นข้อมูลอ่อนไหว: เข้าถึงได้เฉพาะผ่านการเป็นสมาชิกกลุ่ม
+  ที่ยืนยันตัวตนแล้ว; URL ของสื่อเดาไม่ได้จากภายนอก
+
+### NFR-6 โครงสร้างพื้นฐานและค่าใช้จ่าย (กฎของเจ้าของ, 2026-10-02)
+- **Firebase แพ็กเกจ Blaze พร้อมการแจ้งเตือนงบประมาณ** (≈ $5/เดือน), region
+  asia-southeast1; Firestore เป็นฐานข้อมูล backend, Cloud Storage สำหรับสื่อ
+  (D-1) ค่าใช้จ่ายที่คาดไว้สำหรับผู้ใช้ 3 คน ≈ ฿0–30/เดือน
+- **PR preview บน Google Cloud Run**: ทุก PR ได้ลิงก์ preview; ลบเมื่อปิด PR
+  หรือ **7 วันหลัง deploy ล่าสุด**; เก็บ container image **ไม่เกิน 2 เวอร์ชัน
+  หรือ 30 วัน** (D-21)
+- **นาที GitHub Actions คืองบประมาณ**: CI ต้องเร็วและ fail-fast; ไม่รัน push+PR
+  ซ้ำกัน; การเปลี่ยนเฉพาะเอกสารข้าม build/e2e/preview
+- ออกแบบโดยละเอียด: `docs/architecture.md`
+
+<a id="mvp-acceptance-checklist"></a>
+## Checklist การยอมรับ MVP (MVP acceptance checklist)
+
+build ของ V1 พร้อมทดสอบในสวนจริงก็ต่อเมื่อผ่านทุกข้อด้านล่าง
+[SSOT checklist, ปรับตาม Decision log]
+
+**การเข้าใช้** — Google Login ใช้ได้ · LINE Login ทำเครื่องหมายว่าขึ้นกับการเชื่อมต่อ ·
+เจ้าของหลายคนใช้กลุ่มฟาร์มร่วมกัน · ผู้ใช้หนึ่งคนอยู่หลายกลุ่ม ·
+พฤติกรรมการเลือก (กลุ่มเดียว → เข้าเลย, หลายกลุ่ม → ให้เลือก) · ใช้ออฟไลน์ได้
+หลังล็อกอิน
+
+**ออฟไลน์ / ซิงก์** — สร้างการขายได้โดยไม่มีอินเทอร์เน็ต · บันทึกออฟไลน์ใช้ได้
+ทันที · เห็นสถานะ Pending Sync · ลองใหม่อัตโนมัติ · เชื่อมต่อใหม่แล้วซิงก์เอง ·
+ข้อมูลไม่หายเมื่อล้มเหลว · ปุ่มลองใหม่แสดงเมื่อเกิด error/conflict · 3 เครื่อง
+ใช้ชุดข้อมูลเดียวกัน · การแก้เงิน/จำนวนที่ขัดกันไม่ถูกเขียนทับแบบเงียบ ๆ
+· ส่งต่อ/รับช่วง ใช้ได้ออฟไลน์ · รวมข้อมูลด้วย QR ตอนปิดการขายใช้ได้ ·
+เข่งที่บันทึกเกือบพร้อมกันจากสองเครื่องขึ้นคำถามการนับซ้ำพร้อมไทม์ไลน์
+ช่วงทับกัน
+
+**การขาย** — เริ่ม ฟาร์ม → โซน/คนกรีด → จุดชั่ง · เริ่มจุดไหนก่อนก็ได้ · หลาย
+จุดชั่งและหลายฟาร์ม · เลขต่อเนื่องข้ามจุดชั่ง · ตรวจศูนย์/tare ตามการตั้งค่า ·
+กดค้างบันทึกเข่ง 50 กก. และ 60 กก. · ใส่ กก. เข่งไม่เต็ม (ค่าที่อ่าน − tare) ·
+เข่งไม่เต็มเปิดค้างไว้ · ถามต่อหรือเริ่มใหม่เมื่อเป็นคนกรีดคนเดิม · บังคับปิดเป็นเศษ
+เมื่อเปลี่ยนคนกรีด · "จบเข่งแล้ว / เป็นเศษ" · เข่งเชื่อมแสดง (20 + 30) ·
+โหมดผู้บันทึกแสดง 6 ตัวเลข · โหมดสาธารณะ + เสียงภาษาไทย · บันทึกรวม
+ทำเครื่องหมาย บันทึกย้อนหลัง · กก. รวมถูกต้อง · ยอดเงิน = ราคา × กก. · ใส่ราคา
+ได้ทุกเมื่อก่อนสรุปเงิน · Draft/Completed/Cancelled · Completed
+แก้ได้พร้อมเหตุผลเมื่อเงินเปลี่ยน · Soft Delete/Restore
+
+**สรุปเงิน** — กระทบยอดกับผู้ซื้อแบบวางเทียบข้างกัน · เจาะลึกถึงเข่ง ·
+ปิดเป็น Difference found พร้อมเหตุผลได้ · แดง/นัด แยกกัน · ส่วนแบ่งเจ้าของ
+รวมกัน · ถามการปัดเศษ จำตัวเลือกล่าสุด · สถานะการจ่ายเงินแยกกัน ·
+หักค่าปุ๋ยไม่เกินเพดานและยกยอดไปงวดถัดไป
+
+**งานในสวน** — ตรวจสวนแบบออฟไลน์ · เหตุการณ์ที่ไม่มีค่าใช้จ่าย · ไทม์ไลน์
+เหตุการณ์ · งานที่สร้างเอง · คำแนะนำ AI ต้องยืนยัน · สต็อก ·
+เอกสารคนงาน/ครอบครัว · การเตือนวันหมดอายุ · GPS เมื่อมี
+
+**การเงิน** — ค่าใช้จ่ายมีที่ดิน/หมวดหมู่ · ผู้จ่ายจริง · ยอดคงเหลือเงินที่ต้องคืน ·
+Actual/Committed/Planned · เงินเดือนผู้จัดการ · การจ่ายพิเศษ ·
+การเดินทางหลายวัตถุประสงค์โดยไม่บังคับแบ่ง · มุมมองกระแสเงินสด/เงินสำรองพื้นฐาน
+
+**การวิเคราะห์** — มุมมองวันนี้ · ไทม์ไลน์ · กราฟพื้นฐาน · เจาะลึก · มีประวัติ
+ให้ดู · เลือกช่วงเปรียบเทียบได้ · AI อ้างอิงแหล่งที่มา · AI บอกเมื่อ
+ข้อมูลไม่เพียงพอ
+
+## รายการที่ยังเปิดอยู่ (ไม่แต่งขึ้นเอง เจ้าของจะให้ข้อมูลเมื่อมี) [SSOT §39]
+
+พิกัดฟาร์ม · ชื่อ/ขอบเขตโซน · จำนวนต้นแต่ละฟาร์ม · เงื่อนไขสัญญาเช่าคลองพลู
+และ % ส่วนแบ่งกำไร · ประวัติราคาปุ๋ย · สัญลักษณ์ราคาตลาด
+· สิทธิ์ API ของ Windy · ผู้ให้บริการสภาพอากาศย้อนหลัง · กฎหมายเกี่ยวกับเอกสาร ·
+รายละเอียดผู้ซื้อ · ประวัติการขายในสมุด
+· กฎการเกิดซ้ำของงาน · เลย์เอาต์แดชบอร์ดขั้นสุดท้าย · สัญญาข้อมูล JotWai ·
+การสำรอง/ระยะเก็บข้อมูล (backup/retention) · วิธีคำนวณเงินสำรอง
+
+<a id="decision-log"></a>
+## บันทึกการตัดสินใจ (Decision log)
+
+เพิ่มต่อท้ายเท่านั้น ใหม่สุดอยู่ล่างสุด แต่ละรายการระบุข้อกำหนดที่เปลี่ยน
+
+- **2026-10-02 — PRD ปรับฐานใหม่ตาม [SSOT]** ขอบเขตขยายจาก "ทำและสรุปเงิน
+  การขายหนึ่งครั้ง" (v0.4) เป็น Farm Management MVP (การขาย + งานในสวน + การเงิน)
+  สิ่งที่ไม่ทำใน PRD v0.4 คือ "ไม่ใช่เครื่องมือด้านเกษตร/ปุ๋ย" และ "เฉพาะฝั่งการขาย"
+  ถูกกลับโดย SSOT Q111
+
+คำตอบของเจ้าของต่อการทบทวนความขัดแย้งเก่า→ใหม่, 2026-10-02/03 "เก่า" = PRD
+v0.4 / architecture v0.1 / epics 1–2 / stories S1–S32
+
+| # | หัวข้อ | เดิม | การตัดสินใจ | เปลี่ยน |
+|---|---|---|---|---|
+| D-1 | การคิดเงิน / backend | ไม่มี backend | **Firebase Blaze + แจ้งเตือนงบประมาณ; แยกโปรเจกต์ dev/prod; asia-southeast1** | NFR-5, NFR-6 |
+| D-2 | การล็อกอิน | ไม่มีการยืนยันตัวตน | **Google ก่อน; LINE ทีหลัง** (ขึ้นกับการเชื่อมต่อ) | ACC-1 |
+| D-3 | ซิงก์ด้วยมือ | ต้องมีปุ่มสั่งซิงก์เอง (CLAUDE.md, NFR-2 v0.4) | **อัตโนมัติ; ปุ่มลองใหม่เฉพาะเมื่อ error/conflict** | SYNC-2 |
+| D-4 | หลายเครื่อง | เครื่องเดียว ผู้ใช้คนเดียว | **ส่งต่อแบบออฟไลน์ "ส่งต่อ/รับช่วง" + รวมด้วย QR ตอนปิดการขาย; โหมดอิสระพร้อมตรวจจับการนับซ้ำ 7–10 วินาที + ไทม์ไลน์ช่วงทับกัน; Bluetooth หลัง MVP** | SYNC-5…8 |
+| D-5 | การปัดเศษ | Hard-code: เจ้าของปัดเศษ คนกรีดได้ส่วนที่เหลือ | **ถามทุกครั้ง; จำตัวเลือกล่าสุด** | SET-5 |
+| D-6 | Tare และการตรวจศูนย์ | Tare + ด่านตรวจก่อนทุกกอง (S9) | **ค่าตั้งต้นเข่งสุทธิและ tare เป็นการตั้งค่ากลุ่มฟาร์ม มีค่าเริ่มต้นรายการขาย; คงด่านตรวจรายจุดชั่ง ตั้งค่าให้แสดงเฉพาะจุดแรกของแต่ละฟาร์มหรือข้ามทั้งหมดได้** | MD-7, SALE-6/7 |
+| D-7 | ท่าทางการนับ | กดค้าง 1.5 วินาที (เจ้าของปฏิเสธการแตะ 2026-08-03) | **กดค้างสั้น ~0.5–1 วินาที, ตั้งค่าได้** | SALE-8 |
+| D-8 | เสียงและการแสดงผลระยะ 10 ม. | เสียงพูดภาษาไทย + ตัวเลขเต็มจออ่านได้จาก 10 ม. | **คงเสียงภาษาไทย; โหมดผู้บันทึก (6 ตัวเลข) เป็นค่าเริ่มต้น สลับเป็นโหมดสาธารณะได้** | SALE-14…16 |
+| D-9 | ขอบเขตการขาย | การขายเดียวข้ามหลายฟาร์ม (2026-08-03) | **คงไว้ — การขายหนึ่งครั้งครอบคลุมหลายฟาร์มได้** | SALE-1 |
+| D-10 | สถานที่ขายและบทบาท | สวนหรือลานล้ง; ต้องมีผู้จัดการ + หัวหน้าคนงาน | **สวนเท่านั้น; เติมผู้จัดการอัตโนมัติ; เอาฟิลด์หัวหน้าคนงานออก** | SALE-2 |
+| D-11 | ราคา | ก่อนเข่งแรก; โหมด %DRC; ราคาอ้างอิง S30; การปรับ FR-7.3 | **ทุกเมื่อก่อนสรุปเงิน; ตัด %DRC, S30 และการปรับจากการต่อรองออก** | SALE-3, SET-8 |
+| D-12 | การแบ่ง | สัญญารายโซน 50/60/70 + `basis` | **รายคนกรีด มีช่วงเวลา ค่าเริ่มต้น 50/50; เอา `basis` ออก** | MD-8 |
+| D-13 | เข่งเชื่อม | เข่งขาดปิดภายในกองเดียว | **เฉพาะคนกรีดคนเดิม; ที่จุดถัดไปเลือกต่อหรือเริ่มใหม่** | SALE-11/12 |
+| D-14 | บันทึกย้อนหลัง | บันทึกรวม (2026-08-11, ยังไม่สร้าง) | **คงไว้ รายจุดชั่ง** | SALE-18 |
+| D-15 | ยอดไม่ตรงกับผู้ซื้อ | ตรวจทานด้วยสายตาร่วมกัน | **แก้ที่เข่ง; เงินคำนวณจากเข่งเสมอ; Difference found + เหตุผล ถ้ายังแก้ไม่ได้** | SET-3 |
+| D-16 | การแก้การขายที่ Completed | เปิดใหม่ + พิมพ์เหตุผล + ยืนยัน 2 ครั้ง | **แก้ได้โดยตรง; ขอเหตุผลสั้น ๆ เฉพาะเมื่อเงินเปลี่ยน; ติดธงสถานะ** | SALE-21 |
+| D-17 | แนวหน้าจอ | ล็อกแนวนอน (ภายหลังปลดล็อก, S19) | **แนวตั้งเป็นหลัก; โหมดสาธารณะหมุนได้** | NFR-1 |
+| D-18 | การหักค่าปุ๋ย | หักรายการขาย เจ้าของไม่รับต้นทุน ยอดจ่ายติดลบได้ (S29) | **บัญชีข้ามการขาย; คนงานรับ 50%; หักไม่เกินส่วนแบ่ง ส่วนที่เหลือยกไป** | FERT-4…6 |
+| D-19 | เว็บ | ใช้ตรวจสอบเท่านั้น (localStorage) | **ช่องทางใช้งานจริง ทำงานออฟไลน์ (IndexedDB)** | NFR-1 |
+| D-20 | ภาษา | สลับไทย + อังกฤษ (S24) | **ภาษาไทยเท่านั้น** | NFR-1 |
+| D-21 | อายุ preview | — | **7 วันนับจาก deploy ล่าสุด; ลบเมื่อปิด PR** | NFR-6 |
+
+ถูกแทนที่โดยไม่ต้องถาม (SSOT ระบุชัดแล้ว): SaaS แบบ multi-tenant และ
+ผู้ซื้อเป็น tenant (→ กลุ่มฟาร์ม, SaaS สาธารณะเลื่อนออกไป); บทบาทเจ้าของ/
+ผู้จัดการ/หัวหน้าคนงาน (→ เจ้าของ 3 คนสิทธิ์เท่ากัน); นับรายกอง (→ เลขต่อเนื่อง);
+วงจรเปิด/ปิดของกองและโซน (→ Draft/Completed/Cancelled + สถานะ);
+โปรไฟล์ฟาร์มและที่เก็บรายชื่อคนในเครื่อง (→ ข้อมูลหลักที่ซิงก์)

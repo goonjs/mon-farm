@@ -7,7 +7,7 @@ its offline-first requirement.
 ## Why this shape
 
 The app must run standalone offline and sync to a backend when connectivity
-returns (automatically) or on demand (manually). That's an architectural
+returns (automatically, with a retry action on failure). That's an architectural
 concern, not a feature — so architecture (SDD) is written and agreed
 *before* implementation, and every story that touches data is checked against
 an explicit offline/sync gate rather than trusting it to come up naturally in
@@ -181,8 +181,8 @@ release's changelog will therefore only list commits made under this rule.
   **Back-merge** workflow (`hotfix-backmerge.yml`) carries `main` back into
   `dev` automatically; on conflict it opens a PR and fails loudly. Deploy Prod
   refuses to run while `main` has commits `dev` lacks.
-- Status: the workflows exist, but `scripts/deploy.sh` is not wired to a
-  hosting target yet (architecture "Deployment / environments"), so Deploy
+- Status: the workflows exist, but `scripts/deploy.sh` is not wired to
+  Firebase yet (ADR 0001; architecture "Deployment / environments"), so Deploy
   Prod currently fails at the deploy step by design — nothing reaches `main`.
 
 ## Status so far

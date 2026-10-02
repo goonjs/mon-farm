@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error -- plain .mjs module shared with the CI scripts
 import { bumpFor, changelog, lintCommit, nextVersion, parseSubject } from './conventional.mjs';
 
 describe('parseSubject', () => {
