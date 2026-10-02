@@ -1,6 +1,6 @@
 # Story E01-S01: เขียนการออกแบบ sync ใน architecture.md (SDD)
 
-Status: Review
+Status: Done
 
 ## Context
 
