@@ -4,15 +4,18 @@
 
 A web app built to also run as a mobile app, **offline-first**: the app must be
 fully usable standalone with no network, and sync local data to the backend
-database when connectivity returns or when the user triggers a manual sync.
+database automatically when connectivity returns (a retry action appears
+only when sync fails or a conflict needs the user — PRD D-3).
 This constraint shapes architecture decisions (local storage, sync engine,
 conflict resolution) and must be considered in every story that touches data.
 
 Tech stack: **Expo SDK 57** (managed) + expo-router + React Native 0.86 +
 React 19 + TypeScript strict. Local persistence is an append-only event log —
-expo-sqlite on device, localStorage on web. No backend yet. Phone, landscape
-locked. Full rationale and the rejected alternatives are in
-`docs/architecture.md`.
+expo-sqlite on device, localStorage on web (moving to IndexedDB). Backend:
+Firebase (Firestore + Cloud Storage, Blaze plan, separate dev/prod) — agreed
+2026-10-02, not yet built. Android phone first, portrait primary; web is a
+real surface. PR previews on Cloud Run. Full rationale and the rejected
+alternatives are in `docs/architecture.md`.
 
 ## Development process
 

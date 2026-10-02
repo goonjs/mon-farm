@@ -8,7 +8,7 @@ story's QA notes.
       assumed)
 - [ ] Local writes made while offline are queued/persisted correctly
 - [ ] Sync triggers correctly on reconnect (if in scope for this story)
-- [ ] Sync can also be triggered manually (if in scope for this story)
+- [ ] A failed sync or conflict shows a retry/resolve action (if in scope for this story)
 - [ ] Conflicting local/remote changes are resolved per the strategy in
       `docs/architecture.md` — not silently dropped or overwritten
       unexpectedly
