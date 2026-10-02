@@ -17,7 +17,7 @@ Status: Draft
 
 ## Acceptance criteria
 
-- [ ] event ใหม่ทุกตัวมี `id` ไม่ซ้ำทั่วโลกตามรูปแบบที่ S01 เลือก สร้างได้ออฟไลน์ (`src/lib/id.ts`)
+- [ ] event ใหม่ทุกตัวมี `id` ไม่ซ้ำทั่วโลกเป็น **UUIDv7** (RFC 9562) จาก CSPRNG สร้างได้ออฟไลน์ (`src/lib/id.ts`) — ห้าม fallback ไป `Math.random`; แหล่ง CSPRNG บน native ต้องผ่าน dependency gate (architecture §Local data layer)
 - [ ] `EventStore` (memory / native / web) ปฏิเสธ `id` ซ้ำที่เนื้อหาต่างกัน; append `id` เดิมเนื้อหาเดิมซ้ำ = ไม่เกิดอะไร (idempotent สำหรับ sync)
 - [ ] เลขลำดับต่อเครื่องเพิ่มขึ้นเสมอ ไม่ซ้ำแม้ force-close กลางการบันทึก (NFR-2)
 - [ ] `actor` = `{ userId, deviceId }`; deviceId สร้างครั้งเดียวต่อการติดตั้ง; `userId` ไม่เป็น optional เพราะไม่มี event ก่อน login (D-23)
