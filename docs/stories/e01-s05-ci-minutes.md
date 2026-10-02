@@ -1,6 +1,6 @@
 # Story E01-S05: CI ประหยัดนาที — ข้ามเอกสารล้วน, cache, e2e ใช้ dist เดิม, ประเมิน bun
 
-Status: Draft
+Status: Ready
 
 ## Context
 
@@ -20,7 +20,7 @@ Status: Draft
 - [ ] ลำดับ `changes → verify → e2e` ทีละขั้น, ขั้นแรกแดง → ขั้นต่อไปไม่รัน, ทุก job มี `timeout-minutes`
 - [ ] e2e ใช้ `dist/` ที่ verify build ไว้ (artifact) ไม่ build ซ้ำ
 - [ ] cache Playwright browsers ตามเวอร์ชันใน lockfile; รอบที่ cache hit ไม่ดาวน์โหลดใหม่
-- [ ] trigger ยังเป็น `push: main` + `pull_request` (ไม่รันซ้ำ)
+- [ ] trigger ยังเป็น `push: [dev, main]` + `pull_request` (PR รันครั้งเดียว; merge เข้า dev/main ตรวจซ้ำ)
 - [ ] ประเมิน bun: เทียบเวลา install กับ `npm ci` บน runner, ตรวจ dependency tree + `trustedDependencies`, เขียนข้อเสนอใน Dev notes
 - [ ] บันทึกนาที CI ก่อน/หลัง (median 3 รอบ) ใน Dev notes
 

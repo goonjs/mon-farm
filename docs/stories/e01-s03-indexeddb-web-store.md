@@ -1,6 +1,6 @@
 # Story E01-S03: ที่เก็บข้อมูลบนเว็บ localStorage → IndexedDB
 
-Status: Draft
+Status: Ready
 
 ## Context
 

@@ -1,6 +1,6 @@
 # Story E01-S15: สถานะข้อมูลรายฟิลด์ 6 แบบ + ป้ายใช้ซ้ำ
 
-Status: Draft
+Status: Ready
 
 ## Context
 

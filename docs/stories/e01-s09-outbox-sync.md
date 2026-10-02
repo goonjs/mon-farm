@@ -1,6 +1,6 @@
 # Story E01-S09: sync อัตโนมัติ — outbox ส่งขึ้น + ดึงลง
 
-Status: Draft
+Status: Ready
 
 ## Context
 

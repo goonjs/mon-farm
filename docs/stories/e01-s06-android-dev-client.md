@@ -1,6 +1,6 @@
 # Story E01-S06: รันบน Android จริงครั้งแรก (dev client)
 
-Status: Draft
+Status: Ready
 
 ## Context
 

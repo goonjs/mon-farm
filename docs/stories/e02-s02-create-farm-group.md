@@ -1,6 +1,6 @@
 # Story E02-S02: สร้างกลุ่มฟาร์ม + กลุ่มเดียวเข้าเลย
 
-Status: Draft
+Status: Ready
 
 ## Context
 
