@@ -443,7 +443,7 @@ export function HoldStage({
           letterSpacing: fontSize * t.font.tracking.tight,
           lineHeight: fontSize,
           fontSize,
-          color: t.color.ink,
+          color: t.color.numeral,
         }}
       >
         {count}

@@ -26,3 +26,15 @@ tools: Read, Grep, Glob, Bash, Edit, Write
 
 ## Experience log (append; newest last)
 - 2026-10-03 — Hired to adopt the FarmMate brand tokens and drafts 0.1/0.2.
+- 2026-10-03 — FarmMate adoption. Lessons: (1) brand status hues are almost
+  always mid-lightness and fail as text — keep the hue, search lightness in
+  HSL against EVERY ground the colour will sit on (incl. its own sunk tint),
+  and aim above the floor (≥5.5) for sun margin; record before/after ratios.
+  (2) Give the public numeral its own token (`numeral`) so brand changes to
+  `ink` can never weaken the count; raise its CI floor (15:1). (3) Alias, don't
+  rename: add the brand's scale names and remap legacy names to the nearest
+  step, so src/ keeps compiling. (4) Store shadows as {y, blur, rgba} so RN and
+  CSS both consume them; record conflicting brand rules as tokens-not-applied
+  plus an owner question rather than applying silently. (5) This worktree had
+  no node_modules — typecheck/lint/jest/vitest could not run without an
+  install, which is gated; check for it first and report it up front.

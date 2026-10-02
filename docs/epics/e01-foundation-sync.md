@@ -19,6 +19,9 @@ PRD: SYNC, NFR-2/3/5/6 · architecture.md หัวข้อ "2026-10-02 Directi
 - CI: รันเฉพาะ push main + PR, เอกสารล้วนข้าม, verify → e2e → preview, cache browser
 - Cloud Run preview ต่อ PR; ลบเมื่อปิด PR + ลบเองหลัง 7 วัน; เก็บ image ไม่เกิน 2 / 30 วัน
 - รันบน Android จริงครั้งแรก (dev client)
+- ฝัง font Noto Sans Thai (OFL) ผ่าน expo-font + วัดขนาดแอป
+- ชุดไอคอนเส้น open-licence (แนะนำ @expo/vector-icons) — ตรวจ dependency ก่อน
+- preview A/B: card มีเงา+เส้น vs แบน+เส้น กลางแดด
 - ประเมินใช้ bun เป็นตัวติดตั้งใน CI (เร็วกว่า; ต้องตรวจ dependency tree ใหม่ + trustedDependencies)
 
 ## ไม่รวม

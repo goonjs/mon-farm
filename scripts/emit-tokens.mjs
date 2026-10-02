@@ -29,6 +29,8 @@ const UNITS = [
   ['space', 'px'],
   ['radius', 'px'],
   ['border', 'px'],
+  ['layout', 'px'],
+  ['shadow', 'px'],
   ['font.size', 'px'],
   ['font.tracking', 'em'],
   ['bezel', 'px'],
