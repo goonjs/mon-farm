@@ -34,7 +34,7 @@ function run(args: string[], env: Record<string, string> = {}) {
   return spawnSync('bash', [script, ...args], {
     cwd: work,
     encoding: 'utf8',
-    env: { PATH: `${bin}:/usr/bin:/bin`, HOME: work, ...env },
+    env: { PATH: `${bin}:/usr/bin:/bin`, HOME: work, ...env } as unknown as NodeJS.ProcessEnv,
   });
 }
 
