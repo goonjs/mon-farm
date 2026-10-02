@@ -17,7 +17,7 @@ PRD: SYNC, NFR-2/3/5/6 · architecture.md หัวข้อ "2026-10-02 Directi
 - ลบแบบกู้คืนได้ (Soft Delete) / กู้คืน เป็น event; เก็บที่มาของข้อมูล
 - คิวรูป/วิดีโอ → Cloud Storage
 - CI: รันเฉพาะ push main + PR, เอกสารล้วนข้าม, verify → e2e → preview, cache browser
-- Cloud Run preview ต่อ PR; ลบเมื่อปิด PR + ลบเองหลัง 7 วัน; เก็บ image ไม่เกิน 2 / 30 วัน
+- Firebase Hosting preview channel ต่อ PR (โปรเจกต์ dev); หมดอายุ 7 วัน + ลบเมื่อปิด PR (ADR 0001)
 - รันบน Android จริงครั้งแรก (dev client)
 - ฝัง font Noto Sans Thai (OFL) ผ่าน expo-font + วัดขนาดแอป
 - ชุดไอคอนเส้น open-licence (แนะนำ @expo/vector-icons) — ตรวจ dependency ก่อน

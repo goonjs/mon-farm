@@ -22,9 +22,9 @@ Decision log D-1…D-21):
 | Handoff | `handoff`/`claim` events; QR payload carries the sale's event delta at close; duplicate detection on merge (7–10 s window, basket number cross-check) | PRD SYNC-5…7. |
 | Web store | IndexedDB replaces localStorage | Web is now a real surface (D-19); localStorage ~5 MB, whole-blob writes, no media. |
 | Media | Local file queue → Cloud Storage via the outbox | Offline capture. |
-| Auth | Firebase Auth: Google now; LINE later via custom token from a small Cloud Run endpoint (or OIDC if a spike passes); `linkWithCredential` for one user | LINE is not a built-in provider. |
+| Auth | Firebase Auth: Google now; LINE later via custom token from a small server endpoint (Cloud Functions / Cloud Run) (or OIDC if a spike passes); `linkWithCredential` for one user | LINE is not a built-in provider. |
 | Orientation | Portrait primary; weighing public mode may rotate | D-17; `app.json` is already `default` (S19). |
-| PR previews | GitHub Actions → `expo export` → nginx image → **one Cloud Run service per PR** (`mon-farm-pr-N`, min 0 / max 1), Workload Identity Federation (no JSON keys), points at the **dev** Firebase project. Deleted on PR close + daily sweep of services whose last deploy is > 7 days old. Artifact Registry cleanup: keep 2 most recent, delete older than 30 days. | Owner rule (2026-10-02). |
+| PR previews | **Firebase Hosting preview channels** (ADR 0001) in the **dev** project: `expo export` → `firebase hosting:channel:deploy pr-N --expires 7d`; channel deleted on PR close; no container images to retain. *Superseded 2026-10-03: the earlier Cloud Run + Artifact Registry design (PRD D-22).* | ADR 0001; owner rule (7-day previews) |
 | CI minutes | Trigger `push: main` + `pull_request` only (today every PR runs twice); docs-only changes skip heavy jobs via a cheap `changes` gate; graph `changes → verify → e2e → preview`, sequential, each with `timeout-minutes`; cache Playwright browsers; e2e reuses the built `dist/`. | Owner rule: save minutes, fail fast. |
 
 Risks carried: native has never run on a device (top risk with Android-first);
@@ -233,8 +233,9 @@ Both are web-only and documented where they are read:
 Two long-lived branches, two environments with separate domains: `dev`
 (default branch, daily-use MVP environment) and `main` (production). Release
 flow is in `docs/process.md` ("Branches and releases"). **Hosting is Firebase Hosting**
-(one project, a `dev` site and a `prod` site, PR preview channels with 7-day
-expiry) — see `docs/adr/0001-firebase-hosting.md`. It is decided but **not
+(**two projects** — `dev` hosts the `dev` site and PR preview channels with
+7-day expiry over test data; `prod` hosts the `prod` site over real data;
+Blaze — PRD D-22) — see `docs/adr/0001-firebase-hosting.md`. It is decided but **not
 wired yet**: `scripts/deploy.sh` fails closed until the project, domains and
 deploy credential exist. Locally,
 `npm run build:web` produces a static `dist/`. No native build has

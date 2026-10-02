@@ -1,6 +1,6 @@
 # ADR 0001 — Host the web build on Firebase Hosting
 
-- **Status:** Accepted (owner, 2026-10-03)
+- **Status:** Accepted (owner, 2026-10-03); **amended 2026-10-03** — two projects on Blaze (see below)
 - **Deciders:** owner; drafted by the lead agent
 - **Related:** `docs/architecture.md` ("Deployment / environments"),
   `docs/process.md` ("Branches and releases")
@@ -50,3 +50,19 @@ from GitHub Actions via `scripts/deploy.sh <env>`; Deploy Prod calls it with
 2. Create a deploy credential and store it as a GitHub secret (the agent
    cannot and should not create it).
 3. Wire `scripts/deploy.sh` and dev auto-deploy, then confirm with a real run.
+
+## Amendment, 2026-10-03 — two projects, Blaze
+
+Owner decision (PRD D-22), reconciling this ADR with PRD D-1:
+
+- **Two Firebase projects**, not one: **`dev`** hosts the `dev` site and all PR
+  preview channels, over test/seed data only; **`prod`** hosts the `prod` site
+  over real farm data. A public preview can therefore never read or write
+  production data (PRD NFR-5).
+- **Blaze plan with a budget alert** on both: Cloud Storage for media, LINE
+  login, scheduled reminders and any server code need billing (PRD D-1). The
+  Spark transfer-cap consequence above no longer applies.
+- Follow-up 1 becomes: create the two projects, one site each, and choose the
+  two domains. Follow-up 2 needs one deploy credential per project.
+- Cloud Run per-PR previews (the owner's general rule for other repos) are
+  not used in this repo; there are no container images to retain.

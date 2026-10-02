@@ -14,7 +14,7 @@ React 19 + TypeScript strict. Local persistence is an append-only event log —
 expo-sqlite on device, localStorage on web (moving to IndexedDB). Backend:
 Firebase (Firestore + Cloud Storage, Blaze plan, separate dev/prod) — agreed
 2026-10-02, not yet built. Android phone first, portrait primary; web is a
-real surface. PR previews on Cloud Run. Full rationale and the rejected
+real surface. Hosting and PR previews on Firebase Hosting (ADR 0001). Full rationale and the rejected
 alternatives are in `docs/architecture.md`.
 
 ## Development process
