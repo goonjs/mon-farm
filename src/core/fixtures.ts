@@ -15,20 +15,67 @@ export class LogBuilder {
   private seq = 0;
   private ts = 1_770_000_000_000;
   private mono = 0;
+  private deviceSeqs = new Map<string, number>();
   private lastDeductionIdValue: string | undefined;
 
   /**
    * Defaults to a fixed id so existing unit tests are unaffected. e2e fixtures
    * pass a real sale id here so the events they seed carry the same id the
    * route/store actually key by, rather than a fixture placeholder.
+   *
+   * `deviceId` is the device that records the following events; `on()`
+   * switches it mid-log to model a second phone.
    */
-  constructor(private saleId: string = DEFAULT_SALE_ID) {}
+  constructor(
+    private saleId: string = DEFAULT_SALE_ID,
+    private deviceId: string = 'dev-A',
+  ) {}
+
+  /**
+   * Event ids are deterministic rather than UUIDv7 so fixtures stay
+   * reproducible; they are unique per (sale, device, deviceSeq), which is all
+   * the store and projection rely on.
+   */
+  private idFor(deviceSeq: number): string {
+    return `${this.saleId}/${this.deviceId}/${deviceSeq}`;
+  }
 
   private base() {
+    const deviceSeq = (this.deviceSeqs.get(this.deviceId) ?? 0) + 1;
+    this.deviceSeqs.set(this.deviceId, deviceSeq);
     this.seq += 1;
     this.ts += 1_000;
     this.mono += 1_000;
-    return { saleId: this.saleId, seq: this.seq, ts: this.ts, mono: this.mono, actor: 'somchai' };
+    return {
+      id: this.idFor(deviceSeq),
+      saleId: this.saleId,
+      seq: this.seq,
+      deviceSeq,
+      ts: this.ts,
+      mono: this.mono,
+      actor: { userId: 'user-somchai', deviceId: this.deviceId },
+    };
+  }
+
+  /** Records the following events on another device. */
+  on(deviceId: string): this {
+    this.deviceId = deviceId;
+    return this;
+  }
+
+  /**
+   * An independent copy recording on `deviceId` from here on — two phones
+   * that shared this log and then went offline.
+   */
+  fork(deviceId: string): LogBuilder {
+    const copy = new LogBuilder(this.saleId, deviceId);
+    copy.events = [...this.events];
+    copy.seq = this.seq;
+    copy.ts = this.ts;
+    copy.mono = this.mono;
+    copy.deviceSeqs = new Map(this.deviceSeqs);
+    copy.lastDeductionIdValue = this.lastDeductionIdValue;
+    return copy;
   }
 
   sys(payload: SysPayload): this {
@@ -60,12 +107,12 @@ export class LogBuilder {
     return this;
   }
 
-  void(pileId: string, targetSeq: number, reason = 'mistap'): this {
+  void(pileId: string, targetId: string, reason = 'mistap'): this {
     this.events.push({
       ...this.base(),
       kind: 'correction',
       pileId,
-      targetSeq,
+      targetId,
       mode: 'void',
       reason,
     });
@@ -111,9 +158,9 @@ export class LogBuilder {
     return this;
   }
 
-  /** The seq the next pushed event will get — for targeting a void. */
-  nextSeq(): number {
-    return this.seq + 1;
+  /** The id the next pushed event will get — for targeting a void. */
+  nextId(): string {
+    return this.idFor((this.deviceSeqs.get(this.deviceId) ?? 0) + 1);
   }
 
   build(): SaleEvent[] {

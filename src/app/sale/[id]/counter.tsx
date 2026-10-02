@@ -25,6 +25,7 @@ import { ShortBasketPanel } from '../../../components/ShortBasketPanel';
 import { ZeroTareGate } from '../../../components/ZeroTareGate';
 import { ZonePileSwitcher } from '../../../components/ZonePileSwitcher';
 import { canCount, canReopenPile, lastAnnounceOk, pilesStillCounting } from '../../../core/project';
+import { compareEvents } from '../../../core/order';
 import { formatBaht, formatKg } from '../../../core/settle';
 import { basketNetG, lastLiveBasket, liveBaskets, pileTotals, saleTotals, zoneTotals } from '../../../core/totals';
 import type { BasketEvent, Pile, SaleEvent, SaleState, Zone } from '../../../core/types';
@@ -131,7 +132,7 @@ export default function CounterScreen() {
     append({
       kind: 'correction',
       pileId: pile.id,
-      targetSeq: lastBasket.seq,
+      targetId: lastBasket.id,
       mode: 'undo-last',
       reason: msg('counter.mistapReason'),
     });
@@ -816,25 +817,40 @@ function PilePanel({
 
 function LogPanel() {
   const { events } = useSale();
-  const live = new Set(liveBaskets(events).map((b) => b.seq));
+  const live = new Set(liveBaskets(events).map((b) => b.id));
+  // A correction names its target by id; the log shows the target's `#seq`.
+  const seqOf = new Map(events.map((e) => [e.id, e.seq]));
 
   // Newest first. Capped: a 400-basket log does not need to mount all at once,
   // and the log is for checking recent work, not archaeology.
-  const recent = [...events].sort((a, b) => b.seq - a.seq).slice(0, 60);
+  const recent = [...events].sort((a, b) => compareEvents(b, a)).slice(0, 60);
 
   return (
     <ScrollView style={{ flex: 1 }} testID="log">
       {recent.map((e) => (
-        <LogRow key={e.seq} event={e} voided={(e.kind === 'accept' || e.kind === 'short') && !live.has(e.seq)} />
+        <LogRow
+          key={e.id}
+          event={e}
+          targetSeq={e.kind === 'correction' ? seqOf.get(e.targetId) : undefined}
+          voided={(e.kind === 'accept' || e.kind === 'short') && !live.has(e.id)}
+        />
       ))}
     </ScrollView>
   );
 }
 
-function LogRow({ event: e, voided }: { event: SaleEvent; voided: boolean }) {
+function LogRow({
+  event: e,
+  targetSeq,
+  voided,
+}: {
+  event: SaleEvent;
+  targetSeq: number | undefined;
+  voided: boolean;
+}) {
   const t = useTheme();
   const msg = useT();
-  const { mark, colour, body } = describe(e, t, msg);
+  const { mark, colour, body } = describe(e, t, msg, targetSeq);
 
   return (
     <View
@@ -875,7 +891,12 @@ function LogRow({ event: e, voided }: { event: SaleEvent; voided: boolean }) {
  * matters more here than anywhere else on the screen: this is the record two
  * parties read back when they disagree.
  */
-function describe(e: SaleEvent, t: ReturnType<typeof useTheme>, msg: Translate) {
+function describe(
+  e: SaleEvent,
+  t: ReturnType<typeof useTheme>,
+  msg: Translate,
+  targetSeq: number | undefined,
+) {
   switch (e.kind) {
     case 'accept':
       return { mark: '✓', colour: t.color.accept, body: msg('log.accept', { weight: formatKg(e.netG) }) };
@@ -899,7 +920,7 @@ function describe(e: SaleEvent, t: ReturnType<typeof useTheme>, msg: Translate) 
       return {
         mark: '↩',
         colour: t.color.inkSoft,
-        body: msg('log.correction', { seq: e.targetSeq, reason: e.reason }),
+        body: msg('log.correction', { seq: targetSeq ?? '?', reason: e.reason }),
       };
     case 'sys':
       return { mark: '·', colour: t.color.inkSoft, body: sysLabel(e.payload, msg) };

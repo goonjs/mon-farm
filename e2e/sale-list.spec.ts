@@ -55,14 +55,14 @@ test('settlement has a way back to the list — and from there, to a new sale', 
   await expect(page.getByTestId(`sale-${saleId}`)).toBeVisible();
 
   await page.getByTestId('new-sale').click();
-  await expect(page).toHaveURL(/\/sale\/sale-[a-z0-9]+\/setup$/);
+  await expect(page).toHaveURL(/\/sale\/sale-[0-9a-f-]{36}\/setup$/);
 });
 
 test('starting a new sale navigates to a fresh, unrecorded setup screen', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('new-sale').click();
 
-  await expect(page).toHaveURL(/\/sale\/sale-[a-z0-9]+\/setup$/);
+  await expect(page).toHaveURL(/\/sale\/sale-[0-9a-f-]{36}\/setup$/);
   // Nothing has been saved for it yet, so start-counting is disabled.
   await expect(page.getByTestId('start-counting')).toBeDisabled();
 

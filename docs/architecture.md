@@ -227,6 +227,14 @@ event มีสองตระกูล และ registry ใน `src/core/merg
 `correction.targetSeq` ของ v0.4 กลายเป็น change ที่ชี้ `targetId`; `sys` payload ของการขายถูกจัดเข้า registry
 ใน E01-S02 การออกแบบโมเดลการขายใหม่ทั้งชุดอยู่ใน E04-S01
 
+**ช่วงเปลี่ยนผ่าน (E01-S02 → E04-S01)**: event การขายของ v0.4 ได้ `id`, `deviceSeq` และ `actor` ใหม่แล้ว แต่ยังไม่มี
+`groupId`/`targetId`/`baseEventId` (E02-S02 / E04-S01) `correction` ชี้เข่งด้วย **`targetId` = id ของ event เข่ง**
+แล้ว (ไม่ใช่ `seq`) เพราะสองเครื่องที่ออฟไลน์อาจได้ `seq` ต่อการขายเลขเดียวกัน `seq` จึงยังอยู่แต่ไม่ unique และ
+ลำดับการ fold คือ `(seq, deviceId, deviceSeq, id)` (`src/core/order.ts`) ไม่อ่าน `ts` ตัวนับ `deviceSeq` มีตัวเดียวทั้งแอป
+(`src/store/device-clock.ts`) ไม่ใช่ต่อหน้าจอการขาย `userId` เป็นค่าแทน
+`'pre-login'` จนกว่า E02-S01 จะมี login (`src/store/session.ts`) เว็บยังเป็น localStorage ภายใต้คีย์ `mon-farm-v1:*`
+จนถึง E01-S03
+
 **UUIDv7 (RFC 9562, เจ้าของเลือก 2026-10-03)**: เป็นมาตรฐาน IETF (ULID ไม่ใช่) id ที่สร้างใกล้เวลากันเรียงใกล้กัน
 ทำให้ index ของ SQLite/IndexedDB มี locality ดีและ debug ง่าย เขียน generator เองราว 20 บรรทัดใน
 `src/lib/id.ts` ไม่ต้องใช้ library uuid **ห้ามใช้ส่วนเวลาใน id เรียงหรือตัดสินอะไร** เพราะมาจากนาฬิกาเครื่อง
@@ -236,8 +244,9 @@ event มีสองตระกูล และ registry ใน `src/core/merg
 - **เว็บ**: เบราว์เซอร์ที่รองรับมี `crypto.getRandomValues` ทุกตัว และ Vitest/Jest บน Node มี `globalThis.crypto`
   — ไม่ต้องเพิ่ม dependency
 - **native (RN 0.86 / Hermes)**: Hermes ไม่มี global `crypto` (ข้อมูลจากแหล่งรอง — ยืนยันบนเครื่องจริงใน
-  E01-S06) จึง **ต้องขออนุมัติ dependency ตาม gate** สำหรับแหล่ง CSPRNG บน native; E01-S02 เสนอตัวเลือกพร้อม
-  ผลตรวจ เอกสารนี้ไม่เลือกให้
+  E01-S06) จึงใช้ **`expo-crypto`** (`getRandomValues`, first-party Expo, ไม่มี dependency ย่อย) — เจ้าของอนุมัติ
+  ตาม dependency gate 2026-10-03 (E01-S02) อยู่ใน `src/lib/random.native.ts` เท่านั้น เว็บ/เทสต์ใช้
+  `src/lib/random.ts`
 
 **`deviceId` + `deviceSeq`**: `deviceId` เป็น UUIDv7 ที่สร้างครั้งเดียวต่อการติดตั้ง (เว็บ = ต่อ browser profile)
 เก็บใน `meta` ส่วน `deviceSeq` เพิ่ม **ใน transaction เดียวกับการ insert** จึงไม่ซ้ำและไม่ถูกใช้ซ้ำแม้ถูก
@@ -270,7 +279,7 @@ CREATE INDEX events_sale   ON events(group_id, sale_id);
 -- ไม่มี UNIQUE (device_id, device_seq) ทั้งตาราง: ความไม่ซ้ำของ seq บังคับใน transaction ของ append (เฉพาะแถวของเครื่องนี้)
 
 CREATE TABLE meta        (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-  -- device_id, next_device_seq, pull_cursor:<gid>, session (userId, activeGroupId)
+  -- device = JSON {deviceId, nextDeviceSeq} (E01-S02), pull_cursor:<gid>, session (userId, activeGroupId)
 CREATE TABLE memberships (group_id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL,
                           member_count INTEGER, state TEXT NOT NULL);   -- 'active' | 'leaving'
 CREATE TABLE pending_ops (id TEXT PRIMARY KEY, group_id TEXT NOT NULL, op TEXT NOT NULL,
@@ -279,8 +288,11 @@ CREATE TABLE media_queue (media_id TEXT PRIMARY KEY, group_id TEXT NOT NULL, loc
                           content_type TEXT NOT NULL, bytes INTEGER NOT NULL, uploaded_at INTEGER);
 ```
 
-การทำ seq + insert ให้เป็น transaction แบบ exclusive บน expo-sqlite ต้องตรวจกับเอกสาร expo-sqlite ใน E01-S02
-(เขียนไว้จากความจำ ยังไม่ยืนยัน)
+การทำ seq + insert เป็น transaction แบบ exclusive: ตรวจกับ type ของ expo-sqlite 57.0.1 แล้ว (E01-S02) —
+`withExclusiveTransactionAsync(txn => …)` มีจริง และระหว่างที่ถือ write lock การเขียนแบบ async อื่นจะล้มด้วย
+`database is locked` ดังนั้น `SqliteStore` ส่งการเขียนทุกตัว (append, markSynced, การสร้าง device id) ผ่านคิว
+ตามลำดับที่เรียก ตัวนับ seq อยู่ใน `meta` (คีย์ `device`) และ append ปฏิเสธ `deviceSeq` ของเครื่องตัวเองที่ต่ำกว่า
+ค่าที่บันทึกไว้
 
 **ทำไมไม่บังคับ `(device_id, device_seq)` unique ทั้งตาราง**: ถ้าสองการติดตั้งเคยได้ `deviceId` เดียวกัน (เช่น
 Android Auto Backup restore ลงเครื่องใหม่ขณะเครื่องเก่ายังใช้) `insertPulled` จะชน constraint และ pull ค้างถาวร

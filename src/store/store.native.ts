@@ -10,133 +10,158 @@
  * that blob and lose the whole sale. An INSERT loses at most the row in flight,
  * and WAL journaling protects the rest.
  *
- * UNIQUE(sale_id, seq) is the second reason: a duplicate sequence number
- * becomes a constraint violation enforced by the storage engine rather than an
- * invariant that JavaScript has to remember. And `synced_at IS NULL` gives the
- * outbox query for free, which is what makes this sync-ready without a sync
- * engine existing yet.
+ * `id` is the primary key (E01-S02): one event, one row, wherever it was
+ * minted. The device sequence counter lives in `meta` and is advanced in the
+ * same exclusive transaction as the insert, so a force-close can never leave
+ * a stored event whose number is handed out again (NFR-2). `synced_at IS NULL`
+ * is the outbox.
+ *
+ * A new file, `mon-farm-v1.db`: the v0.4 log is not migrated (owner
+ * 2026-10-03). The old `mon-farm.db` is left alone — the interim farm/people
+ * stores still use it until E03 replaces them.
  */
 
 import * as SQLite from 'expo-sqlite';
 
-import { DuplicateSeqError } from './errors';
+import { checkAppend, type DeviceState } from './append-rule';
 import type { EventStore } from './store';
-import type { SaleEvent } from '../core/types';
+import type { EventId, SaleEvent } from '../core/types';
+import { uuidv7 } from '../lib/id';
 
-const DB_NAME = 'mon-farm.db';
-
-interface Row {
-  sale_id: string;
-  seq: number;
-  ts: number;
-  mono: number;
-  kind: string;
-  payload: string;
-  actor: string;
-}
+const DB_NAME = 'mon-farm-v1.db';
 
 /**
- * One table. No piles table, no zones table, no totals column — entities and
- * rollups are projections (see src/core/project.ts). One table means no
- * migration surface, and no way for a cached total to disagree with the log.
+ * Columns are the fields queries filter or order by; `body` is the whole event
+ * as JSON, which is what `load` returns and what sync will send.
  */
 const SCHEMA = `
   PRAGMA journal_mode = WAL;
   CREATE TABLE IF NOT EXISTS events (
-    sale_id    TEXT    NOT NULL,
-    seq        INTEGER NOT NULL,
-    ts         INTEGER NOT NULL,
-    mono       INTEGER NOT NULL,
-    kind       TEXT    NOT NULL,
-    payload    TEXT    NOT NULL,
-    actor      TEXT    NOT NULL,
-    synced_at  INTEGER,
-    PRIMARY KEY (sale_id, seq)
+    id          TEXT    PRIMARY KEY,
+    sale_id     TEXT    NOT NULL,
+    device_id   TEXT    NOT NULL,
+    device_seq  INTEGER NOT NULL,
+    user_id     TEXT    NOT NULL,
+    kind        TEXT    NOT NULL,
+    seq         INTEGER NOT NULL,
+    ts          INTEGER NOT NULL,
+    body        TEXT    NOT NULL,
+    synced_at   INTEGER
   );
-  CREATE INDEX IF NOT EXISTS events_pending ON events(synced_at) WHERE synced_at IS NULL;
+  CREATE INDEX IF NOT EXISTS events_outbox ON events(device_seq) WHERE synced_at IS NULL;
+  CREATE INDEX IF NOT EXISTS events_sale ON events(sale_id);
+  CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `;
 
-/** Everything except the columns stored in their own right. */
-function toPayload(e: SaleEvent): string {
-  const { saleId: _s, seq: _q, ts: _t, mono: _m, actor: _a, kind: _k, ...rest } = e as SaleEvent &
-    Record<string, unknown>;
-  return JSON.stringify(rest);
-}
-
-function fromRow(r: Row): SaleEvent {
-  return {
-    saleId: r.sale_id,
-    seq: r.seq,
-    ts: r.ts,
-    mono: r.mono,
-    actor: r.actor,
-    kind: r.kind,
-    ...JSON.parse(r.payload),
-  } as SaleEvent;
-}
-
 export class SqliteStore implements EventStore {
-  private db: SQLite.SQLiteDatabase | null = null;
+  private db: Promise<SQLite.SQLiteDatabase> | null = null;
+  /**
+   * Tail of the write queue (see `serial`). The provider fires appends without
+   * awaiting, and two racing transactions could otherwise commit seq 8 before
+   * seq 7 — and then refuse 7 as already used.
+   */
+  private queue: Promise<unknown> = Promise.resolve();
 
-  private async open(): Promise<SQLite.SQLiteDatabase> {
-    if (!this.db) {
-      this.db = await SQLite.openDatabaseAsync(DB_NAME);
-      await this.db.execAsync(SCHEMA);
-    }
+  private open(): Promise<SQLite.SQLiteDatabase> {
+    this.db ??= (async () => {
+      const db = await SQLite.openDatabaseAsync(DB_NAME);
+      await db.execAsync(SCHEMA);
+      return db;
+    })();
     return this.db;
   }
 
-  async append(event: SaleEvent): Promise<void> {
-    const db = await this.open();
-    try {
-      await db.runAsync(
-        `INSERT INTO events (sale_id, seq, ts, mono, kind, payload, actor)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        event.saleId,
-        event.seq,
-        event.ts,
-        event.mono,
-        event.kind,
-        toPayload(event),
-        event.actor,
-      );
-    } catch (err) {
-      // Surface the domain meaning rather than a SQLITE_CONSTRAINT string.
-      if (String(err).includes('UNIQUE') || String(err).includes('constraint')) {
-        throw new DuplicateSeqError(event.saleId, event.seq);
-      }
-      throw err;
-    }
+  private async readDevice(db: SQLite.SQLiteDatabase): Promise<DeviceState | null> {
+    const row = await db.getFirstAsync<{ value: string }>(`SELECT value FROM meta WHERE key = 'device'`);
+    return row ? (JSON.parse(row.value) as DeviceState) : null;
   }
 
-  async load(saleId: string): Promise<SaleEvent[]> {
-    const db = await this.open();
-    const rows = await db.getAllAsync<Row>(
-      `SELECT * FROM events WHERE sale_id = ? ORDER BY seq`,
-      saleId,
+  private async writeDevice(db: SQLite.SQLiteDatabase, d: DeviceState): Promise<void> {
+    await db.runAsync(
+      `INSERT INTO meta (key, value) VALUES ('device', ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+      JSON.stringify(d),
     );
-    return rows.map(fromRow);
+  }
+
+  /**
+   * Runs writes one at a time, in call order: once an exclusive transaction
+   * holds the write lock, any other write aborts with "database is locked".
+   */
+  private serial<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(task);
+    // A failed write must not wedge every write after it.
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
+
+  append(event: SaleEvent): Promise<void> {
+    return this.serial(async () => {
+      const db = await this.open();
+      await db.withExclusiveTransactionAsync(async (txn) => {
+        const device = (await this.readDevice(txn)) ?? (await this.mintDevice(txn));
+        const row = await txn.getFirstAsync<{ body: string }>(
+          `SELECT body FROM events WHERE id = ?`,
+          event.id,
+        );
+        const next = checkAppend(event, row ? (JSON.parse(row.body) as SaleEvent) : undefined, device);
+        if (!next) return;
+        await txn.runAsync(
+          `INSERT INTO events (id, sale_id, device_id, device_seq, user_id, kind, seq, ts, body)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          event.id,
+          event.saleId,
+          event.actor.deviceId,
+          event.deviceSeq,
+          event.actor.userId,
+          event.kind,
+          event.seq,
+          event.ts,
+          JSON.stringify(event),
+        );
+        if (next !== device) await this.writeDevice(txn, next);
+      });
+    });
+  }
+
+  private async mintDevice(db: SQLite.SQLiteDatabase): Promise<DeviceState> {
+    const fresh: DeviceState = { deviceId: uuidv7(), nextDeviceSeq: 1 };
+    await this.writeDevice(db, fresh);
+    return fresh;
+  }
+
+  load(saleId: string): Promise<SaleEvent[]> {
+    // Behind queued appends, so re-entering a sale right after leaving it
+    // cannot read a log missing the baskets still being written.
+    return this.serial(async () => {
+      const db = await this.open();
+      const rows = await db.getAllAsync<{ body: string }>(
+        `SELECT body FROM events WHERE sale_id = ? ORDER BY seq, device_id, device_seq, id`,
+        saleId,
+      );
+      return rows.map((r) => JSON.parse(r.body) as SaleEvent);
+    });
   }
 
   async pending(): Promise<SaleEvent[]> {
     const db = await this.open();
-    const rows = await db.getAllAsync<Row>(
-      `SELECT * FROM events WHERE synced_at IS NULL ORDER BY sale_id, seq`,
+    const rows = await db.getAllAsync<{ body: string }>(
+      `SELECT body FROM events WHERE synced_at IS NULL ORDER BY device_seq`,
     );
-    return rows.map(fromRow);
+    return rows.map((r) => JSON.parse(r.body) as SaleEvent);
   }
 
-  async markSynced(saleId: string, seqs: readonly number[]): Promise<void> {
-    if (!seqs.length) return;
-    const db = await this.open();
-    const now = Date.now();
-    const holes = seqs.map(() => '?').join(',');
-    await db.runAsync(
-      `UPDATE events SET synced_at = ? WHERE sale_id = ? AND seq IN (${holes})`,
-      now,
-      saleId,
-      ...seqs,
-    );
+  async markSynced(ids: readonly EventId[]): Promise<void> {
+    if (!ids.length) return;
+    const holes = ids.map(() => '?').join(',');
+    await this.serial(async () => {
+      const db = await this.open();
+      await db.runAsync(
+        `UPDATE events SET synced_at = ? WHERE id IN (${holes})`,
+        Date.now(),
+        ...ids,
+      );
+    });
   }
 
   async listSales(): Promise<string[]> {
@@ -145,6 +170,14 @@ export class SqliteStore implements EventStore {
       `SELECT sale_id, MIN(ts) AS started FROM events GROUP BY sale_id ORDER BY started DESC`,
     );
     return rows.map((r) => r.sale_id);
+  }
+
+  device(): Promise<DeviceState> {
+    // Through the queue, so a first launch cannot mint two device ids.
+    return this.serial(async () => {
+      const db = await this.open();
+      return (await this.readDevice(db)) ?? (await this.mintDevice(db));
+    });
   }
 }
 

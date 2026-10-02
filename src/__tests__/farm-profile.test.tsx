@@ -43,6 +43,9 @@ jest.mock('../store/store', () => {
         return [];
       },
       async markSynced() {},
+      async device() {
+        return { deviceId: 'dev-test', nextDeviceSeq: 1 };
+      },
       // Test-only: same instance across the file (the factory only runs
       // once), so each test clears it rather than getting a fresh one.
       __clear() {
@@ -123,20 +126,24 @@ describe('FarmProfileScreen', () => {
 
   it('offers to seed from the most recent sale when the profile is empty and a sale exists', async () => {
     await mockStore.append({
+      id: 'past-sale/1',
       saleId: 'past-sale',
       seq: 1,
+      deviceSeq: 1,
       ts: Date.now(),
       mono: 1,
-      actor: 'test',
+      actor: { userId: 'user-test', deviceId: 'dev-old' },
       kind: 'sys',
       payload: { t: 'zone_added', zoneId: 'zone-x', name: 'โซนเก่า' },
     });
     await mockStore.append({
+      id: 'past-sale/2',
       saleId: 'past-sale',
       seq: 2,
+      deviceSeq: 2,
       ts: Date.now(),
       mono: 2,
-      actor: 'test',
+      actor: { userId: 'user-test', deviceId: 'dev-old' },
       kind: 'sys',
       payload: { t: 'pile_added', pileId: 'pile-x', zoneId: 'zone-x', name: 'กองเก่า', tareG: 2000, stdNetG: 50000 },
     });

@@ -23,12 +23,18 @@ import {
 } from 'react';
 
 import { detectClockAnomaly, projectSale } from '../core/project';
-import type { SaleEvent, SaleState, SysPayload } from '../core/types';
+import type { Actor, SaleEvent, SaleState, SysPayload } from '../core/types';
+import { uuidv7 } from '../lib/id';
+import { createDeviceClock } from './device-clock';
+import { PRE_LOGIN_USER_ID } from './session';
 // Bare specifier, not './store.web' — Metro resolves this to store.native.ts
 // on iOS/Android and store.web.ts on web. A literal '.web' import here would
 // silently pull the localStorage adapter into native builds too, which is
 // exactly the least-durable path NFR-1 exists to avoid.
 import { store } from './store';
+
+/** Shared by every provider — see device-clock.ts for why it cannot be per sale. */
+const deviceClock = createDeviceClock(store);
 
 /** Every event minus the fields the provider stamps. */
 type NewEvent =
@@ -41,7 +47,7 @@ type NewEvent =
       reason: 'released-early';
       heldMs: number;
     }
-  | { kind: 'correction'; pileId: string; targetSeq: number; mode: 'undo-last' | 'void'; reason: string }
+  | { kind: 'correction'; pileId: string; targetId: string; mode: 'undo-last' | 'void'; reason: string }
   | { kind: 'sys'; payload: SysPayload };
 
 interface SaleContextValue {
@@ -58,7 +64,11 @@ const SaleContext = createContext<SaleContextValue | null>(null);
 export function SaleProvider({ saleId, children }: { saleId: string; children: ReactNode }) {
   const [events, setEvents] = useState<readonly SaleEvent[]>([]);
   const [ready, setReady] = useState(false);
-  const actor = useRef('somchai');
+  // The log as last appended, kept beside the state so `append` can stamp the
+  // next event without doing side effects inside a state updater (React may
+  // run those twice, which would mint two ids for one basket).
+  const eventsRef = useRef<readonly SaleEvent[]>([]);
+  const actor = useRef<Actor | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -66,8 +76,10 @@ export function SaleProvider({ saleId, children }: { saleId: string; children: R
       // No seeding: a sale with no events is a real, legitimate state (one
       // that hasn't been set up yet), not a placeholder waiting to be filled
       // by demo data. See docs/stories/s17-remove-seed-and-sale-list.md.
-      const loaded = await store.load(saleId);
+      const [loaded, deviceId] = await Promise.all([store.load(saleId), deviceClock.load()]);
       if (live) {
+        actor.current = { userId: PRE_LOGIN_USER_ID, deviceId };
+        eventsRef.current = loaded;
         setEvents(loaded);
         setReady(true);
       }
@@ -78,54 +90,52 @@ export function SaleProvider({ saleId, children }: { saleId: string; children: R
   }, [saleId]);
 
   const append = useCallback((incoming: NewEvent) => {
-    setEvents((prev) => {
-      const last = prev.length ? prev[prev.length - 1] : null;
-      const seq = (last?.seq ?? 0) + 1;
-      const ts = Date.now();
-      // Monotonic, for interval evidence (FR-12.4). Survives a wall clock that
-      // jumps; deliberately a different field from `ts`, which is untrusted.
-      const mono = Math.round(
-        typeof performance !== 'undefined' ? performance.now() : Date.now(),
-      );
+    const who = actor.current;
+    // Screens only offer recording once `ready`; this is the backstop.
+    if (!who) throw new Error('append() before the store is ready.');
 
-      const out: SaleEvent[] = [...prev];
-
-      // FR-12.6: a suspect clock is recorded as its own event and flagged in
-      // the UI. It never reorders anything — `seq` decides what happened first.
-      const startedTs = projectSale(prev, saleId).startedTs;
-      const anomaly = detectClockAnomaly(last, ts, startedTs);
-      if (anomaly) {
-        const flag: SaleEvent = {
-          saleId,
-          seq,
-          ts,
-          mono,
-          actor: actor.current,
-          kind: 'sys',
-          payload: { t: 'clock_anomaly', ...anomaly },
-        };
-        out.push(flag);
-        void store.append(flag);
-      }
-
-      const event = {
-        saleId,
-        seq: out.length ? out[out.length - 1].seq + 1 : seq,
-        ts,
-        mono,
-        actor: actor.current,
-        ...incoming,
-      } as SaleEvent;
-
-      out.push(event);
-      // Fire-and-forget: a storage failure must never block counting. The
-      // store swallows quota errors for the same reason.
-      void store.append(event);
-      return out;
+    const prev = eventsRef.current;
+    const last = prev.length ? prev[prev.length - 1] : null;
+    const ts = Date.now();
+    // Monotonic, for interval evidence (FR-12.4). Survives a wall clock that
+    // jumps; deliberately a different field from `ts`, which is untrusted.
+    const mono = Math.round(typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const stamp = (seq: number) => ({
+      id: uuidv7(),
+      saleId,
+      seq,
+      deviceSeq: deviceClock.take(),
+      ts,
+      mono,
+      actor: who,
     });
+
+    const out: SaleEvent[] = [...prev];
+
+    // FR-12.6: a suspect clock is recorded as its own event and flagged in
+    // the UI. It never reorders anything — the fold order never reads `ts`.
+    const startedTs = projectSale(prev, saleId).startedTs;
+    const anomaly = detectClockAnomaly(last, ts, startedTs);
+    if (anomaly) {
+      out.push({
+        ...stamp(nextSeq(out)),
+        kind: 'sys',
+        payload: { t: 'clock_anomaly', ...anomaly },
+      });
+    }
+    out.push({ ...stamp(nextSeq(out)), ...incoming } as SaleEvent);
+
+    eventsRef.current = out;
+    setEvents(out);
+    // Fire-and-forget: a storage failure must never block counting. The
+    // stores run appends in call order (see store.native.ts).
+    for (const e of out.slice(prev.length)) void store.append(e).catch(logAppendFailure);
   }, [saleId]);
 
-  const reset = useCallback(() => setEvents([]), []);
+  const reset = useCallback(() => {
+    eventsRef.current = [];
+    setEvents([]);
+  }, []);
 
   // The whole reason `append` must produce a NEW array rather than mutating:
   // this memo is keyed on array identity.
@@ -137,6 +147,15 @@ export function SaleProvider({ saleId, children }: { saleId: string; children: R
   );
 
   return <SaleContext.Provider value={value}>{children}</SaleContext.Provider>;
+}
+
+/** The next per-sale position, as this device sees the log. */
+function nextSeq(events: readonly SaleEvent[]): number {
+  return events.reduce((max, e) => Math.max(max, e.seq), 0) + 1;
+}
+
+function logAppendFailure(err: unknown): void {
+  console.error('Event could not be stored.', err);
 }
 
 export function useSale(): SaleContextValue {
