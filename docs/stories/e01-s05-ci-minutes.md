@@ -62,7 +62,7 @@ Status: In Progress
 | #85 | PR เอกสารล้วน | 5.4 นาที |
 | #82 | PR เอกสารล้วน | 3.6 นาที |
 
-median PR เอกสารล้วน ≈ **5.4 นาที → คิดเงิน 6 นาที/รอบ** ทั้งที่ไม่มีโค้ดเปลี่ยน
+median PR เอกสารล้วน = **5.3 นาที → คิดเงิน 6 นาที/รอบ** ทั้งที่ไม่มีโค้ดเปลี่ยน
 แยกขั้นใน #87: `npm ci` 22 วิ, build web 75 วิ, ติดตั้ง Playwright 26 วิ, e2e 150 วิ
 
 ### สิ่งที่ทำ
@@ -89,14 +89,41 @@ median PR เอกสารล้วน ≈ **5.4 นาที → คิดเ
 
 - dependency ที่มี install script ใน lockfile มีแค่ `esbuild` 0.28.2, `unrs-resolver` 1.12.2
   (และ `fsevents` แบบ optional เฉพาะ macOS) — bun ไม่รัน lifecycle script ของ dependency
-  นอกจากอยู่ใน `trustedDependencies` (หรือรายการ default ของ bun) จึงต้องตรวจสองตัวนี้ก่อนเปลี่ยน
+  นอกจากอยู่ใน `trustedDependencies` (หรือรายการ default ของ bun); `esbuild` น่าจะอยู่ในรายการ default
+  (ต้องยืนยันตอนวัดจริง) จึงน่าจะต้องเพิ่มแค่ `unrs-resolver`
 - เวลาที่ได้คืนสูงสุดคือ `npm ci` ~22 วิ/job (cache npm ทำงานแล้ว) ≈ ไม่ถึง 1 นาทีต่อ PR
   ขณะที่ต้องเพิ่ม action ภายนอก (`oven-sh/setup-bun`) + lockfile ใหม่ (`bun.lock`) ซึ่งเป็นการเปลี่ยนตัวติดตั้งที่ต้องผ่าน gate dependency
   และ Expo CLI/Metro ยังอ้าง npm เป็นหลัก
 - ยังไม่ได้วัดบน runner จริง (ต้องติดตั้ง bun = ต้องขออนุมัติ) — **ข้อเสนอ: ยังไม่เปลี่ยน**;
   ถ้าต้องการตัวเลขจริง เปิด story แยกพร้อมขอ dependency gate
+- **ส่วนต่างจาก AC:** AC ข้อ bun ขอ "เทียบเวลา install บน runner" ซึ่งยังไม่ได้วัด — รอเจ้าของตัดสิน
+  (ถามผ่าน lead แล้ว 2026-10-02) ว่ายอมรับการประเมินจาก lockfile หรือให้ขอ gate ติดตั้ง bun เพื่อวัดจริง
+
+### หลัง review รอบ 1
+
+- เพิ่ม `--no-renames` และ `core.quotePath=false` ใน `git diff` (test แดงก่อน → เขียว 9/9);
+  รันจริง `c0cf2ab~1...c0cf2ab` (ย้าย `src/app/settlement.tsx`) แสดงทั้ง path เก่าและใหม่
+- `cancel-in-progress` เฉพาะ `pull_request` — run บน dev/main ต้องรันจนจบ
+- build web จริงใน sandbox: `dist/` มีไฟล์ซ่อน `_expo/.routes.json` → ตั้ง `include-hidden-files: true`
+- e2e ใน sandbox รันไม่ได้: Chromium ใน sandbox เป็น build 1194 แต่ `@playwright/test` 1.62.1 ต้องการ 1234
+  (ดาวน์โหลด browser = ติดตั้ง ต้องขออนุมัติ) → e2e จริงพิสูจน์บน CI
+- ข้อจำกัด cache Playwright: hit ยังรัน `install-deps` (apt) จึงประหยัดแค่ส่วนดาวน์โหลด browser (~10–15 วิ);
+  cache บันทึกเฉพาะ job ที่ผ่าน และ cache ของ PR ใช้ได้เฉพาะ PR นั้น/branch ฐาน — จะยืนยันด้วยตัวเลขรอบหลัง
 
 
 ## Code review
+
+รอบ 1 — subagent `devops-ci-engineer` แยก (ไม่ได้เขียนโค้ดนี้), 2026-10-02: approve with 2 should-fix
+
+| # | ระดับ | ประเด็น | ผล |
+|---|---|---|---|
+| 1 | should-fix | `cancel-in-progress` บน push: run โค้ดที่ถูกยกเลิก + merge เอกสารตามมา → โค้ดไม่ถูกตรวจ | แก้: ยกเลิกเฉพาะ PR |
+| 2 | should-fix | `git diff` ตรวจ rename → `git mv src/x.ts docs/x.md` ดูเหมือนเอกสารล้วน | แก้: `--no-renames` + test |
+| 3 | nit | path ภาษาไทยถูก quote → ไม่ถูกนับเป็นเอกสาร (ทางปลอดภัย) | แก้: `core.quotePath=false` |
+| 4 | nit | cache Playwright ประหยัดน้อยกว่าที่คิด (apt ยังรัน) | บันทึกใน Dev notes; วัดจริงรอบหลัง |
+| 5 | nit | artifact ตัดไฟล์ซ่อน | แก้: พบ `_expo/.routes.json` จริง → `include-hidden-files: true` |
+| 6 | nit | median ก่อนเปลี่ยนผิด (5.3 ไม่ใช่ 5.4); ควรมี baseline PR โค้ด | แก้ median; baseline PR โค้ด: #78/#77/#74 = 5.4/5.4/5.4 นาที |
+| 7 | nit | bun: `esbuild` น่าจะอยู่ใน default trusted | แก้ข้อความ (รอยืนยันตอนวัดจริง) |
+| 8 | nit | CLI/git path ทดสอบด้วยมือ | `diffArgs` แยกออกมาและมี test; การเรียก git จริงคงเป็น sandbox run (KISS) |
 
 ## QA notes
