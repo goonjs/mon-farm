@@ -1,715 +1,694 @@
-# PRD — mon-farm (Rubber Farm Management App, MVP V1)
+# PRD — mon-farm (แอปบริหารสวนยาง, MVP V1)
 
-> Status: **Draft v1.0 — first complete PRD, in owner review.**
-> Requirements authority: the owner's *Rubber Farm App MVP V1 — Single Source
-> of Truth* (2026-10-02; Q1–Q109 + Q111–Q137), referred to below as **[SSOT]**.
-> Technical specs carried over from PRD v0.4 / `docs/architecture.md` v0.1 are
-> marked **[carried]**. Conflicts between the two were put to the owner module
-> by module; each answer is recorded in [Decision log](#decision-log).
-> Superseded: PRD v0.4 (sale-counter-only scope) — see git history.
+> สถานะ: **ฉบับภาษาไทยของ PRD v1.0 (2026-10-03)** — นับจากนี้ภาษาไทยเป็น
+> ภาษาทำงานของเอกสารในโปรเจกต์นี้ เนื้อหาเท่ากับ **Draft v1.0 — PRD
+> ฉบับสมบูรณ์ฉบับแรก อยู่ระหว่างเจ้าของตรวจ** (ต้นฉบับอังกฤษดูใน git history)
+> แหล่งอ้างอิงข้อกำหนด: *Rubber Farm App MVP V1 — Single Source of Truth*
+> ของเจ้าของ (2026-10-02; Q1–Q109 + Q111–Q137) ด้านล่างเรียกว่า **[SSOT]**
+> สเปกทางเทคนิคที่ยกมาจาก PRD v0.4 / `docs/architecture.md` v0.1 ทำเครื่องหมาย
+> **[carried]** จุดที่สองแหล่งขัดกัน ได้ถามเจ้าของทีละโมดูล และบันทึกคำตอบไว้ใน
+> [Decision log](#decision-log)
+> ฉบับที่ถูกแทนที่: PRD v0.4 (ขอบเขตเฉพาะตัวนับการขาย) — ดู git history
 
-## Reading guide
+## วิธีอ่าน
 
-- Requirement IDs are per module: `ACC` access, `SYNC` offline/sync, `MD`
-  master data, `SALE` weighing, `SET` reconciliation & settlement, `FERT`
-  fertilizer, `OPS` field operations, `TASK` tasks & notifications, `DOC`
-  worker documents, `INV` inventory, `FIN` finance, `WX` weather, `ANA`
-  analytics, `AI` AI assistance, `INT` integrations, `NFR` non-functional.
-- **MVP** = must work before real farm testing (see [Acceptance](#mvp-acceptance-checklist)).
-  **Deferred** = designed for, not built in V1.
-- ⏳ = waiting on an owner answer; nothing marked ⏳ is implemented on a guess.
+- รหัสข้อกำหนดแยกตามโมดูล: `ACC` การเข้าใช้, `SYNC` ออฟไลน์/ซิงก์, `MD`
+  ข้อมูลหลัก, `SALE` การชั่ง, `SET` กระทบยอดและสรุปเงิน, `FERT` ปุ๋ย,
+  `OPS` งานในสวน, `TASK` งานและการแจ้งเตือน, `DOC` เอกสารคนงาน, `INV`
+  สต็อก, `FIN` การเงิน, `WX` สภาพอากาศ, `ANA` การวิเคราะห์, `AI` ผู้ช่วย AI,
+  `INT` การเชื่อมต่อระบบอื่น, `NFR` ข้อกำหนดที่ไม่ใช่ฟังก์ชัน
+- **MVP** = ต้องใช้งานได้ก่อนทดสอบในสวนจริง (ดู [Acceptance](#mvp-acceptance-checklist))
+  **Deferred** = ออกแบบเผื่อไว้ แต่ไม่สร้างใน V1
+- ⏳ = รอคำตอบจากเจ้าของ; สิ่งใดที่มี ⏳ จะไม่ถูกสร้างจากการเดา
 
 ---
 
-## 1. Product overview
+## 1. ภาพรวมผลิตภัณฑ์
 
-mon-farm is a **personal-first farm management app** for the owner's rubber
-farms and related durian properties. It replaces the paper/notebook workflow
-for rubber sales, and gives the owner one place for farm operations, finance
-and analysis — **usable fully offline at the farm**, synced across up to three
-phones when signal returns.
+mon-farm คือ **แอปบริหารฟาร์มที่ทำเพื่อเจ้าของเป็นหลัก (personal-first)**
+สำหรับสวนยางของเจ้าของและที่ดินทุเรียนที่เกี่ยวข้อง แทนการจดกระดาษ/สมุด
+ในการขายยาง และเป็นที่เดียวสำหรับงานในสวน การเงิน และการวิเคราะห์ —
+**ใช้งานได้เต็มที่แบบออฟไลน์ที่สวน** และซิงก์ข้ามโทรศัพท์ได้สูงสุดสามเครื่อง
+เมื่อสัญญาณกลับมา
 
-It is deliberately not a complete long-term platform: V1 is the smallest
-robust system that replaces paper and collects reliable real-world data
-[SSOT §0]. Public multi-tenant SaaS is deferred; the data model stays clean
-enough to get there, and to integrate with the owner's JotWai finance product
-later [SSOT §1, §29].
+ตั้งใจให้ไม่ใช่แพลตฟอร์มระยะยาวที่ครบทุกอย่าง: V1 คือระบบที่เล็กที่สุดแต่
+แข็งแรง ที่แทนกระดาษได้และเก็บข้อมูลจริงที่เชื่อถือได้ [SSOT §0] SaaS
+สาธารณะแบบ multi-tenant เลื่อนออกไป; โมเดลข้อมูลยังคงสะอาดพอจะไปถึงตรงนั้น
+และเชื่อมกับผลิตภัณฑ์การเงิน JotWai ของเจ้าของได้ในภายหลัง [SSOT §1, §29]
 
-### Goals
+### เป้าหมาย
 
-1. A rubber sale runs end-to-end at the farm with no network — weighing every
-   pile, continuous basket numbering, bridge baskets, reconciliation with the
-   buyer, and per-tapper settlement.
-2. Basket-count mistakes are hard to make: current basket, point, partial
-   weight and totals are always visible [SSOT §5.3].
-3. Every number is explainable and traceable to its source records.
-4. Farm operations (inspections, incidents, tasks, inventory, documents,
-   weather) and finance (expenses, payer, reimbursements, cash-flow) are
-   captured once and stay useful even when incomplete.
-5. AI helps analyse and recommend, but the owner decides — AI never silently
-   creates or changes anything [SSOT §48].
+1. การขายยางทำได้ครบตั้งแต่ต้นจนจบที่สวนโดยไม่มีเครือข่าย — ชั่งทุกกอง
+   เลขเข่งต่อเนื่อง เข่งเชื่อม กระทบยอดกับผู้ซื้อ และสรุปเงินแยกรายคนกรีด
+2. นับเข่งผิดได้ยาก: เข่งปัจจุบัน จุดชั่ง น้ำหนักเข่งไม่เต็ม และยอดรวม
+   แสดงอยู่ตลอด [SSOT §5.3]
+3. ทุกตัวเลขอธิบายได้และย้อนไปถึงบันทึกต้นทางได้
+4. งานในสวน (การตรวจสวน เหตุการณ์ งาน สต็อก เอกสาร สภาพอากาศ) และการเงิน
+   (ค่าใช้จ่าย ผู้จ่ายจริง เงินที่ต้องคืน กระแสเงินสด) บันทึกครั้งเดียว และ
+   ยังมีประโยชน์แม้ข้อมูลไม่ครบ
+5. AI ช่วยวิเคราะห์และแนะนำ แต่เจ้าของเป็นผู้ตัดสินใจ — AI ไม่สร้างหรือ
+   เปลี่ยนอะไรเองแบบเงียบ ๆ [SSOT §48]
 
-### Non-goals (V1)
+### สิ่งที่ไม่ทำ (V1)
 
-- Public SaaS / multi-tenant productization; complex role/permission UI.
-- Moving money (the app records payments, it does not make them).
-- JotWai integration, automated LINE ingestion, TradingView/Windy production
-  integrations, advanced AI monitoring/learning, advanced reserve methodology,
-  full legal/compliance engine, tree-level mapping, paper-history migration
-  [SSOT Deferred list].
+- SaaS สาธารณะ / ทำเป็นผลิตภัณฑ์ multi-tenant; UI จัดการบทบาท/สิทธิ์ที่ซับซ้อน
+- โอนเงินจริง (แอปบันทึกการจ่ายเงิน ไม่ได้จ่ายเงินเอง)
+- การเชื่อม JotWai, การดึงข้อมูลจาก LINE อัตโนมัติ, การเชื่อม TradingView/Windy
+  ระดับใช้งานจริง, การเฝ้าระวัง/เรียนรู้ของ AI ขั้นสูง, วิธีคำนวณเงินสำรองขั้นสูง,
+  ระบบกฎหมาย/การปฏิบัติตามกฎเต็มรูปแบบ, แผนที่ระดับต้น, การย้ายประวัติจากกระดาษ
+  [SSOT Deferred list]
 
-### Core principles [SSOT §2, §40]
+### หลักการหลัก [SSOT §2, §40]
 
-1. Minimal input; remember defaults; calculate rather than ask twice.
-2. **Never invent missing data** — use explicit states: Unknown · Not recorded
+1. ป้อนข้อมูลให้น้อยที่สุด; จำค่าเริ่มต้น; คำนวณแทนการถามซ้ำ
+2. **ห้ามแต่งข้อมูลที่ขาด** — ใช้สถานะที่ชัดเจน: Unknown · Not recorded
    · Estimated · User provided · System calculated · AI suggested / Needs
-   Review.
-3. Separate facts from estimates, forecasts, recommendations, AI interpretation.
-4. Preserve source evidence and audit metadata; never overwrite history.
-5. Drill-down everywhere: dashboard → property → zone → point → record.
-6. Offline-first is mandatory.
-7. Owner is the decision maker.
-8. Don't make Ajarn Somwang (76) learn a new technology workflow.
+   Review
+3. แยกข้อเท็จจริงออกจากค่าประมาณ การพยากรณ์ คำแนะนำ และการตีความของ AI
+4. เก็บหลักฐานต้นทางและ metadata สำหรับตรวจสอบ; ไม่เขียนทับประวัติ
+5. เจาะลึก (drill-down) ได้ทุกที่: แดชบอร์ด → ที่ดิน → โซน → จุดชั่ง → บันทึก
+6. ออฟไลน์ก่อน (offline-first) เป็นข้อบังคับ
+7. เจ้าของเป็นผู้ตัดสินใจ
+8. ไม่ทำให้อาจารย์สมหวัง (76 ปี) ต้องเรียนรู้ขั้นตอนเทคโนโลยีใหม่
 
-## 2. Users & context
+## 2. ผู้ใช้และบริบท
 
-| Who | Role in V1 | Uses the app? |
+| ใคร | บทบาทใน V1 | ใช้แอปไหม? |
 | --- | --- | --- |
-| Owner (Product Owner) | Owner | Yes — primary recorder |
-| Owner's younger sibling | Owner (equal rights) | Yes |
-| Owner's friend | Owner (equal rights) | Yes |
-| อาจารย์สมหวัง วิเชียรฉันท์ — farm manager, 76, adviser, not a tapper | Person record; optional notification recipient; may advance money | No login. Communicates by phone/LINE/in person; future LINE ingestion → Needs Review |
-| แดง (Daeng), นัด (Nat) — rubber tappers, foreign workers | Person records; settlement parties; document holders | No login |
-| Worker families — Daeng 5 members, Nat 2 | Person records for document tracking | No |
-| Buyer — one primary, changeable | Buyer record | No |
-| Khun Nueng / Khun Panom Krongkaew — durian lessees | Counterparty records | No |
+| เจ้าของ (Product Owner) | เจ้าของ | ใช้ — ผู้บันทึกหลัก |
+| น้องของเจ้าของ | เจ้าของ (สิทธิ์เท่ากัน) | ใช้ |
+| เพื่อนของเจ้าของ | เจ้าของ (สิทธิ์เท่ากัน) | ใช้ |
+| อาจารย์สมหวัง วิเชียรฉันท์ — ผู้จัดการสวน, 76 ปี, ที่ปรึกษา, ไม่ได้กรีดยาง | บันทึกบุคคล; ผู้รับการแจ้งเตือนได้ (ไม่บังคับ); อาจสำรองจ่ายเงิน | ไม่มีการล็อกอิน สื่อสารทางโทรศัพท์/LINE/เจอตัว; อนาคตดึงจาก LINE → Needs Review |
+| แดง (Daeng), นัด (Nat) — คนกรีดยาง, แรงงานต่างด้าว | บันทึกบุคคล; คู่สัญญาในการสรุปเงิน; ผู้ถือเอกสาร | ไม่มีการล็อกอิน |
+| ครอบครัวคนงาน — แดง 5 คน, นัด 2 คน | บันทึกบุคคลสำหรับติดตามเอกสาร | ไม่ใช้ |
+| ผู้ซื้อ — รายหลักหนึ่งราย, เปลี่ยนได้ | บันทึกผู้ซื้อ | ไม่ใช้ |
+| คุณหนึ่ง / คุณพนม ครองแก้ว — ผู้เช่าสวนทุเรียน | บันทึกคู่สัญญา | ไม่ใช้ |
 
-### Confirmed farm facts [SSOT §0.1, §3, §14, §49]
+### ข้อเท็จจริงของสวนที่ยืนยันแล้ว [SSOT §0.1, §3, §14, §49]
 
-- **สวนจันทเขลม** (exact spelling) — ~125 rai, ~15 yrs. Daeng: 3 weighing
-  points; Nat: 1 weighing point.
-- **สวนฝั่งคลองพลู** (rubber) — ~30 rai, ~15 yrs. Nat sole tapper; 1 weighing point.
-- ~7,000 rubber trees total (estimate; exact unknown).
-- Durian, Khlong Phlu — 30 rai, first planted 5 Dec 2024, leased to Khun
-  Nueng, rent expected from 2029 (B.E. 2572) + % of sales; terms from lease
-  (not invented).
-- Durian, Takhian Thong — 76 rai, leased to Khun Panom Krongkaew, rent
-  1,000,000 THB/yr, rent only.
-- Product: cup lump rubber (ยางก้อนถ้วย); buyer collects at the farm.
-- Sales: May–Oct ~monthly (1.5–2 months in heavy rain); Nov–Feb ~twice a
-  month; Mar–Apr tapping stops. Daeng and Nat normally sell together.
+- **สวนจันทเขลม** (สะกดตามนี้) — ~125 ไร่, อายุ ~15 ปี แดง: 3 จุดชั่ง;
+  นัด: 1 จุดชั่ง
+- **สวนฝั่งคลองพลู** (ยาง) — ~30 ไร่, อายุ ~15 ปี นัดกรีดคนเดียว; 1 จุดชั่ง
+- ต้นยางรวม ~7,000 ต้น (ประมาณ; ไม่ทราบตัวเลขแน่นอน)
+- ทุเรียน คลองพลู — 30 ไร่, ปลูกครั้งแรก 5 ธ.ค. 2024, ให้คุณหนึ่งเช่า,
+  คาดว่าได้ค่าเช่าตั้งแต่ปี 2029 (พ.ศ. 2572) + % ของยอดขาย; เงื่อนไขตาม
+  สัญญาเช่า (ไม่แต่งขึ้นเอง)
+- ทุเรียน ตะเคียนทอง — 76 ไร่, ให้คุณพนม ครองแก้วเช่า, ค่าเช่า
+  1,000,000 บาท/ปี, ค่าเช่าอย่างเดียว
+- สินค้า: ยางก้อนถ้วย (cup lump rubber); ผู้ซื้อมารับที่สวน
+- การขาย: พ.ค.–ต.ค. ประมาณเดือนละครั้ง (1.5–2 เดือนช่วงฝนหนัก); พ.ย.–ก.พ.
+  ประมาณเดือนละสองครั้ง; มี.ค.–เม.ย. หยุดกรีด แดงกับนัดปกติขายพร้อมกัน
 
 ---
 
-## 3. Module ACC — Identity, Farm Groups & access [SSOT §0.2, Q112, Q118–Q123]
+## 3. โมดูล ACC — ตัวตน กลุ่มฟาร์ม และการเข้าใช้ [SSOT §0.2, Q112, Q118–Q123]
 
-**MVP.**
-- ACC-1 **Google Login** in V1. **LINE Login is integration-dependent** and
-  follows after V1's first field test (D-2). The account model links several
-  sign-in identities to **one logical User**, so adding LINE later never
-  creates a duplicate user.
-- ACC-2 A User can belong to **many Farm Groups**. Any Owner can create one;
-  the creator invites, the invitee accepts. A member can leave — the group and
-  its data remain. Deleting a whole Farm Group is not an MVP operation.
-- ACC-3 Farm selection: one group → enter directly; several → choose.
-- ACC-4 MVP has **three equal Owners** (owner, younger sibling, friend) who can
-  view/create/edit/delete/restore everything. No manager/worker login, no
-  permission UI. Membership carries a `role` field (always `owner` in V1) so
-  configurable roles (Q90) can be added later without a data migration.
-- ACC-5 Farm Group data is isolated: a user sees only groups they belong to.
-- ACC-6 After first sign-in on a device, the app works **offline with no
-  re-login** for the farm visit.
+**MVP**
+- ACC-1 **Google Login** ใน V1 **LINE Login ขึ้นกับการเชื่อมต่อระบบ** และ
+  ตามมาหลังการทดสอบภาคสนามครั้งแรกของ V1 (D-2) โมเดลบัญชีผูกตัวตนการล็อกอิน
+  หลายแบบเข้ากับ **ผู้ใช้เชิงตรรกะคนเดียว (one logical User)** เพื่อให้การเพิ่ม
+  LINE ภายหลังไม่สร้างผู้ใช้ซ้ำ
+- ACC-2 ผู้ใช้หนึ่งคนอยู่ได้ **หลายกลุ่มฟาร์ม** เจ้าของคนใดก็สร้างกลุ่มได้;
+  ผู้สร้างเชิญ ผู้ถูกเชิญตอบรับ สมาชิกออกจากกลุ่มได้ — กลุ่มและข้อมูลยังอยู่
+  การลบกลุ่มฟาร์มทั้งกลุ่มไม่ใช่การทำงานใน MVP
+- ACC-3 การเลือกฟาร์ม: มีกลุ่มเดียว → เข้าเลย; มีหลายกลุ่ม → ให้เลือก
+- ACC-4 MVP มี **เจ้าของ 3 คนสิทธิ์เท่ากัน** (เจ้าของ, น้อง, เพื่อน) ที่ดู/
+  สร้าง/แก้/ลบ/กู้คืนได้ทุกอย่าง ไม่มีการล็อกอินของผู้จัดการ/คนงาน ไม่มี UI
+  จัดการสิทธิ์ การเป็นสมาชิกมีฟิลด์ `role` (เป็น `owner` เสมอใน V1) เพื่อให้
+  เพิ่มบทบาทที่ตั้งค่าได้ (Q90) ภายหลังโดยไม่ต้องย้ายข้อมูล (data migration)
+- ACC-5 ข้อมูลกลุ่มฟาร์มแยกกันเด็ดขาด: ผู้ใช้เห็นเฉพาะกลุ่มที่ตนเป็นสมาชิก
+- ACC-6 หลังล็อกอินครั้งแรกบนเครื่อง แอปทำงาน **ออฟไลน์ได้โดยไม่ต้องล็อกอินใหม่**
+  ตลอดการไปสวนครั้งนั้น
 
-## 4. Module SYNC — Offline-first, sync & data integrity [SSOT §0.3–0.4, §34–35, Q91, Q113–Q117, Q124–Q126]
+## 4. โมดูล SYNC — ออฟไลน์ก่อน ซิงก์ และความถูกต้องของข้อมูล [SSOT §0.3–0.4, §34–35, Q91, Q113–Q117, Q124–Q126]
 
-**MVP.**
+**MVP**
 
-### Offline & sync
-- SYNC-1 Every MVP workflow works with no network. A record saved offline is a
-  **real record immediately**, usable at once, marked **Pending Sync**.
-- SYNC-2 Sync runs **automatically** when connectivity returns and retries
-  automatically on failure; local data is never discarded. There is **no Sync
-  button in normal use**; a **"ลองใหม่" (retry) action appears only when sync
-  has failed or a Conflict needs attention** (D-3).
-- SYNC-3 Status shown per record and globally: **Synced · Pending Sync ·
-  Conflict**.
-- SYNC-4 Up to 3 phones (plus web) share **one logical dataset**. Different
-  records merge automatically. Edits to the same logical record that the
-  system cannot merge safely become a **Conflict the owner resolves** — never a
-  blind last-write-wins on money, weights or counts.
+### ออฟไลน์และซิงก์
+- SYNC-1 ทุกขั้นตอนใน MVP ทำงานได้โดยไม่มีเครือข่าย บันทึกที่บันทึกตอนออฟไลน์
+  **เป็นบันทึกจริงทันที** ใช้ได้เลย และมีสถานะ **Pending Sync**
+- SYNC-2 ซิงก์ทำงาน **อัตโนมัติ** เมื่อการเชื่อมต่อกลับมา และลองใหม่อัตโนมัติ
+  เมื่อล้มเหลว; ไม่ทิ้งข้อมูลในเครื่องเด็ดขาด **ใช้งานปกติไม่มีปุ่ม Sync**;
+  **ปุ่ม "ลองใหม่" (retry) จะแสดงเฉพาะเมื่อซิงก์ล้มเหลว หรือมี Conflict
+  ที่ต้องจัดการ** (D-3)
+- SYNC-3 แสดงสถานะทั้งรายบันทึกและภาพรวม: **Synced · Pending Sync ·
+  Conflict**
+- SYNC-4 โทรศัพท์สูงสุด 3 เครื่อง (รวมเว็บ) ใช้ **ชุดข้อมูลเชิงตรรกะชุดเดียว**
+  บันทึกต่างรายการรวมกันอัตโนมัติ การแก้บันทึกเชิงตรรกะเดียวกันที่ระบบรวมอย่าง
+  ปลอดภัยไม่ได้ จะกลายเป็น **Conflict ให้เจ้าของตัดสิน** — ห้ามใช้
+  last-write-wins แบบไม่ดูข้อมูลกับเงิน น้ำหนัก หรือจำนวนเด็ดขาด
 
-### Handing a sale between devices (D-4)
-Normally one person records at a time, but a sale may move to another phone
-mid-weighing (battery, signal, person).
-- SYNC-5 **Explicit handoff, offline-capable (MVP):** the current device taps
-  **"ส่งต่อ"** — it records the hand-off and locks its own recording for that
-  sale. The receiving device taps **"รับช่วง"** and continues from the next
-  basket number, with no network needed. Both logs merge when either side has
-  signal, or **at sale close via a QR code** shown on one device and scanned
-  by the other. Must be fast (≤ 2 taps each side) and mistake-proof (shows the
-  basket number it continues from).
-- SYNC-6 **Free mode with detection:** recording without a handoff is allowed.
-  On merge, baskets of the same sale recorded on different devices within a
-  **7–10 s window** (configurable; tolerant of clock drift, cross-checked by
-  basket number) raise a "นี่คือการนับซ้ำไหม?" question.
-- SYNC-7 Overlaps are shown as a simple **timeline per device** so the owner
-  can see at a glance which recordings interleave, and decide.
-- SYNC-8 *Deferred:* Bluetooth device-to-device handoff.
+### การส่งต่อการขายระหว่างเครื่อง (D-4)
+ปกติบันทึกทีละคน แต่การขายอาจย้ายไปอีกเครื่องกลางการชั่ง (แบตเตอรี่ สัญญาณ
+หรือเปลี่ยนคน)
+- SYNC-5 **ส่งต่อแบบชัดเจน ทำได้ออฟไลน์ (MVP):** เครื่องปัจจุบันกด
+  **"ส่งต่อ"** — บันทึกการส่งต่อและล็อกการบันทึกของตัวเองสำหรับการขายนั้น
+  เครื่องที่รับกด **"รับช่วง"** แล้วต่อจากเลขเข่งถัดไป โดยไม่ต้องใช้เครือข่าย
+  log ของทั้งสองเครื่องรวมกันเมื่อฝั่งใดฝั่งหนึ่งมีสัญญาณ หรือ **ตอนปิดการขาย
+  ผ่าน QR code** ที่แสดงบนเครื่องหนึ่งแล้วอีกเครื่องสแกน ต้องเร็ว (≤ 2 แตะ
+  ต่อฝั่ง) และกันพลาด (แสดงเลขเข่งที่จะต่อจากนั้น)
+- SYNC-6 **โหมดอิสระพร้อมการตรวจจับ:** บันทึกโดยไม่ส่งต่อก็ได้ ตอนรวมข้อมูล
+  ถ้าเข่งของการขายเดียวกันถูกบันทึกจากต่างเครื่องภายใน **ช่วง 7–10 วินาที**
+  (ตั้งค่าได้; ทนต่อนาฬิกาเครื่องคลาดเคลื่อน, ตรวจซ้ำกับเลขเข่ง) จะขึ้นคำถาม
+  "นี่คือการนับซ้ำไหม?"
+- SYNC-7 ช่วงที่ทับกันแสดงเป็น **ไทม์ไลน์รายเครื่อง** แบบง่าย ให้เจ้าของเห็น
+  ทันทีว่าการบันทึกใดสลับกัน แล้วตัดสินใจ
+- SYNC-8 *Deferred:* ส่งต่อระหว่างเครื่องผ่าน Bluetooth
 
-### Edit, delete, provenance
-- SYNC-9 Any Owner edits records directly. Underneath, every change is kept as
-  an event (who, when, device, source), so history is never lost even though
-  V1 has **no version-history UI** [Q126].
-- SYNC-10 **Soft Delete** for important records: hidden from normal lists,
-  restorable by any Owner [Q124–Q125]. Soft Delete ≠ Cancelled (a business
-  state).
-- SYNC-11 Provenance on important records: created by/at, edited by/at,
-  source channel (app / LINE / manual import / AI), original text/photo/audio,
-  verification state [§35].
-- SYNC-12 Data-completeness states per field where relevant: Unknown · Not
+### การแก้ไข การลบ และที่มาของข้อมูล
+- SYNC-9 เจ้าของคนใดก็แก้บันทึกได้โดยตรง เบื้องหลัง ทุกการเปลี่ยนแปลงถูกเก็บ
+  เป็น event (ใคร เมื่อไร เครื่องไหน แหล่งที่มา) ประวัติจึงไม่หาย แม้ V1
+  **ไม่มี UI ดูประวัติเวอร์ชัน** [Q126]
+- SYNC-10 **ลบแบบกู้คืนได้ (Soft Delete)** สำหรับบันทึกสำคัญ: ซ่อนจากรายการ
+  ปกติ เจ้าของคนใดก็กู้คืนได้ [Q124–Q125] Soft Delete ≠ Cancelled (ซึ่งเป็น
+  สถานะทางธุรกิจ)
+- SYNC-11 ที่มาของข้อมูล (provenance) ในบันทึกสำคัญ: สร้างโดย/เมื่อ,
+  แก้โดย/เมื่อ, ช่องทางต้นทาง (แอป / LINE / นำเข้าเอง / AI), ข้อความ/รูป/เสียง
+  ต้นฉบับ, สถานะการยืนยัน [§35]
+- SYNC-12 สถานะความครบของข้อมูลรายฟิลด์ (ตามที่เกี่ยวข้อง): Unknown · Not
   recorded · Estimated · User provided · System calculated · AI suggested /
-  Needs Review.
+  Needs Review
 
-## 5. Module MD — Farm structure & master data [SSOT §0.1, §3, §38, Q93–Q95, Q137]
+## 5. โมดูล MD — โครงสร้างฟาร์มและข้อมูลหลัก [SSOT §0.1, §3, §38, Q93–Q95, Q137]
 
-**MVP.** Master data is **shared and synced** across the Farm Group
-(supersedes the old device-local farm profile S27 and people store S16 — their
-stable-id rule is kept).
+**MVP** ข้อมูลหลัก **ใช้ร่วมกันและซิงก์** ทั้งกลุ่มฟาร์ม (แทนที่โปรไฟล์ฟาร์ม
+ที่เก็บในเครื่อง S27 และที่เก็บรายชื่อคน S16 เดิม — แต่คงกฎ stable-id ไว้)
 
-- MD-1 **Properties**: rubber farms and durian farms; name, type, area in rai
-  **with dated history** (analytics use the area valid at the time), age,
-  GPS (optional, Unknown until supplied), lease link for durian.
-- MD-2 **Zones**: optional. Add, retire, split, merge; structure history kept so
-  past records keep the structure that applied then. Records can be assigned
-  to a zone retrospectively. The owner is never forced to invent zones.
-- MD-3 **Weighing points (= rubber pile)**: one entity for the physical place —
-  never a separate "pile" entity [§0.1]. Belongs to a property; optional zone;
-  reusable across sales; tracked from day one. Initial data: Chanthakhem —
-  Daeng 3 points, Nat 1 point; Khlong Phlu — Nat 1 point (names to be entered
-  by the owner).
-- MD-4 **Assignments are time-bounded**: tapper ↔ weighing point / zone, with
-  valid-from/to; analytics use the assignment valid at the time [Q94].
-- MD-5 **People**: tappers (Daeng, Nat), families/members (DOC), farm manager
-  (Ajarn Somwang), payers (owner, sibling), lessees. A person may have no login.
-- MD-6 **Buyers**: one primary, changeable; default to the last used.
-- MD-7 **Basket presets** (Farm Group settings, D-6): standard **net** basket
-  weights (50 kg, 60 kg, extensible) and **container tare** values; one of each
-  is the default for a new sale and can be changed per sale/point.
-- MD-8 **Tapper share** per tapper, time-bounded, **default 50/50** (owner /
-  tapper), on gross sale value. The old per-zone contract and its inert
-  `basis` field are removed (D-12).
-- MD-9 **Sale-day settings**: zero/tare check mode (D-6), hold duration (D-7),
-  voice on/off (D-8), duplicate-detection window (SYNC-6).
+- MD-1 **ที่ดิน (Properties)**: สวนยางและสวนทุเรียน; ชื่อ, ประเภท, พื้นที่เป็นไร่
+  **พร้อมประวัติตามวันที่** (การวิเคราะห์ใช้พื้นที่ที่ใช้อยู่ ณ เวลานั้น), อายุ,
+  GPS (ไม่บังคับ, เป็น Unknown จนกว่าจะใส่), ลิงก์สัญญาเช่าสำหรับทุเรียน
+- MD-2 **โซน**: ไม่บังคับ เพิ่ม เลิกใช้ แยก รวม ได้; เก็บประวัติโครงสร้าง
+  เพื่อให้บันทึกในอดีตคงโครงสร้าง ณ ตอนนั้น กำหนดโซนให้บันทึกย้อนหลังได้
+  ไม่บังคับให้เจ้าของต้องแต่งโซนขึ้นมา
+- MD-3 **จุดชั่ง (= กองยาง)**: entity เดียวสำหรับสถานที่จริง — ไม่มี entity
+  "กอง" แยก [§0.1] อยู่ภายใต้ที่ดิน; โซนไม่บังคับ; ใช้ซ้ำได้ข้ามการขาย;
+  ติดตามตั้งแต่วันแรก ข้อมูลเริ่มต้น: จันทเขลม — แดง 3 จุด, นัด 1 จุด;
+  คลองพลู — นัด 1 จุด (ชื่อให้เจ้าของเป็นผู้ใส่)
+- MD-4 **การมอบหมายมีช่วงเวลา**: คนกรีด ↔ จุดชั่ง / โซน มี valid-from/to;
+  การวิเคราะห์ใช้การมอบหมายที่มีผล ณ เวลานั้น [Q94]
+- MD-5 **บุคคล**: คนกรีด (แดง, นัด), ครอบครัว/สมาชิก (DOC), ผู้จัดการสวน
+  (อาจารย์สมหวัง), ผู้จ่าย (เจ้าของ, น้อง), ผู้เช่า บุคคลอาจไม่มีการล็อกอิน
+- MD-6 **ผู้ซื้อ**: รายหลักหนึ่งราย เปลี่ยนได้; ค่าเริ่มต้นคือรายที่ใช้ล่าสุด
+- MD-7 **ค่าตั้งต้นเข่ง (Basket presets)** (ตั้งค่ากลุ่มฟาร์ม, D-6): น้ำหนักเข่ง
+  **สุทธิ** มาตรฐาน (50 กก., 60 กก., เพิ่มได้) และค่า **น้ำหนักภาชนะ (tare)**;
+  อย่างละหนึ่งค่าเป็นค่าเริ่มต้นของการขายใหม่ และเปลี่ยนได้รายการขาย/รายจุด
+- MD-8 **ส่วนแบ่งคนกรีด** รายคนกรีด มีช่วงเวลา **ค่าเริ่มต้น 50/50** (เจ้าของ /
+  คนกรีด) คิดจากมูลค่าขายรวม (gross) สัญญารายโซนแบบเดิมและฟิลด์ `basis`
+  ที่ไม่ได้ใช้ถูกเอาออก (D-12)
+- MD-9 **ตั้งค่าวันขาย**: โหมดตรวจศูนย์/tare (D-6), ระยะเวลากดค้าง (D-7),
+  เปิด/ปิดเสียง (D-8), ช่วงเวลาตรวจจับการนับซ้ำ (SYNC-6)
 
-## 6. Module SALE — Sale capture & weighing [SSOT §0.5, §4.3–4.4, §5, Q96–Q97, Q130–Q137]
+## 6. โมดูล SALE — การบันทึกการขายและการชั่ง [SSOT §0.5, §4.3–4.4, §5, Q96–Q97, Q130–Q137]
 
-**MVP.** The heart of the product: used standing, outdoors, one-handed, often
-offline. Its job is to make losing track of the basket number hard [§5.3].
+**MVP** หัวใจของผลิตภัณฑ์: ใช้ขณะยืน กลางแจ้ง มือเดียว และมักออฟไลน์
+หน้าที่คือทำให้หลงเลขเข่งได้ยาก [§5.3]
 
-### Starting and shaping a sale
-- SALE-1 Start: **Farm → Zone/Tapper context → weighing point**, then weigh
-  (Q130). A sale may span **several farms** (one buyer collection = one sale)
-  (D-9) and any number of weighing points, chosen **in any order**, different
-  every sale [§0.1].
-- SALE-2 Sale header: date, buyer (default last), farm(s), optional weighing
-  start time, farm manager **auto-filled from master data**, notes,
-  photos/documents. Sales happen **at the farm** only (the old sell-at-ล้ง-yard
-  case is dropped; D-10). No worker-lead field — the tapper comes from the
-  weighing point.
-- SALE-3 **Price ฿/kg entered manually** for every sale — never pulled from
-  the previous sale or a market feed. It may be entered **any time before
-  settlement**; weighing does not wait for it (D-11). Single pricing mode
-  (straight ฿/kg); %DRC is dropped.
-- SALE-4 Daeng's and Nat's rubber are **never mixed** — every weight is
-  attributable to one weighing point and therefore one tapper [Q96].
-- SALE-5 A pile exists only on sale day; it is not long-lived inventory [Q97].
+### เริ่มและกำหนดรูปแบบการขาย
+- SALE-1 เริ่ม: **ฟาร์ม → บริบทโซน/คนกรีด → จุดชั่ง** แล้วชั่ง (Q130)
+  การขายหนึ่งครั้งครอบคลุม **หลายฟาร์ม** ได้ (ผู้ซื้อมารับหนึ่งครั้ง = การขาย
+  หนึ่งครั้ง) (D-9) และกี่จุดชั่งก็ได้ เลือก **ลำดับใดก็ได้** ต่างกันทุกการขาย
+  [§0.1]
+- SALE-2 หัวการขาย: วันที่, ผู้ซื้อ (ค่าเริ่มต้นคือรายล่าสุด), ฟาร์ม, เวลาเริ่มชั่ง
+  (ไม่บังคับ), ผู้จัดการสวน **เติมอัตโนมัติจากข้อมูลหลัก**, หมายเหตุ,
+  รูป/เอกสาร การขายเกิด **ที่สวน** เท่านั้น (กรณีขายที่ลานล้งแบบเดิมถูกตัดออก;
+  D-10) ไม่มีฟิลด์หัวหน้าคนงาน — คนกรีดมาจากจุดชั่ง
+- SALE-3 **ราคา ฿/กก. ใส่เองทุกการขาย** — ไม่ดึงจากการขายครั้งก่อนหรือจาก
+  ข้อมูลตลาด ใส่ได้ **ทุกเมื่อก่อนสรุปเงิน**; การชั่งไม่ต้องรอราคา (D-11)
+  มีโหมดราคาเดียว (฿/กก. ตรง ๆ); ตัด %DRC ออก
+- SALE-4 ยางของแดงและนัด **ไม่ปนกันเด็ดขาด** — ทุกน้ำหนักระบุได้ว่ามาจาก
+  จุดชั่งเดียว จึงเป็นของคนกรีดคนเดียว [Q96]
+- SALE-5 กองยางมีอยู่เฉพาะวันขาย; ไม่ใช่สต็อกระยะยาว [Q97]
 
-### Zero/tare check (D-6)
-- SALE-6 Before weighing at a point, the app asks for the **zero/tare check**
-  (scale reads zero; container tare confirmed). Setting: **every point**
-  (default) · **first point of each farm only** · **skip all**. Skips are
-  logged on the sale.
+### ตรวจศูนย์/tare (D-6)
+- SALE-6 ก่อนชั่งที่จุดชั่ง แอปถามให้ **ตรวจศูนย์/tare** (ตาชั่งอ่านศูนย์;
+  ยืนยันน้ำหนักภาชนะ) ตั้งค่าได้: **ทุกจุด** (ค่าเริ่มต้น) · **เฉพาะจุดแรกของ
+  แต่ละฟาร์ม** · **ข้ามทั้งหมด** การข้ามถูกบันทึกไว้ในการขาย
 
-### Counting baskets
-- SALE-7 Basket size picker: the sale's default **net** weight (50 / 60 kg …)
-  with its container tare; the screen shows the expected scale reading
-  (net + tare).
-- SALE-8 Full basket: a **short press-and-hold (~0.5–1 s, configurable)**
-  records one full basket at the selected net weight (D-7). Single taps,
-  swipes and multi-finger touches never count (old field finding, 2026-08-03;
-  S32).
-- SALE-9 Partial basket: type the **scale reading**; net = reading − tare;
-  both stored and shown [carried].
-- SALE-10 **Basket numbers are assigned automatically and run continuously
-  across the whole sale**, across points and farms — never reset per point
-  [Q133–Q134].
-- SALE-11 **Open partial (bridge) basket**: a partial basket stays open by
-  default. When the user moves to **another point of the same tapper**, the app
-  asks: **"เติมเข่ง N ต่อ"** (continue) or **"เริ่มเข่งใหม่"** (start new —
-  the open basket closes as a remainder). Each component keeps its point;
-  display **"เข่ง 11 — (20 + 30) กก. = 50 กก."**; point subtotals include only
-  their own component [§5.2, D-13].
-- SALE-12 A partial basket can **only** be continued at a point of the **same
-  tapper**. Moving to another tapper's point closes it as a remainder first.
-- SALE-13 Explicit **"จบเข่งแล้ว / เป็นเศษ"** closes a partial basket as a final
-  remainder; it is no longer offered for continuation; the next number becomes
-  available [Q135].
+### การนับเข่ง
+- SALE-7 ตัวเลือกขนาดเข่ง: น้ำหนัก **สุทธิ** ค่าเริ่มต้นของการขาย (50 / 60 กก. …)
+  พร้อม tare ของภาชนะ; หน้าจอแสดงค่าที่ตาชั่งควรอ่านได้ (สุทธิ + tare)
+- SALE-8 เข่งเต็ม: **กดค้างสั้น ๆ (~0.5–1 วินาที, ตั้งค่าได้)** บันทึกเข่งเต็ม
+  หนึ่งเข่งตามน้ำหนักสุทธิที่เลือก (D-7) การแตะครั้งเดียว การปัด และการแตะ
+  หลายนิ้ว ไม่นับเด็ดขาด (ข้อค้นพบภาคสนามเดิม, 2026-08-03; S32)
+- SALE-9 เข่งไม่เต็ม: พิมพ์ **ค่าที่ตาชั่งอ่านได้**; สุทธิ = ค่าที่อ่าน − tare;
+  เก็บและแสดงทั้งสองค่า [carried]
+- SALE-10 **เลขเข่งกำหนดอัตโนมัติและต่อเนื่องตลอดทั้งการขาย** ข้ามจุดชั่ง
+  และข้ามฟาร์ม — ไม่เริ่มใหม่ต่อจุด [Q133–Q134]
+- SALE-11 **เข่งไม่เต็มที่ยังเปิดอยู่ (เข่งเชื่อม)**: เข่งไม่เต็มเปิดค้างไว้เป็น
+  ค่าเริ่มต้น เมื่อผู้ใช้ย้ายไป **จุดชั่งอื่นของคนกรีดคนเดิม** แอปถามว่า
+  **"เติมเข่ง N ต่อ"** (ต่อ) หรือ **"เริ่มเข่งใหม่"** (เริ่มใหม่ — เข่งที่เปิดอยู่
+  ปิดเป็นเศษ) แต่ละส่วนคงจุดชั่งของตัวเอง; แสดง
+  **"เข่ง 11 — (20 + 30) กก. = 50 กก."**; ยอดย่อยของแต่ละจุดรวมเฉพาะส่วน
+  ของตัวเอง [§5.2, D-13]
+- SALE-12 เข่งไม่เต็มต่อได้ **เฉพาะ** ที่จุดชั่งของ **คนกรีดคนเดิม** เท่านั้น
+  การย้ายไปจุดของคนกรีดคนอื่นจะปิดเข่งนั้นเป็นเศษก่อน
+- SALE-13 ปุ่ม **"จบเข่งแล้ว / เป็นเศษ"** ปิดเข่งไม่เต็มเป็นเศษสุดท้าย;
+  ไม่เสนอให้ต่ออีก; เลขถัดไปพร้อมใช้ [Q135]
 
-### Weighing screen (D-8, D-17)
-- SALE-14 **Recorder mode (default, portrait)** shows prominently: current
-  basket no. · current point (and tapper) · open partial weight · cumulative
-  kg · completed baskets · next basket no. [§5.3].
-- SALE-15 **Public mode** (one tap to switch; may rotate to landscape): the
-  basket number as large as the screen allows, for the buyer to read [carried
-  FR-9].
-- SALE-16 **Thai voice** speaks each basket number (and remainder/close
-  events) — always Thai, works offline, can be turned off; audio failure never
-  blocks counting [carried FR-11].
+### หน้าจอชั่ง (D-8, D-17)
+- SALE-14 **โหมดผู้บันทึก (Recorder mode — ค่าเริ่มต้น, แนวตั้ง)** แสดงเด่นชัด:
+  เลขเข่งปัจจุบัน · จุดชั่งปัจจุบัน (และคนกรีด) · น้ำหนักเข่งไม่เต็มที่เปิดอยู่ ·
+  กก. สะสม · จำนวนเข่งที่เสร็จแล้ว · เลขเข่งถัดไป [§5.3]
+- SALE-15 **โหมดสาธารณะ (Public mode)** (แตะครั้งเดียวเพื่อสลับ; หมุนเป็น
+  แนวนอนได้): เลขเข่งใหญ่ที่สุดเท่าที่จอจะรองรับ ให้ผู้ซื้ออ่าน [carried
+  FR-9]
+- SALE-16 **เสียงพูดภาษาไทย** อ่านเลขเข่งทุกเข่ง (และเหตุการณ์เศษ/ปิดเข่ง) —
+  เป็นภาษาไทยเสมอ ทำงานออฟไลน์ ปิดได้; เสียงเสียไม่ขวางการนับเด็ดขาด
+  [carried FR-11]
 
-### Corrections & late entry
-- SALE-17 Undo last basket (with confirmation) and edit/void any basket or
-  component; every correction is kept in the event history [carried].
-- SALE-18 **Bulk entry per point** (D-14) for weighing not recorded live (e.g.
-  Ajarn Somwang's paper notes when the owner arrives late): **N full baskets +
-  remainder kg**; the app allocates continuous basket numbers; marked
-  **"บันทึกย้อนหลัง"**; a photo of the paper can be attached.
-- SALE-19 Photos of piles, weighing slips, cash/transfer evidence attach to the
-  sale or a point.
+### การแก้ไขและการบันทึกย้อนหลัง
+- SALE-17 ย้อนกลับ (undo) เข่งล่าสุด (มีการยืนยัน) และแก้/ยกเลิก (void) เข่งหรือส่วนใดก็ได้;
+  ทุกการแก้ไขเก็บไว้ในประวัติ event [carried]
+- SALE-18 **บันทึกรวมรายจุดชั่ง** (D-14) สำหรับการชั่งที่ไม่ได้บันทึกสด (เช่น
+  โน้ตกระดาษของอาจารย์สมหวังเมื่อเจ้าของมาถึงช้า): **เข่งเต็ม N เข่ง + เศษ
+  กก.**; แอปกำหนดเลขเข่งต่อเนื่องให้; ทำเครื่องหมาย **"บันทึกย้อนหลัง"**;
+  แนบรูปกระดาษได้
+- SALE-19 รูปกองยาง ใบชั่ง หลักฐานเงินสด/โอน แนบกับการขายหรือจุดชั่งได้
 
-### Sale states [Q127–Q129]
-- SALE-20 **Draft → Completed**, or **Cancelled** (a business outcome, kept
-  for history). A Cancelled sale keeps its baskets but is excluded from totals.
-- SALE-21 **Completed sales stay directly editable** by any Owner. If an edit
-  changes any money figure (tapper amount, owner share, totals), the app asks
-  for a **short reason** (pick from a list or type) and flags the affected
-  payment statuses for re-check (D-16).
+### สถานะการขาย [Q127–Q129]
+- SALE-20 **Draft → Completed** หรือ **Cancelled** (ผลทางธุรกิจ เก็บไว้เป็น
+  ประวัติ) การขายที่ Cancelled ยังเก็บเข่งไว้ แต่ไม่นับรวมในยอด
+- SALE-21 **การขายที่ Completed ยังแก้ได้โดยตรง** โดยเจ้าของคนใดก็ได้ ถ้าการแก้
+  เปลี่ยนตัวเลขเงินใด ๆ (ยอดคนกรีด ส่วนแบ่งเจ้าของ ยอดรวม) แอปจะขอ
+  **เหตุผลสั้น ๆ** (เลือกจากรายการหรือพิมพ์) และติดธงสถานะการจ่ายเงินที่
+  ได้รับผลกระทบให้ตรวจใหม่ (D-16)
 
-## 7. Module SET — Reconciliation & settlement [SSOT §0.6, §4.5, §6, Q98–Q101]
+## 7. โมดูล SET — กระทบยอดและสรุปเงิน [SSOT §0.6, §4.5, §6, Q98–Q101]
 
-**MVP.**
-- SET-1 Totals are automatic: per basket → point → tapper → farm → sale; total
-  kg, basket count, amount = price × kg [Q98].
-- SET-2 **Verification once, after all points** are weighed (never per pile)
-  [Q99]: owner's totals side-by-side with the **buyer's reported** kg / amount
-  (and basket count if given). The buyer's sheet is not assumed correct.
-- SET-3 **Money always derives from the recorded baskets** (D-15). On mismatch
-  the owner drills down point → basket → component, and fixes the wrong
-  basket(s). If a difference remains, the sale can be closed as **Difference
-  found** with a reason; the difference is recorded, not silently spread.
-- SET-4 Settlement view [Q100]:
-  - **Per tapper** (Daeng, Nat separately): kg, sale amount, tapper share,
-    fertilizer deduction, **cash payable**.
-  - **Owner**: share from each tapper, combined share, **bank transfer**.
-- SET-5 **Rounding** [§0.6, D-5]: when a split produces fractions, the app asks
-  before settlement — *round to whole baht in the tapper's favour* · *in the
-  owner's favour* · *no rounding (keep satang)* — defaulting to the last
-  choice. The rounding adjustment is stored as its own line. Nothing is
-  hard-coded (replaces the built rule where the owner rounds and the tapper
-  takes the remainder).
-- SET-6 **Independent statuses**, never one "Paid" flag [Q101]: verification
+**MVP**
+- SET-1 ยอดรวมคำนวณอัตโนมัติ: รายเข่ง → จุดชั่ง → คนกรีด → ฟาร์ม → การขาย;
+  กก. รวม, จำนวนเข่ง, ยอดเงิน = ราคา × กก. [Q98]
+- SET-2 **ตรวจสอบครั้งเดียว หลังชั่งครบทุกจุด** (ไม่ตรวจรายกอง) [Q99]:
+  ยอดของเจ้าของวางเทียบข้างกับ กก. / ยอดเงิน **ที่ผู้ซื้อแจ้ง** (และจำนวนเข่ง
+  ถ้ามี) ไม่ถือว่าใบของผู้ซื้อถูกต้องเสมอ
+- SET-3 **เงินคำนวณจากเข่งที่บันทึกไว้เสมอ** (D-15) ถ้าไม่ตรงกัน เจ้าของเจาะลึก
+  จุดชั่ง → เข่ง → ส่วน และแก้เข่งที่ผิด ถ้ายังต่างอยู่ ปิดการขายเป็น
+  **Difference found** พร้อมเหตุผลได้; บันทึกส่วนต่างไว้ ไม่เกลี่ยแบบเงียบ ๆ
+- SET-4 หน้าสรุปเงิน [Q100]:
+  - **รายคนกรีด** (แดง, นัด แยกกัน): กก., ยอดขาย, ส่วนแบ่งคนกรีด,
+    หักค่าปุ๋ย, **เงินสดที่ต้องจ่าย**
+  - **เจ้าของ**: ส่วนแบ่งจากคนกรีดแต่ละคน, ส่วนแบ่งรวม, **โอนเข้าบัญชีธนาคาร**
+- SET-5 **การปัดเศษ** [§0.6, D-5]: เมื่อการแบ่งเกิดเศษสตางค์ แอปถามก่อนสรุปเงิน
+  — *ปัดเป็นบาทเต็มให้คนกรีดได้ประโยชน์* · *ให้เจ้าของได้ประโยชน์* ·
+  *ไม่ปัด (เก็บสตางค์)* — ค่าเริ่มต้นคือตัวเลือกล่าสุด ส่วนปรับจากการปัดเศษเก็บเป็น
+  บรรทัดแยกของตัวเอง ไม่ hard-code อะไร (แทนกฎที่สร้างไว้เดิมว่าเจ้าของปัดเศษ
+  และคนกรีดรับส่วนที่เหลือ)
+- SET-6 **สถานะแยกอิสระ** ไม่ใช่ธง "Paid" อันเดียว [Q101]: การตรวจสอบ
   (Pending · Weight verified · Sale total verified · Difference found);
-  Daeng cash received/paid; Nat cash received/paid; Owner transfer received;
-  Sale closed.
-- SET-7 Sale record keeps: date, price/kg, basket count, total kg, amount,
-  share rule, cash to each tapper, bank transfer to owner, rounding
-  adjustment, fertilizer deductions & remaining balance, buyer, location,
-  start time, media, verification status [§4.4].
-- SET-8 Bargained price changes / lump-sum adjustments (old FR-7.3) are **not**
-  in V1 (D-11).
+  แดง ได้รับ/จ่ายเงินสดแล้ว; นัด ได้รับ/จ่ายเงินสดแล้ว; เจ้าของได้รับเงินโอนแล้ว;
+  ปิดการขายแล้ว
+- SET-7 บันทึกการขายเก็บ: วันที่, ราคา/กก., จำนวนเข่ง, กก. รวม, ยอดเงิน,
+  กฎส่วนแบ่ง, เงินสดให้คนกรีดแต่ละคน, เงินโอนให้เจ้าของ, ส่วนปรับจากการ
+  ปัดเศษ, การหักค่าปุ๋ยและยอดคงเหลือ, ผู้ซื้อ, สถานที่, เวลาเริ่ม, สื่อ,
+  สถานะการตรวจสอบ [§4.4]
+- SET-8 การเปลี่ยนราคาจากการต่อรอง / การปรับเป็นก้อน (FR-7.3 เดิม) **ไม่อยู่**
+  ใน V1 (D-11)
 
-## 8. Module FERT — Fertilizer [SSOT §0.7, §4.6, §8]
+## 8. โมดูล FERT — ปุ๋ย [SSOT §0.7, §4.6, §8]
 
-**MVP.**
-- FERT-1 **Purchase**: type (chemical / chicken manure / other), quantity
-  (sacks), cost, shop, date, who ordered, **who paid** (→ FIN payer &
-  reimbursement), invoice/photo. Normally bought for immediate use (no stock).
-- FERT-2 **Plan** (optional): type, quantity, timing, allocation by zone/
-  worker — usually Ajarn Somwang's plan, recorded by the owner; a plan is a
-  Planned expense in FIN.
-- FERT-3 **Allocation** by sacks per worker (zone optional). Cost per worker
-  follows the sacks allocated; rule is extensible later [§8.3].
-- FERT-4 **Liability**: each worker bears **50%** of their allocated cost; the
-  owner's 50% is a farm expense.
-- FERT-5 **Ledger per worker, across sales**: liability, deductions, other
-  payments, **outstanding balance**, optional **instalment plan**, full
-  history.
-- FERT-6 **Deduction at settlement**: the app proposes this sale's deduction
-  (instalment or full balance), editable, **capped at the tapper's share** for
-  that sale; any shortfall **carries forward** — cash paid is never negative
-  (D-18). Replaces the old per-sale deduction S29 (which allowed negative
-  payouts and had the owner bear none of the cost).
+**MVP**
+- FERT-1 **การซื้อ**: ชนิด (เคมี / ขี้ไก่ / อื่น ๆ), จำนวน (กระสอบ), ราคา,
+  ร้าน, วันที่, ใครสั่ง, **ใครจ่าย** (→ ผู้จ่ายจริงและเงินที่ต้องคืนใน FIN),
+  ใบแจ้งหนี้/รูป ปกติซื้อมาใช้ทันที (ไม่มีสต็อก)
+- FERT-2 **แผน** (ไม่บังคับ): ชนิด, จำนวน, ช่วงเวลา, การแบ่งตามโซน/
+  คนงาน — ปกติเป็นแผนของอาจารย์สมหวัง ที่เจ้าของบันทึก; แผนเป็นค่าใช้จ่าย
+  Planned ใน FIN
+- FERT-3 **การแบ่ง** เป็นกระสอบรายคนงาน (โซนไม่บังคับ) ต้นทุนรายคนงานคิดตาม
+  จำนวนกระสอบที่แบ่งให้; ขยายกฎได้ภายหลัง [§8.3]
+- FERT-4 **ภาระ**: คนงานแต่ละคนรับ **50%** ของต้นทุนที่แบ่งให้; อีก 50%
+  ของเจ้าของเป็นค่าใช้จ่ายฟาร์ม
+- FERT-5 **บัญชีรายคนงาน ข้ามการขาย**: ภาระ, การหัก, การจ่ายอื่น ๆ,
+  **ยอดค้าง**, **แผนผ่อนชำระ** (ไม่บังคับ), ประวัติทั้งหมด
+- FERT-6 **หักตอนสรุปเงิน**: แอปเสนอยอดหักของการขายนี้ (งวดผ่อนหรือยอดค้าง
+  ทั้งหมด) แก้ได้ **ไม่เกินส่วนแบ่งของคนกรีด** ในการขายนั้น; ส่วนที่ขาด
+  **ยกไปงวดถัดไป** — เงินสดที่จ่ายไม่ติดลบเด็ดขาด (D-18) แทนการหักรายการขาย
+  แบบเดิม S29 (ซึ่งยอมให้ยอดจ่ายติดลบ และเจ้าของไม่รับต้นทุนเลย)
 
 ---
 
-## 9. Module OPS — Field operations [SSOT §15–21, §18, §37, Q86]
+## 9. โมดูล OPS — งานในสวน [SSOT §15–21, §18, §37, Q86]
 
-**MVP.** All of OPS works offline [SSOT §34].
+**MVP** OPS ทั้งหมดทำงานออฟไลน์ [SSOT §34]
 
-### Inspections & observations
-- OPS-1 Free-form inspection capture: typed note and/or audio; original note/
-  audio preserved [SSOT §17].
-- OPS-2 Attach photos/videos; capture GPS if available; identify property /
-  zone / point (zone optional).
-- OPS-3 (AI, when online) classify the observation and propose structured
-  fields; owner confirms/edits. Unconfirmed AI output stays **AI suggested**,
-  never fact [SSOT §17, §21].
-- OPS-4 From an observation, the owner may create an Incident or Task
-  (explicit action).
+### การตรวจสวนและการสังเกต
+- OPS-1 บันทึกการตรวจสวนแบบอิสระ: พิมพ์โน้ตและ/หรืออัดเสียง; เก็บโน้ต/
+  เสียงต้นฉบับไว้ [SSOT §17]
+- OPS-2 แนบรูป/วิดีโอ; เก็บ GPS ถ้ามี; ระบุที่ดิน / โซน / จุด (โซนไม่บังคับ)
+- OPS-3 (AI, เมื่อออนไลน์) จัดประเภทการสังเกตและเสนอฟิลด์แบบมีโครงสร้าง;
+  เจ้าของยืนยัน/แก้ ผลลัพธ์ AI ที่ยังไม่ยืนยันคงเป็น **AI suggested**
+  ไม่เป็นข้อเท็จจริง [SSOT §17, §21]
+- OPS-4 จากการสังเกต เจ้าของสร้างเหตุการณ์หรืองานได้ (เป็นการกระทำที่ชัดเจน)
 
-### Rubber-tree health
-- OPS-5 Health assessment with a **standard checklist** (overall health, leaf
-  condition, leaf shedding, new leaves, disease/pests, damage, water/soil,
-  tapping-related) plus **custom fields**; checklist configurable by farm /
-  zone / season / inspection type [SSOT §20].
-- OPS-6 Zone-level overview and point-level detail, drill-down to photo/GPS/
-  history [SSOT §19].
-- OPS-7 Tree counts: estimated first, verified later, with a **change history**
-  (losses, new planting) — never overwritten [SSOT §19].
+### สุขภาพต้นยาง
+- OPS-5 ประเมินสุขภาพด้วย **checklist มาตรฐาน** (สุขภาพโดยรวม, สภาพใบ,
+  ใบร่วง, ใบใหม่, โรค/แมลง, ความเสียหาย, น้ำ/ดิน, เรื่องที่เกี่ยวกับการกรีด)
+  และ **ฟิลด์กำหนดเอง**; checklist ตั้งค่าได้ตามฟาร์ม / โซน / ฤดู / ประเภท
+  การตรวจ [SSOT §20]
+- OPS-6 ภาพรวมระดับโซนและรายละเอียดระดับจุด เจาะลึกถึงรูป/GPS/ประวัติได้
+  [SSOT §19]
+- OPS-7 จำนวนต้น: ประมาณก่อน ยืนยันทีหลัง พร้อม **ประวัติการเปลี่ยนแปลง**
+  (ต้นที่เสีย, ปลูกใหม่) — ไม่เขียนทับ [SSOT §19]
 
-### Incidents
-- OPS-8 Incident record: date/time, property, zone, point, GPS, type,
-  severity, description, affected area/trees, photos/videos, reporter, action
-  taken, related task(s), related expense(s), status [SSOT §15]. Types include
-  heavy rain, erosion, riverbank collapse, flooding, standing water, drought,
-  strong wind, fallen rubber/durian trees, disease after wet weather, soil/
-  road damage, other.
-- OPS-9 An incident can exist with **zero cost**, and is retained long-term.
-- OPS-10 **Incident timeline**: dated follow-up events (detected → worsened →
-  discussed → contractor hired → repaired), linking observations, media,
-  tasks, expenses, weather, follow-up inspections [SSOT §16].
+### เหตุการณ์ (Incidents)
+- OPS-8 บันทึกเหตุการณ์: วันที่/เวลา, ที่ดิน, โซน, จุด, GPS, ประเภท,
+  ความรุนแรง, รายละเอียด, พื้นที่/ต้นที่ได้รับผล, รูป/วิดีโอ, ผู้แจ้ง, การดำเนินการ
+  ที่ทำ, งานที่เกี่ยวข้อง, ค่าใช้จ่ายที่เกี่ยวข้อง, สถานะ [SSOT §15] ประเภท
+  ได้แก่ ฝนหนัก, ดินกัดเซาะ, ตลิ่งพัง, น้ำท่วม, น้ำขัง, ภัยแล้ง, ลมแรง,
+  ต้นยาง/ทุเรียนล้ม, โรคหลังสภาพอากาศชื้น, ดิน/ถนนเสียหาย, อื่น ๆ
+- OPS-9 เหตุการณ์มีได้แม้ **ไม่มีค่าใช้จ่ายเลย** และเก็บไว้ระยะยาว
+- OPS-10 **ไทม์ไลน์เหตุการณ์**: เหตุการณ์ติดตามผลตามวันที่ (พบ → แย่ลง →
+  หารือ → จ้างผู้รับเหมา → ซ่อมแล้ว) เชื่อมการสังเกต สื่อ งาน ค่าใช้จ่าย
+  สภาพอากาศ และการตรวจติดตามผล [SSOT §16]
 
 ### GPS
-- OPS-11 GPS optional at property, zone, inspection point, incident and
-  observation level. Store **where the record was created** separately from
-  **where the event happened**; remote entry (from Bangkok, from LINE) must
-  not be forced to carry GPS [SSOT §18].
+- OPS-11 GPS ไม่บังคับ ทั้งระดับที่ดิน โซน จุดตรวจ เหตุการณ์ และการสังเกต
+  เก็บ **ตำแหน่งที่สร้างบันทึก** แยกจาก **ตำแหน่งที่เหตุเกิดขึ้นจริง**;
+  การบันทึกจากที่อื่น (จากกรุงเทพฯ, จาก LINE) ต้องไม่ถูกบังคับให้มี GPS
+  [SSOT §18]
 
-### Contextual notes / Farm Change Log
-- OPS-12 Owner can add a free-text contextual note/event at any time (heavy
-  rain, worker issue, buyer scheduling, repair …). Notes feed Timeline,
-  Reports, Comparisons and AI [SSOT Q86–Q87, Q92].
+### บันทึกบริบท / Farm Change Log
+- OPS-12 เจ้าของเพิ่มโน้ต/เหตุการณ์บริบทแบบข้อความอิสระได้ทุกเมื่อ (ฝนหนัก,
+  เรื่องคนงาน, นัดผู้ซื้อ, การซ่อม …) โน้ตป้อนเข้า Timeline, รายงาน, การเปรียบเทียบ
+  และ AI [SSOT Q86–Q87, Q92]
 
-### Media
-- OPS-13 Photos, videos, receipts, weighing slips, fertilizer invoices, worker
-  documents, incident evidence — each preserving date/time, source, related
-  entity, GPS when available [SSOT §37]. Captured offline; uploaded on sync.
+### สื่อ
+- OPS-13 รูป วิดีโอ ใบเสร็จ ใบชั่ง ใบแจ้งหนี้ปุ๋ย เอกสารคนงาน หลักฐานเหตุการณ์
+  — แต่ละรายการเก็บวันที่/เวลา, แหล่งที่มา, entity ที่เกี่ยวข้อง, GPS เมื่อมี
+  [SSOT §37] บันทึกได้ออฟไลน์; อัปโหลดตอนซิงก์
 
-## 10. Module TASK — Tasks & notifications [SSOT §24–25, Q52–Q58]
+## 10. โมดูล TASK — งานและการแจ้งเตือน [SSOT §24–25, Q52–Q58]
 
-**MVP:** manual tasks, owner-confirmed suggested tasks, document & opted-in
-task reminders. **Deferred:** learned seasonal recommendations beyond simple
-rules.
+**MVP:** งานที่สร้างเอง, งานที่ระบบแนะนำและเจ้าของยืนยัน, การเตือนเอกสาร
+และการเตือนงานที่เลือกเปิดไว้ **Deferred:** คำแนะนำตามฤดูที่เรียนรู้เองเกินกว่า
+กฎง่าย ๆ
 
-- TASK-1 Task fields (recommended defaults, **minimum required kept low**):
-  name, property, zone/point, reason/context, linked source record
-  (observation/incident/document/weather/analytics), responsible person, due
-  date or window, priority, estimated cost, actual cost, status, notes,
-  attachments. Only the name is mandatory; everything else is optional
-  (sensible default per SSOT "don't ask for every detail").
-- TASK-2 The system recommends a sensible status workflow (e.g. To do → In
-  progress → Done / Not needed); the owner doesn't design it.
-- TASK-3 **No task is ever created without explicit owner approval.**
-  Suggestions (from observation, incident, weather, document, analytics,
-  season) offer **Create Task · Not needed · View more data** and explain why
-  [SSOT Q63].
-- TASK-4 Notifications are **opt-in per task**; documents always notify
-  (DOC). The system may *recommend* a reminder; the owner decides [Q53].
-- TASK-5 Recipients: **owner is the default for every notification**; the
-  owner may add Ajarn Somwang per task/issue; he is never added automatically
-  [Q56].
-- TASK-6 Channels: in-app push and LINE, LINE subject to API validation [Q57].
-- TASK-7 Frequency: system-recommended per notification type, editable later;
-  documents repeat until handled; general tasks don't repeat unless selected;
-  de-duplicate [Q58].
+- TASK-1 ฟิลด์ของงาน (ค่าเริ่มต้นที่แนะนำ, **ฟิลด์บังคับให้น้อยที่สุด**):
+  ชื่อ, ที่ดิน, โซน/จุด, เหตุผล/บริบท, บันทึกต้นทางที่เชื่อม
+  (การสังเกต/เหตุการณ์/เอกสาร/สภาพอากาศ/การวิเคราะห์), ผู้รับผิดชอบ, วันครบกำหนด
+  หรือช่วงเวลา, ความสำคัญ, ค่าใช้จ่ายประมาณ, ค่าใช้จ่ายจริง, สถานะ, หมายเหตุ,
+  ไฟล์แนบ บังคับเฉพาะชื่อ; ที่เหลือไม่บังคับทั้งหมด (ค่าเริ่มต้นที่สมเหตุสมผลตาม
+  SSOT "อย่าถามทุกรายละเอียด")
+- TASK-2 ระบบแนะนำขั้นตอนสถานะที่สมเหตุสมผล (เช่น To do → In
+  progress → Done / Not needed); เจ้าของไม่ต้องออกแบบเอง
+- TASK-3 **ไม่มีงานใดถูกสร้างโดยไม่มีการอนุมัติชัดเจนจากเจ้าของ**
+  คำแนะนำ (จากการสังเกต เหตุการณ์ สภาพอากาศ เอกสาร การวิเคราะห์ ฤดูกาล)
+  มีตัวเลือก **Create Task · Not needed · View more data** และอธิบายเหตุผล
+  [SSOT Q63]
+- TASK-4 การแจ้งเตือน **เลือกเปิดแยกตามงาน (opt-in per task)**; เอกสารแจ้งเตือนเสมอ
+  (DOC) ระบบอาจ *แนะนำ* ให้ตั้งเตือนได้; เจ้าของเป็นผู้ตัดสินใจ [Q53]
+- TASK-5 ผู้รับ: **เจ้าของเป็นผู้รับค่าเริ่มต้นของทุกการแจ้งเตือน**; เจ้าของ
+  เพิ่มอาจารย์สมหวังได้เป็นงาน ๆ / เรื่อง ๆ ไป; ไม่เพิ่มท่านโดยอัตโนมัติเด็ดขาด
+  [Q56]
+- TASK-6 ช่องทาง: push ในแอปและ LINE โดย LINE ขึ้นกับการตรวจสอบ API [Q57]
+- TASK-7 ความถี่: ระบบแนะนำตามประเภทการแจ้งเตือน แก้ภายหลังได้; เอกสาร
+  เตือนซ้ำจนกว่าจะจัดการ; งานทั่วไปไม่เตือนซ้ำเว้นแต่เลือกไว้; ตัดรายการซ้ำ
+  [Q58]
 
-## 11. Module DOC — Worker & family documents [SSOT §26, Q54–Q55]
+## 11. โมดูล DOC — เอกสารคนงานและครอบครัว [SSOT §26, Q54–Q55]
 
-**MVP — mandatory reminder functionality.**
+**MVP — ฟังก์ชันการเตือนเป็นข้อบังคับ**
 
-- DOC-1 Model **family → members → documents**. Member: name, called name,
-  relationship to principal worker, DOB/age when useful, worker vs family
-  role, notes. Not a civil registry; members may be left incomplete.
-- DOC-2 Document: type (pink card, passport, visa, health insurance,
-  extensible), holder, issue date if known, expiry date, status, photo/file,
-  renewal notes, responsible person, reminder schedule.
-- DOC-3 Reminders before expiry; recommended default lead times **90 / 60 /
-  30 / 7 days**, editable; repeated until handled.
-- DOC-4 Lifecycle: current → approaching expiry → reminder → owner decides →
-  optional proposed Task → owner confirms → renewed document becomes current;
-  **previous versions kept in history**.
-- DOC-5 The app does not infer legal status; legal rules are verified from
-  authoritative sources before any compliance logic is built.
+- DOC-1 โมเดล **ครอบครัว → สมาชิก → เอกสาร** สมาชิก: ชื่อ, ชื่อเรียก,
+  ความสัมพันธ์กับคนงานหลัก, วันเกิด/อายุเมื่อมีประโยชน์, บทบาทคนงานหรือ
+  ครอบครัว, หมายเหตุ ไม่ใช่ทะเบียนราษฎร์; ข้อมูลสมาชิกไม่ครบได้
+- DOC-2 เอกสาร: ประเภท (บัตรชมพู, หนังสือเดินทาง, วีซ่า, ประกันสุขภาพ,
+  เพิ่มได้), ผู้ถือ, วันออก (ถ้าทราบ), วันหมดอายุ, สถานะ, รูป/ไฟล์,
+  หมายเหตุการต่ออายุ, ผู้รับผิดชอบ, กำหนดการเตือน
+- DOC-3 เตือนก่อนหมดอายุ; ระยะเตือนล่วงหน้าค่าเริ่มต้นที่แนะนำ **90 / 60 /
+  30 / 7 วัน** แก้ได้; เตือนซ้ำจนกว่าจะจัดการ
+- DOC-4 วงจร: ใช้งานอยู่ → ใกล้หมดอายุ → เตือน → เจ้าของตัดสินใจ →
+  เสนองาน (ไม่บังคับ) → เจ้าของยืนยัน → เอกสารที่ต่ออายุแล้วเป็นฉบับปัจจุบัน;
+  **เก็บฉบับก่อนหน้าไว้ในประวัติ**
+- DOC-5 แอปไม่อนุมานสถานะทางกฎหมาย; กฎหมายต้องตรวจสอบจากแหล่งที่เชื่อถือได้
+  ก่อนสร้างตรรกะด้านการปฏิบัติตามกฎใด ๆ
 
-## 12. Module INV — Inventory [SSOT §9]
+## 12. โมดูล INV — สต็อก [SSOT §9]
 
-**MVP.**
-- INV-1 Stock items: grass-cutting fuel and herbicide now; categories
-  extensible. Worker-paid tapping supplies (acid/water) are not owner
-  inventory.
-- INV-2 Inventory transactions: purchase/in, use/out, stock count, with date,
-  quantity, unit, cost (if known), who reported.
-- INV-3 Low-stock flag with an owner-set threshold per item; surfaces on the
-  dashboard. (Reality: workers tell Ajarn Somwang, who tells the owner —
-  recording is by the owner.)
+**MVP**
+- INV-1 รายการสต็อก: ตอนนี้คือน้ำมันตัดหญ้าและยาฆ่าหญ้า; หมวดหมู่เพิ่มได้
+  วัสดุกรีดยางที่คนงานจ่ายเอง (กรด/น้ำ) ไม่ใช่สต็อกของเจ้าของ
+- INV-2 ธุรกรรมสต็อก: ซื้อ/รับเข้า, ใช้/เบิกออก, ตรวจนับ พร้อมวันที่,
+  จำนวน, หน่วย, ต้นทุน (ถ้าทราบ), ผู้แจ้ง
+- INV-3 ธงสต็อกต่ำ ตามเกณฑ์ที่เจ้าของตั้งรายรายการ; แสดงบนแดชบอร์ด
+  (ความจริง: คนงานบอกอาจารย์สมหวัง แล้วท่านบอกเจ้าของ — ผู้บันทึกคือเจ้าของ)
 
-## 13. Module FIN — Farm finance [SSOT §10–13, §27–30, §42]
+## 13. โมดูล FIN — การเงินฟาร์ม [SSOT §10–13, §27–30, §42]
 
-**MVP:** expenses, payer, reimbursements, lifecycle, salary, special
-payments, travel, income streams, basic cash-flow/reserve view.
-**Deferred:** advanced forecasting and reserve methodology.
+**MVP:** ค่าใช้จ่าย, ผู้จ่ายจริง, เงินที่ต้องคืน, วงจรค่าใช้จ่าย, เงินเดือน, การจ่าย
+พิเศษ, การเดินทาง, แหล่งรายได้, มุมมองกระแสเงินสด/เงินสำรองพื้นฐาน
+**Deferred:** การพยากรณ์ขั้นสูงและวิธีคำนวณเงินสำรอง
 
-- FIN-1 **Never collapse into one field** [§42]: what the expense is
-  (category), which property it belongs to, who actually paid, lifecycle
-  (Actual / Committed / Planned), who owes whom, repaid amount, balance.
-- FIN-2 Lifecycle: **Actual** (occurred + paid) · **Committed** (ordered, not
-  necessarily paid) · **Planned/Forecast** (expected). Planned appears in cash
-  planning, never in actual totals [§11].
-- FIN-3 Actual payer: Owner · Ajarn Somwang · Owner's younger sibling ·
-  rubber worker · extensible.
-- FIN-4 **Reimbursements / money owed**: when someone other than the farm's
-  funds pays, a payable is created — who is owed, linked expense(s), original
-  amount, repayments (full/partial/instalments/later), remaining balance,
-  dates, status [§10.1–10.2]. Owner-paid farm expenses are farm expenses
-  payable to the owner, not household spend.
-- FIN-5 Farm manager salary: 15,000 THB/month recurring, paid by owner,
-  separate from his advances [§12].
-- FIN-6 Worker special payments (accident help, support, food/goods, other)
-  recorded separately from the 50% sale share [§12].
-- FIN-7 Travel trip: date(s), origin/destination, **multi-select purposes**,
-  properties involved, expenses (fuel, tolls, hotel, meals, other), receipts/
-  photos, notes. Recorded as one combined cost; allocation to properties is
-  **optional** and never fabricated [§13].
-- FIN-8 Income streams: rubber sales (from SET), Takhian Thong rent, future
-  Khlong Phlu durian profit share/rent; intended-use tags (family expenses,
-  insurance, farm reserve) [§30].
-- FIN-9 Basic cash-flow view: monthly expected inflow/outflow, net, upcoming
-  obligations (salary, committed, planned, reimbursements owed), and a
-  reserve figure with its assumptions and sources labelled. Owner decides the
-  reserve [§27–28].
-- FIN-10 Durian lease records hold only what the lease says; unknown terms are
-  Unknown [§14].
+- FIN-1 **ห้ามรวมเป็นฟิลด์เดียว** [§42]: ค่าใช้จ่ายคืออะไร (หมวดหมู่), เป็นของ
+  ที่ดินใด, ใครจ่ายจริง, วงจร (Actual / Committed / Planned), ใครติดเงินใคร,
+  ยอดที่คืนแล้ว, ยอดคงเหลือ
+- FIN-2 วงจร: **Actual (เกิดจริง)** (เกิดขึ้นแล้ว + จ่ายแล้ว) · **Committed
+  (ผูกพันแล้ว)** (สั่งแล้ว ยังไม่จำเป็นต้องจ่าย) · **Planned/Forecast (วางแผน)**
+  (คาดว่าจะเกิด) Planned แสดงในการวางแผนเงินสด ไม่อยู่ในยอดเกิดจริงเด็ดขาด [§11]
+- FIN-3 ผู้จ่ายจริง: เจ้าของ · อาจารย์สมหวัง · น้องของเจ้าของ ·
+  คนงานกรีดยาง · เพิ่มได้
+- FIN-4 **เงินที่ต้องคืน / เงินค้าง**: เมื่อคนอื่นที่ไม่ใช่เงินของฟาร์มเป็นผู้จ่าย
+  จะสร้างรายการค้างจ่าย — ต้องคืนใคร, ค่าใช้จ่ายที่เชื่อม, ยอดเดิม,
+  การคืนเงิน (ทั้งหมด/บางส่วน/ผ่อน/ภายหลัง), ยอดคงเหลือ, วันที่, สถานะ
+  [§10.1–10.2] ค่าใช้จ่ายฟาร์มที่เจ้าของจ่ายเป็นค่าใช้จ่ายฟาร์มที่ต้องคืนเจ้าของ
+  ไม่ใช่รายจ่ายครัวเรือน
+- FIN-5 เงินเดือนผู้จัดการสวน: 15,000 บาท/เดือน ประจำ, เจ้าของจ่าย, แยกจาก
+  เงินที่ท่านสำรองจ่าย [§12]
+- FIN-6 การจ่ายพิเศษให้คนงาน (ช่วยเหลืออุบัติเหตุ, ช่วยเหลือทั่วไป, อาหาร/ของ,
+  อื่น ๆ) บันทึกแยกจากส่วนแบ่งการขาย 50% [§12]
+- FIN-7 การเดินทาง: วันที่, ต้นทาง/ปลายทาง, **วัตถุประสงค์เลือกได้หลายข้อ**,
+  ที่ดินที่เกี่ยวข้อง, ค่าใช้จ่าย (น้ำมัน, ทางด่วน, ที่พัก, อาหาร, อื่น ๆ),
+  ใบเสร็จ/รูป, หมายเหตุ บันทึกเป็นต้นทุนรวมก้อนเดียว; การแบ่งให้ที่ดิน
+  **ไม่บังคับ** และไม่แต่งขึ้นเอง [§13]
+- FIN-8 แหล่งรายได้: การขายยาง (จาก SET), ค่าเช่าตะเคียนทอง, ส่วนแบ่งกำไร/
+  ค่าเช่าทุเรียนคลองพลูในอนาคต; แท็กการใช้เงินที่ตั้งใจ (ค่าใช้จ่ายครอบครัว,
+  ประกัน, เงินสำรองฟาร์ม) [§30]
+- FIN-9 มุมมองกระแสเงินสดพื้นฐาน: เงินเข้า/ออกที่คาดไว้รายเดือน, สุทธิ,
+  ภาระที่จะมาถึง (เงินเดือน, Committed, Planned, เงินที่ต้องคืน) และตัวเลข
+  เงินสำรองที่ระบุสมมติฐานและแหล่งที่มา เจ้าของเป็นผู้กำหนดเงินสำรอง [§27–28]
+- FIN-10 บันทึกสัญญาเช่าทุเรียนเก็บเฉพาะสิ่งที่สัญญาระบุ; เงื่อนไขที่ไม่ทราบเป็น
+  Unknown [§14]
 
-## 14. Module WX — Weather [SSOT §22–23, Q106]
+## 14. โมดูล WX — สภาพอากาศ [SSOT §22–23, Q106]
 
-**MVP:** forecast + stored actual weather per farm coordinates, rule-based
-alerts → suggested tasks. **Deferred:** Windy production integration.
+**MVP:** พยากรณ์ + เก็บสภาพอากาศจริงตามพิกัดฟาร์ม, การแจ้งเตือนตามกฎ →
+งานที่แนะนำ **Deferred:** การเชื่อม Windy ระดับใช้งานจริง
 
-- WX-1 Weather tied to farm GPS coordinates (coordinates are owner-entered;
-  currently unknown — not invented).
-- WX-2 Provider abstraction: historical and forecast providers swappable
-  independently. Do not assume Windy Premium grants API rights.
-- WX-3 Actual/historical weather **stored in the app's own database** (where
-  licensing permits); forecast never mixed with actual.
-- WX-4 Variables: rainfall, accumulated rainfall, rainy-day count,
-  temperature, humidity, wind, heavy-rain/storm, dry periods.
-- WX-5 Weather → rule/AI recommendation → owner chooses whether to create a
-  Task (e.g. heavy rain → inspect riverbank/drainage/roads). Never silent.
+- WX-1 สภาพอากาศผูกกับพิกัด GPS ของฟาร์ม (พิกัดให้เจ้าของใส่;
+  ตอนนี้ยังไม่ทราบ — ไม่แต่งขึ้นเอง)
+- WX-2 แยกชั้นผู้ให้บริการ (provider abstraction): ผู้ให้บริการข้อมูลย้อนหลังและ
+  พยากรณ์เปลี่ยนได้อิสระจากกัน อย่าถือว่า Windy Premium ให้สิทธิ์ใช้ API
+- WX-3 สภาพอากาศจริง/ย้อนหลัง **เก็บในฐานข้อมูลของแอปเอง** (เท่าที่สัญญา
+  อนุญาต); ไม่ปนพยากรณ์กับค่าจริงเด็ดขาด
+- WX-4 ตัวแปร: ปริมาณฝน, ฝนสะสม, จำนวนวันฝนตก, อุณหภูมิ, ความชื้น, ลม,
+  ฝนหนัก/พายุ, ช่วงแล้ง
+- WX-5 สภาพอากาศ → คำแนะนำตามกฎ/AI → เจ้าของเลือกว่าจะสร้างงานหรือไม่
+  (เช่น ฝนหนัก → ตรวจตลิ่ง/ทางระบายน้ำ/ถนน) ไม่ทำเงียบ ๆ เด็ดขาด
 
-## 15. Module ANA — Dashboard, timeline & analytics [SSOT §31–33, Q59–Q61, Q70–Q109]
+## 15. โมดูล ANA — แดชบอร์ด ไทม์ไลน์ และการวิเคราะห์ [SSOT §31–33, Q59–Q61, Q70–Q109]
 
-**MVP:** Today view, timeline, basic charts with comparison periods,
-drill-down. **Deferred:** final dashboard visual design, market-price
-integration.
+**MVP:** มุมมองวันนี้, ไทม์ไลน์, กราฟพื้นฐานพร้อมช่วงเปรียบเทียบ, การเจาะลึก
+**Deferred:** ดีไซน์แดชบอร์ดขั้นสุดท้าย, การเชื่อมราคาตลาด
 
-- ANA-1 **Home = "ตอนนี้มีอะไรที่ฉันควรรู้หรือควรจัดการ?"** — prioritised
-  items: urgent issues, tasks due, document expiries, open incidents, weather
-  alerts, latest sale/production, finance items (reimbursements owed,
-  upcoming expenses), low stock. Layout not locked; drill-down required.
-- ANA-2 **Timeline**: chronological sales, weather events, fertilizer,
-  inspections, incidents, tasks, expenses, notes, photos, documents; each
-  links to its record [Q60, Q84].
-- ANA-3 Reports/charts with selectable metric, period, zoom, drill-down,
-  comparison and source-data access [Q76]. Sensible default views exist.
-- ANA-4 Comparison periods: presets (previous sale, previous 3 sales, previous
-  month, same period last year, seasonal) + custom range; system may
-  recommend, owner chooses [Q61, Q78, Q102].
-- ANA-5 Dimensions: farm, zone, worker, weighing point, sale, period, year
-  [Q73]. Worker→zone assignments are time-bounded and analytics use the
-  assignment valid at the time [Q94].
-- ANA-6 KPIs: production kg, **kg/rai** (using historically correct area),
-  price, revenue, cost per kg where data supports, fertilizer vs production,
-  reimbursement balances, income vs expenses [§32, Q103].
-- ANA-7 **Sale interval** (days between sales) is the context measure; it is
-  never presented as tapping days. Long intervals take a quick reason (rain,
-  farm condition, workforce, seasonal stop, buyer scheduling, intentional,
-  unknown, other) + free text [Q104–Q105].
-- ANA-8 Market price vs farm selling price chart with **actual-value** and
-  **indexed (=100)** modes [Q107–Q108] — **Deferred** until a market source is
-  confirmed; farm price history chart is MVP.
-- ANA-9 Correlation is never presented as causation [Q88].
+- ANA-1 **หน้าแรก = "ตอนนี้มีอะไรที่ฉันควรรู้หรือควรจัดการ?"** — รายการเรียง
+  ตามความสำคัญ: ปัญหาเร่งด่วน, งานที่ถึงกำหนด, เอกสารใกล้หมดอายุ, เหตุการณ์ที่ยัง
+  เปิดอยู่, การแจ้งเตือนสภาพอากาศ, การขาย/ผลผลิตล่าสุด, รายการการเงิน (เงินที่
+  ต้องคืน, ค่าใช้จ่ายที่จะมาถึง), สต็อกต่ำ ยังไม่ล็อกเลย์เอาต์; ต้องเจาะลึกได้
+- ANA-2 **ไทม์ไลน์**: เรียงตามเวลา การขาย, เหตุการณ์สภาพอากาศ, ปุ๋ย,
+  การตรวจสวน, เหตุการณ์, งาน, ค่าใช้จ่าย, โน้ต, รูป, เอกสาร; แต่ละรายการ
+  ลิงก์ไปยังบันทึกของตัวเอง [Q60, Q84]
+- ANA-3 รายงาน/กราฟ เลือกตัวชี้วัด ช่วงเวลา ซูม เจาะลึก เปรียบเทียบ และเข้าถึง
+  ข้อมูลต้นทางได้ [Q76] มีมุมมองค่าเริ่มต้นที่สมเหตุสมผล
+- ANA-4 ช่วงเปรียบเทียบ: ค่าตั้งต้น (การขายครั้งก่อน, 3 การขายก่อนหน้า, เดือนก่อน,
+  ช่วงเดียวกันปีที่แล้ว, ตามฤดู) + ช่วงกำหนดเอง; ระบบแนะนำได้ เจ้าของเลือก
+  [Q61, Q78, Q102]
+- ANA-5 มิติ: ฟาร์ม, โซน, คนงาน, จุดชั่ง, การขาย, ช่วงเวลา, ปี
+  [Q73] การมอบหมายคนงาน→โซนมีช่วงเวลา และการวิเคราะห์ใช้การมอบหมายที่มีผล
+  ณ เวลานั้น [Q94]
+- ANA-6 KPI: ผลผลิต กก., **กก./ไร่** (ใช้พื้นที่ที่ถูกต้องตามประวัติ),
+  ราคา, รายได้, ต้นทุนต่อ กก. เมื่อข้อมูลรองรับ, ปุ๋ยเทียบผลผลิต,
+  ยอดเงินที่ต้องคืนคงเหลือ, รายได้เทียบรายจ่าย [§32, Q103]
+- ANA-7 **ระยะห่างการขาย** (จำนวนวันระหว่างการขาย) เป็นตัววัดบริบท; ไม่แสดงเป็น
+  จำนวนวันกรีดเด็ดขาด ระยะห่างที่ยาวให้ใส่เหตุผลแบบเร็ว (ฝน, สภาพสวน,
+  แรงงาน, หยุดตามฤดู, นัดผู้ซื้อ, ตั้งใจ, ไม่ทราบ, อื่น ๆ) + ข้อความอิสระ
+  [Q104–Q105]
+- ANA-8 กราฟราคาตลาดเทียบราคาขายของฟาร์ม มีโหมด **ค่าจริง (actual-value)** และ
+  **ดัชนี (indexed =100)** [Q107–Q108] — **Deferred** จนกว่าจะยืนยันแหล่ง
+  ราคาตลาด; กราฟประวัติราคาของฟาร์มเป็น MVP
+- ANA-9 ไม่นำเสนอสหสัมพันธ์ (correlation) ว่าเป็นเหตุและผลเด็ดขาด [Q88]
 
-## 16. Module AI — AI assistance [SSOT §21, Q62–Q71, Q82–Q89, Q109]
+## 16. โมดูล AI — ผู้ช่วย AI [SSOT §21, Q62–Q71, Q82–Q89, Q109]
 
-**MVP: basic** — explain a chart/number, answer questions in chat, suggest
-tasks; online-only (AI is never in an offline-critical path).
-**Deferred:** proactive anomaly monitoring, learned preferences.
+**MVP: พื้นฐาน** — อธิบายกราฟ/ตัวเลข, ตอบคำถามในแชต, แนะนำงาน;
+ออนไลน์เท่านั้น (AI ไม่อยู่ในเส้นทางสำคัญที่ต้องทำงานออฟไลน์เด็ดขาด)
+**Deferred:** การเฝ้าระวังความผิดปกติเชิงรุก, การเรียนรู้ความชอบ
 
-- AI-1 Output always separates **Fact · Pattern/Correlation · Interpretation
-  · Recommendation · Unknown**, and cites source records (drill-through).
-- AI-2 Insufficient data → says **"ไม่รู้ / ข้อมูลไม่เพียงพอ"**, lists what is
-  missing and what would help [Q66, Q89].
-- AI-3 Charts offer **Explain · Trace · Ask follow-up** [Q109].
-- AI-4 Natural-language chat with in-conversation context; database is the
-  source of truth, not chat memory; asks when ambiguous [Q67, Q69].
-- AI-5 Chat may **prepare** actions (create/edit task, reminder, data change,
-  notification recipient) — shown as a diff, executed only on explicit owner
-  confirmation [Q68].
-- AI-6 AI never silently changes preferences/rules; proposed learned rules
-  need owner accept/reject/edit [Q64].
+- AI-1 ผลลัพธ์แยก **Fact · Pattern/Correlation · Interpretation
+  · Recommendation · Unknown** เสมอ และอ้างอิงบันทึกต้นทาง (drill-through)
+- AI-2 ข้อมูลไม่พอ → ตอบ **"ไม่รู้ / ข้อมูลไม่เพียงพอ"** ระบุว่าขาดอะไร
+  และอะไรจะช่วยได้ [Q66, Q89]
+- AI-3 กราฟมีตัวเลือก **Explain · Trace · Ask follow-up** [Q109]
+- AI-4 แชตภาษาธรรมชาติ มีบริบทในบทสนทนา; ฐานข้อมูลคือแหล่งความจริง ไม่ใช่
+  ความจำของแชต; ถามกลับเมื่อกำกวม [Q67, Q69]
+- AI-5 แชต **เตรียม** การกระทำได้ (สร้าง/แก้งาน, การเตือน, การเปลี่ยนข้อมูล,
+  ผู้รับการแจ้งเตือน) — แสดงเป็น diff และทำจริงเฉพาะเมื่อเจ้าของยืนยันชัดเจน
+  [Q68]
+- AI-6 AI ไม่เปลี่ยนความชอบ/กฎแบบเงียบ ๆ เด็ดขาด; กฎที่เรียนรู้และเสนอมา
+  ต้องให้เจ้าของยอมรับ/ปฏิเสธ/แก้ [Q64]
 
-## 17. Module INT — Integrations
+## 17. โมดูล INT — การเชื่อมต่อระบบอื่น
 
-All **Deferred** for V1, designed for:
-- INT-1 LINE ingestion of Ajarn Somwang's text/photos/video/voice → records
-  in **Needs Review** [§36]. Requires LINE Official Account / Messaging API
-  validation.
-- INT-2 JotWai data contract: farm income, farm expenses, reimbursements,
-  rent → JotWai [§29].
-- INT-3 Market price source (TradingView symbol TBD) [§7].
-- INT-4 Windy / weather provider licensing [§22].
+ทั้งหมด **Deferred** ใน V1 แต่ออกแบบเผื่อไว้:
+- INT-1 ดึงข้อความ/รูป/วิดีโอ/เสียงของอาจารย์สมหวังจาก LINE → บันทึก
+  สถานะ **Needs Review** [§36] ต้องตรวจสอบ LINE Official Account / Messaging API
+  ก่อน
+- INT-2 สัญญาข้อมูล (data contract) กับ JotWai: รายได้ฟาร์ม, ค่าใช้จ่ายฟาร์ม,
+  เงินที่ต้องคืน, ค่าเช่า → JotWai [§29]
+- INT-3 แหล่งราคาตลาด (สัญลักษณ์ TradingView ยังไม่กำหนด — TBD) [§7]
+- INT-4 Windy / สิทธิ์การใช้งานของผู้ให้บริการสภาพอากาศ [§22]
 
 ---
 
-## 18. Non-functional requirements
+## 18. ข้อกำหนดที่ไม่ใช่ฟังก์ชัน
 
-### NFR-1 Platform & form factor
-- Android phone first (one-handed, standing, sun, gloves); iOS kept working via
-  Expo. **Portrait is the primary orientation**; only the weighing screen's
-  public mode may rotate to landscape (D-17). Supersedes the old landscape
-  lock.
-- **Web is a real surface** (D-19): dashboards, finance, reports and AI from a
-  computer/tablet, and works offline too (IndexedDB, not localStorage).
-- **Thai-only UI** (D-20). The English locale built in S24 is removed; spoken
-  output is Thai. Numerals stay Arabic digits.
+### NFR-1 แพลตฟอร์มและรูปแบบอุปกรณ์
+- โทรศัพท์ Android ก่อน (มือเดียว, ยืน, แดด, ใส่ถุงมือ); iOS ยังใช้ได้ผ่าน
+  Expo **แนวตั้งเป็นแนวหลัก**; เฉพาะโหมดสาธารณะของหน้าจอชั่งที่หมุนเป็น
+  แนวนอนได้ (D-17) แทนการล็อกแนวนอนแบบเดิม
+- **เว็บเป็นช่องทางใช้งานจริง** (D-19): แดชบอร์ด การเงิน รายงาน และ AI จาก
+  คอมพิวเตอร์/แท็บเล็ต และทำงานออฟไลน์ได้ด้วย (IndexedDB ไม่ใช่ localStorage)
+- **UI ภาษาไทยเท่านั้น** (D-20) เอา locale ภาษาอังกฤษที่สร้างใน S24 ออก;
+  เสียงพูดเป็นภาษาไทย ตัวเลขยังเป็นเลขอารบิก
 
-### NFR-2 Offline, durability & sync
-- Nothing in an MVP workflow blocks on the network (AI and weather fetches are
-  the only online-only features, and they degrade gracefully).
-- A recorded basket survives app kill, screen lock, force quit and restart.
-- Media is captured into a local queue and uploaded by the sync engine.
+### NFR-2 ออฟไลน์ ความคงทนของข้อมูล และซิงก์
+- ไม่มีขั้นตอนใดใน MVP ที่ต้องรอเครือข่าย (AI และการดึงสภาพอากาศเป็นฟีเจอร์
+  ออนไลน์อย่างเดียวเท่านั้น และลดระดับการทำงานอย่างนุ่มนวล)
+- เข่งที่บันทึกแล้วต้องรอดเมื่อแอปถูกปิด, ล็อกจอ, บังคับปิด และเปิดใหม่
+- สื่อถูกเก็บเข้าคิวในเครื่องก่อน และ sync engine เป็นผู้อัปโหลด
 
-### NFR-3 Trust & auditability
-- Every money figure traces to recorded baskets, prices, shares, deductions
-  and rounding lines. Weights in integer grams, money in integer satang;
-  rounding happens only at the explicit rounding step or for display
-  [carried].
-- Ordering never depends on the device clock alone; a wrong clock is flagged,
-  never blocking [carried FR-12].
+### NFR-3 ความน่าเชื่อถือและการตรวจสอบย้อนหลัง
+- ทุกตัวเลขเงินย้อนไปถึงเข่ง ราคา ส่วนแบ่ง การหัก และบรรทัดปัดเศษที่บันทึกไว้ได้
+  น้ำหนักเป็นกรัมจำนวนเต็ม เงินเป็นสตางค์จำนวนเต็ม; ปัดเศษเฉพาะที่ขั้นตอน
+  ปัดเศษที่ชัดเจน หรือเพื่อการแสดงผลเท่านั้น [carried]
+- ลำดับไม่ขึ้นกับนาฬิกาเครื่องอย่างเดียว; นาฬิกาผิดจะถูกติดธง แต่ไม่ขวางการทำงาน
+  [carried FR-12]
 
-### NFR-4 Field usability
-- Readable in direct sunlight (high-contrast light theme as field default);
-  colour never the only carrier of state [carried design system].
-- Minimal typing; remembered defaults; obvious sync state; big touch targets.
+### NFR-4 การใช้งานในภาคสนาม
+- อ่านได้ใต้แดดจัด (ธีมสว่างคอนทราสต์สูงเป็นค่าเริ่มต้นภาคสนาม);
+  สีไม่เป็นตัวบอกสถานะเพียงอย่างเดียว [carried design system]
+- พิมพ์ให้น้อยที่สุด; จำค่าเริ่มต้น; สถานะซิงก์ชัดเจน; ปุ่มกดใหญ่
 
-### NFR-5 Security & privacy
-- Farm Group isolation enforced server-side (security rules), not only in UI.
-- Separate **dev** (CI, PR previews, seed data only) and **prod** (real farm
-  data) environments; public preview links never reach prod data.
-- Worker documents and finance are sensitive: access only via authenticated
-  group membership; media URLs not publicly guessable.
+### NFR-5 ความปลอดภัยและความเป็นส่วนตัว
+- การแยกข้อมูลกลุ่มฟาร์มบังคับที่ฝั่งเซิร์ฟเวอร์ (security rules) ไม่ใช่แค่ใน UI
+- แยกสภาพแวดล้อม **dev** (CI, PR preview, seed data เท่านั้น) และ **prod**
+  (ข้อมูลสวนจริง); ลิงก์ preview สาธารณะเข้าถึงข้อมูล prod ไม่ได้เด็ดขาด
+- เอกสารคนงานและการเงินเป็นข้อมูลอ่อนไหว: เข้าถึงได้เฉพาะผ่านการเป็นสมาชิกกลุ่ม
+  ที่ยืนยันตัวตนแล้ว; URL ของสื่อเดาไม่ได้จากภายนอก
 
-### NFR-6 Infrastructure & cost (owner rules, 2026-10-02)
-- **Firebase on the Blaze plan with a budget alert** (≈ $5/month), region
-  asia-southeast1; Firestore as the backend database, Cloud Storage for media
-  (D-1). Expected cost at 3 users ≈ ฿0–30/month.
-- **PR previews on Google Cloud Run**: every PR gets a preview link; deleted
-  when the PR closes or **7 days after its latest deploy**; container images
-  kept to **at most 2 versions or 30 days** (D-21).
-- **GitHub Actions minutes are a budget**: CI is fast and fail-fast; no
-  duplicate push+PR runs; docs-only changes skip build/e2e/preview.
-- Detailed design: `docs/architecture.md`.
+### NFR-6 โครงสร้างพื้นฐานและค่าใช้จ่าย (กฎของเจ้าของ, 2026-10-02)
+- **Firebase แพ็กเกจ Blaze พร้อมการแจ้งเตือนงบประมาณ** (≈ $5/เดือน), region
+  asia-southeast1; Firestore เป็นฐานข้อมูล backend, Cloud Storage สำหรับสื่อ
+  (D-1) ค่าใช้จ่ายที่คาดไว้สำหรับผู้ใช้ 3 คน ≈ ฿0–30/เดือน
+- **PR preview บน Google Cloud Run**: ทุก PR ได้ลิงก์ preview; ลบเมื่อปิด PR
+  หรือ **7 วันหลัง deploy ล่าสุด**; เก็บ container image **ไม่เกิน 2 เวอร์ชัน
+  หรือ 30 วัน** (D-21)
+- **นาที GitHub Actions คืองบประมาณ**: CI ต้องเร็วและ fail-fast; ไม่รัน push+PR
+  ซ้ำกัน; การเปลี่ยนเฉพาะเอกสารข้าม build/e2e/preview
+- ออกแบบโดยละเอียด: `docs/architecture.md`
 
-## MVP acceptance checklist
+<a id="mvp-acceptance-checklist"></a>
+## Checklist การยอมรับ MVP (MVP acceptance checklist)
 
-A V1 build is ready for real farm testing only when all of these pass
-[SSOT checklist, adjusted by the Decision log].
+build ของ V1 พร้อมทดสอบในสวนจริงก็ต่อเมื่อผ่านทุกข้อด้านล่าง
+[SSOT checklist, ปรับตาม Decision log]
 
-**Access** — Google Login works · LINE Login marked integration-dependent ·
-multiple Owners share a Farm Group · a User in multiple groups · selection
-behaviour (one → direct, many → choose) · works offline after sign-in.
+**การเข้าใช้** — Google Login ใช้ได้ · LINE Login ทำเครื่องหมายว่าขึ้นกับการเชื่อมต่อ ·
+เจ้าของหลายคนใช้กลุ่มฟาร์มร่วมกัน · ผู้ใช้หนึ่งคนอยู่หลายกลุ่ม ·
+พฤติกรรมการเลือก (กลุ่มเดียว → เข้าเลย, หลายกลุ่ม → ให้เลือก) · ใช้ออฟไลน์ได้
+หลังล็อกอิน
 
-**Offline / sync** — sale created with no internet · offline record usable
-immediately · Pending Sync visible · auto retry · reconnect triggers sync ·
-no data loss on failure · retry action shown on error/conflict · 3 devices
-share one dataset · conflicting money/count edits never silently overwritten
-· handoff ส่งต่อ/รับช่วง works offline · QR merge at close works · near-
-simultaneous baskets from two devices raise a duplicate question with an
-overlap timeline.
+**ออฟไลน์ / ซิงก์** — สร้างการขายได้โดยไม่มีอินเทอร์เน็ต · บันทึกออฟไลน์ใช้ได้
+ทันที · เห็นสถานะ Pending Sync · ลองใหม่อัตโนมัติ · เชื่อมต่อใหม่แล้วซิงก์เอง ·
+ข้อมูลไม่หายเมื่อล้มเหลว · ปุ่มลองใหม่แสดงเมื่อเกิด error/conflict · 3 เครื่อง
+ใช้ชุดข้อมูลเดียวกัน · การแก้เงิน/จำนวนที่ขัดกันไม่ถูกเขียนทับแบบเงียบ ๆ
+· ส่งต่อ/รับช่วง ใช้ได้ออฟไลน์ · รวมข้อมูลด้วย QR ตอนปิดการขายใช้ได้ ·
+เข่งที่บันทึกเกือบพร้อมกันจากสองเครื่องขึ้นคำถามการนับซ้ำพร้อมไทม์ไลน์
+ช่วงทับกัน
 
-**Sale** — start Farm → Zone/Tapper → point · any point first · multiple
-points and farms · numbers continue across points · zero/tare check per
-setting · 50 kg and 60 kg hold-to-record · partial kg entry (reading − tare) ·
-partial stays open · continue-or-start-new prompt on same tapper · forced
-remainder on tapper change · "จบเข่งแล้ว / เป็นเศษ" · bridge shows (20 + 30) ·
-recorder mode shows the 6 figures · public mode + Thai voice · bulk entry
-marked บันทึกย้อนหลัง · total kg correct · amount = price × kg · price
-enterable any time before settlement · Draft/Completed/Cancelled · Completed
-editable with reason when money changes · Soft Delete/Restore.
+**การขาย** — เริ่ม ฟาร์ม → โซน/คนกรีด → จุดชั่ง · เริ่มจุดไหนก่อนก็ได้ · หลาย
+จุดชั่งและหลายฟาร์ม · เลขต่อเนื่องข้ามจุดชั่ง · ตรวจศูนย์/tare ตามการตั้งค่า ·
+กดค้างบันทึกเข่ง 50 กก. และ 60 กก. · ใส่ กก. เข่งไม่เต็ม (ค่าที่อ่าน − tare) ·
+เข่งไม่เต็มเปิดค้างไว้ · ถามต่อหรือเริ่มใหม่เมื่อเป็นคนกรีดคนเดิม · บังคับปิดเป็นเศษ
+เมื่อเปลี่ยนคนกรีด · "จบเข่งแล้ว / เป็นเศษ" · เข่งเชื่อมแสดง (20 + 30) ·
+โหมดผู้บันทึกแสดง 6 ตัวเลข · โหมดสาธารณะ + เสียงภาษาไทย · บันทึกรวม
+ทำเครื่องหมาย บันทึกย้อนหลัง · กก. รวมถูกต้อง · ยอดเงิน = ราคา × กก. · ใส่ราคา
+ได้ทุกเมื่อก่อนสรุปเงิน · Draft/Completed/Cancelled · Completed
+แก้ได้พร้อมเหตุผลเมื่อเงินเปลี่ยน · Soft Delete/Restore
 
-**Settlement** — buyer reconciliation side-by-side · drill-down to baskets ·
-Difference found closable with reason · Daeng/Nat separate · owner share
-combined · rounding asked, last choice remembered · separate payment
-statuses · fertilizer deduction capped with carry-forward.
+**สรุปเงิน** — กระทบยอดกับผู้ซื้อแบบวางเทียบข้างกัน · เจาะลึกถึงเข่ง ·
+ปิดเป็น Difference found พร้อมเหตุผลได้ · แดง/นัด แยกกัน · ส่วนแบ่งเจ้าของ
+รวมกัน · ถามการปัดเศษ จำตัวเลือกล่าสุด · สถานะการจ่ายเงินแยกกัน ·
+หักค่าปุ๋ยไม่เกินเพดานและยกยอดไปงวดถัดไป
 
-**Farm operations** — inspection offline · incident with zero cost · incident
-timeline · manual task · AI suggestion needs confirmation · inventory ·
-worker/family documents · expiry reminders · GPS where available.
+**งานในสวน** — ตรวจสวนแบบออฟไลน์ · เหตุการณ์ที่ไม่มีค่าใช้จ่าย · ไทม์ไลน์
+เหตุการณ์ · งานที่สร้างเอง · คำแนะนำ AI ต้องยืนยัน · สต็อก ·
+เอกสารคนงาน/ครอบครัว · การเตือนวันหมดอายุ · GPS เมื่อมี
 
-**Finance** — expense has property/category · actual payer · reimbursement
-balance · Actual/Committed/Planned · manager salary · special payments ·
-multi-purpose trip without forced allocation · basic cash-flow/reserve view.
+**การเงิน** — ค่าใช้จ่ายมีที่ดิน/หมวดหมู่ · ผู้จ่ายจริง · ยอดคงเหลือเงินที่ต้องคืน ·
+Actual/Committed/Planned · เงินเดือนผู้จัดการ · การจ่ายพิเศษ ·
+การเดินทางหลายวัตถุประสงค์โดยไม่บังคับแบ่ง · มุมมองกระแสเงินสด/เงินสำรองพื้นฐาน
 
-**Analytics** — Today view · timeline · basic charts · drill-down · history
-available · comparison periods selectable · AI cites sources · AI says when
-data is insufficient.
+**การวิเคราะห์** — มุมมองวันนี้ · ไทม์ไลน์ · กราฟพื้นฐาน · เจาะลึก · มีประวัติ
+ให้ดู · เลือกช่วงเปรียบเทียบได้ · AI อ้างอิงแหล่งที่มา · AI บอกเมื่อ
+ข้อมูลไม่เพียงพอ
 
-## Open items (not invented, owner to supply over time) [SSOT §39]
+## รายการที่ยังเปิดอยู่ (ไม่แต่งขึ้นเอง เจ้าของจะให้ข้อมูลเมื่อมี) [SSOT §39]
 
-Farm coordinates · zone names/boundaries · tree counts per farm · Khlong Phlu
-lease terms & profit-share % · fertilizer price history · market price symbol
-· Windy API rights · historical weather provider · document legal rules ·
-buyer details · notebook sales
-history · task recurrence rules · final dashboard layout · JotWai contract ·
-backup/retention · reserve methodology.
+พิกัดฟาร์ม · ชื่อ/ขอบเขตโซน · จำนวนต้นแต่ละฟาร์ม · เงื่อนไขสัญญาเช่าคลองพลู
+และ % ส่วนแบ่งกำไร · ประวัติราคาปุ๋ย · สัญลักษณ์ราคาตลาด
+· สิทธิ์ API ของ Windy · ผู้ให้บริการสภาพอากาศย้อนหลัง · กฎหมายเกี่ยวกับเอกสาร ·
+รายละเอียดผู้ซื้อ · ประวัติการขายในสมุด
+· กฎการเกิดซ้ำของงาน · เลย์เอาต์แดชบอร์ดขั้นสุดท้าย · สัญญาข้อมูล JotWai ·
+การสำรอง/ระยะเก็บข้อมูล (backup/retention) · วิธีคำนวณเงินสำรอง
 
-## Decision log
+<a id="decision-log"></a>
+## บันทึกการตัดสินใจ (Decision log)
 
-Append-only. Newest last. Each entry names the requirement it changes.
+เพิ่มต่อท้ายเท่านั้น ใหม่สุดอยู่ล่างสุด แต่ละรายการระบุข้อกำหนดที่เปลี่ยน
 
-- **2026-10-02 — PRD rebased on [SSOT].** Scope widens from "run and settle
-  one sale" (v0.4) to Farm Management MVP (sale + operations + finance).
-  PRD v0.4 non-goals "not an agronomy/fertiliser tool", "sale-side only" are
-  reversed by SSOT Q111.
+- **2026-10-02 — PRD ปรับฐานใหม่ตาม [SSOT]** ขอบเขตขยายจาก "ทำและสรุปเงิน
+  การขายหนึ่งครั้ง" (v0.4) เป็น Farm Management MVP (การขาย + งานในสวน + การเงิน)
+  สิ่งที่ไม่ทำใน PRD v0.4 คือ "ไม่ใช่เครื่องมือด้านเกษตร/ปุ๋ย" และ "เฉพาะฝั่งการขาย"
+  ถูกกลับโดย SSOT Q111
 
-Owner answers to the old→new conflict review, 2026-10-02/03. "Old" = PRD
-v0.4 / architecture v0.1 / epics 1–2 / stories S1–S32.
+คำตอบของเจ้าของต่อการทบทวนความขัดแย้งเก่า→ใหม่, 2026-10-02/03 "เก่า" = PRD
+v0.4 / architecture v0.1 / epics 1–2 / stories S1–S32
 
-| # | Topic | Old | Decision | Changes |
+| # | หัวข้อ | เดิม | การตัดสินใจ | เปลี่ยน |
 |---|---|---|---|---|
-| D-1 | Billing / backend | No backend | **Firebase Blaze + budget alert; separate dev/prod projects; asia-southeast1** | NFR-5, NFR-6 |
-| D-2 | Login | No auth | **Google first; LINE later** (integration-dependent) | ACC-1 |
-| D-3 | Manual sync | Manual sync trigger required (CLAUDE.md, NFR-2 v0.4) | **Automatic; retry action only on error/conflict** | SYNC-2 |
-| D-4 | Multi-device | One device, one operator | **Offline "ส่งต่อ/รับช่วง" handoff + QR merge at close; free mode with 7–10 s duplicate detection + overlap timeline; Bluetooth after MVP** | SYNC-5…8 |
-| D-5 | Rounding | Hard-coded: owner rounds, tapper gets remainder | **Ask each time; remember last choice** | SET-5 |
-| D-6 | Tare & zero check | Tare + gate before every pile (S9) | **Net basket and tare presets as Farm Group config with per-sale default; gate kept per point, setting to show only at each farm's first point or skip all** | MD-7, SALE-6/7 |
-| D-7 | Count gesture | Hold 1.5 s (owner rejected tap 2026-08-03) | **Short hold ~0.5–1 s, configurable** | SALE-8 |
-| D-8 | Voice & 10 m display | Thai speech + full-screen 10 m numeral | **Keep Thai voice; recorder mode (6 figures) by default, switchable public mode** | SALE-14…16 |
-| D-9 | Sale scope | One sale across farms (2026-08-03) | **Kept — one sale may span farms** | SALE-1 |
-| D-10 | Sale location & roles | Farm or ล้ง yard; manager + worker lead required | **Farm only; manager auto-filled; worker-lead field removed** | SALE-2 |
-| D-11 | Price | Before first basket; %DRC mode; S30 price references; FR-7.3 adjustments | **Any time before settlement; %DRC, S30 and bargained adjustments dropped** | SALE-3, SET-8 |
-| D-12 | Split | Per-zone contracts 50/60/70 + `basis` | **Per-tapper, time-bounded, default 50/50; `basis` removed** | MD-8 |
-| D-13 | Bridge basket | Short basket closed within one pile | **Same tapper only; at next point choose continue vs start new** | SALE-11/12 |
-| D-14 | Late entry | Bulk entry (2026-08-11, unbuilt) | **Kept, per weighing point** | SALE-18 |
-| D-15 | Buyer mismatch | Social cross-check by eye | **Fix at the basket; money always from baskets; Difference found + reason if unresolved** | SET-3 |
-| D-16 | Editing Completed | Reopen + typed reason + 2 confirms | **Direct edit; short reason only if money changes; statuses flagged** | SALE-21 |
-| D-17 | Orientation | Landscape lock (later unlocked, S19) | **Portrait primary; public mode may rotate** | NFR-1 |
-| D-18 | Fertilizer deduction | Per-sale deduction, owner bears none, payout may go negative (S29) | **Ledger across sales; worker 50%; deduction capped at share, remainder carries** | FERT-4…6 |
-| D-19 | Web | Verification surface only (localStorage) | **Real surface, offline (IndexedDB)** | NFR-1 |
-| D-20 | Language | Thai + English switch (S24) | **Thai only** | NFR-1 |
-| D-21 | Preview TTL | — | **7 days from latest deploy; deleted on PR close** | NFR-6 |
+| D-1 | การคิดเงิน / backend | ไม่มี backend | **Firebase Blaze + แจ้งเตือนงบประมาณ; แยกโปรเจกต์ dev/prod; asia-southeast1** | NFR-5, NFR-6 |
+| D-2 | การล็อกอิน | ไม่มีการยืนยันตัวตน | **Google ก่อน; LINE ทีหลัง** (ขึ้นกับการเชื่อมต่อ) | ACC-1 |
+| D-3 | ซิงก์ด้วยมือ | ต้องมีปุ่มสั่งซิงก์เอง (CLAUDE.md, NFR-2 v0.4) | **อัตโนมัติ; ปุ่มลองใหม่เฉพาะเมื่อ error/conflict** | SYNC-2 |
+| D-4 | หลายเครื่อง | เครื่องเดียว ผู้ใช้คนเดียว | **ส่งต่อแบบออฟไลน์ "ส่งต่อ/รับช่วง" + รวมด้วย QR ตอนปิดการขาย; โหมดอิสระพร้อมตรวจจับการนับซ้ำ 7–10 วินาที + ไทม์ไลน์ช่วงทับกัน; Bluetooth หลัง MVP** | SYNC-5…8 |
+| D-5 | การปัดเศษ | Hard-code: เจ้าของปัดเศษ คนกรีดได้ส่วนที่เหลือ | **ถามทุกครั้ง; จำตัวเลือกล่าสุด** | SET-5 |
+| D-6 | Tare และการตรวจศูนย์ | Tare + ด่านตรวจก่อนทุกกอง (S9) | **ค่าตั้งต้นเข่งสุทธิและ tare เป็นการตั้งค่ากลุ่มฟาร์ม มีค่าเริ่มต้นรายการขาย; คงด่านตรวจรายจุดชั่ง ตั้งค่าให้แสดงเฉพาะจุดแรกของแต่ละฟาร์มหรือข้ามทั้งหมดได้** | MD-7, SALE-6/7 |
+| D-7 | ท่าทางการนับ | กดค้าง 1.5 วินาที (เจ้าของปฏิเสธการแตะ 2026-08-03) | **กดค้างสั้น ~0.5–1 วินาที, ตั้งค่าได้** | SALE-8 |
+| D-8 | เสียงและการแสดงผลระยะ 10 ม. | เสียงพูดภาษาไทย + ตัวเลขเต็มจออ่านได้จาก 10 ม. | **คงเสียงภาษาไทย; โหมดผู้บันทึก (6 ตัวเลข) เป็นค่าเริ่มต้น สลับเป็นโหมดสาธารณะได้** | SALE-14…16 |
+| D-9 | ขอบเขตการขาย | การขายเดียวข้ามหลายฟาร์ม (2026-08-03) | **คงไว้ — การขายหนึ่งครั้งครอบคลุมหลายฟาร์มได้** | SALE-1 |
+| D-10 | สถานที่ขายและบทบาท | สวนหรือลานล้ง; ต้องมีผู้จัดการ + หัวหน้าคนงาน | **สวนเท่านั้น; เติมผู้จัดการอัตโนมัติ; เอาฟิลด์หัวหน้าคนงานออก** | SALE-2 |
+| D-11 | ราคา | ก่อนเข่งแรก; โหมด %DRC; ราคาอ้างอิง S30; การปรับ FR-7.3 | **ทุกเมื่อก่อนสรุปเงิน; ตัด %DRC, S30 และการปรับจากการต่อรองออก** | SALE-3, SET-8 |
+| D-12 | การแบ่ง | สัญญารายโซน 50/60/70 + `basis` | **รายคนกรีด มีช่วงเวลา ค่าเริ่มต้น 50/50; เอา `basis` ออก** | MD-8 |
+| D-13 | เข่งเชื่อม | เข่งขาดปิดภายในกองเดียว | **เฉพาะคนกรีดคนเดิม; ที่จุดถัดไปเลือกต่อหรือเริ่มใหม่** | SALE-11/12 |
+| D-14 | บันทึกย้อนหลัง | บันทึกรวม (2026-08-11, ยังไม่สร้าง) | **คงไว้ รายจุดชั่ง** | SALE-18 |
+| D-15 | ยอดไม่ตรงกับผู้ซื้อ | ตรวจทานด้วยสายตาร่วมกัน | **แก้ที่เข่ง; เงินคำนวณจากเข่งเสมอ; Difference found + เหตุผล ถ้ายังแก้ไม่ได้** | SET-3 |
+| D-16 | การแก้การขายที่ Completed | เปิดใหม่ + พิมพ์เหตุผล + ยืนยัน 2 ครั้ง | **แก้ได้โดยตรง; ขอเหตุผลสั้น ๆ เฉพาะเมื่อเงินเปลี่ยน; ติดธงสถานะ** | SALE-21 |
+| D-17 | แนวหน้าจอ | ล็อกแนวนอน (ภายหลังปลดล็อก, S19) | **แนวตั้งเป็นหลัก; โหมดสาธารณะหมุนได้** | NFR-1 |
+| D-18 | การหักค่าปุ๋ย | หักรายการขาย เจ้าของไม่รับต้นทุน ยอดจ่ายติดลบได้ (S29) | **บัญชีข้ามการขาย; คนงานรับ 50%; หักไม่เกินส่วนแบ่ง ส่วนที่เหลือยกไป** | FERT-4…6 |
+| D-19 | เว็บ | ใช้ตรวจสอบเท่านั้น (localStorage) | **ช่องทางใช้งานจริง ทำงานออฟไลน์ (IndexedDB)** | NFR-1 |
+| D-20 | ภาษา | สลับไทย + อังกฤษ (S24) | **ภาษาไทยเท่านั้น** | NFR-1 |
+| D-21 | อายุ preview | — | **7 วันนับจาก deploy ล่าสุด; ลบเมื่อปิด PR** | NFR-6 |
 
-Superseded without a question (SSOT is explicit): multi-tenant SaaS and
-buyer-as-tenant (→ Farm Groups, public SaaS deferred); owner/manager/worker-
-lead roles (→ three equal Owners); per-pile count (→ continuous numbering);
-open/closed pile & zone lifecycle (→ Draft/Completed/Cancelled + statuses);
-device-local farm profile & people store (→ synced master data).
+ถูกแทนที่โดยไม่ต้องถาม (SSOT ระบุชัดแล้ว): SaaS แบบ multi-tenant และ
+ผู้ซื้อเป็น tenant (→ กลุ่มฟาร์ม, SaaS สาธารณะเลื่อนออกไป); บทบาทเจ้าของ/
+ผู้จัดการ/หัวหน้าคนงาน (→ เจ้าของ 3 คนสิทธิ์เท่ากัน); นับรายกอง (→ เลขต่อเนื่อง);
+วงจรเปิด/ปิดของกองและโซน (→ Draft/Completed/Cancelled + สถานะ);
+โปรไฟล์ฟาร์มและที่เก็บรายชื่อคนในเครื่อง (→ ข้อมูลหลักที่ซิงก์)
