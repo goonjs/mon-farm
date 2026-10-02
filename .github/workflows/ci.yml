@@ -75,6 +75,15 @@ jobs:
       - name: Build web
         run: npm run build:web
 
+      # Handed to the preview job so the PR is built once, not twice.
+      - name: Keep the web build for the preview
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: dist/
+          retention-days: 1
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
@@ -95,3 +104,38 @@ jobs:
         with:
           name: playwright-results
           path: e2e/.results/
+
+  # A live URL per PR on the dev site; Firebase deletes the channel after 7
+  # days. Skipped for forks, which get no OIDC token and must not reach the
+  # deploy credential.
+  preview:
+    needs: verify
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist/
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy preview channel (expires in 7 days)
+        run: ./scripts/deploy.sh preview "pr-${{ github.event.pull_request.number }}" | tee preview.log
+
+      - name: Show the preview URL
+        run: |
+          url=$(grep -Eo 'https://[^ ]+\.web\.app[^ ]*' preview.log | head -1)
+          echo "Preview: $url" >> "$GITHUB_STEP_SUMMARY"
