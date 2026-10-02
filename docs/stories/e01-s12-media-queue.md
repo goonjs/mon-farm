@@ -1,6 +1,6 @@
 # Story E01-S12: คิวรูป/วิดีโอในเครื่อง → Cloud Storage
 
-Status: Draft
+Status: Ready
 
 ## Context
 

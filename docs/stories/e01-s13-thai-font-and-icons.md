@@ -1,6 +1,6 @@
 # Story E01-S13: ฝัง font Noto Sans Thai + ชุดไอคอนเส้น open-licence
 
-Status: Draft
+Status: Ready
 
 ## Context
 

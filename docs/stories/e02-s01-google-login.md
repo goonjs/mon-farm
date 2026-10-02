@@ -1,6 +1,6 @@
 # Story E02-S01: Google Login + ใช้ออฟไลน์ต่อได้หลัง login
 
-Status: Draft
+Status: Ready
 
 ## Context
 

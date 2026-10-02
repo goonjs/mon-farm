@@ -1,6 +1,6 @@
 # Story E01-S14: preview A/B รูปแบบ card — เงา+เส้น vs แบน+เส้น
 
-Status: Draft
+Status: Ready
 
 ## Context
 

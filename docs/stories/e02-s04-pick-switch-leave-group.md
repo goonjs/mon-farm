@@ -1,6 +1,6 @@
 # Story E02-S04: เลือก/สลับกลุ่มฟาร์ม + ออกจากกลุ่ม
 
-Status: Draft
+Status: Ready
 
 ## Context
 

@@ -1,8 +1,8 @@
 # Architecture / SDD — mon-farm
 
 > Status: **Draft v1.0** (2026-10-03): System overview, Local data layer, Sync
-> engine, Backend API and Security rewritten in Thai for E01-S01 — **pending the
-> owner's agreement**. Other sections remain v0.1, authored 2026-08-10 alongside epic 1. Records what was
+> engine, Backend API and Security rewritten in Thai for E01-S01 — **agreed by the
+> owner 2026-10-03**. Other sections remain v0.1, authored 2026-08-10 alongside epic 1. Records what was
 > actually built and why. Pending owner review — the decisions here were made to
 > unblock implementation, not agreed in advance, so treat every one as a
 > proposal with its reasoning attached rather than as settled.
@@ -36,7 +36,7 @@ location, notifications, camera/QR) each go through the dependency gate in
 
 ## System overview
 
-> สถานะ: **v1.0 สำหรับ E01-S01 — รอเจ้าของอ่านและตกลงทั้งฉบับ** (เขียน 2026-10-03) แทนที่ภาพรวม v0.1
+> สถานะ: **v1.0 สำหรับ E01-S01 — เจ้าของตกลงทั้งฉบับ 2026-10-03** แทนที่ภาพรวม v0.1
 > ข้อตัดสินใจที่ใช้: PRD D-1, D-3, D-19, D-22…D-33 และคำตอบเจ้าของ 2026-10-03 (UUIDv7, ลำดับเชิงเหตุผล,
 > ไม่ย้ายข้อมูลเก่า, รวมอัตโนมัติเฉพาะฟิลด์ที่ไม่ใช่เงิน/น้ำหนัก/จำนวน/สถานะ, รหัสเชิญผ่าน Cloud Functions,
 > ไม่เข้ารหัสข้อมูลในเครื่องใน MVP)

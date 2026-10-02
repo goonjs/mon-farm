@@ -1,6 +1,6 @@
 # Story E01-S07: Firebase dev/prod + Hosting deploy + preview channel ต่อ PR
 
-Status: Draft
+Status: Ready
 
 ## Context
 

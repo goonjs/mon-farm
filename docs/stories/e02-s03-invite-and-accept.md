@@ -1,6 +1,6 @@
 # Story E02-S03: เชิญเจ้าของร่วม → ตอบรับ
 
-Status: Draft
+Status: Ready
 
 ## Context
 

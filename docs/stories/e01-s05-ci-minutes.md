@@ -1,6 +1,6 @@
 # Story E01-S05: CI ประหยัดนาที — ข้ามเอกสารล้วน, cache, e2e ใช้ dist เดิม, ประเมิน bun
 
-Status: Draft
+Status: Ready
 
 ## Context
 

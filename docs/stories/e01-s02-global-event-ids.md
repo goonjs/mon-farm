@@ -1,6 +1,6 @@
 # Story E01-S02: id ของ event ไม่ซ้ำทั่วโลก + ผู้บันทึก = user + เครื่อง
 
-Status: Draft
+Status: Ready
 
 ## Context
 

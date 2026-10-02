@@ -1,6 +1,6 @@
 # Story E01-S10: แสดงสถานะ sync + ปุ่ม "ลองใหม่" เมื่อ error
 
-Status: Draft
+Status: Ready
 
 ## Context
 

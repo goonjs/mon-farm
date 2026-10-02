@@ -1,6 +1,6 @@
 # Story E01-S08: Firestore — event แก้ไม่ได้ + security rules แยกกลุ่มฟาร์ม
 
-Status: Draft
+Status: Ready
 
 ## Context
 

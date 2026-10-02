@@ -1,6 +1,6 @@
 # Story E01-S04: ลบแบบกู้คืนได้ (Soft Delete) + ที่มาของข้อมูล
 
-Status: Draft
+Status: Ready
 
 ## Context
 

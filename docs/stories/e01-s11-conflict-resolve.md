@@ -1,6 +1,6 @@
 # Story E01-S11: ตรวจจับ Conflict + หน้าจอให้เจ้าของเลือก
 
-Status: Draft
+Status: Ready
 
 ## Context
 

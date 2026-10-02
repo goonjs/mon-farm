@@ -1,7 +1,7 @@
 Story เก็บที่นี่ ไฟล์ละ 1 story แตกมาจาก epic ใน `docs/epics/` ใช้
 `docs/templates/story-template.md` เป็นแม่แบบ ดูขั้นตอนทำงานใน `docs/process.md`
 
-## Story ของ PRD v1.0 (2026-10-03) — ทุก story ยังเป็น Draft
+## Story ของ PRD v1.0 (2026-10-03) — E01 + E02 เป็น Ready (เจ้าของตกลง AC 2026-10-03); epic อื่นยังเป็น Draft
 
 ห้ามเริ่ม implement จนกว่า Acceptance criteria จะตกลงกันแล้ว (Status → Ready)
 story ที่มีหัวข้อ `คำถามเจ้าของ` ต้องได้คำตอบก่อน ❓ = มีคำถามค้าง
