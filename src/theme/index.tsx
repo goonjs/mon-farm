@@ -14,6 +14,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import { tokens, type ColorName, type ColorScheme } from '../../design/tokens';
+import { face, type FontWeight } from './fonts';
 
 /**
  * `Record<ColorName, string>`, not `typeof tokens.color.light`.
@@ -36,6 +37,8 @@ export interface Theme {
   readonly publicNumeral: typeof tokens.publicNumeral;
   readonly bezel: typeof tokens.bezel;
   readonly opacity: typeof tokens.opacity;
+  /** Text style for a weight: the embedded Noto Sans Thai face of that weight (E01-S13). */
+  readonly face: (weight: FontWeight) => { fontFamily: string };
 }
 
 function themeFor(scheme: ColorScheme): Theme {
@@ -51,6 +54,7 @@ function themeFor(scheme: ColorScheme): Theme {
     publicNumeral: tokens.publicNumeral,
     bezel: tokens.bezel,
     opacity: tokens.opacity,
+    face,
   };
 }
 

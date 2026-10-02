@@ -167,13 +167,13 @@ const th = {
   // ── The pile-closed decision point (S13) ─────────────────────────────────
   'closed.title': 'ปิดกองแล้ว',
   'closed.total': '{name} — {baskets} เข่ง · {weight} กก.',
-  'closed.nextPile': 'กองถัดไปในโซนนี้ →',
+  'closed.nextPile': 'กองถัดไปในโซนนี้',
   'closed.switchZone': 'เปลี่ยนโซน',
   'closed.closeZone': 'ปิดโซนนี้',
 
   // ── Device settings ──────────────────────────────────────────────────────
   'settings.title': 'ตั้งค่าเครื่อง',
-  'settings.back': '← รายการ',
+  'settings.back': 'รายการ',
   'settings.open': 'ตั้งค่า',
   'settings.language': 'ภาษา',
   'settings.languageNote': 'เปลี่ยนเฉพาะตัวหนังสือบนหน้าจอ เสียงพูดยังเป็นภาษาไทยเสมอ',
@@ -187,13 +187,13 @@ const th = {
 
   // ── Sale setup (S6) ──────────────────────────────────────────────────────
   'setup.title': 'ตั้งค่าการขาย',
-  'setup.backToList': '← รายการ',
+  'setup.backToList': 'รายการ',
   'setup.ready': 'ทุกอย่างพร้อม',
   'setup.needPrice': 'ยังไม่ได้ตั้งราคา',
   'setup.needZone': 'ยังไม่มีโซน',
   'setup.needSplit': 'บางโซนยังไม่มีส่วนแบ่ง',
   'setup.needPile': 'ยังไม่มีกอง',
-  'setup.startCounting': 'เริ่มนับ →',
+  'setup.startCounting': 'เริ่มนับ',
   'setup.parties': 'ผู้ซื้อและคน',
   'setup.farm': 'ไร่',
   'setup.buyer': 'ล้ง',
@@ -230,7 +230,7 @@ const th = {
   'settle.title': 'สรุป',
   'settle.list': 'รายการ',
   'settle.cannotSettle': 'ยังสรุปไม่ได้',
-  'settle.backToCounting': '← กลับไปนับ',
+  'settle.backToCounting': 'กลับไปนับ',
   'settle.saleConsequence': 'การขายนี้จะเปิดอีกครั้ง สามารถนับและปิดกองต่อได้',
   'settle.derivation': 'ที่มาของยอด',
   'settle.ownerTotal': 'รวมส่วนเจ้าของ',
@@ -296,7 +296,7 @@ const th = {
 
   // ── Farm profile (S27) ───────────────────────────────────────────────────
   'farmProfile.title': 'ข้อมูลฟาร์ม',
-  'farmProfile.back': '← ตั้งค่า',
+  'farmProfile.back': 'ตั้งค่า',
   'farmProfile.empty': 'ยังไม่มีโซนที่บันทึกไว้',
   'farmProfile.seedPrompt': 'พบการขายก่อนหน้า — ใช้โซนและกองจากการขายล่าสุดเป็นจุดเริ่มต้นไหม',
   'farmProfile.seedButton': 'ใช้จากการขายล่าสุด',
@@ -437,12 +437,12 @@ const en: Partial<Record<keyof typeof th, string>> = {
 
   'closed.title': 'pile closed',
   'closed.total': '{name} — {baskets} baskets · {weight} kg',
-  'closed.nextPile': 'next pile in this zone →',
+  'closed.nextPile': 'next pile in this zone',
   'closed.switchZone': 'switch zone',
   'closed.closeZone': 'close this zone',
 
   'settings.title': 'device settings',
-  'settings.back': '← list',
+  'settings.back': 'list',
   'settings.open': 'settings',
   'settings.language': 'language',
   'settings.languageNote': 'changes the text on screen only — the spoken count is always Thai',
@@ -455,13 +455,13 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'settings.farmProfile': 'farm profile (zones and piles)',
 
   'setup.title': 'sale setup',
-  'setup.backToList': '← list',
+  'setup.backToList': 'list',
   'setup.ready': 'price, split and at least one pile are set',
   'setup.needPrice': 'price not set yet',
   'setup.needZone': 'add a zone',
   'setup.needSplit': 'a zone has no split, and there is no default',
   'setup.needPile': 'add at least one pile',
-  'setup.startCounting': 'start counting →',
+  'setup.startCounting': 'start counting',
   'setup.parties': 'buyer & people',
   'setup.farm': 'farm',
   'setup.buyer': 'buyer',
@@ -497,7 +497,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'settle.title': 'settlement',
   'settle.list': 'list',
   'settle.cannotSettle': 'cannot settle yet',
-  'settle.backToCounting': '← back to counting',
+  'settle.backToCounting': 'back to counting',
   'settle.saleConsequence': 'the sale reopens; counting and closing can continue.',
   'settle.derivation': 'how the total was reached',
   'settle.ownerTotal': 'owner total',
@@ -556,7 +556,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'log.speechSet': 'spoken count {state}',
 
   'farmProfile.title': 'farm profile',
-  'farmProfile.back': '← settings',
+  'farmProfile.back': 'settings',
   'farmProfile.empty': 'no zones saved yet',
   'farmProfile.seedPrompt': 'found a past sale — use its zones and piles as a starting point?',
   'farmProfile.seedButton': 'use the last sale',

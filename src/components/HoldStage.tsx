@@ -295,7 +295,17 @@ export function HoldStage({
     const overflowsStage = box.width > 0 && width > box.width + 0.5;
     const underusesStage = measured < advanceEm * 0.995;
     if (overflowsStage || underusesStage) setAdvanceEm(measured);
+    else setSizedFor(sizeKey);
   };
+  /**
+   * The size the numeral has been CONFIRMED at — set only by a layout that
+   * needed no correction. The rotate hint waits for it: the first paint uses
+   * the token's estimated advance, and judging legibility on that estimate
+   * flashed the hint for a frame whenever the real face was narrower (E01-S13:
+   * Noto Sans Thai puts three digits right on the floor). Decided once per
+   * digit count and stage size, never on an in-between render.
+   */
+  const [sizedFor, setSizedFor] = useState<string | null>(null);
 
   /**
    * Sized against the stage, not the device. See docs/ux/design-system.md §4:
@@ -308,16 +318,17 @@ export function HoldStage({
    * holds at any digit count without anyone remembering to add a step.
    *
    * The width half of that needs the digit's advance in ems, and `advanceEm`
-   * below is measured rather than assumed. `t.font.family.sans` is a system
-   * stack: the face that renders the numeral is whatever the device happens to
-   * have, and its digits are not the token's estimated width on every one of
-   * them. Guessing low overflows the viewport (CI's Linux face measures 0.6558
+   * below is measured rather than assumed. The numeral is the embedded Noto
+   * Sans Thai (E01-S13), but it falls back to the system face if the font
+   * failed to load, and digit widths differ between faces and renderers — the
+   * token's estimate is not right everywhere. Guessing low overflows the viewport (CI's Linux face measures 0.6558
    * against the token's 0.62, which put a portrait numeral 22px past a 390px
    * screen); guessing high gives back millimetres F-9.7 says the count cannot
    * spare. So the token is the first paint's estimate, and every paint after
    * it uses the ratio the glyph actually achieved.
    */
   const digits = String(count).length;
+  const sizeKey = `${digits}|${box.width}x${box.height}`;
   const byHeight = box.height * t.publicNumeral.stageHeightRatio;
   const byWidth = box.width / (advanceEm * Math.max(1, digits));
   const fontSize = Math.max(24, Math.min(byHeight, byWidth));
@@ -412,7 +423,7 @@ export function HoldStage({
     >
       <Bezel pct={pct} width={box.width} height={box.height} rejected={rejected} />
 
-      {!clearsLegibilityFloor ? (
+      {sizedFor === sizeKey && !clearsLegibilityFloor ? (
         <View style={{ position: 'absolute', top: t.space.sm, alignItems: 'center' }} pointerEvents="none">
           <Text
             testID="rotate-hint"
@@ -437,8 +448,7 @@ export function HoldStage({
         accessibilityLiveRegion="polite"
         onLayout={onCountLayout}
         style={{
-          fontFamily: t.font.family.sans,
-          fontWeight: t.font.weight.black,
+          ...t.face(t.font.weight.black),
           fontVariant: ['tabular-nums'],
           letterSpacing: fontSize * t.font.tracking.tight,
           lineHeight: fontSize,

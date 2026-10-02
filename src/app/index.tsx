@@ -61,9 +61,8 @@ export default function SaleListScreen() {
       >
         <Text
           style={{
-            fontFamily: t.font.family.sans,
+            ...t.face(t.font.weight.black),
             fontSize: t.font.size.title,
-            fontWeight: t.font.weight.black,
             color: t.color.ink,
           }}
         >
@@ -74,7 +73,7 @@ export default function SaleListScreen() {
         </Text>
         <View style={{ flex: 1 }} />
         <Link href={SETTINGS} asChild>
-          <Button testID="open-settings">{msg('settings.open')}</Button>
+          <Button testID="open-settings" icon="settings">{msg('settings.open')}</Button>
         </Link>
       </View>
 
@@ -84,7 +83,7 @@ export default function SaleListScreen() {
         ) : sales.length === 0 ? (
           <Text
             testID="empty-state"
-            style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}
+            style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft }}
           >
             {msg('sales.empty')}
           </Text>
@@ -101,7 +100,7 @@ export default function SaleListScreen() {
         }}
       >
         <Link href={newSaleHref} asChild>
-          <Button testID="new-sale" variant="primary">{msg('sales.new')}</Button>
+          <Button testID="new-sale" variant="primary" icon="plus">{msg('sales.new')}</Button>
         </Link>
       </View>
     </View>

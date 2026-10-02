@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { I18nProvider } from '../i18n';
 import { SpeechProvider } from '../speech';
 import { ThemeProvider } from '../theme';
+import { FontGate } from '../theme/FontGate';
 
 /**
  * Root layout. Theme, language, and speech — there is no sale-wide provider
@@ -24,12 +25,14 @@ export default function RootLayout() {
     // Thai farm, and the device's locale is not evidence about who is holding
     // it (see src/i18n/index.tsx). Speech defaults on — FR-11 is half the
     // cross-check the product exists for.
-    <ThemeProvider initial="light">
-      <I18nProvider initial="th">
-        <SpeechProvider initial>
-          <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
-        </SpeechProvider>
-      </I18nProvider>
-    </ThemeProvider>
+    <FontGate>
+      <ThemeProvider initial="light">
+        <I18nProvider initial="th">
+          <SpeechProvider initial>
+            <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
+          </SpeechProvider>
+        </I18nProvider>
+      </ThemeProvider>
+    </FontGate>
   );
 }

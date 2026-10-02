@@ -65,7 +65,7 @@ export function ZonePileSwitcher({ state, onPick, onClose }: ZonePileSwitcherPro
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.md }}>
         {state.zones.map((zone) => (
           <View key={zone.id}>
-            <Text style={{ fontFamily: t.font.family.sans, fontWeight: t.font.weight.bold, fontSize: t.font.size.small, color: t.color.ink, marginBottom: t.space.xs }}>
+            <Text style={{ ...t.face(t.font.weight.bold), fontSize: t.font.size.small, color: t.color.ink, marginBottom: t.space.xs }}>
               {msg('switcher.zoneRow', {
                 name: zone.name,
                 status: msg(zone.status === 'closed' ? 'status.closed' : 'status.open'),

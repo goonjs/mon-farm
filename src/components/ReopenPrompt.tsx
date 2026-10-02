@@ -47,10 +47,10 @@ export function ReopenPrompt({ testID = 'reopen-prompt', targetLabel, consequenc
         gap: t.space.md,
       }}
     >
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.warn }}>
+      <Text style={{ ...t.face(t.font.weight.black), fontSize: t.font.size.title, color: t.color.warn }}>
         {msg('reopen.title', { target: targetLabel })}
       </Text>
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}>
+      <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}>
         {consequence}
       </Text>
 
@@ -66,7 +66,7 @@ export function ReopenPrompt({ testID = 'reopen-prompt', targetLabel, consequenc
               width: '100%',
               maxWidth: 480,
               minHeight: 40,
-              fontFamily: t.font.family.sans,
+              ...t.face(t.font.weight.regular),
               fontSize: t.font.size.small,
               paddingHorizontal: t.space.sm,
               borderWidth: t.border.hair,
@@ -90,7 +90,7 @@ export function ReopenPrompt({ testID = 'reopen-prompt', targetLabel, consequenc
           <Text testID={`${testID}-reason-echo`} style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.small, color: t.color.ink, fontStyle: 'italic' }}>
             {`"${reason.trim()}"`}
           </Text>
-          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject, textAlign: 'center' }}>
+          <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.reject, textAlign: 'center' }}>
             {msg('reopen.areYouSure')}
           </Text>
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>

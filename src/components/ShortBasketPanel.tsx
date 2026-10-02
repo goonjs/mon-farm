@@ -62,7 +62,7 @@ export function ShortBasketPanel({
         onChange={onChangeReading}
       />
 
-      <Text testID="short-preview" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>
+      <Text testID="short-preview" style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.ink }}>
         {msg('short.derivation', { reading: kg(readingG), tare: kg(tareG), net: kg(netG) })}
       </Text>
 

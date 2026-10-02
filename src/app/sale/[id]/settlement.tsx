@@ -109,7 +109,7 @@ export default function SettlementScreen() {
         <View style={{ flex: 1, padding: t.space.xl, justifyContent: 'center' }}>
           <Text
             style={{
-              fontFamily: t.font.family.sans,
+              ...t.face(t.font.weight.regular),
               fontSize: t.font.size.lead,
               color: t.color.reject,
               marginBottom: t.space.sm,
@@ -117,11 +117,11 @@ export default function SettlementScreen() {
           >
             {msg('settle.cannotSettle')}
           </Text>
-          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+          <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft }}>
             {why}
           </Text>
           <View style={{ flexDirection: 'row', marginTop: t.space.lg }}>
-            <Button variant="primary" onPress={backToCounting}>{msg('settle.backToCounting')}</Button>
+            <Button variant="primary" icon="arrow-left" onPress={backToCounting}>{msg('settle.backToCounting')}</Button>
           </View>
         </View>
         {reopening ? (
@@ -184,14 +184,13 @@ export default function SettlementScreen() {
                 borderTopColor: t.color.ink,
               }}
             >
-              <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+              <Text style={{ flex: 1, ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft }}>
                 {step.thai}
               </Text>
               <Text
                 style={{
-                  fontFamily: t.font.family.sans,
+                  ...t.face(t.font.weight.bold),
                   fontSize: step.key === 'gross' ? t.font.size.lead : t.font.size.small,
-                  fontWeight: t.font.weight.bold,
                   color: t.color.ink,
                   fontVariant: ['tabular-nums'],
                 }}
@@ -245,7 +244,7 @@ export default function SettlementScreen() {
           <View style={card(t)}>
             <CardTitle>{msg('settle.perWorker')}</CardTitle>
             {s.perWorker.length === 0 ? (
-              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+              <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft }}>
                 {msg('settle.noWorker')}
               </Text>
             ) : (
@@ -291,7 +290,7 @@ export default function SettlementScreen() {
           // Unreachable through normal navigation — settlement is only ever
           // pushed to after `sale_closed`, or resumed for an already-closed
           // sale. Kept as a safe fallback rather than assumed away.
-          <Button variant="primary" testID="back-to-count" onPress={backToCounting}>
+          <Button variant="primary" testID="back-to-count" icon="arrow-left" onPress={backToCounting}>
             {msg('settle.backToCounting')}
           </Button>
         )}
@@ -339,7 +338,7 @@ function CardTitle({ children }: { children: React.ReactNode }) {
 function ShareLabel({ children }: { children: React.ReactNode }) {
   const t = useTheme();
   return (
-    <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+    <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft }}>
       {children}
     </Text>
   );
@@ -351,9 +350,8 @@ function Figure({ children, colour, testID }: { children: React.ReactNode; colou
     <Text
       testID={testID}
       style={{
-        fontFamily: t.font.family.sans,
+        ...t.face(t.font.weight.black),
         fontSize: t.font.size.figure,
-        fontWeight: t.font.weight.black,
         letterSpacing: t.font.size.figure * t.font.tracking.tight,
         color: colour,
         fontVariant: ['tabular-nums'],
@@ -371,14 +369,13 @@ function Row({ label, value, bold, colour }: { label: string; value: string; bol
   const t = useTheme();
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: t.space.sm, paddingVertical: 2 }}>
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, flexShrink: 1 }}>
+      <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft, flexShrink: 1 }}>
         {label}
       </Text>
       <Text
         style={{
-          fontFamily: t.font.family.sans,
+          ...t.face(bold ? t.font.weight.bold : t.font.weight.medium),
           fontSize: t.font.size.small,
-          fontWeight: bold ? t.font.weight.bold : t.font.weight.medium,
           color: colour ?? t.color.ink,
           fontVariant: ['tabular-nums'],
         }}

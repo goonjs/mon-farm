@@ -438,7 +438,7 @@ function UndoConfirmRow({
     <>
       <Text
         testID="undo-confirm-detail"
-        style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}
+        style={{ flex: 1, ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.reject }}
       >
         {msg('counter.undoDetail', {
           seq: event.seq,
@@ -503,12 +503,12 @@ function ClosePileConfirmOverlay({
         gap: t.space.md,
       }}
     >
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.reject }}>
+      <Text style={{ ...t.face(t.font.weight.black), fontSize: t.font.size.title, color: t.color.reject }}>
         {msg('pile.close')}
       </Text>
       <Text
         testID="row-close-pile-detail"
-        style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}
+        style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}
       >
         {msg('pile.closeDetail', { name: pile.name, baskets: pt.baskets, weight: formatKg(pt.netG) })}
       </Text>
@@ -564,19 +564,19 @@ function CloseZoneConfirmOverlay({
         gap: t.space.md,
       }}
     >
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.reject }}>
+      <Text style={{ ...t.face(t.font.weight.black), fontSize: t.font.size.title, color: t.color.reject }}>
         {msg('zone.close')}
       </Text>
       <Text
         testID="decision-close-zone-detail"
-        style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}
+        style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}
       >
         {msg('zone.closeDetail', { name: zone.name, baskets: zt.baskets, weight: formatKg(zt.netG) })}
       </Text>
       {stillCounting.length > 0 ? (
         <Text
           testID="decision-close-zone-warning"
-          style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.warn, textAlign: 'center', maxWidth: 480 }}
+          style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.warn, textAlign: 'center', maxWidth: 480 }}
         >
           {msg('zone.closeWarning', { n: stillCounting.length, names: stillCounting.map((p) => p.name).join(', ') })}
         </Text>
@@ -625,12 +625,12 @@ function CloseSaleConfirmOverlay({
         gap: t.space.md,
       }}
     >
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.reject }}>
+      <Text style={{ ...t.face(t.font.weight.black), fontSize: t.font.size.title, color: t.color.reject }}>
         {msg('counter.closeSaleTitle')}
       </Text>
       <Text
         testID="close-sale-detail"
-        style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}
+        style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft, textAlign: 'center', maxWidth: 480 }}
       >
         {msg('counter.closeSaleDetail', {
           zones: state.zones.length,
@@ -743,7 +743,7 @@ function PilePanel({
             </Button>
           ) : (
             <View style={{ gap: t.space.xs }}>
-              <Text testID="close-pile-detail" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}>
+              <Text testID="close-pile-detail" style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.reject }}>
                 {msg('pile.closeDetail', {
                   name: pile.name,
                   baskets: pt.baskets,
@@ -779,7 +779,7 @@ function PilePanel({
             </Button>
           ) : (
             <View style={{ gap: t.space.xs }}>
-              <Text testID="close-zone-detail" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}>
+              <Text testID="close-zone-detail" style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.reject }}>
                 {msg('zone.closeDetail', {
                   name: zone.name,
                   baskets: zt.baskets,
@@ -787,7 +787,7 @@ function PilePanel({
                 })}
               </Text>
               {stillCounting.length > 0 ? (
-                <Text testID="close-zone-warning" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.warn }}>
+                <Text testID="close-zone-warning" style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.warn }}>
                   {msg('zone.closeWarning', {
                     n: stillCounting.length,
                     names: stillCounting.map((p) => p.name).join(', '),
@@ -855,7 +855,7 @@ function LogRow({ event: e, voided }: { event: SaleEvent; voided: boolean }) {
       <Text
         style={{
           flex: 1,
-          fontFamily: t.font.family.sans,
+          ...t.face(t.font.weight.regular),
           fontSize: t.font.size.small,
           color: voided ? t.color.inkSoft : t.color.ink,
           // Non-colour encoding: a voided row is struck through as well as greyed.
@@ -989,14 +989,13 @@ function Stat({ label, value, big, rule }: { label: string; value: string; big?:
         paddingTop: rule ? t.space.sm : 3,
       }}
     >
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, flexShrink: 1 }}>
+      <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft, flexShrink: 1 }}>
         {label}
       </Text>
       <Text
         style={{
-          fontFamily: t.font.family.sans,
+          ...t.face(t.font.weight.bold),
           fontSize: big ? t.font.size.lead : t.font.size.small,
-          fontWeight: t.font.weight.bold,
           color: t.color.ink,
           fontVariant: ['tabular-nums'],
         }}

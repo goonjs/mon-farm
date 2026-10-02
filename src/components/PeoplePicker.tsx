@@ -77,9 +77,8 @@ export function PeoplePicker({ value, onChange, testID = 'people-picker' }: Peop
           <Text
             style={{
               flex: 1,
-              fontFamily: t.font.family.sans,
+              ...t.face(t.font.weight.bold),
               fontSize: t.font.size.small,
-              fontWeight: t.font.weight.bold,
               color: t.color.action,
             }}
           >
@@ -92,7 +91,7 @@ export function PeoplePicker({ value, onChange, testID = 'people-picker' }: Peop
       ) : (
         <>
           {people.length === 0 && !adding ? (
-            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+            <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft }}>
               {msg('people.empty')}
             </Text>
           ) : null}
@@ -110,7 +109,7 @@ export function PeoplePicker({ value, onChange, testID = 'people-picker' }: Peop
                   backgroundColor: t.color.surfaceSunk,
                 }}
               >
-                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>
+                <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.ink }}>
                   {p.name}
                 </Text>
               </Pressable>
@@ -129,7 +128,7 @@ export function PeoplePicker({ value, onChange, testID = 'people-picker' }: Peop
                 onSubmitEditing={createAndSelect}
                 style={{
                   flex: 1,
-                  fontFamily: t.font.family.sans,
+                  ...t.face(t.font.weight.regular),
                   fontSize: t.font.size.small,
                   minHeight: 34,
                   paddingHorizontal: t.space.sm,

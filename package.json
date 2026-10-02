@@ -21,7 +21,9 @@
     "verify": "npm run tokens:check && npm run contrast && npm run typecheck && npm run lint && npm run test:core && npm run test:ui && npm run build:web && npm run test:e2e"
   },
   "dependencies": {
+    "@expo-google-fonts/noto-sans-thai": "^0.4.2",
     "@expo/ui": "~57.0.9",
+    "@expo/vector-icons": "^15.0.2",
     "expo": "~57.0.11",
     "expo-constants": "~57.0.9",
     "expo-device": "~57.0.1",

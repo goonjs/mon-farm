@@ -136,7 +136,7 @@ export function WeightInput({ testID = 'weight-input', label, valueG, minG, maxG
           }}
         />
       </View>
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.inkFaint }}>
+      <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.micro, color: t.color.inkFaint }}>
         {msg('weight.dragHint')}
       </Text>
 
@@ -162,9 +162,8 @@ export function WeightInput({ testID = 'weight-input', label, valueG, minG, maxG
           style={{
             flex: 1,
             textAlign: 'center',
-            fontFamily: t.font.family.sans,
+            ...t.face(t.font.weight.bold),
             fontSize: t.font.size.lead,
-            fontWeight: t.font.weight.bold,
             minHeight: 40,
             paddingHorizontal: t.space.sm,
             borderWidth: t.border.hair,

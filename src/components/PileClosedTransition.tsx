@@ -59,14 +59,14 @@ export function PileClosedTransition({
       </Text>
       <Text
         testID="pile-closed-total"
-        style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.ink, textAlign: 'center' }}
+        style={{ ...t.face(t.font.weight.black), fontSize: t.font.size.title, color: t.color.ink, textAlign: 'center' }}
       >
         {msg('closed.total', { name: pileName, baskets, weight: kg(netG) })}
       </Text>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm, justifyContent: 'center' }}>
         {hasNextPileInZone ? (
-          <Button testID="decision-next-pile" variant="primary" onPress={onNextPile}>
+          <Button testID="decision-next-pile" variant="primary" iconAfter="arrow-right" onPress={onNextPile}>
             {msg('closed.nextPile')}
           </Button>
         ) : null}
