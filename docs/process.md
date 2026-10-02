@@ -181,9 +181,15 @@ release's changelog will therefore only list commits made under this rule.
   **Back-merge** workflow (`hotfix-backmerge.yml`) carries `main` back into
   `dev` automatically; on conflict it opens a PR and fails loudly. Deploy Prod
   refuses to run while `main` has commits `dev` lacks.
-- Status: the workflows exist, but `scripts/deploy.sh` is not wired to
-  Firebase yet (ADR 0001; architecture "Deployment / environments"), so Deploy
-  Prod currently fails at the deploy step by design — nothing reaches `main`.
+- **Hosting:** `dev` deploys to the dev site on every push
+  (`deploy-dev.yml`); each PR from this repo gets a preview URL that expires in
+  7 days (job `preview` in `ci.yml`, link in the job summary); Deploy Prod
+  deploys the prod site. All go through `scripts/deploy.sh` (ADR 0001).
+- **One-time GitHub setup (owner):** Settings, Secrets and variables, Actions,
+  *Variables* tab (identifiers, not secrets):
+  - `GCP_WORKLOAD_IDENTITY_PROVIDER` =
+    `projects/626311237893/locations/global/workloadIdentityPools/github/providers/github-oidc`
+  - `GCP_SERVICE_ACCOUNT` = `gh-deploy@mon-farmmate.iam.gserviceaccount.com`
 
 ## Status so far
 

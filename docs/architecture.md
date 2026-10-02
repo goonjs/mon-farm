@@ -15,7 +15,7 @@ Decision log D-1…D-21):
 
 | Area | Decision | Why |
 |---|---|---|
-| Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert, asia-southeast1, separate `dev` and `prod` projects | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
+| Backend | **Firestore (Standard) via Firebase JS SDK**, Google Cloud with billing + budget alert, asia-southeast1, separate `dev` and `prod` projects | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). The free Firebase tier can't do Storage, LINE login, scheduled reminders or Cloud Run. |
 | Sync unit | **Keep the append-only event log as source of truth and sync unit.** Each event = one immutable Firestore doc (`groups/{gid}/events/{eventId}`), create-only security rules → idempotent re-push, nothing overwritten. Edits are new events carrying `targetId` + `baseEventId`; two edits on the same base = **Conflict** surfaced to the user. | Firestore is last-write-wins per document and transactions fail offline, so platform defaults can't satisfy "never silently overwrite money". Basket events are additive → different devices merge for free. |
 | Pending Sync | Our own outbox (`synced_at IS NULL`), not Firestore's cache | JS SDK persistence on React Native is memory-only; our SQLite store owns durability. Avoids `@react-native-firebase`. |
 | IDs & ordering | Globally unique event ids (UUIDv7/ULID) + per-device sequence; `(sale_id, seq)` PK retired; `actor` → user id + device id | Two offline phones would collide on per-sale `seq`. |
@@ -233,10 +233,14 @@ Both are web-only and documented where they are read:
 Two long-lived branches, two environments with separate domains: `dev`
 (default branch, daily-use MVP environment) and `main` (production). Release
 flow is in `docs/process.md` ("Branches and releases"). **Hosting is Firebase Hosting**
-(one project, a `dev` site and a `prod` site, PR preview channels with 7-day
-expiry) — see `docs/adr/0001-firebase-hosting.md`. It is decided but **not
-wired yet**: `scripts/deploy.sh` fails closed until the project, domains and
-deploy credential exist. Locally,
+(project `mon-farmmate`, sites `mon-farm-dev` and `mon-farm-prod`, PR preview
+channels with 7-day expiry) — see `docs/adr/0001-firebase-hosting.md`. It is
+**wired**: `scripts/deploy.sh dev|prod|preview <name>` deploys `dist/`; a push
+to `dev` deploys the dev site (`deploy-dev.yml`), each same-repo PR gets a
+preview channel (`ci.yml`, reusing CI's build), and Deploy Prod deploys the
+prod site. CI authenticates keylessly (GitHub OIDC to a Google service
+account), so no key is stored anywhere. Custom domains are not connected yet.
+Locally,
 `npm run build:web` produces a static `dist/`. No native build has
 been produced and no device has run this yet — **the app has only ever been
 exercised in a browser.**
