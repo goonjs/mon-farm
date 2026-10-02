@@ -1,6 +1,6 @@
 # Story E01-S05: CI ประหยัดนาที — ข้ามเอกสารล้วน, cache, e2e ใช้ dist เดิม, ประเมิน bun
 
-Status: Ready
+Status: In Progress
 
 ## Context
 
@@ -43,6 +43,59 @@ Status: Ready
 ## Verification
 
 ## Dev notes
+
+### DoD ของ story นี้ (เขียนก่อนเริ่ม)
+
+- [ ] `scripts/ci-changes.mjs` (แยกไฟล์เอกสารล้วน/โค้ด) มี unit test เขียนก่อนและเห็นแดงก่อนเขียวใน vitest
+- [ ] `ci.yml` เป็น `changes → verify → e2e`, ทุก job มี `timeout-minutes`, e2e ใช้ `dist` artifact, cache Playwright ตามเวอร์ชันใน lockfile — ตรวจ YAML และรันตรรกะ `changes` จริงใน sandbox กับ diff เอกสารล้วน/โค้ด/ช่วง commit ที่อ่านไม่ได้
+- [ ] typecheck + lint + test:core ผ่านใน sandbox
+- [ ] PR นี้ CI เขียวครบ 3 job; บันทึกนาทีก่อน/หลัง (median 3 รอบ) และผลประเมิน bun ด้านล่าง
+- [ ] reviewer อิสระ (subagent แยก) ตรวจตาม `code-review-checklist.md` แล้ว findings แก้หรือเลื่อนพร้อมเหตุผลใน "Code review"
+
+### นาที CI ก่อนเปลี่ยน (job `verify` เดียว)
+
+วัดจาก run บน GitHub (wall-clock ของ job; นาทีที่คิดเงินปัดขึ้นต่อ job):
+
+| run | ประเภท | เวลา |
+|---|---|---|
+| #87 | PR เอกสารล้วน | 5.3 นาที (job) |
+| #85 | PR เอกสารล้วน | 5.4 นาที |
+| #82 | PR เอกสารล้วน | 3.6 นาที |
+
+median PR เอกสารล้วน ≈ **5.4 นาที → คิดเงิน 6 นาที/รอบ** ทั้งที่ไม่มีโค้ดเปลี่ยน
+แยกขั้นใน #87: `npm ci` 22 วิ, build web 75 วิ, ติดตั้ง Playwright 26 วิ, e2e 150 วิ
+
+### สิ่งที่ทำ
+
+- `scripts/ci-changes.mjs` + test (เห็นแดงก่อน: module ยังไม่มี → เขียว 6/6)
+  - เอกสารล้วน = ทุกไฟล์อยู่ใต้ `docs/` หรือลงท้าย `.md` **ยกเว้น** `docs/ux/tokens.css`
+    (ไฟล์ generate ที่ `tokens:check` ตรวจ จึงนับเป็นโค้ด)
+  - อ่าน diff ไม่ได้ / base เป็นศูนย์ (push ครั้งแรก) / diff ว่าง → `code=true` (ปลอดภัยไว้ก่อน)
+- `ci.yml`: `changes` (ไม่ติดตั้งอะไร, ตรวจ Conventional Commits + แยกไฟล์, 5 นาที)
+  → `verify` (เฉพาะ `code == 'true'`, ถึง build + อัปโหลด `dist` เก็บ 1 วัน, 15 นาที)
+  → `e2e` (ดาวน์โหลด `dist`, cache `~/.cache/ms-playwright` ตามเวอร์ชัน `@playwright/test` ที่ติดตั้งจาก lockfile;
+  cache hit → ติดแค่ system deps, 15 นาที)
+- รันจริงใน sandbox: ช่วง `92df3d1...99f90d0` (เอกสารล้วน) → `code=false`; `adf4b9d~1...adf4b9d` → `code=true`;
+  base ศูนย์ → `code=true`; ไม่มี argument → `code=true`. typecheck, lint ทั้ง repo, test:core 120/120 ผ่าน
+- ข้อแลกเปลี่ยน: PR ที่แก้โค้ดจ่าย `npm ci` เพิ่มอีกครั้งใน e2e (~22 วิ) และการปัดนาทีขึ้นต่อ job (3 job)
+  เพื่อแลกกับ fail-fast และ PR เอกสารล้วนที่ลดจาก ~6 เหลือ ~1 นาทีที่คิดเงิน
+
+### ต้องให้เจ้าของทำ (branch protection)
+
+ถ้าตั้ง required checks: ต้องใส่ **`changes`** ด้วย ไม่ใช่แค่ `verify`/`e2e` —
+ถ้า `changes` แดง (commit lint ผิด) `verify`/`e2e` จะเป็น "skipped" ซึ่ง GitHub นับว่าผ่าน
+
+### ประเมิน bun (ประเมินเท่านั้น)
+
+- dependency ที่มี install script ใน lockfile มีแค่ `esbuild` 0.28.2, `unrs-resolver` 1.12.2
+  (และ `fsevents` แบบ optional เฉพาะ macOS) — bun ไม่รัน lifecycle script ของ dependency
+  นอกจากอยู่ใน `trustedDependencies` (หรือรายการ default ของ bun) จึงต้องตรวจสองตัวนี้ก่อนเปลี่ยน
+- เวลาที่ได้คืนสูงสุดคือ `npm ci` ~22 วิ/job (cache npm ทำงานแล้ว) ≈ ไม่ถึง 1 นาทีต่อ PR
+  ขณะที่ต้องเพิ่ม action ภายนอก (`oven-sh/setup-bun`) + lockfile ใหม่ (`bun.lock`) ซึ่งเป็นการเปลี่ยนตัวติดตั้งที่ต้องผ่าน gate dependency
+  และ Expo CLI/Metro ยังอ้าง npm เป็นหลัก
+- ยังไม่ได้วัดบน runner จริง (ต้องติดตั้ง bun = ต้องขออนุมัติ) — **ข้อเสนอ: ยังไม่เปลี่ยน**;
+  ถ้าต้องการตัวเลขจริง เปิด story แยกพร้อมขอ dependency gate
+
 
 ## Code review
 
