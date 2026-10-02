@@ -4,6 +4,11 @@ name: CI
 # red pipeline blocks merge. The order below is deliberate -- the cheapest gates
 # that catch the most common breakage run first, so a token drift or a type
 # error fails in seconds rather than after a five-minute browser download.
+#
+# Graph (E01-S05): changes -> verify -> e2e, strictly sequential, so a red
+# step stops everything after it. A docs-only change stops at `changes`:
+# verify and e2e report "skipped", which branch protection counts as passing,
+# so a required check never blocks a docs PR.
 
 #
 # Triggers: a branch with a PR is verified by the pull_request run alone, and
@@ -21,9 +26,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
+  # No install: plain git plus the runner's preinstalled node, so a docs-only
+  # PR costs one billed minute instead of a full build.
+  changes:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
 
     steps:
       - uses: actions/checkout@v4
@@ -32,11 +41,28 @@ jobs:
 
       # Cheapest gate, so it goes first: Conventional Commits are what the
       # Deploy Prod workflow computes the version bump and changelog from.
+      # Docs commits are versioned too, so this runs for docs-only PRs.
       - name: Commit messages follow Conventional Commits
         if: github.event_name == 'pull_request'
         run: >
           node scripts/release.mjs lint
           ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+
+      - name: Classify changed files
+        id: diff
+        run: >
+          node scripts/ci-changes.mjs
+          ${{ github.event.pull_request.base.sha || github.event.before }}
+          ${{ github.sha }} >> "$GITHUB_OUTPUT"
+
+  verify:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
@@ -76,8 +102,59 @@ jobs:
       - name: Build web
         run: npm run build:web
 
+      # e2e tests this exact bundle instead of building it a second time.
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  e2e:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Still needed for @playwright/test and the config's design/tokens import.
+      - name: Install
+        run: npm ci
+
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      # Keyed on the lockfile's resolved Playwright version, so a cache hit is
+      # always the browser build that version expects.
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
       - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+
+      # The cache holds the browser only; its system libraries live outside it.
+      - name: Install Playwright system deps
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
       - name: End-to-end
         run: npm run test:e2e
