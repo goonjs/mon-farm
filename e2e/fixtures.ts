@@ -61,7 +61,7 @@ export async function seedSale(page: Page, saleId: string, events: readonly Sale
       const idx: string[] = JSON.parse(window.localStorage.getItem(index) ?? '[]');
       if (!idx.includes(saleId)) window.localStorage.setItem(index, JSON.stringify([saleId, ...idx]));
     },
-    { key: `mon-farm:events:${saleId}`, index: 'mon-farm:sales', saleId, events },
+    { key: `mon-farm-v1:events:${saleId}`, index: 'mon-farm-v1:sales', saleId, events },
   );
 }
 

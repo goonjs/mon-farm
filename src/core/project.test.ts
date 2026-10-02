@@ -10,7 +10,7 @@ import {
   pilesStillCounting,
   projectSale,
 } from './project';
-import { saleTotals } from './totals';
+import { pileTotals, saleTotals } from './totals';
 
 const pile = (s: ReturnType<typeof projectSale>, id: string) =>
   s.piles.find((p) => p.id === id)!;
@@ -150,11 +150,13 @@ describe('sale lifecycle — the hard boundary', () => {
     const events = [...workedExample()];
     const last = events[events.length - 1];
     events.push({
+      id: 'reopen-1',
       saleId: last.saleId,
       seq: last.seq + 1,
+      deviceSeq: last.deviceSeq + 1,
       ts: last.ts + 1000,
       mono: last.mono + 1000,
-      actor: 'somchai',
+      actor: last.actor,
       kind: 'sys',
       payload: { t: 'sale_reopened', reason: 'buyer disputes กอง 2' },
     });
@@ -185,12 +187,6 @@ describe('ordering', () => {
     const { startedTs: _b, ...fromOriginal } = projectSale(events);
     expect(fromScrambled).toEqual(fromOriginal);
     expect(saleTotals(scrambled)).toEqual(saleTotals(events));
-  });
-
-  it('rejects a duplicate sequence number rather than guessing', () => {
-    const events = setUpSale().build();
-    const dup = [...events, { ...events[0], seq: events[0].seq }];
-    expect(() => projectSale(dup)).toThrow(/[Dd]uplicate sequence/);
   });
 
   it('is idempotent — projecting twice gives the same state', () => {
@@ -324,7 +320,8 @@ describe('deductions (S29) — projected, voided by mark not removal', () => {
 
 describe('clock anomalies (FR-12.6) — flagged, never ordering', () => {
   const ev = (ts: number) =>
-    ({ saleId: 's', seq: 1, ts, mono: 0, actor: 'a', kind: 'reject', pileId: 'p',
+    ({ id: 'e1', saleId: 's', seq: 1, deviceSeq: 1, ts, mono: 0, actor: { userId: 'u', deviceId: 'd' },
+       kind: 'reject', pileId: 'p',
        source: 'hold', reason: 'released-early', heldMs: 1 }) as const;
 
   it('detects the clock going backwards', () => {
@@ -351,5 +348,72 @@ describe('clock anomalies (FR-12.6) — flagged, never ordering', () => {
     expect(s.clockSuspect).toBe(true);
     // The whole point: a suspect clock does not stop anyone counting.
     expect(canCount(s, 'p1')).toBe(true);
+  });
+});
+
+describe('events from more than one device — E01-S02 AC5, NFR-3', () => {
+  /** Two phones counting the same sale: device B joins and counts pile p3. */
+  function twoDeviceSale() {
+    const b = setUpSale();
+    readyPile(b, 'p1');
+    b.accept('p1').accept('p1');
+    b.on('dev-B');
+    readyPile(b, 'p3');
+    b.accept('p3').short('p3', 43_000);
+    b.on('dev-A');
+    b.accept('p1').sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+    return b.build();
+  }
+
+  it('gives every event a unique id and a per-device sequence', () => {
+    const events = twoDeviceSale();
+    expect(new Set(events.map((e) => e.id)).size).toBe(events.length);
+    const seqsOfB = events.filter((e) => e.actor.deviceId === 'dev-B').map((e) => e.deviceSeq);
+    expect(seqsOfB).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('projects the same state whatever the wall clocks say and whatever order rows arrive in', () => {
+    const events = twoDeviceSale();
+    const expected = projectSale(events);
+    const expectedTotals = saleTotals(events);
+
+    // Device B's clock is a day behind, and the rows arrive reversed.
+    const skewed = events
+      .map((e) => (e.actor.deviceId === 'dev-B' ? { ...e, ts: e.ts - 86_400_000 } : e))
+      .reverse();
+    const s = projectSale(skewed);
+
+    expect(s.piles).toEqual(expected.piles);
+    expect(s.zones).toEqual(expected.zones);
+    expect(s.status).toBe(expected.status);
+    expect(saleTotals(skewed)).toEqual(expectedTotals);
+  });
+
+  it('accepts two devices reaching the same per-sale position independently', () => {
+    const shared = setUpSale();
+    readyPile(shared, 'p1');
+    readyPile(shared, 'p3');
+    const prefix = shared.build();
+
+    // Both phones were offline and each counted one basket "next".
+    const onA = shared.fork('dev-A').accept('p1').build().slice(prefix.length);
+    const onB = shared.fork('dev-B').accept('p3').build().slice(prefix.length);
+    expect(onA[0].seq).toBe(onB[0].seq);
+
+    const merged = [...prefix, ...onA, ...onB];
+    expect(saleTotals(merged).baskets).toBe(2);
+
+    // Undoing A's basket must not take B's with it just because they share a seq.
+    const undo = shared.fork('dev-A');
+    undo.accept('p1');
+    undo.void('p1', onA[0].id);
+    const voidOnA = undo.build().slice(-1);
+    expect(saleTotals([...merged, ...voidOnA]).baskets).toBe(1);
+    expect(pileTotals([...merged, ...voidOnA], 'p3').baskets).toBe(1);
+  });
+
+  it('still refuses a log carrying the same event id twice', () => {
+    const events = setUpSale().build();
+    expect(() => projectSale([...events, { ...events[0], seq: 99 }])).toThrow(/Duplicate event id/);
   });
 });

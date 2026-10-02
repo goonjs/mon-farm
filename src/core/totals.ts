@@ -15,12 +15,13 @@ import type {
   Totals,
   ZoneId,
 } from './types';
+import { compareEvents } from './order';
 import { ZERO_TOTALS } from './types';
 
 /**
  * The baskets that still count.
  *
- * A basket is live unless some `correction` event targets its sequence number.
+ * A basket is live unless some `correction` event targets its id.
  * Corrections never mutate their target, so "was it voided?" is always a
  * question about the log, never about a flag someone remembered to set.
  */
@@ -28,19 +29,19 @@ export function liveBaskets(
   events: readonly SaleEvent[],
   pileId?: PileId,
 ): readonly BasketEvent[] {
-  const voided = new Set<number>();
+  const voided = new Set<string>();
   for (const e of events) {
-    if (e.kind === 'correction') voided.add(e.targetSeq);
+    if (e.kind === 'correction') voided.add(e.targetId);
   }
 
   const out: BasketEvent[] = [];
   for (const e of events) {
     if (e.kind !== 'accept' && e.kind !== 'short') continue;
-    if (voided.has(e.seq)) continue;
+    if (voided.has(e.id)) continue;
     if (pileId !== undefined && e.pileId !== pileId) continue;
     out.push(e);
   }
-  return out.sort((a, b) => a.seq - b.seq);
+  return out.sort(compareEvents);
 }
 
 /** The most recent live basket in a pile — what `undo-last` targets. */

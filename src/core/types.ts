@@ -19,14 +19,40 @@ export type SaleId = string;
 export type ZoneId = string;
 export type PileId = string;
 export type PersonId = string;
+/** UUIDv7 (RFC 9562), lowercase canonical form — see src/lib/id.ts. */
+export type EventId = string;
+/** Firebase Auth uid once login exists (E02-S01). */
+export type UserId = string;
+/** UUIDv7 minted once per install (web: per browser profile). */
+export type DeviceId = string;
+
+/**
+ * Who recorded an event: a person on a particular device (D-23). `deviceId`
+ * is self-declared by the device — provenance, not a security boundary.
+ */
+export interface Actor {
+  readonly userId: UserId;
+  readonly deviceId: DeviceId;
+}
 
 export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys';
 
 /**
- * Two clocks, deliberately kept apart.
+ * Identity and ordering (E01-S02).
  *
- * `seq` is the ordering authority (FR-12.5). The device clock cannot be
- * trusted, so nothing downstream may sort by time.
+ * `id` is globally unique, so two offline phones can never mint the same
+ * event, and re-receiving one is recognisable as a repeat. `deviceSeq` counts
+ * 1, 2, 3, … per install and never repeats, even across a force-close (NFR-2);
+ * it is what the outbox drains in.
+ *
+ * `seq` is this sale's position as the recording device saw it. Two devices
+ * offline can reach the same `seq`, so it is not unique: the fold order is
+ * `(seq, deviceId, deviceSeq)` — see `compareEvents` — and nothing that must
+ * name one event (a correction's target) uses it. Retired with the sale
+ * model redesign in E04-S01.
+ *
+ * Two clocks, deliberately kept apart. The device clock cannot be trusted, so
+ * nothing downstream may sort by time.
  *
  * `ts` is the wall clock — "roughly when", useful to a human reading the log,
  * never used to order anything.
@@ -37,11 +63,13 @@ export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys';
  * because intervals only matter within a session.
  */
 export interface EventBase {
+  readonly id: EventId;
   readonly saleId: SaleId;
   readonly seq: number;
+  readonly deviceSeq: number;
   readonly ts: number;
   readonly mono: number;
-  readonly actor: string;
+  readonly actor: Actor;
 }
 
 /**
@@ -93,7 +121,8 @@ export interface RejectEvent extends EventBase {
 }
 
 /**
- * Voids an earlier basket (FR-5.4, NFR-3).
+ * Voids an earlier basket (FR-5.4, NFR-3), named by event id — a `seq` can
+ * be shared by two devices' baskets, an id cannot.
  *
  * Append-only: the target event is never mutated or removed. `undo-last` is the
  * one-tap tier with a default reason; `void` is chosen from the log and demands
@@ -102,7 +131,7 @@ export interface RejectEvent extends EventBase {
 export interface CorrectionEvent extends EventBase {
   readonly kind: 'correction';
   readonly pileId: PileId;
-  readonly targetSeq: number;
+  readonly targetId: EventId;
   readonly mode: 'undo-last' | 'void';
   readonly reason: string;
 }
