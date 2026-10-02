@@ -7,6 +7,7 @@ Status: Draft
 - Epic: `docs/epics/e10-inventory.md`
 - PRD: INV-2, SYNC-9, SYNC-11, NFR-3
 - ขึ้นกับ: E10-S01; (ไม่บังคับ) E11-S01 ค่าใช้จ่าย
+- ใช้ป้ายจาก E01-S15 (สถานะข้อมูลรายฟิลด์ SYNC-12)
 
 ## คำอธิบาย
 

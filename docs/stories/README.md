@@ -6,7 +6,7 @@ Story เก็บที่นี่ ไฟล์ละ 1 story แตกมา�
 ห้ามเริ่ม implement จนกว่า Acceptance criteria จะตกลงกันแล้ว (Status → Ready)
 story ที่มีหัวข้อ `คำถามเจ้าของ` ต้องได้คำตอบก่อน ❓ = มีคำถามค้าง
 
-ลำดับที่แนะนำ: E01-S01…S08 → E02-S01/S02 → E01-S09 เป็นต้นไป → E03 → E04 → E05 → E06 แล้วต่อ E07–E14
+ลำดับที่แนะนำ: E01-S01…S08 → E02-S01/S02 → E01-S09 เป็นต้นไป (รวม E01-S15 — ทำก่อน E03) → E03 → E04 → E05 → E06 แล้วต่อ E07–E14
 
 ### E01 ฐานระบบ — sync, backend, CI — [epic](../epics/e01-foundation-sync.md)
 
@@ -24,6 +24,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E01-S12: คิวรูป/วิดีโอในเครื่อง → Cloud Storage](e01-s12-media-queue.md)
 - [E01-S13: ฝัง font Noto Sans Thai + ชุดไอคอนเส้น open-licence](e01-s13-thai-font-and-icons.md)
 - [E01-S14: preview A/B รูปแบบ card — เงา+เส้น vs แบน+เส้น](e01-s14-card-style-ab-preview.md)
+- [E01-S15: สถานะข้อมูลรายฟิลด์ 6 แบบ + ป้ายใช้ซ้ำ](e01-s15-field-data-states.md)
 
 ### E02 การเข้าใช้ & กลุ่มฟาร์ม — [epic](../epics/e02-access-farm-groups.md)
 
@@ -39,7 +40,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E03-S03: จุดชั่ง (= กอง) และโครงสร้างตั้งต้น](e03-s03-weighing-points-and-seed.md) ❓
 - [E03-S04: โซนไม่บังคับ พร้อมประวัติโครงสร้าง](e03-s04-zones-with-history.md)
 - [E03-S05: มอบหมายคนกรีด ↔ จุดชั่ง/โซน แบบมีช่วงเวลา](e03-s05-tapper-assignments.md) ❓
-- [E03-S06: ส่วนแบ่งรายคนกรีด + เลิกใช้สัญญาต่อโซนและ `basis`](e03-s06-tapper-share-retire-zone-contracts.md) ❓
+- [E03-S06: ส่วนแบ่งรายคนกรีด + เลิกใช้สัญญาต่อโซนและ `basis`](e03-s06-tapper-share-retire-zone-contracts.md)
 - [E03-S07: ค่าตั้งต้นเข่ง และตั้งค่าวันขาย](e03-s07-basket-presets-and-sale-settings.md) ❓
 - [E03-S08: ขนาดตัวอักษร S / M / L](e03-s08-text-size-setting.md)
 

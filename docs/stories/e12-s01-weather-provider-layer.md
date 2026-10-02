@@ -7,6 +7,7 @@ Status: Draft
 - Epic: `docs/epics/e12-weather.md`
 - PRD: WX-1, WX-2, INT-4, NFR-5, NFR-6
 - ขึ้นกับ: E03 (สวน + GPS ไม่บังคับ), E01 (Firebase dev/prod, server endpoint)
+- ใช้ป้ายจาก E01-S15 (สถานะข้อมูลรายฟิลด์ SYNC-12)
 
 ## คำอธิบาย
 
