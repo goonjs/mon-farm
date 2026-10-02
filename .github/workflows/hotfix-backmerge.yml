@@ -1,0 +1,44 @@
+name: Back-merge main into dev
+
+# A hotfix lands on main directly; it must not stay there. Whenever main has
+# commits dev lacks, carry them back. Clean merge: pushed straight to dev.
+# Conflict: a PR main -> dev is opened for a human, and this job fails so it
+# is not missed. After a normal Deploy Prod run dev already contains main, so
+# this is a no-op.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backmerge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Merge main into dev
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "dev already contains main"; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git merge origin/main -m "chore: back-merge main into dev"; then
+            git push origin HEAD:dev
+          else
+            git merge --abort
+            gh pr create --base dev --head main \
+              --title "chore: back-merge main into dev (conflicts)" \
+              --body "Automatic back-merge hit conflicts. Resolve and merge so the hotfix is not lost on dev."
+            exit 1
+          fi

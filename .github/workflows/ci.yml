@@ -26,6 +26,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Cheapest gate, so it goes first: Conventional Commits are what the
+      # Deploy Prod workflow computes the version bump and changelog from.
+      - name: Commit messages follow Conventional Commits
+        if: github.event_name == 'pull_request'
+        run: >
+          node scripts/release.mjs lint
+          ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
 
       - uses: actions/setup-node@v4
         with:

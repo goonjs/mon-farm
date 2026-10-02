@@ -1,0 +1,76 @@
+name: Deploy Prod
+
+# The only way code reaches `main`. Manual trigger (humans, or agents with
+# access to run workflows). Flow: dev -> verify -> compute version from
+# Conventional Commits -> deploy -> ONLY IF the deploy succeeded: tag, update
+# dev + main, publish release notes.
+#
+# Per CLAUDE.md, an agent triggering this needs the owner's explicit yes for
+# that specific run -- it is an outward-facing production release.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Deploys what is on dev, nothing else.
+    if: github.ref == 'refs/heads/dev'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # A hotfix that went straight to main must be back on dev first,
+      # otherwise releasing dev would silently drop it.
+      - name: main is already contained in dev
+        run: git merge-base --is-ancestor origin/main HEAD
+
+      - name: Plan release
+        id: plan
+        run: node scripts/release.mjs plan >> "$GITHUB_OUTPUT"
+
+      - name: Apply version bump and changelog
+        run: node scripts/release.mjs apply
+
+      - run: npm ci
+
+      - name: Build web
+        run: npm run build:web
+
+      - name: Deploy to production
+        run: ./scripts/deploy.sh prod
+
+      # Everything below runs only after a successful deploy.
+      - name: Commit, tag, update dev and main
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json CHANGELOG.md
+          git commit -m "chore(release): v${VERSION}"
+          git tag -a "v${VERSION}" -m "v${VERSION}"
+          git push origin HEAD:dev
+          git push origin HEAD:main "v${VERSION}"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.plan.outputs.version }}
+        run: gh release create "v${VERSION}" --title "v${VERSION}" --notes-file RELEASE_NOTES.md
