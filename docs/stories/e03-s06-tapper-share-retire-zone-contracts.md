@@ -1,6 +1,6 @@
 # Story E03-S06: ส่วนแบ่งรายคนกรีด + เลิกใช้สัญญาต่อโซนและ `basis`
 
-Status: Draft
+Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Context
 

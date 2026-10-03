@@ -1,6 +1,6 @@
 # Story E03-S01: บุคคลและผู้ซื้อ เป็นข้อมูลหลักที่ sync
 
-Status: Draft
+Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Context
 

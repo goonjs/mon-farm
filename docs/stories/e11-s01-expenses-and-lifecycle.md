@@ -1,6 +1,6 @@
 # Story E11-S01: ค่าใช้จ่ายและวงจร Actual / Committed / Planned
 
-Status: Draft
+Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Context
 
