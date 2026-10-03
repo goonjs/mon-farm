@@ -33,6 +33,12 @@
 - **H3 MF-16 / E01-S14 preview A/B รูปแบบ card** (เงา+เส้น vs แบน+เส้น) — หลังเลือกใช้ card และไอคอนแบบ FarmMate (D-35, U1 b) ยังต้องทำไหม?
   - a. ยกเลิก story นี้ ใช้ card แบบ FarmMate ✅ · b. ยังทำ A/B
 
+- **H4 ชื่อ Firebase project ไม่ตรงกัน** — `.firebaserc` (default), `docs/adr/0001-firebase-hosting.md` และ `docs/process.md` ยังเป็น `mon-farmmate`
+  แต่ D-34 และ runbook ใช้ `mon-farm-a7` (ถ้าไม่แก้ deploy จะไปผิด project)
+  - a. ใช้ `mon-farm-a7` ทั้งหมด — lead ใหม่แก้ 3 ไฟล์ (ชื่อ service account ด้วย) ✅ · b. `mon-farmmate` ยังใช้อยู่ (อธิบาย)
+- **H5 keystore Android** สำรองไว้นอก GitHub อย่างน้อย 2 ที่แล้วใช่ไหม (ถ้าหาย อัปเดตแอปเดิมบนเครื่องไม่ได้อีก)
+  - ตอบ: `H5 ใช่` หรือ `H5 ยัง`
+
 ### E04 การขาย/ชั่ง
 
 - **?21** โหมดเลขเข่ง ("ต่อเนื่องทั้งการขาย" / "เริ่ม 1 ใหม่ทุกจุด", D-46) เลือกตอนไหน
@@ -71,6 +77,9 @@
 - MF-15 / E01-S13 font + ไอคอน — งานอยู่ในเครื่องของ session ทีม UX ยังไม่ขึ้น origin; สั่งกู้ขึ้นเป็น draft PR แล้ว (ถ้าไม่ทันก่อนปิด session ต้องทำใหม่)
 - MF-17 / E01-S15 ป้ายสถานะข้อมูล — เหลือไอคอน รอ MF-15
 - Story status ที่ต้องอัปเดต: E01-S05 → Done · E01-S16 → Done (#34; #41 ทำให้) · E01-S08 → Done เมื่อ deploy rules แล้ว
+- Deploy Dev เป็นสีแดงทุก push เข้า `dev` จนกว่า H1 เสร็จ (ตั้งใจปล่อยแดง)
+- ยังไม่ได้ยืนยันผลของ #36: merge เข้า `dev` 2 ครั้งติดกันต้องวิ่งจบทั้งคู่ ไม่มี run ถูกยกเลิก
+- Required checks (D8): เมื่อมี branch protection ให้ require `changes` ด้วย (job ที่ถูกข้ามนับว่าผ่าน)
 - Backlog CI (ทีม platform): push ที่ fail ถูก docs-only push ถัดไปบัง · push ของ bot (Deploy Prod, back-merge) ไม่รัน CI · audit 67 รายการ (54 high, dev tooling เป็นหลัก) ยังไม่ triage
 
 **พร้อมทำเมื่อ H1 เสร็จ:** MF-07 → MF-08 deploy → MF-09 Google login → MF-11 sync → MF-12/13
