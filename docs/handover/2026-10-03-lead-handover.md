@@ -73,7 +73,7 @@
 **merge เข้า `dev` แล้ว (วันนี้):** #29 CLAUDE.md delegation · #30 CI ประหยัดนาที · #33/#37 คำตอบเจ้าของ (D-40…D-46) · #34 กันลบเขต · #35 Firestore rules (เจ้าของ) · #36 CI push ต่อ commit · #38 runbook WIF · #39 ข้าม preview จนตั้ง WIF · #40 mockup v4 · #42 Android package + keystore (เจ้าของ) · #41 contract test บน IndexedDB (E01-S03 AC2)
 
 **ค้างอยู่:**
-- MF-15 / E01-S13 font Noto Sans Thai + ไอคอน Feather — draft #45 (กู้จากเครื่องทีม UX แล้ว) · เจ้าของต้องเลือก: ไอคอน FarmMate แทน Feather ไหม · ลบไฟล์ template expo-symbols ที่ไม่ใช้ไหม; ยังไม่ได้ทดสอบบน Android จริง
+- MF-15 / E01-S13 font Noto Sans Thai + ไอคอน Feather — draft #45 (กู้จากเครื่องทีม UX แล้ว) · เจ้าของต้องเลือก: ไอคอน FarmMate แทน Feather ไหม · ลบไฟล์ template expo-symbols ที่ไม่ใช้ไหม; ยังไม่ได้ทดสอบบน Android จริง · **CI แดง** ที่ e2e 2 test (คำเตือนหมุนจอบนมือถือแนวตั้ง) — สิ่งที่รู้และขั้นต่อไปอยู่บนสุดของคำอธิบาย #45
 - MF-17 / E01-S15 ป้ายสถานะข้อมูล — เหลือไอคอน รอ MF-15
 - Story status ที่ต้องอัปเดต: E01-S05 → Done · E01-S16 → Done (#34; #41 ทำให้) · E01-S08 → Done เมื่อ deploy rules แล้ว
 - Deploy Dev เป็นสีแดงทุก push เข้า `dev` จนกว่า H1 เสร็จ (ตั้งใจปล่อยแดง)
