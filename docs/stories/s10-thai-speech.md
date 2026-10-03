@@ -5,7 +5,7 @@ push to CI and an independent review, neither authorized yet.
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: `docs/epics/e04-sale-weighing.md`
 - Related PRD section(s): FR-11.3, FR-11.4, FR-11.7–FR-11.11, FR-11.12,
   FR-12.2, FR-12.8
 - Depends on: S3 (event log — `announced` sys payload already exists and is
@@ -206,9 +206,9 @@ as `store.web.ts`/`store.native.ts`) — the port and the announcer are pure,
 no RN import, so they belong in the fast Vitest tier.
 
 **Not built, and deliberately out of scope**: the level read-back
-(FR-11.1), พร้อมค่ะ (FR-11.2), ต่อไปค่ะ (FR-11.5). See S31 in
-`docs/epics/epic-1-run-and-settle-one-sale.md`, blocked on PRD open
-questions 5 and 6.
+(FR-11.1), พร้อมค่ะ (FR-11.2), ต่อไปค่ะ (FR-11.5). S31 was a v0.4 story and the old
+epic file is gone (retrievable with `git show b729e57:docs/epics/epic-1-run-and-settle-one-sale.md`);
+no v1.0 epic owns the read-back phrases yet — owner decision pending.
 
 ## Code review
 

@@ -5,7 +5,7 @@ push to CI and an independent review, neither authorized.
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: Legacy (PRD v0.4) — superseded by `docs/epics/e03-master-data.md` (per-zone contracts and `basis` retired)
 - Related PRD section(s): FR-8.6 (workers per zone), FR-8.5 (no safe default)
 - Owner feedback that prompted this story: "I need worker per zone... user
   uses same 50:50 for all workers now but this should be able to vary."

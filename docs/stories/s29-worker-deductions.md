@@ -9,7 +9,7 @@ both fixed** (see Code review). Ready for the owner's sign-off and a push.
 
 ## Context
 
-- Epic: `docs/epics/epic-2-second-field-round.md` (item 8, S29)
+- Epic: Legacy (PRD v0.4) — superseded by `docs/epics/e06-fertilizer.md` (per-sale deduction retired)
 - Related PRD section(s): FR-7.3 (adjustments record amount, reason and who
   agreed them), FR-7.4 (the full derivation, step by step), FR-8.1–8.5 (the
   owner/worker split and its basis), FR-12 (the log is the record)

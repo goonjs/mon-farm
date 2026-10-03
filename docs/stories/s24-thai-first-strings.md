@@ -5,7 +5,7 @@ agreed by the owner 2026-08-11; awaiting independent code review.
 
 ## Context
 
-- Epic: `docs/epics/epic-2-second-field-round.md` (item 1)
+- Epic: Legacy (PRD v0.4) — ไม่มี epic v1.0 รองรับโดยตรง รอเจ้าของตัดสิน; ดู `docs/prd.md` NFR-1 (UI ภาษาไทยล้วน)
 - Related PRD section(s): FR-9.7 (the count readable at ~10 m), NFR-1
   (usable with no network on first launch), NFR-4 (low-end Android floor)
 - Related architecture section(s): `docs/ux/design-system.md` §4 (the

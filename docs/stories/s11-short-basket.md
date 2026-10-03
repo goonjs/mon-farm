@@ -5,7 +5,7 @@ push to CI and an independent review, neither authorized.
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: `docs/epics/e04-sale-weighing.md`
 - Related finding: F-22 (`docs/ux/counter-screen-findings.md`) — one value,
   three simultaneous ways to set it: drag, ± nudge, typed
 - Related finding: F-13 — the panel opens below the stage, never over it

@@ -24,5 +24,6 @@ Epic เก็บที่นี่ ไฟล์ละ 1 epic แตกมาจ
 
 ## ประวัติ (PRD v0.4, ถูกแทนแล้ว)
 
-- `epic-1-run-and-settle-one-sale.md`, `epic-2-second-field-round.md` — เก็บไว้
-  เป็นประวัติการตัดสินใจ ขอบเขตย้ายไปอยู่ E03–E06 แล้ว
+- `epic-1-run-and-settle-one-sale.md`, `epic-2-second-field-round.md` — ลบออก
+  แล้ว (เจ้าของยืนยัน 2026-10-03) ขอบเขตย้ายไปอยู่ E01, E03–E06 ดูฉบับเก่าได้ด้วย
+  `git show b729e57:docs/epics/<ชื่อไฟล์>`

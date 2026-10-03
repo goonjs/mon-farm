@@ -5,7 +5,7 @@ push to CI and an independent review, neither authorized.
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: `docs/epics/e04-sale-weighing.md`
 - Related PRD section(s): FR-6, FR-12
 - Design reference: `docs/ux/pile-zone-sale-lifecycle.md` — three independent
   state machines (pile / zone / sale), §4 the decision point, §7.2 reopen,

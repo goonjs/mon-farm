@@ -5,7 +5,7 @@ to CI. Cannot reach `Done` without both (`docs/process.md` steps 7–9).
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: `docs/epics/e01-foundation-sync.md`
 - Related PRD section(s): NFR-1 (offline primary), NFR-4 (low-end Android), NFR-5 (platform)
 - Related architecture section(s): `docs/architecture.md` §Tech stack, §Client architecture
 
