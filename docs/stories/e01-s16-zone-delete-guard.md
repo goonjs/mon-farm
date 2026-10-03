@@ -1,6 +1,6 @@
 # Story E01-S16: ลบเขตไม่ได้ถ้าคนกรีดของเขตยังมียอดหัก
 
-Status: Review
+Status: Done
 
 ## Context
 
@@ -43,7 +43,7 @@ D-18 "หักไม่เกินส่วนแบ่ง" จะมีใน
 
 - [x] เทสต์เขียนก่อนและเห็นแดง
 - [x] typecheck, lint, Vitest, jest เขียว; review อิสระโดย subagent แยก
-- [ ] CI เขียวบน PR
+- [x] CI เขียวบน PR (#34)
 
 ## Verification
 
