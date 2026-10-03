@@ -173,6 +173,19 @@ const th = {
 
   // ── Device settings ──────────────────────────────────────────────────────
   'storage.notDurable': 'ไม่ได้บันทึกถาวร — เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ ถ้าโหลดหน้าใหม่หรือปิดแท็บ ข้อมูลจะหาย',
+  // ── Data state (SYNC-12, E01-S15) ────────────────────────────────────────
+  'dataState.unknown': 'ไม่ทราบ',
+  'dataState.not-recorded': 'ไม่ได้บันทึก',
+  'dataState.estimated': 'ประมาณ',
+  'dataState.user-provided': 'ผู้ใช้ใส่',
+  'dataState.system-calculated': 'ระบบคำนวณ',
+  'dataState.ai-suggested': 'AI แนะนำ',
+  'dataState.a11y': 'สถานะข้อมูล: {label}',
+  /** design-system §12.9 item 9: "≈" marks an estimate — on the badge, and before an estimated value. */
+  'dataState.estimatedMark': '≈',
+  'dataState.estimatedBadge': '{mark} {label}',
+  'dataState.estimatedValue': '{mark} {value}',
+  // ─────────────────────────────────────────────────────────────────────────
   'settings.title': 'ตั้งค่าเครื่อง',
   'settings.back': '← รายการ',
   'settings.open': 'ตั้งค่า',
@@ -456,6 +469,18 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'closed.closeZone': 'close this zone',
 
   'storage.notDurable': 'Not saved permanently — this browser cannot store data; reloading or closing the tab loses it',
+  // ── Data state ──
+  'dataState.unknown': 'unknown',
+  'dataState.not-recorded': 'not recorded',
+  'dataState.estimated': 'estimated',
+  'dataState.user-provided': 'entered by user',
+  'dataState.system-calculated': 'calculated',
+  'dataState.ai-suggested': 'AI suggested',
+  'dataState.a11y': 'data state: {label}',
+  'dataState.estimatedMark': '≈',
+  'dataState.estimatedBadge': '{mark} {label}',
+  'dataState.estimatedValue': '{mark} {value}',
+  // ──
   'settings.title': 'device settings',
   'settings.back': '← list',
   'settings.open': 'settings',
