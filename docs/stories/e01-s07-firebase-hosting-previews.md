@@ -23,7 +23,7 @@ Firestore database `dev` + bucket ของ dev, ข้อมูลทดสอ�
 - [ ] ทุก PR ได้ preview channel `pr-<N>` บน site dev, `--expires 7d`, deploy ใหม่ต่ออายุ, ลบเมื่อปิด PR, ลิงก์ comment ใน PR (D-21)
 - [ ] build dev/preview ใช้ Firestore database `dev` และ bucket ของ dev เท่านั้น — มี test ยืนยันว่า bundle dev/preview อ้างถึงเฉพาะ database `dev` (NFR-5); preview build โดย CI ของ repo เท่านั้น (ความเสี่ยงที่เจ้าของรับแล้ว (2026-10-03): rules แยก build ไม่ได้ ดู D-34)
 - [ ] preview รันหลัง e2e เขียวเท่านั้น และข้ามเมื่อแก้เอกสารล้วน (E01-S05)
-- [ ] โปรเจกต์เดียวอยู่ asia-southeast1 (database `dev`, `(default)` และ bucket ทั้งสองด้วย) และมี budget alert ตัวเดียวครอบทั้ง dev/prod (D-1, D-34) — บันทึกยืนยันใน Dev notes
+- [ ] โปรเจกต์เดียวอยู่ asia-southeast3 (กรุงเทพฯ) (database `dev`, `(default)` และ bucket ทั้งสองด้วย) และมี budget alert ตัวเดียวครอบทั้ง dev/prod (D-1, D-34) — บันทึกยืนยันใน Dev notes
 
 ## Offline / sync behavior
 
@@ -37,7 +37,7 @@ Firestore database `dev` + bucket ของ dev, ข้อมูลทดสอ�
 
 ## ต้องให้เจ้าของทำ/อนุมัติ
 
-- ~~สร้างโปรเจกต์ Firebase~~ เจ้าของสร้างแล้ว (1 โปรเจกต์, D-34); ยืนยัน Blaze + budget alert, region asia-southeast1
+- ~~สร้างโปรเจกต์ Firebase~~ เจ้าของสร้างแล้ว (1 โปรเจกต์, D-34); ยืนยัน Blaze + budget alert, region asia-southeast3 (กรุงเทพฯ)
 - สร้าง 2 site (`dev`, `prod`), Firestore database `dev`, bucket ของ dev; เลือก 2 domain
 - สร้าง deploy credential **1 ชุด** (โปรเจกต์เดียว) เก็บเป็น GitHub secret (agent สร้างให้ไม่ได้)
 - อนุมัติใช้ `firebase-tools` ใน CI (gate dependency)

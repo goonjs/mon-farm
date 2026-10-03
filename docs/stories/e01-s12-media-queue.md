@@ -37,7 +37,7 @@ Status: Ready
 ## ต้องให้เจ้าของทำ/อนุมัติ
 
 - ถ้าต้องใช้ `expo-file-system` หรือ lib อื่น → gate dependency
-- ยืนยัน bucket ของ dev และ bucket หลัก (prod) อยู่ใน asia-southeast1 และ budget alert ครอบคลุม Storage; build dev/preview อัปโหลดเข้า bucket ของ dev เท่านั้น
+- ยืนยัน bucket ของ dev และ bucket หลัก (prod) อยู่ใน asia-southeast3 (กรุงเทพฯ) และ budget alert ครอบคลุม Storage; build dev/preview อัปโหลดเข้า bucket ของ dev เท่านั้น
 
 ## Verification
 
