@@ -34,6 +34,13 @@ tools: Read, Grep, Glob, Bash
   (2) owner often picks "both" (e.g. handoff AND free mode, voice AND recorder
   view) — offer combinable options; (3) built-but-superseded features (S9,
   S15, S24, S29) need explicit removal stories, not silent drift.
+- 2026-10-03 — Reviewed UX flow doc E02 + sync states (MF-22), 19 findings.
+  Lessons: (1) routing on LOCAL state right after a first login on a new
+  device misroutes existing members (empty list → "create group") — check
+  first-run paths against server state; (2) check every Thai button label
+  against domain verbs already taken (ปิด = close a sale, ส่งต่อ = sale
+  handoff); (3) a "who/which device" requirement needs a data source —
+  devices are UUIDs only.
 - 2026-10-03 — Reviewed UX flow doc E03 (MF-20), 15 findings. Lessons: (1) in
   UX docs, check every "two devices → Conflict" claim against the architecture
   merge table — concurrent *creates* (overlapping assignments, split/merge,
