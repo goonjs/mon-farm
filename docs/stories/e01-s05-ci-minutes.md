@@ -21,7 +21,7 @@ Status: Ready
 - [ ] e2e ใช้ `dist/` ที่ verify build ไว้ (artifact) ไม่ build ซ้ำ
 - [ ] cache Playwright browsers ตามเวอร์ชันใน lockfile; รอบที่ cache hit ไม่ดาวน์โหลดใหม่
 - [ ] trigger ยังเป็น `push: [dev, main]` + `pull_request` (PR รันครั้งเดียว; merge เข้า dev/main ตรวจซ้ำ)
-- [ ] ประเมิน bun: เทียบเวลา install กับ `npm ci` บน runner, ตรวจ dependency tree + `trustedDependencies`, เขียนข้อเสนอใน Dev notes
+- [x] ประเมิน bun: เทียบเวลา install กับ `npm ci` บน runner, ตรวจ dependency tree + `trustedDependencies`, เขียนข้อเสนอใน Dev notes — ปิดด้วย ADR 0002 (เจ้าของรับผล POC จาก sandbox แทนการวัดบน runner, 2026-10-03)
 - [ ] บันทึกนาที CI ก่อน/หลัง (median 3 รอบ) ใน Dev notes
 
 ## Offline / sync behavior
@@ -43,6 +43,8 @@ Status: Ready
 ## Verification
 
 ## Dev notes
+
+- ประเมิน bun: ผล POC และข้อเสนออยู่ที่ `docs/adr/0002-bun-package-manager-ci.md` (Accepted 2026-10-03: คง npm — เจ้าของรับผล POC จาก sandbox, AC ปิดแล้ว)
 
 ## Code review
 

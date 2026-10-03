@@ -16,7 +16,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E01-S04: ลบแบบกู้คืนได้ (Soft Delete) + ที่มาของข้อมูล](e01-s04-soft-delete-provenance.md)
 - [E01-S05: CI ประหยัดนาที — ข้ามเอกสารล้วน, cache, e2e ใช้ dist เดิม, ประเมิน bun](e01-s05-ci-minutes.md)
 - [E01-S06: รันบน Android จริงครั้งแรก (dev client)](e01-s06-android-dev-client.md)
-- [E01-S07: Firebase dev/prod + Hosting deploy + preview channel ต่อ PR](e01-s07-firebase-hosting-previews.md)
+- [E01-S07: Firebase dev/prod (1 โปรเจกต์) + Hosting deploy + preview channel ต่อ PR](e01-s07-firebase-hosting-previews.md)
 - [E01-S08: Firestore — event แก้ไม่ได้ + security rules แยกกลุ่มฟาร์ม](e01-s08-firestore-rules.md)
 - [E01-S09: sync อัตโนมัติ — outbox ส่งขึ้น + ดึงลง](e01-s09-outbox-sync.md)
 - [E01-S10: แสดงสถานะ sync + ปุ่ม "ลองใหม่" เมื่อ error](e01-s10-sync-status-retry.md)

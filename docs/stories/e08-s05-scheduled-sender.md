@@ -6,7 +6,7 @@ Status: Draft
 
 - Epic: `docs/epics/e08-tasks-notifications.md`
 - PRD: TASK-4, TASK-5, TASK-7, NFR-6 · D-1
-- ใหม่ — **ต้องขออนุมัติเจ้าของก่อนเริ่ม**: deploy Cloud Functions (scheduled) บนโปรเจกต์ Blaze dev แล้วค่อย prod, ค่าใช้จ่าย และ dependency ฝั่ง server
+- ใหม่ — **ต้องขออนุมัติเจ้าของก่อนเริ่ม**: deploy Cloud Functions (scheduled) บนโปรเจกต์ Blaze (โปรเจกต์เดียว D-34) — ชี้ database `dev` ก่อน แล้วค่อย prod, ค่าใช้จ่าย และ dependency ฝั่ง server
 - ขึ้นกับ: E08-S03, E08-S04; E01 story Firestore + security rules; E09-S03 (การเตือนเอกสาร)
 
 ## คำอธิบาย

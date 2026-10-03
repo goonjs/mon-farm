@@ -1,6 +1,8 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { useCallback } from 'react';
+import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
-import { SaleProvider } from '../../../store/SaleProvider';
+import { DeletedSaleGate } from '../../../components/DeletedSaleGate';
+import { SaleProvider, useSale } from '../../../store/SaleProvider';
 
 /**
  * Everything under `/sale/[id]/` shares one sale in context, keyed by the
@@ -13,7 +15,25 @@ export default function SaleLayout() {
 
   return (
     <SaleProvider saleId={id}>
-      <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
+      <RefreshOnFocus />
+      <DeletedSaleGate>
+        <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
+      </DeletedSaleGate>
     </SaleProvider>
   );
+}
+
+/**
+ * This provider can stay mounted under the sale list (settlement links back
+ * to `/`), so coming back re-reads the log: the sale may have been deleted
+ * or restored from another screen in the meantime (E01-S04).
+ */
+function RefreshOnFocus() {
+  const { refresh } = useSale();
+  useFocusEffect(
+    useCallback(() => {
+      void refresh().catch((err) => console.error('Could not re-read the sale.', err));
+    }, [refresh]),
+  );
+  return null;
 }

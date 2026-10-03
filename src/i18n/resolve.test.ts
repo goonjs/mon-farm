@@ -82,7 +82,9 @@ describe('the catalogue itself', () => {
     // minus the derivations are set with. Anything outside this set is a
     // glyph the system stack may not carry, and a box on the counter screen
     // is a label nobody can read in any language.
-    const allowed = /^[฀-๿ -~·—–−…×✓✗↺↩←→✕⚖\n]*$/u;
+    // ≈ joins for E01-S15: design-system §12.9 item 9 marks Estimated with it;
+    // U+2248 is in the Thai-capable system fonts (Noto, Roboto, SF, Segoe).
+    const allowed = /^[฀-๿ -~·—–−…×✓✗↺↩←→✕⚖≈\n]*$/u;
     const offenders = Object.entries({ ...messages.th, ...messages.en })
       .filter(([, s]) => !allowed.test(s))
       .map(([id]) => id);

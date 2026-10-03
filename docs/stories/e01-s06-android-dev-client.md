@@ -34,36 +34,28 @@ Status: Ready
 ## ต้องให้เจ้าของทำ/อนุมัติ
 
 - อนุมัติติดตั้ง `expo-dev-client` (gate dependency พร้อมผลตรวจ)
-- เลือกวิธี build: EAS (บัญชี Expo) หรือ build ในเครื่อง (Android SDK อยู่นอก repo → ขออนุญาตเข้าถึงนอก working directory)
+- ~~เลือกวิธี build~~ ตัดสินแล้ว 2026-10-03: GitHub Actions + Gradle (ADR 0003); ทางเลือกฟรีอื่นเก็บไว้ใน ADR เผื่อต้องลดค่าใช้จ่าย
+- สร้าง keystore สำหรับเซ็น APK และเก็บเป็น GitHub secret (คำถามเปิด D1)
 - จัดหาเครื่อง Android สำหรับทดสอบ
 
 ## Verification
 
 ## Dev notes
 
-### ขั้นตอน build (agent เตรียม, รอ gate)
-
-1. ขออนุมัติ `expo-dev-client` (gate dependency + ผลตรวจ `npm audit` ก่อน/หลัง)
-2. วิธี build ที่แนะนำ: **EAS Build (cloud)** — sandbox ไม่มี Android SDK และการ build ในเครื่องต้องเข้าถึงนอก repo
-   ทางเลือก: build ในเครื่องของเจ้าของด้วย Android Studio (ช้ากว่าในการตั้งค่า)
-3. เพิ่ม `eas.json` profile `development` (`developmentClient: true`, `distribution: internal`, Android `apk`)
-4. เจ้าของรัน build ครั้งแรก (ต้อง login บัญชี Expo ของเจ้าของ) → ได้ลิงก์ติดตั้ง APK
-5. รันเซิร์ฟเวอร์ dev (`npx expo start --dev-client`) ให้เครื่องต่อเข้ามา หรือ build แบบ preview (มี bundle ในตัว)
-   สำหรับทดสอบออฟไลน์ล้วน — ทดสอบโหมดเครื่องบินต้องใช้ **build ที่มี bundle ในตัว** เพราะ dev client
-   โหลดโค้ดจากเครื่องคอมพิวเตอร์
+- ทางสร้าง APK: `docs/adr/0003-android-build-path.md` (Accepted 2026-10-03) — ทาง B: GitHub Actions + `expo prebuild` + Gradle `assembleRelease`
+  APK แบบ release มี JS bundle ในตัว จึงทดสอบโหมดเครื่องบินได้ตรง ๆ
 
 ### Checklist เจ้าของ (บนโทรศัพท์ Android จริง)
 
 **ก. เตรียม (ครั้งเดียว)**
 
-1. สมัคร/login <https://expo.dev> → แจ้ง lead ว่าใช้บัญชีไหน (agent ไม่ต้องการรหัสผ่าน)
-2. โทรศัพท์: **การตั้งค่า → ความปลอดภัย → ติดตั้งแอปที่ไม่รู้จัก** → อนุญาตให้ Chrome (ชื่อเมนูต่างกันตามยี่ห้อ)
-3. เสียงพูดไทยแบบออฟไลน์: **การตั้งค่า → ระบบ → ภาษา → เอาต์พุตการอ่านออกเสียง (Text-to-speech)**
+1. โทรศัพท์: **การตั้งค่า → ความปลอดภัย → ติดตั้งแอปที่ไม่รู้จัก** → อนุญาตให้ Chrome (ชื่อเมนูต่างกันตามยี่ห้อ)
+2. เสียงพูดไทยแบบออฟไลน์: **การตั้งค่า → ระบบ → ภาษา → เอาต์พุตการอ่านออกเสียง (Text-to-speech)**
    → เครื่องมือของ Google → ⚙️ → **ติดตั้งข้อมูลเสียง** → **ไทย** → ดาวน์โหลด (ใช้ Wi-Fi)
 
 **ข. ติดตั้ง**
 
-1. เปิดลิงก์ build ที่ agent/lead ส่งให้ บนโทรศัพท์ → **Download** → เปิดไฟล์ → **ติดตั้ง**
+1. เปิดลิงก์ APK (artifact จาก GitHub Actions) ที่ lead ส่งให้ บนโทรศัพท์ → **Download** → เปิดไฟล์ → **ติดตั้ง**
 2. เปิดแอป mon-farm → จับภาพหน้าจอ (กดปุ่มเปิด/ปิด + ลดเสียงพร้อมกัน)
 
 **ค. ทดสอบ (จับภาพหน้าจอทุกข้อ)**
