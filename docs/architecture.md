@@ -356,8 +356,10 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
   เหมือนเดิม Soft Delete ≠ Cancelled (SYNC-10)
 - provenance (SYNC-11) ได้จาก log ไม่ต้องเก็บแยก: สร้างโดย/เมื่อ = `actor` + `ts` ของ create; แก้โดย/เมื่อ =
   head; ช่องทาง = `source`; สถานะการยืนยัน = สถานะรายฟิลด์
-- **สถานะข้อมูลรายฟิลด์ (SYNC-12, E01-S15)**: `FieldValue<T> = { value: T | null; state: FieldDataState }`
-  ที่ `src/core/field-state.ts` ใช้เฉพาะฟิลด์ที่เกี่ยวข้อง อยู่ใน `payload` ของ create/edit การเปลี่ยนสถานะ
+- **สถานะข้อมูลรายฟิลด์ (SYNC-12, E01-S15)**: `FieldValue<T>` ที่ `src/core/field-state.ts` เป็น union —
+  `{ value: null, state: 'unknown' | 'not-recorded' }` หรือ `{ value: T, state: อีก 4 สถานะ }` (สร้างจริงใน E01-S15;
+  "ไม่มีค่า" ตัดสินจาก `state` เสมอ ไม่ใช่จาก `value` เพราะข้อมูลมาเป็น JSON; `sumKnown()` คืน `{ total | null, missing }`)
+  ใช้เฉพาะฟิลด์ที่เกี่ยวข้อง อยู่ใน `payload` ของ create/edit การเปลี่ยนสถานะ
   (เช่น Estimated → User provided) เป็น `edit` ปกติ การเทียบ Conflict ดูทั้ง `value` และ `state` และ
   Unknown / Not recorded ไม่ถูกแปลงเป็น 0 เด็ดขาด
 - หน่วย: น้ำหนักเป็นกรัมจำนวนเต็ม เงินเป็นสตางค์จำนวนเต็ม (ตามเดิม) และ snapshot `netG`/`tareG` บนเข่งยังเป็น

@@ -1,6 +1,6 @@
 # Story E01-S15: สถานะข้อมูลรายฟิลด์ 6 แบบ + ป้ายใช้ซ้ำ
 
-Status: Ready
+Status: In Progress
 
 ## Context
 
@@ -53,8 +53,53 @@ story นี้ทำแค่ model + ป้าย — การใช้ป้
 
 ## Verification
 
+รันใน container ของ session (2026-10-03):
+
+- เห็นแดงก่อน: `field-state.test.ts` และ `DataStateBadge.test.tsx` ล้ม (ไม่มี module) ก่อนเขียนโค้ด
+- typecheck, lint, contrast ผ่าน; Vitest 163; jest 64; `build:web` ผ่าน; Playwright 144 ผ่าน / 6 skip (config ชั่วคราวใน
+  scratchpad เหมือน story ก่อน) รวม `e2e/data-states.spec.ts`
+
 ## Dev notes
+
+### DoD ของ story นี้ (GO-PARTIAL จาก lead 2026-10-03: ทุกอย่างยกเว้นไอคอน)
+
+- [x] เทสต์เขียนก่อนและเห็นแดง: Vitest (6 สถานะ, ป้ายครบ, ไม่มีค่า ≠ 0), jest (ป้ายทุกสถานะ + accessibilityLabel ไทย), Playwright screenshot
+- [x] type กลาง `FieldDataState` + `FieldValue<T>` ใน `src/core/field-state.ts`; ป้ายไทย/อังกฤษที่เดียวใน `src/i18n/messages.ts` (`dataState.*`)
+- [x] `DataStateBadge` ตาม design-system §12.9 ข้อ 9 พร้อมช่อง `ICONS` สำหรับไอคอน
+- [ ] **ไอคอน "?" (Unknown) และประกาย (AI)** — รอ `Icon` ของ E01-S13 (team design ทำเสร็จในเครื่องแล้ว ยังไม่ขึ้น dev); เติมในช่อง `ICONS` ห้ามเพิ่ม library ไอคอนอีกตัว
+- [x] `npm run verify` ทุกชั้นเขียว, review อิสระโดย subagent แยก
+- [ ] CI เขียวบน PR
+
+### การตัดสินใจ
+
+- **ไม่ต้องเพิ่ม token**: คู่สีที่ป้ายใช้ (`inkSoft` บน `surface`, `ruleStrong` บน `surface`, `ink` บน `surfaceSunk`) มีใน
+  `scripts/check-contrast.mjs` อยู่แล้วและผ่าน
+- **Not recorded** ใช้หน้าตาเดียวกับ Unknown (กรอบเส้นประ ตัวหนังสือจาง = "ไม่มีค่า") แต่คำต่างกันและไม่มีไอคอน "?"
+  — design-system ยังไม่กำหนด Not recorded
+- `sumKnown()` คืน `total: null` เมื่อไม่รู้ค่าใดเลย และ `missing` = จำนวนฟิลด์ที่ไม่มีค่า เพื่อให้หน้าจอบอก "ข้อมูลไม่ครบ"
+  แทนที่จะแสดงยอดที่น้อยกว่าจริงเหมือนครบ
+- ป้ายผูกกับ type: key `dataState.${FieldDataState}` — เพิ่มสถานะแล้วไม่มีป้าย typecheck และเทสต์ล้ม
+- หน้า `/preview/data-states` (ไม่มีลิงก์จากแอป) มีไว้ให้เจ้าของตรวจป้ายทั้ง 6 และใช้ถ่าย screenshot — เป็น URL สาธารณะบน
+  build จริง (ไม่มีข้อมูล) ลบหรือเก็บเป็น gallery เมื่อมี story แรกที่ใช้ป้ายจริง (เช่น E09-S01)
+- "≈": อยู่ใน catalogue (`dataState.estimatedMark`) และเพิ่มในชุดตัวอักษรที่อนุญาตของ `resolve.test.ts` ตาม design-system
+  §12.9 ข้อ 9 ป้ายแสดง "≈ ประมาณ" และมี `dataState.estimatedValue` ("≈ {value}") ให้หน้าจอที่ใช้ค่าประมาณนำหน้าค่า
+  ตำแหน่ง ≈ ให้เจ้าของดูใน screenshot
+- ขนาดตัวอักษร S/M/L ใน screenshot: ยังไม่มี E03-S08 จึงถ่ายขนาดเดียว
+- ไม่แตะหน้าจอของ story อื่น; E09-S01 ต้องปรับให้ใช้ "ไม่ได้บันทึก" ตามคำตอบเจ้าของ (ทำใน story นั้น)
 
 ## Code review
 
+review อิสระโดย subagent แยก (2026-10-03) — ไม่มี blocker:
+
+| # | ระดับ | เรื่อง | ผล |
+|---|---|---|---|
+| 1 | should-fix | `sumKnown`/`valueOf` ตัดสิน "ไม่มีค่า" จาก `value === null` — JSON ที่ผิดรูป (`{state:'unknown', value:0}`) จะถูกนับเป็น 0 | แก้: `isNoValue(state)` ใช้ที่เดียวทั้ง core และป้าย; ค่าที่ไม่ใช่ตัวเลขจริงนับเป็น missing + เทสต์ JSON ผิดรูป |
+| 2 | should-fix | architecture ยังเขียน `FieldValue` แบบเก่า | แก้: เป็น union + กฎ `sumKnown` |
+| 3 | should-fix | "≈" ต่อสตริงใน component เลี่ยงกฎตัวอักษรของ catalogue | แก้: ย้ายเข้า catalogue + เพิ่มในชุดที่อนุญาต (อ้าง design-system) + `estimatedValue` สำหรับค่า |
+| nit | | `T` เป็น nullable ได้; เทสต์ token หลวม; ตรวจคำไทยแค่ 4/6; key อยู่ในหมวดตั้งค่า; screenshot ขนาด desktop | แก้ทั้งหมด (screenshot ที่ 412×915 แนวตั้ง) |
+| nit | | เว็บ: `accessibilityLabel` บน View ไม่มี role อาจไม่ถูกอ่าน; พื้น chip AI ต่างจากพื้นหลังน้อย | คงไว้: native อ่านถูก, คำบนป้ายสื่อความหมายเองแล้ว (NFR-4) — ทบทวนเมื่อป้ายอยู่ในหน้าจอจริง |
+
 ## QA notes
+
+- ป้ายทั้ง 6 แบบเรียงกัน: `screenshots/e01-s15/data-state-badges.png` — **เจ้าของต้องตรวจ** (ตาม "ต้องให้เจ้าของทำ/อนุมัติ")
+  ไอคอนยังไม่อยู่ในภาพนี้ (รอ E01-S13)

@@ -1,6 +1,6 @@
 # Story E01-S04: ลบแบบกู้คืนได้ (Soft Delete) + ที่มาของข้อมูล
 
-Status: Review
+Status: Done
 
 ## Context
 
@@ -60,7 +60,7 @@ Soft Delete ใช้กับ **ทุกรายการ** กฎเดี�
 - [x] กลไกเดียว: event `delete` / `restore` ที่ชี้ `targetId` ใช้กับทุกชนิดรายการ ไม่มีทางลบแถวจริง
 - [x] หน้า "ที่ลบแล้ว" + กู้คืน, ปุ่มลบการขายต้องยืนยันสองขั้น; screenshot ใน QA notes
 - [x] `npm run verify` ทุกชั้นเขียว, ตรวจตาม checklist, review อิสระโดย subagent แยก
-- [ ] CI เขียวบน PR
+- [x] CI เขียวบน PR (#17)
 
 
 ### การตัดสินใจ / ส่วนที่ต่างจากแผน
