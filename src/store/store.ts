@@ -28,9 +28,11 @@ export interface EventStore {
   /**
    * Appends one event (architecture §Local data layer, "กติกาของ EventStore"):
    * a new id is inserted; the same id with the same content is a no-op, so a
-   * repeated append or pull is harmless; the same id with different content,
-   * or a `deviceSeq` this device already used, rejects with `IntegrityError`.
-   * Nothing is ever overwritten.
+   * repeated append or pull is harmless; the same id with different content
+   * rejects with `IntegrityError`. This device's own `deviceSeq` is allocated
+   * by the store inside the append (see append-rule.ts): a number already
+   * used is replaced with the next free one, never repeated. Nothing is ever
+   * overwritten.
    */
   append(event: SaleEvent): Promise<void>;
   /** One sale's events in fold order (`compareEvents`). */

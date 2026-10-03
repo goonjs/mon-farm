@@ -58,7 +58,8 @@ export class SqliteStore implements EventStore {
   /**
    * Tail of the write queue (see `serial`). The provider fires appends without
    * awaiting, and two racing transactions could otherwise commit seq 8 before
-   * seq 7 — and then refuse 7 as already used.
+   * seq 7 — which the store would then renumber to 9, reversing this
+   * device's outbox order.
    */
   private queue: Promise<unknown> = Promise.resolve();
 

@@ -33,6 +33,10 @@ export interface DeviceState {
  * Events from other devices are stored as they are: two installs restored
  * from one backup can share a device id, and refusing their events would
  * wedge sync (architecture §Schema — native).
+ *
+ * LOCAL APPENDS ONLY. Pulled events (E01-S09 `insertPulled`) must be stored
+ * verbatim, never renumbered — a pulled event carrying this device's id
+ * (a cloned install) would otherwise drift from the server copy.
  */
 export function checkAppend(
   event: SaleEvent,
@@ -49,6 +53,11 @@ export function checkAppend(
   }
   if (!own) return { event, device };
   const deviceSeq = Math.max(event.deviceSeq, device.nextDeviceSeq);
+  if (deviceSeq !== event.deviceSeq) {
+    // Expected with two tabs open; anywhere else it means appends committed
+    // out of order, which deserves a trace.
+    console.warn(`Device sequence ${event.deviceSeq} already used; stored as ${deviceSeq}.`);
+  }
   return {
     event: deviceSeq === event.deviceSeq ? event : { ...event, deviceSeq },
     device: { ...device, nextDeviceSeq: deviceSeq + 1 },

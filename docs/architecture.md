@@ -296,7 +296,7 @@ CREATE TABLE media_queue (media_id TEXT PRIMARY KEY, group_id TEXT NOT NULL, loc
 
 **ทำไมไม่บังคับ `(device_id, device_seq)` unique ทั้งตาราง**: ถ้าสองการติดตั้งเคยได้ `deviceId` เดียวกัน (เช่น
 Android Auto Backup restore ลงเครื่องใหม่ขณะเครื่องเก่ายังใช้) `insertPulled` จะชน constraint และ pull ค้างถาวร
-จึงบังคับเฉพาะแถวของเครื่องนี้ใน append; ข้อมูลที่ดึงมาซ้ำ `(deviceId, deviceSeq)` แต่ id ต่างกัน → เก็บไว้และ log
+จึงกำหนดเลขให้เฉพาะแถวของเครื่องนี้ใน append (เลขที่ใช้แล้วได้เลขว่างถัดไป ไม่ถูกปฏิเสธ — E01-S03); ข้อมูลที่ดึงมาซ้ำ `(deviceId, deviceSeq)` แต่ id ต่างกัน → เก็บไว้และ log
 เตือน ไม่หยุด pull และตั้ง `android.allowBackup: false` ใน `app.json` (E01-S06) เพื่อกัน `deviceId` ถูกโคลน
 
 **canonical JSON** (ใช้เทียบ "เนื้อหาเท่ากัน" ทั้งในเครื่องและกับ Firestore): key เรียงตามตัวอักษรทุกระดับ, ฟิลด์
@@ -318,6 +318,8 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
   **store เป็นผู้กำหนด `deviceSeq` ของเครื่องตัวเองใน transaction** (`checkAppend`) — เลขที่หน้าจอเสนอมาใช้ได้ถ้ายังว่าง
   ถ้าแท็บอื่นใช้ไปแล้วจะได้เลขว่างถัดไปแทนการถูกปฏิเสธ IndexedDB เรียง transaction ข้ามแท็บให้ จึงไม่มี event หาย
   และไม่มีเลขซ้ำ (แก้ใน E01-S03 หลังพบว่าตัวนับในหน่วยความจำต่อแท็บทำให้ event หายราวครึ่ง; มี Playwright สองแท็บ)
+  ที่ยังเหลือ: แต่ละแท็บเห็นเฉพาะ event ของตัวเองจนกว่าจะ reload และสองแท็บในการขายเดียวกันได้ `seq` ต่อการขายซ้ำกัน
+  (ลำดับ fold ตัดสินด้วย `deviceSeq` ตามลำดับที่ commit) — ไม่มีข้อมูลหาย
 - เรียก `navigator.storage.persist()` เพื่อลดโอกาสเบราว์เซอร์ลบข้อมูล
 - ใช้ IndexedDB ไม่ได้ (เช่น private mode) → ใช้ `MemoryStore` และเตือนเป็นภาษาไทย (E01-S03) — `EventStore.isDurable()`
   + แถบ `StorageWarning` บนทุกหน้าจอ
@@ -326,7 +328,8 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
 
 - `append(e)`: id ใหม่ → insert; **id เดิมเนื้อหาเดิม → ไม่ทำอะไร** (idempotent); **id เดิมเนื้อหาต่าง →
   `IntegrityError`** ห้ามเขียนทับ (แทน `DuplicateSeqError`)
-- `insertPulled(events)`: กติกาเดียวกัน ใส่ `synced_at` / `received_at` และไม่เข้า outbox
+- `insertPulled(events)`: กติกาเดียวกันเรื่อง id (idempotent / `IntegrityError`) แต่ **เก็บตามที่ได้รับ ไม่กำหนด
+  `deviceSeq` ใหม่** (การกำหนดเลขใช้กับ append ในเครื่องเท่านั้น) ใส่ `synced_at` / `received_at` และไม่เข้า outbox
 - `pending(groupId?)`: เรียงตาม `device_seq` · `markSynced(ids, receivedAt)` ทำหลังเซิร์ฟเวอร์ยืนยันแล้วเท่านั้น
 - `purgeGroup(gid)`: ลบทุก table ของกลุ่มนั้น + `pull_cursor:<gid>` ใน transaction เดียว แล้วลบไฟล์สื่อของกลุ่ม
   บนดิสก์ เรียกได้ **เฉพาะ** เมื่อเครื่องรู้ว่าผู้ใช้ไม่เป็นสมาชิกกลุ่มนั้นแล้ว (§การดำเนินการด้านสมาชิกภาพ, E02-S04,

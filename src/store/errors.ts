@@ -13,8 +13,8 @@
 
 /**
  * An append that would rewrite history: an id already stored with different
- * content, or a device sequence number this device already used. The log is
- * append-only, so this is refused rather than resolved by overwriting.
+ * content. The log is append-only, so this is refused rather than resolved
+ * by overwriting.
  */
 export class IntegrityError extends Error {
   constructor(message: string) {

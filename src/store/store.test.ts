@@ -57,12 +57,22 @@ describe('MemoryStore — EventStore rules (E01-S02 AC2, AC3)', () => {
     expect(await store.pending()).toHaveLength(2);
   });
 
-  it('still refuses the same id with different content even after renumbering', async () => {
+  it('still refuses the same id with different content after renumbering', async () => {
     const store = new MemoryStore();
     const { deviceId } = await store.device();
     const [first] = new LogBuilder('s1', deviceId).accept('p1').build();
+    const [clash] = new LogBuilder('s2', deviceId).accept('p1').build();
     await store.append(first);
-    await expect(store.append({ ...first, ts: first.ts + 1 })).rejects.toBeInstanceOf(IntegrityError);
+    await store.append(clash); // stored as deviceSeq 2
+    await expect(store.append({ ...clash, ts: clash.ts + 1 })).rejects.toBeInstanceOf(IntegrityError);
+  });
+
+  it('stores other devices\' events exactly as received and leaves this device\'s counter alone', async () => {
+    const store = new MemoryStore();
+    const [theirs] = new LogBuilder('s1', 'dev-other').accept('p1').accept('p1').build().slice(1);
+    await store.append(theirs);
+    expect((await store.load('s1'))[0]).toEqual(theirs);
+    expect((await store.device()).nextDeviceSeq).toBe(1);
   });
 
   it('lists pending events in device order and clears them by id', async () => {
