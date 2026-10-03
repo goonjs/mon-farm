@@ -181,6 +181,7 @@ may go to another free choice)"*
   cache Gradle, ใส่ค่าเซ็นจาก secret, artifact `retention-days` 7–14) — งาน CI แยก ต้องผ่าน review ตามปกติ
 - เจ้าของสร้าง keystore หนึ่งครั้ง เก็บสำรองไว้นอก GitHub (ถ้าหาย = ต้องถอนแอป
   ทุกเครื่องและข้อมูลที่ยังไม่ซิงก์หาย) แล้วใส่เป็น GitHub secret
+  — **เจ้าของยืนยัน 2026-10-03 (H5, PR #44): สำรองไว้นอก GitHub แล้ว**
 - วัดนาทีจริงของ build แรกแล้วบันทึกใน Dev notes ของ E01-S06 แทนตัวเลขประมาณ
 - `android/` ที่ prebuild สร้าง **ไม่ commit** (คง managed workflow — Expo สร้างโฟลเดอร์
   native ใหม่จาก `app.json` ทุกครั้ง; `.gitignore` มี `/android` และ `*.jks` อยู่แล้ว)

@@ -8,6 +8,8 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 
 ลำดับที่แนะนำ: E01-S01…S08 → E02-S01/S02 → E01-S09 เป็นต้นไป (รวม E01-S15 — ทำก่อน E03) → E03 → E04 → E05 → E06 แล้วต่อ E07–E14
 
+ลำดับแรกของเจ้าของ (D-55; ปรับ D-62/D-64/D-65): E03-S01/S02/S03/S05/S06 (E03-S04 เลื่อนออก) · E11-S01 → S02 → S03 · E06-S03/S04 (E06-S05 ยกเลิก) · คู่กับ flow การขาย E04/E05
+
 ### E01 ฐานระบบ — sync, backend, CI — [epic](../epics/e01-foundation-sync.md)
 
 - [E01-S01: เขียนการออกแบบ sync ใน architecture.md (SDD)](e01-s01-sync-design-sdd.md)
@@ -23,7 +25,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E01-S11: ตรวจจับ Conflict + หน้าจอให้เจ้าของเลือก](e01-s11-conflict-resolve.md)
 - [E01-S12: คิวรูป/วิดีโอในเครื่อง → Cloud Storage](e01-s12-media-queue.md)
 - [E01-S13: ฝัง font Noto Sans Thai + ชุดไอคอนเส้น open-licence](e01-s13-thai-font-and-icons.md)
-- [E01-S14: preview A/B รูปแบบ card — เงา+เส้น vs แบน+เส้น](e01-s14-card-style-ab-preview.md)
+- ~~[E01-S14: preview A/B รูปแบบ card — เงา+เส้น vs แบน+เส้น](e01-s14-card-style-ab-preview.md)~~ ยกเลิก (D-52)
 - [E01-S15: สถานะข้อมูลรายฟิลด์ 6 แบบ + ป้ายใช้ซ้ำ](e01-s15-field-data-states.md)
 - [E01-S16: ลบเขตไม่ได้ถ้าคนกรีดของเขตยังมียอดหัก](e01-s16-zone-delete-guard.md)
 
@@ -36,11 +38,11 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 
 ### E03 ข้อมูลหลัก — [epic](../epics/e03-master-data.md)
 
-- [E03-S01: บุคคลและผู้ซื้อ เป็นข้อมูลหลักที่ sync](e03-s01-people-and-buyers.md) ❓
-- [E03-S02: สวน (ที่ดิน) พร้อมประวัติพื้นที่](e03-s02-properties-and-area-history.md) ❓
-- [E03-S03: จุดชั่ง (= กอง) และโครงสร้างตั้งต้น](e03-s03-weighing-points-and-seed.md) ❓
-- [E03-S04: โซนไม่บังคับ พร้อมประวัติโครงสร้าง](e03-s04-zones-with-history.md)
-- [E03-S05: มอบหมายคนกรีด ↔ จุดชั่ง/โซน แบบมีช่วงเวลา](e03-s05-tapper-assignments.md) ❓
+- [E03-S01: บุคคลและผู้ซื้อ เป็นข้อมูลหลักที่ sync](e03-s01-people-and-buyers.md)
+- [E03-S02: สวน (ที่ดิน) พร้อมประวัติพื้นที่](e03-s02-properties-and-area-history.md)
+- [E03-S03: จุดชั่ง (= กอง) และโครงสร้างตั้งต้น](e03-s03-weighing-points-and-seed.md)
+- [E03-S04: โซนไม่บังคับ พร้อมประวัติโครงสร้าง](e03-s04-zones-with-history.md) — เลื่อนออกจากลำดับแรก (D-64)
+- [E03-S05: มอบหมายคนกรีด ↔ จุดชั่ง แบบมีช่วงเวลา](e03-s05-tapper-assignments.md)
 - [E03-S06: ส่วนแบ่งรายคนกรีด + เลิกใช้สัญญาต่อโซนและ `basis`](e03-s06-tapper-share-retire-zone-contracts.md)
 - [E03-S07: ค่าตั้งต้นเข่ง และตั้งค่าวันขาย](e03-s07-basket-presets-and-sale-settings.md) ❓
 - [E03-S08: ขนาดตัวอักษร S / M / L](e03-s08-text-size-setting.md)
@@ -65,19 +67,19 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 ### E05 กระทบยอด & สรุปเงิน — [epic](../epics/e05-reconciliation-settlement.md)
 
 - [E05-S01: คำนวณสรุปเงินรายคนกรีด (core)](e05-s01-per-tapper-settlement-core.md)
-- [E05-S02: ถามการปัดเศษทุกครั้ง จำค่าล่าสุด](e05-s02-rounding-choice.md) ❓
+- [E05-S02: ถามการปัดเศษทุกครั้ง จำค่าล่าสุด](e05-s02-rounding-choice.md)
 - [E05-S03: กระทบยอดกับผู้ซื้อ (ตรวจครั้งเดียว)](e05-s03-buyer-reconciliation.md)
 - [E05-S04: หน้าสรุปเงิน คนกรีด + เจ้าของ](e05-s04-settlement-screen.md)
 - [E05-S05: สถานะการจ่ายแยกกัน + ปิดการขาย](e05-s05-payment-statuses-and-close.md)
 - [E05-S06: รายการการขายย้อนหลัง + รายละเอียด](e05-s06-sale-history.md)
 
-### E06 บัญชีปุ๋ย — [epic](../epics/e06-fertilizer.md)
+### E06 บัญชีปุ๋ย (+ หนี้คนงานทุกประเภท, D-54) — [epic](../epics/e06-fertilizer.md)
 
 - [E06-S01: บันทึกการซื้อปุ๋ย](e06-s01-fertilizer-purchase.md) ❓
 - [E06-S02: แบ่งกระสอบให้คนกรีด + ภาระ 50/50](e06-s02-allocation-and-burden.md) ❓
-- [E06-S03: บัญชีคนกรีด — ยอดค้าง แผนผ่อน ประวัติ](e06-s03-tapper-ledger.md) ❓
-- [E06-S04: หักค่าปุ๋ยตอนสรุปเงิน ไม่เกินส่วนแบ่ง ยกยอด](e06-s04-deduct-at-settlement.md)
-- [E06-S05: ย้ายข้อมูลหัก S29 เดิม เข้าบัญชีคนกรีด](e06-s05-migrate-s29-deductions.md) ❓
+- [E06-S03: บัญชีหนี้คนงาน — ยอดค้าง แผนผ่อน ประวัติ](e06-s03-tapper-ledger.md)
+- [E06-S04: หักหนี้ตอนสรุปเงิน ไม่เกินส่วนแบ่ง ยกยอด](e06-s04-deduct-at-settlement.md)
+- ~~[E06-S05: ย้ายข้อมูลหัก S29 เดิม เข้าบัญชีคนกรีด](e06-s05-migrate-s29-deductions.md)~~ ยกเลิก (D-65 — ลบโค้ดเก่าใน E06-S04)
 - [E06-S06: แผนปุ๋ย (ไม่บังคับ) → ค่าใช้จ่ายวางแผน](e06-s06-fertilizer-plan.md)
 
 ### E07 งานในสวน — [epic](../epics/e07-field-operations.md)
@@ -113,9 +115,9 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 
 ### E11 การเงินสวน — [epic](../epics/e11-finance.md)
 
-- [E11-S01: ค่าใช้จ่ายและวงจร Actual / Committed / Planned](e11-s01-expenses-and-lifecycle.md) ❓
-- [E11-S02: ผู้จ่ายจริงและเงินที่ต้องคืน](e11-s02-payer-and-reimbursement.md) ❓
-- [E11-S03: บันทึกการคืนเงินและยอดคงเหลือ](e11-s03-repayments.md) ❓
+- [E11-S01: ค่าใช้จ่ายและวงจร Actual / Committed / Planned](e11-s01-expenses-and-lifecycle.md)
+- [E11-S02: ผู้จ่ายจริงและเงินที่ต้องคืน](e11-s02-payer-and-reimbursement.md)
+- [E11-S03: บันทึกการคืนเงินและยอดคงเหลือ](e11-s03-repayments.md) — ลำดับแรก ต่อจาก S02 (D-62)
 - [E11-S04: เงินเดือนผู้จัดการสวน](e11-s04-manager-salary.md) ❓
 - [E11-S05: เงินช่วยเหลือพิเศษคนงาน](e11-s05-worker-special-payments.md) ❓
 - [E11-S06: การเดินทางหลายวัตถุประสงค์](e11-s06-travel-multi-purpose.md)

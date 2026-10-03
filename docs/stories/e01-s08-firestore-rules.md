@@ -90,3 +90,5 @@ Status: In Progress
 
 **คำตอบเจ้าของ (2026-10-03):**
 - D4 → **คง overrides grpc-js ^1.14.5 / basic-ftp ^6.2.1 จนกว่า upstream จะแก้**
+
+**คำตอบเจ้าของ (2026-10-03) (D-56):** รออัปเกรด Blaze — ยังไม่ deploy rules; ทำ E01-S07 ก่อน
