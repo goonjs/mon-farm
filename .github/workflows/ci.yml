@@ -23,9 +23,12 @@ on:
 
 # Only PR runs cancel each other. A push run on dev/main must finish: the next
 # push diffs from its own `before`, so a cancelled code merge followed by a
-# docs merge would otherwise never be verified.
+# docs merge would otherwise never be verified. Push runs are grouped per
+# commit, not per branch: GitHub keeps one *pending* run per group and drops
+# the older one even without cancel-in-progress (#30's merge run was dropped
+# that way behind a docs merge, run 131).
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
