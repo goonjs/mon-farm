@@ -14,4 +14,4 @@
 
 **ห้ามถือเป็น requirement**: flow, ลำดับหน้าจอ, ฟิลด์ และตัวเลขในรูป (เช่น ราคาตลาดโลก USD/kg,
 ส่วนของเจ้าของ 50%, การนับเข่งแบบ "เข่งเต็ม/เข่งไม่เต็ม" ในหน้าเดียว) ไม่ผูกพัน — UX มาจาก PRD,
-story (`docs/prd.md`, `docs/stories/`) และ mockup flow `docs/ux/mockups/flow-v1.html` เท่านั้น ถ้ารูปขัดกับ PRD ให้ยึด PRD
+story (`docs/prd.md`, `docs/stories/`) เอกสาร flow `docs/ux/flows/` และ mockup flow `docs/ux/mockups/flow-v1.html` เท่านั้น ถ้ารูปขัดกับ PRD ให้ยึด PRD
