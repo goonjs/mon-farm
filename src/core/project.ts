@@ -10,6 +10,8 @@
  * Implements the transition table in `docs/ux/pile-zone-sale-lifecycle.md` §8.
  */
 
+import { compareEvents } from './order';
+import { deletedIds } from './soft-delete';
 import type {
   Deduction,
   OpenClosed,
@@ -29,6 +31,7 @@ const IMPLAUSIBLE_JUMP_MS = 6 * 60 * 60 * 1000;
 export function emptySale(id: string): SaleState {
   return {
     id,
+    deleted: false,
     status: 'open',
     startedTs: null,
     parties: null,
@@ -63,16 +66,17 @@ interface MutZone {
 }
 
 /**
- * Pure, total, and order-defining: events are folded in `seq` order, never in
- * timestamp order. An event with an out-of-order `seq` is a programming error
- * upstream, so this throws rather than guessing.
+ * Pure and total: events are folded in `compareEvents` order, never in
+ * timestamp order, so the result does not depend on clocks or on the order
+ * rows arrived in. The same event id twice is a programming error upstream
+ * (the store dedupes), so this throws rather than guessing.
  */
 export function projectSale(events: readonly SaleEvent[], saleId?: string): SaleState {
   const id = saleId ?? events[0]?.saleId ?? '';
   const base = emptySale(id);
 
-  const ordered = [...events].sort((a, b) => a.seq - b.seq);
-  assertSequence(ordered);
+  assertUniqueIds(events);
+  const ordered = [...events].sort(compareEvents);
 
   const piles = new Map<PileId, MutPile>();
   const zones = new Map<ZoneId, MutZone>();
@@ -94,7 +98,9 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
       if (p) p.locked = true;
       continue;
     }
-    if (e.kind === 'reject' || e.kind === 'correction') continue;
+    if (e.kind === 'reject' || e.kind === 'correction' || e.kind === 'delete' || e.kind === 'restore') {
+      continue;
+    }
 
     const { payload } = e as SysEvent;
 
@@ -264,23 +270,30 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
     }
   }
 
+  // Soft-deleted records are hidden, never removed: restoring one brings it
+  // back exactly as the fold left it. A deleted zone hides its piles too.
+  const deleted = deletedIds(events);
+  const zoneGone = (zid: ZoneId) => deleted.has(zid);
+  const pileGone = (p: MutPile) => deleted.has(p.id) || zoneGone(p.zoneId);
+
   return {
     id,
+    deleted: deleted.has(id),
     status,
     startedTs,
     parties,
     price,
     split,
-    zones: [...zones.values()].map(
+    zones: [...zones.values()].filter((z) => !zoneGone(z.id)).map(
       (z): Zone => ({
         id: z.id,
         name: z.name,
         status: z.status,
-        pileIds: [...z.pileIds],
+        pileIds: z.pileIds.filter((pid) => !deleted.has(pid)),
         contract: z.contract,
       }),
     ),
-    piles: [...piles.values()].map(
+    piles: [...piles.values()].filter((p) => !pileGone(p)).map(
       (p): Pile => ({
         id: p.id,
         zoneId: p.zoneId,
@@ -295,18 +308,20 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
     ),
     clockSuspect,
     speechOn,
-    deductions: [...deductions.values()],
+    deductions: [...deductions.values()].filter((d) => !deleted.has(d.id)),
   };
 }
 
-function assertSequence(ordered: readonly SaleEvent[]): void {
-  for (let i = 1; i < ordered.length; i++) {
-    if (ordered[i].seq === ordered[i - 1].seq) {
+function assertUniqueIds(events: readonly SaleEvent[]): void {
+  const seen = new Set<string>();
+  for (const e of events) {
+    if (seen.has(e.id)) {
       throw new Error(
-        `Duplicate sequence number ${ordered[i].seq}. The log is the record of ` +
-          `what happened; two events cannot occupy one position in it.`,
+        `Duplicate event id ${e.id}. The log is the record of what happened; ` +
+          `one event cannot appear in it twice.`,
       );
     }
+    seen.add(e.id);
   }
 }
 
@@ -354,15 +369,13 @@ export function pilesStillCounting(state: SaleState, zoneId: ZoneId): readonly P
  * to be wrong.
  */
 export function lastAnnounceOk(events: readonly SaleEvent[]): boolean | null {
-  let result: boolean | null = null;
-  let atSeq = -Infinity;
+  let latest: { e: SaleEvent; ok: boolean } | null = null;
   for (const e of events) {
-    if (e.kind === 'sys' && e.payload.t === 'announced' && e.seq > atSeq) {
-      result = e.payload.ok;
-      atSeq = e.seq;
+    if (e.kind === 'sys' && e.payload.t === 'announced' && (!latest || compareEvents(e, latest.e) > 0)) {
+      latest = { e, ok: e.payload.ok };
     }
   }
-  return result;
+  return latest?.ok ?? null;
 }
 
 /**

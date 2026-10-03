@@ -21,7 +21,7 @@ Status: In Progress
 - [ ] e2e ใช้ `dist/` ที่ verify build ไว้ (artifact) ไม่ build ซ้ำ
 - [ ] cache Playwright browsers ตามเวอร์ชันใน lockfile; รอบที่ cache hit ไม่ดาวน์โหลดใหม่
 - [ ] trigger ยังเป็น `push: [dev, main]` + `pull_request` (PR รันครั้งเดียว; merge เข้า dev/main ตรวจซ้ำ)
-- [x] ประเมิน bun: เทียบเวลา install กับ `npm ci` บน runner, ตรวจ dependency tree + `trustedDependencies`, เขียนข้อเสนอใน Dev notes — ปิดโดย ADR 0002 — เจ้าของเลือกคง npm (2026-10-03)
+- [x] ประเมิน bun: เทียบเวลา install กับ `npm ci` บน runner, ตรวจ dependency tree + `trustedDependencies`, เขียนข้อเสนอใน Dev notes — ปิดด้วย ADR 0002 (เจ้าของรับผล POC จาก sandbox แทนการวัดบน runner, 2026-10-03)
 - [ ] บันทึกนาที CI ก่อน/หลัง (median 3 รอบ) ใน Dev notes
 
 ## Offline / sync behavior
@@ -109,6 +109,8 @@ median PR เอกสารล้วน = **5.3 นาที → คิดเ�
   (ดาวน์โหลด browser = ติดตั้ง ต้องขออนุมัติ) → e2e จริงพิสูจน์บน CI
 - ข้อจำกัด cache Playwright: hit ยังรัน `install-deps` (apt) จึงประหยัดแค่ส่วนดาวน์โหลด browser (~10–15 วิ);
   cache บันทึกเฉพาะ job ที่ผ่าน และ cache ของ PR ใช้ได้เฉพาะ PR นั้น/branch ฐาน — จะยืนยันด้วยตัวเลขรอบหลัง
+
+- ประเมิน bun: ผล POC และข้อเสนออยู่ที่ `docs/adr/0002-bun-package-manager-ci.md` (Accepted 2026-10-03: คง npm — เจ้าของรับผล POC จาก sandbox, AC ปิดแล้ว)
 
 
 ## Code review
