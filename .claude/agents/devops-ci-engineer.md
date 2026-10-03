@@ -68,3 +68,18 @@ tools: Read, Grep, Glob, Bash, Edit, Write, WebSearch, WebFetch
   locked deps from the store without changing them. (5) The real test is
   after merge: the close run for the PR's own tag, checked with read-only
   gcloud (48 → 47 tags, pr-77 gone).
+- 2026-10-03 — mon-farm bun POC → ADR 0002 (Proposed, recommends staying on
+  npm). Lessons: (1) bun only speeds up the install step (cold ~9 s vs
+  `npm ci` ~15–19 s); `bun run` still runs tsc/eslint/jest/Metro on Node, and
+  `bun --bun` breaks jest-expo and `expo export`. (2) bun's cache is 47k
+  files — restoring it costs about as much as it saves, so in CI prefer cold
+  bun with no cache. (3) Compare trees by `name@version` set *and* by path:
+  same versions can hoist differently. (4) With no Android SDK, replay the
+  `node --print require.resolve(...)` + `expo-modules-autolinking` calls the
+  generated Gradle files run and diff them across trees. (5) Benchmark in a
+  scratch copy with per-tool cache dirs and a fresh TMPDIR per run, so the
+  repo tree is never touched. (6) Benchmark every install mode you
+  recommend: bun's migrate-from-package-lock tree differs from its
+  bun.lock tree, and `--frozen-lockfile` still writes a lockfile when it
+  migrates. Compare install numbers within one batch, since batch-to-batch
+  noise was ~2 s.
