@@ -184,8 +184,7 @@ release's changelog will therefore only list commits made under this rule.
 - **Hosting:** `dev` deploys to the dev site on every push
   (`deploy-dev.yml`); each PR from this repo gets a preview URL that expires in
   7 days (job `preview` in `ci.yml`, link in the job summary); Deploy Prod
-  deploys the prod site once the separate prod project exists (ADR 0001
-  amendment, PRD D-22 — not created yet). All go through `scripts/deploy.sh`.
+  deploys the prod site. All go through `scripts/deploy.sh`.
 - **One-time GitHub setup (owner):** Settings, Secrets and variables, Actions,
   *Variables* tab (identifiers, not secrets):
   - `GCP_WORKLOAD_IDENTITY_PROVIDER` =

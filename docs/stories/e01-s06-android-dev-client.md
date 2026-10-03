@@ -34,12 +34,15 @@ Status: Ready
 ## ต้องให้เจ้าของทำ/อนุมัติ
 
 - อนุมัติติดตั้ง `expo-dev-client` (gate dependency พร้อมผลตรวจ)
-- เลือกวิธี build: EAS (บัญชี Expo) หรือ build ในเครื่อง (Android SDK อยู่นอก repo → ขออนุญาตเข้าถึงนอก working directory)
+- ~~เลือกวิธี build~~ ตัดสินแล้ว 2026-10-03: GitHub Actions + Gradle (ADR 0003); ทางเลือกฟรีอื่นเก็บไว้ใน ADR เผื่อต้องลดค่าใช้จ่าย
+- สร้าง keystore สำหรับเซ็น APK และเก็บเป็น GitHub secret (คำถามเปิด D1)
 - จัดหาเครื่อง Android สำหรับทดสอบ
 
 ## Verification
 
 ## Dev notes
+
+- ทางเลือกการ build APK (EAS / GitHub Actions / เครื่องตัวเอง / Capacitor) เปรียบเทียบไว้ที่ `docs/adr/0003-android-build-path.md` (Proposed — รอเจ้าของตัดสิน)
 
 ## Code review
 

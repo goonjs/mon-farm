@@ -8,6 +8,7 @@ Status: Ready
 - PRD: ACC-1, ACC-6, NFR-5 · D-2
 - Architecture: "2026-10-02 — Direction" แถว *Auth* (Firebase Auth; `linkWithCredential` สำหรับผู้ใช้คนเดียว)
 - ขึ้นกับ: E01-S02 (`actor.userId`), E01-S06 (dev client), E01-S07 (โปรเจกต์ Firebase)
+- ปรับตาม D-34 (2026-10-03)
 
 ## คำอธิบาย
 
@@ -41,7 +42,7 @@ login ด้วย Google บนเว็บและ Android ผ่าน Fireb
 
 ## ต้องให้เจ้าของทำ/อนุมัติ
 
-- เปิด Google provider ในทั้ง 2 โปรเจกต์; สร้าง OAuth client (เว็บ + Android SHA-1); เพิ่ม authorized domains รวมโดเมน preview channel
+- เปิด Google provider ในโปรเจกต์ (Auth ใช้ร่วม dev/prod, D-34); สร้าง OAuth client (เว็บ + Android SHA-1); เพิ่ม authorized domains รวมโดเมน preview channel
 - อนุมัติ dependency สำหรับ Google sign-in บน Android และ auth persistence บน RN (gate + ผลตรวจ)
 
 ## คำถามเจ้าของ
