@@ -287,11 +287,12 @@ CREATE TABLE media_queue (media_id TEXT PRIMARY KEY, group_id TEXT NOT NULL, loc
                           content_type TEXT NOT NULL, bytes INTEGER NOT NULL, uploaded_at INTEGER);
 ```
 
-การทำ seq + insert เป็น transaction แบบ exclusive: ตรวจกับ type ของ expo-sqlite 57.0.1 แล้ว (E01-S02) —
+การทำ seq + insert เป็น transaction แบบ exclusive (store กำหนด `deviceSeq` ของเครื่องตัวเองใน transaction เหมือนเว็บ):
+ตรวจกับ type ของ expo-sqlite 57.0.1 แล้ว (E01-S02) —
 `withExclusiveTransactionAsync(txn => …)` มีจริง และระหว่างที่ถือ write lock การเขียนแบบ async อื่นจะล้มด้วย
 `database is locked` ดังนั้น `SqliteStore` ส่งการเขียนทุกตัว (append, markSynced, การสร้าง device id) ผ่านคิว
-ตามลำดับที่เรียก ตัวนับ seq อยู่ใน `meta` (คีย์ `device`) และ append ปฏิเสธ `deviceSeq` ของเครื่องตัวเองที่ต่ำกว่า
-ค่าที่บันทึกไว้
+ตามลำดับที่เรียก ตัวนับ seq อยู่ใน `meta` (คีย์ `device`) และ `deviceSeq` ของเครื่องตัวเองที่ต่ำกว่าค่าที่บันทึกไว้
+ได้เลขว่างถัดไปแทน (ไม่ถูกปฏิเสธ)
 
 **ทำไมไม่บังคับ `(device_id, device_seq)` unique ทั้งตาราง**: ถ้าสองการติดตั้งเคยได้ `deviceId` เดียวกัน (เช่น
 Android Auto Backup restore ลงเครื่องใหม่ขณะเครื่องเก่ายังใช้) `insertPulled` จะชน constraint และ pull ค้างถาวร
@@ -313,11 +314,10 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
   `event`), index `saleId` และ `pending` — index ที่มี `groupId` เพิ่มเมื่อ envelope มี `groupId` (E02-S02); `meta`
   คีย์ `device` = `{ deviceId, nextDeviceSeq, legacyCleanupV1 }`; ยังไม่สร้าง `memberships`/`pendingOps`/`mediaQueue`
   (สร้างใน story ที่ใช้)
-- append 1 ครั้ง = transaction `readwrite` เดียวครอบ `events` + `meta` (ตัวนับ seq) ข้อจำกัดที่ยังเหลือ: ตัวนับ
-  `deviceSeq` ในหน่วยความจำมีต่อแท็บ ถ้าสองแท็บบันทึกสลับกัน ตัวนับของสองแท็บจะแซงกันไปมา และ event
-  **ราวครึ่งหนึ่ง** ถูกปฏิเสธด้วย `IntegrityError` (ไม่ทับข้อมูล แต่ไม่ถูกเก็บ) ขณะที่หน้าจอทั้งสองยังนับต่อจนกว่าจะ
-  reload — ยังไม่แก้ใน E01-S03 ทางแก้ราคาถูก: `BroadcastChannel` บอกแท็บอื่นให้ reload หรือให้ store กำหนด seq เอง
-  (ต้องตัดสินใจก่อนเปิดใช้เว็บจริงหลายแท็บ)
+- append 1 ครั้ง = transaction `readwrite` เดียวครอบ `events` + `meta` (ตัวนับ seq) ปลอดภัยแม้เปิดหลายแท็บ:
+  **store เป็นผู้กำหนด `deviceSeq` ของเครื่องตัวเองใน transaction** (`checkAppend`) — เลขที่หน้าจอเสนอมาใช้ได้ถ้ายังว่าง
+  ถ้าแท็บอื่นใช้ไปแล้วจะได้เลขว่างถัดไปแทนการถูกปฏิเสธ IndexedDB เรียง transaction ข้ามแท็บให้ จึงไม่มี event หาย
+  และไม่มีเลขซ้ำ (แก้ใน E01-S03 หลังพบว่าตัวนับในหน่วยความจำต่อแท็บทำให้ event หายราวครึ่ง; มี Playwright สองแท็บ)
 - เรียก `navigator.storage.persist()` เพื่อลดโอกาสเบราว์เซอร์ลบข้อมูล
 - ใช้ IndexedDB ไม่ได้ (เช่น private mode) → ใช้ `MemoryStore` และเตือนเป็นภาษาไทย (E01-S03) — `EventStore.isDurable()`
   + แถบ `StorageWarning` บนทุกหน้าจอ

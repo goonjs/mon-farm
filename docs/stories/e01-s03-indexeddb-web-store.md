@@ -41,7 +41,7 @@ Status: Review
 รันใน container ของ session (2026-10-03):
 
 - เห็นแดงก่อน: `e2e/web-store.spec.ts` ล้มทั้ง 2 เทสต์กับโค้ดก่อนเปลี่ยน (ไม่มี IDB `mon-farm-v1`, ไม่มีแถบเตือน)
-- typecheck, lint, tokens, contrast ผ่าน; Vitest 140; jest 54; `build:web` ผ่าน; Playwright 138 ผ่าน / 6 skip
+- typecheck, lint, tokens, contrast ผ่าน; Vitest 141; jest 54; `build:web` ผ่าน; Playwright 140 ผ่าน / 6 skip (รวมสองแท็บ)
   (ผ่าน config ชั่วคราวใน scratchpad ที่ชี้ `/opt/pw-browsers/chromium` เหมือน E01-S02)
 - e2e seed (`e2e/fixtures.ts`) เขียนลง IndexedDB หลังแอปสร้างฐานข้อมูลแล้วเท่านั้น
 
@@ -68,7 +68,10 @@ Status: Review
 - `MemoryStore` ย้ายไป `memory-store.ts` (ไฟล์ไม่มี suffix) เพราะ `./store` จาก `store.web.ts` resolve กลับมาที่ตัวเอง
 - ล้างคีย์ `mon-farm-v1:*` ใน localStorage ที่ E01-S02 เขียนบน dev build ด้วย ธง `legacyCleanupV1` ย้ายไปอยู่ใน IDB meta
   ผล: เบราว์เซอร์ที่เคยล้างใน E01-S02 จะล้างอีกครั้งหนึ่ง (รวม `mon-farm:locale` — ยอมรับตาม D-20)
-- ข้อจำกัดหลายแท็บ: บันทึกใน architecture แล้วว่าเสียราวครึ่งหนึ่งของ event ถ้าสองแท็บนับพร้อมกัน — ยังไม่แก้
+- **สองแท็บนับพร้อมกัน — แก้แล้ว (หลัง PR #16 ขึ้น ตามที่ lead ขอ)**: สาเหตุคือตัวนับ `deviceSeq` ในหน่วยความจำมีต่อแท็บ
+  สองแท็บจึงเสนอเลขเดียวกันและ store ปฏิเสธอีกตัว (เทสต์สองแท็บ × 3 เข่ง เก็บได้ 3 จาก 6) แก้โดยให้ store กำหนดเลขของเครื่อง
+  ตัวเองใน transaction (`checkAppend` ให้เลขว่างถัดไปแทนการปฏิเสธ) — Playwright สองหน้าเก็บครบ 6 ไม่มี error; ใช้กับ
+  memory/native ด้วยกฎเดียวกัน
 - ยังไม่มี e2e ที่นับเข่งจริงในโหมด memory (ต้องผ่าน setup ทั้งหมด) — unit test ครอบการบันทึกใน memory แล้ว
 
 ## Code review
@@ -81,7 +84,7 @@ review อิสระโดย subagent แยก (2026-10-03) ตาม `docs/
 | 2 | should-fix | อ่าน getter `indexedDB`/`localStorage` แล้ว throw นอก try; `StorageWarning` ไม่มี catch | แก้: อ่านใน try ทั้งสองที่ + `.catch` → เตือน + unit test ทั้งสองกรณี |
 | 3 | should-fix | AC2 ไม่มีเทสต์บน IndexedDB | เลื่อน (รอ `fake-indexeddb`) — ไม่ติ๊กว่าครบ ดู §การตัดสินใจ |
 | 4 | should-fix | e2e seed แข่งกับแอปตอนสร้าง DB อาจค้าง | แก้: รอรายการขายแสดงก่อน, เปิดด้วย version 1 และ reject ถ้าต้อง upgrade, ปิด connection |
-| 5 | should-fix | เอกสารประเมินข้อจำกัดหลายแท็บต่ำไป | แก้: architecture ระบุว่าเสียราวครึ่ง + ทางแก้ที่เสนอ |
+| 5 | should-fix | เอกสารประเมินข้อจำกัดหลายแท็บต่ำไป | แก้ที่ต้นเหตุ: store กำหนด `deviceSeq` ใน transaction + Playwright สองแท็บ (ดู §การตัดสินใจ) |
 | 6 | should-fix | assertion 1 event = 1 record หลวม | แก้: นับ `accept` ใหม่ = 1 และ record ที่ seed ไว้ไม่เปลี่ยน |
 | 7 | should-fix | โหมด fallback ไม่ได้ทดสอบ `open()` ที่ error | แก้บางส่วน: เพิ่ม e2e `open()` error → เตือน; การนับเข่งในโหมด memory ครอบด้วย unit test |
 | nit | | `markSynced` unhandled rejection; connection รั่วเมื่อ `ensureMeta` ล้ม; ตัวอักษรแถบเตือนเล็ก | แก้ทั้งหมด (แถบเตือนใช้ขนาด body) |

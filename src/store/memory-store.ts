@@ -14,10 +14,10 @@ export class MemoryStore implements EventStore {
   private state: DeviceState = { deviceId: uuidv7(), nextDeviceSeq: 1 };
 
   async append(event: SaleEvent): Promise<void> {
-    const next = checkAppend(event, this.rows.get(event.id), this.state);
-    if (!next) return;
-    this.rows.set(event.id, event);
-    this.state = next;
+    const result = checkAppend(event, this.rows.get(event.id), this.state);
+    if (!result) return;
+    this.rows.set(event.id, result.event);
+    this.state = result.device;
   }
 
   async load(saleId: string): Promise<SaleEvent[]> {

@@ -103,3 +103,27 @@ test('without IndexedDB the app still counts and warns in Thai that nothing is k
   await expect(page.getByTestId('storage-warning')).toBeVisible();
   await page.screenshot({ path: 'docs/stories/screenshots/e01-s03/storage-warning.png' });
 });
+
+test('two tabs counting the same sale in turn lose nothing (NFR-2)', async ({ context, page }) => {
+  const saleId = testSaleId('idb-two-tabs');
+  await seedSale(page, saleId, openPileScenario(saleId, 0));
+  const errors: string[] = [];
+  const second = await context.newPage();
+  for (const p of [page, second]) {
+    p.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    await p.goto(`/sale/${saleId}/counter?holdMs=200`);
+    await expect(p.getByTestId('count')).toHaveText('0');
+  }
+
+  // Each tab only sees its own baskets until reload — what matters is that
+  // every one of them is stored.
+  for (let i = 0; i < 3; i++) {
+    await holdToCount(page);
+    await holdToCount(second);
+  }
+  await expect.poll(async () => (await idbRecords(page, saleId)).writtenAccepts).toBe(6);
+  expect(errors.filter((e) => e.includes('could not be stored') || e.includes('IntegrityError'))).toEqual([]);
+
+  await page.reload();
+  await expect(page.getByTestId('count')).toHaveText('6');
+});

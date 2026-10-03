@@ -162,17 +162,18 @@ export class IndexedDbStore implements EventStore {
         request(metaStore.get('device')) as Promise<Meta>,
         request(events.get(event.id)) as Promise<EventRecord | undefined>,
       ]);
-      const next = checkAppend(event, existing?.event, meta);
-      if (next) {
+      const result = checkAppend(event, existing?.event, meta);
+      if (result) {
+        const stored = result.event;
         events.add({
-          id: event.id,
-          saleId: event.saleId,
-          ts: event.ts,
-          deviceSeq: event.deviceSeq,
+          id: stored.id,
+          saleId: stored.saleId,
+          ts: stored.ts,
+          deviceSeq: stored.deviceSeq,
           pending: 1,
-          event,
+          event: stored,
         } satisfies EventRecord);
-        if (next !== meta) metaStore.put({ ...meta, ...next }, 'device');
+        if (result.device !== meta) metaStore.put({ ...meta, ...result.device }, 'device');
       }
     } catch (err) {
       tx.abort();

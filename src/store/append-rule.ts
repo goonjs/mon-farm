@@ -15,31 +15,42 @@ export interface DeviceState {
 }
 
 /**
- * The append rule every adapter shares. Returns the device state to persist
- * with the insert, or null when the event is already stored (the idempotent
- * no-op); throws `IntegrityError` when the append would rewrite history.
+ * The append rule every adapter shares. Returns what to store — the event
+ * and the device state to persist with it in the same transaction — or null
+ * when the event is already stored (the idempotent no-op). Throws
+ * `IntegrityError` when the append would rewrite history.
  *
- * "Already used" for this device's own sequence means anything below the
- * persisted high-water mark, which is written in the same transaction as the
- * event, so no stored number can be handed out again after a force-close
- * (NFR-2). A number whose event never reached storage may be reused — no
- * event ever carried it.
- * Events from other devices are not checked: two installs restored from one
- * backup can share a device id, and refusing their events would wedge sync
- * (architecture §Schema — native).
+ * This device's own sequence numbers are ALLOCATED here, inside the store's
+ * transaction, not trusted from the caller: the number the caller proposes is
+ * kept when it is free (always, with one writer), and otherwise the event gets
+ * the next free one. Two browser tabs each keep their own counter in memory;
+ * IndexedDB serialises their transactions, so this is what turns "two tabs
+ * collide" into "both tabs' events are stored, numbered in commit order"
+ * rather than one being refused (NFR-2). The high-water mark is written with
+ * the event, so no stored number is ever handed out again, even across a
+ * force-close.
+ *
+ * Events from other devices are stored as they are: two installs restored
+ * from one backup can share a device id, and refusing their events would
+ * wedge sync (architecture §Schema — native).
  */
 export function checkAppend(
   event: SaleEvent,
   existing: SaleEvent | undefined,
   device: DeviceState,
-): DeviceState | null {
+): { event: SaleEvent; device: DeviceState } | null {
+  const own = event.actor.deviceId === device.deviceId;
   if (existing) {
-    if (canonicalJson(existing) === canonicalJson(event)) return null;
+    // An own event may have been renumbered on its way in; its number is the
+    // store's to decide, so it is not part of "same content".
+    const comparable = (e: SaleEvent) => canonicalJson(own ? { ...e, deviceSeq: 0 } : e);
+    if (comparable(existing) === comparable(event)) return null;
     throw new IntegrityError(`Event ${event.id} already exists with different content.`);
   }
-  if (event.actor.deviceId !== device.deviceId) return device;
-  if (event.deviceSeq < device.nextDeviceSeq) {
-    throw new IntegrityError(`Device sequence ${event.deviceSeq} was already used on this device.`);
-  }
-  return { ...device, nextDeviceSeq: event.deviceSeq + 1 };
+  if (!own) return { event, device };
+  const deviceSeq = Math.max(event.deviceSeq, device.nextDeviceSeq);
+  return {
+    event: deviceSeq === event.deviceSeq ? event : { ...event, deviceSeq },
+    device: { ...device, nextDeviceSeq: deviceSeq + 1 },
+  };
 }
