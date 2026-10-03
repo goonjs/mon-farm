@@ -796,3 +796,4 @@ exercised in a browser.**
 4. **Sync, conflict resolution, multi-tenancy** — designed in §Sync engine / §Security (E01-S01), not built. RBAC beyond `role: 'owner'` is post-MVP.
 5. **Battery cost** of white-at-full-brightness in the field (F-15) is
    unmeasured.
+6. **Region และ Storage — ทบทวนหลังออกแบบ flow ครบ** (เจ้าของสั่ง 2026-10-03): `(default)` อยู่ asia-southeast3 (D-47) แก้ภายหลังไม่ได้ (ลบแล้วสร้างใหม่ได้ง่ายเฉพาะก่อนมีข้อมูลจริง); Storage ฟรีโควตามีเฉพาะ bucket ใน us-*, อัปโหลดไฟล์ติดการอัปเกรดแผน (D-48) — รายละเอียดใน `docs/runbooks/firebase-setup.md` ข้อ 9
