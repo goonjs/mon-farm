@@ -41,3 +41,11 @@ tools: Read, Grep, Glob, Bash
   against domain verbs already taken (ปิด = close a sale, ส่งต่อ = sale
   handoff); (3) a "who/which device" requirement needs a data source —
   devices are UUIDs only.
+- 2026-10-03 — Reviewed UX flow doc E03 (MF-20), 15 findings. Lessons: (1) in
+  UX docs, check every "two devices → Conflict" claim against the architecture
+  merge table — concurrent *creates* (overlapping assignments, split/merge,
+  same-date history rows) auto-merge there, so "value before edit" doesn't
+  exist; (2) answer options that contradict an owner answer or an existing AC
+  hide easily inside question tables — check each option, not just each
+  question; (3) UI tied to a sync phase (e.g. empty list during first
+  download) can enable duplicate creates.

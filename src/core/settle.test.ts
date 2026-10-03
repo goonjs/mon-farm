@@ -232,7 +232,7 @@ describe('settle — voided baskets leave the money', () => {
     const b = setUpSale();
     readyPile(b, 'p1');
     b.accept('p1');
-    const target = b.nextSeq();
+    const target = b.nextId();
     b.accept('p1');
     b.accept('p1');
 

@@ -2,8 +2,8 @@
  * The persistence port.
  *
  * Two implementations sit behind it, and Metro picks by filename:
- *   store.native.ts — expo-sqlite, WAL, UNIQUE(sale_id, seq)
- *   store.web.ts    — IndexedDB
+ *   store.native.ts — expo-sqlite, WAL, `mon-farm-v1.db`
+ *   store.web.ts    — IndexedDB `mon-farm-v1` (memory fallback when unavailable)
  *
  * The split is the single highest-value risk mitigation in this project.
  * expo-sqlite does ship a web implementation, but it is the least-travelled
@@ -12,30 +12,47 @@
  * verification is about UI behaviour, and durability guarantees are a native
  * concern.
  *
- * Cost: a second implementation of a four-method interface. Worth every line.
+ * Cost: a second implementation of a small interface. Worth every line.
  * Do not "simplify" this to one adapter.
  */
 
-import { DuplicateSeqError } from './errors';
-import type { SaleEvent } from '../core/types';
+import type { EventId, SaleEvent } from '../core/types';
+import type { DeviceState } from './append-rule';
 
-// Re-exported for existing importers — the class itself lives in ./errors,
-// off the platform-suffix path (see that file's header).
-export { DuplicateSeqError } from './errors';
+// Re-exported for existing importers — these live in unsuffixed files, off
+// the platform-suffix path (see ./errors's header).
+export { IntegrityError } from './errors';
+export { checkAppend, type DeviceState } from './append-rule';
 
 export interface EventStore {
   /**
-   * Appends one event. MUST reject a duplicate (saleId, seq) rather than
-   * overwriting — the log is the record of what happened, and two events
-   * cannot occupy one position in it.
+   * Appends one event (architecture §Local data layer, "กติกาของ EventStore"):
+   * a new id is inserted; the same id with the same content is a no-op, so a
+   * repeated append or pull is harmless; the same id with different content
+   * rejects with `IntegrityError`. This device's own `deviceSeq` is allocated
+   * by the store inside the append (see append-rule.ts): a number already
+   * used is replaced with the next free one, never repeated. Nothing is ever
+   * overwritten.
    */
   append(event: SaleEvent): Promise<void>;
+  /** One sale's events in fold order (`compareEvents`). */
   load(saleId: string): Promise<SaleEvent[]>;
-  /** Unsynced rows. The outbox query for a sync layer that does not exist yet. */
+  /** The outbox: events not yet synced, in `deviceSeq` order. */
   pending(): Promise<SaleEvent[]>;
-  markSynced(saleId: string, seqs: readonly number[]): Promise<void>;
+  markSynced(ids: readonly EventId[]): Promise<void>;
   /** Sale ids present in the store, newest first. */
   listSales(): Promise<string[]>;
+  /**
+   * The device id is minted once per install; `nextDeviceSeq` is above every
+   * sequence number this device has stored, and is persisted in the same
+   * write as each event, so a force-close cannot make one repeat (NFR-2).
+   */
+  device(): Promise<DeviceState>;
+  /**
+   * False when events only live in memory (no IndexedDB on this browser) —
+   * the app keeps counting and warns that nothing will survive a reload.
+   */
+  isDurable(): Promise<boolean>;
 }
 
 /**
@@ -52,42 +69,6 @@ export interface EventStore {
  */
 export declare const store: EventStore;
 
-/**
- * In-memory store. Used by tests, and as the fallback when no persistent
- * backend is available — the app stays usable, it just forgets.
- */
-export class MemoryStore implements EventStore {
-  private rows = new Map<string, SaleEvent[]>();
-  private synced = new Set<string>();
-
-  async append(event: SaleEvent): Promise<void> {
-    const list = this.rows.get(event.saleId) ?? [];
-    if (list.some((e) => e.seq === event.seq)) {
-      throw new DuplicateSeqError(event.saleId, event.seq);
-    }
-    list.push(event);
-    this.rows.set(event.saleId, list);
-  }
-
-  async load(saleId: string): Promise<SaleEvent[]> {
-    return [...(this.rows.get(saleId) ?? [])].sort((a, b) => a.seq - b.seq);
-  }
-
-  async pending(): Promise<SaleEvent[]> {
-    const out: SaleEvent[] = [];
-    for (const [saleId, list] of this.rows) {
-      for (const e of list) {
-        if (!this.synced.has(`${saleId}#${e.seq}`)) out.push(e);
-      }
-    }
-    return out;
-  }
-
-  async markSynced(saleId: string, seqs: readonly number[]): Promise<void> {
-    for (const seq of seqs) this.synced.add(`${saleId}#${seq}`);
-  }
-
-  async listSales(): Promise<string[]> {
-    return [...this.rows.keys()];
-  }
-}
+// In its own unsuffixed file for the same reason as ./errors: the web adapter
+// falls back to it, and `./store` from store.web.ts resolves to itself.
+export { MemoryStore } from './memory-store';

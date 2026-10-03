@@ -19,14 +19,49 @@ export type SaleId = string;
 export type ZoneId = string;
 export type PileId = string;
 export type PersonId = string;
-
-export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys';
+/** UUIDv7 (RFC 9562), lowercase canonical form — see src/lib/id.ts. */
+export type EventId = string;
+/** Firebase Auth uid once login exists (E02-S01). */
+export type UserId = string;
+/** UUIDv7 minted once per install (web: per browser profile). */
+export type DeviceId = string;
 
 /**
- * Two clocks, deliberately kept apart.
+ * Who recorded an event: a person on a particular device (D-23). `deviceId`
+ * is self-declared by the device — provenance, not a security boundary.
+ */
+export interface Actor {
+  readonly userId: UserId;
+  readonly deviceId: DeviceId;
+}
+
+export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys' | 'delete' | 'restore';
+
+/**
+ * Any record an event can create or change: a sale, zone, pile, deduction —
+ * or a basket, whose record id is its own event id.
+ */
+export type RecordId = string;
+
+/** Where a record came from (SYNC-11). Everything is `'app'` until LINE/import/AI exist. */
+export type Source = 'app' | 'line' | 'import' | 'ai';
+
+/**
+ * Identity and ordering (E01-S02).
  *
- * `seq` is the ordering authority (FR-12.5). The device clock cannot be
- * trusted, so nothing downstream may sort by time.
+ * `id` is globally unique, so two offline phones can never mint the same
+ * event, and re-receiving one is recognisable as a repeat. `deviceSeq` counts
+ * 1, 2, 3, … per install and never repeats, even across a force-close (NFR-2);
+ * it is what the outbox drains in.
+ *
+ * `seq` is this sale's position as the recording device saw it. Two devices
+ * offline can reach the same `seq`, so it is not unique: the fold order is
+ * `(seq, deviceId, deviceSeq)` — see `compareEvents` — and nothing that must
+ * name one event (a correction's target) uses it. Retired with the sale
+ * model redesign in E04-S01.
+ *
+ * Two clocks, deliberately kept apart. The device clock cannot be trusted, so
+ * nothing downstream may sort by time.
  *
  * `ts` is the wall clock — "roughly when", useful to a human reading the log,
  * never used to order anything.
@@ -37,11 +72,14 @@ export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys';
  * because intervals only matter within a session.
  */
 export interface EventBase {
+  readonly id: EventId;
   readonly saleId: SaleId;
   readonly seq: number;
+  readonly deviceSeq: number;
   readonly ts: number;
   readonly mono: number;
-  readonly actor: string;
+  readonly actor: Actor;
+  readonly source: Source;
 }
 
 /**
@@ -57,7 +95,8 @@ export interface EventBase {
 export interface AcceptEvent extends EventBase {
   readonly kind: 'accept';
   readonly pileId: PileId;
-  readonly source: 'hold' | 'hold-kbd';
+  /** How the basket was entered (renamed from `source` in E01-S04, which is now the envelope's channel). */
+  readonly input: 'hold' | 'hold-kbd';
   readonly netG: number;
   readonly tareG: number;
 }
@@ -87,13 +126,14 @@ export interface ShortEvent extends EventBase {
 export interface RejectEvent extends EventBase {
   readonly kind: 'reject';
   readonly pileId: PileId;
-  readonly source: 'hold' | 'hold-kbd';
+  readonly input: 'hold' | 'hold-kbd';
   readonly reason: 'released-early';
   readonly heldMs: number;
 }
 
 /**
- * Voids an earlier basket (FR-5.4, NFR-3).
+ * Voids an earlier basket (FR-5.4, NFR-3), named by event id — a `seq` can
+ * be shared by two devices' baskets, an id cannot.
  *
  * Append-only: the target event is never mutated or removed. `undo-last` is the
  * one-tap tier with a default reason; `void` is chosen from the log and demands
@@ -102,7 +142,7 @@ export interface RejectEvent extends EventBase {
 export interface CorrectionEvent extends EventBase {
   readonly kind: 'correction';
   readonly pileId: PileId;
-  readonly targetSeq: number;
+  readonly targetId: EventId;
   readonly mode: 'undo-last' | 'void';
   readonly reason: string;
 }
@@ -248,7 +288,31 @@ export interface SysEvent extends EventBase {
   readonly payload: SysPayload;
 }
 
-export type SaleEvent = AcceptEvent | ShortEvent | RejectEvent | CorrectionEvent | SysEvent;
+/**
+ * Soft Delete (SYNC-10, D-27): one rule for every record. Nothing is ever
+ * removed from the log; a `delete` hides `targetId` from normal views and
+ * totals, a later `restore` brings it back exactly as it was. The last of the
+ * two in fold order wins. Not the same as a Cancelled sale, which is a
+ * business outcome and stays listed (E04-S11).
+ */
+export interface DeleteEvent extends EventBase {
+  readonly kind: 'delete';
+  readonly targetId: RecordId;
+}
+
+export interface RestoreEvent extends EventBase {
+  readonly kind: 'restore';
+  readonly targetId: RecordId;
+}
+
+export type SaleEvent =
+  | AcceptEvent
+  | ShortEvent
+  | RejectEvent
+  | CorrectionEvent
+  | SysEvent
+  | DeleteEvent
+  | RestoreEvent;
 
 /** A basket that contributes weight — i.e. not voided. */
 export type BasketEvent = AcceptEvent | ShortEvent;
@@ -306,6 +370,8 @@ export interface Deduction {
 
 export interface SaleState {
   readonly id: SaleId;
+  /** Soft-deleted (SYNC-10): hidden from the sale list, shown under "deleted". */
+  readonly deleted: boolean;
   readonly status: OpenClosed;
   readonly startedTs: number | null;
   readonly parties: {
