@@ -774,9 +774,12 @@ and PR preview channels with 7-day expiry use the named Firestore database
 `(default)` database and the default bucket over real data; build config (not rules)
 keeps dev/preview builds off prod data — a mistake guard, not a security
 boundary (§Security); Auth and the budget alert are shared;
-split into two projects before commercial launch) — see `docs/adr/0001-firebase-hosting.md`. It is decided but **not
-wired yet**: `scripts/deploy.sh` fails closed until the sites, the `dev` database and
-bucket, domains and deploy credential exist (the project itself exists). Locally,
+split into two projects before commercial launch) — see `docs/adr/0001-firebase-hosting.md`. The sites, deploy
+script and workflows are **wired** (ADR 0001, "What was built"): a push to `dev`
+deploys the dev site, each same-repo PR gets a preview channel, and CI
+authenticates keylessly (GitHub OIDC to a Google service account, no stored
+key). **Not yet done:** the `dev` Firestore database and bucket, custom domains,
+the two GitHub repo variables, and a first Deploy Prod run. Locally,
 `npm run build:web` produces a static `dist/`. No native build has
 been produced and no device has run this yet — **the app has only ever been
 exercised in a browser.**

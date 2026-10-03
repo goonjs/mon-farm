@@ -17,6 +17,7 @@ concurrency:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
@@ -52,6 +53,11 @@ jobs:
 
       - name: Build web
         run: npm run build:web
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
       - name: Deploy to production
         run: ./scripts/deploy.sh prod

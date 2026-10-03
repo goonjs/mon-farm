@@ -111,3 +111,34 @@ one deploy credential.
 
 **Revisit:** split into two projects (dev, prod) before commercial launch, or
 before any non-owner user is given access — whichever comes first.
+
+## What was built (2026-10-03)
+
+Matches Amendment 2 (one project):
+
+- Firebase project `mon-farmmate` (`farm-mate` was taken); no billing attached
+  yet. Hosting sites `mon-farm-dev` and `mon-farm-prod` (`<site>.web.app`).
+- `firebase.json` / `.firebaserc`: `dev` and `prod` targets, SPA rewrite to
+  `index.html`, one-year immutable cache for `/_expo/static/**`, `no-cache`
+  for `index.html`.
+- `scripts/deploy.sh dev|prod|preview <name>` (tests in
+  `scripts/deploy.test.ts`); non-zero on any failure, and in CI it requires a
+  service credential from the environment.
+- **Keyless CI credential (Workload Identity Federation):** pool `github`,
+  provider `github-oidc` restricted to the GitHub repo `goonjs/mon-farm`,
+  deploy-only service account `gh-deploy@mon-farmmate.iam.gserviceaccount.com`
+  (roles: Firebase Hosting Admin, Service Usage Consumer). No key exists. This
+  is the one deploy credential Amendment 2 calls for; its Hosting Admin role
+  covers both sites.
+- Workflows: `deploy-dev.yml` (push to `dev`), a `preview` job in `ci.yml`
+  (PR channel `pr-<number>` on the dev site, 7-day expiry, reuses CI's build),
+  and an auth step before the deploy in `deploy-prod.yml`.
+- The dev site was deployed by hand and checked (SPA fallback, cache headers).
+  The prod site has never been deployed.
+- Hosting free quota, checked against the Firebase pricing page on 2026-10-03:
+  10 GB storage and 360 MB/day data transfer.
+
+**Still open (owner):** add the repo variables listed in `docs/process.md`;
+create the `dev` database and dev bucket; choose and connect the two domains;
+run Deploy Prod once. Not yet built from E01-S07: preview-channel cleanup on
+PR close and the PR comment with the preview link.

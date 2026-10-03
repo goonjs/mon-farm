@@ -53,3 +53,4 @@ example
 /ios
 /android
 e2e/.results/
+.firebase/
