@@ -63,10 +63,12 @@ Status: Done
 
 ### การตัดสินใจ / ส่วนที่ต่างจากแผน
 
-- **AC2 "ผลเหมือน native" ยังไม่มีเทสต์ระดับ adapter บน IndexedDB — เลื่อน** จนกว่า `fake-indexeddb` (dev dependency)
-  จะได้รับอนุมัติจากเจ้าของ (ส่งคำขอพร้อมผลตรวจแล้ว: 0 runtime deps, Apache-2.0, audit 0) ตอนนี้ครอบด้วย Playwright
-  (record ต่อ event, reload 400 เข่ง) + การอ่านโค้ดโดย reviewer เมื่ออนุมัติแล้วจะรัน contract suite ของ `MemoryStore`
-  กับ `IndexedDbStore`
+- **AC2 "ผลเหมือน native" — ปิดแล้ว (หลัง Done, 2026-10-03)**: เจ้าของอนุมัติ `fake-indexeddb@6.2.5` (devDependency,
+  คำถาม D3) → `src/store/store.test.ts` รันกติกา `EventStore` ชุดเดียวกับทั้ง `MemoryStore` และ `IndexedDbStore` (idempotent,
+  `IntegrityError`, กำหนดเลข seq, หนึ่ง id หนึ่ง body, outbox) + ลำดับ `listSales`/`pending`/`load` + `markSynced` (ว่าง, id ไม่รู้จัก, ซ้ำ) + เปิดใหม่แล้ว seq และสถานะ synced
+  ต่อเนื่อง; mutation check (ทำในเครื่อง ไม่ commit): ปิดการตรวจ id ซ้ำ → 4 เทสต์ IndexedDB ล้ม, ลบ sort ของ `pending` หรือ
+  `listSales` → เทสต์ของตัวนั้นล้ม; review อิสระของ PR นี้: should-fix 2 ข้อ (เทสต์ `listSales` ไม่มีทางล้ม, baseline audit
+  ขัดกันใน architecture) แก้แล้ว
 - `EventStore.isDurable()` ใหม่ + สัญญาณสด `src/store/durability.ts`: storage ล้มหลังเปิดได้ (quota, Safari ตัดการเชื่อมต่อ)
   → แถบเตือนขึ้นทันที ไม่ใช่แค่ตอนเปิดแอป
 - `MemoryStore` ย้ายไป `memory-store.ts` (ไฟล์ไม่มี suffix) เพราะ `./store` จาก `store.web.ts` resolve กลับมาที่ตัวเอง
@@ -76,7 +78,7 @@ Status: Done
   สองแท็บจึงเสนอเลขเดียวกันและ store ปฏิเสธอีกตัว (เทสต์สองแท็บ × 3 เข่ง เก็บได้ 3 จาก 6) แก้โดยให้ store กำหนดเลขของเครื่อง
   ตัวเองใน transaction (`checkAppend` ให้เลขว่างถัดไปแทนการปฏิเสธ) — Playwright สองหน้าเก็บครบ 6 ไม่มี error; ใช้กับ
   memory/native ด้วยกฎเดียวกัน ที่ยังเหลือ: แต่ละแท็บเห็นเฉพาะ event ของตัวเองจนกว่าจะ reload (ไม่มีข้อมูลหาย)
-  การ renumber บน IndexedDB ครอบด้วย e2e เท่านั้น และบน native ยังไม่มีเทสต์ (รอ `fake-indexeddb` / E01-S06)
+  การ renumber บน IndexedDB มีทั้ง unit (contract suite) และ e2e; บน native ยังไม่มีเทสต์ (E01-S06)
 - ยังไม่มี e2e ที่นับเข่งจริงในโหมด memory (ต้องผ่าน setup ทั้งหมด) — unit test ครอบการบันทึกใน memory แล้ว
 
 ## Code review
@@ -87,7 +89,7 @@ review อิสระโดย subagent แยก (2026-10-03) ตาม `docs/
 |---|---|---|---|
 | 1 | should-fix | storage ล้มหลังเปิดได้ → append ล้มเงียบ ไม่มีเตือน | แก้: `durability.ts` + `WebStore.append` ส่งสัญญาณ (ยกเว้น `IntegrityError`), `StorageWarning` subscribe, reset connection เมื่อ `onclose`/`onversionchange` + unit test |
 | 2 | should-fix | อ่าน getter `indexedDB`/`localStorage` แล้ว throw นอก try; `StorageWarning` ไม่มี catch | แก้: อ่านใน try ทั้งสองที่ + `.catch` → เตือน + unit test ทั้งสองกรณี |
-| 3 | should-fix | AC2 ไม่มีเทสต์บน IndexedDB | เลื่อน (รอ `fake-indexeddb`) — ไม่ติ๊กว่าครบ ดู §การตัดสินใจ |
+| 3 | should-fix | AC2 ไม่มีเทสต์บน IndexedDB | ปิดแล้ว: contract suite บน `fake-indexeddb` (อนุมัติ D3) |
 | 4 | should-fix | e2e seed แข่งกับแอปตอนสร้าง DB อาจค้าง | แก้: รอรายการขายแสดงก่อน, เปิดด้วย version 1 และ reject ถ้าต้อง upgrade, ปิด connection |
 | 5 | should-fix | เอกสารประเมินข้อจำกัดหลายแท็บต่ำไป | แก้ที่ต้นเหตุ: store กำหนด `deviceSeq` ใน transaction + Playwright สองแท็บ (ดู §การตัดสินใจ) |
 | 6 | should-fix | assertion 1 event = 1 record หลวม | แก้: นับ `accept` ใหม่ = 1 และ record ที่ seed ไว้ไม่เปลี่ยน |
