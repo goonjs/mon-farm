@@ -183,11 +183,17 @@ jobs:
   # days. Runs only after e2e is green, and is skipped with it on docs-only
   # changes. Skipped for forks, which get no OIDC token and must not reach the
   # deploy credential. Deploys the `dist` artifact verify already built.
+  # Skipped (not failed) until the owner sets the keyless-auth repo variables
+  # GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT: without them every
+  # same-repo PR went red at google-github-actions/auth, hiding real failures.
+  # A skipped job counts as passing.
   preview:
     needs: e2e
     if: >
       github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' &&
+      vars.GCP_SERVICE_ACCOUNT != ''
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
