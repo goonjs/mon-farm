@@ -49,3 +49,7 @@ Status: Ready
 
 **คำตอบเจ้าของ (2026-10-03):**
 - D5 → **คง Noto Sans Thai สำหรับตัวเลขนับ**; ปรับเกณฑ์ (rotate hint) ใหม่ตอนทดสอบในสวน
+
+**คำตอบเจ้าของ (2026-10-03, PR #44 รอบ lead ใหม่):**
+- ไอคอน: ใช้แบบ **FarmMate** แทน Feather (#45 ต้องปรับ)
+- ลบไฟล์ template expo-symbols ที่ไม่ใช้ 4 ไฟล์ได้: `src/app/explore.tsx`, `src/components/app-tabs.tsx`, `src/components/app-tabs.web.tsx`, `src/components/ui/collapsible.tsx`

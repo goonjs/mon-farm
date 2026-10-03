@@ -1,6 +1,6 @@
 # Story E01-S14: preview A/B รูปแบบ card — เงา+เส้น vs แบน+เส้น
 
-Status: Ready
+Status: Cancelled (2026-10-03 — เจ้าของตอบ H3 "no need": ใช้ card แบบ FarmMate, D-52)
 
 ## Context
 

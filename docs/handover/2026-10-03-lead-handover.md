@@ -3,6 +3,11 @@
 เอกสารนี้ส่งต่อจาก lead session รอบแรก ให้ lead session ใหม่
 ทุก session ของทีมรอบแรกปิดแล้ว (หรือกำลังปิด) — เริ่มใหม่จากเอกสารนี้ + repo
 
+## ผลคำตอบ (บันทึกโดย lead ใหม่ 2026-10-03)
+
+- H1 ✅ WIF ใช้ได้ (preview ของ #41/#44 ผ่าน) · H2 ลบ 33 branch ที่ merge แล้ว (เก็บ `claude/mf-adr-android-build`, `docs/owner-answers-flow-v1`) · H3 ยกเลิก E01-S14 (D-52) · H4 ใช้ `mon-farmmate` · H5 keystore สำรองแล้ว (ADR 0003)
+- ?21 → D-49 + D-53 · ?22 → epic E15 (D-50) · ?23 → D-51 · ลำดับ epic → D-55 · หนี้ทุกประเภท → D-54 · MF-08 รอ Blaze → D-56 · #45 ใช้ไอคอน FarmMate + ลบ template 4 ไฟล์
+
 ## วิธีตอบ (สำหรับเจ้าของ)
 
 - ตอบใน **comment ของ PR นี้** ใช้รหัสข้อ เช่น `H1 a` · `?21 a` · `E04-S06-3 ใช่`
@@ -92,7 +97,7 @@
 - Mockup flow (v4): https://claude.ai/artifact/XBfNg1aq3y6bPSU1YXUZby — ไฟล์ `docs/ux/mockups/flow-v1.html` (publish ทับ path เดิมเพื่อคง URL)
 - สรุปการตัดสินใจ (D1–D8): https://claude.ai/artifact/2sNuFhBNdjeNQgjXmn7TJX
 - การตัดสินใจทั้งหมด: `docs/prd.md` (D-1…D-46) · ADR `docs/adr/0001…0003`
-- Firebase project เดียว `mon-farm-a7` (D-34) เจ้าของตั้งค่าเองในเครื่อง
+- Firebase project เดียว `mon-farmmate` (D-34) เจ้าของตั้งค่าเองในเครื่อง — `mon-farm-a7` เป็นชื่อที่ผิด (เจ้าของตอบ H4); Android app + fingerprint อยู่ใน `mon-farmmate`
 
 ## กติกาทำงานที่ใช้ได้ผล (ส่งต่อ)
 
