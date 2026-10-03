@@ -21,6 +21,7 @@ Status: Ready
 - [ ] มีไฟล์ licence OFL ใน repo คู่กับ font
 - [ ] ไอคอนเส้นชุดเดียวใช้แทนไอคอนเดิมในจุดนำทาง/แถวฟอร์ม; ทุกไอคอนที่สื่อความหมายมี `accessibilityLabel` ภาษาไทย
 - [ ] `npm run contrast` และ e2e เดิมผ่าน
+- [ ] ตัวเลขนับ (count numeral) ใช้ Noto Sans Thai ด้วย (D5, เจ้าของ 2026-10-03) — ปรับเกณฑ์ rotate hint (`tokens.publicNumeral.minHeightRatio`) ใหม่ตอนทดสอบในสวน ไม่ใช่ใน story นี้ (E04-S07)
 
 ## Offline / sync behavior
 
@@ -43,3 +44,8 @@ Status: Ready
 ## Code review
 
 ## QA notes
+
+## คำถามเจ้าของ
+
+**คำตอบเจ้าของ (2026-10-03):**
+- D5 → **คง Noto Sans Thai สำหรับตัวเลขนับ**; ปรับเกณฑ์ (rotate hint) ใหม่ตอนทดสอบในสวน
