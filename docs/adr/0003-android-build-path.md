@@ -234,6 +234,11 @@ may go to another free choice)"*
    รหัสผ่านไม่ผ่าน agent; สำรองไว้นอก GitHub อย่างน้อย 2 ที่. ค่า SHA-1/SHA-256
    fingerprint ของกุญแจ (ไม่ใช่ความลับ) จะต้องลงทะเบียนใน Firebase สำหรับ Google
    sign-in บน Android (E02-S01)
+   - Fingerprint ของ release key (เจ้าของส่งให้ 2026-10-03, alias `mon-farm`):
+     - SHA-1: `D1:DC:39:63:38:B2:E3:35:DB:2A:99:2A:61:08:DC:BC:85:58:88:9B`
+     - SHA-256: `4C:87:F2:78:77:3F:22:47:30:08:B3:57:3E:4B:A2:1F:6A:16:E7:32:29:A9:E4:D0:6C:C5:70:81:85:FF:79:64`
+     - ถ้าวันหนึ่งขึ้น Google Play และเปิด Play App Signing จะมี fingerprint ของ Google
+       เพิ่มอีกชุดที่ต้องลงทะเบียนด้วย
 
 ## Sources (ดึงข้อมูล 2026-10-03)
 
