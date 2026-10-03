@@ -232,8 +232,7 @@ event มีสองตระกูล และ registry ใน `src/core/merg
 แล้ว (ไม่ใช่ `seq`) เพราะสองเครื่องที่ออฟไลน์อาจได้ `seq` ต่อการขายเลขเดียวกัน `seq` จึงยังอยู่แต่ไม่ unique และ
 ลำดับการ fold คือ `(seq, deviceId, deviceSeq, id)` (`src/core/order.ts`) ไม่อ่าน `ts` ตัวนับ `deviceSeq` มีตัวเดียวทั้งแอป
 (`src/store/device-clock.ts`) ไม่ใช่ต่อหน้าจอการขาย `userId` เป็นค่าแทน
-`'pre-login'` จนกว่า E02-S01 จะมี login (`src/store/session.ts`) เว็บยังเป็น localStorage ภายใต้คีย์ `mon-farm-v1:*`
-จนถึง E01-S03
+`'pre-login'` จนกว่า E02-S01 จะมี login (`src/store/session.ts`) เว็บเป็น IndexedDB ตั้งแต่ E01-S03
 
 **UUIDv7 (RFC 9562, เจ้าของเลือก 2026-10-03)**: เป็นมาตรฐาน IETF (ULID ไม่ใช่) id ที่สร้างใกล้เวลากันเรียงใกล้กัน
 ทำให้ index ของ SQLite/IndexedDB มี locality ดีและ debug ง่าย เขียน generator เองราว 20 บรรทัดใน
@@ -310,9 +309,18 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
 `[deviceId, deviceSeq]`; index `[groupId, saleId]` และ `[groupId, targetId]`), `meta`, `memberships`,
 `pendingOps`, `mediaQueue` (เก็บไฟล์เป็น Blob)
 
-- append 1 ครั้ง = transaction `readwrite` เดียวครอบ `events` + `meta` (ตัวนับ seq) ปลอดภัยแม้เปิดหลายแท็บ
+- **สร้างแล้ว (E01-S03)**: record ใน `events` = `{ id, saleId, ts, deviceSeq, pending, event }` (เก็บ event ทั้งตัวใน
+  `event`), index `saleId` และ `pending` — index ที่มี `groupId` เพิ่มเมื่อ envelope มี `groupId` (E02-S02); `meta`
+  คีย์ `device` = `{ deviceId, nextDeviceSeq, legacyCleanupV1 }`; ยังไม่สร้าง `memberships`/`pendingOps`/`mediaQueue`
+  (สร้างใน story ที่ใช้)
+- append 1 ครั้ง = transaction `readwrite` เดียวครอบ `events` + `meta` (ตัวนับ seq) ข้อจำกัดที่ยังเหลือ: ตัวนับ
+  `deviceSeq` ในหน่วยความจำมีต่อแท็บ ถ้าสองแท็บบันทึกสลับกัน ตัวนับของสองแท็บจะแซงกันไปมา และ event
+  **ราวครึ่งหนึ่ง** ถูกปฏิเสธด้วย `IntegrityError` (ไม่ทับข้อมูล แต่ไม่ถูกเก็บ) ขณะที่หน้าจอทั้งสองยังนับต่อจนกว่าจะ
+  reload — ยังไม่แก้ใน E01-S03 ทางแก้ราคาถูก: `BroadcastChannel` บอกแท็บอื่นให้ reload หรือให้ store กำหนด seq เอง
+  (ต้องตัดสินใจก่อนเปิดใช้เว็บจริงหลายแท็บ)
 - เรียก `navigator.storage.persist()` เพื่อลดโอกาสเบราว์เซอร์ลบข้อมูล
-- ใช้ IndexedDB ไม่ได้ (เช่น private mode) → ใช้ `MemoryStore` และเตือนเป็นภาษาไทย (E01-S03)
+- ใช้ IndexedDB ไม่ได้ (เช่น private mode) → ใช้ `MemoryStore` และเตือนเป็นภาษาไทย (E01-S03) — `EventStore.isDurable()`
+  + แถบ `StorageWarning` บนทุกหน้าจอ
 
 ### กติกาของ `EventStore`
 

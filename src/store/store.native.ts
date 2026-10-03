@@ -172,6 +172,10 @@ export class SqliteStore implements EventStore {
     return rows.map((r) => r.sale_id);
   }
 
+  async isDurable(): Promise<boolean> {
+    return true;
+  }
+
   device(): Promise<DeviceState> {
     // Through the queue, so a first launch cannot mint two device ids.
     return this.serial(async () => {

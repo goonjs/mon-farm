@@ -46,6 +46,9 @@ jest.mock('../store/store', () => {
       async device() {
         return { deviceId: 'dev-test', nextDeviceSeq: 1 };
       },
+      async isDurable() {
+        return true;
+      },
       // Test-only: same instance across the file (the factory only runs
       // once), so each test clears it rather than getting a fresh one.
       __clear() {
