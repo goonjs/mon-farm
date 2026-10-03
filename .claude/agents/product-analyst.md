@@ -34,3 +34,8 @@ tools: Read, Grep, Glob, Bash
   (2) owner often picks "both" (e.g. handoff AND free mode, voice AND recorder
   view) — offer combinable options; (3) built-but-superseded features (S9,
   S15, S24, S29) need explicit removal stories, not silent drift.
+- 2026-10-03 — Reviewed UX flow doc E04 (MF-21), 17 findings. Lessons: (1)
+  recount every "≤ N taps" path in the wireframes — menus hide extra taps;
+  (2) a worked example in a wireframe must satisfy the doc's own definitions
+  (six-value example contradicted them); (3) one-way offline channels (QR)
+  give the sender no acknowledgement — flag any copy that assumes it does.
