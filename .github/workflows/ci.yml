@@ -58,6 +58,16 @@ jobs:
           ${{ github.event.pull_request.base.sha || github.event.before }}
           ${{ github.sha }} >> "$GITHUB_OUTPUT"
 
+      # The preview job skips silently while keyless auth is unconfigured; say
+      # so on the run page, at no extra job cost.
+      - name: Note when PR previews are off
+        if: >
+          github.event_name == 'pull_request' &&
+          (vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT == '')
+        run: >
+          echo "::notice title=PR preview off::Set repo variables
+          GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT to deploy previews."
+
   verify:
     needs: changes
     if: needs.changes.outputs.code == 'true'
