@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readyPile, setUpSale, workedExampleLog } from './fixtures';
 import { projectSale } from './project';
 import { settle } from './settle';
+import { DeleteBlockedError, assertAllowed, deleteBlockers, restoreBlockers } from './delete-guard';
 import { deletedIds, provenance } from './soft-delete';
 import { saleTotals } from './totals';
 
@@ -57,17 +58,86 @@ describe('soft delete — one rule for every record (E01-S04, SYNC-10, D-27)', (
     expect(settle(b.build(), projectSale(b.build()))).toEqual(full);
   });
 
-  it('deleting a zone does not delete deductions against its worker — they are records of their own', () => {
-    // Pinned on purpose (review finding): the worker's share from that zone
-    // leaves the payout, the deduction stays, so the payout can go negative —
-    // visible on the settlement screen, which already shows negative payouts.
+  // E01-S16 / D-44 (owner 2026-10-03): this replaces the E01-S04 test that
+  // pinned a negative payout after deleting a zone.
+  it('blocks deleting a zone while its worker has live deductions, naming them', () => {
+    const b = workedExampleLog();
+    b.deduction('person-manop', 10_000, 'advance', 'สมชาย', 'มานพ');
+    const ded = b.lastDeductionId();
+    expect(deleteBlockers(b.build(), 'zB')).toEqual([ded]);
+    expect(deleteBlockers(b.build(), 'zA')).toEqual([]); // ประยุทธ has no deduction
+  });
+
+  it('lets the zone go once those deductions are voided or deleted', () => {
+    const voided = workedExampleLog();
+    voided.deduction('person-manop', 10_000, 'advance', 'สมชาย', 'มานพ').voidDeduction();
+    expect(deleteBlockers(voided.build(), 'zB')).toEqual([]);
+
+    const removed = workedExampleLog();
+    removed.deduction('person-manop', 10_000, 'advance', 'สมชาย', 'มานพ');
+    removed.remove(removed.lastDeductionId());
+    expect(deleteBlockers(removed.build(), 'zB')).toEqual([]);
+  });
+
+  it('never blocks a zone without a worker contract, or a record that is not a zone', () => {
+    const b = setUpSale(); // no zone contracts, sale-level default only
+    b.deduction('person-x', 5_000, 'advance', 'สมชาย');
+    expect(deleteBlockers(b.build(), 'zA')).toEqual([]);
+    expect(deleteBlockers(b.build(), 'p1')).toEqual([]);
+    expect(deleteBlockers(b.build(), 'sale-1')).toEqual([]);
+  });
+
+  it('a deleted deduction that is restored blocks again', () => {
+    const b = workedExampleLog();
+    b.deduction('person-manop', 10_000, 'advance', 'สมชาย', 'มานพ');
+    const ded = b.lastDeductionId();
+    b.remove(ded).restore(ded);
+    expect(deleteBlockers(b.build(), 'zB')).toEqual([ded]);
+  });
+
+  it('follows the zone\'s current worker: cleared contract unblocks, reassigned contract moves the block', () => {
+    const cleared = workedExampleLog();
+    cleared.deduction('person-manop', 10_000, 'advance', 'สมชาย', 'มานพ');
+    cleared.sys({ t: 'zone_contract_cleared', zoneId: 'zB' });
+    expect(deleteBlockers(cleared.build(), 'zB')).toEqual([]);
+
+    const moved = workedExampleLog();
+    moved.deduction('person-manop', 10_000, 'advance', 'สมชาย', 'มานพ');
+    moved.sys({ t: 'zone_contract_set', zoneId: 'zB', personId: 'person-somsak', workerName: 'สมศักดิ์', ownerPct: 50 });
+    expect(deleteBlockers(moved.build(), 'zB')).toEqual([]);
+    moved.deduction('person-somsak', 2_000, 'advance', 'สมชาย', 'สมศักดิ์');
+    expect(deleteBlockers(moved.build(), 'zB')).toEqual([moved.lastDeductionId()]);
+  });
+
+  it('blocks restoring a deduction against the worker of a deleted zone (the mirror of D-44)', () => {
+    const b = workedExampleLog();
+    b.deduction('person-manop', 10_000, 'advance', 'สมชาย', 'มานพ');
+    const ded = b.lastDeductionId();
+    b.remove(ded).remove('zB'); // allowed: the deduction was out of the way first
+    expect(restoreBlockers(b.build(), ded)).toEqual(['zB']);
+    expect(() => assertAllowed(b.build(), ded, false)).toThrow(DeleteBlockedError);
+
+    b.restore('zB'); // zone back first → the deduction may follow
+    expect(restoreBlockers(b.build(), ded)).toEqual([]);
+  });
+
+  it('names the reason so a screen can explain it in Thai', () => {
+    const b = workedExampleLog();
+    b.deduction('person-manop', 10_000, 'advance', 'สมชาย', 'มานพ');
+    try {
+      assertAllowed(b.build(), 'zB', true);
+      throw new Error('expected a block');
+    } catch (err) {
+      expect(err).toBeInstanceOf(DeleteBlockedError);
+      expect((err as DeleteBlockedError).reason).toBe('live-deductions');
+    }
+  });
+
+  it('still projects a zone delete that arrived anyway (older device), without crashing', () => {
     const b = workedExampleLog();
     b.deduction('person-manop', 10_000, 'advance', 'สมชาย', 'มานพ');
     b.remove('zB');
-    const s = settle(b.build(), projectSale(b.build()));
-    const manop = s.perWorker.find((w) => w.personId === 'person-manop')!;
-    expect(manop.workerSatang).toBe(0);
-    expect(manop.payoutSatang).toBe(-10_000);
+    expect(() => settle(b.build(), projectSale(b.build()))).not.toThrow();
   });
 
   it('a deleted deduction leaves the payout; a voided one is still a different thing', () => {

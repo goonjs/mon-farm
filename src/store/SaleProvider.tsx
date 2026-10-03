@@ -22,6 +22,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { assertAllowed } from '../core/delete-guard';
 import { detectClockAnomaly, projectSale } from '../core/project';
 import type { Actor, SaleEvent, SaleState, SysPayload } from '../core/types';
 import { actorNow, nextSeq, stamp as envelope } from './record';
@@ -97,6 +98,11 @@ export function SaleProvider({ saleId, children }: { saleId: string; children: R
     if (!who) throw new Error('append() before the store is ready.');
 
     const prev = eventsRef.current;
+    // D-44 (E01-S16): the same rule as `setDeleted`, so a screen inside the
+    // sale cannot delete a zone (or restore a deduction) around it.
+    if (incoming.kind === 'delete' || incoming.kind === 'restore') {
+      assertAllowed(prev, incoming.targetId, incoming.kind === 'delete');
+    }
     const last = prev.length ? prev[prev.length - 1] : null;
     const ts = Date.now();
     const stamp = (seq: number) => ({ ...envelope(saleId, seq, who), ts });
