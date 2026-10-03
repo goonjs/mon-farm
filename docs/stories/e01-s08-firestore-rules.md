@@ -46,12 +46,12 @@ Status: In Progress
 
 ### DoD ของ story นี้
 
-- [x] test บน emulator (`firestore/rules.test.ts`) เขียนก่อน เห็นแดงก่อนเขียว (rules ปิดทั้งหมด → 3 test ล้มเหลว: สร้าง, อ่าน, batch 500) แล้วเขียว 16/16
+- [x] test บน emulator (`firestore/rules.test.ts`) เขียนก่อน เห็นแดงก่อนเขียว (rules ปิดทั้งหมด → 3 test ล้มเหลว: สร้าง, อ่าน, batch 500) แล้วเขียว 16/16; หลัง review เพิ่มเป็น 57 test (แดง 16 ข้อก่อนเติม type check ใน rules แล้วเขียว 57/57)
 - [x] `firestore.rules` + `firestore.indexes.json` + `firebase.json` ใน repo; `npm run test:rules` ผ่าน
-- [x] พิสูจน์ว่า test จับ rules ที่หย่อนได้: ถอด `receivedAt == request.time`, เปิด update event, ให้ผู้ login ทุกคนอ่าน event ได้ — แต่ละกรณีมี test ที่ล้มเหลวตรงจุด แล้วคืน rules
+- [x] พิสูจน์ว่า test จับ rules ที่หย่อนได้ (mutation check): ถอดทีละ clause ของ envelope (id, groupId, actor, receivedAt, schema และ type check ทั้ง 11 ข้อ) และของ rules กลุ่ม/สมาชิก/collection-group/users/invites — ทุกกรณีมี test ล้มเหลวตรงจุด ยกเว้น 1 ข้อที่ซ้ำซ้อนโดยออกแบบ (ดู Code review)
 - [x] บันทึก `npm audit` ก่อน/หลัง (ด้านล่าง)
 - [x] typecheck + test:core ผ่าน; CI มีขั้น `test:rules` (JDK 21 + cache emulator) — รอ CI จริงของ PR
-- [ ] reviewer อิสระตรวจตาม `code-review-checklist.md`
+- [x] reviewer อิสระ (agent แยก session) ตรวจแล้ว — ดู Code review; แก้ข้อ major ทั้งสองแล้ว
 - [ ] deploy rules เข้า database `dev` — ต้องมี database `dev` และ credential ก่อน (E01-S07; owner สร้าง database)
 - [ ] client adapter แปลง "มีอยู่แล้วและ canonical JSON เท่ากัน" เป็นสำเร็จ (AC ข้อ 4) — อยู่ใน E01-S09 (outbox) ไม่ได้ทำใน PR นี้; rules ฝั่งนี้ปฏิเสธการสร้างซ้ำตามที่ test ยืนยันแล้ว
 
@@ -67,6 +67,22 @@ Status: In Progress
 - emulator JAR เก็บที่ `~/.cache/firebase/emulators` (เจ้าของอนุญาตเฉพาะ path นี้)
 
 ## Code review
+
+**Reviewer อิสระ (agent แยก, read-only), 2026-10-03:** verdict เดิม *merge after fixes*; แกนควบคุมการเข้าถึงถูกต้อง
+ไม่พบช่องอ่าน/เขียนข้ามกลุ่ม (ลองยิงบน emulator: non-member, ออกจากกลุ่มแล้ว, ยึด gid เดิม, เข้ากลุ่มเอง, ยก role, collection-group query)
+
+| # | ระดับ | ข้อสังเกต | ผล |
+|---|---|---|---|
+| 1 | major | `validEvent` ไม่ตรวจชนิดข้อมูล (deviceSeq/ts/payload/source/kind/actor.deviceId ฯลฯ) — สมาชิกยัดค่าเพี้ยนได้ | **แก้แล้ว** เพิ่ม type check ตาม architecture §Event envelope + test ข้อละ 1 ข้อ (16 test) ผ่าน mutation check |
+| 2 | major | rules `groups`/`members`/collection-group/`users`/`invites` ไม่มี test | **แก้แล้ว** เพิ่ม test ครบตามรายการ review (สร้าง/เข้า/ยกสิทธิ์/ออก/เตะ/อ่านข้ามกลุ่ม) + 2 test ที่ mutation check ชี้ว่ายังขาด (role แรกต้อง owner; ผู้สร้างเพิ่มตัวเองกลับหลังออกไม่ได้) |
+| 3 | minor | story ติ๊ก "ผู้ที่ไม่ใช่สมาชิกอ่าน/เขียนกลุ่มไม่ได้" ทั้งที่ยังไม่มี test กลุ่ม | แก้โดยข้อ 2 |
+| 4 | minor | group/member create ไม่มี `hasOnly` / ตรวจชนิด | **ยังไม่ทำ — ส่งให้ E02**: ฟิลด์จริงของ group/member ยังไม่นิ่ง การล็อกตอนนี้เสี่ยงทำ E02 ต้องแก้ rules; E02 ต้องเพิ่ม `hasOnly` พร้อม test |
+| 5 | minor | owner ออกจากกลุ่มได้ (กลุ่มไม่มี owner); สมาชิกคนสุดท้ายออกไม่ได้ (D-26) | **คำถามเจ้าของ (E02):** ต้องห้าม owner ออกไหม — ตอนนี้ rules อนุญาต |
+| 6 | minor | `signedIn()` = `auth != null` รับ anonymous provider ได้ ทั้งที่ระบุ Google login | **คำถามเจ้าของ (E02):** จะบังคับ `sign_in_provider != 'anonymous'` ไหม |
+| 7 | minor | `firebase` อยู่ใน `dependencies` ทั้งที่มีแค่ test ใช้ | คงไว้: E01-S09 (client sync) ใช้ทันที |
+| 8 | note | rules จำกัดขนาด `payload` ไม่ได้ | ข้อจำกัดของ Firestore rules; เพดานคือ 1 MiB/เอกสาร ระบุใน test header |
+| 9 | note | `leave` rule ข้อ "count ลดทีละ 1" บน group ถูกบังด้วย member-delete rule (batch เดียวกันบังคับ -1 อยู่แล้ว) จึง mutation แยกไม่ได้ | ซ้ำซ้อนโดยออกแบบ (defense in depth) ไม่ใช่ช่องโหว่ |
+| 10 | nit | log emulator แสดง evaluation error บนหลาย case ที่ deny | ใน prod rules error = deny; ปลอดภัย (fail closed) |
 
 ## QA notes
 
