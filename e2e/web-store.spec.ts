@@ -122,6 +122,31 @@ test('two tabs counting the same sale in turn lose nothing (NFR-2)', async ({ co
     await holdToCount(second);
   }
   await expect.poll(async () => (await idbRecords(page, saleId)).writtenAccepts).toBe(6);
+  // One id, one body: each record's indexed deviceSeq is the one inside the
+  // stored event (what the outbox will push), and no number repeats.
+  const seqs = await page.evaluate(
+    (saleId) =>
+      new Promise<{ indexed: number; body: number }[]>((resolve, reject) => {
+        const open = indexedDB.open('mon-farm-v1');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const req = open.result.transaction('events').objectStore('events').index('saleId').getAll(saleId);
+          req.onsuccess = () => {
+            const rows = req.result as { deviceSeq: number; event: { deviceSeq: number; actor: { deviceId: string } } }[];
+            open.result.close();
+            resolve(
+              rows
+                .filter((r) => r.event.actor.deviceId !== 'dev-A')
+                .map((r) => ({ indexed: r.deviceSeq, body: r.event.deviceSeq })),
+            );
+          };
+          req.onerror = () => reject(req.error);
+        };
+      }),
+    saleId,
+  );
+  expect(seqs.every((s) => s.indexed === s.body)).toBe(true);
+  expect(new Set(seqs.map((s) => s.body)).size).toBe(seqs.length);
   expect(errors.filter((e) => e.includes('could not be stored') || e.includes('IntegrityError'))).toEqual([]);
 
   await page.reload();
