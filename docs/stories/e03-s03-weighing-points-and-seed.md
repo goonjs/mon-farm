@@ -1,6 +1,6 @@
 # Story E03-S03: จุดชั่ง (= กอง) และโครงสร้างตั้งต้น
 
-Status: Draft
+Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Context
 

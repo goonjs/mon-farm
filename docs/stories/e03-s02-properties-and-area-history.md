@@ -1,6 +1,6 @@
 # Story E03-S02: สวน (ที่ดิน) พร้อมประวัติพื้นที่
 
-Status: Draft
+Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Context
 
