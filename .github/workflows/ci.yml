@@ -23,9 +23,12 @@ on:
 
 # Only PR runs cancel each other. A push run on dev/main must finish: the next
 # push diffs from its own `before`, so a cancelled code merge followed by a
-# docs merge would otherwise never be verified.
+# docs merge would otherwise never be verified. Push runs are grouped per
+# commit, not per branch: GitHub keeps one *pending* run per group and drops
+# the older one even without cancel-in-progress (#30's merge run was dropped
+# that way behind a docs merge, run 131).
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -57,6 +60,16 @@ jobs:
           node scripts/ci-changes.mjs
           ${{ github.event.pull_request.base.sha || github.event.before }}
           ${{ github.sha }} >> "$GITHUB_OUTPUT"
+
+      # The preview job skips silently while keyless auth is unconfigured; say
+      # so on the run page, at no extra job cost.
+      - name: Note when PR previews are off
+        if: >
+          github.event_name == 'pull_request' &&
+          (vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT == '')
+        run: >
+          echo "::notice title=PR preview off::Set repo variables
+          GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT to deploy previews."
 
   verify:
     needs: changes
@@ -200,11 +213,17 @@ jobs:
   # days. Runs only after e2e is green, and is skipped with it on docs-only
   # changes. Skipped for forks, which get no OIDC token and must not reach the
   # deploy credential. Deploys the `dist` artifact verify already built.
+  # Skipped (not failed) until the owner sets the keyless-auth repo variables
+  # GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT: without them every
+  # same-repo PR went red at google-github-actions/auth, hiding real failures.
+  # A skipped job counts as passing.
   preview:
     needs: e2e
     if: >
       github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' &&
+      vars.GCP_SERVICE_ACCOUNT != ''
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
