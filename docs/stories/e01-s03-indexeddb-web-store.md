@@ -36,6 +36,10 @@ Status: Done
 
 - ถ้า test ต้องใช้ `fake-indexeddb` (dev dependency) — ขออนุมัติตาม gate พร้อมผลตรวจความปลอดภัย
 
+**คำตอบเจ้าของ (2026-10-03) — D3:** **อนุมัติ** ติดตั้ง `fake-indexeddb` เป็น devDependency ใช้ในเทสต์เท่านั้น
+(ผลตรวจที่ส่งไป: 0 runtime deps, Apache-2.0, audit 0) — ยังไม่ได้ติดตั้ง; งานที่ปลดล็อก: contract suite ของ `MemoryStore`
+กับ `IndexedDbStore` (AC2) และเทสต์ renumber บน IndexedDB (ดู §การตัดสินใจ)
+
 ## Verification
 
 รันใน container ของ session (2026-10-03):

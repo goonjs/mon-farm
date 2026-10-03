@@ -31,21 +31,36 @@
 
 ## 5. Auth (E02-S01)
 
-- [ ] เปิด Google sign-in provider
+- [x] เปิด Google sign-in provider (2026-10-03)
 - [ ] Authorized domains: โดเมน `*.web.app` / `*.firebaseapp.com` ของทั้ง 2 site
   (preview channel ใช้ subdomain ของ site dev)
 
 ## 6. OAuth client (E02-S01) — หลังมี keystore (D1: เจ้าของสร้างในเครื่องตัวเอง เก็บเป็น GitHub secret — E01-S06)
 
 - [ ] Web client: Firebase สร้างให้อัตโนมัติเมื่อเปิด Google provider — จด client ID
-- [ ] Android app: package name `TBD` (ทีม platform จะเสนอใน E01-S06) + SHA-1 ของ keystore ที่ใช้เซ็น
-  ถ้ายังไม่มี keystore ข้ามข้อนี้ไปก่อน
+- [x] Android app ลงทะเบียนแล้ว (2026-10-03): package name `com.goonjs.monfarm`, nickname "Mon FarmMate"
+- [x] เพิ่ม fingerprint SHA-1 และ SHA-256 ของ release key แล้ว (2026-10-03; ค่าอยู่ใน ADR 0003) —
+  คาดว่าไม่ต้องใช้ `google-services.json` (แอปใช้ Firebase JS SDK) — ยืนยันอีกครั้งตอนเลือก lib
+  Google sign-in ของ E02-S01
 
-## 7. Deploy credential (E01-S07)
+## 7. Deploy credential (E01-S07) — keyless (Workload Identity Federation)
 
-- [ ] สร้าง service account **1 ตัว** สำหรับ CI deploy (สิทธิ์: Firebase Hosting Admin; เพิ่ม Rules/Functions ทีหลังเมื่อถึง story นั้น)
-- [ ] สร้าง key แล้วเก็บเป็น GitHub secret ของ repo `goonjs/mon-farm` ชื่อ `FIREBASE_SERVICE_ACCOUNT`
-- [ ] **ห้าม** วาง key ลงใน repo, issue, PR หรือแชตกับ agent — ลบไฟล์ key ในเครื่องหลังใส่ secret
+> แก้ 2026-10-03: workflow ทั้งหมด (`ci.yml` preview, `deploy-dev.yml`, `deploy-prod.yml`) ใช้
+> `google-github-actions/auth` แบบ **ไม่มี key** ผ่าน repo **variables** `GCP_WORKLOAD_IDENTITY_PROVIDER`
+> และ `GCP_SERVICE_ACCOUNT` — **ไม่ต้องสร้าง service-account key และไม่มี secret `FIREBASE_SERVICE_ACCOUNT`**
+
+- [ ] สร้าง service account **1 ตัว** สำหรับ CI deploy เช่น `github-deploy@mon-farm-a7.iam.gserviceaccount.com`
+  ให้สิทธิ์ Firebase Hosting Admin (เพิ่ม Firebase Rules Admin / Functions ทีหลังเมื่อถึง story นั้น)
+- [ ] IAM → Workload Identity Federation: สร้าง pool (เช่น `github`) และ provider แบบ OIDC
+  - issuer: `https://token.actions.githubusercontent.com`
+  - attribute mapping: `google.subject=assertion.sub`, `attribute.repository=assertion.repository`
+  - attribute condition: `assertion.repository == "goonjs/mon-farm"`
+- [ ] ให้ service account ข้างบนมี role `Workload Identity User` สำหรับ principal
+  `principalSet://iam.googleapis.com/projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github/attribute.repository/goonjs/mon-farm`
+- [ ] GitHub repo `goonjs/mon-farm` → Settings → Secrets and variables → Actions → แท็บ **Variables** (ไม่ใช่ Secrets):
+  - `GCP_WORKLOAD_IDENTITY_PROVIDER` = `projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github/providers/<PROVIDER_ID>`
+  - `GCP_SERVICE_ACCOUNT` = อีเมล service account ข้างบน
+- [ ] **ห้าม** สร้างหรือดาวน์โหลด service-account key — วิธีนี้ไม่ต้องใช้ key เลย
 
 ## 8. ส่งค่าที่ไม่ใช่ความลับกลับมา
 
@@ -57,4 +72,4 @@
 | ชื่อ site dev / prod | |
 | ชื่อ bucket dev / prod | |
 | web app config (`apiKey`, `authDomain`, `appId`, `messagingSenderId`) | ค่าเหล่านี้ไม่ใช่ความลับ |
-| ชื่อ GitHub secret | `FIREBASE_SERVICE_ACCOUNT` |
+| GitHub variables ที่ตั้งแล้ว | `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` (ค่าไม่ใช่ความลับ) |
