@@ -17,7 +17,7 @@ Decision log D-1…D-21):
 
 | Area | Decision | Why |
 |---|---|---|
-| Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert, asia-southeast3 (กรุงเทพฯ), **one Firebase project** for MVP (D-34): dev/preview on a named Firestore database `dev` + a dev Storage bucket, prod on `(default)` + the default bucket; split into two projects before commercial launch | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
+| Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert (เลื่อนตาม D-48 — ยังไม่อัปเกรดแผน), asia-southeast3 (กรุงเทพฯ), **one Firebase project** for MVP (D-34): dev/preview on a named Firestore database `dev` + a dev Storage bucket, prod on `(default)` + the default bucket; split into two projects before commercial launch | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
 | Sync unit | **Keep the append-only event log as source of truth and sync unit.** Each event = one immutable Firestore doc (`groups/{gid}/events/{eventId}`), create-only security rules → idempotent re-push, nothing overwritten. Edits are new events carrying `targetId` + `baseEventId`; concurrent edits merge only when they touch different non-money/weight/count/status fields, otherwise **Conflict** surfaced to the user (see §Sync engine). | Firestore is last-write-wins per document and transactions fail offline, so platform defaults can't satisfy "never silently overwrite money". Basket events are additive → different devices merge for free. |
 | Pending Sync | Our own outbox (`synced_at IS NULL`), not Firestore's cache | JS SDK persistence on React Native is memory-only; our SQLite store owns durability. Avoids `@react-native-firebase`. |
 | IDs & ordering | Globally unique event ids (**UUIDv7**, owner 2026-10-03) + per-device sequence; causal order only, no clock ordering; `(sale_id, seq)` PK retired; `actor` → user id + device id | Two offline phones would collide on per-sale `seq`. |
@@ -70,7 +70,7 @@ Firestore document หนึ่งตัว ที่สร้างได้อ
                                     └──────────┬───────────────────┘
                                                │ Firebase JS SDK (memory cache)
                  ┌─────────────────────────────▼─────────────────────────────┐
-                 │ Firebase 1 โปรเจกต์ (asia-southeast3 (กรุงเทพฯ), Blaze, D-34)          │
+                 │ Firebase 1 โปรเจกต์ (asia-southeast3, Blaze, D-34)          │
                  │ site dev/prod · Firestore db `dev` / `(default)` · bucket  │
                  │ dev/prod · Auth (Google, ใช้ร่วม) · groups/{gid}/…          │
                  │ Cloud Functions: createInvite / acceptInvite               │
@@ -551,7 +551,7 @@ retry/backoff ชุดเดียวกัน ถ้า object มีอยู
 ## Backend API
 
 ไม่มี REST API ที่เขียนเอง backend = Firestore + Cloud Storage ที่ป้องกันด้วย rules และ callable function
-สองตัว ทั้งหมดอยู่ในโปรเจกต์ Firebase เดียวที่ asia-southeast3 (กรุงเทพฯ) บน Blaze (D-1, D-22, D-34) แยก dev/prod ภายใน
+สองตัว ทั้งหมดอยู่ในโปรเจกต์ Firebase เดียวที่ asia-southeast3 (กรุงเทพฯ) บน Blaze (เลื่อนตาม D-48 — ยังไม่อัปเกรดแผน) (D-1, D-22, D-34) แยก dev/prod ภายใน
 โปรเจกต์: Firestore database `dev` (dev + preview) กับ `(default)` (prod), Storage bucket ของ dev กับ bucket
 หลัก (prod), Hosting site `dev` กับ `prod`
 
@@ -578,7 +578,7 @@ inviteAttempts/{uid}            { failures, windowStart }                       
 
 ### Callable functions — รหัสเชิญ (เจ้าของตกลง 2026-10-03, D-31, E02-S03)
 
-**ใช้ Cloud Functions สองตัว (`createInvite`, `acceptInvite`, asia-southeast3 — ยังไม่ได้ยืนยันว่า Functions รองรับ ถ้าไม่รองรับใช้ asia-southeast3 (กรุงเทพฯ) ได้ เพราะไม่กระทบที่เก็บข้อมูล, min instances 0) ไม่ใช่ rules
+**ใช้ Cloud Functions สองตัว (`createInvite`, `acceptInvite`, asia-southeast3 — ยังไม่ได้ยืนยันว่า Functions รองรับ ถ้าไม่รองรับใช้ asia-southeast1 (สิงคโปร์) ได้ เพราะไม่กระทบที่เก็บข้อมูล, min instances 0) ไม่ใช่ rules
 อย่างเดียว**
 
 - **rules อย่างเดียวทำได้แค่ส่วนความถูกต้อง**: doc `invites/{code}` + batch ฝั่ง client ที่สร้าง `members/{uid}`

@@ -2,6 +2,8 @@
 
 Status: Ready
 
+> **ติด D-48:** ส่วนอัปโหลดขึ้น Cloud Storage ทำจริงไม่ได้จนกว่าเจ้าของอัปเกรดแผน (bucket ยังไม่ถูกสร้าง) ทำได้เฉพาะคิวในเครื่อง/อินเทอร์เฟซ และ test ด้วย fake
+
 ## Context
 
 - Epic: `docs/epics/e01-foundation-sync.md`
@@ -37,7 +39,7 @@ Status: Ready
 ## ต้องให้เจ้าของทำ/อนุมัติ
 
 - ถ้าต้องใช้ `expo-file-system` หรือ lib อื่น → gate dependency
-- ยืนยัน bucket ของ dev และ bucket หลัก (prod) อยู่ใน asia-southeast3 (กรุงเทพฯ) และ budget alert ครอบคลุม Storage; build dev/preview อัปโหลดเข้า bucket ของ dev เท่านั้น
+- (เลื่อนตาม D-48) ยืนยัน bucket ของ dev และ bucket หลัก (prod) อยู่ใน asia-southeast3 (กรุงเทพฯ) และ budget alert ครอบคลุม Storage; build dev/preview อัปโหลดเข้า bucket ของ dev เท่านั้น
 
 ## Verification
 
