@@ -25,7 +25,20 @@ service cloud.firestore {
           && e.groupId == gid
           && e.actor.keys().hasOnly(['userId', 'deviceId'])
           && e.actor.userId == me()
-          && e.receivedAt == request.time;
+          && e.actor.deviceId is string
+          && e.receivedAt == request.time
+          // Field types (architecture §Event envelope). Rules cannot cap the
+          // size of `payload`; Firestore's 1 MiB document limit is the only cap.
+          && e.deviceSeq is int && e.deviceSeq >= 1
+          && e.ts is number
+          && (!('mono' in e) || e.mono is number)
+          && (!('alsoBasedOn' in e) || e.alsoBasedOn is list)
+          && e.payload is map
+          && e.source in ['app', 'line', 'import', 'ai']
+          && e.kind is string && e.kind.size() > 0 && e.kind.size() < 64
+          && e.targetId is string
+          && (e.baseEventId == null || e.baseEventId is string)
+          && (e.saleId == null || e.saleId is string);
     }
 
     match /groups/{gid} {
