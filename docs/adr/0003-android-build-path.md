@@ -1,6 +1,6 @@
 # ADR 0003 — ทางสร้าง APK Android (EAS Build, GitHub Actions, เครื่องตัวเอง หรือ Capacitor)
 
-- **Status:** Proposed (รอเจ้าของตัดสิน)
+- **Status:** Accepted (owner, 2026-10-03) — ทาง **B: GitHub Actions + Gradle**
 - **Deciders:** owner; drafted by a research agent for the lead agent, 2026-10-03
 - **Related:** `docs/stories/e01-s06-android-dev-client.md`, `docs/architecture.md`
   (Tech stack, "Rejected", "Open and undecided" ข้อ 1), PRD NFR-1, NFR-2, NFR-6,
@@ -138,6 +138,17 @@ react-native-web) จึงห่อด้วย Capacitor ได้ในทา
 | **D. `eas build --local`** | **$0** | เหมือน C + keystore จาก Expo | สูง + ต้องมีบัญชี · สูง | ข้อเสียของ A + C รวมกัน |
 | **E. Capacitor** | $0 (ค่าเครื่องมือ) แต่ build ยังต้องใช้ B หรือ C | plugin ครบ แต่หลายตัวเป็น community; UI อยู่ใน WebView | **สูงมาก (เป็น platform ที่สามที่ต้องเขียน/ดูแล)** · สูง | ทิ้งงาน native ที่ทำไว้; ไม่ได้แก้คำถาม "ใคร build" |
 
+## Decision
+
+เจ้าของตอบ (2026-10-03): *"go with Github action, keep the document somewhere
+that if the bill come or we have to reduce cost (because I have many projects, we
+may go to another free choice)"*
+
+ใช้ **ทาง B — GitHub Actions + `expo prebuild` + Gradle `assembleRelease`**,
+สั่งรันเองเท่านั้น (`workflow_dispatch`). ทางลดค่าใช้จ่ายถ้าวันหนึ่งมีบิล อยู่ใน
+หัวข้อ "เมื่อต้องลดค่าใช้จ่าย" ด้านล่าง. ส่วน Recommendation เก็บไว้เป็นเหตุผล
+ประกอบการตัดสิน
+
 ## Recommendation
 
 **เลือก B (GitHub Actions, กดสั่งเอง) เป็นทางหลัก** เหตุผล:
@@ -164,7 +175,7 @@ react-native-web) จึงห่อด้วย Capacitor ได้ในทา
 
 ## Consequences
 
-ถ้าเลือก B:
+(เลือก B แล้ว)
 
 - เพิ่ม workflow `android-apk.yml` (`workflow_dispatch` เท่านั้น, `timeout-minutes`,
   cache Gradle, ใส่ค่าเซ็นจาก secret, artifact `retention-days` 7–14) — งาน CI แยก ต้องผ่าน review ตามปกติ
@@ -176,18 +187,48 @@ react-native-web) จึงห่อด้วย Capacitor ได้ในทา
 - ไม่ปิดทาง A: ย้ายไป EAS ได้ทีหลังโดยอัปโหลด keystore เดิม
 - ไม่ว่าเลือกทางไหน: แก้บรรทัด "Rejected: PWA / Capacitor" ใน `docs/architecture.md`
   ให้เหตุผลตรงกับ ADR นี้ (Capacitor มี plugin; ที่ไม่เลือกเพราะต้องเขียน platform
-  layer ใหม่) และบันทึกทางที่เลือกในส่วน Tech stack — ทำตอนเจ้าของตัดสิน
+  layer ใหม่) และบันทึกทางที่เลือกในส่วน Tech stack
 
-ถ้าเลือก A: สมัครบัญชี Expo, ขอติดตั้ง `eas-cli` ผ่าน dependency gate, เพิ่ม
-`eas.json` (profile `preview` → `buildType: apk`), ให้ EAS สร้าง keystore
+## เมื่อต้องลดค่าใช้จ่าย (cost fallback)
 
-## สิ่งที่เจ้าของต้องตัดสิน
+เจ้าของมีหลายโปรเจกต์ที่ใช้นาที GitHub Actions **ก้อนเดียวกัน** (2,000 นาที/เดือน
+บน GitHub Free, แชร์ทุก repo private) หัวข้อนี้มีไว้ให้หยิบใช้เมื่อบิลมาหรือต้องลดต้นทุน
 
-1. **จะ build APK ทางไหน?**
-   - **B — GitHub Actions กดสั่งเอง (แนะนำ)** — ฟรี, ไม่ต้องสมัครอะไร, เจ้าของสร้าง keystore ครั้งเดียว
-   - A — EAS Build แผนฟรี — ง่ายสุด แต่ต้องสมัครบัญชี Expo และติดตั้ง `eas-cli`
-   - C — build บนคอมของเจ้าของเอง
-2. **(ถ้าเลือก B) ใครสร้าง keystore?**
+### (a) สัญญาณที่ควรทบทวน
+
+- หน้า Billing ของบัญชี GitHub แสดงนาที Actions ที่ใช้ **เกิน ~80% ของ 2,000**
+  ก่อนสิ้นเดือน (ทุก repo รวมกัน)
+- มี **บิลค่า Actions** (นาทีเกิน: Linux $0.006/นาที) หรือค่า **artifact storage**
+  (เกิน 500 MB)
+- build APK หนึ่งครั้งใช้นาน **เกิน 40 นาที** หรือต้อง build **เกิน ~10 ครั้ง/เดือน**
+  อย่างสม่ำเสมอ
+
+### (b) ลดนาทีก่อนย้าย (ทำได้ใน workflow เดิม)
+
+1. รันเฉพาะเมื่อสั่ง (`workflow_dispatch`) หรือเมื่อติด tag release — **ไม่ผูกกับ
+   PR/push** (เป็นค่าตั้งต้นของ ADR นี้อยู่แล้ว)
+2. cache Gradle และ npm ระหว่างรอบ
+3. build เฉพาะสถาปัตยกรรมของมือถือจริง: `-PreactNativeArchitectures=arm64-v8a`
+   (ค่าเริ่มต้นคอมไพล์ native ทั้ง 4 แบบ)
+4. `concurrency` + `cancel-in-progress` (กดซ้ำแล้วรอบเก่าหยุด), `timeout-minutes`
+   (เช่น 45) กัน build ค้างกินนาที
+5. artifact `retention-days` 7–14 หรือแนบ GitHub Release แทน
+
+### (c) ทางฟรีที่เหลือ เรียงตามความง่ายในการย้าย
+
+| ลำดับ | ทาง | ราคา / โควตา | ขั้นตอนย้ายโดยย่อ | ข้อแลก |
+|---|---|---|---|---|
+| 1 | **EAS Build แผนฟรี** (ทาง A) | $0 · 15 Android build/เดือน, เกินแล้วรอเดือนหน้า (ไม่เก็บเงิน) | สมัครบัญชี Expo → ขอติดตั้ง `eas-cli` (dependency gate) → `eas.json` profile `preview` (`buildType: apk`) → `eas credentials` อัปโหลด **keystore ตัวเดิม** | คิวฟรีอาจรอ 90+ นาที; มีบัญชีภายนอกเพิ่ม |
+| 2 | **Self-hosted runner** บนคอมของเจ้าของ | $0 — GitHub ไม่คิดนาทีของ self-hosted runner | ติดตั้ง runner ของ GitHub + Android SDK/JDK บนคอม → เปลี่ยน `runs-on` เป็น `self-hosted`; workflow และ secret เดิมใช้ต่อได้ | คอมต้องเปิดอยู่ตอนสั่ง build; ติดตั้งครั้งแรกหลาย GB |
+| 3 | **Build ในคอมเอง** (ทาง C) | $0 | ติดตั้ง Android Studio + JDK → `npx expo prebuild --platform android` → `./gradlew assembleRelease` พร้อมไฟล์ keystore ในเครื่อง | ต้องมีคนลงมือทุกครั้ง; agent ทำแทนไม่ได้ |
+| — | `eas build --local` (ทาง D) | $0 | — | **ไม่แนะนำ**: ต้องมีทั้งบัญชี Expo และ SDK ในเครื่อง ได้ข้อเสียของ 1 และ 3 รวมกัน |
+
+ทุกทางใช้ **keystore ตัวเดิม** ได้ — ย้ายแล้วโทรศัพท์อัปเดตทับแอปเดิมได้ ข้อมูลไม่หาย
+**ห้ามสร้าง keystore ใหม่ตอนย้าย**
+
+## คำถามที่ยังเปิด
+
+1. **ใครสร้าง keystore?** (lead ถามเจ้าของแล้ว — ยังรอคำตอบ)
    - **เจ้าของสร้างเองตามขั้นตอนที่ agent เขียนให้ แล้วใส่ secret เอง (แนะนำ)** — กุญแจไม่ผ่านมือ agent
    - ให้ workflow สร้างครั้งแรกแล้วเจ้าของดาวน์โหลดไปเก็บ — สะดวกกว่า แต่กุญแจเคยอยู่ใน log/artifact ของ CI
 
@@ -205,6 +246,7 @@ react-native-web) จึงห่อด้วย Capacitor ได้ในทา
 - Ubuntu 24.04 runner image (Android SDK/NDK ติดมา): <https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md>
 - เวลา build RN/Expo Android 20–40 นาที (แหล่งรอง): <https://github.com/polygon-mv/rn-build-cache>
 - Capacitor: <https://capacitorjs.com/docs>, official plugins <https://capacitorjs.com/docs/apis>, Android <https://capacitorjs.com/docs/android>
+- Self-hosted runner ไม่คิดนาที: <https://docs.github.com/en/billing/concepts/product-billing/github-actions>
 - Capacitor community plugins: <https://github.com/capacitor-community/text-to-speech>,
   <https://github.com/capacitor-community/sqlite>, <https://github.com/capacitor-community/keep-awake>
 - Ionic เทียบ Capacitor กับ React Native (overhead การวาดใน WebView): <https://ionic.io/blog/capacitor-everything-youve-ever-wanted-to-know>
