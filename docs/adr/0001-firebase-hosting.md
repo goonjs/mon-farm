@@ -1,6 +1,6 @@
 # ADR 0001 — Host the web build on Firebase Hosting
 
-- **Status:** Accepted (owner, 2026-10-03); **amended 2026-10-03** — two projects on Blaze (see below)
+- **Status:** Accepted (owner, 2026-10-03); **amended 2026-10-03** — two projects on Blaze; **amendment 2, 2026-10-03** — back to one project for MVP, Blaze kept (see below)
 - **Deciders:** owner; drafted by the lead agent
 - **Related:** `docs/architecture.md` ("Deployment / environments"),
   `docs/process.md` ("Branches and releases")
@@ -53,6 +53,8 @@ from GitHub Actions via `scripts/deploy.sh <env>`; Deploy Prod calls it with
 
 ## Amendment, 2026-10-03 — two projects, Blaze
 
+*Two-project part superseded by Amendment 2 below (PRD D-34); Blaze stays.*
+
 Owner decision (PRD D-22), reconciling this ADR with PRD D-1:
 
 - **Two Firebase projects**, not one: **`dev`** hosts the `dev` site and all PR
@@ -66,3 +68,46 @@ Owner decision (PRD D-22), reconciling this ADR with PRD D-1:
   two domains. Follow-up 2 needs one deploy credential per project.
 - Cloud Run per-PR previews (the owner's general rule for other repos) are
   not used in this repo; there are no container images to retain.
+
+## Amendment 2, 2026-10-03 — one project for MVP
+
+Owner decision (PRD D-34): "This is MVP and for personal use first. So one
+project until we go commercial, then we will separate." The owner has already
+created a single Firebase project holding both dev and prod. This reverses
+the two-project part of Amendment 1 (PRD D-1, D-22); the rest of Amendment 1
+stands — **Blaze with a budget alert stays**, and Cloud Run previews stay
+unused.
+
+Separation inside the one project:
+
+- **Hosting:** two sites, `dev` and `prod`; all PR preview channels live on
+  the `dev` site (7-day expiry, D-21).
+- **Firestore:** a named database `dev` for dev and previews (test/seed data
+  only); prod uses `(default)` (real farm data).
+- **Cloud Storage:** a separate bucket for dev media; prod uses the default
+  bucket.
+- **Build config:** dev/preview builds point at the `dev` database and the
+  dev bucket. E01-S07 holds the test that checks the build config. Security
+  rules still enforce farm-group membership on every database and bucket.
+
+**Risk — accepted by the owner 2026-10-03 (ความเสี่ยงที่เจ้าของรับแล้ว):**
+with one project, Auth is shared, so security rules cannot tell a prod build
+from a preview build. The separate `dev` database and bucket prevent
+*mistakes*; they are **not a security boundary**. A preview build altered to
+point at `(default)` could read and write real farm data with the signed-in
+user's rights, which weakens the PRD NFR-5 guarantee that a public preview can
+never touch production data. Mitigations: previews are built only by this
+repo's CI from branches in the owner's repo (needs write access), plus a build
+test that dev/preview bundles reference only the `dev` database. Two projects
+(the revisit below) remove this risk.
+
+Accepted trade-off for MVP: **Firebase Auth and the Blaze budget alert are
+shared** — the same Google account signs in to dev, previews and prod, and one
+budget covers both environments.
+
+Follow-up 1 becomes: create the two sites, the `dev` database and the dev
+bucket in the existing project, and choose the two domains. Follow-up 2 needs
+one deploy credential.
+
+**Revisit:** split into two projects (dev, prod) before commercial launch, or
+before any non-owner user is given access — whichever comes first.
