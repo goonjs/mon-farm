@@ -17,7 +17,7 @@ Decision log D-1…D-21):
 
 | Area | Decision | Why |
 |---|---|---|
-| Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert, asia-southeast1, separate `dev` and `prod` projects | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
+| Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert, asia-southeast1, **one Firebase project** for MVP (D-34): dev/preview on a named Firestore database `dev` + a dev Storage bucket, prod on `(default)` + the default bucket; split into two projects before commercial launch | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
 | Sync unit | **Keep the append-only event log as source of truth and sync unit.** Each event = one immutable Firestore doc (`groups/{gid}/events/{eventId}`), create-only security rules → idempotent re-push, nothing overwritten. Edits are new events carrying `targetId` + `baseEventId`; concurrent edits merge only when they touch different non-money/weight/count/status fields, otherwise **Conflict** surfaced to the user (see §Sync engine). | Firestore is last-write-wins per document and transactions fail offline, so platform defaults can't satisfy "never silently overwrite money". Basket events are additive → different devices merge for free. |
 | Pending Sync | Our own outbox (`synced_at IS NULL`), not Firestore's cache | JS SDK persistence on React Native is memory-only; our SQLite store owns durability. Avoids `@react-native-firebase`. |
 | IDs & ordering | Globally unique event ids (**UUIDv7**, owner 2026-10-03) + per-device sequence; causal order only, no clock ordering; `(sale_id, seq)` PK retired; `actor` → user id + device id | Two offline phones would collide on per-sale `seq`. |
@@ -26,7 +26,7 @@ Decision log D-1…D-21):
 | Media | Local file queue → Cloud Storage via the outbox | Offline capture. |
 | Auth | Firebase Auth: Google now; LINE later via custom token from a small server endpoint (Cloud Functions / Cloud Run) (or OIDC if a spike passes); `linkWithCredential` for one user | LINE is not a built-in provider. |
 | Orientation | Portrait primary; weighing public mode may rotate | D-17; `app.json` is already `default` (S19). |
-| PR previews | **Firebase Hosting preview channels** (ADR 0001) in the **dev** project: `expo export` → `firebase hosting:channel:deploy pr-N --expires 7d`; channel deleted on PR close; no container images to retain. *Superseded 2026-10-03: the earlier Cloud Run + Artifact Registry design (PRD D-22).* | ADR 0001; owner rule (7-day previews) |
+| PR previews | **Firebase Hosting preview channels** (ADR 0001) on the **dev** site (same project as prod, D-34), wired to the `dev` database and bucket: `expo export` → `firebase hosting:channel:deploy pr-N --expires 7d`; channel deleted on PR close; no container images to retain. *Superseded 2026-10-03: the earlier Cloud Run + Artifact Registry design (PRD D-22).* | ADR 0001; owner rule (7-day previews) |
 | CI minutes | Trigger `push: main` + `pull_request` only (today every PR runs twice); docs-only changes skip heavy jobs via a cheap `changes` gate; graph `changes → verify → e2e → preview`, sequential, each with `timeout-minutes`; cache Playwright browsers; e2e reuses the built `dist/`. | Owner rule: save minutes, fail fast. |
 
 Risks carried: native has never run on a device (top risk with Android-first);
@@ -70,8 +70,9 @@ Firestore document หนึ่งตัว ที่สร้างได้อ
                                     └──────────┬───────────────────┘
                                                │ Firebase JS SDK (memory cache)
                  ┌─────────────────────────────▼─────────────────────────────┐
-                 │ Firebase (dev / prod แยกโปรเจกต์, asia-southeast1, Blaze)   │
-                 │ Auth (Google) · Firestore groups/{gid}/… · Cloud Storage   │
+                 │ Firebase 1 โปรเจกต์ (asia-southeast1, Blaze, D-34)          │
+                 │ site dev/prod · Firestore db `dev` / `(default)` · bucket  │
+                 │ dev/prod · Auth (Google, ใช้ร่วม) · groups/{gid}/…          │
                  │ Cloud Functions: createInvite / acceptInvite               │
                  └────────────────────────────────────────────────────────────┘
 ```
@@ -548,7 +549,9 @@ retry/backoff ชุดเดียวกัน ถ้า object มีอยู
 ## Backend API
 
 ไม่มี REST API ที่เขียนเอง backend = Firestore + Cloud Storage ที่ป้องกันด้วย rules และ callable function
-สองตัว ทั้งหมดอยู่ใน 2 โปรเจกต์ (`dev`, `prod`) ที่ asia-southeast1 บน Blaze (D-1, D-22)
+สองตัว ทั้งหมดอยู่ในโปรเจกต์ Firebase เดียวที่ asia-southeast1 บน Blaze (D-1, D-22, D-34) แยก dev/prod ภายใน
+โปรเจกต์: Firestore database `dev` (dev + preview) กับ `(default)` (prod), Storage bucket ของ dev กับ bucket
+หลัก (prod), Hosting site `dev` กับ `prod`
 
 ### โครง Firestore
 
@@ -606,7 +609,10 @@ inviteAttempts/{uid}            { failures, windowStart }                       
 
 ### สภาพแวดล้อม
 
-build ของ dev/preview ชี้โปรเจกต์ dev เท่านั้น (มี test ยืนยันใน E01-S07) rules/indexes/functions อยู่ใน repo
+build ของ dev/preview ชี้ Firestore database `dev` และ bucket ของ dev เท่านั้น (มี test ยืนยันใน E01-S07)
+(กันการพลาด ไม่ใช่ขอบเขตความปลอดภัย — ดู §Security) Auth และ budget alert ใช้ร่วม
+ทั้งโปรเจกต์ (เจ้าของรับใน MVP, D-34) แยกเป็น 2 โปรเจกต์ก่อนเปิดเชิงพาณิชย์หรือก่อนมีผู้ใช้ที่ไม่ใช่เจ้าของ
+rules/indexes/functions อยู่ใน repo
 ทั้งหมด deploy ผ่านสคริปต์: dev อัตโนมัติ, prod ต้องให้เจ้าของอนุมัติทุกครั้ง test ใช้ Firebase Emulator (ต้องใช้
 Java นอก repo — ขออนุญาตใน E01-S08)
 
@@ -701,8 +707,16 @@ Firestore นับเป็น Firestore read; ต้องให้สิท�
 
 ### สภาพแวดล้อมและความลับ
 
-- dev/prod แยกโปรเจกต์ ลิงก์ preview ใช้ dev เท่านั้น จึงเข้าถึงข้อมูล prod ไม่ได้ (NFR-5, D-22)
-- config ของ Firebase web app ไม่ใช่ความลับ ความปลอดภัยอยู่ที่ rules credential สำหรับ deploy 1 ชุดต่อโปรเจกต์
+- dev/prod อยู่โปรเจกต์เดียว (D-34) ลิงก์ preview ต้องไม่แตะข้อมูล prod (NFR-5, D-22) กลไก: build
+  dev/preview ตั้งค่าให้ใช้ Firestore database `dev` และ bucket ของ dev และมี test ใน E01-S07 ยืนยันว่า
+  bundle dev/preview อ้างถึงเฉพาะ database `dev`
+- **ความเสี่ยงที่เจ้าของรับแล้ว (2026-10-03)** (D-34): Auth ใช้ร่วม rules จึงแยก build prod กับ build preview ไม่ได้
+  database `dev`/bucket ของ dev กันการพลาด แต่**ไม่ใช่ขอบเขตความปลอดภัย** — build preview ที่ถูกแก้ให้ชี้
+  `(default)` อ่าน/เขียนข้อมูลจริงได้ด้วยสิทธิ์ของผู้ใช้ที่ login อยู่ ลดความเสี่ยง: preview build โดย CI ของ
+  repo จาก branch ใน repo ของเจ้าของเท่านั้น (ต้องมีสิทธิ์ write) + test bundle ข้างบน; แยก 2 โปรเจกต์จึงปิด
+  ความเสี่ยงนี้
+- Auth ใช้ร่วมกัน: บัญชีที่ login ใน preview เป็นบัญชีเดียวกับ prod — ยอมรับใน MVP (ผู้ใช้มีแค่เจ้าของ)
+- config ของ Firebase web app ไม่ใช่ความลับ ความปลอดภัยอยู่ที่ rules credential สำหรับ deploy 1 ชุด (โปรเจกต์เดียว)
   เก็บใน GitHub secrets ห้ามมี service-account key ใน repo
 - ใครมีบัญชี Google ก็สร้างกลุ่มของตัวเองได้ (เปลือง write เล็กน้อย) แต่อ่านกลุ่มคนอื่นไม่ได้ budget alert เป็น
   ตาข่ายรองรับ (D-1) App Check ยังไม่ทำ (YAGNI) พิจารณาเมื่อมีการใช้ผิดจริง
@@ -752,11 +766,15 @@ Both are web-only and documented where they are read:
 Two long-lived branches, two environments with separate domains: `dev`
 (default branch, daily-use MVP environment) and `main` (production). Release
 flow is in `docs/process.md` ("Branches and releases"). **Hosting is Firebase Hosting**
-(**two projects** — `dev` hosts the `dev` site and PR preview channels with
-7-day expiry over test data; `prod` hosts the `prod` site over real data;
-Blaze — PRD D-22) — see `docs/adr/0001-firebase-hosting.md`. It is decided but **not
-wired yet**: `scripts/deploy.sh` fails closed until the project, domains and
-deploy credential exist. Locally,
+(**one project** on Blaze — PRD D-34, ADR 0001 amendment 2: the `dev` site
+and PR preview channels with 7-day expiry use the named Firestore database
+`dev` and a dev Storage bucket over test data; the `prod` site uses the
+`(default)` database and the default bucket over real data; build config (not rules)
+keeps dev/preview builds off prod data — a mistake guard, not a security
+boundary (§Security); Auth and the budget alert are shared;
+split into two projects before commercial launch) — see `docs/adr/0001-firebase-hosting.md`. It is decided but **not
+wired yet**: `scripts/deploy.sh` fails closed until the sites, the `dev` database and
+bucket, domains and deploy credential exist (the project itself exists). Locally,
 `npm run build:web` produces a static `dist/`. No native build has
 been produced and no device has run this yet — **the app has only ever been
 exercised in a browser.**
