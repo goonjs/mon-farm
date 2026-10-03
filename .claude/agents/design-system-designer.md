@@ -38,3 +38,10 @@ tools: Read, Grep, Glob, Bash, Edit, Write
   plus an owner question rather than applying silently. (5) This worktree had
   no node_modules — typecheck/lint/jest/vitest could not run without an
   install, which is gated; check for it first and report it up front.
+- 2026-10-03 — Flow mockup v1 (`docs/ux/mockups/flow-v1.html`). Lesson: the
+  owner disliked seeing the old POC look with only FarmMate colours swapped
+  in — an owner's visual reference must be applied as visual *patterns*
+  (card surfaces, icon tiles, icon style), not only as colour tokens.
+  "Visual only" is ambiguous: ask the owner up front which patterns it
+  covers (here U1 b = cards + icons only; nav/FAB/dashboard/stepped flow
+  excluded) and record the answer in the reference README.

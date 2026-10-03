@@ -83,7 +83,7 @@ test('an edit made just before leaving is written, not dropped', async ({ page }
   // route rather than on `count`.
   await page.getByTestId('price-baht').fill('27');
   await page.getByTestId('start-counting').click();
-  await expect(page).toHaveURL(/\/sale\/sale-[a-z0-9]+\/counter$/);
+  await expect(page).toHaveURL(/\/sale\/sale-[0-9a-f-]{36}\/counter$/);
 
   const saleId = new URL(page.url()).pathname.split('/')[2];
   await page.goto(`/sale/${saleId}/setup`);

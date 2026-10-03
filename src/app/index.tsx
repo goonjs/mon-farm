@@ -17,6 +17,7 @@ import { Button } from '../components/chrome';
 import { projectSale } from '../core/project';
 import type { SaleState } from '../core/types';
 import { newId } from '../lib/id';
+import { setDeleted } from '../store/record';
 // Bare specifier — see the note in SaleProvider.tsx for why this matters.
 import { store } from '../store/store';
 import { useT } from '../i18n';
@@ -26,6 +27,8 @@ export default function SaleListScreen() {
   const t = useTheme();
   const msg = useT();
   const [sales, setSales] = useState<SaleState[] | null>(null); // null = loading
+  // Soft-deleted sales (E01-S04) are hidden here and listed under "deleted".
+  const [deletedCount, setDeletedCount] = useState(0);
 
   const reload = useCallback(() => {
     (async () => {
@@ -33,9 +36,19 @@ export default function SaleListScreen() {
       const states = await Promise.all(
         ids.map(async (id) => projectSale(await store.load(id), id)),
       );
-      setSales(states);
+      setSales(states.filter((s) => !s.deleted));
+      setDeletedCount(states.filter((s) => s.deleted).length);
     })();
   }, []);
+
+  const remove = async (id: string) => {
+    try {
+      await setDeleted(id, true);
+    } catch (err) {
+      console.error('Delete could not be stored.', err);
+    }
+    reload();
+  };
 
   useEffect(reload, [reload]);
   // Coming back from setting up or counting a sale should refresh the list —
@@ -89,7 +102,12 @@ export default function SaleListScreen() {
             {msg('sales.empty')}
           </Text>
         ) : (
-          sales.map((s) => <SaleRow key={s.id} sale={s} />)
+          sales.map((s) => <SaleRow key={s.id} sale={s} onDelete={() => void remove(s.id)} />)
+        )}
+        {deletedCount > 0 && (
+          <Link href="/deleted" asChild>
+            <Button testID="open-deleted">{msg('sales.deletedLink', { n: deletedCount })}</Button>
+          </Link>
         )}
       </ScrollView>
 
@@ -108,8 +126,11 @@ export default function SaleListScreen() {
   );
 }
 
-function SaleRow({ sale }: { sale: SaleState }) {
+function SaleRow({ sale, onDelete }: { sale: SaleState; onDelete: () => void }) {
+  const t = useTheme();
   const msg = useT();
+  // Two steps, like every destructive action here; keeping it is the default.
+  const [confirming, setConfirming] = useState(false);
   const href: Href = sale.status === 'closed'
     ? { pathname: '/sale/[id]/settlement', params: { id: sale.id } }
     : { pathname: '/sale/[id]/counter', params: { id: sale.id } };
@@ -117,14 +138,48 @@ function SaleRow({ sale }: { sale: SaleState }) {
   const label = sale.parties?.farmName || sale.parties?.buyer || msg('sales.unnamed');
 
   return (
-    <Link href={href} asChild>
-      <Button testID={`sale-${sale.id}`}>
-        {msg('sales.row', {
-          name: label,
-          status: msg(sale.status === 'closed' ? 'status.closed' : 'status.open'),
-          zones: sale.zones.length,
-        })}
-      </Button>
-    </Link>
+    <View style={{ gap: t.space.xs }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+        <View style={{ flex: 1 }}>
+          <Link href={href} asChild>
+            <Button testID={`sale-${sale.id}`}>
+              {msg('sales.row', {
+                name: label,
+                status: msg(sale.status === 'closed' ? 'status.closed' : 'status.open'),
+                zones: sale.zones.length,
+              })}
+            </Button>
+          </Link>
+        </View>
+        {!confirming && (
+          <Button
+            testID={`delete-${sale.id}`}
+            variant="destructive"
+            accessibilityLabel={msg('sales.deleteLabel', { name: label })}
+            onPress={() => setConfirming(true)}
+          >
+            {msg('sales.delete')}
+          </Button>
+        )}
+      </View>
+      {confirming && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+          <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+            {msg('sales.deleteHint')}
+          </Text>
+          <Button testID={`delete-cancel-${sale.id}`} onPress={() => setConfirming(false)}>
+            {msg('sales.deleteCancel')}
+          </Button>
+          <Button
+            testID={`delete-confirm-${sale.id}`}
+            variant="destructive"
+            accessibilityLabel={`${msg('sales.deleteConfirm')} — ${label}`}
+            onPress={onDelete}
+          >
+            {msg('sales.deleteConfirm')}
+          </Button>
+        </View>
+      )}
+    </View>
   );
 }
