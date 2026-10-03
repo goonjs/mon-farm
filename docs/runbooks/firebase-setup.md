@@ -15,8 +15,9 @@
 
 ## 2. Firestore (E01-S08)
 
-- [ ] database `(default)` = **prod** (`asia-southeast3 (กรุงเทพฯ)`, native mode)
-- [ ] สร้าง database ชื่อ `dev` (`asia-southeast3 (กรุงเทพฯ)`) — build dev/preview ใช้ตัวนี้เท่านั้น (NFR-5)
+- [x] database `(default)` = **prod** — สร้างแล้ว 2026-10-03: `asia-southeast3` (กรุงเทพฯ), Standard, native mode,
+  production mode; ห้ามเปลี่ยนชื่อหรือลบ (D-48)
+- [ ] **เลื่อนตาม D-48 (ยังไม่อัปเกรดแผน):** สร้าง database ชื่อ `dev` (`asia-southeast3 (กรุงเทพฯ)`) — build dev/preview ใช้ตัวนี้เท่านั้น (NFR-5)
 - [ ] ยังไม่ต้อง deploy rules — ทีม platform ทำผ่าน CI หลังเจ้าของอนุมัติ deploy
 
 ## 3. Cloud Storage (E01-S12)
