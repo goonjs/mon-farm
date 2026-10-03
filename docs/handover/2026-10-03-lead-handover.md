@@ -74,7 +74,7 @@
 
 **ค้างอยู่:**
 - #41 `test(store)` contract บน IndexedDB (E01-S03 AC2, ทีม sync) — draft, ยังไม่มี CI; ต้อง merge `dev` เข้าใหม่ (lockfile เปลี่ยนจาก #35) → CI เขียว → merge
-- MF-15 / E01-S13 font + ไอคอน — งานอยู่ในเครื่องของ session ทีม UX ยังไม่ขึ้น origin; สั่งกู้ขึ้นเป็น draft PR แล้ว (ถ้าไม่ทันก่อนปิด session ต้องทำใหม่)
+- MF-15 / E01-S13 font Noto Sans Thai + ไอคอน Feather — draft #45 (กู้จากเครื่องทีม UX แล้ว) · เจ้าของต้องเลือก: ไอคอน FarmMate แทน Feather ไหม · ลบไฟล์ template expo-symbols ที่ไม่ใช้ไหม; ยังไม่ได้ทดสอบบน Android จริง
 - MF-17 / E01-S15 ป้ายสถานะข้อมูล — เหลือไอคอน รอ MF-15
 - Story status ที่ต้องอัปเดต: E01-S05 → Done · E01-S16 → Done (#34; #41 ทำให้) · E01-S08 → Done เมื่อ deploy rules แล้ว
 - Deploy Dev เป็นสีแดงทุก push เข้า `dev` จนกว่า H1 เสร็จ (ตั้งใจปล่อยแดง)
