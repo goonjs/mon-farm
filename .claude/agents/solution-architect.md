@@ -42,3 +42,11 @@ tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
   `crypto` global, so random ids on native are a dependency-gate ask; Cloud
   Storage free tier is US-regions only; re-check story ACs against fresh
   owner decisions (no-migration left three stale migration ACs).
+- 2026-10-03 — ADR 0003 Android build path (EAS / GH Actions / local /
+  `eas build --local` / Capacitor). Lessons: expo.dev, docs.expo.dev and
+  docs.github.com are egress-blocked too — the Parallel web_fetch MCP reads
+  them but rate-limits after ~3 calls, so batch URLs in one call. "Capacitor"
+  is a way to *make* an app, not a way to *build* an APK — separate the two
+  questions for the owner. Be fair: Capacitor has plugins for TTS/haptics/
+  orientation; the real cost is a third platform layer on an app already in
+  RN. A dev client needs Metro, so field testing needs a release APK.

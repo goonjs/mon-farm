@@ -68,3 +68,14 @@ tools: Read, Grep, Glob, Bash, Edit, Write, WebSearch, WebFetch
   locked deps from the store without changing them. (5) The real test is
   after merge: the close run for the PR's own tag, checked with read-only
   gcloud (48 → 47 tags, pr-77 gone).
+- 2026-10-03 — mon-farm ADR 0003 (Android APK build path). Lessons:
+  (1) ubuntu-24.04 runners ship Android SDK/NDK + `ANDROID_HOME`, so
+  `expo prebuild` + `gradlew assembleRelease` needs no installs. (2) Sign
+  with the real keystore from the first APK: prebuild's template signs
+  release with its public debug key, and switching keys later forces an
+  uninstall that wipes local SQLite. `android/` is regenerated each run, so
+  inject signing every build (`-Pandroid.injected.signing.*` or a config
+  plugin). Keep one keystore in secrets, backed up off GitHub. Set artifact
+  `retention-days` — Free has 500 MB artifact storage. (3) APK builds are
+  `workflow_dispatch` only (~20–40 min on 2-core, secondary source;
+  measure the first run). (4) `eas build --local` still needs an Expo login.
