@@ -228,9 +228,12 @@ may go to another free choice)"*
 
 ## คำถามที่ยังเปิด
 
-1. **ใครสร้าง keystore?** (lead ถามเจ้าของแล้ว — ยังรอคำตอบ)
-   - **เจ้าของสร้างเองตามขั้นตอนที่ agent เขียนให้ แล้วใส่ secret เอง (แนะนำ)** — กุญแจไม่ผ่านมือ agent
-   - ให้ workflow สร้างครั้งแรกแล้วเจ้าของดาวน์โหลดไปเก็บ — สะดวกกว่า แต่กุญแจเคยอยู่ใน log/artifact ของ CI
+1. ~~ใครสร้าง keystore?~~ **ตัดสินแล้ว (owner, 2026-10-03): เจ้าของสร้างเอง**
+   บนคอมของตัวเองด้วย `keytool` แล้วใส่ GitHub Secrets เอง (`ANDROID_KEYSTORE_BASE64`,
+   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) — กุญแจและ
+   รหัสผ่านไม่ผ่าน agent; สำรองไว้นอก GitHub อย่างน้อย 2 ที่. ค่า SHA-1/SHA-256
+   fingerprint ของกุญแจ (ไม่ใช่ความลับ) จะต้องลงทะเบียนใน Firebase สำหรับ Google
+   sign-in บน Android (E02-S01)
 
 ## Sources (ดึงข้อมูล 2026-10-03)
 
