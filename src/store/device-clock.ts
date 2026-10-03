@@ -1,11 +1,13 @@
 /**
  * One device-sequence allocator for the whole app (E01-S02).
  *
- * The store enforces a single high-water mark per install, so the numbers
- * must be handed out by one counter too. A counter per `SaleProvider` breaks
- * as soon as two are mounted — settlement links back to the sale list while
- * the sale's provider stays on the stack — and the stale one then stamps
- * numbers the store already used, which it rightly refuses.
+ * The store has the final word (it allocates this device's numbers inside
+ * the append transaction, see append-rule.ts), but one counter per app keeps
+ * its proposals right first time, so within one tab the stored numbers follow
+ * recording order. A counter per `SaleProvider` would fall behind as soon as
+ * two are mounted — settlement links back to the sale list while the sale's
+ * provider stays on the stack. Other browser tabs have their own counter;
+ * the store renumbers their collisions.
  */
 
 import type { DeviceId } from '../core/types';

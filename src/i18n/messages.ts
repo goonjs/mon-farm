@@ -172,6 +172,7 @@ const th = {
   'closed.closeZone': 'ปิดโซนนี้',
 
   // ── Device settings ──────────────────────────────────────────────────────
+  'storage.notDurable': 'ไม่ได้บันทึกถาวร — เบราว์เซอร์นี้เก็บข้อมูลไม่ได้ ถ้าโหลดหน้าใหม่หรือปิดแท็บ ข้อมูลจะหาย',
   'settings.title': 'ตั้งค่าเครื่อง',
   'settings.back': '← รายการ',
   'settings.open': 'ตั้งค่า',
@@ -441,6 +442,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'closed.switchZone': 'switch zone',
   'closed.closeZone': 'close this zone',
 
+  'storage.notDurable': 'Not saved permanently — this browser cannot store data; reloading or closing the tab loses it',
   'settings.title': 'device settings',
   'settings.back': '← list',
   'settings.open': 'settings',

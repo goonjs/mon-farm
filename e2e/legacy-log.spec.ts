@@ -19,6 +19,8 @@ test('a browser holding a v0.4 log opens empty and drops the old sale keys', asy
     );
     localStorage.setItem('mon-farm:sales', JSON.stringify(['old-sale']));
     localStorage.setItem('mon-farm:synced', '[]');
+    // What E01-S02 wrote on dev builds before IndexedDB.
+    localStorage.setItem('mon-farm-v1:meta', '{}');
     localStorage.setItem('mon-farm:locale', 'th');
     localStorage.setItem('mon-farm:people', '[]');
     localStorage.setItem('mon-farm:farm-profile', '{"zones":[]}');
@@ -40,7 +42,8 @@ test('a browser holding a v0.4 log opens empty and drops the old sale keys', asy
   expect(keys).toContain('mon-farm:people');
   expect(keys).toContain('mon-farm:farm-profile');
   expect(keys).toContain('mon-farm:speech-on');
-  expect(keys).toContain('mon-farm-v1:meta');
+  // E01-S03: nothing of the new store lives in localStorage.
+  expect(keys.filter((k) => k.startsWith('mon-farm-v1:'))).toEqual([]);
 
   await page.screenshot({ path: 'docs/stories/screenshots/e01-s02/legacy-log-ignored.png' });
 });

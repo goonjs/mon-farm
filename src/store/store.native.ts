@@ -58,7 +58,8 @@ export class SqliteStore implements EventStore {
   /**
    * Tail of the write queue (see `serial`). The provider fires appends without
    * awaiting, and two racing transactions could otherwise commit seq 8 before
-   * seq 7 — and then refuse 7 as already used.
+   * seq 7 — which the store would then renumber to 9, reversing this
+   * device's outbox order.
    */
   private queue: Promise<unknown> = Promise.resolve();
 
@@ -104,22 +105,23 @@ export class SqliteStore implements EventStore {
           `SELECT body FROM events WHERE id = ?`,
           event.id,
         );
-        const next = checkAppend(event, row ? (JSON.parse(row.body) as SaleEvent) : undefined, device);
-        if (!next) return;
+        const result = checkAppend(event, row ? (JSON.parse(row.body) as SaleEvent) : undefined, device);
+        if (!result) return;
+        const stored = result.event;
         await txn.runAsync(
           `INSERT INTO events (id, sale_id, device_id, device_seq, user_id, kind, seq, ts, body)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          event.id,
-          event.saleId,
-          event.actor.deviceId,
-          event.deviceSeq,
-          event.actor.userId,
-          event.kind,
-          event.seq,
-          event.ts,
-          JSON.stringify(event),
+          stored.id,
+          stored.saleId,
+          stored.actor.deviceId,
+          stored.deviceSeq,
+          stored.actor.userId,
+          stored.kind,
+          stored.seq,
+          stored.ts,
+          JSON.stringify(stored),
         );
-        if (next !== device) await this.writeDevice(txn, next);
+        if (result.device !== device) await this.writeDevice(txn, result.device);
       });
     });
   }
@@ -170,6 +172,10 @@ export class SqliteStore implements EventStore {
       `SELECT sale_id, MIN(ts) AS started FROM events GROUP BY sale_id ORDER BY started DESC`,
     );
     return rows.map((r) => r.sale_id);
+  }
+
+  async isDurable(): Promise<boolean> {
+    return true;
   }
 
   device(): Promise<DeviceState> {

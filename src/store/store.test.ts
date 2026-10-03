@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { LogBuilder } from '../core/fixtures';
 import type { AcceptEvent } from '../core/types';
+import { canonicalJson } from '../core/canonical';
 import { IntegrityError, MemoryStore } from './store';
 
 const UUIDV7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -42,13 +43,51 @@ describe('MemoryStore — EventStore rules (E01-S02 AC2, AC3)', () => {
     expect((await store.device()).nextDeviceSeq).toBe(3);
   });
 
-  it('rejects a second event claiming a device sequence this device already used', async () => {
+  it('gives an event claiming an already-used device sequence the next free one, never repeating', async () => {
+    const store = new MemoryStore();
+    const { deviceId } = await store.device();
+    const [first] = new LogBuilder('s1', deviceId).accept('p1').build();
+    const [clash] = new LogBuilder('s2', deviceId).accept('p1').build(); // also proposes 1
+    await store.append(first);
+    await store.append(clash);
+    expect((await store.load('s2'))[0]).toMatchObject({ id: clash.id, deviceSeq: 2 });
+    expect((await store.device()).nextDeviceSeq).toBe(3);
+
+    // Re-appending the caller's copy (still numbered 1) is the same event, not a conflict.
+    await store.append(clash);
+    expect(await store.pending()).toHaveLength(2);
+  });
+
+  it('one id, one body: what is stored and what the outbox sends both carry the allocated number', async () => {
+    const store = new MemoryStore();
+    const { deviceId } = await store.device();
+    const [first] = new LogBuilder('s1', deviceId).accept('p1').build();
+    const [clash] = new LogBuilder('s2', deviceId).accept('p2').build(); // proposes 1, gets 2
+    await store.append(first);
+    await store.append(clash);
+
+    const loaded = (await store.load('s2')).find((e) => e.id === clash.id)!;
+    const queued = (await store.pending()).find((e) => e.id === clash.id)!;
+    expect(loaded.deviceSeq).toBe(2);
+    expect(canonicalJson(queued)).toBe(canonicalJson(loaded));
+  });
+
+  it('still refuses the same id with different content after renumbering', async () => {
     const store = new MemoryStore();
     const { deviceId } = await store.device();
     const [first] = new LogBuilder('s1', deviceId).accept('p1').build();
     const [clash] = new LogBuilder('s2', deviceId).accept('p1').build();
     await store.append(first);
-    await expect(store.append(clash)).rejects.toBeInstanceOf(IntegrityError);
+    await store.append(clash); // stored as deviceSeq 2
+    await expect(store.append({ ...clash, ts: clash.ts + 1 })).rejects.toBeInstanceOf(IntegrityError);
+  });
+
+  it('stores other devices\' events exactly as received and leaves this device\'s counter alone', async () => {
+    const store = new MemoryStore();
+    const [theirs] = new LogBuilder('s1', 'dev-other').accept('p1').accept('p1').build().slice(1);
+    await store.append(theirs);
+    expect((await store.load('s1'))[0]).toEqual(theirs);
+    expect((await store.device()).nextDeviceSeq).toBe(1);
   });
 
   it('lists pending events in device order and clears them by id', async () => {

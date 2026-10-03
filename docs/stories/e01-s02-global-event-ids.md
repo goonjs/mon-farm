@@ -1,6 +1,6 @@
 # Story E01-S02: id ของ event ไม่ซ้ำทั่วโลก + ผู้บันทึก = user + เครื่อง
 
-Status: Review
+Status: Done
 
 ## Context
 
@@ -54,7 +54,7 @@ Status: Review
 - [x] `npm run verify` เขียวในเครื่อง (typecheck, lint, Vitest, jest, web build, Playwright) และ fixture เดิมได้ผล projection/settle เท่าเดิม
 - [x] Playwright: seed คีย์ localStorage รูปแบบเก่า → reload → แอปเปิดได้ เริ่มว่าง ไม่ crash (หลักฐานใน QA notes)
 - [x] ตรวจตนเองตาม definition-of-done + offline-sync checklist และมี review อิสระโดย subagent แยก ผลอยู่ใน §Code review
-- [ ] CI เขียวบน PR
+- [x] CI เขียวบน PR (#15, run 37077709188)
 
 
 ### การตัดสินใจ / ส่วนที่ต่างจากแผน

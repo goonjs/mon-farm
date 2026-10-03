@@ -232,8 +232,7 @@ event มีสองตระกูล และ registry ใน `src/core/merg
 แล้ว (ไม่ใช่ `seq`) เพราะสองเครื่องที่ออฟไลน์อาจได้ `seq` ต่อการขายเลขเดียวกัน `seq` จึงยังอยู่แต่ไม่ unique และ
 ลำดับการ fold คือ `(seq, deviceId, deviceSeq, id)` (`src/core/order.ts`) ไม่อ่าน `ts` ตัวนับ `deviceSeq` มีตัวเดียวทั้งแอป
 (`src/store/device-clock.ts`) ไม่ใช่ต่อหน้าจอการขาย `userId` เป็นค่าแทน
-`'pre-login'` จนกว่า E02-S01 จะมี login (`src/store/session.ts`) เว็บยังเป็น localStorage ภายใต้คีย์ `mon-farm-v1:*`
-จนถึง E01-S03
+`'pre-login'` จนกว่า E02-S01 จะมี login (`src/store/session.ts`) เว็บเป็น IndexedDB ตั้งแต่ E01-S03
 
 **UUIDv7 (RFC 9562, เจ้าของเลือก 2026-10-03)**: เป็นมาตรฐาน IETF (ULID ไม่ใช่) id ที่สร้างใกล้เวลากันเรียงใกล้กัน
 ทำให้ index ของ SQLite/IndexedDB มี locality ดีและ debug ง่าย เขียน generator เองราว 20 บรรทัดใน
@@ -288,15 +287,16 @@ CREATE TABLE media_queue (media_id TEXT PRIMARY KEY, group_id TEXT NOT NULL, loc
                           content_type TEXT NOT NULL, bytes INTEGER NOT NULL, uploaded_at INTEGER);
 ```
 
-การทำ seq + insert เป็น transaction แบบ exclusive: ตรวจกับ type ของ expo-sqlite 57.0.1 แล้ว (E01-S02) —
+การทำ seq + insert เป็น transaction แบบ exclusive (store กำหนด `deviceSeq` ของเครื่องตัวเองใน transaction เหมือนเว็บ):
+ตรวจกับ type ของ expo-sqlite 57.0.1 แล้ว (E01-S02) —
 `withExclusiveTransactionAsync(txn => …)` มีจริง และระหว่างที่ถือ write lock การเขียนแบบ async อื่นจะล้มด้วย
 `database is locked` ดังนั้น `SqliteStore` ส่งการเขียนทุกตัว (append, markSynced, การสร้าง device id) ผ่านคิว
-ตามลำดับที่เรียก ตัวนับ seq อยู่ใน `meta` (คีย์ `device`) และ append ปฏิเสธ `deviceSeq` ของเครื่องตัวเองที่ต่ำกว่า
-ค่าที่บันทึกไว้
+ตามลำดับที่เรียก ตัวนับ seq อยู่ใน `meta` (คีย์ `device`) และ `deviceSeq` ของเครื่องตัวเองที่ต่ำกว่าค่าที่บันทึกไว้
+ได้เลขว่างถัดไปแทน (ไม่ถูกปฏิเสธ)
 
 **ทำไมไม่บังคับ `(device_id, device_seq)` unique ทั้งตาราง**: ถ้าสองการติดตั้งเคยได้ `deviceId` เดียวกัน (เช่น
 Android Auto Backup restore ลงเครื่องใหม่ขณะเครื่องเก่ายังใช้) `insertPulled` จะชน constraint และ pull ค้างถาวร
-จึงบังคับเฉพาะแถวของเครื่องนี้ใน append; ข้อมูลที่ดึงมาซ้ำ `(deviceId, deviceSeq)` แต่ id ต่างกัน → เก็บไว้และ log
+จึงกำหนดเลขให้เฉพาะแถวของเครื่องนี้ใน append (เลขที่ใช้แล้วได้เลขว่างถัดไป ไม่ถูกปฏิเสธ — E01-S03); ข้อมูลที่ดึงมาซ้ำ `(deviceId, deviceSeq)` แต่ id ต่างกัน → เก็บไว้และ log
 เตือน ไม่หยุด pull และตั้ง `android.allowBackup: false` ใน `app.json` (E01-S06) เพื่อกัน `deviceId` ถูกโคลน
 
 **canonical JSON** (ใช้เทียบ "เนื้อหาเท่ากัน" ทั้งในเครื่องและกับ Firestore): key เรียงตามตัวอักษรทุกระดับ, ฟิลด์
@@ -310,15 +310,26 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
 `[deviceId, deviceSeq]`; index `[groupId, saleId]` และ `[groupId, targetId]`), `meta`, `memberships`,
 `pendingOps`, `mediaQueue` (เก็บไฟล์เป็น Blob)
 
-- append 1 ครั้ง = transaction `readwrite` เดียวครอบ `events` + `meta` (ตัวนับ seq) ปลอดภัยแม้เปิดหลายแท็บ
+- **สร้างแล้ว (E01-S03)**: record ใน `events` = `{ id, saleId, ts, deviceSeq, pending, event }` (เก็บ event ทั้งตัวใน
+  `event`), index `saleId` และ `pending` — index ที่มี `groupId` เพิ่มเมื่อ envelope มี `groupId` (E02-S02); `meta`
+  คีย์ `device` = `{ deviceId, nextDeviceSeq, legacyCleanupV1 }`; ยังไม่สร้าง `memberships`/`pendingOps`/`mediaQueue`
+  (สร้างใน story ที่ใช้)
+- append 1 ครั้ง = transaction `readwrite` เดียวครอบ `events` + `meta` (ตัวนับ seq) ปลอดภัยแม้เปิดหลายแท็บ:
+  **store เป็นผู้กำหนด `deviceSeq` ของเครื่องตัวเองใน transaction** (`checkAppend`) — เลขที่หน้าจอเสนอมาใช้ได้ถ้ายังว่าง
+  ถ้าแท็บอื่นใช้ไปแล้วจะได้เลขว่างถัดไปแทนการถูกปฏิเสธ IndexedDB เรียง transaction ข้ามแท็บให้ จึงไม่มี event หาย
+  และไม่มีเลขซ้ำ (แก้ใน E01-S03 หลังพบว่าตัวนับในหน่วยความจำต่อแท็บทำให้ event หายราวครึ่ง; มี Playwright สองแท็บ)
+  ที่ยังเหลือ: แต่ละแท็บเห็นเฉพาะ event ของตัวเองจนกว่าจะ reload และสองแท็บในการขายเดียวกันได้ `seq` ต่อการขายซ้ำกัน
+  (ลำดับ fold ตัดสินด้วย `deviceSeq` ตามลำดับที่ commit) — ไม่มีข้อมูลหาย
 - เรียก `navigator.storage.persist()` เพื่อลดโอกาสเบราว์เซอร์ลบข้อมูล
-- ใช้ IndexedDB ไม่ได้ (เช่น private mode) → ใช้ `MemoryStore` และเตือนเป็นภาษาไทย (E01-S03)
+- ใช้ IndexedDB ไม่ได้ (เช่น private mode) → ใช้ `MemoryStore` และเตือนเป็นภาษาไทย (E01-S03) — `EventStore.isDurable()`
+  + แถบ `StorageWarning` บนทุกหน้าจอ
 
 ### กติกาของ `EventStore`
 
 - `append(e)`: id ใหม่ → insert; **id เดิมเนื้อหาเดิม → ไม่ทำอะไร** (idempotent); **id เดิมเนื้อหาต่าง →
   `IntegrityError`** ห้ามเขียนทับ (แทน `DuplicateSeqError`)
-- `insertPulled(events)`: กติกาเดียวกัน ใส่ `synced_at` / `received_at` และไม่เข้า outbox
+- `insertPulled(events)`: กติกาเดียวกันเรื่อง id (idempotent / `IntegrityError`) แต่ **เก็บตามที่ได้รับ ไม่กำหนด
+  `deviceSeq` ใหม่** (การกำหนดเลขใช้กับ append ในเครื่องเท่านั้น) ใส่ `synced_at` / `received_at` และไม่เข้า outbox
 - `pending(groupId?)`: เรียงตาม `device_seq` · `markSynced(ids, receivedAt)` ทำหลังเซิร์ฟเวอร์ยืนยันแล้วเท่านั้น
 - `purgeGroup(gid)`: ลบทุก table ของกลุ่มนั้น + `pull_cursor:<gid>` ใน transaction เดียว แล้วลบไฟล์สื่อของกลุ่ม
   บนดิสก์ เรียกได้ **เฉพาะ** เมื่อเครื่องรู้ว่าผู้ใช้ไม่เป็นสมาชิกกลุ่มนั้นแล้ว (§การดำเนินการด้านสมาชิกภาพ, E02-S04,
