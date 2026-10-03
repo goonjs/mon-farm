@@ -33,6 +33,9 @@ Status: In Progress
 
 ## ต้องให้เจ้าของทำ/อนุมัติ
 
+(ทำแล้ว 2026-10-03: dependency อนุมัติผ่าน lead ตาม pre-approval ของเจ้าของ; ชุดไอคอน = Feather ตาม design-system §12.10 ข้อ 11)
+
+
 - อนุมัติ `@expo/vector-icons` (หรือชุดอื่น) ตาม gate dependency พร้อมผลตรวจ licence + ช่องโหว่
 - เลือกชุดไอคอนสุดท้าย (Feather หรืออื่น)
 
@@ -52,12 +55,16 @@ Status: In Progress
   (index ของแพ็กเกจ `require` ครบ 9 weight จะติดไปใน bundle)
 - **หนึ่ง family ต่อหนึ่ง weight** (`src/theme/fonts.ts`, `t.face(weight)`): บน Android `fontFamily` ชี้ไฟล์เดียว
   ถ้าใช้ `fontWeight` กับ regular จะได้ตัวหนาปลอม — call site ที่เคยเป็น `fontFamily: sans` + `fontWeight` (68 จุด)
-  เปลี่ยนเป็น `...t.face(w)`; ข้อความ mono ยังเป็น system mono (Noto Sans Thai ไม่มี mono)
-- **FontGate** (`src/theme/FontGate.tsx`) ครอบ root: ไม่แสดงจนกว่า font โหลด; โหลดไม่ได้ → แสดงด้วย system font ไม่ค้าง
+  เปลี่ยนเป็น `...t.face(w)`; ข้อความ mono ยังเป็น system mono (Noto Sans Thai ไม่มี mono) — **ข้อยกเว้นที่ตั้งใจ**:
+  บนเว็บ mono stack มี `NotoSansThai_400Regular` ก่อน generic ไทยในป้าย mono จึงเป็น Noto; บน Android
+  font ไทยสำรองของระบบคือ Noto Sans Thai อยู่แล้ว
+- **FontGate** (`src/theme/FontGate.tsx`) ครอบ root: คง splash ไว้ (`preventAutoHideAsync`) จนกว่า font โหลด แล้วซ่อน;
+  โหลดไม่ได้หรือค้างเกิน 3 วินาที → แสดงด้วย font ของระบบ (ทุก weight เหลือ regular) ไม่ค้างจอว่าง;
+  บนเว็บ `face()` ต่อท้ายด้วย system stack จึงไม่ตกไปเป็น serif
 - **ไอคอน**: `Icon` (มี `label` = ประกาศเป็นภาษาไทย, ไม่มี = ซ่อนจาก screen reader) + `Button` `icon` / `iconAfter`
   แทนลูกศรข้อความในปุ่มนำทาง: ตั้งค่า, รายการ (กลับ), ข้อมูลฟาร์ม, การขายใหม่, เริ่มนับ, กลับไปนับ, กองถัดไป
   ปุ่ม action ในหน้าชั่ง (↺ ⚖) ไม่ใช่จุดนำทาง — ไม่แตะใน story นี้
-- **ขนาด bundle เว็บ** (`npm run build:web`, `dist/`): ก่อน 3,620,395 B → หลัง 3,935,716 B (+315,321 B);
+- **ขนาด bundle เว็บ** (`npm run build:web`, `dist/`): ก่อน 3,620,395 B → หลัง 3,935,716 B (+315,321 B; หลังแก้ตาม review 3,940,292 B);
   JS 2,314,115 → 2,324,381 B (+10,266 B); ไฟล์ font ใหม่ 5 weight + Feather. ขนาดแอป native: ยังวัดไม่ได้ใน sandbox
   (ไม่มี Android build) — ไฟล์ ttf 5 weight รวม 237,584 B คือส่วนที่เพิ่มใน APK โดยประมาณ
 - **ข้อค้นพบ (ส่งต่อ design)**: ตัวเลขนับสาธารณะใช้ Noto Sans Thai ExtraBold แล้ว digit กว้าง 0.578em (−0.04 tracking = 0.538em)
@@ -74,6 +81,22 @@ Status: In Progress
   ไม่ถูก import จากหน้าจอจริง — ไม่ลบ (การลบไฟล์ต้องขอยืนยัน) เสนอให้ลบใน story แยก
 
 ## Code review
+
+Independent review (subagent, 2026-10-03) — request changes, 11 findings; resolved:
+
+1. ไม่มี test ที่ล้มถ้า hint หาย → เพิ่ม e2e 4 หลัก (hint ต้องขึ้น) + อ่านอัตราส่วนหลังขนาดนิ่ง — **แก้**
+2. gating ของ hint ไม่มี unit test + ค้างซ่อนถ้า stage เปลี่ยนแต่ตัวเลขไม่เปลี่ยน → `HoldStage.hint.test.tsx` 4 test
+   (test "stage สูงขึ้น" ล้มก่อนแก้) และเปลี่ยน key เป็น จำนวนหลัก + ขนาดตัวเลข — **แก้**
+3. `document.fonts.check` ล้มไม่ได้ → ตรวจว่า face ที่ลงทะเบียน `status === 'loaded'` — **แก้**
+4. splash / ไม่มี timeout บน native → `preventAutoHideAsync` + `hideAsync` + timeout 3 วินาที (test ก่อน) — **แก้**
+5. web fallback เป็น serif → `faceFor(w, 'web')` ต่อ system stack (test) — **แก้**
+6. ไทยในป้าย mono → mono stack มี Noto บนเว็บ; บันทึกเป็นข้อยกเว้นใน Dev notes — **แก้/บันทึก**
+7. comment ใน `design/tokens.ts` ล้าสมัย → เขียนใหม่ `sans` = fallback เท่านั้น — **แก้**
+8. a11y props ซ้ำซ้อน → เหลือ `accessible={false}` + `aria-hidden` — **แก้**
+9. ปุ่มกลับไม่มีคำว่า "กลับ" สำหรับ screen reader (ชื่อปุ่มคือ "รายการ"/"ตั้งค่า") — **เลื่อน**: ใช้ข้อความเดิมก่อนมีลูกศร
+   เป็นชื่อปุ่ม; คำบนปุ่มนำทางจะทบทวนใน UX flow (MF-20/21) ไม่เปลี่ยนเงียบ ๆ ใน story นี้
+10. act() warning จากไอคอน → mock Feather ใน `jest.setup.js` — **แก้** (warning ที่เหลือใน `HoldStage.test.tsx` มีอยู่เดิม)
+11. comment ยาว / comment ของ test weight → **แก้**
 
 ## QA notes
 

@@ -49,14 +49,29 @@ test('a phone in portrait shows the rotate hint past two digits, without coverin
   // ExtraBold with tight tracking (0.538em) gives ~0.620 — on the 0.62 floor.
   // So assert the rule itself: the hint shows exactly when the measured
   // ratio is under the floor. (Finding raised: 3 digits now sit on the floor.)
-  const ratio = await page.getByTestId('count').evaluate(
-    (el) => parseFloat(getComputedStyle(el).fontSize) / Math.min(innerWidth, innerHeight),
-  );
+  // Read only once the size has settled: the first paint uses the token's
+  // estimated digit width and is corrected after one layout.
+  const readRatio = () =>
+    page.getByTestId('count').evaluate(
+      (el) => parseFloat(getComputedStyle(el).fontSize) / Math.min(innerWidth, innerHeight),
+    );
+  let ratio = await readRatio();
+  await expect
+    .poll(async () => {
+      const before = ratio;
+      await page.waitForTimeout(150);
+      ratio = await readRatio();
+      return ratio === before;
+    })
+    .toBe(true);
   const needsHint = ratio < tokens.publicNumeral.minHeightRatio;
   await expect(page.getByTestId('rotate-hint')).toHaveCount(needsHint ? 1 : 0);
   // No flicker (lead condition, 2026-10-03): if the final answer is "no
   // hint", it must never have shown at all.
-  if (!needsHint) expect(await page.evaluate(() => (window as unknown as { hintSeen: boolean }).hintSeen)).toBe(false);
+  if (!needsHint) {
+    const hintSeen = await page.evaluate(() => (window as unknown as { hintSeen: boolean }).hintSeen);
+    expect(hintSeen).toBe(false);
+  }
 
   // Non-blocking: the count itself must still be fully on screen, not
   // obscured or pushed out by the hint. Sub-pixel tolerance: layout engines

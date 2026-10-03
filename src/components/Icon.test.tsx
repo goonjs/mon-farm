@@ -19,7 +19,8 @@ describe('Icon', () => {
     wrap(<Icon name="plus" testID="deco" />);
     const el = screen.getByTestId('deco', { includeHiddenElements: true });
     expect(el.props.accessible).toBe(false);
-    expect(el.props.importantForAccessibility).toBe('no-hide-descendants');
+    expect(el.props['aria-hidden']).toBe(true);
+    expect(screen.queryByTestId('deco')).toBeNull(); // hidden from the default (accessible) query
   });
 
   test('a button with an icon is still named by its text alone', () => {

@@ -303,7 +303,7 @@ export function HoldStage({
    * the token's estimated advance, and judging legibility on that estimate
    * flashed the hint for a frame whenever the real face was narrower (E01-S13:
    * Noto Sans Thai puts three digits right on the floor). Decided once per
-   * digit count and stage size, never on an in-between render.
+   * digit count and numeral size, never on an in-between render.
    */
   const [sizedFor, setSizedFor] = useState<string | null>(null);
 
@@ -321,17 +321,20 @@ export function HoldStage({
    * below is measured rather than assumed. The numeral is the embedded Noto
    * Sans Thai (E01-S13), but it falls back to the system face if the font
    * failed to load, and digit widths differ between faces and renderers — the
-   * token's estimate is not right everywhere. Guessing low overflows the viewport (CI's Linux face measures 0.6558
-   * against the token's 0.62, which put a portrait numeral 22px past a 390px
-   * screen); guessing high gives back millimetres F-9.7 says the count cannot
+   * token's estimate is not right everywhere. Guessing low overflows the
+   * viewport (CI's old Linux system face measured 0.6558 against the token's
+   * 0.62, which put a portrait numeral 22px past a 390px screen; Noto with
+   * tight tracking measures 0.538); guessing high gives back millimetres F-9.7 says the count cannot
    * spare. So the token is the first paint's estimate, and every paint after
    * it uses the ratio the glyph actually achieved.
    */
   const digits = String(count).length;
-  const sizeKey = `${digits}|${box.width}x${box.height}`;
   const byHeight = box.height * t.publicNumeral.stageHeightRatio;
   const byWidth = box.width / (advanceEm * Math.max(1, digits));
   const fontSize = Math.max(24, Math.min(byHeight, byWidth));
+  // Keyed on what the numeral IS, not on the stage: a stage that only grows
+  // taller leaves a width-bound numeral unchanged and lays nothing out again.
+  const sizeKey = `${digits}|${fontSize}`;
 
   /**
    * The rotate hint (S19), and why it is a MEASUREMENT rather than an

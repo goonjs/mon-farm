@@ -20,7 +20,15 @@ test('Thai text uses the embedded Noto Sans Thai with the network blocked', asyn
 
   const family = await button.getByText('ตั้งค่า').evaluate((el) => getComputedStyle(el).fontFamily);
   expect(family).toContain('NotoSansThai_500Medium');
-  expect(await page.evaluate(() => document.fonts.check('16px NotoSansThai_500Medium', 'ตั้งค่า'))).toBe(true);
+  // `document.fonts.check` is true when NO face matches the name, so it cannot
+  // fail here. Look for the registered face and require it to have loaded.
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        [...document.fonts].some((f) => f.family.replace(/"/g, '') === 'NotoSansThai_500Medium' && f.status === 'loaded'),
+      ),
+    )
+    .toBe(true);
   expect(external).toEqual([]);
 
   await page.screenshot({ path: `docs/ux/screenshots/${testInfo.project.name}/fonts-offline.png` });

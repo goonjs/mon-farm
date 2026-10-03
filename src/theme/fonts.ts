@@ -18,7 +18,9 @@ import { NotoSansThai_600SemiBold } from '@expo-google-fonts/noto-sans-thai/600S
 import { NotoSansThai_700Bold } from '@expo-google-fonts/noto-sans-thai/700Bold';
 import { NotoSansThai_800ExtraBold } from '@expo-google-fonts/noto-sans-thai/800ExtraBold';
 
-import type { tokens } from '../../design/tokens';
+import { Platform } from 'react-native';
+
+import { tokens } from '../../design/tokens';
 
 export type FontWeight = (typeof tokens.font.weight)[keyof typeof tokens.font.weight];
 
@@ -38,7 +40,17 @@ export const fontAssets = {
   NotoSansThai_800ExtraBold,
 };
 
-/** The text style for a weight: its own family, and deliberately no `fontWeight`. */
+/**
+ * The text style for a weight: its own family, and deliberately no
+ * `fontWeight`. On web the system stack follows as a fallback, so a font that
+ * failed to load degrades to the platform sans rather than the browser's
+ * default (often serif); native takes a single family name only.
+ */
+export function faceFor(weight: FontWeight, os: string): { fontFamily: string } {
+  const family = FONT_FACES[weight];
+  return { fontFamily: os === 'web' ? `${family}, ${tokens.font.family.sans}` : family };
+}
+
 export function face(weight: FontWeight): { fontFamily: string } {
-  return { fontFamily: FONT_FACES[weight] };
+  return faceFor(weight, Platform.OS);
 }

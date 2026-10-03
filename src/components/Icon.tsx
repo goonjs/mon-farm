@@ -32,12 +32,7 @@ export function Icon({
   // empty placeholder until it has loaded, and the meaning must not wait for it.
   const a11y = label
     ? { accessible: true, accessibilityRole: 'image' as const, accessibilityLabel: label }
-    : {
-        accessible: false,
-        importantForAccessibility: 'no-hide-descendants' as const,
-        accessibilityElementsHidden: true,
-        'aria-hidden': true,
-      };
+    : { accessible: false, 'aria-hidden': true };
   return (
     <View testID={testID} {...a11y}>
       <Feather name={name} size={size ?? t.font.size.body * 1.25} color={color ?? t.color.ink} />
