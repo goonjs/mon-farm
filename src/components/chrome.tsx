@@ -166,6 +166,7 @@ export function Button({
   testID,
   icon,
   iconAfter,
+  accessibilityLabel,
 }: {
   children: React.ReactNode;
   onPress?: () => void;
@@ -176,6 +177,8 @@ export function Button({
   icon?: IconName;
   /** Trailing icon, for forward navigation ("next"). Decorative too. */
   iconAfter?: IconName;
+  /** When the visible text alone does not say what the button acts on. */
+  accessibilityLabel?: string;
 }) {
   const t = useTheme();
   const styles = {
@@ -187,6 +190,7 @@ export function Button({
   return (
     <Pressable
       testID={testID}
+      accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       onPress={onPress}
       disabled={disabled}

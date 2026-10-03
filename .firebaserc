@@ -1,0 +1,13 @@
+{
+  "projects": {
+    "default": "mon-farmmate"
+  },
+  "targets": {
+    "mon-farmmate": {
+      "hosting": {
+        "dev": ["mon-farm-dev"],
+        "prod": ["mon-farm-prod"]
+      }
+    }
+  }
+}

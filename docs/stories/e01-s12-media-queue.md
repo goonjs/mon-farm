@@ -8,6 +8,7 @@ Status: Ready
 - PRD: OPS-13, NFR-2, NFR-5 · D-1
 - Architecture: "2026-10-02 — Direction" แถว *Media*
 - ขึ้นกับ: E01-S09, E01-S10
+- ปรับตาม D-34 (2026-10-03)
 
 ## คำอธิบาย
 
@@ -36,7 +37,7 @@ Status: Ready
 ## ต้องให้เจ้าของทำ/อนุมัติ
 
 - ถ้าต้องใช้ `expo-file-system` หรือ lib อื่น → gate dependency
-- ยืนยัน bucket ใน asia-southeast1 และ budget alert ครอบคลุม Storage
+- ยืนยัน bucket ของ dev และ bucket หลัก (prod) อยู่ใน asia-southeast1 และ budget alert ครอบคลุม Storage; build dev/preview อัปโหลดเข้า bucket ของ dev เท่านั้น
 
 ## Verification
 

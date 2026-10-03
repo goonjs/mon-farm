@@ -254,7 +254,10 @@ position, and a word — colour is the fourth channel, never the first.
 | Paused / not ready | Hollow dot | Topbar left | `หยุด` |
 | Audio degraded | Slashed speaker | Topbar right | `ไม่มีเสียง` |
 | Clock anomaly | Clock glyph in a flag chip | Topbar right | `เวลาผิด` |
-| Unsynced | Half-filled dot + count | Topbar right | `ค้าง N` |
+| Unsynced | Half-filled dot + count | Topbar right | `รอส่ง N` |
+
+ป้ายสถานะ sync ภาพรวม (คำตอบเจ้าของ 2026-10-03, แทน `ค้าง N` เดิม):
+`ซิงก์แล้ว` / `รอส่ง N` / `ขัดกัน N` / `ส่งไม่สำเร็จ · ลองใหม่` (E01-S10)
 
 The last three are non-blocking by design. They report; they never gate
 counting. A screen that stops you counting because its clock is wrong has
@@ -587,3 +590,8 @@ use `ink` at `figure`/`displayXl` size on `surfaceRaised`, ≥7:1.
 | 9 สถานะข้อมูล/การเงิน | ok | ใช้ตามที่เสนอ เพิ่ม token เมื่อ story ต้องใช้ |
 | 10 สี Sync | ok | คงเดิม (เขียว ✓ / amber / แดง ⚠) |
 | 11 ไอคอน | **(b)** ชุดไอคอนเส้น open-licence สำหรับ MVP | story ใน E01 พร้อมตรวจ dependency/ความปลอดภัย — ตัวเลือกที่แนะนำ `@expo/vector-icons` (MIT, ของ Expo เอง, ใช้ `expo-font` ที่มีอยู่) ชุด Feather/Lucide-style |
+
+**ขอบเขตที่รับจากรูปตัวอย่าง FarmMate (เจ้าของ 2026-10-03, U1 b / U2 b):** รับเฉพาะ **การ์ดและไอคอน** —
+พื้นการ์ด (`surfaceRaised` + มุม `lg`) พร้อมช่องไอคอนสีอ่อน (`md`) และสไตล์ไอคอน (§12.7); แถบนำทางล่าง FAB
+แดชบอร์ด และการชั่งแบบเป็นขั้น ๆ ไม่ใช่ requirement ใช้ทำ mockup วาง flow ก่อน แล้วค่อยเขียน story:
+[`mockups/flow-v1.html`](mockups/flow-v1.html)

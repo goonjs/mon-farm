@@ -17,7 +17,7 @@ Decision log D-1…D-21):
 
 | Area | Decision | Why |
 |---|---|---|
-| Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert, asia-southeast1, separate `dev` and `prod` projects | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
+| Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert, asia-southeast1, **one Firebase project** for MVP (D-34): dev/preview on a named Firestore database `dev` + a dev Storage bucket, prod on `(default)` + the default bucket; split into two projects before commercial launch | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
 | Sync unit | **Keep the append-only event log as source of truth and sync unit.** Each event = one immutable Firestore doc (`groups/{gid}/events/{eventId}`), create-only security rules → idempotent re-push, nothing overwritten. Edits are new events carrying `targetId` + `baseEventId`; concurrent edits merge only when they touch different non-money/weight/count/status fields, otherwise **Conflict** surfaced to the user (see §Sync engine). | Firestore is last-write-wins per document and transactions fail offline, so platform defaults can't satisfy "never silently overwrite money". Basket events are additive → different devices merge for free. |
 | Pending Sync | Our own outbox (`synced_at IS NULL`), not Firestore's cache | JS SDK persistence on React Native is memory-only; our SQLite store owns durability. Avoids `@react-native-firebase`. |
 | IDs & ordering | Globally unique event ids (**UUIDv7**, owner 2026-10-03) + per-device sequence; causal order only, no clock ordering; `(sale_id, seq)` PK retired; `actor` → user id + device id | Two offline phones would collide on per-sale `seq`. |
@@ -26,7 +26,7 @@ Decision log D-1…D-21):
 | Media | Local file queue → Cloud Storage via the outbox | Offline capture. |
 | Auth | Firebase Auth: Google now; LINE later via custom token from a small server endpoint (Cloud Functions / Cloud Run) (or OIDC if a spike passes); `linkWithCredential` for one user | LINE is not a built-in provider. |
 | Orientation | Portrait primary; weighing public mode may rotate | D-17; `app.json` is already `default` (S19). |
-| PR previews | **Firebase Hosting preview channels** (ADR 0001) in the **dev** project: `expo export` → `firebase hosting:channel:deploy pr-N --expires 7d`; channel deleted on PR close; no container images to retain. *Superseded 2026-10-03: the earlier Cloud Run + Artifact Registry design (PRD D-22).* | ADR 0001; owner rule (7-day previews) |
+| PR previews | **Firebase Hosting preview channels** (ADR 0001) on the **dev** site (same project as prod, D-34), wired to the `dev` database and bucket: `expo export` → `firebase hosting:channel:deploy pr-N --expires 7d`; channel deleted on PR close; no container images to retain. *Superseded 2026-10-03: the earlier Cloud Run + Artifact Registry design (PRD D-22).* | ADR 0001; owner rule (7-day previews) |
 | CI minutes | Trigger `push: main` + `pull_request` only (today every PR runs twice); docs-only changes skip heavy jobs via a cheap `changes` gate; graph `changes → verify → e2e → preview`, sequential, each with `timeout-minutes`; cache Playwright browsers; e2e reuses the built `dist/`. | Owner rule: save minutes, fail fast. |
 
 Risks carried: native has never run on a device (top risk with Android-first);
@@ -70,8 +70,9 @@ Firestore document หนึ่งตัว ที่สร้างได้อ
                                     └──────────┬───────────────────┘
                                                │ Firebase JS SDK (memory cache)
                  ┌─────────────────────────────▼─────────────────────────────┐
-                 │ Firebase (dev / prod แยกโปรเจกต์, asia-southeast1, Blaze)   │
-                 │ Auth (Google) · Firestore groups/{gid}/… · Cloud Storage   │
+                 │ Firebase 1 โปรเจกต์ (asia-southeast1, Blaze, D-34)          │
+                 │ site dev/prod · Firestore db `dev` / `(default)` · bucket  │
+                 │ dev/prod · Auth (Google, ใช้ร่วม) · groups/{gid}/…          │
                  │ Cloud Functions: createInvite / acceptInvite               │
                  └────────────────────────────────────────────────────────────┘
 ```
@@ -227,6 +228,21 @@ event มีสองตระกูล และ registry ใน `src/core/merg
 `correction.targetSeq` ของ v0.4 กลายเป็น change ที่ชี้ `targetId`; `sys` payload ของการขายถูกจัดเข้า registry
 ใน E01-S02 การออกแบบโมเดลการขายใหม่ทั้งชุดอยู่ใน E04-S01
 
+**ช่วงเปลี่ยนผ่าน (E01-S02 → E04-S01)**: event การขายของ v0.4 ได้ `id`, `deviceSeq` และ `actor` ใหม่แล้ว แต่ยังไม่มี
+`groupId`/`targetId`/`baseEventId` (E02-S02 / E04-S01) `correction` ชี้เข่งด้วย **`targetId` = id ของ event เข่ง**
+แล้ว (ไม่ใช่ `seq`) เพราะสองเครื่องที่ออฟไลน์อาจได้ `seq` ต่อการขายเลขเดียวกัน `seq` จึงยังอยู่แต่ไม่ unique และ
+ลำดับการ fold คือ `(seq, deviceId, deviceSeq, id)` (`src/core/order.ts`) ไม่อ่าน `ts` ตัวนับ `deviceSeq` มีตัวเดียวทั้งแอป
+(`src/store/device-clock.ts`) ไม่ใช่ต่อหน้าจอการขาย `userId` เป็นค่าแทน
+`'pre-login'` จนกว่า E02-S01 จะมี login (`src/store/session.ts`) เว็บเป็น IndexedDB ตั้งแต่ E01-S03
+
+**Soft Delete + provenance (E01-S04)**: event `delete` / `restore` ชี้ `targetId` ใดก็ได้ (การขาย, โซน, กอง, รายการหัก,
+เข่ง = id ของ event เข่ง) ตัดสินด้วย event ล่าสุดตามลำดับ fold (`src/core/soft-delete.ts`) — ยังไม่มี `baseEventId`/DAG
+(E01-S11 จะแทนกฎ "ล่าสุดชนะ" นี้ด้วย Conflict เมื่อสองเครื่องลบ/กู้คืนพร้อมกัน) ลบโซน = ซ่อนกองและเข่งในโซนด้วย envelope
+ได้ฟิลด์ `source` (`'app'` ตอนนี้) ตามแบบด้านบน และฟิลด์วิธีป้อนของเข่ง (`hold`/`hold-kbd`) เปลี่ยนชื่อจาก `source`
+เป็น `input` เพื่อไม่ชนกัน ลบเขตที่คนกรีดยังมีรายการหักมีผลไม่ได้จนกว่าจะยกเลิกรายการหักก่อน และกู้คืนรายการหักของคนกรีด
+ในเขตที่ถูกลบไม่ได้จนกว่าจะกู้คืนเขตก่อน (D-44, `src/core/delete-guard.ts`; ตรวจทุกทางเขียน: `setDeleted` และ
+`SaleProvider.append`; E01-S16)
+
 **UUIDv7 (RFC 9562, เจ้าของเลือก 2026-10-03)**: เป็นมาตรฐาน IETF (ULID ไม่ใช่) id ที่สร้างใกล้เวลากันเรียงใกล้กัน
 ทำให้ index ของ SQLite/IndexedDB มี locality ดีและ debug ง่าย เขียน generator เองราว 20 บรรทัดใน
 `src/lib/id.ts` ไม่ต้องใช้ library uuid **ห้ามใช้ส่วนเวลาใน id เรียงหรือตัดสินอะไร** เพราะมาจากนาฬิกาเครื่อง
@@ -236,8 +252,9 @@ event มีสองตระกูล และ registry ใน `src/core/merg
 - **เว็บ**: เบราว์เซอร์ที่รองรับมี `crypto.getRandomValues` ทุกตัว และ Vitest/Jest บน Node มี `globalThis.crypto`
   — ไม่ต้องเพิ่ม dependency
 - **native (RN 0.86 / Hermes)**: Hermes ไม่มี global `crypto` (ข้อมูลจากแหล่งรอง — ยืนยันบนเครื่องจริงใน
-  E01-S06) จึง **ต้องขออนุมัติ dependency ตาม gate** สำหรับแหล่ง CSPRNG บน native; E01-S02 เสนอตัวเลือกพร้อม
-  ผลตรวจ เอกสารนี้ไม่เลือกให้
+  E01-S06) จึงใช้ **`expo-crypto`** (`getRandomValues`, first-party Expo, ไม่มี dependency ย่อย) — เจ้าของอนุมัติ
+  ตาม dependency gate 2026-10-03 (E01-S02) อยู่ใน `src/lib/random.native.ts` เท่านั้น เว็บ/เทสต์ใช้
+  `src/lib/random.ts`
 
 **`deviceId` + `deviceSeq`**: `deviceId` เป็น UUIDv7 ที่สร้างครั้งเดียวต่อการติดตั้ง (เว็บ = ต่อ browser profile)
 เก็บใน `meta` ส่วน `deviceSeq` เพิ่ม **ใน transaction เดียวกับการ insert** จึงไม่ซ้ำและไม่ถูกใช้ซ้ำแม้ถูก
@@ -270,7 +287,7 @@ CREATE INDEX events_sale   ON events(group_id, sale_id);
 -- ไม่มี UNIQUE (device_id, device_seq) ทั้งตาราง: ความไม่ซ้ำของ seq บังคับใน transaction ของ append (เฉพาะแถวของเครื่องนี้)
 
 CREATE TABLE meta        (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-  -- device_id, next_device_seq, pull_cursor:<gid>, session (userId, activeGroupId)
+  -- device = JSON {deviceId, nextDeviceSeq} (E01-S02), pull_cursor:<gid>, session (userId, activeGroupId)
 CREATE TABLE memberships (group_id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL,
                           member_count INTEGER, state TEXT NOT NULL);   -- 'active' | 'leaving'
 CREATE TABLE pending_ops (id TEXT PRIMARY KEY, group_id TEXT NOT NULL, op TEXT NOT NULL,
@@ -279,12 +296,16 @@ CREATE TABLE media_queue (media_id TEXT PRIMARY KEY, group_id TEXT NOT NULL, loc
                           content_type TEXT NOT NULL, bytes INTEGER NOT NULL, uploaded_at INTEGER);
 ```
 
-การทำ seq + insert ให้เป็น transaction แบบ exclusive บน expo-sqlite ต้องตรวจกับเอกสาร expo-sqlite ใน E01-S02
-(เขียนไว้จากความจำ ยังไม่ยืนยัน)
+การทำ seq + insert เป็น transaction แบบ exclusive (store กำหนด `deviceSeq` ของเครื่องตัวเองใน transaction เหมือนเว็บ):
+ตรวจกับ type ของ expo-sqlite 57.0.1 แล้ว (E01-S02) —
+`withExclusiveTransactionAsync(txn => …)` มีจริง และระหว่างที่ถือ write lock การเขียนแบบ async อื่นจะล้มด้วย
+`database is locked` ดังนั้น `SqliteStore` ส่งการเขียนทุกตัว (append, markSynced, การสร้าง device id) ผ่านคิว
+ตามลำดับที่เรียก ตัวนับ seq อยู่ใน `meta` (คีย์ `device`) และ `deviceSeq` ของเครื่องตัวเองที่ต่ำกว่าค่าที่บันทึกไว้
+ได้เลขว่างถัดไปแทน (ไม่ถูกปฏิเสธ)
 
 **ทำไมไม่บังคับ `(device_id, device_seq)` unique ทั้งตาราง**: ถ้าสองการติดตั้งเคยได้ `deviceId` เดียวกัน (เช่น
 Android Auto Backup restore ลงเครื่องใหม่ขณะเครื่องเก่ายังใช้) `insertPulled` จะชน constraint และ pull ค้างถาวร
-จึงบังคับเฉพาะแถวของเครื่องนี้ใน append; ข้อมูลที่ดึงมาซ้ำ `(deviceId, deviceSeq)` แต่ id ต่างกัน → เก็บไว้และ log
+จึงกำหนดเลขให้เฉพาะแถวของเครื่องนี้ใน append (เลขที่ใช้แล้วได้เลขว่างถัดไป ไม่ถูกปฏิเสธ — E01-S03); ข้อมูลที่ดึงมาซ้ำ `(deviceId, deviceSeq)` แต่ id ต่างกัน → เก็บไว้และ log
 เตือน ไม่หยุด pull และตั้ง `android.allowBackup: false` ใน `app.json` (E01-S06) เพื่อกัน `deviceId` ถูกโคลน
 
 **canonical JSON** (ใช้เทียบ "เนื้อหาเท่ากัน" ทั้งในเครื่องและกับ Firestore): key เรียงตามตัวอักษรทุกระดับ, ฟิลด์
@@ -298,15 +319,26 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
 `[deviceId, deviceSeq]`; index `[groupId, saleId]` และ `[groupId, targetId]`), `meta`, `memberships`,
 `pendingOps`, `mediaQueue` (เก็บไฟล์เป็น Blob)
 
-- append 1 ครั้ง = transaction `readwrite` เดียวครอบ `events` + `meta` (ตัวนับ seq) ปลอดภัยแม้เปิดหลายแท็บ
+- **สร้างแล้ว (E01-S03)**: record ใน `events` = `{ id, saleId, ts, deviceSeq, pending, event }` (เก็บ event ทั้งตัวใน
+  `event`), index `saleId` และ `pending` — index ที่มี `groupId` เพิ่มเมื่อ envelope มี `groupId` (E02-S02); `meta`
+  คีย์ `device` = `{ deviceId, nextDeviceSeq, legacyCleanupV1 }`; ยังไม่สร้าง `memberships`/`pendingOps`/`mediaQueue`
+  (สร้างใน story ที่ใช้)
+- append 1 ครั้ง = transaction `readwrite` เดียวครอบ `events` + `meta` (ตัวนับ seq) ปลอดภัยแม้เปิดหลายแท็บ:
+  **store เป็นผู้กำหนด `deviceSeq` ของเครื่องตัวเองใน transaction** (`checkAppend`) — เลขที่หน้าจอเสนอมาใช้ได้ถ้ายังว่าง
+  ถ้าแท็บอื่นใช้ไปแล้วจะได้เลขว่างถัดไปแทนการถูกปฏิเสธ IndexedDB เรียง transaction ข้ามแท็บให้ จึงไม่มี event หาย
+  และไม่มีเลขซ้ำ (แก้ใน E01-S03 หลังพบว่าตัวนับในหน่วยความจำต่อแท็บทำให้ event หายราวครึ่ง; มี Playwright สองแท็บ)
+  ที่ยังเหลือ: แต่ละแท็บเห็นเฉพาะ event ของตัวเองจนกว่าจะ reload และสองแท็บในการขายเดียวกันได้ `seq` ต่อการขายซ้ำกัน
+  (ลำดับ fold ตัดสินด้วย `deviceSeq` ตามลำดับที่ commit) — ไม่มีข้อมูลหาย
 - เรียก `navigator.storage.persist()` เพื่อลดโอกาสเบราว์เซอร์ลบข้อมูล
-- ใช้ IndexedDB ไม่ได้ (เช่น private mode) → ใช้ `MemoryStore` และเตือนเป็นภาษาไทย (E01-S03)
+- ใช้ IndexedDB ไม่ได้ (เช่น private mode) → ใช้ `MemoryStore` และเตือนเป็นภาษาไทย (E01-S03) — `EventStore.isDurable()`
+  + แถบ `StorageWarning` บนทุกหน้าจอ
 
 ### กติกาของ `EventStore`
 
 - `append(e)`: id ใหม่ → insert; **id เดิมเนื้อหาเดิม → ไม่ทำอะไร** (idempotent); **id เดิมเนื้อหาต่าง →
   `IntegrityError`** ห้ามเขียนทับ (แทน `DuplicateSeqError`)
-- `insertPulled(events)`: กติกาเดียวกัน ใส่ `synced_at` / `received_at` และไม่เข้า outbox
+- `insertPulled(events)`: กติกาเดียวกันเรื่อง id (idempotent / `IntegrityError`) แต่ **เก็บตามที่ได้รับ ไม่กำหนด
+  `deviceSeq` ใหม่** (การกำหนดเลขใช้กับ append ในเครื่องเท่านั้น) ใส่ `synced_at` / `received_at` และไม่เข้า outbox
 - `pending(groupId?)`: เรียงตาม `device_seq` · `markSynced(ids, receivedAt)` ทำหลังเซิร์ฟเวอร์ยืนยันแล้วเท่านั้น
 - `purgeGroup(gid)`: ลบทุก table ของกลุ่มนั้น + `pull_cursor:<gid>` ใน transaction เดียว แล้วลบไฟล์สื่อของกลุ่ม
   บนดิสก์ เรียกได้ **เฉพาะ** เมื่อเครื่องรู้ว่าผู้ใช้ไม่เป็นสมาชิกกลุ่มนั้นแล้ว (§การดำเนินการด้านสมาชิกภาพ, E02-S04,
@@ -327,8 +359,10 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
   เหมือนเดิม Soft Delete ≠ Cancelled (SYNC-10)
 - provenance (SYNC-11) ได้จาก log ไม่ต้องเก็บแยก: สร้างโดย/เมื่อ = `actor` + `ts` ของ create; แก้โดย/เมื่อ =
   head; ช่องทาง = `source`; สถานะการยืนยัน = สถานะรายฟิลด์
-- **สถานะข้อมูลรายฟิลด์ (SYNC-12, E01-S15)**: `FieldValue<T> = { value: T | null; state: FieldDataState }`
-  ที่ `src/core/field-state.ts` ใช้เฉพาะฟิลด์ที่เกี่ยวข้อง อยู่ใน `payload` ของ create/edit การเปลี่ยนสถานะ
+- **สถานะข้อมูลรายฟิลด์ (SYNC-12, E01-S15)**: `FieldValue<T>` ที่ `src/core/field-state.ts` เป็น union —
+  `{ value: null, state: 'unknown' | 'not-recorded' }` หรือ `{ value: T, state: อีก 4 สถานะ }` (สร้างจริงใน E01-S15;
+  "ไม่มีค่า" ตัดสินจาก `state` เสมอ ไม่ใช่จาก `value` เพราะข้อมูลมาเป็น JSON; `sumKnown()` คืน `{ total | null, missing }`)
+  ใช้เฉพาะฟิลด์ที่เกี่ยวข้อง อยู่ใน `payload` ของ create/edit การเปลี่ยนสถานะ
   (เช่น Estimated → User provided) เป็น `edit` ปกติ การเทียบ Conflict ดูทั้ง `value` และ `state` และ
   Unknown / Not recorded ไม่ถูกแปลงเป็น 0 เด็ดขาด
 - หน่วย: น้ำหนักเป็นกรัมจำนวนเต็ม เงินเป็นสตางค์จำนวนเต็ม (ตามเดิม) และ snapshot `netG`/`tareG` บนเข่งยังเป็น
@@ -517,7 +551,9 @@ retry/backoff ชุดเดียวกัน ถ้า object มีอยู
 ## Backend API
 
 ไม่มี REST API ที่เขียนเอง backend = Firestore + Cloud Storage ที่ป้องกันด้วย rules และ callable function
-สองตัว ทั้งหมดอยู่ใน 2 โปรเจกต์ (`dev`, `prod`) ที่ asia-southeast1 บน Blaze (D-1, D-22)
+สองตัว ทั้งหมดอยู่ในโปรเจกต์ Firebase เดียวที่ asia-southeast1 บน Blaze (D-1, D-22, D-34) แยก dev/prod ภายใน
+โปรเจกต์: Firestore database `dev` (dev + preview) กับ `(default)` (prod), Storage bucket ของ dev กับ bucket
+หลัก (prod), Hosting site `dev` กับ `prod`
 
 ### โครง Firestore
 
@@ -575,7 +611,10 @@ inviteAttempts/{uid}            { failures, windowStart }                       
 
 ### สภาพแวดล้อม
 
-build ของ dev/preview ชี้โปรเจกต์ dev เท่านั้น (มี test ยืนยันใน E01-S07) rules/indexes/functions อยู่ใน repo
+build ของ dev/preview ชี้ Firestore database `dev` และ bucket ของ dev เท่านั้น (มี test ยืนยันใน E01-S07)
+(กันการพลาด ไม่ใช่ขอบเขตความปลอดภัย — ดู §Security) Auth และ budget alert ใช้ร่วม
+ทั้งโปรเจกต์ (เจ้าของรับใน MVP, D-34) แยกเป็น 2 โปรเจกต์ก่อนเปิดเชิงพาณิชย์หรือก่อนมีผู้ใช้ที่ไม่ใช่เจ้าของ
+rules/indexes/functions อยู่ใน repo
 ทั้งหมด deploy ผ่านสคริปต์: dev อัตโนมัติ, prod ต้องให้เจ้าของอนุมัติทุกครั้ง test ใช้ Firebase Emulator (ต้องใช้
 Java นอก repo — ขออนุญาตใน E01-S08)
 
@@ -670,8 +709,16 @@ Firestore นับเป็น Firestore read; ต้องให้สิท�
 
 ### สภาพแวดล้อมและความลับ
 
-- dev/prod แยกโปรเจกต์ ลิงก์ preview ใช้ dev เท่านั้น จึงเข้าถึงข้อมูล prod ไม่ได้ (NFR-5, D-22)
-- config ของ Firebase web app ไม่ใช่ความลับ ความปลอดภัยอยู่ที่ rules credential สำหรับ deploy 1 ชุดต่อโปรเจกต์
+- dev/prod อยู่โปรเจกต์เดียว (D-34) ลิงก์ preview ต้องไม่แตะข้อมูล prod (NFR-5, D-22) กลไก: build
+  dev/preview ตั้งค่าให้ใช้ Firestore database `dev` และ bucket ของ dev และมี test ใน E01-S07 ยืนยันว่า
+  bundle dev/preview อ้างถึงเฉพาะ database `dev`
+- **ความเสี่ยงที่เจ้าของรับแล้ว (2026-10-03)** (D-34): Auth ใช้ร่วม rules จึงแยก build prod กับ build preview ไม่ได้
+  database `dev`/bucket ของ dev กันการพลาด แต่**ไม่ใช่ขอบเขตความปลอดภัย** — build preview ที่ถูกแก้ให้ชี้
+  `(default)` อ่าน/เขียนข้อมูลจริงได้ด้วยสิทธิ์ของผู้ใช้ที่ login อยู่ ลดความเสี่ยง: preview build โดย CI ของ
+  repo จาก branch ใน repo ของเจ้าของเท่านั้น (ต้องมีสิทธิ์ write) + test bundle ข้างบน; แยก 2 โปรเจกต์จึงปิด
+  ความเสี่ยงนี้
+- Auth ใช้ร่วมกัน: บัญชีที่ login ใน preview เป็นบัญชีเดียวกับ prod — ยอมรับใน MVP (ผู้ใช้มีแค่เจ้าของ)
+- config ของ Firebase web app ไม่ใช่ความลับ ความปลอดภัยอยู่ที่ rules credential สำหรับ deploy 1 ชุด (โปรเจกต์เดียว)
   เก็บใน GitHub secrets ห้ามมี service-account key ใน repo
 - ใครมีบัญชี Google ก็สร้างกลุ่มของตัวเองได้ (เปลือง write เล็กน้อย) แต่อ่านกลุ่มคนอื่นไม่ได้ budget alert เป็น
   ตาข่ายรองรับ (D-1) App Check ยังไม่ทำ (YAGNI) พิจารณาเมื่อมีการใช้ผิดจริง
@@ -721,11 +768,18 @@ Both are web-only and documented where they are read:
 Two long-lived branches, two environments with separate domains: `dev`
 (default branch, daily-use MVP environment) and `main` (production). Release
 flow is in `docs/process.md` ("Branches and releases"). **Hosting is Firebase Hosting**
-(**two projects** — `dev` hosts the `dev` site and PR preview channels with
-7-day expiry over test data; `prod` hosts the `prod` site over real data;
-Blaze — PRD D-22) — see `docs/adr/0001-firebase-hosting.md`. It is decided but **not
-wired yet**: `scripts/deploy.sh` fails closed until the project, domains and
-deploy credential exist. Locally,
+(**one project** on Blaze — PRD D-34, ADR 0001 amendment 2: the `dev` site
+and PR preview channels with 7-day expiry use the named Firestore database
+`dev` and a dev Storage bucket over test data; the `prod` site uses the
+`(default)` database and the default bucket over real data; build config (not rules)
+keeps dev/preview builds off prod data — a mistake guard, not a security
+boundary (§Security); Auth and the budget alert are shared;
+split into two projects before commercial launch) — see `docs/adr/0001-firebase-hosting.md`. The sites, deploy
+script and workflows are **wired** (ADR 0001, "What was built"): a push to `dev`
+deploys the dev site, each same-repo PR gets a preview channel, and CI
+authenticates keylessly (GitHub OIDC to a Google service account, no stored
+key). **Not yet done:** the `dev` Firestore database and bucket, custom domains,
+the two GitHub repo variables, and a first Deploy Prod run. Locally,
 `npm run build:web` produces a static `dist/`. No native build has
 been produced and no device has run this yet — **the app has only ever been
 exercised in a browser.**

@@ -16,7 +16,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E01-S04: ลบแบบกู้คืนได้ (Soft Delete) + ที่มาของข้อมูล](e01-s04-soft-delete-provenance.md)
 - [E01-S05: CI ประหยัดนาที — ข้ามเอกสารล้วน, cache, e2e ใช้ dist เดิม, ประเมิน bun](e01-s05-ci-minutes.md)
 - [E01-S06: รันบน Android จริงครั้งแรก (dev client)](e01-s06-android-dev-client.md)
-- [E01-S07: Firebase dev/prod + Hosting deploy + preview channel ต่อ PR](e01-s07-firebase-hosting-previews.md)
+- [E01-S07: Firebase dev/prod (1 โปรเจกต์) + Hosting deploy + preview channel ต่อ PR](e01-s07-firebase-hosting-previews.md)
 - [E01-S08: Firestore — event แก้ไม่ได้ + security rules แยกกลุ่มฟาร์ม](e01-s08-firestore-rules.md)
 - [E01-S09: sync อัตโนมัติ — outbox ส่งขึ้น + ดึงลง](e01-s09-outbox-sync.md)
 - [E01-S10: แสดงสถานะ sync + ปุ่ม "ลองใหม่" เมื่อ error](e01-s10-sync-status-retry.md)
@@ -25,6 +25,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E01-S13: ฝัง font Noto Sans Thai + ชุดไอคอนเส้น open-licence](e01-s13-thai-font-and-icons.md)
 - [E01-S14: preview A/B รูปแบบ card — เงา+เส้น vs แบน+เส้น](e01-s14-card-style-ab-preview.md)
 - [E01-S15: สถานะข้อมูลรายฟิลด์ 6 แบบ + ป้ายใช้ซ้ำ](e01-s15-field-data-states.md)
+- [E01-S16: ลบเขตไม่ได้ถ้าคนกรีดของเขตยังมียอดหัก](e01-s16-zone-delete-guard.md)
 
 ### E02 การเข้าใช้ & กลุ่มฟาร์ม — [epic](../epics/e02-access-farm-groups.md)
 

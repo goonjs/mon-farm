@@ -1,5 +1,7 @@
 import { Stack } from 'expo-router';
+import { View } from 'react-native';
 
+import { StorageWarning } from '../components/StorageWarning';
 import { I18nProvider } from '../i18n';
 import { SpeechProvider } from '../speech';
 import { ThemeProvider } from '../theme';
@@ -29,7 +31,10 @@ export default function RootLayout() {
       <ThemeProvider initial="light">
         <I18nProvider initial="th">
           <SpeechProvider initial>
-            <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
+            <View style={{ flex: 1 }}>
+              <StorageWarning />
+              <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
+            </View>
           </SpeechProvider>
         </I18nProvider>
       </ThemeProvider>

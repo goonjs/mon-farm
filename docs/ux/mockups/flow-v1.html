@@ -1,0 +1,1465 @@
+<title>mon-farm Flow v1</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
+
+/* ---------------------------------------------------------------------------
+   Tokens. Values are copied from docs/ux/tokens.css (generated from
+   design/tokens.ts). Two families:
+   --pg-*  the documentation page around the phones; follows light/dark.
+   --c-*   the app screens inside the phones; stays in the app's light field
+           theme in both page themes (the app's dark theme is opt-in and is
+           not what this flow review is about).
+   --note-* the yellow "?" open-question markers; constant, readable on both.
+   --ans-*  the green "ตอบแล้ว" answered markers; constant, readable on both.
+   No literal colour appears below the token blocks.
+   ------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+  --pg-bg: #F7FAFC;
+  --pg-card: #FFFFFF;
+  --pg-ink: #002858;
+  --pg-ink-soft: #52657A;
+  --pg-rule: #CBD4DC;
+  --pg-accent: #006F52;
+  --frame-bezel: #13202E;
+  --frame-ring: #CBD4DC;
+  --frame-shadow: rgba(0, 40, 88, 0.14);
+
+  --note-bg: #FECB56;
+  --note-ink: #002858;
+  --ans-bg: #E8F8F2;
+  --ans-ink: #006F52;
+
+  --c-stage: #FFFFFF;
+  --c-surface: #F7FAFC;
+  --c-sunk: #F1F3F5;
+  --c-raised: #FFFFFF;
+  --c-numeral: #002858;
+  --c-ink: #002858;
+  --c-ink-soft: #52657A;
+  --c-ink-faint: #7A8998;
+  --c-inverse: #FFFFFF;
+  --c-rule: #CBD4DC;
+  --c-rule-faint: #E4E9EE;
+  --c-rule-strong: #7A8998;
+  --c-action: #002858;
+  --c-action-sunk: #EAF5FC;
+  --c-accept: #006F52;
+  --c-accept-sunk: #E8F8F2;
+  --c-reject: #BB1C1C;
+  --c-reject-sunk: #FDECEC;
+  --c-warn: #815908;
+  --c-warn-sunk: #FFF5D8;
+  --c-brand: #00AA7D;
+  --c-brand-strong: #008F6C;
+  --c-brand-yellow: #FECB56;
+  --c-brand-cream: #FFF8E8;
+  --c-brand-light: #48C090;
+  --c-shadow-card: rgba(0, 40, 88, 0.06);
+  --c-shadow-float: rgba(0, 40, 88, 0.10);
+  --c-scrim: rgba(0, 40, 88, 0.55);
+
+  --font: "Noto Sans Thai", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px; --r-pill: 999px;
+  --target: 48px; --target-c: 56px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --pg-bg: #0B1520;
+    --pg-card: #13202E;
+    --pg-ink: #F4F5F6;
+    --pg-ink-soft: #A3B1C0;
+    --pg-rule: #2E3B49;
+    --pg-accent: #48C090;
+    --frame-bezel: #02070C;
+    --frame-ring: #2E3B49;
+    --frame-shadow: rgba(0, 0, 0, 0.5);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --pg-bg: #0B1520;
+  --pg-card: #13202E;
+  --pg-ink: #F4F5F6;
+  --pg-ink-soft: #A3B1C0;
+  --pg-rule: #2E3B49;
+  --pg-accent: #48C090;
+  --frame-bezel: #02070C;
+  --frame-ring: #2E3B49;
+  --frame-shadow: rgba(0, 0, 0, 0.5);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--pg-bg);
+  color: var(--pg-ink);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+.num { font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; }
+
+/* ---- page header ---- */
+.hdr h1 { margin: 0; font-size: 28px; line-height: 1.25; font-weight: 700; }
+.hdr p { margin: 6px 0 0; color: var(--pg-ink-soft); }
+.hdr .date { font-size: 14px; }
+.legend {
+  margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px 20px;
+  padding: 12px 16px; border: 1px solid var(--pg-rule); border-radius: var(--r-lg);
+  background: var(--pg-card); font-size: 14px; color: var(--pg-ink-soft);
+}
+.legend > span { display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---- flow layout ---- */
+.sec { margin-top: 40px; }
+.sec h2 { font-size: 20px; line-height: 1.25; margin: 0 0 4px; font-weight: 700; }
+.sec > p { margin: 0 0 20px; color: var(--pg-ink-soft); font-size: 14px; }
+.flow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: 28px 8px; }
+.step { margin: 0; width: min(360px, 100%); }
+.arrow {
+  width: 112px; align-self: center; display: flex; flex-direction: column;
+  align-items: center; gap: 6px; text-align: center; font-size: 13px;
+  line-height: 1.35; color: var(--pg-ink-soft); padding-bottom: 120px;
+}
+.arrow .ic { width: 40px; height: 40px; color: var(--pg-accent); stroke-width: 2.25; }
+.arrow b { color: var(--pg-ink); font-weight: 600; }
+@media (max-width: 860px) {
+  .flow { flex-direction: column; align-items: center; }
+  .arrow { width: min(360px, 100%); flex-direction: row; justify-content: center; text-align: left; padding: 0; }
+  .arrow .ic { transform: rotate(90deg); flex: none; }
+}
+figcaption { margin-top: 12px; font-size: 14px; color: var(--pg-ink-soft); }
+figcaption .t { display: block; font-size: 16px; font-weight: 700; color: var(--pg-ink); }
+figcaption .ids { display: block; margin-top: 4px; font-size: 12px; letter-spacing: 0.02em; }
+figcaption ul { margin: 8px 0 0; padding: 0; list-style: none; }
+figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; }
+
+/* ---- "?" open-question marker ---- */
+.q {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  min-width: 26px; height: 20px; padding: 0 6px; border-radius: var(--r-pill);
+  background: var(--note-bg); color: var(--note-ink);
+  font-size: 11px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+/* ---- green "ตอบแล้ว" answered marker ---- */
+.ans {
+  display: inline-flex; align-items: center; gap: 3px; flex: none;
+  height: 20px; padding: 0 7px; border-radius: var(--r-pill);
+  background: var(--ans-bg); color: var(--ans-ink);
+  font-size: 11px; font-weight: 700; line-height: 1; white-space: nowrap; vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+.ans .ic { width: 12px; height: 12px; stroke-width: 3; }
+
+/* ---- phone frame ---- */
+.phone {
+  width: 100%; height: 740px; padding: 10px; border-radius: 40px;
+  background: var(--frame-bezel);
+  box-shadow: 0 0 0 1px var(--frame-ring), 0 12px 32px var(--frame-shadow);
+}
+.screen {
+  position: relative; height: 100%; border-radius: 30px; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--c-surface); color: var(--c-ink); font-size: 16px; line-height: 1.4;
+}
+.sbar {
+  height: 28px; flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 22px; font-size: 12px; font-weight: 600; color: var(--c-ink);
+}
+.sbar .ic { width: 16px; height: 16px; }
+.appbar { height: 56px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 8px 0 4px; }
+.appbar h3 { flex: 1; margin: 0; font-size: 18px; font-weight: 600; line-height: 1.25; min-width: 0; }
+.appbar h3 small { display: block; font-size: 12px; font-weight: 400; color: var(--c-ink-soft); }
+.iconbtn {
+  width: var(--target); height: var(--target); flex: none; display: grid; place-items: center;
+  border-radius: var(--r-pill); color: var(--c-ink);
+}
+.body { flex: 1; min-height: 0; overflow: hidden; padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 12px; }
+.foot { flex: none; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+
+/* ---- icons ---- */
+.ic { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ic.sm { width: 18px; height: 18px; }
+.ic.lg { width: 28px; height: 28px; }
+.fillsoft { fill: currentColor; fill-opacity: 0.16; }
+
+/* ---- cards and icon tiles (FarmMate pattern) ---- */
+.card {
+  background: var(--c-raised); border: 1px solid var(--c-rule-faint); border-radius: var(--r-lg);
+  box-shadow: 0 2px 12px var(--c-shadow-card); padding: 12px;
+}
+.card.cream { background: var(--c-brand-cream); }
+.card.tight { padding: 4px 12px; }
+.card h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--c-ink-soft); }
+.row { display: flex; align-items: center; gap: 12px; min-height: var(--target); }
+.row + .row { border-top: 1px solid var(--c-rule-faint); }
+.row .grow { flex: 1; min-width: 0; }
+.row .lbl { font-size: 14px; color: var(--c-ink-soft); }
+.row .val { font-size: 16px; font-weight: 600; }
+.row .sub { display: block; font-size: 13px; color: var(--c-ink-soft); font-weight: 400; }
+.tile {
+  width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: var(--r-md);
+}
+.tile.sm { width: 36px; height: 36px; border-radius: 10px; }
+.tile.sm .ic { width: 20px; height: 20px; }
+.t-green { background: var(--c-accept-sunk); color: var(--c-accept); }
+.t-cream { background: var(--c-brand-cream); color: var(--c-warn); }
+.t-blue { background: var(--c-action-sunk); color: var(--c-action); }
+.t-red { background: var(--c-reject-sunk); color: var(--c-reject); }
+.t-gray { background: var(--c-sunk); color: var(--c-ink-soft); }
+.chev { color: var(--c-ink-faint); }
+
+/* ---- buttons ---- */
+.btn {
+  min-height: 52px; width: 100%; border-radius: var(--r-pill); display: flex; align-items: center;
+  justify-content: center; gap: 8px; font-size: 16px; font-weight: 600; padding: 0 20px; text-align: center;
+}
+.btn-primary { background: var(--c-action); color: var(--c-inverse); box-shadow: 0 3px 10px var(--c-shadow-float); }
+.btn-secondary { background: var(--c-raised); color: var(--c-action); border: 2px solid var(--c-action); }
+.btn-disabled { background: var(--c-sunk); color: var(--c-ink-soft); border: 2px dashed var(--c-rule-strong); }
+.btn.small { min-height: var(--target); width: auto; font-size: 14px; padding: 0 16px; }
+
+/* ---- sync pill (SYNC-3): icon + word, colour agrees ---- */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px;
+  border-radius: var(--r-pill); font-size: 13px; font-weight: 600; white-space: nowrap; flex: none;
+}
+.pill .ic { width: 16px; height: 16px; }
+.p-ok { background: var(--c-accept-sunk); color: var(--c-accept); }
+.p-pend { background: var(--c-warn-sunk); color: var(--c-warn); }
+.p-conf { background: var(--c-reject-sunk); color: var(--c-reject); }
+
+/* ---- field data-state badges (SYNC-12, E01-S15) ---- */
+.ds {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 500; color: var(--c-ink-soft); border: 1px solid var(--c-rule); background: var(--c-raised);
+  white-space: nowrap;
+}
+.ds .ic { width: 13px; height: 13px; }
+.ds-unknown { border: 1.5px dashed var(--c-rule-strong); }
+.ds-none { background: var(--c-sunk); border-color: var(--c-rule-faint); }
+
+/* ---- flags / status chips ---- */
+.chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: var(--r-pill);
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.chip .ic { width: 15px; height: 15px; }
+.ch-ok { background: var(--c-accept-sunk); color: var(--c-accept); }
+.ch-warn { background: var(--c-warn-sunk); color: var(--c-warn); }
+.ch-bad { background: var(--c-reject-sunk); color: var(--c-reject); }
+.ch-plain { background: var(--c-sunk); color: var(--c-ink-soft); }
+
+/* ---- segmented choices ---- */
+.seg { display: flex; gap: 6px; background: var(--c-sunk); border-radius: var(--r-pill); padding: 4px; }
+.seg > span {
+  flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center;
+  border-radius: var(--r-pill); font-size: 15px; font-weight: 600; color: var(--c-ink-soft); line-height: 1.2;
+}
+.seg > span small { display: block; font-size: 11px; font-weight: 400; }
+.seg > span.on { background: var(--c-action); color: var(--c-inverse); }
+
+/* ---- figures: big value + smaller unit (§12.3) ---- */
+.fig { font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; }
+.fig .u { font-size: 0.5em; font-weight: 500; color: var(--c-ink-soft); margin-left: 4px; letter-spacing: 0; }
+.kv { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; min-height: 24px; }
+.kv span:first-child { color: var(--c-ink-soft); }
+.kv span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.kv.total { border-top: 1px solid var(--c-rule-faint); margin-top: 4px; padding-top: 6px; }
+
+/* ---- screen-specific ---- */
+.hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 0 24px; }
+.hero h2 { margin: 4px 0 0; font-size: 32px; font-weight: 700; line-height: 1.2; }
+.hero p { margin: 0; color: var(--c-ink-soft); }
+.gmark { width: 28px; height: 28px; border-radius: var(--r-pill); display: grid; place-items: center; border: 2px solid var(--c-rule-strong); font-weight: 800; font-size: 15px; color: var(--c-ink); }
+.greet { padding: 0 4px; }
+.greet b { display: block; font-size: 24px; line-height: 1.25; }
+.greet span { font-size: 14px; color: var(--c-ink-soft); }
+.steps { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--c-ink-soft); flex-wrap: wrap; }
+.steps .done { color: var(--c-accept); font-weight: 600; display: inline-flex; align-items: center; gap: 2px; }
+.steps .now { color: var(--c-ink); font-weight: 700; }
+.expect { text-align: center; padding: 14px 12px; }
+.expect .fig { font-size: 44px; }
+.expect p { margin: 4px 0 0; font-size: 14px; color: var(--c-ink-soft); }
+
+.six { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.six .card { padding: 8px 10px; }
+.six .lbl { font-size: 12px; color: var(--c-ink-soft); display: block; }
+.six .fig { font-size: 22px; }
+.six .sm2 { display: block; font-size: 11px; color: var(--c-warn); font-weight: 600; line-height: 1.2; margin-top: 2px; }
+.card.warn { background: var(--c-warn-sunk); border-color: var(--c-warn-sunk); }
+.card.warn .lbl { color: var(--c-warn); font-weight: 600; }
+
+/* current / next basket card (owner answer 8, revised 2026-10-03: back to v1) */
+.bigc { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.bigc .lbl { font-size: 12px; color: var(--c-ink-soft); display: block; }
+.bigc .fig.xl { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; }
+.bigc .next { text-align: right; }
+.bigc .next .fig { font-size: 28px; }
+
+/* inline weight entry (F-13, F-22) */
+.stepper { display: flex; align-items: center; gap: 8px; }
+.stepper .sb {
+  width: var(--target); height: var(--target); flex: none; border-radius: var(--r-pill); display: grid; place-items: center;
+  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); color: var(--c-action);
+}
+.inp {
+  flex: 1; min-width: 64px; min-height: var(--target); padding: 0 12px; border-radius: var(--r-sm);
+  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+  font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--c-ink);
+}
+.inp.focus { border: 2px solid var(--c-action); }
+.inp .u { font-size: 13px; font-weight: 500; color: var(--c-ink-soft); }
+.inp.text { justify-content: flex-start; font-size: 14px; font-weight: 400; color: var(--c-ink-faint); }
+.btnrow { display: flex; gap: 8px; }
+.btnrow .btn { min-height: var(--target); }
+
+/* big two-way choice (bridge basket) */
+.choice {
+  display: flex; align-items: center; gap: 12px; min-height: 76px; padding: 10px 14px; border-radius: var(--r-lg);
+  border: 2px solid var(--c-action); background: var(--c-raised); color: var(--c-action); text-align: left;
+}
+.choice b { display: block; font-size: 17px; line-height: 1.3; }
+.choice small { display: block; font-size: 13px; line-height: 1.35; font-weight: 500; color: var(--c-ink-soft); }
+.choice.pri { background: var(--c-action); color: var(--c-inverse); }
+.choice.pri small { color: var(--c-inverse); }
+.choice .tile { background: var(--c-action-sunk); color: var(--c-action); }
+/* v4: sheet options rewritten for outdoor reading — bold title, then 1–2 short
+   lines, key numbers in a chip. The recommended option is a tinted outline,
+   not a dark fill, so its small lines stay ink-on-light. */
+.choice.cmp { min-height: var(--target-c); gap: 10px; padding: 8px 12px; border-radius: var(--r-md); align-items: flex-start; border-width: 1.5px; border-color: var(--c-rule-strong); }
+.choice.cmp b { font-size: 16px; color: var(--c-ink); margin-bottom: 2px; }
+.choice.cmp .ln { display: block; font-size: 14px; line-height: 1.45; font-weight: 500; color: var(--c-ink-soft); }
+.choice.cmp .tile { width: 32px; height: 32px; border-radius: var(--r-sm); margin-top: 2px; }
+.choice.cmp .tile .ic { width: 18px; height: 18px; }
+.choice.cmp.pri { background: var(--c-action-sunk); border: 2px solid var(--c-action); }
+.choice.cmp.pri .tile { background: var(--c-raised); }
+.nchip {
+  display: inline-block; padding: 0 6px; border-radius: var(--r-sm); background: var(--c-brand-cream);
+  border: 1px solid var(--c-brand-yellow); color: var(--c-ink); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+/* v4 home (screen 3): long screenshot phone, cover, action cards, module grid */
+.step.long-step { position: relative; }
+.longtag {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 2px 10px; border-radius: var(--r-pill);
+  border: 1px dashed var(--pg-rule); color: var(--pg-ink-soft); font-size: 13px; font-weight: 600;
+}
+.longtag .ic { width: 16px; height: 16px; }
+.phone.long { height: auto; }
+.phone.long .screen { height: auto; }
+.phone.long .body { overflow: visible; }
+.cover {
+  position: relative; flex: none; height: 148px; margin: 0 16px; border-radius: var(--r-lg); overflow: hidden;
+  background: var(--c-action-sunk);
+}
+.cover svg.scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cover .sun { fill: var(--c-brand-yellow); }
+.cover .rays { stroke: var(--c-brand-yellow); stroke-width: 2.5; stroke-linecap: round; fill: none; transform-origin: 62px 40px; }
+.cover .cloud { fill: var(--c-raised); }
+.cover .hill-back { fill: var(--c-brand-light); }
+.cover .hill { fill: var(--c-brand); }
+.cover .trunk { fill: var(--c-ink-soft); }
+.cover .crown { fill: var(--c-brand-strong); }
+.cover .crown2 { fill: var(--c-brand); }
+.cover .cup { fill: var(--c-raised); stroke: var(--c-ink-soft); stroke-width: 1; }
+.cover .tap { stroke: var(--c-raised); stroke-width: 1.5; fill: none; }
+.cover .chg {
+  position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px;
+  border-radius: var(--r-pill); background: var(--c-raised); color: var(--c-action); font-size: 12px; font-weight: 600;
+  box-shadow: 0 2px 8px var(--c-shadow-float);
+}
+.cover .chg .ic { width: 16px; height: 16px; }
+@media (prefers-reduced-motion: no-preference) {
+  .cover .rays { animation: cover-spin 24s linear infinite; }
+  .cover .cloud { animation: cover-drift 18s ease-in-out infinite alternate; }
+}
+@keyframes cover-spin { to { transform: rotate(360deg); } }
+@keyframes cover-drift { from { transform: translateX(0); } to { transform: translateX(26px); } }
+
+.acts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.act {
+  min-height: 104px; padding: 10px 6px; border-radius: var(--r-lg); background: var(--c-raised);
+  border: 1px solid var(--c-rule-faint); box-shadow: 0 2px 12px var(--c-shadow-card);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; text-align: center;
+  font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--c-ink);
+}
+.act .tile { width: 48px; height: 48px; }
+.act .ic { width: 26px; height: 26px; }
+.act.main { border: 2px solid var(--c-action); }
+.sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 4px; }
+.sec-h b { font-size: 16px; }
+.sec-h a, .sec-h span.lnk { font-size: 14px; color: var(--c-action); font-weight: 600; text-decoration: none; }
+.mods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mod {
+  display: flex; align-items: center; gap: 8px; min-height: var(--target-c); padding: 8px 10px; border-radius: var(--r-md);
+  background: var(--c-raised); border: 1px solid var(--c-rule-faint); box-shadow: 0 2px 12px var(--c-shadow-card);
+  font-size: 13px; font-weight: 600; line-height: 1.25; color: var(--c-ink);
+}
+.mod small { display: block; font-size: 11px; font-weight: 400; color: var(--c-ink-soft); }
+.mod.wide { grid-column: span 2; }
+.mod small .ic { width: 11px; height: 11px; vertical-align: -1px; }
+.more-hint { font-size: 12px; color: var(--c-ink-soft); padding: 0 4px; line-height: 1.4; }
+
+/* photo type picker (E04-S10) */
+.types { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.type {
+  display: flex; align-items: center; gap: 8px; min-height: var(--target-c); padding: 6px 8px; border-radius: var(--r-md);
+  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); font-size: 14px; font-weight: 600; line-height: 1.25;
+}
+.type.on { border: 2px solid var(--c-action); background: var(--c-action-sunk); }
+.type .ck { margin-left: auto; color: var(--c-action); }
+
+/* compact select (settlement bank account) */
+.sel {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 8px; border-radius: var(--r-sm);
+  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); color: var(--c-action); font-weight: 600;
+}
+.sel .ic { width: 14px; height: 14px; }
+.sel small { font-size: 11px; font-weight: 400; color: var(--c-ink-soft); }
+
+/* conflict choice rows */
+.optrow { display: flex; align-items: center; gap: 8px; }
+.optrow .who { flex: 1; min-width: 0; font-size: 13px; line-height: 1.3; color: var(--c-ink-soft); }
+.optrow .who b { display: block; color: var(--c-ink); font-size: 14px; }
+.optrow .btn { flex: none; }
+
+/* insets below a phone: app-themed (light field theme), sit on the page */
+.extras { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.inset {
+  background: var(--c-surface); color: var(--c-ink); border: 1px solid var(--pg-rule); border-radius: var(--r-lg);
+  padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 14px;
+}
+.inset > .ttl { font-size: 13px; font-weight: 700; color: var(--c-ink); }
+.inset > .note { font-size: 12px; color: var(--c-ink-soft); line-height: 1.45; }
+.mini-row { display: flex; align-items: center; gap: 8px; font-size: 13px; min-height: 28px; }
+.mini-row .grow { flex: 1; min-width: 0; }
+
+/* FarmMate logo (drawn in the spirit of the reference, not copied) */
+.fm-logo { width: 112px; height: 112px; }
+.hero h2.fm-word { margin: 0; font-size: 38px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; color: var(--c-ink); }
+
+.stage {
+  position: relative; flex: 1; min-height: 150px; border-radius: var(--r-xl); background: var(--c-stage);
+  border: 2px solid var(--c-rule-strong); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; text-align: center; padding: 12px;
+}
+.stage svg.sweep { position: absolute; inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); overflow: visible; }
+.stage svg.sweep rect { fill: none; stroke: var(--c-action); stroke-width: 6; stroke-linecap: round; }
+.stage b { font-size: 20px; }
+.stage span { font-size: 14px; color: var(--c-ink-soft); }
+.tools { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.tool {
+  min-height: var(--target-c); border-radius: var(--r-md); background: var(--c-raised); border: 1.5px solid var(--c-rule-strong);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--c-action);
+}
+.tool .ic { width: 20px; height: 20px; }
+
+/* public mode: §12.8 — white flat stage, numeral token only, nothing else */
+.pub-bar { height: 56px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; background: var(--c-action); color: var(--c-inverse); }
+.pub-bar span { flex: 1; font-size: 14px; font-weight: 600; }
+.pub-bar .pill { background: var(--c-raised); }
+.pub-stage { position: relative; flex: 1; background: var(--c-stage); display: grid; place-items: center; overflow: hidden; }
+.pub-stage svg.sweep { position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); }
+.pub-stage svg.sweep rect { fill: none; stroke: var(--c-action); stroke-width: 10; stroke-linecap: round; }
+.pub-num { font-size: 240px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--c-numeral); font-variant-numeric: tabular-nums; }
+.pub-foot { height: 64px; flex: none; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--c-sunk); color: var(--c-action); font-size: 14px; font-weight: 600; }
+
+.cmp { width: 100%; border-collapse: collapse; font-size: 14px; }
+.cmp th { font-size: 12px; font-weight: 600; color: var(--c-ink-soft); text-align: right; padding: 4px 0 6px; vertical-align: bottom; }
+.cmp th:first-child, .cmp td:first-child { text-align: left; }
+.cmp td { padding: 8px 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; border-top: 1px solid var(--c-rule-faint); }
+.cmp td:first-child { font-weight: 500; color: var(--c-ink-soft); }
+.cmp .ok { color: var(--c-accept); display: inline-flex; align-items: center; gap: 2px; }
+
+.sheet-scrim { position: absolute; inset: 0; background: var(--c-scrim); }
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; background: var(--c-raised); border-radius: 24px 24px 0 0;
+  padding: 10px 16px 20px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -6px 24px var(--c-shadow-float);
+}
+.sheet .grab { width: 40px; height: 4px; border-radius: var(--r-pill); background: var(--c-rule); align-self: center; }
+.sheet h4 { margin: 4px 0 0; font-size: 20px; line-height: 1.3; }
+.sheet p { margin: 0; font-size: 14px; color: var(--c-ink-soft); }
+.radio {
+  display: flex; align-items: center; gap: 12px; min-height: var(--target-c); padding: 8px 12px; border-radius: var(--r-md);
+  border: 1.5px solid var(--c-rule-strong); font-size: 15px; line-height: 1.3;
+}
+.radio .dot { width: 22px; height: 22px; border-radius: var(--r-pill); border: 2px solid var(--c-rule-strong); flex: none; display: grid; place-items: center; }
+.radio.on { border: 2px solid var(--c-action); background: var(--c-action-sunk); }
+.radio.on .dot { border-color: var(--c-action); }
+.radio.on .dot::after { content: ""; width: 10px; height: 10px; border-radius: var(--r-pill); background: var(--c-action); }
+.radio small { display: block; font-size: 12px; color: var(--c-ink-soft); }
+.dim { filter: saturate(0.7); }
+
+.tick {
+  display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 12px;
+  border-radius: var(--r-md); border: 1.5px solid var(--c-rule-strong); background: var(--c-raised);
+}
+.tick .box { width: 28px; height: 28px; border-radius: var(--r-sm); border: 2px solid var(--c-rule-strong); flex: none; display: grid; place-items: center; }
+.tick.on { border-color: var(--c-accept); background: var(--c-accept-sunk); }
+.tick.on .box { border-color: var(--c-accept); background: var(--c-accept); color: var(--c-inverse); }
+.tick .grow { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.3; }
+.tick .grow small { display: block; font-size: 12px; font-weight: 400; color: var(--c-ink-soft); }
+.tick .amt { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
+
+.banner { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-md); font-size: 14px; line-height: 1.4; }
+.banner.bad { background: var(--c-reject-sunk); color: var(--c-reject); }
+.banner.info { background: var(--c-sunk); color: var(--c-ink-soft); }
+.banner b { color: var(--c-ink); display: block; }
+.opt { display: flex; flex-direction: column; gap: 8px; }
+.opt .who { font-size: 13px; color: var(--c-ink-soft); }
+
+/* ---- open questions list ---- */
+.qs { margin-top: 48px; padding: 20px; border-radius: var(--r-lg); background: var(--pg-card); border: 1px solid var(--pg-rule); }
+.qs h2 { margin: 0 0 4px; font-size: 20px; }
+.qs > p { margin: 0 0 12px; color: var(--pg-ink-soft); font-size: 14px; }
+.qs ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.qs li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; }
+.qs .not { margin-top: 20px; font-size: 14px; color: var(--pg-ink-soft); }
+.qs .not b { color: var(--pg-ink); }
+.qs h3 { margin: 24px 0 4px; font-size: 17px; }
+.qs table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.45; }
+.qs th { text-align: left; font-size: 12px; font-weight: 600; color: var(--pg-ink-soft); padding: 6px 8px; border-bottom: 1px solid var(--pg-rule); }
+.qs td { padding: 8px; border-top: 1px solid var(--pg-rule); vertical-align: top; }
+.qs td:first-child { width: 36%; color: var(--pg-ink-soft); }
+.qs td:first-child .ans { margin-right: 4px; }
+.sub-h { margin: 32px 0 4px; font-size: 17px; line-height: 1.3; font-weight: 700; }
+.sub-p { margin: 0 0 20px; color: var(--pg-ink-soft); font-size: 14px; }
+</style>
+
+<!-- Icon sprite: hand-drawn 24px stroke icons, inherit currentColor -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c0-8.5 6-14 15-14 0 9-6 15-14 15"/><path d="M5 19l8.5-8.5"/></symbol>
+    <symbol id="i-basket" viewBox="0 0 24 24"><path class="fillsoft" d="M3 10h18l-2.2 9.2a1 1 0 0 1-1 .8H6.2a1 1 0 0 1-1-.8z"/><path d="M7.5 10l3-6M16.5 10l-3-6M9 14v2.5M12 14v2.5M15 14v2.5"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><rect class="fillsoft" x="4" y="7" width="16" height="14" rx="2.5"/><circle cx="12" cy="14" r="3.5"/><path d="M12 14l1.8-1.8M9 3.5h6M12 3.5V7"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17.5 14c2 .3 3.4 1.8 4 4.5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.3-7 8-7s7 2.5 8 7"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path class="fillsoft" d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-cloud-ok" viewBox="0 0 24 24"><path d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.6 9.6 4.5 4.5 0 0 0 7 18.5z"/><path d="M9.5 14l2 2 3.5-3.5"/></symbol>
+    <symbol id="i-half" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5L2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4"/><path class="fillsoft" d="M5 4h12l-2.5 4L17 12H5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.6L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.3 4.6L20 16"/><path d="M20 20.5V16h-4.5"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle class="fillsoft" cx="12" cy="12" r="8.5"/><path d="M10 7.5h2.8a2 2 0 0 1 0 4.1H10h3.2a2.1 2.1 0 0 1 0 4.2H10z"/><path d="M11.5 6v1.5M11.5 15.8v1.7"/></symbol>
+    <symbol id="i-bank" viewBox="0 0 24 24"><path class="fillsoft" d="M3 9.5L12 4l9 5.5z"/><path d="M3 9.5L12 4l9 5.5M4.5 10v8M9.5 10v8M14.5 10v8M19.5 10v8M3 20.5h18"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path class="fillsoft" d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></symbol>
+    <symbol id="i-tree" viewBox="0 0 24 24"><circle class="fillsoft" cx="12" cy="9" r="5.5"/><path d="M12 14.5V21M9 21h6"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M5 8h13l-3.5-3.5M19 16H6l3.5 3.5"/></symbol>
+    <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-shrink" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect class="fillsoft" x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l2.5 2.5"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24"><path d="M4 20v-3M9 20v-7M14 20V9M19 20V4"/></symbol>
+    <symbol id="i-nosignal" viewBox="0 0 24 24"><path d="M4 20v-3M9 20v-7M14 20V9M19 20V4" opacity=".35"/><path d="M3 4l18 16"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 24 24"><rect x="2.5" y="7" width="17" height="10" rx="2"/><path d="M22 10.5v3"/><rect x="4.5" y="9" width="11" height="6" rx="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+    <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18h.01M12 18h3.5"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7v.5M12 16.5v.01"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path class="fillsoft" d="M3.5 8.5a2 2 0 0 1 2-2h2.2L9.5 4h5l1.8 2.5h2.2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect class="fillsoft" x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 2.5-2.5L20 18"/></symbol>
+    <symbol id="i-receipt" viewBox="0 0 24 24"><path class="fillsoft" d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z"/><path d="M9 8h6M9 11.5h6M9 15h3.5"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 4v16h16"/><path class="fillsoft" d="M8 17v-5h3v5zM13 17V8h3v9z"/><path d="M8 17v-5h3v5M13 17V8h3v9"/></symbol>
+    <symbol id="i-weather" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.5"/><path d="M9 2.5v1.5M2.5 9H4M4.4 4.4l1 1M13.6 4.4l-1 1"/><path class="fillsoft" d="M9 20h9a3.5 3.5 0 0 0 .3-7A5 5 0 0 0 9 14.2 3 3 0 0 0 9 20z"/><path d="M9 20h9a3.5 3.5 0 0 0 .3-7A5 5 0 0 0 9 14.2 3 3 0 0 0 9 20z"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path class="fillsoft" d="M3.5 7.5h15a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M3.5 7.5V6a2 2 0 0 1 2-2H16v3.5M15.5 13.5h5"/><circle cx="16.5" cy="13.5" r=".6"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path class="fillsoft" d="M3.5 8L12 4l8.5 4v8.5L12 20.5l-8.5-4z"/><path d="M3.5 8L12 12l8.5-4M12 12v8.5M7.8 6l8.4 4"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h3.5l1.5 4.5-2 1.5a11 11 0 0 0 6 6l1.5-2 4.5 1.5V19a1.5 1.5 0 0 1-1.5 1.5A15.5 15.5 0 0 1 3.5 5.5 1.5 1.5 0 0 1 5 4z"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path class="fillsoft" d="M4 5.5h16v10.5H10l-4.5 3.5V16H4z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M10 6.5h10M10 12h10M10 17.5h10"/><path d="M3.5 6.5l1.5 1.5L7.5 5.5M3.5 12l1.5 1.5L7.5 11"/><circle cx="5" cy="17.5" r="1.2"/></symbol>
+    <symbol id="i-pile" viewBox="0 0 24 24"><path class="fillsoft" d="M3 19c1.5-4 4-6.5 5.5-6.5 1 0 1.7.8 2.3 1.6.9-2.6 2.6-5.1 4.2-5.1 2 0 4.5 4.6 6 10z"/><path d="M2.5 19.5h19"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header class="hdr">
+  <h1>mon-farm — Flow v4 · 2026-10-03</h1>
+  <p>ตัวอย่างลำดับหน้าจอ (mockup) ของแอป <b>FarmMate</b> — ใช้การ์ดและไอคอนจาก FarmMate; flow ยึด PRD · v4: หน้าแรกวาดใหม่ตามคำตอบใน Asana (ภาพปก · 3 งานที่ใช้บ่อย · รายการวันนี้ · การ์ดโมดูล), ทางเลือกหน้า 12 อ่านง่ายขึ้น, ใส่คำตอบ ?20 (เลขเข่งแยกต่อจุด)</p>
+  <p class="date num">v4 · 2026-10-03 · ตัวเลข ชื่อ และน้ำหนักทั้งหมดในหน้าจอเป็น <b>ตัวอย่าง</b></p>
+  <div class="legend">
+    <span><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 8</span> เจ้าของตอบแล้ว 2026-10-03 — ตารางคำตอบอยู่ท้ายหน้า</span>
+    <span><span class="q">?21</span> คำถามใหม่ใน v4: ?21–?23 (ยังไม่ได้ตอบ)</span>
+    <span><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span> ป้ายสถานะ sync (ไอคอน + คำ)</span>
+    <span><span class="ds ds-none">ไม่ได้บันทึก</span> ป้ายสถานะข้อมูลรายฟิลด์ (E01-S15)</span>
+  </div>
+</header>
+
+<!-- ======================= 1. ACCESS + HOME ======================= -->
+<section class="sec">
+  <h2>1 · เข้าใช้งาน และหน้าแรก</h2>
+  <p>ครั้งแรกต้องต่อเน็ตเพื่อ login; หลังจากนั้นใช้ออฟไลน์ได้ทั้งหมด</p>
+  <div class="flow">
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="หน้าเข้าสู่ระบบ">
+        <div class="sbar num"><span>06:40</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="hero">
+          <svg class="fm-logo" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="17" cy="27" r="7" style="fill:var(--c-brand-yellow)"/>
+            <path d="M31 46C28 29 36 14 54 7c3 18-6 34-23 39z" style="fill:var(--c-brand)"/>
+            <path d="M28 45C23 36 15 32 7 33c3 9 11 14 21 12z" style="fill:var(--c-brand-light)"/>
+            <path d="M5 52c13-10 33-12 54-6-17-1-33 3-45 12z" style="fill:var(--c-brand-strong)"/>
+          </svg>
+          <h2 class="fm-word">FarmMate</h2>
+          <p>แอปบริหารสวนยาง</p>
+        </div>
+        <div class="foot">
+          <div class="banner info"><svg class="ic sm"><use href="#i-signal"/></svg><span><b>ครั้งแรกต้องต่ออินเทอร์เน็ต</b>หลังเข้าสู่ระบบแล้ว ใช้ที่สวนแบบไม่มีสัญญาณได้</span></div>
+          <div class="btn btn-secondary"><span class="gmark">G</span>เข้าสู่ระบบด้วย Google</div>
+        </div>
+      </div></div>
+      <figcaption>
+        <span class="t">1. เข้าสู่ระบบ</span>
+        login ด้วย Google ครั้งเดียวต่อเครื่อง ไม่มีปุ่มออกจากระบบใน MVP; LINE มาทีหลัง
+        <span class="ids">ACC-1, ACC-6 · D-2, D-23 · E02-S01</span>
+        <ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 1</span><span>ชื่อแอป FarmMate; โลโก้วาดใหม่เป็น SVG ในแนวเดียวกับรูปตัวอย่าง (ใบไม้ + พระอาทิตย์ + เนิน) ไม่ได้คัดลอกรูป</span></li></ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กด <b>เข้าสู่ระบบด้วย Google</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="เลือกหรือสร้างกลุ่มฟาร์ม">
+        <div class="sbar num"><span>06:41</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"></span><h3>เลือกกลุ่มฟาร์ม</h3></div>
+        <div class="body">
+          <div class="card tight">
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-tree"/></svg></span><span class="grow"><span class="val">สวนครอบครัว</span><span class="sub">ตัวอย่าง · เจ้าของ 3 คน</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-tree"/></svg></span><span class="grow"><span class="val">สวนของเพื่อน</span><span class="sub">ตัวอย่าง · เจ้าของ 2 คน</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+          </div>
+          <div class="card tight">
+            <div class="row"><span class="tile t-blue"><svg class="ic"><use href="#i-plus"/></svg></span><span class="grow"><span class="val">สร้างกลุ่มฟาร์มใหม่</span><span class="sub">ตั้งชื่อ แล้วเป็นเจ้าของกลุ่ม</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-blue"><svg class="ic"><use href="#i-key"/></svg></span><span class="grow"><span class="val">เข้าร่วมด้วยรหัสเชิญ</span><span class="sub">รหัส 6 หลัก · ต้องต่อเน็ต</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+          </div>
+          <div class="banner info"><svg class="ic sm"><use href="#i-lock"/></svg><span>ต้องอยู่ในกลุ่มก่อนจึงจะบันทึกข้อมูลได้ ข้อมูลแต่ละกลุ่มแยกกัน</span></div>
+        </div>
+      </div></div>
+      <figcaption>
+        <span class="t">2. เลือก / สร้างกลุ่มฟาร์ม</span>
+        แสดงเมื่อยังไม่มีกลุ่ม หรือมี 2 กลุ่มขึ้นไป — มีกลุ่มเดียวข้ามหน้านี้ไปหน้าแรกเลย
+        <span class="ids">ACC-2, ACC-3, ACC-5 · D-24, D-25 · E02-S02, S03, S04</span>
+        <ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 2</span><span>สลับกลุ่ม ตั้งค่า และข้อมูลหลัก อยู่ในเมนู ☰ ของหน้าแรกไว้ก่อน — ตำแหน่งจริงตัดสินตอน build</span></li></ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>กลุ่ม</b> (กลุ่มเดียว = เข้าเลย)</span></div>
+
+    <figure class="step long-step">
+      <span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span>
+      <div class="phone long"><div class="screen" aria-label="หน้าแรก วันนี้ (หน้ายาว เลื่อนได้)">
+        <div class="sbar num"><span>06:42</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-menu"/></svg></span><h3>สวนครอบครัว <small>ส. 3 ต.ค. 2569</small></h3><span class="pill p-conf"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน 1</span></div>
+        <div class="cover" role="img" aria-label="ภาพปก: สวนยางยามเช้า">
+          <svg class="scene" viewBox="0 0 316 148" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <g class="rays"><path d="M62 16v-7M62 64v7M38 40h-7M86 40h7M45 23l-5-5M79 57l5 5M79 23l5-5M45 57l-5 5"/></g>
+            <circle class="sun" cx="62" cy="40" r="14"/>
+            <g class="cloud"><ellipse cx="200" cy="34" rx="22" ry="9"/><ellipse cx="216" cy="28" rx="14" ry="10"/><ellipse cx="186" cy="30" rx="11" ry="8"/></g>
+            <path class="hill-back" d="M0 108C60 84 120 92 170 100S270 82 316 92V148H0z"/>
+            <g>
+              <rect class="trunk" x="120" y="66" width="4" height="40" rx="1.5"/><ellipse class="crown2" cx="122" cy="62" rx="15" ry="13"/>
+              <rect class="trunk" x="160" y="62" width="4" height="44" rx="1.5"/><ellipse class="crown2" cx="162" cy="58" rx="15" ry="13"/>
+              <rect class="trunk" x="200" y="64" width="4" height="42" rx="1.5"/><ellipse class="crown2" cx="202" cy="60" rx="15" ry="13"/>
+              <rect class="trunk" x="240" y="60" width="4" height="46" rx="1.5"/><ellipse class="crown2" cx="242" cy="56" rx="15" ry="13"/>
+              <rect class="trunk" x="280" y="62" width="4" height="44" rx="1.5"/><ellipse class="crown2" cx="282" cy="58" rx="15" ry="13"/>
+            </g>
+            <path class="hill" d="M0 124C70 108 150 112 210 118S290 110 316 114V148H0z"/>
+            <g>
+              <rect class="trunk" x="96" y="70" width="6" height="58" rx="2"/><ellipse class="crown" cx="99" cy="64" rx="22" ry="18"/>
+              <path class="tap" d="M96 100l6-4"/><path class="cup" d="M93 104h7l-1 6h-5z"/>
+              <rect class="trunk" x="150" y="74" width="6" height="54" rx="2"/><ellipse class="crown" cx="153" cy="68" rx="22" ry="18"/>
+              <path class="tap" d="M150 104l6-4"/><path class="cup" d="M147 108h7l-1 6h-5z"/>
+              <rect class="trunk" x="204" y="72" width="6" height="56" rx="2"/><ellipse class="crown" cx="207" cy="66" rx="22" ry="18"/>
+              <rect class="trunk" x="258" y="70" width="6" height="58" rx="2"/><ellipse class="crown" cx="261" cy="64" rx="22" ry="18"/>
+            </g>
+          </svg>
+          <span class="chg"><svg class="ic"><use href="#i-image"/></svg>เปลี่ยนรูปปก</span>
+        </div>
+        <div class="body" style="padding-top:12px">
+          <div class="acts">
+            <div class="act"><span class="tile t-cream"><svg class="ic"><use href="#i-list"/></svg></span>เตรียมขาย</div>
+            <div class="act main"><span class="tile t-blue"><svg class="ic"><use href="#i-basket"/></svg></span>เริ่มการขาย</div>
+            <div class="act"><span class="tile t-green"><svg class="ic"><use href="#i-receipt"/></svg></span>บันทึก<br>ค่าใช้จ่าย</div>
+          </div>
+          <div class="sec-h"><b>วันนี้ต้องรู้อะไรบ้าง</b><span style="font-size:12px;color:var(--c-ink-soft)">สำคัญก่อน</span></div>
+          <div class="card tight">
+            <div class="row"><span class="tile t-red"><svg class="ic"><use href="#i-alert"/></svg></span><span class="grow"><span class="lbl">เรื่องด่วน · ซิงก์</span><span class="val" style="display:block">ข้อมูลขัดกัน 1 รายการ</span><span class="sub num">ตัวอย่าง · การขาย 18 ก.ย. · แตะเพื่อเลือกค่า</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="lbl">การขายล่าสุด</span><span class="val num" style="display:block">18 ก.ย. 2569 · 2,100 กก.</span><span class="sub">ตัวอย่าง · <span class="chip ch-ok" style="padding:0 6px"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-clock"/></svg></span><span class="grow"><span class="lbl">งานถึงกำหนด</span><span class="val" style="display:block">ใส่ปุ๋ย สวนจันทเขลม</span><span class="sub">ตัวอย่าง · วันนี้</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+          </div>
+          <div class="sec-h" style="margin-top:-4px"><span class="more-hint">มีเมื่อเกิดขึ้น: การขายที่ยังไม่ปิด · เอกสารใกล้หมดอายุ · …</span><span class="lnk" style="white-space:nowrap">ดูการขายทั้งหมด ›</span></div>
+          <div class="sec-h"><b>โมดูลอื่น</b></div>
+          <div class="mods">
+            <div class="mod"><span class="tile sm t-blue"><svg class="ic"><use href="#i-chart"/></svg></span><span>รายงานการขายย้อนหลัง</span></div>
+            <div class="mod"><span class="tile sm t-blue"><svg class="ic"><use href="#i-weather"/></svg></span><span>พยากรณ์อากาศ<small>เปิดภายนอก <svg class="ic"><use href="#i-ext"/></svg></small></span></div>
+            <div class="mod"><span class="tile sm t-cream"><svg class="ic"><use href="#i-wallet"/></svg></span><span>รายการที่ต้องจ่าย</span></div>
+            <div class="mod"><span class="tile sm t-green"><svg class="ic"><use href="#i-box"/></svg></span><span>รายการ stock</span></div>
+            <div class="mod wide"><span class="tile sm t-gray"><svg class="ic"><use href="#i-users"/></svg></span><span>ข้อมูลพนักงาน</span><svg class="ic chev" style="margin-left:auto"><use href="#i-chev"/></svg></div>
+          </div>
+          <div style="height:8px"></div>
+        </div>
+      </div></div>
+      <div class="extras">
+        <div class="inset">
+          <span class="ttl">แตะ เตรียมขาย → หน้าเตรียมขาย (ร่าง)</span>
+          <div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-cal"/></svg></span><span class="grow">วัน / เวลานัด</span><b class="num">ส. 10 ต.ค. · 07:00</b></div>
+          <div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-chat"/></svg></span><span class="grow">ข้อความนัดผู้ซื้อ<br><span style="font-size:12px;color:var(--c-ink-soft)">ร่างให้แล้ว · แก้ได้ · ส่งทาง LINE</span></span></div>
+          <div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-users"/></svg></span><span class="grow">ผู้ซื้อ ก (ตัวอย่าง)</span><span class="btn btn-secondary small" style="min-height:40px;padding:0 10px"><svg class="ic sm"><use href="#i-phone"/></svg>โทร</span><span class="btn btn-secondary small" style="min-height:40px;padding:0 10px"><svg class="ic sm"><use href="#i-chat"/></svg>LINE</span></div>
+          <div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-coin"/></svg></span><span class="grow">ราคาที่ตกลง ฿/กก.</span><span class="ds ds-none">ไม่ได้บันทึก</span></div>
+          <div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-list"/></svg></span><span class="grow">เช็กลิสต์ก่อนขาย</span><b class="num">2 / 5</b></div>
+          <span class="note">ภาพร่างเท่านั้น — ขั้นตอนจริงรอเลือก epic <span class="q">?22</span> · ราคาที่ตกลงไปเติมหัวการขาย (หน้า 5) ให้เอง</span>
+        </div>
+      </div>
+      <figcaption>
+        <span class="t">3. หน้าแรก — ตามคำตอบ Asana 2026-10-03</span>
+        บนสุดเป็นภาพปก (ภาพวาดสวนยาง ขยับช้า ๆ; ปิดเมื่อเครื่องตั้ง "ลดการเคลื่อนไหว") หรือรูปที่ผู้ใช้เลือก · ต่อด้วย 3 งานที่ใช้บ่อย · รายการวันนี้เรียงเรื่องสำคัญก่อน · การ์ดไปโมดูลอื่น · ไม่มีปุ่มติดล่างแล้ว — เริ่มการขายเป็นการ์ดกลาง
+        <span class="ids">ANA-1, SYNC-3 · E13-S01, E01-S10</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 3</span><span>ตาม Asana 2026-10-03: ภาพปก → เตรียมขาย / เริ่มการขาย / บันทึกค่าใช้จ่าย → รายการวันนี้ → การ์ดโมดูล (รายงานการขายย้อนหลัง · พยากรณ์อากาศ · รายการที่ต้องจ่าย · รายการ stock · ข้อมูลพนักงาน)</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 4</span><span>มีหน้ารายการการขายแยก — ทางเข้าคือ "ดูการขายทั้งหมด" ใต้รายการวันนี้</span></li>
+          <li><span class="q">?22</span><span>เตรียมขาย (เช็กลิสต์ · ร่างข้อความนัด · เลือกวันเวลา · โทร/LINE ผู้ซื้อ · ราคาที่ตกลง) อยู่ใน epic ไหน — การขาย (E04) หรือ epic ใหม่?</span></li>
+          <li><span class="q">?23</span><span>พยากรณ์อากาศเปิดอะไร — แอปพยากรณ์ในเครื่อง หรือเว็บ (เช่น กรมอุตุฯ) ตามพิกัดสวน · หลายสวน → ถามเลือกสวนก่อน</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>ดูการขายทั้งหมด</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="รายการการขายทั้งหมด">
+        <div class="sbar num"><span>06:43</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>การขายทั้งหมด <small>สวนครอบครัว</small></h3><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span></div>
+        <div class="body">
+          <span style="font-size:13px;color:var(--c-ink-soft)">ใหม่สุดก่อน · แตะเพื่อดูสรุปการขาย</span>
+          <div class="card tight">
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">18 ก.ย. 2569</span><span class="sub num">ผู้ซื้อ ก · 42 เข่ง</span></span><span style="text-align:right"><span class="val num" style="display:block">2,100 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">4 ก.ย. 2569</span><span class="sub num">ผู้ซื้อ ก · 37 เข่ง</span></span><span style="text-align:right"><span class="val num" style="display:block">1,850 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">21 ส.ค. 2569</span><span class="sub num">ผู้ซื้อ ข · 40 เข่ง</span></span><span style="text-align:right"><span class="val num" style="display:block">1,960 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></div>
+          </div>
+          <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span>การขายที่ยังไม่ปิดแสดงสถานะ เช่น <b style="display:inline">กำลังชั่ง</b> · ป้าย sync ต่อการขาย: ซิงก์แล้ว / รอส่ง / ข้อมูลขัดกัน / ส่งไม่สำเร็จ</span></div>
+        </div>
+      </div></div>
+      <figcaption>
+        <span class="t">4. รายการการขายทั้งหมด</span>
+        หน้าแยก เรียงใหม่สุดก่อน; แต่ละแถวบอกวันที่ ผู้ซื้อ เข่ง กก. และสถานะการขาย
+        <span class="ids">SALE-20, D-28 · E05-S06</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 4</span><span>ทั้งสองอย่าง: หน้าแยก + ทางเข้าจากหน้าแรกไว้ก่อน</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว</span><span>คำป้าย sync ต่อการขาย: ซิงก์แล้ว / รอส่ง / ข้อมูลขัดกัน / ส่งไม่สำเร็จ</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ======================= 2. WEIGH ======================= -->
+<section class="sec">
+  <h2>2 · เริ่มการขายและนับเข่ง</h2>
+  <p>ทั้งหมดทำงานออฟไลน์ — บันทึกเป็นของจริงทันที และส่งขึ้นเองเมื่อมีสัญญาณ</p>
+  <div class="flow">
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="เริ่มการขาย หัวการขาย">
+        <div class="sbar num"><span>07:05</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>เริ่มการขาย</h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 1</span></div>
+        <div class="body">
+          <div class="card tight">
+            <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-cal"/></svg></span><span class="grow lbl">วันที่</span><span class="val num">ส. 3 ต.ค. 2569</span></div>
+            <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-users"/></svg></span><span class="grow"><span class="lbl">ผู้ซื้อ</span><span class="sub">รายล่าสุด</span></span><span class="val">ผู้ซื้อ ก (ตัวอย่าง)</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="lbl">ผู้จัดการสวน</span><span class="sub">เติมจากข้อมูลหลัก</span></span><span class="val">อ.สมหวัง</span></div>
+            <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-clock"/></svg></span><span class="grow"><span class="lbl">เวลาเริ่มชั่ง</span><span class="sub">ไม่บังคับ</span></span><span class="ds ds-none">ไม่ได้บันทึก</span></div>
+            <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-coin"/></svg></span><span class="grow"><span class="lbl">ราคา ฿/กก.</span><span class="sub">ใส่ทีหลังได้ · ใส่ตอนนี้ หน้าชั่งจะโชว์ยอดเงิน</span></span><span class="ds ds-none">ไม่ได้บันทึก</span></div>
+            <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="lbl">ขนาดเข่ง</span><span class="sub">ค่าเริ่มต้นของกลุ่ม</span></span><span class="val num">50 กก. สุทธิ</span></div>
+            <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-note"/></svg></span><span class="grow lbl">หมายเหตุ / รูป</span><svg class="ic sm chev"><use href="#i-plus"/></svg></div>
+          </div>
+          <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span>เลือกสวนตอนเลือกจุดชั่ง — การขายเดียวรวมหลายสวนได้</span></div>
+        </div>
+        <div class="foot"><div class="btn btn-primary">ถัดไป: เลือกจุดชั่ง</div></div>
+      </div></div>
+      <figcaption>
+        <span class="t">5. เริ่มการขาย — หัวการขาย</span>
+        ทุกช่องเติมค่าเริ่มต้นให้แล้ว กดถัดไปได้เลย; ราคาไม่ต้องรู้ตอนชั่ง
+        <span class="ids">SALE-2, SALE-3, SALE-7, MD-6, MD-7 · D-10, D-11 · E04-S02</span>
+        <ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 5</span><span>ถูกต้อง — ไม่มีสวนในหัวการขาย</span></li></ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กด <b>ถัดไป</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="เลือกจุดชั่ง">
+        <div class="sbar num"><span>07:06</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>เลือกจุดชั่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 1</span></div>
+        <div class="body">
+          <div class="steps"><span class="done"><svg class="ic sm"><use href="#i-check"/></svg>สวน</span>›<span class="done"><svg class="ic sm"><use href="#i-check"/></svg>คนกรีด</span>›<span class="now">จุดชั่ง</span></div>
+          <div class="card">
+            <h4>สวน</h4>
+            <div class="seg"><span class="on">จันทเขลม<small class="num">~125 ไร่</small></span><span>คลองพลู<small class="num">~30 ไร่</small></span></div>
+          </div>
+          <div class="card">
+            <h4>คนกรีด</h4>
+            <div class="seg"><span class="on">แดง<small>3 จุด</small></span><span>นัด<small>1 จุด</small></span></div>
+          </div>
+          <div class="card tight">
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">ตัวอย่างชื่อ · ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 2</span><span class="sub">ตัวอย่างชื่อ · ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">ตัวอย่างชื่อ · ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+          </div>
+          <span style="font-size:13px;color:var(--c-ink-soft)">เลือกจุดไหนก่อนก็ได้</span>
+          <div class="banner info"><svg class="ic sm"><use href="#i-basket"/></svg><span><b>เลขเข่ง 2 แบบ</b>"เลขเข่งต่อเนื่องทั้งการขาย" หรือ "เริ่ม 1 ใหม่ทุกจุด" — เลือกไว้ตอนเริ่มการขาย <span class="q">?21</span></span></div>
+        </div>
+      </div></div>
+      <figcaption>
+        <span class="t">6. เลือก สวน → คนกรีด → จุดชั่ง</span>
+        ค่าเริ่มต้นเลือกไว้แล้ว แตะจุดชั่งเดียวก็เริ่มได้ (เริ่มถึงเข่งแรก ≤ 4 แตะ)
+        <span class="ids">SALE-1, SALE-4, SALE-10, MD-3, MD-4 · D-9 · E04-S02</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 6</span><span>ขั้นคือ สวน → คนกรีด → จุดชั่ง ตามที่วาด ไม่มีขั้นโซนแยก · <b>สวน = โซนของ POC; โซนย่อยในสวนยังมีแต่ไม่บังคับ</b></span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 20</span><span>มีโหมดเลขเข่งที่สอง: เริ่มเข่ง 1 ใหม่ทุกจุด แต่ละจุดมีเศษของตัวเองได้ เพราะคิดเงินจากน้ำหนักรวม</span></li>
+          <li><span class="q">?21</span><span>เลือกโหมดตอนไหน: ตั้งค่ากลุ่ม หรือ ตอนเริ่มการขาย?</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>จุด 1</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="ตรวจศูนย์และขนาดเข่ง">
+        <div class="sbar num"><span>07:07</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ก่อนชั่ง · จุด 1 <small>จันทเขลม · แดง</small></h3></div>
+        <div class="body">
+          <div class="card">
+            <div class="row" style="min-height:0;margin-bottom:8px"><span class="tile t-blue"><svg class="ic"><use href="#i-scale"/></svg></span><span class="grow"><span class="val">ตาชั่งอ่าน 0 ไหม?</span><span class="sub">ไม่มีอะไรบนตาชั่ง</span></span></div>
+            <div class="seg"><span class="on"><svg class="ic sm"><use href="#i-check"/></svg>อ่าน 0</span><span><svg class="ic sm"><use href="#i-flag"/></svg>ไม่ใช่ 0</span></div>
+          </div>
+          <div class="card tight">
+            <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="lbl">น้ำหนักภาชนะ (tare)</span><span class="sub">ค่าจากการตั้งค่า</span></span><span class="val num">2 กก.</span></div>
+          </div>
+          <div class="card">
+            <h4>ขนาดเข่ง (สุทธิ)</h4>
+            <div class="seg"><span class="on num">50 กก.</span><span class="num">60 กก.</span><span><svg class="ic sm"><use href="#i-plus"/></svg></span></div>
+          </div>
+          <div class="card expect">
+            <span class="lbl" style="font-size:14px;color:var(--c-ink-soft)">ตาชั่งควรอ่าน</span>
+            <div class="fig num">52<span class="u">กก.</span></div>
+            <p class="num">สุทธิ 50 + ภาชนะ 2</p>
+          </div>
+          <span style="font-size:13px;color:var(--c-ink-soft)">ถามตรวจศูนย์: ทุกจุด (ตั้งค่าได้: จุดแรกของแต่ละสวน · ข้าม) · ไม่ใช่ 0 = ติดธงแล้วไปต่อ</span>
+        </div>
+        <div class="foot"><div class="btn btn-primary">เริ่มชั่ง</div></div>
+      </div></div>
+      <figcaption>
+        <span class="t">7. ตรวจศูนย์ / tare + ขนาดเข่ง</span>
+        ยืนยันตาชั่งอ่าน 0 และน้ำหนักภาชนะ เห็นค่าที่ตาชั่งควรอ่านก่อนเริ่ม; ไม่ขวางการชั่ง
+        <span class="ids">SALE-6, SALE-7, MD-7, MD-9 · D-6 · E04-S03</span>
+        <ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 7</span><span>tare ดึงจากค่าที่ตั้งไว้ (แสดง "ค่าจากการตั้งค่า")</span></li></ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กด <b>เริ่มชั่ง</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="นับเข่ง โหมดผู้บันทึก">
+        <div class="sbar num"><span>07:48</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 23</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
+        <div class="body" style="gap:10px">
+          <div class="card tight">
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จันทเขลม · จุด 1</span><span class="sub">คนกรีด: แดง</span></span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div>
+          </div>
+          <div class="card bigc" aria-label="เข่งปัจจุบัน 23 ถัดไป 24">
+            <div><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">23</div></div>
+            <div class="next"><span class="lbl">ถัดไป</span><div class="fig num">24</div></div>
+          </div>
+          <div class="six">
+            <div class="card"><span class="lbl">เสร็จแล้ว</span><div class="fig num">22<span class="u">เข่ง</span></div></div>
+            <div class="card"><span class="lbl">สะสม</span><div class="fig num">1,100<span class="u">กก.</span></div></div>
+            <div class="card"><span class="lbl">เข่งไม่เต็ม</span><div class="fig" style="font-size:16px;padding-top:4px">ไม่มี</div></div>
+          </div>
+          <div class="stage">
+            <svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg>
+            <b>กดค้างเพื่อบันทึกเข่งเต็ม</b>
+            <span class="num">ตาชั่งควรอ่าน 52 กก.</span>
+          </div>
+          <div class="tools">
+            <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เข่งไม่เต็ม</span>
+            <span class="tool"><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ</span>
+            <span class="tool"><svg class="ic"><use href="#i-expand"/></svg>โหมดสาธารณะ</span>
+          </div>
+        </div>
+      </div></div>
+      <div class="extras">
+        <div class="inset">
+          <span class="ttl">ตอนนับ</span>
+          <span class="note">animation เฉพาะตอนเลขเปลี่ยน — เข่งปัจจุบัน 23 → 24 และถัดไป 24 → 25 หลังกดค้างครบ; ไม่มีแถบเลื่อนเข่งที่เสร็จ</span>
+        </div>
+        <div class="inset">
+          <span class="ttl">ถ้าใส่ราคาไว้ก่อนเริ่ม หรือใส่ระหว่างการขาย (เช่น 48.50 ฿/กก.)</span>
+          <div class="six">
+            <div class="card"><span class="lbl">ยอดเงิน</span><div class="fig num">5.34<span class="u">หมื่น ฿</span></div></div>
+            <div class="card"><span class="lbl">สะสม</span><div class="fig num">1,100<span class="u">กก.</span></div></div>
+            <div class="card"><span class="lbl">เข่งไม่เต็ม</span><div class="fig" style="font-size:16px;padding-top:4px">ไม่มี</div></div>
+          </div>
+          <span class="note num">การ์ดแรกเปลี่ยนจาก "เสร็จแล้ว N เข่ง" เป็นยอดเงิน (1,100 × 48.50 = 53,350 ฿) · ใส่ราคาระหว่างการขาย → เปลี่ยนทันที · แบบย่อ เลขนัยสำคัญไม่เกิน 3 หลัก: 2,450 → 2.45 พัน · 53,350 → 5.34 หมื่น · 134,250 → 1.34 แสน · 1,093,675 → 1.09 ล้าน · ต่ำกว่า 1,000 แสดงเต็ม <span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 19</span></span>
+        </div>
+      </div>
+      <figcaption>
+        <span class="t">8. นับเข่ง — โหมดผู้บันทึก (ค่าเริ่มต้น, แนวตั้ง)</span>
+        การ์ดบนแสดง <b>เข่งปัจจุบัน</b> (23 = เข่งที่กำลังชั่ง) ตัวใหญ่ และ <b>ถัดไป</b> (24); พื้นที่กดค้างมีแต่ข้อความ; กดค้าง ~1 วินาที = 1 เข่ง (แตะ ปัด หรือสองนิ้วไม่นับ); เสียงไทยอ่านเลขเข่ง
+        <span class="ids">SALE-8–SALE-17, SYNC-3 · D-7, D-8, D-13 · E04-S04, S05, S06, S08, S09</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 8</span><span>แก้คำตอบ 2026-10-03: กลับไปแบบ v1 — การ์ดบน เข่งปัจจุบัน + ถัดไป · ไม่มี ticker และเลขจาง · การ์ด 3 ใบคงไว้ (มีราคา → การ์ดแรกเป็นยอดเงินแบบย่อ)</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 9</span><span>"ชั่งครบแล้ว → ตรวจยอด" อยู่ในเมนู ⋯ และในหน้าเปลี่ยนจุดเมื่อทุกจุดมีบันทึก (หน้า 12)</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>โหมดสาธารณะ</b> (แตะอีกครั้งเพื่อกลับ)</span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="นับเข่ง โหมดสาธารณะ">
+        <div class="sbar num" style="background:var(--c-action);color:var(--c-inverse)"><span>07:49</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="pub-bar"><span>จันทเขลม · จุด 1 · แดง</span><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 23</span><svg class="ic" aria-label="เสียงเปิด"><use href="#i-speaker"/></svg></div>
+        <div class="pub-stage">
+          <svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="4" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg>
+          <div class="pub-num">23</div>
+        </div>
+        <div class="pub-foot"><svg class="ic"><use href="#i-shrink"/></svg>แตะเพื่อกลับโหมดผู้บันทึก</div>
+      </div></div>
+      <figcaption>
+        <span class="t">9. นับเข่ง — โหมดสาธารณะ</span>
+        เลขเข่งที่กำลังชั่ง (23) ใหญ่ที่สุดให้ผู้ซื้ออ่าน; กดค้างบนจอนี้ก็นับได้; หมุนเป็นแนวนอนได้เฉพาะโหมดนี้
+        <span class="ids">SALE-15, SALE-16 · D-8, D-17 · E04-S07 · design-system §12.8</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 10</span><span>จอขาวแบน มีแต่ตัวเลข — แถบชื่อจุดอยู่ด้านบนสำหรับผู้บันทึก</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 8</span><span>โหมดสาธารณะยังแสดงเข่งที่กำลังชั่ง (23)</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+  </div>
+
+  <h3 class="sub-h">2b · เข่งไม่เต็ม และเข่งเชื่อม (E04-S06)</h3>
+  <p class="sub-p">ตัวอย่างเดียวกัน ช่วงสาย: แดงเสร็จแล้ว (เข่ง 1–31 · 1,520 กก.) · นัดที่ จันทเขลม จุด 4 ชั่งเต็มเข่ง 32–39 (400 กก.) แล้วยางหมดกองตอนเข่ง 40</p>
+  <div class="flow">
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="บันทึกเข่งไม่เต็ม">
+        <div class="sbar num"><span>09:18</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 38</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
+        <div class="body" style="gap:10px">
+          <div class="card tight">
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จันทเขลม · จุด 4</span><span class="sub">คนกรีด: นัด</span></span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div>
+          </div>
+          <div class="card bigc" aria-label="เข่งปัจจุบัน 40 ถัดไป 41">
+            <div><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">40</div></div>
+            <div class="next"><span class="lbl">ถัดไป</span><div class="fig num">41</div></div>
+          </div>
+          <div class="six">
+            <div class="card"><span class="lbl">เสร็จแล้ว</span><div class="fig num">39<span class="u">เข่ง</span></div></div>
+            <div class="card"><span class="lbl">สะสม</span><div class="fig num">1,920<span class="u">กก.</span></div></div>
+            <div class="card"><span class="lbl">เข่งไม่เต็ม</span><div class="fig" style="font-size:16px;padding-top:4px">ไม่มี</div></div>
+          </div>
+          <div class="stage" style="min-height:0;gap:2px">
+            <b style="font-size:16px">หยุดนับระหว่างใส่ค่า</b>
+          </div>
+          <div class="card" style="flex:none">
+            <h4 style="color:var(--c-ink);font-size:15px">เข่ง 40 ไม่เต็ม — จันทเขลม จุด 4 · นัด</h4>
+            <span class="lbl" style="font-size:13px;color:var(--c-ink-soft)">ตาชั่งอ่าน (กก.)</span>
+            <div class="stepper" style="margin:4px 0 6px">
+              <span class="sb"><svg class="ic"><use href="#i-minus"/></svg></span>
+              <span class="inp focus">37<span class="u">กก.</span></span>
+              <span class="sb"><svg class="ic"><use href="#i-plus"/></svg></span>
+            </div>
+            <div class="kv"><span>ยางสุทธิ</span><span>37 − 2 = 35 กก.</span></div>
+            <div class="kv"><span>ยังขาดอีก</span><span>15 กก. จึงเต็ม 50</span></div>
+            <div class="btnrow" style="margin-top:8px"><span class="btn btn-secondary">ยกเลิก</span><span class="btn btn-primary">บันทึก</span></div>
+          </div>
+        </div>
+      </div></div>
+      <figcaption>
+        <span class="t">10. บันทึกเข่งไม่เต็ม</span>
+        แตะ <b>เข่งไม่เต็ม</b> → แผงใส่ค่าเปิดแทนแถวปุ่ม ใต้พื้นที่กดค้าง — ไม่บังเลขเข่ง (F-13); พิมพ์ค่าที่ตาชั่งอ่าน แอปหักภาชนะให้ทันที เก็บทั้งสองค่า; ± ทีละ 0.5 กก. หรือพิมพ์ตรง (F-22)
+        <span class="ids">SALE-9, SALE-11 · F-13, F-22 · E04-S06 · POC: ShortBasketPanel</span>
+        <ul>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>ค่าที่อ่าน ≤ ภาชนะ หรือ ≥ 52 (เข่งเต็ม) → ไม่รับ บอกเหตุผล (flow e04 §8.1 · Q9 ยังเปิด)</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>ยกเลิก = ไม่บันทึกอะไร</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กด <b>บันทึก</b> — เข่ง 40 เปิดค้าง</span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="มีเข่งไม่เต็มเปิดอยู่">
+        <div class="sbar num"><span>09:19</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 39</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
+        <div class="body" style="gap:10px">
+          <div class="card tight">
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จันทเขลม · จุด 4</span><span class="sub">คนกรีด: นัด</span></span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div>
+          </div>
+          <div class="card bigc" aria-label="เข่งปัจจุบัน 40 ถัดไป 41">
+            <div><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">40</div></div>
+            <div class="next"><span class="lbl">ถัดไป</span><div class="fig num">41</div></div>
+          </div>
+          <div class="six">
+            <div class="card"><span class="lbl">เสร็จแล้ว</span><div class="fig num">39<span class="u">เข่ง</span></div></div>
+            <div class="card"><span class="lbl">สะสม</span><div class="fig num">1,955<span class="u">กก.</span></div></div>
+            <div class="card warn"><span class="lbl">เข่งไม่เต็ม 40</span><span class="sm2">เหลือเติม</span><div class="fig num">15<span class="u">กก.</span></div></div>
+          </div>
+          <div class="card warn" style="flex:none">
+            <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--c-raised)"><svg class="ic"><use href="#i-scale"/></svg></span><span class="grow"><span class="val num">เข่ง 40 เปิดอยู่ · 35 กก.</span><span class="sub num">ตาชั่ง 37 − ภาชนะ 2 · จันทเขลม จุด 4</span></span></div>
+            <div class="btn btn-secondary small" style="width:100%;margin-top:8px"><svg class="ic sm"><use href="#i-flag"/></svg>จบเข่งแล้ว / เป็นเศษ</div>
+          </div>
+          <div class="stage" style="min-height:0">
+            <svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg>
+            <b>เข่ง 40 รอเติม</b>
+            <span>ไปจุดถัดไปของ นัด แล้วเติมต่อได้</span>
+          </div>
+          <div class="tools">
+            <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เข่งไม่เต็ม</span>
+            <span class="tool"><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ</span>
+            <span class="tool"><svg class="ic"><use href="#i-expand"/></svg>โหมดสาธารณะ</span>
+          </div>
+        </div>
+      </div></div>
+      <figcaption>
+        <span class="t">11. มีเข่งไม่เต็มเปิดอยู่</span>
+        เข่ง 40 เปิดค้าง (SALE-11); การ์ดเข่งไม่เต็มบอกว่าต้อง <b>เติมอีกกี่ กก.</b> · เข่งปัจจุบันยังเป็น 40 จนเข่งนี้ปิด · <b>จบเข่งแล้ว / เป็นเศษ</b> ปิดทันที เลขถัดไป 41 (SALE-13)
+        <span class="ids">SALE-11, SALE-13, SALE-14 · D-13 · E04-S06</span>
+        <ul>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>การ์ดเสร็จแล้วยังเป็น 39 — เข่งที่เปิดอยู่ยังไม่นับว่าเสร็จ; กก. สะสมรวม 35 แล้ว (1,920 + 35)</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>กดค้างที่จุดเดิมขณะเข่ง 40 เปิดอยู่ — flow e04 Q8 (ยังเปิด)</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>เปลี่ยนจุด</b> → คลองพลู · นัด · <b>จุด 1</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="เปลี่ยนจุด คนกรีดคนเดิม มีเข่งเปิดอยู่">
+        <div class="sbar num"><span>09:31</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar dim"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>เปลี่ยนจุด <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 39</span></div>
+        <div class="body dim">
+          <div class="card"><h4>สวน</h4><div class="seg"><span>จันทเขลม</span><span class="on">คลองพลู</span></div></div>
+          <div class="card"><h4>คนกรีด</h4><div class="seg"><span class="on">นัด<small>1 จุด</small></span></div></div>
+          <div class="card tight"><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div>
+        </div>
+        <div class="sheet-scrim"></div>
+        <div class="sheet">
+          <span class="grab"></span>
+          <h4>เข่ง 40 ยังไม่เต็ม</h4>
+          <p class="num">มี 35 กก. จาก จันทเขลม จุด 4 · คนกรีดคนเดิม (นัด)</p>
+          <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมเข่ง 40 ต่อให้เต็ม</b><span class="ln num">เติมอีก <span class="nchip">15 กก.</span></span><span class="ln num">ตาชั่งอ่าน <span class="nchip">52 กก.</span> ทั้งเข่ง</span></span></div>
+          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-scale"/></svg></span><span><b>2 · ชั่งส่วนที่เติมใหม่แยก</b><span class="ln num">เติมอีก <span class="nchip">15 กก.</span> นับรวมเป็นเข่ง 40</span><span class="ln num">ตาชั่งอ่าน <span class="nchip">17 กก.</span> (15 + ภาชนะ 2)</span></span></div>
+          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-plus"/></svg></span><span><b>3 · เริ่มเข่งใหม่ นับต่อ</b><span class="ln num">เข่งใหม่คือ <span class="nchip">เข่ง 41</span></span><span class="ln num">เข่ง 40 ปิดเป็นเศษ <span class="nchip">35 กก.</span></span></span></div>
+          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-refresh"/></svg></span><span><b>4 · เริ่มเข่งใหม่ที่จุดนี้ นับจาก 1</b><span class="ln num">เลขเข่งแยกต่อจุด · เริ่ม <span class="nchip">เข่ง 1</span></span><span class="ln num">เข่ง 40 เดิมปิดเป็นเศษ <span class="nchip">35 กก.</span></span></span></div>
+          <p style="font-size:12px;line-height:1.35">ไปจุดของคนกรีดคนอื่น → เข่ง 40 ปิดเป็นเศษเองโดยไม่ถาม (ยางคนละคนกรีดรวมกันไม่ได้)</p>
+        </div>
+      </div></div>
+      <div class="extras">
+        <div class="inset">
+          <span class="ttl">เมื่อทุกจุดมีบันทึกแล้ว — หน้าเปลี่ยนจุดมีปุ่มนี้</span>
+          <div class="mini-row"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ชั่งแล้ว</span><span class="grow">จันทเขลม จุด 1–3 · แดง</span></div>
+          <div class="mini-row"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ชั่งแล้ว</span><span class="grow">จันทเขลม จุด 4 · นัด</span></div>
+          <div class="mini-row"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ชั่งแล้ว</span><span class="grow">คลองพลู จุด 1 · นัด</span></div>
+          <div class="btn btn-primary">ชั่งครบแล้ว → ตรวจยอด</div>
+          <span class="note">ปุ่มเดียวกับในเมนู ⋯ ของหน้าชั่ง — ไปหน้า 16</span>
+        </div>
+      </div>
+      <figcaption>
+        <span class="t">12. เปลี่ยนจุด — คนกรีดคนเดิม มีเข่งเปิดอยู่</span>
+        สี่ทางเลือก แตะครั้งเดียว · v4: แต่ละข้อเป็นหัวข้อตัวหนา + 2 บรรทัดสั้น ตัวเลขสำคัญอยู่ในกรอบเด่น · ตัดคำ "แล้วกดค้าง" ออก (หน้าชั่งบอกเองหลังเลือก): <b>เติมต่อให้เต็ม</b> (ตาชั่งอ่านทั้งเข่ง 52) · <b>ชั่งส่วนที่เติมแยก</b> (ตาชั่งอ่าน 17 นับรวมเป็นเข่ง 40) · <b>เริ่มเข่งใหม่ นับต่อ</b> (41) · <b>เริ่มเข่งใหม่ที่จุดนี้ นับจาก 1</b> (เลขเข่งแยกต่อจุด) — สามและสี่ปิดเข่ง 40 เป็นเศษ
+        <span class="ids">SALE-11, SALE-12 · E04-S06</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 9</span><span>ทุกจุดมีบันทึกแล้ว → หน้านี้มีปุ่ม "ชั่งครบแล้ว → ตรวจยอด" (กรอบด้านบน)</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 17</span><span>เติมเข่งที่จุดใหม่มี 4 ทางเลือกตามที่วาด</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 20</span><span>ทางเลือก 4 = เริ่มเลขเข่ง 1 ใหม่ <b>ต่อจุดชั่ง</b> — โหมดเลขเข่งแบบที่สอง เลขไม่ต้องต่อเนื่องทั้งการขาย แต่ละจุดมีเศษของตัวเองได้ เพราะคิดเงินจากน้ำหนักรวม (เลือกโหมดตอนไหน ดู <span class="q">?21</span> หน้า 6)</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>1 · เติมเข่ง 40 ต่อให้เต็ม</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="เติมเข่งต่อที่จุดใหม่">
+        <div class="sbar num"><span>09:32</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 39</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
+        <div class="body" style="gap:10px">
+          <div class="card tight">
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">คลองพลู · จุด 1</span><span class="sub">คนกรีด: นัด</span></span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div>
+          </div>
+          <div class="card bigc" aria-label="เข่งปัจจุบัน 40 ถัดไป 41">
+            <div><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">40</div></div>
+            <div class="next"><span class="lbl">ถัดไป</span><div class="fig num">41</div></div>
+          </div>
+          <div class="six">
+            <div class="card"><span class="lbl">เสร็จแล้ว</span><div class="fig num">39<span class="u">เข่ง</span></div></div>
+            <div class="card"><span class="lbl">สะสม</span><div class="fig num">1,955<span class="u">กก.</span></div></div>
+            <div class="card warn"><span class="lbl">เข่งไม่เต็ม 40</span><span class="sm2">เหลือเติม</span><div class="fig num">15<span class="u">กก.</span></div></div>
+          </div>
+          <div class="stage">
+            <svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg>
+            <b>เติมเข่ง 40</b>
+            <div class="fig num" style="font-size:36px;color:var(--c-ink)"><span style="font-size:18px;font-weight:600">เติมอีก </span>15<span class="u">กก.</span></div>
+            <span class="num"><b style="font-size:16px;color:var(--c-ink)">ตาชั่งจะอ่าน 52 กก.</b> แล้วกดค้างเพื่อนับ</span>
+            <span class="num">(35 + 15) = 50 กก. → ปิดเป็นเข่งเต็มเอง</span>
+          </div>
+          <div class="tools">
+            <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เติมไม่ถึง</span>
+            <span class="tool"><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ</span>
+            <span class="tool"><svg class="ic"><use href="#i-expand"/></svg>โหมดสาธารณะ</span>
+          </div>
+        </div>
+      </div></div>
+      <figcaption>
+        <span class="t">13. เติมเข่งต่อที่จุดใหม่ (ทางเลือก 1)</span>
+        เติมจนตาชั่งอ่าน 52 แล้วกดค้าง → ปิดเป็นเข่งเต็มอัตโนมัติ แสดง <span class="num">"เข่ง 40 — (35 + 15) กก. = 50 กก."</span> เสร็จแล้วเป็น 40 เข่ง · เข่งปัจจุบันเป็น 41 · ยอดแต่ละจุดนับเฉพาะส่วนของตัวเอง: จันทเขลม จุด 4 +35 · คลองพลู จุด 1 +15
+        <span class="ids">SALE-11 · E04-S06 (คำตอบเจ้าของ: รวมครบน้ำหนักมาตรฐาน → ปิดเต็มเอง)</span>
+        <ul>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>เติมไม่ถึง (ยางหมดก่อน) → ใส่ค่าตาชั่ง เข่ง 40 ยังเปิดอยู่</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span class="num">ตัวอย่างต่อ: นัด เข่ง 41–45 เต็ม + เข่ง 46 เศษ 35 กก. ที่จุดนี้ → นัดรวม 15 เข่ง 735 กก. (จันทเขลม จุด 4 = 435 · คลองพลู จุด 1 = 300)</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 17</span><span>ทางเลือก 1: เข่ง 40 วางบนตาชั่งแล้วเติมจนอ่าน 52 (ค่ารวมทั้งเข่ง) · ทางเลือก 2 ใช้ค่าของส่วนที่เติมแยก (17 กก.) แทน</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ======================= 3. BACKFILL ======================= -->
+<section class="sec">
+  <h2>3 · บันทึกย้อนหลัง (E04-S10)</h2>
+  <p>ชั่งไปแล้วแต่ไม่ได้บันทึกสด — ตัวอย่าง: อ.สมหวังจดจุด 3 ของแดงบนกระดาษ ขณะที่มือถือบันทึกจุด 1–2 (เข่ง 1–27) · ทุกคนในกลุ่มทำได้เท่ากัน (MVP)</p>
+  <div class="flow">
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>เมนู <b>⋯</b> ▸ <b>บันทึกย้อนหลัง</b> ▸ เลือกจุด</span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="บันทึกย้อนหลัง ยอดรวมต่อจุด">
+        <div class="sbar num"><span>08:52</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>บันทึกย้อนหลัง <small>จันทเขลม จุด 3 · แดง</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 28</span></div>
+        <div class="body">
+          <div class="banner info"><svg class="ic sm"><use href="#i-note"/></svg><span>ใส่เป็นยอดรวมของจุดนี้ — เลขเข่งต่อท้ายเลขล่าสุดให้เอง</span></div>
+          <div class="card tight">
+            <div class="row" style="min-height:64px"><span class="grow"><span class="lbl">เข่งเต็ม (เข่ง)</span><span class="sub num">ขนาด 50 กก. สุทธิ</span></span><span class="inp focus" style="flex:none;width:104px">3</span></div>
+            <div class="row" style="min-height:64px"><span class="grow"><span class="lbl">เศษ (กก. ยางสุทธิ)</span><span class="sub">ไม่บังคับ</span></span><span class="inp" style="flex:none;width:104px">20<span class="u">กก.</span></span></div>
+          </div>
+          <div class="card expect">
+            <span class="lbl" style="font-size:14px;color:var(--c-ink-soft)">จะได้</span>
+            <div class="fig num" style="font-size:26px">เข่ง 28–30 เต็ม</div>
+            <p class="num">+ เข่ง 31 เศษ 20 กก. · รวม 170 กก.<br>ต่อท้ายเลขล่าสุด (27)</p>
+          </div>
+          <div class="card tight">
+            <div class="row"><span class="tile t-blue"><svg class="ic"><use href="#i-camera"/></svg></span><span class="grow"><span class="val">รูป</span><span class="sub">ไม่บังคับ · ยังไม่มีรูป</span></span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-plus"/></svg>เพิ่มรูป</span></div>
+          </div>
+          <span style="font-size:13px;color:var(--c-ink-soft)">ทุกเข่งติดป้าย "บันทึกย้อนหลัง" และนับเข้ายอดเหมือนเข่งปกติ · ไม่ผ่านด่านตรวจศูนย์</span>
+        </div>
+        <div class="foot"><div class="btn btn-primary">บันทึก 4 เข่ง</div></div>
+      </div></div>
+      <figcaption>
+        <span class="t">14. บันทึกย้อนหลัง — ยอดรวมต่อจุด</span>
+        เข่งเต็ม N + เศษ กก.; แอปให้เลขต่อเนื่องต่อท้ายเลขล่าสุด (คำตอบเจ้าของ S10); เห็นช่วงเลขก่อนบันทึก
+        <span class="ids">SALE-18, SALE-10 · D-14 · E04-S10</span>
+        <ul>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span class="num">แดงรวม: จุด 1 = 1,200 (เข่ง 1–24) · จุด 2 = 150 (25–27) · จุด 3 = 170 (28–31) → 1,520 กก. 31 เข่ง</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>เศษ = ยางสุทธิ หรือค่าตาชั่ง — flow e04 Q16 (ยังเปิด); มีเข่งไม่เต็มเปิดอยู่ตอนบันทึก — Q28</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>เพิ่มรูป</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="เพิ่มรูป เลือกประเภท">
+        <div class="sbar num"><span>08:53</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar dim"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>บันทึกย้อนหลัง <small>จันทเขลม จุด 3 · แดง</small></h3></div>
+        <div class="body dim">
+          <div class="card"><div class="kv"><span>เข่งเต็ม</span><span>3</span></div><div class="kv"><span>เศษ</span><span>20 กก.</span></div></div>
+        </div>
+        <div class="sheet-scrim"></div>
+        <div class="sheet">
+          <span class="grab"></span>
+          <h4>เพิ่มรูป — รูปอะไร?</h4>
+          <p>เลือกประเภทช่วยให้หาเจอทีหลัง · ไม่บังคับ</p>
+          <div class="types">
+            <span class="type on"><span class="tile sm t-blue"><svg class="ic"><use href="#i-note"/></svg></span>โน้ตกระดาษ<svg class="ic sm ck"><use href="#i-check"/></svg></span>
+            <span class="type"><span class="tile sm t-blue"><svg class="ic"><use href="#i-receipt"/></svg></span>ใบชั่ง / สลิปผู้ซื้อ</span>
+            <span class="type"><span class="tile sm t-blue"><svg class="ic"><use href="#i-scale"/></svg></span>หน้าตาชั่ง</span>
+            <span class="type"><span class="tile sm t-blue"><svg class="ic"><use href="#i-pile"/></svg></span>กองยาง</span>
+            <span class="type"><span class="tile sm t-blue"><svg class="ic"><use href="#i-bank"/></svg></span>สลิปโอน / หลักฐานเงิน</span>
+            <span class="type"><span class="tile sm t-gray"><svg class="ic"><use href="#i-plus"/></svg></span>เพิ่มรูปอื่น</span>
+          </div>
+          <span style="font-size:13px;color:var(--c-ink-soft)">คำอธิบาย (ไม่บังคับ)</span>
+          <span class="inp text">เช่น จดโดย อ.สมหวัง</span>
+          <div class="btnrow"><span class="btn btn-secondary"><svg class="ic sm"><use href="#i-camera"/></svg>ถ่ายรูป</span><span class="btn btn-secondary"><svg class="ic sm"><use href="#i-image"/></svg>เลือกรูป</span></div>
+          <p style="font-size:13px">รูปเก็บในเครื่องก่อน · ส่งขึ้นเองเมื่อมีสัญญาณ (รอส่ง)</p>
+        </div>
+      </div></div>
+      <figcaption>
+        <span class="t">15. เพิ่มรูป — เลือกประเภทก่อน</span>
+        ประเภทที่แนะนำ: โน้ตกระดาษ (SALE-18) · ใบชั่ง / สลิปผู้ซื้อ · หน้าตาชั่ง · กองยาง · สลิปโอน / หลักฐานเงิน (SALE-19) · <b>เพิ่มรูปอื่น</b> ใช้คำอธิบายแทนประเภท; ทุกอย่างไม่บังคับ — ไม่เลือกก็ถ่ายได้
+        <span class="ids">SALE-18, SALE-19, SALE-2, NFR-2 · E04-S10, E01-S12</span>
+        <ul>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>หน้าเดียวกันใช้ตอนแนบรูปกับการขาย (หัวการขาย ▸ รูป) หรือกับจุดชั่ง</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>MVP: ทุกคนในกลุ่มเพิ่ม / ดูรูปได้เท่ากัน</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว</span><span>ประเภทรูป E04-S10 ยืนยันแล้วตามที่วาด</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ======================= 4. RECONCILE + SETTLE ======================= -->
+<section class="sec">
+  <h2>4 · ตรวจยอดกับผู้ซื้อ และสรุปเงิน</h2>
+  <p class="num">ตัวอย่างทั้งการขาย: แดง 3 จุด 1,520 กก. (31 เข่ง · จุด 3 บันทึกย้อนหลัง) · นัด 2 จุด 735 กก. (15 เข่ง · เข่ง 40 เชื่อม 35 + 15) · ราคา 48.50 ฿/กก. · ส่วนแบ่ง 50/50</p>
+  <div class="flow">
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="ตรวจยอดกับผู้ซื้อ">
+        <div class="sbar num"><span>10:15</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ตรวจยอดกับผู้ซื้อ <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 49</span></div>
+        <div class="body" style="gap:10px">
+          <div class="card tight">
+            <div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-coin"/></svg></span><span class="grow"><span class="lbl">ราคา ฿/กก.</span><span class="ds" style="margin-top:2px">ผู้ใช้ใส่</span></span><span class="fig num" style="font-size:24px">48.50</span></div>
+          </div>
+          <div class="card">
+            <table class="cmp">
+              <thead><tr><th></th><th>ของเรา<br><span class="ds">ระบบคำนวณ</span></th><th>ผู้ซื้อแจ้ง<br><span class="ds">ผู้ใช้ใส่</span></th><th>ต่าง</th></tr></thead>
+              <tbody>
+                <tr><td>น้ำหนัก กก.</td><td>2,255</td><td>2,255</td><td><span class="ok"><svg class="ic sm"><use href="#i-check"/></svg>0</span></td></tr>
+                <tr><td>เข่ง</td><td>46</td><td><span class="ds ds-none">ไม่ได้บันทึก</span></td><td>—</td></tr>
+                <tr><td>ยอดเงิน ฿</td><td>109,367.50</td><td>109,367.50</td><td><span class="ok"><svg class="ic sm"><use href="#i-check"/></svg>0</span></td></tr>
+              </tbody>
+            </table>
+            <div style="margin-top:8px"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ยอดผู้ขายและผู้ซื้อตรงกัน</span></div>
+          </div>
+          <div class="card tight">
+            <div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">แดง</span><span class="sub num">3 จุด · 31 เข่ง</span></span><span class="val num">1,520 กก.</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">นัด</span><span class="sub num">2 จุด · 15 เข่ง</span></span><span class="val num">735 กก.</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
+          </div>
+          <div class="banner info"><svg class="ic sm"><use href="#i-search"/></svg><span>ไม่ตรง: เจาะดู จุดชั่ง → เข่ง แล้วแก้; ยังต่าง → ปิดเป็น "พบส่วนต่าง" + เหตุผล</span></div>
+        </div>
+        <div class="foot"><div class="btn btn-primary">ไปสรุปเงิน</div></div>
+      </div></div>
+      <figcaption>
+        <span class="t">16. ชั่งครบแล้ว → ตรวจยอดกับผู้ซื้อ</span>
+        ใส่ราคา (ถ้ายังไม่ใส่) และยอดที่ผู้ซื้อแจ้ง วางเทียบกับยอดของเรา ตรวจครั้งเดียวหลังชั่งครบทุกจุด
+        <span class="ids">SET-1, SET-2, SET-3, SET-6, SALE-3 · D-15 · E05-S03</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 11</span><span>สถานะตรงกันใช้คำ "ยอดผู้ขายและผู้ซื้อตรงกัน"</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว</span><span>สถานะการตรวจ (E05-S03): รอตรวจสอบเทียบยอด / ยืนยันน้ำหนักรวมตรงกัน / ยอดผู้ขายและผู้ซื้อตรงกัน / พบส่วนต่าง</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กด <b>ไปสรุปเงิน</b> (มีเศษสตางค์ → ถามก่อน)</span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="ถามการปัดเศษ">
+        <div class="sbar num"><span>10:17</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar dim"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>สรุปเงิน</h3></div>
+        <div class="body dim">
+          <div class="card"><div class="kv"><span>แดง</span><span>…</span></div></div>
+          <div class="card"><div class="kv"><span>นัด</span><span>…</span></div></div>
+        </div>
+        <div class="sheet-scrim"></div>
+        <div class="sheet">
+          <span class="grab"></span>
+          <h4>ปัดเศษสตางค์อย่างไร?</h4>
+          <p class="num">ส่วนแบ่งของ นัด = 17,823.75 บาท (มีเศษ 75 สตางค์)</p>
+          <div class="radio on"><span class="dot"></span><span>ปัดเป็นบาทเต็ม ให้คนกรีดได้ประโยชน์<small class="num">นัด 17,824 · เจ้าของ 17,823.50 · ใช้ครั้งก่อน</small></span></div>
+          <div class="radio"><span class="dot"></span><span>ให้เจ้าของได้ประโยชน์<small class="num">นัด 17,823 · เจ้าของ 17,824.50</small></span></div>
+          <div class="radio"><span class="dot"></span><span>ไม่ปัด (เก็บสตางค์)<small class="num">นัด 17,823.75 · เจ้าของ 17,823.75</small></span></div>
+          <p>ส่วนปรับจากการปัดเศษเก็บเป็นบรรทัดแยก · ฝั่งเจ้าของเก็บสตางค์ได้</p>
+          <div class="btn btn-primary">ยืนยัน</div>
+        </div>
+      </div></div>
+      <figcaption>
+        <span class="t">17. ถามการปัดเศษ</span>
+        ขึ้นเฉพาะเมื่อแบ่งแล้วมีเศษสตางค์; ค่าเริ่มต้นคือตัวเลือกครั้งก่อน
+        <span class="ids">SET-5 · D-5 · E05-S02</span>
+        <ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 12</span><span>ใช่ — ฝั่งเจ้าของ (รับโอน) เก็บสตางค์ ไม่ต้องปัด</span></li></ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>เลือกวิธีปัด แล้วกด <b>ยืนยัน</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="สรุปเงินรายคนกรีด">
+        <div class="sbar num"><span>10:18</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>สรุปเงิน <small class="num">3 ต.ค. 2569 · 48.50 ฿/กก.</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 50</span></div>
+        <div class="body" style="gap:8px">
+          <div class="card">
+            <div class="row" style="min-height:0"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow val">แดง <span class="sub" style="display:inline">· 1,520 กก.</span></span></div>
+            <div class="kv"><span>ยอดขาย</span><span>73,720.00</span></div>
+            <div class="kv"><span>ส่วนแบ่งคนกรีด 50%</span><span>36,860.00</span></div>
+            <div class="kv"><span>หักค่าปุ๋ย · ปัดเศษ</span><span>0.00 · 0.00</span></div>
+            <div class="kv total"><span>เงินสดที่ต้องจ่าย</span><span class="fig" style="font-size:24px">36,860<span class="u">บาท</span></span></div>
+          </div>
+          <div class="card">
+            <div class="row" style="min-height:0"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow val">นัด <span class="sub" style="display:inline">· 735 กก.</span></span></div>
+            <div class="kv"><span>ยอดขาย</span><span>35,647.50</span></div>
+            <div class="kv"><span>ส่วนแบ่งคนกรีด 50%</span><span>17,823.75</span></div>
+            <div class="kv"><span>หักค่าปุ๋ย · ปัดเศษ</span><span>0.00 · +0.25</span></div>
+            <div class="kv total"><span>เงินสดที่ต้องจ่าย</span><span class="fig" style="font-size:24px">17,824<span class="u">บาท</span></span></div>
+          </div>
+          <div class="card cream">
+            <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--c-raised)"><svg class="ic"><use href="#i-bank"/></svg></span><span class="grow val">ส่วนแบ่งเจ้าของ</span></div>
+            <div class="kv"><span>จาก แดง · จาก นัด</span><span>36,860.00 · 17,823.50</span></div>
+            <div class="kv" style="margin-top:4px"><span>บัญชีรับเงิน</span><span class="sel">ค่าเริ่มต้น<svg class="ic"><use href="#i-down"/></svg><small>(ไม่บังคับ)</small></span></div>
+            <div class="kv total"><span>โอนเข้าบัญชีธนาคาร</span><span class="fig" style="font-size:24px">54,683.50<span class="u">บาท</span></span></div>
+          </div>
+        </div>
+        <div class="foot"><div class="btn btn-primary">บันทึกการจ่ายเงิน</div></div>
+      </div></div>
+      <figcaption>
+        <span class="t">18. สรุปเงิน — แบ่งรายคนกรีด</span>
+        การ์ดต่อคนกรีด (เงินสดที่ต้องจ่ายเด่นที่สุด) และการ์ดเจ้าของ (โอนเข้าบัญชี); แตะตัวเลขใดก็ได้เพื่อดูวิธีคำนวณจนถึงเข่ง; หักค่าปุ๋ย = 0 จนกว่า E06 พร้อม
+        <span class="ids">SET-1, SET-4, SET-7, MD-8, NFR-3 · D-12 · E05-S01, S04</span>
+        <ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 14</span><span>บัญชีปลายทางไม่บังคับ; จะมีหน้าตั้งค่าบัญชีรับเงินพร้อมค่าเริ่มต้น เลือกเปลี่ยนได้ที่นี่</span></li></ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กด <b>บันทึกการจ่ายเงิน</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="สถานะการจ่ายเงินและปิดการขาย">
+        <div class="sbar num"><span>10:26</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>การจ่ายเงิน <small class="num">3 ต.ค. 2569 · ฉบับร่าง</small></h3><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span></div>
+        <div class="body">
+          <div class="card tight">
+            <div class="row" style="padding:6px 0"><span class="tile sm t-green"><svg class="ic"><use href="#i-scale"/></svg></span><span class="grow"><span class="lbl" style="display:block">การตรวจกับผู้ซื้อ</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ยอดผู้ขายและผู้ซื้อตรงกัน</span></span></div>
+          </div>
+          <div class="tick on"><span class="box"><svg class="ic sm"><use href="#i-check"/></svg></span><span class="grow">แดง ได้รับเงินสดแล้ว<small>เจ้าของ · มือถือ · 10:24</small></span><span class="amt num">36,860</span></div>
+          <div class="tick"><span class="box"></span><span class="grow">นัด ได้รับเงินสดแล้ว<small>ยังไม่จ่าย</small></span><span class="amt num">17,824</span></div>
+          <div class="tick"><span class="box"></span><span class="grow">เจ้าของได้รับเงินโอนแล้ว<small>ยังไม่ได้รับ · บัญชีค่าเริ่มต้น</small></span><span class="amt num">54,683.50</span></div>
+          <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span>แต่ละข้อติ๊กแยกกันและยกเลิกได้ · แก้การขายภายหลังจนเงินเปลี่ยน → ข้อที่กระทบติดธง "ต้องตรวจใหม่"</span></div>
+        </div>
+        <div class="foot">
+          <div class="btn btn-secondary"><svg class="ic"><use href="#i-check"/></svg>ปิดการขาย</div>
+        </div>
+      </div></div>
+      <figcaption>
+        <span class="t">19. สถานะการจ่ายเงิน และปิดการขาย</span>
+        ติ๊กแยกกันทีละคน (ไม่ใช่ธง "จ่ายแล้ว" อันเดียว) แล้วปิดการขาย; ปิดได้แม้พบส่วนต่าง แต่ไม่ได้ถ้ามี Conflict ค้าง
+        <span class="ids">SET-6, SALE-20, SALE-21 · D-16, D-29 · E05-S05, E04-S11</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 13</span><span>ปิดการขาย = Completed = จัดการครบทุกอย่างแล้ว</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>หักเงิน (deductions) จะเพิ่มเป็นขั้นก่อนปิดการขาย ใน epic ของตัวเอง</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ======================= 5. SYNC ======================= -->
+<section class="sec">
+  <h2>5 · ออฟไลน์และซิงก์ (เกิดได้ทุกหน้า)</h2>
+  <p>ใช้งานปกติไม่มีปุ่ม Sync — ส่งเองเมื่อมีสัญญาณ; ปุ่ม "ลองใหม่" ขึ้นเฉพาะเมื่อส่งไม่สำเร็จหรือมี Conflict</p>
+  <div class="flow">
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>ป้าย sync สีแดง</b> ที่หัวแอป หรือธง Conflict ในการขาย</span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="สถานะซิงก์และตัดสิน Conflict">
+        <div class="sbar num"><span>18:12</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ข้อมูลขัดกัน <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-conf"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน 1</span></div>
+        <div class="body" style="gap:10px">
+          <div class="banner bad"><svg class="ic sm"><use href="#i-lock"/></svg><span><b>ปิดการขายและบันทึกการจ่ายเงินไม่ได้</b>จนกว่าจะเลือกค่า · ระหว่างนี้คิดเงินจากค่าเดิม</span></div>
+          <div class="card">
+            <div class="row" style="min-height:0"><span class="tile t-red"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">เข่ง 46 · เศษ</span><span class="sub">นัด · คลองพลู จุด 1</span></span><span class="chip ch-bad"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span></div>
+          </div>
+          <div class="opt">
+            <div class="card optrow"><span class="who"><b>ค่าจากเครื่อง A</b>เจ้าของ · มือถือ · 18:05</span><span class="fig num" style="font-size:22px">36<span class="u">กก.</span></span><span class="btn btn-secondary small">ใช้ค่านี้</span></div>
+            <div class="card optrow"><span class="who"><b>ค่าจากเครื่อง B</b>น้อง · เว็บ · 18:07</span><span class="fig num" style="font-size:22px">38<span class="u">กก.</span></span><span class="btn btn-secondary small">ใช้ค่านี้</span></div>
+            <div class="card optrow"><span class="who"><b>คงค่าเดิม</b>ก่อนมีการแก้</span><span class="fig num" style="font-size:22px">35<span class="u">กก.</span></span><span class="btn btn-secondary small">ใช้ค่านี้</span></div>
+          </div>
+          <span style="font-size:13px;color:var(--c-ink-soft)">ตัดสินได้ออฟไลน์ · ปรับเป็นค่าอื่นเอง = phase ถัดไปหลัง MVP</span>
+          <div class="card tight">
+            <h4 style="margin:8px 0 2px">ป้ายสถานะ sync</h4>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;padding-bottom:10px">
+              <span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span>
+              <span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 12</span>
+              <span class="pill p-conf"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน 1</span>
+              <span class="pill p-conf"><svg class="ic"><use href="#i-refresh"/></svg>ส่งไม่สำเร็จ · ลองใหม่</span>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <figcaption>
+        <span class="t">20. สถานะ sync และตัดสิน Conflict</span>
+        สองเครื่องแก้ค่าเดียวกันต่างกัน → เห็นค่าทั้งหมด ใคร/เครื่องไหน/เมื่อไร แล้วเลือก; ไม่มีการเขียนทับแบบเงียบ ๆ
+        <span class="ids">SYNC-1–SYNC-4, SYNC-12 · D-3, D-28, D-29, D-30 · E01-S10, S11, S15</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 15</span><span>ยืนยันคำ: ซิงก์แล้ว / รอส่ง N / ขัดกัน N / ส่งไม่สำเร็จ · ลองใหม่</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 16</span><span>MVP 3 ตัวเลือก: ค่าจากเครื่อง A · ค่าจากเครื่อง B · คงค่าเดิม; ปรับเป็นค่าอื่นเอง = phase ถัดไปหลัง MVP</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ======================= OWNER ANSWERS ======================= -->
+<section class="qs">
+  <h2>คำตอบเจ้าของ</h2>
+  <p>ตอบ ?1–?16 ของ v1, ?17 ?19 ของ v2 และ ?20 ของ v3 เมื่อ 2026-10-03 (คำตอบ 8 แก้ใหม่ · คำตอบ 3 ตาม Asana) — ใส่ลงหน้าจอใน v4 แล้ว</p>
+  <table>
+    <thead><tr><th>คำถาม</th><th>คำตอบ</th></tr></thead>
+    <tbody>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>1</span>ชื่อและโลโก้แอป</td><td>ใช้ <b>FarmMate</b> — ชื่อ + โลโก้แนวเดียวกับรูปตัวอย่าง (mockup วาดใหม่เป็น SVG)</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>2</span>เมนู ☰ หัวหน้าแรก</td><td>ใช้ได้ไว้ก่อน (ตั้งค่า สลับกลุ่ม ข้อมูลหลัก) — ตำแหน่งจริงตัดสินตอน build</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>3</span>หน้าแรก (เดิม: ปุ่ม เริ่มการขาย ล่างหน้าแรก)</td><td><b>ตาม Asana 2026-10-03</b> (หน้า 3): ภาพปก — ภาพวาด SVG หรือรูปที่ผู้ใช้เลือก (จะลองแบบ 1–2 ภายหลัง) · 3 การ์ดงานที่ใช้บ่อย: เตรียมขาย / เริ่มการขาย / บันทึกค่าใช้จ่าย · รายการวันนี้ (เรื่องด่วน/ซิงก์ · การขายที่ยังไม่ปิด · การขายล่าสุด + "ดูการขายทั้งหมด" · งานถึงกำหนด · เอกสารใกล้หมดอายุ) · การ์ดโมดูล: รายงานการขายย้อนหลัง · พยากรณ์อากาศ · รายการที่ต้องจ่าย · รายการ stock · ข้อมูลพนักงาน · ปุ่มติดล่างเดิมเอาออก · ยังเปิด: เตรียมขายอยู่ epic ไหน (?22) · พยากรณ์อากาศเปิดแอป/เว็บอะไร (?23)</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>4</span>รายการการขายทั้งหมด</td><td>ทั้งสองอย่าง: มีหน้ารายการแยก; ทางเข้าตอนนี้จาก "ดูการขายทั้งหมด" บนหน้าแรก (หน้า 4)</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>5</span>ไม่มีสวนในหัวการขาย</td><td>ถูกต้อง</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>6</span>โซน / คนกรีด</td><td>POC เรียก "โซน" MVP เรียก "สวน" — ขั้นคือ สวน → คนกรีด → จุดชั่ง · สวน = โซนของ POC; โซนย่อยในสวนยังมีแต่ไม่บังคับ</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>7</span>ค่า tare</td><td>ดึงจากค่าที่ตั้งไว้ (แสดง "ค่าจากการตั้งค่า")</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>8</span>เลขเข่งปัจจุบัน / ถัดไป</td><td>แก้คำตอบ 2026-10-03: กลับไปแบบ v1 — การ์ดบนแสดง "เข่งปัจจุบัน" ตัวใหญ่ + "ถัดไป" · พื้นที่กดค้างมีแต่ข้อความ ไม่มีเลขจาง · ยกเลิก ticker เข่งที่เสร็จ · animation เฉพาะตอนเลขเปลี่ยน · การ์ด 3 ใบคงไว้ (มีราคาก่อนเริ่ม หรือใส่ระหว่างการขาย → การ์ดแรกเป็นยอดเงินแบบย่อทันที เช่น 5.34 หมื่น ฿) · โหมดสาธารณะแสดงเข่งปัจจุบัน</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>9</span>ชั่งครบแล้ว → ตรวจยอด</td><td>อยู่ในเมนู ⋯ และในหน้าเปลี่ยนจุดเมื่อทุกจุดมีบันทึก</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>10</span>จอสาธารณะมีแต่ตัวเลข</td><td>ใช้ได้</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>11</span>คำของสถานะการตรวจ</td><td>สถานะตรงกัน = "ยอดผู้ขายและผู้ซื้อตรงกัน"</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>12</span>ฝั่งเจ้าของไม่ต้องปัดเศษ</td><td>ใช่ (เจ้าของเก็บสตางค์)</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>13</span>ปิดการขาย = Completed</td><td>ใช่ — จัดการครบทุกอย่างแล้ว; หักเงินจะเพิ่มก่อนปิดการขายใน epic ของตัวเอง</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>14</span>บัญชีปลายทาง</td><td>ไม่บังคับ; จะมีหน้าตั้งค่าบัญชีรับเงินพร้อมค่าเริ่มต้น เลือกได้ในหน้าสรุปเงิน</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>15</span>คำของป้าย sync</td><td>ซิงก์แล้ว / รอส่ง N / ขัดกัน N / ส่งไม่สำเร็จ · ลองใหม่</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>16</span>ตัวเลือกหน้า Conflict</td><td>MVP 3 ตัวเลือก: ค่าจากเครื่อง A · ค่าจากเครื่อง B · คงค่าเดิม; ปรับเป็นค่าอื่นเอง = phase ถัดไปหลัง MVP</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>17</span>เติมเข่งที่จุดใหม่</td><td>4 ทางเลือก (หน้า 12): เติมต่อให้เต็ม (ตาชั่งอ่าน 52) · ชั่งส่วนที่เติมแยก (ตาชั่งอ่าน 17) นับรวมเป็นเข่ง 40 · เริ่มเข่งใหม่ นับต่อ (41) · เริ่มเข่งใหม่ นับจาก 1 (ดู 20)</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>19</span>ยอดเงินแบบย่อ</td><td>ใช้ "พัน" ด้วย (2,450 → 2.45 พัน) · ต่ำกว่า 1,000 แสดงเต็ม</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>20</span>ทางเลือก 4 "นับจาก 1"</td><td>เริ่มเลขเข่ง 1 ใหม่ <b>ต่อจุดชั่ง</b> — โหมดเลขเข่งแบบที่สอง: เลขไม่ต้องต่อเนื่องทั้งการขาย แต่ละจุดเริ่มเข่ง 1 และมีเข่งเศษของตัวเองได้ เพราะคิดเงินจากน้ำหนักรวมอยู่แล้ว (หน้า 6, 12) · เลือกโหมดตอนไหน → ?21</td></tr>
+    </tbody>
+  </table>
+
+  <h3>คำถามที่ยังเปิด</h3>
+  <ol>
+    <li><span class="q">?21</span><span>โหมดเลขเข่ง ("เลขเข่งต่อเนื่องทั้งการขาย" / "เริ่ม 1 ใหม่ทุกจุด") เลือกตอนไหน: ตั้งค่ากลุ่ม หรือ ตอนเริ่มการขาย (หน้า 5)? · ถ้าเลือกต่อจุด — บันทึกย้อนหลัง (หน้า 14) ก็เริ่มเข่ง 1 ของจุดนั้นด้วยใช่ไหม · ทางเลือก 4 ในหน้า 12 สลับโหมดกลางการขายได้ หรือขึ้นเฉพาะการขายที่เลือกโหมดต่อจุด?</span></li>
+    <li><span class="q">?22</span><span>เตรียมขาย (เช็กลิสต์ · ร่างข้อความนัดผู้ซื้อ · เลือกวันเวลา · โทร/LINE ผู้ซื้อแตะเดียว · บันทึกราคาที่ตกลง) อยู่ใน epic ไหน — การขาย (E04) หรือ epic ใหม่? (หน้า 3)</span></li>
+    <li><span class="q">?23</span><span>การ์ดพยากรณ์อากาศเปิดอะไร — แอปพยากรณ์ในเครื่อง หรือเว็บไซต์ไหน ตามพิกัด GPS ของสวน; หลายสวน → ถามเลือกสวนก่อน (หน้า 3)</span></li>
+  </ol>
+  <p class="not"><b>ยังไม่วาดในรอบนี้:</b> ย้อนกลับ-แก้-ยกเลิกเข่ง (E04-S09), ส่งต่อ/รับช่วง และรวมด้วย QR (E04-S12, S13), คำถามการนับซ้ำ (E04-S14), กรณี "พบส่วนต่าง", หน้าตั้งค่าบัญชีรับเงิน, หน้าเตรียมขายเต็ม (มีแค่ภาพร่างใต้หน้า 3), หน้าเลือกรูปปก, และโมดูลในการ์ดล่างหน้าแรก</p>
+</section>
+
+</div>
