@@ -228,9 +228,17 @@ may go to another free choice)"*
 
 ## คำถามที่ยังเปิด
 
-1. **ใครสร้าง keystore?** (lead ถามเจ้าของแล้ว — ยังรอคำตอบ)
-   - **เจ้าของสร้างเองตามขั้นตอนที่ agent เขียนให้ แล้วใส่ secret เอง (แนะนำ)** — กุญแจไม่ผ่านมือ agent
-   - ให้ workflow สร้างครั้งแรกแล้วเจ้าของดาวน์โหลดไปเก็บ — สะดวกกว่า แต่กุญแจเคยอยู่ใน log/artifact ของ CI
+1. ~~ใครสร้าง keystore?~~ **ตัดสินแล้ว (owner, 2026-10-03, D1): เจ้าของสร้างเอง**
+   บนคอมของตัวเองด้วย `keytool` และใส่ GitHub Secrets เองแล้ว (`ANDROID_KEYSTORE_BASE64`,
+   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) — กุญแจและ
+   รหัสผ่านไม่ผ่าน agent; สำรองไว้นอก GitHub อย่างน้อย 2 ที่
+   - Package name: `com.goonjs.monfarm` (ลงทะเบียนใน Firebase `mon-farm-a7` แล้ว; เปลี่ยนไม่ได้)
+   - Fingerprint ของ release key (alias `mon-farm`, ไม่ใช่ความลับ; ลงทะเบียนใน Firebase แล้ว
+     สำหรับ Google sign-in บน Android, E02-S01):
+     - SHA-1: `D1:DC:39:63:38:B2:E3:35:DB:2A:99:2A:61:08:DC:BC:85:58:88:9B`
+     - SHA-256: `4C:87:F2:78:77:3F:22:47:30:08:B3:57:3E:4B:A2:1F:6A:16:E7:32:29:A9:E4:D0:6C:C5:70:81:85:FF:79:64`
+     - ถ้าวันหนึ่งขึ้น Google Play และเปิด Play App Signing จะมี fingerprint ของ Google
+       เพิ่มอีกชุดที่ต้องลงทะเบียนด้วย
 
 ## Sources (ดึงข้อมูล 2026-10-03)
 
