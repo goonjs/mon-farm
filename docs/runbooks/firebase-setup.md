@@ -22,6 +22,8 @@
 
 ## 3. Cloud Storage (E01-S12)
 
+> เลื่อนทั้งหมดตาม D-48: ยังไม่อัปเกรดแผน → ยังอัปโหลดไฟล์ไม่ได้ (เจ้าของยืนยัน) ฟรีโควตา 5 GB มีเฉพาะ bucket ใน us-central1/us-west1/us-east1 ไม่ใช่ asia-southeast3
+
 - [ ] bucket หลัก (default) = **prod**, `asia-southeast3 (กรุงเทพฯ)`
 - [ ] สร้าง bucket แยกสำหรับ **dev**, `asia-southeast3 (กรุงเทพฯ)`
 
