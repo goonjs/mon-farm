@@ -38,3 +38,8 @@ Status: Draft
 ## Code review
 
 ## QA notes
+
+## คำถามเจ้าของ
+
+**คำตอบเจ้าของ (2026-10-03) — จาก mockup `docs/ux/mockups/flow-v1.html`:**
+- ?7 ค่า tare จริง → **ใช้ค่าจากการตั้งค่า** (ค่าตั้งต้น tare ของกลุ่ม MD-7, E03-S07) — ไม่ hard-code ตัวเลขในหน้าจอ

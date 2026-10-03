@@ -53,3 +53,11 @@ Inspection = การตรวจสวน · Task = งาน · Epic = Epic �
   enforces — I first wrote "rules keep previews off prod", but with shared
   Auth rules cannot tell builds apart; separate DB/bucket is a mistake guard,
   not a security boundary. Name the residual risk instead of overclaiming.
+- 2026-10-03 — Recorded owner answers to flow-v1 mockup ?1–?16 (D-35…D-39,
+  stories, design-system §7). Lessons: (1) a changed UI word lives in more
+  places than design-system — grep `docs/ux/flows/` too (`ค้าง N` was in 3
+  flow docs); (2) a short "yes/do X" answer to a mockup question leaves
+  details unstated (format thresholds, scale-reading formula, other status
+  labels) — record the answer verbatim and list each gap as คำถามเปิด in the
+  same story, never fill it in; (3) when the owner adds a "tell me if I
+  misunderstand", report the conflict with quotes, change nothing.

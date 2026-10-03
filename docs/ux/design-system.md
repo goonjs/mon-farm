@@ -254,7 +254,10 @@ position, and a word — colour is the fourth channel, never the first.
 | Paused / not ready | Hollow dot | Topbar left | `หยุด` |
 | Audio degraded | Slashed speaker | Topbar right | `ไม่มีเสียง` |
 | Clock anomaly | Clock glyph in a flag chip | Topbar right | `เวลาผิด` |
-| Unsynced | Half-filled dot + count | Topbar right | `ค้าง N` |
+| Unsynced | Half-filled dot + count | Topbar right | `รอส่ง N` |
+
+ป้ายสถานะ sync ภาพรวม (คำตอบเจ้าของ 2026-10-03, แทน `ค้าง N` เดิม):
+`ซิงก์แล้ว` / `รอส่ง N` / `ขัดกัน N` / `ส่งไม่สำเร็จ · ลองใหม่` (E01-S10)
 
 The last three are non-blocking by design. They report; they never gate
 counting. A screen that stops you counting because its clock is wrong has
