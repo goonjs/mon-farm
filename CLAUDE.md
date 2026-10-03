@@ -12,8 +12,7 @@ conflict resolution) and must be considered in every story that touches data.
 Tech stack: **Expo SDK 57** (managed) + expo-router + React Native 0.86 +
 React 19 + TypeScript strict. Local persistence is an append-only event log —
 expo-sqlite on device, localStorage on web (moving to IndexedDB). Backend:
-Firebase (Firestore + Cloud Storage, Blaze plan, separate dev/prod) — agreed
-2026-10-02, not yet built. Android phone first, portrait primary; web is a
+Firebase (Firestore + Cloud Storage, Blaze plan) — agreed 2026-10-02, not yet built; one project for the MVP with dev/prod split inside it, separate projects before going commercial (PRD D-34). Android phone first, portrait primary; web is a
 real surface. Hosting and PR previews on Firebase Hosting (ADR 0001). Full rationale and the rejected
 alternatives are in `docs/architecture.md`.
 
@@ -56,6 +55,15 @@ Ask again, every time.
 
 - **No push to remote** (including branch creation, force-push, tags)
   without explicit confirmation for that specific push.
+  **Amendment, 2026-10-03 — who may say yes.** The owner delegates the
+  per-push confirmation to the lead (dispatcher) session they run for this
+  repo. The lead may confirm a push of its own or of a team session it
+  dispatched, under the same rules as above: one confirmation per specific
+  push, never carried forward, and only after the six-point brief has been
+  put to the lead. A team session sends its brief to the lead and pushes
+  only on the lead's yes for that push. The owner keeps: pushes to `main`,
+  tags, force-pushes to a branch the agent did not create, and every Deploy
+  Prod run. The owner can withdraw this delegation at any time in chat.
 
   **Reconsidered and deliberately kept, 2026-08-11. Do not propose
   relaxing this again.** It was argued that the gate had become redundant
@@ -119,7 +127,7 @@ Ask again, every time.
 - **No package/dependency installation** without explicit permission,
   a stated rationale for why it's needed, and evidence of a security check
   (e.g. known-vulnerability scan, source/maintainer sanity check) presented
-  before the ask.
+  before the ask. Delegated 2026-10-03: the lead session may give that permission when the check shows a reputable maintainer and the audit adds no new high or critical finding — the evidence is still presented, to the lead, before installing. Anything else goes to the owner. `npm ci` from an unchanged lockfile needs no ask.
 - **No data migration or data change on any environment other than local,
   dev, or sandbox** without a stated rationale and explicit approval for
   that specific change.

@@ -38,6 +38,7 @@ Status: Ready
 - อนุมัติติดตั้ง `firebase` (JS SDK) และ `@firebase/rules-unit-testing` (gate dependency + ผลตรวจ, ทำ `npm audit` baseline ใหม่)
 - emulator ต้องใช้ Java ที่อยู่นอก repo → ขออนุญาต
 - อนุมัติ deploy rules เข้า prod (database `(default)`)
+- D4 (ตัดสินแล้ว 2026-10-03): **คง `overrides` grpc-js ^1.14.5 / basic-ftp ^6.2.1 ไว้จนกว่า upstream จะแก้** — ณ 2026-10-03 ยังไม่พบ override นี้ใน `package.json` บน `dev`; เมื่อเพิ่มพร้อม dependency ของ story นี้ ให้คงไว้และตรวจทุกครั้งที่อัปเดต upstream ว่าเอาออกได้หรือยัง
 
 ## Verification
 
@@ -46,3 +47,8 @@ Status: Ready
 ## Code review
 
 ## QA notes
+
+## คำถามเจ้าของ
+
+**คำตอบเจ้าของ (2026-10-03):**
+- D4 → **คง overrides grpc-js ^1.14.5 / basic-ftp ^6.2.1 จนกว่า upstream จะแก้**

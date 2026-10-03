@@ -68,6 +68,17 @@ tools: Read, Grep, Glob, Bash, Edit, Write, WebSearch, WebFetch
   locked deps from the store without changing them. (5) The real test is
   after merge: the close run for the PR's own tag, checked with read-only
   gcloud (48 → 47 tags, pr-77 gone).
+- 2026-10-02 — mon-farm E01-S05 (`changes → verify → e2e`). Lessons:
+  (1) a docs-only gate that diffs `github.event.before...sha` loses
+  coverage if push runs share `cancel-in-progress` — a cancelled code merge
+  followed by a docs merge skips verify; cancel only PR runs
+  (`${{ github.event_name == 'pull_request' }}`). (2) `git diff
+  --name-only` detects renames and prints only the new path; use
+  `--no-renames` (+ `-c core.quotePath=false` for Thai names). (3) Expo's
+  web export ships `_expo/.routes.json`; `upload-artifact@v4` drops hidden
+  files unless `include-hidden-files: true`. (4) Skipped-by-`if` jobs
+  count as passing for required checks, so the gate job itself must be
+  required. (5) A Playwright cache hit still pays apt `install-deps`.
 - 2026-10-03 — mon-farm ADR 0003 (Android APK build path). Lessons:
   (1) ubuntu-24.04 runners ship Android SDK/NDK + `ANDROID_HOME`, so
   `expo prebuild` + `gradlew assembleRelease` needs no installs. (2) Sign

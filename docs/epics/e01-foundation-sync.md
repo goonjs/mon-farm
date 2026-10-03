@@ -29,4 +29,4 @@ PRD: SYNC, NFR-2/3/5/6 · architecture.md หัวข้อ "2026-10-02 Directi
 - ส่งต่อ/QR (อยู่ E04), Bluetooth (หลัง MVP)
 
 ## ประเด็นค้าง
-- 
+- ชื่อแอป FarmMate (D-35): เปลี่ยน `app.json` `name` และชื่อที่แสดง — ยังไม่มี story
