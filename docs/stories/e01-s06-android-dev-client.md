@@ -42,6 +42,8 @@ Status: Ready
 
 ## Dev notes
 
+- ทางเลือกการ build APK (EAS / GitHub Actions / เครื่องตัวเอง / Capacitor) เปรียบเทียบไว้ที่ `docs/adr/0003-android-build-path.md` (Proposed — รอเจ้าของตัดสิน)
+
 ## Code review
 
 ## QA notes
