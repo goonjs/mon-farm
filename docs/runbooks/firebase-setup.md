@@ -1,33 +1,36 @@
-# Runbook: ตั้งค่า Firebase โปรเจกต์ `mon-farm-a7`
+# Runbook: ตั้งค่า Firebase โปรเจกต์ `mon-farmmate`
 
-> สถานะ: รอเจ้าของทำในเครื่องตัวเอง (เขียน 2026-10-03)
+> สถานะ: รอเจ้าของทำในเครื่องตัวเอง (เขียน 2026-10-03) — **ข้อที่ต้องอัปเกรดแผนเลื่อนทั้งหมดตาม D-48** (ฐานข้อมูล `dev`, bucket, budget alert)
 > ที่มา: PRD D-34 (1 โปรเจกต์สำหรับ MVP), ADR 0001 amendment 2, story E01-S07, E01-S08, E01-S12, E02-S01
-> ใครทำ: เจ้าของ (หรือ session ในเครื่องเจ้าของ เช่น mon-farm-a7) เพราะต้องใช้สิทธิ์ console และสร้าง secret
+> ใครทำ: เจ้าของ (หรือ session ในเครื่องเจ้าของ เช่น session ที่ชื่อ mon-farm-a7 — ชื่อนี้เป็นชื่อ session ไม่ใช่ชื่อโปรเจกต์) เพราะต้องใช้สิทธิ์ console และสร้าง secret
 
 โปรเจกต์เดียวเก็บทั้ง dev และ prod แยกกันด้วย database, bucket และ Hosting site — Auth ใช้ร่วมกัน
 (ความเสี่ยงที่เจ้าของรับแล้ว 2026-10-03) ทำตามลำดับ ข้อที่ขึ้นกับข้ออื่นเขียนไว้ในวงเล็บ
 
 ## 1. โปรเจกต์และงบ
 
-- [ ] ยืนยันแผน Blaze
-- [ ] ตั้ง budget alert ที่ครอบ Firestore, Cloud Storage, Cloud Functions, Hosting (NFR-6)
-- [ ] ตั้ง default region เป็น `asia-southeast1`
+- [ ] ยืนยันแผน Blaze (เลื่อนตาม D-48 — ยังไม่อัปเกรดแผน)
+- [ ] (เลื่อนตาม D-48 — ยังไม่อัปเกรดแผน) ตั้ง budget alert ที่ครอบ Firestore, Cloud Storage, Cloud Functions, Hosting (NFR-6)
+- [ ] ตั้ง default region เป็น `asia-southeast3 (กรุงเทพฯ)`
 
 ## 2. Firestore (E01-S08)
 
-- [ ] database `(default)` = **prod** (`asia-southeast1`, native mode)
-- [ ] สร้าง database ชื่อ `dev` (`asia-southeast1`) — build dev/preview ใช้ตัวนี้เท่านั้น (NFR-5)
+- [x] database `(default)` = **prod** — สร้างแล้ว 2026-10-03: `asia-southeast3` (กรุงเทพฯ), Standard, native mode,
+  production mode; ห้ามเปลี่ยนชื่อหรือลบ (D-48)
+- [ ] **เลื่อนตาม D-48 (ยังไม่อัปเกรดแผน):** สร้าง database ชื่อ `dev` (`asia-southeast3 (กรุงเทพฯ)`) — build dev/preview ใช้ตัวนี้เท่านั้น (NFR-5)
 - [ ] ยังไม่ต้อง deploy rules — ทีม platform ทำผ่าน CI หลังเจ้าของอนุมัติ deploy
 
 ## 3. Cloud Storage (E01-S12)
 
-- [ ] bucket หลัก (default) = **prod**, `asia-southeast1`
-- [ ] สร้าง bucket แยกสำหรับ **dev**, `asia-southeast1`
+> เลื่อนทั้งหมดตาม D-48: ยังไม่อัปเกรดแผน → ยังอัปโหลดไฟล์ไม่ได้ (เจ้าของยืนยัน) ฟรีโควตา 5 GB มีเฉพาะ bucket ใน us-central1/us-west1/us-east1 ไม่ใช่ asia-southeast3
+
+- [ ] bucket หลัก (default) = **prod**, `asia-southeast3 (กรุงเทพฯ)`
+- [ ] สร้าง bucket แยกสำหรับ **dev**, `asia-southeast3 (กรุงเทพฯ)`
 
 ## 4. Hosting (E01-S07)
 
-- [ ] สร้าง 2 site: site ของ `dev` (ใช้ preview channel ของ PR ด้วย) และ site ของ `prod`
-- [ ] จดชื่อ site ทั้งสอง (เช่น `mon-farm-a7-dev`, `mon-farm-a7`) ส่งกลับมา
+- [x] 2 site: site ของ `dev` (ใช้ preview channel ของ PR ด้วย) และ site ของ `prod`
+- [x] สร้างแล้ว (2026-10-03): site `mon-farm-dev` (dev + preview channel ของ PR) และ `mon-farm-prod` (prod) ใน `mon-farmmate`
 
 ## 5. Auth (E02-S01)
 
@@ -45,19 +48,22 @@
 
 ## 7. Deploy credential (E01-S07) — keyless (Workload Identity Federation)
 
+> สถานะ 2026-10-03: **ทำครบแล้ว** ใน `mon-farmmate` — pool `github`, provider `github-oidc`, service account
+> `gh-deploy@…` (Firebase Hosting Admin + Service Usage Consumer), ตั้ง repo variables แล้ว และ PR preview ผ่านจริง (PR #35)
+
 > แก้ 2026-10-03: workflow ทั้งหมด (`ci.yml` preview, `deploy-dev.yml`, `deploy-prod.yml`) ใช้
 > `google-github-actions/auth` แบบ **ไม่มี key** ผ่าน repo **variables** `GCP_WORKLOAD_IDENTITY_PROVIDER`
 > และ `GCP_SERVICE_ACCOUNT` — **ไม่ต้องสร้าง service-account key และไม่มี secret `FIREBASE_SERVICE_ACCOUNT`**
 
-- [ ] สร้าง service account **1 ตัว** สำหรับ CI deploy เช่น `github-deploy@mon-farm-a7.iam.gserviceaccount.com`
+- [x] สร้าง service account **1 ตัว** สำหรับ CI deploy สร้างแล้ว: `gh-deploy@mon-farmmate.iam.gserviceaccount.com`
   ให้สิทธิ์ Firebase Hosting Admin (เพิ่ม Firebase Rules Admin / Functions ทีหลังเมื่อถึง story นั้น)
-- [ ] IAM → Workload Identity Federation: สร้าง pool (เช่น `github`) และ provider แบบ OIDC
+- [x] IAM → Workload Identity Federation: สร้าง pool (เช่น `github`) และ provider แบบ OIDC
   - issuer: `https://token.actions.githubusercontent.com`
   - attribute mapping: `google.subject=assertion.sub`, `attribute.repository=assertion.repository`
   - attribute condition: `assertion.repository == "goonjs/mon-farm"`
-- [ ] ให้ service account ข้างบนมี role `Workload Identity User` สำหรับ principal
+- [x] ให้ service account ข้างบนมี role `Workload Identity User` สำหรับ principal
   `principalSet://iam.googleapis.com/projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github/attribute.repository/goonjs/mon-farm`
-- [ ] GitHub repo `goonjs/mon-farm` → Settings → Secrets and variables → Actions → แท็บ **Variables** (ไม่ใช่ Secrets):
+- [x] GitHub repo `goonjs/mon-farm` → Settings → Secrets and variables → Actions → แท็บ **Variables** (ไม่ใช่ Secrets):
   - `GCP_WORKLOAD_IDENTITY_PROVIDER` = `projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github/providers/<PROVIDER_ID>`
   - `GCP_SERVICE_ACCOUNT` = อีเมล service account ข้างบน
 - [ ] **ห้าม** สร้างหรือดาวน์โหลด service-account key — วิธีนี้ไม่ต้องใช้ key เลย
@@ -68,8 +74,18 @@
 
 | ค่า | ตัวอย่าง |
 | --- | --- |
-| project ID | `mon-farm-a7` |
+| project ID | `mon-farmmate` (หมายเลข 626311237893) |
 | ชื่อ site dev / prod | |
 | ชื่อ bucket dev / prod | |
 | web app config (`apiKey`, `authDomain`, `appId`, `messagingSenderId`) | ค่าเหล่านี้ไม่ใช่ความลับ |
 | GitHub variables ที่ตั้งแล้ว | `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` (ค่าไม่ใช่ความลับ) |
+
+## 9. ต้องทบทวนหลังออกแบบ flow ทั้งหมดเสร็จ (Region / Storage)
+
+**ต้องทบทวน — Region และ Storage (เจ้าของสั่ง 2026-10-03: ทบทวนอีกครั้งหลังออกแบบ flow ทั้งหมดเสร็จ)**
+
+- **Region ของ Firestore:** ตอนนี้ `(default)` ถูกสร้างที่ asia-southeast3 (กรุงเทพฯ) (D-47) แก้ภายหลังไม่ได้ ถ้าจะเปลี่ยน ต้องลบแล้วสร้างใหม่ (ใช้ ID เดิมซ้ำได้หลังราว 5 นาที ตามเอกสาร Firebase) ซึ่งทำได้ง่ายเฉพาะ **ก่อนมีข้อมูลจริง** — ปัจจุบันฐานข้อมูลว่าง
+- **Cloud Storage:** ฟรีโควตา 5 GB มีเฉพาะ bucket ใน us-central1/us-west1/us-east1 ส่วน bucket ใน asia-southeast3 ไม่มีฟรีโควตา และการอัปโหลดไฟล์ถูกบล็อกจนกว่าจะอัปเกรดแผน (D-48) ต้องตัดสิน: อัปเกรดเมื่อไหร่ / bucket อยู่ region ไหน / ใช้ us-* เพื่อฟรี 5 GB หรือจ่ายแลกกับความใกล้ผู้ใช้ในไทย
+- **ฐานข้อมูล `dev`:** ต้องอัปเกรดแผนและไม่ได้ฟรีโควตา (ยืนยันจากคอนโซล) จะสร้างเมื่อไหร่
+- **ไม่ต้องตัดสินตอนนี้:** story ที่แตะข้อมูลในเครื่องไม่ติด ส่วนที่ติดคือ E01-S12 (อัปโหลด), story ที่แนบไฟล์ เช่น E07-S02
+- ตรวจให้ครบก่อนตัดสิน: Cloud Storage และ Cloud Functions รองรับ asia-southeast3 ไหม และราคา

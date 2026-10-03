@@ -106,7 +106,9 @@ shared** — the same Google account signs in to dev, previews and prod, and one
 budget covers both environments.
 
 Follow-up 1 becomes: create the two sites, the `dev` database and the dev
-bucket in the existing project, and choose the two domains. Follow-up 2 needs
+bucket in the existing project, and choose the two domains. **The `dev`
+database and bucket are deferred (PRD D-48): the owner is not upgrading the
+plan yet.** Follow-up 2 needs
 one deploy credential.
 
 **Revisit:** split into two projects (dev, prod) before commercial launch, or
@@ -139,6 +141,7 @@ Matches Amendment 2 (one project):
   10 GB storage and 360 MB/day data transfer.
 
 **Still open (owner):** add the repo variables listed in `docs/process.md`;
-create the `dev` database and dev bucket; choose and connect the two domains;
+create the `dev` database and dev bucket (deferred, PRD D-48 — needs the plan
+upgrade); choose and connect the two domains;
 run Deploy Prod once. Not yet built from E01-S07: preview-channel cleanup on
 PR close and the PR comment with the preview link.

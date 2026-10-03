@@ -9,7 +9,7 @@ PRD: SYNC, NFR-2/3/5/6 · architecture.md หัวข้อ "2026-10-02 Directi
 ## ขอบเขต
 - เปลี่ยน id ของ event log: id ไม่ซ้ำทั่วโลก (UUIDv7/ULID), เลขลำดับต่อเครื่อง, ผู้บันทึก = user + เครื่อง
 - ที่เก็บข้อมูลบนเว็บ: localStorage → IndexedDB
-- Firebase 1 โปรเจกต์ (Blaze, budget alert, asia-southeast1) แยก dev/prod ด้วย Hosting site + Firestore database + Storage bucket คนละตัว (D-34)
+- Firebase 1 โปรเจกต์ (Blaze, budget alert, asia-southeast3 (กรุงเทพฯ)) แยก dev/prod ด้วย Hosting site + Firestore database + Storage bucket คนละตัว (D-34)
 - Firestore: event เป็นเอกสารแก้ไม่ได้, rules ให้สร้างอย่างเดียว, แยกข้อมูลตามกลุ่มฟาร์ม
 - outbox ส่งขึ้น + snapshot ดึงลง; sync อัตโนมัติเมื่อมีเน็ต; retry อัตโนมัติ
 - สถานะต่อการขาย + ภาพรวม: Synced / Pending Sync / Conflict; ปุ่มลองใหม่เมื่อ error

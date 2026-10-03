@@ -17,7 +17,7 @@ Decision log D-1…D-21):
 
 | Area | Decision | Why |
 |---|---|---|
-| Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert, asia-southeast1, **one Firebase project** for MVP (D-34): dev/preview on a named Firestore database `dev` + a dev Storage bucket, prod on `(default)` + the default bucket; split into two projects before commercial launch | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
+| Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert (เลื่อนตาม D-48 — ยังไม่อัปเกรดแผน), asia-southeast3 (กรุงเทพฯ), **one Firebase project** for MVP (D-34): dev/preview on a named Firestore database `dev` + a dev Storage bucket, prod on `(default)` + the default bucket; split into two projects before commercial launch | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
 | Sync unit | **Keep the append-only event log as source of truth and sync unit.** Each event = one immutable Firestore doc (`groups/{gid}/events/{eventId}`), create-only security rules → idempotent re-push, nothing overwritten. Edits are new events carrying `targetId` + `baseEventId`; concurrent edits merge only when they touch different non-money/weight/count/status fields, otherwise **Conflict** surfaced to the user (see §Sync engine). | Firestore is last-write-wins per document and transactions fail offline, so platform defaults can't satisfy "never silently overwrite money". Basket events are additive → different devices merge for free. |
 | Pending Sync | Our own outbox (`synced_at IS NULL`), not Firestore's cache | JS SDK persistence on React Native is memory-only; our SQLite store owns durability. Avoids `@react-native-firebase`. |
 | IDs & ordering | Globally unique event ids (**UUIDv7**, owner 2026-10-03) + per-device sequence; causal order only, no clock ordering; `(sale_id, seq)` PK retired; `actor` → user id + device id | Two offline phones would collide on per-sale `seq`. |
@@ -70,7 +70,7 @@ Firestore document หนึ่งตัว ที่สร้างได้อ
                                     └──────────┬───────────────────┘
                                                │ Firebase JS SDK (memory cache)
                  ┌─────────────────────────────▼─────────────────────────────┐
-                 │ Firebase 1 โปรเจกต์ (asia-southeast1, Blaze, D-34)          │
+                 │ Firebase 1 โปรเจกต์ (asia-southeast3, Blaze, D-34)          │
                  │ site dev/prod · Firestore db `dev` / `(default)` · bucket  │
                  │ dev/prod · Auth (Google, ใช้ร่วม) · groups/{gid}/…          │
                  │ Cloud Functions: createInvite / acceptInvite               │
@@ -551,7 +551,7 @@ retry/backoff ชุดเดียวกัน ถ้า object มีอยู
 ## Backend API
 
 ไม่มี REST API ที่เขียนเอง backend = Firestore + Cloud Storage ที่ป้องกันด้วย rules และ callable function
-สองตัว ทั้งหมดอยู่ในโปรเจกต์ Firebase เดียวที่ asia-southeast1 บน Blaze (D-1, D-22, D-34) แยก dev/prod ภายใน
+สองตัว ทั้งหมดอยู่ในโปรเจกต์ Firebase เดียวที่ asia-southeast3 (กรุงเทพฯ) บน Blaze (เลื่อนตาม D-48 — ยังไม่อัปเกรดแผน) (D-1, D-22, D-34) แยก dev/prod ภายใน
 โปรเจกต์: Firestore database `dev` (dev + preview) กับ `(default)` (prod), Storage bucket ของ dev กับ bucket
 หลัก (prod), Hosting site `dev` กับ `prod`
 
@@ -578,7 +578,7 @@ inviteAttempts/{uid}            { failures, windowStart }                       
 
 ### Callable functions — รหัสเชิญ (เจ้าของตกลง 2026-10-03, D-31, E02-S03)
 
-**ใช้ Cloud Functions สองตัว (`createInvite`, `acceptInvite`, asia-southeast1, min instances 0) ไม่ใช่ rules
+**ใช้ Cloud Functions สองตัว (`createInvite`, `acceptInvite`, asia-southeast3 — ยังไม่ได้ยืนยันว่า Functions รองรับ ถ้าไม่รองรับใช้ asia-southeast1 (สิงคโปร์) ได้ เพราะไม่กระทบที่เก็บข้อมูล, min instances 0) ไม่ใช่ rules
 อย่างเดียว**
 
 - **rules อย่างเดียวทำได้แค่ส่วนความถูกต้อง**: doc `invites/{code}` + batch ฝั่ง client ที่สร้าง `members/{uid}`
@@ -607,7 +607,7 @@ inviteAttempts/{uid}            { failures, windowStart }                       
 |---|---|---|---|
 | Firestore Standard | 50,000 reads, 20,000 writes, 20,000 deletes/วัน; 1 GiB; egress 10 GiB/เดือน | วันขาย ~1,000 events ≈ 1,000 writes + ~2,000 reads + อ่านจาก rules | [Firestore pricing](https://cloud.google.com/firestore/pricing) |
 | Cloud Functions | 2M invocations, 400,000 GB-s/เดือน | หลักสิบครั้ง/เดือน | [Cloud Run functions](https://cloud.google.com/functions) |
-| Cloud Storage | **5 GB-month ฟรีเฉพาะ bucket ใน us-central1/us-east1/us-west1** | bucket ใน asia-southeast1 **เสียเงินตั้งแต่ byte แรก** — รูปหลัก GB คาดว่าไม่กี่บาท/เดือน (ต้องยืนยันราคา) | [Storage FAQ Sept 2024](https://firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024) |
+| Cloud Storage | **5 GB-month ฟรีเฉพาะ bucket ใน us-central1/us-east1/us-west1** | bucket นอก us-* (รวม asia-southeast3 ที่เลือกใช้) **เสียเงินตั้งแต่ byte แรก** (ราคาของ asia-southeast3 โดยเฉพาะยังไม่ได้ตรวจ) — รูปหลัก GB คาดว่าไม่กี่บาท/เดือน (ต้องยืนยันราคา) | [Storage FAQ Sept 2024](https://firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024) |
 
 ### สภาพแวดล้อม
 
@@ -798,3 +798,4 @@ exercised in a browser.**
 4. **Sync, conflict resolution, multi-tenancy** — designed in §Sync engine / §Security (E01-S01), not built. RBAC beyond `role: 'owner'` is post-MVP.
 5. **Battery cost** of white-at-full-brightness in the field (F-15) is
    unmeasured.
+6. **Region และ Storage — ทบทวนหลังออกแบบ flow ครบ** (เจ้าของสั่ง 2026-10-03): `(default)` อยู่ asia-southeast3 (D-47) แก้ภายหลังไม่ได้ (ลบแล้วสร้างใหม่ได้ง่ายเฉพาะก่อนมีข้อมูลจริง); Storage ฟรีโควตามีเฉพาะ bucket ใน us-*, อัปโหลดไฟล์ติดการอัปเกรดแผน (D-48) — รายละเอียดใน `docs/runbooks/firebase-setup.md` ข้อ 9
