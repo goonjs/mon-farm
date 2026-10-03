@@ -725,12 +725,14 @@ Firestore นับเป็น Firestore read; ต้องให้สิท�
 
 ### Dependency gate (CLAUDE.md) ที่การออกแบบนี้ต้องใช้ — ขออนุมัติแยกทีละตัวพร้อมผลตรวจ
 
-`firebase` JS SDK (E01-S08) · แหล่ง CSPRNG บน native (E01-S02) · Google sign-in บน Android + auth persistence
+`firebase` JS SDK (E01-S08) · แหล่ง CSPRNG บน native (E01-S02 — **ติดตั้งแล้ว** `expo-crypto`) · Google sign-in บน Android + auth persistence
 บน RN และ `expo-dev-client` (E01-S06, E02-S01) · `@firebase/rules-unit-testing` (dev) · `firebase-tools` (CI) ·
-`firebase-functions` / `firebase-admin` (`functions/`, E02-S03) · `fake-indexeddb` (dev, ถ้าจำเป็น) · lib ไฟล์
+`firebase-functions` / `firebase-admin` (`functions/`, E02-S03) · `fake-indexeddb` (dev — **ติดตั้งแล้ว** 6.2.5, เจ้าของอนุมัติ D3 2026-10-03; audit ก่อน/หลังเท่ากัน 67) · lib ไฟล์
 บน native สำหรับสื่อ (E01-S12) ต้องทำ baseline ของ `npm audit` ใหม่หลังติดตั้ง `firebase`
 
-**audit เดิม (ยังใช้ได้)**: `npm audit` รายงาน 22 รายการ รวมเป็น **3 advisory** — `image-size` สองตัว (DoS ใน
+**audit ปัจจุบัน (2026-10-03, dev หลัง #33)**: 67 รายการ (13 moderate, 54 high, 0 critical) — เพิ่มจาก 22 โดย PR
+อื่นใน dev ก่อนการติดตั้ง `fake-indexeddb` (ซึ่งไม่เพิ่มรายการใด) ต้องจัดหมวด advisory ใหม่ (งานของทีม CI) — ย่อหน้าถัดไป
+เป็น **baseline เดิมที่ล้าสมัยแล้ว**: `npm audit` รายงาน 22 รายการ รวมเป็น **3 advisory** — `image-size` สองตัว (DoS ใน
 parser) และ `uuid` หนึ่งตัว (buffer bounds) ทั้งหมดเข้ามาผ่าน build tooling ของ Expo (`@expo/config-plugins`,
 `@expo/prebuild-config`) ไม่มีตัวไหนถูกเรียกตอนรันบนเครื่อง และ `npm audit fix --force` จะ downgrade Expo
 ตรวจใหม่เมื่ออัปเดต SDK
