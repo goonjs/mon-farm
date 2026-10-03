@@ -231,7 +231,7 @@ may go to another free choice)"*
 1. ~~ใครสร้าง keystore?~~ **ตัดสินแล้ว (owner, 2026-10-03, D1): เจ้าของสร้างเอง**
    บนคอมของตัวเองด้วย `keytool` และใส่ GitHub Secrets เองแล้ว (`ANDROID_KEYSTORE_BASE64`,
    `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) — กุญแจและ
-   รหัสผ่านไม่ผ่าน agent; สำรองไว้นอก GitHub อย่างน้อย 2 ที่
+   รหัสผ่านไม่ผ่าน agent; ต้องสำรองไว้นอก GitHub อย่างน้อย 2 ที่ (GitHub ดาวน์โหลดคืนไม่ได้)
    - Package name: `com.goonjs.monfarm` (ลงทะเบียนใน Firebase `mon-farm-a7` แล้ว; เปลี่ยนไม่ได้)
    - Fingerprint ของ release key (alias `mon-farm`, ไม่ใช่ความลับ; ลงทะเบียนใน Firebase แล้ว
      สำหรับ Google sign-in บน Android, E02-S01):

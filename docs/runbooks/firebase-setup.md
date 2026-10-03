@@ -40,7 +40,8 @@
 - [ ] Web client: Firebase สร้างให้อัตโนมัติเมื่อเปิด Google provider — จด client ID
 - [x] Android app ลงทะเบียนแล้ว (2026-10-03): package name `com.goonjs.monfarm`, nickname "Mon FarmMate"
 - [x] เพิ่ม fingerprint SHA-1 และ SHA-256 ของ release key แล้ว (2026-10-03; ค่าอยู่ใน ADR 0003) —
-  ไม่ต้องใช้ `google-services.json` (แอปใช้ Firebase JS SDK)
+  คาดว่าไม่ต้องใช้ `google-services.json` (แอปใช้ Firebase JS SDK) — ยืนยันอีกครั้งตอนเลือก lib
+  Google sign-in ของ E02-S01
 
 ## 7. Deploy credential (E01-S07) — keyless (Workload Identity Federation)
 
