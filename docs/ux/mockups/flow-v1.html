@@ -330,12 +330,82 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .choice.pri { background: var(--c-action); color: var(--c-inverse); }
 .choice.pri small { color: var(--c-inverse); }
 .choice .tile { background: var(--c-action-sunk); color: var(--c-action); }
-.choice.cmp { min-height: var(--target-c); gap: 10px; padding: 7px 12px; border-radius: var(--r-md); }
-.choice.cmp b { font-size: 15px; }
-.choice.cmp small { font-size: 12px; line-height: 1.3; }
-.choice.cmp .tile { width: 32px; height: 32px; border-radius: var(--r-sm); }
+/* v4: sheet options rewritten for outdoor reading — bold title, then 1–2 short
+   lines, key numbers in a chip. The recommended option is a tinted outline,
+   not a dark fill, so its small lines stay ink-on-light. */
+.choice.cmp { min-height: var(--target-c); gap: 10px; padding: 8px 12px; border-radius: var(--r-md); align-items: flex-start; border-width: 1.5px; border-color: var(--c-rule-strong); }
+.choice.cmp b { font-size: 16px; color: var(--c-ink); margin-bottom: 2px; }
+.choice.cmp .ln { display: block; font-size: 14px; line-height: 1.45; font-weight: 500; color: var(--c-ink-soft); }
+.choice.cmp .tile { width: 32px; height: 32px; border-radius: var(--r-sm); margin-top: 2px; }
 .choice.cmp .tile .ic { width: 18px; height: 18px; }
-.choice.cmp .n { font-variant-numeric: tabular-nums; }
+.choice.cmp.pri { background: var(--c-action-sunk); border: 2px solid var(--c-action); }
+.choice.cmp.pri .tile { background: var(--c-raised); }
+.nchip {
+  display: inline-block; padding: 0 6px; border-radius: var(--r-sm); background: var(--c-brand-cream);
+  border: 1px solid var(--c-brand-yellow); color: var(--c-ink); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+/* v4 home (screen 3): long screenshot phone, cover, action cards, module grid */
+.step.long-step { position: relative; }
+.longtag {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 2px 10px; border-radius: var(--r-pill);
+  border: 1px dashed var(--pg-rule); color: var(--pg-ink-soft); font-size: 13px; font-weight: 600;
+}
+.longtag .ic { width: 16px; height: 16px; }
+.phone.long { height: auto; }
+.phone.long .screen { height: auto; }
+.phone.long .body { overflow: visible; }
+.cover {
+  position: relative; flex: none; height: 148px; margin: 0 16px; border-radius: var(--r-lg); overflow: hidden;
+  background: var(--c-action-sunk);
+}
+.cover svg.scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cover .sun { fill: var(--c-brand-yellow); }
+.cover .rays { stroke: var(--c-brand-yellow); stroke-width: 2.5; stroke-linecap: round; fill: none; transform-origin: 62px 40px; }
+.cover .cloud { fill: var(--c-raised); }
+.cover .hill-back { fill: var(--c-brand-light); }
+.cover .hill { fill: var(--c-brand); }
+.cover .trunk { fill: var(--c-ink-soft); }
+.cover .crown { fill: var(--c-brand-strong); }
+.cover .crown2 { fill: var(--c-brand); }
+.cover .cup { fill: var(--c-raised); stroke: var(--c-ink-soft); stroke-width: 1; }
+.cover .tap { stroke: var(--c-raised); stroke-width: 1.5; fill: none; }
+.cover .chg {
+  position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px;
+  border-radius: var(--r-pill); background: var(--c-raised); color: var(--c-action); font-size: 12px; font-weight: 600;
+  box-shadow: 0 2px 8px var(--c-shadow-float);
+}
+.cover .chg .ic { width: 16px; height: 16px; }
+@media (prefers-reduced-motion: no-preference) {
+  .cover .rays { animation: cover-spin 24s linear infinite; }
+  .cover .cloud { animation: cover-drift 18s ease-in-out infinite alternate; }
+}
+@keyframes cover-spin { to { transform: rotate(360deg); } }
+@keyframes cover-drift { from { transform: translateX(0); } to { transform: translateX(26px); } }
+
+.acts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.act {
+  min-height: 104px; padding: 10px 6px; border-radius: var(--r-lg); background: var(--c-raised);
+  border: 1px solid var(--c-rule-faint); box-shadow: 0 2px 12px var(--c-shadow-card);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; text-align: center;
+  font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--c-ink);
+}
+.act .tile { width: 48px; height: 48px; }
+.act .ic { width: 26px; height: 26px; }
+.act.main { border: 2px solid var(--c-action); }
+.sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 4px; }
+.sec-h b { font-size: 16px; }
+.sec-h a, .sec-h span.lnk { font-size: 14px; color: var(--c-action); font-weight: 600; text-decoration: none; }
+.mods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mod {
+  display: flex; align-items: center; gap: 8px; min-height: var(--target-c); padding: 8px 10px; border-radius: var(--r-md);
+  background: var(--c-raised); border: 1px solid var(--c-rule-faint); box-shadow: 0 2px 12px var(--c-shadow-card);
+  font-size: 13px; font-weight: 600; line-height: 1.25; color: var(--c-ink);
+}
+.mod small { display: block; font-size: 11px; font-weight: 400; color: var(--c-ink-soft); }
+.mod.wide { grid-column: span 2; }
+.mod small .ic { width: 11px; height: 11px; vertical-align: -1px; }
+.more-hint { font-size: 12px; color: var(--c-ink-soft); padding: 0 4px; line-height: 1.4; }
 
 /* photo type picker (E04-S10) */
 .types { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -509,19 +579,27 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     <symbol id="i-camera" viewBox="0 0 24 24"><path class="fillsoft" d="M3.5 8.5a2 2 0 0 1 2-2h2.2L9.5 4h5l1.8 2.5h2.2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></symbol>
     <symbol id="i-image" viewBox="0 0 24 24"><rect class="fillsoft" x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 2.5-2.5L20 18"/></symbol>
     <symbol id="i-receipt" viewBox="0 0 24 24"><path class="fillsoft" d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z"/><path d="M9 8h6M9 11.5h6M9 15h3.5"/></symbol>
-    <symbol id="i-pile" viewBox="0 0 24 24"><path class="fillsoft" d="M3 19c1.5-4 4-6.5 5.5-6.5 1 0 1.7.8 2.3 1.6.9-2.6 2.6-5.1 4.2-5.1 2 0 4.5 4.6 6 10z"/><path d="M2.5 19.5h19"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 4v16h16"/><path class="fillsoft" d="M8 17v-5h3v5zM13 17V8h3v9z"/><path d="M8 17v-5h3v5M13 17V8h3v9"/></symbol>
+    <symbol id="i-weather" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.5"/><path d="M9 2.5v1.5M2.5 9H4M4.4 4.4l1 1M13.6 4.4l-1 1"/><path class="fillsoft" d="M9 20h9a3.5 3.5 0 0 0 .3-7A5 5 0 0 0 9 14.2 3 3 0 0 0 9 20z"/><path d="M9 20h9a3.5 3.5 0 0 0 .3-7A5 5 0 0 0 9 14.2 3 3 0 0 0 9 20z"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path class="fillsoft" d="M3.5 7.5h15a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M3.5 7.5V6a2 2 0 0 1 2-2H16v3.5M15.5 13.5h5"/><circle cx="16.5" cy="13.5" r=".6"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path class="fillsoft" d="M3.5 8L12 4l8.5 4v8.5L12 20.5l-8.5-4z"/><path d="M3.5 8L12 12l8.5-4M12 12v8.5M7.8 6l8.4 4"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h3.5l1.5 4.5-2 1.5a11 11 0 0 0 6 6l1.5-2 4.5 1.5V19a1.5 1.5 0 0 1-1.5 1.5A15.5 15.5 0 0 1 3.5 5.5 1.5 1.5 0 0 1 5 4z"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path class="fillsoft" d="M4 5.5h16v10.5H10l-4.5 3.5V16H4z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M10 6.5h10M10 12h10M10 17.5h10"/><path d="M3.5 6.5l1.5 1.5L7.5 5.5M3.5 12l1.5 1.5L7.5 11"/><circle cx="5" cy="17.5" r="1.2"/></symbol>
+    <symbol id="i-pile"viewBox="0 0 24 24"><path class="fillsoft" d="M3 19c1.5-4 4-6.5 5.5-6.5 1 0 1.7.8 2.3 1.6.9-2.6 2.6-5.1 4.2-5.1 2 0 4.5 4.6 6 10z"/><path d="M2.5 19.5h19"/></symbol>
   </defs>
 </svg>
 
 <div class="wrap">
 
 <header class="hdr">
-  <h1>mon-farm — Flow v3 · 2026-10-03</h1>
-  <p>ตัวอย่างลำดับหน้าจอ (mockup) ของแอป <b>FarmMate</b> — ใช้การ์ดและไอคอนจาก FarmMate; flow ยึด PRD · v3: หน้าชั่งกลับไปแบบ v1 (เข่งปัจจุบัน / ถัดไป), เติมเข่งที่จุดใหม่ 4 ทางเลือก, ใส่คำตอบ ?17 ?19</p>
-  <p class="date num">v3 · 2026-10-03 · ตัวเลข ชื่อ และน้ำหนักทั้งหมดในหน้าจอเป็น <b>ตัวอย่าง</b></p>
+  <h1>mon-farm — Flow v4 · 2026-10-03</h1>
+  <p>ตัวอย่างลำดับหน้าจอ (mockup) ของแอป <b>FarmMate</b> — ใช้การ์ดและไอคอนจาก FarmMate; flow ยึด PRD · v4: หน้าแรกวาดใหม่ตามคำตอบใน Asana (ภาพปก · 3 งานที่ใช้บ่อย · รายการวันนี้ · การ์ดโมดูล), ทางเลือกหน้า 12 อ่านง่ายขึ้น, ใส่คำตอบ ?20 (เลขเข่งแยกต่อจุด)</p>
+  <p class="date num">v4 · 2026-10-03 · ตัวเลข ชื่อ และน้ำหนักทั้งหมดในหน้าจอเป็น <b>ตัวอย่าง</b></p>
   <div class="legend">
     <span><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 8</span> เจ้าของตอบแล้ว 2026-10-03 — ตารางคำตอบอยู่ท้ายหน้า</span>
-    <span><span class="q">?20</span> คำถามใหม่ใน v3 (ยังไม่ได้ตอบ)</span>
+    <span><span class="q">?21</span> คำถามใหม่ใน v4: ?21–?23 (ยังไม่ได้ตอบ)</span>
     <span><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span> ป้ายสถานะ sync (ไอคอน + คำ)</span>
     <span><span class="ds ds-none">ไม่ได้บันทึก</span> ป้ายสถานะข้อมูลรายฟิลด์ (E01-S15)</span>
   </div>
@@ -587,30 +665,80 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 
     <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>กลุ่ม</b> (กลุ่มเดียว = เข้าเลย)</span></div>
 
-    <figure class="step">
-      <div class="phone"><div class="screen" aria-label="หน้าแรก วันนี้">
+    <figure class="step long-step">
+      <span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span>
+      <div class="phone long"><div class="screen" aria-label="หน้าแรก วันนี้ (หน้ายาว เลื่อนได้)">
         <div class="sbar num"><span>06:42</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
-        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-menu"/></svg></span><h3>สวนครอบครัว <small>ส. 3 ต.ค. 2569</small></h3><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span></div>
-        <div class="body">
-          <div class="greet"><b>วันนี้ต้องรู้อะไรบ้าง</b><span>เรียงจากเรื่องสำคัญก่อน</span></div>
-          <div class="card tight">
-            <div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-clock"/></svg></span><span class="grow"><span class="lbl">งานถึงกำหนด</span><span class="val" style="display:block">ใส่ปุ๋ย สวนจันทเขลม</span><span class="sub">ตัวอย่าง · วันนี้</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
-            <div class="row"><span class="tile t-red"><svg class="ic"><use href="#i-doc"/></svg></span><span class="grow"><span class="lbl">เอกสารใกล้หมดอายุ</span><span class="val" style="display:block">เอกสารของ แดง</span><span class="sub">ตัวอย่าง · อีก 12 วัน</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="lbl">การขายล่าสุด</span><span class="val num" style="display:block">18 ก.ย. 2569 · 2,100 กก.</span><span class="sub">ตัวอย่าง · ปิดแล้ว · <span class="chip ch-ok" style="padding:0 6px"><svg class="ic"><use href="#i-check"/></svg>ซิงก์แล้ว</span></span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
-          </div>
-          <span style="font-size:14px;color:var(--c-action);font-weight:600;align-self:flex-end;min-height:32px">ดูการขายทั้งหมด ›</span>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-menu"/></svg></span><h3>สวนครอบครัว <small>ส. 3 ต.ค. 2569</small></h3><span class="pill p-conf"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน 1</span></div>
+        <div class="cover" role="img" aria-label="ภาพปก: สวนยางยามเช้า">
+          <svg class="scene" viewBox="0 0 316 148" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <g class="rays"><path d="M62 16v-7M62 64v7M38 40h-7M86 40h7M45 23l-5-5M79 57l5 5M79 23l5-5M45 57l-5 5"/></g>
+            <circle class="sun" cx="62" cy="40" r="14"/>
+            <g class="cloud"><ellipse cx="200" cy="34" rx="22" ry="9"/><ellipse cx="216" cy="28" rx="14" ry="10"/><ellipse cx="186" cy="30" rx="11" ry="8"/></g>
+            <path class="hill-back" d="M0 108C60 84 120 92 170 100S270 82 316 92V148H0z"/>
+            <g>
+              <rect class="trunk" x="120" y="66" width="4" height="40" rx="1.5"/><ellipse class="crown2" cx="122" cy="62" rx="15" ry="13"/>
+              <rect class="trunk" x="160" y="62" width="4" height="44" rx="1.5"/><ellipse class="crown2" cx="162" cy="58" rx="15" ry="13"/>
+              <rect class="trunk" x="200" y="64" width="4" height="42" rx="1.5"/><ellipse class="crown2" cx="202" cy="60" rx="15" ry="13"/>
+              <rect class="trunk" x="240" y="60" width="4" height="46" rx="1.5"/><ellipse class="crown2" cx="242" cy="56" rx="15" ry="13"/>
+              <rect class="trunk" x="280" y="62" width="4" height="44" rx="1.5"/><ellipse class="crown2" cx="282" cy="58" rx="15" ry="13"/>
+            </g>
+            <path class="hill" d="M0 124C70 108 150 112 210 118S290 110 316 114V148H0z"/>
+            <g>
+              <rect class="trunk" x="96" y="70" width="6" height="58" rx="2"/><ellipse class="crown" cx="99" cy="64" rx="22" ry="18"/>
+              <path class="tap" d="M96 100l6-4"/><path class="cup" d="M93 104h7l-1 6h-5z"/>
+              <rect class="trunk" x="150" y="74" width="6" height="54" rx="2"/><ellipse class="crown" cx="153" cy="68" rx="22" ry="18"/>
+              <path class="tap" d="M150 104l6-4"/><path class="cup" d="M147 108h7l-1 6h-5z"/>
+              <rect class="trunk" x="204" y="72" width="6" height="56" rx="2"/><ellipse class="crown" cx="207" cy="66" rx="22" ry="18"/>
+              <rect class="trunk" x="258" y="70" width="6" height="58" rx="2"/><ellipse class="crown" cx="261" cy="64" rx="22" ry="18"/>
+            </g>
+          </svg>
+          <span class="chg"><svg class="ic"><use href="#i-image"/></svg>เปลี่ยนรูปปก</span>
         </div>
-        <div class="foot">
-          <div class="btn btn-primary"><svg class="ic"><use href="#i-plus"/></svg>เริ่มการขาย</div>
+        <div class="body" style="padding-top:12px">
+          <div class="acts">
+            <div class="act"><span class="tile t-cream"><svg class="ic"><use href="#i-list"/></svg></span>เตรียมขาย</div>
+            <div class="act main"><span class="tile t-blue"><svg class="ic"><use href="#i-basket"/></svg></span>เริ่มการขาย</div>
+            <div class="act"><span class="tile t-green"><svg class="ic"><use href="#i-receipt"/></svg></span>บันทึก<br>ค่าใช้จ่าย</div>
+          </div>
+          <div class="sec-h"><b>วันนี้ต้องรู้อะไรบ้าง</b><span style="font-size:12px;color:var(--c-ink-soft)">สำคัญก่อน</span></div>
+          <div class="card tight">
+            <div class="row"><span class="tile t-red"><svg class="ic"><use href="#i-alert"/></svg></span><span class="grow"><span class="lbl">เรื่องด่วน · ซิงก์</span><span class="val" style="display:block">ข้อมูลขัดกัน 1 รายการ</span><span class="sub num">ตัวอย่าง · การขาย 18 ก.ย. · แตะเพื่อเลือกค่า</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="lbl">การขายล่าสุด</span><span class="val num" style="display:block">18 ก.ย. 2569 · 2,100 กก.</span><span class="sub">ตัวอย่าง · <span class="chip ch-ok" style="padding:0 6px"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-clock"/></svg></span><span class="grow"><span class="lbl">งานถึงกำหนด</span><span class="val" style="display:block">ใส่ปุ๋ย สวนจันทเขลม</span><span class="sub">ตัวอย่าง · วันนี้</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+          </div>
+          <div class="sec-h" style="margin-top:-4px"><span class="more-hint">มีเมื่อเกิดขึ้น: การขายที่ยังไม่ปิด · เอกสารใกล้หมดอายุ · …</span><span class="lnk" style="white-space:nowrap">ดูการขายทั้งหมด ›</span></div>
+          <div class="sec-h"><b>โมดูลอื่น</b></div>
+          <div class="mods">
+            <div class="mod"><span class="tile sm t-blue"><svg class="ic"><use href="#i-chart"/></svg></span><span>รายงานการขายย้อนหลัง</span></div>
+            <div class="mod"><span class="tile sm t-blue"><svg class="ic"><use href="#i-weather"/></svg></span><span>พยากรณ์อากาศ<small>เปิดภายนอก <svg class="ic"><use href="#i-ext"/></svg></small></span></div>
+            <div class="mod"><span class="tile sm t-cream"><svg class="ic"><use href="#i-wallet"/></svg></span><span>รายการที่ต้องจ่าย</span></div>
+            <div class="mod"><span class="tile sm t-green"><svg class="ic"><use href="#i-box"/></svg></span><span>รายการ stock</span></div>
+            <div class="mod wide"><span class="tile sm t-gray"><svg class="ic"><use href="#i-users"/></svg></span><span>ข้อมูลพนักงาน</span><svg class="ic chev" style="margin-left:auto"><use href="#i-chev"/></svg></div>
+          </div>
+          <div style="height:8px"></div>
         </div>
       </div></div>
+      <div class="extras">
+        <div class="inset">
+          <span class="ttl">แตะ เตรียมขาย → หน้าเตรียมขาย (ร่าง)</span>
+          <div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-cal"/></svg></span><span class="grow">วัน / เวลานัด</span><b class="num">ส. 10 ต.ค. · 07:00</b></div>
+          <div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-chat"/></svg></span><span class="grow">ข้อความนัดผู้ซื้อ<br><span style="font-size:12px;color:var(--c-ink-soft)">ร่างให้แล้ว · แก้ได้ · ส่งทาง LINE</span></span></div>
+          <div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-users"/></svg></span><span class="grow">ผู้ซื้อ ก (ตัวอย่าง)</span><span class="btn btn-secondary small" style="min-height:40px;padding:0 10px"><svg class="ic sm"><use href="#i-phone"/></svg>โทร</span><span class="btn btn-secondary small" style="min-height:40px;padding:0 10px"><svg class="ic sm"><use href="#i-chat"/></svg>LINE</span></div>
+          <div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-coin"/></svg></span><span class="grow">ราคาที่ตกลง ฿/กก.</span><span class="ds ds-none">ไม่ได้บันทึก</span></div>
+          <div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-list"/></svg></span><span class="grow">เช็กลิสต์ก่อนขาย</span><b class="num">2 / 5</b></div>
+          <span class="note">ภาพร่างเท่านั้น — ขั้นตอนจริงรอเลือก epic <span class="q">?22</span> · ราคาที่ตกลงไปเติมหัวการขาย (หน้า 5) ให้เอง</span>
+        </div>
+      </div>
       <figcaption>
-        <span class="t">3. หน้าแรก — วันนี้</span>
-        รายการเดียวเรียงตามความสำคัญ แตะแล้วไปบันทึกต้นทาง; ป้าย sync ภาพรวมอยู่หัวแอป
+        <span class="t">3. หน้าแรก — ตามคำตอบ Asana 2026-10-03</span>
+        บนสุดเป็นภาพปก (ภาพวาดสวนยาง ขยับช้า ๆ; ปิดเมื่อเครื่องตั้ง "ลดการเคลื่อนไหว") หรือรูปที่ผู้ใช้เลือก · ต่อด้วย 3 งานที่ใช้บ่อย · รายการวันนี้เรียงเรื่องสำคัญก่อน · การ์ดไปโมดูลอื่น · ไม่มีปุ่มติดล่างแล้ว — เริ่มการขายเป็นการ์ดกลาง
         <span class="ids">ANA-1, SYNC-3 · E13-S01, E01-S10</span>
         <ul>
-          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 3</span><span>ปุ่ม เริ่มการขาย ติดล่างหน้าแรกไว้ก่อน · <b>หน้าแรก: รายการเนื้อหารอเจ้าของเลือกใน Asana</b> (เนื้อหาในจอนี้เป็นตัวอย่าง)</span></li>
-          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 4</span><span>มีหน้ารายการการขายแยก — ทางเข้าตอนนี้คือ "ดูการขายทั้งหมด" บนหน้าแรก</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 3</span><span>ตาม Asana 2026-10-03: ภาพปก → เตรียมขาย / เริ่มการขาย / บันทึกค่าใช้จ่าย → รายการวันนี้ → การ์ดโมดูล (รายงานการขายย้อนหลัง · พยากรณ์อากาศ · รายการที่ต้องจ่าย · รายการ stock · ข้อมูลพนักงาน)</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 4</span><span>มีหน้ารายการการขายแยก — ทางเข้าคือ "ดูการขายทั้งหมด" ใต้รายการวันนี้</span></li>
+          <li><span class="q">?22</span><span>เตรียมขาย (เช็กลิสต์ · ร่างข้อความนัด · เลือกวันเวลา · โทร/LINE ผู้ซื้อ · ราคาที่ตกลง) อยู่ใน epic ไหน — การขาย (E04) หรือ epic ใหม่?</span></li>
+          <li><span class="q">?23</span><span>พยากรณ์อากาศเปิดอะไร — แอปพยากรณ์ในเครื่อง หรือเว็บ (เช่น กรมอุตุฯ) ตามพิกัดสวน · หลายสวน → ถามเลือกสวนก่อน</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -698,14 +826,19 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 2</span><span class="sub">ตัวอย่างชื่อ · ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
             <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">ตัวอย่างชื่อ · ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
           </div>
-          <span style="font-size:13px;color:var(--c-ink-soft)">เลือกจุดไหนก่อนก็ได้ · เลขเข่งต่อเนื่องทั้งการขาย</span>
+          <span style="font-size:13px;color:var(--c-ink-soft)">เลือกจุดไหนก่อนก็ได้</span>
+          <div class="banner info"><svg class="ic sm"><use href="#i-basket"/></svg><span><b>เลขเข่ง 2 แบบ</b>"เลขเข่งต่อเนื่องทั้งการขาย" หรือ "เริ่ม 1 ใหม่ทุกจุด" — เลือกไว้ตอนเริ่มการขาย <span class="q">?21</span></span></div>
         </div>
       </div></div>
       <figcaption>
         <span class="t">6. เลือก สวน → คนกรีด → จุดชั่ง</span>
         ค่าเริ่มต้นเลือกไว้แล้ว แตะจุดชั่งเดียวก็เริ่มได้ (เริ่มถึงเข่งแรก ≤ 4 แตะ)
         <span class="ids">SALE-1, SALE-4, SALE-10, MD-3, MD-4 · D-9 · E04-S02</span>
-        <ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 6</span><span>ขั้นคือ สวน → คนกรีด → จุดชั่ง ตามที่วาด ไม่มีขั้นโซนแยก · <b>สวน = โซนของ POC; โซนย่อยในสวนยังมีแต่ไม่บังคับ</b></span></li></ul>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 6</span><span>ขั้นคือ สวน → คนกรีด → จุดชั่ง ตามที่วาด ไม่มีขั้นโซนแยก · <b>สวน = โซนของ POC; โซนย่อยในสวนยังมีแต่ไม่บังคับ</b></span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 20</span><span>มีโหมดเลขเข่งที่สอง: เริ่มเข่ง 1 ใหม่ทุกจุด แต่ละจุดมีเศษของตัวเองได้ เพราะคิดเงินจากน้ำหนักรวม</span></li>
+          <li><span class="q">?21</span><span>เลือกโหมดตอนไหน: ตั้งค่ากลุ่ม หรือ ตอนเริ่มการขาย?</span></li>
+        </ul>
       </figcaption>
     </figure>
 
@@ -937,10 +1070,10 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <span class="grab"></span>
           <h4>เข่ง 40 ยังไม่เต็ม</h4>
           <p class="num">มี 35 กก. จาก จันทเขลม จุด 4 · คนกรีดคนเดิม (นัด)</p>
-          <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมเข่ง 40 ต่อให้เต็ม</b><small class="num">อีก 15 กก. · ตาชั่งจะอ่าน 52 กก. แล้วกดค้างเพื่อนับ</small></span></div>
-          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-scale"/></svg></span><span><b>2 · ชั่งส่วนที่เติมใหม่แยก</b><small class="num">อีก 15 กก. ให้ครบ 50 นับรวมเป็นเข่ง 40 · ตาชั่งจะอ่าน 17 กก. (15 + ภาชนะ 2) แล้วกดค้าง</small></span></div>
-          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-plus"/></svg></span><span><b>3 · เริ่มเข่งเต็มใหม่ นับต่อ (เข่ง 41)</b><small class="num">เข่ง 40 ปิดเป็นเศษ 35 กก.</small></span></div>
-          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-refresh"/></svg></span><span><b>4 · เริ่มเข่งเต็มใหม่ นับจากเข่ง 1 <span class="q">?20</span></b><small class="num">เข่ง 40 ปิดเป็นเศษ 35 กก. · เริ่มนับใหม่ที่ 1</small></span></div>
+          <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมเข่ง 40 ต่อให้เต็ม</b><span class="ln num">เติมอีก <span class="nchip">15 กก.</span></span><span class="ln num">ตาชั่งอ่าน <span class="nchip">52 กก.</span> ทั้งเข่ง</span></span></div>
+          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-scale"/></svg></span><span><b>2 · ชั่งส่วนที่เติมใหม่แยก</b><span class="ln num">เติมอีก <span class="nchip">15 กก.</span> นับรวมเป็นเข่ง 40</span><span class="ln num">ตาชั่งอ่าน <span class="nchip">17 กก.</span> (15 + ภาชนะ 2)</span></span></div>
+          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-plus"/></svg></span><span><b>3 · เริ่มเข่งใหม่ นับต่อ</b><span class="ln num">เข่งใหม่คือ <span class="nchip">เข่ง 41</span></span><span class="ln num">เข่ง 40 ปิดเป็นเศษ <span class="nchip">35 กก.</span></span></span></div>
+          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-refresh"/></svg></span><span><b>4 · เริ่มเข่งใหม่ที่จุดนี้ นับจาก 1</b><span class="ln num">เลขเข่งแยกต่อจุด · เริ่ม <span class="nchip">เข่ง 1</span></span><span class="ln num">เข่ง 40 เดิมปิดเป็นเศษ <span class="nchip">35 กก.</span></span></span></div>
           <p style="font-size:12px;line-height:1.35">ไปจุดของคนกรีดคนอื่น → เข่ง 40 ปิดเป็นเศษเองโดยไม่ถาม (ยางคนละคนกรีดรวมกันไม่ได้)</p>
         </div>
       </div></div>
@@ -956,12 +1089,12 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       </div>
       <figcaption>
         <span class="t">12. เปลี่ยนจุด — คนกรีดคนเดิม มีเข่งเปิดอยู่</span>
-        สี่ทางเลือก แถวกะทัดรัด แตะครั้งเดียว: <b>เติมต่อให้เต็ม</b> (ตาชั่งอ่านทั้งเข่ง 52) · <b>ชั่งส่วนที่เติมแยก</b> (ตาชั่งอ่าน 17 นับรวมเป็นเข่ง 40) · <b>เริ่มเข่งใหม่ นับต่อ</b> (41) · <b>เริ่มเข่งใหม่ นับจาก 1</b> — สามและสี่ปิดเข่ง 40 เป็นเศษ
+        สี่ทางเลือก แตะครั้งเดียว · v4: แต่ละข้อเป็นหัวข้อตัวหนา + 2 บรรทัดสั้น ตัวเลขสำคัญอยู่ในกรอบเด่น · ตัดคำ "แล้วกดค้าง" ออก (หน้าชั่งบอกเองหลังเลือก): <b>เติมต่อให้เต็ม</b> (ตาชั่งอ่านทั้งเข่ง 52) · <b>ชั่งส่วนที่เติมแยก</b> (ตาชั่งอ่าน 17 นับรวมเป็นเข่ง 40) · <b>เริ่มเข่งใหม่ นับต่อ</b> (41) · <b>เริ่มเข่งใหม่ที่จุดนี้ นับจาก 1</b> (เลขเข่งแยกต่อจุด) — สามและสี่ปิดเข่ง 40 เป็นเศษ
         <span class="ids">SALE-11, SALE-12 · E04-S06</span>
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 9</span><span>ทุกจุดมีบันทึกแล้ว → หน้านี้มีปุ่ม "ชั่งครบแล้ว → ตรวจยอด" (กรอบด้านบน)</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 17</span><span>เติมเข่งที่จุดใหม่มี 4 ทางเลือกตามที่วาด</span></li>
-          <li><span class="q">?20</span><span>ทางเลือก 4: ขัดกับเลขเข่งต่อเนื่องทั้งการขาย (SALE-10, E04-S01) — รอเจ้าของยืนยันว่าเริ่ม 1 ใหม่ต่อจุด/ต่อคนกรีด หรือแค่ตัวนับบนจอ</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว 20</span><span>ทางเลือก 4 = เริ่มเลขเข่ง 1 ใหม่ <b>ต่อจุดชั่ง</b> — โหมดเลขเข่งแบบที่สอง เลขไม่ต้องต่อเนื่องทั้งการขาย แต่ละจุดมีเศษของตัวเองได้ เพราะคิดเงินจากน้ำหนักรวม (เลือกโหมดตอนไหน ดู <span class="q">?21</span> หน้า 6)</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -1294,13 +1427,13 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 <!-- ======================= OWNER ANSWERS ======================= -->
 <section class="qs">
   <h2>คำตอบเจ้าของ</h2>
-  <p>ตอบ ?1–?16 ของ v1 และ ?17 ?19 ของ v2 เมื่อ 2026-10-03 (คำตอบ 8 แก้ใหม่) — ใส่ลงหน้าจอใน v3 แล้ว</p>
+  <p>ตอบ ?1–?16 ของ v1, ?17 ?19 ของ v2 และ ?20 ของ v3 เมื่อ 2026-10-03 (คำตอบ 8 แก้ใหม่ · คำตอบ 3 ตาม Asana) — ใส่ลงหน้าจอใน v4 แล้ว</p>
   <table>
     <thead><tr><th>คำถาม</th><th>คำตอบ</th></tr></thead>
     <tbody>
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>1</span>ชื่อและโลโก้แอป</td><td>ใช้ <b>FarmMate</b> — ชื่อ + โลโก้แนวเดียวกับรูปตัวอย่าง (mockup วาดใหม่เป็น SVG)</td></tr>
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>2</span>เมนู ☰ หัวหน้าแรก</td><td>ใช้ได้ไว้ก่อน (ตั้งค่า สลับกลุ่ม ข้อมูลหลัก) — ตำแหน่งจริงตัดสินตอน build</td></tr>
-      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>3</span>ปุ่ม เริ่มการขาย ล่างหน้าแรก</td><td>ใช้ได้ไว้ก่อน; เนื้อหาหน้าแรกจะออกแบบใหม่ — <b>หน้าแรก: รายการเนื้อหารอเจ้าของเลือกใน Asana</b></td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>3</span>หน้าแรก (เดิม: ปุ่ม เริ่มการขาย ล่างหน้าแรก)</td><td><b>ตาม Asana 2026-10-03</b> (หน้า 3): ภาพปก — ภาพวาด SVG หรือรูปที่ผู้ใช้เลือก (จะลองแบบ 1–2 ภายหลัง) · 3 การ์ดงานที่ใช้บ่อย: เตรียมขาย / เริ่มการขาย / บันทึกค่าใช้จ่าย · รายการวันนี้ (เรื่องด่วน/ซิงก์ · การขายที่ยังไม่ปิด · การขายล่าสุด + "ดูการขายทั้งหมด" · งานถึงกำหนด · เอกสารใกล้หมดอายุ) · การ์ดโมดูล: รายงานการขายย้อนหลัง · พยากรณ์อากาศ · รายการที่ต้องจ่าย · รายการ stock · ข้อมูลพนักงาน · ปุ่มติดล่างเดิมเอาออก · ยังเปิด: เตรียมขายอยู่ epic ไหน (?22) · พยากรณ์อากาศเปิดแอป/เว็บอะไร (?23)</td></tr>
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>4</span>รายการการขายทั้งหมด</td><td>ทั้งสองอย่าง: มีหน้ารายการแยก; ทางเข้าตอนนี้จาก "ดูการขายทั้งหมด" บนหน้าแรก (หน้า 4)</td></tr>
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>5</span>ไม่มีสวนในหัวการขาย</td><td>ถูกต้อง</td></tr>
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>6</span>โซน / คนกรีด</td><td>POC เรียก "โซน" MVP เรียก "สวน" — ขั้นคือ สวน → คนกรีด → จุดชั่ง · สวน = โซนของ POC; โซนย่อยในสวนยังมีแต่ไม่บังคับ</td></tr>
@@ -1314,16 +1447,19 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>14</span>บัญชีปลายทาง</td><td>ไม่บังคับ; จะมีหน้าตั้งค่าบัญชีรับเงินพร้อมค่าเริ่มต้น เลือกได้ในหน้าสรุปเงิน</td></tr>
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>15</span>คำของป้าย sync</td><td>ซิงก์แล้ว / รอส่ง N / ขัดกัน N / ส่งไม่สำเร็จ · ลองใหม่</td></tr>
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>16</span>ตัวเลือกหน้า Conflict</td><td>MVP 3 ตัวเลือก: ค่าจากเครื่อง A · ค่าจากเครื่อง B · คงค่าเดิม; ปรับเป็นค่าอื่นเอง = phase ถัดไปหลัง MVP</td></tr>
-      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>17</span>เติมเข่งที่จุดใหม่</td><td>4 ทางเลือก (หน้า 12): เติมต่อให้เต็ม (ตาชั่งอ่าน 52) · ชั่งส่วนที่เติมแยก (ตาชั่งอ่าน 17) นับรวมเป็นเข่ง 40 · เริ่มเข่งใหม่ นับต่อ (41) · เริ่มเข่งใหม่ นับจาก 1 (ดู ?20)</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>17</span>เติมเข่งที่จุดใหม่</td><td>4 ทางเลือก (หน้า 12): เติมต่อให้เต็ม (ตาชั่งอ่าน 52) · ชั่งส่วนที่เติมแยก (ตาชั่งอ่าน 17) นับรวมเป็นเข่ง 40 · เริ่มเข่งใหม่ นับต่อ (41) · เริ่มเข่งใหม่ นับจาก 1 (ดู 20)</td></tr>
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>19</span>ยอดเงินแบบย่อ</td><td>ใช้ "พัน" ด้วย (2,450 → 2.45 พัน) · ต่ำกว่า 1,000 แสดงเต็ม</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>20</span>ทางเลือก 4 "นับจาก 1"</td><td>เริ่มเลขเข่ง 1 ใหม่ <b>ต่อจุดชั่ง</b> — โหมดเลขเข่งแบบที่สอง: เลขไม่ต้องต่อเนื่องทั้งการขาย แต่ละจุดเริ่มเข่ง 1 และมีเข่งเศษของตัวเองได้ เพราะคิดเงินจากน้ำหนักรวมอยู่แล้ว (หน้า 6, 12) · เลือกโหมดตอนไหน → ?21</td></tr>
     </tbody>
   </table>
 
   <h3>คำถามที่ยังเปิด</h3>
   <ol>
-    <li><span class="q">?20</span><span>เติมเข่งที่จุดใหม่ ทางเลือก 4 "เริ่มนับใหม่จากเข่งที่ 1" (หน้า 12): ขัดกับเลขเข่งต่อเนื่องทั้งการขาย (SALE-10, E04-S01) — รอเจ้าของยืนยันว่าเริ่ม 1 ใหม่ต่อจุด/ต่อคนกรีด หรือแค่ตัวนับบนจอ</span></li>
+    <li><span class="q">?21</span><span>โหมดเลขเข่ง ("เลขเข่งต่อเนื่องทั้งการขาย" / "เริ่ม 1 ใหม่ทุกจุด") เลือกตอนไหน: ตั้งค่ากลุ่ม หรือ ตอนเริ่มการขาย (หน้า 5)? · ถ้าเลือกต่อจุด — บันทึกย้อนหลัง (หน้า 14) ก็เริ่มเข่ง 1 ของจุดนั้นด้วยใช่ไหม · ทางเลือก 4 ในหน้า 12 สลับโหมดกลางการขายได้ หรือขึ้นเฉพาะการขายที่เลือกโหมดต่อจุด?</span></li>
+    <li><span class="q">?22</span><span>เตรียมขาย (เช็กลิสต์ · ร่างข้อความนัดผู้ซื้อ · เลือกวันเวลา · โทร/LINE ผู้ซื้อแตะเดียว · บันทึกราคาที่ตกลง) อยู่ใน epic ไหน — การขาย (E04) หรือ epic ใหม่? (หน้า 3)</span></li>
+    <li><span class="q">?23</span><span>การ์ดพยากรณ์อากาศเปิดอะไร — แอปพยากรณ์ในเครื่อง หรือเว็บไซต์ไหน ตามพิกัด GPS ของสวน; หลายสวน → ถามเลือกสวนก่อน (หน้า 3)</span></li>
   </ol>
-  <p class="not"><b>ยังไม่วาดในรอบนี้:</b> ย้อนกลับ-แก้-ยกเลิกเข่ง (E04-S09), ส่งต่อ/รับช่วง และรวมด้วย QR (E04-S12, S13), คำถามการนับซ้ำ (E04-S14), กรณี "พบส่วนต่าง", หน้าตั้งค่าบัญชีรับเงิน, เนื้อหาหน้าแรกจริง (รอ Asana), และโมดูลอื่นนอกการขาย</p>
+  <p class="not"><b>ยังไม่วาดในรอบนี้:</b> ย้อนกลับ-แก้-ยกเลิกเข่ง (E04-S09), ส่งต่อ/รับช่วง และรวมด้วย QR (E04-S12, S13), คำถามการนับซ้ำ (E04-S14), กรณี "พบส่วนต่าง", หน้าตั้งค่าบัญชีรับเงิน, หน้าเตรียมขายเต็ม (มีแค่ภาพร่างใต้หน้า 3), หน้าเลือกรูปปก, และโมดูลในการ์ดล่างหน้าแรก</p>
 </section>
 
 </div>
