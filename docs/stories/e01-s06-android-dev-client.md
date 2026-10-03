@@ -35,7 +35,7 @@ Status: Ready
 
 - ~~อนุมัติติดตั้ง `expo-dev-client`~~ อนุมัติแล้ว 2026-10-03 (D2) ภายใต้เกณฑ์ dependency ที่ตั้งไว้ (`CLAUDE.md` 2026-10-03: maintainer น่าเชื่อถือ และ audit ไม่เพิ่ม finding ระดับ high/critical ใหม่) — ยังต้องแสดงผลตรวจก่อนติดตั้ง; ถ้าผลตรวจไม่ผ่านเกณฑ์ กลับไปถามเจ้าของ
 - ~~เลือกวิธี build~~ ตัดสินแล้ว 2026-10-03: GitHub Actions + Gradle (ADR 0003); ทางเลือกฟรีอื่นเก็บไว้ใน ADR เผื่อต้องลดค่าใช้จ่าย
-- สร้าง keystore สำหรับเซ็น APK และเก็บเป็น GitHub secret — ตัดสินแล้ว 2026-10-03 (D1): **เจ้าของสร้างในเครื่องตัวเอง** แล้วเก็บเป็น GitHub secret (agent ไม่เห็นไฟล์ keystore/รหัส)
+- ~~สร้าง keystore สำหรับเซ็น APK และเก็บเป็น GitHub secret~~ ทำแล้ว 2026-10-03 — ตัดสินแล้ว 2026-10-03 (D1): **เจ้าของสร้างในเครื่องตัวเอง** แล้วเก็บเป็น GitHub secret (agent ไม่เห็นไฟล์ keystore/รหัส)
 - ~~จัดหาเครื่อง Android สำหรับทดสอบ~~ ตัดสินแล้ว 2026-10-03 (D2): **ใช้เครื่อง Android ของเจ้าของ**
 
 ## Verification
@@ -44,6 +44,7 @@ Status: Ready
 
 - ทางสร้าง APK: `docs/adr/0003-android-build-path.md` (Accepted 2026-10-03) — ทาง B: GitHub Actions + `expo prebuild` + Gradle `assembleRelease`
   APK แบบ release มี JS bundle ในตัว จึงทดสอบโหมดเครื่องบินได้ตรง ๆ
+- package name `com.goonjs.monfarm` (`app.json`); keystore อยู่ใน GitHub Secrets แล้ว (2026-10-03)
 
 ### Checklist เจ้าของ (บนโทรศัพท์ Android จริง)
 

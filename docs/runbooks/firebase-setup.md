@@ -31,15 +31,17 @@
 
 ## 5. Auth (E02-S01)
 
-- [ ] เปิด Google sign-in provider
+- [x] เปิด Google sign-in provider (2026-10-03)
 - [ ] Authorized domains: โดเมน `*.web.app` / `*.firebaseapp.com` ของทั้ง 2 site
   (preview channel ใช้ subdomain ของ site dev)
 
 ## 6. OAuth client (E02-S01) — หลังมี keystore (D1: เจ้าของสร้างในเครื่องตัวเอง เก็บเป็น GitHub secret — E01-S06)
 
 - [ ] Web client: Firebase สร้างให้อัตโนมัติเมื่อเปิด Google provider — จด client ID
-- [ ] Android app: package name `TBD` (ทีม platform จะเสนอใน E01-S06) + SHA-1 ของ keystore ที่ใช้เซ็น
-  ถ้ายังไม่มี keystore ข้ามข้อนี้ไปก่อน
+- [x] Android app ลงทะเบียนแล้ว (2026-10-03): package name `com.goonjs.monfarm`, nickname "Mon FarmMate"
+- [x] เพิ่ม fingerprint SHA-1 และ SHA-256 ของ release key แล้ว (2026-10-03; ค่าอยู่ใน ADR 0003) —
+  คาดว่าไม่ต้องใช้ `google-services.json` (แอปใช้ Firebase JS SDK) — ยืนยันอีกครั้งตอนเลือก lib
+  Google sign-in ของ E02-S01
 
 ## 7. Deploy credential (E01-S07) — keyless (Workload Identity Federation)
 
