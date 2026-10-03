@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flow ข้อมูลฟาร์มและเงิน v1.1.0</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
+
+/* ---------------------------------------------------------------------------
+   Tokens. Values are copied from docs/ux/tokens.css (generated from
+   design/tokens.ts). Two families:
+   --pg-*  the documentation page around the phones; follows light/dark.
+   --c-*   the app screens inside the phones; stays in the app's light field
+           theme in both page themes (the app's dark theme is opt-in and is
+           not what this flow review is about).
+   --note-* the yellow "?" open-question markers; constant, readable on both.
+   --ans-*  the green "ตอบแล้ว" answered markers; constant, readable on both.
+   No literal colour appears below the token blocks.
+   ------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+  --pg-bg: #F7FAFC;
+  --pg-card: #FFFFFF;
+  --pg-ink: #002858;
+  --pg-ink-soft: #52657A;
+  --pg-rule: #CBD4DC;
+  --pg-accent: #006F52;
+  --frame-bezel: #13202E;
+  --frame-ring: #CBD4DC;
+  --frame-shadow: rgba(0, 40, 88, 0.14);
+
+  --note-bg: #FECB56;
+  --note-ink: #002858;
+  --ans-bg: #E8F8F2;
+  --ans-ink: #006F52;
+
+  --c-stage: #FFFFFF;
+  --c-surface: #F7FAFC;
+  --c-sunk: #F1F3F5;
+  --c-raised: #FFFFFF;
+  --c-numeral: #002858;
+  --c-ink: #002858;
+  --c-ink-soft: #52657A;
+  --c-ink-faint: #7A8998;
+  --c-inverse: #FFFFFF;
+  --c-rule: #CBD4DC;
+  --c-rule-faint: #E4E9EE;
+  --c-rule-strong: #7A8998;
+  --c-action: #002858;
+  --c-action-sunk: #EAF5FC;
+  --c-accept: #006F52;
+  --c-accept-sunk: #E8F8F2;
+  --c-reject: #BB1C1C;
+  --c-reject-sunk: #FDECEC;
+  --c-warn: #815908;
+  --c-warn-sunk: #FFF5D8;
+  --c-brand: #00AA7D;
+  --c-brand-strong: #008F6C;
+  --c-brand-yellow: #FECB56;
+  --c-brand-cream: #FFF8E8;
+  --c-brand-light: #48C090;
+  --c-shadow-card: rgba(0, 40, 88, 0.06);
+  --c-shadow-float: rgba(0, 40, 88, 0.10);
+  --c-scrim: rgba(0, 40, 88, 0.55);
+
+  --font: "Noto Sans Thai", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px; --r-pill: 999px;
+  --target: 48px; --target-c: 56px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --pg-bg: #0B1520;
+    --pg-card: #13202E;
+    --pg-ink: #F4F5F6;
+    --pg-ink-soft: #A3B1C0;
+    --pg-rule: #2E3B49;
+    --pg-accent: #48C090;
+    --frame-bezel: #02070C;
+    --frame-ring: #2E3B49;
+    --frame-shadow: rgba(0, 0, 0, 0.5);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --pg-bg: #0B1520;
+  --pg-card: #13202E;
+  --pg-ink: #F4F5F6;
+  --pg-ink-soft: #A3B1C0;
+  --pg-rule: #2E3B49;
+  --pg-accent: #48C090;
+  --frame-bezel: #02070C;
+  --frame-ring: #2E3B49;
+  --frame-shadow: rgba(0, 0, 0, 0.5);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--pg-bg);
+  color: var(--pg-ink);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+.num { font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; }
+
+/* ---- page header ---- */
+.hdr h1 { margin: 0; font-size: 28px; line-height: 1.25; font-weight: 700; }
+.hdr p { margin: 6px 0 0; color: var(--pg-ink-soft); }
+.hdr .date { font-size: 14px; }
+.legend {
+  margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px 20px;
+  padding: 12px 16px; border: 1px solid var(--pg-rule); border-radius: var(--r-lg);
+  background: var(--pg-card); font-size: 14px; color: var(--pg-ink-soft);
+}
+.legend > span { display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---- flow layout ---- */
+.sec { margin-top: 40px; }
+.sec h2 { font-size: 20px; line-height: 1.25; margin: 0 0 4px; font-weight: 700; }
+.sec > p { margin: 0 0 20px; color: var(--pg-ink-soft); font-size: 14px; }
+.flow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: 28px 8px; }
+.step { margin: 0; width: min(360px, 100%); }
+.arrow {
+  width: 112px; align-self: center; display: flex; flex-direction: column;
+  align-items: center; gap: 6px; text-align: center; font-size: 13px;
+  line-height: 1.35; color: var(--pg-ink-soft); padding-bottom: 120px;
+}
+.arrow .ic { width: 40px; height: 40px; color: var(--pg-accent); stroke-width: 2.25; }
+.arrow b { color: var(--pg-ink); font-weight: 600; }
+@media (max-width: 860px) {
+  .flow { flex-direction: column; align-items: center; }
+  .arrow { width: min(360px, 100%); flex-direction: row; justify-content: center; text-align: left; padding: 0; }
+  .arrow .ic { transform: rotate(90deg); flex: none; }
+}
+figcaption { margin-top: 12px; font-size: 14px; color: var(--pg-ink-soft); }
+figcaption .t { display: block; font-size: 16px; font-weight: 700; color: var(--pg-ink); }
+figcaption .ids { display: block; margin-top: 4px; font-size: 12px; letter-spacing: 0.02em; }
+figcaption ul { margin: 8px 0 0; padding: 0; list-style: none; }
+figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; }
+
+/* ---- "?" open-question marker ---- */
+.q {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  min-width: 26px; height: 20px; padding: 0 6px; border-radius: var(--r-pill);
+  background: var(--note-bg); color: var(--note-ink);
+  font-size: 11px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+/* ---- green "ตอบแล้ว" answered marker ---- */
+.ans {
+  display: inline-flex; align-items: center; gap: 3px; flex: none;
+  height: 20px; padding: 0 7px; border-radius: var(--r-pill);
+  background: var(--ans-bg); color: var(--ans-ink);
+  font-size: 11px; font-weight: 700; line-height: 1; white-space: nowrap; vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+.ans .ic { width: 12px; height: 12px; stroke-width: 3; }
+
+/* ---- phone frame ---- */
+.phone {
+  width: 100%; height: 740px; padding: 10px; border-radius: 40px;
+  background: var(--frame-bezel);
+  box-shadow: 0 0 0 1px var(--frame-ring), 0 12px 32px var(--frame-shadow);
+}
+.screen {
+  position: relative; height: 100%; border-radius: 30px; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--c-surface); color: var(--c-ink); font-size: 16px; line-height: 1.4;
+}
+.sbar {
+  height: 28px; flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 22px; font-size: 12px; font-weight: 600; color: var(--c-ink);
+}
+.sbar .ic { width: 16px; height: 16px; }
+.appbar { height: 56px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 8px 0 4px; }
+.appbar h3 { flex: 1; margin: 0; font-size: 18px; font-weight: 600; line-height: 1.25; min-width: 0; }
+.appbar h3 small { display: block; font-size: 12px; font-weight: 400; color: var(--c-ink-soft); }
+.iconbtn {
+  width: var(--target); height: var(--target); flex: none; display: grid; place-items: center;
+  border-radius: var(--r-pill); color: var(--c-ink);
+}
+.body { flex: 1; min-height: 0; overflow: hidden; padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 12px; }
+.foot { flex: none; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+
+/* ---- icons ---- */
+.ic { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ic.sm { width: 18px; height: 18px; }
+.ic.lg { width: 28px; height: 28px; }
+.fillsoft { fill: currentColor; fill-opacity: 0.16; }
+
+/* ---- cards and icon tiles (FarmMate pattern) ---- */
+.card {
+  background: var(--c-raised); border: 1px solid var(--c-rule-faint); border-radius: var(--r-lg);
+  box-shadow: 0 2px 12px var(--c-shadow-card); padding: 12px;
+}
+.card.cream { background: var(--c-brand-cream); }
+.card.tight { padding: 4px 12px; }
+.card h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--c-ink-soft); }
+.row { display: flex; align-items: center; gap: 12px; min-height: var(--target); }
+.row + .row { border-top: 1px solid var(--c-rule-faint); }
+.row .grow { flex: 1; min-width: 0; }
+.row .lbl { font-size: 14px; color: var(--c-ink-soft); }
+.row .val { font-size: 16px; font-weight: 600; }
+.row .sub { display: block; font-size: 13px; color: var(--c-ink-soft); font-weight: 400; }
+.tile {
+  width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: var(--r-md);
+}
+.tile.sm { width: 36px; height: 36px; border-radius: 10px; }
+.tile.sm .ic { width: 20px; height: 20px; }
+.t-green { background: var(--c-accept-sunk); color: var(--c-accept); }
+.t-cream { background: var(--c-brand-cream); color: var(--c-warn); }
+.t-blue { background: var(--c-action-sunk); color: var(--c-action); }
+.t-red { background: var(--c-reject-sunk); color: var(--c-reject); }
+.t-gray { background: var(--c-sunk); color: var(--c-ink-soft); }
+.chev { color: var(--c-ink-faint); }
+
+/* ---- buttons ---- */
+.btn {
+  min-height: 52px; width: 100%; border-radius: var(--r-pill); display: flex; align-items: center;
+  justify-content: center; gap: 8px; font-size: 16px; font-weight: 600; padding: 0 20px; text-align: center;
+}
+.btn-primary { background: var(--c-action); color: var(--c-inverse); box-shadow: 0 3px 10px var(--c-shadow-float); }
+.btn-secondary { background: var(--c-raised); color: var(--c-action); border: 2px solid var(--c-action); }
+.btn-disabled { background: var(--c-sunk); color: var(--c-ink-soft); border: 2px dashed var(--c-rule-strong); }
+.btn.small { min-height: var(--target); width: auto; font-size: 14px; padding: 0 16px; }
+
+/* ---- sync pill (SYNC-3): icon + word, colour agrees ---- */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px;
+  border-radius: var(--r-pill); font-size: 13px; font-weight: 600; white-space: nowrap; flex: none;
+}
+.pill .ic { width: 16px; height: 16px; }
+.p-ok { background: var(--c-accept-sunk); color: var(--c-accept); }
+.p-pend { background: var(--c-warn-sunk); color: var(--c-warn); }
+.p-conf { background: var(--c-reject-sunk); color: var(--c-reject); }
+
+/* ---- field data-state badges (SYNC-12, E01-S15) ---- */
+.ds {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 500; color: var(--c-ink-soft); border: 1px solid var(--c-rule); background: var(--c-raised);
+  white-space: nowrap;
+}
+.ds .ic { width: 13px; height: 13px; }
+.ds-unknown { border: 1.5px dashed var(--c-rule-strong); }
+.ds-none { background: var(--c-sunk); border-color: var(--c-rule-faint); }
+
+/* ---- flags / status chips ---- */
+.chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: var(--r-pill);
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.chip .ic { width: 15px; height: 15px; }
+.ch-ok { background: var(--c-accept-sunk); color: var(--c-accept); }
+.ch-warn { background: var(--c-warn-sunk); color: var(--c-warn); }
+.ch-bad { background: var(--c-reject-sunk); color: var(--c-reject); }
+.ch-plain { background: var(--c-sunk); color: var(--c-ink-soft); }
+
+/* ---- segmented choices ---- */
+.seg { display: flex; gap: 6px; background: var(--c-sunk); border-radius: var(--r-pill); padding: 4px; }
+.seg > span {
+  flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center;
+  border-radius: var(--r-pill); font-size: 15px; font-weight: 600; color: var(--c-ink-soft); line-height: 1.2;
+}
+.seg > span small { display: block; font-size: 11px; font-weight: 400; }
+.seg > span.on { background: var(--c-action); color: var(--c-inverse); }
+
+/* ---- figures: big value + smaller unit (§12.3) ---- */
+.fig { font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; }
+.fig .u { font-size: 0.5em; font-weight: 500; color: var(--c-ink-soft); margin-left: 4px; letter-spacing: 0; }
+.kv { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; min-height: 24px; }
+.kv span:first-child { color: var(--c-ink-soft); }
+.kv span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.kv.total { border-top: 1px solid var(--c-rule-faint); margin-top: 4px; padding-top: 6px; }
+
+/* ---- screen-specific ---- */
+.hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 0 24px; }
+.hero h2 { margin: 4px 0 0; font-size: 32px; font-weight: 700; line-height: 1.2; }
+.hero p { margin: 0; color: var(--c-ink-soft); }
+.gmark { width: 28px; height: 28px; border-radius: var(--r-pill); display: grid; place-items: center; border: 2px solid var(--c-rule-strong); font-weight: 800; font-size: 15px; color: var(--c-ink); }
+.greet { padding: 0 4px; }
+.greet b { display: block; font-size: 24px; line-height: 1.25; }
+.greet span { font-size: 14px; color: var(--c-ink-soft); }
+.steps { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--c-ink-soft); flex-wrap: wrap; }
+.steps .done { color: var(--c-accept); font-weight: 600; display: inline-flex; align-items: center; gap: 2px; }
+.steps .now { color: var(--c-ink); font-weight: 700; }
+.expect { text-align: center; padding: 14px 12px; }
+.expect .fig { font-size: 44px; }
+.expect p { margin: 4px 0 0; font-size: 14px; color: var(--c-ink-soft); }
+
+.six { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.six .card { padding: 8px 10px; }
+.six .lbl { font-size: 12px; color: var(--c-ink-soft); display: block; }
+.six .fig { font-size: 22px; }
+.six .sm2 { display: block; font-size: 11px; color: var(--c-warn); font-weight: 600; line-height: 1.2; margin-top: 2px; }
+.card.warn { background: var(--c-warn-sunk); border-color: var(--c-warn-sunk); }
+.card.warn .lbl { color: var(--c-warn); font-weight: 600; }
+
+/* current / next basket card (owner answer 8, revised 2026-10-03: back to v1) */
+.bigc { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.bigc .lbl { font-size: 12px; color: var(--c-ink-soft); display: block; }
+.bigc .fig.xl { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; }
+.bigc .next { text-align: right; }
+.bigc .next .fig { font-size: 28px; }
+
+/* inline weight entry (F-13, F-22) */
+.stepper { display: flex; align-items: center; gap: 8px; }
+.stepper .sb {
+  width: var(--target); height: var(--target); flex: none; border-radius: var(--r-pill); display: grid; place-items: center;
+  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); color: var(--c-action);
+}
+.inp {
+  flex: 1; min-width: 64px; min-height: var(--target); padding: 0 12px; border-radius: var(--r-sm);
+  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+  font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--c-ink);
+}
+.inp.focus { border: 2px solid var(--c-action); }
+.inp .u { font-size: 13px; font-weight: 500; color: var(--c-ink-soft); }
+.inp.text { justify-content: flex-start; font-size: 14px; font-weight: 400; color: var(--c-ink-faint); }
+.btnrow { display: flex; gap: 8px; }
+.btnrow .btn { min-height: var(--target); }
+
+/* big two-way choice (bridge basket) */
+.choice {
+  display: flex; align-items: center; gap: 12px; min-height: 76px; padding: 10px 14px; border-radius: var(--r-lg);
+  border: 2px solid var(--c-action); background: var(--c-raised); color: var(--c-action); text-align: left;
+}
+.choice b { display: block; font-size: 17px; line-height: 1.3; }
+.choice small { display: block; font-size: 13px; line-height: 1.35; font-weight: 500; color: var(--c-ink-soft); }
+.choice.pri { background: var(--c-action); color: var(--c-inverse); }
+.choice.pri small { color: var(--c-inverse); }
+.choice .tile { background: var(--c-action-sunk); color: var(--c-action); }
+/* v4: sheet options rewritten for outdoor reading — bold title, then 1–2 short
+   lines, key numbers in a chip. The recommended option is a tinted outline,
+   not a dark fill, so its small lines stay ink-on-light. */
+.choice.cmp { min-height: var(--target-c); gap: 10px; padding: 8px 12px; border-radius: var(--r-md); align-items: flex-start; border-width: 1.5px; border-color: var(--c-rule-strong); }
+.choice.cmp b { font-size: 16px; color: var(--c-ink); margin-bottom: 2px; }
+.choice.cmp .ln { display: block; font-size: 14px; line-height: 1.45; font-weight: 500; color: var(--c-ink-soft); }
+.choice.cmp .tile { width: 32px; height: 32px; border-radius: var(--r-sm); margin-top: 2px; }
+.choice.cmp .tile .ic { width: 18px; height: 18px; }
+.choice.cmp.pri { background: var(--c-action-sunk); border: 2px solid var(--c-action); }
+.choice.cmp.pri .tile { background: var(--c-raised); }
+.nchip {
+  display: inline-block; padding: 0 6px; border-radius: var(--r-sm); background: var(--c-brand-cream);
+  border: 1px solid var(--c-brand-yellow); color: var(--c-ink); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+/* v4 home (screen 3): long screenshot phone, cover, action cards, module grid */
+.step.long-step { position: relative; }
+.longtag {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 2px 10px; border-radius: var(--r-pill);
+  border: 1px dashed var(--pg-rule); color: var(--pg-ink-soft); font-size: 13px; font-weight: 600;
+}
+.longtag .ic { width: 16px; height: 16px; }
+.phone.long { height: auto; }
+.phone.long .screen { height: auto; }
+.phone.long .body { overflow: visible; }
+.cover {
+  position: relative; flex: none; height: 148px; margin: 0 16px; border-radius: var(--r-lg); overflow: hidden;
+  background: var(--c-action-sunk);
+}
+.cover svg.scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cover .sun { fill: var(--c-brand-yellow); }
+.cover .rays { stroke: var(--c-brand-yellow); stroke-width: 2.5; stroke-linecap: round; fill: none; transform-origin: 62px 40px; }
+.cover .cloud { fill: var(--c-raised); }
+.cover .hill-back { fill: var(--c-brand-light); }
+.cover .hill { fill: var(--c-brand); }
+.cover .trunk { fill: var(--c-ink-soft); }
+.cover .crown { fill: var(--c-brand-strong); }
+.cover .crown2 { fill: var(--c-brand); }
+.cover .cup { fill: var(--c-raised); stroke: var(--c-ink-soft); stroke-width: 1; }
+.cover .tap { stroke: var(--c-raised); stroke-width: 1.5; fill: none; }
+.cover .chg {
+  position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px;
+  border-radius: var(--r-pill); background: var(--c-raised); color: var(--c-action); font-size: 12px; font-weight: 600;
+  box-shadow: 0 2px 8px var(--c-shadow-float);
+}
+.cover .chg .ic { width: 16px; height: 16px; }
+@media (prefers-reduced-motion: no-preference) {
+  .cover .rays { animation: cover-spin 24s linear infinite; }
+  .cover .cloud { animation: cover-drift 18s ease-in-out infinite alternate; }
+}
+@keyframes cover-spin { to { transform: rotate(360deg); } }
+@keyframes cover-drift { from { transform: translateX(0); } to { transform: translateX(26px); } }
+
+.acts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.act {
+  min-height: 104px; padding: 10px 6px; border-radius: var(--r-lg); background: var(--c-raised);
+  border: 1px solid var(--c-rule-faint); box-shadow: 0 2px 12px var(--c-shadow-card);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; text-align: center;
+  font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--c-ink);
+}
+.act .tile { width: 48px; height: 48px; }
+.act .ic { width: 26px; height: 26px; }
+.act.main { border: 2px solid var(--c-action); }
+.sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 4px; }
+.sec-h b { font-size: 16px; }
+.sec-h a, .sec-h span.lnk { font-size: 14px; color: var(--c-action); font-weight: 600; text-decoration: none; }
+.mods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mod {
+  display: flex; align-items: center; gap: 8px; min-height: var(--target-c); padding: 8px 10px; border-radius: var(--r-md);
+  background: var(--c-raised); border: 1px solid var(--c-rule-faint); box-shadow: 0 2px 12px var(--c-shadow-card);
+  font-size: 13px; font-weight: 600; line-height: 1.25; color: var(--c-ink);
+}
+.mod small { display: block; font-size: 11px; font-weight: 400; color: var(--c-ink-soft); }
+.mod.wide { grid-column: span 2; }
+.mod small .ic { width: 11px; height: 11px; vertical-align: -1px; }
+.more-hint { font-size: 12px; color: var(--c-ink-soft); padding: 0 4px; line-height: 1.4; }
+
+/* photo type picker (E04-S10) */
+.types { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.type {
+  display: flex; align-items: center; gap: 8px; min-height: var(--target-c); padding: 6px 8px; border-radius: var(--r-md);
+  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); font-size: 14px; font-weight: 600; line-height: 1.25;
+}
+.type.on { border: 2px solid var(--c-action); background: var(--c-action-sunk); }
+.type .ck { margin-left: auto; color: var(--c-action); }
+
+/* compact select (settlement bank account) */
+.sel {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 8px; border-radius: var(--r-sm);
+  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); color: var(--c-action); font-weight: 600;
+}
+.sel .ic { width: 14px; height: 14px; }
+.sel small { font-size: 11px; font-weight: 400; color: var(--c-ink-soft); }
+
+/* conflict choice rows */
+.optrow { display: flex; align-items: center; gap: 8px; }
+.optrow .who { flex: 1; min-width: 0; font-size: 13px; line-height: 1.3; color: var(--c-ink-soft); }
+.optrow .who b { display: block; color: var(--c-ink); font-size: 14px; }
+.optrow .btn { flex: none; }
+
+/* insets below a phone: app-themed (light field theme), sit on the page */
+.extras { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.inset {
+  background: var(--c-surface); color: var(--c-ink); border: 1px solid var(--pg-rule); border-radius: var(--r-lg);
+  padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 14px;
+}
+.inset > .ttl { font-size: 13px; font-weight: 700; color: var(--c-ink); }
+.inset > .note { font-size: 12px; color: var(--c-ink-soft); line-height: 1.45; }
+.mini-row { display: flex; align-items: center; gap: 8px; font-size: 13px; min-height: 28px; }
+.mini-row .grow { flex: 1; min-width: 0; }
+
+/* FarmMate logo (drawn in the spirit of the reference, not copied) */
+.fm-logo { width: 112px; height: 112px; }
+.hero h2.fm-word { margin: 0; font-size: 38px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; color: var(--c-ink); }
+
+.stage {
+  position: relative; flex: 1; min-height: 150px; border-radius: var(--r-xl); background: var(--c-stage);
+  border: 2px solid var(--c-rule-strong); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; text-align: center; padding: 12px;
+}
+.stage svg.sweep { position: absolute; inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); overflow: visible; }
+.stage svg.sweep rect { fill: none; stroke: var(--c-action); stroke-width: 6; stroke-linecap: round; }
+.stage b { font-size: 20px; }
+.stage span { font-size: 14px; color: var(--c-ink-soft); }
+.tools { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.tool {
+  min-height: var(--target-c); border-radius: var(--r-md); background: var(--c-raised); border: 1.5px solid var(--c-rule-strong);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--c-action);
+}
+.tool .ic { width: 20px; height: 20px; }
+
+/* public mode: §12.8 — white flat stage, numeral token only, nothing else */
+.pub-bar { height: 56px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; background: var(--c-action); color: var(--c-inverse); }
+.pub-bar span { flex: 1; font-size: 14px; font-weight: 600; }
+.pub-bar .pill { background: var(--c-raised); }
+.pub-stage { position: relative; flex: 1; background: var(--c-stage); display: grid; place-items: center; overflow: hidden; }
+.pub-stage svg.sweep { position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); }
+.pub-stage svg.sweep rect { fill: none; stroke: var(--c-action); stroke-width: 10; stroke-linecap: round; }
+.pub-num { font-size: 240px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--c-numeral); font-variant-numeric: tabular-nums; }
+.pub-foot { height: 64px; flex: none; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--c-sunk); color: var(--c-action); font-size: 14px; font-weight: 600; }
+
+.cmp { width: 100%; border-collapse: collapse; font-size: 14px; }
+.cmp th { font-size: 12px; font-weight: 600; color: var(--c-ink-soft); text-align: right; padding: 4px 0 6px; vertical-align: bottom; }
+.cmp th:first-child, .cmp td:first-child { text-align: left; }
+.cmp td { padding: 8px 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; border-top: 1px solid var(--c-rule-faint); }
+.cmp td:first-child { font-weight: 500; color: var(--c-ink-soft); }
+.cmp .ok { color: var(--c-accept); display: inline-flex; align-items: center; gap: 2px; }
+
+.sheet-scrim { position: absolute; inset: 0; background: var(--c-scrim); }
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; background: var(--c-raised); border-radius: 24px 24px 0 0;
+  padding: 10px 16px 20px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -6px 24px var(--c-shadow-float);
+}
+.sheet .grab { width: 40px; height: 4px; border-radius: var(--r-pill); background: var(--c-rule); align-self: center; }
+.sheet h4 { margin: 4px 0 0; font-size: 20px; line-height: 1.3; }
+.sheet p { margin: 0; font-size: 14px; color: var(--c-ink-soft); }
+.radio {
+  display: flex; align-items: center; gap: 12px; min-height: var(--target-c); padding: 8px 12px; border-radius: var(--r-md);
+  border: 1.5px solid var(--c-rule-strong); font-size: 15px; line-height: 1.3;
+}
+.radio .dot { width: 22px; height: 22px; border-radius: var(--r-pill); border: 2px solid var(--c-rule-strong); flex: none; display: grid; place-items: center; }
+.radio.on { border: 2px solid var(--c-action); background: var(--c-action-sunk); }
+.radio.on .dot { border-color: var(--c-action); }
+.radio.on .dot::after { content: ""; width: 10px; height: 10px; border-radius: var(--r-pill); background: var(--c-action); }
+.radio small { display: block; font-size: 12px; color: var(--c-ink-soft); }
+.dim { filter: saturate(0.7); }
+
+.tick {
+  display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 12px;
+  border-radius: var(--r-md); border: 1.5px solid var(--c-rule-strong); background: var(--c-raised);
+}
+.tick .box { width: 28px; height: 28px; border-radius: var(--r-sm); border: 2px solid var(--c-rule-strong); flex: none; display: grid; place-items: center; }
+.tick.on { border-color: var(--c-accept); background: var(--c-accept-sunk); }
+.tick.on .box { border-color: var(--c-accept); background: var(--c-accept); color: var(--c-inverse); }
+.tick .grow { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.3; }
+.tick .grow small { display: block; font-size: 12px; font-weight: 400; color: var(--c-ink-soft); }
+.tick .amt { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
+
+.banner { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-md); font-size: 14px; line-height: 1.4; }
+.banner.bad { background: var(--c-reject-sunk); color: var(--c-reject); }
+.banner.info { background: var(--c-sunk); color: var(--c-ink-soft); }
+.banner b { color: var(--c-ink); display: block; }
+.opt { display: flex; flex-direction: column; gap: 8px; }
+.opt .who { font-size: 13px; color: var(--c-ink-soft); }
+
+/* ---- open questions list ---- */
+.qs { margin-top: 48px; padding: 20px; border-radius: var(--r-lg); background: var(--pg-card); border: 1px solid var(--pg-rule); }
+.qs h2 { margin: 0 0 4px; font-size: 20px; }
+.qs > p { margin: 0 0 12px; color: var(--pg-ink-soft); font-size: 14px; }
+.qs ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.qs li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; }
+.qs .not { margin-top: 20px; font-size: 14px; color: var(--pg-ink-soft); }
+.qs .not b { color: var(--pg-ink); }
+.qs h3 { margin: 24px 0 4px; font-size: 17px; }
+.qs table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.45; }
+.qs th { text-align: left; font-size: 12px; font-weight: 600; color: var(--pg-ink-soft); padding: 6px 8px; border-bottom: 1px solid var(--pg-rule); }
+.qs td { padding: 8px; border-top: 1px solid var(--pg-rule); vertical-align: top; }
+.qs td:first-child { width: 36%; color: var(--pg-ink-soft); }
+.qs td:first-child .ans { margin-right: 4px; }
+.sub-h { margin: 32px 0 4px; font-size: 17px; line-height: 1.3; font-weight: 700; }
+.sub-p { margin: 0 0 20px; color: var(--pg-ink-soft); font-size: 14px; }
+
+/* ===== v1.1.0 farm-data additions (same tokens; no literal colours) ===== */
+.dod { margin-top: 12px; padding: 12px 16px; border: 1px solid var(--pg-rule); border-radius: var(--r-lg); background: var(--pg-card); font-size: 14px; color: var(--pg-ink-soft); }
+.dod b { color: var(--pg-ink); }
+.dod ol { margin: 6px 0 0; padding-left: 20px; }
+.toc { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; }
+.toc a { color: var(--pg-accent); text-decoration: none; font-weight: 600; padding: 2px 10px; border: 1px solid var(--pg-rule); border-radius: var(--r-pill); background: var(--pg-card); }
+.fld { display: flex; flex-direction: column; gap: 4px; }
+.flbl { font-size: 14px; font-weight: 600; color: var(--c-ink-soft); }
+.req { color: var(--c-reject); margin-left: 2px; }
+.fhint { font-size: 12px; font-weight: 400; margin-left: 6px; }
+.fline { display: flex; gap: 8px; align-items: center; }
+.inp.val { justify-content: flex-start; font-size: 16px; font-weight: 600; }
+.inp.bad { border: 2px solid var(--c-reject); }
+.ferr { display: flex; gap: 4px; align-items: center; color: var(--c-reject); font-size: 13px; font-weight: 600; line-height: 1.3; }
+.ferr .ic { width: 15px; height: 15px; }
+.fcs { display: flex; flex-wrap: wrap; gap: 6px; }
+.fc {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 12px; border-radius: var(--r-pill);
+  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); color: var(--c-ink); font-size: 14px; font-weight: 600; white-space: nowrap;
+}
+.fc .ic { width: 16px; height: 16px; }
+.fc.on { background: var(--c-action-sunk); border: 2px solid var(--c-action); color: var(--c-action); }
+.fc.add { border-style: dashed; color: var(--c-action); }
+.fc.off { border-style: dashed; color: var(--c-ink-faint); background: var(--c-sunk); }
+.drawer {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 86%; background: var(--c-raised);
+  border-radius: 0 24px 24px 0; padding: 40px 12px 16px; display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 6px 0 24px var(--c-shadow-float);
+}
+.dgrp { font-size: 12px; font-weight: 700; color: var(--c-ink-soft); padding: 4px 4px 0; }
+.xrow { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 10px; border-radius: var(--r-md); }
+.xrow + .xrow { margin-top: 6px; }
+.xrow .grow { flex: 1; min-width: 0; }
+.xrow .val { display: block; font-size: 15px; font-weight: 600; }
+.xrow .sub { display: block; font-size: 12px; color: var(--c-ink-soft); }
+.xrow .amt { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.xrow .amt small { display: block; font-size: 11px; font-weight: 600; }
+.xrow.actual { background: var(--c-action-sunk); border: 1.5px solid var(--c-action-sunk); }
+.xrow.commit { background: var(--c-raised); border: 1.5px solid var(--c-action); }
+.xrow.plan { background: var(--c-raised); border: 1.5px dashed var(--c-rule-strong); }
+.dt { border-bottom: 1.5px dotted var(--c-ink-faint); }
+.bal { text-align: center; padding: 6px 0 2px; }
+.bal .lbl { display: block; font-size: 13px; color: var(--c-ink-soft); }
+.bal .fig { font-size: 40px; }
+.hrow { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 14px; }
+.hrow + .hrow { border-top: 1px solid var(--c-rule-faint); }
+.hrow .grow { flex: 1; min-width: 0; line-height: 1.35; }
+.hrow .grow b { display: block; font-size: 14px; }
+.hrow .grow small { display: block; font-size: 12px; color: var(--c-ink-soft); }
+.hrow .amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hrow .amt.dim2 { color: var(--c-ink-faint); font-weight: 600; }
+.ptrow { display: flex; align-items: center; gap: 8px; }
+.ptrow .grow { flex: 1; }
+.mapt td:first-child { width: 30%; }
+.mod .badge { margin-left: auto; text-align: right; font-size: 11px; font-weight: 600; color: var(--c-ink-soft); line-height: 1.3; }
+.mod .badge b { display: block; font-size: 13px; color: var(--c-ink); font-variant-numeric: tabular-nums; }
+.legend .xs { display: inline-block; width: 26px; height: 16px; border-radius: 6px; }
+.legend .xs.actual { background: var(--c-action-sunk); border: 1.5px solid var(--c-action-sunk); }
+.legend .xs.commit { background: var(--c-raised); border: 1.5px solid var(--c-action); }
+.legend .xs.plan { background: var(--c-raised); border: 1.5px dashed var(--c-rule-strong); }
+</style>
+</head>
+<body>
+<!-- Icon sprite: v4 set + farm-data additions; 24px stroke icons, inherit currentColor -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c0-8.5 6-14 15-14 0 9-6 15-14 15"/><path d="M5 19l8.5-8.5"/></symbol>
+    <symbol id="i-basket" viewBox="0 0 24 24"><path class="fillsoft" d="M3 10h18l-2.2 9.2a1 1 0 0 1-1 .8H6.2a1 1 0 0 1-1-.8z"/><path d="M7.5 10l3-6M16.5 10l-3-6M9 14v2.5M12 14v2.5M15 14v2.5"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><rect class="fillsoft" x="4" y="7" width="16" height="14" rx="2.5"/><circle cx="12" cy="14" r="3.5"/><path d="M12 14l1.8-1.8M9 3.5h6M12 3.5V7"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17.5 14c2 .3 3.4 1.8 4 4.5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.3-7 8-7s7 2.5 8 7"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path class="fillsoft" d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-cloud-ok" viewBox="0 0 24 24"><path d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.6 9.6 4.5 4.5 0 0 0 7 18.5z"/><path d="M9.5 14l2 2 3.5-3.5"/></symbol>
+    <symbol id="i-half" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5L2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4"/><path class="fillsoft" d="M5 4h12l-2.5 4L17 12H5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.6L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.3 4.6L20 16"/><path d="M20 20.5V16h-4.5"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle class="fillsoft" cx="12" cy="12" r="8.5"/><path d="M10 7.5h2.8a2 2 0 0 1 0 4.1H10h3.2a2.1 2.1 0 0 1 0 4.2H10z"/><path d="M11.5 6v1.5M11.5 15.8v1.7"/></symbol>
+    <symbol id="i-bank" viewBox="0 0 24 24"><path class="fillsoft" d="M3 9.5L12 4l9 5.5z"/><path d="M3 9.5L12 4l9 5.5M4.5 10v8M9.5 10v8M14.5 10v8M19.5 10v8M3 20.5h18"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path class="fillsoft" d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></symbol>
+    <symbol id="i-tree" viewBox="0 0 24 24"><circle class="fillsoft" cx="12" cy="9" r="5.5"/><path d="M12 14.5V21M9 21h6"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M5 8h13l-3.5-3.5M19 16H6l3.5 3.5"/></symbol>
+    <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-shrink" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect class="fillsoft" x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l2.5 2.5"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24"><path d="M4 20v-3M9 20v-7M14 20V9M19 20V4"/></symbol>
+    <symbol id="i-nosignal" viewBox="0 0 24 24"><path d="M4 20v-3M9 20v-7M14 20V9M19 20V4" opacity=".35"/><path d="M3 4l18 16"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 24 24"><rect x="2.5" y="7" width="17" height="10" rx="2"/><path d="M22 10.5v3"/><rect x="4.5" y="9" width="11" height="6" rx="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+    <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18h.01M12 18h3.5"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7v.5M12 16.5v.01"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path class="fillsoft" d="M3.5 8.5a2 2 0 0 1 2-2h2.2L9.5 4h5l1.8 2.5h2.2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect class="fillsoft" x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 2.5-2.5L20 18"/></symbol>
+    <symbol id="i-receipt" viewBox="0 0 24 24"><path class="fillsoft" d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z"/><path d="M9 8h6M9 11.5h6M9 15h3.5"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 4v16h16"/><path class="fillsoft" d="M8 17v-5h3v5zM13 17V8h3v9z"/><path d="M8 17v-5h3v5M13 17V8h3v9"/></symbol>
+    <symbol id="i-weather" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.5"/><path d="M9 2.5v1.5M2.5 9H4M4.4 4.4l1 1M13.6 4.4l-1 1"/><path class="fillsoft" d="M9 20h9a3.5 3.5 0 0 0 .3-7A5 5 0 0 0 9 14.2 3 3 0 0 0 9 20z"/><path d="M9 20h9a3.5 3.5 0 0 0 .3-7A5 5 0 0 0 9 14.2 3 3 0 0 0 9 20z"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path class="fillsoft" d="M3.5 7.5h15a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M3.5 7.5V6a2 2 0 0 1 2-2H16v3.5M15.5 13.5h5"/><circle cx="16.5" cy="13.5" r=".6"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path class="fillsoft" d="M3.5 8L12 4l8.5 4v8.5L12 20.5l-8.5-4z"/><path d="M3.5 8L12 12l8.5-4M12 12v8.5M7.8 6l8.4 4"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h3.5l1.5 4.5-2 1.5a11 11 0 0 0 6 6l1.5-2 4.5 1.5V19a1.5 1.5 0 0 1-1.5 1.5A15.5 15.5 0 0 1 3.5 5.5 1.5 1.5 0 0 1 5 4z"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path class="fillsoft" d="M4 5.5h16v10.5H10l-4.5 3.5V16H4z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M10 6.5h10M10 12h10M10 17.5h10"/><path d="M3.5 6.5l1.5 1.5L7.5 5.5M3.5 12l1.5 1.5L7.5 11"/><circle cx="5" cy="17.5" r="1.2"/></symbol>
+    <symbol id="i-pile" viewBox="0 0 24 24"><path class="fillsoft" d="M3 19c1.5-4 4-6.5 5.5-6.5 1 0 1.7.8 2.3 1.6.9-2.6 2.6-5.1 4.2-5.1 2 0 4.5 4.6 6 10z"/><path d="M2.5 19.5h19"/></symbol>
+  
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M10 7V4.5h4V7M6.5 7l1 13h9l1-13"/><path d="M10 11v5.5M14 11v5.5"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></symbol>
+    <symbol id="i-device" viewBox="0 0 24 24"><rect class="fillsoft" x="6.5" y="3" width="11" height="18" rx="2"/><path d="M10.5 18h3"/></symbol>
+    <symbol id="i-gps" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/><path d="M12 2.5V6M12 18v3.5M2.5 12H6M18 12h3.5"/></symbol>
+    <symbol id="i-percent" viewBox="0 0 24 24"><path d="M18.5 5.5l-13 13"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/></symbol>
+    <symbol id="i-handcoin" viewBox="0 0 24 24"><circle class="fillsoft" cx="15.5" cy="7" r="3.5"/><path d="M2.5 14.5h3l3.5 1.5h4a1.5 1.5 0 0 1 0 3H9M5.5 20.5h8l6.5-3.5a1.6 1.6 0 0 0-1.6-2.7L14 16"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header class="hdr">
+  <h1>Flow ข้อมูลฟาร์มและเงิน · v1.1.0 · 2026-10-04</h1>
+  <p>mockup ของแอป <b>FarmMate</b> — ข้อมูลหลัก (คน · ผู้ซื้อ · สวน · จุดชั่ง · คนกรีดของจุด · ส่วนแบ่ง), ค่าใช้จ่ายและเงินที่สวนต้องคืน, บัญชีหนี้คนงาน และการ์ดหน้าแรกที่เกี่ยว · ใช้ CSS / token / ไอคอน / กรอบโทรศัพท์ชุดเดียวกับ v4 (flow-v1.html)</p>
+  <p class="date num">ยึด story ลำดับแรกที่ Ready และ PRD D-43…D-69 · ตัวเลข ชื่อจุด และชื่อผู้ซื้อทั้งหมดในหน้าจอเป็น <b>ตัวอย่าง</b> · การหักหนี้ตอนสรุปเงินอยู่ใน flow-sale-v1.1.0.html</p>
+  <div class="legend">
+    <span><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-65</span> ข้อตัดสิน/คำตอบเจ้าของที่หน้าจอใช้</span>
+    <span><span class="q">?F1</span> คำถามเปิดของไฟล์นี้ (ท้ายหน้า)</span>
+    <span><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 2</span> ตัวบอก sync ภาพรวม · ต่อแถวมีแค่ <span class="chip ch-bad"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span></span>
+    <span><span class="ds ds-unknown">ไม่ทราบ</span> <span class="ds ds-none">ไม่ได้บันทึก</span> ป้ายข้อมูลรายฟิลด์ (E01-S15)</span>
+    <span><span class="xs actual"></span>เกิดจริง <span class="xs commit"></span>ผูกพันแล้ว <span class="xs plan"></span>วางแผน</span>
+    <span><span class="dt num">1 ต.ค. 2569</span> วันที่ — แตะสลับ พ.ศ./ค.ศ.</span>
+  </div>
+  <div class="dod"><b>Definition of Done ของ mockup นี้</b>
+    <ol>
+      <li>ทุกหัวข้อที่ได้รับมอบ (เมนู · คน · ผู้ซื้อ · สวน · จุดชั่ง · ส่วนแบ่ง · ค่าใช้จ่าย · ค้างใคร · บัญชีหนี้ · หน้าแรก · กติกาทั่วไป) มีหน้าจอ + ลูกศร flow + caption + รหัส AC/D-NN</li>
+      <li>ไม่มีความต้องการที่แต่งเอง — ที่ไม่ชัดใช้ทางเลือกที่ปลอดภัยที่สุดและอยู่ใน "คำถามที่ยังเปิด"; ตารางหน้าจอ → story/AC ครบทุกหน้า</li>
+      <li>ใช้ CSS/token/ไอคอน/กรอบโทรศัพท์แบบ v4 ไม่มีสี literal นอก token; ไม่แก้ flow-v1.html</li>
+      <li>ตรวจใน Chromium: มือถือ 390 px + เดสก์ท็อป 1280 px + โหมดมืด ไม่มี scroll แนวนอน; screenshot อยู่ใน docs/ux/screenshots/v1.1.0/farm/</li>
+      <li>ผ่านการทบทวนอิสระโดย subagent แยก (ตรง AC/D-NN) และแก้ตามผลแล้ว</li>
+      <li>คำ "หักหนี้" และตัวเลขแดง/นัด ตรงกับ flow การขาย; PR draft CI เขียว</li>
+    </ol>
+  </div>
+  <nav class="toc"><a href="#sec1">1 · เมนู</a><a href="#sec2">2 · คน</a><a href="#sec3">3 · ผู้ซื้อ</a><a href="#sec4">4 · สวน</a><a href="#sec5">5 · จุดชั่ง</a><a href="#sec6">6 · ส่วนแบ่ง</a><a href="#sec7">7 · ค่าใช้จ่าย</a><a href="#sec8">8 · บัญชีหนี้</a><a href="#sec9">9 · หน้าแรก</a><a href="#sec10">10 · ทั่วไป</a><a href="#map">ตาราง + คำถาม</a></nav>
+</header>
+<section class="sec" id="sec1"><h2>1 · เมนู และข้อมูลฟาร์ม</h2><p>ทางเข้าข้อมูลหลักทั้งหมด — ทุกหน้าในไฟล์นี้ใช้ได้ตอนออฟไลน์ บันทึกในเครื่องทันที</p><div class="flow"><figure class="step" id="s1"><div class="phone"><div class="screen" aria-label="เมนูหน้าแรก"><div class="sbar num"><span>06:42</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-menu"/></svg></span><h3>สวนครอบครัว <small class="num">ส. 3 ต.ค. 2569</small></h3><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span></div><div class="body"><div class="cover" aria-hidden="true" style="height:90px"></div><div class="acts"><div class="act"><span class="tile t-cream"><svg class="ic"><use href="#i-list"/></svg></span>เตรียมขาย</div><div class="act main"><span class="tile t-blue"><svg class="ic"><use href="#i-basket"/></svg></span>เริ่มการขาย</div><div class="act"><span class="tile t-green"><svg class="ic"><use href="#i-receipt"/></svg></span>บันทึก<br>ค่าใช้จ่าย</div></div></div><div class="sheet-scrim"></div><div class="drawer"><div class="dgrp">กลุ่มฟาร์ม</div><div class="card tight"><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-tree"/></svg></span><span class="grow"><span class="val">สวนครอบครัว</span><span class="sub">ตัวอย่าง · เจ้าของ 3 คน</span></span></div><div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-swap"/></svg></span><span class="grow"><span class="val">สลับกลุ่ม</span><span class="sub">เลือกกลุ่มอื่น / สร้าง / เข้าร่วม</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="dgrp">ของกลุ่ม — ทุกเครื่องในกลุ่มเห็นเหมือนกัน</div><div class="card tight"><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-tree"/></svg></span><span class="grow"><span class="val">ข้อมูลฟาร์ม</span><span class="sub">สวนและจุดชั่ง · คน · ผู้ซื้อ · ตั้งค่าวันขาย</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="dgrp">เฉพาะโทรศัพท์เครื่องนี้ (ไม่ sync)</div><div class="card tight"><div class="row"><span class="tile t-gray"><svg class="ic"><use href="#i-device"/></svg></span><span class="grow"><span class="val">เครื่องนี้</span><span class="sub">ขนาดตัวอักษร · เวลากดค้าง · เสียง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div></div></div></div><figcaption><span class="t">1. เมนู ☰ — ข้อมูลฟาร์ม · เครื่องนี้ · สลับกลุ่ม</span>แตะ ☰ ที่หัวหน้าแรก: ข้อมูลหลักของกลุ่มอยู่ที่ "ข้อมูลฟาร์ม" แยกจาก "เครื่องนี้" (ค่าที่ไม่ sync) ด้วยหัวข้อและคำอธิบาย ให้รู้ว่าเปลี่ยนแล้วกระทบเครื่องอื่นไหม<span class="ids">D-65 (ข้อมูลหลักอยู่ที่ ☰ → ข้อมูลฟาร์ม) · E03-S01 AC7 · E02-S04 (สลับกลุ่ม) · E03-S07 (ค่าของเครื่อง)</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q2</span><span>ข้อมูลหลักอยู่ที่เมนู ☰ → "ข้อมูลฟาร์ม" (D-65)</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>ข้อมูลฟาร์ม</b></span></div><figure class="step" id="s2"><div class="phone"><div class="screen" aria-label="ข้อมูลฟาร์ม"><div class="sbar num"><span>06:43</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ข้อมูลฟาร์ม <small class="num">สวนครอบครัว</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 2</span></div><div class="body"><div class="card tight"><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-tree"/></svg></span><span class="grow"><span class="val">สวนและจุดชั่ง</span><span class="sub">2 สวน · 5 จุดชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-blue"><svg class="ic"><use href="#i-users"/></svg></span><span class="grow"><span class="val">คน</span><span class="sub">5 คน · คนกรีด 2</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-handcoin"/></svg></span><span class="grow"><span class="val">ผู้ซื้อ</span><span class="sub">2 ราย</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-gray"><svg class="ic"><use href="#i-gear"/></svg></span><span class="grow"><span class="val">ตั้งค่าวันขาย</span><span class="sub">น้ำหนักเข่ง · ตาชั่ง · ตรวจศูนย์</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span><b>ใช้กับทุกเครื่องในกลุ่ม</b>แก้ได้ตอนไม่มีเน็ต — ส่งให้เครื่องอื่นเองเมื่อมีเน็ต ไม่มีปุ่ม sync</span></div></div></div></div><figcaption><span class="t">2. ข้อมูลฟาร์ม</span>4 หมวดของกลุ่ม; ตัวบอก sync ภาพรวมอยู่ที่หัว (รอส่ง N) — ไม่มีป้ายรอส่งต่อแถว<span class="ids">D-65 · E03-S01 AC7, AC9 · SYNC-1, SYNC-3 · D-3</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q20</span><span>ป้าย sync ต่อแถวแสดงเฉพาะ "ขัดกัน"; รอส่งดูที่ตัวบอกภาพรวม (D-65)</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>ตั้งค่าวันขาย</b></span></div><figure class="step long-step" id="s3"><span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span><div class="phone long"><div class="screen" aria-label="ตั้งค่าวันขาย"><div class="sbar num"><span>06:44</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ตั้งค่าวันขาย <small class="num">ของกลุ่ม</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 2</span></div><div class="body"><div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span>ใช้กับทุกเครื่องในกลุ่ม · การขายที่เริ่มแล้วใช้ค่าเดิม</span></div><div class="card"><h4>ประเภทตาชั่ง</h4><div class="radio on"><span class="dot"></span><span>ไม่มีทศนิยม — อ่านทีละ 1 กก.<small>ค่าเริ่มต้น · เปลี่ยนได้ตอนเริ่มการขาย</small></span></div><div class="radio dim" style="margin-top:6px;border-style:dashed;color:var(--c-ink-faint)"><span class="dot"></span><span>ทศนิยม 1 ตำแหน่ง<small><svg class="ic"><use href="#i-lock"/></svg> ยังไม่พร้อมใช้งาน</small></span></div></div><div class="card tight"><h4>น้ำหนักเข่งสุทธิ</h4><div class="row"><span class="grow"><span class="val"><span class="num">50 กก.</span></span></span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ค่าเริ่มต้นการขายใหม่</span></div><div class="row"><span class="grow"><span class="val"><span class="num">60 กก.</span></span></span></div><div class="row"><span class="fc add"><svg class="ic"><use href="#i-plus"/></svg>เพิ่มน้ำหนักเข่ง</span></div></div><div class="card tight"><h4>น้ำหนักตะกร้า (ภาชนะ)</h4><div class="row"><span class="grow"><span class="val"><span class="num">2 กก.</span></span><span class="sub">ตัวอย่าง</span></span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ค่าเริ่มต้น</span></div></div><div class="card"><h4>ตรวจศูนย์ / ตะกร้าก่อนชั่ง</h4><div class="seg"><span class="on">ทุกจุด</span><span>จุดแรกของสวน</span><span>ข้าม</span></div></div><div class="card"><h4>ช่วงเวลาจับนับซ้ำ</h4><div class="stepper"><span class="sb"><svg class="ic"><use href="#i-minus"/></svg></span><span class="inp" style="justify-content:center">8<span class="u">วินาที</span></span><span class="sb"><svg class="ic"><use href="#i-plus"/></svg></span></div></div></div></div></div><div class="extras"><div class="inset"><div class="ttl">เครื่องนี้ (☰ → เครื่องนี้) · ไม่ sync</div><div class="mini-row"><span class="grow">ขนาดตัวอักษร</span><b>กลาง</b></div><div class="mini-row"><span class="grow">เวลากดค้างเพื่อนับเข่ง</span><b class="num">0.7 วินาที</b></div><div class="mini-row"><span class="grow">เสียงอ่านเลขเข่ง</span><b>เปิด</b></div><div class="note">ค่าเริ่มต้นตามคำตอบเจ้าของใน E03-S07 · ขนาดตัวอักษร = E03-S08</div></div></div><figcaption><span class="t">3. ตั้งค่าวันขาย — รวมประเภทตาชั่ง</span>"ไม่มีทศนิยม" เป็นค่าเริ่มต้น; "ทศนิยม 1 ตำแหน่ง" เห็นในตัวเลือกแต่กดไม่ได้ ขึ้น "ยังไม่พร้อมใช้งาน" · ค่าเข่ง/ตะกร้า/ตรวจศูนย์/จับนับซ้ำ เป็นของกลุ่ม<span class="ids">D-66 · MD-7, MD-9, SYNC-6 · E03-S07 (Draft — AC ยังไม่ตกลง) · D-53 (ค่าเริ่มต้นโหมดเลขเข่งมาจากตั้งค่ากลุ่ม — ไม่ได้วาดในหน้านี้)</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-66</span><span>ประเภทตาชั่งตั้งที่กลุ่ม + เปลี่ยนได้ตอนเริ่มการขาย; น้ำหนักเก็บเป็นกรัม (NFR-3)</span></li><li><span class="q">?19</span><span>ทศนิยมของน้ำหนักเข่ง/ตะกร้าในตั้งค่า — เจ้าของขอตอบทีหลัง (D-65); หน้านี้ใช้ค่าจำนวนเต็มตามตัวอย่าง v4</span></li><li><span class="q">?F1</span><span>ช่อง "โหมดเลขเข่ง" (ค่าเริ่มต้นของกลุ่ม — D-53) อยู่หน้านี้ด้วยไหม — E03-S07 ยัง Draft จึงยังไม่วาด</span></li></ul></figcaption></figure></div></section>
+<section class="sec" id="sec2"><h2>2 · คน</h2><p>บุคคลเป็นข้อมูลหลักของกลุ่ม (sync) — เครื่องที่ 2 เห็นคนที่เครื่องแรกสร้างหลัง sync โดยไม่ต้อง reload</p><div class="flow"><figure class="step" id="s4"><div class="phone"><div class="screen" aria-label="รายการคน"><div class="sbar num"><span>07:00</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>คน <small class="num">ข้อมูลฟาร์ม</small></h3><span class="pill p-conf"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน 1</span></div><div class="body"><div class="fcs"><span class="fc on">ทั้งหมด</span><span class="fc">คนกรีด</span><span class="fc">ผู้จัดการสวน</span><span class="fc">ผู้จ่าย</span><span class="fc">ผู้เช่า</span><span class="fc">อื่น ๆ</span></div><div class="card tight"><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">แดง</span><span class="sub">คนกรีด · รับผิดชอบ 3 จุด</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">นัด</span><span class="sub">คนกรีด · รับผิดชอบ 2 จุด</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-blue"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">อาจารย์สมหวัง</span><span class="sub">ผู้จัดการสวน · ผู้จ่าย</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-blue"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">น้องของเจ้าของ</span><span class="sub">ผู้จ่าย</span></span><span class="chip ch-bad"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">คุณพนม ครองแก้ว</span><span class="sub">ผู้เช่า</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="row" style="padding:0 4px"><span class="grow sub" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic sm"><use href="#i-trash"/></svg> ที่ลบแล้ว (1) · กู้คืนได้</span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="foot"><div class="btn btn-primary"><svg class="ic"><use href="#i-plus"/></svg>เพิ่มคน</div></div></div></div><figcaption><span class="t">4. คน — รายการ กรองตามบทบาท</span>ตัวกรองบทบาท (หลายบทบาทต่อคนได้ จึงขึ้นได้หลายตัวกรอง) · ป้ายต่อแถวมีแค่ "ขัดกัน" · คนที่ลบแล้วอยู่ "ที่ลบแล้ว" กู้คืนได้<span class="ids">E03-S01 AC1, AC2, AC3, AC6, AC9 · MD-5 · D-65, D-67 (คำ "ขัดกัน" ทั้งแอป) · D-68</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q3</span><span>คำบนจอ "ลบ" + "กู้คืนได้" — ไม่ใช้ "เก็บถาวร" (D-65)</span></li><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-67</span><span>ใช้คำ "ขัดกัน" ทั้งแอป; แตะแถว → ฟิลด์แสดงค่าก่อนแก้ + [เลือกค่า] (E01-S11)</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>เพิ่มคน</b> หรือ <b>แก้</b></span></div><figure class="step" id="s5"><div class="phone"><div class="screen" aria-label="ฟอร์มคน"><div class="sbar num"><span>07:01</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>แก้ข้อมูลคน</h3></div><div class="body"><div class="fld"><span class="flbl">ชื่อ<b class="req">*</b></span><div class="fline"><span class="inp val">แดง</span></div></div><div class="fld"><span class="flbl">บทบาท<b class="req">*</b><span class="fhint">เลือกได้หลายอย่าง · ต้องมีอย่างน้อย 1</span></span><div class="fcs"><span class="fc on"><svg class="ic"><use href="#i-check"/></svg>คนกรีด</span><span class="fc">ผู้จัดการสวน</span><span class="fc">ผู้จ่าย</span><span class="fc">ผู้เช่า</span></div></div><div class="fld"><span class="flbl">บทบาทอื่น<span class="fhint">พิมพ์เอง</span></span><div class="fline"><span class="inp text">เช่น ลูกคนงาน</span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-plus"/></svg>เพิ่ม</span></div></div><div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span>ไม่ต้องมีบัญชีเข้าแอป · แก้ชื่อทีหลังได้ บันทึกเก่าแสดงชื่อใหม่</span></div></div><div class="foot"><div class="btn btn-primary">บันทึก</div></div></div></div><div class="extras"><div class="inset"><div class="ttl">ตรวจก่อนบันทึก</div><div class="fld"><span class="flbl">ชื่อ<b class="req">*</b></span><div class="fline"><span class="inp text bad"></span></div><span class="ferr"><svg class="ic"><use href="#i-alert"/></svg>ใส่ชื่อ</span></div><span class="ferr"><svg class="ic"><use href="#i-alert"/></svg>เลือกบทบาทอย่างน้อย 1 อย่าง</span><div class="note">ค่าที่กรอกไม่หายเมื่อขึ้นข้อความผิด</div></div></div><figcaption><span class="t">5. คน — ฟอร์ม (เพิ่ม/แก้ใช้หน้าเดียวกัน)</span>ชื่อ* · บทบาท* หลายอย่างได้ (เผื่อเลื่อนตำแหน่ง) · บทบาทอื่นพิมพ์เองแล้วเพิ่มเป็นตัวเลือกใหม่<span class="ids">E03-S01 AC1, AC2 · MD-5 · D-68</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-68</span><span>หลายบทบาทได้ ต้องมีอย่างน้อย 1; บทบาทอื่นพิมพ์เองได้ เช่น "ลูกคนงาน" (แทน D-65 "ไม่ต้องมีบทบาท")</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะแถว <b>แดง</b></span></div><figure class="step" id="s6"><div class="phone"><div class="screen" aria-label="รายละเอียดคนกรีด"><div class="sbar num"><span>07:02</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>แดง <small class="num">คน</small></h3><span class="btn btn-secondary small">แก้</span></div><div class="body"><div class="card tight"><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">แดง</span><span class="sub">บทบาท: คนกรีด</span></span></div></div><div class="card tight"><h4>จุดที่รับผิดชอบตอนนี้</h4><div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">สวนจันทเขลม · ไม่ระบุวันเริ่ม</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 2</span><span class="sub">สวนจันทเขลม · ไม่ระบุวันเริ่ม</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">สวนจันทเขลม · ถึง <span class="dt num">31 ต.ค. 2569</span> (มีแผนเปลี่ยน)</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="card tight"><div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-percent"/></svg></span><span class="grow"><span class="val">ส่วนแบ่ง</span><span class="sub">เจ้าของ 50 · คนกรีด 50 (ค่าเริ่มต้น)</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile sm t-cream"><svg class="ic"><use href="#i-wallet"/></svg></span><span class="grow"><span class="val">บัญชีหนี้</span><span class="sub">หนี้ที่ติดสวน 3,000.00 บาท · ผ่อน 1,000/การขาย</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="btn btn-secondary small" style="align-self:flex-start;margin-top:8px;color:var(--c-reject);border-color:var(--c-reject)"><svg class="ic sm"><use href="#i-trash"/></svg>ลบ (กู้คืนได้)</div></div></div></div><figcaption><span class="t">6. รายละเอียดคนกรีด</span>หน้าคนงานมีทางไป จุดที่รับผิดชอบ · ส่วนแบ่ง · บัญชีหนี้ · ปุ่มลบอยู่ล่างสุด แยกห่างจาก [แก้] · ชื่อจุดเป็นตัวอย่าง (เจ้าของตั้งเอง)<span class="ids">E03-S01 AC7 · E03-S05 AC10 · E03-S06 AC9 · E06-S03 AC11 · D-65</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q2</span><span>การ์ด "ข้อมูลพนักงาน" → รายชื่อคนงาน → บัญชีหนี้/ส่วนแบ่ง/จุดที่รับผิดชอบ (D-65)</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>ลบ</b></span></div><figure class="step" id="s7"><div class="phone"><div class="screen" aria-label="ยืนยันลบคนกรีด"><div class="sbar num"><span>07:03</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>แดง <small class="num">คน</small></h3></div><div class="body"><div class="card tight"><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">แดง</span><span class="sub">บทบาท: คนกรีด</span></span></div></div><div class="card tight"><h4>จุดที่รับผิดชอบตอนนี้</h4><div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">สวนจันทเขลม · ไม่ระบุวันเริ่ม</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 2</span><span class="sub">สวนจันทเขลม · ไม่ระบุวันเริ่ม</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">สวนจันทเขลม · ถึง <span class="dt num">31 ต.ค. 2569</span> (มีแผนเปลี่ยน)</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="card tight"><div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-percent"/></svg></span><span class="grow"><span class="val">ส่วนแบ่ง</span><span class="sub">เจ้าของ 50 · คนกรีด 50 (ค่าเริ่มต้น)</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile sm t-cream"><svg class="ic"><use href="#i-wallet"/></svg></span><span class="grow"><span class="val">บัญชีหนี้</span><span class="sub">หนี้ที่ติดสวน 3,000.00 บาท · ผ่อน 1,000/การขาย</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="btn btn-secondary small" style="align-self:flex-start;margin-top:8px;color:var(--c-reject);border-color:var(--c-reject)"><svg class="ic sm"><use href="#i-trash"/></svg>ลบ (กู้คืนได้)</div></div><div class="sheet-scrim"></div><div class="sheet"><div class="grab"></div><h4>ลบ "แดง" ไหม</h4><div class="banner bad"><svg class="ic sm"><use href="#i-alert"/></svg><span><b>แดงยังรับผิดชอบ 3 จุด</b>จุด 1, จุด 2, จุด 3 (สวนจันทเขลม) — หลังลบ จุดเหล่านี้จะขึ้นคำเตือน "ยังไม่มีคนกรีด"</span></div><p>จะไม่ขึ้นในตัวเลือกอีก บันทึกเก่าที่อ้างถึงยังแสดงชื่อนี้ · <b style="color:var(--c-ink)">กู้คืนได้</b> ที่ "ที่ลบแล้ว"</p><div class="btnrow" style="margin-top:6px"><div class="btn btn-secondary">ยกเลิก</div><div class="btn btn-primary" style="background:var(--c-reject)"><svg class="ic sm"><use href="#i-trash"/></svg>ลบ</div></div></div></div></div><figcaption><span class="t">7. ลบคนกรีดที่ยังมีจุด — เตือน ไม่ขวาง</span>บอกรายชื่อจุดที่จะว่าง แต่กดลบได้ · เอาบทบาทคนกรีดออกขณะยังมีจุด ใช้คำเตือนแบบเดียวกัน<span class="ids">E03-S01 AC3, AC4 · D-27, D-65</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q5</span><span>ลบคนกรีดที่ยังมีจุด → เตือน ไม่ขวาง (D-65)</span></li></ul></figcaption></figure></div></section>
+<section class="sec" id="sec3"><h2>3 · ผู้ซื้อ</h2><p></p><div class="flow"><figure class="step" id="s8"><div class="phone"><div class="screen" aria-label="รายการผู้ซื้อ"><div class="sbar num"><span>07:10</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ผู้ซื้อ <small class="num">ข้อมูลฟาร์ม</small></h3><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span></div><div class="body"><div class="card tight"><div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-handcoin"/></svg></span><span class="grow"><span class="val">ผู้ซื้อ ก (ตัวอย่าง)</span><span class="sub">การขายล่าสุด 18 ก.ย. 2569</span></span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ใช้ล่าสุด</span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-handcoin"/></svg></span><span class="grow"><span class="val">ผู้ซื้อ ข (ตัวอย่าง)</span><span class="sub">การขายล่าสุด 21 ส.ค. 2569</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="row" style="padding:0 4px"><span class="grow sub" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic sm"><use href="#i-trash"/></svg> ที่ลบแล้ว (0)</span></div><div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span><b>"ใช้ล่าสุด" = ค่าเริ่มต้นของการขายใหม่</b>แอปคิดเองจากการขายล่าสุด ไม่ต้องตั้ง</span></div></div><div class="foot"><div class="btn btn-primary"><svg class="ic"><use href="#i-plus"/></svg>เพิ่มผู้ซื้อ</div></div></div></div><div class="extras"><div class="inset"><div class="ttl">ฟอร์มผู้ซื้อ</div><div class="fld"><span class="flbl">ชื่อผู้ซื้อ<b class="req">*</b></span><div class="fline"><span class="inp text">พิมพ์ชื่อ</span></div></div><div class="btn btn-primary" style="min-height:44px">บันทึก</div><div class="note">ลบผู้ซื้อ = ลบ (กู้คืนได้) แบบเดียวกับคน</div></div></div><figcaption><span class="t">8. ผู้ซื้อ — รายการ + ฟอร์ม</span>ป้าย "ใช้ล่าสุด" บอกค่าเริ่มต้นของการขายใหม่ · ฟอร์มมีแค่ชื่อ* (รายละเอียดผู้ซื้อยังไม่มีใน PRD จึงไม่เพิ่มฟิลด์)<span class="ids">E03-S01 AC5 · MD-6 · D-65 · ชื่อผู้ซื้อตรงกับ v4 หน้า 4</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q6</span><span>ผู้ซื้อล่าสุดถูกลบ → การขายใหม่ไม่มีค่าเริ่มต้น ต้องเลือกเอง (D-65)</span></li></ul></figcaption></figure></div></section>
+<section class="sec" id="sec4"><h2>4 · สวน</h2><p>สวนยางและสวนทุเรียน พร้อมประวัติพื้นที่ — ชื่อสวนและไร่มาจาก PRD §2</p><div class="flow"><figure class="step" id="s9"><div class="phone"><div class="screen" aria-label="รายการสวน"><div class="sbar num"><span>07:20</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>สวนและจุดชั่ง <small class="num">ข้อมูลฟาร์ม</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 1</span></div><div class="body"><div class="card tight"><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-tree"/></svg></span><span class="grow"><span class="val">สวนจันทเขลม</span><span class="sub">ยาง · 125 ไร่ · 4 จุดชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-tree"/></svg></span><span class="grow"><span class="val">สวนฝั่งคลองพลู</span><span class="sub">ยาง · 30 ไร่ · 1 จุดชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-leaf"/></svg></span><span class="grow"><span class="val">ทุเรียน คลองพลู</span><span class="sub">ทุเรียน · 30 ไร่</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-leaf"/></svg></span><span class="grow"><span class="val">ทุเรียน ตะเคียนทอง</span><span class="sub">ทุเรียน · พื้นที่ <span class="ds ds-unknown">ไม่ทราบ</span></span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="row" style="padding:0 4px"><span class="grow sub" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic sm"><use href="#i-trash"/></svg> ที่ลบแล้ว (0)</span></div></div><div class="foot"><div class="btn btn-primary"><svg class="ic"><use href="#i-plus"/></svg>เพิ่มสวน</div></div></div></div><figcaption><span class="t">9. สวน — รายการ</span>ยาง/ทุเรียน · พื้นที่ ณ วันนี้ · จำนวนจุดชั่ง · พื้นที่ไม่ใส่แสดง "ไม่ทราบ" (ตัวอย่างแถวสุดท้าย — PRD มี 76 ไร่ ใช้แสดงป้ายเท่านั้น)<span class="ids">E03-S02 AC1, AC2, AC5 · MD-1 · PRD §2 (ชื่อสวน/ไร่) · D-65</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q7</span><span>พื้นที่ไม่บังคับ — ไม่ใส่แสดง "ไม่ทราบ" (D-65)</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>เพิ่มสวน</b></span></div><figure class="step long-step" id="s10"><span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span><div class="phone long"><div class="screen" aria-label="ฟอร์มสวน"><div class="sbar num"><span>07:21</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>เพิ่มสวน</h3></div><div class="body"><div class="fld"><span class="flbl">ชื่อสวน<b class="req">*</b></span><div class="fline"><span class="inp val">ทุเรียน ตะเคียนทอง</span></div></div><div class="fld"><span class="flbl">ประเภท<b class="req">*</b></span><div class="seg"><span>ยาง</span><span class="on">ทุเรียน</span></div></div><div class="fld"><span class="flbl">พื้นที่ (ไร่)<span class="fhint">ไม่บังคับ</span></span><div class="fline"><span class="inp text">ว่าง = ไม่ทราบ</span><span class="ds ds-unknown">ไม่ทราบ</span></div></div><div class="fld"><span class="flbl">ปีที่ปลูก (พ.ศ.)<span class="fhint">ไม่บังคับ · แอปคำนวณอายุ</span></span><div class="fline"><span class="inp text">เช่น 2554</span><span class="ds ds-unknown">ไม่ทราบ</span></div></div><div class="fld"><span class="flbl">ตำแหน่ง GPS<span class="fhint">ไม่บังคับ · ใช้กับการ์ดพยากรณ์อากาศ</span></span><div class="fline"><span class="ds ds-unknown">ไม่ทราบ</span><span class="btn btn-secondary small" style="margin-left:auto"><svg class="ic sm"><use href="#i-gps"/></svg>ใช้ตำแหน่งตอนนี้</span></div></div><div class="fld"><span class="flbl">ไฟล์สัญญาเช่า<span class="fhint">เฉพาะทุเรียน</span></span><div class="card tight"><div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-doc"/></svg></span><span class="grow"><span class="val">สัญญา-ตะเคียนทอง.jpg</span><span class="sub">เก็บในเครื่องแล้ว · เปิดได้ในเครื่องนี้</span></span><span class="chip ch-warn"><svg class="ic"><use href="#i-half"/></svg>รอส่ง</span></div></div><span class="fhint" style="margin:0">อัปโหลดเมื่ออัปเกรดแผน Firebase — ระหว่างนี้เครื่องอื่นเห็นชื่อไฟล์แต่ยังเปิดไม่ได้</span></div></div><div class="foot"><div class="btn btn-primary">บันทึก</div></div></div></div><div class="extras"><div class="inset"><div class="ttl">พื้นที่ใส่แล้ว + GPS ได้แล้ว</div><div class="fld"><span class="flbl">พื้นที่ (ไร่)</span><div class="fline"><span class="inp val">76</span><span class="fhint" style="margin:0">มีผลตั้งแต่ <span class="dt num">3 ต.ค. 2569</span></span></div></div><div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-gps"/></svg></span><span class="grow num">⟨ละติจูด, ลองจิจูด⟩</span><span class="btn btn-secondary small" style="min-height:40px">ลบตำแหน่ง</span></div><span class="ferr"><svg class="ic"><use href="#i-alert"/></svg>ใส่พื้นที่เป็นตัวเลขมากกว่า 0</span><div class="note">ข้อความผิดตัวอย่างเมื่อใส่ 0 หรือไม่ใช่ตัวเลข · ไม่ได้สิทธิ์ตำแหน่ง → "แอปยังไม่ได้รับอนุญาตให้ใช้ตำแหน่ง — เปิดได้ที่ตั้งค่าของโทรศัพท์"</div></div></div><figcaption><span class="t">10. สวน — ฟอร์ม</span>บังคับแค่ชื่อ + ประเภท · พื้นที่/ปีที่ปลูก/GPS ว่างได้ = "ไม่ทราบ" · กด "ใช้ตำแหน่งตอนนี้" เท่านั้นจึงบันทึกพิกัด · ทุเรียนแนบสัญญาได้ เก็บในเครื่องทันที อัปโหลดรออัปเกรด<span class="ids">E03-S02 AC1, AC2, AC6, AC7, AC8 · MD-1 · SYNC-12 · D-48, D-51, D-65</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>เจ้าของ</span><span>อายุสวน = เก็บปีที่ปลูก แอปคำนวณอายุ; สัญญาเช่า = แนบไฟล์เท่านั้น เงื่อนไขรอ E11</span></li><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-48</span><span>ไฟล์เก็บในเครื่องได้ทันที อัปโหลดรออัปเกรด Blaze</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>บันทึก → <b>รายละเอียดสวน</b></span></div><figure class="step long-step" id="s11"><span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span><div class="phone long"><div class="screen" aria-label="รายละเอียดสวน"><div class="sbar num"><span>07:22</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>สวนจันทเขลม <small class="num">สวนและจุดชั่ง</small></h3><span class="btn btn-secondary small">แก้</span></div><div class="body"><div class="card tight"><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-tree"/></svg></span><span class="grow"><span class="val">สวนจันทเขลม</span><span class="sub">ยาง</span></span></div><div class="row"><span class="grow"><span class="lbl">พื้นที่ตอนนี้</span><span class="val num" style="display:block">125 ไร่</span></span><span class="btn btn-secondary small">เปลี่ยนพื้นที่</span></div><div class="row"><span class="grow"><span class="lbl">ปีที่ปลูก · อายุ</span><span class="val num" style="display:block">2554 · 15 ปี</span><span class="sub">ตัวอย่างปี</span></span></div><div class="row"><span class="grow"><span class="lbl">ตำแหน่ง GPS</span></span><span class="ds ds-unknown">ไม่ทราบ</span></div></div><div class="card"><h4>ประวัติพื้นที่</h4><div class="hrow"><span class="grow"><b class="num">125 ไร่</b><small>มีผลตั้งแต่ <span class="dt num">1 ต.ค. 2569</span> · ใช้อยู่</small></span></div><div class="hrow"><span class="grow"><b class="num">120 ไร่</b><small>มีผลตั้งแต่ <span class="dt num">1 ม.ค. 2569</span> · ตัวอย่าง</small></span></div></div><div class="card tight"><h4>จุดชั่ง (4)</h4><div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">คนกรีด: แดง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 4</span><span class="sub">คนกรีด: นัด</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="more-hint">+ จุด 2, จุด 3 · ชื่อจุดเป็นตัวอย่าง</div><div class="row"><span class="fc add"><svg class="ic"><use href="#i-plus"/></svg>เพิ่มจุดชั่ง</span></div></div><div class="btn btn-secondary small" style="align-self:flex-start;color:var(--c-reject);border-color:var(--c-reject)"><svg class="ic sm"><use href="#i-trash"/></svg>ลบสวน (กู้คืนได้)</div></div></div></div><div class="extras"><div class="inset"><div class="ttl">เปลี่ยนพื้นที่</div><div class="fld"><span class="flbl">พื้นที่ใหม่ (ไร่)<b class="req">*</b></span><div class="fline"><span class="inp val">125</span></div></div><div class="fld"><span class="flbl">มีผลตั้งแต่<b class="req">*</b></span><div class="fline"><span class="inp val"><span class="dt num">1 ต.ค. 2569</span></span></div></div><div class="note">บันทึก → เพิ่มบรรทัดใหม่ในประวัติ</div></div></div><figcaption><span class="t">11. สวน — รายละเอียด + ประวัติพื้นที่</span>เปลี่ยนพื้นที่ = เพิ่มบรรทัดใหม่พร้อมวันที่มีผล ไม่ทับของเดิม · วันที่มีผลเดียวกันสองรายการ → ใช้รายการที่บันทึกล่าสุด (ไม่ใช่ขัดกัน) · ประวัติ 120 ไร่ เป็นตัวอย่างการเปลี่ยน ไม่ใช่ข้อเท็จจริง<span class="ids">E03-S02 AC3, AC4, AC5, AC6 · MD-1 · D-65 · E03-S03 (จุดชั่งใต้สวน)</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q8</span><span>พื้นที่วันเดียวกันสองรายการ → ใช้รายการล่าสุด รายการเดิมยังอยู่ในประวัติ (D-65)</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>ลบสวน</b></span></div><figure class="step" id="s12"><div class="phone"><div class="screen" aria-label="ยืนยันลบสวน"><div class="sbar num"><span>07:23</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>สวนจันทเขลม <small class="num">สวนและจุดชั่ง</small></h3></div><div class="body"><div style="flex:1"></div></div><div class="sheet-scrim"></div><div class="sheet"><div class="grab"></div><h4>ลบ "สวนจันทเขลม" ไหม</h4><div class="banner bad"><svg class="ic sm"><use href="#i-alert"/></svg><span><b>จุดชั่ง 4 จุดในสวนนี้หายตาม</b>จะไม่ขึ้นตอนเริ่มการขาย ไม่ต้องลบทีละจุด</span></div><p>การขายเก่ายังนับเข่งเดิม ส่วนแบ่งไม่หาย · <b style="color:var(--c-ink)">กู้คืนได้</b> — กู้คืนสวนแล้วจุดชั่งกลับมาด้วย</p><div class="btnrow" style="margin-top:6px"><div class="btn btn-secondary">ยกเลิก</div><div class="btn btn-primary" style="background:var(--c-reject)"><svg class="ic sm"><use href="#i-trash"/></svg>ลบสวน</div></div></div></div></div><figcaption><span class="t">12. ลบสวน (กู้คืนได้) — จุดชั่งหายตาม</span>ลบได้เสมอ ไม่ขวางเพราะรายการหักเงินคนกรีด<span class="ids">E03-S02 AC9, AC10 · D-58 (แทน D-44) · D-65</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q9</span><span>ลบสวนแล้วจุดชั่งหายตาม (D-65)</span></li><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-58</span><span>ลบสวน/โซนได้เสมอ กันเงินติดลบด้วยเพดานหัก (D-18) + ธงหักเกิน (D-61)</span></li></ul></figcaption></figure></div></section>
+<section class="sec" id="sec5"><h2>5 · จุดชั่ง และคนกรีดของจุด</h2><p>จุดชั่ง = กอง อยู่ใต้สวน ใช้ซ้ำทุกการขาย · ผู้รับผิดชอบจุด = คนกรีดของจุด (D-55)</p><div class="flow"><figure class="step long-step" id="s13"><span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span><div class="phone long"><div class="screen" aria-label="โครงสร้างตั้งต้น"><div class="sbar num"><span>07:30</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>โครงสร้างตั้งต้น <small class="num">สวนและจุดชั่ง</small></h3></div><div class="body"><div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span><b>ยังไม่มีจุดชั่งในกลุ่ม</b>ใส่ชื่อจุดเอง — แอปไม่ตั้งชื่อให้</span></div><div class="card"><h4>สวนจันทเขลม (ยาง)</h4><div class="ptrow"><span class="lbl" style="width:96px;font-size:13px;color:var(--c-ink-soft)">จุดของแดง 1<b class="req">*</b></span><span class="inp text grow" style="min-height:44px">ใส่ชื่อจุด</span></div><div class="ptrow"><span class="lbl" style="width:96px;font-size:13px;color:var(--c-ink-soft)">จุดของแดง 2<b class="req">*</b></span><span class="inp text grow" style="min-height:44px">ใส่ชื่อจุด</span></div><div class="ptrow"><span class="lbl" style="width:96px;font-size:13px;color:var(--c-ink-soft)">จุดของแดง 3<b class="req">*</b></span><span class="inp text grow" style="min-height:44px">ใส่ชื่อจุด</span></div><div class="ptrow"><span class="lbl" style="width:96px;font-size:13px;color:var(--c-ink-soft)">จุดของนัด<b class="req">*</b></span><span class="inp text grow" style="min-height:44px">ใส่ชื่อจุด</span></div><div class="mini-row" style="margin-top:4px"><span class="grow">คนกรีด</span><b>แดง · นัด</b></div></div><div class="card"><h4>สวนฝั่งคลองพลู (ยาง)</h4><div class="ptrow"><span class="lbl" style="width:96px;font-size:13px;color:var(--c-ink-soft)">จุดของนัด<b class="req">*</b></span><span class="inp text grow" style="min-height:44px">ใส่ชื่อจุด</span></div></div><div class="more-hint">"จุดของแดง 1" เป็นป้ายบอกช่อง ไม่ใช่ชื่อที่บันทึก · แก้หรือเพิ่มจุดทีหลังได้</div></div><div class="foot"><div class="btn btn-primary">สร้าง 5 จุดชั่ง</div></div></div></div><figcaption><span class="t">13. จุดชั่ง — โครงสร้างตั้งต้น</span>จันทเขลม 4 จุด (แดง 3 · นัด 1) · คลองพลู 1 จุด (นัด) · ชื่อจุดเจ้าของใส่เอง · มอบหมายคนกรีดตั้งต้นแบบไม่ระบุวันเริ่ม · ปุ่มนี้ขึ้นเฉพาะเมื่อกลุ่มยังไม่มีจุดชั่ง และเครื่องนี้ดึงข้อมูลกลุ่มครั้งแรกเสร็จแล้ว<span class="ids">E03-S03 AC5, AC6 · E03-S05 AC6 · MD-3 · D-63</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q11</span><span>การมอบหมายจากโครงสร้างตั้งต้น ไม่ระบุวันเริ่ม (D-63)</span></li><li><span class="q">?F2</span><span>ยังไม่มีคน "แดง"/"นัด" ที่เป็นคนกรีด หรือมีชื่อซ้ำหลายคน — หน้านี้ให้เลือก/เพิ่มคนในขั้นเดียว (ข้อเสนอจาก flow E03 §4.3) ใช่ไหม</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>ต่อมา: <b>เพิ่มจุดชั่ง</b> ในสวน</span></div><figure class="step" id="s14"><div class="phone"><div class="screen" aria-label="ฟอร์มจุดชั่ง"><div class="sbar num"><span>07:40</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>เพิ่มจุดชั่ง</h3></div><div class="body"><div class="fld"><span class="flbl">สวน</span><div class="fline"><span class="inp val">สวนจันทเขลม</span></div></div><div class="fld"><span class="flbl">ชื่อจุดชั่ง<b class="req">*</b></span><div class="fline"><span class="inp val bad">จุด 1</span></div><span class="ferr"><svg class="ic"><use href="#i-alert"/></svg>มีจุดชื่อ "จุด 1" ในสวนนี้แล้ว — ใช้ชื่ออื่น</span></div><div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span>สวนต่างกันใช้ชื่อเดียวกันได้ · จุดชั่งไม่มีน้ำหนักเข่ง/ตะกร้าของตัวเอง ใช้ค่ากลุ่ม และไม่เก็บยอดยางคงค้าง</span></div></div><div class="foot"><div class="btn btn-primary">บันทึก</div></div></div></div><figcaption><span class="t">14. จุดชั่ง — ชื่อซ้ำในสวนเดียวกันไม่ได้</span>ข้อความไทยบอกเหตุ ไม่บันทึก · หลังบันทึกจุดใหม่ แสดงทางลัด "มอบหมายคนกรีดให้จุดนี้" (ไม่บังคับ)<span class="ids">E03-S03 AC1, AC3, AC4, AC7 · MD-3, MD-7, SALE-5 · D-65</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q10</span><span>ชื่อจุดซ้ำในสวนเดียวกันไม่ได้ (D-65)</span></li><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-65</span><span>สองเครื่องสร้างชื่อซ้ำตอนออฟไลน์ → เก็บทั้งคู่ + ธง "ชื่อซ้ำ" ให้แก้ชื่อหรือลบ ไม่รวมเอง</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะจุด <b>จุด 3</b></span></div><figure class="step" id="s15"><div class="phone"><div class="screen" aria-label="หน้าจุดชั่ง"><div class="sbar num"><span>07:41</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>จุด 3 <small class="num">สวนจันทเขลม</small></h3><span class="btn btn-secondary small">แก้ชื่อ</span></div><div class="body"><div class="card tight"><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">สวนจันทเขลม</span></span></div></div><div class="card tight"><h4>คนกรีดของจุด</h4><div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">แดง</span><span class="sub">ไม่ระบุวันเริ่ม – <span class="dt num">31 ต.ค. 2569</span></span></span><span class="chip ch-ok">ตอนนี้</span></div><div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">นัด</span><span class="sub">ตั้งแต่ <span class="dt num">1 พ.ย. 2569</span></span></span><span class="chip ch-warn"><svg class="ic"><use href="#i-clock"/></svg>ตามแผน</span></div></div><div class="btn btn-secondary"><svg class="ic"><use href="#i-swap"/></svg>วางแผนเปลี่ยนคนกรีด</div><div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span>เปลี่ยนไปข้างหน้าไม่เปลี่ยนเจ้าของเข่งในการขายก่อนวันเริ่ม</span></div><div class="btn btn-secondary small" style="align-self:flex-start;color:var(--c-reject);border-color:var(--c-reject)"><svg class="ic sm"><use href="#i-trash"/></svg>ลบจุดชั่ง (กู้คืนได้)</div></div></div></div><figcaption><span class="t">15. หน้าจุดชั่ง → คนกรีดของจุด</span>จุดละ 1 คน ณ วันหนึ่ง · ตัวอย่าง: ตั้งแผนล่วงหน้าให้นัดเริ่ม 1 พ.ย. → แดงสิ้นสุด 31 ต.ค. ให้อัตโนมัติ (รวมวันนั้น) · เปลี่ยนคนกรีดทำจากหน้านี้ทีละจุดเท่านั้น<span class="ids">E03-S05 AC1, AC2, AC3, AC4, AC5 · MD-4, SALE-4 · D-55, D-63</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q15</span><span>"ถึง" รวมวันนั้น — คนเดิมถึงวันก่อนวันเริ่มของคนใหม่; เปลี่ยนจากหน้าจุดชั่งทีละจุด (D-63)</span></li><li><span class="q">?F3</span><span>แผนเปลี่ยนคนกรีดที่ตั้งล่วงหน้า แก้หรือยกเลิกได้ก่อนถึงวันไหม — AC ไม่ระบุ จึงยังไม่วาดปุ่ม</span></li><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-67</span><span>ลบจุดที่การขายเปิดอยู่ใช้ → ถามทุกครั้งว่าเข่งที่ชั่งแล้วคงที่จุดเดิม ("ลบแล้ว") หรือย้ายไปจุดใหม่ — หน้าจอนี้อยู่ฝั่ง flow การขาย</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>วางแผนเปลี่ยนคนกรีด</b></span></div><figure class="step" id="s16"><div class="phone"><div class="screen" aria-label="วางแผนเปลี่ยนคนกรีด"><div class="sbar num"><span>07:42</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>จุด 3 <small class="num">สวนจันทเขลม</small></h3></div><div class="body"><div style="flex:1"></div></div><div class="sheet-scrim"></div><div class="sheet"><div class="grab"></div><h4>วางแผนเปลี่ยนคนกรีด · จุด 3</h4><div class="radio on"><span class="dot"></span><span><b>มีคนใหม่</b><small>เลือกคนกรีด + วันเริ่ม (ตั้งล่วงหน้าได้)</small></span></div><div class="ptrow" style="padding-left:34px"><span class="inp val grow" style="min-height:44px">นัด</span><span class="inp val grow num" style="min-height:44px">1 พ.ย. 2569</span></div><div class="banner info" style="margin-left:34px"><svg class="ic sm"><use href="#i-check"/></svg><span>แดง ถึง <b style="display:inline">31 ต.ค. 2569</b> · นัด เริ่ม <b style="display:inline">1 พ.ย. 2569</b></span></div><div class="radio"><span class="dot"></span><span><b>ลาออก ยังไม่มีคนแทน</b><small>ใส่วันสิ้นสุดอย่างเดียว → "ยังไม่มีคนกรีด" ตั้งแต่วันถัดไป</small></span></div><div class="btn btn-primary" style="margin-top:4px">บันทึกแผน</div></div></div></div><figcaption><span class="t">16. วางแผนเปลี่ยนคนกรีด</span>สองทาง: มีคนใหม่ (คนเดิมสิ้นสุดวันก่อนให้อัตโนมัติ) · ลาออกไม่มีคนแทน (จุดเป็น "ยังไม่มีคนกรีด") · จุดที่ไม่มีคนกรีดยังชั่งได้ มอบหมายย้อนหลังได้ แต่สรุปเงิน/ปิดการขายไม่ได้จนทุกจุดมีคนกรีด<span class="ids">E03-S05 AC2, AC3, AC7, AC8, AC9 · D-16, D-63</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q16</span><span>จุดที่ยังไม่มีคนกรีด → ชั่งได้ มอบหมายย้อนหลังได้; การขาย Completed ที่เงินเปลี่ยน → ขอเหตุผล + ธง (D-16, D-63)</span></li><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q23</span><span>สองเครื่องมอบหมายทับช่วงกัน → ขัดกัน และขวางการปิด/สรุปเงินจนเจ้าของเลือก (D-29)</span></li></ul></figcaption></figure></div></section>
+<section class="sec" id="sec6"><h2>6 · ส่วนแบ่งรายคนกรีด</h2><p>ตั้งต่อคนกรีด มีวันที่มีผล ไม่ได้ตั้ง = 50/50</p><div class="flow"><figure class="step long-step" id="s17"><span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span><div class="phone long"><div class="screen" aria-label="ส่วนแบ่งของคนกรีด"><div class="sbar num"><span>08:00</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ส่วนแบ่ง <small class="num">แดง</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 1</span></div><div class="body"><div class="card"><div class="bal"><span class="lbl">ส่วนแบ่งตอนนี้</span><span class="fig" style="font-size:28px">เจ้าของ 50 · คนกรีด 50</span><span class="lbl">(ค่าเริ่มต้น) · คิดจากมูลค่าขายรวม</span></div></div><div class="fld"><span class="flbl">เปลี่ยนเป็น<span class="fhint">เจ้าของ / คนกรีด</span></span><div class="seg"><span>50/50</span><span>60/40</span><span>70/30</span><span class="on">กำหนดเอง</span></div></div><div class="fld"><span class="flbl">คนกรีดได้ (%)<b class="req">*</b><span class="fhint">จำนวนเต็ม 0–100</span></span><div class="fline"><span class="inp" style="max-width:120px">55<span class="u">%</span></span><span class="grow" style="font-size:14px;color:var(--c-ink-soft)">→ เจ้าของ <b class="num" style="color:var(--c-ink)">45%</b></span></div></div><div class="fld"><span class="flbl">มีผลตั้งแต่<b class="req">*</b></span><div class="fline"><span class="inp val bad"><span class="dt num">1 ก.ย. 2569</span></span></div><span class="ferr"><svg class="ic"><use href="#i-alert"/></svg>ย้อนก่อนการขายที่ปิดแล้ว (18 ก.ย. 2569) ไม่ได้ — เลือกตั้งแต่ 19 ก.ย. 2569</span></div><div class="card"><h4>ประวัติ</h4><div class="hrow"><span class="grow"><b>ยังไม่เคยเปลี่ยน</b><small>ใช้ค่าเริ่มต้น 50/50</small></span></div></div></div><div class="foot"><div class="btn btn-primary">บันทึก</div></div></div></div><div class="extras"><div class="inset"><div class="ttl">ตรวจก่อนบันทึก (กำหนดเอง)</div><span class="ferr"><svg class="ic"><use href="#i-alert"/></svg>ใส่เป็นจำนวนเต็ม เช่น 55</span><span class="ferr"><svg class="ic"><use href="#i-alert"/></svg>ใส่ได้ตั้งแต่ 0 ถึง 100</span></div></div><figcaption><span class="t">17. ส่วนแบ่ง — ปุ่มสำเร็จรูป / กำหนดเอง + วันที่มีผล + ประวัติ</span>50/50 · 60/40 · 70/30 · กำหนดเอง (พิมพ์ฝั่งคนกรีด อีกฝั่งคำนวณทันที) · วันที่มีผลย้อนก่อนการขายที่ปิดแล้วไม่ได้ (ตัวอย่างใช้การขาย 18 ก.ย. 2569 จาก v4) · ไม่มีตัวเลือก "คิดจาก…"<span class="ids">E03-S06 AC1–AC5, AC9 · MD-8 · D-12, D-63</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q17/Q18</span><span>กำหนดเองพิมพ์ฝั่งคนกรีด; ย้อนไปก่อนการขายที่ Completed ไม่ได้ (D-63)</span></li><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-67</span><span>เครื่องออฟไลน์ตั้งย้อนก่อนการขายที่อีกเครื่องเพิ่งปิด → ติดธงให้แก้วันที่ การขายนั้นคงส่วนแบ่งเดิม</span></li><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-30</span><span>แก้ส่วนแบ่งซ้อนสองเครื่อง → ขัดกันเสมอ ไม่ทับเงียบ</span></li></ul></figcaption></figure></div></section>
+<section class="sec" id="sec7"><h2>7 · ค่าใช้จ่าย และเงินที่สวนต้องคืน</h2><p>เงินเก็บเป็นสตางค์ · ข้อมูลการเงินเห็นเฉพาะสมาชิกกลุ่ม · ตัวเลขทั้งหมดเป็นตัวอย่าง</p><div class="flow"><figure class="step long-step" id="s18"><span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span><div class="phone long"><div class="screen" aria-label="ฟอร์มค่าใช้จ่าย"><div class="sbar num"><span>09:00</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>บันทึกค่าใช้จ่าย</h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 3</span></div><div class="body"><div class="fld"><span class="flbl">จำนวนเงิน<b class="req">*</b></span><div class="inp" style="justify-content:flex-start">350.00<span class="u">บาท</span></div></div><div class="fld"><span class="flbl">วันที่<b class="req">*</b></span><div class="fline"><span class="inp val"><span class="dt num">28 ก.ย. 2569</span></span></div></div><div class="fld"><span class="flbl">วงจร</span><div class="seg"><span class="on">เกิดจริง</span><span>ผูกพันแล้ว</span><span>วางแผน</span></div></div><div class="fld"><span class="flbl">หมวด<span class="fhint">แก้ชื่อ/เพิ่มได้</span></span><div class="fcs"><span class="fc">ปุ๋ย</span><span class="fc">ค่าแรง</span><span class="fc on">น้ำมันตัดหญ้า</span><span class="fc">ยาฆ่าหญ้า</span><span class="fc">เดินทาง</span><span class="fc">เงินเดือนผู้จัดการ</span><span class="fc">ช่วยเหลือคนงาน</span><span class="fc">ซ่อมแซม/อุปกรณ์</span><span class="fc">อื่น ๆ</span></div></div><div class="fld"><span class="flbl">ผู้จ่ายจริง<span class="fhint">ค่าเริ่มต้น = คนเดิมครั้งก่อน</span></span><div class="fcs"><span class="fc">เงินสวน</span><span class="fc">เจ้าของ</span><span class="fc">อาจารย์สมหวัง</span><span class="fc">น้องของเจ้าของ</span><span class="fc on">แดง</span><span class="fc">+ คนอื่น</span></div></div><div class="banner info"><svg class="ic sm"><use href="#i-handcoin"/></svg><span><b>สวนต้องคืน แดง 350.00 บาท</b>สร้างให้เองเพราะผู้จ่ายไม่ใช่เงินสวน และวงจรเป็นเกิดจริง</span></div><div class="fld"><span class="flbl">สวน<span class="fhint">ไม่บังคับ</span></span><div class="fline"><span class="inp text">ไม่ระบุ</span><span class="ds ds-none">ไม่ได้บันทึก</span></div></div><div class="fld"><span class="flbl">รายการ<span class="fhint">ไม่บังคับ</span></span><div class="fline"><span class="inp text">เช่น น้ำมันตัดหญ้า 10 ลิตร</span></div></div><div class="fld"><span class="flbl">ใบเสร็จ / รูป<span class="fhint">ไม่บังคับ</span></span><div class="fline"><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-camera"/></svg>ถ่ายรูป</span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-image"/></svg>เลือกรูป</span></div></div><div class="fld"><span class="flbl">หมายเหตุ<span class="fhint">ไม่บังคับ</span></span><div class="fline"><span class="inp text"></span><span class="ds ds-none">ไม่ได้บันทึก</span></div></div></div><div class="foot"><div class="btn btn-primary">บันทึก</div></div></div></div><div class="extras"><div class="inset"><div class="ttl">วางแผน — จำนวนเงินไม่ทราบ</div><div class="seg"><span>เกิดจริง</span><span>ผูกพันแล้ว</span><span class="on">วางแผน</span></div><div class="mini-row"><span class="grow">จำนวนเงิน</span><span class="ds ds-unknown">ไม่ทราบ</span><span class="fc" style="min-height:32px">ไม่ทราบ</span></div><div class="note">เลื่อนเป็นผูกพันแล้ว/เกิดจริง ต้องใส่จำนวนเงินก่อน (ไม่นับเป็น 0 เงียบ ๆ)</div></div></div><figcaption><span class="t">18. ค่าใช้จ่าย — ฟอร์ม</span>บังคับแค่จำนวนเงิน + วันที่ · วงจรเริ่มต้น = เกิดจริง · หมวดตั้งต้นจาก D-62 · ผู้จ่ายมี "เงินสวน" (ไม่สร้างเงินที่ต้องคืน) · ตัวอย่าง: แดงสำรองจ่ายค่าน้ำมันตัดหญ้า 350 → สวนต้องคืนแดง · ใบเสร็จเก็บในเครื่อง อัปโหลดรออัปเกรด<span class="ids">E11-S01 AC1–AC5, AC9 · E11-S02 AC1–AC4 · FIN-1–FIN-4 · D-48, D-62</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-62</span><span>"เงินสวน" เป็นผู้จ่าย · ฟอร์มบังคับแค่เงิน + วันที่ · ผู้จ่ายเริ่มต้น = คนเดิมครั้งก่อน · รายการวางแผนใส่เงิน "ไม่ทราบ" ได้</span></li><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-67</span><span>ค่าใช้จ่ายผูกพันใส่ผู้จ่ายล่วงหน้าได้ แต่เงินที่ต้องคืนเกิดเมื่อเป็น "เกิดจริง" เท่านั้น</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>บันทึก → <b>ค่าใช้จ่ายทั้งหมด</b></span></div><figure class="step" id="s19"><div class="phone long"><div class="screen" aria-label="รายการค่าใช้จ่าย"><div class="sbar num"><span>09:01</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ค่าใช้จ่ายทั้งหมด <small class="num">สวนครอบครัว</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 3</span></div><div class="body"><div class="fcs"><span class="fc on">ทั้งหมด</span><span class="fc">เกิดจริง</span><span class="fc">ผูกพันแล้ว</span><span class="fc">วางแผน</span></div><div class="fcs"><span class="fc">หมวด: ทั้งหมด ▾</span><span class="fc">สวน: ทั้งหมด ▾</span><span class="fc">ต.ค. 2569 ▾</span></div><div class="card"><div class="kv"><span>เกิดจริง ก.ย. 2569 (ไม่รวมวางแผน)</span><span>2,550.00</span></div><div class="kv"><span>ผูกพันแล้ว</span><span>15,000.00</span></div></div><div><div class="xrow commit"><span class="grow"><span class="val">เงินเดือนผู้จัดการ ต.ค.</span><span class="sub"><span class="dt num">31 ต.ค. 2569</span> · ผู้จ่าย เจ้าของ (ใส่ล่วงหน้า)</span></span><span class="amt">15,000.00<small>ผูกพันแล้ว</small></span></div><div class="xrow plan"><span class="grow"><span class="val">ปุ๋ย รอบ พ.ย.</span><span class="sub"><span class="dt num">15 พ.ย. 2569</span> · สวนจันทเขลม</span></span><span class="amt"><span class="ds ds-unknown">ไม่ทราบ</span><small>วางแผน</small></span></div><div class="xrow actual"><span class="grow"><span class="val">น้ำมันตัดหญ้า</span><span class="sub"><span class="dt num">28 ก.ย. 2569</span> · ผู้จ่าย แดง → สวนต้องคืน</span></span><span class="amt">350.00<small>เกิดจริง</small></span></div><div class="xrow actual"><span class="grow"><span class="val">ซ่อมแซม/อุปกรณ์</span><span class="sub"><span class="dt num">22 ก.ย. 2569</span> · ผู้จ่าย อาจารย์สมหวัง</span></span><span class="amt">400.00<small>เกิดจริง</small></span></div><div class="xrow actual"><span class="grow"><span class="val">ปุ๋ย · ส่วนเจ้าของ</span><span class="sub"><span class="dt num">20 ก.ย. 2569</span> · สร้างจากหนี้ค่าปุ๋ยของแดง</span></span><span class="amt">1,000.00<small>เกิดจริง</small></span></div><div class="xrow actual"><span class="grow"><span class="val">ยาฆ่าหญ้า</span><span class="sub"><span class="dt num">15 ก.ย. 2569</span> · ผู้จ่าย อาจารย์สมหวัง</span></span><span class="amt">800.00<small>เกิดจริง</small></span></div></div></div><div class="foot"><div class="btn btn-primary"><svg class="ic"><use href="#i-plus"/></svg>บันทึกค่าใช้จ่าย</div></div></div></div><figcaption><span class="t">19. ค่าใช้จ่าย — รายการ + กรอง</span>เกิดจริง = ทึบ · ผูกพันแล้ว = มีกรอบ · วางแผน = กรอบเส้นประ ทุกแบบมีป้ายคำ · ยอดเกิดจริงไม่รวมวางแผน · ตัวเลขทั้งหมดเป็นตัวอย่าง (เงินเดือนผู้จัดการ 15,000 จาก FIN-5)<span class="ids">E11-S01 AC3, AC4, AC6, AC8 · FIN-2, FIN-5 · design-system §12.9 ข้อ 9 · D-65</span><ul><li><span class="q">?F4</span><span>ตัวกรองที่วาด (วงจร · หมวด · สวน · เดือน) — AC ไม่ระบุตัวกรอง เป็นข้อเสนอ ใช้ชุดนี้ไหม</span></li><li><span class="q">?F5</span><span>ทางเข้าหน้า "ค่าใช้จ่ายทั้งหมด" อยู่ที่ไหน — วาดไว้จากหน้า "รายการที่ต้องจ่าย" (หน้า 27) เพราะเมนู ☰ ที่ตกลงมีแค่ข้อมูลฟาร์ม/เครื่องนี้/สลับกลุ่ม</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>ค้างใคร</b></span></div><figure class="step" id="s20"><div class="phone long"><div class="screen" aria-label="ค้างใคร"><div class="sbar num"><span>09:10</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ค้างใคร <small class="num">เงินที่สวนต้องคืน</small></h3><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span></div><div class="body"><div class="card"><div class="bal"><span class="lbl">สวนต้องคืนรวม</span><span class="fig">1,550.00<span class="u">บาท</span></span><span class="lbl">2 คน · 3 รายการ</span></div></div><div class="card tight"><div class="row"><span class="tile t-blue"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">อาจารย์สมหวัง</span><span class="sub">2 รายการ · เก่าสุด 15 ก.ย. 2569</span></span><span class="val num">1,200.00</span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">แดง</span><span class="sub">1 รายการ · 28 ก.ย. 2569</span></span><span class="val num">350.00</span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="card"><h4>อาจารย์สมหวัง — เจาะลง</h4><div class="hrow"><span class="grow"><b>ยาฆ่าหญ้า</b><small><span class="dt num">15 ก.ย. 2569</span> · ยอดเดิม 800.00 · <span class="chip ch-warn">ค้าง</span></small></span><span class="amt">800.00</span></div><div class="hrow"><span class="grow"><b>ซ่อมแซม/อุปกรณ์</b><small><span class="dt num">22 ก.ย. 2569</span> · ยอดเดิม 400.00 · <span class="chip ch-warn">ค้าง</span></small></span><span class="amt">400.00</span></div></div><div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span>เงินที่คนกรีดยืมคนอื่นไม่อยู่ที่นี่ — สวนไม่ได้เป็นหนี้ผู้ให้ยืม (ดูในบัญชีหนี้คนงาน)</span></div></div><div class="foot"><div class="btn btn-primary"><svg class="ic"><use href="#i-handcoin"/></svg>บันทึกการคืน</div></div></div></div><figcaption><span class="t">20. หน้า "ค้างใคร"</span>ยอดคงเหลือรวมต่อคน เจาะลงถึงค่าใช้จ่ายต้นทาง · สถานะ ค้าง / คืนบางส่วน / คืนครบ<span class="ids">E11-S02 AC6, AC7 · E11-S03 AC4, AC8 · FIN-1, FIN-4 · D-69</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-69</span><span>ยืมใครคืนคนนั้น — เงินยืมของคนกรีดจากคนอื่นไม่สร้างเงินที่สวนต้องคืน</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>บันทึกการคืน</b></span></div><figure class="step long-step" id="s21"><span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span><div class="phone long"><div class="screen" aria-label="บันทึกการคืน"><div class="sbar num"><span>09:11</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>บันทึกการคืน</h3></div><div class="body"><div class="fld"><span class="flbl">ใครคืนให้ใคร</span><div class="fline"><span class="inp val grow" style="font-size:15px">เงินสวน</span><svg class="ic"><use href="#i-arrow"/></svg><span class="inp val grow" style="font-size:15px">อาจารย์สมหวัง</span></div><span class="fhint" style="margin:0">ผู้คืนเริ่มต้น = เงินสวน · ผู้รับเริ่มต้น = คนที่ต้องได้คืน · แตะเพื่อเปลี่ยน</span></div><div class="fld"><span class="flbl">จำนวน<b class="req">*</b></span><div class="inp" style="justify-content:flex-start">1,000.00<span class="u">บาท</span></div></div><div class="fld"><span class="flbl">วันที่<b class="req">*</b></span><div class="fline"><span class="inp val"><span class="dt num">3 ต.ค. 2569</span></span></div></div><div class="card"><h4>ตัดรายการเก่าสุดก่อน</h4><div class="hrow"><span class="grow"><b>ยาฆ่าหญ้า · <span class="dt num">15 ก.ย.</span></b><small>ค้าง 800.00 → <span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>คืนครบ</span></small></span><span class="amt">800.00</span></div><div class="hrow"><span class="grow"><b>ซ่อมแซม/อุปกรณ์ · <span class="dt num">22 ก.ย.</span></b><small>ค้าง 400.00 → เหลือ 200.00 <span class="chip ch-warn">คืนบางส่วน</span></small></span><span class="amt">200.00</span></div><div class="row"><span class="fc add">เปลี่ยนการตัดเอง</span></div></div><div class="fld"><span class="flbl">หมายเหตุ<span class="fhint">ไม่บังคับ</span></span><div class="fline"><span class="inp text"></span><span class="ds ds-none">ไม่ได้บันทึก</span></div></div></div><div class="foot"><div class="btn btn-primary">บันทึก</div></div></div></div><div class="extras"><div class="inset"><div class="ttl">คืนเกินยอด</div><span class="ferr"><svg class="ic"><use href="#i-alert"/></svg>คืนได้ไม่เกิน 1,200.00 บาท (ยอดคงเหลือของอาจารย์สมหวัง)</span><div class="note">เตือนก่อนบันทึก ไม่บันทึกส่วนเกิน · สองเครื่องคืนพร้อมกันจนเกิน → ติดธงให้เจ้าของตรวจ</div></div></div><figcaption><span class="t">21. บันทึกการคืน</span>ระบุใครคืนให้ใคร · คืนครั้งเดียวหลายรายการของคนเดียวกันได้ ตัดเก่าสุดก่อน เปลี่ยนการตัดเองได้ · คืนเกินยอดคงเหลือไม่ได้<span class="ids">E11-S03 AC1–AC5, AC7 · FIN-4 · D-59, D-67</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-67</span><span>คืนครั้งเดียวหลายรายการได้ ตัดเก่าสุดก่อน (เปลี่ยนการตัดเองได้)</span></li><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-60</span><span>การหักกลบตอนสรุปเงินบันทึกเป็นการคืนอีกรายการ อ้างถึงการขาย — แยกจากการหักหนี้ (หน้าของทีมการขาย)</span></li></ul></figcaption></figure></div></section>
+<section class="sec" id="sec8"><h2>8 · บัญชีหนี้คนงาน</h2><p>บัญชีต่อคนงานข้ามการขาย · หน้าการหักตอนสรุปเงิน (หน้า 17 "หักเงินคืนหนี้") อยู่ใน flow-sale-v1.1.0.html</p><div class="flow"><figure class="step long-step" id="s22"><span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span><div class="phone long"><div class="screen" aria-label="บัญชีหนี้คนงาน"><div class="sbar num"><span>10:00</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>บัญชีหนี้ <small class="num">แดง</small></h3><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span></div><div class="body"><div class="card"><div class="bal"><span class="lbl">ยอดค้างรวม · หนี้ที่ติดสวน</span><span class="fig">3,000.00<span class="u">บาท</span></span><span class="lbl">หักได้ตอนสรุปเงิน ("หักหนี้")</span></div><div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-cal"/></svg></span><span class="grow"><span class="lbl">แผนผ่อน</span><span class="val" style="display:block">1,000.00 บาท ต่อการขาย</span></span><span class="btn btn-secondary small">แก้</span></div></div><div class="card tight"><h4>หนี้กับคนอื่น — แสดงเพื่อดู ไม่หักตอนขาย</h4><div class="row"><span class="tile sm t-gray"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">อาจารย์สมหวัง</span><span class="sub">เงินยืม · ยืมใครคืนคนนั้น</span></span><span class="val num">500.00</span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="card tight"><div class="row"><span class="tile sm t-cream"><svg class="ic"><use href="#i-handcoin"/></svg></span><span class="grow"><span class="val">สวนต้องคืนแดง</span><span class="sub">ค่าน้ำมันตัดหญ้า 28 ก.ย. — ดูใน "ค้างใคร"</span></span><span class="val num">350.00</span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="fld"><span class="flbl">ประวัติ</span><div class="fcs"><span class="fc on">ทั้งหมด</span><span class="fc">เงินยืม/เบิก</span><span class="fc">ค่าปุ๋ย</span><span class="fc">อื่น ๆ</span><span class="fc">หักหนี้ · จ่ายคืน</span></div></div><div class="card tight"><div class="hrow"><span class="grow"><b>เงินยืม/เบิก · ผู้ให้ อาจารย์สมหวัง</b><small><span class="dt num">25 ก.ย. 2569</span> · ไม่นับในยอดที่หักได้</small></span><span class="amt dim2">500.00</span></div><div class="hrow"><span class="grow"><b>ค่าปุ๋ย · 2,000.00 × 50%</b><small><span class="dt num">20 ก.ย. 2569</span> · ปุ๋ยรอบ ก.ย. (ตัวอย่าง) · สร้างค่าใช้จ่ายส่วนเจ้าของ 1,000.00</small></span><span class="amt">+1,000.00</span></div><div class="hrow"><span class="grow"><b>เงินยืม/เบิก · ผู้ให้ เงินสวน</b><small><span class="dt num">10 ก.ย. 2569</span></small></span><span class="amt">+800.00</span></div><div class="hrow"><span class="grow"><b>ยอดยกมา · เงินยืม/เบิก</b><small><span class="dt num">1 ก.ย. 2569</span> · ค้างก่อนเริ่มใช้แอป</small></span><span class="amt">+1,200.00</span></div></div></div><div class="foot"><div class="btnrow"><div class="btn btn-primary"><svg class="ic"><use href="#i-plus"/></svg>เพิ่มหนี้</div><div class="btn btn-secondary"><svg class="ic"><use href="#i-handcoin"/></svg>บันทึกจ่ายคืน</div></div></div></div></div><div class="extras"><div class="inset"><div class="ttl">ตัวเลขชุดเดียวกับ flow การขาย</div><div class="mini-row"><span class="grow">แดง · หนี้ที่ติดสวน</span><b class="num">3,000.00</b></div><div class="mini-row"><span class="grow">แผนผ่อน → เสนอหักต่อการขาย</span><b class="num">1,000.00</b></div><div class="mini-row"><span class="grow">นัด · หนี้</span><b>ไม่มี</b></div><div class="mini-row"><span class="grow">สวนต้องคืนแดง (เสนอหักกลบได้ — D-60)</span><b class="num">350.00</b></div><div class="note">ต้องตรงกับหน้า 17 (สรุปยอดส่วนแบ่ง · "หักเงินคืนหนี้") ของ flow-sale-v1.1.0</div></div></div><figcaption><span class="t">22. บัญชีหนี้คนงาน — ยอดค้างรวม + แผนผ่อน + ประวัติ</span>ยอดค้างรวมก้อนเดียว (หนี้ที่ติดสวน = ยอดยกมา 1,200 + เงินยืม 800 + ค่าปุ๋ย 1,000) · แผนผ่อนเดียว งวดละการขาย · หนี้กับคนอื่นแยกกล่อง ไม่นับในยอดที่หักได้ · ประวัติกรองตามประเภท แต่ละบรรทัดเจาะไปต้นทางได้<span class="ids">E06-S03 AC1, AC2, AC5, AC6, AC7, AC9, AC10, AC11 · FERT-5 · D-54, D-59, D-69 · คำ "หักหนี้" ตรงกับ E06-S04 / หน้า 17 ของ flow การขาย</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-59</span><span>ยอดค้างรวมก้อนเดียว + แผนผ่อนเดียวต่อคน; งวดผ่อนนับต่อการขาย; ประวัติแยกประเภท</span></li><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-69</span><span>เงินยืมจากคนอื่น = แสดงเพื่อดู ตอนสรุปเงินหักได้เฉพาะหนี้ที่ติดสวน</span></li><li><span class="q">?F6</span><span>ยอดยกมา ต้องเลือกประเภทหนี้ด้วยไหม — วาดเป็น "ยอดยกมา · ⟨ประเภท⟩" (ติ๊กในฟอร์มเพิ่มหนี้)</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>เพิ่มหนี้</b></span></div><figure class="step long-step" id="s23"><span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span><div class="phone long"><div class="screen" aria-label="เพิ่มหนี้"><div class="sbar num"><span>10:01</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>เพิ่มหนี้ <small class="num">แดง</small></h3></div><div class="body"><div class="fld"><span class="flbl">ประเภท<b class="req">*</b></span><div class="seg"><span>เงินยืม/เบิก</span><span class="on">ค่าปุ๋ย</span><span>อื่น ๆ</span></div></div><div class="fld"><span class="flbl">ยอดค่าปุ๋ย<b class="req">*</b></span><div class="inp" style="justify-content:flex-start">2,000.00<span class="u">บาท</span></div></div><div class="fld"><span class="flbl">คนงานรับ<span class="fhint">ค่าเริ่มต้น 50%</span></span><div class="seg"><span class="on">50%</span><span>กำหนดเอง</span></div></div><div class="card"><div class="kv"><span>หนี้ของแดง (2,000.00 × 50%)</span><span>1,000.00</span></div><div class="kv"><span>ค่าใช้จ่ายสวน หมวดปุ๋ย · ส่วนเจ้าของ</span><span>1,000.00</span></div></div><div class="banner info"><svg class="ic sm"><use href="#i-receipt"/></svg><span><b>สร้างค่าใช้จ่ายส่วนเจ้าของให้อัตโนมัติ</b>แก้/ลบหนี้นี้ ค่าใช้จ่ายนั้นปรับตาม</span></div><div class="fld"><span class="flbl">วันที่<b class="req">*</b></span><div class="fline"><span class="inp val"><span class="dt num">20 ก.ย. 2569</span></span></div></div><div class="fld"><span class="flbl">หมายเหตุ<span class="fhint">ใช้เทียบตอนมีระบบปุ๋ย</span></span><div class="fline"><span class="inp val">ปุ๋ยรอบ ก.ย. (ตัวอย่าง)</span></div></div><div class="tick" style="min-height:52px"><span class="box"></span><span class="grow">เป็นยอดยกมา<small>ค้างก่อนเริ่มใช้แอป</small></span></div></div><div class="foot"><div class="btn btn-primary">บันทึก</div></div></div></div><div class="extras"><div class="inset"><div class="ttl">ประเภท เงินยืม/เบิก</div><div class="seg"><span class="on">เงินยืม/เบิก</span><span>ค่าปุ๋ย</span><span>อื่น ๆ</span></div><div class="mini-row"><span class="grow">ผู้ให้ยืม</span><div class="fcs"><span class="fc">เงินสวน</span><span class="fc on">อาจารย์สมหวัง</span><span class="fc">คนอื่น ▸</span></div></div><div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span><b>ยืมใครคืนคนนั้น</b>หนี้นี้แสดงเพื่อดูในบัญชี ไม่หักตอนสรุปเงิน — สวนไม่ได้เป็นหนี้ผู้ให้ยืม</span></div><div class="note">"อื่น ๆ" ไม่มีช่องผู้ให้ — ถือเป็นหนี้ที่ติดสวน <span class="q">?F9</span></div></div></div><figcaption><span class="t">23. เพิ่มหนี้ — ค่าปุ๋ย + เลือก %</span>ประเภท เงินยืม/เบิก · ค่าปุ๋ย · อื่น ๆ (อื่น ๆ ต้องมีหมายเหตุ) · ค่าปุ๋ยใส่ยอด + % ที่คนงานรับ → หนี้ = ยอด × % ปัดเป็นสตางค์ · สร้างค่าใช้จ่ายส่วนเจ้าของอัตโนมัติ<span class="ids">E06-S03 AC1, AC3, AC4, AC5, AC12 · E11-S01 · FERT-4 · D-59, D-67</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-67</span><span>หนี้ค่าปุ๋ยที่ใส่เอง → สร้างค่าใช้จ่ายสวน (หมวดปุ๋ย) ส่วนเจ้าของให้อัตโนมัติ</span></li><li><span class="q">?F7</span><span>ค่าใช้จ่ายส่วนเจ้าของที่สร้างอัตโนมัติ ผู้จ่ายคือใคร — วาดเป็น "ไม่ได้บันทึก" (จึงยังไม่สร้างเงินที่ต้องคืนใคร) จนเจ้าของแก้</span></li><li><span class="q">?F8</span><span>% กำหนดเองของค่าปุ๋ย เป็นจำนวนเต็มเหมือนส่วนแบ่งไหม</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กลับบัญชี แตะ <b>บันทึกจ่ายคืน</b></span></div><figure class="step" id="s24"><div class="phone long"><div class="screen" aria-label="บันทึกจ่ายคืน"><div class="sbar num"><span>10:05</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>บันทึกจ่ายคืน <small class="num">แดง</small></h3></div><div class="body"><div class="fld"><span class="flbl">จ่ายคืนหนี้ไหน</span><div class="radio on"><span class="dot"></span><span>หนี้ที่ติดสวน<small>ค้าง 3,000.00</small></span></div><div class="radio"><span class="dot"></span><span>หนี้กับ อาจารย์สมหวัง<small>ค้าง 500.00 · บันทึกว่าคืนแล้ว</small></span></div></div><div class="fld"><span class="flbl">จำนวน<b class="req">*</b></span><div class="inp" style="justify-content:flex-start">500.00<span class="u">บาท</span></div></div><div class="fld"><span class="flbl">วันที่<b class="req">*</b></span><div class="fline"><span class="inp val"><span class="dt num">3 ต.ค. 2569</span></span></div></div><div class="fld"><span class="flbl">หมายเหตุ<span class="fhint">ไม่บังคับ</span></span><div class="fline"><span class="inp text"></span><span class="ds ds-none">ไม่ได้บันทึก</span></div></div><div class="card"><div class="kv total"><span>ยอดค้างหลังบันทึก</span><span>2,500.00</span></div></div><div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span><b>จ่ายคืนนอกการขาย</b>การหักตอนสรุปเงิน ("หักหนี้") บันทึกจากหน้าสรุปยอดส่วนแบ่งของการขาย</span></div></div><div class="foot"><div class="btn btn-primary">บันทึก</div></div></div></div><div class="extras"><div class="inset"><div class="ttl">จ่ายเกินยอดค้าง</div><span class="ferr"><svg class="ic"><use href="#i-alert"/></svg>เกินยอดค้าง (3,000.00 บาท) — ตรวจจำนวนก่อนบันทึก</span><div class="btnrow"><div class="btn btn-secondary small" style="flex:1">แก้จำนวน</div><div class="btn btn-secondary small" style="flex:1">บันทึกต่อ</div></div><div class="note">AC เขียนว่า "เตือนก่อนบันทึก" (ไม่ใช่ห้าม) <span class="q">?F10</span></div></div></div><figcaption><span class="t">24. จ่ายคืนนอกการขาย</span>คนงานจ่ายคืนนอกการขาย: ยอด วันที่ หมายเหตุ · จ่ายเกินยอดค้าง → เตือนก่อนบันทึก · หนี้กับคนอื่น บันทึกว่าคืนแล้ว (ไม่ผ่านเงินสวน) · แก้/ยกเลิกได้ เก็บประวัติ<span class="ids">E06-S03 AC2, AC8, AC10 · E11-S03 AC3 · D-69</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-69</span><span>หนี้กับคนอื่น คนกรีดคืนเอง แล้วบันทึกว่าคืนแล้วในบัญชีหนี้คนงาน (แทน D-67 ข้อ "คืนตรงปิดสองฝั่ง")</span></li></ul></figcaption></figure></div></section>
+<section class="sec" id="sec9"><h2>9 · หน้าแรก</h2><p>เฉพาะสองการ์ดที่ D-65 ผูกกับข้อมูลชุดนี้ — โครงหน้าแรกทั้งหมดอยู่ใน v4 หน้า 3</p><div class="flow"><figure class="step" id="s25"><div class="phone"><div class="screen" aria-label="หน้าแรก ส่วนล่าง"><div class="sbar num"><span>10:30</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-menu"/></svg></span><h3>สวนครอบครัว <small class="num">ส. 3 ต.ค. 2569</small></h3><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span></div><div class="body"><div class="cover" style="height:72px;margin:0"></div><div class="sec-h"><b>ควรรู้ / ควรจัดการ</b></div><div class="card tight"><div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-handcoin"/></svg></span><span class="grow"><span class="lbl">เงินที่ต้องคืน</span><span class="val" style="display:block">สวนต้องคืน 1,550.00 บาท</span><span class="sub">อาจารย์สมหวัง 1,200 · แดง 350</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="sec-h"><b>ไปที่</b></div><div class="mods"><div class="mod"><span class="tile sm t-blue"><svg class="ic"><use href="#i-chart"/></svg></span><span>รายงานการขายย้อนหลัง</span></div><div class="mod"><span class="tile sm t-blue"><svg class="ic"><use href="#i-weather"/></svg></span><span>พยากรณ์อากาศ<small>เปิดภายนอก <svg class="ic"><use href="#i-ext"/></svg></small></span></div><div class="mod wide"><span class="tile sm t-cream"><svg class="ic"><use href="#i-wallet"/></svg></span><span>รายการที่ต้องจ่าย</span><span class="badge">ต้องคืน <b>1,550.00</b>ผูกพัน <b>15,000.00</b></span></div><div class="mod"><span class="tile sm t-green"><svg class="ic"><use href="#i-box"/></svg></span><span>รายการ stock</span></div><div class="mod"><span class="tile sm t-gray"><svg class="ic"><use href="#i-users"/></svg></span><span>ข้อมูลพนักงาน<small>คนกรีด 2</small></span></div></div></div></div></div><figcaption><span class="t">25. หน้าแรก — การ์ด "รายการที่ต้องจ่าย" และ "ข้อมูลพนักงาน"</span>ส่วนล่างของหน้าแรก v4 (ภาพปกย่อไว้) · "รายการที่ต้องจ่าย" = เงินที่สวนต้องคืน (คงเหลือ > 0) + ค่าใช้จ่ายผูกพันแล้ว แสดงสองยอดแยก ไม่บวกรวม · รายการ "เงินที่ต้องคืน" อยู่ในรายการควรรู้ตามลำดับ D-45<span class="ids">E13-S01 (Draft) · E11-S01 AC7 · E11-S02 AC8 · E03-S01 AC7 · ANA-1 · D-45, D-65</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-65</span><span>การ์ด "รายการที่ต้องจ่าย" = เงินที่สวนต้องคืน + ค่าใช้จ่ายที่ผูกพันแล้ว; การ์ด "ข้อมูลพนักงาน" → รายชื่อคนงาน</span></li><li><span class="q">?F11</span><span>การ์ด "รายการที่ต้องจ่าย" แสดงยอดแบบไหน — วาดสองยอดแยก (ต้องคืน · ผูกพัน) เพราะความหมายต่างกัน</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>ข้อมูลพนักงาน</b></span></div><figure class="step" id="s26"><div class="phone"><div class="screen" aria-label="ข้อมูลพนักงาน"><div class="sbar num"><span>10:31</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ข้อมูลพนักงาน</h3><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span></div><div class="body"><div class="fcs"><span class="fc on">คนกรีด</span><span class="fc">ทุกคน</span></div><div class="card tight"><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">แดง</span><span class="sub">3 จุด · 50/50 · หนี้ที่ติดสวน 3,000.00</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">นัด</span><span class="sub">2 จุด · 50/50 · ไม่มีหนี้</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span>แตะชื่อ → หน้าคนงาน (หน้า 6): จุดที่รับผิดชอบ · ส่วนแบ่ง · บัญชีหนี้</span></div></div></div></div><figcaption><span class="t">26. ข้อมูลพนักงาน → รายชื่อคนงาน</span>เปิดมาที่คนกรีด (ข้อมูลส่วนแบ่ง/หนี้มีเฉพาะคนกรีด) สลับเป็นทุกคนได้<span class="ids">E03-S01 AC7 · E06-S03 AC11 · D-65</span><ul><li><span class="q">?F12</span><span>"รายชื่อคนงาน" แสดงเฉพาะคนกรีด หรือทุกคน — วาดค่าเริ่มต้นเป็นคนกรีด สลับได้</span></li></ul></figcaption></figure><div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กลับ แตะ <b>รายการที่ต้องจ่าย</b></span></div><figure class="step" id="s27"><div class="phone"><div class="screen" aria-label="รายการที่ต้องจ่าย"><div class="sbar num"><span>10:32</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>รายการที่ต้องจ่าย</h3><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span></div><div class="body"><div class="card tight"><h4>เงินที่สวนต้องคืน</h4><div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">อาจารย์สมหวัง</span><span class="sub">2 รายการ · ค้าง</span></span><span class="val num">1,200.00</span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">แดง</span><span class="sub">1 รายการ · ค้าง</span></span><span class="val num">350.00</span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="row"><span class="grow lbl">ดูทั้งหมดใน "ค้างใคร"</span><svg class="ic chev"><use href="#i-chev"/></svg></div></div><div class="card"><h4>ค่าใช้จ่ายผูกพันแล้ว</h4><div class="xrow commit"><span class="grow"><span class="val">เงินเดือนผู้จัดการ ต.ค.</span><span class="sub"><span class="dt num">31 ต.ค. 2569</span> · ผู้จ่าย เจ้าของ (ใส่ล่วงหน้า)</span></span><span class="amt">15,000.00<small>ผูกพันแล้ว</small></span></div></div><div class="card tight"><div class="row"><span class="tile sm t-gray"><svg class="ic"><use href="#i-receipt"/></svg></span><span class="grow"><span class="val">ค่าใช้จ่ายทั้งหมด</span><span class="sub">รวมเกิดจริงและวางแผน · กรองได้</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div></div></div></div><figcaption><span class="t">27. รายการที่ต้องจ่าย</span>สองส่วน: เงินที่สวนต้องคืน (คงเหลือ > 0) · ค่าใช้จ่ายผูกพันแล้ว · มีทางไป "ค้างใคร" และ "ค่าใช้จ่ายทั้งหมด"<span class="ids">E11-S02 AC8 · E11-S01 AC7 · E13-S01 · D-65</span><ul><li><span class="q">?F5</span><span>ทางเข้าค่าใช้จ่ายทั้งหมด — ดูหน้า 19</span></li></ul></figcaption></figure></div></section>
+<section class="sec" id="sec10"><h2>10 · ทั่วไป</h2><p>รูปแบบที่ใช้ซ้ำทุกหน้าข้างบน</p><div class="flow"><figure class="step long-step" id="s28"><span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span><div class="phone long"><div class="screen" aria-label="กติกาทั่วไป"><div class="sbar num"><span>11:00</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div><div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>กติกาที่ใช้ทุกหน้า</h3><span class="pill p-conf"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน 1</span></div><div class="body"><div class="card tight"><h4>วันที่ — แตะเพื่อสลับ</h4><div class="row"><span class="grow"><span class="lbl">พ.ศ. (ค่าเริ่มต้น)</span><span class="val num" style="display:block"><span class="dt num">1 ต.ค. 2569</span></span></span><svg class="ic"><use href="#i-swap"/></svg><span class="grow" style="text-align:right"><span class="lbl">แตะแล้ว — ค.ศ.</span><span class="val num" style="display:block"><span class="dt num">1 ต.ค. 2026</span></span></span></div></div><div class="card tight"><h4>ลบ + กู้คืนได้</h4><div class="row"><span class="grow"><span class="val">สวนจันทเขลม</span><span class="sub">ลบแล้ว · <span class="dt num">3 ต.ค. 2569</span> · 4 จุดชั่งกลับมาด้วย</span></span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-undo"/></svg>กู้คืน</span></div><div class="more-hint">บันทึกเก่าแสดงชื่อที่ลบต่อท้าย "(ลบแล้ว)" — ข้อเสนอ <span class="q">?F13</span></div></div><div class="card tight"><h4>ป้าย sync ต่อแถว — เฉพาะ "ขัดกัน"</h4><div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">น้องของเจ้าของ</span><span class="sub">ชื่อ: แสดงค่าก่อนแก้</span></span><span class="chip ch-bad"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span><svg class="ic chev"><use href="#i-chev"/></svg></div><div class="more-hint">รอส่ง/ส่งไม่สำเร็จ ดูที่ตัวบอกภาพรวมบนหัว — ไม่ติดทุกแถว</div></div><div class="card"><h4>ป้ายข้อมูลรายฟิลด์</h4><div class="mini-row"><span class="grow">พื้นที่ / GPS / เงินวางแผน ที่ไม่มีใครรู้</span><span class="ds ds-unknown">ไม่ทราบ</span></div><div class="mini-row"><span class="grow">ฟิลด์ไม่บังคับที่ยังไม่มีใครใส่</span><span class="ds ds-none">ไม่ได้บันทึก</span></div></div></div></div></div><figcaption><span class="t">28. กติกาทั่วไป (ไม่ใช่หน้าจริง — รวมรูปแบบที่ใช้ทุกหน้า)</span>วันที่ พ.ศ. แตะสลับ ค.ศ. (เส้นประใต้วันที่ = แตะได้) · คำ "ลบ" + "กู้คืนได้" · ป้าย sync ต่อแถวเฉพาะ "ขัดกัน" · ป้าย "ไม่ทราบ" (เส้นประ) / "ไม่ได้บันทึก" (พื้นเทา) ไม่แต่งค่าแทน<span class="ids">E03-S01 AC3, AC8, AC9 · E01-S15 · SYNC-3, SYNC-12 · D-65, D-67</span><ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>ตอบแล้ว Q1</span><span>วันที่แสดง พ.ศ. แตะสลับ พ.ศ./ค.ศ. (D-65)</span></li><li><span class="q">?F14</span><span>แตะสลับ พ.ศ./ค.ศ. แล้ว — สลับทุกวันที่ทั้งแอปและจำไว้ หรือเฉพาะหน้าจอนั้นชั่วคราว</span></li></ul></figcaption></figure></div></section>
+<section class="qs" id="map">
+  <h2>ตารางหน้าจอ → story / AC</h2>
+  <p>ทุกหน้าอ้างถึง AC ที่เจ้าของตกลงแล้ว (Ready) ยกเว้นที่เขียนว่า Draft · ตัวเลข ชื่อจุด และชื่อผู้ซื้อทั้งหมดเป็นตัวอย่าง; ชื่อคน/สวน/ไร่มาจาก PRD §2</p>
+  <table class="mapt"><thead><tr><th>หน้าจอ</th><th>story / AC / ข้อตัดสิน</th></tr></thead><tbody><tr><td>1 เมนู ☰</td><td>E03-S01 AC7 · E02-S04 · D-65</td></tr><tr><td>2 ข้อมูลฟาร์ม</td><td>E03-S01 AC7, AC9 · D-65</td></tr><tr><td>3 ตั้งค่าวันขาย + ประเภทตาชั่ง</td><td>E03-S07 (Draft) · D-66 · MD-7, MD-9</td></tr><tr><td>4 คน — รายการ</td><td>E03-S01 AC1, AC2, AC3, AC6, AC9</td></tr><tr><td>5 คน — ฟอร์ม</td><td>E03-S01 AC1, AC2 · D-68</td></tr><tr><td>6 รายละเอียดคนกรีด</td><td>E03-S01 AC7 · E03-S05 AC10 · E03-S06 AC9 · E06-S03 AC11</td></tr><tr><td>7 ลบคนกรีดที่มีจุด</td><td>E03-S01 AC3, AC4</td></tr><tr><td>8 ผู้ซื้อ</td><td>E03-S01 AC5 · MD-6</td></tr><tr><td>9 สวน — รายการ</td><td>E03-S02 AC1, AC2, AC5</td></tr><tr><td>10 สวน — ฟอร์ม</td><td>E03-S02 AC1, AC2, AC6, AC7, AC8</td></tr><tr><td>11 สวน — รายละเอียด + ประวัติพื้นที่</td><td>E03-S02 AC3, AC4, AC5, AC6</td></tr><tr><td>12 ลบสวน</td><td>E03-S02 AC9, AC10 · D-58</td></tr><tr><td>13 โครงสร้างตั้งต้น</td><td>E03-S03 AC5, AC6 · E03-S05 AC6</td></tr><tr><td>14 จุดชั่ง — ชื่อซ้ำ</td><td>E03-S03 AC1, AC3, AC4, AC7</td></tr><tr><td>15 หน้าจุดชั่ง</td><td>E03-S05 AC1–AC5</td></tr><tr><td>16 วางแผนเปลี่ยนคนกรีด</td><td>E03-S05 AC2, AC3, AC7, AC8, AC9</td></tr><tr><td>17 ส่วนแบ่ง</td><td>E03-S06 AC1–AC5, AC9</td></tr><tr><td>18 ค่าใช้จ่าย — ฟอร์ม</td><td>E11-S01 AC1–AC5, AC9 · E11-S02 AC1–AC4</td></tr><tr><td>19 ค่าใช้จ่าย — รายการ</td><td>E11-S01 AC3, AC4, AC6, AC8</td></tr><tr><td>20 ค้างใคร</td><td>E11-S02 AC6, AC7 · E11-S03 AC4, AC8</td></tr><tr><td>21 บันทึกการคืน</td><td>E11-S03 AC1–AC5, AC7</td></tr><tr><td>22 บัญชีหนี้คนงาน</td><td>E06-S03 AC1, AC2, AC5, AC6, AC7, AC9, AC10, AC11</td></tr><tr><td>23 เพิ่มหนี้</td><td>E06-S03 AC1, AC3, AC4, AC5, AC12</td></tr><tr><td>24 จ่ายคืนนอกการขาย</td><td>E06-S03 AC2, AC8, AC10</td></tr><tr><td>25 หน้าแรก — การ์ด</td><td>E13-S01 (Draft) · E11-S01 AC7 · E11-S02 AC8 · E03-S01 AC7</td></tr><tr><td>26 ข้อมูลพนักงาน</td><td>E03-S01 AC7 · E06-S03 AC11</td></tr><tr><td>27 รายการที่ต้องจ่าย</td><td>E11-S01 AC7 · E11-S02 AC8</td></tr><tr><td>28 กติกาทั่วไป</td><td>E03-S01 AC3, AC8, AC9 · E01-S15</td></tr></tbody></table>
+  <p class="not">ไม่ได้วาดในรอบนี้ (มี AC แต่ไม่มีหน้าจอใหม่ หรืออยู่ไฟล์อื่น): หน้าตัดสิน "ขัดกัน" (E01-S11 — v4 หน้า 20) · หน้าสรุปยอดส่วนแบ่ง + "หักเงินคืนหนี้" (E06-S04 — flow-sale-v1.1.0) · ลบจุดที่การขายเปิดอยู่ใช้ (E03-S03 AC8, D-67 — ฝั่งการขาย) · เลื่อนวงจรค่าใช้จ่ายพร้อมประวัติ (E11-S01 AC3) · แก้/ยกเลิกรายการหนี้และการคืน (E06-S03 AC10, E11-S03 AC7) · PeoplePicker ในฟอร์มอื่น (E03-S01 AC6) · โซน (E03-S04 เลื่อนออก — D-64)</p>
+
+  <h3>คำถามที่ยังเปิด</h3>
+  <p>ไม่แต่งความต้องการเอง — ที่ไม่ชัดใช้ทางเลือกที่ปลอดภัยที่สุดในหน้าจอ แล้วจดไว้ที่นี่</p>
+  <ol><li><span class="q">?F1</span><span>ช่อง "โหมดเลขเข่ง" (ค่าเริ่มต้นของกลุ่ม — D-53) อยู่ในหน้าตั้งค่าวันขายด้วยไหม — E03-S07 ยัง Draft (หน้า 3)</span></li><li><span class="q">?F2</span><span>โครงสร้างตั้งต้น: ยังไม่มีคนกรีดชื่อ "แดง"/"นัด" หรือมีชื่อซ้ำ — เลือก/เพิ่มคนในหน้านั้นได้ในขั้นเดียวใช่ไหม (หน้า 13)</span></li><li><span class="q">?F3</span><span>แผนเปลี่ยนคนกรีดที่ตั้งล่วงหน้า แก้หรือยกเลิกได้ก่อนถึงวันไหม (หน้า 15)</span></li><li><span class="q">?F4</span><span>ตัวกรองรายการค่าใช้จ่าย: วงจร · หมวด · สวน · เดือน ใช้ชุดนี้ไหม (หน้า 19)</span></li><li><span class="q">?F5</span><span>ทางเข้า "ค่าใช้จ่ายทั้งหมด" — วาดไว้ใต้ "รายการที่ต้องจ่าย"; ควรอยู่ที่เมนู ☰ หรือที่อื่นด้วยไหม (หน้า 19, 27)</span></li><li><span class="q">?F6</span><span>ยอดยกมา ต้องเลือกประเภทหนี้ด้วยไหม — วาดเป็นติ๊ก "เป็นยอดยกมา" ในฟอร์มเพิ่มหนี้ (หน้า 22–23)</span></li><li><span class="q">?F7</span><span>ค่าใช้จ่ายส่วนเจ้าของที่สร้างจากหนี้ค่าปุ๋ย: ผู้จ่ายคือใคร — วาดเป็น "ไม่ได้บันทึก" จึงยังไม่สร้างเงินที่ต้องคืน (หน้า 23)</span></li><li><span class="q">?F8</span><span>% ที่คนงานรับในหนี้ค่าปุ๋ยแบบกำหนดเอง เป็นจำนวนเต็มเหมือนส่วนแบ่งไหม (หน้า 23)</span></li><li><span class="q">?F9</span><span>หนี้ประเภท "อื่น ๆ" มีผู้ให้ยืมไหม — วาดเป็นหนี้ที่ติดสวนเสมอ ไม่มีช่องผู้ให้ (หน้า 23)</span></li><li><span class="q">?F10</span><span>จ่ายคืนเกินยอดค้าง: AC ว่า "เตือนก่อนบันทึก" — ให้บันทึกต่อได้ (ยอดติดลบ = สวนติดเงินคนงาน) หรือห้าม; วาดเป็นเตือน + เลือกแก้/บันทึกต่อ (หน้า 24)</span></li><li><span class="q">?F11</span><span>การ์ด "รายการที่ต้องจ่าย" บนหน้าแรก แสดงสองยอดแยก (ต้องคืน · ผูกพัน) ใช่ไหม (หน้า 25)</span></li><li><span class="q">?F12</span><span>"รายชื่อคนงาน" จากการ์ดข้อมูลพนักงาน แสดงเฉพาะคนกรีด หรือทุกคน (หน้า 26)</span></li><li><span class="q">?F13</span><span>บันทึกเก่าที่อ้างถึงสิ่งที่ลบแล้ว ต่อท้ายชื่อด้วย "(ลบแล้ว)" ไหม (หน้า 28)</span></li><li><span class="q">?F14</span><span>แตะสลับ พ.ศ./ค.ศ. — สลับทุกวันที่ทั้งแอปและจำไว้ หรือเฉพาะหน้าจอนั้นชั่วคราว (หน้า 28)</span></li><li><span class="q">?19</span><span>(ค้างจาก D-65) ทศนิยมของน้ำหนักเข่ง/ตะกร้าในตั้งค่า — เจ้าของขอตอบทีหลัง (หน้า 3)</span></li></ol>
+</section>
+
+</div>
+</body>
+</html>
