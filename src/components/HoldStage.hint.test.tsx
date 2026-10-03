@@ -73,4 +73,16 @@ describe('HoldStage rotate hint', () => {
     act(() => layoutCount(4, est));
     expect(screen.getByTestId('rotate-hint')).toBeOnTheScreen();
   });
+
+  it('confirms a correction that leaves a height-bound numeral the same size', () => {
+    // A short stage: height binds, so correcting the digit width does not
+    // change the font size and no second count layout ever arrives. The
+    // decision must still be made (CI found the hint stuck hidden here).
+    wrap(<HoldStage count={1186} onCount={jest.fn()} onReject={jest.fn()} caption="c" />);
+    act(() => layoutStage(390, 150));
+    const before = fontSizeOfCount();
+    act(() => layoutCount(4, 0.5));
+    expect(fontSizeOfCount()).toBe(before);
+    expect(screen.getByTestId('rotate-hint')).toBeOnTheScreen();
+  });
 });

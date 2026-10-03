@@ -294,8 +294,14 @@ export function HoldStage({
     if (measured <= 0) return;
     const overflowsStage = box.width > 0 && width > box.width + 0.5;
     const underusesStage = measured < advanceEm * 0.995;
-    if (overflowsStage || underusesStage) setAdvanceEm(measured);
-    else setSizedFor(sizeKey);
+    if (!overflowsStage && !underusesStage) {
+      setSizedFor(sizeKey);
+      return;
+    }
+    setAdvanceEm(measured);
+    // A height-bound numeral keeps its size after the correction, so no new
+    // layout will come to confirm it — confirm now (CI caught this case).
+    if (sizeFor(measured) === fontSize) setSizedFor(sizeKey);
   };
   /**
    * The size the numeral has been CONFIRMED at — set only by a layout that
@@ -330,8 +336,9 @@ export function HoldStage({
    */
   const digits = String(count).length;
   const byHeight = box.height * t.publicNumeral.stageHeightRatio;
-  const byWidth = box.width / (advanceEm * Math.max(1, digits));
-  const fontSize = Math.max(24, Math.min(byHeight, byWidth));
+  const sizeFor = (advance: number) =>
+    Math.max(24, Math.min(byHeight, box.width / (advance * Math.max(1, digits))));
+  const fontSize = sizeFor(advanceEm);
   // Keyed on what the numeral IS, not on the stage: a stage that only grows
   // taller leaves a width-bound numeral unchanged and lays nothing out again.
   const sizeKey = `${digits}|${fontSize}`;
