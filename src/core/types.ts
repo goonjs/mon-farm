@@ -35,7 +35,16 @@ export interface Actor {
   readonly deviceId: DeviceId;
 }
 
-export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys';
+export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys' | 'delete' | 'restore';
+
+/**
+ * Any record an event can create or change: a sale, zone, pile, deduction —
+ * or a basket, whose record id is its own event id.
+ */
+export type RecordId = string;
+
+/** Where a record came from (SYNC-11). Everything is `'app'` until LINE/import/AI exist. */
+export type Source = 'app' | 'line' | 'import' | 'ai';
 
 /**
  * Identity and ordering (E01-S02).
@@ -70,6 +79,7 @@ export interface EventBase {
   readonly ts: number;
   readonly mono: number;
   readonly actor: Actor;
+  readonly source: Source;
 }
 
 /**
@@ -85,7 +95,8 @@ export interface EventBase {
 export interface AcceptEvent extends EventBase {
   readonly kind: 'accept';
   readonly pileId: PileId;
-  readonly source: 'hold' | 'hold-kbd';
+  /** How the basket was entered (renamed from `source` in E01-S04, which is now the envelope's channel). */
+  readonly input: 'hold' | 'hold-kbd';
   readonly netG: number;
   readonly tareG: number;
 }
@@ -115,7 +126,7 @@ export interface ShortEvent extends EventBase {
 export interface RejectEvent extends EventBase {
   readonly kind: 'reject';
   readonly pileId: PileId;
-  readonly source: 'hold' | 'hold-kbd';
+  readonly input: 'hold' | 'hold-kbd';
   readonly reason: 'released-early';
   readonly heldMs: number;
 }
@@ -277,7 +288,31 @@ export interface SysEvent extends EventBase {
   readonly payload: SysPayload;
 }
 
-export type SaleEvent = AcceptEvent | ShortEvent | RejectEvent | CorrectionEvent | SysEvent;
+/**
+ * Soft Delete (SYNC-10, D-27): one rule for every record. Nothing is ever
+ * removed from the log; a `delete` hides `targetId` from normal views and
+ * totals, a later `restore` brings it back exactly as it was. The last of the
+ * two in fold order wins. Not the same as a Cancelled sale, which is a
+ * business outcome and stays listed (E04-S11).
+ */
+export interface DeleteEvent extends EventBase {
+  readonly kind: 'delete';
+  readonly targetId: RecordId;
+}
+
+export interface RestoreEvent extends EventBase {
+  readonly kind: 'restore';
+  readonly targetId: RecordId;
+}
+
+export type SaleEvent =
+  | AcceptEvent
+  | ShortEvent
+  | RejectEvent
+  | CorrectionEvent
+  | SysEvent
+  | DeleteEvent
+  | RestoreEvent;
 
 /** A basket that contributes weight — i.e. not voided. */
 export type BasketEvent = AcceptEvent | ShortEvent;
@@ -335,6 +370,8 @@ export interface Deduction {
 
 export interface SaleState {
   readonly id: SaleId;
+  /** Soft-deleted (SYNC-10): hidden from the sale list, shown under "deleted". */
+  readonly deleted: boolean;
   readonly status: OpenClosed;
   readonly startedTs: number | null;
   readonly parties: {

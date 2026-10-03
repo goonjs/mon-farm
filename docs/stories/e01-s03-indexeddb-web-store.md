@@ -1,6 +1,6 @@
 # Story E01-S03: ที่เก็บข้อมูลบนเว็บ localStorage → IndexedDB
 
-Status: Review
+Status: Done
 
 ## Context
 
@@ -54,7 +54,7 @@ Status: Review
 - [x] IndexedDB ใช้ไม่ได้ → `MemoryStore` + แถบเตือนภาษาไทยบนทุกหน้าจอ; นับต่อได้
 - [x] `npm run verify` ทุกชั้นเขียว (Playwright ผ่าน config ชั่วคราวใน container) + screenshot ของแถบเตือนใน QA notes
 - [x] review อิสระโดย subagent แยก ผลอยู่ใน §Code review
-- [ ] CI เขียวบน PR
+- [x] CI เขียวบน PR (#16)
 
 
 ### การตัดสินใจ / ส่วนที่ต่างจากแผน

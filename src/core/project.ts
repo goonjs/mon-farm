@@ -11,6 +11,7 @@
  */
 
 import { compareEvents } from './order';
+import { deletedIds } from './soft-delete';
 import type {
   Deduction,
   OpenClosed,
@@ -30,6 +31,7 @@ const IMPLAUSIBLE_JUMP_MS = 6 * 60 * 60 * 1000;
 export function emptySale(id: string): SaleState {
   return {
     id,
+    deleted: false,
     status: 'open',
     startedTs: null,
     parties: null,
@@ -96,7 +98,9 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
       if (p) p.locked = true;
       continue;
     }
-    if (e.kind === 'reject' || e.kind === 'correction') continue;
+    if (e.kind === 'reject' || e.kind === 'correction' || e.kind === 'delete' || e.kind === 'restore') {
+      continue;
+    }
 
     const { payload } = e as SysEvent;
 
@@ -266,23 +270,30 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
     }
   }
 
+  // Soft-deleted records are hidden, never removed: restoring one brings it
+  // back exactly as the fold left it. A deleted zone hides its piles too.
+  const deleted = deletedIds(events);
+  const zoneGone = (zid: ZoneId) => deleted.has(zid);
+  const pileGone = (p: MutPile) => deleted.has(p.id) || zoneGone(p.zoneId);
+
   return {
     id,
+    deleted: deleted.has(id),
     status,
     startedTs,
     parties,
     price,
     split,
-    zones: [...zones.values()].map(
+    zones: [...zones.values()].filter((z) => !zoneGone(z.id)).map(
       (z): Zone => ({
         id: z.id,
         name: z.name,
         status: z.status,
-        pileIds: [...z.pileIds],
+        pileIds: z.pileIds.filter((pid) => !deleted.has(pid)),
         contract: z.contract,
       }),
     ),
-    piles: [...piles.values()].map(
+    piles: [...piles.values()].filter((p) => !pileGone(p)).map(
       (p): Pile => ({
         id: p.id,
         zoneId: p.zoneId,
@@ -297,7 +308,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
     ),
     clockSuspect,
     speechOn,
-    deductions: [...deductions.values()],
+    deductions: [...deductions.values()].filter((d) => !deleted.has(d.id)),
   };
 }
 

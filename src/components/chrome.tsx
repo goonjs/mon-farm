@@ -165,12 +165,15 @@ export function Button({
   variant = 'ghost',
   disabled,
   testID,
+  accessibilityLabel,
 }: {
   children: React.ReactNode;
   onPress?: () => void;
   variant?: 'primary' | 'ghost' | 'destructive';
   disabled?: boolean;
   testID?: string;
+  /** When the visible text alone does not say what the button acts on. */
+  accessibilityLabel?: string;
 }) {
   const t = useTheme();
   const styles = {
@@ -182,6 +185,7 @@ export function Button({
   return (
     <Pressable
       testID={testID}
+      accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       onPress={onPress}
       disabled={disabled}
