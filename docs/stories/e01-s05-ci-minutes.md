@@ -21,7 +21,7 @@ Status: In Progress
 - [ ] e2e ใช้ `dist/` ที่ verify build ไว้ (artifact) ไม่ build ซ้ำ
 - [ ] cache Playwright browsers ตามเวอร์ชันใน lockfile; รอบที่ cache hit ไม่ดาวน์โหลดใหม่
 - [ ] trigger ยังเป็น `push: [dev, main]` + `pull_request` (PR รันครั้งเดียว; merge เข้า dev/main ตรวจซ้ำ)
-- [ ] ประเมิน bun: เทียบเวลา install กับ `npm ci` บน runner, ตรวจ dependency tree + `trustedDependencies`, เขียนข้อเสนอใน Dev notes
+- [x] ประเมิน bun: เทียบเวลา install กับ `npm ci` บน runner, ตรวจ dependency tree + `trustedDependencies`, เขียนข้อเสนอใน Dev notes — ปิดโดย ADR 0002 — เจ้าของเลือกคง npm (2026-10-03)
 - [ ] บันทึกนาที CI ก่อน/หลัง (median 3 รอบ) ใน Dev notes
 
 ## Offline / sync behavior
@@ -96,8 +96,8 @@ median PR เอกสารล้วน = **5.3 นาที → คิดเ�
   และ Expo CLI/Metro ยังอ้าง npm เป็นหลัก
 - ยังไม่ได้วัดบน runner จริง (ต้องติดตั้ง bun = ต้องขออนุมัติ) — **ข้อเสนอ: ยังไม่เปลี่ยน**;
   ถ้าต้องการตัวเลขจริง เปิด story แยกพร้อมขอ dependency gate
-- **ส่วนต่างจาก AC:** AC ข้อ bun ขอ "เทียบเวลา install บน runner" ซึ่งยังไม่ได้วัด — รอเจ้าของตัดสิน
-  (ถามผ่าน lead แล้ว 2026-10-02) ว่ายอมรับการประเมินจาก lockfile หรือให้ขอ gate ติดตั้ง bun เพื่อวัดจริง
+- **ส่วนต่างจาก AC:** ไม่ได้วัดเวลา install ของ bun บน runner ใน story นี้ — เจ้าของตัดสิน 2026-10-03
+  ให้คง npm และปิดเรื่อง bun ด้วย ADR 0002 (POC bun ทำใน session อื่น)
 
 ### หลัง review รอบ 1
 
