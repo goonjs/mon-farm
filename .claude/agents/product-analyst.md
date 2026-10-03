@@ -49,3 +49,8 @@ tools: Read, Grep, Glob, Bash
   hide easily inside question tables — check each option, not just each
   question; (3) UI tied to a sync phase (e.g. empty list during first
   download) can enable duplicate creates.
+- 2026-10-03 — Reviewed UX flow doc E04 (MF-21), 17 findings. Lessons: (1)
+  recount every "≤ N taps" path in the wireframes — menus hide extra taps;
+  (2) a worked example in a wireframe must satisfy the doc's own definitions
+  (six-value example contradicted them); (3) one-way offline channels (QR)
+  give the sender no acknowledgement — flag any copy that assumes it does.
