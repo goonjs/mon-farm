@@ -35,7 +35,7 @@
 - [ ] Authorized domains: โดเมน `*.web.app` / `*.firebaseapp.com` ของทั้ง 2 site
   (preview channel ใช้ subdomain ของ site dev)
 
-## 6. OAuth client (E02-S01) — หลังมี keystore (คำถาม D1)
+## 6. OAuth client (E02-S01) — หลังมี keystore (D1: เจ้าของสร้างในเครื่องตัวเอง เก็บเป็น GitHub secret — E01-S06)
 
 - [ ] Web client: Firebase สร้างให้อัตโนมัติเมื่อเปิด Google provider — จด client ID
 - [ ] Android app: package name `TBD` (ทีม platform จะเสนอใน E01-S06) + SHA-1 ของ keystore ที่ใช้เซ็น

@@ -47,6 +47,10 @@ Firestore database `dev` + bucket ของ dev, ข้อมูลทดสอ�
 
 ## Dev notes
 
+### Checklist เจ้าของ
+
+ขั้นตอนตั้งค่า Firebase (โปรเจกต์เดียว, D-34) อยู่ที่ `docs/runbooks/firebase-setup.md`
+
 ## Code review
 
 ## QA notes
