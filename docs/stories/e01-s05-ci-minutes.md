@@ -38,6 +38,7 @@ Status: Ready
 
 - อนุมัติ push ของ PR ทดสอบแต่ละครั้ง
 - ปรับ branch protection (required checks) ให้ตรงชื่อ job ใหม่ — เป็นการตั้งค่าบัญชี เจ้าของทำ
+- D8 (ตัดสินแล้ว 2026-10-03): **เพิ่ม `changes` เป็น required check ใน branch protection หลัง PR CI-minutes ของ platform merge แล้ว** — เจ้าของเป็นคนตั้งค่า
 - ถ้าจะเปลี่ยนไปใช้ bun จริง: เป็นการเปลี่ยนตัวติดตั้ง → ผ่าน gate dependency แยก story
 
 ## Verification
@@ -49,3 +50,8 @@ Status: Ready
 ## Code review
 
 ## QA notes
+
+## คำถามเจ้าของ
+
+**คำตอบเจ้าของ (2026-10-03):**
+- D8 → **เพิ่ม `changes` เป็น required check หลัง PR CI-minutes (story นี้) merge** — เจ้าของตั้งค่าเอง
