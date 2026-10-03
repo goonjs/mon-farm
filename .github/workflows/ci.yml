@@ -113,6 +113,23 @@ jobs:
       - name: Component tests
         run: npm run test:ui
 
+      # Firestore security rules on the emulator (E01-S08). The emulator is a
+      # Java program (firebase-tools needs JDK 21+) and a ~60 MB download, so
+      # both the JDK and the JAR are cached.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cache Firestore emulator
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Firestore rules tests
+        run: npm run test:rules
+
       # Doubles as the build gate: a bundling failure exits non-zero here rather
       # than turning into a blank screenshot in the e2e job.
       - name: Build web
