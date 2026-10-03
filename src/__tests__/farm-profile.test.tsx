@@ -136,6 +136,7 @@ describe('FarmProfileScreen', () => {
       ts: Date.now(),
       mono: 1,
       actor: { userId: 'user-test', deviceId: 'dev-old' },
+      source: 'app',
       kind: 'sys',
       payload: { t: 'zone_added', zoneId: 'zone-x', name: 'โซนเก่า' },
     });
@@ -147,6 +148,7 @@ describe('FarmProfileScreen', () => {
       ts: Date.now(),
       mono: 2,
       actor: { userId: 'user-test', deviceId: 'dev-old' },
+      source: 'app',
       kind: 'sys',
       payload: { t: 'pile_added', pileId: 'pile-x', zoneId: 'zone-x', name: 'กองเก่า', tareG: 2000, stdNetG: 50000 },
     });

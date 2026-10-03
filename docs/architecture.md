@@ -234,6 +234,12 @@ event มีสองตระกูล และ registry ใน `src/core/merg
 (`src/store/device-clock.ts`) ไม่ใช่ต่อหน้าจอการขาย `userId` เป็นค่าแทน
 `'pre-login'` จนกว่า E02-S01 จะมี login (`src/store/session.ts`) เว็บเป็น IndexedDB ตั้งแต่ E01-S03
 
+**Soft Delete + provenance (E01-S04)**: event `delete` / `restore` ชี้ `targetId` ใดก็ได้ (การขาย, โซน, กอง, รายการหัก,
+เข่ง = id ของ event เข่ง) ตัดสินด้วย event ล่าสุดตามลำดับ fold (`src/core/soft-delete.ts`) — ยังไม่มี `baseEventId`/DAG
+(E01-S11 จะแทนกฎ "ล่าสุดชนะ" นี้ด้วย Conflict เมื่อสองเครื่องลบ/กู้คืนพร้อมกัน) ลบโซน = ซ่อนกองและเข่งในโซนด้วย envelope
+ได้ฟิลด์ `source` (`'app'` ตอนนี้) ตามแบบด้านบน และฟิลด์วิธีป้อนของเข่ง (`hold`/`hold-kbd`) เปลี่ยนชื่อจาก `source`
+เป็น `input` เพื่อไม่ชนกัน
+
 **UUIDv7 (RFC 9562, เจ้าของเลือก 2026-10-03)**: เป็นมาตรฐาน IETF (ULID ไม่ใช่) id ที่สร้างใกล้เวลากันเรียงใกล้กัน
 ทำให้ index ของ SQLite/IndexedDB มี locality ดีและ debug ง่าย เขียน generator เองราว 20 บรรทัดใน
 `src/lib/id.ts` ไม่ต้องใช้ library uuid **ห้ามใช้ส่วนเวลาใน id เรียงหรือตัดสินอะไร** เพราะมาจากนาฬิกาเครื่อง

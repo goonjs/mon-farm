@@ -19,9 +19,10 @@ describe('device clock — one counter for every screen (E01-S02 AC3)', () => {
       ts: 0,
       mono: 0,
       actor: { userId: 'u', deviceId },
+      source: 'app',
       kind: 'accept',
       pileId: 'p1',
-      source: 'hold',
+      input: 'hold',
       netG: 50_000,
       tareG: 2_000,
     });

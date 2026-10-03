@@ -24,31 +24,27 @@ import {
 
 import { detectClockAnomaly, projectSale } from '../core/project';
 import type { Actor, SaleEvent, SaleState, SysPayload } from '../core/types';
-import { uuidv7 } from '../lib/id';
-import { createDeviceClock } from './device-clock';
-import { PRE_LOGIN_USER_ID } from './session';
+import { actorNow, nextSeq, stamp as envelope } from './record';
 // Bare specifier, not './store.web' — Metro resolves this to store.native.ts
 // on iOS/Android and store.web.ts on web. A literal '.web' import here would
 // silently pull the localStorage adapter into native builds too, which is
 // exactly the least-durable path NFR-1 exists to avoid.
 import { store } from './store';
 
-/** Shared by every provider — see device-clock.ts for why it cannot be per sale. */
-const deviceClock = createDeviceClock(store);
-
 /** Every event minus the fields the provider stamps. */
 type NewEvent =
-  | { kind: 'accept'; pileId: string; source: 'hold' | 'hold-kbd'; netG: number; tareG: number }
+  | { kind: 'accept'; pileId: string; input: 'hold' | 'hold-kbd'; netG: number; tareG: number }
   | { kind: 'short'; pileId: string; readingG: number; tareG: number }
   | {
       kind: 'reject';
       pileId: string;
-      source: 'hold' | 'hold-kbd';
+      input: 'hold' | 'hold-kbd';
       reason: 'released-early';
       heldMs: number;
     }
   | { kind: 'correction'; pileId: string; targetId: string; mode: 'undo-last' | 'void'; reason: string }
-  | { kind: 'sys'; payload: SysPayload };
+  | { kind: 'sys'; payload: SysPayload }
+  | { kind: 'delete' | 'restore'; targetId: string };
 
 interface SaleContextValue {
   saleId: string;
@@ -57,6 +53,12 @@ interface SaleContextValue {
   ready: boolean;
   append: (e: NewEvent) => void;
   reset: () => void;
+  /**
+   * Re-reads the log from the store and merges it in by event id. For when
+   * something outside this provider wrote to the sale (the sale list deleting
+   * it, the deleted screen restoring it) while this provider stayed mounted.
+   */
+  refresh: () => Promise<void>;
 }
 
 const SaleContext = createContext<SaleContextValue | null>(null);
@@ -76,9 +78,9 @@ export function SaleProvider({ saleId, children }: { saleId: string; children: R
       // No seeding: a sale with no events is a real, legitimate state (one
       // that hasn't been set up yet), not a placeholder waiting to be filled
       // by demo data. See docs/stories/s17-remove-seed-and-sale-list.md.
-      const [loaded, deviceId] = await Promise.all([store.load(saleId), deviceClock.load()]);
+      const [loaded, who] = await Promise.all([store.load(saleId), actorNow()]);
       if (live) {
-        actor.current = { userId: PRE_LOGIN_USER_ID, deviceId };
+        actor.current = who;
         eventsRef.current = loaded;
         setEvents(loaded);
         setReady(true);
@@ -97,18 +99,7 @@ export function SaleProvider({ saleId, children }: { saleId: string; children: R
     const prev = eventsRef.current;
     const last = prev.length ? prev[prev.length - 1] : null;
     const ts = Date.now();
-    // Monotonic, for interval evidence (FR-12.4). Survives a wall clock that
-    // jumps; deliberately a different field from `ts`, which is untrusted.
-    const mono = Math.round(typeof performance !== 'undefined' ? performance.now() : Date.now());
-    const stamp = (seq: number) => ({
-      id: uuidv7(),
-      saleId,
-      seq,
-      deviceSeq: deviceClock.take(),
-      ts,
-      mono,
-      actor: who,
-    });
+    const stamp = (seq: number) => ({ ...envelope(saleId, seq, who), ts });
 
     const out: SaleEvent[] = [...prev];
 
@@ -132,6 +123,18 @@ export function SaleProvider({ saleId, children }: { saleId: string; children: R
     for (const e of out.slice(prev.length)) void store.append(e).catch(logAppendFailure);
   }, [saleId]);
 
+  const refresh = useCallback(async () => {
+    const stored = await store.load(saleId);
+    const known = new Set(eventsRef.current.map((e) => e.id));
+    const fresh = stored.filter((e) => !known.has(e.id));
+    if (!fresh.length) return;
+    // Keeps events still being written (fire-and-forget) that the store has
+    // not returned yet; adds what others wrote.
+    const merged = [...eventsRef.current, ...fresh];
+    eventsRef.current = merged;
+    setEvents(merged);
+  }, [saleId]);
+
   const reset = useCallback(() => {
     eventsRef.current = [];
     setEvents([]);
@@ -142,16 +145,11 @@ export function SaleProvider({ saleId, children }: { saleId: string; children: R
   const state = useMemo(() => projectSale(events, saleId), [events, saleId]);
 
   const value = useMemo<SaleContextValue>(
-    () => ({ saleId, events, state, ready, append, reset }),
-    [saleId, events, state, ready, append, reset],
+    () => ({ saleId, events, state, ready, append, reset, refresh }),
+    [saleId, events, state, ready, append, reset, refresh],
   );
 
   return <SaleContext.Provider value={value}>{children}</SaleContext.Provider>;
-}
-
-/** The next per-sale position, as this device sees the log. */
-function nextSeq(events: readonly SaleEvent[]): number {
-  return events.reduce((max, e) => Math.max(max, e.seq), 0) + 1;
 }
 
 function logAppendFailure(err: unknown): void {

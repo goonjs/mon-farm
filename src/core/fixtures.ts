@@ -54,6 +54,7 @@ export class LogBuilder {
       ts: this.ts,
       mono: this.mono,
       actor: { userId: 'user-somchai', deviceId: this.deviceId },
+      source: 'app' as const,
     };
   }
 
@@ -85,7 +86,7 @@ export class LogBuilder {
 
   /** A standard basket. Weights in grams. */
   accept(pileId: string, netG = 50_000, tareG = 2_000): this {
-    this.events.push({ ...this.base(), kind: 'accept', pileId, source: 'hold', netG, tareG });
+    this.events.push({ ...this.base(), kind: 'accept', pileId, input: 'hold', netG, tareG });
     return this;
   }
 
@@ -100,7 +101,7 @@ export class LogBuilder {
       ...this.base(),
       kind: 'reject',
       pileId,
-      source: 'hold',
+      input: 'hold',
       reason: 'released-early',
       heldMs,
     });
@@ -155,6 +156,17 @@ export class LogBuilder {
       kind: 'sys',
       payload: { t: 'deduction_voided', deductionId, reason },
     });
+    return this;
+  }
+
+  /** Soft-deletes any record (named `remove` because `delete` reads badly as a method). */
+  remove(targetId: string): this {
+    this.events.push({ ...this.base(), kind: 'delete', targetId });
+    return this;
+  }
+
+  restore(targetId: string): this {
+    this.events.push({ ...this.base(), kind: 'restore', targetId });
     return this;
   }
 
@@ -239,6 +251,11 @@ export function readyPile(b: LogBuilder, pileId: string, tareG = 2_000): LogBuil
  * real, per-test sale id instead of the fixture's internal default.
  */
 export function workedExample(saleId?: string): SaleEvent[] {
+  return workedExampleLog(saleId).build();
+}
+
+/** The worked example as a builder, for tests that keep appending to it. */
+export function workedExampleLog(saleId?: string): LogBuilder {
   const b = setUpSale(new LogBuilder(saleId));
   withZoneContract(b, 'zA', 'person-prayuth', 'ประยุทธ', 50);
   withZoneContract(b, 'zB', 'person-manop', 'มานพ', 50);
@@ -261,5 +278,5 @@ export function workedExample(saleId?: string): SaleEvent[] {
   b.sys({ t: 'zone_closed', zoneId: 'zB', forcedPiles: [] });
 
   b.sys({ t: 'sale_closed' });
-  return b.build();
+  return b;
 }

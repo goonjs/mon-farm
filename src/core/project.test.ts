@@ -157,6 +157,7 @@ describe('sale lifecycle — the hard boundary', () => {
       ts: last.ts + 1000,
       mono: last.mono + 1000,
       actor: last.actor,
+      source: 'app',
       kind: 'sys',
       payload: { t: 'sale_reopened', reason: 'buyer disputes กอง 2' },
     });
@@ -320,9 +321,9 @@ describe('deductions (S29) — projected, voided by mark not removal', () => {
 
 describe('clock anomalies (FR-12.6) — flagged, never ordering', () => {
   const ev = (ts: number) =>
-    ({ id: 'e1', saleId: 's', seq: 1, deviceSeq: 1, ts, mono: 0, actor: { userId: 'u', deviceId: 'd' },
+    ({ id: 'e1', saleId: 's', seq: 1, deviceSeq: 1, ts, mono: 0, actor: { userId: 'u', deviceId: 'd' }, source: 'app',
        kind: 'reject', pileId: 'p',
-       source: 'hold', reason: 'released-early', heldMs: 1 }) as const;
+       input: 'hold', reason: 'released-early', heldMs: 1 }) as const;
 
   it('detects the clock going backwards', () => {
     expect(detectClockAnomaly(ev(2000), 1000, null)?.anomaly).toBe('backwards');

@@ -120,12 +120,12 @@ export default function CounterScreen() {
   const nextCount = (totals?.baskets ?? 0) + 1;
 
   const onCount = () => {
-    append({ kind: 'accept', pileId: pile.id, source: 'hold', netG: pile.stdNetG, tareG: pile.tareG });
+    append({ kind: 'accept', pileId: pile.id, input: 'hold', netG: pile.stdNetG, tareG: pile.tareG });
     if (speechOn) announceCount(nextCount, speaker, append);
   };
 
   const onReject = (heldMs: number) =>
-    append({ kind: 'reject', pileId: pile.id, source: 'hold', reason: 'released-early', heldMs });
+    append({ kind: 'reject', pileId: pile.id, input: 'hold', reason: 'released-early', heldMs });
 
   const doUndo = () => {
     if (!lastBasket) return;
@@ -924,6 +924,10 @@ function describe(
       };
     case 'sys':
       return { mark: '·', colour: t.color.inkSoft, body: sysLabel(e.payload, msg) };
+    case 'delete':
+      return { mark: '·', colour: t.color.inkSoft, body: msg('log.deleted') };
+    case 'restore':
+      return { mark: '·', colour: t.color.inkSoft, body: msg('log.restored') };
   }
 }
 
