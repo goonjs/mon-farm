@@ -87,14 +87,14 @@ review อิสระโดย subagent แยก (2026-10-03) ตาม checkl
 | 2 | should-fix | event ก่อน E01-S04 ไม่มี `source` ของ envelope / เข่งใช้ `source` เป็นวิธีป้อน | แก้: `provenance` อ่านเป็น `'app'` + เทสต์ (log บน dev เท่านั้น ไม่ upgrade) |
 | 3 | should-fix | ปุ่มลบไม่บอกว่าลบรายการไหนกับ screen reader | แก้: `Button.accessibilityLabel` = "ลบ {ชื่อ}"; ปุ่มสูง 40 < 48 ของ design system เป็นของเดิม — ไม่แก้ใน story นี้ |
 | 4 | should-fix | ลบ/กู้คืนล้มเงียบ | แก้: catch + log |
-| 5 | should-fix | ลบโซนแล้วรายการหักของคนกรีดโซนนั้นยังอยู่ → payout ติดลบ | ตรึงพฤติกรรมด้วยเทสต์ (รายการหักเป็น record ของมันเอง หน้าสรุปเงินแสดงยอดติดลบอยู่แล้ว) — แจ้งเจ้าของใน DONE |
+| 5 | should-fix | ลบโซนแล้วรายการหักของคนกรีดโซนนั้นยังอยู่ → payout ติดลบ | กลับทางโดย D-44 — ดูหมายเหตุด้านล่าง |
 | nit | | `touches()` ขาด `forcedPiles`; delete id ที่ไม่เคยสร้าง; `deletedIds` sort ทั้ง log; ข้อความอังกฤษ Title Case; แถวที่ลบแล้วไม่มีสถานะ | แก้ทั้งหมด + เทสต์ provenance ทุกชนิดรายการ |
 | nit | | ข้อความ log ไม่บอกว่าลบอะไร; ชื่อ `stamp`/`Stamp` ซ้ำความหมาย; ไม่มี jest ของลบสองขั้นในรายการ | เลื่อน: Playwright ครอบลบสองขั้นแล้ว; ข้อความ log ทำพร้อม UI ลบรายการย่อย (E03/E04) |
 
 **อัปเดตหลัง Done — คำตอบเจ้าของ (2026-10-03) D6 (D-44):** ข้อ 5 กลับทาง — ลบโซน/สวนที่ยังมีรายการหักเงินของคนกรีด
-ต้อง **ไม่ให้ลบ จนกว่าจะยกเลิก (void) รายการหักก่อน** เทสต์ที่ตรึงพฤติกรรมเดิม `src/core/soft-delete.test.ts`
-("deleting a zone does not delete deductions against its worker") ต้องเปลี่ยนเป็น "ลบไม่ได้" ใน story ที่ทำ D-44
-(E03-S02 สวน / E03-S04 โซน) — story นี้ไม่เปิดใหม่
+ต้อง **ไม่ให้ลบ จนกว่าจะยกเลิก (void) รายการหักก่อน** กติกาใน core (`src/core/delete-guard.ts`, ตรวจทุกทางเขียน) และเทสต์ที่แทน
+เทสต์เดิม ("deleting a zone does not delete deductions against its worker") ทำใน **E01-S16**; หน้าจอลบโซน/สวน
+(E03-S04 / E03-S02) ใช้กติกานั้น — story นี้ไม่เปิดใหม่
 
 ## QA notes
 
