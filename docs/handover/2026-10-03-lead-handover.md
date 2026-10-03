@@ -26,7 +26,7 @@
   แล้วตั้ง repo **Variables** `GCP_WORKLOAD_IDENTITY_PROVIDER` และ `GCP_SERVICE_ACCOUNT` (ห้ามสร้าง key)
   - ขวาง: MF-07 (Hosting + preview ต่อ PR), MF-08 deploy rules ขึ้น `firestore:dev`, แล้วต่อด้วย MF-09/11 (login, sync)
   - ตอนนี้ job `preview` ถูกข้าม (#39) และ CI ขึ้นข้อความ "PR preview off" จนกว่าจะตั้งครบ
-  - ตอบ: `H1 เสร็จแล้ว` เมื่อทำเสร็จ
+  - อัปเดต 16:04Z: job `preview` ของ #41 รันและผ่าน (deploy preview สำเร็จ) แปลว่าตั้ง WIF แล้ว — เจ้าของยืนยัน `H1 เสร็จแล้ว` แล้ว lead ใหม่เริ่ม MF-07 / deploy rules ได้
 - **H2 ลบ branch ที่ merge แล้ว** (~33 อัน ทั้ง `claude/mf-*` และ `docs/*` เก่า) + เปิด "Automatically delete head branches" ใน Settings
   - a. ลบ + เปิด ✅ · b. ยังไม่ลบ
   - lead ใหม่ต้องเช็กว่าแต่ละ branch มี PR ที่ merge แล้วก่อนลบ และลบเฉพาะเมื่อเจ้าของตอบ a
@@ -70,10 +70,9 @@
 
 ## สถานะ (2026-10-03 ปลายวัน)
 
-**merge เข้า `dev` แล้ว (วันนี้):** #29 CLAUDE.md delegation · #30 CI ประหยัดนาที · #33/#37 คำตอบเจ้าของ (D-40…D-46) · #34 กันลบเขต · #35 Firestore rules (เจ้าของ) · #36 CI push ต่อ commit · #38 runbook WIF · #39 ข้าม preview จนตั้ง WIF · #40 mockup v4 · #42 Android package + keystore (เจ้าของ)
+**merge เข้า `dev` แล้ว (วันนี้):** #29 CLAUDE.md delegation · #30 CI ประหยัดนาที · #33/#37 คำตอบเจ้าของ (D-40…D-46) · #34 กันลบเขต · #35 Firestore rules (เจ้าของ) · #36 CI push ต่อ commit · #38 runbook WIF · #39 ข้าม preview จนตั้ง WIF · #40 mockup v4 · #42 Android package + keystore (เจ้าของ) · #41 contract test บน IndexedDB (E01-S03 AC2)
 
 **ค้างอยู่:**
-- #41 `test(store)` contract บน IndexedDB (E01-S03 AC2, ทีม sync) — draft, ยังไม่มี CI; ต้อง merge `dev` เข้าใหม่ (lockfile เปลี่ยนจาก #35) → CI เขียว → merge
 - MF-15 / E01-S13 font Noto Sans Thai + ไอคอน Feather — draft #45 (กู้จากเครื่องทีม UX แล้ว) · เจ้าของต้องเลือก: ไอคอน FarmMate แทน Feather ไหม · ลบไฟล์ template expo-symbols ที่ไม่ใช้ไหม; ยังไม่ได้ทดสอบบน Android จริง
 - MF-17 / E01-S15 ป้ายสถานะข้อมูล — เหลือไอคอน รอ MF-15
 - Story status ที่ต้องอัปเดต: E01-S05 → Done · E01-S16 → Done (#34; #41 ทำให้) · E01-S08 → Done เมื่อ deploy rules แล้ว
