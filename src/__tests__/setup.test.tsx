@@ -50,6 +50,12 @@ jest.mock('../store/store', () => {
         return [];
       },
       async markSynced() {},
+      async device() {
+        return { deviceId: 'dev-test', nextDeviceSeq: 1 };
+      },
+      async isDurable() {
+        return true;
+      },
     },
   };
 });

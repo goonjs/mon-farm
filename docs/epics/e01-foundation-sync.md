@@ -12,12 +12,13 @@ PRD: SYNC, NFR-2/3/5/6 · architecture.md หัวข้อ "2026-10-02 Directi
 - Firebase โปรเจกต์ dev + prod (Blaze, budget alert, asia-southeast1)
 - Firestore: event เป็นเอกสารแก้ไม่ได้, rules ให้สร้างอย่างเดียว, แยกข้อมูลตามกลุ่มฟาร์ม
 - outbox ส่งขึ้น + snapshot ดึงลง; sync อัตโนมัติเมื่อมีเน็ต; retry อัตโนมัติ
-- สถานะต่อรายการ + ภาพรวม: Synced / Pending Sync / Conflict; ปุ่มลองใหม่เมื่อ error
+- สถานะต่อการขาย + ภาพรวม: Synced / Pending Sync / Conflict; ปุ่มลองใหม่เมื่อ error
 - ตรวจจับ conflict (แก้ซ้อนบนฐานเดียวกัน) + หน้าจอให้เลือก
-- ลบแบบกู้คืนได้ (Soft Delete) / กู้คืน เป็น event; เก็บที่มาของข้อมูล
+- ลบแบบกู้คืนได้ (Soft Delete) / กู้คืน เป็น event ใช้กับทุกรายการ; เก็บที่มาของข้อมูล
+- สถานะข้อมูลรายฟิลด์ 6 แบบ (SYNC-12): type กลาง + ป้ายไทย + component ป้ายตัวเดียว (E01-S15); การใช้ในหน้าจออยู่ใน story ที่ต้องใช้
 - คิวรูป/วิดีโอ → Cloud Storage
 - CI: รันเฉพาะ push main + PR, เอกสารล้วนข้าม, verify → e2e → preview, cache browser
-- Cloud Run preview ต่อ PR; ลบเมื่อปิด PR + ลบเองหลัง 7 วัน; เก็บ image ไม่เกิน 2 / 30 วัน
+- Firebase Hosting preview channel ต่อ PR (โปรเจกต์ dev); หมดอายุ 7 วัน + ลบเมื่อปิด PR (ADR 0001)
 - รันบน Android จริงครั้งแรก (dev client)
 - ฝัง font Noto Sans Thai (OFL) ผ่าน expo-font + วัดขนาดแอป
 - ชุดไอคอนเส้น open-licence (แนะนำ @expo/vector-icons) — ตรวจ dependency ก่อน

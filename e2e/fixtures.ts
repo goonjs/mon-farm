@@ -40,28 +40,55 @@ export function unreadyPileScenario(saleId: string): SaleEvent[] {
 }
 
 /**
- * Writes a sale's events directly into the browser's localStorage before the
- * app boots, mirroring `src/store/store.web.ts`'s exact schema. This is the
- * ENTIRE seeding mechanism for e2e now — there is no app-side seed any more
- * (see docs/stories/s17-remove-seed-and-sale-list.md). Tests build their own
- * scenarios with `src/core/fixtures.ts`'s `LogBuilder` and friends, which are
- * plain TS with no RN imports, so they run fine under Playwright's Node
- * environment too.
+ * Writes a sale's events straight into the app's IndexedDB (`mon-farm-v1`,
+ * see `src/store/store.web.ts`) before the test opens the screen it is
+ * about. This is the ENTIRE seeding mechanism for e2e — there is no app-side
+ * seed (see docs/stories/s17-remove-seed-and-sale-list.md). Tests build their
+ * scenarios with `src/core/fixtures.ts`'s `LogBuilder`, plain TS that runs
+ * under Playwright's Node too.
  *
- * Idempotent by construction: only writes if the key is empty. `addInitScript`
- * reruns on every navigation, including `page.reload()` — writing
- * unconditionally would re-seed (and, for the append-only store, collide with
- * events written since) on every reload a test performs.
+ * It loads the app once, so the database exists with the app's own schema,
+ * then writes the records in one transaction. Runs once per call — unlike an
+ * init script it does not re-run on `page.reload()`. The record shape below
+ * mirrors `EventRecord` in store.web.ts; keep the two in step.
  */
 export async function seedSale(page: Page, saleId: string, events: readonly SaleEvent[]): Promise<void> {
-  await page.addInitScript(
-    ({ key, index, saleId, events }) => {
-      if (window.localStorage.getItem(key) !== null) return;
-      window.localStorage.setItem(key, JSON.stringify(events));
-      const idx: string[] = JSON.parse(window.localStorage.getItem(index) ?? '[]');
-      if (!idx.includes(saleId)) window.localStorage.setItem(index, JSON.stringify([saleId, ...idx]));
-    },
-    { key: `mon-farm:events:${saleId}`, index: 'mon-farm:sales', saleId, events },
+  if (events.some((e) => e.saleId !== saleId)) throw new Error(`seedSale: events not all for ${saleId}`);
+  await page.goto('/');
+  // The list renders only after `listSales()` resolved, i.e. after the app
+  // created the database with its own schema — so the seed never creates it.
+  await page.locator('[data-testid="empty-state"], [data-testid^="sale-"]').first().waitFor();
+  await page.evaluate(
+    (events) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('mon-farm-v1', 1);
+        open.onupgradeneeded = () => {
+          open.transaction?.abort();
+          reject(new Error('seedSale: app has not created mon-farm-v1 yet'));
+        };
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const tx = db.transaction('events', 'readwrite');
+          const store = tx.objectStore('events');
+          for (const event of events) {
+            store.put({
+              id: event.id,
+              saleId: event.saleId,
+              ts: event.ts,
+              deviceSeq: event.deviceSeq,
+              pending: 1,
+              event,
+            });
+          }
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    events as SaleEvent[],
   );
 }
 

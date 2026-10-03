@@ -34,3 +34,11 @@ tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
   Lessons: Spark cannot host Storage/Functions/Cloud Run — say so up front
   with a feature table (owner asked for one); current CI double-runs every PR
   (push + pull_request in different concurrency groups).
+- 2026-10-03 — E01-S01 SDD draft (Thai). Lessons: firebase.google.com is
+  blocked by the sandbox egress proxy — quote quotas from search excerpts and
+  flag "re-verify at source"; Firestore rules cannot rate-limit (failed
+  commits roll back any counter), so a short shared secret (6-digit invite)
+  needs a server function — show the brute-force arithmetic; Hermes ships no
+  `crypto` global, so random ids on native are a dependency-gate ask; Cloud
+  Storage free tier is US-regions only; re-check story ACs against fresh
+  owner decisions (no-migration left three stale migration ACs).

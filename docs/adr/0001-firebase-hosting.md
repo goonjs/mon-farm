@@ -1,6 +1,6 @@
 # ADR 0001 — Host the web build on Firebase Hosting
 
-- **Status:** Accepted (owner, 2026-10-03)
+- **Status:** Accepted (owner, 2026-10-03); **amended 2026-10-03** — two projects with billing (see below)
 - **Deciders:** owner; drafted by the lead agent
 - **Related:** `docs/architecture.md` ("Deployment / environments"),
   `docs/process.md` ("Branches and releases")
@@ -73,5 +73,31 @@ from GitHub Actions via `scripts/deploy.sh <env>`; Deploy Prod calls it with
 2. Choose the two custom domains and connect them in the Firebase console
    (Hosting, per site); DNS records are added at the registrar.
 3. Run Deploy Prod once to confirm the first production release.
-4. Before selling: decide on moving to Google Cloud with billing (see
-   Consequences).
+4. Create the separate prod project (with billing and a budget alert) and a
+   deploy credential for it, per the amendment below; then point the `prod`
+   target in `.firebaserc` at it.
+
+## Amendment, 2026-10-03 — two projects, billing
+
+Owner decision (PRD D-22), reconciling this ADR with PRD D-1:
+
+- **Two Firebase projects**, not one: **`dev`** hosts the `dev` site and all PR
+  preview channels, over test/seed data only; **`prod`** hosts the `prod` site
+  over real farm data. A public preview can therefore never read or write
+  production data (PRD NFR-5).
+- **Google Cloud with billing and a budget alert** on both: Cloud Storage for
+  media, LINE login, scheduled reminders and any server code need billing
+  (PRD D-1). The free-quota consequence above no longer applies once billing
+  is on.
+- Follow-up 1 becomes: create the two projects, one site each, and choose the
+  two domains. Follow-up 2 needs one deploy credential per project.
+- Cloud Run per-PR previews (the owner's general rule for other repos) are
+  not used in this repo; there are no container images to retain.
+
+**Status of the amendment (2026-10-03):** what is built so far is the *dev*
+side only. Project `mon-farmmate` has no billing and hosts the `dev` site
+(`mon-farm-dev`) and, for now, an unused `mon-farm-prod` site that has never been
+deployed. The separate **prod project, its billing and its own deploy
+credential are not created yet** (owner decision pending), and Deploy Prod
+cannot succeed until they are. The keyless credential's identity pool lives in
+`mon-farmmate`; the prod project needs its own.
