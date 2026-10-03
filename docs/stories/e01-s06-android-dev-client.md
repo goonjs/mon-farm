@@ -44,6 +44,7 @@ Status: Ready
 
 - ทางสร้าง APK: `docs/adr/0003-android-build-path.md` (Accepted 2026-10-03) — ทาง B: GitHub Actions + `expo prebuild` + Gradle `assembleRelease`
   APK แบบ release มี JS bundle ในตัว จึงทดสอบโหมดเครื่องบินได้ตรง ๆ
+- package name `com.goonjs.monfarm` (`app.json`); keystore อยู่ใน GitHub Secrets แล้ว (2026-10-03)
 
 ### Checklist เจ้าของ (บนโทรศัพท์ Android จริง)
 
