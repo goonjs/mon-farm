@@ -560,6 +560,34 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .lnk2 { color: var(--c-action); font-weight: 600; font-size: 13px; }
 .flag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--c-reject); }
 .flag .ic { width: 14px; height: 14px; }
+/* D-70 app-wide rule: one fact per line, with a symbol; times on their own line */
+.mi { display: flex; align-items: center; gap: 5px; font-size: 12px; line-height: 1.35; color: var(--c-ink-soft); font-weight: 500; }
+.mi .ic { width: 14px; height: 14px; flex: none; }
+.mi b { color: var(--c-ink); font-weight: 600; }
+.row .mi { margin-top: 1px; }
+.lines { display: flex; flex-direction: column; gap: 3px; }
+/* D-70 S9: slide-up weight picker — drag ruler + ±1 kg (scale step) */
+.wsheet { gap: 8px; }
+.wval { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.wval .sb { width: 56px; height: 56px; border-radius: var(--r-pill); display: grid; place-items: center; border: 2px solid var(--c-action); color: var(--c-action); background: var(--c-raised); flex: none; }
+.wval .sb .ic { width: 28px; height: 28px; stroke-width: 2.5; }
+.wval .big { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; min-width: 112px; text-align: center; }
+.wval .big .u { font-size: 18px; font-weight: 600; color: var(--c-ink-soft); margin-left: 4px; letter-spacing: 0; }
+.ruler { position: relative; height: 72px; border-radius: var(--r-md); background: var(--c-sunk); overflow: hidden; touch-action: pan-x; }
+.ruler svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ruler .tk { stroke: var(--c-rule-strong); stroke-width: 2; }
+.ruler .tk5 { stroke: var(--c-ink-soft); stroke-width: 2.5; }
+.ruler .lb { fill: var(--c-ink-soft); font-size: 13px; font-weight: 600; font-family: var(--font); }
+.ruler .lb.cur { fill: var(--c-ink); font-size: 15px; font-weight: 800; }
+.ruler .ndl { stroke: var(--c-action); stroke-width: 4; stroke-linecap: round; }
+.ruler .fade { fill: var(--c-sunk); }
+.rhint { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 12px; color: var(--c-ink-soft); }
+.rhint .ic { width: 16px; height: 16px; }
+.wres { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.wres > div { background: var(--c-surface); border: 1px solid var(--c-rule-faint); border-radius: var(--r-md); padding: 6px 10px; }
+.wres span { display: block; font-size: 12px; color: var(--c-ink-soft); }
+.wres b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.wres small { font-size: 11px; color: var(--c-ink-soft); }
 </style>
 
 <!-- Icon sprite: hand-drawn 24px stroke icons, inherit currentColor -->
@@ -618,6 +646,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     <symbol id="i-list" viewBox="0 0 24 24"><path d="M10 6.5h10M10 12h10M10 17.5h10"/><path d="M3.5 6.5l1.5 1.5L7.5 5.5M3.5 12l1.5 1.5L7.5 11"/><circle cx="5" cy="17.5" r="1.2"/></symbol>
     <symbol id="i-pile" viewBox="0 0 24 24"><path class="fillsoft" d="M3 19c1.5-4 4-6.5 5.5-6.5 1 0 1.7.8 2.3 1.6.9-2.6 2.6-5.1 4.2-5.1 2 0 4.5 4.6 6 10z"/><path d="M2.5 19.5h19"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7"/><path class="fillsoft" d="M6 7l1 12.2a1 1 0 0 0 1 .8h8a1 1 0 0 0 1-.8L18 7z"/><path d="M10 11v5M14 11v5"/></symbol>
+    <symbol id="i-drag" viewBox="0 0 24 24"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M4 12h16"/></symbol>
+    <symbol id="i-in" viewBox="0 0 24 24"><path d="M20 6v7a3 3 0 0 1-3 3H6"/><path d="M10 12l-4 4 4 4"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M4 6v7a3 3 0 0 0 3 3h11"/><path d="M14 12l4 4-4 4"/></symbol>
   </defs>
 </svg>
 
@@ -626,11 +657,11 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 
 <header class="hdr">
   <h1>Flow การขาย · v1.1.0 · 2026-10-04</h1>
-  <p>ตัวอย่างลำดับหน้าจอ (mockup) ของการขายในแอป <b>FarmMate</b> — คัดลอกจาก Flow v4 (<code>flow-v1.html</code>) แล้วใส่การตัดสินใจ D-49…D-69: โหมดเลขเข่งและประเภทตาชั่งตอนเริ่มการขาย · ทางเลือกหน้า 12 เหลือ 3 ข้อ · จุดที่ยังไม่มีคนกรีด · ลบจุดระหว่างการขาย · บันทึกย้อนหลังแบบ flow เดียวกับการชั่ง · หักหนี้ที่หน้าสรุปยอดส่วนแบ่ง แล้วค่อยปัดเศษ</p>
+  <p>ตัวอย่างลำดับหน้าจอ (mockup) ของการขายในแอป <b>FarmMate</b> — คัดลอกจาก Flow v4 (<code>flow-v1.html</code>) แล้วใส่การตัดสินใจ D-49…D-69: โหมดเลขเข่งและประเภทตาชั่งตอนเริ่มการขาย · ทางเลือกหน้า 12 เหลือ 3 ข้อ · จุดที่ยังไม่มีคนกรีด · ลบจุดระหว่างการขาย · บันทึกย้อนหลังแบบ flow เดียวกับการชั่ง · หักหนี้ที่หน้าสรุปยอดส่วนแบ่ง แล้วค่อยปัดเศษ · ปรับตามคำตอบเจ้าของ D-70 (S1–S10) และกฎหนึ่งข้อมูลต่อบรรทัด</p>
   <p class="date num">v1.1.0 · 2026-10-04 · ตัวเลข ชื่อ และน้ำหนักทั้งหมดในหน้าจอเป็น <b>ตัวอย่าง</b> · เลขหน้าเดิมจาก v4 คงไว้ หน้าใหม่ใช้ตัวอักษรต่อท้าย (เช่น 8a)</p>
   <div class="legend">
     <span><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-53</span> ตัดสินแล้ว — เลขอ้างอิงใน decision log ของ PRD</span>
-    <span><span class="q">?S1</span> คำถามใหม่ของไฟล์นี้ (ยังไม่ได้ตอบ) — รายการอยู่ท้ายหน้า</span>
+    <span><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span> คำตอบเจ้าของ S1–S10 (2026-10-04) — ใส่ลงหน้าจอแล้ว · ตารางท้ายหน้า</span>
     <span><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span> ป้ายสถานะ sync (ไอคอน + คำ)</span>
     <span><span class="ds ds-none">ไม่ได้บันทึก</span> ป้ายสถานะข้อมูลรายฟิลด์ (E01-S15)</span>
   </div>
@@ -649,11 +680,11 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="body">
           <span style="font-size:13px;color:var(--c-ink-soft)">ใหม่สุดก่อน · แตะเพื่อดูสรุปการขาย</span>
           <div class="card tight">
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">18 ก.ย. 2569</span><span class="sub num">ผู้ซื้อ ก · 42 เข่ง</span><span class="chip ch-bad" style="margin-top:2px"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span></span><span style="text-align:right"><span class="val num" style="display:block">2,100 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></div>
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">4 ก.ย. 2569</span><span class="sub num">ผู้ซื้อ ก · 37 เข่ง</span></span><span style="text-align:right"><span class="val num" style="display:block">1,850 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></div>
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">21 ส.ค. 2569</span><span class="sub num">ผู้ซื้อ ข · 40 เข่ง</span></span><span style="text-align:right"><span class="val num" style="display:block">1,960 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">18 ก.ย. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>ผู้ซื้อ ก</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>42 เข่ง</span><span class="chip ch-bad" style="margin-top:2px"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span></span><span style="text-align:right"><span class="val num" style="display:block">2,100 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">4 ก.ย. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>ผู้ซื้อ ก</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>37 เข่ง</span></span><span style="text-align:right"><span class="val num" style="display:block">1,850 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">21 ส.ค. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>ผู้ซื้อ ข</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>40 เข่ง</span></span><span style="text-align:right"><span class="val num" style="display:block">1,960 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></div>
           </div>
-          <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span>การขายที่ยังไม่ปิดแสดงสถานะ เช่น <b style="display:inline">กำลังชั่ง</b> · ป้าย sync ต่อแถวแสดงเฉพาะ <b style="display:inline">ขัดกัน</b> — สถานะรวม (ซิงก์แล้ว / รอส่ง / ขัดกัน / ส่งไม่สำเร็จ) อยู่ที่หัวแอป · วันที่เป็น พ.ศ. แตะเพื่อสลับ ค.ศ.</span></div>
+          <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span class="lines"><span>การขายที่ยังไม่ปิดแสดงสถานะ เช่น <b style="display:inline">กำลังชั่ง</b></span><span>ป้ายต่อแถวแสดงเฉพาะ <b style="display:inline">ขัดกัน</b> · สถานะรวมอยู่ที่หัวแอป</span><span>วันที่เป็น พ.ศ. แตะเพื่อสลับ ค.ศ.</span></span></div>
         </div>
       </div></div>
       <figcaption>
@@ -663,7 +694,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-65</span><span>ป้าย sync ต่อแถวแสดงเฉพาะ "ขัดกัน" · วันที่ พ.ศ. แตะสลับ พ.ศ./ค.ศ.</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-67</span><span>ใช้คำ "ขัดกัน" ทั้งแอป (แทน "ข้อมูลขัดกัน")</span></li>
-          <li><span class="q">?S7</span><span>กติกา "ป้ายต่อแถวเฉพาะขัดกัน" มาจากหน้าข้อมูลหลัก — ใช้กับรายการการขายด้วยตามที่วาดใช่ไหม</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S7: ป้าย sync ต่อแถวเฉพาะ "ขัดกัน" ใช้กับรายการการขายด้วย</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -688,19 +719,19 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-users"/></svg></span><span class="grow"><span class="lbl">ผู้ซื้อ</span><span class="sub">รายล่าสุด</span></span><span class="val">ผู้ซื้อ ก (ตัวอย่าง)</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
             <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="lbl">ผู้จัดการสวน</span><span class="sub">เติมจากข้อมูลหลัก</span></span><span class="val">อ.สมหวัง</span></div>
             <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-clock"/></svg></span><span class="grow"><span class="lbl">เวลาเริ่มชั่ง</span><span class="sub">ไม่บังคับ</span></span><span class="ds ds-none">ไม่ได้บันทึก</span></div>
-            <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-coin"/></svg></span><span class="grow"><span class="lbl">ราคา ฿/กก.</span><span class="sub">ใส่ทีหลังได้ · ใส่ตอนนี้ หน้าชั่งจะโชว์ยอดเงิน</span></span><span class="ds ds-none">ไม่ได้บันทึก</span></div>
+            <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-coin"/></svg></span><span class="grow"><span class="lbl">ราคา ฿/กก.</span><span class="sub">ใส่ทีหลังได้</span><span class="sub">ใส่ตอนนี้ หน้าชั่งโชว์ยอดเงิน</span></span><span class="ds ds-none">ไม่ได้บันทึก</span></div>
             <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="lbl">ขนาดเข่ง</span><span class="sub">ค่าเริ่มต้นของกลุ่ม</span></span><span class="val num">50 กก. สุทธิ</span></div>
             <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-note"/></svg></span><span class="grow lbl">หมายเหตุ / รูป</span><svg class="ic sm chev"><use href="#i-plus"/></svg></div>
           </div>
           <div class="card">
-            <h4>เลขเข่ง <span style="font-weight:400">· ค่าเริ่มต้นจากตั้งค่ากลุ่ม</span></h4>
+            <h4>เลขเข่ง<span class="mi" style="font-weight:400"><svg class="ic"><use href="#i-users"/></svg>ค่าเริ่มต้นจากตั้งค่ากลุ่ม</span></h4>
             <div class="seg stack"><span class="on">ต่อเนื่องทั้งการขาย<small>1, 2, 3 … ข้ามทุกจุด</small></span><span>นับแยกต่อจุด<small>ทุกจุดเริ่มเข่ง 1</small></span></div>
           </div>
           <div class="card">
-            <h4>ประเภทตาชั่ง <span style="font-weight:400">· ค่าเริ่มต้นจากตั้งค่ากลุ่ม</span></h4>
+            <h4>ประเภทตาชั่ง<span class="mi" style="font-weight:400"><svg class="ic"><use href="#i-users"/></svg>ค่าเริ่มต้นจากตั้งค่ากลุ่ม</span></h4>
             <div class="seg stack"><span class="on">ไม่มีทศนิยม<small>อ่านทีละ 1 กก.</small></span><span class="off" aria-disabled="true">ทศนิยม 1 ตำแหน่ง<small>ยังไม่พร้อมใช้งาน</small></span></div>
           </div>
-          <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span>เลือกสวนตอนเลือกจุดชั่ง — การขายเดียวรวมหลายสวนได้ · ใช้ค่าเริ่มต้นทั้งหมดก็กดถัดไปได้เลย</span></div>
+          <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span class="lines"><span>เลือกสวนตอนเลือกจุดชั่ง — การขายเดียวรวมหลายสวนได้</span><span>ใช้ค่าเริ่มต้นทั้งหมดก็กดถัดไปได้เลย</span></span></div>
         </div>
         <div class="foot"><div class="btn btn-primary">ถัดไป: เลือกจุดชั่ง</div></div>
       </div></div>
@@ -718,7 +749,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-53</span><span>เลือกโหมดเลขเข่งตอนเริ่มการขาย ค่าเริ่มต้นจากตั้งค่ากลุ่ม (ตอบ ?21 ของ v4)</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-66</span><span>ประเภทตาชั่ง: ไม่มีทศนิยม = ค่าเริ่มต้น · ทศนิยม 1 ตำแหน่ง แสดงแต่กดไม่ได้ "ยังไม่พร้อมใช้งาน"</span></li>
-          <li><span class="q">?S3</span><span>เปลี่ยนโหมดเลขเข่งหรือประเภทตาชั่งได้ถึงเมื่อไร — ร่างนี้ถือแบบปลอดภัย: ก่อนบันทึกเข่งแรกเท่านั้น (ไม่ต้องเรียงเลขเข่งใหม่)</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S3: เปลี่ยนโหมดเลขเข่ง / ประเภทตาชั่งได้ก่อนบันทึกเข่งแรกเท่านั้น</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -740,19 +771,22 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="seg"><span class="on">แดง<small>3 จุด</small></span><span>นัด<small>1 จุด</small></span></div>
           </div>
           <div class="card tight">
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">ตัวอย่างชื่อ · ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 2</span><span class="sub">ตัวอย่างชื่อ · ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">ตัวอย่างชื่อ · ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 2</span><span class="sub">ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
           </div>
-          <span style="font-size:13px;color:var(--c-ink-soft)">เลือกจุดไหนก่อนก็ได้</span>
+          <div class="card tight">
+            <h4 style="margin:8px 0 0">จุดที่ยังไม่มีคนกรีด</h4>
+            <div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุดใหม่ (ตัวอย่าง)</span><span class="mi"><svg class="ic"><use href="#i-alert"/></svg>ต้องมอบหมายก่อนสรุปเงิน</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+          </div>
         </div>
       </div></div>
       <figcaption>
         <span class="t">6. เลือก สวน → คนกรีด → จุดชั่ง</span>
-        ค่าเริ่มต้นเลือกไว้แล้ว แตะจุดชั่งเดียวก็เริ่มได้ · เอาแถบ ?21 ออก (ตอบแล้ว D-53)
+        ค่าเริ่มต้นเลือกไว้แล้ว แตะจุดชั่งเดียวก็เริ่มได้ · เลือกจุดไหนก่อนก็ได้ · จุดที่ยังไม่มีคนกรีดอยู่ในกลุ่มแยกด้านล่าง ไม่อยู่ในขั้น "คนกรีด" · เอาแถบ ?21 ออก (ตอบแล้ว D-53)
         <span class="ids">SALE-1, SALE-4, SALE-10, MD-3, MD-4 · D-9, D-53 · E04-S02</span>
         <ul>
-          <li><span class="q">?S1</span><span>จุดที่ยังไม่มีคนกรีด (หน้า 8a) อยู่ตรงไหนในขั้น "คนกรีด" — ร่างนี้ยังไม่วาดตำแหน่ง</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S1: จุดที่ยังไม่มีคนกรีดไม่แสดงในขั้น "คนกรีด" — แสดงเฉพาะในหน้าการขาย (กลุ่มแยกด้านล่าง)</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -780,7 +814,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="fig num">52<span class="u">กก.</span></div>
             <p class="num">สุทธิ 50 + ภาชนะ 2</p>
           </div>
-          <span style="font-size:13px;color:var(--c-ink-soft)">ถามตรวจศูนย์: ทุกจุด (ตั้งค่าได้: จุดแรกของแต่ละสวน · ข้าม) · ไม่ใช่ 0 = ติดธงแล้วไปต่อ</span>
+          <span class="lines"><span class="mi"><svg class="ic"><use href="#i-help"/></svg>ถามตรวจศูนย์ทุกจุด (ตั้งค่าได้)</span><span class="mi"><svg class="ic"><use href="#i-flag"/></svg>ไม่ใช่ 0 = ติดธงแล้วไปต่อ</span></span>
         </div>
         <div class="foot"><div class="btn btn-primary">เริ่มชั่ง</div></div>
       </div></div>
@@ -836,7 +870,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       </figcaption>
     </figure>
 
-    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>ตัวอย่างแยก: แตะจุดที่ <b>ยังไม่มีคนกรีด</b></span></div>
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>จุดใหม่</b> ในกลุ่ม "จุดที่ยังไม่มีคนกรีด" (ตัวอย่างแยก)</span></div>
 
     <figure class="step">
       <div class="phone"><div class="screen" aria-label="ชั่งที่จุดที่ยังไม่มีคนกรีด">
@@ -844,9 +878,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 30</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
         <div class="body" style="gap:10px">
           <div class="card tight">
-            <div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุดใหม่ (ตัวอย่าง)</span><span class="sub">จันทเขลม · ยังไม่มีคนกรีด</span></span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div>
+            <div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุดใหม่ (ตัวอย่าง)</span><span class="sub">จันทเขลม</span><span class="sub">คนกรีด: ยังไม่มีคนกรีด</span></span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div>
           </div>
-          <div class="banner warn" style="flex-wrap:wrap"><svg class="ic sm"><use href="#i-alert"/></svg><span style="flex:1;min-width:0"><b>จุดนี้ยังไม่มีคนกรีด</b>ชั่งต่อได้ตามปกติ · ต้องมอบหมายก่อนสรุปเงิน</span><span class="btn btn-secondary slim" style="width:100%"><svg class="ic sm"><use href="#i-person"/></svg>มอบหมายตอนนี้</span></div>
+          <div class="banner warn" style="flex-wrap:wrap"><svg class="ic sm"><use href="#i-alert"/></svg><span style="flex:1;min-width:0"><b>จุดนี้ยังไม่มีคนกรีด</b><span style="display:block">ชั่งต่อได้ตามปกติ</span><span style="display:block">ต้องมอบหมายก่อนสรุปเงิน</span></span><span class="btn btn-secondary slim" style="width:100%"><svg class="ic sm"><use href="#i-person"/></svg>มอบหมายตอนนี้</span></div>
           <div class="card bigc" aria-label="เข่งปัจจุบัน 28 ถัดไป 29">
             <div><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">28</div></div>
             <div class="next"><span class="lbl">ถัดไป</span><div class="fig num">29</div></div>
@@ -872,7 +906,8 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="inset">
           <span class="ttl">แตะ "มอบหมายตอนนี้" → มอบหมายคนกรีดของจุดนี้</span>
           <div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow">คนกรีด</span><span class="sel">เลือก<svg class="ic"><use href="#i-down"/></svg></span></div>
-          <div class="mini-row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-cal"/></svg></span><span class="grow">วันเริ่ม <span class="q">?S5</span></span><b class="num">ส. 3 ต.ค. 2569</b></div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-help"/></svg><span class="grow">มีผลเฉพาะการขายนี้ — ไม่แก้ตั้งค่าของจุด</span></div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-pin"/></svg><span class="grow">คนรับผิดชอบจุด "ต่อจากนี้ไป" → ตั้งที่หน้าจุด</span></div>
           <span class="note">มอบหมายย้อนหลังได้ — เข่งที่ชั่งไปแล้วเป็นของคนที่มอบหมาย ณ วันขาย (คำนวณใหม่จาก log) · เปลี่ยนคนกรีดยังทำที่หน้าจุดชั่งทีละจุด (E03-S05)</span>
         </div>
       </div>
@@ -882,7 +917,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <span class="ids">MD-4, SALE-4 · D-63 · E03-S05</span>
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-63</span><span>จุดที่ยังไม่มีคนกรีด ชั่งได้ มอบหมายย้อนหลังได้ แต่สรุปเงิน/ปิดไม่ได้จนทุกจุดมีคนกรีด</span></li>
-          <li><span class="q">?S5</span><span>"มอบหมายตอนนี้" ตั้งวันเริ่มเท่าไร — ร่างนี้เติมวันขายให้และแก้ได้ (ไม่เติม "ไม่ระบุวันเริ่ม" เอง เพราะจะย้อนไปทุกการขายเก่า)</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S5: มอบหมายในหน้าการขายมีผลเฉพาะการขายนี้ ไม่แก้ตั้งค่าจุด จึงไม่ถามวันเริ่ม · คนรับผิดชอบจุด "ต่อจากนี้ไป" ตั้งที่หน้าจุด</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -929,31 +964,34 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="card"><span class="lbl">สะสม</span><div class="fig num">1,920<span class="u">กก.</span></div></div>
             <div class="card"><span class="lbl">เข่งไม่เต็ม</span><div class="fig" style="font-size:16px;padding-top:4px">ไม่มี</div></div>
           </div>
-          <div class="stage" style="min-height:0;gap:2px">
-            <b style="font-size:16px">หยุดนับระหว่างใส่ค่า</b>
+        </div>
+        <div class="sheet-scrim" style="top:300px"></div>
+        <div class="sheet wsheet">
+          <span class="grab"></span>
+          <h4>เข่ง 40 ไม่เต็ม</h4>
+          <div class="lines">
+            <span class="mi"><svg class="ic"><use href="#i-pin"/></svg><b>จันทเขลม · จุด 4</b></span>
+            <span class="mi"><svg class="ic"><use href="#i-person"/></svg>คนกรีด: นัด</span>
           </div>
-          <div class="card" style="flex:none">
-            <h4 style="color:var(--c-ink);font-size:15px">เข่ง 40 ไม่เต็ม — จันทเขลม จุด 4 · นัด</h4>
-            <span class="lbl" style="font-size:13px;color:var(--c-ink-soft)">ตาชั่งอ่าน (กก.)</span>
-            <div class="stepper" style="margin:4px 0 6px">
-              <span class="sb"><svg class="ic"><use href="#i-minus"/></svg></span>
-              <span class="inp focus">37<span class="u">กก.</span></span>
-              <span class="sb"><svg class="ic"><use href="#i-plus"/></svg></span>
-            </div>
-            <div class="kv"><span>ยางสุทธิ</span><span>37 − 2 = 35 กก.</span></div>
-            <div class="kv"><span>ยังขาดอีก</span><span>15 กก. จึงเต็ม 50</span></div>
-            <div class="btnrow" style="margin-top:8px"><span class="btn btn-secondary">ยกเลิก</span><span class="btn btn-primary">บันทึก</span></div>
+          <span class="lbl" style="font-size:13px;color:var(--c-ink-soft);text-align:center">ตาชั่งอ่าน</span>
+          <div class="wval"><span class="sb" aria-label="ลด 1 กก."><svg class="ic"><use href="#i-minus"/></svg></span><span class="big">37<span class="u">กก.</span></span><span class="sb" aria-label="เพิ่ม 1 กก."><svg class="ic"><use href="#i-plus"/></svg></span></div>
+          <div class="ruler" aria-label="ไม้บรรทัดลากเลือกน้ำหนัก"><svg viewBox="0 0 316 72" preserveAspectRatio="none" aria-hidden="true"><line class="tk5" x1="2.0" y1="8" x2="2.0" y2="34"/><text class="lb" x="2.0" y="56" text-anchor="middle">25</text><line class="tk" x1="15.0" y1="8" x2="15.0" y2="24"/><line class="tk" x1="28.0" y1="8" x2="28.0" y2="24"/><line class="tk" x1="41.0" y1="8" x2="41.0" y2="24"/><line class="tk" x1="54.0" y1="8" x2="54.0" y2="24"/><line class="tk5" x1="67.0" y1="8" x2="67.0" y2="34"/><text class="lb" x="67.0" y="56" text-anchor="middle">30</text><line class="tk" x1="80.0" y1="8" x2="80.0" y2="24"/><line class="tk" x1="93.0" y1="8" x2="93.0" y2="24"/><line class="tk" x1="106.0" y1="8" x2="106.0" y2="24"/><line class="tk" x1="119.0" y1="8" x2="119.0" y2="24"/><line class="tk5" x1="132.0" y1="8" x2="132.0" y2="34"/><line class="tk" x1="145.0" y1="8" x2="145.0" y2="24"/><line class="tk" x1="158.0" y1="8" x2="158.0" y2="24"/><line class="tk" x1="171.0" y1="8" x2="171.0" y2="24"/><line class="tk" x1="184.0" y1="8" x2="184.0" y2="24"/><line class="tk5" x1="197.0" y1="8" x2="197.0" y2="34"/><line class="tk" x1="210.0" y1="8" x2="210.0" y2="24"/><line class="tk" x1="223.0" y1="8" x2="223.0" y2="24"/><line class="tk" x1="236.0" y1="8" x2="236.0" y2="24"/><line class="tk" x1="249.0" y1="8" x2="249.0" y2="24"/><line class="tk5" x1="262.0" y1="8" x2="262.0" y2="34"/><text class="lb" x="262.0" y="56" text-anchor="middle">45</text><line class="tk" x1="275.0" y1="8" x2="275.0" y2="24"/><line class="tk" x1="288.0" y1="8" x2="288.0" y2="24"/><line class="tk" x1="301.0" y1="8" x2="301.0" y2="24"/><line class="tk" x1="314.0" y1="8" x2="314.0" y2="24"/><text class="lb cur" x="158.0" y="56" text-anchor="middle">37</text><text class="lb" x="197.0" y="56" text-anchor="middle">40</text><line class="ndl" x1="158.0" y1="4" x2="158.0" y2="40"/></svg></div>
+          <span class="rhint"><svg class="ic"><use href="#i-drag"/></svg>ลากซ้าย–ขวา หรือกด ± ทีละ 1 กก.</span>
+          <div class="wres">
+            <div><span>ยางสุทธิ</span><b>35</b> <small>กก.</small><span>37 − ภาชนะ 2</span></div>
+            <div><span>ยังขาด</span><b>15</b> <small>กก.</small><span>จึงเต็ม 50</span></div>
           </div>
+          <div class="btnrow"><span class="btn btn-secondary">ยกเลิก</span><span class="btn btn-primary">บันทึก</span></div>
         </div>
       </div></div>
       <figcaption>
-        <span class="t">10. บันทึกเข่งไม่เต็ม</span>
-        ไม่เปลี่ยนจาก v4 · ตาชั่งแบบไม่มีทศนิยม (D-66) — ปุ่ม ± ทีละ 1 กก. หรือพิมพ์ตรง
+        <span class="t">10. บันทึกเข่งไม่เต็ม — แผ่นเลื่อนขึ้นเลือกน้ำหนัก</span>
+        แตะ <b>เข่งไม่เต็ม</b> → แผ่นเลื่อนขึ้น (เลขเข่งด้านบนยังเห็น) · <b>ลากไม้บรรทัด</b> ซ้าย–ขวาเพื่อเลือกค่าเร็ว ๆ แล้วเก็บละเอียดด้วย <b>±</b> · ขยับตามประเภทตาชั่งเท่านั้น: ไม่มีทศนิยม = ทีละ 1 กก. · แอปหักภาชนะให้ทันที เก็บทั้งสองค่า · ไม้บรรทัดหยุดที่ 3 และ 51 กก.
         <span class="ids">SALE-9, SALE-11 · F-13, F-22 · D-66 · E04-S06</span>
         <ul>
           <li><svg class="ic sm"><use href="#i-help"/></svg><span>ค่าที่อ่าน ≤ ภาชนะ หรือ ≥ 52 (เข่งเต็ม) → ไม่รับ บอกเหตุผล (flow e04 §8.1 · Q9 ยังเปิด)</span></li>
           <li><svg class="ic sm"><use href="#i-help"/></svg><span>ยกเลิก = ไม่บันทึกอะไร</span></li>
-          <li><span class="q">?S9</span><span>v4 เขียน ± ทีละ 0.5 กก. — ตาชั่งไม่มีทศนิยมอ่านทีละ 1 กก. (D-66) ร่างนี้จึงใช้ ± ทีละ 1 กก. ใช่ไหม</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S9: ± ขยับตามประเภทตาชั่งเท่านั้น (ทีละ 1 กก.) และต้องลากปรับได้ — แผ่นเลื่อนขึ้นให้เลือกค่าได้เร็วกว่ากด/พิมพ์</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -978,7 +1016,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="card warn"><span class="lbl">เข่งไม่เต็ม 40</span><span class="sm2">เหลือเติม</span><div class="fig num">15<span class="u">กก.</span></div></div>
           </div>
           <div class="card warn" style="flex:none">
-            <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--c-raised)"><svg class="ic"><use href="#i-scale"/></svg></span><span class="grow"><span class="val num">เข่ง 40 เปิดอยู่ · 35 กก.</span><span class="sub num">ตาชั่ง 37 − ภาชนะ 2 · จันทเขลม จุด 4</span></span></div>
+            <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--c-raised)"><svg class="ic"><use href="#i-scale"/></svg></span><span class="grow"><span class="val num">เข่ง 40 เปิดอยู่ · 35 กก.</span><span class="sub num">ตาชั่ง 37 − ภาชนะ 2</span></span></div>
             <div class="btn btn-secondary small" style="width:100%;margin-top:8px"><svg class="ic sm"><use href="#i-flag"/></svg>จบเข่งแล้ว / เป็นเศษ</div>
           </div>
           <div class="stage" style="min-height:0">
@@ -1019,7 +1057,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="sheet">
           <span class="grab"></span>
           <h4>เข่ง 40 ยังไม่เต็ม</h4>
-          <p class="num">มี 35 กก. จาก จันทเขลม จุด 4 · คนกรีดคนเดิม (นัด)</p>
+          <div class="lines"><span class="mi"><svg class="ic"><use href="#i-scale"/></svg>มีแล้ว <b class="num">35 กก.</b></span><span class="mi"><svg class="ic"><use href="#i-pin"/></svg>จาก จันทเขลม จุด 4</span><span class="mi"><svg class="ic"><use href="#i-person"/></svg>คนกรีดคนเดิม: นัด</span></div>
           <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมให้เต็มเข่ง</b><span class="ln num">เติมอีก <span class="nchip">15 กก.</span> เป็นเข่ง 40</span><span class="ln num">ตาชั่งอ่าน <span class="nchip">52 กก.</span> ทั้งเข่ง</span></span></div>
           <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-scale"/></svg></span><span><b>2 · ชั่งแยกให้ครบน้ำหนักเข่ง</b><span class="ln num">ชั่งส่วนที่เติม <span class="nchip">15 กก.</span> นับรวมเป็นเข่ง 40</span><span class="ln num">ตาชั่งอ่าน <span class="nchip">17 กก.</span> (15 + ภาชนะ 2)</span></span></div>
           <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-plus"/></svg></span><span><b>3 · ปล่อยเข่งเศษไว้ แล้วนับเข่งเต็มถัดไป</b><span class="ln num">เข่ง 40 เป็นเศษ <span class="nchip">35 กก.</span></span><span class="ln num">เข่งเต็มถัดไปคือ <span class="nchip">เข่ง 41</span></span></span></div>
@@ -1037,7 +1075,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         </div>
         <div class="inset">
           <span class="ttl">การขายที่เลือก "นับแยกต่อจุด"</span>
-          <span class="note">ทางเลือกข้อ 4 ของ v4 ("เริ่มเข่งใหม่ที่จุดนี้ นับจาก 1") ย้ายไปเป็นโหมดตอนเริ่มการขาย (หน้า 5) · หน้านี้ในโหมดนับแยกต่อจุดยังไม่วาด <span class="q">?S2</span></span>
+          <span class="note">ทางเลือกข้อ 4 ของ v4 ("เริ่มเข่งใหม่ที่จุดนี้ นับจาก 1") ย้ายไปเป็นโหมดตอนเริ่มการขาย (หน้า 5) · โหมดนับแยกต่อจุด ดูหน้า 12-ต่อจุด ถัดไป</span>
         </div>
       </div>
       <figcaption>
@@ -1046,7 +1084,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <span class="ids">SALE-11, SALE-12 · D-42, D-46, D-53, D-57 · E04-S06</span>
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-57</span><span>โหมดต่อเนื่องทั้งการขาย ยังถามเมื่อย้ายไปจุดใหม่ของคนกรีดคนเดิม: (1) เติมให้เต็มเข่ง · (2) ชั่งแยกให้ครบน้ำหนักเข่ง · (3) ปล่อยเข่งเศษไว้ แล้วนับเข่งเต็มถัดไป</span></li>
-          <li><span class="q">?S2</span><span>โหมดนับแยกต่อจุด: ย้ายไปจุดของคนกรีดคนเดิมหรือคนอื่น — เข่งไม่เต็มของจุดเดิมเปิดค้างไว้ หรือปิดเป็นเศษ และหน้านี้ยังถามไหม (คำถามค้างใน E04-S06)</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S2: โหมดนับแยกต่อจุด — ไปจุดของคนกรีดคนอื่น เข่งไม่เต็มของจุดเดิมเปิดค้างไว้ ไม่ถาม · ไปจุดของคนกรีดคนเดิม จึงถามทางเลือก (หน้า 12-ต่อจุด)</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -1096,6 +1134,47 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       </figcaption>
     </figure>
 
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>ตัวอย่างแยก: การขายที่เลือก <b>นับแยกต่อจุด</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="เปลี่ยนจุด คนกรีดคนเดิม โหมดนับแยกต่อจุด">
+        <div class="sbar num"><span>09:31</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar dim"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>เปลี่ยนจุด <small class="num">การขาย 3 ต.ค. 2569</small></h3></div>
+        <div class="body dim">
+          <div class="card"><h4>สวน</h4><div class="seg"><span>จันทเขลม</span><span class="on">คลองพลู</span></div></div>
+          <div class="card"><h4>คนกรีด</h4><div class="seg"><span class="on">นัด<small>1 จุด</small></span></div></div>
+        </div>
+        <div class="sheet-scrim"></div>
+        <div class="sheet">
+          <span class="grab"></span>
+          <h4>เข่ง 9 ของ จันทเขลม จุด 4 ยังไม่เต็ม</h4>
+          <div class="lines">
+            <span class="mi"><svg class="ic"><use href="#i-scale"/></svg>มีแล้ว <b class="num">35 กก.</b></span>
+            <span class="mi"><svg class="ic"><use href="#i-person"/></svg>คนกรีดคนเดิม: นัด</span>
+            <span class="mi"><svg class="ic"><use href="#i-pin"/></svg>จุดใหม่: คลองพลู จุด 1 (เริ่มที่เข่ง 1)</span>
+          </div>
+          <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมให้เต็มเข่ง</b><span class="ln num">เติมอีก <span class="nchip">15 กก.</span></span><span class="ln num">ตาชั่งอ่าน <span class="nchip">52 กก.</span> ทั้งเข่ง</span><span class="ln">นับเป็นเข่ง 9 ของจันทเขลม จุด 4</span></span></div>
+          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-scale"/></svg></span><span><b>2 · ชั่งแยกให้ครบน้ำหนักเข่ง</b><span class="ln num">ชั่งส่วนที่เติม <span class="nchip">15 กก.</span></span><span class="ln num">ตาชั่งอ่าน <span class="nchip">17 กก.</span> (15 + ภาชนะ 2)</span><span class="ln">นับรวมเป็นเข่ง 9 ของจันทเขลม จุด 4</span></span></div>
+          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-plus"/></svg></span><span><b>3 · ปล่อยเข่งเศษไว้ แล้วนับเข่งเต็มถัดไป</b><span class="ln num">เข่ง 9 ของจันทเขลม จุด 4 <span class="nchip">35 กก.</span></span><span class="ln num">จุดนี้เริ่มที่ <span class="nchip">เข่ง 1</span></span></span></div>
+        </div>
+      </div></div>
+      <div class="extras">
+        <div class="inset">
+          <span class="ttl">โหมดนับแยกต่อจุด — ไปจุดของคนกรีดคนอื่น</span>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-check"/></svg><span class="grow">ไม่ถาม — ไปชั่งได้เลย</span></div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-scale"/></svg><span class="grow">เข่งไม่เต็มของจุดเดิมเปิดค้างไว้</span></div>
+        </div>
+      </div>
+      <figcaption>
+        <span class="t">12-ต่อจุด. เปลี่ยนจุด — คนกรีดคนเดิม (โหมดนับแยกต่อจุด)</span>
+        ตัวอย่างแยก: นัดชั่งที่ จันทเขลม จุด 4 ได้เข่ง 1–8 เต็ม และเข่ง 9 มี 35 กก. แล้วย้ายไป คลองพลู จุด 1 · ถามทางเลือก 3 ข้อเหมือนโหมดต่อเนื่อง แต่เลขเข่งเป็นของแต่ละจุด — จุดใหม่เริ่มที่เข่ง 1
+        <span class="ids">SALE-11, SALE-12 · D-46, D-57, D-70 · E04-S06</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S2: ไปจุดของคนกรีดคนเดิม → ถามทางเลือก · ไปจุดของคนกรีดคนอื่น → เข่งไม่เต็มของจุดเดิมเปิดค้าง ไม่ถาม</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
   </div>
 
   <h3 class="sub-h">2c · ลบจุดชั่งที่การขายเปิดอยู่ใช้ (ใหม่)</h3>
@@ -1116,9 +1195,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="sheet">
           <span class="grab"></span>
           <h4>ลบ จุด 2? <span style="font-size:14px;font-weight:500;color:var(--c-ink-soft)">กู้คืนได้</span></h4>
-          <div class="banner warn"><svg class="ic sm"><use href="#i-alert"/></svg><span class="num"><b>การขาย 3 ต.ค. 2569 ยังไม่ปิด ใช้จุดนี้อยู่</b>ชั่งแล้ว 3 เข่ง (25–27) · 150 กก. · แดง · การขายนั้นต้องเลือกจุดใหม่ก่อนชั่งต่อ</span></div>
+          <div class="banner warn"><svg class="ic sm"><use href="#i-alert"/></svg><span class="num lines"><b>การขาย 3 ต.ค. 2569 ยังไม่ปิด ใช้จุดนี้อยู่</b><span>ชั่งแล้ว 3 เข่ง (เข่ง 25–27)</span><span>150 กก. · คนกรีด แดง</span><span>การขายนั้นต้องเลือกจุดใหม่ก่อนชั่งต่อ</span></span></div>
           <p style="font-weight:600;color:var(--c-ink)">เข่งที่ชั่งแล้วที่จุดนี้</p>
-          <div class="radio"><span class="dot"></span><span>คงไว้ที่ จุด 2<small>ในการขายแสดงว่า "จุด 2 · ลบแล้ว" · ยอดของแดงไม่เปลี่ยน</small></span></div>
+          <div class="radio"><span class="dot"></span><span>คงไว้ที่ จุด 2<small>ในการขายแสดงว่า "จุด 2 · ลบแล้ว"</small><small>ยอดของแดงไม่เปลี่ยน</small></span></div>
           <div class="radio"><span class="dot"></span><span>ย้ายไปจุดใหม่<small>เลือกจุดใหม่ในการขายนั้น (หน้า 12b)</small></span></div>
           <span style="font-size:12px;color:var(--c-ink-soft)">ต้องเลือกก่อน จึงกดลบได้</span>
           <div class="btnrow"><span class="btn btn-secondary">ยกเลิก</span><span class="btn btn-disabled"><svg class="ic sm"><use href="#i-trash"/></svg>ลบ</span></div>
@@ -1131,7 +1210,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-67</span><span>ลบจุดที่การขายเปิดอยู่ใช้ → ถามทุกครั้ง ว่าเข่งคงที่จุดเดิมหรือย้ายไปจุดใหม่</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-65</span><span>คำบนจอ "ลบ" + "กู้คืนได้" · การขายนั้นต้องเลือกจุดใหม่ และสร้างจุดได้ทันที</span></li>
-          <li><span class="q">?S4</span><span>ลบจากเครื่องอื่นขณะเครื่องนี้ชั่งออฟไลน์อยู่ — E03-S03 ระบุแล้วว่าเครื่องนี้เห็นหลัง sync และต้องเลือกจุดใหม่ แต่เข่งที่ชั่งหลังลบ (ก่อน sync) ไปอยู่ที่ไหน และใครตอบคำถาม "คงไว้ / ย้าย"</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S4: ลบจุดจากเครื่องอื่นขณะเครื่องนี้ชั่งออฟไลน์ → เชื่อการกระทำที่เกิดก่อน (ตามเวลา)</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -1143,17 +1222,17 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="sbar num"><span>09:42</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
         <div class="appbar dim"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 41</span></div>
         <div class="body dim">
-          <div class="card tight"><div class="row"><span class="tile t-gray"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จันทเขลม · จุด 2</span><span class="sub">ลบแล้ว · แดง</span></span></div></div>
+          <div class="card tight"><div class="row"><span class="tile t-gray"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จันทเขลม · จุด 2</span><span class="sub">ลบแล้ว</span><span class="sub">คนกรีด: แดง</span></span></div></div>
         </div>
         <div class="sheet-scrim"></div>
         <div class="sheet">
           <span class="grab"></span>
           <h4>จุด 2 ถูกลบแล้ว — เลือกจุดใหม่</h4>
-          <p class="num">ต้องเลือกจุดก่อนชั่งต่อ · เข่ง 25–27 (150 กก.) คงไว้ที่ "จุด 2 · ลบแล้ว"</p>
+          <div class="lines"><span class="mi"><svg class="ic"><use href="#i-lock"/></svg>ต้องเลือกจุดก่อนชั่งต่อ</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>เข่ง 25–27 (150 กก.) คงไว้ที่ "จุด 2 · ลบแล้ว"</span></div>
           <div class="card tight" style="box-shadow:none">
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">จันทเขลม · แดง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">จันทเขลม · แดง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
-            <div class="row"><span class="tile t-blue"><svg class="ic"><use href="#i-plus"/></svg></span><span class="grow"><span class="val">สร้างจุดใหม่</span><span class="sub">ในสวนจันทเขลม · ตั้งชื่อแล้วใช้ทันที</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">คนกรีด: แดง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">คนกรีด: แดง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-blue"><svg class="ic"><use href="#i-plus"/></svg></span><span class="grow"><span class="val">สร้างจุดใหม่</span><span class="sub">ในสวนจันทเขลม</span><span class="sub">ตั้งชื่อแล้วใช้ทันที</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
           </div>
           <p style="font-size:12px">ถ้าตอนลบเลือก "ย้ายไปจุดใหม่" → เข่ง 25–27 ย้ายไปจุดที่เลือกตรงนี้</p>
         </div>
@@ -1195,10 +1274,10 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <div class="card expect" style="padding:10px 12px">
             <span class="lbl" style="font-size:14px;color:var(--c-ink-soft)">จะได้ (เลขเข่งต่อเนื่อง)</span>
             <div class="fig num" style="font-size:24px">เข่ง 28–30 เต็ม</div>
-            <p class="num">+ เข่ง 31 เศษ 20 กก. · รวม 170 กก. · ต่อท้ายเลขล่าสุด (27)</p>
+            <p class="num">+ เข่ง 31 เศษ 20 กก.</p><p class="num">รวม 170 กก. · ต่อจากเลขล่าสุด 27</p>
           </div>
           <div class="card tight">
-            <div class="row"><span class="tile t-blue"><svg class="ic"><use href="#i-camera"/></svg></span><span class="grow"><span class="val">แนบหลักฐาน</span><span class="sub">ไม่บังคับ · ยังไม่มีรูป</span></span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-plus"/></svg>เพิ่มรูป</span></div>
+            <div class="row"><span class="tile t-blue"><svg class="ic"><use href="#i-camera"/></svg></span><span class="grow"><span class="val">แนบหลักฐาน</span><span class="sub">ไม่บังคับ</span><span class="sub">ยังไม่มีรูป</span></span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-plus"/></svg>เพิ่มรูป</span></div>
           </div>
         </div>
         <div class="foot"><div class="btn btn-primary">บันทึก 4 เข่ง</div></div>
@@ -1236,7 +1315,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="sheet">
           <span class="grab"></span>
           <h4>แนบหลักฐาน — รูปอะไร?</h4>
-          <p>ไม่บังคับ · เลือกประเภทช่วยให้หาเจอทีหลัง</p>
+          <p>ไม่บังคับ</p><p>เลือกประเภทช่วยให้หาเจอทีหลัง</p>
           <div class="types">
             <span class="type on"><span class="tile sm t-blue"><svg class="ic"><use href="#i-note"/></svg></span>โน้ตกระดาษ<svg class="ic sm ck"><use href="#i-check"/></svg></span>
             <span class="type"><span class="tile sm t-blue"><svg class="ic"><use href="#i-receipt"/></svg></span>ใบชั่ง / สลิปผู้ซื้อ</span>
@@ -1248,7 +1327,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <span style="font-size:13px;color:var(--c-ink-soft)">คำอธิบาย (ไม่บังคับ)</span>
           <span class="inp text">เช่น จดโดย อ.สมหวัง</span>
           <div class="btnrow"><span class="btn btn-secondary"><svg class="ic sm"><use href="#i-camera"/></svg>ถ่ายรูป</span><span class="btn btn-secondary"><svg class="ic sm"><use href="#i-image"/></svg>เลือกรูป</span></div>
-          <p style="font-size:13px">รูปเก็บในเครื่องก่อน (รอส่ง) · ข้ามได้ บันทึกเข่งได้โดยไม่มีรูป</p>
+          <div class="lines"><span class="mi"><svg class="ic"><use href="#i-half"/></svg>รูปเก็บในเครื่องก่อน (รอส่ง)</span><span class="mi"><svg class="ic"><use href="#i-check"/></svg>ข้ามได้ — บันทึกเข่งได้โดยไม่มีรูป</span></div>
         </div>
       </div></div>
       <figcaption>
@@ -1291,8 +1370,8 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div style="margin-top:8px"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ยอดผู้ขายและผู้ซื้อตรงกัน</span></div>
           </div>
           <div class="card tight">
-            <div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">แดง</span><span class="sub num">3 จุด · 31 เข่ง</span></span><span class="val num">1,520 กก.</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
-            <div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">นัด</span><span class="sub num">2 จุด · 15 เข่ง</span></span><span class="val num">735 กก.</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">แดง</span><span class="mi"><svg class="ic"><use href="#i-pin"/></svg>3 จุด</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>31 เข่ง</span></span><span class="val num">1,520 กก.</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">นัด</span><span class="mi"><svg class="ic"><use href="#i-pin"/></svg>2 จุด</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>15 เข่ง</span></span><span class="val num">735 กก.</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
           </div>
           <div class="banner info"><svg class="ic sm"><use href="#i-search"/></svg><span>ไม่ตรง: เจาะดู จุดชั่ง → เข่ง แล้วแก้; ยังต่าง → ปิดเป็น "พบส่วนต่าง" + เหตุผล</span></div>
         </div>
@@ -1322,51 +1401,74 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       <span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span>
       <div class="phone long"><div class="screen" aria-label="สรุปยอดส่วนแบ่ง และหักหนี้ (หน้ายาว)">
         <div class="sbar num"><span>10:17</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
-        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>สรุปยอดส่วนแบ่ง <small class="num">3 ต.ค. 2569 · 48.50 ฿/กก.</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 50</span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>สรุปยอดส่วนแบ่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 50</span></div>
         <div class="body" style="gap:10px">
+          <span class="mi"><svg class="ic"><use href="#i-coin"/></svg>ราคา <b class="num">48.50 ฿/กก.</b></span>
           <div class="card">
-            <div class="row" style="min-height:0"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow val">แดง <span class="sub" style="display:inline">· 1,520 กก.</span></span></div>
+            <div class="row" style="min-height:0"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow val">แดง</span></div>
+            <div class="kv"><span>น้ำหนัก</span><span>1,520 กก.</span></div>
             <div class="kv"><span>ยอดขาย</span><span>73,720.00</span></div>
             <div class="kv"><span>ส่วนแบ่งคนกรีด 50%</span><span>36,860.00</span></div>
-            <div class="kv minus"><span>หักหนี้ · งวดผ่อน</span><span>−2,000.00</span></div>
+            <div class="kv minus"><span>หักหนี้ (งวดผ่อน)</span><span>−2,000.00</span></div>
             <div class="kv"><span>ปัดเศษ</span><span>0.00</span></div>
             <div class="kv total"><span>เงินสดที่ต้องจ่าย</span><span class="fig" style="font-size:24px">34,860<span class="u">บาท</span></span></div>
             <div class="kv" style="margin-top:4px"><span>หนี้คงค้างหลังการขายนี้</span><span>3,000.00</span></div>
             <span class="lnk2">แก้ยอดหัก ›</span>
           </div>
           <div class="card">
-            <div class="row" style="min-height:0"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow val">นัด <span class="sub" style="display:inline">· 735 กก.</span></span></div>
+            <div class="row" style="min-height:0"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow val">นัด</span></div>
+            <div class="kv"><span>น้ำหนัก</span><span>735 กก.</span></div>
             <div class="kv"><span>ยอดขาย</span><span>35,647.50</span></div>
             <div class="kv"><span>ส่วนแบ่งคนกรีด 50%</span><span>17,823.75</span></div>
             <div class="kv muted"><span>หักหนี้</span><span>ยังไม่หัก</span></div>
             <div class="kv muted"><span>ปัดเศษ</span><span>ขั้นถัดไป</span></div>
             <div class="kv total"><span>เงินสดที่ต้องจ่าย</span><span class="fig" style="font-size:24px">17,823.75<span class="u">บาท</span></span></div>
             <div class="ded offer" style="margin-top:8px">
-              <div class="hd"><svg class="ic sm"><use href="#i-wallet"/></svg><span class="grow">มีหนี้ติดสวน 1,500.00 · สวนต้องคืนนัด 640.00</span></div>
+              <div class="lines"><span class="mi"><svg class="ic"><use href="#i-wallet"/></svg>หนี้ติดสวน <b class="num">1,500.00</b></span><span class="mi"><svg class="ic"><use href="#i-in"/></svg>สวนต้องคืนนัด <b class="num">640.00</b></span></div>
             </div>
             <div class="btn btn-secondary small" style="width:100%;margin-top:8px"><svg class="ic sm"><use href="#i-minus"/></svg>หักเงินคืนหนี้</div>
           </div>
           <div class="card cream">
             <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--c-raised)"><svg class="ic"><use href="#i-bank"/></svg></span><span class="grow val">ส่วนแบ่งเจ้าของ</span></div>
-            <div class="kv"><span>จาก แดง · จาก นัด</span><span>36,860.00 · 17,823.75</span></div>
+            <div class="kv"><span>ส่วนของสวน (ยางของแดง)</span><span>36,860.00</span></div>
+            <div class="kv"><span>ส่วนของสวน (ยางของนัด)</span><span>17,823.75</span></div>
+            <div class="kv total"><span>โอนเข้าบัญชี</span><span class="fig" style="font-size:22px">54,683.75<span class="u">บาท</span></span></div>
             <div class="kv" style="margin-top:4px"><span>บัญชีรับเงิน</span><span class="sel">ค่าเริ่มต้น<svg class="ic"><use href="#i-down"/></svg><small>(ไม่บังคับ)</small></span></div>
-            <div class="kv total"><span>โอนเข้าบัญชีธนาคาร</span><span class="fig" style="font-size:22px">54,683.75<span class="u">บาท</span></span></div>
-            <span style="font-size:12px;color:var(--c-ink-soft)">การหักหนี้ไม่เปลี่ยนยอดขายรวมและส่วนแบ่งเจ้าของ · ปัดเศษอาจเปลี่ยนไม่เกิน 1 บาท</span>
+            <div class="ded" style="margin-top:8px;padding:8px 10px">
+              <div class="hd"><svg class="ic sm"><use href="#i-wallet"/></svg><span class="grow">เงินสดวันนี้ (ไม่รวมยอดโอน)</span></div>
+              <span style="font-size:14px;color:var(--c-ink)">หักไว้จากเงินสดที่จ่ายคนกรีด</span>
+              <div class="kv plus"><span>แดง คืนหนี้ให้สวน</span><span>+2,000.00</span></div>
+              <div class="kv total"><span><b style="color:var(--c-ink)">เงินสดเข้าสวนวันนี้</b></span><span class="fig" style="font-size:20px">2,000.00</span></div>
+            </div>
           </div>
         </div>
         <div class="foot"><div class="btn btn-primary">ถัดไป: ปัดเศษ</div></div>
       </div></div>
       <div class="extras">
         <div class="inset">
+          <span class="ttl">การ์ดเจ้าของ — หลังบันทึกหักหนี้ของนัด (หน้า 17a)</span>
+          <div class="card cream" style="box-shadow:none;padding:8px 10px">
+            <div class="hd" style="display:flex;gap:6px;align-items:center;font-weight:600;font-size:14px"><svg class="ic sm"><use href="#i-wallet"/></svg>เงินสดวันนี้ (ไม่รวมยอดโอน)</div>
+            <span style="font-size:14px;color:var(--c-ink)">หักไว้จากเงินสดที่จ่ายคนกรีด</span>
+            <div class="kv plus"><span>แดง คืนหนี้ให้สวน</span><span>+2,000.00</span></div>
+            <div class="kv plus"><span>นัด คืนหนี้ให้สวน</span><span>+1,500.00</span></div>
+            <div class="kv minus"><span>สวนคืนเงินที่นัดออกให้ก่อน</span><span>−640.00</span></div>
+            <div class="kv total"><span><b style="color:var(--c-ink)">เงินสดเข้าสวนวันนี้</b></span><span class="fig" style="font-size:20px">2,860.00</span></div>
+          </div>
+          <span class="note num">ตรวจยอดหลังปัดเศษ (หน้า 18: นัด 16,963.75 → 16,964 · ส่วนของสวนจากนัด 17,823.75 → 17,823.50) — เงินสดคนกรีด 34,860 + 16,964 · โอน 54,683.50 · เงินสดเข้าสวน 2,860 → รวม 109,367.50 = ยอดขาย</span>
+        </div>
+        <div class="inset">
           <span class="ttl">เพดานหัก — เงินสดไม่ติดลบ (ตัวอย่างแยก)</span>
-          <div class="mini-row num"><span class="grow">ส่วนแบ่ง 1,200 · หนี้ติดสวน 5,000</span><b>หักได้ไม่เกิน 1,200</b></div>
-          <div class="mini-row num"><span class="grow">→ เงินสด 0 · ยกไปงวดถัดไป 3,800</span></div>
+          <div class="mini-row num"><span class="grow">ส่วนแบ่ง 1,200</span></div>
+          <div class="mini-row num"><span class="grow">หนี้ติดสวน 5,000</span><b>หักได้ไม่เกิน 1,200</b></div>
+          <div class="mini-row num"><span class="grow">→ เงินสด 0</span></div>
+          <div class="mini-row num"><span class="grow">→ ยกไปงวดถัดไป 3,800</span></div>
           <div class="mini-row num"><span class="grow">ถ้าใช้หักกลบเงินที่สวนต้องคืน 640</span><b>เพดาน 1,840</b></div>
           <span class="note">เพดาน = ส่วนแบ่ง + เงินที่สวนคืนครั้งนี้ (ไม่เกินยอดค้าง) · กดบันทึกเกินเพดานไม่ได้ (D-18, D-67)</span>
         </div>
         <div class="inset">
           <span class="ttl">หลังแก้การขาย ส่วนแบ่งลดจนน้อยกว่ายอดหัก (ตัวอย่างแยก)</span>
-          <div class="mini-row num"><span class="chip ch-bad"><svg class="ic"><use href="#i-flag"/></svg>หักเกินส่วนแบ่ง</span><span class="grow">ส่วนแบ่ง 1,450 · หักไว้ 2,000</span></div>
+          <div class="mini-row num"><span class="chip ch-bad"><svg class="ic"><use href="#i-flag"/></svg>หักเกินส่วนแบ่ง</span><span class="grow">ส่วนแบ่ง 1,450<br>หักไว้ 2,000</span></div>
           <span class="note">แอปไม่ปรับเงินให้เอง — ติดธงบนการ์ดคนกรีด จนเจ้าของแก้ยอดหัก (ดูหน้า 19)</span>
         </div>
       </div>
@@ -1378,8 +1480,8 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-60</span><span>หักหนี้ที่หน้าสรุปยอดส่วนแบ่ง ด้วยปุ่ม "หักเงินคืนหนี้" แล้วค่อยปัดเศษ</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-61</span><span>หักเกินส่วนแบ่งหลังแก้การขาย → ธง "หักเกินส่วนแบ่ง" ปิด/ติ๊กจ่ายไม่ได้จนแก้ยอดหัก</span></li>
           <li><svg class="ic sm"><use href="#i-help"/></svg><span>การขายที่ยกเลิกหรือถูกลบ → การหักและการคืนจากหักกลบของการขายนั้นยกเลิกตาม (กู้คืน → กลับมานับ)</span></li>
-          <li><span class="q">?S8</span><span>หน้า 17 = สรุปยอดส่วนแบ่ง ตาม D-60 / E06-S04 · ร่างนี้ย้ายถามปัดเศษ (v4 หน้า 17) ไปเป็นหน้า 18 — ถูกไหม</span></li>
-          <li><span class="q">?S6</span><span>การ์ดเจ้าของควรแสดงเงินหนี้ที่รับคืนและเงินที่สวนคืนคนกรีดไหม — ร่างนี้ไม่แสดง (คงแค่ส่วนแบ่งเจ้าของ)</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S8: สรุปยอดส่วนแบ่ง = หน้า 17 · ถามปัดเศษ = หน้า 18</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S6: การ์ดเจ้าของแสดงหนี้ที่รับคืนและเงินที่สวนคืน — แต่ต้องไม่รก เข้าใจง่าย (ผลรีวิวจาก persona ชาวสวนอยู่ท้ายหน้า)</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -1398,17 +1500,17 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <div class="kv"><span>ส่วนแบ่งครั้งนี้</span><span>17,823.75</span></div>
           <div class="ded on">
             <div class="hd"><span class="grow">หนี้ที่ติดสวน — หักได้</span><b class="num">1,500.00</b></div>
-            <small class="num">ค่าปุ๋ย 1,500.00 · ไม่มีแผนผ่อน → เสนอยอดค้างทั้งหมด</small>
+            <div class="lines"><span class="mi"><svg class="ic"><use href="#i-receipt"/></svg>ค่าปุ๋ย <b class="num">1,500.00</b></span><span class="mi"><svg class="ic"><use href="#i-help"/></svg>ไม่มีแผนผ่อน → เสนอยอดค้างทั้งหมด</span></div>
             <span class="lbl" style="font-size:13px;color:var(--c-ink-soft)">หักครั้งนี้ (แก้ได้ 0 – 1,500.00)</span>
             <div class="stepper sm"><span class="sb"><svg class="ic"><use href="#i-minus"/></svg></span><span class="inp focus">1,500.00<span class="u">บาท</span></span><span class="sb"><svg class="ic"><use href="#i-plus"/></svg></span></div>
           </div>
           <div class="ded offer">
             <div class="hd"><svg class="ic sm"><use href="#i-wallet"/></svg><span class="grow">แนะนำ: นำเงินที่สวนต้องคืนมาหักกลบ</span></div>
-            <small class="num">สวนต้องคืนนัด 640.00 · สำรองจ่ายค่าน้ำมันตัดหญ้า 12 ก.ย. 2569</small>
+            <div class="lines"><span class="mi"><svg class="ic"><use href="#i-in"/></svg>สวนต้องคืนนัด <b class="num">640.00</b></span><span class="mi"><svg class="ic"><use href="#i-receipt"/></svg>สำรองจ่ายค่าน้ำมันตัดหญ้า</span><span class="mi"><svg class="ic"><use href="#i-cal"/></svg>12 ก.ย. 2569</span></div>
             <span class="lbl" style="font-size:13px;color:var(--c-ink-soft)">ใช้ครั้งนี้ (แก้ได้ 0 – 640.00)</span>
             <div class="stepper sm"><span class="sb"><svg class="ic"><use href="#i-minus"/></svg></span><span class="inp">640.00<span class="u">บาท</span></span><span class="sb"><svg class="ic"><use href="#i-plus"/></svg></span></div>
             <div class="hd"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ใช้หักกลบแล้ว</span><span class="grow"></span><span class="lnk2">ไม่ใช้</span></div>
-            <small>ค่าเริ่มต้น = ไม่ใช้ จนเจ้าของกด "ใช้หักกลบ" · บันทึกเป็น "การคืนเงิน" แยกจากการหักหนี้ · ส่วนที่เหลือยังค้างคืน</small>
+            <small>ค่าเริ่มต้น = ไม่ใช้ จนเจ้าของกด "ใช้หักกลบ"</small><small>บันทึกเป็น "การคืนเงิน" แยกจากการหักหนี้</small><small>ส่วนที่ไม่ใช้ยังค้างคืน</small>
           </div>
           <div class="card" style="box-shadow:none;padding:10px 12px">
             <div class="kv"><span>ส่วนแบ่ง</span><span>17,823.75</span></div>
@@ -1426,7 +1528,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <span class="ids">FERT-5, FERT-6, FIN-4, SET-4 · D-18, D-54, D-59, D-60, D-67, D-69 · E06-S03, E06-S04, E11-S02, E11-S03</span>
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-69</span><span>ตอนสรุปเงินหักได้เฉพาะหนี้ที่ติดสวน · หนี้กับคนอื่น (ตัวอย่าง: นัดยืม อ.สมหวัง 1,000) แสดงในบัญชีหนี้คนงาน ไม่อยู่ในยอดที่หักได้</span></li>
-          <li><span class="q">?S10</span><span>แผ่นนี้ควรแสดงหนี้กับคนอื่น (หักไม่ได้) ให้เห็นด้วยไหม — ร่างนี้ไม่แสดง</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S10: แผ่นนี้ไม่แสดงหนี้กับคนอื่น</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-59</span><span>ยอดค้างก้อนเดียวต่อคน + แผนผ่อนเดียวต่อคน · งวดนับต่อการขาย</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-67</span><span>หักกลบใช้บางส่วนได้ · เพดานหัก = ส่วนแบ่ง + เงินคืนครั้งนี้ · คืนหลายรายการ ตัดเก่าสุดก่อน</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-60</span><span>บันทึกการคืนและการหักแยกกัน แต่คิดรวมในยอดที่คนกรีดรับครั้งนี้</span></li>
@@ -1448,11 +1550,11 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="sheet">
           <span class="grab"></span>
           <h4>ปัดเศษสตางค์อย่างไร?</h4>
-          <p class="num">เลือกครั้งเดียวทั้งการขาย · คิดจากเงินสดหลังหักหนี้ · นัด 16,963.75 (เศษ 75 สตางค์) · แดงไม่มีเศษ</p>
-          <div class="radio on"><span class="dot"></span><span>ปัดเป็นบาทเต็ม ให้คนกรีดได้ประโยชน์<small class="num">นัด 16,964 · เจ้าของจากนัด 17,823.50 · ใช้ครั้งก่อนของกลุ่ม</small></span></div>
-          <div class="radio"><span class="dot"></span><span>ให้เจ้าของได้ประโยชน์<small class="num">นัด 16,963 · เจ้าของจากนัด 17,824.50</small></span></div>
-          <div class="radio"><span class="dot"></span><span>ไม่ปัด (เก็บสตางค์)<small class="num">นัด 16,963.75 · เจ้าของจากนัด 17,823.75</small></span></div>
-          <p>ส่วนปรับจากการปัดเศษเก็บเป็นบรรทัดแยก · ฝั่งเจ้าของเก็บสตางค์ได้ · <span class="lnk2">แก้รายคน ›</span></p>
+          <div class="lines"><span class="mi"><svg class="ic"><use href="#i-check"/></svg>เลือกครั้งเดียวทั้งการขาย</span><span class="mi"><svg class="ic"><use href="#i-minus"/></svg>คิดจากเงินสดหลังหักหนี้</span><span class="mi"><svg class="ic"><use href="#i-person"/></svg>นัด <b class="num">16,963.75</b> (เศษ 75 สตางค์)</span><span class="mi"><svg class="ic"><use href="#i-person"/></svg>แดง ไม่มีเศษ</span></div>
+          <div class="radio on"><span class="dot"></span><span>ปัดเป็นบาทเต็ม ให้คนกรีดได้ประโยชน์<small class="num">นัด 16,964</small><small class="num">เจ้าของจากนัด 17,823.50</small><small>✓ ใช้ครั้งก่อนของกลุ่ม</small></span></div>
+          <div class="radio"><span class="dot"></span><span>ให้เจ้าของได้ประโยชน์<small class="num">นัด 16,963</small><small class="num">เจ้าของจากนัด 17,824.50</small></span></div>
+          <div class="radio"><span class="dot"></span><span>ไม่ปัด (เก็บสตางค์)<small class="num">นัด 16,963.75</small><small class="num">เจ้าของจากนัด 17,823.75</small></span></div>
+          <p>ส่วนปรับเก็บเป็นบรรทัดแยก — เจ้าของเก็บสตางค์ได้</p><p><span class="lnk2">แก้รายคน ›</span></p>
           <div class="btn btn-primary">ยืนยัน</div>
         </div>
       </div></div>
@@ -1472,15 +1574,15 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     <figure class="step">
       <div class="phone"><div class="screen" aria-label="สถานะการจ่ายเงินและปิดการขาย">
         <div class="sbar num"><span>10:26</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
-        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>การจ่ายเงิน <small class="num">3 ต.ค. 2569 · ฉบับร่าง</small></h3><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>การจ่ายเงิน <small class="num">การขาย 3 ต.ค. 2569 (ฉบับร่าง)</small></h3><span class="pill p-ok"><svg class="ic"><use href="#i-cloud-ok"/></svg>ซิงก์แล้ว</span></div>
         <div class="body">
           <div class="card tight">
             <div class="row" style="padding:6px 0"><span class="tile sm t-green"><svg class="ic"><use href="#i-scale"/></svg></span><span class="grow"><span class="lbl" style="display:block">การตรวจกับผู้ซื้อ</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ยอดผู้ขายและผู้ซื้อตรงกัน</span></span></div>
           </div>
-          <div class="tick on"><span class="box"><svg class="ic sm"><use href="#i-check"/></svg></span><span class="grow">แดง ได้รับเงินสดแล้ว<small class="num">เจ้าของ · มือถือ · 10:24 · หักหนี้ 2,000</small></span><span class="amt num">34,860</span></div>
-          <div class="tick"><span class="box"></span><span class="grow">นัด ได้รับเงินสดแล้ว<small class="num">ยังไม่จ่าย · หักหนี้ 1,500 · คืน 640</small></span><span class="amt num">16,964</span></div>
-          <div class="tick"><span class="box"></span><span class="grow">เจ้าของได้รับเงินโอนแล้ว<small>ยังไม่ได้รับ · บัญชีค่าเริ่มต้น</small></span><span class="amt num">54,683.50</span></div>
-          <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span>แต่ละข้อติ๊กแยกกันและยกเลิกได้ · แก้การขายภายหลังจนเงินเปลี่ยน → ข้อที่กระทบติดธง "ต้องตรวจใหม่"</span></div>
+          <div class="tick on"><span class="box"><svg class="ic sm"><use href="#i-check"/></svg></span><span class="grow">แดง ได้รับเงินสดแล้ว<span class="mi"><svg class="ic"><use href="#i-person"/></svg>เจ้าของ · มือถือ</span><span class="mi"><svg class="ic"><use href="#i-clock"/></svg>10:24</span><span class="mi"><svg class="ic"><use href="#i-minus"/></svg>หักหนี้ 2,000</span></span><span class="amt num">34,860</span></div>
+          <div class="tick"><span class="box"></span><span class="grow">นัด ได้รับเงินสดแล้ว<span class="mi">ยังไม่จ่าย</span><span class="mi"><svg class="ic"><use href="#i-minus"/></svg>หักหนี้ 1,500</span><span class="mi"><svg class="ic"><use href="#i-in"/></svg>คืน 640</span></span><span class="amt num">16,964</span></div>
+          <div class="tick"><span class="box"></span><span class="grow">เจ้าของได้รับเงินโอนแล้ว<span class="mi">ยังไม่ได้รับ</span><span class="mi"><svg class="ic"><use href="#i-bank"/></svg>บัญชีค่าเริ่มต้น</span></span><span class="amt num">54,683.50</span></div>
+          <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span class="lines"><span>แต่ละข้อติ๊กแยกกันและยกเลิกได้</span><span>แก้การขายภายหลังจนเงินเปลี่ยน → ข้อที่กระทบติดธง "ต้องตรวจใหม่"</span></span></div>
         </div>
         <div class="foot">
           <div class="btn btn-secondary"><svg class="ic"><use href="#i-check"/></svg>ปิดการขาย</div>
@@ -1520,16 +1622,16 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="sbar num"><span>18:12</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ขัดกัน <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-conf"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน 1</span></div>
         <div class="body" style="gap:10px">
-          <div class="banner bad"><svg class="ic sm"><use href="#i-lock"/></svg><span><b>ปิดการขายและบันทึกการจ่ายเงินไม่ได้</b>จนกว่าจะเลือกค่า · ระหว่างนี้คิดเงินจากค่าเดิม</span></div>
+          <div class="banner bad"><svg class="ic sm"><use href="#i-lock"/></svg><span><b>ปิดการขายและบันทึกการจ่ายเงินไม่ได้</b><span style="display:block">จนกว่าจะเลือกค่า</span><span style="display:block">ระหว่างนี้คิดเงินจากค่าเดิม</span></span></div>
           <div class="card">
-            <div class="row" style="min-height:0"><span class="tile t-red"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">เข่ง 46 · เศษ</span><span class="sub">นัด · คลองพลู จุด 1</span></span><span class="chip ch-bad"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span></div>
+            <div class="row" style="min-height:0"><span class="tile t-red"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">เข่ง 46 (เศษ)</span><span class="mi"><svg class="ic"><use href="#i-person"/></svg>นัด</span><span class="mi"><svg class="ic"><use href="#i-pin"/></svg>คลองพลู จุด 1</span></span><span class="chip ch-bad"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span></div>
           </div>
           <div class="opt">
-            <div class="card optrow"><span class="who"><b>ค่าจากเครื่อง A</b>เจ้าของ · มือถือ · 18:05</span><span class="fig num" style="font-size:22px">36<span class="u">กก.</span></span><span class="btn btn-secondary small">ใช้ค่านี้</span></div>
-            <div class="card optrow"><span class="who"><b>ค่าจากเครื่อง B</b>น้อง · เว็บ · 18:07</span><span class="fig num" style="font-size:22px">38<span class="u">กก.</span></span><span class="btn btn-secondary small">ใช้ค่านี้</span></div>
+            <div class="card optrow"><span class="who"><b>ค่าจากเครื่อง A</b><span class="mi"><svg class="ic"><use href="#i-person"/></svg>เจ้าของ · มือถือ</span><span class="mi"><svg class="ic"><use href="#i-clock"/></svg>18:05</span></span><span class="fig num" style="font-size:22px">36<span class="u">กก.</span></span><span class="btn btn-secondary small">ใช้ค่านี้</span></div>
+            <div class="card optrow"><span class="who"><b>ค่าจากเครื่อง B</b><span class="mi"><svg class="ic"><use href="#i-person"/></svg>น้อง · เว็บ</span><span class="mi"><svg class="ic"><use href="#i-clock"/></svg>18:07</span></span><span class="fig num" style="font-size:22px">38<span class="u">กก.</span></span><span class="btn btn-secondary small">ใช้ค่านี้</span></div>
             <div class="card optrow"><span class="who"><b>คงค่าเดิม</b>ก่อนมีการแก้</span><span class="fig num" style="font-size:22px">35<span class="u">กก.</span></span><span class="btn btn-secondary small">ใช้ค่านี้</span></div>
           </div>
-          <span style="font-size:13px;color:var(--c-ink-soft)">ตัดสินได้ออฟไลน์ · ปรับเป็นค่าอื่นเอง = phase ถัดไปหลัง MVP</span>
+          <span class="lines"><span class="mi"><svg class="ic"><use href="#i-nosignal"/></svg>ตัดสินได้ออฟไลน์</span><span class="mi"><svg class="ic"><use href="#i-help"/></svg>ปรับเป็นค่าอื่นเอง = phase ถัดไปหลัง MVP</span></span>
           <div class="card tight">
             <h4 style="margin:8px 0 2px">ป้ายสถานะ sync</h4>
             <div style="display:flex;flex-wrap:wrap;gap:6px;padding-bottom:10px">
@@ -1564,38 +1666,57 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       <tr><td>1–3</td><td>ไม่อยู่ในไฟล์นี้ (ไม่ใช่ flow การขาย)</td><td>—</td></tr>
       <tr><td>4</td><td>ป้าย sync ต่อแถวแสดงเฉพาะ "ขัดกัน" · คำ "ขัดกัน" แทน "ข้อมูลขัดกัน" · วันที่ พ.ศ. แตะสลับ ค.ศ.</td><td>D-65, D-67</td></tr>
       <tr><td>5</td><td>เพิ่มเลือกโหมดเลขเข่ง (ต่อเนื่องทั้งการขาย / นับแยกต่อจุด) ค่าเริ่มต้นจากตั้งค่ากลุ่ม · เพิ่มประเภทตาชั่ง (ไม่มีทศนิยม = ค่าเริ่มต้น; ทศนิยม 1 ตำแหน่ง กดไม่ได้ "ยังไม่พร้อมใช้งาน") · กลายเป็นหน้ายาว</td><td>D-46, D-53, D-66</td></tr>
-      <tr><td>6</td><td>เอาแถบ ?21 ออก</td><td>D-53</td></tr>
+      <tr><td>6</td><td>เอาแถบ ?21 ออก · จุดที่ยังไม่มีคนกรีดเป็นกลุ่มแยกด้านล่าง ไม่อยู่ในขั้น "คนกรีด"</td><td>D-53, D-70</td></tr>
       <tr><td>8</td><td>เพิ่มกรอบอธิบายเลขเข่งในโหมดนับแยกต่อจุด</td><td>D-46</td></tr>
-      <tr><td>8a (ใหม่)</td><td>จุดที่ยังไม่มีคนกรีด: แถบเตือน ชั่งต่อได้ + ปุ่ม "มอบหมายตอนนี้"</td><td>D-63</td></tr>
-      <tr><td>10</td><td>ปุ่ม ± ทีละ 1 กก. (ตาชั่งไม่มีทศนิยม) — รอยืนยัน ?S9</td><td>D-66</td></tr>
+      <tr><td>8a (ใหม่)</td><td>จุดที่ยังไม่มีคนกรีด: แถบเตือน ชั่งต่อได้ + ปุ่ม "มอบหมายตอนนี้" · มอบหมายมีผลเฉพาะการขายนี้ ไม่มีช่องวันเริ่ม</td><td>D-63, D-70</td></tr>
+      <tr><td>10</td><td>แผ่นเลื่อนขึ้นเลือกน้ำหนัก: ลากไม้บรรทัด + ± ทีละ 1 กก. ตามประเภทตาชั่ง (แทนแผงพิมพ์ในหน้า)</td><td>D-66, D-70</td></tr>
       <tr><td>12</td><td>เหลือ 3 ทางเลือก ใช้คำตาม D-57 · ข้อ 4 เดิมย้ายไปเป็นโหมดเลขเข่งที่หน้า 5</td><td>D-46, D-53, D-57</td></tr>
       <tr><td>13</td><td>ชื่อทางเลือก "เติมให้เต็มเข่ง"</td><td>D-57</td></tr>
+      <tr><td>12-ต่อจุด (ใหม่)</td><td>โหมดนับแยกต่อจุด: คนกรีดคนเดิม → ถาม 3 ทางเลือก (เลขเข่งของแต่ละจุด) · คนกรีดคนอื่น → เข่งไม่เต็มเปิดค้าง ไม่ถาม</td><td>D-46, D-57, D-70</td></tr>
       <tr><td>12a, 12b (ใหม่)</td><td>ลบจุดที่การขายเปิดอยู่ใช้: ถามทุกครั้งว่าเข่งคงไว้หรือย้าย · การขายต้องเลือกจุดใหม่ / สร้างจุดใหม่ทันที · คำ "ลบ" + "กู้คืนได้"</td><td>D-58, D-65, D-67</td></tr>
       <tr><td>14</td><td>บันทึกย้อนหลังใช้ขั้น สวน → คนกรีด → จุดชั่ง เหมือนการชั่ง แล้วใส่ตัวเลข · เลขเข่งตามโหมดของการขาย · "แนบหลักฐาน" ไม่บังคับ</td><td>D-46, D-49</td></tr>
       <tr><td>15</td><td>ชื่อ "แนบหลักฐาน" · ย้ำว่าไม่บังคับ · หมายเหตุอัปโหลดรออัปเกรดแผน</td><td>D-48, D-49</td></tr>
       <tr><td>16</td><td>ปุ่ม "ไปสรุปยอดส่วนแบ่ง" · ถ้ามีจุดไม่มีคนกรีด ปุ่มกดไม่ได้ บอกจุดที่ขาด + ทางไปมอบหมาย</td><td>D-63</td></tr>
-      <tr><td>17</td><td>เดิม "ถามการปัดเศษ" → ตอนนี้ "สรุปยอดส่วนแบ่ง" (ย้ายจาก v4 หน้า 18) เรียงส่วนแบ่ง → หักหนี้ → ปัดเศษ → เงินสด · ปุ่ม "หักเงินคืนหนี้" · คำ "หักหนี้" แทน "หักค่าปุ๋ย" · เพดานหัก · ธง "หักเกินส่วนแบ่ง"</td><td>D-18, D-54, D-59, D-60, D-61, D-67</td></tr>
+      <tr><td>17</td><td>เดิม "ถามการปัดเศษ" → ตอนนี้ "สรุปยอดส่วนแบ่ง" (ย้ายจาก v4 หน้า 18) เรียงส่วนแบ่ง → หักหนี้ → ปัดเศษ → เงินสด · ปุ่ม "หักเงินคืนหนี้" · คำ "หักหนี้" แทน "หักค่าปุ๋ย" · เพดานหัก · ธง "หักเกินส่วนแบ่ง" · การ์ดเจ้าของมีกล่อง "เงินสดวันนี้ (ไม่รวมยอดโอน)": หนี้ที่รับคืน / เงินที่สวนคืน — รีวิวด้วย persona ชาวสวน 2 รอบ</td><td>D-18, D-54, D-59, D-60, D-61, D-67, D-70</td></tr>
       <tr><td>17a (ใหม่)</td><td>แผ่นหักเงินคืนหนี้: เฉพาะหนี้ที่ติดสวน · เสนองวดผ่อน/ยอดค้าง แก้ได้ 0–เพดาน · เสนอหักกลบเงินที่สวนต้องคืน (บางส่วนได้ เจ้าของกดใช้เอง)</td><td>D-59, D-60, D-67, D-69</td></tr>
       <tr><td>18</td><td>เดิม "สรุปเงิน" → ตอนนี้ "ถามการปัดเศษ" หลังหักหนี้ · เลือกครั้งเดียวทั้งการขาย · จำทั้งกลุ่ม</td><td>D-60, D-67</td></tr>
       <tr><td>19</td><td>ยอดหลังหักหนี้และปัดเศษ · เอาหมายเหตุ "หักเงินจะเป็นขั้นแยก" ออก · ธงหักเกินส่วนแบ่งขวางการปิด</td><td>D-60, D-61</td></tr>
       <tr><td>20</td><td>คำ "ขัดกัน" แทน "ข้อมูลขัดกัน"</td><td>D-65, D-67</td></tr>
+      <tr><td>ทุกหน้า</td><td>หนึ่งข้อมูลต่อบรรทัด ใช้สัญลักษณ์นำ เวลาอยู่บรรทัดของตัวเอง (เช่น รายการการขาย การจ่ายเงิน ขัดกัน)</td><td>D-70</td></tr>
     </tbody>
   </table>
 
-  <h3>คำถามที่ยังเปิด</h3>
-  <p>ข้อที่ไม่ชัด ร่างนี้ใช้ทางเลือกที่ปลอดภัยที่สุด แล้วจดไว้ที่นี่ — ยังไม่ใช่ความต้องการ</p>
-  <ol>
-    <li><span class="q">?S1</span><span>หน้า 6 — จุดที่ยังไม่มีคนกรีดแสดงตรงไหนในขั้น "คนกรีด" (ร่างนี้ยังไม่วาดตำแหน่ง หน้า 8a เป็นตัวอย่างแยก)</span></li>
-    <li><span class="q">?S2</span><span>หน้า 12 — โหมดนับแยกต่อจุด: ย้ายไปจุดของคนกรีดคนเดิมหรือคนอื่น เข่งไม่เต็มของจุดเดิมเปิดค้างหรือปิดเป็นเศษ และยังถาม 3 ทางเลือกไหม (คำถามค้างใน E04-S06)</span></li>
-    <li><span class="q">?S3</span><span>หน้า 5 — เปลี่ยนโหมดเลขเข่ง / ประเภทตาชั่งได้ถึงเมื่อไร (ร่าง: ก่อนบันทึกเข่งแรกเท่านั้น)</span></li>
-    <li><span class="q">?S4</span><span>หน้า 12a — ลบจากเครื่องอื่นขณะเครื่องนี้ชั่งออฟไลน์: เข่งที่ชั่งหลังลบ (ก่อน sync) ไปอยู่ที่ไหน (E03-S03 ระบุแค่ว่าต้องเลือกจุดใหม่หลัง sync) · ร่างนี้ไม่ตั้งค่าเริ่มต้นของคำถาม "คงไว้ / ย้าย"</span></li>
-    <li><span class="q">?S5</span><span>หน้า 8a — "มอบหมายตอนนี้" ตั้งวันเริ่มเท่าไร (ร่าง: เติมวันขาย แก้ได้)</span></li>
-    <li><span class="q">?S6</span><span>หน้า 17 — การ์ดเจ้าของแสดงเงินหนี้ที่รับคืน และเงินที่สวนคืนคนกรีดไหม (ร่าง: ไม่แสดง)</span></li>
-    <li><span class="q">?S7</span><span>หน้า 4 — ป้าย sync ต่อแถวเฉพาะ "ขัดกัน" (D-65 มาจากหน้าข้อมูลหลัก) ใช้กับรายการการขายด้วยใช่ไหม</span></li>
-    <li><span class="q">?S8</span><span>หน้า 18 — สรุปยอดส่วนแบ่งเป็นหน้า 17 ตาม D-60 / E06-S04 แล้ว ร่างนี้จึงให้ถามปัดเศษเป็นหน้า 18 — ถูกไหม</span></li>
-    <li><span class="q">?S9</span><span>หน้า 10 — ตาชั่งไม่มีทศนิยม: ปุ่ม ± ทีละ 1 กก. แทน 0.5 กก. ของ v4 ใช่ไหม</span></li>
-    <li><span class="q">?S10</span><span>หน้า 17a — แผ่นหักเงินคืนหนี้ควรแสดงหนี้กับคนอื่น (หักไม่ได้) ให้เห็นด้วยไหม — ร่างนี้ไม่แสดง (D-69 ให้แสดงในบัญชีหนี้คนงาน)</span></li>
-  </ol>
+  <h3>คำตอบเจ้าของ (D-70 · 2026-10-04)</h3>
+  <p>คำถาม ?S1–?S10 ของรอบก่อนตอบครบแล้ว และใส่ลงหน้าจอแล้ว · ไม่มีคำถามเปิดในไฟล์นี้</p>
+  <table class="chg">
+    <thead><tr><th>ข้อ</th><th>คำตอบ</th><th>หน้า</th></tr></thead>
+    <tbody>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S1</span></td><td>จุดที่ยังไม่มีคนกรีดไม่แสดงในขั้น "คนกรีด" — แสดงเฉพาะในหน้าการขาย; คนรับผิดชอบจุด "ต่อจากนี้ไป" ตั้งที่หน้าจุด</td><td>6, 8a</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S2</span></td><td>นับแยกต่อจุด: ไปจุดของคนกรีดคนอื่น → เข่งไม่เต็มของจุดเดิมเปิดค้าง ไม่ถาม; ไปจุดของคนกรีดคนเดิม → ถามทางเลือก</td><td>12-ต่อจุด</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S3</span></td><td>เปลี่ยนโหมดเลขเข่ง / ประเภทตาชั่งได้ก่อนบันทึกเข่งแรกเท่านั้น</td><td>5</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S4</span></td><td>ลบจากเครื่องอื่นขณะเครื่องนี้ชั่งออฟไลน์ → เชื่อการกระทำที่เกิดก่อน (ตามเวลา)</td><td>12a</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S5</span></td><td>มอบหมายในหน้าการขาย = เฉพาะการขายนี้ ไม่แก้ตั้งค่าจุด → ไม่มีช่องวันเริ่ม</td><td>8a</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S6</span></td><td>การ์ดเจ้าของแสดงหนี้ที่รับคืน / เงินที่สวนคืนคนกรีด ไม่รก เข้าใจง่าย — รีวิวด้วย persona ชาวสวน (ผลด้านล่าง)</td><td>17</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S7</span></td><td>ป้ายต่อแถวเฉพาะ "ขัดกัน" ใช้กับรายการการขายด้วย</td><td>4</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S8</span></td><td>สรุปยอดส่วนแบ่ง = หน้า 17 · ปัดเศษ = หน้า 18</td><td>17, 18</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S9</span></td><td>± ขยับตามประเภทตาชั่ง (ทีละ 1 กก.) + ลากปรับได้ — แผ่นเลื่อนขึ้นเลือกค่าเร็วกว่ากด/พิมพ์</td><td>10</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S10</span></td><td>แผ่นหักเงินคืนหนี้ไม่แสดงหนี้กับคนอื่น</td><td>17a</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>กฎ</span></td><td>แบ่งบรรทัด ใช้สัญลักษณ์ แยกเวลาให้ชัด ห้ามกองหลายข้อมูลรวมบรรทัดเดียว</td><td>ทุกหน้า</td></tr>
+    </tbody>
+  </table>
+  <h3>ผลรีวิวการ์ดเจ้าของ (S6) — persona ชาวสวน</h3>
+  <p>agent แยกเล่นเป็น "ป้าศรี" เจ้าของสวนอายุ 58 ใช้ LINE ทุกวัน ไม่ใช่คนบัญชี อ่านกลางแดดที่ลานชั่ง · ร่างแรกคำตัดสิน <b>"ต้องปรับ"</b> → ปรับแล้วทุกข้อ</p>
+  <table class="chg">
+    <thead><tr><th>ข้อ</th><th>สิ่งที่งง (ร่างแรก)</th><th>ปรับเป็น</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>"จาก แดง / จาก นัด" นึกว่าเป็นเงินที่คนกรีดจ่ายมา ปนกับ "แดง คืนหนี้"</td><td>"ส่วนของสวน (ยางของแดง)"</td></tr>
+      <tr><td>2</td><td>ชื่อกล่อง "เงินสดเรื่องหนี้ วันนี้" ฟังแปลก ไม่บอกว่าแยกจากยอดโอน</td><td>"เงินสดวันนี้ (ไม่รวมยอดโอน)" · ยอดรวม "เงินสดเข้าสวนวันนี้" ตัวหนา</td></tr>
+      <tr><td>3</td><td>ลูกศร ↩ ↪ เล็ก คล้ายกัน ไม่สื่อความหมาย</td><td>ตัดลูกศร ใช้คำกริยาบอกทิศ + สีเขียว/แดง และ +/−</td></tr>
+      <tr><td>4</td><td>"คืนหนี้" กับ "คืนเงิน" คล้ายกันจนต้องอ่านซ้ำ</td><td>"แดง คืนหนี้ให้สวน" / "สวนคืนเงินที่นัดออกให้ก่อน"</td></tr>
+      <tr><td>5</td><td>หมายเหตุสีเทาเป็นภาษาบัญชี ตัวเล็ก · ช่องบัญชีรับเงินแทรกก่อนยอดโอน</td><td>หมายเหตุตัวใหญ่ขึ้น ภาษาง่าย · ย้ายช่องบัญชีรับเงินไปใต้ยอดโอน · "โอนเข้าบัญชี" บรรทัดเดียว</td></tr>
+    </tbody>
+  </table>
+  <p>รีวิวรอบสอง (agent ใหม่ persona เดิม): อ่านรอบเดียวได้ยอดโอน 54,683.75 · เงินสดเข้าสวน 2,000 (หลังหักนัด 2,860) · ใครจ่ายใครถูกทั้งหมด · ที่ยังงงแก้แล้ว: บรรทัดตรวจใต้จอระบุว่าเป็นยอดหลังปัดเศษ · คำอธิบายย้ายขึ้นใต้หัวกล่อง · "สุทธิ" → "เงินสดเข้าสวนวันนี้" · "สวนจ่ายคืนนัด" → "สวนคืนเงินที่นัดออกให้ก่อน" · คงคำ "บัญชีรับเงิน ค่าเริ่มต้น" เพราะเจ้าของตกลงไว้ใน v4 (D-38)</p>
   <p class="not"><b>ยังไม่วาดในรอบนี้:</b> ย้อนกลับ-แก้-ยกเลิกเข่ง (E04-S09), ส่งต่อ/รับช่วง และรวมด้วย QR (E04-S12, S13), การนับซ้ำ (E04-S14), กรณี "พบส่วนต่าง", ลบสวนระหว่างการขาย, หน้าบัญชีหนี้คนงาน (ทีมข้อมูลฟาร์มและเงิน — <code>flow-farm-v1.1.0.html</code>), หน้าตั้งค่ากลุ่ม (โหมดเลขเข่ง / ประเภทตาชั่ง)</p>
 </section>
 
