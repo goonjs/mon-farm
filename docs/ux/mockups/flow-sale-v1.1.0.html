@@ -588,6 +588,12 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .wres span { display: block; font-size: 12px; color: var(--c-ink-soft); }
 .wres b { font-size: 20px; font-variant-numeric: tabular-nums; }
 .wres small { font-size: 11px; color: var(--c-ink-soft); }
+/* D-71: how the debt money comes in — per tapper */
+.bills { display: flex; flex-wrap: wrap; gap: 4px; }
+.bill { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--c-rule-strong); background: var(--c-raised); color: var(--c-ink); }
+.bill.take { border: 2px solid var(--c-accept); background: var(--c-accept-sunk); }
+.radio .opt-l { display: block; font-size: 12px; color: var(--c-ink-soft); line-height: 1.35; }
+.radio .chip { margin-top: 3px; }
 </style>
 
 <!-- Icon sprite: hand-drawn 24px stroke icons, inherit currentColor -->
@@ -1413,7 +1419,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="kv"><span>ปัดเศษ</span><span>0.00</span></div>
             <div class="kv total"><span>เงินสดที่ต้องจ่าย</span><span class="fig" style="font-size:24px">34,860<span class="u">บาท</span></span></div>
             <div class="kv" style="margin-top:4px"><span>หนี้คงค้างหลังการขายนี้</span><span>3,000.00</span></div>
-            <span class="lnk2">แก้ยอดหัก ›</span>
+            <span class="mi"><svg class="ic"><use href="#i-coin"/></svg>รับคืน: หยิบเงินสดจากกองแดง</span>
+            <span class="mi"><svg class="ic"><use href="#i-check"/></svg>หยิบแบงค์พัน 2 ใบ — ไม่ต้องแตก</span>
+            <span class="lnk2">แก้ยอดหัก / วิธีรับเงิน ›</span>
           </div>
           <div class="card">
             <div class="row" style="min-height:0"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow val">นัด</span></div>
@@ -1438,6 +1446,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
               <div class="hd"><svg class="ic sm"><use href="#i-wallet"/></svg><span class="grow">เงินสดวันนี้ (ไม่รวมยอดโอน)</span></div>
               <span style="font-size:14px;color:var(--c-ink)">หักไว้จากเงินสดที่จ่ายคนกรีด</span>
               <div class="kv plus"><span>แดง คืนหนี้ให้สวน</span><span>+2,000.00</span></div>
+              <span class="mi"><svg class="ic"><use href="#i-coin"/></svg>หยิบจากกองเงินสดของแดง</span>
               <div class="kv total"><span><b style="color:var(--c-ink)">เงินสดเข้าสวนวันนี้</b></span><span class="fig" style="font-size:20px">2,000.00</span></div>
             </div>
           </div>
@@ -1448,14 +1457,30 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="inset">
           <span class="ttl">การ์ดเจ้าของ — หลังบันทึกหักหนี้ของนัด (หน้า 17a)</span>
           <div class="card cream" style="box-shadow:none;padding:8px 10px">
-            <div class="hd" style="display:flex;gap:6px;align-items:center;font-weight:600;font-size:14px"><svg class="ic sm"><use href="#i-wallet"/></svg>เงินสดวันนี้ (ไม่รวมยอดโอน)</div>
-            <span style="font-size:14px;color:var(--c-ink)">หักไว้จากเงินสดที่จ่ายคนกรีด</span>
-            <div class="kv plus"><span>แดง คืนหนี้ให้สวน</span><span>+2,000.00</span></div>
-            <div class="kv plus"><span>นัด คืนหนี้ให้สวน</span><span>+1,500.00</span></div>
-            <div class="kv minus"><span>สวนคืนเงินที่นัดออกให้ก่อน</span><span>−640.00</span></div>
-            <div class="kv total"><span><b style="color:var(--c-ink)">เงินสดเข้าสวนวันนี้</b></span><span class="fig" style="font-size:20px">2,860.00</span></div>
+            <div class="kv"><span>ส่วนของสวน (ยางของแดง)</span><span>36,860.00</span></div>
+            <div class="kv"><span>ส่วนของสวน (ยางของนัด)</span><span>17,823.75</span></div>
+            <div class="kv plus"><span>นัด คืนหนี้สุทธิ (มากับโอน)</span><span>+860.00</span></div>
+            <div class="kv total"><span>โอนเข้าบัญชี</span><span class="fig" style="font-size:20px">55,543.75</span></div>
+            <div class="ded" style="margin-top:8px;padding:8px 10px">
+              <div class="hd"><svg class="ic sm"><use href="#i-wallet"/></svg><span class="grow">เงินสดวันนี้ (ไม่รวมยอดโอน)</span></div>
+              <div class="kv plus"><span>แดง คืนหนี้ให้สวน</span><span>+2,000.00</span></div>
+              <span class="mi"><svg class="ic"><use href="#i-coin"/></svg>หยิบจากกองเงินสดของแดง</span>
+              <div class="kv total"><span><b style="color:var(--c-ink)">เงินสดเข้าสวนวันนี้</b></span><span class="fig" style="font-size:20px">2,000.00</span></div>
+            </div>
           </div>
-          <span class="note num">ตรวจยอดหลังปัดเศษ (หน้า 18: นัด 16,963.75 → 16,964 · ส่วนของสวนจากนัด 17,823.75 → 17,823.50) — เงินสดคนกรีด 34,860 + 16,964 · โอน 54,683.50 · เงินสดเข้าสวน 2,860 → รวม 109,367.50 = ยอดขาย</span>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-receipt"/></svg><b>บันทึกในบัญชีหนี้ (เท่ากันทุกทาง)</b></div>
+          <div class="mini-row num"><span class="grow">แดง คืนหนี้ 2,000</span></div>
+          <div class="mini-row num"><span class="grow">นัด คืนหนี้ 1,500</span></div>
+          <div class="mini-row num"><span class="grow">สวนคืนเงินนัด 640</span></div>
+          <span class="note num">นัดคืนหนี้ 1,500 และสวนคืน 640 บันทึกแยกเหมือนเดิม — ต่างแค่เงินสุทธิ 860 มากับยอดโอน · ตรวจยอดหลังปัดเศษ (หน้า 18: นัด 16,963.75 → 16,964 · ส่วนของสวนจากนัด 17,823.75 → 17,823.50): เงินสดแดง 34,860 + เงินสดนัด 16,964 + โอน 55,543.50 + เงินสดเข้าสวน 2,000 = 109,367.50 = ยอดขาย</span>
+        </div>
+        <div class="inset">
+          <span class="ttl">ทาง 1 ดึงเงินสดจากส่วนแบ่ง — ต้องแตกเงิน (ตัวอย่างแยก)</span>
+          <div class="mini-row num"><span class="grow">กองเงินสดจากคนซื้อ 1,050</span></div>
+          <div class="mini-row num"><span class="bills"><span class="bill">1,000×1</span><span class="bill">50×1</span></span></div>
+          <div class="mini-row num"><span class="grow">หักหนี้ 30</span></div>
+          <div class="mini-row"><span class="chip ch-warn"><svg class="ic"><use href="#i-alert"/></svg>ต้องแตกเงิน</span><span class="grow">ไม่มีแบงค์/เหรียญรวมได้ 30 พอดี</span></div>
+          <span class="note">ถือเสมอว่าคนซื้อจัดกองด้วยแบงค์ใหญ่สุดก่อน: 1000/500/100/50/20 · เหรียญ 10/5/2/1 (D-71)</span>
         </div>
         <div class="inset">
           <span class="ttl">เพดานหัก — เงินสดไม่ติดลบ (ตัวอย่างแยก)</span>
@@ -1512,23 +1537,34 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="hd"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ใช้หักกลบแล้ว</span><span class="grow"></span><span class="lnk2">ไม่ใช้</span></div>
             <small>ค่าเริ่มต้น = ไม่ใช้ จนเจ้าของกด "ใช้หักกลบ"</small><small>บันทึกเป็น "การคืนเงิน" แยกจากการหักหนี้</small><small>ส่วนที่ไม่ใช้ยังค้างคืน</small>
           </div>
+          <div class="ded">
+            <div class="hd"><svg class="ic sm"><use href="#i-coin"/></svg><span class="grow">รับเงินคืนหนี้ทางไหน (นัด)</span></div>
+            <div class="kv minus"><span>หักหนี้</span><span>−1,500.00</span></div>
+            <div class="kv minus"><span>หักกลบ: ค่าน้ำมันที่สวนต้องคืนนัด</span><span>−640.00</span></div>
+            <div class="kv total"><span>นัดต้องคืนสวนจริง</span><span>860.00</span></div>
+            <div class="radio"><span class="dot"></span><span><b>1 · ดึงเงินสดจากส่วนแบ่ง</b><span class="opt-l"><b style="display:inline;font-size:12px;color:var(--c-ink)">→ เงินสดเข้ามือ 860</b></span><span class="chip ch-warn"><svg class="ic"><use href="#i-alert"/></svg>ต้องแตกเงิน — แบงค์ย่อยไม่พอ 60</span><span class="opt-l num">→ กองนัด 16,963.75</span><span class="opt-l num">กองนัดก่อนหัก 17,823.75 มี:</span><span class="bills"><span class="bill">1,000×17</span><span class="bill">500×1</span><span class="bill">100×3</span><span class="bill">20×1</span><span class="bill">2×1</span><span class="bill">1×1</span><span class="bill">สตางค์ 0.75</span></span></span></div>
+            <div class="radio"><span class="dot"></span><span><b>2 · ให้คนซื้อแบ่งเงินสด 2 กอง</b><span class="opt-l num"><b style="display:inline;font-size:12px;color:var(--c-ink)">→ เงินสดเข้ามือ 860</b> (กองคืนเจ้าของ)</span><span class="opt-l num">→ กองนัด 16,963.75</span></span></div>
+            <div class="radio on"><span class="dot"></span><span><b>3 · ให้คนซื้อโอนรวมกับส่วนเจ้าของ</b><span class="opt-l num"><b style="display:inline;font-size:12px;color:var(--c-ink)">→ เข้าบัญชี 860</b> (รวมกับยอดโอน)</span><span class="opt-l num">→ กองนัด 16,963.75</span></span></div>
+          </div>
           <div class="card" style="box-shadow:none;padding:10px 12px">
             <div class="kv"><span>ส่วนแบ่ง</span><span>17,823.75</span></div>
             <div class="kv minus"><span>หักหนี้</span><span>−1,500.00</span></div>
-            <div class="kv plus"><span>คืนเงินที่สวนต้องคืน (หักกลบ)</span><span>+640.00</span></div>
-            <div class="kv total"><span>ก่อนปัดเศษ</span><span>16,963.75</span></div>
+            <div class="kv plus"><span>สวนคืนค่าน้ำมันให้นัด (หักกลบ)</span><span>+640.00</span></div>
+            <div class="kv total"><span>จ่ายนัด (ยังไม่ปัดเศษ)</span><span>16,963.75</span></div>
             <div class="kv"><span>หนี้คงค้างหลังการขายนี้</span><span>0.00</span></div>
+            <div class="kv"><span>เงินคืนหนี้เข้าทาง</span><span>โอน (กับส่วนเจ้าของ)</span></div>
           </div>
           <div class="btnrow"><span class="btn btn-secondary">ยกเลิก</span><span class="btn btn-primary">บันทึก</span></div>
         </div>
       </div></div>
       <figcaption>
         <span class="t">17a. หักเงินคืนหนี้ — นัด (ใหม่)</span>
-        หักได้ <b>เฉพาะหนี้ที่ติดสวน</b> · ยอดเสนอ = งวดผ่อน (ถ้ามีแผน) หรือยอดค้างทั้งหมด ตัดที่ส่วนแบ่ง · แก้ได้ 0 ถึงเพดาน · แอป <b>เสนอ</b> หักกลบเงินที่สวนต้องคืน — <b>เจ้าของกดใช้เอง</b> ใช้บางส่วนได้ · ภาพนี้คือหลังเจ้าของกด "ใช้หักกลบ" แล้ว
+        หักได้ <b>เฉพาะหนี้ที่ติดสวน</b> · ยอดเสนอ = งวดผ่อน (ถ้ามีแผน) หรือยอดค้างทั้งหมด ตัดที่ส่วนแบ่ง · แก้ได้ 0 ถึงเพดาน · แอป <b>เสนอ</b> หักกลบเงินที่สวนต้องคืน — <b>เจ้าของกดใช้เอง</b> ใช้บางส่วนได้ · ภาพนี้คือหลังเจ้าของกด "ใช้หักกลบ" แล้ว · ใหม่ D-71: เลือก <b>วิธีรับเงินคืนหนี้</b> แยกต่อคนกรีด 3 ทาง — แอปเช็กว่ากองเงินสดจากคนซื้อ (แบงค์ใหญ่ก่อน) หยิบยอดพอดีได้ไหม; นัดต้องคืนสวนจริง 860 หยิบพอดีไม่ได้ (แบงค์ย่อยไม่พอ 60) → ขึ้น "ต้องแตกเงิน" เจ้าของเลือกทาง 3
         <span class="ids">FERT-5, FERT-6, FIN-4, SET-4 · D-18, D-54, D-59, D-60, D-67, D-69 · E06-S03, E06-S04, E11-S02, E11-S03</span>
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-69</span><span>ตอนสรุปเงินหักได้เฉพาะหนี้ที่ติดสวน · หนี้กับคนอื่น (ตัวอย่าง: นัดยืม อ.สมหวัง 1,000) แสดงในบัญชีหนี้คนงาน ไม่อยู่ในยอดที่หักได้</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S10: แผ่นนี้ไม่แสดงหนี้กับคนอื่น</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-71</span><span>วิธีรับเงินคืนหนี้ต่อคนกรีด: (1) ดึงเงินสดจากส่วนแบ่ง + เตือนเมื่อต้องแตกเงิน · (2) คนซื้อแบ่ง 2 กอง · (3) คนซื้อโอนรวมกับส่วนเจ้าของ · ทุกทางบันทึกการคืนหนี้เท่ากัน ต่างแค่เงินเข้าทางไหน</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-59</span><span>ยอดค้างก้อนเดียวต่อคน + แผนผ่อนเดียวต่อคน · งวดนับต่อการขาย</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-67</span><span>หักกลบใช้บางส่วนได้ · เพดานหัก = ส่วนแบ่ง + เงินคืนครั้งนี้ · คืนหลายรายการ ตัดเก่าสุดก่อน</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-60</span><span>บันทึกการคืนและการหักแยกกัน แต่คิดรวมในยอดที่คนกรีดรับครั้งนี้</span></li>
@@ -1579,9 +1615,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <div class="card tight">
             <div class="row" style="padding:6px 0"><span class="tile sm t-green"><svg class="ic"><use href="#i-scale"/></svg></span><span class="grow"><span class="lbl" style="display:block">การตรวจกับผู้ซื้อ</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ยอดผู้ขายและผู้ซื้อตรงกัน</span></span></div>
           </div>
-          <div class="tick on"><span class="box"><svg class="ic sm"><use href="#i-check"/></svg></span><span class="grow">แดง ได้รับเงินสดแล้ว<span class="mi"><svg class="ic"><use href="#i-person"/></svg>เจ้าของ · มือถือ</span><span class="mi"><svg class="ic"><use href="#i-clock"/></svg>10:24</span><span class="mi"><svg class="ic"><use href="#i-minus"/></svg>หักหนี้ 2,000</span></span><span class="amt num">34,860</span></div>
-          <div class="tick"><span class="box"></span><span class="grow">นัด ได้รับเงินสดแล้ว<span class="mi">ยังไม่จ่าย</span><span class="mi"><svg class="ic"><use href="#i-minus"/></svg>หักหนี้ 1,500</span><span class="mi"><svg class="ic"><use href="#i-in"/></svg>คืน 640</span></span><span class="amt num">16,964</span></div>
-          <div class="tick"><span class="box"></span><span class="grow">เจ้าของได้รับเงินโอนแล้ว<span class="mi">ยังไม่ได้รับ</span><span class="mi"><svg class="ic"><use href="#i-bank"/></svg>บัญชีค่าเริ่มต้น</span></span><span class="amt num">54,683.50</span></div>
+          <div class="tick on"><span class="box"><svg class="ic sm"><use href="#i-check"/></svg></span><span class="grow">แดง ได้รับเงินสดแล้ว<span class="mi"><svg class="ic"><use href="#i-person"/></svg>เจ้าของ · มือถือ</span><span class="mi"><svg class="ic"><use href="#i-clock"/></svg>10:24</span><span class="mi"><svg class="ic"><use href="#i-minus"/></svg>หักหนี้ 2,000 (หยิบจากกองเงินสด)</span></span><span class="amt num">34,860</span></div>
+          <div class="tick"><span class="box"></span><span class="grow">นัด ได้รับเงินสดแล้ว<span class="mi">ยังไม่จ่าย</span><span class="mi"><svg class="ic"><use href="#i-minus"/></svg>หักหนี้ 1,500</span><span class="mi"><svg class="ic"><use href="#i-in"/></svg>สวนคืน 640</span><span class="mi"><svg class="ic"><use href="#i-bank"/></svg>สุทธิ 860 มากับยอดโอน</span></span><span class="amt num">16,964</span></div>
+          <div class="tick"><span class="box"></span><span class="grow">เจ้าของได้รับเงินโอนแล้ว<span class="mi">ยังไม่ได้รับ</span><span class="mi"><svg class="ic"><use href="#i-bank"/></svg>บัญชีค่าเริ่มต้น</span><span class="mi"><svg class="ic"><use href="#i-plus"/></svg>รวมเงินคืนหนี้นัด 860</span></span><span class="amt num">55,543.50</span></div>
           <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span class="lines"><span>แต่ละข้อติ๊กแยกกันและยกเลิกได้</span><span>แก้การขายภายหลังจนเงินเปลี่ยน → ข้อที่กระทบติดธง "ต้องตรวจใหม่"</span></span></div>
         </div>
         <div class="foot">
@@ -1678,9 +1714,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       <tr><td>15</td><td>ชื่อ "แนบหลักฐาน" · ย้ำว่าไม่บังคับ · หมายเหตุอัปโหลดรออัปเกรดแผน</td><td>D-48, D-49</td></tr>
       <tr><td>16</td><td>ปุ่ม "ไปสรุปยอดส่วนแบ่ง" · ถ้ามีจุดไม่มีคนกรีด ปุ่มกดไม่ได้ บอกจุดที่ขาด + ทางไปมอบหมาย</td><td>D-63</td></tr>
       <tr><td>17</td><td>เดิม "ถามการปัดเศษ" → ตอนนี้ "สรุปยอดส่วนแบ่ง" (ย้ายจาก v4 หน้า 18) เรียงส่วนแบ่ง → หักหนี้ → ปัดเศษ → เงินสด · ปุ่ม "หักเงินคืนหนี้" · คำ "หักหนี้" แทน "หักค่าปุ๋ย" · เพดานหัก · ธง "หักเกินส่วนแบ่ง" · การ์ดเจ้าของมีกล่อง "เงินสดวันนี้ (ไม่รวมยอดโอน)": หนี้ที่รับคืน / เงินที่สวนคืน — รีวิวด้วย persona ชาวสวน 2 รอบ</td><td>D-18, D-54, D-59, D-60, D-61, D-67, D-70</td></tr>
-      <tr><td>17a (ใหม่)</td><td>แผ่นหักเงินคืนหนี้: เฉพาะหนี้ที่ติดสวน · เสนองวดผ่อน/ยอดค้าง แก้ได้ 0–เพดาน · เสนอหักกลบเงินที่สวนต้องคืน (บางส่วนได้ เจ้าของกดใช้เอง)</td><td>D-59, D-60, D-67, D-69</td></tr>
+      <tr><td>17a (ใหม่)</td><td>แผ่นหักเงินคืนหนี้: เฉพาะหนี้ที่ติดสวน · เสนองวดผ่อน/ยอดค้าง แก้ได้ 0–เพดาน · เสนอหักกลบเงินที่สวนต้องคืน (บางส่วนได้ เจ้าของกดใช้เอง) · เลือกวิธีรับเงินคืนหนี้ 3 ทางต่อคนกรีด พร้อมเช็ก "ต้องแตกเงิน"</td><td>D-59, D-60, D-67, D-69, D-71</td></tr>
       <tr><td>18</td><td>เดิม "สรุปเงิน" → ตอนนี้ "ถามการปัดเศษ" หลังหักหนี้ · เลือกครั้งเดียวทั้งการขาย · จำทั้งกลุ่ม</td><td>D-60, D-67</td></tr>
-      <tr><td>19</td><td>ยอดหลังหักหนี้และปัดเศษ · เอาหมายเหตุ "หักเงินจะเป็นขั้นแยก" ออก · ธงหักเกินส่วนแบ่งขวางการปิด</td><td>D-60, D-61</td></tr>
+      <tr><td>19</td><td>ยอดหลังหักหนี้และปัดเศษ · เอาหมายเหตุ "หักเงินจะเป็นขั้นแยก" ออก · ธงหักเกินส่วนแบ่งขวางการปิด · ยอดโอนเจ้าของรวมเงินคืนหนี้ที่มากับโอน (55,543.50)</td><td>D-60, D-61, D-71</td></tr>
       <tr><td>20</td><td>คำ "ขัดกัน" แทน "ข้อมูลขัดกัน"</td><td>D-65, D-67</td></tr>
       <tr><td>ทุกหน้า</td><td>หนึ่งข้อมูลต่อบรรทัด ใช้สัญลักษณ์นำ เวลาอยู่บรรทัดของตัวเอง (เช่น รายการการขาย การจ่ายเงิน ขัดกัน)</td><td>D-70</td></tr>
     </tbody>
@@ -1717,6 +1753,19 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     </tbody>
   </table>
   <p>รีวิวรอบสอง (agent ใหม่ persona เดิม): อ่านรอบเดียวได้ยอดโอน 54,683.75 · เงินสดเข้าสวน 2,000 (หลังหักนัด 2,860) · ใครจ่ายใครถูกทั้งหมด · ที่ยังงงแก้แล้ว: บรรทัดตรวจใต้จอระบุว่าเป็นยอดหลังปัดเศษ · คำอธิบายย้ายขึ้นใต้หัวกล่อง · "สุทธิ" → "เงินสดเข้าสวนวันนี้" · "สวนจ่ายคืนนัด" → "สวนคืนเงินที่นัดออกให้ก่อน" · คงคำ "บัญชีรับเงิน ค่าเริ่มต้น" เพราะเจ้าของตกลงไว้ใน v4 (D-38)</p>
+  <h3>ผลรีวิววิธีรับเงินคืนหนี้ (D-71) — persona ชาวสวน</h3>
+  <p>ป้าศรีอ่านออกว่าแดงคืนเป็นเงินสด (แบงค์พัน 2 ใบ) และนัดเลือกโอน 860 รวมกับส่วนเจ้าของ · คำตัดสินรอบแรก <b>"ต้องปรับ"</b> → ปรับแล้ว:</p>
+  <table class="chg">
+    <thead><tr><th>ข้อ</th><th>สิ่งที่งง</th><th>ปรับเป็น</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>แต่ละทางไม่บอกว่าเงินเข้ามือหรือเข้าบัญชี</td><td>บรรทัดแรกของแต่ละทาง: "→ เงินสดเข้ามือ 860" / "→ เข้าบัญชี 860"</td></tr>
+      <tr><td>2</td><td>ป้ายแบงค์ไม่บอกว่าเป็นกองไหน · สตางค์หาย</td><td>"กองนัดก่อนหัก 17,823.75 มี:" + ป้าย "สตางค์ 0.75" · ป้ายตัวใหญ่ขึ้น</td></tr>
+      <tr><td>3</td><td>คำเตือนไม่บอกสาเหตุ</td><td>"ต้องแตกเงิน — แบงค์ย่อยไม่พอ 60" ขึ้นก่อนป้ายแบงค์</td></tr>
+      <tr><td>4</td><td>เครื่องหมาย/คำบัญชีไม่ตรงกัน ("สุทธิ" "ก่อนปัดเศษ")</td><td>"−1,500" / "+640" · "นัดต้องคืนสวนจริง" · "จ่ายนัด (ยังไม่ปัดเศษ)"</td></tr>
+      <tr><td>5</td><td>การ์ดแดงอัดหลายเรื่องในบรรทัดเดียว</td><td>"รับคืน: หยิบเงินสดจากกองแดง" / "หยิบแบงค์พัน 2 ใบ — ไม่ต้องแตก"</td></tr>
+    </tbody>
+  </table>
+  <p>รีวิวรอบสอง (agent ใหม่ persona เดิม): อ่านรอบเดียวถูกทั้งสองคน — แดงเงินสด 2,000 เข้ามือ (แบงค์พัน 2 ใบ) · นัด 860 เข้าบัญชี ยอดโอน 55,543.75 · เข้าใจเหตุที่ทาง 1 เตือน · แก้ที่เหลือแล้ว: บรรทัดหักกลบในกล่องเป็น "−640" ไม่ใช่ "+640" สีเขียว · คำเตือนเป็น "แบงค์ย่อยไม่พอ 60" · ทาง 1 มีบรรทัด "→ กองนัด 16,963.75" เหมือนทาง 2/3</p>
   <p class="not"><b>ยังไม่วาดในรอบนี้:</b> ย้อนกลับ-แก้-ยกเลิกเข่ง (E04-S09), ส่งต่อ/รับช่วง และรวมด้วย QR (E04-S12, S13), การนับซ้ำ (E04-S14), กรณี "พบส่วนต่าง", ลบสวนระหว่างการขาย, หน้าบัญชีหนี้คนงาน (ทีมข้อมูลฟาร์มและเงิน — <code>flow-farm-v1.1.0.html</code>), หน้าตั้งค่ากลุ่ม (โหมดเลขเข่ง / ประเภทตาชั่ง)</p>
 </section>
 
