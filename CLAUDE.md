@@ -148,6 +148,22 @@ via the Deploy Prod workflow (hotfixes auto back-merge to `dev`). Triggering
 Deploy Prod needs the owner's explicit yes per run. Full detail in
 `docs/process.md`.
 
+**Agent branch and merge rules** (dev-pose standard, owner decision 2026-10-04):
+
+- **Always branch from the latest `dev`**: `git fetch origin && git checkout dev && git pull --rebase origin dev`, then `git switch -c <type>/<slug>` with type
+  `feature/`, `fix/`, `chore/`, `docs/` or `hotfix/`. One branch, one purpose.
+- **Never commit, push, force-push or rebase on `dev` or `main`.** Work reaches
+  them only through a pull request (and `main` only through Deploy Prod, below).
+  Run `git branch --show-current` before every commit; if it prints `dev` or
+  `main`, stop and create a working branch first.
+- **Never merge a pull request.** Merging is the owner's. The push delegation to
+  the lead session above does not extend to merging.
+- Once a PR is open, or anyone else has pushed to the branch, bring in `dev` by
+  **merge**, never rebase or force-push it.
+- When a session has nothing left to run (work merged or handed off, no
+  scheduled check-in or PR subscription), say so and tell the owner it can be
+  closed.
+
 **Never commit ahead of an unanswered question.** If a change depends on
 something the owner has been asked and has not yet answered, it stays in
 the working tree — uncommitted — until the answer arrives. Do not commit a
