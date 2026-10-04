@@ -588,6 +588,15 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .wres span { display: block; font-size: 12px; color: var(--c-ink-soft); }
 .wres b { font-size: 20px; font-variant-numeric: tabular-nums; }
 .wres small { font-size: 11px; color: var(--c-ink-soft); }
+/* D-75: waiting for a replacement scale — slow spin, still when reduced motion */
+.waitbox { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 0 24px; }
+.waitbox .spin { width: 112px; height: 112px; color: var(--c-action); stroke-width: 1.4; animation: hg-turn 2.4s ease-in-out infinite; }
+.waitbox h2 { margin: 0; font-size: 28px; font-weight: 800; line-height: 1.2; }
+.waitbox p { margin: 0; font-size: 15px; color: var(--c-ink-soft); }
+@keyframes hg-turn { 0%, 40% { transform: rotate(0deg); } 60%, 100% { transform: rotate(180deg); } }
+@media (prefers-reduced-motion: reduce) { .waitbox .spin { animation: none; } }
+.skew { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--r-pill); background: var(--c-warn-sunk); color: var(--c-warn); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.skew .ic { width: 15px; height: 15px; }
 /* D-71: how the debt money comes in — per tapper */
 .bills { display: flex; flex-wrap: wrap; gap: 4px; }
 .bill { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--c-rule-strong); background: var(--c-raised); color: var(--c-ink); }
@@ -655,6 +664,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     <symbol id="i-drag" viewBox="0 0 24 24"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M4 12h16"/></symbol>
     <symbol id="i-in" viewBox="0 0 24 24"><path d="M20 6v7a3 3 0 0 1-3 3H6"/><path d="M10 12l-4 4 4 4"/></symbol>
     <symbol id="i-out" viewBox="0 0 24 24"><path d="M4 6v7a3 3 0 0 0 3 3h11"/><path d="M14 12l4 4-4 4"/></symbol>
+    <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M6 3h12M6 21h12"/><path class="fillsoft" d="M7 3c0 5 5 6 5 9s-5 4-5 9h10c0-5-5-6-5-9s5-4 5-9z"/><path d="M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/></symbol>
   </defs>
 </svg>
 
@@ -820,14 +830,14 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="fig num">52<span class="u">กก.</span></div>
             <p class="num">สุทธิ 50 + ภาชนะ 2</p>
           </div>
-          <span class="lines"><span class="mi"><svg class="ic"><use href="#i-help"/></svg>ถามตรวจศูนย์ทุกจุด (ตั้งค่าได้)</span><span class="mi"><svg class="ic"><use href="#i-flag"/></svg>ไม่ใช่ 0 = ติดธงแล้วไปต่อ</span></span>
+          <span class="lines"><span class="mi"><svg class="ic"><use href="#i-help"/></svg>ถามตรวจศูนย์ทุกจุด (ตั้งค่าได้)</span><span class="mi"><svg class="ic"><use href="#i-flag"/></svg>ไม่ใช่ 0 → เลือก: รอเปลี่ยนตาชั่ง หรือรับเข็มเบี้ยว</span></span>
         </div>
         <div class="foot"><div class="btn btn-primary">เริ่มชั่ง</div></div>
       </div></div>
       <figcaption>
         <span class="t">7. ตรวจศูนย์ / tare + ขนาดเข่ง</span>
-        ไม่เปลี่ยนจาก v4
-        <span class="ids">SALE-6, SALE-7, MD-7, MD-9 · D-6 · E04-S03</span>
+        เหมือน v4 ยกเว้นเมื่อตาชั่งเปล่าอ่านไม่เป็น 0 — แทนการติดธงแล้วไปต่อ ให้เลือก 2 ทาง (หน้า 7a–7c, D-75)
+        <span class="ids">SALE-6, SALE-7, MD-7, MD-9 · D-6, D-75 · E04-S03</span>
       </figcaption>
     </figure>
 
@@ -944,6 +954,142 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <span class="t">9. นับเข่ง — โหมดสาธารณะ</span>
         ไม่เปลี่ยนจาก v4
         <span class="ids">SALE-15, SALE-16 · D-8, D-17, D-40 · E04-S07</span>
+      </figcaption>
+    </figure>
+
+  </div>
+
+  <h3 class="sub-h">2a · ตาชั่งเปล่าอ่านไม่เป็น 0 (D-75)</h3>
+  <p class="sub-p">ตัวอย่างแยก: ก่อนชั่ง จันทเขลม จุด 1 ตาชั่งเปล่าอ่าน 2 กก. (เข็มเอียง) — เลือก รอเปลี่ยนตาชั่ง หรือ รับเข็มเบี้ยวและใช้ต่อ</p>
+  <div class="flow">
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>หน้า 7 แตะ <b>ไม่ใช่ 0</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="ตาชั่งเปล่าไม่อ่านศูนย์ เลือก 2 ทาง">
+        <div class="sbar num"><span>07:07</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar dim"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ก่อนชั่ง · จุด 1 <small>จันทเขลม · แดง</small></h3></div>
+        <div class="body dim"><div class="card"><div class="seg"><span>อ่าน 0</span><span class="on">ไม่ใช่ 0</span></div></div></div>
+        <div class="sheet-scrim"></div>
+        <div class="sheet">
+          <span class="grab"></span>
+          <h4>ตาชั่งเปล่าอ่านไม่เป็น 0</h4>
+          <span class="mi"><svg class="ic"><use href="#i-alert"/></svg>เข็มเอียง หรือตาชั่งไม่ได้มาตรฐาน</span>
+          <span class="lbl" style="font-size:13px;color:var(--c-ink-soft)">ตาชั่งเปล่าอ่าน (กก.)</span>
+          <div class="stepper sm"><span class="sb"><svg class="ic"><use href="#i-minus"/></svg></span><span class="inp focus">+2<span class="u">กก.</span></span><span class="sb"><svg class="ic"><use href="#i-plus"/></svg></span></div>
+          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-hourglass"/></svg></span><span><b>1 · รอเปลี่ยนตาชั่ง</b><span class="ln">ยังชั่งไม่ได้</span><span class="ln">ได้ตาชั่งใหม่แล้ว ตรวจตาชั่งเปล่าอีกครั้ง</span></span></div>
+          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-scale"/></svg></span><span><b>2 · รับเข็มเบี้ยวและใช้ต่อ</b><span class="ln">เข็มเบี้ยว <span class="nchip">+2 กก.</span></span><span class="ln">แอปบวกเข็มเบี้ยวให้เองทุกที่</span><span class="ln">ใช้จนตรวจตาชั่งเปล่าครั้งหน้า</span></span></div>
+        </div>
+      </div></div>
+      <figcaption>
+        <span class="t">7a. ตาชั่งเปล่าอ่านไม่เป็น 0 — เลือก 2 ทาง (ใหม่)</span>
+        ใส่ค่าที่ตาชั่งเปล่าอ่าน (บวกหรือลบ) แล้วเลือก <b>รอเปลี่ยนตาชั่ง</b> หรือ <b>รับเข็มเบี้ยวและใช้ต่อ</b> · การเลือกเก็บเป็น event ในบันทึกการขาย
+        <span class="ids">SALE-6, SALE-7 · D-6, D-75 · E04-S03</span>
+        <ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-75</span><span>ไม่อ่านศูนย์ → เลือก รอเปลี่ยนตาชั่ง / รับเข็มเบี้ยวและใช้ต่อ (แทน "ติดธงแล้วไปต่อ")</span></li></ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>1 · รอเปลี่ยนตาชั่ง</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="รอเปลี่ยนตาชั่ง">
+        <div class="sbar num"><span>07:08</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="waitbox">
+          <svg class="ic spin" aria-hidden="true"><use href="#i-hourglass"/></svg>
+          <h2>รอเปลี่ยนตาชั่ง</h2>
+          <div class="lines" style="align-items:center">
+            <p>ยังชั่งไม่ได้</p>
+            <p>ได้ตาชั่งใหม่แล้ว ตรวจตาชั่งเปล่าอีกครั้ง</p>
+          </div>
+        </div>
+        <div class="foot"><span class="mi" style="justify-content:center">กด ตกลง แล้วกลับหน้าก่อนชั่ง</span><div class="btn btn-primary">ตกลง</div></div>
+      </div></div>
+      <figcaption>
+        <span class="t">7b. รอเปลี่ยนตาชั่ง (ใหม่)</span>
+        นาฬิกาทรายพลิกช้า ๆ (หยุดนิ่งเมื่อเครื่องตั้ง "ลดการเคลื่อนไหว") · ข้อความใหญ่ชัด · <b>ตกลง</b> ปิดกลับหน้าเดิม (หน้า 7) — ยังไม่บันทึกเข่งจนตรวจศูนย์ใหม่ผ่าน
+        <span class="ids">SALE-6 · D-75 · E04-S03</span>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>หรือแตะ <b>2 · รับเข็มเบี้ยวและใช้ต่อ</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="ตรวจ tare เมื่อมีเข็มเบี้ยว">
+        <div class="sbar num"><span>07:08</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ก่อนชั่ง · จุด 1 <small>จันทเขลม · แดง</small></h3></div>
+        <div class="body">
+          <div class="card">
+            <div class="row" style="min-height:0"><span class="tile t-cream"><svg class="ic"><use href="#i-scale"/></svg></span><span class="grow"><span class="val">ตาชั่งเปล่าอ่าน +2 กก.</span><span class="skew"><svg class="ic"><use href="#i-alert"/></svg>รับเข็มเบี้ยวแล้ว</span></span></div>
+          </div>
+          <div class="card tight">
+            <div class="row"><span class="tile sm t-blue"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="lbl">น้ำหนักตะกร้า (tare)</span><span class="sub">ค่าจากการตั้งค่า</span></span><span class="val num">2 กก.</span></div>
+          </div>
+          <div class="card expect" style="text-align:left">
+            <div class="kv"><span>ยางสุทธิ</span><span>50 กก.</span></div>
+            <div class="kv"><span>+ ตะกร้า</span><span>2 กก.</span></div>
+            <div class="kv" style="color:var(--c-warn)"><span style="color:var(--c-warn)">+ เข็มเบี้ยว</span><span>2 กก.</span></div>
+            <div class="kv total"><span>= ตาชั่งควรอ่าน</span><span class="fig" style="font-size:40px">54<span class="u">กก.</span></span></div>
+          </div>
+          <span class="mi"><svg class="ic"><use href="#i-clock"/></svg>เข็มเบี้ยวใช้จนตรวจตาชั่งเปล่าครั้งหน้า</span>
+        </div>
+        <div class="foot"><div class="btn btn-primary">เริ่มชั่ง</div></div>
+      </div></div>
+      <figcaption>
+        <span class="t">7c. ตรวจ tare เมื่อรับเข็มเบี้ยว (ใหม่)</span>
+        "ตาชั่งควรอ่าน" รวมค่าเบี้ยวแล้ว และแสดงค่าเบี้ยวแยกเป็นบรรทัดของตัวเอง: สุทธิ · ตะกร้า · เข็มเบี้ยว · ตาชั่งควรอ่าน
+        <span class="ids">SALE-6, SALE-7 · D-70, D-75 · E04-S03</span>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กด <b>เริ่มชั่ง</b></span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="นับเข่ง เมื่อมีเข็มเบี้ยว">
+        <div class="sbar num"><span>07:12</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 3</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
+        <div class="body" style="gap:10px">
+          <div class="card tight">
+            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จันทเขลม · จุด 1</span><span class="sub">คนกรีด: แดง</span><span class="skew" style="margin:2px 0 4px"><svg class="ic"><use href="#i-alert"/></svg>เบี้ยว +2 กก.</span></span><span class="btn btn-secondary small"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div>
+          </div>
+          <div class="card bigc" aria-label="เข่งปัจจุบัน 3 ถัดไป 4">
+            <div><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">3</div></div>
+            <div class="next"><span class="lbl">ถัดไป</span><div class="fig num">4</div></div>
+          </div>
+          <div class="stage">
+            <svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg>
+            <b>กดค้างเพื่อบันทึกเข่งเต็ม</b>
+            <div class="lines" style="align-items:center">
+              <span class="num">ยางสุทธิ 50</span>
+              <span class="num">+ ตะกร้า 2</span>
+              <span class="num" style="color:var(--c-warn);font-weight:700">+ เข็มเบี้ยว 2</span>
+            </div>
+            <div class="fig num" style="font-size:34px;color:var(--c-ink)"><span style="font-size:16px;font-weight:600">= ตาชั่งควรอ่าน </span>54<span class="u">กก.</span></div>
+          </div>
+          <div class="tools">
+            <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เข่งไม่เต็ม</span>
+            <span class="tool"><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ</span>
+            <span class="tool"><svg class="ic"><use href="#i-expand"/></svg>โหมดสาธารณะ</span>
+          </div>
+        </div>
+      </div></div>
+      <div class="extras">
+        <div class="inset">
+          <span class="ttl">แผ่นเลื่อนขึ้นเข่งไม่เต็ม (หน้า 10) เมื่อมีเข็มเบี้ยว</span>
+          <div class="kv num"><span>ตาชั่งอ่าน</span><span>39 กก.</span></div>
+          <div class="kv num"><span>− ตะกร้า</span><span>2 กก.</span></div>
+          <div class="kv num" style="color:var(--c-warn)"><span style="color:var(--c-warn)">− เข็มเบี้ยว</span><span>2 กก.</span></div>
+          <div class="kv total num"><span>ยางสุทธิ</span><span>35 กก.</span></div>
+          <div class="mini-row"><span class="grow">เงินคิดจากยางสุทธิ 35 กก.</span></div>
+          <span class="note">ทางเลือกหน้า 12 ก็บวกเข็มเบี้ยว</span>
+          <span class="note num">เติมให้เต็มเข่ง: ตาชั่งอ่าน 54 (แทน 52)</span>
+          <span class="note num">ชั่งแยก: ตาชั่งอ่าน 19 (แทน 17)</span>
+        </div>
+      </div>
+      <figcaption>
+        <span class="t">8b. นับเข่ง เมื่อมีเข็มเบี้ยว +2 กก. (ใหม่)</span>
+        ป้าย <b>เบี้ยว +2 กก.</b> ใต้ชื่อจุด · "ตาชั่งควรอ่าน 54" พร้อมแยกบรรทัด สุทธิ · ตะกร้า · เข็มเบี้ยว
+        <span class="ids">SALE-7, SALE-9, NFR-3 · D-70, D-75 · E04-S03, E04-S05, E04-S06</span>
+        <ul><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-75</span><span>ทุกที่ที่บอก "ตาชั่งควรอ่าน" รวมค่าเบี้ยว และแสดงค่าเบี้ยวแยกอีกบรรทัด · ใช้จนตรวจศูนย์ครั้งถัดไป</span></li></ul>
       </figcaption>
     </figure>
 
@@ -1760,7 +1906,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       <tr><td>4</td><td>ป้าย sync ต่อแถวแสดงเฉพาะ "ขัดกัน" · คำ "ขัดกัน" แทน "ข้อมูลขัดกัน" · วันที่ พ.ศ. แตะสลับ ค.ศ.</td><td>D-65, D-67</td></tr>
       <tr><td>5</td><td>เพิ่มเลือกโหมดเลขเข่ง (ต่อเนื่องทั้งการขาย / นับแยกต่อจุด) ค่าเริ่มต้นจากตั้งค่ากลุ่ม · เพิ่มประเภทตาชั่ง (ไม่มีทศนิยม = ค่าเริ่มต้น; ทศนิยม 1 ตำแหน่ง กดไม่ได้ "ยังไม่พร้อมใช้งาน") · กลายเป็นหน้ายาว</td><td>D-46, D-53, D-66</td></tr>
       <tr><td>6</td><td>เอาแถบ ?21 ออก · จุดที่ยังไม่มีคนกรีดเป็นกลุ่มแยกด้านล่าง ไม่อยู่ในขั้น "คนกรีด"</td><td>D-53, D-70</td></tr>
+      <tr><td>7</td><td>ตาชั่งเปล่าไม่อ่าน 0 → เลือก 2 ทาง (แทนติดธงแล้วไปต่อ)</td><td>D-75</td></tr>
       <tr><td>8</td><td>เพิ่มกรอบอธิบายเลขเข่งในโหมดนับแยกต่อจุด</td><td>D-46</td></tr>
+      <tr><td>7a, 7b, 7c, 8b (ใหม่)</td><td>เลือก รอเปลี่ยนตาชั่ง / รับเข็มเบี้ยว · หน้ารอ (นาฬิกาทราย + ตกลง) · ตาชั่งควรอ่านรวมเข็มเบี้ยว แยกบรรทัด สุทธิ · ตะกร้า · เข็มเบี้ยว</td><td>D-70, D-75</td></tr>
       <tr><td>8a (ใหม่)</td><td>จุดที่ยังไม่มีคนกรีด: แถบเตือน ชั่งต่อได้ + ปุ่ม "มอบหมายตอนนี้" · มอบหมายมีผลเฉพาะการขายนี้ ไม่มีช่องวันเริ่ม</td><td>D-63, D-70</td></tr>
       <tr><td>10</td><td>แผ่นเลื่อนขึ้นเลือกน้ำหนัก: ลากไม้บรรทัด + ± ทีละ 1 กก. ตามประเภทตาชั่ง (แทนแผงพิมพ์ในหน้า)</td><td>D-66, D-70</td></tr>
       <tr><td>12</td><td>เหลือ 3 ทางเลือก ใช้คำตาม D-57 · ข้อ 4 เดิมย้ายไปเป็นโหมดเลขเข่งที่หน้า 5</td><td>D-46, D-53, D-57</td></tr>
@@ -1836,6 +1984,8 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       <tr><td>5</td><td>หน้า 16 คำถามตัวเล็กใต้ยอดเงิน</td><td>หัวการ์ดตัวใหญ่ "ผู้ซื้อได้ยอดเท่านี้ไหม?" · คงคำ "รอส่ง" (ตกลงไว้ใน v4)</td></tr>
     </tbody>
   </table>
+  <h3>ผลรีวิวตาชั่งไม่อ่านศูนย์ (D-75) — persona ชาวสวน</h3>
+  <p>ป้าศรีเข้าใจว่าทาง 1 วันนี้ยังชั่งไม่ได้ และเข้าใจว่าทำไมตาชั่งควรอ่าน 54 (ยาง 50 + ตะกร้า 2 + เข็มเบี้ยว 2) · คำตัดสิน <b>"ต้องปรับ"</b> เรื่องคำ → ปรับแล้ว: บรรทัดคำอธิบายทาง 2 สั้นลงเป็น 2 บรรทัด · "ตรวจศูนย์" → "ตรวจตาชั่งเปล่า" · หน้ารอบอกว่ากด ตกลง แล้วกลับหน้าก่อนชั่ง · ชื่อ "ตะกร้า" ตรงกันทั้งหน้า · ทุกบรรทัดมีเครื่องหมาย + / = และผลรวมอยู่ท้าย · ป้าย "เบี้ยว +2 กก." บรรทัดเดียว · โน้ตในกรอบแยกบรรทัด · คงชื่อทางเลือกและปุ่ม "รอเปลี่ยนตาชั่ง" / "รับเข็มเบี้ยวและใช้ต่อ" / "ตกลง" ตามคำของเจ้าของ (D-75)</p>
   <p class="not"><b>ยังไม่วาดในรอบนี้:</b> ย้อนกลับ-แก้-ยกเลิกเข่ง (E04-S09), ส่งต่อ/รับช่วง และรวมด้วย QR (E04-S12, S13), การนับซ้ำ (E04-S14), กรณี "พบส่วนต่าง", ลบสวนระหว่างการขาย, หน้าบัญชีหนี้คนงาน (ทีมข้อมูลฟาร์มและเงิน — <code>flow-farm-v1.1.0.html</code>), หน้าตั้งค่ากลุ่ม (โหมดเลขเข่ง / ประเภทตาชั่ง)</p>
 </section>
 
