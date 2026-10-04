@@ -1,17 +1,21 @@
 name: Back-merge main into dev
 
 # A hotfix lands on main directly; it must not stay there. Whenever main has
-# commits dev lacks, carry them back. Clean merge: pushed straight to dev.
-# Conflict: a PR main -> dev is opened for a human, and this job fails so it
-# is not missed. After a normal Deploy Prod run dev already contains main, so
-# this is a no-op.
+# commits dev lacks, open a PR main -> dev so the fix is carried back down.
+# Nothing is pushed to dev directly: a human merges the PR (merge commit, not
+# squash, so dev really contains main). If main and dev conflict, the PR says
+# so and this job fails so it is not missed. After a normal Deploy Prod run dev
+# already contains main, so this is a no-op. An open PR is never duplicated.
+#
+# PRs opened with the workflow token do not start other workflows, so this PR
+# has no CI run of its own; CI runs on dev after the merge.
 
 on:
   push:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 jobs:
@@ -24,21 +28,29 @@ jobs:
           ref: dev
           fetch-depth: 0
 
-      - name: Merge main into dev
+      - name: Open a PR main into dev
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if git merge-base --is-ancestor origin/main HEAD; then
             echo "dev already contains main"; exit 0
           fi
+          open="$(gh pr list --base dev --head main --state open --json number --jq 'length')"
+          if [ "$open" != "0" ]; then
+            echo "a back-merge PR main -> dev is already open"; exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git merge origin/main -m "chore: back-merge main into dev"; then
-            git push origin HEAD:dev
-          else
-            git merge --abort
+          conflict=0
+          git merge --no-commit --no-ff origin/main >/dev/null 2>&1 || conflict=1
+          git merge --abort >/dev/null 2>&1 || true
+          if [ "$conflict" = "1" ]; then
             gh pr create --base dev --head main \
               --title "chore: back-merge main into dev (conflicts)" \
-              --body "Automatic back-merge hit conflicts. Resolve and merge so the hotfix is not lost on dev."
+              --body "Automatic back-merge hit conflicts. Resolve them and merge (merge commit) so the hotfix is not lost on dev."
+            echo "::error::main conflicts with dev; resolve the back-merge PR"
             exit 1
           fi
+          gh pr create --base dev --head main \
+            --title "chore: back-merge main into dev" \
+            --body "A hotfix landed on main. Merge this PR (merge commit, not squash) so dev contains it. Deploy Prod refuses to run while main has commits dev lacks."

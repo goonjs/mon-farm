@@ -144,7 +144,7 @@ Ask again, every time.
 characters including the prefix, imperative, lowercase description; explain
 *why* in the body. One logical, medium-sized change per commit. `dev` is the
 default branch and where work lands; `main` is production and moves **only**
-via the Deploy Prod workflow (hotfixes auto back-merge to `dev`). Triggering
+via the Deploy Prod workflow (a hotfix is carried back to `dev` by a back-merge PR). Triggering
 Deploy Prod needs the owner's explicit yes per run. Full detail in
 `docs/process.md`.
 

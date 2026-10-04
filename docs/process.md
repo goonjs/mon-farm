@@ -178,9 +178,12 @@ release's changelog will therefore only list commits made under this rule.
   Agents may trigger it if they have access, but each run needs the owner's
   explicit go-ahead (CLAUDE.md security gates).
 - **Hotfix:** may be merged to `main` directly (the one exception). The
-  **Back-merge** workflow (`hotfix-backmerge.yml`) carries `main` back into
-  `dev` automatically; on conflict it opens a PR and fails loudly. Deploy Prod
-  refuses to run while `main` has commits `dev` lacks.
+  **Back-merge** workflow (`hotfix-backmerge.yml`) opens a PR `main` -> `dev`
+  (never a direct push); the owner merges it with a merge commit, not squash.
+  On conflict the PR says so and the job fails loudly. Deploy Prod refuses to
+  run while `main` has commits `dev` lacks, so it waits for that merge. The PR
+  is opened with the workflow token, so it has no CI run of its own; CI runs on
+  `dev` after the merge.
 - **Hosting:** `dev` deploys to the dev site on every push
   (`deploy-dev.yml`); each PR from this repo gets a preview URL that expires in
   7 days (job `preview` in `ci.yml`, link in the job summary); Deploy Prod
