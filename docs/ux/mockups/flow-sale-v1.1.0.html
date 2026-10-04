@@ -1361,29 +1361,36 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="sbar num"><span>10:15</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>ตรวจยอดกับผู้ซื้อ <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 49</span></div>
         <div class="body" style="gap:10px">
-          <div class="card tight">
-            <div class="row"><span class="tile t-cream"><svg class="ic"><use href="#i-coin"/></svg></span><span class="grow"><span class="lbl">ราคา ฿/กก.</span><span class="ds" style="margin-top:2px">ผู้ใช้ใส่</span></span><span class="fig num" style="font-size:24px">48.50</span></div>
-          </div>
           <div class="card">
-            <table class="cmp">
-              <thead><tr><th></th><th>ของเรา<br><span class="ds">ระบบคำนวณ</span></th><th>ผู้ซื้อแจ้ง<br><span class="ds">ผู้ใช้ใส่</span></th><th>ต่าง</th></tr></thead>
-              <tbody>
-                <tr><td>น้ำหนัก กก.</td><td>2,255</td><td>2,255</td><td><span class="ok"><svg class="ic sm"><use href="#i-check"/></svg>0</span></td></tr>
-                <tr><td>เข่ง</td><td>46</td><td><span class="ds ds-none">ไม่ได้บันทึก</span></td><td>—</td></tr>
-                <tr><td>ยอดเงิน ฿</td><td>109,367.50</td><td>109,367.50</td><td><span class="ok"><svg class="ic sm"><use href="#i-check"/></svg>0</span></td></tr>
-              </tbody>
-            </table>
-            <div style="margin-top:8px"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ยอดผู้ขายและผู้ซื้อตรงกัน</span></div>
+            <div style="font-size:18px;font-weight:700;margin-bottom:6px">ผู้ซื้อได้ยอดเท่านี้ไหม?</div>
+            <h4>ยอดของเรา</h4>
+            <div class="kv"><span>น้ำหนัก</span><span>2,255 กก.</span></div>
+            <div class="kv"><span>ราคา</span><span>48.50 ฿/กก.</span></div>
+            <div class="kv"><span>จำนวนเข่ง</span><span>46 เข่ง</span></div>
+            <div class="kv total"><span>ยอดเงิน</span><span class="fig" style="font-size:22px">109,367.50<span class="u">บาท</span></span></div>
+            <span class="mi" style="margin-top:6px"><svg class="ic"><use href="#i-users"/></svg>ผู้ซื้อ ก (ตัวอย่าง)</span>
+            <div class="btn btn-primary" style="margin-top:8px"><svg class="ic sm"><use href="#i-check"/></svg>ตรงกันทั้งหมด</div>
+            <div class="btn btn-secondary small" style="width:100%;margin-top:8px"><svg class="ic sm"><use href="#i-search"/></svg>ไม่ตรงกัน</div>
           </div>
           <div class="card tight">
             <div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">แดง</span><span class="mi"><svg class="ic"><use href="#i-pin"/></svg>3 จุด</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>31 เข่ง</span></span><span class="val num">1,520 กก.</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
             <div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-person"/></svg></span><span class="grow"><span class="val">นัด</span><span class="mi"><svg class="ic"><use href="#i-pin"/></svg>2 จุด</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>15 เข่ง</span></span><span class="val num">735 กก.</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
           </div>
-          <div class="banner info"><svg class="ic sm"><use href="#i-search"/></svg><span>ไม่ตรง: เจาะดู จุดชั่ง → เข่ง แล้วแก้; ยังต่าง → ปิดเป็น "พบส่วนต่าง" + เหตุผล</span></div>
         </div>
-        <div class="foot"><div class="btn btn-primary">ไปสรุปยอดส่วนแบ่ง</div></div>
       </div></div>
       <div class="extras">
+        <div class="inset">
+          <span class="ttl">กด "ตรงกันทั้งหมด" (กดเดียวจบ)</span>
+          <div class="mini-row"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ยอดผู้ขายและผู้ซื้อตรงกัน</span></div>
+          <div class="mini-row"><span class="grow">จะบันทึกว่ายอดผู้ซื้อเท่ากับยอดเรา</span></div>
+          <div class="btn btn-primary">ไปสรุปยอดส่วนแบ่ง</div>
+        </div>
+        <div class="inset">
+          <span class="ttl">กด "ไม่ตรงกัน"</span>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-search"/></svg><span class="grow">เจาะดู จุดชั่ง → เข่ง แล้วแก้</span></div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-flag"/></svg><span class="grow">ยังต่าง → ปิดเป็น "พบส่วนต่าง" + เหตุผล</span></div>
+          <span class="note">หลัง MVP (ไอเดีย ไม่วาด): ตัวช่วยหาว่าผู้ซื้อคิดน้ำหนักหรือราคาต่างตรงไหน</span>
+        </div>
         <div class="inset">
           <span class="ttl">ถ้ายังมีจุดที่ไม่มีคนกรีด ณ วันขาย</span>
           <div class="banner bad" style="padding:8px 10px"><svg class="ic sm"><use href="#i-lock"/></svg><span><b>สรุปเงินยังไม่ได้</b>ทุกจุดในการขายต้องมีคนกรีดก่อน</span></div>
@@ -1392,10 +1399,11 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         </div>
       </div>
       <figcaption>
-        <span class="t">16. ชั่งครบแล้ว → ตรวจยอดกับผู้ซื้อ</span>
-        เหมือน v4 · ปุ่มไปหน้าถัดไปเปลี่ยนชื่อเป็น <b>ไปสรุปยอดส่วนแบ่ง</b> · ใหม่: ถ้ามีจุดที่ยังไม่มีคนกรีด ปุ่มกดไม่ได้ บอกจุดที่ขาด พร้อมทางไปมอบหมาย
-        <span class="ids">SET-1, SET-2, SET-3, SET-6 · D-15, D-63 · E05-S03, E03-S05</span>
+        <span class="t">16. ชั่งครบแล้ว → ตรวจยอดกับผู้ซื้อ (กดยืนยัน)</span>
+        ไม่มีช่องกรอกยอดผู้ซื้อวางเทียบข้างแล้ว — แสดงยอดเรา (น้ำหนัก ราคา จำนวนเข่ง ยอดเงิน) แล้วกด <b>ตรงกันทั้งหมด</b> (กดเดียวจบ) หรือ <b>ไม่ตรงกัน</b> · ถ้ามีจุดที่ยังไม่มีคนกรีด ไปสรุปเงินไม่ได้ บอกจุดที่ขาด พร้อมทางไปมอบหมาย
+        <span class="ids">SET-1, SET-2, SET-3, SET-6 · D-15, D-63, D-72 · E05-S03, E03-S05</span>
         <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-72</span><span>ตรวจยอดผู้ซื้อแบบกดยืนยัน: "ตรงกันทั้งหมด" ตั้งสถานะตรงกันทันที · "ไม่ตรงกัน" → เจาะถึงเข่งแก้ หรือ "พบส่วนต่าง" + เหตุผล</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-63</span><span>สรุปเงิน/ปิดการขายทำไม่ได้จนทุกจุดมีคนกรีด — บอกจุดที่ขาด พร้อมทางไปมอบหมาย</span></li>
         </ul>
       </figcaption>
@@ -1605,7 +1613,56 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       </figcaption>
     </figure>
 
-    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กด <b>ยืนยัน</b> → บันทึกการจ่ายเงิน</span></div>
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กด <b>ยืนยัน</b> → เทียบยอด</span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="เทียบยอด ทุกกองรวมกันเท่ากับยอดขาย">
+        <div class="sbar num"><span>10:22</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>เทียบยอด <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 52</span></div>
+        <div class="body" style="gap:10px">
+          <div class="card">
+            <h4>เงินสดให้คนกรีด</h4>
+            <div class="kv"><span class="mi" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic"><use href="#i-person"/></svg>แดง</span><span>34,860.00</span></div>
+            <div class="kv"><span class="mi" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic"><use href="#i-person"/></svg>นัด</span><span>16,964.00</span></div>
+            <h4 style="margin-top:8px">เงินเข้าสวน</h4>
+            <div class="kv"><span class="mi" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic"><use href="#i-bank"/></svg>โอนเข้าบัญชีเจ้าของ</span><span>55,543.50</span></div>
+            <span class="mi" style="padding-left:19px">ส่วนเจ้าของ 54,683.50</span>
+            <span class="mi" style="padding-left:19px">+ นัดคืนหนี้ 860 (หลังหักกลบ 640)</span>
+            <div class="kv"><span class="mi" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic"><use href="#i-wallet"/></svg>แดงคืนหนี้ (เงินสด)</span><span>2,000.00</span></div>
+            <span class="mi" style="padding-left:19px">หักจากเงินแดงแล้ว</span>
+            <div class="kv muted"><span class="mi" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic"><use href="#i-coin"/></svg>กองคืนหนี้แยก</span><span>ไม่มี</span></div>
+            <div class="kv total"><span>รวมทุกกอง</span><span class="fig" style="font-size:20px">109,367.50</span></div>
+            <div class="kv"><span>ยอดขายทั้งหมด</span><span>109,367.50</span></div>
+            <span style="font-size:14px;color:var(--c-ink);margin-top:6px;display:block">เงินทุกกองรวมกันต้องเท่ายอดขาย</span>
+            <span class="mi" style="margin-top:4px">ปัดเศษแล้ว ไม่ต้องบวกเพิ่ม</span>
+            <span class="mi" style="padding-left:19px">นัด +0.25</span>
+            <span class="mi" style="padding-left:19px">เจ้าของ −0.25</span>
+          </div>
+          <div class="mini-row"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ตรงกันถึงสตางค์</span></div>
+        </div>
+        <div class="foot"><div class="btn btn-primary">ถัดไป: การจ่ายเงิน</div></div>
+      </div></div>
+      <div class="extras">
+        <div class="inset">
+          <span class="ttl">ถ้าไม่ตรง (ตัวอย่างแยก)</span>
+          <div class="kv num"><span>รวมทุกกอง</span><span>109,367.25</span></div>
+          <div class="kv num"><span>ยอดขายทั้งหมด</span><span>109,367.50</span></div>
+          <div class="mini-row"><span class="chip ch-warn"><svg class="ic"><use href="#i-alert"/></svg>ขาดไป 0.25 บาท</span></div>
+          <div class="banner bad" style="padding:8px 10px"><svg class="ic sm"><use href="#i-lock"/></svg><span><b>ปิดการขายไม่ได้</b>จนกว่ายอดจะตรงกัน</span></div>
+          <div class="btn btn-disabled"><svg class="ic sm"><use href="#i-lock"/></svg>ปิดการขาย</div>
+        </div>
+      </div>
+      <figcaption>
+        <span class="t">18a. เทียบยอด (ใหม่)</span>
+        หลังสรุปยอดส่วนแบ่งและปัดเศษ: เงินทุกกอง — เงินสดคนกรีดแต่ละคน · โอนเจ้าของ (รวมเงินคืนหนี้ที่มากับโอน) · เงินสดเข้าสวน (เงินที่หยิบคืนหนี้) · กองคืนหนี้แยก (ทาง 2 — การขายนี้ไม่มี) · ส่วนปรับปัดเศษ — รวมกัน = ยอดขายทั้งหมด <b>ตรงถึงสตางค์</b> · ไม่ตรง → ส่วนต่างสีเตือน ปิดการขายไม่ได้
+        <span class="ids">SET-4, SET-5, NFR-3 · D-71, D-72 · E05-S04, E06-S04</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-72</span><span>หน้าเทียบยอด: ทุกกองรวมกัน = ยอดขายทั้งหมด ตรงถึงสตางค์</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กด <b>ถัดไป</b> → บันทึกการจ่ายเงิน</span></div>
 
     <figure class="step">
       <div class="phone"><div class="screen" aria-label="สถานะการจ่ายเงินและปิดการขาย">
@@ -1712,10 +1769,11 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       <tr><td>12a, 12b (ใหม่)</td><td>ลบจุดที่การขายเปิดอยู่ใช้: ถามทุกครั้งว่าเข่งคงไว้หรือย้าย · การขายต้องเลือกจุดใหม่ / สร้างจุดใหม่ทันที · คำ "ลบ" + "กู้คืนได้"</td><td>D-58, D-65, D-67</td></tr>
       <tr><td>14</td><td>บันทึกย้อนหลังใช้ขั้น สวน → คนกรีด → จุดชั่ง เหมือนการชั่ง แล้วใส่ตัวเลข · เลขเข่งตามโหมดของการขาย · "แนบหลักฐาน" ไม่บังคับ</td><td>D-46, D-49</td></tr>
       <tr><td>15</td><td>ชื่อ "แนบหลักฐาน" · ย้ำว่าไม่บังคับ · หมายเหตุอัปโหลดรออัปเกรดแผน</td><td>D-48, D-49</td></tr>
-      <tr><td>16</td><td>ปุ่ม "ไปสรุปยอดส่วนแบ่ง" · ถ้ามีจุดไม่มีคนกรีด ปุ่มกดไม่ได้ บอกจุดที่ขาด + ทางไปมอบหมาย</td><td>D-63</td></tr>
+      <tr><td>16</td><td>เอาช่องกรอกยอดผู้ซื้อวางเทียบข้างออก → แสดงยอดเรา + ปุ่ม "ตรงกันทั้งหมด" / "ไม่ตรงกัน" · ปุ่ม "ไปสรุปยอดส่วนแบ่ง" · ถ้ามีจุดไม่มีคนกรีด ไปต่อไม่ได้</td><td>D-63, D-72</td></tr>
       <tr><td>17</td><td>เดิม "ถามการปัดเศษ" → ตอนนี้ "สรุปยอดส่วนแบ่ง" (ย้ายจาก v4 หน้า 18) เรียงส่วนแบ่ง → หักหนี้ → ปัดเศษ → เงินสด · ปุ่ม "หักเงินคืนหนี้" · คำ "หักหนี้" แทน "หักค่าปุ๋ย" · เพดานหัก · ธง "หักเกินส่วนแบ่ง" · การ์ดเจ้าของมีกล่อง "เงินสดวันนี้ (ไม่รวมยอดโอน)": หนี้ที่รับคืน / เงินที่สวนคืน — รีวิวด้วย persona ชาวสวน 2 รอบ</td><td>D-18, D-54, D-59, D-60, D-61, D-67, D-70</td></tr>
       <tr><td>17a (ใหม่)</td><td>แผ่นหักเงินคืนหนี้: เฉพาะหนี้ที่ติดสวน · เสนองวดผ่อน/ยอดค้าง แก้ได้ 0–เพดาน · เสนอหักกลบเงินที่สวนต้องคืน (บางส่วนได้ เจ้าของกดใช้เอง) · เลือกวิธีรับเงินคืนหนี้ 3 ทางต่อคนกรีด พร้อมเช็ก "ต้องแตกเงิน"</td><td>D-59, D-60, D-67, D-69, D-71</td></tr>
       <tr><td>18</td><td>เดิม "สรุปเงิน" → ตอนนี้ "ถามการปัดเศษ" หลังหักหนี้ · เลือกครั้งเดียวทั้งการขาย · จำทั้งกลุ่ม</td><td>D-60, D-67</td></tr>
+      <tr><td>18a (ใหม่)</td><td>เทียบยอด: ทุกกองรวมกัน = ยอดขาย ตรงถึงสตางค์ · ไม่ตรง → ส่วนต่างสีเตือน ปิดการขายไม่ได้</td><td>D-72</td></tr>
       <tr><td>19</td><td>ยอดหลังหักหนี้และปัดเศษ · เอาหมายเหตุ "หักเงินจะเป็นขั้นแยก" ออก · ธงหักเกินส่วนแบ่งขวางการปิด · ยอดโอนเจ้าของรวมเงินคืนหนี้ที่มากับโอน (55,543.50)</td><td>D-60, D-61, D-71</td></tr>
       <tr><td>20</td><td>คำ "ขัดกัน" แทน "ข้อมูลขัดกัน"</td><td>D-65, D-67</td></tr>
       <tr><td>ทุกหน้า</td><td>หนึ่งข้อมูลต่อบรรทัด ใช้สัญลักษณ์นำ เวลาอยู่บรรทัดของตัวเอง (เช่น รายการการขาย การจ่ายเงิน ขัดกัน)</td><td>D-70</td></tr>
@@ -1766,6 +1824,18 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     </tbody>
   </table>
   <p>รีวิวรอบสอง (agent ใหม่ persona เดิม): อ่านรอบเดียวถูกทั้งสองคน — แดงเงินสด 2,000 เข้ามือ (แบงค์พัน 2 ใบ) · นัด 860 เข้าบัญชี ยอดโอน 55,543.75 · เข้าใจเหตุที่ทาง 1 เตือน · แก้ที่เหลือแล้ว: บรรทัดหักกลบในกล่องเป็น "−640" ไม่ใช่ "+640" สีเขียว · คำเตือนเป็น "แบงค์ย่อยไม่พอ 60" · ทาง 1 มีบรรทัด "→ กองนัด 16,963.75" เหมือนทาง 2/3</p>
+  <h3>ผลรีวิวตรวจยอดผู้ซื้อ + เทียบยอด (D-72) — persona ชาวสวน</h3>
+  <p>ป้าศรีรู้ว่าต้องกดอะไรในหน้า 16 และบวกเองได้ว่าหน้า 18a ลงตัว 109,367.50 · คำตัดสิน <b>"ต้องปรับ"</b> เรื่องคำ → ปรับแล้ว:</p>
+  <table class="chg">
+    <thead><tr><th>ข้อ</th><th>สิ่งที่งง</th><th>ปรับเป็น</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>"เงินสดเข้าสวน · หยิบจากกองแดง" ไม่บอกว่าเป็นเงินคืนหนี้</td><td>"แดงคืนหนี้ (เงินสด)" + "หักจากเงินแดงแล้ว"</td></tr>
+      <tr><td>2</td><td>ยอดโอนปนสองเรื่อง · บรรทัด "—" ไม่มีความหมาย</td><td>"ส่วนเจ้าของ 54,683.50" กับ "+ นัดคืนหนี้ 860" แยกบรรทัด · "ไม่มี"</td></tr>
+      <tr><td>3</td><td>ปัดเศษอยู่ในรายการ เกือบบวกซ้ำ</td><td>ย้ายไปใต้ยอดรวม: "ปัดเศษแล้ว ไม่ต้องบวกเพิ่ม"</td></tr>
+      <tr><td>4</td><td>"ส่วนต่าง −0.25" ไม่บอกขาดหรือเกิน</td><td>"ขาดไป 0.25 บาท" · คำอธิบายย้ายมาข้างยอดรวม ตัวใหญ่ขึ้น</td></tr>
+      <tr><td>5</td><td>หน้า 16 คำถามตัวเล็กใต้ยอดเงิน</td><td>หัวการ์ดตัวใหญ่ "ผู้ซื้อได้ยอดเท่านี้ไหม?" · คงคำ "รอส่ง" (ตกลงไว้ใน v4)</td></tr>
+    </tbody>
+  </table>
   <p class="not"><b>ยังไม่วาดในรอบนี้:</b> ย้อนกลับ-แก้-ยกเลิกเข่ง (E04-S09), ส่งต่อ/รับช่วง และรวมด้วย QR (E04-S12, S13), การนับซ้ำ (E04-S14), กรณี "พบส่วนต่าง", ลบสวนระหว่างการขาย, หน้าบัญชีหนี้คนงาน (ทีมข้อมูลฟาร์มและเงิน — <code>flow-farm-v1.1.0.html</code>), หน้าตั้งค่ากลุ่ม (โหมดเลขเข่ง / ประเภทตาชั่ง)</p>
 </section>
 
