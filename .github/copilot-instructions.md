@@ -1,1 +1,1 @@
-Read [AGENTS.md](../AGENTS.md), which points to the rules for this repo.
+The rules for this repo are in [CLAUDE.md](../CLAUDE.md) (see also [AGENTS.md](../AGENTS.md)). Read it before creating or changing anything.
