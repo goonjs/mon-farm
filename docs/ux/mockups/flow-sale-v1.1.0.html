@@ -539,6 +539,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .seg > span.off small { color: var(--c-ink-soft); }
 .seg.stack > span { flex-direction: column; gap: 0; padding: 6px 8px; border-radius: var(--r-md); }
 .seg.stack { border-radius: var(--r-md); }
+.seg.col { flex-direction: column; }
 .banner.warn { background: var(--c-warn-sunk); color: var(--c-warn); }
 .banner.warn b { color: var(--c-warn); }
 .choice.cmp.off { border-style: dashed; color: var(--c-ink-faint); }
@@ -610,7 +611,11 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .ruler .lb { fill: var(--c-ink-soft); font-size: 13px; font-weight: 600; font-family: var(--font); }
 .ruler .lb.cur { fill: var(--c-ink); font-size: 15px; font-weight: 800; }
 .ruler .ndl { stroke: var(--c-action); stroke-width: 4; stroke-linecap: round; }
-.ruler .fade { fill: var(--c-sunk); }
+.ruler .fade { fill: var(--c-rule); opacity: .55; }
+.ruler .over { fill: var(--c-warn); opacity: .28; }
+.ruler .mk { stroke: var(--c-accept); stroke-width: 3; stroke-dasharray: 4 3; }
+.ruler .lb.mkl { fill: var(--c-accept); font-weight: 800; }
+.ruler .lb.mkt { fill: var(--c-accept); font-size: 11px; font-weight: 700; }
 .rhint { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 12px; color: var(--c-ink-soft); }
 .rhint .ic { width: 16px; height: 16px; }
 .wres { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -775,7 +780,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           </div>
           <div class="card">
             <h4>เลขเข่ง<span class="mi" style="font-weight:400"><svg class="ic"><use href="#i-users"/></svg>ค่าเริ่มต้นจากตั้งค่ากลุ่ม</span></h4>
-            <div class="seg stack"><span class="on">ต่อเนื่องทั้งการขาย<small>1, 2, 3 … ข้ามทุกจุด</small></span><span>นับแยกต่อจุด<small>ทุกจุดเริ่มเข่ง 1</small></span></div>
+            <div class="seg stack col"><span class="on">เริ่มเข่ง 1 ครั้งเดียว<small>นับต่อทุกจุด</small></span><span>เริ่มเข่ง 1 ตามคนกรีดยาง<small>จุดของคนเดียวกันนับต่อ</small></span></div>
           </div>
           <div class="card">
             <h4>ประเภทตาชั่ง<span class="mi" style="font-weight:400"><svg class="ic"><use href="#i-users"/></svg>ค่าเริ่มต้นจากตั้งค่ากลุ่ม</span></h4>
@@ -794,7 +799,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       <figcaption>
         <span class="t">5. เริ่มการขาย — หัวการขาย</span>
         ทุกช่องเติมค่าเริ่มต้นให้แล้ว กดถัดไปได้เลย (ยัง ≤ 4 แตะถึงเข่งแรก) · ใหม่: <b>เลขเข่ง</b> และ <b>ประเภทตาชั่ง</b> ค่าเริ่มต้นมาจากตั้งค่ากลุ่ม เปลี่ยนได้ที่นี่
-        <span class="ids">SALE-2, SALE-3, SALE-7, SALE-10, MD-6, MD-7, MD-9 · D-10, D-11, D-46, D-53, D-66 · E04-S01, E04-S02, E03-S07</span>
+        <span class="ids">SALE-2, SALE-3, SALE-7, SALE-10, MD-6, MD-7, MD-9 · D-10, D-11, D-46, D-53, D-66, D-79 · E04-S01, E04-S02, E03-S07</span>
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-53</span><span>เลือกโหมดเลขเข่งตอนเริ่มการขาย ค่าเริ่มต้นจากตั้งค่ากลุ่ม (ตอบ ?21 ของ v4)</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-66</span><span>ประเภทตาชั่ง: ไม่มีทศนิยม = ค่าเริ่มต้น · ทศนิยม 1 ตำแหน่ง แสดงแต่กดไม่ได้ "ยังไม่พร้อมใช้งาน"</span></li>
@@ -914,15 +919,17 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <span class="note num">การ์ดแรกเปลี่ยนจาก "เสร็จแล้ว" เป็น "ราคารวม" (1,100 × 48.50 = 53,350 ฿ แบบย่อ D-41) · จำนวนเข่งที่นับแล้วย้ายไปเป็นบรรทัดเล็กใต้เลขเข่งปัจจุบัน</span>
         </div>
         <div class="inset">
-          <span class="ttl">ถ้าเลือก "นับแยกต่อจุด" ตอนเริ่มการขาย</span>
-          <div class="mini-row"><span class="grow">เข่งปัจจุบัน นับของจุดนี้เท่านั้น — ทุกจุดเริ่มที่ <b>เข่ง 1</b></span></div>
-          <span class="note">ยอดรวมต่อจุด / คนกรีดยาง / การขาย ได้ค่าเดียวกันทั้งสองโหมด เพราะสรุปเงินใช้น้ำหนักรวม (D-46)</span>
+          <span class="ttl">ถ้าเลือก "เริ่มเข่ง 1 ตามคนกรีดยาง" ตอนเริ่มการขาย</span>
+          <div class="mini-row"><span class="grow">เข่งปัจจุบัน นับของคนกรีดยางคนนี้เท่านั้น</span></div>
+          <div class="mini-row"><span class="grow">คนกรีดยางแต่ละคนเริ่มที่ <b>เข่ง 1</b></span></div>
+          <div class="mini-row"><span class="grow">ย้ายไปจุดอื่นของคนเดิม เลขเข่งนับต่อ</span></div>
+          <span class="note">ยอดรวมต่อจุด / คนกรีดยาง / การขาย ได้ค่าเดียวกันทั้งสองโหมด เพราะสรุปเงินใช้น้ำหนักรวม (D-46, D-79)</span>
         </div>
       </div>
       <figcaption>
         <span class="t">8. นับเข่ง — โหมดผู้บันทึก (ปรับตามคอมเมนต์เจ้าของ)</span>
         การ์ดเลขเข่งแสดงแค่ <b>เข่งปัจจุบัน</b> ตรงกลาง · ใส่ราคาแล้ว การ์ด "เสร็จแล้ว" เป็น <b>ราคารวม</b> และ "นับแล้ว N เข่ง" ย้ายเป็นบรรทัดเล็กใต้เลข · พื้นที่กดค้างเล็กลง · แถวจุดชั่ง: ชื่อสวน · จุดเต็มบรรทัด แล้วคนกรีดยาง + ปุ่มเปลี่ยนจุดบรรทัดถัดไป · ไอคอนใบไม้หน้าน้ำหนักสะสม
-        <span class="ids">SALE-8–SALE-17 · D-7, D-8, D-13, D-40, D-41, D-46 · E04-S01, S04, S05, S06, S08, S09</span>
+        <span class="ids">SALE-8–SALE-17 · D-7, D-8, D-13, D-40, D-41, D-46, D-79 · E04-S01, S04, S05, S06, S08, S09</span>
       </figcaption>
     </figure>
 
@@ -1141,8 +1148,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           </div>
           <span style="align-self:center" class="scaleval"><svg class="ic"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน</span>
           <div class="wval"><span class="sb" aria-label="ลด 1 กก."><svg class="ic"><use href="#i-minus"/></svg></span><span class="big">39<span class="u">กก.</span></span><span class="sb" aria-label="เพิ่ม 1 กก."><svg class="ic"><use href="#i-plus"/></svg></span></div>
-          <div class="ruler" aria-label="ไม้บรรทัดลากเลือกน้ำหนัก"><svg viewBox="0 0 316 72" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><line class="tk" x1="-11.0" y1="8" x2="-11.0" y2="24"/><line class="tk" x1="2.0" y1="8" x2="2.0" y2="24"/><line class="tk" x1="15.0" y1="8" x2="15.0" y2="24"/><line class="tk" x1="28.0" y1="8" x2="28.0" y2="24"/><line class="tk5" x1="41.0" y1="8" x2="41.0" y2="34"/><text class="lb" x="41.0" y="56" text-anchor="middle">30</text><line class="tk" x1="54.0" y1="8" x2="54.0" y2="24"/><line class="tk" x1="67.0" y1="8" x2="67.0" y2="24"/><line class="tk" x1="80.0" y1="8" x2="80.0" y2="24"/><line class="tk" x1="93.0" y1="8" x2="93.0" y2="24"/><line class="tk5" x1="106.0" y1="8" x2="106.0" y2="34"/><text class="lb" x="106.0" y="56" text-anchor="middle">35</text><line class="tk" x1="119.0" y1="8" x2="119.0" y2="24"/><line class="tk" x1="132.0" y1="8" x2="132.0" y2="24"/><line class="tk" x1="145.0" y1="8" x2="145.0" y2="24"/><line class="tk" x1="158.0" y1="8" x2="158.0" y2="24"/><line class="tk5" x1="171.0" y1="8" x2="171.0" y2="34"/><line class="tk" x1="184.0" y1="8" x2="184.0" y2="24"/><line class="tk" x1="197.0" y1="8" x2="197.0" y2="24"/><line class="tk" x1="210.0" y1="8" x2="210.0" y2="24"/><line class="tk" x1="223.0" y1="8" x2="223.0" y2="24"/><line class="tk5" x1="236.0" y1="8" x2="236.0" y2="34"/><text class="lb" x="236.0" y="56" text-anchor="middle">45</text><line class="tk" x1="249.0" y1="8" x2="249.0" y2="24"/><line class="tk" x1="262.0" y1="8" x2="262.0" y2="24"/><line class="tk" x1="275.0" y1="8" x2="275.0" y2="24"/><line class="tk" x1="288.0" y1="8" x2="288.0" y2="24"/><line class="tk5" x1="301.0" y1="8" x2="301.0" y2="34"/><text class="lb" x="301.0" y="56" text-anchor="middle">50</text><line class="tk" x1="314.0" y1="8" x2="314.0" y2="24"/><text class="lb cur" x="158.0" y="56" text-anchor="middle">39</text><line class="ndl" x1="158.0" y1="4" x2="158.0" y2="40"/></svg></div>
+          <div class="ruler" aria-label="ไม้บรรทัดลากเลือกน้ำหนัก"><svg viewBox="0 0 316 72" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect class="over" x="248.0" y="0" width="68.0" height="72"/><line class="tk" x1="-10.0" y1="8" x2="-10.0" y2="20"/><line class="tk" x1="-4.0" y1="8" x2="-4.0" y2="20"/><line class="tk" x1="2.0" y1="8" x2="2.0" y2="20"/><line class="tk" x1="8.0" y1="8" x2="8.0" y2="20"/><line class="tk5" x1="14.0" y1="8" x2="14.0" y2="30"/><text class="lb" x="14.0" y="52" text-anchor="middle">15</text><line class="tk" x1="20.0" y1="8" x2="20.0" y2="20"/><line class="tk" x1="26.0" y1="8" x2="26.0" y2="20"/><line class="tk" x1="32.0" y1="8" x2="32.0" y2="20"/><line class="tk" x1="38.0" y1="8" x2="38.0" y2="20"/><line class="tk5" x1="44.0" y1="8" x2="44.0" y2="30"/><text class="lb" x="44.0" y="52" text-anchor="middle">20</text><line class="tk" x1="50.0" y1="8" x2="50.0" y2="20"/><line class="tk" x1="56.0" y1="8" x2="56.0" y2="20"/><line class="tk" x1="62.0" y1="8" x2="62.0" y2="20"/><line class="tk" x1="68.0" y1="8" x2="68.0" y2="20"/><line class="tk5" x1="74.0" y1="8" x2="74.0" y2="30"/><text class="lb" x="74.0" y="52" text-anchor="middle">25</text><line class="tk" x1="80.0" y1="8" x2="80.0" y2="20"/><line class="tk" x1="86.0" y1="8" x2="86.0" y2="20"/><line class="tk" x1="92.0" y1="8" x2="92.0" y2="20"/><line class="tk" x1="98.0" y1="8" x2="98.0" y2="20"/><line class="tk5" x1="104.0" y1="8" x2="104.0" y2="30"/><text class="lb" x="104.0" y="52" text-anchor="middle">30</text><line class="tk" x1="110.0" y1="8" x2="110.0" y2="20"/><line class="tk" x1="116.0" y1="8" x2="116.0" y2="20"/><line class="tk" x1="122.0" y1="8" x2="122.0" y2="20"/><line class="tk" x1="128.0" y1="8" x2="128.0" y2="20"/><line class="tk5" x1="134.0" y1="8" x2="134.0" y2="30"/><text class="lb" x="134.0" y="52" text-anchor="middle">35</text><line class="tk" x1="140.0" y1="8" x2="140.0" y2="20"/><line class="tk" x1="146.0" y1="8" x2="146.0" y2="20"/><line class="tk" x1="152.0" y1="8" x2="152.0" y2="20"/><line class="tk" x1="158.0" y1="8" x2="158.0" y2="20"/><line class="tk5" x1="164.0" y1="8" x2="164.0" y2="30"/><line class="tk" x1="170.0" y1="8" x2="170.0" y2="20"/><line class="tk" x1="176.0" y1="8" x2="176.0" y2="20"/><line class="tk" x1="182.0" y1="8" x2="182.0" y2="20"/><line class="tk" x1="188.0" y1="8" x2="188.0" y2="20"/><line class="tk5" x1="194.0" y1="8" x2="194.0" y2="30"/><text class="lb" x="194.0" y="52" text-anchor="middle">45</text><line class="tk" x1="200.0" y1="8" x2="200.0" y2="20"/><line class="tk" x1="206.0" y1="8" x2="206.0" y2="20"/><line class="tk" x1="212.0" y1="8" x2="212.0" y2="20"/><line class="tk" x1="218.0" y1="8" x2="218.0" y2="20"/><line class="tk5" x1="224.0" y1="8" x2="224.0" y2="30"/><text class="lb" x="224.0" y="52" text-anchor="middle">50</text><line class="tk" x1="230.0" y1="8" x2="230.0" y2="20"/><line class="tk" x1="236.0" y1="8" x2="236.0" y2="20"/><line class="tk" x1="242.0" y1="8" x2="242.0" y2="20"/><line class="tk" x1="248.0" y1="8" x2="248.0" y2="20"/><line class="tk5" x1="254.0" y1="8" x2="254.0" y2="30"/><line class="tk" x1="260.0" y1="8" x2="260.0" y2="20"/><line class="tk" x1="266.0" y1="8" x2="266.0" y2="20"/><line class="tk" x1="272.0" y1="8" x2="272.0" y2="20"/><line class="tk" x1="278.0" y1="8" x2="278.0" y2="20"/><line class="tk5" x1="284.0" y1="8" x2="284.0" y2="30"/><text class="lb" x="284.0" y="52" text-anchor="middle">60</text><line class="tk" x1="290.0" y1="8" x2="290.0" y2="20"/><line class="tk" x1="296.0" y1="8" x2="296.0" y2="20"/><line class="tk" x1="302.0" y1="8" x2="302.0" y2="20"/><line class="tk" x1="308.0" y1="8" x2="308.0" y2="20"/><line class="tk5" x1="314.0" y1="8" x2="314.0" y2="30"/><line class="tk" x1="320.0" y1="8" x2="320.0" y2="20"/><line class="mk" x1="248.0" y1="2" x2="248.0" y2="38"/><text class="lb mkl" x="248.0" y="52" text-anchor="middle">54</text><text class="lb mkt" x="248.0" y="67" text-anchor="middle">ตาชั่งควรอ่าน</text><text class="lb cur" x="158.0" y="54" text-anchor="middle">39</text><line class="ndl" x1="158.0" y1="4" x2="158.0" y2="38"/></svg></div>
           <span class="rhint"><svg class="ic"><use href="#i-drag"/></svg>ลากซ้าย–ขวา หรือกด ± ทีละ 1 กก.</span>
+          <span class="rhint num">เลื่อนได้ถึง 79 กก. · เลยขีด (สีส้ม) = เกินเต็มเข่ง</span>
           <div class="card" style="box-shadow:none;padding:8px 10px">
             <div class="kv"><span class="scaleval" style="font-size:14px;padding:1px 8px"><svg class="ic" style="width:18px;height:18px"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน</span><span style="color:var(--c-action);font-weight:800">39 กก.</span></div>
             <div class="kv"><span>− น้ำหนักเข่ง</span><span>2 กก.</span></div>
@@ -1333,8 +1341,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           </div>
           <span style="align-self:center" class="scaleval"><svg class="ic"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน</span>
           <div class="wval"><span class="sb" aria-label="ลด 1 กก."><svg class="ic"><use href="#i-minus"/></svg></span><span class="big">37<span class="u">กก.</span></span><span class="sb" aria-label="เพิ่ม 1 กก."><svg class="ic"><use href="#i-plus"/></svg></span></div>
-          <div class="ruler" aria-label="ไม้บรรทัดลากเลือกน้ำหนัก"><svg viewBox="0 0 316 72" preserveAspectRatio="none" aria-hidden="true"><line class="tk5" x1="2.0" y1="8" x2="2.0" y2="34"/><text class="lb" x="2.0" y="56" text-anchor="middle">25</text><line class="tk" x1="15.0" y1="8" x2="15.0" y2="24"/><line class="tk" x1="28.0" y1="8" x2="28.0" y2="24"/><line class="tk" x1="41.0" y1="8" x2="41.0" y2="24"/><line class="tk" x1="54.0" y1="8" x2="54.0" y2="24"/><line class="tk5" x1="67.0" y1="8" x2="67.0" y2="34"/><text class="lb" x="67.0" y="56" text-anchor="middle">30</text><line class="tk" x1="80.0" y1="8" x2="80.0" y2="24"/><line class="tk" x1="93.0" y1="8" x2="93.0" y2="24"/><line class="tk" x1="106.0" y1="8" x2="106.0" y2="24"/><line class="tk" x1="119.0" y1="8" x2="119.0" y2="24"/><line class="tk5" x1="132.0" y1="8" x2="132.0" y2="34"/><line class="tk" x1="145.0" y1="8" x2="145.0" y2="24"/><line class="tk" x1="158.0" y1="8" x2="158.0" y2="24"/><line class="tk" x1="171.0" y1="8" x2="171.0" y2="24"/><line class="tk" x1="184.0" y1="8" x2="184.0" y2="24"/><line class="tk5" x1="197.0" y1="8" x2="197.0" y2="34"/><line class="tk" x1="210.0" y1="8" x2="210.0" y2="24"/><line class="tk" x1="223.0" y1="8" x2="223.0" y2="24"/><line class="tk" x1="236.0" y1="8" x2="236.0" y2="24"/><line class="tk" x1="249.0" y1="8" x2="249.0" y2="24"/><line class="tk5" x1="262.0" y1="8" x2="262.0" y2="34"/><text class="lb" x="262.0" y="56" text-anchor="middle">45</text><line class="tk" x1="275.0" y1="8" x2="275.0" y2="24"/><line class="tk" x1="288.0" y1="8" x2="288.0" y2="24"/><line class="tk" x1="301.0" y1="8" x2="301.0" y2="24"/><line class="tk" x1="314.0" y1="8" x2="314.0" y2="24"/><text class="lb cur" x="158.0" y="56" text-anchor="middle">37</text><text class="lb" x="197.0" y="56" text-anchor="middle">40</text><line class="ndl" x1="158.0" y1="4" x2="158.0" y2="40"/></svg></div>
+          <div class="ruler" aria-label="ไม้บรรทัดลากเลือกน้ำหนัก"><svg viewBox="0 0 316 72" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect class="over" x="248.0" y="0" width="68.0" height="72"/><line class="tk" x1="-10.0" y1="8" x2="-10.0" y2="20"/><line class="tk5" x1="-4.0" y1="8" x2="-4.0" y2="30"/><line class="tk" x1="2.0" y1="8" x2="2.0" y2="20"/><line class="tk" x1="8.0" y1="8" x2="8.0" y2="20"/><line class="tk" x1="14.0" y1="8" x2="14.0" y2="20"/><line class="tk" x1="20.0" y1="8" x2="20.0" y2="20"/><line class="tk5" x1="26.0" y1="8" x2="26.0" y2="30"/><text class="lb" x="26.0" y="52" text-anchor="middle">15</text><line class="tk" x1="32.0" y1="8" x2="32.0" y2="20"/><line class="tk" x1="38.0" y1="8" x2="38.0" y2="20"/><line class="tk" x1="44.0" y1="8" x2="44.0" y2="20"/><line class="tk" x1="50.0" y1="8" x2="50.0" y2="20"/><line class="tk5" x1="56.0" y1="8" x2="56.0" y2="30"/><text class="lb" x="56.0" y="52" text-anchor="middle">20</text><line class="tk" x1="62.0" y1="8" x2="62.0" y2="20"/><line class="tk" x1="68.0" y1="8" x2="68.0" y2="20"/><line class="tk" x1="74.0" y1="8" x2="74.0" y2="20"/><line class="tk" x1="80.0" y1="8" x2="80.0" y2="20"/><line class="tk5" x1="86.0" y1="8" x2="86.0" y2="30"/><text class="lb" x="86.0" y="52" text-anchor="middle">25</text><line class="tk" x1="92.0" y1="8" x2="92.0" y2="20"/><line class="tk" x1="98.0" y1="8" x2="98.0" y2="20"/><line class="tk" x1="104.0" y1="8" x2="104.0" y2="20"/><line class="tk" x1="110.0" y1="8" x2="110.0" y2="20"/><line class="tk5" x1="116.0" y1="8" x2="116.0" y2="30"/><text class="lb" x="116.0" y="52" text-anchor="middle">30</text><line class="tk" x1="122.0" y1="8" x2="122.0" y2="20"/><line class="tk" x1="128.0" y1="8" x2="128.0" y2="20"/><line class="tk" x1="134.0" y1="8" x2="134.0" y2="20"/><line class="tk" x1="140.0" y1="8" x2="140.0" y2="20"/><line class="tk5" x1="146.0" y1="8" x2="146.0" y2="30"/><line class="tk" x1="152.0" y1="8" x2="152.0" y2="20"/><line class="tk" x1="158.0" y1="8" x2="158.0" y2="20"/><line class="tk" x1="164.0" y1="8" x2="164.0" y2="20"/><line class="tk" x1="170.0" y1="8" x2="170.0" y2="20"/><line class="tk5" x1="176.0" y1="8" x2="176.0" y2="30"/><line class="tk" x1="182.0" y1="8" x2="182.0" y2="20"/><line class="tk" x1="188.0" y1="8" x2="188.0" y2="20"/><line class="tk" x1="194.0" y1="8" x2="194.0" y2="20"/><line class="tk" x1="200.0" y1="8" x2="200.0" y2="20"/><line class="tk5" x1="206.0" y1="8" x2="206.0" y2="30"/><text class="lb" x="206.0" y="52" text-anchor="middle">45</text><line class="tk" x1="212.0" y1="8" x2="212.0" y2="20"/><line class="tk" x1="218.0" y1="8" x2="218.0" y2="20"/><line class="tk" x1="224.0" y1="8" x2="224.0" y2="20"/><line class="tk" x1="230.0" y1="8" x2="230.0" y2="20"/><line class="tk5" x1="236.0" y1="8" x2="236.0" y2="30"/><line class="tk" x1="242.0" y1="8" x2="242.0" y2="20"/><line class="tk" x1="248.0" y1="8" x2="248.0" y2="20"/><line class="tk" x1="254.0" y1="8" x2="254.0" y2="20"/><line class="tk" x1="260.0" y1="8" x2="260.0" y2="20"/><line class="tk5" x1="266.0" y1="8" x2="266.0" y2="30"/><line class="tk" x1="272.0" y1="8" x2="272.0" y2="20"/><line class="tk" x1="278.0" y1="8" x2="278.0" y2="20"/><line class="tk" x1="284.0" y1="8" x2="284.0" y2="20"/><line class="tk" x1="290.0" y1="8" x2="290.0" y2="20"/><line class="tk5" x1="296.0" y1="8" x2="296.0" y2="30"/><text class="lb" x="296.0" y="52" text-anchor="middle">60</text><line class="tk" x1="302.0" y1="8" x2="302.0" y2="20"/><line class="tk" x1="308.0" y1="8" x2="308.0" y2="20"/><line class="tk" x1="314.0" y1="8" x2="314.0" y2="20"/><line class="tk" x1="320.0" y1="8" x2="320.0" y2="20"/><line class="mk" x1="248.0" y1="2" x2="248.0" y2="38"/><text class="lb mkl" x="248.0" y="52" text-anchor="middle">52</text><text class="lb mkt" x="248.0" y="67" text-anchor="middle">ตาชั่งควรอ่าน</text><text class="lb cur" x="158.0" y="54" text-anchor="middle">37</text><line class="ndl" x1="158.0" y1="4" x2="158.0" y2="38"/></svg></div>
           <span class="rhint"><svg class="ic"><use href="#i-drag"/></svg>ลากซ้าย–ขวา หรือกด ± ทีละ 1 กก.</span>
+          <span class="rhint num">เลื่อนได้ถึง 77 กก. · เลยขีด (สีส้ม) = เกินเต็มเข่ง</span>
           <div class="wres">
             <div><span><svg class="ic xs"><use href="#i-rubber"/></svg> ยางสุทธิ</span><b>35</b> <small>กก.</small><span>37 − น้ำหนักเข่ง 2</span></div>
             <div><span>ยังขาด</span><b>15</b> <small>กก.</small><span>จึงเต็ม 50</span></div>
@@ -1344,10 +1353,11 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       </div></div>
       <figcaption>
         <span class="t">10. บันทึกเข่งไม่เต็ม — แผ่นเลื่อนขึ้นเลือกน้ำหนัก</span>
-        แตะ <b>เข่งไม่เต็ม</b> → แผ่นเลื่อนขึ้น (เลขเข่งด้านบนยังเห็น) · <b>ลากไม้บรรทัด</b> ซ้าย–ขวาเพื่อเลือกค่าเร็ว ๆ แล้วเก็บละเอียดด้วย <b>±</b> · ขยับตามประเภทตาชั่งเท่านั้น: ไม่มีทศนิยม = ทีละ 1 กก. · แอปหักน้ำหนักเข่งให้ทันที เก็บทั้งสองค่า · ไม้บรรทัดหยุดที่ 3 และ 51 กก.
+        แตะ <b>เข่งไม่เต็ม</b> → แผ่นเลื่อนขึ้น (เลขเข่งด้านบนยังเห็น) · <b>ลากไม้บรรทัด</b> ซ้าย–ขวาเพื่อเลือกค่าเร็ว ๆ แล้วเก็บละเอียดด้วย <b>±</b> · ขยับตามประเภทตาชั่งเท่านั้น: ไม่มีทศนิยม = ทีละ 1 กก. · แอปหักน้ำหนักเข่งให้ทันที เก็บทั้งสองค่า · ไม้บรรทัดเริ่มที่ 3 กก. สุดที่ 77 กก. (ยางสุทธิ 75 = 150%) · ขีดเต็มเข่งที่ 52 เลยขีดเป็นสีส้ม (D-79)
         <span class="ids">SALE-9, SALE-11 · F-13, F-22 · D-66 · E04-S06</span>
         <ul>
-          <li><svg class="ic sm"><use href="#i-help"/></svg><span>ค่าที่อ่าน ≤ น้ำหนักเข่ง หรือ ≥ 52 (เข่งเต็ม) → ไม่รับ บอกเหตุผล (flow e04 §8.1 · Q9 ยังเปิด)</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>ค่าที่อ่าน ≤ น้ำหนักเข่ง → ไม่รับ บอกเหตุผล (flow e04 §8.1 · Q9 ยังเปิด)</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-79</span><span>ไม้บรรทัดเลื่อนได้ถึง 150% ของน้ำหนักยางสุทธิ (50 → 75 กก. = ตาชั่ง 77) · มีขีดตรง "ตาชั่งควรอ่าน" (เข่งเต็ม 52) · ส่วนที่เลยขีดเป็นอีกสี</span></li>
           <li><svg class="ic sm"><use href="#i-help"/></svg><span>ยกเลิก = ไม่บันทึกอะไร</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S9: ± ขยับตามประเภทตาชั่งเท่านั้น (ทีละ 1 กก.) และต้องลากปรับได้ — แผ่นเลื่อนขึ้นให้เลือกค่าได้เร็วกว่ากด/พิมพ์</span></li>
         </ul>
@@ -1429,8 +1439,8 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <span class="note">ปุ่มเดียวกับในเมนู ⋯ ของหน้าชั่ง — ไปหน้า 16</span>
         </div>
         <div class="inset">
-          <span class="ttl">การขายที่เลือก "นับแยกต่อจุด"</span>
-          <span class="note">ทางเลือกข้อ 4 ของ v4 ("เริ่มเข่งใหม่ที่จุดนี้ นับจาก 1") ย้ายไปเป็นโหมดตอนเริ่มการขาย (หน้า 5) · โหมดนับแยกต่อจุด ดูหน้า 12-ต่อจุด ถัดไป</span>
+          <span class="ttl">การขายที่เลือก "เริ่มเข่ง 1 ตามคนกรีดยาง"</span>
+          <span class="note">ทางเลือกข้อ 4 ของ v4 ("เริ่มเข่งใหม่ที่จุดนี้ นับจาก 1") ย้ายไปเป็นโหมดตอนเริ่มการขาย (หน้า 5) · โหมดนี้ ดูหน้า 12-ต่อคน ถัดไป</span>
         </div>
       </div>
       <figcaption>
@@ -1439,7 +1449,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <span class="ids">SALE-11, SALE-12 · D-42, D-46, D-53, D-57 · E04-S06</span>
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-57</span><span>โหมดต่อเนื่องทั้งการขาย ยังถามเมื่อย้ายไปจุดใหม่ของคนกรีดยางคนเดิม: (1) เติมให้เต็มเข่ง · (2) ชั่งแยกให้ครบน้ำหนักยางสุทธิ · (3) ปล่อยเข่งไม่เต็มไว้ แล้วนับเข่งเต็มถัดไป</span></li>
-          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S2: โหมดนับแยกต่อจุด — ไปจุดของคนกรีดยางคนอื่น เข่งไม่เต็มของจุดเดิมเปิดค้างไว้ ไม่ถาม · ไปจุดของคนกรีดยางคนเดิม จึงถามทางเลือก (หน้า 12-ต่อจุด)</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S2: โหมดเริ่มเข่ง 1 ตามคนกรีดยาง (D-79 แทนนับแยกต่อจุด) — ไปจุดของคนกรีดยางคนอื่น เข่งไม่เต็มของจุดเดิมเปิดค้างไว้ ไม่ถาม · ไปจุดของคนกรีดยางคนเดิม จึงถามทางเลือก (หน้า 12-ต่อคน)</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -1486,10 +1496,10 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       </figcaption>
     </figure>
 
-    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>ตัวอย่างแยก: การขายที่เลือก <b>นับแยกต่อจุด</b></span></div>
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>ตัวอย่างแยก: การขายที่เลือก <b>เริ่มเข่ง 1 ตามคนกรีดยาง</b></span></div>
 
     <figure class="step">
-      <div class="phone"><div class="screen" aria-label="เปลี่ยนจุด คนกรีดยางคนเดิม โหมดนับแยกต่อจุด">
+      <div class="phone"><div class="screen" aria-label="เปลี่ยนจุด คนกรีดยางคนเดิม โหมดเริ่มเข่ง 1 ตามคนกรีดยาง">
         <div class="sbar num"><span>09:31</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
         <div class="appbar dim"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>เปลี่ยนจุด <small class="num">การขาย 3 ต.ค. 2569</small></h3></div>
         <div class="body dim">
@@ -1499,28 +1509,28 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="sheet-scrim"></div>
         <div class="sheet">
           <span class="grab"></span>
-          <h4>เข่ง 9 ของ จันทเขลม จุด 4 ยังไม่เต็ม</h4>
+          <h4>เข่ง 9 ของนัด ยังไม่เต็ม</h4>
           <div class="lines">
             <span class="mi"><svg class="ic"><use href="#i-scale"/></svg>มีแล้ว <b class="num">35 กก.</b></span>
             <span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>คนกรีดยางคนเดิม: นัด</span>
-            <span class="mi"><svg class="ic"><use href="#i-pin"/></svg>จุดใหม่: คลองพลู จุด 1 (เริ่มที่เข่ง 1)</span>
+            <span class="mi"><svg class="ic"><use href="#i-pin"/></svg>จาก จันทเขลม จุด 4 → คลองพลู จุด 1</span>
           </div>
-          <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมให้เต็มเข่ง</b><span class="ln num"><span style="color:var(--c-warn);font-weight:700">เติมอีก</span> <span class="nchip warn">15 กก.</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน <span class="nchip scale">52 กก.</span> ทั้งเข่ง</span><span class="ln"><span style="white-space:nowrap">นับเป็นเข่ง 9</span> ของจันทเขลม จุด 4</span></span></div>
-          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-scale"/></svg></span><span><b>2 · ชั่งแยกให้ครบน้ำหนักยางสุทธิ</b><span class="ln num">ชั่งส่วนที่เติม <span class="nchip">15 กก.</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน <span class="nchip scale">17 กก.</span> <span style="white-space:nowrap">(15 + น้ำหนักเข่ง 2)</span></span><span class="ln"><span style="white-space:nowrap">นับรวมเป็นเข่ง 9</span> ของจันทเขลม จุด 4</span></span></div>
-          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-plus"/></svg></span><span><b>3 · ปล่อยเข่งไม่เต็มไว้ แล้วนับเข่งเต็มถัดไป</b><span class="ln num">เข่ง 9 ของจันทเขลม จุด 4 <span class="nchip">35 กก.</span></span><span class="ln num">จุดนี้เริ่มที่ <span class="nchip">เข่ง 1</span></span></span></div>
+          <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมให้เต็มเข่ง</b><span class="ln num"><span style="color:var(--c-warn);font-weight:700">เติมอีก</span> <span class="nchip warn">15 กก.</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน <span class="nchip scale">52 กก.</span> ทั้งเข่ง</span><span class="ln"><span style="white-space:nowrap">นับเป็นเข่ง 9</span> ของนัด</span></span></div>
+          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-scale"/></svg></span><span><b>2 · ชั่งแยกให้ครบน้ำหนักยางสุทธิ</b><span class="ln num">ชั่งส่วนที่เติม <span class="nchip">15 กก.</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน <span class="nchip scale">17 กก.</span> <span style="white-space:nowrap">(15 + น้ำหนักเข่ง 2)</span></span><span class="ln"><span style="white-space:nowrap">นับรวมเป็นเข่ง 9</span> ของนัด</span></span></div>
+          <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-plus"/></svg></span><span><b>3 · ปล่อยเข่งไม่เต็มไว้ แล้วนับเข่งเต็มถัดไป</b><span class="ln num">เข่ง 9 ไม่เต็ม <span class="nchip">35 กก.</span></span><span class="ln num">เข่งเต็มถัดไปคือ <span class="nchip">เข่ง 10</span> ของนัด</span></span></div>
         </div>
       </div></div>
       <div class="extras">
         <div class="inset">
-          <span class="ttl">โหมดนับแยกต่อจุด — ไปจุดของคนกรีดยางคนอื่น</span>
+          <span class="ttl">โหมดนี้ — ไปจุดของคนกรีดยางคนอื่น</span>
           <div class="mini-row"><svg class="ic sm"><use href="#i-check"/></svg><span class="grow">ไม่ถาม — ไปชั่งได้เลย</span></div>
           <div class="mini-row"><svg class="ic sm"><use href="#i-scale"/></svg><span class="grow">เข่งไม่เต็มของจุดเดิมเปิดค้างไว้</span></div>
         </div>
       </div>
       <figcaption>
-        <span class="t">12-ต่อจุด. เปลี่ยนจุด — คนกรีดยางคนเดิม (โหมดนับแยกต่อจุด)</span>
-        ตัวอย่างแยก: นัดชั่งที่ จันทเขลม จุด 4 ได้เข่ง 1–8 เต็ม และเข่ง 9 มี 35 กก. แล้วย้ายไป คลองพลู จุด 1 · ถามทางเลือก 3 ข้อเหมือนโหมดต่อเนื่อง แต่เลขเข่งเป็นของแต่ละจุด — จุดใหม่เริ่มที่เข่ง 1
-        <span class="ids">SALE-11, SALE-12 · D-46, D-57, D-70 · E04-S06</span>
+        <span class="t">12-ต่อคน. เปลี่ยนจุด — คนกรีดยางคนเดิม (โหมดเริ่มเข่ง 1 ตามคนกรีดยาง)</span>
+        ตัวอย่างแยก: นัดชั่งที่ จันทเขลม จุด 4 ได้เข่ง 1–8 เต็ม และเข่ง 9 มี 35 กก. แล้วย้ายไป คลองพลู จุด 1 · ถามทางเลือก 3 ข้อเหมือนโหมดต่อเนื่อง · เลขเข่งเป็นของนัด นับต่อข้ามจุด (D-79) — แดงมีเลขเข่งของตัวเองเริ่มที่ 1
+        <span class="ids">SALE-11, SALE-12 · D-46, D-57, D-70, D-79 · E04-S06</span>
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S2: ไปจุดของคนกรีดยางคนเดิม → ถามทางเลือก · ไปจุดของคนกรีดยางคนอื่น → เข่งไม่เต็มของจุดเดิมเปิดค้าง ไม่ถาม</span></li>
         </ul>
@@ -1642,15 +1652,16 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       </div></div>
       <div class="extras">
         <div class="inset">
-          <span class="ttl">ถ้าการขายเลือก "นับแยกต่อจุด"</span>
-          <div class="mini-row"><span class="grow num">จุด 3 ยังไม่มีเข่ง → <b>เข่ง 1–3 เต็ม + เข่ง 4 ไม่เต็ม 20 กก.</b> ของจุด 3</span></div>
+          <span class="ttl">ถ้าการขายเลือก "เริ่มเข่ง 1 ตามคนกรีดยาง"</span>
+          <div class="mini-row"><span class="grow num">แดงมีเข่ง 1–27 แล้ว (จุด 1–2)</span></div>
+          <div class="mini-row"><span class="grow num">จุด 3 → <b>เข่ง 28–30 เต็ม + เข่ง 31 ไม่เต็ม 20 กก.</b> ของแดง</span></div>
           <span class="note">แอปให้เลขตามโหมดเลขเข่งของการขาย (E04-S10) · ทุกเข่งติดป้าย "บันทึกย้อนหลัง" และนับเข้ายอดเหมือนเข่งปกติ</span>
         </div>
       </div>
       <figcaption>
         <span class="t">14. บันทึกย้อนหลัง — ใส่ตัวเลขแทนกดค้าง</span>
         flow เดียวกับการชั่งต่อจุด (ขั้นสวน → คนกรีดยาง → จุดชั่ง เหมือนหน้า 6 · เปลี่ยนจุดได้) ต่างแค่หน้าจอ: <b>ใส่ตัวเลข</b> แทนการกดค้างและการแสดงเข่งปัจจุบัน · <b>แนบหลักฐานได้ ไม่บังคับ</b>
-        <span class="ids">SALE-18, SALE-10 · D-14, D-46, D-49 · E04-S10</span>
+        <span class="ids">SALE-18, SALE-10 · D-14, D-46, D-49, D-79 · E04-S10</span>
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-49</span><span>ใช้ flow เดียวกับการชั่งต่อจุดชั่ง ต่างแค่หน้าจอ: ใส่ตัวเลขเลย และแนบหลักฐานได้ ไม่บังคับ</span></li>
           <li><svg class="ic sm"><use href="#i-help"/></svg><span class="num">แดงรวม: จุด 1 = 1,200 (เข่ง 1–24) · จุด 2 = 150 (25–27) · จุด 3 = 170 (28–31) → 1,520 กก. 31 เข่ง</span></li>
@@ -2124,18 +2135,18 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     <tbody>
       <tr><td>1–3</td><td>ไม่อยู่ในไฟล์นี้ (ไม่ใช่ flow การขาย)</td><td>—</td></tr>
       <tr><td>4</td><td>ป้าย sync ต่อแถวแสดงเฉพาะ "ขัดกัน" · คำ "ขัดกัน" แทน "ข้อมูลขัดกัน" · วันที่ พ.ศ. แตะสลับ ค.ศ.</td><td>D-65, D-67</td></tr>
-      <tr><td>5</td><td>เพิ่มเลือกโหมดเลขเข่ง (ต่อเนื่องทั้งการขาย / นับแยกต่อจุด) ค่าเริ่มต้นจากตั้งค่ากลุ่ม · เพิ่มประเภทตาชั่ง (ไม่มีทศนิยม = ค่าเริ่มต้น; ทศนิยม 1 ตำแหน่ง กดไม่ได้ "ยังไม่พร้อมใช้งาน") · กลายเป็นหน้ายาว</td><td>D-46, D-53, D-66</td></tr>
+      <tr><td>5</td><td>เพิ่มเลือกโหมดเลขเข่ง (เริ่มเข่ง 1 ครั้งเดียว / เริ่มเข่ง 1 ตามคนกรีดยาง — D-79) ค่าเริ่มต้นจากตั้งค่ากลุ่ม · เพิ่มประเภทตาชั่ง (ไม่มีทศนิยม = ค่าเริ่มต้น; ทศนิยม 1 ตำแหน่ง กดไม่ได้ "ยังไม่พร้อมใช้งาน") · กลายเป็นหน้ายาว</td><td>D-46, D-53, D-66, D-79</td></tr>
       <tr><td>6</td><td>เอาแถบ ?21 ออก · จุดที่ยังไม่มีคนกรีดยางเป็นกลุ่มแยกด้านล่าง ไม่อยู่ในขั้น "คนกรีดยาง"</td><td>D-53, D-70</td></tr>
       <tr><td>7</td><td>ตาชั่งเปล่าไม่อ่าน 0 → เลือก 2 ทาง (แทนติดธงแล้วไปต่อ)</td><td>D-75</td></tr>
-      <tr><td>8</td><td>เพิ่มกรอบอธิบายเลขเข่งในโหมดนับแยกต่อจุด</td><td>D-46</td></tr>
+      <tr><td>8</td><td>เพิ่มกรอบอธิบายเลขเข่งในโหมดเริ่มเข่ง 1 ตามคนกรีดยาง</td><td>D-46, D-79</td></tr>
       <tr><td>7a–7c<br>8b, 8c<br>10–13<br>-เบี้ยว<br>(ใหม่)</td><td>เลือก รอเปลี่ยนตาชั่ง / รับเข็มเบี้ยว · หน้ารอ (นาฬิกาทราย + ตกลง) · ตาชั่งควรอ่านรวมค่าเบี้ยว แยกบรรทัด สุทธิ · น้ำหนักเข่ง · ค่าเบี้ยว · 8c ย้ายจุดเมื่อมีค่าเบี้ยว → ตรวจตาชั่งเปล่าทุกครั้ง ไม่สนโหมดในตั้งค่า · 8b มีการ์ด 3 ใบครบ · หน้าเข่งไม่เต็ม / เข่งเปิดอยู่ / เปลี่ยนจุด / เติมเข่ง ฉบับมีค่าเบี้ยว: ตาชั่งควรอ่านรวมค่าเบี้ยว + บรรทัดค่าเบี้ยวแยก</td><td>D-70, D-75, D-76</td></tr>
       <tr><td>8a (ใหม่)</td><td>จุดที่ยังไม่มีคนกรีดยาง: แถบเตือน ชั่งต่อได้ + ปุ่ม "มอบหมายตอนนี้" · มอบหมายมีผลเฉพาะการขายนี้ ไม่มีช่องวันเริ่ม</td><td>D-63, D-70</td></tr>
       <tr><td>10</td><td>แผ่นเลื่อนขึ้นเลือกน้ำหนัก: ลากไม้บรรทัด + ± ทีละ 1 กก. ตามประเภทตาชั่ง (แทนแผงพิมพ์ในหน้า)</td><td>D-66, D-70</td></tr>
       <tr><td>12</td><td>เหลือ 3 ทางเลือก ใช้คำตาม D-57 · ข้อ 4 เดิมย้ายไปเป็นโหมดเลขเข่งที่หน้า 5</td><td>D-46, D-53, D-57</td></tr>
       <tr><td>13</td><td>ชื่อทางเลือก "เติมให้เต็มเข่ง"</td><td>D-57</td></tr>
-      <tr><td>12-ต่อจุด (ใหม่)</td><td>โหมดนับแยกต่อจุด: คนกรีดยางคนเดิม → ถาม 3 ทางเลือก (เลขเข่งของแต่ละจุด) · คนกรีดยางคนอื่น → เข่งไม่เต็มเปิดค้าง ไม่ถาม</td><td>D-46, D-57, D-70</td></tr>
+      <tr><td>12-ต่อคน (ใหม่)</td><td>โหมดเริ่มเข่ง 1 ตามคนกรีดยาง: คนกรีดยางคนเดิม → ถาม 3 ทางเลือก (เลขเข่งของคนนั้น นับต่อข้ามจุด) · คนกรีดยางคนอื่น → เข่งไม่เต็มเปิดค้าง ไม่ถาม</td><td>D-46, D-57, D-70, D-79</td></tr>
       <tr><td>12a, 12b (ใหม่)</td><td>ลบจุดที่การขายเปิดอยู่ใช้: ถามทุกครั้งว่าเข่งคงไว้หรือย้าย · การขายต้องเลือกจุดใหม่ / สร้างจุดใหม่ทันที · คำ "ลบ" + "กู้คืนได้"</td><td>D-58, D-65, D-67</td></tr>
-      <tr><td>14</td><td>บันทึกย้อนหลังใช้ขั้น สวน → คนกรีดยาง → จุดชั่ง เหมือนการชั่ง แล้วใส่ตัวเลข · เลขเข่งตามโหมดของการขาย · "แนบหลักฐาน" ไม่บังคับ</td><td>D-46, D-49</td></tr>
+      <tr><td>14</td><td>บันทึกย้อนหลังใช้ขั้น สวน → คนกรีดยาง → จุดชั่ง เหมือนการชั่ง แล้วใส่ตัวเลข · เลขเข่งตามโหมดของการขาย · "แนบหลักฐาน" ไม่บังคับ</td><td>D-46, D-49, D-79</td></tr>
       <tr><td>15</td><td>ชื่อ "แนบหลักฐาน" · ย้ำว่าไม่บังคับ · หมายเหตุอัปโหลดรออัปเกรดแผน</td><td>D-48, D-49</td></tr>
       <tr><td>16</td><td>เอาช่องกรอกยอดคนรับซื้อยางวางเทียบข้างออก → แสดงยอดเรา + ปุ่ม "ตรงกันทั้งหมด" / "ไม่ตรงกัน" · ปุ่ม "ไปสรุปยอดส่วนแบ่ง" · ถ้ามีจุดไม่มีคนกรีดยาง ไปต่อไม่ได้ · หัวการ์ด "ยอดที่คำนวณได้ทั้งหมด" + แถวเข่งไม่เต็มแยกตามจุด (คอมเมนต์เจ้าของ)</td><td>D-63, D-72</td></tr>
       <tr><td>17</td><td>เดิม "ถามการปัดเศษ" → ตอนนี้ "สรุปยอดส่วนแบ่ง" (ย้ายจาก v4 หน้า 18) เรียงส่วนแบ่ง → หักหนี้ → ปัดเศษ → เงินสด · ปุ่ม "หักเงินคืนหนี้" · คำ "หักหนี้" แทน "หักค่าปุ๋ย" · เพดานหัก · ธง "หักเกินส่วนแบ่ง" · การ์ดเจ้าของสวนมีกล่อง "เงินสดวันนี้ (ไม่รวมยอดโอน)": หนี้ที่รับคืน / เงินที่สวนคืน — รีวิวด้วย persona ชาวสวน 2 รอบ</td><td>D-18, D-54, D-59, D-60, D-61, D-67, D-70</td></tr>
@@ -2155,13 +2166,13 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       <tr><td>icon</td><td colspan="2">ไอคอนชุดเดียวกับทีมฟาร์ม: ตาชั่ง (ค่าที่ตาชั่งอ่าน) · ใบไม้ (น้ำหนักยาง) · คนกรีดยาง (หมวกสาน) · บันทึก — ใบไม้หน้าน้ำหนักยาง · ตาชั่งหน้าค่าตาชั่ง พร้อมเน้นตัวเลข · คนกรีดยางหน้าชื่อเมื่อขึ้นต้นแถว · ทุกหน้า</td></tr>
       <tr><td>1</td><td>การ์ดเริ่มการขาย: ชื่อยาวบีบแถว</td><td>ป้ายอยู่บน ค่าเต็มความกว้างอยู่ล่าง ไม่ตัดคำกลางชื่อ · 5</td></tr>
       <tr><td>2</td><td>แถบ "เลือกสวนตอนเลือกจุดชั่ง… / ใช้ค่าเริ่มต้นทั้งหมด…"</td><td>เอาออก · 5</td></tr>
-      <tr><td>3</td><td>ตัวเลือกเลขเข่ง "1, 2, 3 … ข้ามทุกจุด" งง</td><td>รอ lead ยืนยันถ้อยคำ · 5</td></tr>
+      <tr><td>3</td><td>ตัวเลือกเลขเข่ง "1, 2, 3 … ข้ามทุกจุด" งง</td><td>"เริ่มเข่ง 1 ครั้งเดียว · นับต่อทุกจุด" / "เริ่มเข่ง 1 ตามคนกรีดยาง · จุดของคนเดียวกันนับต่อ" — เจ้าของเปลี่ยนกติกาเป็นนับแยกต่อคนกรีดยาง (D-79 แทน D-46) · 5, 8, 12, 12-ต่อคน, 14</td></tr>
       <tr><td>4</td><td>การ์ดเลขเข่งมีหลายตัวเลข</td><td>การ์ดกลางแสดงแค่ "เข่งปัจจุบัน" · ใส่ราคาแล้ว การ์ด "เสร็จแล้ว" เป็น "ราคารวม" และ "นับแล้ว N เข่ง" ตัวเล็กใต้เลข · 8, 8b, 10–13</td></tr>
       <tr><td>5</td><td>พื้นที่กดค้างใหญ่เกิน</td><td>ลดความสูง ปุ่มเครื่องมืออยู่ล่างเหมือนเดิม · 8, 8b</td></tr>
       <tr><td>6</td><td>สวน · จุด ตัดบรรทัด</td><td>สวน · จุด เต็มบรรทัด · คนกรีดยาง + ปุ่มเปลี่ยนจุด บรรทัดถัดไป · ทุกหน้าชั่ง</td></tr>
-      <tr><td>7</td><td>ไม้บรรทัดเข่งไม่เต็ม สูงสุดเท่าไร</td><td>รอคำตอบเจ้าของ (ถามผ่าน lead แล้ว) · 10</td></tr>
+      <tr><td>7</td><td>ไม้บรรทัดเข่งไม่เต็ม สูงสุดเท่าไร</td><td>เลื่อนได้ถึง 150% ของยางสุทธิ (ตาชั่ง 77 / 79 เมื่อเบี้ยว) · ขีด "เต็มเข่ง" ตรงตาชั่งควรอ่าน · เลยขีดเป็นสีส้ม (D-79) · 10, 10-เบี้ยว</td></tr>
       <tr><td>8</td><td>"ตาชั่งอ่าน" ไม่เด่น</td><td>ป้ายมีกรอบ + ไอคอนตาชั่ง · ตัวเลขสีเน้น · 10, 10-เบี้ยว</td></tr>
-      <tr><td>9</td><td>"เติมอีก" กลืนกับข้อความ</td><td>"เติมอีก" และจำนวนเป็นสีเตือน · 12, 12-เบี้ยว, 12-ต่อจุด</td></tr>
+      <tr><td>9</td><td>"เติมอีก" กลืนกับข้อความ</td><td>"เติมอีก" และจำนวนเป็นสีเตือน · 12, 12-เบี้ยว, 12-ต่อคน</td></tr>
       <tr><td>10</td><td>"จะได้ เข่ง 28–30 เต็ม + เข่ง 31…" อ่านยาก</td><td>"จะได้ 4 เข่ง" แล้วแยกบรรทัด: เข่งเต็ม 3 เข่ง (เข่งที่ 28–30, 150 กก.) · เข่งไม่เต็ม 1 เข่ง (เข่งที่ 31, 20 กก.) · รวม · 14</td></tr>
       <tr><td>11</td><td>หักหนี้นัด ทาง 1 ข้อมูลแน่น</td><td>เหลือ "เงินสดเข้ามือ 860" + ป้าย "ต้องแตกเงิน" · รายละเอียดแบงค์ซ่อนไว้ใน "ทำไม?" · 17a</td></tr>
     </tbody>
@@ -2173,7 +2184,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     <thead><tr><th>ข้อ</th><th>คำตอบ</th><th>หน้า</th></tr></thead>
     <tbody>
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S1</span></td><td>จุดที่ยังไม่มีคนกรีดยางไม่แสดงในขั้น "คนกรีดยาง" — แสดงเฉพาะในหน้าการขาย; คนรับผิดชอบจุด "ต่อจากนี้ไป" ตั้งที่หน้าจุด</td><td>6, 8a</td></tr>
-      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S2</span></td><td>นับแยกต่อจุด: ไปจุดของคนกรีดยางคนอื่น → เข่งไม่เต็มของจุดเดิมเปิดค้าง ไม่ถาม; ไปจุดของคนกรีดยางคนเดิม → ถามทางเลือก</td><td>12-ต่อจุด</td></tr>
+      <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S2</span></td><td>นับแยก (D-79: ตามคนกรีดยาง): ไปจุดของคนกรีดยางคนอื่น → เข่งไม่เต็มของจุดเดิมเปิดค้าง ไม่ถาม; ไปจุดของคนกรีดยางคนเดิม → ถามทางเลือก</td><td>12-ต่อคน</td></tr>
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S3</span></td><td>เปลี่ยนโหมดเลขเข่ง / ประเภทตาชั่งได้ก่อนบันทึกเข่งแรกเท่านั้น</td><td>5</td></tr>
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S4</span></td><td>ลบจากเครื่องอื่นขณะเครื่องนี้ชั่งออฟไลน์ → เชื่อการกระทำที่เกิดก่อน (ตามเวลา)</td><td>12a</td></tr>
       <tr><td><span class="ans"><svg class="ic"><use href="#i-check"/></svg>S5</span></td><td>มอบหมายในหน้าการขาย = เฉพาะการขายนี้ ไม่แก้ตั้งค่าจุด → ไม่มีช่องวันเริ่ม</td><td>8a</td></tr>
