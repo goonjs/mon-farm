@@ -59,10 +59,21 @@ Status: In Progress
 - rules test: batch ที่แอปสร้าง (`createGroupWrites`) ผ่าน; เพิ่มคนอื่นใน batch เดียวกันไม่ได้; ผู้สร้างเพิ่มคนอื่นทีหลังไม่ได้
   — ผ่านตั้งแต่รันครั้งแรกโดยไม่ต้องแก้ `firestore.rules` (กติกามีอยู่แล้วจาก E01-S08) จึงไม่ใช่ test ที่ล้มก่อน
 - Playwright `e2e/groups.spec.ts` (build จริง, 390×844): login แล้ว 0 กลุ่ม → หน้าเริ่มใช้งาน; ชื่อว่าง → ข้อความ;
-  สร้างขณะออฟไลน์ → เข้ากลุ่ม (รายการขาย) และ localStorage มี membership + op; reload โดยตัดทุก request นอก origin แล้ว
+  สร้างขณะออฟไลน์ → เข้ากลุ่ม (รายการขาย) และในเครื่องมี membership + op (ตอนนั้น localStorage — ย้ายเป็น IndexedDB หลัง review); reload โดยตัดทุก request นอก origin แล้ว
   ออฟไลน์ → เข้ากลุ่มเลย; เริ่มการขายในกลุ่ม → event ใน IndexedDB มี `groupId` ของกลุ่มนั้นทุกตัว e2e ทั้งชุด 152 ผ่าน
 - ภาพ: `docs/ux/screenshots/overnight/e02/s02-group-start.png`, `s02-create-name-required.png`, `s02-create-group.png`,
   `s02-in-group.png`, `s02-reopen-offline.png`
+
+2026-10-09 หลัง code review (commit `9338135`…`947777e`):
+
+- `typecheck`, `lint`, `test:core` 255/255, `test:ui` 84/84, `tokens:check`, `contrast` — ผ่านก่อนทุก commit
+- Vitest: memberships + pendingOps ใน IndexedDB (`memberships`, `pendingOps`) อยู่รอด reload; สองแท็บสร้างกลุ่มพร้อมกัน
+  เก็บครบทั้งสอง; เขียนซ้ำคีย์เดิม → reject และไม่มีครึ่งเดียวค้าง; `decideEntry` นับเฉพาะกลุ่มของ `userId` ที่ login (F5)
+- jest-expo: กลุ่มของบัญชีอื่นในเครื่องไม่ถูกเปิดให้ผู้ที่ login (F5); submit จากคีย์บอร์ด + กดสร้างในเฟรมเดียว →
+  กลุ่มเดียว (F6); ข้อความ "ใส่ชื่อกลุ่มฟาร์ม" หายทันทีเมื่อชื่อใช้ได้ ยังว่าง → ยังแสดง (F8)
+- Playwright `e2e/groups.spec.ts`: membership (มี `userId`) + op อ่านจาก IndexedDB, ไม่มีคีย์ `mon-farm:account` ใน
+  localStorage; event มี `groupId` และ `actor.userId` = `e2e-user`; ข้อความชื่อว่างหายหลังพิมพ์ชื่อ ทั้งชุด 152 ผ่าน 8 ข้าม
+- ภาพ `s02-create-group.png` ถ่ายใหม่ — ไม่มีข้อความ error ค้างแล้ว (ภาพอื่นของ E02 ไม่เปลี่ยน)
 
 ## Dev notes
 
@@ -73,7 +84,12 @@ Status: In Progress
   §การดำเนินการด้านสมาชิกภาพ ไม่ได้ลง event log (log การขายเป็นต่อ `saleId` และ server เก็บกลุ่มเป็น doc ไม่ใช่ event)
 - **ปุ่ม "เข้าร่วมด้วยรหัสเชิญ"** แสดงตาม flow §3.1 แต่ปิดไว้จนกว่า E02-S03
 - **≥ 2 กลุ่ม**: `decideEntry` คืน `pick`; หน้าเลือกเป็นของ E02-S04 — ระหว่างนี้ gate เปิดกลุ่มแรก (build นี้สร้างกลุ่มที่สอง
-  ไม่ได้อยู่แล้ว เพราะสร้างได้เฉพาะตอนมี 0 กลุ่มและยังไม่มีการเข้าร่วม)
+  ไม่ได้อยู่แล้ว เพราะสร้างได้เฉพาะตอนมี 0 กลุ่มและยังไม่มีการเข้าร่วม; ทางเดียวที่เคยเกิดได้คือกดซ้ำ F6 ซึ่งแก้แล้ว)
+  — review F9 ขอให้ไม่เลือกเงียบ ๆ: **เลื่อนไป E02-S04** (หน้าเลือกกลุ่ม)
+- **เก็บที่ไหน**: เว็บ = IndexedDB `mon-farm-v1` v2 store `memberships` (keyPath `groupId`) + `pendingOps` (คีย์
+  `create_group:<gid>`) schema ร่วมกับ event store ใน `src/store/idb.ts`; native = ตาราง `memberships` (เพิ่ม `user_id`)
+  / `pending_ops` แต่ละ membership มี `userId` เจ้าของ op ใช้ `createdBy`; gate เปิดเฉพาะกลุ่มของผู้ใช้ที่ login (F5)
+  — membership บนเครื่อง dev ที่สร้างก่อนแก้นี้ไม่มี `userId` จะไม่ถูกนับ (dev เท่านั้น สร้างใหม่ได้)
 - **event เก่าบนเครื่อง dev** (ก่อน branch นี้) ไม่มี `groupId`: ยังอ่าน/แสดงได้ (load ไม่ตรวจ) แต่จะไม่ถูกส่ง —
   การขายยังไม่กรองตามกลุ่ม (E02-S04)
 - **ไม่ครอบคลุม / ค้าง**:
@@ -83,5 +99,24 @@ Status: In Progress
   - native (`account.native.ts` ตาราง `memberships`/`pending_ops`) ยังไม่เคยรันบนเครื่อง
 
 ## Code review
+
+2026-10-09 — review อิสระของ `2b4549b` + `bed3acc` (agent แยก): **Changes requested** สรุปทั้งหมดอยู่ใน E02-S01
+§Code review; ส่วนที่เป็นของ story นี้:
+
+- **F1/F4** web memberships/pendingOps → IndexedDB ตามแบบที่ตกลงแล้ว ไม่มี cache, สร้างกลุ่ม = 1 transaction —
+  **แก้** `9338135`
+- **F5** membership ผูก `userId`, gate กรองตามผู้ใช้ที่ login — **แก้** `a82a174`
+- **F6** กดสร้างซ้ำในเฟรมเดียวได้สองกลุ่ม — **แก้** `e271a0b`
+- **F8** ข้อความชื่อว่างค้างหลังแก้ชื่อ — **แก้** `947777e` + ถ่ายภาพใหม่
+- **F9** gate เลือกกลุ่มแรกเงียบ ๆ เมื่อมี ≥ 2 — **เลื่อนไป E02-S04**
+- **Known follow-ups (ยังไม่แก้)**:
+  - F7: `WebStore.append` ถือ error อื่นที่ไม่ใช่ `IntegrityError` (รวม `NoGroupError`) ว่า storage เสีย → เตือน
+    not-durable ผิด; ยังเข้าไม่ถึงเพราะ `stamp` ใส่ `groupId` ก่อน — ควรยกเว้น `NoGroupError`
+  - F10: native account store เปิด connection SQLite ของตัวเองบน `mon-farm-v1.db` → ควรใช้ connection/queue ร่วมกับ
+    `SqliteStore` ก่อน outbox เขียน `pending_ops` พร้อม append (E01-S09)
+  - F11: ดู E02-S01
+  - F12: rules ไม่ตรวจรูปร่าง `groups/{gid}` และ member doc (`name` เป็น string/ขนาด, `hasOnly`) — มีก่อน diff นี้
+    ตามไปที่ E01-S09 หรือ E02-S03
+  - F13: ดู E02-S01
 
 ## QA notes

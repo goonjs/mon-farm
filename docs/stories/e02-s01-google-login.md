@@ -74,6 +74,19 @@ login ด้วย Google บนเว็บและ Android ผ่าน Fireb
   `s01-login-offline.png`, `s01-reopen-offline.png`
 - e2e เดิมทั้งชุด 144 ผ่านหลังเพิ่ม gate (preload session ผ่าน `storageState`, `e2e/session.ts`)
 
+2026-10-09 หลัง code review (commit `9338135`…`947777e`):
+
+- `typecheck`, `lint`, `test:core` 255/255, `test:ui` 84/84, `tokens:check`, `contrast` — ผ่านก่อนทุก commit
+- Vitest `src/store/account.test.ts` บน fake-indexeddb: session อยู่ใน IndexedDB `meta` คีย์ `session`, อยู่รอด reload;
+  ค่าที่เก็บผิดรูป → ถือว่ายังไม่ login; **สองแท็บ**: แท็บที่อ่านไว้ก่อนแล้ว login ทีหลังไม่ลบกลุ่ม/op ที่อีกแท็บสร้าง (F1 —
+  เขียนก่อนและล้มก่อนเปลี่ยน adapter); ไม่มี IndexedDB → ใช้หน่วยความจำ + เตือน not-durable
+- jest-expo: login แล้วเขียน event จริง → `actor.userId` = ผู้ใช้ และ `groupId` = กลุ่ม (F2 — ล้มเมื่อแก้ `stamp` ให้ใส่
+  userId อื่น); กด login สองครั้งในเฟรมเดียว → เรียก sign-in ครั้งเดียว (F6); บัญชีอื่นมีกลุ่มในเครื่อง → ผู้ที่ login
+  ใหม่ไม่ถูกพาเข้ากลุ่มนั้น (F5)
+- Playwright ทั้งชุด (build จริง, Chromium ที่ติดตั้งไว้ผ่าน config ใน scratchpad): 152 ผ่าน, 8 ข้าม (รวม
+  `auth-emulator.spec.ts`) — session preload เป็น IndexedDB ผ่าน `storageState`; `e2e/groups.spec.ts` ตรวจ
+  `actor.userId` ของ event ใน IndexedDB ด้วย ภาพหน้าจอที่ e2e เขียนทับคืนเป็นเวอร์ชันที่ commit ไว้ ยกเว้นที่ตั้งใจถ่ายใหม่
+
 ## Dev notes
 
 - **โครง**: `src/core/user.ts` (ผู้ใช้เชิงตรรกะ + ตัวตน) · `src/auth/google.ts` port, `google.web.ts` (Firebase Auth
@@ -88,7 +101,12 @@ login ด้วย Google บนเว็บและ Android ผ่าน Fireb
   "เข้าสู่ระบบไม่สำเร็จ") ⇒ **ถ้า merge ตอนนี้ เว็บ dev จะติดหน้า login จนกว่าจะมี config จริง + Google provider**
 - **Auth emulator + Playwright popup** (`e2e/auth-emulator.spec.ts`, `npm run test:e2e:auth`, emulator `auth` เพิ่มใน
   `firebase.json` พอร์ต 9099): เขียนแล้ว **รันใน sandbox ไม่ผ่าน** — SDK โหลด `https://apis.google.com/js/api.js`
-  แม้ใช้ emulator และ proxy ของ sandbox ตอบ 403 ยังไม่เคยเห็น popup login สำเร็จจริง ยังไม่ได้ใส่ใน CI
+  แม้ใช้ emulator และ proxy ของ sandbox ตอบ 403 ยังไม่เคยเห็น popup login สำเร็จจริง ยังไม่ได้ใส่ใน CI หลัง review
+  (F3) spec คาดหน้าเริ่มใช้งาน (ผู้ใช้ใหม่ยังไม่มีกลุ่ม) → สร้างกลุ่ม → reload เข้ากลุ่มเลย; comment ใน `e2e/session.ts`
+  / `e2e/login.spec.ts` ไม่อ้าง spec นี้เป็นหลักฐานแล้ว
+- **เบราว์เซอร์ที่ไม่มี IndexedDB**: session อยู่ใน IndexedDB แล้ว จึงเริ่มที่หน้า login ทุกครั้ง (login แล้วใช้หน่วยความจำ
+  + เตือน) e2e ของ E01-S03 "ไม่มี IndexedDB" จึงตรวจแถบเตือนบนหน้า login แทนการนับ — การนับในหน่วยความจำพิสูจน์ใน
+  `store.web.test.ts` / `account.test.ts`; ภาพ `docs/stories/screenshots/e01-s03/storage-warning.png` ไม่ถ่ายใหม่แล้ว
 - **ไม่ครอบคลุม / ค้าง**:
   - AC1 Android: ไม่ทำ (ต้องมี E01-S06 dev client + dependency ผ่าน gate + OAuth client SHA-1)
   - AC1 เว็บกับ Google จริง: ต้องให้เจ้าของเปิด provider + OAuth client + authorized domains (E01-S07)
@@ -98,5 +116,21 @@ login ด้วย Google บนเว็บและ Android ผ่าน Fireb
   - native adapter (`account.native.ts`) เขียนแล้วแต่ยังไม่เคยรันบนเครื่อง
 
 ## Code review
+
+2026-10-09 — review อิสระของ `2b4549b` + `bed3acc` (agent แยก): **Changes requested** ผลและการแก้ (ร่วมกับ E02-S02):
+
+- **F1** (should-fix) web account store cache เอกสาร localStorage แล้วเขียนทับทั้งก้อน → แท็บที่ค้างลบกลุ่มของอีกแท็บได้
+  → **แก้** `9338135`: IndexedDB ไม่มี cache, เขียน 1 ครั้ง = 1 transaction; test สองแท็บ
+- **F2** (should-fix) AC6 ไม่มี test บน event จริง → **แก้** `4585933` (jest + e2e)
+- **F3** (should-fix) emulator spec ค้างและ comment อ้างเกินจริง → **แก้** `d429cf8` (spec ยังไม่เคยรันผ่าน — ดู Dev notes)
+- **F4** (should-fix, process) commit คำถามเจ้าของที่ยังไม่ได้ตอบ (localStorage) → **แก้** `9338135`: กลับไปใช้แบบที่ตกลง
+  แล้ว (IndexedDB `meta`) ลบหมายเหตุ "รอเจ้าของยืนยัน" ใน architecture จึงไม่มีคำถามค้าง
+- **F5** (should-fix) memberships ไม่ผูกผู้ใช้ → **แก้** `a82a174`
+- **F6** (nit) กดซ้ำในเฟรมเดียว → **แก้** `e271a0b` (`useRef` ทั้ง login และสร้างกลุ่ม)
+- **F11** (nit) อ่าน account ไม่ได้ชั่วคราวตอนเปิดแอป → ไปหน้า login (ต้องใช้เน็ต) — **ยังไม่แก้** follow-up: ควรแยก
+  ข้อมูลเสียกับ I/O error แล้วให้ลองใหม่
+- **F13** (nit) test "บัญชีเดียวกันสองเครื่อง" ใน `user.test.ts` ตรวจแค่ input ของตัวเอง — **ยังไม่แก้** follow-up; AC4
+  "uid เดียวกัน" ต้องพิสูจน์ด้วย emulator spec จึงยังไม่นับว่าผ่าน
+- F7–F10, F12: ดู E02-S02
 
 ## QA notes
