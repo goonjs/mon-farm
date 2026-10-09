@@ -225,7 +225,15 @@ function groupByTarget(events: readonly FinanceEvent[], kinds: readonly string[]
   return out;
 }
 
-export function projectFinance(events: readonly FinanceEvent[]): FinanceState {
+/**
+ * `saleCounts(saleId)`: whether a sale is still live. A repayment made by
+ * netting at a sale that was later cancelled/deleted stops counting (D-67),
+ * the same rule the debt ledger applies to that sale's deductions.
+ */
+export function projectFinance(
+  events: readonly FinanceEvent[],
+  saleCounts: (saleId: string) => boolean = () => true,
+): FinanceState {
   const expenses: Expense[] = [];
   const all = [...events, ...ownerShareEvents(events)];
   for (const [id, evs] of groupByTarget(all, ['expense_created', 'expense_changed'])) {
@@ -267,7 +275,7 @@ export function projectFinance(events: readonly FinanceEvent[]): FinanceState {
   }
   const categories = [...names].map(([id, name]) => ({ id, name }));
 
-  const live = repayments.filter((r) => !r.deleted);
+  const live = repayments.filter((r) => !r.deleted && (!r.saleId || saleCounts(r.saleId)));
   const reimbursements: Reimbursement[] = [];
   for (const x of expenses) {
     if (x.deleted || x.stage !== 'actual' || !x.payer || x.payer.id === FARM_FUNDS || x.amountSatang === null) continue;

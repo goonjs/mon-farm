@@ -12,6 +12,7 @@ import type { EventId } from '../core/types';
 import { financeStore } from '../store/finance';
 import { writeFinance } from '../store/finance-write';
 import { actorNow } from '../store/record';
+import { useSaleCounts } from './use-live-sales';
 
 export interface UseFinance {
   readonly events: readonly FinanceEvent[] | null;
@@ -38,7 +39,9 @@ export function useFinance(): UseFinance {
   }, [reload]);
   useFocusEffect(reload);
 
-  const state = useMemo(() => (events ? projectFinance(events) : null), [events]);
+  // A repayment netted at a sale that was later deleted stops counting (D-67).
+  const saleCounts = useSaleCounts();
+  const state = useMemo(() => (events ? projectFinance(events, saleCounts) : null), [events, saleCounts]);
 
   const write = useCallback(
     async (targetId: string, base: EventId | null, payload: FinancePayload) => {
