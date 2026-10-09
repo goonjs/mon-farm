@@ -1,6 +1,6 @@
 # Story E11-S03: บันทึกการคืนเงินและยอดคงเหลือ
 
-Status: Ready (เจ้าของตกลง AC 2026-10-03)
+Status: In Progress (เจ้าของตกลง AC 2026-10-03) — implemented on `feature/e11-e06-money`, awaiting independent review + CI
 
 ## Context
 
@@ -52,7 +52,13 @@ Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Verification
 
+- Unit (Vitest): `src/core/finance/*.test.ts`, `src/store/finance.test.ts` · Component (Jest): `src/__tests__/finance.test.tsx` · Sandbox: `e2e/finance.spec.ts` (phone-portrait, offline) passed 2026-10-09 · Screenshots: `docs/ux/screenshots/overnight/money/`
+
 ## Dev notes
+
+- `repayment_recorded` with from/to (default farm funds → payee, both changeable), amount, date, note, allocations, `saleId` (for D-60 netting). `allocateOldestFirst()` + manual split; over-repay refused before save; two devices over-repaying → `overpaid` flag.
+- Repayments can be deleted (restorable) from the owed page; balances recompute from the log.
+- Not covered: editing a repayment in place from the UI (core supports `repayment_changed`; UI offers delete + re-record); netting at settlement written by E06-S04.
 
 ## Code review
 

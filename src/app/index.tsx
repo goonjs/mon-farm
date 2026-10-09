@@ -86,6 +86,10 @@ export default function SaleListScreen() {
           {msg('sales.title')}
         </Text>
         <View style={{ flex: 1 }} />
+        {/* D-74 F5: "all expenses" is reachable from the front door and the menu (settings). */}
+        <Link href="/finance/expenses" asChild>
+          <Button testID="open-expenses">{msg('fin.open')}</Button>
+        </Link>
         <Link href={SETTINGS} asChild>
           <Button testID="open-settings">{msg('settings.open')}</Button>
         </Link>

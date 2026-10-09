@@ -1,6 +1,6 @@
 # Story E11-S02: ผู้จ่ายจริงและเงินที่ต้องคืน
 
-Status: Ready (เจ้าของตกลง AC 2026-10-03)
+Status: In Progress (เจ้าของตกลง AC 2026-10-03) — implemented on `feature/e11-e06-money`, awaiting independent review + CI
 
 ## Context
 
@@ -55,7 +55,14 @@ Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Verification
 
+- Unit (Vitest): `src/core/finance/*.test.ts`, `src/store/finance.test.ts` · Component (Jest): `src/__tests__/finance.test.tsx` · Sandbox: `e2e/finance.spec.ts` (phone-portrait, offline) passed 2026-10-09 · Screenshots: `docs/ux/screenshots/overnight/money/`
+
 ## Dev notes
+
+- Money owed back is a projection of expenses (`projectFinance().reimbursements`) — never stored, so two devices cannot create it twice. Farm funds (`FARM_FUNDS`) creates nothing; committed/planned create nothing until actual; payer/amount/stage/delete changes follow.
+- Payers: farm funds + the shared people list (E03-S01 store) + "+ someone else"; no farm-specific names seeded (D-73). Default payer = this device's last expense's payer.
+- `/finance/owed` (ค้างใคร): total per person, drill-down to expenses and repayments, overpaid flag. D-69 note shown.
+- Not covered: tapper loans from others (E06-S03); netting proposal at settlement (E06-S04).
 
 ## Code review
 

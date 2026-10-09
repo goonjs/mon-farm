@@ -1,6 +1,6 @@
 # Story E11-S01: ค่าใช้จ่ายและวงจร Actual / Committed / Planned
 
-Status: Ready (เจ้าของตกลง AC 2026-10-03)
+Status: In Progress (เจ้าของตกลง AC 2026-10-03) — implemented on `feature/e11-e06-money`, awaiting independent review + CI
 
 ## Context
 
@@ -56,7 +56,14 @@ Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Verification
 
+- Unit (Vitest): `src/core/finance/*.test.ts`, `src/store/finance.test.ts` · Component (Jest): `src/__tests__/finance.test.tsx` · Sandbox: `e2e/finance.spec.ts` (phone-portrait, offline) passed 2026-10-09 · Screenshots: `docs/ux/screenshots/overnight/money/`
+
 ## Dev notes
+
+- Core: `src/core/finance/` (types, ledger, money) — pure, integer satang, string-parsed baht (no float). Records follow the architecture envelope (`targetId` + `baseEventId`); concurrent money/stage/payer edits from one base → conflict, totals keep the base value; an edit naming every head (`alsoBasedOn`) resolves it.
+- Store: own append-only log `src/store/finance*.ts` (memory / web localStorage / native sqlite table `finance_events`), same idempotent-append rule as the sale log. Moves into the one `events` table when the envelope redesign lands (E04-S01); not in the outbox yet — sync is E01-S09.
+- Screens: `/finance/expenses` (totals per stage, filters stage/category/month, F7 bulk payer, F7 unrepaid → payer → bulk repay), `/finance/expense/[id]` (form, stage moves with history, soft delete/restore, conflict pick). Entry from the front door and settings (F5; no ☰ menu exists yet).
+- Not covered: receipt/photo (needs E01-S12 media queue); farm (สวน) picker — the field and filter exist, but no property store yet (E03-S02); home card itself (E13-S01, `payableSatang()` is ready).
 
 ## Code review
 
