@@ -35,6 +35,7 @@ import { speaker } from '../../../speech/speaker';
 import { useSpeech } from '../../../speech';
 import { saleSettings, tapperOn, todayIso, type MasterState } from '../../../core/master';
 import { nextBasketNo, saleNumbering } from '../../../core/sale-points';
+import { expectedReadingG, gateNeeded, saleSkewG } from '../../../core/scale-check';
 import { readHoldMs } from '../../../store/hold-preference';
 import { peopleStore } from '../../../store/people';
 import { useSale } from '../../../store/SaleProvider';
@@ -113,6 +114,21 @@ export default function CounterScreen() {
   const countable = pile ? canCount(state, pile.id) : false;
   const lastBasket = pile ? lastLiveBasket(events, pile.id) : null;
 
+  // E04-S03: at a weighing point the gate follows the group's check mode.
+  // When this point needs no check, record that it was skipped and open it
+  // (SALE-6) — never silently. Piles from the old setup flow always ask.
+  const isPoint = !!master && !!pile && master.points.some((p) => p.id === pile.id);
+  const skipGate =
+    ready && isPoint && pile?.status === 'not-started' && !gateNeeded(state, events, pile.id, saleSettings(master!).zeroCheck);
+  useEffect(() => {
+    if (!skipGate || !pile || !master) return;
+    append({ kind: 'sys', payload: { t: 'gate_skipped', pileId: pile.id, mode: saleSettings(master).zeroCheck } });
+    append({ kind: 'sys', payload: { t: 'ready', pileId: pile.id } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once per point that needs no check; `append` and the log are read at that moment.
+  }, [skipGate, pile?.id]);
+  const [waiting, setWaiting] = useState(false);
+  const skewG = saleSkewG(events);
+
   if (!ready || !pile || !zone) {
     return (
       <View style={{ flex: 1, backgroundColor: t.color.surface, alignItems: 'center', justifyContent: 'center' }}>
@@ -121,11 +137,19 @@ export default function CounterScreen() {
     );
   }
 
-  const expected = msg('gate.expected', {
-    tare: formatKg(pile.tareG),
-    std: formatKg(pile.stdNetG),
-    expected: formatKg(pile.tareG + pile.stdNetG),
-  });
+  // With a skew accepted, "the scale should read" includes it (D-75).
+  const expected = skewG
+    ? msg('gate.expectedSkew', {
+        tare: formatKg(pile.tareG),
+        std: formatKg(pile.stdNetG),
+        skew: formatKg(skewG),
+        expected: formatKg(expectedReadingG(pile.stdNetG, pile.tareG, skewG)),
+      })
+    : msg('gate.expected', {
+        tare: formatKg(pile.tareG),
+        std: formatKg(pile.stdNetG),
+        expected: formatKg(pile.tareG + pile.stdNetG),
+      });
 
   // The count about to exist once this basket lands — `totals` here is a
   // closure over state from before the append below, so this is the number
@@ -169,13 +193,21 @@ export default function CounterScreen() {
 
   const confirmShort = () => {
     const point = pointFields();
-    append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG, ...point });
+    append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG, ...(skewG ? { skewG } : {}), ...point });
     if (speechOn) announceCount(point.basketNo ?? nextCount, speaker, append);
     setShortOpen(false);
   };
 
-  const onZeroChecked = (ok: boolean, readingG: number) =>
+  const onZeroChecked = (ok: boolean, readingG: number) => {
     append({ kind: 'sys', payload: { t: 'zero_check', pileId: pile.id, ok, readingG } });
+    // At a weighing point a failed check carries on with the skew (D-75).
+    if (!ok && isPoint) append({ kind: 'sys', payload: { t: 'skew_accepted', pileId: pile.id, skewG: readingG } });
+  };
+
+  const onWait = () => {
+    append({ kind: 'sys', payload: { t: 'scale_wait', pileId: pile.id } });
+    setWaiting(true);
+  };
 
   const onTareConfirmed = (confirmedTareG: number) =>
     append({ kind: 'sys', payload: { t: 'tare_confirmed', pileId: pile.id, tareG: confirmedTareG } });
@@ -283,6 +315,18 @@ export default function CounterScreen() {
               onCloseZone={() => setConfirmCloseZone(true)}
               onCloseSale={() => setConfirmCloseSale(true)}
             />
+          ) : waiting ? (
+            // D-75: the operator chose to wait for another scale; back to the check after.
+            <View testID="scale-waiting" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: t.space.md, padding: t.space.xl }}>
+              <Text style={{ fontSize: t.font.size.figure, color: t.color.action }}>⌛</Text>
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+                {msg('gate.waiting')}
+              </Text>
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.inkSoft }}>{msg('gate.waitingBody')}</Text>
+              <Button testID="waiting-ok" variant="primary" onPress={() => setWaiting(false)}>
+                {msg('gate.waitingOk')}
+              </Button>
+            </View>
           ) : pile.status === 'not-started' ? (
             <ZeroTareGate
               pileName={pile.name}
@@ -293,6 +337,8 @@ export default function CounterScreen() {
               onZeroChecked={onZeroChecked}
               onTareConfirmed={onTareConfirmed}
               onReady={onGateReady}
+              onWait={isPoint ? onWait : undefined}
+              skewG={skewG}
             />
           ) : (
             <HoldStage

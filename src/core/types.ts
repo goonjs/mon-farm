@@ -128,6 +128,11 @@ export interface ShortEvent extends EventBase {
   readonly basketNo?: number;
   readonly readingG: number;
   readonly tareG: number;
+  /**
+   * The scale's accepted skew at the time (E04-S03, D-75), snapshotted like
+   * the tare: net = reading − basket − skew. Absent = no skew.
+   */
+  readonly skewG?: number;
 }
 
 /**
@@ -232,6 +237,16 @@ export type SysPayload =
       readonly tareG: number;
       readonly stdNetG: number;
     }
+  /**
+   * The empty scale did not read zero and the operator chose to carry on
+   * with the skew (E04-S03, D-75): every expected reading includes it, and
+   * short baskets subtract it, until the next passing zero check.
+   */
+  | { readonly t: 'skew_accepted'; readonly pileId: PileId; readonly skewG: number }
+  /** The operator chose to wait for another scale instead (D-75): nothing is weighed until a zero check passes. */
+  | { readonly t: 'scale_wait'; readonly pileId: PileId }
+  /** The zero/tare check was not asked here, by the sale's check mode (SALE-6) — recorded, not silent. */
+  | { readonly t: 'gate_skipped'; readonly pileId: PileId; readonly mode: ZeroCheckMode }
   /** Non-blocking by design: a failed zero check flags and continues. */
   | { readonly t: 'zero_check'; readonly pileId: PileId; readonly ok: boolean; readonly readingG: number }
   | { readonly t: 'tare_confirmed'; readonly pileId: PileId; readonly tareG: number }

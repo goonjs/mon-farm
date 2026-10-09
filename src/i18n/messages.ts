@@ -568,6 +568,15 @@ const th = {
   'pick.unassignedWarn': 'ยังไม่มีคนกรีด · ชั่งได้ ต้องมอบหมายก่อนสรุปยอดส่วนแบ่ง',
   'pick.noFarms': 'ยังไม่มีสวน — เพิ่มที่ ข้อมูลฟาร์ม',
   'pick.noPoints': 'สวนนี้ยังไม่มีจุดชั่ง',
+
+  // ── Zero/tare check by mode, skew (E04-S03) ─────────────────────────────
+  'gate.acceptSkew': 'รับเข็มเบี้ยวและใช้ต่อ',
+  'gate.wait': 'รอเปลี่ยนตาชั่ง',
+  'gate.expectedSkew': '{tare} + {std} + เข็มเบี้ยว {skew} = {expected} กก.',
+  'gate.waiting': 'รอเปลี่ยนตาชั่ง',
+  'gate.waitingBody': 'ชั่งเข่งไม่ได้จนตาชั่งเปล่าขึ้นศูนย์',
+  'gate.waitingOk': 'ตกลง',
+  'gate.skewLine': 'เข็มเบี้ยว {skew} กก.',
 } as const;
 
 /**
@@ -1061,6 +1070,13 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'pick.unassignedWarn': 'no tapper yet · can weigh; assign before settling',
   'pick.noFarms': 'no farms yet — add under Farm data',
   'pick.noPoints': 'this farm has no points yet',
+  'gate.acceptSkew': 'accept the skew and carry on',
+  'gate.wait': 'wait for another scale',
+  'gate.expectedSkew': '{tare} + {std} + skew {skew} = {expected} kg',
+  'gate.waiting': 'Waiting for another scale',
+  'gate.waitingBody': 'No baskets until the empty scale reads zero',
+  'gate.waitingOk': 'OK',
+  'gate.skewLine': 'skew {skew} kg',
 };
 
 export const messages = { th, en } as const;
