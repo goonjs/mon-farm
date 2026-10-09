@@ -1,6 +1,6 @@
 # Story E01-S07: Firebase dev/prod (1 โปรเจกต์) + Hosting deploy + preview channel ต่อ PR
 
-Status: Ready
+Status: In Progress
 
 ## Context
 
@@ -46,6 +46,17 @@ Firestore database `dev` + bucket ของ dev, ข้อมูลทดสอ�
 ## Verification
 
 ## Dev notes
+
+### 2026-10-09 (overnight, team INFRA)
+
+- มีอยู่แล้วก่อนรอบนี้: job `preview` ใน `ci.yml` (หลัง e2e เขียว, ข้ามเมื่อแก้เอกสารล้วน, `--expires 7d`
+  ซึ่ง deploy ซ้ำจะต่ออายุเอง) และ auth แบบ keyless ชุดเดียวกับ `deploy-dev.yml`
+- เพิ่ม: comment ลิงก์ preview ใน PR (comment เดียว push ใหม่แก้ comment เดิม — `scripts/preview-comment.mjs`)
+  และ `preview-cleanup.yml` ลบ channel `pr-<N>` เมื่อปิด/merge PR ผ่าน `deploy.sh preview-delete`
+  (channel ไม่มีอยู่ = สำเร็จ, ไม่ยอมแตะ channel `live`)
+- รูปแบบ URL: `https://mon-farm-dev--pr-<N>-<hash>.web.app`
+- ยังเปิด: AC database `dev`/bucket/budget alert (D-48); test "bundle อ้างเฉพาะ database `dev`" — ตอนนี้ไม่มีโค้ดแอปที่คุย
+  Firestore จึงยังไม่มีอะไรให้ test; การลบ channel ตอนปิด PR ยังไม่ได้รันจริง (ต้องมีการปิด PR)
 
 ### Checklist เจ้าของ
 
