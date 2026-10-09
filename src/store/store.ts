@@ -48,6 +48,9 @@ export interface EventStore {
    * same id with different content rejects with `IntegrityError`.
    */
   insertPulled(event: SaleEvent): Promise<void>;
+  /** Where pull resumes: the newest server `receivedAt` already stored (0 = never pulled). */
+  syncCursor(): Promise<number>;
+  setSyncCursor(value: number): Promise<void>;
   /** Sale ids present in the store, newest first. */
   listSales(): Promise<string[]>;
   /**

@@ -366,3 +366,13 @@ describe('review fixes', () => {
     expect(await p.cursor.get()).toBe(500);
   });
 });
+
+describe('storeCursor', () => {
+  it('keeps the pull cursor in the store, so a restart resumes instead of re-downloading', async () => {
+    const { storeCursor } = await import('./engine');
+    const store = new MemoryStore();
+    const cursor = storeCursor(store);
+    await cursor.set(99);
+    expect(await storeCursor(store).get()).toBe(99);
+  });
+});

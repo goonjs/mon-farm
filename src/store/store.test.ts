@@ -200,6 +200,15 @@ describe.each(adapters)('%s — insertPulled (E01-S09)', (_name, makeStore) => {
   });
 });
 
+describe.each(adapters)('%s — sync cursor (E01-S09)', (_name, makeStore) => {
+  it('starts at 0 and keeps what it is given', async () => {
+    const store = makeStore();
+    expect(await store.syncCursor()).toBe(0);
+    await store.setSyncCursor(1_234);
+    expect(await store.syncCursor()).toBe(1_234);
+  });
+});
+
 describe('IndexedDbStore — what only a persistent store must do', () => {
   it('a reopened store resumes the device and its sequence (force-close, NFR-2)', async () => {
     const factory = new IDBFactory();
@@ -213,5 +222,11 @@ describe('IndexedDbStore — what only a persistent store must do', () => {
     expect(await reopened.device()).toEqual({ deviceId, nextDeviceSeq: 3 });
     expect(await reopened.load('s1')).toHaveLength(2);
     expect(await reopened.pending()).toHaveLength(1); // synced state survived too
+  });
+
+  it('a reopened store resumes pulling where it stopped, not from the start', async () => {
+    const factory = new IDBFactory();
+    await new IndexedDbStore(factory).setSyncCursor(42);
+    expect(await new IndexedDbStore(factory).syncCursor()).toBe(42);
   });
 });

@@ -242,6 +242,20 @@ export class IndexedDbStore implements EventStore {
     await done;
   }
 
+  // In `meta` under its own key: no schema change, no version bump.
+  async syncCursor(): Promise<number> {
+    const db = await this.open();
+    const v = await request(db.transaction('meta', 'readonly').objectStore('meta').get('syncCursor'));
+    return typeof v === 'number' ? v : 0;
+  }
+
+  async setSyncCursor(value: number): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction('meta', 'readwrite');
+    tx.objectStore('meta').put(value, 'syncCursor');
+    await committed(tx);
+  }
+
   async listSales(): Promise<string[]> {
     const db = await this.open();
     const tx = db.transaction('events', 'readonly');
@@ -318,6 +332,12 @@ export class WebStore implements EventStore {
   }
   async insertPulled(event: SaleEvent) {
     return (await this.pick()).insertPulled(event);
+  }
+  async syncCursor() {
+    return (await this.pick()).syncCursor();
+  }
+  async setSyncCursor(value: number) {
+    return (await this.pick()).setSyncCursor(value);
   }
   async listSales() {
     return (await this.pick()).listSales();

@@ -11,6 +11,7 @@ import type { EventStore } from './store';
 export class MemoryStore implements EventStore {
   private rows = new Map<EventId, SaleEvent>();
   private synced = new Set<EventId>();
+  private cursor = 0;
   private state: DeviceState = { deviceId: uuidv7(), nextDeviceSeq: 1 };
 
   async append(event: SaleEvent): Promise<void> {
@@ -37,6 +38,14 @@ export class MemoryStore implements EventStore {
   async insertPulled(event: SaleEvent): Promise<void> {
     if (checkPulled(event, this.rows.get(event.id))) this.rows.set(event.id, event);
     this.synced.add(event.id);
+  }
+
+  async syncCursor(): Promise<number> {
+    return this.cursor;
+  }
+
+  async setSyncCursor(value: number): Promise<void> {
+    this.cursor = value;
   }
 
   async listSales(): Promise<string[]> {

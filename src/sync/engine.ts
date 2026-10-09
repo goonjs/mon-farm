@@ -59,6 +59,12 @@ export class MemoryCursor implements CursorStore {
   }
 }
 
+/** The store's own cursor, so a restart resumes pulling instead of re-downloading the group. */
+export const storeCursor = (store: Pick<EventStore, 'syncCursor' | 'setSyncCursor'>): CursorStore => ({
+  get: () => store.syncCursor(),
+  set: (value) => store.setSyncCursor(value),
+});
+
 export type SyncStore = Pick<EventStore, 'pending' | 'markSynced' | 'insertPulled'>;
 
 export interface SyncDeps {

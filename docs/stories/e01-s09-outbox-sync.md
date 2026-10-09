@@ -53,6 +53,8 @@ sync engine หลัง port (`RemoteEvents`): ส่ง `pending()` ขึ้�
   database `dev` (D-48); ยังไม่ต่อ trigger ในแอป (เปิดแอป / online / AppState) เพราะยังไม่มี remote ให้ต่อ;
   integration บน emulator และ Playwright offline→online รอ adapter
 - `insertPulled` บน SQLite ยังไม่ได้รันบนเครื่องจริง (E01-S06)
+- cursor ของ pull เก็บถาวรใน store (`syncCursor` ใน `meta` ทั้ง IndexedDB และ SQLite ไม่ต้องขึ้น version) ใช้ผ่าน
+  `storeCursor(store)` — เปิดแอปใหม่ดึงต่อจากเดิม ไม่ดาวน์โหลดทั้งกลุ่มซ้ำ
 
 ## Code review
 

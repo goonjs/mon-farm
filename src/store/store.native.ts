@@ -193,6 +193,23 @@ export class SqliteStore implements EventStore {
     });
   }
 
+  async syncCursor(): Promise<number> {
+    const db = await this.open();
+    const row = await db.getFirstAsync<{ value: string }>(`SELECT value FROM meta WHERE key = 'syncCursor'`);
+    return row ? Number(row.value) : 0;
+  }
+
+  setSyncCursor(value: number): Promise<void> {
+    return this.serial(async () => {
+      const db = await this.open();
+      await db.runAsync(
+        `INSERT INTO meta (key, value) VALUES ('syncCursor', ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+        String(value),
+      );
+    });
+  }
+
   async listSales(): Promise<string[]> {
     const db = await this.open();
     const rows = await db.getAllAsync<{ sale_id: string; started: number }>(
