@@ -74,6 +74,16 @@ story นี้ทำแค่ model + ป้าย — การใช้ป้
 - [x] `npm run verify` ทุกชั้นเขียว, review อิสระโดย subagent แยก
 - [ ] CI เขียวบน PR
 
+### 2026-10-09 (overnight, team INFRA) — AC9 พ.ศ./ค.ศ. (D-74 F14) — AC ตาม D-81 รอเจ้าของตรวจ
+
+- [x] เทสต์ก่อน (เห็นแดง): `src/core/thai-date.test.ts`, `src/i18n/era.test.ts`, `src/components/DateText.test.tsx`, e2e ใน `e2e/data-states.spec.ts`
+- `dateParts(ts, era)` ใน core: วันที่ตามเวลา**ในสวน (กรุงเทพฯ UTC+7)** ไม่ขึ้นกับ timezone ของเครื่อง; พ.ศ. = ค.ศ. + 543
+- ค่าที่เลือก (`era`) อยู่ใน `I18nProvider` เดียวกับภาษา จึงสลับทุกวันที่ทั้งแอปพร้อมกัน และจำในเครื่อง (`mon-farm:era`, แบบเดียวกับภาษา — บน native ยังไม่จำจนกว่าจะมี store ถาวรของ preference เหมือนภาษา)
+- `DateText` แตะแล้วสลับ; ค่าเริ่มต้น พ.ศ.; รูปแบบ "9 ต.ค. 2569"; `accessibilityLabel` ไทยบอกระบบปีและผลของการแตะ
+- screenshot: `docs/ux/screenshots/overnight/infra/date-be.png`, `date-ce.png` (หน้า `/preview/data-states`)
+- ยังไม่ใช้ใน screen จริง (ไม่มีหน้าจอไหนแสดงวันที่ตอนนี้); ไม่แตะหน้าจอ story อื่น
+- [ ] ไอคอน "?" / ประกาย — ยังรอ `Icon` จาก E01-S13 (#45 ยังไม่ merge; ทำในเครื่องที่ `feature/e01-s13` แล้ว) — ไม่ได้ดึงมาเพื่อไม่ให้ PR นี้พ่วงทั้ง #45
+
 ### การตัดสินใจ
 
 - **ไม่ต้องเพิ่ม token**: คู่สีที่ป้ายใช้ (`inkSoft` บน `surface`, `ruleStrong` บน `surface`, `ink` บน `surfaceSunk`) มีใน

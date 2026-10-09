@@ -13,6 +13,7 @@
  * function rather than a change to every caller.
  */
 
+import type { Era } from '../core/thai-date';
 import type { Locale } from './messages';
 
 const KEY = 'mon-farm:locale';
@@ -35,5 +36,25 @@ export async function writeLocale(locale: Locale): Promise<void> {
     globalThis.localStorage?.setItem(KEY, locale);
   } catch {
     /* a quota or privacy-mode error must not take the app down */
+  }
+}
+
+/** Buddhist or Common Era for every date in the app (D-74 F14). Same terms as the language. */
+const ERA_KEY = 'mon-farm:era';
+
+export async function readEra(): Promise<Era | null> {
+  try {
+    const raw = globalThis.localStorage?.getItem(ERA_KEY);
+    return raw === 'be' || raw === 'ce' ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function writeEra(era: Era): Promise<void> {
+  try {
+    globalThis.localStorage?.setItem(ERA_KEY, era);
+  } catch {
+    /* the choice just does not survive a restart */
   }
 }

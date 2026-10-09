@@ -21,7 +21,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { type Locale, type MessageId } from './messages';
 import { resolve } from './resolve';
-import { readLocale, writeLocale } from './preference';
+import type { Era } from '../core/thai-date';
+import { readEra, readLocale, writeEra, writeLocale } from './preference';
 
 export type Translate = (id: MessageId, params?: Record<string, string | number>) => string;
 
@@ -30,12 +31,16 @@ interface I18nContextValue {
   t: Translate;
   setLocale: (l: Locale) => void;
   toggle: () => void;
+  /** Year system for every date shown (D-74 F14); Buddhist Era unless switched. */
+  era: Era;
+  toggleEra: () => void;
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children, initial = 'th' }: { children: ReactNode; initial?: Locale }) {
   const [locale, setLocaleState] = useState<Locale>(initial);
+  const [era, setEra] = useState<Era>('be');
 
   /**
    * Read after mount rather than during render, for the same reason
@@ -49,6 +54,9 @@ export function I18nProvider({ children, initial = 'th' }: { children: ReactNode
     let cancelled = false;
     readLocale().then((stored) => {
       if (!cancelled && stored) setLocaleState(stored);
+    });
+    readEra().then((stored) => {
+      if (!cancelled && stored) setEra(stored);
     });
     return () => {
       cancelled = true;
@@ -68,8 +76,14 @@ export function I18nProvider({ children, initial = 'th' }: { children: ReactNode
       t: (id, params) => resolve(locale, id, params),
       setLocale,
       toggle: () => setLocale(locale === 'th' ? 'en' : 'th'),
+      era,
+      toggleEra: () => {
+        const next = era === 'be' ? 'ce' : 'be';
+        setEra(next);
+        void writeEra(next);
+      },
     }),
-    [locale, setLocale],
+    [locale, setLocale, era],
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
