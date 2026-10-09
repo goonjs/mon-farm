@@ -154,7 +154,9 @@ export type FinancePayload =
   /** targetId `default-account`; null = no default. */
   | { readonly t: 'account_default_set'; readonly accountId: string | null }
   /** targetId `sale-account-<saleId>`; null clears the choice. */
-  | { readonly t: 'sale_account_set'; readonly saleId: string; readonly choice: SaleAccountChoice | null };
+  | { readonly t: 'sale_account_set'; readonly saleId: string; readonly choice: SaleAccountChoice | null }
+  /** targetId `sale-rounding-<saleId>` (E05-S02). The latest one this device wrote is next sale's default. */
+  | { readonly t: 'sale_rounding_set'; readonly saleId: string; readonly mode: 'worker' | 'owner' | 'none' };
 
 export interface FinanceEvent {
   readonly id: EventId;
