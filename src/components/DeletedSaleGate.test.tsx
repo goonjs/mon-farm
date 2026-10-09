@@ -7,7 +7,7 @@ import { LogBuilder, setUpSale } from '../core/fixtures';
 import { SaleProvider } from '../store/SaleProvider';
 import { store as mockStore } from '../store/store';
 import { wrap } from '../test/render';
-import { setSessionUser } from '../store/session';
+import { setSessionGroup, setSessionUser } from '../store/session';
 
 jest.mock('../store/store', () => {
   const { MemoryStore } = jest.requireActual('../store/memory-store');
@@ -21,8 +21,11 @@ async function flush() {
   });
 }
 
-// E02-S01: nothing is recorded without a signed-in user.
-beforeAll(() => setSessionUser('user-test'));
+// E02-S01/S02: nothing is recorded without a signed-in user in an open group.
+beforeAll(() => {
+  setSessionUser('user-test');
+  setSessionGroup('group-test');
+});
 
 describe('DeletedSaleGate — a deleted sale cannot be recorded into (E01-S04)', () => {
   it('shows a restore notice instead of the sale, and the sale again once restored', async () => {

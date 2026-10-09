@@ -6,7 +6,7 @@ import { LogBuilder, setUpSale } from '../core/fixtures';
 import { projectSale } from '../core/project';
 import { store as mockStore } from '../store/store';
 import { wrap } from '../test/render';
-import { setSessionUser } from '../store/session';
+import { setSessionGroup, setSessionUser } from '../store/session';
 
 // The real MemoryStore — it has its own unsuffixed file since E01-S03, so
 // Jest's platform resolution no longer gets in the way.
@@ -31,8 +31,11 @@ async function seed(saleId: string, deleted: boolean) {
   for (const e of b.build()) await mockStore.append(e);
 }
 
-// E02-S01: nothing is recorded without a signed-in user.
-beforeAll(() => setSessionUser('user-test'));
+// E02-S01/S02: nothing is recorded without a signed-in user in an open group.
+beforeAll(() => {
+  setSessionUser('user-test');
+  setSessionGroup('group-test');
+});
 
 describe('DeletedSalesScreen — E01-S04 (SYNC-10)', () => {
   it('lists only deleted sales, and restoring one writes a restore event and removes it from the list', async () => {

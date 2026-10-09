@@ -5,7 +5,7 @@ import SetupScreen from '../app/sale/[id]/setup';
 import { farmStore as mockFarmStore } from '../store/farm';
 import { SaleProvider } from '../store/SaleProvider';
 import { wrap } from '../test/render';
-import { setSessionUser } from '../store/session';
+import { setSessionGroup, setSessionUser } from '../store/session';
 
 /**
  * Same jest.mock pattern as PeoplePicker.test.tsx — the instance is built
@@ -83,8 +83,11 @@ function renderSetup(saleId: string) {
   );
 }
 
-// E02-S01: nothing is recorded without a signed-in user.
-beforeAll(() => setSessionUser('user-test'));
+// E02-S01/S02: nothing is recorded without a signed-in user in an open group.
+beforeAll(() => {
+  setSessionUser('user-test');
+  setSessionGroup('group-test');
+});
 
 describe('setup: use the farm profile', () => {
   beforeEach(async () => {

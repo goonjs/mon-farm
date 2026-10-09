@@ -356,6 +356,21 @@ const th = {
   'login.popupBlocked': 'เบราว์เซอร์บล็อกหน้าต่างเข้าสู่ระบบ — อนุญาตป๊อปอัปแล้วลองอีกครั้ง',
   'login.failed': 'เข้าสู่ระบบไม่สำเร็จ — ลองอีกครั้ง',
   'login.retry': 'ลองอีกครั้ง',
+
+  // ── Farm groups (E02-S02) — docs/ux/flows/e02-access-and-sync-states.md §3 ─
+  'group.welcome': 'ยินดีต้อนรับ {name}',
+  'group.welcomeNoName': 'ยินดีต้อนรับ',
+  'group.needGroup': 'ต้องมีกลุ่มฟาร์มก่อนจึงจะบันทึกข้อมูลได้',
+  'group.create': 'สร้างกลุ่มฟาร์มใหม่',
+  'group.join': 'เข้าร่วมด้วยรหัสเชิญ',
+  'group.back': '← กลับ',
+  'group.createTitle': 'สร้างกลุ่มฟาร์ม',
+  'group.nameLabel': 'ชื่อกลุ่มฟาร์ม *',
+  'group.nameHint': 'เช่น ชื่อสวนหรือชื่อครอบครัว',
+  'group.ownerNote': 'คุณจะเป็นเจ้าของ และเชิญคนอื่นเข้ามาได้ทีหลัง',
+  'group.submit': 'สร้าง',
+  'group.nameRequired': 'ใส่ชื่อกลุ่มฟาร์ม',
+  'group.createFailed': 'สร้างกลุ่มไม่สำเร็จ — ลองอีกครั้ง',
 } as const;
 
 /**
@@ -651,6 +666,20 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'login.popupBlocked': 'the browser blocked the sign-in window — allow pop-ups, then try again',
   'login.failed': 'sign-in failed — try again',
   'login.retry': 'try again',
+
+  'group.welcome': 'welcome, {name}',
+  'group.welcomeNoName': 'welcome',
+  'group.needGroup': 'you need a farm group before anything can be recorded',
+  'group.create': 'create a new farm group',
+  'group.join': 'join with an invite code',
+  'group.back': '← back',
+  'group.createTitle': 'create a farm group',
+  'group.nameLabel': 'farm group name *',
+  'group.nameHint': 'e.g. the farm or family name',
+  'group.ownerNote': 'you will be its owner, and can invite others later',
+  'group.submit': 'create',
+  'group.nameRequired': 'enter a farm group name',
+  'group.createFailed': 'could not create the group — try again',
 };
 
 export const messages = { th, en } as const;

@@ -1,13 +1,15 @@
 /**
  * Web account store: one small JSON document in localStorage, the same
- * trade-off as `farm.web.ts`. It is read once per launch and written once
- * per sign-in, so a single document is written whole — never half.
+ * trade-off as `farm.web.ts`. The user, the memberships and the pending
+ * group ops live in that one document, so a group's membership row and its
+ * `create_group` op are written in one `setItem` — together or not at all.
  *
- * A failed write keeps the value in memory for this session and raises the
- * not-durable warning (`durability.ts`), so nobody is told they are signed
- * in "for good" when a reload would lose it.
+ * A failed sign-in write keeps the user in memory for this session and
+ * raises the not-durable warning (`durability.ts`). A failed group write is
+ * refused instead: a group that a reload would forget must not be entered.
  */
 
+import type { CreateGroupOp, Membership } from '../core/group';
 import type { User } from '../core/user';
 import type { AccountStore } from './account';
 import { markNotDurable } from './durability';
@@ -16,9 +18,11 @@ const KEY = 'mon-farm:account';
 
 interface AccountDoc {
   readonly user: User | null;
+  readonly memberships: readonly Membership[];
+  readonly pendingOps: readonly CreateGroupOp[];
 }
 
-const EMPTY: AccountDoc = { user: null };
+const EMPTY: AccountDoc = { user: null, memberships: [], pendingOps: [] };
 
 export class WebAccountStore implements AccountStore {
   private cached: AccountDoc | null = null;
@@ -38,15 +42,12 @@ export class WebAccountStore implements AccountStore {
     return this.cached;
   }
 
-  private write(doc: AccountDoc): void {
+  /** Throws when the document could not be stored; the cache follows only success. */
+  private persist(doc: AccountDoc): void {
+    const storage = this.storage();
+    if (!storage) throw new Error('No localStorage.');
+    storage.setItem(KEY, JSON.stringify(doc));
     this.cached = doc;
-    try {
-      const storage = this.storage();
-      if (!storage) throw new Error('No localStorage.');
-      storage.setItem(KEY, JSON.stringify(doc));
-    } catch (err) {
-      markNotDurable(err);
-    }
   }
 
   async user(): Promise<User | null> {
@@ -54,7 +55,30 @@ export class WebAccountStore implements AccountStore {
   }
 
   async saveUser(user: User): Promise<void> {
-    this.write({ ...this.read(), user });
+    const doc = { ...this.read(), user };
+    try {
+      this.persist(doc);
+    } catch (err) {
+      this.cached = doc;
+      markNotDurable(err);
+    }
+  }
+
+  async memberships(): Promise<Membership[]> {
+    return [...this.read().memberships];
+  }
+
+  async createGroup(membership: Membership, op: CreateGroupOp): Promise<void> {
+    const doc = this.read();
+    this.persist({
+      ...doc,
+      memberships: [...doc.memberships, membership],
+      pendingOps: [...doc.pendingOps, op],
+    });
+  }
+
+  async pendingOps(): Promise<CreateGroupOp[]> {
+    return [...this.read().pendingOps];
   }
 }
 

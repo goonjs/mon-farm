@@ -1,4 +1,5 @@
-import type { UserId } from '../core/types';
+import { NoGroupError } from '../core/scope';
+import type { GroupId, UserId } from '../core/types';
 
 /**
  * Who is writing (E02-S01, D-23): the signed-in user, set by the account gate
@@ -15,6 +16,7 @@ export class NotSignedInError extends Error {
 }
 
 let current: UserId | null = null;
+let group: GroupId | null = null;
 
 export function setSessionUser(userId: UserId | null): void {
   current = userId;
@@ -23,4 +25,17 @@ export function setSessionUser(userId: UserId | null): void {
 export function sessionUserId(): UserId {
   if (!current) throw new NotSignedInError();
   return current;
+}
+
+/**
+ * The open farm group (E02-S02, D-24), set by the account gate on entering
+ * one. Before that, nothing can be recorded.
+ */
+export function setSessionGroup(groupId: GroupId | null): void {
+  group = groupId;
+}
+
+export function sessionGroupId(): GroupId {
+  if (!group) throw new NoGroupError();
+  return group;
 }

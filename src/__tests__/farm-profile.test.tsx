@@ -130,6 +130,7 @@ describe('FarmProfileScreen', () => {
   it('offers to seed from the most recent sale when the profile is empty and a sale exists', async () => {
     await mockStore.append({
       id: 'past-sale/1',
+      groupId: 'group-test',
       saleId: 'past-sale',
       seq: 1,
       deviceSeq: 1,
@@ -142,6 +143,7 @@ describe('FarmProfileScreen', () => {
     });
     await mockStore.append({
       id: 'past-sale/2',
+      groupId: 'group-test',
       saleId: 'past-sale',
       seq: 2,
       deviceSeq: 2,

@@ -228,8 +228,10 @@ event มีสองตระกูล และ registry ใน `src/core/merg
 `correction.targetSeq` ของ v0.4 กลายเป็น change ที่ชี้ `targetId`; `sys` payload ของการขายถูกจัดเข้า registry
 ใน E01-S02 การออกแบบโมเดลการขายใหม่ทั้งชุดอยู่ใน E04-S01
 
-**ช่วงเปลี่ยนผ่าน (E01-S02 → E04-S01)**: event การขายของ v0.4 ได้ `id`, `deviceSeq` และ `actor` ใหม่แล้ว แต่ยังไม่มี
-`groupId`/`targetId`/`baseEventId` (E02-S02 / E04-S01) `correction` ชี้เข่งด้วย **`targetId` = id ของ event เข่ง**
+**ช่วงเปลี่ยนผ่าน (E01-S02 → E04-S01)**: event การขายของ v0.4 ได้ `id`, `deviceSeq`, `actor` และ `groupId` (E02-S02 —
+ไม่มี group id → `NoGroupError` ทั้งที่ write path `record.ts` และที่ `checkAppend` ของทุก adapter, `src/core/scope.ts`)
+แล้ว แต่ยังไม่มี `targetId`/`baseEventId` (E04-S01) ยังไม่ได้เพิ่ม index ที่มี `groupId` ใน IndexedDB และคอลัมน์
+`group_id` ในตาราง `events` ของ native (`body` มี `groupId` อยู่แล้ว) — เพิ่มพร้อม query ที่กรองตามกลุ่ม (E02-S04) `correction` ชี้เข่งด้วย **`targetId` = id ของ event เข่ง**
 แล้ว (ไม่ใช่ `seq`) เพราะสองเครื่องที่ออฟไลน์อาจได้ `seq` ต่อการขายเลขเดียวกัน `seq` จึงยังอยู่แต่ไม่ unique และ
 ลำดับการ fold คือ `(seq, deviceId, deviceSeq, id)` (`src/core/order.ts`) ไม่อ่าน `ts` ตัวนับ `deviceSeq` มีตัวเดียวทั้งแอป
 (`src/store/device-clock.ts`) ไม่ใช่ต่อหน้าจอการขาย `userId` = uid ของผู้ใช้ที่
@@ -513,6 +515,10 @@ retry/backoff ชุดเดียวกัน ถ้า object มีอยู
 
 - **สร้างกลุ่ม**: ทำออฟไลน์ได้ `gid` = UUIDv7 สร้างในเครื่อง → แถว `memberships` + `pending_ops.create_group`
   มีเน็ตแล้วส่ง batch `{groups/{gid}, members/{uid}}` (ส่งซ้ำ → ตรวจแบบข้อ 4 ด้วย `getDoc` ของ members/{uid})
+  — **สร้างแล้ว (E02-S02)**: `src/core/group.ts` (`newGroup`, `decideEntry`, `createGroupWrites` = batch ที่ outbox จะส่ง
+  และที่ rules test ใช้ยืนยัน) + `AccountStore.createGroup` (native: `memberships` + `pending_ops` ใน transaction
+  เดียว; เว็บ: เอกสาร localStorage เดียวกับ session เขียนครั้งเดียว) ยังไม่มีการส่งขึ้นเซิร์ฟเวอร์ (E01-S09) และยังไม่ทำ
+  "login ครั้งแรกบนเครื่องใหม่ → ดึงรายการกลุ่มจากเซิร์ฟเวอร์ก่อน" (ต้องมี backend)
 - **เข้าร่วม**: ต้องมีเน็ต (callable `acceptInvite`) เสร็จแล้วดึงข้อมูลทั้งกลุ่มลงมา
 - **รีเฟรชรายการกลุ่ม**: ตอนเปิดแอปและทุกครั้งที่กลับมาออนไลน์ query collection-group `members` (`uid == me`)
   แล้วอ่าน `groups/{gid}` ของแต่ละกลุ่ม → อัปเดต `memberships` (ชื่อ, `member_count` ที่ใช้คุมปุ่มออก, กลุ่มที่

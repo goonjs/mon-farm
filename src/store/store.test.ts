@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { LogBuilder } from '../core/fixtures';
 import type { AcceptEvent } from '../core/types';
 import { canonicalJson } from '../core/canonical';
+import { NoGroupError } from '../core/scope';
 import { IntegrityError, MemoryStore, type EventStore } from './store';
 import { IndexedDbStore } from './store.web';
 
@@ -28,6 +29,18 @@ describe.each(adapters)('%s — EventStore rules (E01-S02 AC2/AC3, E01-S03 AC2)'
     const reordered = Object.fromEntries(Object.entries(e).reverse()) as typeof e;
     await store.append(reordered);
     expect(await store.load(e.saleId)).toHaveLength(1);
+  });
+
+  it('refuses an event with no group id and stores nothing (E02-S02, D-24)', async () => {
+    const store = makeStore();
+    const [e] = new LogBuilder().accept('p1').build();
+    const { groupId: _dropped, ...groupless } = e;
+    await expect(store.append(groupless as typeof e)).rejects.toBeInstanceOf(NoGroupError);
+    expect(await store.load(e.saleId)).toEqual([]);
+  });
+
+  it('every fixture event carries a group id', () => {
+    expect(new LogBuilder().accept('p1').build()[0].groupId).toBe('group-1');
   });
 
   it('rejects the same id with different content, never overwriting', async () => {

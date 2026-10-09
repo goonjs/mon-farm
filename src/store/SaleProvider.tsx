@@ -24,8 +24,8 @@ import {
 
 import { assertAllowed } from '../core/delete-guard';
 import { detectClockAnomaly, projectSale } from '../core/project';
-import type { Actor, SaleEvent, SaleState, SysPayload } from '../core/types';
-import { actorNow, nextSeq, stamp as envelope } from './record';
+import type { SaleEvent, SaleState, SysPayload } from '../core/types';
+import { nextSeq, stamp as envelope, writerNow, type Writer } from './record';
 // Bare specifier, not './store.web' — Metro resolves this to store.native.ts
 // on iOS/Android and store.web.ts on web. A literal '.web' import here would
 // silently pull the localStorage adapter into native builds too, which is
@@ -71,7 +71,7 @@ export function SaleProvider({ saleId, children }: { saleId: string; children: R
   // next event without doing side effects inside a state updater (React may
   // run those twice, which would mint two ids for one basket).
   const eventsRef = useRef<readonly SaleEvent[]>([]);
-  const actor = useRef<Actor | null>(null);
+  const writer = useRef<Writer | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -79,9 +79,9 @@ export function SaleProvider({ saleId, children }: { saleId: string; children: R
       // No seeding: a sale with no events is a real, legitimate state (one
       // that hasn't been set up yet), not a placeholder waiting to be filled
       // by demo data. See docs/stories/s17-remove-seed-and-sale-list.md.
-      const [loaded, who] = await Promise.all([store.load(saleId), actorNow()]);
+      const [loaded, who] = await Promise.all([store.load(saleId), writerNow()]);
       if (live) {
-        actor.current = who;
+        writer.current = who;
         eventsRef.current = loaded;
         setEvents(loaded);
         setReady(true);
@@ -93,7 +93,7 @@ export function SaleProvider({ saleId, children }: { saleId: string; children: R
   }, [saleId]);
 
   const append = useCallback((incoming: NewEvent) => {
-    const who = actor.current;
+    const who = writer.current;
     // Screens only offer recording once `ready`; this is the backstop.
     if (!who) throw new Error('append() before the store is ready.');
 

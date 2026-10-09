@@ -9,6 +9,8 @@
 import type { SaleEvent, SysPayload } from './types';
 
 const DEFAULT_SALE_ID = 'sale-1';
+/** The group every fixture event is recorded in (E02-S02, D-24). */
+export const FIXTURE_GROUP_ID = 'group-1';
 
 export class LogBuilder {
   private events: SaleEvent[] = [];
@@ -48,6 +50,7 @@ export class LogBuilder {
     this.mono += 1_000;
     return {
       id: this.idFor(deviceSeq),
+      groupId: FIXTURE_GROUP_ID,
       saleId: this.saleId,
       seq: this.seq,
       deviceSeq,
