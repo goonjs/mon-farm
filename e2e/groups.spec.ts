@@ -36,7 +36,7 @@ test('create a farm group, then reopen offline straight into it', async ({ page,
   // Kept in IndexedDB (architecture §Schema — เว็บ), not localStorage.
   const memberships = await page.evaluate(readStore<Membership>, 'memberships');
   const pendingOps = await page.evaluate(readStore<CreateGroupOp>, 'pendingOps');
-  expect(memberships).toEqual([expect.objectContaining({ name: 'สวนบ้านนา', role: 'owner' })]);
+  expect(memberships).toEqual([expect.objectContaining({ name: 'สวนบ้านนา', role: 'owner', userId: 'e2e-user' })]);
   expect(pendingOps).toEqual([
     expect.objectContaining({ op: 'create_group', groupId: memberships[0].groupId, createdBy: 'e2e-user' }),
   ]);

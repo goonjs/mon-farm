@@ -22,8 +22,9 @@ export interface AccountStore {
   user(): Promise<User | null>;
   saveUser(user: User): Promise<void>;
   /**
-   * The groups this device's user belongs to, as last known on the device —
-   * what the app opens into, offline included (ACC-3, ACC-6).
+   * The groups kept on this device, each tagged with the `userId` it belongs
+   * to — the gate opens only the signed-in user's (`decideEntry`), offline
+   * included (ACC-3, ACC-6).
    */
   memberships(): Promise<Membership[]>;
   /**

@@ -18,8 +18,8 @@ const DB_NAME = 'mon-farm-v1.db';
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-  CREATE TABLE IF NOT EXISTS memberships (group_id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL,
-                                          member_count INTEGER, state TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS memberships (group_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL,
+                                          role TEXT NOT NULL, member_count INTEGER, state TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS pending_ops (id TEXT PRIMARY KEY, group_id TEXT NOT NULL, op TEXT NOT NULL,
                                           body TEXT NOT NULL, error TEXT);
 `;
@@ -49,18 +49,19 @@ export class SqliteAccountStore implements AccountStore {
 
   async memberships(): Promise<Membership[]> {
     const db = await this.open();
-    const rows = await db.getAllAsync<{ group_id: string; name: string; role: Role }>(
-      `SELECT group_id, name, role FROM memberships WHERE state = 'active' ORDER BY rowid`,
+    const rows = await db.getAllAsync<{ group_id: string; user_id: string; name: string; role: Role }>(
+      `SELECT group_id, user_id, name, role FROM memberships WHERE state = 'active' ORDER BY rowid`,
     );
-    return rows.map((r) => ({ groupId: r.group_id, name: r.name, role: r.role }));
+    return rows.map((r) => ({ groupId: r.group_id, userId: r.user_id, name: r.name, role: r.role }));
   }
 
   async createGroup(membership: Membership, op: CreateGroupOp): Promise<void> {
     const db = await this.open();
     await db.withExclusiveTransactionAsync(async (tx) => {
       await tx.runAsync(
-        `INSERT INTO memberships (group_id, name, role, member_count, state) VALUES (?, ?, ?, 1, 'active')`,
+        `INSERT INTO memberships (group_id, user_id, name, role, member_count, state) VALUES (?, ?, ?, ?, 1, 'active')`,
         membership.groupId,
+        membership.userId,
         membership.name,
         membership.role,
       );

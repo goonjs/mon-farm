@@ -11,8 +11,8 @@
  * There is no sign-out (D-23): once a user is stored, this never shows the
  * login screen again.
  *
- * Which group opens is decided from the memberships kept on the device
- * (`decideEntry`): none → create/join, one → straight in. Two or more is the
+ * Which group opens is decided from the signed-in user's memberships kept on
+ * the device (`decideEntry`): none → create/join, one → straight in. Two or more is the
  * picker of E02-S04; nothing in this build can produce a second group
  * (joining is E02-S03), so until then the first one opens.
  */
@@ -20,8 +20,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { googleSignIn as defaultGoogle, type GoogleSignIn } from '../auth/google';
-import { decideEntry, newGroup, type Membership } from '../core/group';
-import type { GroupId } from '../core/types';
+import { decideEntry, membershipsOf, newGroup, type Membership } from '../core/group';
+import type { GroupId, UserId } from '../core/types';
 import type { User } from '../core/user';
 import { uuidv7 } from '../lib/id';
 import { accountStore, type AccountStore } from '../store/account';
@@ -35,11 +35,15 @@ type Phase =
   | { kind: 'no-group'; user: User }
   | { kind: 'in-group'; user: User; groupId: GroupId };
 
-/** The group to open, or null when there is none (E02-S04 replaces the `pick` case). */
-function groupToOpen(memberships: readonly Membership[]): GroupId | null {
-  const entry = decideEntry(memberships);
+/**
+ * The signed-in user's group to open, or null when they have none (E02-S04
+ * replaces the `pick` case). Another account's groups on this device never
+ * count (review F5).
+ */
+function groupToOpen(memberships: readonly Membership[], userId: UserId): GroupId | null {
+  const entry = decideEntry(memberships, userId);
   if (entry.kind === 'enter') return entry.groupId;
-  if (entry.kind === 'pick') return memberships[0].groupId;
+  if (entry.kind === 'pick') return membershipsOf(memberships, userId)[0].groupId;
   return null;
 }
 
@@ -57,7 +61,7 @@ export function AccountGate({
 
   const enter = (user: User, memberships: readonly Membership[]) => {
     setSessionUser(user.userId);
-    const groupId = groupToOpen(memberships);
+    const groupId = groupToOpen(memberships, user.userId);
     setSessionGroup(groupId);
     setPhase(groupId ? { kind: 'in-group', user, groupId } : { kind: 'no-group', user });
   };

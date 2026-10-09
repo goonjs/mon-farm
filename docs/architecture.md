@@ -290,8 +290,9 @@ CREATE INDEX events_sale   ON events(group_id, sale_id);
 
 CREATE TABLE meta        (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   -- device = JSON {deviceId, nextDeviceSeq} (E01-S02), pull_cursor:<gid>, session (userId, activeGroupId)
-CREATE TABLE memberships (group_id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL,
+CREATE TABLE memberships (group_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL, role TEXT NOT NULL,
                           member_count INTEGER, state TEXT NOT NULL);   -- 'active' | 'leaving'
+  -- user_id = เจ้าของแถว: gate เปิดเฉพาะกลุ่มของผู้ใช้ที่ login อยู่ (E02-S02, review F5); pending_ops ใช้ body.createdBy
 CREATE TABLE pending_ops (id TEXT PRIMARY KEY, group_id TEXT NOT NULL, op TEXT NOT NULL,
                           body TEXT NOT NULL, error TEXT);              -- 'create_group' (การออกกลุ่มใช้ memberships.state)
 CREATE TABLE media_queue (media_id TEXT PRIMARY KEY, group_id TEXT NOT NULL, local_uri TEXT NOT NULL,
@@ -325,7 +326,8 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
   `event`), index `saleId` และ `pending` — index ที่มี `groupId` เพิ่มเมื่อ envelope มี `groupId` (E02-S02); `meta`
   คีย์ `device` = `{ deviceId, nextDeviceSeq, legacyCleanupV1 }`; ยังไม่สร้าง `mediaQueue` (สร้างใน story ที่ใช้)
 - **สร้างแล้ว (E02-S01/S02, DB version 2)**: `meta` คีย์ `session` = ผู้ใช้ที่ login; `memberships` (keyPath `groupId`);
-  `pendingOps` (คีย์ `${op}:${groupId}` เหมือน `pending_ops.id` ของ native) — schema ทั้งหมดอยู่ที่ `src/store/idb.ts`
+  `pendingOps` (คีย์ `${op}:${groupId}` เหมือน `pending_ops.id` ของ native); membership มี `userId` และ op มี
+  `createdBy` = ผู้ใช้เจ้าของ — `decideEntry` นับเฉพาะกลุ่มของผู้ใช้ที่ login อยู่ — schema ทั้งหมดอยู่ที่ `src/store/idb.ts`
   ที่ event store และ account store ใช้ร่วมกัน (เปิด version เดียวกัน, upgrade สร้าง store ที่ขาด) ไม่มี cache: อ่านจาก
   DB ทุกครั้ง และเขียน 1 ครั้ง = transaction `readwrite` เดียว (สร้างกลุ่ม = `memberships` + `pendingOps` ใน transaction
   เดียวด้วย `add`) จึงไม่มีแท็บไหนเขียนสำเนาเก่าทับของใหม่ได้

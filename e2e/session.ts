@@ -27,6 +27,7 @@ export const E2E_USER = {
 
 interface PreloadedMembership {
   groupId: string;
+  userId: string;
   name: string;
   role: 'owner';
 }
@@ -56,7 +57,9 @@ const account = (memberships: PreloadedMembership[]) => ({
 });
 
 /** Signed in, one farm group — the group the fixtures' events are recorded in. */
-export const signedIn = account([{ groupId: FIXTURE_GROUP_ID, name: 'สวนทดสอบ', role: 'owner' }]);
+export const signedIn = account([
+  { groupId: FIXTURE_GROUP_ID, userId: E2E_USER.userId, name: 'สวนทดสอบ', role: 'owner' },
+]);
 
 /** Signed in, no farm group yet (E02-S02). */
 export const signedInNoGroup = account([]);

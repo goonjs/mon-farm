@@ -239,6 +239,20 @@ describe('AccountGate — E02-S02 farm groups', () => {
     expect(screen.queryByTestId('app')).toBeNull();
   });
 
+  it("another account's group on this device is not opened for the user who signs in (review F5)", async () => {
+    const accounts = new MemoryAccountStore();
+    const other = userFromSignIn('uid-other', 'สมศรี', { provider: 'google', subject: 'g-2' });
+    const theirs = newGroup('g-theirs', 'สวนสมศรี', other, 1);
+    await accounts.createGroup(theirs.membership, theirs.op);
+    await renderGate(accounts, google(() => Promise.resolve(somchai)));
+    fireEvent.press(screen.getByTestId('login-google'));
+    await flush();
+
+    expect(screen.getByTestId('group-start')).toBeTruthy();
+    expect(screen.queryByTestId('app')).toBeNull();
+    expect(() => sessionGroupId()).toThrow(NoGroupError);
+  });
+
   it('one group kept on the device: opens straight into it, offline, no picker (AC2, AC5)', async () => {
     const accounts = await signedIn();
     const membership = await withGroup(accounts);

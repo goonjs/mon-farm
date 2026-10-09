@@ -13,14 +13,22 @@ import type { GroupId, UserId } from './types';
 
 export type Role = 'owner';
 
-/** One group this device's user belongs to, as kept on the device. */
+/**
+ * One group a user of this device belongs to, as kept on the device. Kept
+ * per `userId`: the store is the device's, and a different account signing
+ * in must not open someone else's group (review F5).
+ */
 export interface Membership {
   readonly groupId: GroupId;
+  readonly userId: UserId;
   readonly name: string;
   readonly role: Role;
 }
 
-/** Waiting for the outbox: the batch that creates the group on the server. */
+/**
+ * Waiting for the outbox: the batch that creates the group on the server.
+ * `createdBy` is the user it belongs to — only that user's auth can send it.
+ */
 export interface CreateGroupOp {
   readonly op: 'create_group';
   readonly groupId: GroupId;
@@ -32,10 +40,19 @@ export interface CreateGroupOp {
 
 export type Entry = { readonly kind: 'start' } | { readonly kind: 'enter'; readonly groupId: GroupId } | { readonly kind: 'pick' };
 
-/** Where the app opens (ACC-3): none → create/join, one → in, more → pick (E02-S04). */
-export function decideEntry(memberships: readonly Membership[]): Entry {
-  if (memberships.length === 0) return { kind: 'start' };
-  if (memberships.length === 1) return { kind: 'enter', groupId: memberships[0].groupId };
+/** The signed-in user's own memberships, out of everything kept on the device. */
+export function membershipsOf(memberships: readonly Membership[], userId: UserId): Membership[] {
+  return memberships.filter((m) => m.userId === userId);
+}
+
+/**
+ * Where the app opens for `userId` (ACC-3): none → create/join, one → in,
+ * more → pick (E02-S04). Counts only that user's groups.
+ */
+export function decideEntry(memberships: readonly Membership[], userId: UserId): Entry {
+  const mine = membershipsOf(memberships, userId);
+  if (mine.length === 0) return { kind: 'start' };
+  if (mine.length === 1) return { kind: 'enter', groupId: mine[0].groupId };
   return { kind: 'pick' };
 }
 
@@ -55,7 +72,7 @@ export function newGroup(
   const trimmed = name.trim();
   if (!trimmed) throw new EmptyGroupNameError();
   return {
-    membership: { groupId, name: trimmed, role: 'owner' },
+    membership: { groupId, userId: creator.userId, name: trimmed, role: 'owner' },
     op: {
       op: 'create_group',
       groupId,

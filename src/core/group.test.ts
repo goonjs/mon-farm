@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createGroupWrites, decideEntry, EmptyGroupNameError, newGroup, type Membership } from './group';
 
 const somchai = { userId: 'uid-1', displayName: 'สมชาย' };
-const m = (groupId: string): Membership => ({ groupId, name: `กลุ่ม ${groupId}`, role: 'owner' });
+const m = (groupId: string, userId = 'uid-1'): Membership => ({ groupId, userId, name: `กลุ่ม ${groupId}`, role: 'owner' });
 
 /**
  * E02-S02 (ACC-2…ACC-4, D-24). Where the app opens is decided from the
@@ -11,22 +11,27 @@ const m = (groupId: string): Membership => ({ groupId, name: `กลุ่ม ${
  */
 describe('decideEntry', () => {
   it('no group: only create or join — nothing to record into (AC3)', () => {
-    expect(decideEntry([])).toEqual({ kind: 'start' });
+    expect(decideEntry([], 'uid-1')).toEqual({ kind: 'start' });
   });
 
   it('one group: straight in, no picker (AC2)', () => {
-    expect(decideEntry([m('g1')])).toEqual({ kind: 'enter', groupId: 'g1' });
+    expect(decideEntry([m('g1')], 'uid-1')).toEqual({ kind: 'enter', groupId: 'g1' });
   });
 
   it('two or more: the picker (E02-S04), never a silent choice', () => {
-    expect(decideEntry([m('g1'), m('g2')])).toEqual({ kind: 'pick' });
+    expect(decideEntry([m('g1'), m('g2')], 'uid-1')).toEqual({ kind: 'pick' });
+  });
+
+  it("counts only the signed-in user's groups: another account's group on this device is not entered (review F5)", () => {
+    expect(decideEntry([m('g-other', 'uid-2')], 'uid-1')).toEqual({ kind: 'start' });
+    expect(decideEntry([m('g-other', 'uid-2'), m('g1')], 'uid-1')).toEqual({ kind: 'enter', groupId: 'g1' });
   });
 });
 
 describe('newGroup', () => {
   it('makes the creator its owner, under a locally minted id (AC1, ACC-4)', () => {
     const { membership, op } = newGroup('g-local', '  สวนบ้านนา ', somchai, 1_790_000_000_000);
-    expect(membership).toEqual({ groupId: 'g-local', name: 'สวนบ้านนา', role: 'owner' });
+    expect(membership).toEqual({ groupId: 'g-local', userId: 'uid-1', name: 'สวนบ้านนา', role: 'owner' });
     expect(op).toEqual({
       op: 'create_group',
       groupId: 'g-local',
