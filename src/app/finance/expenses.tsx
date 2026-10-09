@@ -84,6 +84,7 @@ export default function ExpensesScreen() {
         right={
           <>
             <Button testID="open-owed" onPress={() => router.push('/finance/owed')}>{msg('fin.list.owed')}</Button>
+            <Button testID="open-debts" onPress={() => router.push('/finance/debts')}>{msg('debt.open')}</Button>
             <Button testID="expenses-back" onPress={() => router.replace('/')}>{msg('common.back')}</Button>
           </>
         }

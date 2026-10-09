@@ -17,7 +17,7 @@ export interface UseFinance {
   readonly events: readonly FinanceEvent[] | null;
   readonly state: FinanceState | null;
   readonly deviceId: string | null;
-  write(targetId: string, base: EventId | null, payload: FinancePayload): Promise<void>;
+  write(targetId: string, base: EventId | null, payload: FinancePayload): Promise<FinanceEvent>;
   reload(): void;
 }
 
@@ -42,8 +42,9 @@ export function useFinance(): UseFinance {
 
   const write = useCallback(
     async (targetId: string, base: EventId | null, payload: FinancePayload) => {
-      await writeFinance(targetId, base, payload);
+      const event = await writeFinance(targetId, base, payload);
       reload();
+      return event;
     },
     [reload],
   );
