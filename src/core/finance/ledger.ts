@@ -13,6 +13,7 @@ import type { EventId } from '../types';
 import {
   FARM_FUNDS,
   type Allocation,
+  type DebtFields,
   type ExpenseFields,
   type ExpensePatch,
   type FinanceEvent,
@@ -67,12 +68,12 @@ type Patch = Record<string, unknown>;
 
 function patchOf(e: FinanceEvent): Patch | null {
   const p = e.payload;
-  return p.t === 'expense_changed' || p.t === 'repayment_changed' ? (p.patch as Patch) : null;
+  return 'patch' in p ? (p.patch as Patch) : null;
 }
 
 function alsoOf(e: FinanceEvent): readonly EventId[] {
   const p = e.payload;
-  return (p.t === 'expense_changed' || p.t === 'repayment_changed' ? p.alsoBasedOn : undefined) ?? [];
+  return ('alsoBasedOn' in p ? p.alsoBasedOn : undefined) ?? [];
 }
 
 const byId = (a: FinanceEvent, b: FinanceEvent) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
@@ -226,7 +227,8 @@ function groupByTarget(events: readonly FinanceEvent[], kinds: readonly string[]
 
 export function projectFinance(events: readonly FinanceEvent[]): FinanceState {
   const expenses: Expense[] = [];
-  for (const [id, evs] of groupByTarget(events, ['expense_created', 'expense_changed'])) {
+  const all = [...events, ...ownerShareEvents(events)];
+  for (const [id, evs] of groupByTarget(all, ['expense_created', 'expense_changed'])) {
     const f = foldRecord(
       evs,
       (c) => ({ ...(c.payload as { fields: ExpenseFields }).fields, deleted: false }) as ExpenseFields & { deleted: boolean },
@@ -289,6 +291,67 @@ export function projectFinance(events: readonly FinanceEvent[]): FinanceState {
   reimbursements.sort(oldestFirst);
 
   return { expenses, categories, repayments, reimbursements };
+}
+
+/**
+ * A manual fertilizer debt carries the owner's share as a farm expense (D-67,
+ * D-74 F7): synthesised from the debt's own events under `<debtId>:owner`,
+ * so editing or voiding the debt moves the expense with it, while the payer
+ * (unset at first) is set later by ordinary edits on that id.
+ */
+export const OWNER_SHARE_SUFFIX = ':owner';
+
+function ownerShareEvents(events: readonly FinanceEvent[]): FinanceEvent[] {
+  const out: FinanceEvent[] = [];
+  const debts = new Map<string, DebtFields & { deleted?: boolean }>();
+  for (const e of events) if (e.payload.t === 'debt_added') debts.set(e.targetId, e.payload.fields);
+  const derived = (f: Pick<DebtFields, 'fertilizer'>) => (f.fertilizer ? fertilizerSplit(f.fertilizer.totalSatang, f.fertilizer.workerPct).ownerSatang : null);
+  for (const e of events) {
+    const p = e.payload;
+    const id = e.targetId + OWNER_SHARE_SUFFIX;
+    const syn = (payload: FinanceEvent['payload']): FinanceEvent => ({
+      ...e,
+      id: e.id + OWNER_SHARE_SUFFIX,
+      targetId: id,
+      baseEventId: e.baseEventId === null ? null : e.baseEventId + OWNER_SHARE_SUFFIX,
+      payload,
+    });
+    if (p.t === 'debt_added' && p.fields.kind === 'fertilizer' && p.fields.fertilizer) {
+      out.push(
+        syn({
+          t: 'expense_created',
+          fields: {
+            amountSatang: derived(p.fields),
+            date: p.fields.date,
+            stage: 'actual',
+            categoryId: 'cat-fertilizer',
+            propertyId: null,
+            item: p.fields.worker.name,
+            note: p.fields.note,
+            payer: null,
+          },
+        }),
+      );
+    } else if (p.t === 'debt_changed') {
+      const base = debts.get(e.targetId);
+      if (!base || base.kind !== 'fertilizer') continue;
+      const patch: ExpensePatch = {
+        ...(p.patch.fertilizer !== undefined ? { amountSatang: p.patch.fertilizer ? derived(p.patch as DebtFields) : 0 } : {}),
+        ...(p.patch.date !== undefined ? { date: p.patch.date } : {}),
+        ...(p.patch.note !== undefined ? { note: p.patch.note } : {}),
+        ...(p.patch.deleted !== undefined ? { deleted: p.patch.deleted } : {}),
+      };
+      out.push(syn({ t: 'expense_changed', patch, alsoBasedOn: (p.alsoBasedOn ?? []).map((a) => a + OWNER_SHARE_SUFFIX) }));
+    }
+  }
+  return out;
+}
+
+/** Fertilizer bill × whole-number % → the worker's debt, rounded half-up to the satang; the rest is the owner's. */
+export function fertilizerSplit(totalSatang: number, workerPct: number): { workerSatang: number; ownerSatang: number } {
+  if (!Number.isInteger(workerPct) || workerPct < 0 || workerPct > 100) throw new RangeError('workerPct must be a whole 0–100');
+  const workerSatang = Math.floor((totalSatang * workerPct + 50) / 100);
+  return { workerSatang, ownerSatang: totalSatang - workerSatang };
 }
 
 /** The event no other event of this record names as its base — what the next edit builds on. */
@@ -459,3 +522,19 @@ export function allocateOldestFirst(debts: readonly Reimbursement[], amountSatan
 }
 
 export type { ExpensePatch, RepaymentPatch };
+
+/** The record fold for sibling projections (`debts.ts`): final state + the head an edit builds on. */
+export function foldRecordPublic<S extends object>(
+  events: readonly FinanceEvent[],
+  initial: (create: FinanceEvent) => S,
+  guarded: readonly string[],
+): { state: S; head: EventId; conflicts: readonly FieldConflict[] } | null {
+  const f = foldRecord(events, initial, guarded);
+  return f ? { state: f.state, head: latestHead(events, f.createdBy.id) ?? f.createdBy.id, conflicts: f.conflicts } : null;
+}
+
+/** The newest head of a chain of events on one record (ties by id). */
+export function headOf(events: readonly FinanceEvent[]): EventId | null {
+  const heads = headsOf(events, events[0]?.targetId ?? '');
+  return heads.length ? heads[heads.length - 1] : null;
+}
