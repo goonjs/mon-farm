@@ -196,3 +196,37 @@ test('deduct debt at settlement — instalment proposed, capped, recorded agains
   await expect(page.getByTestId('debt-balance')).toContainText('3,000.00');
   await expect(page.getByTestId('debt-summary-balance')).toContainText('3,000.00 ✓');
 });
+
+test('receiving accounts — add, default, show the buyer (offline)', async ({ page, context }) => {
+  const saleId = testSaleId('money-accounts');
+  await seedPeople(page, [{ id: 'person-prayuth', name: 'ประยุทธ' }]);
+  await seedSale(page, saleId, workedExample(saleId));
+  await page.goto('/settings');
+  await context.setOffline(true);
+  await page.getByTestId('settings-open-accounts').click();
+  await expect(page.getByTestId('accounts-empty')).toBeVisible();
+
+  await page.getByTestId('account-add').click();
+  await page.getByTestId('account-label').fill('บัญชีหลัก');
+  await page.getByTestId('account-bank-KBANK').click();
+  await page.getByTestId('account-number').fill('1234567890');
+  await page.getByTestId('account-name').fill('สมชาย ใจดี');
+  await page.getByTestId('account-pp-mobile').click();
+  await page.getByTestId('account-pp-number').fill('0812345678');
+  await page.screenshot({ path: `${SHOTS}/13-account-form.png`, fullPage: true });
+  await page.getByTestId('account-save').click();
+  await expect(page.locator('[data-testid^="account-default-"]')).toHaveCount(1);
+  await page.screenshot({ path: `${SHOTS}/14-accounts.png`, fullPage: true });
+
+  await context.setOffline(false);
+  await page.goto(`/sale/${saleId}/settlement`);
+  await context.setOffline(true);
+  await expect(page.getByTestId('sale-account-amount')).toContainText('149,367.25');
+  await page.getByTestId('show-account').click();
+  await expect(page.getByTestId('show-amount')).toContainText('149,367.25');
+  await expect(page.getByTestId('show-pp-id')).toContainText('0812345678');
+  await page.screenshot({ path: `${SHOTS}/15-show-account-promptpay.png`, fullPage: true });
+  await page.getByTestId('show-bank').click();
+  await expect(page.getByTestId('show-account-no')).toContainText('1234567890');
+  await page.screenshot({ path: `${SHOTS}/16-show-account-bank.png`, fullPage: true });
+});

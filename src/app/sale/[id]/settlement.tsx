@@ -19,6 +19,7 @@ import { Link, useRouter } from 'expo-router';
 import { Button, TopBar } from '../../../components/chrome';
 import { DeductionForm, type DeductionFormInput } from '../../../components/DeductionForm';
 import { DebtDeductionCard } from '../../../components/finance/DebtDeductionCard';
+import { SaleAccountCard } from '../../../components/finance/SaleAccountCard';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { WorkerPayoutCard } from '../../../components/WorkerPayoutCard';
 import { formatBaht, formatKg, settle, SettlementUnavailable } from '../../../core/settle';
@@ -263,6 +264,10 @@ export default function SettlementScreen() {
                 );
               })
             )}
+          </View>
+
+          <View style={card(t)}>
+            <SaleAccountCard saleId={state.id} ownerSatang={s.ownerSatang} />
           </View>
 
           <View style={card(t)}>

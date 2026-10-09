@@ -1,6 +1,6 @@
 # Story E05-S07: บัญชีรับเงิน + แสดงบัญชีให้คนรับซื้อยางดูตอนสรุปเงิน
 
-Status: Draft (เจ้าของสั่ง 2026-10-05/09 — AC ด้านล่างยังต้องตกลงกับเจ้าของ)
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ
 
 ## Context
 
@@ -47,3 +47,14 @@ Status: Draft (เจ้าของสั่ง 2026-10-05/09 — AC ด้า�
 
 - ?A1–?A3 (จาก mockup ฟาร์ม) ตอบแล้ว 2026-10-09 — ดู AC
 - ?B1 ?B2 (จาก mockup การขาย) ตอบแล้ว 2026-10-09 ตามข้อเสนอ — ดู AC · "ไม่ระบุบัญชี" แทนด้วย รับเงินสด / หมายเหตุ / ไม่เลือก
+
+## Verification
+
+- Unit: `src/core/finance/promptpay.test.ts` (CRC check value; payload equals the two published go-promptpay vectors exactly; national-id tag; Thai id checksum; mobile; account length per bank), `accounts.test.ts` · Component: `src/__tests__/accounts.test.tsx` · Sandbox: `e2e/finance.spec.ts` accounts test (offline, portrait) · Screenshots 13–16 in `docs/ux/screenshots/overnight/money/`
+
+## Dev notes
+
+- Accounts, the default and each sale's choice are events in the finance log (`account_added/changed`, `account_default_set`, `sale_account_set`) — no sale-type change. Concurrent edits to bank/number/PromptPay conflict (D-30).
+- `/finance/accounts` (settings → บัญชีรับเงิน): add/edit/delete (restorable); default sorts first with a ✓ badge; deleting the default asks first and leaves none. Settlement gets a "รับยอดโอนเข้า" card (accounts · cash · note · none) whose amount = owner share + route-3 debt repayments, and "ให้คนรับซื้อยางดูบัญชี" → `/finance/show-account`, large text, PromptPay first, switchable to bank.
+- **Needs owner / lead decision:** drawing the QR image needs a QR renderer and ?B2 keep-awake needs `expo-keep-awake` — both new dependencies, not installed (dependency gate). The payload itself is built and tested; the screen shows a placeholder where the QR goes.
+- Not covered: gating "show the buyer" on the rounding question (?B1) — E05-S02 not built, amount shown unrounded; bank list is the 8 common banks.
