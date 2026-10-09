@@ -7,7 +7,7 @@
  * blocked · failed (+ try again). Closing the Google window is not an error.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { SignInError, type SignInFailure } from '../auth/errors';
@@ -27,14 +27,19 @@ export function LoginScreen({ onSignIn }: { onSignIn: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<SignInFailure | null>(null);
 
+  // Set synchronously: two presses in one frame both see `busy` false.
+  const inFlight = useRef(false);
+
   const signIn = async () => {
-    if (busy) return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setFailure(null);
     try {
       await onSignIn();
     } catch (err) {
       setFailure(err instanceof SignInError ? err.reason : 'failed');
+      inFlight.current = false;
       setBusy(false);
     }
   };

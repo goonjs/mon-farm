@@ -102,6 +102,19 @@ describe('AccountGate — E02-S01 Google login', () => {
     expect(screen.queryByTestId('login-screen')).toBeNull();
   });
 
+  it('two presses in the same frame start one sign-in, not two (review F6)', async () => {
+    const g = google(() => new Promise<User>(() => undefined));
+    await renderGate(new MemoryAccountStore(), g);
+    const button = screen.getByTestId('login-google');
+    // One act: React has not re-rendered `busy` between the two presses.
+    act(() => {
+      fireEvent.press(button);
+      fireEvent.press(button);
+    });
+    await flush();
+    expect(g.calls).toBe(1);
+  });
+
   it('first launch offline: a Thai message that the first sign-in needs the internet (AC3)', async () => {
     await renderGate(new MemoryAccountStore(), google(() => Promise.reject(new SignInError('offline'))));
     fireEvent.press(screen.getByTestId('login-google'));
@@ -213,6 +226,21 @@ describe('AccountGate — E02-S02 farm groups', () => {
     ]);
     expect(screen.getByTestId('app')).toBeTruthy();
     expect(sessionGroupId()).toBe(membership.groupId);
+  });
+
+  it('submitting from the keyboard and tapping create in the same frame makes one group (review F6)', async () => {
+    const accounts = await signedIn();
+    const create = jest.spyOn(accounts, 'createGroup');
+    await renderGate(accounts, google(() => Promise.resolve(somchai)));
+    fireEvent.press(screen.getByTestId('group-create'));
+    fireEvent.changeText(screen.getByTestId('group-name'), 'สวนบ้านนา');
+    act(() => {
+      fireEvent(screen.getByTestId('group-name'), 'submitEditing');
+      fireEvent.press(screen.getByTestId('group-submit'));
+    });
+    await flush();
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(await accounts.memberships()).toHaveLength(1);
   });
 
   it('a blank name is refused with a Thai message and creates nothing', async () => {

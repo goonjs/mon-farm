@@ -10,7 +10,7 @@
  * role choice and no permissions UI: the creator is the owner (ACC-4).
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 import { EmptyGroupNameError } from '../core/group';
@@ -39,8 +39,13 @@ export function GroupStartScreen({
   const text = (size: number, color: string, weight: Weight = t.font.weight.regular) =>
     ({ fontFamily: t.font.family.sans, fontSize: size, color, fontWeight: weight }) as const;
 
+  // Set synchronously: a keyboard submit and a tap in one frame both see
+  // `busy` false, and would create two groups.
+  const inFlight = useRef(false);
+
   const submit = async () => {
-    if (busy) return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setProblem(null);
     try {
@@ -52,6 +57,7 @@ export function GroupStartScreen({
         console.error('Farm group could not be kept on this device.', err);
         setProblem('createFailed');
       }
+      inFlight.current = false;
       setBusy(false);
     }
   };
