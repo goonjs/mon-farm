@@ -61,5 +61,7 @@ export function saleHistory(sales: readonly { id: string; events: readonly SaleE
     deletedCount: rows.length - visible.length,
     totalSatang: visible.reduce((s, r) => s + (r.grossSatang ?? 0), 0),
     totalNetG: visible.reduce((s, r) => s + r.netG, 0),
+    /** Sales with no amount yet — counted, but not in `totalSatang` (review #9). */
+    unpricedCount: visible.filter((r) => r.grossSatang === null).length,
   };
 }

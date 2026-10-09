@@ -21,11 +21,12 @@ describe('sale history (E05-S06)', () => {
     expect(row.baskets).toBeGreaterThan(0);
   });
 
-  it('a sale with no price shows no amount instead of a guessed one', () => {
+  it('a sale with no price shows no amount instead of a guessed one, and is counted apart (review #9)', () => {
     const b = new LogBuilder('s-2');
     b.sys({ t: 'sale_started', farmName: 'ไร่', buyer: 'ล้ง', manager: '', workerLead: '', where: 'farm' });
     const events = b.build();
     expect(summarizeSale(events, projectSale(events, 's-2')).grossSatang).toBeNull();
+    expect(saleHistory([{ id: 's-2', events }]).unpricedCount).toBe(1);
   });
 
   it('history hides deleted sales from the list and totals, newest first', () => {
@@ -39,5 +40,6 @@ describe('sale history (E05-S06)', () => {
     expect(rows.deletedCount).toBe(1);
     expect(rows.totalSatang).toBe(29_873_450);
     expect(rows.totalNetG).toBe(11_273_000);
+    expect(rows.unpricedCount).toBe(0);
   });
 });

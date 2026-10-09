@@ -3,8 +3,8 @@
  * sale, AFTER debt deductions, in the worker's favour, the owner's, or not
  * at all. Each worker's adjustment is its own line, and the owner absorbs
  * the opposite, so owner + workers + adjustments still equal the sale to the
- * satang (NFR-3). The choice lives in the finance log, keyed by sale; this
- * device's latest choice is the default for the next sale.
+ * satang (NFR-3). The choice lives in the finance log, keyed by sale; the
+ * group's latest choice is the default for the next sale (D-67).
  */
 
 import { roundCash, type RoundingMode } from './deduct';
@@ -26,9 +26,13 @@ export function roundingFor(events: readonly FinanceEvent[], saleId: string, dev
     const p = own.find((e) => e.id === head)?.payload;
     if (p?.t === 'sale_rounding_set') return { mode: p.mode, asked: true, head };
   }
+  // Remembered for the whole group (D-67): the newest choice from any device.
+  // "Newest" is the UUIDv7 event id — a default to preselect, never a money
+  // decision, and the owner still has to tap it.
+  void deviceId;
   let last: FinanceEvent | null = null;
   for (const e of events) {
-    if (e.payload.t === 'sale_rounding_set' && e.actor.deviceId === deviceId && (!last || e.deviceSeq > last.deviceSeq)) last = e;
+    if (e.payload.t === 'sale_rounding_set' && (!last || e.id > last.id)) last = e;
   }
   const mode = last?.payload.t === 'sale_rounding_set' ? last.payload.mode : 'none';
   return { mode, asked: false, head: null };

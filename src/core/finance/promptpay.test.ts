@@ -30,6 +30,12 @@ describe('PromptPay payload (EMVCo merchant-presented QR)', () => {
     expect(p.slice(-4)).toBe(crc16(p.slice(0, -4)));
   });
 
+  it('review #1: refuses an amount that is not a positive whole number of satang', () => {
+    for (const bad of [-50, 0, Number.NaN, 12.5]) {
+      expect(() => promptPayPayload({ type: 'mobile', id: '0812345678' }, bad)).toThrow(RangeError);
+    }
+  });
+
   it('national id uses sub-tag 02 with the 13 digits', () => {
     const p = promptPayPayload({ type: 'nationalId', id: '1101700207030' }, null);
     expect(p).toContain('0016A00000067701011102131101700207030');

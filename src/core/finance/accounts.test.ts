@@ -42,6 +42,18 @@ describe('projectAccounts', () => {
     expect(s.accounts.find((x) => x.id === 'acc-1')?.deleted).toBe(true);
   });
 
+  it('review #3: a sale not yet recorded is told apart from one that recorded the default', () => {
+    const a = ev('acc-1', { t: 'account_added', fields: BANK });
+    const d = ev('default-account', { t: 'account_default_set', accountId: 'acc-1' });
+    expect(projectAccounts([a, d]).recordedFor('s1')).toBe(false);
+    const c = ev('sale-account-s1', { t: 'sale_account_set', saleId: 's1', choice: { kind: 'account', accountId: 'acc-1' } });
+    const b = ev('acc-2', { t: 'account_added', fields: PP });
+    const d2 = ev('default-account', { t: 'account_default_set', accountId: 'acc-2' }, d.id);
+    const s = projectAccounts([a, d, c, b, d2]);
+    expect(s.recordedFor('s1')).toBe(true);
+    expect(s.choiceFor('s1')).toEqual({ kind: 'account', accountId: 'acc-1' });
+  });
+
   it('a sale records its choice; with none it falls back to the default', () => {
     const a = ev('acc-1', { t: 'account_added', fields: BANK });
     const d = ev('default-account', { t: 'account_default_set', accountId: 'acc-1' });

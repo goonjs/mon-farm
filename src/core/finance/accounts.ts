@@ -36,6 +36,8 @@ export interface AccountsState {
   readonly defaultHead: string | null;
   /** The sale's own choice, else the default account, else null. */
   choiceFor(saleId: string): SaleAccountChoice | null;
+  /** True once the sale has its own recorded choice — until then it only follows today's default (review #3). */
+  recordedFor(saleId: string): boolean;
   saleChoiceHead(saleId: string): string | null;
 }
 
@@ -89,5 +91,6 @@ export function projectAccounts(events: readonly FinanceEvent[]): AccountsState 
       return defaultId ? { kind: 'account', accountId: defaultId } : null;
     },
     saleChoiceHead: (saleId) => sales.get(saleId)?.head ?? null,
+    recordedFor: (saleId) => sales.has(saleId),
   };
 }

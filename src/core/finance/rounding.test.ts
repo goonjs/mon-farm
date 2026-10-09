@@ -18,6 +18,11 @@ describe('rounding choice (E05-S02)', () => {
     expect(roundingFor([a, b], 's1', 'dev-a').mode).toBe('worker');
     expect(roundingFor([], 's1', 'dev-a')).toEqual({ mode: 'none', asked: false, head: null });
   });
+
+  it('review #2: the last choice is remembered for the whole group (D-67), not per device', () => {
+    const a = ev('sale-rounding-s1', { t: 'sale_rounding_set', saleId: 's1', mode: 'owner' }, null, 'dev-a');
+    expect(roundingFor([a], 's2', 'dev-b')).toEqual({ mode: 'owner', asked: false, head: null });
+  });
 });
 
 describe('roundSettlement: share → deduct → round → cash; owner + workers + adjust = sale (NFR-3)', () => {

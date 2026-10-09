@@ -27,6 +27,10 @@ const tlv = (tag: string, value: string) => `${tag}${String(value.length).padSta
 
 /** The string the QR encodes. `amountSatang` null → a static QR the payer types an amount into. */
 export function promptPayPayload(pp: PromptPay, amountSatang: number | null): string {
+  // A QR that charges a negative, zero or fractional amount must never be drawn (review #1).
+  if (amountSatang !== null && (!Number.isSafeInteger(amountSatang) || amountSatang <= 0)) {
+    throw new RangeError(`PromptPay amount must be a positive whole number of satang, got ${amountSatang}`);
+  }
   const target = pp.type === 'mobile' ? tlv('01', `0066${pp.id.replace(/^0/, '')}`) : tlv('02', pp.id);
   const body =
     tlv('00', '01') +
