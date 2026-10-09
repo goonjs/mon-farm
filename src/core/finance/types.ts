@@ -117,6 +117,25 @@ export interface DebtPaymentFields {
 
 export type DebtPaymentPatch = Partial<DebtPaymentFields> & { readonly deleted?: boolean };
 
+// ── Receiving accounts (E05-S07) ────────────────────────────────────────────
+
+export interface AccountFields {
+  /** What the owner calls it, e.g. "บัญชีหลัก". */
+  readonly label: string;
+  readonly bankCode: string | null;
+  readonly accountNo: string;
+  readonly accountName: string;
+  readonly promptPay: { readonly type: 'mobile' | 'nationalId'; readonly id: string } | null;
+}
+
+export type AccountPatch = Partial<AccountFields> & { readonly deleted?: boolean };
+
+/** Where a sale's owner transfer goes — an account, cash, a free note, or nothing recorded (all optional, D-38). */
+export type SaleAccountChoice =
+  | { readonly kind: 'account'; readonly accountId: string }
+  | { readonly kind: 'cash' }
+  | { readonly kind: 'note'; readonly note: string };
+
 export type FinancePayload =
   | { readonly t: 'expense_created'; readonly fields: ExpenseFields }
   | { readonly t: 'expense_changed'; readonly patch: ExpensePatch; readonly alsoBasedOn?: readonly EventId[] }
@@ -129,7 +148,13 @@ export type FinancePayload =
   | { readonly t: 'debt_payment_recorded'; readonly fields: DebtPaymentFields }
   | { readonly t: 'debt_payment_changed'; readonly patch: DebtPaymentPatch; readonly alsoBasedOn?: readonly EventId[] }
   /** One plan per worker (targetId `plan-<workerId>`); null cancels it. Instalment = per sale (D-59). */
-  | { readonly t: 'debt_plan_set'; readonly worker: Payer; readonly perSaleSatang: number | null };
+  | { readonly t: 'debt_plan_set'; readonly worker: Payer; readonly perSaleSatang: number | null }
+  | { readonly t: 'account_added'; readonly fields: AccountFields }
+  | { readonly t: 'account_changed'; readonly patch: AccountPatch; readonly alsoBasedOn?: readonly EventId[] }
+  /** targetId `default-account`; null = no default. */
+  | { readonly t: 'account_default_set'; readonly accountId: string | null }
+  /** targetId `sale-account-<saleId>`; null clears the choice. */
+  | { readonly t: 'sale_account_set'; readonly saleId: string; readonly choice: SaleAccountChoice | null };
 
 export interface FinanceEvent {
   readonly id: EventId;
