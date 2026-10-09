@@ -116,7 +116,11 @@ export function GroupStartScreen({
         <TextInput
           testID="group-name"
           value={name}
-          onChangeText={setName}
+          onChangeText={(next) => {
+            setName(next);
+            // Once the name is valid the "name required" message is stale.
+            if (problem === 'nameRequired' && next.trim()) setProblem(null);
+          }}
           placeholder={msg('group.nameHint')}
           placeholderTextColor={t.color.inkFaint}
           accessibilityLabel={msg('group.nameLabel')}

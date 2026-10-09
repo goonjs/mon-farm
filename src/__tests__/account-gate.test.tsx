@@ -252,6 +252,13 @@ describe('AccountGate — E02-S02 farm groups', () => {
     await flush();
     expect(screen.getByText('ใส่ชื่อกลุ่มฟาร์ม')).toBeTruthy();
     expect(await accounts.memberships()).toEqual([]);
+
+    // Still blank: the message stays.
+    fireEvent.changeText(screen.getByTestId('group-name'), '    ');
+    expect(screen.getByText('ใส่ชื่อกลุ่มฟาร์ม')).toBeTruthy();
+    // It goes as soon as the name is valid, not on the next submit (review F8).
+    fireEvent.changeText(screen.getByTestId('group-name'), 'ส');
+    expect(screen.queryByText('ใส่ชื่อกลุ่มฟาร์ม')).toBeNull();
   });
 
   it('back from the form returns to the start choices', async () => {

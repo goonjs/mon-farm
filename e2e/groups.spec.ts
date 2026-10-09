@@ -29,6 +29,8 @@ test('create a farm group, then reopen offline straight into it', async ({ page,
   // Created with no network at all: the id is minted on the device.
   await context.setOffline(true);
   await page.getByTestId('group-name').fill('สวนบ้านนา');
+  // A valid name clears the earlier message at once (review F8).
+  await expect(page.getByTestId('group-problem')).toHaveCount(0);
   await page.screenshot({ path: `${SHOTS}/s02-create-group.png` });
   await page.getByTestId('group-submit').click();
   await expect(page.getByTestId('empty-state')).toBeVisible();
