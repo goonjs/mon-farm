@@ -76,4 +76,24 @@ describe('MasterStore — people and buyers as events (E03-S01)', () => {
     for (const e of start('sale-old', b1.id)) await events.append(e);
     expect(await master.latestBuyerId()).toBe(b1.id);
   });
+
+  it('properties: add with optional fields, edit, record area history, delete and restore (E03-S02)', async () => {
+    const f = await master.addProperty({ name: 'สวนจันทเขลม', crop: 'rubber', plantedYearBe: 2554 });
+    await master.recordArea(f.id, 12_000, '2026-01-01');
+    await master.recordArea(f.id, 12_500, '2026-10-01');
+    await master.editProperty(f.id, { name: 'สวนจันทเขลม 2', plantedYearBe: null });
+    const got = (await master.state()).properties[0];
+    expect(got).toMatchObject({ id: f.id, name: 'สวนจันทเขลม 2', plantedYearBe: null, gps: null });
+    expect(got.areaHistory.map((a) => a.centiRai)).toEqual([12_500, 12_000]);
+    await master.remove(f.id);
+    expect((await master.state()).properties[0].deleted).toBe(true);
+    await master.restore(f.id);
+    expect((await master.state()).properties[0].deleted).toBe(false);
+  });
+
+  it('refuses a property with no name, or an area that is not > 0', async () => {
+    await expect(master.addProperty({ name: ' ', crop: 'rubber' })).rejects.toThrow();
+    const f = await master.addProperty({ name: 'ทุเรียน', crop: 'durian' });
+    await expect(master.recordArea(f.id, 0, '2026-10-01')).rejects.toThrow();
+  });
 });

@@ -340,7 +340,48 @@ export type MasterPayload =
       readonly otherRoles?: readonly string[];
     }
   | { readonly t: 'buyer_added'; readonly buyerId: string; readonly name: string }
-  | { readonly t: 'buyer_edited'; readonly buyerId: string; readonly name: string };
+  | { readonly t: 'buyer_edited'; readonly buyerId: string; readonly name: string }
+  /**
+   * A farm property (สวน, E03-S02, MD-1). Planted year and GPS are optional
+   * and absent means Unknown (SYNC-12). Canonical JSON allows integers only,
+   * so GPS is microdegrees.
+   */
+  | {
+      readonly t: 'property_added';
+      readonly propertyId: string;
+      readonly name: string;
+      readonly crop: Crop;
+      readonly plantedYearBe?: number;
+      readonly gps?: Gps;
+    }
+  | {
+      readonly t: 'property_edited';
+      readonly propertyId: string;
+      readonly name?: string;
+      readonly crop?: Crop;
+      readonly plantedYearBe?: number;
+      readonly gps?: Gps;
+      /** Optional fields set back to Unknown — canonical JSON has no null. */
+      readonly cleared?: readonly ('plantedYearBe' | 'gps')[];
+    }
+  /**
+   * One dated area entry: appended, never overwritten (MD-1). `centiRai` is
+   * rai × 100 (integers only); `effective` is an ISO day, `YYYY-MM-DD`.
+   */
+  | {
+      readonly t: 'area_recorded';
+      readonly propertyId: string;
+      readonly entryId: string;
+      readonly centiRai: number;
+      readonly effective: string;
+    };
+
+export type Crop = 'rubber' | 'durian';
+
+export interface Gps {
+  readonly latE6: number;
+  readonly lngE6: number;
+}
 
 export interface MasterEvent extends EventBase {
   readonly kind: 'master';

@@ -1,7 +1,7 @@
 /**
  * ข้อมูลฟาร์ม — the entry to the farm group's master data (E03-S01 AC7,
  * mockup v1.1.0 screen 2). Rows appear as their stories land: people and
- * buyers now; farms, weighing points, accounts and sale settings later.
+ * buyers (S01), farms (S02); weighing points, accounts and sale settings later.
  */
 
 import { Link, useFocusEffect, type Href } from 'expo-router';
@@ -26,10 +26,14 @@ export default function FarmDataScreen() {
 
   const people = state ? filterPeople(state.people, 'all').length : 0;
   const buyers = state ? state.buyers.filter((b) => !b.deleted).length : 0;
+  const properties = state ? state.properties.filter((p) => !p.deleted).length : 0;
 
   return (
     <FarmScreen title={msg('farmData.title')} back={'/' as Href}>
       <Card>
+        <Link href={'/properties' as Href} asChild>
+          <ListRow testID="farm-data-properties" title={msg('farmData.properties')} lines={[msg('farmData.propertiesCount', { n: properties })]} />
+        </Link>
         <Link href={'/people' as Href} asChild>
           <ListRow testID="farm-data-people" title={msg('farmData.people')} lines={[msg('farmData.peopleCount', { n: people })]} />
         </Link>

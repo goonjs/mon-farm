@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MASTER_SCOPE,
+  ageInYears,
+  areaOn,
+  parseGps,
+  parseRai,
+  parseThaiDay,
+  validateProperty,
   defaultBuyer,
   filterPeople,
   formatThaiDate,
@@ -158,5 +164,91 @@ describe('formatThaiDate (D-65 Q1)', () => {
   });
   it('Common era on request', () => {
     expect(formatThaiDate(ts, 'ce')).toBe('1 ต.ค. 2026');
+  });
+});
+
+describe('properties — E03-S02 (MD-1)', () => {
+  const add = { t: 'property_added', propertyId: 'f1', name: 'สวนจันทเขลม', crop: 'rubber' } as const;
+
+  it('creates a property; area, planted year and GPS are optional and read as unknown', () => {
+    const f = projectMaster(log().master(add).build()).properties[0];
+    expect(f).toMatchObject({ id: 'f1', name: 'สวนจันทเขลม', crop: 'rubber', deleted: false });
+    expect(f.plantedYearBe).toBeNull();
+    expect(f.gps).toBeNull();
+    expect(areaOn(f, '2026-10-01')).toBeNull();
+  });
+
+  it('edits only the named fields, and can clear an optional one', () => {
+    const f = projectMaster(
+      log()
+        .master({ ...add, plantedYearBe: 2554, gps: { latE6: 12_500_000, lngE6: 102_100_000 } })
+        .master({ t: 'property_edited', propertyId: 'f1', crop: 'durian', cleared: ['gps'] })
+        .build(),
+    ).properties[0];
+    expect(f).toMatchObject({ name: 'สวนจันทเขลม', crop: 'durian', plantedYearBe: 2554, gps: null });
+  });
+
+  it('area on a date: before / on / after a change; none yet = unknown', () => {
+    const f = projectMaster(
+      log()
+        .master(add)
+        .master({ t: 'area_recorded', propertyId: 'f1', entryId: 'a1', centiRai: 12_000, effective: '2026-01-01' })
+        .master({ t: 'area_recorded', propertyId: 'f1', entryId: 'a2', centiRai: 12_500, effective: '2026-10-01' })
+        .build(),
+    ).properties[0];
+    expect(areaOn(f, '2025-12-31')).toBeNull();
+    expect(areaOn(f, '2026-01-01')).toBe(12_000);
+    expect(areaOn(f, '2026-09-30')).toBe(12_000);
+    expect(areaOn(f, '2026-10-01')).toBe(12_500);
+    expect(areaOn(f, '2027-01-01')).toBe(12_500);
+    expect(f.areaHistory).toHaveLength(2);
+  });
+
+  it('two entries on the same effective date: the one recorded last wins, the other stays in history (D-65 Q8)', () => {
+    const f = projectMaster(
+      log()
+        .master(add)
+        .master({ t: 'area_recorded', propertyId: 'f1', entryId: 'a1', centiRai: 10_000, effective: '2026-10-01' })
+        .master({ t: 'area_recorded', propertyId: 'f1', entryId: 'a2', centiRai: 11_000, effective: '2026-10-01' })
+        .build(),
+    ).properties[0];
+    expect(areaOn(f, '2026-10-01')).toBe(11_000);
+    expect(f.areaHistory.map((a) => a.entryId)).toEqual(['a2', 'a1']);
+  });
+
+  it('a deleted property is listed as deleted and comes back on restore', () => {
+    const b = log().master(add).remove('f1');
+    expect(projectMaster(b.build()).properties[0].deleted).toBe(true);
+    expect(projectMaster(b.restore('f1').build()).properties[0].deleted).toBe(false);
+  });
+
+  it('age from the planted year (พ.ศ.), unknown without one', () => {
+    expect(ageInYears(2554, Date.UTC(2569 - 543, 5, 1))).toBe(15);
+    expect(ageInYears(null, Date.UTC(2026, 5, 1))).toBeNull();
+  });
+});
+
+describe('validateProperty / area input (D-65 Q7)', () => {
+  it('needs a name and a crop; area may be blank but if given must be a number > 0', () => {
+    expect(validateProperty({ name: '', crop: null })).toEqual(['name', 'crop']);
+    expect(parseRai('')).toEqual({ ok: true, centiRai: null });
+    expect(parseRai('76')).toEqual({ ok: true, centiRai: 7600 });
+    expect(parseRai('12.5')).toEqual({ ok: true, centiRai: 1250 });
+    expect(parseRai('0')).toEqual({ ok: false });
+    expect(parseRai('-3')).toEqual({ ok: false });
+    expect(parseRai('abc')).toEqual({ ok: false });
+  });
+
+  it('reads a Thai date d/m/yyyy in พ.ศ. (or ค.ศ.) into an ISO day', () => {
+    expect(parseThaiDay('1/10/2569')).toBe('2026-10-01');
+    expect(parseThaiDay('1/10/2026')).toBe('2026-10-01');
+    expect(parseThaiDay('31/2/2569')).toBeNull();
+    expect(parseThaiDay('x')).toBeNull();
+  });
+
+  it('reads GPS "lat, lng" into microdegrees; blank = none', () => {
+    expect(parseGps('12.6113, 102.1035')).toEqual({ ok: true, gps: { latE6: 12_611_300, lngE6: 102_103_500 } });
+    expect(parseGps('')).toEqual({ ok: true, gps: null });
+    expect(parseGps('200, 1')).toEqual({ ok: false });
   });
 });

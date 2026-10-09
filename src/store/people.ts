@@ -14,8 +14,8 @@
 
 import type { MasterStore } from './master-store';
 
-export type { Buyer, PeopleStore, Person, PersonPatch } from './master-store';
-export { MasterStore, PersonInvalidError } from './master-store';
+export type { Buyer, PeopleStore, Person, PersonPatch, Property, PropertyDraft } from './master-store';
+export { InvalidInputError, MasterStore, PersonInvalidError } from './master-store';
 
 
 /**

@@ -20,9 +20,11 @@ import {
   type MasterState,
   type PeopleFilter,
   type PersonRecord,
+  type PropertyRecord,
+  validateProperty,
 } from '../core/master';
 import { projectSale } from '../core/project';
-import type { BuiltinRole, MasterPayload, PersonId, SaleEvent } from '../core/types';
+import type { BuiltinRole, Crop, Gps, MasterPayload, PersonId, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
 import type { DeviceClock } from './device-clock';
 import { PRE_LOGIN_USER_ID } from './session';
@@ -50,6 +52,17 @@ export interface PeopleStore {
   remove(id: string): Promise<void>;
   restore(id: string): Promise<void>;
 }
+
+export type Property = PropertyRecord;
+
+export interface PropertyDraft {
+  readonly name: string;
+  readonly crop: Crop;
+  readonly plantedYearBe?: number | null;
+  readonly gps?: Gps | null;
+}
+
+export class InvalidInputError extends Error {}
 
 export class PersonInvalidError extends Error {
   constructor(readonly fields: readonly ('name' | 'roles')[]) {
@@ -130,6 +143,49 @@ export class MasterStore implements PeopleStore {
       if (sale.parties && !sale.deleted) return sale.parties.buyerId ?? null;
     }
     return null;
+  }
+
+  async addProperty(draft: PropertyDraft): Promise<Property> {
+    if (validateProperty(draft).length) throw new InvalidInputError('A property needs a name and a crop.');
+    const propertyId = uuidv7();
+    await this.write({
+      t: 'property_added',
+      propertyId,
+      name: draft.name.trim(),
+      crop: draft.crop,
+      ...(draft.plantedYearBe ? { plantedYearBe: draft.plantedYearBe } : {}),
+      ...(draft.gps ? { gps: draft.gps } : {}),
+    });
+    return (await this.state()).properties.find((p) => p.id === propertyId)!;
+  }
+
+  /** `null` sets an optional field back to Unknown; `undefined` leaves it. */
+  async editProperty(id: string, patch: Partial<PropertyDraft>): Promise<void> {
+    const cur = (await this.state()).properties.find((p) => p.id === id);
+    if (!cur) return;
+    const name = patch.name?.trim() ?? cur.name;
+    if (validateProperty({ name, crop: patch.crop ?? cur.crop }).length) {
+      throw new InvalidInputError('A property needs a name and a crop.');
+    }
+    const cleared = [
+      ...(patch.plantedYearBe === null && cur.plantedYearBe !== null ? (['plantedYearBe'] as const) : []),
+      ...(patch.gps === null && cur.gps !== null ? (['gps'] as const) : []),
+    ];
+    await this.write({
+      t: 'property_edited',
+      propertyId: id,
+      ...(name !== cur.name ? { name } : {}),
+      ...(patch.crop && patch.crop !== cur.crop ? { crop: patch.crop } : {}),
+      ...(patch.plantedYearBe && patch.plantedYearBe !== cur.plantedYearBe ? { plantedYearBe: patch.plantedYearBe } : {}),
+      ...(patch.gps && JSON.stringify(patch.gps) !== JSON.stringify(cur.gps) ? { gps: patch.gps } : {}),
+      ...(cleared.length ? { cleared } : {}),
+    });
+  }
+
+  /** Appends a dated area entry; never overwrites an earlier one (MD-1). */
+  async recordArea(propertyId: string, centiRai: number, effective: string): Promise<void> {
+    if (!Number.isInteger(centiRai) || centiRai <= 0) throw new InvalidInputError('Area must be a number above 0.');
+    await this.write({ t: 'area_recorded', propertyId, entryId: uuidv7(), centiRai, effective });
   }
 
   async remove(id: string): Promise<void> {
