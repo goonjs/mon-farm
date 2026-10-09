@@ -75,7 +75,20 @@ export interface PointRecord {
   readonly createdTs: number;
 }
 
+/** One dated change of a point's tapper; `tapperId` null = no tapper from then. */
+export interface AssignmentChange {
+  readonly assignmentId: string;
+  readonly pointId: string;
+  readonly tapperId: PersonId | null;
+  /** ISO day; null = no start date (covers all of the past). */
+  readonly from: string | null;
+  /** Cancelled plan (soft delete). */
+  readonly deleted: boolean;
+}
+
 export interface MasterState {
+  /** In fold order — the tie-breaker for two changes on the same day. */
+  readonly assignments: readonly AssignmentChange[];
   /** Including deleted ones — old records still resolve their names. */
   readonly people: readonly PersonRecord[];
   readonly buyers: readonly BuyerRecord[];
@@ -90,6 +103,7 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
   const buyers = new Map<string, BuyerRecord>();
   const properties = new Map<string, PropertyRecord & { areas: AreaEntry[] }>();
   const points = new Map<string, { id: string; propertyId: string; name: string; createdTs: number }>();
+  const changes: Omit<AssignmentChange, 'deleted'>[] = [];
   const ordered = events.filter((e) => e.kind === 'master').sort(compareEvents);
 
   for (const e of ordered) {
@@ -165,6 +179,12 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
         if (cur) points.set(p.pointId, { ...cur, name: p.name });
         break;
       }
+      case 'tapper_assigned':
+        changes.push({ assignmentId: p.assignmentId, pointId: p.pointId, tapperId: p.tapperId, from: p.from ?? null });
+        break;
+      case 'tapper_unassigned':
+        changes.push({ assignmentId: p.assignmentId, pointId: p.pointId, tapperId: null, from: p.from });
+        break;
     }
   }
 
@@ -177,6 +197,7 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
   const shownNames = new Map<string, number>();
   for (const x of pointList) if (!x.hidden) shownNames.set(nameKey(x.propertyId, x.name), (shownNames.get(nameKey(x.propertyId, x.name)) ?? 0) + 1);
   return {
+    assignments: changes.map((c) => ({ ...c, deleted: gone.has(c.assignmentId) })),
     points: pointList
       .map((x) => ({ ...x, duplicateName: !x.hidden && (shownNames.get(nameKey(x.propertyId, x.name)) ?? 0) > 1 }))
       .sort(byThaiName),
@@ -360,4 +381,70 @@ export function planStarterPoints(state: MasterState, rows: readonly StarterRow[
     seen.add(k);
   }
   return missing || duplicates.size ? { ok: false, missing, duplicates: [...duplicates] } : { ok: true, points };
+}
+
+/**
+ * A point's live changes, earliest first: no start date first, then by day;
+ * on the same day the change later in fold order comes last, so it wins.
+ */
+function liveChanges(state: MasterState, pointId: string): AssignmentChange[] {
+  return state.assignments
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => c.pointId === pointId && !c.deleted)
+    .sort((a, b) => {
+      const fa = a.c.from ?? '';
+      const fb = b.c.from ?? '';
+      return fa === fb ? a.i - b.i : fa < fb ? -1 : 1;
+    })
+    .map(({ c }) => c);
+}
+
+/** The point's tapper on `day`, or null — "ยังไม่มีคนกรีด" (SALE-4). */
+export function tapperOn(state: MasterState, pointId: string, day: string): PersonId | null {
+  let who: PersonId | null = null;
+  for (const c of liveChanges(state, pointId)) if (c.from === null || c.from <= day) who = c.tapperId;
+  return who;
+}
+
+export interface TimelineSegment {
+  readonly assignmentId: string;
+  readonly tapperId: PersonId;
+  readonly from: string | null;
+  /** Inclusive last day; null = still in effect. The day before the next change (D-63). */
+  readonly to: string | null;
+}
+
+/** Who had the point when — vacancies are the gaps between segments. */
+export function pointTimeline(state: MasterState, pointId: string): TimelineSegment[] {
+  const live = liveChanges(state, pointId);
+  // A change superseded on its own start day never took effect.
+  const effective = live.filter((c, i) => live[i + 1]?.from !== c.from);
+  return effective.flatMap((c, i) => {
+    if (c.tapperId === null) return [];
+    const next = effective[i + 1];
+    return [{ assignmentId: c.assignmentId, tapperId: c.tapperId, from: c.from, to: next?.from ? dayBefore(next.from) : null }];
+  });
+}
+
+/** The shown points a person is the tapper of on `day` (D-65). */
+export function pointsOf(state: MasterState, tapperId: PersonId, day: string): PointRecord[] {
+  return activePoints(state).filter((p) => tapperOn(state, p.id, day) === tapperId);
+}
+
+/** The ISO day before `day`. */
+export function dayBefore(day: string): string {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+}
+
+/**
+ * The point's tapper on `day` as a person who can still tap: null when none
+ * is assigned, or the assigned person was deleted or lost the tapper role —
+ * the point then reads "ยังไม่มีคนกรีด" (E03-S01 AC4, D-65). The assignment
+ * itself is untouched, so restoring the person restores the point.
+ */
+export function activeTapperOn(state: MasterState, pointId: string, day: string): PersonRecord | null {
+  const id = tapperOn(state, pointId, day);
+  const person = id ? state.people.find((p) => p.id === id) : undefined;
+  return person && !person.deleted && person.roles.includes('tapper') ? person : null;
 }

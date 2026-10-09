@@ -86,7 +86,15 @@ function touches(e: SaleEvent, id: RecordId): boolean {
       return p.zoneId === id || p.pileId === id || p.deductionId === id || !!p.forcedPiles?.includes(id);
     }
     case 'master': {
-      const p = e.payload as { personId?: string; buyerId?: string; propertyId?: string; pointId?: string };
+      const p = e.payload as {
+        personId?: string;
+        buyerId?: string;
+        propertyId?: string;
+        pointId?: string;
+        assignmentId?: string;
+      };
+      // An assignment names its point and person, but only creates itself.
+      if (p.assignmentId) return p.assignmentId === id;
       // A point names its farm too, but only creates/changes the point.
       if (p.pointId) return p.pointId === id;
       return p.personId === id || p.buyerId === id || p.propertyId === id;

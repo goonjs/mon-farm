@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { MASTER_SCOPE } from '../core/master';
+import { MASTER_SCOPE, tapperOn } from '../core/master';
 import { createDeviceClock } from './device-clock';
 import { DuplicatePointNameError, MasterStore } from './master-store';
 import { MemoryStore } from './memory-store';
@@ -112,7 +112,25 @@ describe('MasterStore — people and buyers as events (E03-S01)', () => {
     const f = await master.addProperty({ name: 'ก', crop: 'rubber' });
     const made = await master.createStarterPoints([{ propertyId: f.id, tapperId: 't1', names: ['จุด 1', 'จุด 2'] }]);
     expect(made.map((m) => [m.name, m.tapperId])).toEqual([['จุด 1', 't1'], ['จุด 2', 't1']]);
+    // E03-S05: each point starts with its tapper, no start date (D-63).
+    const st = await master.state();
+    expect(made.map((m) => tapperOn(st, m.id, '2000-01-01'))).toEqual(['t1', 't1']);
     expect((await master.state()).points).toHaveLength(2);
     await expect(master.createStarterPoints([{ propertyId: f.id, tapperId: 't1', names: ['จุด 1'] }])).rejects.toThrow();
+  });
+
+  it('assign, plan a change, leave without replacement, cancel a plan (E03-S05)', async () => {
+    const f = await master.addProperty({ name: 'ก', crop: 'rubber' });
+    const p = await master.addPoint(f.id, 'จุด 1');
+    await master.assignTapper(p.id, 'red', null);
+    const plan = await master.assignTapper(p.id, 'nat', '2026-12-01');
+    let s = await master.state();
+    expect([tapperOn(s, p.id, '2026-11-30'), tapperOn(s, p.id, '2026-12-01')]).toEqual(['red', 'nat']);
+    await master.remove(plan);
+    s = await master.state();
+    expect(tapperOn(s, p.id, '2026-12-01')).toBe('red');
+    await master.endTapper(p.id, '2027-01-01');
+    s = await master.state();
+    expect(tapperOn(s, p.id, '2027-01-01')).toBeNull();
   });
 });

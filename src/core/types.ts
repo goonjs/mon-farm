@@ -381,7 +381,22 @@ export type MasterPayload =
    * group settings (MD-7).
    */
   | { readonly t: 'point_added'; readonly pointId: string; readonly propertyId: string; readonly name: string }
-  | { readonly t: 'point_renamed'; readonly pointId: string; readonly name: string };
+  | { readonly t: 'point_renamed'; readonly pointId: string; readonly name: string }
+  /**
+   * A point's tapper from `from` (an ISO day; absent = no start, covering all
+   * of the past) until the next change on that point (E03-S05, MD-4, D-63).
+   * Whoever had it before ends the day before — derived, never stored.
+   * Cancelling a planned change is a `delete` naming `assignmentId`.
+   */
+  | {
+      readonly t: 'tapper_assigned';
+      readonly assignmentId: string;
+      readonly pointId: string;
+      readonly tapperId: PersonId;
+      readonly from?: string;
+    }
+  /** No tapper from `from`: someone left with no replacement yet. */
+  | { readonly t: 'tapper_unassigned'; readonly assignmentId: string; readonly pointId: string; readonly from: string };
 
 export type Crop = 'rubber' | 'durian';
 

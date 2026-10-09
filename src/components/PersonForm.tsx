@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { BUILTIN_ROLES, validatePerson } from '../core/master';
+import { BUILTIN_ROLES, pointsOf, todayIso, validatePerson, type PointRecord } from '../core/master';
 import type { BuiltinRole } from '../core/types';
 import { useT } from '../i18n';
 import { peopleStore, type Person } from '../store/people';
@@ -28,9 +28,12 @@ export function PersonForm({ personId, onDone }: { personId: string | null; onDo
   const [otherDraft, setOtherDraft] = useState('');
   const [tried, setTried] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [points, setPoints] = useState<PointRecord[]>([]);
+  const [roleWarning, setRoleWarning] = useState(false);
 
   useEffect(() => {
     if (!personId) return;
+    peopleStore.state().then((s) => setPoints(pointsOf(s, personId, todayIso(Date.now()))));
     peopleStore.get(personId).then((p) => {
       if (!p) return;
       setExisting(p);
@@ -48,9 +51,17 @@ export function PersonForm({ personId, onDone }: { personId: string | null; onDo
     setOtherDraft('');
   };
 
-  const save = async () => {
+  const pointList = points.map((p) => p.name).join(', ');
+  const tapperWarning = existing ? msg('person.pointsWarn', { name: existing.name, n: points.length, points: pointList }) : '';
+
+  const save = async (confirmed = false) => {
     setTried(true);
     if (errors.length) return;
+    // Taking away the tapper role while they still tap points: warn, never block (D-65 Q5).
+    if (!confirmed && existing && points.length > 0 && existing.roles.includes('tapper') && !roles.includes('tapper')) {
+      setRoleWarning(true);
+      return;
+    }
     if (existing) await peopleStore.edit(existing.id, { name, roles, otherRoles });
     else await peopleStore.create(name, roles, otherRoles);
     onDone();
@@ -106,6 +117,24 @@ export function PersonForm({ personId, onDone }: { personId: string | null; onDo
         ) : null}
       </Card>
 
+      {existing && points.length > 0 ? (
+        <Card testID="person-points">
+          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+            {msg('person.points')}
+          </Text>
+          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.ink }}>{pointList}</Text>
+        </Card>
+      ) : null}
+
+      {roleWarning ? (
+        <Card testID="role-warning">
+          <FieldError text={tapperWarning} />
+          <Button testID="role-warning-yes" variant="primary" onPress={() => void save(true)}>
+            {msg('person.roleWarnYes')}
+          </Button>
+        </Card>
+      ) : null}
+
       <Button testID="person-save" variant="primary" onPress={() => void save()}>
         {msg('common.save')}
       </Button>
@@ -116,6 +145,7 @@ export function PersonForm({ personId, onDone }: { personId: string | null; onDo
             <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
               {msg('personForm.deleteTitle', { name: existing.name })}
             </Text>
+            {points.length > 0 ? <FieldError text={tapperWarning} /> : null}
             <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.ink }}>
               {msg('personForm.deleteBody')}
             </Text>

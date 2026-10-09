@@ -56,6 +56,7 @@ describe('PointForm — E03-S03', () => {
       fireEvent.press(screen.getByTestId('point-save'));
     });
     await flush();
+    fireEvent.press(screen.getByTestId('offer-later')); // E03-S05 asks about a tapper first
     expect(onDone).toHaveBeenCalled();
     expect((await shownPoints()).map((p) => p.name).sort()).toEqual(['จุด 1', 'จุด 2']);
   });

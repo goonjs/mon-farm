@@ -216,6 +216,24 @@ export class MasterStore implements PeopleStore {
     await this.write({ t: 'point_renamed', pointId, name: trimmed });
   }
 
+  /**
+   * The point's tapper from `from` (ISO day), or with no start date; the
+   * previous tapper ends the day before (D-63). Returns the change's id —
+   * a planned change is cancelled by `remove(id)` before it starts.
+   */
+  async assignTapper(pointId: string, tapperId: string, from: string | null): Promise<string> {
+    const assignmentId = uuidv7();
+    await this.write({ t: 'tapper_assigned', assignmentId, pointId, tapperId, ...(from ? { from } : {}) });
+    return assignmentId;
+  }
+
+  /** The tapper leaves with no replacement: no tapper from `from`. */
+  async endTapper(pointId: string, from: string): Promise<string> {
+    const assignmentId = uuidv7();
+    await this.write({ t: 'tapper_unassigned', assignmentId, pointId, from });
+    return assignmentId;
+  }
+
   /** The generic wizard (D-73): all points or none; each comes back with its tapper. */
   async createStarterPoints(rows: readonly StarterRow[]): Promise<(Point & { tapperId: string })[]> {
     const plan = planStarterPoints(await this.state(), rows);
@@ -224,6 +242,8 @@ export class MasterStore implements PeopleStore {
     for (const p of plan.points) {
       const pointId = uuidv7();
       await this.write({ t: 'point_added', pointId, propertyId: p.propertyId, name: p.name });
+      // The helper's assignments carry no start date (D-63).
+      await this.write({ t: 'tapper_assigned', assignmentId: uuidv7(), pointId, tapperId: p.tapperId });
       made.push({ pointId, tapperId: p.tapperId });
     }
     const points = (await this.state()).points;

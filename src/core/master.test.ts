@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MASTER_SCOPE,
+  activeTapperOn,
+  dayBefore,
+  pointTimeline,
+  pointsOf,
+  tapperOn,
   activePoints,
   planStarterPoints,
   pointNameTaken,
@@ -339,5 +344,116 @@ describe('planStarterPoints — the generic wizard (D-73)', () => {
         { propertyId: 'f1', tapperId: 't2', names: ['จุด 1'] },
       ]),
     ).toEqual({ ok: false, missing: 0, duplicates: ['จุด 1'] });
+  });
+});
+
+describe('tapper assignments — E03-S05 (MD-4, D-63)', () => {
+  const base = () =>
+    log()
+      .master({ t: 'property_added', propertyId: 'f1', name: 'ก', crop: 'rubber' })
+      .master({ t: 'point_added', pointId: 'p1', propertyId: 'f1', name: 'จุด 1' });
+
+  it('no assignment → no tapper', () => {
+    expect(tapperOn(projectMaster(base().build()), 'p1', '2026-10-01')).toBeNull();
+  });
+
+  it('an assignment with no start date covers all of the past', () => {
+    const s = projectMaster(base().master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' }).build());
+    expect(tapperOn(s, 'p1', '2000-01-01')).toBe('red');
+    expect(tapperOn(s, 'p1', '2030-01-01')).toBe('red');
+  });
+
+  it('a change from 1 Oct: the old tapper ends 30 Sep, inclusive; earlier sales keep the old tapper', () => {
+    const s = projectMaster(
+      base()
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p1', tapperId: 'nat', from: '2026-10-01' })
+        .build(),
+    );
+    expect(tapperOn(s, 'p1', '2026-09-30')).toBe('red');
+    expect(tapperOn(s, 'p1', '2026-10-01')).toBe('nat');
+    expect(pointTimeline(s, 'p1')).toEqual([
+      { assignmentId: 'a1', tapperId: 'red', from: null, to: '2026-09-30' },
+      { assignmentId: 'a2', tapperId: 'nat', from: '2026-10-01', to: null },
+    ]);
+  });
+
+  it('leaving with no replacement: no tapper from the next day', () => {
+    const s = projectMaster(
+      base()
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+        .master({ t: 'tapper_unassigned', assignmentId: 'a2', pointId: 'p1', from: '2026-11-01' })
+        .build(),
+    );
+    expect(tapperOn(s, 'p1', '2026-10-31')).toBe('red');
+    expect(tapperOn(s, 'p1', '2026-11-01')).toBeNull();
+    expect(pointTimeline(s, 'p1')[0]).toMatchObject({ tapperId: 'red', to: '2026-10-31' });
+  });
+
+  it('a planned change can be cancelled (soft delete) and the old tapper simply carries on', () => {
+    const b = base()
+      .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+      .master({ t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p1', tapperId: 'nat', from: '2026-12-01' })
+      .remove('a2');
+    const s = projectMaster(b.build());
+    expect(tapperOn(s, 'p1', '2027-01-01')).toBe('red');
+    expect(pointTimeline(s, 'p1')).toEqual([{ assignmentId: 'a1', tapperId: 'red', from: null, to: null }]);
+  });
+
+  it('a later assignment back-dated before a sale changes who owns that day (retroactive)', () => {
+    const s = projectMaster(base().master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red', from: '2026-09-01' }).build());
+    expect(tapperOn(s, 'p1', '2026-09-15')).toBe('red');
+    expect(tapperOn(s, 'p1', '2026-08-31')).toBeNull();
+  });
+
+  it('two changes on the same start day: the one later in fold order wins', () => {
+    const s = projectMaster(
+      base()
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red', from: '2026-10-01' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p1', tapperId: 'nat', from: '2026-10-01' })
+        .build(),
+    );
+    expect(tapperOn(s, 'p1', '2026-10-01')).toBe('nat');
+  });
+
+  it("a person's points on a day, for the people screen and the delete warning", () => {
+    const s = projectMaster(
+      base()
+        .master({ t: 'point_added', pointId: 'p2', propertyId: 'f1', name: 'จุด 2' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p2', tapperId: 'red' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a3', pointId: 'p2', tapperId: 'nat', from: '2026-10-01' })
+        .build(),
+    );
+    expect(pointsOf(s, 'red', '2026-09-01').map((p) => p.name)).toEqual(['จุด 1', 'จุด 2']);
+    expect(pointsOf(s, 'red', '2026-10-01').map((p) => p.name)).toEqual(['จุด 1']);
+  });
+
+  it('dayBefore handles month and year ends', () => {
+    expect(dayBefore('2026-10-01')).toBe('2026-09-30');
+    expect(dayBefore('2026-01-01')).toBe('2025-12-31');
+    expect(dayBefore('2024-03-01')).toBe('2024-02-29');
+  });
+});
+
+describe('activeTapperOn — the point reads "no tapper" once its tapper is gone (E03-S01 AC4)', () => {
+  const b = () =>
+    log()
+      .master({ t: 'property_added', propertyId: 'f1', name: 'ก', crop: 'rubber' })
+      .master({ t: 'point_added', pointId: 'p1', propertyId: 'f1', name: 'จุด 1' })
+      .master({ t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] })
+      .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' });
+
+  it('is the assigned tapper while they exist and hold the role', () => {
+    expect(activeTapperOn(projectMaster(b().build()), 'p1', '2026-10-01')?.name).toBe('แดง');
+  });
+  it('is none once the person is deleted, and back on restore', () => {
+    const x = b().remove('red');
+    expect(activeTapperOn(projectMaster(x.build()), 'p1', '2026-10-01')).toBeNull();
+    expect(activeTapperOn(projectMaster(x.restore('red').build()), 'p1', '2026-10-01')?.name).toBe('แดง');
+  });
+  it('is none once the tapper role is removed', () => {
+    const x = b().master({ t: 'person_edited', personId: 'red', roles: ['worker'] });
+    expect(activeTapperOn(projectMaster(x.build()), 'p1', '2026-10-01')).toBeNull();
   });
 });
