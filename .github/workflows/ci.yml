@@ -201,6 +201,7 @@ jobs:
           name: screenshots
           path: docs/ux/screenshots/
           if-no-files-found: warn
+          include-hidden-files: true
 
       - name: Upload Playwright report on failure
         if: failure()
