@@ -20,7 +20,7 @@ import { Text, View } from 'react-native';
 import { projectDebts } from '../../core/finance/debts';
 import { deductionCap, needsChange, nettingPayloads, overDeducted, proposeDeduction, workerCash } from '../../core/finance/deduct';
 import { formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../core/finance/money';
-import { FARM_FUNDS, type DebtPaymentMethod, type Payer } from '../../core/finance/types';
+import { FARM_FUNDS, type DebtPaymentMethod, type FinanceEvent, type Payer } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
 import { useSaleCounts } from '../../finance/use-live-sales';
 import { useT } from '../../i18n';
@@ -28,6 +28,7 @@ import { newId } from '../../lib/id';
 import { useTheme } from '../../theme';
 import { Button } from '../chrome';
 import { Chip, ChipRow, Input, Note } from './parts';
+import { useInFlight } from '../../finance/use-in-flight';
 
 type Route = Exclude<DebtPaymentMethod, 'outside' | 'netting'>;
 const ROUTES: readonly Route[] = ['cash-from-share', 'buyer-split', 'transfer-with-owner'];
@@ -53,7 +54,12 @@ export function DebtDeductionCard({ saleId, worker, shareSatang }: { saleId: str
   const [useNet, setUseNet] = useState(false);
   // null = "everything the farm owes" — derived, not frozen at first render, when the log may not have loaded yet.
   const [netText, setNetText] = useState<string | null>(null);
-  const net = useNet ? (netText === null ? owedBackSatang : (parseBahtToSatang(netText) ?? 0)) : 0;
+  // Default: what the farm owes, but never more than the worker owes (review #7).
+  const netDefault = Math.min(owedBackSatang, Math.max(0, balance));
+  const net = useNet ? (netText === null ? netDefault : (parseBahtToSatang(netText) ?? 0)) : 0;
+  const inFlight = useInFlight();
+  const saving = inFlight.busy;
+  const [failed, setFailed] = useState(false);
   // Room left in this sale's share: netting already recorded here paid in what it took, so only
   // plain deductions use the share up. The new deduction's netting part widens the cap (D-67).
   const roomSatang = shareSatang - deductedHere;
@@ -71,33 +77,49 @@ export function DebtDeductionCard({ saleId, worker, shareSatang }: { saleId: str
 
   const save = async () => {
     if (!amountOk || !netOk) return;
+    setFailed(false);
     const date = todayIso();
-    if (useNet && net > 0) {
-      const plan = nettingPayloads({ worker, farm, owed: owedBack, amountSatang: net, saleId, date });
-      if (!plan.ok) return;
-      await fin.write(newId('rp-'), null, plan.repayment);
-      await fin.write(newId('dpay-'), null, plan.debtPayment);
+    let repayment: FinanceEvent | null = null;
+    try {
+      if (useNet && net > 0) {
+        const repaymentId = newId('rp-');
+        const plan = nettingPayloads({ worker, farm, owed: owedBack, amountSatang: net, saleId, date, repaymentId });
+        if (!plan.ok) throw new Error('netting above what the farm owes');
+        repayment = await fin.write(repaymentId, null, plan.repayment);
+        await fin.write(newId('dpay-'), null, plan.debtPayment);
+        repayment = null;
+      }
+      const rest = amount - net;
+      if (rest > 0) {
+        await fin.write(newId('dpay-'), null, {
+          t: 'debt_payment_recorded',
+          fields: { worker, creditor: farm, amountSatang: rest, date, note: '', method: route, saleId },
+        });
+      }
+      setEditing(false);
+      setAmountText(null);
+      setUseNet(false);
+    } catch (err) {
+      console.error('Deduction could not be stored.', err);
+      // Half a netting is worse than none: undo the repayment if its debt side failed (review #4).
+      if (repayment) {
+        await fin.write(repayment.targetId, repayment.id, { t: 'repayment_changed', patch: { deleted: true } }).catch(() => undefined);
+      }
+      setFailed(true);
     }
-    const rest = amount - net;
-    if (rest > 0) {
-      await fin.write(newId('dpay-'), null, {
-        t: 'debt_payment_recorded',
-        fields: { worker, creditor: farm, amountSatang: rest, date, note: '', method: route, saleId },
-      });
-    }
-    setEditing(false);
-    setAmountText(null);
-    setUseNet(false);
   };
 
-  const voidPayment = (id: string) => {
+  const voidPayment = async (id: string) => {
     const p = account?.payments.find((x) => x.id === id);
     if (!p) return;
-    void fin.write(p.id, p.headEventId, { t: 'debt_payment_changed', patch: { deleted: true } });
-    // Netting voids its farm-side repayment with it (D-67).
-    if (p.method === 'netting') {
-      const r = fin.state?.repayments.find((x) => x.saleId === saleId && x.to.id === worker.id && !x.deleted && x.amountSatang === p.amountSatang);
-      if (r) void fin.write(r.id, r.headEventId, { t: 'repayment_changed', patch: { deleted: true } });
+    try {
+      await fin.write(p.id, p.headEventId, { t: 'debt_payment_changed', patch: { deleted: true } });
+      // Netting voids its farm-side repayment with it, by the id it recorded (D-67).
+      const r = p.repaymentId ? fin.state?.repayments.find((x) => x.id === p.repaymentId && !x.deleted) : undefined;
+      if (r) await fin.write(r.id, r.headEventId, { t: 'repayment_changed', patch: { deleted: true } });
+    } catch (err) {
+      console.error('Void could not be stored.', err);
+      setFailed(true);
     }
   };
 
@@ -117,7 +139,7 @@ export function DebtDeductionCard({ saleId, worker, shareSatang }: { saleId: str
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.xs }}>
             <Text style={{ flex: 1, fontFamily: t.font.family.mono, fontSize: t.font.size.small, color: t.color.ink }}>{`−${formatSatang(p.amountSatang)}`}</Text>
-            <Button testID={`deduct-void-${p.id}`} variant="destructive" onPress={() => voidPayment(p.id)}>{msg('deduct.void')}</Button>
+            <Button testID={`deduct-void-${p.id}`} variant="destructive" onPress={() => void inFlight.run(() => voidPayment(p.id))}>{msg('deduct.void')}</Button>
           </View>
         </View>
       ))}
@@ -156,7 +178,7 @@ export function DebtDeductionCard({ saleId, worker, shareSatang }: { saleId: str
               {useNet ? (
                 <>
                   <Note>{msg('deduct.netAmount', { max: formatSatang(owedBackSatang) })}</Note>
-                  <Input testID={`deduct-net-amount-${worker.id}`} numeric value={netText ?? satangToInput(owedBackSatang)} onChangeText={setNetText} accessibilityLabel={msg('deduct.netUse')} />
+                  <Input testID={`deduct-net-amount-${worker.id}`} numeric value={netText ?? satangToInput(netDefault)} onChangeText={setNetText} accessibilityLabel={msg('deduct.netUse')} />
                 </>
               ) : null}
             </View>
@@ -178,8 +200,10 @@ export function DebtDeductionCard({ saleId, worker, shareSatang }: { saleId: str
               </Chip>
             ))}
           </ChipRow>
+          {useNet && net > amount ? <Note tone="reject" testID={`deduct-net-over-${worker.id}`}>{msg('deduct.netOver')}</Note> : null}
+          {failed ? <Note tone="reject" testID={`deduct-failed-${worker.id}`}>{msg('fin.form.saveFailed')}</Note> : null}
           {amountOk ? <Note>{msg('deduct.after', { amount: formatSatang(balance - amount) })}</Note> : null}
-          <Button testID={`deduct-save-${worker.id}`} variant="primary" disabled={!amountOk || !netOk} onPress={() => void save()}>
+          <Button testID={`deduct-save-${worker.id}`} variant="primary" disabled={!amountOk || !netOk || saving} onPress={() => void inFlight.run(save)}>
             {msg('deduct.save')}
           </Button>
         </View>

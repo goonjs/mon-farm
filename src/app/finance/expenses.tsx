@@ -20,6 +20,7 @@ import { FARM_FUNDS, type Payer, type Stage } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
+import { useInFlight } from '../../finance/use-in-flight';
 
 const STAGES: readonly Stage[] = ['actual', 'committed', 'planned'];
 
@@ -69,12 +70,18 @@ export default function ExpensesScreen() {
   const chosenSatang = chosen.reduce((s, x) => s + (x.amountSatang ?? 0), 0);
   const chosenOwed = chosen.reduce((s, x) => s + Math.max(0, reimb.get(x.id)?.remainingSatang ?? 0), 0);
 
+  const inFlight = useInFlight();
+  const saving = inFlight.busy;
   const saveBulkPayer = async () => {
-    for (const x of chosen) {
-      await fin.write(x.id, x.headEventId, { t: 'expense_changed', patch: { payer: bulkPayer } });
+    try {
+      for (const x of chosen) {
+        await fin.write(x.id, x.headEventId, { t: 'expense_changed', patch: { payer: bulkPayer } });
+      }
+      setSelected(new Set());
+      setBulkPayer(null);
+    } catch (err) {
+      console.error('Payer could not be stored.', err);
     }
-    setSelected(new Set());
-    setBulkPayer(null);
   };
 
   return (
@@ -183,7 +190,7 @@ export default function ExpensesScreen() {
           {bulkPayer && bulkPayer.id !== FARM_FUNDS ? (
             <Note tone="warn" testID="bulk-owed">{msg('fin.bulk.owedPreview', { name: bulkPayer.name, amount: formatSatang(chosenSatang) })}</Note>
           ) : null}
-          <Button testID="bulk-payer-save" variant="primary" disabled={!bulkPayer} onPress={() => void saveBulkPayer()}>
+          <Button testID="bulk-payer-save" variant="primary" disabled={!bulkPayer || saving} onPress={() => void inFlight.run(saveBulkPayer)}>
             {msg('fin.bulk.payerSave')}
           </Button>
         </View>

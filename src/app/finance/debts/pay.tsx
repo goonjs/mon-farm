@@ -21,6 +21,7 @@ import { useSaleCounts } from '../../../finance/use-live-sales';
 import { useT } from '../../../i18n';
 import { newId } from '../../../lib/id';
 import { useTheme } from '../../../theme';
+import { useInFlight } from '../../../finance/use-in-flight';
 
 export default function DebtPaymentScreen() {
   const { workerId, name } = useLocalSearchParams<{ workerId: string; name: string }>();
@@ -41,6 +42,9 @@ export default function DebtPaymentScreen() {
   const [date, setDate] = useState(todayIso());
   const [note, setNote] = useState('');
   const [confirmOver, setConfirmOver] = useState(false);
+  const inFlight = useInFlight();
+  const saving = inFlight.busy;
+  const [failed, setFailed] = useState(false);
 
   const chosen = options.find((o) => o.creditor.id === creditorId) ?? options[0];
   const satang = parseBahtToSatang(amount) ?? 0;
@@ -53,16 +57,23 @@ export default function DebtPaymentScreen() {
       setConfirmOver(true);
       return;
     }
-    await fin.write(newId('dpay-'), null, {
-      t: 'debt_payment_recorded',
-      fields: { worker, creditor: chosen.creditor, amountSatang: satang, date, note: note.trim(), method: 'outside', saleId: null },
-    });
-    router.back();
+    try {
+      await fin.write(newId('dpay-'), null, {
+        t: 'debt_payment_recorded',
+        fields: { worker, creditor: chosen.creditor, amountSatang: satang, date, note: note.trim(), method: 'outside', saleId: null },
+      });
+      router.back();
+    } catch (err) {
+      console.error('Payment could not be stored.', err);
+      setFailed(true);
+    }
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <TopBar crumb={msg('debt.pay.title', { name: worker.name })} right={<Button testID="debt-pay-back" onPress={() => router.back()}>{msg('common.back')}</Button>} />
+      {/* Until the log has loaded the balance is unknown, not zero (review #8). */}
+      {fin.events === null ? null : (
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.lg }}>
         <View style={{ gap: t.space.xs }}>
           <Label>{msg('debt.pay.which')}</Label>
@@ -94,15 +105,17 @@ export default function DebtPaymentScreen() {
             <Note tone="warn">{msg('debt.pay.over', { amount: formatSatang(chosen.balance) })}</Note>
             <View style={{ flexDirection: 'row', gap: t.space.sm }}>
               <Button testID="debt-pay-fix" onPress={() => setConfirmOver(false)}>{msg('debt.pay.fix')}</Button>
-              <Button testID="debt-pay-anyway" variant="primary" onPress={() => void save(true)}>{msg('debt.pay.anyway')}</Button>
+              <Button testID="debt-pay-anyway" variant="primary" disabled={saving} onPress={() => void inFlight.run(() => save(true))}>{msg('debt.pay.anyway')}</Button>
             </View>
           </View>
         ) : (
-          <Button testID="debt-pay-save" variant="primary" disabled={satang <= 0} onPress={() => void save(false)}>
+          <Button testID="debt-pay-save" variant="primary" disabled={satang <= 0 || saving} onPress={() => void inFlight.run(() => save(false))}>
             {msg('fin.form.save')}
           </Button>
         )}
+        {failed ? <Note tone="reject">{msg('fin.form.saveFailed')}</Note> : null}
       </ScrollView>
+      )}
     </View>
   );
 }

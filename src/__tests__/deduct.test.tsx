@@ -97,6 +97,33 @@ describe('deduct at settlement (E06-S04)', () => {
     expect(screen.getByTestId('deduct-cash-p-nat').props.children).toBe('0.00');
   });
 
+  it('review #4: voiding a netting line voids its linked repayment by id', async () => {
+    wrap(<DebtDeductionCard saleId="sale-1" worker={NAT} shareSatang={86000} />);
+    await flush();
+    const before = projectDebts(await mockFinance.load()).get('p-nat')!;
+    const netting = before.payments.find((p) => p.method === 'netting' && !p.deleted)!;
+    expect(netting.repaymentId).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId(`deduct-void-${netting.id}`)));
+    await flush();
+    const s = projectFinance(await mockFinance.load());
+    expect(s.repayments.find((r) => r.id === netting.repaymentId)?.deleted).toBe(true);
+    expect(s.reimbursements.find((r) => r.expenseId === 'x-nat')?.remainingSatang).toBe(64000);
+  });
+
+  it('review #3: a double tap records one deduction, not two', async () => {
+    wrap(<DebtDeductionCard saleId="sale-2" worker={DAENG} shareSatang={286000} />);
+    await flush();
+    fireEvent.press(screen.getByTestId('deduct-open-p-daeng'));
+    fireEvent.changeText(screen.getByTestId('deduct-amount-p-daeng'), '100');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('deduct-save-p-daeng'));
+      fireEvent.press(screen.getByTestId('deduct-save-p-daeng'));
+    });
+    await flush();
+    const a = projectDebts(await mockFinance.load()).get('p-daeng')!;
+    expect(a.payments.filter((p) => p.saleId === 'sale-2')).toHaveLength(1);
+  });
+
   it('after the share shrinks below what was deducted → flagged (D-61)', async () => {
     wrap(<DebtDeductionCard saleId="sale-1" worker={DAENG} shareSatang={30000} />);
     await flush();

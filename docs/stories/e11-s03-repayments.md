@@ -62,4 +62,6 @@ Status: In Progress (เจ้าของตกลง AC 2026-10-03) — implem
 
 ## Code review
 
+- Independent review (separate agent, 2026-10-09) on `f7b1373..804696d`: 4 major + 5 minor findings. Fixed: conflict detection now compares each guarded field's branch tips (not only direct siblings) and shows edits made while a conflict is open (#1, #2, confirmed by tests); one money write at a time per form via a ref guard (#3, double-tap test); netting's repayment and debt payment linked by id, compensated if the second write fails, voided together (#4); owner-share expense amount/date read-only in the expense form, conflict resolution uses projected heads (#5); fertilizer→other deletes the owner-share expense (#6); netting default capped at the balance with a message (#7); payment form waits for the log and reports save errors (#8); 0% fertilizer allowed (#9); new card capped by what is left after old S29 deductions. Open: `useSaleCounts` treats sales as live until loaded (brief window); D-72 piles page, rounding UI, D-61 blocking — listed under Dev notes.
+
 ## QA notes

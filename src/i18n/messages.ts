@@ -413,6 +413,7 @@ const th = {
   'fin.form.restore': 'กู้คืน',
   'fin.form.deleted': 'รายการนี้ถูกลบแล้ว (กู้คืนได้)',
   'fin.form.history': 'ประวัติวงจร',
+  'fin.form.ownerShareLocked': 'ส่วนเจ้าของสวนของหนี้ค่าปุ๋ย — ยอด/วันที่แก้ที่บัญชีหนี้',
   'fin.form.err.amount-required': 'ใส่จำนวนเงินก่อน (วางแผนเท่านั้นที่ใส่ "ไม่ทราบ" ได้)',
   'fin.form.err.amount-invalid': 'จำนวนเงินไม่ถูกต้อง',
   'fin.form.err.date-required': 'ใส่วันที่เป็น ปปปป-ดด-วว',
@@ -534,6 +535,7 @@ const th = {
   'deduct.transfer': 'โอนเข้าบัญชีเจ้าของเพิ่ม {amount}',
   'deduct.overFlag': 'หักเกินส่วนแบ่ง — แก้ยอดหักก่อนปิด/จ่าย',
   'deduct.after': 'ยอดค้างหลังการขายนี้ {amount}',
+  'deduct.netOver': 'ยอดหักกลบต้องไม่เกินยอดหักหนี้ทั้งหมด',
 } as const;
 
 /**
@@ -886,6 +888,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'fin.form.restore': 'restore',
   'fin.form.deleted': 'this expense is deleted (restorable)',
   'fin.form.history': 'stage history',
+  'fin.form.ownerShareLocked': 'owner share of a fertilizer debt; amount/date change on the debt',
   'fin.form.err.amount-required': 'enter an amount (only planned may be "unknown")',
   'fin.form.err.amount-invalid': 'amount is not valid',
   'fin.form.err.date-required': 'enter the date as YYYY-MM-DD',
@@ -1005,6 +1008,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'deduct.transfer': 'adds {amount} to the owner transfer',
   'deduct.overFlag': 'deducted more than the share — fix before closing/paying',
   'deduct.after': 'balance after this sale {amount}',
+  'deduct.netOver': 'the netted part cannot exceed the total deduction',
 };
 
 export const messages = { th, en } as const;

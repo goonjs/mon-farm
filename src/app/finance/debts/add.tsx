@@ -23,6 +23,7 @@ import { useFinance } from '../../../finance/use-finance';
 import { useT } from '../../../i18n';
 import { newId } from '../../../lib/id';
 import { useTheme } from '../../../theme';
+import { useInFlight } from '../../../finance/use-in-flight';
 
 const KINDS: readonly DebtKind[] = ['loan', 'fertilizer', 'other'];
 
@@ -43,13 +44,15 @@ export default function AddDebtScreen() {
   const [carried, setCarried] = useState(false);
   const [tried, setTried] = useState(false);
   const [failed, setFailed] = useState(false);
+  const inFlight = useInFlight();
+  const saving = inFlight.busy;
 
   const entered = parseBahtToSatang(amount) ?? 0;
   const pctNum = /^\d{1,3}$/.test(pct.trim()) ? Number(pct.trim()) : NaN;
   const pctOk = Number.isInteger(pctNum) && pctNum >= 0 && pctNum <= 100;
   const split = kind === 'fertilizer' && pctOk ? fertilizerSplit(entered, pctNum) : null;
   const debtSatang = kind === 'fertilizer' ? (split?.workerSatang ?? 0) : entered;
-  const problems = checkDebt({ kind, amountSatang: debtSatang, date, note });
+  const problems = checkDebt({ kind, amountSatang: debtSatang, date, note, fertilizerTotalSatang: kind === 'fertilizer' ? entered : undefined });
   const ok = problems.length === 0 && (kind !== 'fertilizer' || pctOk) && (kind !== 'loan' || !!lender);
 
   const save = async () => {
@@ -145,7 +148,7 @@ export default function AddDebtScreen() {
         </ChipRow>
 
         {failed ? <Note tone="reject">{msg('fin.form.saveFailed')}</Note> : null}
-        <Button testID="debt-save" variant="primary" onPress={() => void save()}>
+        <Button testID="debt-save" variant="primary" disabled={saving} onPress={() => void inFlight.run(save)}>
           {msg('fin.form.save')}
         </Button>
       </ScrollView>

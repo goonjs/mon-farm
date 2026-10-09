@@ -257,8 +257,8 @@ export default function SettlementScreen() {
                 return (
                   <View key={w.personId} style={{ marginBottom: t.space.sm }}>
                     <WorkerPayoutCard worker={w} onVoidDeduction={voidDeduction} zoneNames={zoneNames} />
-                    {/* E06-S04: debt from the worker's ledger, deducted at this sale. */}
-                    <DebtDeductionCard saleId={state.id} worker={{ id: w.personId, name: w.workerName }} shareSatang={w.workerSatang} />
+                    {/* E06-S04: debt from the worker's ledger, deducted at this sale. Capped by what is left after any old S29 deduction, so the two cannot take the same money twice. */}
+                    <DebtDeductionCard saleId={state.id} worker={{ id: w.personId, name: w.workerName }} shareSatang={Math.max(0, w.payoutSatang)} />
                   </View>
                 );
               })

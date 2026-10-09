@@ -18,13 +18,14 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { Button, TopBar } from '../../../components/chrome';
 import { Chip, ChipRow, Input, Label, Note, PayerPicker } from '../../../components/finance/parts';
-import { checkExpense, defaultPayer, headsOf, type Expense } from '../../../core/finance/ledger';
+import { checkExpense, defaultPayer, OWNER_SHARE_SUFFIX, type Expense } from '../../../core/finance/ledger';
 import { formatDate, formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../../core/finance/money';
 import { FARM_FUNDS, type ExpenseFields, type ExpensePatch, type Payer, type Stage } from '../../../core/finance/types';
 import { useFinance } from '../../../finance/use-finance';
 import { useT } from '../../../i18n';
 import { newId } from '../../../lib/id';
 import { useTheme } from '../../../theme';
+import { useInFlight } from '../../../finance/use-in-flight';
 
 const STAGES: readonly Stage[] = ['actual', 'committed', 'planned'];
 const LIST = '/finance/expenses' as const;
@@ -84,6 +85,10 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [failed, setFailed] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
+  const inFlight = useInFlight();
+  const saving = inFlight.busy;
+  // The owner share of a fertilizer debt follows the debt: only its payer, item and note are edited here (review #5).
+  const ownerShare = !!existing?.id.endsWith(OWNER_SHARE_SUFFIX);
 
   const unknown = stage === 'planned' && unknownWanted;
   const amountSatang = unknown ? null : parseBahtToSatang(amount);
@@ -130,7 +135,8 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
 
   const pickConflict = async (field: string, value: unknown) => {
     if (!existing) return;
-    const others = headsOf(fin.events ?? [], existing.id).filter((h) => h !== existing.headEventId);
+    // Heads from the projection, which includes synthesised ones the raw log lacks (review #5).
+    const others = existing.heads.filter((h) => h !== existing.headEventId);
     await fin.write(existing.id, existing.headEventId, {
       t: 'expense_changed',
       patch: { [field]: value } as ExpensePatch,
@@ -188,6 +194,10 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
         </View>
       ))}
 
+      {ownerShare ? (
+        <Note testID="owner-share-locked">{`${msg('fin.form.ownerShareLocked')} · ${amountSatang === null ? msg('fin.row.unknown') : formatSatang(amountSatang)} · ${formatDate(date)}`}</Note>
+      ) : (
+      <>
       <View style={{ gap: t.space.xs }}>
         <Label hint={msg('fin.form.amountHint')}>{msg('fin.form.amount')}</Label>
         <View style={{ flexDirection: 'row', gap: t.space.xs, alignItems: 'center' }}>
@@ -224,6 +234,8 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
           ))}
         </ChipRow>
       </View>
+      </>
+      )}
 
       <View style={{ gap: t.space.xs }}>
         <Label>{msg('fin.form.category')}</Label>
@@ -268,7 +280,7 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
 
       {failed ? <Note tone="reject" testID="save-failed">{msg('fin.form.saveFailed')}</Note> : null}
 
-      <Button testID="expense-save" variant="primary" onPress={() => void save()}>
+      <Button testID="expense-save" variant="primary" disabled={saving} onPress={() => void inFlight.run(save)}>
         {msg('fin.form.save')}
       </Button>
 
@@ -281,7 +293,7 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
         </View>
       ) : null}
 
-      {existing && !existing.deleted ? (
+      {existing && !existing.deleted && !ownerShare ? (
         confirmDelete ? (
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>
             <Button testID="expense-delete-cancel" onPress={() => setConfirmDelete(false)}>{msg('fin.form.cancel')}</Button>

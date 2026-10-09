@@ -21,6 +21,7 @@ import { useFinance } from '../../finance/use-finance';
 import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useTheme } from '../../theme';
+import { useInFlight } from '../../finance/use-in-flight';
 
 export default function RepayScreen() {
   const { payerId, ids } = useLocalSearchParams<{ payerId: string; ids?: string }>();
@@ -70,6 +71,8 @@ function Form({ debts, fin, categoryOf }: { debts: readonly Reimbursement[]; fin
   const [note, setNote] = useState('');
   const [manual, setManual] = useState<Record<string, string> | null>(null);
   const [failed, setFailed] = useState(false);
+  const inFlight = useInFlight();
+  const saving = inFlight.busy;
 
   const auto = allocateOldestFirst(debts, parseBahtToSatang(amount) ?? 0);
   const manualAllocs: Allocation[] | null = manual
@@ -171,7 +174,7 @@ function Form({ debts, fin, categoryOf }: { debts: readonly Reimbursement[]; fin
       </View>
 
       {failed ? <Note tone="reject">{msg('fin.form.saveFailed')}</Note> : null}
-      <Button testID="repay-save" variant="primary" disabled={!canSave} onPress={() => void save()}>
+      <Button testID="repay-save" variant="primary" disabled={!canSave || saving} onPress={() => void inFlight.run(save)}>
         {`${msg('fin.form.save')} · ${formatSatang(total)}`}
       </Button>
     </ScrollView>
