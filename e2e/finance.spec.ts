@@ -9,9 +9,8 @@ import { expect, test } from '@playwright/test';
 
 const SHOTS = 'docs/ux/screenshots/overnight/money';
 
-test.beforeEach((_fixtures, info) => {
-  test.skip(info.project.name !== 'phone-portrait', 'finance screens are portrait-first');
-});
+// Finance screens are portrait-first: run only where the viewport is portrait.
+test.skip(({ viewport }) => !viewport || viewport.width > viewport.height, 'finance screens are portrait-first');
 
 async function addExpense(
   page: import('@playwright/test').Page,
@@ -97,4 +96,64 @@ test('expenses, money owed back and repayment — offline, end to end', async ({
   await context.setOffline(false);
   await page.reload();
   await expect(page.getByTestId('owed-total')).toContainText('2,840.00');
+});
+
+test('worker debt ledger — fertilizer split, loan from someone else, reconciliation', async ({ page, context }) => {
+  await page.goto('/');
+  await context.setOffline(true);
+  await page.getByTestId('open-expenses').click();
+  await page.getByTestId('open-debts').click();
+  await expect(page.getByTestId('debts-empty')).toBeVisible();
+
+  // Workers come from the shared people list; add แดง and นัด through a payer picker.
+  await page.getByTestId('debts-back').click();
+  for (const name of ['แดง', 'นัด', 'อาจารย์สมหวัง']) {
+    await page.getByTestId('expense-new').click();
+    await page.getByTestId('expense-payer-add').click();
+    await page.getByTestId('expense-payer-name').fill(name);
+    await page.getByTestId('expense-payer-add-save').click();
+    await page.getByTestId('expense-back').click();
+  }
+  await page.getByTestId('open-debts').click();
+  await page.locator('[data-testid^="debt-person-"]', { hasText: 'แดง' }).click();
+
+  // Loan 3,000 from farm funds.
+  await page.getByTestId('debt-add').click();
+  await page.getByTestId('debt-amount').fill('3000');
+  await page.getByTestId('debt-date').fill('2026-09-10');
+  await page.getByTestId('debt-save').click();
+
+  // Fertilizer 4,000 at 50% → debt 2,000, owner-share expense 2,000.
+  await page.getByTestId('debt-add').click();
+  await page.getByTestId('debt-kind-fertilizer').click();
+  await page.getByTestId('debt-amount').fill('4000');
+  await page.getByTestId('debt-date').fill('2026-09-20');
+  await page.getByTestId('debt-note').fill('ปุ๋ยรอบ ก.ย.');
+  await expect(page.getByTestId('debt-owner-share')).toContainText('2,000.00');
+  await page.screenshot({ path: `${SHOTS}/08-debt-add-fertilizer.png`, fullPage: true });
+  await page.getByTestId('debt-save').click();
+
+  await page.getByTestId('debt-plan-edit').click();
+  await page.getByTestId('debt-plan-amount').fill('2000');
+  await page.getByTestId('debt-plan-save').click();
+  await expect(page.getByTestId('debt-balance')).toContainText('5,000.00');
+  await expect(page.getByTestId('debt-summary-balance')).toContainText('5,000.00 ✓');
+  await page.screenshot({ path: `${SHOTS}/09-debt-account.png`, fullPage: true });
+
+  // นัด borrowed 1,000 from อาจารย์สมหวัง: shown, not deductible; pays 500 back himself.
+  await page.getByTestId('debt-back').click();
+  await page.locator('[data-testid^="debt-person-"]', { hasText: 'นัด' }).click();
+  await page.getByTestId('debt-add').click();
+  await page.locator('[data-testid^="debt-lender-"]', { hasText: 'อาจารย์สมหวัง' }).click();
+  await page.getByTestId('debt-amount').fill('1000');
+  await expect(page.getByTestId('debt-lender-note')).toBeVisible();
+  await page.getByTestId('debt-save').click();
+  await expect(page.getByTestId('debt-balance')).toContainText('0.00');
+  await page.getByTestId('debt-pay').click();
+  await page.locator('[data-testid^="debt-pay-to-"]', { hasText: 'อาจารย์สมหวัง' }).click();
+  await page.getByTestId('debt-pay-amount').fill('500');
+  await page.screenshot({ path: `${SHOTS}/10-debt-pay-other.png`, fullPage: true });
+  await page.getByTestId('debt-pay-save').click();
+  await expect(page.locator('[data-testid^="debt-other-"]')).toContainText('500.00');
+  await page.screenshot({ path: `${SHOTS}/11-debt-account-other-lender.png`, fullPage: true });
 });
