@@ -77,6 +77,13 @@ describe('AccountGate — E02-S01 Google login', () => {
     expect(await accounts.user()).toEqual(somchai);
     expect(screen.getByTestId('app')).toBeTruthy();
     expect(sessionUserId()).toBe('uid-somchai');
+
+    // An event actually written now carries them as its writer (review F2).
+    const [membership] = await accounts.memberships();
+    await setDeleted('sale-after-login', true);
+    const [event] = await mockStore.load('sale-after-login');
+    expect(event.actor.userId).toBe('uid-somchai');
+    expect(event.groupId).toBe(membership.groupId);
   });
 
   it('while signing in, the button says so and cannot be pressed again', async () => {

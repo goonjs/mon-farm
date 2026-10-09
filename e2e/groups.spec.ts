@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import type { CreateGroupOp, Membership } from '../src/core/group';
+import type { SaleEvent } from '../src/core/types';
 import { BASE_URL, readStore, signedInNoGroup } from './session';
 
 /**
@@ -55,7 +56,7 @@ test('create a farm group, then reopen offline straight into it', async ({ page,
   await page.screenshot({ path: `${SHOTS}/s02-reopen-offline.png` });
 });
 
-test('a sale started in the group records the group id on its events', async ({ page }) => {
+test('a sale started in the group records the group id and the writer on its events', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('group-create').click();
   await page.getByTestId('group-name').fill('สวนบ้านนา');
@@ -67,18 +68,9 @@ test('a sale started in the group records the group id on its events', async ({ 
   // The default split saves on its own (setup.spec.ts) — an event to inspect.
   await expect(page.getByTestId('saved-split')).toContainText('บันทึกแล้ว');
 
-  const groups = await page.evaluate(
-    () =>
-      new Promise<string[]>((resolve, reject) => {
-        const open = indexedDB.open('mon-farm-v1');
-        open.onerror = () => reject(open.error);
-        open.onsuccess = () => {
-          const all = open.result.transaction('events').objectStore('events').getAll();
-          all.onsuccess = () => resolve(all.result.map((r: { event: { groupId: string } }) => r.event.groupId));
-          all.onerror = () => reject(all.error);
-        };
-      }),
-  );
-  expect(groups.length).toBeGreaterThan(0);
-  expect(new Set(groups)).toEqual(new Set([groupId]));
+  const events = (await page.evaluate(readStore<{ event: SaleEvent }>, 'events')).map((r) => r.event);
+  expect(events.length).toBeGreaterThan(0);
+  expect(new Set(events.map((e) => e.groupId))).toEqual(new Set([groupId]));
+  // ...and the signed-in user as its writer (E02-S01 AC6, review F2).
+  expect(new Set(events.map((e) => e.actor.userId))).toEqual(new Set(['e2e-user']));
 });
