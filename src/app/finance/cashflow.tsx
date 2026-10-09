@@ -16,11 +16,12 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { Button, TopBar } from '../../components/chrome';
 import { Input, Label, Note, StageTag, stageFrame } from '../../components/finance/parts';
-import { nextMonth } from '../../core/finance/ledger';
+import { isDerivedExpense, nextMonth, projectFinance } from '../../core/finance/ledger';
 import { formatDate, formatMonth, formatSatang, parseBahtToSatang, todayIso } from '../../core/finance/money';
 import { cashflow, projectPlan, type CashflowRow } from '../../core/finance/plan';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
+import { useSaleCounts } from '../../finance/use-live-sales';
 import { useRubberIncome } from '../../finance/use-rubber-income';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -46,18 +47,24 @@ export default function CashflowScreen() {
   const fin = useFinance();
   const inFlight = useInFlight();
   const rubber = useRubberIncome();
+  const counts = useSaleCounts();
   const plan = useMemo(() => projectPlan(fin.events ?? []), [fin.events]);
   const now = todayIso().slice(0, 7);
+  const toMonth = addMonths(now, 3);
+  // Salary months out to the table's last month, not just next month (review #4).
+  const state = useMemo(() => (fin.events ? projectFinance(fin.events, counts, addMonths(toMonth, -1)) : null), [fin.events, counts, toMonth]);
   const rows = useMemo(
-    () => (fin.state ? cashflow({ state: fin.state, plan, rubber, fromMonth: addMonths(now, -2), toMonth: addMonths(now, 3) }) : []),
-    [fin.state, plan, rubber, now],
+    () => (state ? cashflow({ state, plan, rubber: rubber.income, rubberUnknown: rubber.unknown, fromMonth: addMonths(now, -2), toMonth }) : []),
+    [state, plan, rubber, now, toMonth],
   );
   const [open, setOpen] = useState<string | null>(null);
 
   const ob = useMemo(() => {
-    const live = (fin.state?.expenses ?? []).filter((x) => !x.deleted && x.date.slice(0, 7) >= now);
+    const all = (fin.state?.expenses ?? []).filter((x) => !x.deleted);
+    const live = all.filter((x) => x.date.slice(0, 7) >= now);
     return {
-      committed: live.filter((x) => x.stage === 'committed').reduce((s, x) => s + (x.amountSatang ?? 0), 0),
+      // Every committed item, overdue ones included — an unpaid past salary is still owed (review #7).
+      committed: all.filter((x) => x.stage === 'committed').reduce((s, x) => s + (x.amountSatang ?? 0), 0),
       planned: live.filter((x) => x.stage === 'planned').reduce((s, x) => s + (x.amountSatang ?? 0), 0),
       plannedUnknown: live.filter((x) => x.stage === 'planned' && x.amountSatang === null).length,
       owed: (fin.state?.reimbursements ?? []).reduce((s, r) => s + Math.max(0, r.remainingSatang), 0),
@@ -70,7 +77,7 @@ export default function CashflowScreen() {
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.md }}>
         <Note>{msg('cf.pending')}</Note>
         {rows.map((r) => (
-          <Month key={r.month} r={r} open={open === r.month} onToggle={() => setOpen(open === r.month ? null : r.month)} fin={fin} plan={plan} />
+          <Month key={r.month} r={r} open={open === r.month} onToggle={() => setOpen(open === r.month ? null : r.month)} state={state} plan={plan} />
         ))}
 
         <View testID="cashflow-obligations" style={{ gap: t.space.xxs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.rule }}>
@@ -103,7 +110,7 @@ function Line({ label, value, testID }: { label: string; value: string; testID?:
   );
 }
 
-function Month({ r, open, onToggle, fin, plan }: { r: CashflowRow; open: boolean; onToggle: () => void; fin: ReturnType<typeof useFinance>; plan: ReturnType<typeof projectPlan> }) {
+function Month({ r, open, onToggle, state, plan }: { r: CashflowRow; open: boolean; onToggle: () => void; state: ReturnType<typeof projectFinance> | null; plan: ReturnType<typeof projectPlan> }) {
   const t = useTheme();
   const msg = useT();
   const sign = signed;
@@ -129,14 +136,16 @@ function Month({ r, open, onToggle, fin, plan }: { r: CashflowRow; open: boolean
       ) : null}
       {open
         ? r.sources.map((id) => {
-            const x = fin.state?.expenses.find((e) => e.id === id);
+            const x = state?.expenses.find((e) => e.id === id);
             const inc = plan.incomes.find((i) => i.id === id);
             return (
               <Button
                 key={id}
                 testID={`cf-source-${id}`}
                 onPress={() =>
-                  x
+                  x && isDerivedExpense(id) && id.startsWith('salary-')
+                    ? router.push('/finance/salary')
+                    : x
                     ? router.push({ pathname: '/finance/expense/[id]', params: { id } })
                     : id.startsWith('sale-')
                       ? router.push({ pathname: '/sale/[id]/settlement', params: { id } })
@@ -144,7 +153,7 @@ function Month({ r, open, onToggle, fin, plan }: { r: CashflowRow; open: boolean
                 }
               >
                 {x
-                  ? `${x.item || fin.state?.categories.find((c) => c.id === x.categoryId)?.name || msg('fin.filter.category')} · ${x.amountSatang === null ? msg('fin.row.unknown') : formatSatang(x.amountSatang)}`
+                  ? `${x.item || state?.categories.find((c) => c.id === x.categoryId)?.name || msg('fin.filter.category')} · ${x.amountSatang === null ? msg('fin.row.unknown') : formatSatang(x.amountSatang)}`
                   : inc
                     ? `${msg('inc.received')} · ${formatDate(inc.date)} · ${signed(inc.amountSatang)}`
                     : id.startsWith('sale-')
