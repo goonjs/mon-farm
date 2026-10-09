@@ -154,6 +154,7 @@ export default function SetupScreen() {
 }
 
 function PartiesCard() {
+  const t = useTheme();
   const msg = useT();
   const { state, append } = useSale();
   const p = state.parties;
@@ -217,7 +218,7 @@ function PartiesCard() {
       <LabeledInput testID="farm-name" label={msg('setup.farm')} value={farmName} onChangeText={dirty(setFarmName)} />
       <LabeledInput testID="buyer" label={msg('setup.buyer')} value={buyer} onChangeText={dirty(setBuyer)} />
       {buyers.length > 0 ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.xs }}>
           {buyers.map((b) => (
             <Button key={b.id} testID={`buyer-pick-${b.id}`} variant={b.id === buyerId ? 'primary' : 'ghost'} onPress={() => dirty(setBuyer)(b.name)}>
               {b.name}

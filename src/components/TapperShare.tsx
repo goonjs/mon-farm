@@ -25,6 +25,7 @@ import {
   type MasterState,
 } from '../core/master';
 import { useT } from '../i18n';
+import { ShareTooEarlyError } from '../store/master-store';
 import { peopleStore as master } from '../store/people';
 import { useTheme } from '../theme';
 import { Button } from './chrome';
@@ -43,6 +44,7 @@ export function TapperShare({ tapperId }: { tapperId: string }) {
   const [pct, setPct] = useState('');
   const [from, setFrom] = useState(() => thaiDayInput(todayIso(now)));
   const [tried, setTried] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const reload = useCallback(() => {
     master.state().then(setState);
@@ -60,8 +62,17 @@ export function TapperShare({ tapperId }: { tapperId: string }) {
 
   const save = async () => {
     setTried(true);
-    if (!parsed.ok || !fromDay || tooEarly) return;
-    await master.setShare(tapperId, parsed.tapperPct, fromDay);
+    if (!parsed.ok || !fromDay || tooEarly || busy) return;
+    setBusy(true);
+    try {
+      await master.setShare(tapperId, parsed.tapperPct, fromDay);
+    } catch (err) {
+      // Saved before the latest closed sale had loaded: show it, as if it had.
+      if (err instanceof ShareTooEarlyError) return setLastClosed(err.lastClosedSaleDay);
+      throw err;
+    } finally {
+      setBusy(false);
+    }
     setTried(false);
     setCustom(false);
     setPct('');

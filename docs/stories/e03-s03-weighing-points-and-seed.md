@@ -72,6 +72,14 @@ Status: In Progress (overnight 2026-10-09, branch `feature/e03-farm-data`)
 
 ## Code review
 
+**2026-10-09 — independent review (separate agent, read-only, `docs/checklists/code-review-checklist.md`) of `origin/dev...feature/e03-farm-data` (cac210f..9ffa401)**: ไม่มี blocker; tsc/eslint/Vitest/jest ผ่าน
+- แก้แล้ว (commit "fix(farm): address review findings"): วันเริ่มว่างใช้ได้เฉพาะการมอบหมายแรกของจุด (กันการเขียนทับอดีต) ·
+  แผน "ลาออก ยังไม่มีคนแทน" แสดงและยกเลิกได้ · กันกดซ้ำ (ตัวช่วยตั้งค่าจุด, ฟอร์มสวน, ส่วนแบ่ง) และจับ `ShareTooEarlyError` ·
+  ปีที่ปลูกรับ ค.ศ. แปลงเป็น พ.ศ. และไม่รับปีอนาคต · ไม่เขียน `person_edited` ว่าง · เทสต์ลำดับมาถึงสลับของพื้นที่/การมอบหมาย/ส่วนแบ่งจากสองเครื่อง · nit เล็ก ๆ
+- เลื่อน (มีเหตุผล): เวลากดค้าง/ขนาดตัวอักษร/เสียง ไม่ถูกจำบน native เพราะยังไม่มีที่เก็บค่าของเครื่องบน native (ช่องว่างเดิมของ
+  ค่าเสียง S10) — ต้องเพิ่ม key-value บน native (เช่นแถว `meta` ใน SQLite) เป็นงานแยก · ปุ่มตัวช่วยใช้ `firstPullDone = true` จนมี E01-S09 ·
+  "วันนี้" ของจอคงที่ตั้งแต่เปิดจอ · `ThaiDate` แสดงเดือนไทยแม้ภาษาอังกฤษ · ชื่อผู้ซื้อซ้ำกันใน setup ผูก id รายแรก
+
 ## QA notes
 
 **2026-10-09 (FARM, sandbox)** — `e2e/farm-points.spec.ts`: ออฟไลน์ สร้าง 3 คนกรีด 2 สวน → ตัวช่วย (สวน ก: แดง 2 จุด, นัด 1 จุด;

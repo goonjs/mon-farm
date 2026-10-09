@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MASTER_SCOPE,
+  blankStartAllowed,
+  parsePlantedYear,
+  plannedVacancies,
   saleSettings,
   validDupWindow,
   validHoldMs,
@@ -541,5 +544,63 @@ describe('sale settings — E03-S07 (MD-7, MD-9, SYNC-6)', () => {
     expect(validPairKg(0, 3)).toBe(false);
     expect(validPairKg(55.5, 3)).toBe(false);
     expect(validPairKg(55, 0)).toBe(true);
+  });
+});
+
+describe('review fixes (independent review 2026-10-09)', () => {
+  const base = () =>
+    log()
+      .master({ t: 'property_added', propertyId: 'f1', name: 'ก', crop: 'rubber' })
+      .master({ t: 'point_added', pointId: 'p1', propertyId: 'f1', name: 'จุด 1' });
+
+  it('a blank start date is only for a point with no assignment yet — later changes go forward', () => {
+    expect(blankStartAllowed(projectMaster(base().build()), 'p1')).toBe(true);
+    const s = projectMaster(base().master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' }).build());
+    expect(blankStartAllowed(s, 'p1')).toBe(false);
+  });
+
+  it('a planned vacancy is listed so it can be cancelled before it starts', () => {
+    const s = projectMaster(
+      base()
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+        .master({ t: 'tapper_unassigned', assignmentId: 'a2', pointId: 'p1', from: '2099-01-01' })
+        .build(),
+    );
+    expect(plannedVacancies(s, 'p1', '2026-10-01')).toEqual([{ assignmentId: 'a2', from: '2099-01-01' }]);
+    expect(plannedVacancies(s, 'p1', '2099-01-01')).toEqual([]);
+  });
+
+  it('planted year: พ.ศ. as typed, ค.ศ. converted, a future year refused', () => {
+    const now = Date.UTC(2026, 5, 1);
+    expect(parsePlantedYear('', now)).toEqual({ ok: true, yearBe: null });
+    expect(parsePlantedYear('2554', now)).toEqual({ ok: true, yearBe: 2554 });
+    expect(parsePlantedYear('2011', now)).toEqual({ ok: true, yearBe: 2554 });
+    expect(parsePlantedYear('2570', now)).toEqual({ ok: false });
+    expect(parsePlantedYear('25x4', now)).toEqual({ ok: false });
+  });
+
+  it('area, assignment and share events from two devices fold the same whatever order they arrive in', () => {
+    const b = log();
+    const events = [
+      ...b
+        .master({ t: 'property_added', propertyId: 'f1', name: 'ก', crop: 'rubber' })
+        .master({ t: 'point_added', pointId: 'p1', propertyId: 'f1', name: 'จุด 1' })
+        .master({ t: 'area_recorded', propertyId: 'f1', entryId: 'x1', centiRai: 100, effective: '2026-10-01' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red', from: '2026-10-01' })
+        .master({ t: 'share_set', shareId: 's1', tapperId: 'red', tapperPct: 55, from: '2026-10-01' })
+        .build(),
+    ];
+    const other = events.map((e, i) => ({ ...e, id: `${e.id}-B`, actor: { ...e.actor, deviceId: 'dev-B' }, deviceSeq: i + 1 }));
+    const tieB = [
+      { ...other[2], payload: { t: 'area_recorded', propertyId: 'f1', entryId: 'x2', centiRai: 200, effective: '2026-10-01' } },
+      { ...other[3], payload: { t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p1', tapperId: 'nat', from: '2026-10-01' } },
+      { ...other[4], payload: { t: 'share_set', shareId: 's2', tapperId: 'red', tapperPct: 60, from: '2026-10-01' } },
+    ] as SaleEvent[];
+    const all = [...events, ...tieB];
+    const a = projectMaster(all);
+    const r = projectMaster([...all].reverse());
+    expect(areaOn(r.properties[0], '2026-10-01')).toBe(areaOn(a.properties[0], '2026-10-01'));
+    expect(tapperOn(r, 'p1', '2026-10-01')).toBe(tapperOn(a, 'p1', '2026-10-01'));
+    expect(shareOn(r, 'red', '2026-10-01')).toEqual(shareOn(a, 'red', '2026-10-01'));
   });
 });

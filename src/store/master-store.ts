@@ -13,6 +13,7 @@
 
 import {
   MASTER_SCOPE,
+  blankStartAllowed,
   filterPeople,
   projectMaster,
   validatePerson,
@@ -131,6 +132,8 @@ export class MasterStore implements PeopleStore {
     };
     const invalid = validatePerson(next);
     if (invalid.length) throw new PersonInvalidError(invalid);
+    const changed = next.name !== cur.name || !sameList(next.roles, cur.roles) || !sameList(next.otherRoles, cur.otherRoles);
+    if (!changed) return;
     // Only the fields that changed go in the patch, so a concurrent edit of a
     // different field on another phone can merge (D-30) once E01-S11 lands.
     await this.write({
@@ -233,6 +236,9 @@ export class MasterStore implements PeopleStore {
    * a planned change is cancelled by `remove(id)` before it starts.
    */
   async assignTapper(pointId: string, tapperId: string, from: string | null): Promise<string> {
+    if (!from && !blankStartAllowed(await this.state(), pointId)) {
+      throw new InvalidInputError('A change to an assigned point needs a start day.');
+    }
     const assignmentId = uuidv7();
     await this.write({ t: 'tapper_assigned', assignmentId, pointId, tapperId, ...(from ? { from } : {}) });
     return assignmentId;

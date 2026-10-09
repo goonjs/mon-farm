@@ -18,6 +18,7 @@ import {
   formatGps,
   formatRai,
   parseGps,
+  parsePlantedYear,
   parseRai,
   parseThaiDay,
   thaiDayInput,
@@ -48,6 +49,7 @@ export function PropertyForm({ propertyId, onDone }: { propertyId: string | null
   const [gps, setGps] = useState('');
   const [tried, setTried] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!propertyId) return;
@@ -73,23 +75,30 @@ export function PropertyForm({ propertyId, onDone }: { propertyId: string | null
   const rai = parseRai(area);
   const day = parseThaiDay(areaDate);
   const gpsParsed = parseGps(gps);
-  const year = planted.trim() ? (/^\d{4}$/.test(planted.trim()) ? Number(planted.trim()) : NaN) : null;
+  const plantedParsed = parsePlantedYear(planted, now);
+  const year = plantedParsed.ok ? plantedParsed.yearBe : null;
   const problems: Problem[] = [
     ...validateProperty({ name, crop }),
     ...(!rai.ok ? (['area'] as const) : []),
     ...(rai.ok && rai.centiRai !== null && !day ? (['date'] as const) : []),
-    ...(Number.isNaN(year) ? (['year'] as const) : []),
+    ...(!plantedParsed.ok ? (['year'] as const) : []),
     ...(!gpsParsed.ok ? (['gps'] as const) : []),
   ];
   const show = (p: Problem) => tried && problems.includes(p);
 
   const save = async () => {
     setTried(true);
-    if (problems.length || !crop || !rai.ok || !gpsParsed.ok) return;
-    const fields = { name, crop, plantedYearBe: year, gps: gpsParsed.gps };
-    const id = existing ? existing.id : (await master.addProperty(fields)).id;
-    if (existing) await master.editProperty(id, fields);
-    if (rai.centiRai !== null && day) await master.recordArea(id, rai.centiRai, day);
+    if (problems.length || !crop || !rai.ok || !gpsParsed.ok || busy) return;
+    // One save at a time: a double tap must not create two farms.
+    setBusy(true);
+    try {
+      const fields = { name, crop, plantedYearBe: year, gps: gpsParsed.gps };
+      const id = existing ? existing.id : (await master.addProperty(fields)).id;
+      if (existing) await master.editProperty(id, fields);
+      if (rai.centiRai !== null && day) await master.recordArea(id, rai.centiRai, day);
+    } finally {
+      setBusy(false);
+    }
     onDone();
   };
 

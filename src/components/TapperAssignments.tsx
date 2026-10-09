@@ -13,9 +13,12 @@ import { Text, View } from 'react-native';
 
 import {
   activeTapperOn,
+  blankStartAllowed,
+  dayAfter,
   dayBefore,
   filterPeople,
   parseThaiDay,
+  plannedVacancies,
   pointTimeline,
   todayIso,
   type MasterState,
@@ -40,6 +43,7 @@ export function TapperAssignments({ pointId, startOpen = false }: { pointId: str
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [tried, setTried] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const reload = useCallback(() => {
     master.state().then(setState);
@@ -55,18 +59,23 @@ export function TapperAssignments({ pointId, startOpen = false }: { pointId: str
 
   const fromDay = from.trim() ? parseThaiDay(from) : null;
   const toDay = parseThaiDay(to);
-  const fromBad = from.trim() !== '' && !fromDay;
+  // No start date reaches back over the whole past: only for the first assignment (D-63).
+  const blankOk = blankStartAllowed(state, pointId);
+  const fromBad = from.trim() ? !fromDay : !blankOk;
+  const vacancies = plannedVacancies(state, pointId, today);
   const valid = mode === 'new' ? !!tapperId && !fromBad : !!toDay;
   // Whoever has the point the day the change starts is the one who ends the day before.
   const outgoing = fromDay ? activeTapperOn(state, pointId, fromDay) : null;
 
   const save = async () => {
     setTried(true);
-    if (!valid) return;
-    if (mode === 'new' && tapperId) await master.assignTapper(pointId, tapperId, fromDay);
-    if (mode === 'leave' && toDay) {
-      const [y, m, d] = toDay.split('-').map(Number);
-      await master.endTapper(pointId, new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10));
+    if (!valid || busy) return;
+    setBusy(true);
+    try {
+      if (mode === 'new' && tapperId) await master.assignTapper(pointId, tapperId, fromDay);
+      if (mode === 'leave' && toDay) await master.endTapper(pointId, dayAfter(toDay));
+    } finally {
+      setBusy(false);
     }
     setPlanning(false);
     setTried(false);
@@ -118,6 +127,21 @@ export function TapperAssignments({ pointId, startOpen = false }: { pointId: str
             </View>
           );
         })}
+        {vacancies.map((v) => (
+          <View key={v.assignmentId} testID={`vacancy-${v.assignmentId}`} style={{ gap: 2, paddingVertical: t.space.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+              <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+                {msg('assign.none')}
+              </Text>
+              <Pill tone="warn">{msg('assign.planned')}</Pill>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
+              <Text style={small}>{msg('assign.from')}</Text>
+              <ThaiDate ts={dayTs(v.from)} />
+            </View>
+            <LinkButton testID={`cancel-plan-${v.assignmentId}`} label={msg('assign.cancelPlan')} onPress={() => void cancelPlan(v.assignmentId)} />
+          </View>
+        ))}
       </Card>
 
       {planning ? (
@@ -140,10 +164,10 @@ export function TapperAssignments({ pointId, startOpen = false }: { pointId: str
               {tried && !tapperId ? <FieldError text={msg('assign.pickTapper')} /> : null}
               <TextField
                 testID="plan-from"
-                label={msg('assign.fromLabel')}
+                label={msg(blankOk ? 'assign.fromLabel' : 'assign.fromRequired')}
                 value={from}
                 onChangeText={setFrom}
-                error={tried && fromBad ? msg('assign.badDate') : null}
+                error={tried && fromBad ? msg(from.trim() ? 'assign.badDate' : 'assign.needFrom') : null}
               />
               {outgoing && fromDay && outgoing.id !== tapperId ? (
                 <View testID="plan-preview" style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>

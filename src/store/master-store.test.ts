@@ -158,4 +158,11 @@ describe('MasterStore — people and buyers as events (E03-S01)', () => {
     expect(s).toMatchObject({ zeroCheck: 'skip', dupWindowS: 9 });
     expect(s.pairs.find((p) => p.isDefault)).toMatchObject({ netG: 55_000, basketG: 3_000 });
   });
+
+  it('refuses a blank start once the point has an assignment (review fix)', async () => {
+    const f = await master.addProperty({ name: 'ก', crop: 'rubber' });
+    const p = await master.addPoint(f.id, 'จุด 1');
+    await master.assignTapper(p.id, 'red', null);
+    await expect(master.assignTapper(p.id, 'nat', null)).rejects.toThrow();
+  });
 });

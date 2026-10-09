@@ -110,6 +110,36 @@ describe('Point screen — tapper of the point (E03-S05)', () => {
   });
 });
 
+describe('review fixes — E03-S05', () => {
+  it('once a point has a tapper, a change needs a start day', async () => {
+    const { p, red, nat } = await setup();
+    await mockMaster.assignTapper(p.id, red.id, null);
+    wrap(<PointForm pointId={p.id} propertyId={null} onDone={jest.fn()} />);
+    await flush();
+    fireEvent.press(screen.getByTestId('plan-change'));
+    fireEvent.press(screen.getByTestId(`plan-tapper-${nat.id}`));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('plan-save'));
+    });
+    expect(screen.getByText('ใส่วันเริ่ม — เปลี่ยนคนกรีดมีผลไปข้างหน้า')).toBeTruthy();
+    expect(tapperOn(await mockMaster.state(), p.id, '2000-01-01')).toBe(red.id);
+  });
+
+  it('a planned leave shows and can be cancelled', async () => {
+    const { p, red } = await setup();
+    await mockMaster.assignTapper(p.id, red.id, null);
+    const leave = await mockMaster.endTapper(p.id, '2099-01-01');
+    wrap(<PointForm pointId={p.id} propertyId={null} onDone={jest.fn()} />);
+    await flush();
+    expect(screen.getByTestId(`vacancy-${leave}`)).toHaveTextContent(/ตามแผน/);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId(`cancel-plan-${leave}`));
+    });
+    await flush();
+    expect(tapperOn(await mockMaster.state(), p.id, '2099-06-01')).toBe(red.id);
+  });
+});
+
 describe('People screen side (E03-S01 AC4/AC7, E03-S05)', () => {
   it("shows the tapper's current points, and deleting warns with their names but does not block", async () => {
     const { p, red } = await setup();

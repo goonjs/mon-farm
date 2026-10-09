@@ -528,9 +528,7 @@ export function parseTapperPct(text: string): { ok: true; tapperPct: number } | 
 
 /** The first day a new share may start: the day after the latest closed sale (D-74 F17), or any day. */
 export function earliestShareDay(lastClosedSaleDay: string | null): string | null {
-  if (!lastClosedSaleDay) return null;
-  const [y, m, d] = lastClosedSaleDay.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+  return lastClosedSaleDay ? dayAfter(lastClosedSaleDay) : null;
 }
 
 export function shareFromAllowed(from: string, lastClosedSaleDay: string | null): boolean {
@@ -578,4 +576,40 @@ export function validHoldMs(ms: number): boolean {
 /** A pair in whole kg (whole-kg scale, D-66): net above 0, basket 0 or more. */
 export function validPairKg(netKg: number, basketKg: number): boolean {
   return Number.isInteger(netKg) && netKg > 0 && Number.isInteger(basketKg) && basketKg >= 0;
+}
+
+/**
+ * A change with no start date reaches back over all of the past, so it is
+ * only for a point's first assignment; after that a change needs a day and
+ * goes forward (D-63) — otherwise it would rewrite who tapped before.
+ */
+export function blankStartAllowed(state: MasterState, pointId: string): boolean {
+  return liveChanges(state, pointId).length === 0;
+}
+
+/** "No tapper from X" changes not yet started — listed so they can be cancelled (D-74 F3). */
+export function plannedVacancies(state: MasterState, pointId: string, today: string): { assignmentId: string; from: string }[] {
+  return liveChanges(state, pointId)
+    .filter((c) => c.tapperId === null && c.from !== null && c.from > today)
+    .map((c) => ({ assignmentId: c.assignmentId, from: c.from! }));
+}
+
+/** The ISO day after `day`. */
+export function dayAfter(day: string): string {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+}
+
+/**
+ * Planted year as typed: 4 digits in พ.ศ., or ค.ศ. (below 2400) converted;
+ * a year after this one is refused. Blank = unknown.
+ */
+export function parsePlantedYear(text: string, nowTs: number): { ok: true; yearBe: number | null } | { ok: false } {
+  const t = text.trim();
+  if (!t) return { ok: true, yearBe: null };
+  if (!/^\d{4}$/.test(t)) return { ok: false };
+  const n = Number(t);
+  const yearBe = n < 2400 ? n + 543 : n;
+  const thisYearBe = new Date(nowTs + BANGKOK_OFFSET_MS).getUTCFullYear() + 543;
+  return yearBe <= thisYearBe ? { ok: true, yearBe } : { ok: false };
 }

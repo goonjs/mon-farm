@@ -26,7 +26,7 @@ export interface PeoplePickerProps {
   value: Person | null;
   /** Called with a person on pick, or null when "change" clears the selection. */
   onChange: (person: Person | null) => void;
-  /** Only offer people with this role; a person added here gets it. Defaults to tapper. */
+  /** Only offer people with this role, and give it to a person added here. Without it: everyone is offered, and a new person is a tapper. */
   role?: BuiltinRole;
   testID?: string;
 }
