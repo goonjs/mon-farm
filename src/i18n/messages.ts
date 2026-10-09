@@ -578,6 +578,18 @@ const th = {
   'acct.show.bank': 'บัญชีธนาคาร',
   'acct.show.close': 'ปิด',
   'acct.show.qrPending': 'QR พร้อมเพย์ (รอเพิ่มตัวสร้างภาพ QR)',
+
+  // ── Rounding after deductions (E05-S02) ─────────────────────────────────
+  'round.title': 'ปัดเศษเงินสดคนกรีด',
+  'round.ask': 'มีเศษสตางค์ — เลือกก่อนสรุปเงิน',
+  'round.none.needed': 'ไม่มีเศษสตางค์ ไม่ต้องปัด',
+  'round.worker': 'ปัดให้คนกรีดได้ประโยชน์',
+  'round.owner': 'ปัดให้เจ้าของได้ประโยชน์',
+  'round.keep': 'ไม่ปัด (เก็บสตางค์)',
+  'round.line': '{name} {before} → {after} (ส่วนปรับ {adjust})',
+  'round.owner.line': 'เจ้าของสวน {amount}',
+  'round.check': 'เจ้าของ + คนกรีด + ส่วนปรับ = ยอดการขาย ✓',
+  'round.default': 'ค่าเริ่มต้นจากการขายครั้งก่อน',
 } as const;
 
 /**
@@ -1092,6 +1104,17 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'acct.show.bank': 'bank account',
   'acct.show.close': 'close',
   'acct.show.qrPending': 'PromptPay QR (QR image renderer pending)',
+
+  'round.title': 'rounding the workers\' cash',
+  'round.ask': 'there are satang — choose before settling',
+  'round.none.needed': 'no satang, nothing to round',
+  'round.worker': 'round in the worker\'s favour',
+  'round.owner': 'round in the owner\'s favour',
+  'round.keep': 'do not round (keep satang)',
+  'round.line': '{name} {before} → {after} (adjust {adjust})',
+  'round.owner.line': 'owner {amount}',
+  'round.check': 'owner + workers + adjustments = sale total ✓',
+  'round.default': 'default from the previous sale',
 };
 
 export const messages = { th, en } as const;

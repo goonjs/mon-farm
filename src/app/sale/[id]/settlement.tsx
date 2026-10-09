@@ -19,10 +19,12 @@ import { Link, useRouter } from 'expo-router';
 import { Button, TopBar } from '../../../components/chrome';
 import { DeductionForm, type DeductionFormInput } from '../../../components/DeductionForm';
 import { DebtDeductionCard } from '../../../components/finance/DebtDeductionCard';
+import { RoundingCard } from '../../../components/finance/RoundingCard';
 import { SaleAccountCard } from '../../../components/finance/SaleAccountCard';
+import { useSaleRounding, type SaleRounding } from '../../../finance/use-sale-rounding';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { WorkerPayoutCard } from '../../../components/WorkerPayoutCard';
-import { formatBaht, formatKg, settle, SettlementUnavailable } from '../../../core/settle';
+import { formatBaht, formatKg, settle, SettlementUnavailable, type Settlement } from '../../../core/settle';
 import { newId } from '../../../lib/id';
 import { useSale } from '../../../store/SaleProvider';
 import { useT } from '../../../i18n';
@@ -266,9 +268,7 @@ export default function SettlementScreen() {
             )}
           </View>
 
-          <View style={card(t)}>
-            <SaleAccountCard saleId={state.id} ownerSatang={s.ownerSatang} />
-          </View>
+          <MoneyCards saleId={state.id} settlement={s} />
 
           <View style={card(t)}>
             <CardTitle>{msg('settle.deductionAdd')}</CardTitle>
@@ -394,5 +394,29 @@ function Row({ label, value, bold, colour }: { label: string; value: string; bol
         {value}
       </Text>
     </View>
+  );
+}
+
+/**
+ * Rounding (E05-S02) and where the owner transfer goes (E05-S07), sharing one
+ * rounding state so the transfer amount is the rounded one. A component of
+ * its own because the hook cannot run above the screen's early return.
+ */
+function MoneyCards({ saleId, settlement }: { saleId: string; settlement: Settlement }) {
+  const t = useTheme();
+  const r: SaleRounding = useSaleRounding(
+    saleId,
+    settlement.perWorker.map((w) => ({ id: w.personId, name: w.workerName || w.personId, shareSatang: Math.max(0, w.payoutSatang) })),
+    settlement.ownerSatang,
+  );
+  return (
+    <>
+      <View style={card(t)}>
+        <RoundingCard r={r} />
+      </View>
+      <View style={card(t)}>
+        <SaleAccountCard saleId={saleId} ownerSatang={r.result.ownerSatang} ready={r.ready} />
+      </View>
+    </>
   );
 }

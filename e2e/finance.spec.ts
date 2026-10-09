@@ -222,8 +222,17 @@ test('receiving accounts — add, default, show the buyer (offline)', async ({ p
   await page.goto(`/sale/${saleId}/settlement`);
   await context.setOffline(true);
   await expect(page.getByTestId('sale-account-amount')).toContainText('149,367.25');
+  // ?B1: the buyer view waits for the rounding question (E05-S02).
+  await expect(page.getByTestId('round-ask')).toBeVisible();
+  await expect(page.getByTestId('show-account')).toHaveCount(0);
+  await page.getByTestId('round-owner').click();
+  await expect(page.locator('[data-testid="round-line-person-prayuth"]')).toContainText('100,342.00');
+  await expect(page.getByTestId('round-owner-total')).toContainText('149,367.50');
+  await expect(page.getByTestId('sale-account-amount')).toContainText('149,367.50');
+  await page.getByTestId('rounding').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${SHOTS}/17-rounding.png`, fullPage: true });
   await page.getByTestId('show-account').click();
-  await expect(page.getByTestId('show-amount')).toContainText('149,367.25');
+  await expect(page.getByTestId('show-amount')).toContainText('149,367.50');
   await expect(page.getByTestId('show-pp-id')).toContainText('0812345678');
   await page.screenshot({ path: `${SHOTS}/15-show-account-promptpay.png`, fullPage: true });
   await page.getByTestId('show-bank').click();

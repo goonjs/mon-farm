@@ -5,8 +5,8 @@
  * a free note, or nothing — all optional, recorded against the sale in the
  * finance log. The amount is the owner share plus any debt repayments the
  * buyer transfers with it (D-71 route 3). "Show the buyer" opens the large
- * full-screen view; per ?B1 it should wait for the rounding question
- * (E05-S02, not built yet), so for now it shows the unrounded amount.
+ * full-screen view, available once the rounding question is answered (?B1)
+ * so the amount shown is final.
  */
 
 import { router } from 'expo-router';
@@ -25,7 +25,7 @@ import { useTheme } from '../../theme';
 import { Button } from '../chrome';
 import { Chip, ChipRow, Input, Label, Note } from './parts';
 
-export function SaleAccountCard({ saleId, ownerSatang }: { saleId: string; ownerSatang: number }) {
+export function SaleAccountCard({ saleId, ownerSatang, ready = true }: { saleId: string; ownerSatang: number; ready?: boolean }) {
   const t = useTheme();
   const msg = useT();
   const fin = useFinance();
@@ -81,7 +81,8 @@ export function SaleAccountCard({ saleId, ownerSatang }: { saleId: string; owner
       ) : choice?.kind === 'note' ? (
         <Note>{choice.note}</Note>
       ) : null}
-      {chosenAccount ? (
+      {/* ?B1: only once the rounding question is answered, so the amount is final. */}
+      {chosenAccount && ready ? (
         <Button
           testID="show-account"
           variant="primary"

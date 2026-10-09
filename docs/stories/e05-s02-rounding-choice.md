@@ -1,6 +1,6 @@
 # Story E05-S02: ถามการปัดเศษทุกครั้ง จำค่าล่าสุด
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ
 
 ## Context
 
@@ -37,11 +37,19 @@ Status: Draft
 
 ## Verification
 
+- Unit: `src/core/finance/rounding.test.ts` (3 modes; owner + workers + adjustments = sale to the satang; no fraction → no question; per-sale choice, changeable, last choice = next default) and `deduct.test.ts` (`roundCash`) · Sandbox: `e2e/finance.spec.ts` accounts test answers the rounding question first · Screenshot `docs/ux/screenshots/overnight/money/17-rounding.png`
+
 - [ ] Sandbox run:
 - [ ] Screenshots (UI) — golden path:
 - [ ] Screenshots (UI) — edge cases:
 
 ## Dev notes
+
+- Order share → debt deduction → rounding → cash (D-60): `useSaleRounding` takes each worker's cash after this sale's deductions (`DebtDeductionCard`), `roundSettlement()` rounds it, the owner absorbs the opposite adjustment.
+- The choice is a finance-log event `sale_rounding_set` keyed by sale (`sale-rounding-<saleId>`), not a sale event — no shared sale-type change while team SALE reworks the sale model; this device's latest choice preselects the next sale but is not taken until tapped. Changing it recomputes from the log.
+- "ให้คนรับซื้อยางดูบัญชี" (E05-S07) appears only after the question is answered (?B1).
+- `settle.ts` keeps only valuation rounding (gram×price → satang, the owner/worker split); there is no cash rounding in it. If the owner wants the choice inside the sale's own log, move the event when E04-S01 lands.
+- Not covered: the S29 deduction payout still feeds `shareSatang` until S29 is removed (E06-S04); settlement layout in portrait (E05-S04).
 
 ## Code review
 
