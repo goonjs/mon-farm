@@ -151,6 +151,55 @@ describe.each(adapters)('%s — EventStore rules (E01-S02 AC2/AC3, E01-S03 AC2)'
   });
 });
 
+describe.each(adapters)('%s — insertPulled (E01-S09)', (_name, makeStore) => {
+  it('stores another device\'s event verbatim, already synced, without touching this device\'s counter', async () => {
+    const store = makeStore();
+    const before = await store.device();
+    const [e] = new LogBuilder('s1', 'dev-other').accept('p1').build();
+    await store.insertPulled(e);
+    expect(await store.load('s1')).toEqual([e]);
+    expect(await store.pending()).toEqual([]);
+    expect(await store.device()).toEqual(before);
+  });
+
+  it('is idempotent: pulling the same event twice keeps one copy', async () => {
+    const store = makeStore();
+    const [e] = new LogBuilder('s1', 'dev-other').accept('p1').build();
+    await store.insertPulled(e);
+    await store.insertPulled(Object.fromEntries(Object.entries(e).reverse()) as typeof e);
+    expect(await store.load('s1')).toHaveLength(1);
+  });
+
+  it('refuses the same id with different content, keeping what is stored', async () => {
+    const store = makeStore();
+    const [e] = new LogBuilder('s1', 'dev-other').accept('p1').build() as AcceptEvent[];
+    await store.insertPulled(e);
+    await expect(store.insertPulled({ ...e, netG: 1 })).rejects.toBeInstanceOf(IntegrityError);
+    expect((await store.load('s1'))[0]).toEqual(e);
+  });
+
+  // The server has it, so the ack was only lost: the outbox can let it go.
+  it('pulling back an own event still in the outbox marks it synced', async () => {
+    const store = makeStore();
+    const { deviceId } = await store.device();
+    const [e] = new LogBuilder('s1', deviceId).accept('p1').build();
+    await store.append(e);
+    await store.insertPulled(e);
+    expect(await store.pending()).toEqual([]);
+    expect(await store.load('s1')).toHaveLength(1);
+  });
+
+  it('never renumbers a pulled event carrying this device\'s id (cloned install)', async () => {
+    const store = makeStore();
+    const { deviceId } = await store.device();
+    const [a, b] = new LogBuilder('s1', deviceId).accept('p1').accept('p1').build();
+    await store.append(a);
+    const clash = { ...b, deviceSeq: a.deviceSeq };
+    await store.insertPulled(clash);
+    expect((await store.load('s1')).find((e) => e.id === b.id)).toEqual(clash);
+  });
+});
+
 describe('IndexedDbStore — what only a persistent store must do', () => {
   it('a reopened store resumes the device and its sequence (force-close, NFR-2)', async () => {
     const factory = new IDBFactory();

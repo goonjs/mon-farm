@@ -1,7 +1,7 @@
 import { compareEvents } from '../core/order';
 import type { EventId, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
-import { checkAppend, type DeviceState } from './append-rule';
+import { checkAppend, checkPulled, type DeviceState } from './append-rule';
 import type { EventStore } from './store';
 
 /**
@@ -32,6 +32,11 @@ export class MemoryStore implements EventStore {
 
   async markSynced(ids: readonly EventId[]): Promise<void> {
     for (const id of ids) this.synced.add(id);
+  }
+
+  async insertPulled(event: SaleEvent): Promise<void> {
+    if (checkPulled(event, this.rows.get(event.id))) this.rows.set(event.id, event);
+    this.synced.add(event.id);
   }
 
   async listSales(): Promise<string[]> {
