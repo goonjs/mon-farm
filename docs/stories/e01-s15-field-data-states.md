@@ -103,6 +103,11 @@ story นี้ทำแค่ model + ป้าย — การใช้ป้
 
 ## Code review
 
+Independent review (subagent, 2026-10-09) of the พ.ศ./ค.ศ. switch (02b5332): nothing blocking. Fixed: (1) the tap target was smaller than
+48pt → `minHeight: target.min`; (2) a fast double tap was lost because `toggleEra` read the old value → updater function, with tests for both.
+For the owner: (3) after switching to ค.ศ. nothing on screen says which era it is, or that the date can be tapped (only the a11y label does);
+(4) the English locale shows พ.ศ. by default too; (6) the era is not yet remembered on native (same limitation as the language setting)
+
 review อิสระโดย subagent แยก (2026-10-03) — ไม่มี blocker:
 
 | # | ระดับ | เรื่อง | ผล |

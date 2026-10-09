@@ -46,4 +46,20 @@ describe('DateText (D-74 F14)', () => {
     wrap(<DateText ts={ts} testID="d" />);
     expect(screen.getByTestId('d').props.accessibilityLabel).toBe('9 ต.ค. 2569 (พ.ศ.) แตะเพื่อแสดงเป็น ค.ศ.');
   });
+
+  it('is a full gloved-hand target (NFR-4: 48pt)', () => {
+    wrap(<DateText ts={ts} testID="d" />);
+    const style = [screen.getByTestId('d').props.style].flat(Infinity).reduce((a, x) => ({ ...a, ...x }), {});
+    expect(style.minHeight).toBeGreaterThanOrEqual(48);
+  });
+
+  it('a fast double tap switches twice, back to where it started', () => {
+    wrap(<DateText ts={ts} testID="d" />);
+    act(() => {
+      fireEvent.press(screen.getByTestId('d'));
+      fireEvent.press(screen.getByTestId('d'));
+    });
+    expect(screen.getByTestId('d')).toHaveTextContent('9 ต.ค. 2569');
+    expect(store.get('mon-farm:era')).toBe('be');
+  });
 });

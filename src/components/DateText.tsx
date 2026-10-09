@@ -22,7 +22,14 @@ export function DateText({ ts, testID, style }: { ts: number; testID?: string; s
     other: t(era === 'be' ? 'date.eraCe' : 'date.eraBe'),
   });
   return (
-    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={toggleEra} hitSlop={8}>
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={toggleEra}
+      // A whole gloved-hand target (NFR-4), not just the line of text.
+      style={{ minHeight: theme.target.min, justifyContent: 'center' }}
+    >
       <Text style={[{ fontFamily: theme.font.family.sans, fontSize: theme.font.size.bodyMd, color: theme.color.ink }, style]}>
         {date}
       </Text>

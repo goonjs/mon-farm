@@ -77,11 +77,14 @@ export function I18nProvider({ children, initial = 'th' }: { children: ReactNode
       setLocale,
       toggle: () => setLocale(locale === 'th' ? 'en' : 'th'),
       era,
-      toggleEra: () => {
-        const next = era === 'be' ? 'ce' : 'be';
-        setEra(next);
-        void writeEra(next);
-      },
+      // From the latest state, not this render's: a fast double tap must
+      // switch twice. Writing inside the updater is idempotent if re-run.
+      toggleEra: () =>
+        setEra((e) => {
+          const next = e === 'be' ? 'ce' : 'be';
+          void writeEra(next);
+          return next;
+        }),
     }),
     [locale, setLocale, era],
   );
