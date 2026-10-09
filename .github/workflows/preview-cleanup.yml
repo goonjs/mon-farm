@@ -10,6 +10,8 @@ on:
   pull_request:
     types: [closed]
 
+# CI's preview job re-checks that the PR is open right before deploying, so
+# a deploy racing this cleanup does not bring the channel back for 7 days.
 concurrency:
   group: preview-${{ github.event.pull_request.number }}
 

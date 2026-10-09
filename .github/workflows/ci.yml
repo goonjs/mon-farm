@@ -246,11 +246,22 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
+      # The PR may have closed while CI ran; preview-cleanup.yml has then
+      # already deleted the channel, and deploying would bring it back.
+      - name: Check the PR is still open
+        id: open
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: echo "state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .state)" >> "$GITHUB_OUTPUT"
+
       - name: Deploy preview channel (expires in 7 days)
+        if: steps.open.outputs.state == 'open'
         run: ./scripts/deploy.sh preview "pr-${{ github.event.pull_request.number }}" | tee preview.log
 
       # One comment per PR: edit ours if it is there, otherwise post it.
       - name: Comment the preview URL on the PR
+        if: steps.open.outputs.state == 'open'
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
@@ -259,7 +270,7 @@ jobs:
           node scripts/preview-comment.mjs preview.log "$SHA" > comment.md
           head -2 comment.md | tail -1 >> "$GITHUB_STEP_SUMMARY"
           id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
-            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- mon-farm-preview -->"))) | .id' | head -1)
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- mon-farm-preview -->"))) | .id' | sed -n 1p)
           if [ -n "$id" ]; then
             gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@comment.md >/dev/null
           else
