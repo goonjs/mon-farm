@@ -13,7 +13,7 @@
 
 import { compareEvents } from './order';
 import { deletedIds } from './soft-delete';
-import type { BuiltinRole, Crop, Gps, PersonId, SaleEvent } from './types';
+import type { BuiltinRole, Crop, Gps, NumberingMode, PersonId, SaleEvent, ScaleType, ZeroCheckMode } from './types';
 
 /**
  * The scope master-data events are stored under, in place of a sale id. The
@@ -93,7 +93,24 @@ export interface ShareEntry {
   readonly from: string;
 }
 
+export interface BasketPair {
+  readonly pairId: string;
+  readonly netG: number;
+  readonly basketG: number;
+}
+
+interface SettingsFold {
+  readonly scaleType: ScaleType;
+  readonly numbering: NumberingMode;
+  readonly zeroCheck: ZeroCheckMode;
+  readonly dupWindowS: number;
+  /** Added pairs, in fold order, deleted ones included (filtered in `saleSettings`). */
+  readonly added: readonly (BasketPair & { deleted: boolean })[];
+  readonly defaultPairId: string | null;
+}
+
 export interface MasterState {
+  readonly settings: SettingsFold;
   /** In fold order — same-day tie-breaker, like assignments. */
   readonly shares: readonly ShareEntry[];
   /** In fold order — the tie-breaker for two changes on the same day. */
@@ -114,6 +131,8 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
   const points = new Map<string, { id: string; propertyId: string; name: string; createdTs: number }>();
   const changes: Omit<AssignmentChange, 'deleted'>[] = [];
   const shares: ShareEntry[] = [];
+  let settings: Omit<SettingsFold, 'added'> = { scaleType: 'whole', numbering: 'per-tapper', zeroCheck: 'every', dupWindowS: 8, defaultPairId: null };
+  const pairs: BasketPair[] = [];
   const ordered = events.filter((e) => e.kind === 'master').sort(compareEvents);
 
   for (const e of ordered) {
@@ -198,6 +217,17 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
       case 'share_set':
         shares.push({ shareId: p.shareId, tapperId: p.tapperId, tapperPct: p.tapperPct, from: p.from });
         break;
+      case 'settings_set': {
+        const { t: _t, ...patch } = p;
+        settings = { ...settings, ...patch };
+        break;
+      }
+      case 'basket_pair_added':
+        pairs.push({ pairId: p.pairId, netG: p.netG, basketG: p.basketG });
+        break;
+      case 'basket_pair_default':
+        settings = { ...settings, defaultPairId: p.pairId };
+        break;
     }
   }
 
@@ -210,6 +240,7 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
   const shownNames = new Map<string, number>();
   for (const x of pointList) if (!x.hidden) shownNames.set(nameKey(x.propertyId, x.name), (shownNames.get(nameKey(x.propertyId, x.name)) ?? 0) + 1);
   return {
+    settings: { ...settings, added: pairs.map((x) => ({ ...x, deleted: gone.has(x.pairId) })) },
     shares: shares.filter((x) => !gone.has(x.shareId)),
     assignments: changes.map((c) => ({ ...c, deleted: gone.has(c.assignmentId) })),
     points: pointList
@@ -505,4 +536,46 @@ export function earliestShareDay(lastClosedSaleDay: string | null): string | nul
 export function shareFromAllowed(from: string, lastClosedSaleDay: string | null): boolean {
   const earliest = earliestShareDay(lastClosedSaleDay);
   return !earliest || from >= earliest;
+}
+
+/** The two standard nets every group starts with (MD-7); their basket weights follow the v1.1.0 mockup. */
+const BUILTIN_PAIRS: readonly BasketPair[] = [
+  { pairId: 'builtin-50', netG: 50_000, basketG: 2_000 },
+  { pairId: 'builtin-60', netG: 60_000, basketG: 3_000 },
+];
+
+export interface SaleSettings {
+  readonly scaleType: ScaleType;
+  readonly numbering: NumberingMode;
+  readonly zeroCheck: ZeroCheckMode;
+  readonly dupWindowS: number;
+  /** Exactly one is the default for a new sale. */
+  readonly pairs: readonly (BasketPair & { isDefault: boolean })[];
+}
+
+/**
+ * The group's sale settings with defaults filled in. A new sale snapshots
+ * these when it starts (E04-S02); changing them later never touches a basket
+ * already recorded.
+ */
+export function saleSettings(state: MasterState): SaleSettings {
+  const { added, defaultPairId, ...rest } = state.settings;
+  const live = [...BUILTIN_PAIRS, ...added.filter((p) => !p.deleted).map(({ deleted: _d, ...p }) => p)];
+  const def = live.find((p) => p.pairId === defaultPairId) ?? live[0];
+  return { ...rest, pairs: live.map((p) => ({ ...p, isDefault: p.pairId === def?.pairId })) };
+}
+
+/** Duplicate-count window, whole seconds 7–10 (SYNC-6). */
+export function validDupWindow(s: number): boolean {
+  return Number.isInteger(s) && s >= 7 && s <= 10;
+}
+
+/** Hold time, ms, 0.5–1 s (D-7). */
+export function validHoldMs(ms: number): boolean {
+  return Number.isInteger(ms) && ms >= 500 && ms <= 1000;
+}
+
+/** A pair in whole kg (whole-kg scale, D-66): net above 0, basket 0 or more. */
+export function validPairKg(netKg: number, basketKg: number): boolean {
+  return Number.isInteger(netKg) && netKg > 0 && Number.isInteger(basketKg) && basketKg >= 0;
 }

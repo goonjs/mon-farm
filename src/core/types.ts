@@ -399,7 +399,29 @@ export type MasterPayload =
       readonly tapperId: PersonId;
       readonly tapperPct: number;
       readonly from: string;
-    };
+    }
+  /**
+   * Group-wide sale settings (E03-S07, MD-7/MD-9/SYNC-6) — a patch; a field
+   * left out is unchanged. Hold time and speech are per device (owner
+   * 2026-10-03) and never appear here.
+   */
+  | {
+      readonly t: 'settings_set';
+      readonly scaleType?: ScaleType;
+      readonly numbering?: NumberingMode;
+      readonly zeroCheck?: ZeroCheckMode;
+      readonly dupWindowS?: number;
+    }
+  /** A standard net + basket weight pair, integer grams (MD-7). Removed with `delete`. */
+  | { readonly t: 'basket_pair_added'; readonly pairId: string; readonly netG: number; readonly basketG: number }
+  | { readonly t: 'basket_pair_default'; readonly pairId: string };
+
+/** Scale resolution: whole kg (default) or one decimal (not available yet, D-66). */
+export type ScaleType = 'whole' | 'decimal1';
+/** Basket numbers run on per tapper across their points, or restart at 1 per point (D-79). */
+export type NumberingMode = 'per-tapper' | 'per-point';
+/** Zero/tare check before weighing: every point, the first point of each farm, or none (MD-9). */
+export type ZeroCheckMode = 'every' | 'first-per-farm' | 'skip';
 
 export type Crop = 'rubber' | 'durian';
 

@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MASTER_SCOPE,
+  saleSettings,
+  validDupWindow,
+  validHoldMs,
+  validPairKg,
   earliestShareDay,
   parseTapperPct,
   shareFromAllowed,
@@ -499,5 +503,43 @@ describe('tapper share — E03-S06 (MD-8, D-63)', () => {
     expect(shareFromAllowed('2026-09-18', '2026-09-18')).toBe(false);
     expect(shareFromAllowed('2026-09-19', '2026-09-18')).toBe(true);
     expect(shareFromAllowed('2020-01-01', null)).toBe(true);
+  });
+});
+
+describe('sale settings — E03-S07 (MD-7, MD-9, SYNC-6)', () => {
+  it('defaults: whole-kg scale, numbering per tapper, zero check every point, 8 s window, 50 and 60 kg built in', () => {
+    const s = saleSettings(projectMaster([]));
+    expect(s).toMatchObject({ scaleType: 'whole', numbering: 'per-tapper', zeroCheck: 'every', dupWindowS: 8 });
+    expect(s.pairs.map((p) => [p.netG, p.basketG, p.isDefault])).toEqual([
+      [50_000, 2_000, true],
+      [60_000, 3_000, false],
+    ]);
+  });
+
+  it('a settings change patches only the fields it names', () => {
+    const s = saleSettings(
+      projectMaster(log().master({ t: 'settings_set', zeroCheck: 'first-per-farm' }).master({ t: 'settings_set', dupWindowS: 10 }).build()),
+    );
+    expect(s).toMatchObject({ zeroCheck: 'first-per-farm', dupWindowS: 10, numbering: 'per-tapper' });
+  });
+
+  it('adds a pair, makes it the default, and a deleted pair drops out (default falls back to the first left)', () => {
+    const b = log()
+      .master({ t: 'basket_pair_added', pairId: 'x', netG: 55_000, basketG: 3_000 })
+      .master({ t: 'basket_pair_default', pairId: 'x' });
+    let s = saleSettings(projectMaster(b.build()));
+    expect(s.pairs.find((p) => p.isDefault)?.netG).toBe(55_000);
+    s = saleSettings(projectMaster(b.remove('x').build()));
+    expect(s.pairs.map((p) => p.pairId)).toEqual(['builtin-50', 'builtin-60']);
+    expect(s.pairs.find((p) => p.isDefault)?.pairId).toBe('builtin-50');
+  });
+
+  it('validates ranges: duplicate window 7–10 s, hold 0.5–1 s, weights in whole kg above 0', () => {
+    expect([6, 7, 10, 11].map(validDupWindow)).toEqual([false, true, true, false]);
+    expect([400, 500, 1000, 1100].map(validHoldMs)).toEqual([false, true, true, false]);
+    expect(validPairKg(55, 3)).toBe(true);
+    expect(validPairKg(0, 3)).toBe(false);
+    expect(validPairKg(55.5, 3)).toBe(false);
+    expect(validPairKg(55, 0)).toBe(true);
   });
 });

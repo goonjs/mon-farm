@@ -22,6 +22,8 @@ import {
   type PersonRecord,
   type PropertyRecord,
   shareFromAllowed,
+  validDupWindow,
+  validPairKg,
   type StarterRow,
   todayIso,
   planStarterPoints,
@@ -30,7 +32,7 @@ import {
   validateProperty,
 } from '../core/master';
 import { projectSale } from '../core/project';
-import type { BuiltinRole, Crop, Gps, MasterPayload, PersonId, SaleEvent } from '../core/types';
+import type { BuiltinRole, Crop, Gps, MasterPayload, NumberingMode, PersonId, SaleEvent, ScaleType, ZeroCheckMode } from '../core/types';
 import { uuidv7 } from '../lib/id';
 import type { DeviceClock } from './device-clock';
 import { PRE_LOGIN_USER_ID } from './session';
@@ -268,6 +270,31 @@ export class MasterStore implements PeopleStore {
     const last = await this.lastClosedSaleDay(tapperId);
     if (last && !shareFromAllowed(from, last)) throw new ShareTooEarlyError(last);
     await this.write({ t: 'share_set', shareId: uuidv7(), tapperId, tapperPct, from });
+  }
+
+  /** Group-wide sale settings (E03-S07): only the fields given change. */
+  async updateSettings(patch: {
+    scaleType?: ScaleType;
+    numbering?: NumberingMode;
+    zeroCheck?: ZeroCheckMode;
+    dupWindowS?: number;
+  }): Promise<void> {
+    if (patch.dupWindowS !== undefined && !validDupWindow(patch.dupWindowS)) {
+      throw new InvalidInputError('The duplicate window is 7 to 10 seconds.');
+    }
+    await this.write({ t: 'settings_set', ...patch });
+  }
+
+  /** A net + basket pair in whole kg (whole-kg scale, D-66), stored in grams. */
+  async addPair(netKg: number, basketKg: number): Promise<string> {
+    if (!validPairKg(netKg, basketKg)) throw new InvalidInputError('Weights are whole kg; net above 0.');
+    const pairId = uuidv7();
+    await this.write({ t: 'basket_pair_added', pairId, netG: netKg * 1000, basketG: basketKg * 1000 });
+    return pairId;
+  }
+
+  async setDefaultPair(pairId: string): Promise<void> {
+    await this.write({ t: 'basket_pair_default', pairId });
   }
 
   /** The generic wizard (D-73): all points or none; each comes back with its tapper. */

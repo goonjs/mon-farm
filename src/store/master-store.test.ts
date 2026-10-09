@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { MASTER_SCOPE, shareOn, tapperOn } from '../core/master';
+import { MASTER_SCOPE, saleSettings, shareOn, tapperOn } from '../core/master';
 import { createDeviceClock } from './device-clock';
 import { DuplicatePointNameError, MasterStore, ShareTooEarlyError } from './master-store';
 import { MemoryStore } from './memory-store';
@@ -146,5 +146,16 @@ describe('MasterStore — people and buyers as events (E03-S01)', () => {
     await master.setShare(red.id, 55, '2026-09-19');
     await expect(master.setShare(red.id, 101, '2026-10-01')).rejects.toThrow();
     expect(shareOn(await master.state(), red.id, '2026-09-19')).toMatchObject({ tapperPct: 55, ownerPct: 45 });
+  });
+
+  it('sale settings: patch, add a pair in whole kg, make it default; refuse out-of-range values (E03-S07)', async () => {
+    await master.updateSettings({ zeroCheck: 'skip', dupWindowS: 9 });
+    await expect(master.updateSettings({ dupWindowS: 12 })).rejects.toThrow();
+    const id = await master.addPair(55, 3);
+    await master.setDefaultPair(id);
+    await expect(master.addPair(0, 3)).rejects.toThrow();
+    const s = saleSettings(await master.state());
+    expect(s).toMatchObject({ zeroCheck: 'skip', dupWindowS: 9 });
+    expect(s.pairs.find((p) => p.isDefault)).toMatchObject({ netG: 55_000, basketG: 3_000 });
   });
 });

@@ -33,6 +33,7 @@ import { useT, type Translate } from '../../../i18n';
 import { announceCount } from '../../../speech/announcer';
 import { speaker } from '../../../speech/speaker';
 import { useSpeech } from '../../../speech';
+import { readHoldMs } from '../../../store/hold-preference';
 import { useSale } from '../../../store/SaleProvider';
 import { useTheme, useThemeControls } from '../../../theme';
 
@@ -63,6 +64,8 @@ type Overlay =
   | { kind: 'reopen-zone'; zoneId: string };
 
 export default function CounterScreen() {
+  // This device's hold time (E03-S07, D-7) — read once per visit to the counter.
+  const [deviceHoldMs] = useState(readHoldMs);
   const t = useTheme();
   const msg = useT();
   const router = useRouter();
@@ -277,7 +280,7 @@ export default function CounterScreen() {
               onReject={onReject}
               enabled={countable}
               caption={countable ? expected : msg('counter.pileNotReady')}
-              holdMs={holdMsOverride()}
+              holdMs={holdMsOverride() ?? deviceHoldMs}
             />
           )}
           {pile.status === 'counting' ? (

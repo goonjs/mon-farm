@@ -93,8 +93,10 @@ function touches(e: SaleEvent, id: RecordId): boolean {
         pointId?: string;
         assignmentId?: string;
         shareId?: string;
+        pairId?: string;
       };
       if (p.shareId) return p.shareId === id;
+      if (p.pairId) return p.pairId === id;
       // An assignment names its point and person, but only creates itself.
       if (p.assignmentId) return p.assignmentId === id;
       // A point names its farm too, but only creates/changes the point.
