@@ -64,4 +64,9 @@ Firestore database `dev` + bucket ของ dev, ข้อมูลทดสอ�
 
 ## Code review
 
+- 2026-10-09 independent review (separate agent, read-only): nothing blocking. Fixed: the PR could close while
+  CI was deploying, bringing a deleted channel back → the job checks the PR is still open before deploying
+  (3726d60); `head -1` after `gh --paginate` → `sed -n 1p`. Not fixed: the comment still shows the old link after
+  the PR closes (the channel is gone anyway); a docs-only push does not update the SHA in the comment
+
 ## QA notes
