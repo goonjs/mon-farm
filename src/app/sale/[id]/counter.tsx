@@ -927,7 +927,9 @@ function describe(
     case 'delete':
       return { mark: '·', colour: t.color.inkSoft, body: msg('log.deleted') };
     case 'restore':
-      return { mark: '·', colour: t.color.inkSoft, body: msg('log.restored') };
+      return { mark: '·', colour: t.color.inkSoft, body: msg('log.restored') };    // Farm master data never lives in a sale's log; listed only so the switch stays total.
+    case 'master':
+      return { mark: '·', colour: t.color.inkSoft, body: sysLabel(e.payload, msg) };
   }
 }
 

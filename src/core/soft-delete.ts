@@ -85,6 +85,10 @@ function touches(e: SaleEvent, id: RecordId): boolean {
       };
       return p.zoneId === id || p.pileId === id || p.deductionId === id || !!p.forcedPiles?.includes(id);
     }
+    case 'master': {
+      const p = e.payload as { personId?: string; buyerId?: string };
+      return p.personId === id || p.buyerId === id;
+    }
     default:
       return false;
   }

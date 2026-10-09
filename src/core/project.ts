@@ -98,7 +98,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
       if (p) p.locked = true;
       continue;
     }
-    if (e.kind === 'reject' || e.kind === 'correction' || e.kind === 'delete' || e.kind === 'restore') {
+    if (e.kind === 'reject' || e.kind === 'correction' || e.kind === 'delete' || e.kind === 'restore' || e.kind === 'master') {
       continue;
     }
 
@@ -110,6 +110,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
         parties = {
           farmName: payload.farmName,
           buyer: payload.buyer,
+          ...(payload.buyerId ? { buyerId: payload.buyerId } : {}),
           manager: payload.manager,
           workerLead: payload.workerLead,
           where: payload.where,

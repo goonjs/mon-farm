@@ -6,14 +6,16 @@
  * "ประยุทธ์" two different people, silently, on a money screen; picking from a
  * list makes that mistake structurally harder.
  *
- * Deliberately small: no search, no avatars, no roles. It lists active people,
- * lets you pick one, or type a name and create+pick it in one step. That is
- * the entire job.
+ * Deliberately small: no search, no avatars. It lists active people —
+ * optionally only those holding one role (E03-S01) — lets you pick one, or
+ * type a name and create+pick it in one step, giving the new person the
+ * picker's role (a person needs at least one, D-68). That is the entire job.
  */
 
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import type { BuiltinRole } from '../core/types';
 import { peopleStore, type Person } from '../store/people';
 import { useT } from '../i18n';
 import { useTheme } from '../theme';
@@ -24,10 +26,12 @@ export interface PeoplePickerProps {
   value: Person | null;
   /** Called with a person on pick, or null when "change" clears the selection. */
   onChange: (person: Person | null) => void;
+  /** Only offer people with this role; a person added here gets it. Defaults to tapper. */
+  role?: BuiltinRole;
   testID?: string;
 }
 
-export function PeoplePicker({ value, onChange, testID = 'people-picker' }: PeoplePickerProps) {
+export function PeoplePicker({ value, onChange, role, testID = 'people-picker' }: PeoplePickerProps) {
   const t = useTheme();
   const msg = useT();
   const [people, setPeople] = useState<Person[] | null>(null); // null = still loading
@@ -35,8 +39,8 @@ export function PeoplePicker({ value, onChange, testID = 'people-picker' }: Peop
   const [draftName, setDraftName] = useState('');
 
   const reload = useCallback(() => {
-    peopleStore.list().then(setPeople);
-  }, []);
+    peopleStore.list(role ?? 'all').then(setPeople);
+  }, [role]);
 
   useEffect(() => {
     reload();
@@ -45,12 +49,12 @@ export function PeoplePicker({ value, onChange, testID = 'people-picker' }: Peop
   const createAndSelect = useCallback(async () => {
     const name = draftName.trim();
     if (!name) return;
-    const person = await peopleStore.create(name);
+    const person = await peopleStore.create(name, [role ?? 'tapper']);
     setDraftName('');
     setAdding(false);
     reload();
     onChange(person);
-  }, [draftName, onChange, reload]);
+  }, [draftName, onChange, reload, role]);
 
   if (people === null) {
     return (

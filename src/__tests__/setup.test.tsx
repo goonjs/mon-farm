@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 
 import SetupScreen from '../app/sale/[id]/setup';
 import { farmStore as mockFarmStore } from '../store/farm';
+import { peopleStore as mockPeople } from '../store/people';
+import { store as mockEventStore } from '../store/store';
 import { SaleProvider } from '../store/SaleProvider';
 import { wrap } from '../test/render';
 
@@ -141,5 +143,48 @@ describe('setup: use the farm profile', () => {
     await flush();
 
     expect(screen.queryByTestId('use-farm-profile')).toBeNull();
+  });
+});
+
+describe('SetupScreen — buyer from farm master data (E03-S01, MD-6)', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('a new sale starts with the latest buyer filled in', async () => {
+    const b = await mockPeople.addBuyer('ล้ง ล่าสุด');
+    jest.spyOn(mockPeople, 'latestBuyerId').mockResolvedValue(b.id);
+    renderSetup('sale-buyer-default');
+    await flush();
+    await flush();
+    expect(screen.getByTestId('buyer').props.value).toBe('ล้ง ล่าสุด');
+  });
+
+  it('no default when the latest buyer was deleted (D-65 Q6)', async () => {
+    const b = await mockPeople.addBuyer('ล้ง ลบ');
+    await mockPeople.remove(b.id);
+    jest.spyOn(mockPeople, 'latestBuyerId').mockResolvedValue(b.id);
+    renderSetup('sale-buyer-deleted');
+    await flush();
+    await flush();
+    expect(screen.getByTestId('buyer').props.value).toBe('');
+    expect(screen.queryByTestId(`buyer-pick-${b.id}`)).toBeNull();
+  });
+
+  it('picking a listed buyer saves its id with the name snapshot', async () => {
+    jest.useFakeTimers();
+    try {
+      const b = await mockPeople.addBuyer('ล้ง เลือก');
+      renderSetup('sale-buyer-pick');
+      await flush();
+      fireEvent.changeText(screen.getByTestId('farm-name'), 'สวน');
+      fireEvent.press(screen.getByTestId(`buyer-pick-${b.id}`));
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+      });
+      const log = (await mockEventStore.load('sale-buyer-pick')) as { kind: string; payload?: { t: string } }[];
+      const started = log.filter((e) => e.kind === 'sys' && e.payload?.t === 'sale_started').pop();
+      expect(started?.payload).toMatchObject({ buyer: 'ล้ง เลือก', buyerId: b.id });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
