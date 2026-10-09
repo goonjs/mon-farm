@@ -122,7 +122,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
         break;
 
       case 'split_set':
-        split = { ownerPct: payload.ownerPct, basis: payload.basis };
+        split = { ownerPct: payload.ownerPct };
         break;
 
       case 'zone_added':

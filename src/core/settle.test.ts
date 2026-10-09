@@ -193,7 +193,7 @@ describe('settle — rounding closes exactly', () => {
     // A third of an odd number of satang is where naive rounding loses a unit.
     const b = setUpSale(new LogBuilder());
     // Rebuild with a 33% split by appending a later split_set.
-    b.sys({ t: 'split_set', ownerPct: 33, basis: 'gross' });
+    b.sys({ t: 'split_set', ownerPct: 33 });
     readyPile(b, 'p1');
     b.accept('p1', 33_333);
     readyPile(b, 'p3');
@@ -216,7 +216,7 @@ describe('settle — refuses rather than guesses', () => {
         t: 'sale_started',
         farmName: 'f', buyer: 'b', manager: 'm', workerLead: 'w', where: 'farm',
       })
-      .sys({ t: 'split_set', ownerPct: 60, basis: 'gross' });
+      .sys({ t: 'split_set', ownerPct: 60 });
     const events = b.build();
     expect(() => settle(events, projectSale(events))).toThrow(SettlementUnavailable);
   });

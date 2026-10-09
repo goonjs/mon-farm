@@ -86,7 +86,16 @@ export interface AssignmentChange {
   readonly deleted: boolean;
 }
 
+export interface ShareEntry {
+  readonly shareId: string;
+  readonly tapperId: PersonId;
+  readonly tapperPct: number;
+  readonly from: string;
+}
+
 export interface MasterState {
+  /** In fold order — same-day tie-breaker, like assignments. */
+  readonly shares: readonly ShareEntry[];
   /** In fold order — the tie-breaker for two changes on the same day. */
   readonly assignments: readonly AssignmentChange[];
   /** Including deleted ones — old records still resolve their names. */
@@ -104,6 +113,7 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
   const properties = new Map<string, PropertyRecord & { areas: AreaEntry[] }>();
   const points = new Map<string, { id: string; propertyId: string; name: string; createdTs: number }>();
   const changes: Omit<AssignmentChange, 'deleted'>[] = [];
+  const shares: ShareEntry[] = [];
   const ordered = events.filter((e) => e.kind === 'master').sort(compareEvents);
 
   for (const e of ordered) {
@@ -185,6 +195,9 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
       case 'tapper_unassigned':
         changes.push({ assignmentId: p.assignmentId, pointId: p.pointId, tapperId: null, from: p.from });
         break;
+      case 'share_set':
+        shares.push({ shareId: p.shareId, tapperId: p.tapperId, tapperPct: p.tapperPct, from: p.from });
+        break;
     }
   }
 
@@ -197,6 +210,7 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
   const shownNames = new Map<string, number>();
   for (const x of pointList) if (!x.hidden) shownNames.set(nameKey(x.propertyId, x.name), (shownNames.get(nameKey(x.propertyId, x.name)) ?? 0) + 1);
   return {
+    shares: shares.filter((x) => !gone.has(x.shareId)),
     assignments: changes.map((c) => ({ ...c, deleted: gone.has(c.assignmentId) })),
     points: pointList
       .map((x) => ({ ...x, duplicateName: !x.hidden && (shownNames.get(nameKey(x.propertyId, x.name)) ?? 0) > 1 }))
@@ -447,4 +461,48 @@ export function activeTapperOn(state: MasterState, pointId: string, day: string)
   const id = tapperOn(state, pointId, day);
   const person = id ? state.people.find((p) => p.id === id) : undefined;
   return person && !person.deleted && person.roles.includes('tapper') ? person : null;
+}
+
+/** A tapper's share entries, newest effective first; same day → later in fold order first. */
+export function shareHistory(state: MasterState, tapperId: PersonId): ShareEntry[] {
+  return state.shares
+    .map((x, i) => ({ x, i }))
+    .filter(({ x }) => x.tapperId === tapperId)
+    .sort((a, b) => (a.x.from === b.x.from ? b.i - a.i : a.x.from < b.x.from ? 1 : -1))
+    .map(({ x }) => x);
+}
+
+export interface Share {
+  readonly tapperPct: number;
+  readonly ownerPct: number;
+  /** Nothing was ever set: 50/50 (MD-8). */
+  readonly isDefault: boolean;
+}
+
+/** The tapper's share of gross on `day`. A change never reaches back before its start. */
+export function shareOn(state: MasterState, tapperId: PersonId, day: string): Share {
+  const entry = shareHistory(state, tapperId).find((x) => x.from <= day);
+  const tapperPct = entry?.tapperPct ?? 50;
+  return { tapperPct, ownerPct: 100 - tapperPct, isDefault: !entry };
+}
+
+/** The tapper's side as typed: a whole number 0–100 (D-63 Q17). */
+export function parseTapperPct(text: string): { ok: true; tapperPct: number } | { ok: false; reason: 'whole' | 'range' } {
+  const t = text.trim();
+  if (/^-\d+$/.test(t)) return { ok: false, reason: 'range' };
+  if (!/^\d+$/.test(t)) return { ok: false, reason: 'whole' };
+  const n = Number(t);
+  return n <= 100 ? { ok: true, tapperPct: n } : { ok: false, reason: 'range' };
+}
+
+/** The first day a new share may start: the day after the latest closed sale (D-74 F17), or any day. */
+export function earliestShareDay(lastClosedSaleDay: string | null): string | null {
+  if (!lastClosedSaleDay) return null;
+  const [y, m, d] = lastClosedSaleDay.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+}
+
+export function shareFromAllowed(from: string, lastClosedSaleDay: string | null): boolean {
+  const earliest = earliestShareDay(lastClosedSaleDay);
+  return !earliest || from >= earliest;
 }

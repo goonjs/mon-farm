@@ -16,6 +16,7 @@ import { peopleStore, type Person } from '../store/people';
 import { useTheme } from '../theme';
 import { Button } from './chrome';
 import { Card, Chip, ChipRow, FieldError, TextField } from './farm-ui';
+import { TapperShare } from './TapperShare';
 import { ThaiDate } from './ThaiDate';
 
 export function PersonForm({ personId, onDone }: { personId: string | null; onDone: () => void }) {
@@ -125,6 +126,9 @@ export function PersonForm({ personId, onDone }: { personId: string | null; onDo
           <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.ink }}>{pointList}</Text>
         </Card>
       ) : null}
+
+      {/* E03-S06: a tapper's share sits on their page (AC9). */}
+      {existing && existing.roles.includes('tapper') ? <TapperShare tapperId={existing.id} /> : null}
 
       {roleWarning ? (
         <Card testID="role-warning">

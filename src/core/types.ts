@@ -164,23 +164,13 @@ export type SysPayload =
     }
   | { readonly t: 'price_set'; readonly satangPerKg: number; readonly indexRef: string }
   /**
-   * FR-8.5: the basis has no safe default. `settle()` refuses to run without
-   * one being resolvable for every zone — either this sale-level default or a
-   * `zone_contract_set` override (below).
-   *
-   * `ownerPct` here is the DEFAULT applied to any zone that never gets its own
-   * contract. `basis` (gross vs final) is sale-level only — it does not vary
-   * per zone, unlike the percentage.
-   *
-   * `basis` IS INERT (S29, owner decision 2026-09-03). Deductions come off a
-   * worker's own share AFTER the owner/worker split runs, so `settle()`
-   * always splits on gross — there is no arithmetic left for `'final'` to
-   * select. The field stays because FR-8.5 still requires every contract to
-   * record a basis explicitly and the setup screen still forces the choice;
-   * removing it is an event-shape change affecting logs that already exist,
-   * and belongs in its own story, not this one.
+   * FR-8.5: `settle()` refuses to run without a split resolvable for every
+   * zone — either this sale-level default or a `zone_contract_set` override
+   * (below). `ownerPct` is the DEFAULT for any zone with no contract of its
+   * own. The split is always on gross (D-12); the old `basis` field was inert
+   * and is gone (E03-S06) — no stored log carries it (owner: start fresh).
    */
-  | { readonly t: 'split_set'; readonly ownerPct: number; readonly basis: 'gross' | 'final' }
+  | { readonly t: 'split_set'; readonly ownerPct: number }
   | { readonly t: 'zone_added'; readonly zoneId: ZoneId; readonly name: string }
   /**
    * Overrides the sale default for one zone. Workers are per zone (multiple
@@ -396,7 +386,20 @@ export type MasterPayload =
       readonly from?: string;
     }
   /** No tapper from `from`: someone left with no replacement yet. */
-  | { readonly t: 'tapper_unassigned'; readonly assignmentId: string; readonly pointId: string; readonly from: string };
+  | { readonly t: 'tapper_unassigned'; readonly assignmentId: string; readonly pointId: string; readonly from: string }
+  /**
+   * A tapper's share from `from` (ISO day) on (E03-S06, MD-8): the tapper's
+   * whole-number percent of GROSS sale value; the owner gets the rest. No
+   * entry = 50/50. Money: two devices editing it concurrently must become a
+   * Conflict (D-30) once E01-S11 exists.
+   */
+  | {
+      readonly t: 'share_set';
+      readonly shareId: string;
+      readonly tapperId: PersonId;
+      readonly tapperPct: number;
+      readonly from: string;
+    };
 
 export type Crop = 'rubber' | 'durian';
 
@@ -489,11 +492,8 @@ export interface SaleState {
     readonly where: 'farm' | 'buyer';
   } | null;
   readonly price: { readonly satangPerKg: number; readonly indexRef: string } | null;
-  /**
-   * `basis` IS INERT here too — see the comment on `split_set` above. Kept
-   * verbatim because the projection is a straight fold of the event.
-   */
-  readonly split: { readonly ownerPct: number; readonly basis: 'gross' | 'final' } | null;
+  /** Always on gross (D-12) — see `split_set`. */
+  readonly split: { readonly ownerPct: number } | null;
   readonly zones: readonly Zone[];
   readonly piles: readonly Pile[];
   /** FR-12.7 — surfaced as a non-blocking indicator, never a gate. */

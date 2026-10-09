@@ -21,7 +21,9 @@ import {
   type PeopleFilter,
   type PersonRecord,
   type PropertyRecord,
+  shareFromAllowed,
   type StarterRow,
+  todayIso,
   planStarterPoints,
   pointNameTaken,
   type PointRecord,
@@ -72,6 +74,13 @@ export class InvalidInputError extends Error {}
 export class DuplicatePointNameError extends InvalidInputError {}
 
 export type Point = PointRecord;
+
+/** A share may not start on or before the tapper's latest closed sale (D-63, D-74 F17). */
+export class ShareTooEarlyError extends InvalidInputError {
+  constructor(readonly lastClosedSaleDay: string) {
+    super(`A share must start after ${lastClosedSaleDay}.`);
+  }
+}
 
 export class PersonInvalidError extends Error {
   constructor(readonly fields: readonly ('name' | 'roles')[]) {
@@ -232,6 +241,33 @@ export class MasterStore implements PeopleStore {
     const assignmentId = uuidv7();
     await this.write({ t: 'tapper_unassigned', assignmentId, pointId, from });
     return assignmentId;
+  }
+
+  /**
+   * The Bangkok day of the latest closed sale this tapper took part in, or
+   * null. Sales do not reference weighing points until E04-S01, so "took part"
+   * is read from the link sales carry today: a zone contract naming them.
+   */
+  async lastClosedSaleDay(tapperId: string): Promise<string | null> {
+    let latest: string | null = null;
+    for (const id of await this.events.listSales()) {
+      const sale = projectSale(await this.events.load(id), id);
+      if (sale.deleted || sale.status !== 'closed' || sale.startedTs === null) continue;
+      if (!sale.zones.some((z) => z.contract?.personId === tapperId)) continue;
+      const day = todayIso(sale.startedTs);
+      if (!latest || day > latest) latest = day;
+    }
+    return latest;
+  }
+
+  /** The tapper's whole-number % of gross from `from` on (E03-S06, MD-8). */
+  async setShare(tapperId: string, tapperPct: number, from: string): Promise<void> {
+    if (!Number.isInteger(tapperPct) || tapperPct < 0 || tapperPct > 100) {
+      throw new InvalidInputError('A share is a whole percent from 0 to 100.');
+    }
+    const last = await this.lastClosedSaleDay(tapperId);
+    if (last && !shareFromAllowed(from, last)) throw new ShareTooEarlyError(last);
+    await this.write({ t: 'share_set', shareId: uuidv7(), tapperId, tapperPct, from });
   }
 
   /** The generic wizard (D-73): all points or none; each comes back with its tapper. */

@@ -8,10 +8,8 @@
  *
  * Workers ARE per zone (FR-8.6): each zone resolves its own owner/worker split
  * from a `zone_contract_set` event, falling back to the sale-level
- * `split_set` default when a zone has none of its own. `basis` (gross vs
- * final) does not vary per zone — with no adjustments in the MVP the two
- * modes are identical, so this only matters once adjustments exist, but the
- * event shape is fixed now rather than migrated later.
+ * `split_set` default when a zone has none of its own. The split is always
+ * on gross (D-12); deductions come off a worker's own share afterwards.
  *
  * FR-7.4 forbids a single opaque total, so this returns the DERIVATION, not
  * just the number. Each step is one arithmetic operation, rendered verbatim on

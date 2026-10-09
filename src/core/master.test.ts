@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MASTER_SCOPE,
+  earliestShareDay,
+  parseTapperPct,
+  shareFromAllowed,
+  shareHistory,
+  shareOn,
   activeTapperOn,
   dayBefore,
   pointTimeline,
@@ -455,5 +460,44 @@ describe('activeTapperOn — the point reads "no tapper" once its tapper is gone
   it('is none once the tapper role is removed', () => {
     const x = b().master({ t: 'person_edited', personId: 'red', roles: ['worker'] });
     expect(activeTapperOn(projectMaster(x.build()), 'p1', '2026-10-01')).toBeNull();
+  });
+});
+
+describe('tapper share — E03-S06 (MD-8, D-63)', () => {
+  const b = () => log().master({ t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] });
+
+  it('50/50 by default, flagged as the default', () => {
+    expect(shareOn(projectMaster(b().build()), 'red', '2026-10-01')).toEqual({ tapperPct: 50, ownerPct: 50, isDefault: true });
+  });
+
+  it('a share from a date applies from that day on; earlier days keep the old one', () => {
+    const s = projectMaster(
+      b()
+        .master({ t: 'share_set', shareId: 's1', tapperId: 'red', tapperPct: 55, from: '2026-10-01' })
+        .master({ t: 'share_set', shareId: 's2', tapperId: 'red', tapperPct: 60, from: '2027-01-01' })
+        .build(),
+    );
+    expect(shareOn(s, 'red', '2026-09-30')).toMatchObject({ tapperPct: 50, isDefault: true });
+    expect(shareOn(s, 'red', '2026-10-01')).toEqual({ tapperPct: 55, ownerPct: 45, isDefault: false });
+    expect(shareOn(s, 'red', '2027-01-01')).toMatchObject({ tapperPct: 60 });
+    expect(shareHistory(s, 'red').map((h) => h.tapperPct)).toEqual([60, 55]);
+  });
+
+  it('custom: the tapper side, a whole number 0–100 (D-63 Q17)', () => {
+    expect(parseTapperPct('45')).toEqual({ ok: true, tapperPct: 45 });
+    expect(parseTapperPct('0')).toEqual({ ok: true, tapperPct: 0 });
+    expect(parseTapperPct('100')).toEqual({ ok: true, tapperPct: 100 });
+    expect(parseTapperPct('45.5')).toEqual({ ok: false, reason: 'whole' });
+    expect(parseTapperPct('101')).toEqual({ ok: false, reason: 'range' });
+    expect(parseTapperPct('-1')).toEqual({ ok: false, reason: 'range' });
+    expect(parseTapperPct('')).toEqual({ ok: false, reason: 'whole' });
+  });
+
+  it('the start day must be after the tapper\'s latest closed sale — the same day is not allowed (D-74 F17)', () => {
+    expect(earliestShareDay(null)).toBeNull();
+    expect(earliestShareDay('2026-09-18')).toBe('2026-09-19');
+    expect(shareFromAllowed('2026-09-18', '2026-09-18')).toBe(false);
+    expect(shareFromAllowed('2026-09-19', '2026-09-18')).toBe(true);
+    expect(shareFromAllowed('2020-01-01', null)).toBe(true);
   });
 });

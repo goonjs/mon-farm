@@ -93,3 +93,28 @@ test('buyers: add two, and the form keeps working offline', async ({ page, conte
   await expect(page.getByText('คนรับซื้อยาง ข')).toBeVisible();
   if (info.project.name === 'phone-landscape') await page.screenshot({ path: `${SHOTS}/e03-s01-buyers.png`, fullPage: true });
 });
+
+test('share: a tapper starts at 50/50; a custom share from a date is kept offline (E03-S06)', async ({ page, context }, info) => {
+  await page.goto('/person/new');
+  await page.getByTestId('person-name').fill('แดง');
+  await page.getByTestId('role-tapper').click();
+  await page.getByTestId('person-save').click();
+  await expect(page.getByTestId('add-person')).toBeVisible();
+  await context.setOffline(true);
+  await page.getByText('แดง', { exact: true }).click();
+  await expect(page.getByTestId('share-now')).toContainText('คนกรีดยาง 50%');
+  await page.getByTestId('share-custom').click();
+  await page.getByTestId('share-pct').fill('101');
+  await page.getByTestId('share-save').click();
+  await expect(page.getByText('ใส่ได้ตั้งแต่ 0 ถึง 100')).toBeVisible();
+  await page.getByTestId('share-pct').fill('55');
+  await expect(page.getByTestId('share-owner')).toContainText('45%');
+  await page.getByTestId('share-from').fill('1/1/2569');
+  if (info.project.name === 'phone-landscape') await page.screenshot({ path: `${SHOTS}/e03-s06-share-form.png`, fullPage: true });
+  await page.getByTestId('share-save').click();
+  await expect(page.getByTestId('share-history')).toContainText('55%');
+  await context.setOffline(false);
+  await page.reload();
+  await expect(page.getByTestId('share-now')).toContainText('คนกรีดยาง 55%');
+  if (info.project.name === 'phone-landscape') await page.screenshot({ path: `${SHOTS}/e03-s06-share-saved.png`, fullPage: true });
+});
