@@ -14,10 +14,11 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     // `src/store/*.test.ts` (not `**`) is deliberate: it picks up the pure
-    // port files (people.ts, store.ts — no RN/web-only globals). The one
-    // platform adapter tested here is store.web.ts, and only through an
-    // injected IDBFactory (fake-indexeddb) and Storage stub — nothing reaches
-    // a real browser global. Native adapters (expo-sqlite) stay out.
+    // port files (people.ts, store.ts — no RN/web-only globals). The
+    // platform adapters tested here are store.web.ts and account.web.ts, and
+    // only through an injected IDBFactory (fake-indexeddb) and Storage stub —
+    // nothing reaches a real browser global. Native adapters (expo-sqlite)
+    // stay out.
     // `src/i18n/*.test.ts` joins on the same terms: the catalogue and its
     // resolver are plain data and a pure function, with the React binding kept
     // in a separate file precisely so the rules can be proven without a tree.

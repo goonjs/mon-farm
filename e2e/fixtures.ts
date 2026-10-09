@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 
 import { LogBuilder, readyPile, setUpSale } from '../src/core/fixtures';
 import type { SaleEvent } from '../src/core/types';
+import { DB_NAME, DB_VERSION } from '../src/store/idb';
 
 /**
  * A sale with one zone, one pile already checked and ready, and `standardBaskets`
@@ -59,12 +60,12 @@ export async function seedSale(page: Page, saleId: string, events: readonly Sale
   // created the database with its own schema — so the seed never creates it.
   await page.locator('[data-testid="empty-state"], [data-testid^="sale-"]').first().waitFor();
   await page.evaluate(
-    (events) =>
+    ({ events, name, version }) =>
       new Promise<void>((resolve, reject) => {
-        const open = indexedDB.open('mon-farm-v1', 1);
+        const open = indexedDB.open(name, version);
         open.onupgradeneeded = () => {
           open.transaction?.abort();
-          reject(new Error('seedSale: app has not created mon-farm-v1 yet'));
+          reject(new Error(`seedSale: app has not created ${name} v${version} yet`));
         };
         open.onerror = () => reject(open.error);
         open.onsuccess = () => {
@@ -88,7 +89,7 @@ export async function seedSale(page: Page, saleId: string, events: readonly Sale
           tx.onerror = () => reject(tx.error);
         };
       }),
-    events as SaleEvent[],
+    { events: events as SaleEvent[], name: DB_NAME, version: DB_VERSION },
   );
 }
 

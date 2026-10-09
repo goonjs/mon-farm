@@ -77,12 +77,12 @@ login ด้วย Google บนเว็บและ Android ผ่าน Fireb
 ## Dev notes
 
 - **โครง**: `src/core/user.ts` (ผู้ใช้เชิงตรรกะ + ตัวตน) · `src/auth/google.ts` port, `google.web.ts` (Firebase Auth
-  popup), `google.native.ts` (ยังไม่ทำ — throw), `errors.ts` · `src/store/account.ts` port + web (localStorage
-  `mon-farm:account`) / native (`meta.session` ใน `mon-farm-v1.db`) / memory · `src/store/session.ts` ผู้เขียนปัจจุบัน
+  popup), `google.native.ts` (ยังไม่ทำ — throw), `errors.ts` · `src/store/account.ts` port + web (IndexedDB
+  `mon-farm-v1`: `meta.session`, schema ร่วมใน `src/store/idb.ts`) / native (`meta.session` ใน `mon-farm-v1.db`) / memory · `src/store/session.ts` ผู้เขียนปัจจุบัน
   (แทนค่า `'pre-login'`) · `src/components/AccountGate.tsx` + `LoginScreen.tsx` ครอบ `Stack` ใน `_layout.tsx`
 - **การตัดสินใจ**: gate อ่านผู้ใช้จาก store ในเครื่อง ไม่อ่านจาก Firebase Auth ตอนเปิดแอป → เปิดออฟไลน์ / token
-  หมดอายุไม่ขวางการบันทึก (AC5, AC7) เว็บเก็บใน localStorage ไม่ใช่ IndexedDB `meta` ตามแผน architecture — บันทึก
-  ไว้ใน architecture §Security ให้เจ้าของยืนยัน
+  หมดอายุไม่ขวางการบันทึก (AC5, AC7) เว็บเก็บใน IndexedDB `meta` ตามแผน architecture §Schema — เว็บ (ร่าง
+  แรกใช้ localStorage และค้างคำถามเจ้าของไว้ — แก้กลับตามแบบที่ตกลงแล้วหลัง code review F4 จึงไม่มีคำถามค้าง)
 - **Firebase config**: ยังไม่มีโปรเจกต์ (E01-S07) → `google.web.ts` ใช้ `demo-mon-farm` และทำงานเฉพาะเมื่อ build
   ตั้ง `EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST`; ไม่มีทั้ง config จริงและ emulator → ไม่ยอมเรียก (ข้อความ
   "เข้าสู่ระบบไม่สำเร็จ") ⇒ **ถ้า merge ตอนนี้ เว็บ dev จะติดหน้า login จนกว่าจะมี config จริง + Google provider**

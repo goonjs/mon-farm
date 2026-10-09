@@ -323,8 +323,12 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
 
 - **สร้างแล้ว (E01-S03)**: record ใน `events` = `{ id, saleId, ts, deviceSeq, pending, event }` (เก็บ event ทั้งตัวใน
   `event`), index `saleId` และ `pending` — index ที่มี `groupId` เพิ่มเมื่อ envelope มี `groupId` (E02-S02); `meta`
-  คีย์ `device` = `{ deviceId, nextDeviceSeq, legacyCleanupV1 }`; ยังไม่สร้าง `memberships`/`pendingOps`/`mediaQueue`
-  (สร้างใน story ที่ใช้)
+  คีย์ `device` = `{ deviceId, nextDeviceSeq, legacyCleanupV1 }`; ยังไม่สร้าง `mediaQueue` (สร้างใน story ที่ใช้)
+- **สร้างแล้ว (E02-S01/S02, DB version 2)**: `meta` คีย์ `session` = ผู้ใช้ที่ login; `memberships` (keyPath `groupId`);
+  `pendingOps` (คีย์ `${op}:${groupId}` เหมือน `pending_ops.id` ของ native) — schema ทั้งหมดอยู่ที่ `src/store/idb.ts`
+  ที่ event store และ account store ใช้ร่วมกัน (เปิด version เดียวกัน, upgrade สร้าง store ที่ขาด) ไม่มี cache: อ่านจาก
+  DB ทุกครั้ง และเขียน 1 ครั้ง = transaction `readwrite` เดียว (สร้างกลุ่ม = `memberships` + `pendingOps` ใน transaction
+  เดียวด้วย `add`) จึงไม่มีแท็บไหนเขียนสำเนาเก่าทับของใหม่ได้
 - append 1 ครั้ง = transaction `readwrite` เดียวครอบ `events` + `meta` (ตัวนับ seq) ปลอดภัยแม้เปิดหลายแท็บ:
   **store เป็นผู้กำหนด `deviceSeq` ของเครื่องตัวเองใน transaction** (`checkAppend`) — เลขที่หน้าจอเสนอมาใช้ได้ถ้ายังว่าง
   ถ้าแท็บอื่นใช้ไปแล้วจะได้เลขว่างถัดไปแทนการถูกปฏิเสธ IndexedDB เรียง transaction ข้ามแท็บให้ จึงไม่มี event หาย
@@ -333,7 +337,8 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
   (ลำดับ fold ตัดสินด้วย `deviceSeq` ตามลำดับที่ commit) — ไม่มีข้อมูลหาย
 - เรียก `navigator.storage.persist()` เพื่อลดโอกาสเบราว์เซอร์ลบข้อมูล
 - ใช้ IndexedDB ไม่ได้ (เช่น private mode) → ใช้ `MemoryStore` และเตือนเป็นภาษาไทย (E01-S03) — `EventStore.isDurable()`
-  + แถบ `StorageWarning` บนทุกหน้าจอ
+  + แถบ `StorageWarning` บนทุกหน้าจอ; account store ก็ใช้หน่วยความจำเช่นกัน (session + กลุ่มอยู่แค่ใน session นี้ เปิดใหม่
+  ต้อง login ใหม่) และเตือนแบบเดียวกัน
 
 ### กติกาของ `EventStore`
 
@@ -517,7 +522,7 @@ retry/backoff ชุดเดียวกัน ถ้า object มีอยู
   มีเน็ตแล้วส่ง batch `{groups/{gid}, members/{uid}}` (ส่งซ้ำ → ตรวจแบบข้อ 4 ด้วย `getDoc` ของ members/{uid})
   — **สร้างแล้ว (E02-S02)**: `src/core/group.ts` (`newGroup`, `decideEntry`, `createGroupWrites` = batch ที่ outbox จะส่ง
   และที่ rules test ใช้ยืนยัน) + `AccountStore.createGroup` (native: `memberships` + `pending_ops` ใน transaction
-  เดียว; เว็บ: เอกสาร localStorage เดียวกับ session เขียนครั้งเดียว) ยังไม่มีการส่งขึ้นเซิร์ฟเวอร์ (E01-S09) และยังไม่ทำ
+  เดียว; เว็บ: IndexedDB `memberships` + `pendingOps` ใน transaction เดียว) ยังไม่มีการส่งขึ้นเซิร์ฟเวอร์ (E01-S09) และยังไม่ทำ
   "login ครั้งแรกบนเครื่องใหม่ → ดึงรายการกลุ่มจากเซิร์ฟเวอร์ก่อน" (ต้องมี backend)
 - **เข้าร่วม**: ต้องมีเน็ต (callable `acceptInvite`) เสร็จแล้วดึงข้อมูลทั้งกลุ่มลงมา
 - **รีเฟรชรายการกลุ่ม**: ตอนเปิดแอปและทุกครั้งที่กลับมาออนไลน์ query collection-group `members` (`uid == me`)
@@ -638,9 +643,8 @@ Java นอก repo — ขออนุญาตใน E01-S08)
 - **สร้างแล้ว (E02-S01)**: ผู้ใช้ที่ login แล้ว (`userId` + รายการตัวตน, `src/core/user.ts`) เก็บในเครื่องผ่าน
   `AccountStore` (`src/store/account.*`) และ gate อ่านจากที่นั้น ไม่อ่านจาก Firebase Auth ตอนเปิดแอป — เปิดออฟไลน์
   ได้โดยไม่ขึ้นกับ token และไม่ต้องใช้ persistence adapter ของ Firebase บน RN เพื่อการนี้ native = `meta` คีย์
-  `session` ใน `mon-farm-v1.db`; **เว็บ = localStorage คีย์ `mon-farm:account` (ต่างจากแผน IndexedDB `meta`)** เพราะ
-  เป็นเอกสาร JSON เล็กที่เขียนทั้งก้อนครั้งเดียว ไม่ต้องเพิ่ม version ของ IDB และ e2e preload ได้ด้วย `storageState`
-  — รอเจ้าของยืนยัน; login บนเว็บ = Firebase Auth popup (ทดสอบกับ Auth emulator เท่านั้น จนกว่า E01-S07);
+  `session` ใน `mon-farm-v1.db`; เว็บ = IndexedDB `meta` คีย์ `session` ตาม §Schema — เว็บ (ร่วมกับ `memberships` /
+  `pendingOps`; e2e preload ผ่าน `storageState` ที่ restore IndexedDB ได้); login บนเว็บ = Firebase Auth popup (ทดสอบกับ Auth emulator เท่านั้น จนกว่า E01-S07);
   Android ยังไม่ทำ (E01-S06); ยังไม่เขียน `users/{uid}` ขึ้น Firestore
 - **`deviceId` ไม่ใช่ตัวตน**: rules ผูก event กับ `actor.userId == request.auth.uid` เท่านั้น
 - **ไม่มีอะไรถูกแก้หรือลบที่เซิร์ฟเวอร์**: events และ media สร้างได้อย่างเดียว; การลบ = Soft Delete event

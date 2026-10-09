@@ -89,19 +89,24 @@ test('an IndexedDB that refuses to open also falls back, with the warning', asyn
   await expect(page.getByTestId('storage-warning')).toBeVisible();
 });
 
-test('without IndexedDB the app still counts and warns in Thai that nothing is kept', async ({ page }) => {
+/**
+ * Since E02 the signed-in session lives in IndexedDB too, so a browser
+ * without it starts signed out, every time: the warning must already be on
+ * the login screen. Counting on in memory after a sign-in there is proven
+ * below the browser — `store.web.test.ts` (events) and `account.test.ts`
+ * (session and group) — since signing in needs the Auth emulator.
+ * (`docs/stories/screenshots/e01-s03/storage-warning.png` is the pre-E02
+ * capture of the counting screen and is no longer retaken.)
+ */
+test('without IndexedDB the app warns in Thai that nothing is kept, from the first screen', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });
   });
   await page.goto('/');
+  await expect(page.getByTestId('login-screen')).toBeVisible();
   const warning = page.getByTestId('storage-warning');
   await expect(warning).toBeVisible();
   await expect(warning).toContainText('ไม่ได้บันทึก');
-
-  await page.getByTestId('new-sale').click();
-  await expect(page).toHaveURL(/\/setup$/);
-  await expect(page.getByTestId('storage-warning')).toBeVisible();
-  await page.screenshot({ path: 'docs/stories/screenshots/e01-s03/storage-warning.png' });
 });
 
 test('two tabs counting the same sale in turn lose nothing (NFR-2)', async ({ context, page }) => {

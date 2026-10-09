@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-import { BASE_URL, signedInNoGroup } from './session';
+import type { CreateGroupOp, Membership } from '../src/core/group';
+import { BASE_URL, readStore, signedInNoGroup } from './session';
 
 /**
  * E02-S02: signed in with no farm group → only create / join; create one →
@@ -32,11 +33,14 @@ test('create a farm group, then reopen offline straight into it', async ({ page,
   await expect(page.getByTestId('empty-state')).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/s02-in-group.png` });
 
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('mon-farm:account') ?? '{}'));
-  expect(stored.memberships).toEqual([expect.objectContaining({ name: 'สวนบ้านนา', role: 'owner' })]);
-  expect(stored.pendingOps).toEqual([
-    expect.objectContaining({ op: 'create_group', groupId: stored.memberships[0].groupId, createdBy: 'e2e-user' }),
+  // Kept in IndexedDB (architecture §Schema — เว็บ), not localStorage.
+  const memberships = await page.evaluate(readStore<Membership>, 'memberships');
+  const pendingOps = await page.evaluate(readStore<CreateGroupOp>, 'pendingOps');
+  expect(memberships).toEqual([expect.objectContaining({ name: 'สวนบ้านนา', role: 'owner' })]);
+  expect(pendingOps).toEqual([
+    expect.objectContaining({ op: 'create_group', groupId: memberships[0].groupId, createdBy: 'e2e-user' }),
   ]);
+  expect(await page.evaluate(() => localStorage.getItem('mon-farm:account'))).toBeNull();
 
   // Reopen: the page itself must load (no service worker), everything else fails.
   await context.setOffline(false);
@@ -57,9 +61,7 @@ test('a sale started in the group records the group id on its events', async ({ 
   await page.getByTestId('group-name').fill('สวนบ้านนา');
   await page.getByTestId('group-submit').click();
   await expect(page.getByTestId('empty-state')).toBeVisible();
-  const groupId = await page.evaluate(
-    () => JSON.parse(localStorage.getItem('mon-farm:account') ?? '{}').memberships[0].groupId as string,
-  );
+  const [{ groupId }] = await page.evaluate(readStore<Membership>, 'memberships');
 
   await page.getByTestId('new-sale').click();
   // The default split saves on its own (setup.spec.ts) — an event to inspect.

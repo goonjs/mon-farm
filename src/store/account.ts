@@ -9,8 +9,8 @@
  * says they did. There is no sign-out in the MVP (D-23), so nothing clears it.
  *
  * Same port/adapter shape as `farm.ts` / `people.ts`:
- *   account.web.ts    — localStorage, one JSON document
- *   account.native.ts — expo-sqlite, `meta` in `mon-farm-v1.db`
+ *   account.web.ts    — IndexedDB `mon-farm-v1`: `meta`, `memberships`, `pendingOps`
+ *   account.native.ts — expo-sqlite `mon-farm-v1.db`: `meta`, `memberships`, `pending_ops`
  *   account-memory.ts — tests
  */
 
