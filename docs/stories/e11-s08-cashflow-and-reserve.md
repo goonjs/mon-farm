@@ -1,6 +1,6 @@
 # Story E11-S08: กระแสเงินสดรายเดือนและเงินสำรอง
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ
 
 ## Context
 
@@ -34,7 +34,12 @@ Status: Draft
 
 ## Verification
 
+- Unit `plan.test.ts` (monthly in/out/net by stage, sources per month, incomplete months, reserve) · e2e `finance.spec.ts` (salary in out-actual, income in in-actual, incomplete month, reserve entry) · Screenshot 21
+
 ## Dev notes
+
+- `/finance/cashflow`: two months back to three ahead; per month in (actual/planned) and out (actual/committed/planned) as solid/outlined/dashed cells with words, net actual and net-if-planned, "ข้อมูลไม่ครบ" when an amount is unknown (planned expense or lease), and a drill-down to every source record. Below: coming up (committed incl. salary, planned + unknown count, owed back) and the reserve — the owner's amount, assumption and source; the app never computes it.
+- Not covered: a count of pending-sync records (sync not built, E01-S09) — a note says figures may change once devices sync.
 
 ## Code review
 

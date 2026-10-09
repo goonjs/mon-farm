@@ -102,6 +102,10 @@ export default function SettingsScreen() {
         <Link href="/finance/debts" asChild>
           <Button testID="settings-open-debts">{msg('debt.open')}</Button>
         </Link>
+
+        <Link href="/finance/cashflow" asChild>
+          <Button testID="settings-open-cashflow">{msg('cf.open')}</Button>
+        </Link>
       </ScrollView>
     </View>
   );

@@ -1,6 +1,6 @@
 # Story E11-S05: เงินช่วยเหลือพิเศษคนงาน
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ
 
 ## Context
 
@@ -35,7 +35,11 @@ Status: Draft
 
 ## Verification
 
+- Unit `plan.test.ts` (`aidByWorker` per worker and period; non-farm payer owed back) · Component `plan.test.tsx` (form records worker + kind) · Screenshot: covered by the expense form
+
 ## Dev notes
+
+- A special payment is an expense in category ช่วยเหลือคนงาน with `worker` + `aidKind` (accident · general · food · other); it lives only in the finance log, so it never reaches a sale's settlement or the share. `/finance/aid` lists totals per worker over a date range, each opening its payments.
 
 ## Code review
 
