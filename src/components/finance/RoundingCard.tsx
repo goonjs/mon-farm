@@ -53,7 +53,11 @@ export function RoundingCard({ r }: { r: SaleRounding }) {
       {r.choice.asked ? (
         <>
           <Note testID="round-owner-total">{msg('round.owner.line', { amount: formatSatang(r.result.ownerSatang) })}</Note>
-          <Note>{msg('round.check')}</Note>
+          {r.check.ok ? (
+            <Note testID="round-check">{msg('round.check')}</Note>
+          ) : (
+            <Note tone="reject" testID="round-check-off">{msg('round.checkOff', { diff: formatSatang(r.check.diffSatang) })}</Note>
+          )}
         </>
       ) : null}
     </View>

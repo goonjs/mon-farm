@@ -408,6 +408,7 @@ function MoneyCards({ saleId, settlement }: { saleId: string; settlement: Settle
     saleId,
     settlement.perWorker.map((w) => ({ id: w.personId, name: w.workerName || w.personId, shareSatang: Math.max(0, w.payoutSatang) })),
     settlement.ownerSatang,
+    settlement.grossSatang,
   );
   return (
     <>

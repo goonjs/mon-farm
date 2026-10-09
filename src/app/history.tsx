@@ -51,6 +51,7 @@ export default function HistoryScreen() {
           <>
             <Note testID="history-total">
               {msg('hist.total', { n: h.visible.length, kg: kg(h.totalNetG), amount: formatSatang(h.totalSatang) })}
+              {h.unpricedCount ? ` · ${msg('hist.unpriced', { n: h.unpricedCount })}` : ''}
             </Note>
             {h.visible.map((r) => (
               <Row key={r.saleId} r={r} />

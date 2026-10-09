@@ -29,6 +29,8 @@ export default function ShowAccountScreen() {
   const fin = useFinance();
   const account = useMemo(() => projectAccounts(fin.events ?? []).accounts.find((a) => a.id === accountId), [fin.events, accountId]);
   const satang = Number(amount);
+  // Only a positive whole number of satang may reach the buyer or a QR (review #1).
+  const amountOk = Number.isSafeInteger(satang) && satang > 0;
   const [view, setView] = useState<'pp' | 'bank' | null>(null);
   const shown = view ?? (account?.promptPay ? 'pp' : 'bank');
 
@@ -43,7 +45,11 @@ export default function ShowAccountScreen() {
         </Text>
         <View style={{ gap: t.space.xs }}>
           <Text style={label}>{msg('acct.show.amount')}</Text>
-          <Text testID="show-amount" style={big}>{`${formatSatang(satang)} ฿`}</Text>
+          {amountOk ? (
+            <Text testID="show-amount" style={big}>{`${formatSatang(satang)} ฿`}</Text>
+          ) : (
+            <Note tone="reject" testID="show-amount-bad">{msg('acct.show.badAmount')}</Note>
+          )}
         </View>
 
         {account?.promptPay && account.bankCode ? (
@@ -59,7 +65,7 @@ export default function ShowAccountScreen() {
             <Text testID="show-pp-id" style={big}>{account.promptPay.id}</Text>
             <View
               testID="show-qr-pending"
-              accessibilityLabel={promptPayPayload(account.promptPay, satang)}
+              accessibilityLabel={amountOk ? promptPayPayload(account.promptPay, satang) : undefined}
               style={{ padding: t.space.lg, borderRadius: t.radius.lg, borderWidth: t.border.thick, borderStyle: 'dashed', borderColor: t.color.ruleStrong }}
             >
               <Note>{msg('acct.show.qrPending')}</Note>

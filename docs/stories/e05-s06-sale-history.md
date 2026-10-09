@@ -45,6 +45,8 @@ Status: In Progress — AC ตาม D-81 รอเจ้าของตรว�
 
 ## Code review
 
+- Independent review (separate agent, 2026-10-09) on `feature/e11-e06-money..42a8e26` → `4ed90d8`: 3 major + 7 minor. Fixed with tests: PromptPay payload refuses a non-positive/fractional amount and the buyer screen refuses a bad one (#1); rounding default remembered for the whole group per D-67, not per device (#2); a sale's account is recorded when shown to the buyer, and "following today's default" is told apart from "recorded" (#3); deleting the default writes "no default" so a restore does not revive it (#4); the rounding ✓ is now computed against the sale total (#5); in-flight guards on account writes (#7); one debt projection for both cards (#8); unpriced sales counted apart in history (#9); stale docs (#10). Open: concurrent rounding/default choices keep one silently (#6, SYNC-4).
+
 - Reviewer (agent/session แยก):
 - Findings:
 - Resolution:

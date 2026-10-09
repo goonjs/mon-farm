@@ -577,6 +577,8 @@ const th = {
   'acct.show.pp': 'พร้อมเพย์',
   'acct.show.bank': 'บัญชีธนาคาร',
   'acct.show.close': 'ปิด',
+  'acct.show.badAmount': 'ยอดโอนไม่ถูกต้อง — กลับไปตรวจหน้าสรุปเงิน',
+  'acct.sale.unrecorded': 'ใช้บัญชีค่าเริ่มต้น — บันทึกกับการขายเมื่อกดให้ดูบัญชีหรือเลือกเอง',
   'acct.show.qrPending': 'QR พร้อมเพย์ (รอเพิ่มตัวสร้างภาพ QR)',
 
   // ── Rounding after deductions (E05-S02) ─────────────────────────────────
@@ -590,6 +592,7 @@ const th = {
   'round.owner.line': 'เจ้าของสวน {amount}',
   'round.check': 'เจ้าของ + คนกรีด + ส่วนปรับ = ยอดการขาย ✓',
   'round.default': 'ค่าเริ่มต้นจากการขายครั้งก่อน',
+  'round.checkOff': 'ยอดไม่ตรงกับยอดการขาย ต่าง {diff} — ตรวจการหักเงิน',
 
   // ── Sale history (E05-S06) ──────────────────────────────────────────────
   'hist.open': 'ประวัติการขาย',
@@ -602,6 +605,7 @@ const th = {
   'hist.row.noPrice': 'ยังไม่มีราคา',
   'hist.row.owner': 'ส่วนเจ้าของ {amount}',
   'hist.row.local': 'ในเครื่อง ยังไม่ซิงก์',
+  'hist.unpriced': 'ยังไม่มีราคา {n} การขาย ไม่รวมในยอดเงิน',
   'hist.status.open': 'เปิดอยู่',
   'hist.status.closed': 'ปิดแล้ว',
 } as const;
@@ -1117,6 +1121,8 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'acct.show.pp': 'PromptPay',
   'acct.show.bank': 'bank account',
   'acct.show.close': 'close',
+  'acct.show.badAmount': 'the transfer amount is not valid; go back to the settlement',
+  'acct.sale.unrecorded': 'using the default account; recorded with the sale once shown to the buyer or picked',
   'acct.show.qrPending': 'PromptPay QR (QR image renderer pending)',
 
   'round.title': 'rounding the workers\' cash',
@@ -1129,6 +1135,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'round.owner.line': 'owner {amount}',
   'round.check': 'owner + workers + adjustments = sale total ✓',
   'round.default': 'default from the previous sale',
+  'round.checkOff': 'does not add up to the sale, off by {diff}; check the deductions',
 
   'hist.open': 'sale history',
   'hist.title': 'sale history',
@@ -1140,6 +1147,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'hist.row.noPrice': 'no price yet',
   'hist.row.owner': 'owner share {amount}',
   'hist.row.local': 'on this device, not synced',
+  'hist.unpriced': '{n} without a price, not in the amount',
   'hist.status.open': 'open',
   'hist.status.closed': 'closed',
 };

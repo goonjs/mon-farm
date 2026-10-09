@@ -228,6 +228,8 @@ test('receiving accounts — add, default, show the buyer (offline)', async ({ p
   await page.getByTestId('round-owner').click();
   await expect(page.locator('[data-testid="round-line-person-prayuth"]')).toContainText('100,342.00');
   await expect(page.getByTestId('round-owner-total')).toContainText('149,367.50');
+  await expect(page.getByTestId('round-check')).toBeVisible();
+  await expect(page.getByTestId('sale-account-unrecorded')).toBeVisible();
   await expect(page.getByTestId('sale-account-amount')).toContainText('149,367.50');
   await page.getByTestId('rounding').scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${SHOTS}/17-rounding.png`, fullPage: true });

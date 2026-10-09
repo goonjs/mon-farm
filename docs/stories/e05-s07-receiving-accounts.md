@@ -57,4 +57,9 @@ Status: In Progress — AC ตาม D-81 รอเจ้าของตรว�
 - Accounts, the default and each sale's choice are events in the finance log (`account_added/changed`, `account_default_set`, `sale_account_set`) — no sale-type change. Concurrent edits to bank/number/PromptPay conflict (D-30).
 - `/finance/accounts` (settings → บัญชีรับเงิน): add/edit/delete (restorable); default sorts first with a ✓ badge; deleting the default asks first and leaves none. Settlement gets a "รับยอดโอนเข้า" card (accounts · cash · note · none) whose amount = owner share + route-3 debt repayments, and "ให้คนรับซื้อยางดูบัญชี" → `/finance/show-account`, large text, PromptPay first, switchable to bank.
 - **Needs owner / lead decision:** drawing the QR image needs a QR renderer and ?B2 keep-awake needs `expo-keep-awake` — both new dependencies, not installed (dependency gate). The payload itself is built and tested; the screen shows a placeholder where the QR goes.
-- Not covered: gating "show the buyer" on the rounding question (?B1) — E05-S02 not built, amount shown unrounded; bank list is the 8 common banks.
+- "Show the buyer" waits for the rounding answer (?B1, built in E05-S02) and records the account with the sale when pressed. Bank list is the 8 common banks.
+- Not covered: two devices changing the default at once picks one head silently (no Conflict yet, SYNC-4).
+
+## Code review
+
+- Independent review (separate agent, 2026-10-09) on `feature/e11-e06-money..42a8e26` → `4ed90d8`: 3 major + 7 minor. Fixed with tests: PromptPay payload refuses a non-positive/fractional amount and the buyer screen refuses a bad one (#1); rounding default remembered for the whole group per D-67, not per device (#2); a sale's account is recorded when shown to the buyer, and "following today's default" is told apart from "recorded" (#3); deleting the default writes "no default" so a restore does not revive it (#4); the rounding ✓ is now computed against the sale total (#5); in-flight guards on account writes (#7); one debt projection for both cards (#8); unpriced sales counted apart in history (#9); stale docs (#10). Open: concurrent rounding/default choices keep one silently (#6, SYNC-4).

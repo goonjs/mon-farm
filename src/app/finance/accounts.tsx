@@ -17,6 +17,7 @@ import { checkAccountFields, projectAccounts, type Account } from '../../core/fi
 import { BANKS } from '../../core/finance/promptpay';
 import type { AccountFields } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
+import { useInFlight } from '../../finance/use-in-flight';
 import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useTheme } from '../../theme';
@@ -30,15 +31,24 @@ export default function AccountsScreen() {
   const state = useMemo(() => projectAccounts(fin.events ?? []), [fin.events]);
   const [editing, setEditing] = useState<Account | 'new' | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const inFlight = useInFlight();
 
   // The default first, then the rest — so a change of default is visible at once.
   const sorted = [...state.accounts].sort((a, b) => Number(b.id === state.defaultId) - Number(a.id === state.defaultId));
 
-  const setDefault = (id: string) => fin.write('default-account', state.defaultHead, { t: 'account_default_set', accountId: id });
-  const setDeleted = async (a: Account, deleted: boolean) => {
-    await fin.write(a.id, a.headEventId, { t: 'account_changed', patch: { deleted } });
-    setConfirming(null);
-  };
+  const setDefault = (id: string) =>
+    inFlight.run(async () => {
+      await fin.write('default-account', state.defaultHead, { t: 'account_default_set', accountId: id });
+    });
+  const setDeleted = (a: Account, deleted: boolean) =>
+    inFlight.run(async () => {
+      await fin.write(a.id, a.headEventId, { t: 'account_changed', patch: { deleted } });
+      // Deleting the default leaves none — restoring the account later must not quietly make it default again (review #4).
+      if (deleted && a.id === state.defaultId) {
+        await fin.write('default-account', state.defaultHead, { t: 'account_default_set', accountId: null });
+      }
+      setConfirming(null);
+    });
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
@@ -49,7 +59,7 @@ export default function AccountsScreen() {
             key={editing === 'new' ? 'new' : editing.headEventId}
             initial={editing === 'new' ? EMPTY : editing}
             onCancel={() => setEditing(null)}
-            onSave={async (fields) => {
+            onSave={(fields) => inFlight.run(async () => {
               if (editing === 'new') {
                 const id = newId('acct-');
                 await fin.write(id, null, { t: 'account_added', fields });
@@ -62,7 +72,7 @@ export default function AccountsScreen() {
                 if (Object.keys(patch).length) await fin.write(editing.id, editing.headEventId, { t: 'account_changed', patch });
               }
               setEditing(null);
-            }}
+            })}
           />
         ) : (
           <Button testID="account-add" variant="primary" onPress={() => setEditing('new')}>{msg('acct.add')}</Button>

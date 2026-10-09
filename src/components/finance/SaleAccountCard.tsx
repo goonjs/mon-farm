@@ -19,6 +19,7 @@ import { formatSatang } from '../../core/finance/money';
 import { BANKS } from '../../core/finance/promptpay';
 import type { SaleAccountChoice } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
+import { useSaleCounts } from '../../finance/use-live-sales';
 import { useInFlight } from '../../finance/use-in-flight';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -30,17 +31,18 @@ export function SaleAccountCard({ saleId, ownerSatang, ready = true }: { saleId:
   const msg = useT();
   const fin = useFinance();
   const inFlight = useInFlight();
+  const counts = useSaleCounts();
   const accounts = useMemo(() => projectAccounts(fin.events ?? []), [fin.events]);
   const choice = accounts.choiceFor(saleId);
   const [note, setNote] = useState<string | null>(null);
 
   const transferIn = useMemo(() => {
     let sum = 0;
-    for (const a of projectDebts(fin.events ?? []).values()) {
+    for (const a of projectDebts(fin.events ?? [], counts).values()) {
       for (const p of a.payments) if (p.saleId === saleId && !p.deleted && p.method === 'transfer-with-owner') sum += p.amountSatang;
     }
     return sum;
-  }, [fin.events, saleId]);
+  }, [fin.events, saleId, counts]);
   const amount = ownerSatang + transferIn;
 
   const set = (c: SaleAccountChoice | null) =>
@@ -82,11 +84,20 @@ export function SaleAccountCard({ saleId, ownerSatang, ready = true }: { saleId:
         <Note>{choice.note}</Note>
       ) : null}
       {/* ?B1: only once the rounding question is answered, so the amount is final. */}
-      {chosenAccount && ready ? (
+      {choice && !accounts.recordedFor(saleId) ? <Note testID="sale-account-unrecorded">{msg('acct.sale.unrecorded')}</Note> : null}
+      {chosenAccount && ready && amount > 0 ? (
         <Button
           testID="show-account"
           variant="primary"
-          onPress={() => router.push({ pathname: '/finance/show-account', params: { accountId: chosenAccount.id, amount: String(amount) } })}
+          onPress={() =>
+            void inFlight.run(async () => {
+              // Showing the buyer an account settles which account this sale used (review #3).
+              if (!accounts.recordedFor(saleId)) {
+                await fin.write(`sale-account-${saleId}`, null, { t: 'sale_account_set', saleId, choice: { kind: 'account', accountId: chosenAccount.id } });
+              }
+              router.push({ pathname: '/finance/show-account', params: { accountId: chosenAccount.id, amount: String(amount) } });
+            })
+          }
         >
           {msg('acct.show')}
         </Button>
