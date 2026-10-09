@@ -537,6 +537,10 @@ const th = {
   'saleSettings.dupHelp': 'สองเครื่องนับเข่งห่างกันไม่เกินเวลานี้ → แอปถามว่านับซ้ำไหม',
   'saleSettings.less': 'ลด',
   'saleSettings.more': 'เพิ่ม',
+
+  // ── Text size (E03-S08) ─────────────────────────────────────────────────
+  'settings.textSize': 'ขนาดตัวอักษร',
+  'settings.textSizeNote': 'เฉพาะเครื่องนี้ · ตัวเลขนับบนจอสาธารณะไม่เปลี่ยน',
 } as const;
 
 /**
@@ -1003,6 +1007,8 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'saleSettings.dupHelp': 'Two devices counting within this time → the app asks if it was counted twice',
   'saleSettings.less': 'less',
   'saleSettings.more': 'more',
+  'settings.textSize': 'Text size',
+  'settings.textSizeNote': 'This device only · the public count does not change',
 };
 
 export const messages = { th, en } as const;
