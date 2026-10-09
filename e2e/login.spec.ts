@@ -5,8 +5,10 @@ import { BASE_URL, signedIn, signedOut } from './session';
 /**
  * E02-S01 without a backend: the login gate, the first-launch-offline
  * message, and reopening on a device that has signed in before while every
- * request off this origin fails. The Google popup itself is
- * `auth-emulator.spec.ts`.
+ * request off this origin fails. Nothing here signs in through Google: the
+ * popup is written up in `auth-emulator.spec.ts`, which has not yet been
+ * seen to pass (apis.google.com is blocked where it was written), so a
+ * successful sign-in is so far proven only by the gate's component tests.
  */
 
 const SHOTS = 'docs/ux/screenshots/overnight/e02';
