@@ -61,4 +61,11 @@ Status: In Progress
 
 ## Code review
 
+- 2026-10-09 independent review (separate agent, read-only), fixed in e64fe1a: pull/fetch had no timeout (the engine
+  could hang forever) → 30-second timeout; a corrupt doc's error vanished on the next run → its id is kept until `retry()`
+  re-checks it (`integrityIds()`); unhandled rejections from timers; one refused event held back the whole outbox;
+  `stop()` didn't stop retries; the cursor could move backwards; conflict options nested in two lines were lost.
+  Not fixed (minor): `unauthenticated` retries forever with no token refresh (needs login E02-S01); the first full
+  download is not paged; `foldRecord` recurses once per event in the chain
+
 ## QA notes
