@@ -10,6 +10,7 @@
  */
 
 import type { EventId } from '../types';
+import { isMonth } from './money';
 import {
   FARM_FUNDS,
   type Allocation,
@@ -241,7 +242,7 @@ function groupByTarget(events: readonly FinanceEvent[], kinds: readonly string[]
 export function projectFinance(
   events: readonly FinanceEvent[],
   saleCounts: (saleId: string) => boolean = () => true,
-  /** "YYYY-MM": salary months are made up to the month after this (E11-S04); omitted → none. */
+  /** "YYYY-MM": salary months are made up to the month after this (E11-S04); omitted → none. The cashflow passes its own horizon. */
   asOfMonth?: string,
 ): FinanceState {
   const expenses: Expense[] = [];
@@ -392,10 +393,13 @@ function salaryEvents(events: readonly FinanceEvent[], asOfMonth: string): Finan
   for (const create of events) {
     if (create.payload.t !== 'salary_set') continue;
     const rule = create.payload.rule;
+    // A malformed month would never be reached by counting up — skip the rule rather than loop forever (review #1).
+    if (!isMonth(rule.startMonth) || !isMonth(last)) continue;
     const raises = events
       .filter((e) => e.targetId === create.targetId && e.payload.t === 'salary_amount_set')
       .sort(byId)
-      .map((e) => e.payload as { fromMonth: string; amountSatang: number });
+      .map((e) => e.payload as { fromMonth: string; amountSatang: number })
+      .filter((r) => isMonth(r.fromMonth));
     for (let m = rule.startMonth; m <= last; m = nextMonth(m)) {
       const target = `${create.targetId}:${m}`;
       const marks = events.filter((e) => e.targetId === target && (e.payload.t === 'salary_paid' || e.payload.t === 'salary_unpaid'));

@@ -47,10 +47,10 @@ export interface ExpenseFields {
   /** null = not recorded yet (F7: fertilizer owner-share expenses may leave it for later). */
   readonly payer: Payer | null;
   /** E11-S05: a special payment to a worker (aid) — never touches a sale's settlement. */
-  readonly worker?: Payer;
-  readonly aidKind?: AidKind;
-  /** E11-S06: a trip — the amount is the sum of its lines. */
-  readonly trip?: Trip;
+  readonly worker?: Payer | null;
+  readonly aidKind?: AidKind | null;
+  /** E11-S06: a trip — the amount is the sum of its lines. null clears it (an absent key cannot, once stored). */
+  readonly trip?: Trip | null;
 }
 
 export type AidKind = 'accident' | 'general' | 'food' | 'other';
