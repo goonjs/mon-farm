@@ -10,7 +10,7 @@ import { Text } from 'react-native';
 
 import { Button } from '../components/chrome';
 import { Card, FarmScreen, LinkButton, ListRow, StateBadge } from '../components/farm-ui';
-import { areaOn, formatRai, todayIso, type MasterState } from '../core/master';
+import { activePoints, areaOn, formatRai, showStarterButton, todayIso, type MasterState } from '../core/master';
 import { useT } from '../i18n';
 import { peopleStore as master } from '../store/people';
 import { useTheme } from '../theme';
@@ -68,6 +68,12 @@ export default function PropertiesScreen() {
         </>
       ) : (
         <>
+          {/* No sync yet (E01-S09): this device's log is everything there is, so its "first pull" is done. */}
+          {state && active.length > 0 && showStarterButton(state, true) ? (
+            <Link href={'/points-wizard' as Href} asChild>
+              <Button testID="open-wizard" variant="primary">{msg('wizard.open')}</Button>
+            </Link>
+          ) : null}
           <Card>
             {state && active.length === 0 ? (
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
@@ -83,6 +89,7 @@ export default function PropertiesScreen() {
                     title={p.name}
                     lines={[
                       msg(`crop.${p.crop}`),
+                      msg('points.title', { n: activePoints(state!, p.id).length }),
                       area === null ? msg('properties.areaUnknown') : msg('properties.area', { rai: formatRai(area) }),
                     ]}
                   />

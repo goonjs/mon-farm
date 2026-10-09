@@ -374,7 +374,14 @@ export type MasterPayload =
       readonly entryId: string;
       readonly centiRai: number;
       readonly effective: string;
-    };
+    }
+  /**
+   * A weighing point (จุดชั่ง = กอง, E03-S03, MD-3): a place under a farm,
+   * reused by every sale. No tare or basket weight of its own — those are
+   * group settings (MD-7).
+   */
+  | { readonly t: 'point_added'; readonly pointId: string; readonly propertyId: string; readonly name: string }
+  | { readonly t: 'point_renamed'; readonly pointId: string; readonly name: string };
 
 export type Crop = 'rubber' | 'durian';
 

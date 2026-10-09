@@ -8,7 +8,7 @@
  * body sizes and the 48 dp target floor instead (NFR-4).
  */
 
-import { Link, type Href } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
@@ -28,19 +28,21 @@ export function FarmScreen({
   footer?: ReactNode;
 }) {
   const t = useTheme();
+  const router = useRouter();
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, padding: t.space.md }}>
-        <Link href={back} asChild>
-          <Pressable
-            testID="back"
-            accessibilityRole="link"
-            accessibilityLabel="กลับ"
-            style={{ minWidth: t.target.min, minHeight: t.target.min, justifyContent: 'center' }}
-          >
-            <Text style={{ fontSize: t.font.size.headingLg, color: t.color.ink }}>‹</Text>
-          </Pressable>
-        </Link>
+        <Pressable
+          testID="back"
+          accessibilityRole="button"
+          accessibilityLabel="กลับ"
+          // Pop, so going back never stacks a second copy of the parent; `back`
+          // is where to land when there is no history (a reload, a deep link).
+          onPress={() => (router.canGoBack() ? router.back() : router.replace(back))}
+          style={{ minWidth: t.target.min, minHeight: t.target.min, justifyContent: 'center' }}
+        >
+          <Text style={{ fontSize: t.font.size.headingLg, color: t.color.ink }}>‹</Text>
+        </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.bold, color: t.color.ink }}>
             {title}
@@ -203,11 +205,12 @@ export function TextField({
 
 export function FieldError({ text }: { text: string }) {
   const t = useTheme();
+  const style = { fontFamily: t.font.family.sans, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.reject };
   return (
-    <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.reject }}>
-      {`⚠ `}
-      <Text>{text}</Text>
-    </Text>
+    <View style={{ flexDirection: 'row', gap: t.space.xs }}>
+      <Text style={style}>⚠</Text>
+      <Text style={[style, { flexShrink: 1 }]}>{text}</Text>
+    </View>
   );
 }
 

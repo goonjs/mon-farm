@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { MASTER_SCOPE } from '../core/master';
 import { createDeviceClock } from './device-clock';
-import { MasterStore } from './master-store';
+import { DuplicatePointNameError, MasterStore } from './master-store';
 import { MemoryStore } from './memory-store';
 import { LogBuilder } from '../core/fixtures';
 
@@ -95,5 +95,24 @@ describe('MasterStore — people and buyers as events (E03-S01)', () => {
     await expect(master.addProperty({ name: ' ', crop: 'rubber' })).rejects.toThrow();
     const f = await master.addProperty({ name: 'ทุเรียน', crop: 'durian' });
     await expect(master.recordArea(f.id, 0, '2026-10-01')).rejects.toThrow();
+  });
+
+  it('points: add under a farm, refuse a name taken in that farm, rename, delete (E03-S03)', async () => {
+    const f = await master.addProperty({ name: 'ก', crop: 'rubber' });
+    const g = await master.addProperty({ name: 'ข', crop: 'rubber' });
+    const p1 = await master.addPoint(f.id, 'จุด 1');
+    await expect(master.addPoint(f.id, 'จุด 1')).rejects.toBeInstanceOf(DuplicatePointNameError);
+    await master.addPoint(g.id, 'จุด 1');
+    await expect(master.renamePoint(p1.id, ' ')).rejects.toThrow();
+    await master.renamePoint(p1.id, 'จุดหน้า');
+    expect((await master.state()).points.find((p) => p.id === p1.id)?.name).toBe('จุดหน้า');
+  });
+
+  it('the starter wizard writes one point per typed name and returns them with their tapper', async () => {
+    const f = await master.addProperty({ name: 'ก', crop: 'rubber' });
+    const made = await master.createStarterPoints([{ propertyId: f.id, tapperId: 't1', names: ['จุด 1', 'จุด 2'] }]);
+    expect(made.map((m) => [m.name, m.tapperId])).toEqual([['จุด 1', 't1'], ['จุด 2', 't1']]);
+    expect((await master.state()).points).toHaveLength(2);
+    await expect(master.createStarterPoints([{ propertyId: f.id, tapperId: 't1', names: ['จุด 1'] }])).rejects.toThrow();
   });
 });

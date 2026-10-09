@@ -8,10 +8,12 @@
  * with it until restored (D-58, D-65 Q9).
  */
 
-import { useEffect, useState } from 'react';
+import { Link, useFocusEffect, type Href } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import {
+  activePoints,
   ageInYears,
   formatGps,
   formatRai,
@@ -24,10 +26,10 @@ import {
 } from '../core/master';
 import type { Crop } from '../core/types';
 import { useT } from '../i18n';
-import { peopleStore as master, type Property } from '../store/people';
+import { peopleStore as master, type Point, type Property } from '../store/people';
 import { useTheme } from '../theme';
 import { Button } from './chrome';
-import { Card, Chip, ChipRow, FieldError, TextField } from './farm-ui';
+import { Card, Chip, ChipRow, FieldError, ListRow, StateBadge, TextField } from './farm-ui';
 import { ThaiDate } from './ThaiDate';
 
 type Problem = 'name' | 'crop' | 'area' | 'date' | 'year' | 'gps';
@@ -36,6 +38,7 @@ export function PropertyForm({ propertyId, onDone }: { propertyId: string | null
   const t = useTheme();
   const msg = useT();
   const [existing, setExisting] = useState<Property | null>(null);
+  const [points, setPoints] = useState<Point[]>([]);
   const [name, setName] = useState('');
   const [crop, setCrop] = useState<Crop | null>(null);
   const [area, setArea] = useState('');
@@ -52,12 +55,20 @@ export function PropertyForm({ propertyId, onDone }: { propertyId: string | null
       const p = s.properties.find((x) => x.id === propertyId);
       if (!p) return;
       setExisting(p);
+      setPoints(activePoints(s, p.id));
       setName(p.name);
       setCrop(p.crop);
       setPlanted(p.plantedYearBe ? String(p.plantedYearBe) : '');
       setGps(p.gps ? formatGps(p.gps) : '');
     });
   }, [propertyId]);
+
+  // Points are added and renamed on their own screen; refresh the list on return.
+  useFocusEffect(
+    useCallback(() => {
+      if (propertyId) master.state().then((s) => setPoints(activePoints(s, propertyId)));
+    }, [propertyId]),
+  );
 
   const rai = parseRai(area);
   const day = parseThaiDay(areaDate);
@@ -158,6 +169,25 @@ export function PropertyForm({ propertyId, onDone }: { propertyId: string | null
               ) : null}
             </View>
           ))}
+        </Card>
+      ) : null}
+
+      {existing ? (
+        <Card testID="property-points">
+          <Label text={msg('points.title', { n: points.length })} />
+          {points.length === 0 ? <Muted text={msg('points.empty')} /> : null}
+          {points.map((p) => (
+            <Link key={p.id} href={`/point/${p.id}` as Href} asChild>
+              <ListRow
+                testID={`point-${p.id}`}
+                title={p.name}
+                badge={p.duplicateName ? <StateBadge text={msg('points.duplicate')} /> : undefined}
+              />
+            </Link>
+          ))}
+          <Link href={`/point/new?property=${existing.id}` as Href} asChild>
+            <Button testID="add-point">{msg('points.add')}</Button>
+          </Link>
         </Card>
       ) : null}
 

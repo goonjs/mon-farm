@@ -21,6 +21,10 @@ import {
   type PeopleFilter,
   type PersonRecord,
   type PropertyRecord,
+  type StarterRow,
+  planStarterPoints,
+  pointNameTaken,
+  type PointRecord,
   validateProperty,
 } from '../core/master';
 import { projectSale } from '../core/project';
@@ -63,6 +67,11 @@ export interface PropertyDraft {
 }
 
 export class InvalidInputError extends Error {}
+
+/** A point name already used in that farm (D-65 Q10). */
+export class DuplicatePointNameError extends InvalidInputError {}
+
+export type Point = PointRecord;
 
 export class PersonInvalidError extends Error {
   constructor(readonly fields: readonly ('name' | 'roles')[]) {
@@ -186,6 +195,39 @@ export class MasterStore implements PeopleStore {
   async recordArea(propertyId: string, centiRai: number, effective: string): Promise<void> {
     if (!Number.isInteger(centiRai) || centiRai <= 0) throw new InvalidInputError('Area must be a number above 0.');
     await this.write({ t: 'area_recorded', propertyId, entryId: uuidv7(), centiRai, effective });
+  }
+
+  async addPoint(propertyId: string, name: string): Promise<Point> {
+    const trimmed = name.trim();
+    if (!trimmed) throw new InvalidInputError('A point needs a name.');
+    if (pointNameTaken(await this.state(), propertyId, trimmed)) throw new DuplicatePointNameError(trimmed);
+    const pointId = uuidv7();
+    await this.write({ t: 'point_added', pointId, propertyId, name: trimmed });
+    return (await this.state()).points.find((p) => p.id === pointId)!;
+  }
+
+  async renamePoint(pointId: string, name: string): Promise<void> {
+    const trimmed = name.trim();
+    if (!trimmed) throw new InvalidInputError('A point needs a name.');
+    const state = await this.state();
+    const cur = state.points.find((p) => p.id === pointId);
+    if (!cur || cur.name === trimmed) return;
+    if (pointNameTaken(state, cur.propertyId, trimmed, pointId)) throw new DuplicatePointNameError(trimmed);
+    await this.write({ t: 'point_renamed', pointId, name: trimmed });
+  }
+
+  /** The generic wizard (D-73): all points or none; each comes back with its tapper. */
+  async createStarterPoints(rows: readonly StarterRow[]): Promise<(Point & { tapperId: string })[]> {
+    const plan = planStarterPoints(await this.state(), rows);
+    if (!plan.ok) throw new InvalidInputError('Every point needs a name, unique within its farm.');
+    const made: { pointId: string; tapperId: string }[] = [];
+    for (const p of plan.points) {
+      const pointId = uuidv7();
+      await this.write({ t: 'point_added', pointId, propertyId: p.propertyId, name: p.name });
+      made.push({ pointId, tapperId: p.tapperId });
+    }
+    const points = (await this.state()).points;
+    return made.map((m) => ({ ...points.find((p) => p.id === m.pointId)!, tapperId: m.tapperId }));
   }
 
   async remove(id: string): Promise<void> {

@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MASTER_SCOPE,
+  activePoints,
+  planStarterPoints,
+  pointNameTaken,
+  showStarterButton,
   ageInYears,
   areaOn,
   parseGps,
@@ -250,5 +254,90 @@ describe('validateProperty / area input (D-65 Q7)', () => {
     expect(parseGps('12.6113, 102.1035')).toEqual({ ok: true, gps: { latE6: 12_611_300, lngE6: 102_103_500 } });
     expect(parseGps('')).toEqual({ ok: true, gps: null });
     expect(parseGps('200, 1')).toEqual({ ok: false });
+  });
+});
+
+describe('weighing points — E03-S03 (MD-3)', () => {
+  const farm = (id: string, name = id) => ({ t: 'property_added', propertyId: id, name, crop: 'rubber' }) as const;
+  const point = (pointId: string, propertyId: string, name: string) => ({ t: 'point_added', pointId, propertyId, name }) as const;
+
+  it('creates, renames, deletes and restores a point; its id is stable', () => {
+    const b = log()
+      .master(farm('f1'))
+      .master(point('p1', 'f1', 'จุด 1'))
+      .master({ t: 'point_renamed', pointId: 'p1', name: 'จุดหน้า' });
+    expect(projectMaster(b.build()).points[0]).toMatchObject({ id: 'p1', propertyId: 'f1', name: 'จุดหน้า', hidden: false });
+    b.remove('p1');
+    expect(projectMaster(b.build()).points[0]).toMatchObject({ id: 'p1', deleted: true, hidden: true });
+    expect(activePoints(projectMaster(b.build()))).toEqual([]);
+    b.restore('p1');
+    expect(activePoints(projectMaster(b.build())).map((p) => p.id)).toEqual(['p1']);
+  });
+
+  it('deleting a farm hides its points; restoring the farm brings them back (D-65 Q9)', () => {
+    const b = log().master(farm('f1')).master(point('p1', 'f1', 'จุด 1')).remove('f1');
+    const s = projectMaster(b.build());
+    expect(s.points[0]).toMatchObject({ deleted: false, hidden: true });
+    expect(activePoints(s)).toEqual([]);
+    expect(activePoints(projectMaster(b.restore('f1').build())).map((p) => p.id)).toEqual(['p1']);
+  });
+
+  it('a name is taken only within the same farm, and only by a point still shown (D-65 Q10)', () => {
+    const s = projectMaster(
+      log().master(farm('f1')).master(farm('f2')).master(point('p1', 'f1', 'จุด 1')).master(point('p2', 'f1', 'จุดเก่า')).remove('p2').build(),
+    );
+    expect(pointNameTaken(s, 'f1', ' จุด 1 ')).toBe(true);
+    expect(pointNameTaken(s, 'f2', 'จุด 1')).toBe(false);
+    expect(pointNameTaken(s, 'f1', 'จุดเก่า')).toBe(false);
+    expect(pointNameTaken(s, 'f1', 'จุด 1', 'p1')).toBe(false); // renaming to its own name
+  });
+
+  it('two devices adding the same name offline: both kept and flagged; a rename clears the flag', () => {
+    const b = log().master(farm('f1')).master(point('p1', 'f1', 'จุด 1')).master(point('p2', 'f1', 'จุด 1'));
+    expect(projectMaster(b.build()).points.map((p) => p.duplicateName)).toEqual([true, true]);
+    b.master({ t: 'point_renamed', pointId: 'p2', name: 'จุด 2' });
+    expect(projectMaster(b.build()).points.map((p) => p.duplicateName)).toEqual([false, false]);
+  });
+
+  it('the starter button shows only with no points at all, after the first pull', () => {
+    const empty = projectMaster(log().master(farm('f1')).build());
+    const some = projectMaster(log().master(farm('f1')).master(point('p1', 'f1', 'จุด 1')).build());
+    expect(showStarterButton(empty, true)).toBe(true);
+    expect(showStarterButton(empty, false)).toBe(false);
+    expect(showStarterButton(some, true)).toBe(false);
+  });
+});
+
+describe('planStarterPoints — the generic wizard (D-73)', () => {
+  const s = projectMaster(log().master({ t: 'property_added', propertyId: 'f1', name: 'ก', crop: 'rubber' }).build());
+
+  it('one point per name the user typed, per tapper, across farms', () => {
+    const plan = planStarterPoints(s, [
+      { propertyId: 'f1', tapperId: 't1', names: ['จุด 1', 'จุด 2'] },
+      { propertyId: 'f1', tapperId: 't2', names: ['จุด 3'] },
+      { propertyId: 'f2', tapperId: 't2', names: ['จุด 1'] },
+    ]);
+    expect(plan).toEqual({
+      ok: true,
+      points: [
+        { propertyId: 'f1', tapperId: 't1', name: 'จุด 1' },
+        { propertyId: 'f1', tapperId: 't1', name: 'จุด 2' },
+        { propertyId: 'f1', tapperId: 't2', name: 'จุด 3' },
+        { propertyId: 'f2', tapperId: 't2', name: 'จุด 1' },
+      ],
+    });
+  });
+
+  it('every name is required — nothing is made up', () => {
+    expect(planStarterPoints(s, [{ propertyId: 'f1', tapperId: 't1', names: ['จุด 1', ' '] }])).toEqual({ ok: false, missing: 1, duplicates: [] });
+  });
+
+  it('a name repeated in one farm is refused', () => {
+    expect(
+      planStarterPoints(s, [
+        { propertyId: 'f1', tapperId: 't1', names: ['จุด 1'] },
+        { propertyId: 'f1', tapperId: 't2', names: ['จุด 1'] },
+      ]),
+    ).toEqual({ ok: false, missing: 0, duplicates: ['จุด 1'] });
   });
 });

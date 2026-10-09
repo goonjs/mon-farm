@@ -14,6 +14,7 @@ jest.mock('../store/people', () => {
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
   useFocusEffect: () => undefined,
+  useRouter: () => ({ back: jest.fn(), replace: jest.fn(), canGoBack: () => true }),
 }));
 
 async function flush() {

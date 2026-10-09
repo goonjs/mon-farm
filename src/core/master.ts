@@ -62,11 +62,25 @@ export interface PropertyRecord {
   readonly createdTs: number;
 }
 
+export interface PointRecord {
+  readonly id: string;
+  readonly propertyId: string;
+  readonly name: string;
+  /** Deleted itself. */
+  readonly deleted: boolean;
+  /** Not offered anywhere: deleted itself, or its farm is (D-65 Q9). */
+  readonly hidden: boolean;
+  /** Shares its name with another shown point in the same farm — two devices offline (D-65). */
+  readonly duplicateName: boolean;
+  readonly createdTs: number;
+}
+
 export interface MasterState {
   /** Including deleted ones — old records still resolve their names. */
   readonly people: readonly PersonRecord[];
   readonly buyers: readonly BuyerRecord[];
   readonly properties: readonly PropertyRecord[];
+  readonly points: readonly PointRecord[];
 }
 
 const byThaiName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, 'th');
@@ -75,6 +89,7 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
   const people = new Map<string, PersonRecord>();
   const buyers = new Map<string, BuyerRecord>();
   const properties = new Map<string, PropertyRecord & { areas: AreaEntry[] }>();
+  const points = new Map<string, { id: string; propertyId: string; name: string; createdTs: number }>();
   const ordered = events.filter((e) => e.kind === 'master').sort(compareEvents);
 
   for (const e of ordered) {
@@ -142,11 +157,29 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
         if (cur) cur.areas.push({ entryId: p.entryId, centiRai: p.centiRai, effective: p.effective, recordedTs: e.ts });
         break;
       }
+      case 'point_added':
+        points.set(p.pointId, { id: p.pointId, propertyId: p.propertyId, name: p.name, createdTs: e.ts });
+        break;
+      case 'point_renamed': {
+        const cur = points.get(p.pointId);
+        if (cur) points.set(p.pointId, { ...cur, name: p.name });
+        break;
+      }
     }
   }
 
   const gone = deletedIds(events);
+  const pointList = [...points.values()].map((x) => ({
+    ...x,
+    deleted: gone.has(x.id),
+    hidden: gone.has(x.id) || gone.has(x.propertyId),
+  }));
+  const shownNames = new Map<string, number>();
+  for (const x of pointList) if (!x.hidden) shownNames.set(nameKey(x.propertyId, x.name), (shownNames.get(nameKey(x.propertyId, x.name)) ?? 0) + 1);
   return {
+    points: pointList
+      .map((x) => ({ ...x, duplicateName: !x.hidden && (shownNames.get(nameKey(x.propertyId, x.name)) ?? 0) > 1 }))
+      .sort(byThaiName),
     people: [...people.values()].map((x) => ({ ...x, deleted: gone.has(x.id) })).sort(byThaiName),
     buyers: [...buyers.values()].map((x) => ({ ...x, deleted: gone.has(x.id) })).sort(byThaiName),
     properties: [...properties.values()]
@@ -276,4 +309,55 @@ export function formatGps(gps: Gps): string {
 /** Centi-rai for display: `125` or `12.5`. */
 export function formatRai(centiRai: number): string {
   return String(centiRai / 100);
+}
+
+const nameKey = (propertyId: string, name: string) => `${propertyId}\u0000${name.trim()}`;
+
+/** Points that can be offered: not deleted, and their farm not deleted either. */
+export function activePoints(state: MasterState, propertyId?: string): PointRecord[] {
+  return state.points.filter((p) => !p.hidden && (propertyId === undefined || p.propertyId === propertyId));
+}
+
+/** Is `name` already used by a shown point of this farm (other than `exceptId`)? (D-65 Q10) */
+export function pointNameTaken(state: MasterState, propertyId: string, name: string, exceptId?: string): boolean {
+  const key = name.trim();
+  return activePoints(state, propertyId).some((p) => p.id !== exceptId && p.name.trim() === key);
+}
+
+/**
+ * The starter-structure button: only while the group has no points in use
+ * (deleted ones do not count — they cannot be duplicated), and only once this device has pulled the group's data, so a phone that has
+ * not yet seen another phone's points cannot create a second set.
+ */
+export function showStarterButton(state: MasterState, firstPullDone: boolean): boolean {
+  return firstPullDone && activePoints(state).length === 0;
+}
+
+export interface StarterRow {
+  readonly propertyId: string;
+  readonly tapperId: string;
+  /** One per point, typed by the user — never made up (D-73). */
+  readonly names: readonly string[];
+}
+
+export type StarterPlan =
+  | { ok: true; points: { propertyId: string; tapperId: string; name: string }[] }
+  | { ok: false; missing: number; duplicates: string[] };
+
+/**
+ * The generic set-up wizard's plan (D-73): farm → tappers → how many points
+ * each → their names. Nothing farm-specific lives in code; every name is
+ * the user's, and a name may not repeat within a farm (D-65 Q10).
+ */
+export function planStarterPoints(state: MasterState, rows: readonly StarterRow[]): StarterPlan {
+  const points = rows.flatMap((r) => r.names.map((name) => ({ propertyId: r.propertyId, tapperId: r.tapperId, name: name.trim() })));
+  const missing = points.filter((p) => !p.name).length;
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const p of points.filter((x) => x.name)) {
+    const k = nameKey(p.propertyId, p.name);
+    if (seen.has(k) || pointNameTaken(state, p.propertyId, p.name)) duplicates.add(p.name);
+    seen.add(k);
+  }
+  return missing || duplicates.size ? { ok: false, missing, duplicates: [...duplicates] } : { ok: true, points };
 }
