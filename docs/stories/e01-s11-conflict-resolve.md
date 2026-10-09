@@ -1,6 +1,6 @@
 # Story E01-S11: ตรวจจับ Conflict + หน้าจอให้เจ้าของเลือก
 
-Status: Ready
+Status: In Progress
 
 ## Context
 
@@ -53,6 +53,14 @@ Status: Ready
 ## Verification
 
 ## Dev notes
+
+### 2026-10-09 (overnight, team INFRA) — core เท่านั้น
+
+- `src/core/conflicts.ts`: `foldRecord` (กราฟ `baseEventId`/`alsoBasedOn`, head, ค่า base ของ ancestor ร่วม, กฎ D-30
+  ต่อฟิลด์, ลบ vs แก้, change ที่มาก่อน base = รอ), `resolution` (based on ทุก head), `blockingConflicts`
+- ยังไม่ทำ: AC1 (event การแก้ทุกตัวยังไม่มี `baseEventId` — ต้องแก้ envelope/projection), ต่อเข้า projection,
+  หน้าจอตัดสิน 3 ตัวเลือก (D-39), integration บน emulator; registry ฟิลด์ strict ใน `STRICT_FIELDS` เป็นชุดเริ่มต้นที่ต้องตรวจกับ
+  payload จริงเมื่อ envelope มา
 
 ## Code review
 
