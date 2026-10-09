@@ -1,6 +1,6 @@
 # Story E01-S10: แสดงสถานะ sync + ปุ่ม "ลองใหม่" เมื่อ error
 
-Status: Ready
+Status: In Progress
 
 ## Context
 
@@ -52,6 +52,12 @@ Status: Ready
 ## Verification
 
 ## Dev notes
+
+### 2026-10-09 (overnight, team INFRA) — core เท่านั้น
+
+- `src/sync/status.ts`: `saleSyncState` (Conflict → error → Pending → Synced ต่อการขาย), `overallBadge` (ออฟไลน์ =
+  รอส่ง ไม่ใช่ error; ปุ่มลองใหม่เฉพาะ error/Conflict; outbox ว่างแสดง ซิงก์แล้ว), คำไทยตามคำตอบเจ้าของใน `src/i18n/messages.ts`
+- ยังไม่ทำ: component ส่วนหัว/รายการขาย + screenshot (ยังไม่มี remote จริงให้ต่อ — ดู E01-S09 Dev notes) และธง Conflict ที่เข่ง
 
 ## Code review
 

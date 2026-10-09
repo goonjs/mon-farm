@@ -345,6 +345,16 @@ const th = {
   // ── Setup: prefill from the farm profile (S27) ──────────────────────────
   'setup.useFarmProfileTitle': 'ใช้ข้อมูลฟาร์มที่บันทึกไว้',
   'setup.useFarmProfileButton': 'ใช้โซนและกองจากฟาร์ม',
+
+  // ── Sync status (E01-S10; design-system §7, owner 2026-10-03) ───────────
+  'sync.synced': 'ซิงก์แล้ว',
+  'sync.pendingN': 'รอส่ง {n}',
+  'sync.conflictN': 'ขัดกัน {n}',
+  'sync.errorRetry': 'ส่งไม่สำเร็จ · ลองใหม่',
+  'sync.salePending': 'รอส่ง',
+  'sync.saleConflict': 'ข้อมูลขัดกัน',
+  'sync.saleError': 'ส่งไม่สำเร็จ',
+  'sync.retry': 'ลองใหม่',
 } as const;
 
 /**
@@ -630,6 +640,15 @@ const en: Partial<Record<keyof typeof th, string>> = {
 
   'setup.useFarmProfileTitle': 'use the saved farm profile',
   'setup.useFarmProfileButton': 'use zones and piles from the farm',
+
+  'sync.synced': 'synced',
+  'sync.pendingN': '{n} to send',
+  'sync.conflictN': '{n} in conflict',
+  'sync.errorRetry': 'not sent · retry',
+  'sync.salePending': 'to send',
+  'sync.saleConflict': 'in conflict',
+  'sync.saleError': 'not sent',
+  'sync.retry': 'retry',
 };
 
 export const messages = { th, en } as const;
