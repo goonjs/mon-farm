@@ -25,9 +25,16 @@ export { fertilizerSplit };
 
 export type DebtProblem = 'amount-required' | 'date-required' | 'note-required';
 
-export function checkDebt(f: Pick<DebtFields, 'kind' | 'amountSatang' | 'date' | 'note'>): DebtProblem[] {
+/**
+ * A fertilizer debt is judged on the bill, not the worker's share: at 0% the
+ * owner carries it all and the worker's share is legitimately zero (review #9).
+ */
+export function checkDebt(
+  f: Pick<DebtFields, 'kind' | 'amountSatang' | 'date' | 'note'> & { readonly fertilizerTotalSatang?: number },
+): DebtProblem[] {
   const out: DebtProblem[] = [];
-  if (!Number.isSafeInteger(f.amountSatang) || f.amountSatang <= 0) out.push('amount-required');
+  const judged = f.kind === 'fertilizer' && f.fertilizerTotalSatang !== undefined ? f.fertilizerTotalSatang : f.amountSatang;
+  if (!Number.isSafeInteger(judged) || judged <= 0 || f.amountSatang < 0) out.push('amount-required');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) out.push('date-required');
   if (f.kind === 'other' && !f.note.trim()) out.push('note-required');
   return out;

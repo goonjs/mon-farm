@@ -166,6 +166,28 @@ describe('E11-S01 expenses and lifecycle', () => {
     expect(x.amountSatang).toBe(70000);
   });
 
+  it('review #1: concurrent money edits on different-depth branches are still a conflict', () => {
+    const c = created('x1', { amountSatang: 1000 });
+    const a1 = ev('x1', { t: 'expense_changed', patch: { note: 'n' } }, { base: c.id, device: 'dev-a' });
+    const a2 = ev('x1', { t: 'expense_changed', patch: { amountSatang: 100 } }, { base: a1.id, device: 'dev-a' });
+    const b1 = ev('x1', { t: 'expense_changed', patch: { amountSatang: 200 } }, { base: c.id, device: 'dev-b' });
+    const x = projectFinance([c, a1, a2, b1]).expenses[0];
+    expect(x.amountSatang).toBe(1000);
+    expect(x.note).toBe('n');
+    expect(x.conflicts).toEqual([{ field: 'amountSatang', values: [100, 200] }]);
+  });
+
+  it('review #2: an edit made on one branch while the conflict is open is shown, not lost', () => {
+    const c = created('x1', { amountSatang: 1000 });
+    const a1 = ev('x1', { t: 'expense_changed', patch: { amountSatang: 100 } }, { base: c.id, device: 'dev-a' });
+    const b1 = ev('x1', { t: 'expense_changed', patch: { amountSatang: 200 } }, { base: c.id, device: 'dev-b' });
+    const c1 = ev('x1', { t: 'expense_changed', patch: { amountSatang: 300 } }, { base: b1.id, device: 'dev-b' });
+    const x = projectFinance([c, a1, b1, c1]).expenses[0];
+    expect(x.amountSatang).toBe(1000);
+    expect(x.conflicts).toEqual([{ field: 'amountSatang', values: [100, 300] }]);
+    expect([...x.heads].sort()).toEqual([a1.id, c1.id].sort());
+  });
+
   it('a change that arrives before its base is held, not applied', () => {
     const c = created('x1', { amountSatang: 64000 });
     const late = ev('x1', { t: 'expense_changed', patch: { amountSatang: 1 } }, { base: 'never-seen' });

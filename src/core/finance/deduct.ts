@@ -102,6 +102,8 @@ export function nettingPayloads(i: {
   amountSatang: number;
   saleId: string;
   date: string;
+  /** The id the repayment will be written under — the debt payment points at it. */
+  repaymentId: string;
 }): NettingPlan {
   const mine = i.owed.filter((r) => r.to.id === i.worker.id);
   const plan = allocateOldestFirst(mine, i.amountSatang);
@@ -114,7 +116,7 @@ export function nettingPayloads(i: {
     },
     debtPayment: {
       t: 'debt_payment_recorded',
-      fields: { worker: i.worker, creditor: i.farm, amountSatang: i.amountSatang, date: i.date, note: '', method: 'netting', saleId: i.saleId },
+      fields: { worker: i.worker, creditor: i.farm, amountSatang: i.amountSatang, date: i.date, note: '', method: 'netting', saleId: i.saleId, repaymentId: i.repaymentId },
     },
   };
 }

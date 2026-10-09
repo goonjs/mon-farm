@@ -98,13 +98,14 @@ describe('netting (D-60): one repayment naming the sale + one debt payment, kept
       ev('b1', { t: 'debt_added', fields: { worker: NAT, kind: 'fertilizer', amountSatang: 150000, date: '2026-09-20', note: '', lender: FARM, fertilizer: { totalSatang: 300000, workerPct: 50 }, carriedForward: false } }),
     ];
     const s = projectFinance(base);
-    const p = nettingPayloads({ worker: NAT, farm: FARM, owed: s.reimbursements, amountSatang: 40000, saleId: 's-3oct', date: '2026-10-03' });
+    const p = nettingPayloads({ worker: NAT, farm: FARM, owed: s.reimbursements, amountSatang: 40000, saleId: 's-3oct', date: '2026-10-03', repaymentId: 'rp' });
     expect(p.ok).toBe(true);
     if (!p.ok) return;
     const after = [...base, ev('rp', p.repayment), ev('dp', p.debtPayment)];
     const s2 = projectFinance(after);
     expect(s2.reimbursements[0]).toMatchObject({ remainingSatang: 24000, status: 'partial' });
     expect(s2.repayments[0]).toMatchObject({ saleId: 's-3oct', from: FARM, to: NAT, amountSatang: 40000 });
+    expect(projectDebts(after).get(NAT.id)!.payments[0].repaymentId).toBe('rp');
     const a = projectDebts(after).get(NAT.id)!;
     expect(a.summary.deducted.netting).toBe(40000);
     expect(a.balanceSatang).toBe(110000);
@@ -115,7 +116,7 @@ describe('netting (D-60): one repayment naming the sale + one debt payment, kept
       ev('x9', { t: 'expense_created', fields: { amountSatang: 64000, date: '2026-09-28', stage: 'actual', categoryId: null, propertyId: null, item: '', note: '', payer: NAT } }),
       ev('b9', { t: 'debt_added', fields: { worker: NAT, kind: 'loan', amountSatang: 100000, date: '2026-09-20', note: '', lender: FARM, fertilizer: null, carriedForward: false } }),
     ];
-    const p = nettingPayloads({ worker: NAT, farm: FARM, owed: projectFinance(base).reimbursements, amountSatang: 64000, saleId: 's-gone', date: '2026-10-03' });
+    const p = nettingPayloads({ worker: NAT, farm: FARM, owed: projectFinance(base).reimbursements, amountSatang: 64000, saleId: 's-gone', date: '2026-10-03', repaymentId: 'rp9' });
     if (!p.ok) throw new Error('plan');
     const all = [...base, ev('rp9', p.repayment), ev('dp9', p.debtPayment)];
     const gone = (id: string) => id !== 's-gone';
@@ -125,7 +126,7 @@ describe('netting (D-60): one repayment naming the sale + one debt payment, kept
   });
 
   it('refuses more than the farm owes', () => {
-    const p = nettingPayloads({ worker: NAT, farm: FARM, owed: [], amountSatang: 1, saleId: 's', date: '2026-10-03' });
+    const p = nettingPayloads({ worker: NAT, farm: FARM, owed: [], amountSatang: 1, saleId: 's', date: '2026-10-03', repaymentId: 'rp' });
     expect(p.ok).toBe(false);
   });
 });

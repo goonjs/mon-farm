@@ -64,6 +64,11 @@ describe('fertilizer split (D-59, F8)', () => {
 });
 
 describe('checkDebt', () => {
+  it('review #9: a 0% fertilizer debt (owner pays the whole bill) is allowed', () => {
+    expect(checkDebt({ kind: 'fertilizer', amountSatang: 0, date: '2026-09-01', note: '', fertilizerTotalSatang: 400000 })).toEqual([]);
+    expect(checkDebt({ kind: 'fertilizer', amountSatang: 0, date: '2026-09-01', note: '', fertilizerTotalSatang: 0 })).toEqual(['amount-required']);
+  });
+
   it('"other" needs a note; amount and date required', () => {
     expect(checkDebt({ kind: 'other', amountSatang: 100, date: '2026-09-01', note: '' })).toEqual(['note-required']);
     expect(checkDebt({ kind: 'loan', amountSatang: 0, date: '', note: '' })).toEqual(['amount-required', 'date-required']);
@@ -179,6 +184,21 @@ describe('E06-S03 tapper ledger', () => {
     s = projectFinance([b, setPayer, edit, edit2, voided]);
     expect(s.expenses.find((e) => e.id === 'b2:owner')!.deleted).toBe(true);
     expect(s.reimbursements).toEqual([]);
+  });
+
+  it('review #6: a debt changed away from fertilizer deletes its owner-share expense', () => {
+    const b = debt('b7', { kind: 'fertilizer', amountSatang: 200000, fertilizer: { totalSatang: 400000, workerPct: 50 } });
+    const e = ev('b7', { t: 'debt_changed', patch: { kind: 'loan', fertilizer: null } }, { base: b.id });
+    expect(projectFinance([b, e]).expenses.find((x) => x.id === 'b7:owner')?.deleted).toBe(true);
+  });
+
+  it('review #5: an owner-share edit then a debt edit do not conflict when the expense edit is payer-only', () => {
+    const b = debt('b8', { kind: 'fertilizer', amountSatang: 200000, fertilizer: { totalSatang: 400000, workerPct: 50 } });
+    const pay = ev('b8:owner', { t: 'expense_changed', patch: { payer: FARM } }, { base: b.id + ':owner' });
+    const e = ev('b8', { t: 'debt_changed', patch: { amountSatang: 300000, fertilizer: { totalSatang: 500000, workerPct: 60 } } }, { base: b.id });
+    const x = projectFinance([b, pay, e]).expenses.find((y) => y.id === 'b8:owner')!;
+    expect(x.conflicts).toEqual([]);
+    expect(x).toMatchObject({ amountSatang: 200000, payer: FARM });
   });
 
   it('separate accounts per worker', () => {

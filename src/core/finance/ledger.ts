@@ -124,35 +124,41 @@ function foldRecord<S extends object>(
     ancestors.set(e.id, set);
   }
 
-  // Forks: changes sharing a base. A guarded field set to different values by
-  // two siblings is a conflict until a later change descends from all of them.
-  const open: { field: string; siblings: Set<EventId>; values: unknown[] }[] = [];
-  const siblingsByBase = new Map<EventId, FinanceEvent[]>();
-  for (const e of order) {
-    const list = siblingsByBase.get(e.baseEventId as EventId) ?? [];
-    list.push(e);
-    siblingsByBase.set(e.baseEventId as EventId, list);
-  }
-  for (const siblings of siblingsByBase.values()) {
-    if (siblings.length < 2) continue;
-    for (const field of guarded) {
-      const touching = siblings.filter((e) => field in (patchOf(e) as Patch));
-      const values = [...new Map(touching.map((e) => [JSON.stringify((patchOf(e) as Patch)[field]), (patchOf(e) as Patch)[field]])).values()];
-      if (values.length < 2) continue;
-      const ids = new Set(touching.map((e) => e.id));
-      const resolved = order.some((e) => !ids.has(e.id) && [...ids].every((s) => ancestors.get(e.id)?.has(s)));
-      if (!resolved) open.push({ field, siblings: ids, values: values.sort(compareValues) });
-    }
+  // Conflicts, per guarded field. The field's "tips" are the changes that set
+  // it with no later change on their own branch setting it again. Two tips
+  // are concurrent (neither descends from the other, by construction); if
+  // their values differ and no later change descends from both, the field is
+  // in conflict. While it is, every change on a contested branch is held back
+  // for that field, so the value stays what it was before the fork, and the
+  // tips' values are what the user picks from — including an edit made on
+  // one branch after the fork (review #1, #2).
+  const isAncestor = (a: EventId, of: EventId) => ancestors.get(of)?.has(a) ?? false;
+  const open: { field: string; held: Set<EventId>; values: unknown[] }[] = [];
+  for (const field of guarded) {
+    const setters = order.filter((e) => field in (patchOf(e) as Patch));
+    const tips = setters.filter((s1) => !setters.some((s2) => s2 !== s1 && isAncestor(s1.id, s2.id)));
+    if (tips.length < 2) continue;
+    const valueOf = (e: FinanceEvent) => (patchOf(e) as Patch)[field];
+    const distinct = new Set(tips.map((e) => JSON.stringify(valueOf(e))));
+    if (distinct.size < 2) continue;
+    const resolved = order.some((e) => tips.every((tip) => isAncestor(tip.id, e.id)));
+    if (resolved) continue;
+    // Held: every setter on a contested branch that is not shared history of all tips.
+    const held = new Set(
+      setters
+        .filter((s1) => tips.some((tip) => s1 === tip || isAncestor(s1.id, tip.id)))
+        .filter((s1) => !tips.every((tip) => s1 === tip || isAncestor(s1.id, tip.id)))
+        .map((e) => e.id),
+    );
+    const values = [...new Map(tips.map((e) => [JSON.stringify(valueOf(e)), valueOf(e)])).values()].sort(compareValues);
+    open.push({ field, held, values });
   }
 
   let state = initial(create);
   const history: S[] = [state];
   for (const e of order) {
     const patch = { ...(patchOf(e) as Patch) };
-    for (const c of open) {
-      const inBranch = c.siblings.has(e.id) || [...c.siblings].some((s) => ancestors.get(e.id)?.has(s));
-      if (inBranch) delete patch[c.field];
-    }
+    for (const c of open) if (c.held.has(e.id)) delete patch[c.field];
     state = { ...state, ...patch } as S;
     history.push(state);
   }
@@ -177,6 +183,8 @@ export interface Expense extends ExpenseFields {
   readonly waiting: boolean;
   /** The current head — what an edit names as its `baseEventId`. */
   readonly headEventId: EventId;
+  /** Every head (more than one while edits are concurrent) — a resolving edit names them all. Includes synthesised ones. */
+  readonly heads: readonly EventId[];
   /** Device that created it — for "same payer as last time" (D-62). */
   readonly createdOn: string;
 }
@@ -250,6 +258,7 @@ export function projectFinance(
       conflicts: f.conflicts,
       waiting: f.waiting,
       headEventId: latestHead(evs, f.createdBy.id) ?? f.createdBy.id,
+      heads: headsOf(evs, id),
       createdOn: f.createdBy.actor.deviceId,
     });
   }
@@ -344,10 +353,12 @@ function ownerShareEvents(events: readonly FinanceEvent[]): FinanceEvent[] {
       const base = debts.get(e.targetId);
       if (!base || base.kind !== 'fertilizer') continue;
       const patch: ExpensePatch = {
-        ...(p.patch.fertilizer !== undefined ? { amountSatang: p.patch.fertilizer ? derived(p.patch as DebtFields) : 0 } : {}),
+        ...(p.patch.fertilizer ? { amountSatang: derived(p.patch as DebtFields) } : {}),
         ...(p.patch.date !== undefined ? { date: p.patch.date } : {}),
         ...(p.patch.note !== undefined ? { note: p.patch.note } : {}),
         ...(p.patch.deleted !== undefined ? { deleted: p.patch.deleted } : {}),
+        // No longer a fertilizer debt → no owner share (review #6).
+        ...(p.patch.fertilizer === null || (p.patch.kind !== undefined && p.patch.kind !== 'fertilizer') ? { deleted: true } : {}),
       };
       out.push(syn({ t: 'expense_changed', patch, alsoBasedOn: (p.alsoBasedOn ?? []).map((a) => a + OWNER_SHARE_SUFFIX) }));
     }

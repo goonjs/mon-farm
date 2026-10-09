@@ -111,6 +111,8 @@ export interface DebtPaymentFields {
   readonly method: DebtPaymentMethod;
   /** The sale it was deducted at; a cancelled/deleted sale's deductions stop counting. */
   readonly saleId: string | null;
+  /** Netting only: the farm-side repayment written with it, so the two void together. */
+  readonly repaymentId?: string;
 }
 
 export type DebtPaymentPatch = Partial<DebtPaymentFields> & { readonly deleted?: boolean };
