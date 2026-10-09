@@ -232,8 +232,8 @@ event มีสองตระกูล และ registry ใน `src/core/merg
 `groupId`/`targetId`/`baseEventId` (E02-S02 / E04-S01) `correction` ชี้เข่งด้วย **`targetId` = id ของ event เข่ง**
 แล้ว (ไม่ใช่ `seq`) เพราะสองเครื่องที่ออฟไลน์อาจได้ `seq` ต่อการขายเลขเดียวกัน `seq` จึงยังอยู่แต่ไม่ unique และ
 ลำดับการ fold คือ `(seq, deviceId, deviceSeq, id)` (`src/core/order.ts`) ไม่อ่าน `ts` ตัวนับ `deviceSeq` มีตัวเดียวทั้งแอป
-(`src/store/device-clock.ts`) ไม่ใช่ต่อหน้าจอการขาย `userId` เป็นค่าแทน
-`'pre-login'` จนกว่า E02-S01 จะมี login (`src/store/session.ts`) เว็บเป็น IndexedDB ตั้งแต่ E01-S03
+(`src/store/device-clock.ts`) ไม่ใช่ต่อหน้าจอการขาย `userId` = uid ของผู้ใช้ที่
+login แล้ว (E02-S01, `src/store/session.ts`; ยังไม่ login → `NotSignedInError` บันทึกไม่ได้) เว็บเป็น IndexedDB ตั้งแต่ E01-S03
 
 **Soft Delete + provenance (E01-S04)**: event `delete` / `restore` ชี้ `targetId` ใดก็ได้ (การขาย, โซน, กอง, รายการหัก,
 เข่ง = id ของ event เข่ง) ตัดสินด้วย event ล่าสุดตามลำดับ fold (`src/core/soft-delete.ts`) — ยังไม่มี `baseEventId`/DAG
@@ -629,6 +629,13 @@ Java นอก repo — ขออนุญาตใน E01-S08)
   LINE ในอนาคตห้ามเชื่อถือ ต้องตรวจจาก Firebase Auth `providerData` เอง session ต้องคงอยู่หลัง force-close: บน RN
   ต้องมี persistence adapter (ผ่าน gate ใน E02-S01) ไม่มี logout ใน MVP บันทึกออฟไลน์ไม่ต้องใช้ ID token ที่ยัง
   ไม่หมดอายุ — token refresh เองเมื่อมีเน็ต
+- **สร้างแล้ว (E02-S01)**: ผู้ใช้ที่ login แล้ว (`userId` + รายการตัวตน, `src/core/user.ts`) เก็บในเครื่องผ่าน
+  `AccountStore` (`src/store/account.*`) และ gate อ่านจากที่นั้น ไม่อ่านจาก Firebase Auth ตอนเปิดแอป — เปิดออฟไลน์
+  ได้โดยไม่ขึ้นกับ token และไม่ต้องใช้ persistence adapter ของ Firebase บน RN เพื่อการนี้ native = `meta` คีย์
+  `session` ใน `mon-farm-v1.db`; **เว็บ = localStorage คีย์ `mon-farm:account` (ต่างจากแผน IndexedDB `meta`)** เพราะ
+  เป็นเอกสาร JSON เล็กที่เขียนทั้งก้อนครั้งเดียว ไม่ต้องเพิ่ม version ของ IDB และ e2e preload ได้ด้วย `storageState`
+  — รอเจ้าของยืนยัน; login บนเว็บ = Firebase Auth popup (ทดสอบกับ Auth emulator เท่านั้น จนกว่า E01-S07);
+  Android ยังไม่ทำ (E01-S06); ยังไม่เขียน `users/{uid}` ขึ้น Firestore
 - **`deviceId` ไม่ใช่ตัวตน**: rules ผูก event กับ `actor.userId == request.auth.uid` เท่านั้น
 - **ไม่มีอะไรถูกแก้หรือลบที่เซิร์ฟเวอร์**: events และ media สร้างได้อย่างเดียว; การลบ = Soft Delete event
 

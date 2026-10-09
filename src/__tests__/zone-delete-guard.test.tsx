@@ -1,11 +1,15 @@
 import { workedExampleLog } from '../core/fixtures';
 import { DeleteBlockedError, setDeleted } from '../store/record';
 import { store as mockStore } from '../store/store';
+import { setSessionUser } from '../store/session';
 
 jest.mock('../store/store', () => {
   const { MemoryStore } = jest.requireActual('../store/memory-store');
   return { store: new MemoryStore() };
 });
+
+// E02-S01: nothing is recorded without a signed-in user.
+beforeAll(() => setSessionUser('user-test'));
 
 describe('setDeleted — the write path enforces D-44 (E01-S16)', () => {
   it('refuses to delete a zone whose worker has live deductions, and writes nothing', async () => {

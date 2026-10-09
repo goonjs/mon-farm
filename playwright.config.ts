@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 import { tokens } from './design/tokens';
+import { BASE_URL, signedIn } from './e2e/session';
 
 /**
  * Playwright runs against the EXPORTED web build, never the dev server.
@@ -39,14 +40,17 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['list']] : [['list']],
 
   use: {
-    baseURL: 'http://127.0.0.1:8080',
+    baseURL: BASE_URL,
+    // E02-S01: the app opens on the login screen until someone has signed
+    // in; the suites start from a device that already has (e2e/session.ts).
+    storageState: signedIn,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
 
   webServer: {
     command: 'node scripts/serve-dist.mjs',
-    url: 'http://127.0.0.1:8080',
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },

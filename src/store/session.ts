@@ -1,12 +1,26 @@
 import type { UserId } from '../core/types';
 
 /**
- * The user id stamped on events until Google login exists (E02-S01).
- *
- * D-23 means every event has a real user, so `actor.userId` is not optional;
- * login is the story that supplies one. Until then this one constant stands
- * in, and E02-S01 replaces it with the Firebase Auth uid from the session
- * (and makes recording impossible without it). Nothing from before that
- * point is synced or migrated, so the placeholder never leaves the device.
+ * Who is writing (E02-S01, D-23): the signed-in user, set by the account gate
+ * once it has read the device's stored session, and read by the write path
+ * (`record.ts`) for `actor.userId`. There is no placeholder user any more —
+ * before anyone signs in, nothing can be recorded at all (ACC-6).
  */
-export const PRE_LOGIN_USER_ID: UserId = 'pre-login';
+
+export class NotSignedInError extends Error {
+  constructor() {
+    super('Nothing can be recorded before someone signs in.');
+    this.name = 'NotSignedInError';
+  }
+}
+
+let current: UserId | null = null;
+
+export function setSessionUser(userId: UserId | null): void {
+  current = userId;
+}
+
+export function sessionUserId(): UserId {
+  if (!current) throw new NotSignedInError();
+  return current;
+}

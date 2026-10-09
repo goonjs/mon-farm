@@ -5,6 +5,7 @@ import SetupScreen from '../app/sale/[id]/setup';
 import { farmStore as mockFarmStore } from '../store/farm';
 import { SaleProvider } from '../store/SaleProvider';
 import { wrap } from '../test/render';
+import { setSessionUser } from '../store/session';
 
 /**
  * Same jest.mock pattern as PeoplePicker.test.tsx — the instance is built
@@ -81,6 +82,9 @@ function renderSetup(saleId: string) {
     </SaleProvider>,
   );
 }
+
+// E02-S01: nothing is recorded without a signed-in user.
+beforeAll(() => setSessionUser('user-test'));
 
 describe('setup: use the farm profile', () => {
   beforeEach(async () => {

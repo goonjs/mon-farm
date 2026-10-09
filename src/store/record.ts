@@ -8,7 +8,7 @@ import { assertAllowed } from '../core/delete-guard';
 import type { Actor, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
 import { createDeviceClock } from './device-clock';
-import { PRE_LOGIN_USER_ID } from './session';
+import { sessionUserId } from './session';
 import { store } from './store';
 
 export { DeleteBlockedError } from '../core/delete-guard';
@@ -36,8 +36,10 @@ export function nextSeq(events: readonly SaleEvent[]): number {
   return events.reduce((max, e) => Math.max(max, e.seq), 0) + 1;
 }
 
+/** The signed-in user on this device; throws `NotSignedInError` before sign-in (E02-S01). */
 export async function actorNow(): Promise<Actor> {
-  return { userId: PRE_LOGIN_USER_ID, deviceId: await deviceClock.load() };
+  const userId = sessionUserId();
+  return { userId, deviceId: await deviceClock.load() };
 }
 
 /** Soft-deletes or restores a record of `saleId` (the sale itself by default). */

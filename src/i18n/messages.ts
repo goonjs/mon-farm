@@ -345,6 +345,17 @@ const th = {
   // ── Setup: prefill from the farm profile (S27) ──────────────────────────
   'setup.useFarmProfileTitle': 'ใช้ข้อมูลฟาร์มที่บันทึกไว้',
   'setup.useFarmProfileButton': 'ใช้โซนและกองจากฟาร์ม',
+
+  // ── Login (E02-S01) — docs/ux/flows/e02-access-and-sync-states.md §2 ─────
+  'login.appName': 'mon-farm',
+  'login.tagline': 'บันทึกการขายยางและงานสวน ใช้ได้แม้ไม่มีเน็ต',
+  'login.google': 'เข้าสู่ระบบด้วย Google',
+  'login.busy': 'กำลังเข้าสู่ระบบ…',
+  'login.firstTimeNote': 'ครั้งแรกต้องต่ออินเทอร์เน็ต หลังจากนั้นใช้ได้แม้ไม่มีเน็ต',
+  'login.offline': 'ต้องต่ออินเทอร์เน็ตเพื่อเข้าสู่ระบบครั้งแรก — ต่อเน็ตแล้วกดอีกครั้ง',
+  'login.popupBlocked': 'เบราว์เซอร์บล็อกหน้าต่างเข้าสู่ระบบ — อนุญาตป๊อปอัปแล้วลองอีกครั้ง',
+  'login.failed': 'เข้าสู่ระบบไม่สำเร็จ — ลองอีกครั้ง',
+  'login.retry': 'ลองอีกครั้ง',
 } as const;
 
 /**
@@ -630,6 +641,16 @@ const en: Partial<Record<keyof typeof th, string>> = {
 
   'setup.useFarmProfileTitle': 'use the saved farm profile',
   'setup.useFarmProfileButton': 'use zones and piles from the farm',
+
+  'login.appName': 'mon-farm',
+  'login.tagline': 'rubber sales and farm work, recorded even without internet',
+  'login.google': 'sign in with Google',
+  'login.busy': 'signing in…',
+  'login.firstTimeNote': 'the first sign-in needs the internet; after that it works offline',
+  'login.offline': 'the first sign-in needs the internet — connect, then press again',
+  'login.popupBlocked': 'the browser blocked the sign-in window — allow pop-ups, then try again',
+  'login.failed': 'sign-in failed — try again',
+  'login.retry': 'try again',
 };
 
 export const messages = { th, en } as const;

@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { View } from 'react-native';
 
+import { AccountGate } from '../components/AccountGate';
 import { StorageWarning } from '../components/StorageWarning';
 import { I18nProvider } from '../i18n';
 import { SpeechProvider } from '../speech';
@@ -31,7 +32,10 @@ export default function RootLayout() {
         <SpeechProvider initial>
           <View style={{ flex: 1 }}>
             <StorageWarning />
-            <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
+            {/* E02-S01: no screen renders before someone has signed in (ACC-6). */}
+            <AccountGate>
+              <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
+            </AccountGate>
           </View>
         </SpeechProvider>
       </I18nProvider>
