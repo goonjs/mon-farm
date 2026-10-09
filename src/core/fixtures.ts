@@ -90,6 +90,15 @@ export class LogBuilder {
     return this;
   }
 
+  /**
+   * A standard basket at a weighing point with its number (E04-S01). The
+   * point stands in as the pile until the counter screen moves to points.
+   */
+  acceptAt(pointId: string, basketNo: number, netG = 50_000, tareG = 2_000): this {
+    this.events.push({ ...this.base(), kind: 'accept', pileId: pointId, pointId, basketNo, input: 'hold', netG, tareG });
+    return this;
+  }
+
   /** An off-standard basket, given its gross scale reading. */
   short(pileId: string, readingG: number, tareG = 2_000): this {
     this.events.push({ ...this.base(), kind: 'short', pileId, readingG, tareG });

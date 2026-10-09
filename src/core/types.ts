@@ -95,6 +95,13 @@ export interface EventBase {
 export interface AcceptEvent extends EventBase {
   readonly kind: 'accept';
   readonly pileId: PileId;
+  /**
+   * The weighing point (E04-S01) and the basket's number, fixed when it is
+   * recorded (SALE-10) — per tapper or per point, by the sale's mode. Absent
+   * on baskets recorded by the pile counter before the move to points.
+   */
+  readonly pointId?: string;
+  readonly basketNo?: number;
   /** How the basket was entered (renamed from `source` in E01-S04, which is now the envelope's channel). */
   readonly input: 'hold' | 'hold-kbd';
   readonly netG: number;
@@ -112,6 +119,13 @@ export interface AcceptEvent extends EventBase {
 export interface ShortEvent extends EventBase {
   readonly kind: 'short';
   readonly pileId: PileId;
+  /**
+   * The weighing point (E04-S01) and the basket's number, fixed when it is
+   * recorded (SALE-10) — per tapper or per point, by the sale's mode. Absent
+   * on baskets recorded by the pile counter before the move to points.
+   */
+  readonly pointId?: string;
+  readonly basketNo?: number;
   readonly readingG: number;
   readonly tareG: number;
 }
@@ -163,6 +177,8 @@ export type SysPayload =
       readonly where: 'farm' | 'buyer';
     }
   | { readonly t: 'price_set'; readonly satangPerKg: number; readonly indexRef: string }
+  /** The sale's basket-numbering mode, chosen at start; the group setting is the default (D-53). */
+  | { readonly t: 'numbering_set'; readonly numbering: NumberingMode }
   /**
    * FR-8.5: `settle()` refuses to run without a split resolvable for every
    * zone — either this sale-level default or a `zone_contract_set` override
