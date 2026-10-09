@@ -172,6 +172,10 @@ export type SysPayload =
        * buyer" the next sale's default (MD-6). Absent for a typed-in name.
        */
       readonly buyerId?: string;
+      /** The manager picked from master data (E04-S02); `manager` stays the name snapshot. */
+      readonly managerId?: string;
+      /** Free note on the sale header (E04-S02, SALE-2). */
+      readonly note?: string;
       readonly manager: string;
       readonly workerLead: string;
       readonly where: 'farm' | 'buyer';
@@ -526,6 +530,8 @@ export interface SaleState {
     readonly buyer: string;
     readonly buyerId?: string;
     readonly manager: string;
+    readonly managerId?: string;
+    readonly note?: string;
     readonly workerLead: string;
     readonly where: 'farm' | 'buyer';
   } | null;

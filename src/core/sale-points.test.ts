@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { LogBuilder } from './fixtures';
 import { MASTER_SCOPE, projectMaster } from './master';
-import { nextBasketNo, saleNumbering, saleRollup } from './sale-points';
+import { projectSale } from './project';
+import { nextBasketNo, parsePrice, pointChoices, pointSetupPayloads, saleNumbering, saleRollup } from './sale-points';
 import type { MasterPayload, NumberingMode, SaleEvent } from './types';
 
 /** Farm: สวน ก (p1, p2 → แดง; p4 → นัด), สวน ข (p3 → แดง). */
@@ -109,5 +110,45 @@ describe('E04-S01 — totals by point, tapper, farm and sale (SALE-4, NFR-3)', (
   it('baskets keep their weight snapshot: totals read the event, not today\'s settings', () => {
     const b = new LogBuilder('sale-x').acceptAt('p1', 1, 60_000, 3_000);
     expect(saleRollup(b.build(), master(), DAY).byPoint.get('p1')?.netG).toBe(60_000);
+  });
+});
+
+describe('E04-S02 — starting a sale from master data', () => {
+  it('lists a farm\'s points by tapper on the sale day; points with no tapper sit apart (D-70)', () => {
+    const m = master();
+    const c = pointChoices(m, 'fA', DAY);
+    expect(c.byTapper.map((g) => [g.tapperId, g.points.map((p) => p.id)])).toEqual([
+      ['red', ['p1', 'p2']],
+      ['nat', ['p4']],
+    ]);
+    expect(c.unassigned).toEqual([]);
+    expect(pointChoices(m, 'fB', DAY).byTapper.map((g) => g.tapperId)).toEqual(['red']);
+  });
+
+  it('picking a point adds the farm and point to the sale once, with the default net + basket weights', () => {
+    const m = master();
+    const pair = { pairId: 'builtin-50', netG: 50_000, basketG: 2_000 };
+    const first = pointSetupPayloads(projectSale([]), m, 'p1', pair);
+    expect(first).toEqual([
+      { t: 'zone_added', zoneId: 'fA', name: 'ก' },
+      { t: 'pile_added', pileId: 'p1', zoneId: 'fA', name: 'p1', tareG: 2_000, stdNetG: 50_000 },
+    ]);
+    const b = new LogBuilder('s');
+    for (const p of first) b.sys(p);
+    expect(pointSetupPayloads(projectSale(b.build(), 's'), m, 'p1', pair)).toEqual([]);
+    expect(pointSetupPayloads(projectSale(b.build(), 's'), m, 'p2', pair)).toEqual([
+      { t: 'pile_added', pileId: 'p2', zoneId: 'fA', name: 'p2', tareG: 2_000, stdNetG: 50_000 },
+    ]);
+  });
+});
+
+describe('parsePrice — ฿/kg typed → integer satang (SALE-3)', () => {
+  it('blank = no price yet; two decimals at most; above 0', () => {
+    expect(parsePrice('')).toEqual({ ok: true, satang: null });
+    expect(parsePrice('52.50')).toEqual({ ok: true, satang: 5250 });
+    expect(parsePrice('52')).toEqual({ ok: true, satang: 5200 });
+    expect(parsePrice('52.505')).toEqual({ ok: false });
+    expect(parsePrice('0')).toEqual({ ok: false });
+    expect(parsePrice('x')).toEqual({ ok: false });
   });
 });

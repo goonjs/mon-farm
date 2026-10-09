@@ -13,9 +13,9 @@
  * never a silent undo.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Button, Pill, Tabs, TopBar } from '../../../components/chrome';
 import { HoldStage } from '../../../components/HoldStage';
@@ -33,7 +33,10 @@ import { useT, type Translate } from '../../../i18n';
 import { announceCount } from '../../../speech/announcer';
 import { speaker } from '../../../speech/speaker';
 import { useSpeech } from '../../../speech';
+import { saleSettings, tapperOn, todayIso, type MasterState } from '../../../core/master';
+import { nextBasketNo, saleNumbering } from '../../../core/sale-points';
 import { readHoldMs } from '../../../store/hold-preference';
+import { peopleStore } from '../../../store/people';
 import { useSale } from '../../../store/SaleProvider';
 import { useTheme, useThemeControls } from '../../../theme';
 
@@ -75,7 +78,14 @@ export default function CounterScreen() {
   const [tab, setTab] = useState<TabKey>('count');
   const [shortOpen, setShortOpen] = useState(false);
   const [shortReadingG, setShortReadingG] = useState(0);
-  const [selectedPileId, setSelectedPileId] = useState<string | null>(null);
+  // E04-S02: the point-picking screen opens the counter on the point it chose.
+  const { pile: pileParam } = useLocalSearchParams<{ pile?: string }>();
+  const [selectedPileId, setSelectedPileId] = useState<string | null>(pileParam ?? null);
+  // Farm master data, for numbering baskets at weighing points (E04-S01).
+  const [master, setMaster] = useState<MasterState | null>(null);
+  useEffect(() => {
+    peopleStore.state().then(setMaster);
+  }, []);
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' });
   const [confirmUndo, setConfirmUndo] = useState(false);
   const [confirmCloseSale, setConfirmCloseSale] = useState(false);
@@ -120,11 +130,21 @@ export default function CounterScreen() {
   // The count about to exist once this basket lands — `totals` here is a
   // closure over state from before the append below, so this is the number
   // that needs speaking, not the one currently on screen (FR-11.3).
+  const pointFields = (): { pointId?: string; basketNo?: number } => {
+    // A pile that is a master-data weighing point gets its point and number
+    // (E04-S01, SALE-10); a pile from the old setup flow stays as it was.
+    if (!master || !master.points.some((p) => p.id === pile.id)) return {};
+    const mode = saleNumbering(events, saleSettings(master).numbering);
+    const day = todayIso(state.startedTs ?? Date.now());
+    return { pointId: pile.id, basketNo: nextBasketNo(events, pile.id, mode, (id) => tapperOn(master, id, day)) };
+  };
   const nextCount = (totals?.baskets ?? 0) + 1;
 
   const onCount = () => {
-    append({ kind: 'accept', pileId: pile.id, input: 'hold', netG: pile.stdNetG, tareG: pile.tareG });
-    if (speechOn) announceCount(nextCount, speaker, append);
+    const point = pointFields();
+    append({ kind: 'accept', pileId: pile.id, input: 'hold', netG: pile.stdNetG, tareG: pile.tareG, ...point });
+    // At a point the spoken number is the basket's own number (D-79), else the pile count.
+    if (speechOn) announceCount(point.basketNo ?? nextCount, speaker, append);
   };
 
   const onReject = (heldMs: number) =>
@@ -148,8 +168,9 @@ export default function CounterScreen() {
   };
 
   const confirmShort = () => {
-    append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG });
-    if (speechOn) announceCount(nextCount, speaker, append);
+    const point = pointFields();
+    append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG, ...point });
+    if (speechOn) announceCount(point.basketNo ?? nextCount, speaker, append);
     setShortOpen(false);
   };
 

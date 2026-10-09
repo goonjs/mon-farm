@@ -99,7 +99,7 @@ test('without IndexedDB the app still counts and warns in Thai that nothing is k
   await expect(warning).toContainText('ไม่ได้บันทึก');
 
   await page.getByTestId('new-sale').click();
-  await expect(page).toHaveURL(/\/setup$/);
+  await expect(page).toHaveURL(/\/start$/); // E04-S02: a new sale opens the start screen
   await expect(page.getByTestId('storage-warning')).toBeVisible();
   await page.screenshot({ path: 'docs/stories/screenshots/e01-s03/storage-warning.png' });
 });

@@ -9,10 +9,10 @@
  * All weights are integer grams (NFR-3).
  */
 
-import { tapperOn, type MasterState } from './master';
+import { activePoints, tapperOn, type BasketPair, type MasterState, type PointRecord } from './master';
 import { compareEvents } from './order';
 import { ZERO_TOTALS, addTotals, basketNetG, liveBaskets } from './totals';
-import type { BasketEvent, NumberingMode, PersonId, SaleEvent, Totals } from './types';
+import type { BasketEvent, NumberingMode, PersonId, SaleEvent, SaleState, SysPayload, Totals } from './types';
 
 export type TapperOf = (pointId: string) => PersonId | null;
 
@@ -101,4 +101,50 @@ export function saleRollup(events: readonly SaleEvent[], master: MasterState, sa
     sale = addTotals(sale, t);
   }
   return { byPoint, byTapper, byFarm, unassigned, sale };
+}
+
+export interface PointChoices {
+  /** Points grouped under their tapper on the sale day, in point-name order (E04-S02). */
+  readonly byTapper: readonly { tapperId: PersonId; points: readonly PointRecord[] }[];
+  /** Points with no tapper that day: weighable, shown apart with a warning (D-63, D-70). */
+  readonly unassigned: readonly PointRecord[];
+}
+
+export function pointChoices(master: MasterState, propertyId: string, saleDay: string): PointChoices {
+  const byTapper = new Map<PersonId, PointRecord[]>();
+  const unassigned: PointRecord[] = [];
+  for (const p of activePoints(master, propertyId)) {
+    const tapper = tapperOn(master, p.id, saleDay);
+    if (!tapper) unassigned.push(p);
+    else byTapper.set(tapper, [...(byTapper.get(tapper) ?? []), p]);
+  }
+  return { byTapper: [...byTapper].map(([tapperId, points]) => ({ tapperId, points })), unassigned };
+}
+
+/**
+ * What to append so the sale can weigh at `pointId` with today's counter: its
+ * farm as a zone and the point as a pile, each once, keyed by their master
+ * ids, carrying the default net + basket weight as the pile's snapshot
+ * (MD-7). Additive — the pile counter stays the one way to record baskets.
+ */
+export function pointSetupPayloads(sale: SaleState, master: MasterState, pointId: string, pair: BasketPair): SysPayload[] {
+  const point = master.points.find((p) => p.id === pointId);
+  const farm = point && master.properties.find((f) => f.id === point.propertyId);
+  if (!point || !farm) return [];
+  const out: SysPayload[] = [];
+  if (!sale.zones.some((z) => z.id === farm.id)) out.push({ t: 'zone_added', zoneId: farm.id, name: farm.name });
+  if (!sale.piles.some((p) => p.id === point.id)) {
+    out.push({ t: 'pile_added', pileId: point.id, zoneId: farm.id, name: point.name, tareG: pair.basketG, stdNetG: pair.netG });
+  }
+  return out;
+}
+
+/** A price as typed (฿/kg, up to 2 decimals) → integer satang; blank = not set yet (SALE-3). */
+export function parsePrice(text: string): { ok: true; satang: number | null } | { ok: false } {
+  const t = text.trim();
+  if (!t) return { ok: true, satang: null };
+  const m = /^(\d+)(?:\.(\d{1,2}))?$/.exec(t);
+  if (!m) return { ok: false };
+  const satang = Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0'));
+  return satang > 0 ? { ok: true, satang } : { ok: false };
 }
