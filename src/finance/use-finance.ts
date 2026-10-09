@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { projectFinance, type FinanceState } from '../core/finance/ledger';
 import type { FinanceEvent, FinancePayload } from '../core/finance/types';
 import type { EventId } from '../core/types';
+import { todayIso } from '../core/finance/money';
 import { financeStore } from '../store/finance';
 import { writeFinance } from '../store/finance-write';
 import { actorNow } from '../store/record';
@@ -41,7 +42,9 @@ export function useFinance(): UseFinance {
 
   // A repayment netted at a sale that was later deleted stops counting (D-67).
   const saleCounts = useSaleCounts();
-  const state = useMemo(() => (events ? projectFinance(events, saleCounts) : null), [events, saleCounts]);
+  // Salary months are made up to next month from today's month (E11-S04).
+  const asOfMonth = todayIso().slice(0, 7);
+  const state = useMemo(() => (events ? projectFinance(events, saleCounts, asOfMonth) : null), [events, saleCounts, asOfMonth]);
 
   const write = useCallback(
     async (targetId: string, base: EventId | null, payload: FinancePayload) => {

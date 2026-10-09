@@ -1,6 +1,6 @@
 # Story E11-S06: การเดินทางหลายวัตถุประสงค์
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ
 
 ## Context
 
@@ -31,7 +31,12 @@ Status: Draft
 
 ## Verification
 
+- Unit `plan.test.ts` (`checkTrip`: lines sum, split must add up, unsplit allowed) · Component `plan.test.tsx` (trip total from lines, split error, saved split)
+
 ## Dev notes
+
+- A trip is a travel expense with `trip` {from, to, purposes, farms, cost lines (fuel · toll · lodging · food · other), split | null}. With cost lines the amount is their sum; "ไม่ได้แบ่ง" by default, never split automatically; a split must equal the trip.
+- Not covered: farms are typed names (no property store yet, E03-S02); receipt photos (E01-S12).
 
 ## Code review
 

@@ -1,6 +1,6 @@
 # Story E11-S04: เงินเดือนผู้จัดการสวน
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ
 
 ## Context
 
@@ -38,7 +38,12 @@ Status: Draft
 
 ## Verification
 
+- Unit `plan.test.ts` (months committed→actual, owner-paid salary owed back apart from the manager's own reimbursements, two-device paid counts once, raise from a month never rewrites a paid month, part of "to pay") · Component `plan.test.tsx` · e2e `finance.spec.ts` salary test · Screenshot 19
+
 ## Dev notes
+
+- Rule `salary_set` (recipient, payer default chosen by owner, amount, first month, due day) and `salary_amount_set` from a month. Each month up to next month is synthesised as an expense `salary-<id>:<YYYY-MM>` (committed; `salary_paid` → actual at the amount paid) — made from the rule on every device, never stored, so sync cannot duplicate months. `/finance/salary` (from the expense list).
+- Months are listed up to next month only; later months appear as time passes. Amount/date of a salary month are read-only in the expense form (edited via the rule).
 
 ## Code review
 
