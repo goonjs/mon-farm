@@ -51,6 +51,19 @@ export function formatMonth(month: string, era: Era = 'be'): string {
   return `${MONTHS_TH[m - 1]} ${era === 'be' ? y + 543 : y}`;
 }
 
+/** "YYYY-MM" with a real month (01–12). A month like "2025-13" would never be reached by counting up. */
+export function isMonth(s: string): boolean {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
+}
+
+/** "YYYY-MM-DD" that is a real calendar day. */
+export function isIsoDate(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const [y, m, d] = s.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+
 /** Today as "YYYY-MM-DD" in the device's local calendar. */
 export function todayIso(now: Date = new Date()): string {
   const p = (x: number) => String(x).padStart(2, '0');

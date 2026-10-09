@@ -7,6 +7,7 @@
  */
 
 import { foldRecordPublic, headOf, nextMonth, type FinanceState } from './ledger';
+import { todayIso } from './money';
 import type { FinanceEvent, IncomeFields, LeaseFields, Payer, Trip } from './types';
 
 // ── E11-S05 ────────────────────────────────────────────────────────────────
@@ -15,7 +16,8 @@ import type { FinanceEvent, IncomeFields, LeaseFields, Payer, Trip } from './typ
 export function aidByWorker(state: FinanceState, from: string, to: string): { worker: Payer; totalSatang: number; ids: string[] }[] {
   const by = new Map<string, { worker: Payer; totalSatang: number; ids: string[] }>();
   for (const x of state.expenses) {
-    if (x.deleted || !x.worker || x.date < from || x.date > to) continue;
+    // Only while it is still a worker-aid expense (review #5).
+    if (x.deleted || !x.worker || x.categoryId !== 'cat-worker-aid' || x.date < from || x.date > to) continue;
     const row = by.get(x.worker.id) ?? { worker: x.worker, totalSatang: 0, ids: [] };
     row.totalSatang += x.amountSatang ?? 0;
     row.ids.push(x.id);
@@ -96,7 +98,17 @@ export function rubberIncome(
 ): { saleId: string; date: string; satang: number }[] {
   return rows
     .filter((r) => r.status === 'closed' && !r.deleted && r.ownerSatang !== null && r.startedTs !== null)
-    .map((r) => ({ saleId: r.saleId, date: new Date(r.startedTs!).toISOString().slice(0, 10), satang: r.ownerSatang! }));
+    // The local calendar day, like every other date in the app (review #2).
+    .map((r) => ({ saleId: r.saleId, date: todayIso(new Date(r.startedTs!)), satang: r.ownerSatang! }));
+}
+
+/** Days of closed sales whose amount is not known yet (no price) — their months are incomplete. */
+export function rubberUnknownDates(
+  rows: readonly { startedTs: number | null; status: 'open' | 'closed'; ownerSatang: number | null; deleted: boolean }[],
+): string[] {
+  return rows
+    .filter((r) => r.status === 'closed' && !r.deleted && r.ownerSatang === null && r.startedTs !== null)
+    .map((r) => todayIso(new Date(r.startedTs!)));
 }
 
 function monthsBetween(from: string, to: string): string[] {
@@ -114,15 +126,19 @@ export function leaseIncome(leases: readonly Lease[], from: string, to: string) 
   const expected: { leaseId: string; month: string; satang: number }[] = [];
   const incomplete = new Set<string>();
   for (const l of leases) {
-    if (l.deleted || !l.start) continue;
+    if (l.deleted) continue;
+    // Unknown start: no month can be ruled in or out, so every month is incomplete (review #6).
+    if (!l.start) {
+      for (const m of monthsBetween(from, to)) incomplete.add(m);
+      continue;
+    }
     const startMonth = l.start.slice(0, 7);
     const endMonth = l.end ? l.end.slice(0, 7) : to;
     for (const m of monthsBetween(from, to)) {
       if (m < startMonth || m > endMonth) continue;
-      if (l.rentSatang === null || l.period === null) {
-        incomplete.add(m);
-        continue;
-      }
+      // Unknown rent, period or share % (0 = no share) all leave the month incomplete.
+      if (l.rentSatang === null || l.period === null || l.sharePct === null) incomplete.add(m);
+      if (l.rentSatang === null || l.period === null) continue;
       if (l.period === 'month' || m.slice(5) === startMonth.slice(5)) expected.push({ leaseId: l.id, month: m, satang: l.rentSatang });
     }
   }
@@ -149,6 +165,8 @@ export function cashflow(i: {
   state: FinanceState;
   plan: ReturnType<typeof projectPlan>;
   rubber: readonly { saleId: string; date: string; satang: number }[];
+  /** Days of closed sales with no amount yet (no price) — flags their months. */
+  rubberUnknown?: readonly string[];
   fromMonth: string;
   toMonth: string;
 }): CashflowRow[] {
@@ -160,7 +178,7 @@ export function cashflow(i: {
     let outActual = 0;
     let outCommitted = 0;
     let outPlanned = 0;
-    let incomplete = leases.incompleteMonths.includes(month);
+    let incomplete = leases.incompleteMonths.includes(month) || (i.rubberUnknown ?? []).some((d) => d.startsWith(month));
     for (const x of i.state.expenses) {
       if (x.deleted || !x.date.startsWith(month)) continue;
       sources.push(x.id);
@@ -185,6 +203,8 @@ export function cashflow(i: {
     }
     for (const e of leases.expected) {
       if (e.month !== month) continue;
+      // Rent already recorded against this lease this month replaces what was expected (review #3).
+      if (i.plan.incomes.some((inc) => !inc.deleted && inc.leaseId === e.leaseId && inc.date.startsWith(month))) continue;
       sources.push(e.leaseId);
       inPlanned += e.satang;
     }

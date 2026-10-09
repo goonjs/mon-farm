@@ -9,6 +9,7 @@ import {
   projectPlan,
   rubberIncome,
 } from './plan';
+import { isIsoDate, isMonth } from './money';
 import { FARM_FUNDS, type ExpenseFields, type FinanceEvent, type FinancePayload, type Payer } from './types';
 
 let n = 0;
@@ -82,6 +83,51 @@ describe('E11-S04 manager salary', () => {
 
   it('upcoming salary is part of "to pay"', () => {
     expect(payableSatang(projectFinance([salary()], undefined, '2026-09'))).toBe(3_000_000);
+  });
+});
+
+describe('review fixes', () => {
+  it('#1 an invalid start month never hangs; the rule is ignored', () => {
+    const bad = ev('salary-9', { t: 'salary_set', rule: { recipient: SOMWANG, payer: OWNER, amountSatang: 100, startMonth: '2025-13', dueDay: 1 } });
+    expect(projectFinance([bad], undefined, '2027-01').expenses).toEqual([]);
+    expect(isMonth('2025-13')).toBe(false);
+    expect(isMonth('2025-12')).toBe(true);
+    expect(isIsoDate('2026-02-30')).toBe(false);
+    expect(isIsoDate('2026-02-28')).toBe(true);
+  });
+
+  it('#2 rubber income is dated by the local calendar day', () => {
+    const ts = new Date(2026, 9, 1, 0, 30).getTime(); // 1 Oct 00:30 local
+    expect(rubberIncome([{ saleId: 's', startedTs: ts, status: 'closed', ownerSatang: 1, deleted: false }])[0].date).toBe('2026-10-01');
+  });
+
+  it('#3 rent received against a lease replaces that month’s expected rent', () => {
+    const lease = ev('lease-9', { t: 'lease_added', fields: { farmName: 'A', tenant: 'T', rentSatang: 100_000_000, period: 'year', start: '2026-01-15', end: null, sharePct: 0, note: '' } });
+    const got = ev('inc-9', { t: 'income_recorded', fields: { amountSatang: 100_000_000, date: '2026-01-20', stage: 'actual', leaseId: 'lease-9', note: '', tag: null } });
+    const rows = cashflow({ state: projectFinance([lease, got]), plan: projectPlan([lease, got]), rubber: [], fromMonth: '2026-01', toMonth: '2026-01' });
+    expect(rows[0]).toMatchObject({ inActual: 100_000_000, inPlanned: 0, netAll: 100_000_000 });
+  });
+
+  it('#4 salary months reach as far as asked (the cashflow horizon)', () => {
+    const st = projectFinance([salary()], undefined, '2026-12');
+    expect(st.expenses.map((x) => x.id).at(-1)).toBe('salary-1:2027-01');
+  });
+
+  it('#5 an expense moved out of worker aid no longer counts for the worker', () => {
+    const a = expense('a9', { categoryId: 'cat-worker-aid', worker: NAT, aidKind: 'food', amountSatang: 100, date: '2026-09-05' });
+    const moved = ev('a9', { t: 'expense_changed', patch: { categoryId: 'cat-other', worker: null, aidKind: null } }, a.id);
+    expect(aidByWorker(projectFinance([a, moved]), '2026-01-01', '2026-12-31')).toEqual([]);
+    const stillTagged = ev('a9', { t: 'expense_changed', patch: { categoryId: 'cat-other' } }, a.id);
+    expect(aidByWorker(projectFinance([a, stillTagged]), '2026-01-01', '2026-12-31')).toEqual([]);
+  });
+
+  it('#6 unknown start or unknown share flags months; closed sales without an amount flag theirs', () => {
+    const noStart = ev('lease-a', { t: 'lease_added', fields: { farmName: 'A', tenant: '', rentSatang: 1, period: 'year', start: null, end: null, sharePct: 0, note: '' } });
+    expect(leaseIncome(projectPlan([noStart]).leases, '2026-01', '2026-02').incompleteMonths).toEqual(['2026-01', '2026-02']);
+    const noShare = ev('lease-b', { t: 'lease_added', fields: { farmName: 'B', tenant: '', rentSatang: 1, period: 'year', start: '2026-02-01', end: null, sharePct: null, note: '' } });
+    expect(leaseIncome(projectPlan([noShare]).leases, '2026-01', '2026-02').incompleteMonths).toEqual(['2026-02']);
+    const rows = cashflow({ state: projectFinance([]), plan: projectPlan([]), rubber: [], rubberUnknown: ['2026-03-05'], fromMonth: '2026-03', toMonth: '2026-03' });
+    expect(rows[0].incomplete).toBe(true);
   });
 });
 
