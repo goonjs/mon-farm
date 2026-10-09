@@ -177,7 +177,19 @@ export function foldRecord(
         value[f] = changed[0].value[f];
       }
     }
-    for (const v of values) for (const c of v.conflicts) if (!conflicts.some((x) => x.field === c.field)) conflicts.push(c);
+    // Conflicts still open inside a line stay open, with every line's options.
+    for (const v of values) {
+      for (const c of v.conflicts) {
+        const i = conflicts.findIndex((x) => x.field === c.field);
+        if (i < 0) {
+          conflicts.push(c);
+          continue;
+        }
+        const options = [...conflicts[i].options];
+        for (const o of c.options) if (!options.some((x) => same(x.value, o.value))) options.push(o);
+        conflicts[i] = { ...conflicts[i], options };
+      }
+    }
     for (const c of conflicts) {
       if (c.base === undefined) delete value[c.field];
       else value[c.field] = c.base;

@@ -136,3 +136,19 @@ describe('blockingConflicts', () => {
     expect(blockingConflicts(records).map((c) => [c.targetId, c.field])).toEqual([['b1', 'note']]);
   });
 });
+
+describe('nested conflicts', () => {
+  it('keeps every option when two lines each carry a conflict on the same field', () => {
+    const r = foldRecord([
+      create,
+      change('a1', 'c', { note: 'a1' }),
+      change('a2', 'c', { note: 'a2' }),
+      change('x', 'a1', { buyer: 'q' }, ['a2']),
+      change('b1', 'c', { note: 'b1' }),
+      change('b2', 'c', { note: 'b2' }),
+      change('y', 'b1', { buyer: 'q' }, ['b2']),
+    ]);
+    const note = r.conflicts.find((c) => c.field === 'note')!;
+    expect(note.options.map((o) => o.value).sort()).toEqual(['a1', 'a2', 'b1', 'b2']);
+  });
+});

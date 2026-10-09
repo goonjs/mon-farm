@@ -296,3 +296,73 @@ describe('media through the engine (E01-S12 AC2, AC5)', () => {
     expect(engine.status()).toMatchObject({ state: 'synced', pending: 0 });
   });
 });
+
+describe('review fixes', () => {
+  it('a pull that never answers times out instead of wedging every later sync', async () => {
+    const p = await phone();
+    p.remote.pull = () => new Promise(() => undefined);
+    const first = p.engine.sync();
+    await vi.advanceTimersByTimeAsync(30_000);
+    await first;
+    expect(p.engine.status().state).toBe('pending');
+  });
+
+  it('a corrupt pulled doc keeps the error showing on later clean runs, until retry finds it fixed', async () => {
+    const p = await phone();
+    const [mine] = new LogBuilder('s1', 'dev-x').accept('p1').build() as AcceptEvent[];
+    await p.store.insertPulled(mine);
+    p.server.docs.set(mine.id, { event: { ...mine, netG: 1 }, receivedAt: 10 });
+    await p.engine.sync();
+    await p.engine.sync();
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'integrity' });
+    expect(p.engine.integrityIds()).toEqual([mine.id]);
+
+    p.server.docs.set(mine.id, { event: mine, receivedAt: 11 });
+    await p.engine.retry();
+    expect(p.engine.status().state).toBe('synced');
+    expect(p.engine.integrityIds()).toEqual([]);
+  });
+
+  it('a local failure on a timer path is not an unhandled rejection', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.store.pending = async () => {
+      throw new Error('disk');
+    };
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+    p.engine.poke();
+    await vi.advanceTimersByTimeAsync(2_000);
+    await vi.advanceTimersByTimeAsync(10);
+    process.off('unhandledRejection', unhandled);
+    expect(unhandled).not.toHaveBeenCalled();
+  });
+
+  it('one refused event does not hold back the rest of the outbox', async () => {
+    const p = await phone();
+    const events = new LogBuilder('s1', p.deviceId).accept('p1').accept('p1').accept('p1').build() as AcceptEvent[];
+    await record(p.store, events);
+    p.server.docs.set(events[1].id, { event: { ...events[1], netG: 1 }, receivedAt: 5 });
+    await p.engine.sync();
+    expect((await p.store.pending()).map((e) => e.id)).toEqual([events[1].id]);
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'integrity', pending: 1 });
+  });
+
+  it('after stop(), an in-flight failure schedules no more retries', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.offline = true;
+    const run = p.engine.sync();
+    p.engine.stop();
+    await run;
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('the cursor never moves backwards when a listener and a sync interleave', async () => {
+    const p = await phone();
+    await p.cursor.set(500);
+    const [e] = new LogBuilder('s1', 'dev-x').accept('p1').build();
+    await p.engine.ingest([{ event: e, receivedAt: 100 }]);
+    expect(await p.cursor.get()).toBe(500);
+  });
+});
