@@ -376,3 +376,17 @@ describe('totals — the rollups agree with each other', () => {
     expect(t.standardBaskets).toBe(0);
   });
 });
+
+describe('settle — a log written before `basis` was removed (E03-S06)', () => {
+  it('loads and settles exactly as before: the extra field is ignored', () => {
+    const current = workedExample();
+    // The same log as an older build wrote it: every split_set also carried basis: 'gross'.
+    const old = current.map((e) =>
+      e.kind === 'sys' && e.payload.t === 'split_set' ? ({ ...e, payload: { ...e.payload, basis: 'gross' } } as typeof e) : e,
+    );
+    expect(old.some((e) => e.kind === 'sys' && 'basis' in e.payload)).toBe(true);
+    const stateOld = projectSale(old);
+    expect(stateOld).toEqual(projectSale(current));
+    expect(settle(old, stateOld)).toEqual(settle(current, projectSale(current)));
+  });
+});
