@@ -639,6 +639,48 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .bill.take { border: 2px solid var(--c-accept); background: var(--c-accept-sunk); }
 .radio .opt-l { display: block; font-size: 12px; color: var(--c-ink-soft); line-height: 1.35; }
 .radio .chip { margin-top: 3px; }
+/* sale list: kg per tapper under each sale row (owner comment, D-70/D-78) */
+.row.salerow { flex-wrap: wrap; align-items: flex-start; padding: 8px 0; row-gap: 4px; }
+.row.salerow > .tile { margin-top: 2px; }
+.tpl { flex: 0 0 calc(100% - 56px); display: flex; flex-direction: column; gap: 4px; margin-left: 56px; padding: 2px 0 2px 10px; border-left: 2px solid var(--c-rule-faint); }
+.tpl .tr { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 1.3; color: var(--c-ink); font-weight: 600; }
+.tpl .tr .ic { width: 16px; height: 16px; color: var(--c-ink-soft); }
+.tpl .tr .w { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.tot { display: inline-flex; align-items: center; gap: 4px; }
+.tot .ic { width: 16px; height: 16px; color: var(--c-ink-soft); }
+/* D-80 / E05-S07: receiving account on the owner card */
+.acct { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--c-rule-faint); display: flex; flex-direction: column; gap: 8px; }
+.acct .lab { font-size: 13px; color: var(--c-ink-soft); }
+.acct .row { min-height: 0; gap: 10px; }
+.acct .row .val { font-size: 17px; }
+.btn.full { width: 100%; }
+.acc-opt .val { font-size: 15px; font-weight: 700; display: block; }
+/* D-80: buyer view — full screen, turned toward the buyer, read at arm's length */
+.bv { background: var(--c-raised); }
+.bv .bvtop { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 12px 0; }
+.bv .bvbody { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 18px 12px; text-align: center; }
+.bv .hello { font-size: 18px; font-weight: 600; color: var(--c-ink-soft); }
+.bv .amt { font-size: 46px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; color: var(--c-numeral); font-variant-numeric: tabular-nums; }
+.bv .amt .u { font-size: 22px; font-weight: 700; color: var(--c-ink-soft); margin-left: 4px; letter-spacing: 0; }
+.bv .how { display: inline-flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 700; color: var(--c-accept); }
+.bv .how .ic { width: 22px; height: 22px; }
+.bv .qrbox { width: 208px; padding: 8px; border-radius: var(--r-md); border: 2px solid var(--c-rule); background: var(--c-stage); }
+.bv .qrbox svg { display: block; width: 100%; height: auto; }
+.bv .qrbox { color: var(--c-ink); }
+.bv .qrcap { font-size: 16px; font-weight: 600; color: var(--c-ink-soft); }
+.bv .fld { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0; }
+.bv .fld .k { font-size: 16px; color: var(--c-ink-soft); }
+.bv .fld .v { font-size: 30px; font-weight: 800; line-height: 1.2; color: var(--c-ink); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+.bv .fld .v.nm { font-size: 24px; font-weight: 700; }
+.bv .bvfoot { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 0 16px 18px; }
+.sw { display: flex; align-items: center; gap: 10px; min-height: var(--target); padding: 0 12px; border-radius: var(--r-md); background: var(--c-sunk); font-size: 15px; font-weight: 600; }
+.sw .grow { flex: 1; min-width: 0; }
+.sw .knob { width: 46px; height: 28px; border-radius: var(--r-pill); background: var(--c-rule-strong); position: relative; flex: none; }
+.sw .knob::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: var(--r-pill); background: var(--c-raised); }
+.sw.on .knob { background: var(--c-accept); }
+.sw.on .knob::after { left: 21px; }
+.copy { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--target); padding: 0 18px; border-radius: var(--r-pill); border: 2px solid var(--c-action); color: var(--c-action); background: var(--c-raised); font-size: 16px; font-weight: 700; }
+.copy .ic { width: 20px; height: 20px; }
 </style>
 
 <!-- Icon sprite: hand-drawn 24px stroke icons, inherit currentColor -->
@@ -705,6 +747,10 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     <symbol id="i-rubber" viewBox="0 0 24 24"><path class="fillsoft" d="M5 19.5c0-8.5 5.5-14.5 15-15 .3 9.8-5.6 15.4-15 15z"/><path d="M5 19.5c0-8.5 5.5-14.5 15-15 .3 9.8-5.6 15.4-15 15z"/><path d="M5 19.5l9.5-9.5M9 15.5h3.5M11.5 13v-3"/></symbol>
     <symbol id="i-tapper" viewBox="0 0 24 24"><path class="fillsoft" d="M3 9.5L12 4l9 5.5z"/><path d="M3 9.5L12 4l9 5.5z"/><path d="M8.5 9.5a3.5 3.5 0 0 0 7 0"/><path d="M5.5 20.5c.7-3.6 3.3-5.5 6.5-5.5s5.8 1.9 6.5 5.5"/></symbol>
     <symbol id="i-save" viewBox="0 0 24 24"><path class="fillsoft" d="M5 4h11l3 3v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M5 4h11l3 3v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 4v4.5h7V4"/><path d="M9 16l2 2 4-4"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect class="fillsoft" x="8" y="8" width="12" height="12" rx="2"/><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 19v1M19 14h1"/></symbol>
+    <!-- placeholder only: QR-looking pattern, NOT a scannable PromptPay code -->
+    <symbol id="qr-demo" viewBox="0 0 29 29"><path style="fill:currentColor;stroke:none" d="M2 2h7v1h-7zM14 2h1v1h-1zM16 2h3v1h-3zM20 2h7v1h-7zM2 3h1v1h-1zM8 3h1v1h-1zM10 3h1v1h-1zM17 3h1v1h-1zM20 3h1v1h-1zM26 3h1v1h-1zM2 4h1v1h-1zM4 4h3v1h-3zM8 4h1v1h-1zM12 4h1v1h-1zM15 4h2v1h-2zM18 4h1v1h-1zM20 4h1v1h-1zM22 4h3v1h-3zM26 4h1v1h-1zM2 5h1v1h-1zM4 5h3v1h-3zM8 5h1v1h-1zM11 5h2v1h-2zM14 5h3v1h-3zM20 5h1v1h-1zM22 5h3v1h-3zM26 5h1v1h-1zM2 6h1v1h-1zM4 6h3v1h-3zM8 6h1v1h-1zM10 6h2v1h-2zM13 6h1v1h-1zM15 6h1v1h-1zM17 6h2v1h-2zM20 6h1v1h-1zM22 6h3v1h-3zM26 6h1v1h-1zM2 7h1v1h-1zM8 7h1v1h-1zM11 7h2v1h-2zM14 7h1v1h-1zM16 7h2v1h-2zM20 7h1v1h-1zM26 7h1v1h-1zM2 8h7v1h-7zM10 8h1v1h-1zM12 8h1v1h-1zM14 8h1v1h-1zM16 8h1v1h-1zM18 8h1v1h-1zM20 8h7v1h-7zM10 9h2v1h-2zM13 9h1v1h-1zM15 9h2v1h-2zM4 10h2v1h-2zM7 10h4v1h-4zM13 10h1v1h-1zM15 10h5v1h-5zM23 10h3v1h-3zM3 11h1v1h-1zM10 11h2v1h-2zM18 11h7v1h-7zM26 11h1v1h-1zM3 12h3v1h-3zM7 12h2v1h-2zM20 12h1v1h-1zM22 12h3v1h-3zM2 13h2v1h-2zM10 13h1v1h-1zM18 13h3v1h-3zM22 13h2v1h-2zM26 13h1v1h-1zM2 14h2v1h-2zM7 14h3v1h-3zM18 14h2v1h-2zM21 14h1v1h-1zM23 14h1v1h-1zM25 14h2v1h-2zM4 15h2v1h-2zM9 15h2v1h-2zM18 15h3v1h-3zM22 15h1v1h-1zM24 15h3v1h-3zM3 16h1v1h-1zM6 16h1v1h-1zM8 16h1v1h-1zM18 16h5v1h-5zM24 16h1v1h-1zM3 17h3v1h-3zM7 17h1v1h-1zM9 17h2v1h-2zM15 17h1v1h-1zM18 17h3v1h-3zM22 17h1v1h-1zM3 18h3v1h-3zM8 18h2v1h-2zM12 18h1v1h-1zM14 18h1v1h-1zM17 18h6v1h-6zM24 18h1v1h-1zM26 18h1v1h-1zM12 19h4v1h-4zM18 19h1v1h-1zM22 19h2v1h-2zM2 20h7v1h-7zM13 20h4v1h-4zM18 20h1v1h-1zM20 20h1v1h-1zM22 20h3v1h-3zM2 21h1v1h-1zM8 21h1v1h-1zM11 21h2v1h-2zM14 21h3v1h-3zM18 21h1v1h-1zM22 21h1v1h-1zM24 21h1v1h-1zM26 21h1v1h-1zM2 22h1v1h-1zM4 22h3v1h-3zM8 22h1v1h-1zM11 22h2v1h-2zM16 22h7v1h-7zM24 22h3v1h-3zM2 23h1v1h-1zM4 23h3v1h-3zM8 23h1v1h-1zM10 23h5v1h-5zM16 23h1v1h-1zM18 23h2v1h-2zM21 23h1v1h-1zM2 24h1v1h-1zM4 24h3v1h-3zM8 24h1v1h-1zM11 24h1v1h-1zM18 24h1v1h-1zM20 24h1v1h-1zM23 24h2v1h-2zM26 24h1v1h-1zM2 25h1v1h-1zM8 25h1v1h-1zM10 25h1v1h-1zM12 25h2v1h-2zM15 25h1v1h-1zM18 25h3v1h-3zM23 25h1v1h-1zM25 25h2v1h-2zM2 26h7v1h-7zM10 26h1v1h-1zM14 26h2v1h-2zM18 26h3v1h-3zM22 26h5v1h-5z"/><rect style="fill:var(--c-stage);stroke:currentColor;stroke-width:.3" x="11" y="12" width="7" height="5" rx="1"/><text style="fill:currentColor;font-size:3.6px;font-weight:800" x="14.5" y="15.6" text-anchor="middle">฿</text></symbol>
   </defs>
 </svg>
 
@@ -713,7 +759,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 
 <header class="hdr">
   <h1>Flow การขาย · v1.1.0 · 2026-10-04</h1>
-  <p>ตัวอย่างลำดับหน้าจอ (mockup) ของการขายในแอป <b>FarmMate</b> — คัดลอกจาก Flow v4 (<code>flow-v1.html</code>) แล้วใส่การตัดสินใจ D-49…D-69: โหมดเลขเข่งและประเภทตาชั่งตอนเริ่มการขาย · ทางเลือกหน้า 12 เหลือ 3 ข้อ · จุดที่ยังไม่มีคนกรีดยาง · ลบจุดระหว่างการขาย · บันทึกย้อนหลังแบบ flow เดียวกับการชั่ง · หักหนี้ที่หน้าสรุปยอดส่วนแบ่ง แล้วค่อยปัดเศษ · ปรับตามคำตอบเจ้าของ D-70 (S1–S10) และกฎหนึ่งข้อมูลต่อบรรทัด</p>
+  <p>ตัวอย่างลำดับหน้าจอ (mockup) ของการขายในแอป <b>FarmMate</b> — คัดลอกจาก Flow v4 (<code>flow-v1.html</code>) แล้วใส่การตัดสินใจ D-49…D-69: โหมดเลขเข่งและประเภทตาชั่งตอนเริ่มการขาย · ทางเลือกหน้า 12 เหลือ 3 ข้อ · จุดที่ยังไม่มีคนกรีดยาง · ลบจุดระหว่างการขาย · บันทึกย้อนหลังแบบ flow เดียวกับการชั่ง · หักหนี้ที่หน้าสรุปยอดส่วนแบ่ง แล้วค่อยปัดเศษ · ปรับตามคำตอบเจ้าของ D-70 (S1–S10) และกฎหนึ่งข้อมูลต่อบรรทัด · 2026-10-09: บัญชีรับเงิน + หน้าให้คนรับซื้อยางดูบัญชี (D-80 · E05-S07 — หน้า 17, 17b, 17c) และ กก. ต่อคนกรีดยางในรายการการขาย (หน้า 4)</p>
   <p class="date num">v1.1.0 · 2026-10-04 · ตัวเลข ชื่อ และน้ำหนักทั้งหมดในหน้าจอเป็น <b>ตัวอย่าง</b> · เลขหน้าเดิมจาก v4 คงไว้ หน้าใหม่ใช้ตัวอักษรต่อท้าย (เช่น 8a)</p>
   <div class="legend">
     <span><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-53</span> ตัดสินแล้ว — เลขอ้างอิงใน decision log ของ PRD</span>
@@ -736,18 +782,19 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="body">
           <span style="font-size:13px;color:var(--c-ink-soft)">ใหม่สุดก่อน · แตะเพื่อดูสรุปการขาย</span>
           <div class="card tight">
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">18 ก.ย. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>คนรับซื้อยาง ก</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>42 เข่ง</span><span class="chip ch-bad" style="margin-top:2px"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span></span><span style="text-align:right"><span class="val num" style="display:block">2,100 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></div>
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">4 ก.ย. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>คนรับซื้อยาง ก</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>37 เข่ง</span></span><span style="text-align:right"><span class="val num" style="display:block">1,850 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></div>
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">21 ส.ค. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>คนรับซื้อยาง ข</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>40 เข่ง</span></span><span style="text-align:right"><span class="val num" style="display:block">1,960 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span></div>
+            <div class="row salerow"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">18 ก.ย. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>คนรับซื้อยาง ก</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>42 เข่ง</span><span class="chip ch-bad" style="margin-top:2px"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span></span><span style="text-align:right;align-self:flex-start;padding-top:6px"><span class="val num tot" style="display:flex"><svg class="ic"><use href="#i-rubber"/></svg>2,100 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span><span class="tpl"><span class="tr"><svg class="ic"><use href="#i-tapper"/></svg>แดง<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>1,400 กก.</span></span><span class="tr"><svg class="ic"><use href="#i-tapper"/></svg>นัด<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>700 กก.</span></span></span></div>
+            <div class="row salerow"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">4 ก.ย. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>คนรับซื้อยาง ก</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>37 เข่ง</span></span><span style="text-align:right;align-self:flex-start;padding-top:6px"><span class="val num tot" style="display:flex"><svg class="ic"><use href="#i-rubber"/></svg>1,850 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span><span class="tpl"><span class="tr"><svg class="ic"><use href="#i-tapper"/></svg>แดง<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>1,250 กก.</span></span><span class="tr"><svg class="ic"><use href="#i-tapper"/></svg>นัด<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>600 กก.</span></span></span></div>
+            <div class="row salerow"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">21 ส.ค. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>คนรับซื้อยาง ข</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>40 เข่ง</span></span><span style="text-align:right;align-self:flex-start;padding-top:6px"><span class="val num tot" style="display:flex"><svg class="ic"><use href="#i-rubber"/></svg>1,960 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span><span class="tpl"><span class="tr"><svg class="ic"><use href="#i-tapper"/></svg>แดง<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>1,310 กก.</span></span><span class="tr"><svg class="ic"><use href="#i-tapper"/></svg>นัด<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>650 กก.</span></span></span></div>
           </div>
           <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span class="lines"><span>การขายที่ยังไม่ปิดแสดงสถานะ เช่น <b style="display:inline">กำลังชั่ง</b></span><span>ป้ายต่อแถวแสดงเฉพาะ <b style="display:inline">ขัดกัน</b> · สถานะรวมอยู่ที่หัวแอป</span><span>วันที่เป็น พ.ศ. แตะเพื่อสลับ ค.ศ.</span></span></div>
         </div>
       </div></div>
       <figcaption>
         <span class="t">4. รายการการขายทั้งหมด</span>
-        เหมือน v4 ยกเว้นป้าย sync: ใช้คำ <b>ขัดกัน</b> ทั้งแอป และแถวแสดงป้ายเฉพาะเมื่อขัดกัน · วันที่ พ.ศ. แตะสลับ ค.ศ.
-        <span class="ids">SALE-20, D-28 · D-65, D-67 · E05-S06</span>
+        เหมือน v4 ยกเว้นป้าย sync: ใช้คำ <b>ขัดกัน</b> ทั้งแอป และแถวแสดงป้ายเฉพาะเมื่อขัดกัน · วันที่ พ.ศ. แตะสลับ ค.ศ. · ใหม่: ใต้แต่ละแถวบอก <b>น้ำหนักยางของคนกรีดยางแต่ละคน</b> ในการขายนั้น — คนละบรรทัด ไอคอนคนกรีดยางหน้าชื่อ ไอคอนใบไม้หน้าน้ำหนัก รวมกันเท่ายอดของแถว (1,400 + 700 = 2,100 กก.)
+        <span class="ids">SALE-20, D-28 · D-65, D-67, D-70, D-78 · E05-S06</span>
         <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-78</span><span>คอมเมนต์ผู้รีวิว (เจ้าของอนุมัติ 2026-10-09): แถวการขายบอกว่าคนกรีดยางแต่ละคนกรีดได้กี่ กก. · ใช้ทุกแถวให้เหมือนกัน · หนึ่งข้อมูลต่อบรรทัด (D-70)</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-65</span><span>ป้าย sync ต่อแถวแสดงเฉพาะ "ขัดกัน" · วันที่ พ.ศ. แตะสลับ พ.ศ./ค.ศ.</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-67</span><span>ใช้คำ "ขัดกัน" ทั้งแอป (แทน "ข้อมูลขัดกัน")</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>S7: ป้าย sync ต่อแถวเฉพาะ "ขัดกัน" ใช้กับรายการการขายด้วย</span></li>
@@ -1825,7 +1872,11 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="kv"><span>ส่วนของสวน (ยางของแดง)</span><span>36,860.00</span></div>
             <div class="kv"><span>ส่วนของสวน (ยางของนัด)</span><span>17,823.75</span></div>
             <div class="kv total"><span>โอนเข้าบัญชี</span><span class="fig" style="font-size:22px">54,683.75<span class="u">บาท</span></span></div>
-            <div class="kv" style="margin-top:4px"><span>บัญชีรับเงิน</span><span class="sel">ค่าเริ่มต้น<svg class="ic"><use href="#i-down"/></svg><small>(ไม่บังคับ)</small></span></div>
+            <div class="acct">
+              <div class="kv" style="align-items:center"><span class="lab">รับเข้าบัญชี (ไม่บังคับ)</span><span class="sel">เปลี่ยน<svg class="ic"><use href="#i-down"/></svg></span></div>
+              <div class="row"><span class="tile sm t-cream" style="background:var(--c-raised)"><svg class="ic"><use href="#i-bank"/></svg></span><span class="grow"><span class="val num" style="white-space:nowrap">กสิกรไทย ••1234</span><span class="mi"><svg class="ic"><use href="#i-check"/></svg>บัญชีค่าเริ่มต้น</span><span class="mi"><svg class="ic"><use href="#i-qr"/></svg>มีพร้อมเพย์</span></span></div>
+              <div class="btn btn-secondary small full"><svg class="ic sm"><use href="#i-expand"/></svg>ให้คนรับซื้อยางดูบัญชี</div>
+            </div>
             <div class="ded" style="margin-top:8px;padding:8px 10px">
               <div class="hd"><svg class="ic sm"><use href="#i-wallet"/></svg><span class="grow">เงินสดวันนี้ (ไม่รวมยอดโอน)</span></div>
               <span style="font-size:14px;color:var(--c-ink)">หักไว้จากเงินสดที่จ่ายคนกรีดยาง</span>
@@ -1838,6 +1889,14 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="foot"><div class="btn btn-primary">ถัดไป: ปัดเศษ</div></div>
       </div></div>
       <div class="extras">
+        <div class="inset">
+          <span class="ttl">แตะ "เปลี่ยน" → แผ่นเลือกบัญชีที่รับยอดโอน</span>
+          <div class="radio on acc-opt"><span class="dot"></span><span><span class="val num">กสิกรไทย ••1234</span><small>นายตัวอย่าง ใจดี</small><small>มีพร้อมเพย์</small><small>✓ บัญชีค่าเริ่มต้น</small></span></div>
+          <div class="radio acc-opt"><span class="dot"></span><span><span class="val num">ออมสิน ••9012</span><small>นายตัวอย่าง ใจดี</small><small>ไม่มีพร้อมเพย์</small></span></div>
+          <div class="radio acc-opt"><span class="dot"></span><span><span class="val">ไม่ระบุบัญชี</span><small>การขายนี้ไม่บันทึกบัญชีรับเงิน</small></span></div>
+          <div class="mini-row"><span class="lnk2">ตั้งค่าบัญชีรับเงิน ›</span></div>
+          <span class="note">เลือกแล้วบันทึกกับการขายนี้เท่านั้น ไม่เปลี่ยนบัญชีค่าเริ่มต้นของกลุ่ม · ไม่มีบัญชีที่ตั้งไว้ → แถวนี้เป็น "ยังไม่ได้ตั้งบัญชี" + ลิงก์ไปตั้งค่า (D-38, D-80)</span>
+        </div>
         <div class="inset">
           <span class="ttl">การ์ดเจ้าของสวน — หลังบันทึกหักหนี้ของนัด (หน้า 17a)</span>
           <div class="card cream" style="box-shadow:none;padding:8px 10px">
@@ -1883,9 +1942,10 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       </div>
       <figcaption>
         <span class="t">17. สรุปยอดส่วนแบ่ง + หักหนี้ (ใหม่ — แทนหน้า 18 "สรุปเงิน" ของ v4)</span>
-        การ์ดต่อคนกรีดยางเรียงตามลำดับคิดเงิน: ส่วนแบ่ง → <b>หักหนี้</b> → ปัดเศษ → <b>เงินสดที่ต้องจ่าย</b> (เด่นที่สุด) · คนกรีดยางที่มีหนี้ที่ติดสวนมีปุ่ม <b>หักเงินคืนหนี้</b> · ใช้คำ "หักหนี้" (ไม่ใช่ "หักค่าปุ๋ย") · แดงหักงวดผ่อนแล้วเป็นตัวอย่าง · แตะตัวเลขใดก็ได้เพื่อดูวิธีคำนวณจนถึงเข่ง (E05-S04)
-        <span class="ids">SET-4, SET-5, SET-7, FERT-5, FERT-6, FIN-4, NFR-3 · D-18, D-54, D-59, D-60, D-61, D-67, D-69 · E05-S04, E06-S04</span>
+        การ์ดต่อคนกรีดยางเรียงตามลำดับคิดเงิน: ส่วนแบ่ง → <b>หักหนี้</b> → ปัดเศษ → <b>เงินสดที่ต้องจ่าย</b> (เด่นที่สุด) · คนกรีดยางที่มีหนี้ที่ติดสวนมีปุ่ม <b>หักเงินคืนหนี้</b> · ใช้คำ "หักหนี้" (ไม่ใช่ "หักค่าปุ๋ย") · แดงหักงวดผ่อนแล้วเป็นตัวอย่าง · แตะตัวเลขใดก็ได้เพื่อดูวิธีคำนวณจนถึงเข่ง (E05-S04) · ใหม่ (E05-S07): ใต้ยอดโอน <b>รับเข้าบัญชี</b> แสดงชื่อย่อธนาคาร + 4 หลักท้าย เลือกบัญชีค่าเริ่มต้นไว้ก่อน แตะ <b>เปลี่ยน</b> เลือกบัญชีอื่นหรือไม่ระบุ (ไม่บังคับ) · ปุ่ม <b>ให้คนรับซื้อยางดูบัญชี</b> → หน้า 17b / 17c
+        <span class="ids">SET-4, SET-5, SET-7, FERT-5, FERT-6, FIN-4, NFR-3 · D-18, D-38, D-54, D-59, D-60, D-61, D-67, D-69, D-80 · E05-S04, E05-S07, E06-S04</span>
         <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-80</span><span>เลือกบัญชีที่รับยอดโอน (บันทึกกับการขาย) และกด "ให้คนรับซื้อยางดูบัญชี" ได้จากการ์ดเจ้าของสวน · ปุ่มนี้ไม่ใช้ไอคอนบันทึก (D-78)</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-60</span><span>หักหนี้ที่หน้าสรุปยอดส่วนแบ่ง ด้วยปุ่ม "หักเงินคืนหนี้" แล้วค่อยปัดเศษ</span></li>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-61</span><span>หักเกินส่วนแบ่งหลังแก้การขาย → ธง "หักเกินส่วนแบ่ง" ปิด/ติ๊กจ่ายไม่ได้จนแก้ยอดหัก</span></li>
           <li><svg class="ic sm"><use href="#i-help"/></svg><span>การขายที่ยกเลิกหรือถูกลบ → การหักและการคืนจากหักกลบของการขายนั้นยกเลิกตาม (กู้คืน → กลับมานับ)</span></li>
@@ -2060,7 +2120,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           </div>
           <div class="tick on"><span class="box"><svg class="ic sm"><use href="#i-check"/></svg></span><span class="grow">แดง ได้รับเงินสดแล้ว<span class="mi"><svg class="ic"><use href="#i-person"/></svg>เจ้าของสวน · มือถือ</span><span class="mi"><svg class="ic"><use href="#i-clock"/></svg>10:24</span><span class="mi"><svg class="ic"><use href="#i-minus"/></svg>หักหนี้ 2,000 (หยิบจากกองเงินสด)</span></span><span class="amt num">34,860</span></div>
           <div class="tick"><span class="box"></span><span class="grow">นัด ได้รับเงินสดแล้ว<span class="mi">ยังไม่จ่าย</span><span class="mi"><svg class="ic"><use href="#i-minus"/></svg>หักหนี้ 1,500</span><span class="mi"><svg class="ic"><use href="#i-in"/></svg>สวนคืน 640</span><span class="mi"><svg class="ic"><use href="#i-bank"/></svg>สุทธิ 860 มากับยอดโอน</span></span><span class="amt num">16,964</span></div>
-          <div class="tick"><span class="box"></span><span class="grow">เจ้าของสวนได้รับเงินโอนแล้ว<span class="mi">ยังไม่ได้รับ</span><span class="mi"><svg class="ic"><use href="#i-bank"/></svg>บัญชีค่าเริ่มต้น</span><span class="mi"><svg class="ic"><use href="#i-plus"/></svg>รวมเงินคืนหนี้นัด 860</span></span><span class="amt num">55,543.50</span></div>
+          <div class="tick"><span class="box"></span><span class="grow">เจ้าของสวนได้รับเงินโอนแล้ว<span class="mi">ยังไม่ได้รับ</span><span class="mi"><svg class="ic"><use href="#i-bank"/></svg>กสิกรไทย ••1234</span><span class="mi"><svg class="ic"><use href="#i-plus"/></svg>รวมเงินคืนหนี้นัด 860</span></span><span class="amt num">55,543.50</span></div>
           <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span class="lines"><span>แต่ละข้อติ๊กแยกกันและยกเลิกได้</span><span>แก้การขายภายหลังจนเงินเปลี่ยน → ข้อที่กระทบติดธง "ต้องตรวจใหม่"</span></span></div>
         </div>
         <div class="foot">
@@ -2077,10 +2137,100 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       </div>
       <figcaption>
         <span class="t">19. สถานะการจ่ายเงิน และปิดการขาย</span>
-        ยอดเงินสดเป็นยอดหลังหักหนี้และปัดเศษ · เอาหมายเหตุ "หักเงินจะเป็นขั้นแยก" ของ v4 ออก (หักที่หน้า 17 แล้ว) · ปิดได้แม้พบส่วนต่าง แต่ไม่ได้ถ้ามีรายการขัดกันค้าง หรือมีธงหักเกินส่วนแบ่ง
-        <span class="ids">SET-6, SALE-20, SALE-21 · D-16, D-29, D-60, D-61 · E05-S05, E04-S11, E06-S04</span>
+        ยอดเงินสดเป็นยอดหลังหักหนี้และปัดเศษ · เอาหมายเหตุ "หักเงินจะเป็นขั้นแยก" ของ v4 ออก (หักที่หน้า 17 แล้ว) · ปิดได้แม้พบส่วนต่าง แต่ไม่ได้ถ้ามีรายการขัดกันค้าง หรือมีธงหักเกินส่วนแบ่ง · แถวยอดโอนบอกบัญชีที่เลือกไว้ที่หน้า 17 (กสิกรไทย ••1234)
+        <span class="ids">SET-6, SALE-20, SALE-21 · D-16, D-29, D-60, D-61, D-80 · E05-S05, E04-S11, E06-S04, E05-S07</span>
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-61</span><span>ธง "หักเกินส่วนแบ่ง" — ปิดการขาย/ติ๊กจ่ายไม่ได้จนเจ้าของสวนแก้ยอดหัก ไม่ปรับเงินเงียบ ๆ</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+  </div>
+
+  <h3 class="sub-h">4a · ให้คนรับซื้อยางดูบัญชี (E05-S07 · D-80 · ใหม่)</h3>
+  <p class="sub-p">จากการ์ดเจ้าของสวนหน้า 17 แตะ <b>ให้คนรับซื้อยางดูบัญชี</b> → หน้าเต็มจอ เจ้าของสวนหันจอให้คนรับซื้อยางดู · ยอดบนจอคือยอดโอนหลังหักหนี้และปัดเศษ (55,543.50 บาท — ตรงกับหน้า 18a และ 19) · ใช้ได้ออฟไลน์ทั้งหมด · ข้อมูลบัญชีเป็นตัวอย่างสมมุติ</p>
+  <div class="flow">
+
+    <figure class="step">
+      <div class="phone"><div class="screen bv" aria-label="ให้คนรับซื้อยางดูบัญชี — พร้อมเพย์ และ QR">
+        <div class="sbar num"><span>10:23</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="bvtop"><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-back"/></svg>กลับ</span></div>
+        <div class="bvbody" style="gap:6px">
+          <span class="hello">ยอดโอนให้เจ้าของสวน</span>
+          <span class="amt">55,543.50<span class="u">บาท</span></span>
+          <span class="how" style="margin-top:4px"><svg class="ic"><use href="#i-qr"/></svg>สแกนจ่ายด้วยพร้อมเพย์</span>
+          <div class="qrbox" role="img" aria-label="QR พร้อมเพย์ ใส่ยอด 55,543.50 บาท (ภาพตัวอย่าง)"><svg viewBox="0 0 29 29"><use href="#qr-demo"/></svg></div>
+          <span class="qrcap">ยอดเงินอยู่ใน QR แล้ว</span>
+          <div class="fld"><span class="k">พร้อมเพย์ (เบอร์มือถือ)</span><span class="v">081-234-5678</span></div>
+          <div class="fld"><span class="k">ชื่อบัญชี</span><span class="v nm">นายตัวอย่าง ใจดี</span></div>
+        </div>
+        <div class="bvfoot">
+          <div class="sw on"><svg class="ic sm"><use href="#i-qr"/></svg><span class="grow">แสดง QR</span><span class="knob"></span></div>
+          <div class="btn btn-secondary small full"><svg class="ic sm"><use href="#i-swap"/></svg>ดูเลขบัญชีธนาคาร</div>
+        </div>
+      </div></div>
+      <div class="extras">
+        <div class="inset">
+          <span class="ttl">ปิด "แสดง QR" — เหลือเบอร์พร้อมเพย์ตัวใหญ่</span>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-qr"/></svg><span class="grow">โอนด้วยพร้อมเพย์</span></div>
+          <div class="mini-row num"><b style="font-size:22px">081-234-5678</b></div>
+          <div class="mini-row"><span class="grow">นายตัวอย่าง ใจดี</span></div>
+          <div class="mini-row"><span class="copy" style="min-height:40px;font-size:14px"><svg class="ic"><use href="#i-copy"/></svg>คัดลอกเบอร์</span></div>
+          <span class="note">จำค่า "แสดง QR" ไว้ในเครื่องนี้ (ค่าเริ่มต้น = แสดง)</span>
+        </div>
+        <div class="inset">
+          <span class="ttl">แตะ "ดูเลขบัญชีธนาคาร"</span>
+          <div class="mini-row"><span class="grow">แสดงแบบหน้า 17c: ธนาคาร · เลขบัญชี · ชื่อบัญชี ของ กสิกรไทย ••1234</span></div>
+          <div class="mini-row"><span class="grow num">กสิกรไทย</span></div>
+          <div class="mini-row num"><b style="font-size:20px">012-3-45123-4</b></div>
+          <div class="mini-row"><span class="grow">ปุ่มล่างเปลี่ยนเป็น "ดูพร้อมเพย์"</span></div>
+        </div>
+      </div>
+      <figcaption>
+        <span class="t">17b. ให้คนรับซื้อยางดูบัญชี — บัญชีมีพร้อมเพย์ (ใหม่)</span>
+        หน้าเต็มจอ พื้นขาว ไม่มีแถบหัวแอป · <b>ยอดโอนใหญ่ที่สุด</b> อ่านได้ระยะแขน · บัญชีมีพร้อมเพย์ → แสดง <b>พร้อมเพย์ก่อน</b> พร้อม <b>QR พร้อมเพย์ที่ใส่ยอดเงินแล้ว</b> สร้างในเครื่อง ใช้ได้ออฟไลน์ · ใต้ QR มีเบอร์พร้อมเพย์และชื่อบัญชีให้คนรับซื้อยางเทียบกับแอปธนาคาร · สวิตช์ <b>แสดง QR</b> และปุ่ม <b>ดูเลขบัญชีธนาคาร</b> อยู่ล่าง (ฝั่งเจ้าของสวนกด) · ปุ่ม "กลับ" กลับหน้า 17 · ภาพ QR เป็นลายตัวอย่าง สแกนไม่ได้
+        <span class="ids">SET-4 · D-38, D-71, D-80 · E05-S07</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-80</span><span>มีพร้อมเพย์ → แสดงพร้อมเพย์ก่อน (QR ถ้าเลือก) · สลับไปบัญชีธนาคารได้ และเลือกแสดง QR หรือไม่</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>QR ตามมาตรฐานพร้อมเพย์ ยอดตรงกับยอดโอนเข้าเจ้าของสวนถึงสตางค์ (55,543.50 รวมเงินคืนหนี้นัด 860 — D-71) · ในแอปจริง QR ใช้สีดำบนขาว</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>ถ้าหน้า 17 เลือก <b>ออมสิน ••9012</b> (ไม่มีพร้อมเพย์)</span></div>
+
+    <figure class="step">
+      <div class="phone"><div class="screen bv" aria-label="ให้คนรับซื้อยางดูบัญชี — บัญชีธนาคาร ไม่มีพร้อมเพย์">
+        <div class="sbar num"><span>10:23</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="bvtop"><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-back"/></svg>กลับ</span></div>
+        <div class="bvbody" style="gap:14px">
+          <span class="hello">ยอดโอนให้เจ้าของสวน</span>
+          <span class="amt">55,543.50<span class="u">บาท</span></span>
+          <span class="how" style="color:var(--c-action)"><svg class="ic"><use href="#i-bank"/></svg>โอนเข้าบัญชีธนาคาร</span>
+          <div class="fld"><span class="k">ธนาคาร</span><span class="v nm" style="font-size:28px">ออมสิน</span></div>
+          <div class="fld"><span class="k">เลขบัญชี</span><span class="v" style="font-size:32px">0201-2345-9012</span></div>
+          <span class="copy"><svg class="ic"><use href="#i-copy"/></svg>คัดลอกเลขบัญชี</span>
+          <div class="fld"><span class="k">ชื่อบัญชี</span><span class="v nm">นายตัวอย่าง ใจดี</span></div>
+        </div>
+        <div class="bvfoot">
+          <span class="mi" style="justify-content:center;font-size:13px"><svg class="ic"><use href="#i-help"/></svg>บัญชีนี้ไม่มีพร้อมเพย์</span>
+        </div>
+      </div></div>
+      <div class="extras">
+        <div class="inset">
+          <span class="ttl">แตะ "คัดลอกเลขบัญชี"</span>
+          <div class="mini-row"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>คัดลอกเลขบัญชีแล้ว</span></div>
+          <div class="mini-row num"><span class="grow">คัดลอกเฉพาะตัวเลข 020123459012</span></div>
+          <span class="note">ใช้วางใน LINE ส่งให้คนรับซื้อยาง หรือวางในแอปธนาคาร</span>
+        </div>
+      </div>
+      <figcaption>
+        <span class="t">17c. ให้คนรับซื้อยางดูบัญชี — บัญชีไม่มีพร้อมเพย์ (ใหม่)</span>
+        ไม่มีพร้อมเพย์ → แสดง <b>ธนาคาร · เลขบัญชี · ชื่อบัญชี</b> คนละบรรทัด ตัวใหญ่ · เลขบัญชีตัวใหญ่ที่สุดรองจากยอดเงิน แบ่งกลุ่มด้วยขีดให้อ่านออกเสียงง่าย · ปุ่ม <b>คัดลอกเลขบัญชี</b> ใต้เลข · ไม่มีสวิตช์ QR (ไม่มีพร้อมเพย์ให้สลับ) · ใช้ได้ออฟไลน์
+        <span class="ids">SET-4 · D-38, D-70, D-80 · E05-S07</span>
+        <ul>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-80</span><span>ไม่มีพร้อมเพย์ → ธนาคาร · เลขบัญชี · ชื่อบัญชี ชัด ๆ</span></li>
+          <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-70</span><span>หนึ่งข้อมูลต่อบรรทัด: ป้ายเล็กอยู่บน ค่าตัวใหญ่อยู่ล่าง</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -2143,7 +2293,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     <thead><tr><th>หน้า</th><th>อะไรเปลี่ยน</th><th>D-NN</th></tr></thead>
     <tbody>
       <tr><td>1–3</td><td>ไม่อยู่ในไฟล์นี้ (ไม่ใช่ flow การขาย)</td><td>—</td></tr>
-      <tr><td>4</td><td>ป้าย sync ต่อแถวแสดงเฉพาะ "ขัดกัน" · คำ "ขัดกัน" แทน "ข้อมูลขัดกัน" · วันที่ พ.ศ. แตะสลับ ค.ศ.</td><td>D-65, D-67</td></tr>
+      <tr><td>4</td><td>ป้าย sync ต่อแถวแสดงเฉพาะ "ขัดกัน" · คำ "ขัดกัน" แทน "ข้อมูลขัดกัน" · วันที่ พ.ศ. แตะสลับ ค.ศ. · ใต้แต่ละแถว น้ำหนักยางของคนกรีดยางแต่ละคน คนละบรรทัด (ไอคอนคนกรีดยาง + ใบไม้) · ยอดรวมของแถวมีไอคอนใบไม้</td><td>D-65, D-67, D-70, D-78</td></tr>
       <tr><td>5</td><td>เพิ่มเลือกโหมดเลขเข่ง (นับต่อเนื่องตามคนกรีดยาง / เริ่มนับเข่ง 1 ทุกจุด — D-46, D-79) ค่าเริ่มต้นจากตั้งค่ากลุ่ม · เพิ่มประเภทตาชั่ง (ไม่มีทศนิยม = ค่าเริ่มต้น; ทศนิยม 1 ตำแหน่ง กดไม่ได้ "ยังไม่พร้อมใช้งาน") · กลายเป็นหน้ายาว</td><td>D-46, D-53, D-66, D-79</td></tr>
       <tr><td>6</td><td>เอาแถบ ?21 ออก · จุดที่ยังไม่มีคนกรีดยางเป็นกลุ่มแยกด้านล่าง ไม่อยู่ในขั้น "คนกรีดยาง"</td><td>D-53, D-70</td></tr>
       <tr><td>7</td><td>ตาชั่งเปล่าไม่อ่าน 0 → เลือก 2 ทาง (แทนติดธงแล้วไปต่อ)</td><td>D-75</td></tr>
@@ -2159,10 +2309,12 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       <tr><td>15</td><td>ชื่อ "แนบหลักฐาน" · ย้ำว่าไม่บังคับ · หมายเหตุอัปโหลดรออัปเกรดแผน</td><td>D-48, D-49</td></tr>
       <tr><td>16</td><td>เอาช่องกรอกยอดคนรับซื้อยางวางเทียบข้างออก → แสดงยอดเรา + ปุ่ม "ตรงกันทั้งหมด" / "ไม่ตรงกัน" · ปุ่ม "ไปสรุปยอดส่วนแบ่ง" · ถ้ามีจุดไม่มีคนกรีดยาง ไปต่อไม่ได้ · หัวการ์ด "ยอดที่คำนวณได้ทั้งหมด" + แถวเข่งไม่เต็มแยกตามจุด (คอมเมนต์เจ้าของ)</td><td>D-63, D-72</td></tr>
       <tr><td>17</td><td>เดิม "ถามการปัดเศษ" → ตอนนี้ "สรุปยอดส่วนแบ่ง" (ย้ายจาก v4 หน้า 18) เรียงส่วนแบ่ง → หักหนี้ → ปัดเศษ → เงินสด · ปุ่ม "หักเงินคืนหนี้" · คำ "หักหนี้" แทน "หักค่าปุ๋ย" · เพดานหัก · ธง "หักเกินส่วนแบ่ง" · การ์ดเจ้าของสวนมีกล่อง "เงินสดวันนี้ (ไม่รวมยอดโอน)": หนี้ที่รับคืน / เงินที่สวนคืน — รีวิวด้วย persona ชาวสวน 2 รอบ</td><td>D-18, D-54, D-59, D-60, D-61, D-67, D-70</td></tr>
+      <tr><td>17 (E05-S07)</td><td>การ์ดเจ้าของสวน: "รับเข้าบัญชี (ไม่บังคับ)" แทน "บัญชีรับเงิน ค่าเริ่มต้น" — ชื่อย่อธนาคาร ••4 หลักท้าย + ป้ายบัญชีค่าเริ่มต้น / มีพร้อมเพย์ · ปุ่ม "เปลี่ยน" → แผ่นเลือกบัญชี (หรือไม่ระบุ) · ปุ่ม "ให้คนรับซื้อยางดูบัญชี"</td><td>D-38, D-80</td></tr>
+      <tr><td>17b, 17c (ใหม่)</td><td>หน้าเต็มจอให้คนรับซื้อยางดู: ยอดโอนตัวใหญ่ · 17b บัญชีมีพร้อมเพย์ → พร้อมเพย์ก่อน + QR ใส่ยอด สวิตช์ "แสดง QR" ปุ่ม "ดูเลขบัญชีธนาคาร" · 17c ไม่มีพร้อมเพย์ → ธนาคาร · เลขบัญชี · ชื่อบัญชี ตัวใหญ่ + "คัดลอกเลขบัญชี"</td><td>D-70, D-71, D-80</td></tr>
       <tr><td>17a (ใหม่)</td><td>แผ่นหักเงินคืนหนี้: เฉพาะหนี้ที่ติดสวน · เสนองวดผ่อน/ยอดค้าง แก้ได้ 0–เพดาน · เสนอหักกลบเงินที่สวนต้องคืน (บางส่วนได้ เจ้าของสวนกดใช้เอง) · เลือกวิธีรับเงินคืนหนี้ 3 ทางต่อคนกรีดยาง พร้อมเช็ก "ต้องแตกเงิน"</td><td>D-59, D-60, D-67, D-69, D-71</td></tr>
       <tr><td>18</td><td>เดิม "สรุปเงิน" → ตอนนี้ "ถามการปัดเศษ" หลังหักหนี้ · เลือกครั้งเดียวทั้งการขาย · จำทั้งกลุ่ม</td><td>D-60, D-67</td></tr>
       <tr><td>18a (ใหม่)</td><td>เทียบยอด: ทุกกองรวมกัน = ยอดขาย ตรงถึงสตางค์ · ไม่ตรง → ส่วนต่างสีเตือน ปิดการขายไม่ได้</td><td>D-72</td></tr>
-      <tr><td>19</td><td>ยอดหลังหักหนี้และปัดเศษ · เอาหมายเหตุ "หักเงินจะเป็นขั้นแยก" ออก · ธงหักเกินส่วนแบ่งขวางการปิด · ยอดโอนเจ้าของสวนรวมเงินคืนหนี้ที่มากับโอน (55,543.50)</td><td>D-60, D-61, D-71</td></tr>
+      <tr><td>19</td><td>ยอดหลังหักหนี้และปัดเศษ · เอาหมายเหตุ "หักเงินจะเป็นขั้นแยก" ออก · ธงหักเกินส่วนแบ่งขวางการปิด · ยอดโอนเจ้าของสวนรวมเงินคืนหนี้ที่มากับโอน (55,543.50) · แถวยอดโอนบอกบัญชีที่เลือก (กสิกรไทย ••1234)</td><td>D-60, D-61, D-71, D-80</td></tr>
       <tr><td>20</td><td>คำ "ขัดกัน" แทน "ข้อมูลขัดกัน"</td><td>D-65, D-67</td></tr>
       <tr><td>ทุกหน้า</td><td>หนึ่งข้อมูลต่อบรรทัด ใช้สัญลักษณ์นำ เวลาอยู่บรรทัดของตัวเอง (เช่น รายการการขาย การจ่ายเงิน ขัดกัน)</td><td>D-70</td></tr>
     </tbody>
@@ -2184,11 +2336,12 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       <tr><td>9</td><td>"เติมอีก" กลืนกับข้อความ</td><td>"เติมอีก" และจำนวนเป็นสีเตือน · 12, 12-เบี้ยว, 12-ต่อจุด</td></tr>
       <tr><td>10</td><td>"จะได้ เข่ง 28–30 เต็ม + เข่ง 31…" อ่านยาก</td><td>"จะได้ 4 เข่ง" แล้วแยกบรรทัด: เข่งเต็ม 3 เข่ง (เข่งที่ 28–30, 150 กก.) · เข่งไม่เต็ม 1 เข่ง (เข่งที่ 31, 20 กก.) · รวม · 14</td></tr>
       <tr><td>11</td><td>หักหนี้นัด ทาง 1 ข้อมูลแน่น</td><td>เหลือ "เงินสดเข้ามือ 860" + ป้าย "ต้องแตกเงิน" · รายละเอียดแบงค์ซ่อนไว้ใน "ทำไม?" · 17a</td></tr>
+      <tr><td>12</td><td>แถวการขายไม่บอกว่าใครกรีดได้เท่าไร (คอมเมนต์ผู้รีวิว เจ้าของอนุมัติ 9 ต.ค.)</td><td>ใต้แถว: คนกรีดยางคนละบรรทัด ไอคอนคนกรีดยางหน้าชื่อ ไอคอนใบไม้หน้า กก. รวมเท่ายอดแถว (แดง 1,400 + นัด 700 = 2,100) · ใช้ทุกแถว · 4</td></tr>
     </tbody>
   </table>
 
   <h3>คำตอบเจ้าของ (D-70 · 2026-10-04)</h3>
-  <p>คำถาม ?S1–?S10 ของรอบก่อนตอบครบแล้ว และใส่ลงหน้าจอแล้ว · ไม่มีคำถามเปิดในไฟล์นี้</p>
+  <p>คำถาม ?S1–?S10 ของรอบก่อนตอบครบแล้ว และใส่ลงหน้าจอแล้ว · ข้อเสนอใหม่ของ E05-S07 (?A1, ?A2) อยู่ท้ายหน้า</p>
   <table class="chg">
     <thead><tr><th>ข้อ</th><th>คำตอบ</th><th>หน้า</th></tr></thead>
     <tbody>
@@ -2247,7 +2400,23 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
   <p>ป้าศรีเข้าใจว่าทาง 1 วันนี้ยังชั่งไม่ได้ และเข้าใจว่าทำไมตาชั่งควรอ่าน 54 (ยาง 50 + น้ำหนักเข่ง 2 + ค่าเบี้ยว 2) · คำตัดสิน <b>"ต้องปรับ"</b> เรื่องคำ → ปรับแล้ว: บรรทัดคำอธิบายทาง 2 สั้นลงเป็น 2 บรรทัด · "ตรวจตาชั่งเปล่า" → "ตรวจตาชั่งเปล่า" · หน้ารอบอกว่ากด ตกลง แล้วกลับหน้าก่อนชั่ง · ชื่อ "น้ำหนักเข่ง" ตรงกันทั้งหน้า · ทุกบรรทัดมีเครื่องหมาย + / = และผลรวมอยู่ท้าย · ป้าย "เบี้ยว +2 กก." บรรทัดเดียว · โน้ตในกรอบแยกบรรทัด · คงชื่อทางเลือกและปุ่ม "รอเปลี่ยนตาชั่ง" / "รับเข็มเบี้ยวและใช้ต่อ" / "ตกลง" ตามคำของเจ้าของสวน (D-75)</p>
   <p>รีวิว persona หน้า 8c (D-76): ป้าศรีเข้าใจว่าทำไมหน้านี้ขึ้น แต่สับสนว่าปุ่มถูกเลือกไว้แล้ว และเห็นค่าเบี้ยวเดิมหลังคำถาม → แก้: การ์ดค่าเบี้ยว +2 ขึ้นก่อนคำถาม · ไม่มีปุ่มเลือกไว้ก่อน ("ถัดไป" กดได้เมื่อเลือกแล้ว) · คำอธิบายเป็นภาษาง่าย ตัดบรรทัดเรื่องตั้งค่าออกจากจอ (ยังอยู่ในคำบรรยาย)</p>
   <p>รีวิว persona หน้าเข็มเบี้ยวรอบสอง (8b, 10/11/12/13-เบี้ยว): ตัวเลขถูกทุกหน้า ค่าเบี้ยวแยกบรรทัดครบ · คำตัดสิน "ต้องปรับ" → แก้แล้ว: ใช้ "ตาชั่งควรอ่าน" กับเลขเป้าหมายทุกหน้า ("ตาชั่งอ่าน" เฉพาะเลขที่ชั่งจริง) · ใส่ของที่หน้าปกติมีกลับครบ (คำบอกวิธีลาก, คนกรีดยางคนเดิม, นับรวมเป็นเข่ง 3, หมายเหตุไปจุดคนอื่น, เลขโต "เติมอีก 15", "แล้วกดค้างเพื่อนับ") · สูตรก่อนผลลัพธ์ในการ์ดเข่งที่เปิดอยู่</p>
-  <p class="not"><b>ยังไม่วาดในรอบนี้:</b> ย้อนกลับ-แก้-ยกเลิกเข่ง (E04-S09), ส่งต่อ/รับช่วง และรวมด้วย QR (E04-S12, S13), การนับซ้ำ (E04-S14), กรณี "พบส่วนต่าง", ลบสวนระหว่างการขาย, หน้าบัญชีหนี้คนงาน (ทีมข้อมูลฟาร์มและเงิน — <code>flow-farm-v1.1.0.html</code>), หน้าตั้งค่ากลุ่ม (โหมดเลขเข่ง / ประเภทตาชั่ง)</p>
+  <h3>บัญชีรับเงิน + ให้คนรับซื้อยางดูบัญชี (E05-S07 · D-80) — รีวิว persona</h3>
+  <p>ผู้ออกแบบรีวิวเองในบทบาทของสองคน (ยังไม่ใช่ agent แยก): เจ้าของสวนอายุราว 55 ไม่ถนัดเทคโนโลยี และคนรับซื้อยางที่ดูจอจากระยะแขน · หาปุ่มเจอบนการ์ดเจ้าของสวน และอ่านยอดกับเลขได้ในครั้งเดียว · ปรับแล้ว:</p>
+  <table class="chg">
+    <thead><tr><th>ข้อ</th><th>สิ่งที่งง</th><th>ปรับเป็น</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>ชื่อบัญชี "กสิกรไทย ••1234" ตัดสองบรรทัด เพราะปุ่ม "เปลี่ยน" อยู่แถวเดียวกัน</td><td>ย้าย "เปลี่ยน" ขึ้นไปแถวป้าย "รับเข้าบัญชี" · ชื่อบัญชีเต็มบรรทัด · 17</td></tr>
+      <tr><td>2</td><td>แถวการขายแคบ เลข กก. ตัดบรรทัด ("1,400 / กก.")</td><td>รายชื่อคนกรีดยางลงไปเต็มความกว้างใต้แถว มีเส้นนำซ้าย · 4</td></tr>
+      <tr><td>3</td><td>ข้อความใต้ QR ตัวเล็ก คนรับซื้อยางอ่านไม่ออกจากระยะแขน</td><td>"ยอดเงินอยู่ใน QR แล้ว" 16 px ตัวหนา · ยอดเงิน 46 px · เลข 30–32 px · 17b</td></tr>
+      <tr><td>4</td><td>คนรับซื้อยางต้องเทียบชื่อปลายทางในแอปธนาคาร</td><td>ชื่อบัญชีแสดงทั้งในหน้า QR และหน้าเลขบัญชี · 17b, 17c</td></tr>
+    </tbody>
+  </table>
+  <h3>ข้อเสนอรอเจ้าของดู (E05-S07)</h3>
+  <ol>
+    <li><span class="q">?A1</span><span>กดปุ่มที่หน้า 17 ก่อนปัดเศษ: ยอดยังมีสตางค์และอาจเปลี่ยน · <b>ข้อเสนอ:</b> แอปถามปัดเศษ (หน้า 18) ก่อน แล้วจึงเปิดหน้าให้คนรับซื้อยางดู เพื่อให้ยอดที่โอนตรงกับยอดสุดท้าย</span></li>
+    <li><span class="q">?A2</span><span>ระหว่างเปิดหน้า 17b/17c <b>ข้อเสนอ:</b> จอไม่ดับเอง (ยังไม่ปรับความสว่างจอ)</span></li>
+  </ol>
+  <p class="not"><b>ยังไม่วาดในรอบนี้:</b> หน้าตั้งค่า "บัญชีรับเงิน" (เพิ่ม/แก้/ลบ บัญชี + พร้อมเพย์ — E05-S07), ย้อนกลับ-แก้-ยกเลิกเข่ง (E04-S09), ส่งต่อ/รับช่วง และรวมด้วย QR (E04-S12, S13), การนับซ้ำ (E04-S14), กรณี "พบส่วนต่าง", ลบสวนระหว่างการขาย, หน้าบัญชีหนี้คนงาน (ทีมข้อมูลฟาร์มและเงิน — <code>flow-farm-v1.1.0.html</code>), หน้าตั้งค่ากลุ่ม (โหมดเลขเข่ง / ประเภทตาชั่ง)</p>
 </section>
 
 </div>
