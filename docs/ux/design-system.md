@@ -367,6 +367,14 @@ Carried from the PRD and findings; not resolved by this document.
    female voice. Not confirmed with the owner.
 4. **Tablet** remains unexplored. It is the only way to reach comfortable 10 m
    legibility, and this system is phone-only by decision, not by finding.
+5. **Legibility floor with the embedded face** (E01-S13, 2026-10-03). Noto Sans
+   Thai ExtraBold digits advance 0.538em with `tracking.tight` (the old system
+   face measured ~0.656em), so three digits on a portrait phone now fill
+   ≈0.620 of the short edge — on the 0.62 `minHeightRatio` floor, not under it.
+   The rotate hint is decided once per digit count and stage size, so it cannot
+   flicker, but which side of the floor three digits land on is now a
+   sub-pixel matter. Recalibrate `minHeightRatio` (or add hysteresis) in the
+   field test with the new face.
 
 ---
 

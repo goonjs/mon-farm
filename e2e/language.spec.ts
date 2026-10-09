@@ -16,18 +16,18 @@ test('opens in Thai with no stored preference', async ({ page }) => {
   await page.goto('/');
   // Not `toContainText('sales')` inverted — assert the Thai is actually there,
   // so a blank render cannot pass by failing to contain English.
-  await expect(page.getByTestId('open-settings')).toHaveText('ตั้งค่า');
+  await expect(page.getByTestId('open-settings')).toHaveText(/^[\uE000-\uF8FF]?\s*ตั้งค่า$/u);
 });
 
 test('switching to English changes the screen, and back again', async ({ page }, testInfo) => {
   await page.goto('/settings');
-  await expect(page.getByTestId('settings-back')).toHaveText('← รายการ');
+  await expect(page.getByTestId('settings-back')).toHaveText(/^[\uE000-\uF8FF]?\s*รายการ$/u);
 
   await page.getByTestId('language-en').click();
-  await expect(page.getByTestId('settings-back')).toHaveText('← list');
+  await expect(page.getByTestId('settings-back')).toHaveText(/^[\uE000-\uF8FF]?\s*list$/u);
 
   await page.getByTestId('language-th').click();
-  await expect(page.getByTestId('settings-back')).toHaveText('← รายการ');
+  await expect(page.getByTestId('settings-back')).toHaveText(/^[\uE000-\uF8FF]?\s*รายการ$/u);
 
   await page.screenshot({ path: `docs/ux/screenshots/${testInfo.project.name}/settings.png` });
 });
@@ -35,14 +35,14 @@ test('switching to English changes the screen, and back again', async ({ page },
 test('the choice survives a reload', async ({ page }) => {
   await page.goto('/settings');
   await page.getByTestId('language-en').click();
-  await expect(page.getByTestId('settings-back')).toHaveText('← list');
+  await expect(page.getByTestId('settings-back')).toHaveText(/^[\uE000-\uF8FF]?\s*list$/u);
 
   await page.reload();
-  await expect(page.getByTestId('settings-back')).toHaveText('← list');
+  await expect(page.getByTestId('settings-back')).toHaveText(/^[\uE000-\uF8FF]?\s*list$/u);
 
   // And it is the whole app, not just the screen it was set on.
   await page.goto('/');
-  await expect(page.getByTestId('open-settings')).toHaveText('settings');
+  await expect(page.getByTestId('open-settings')).toHaveText(/^[\uE000-\uF8FF]?\s*settings$/u);
 });
 
 /**

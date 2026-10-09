@@ -83,7 +83,7 @@ export default function FarmProfileScreen() {
         crumb={msg('farmProfile.title')}
         right={
           <Link href="/settings" asChild>
-            <Button testID="farm-profile-back">{msg('farmProfile.back')}</Button>
+            <Button testID="farm-profile-back" icon="arrow-left">{msg('farmProfile.back')}</Button>
           </Link>
         }
       />
@@ -104,7 +104,7 @@ export default function FarmProfileScreen() {
                   gap: t.space.sm,
                 }}
               >
-                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>
+                <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.ink }}>
                   {msg('farmProfile.seedPrompt')}
                 </Text>
                 <Button testID="seed-from-last-sale" variant="primary" onPress={seedFromLastSale}>
@@ -114,7 +114,7 @@ export default function FarmProfileScreen() {
             ) : null}
 
             {zones.length === 0 ? (
-              <Text testID="farm-profile-empty" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+              <Text testID="farm-profile-empty" style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft }}>
                 {msg('farmProfile.empty')}
               </Text>
             ) : (
@@ -201,7 +201,7 @@ function ZoneCard({ zone, onChange }: { zone: ProfileZone; onChange: () => void 
       </View>
 
       {zone.piles.length === 0 ? (
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+        <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft }}>
           {msg('farmProfile.noPiles')}
         </Text>
       ) : (
@@ -337,7 +337,7 @@ function PileRow({ zone, pile, onChange }: { zone: ProfileZone; pile: ProfilePil
 
 function inputStyle(t: ReturnType<typeof useTheme>) {
   return {
-    fontFamily: t.font.family.sans,
+    ...t.face(t.font.weight.regular),
     fontSize: t.font.size.small,
     minHeight: 34,
     paddingHorizontal: t.space.sm,

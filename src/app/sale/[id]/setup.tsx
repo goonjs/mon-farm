@@ -85,7 +85,7 @@ export default function SetupScreen() {
           // AUTOSAVE_DELAY_MS. Flushing here would write that default for a
           // sale the operator never touched, and it would then wrongly stop
           // appearing as empty. Only the forward path (start counting) flushes.
-          <Button testID="back-to-list" onPress={() => router.back()}>
+          <Button testID="back-to-list" icon="arrow-left" onPress={() => router.back()}>
             {msg('setup.backToList')}
           </Button>
         }
@@ -136,7 +136,7 @@ export default function SetupScreen() {
                   ? msg('setup.needSplit')
                   : msg('setup.needPile')}
         </Text>
-        <Button
+        <Button iconAfter="arrow-right"
           testID="start-counting"
           variant="primary"
           disabled={!canStart}
@@ -275,7 +275,7 @@ function SplitCard() {
 
   return (
     <Card title={msg('setup.split')}>
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, marginBottom: t.space.sm }}>
+      <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft, marginBottom: t.space.sm }}>
         {msg('setup.splitNote')}
       </Text>
       <Field label={msg('setup.ownerWorker')}>
@@ -539,12 +539,12 @@ function FarmProfilePrefillCard() {
         gap: t.space.xs,
       }}
     >
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>
+      <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.ink }}>
         {msg('setup.useFarmProfileTitle')}
       </Text>
       {zones.map((zone) => (
         <View key={zone.id} style={{ gap: 2 }}>
-          <Text style={{ fontFamily: t.font.family.sans, fontWeight: t.font.weight.bold, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
+          <Text style={{ ...t.face(t.font.weight.bold), fontSize: t.font.size.micro, color: t.color.inkSoft }}>
             {zone.name}
           </Text>
           {zone.piles.map((pile) => (
@@ -622,7 +622,7 @@ function ZoneEditor({ zone }: { zone: Zone }) {
         backgroundColor: t.color.surfaceSunk,
       }}
     >
-      <Text style={{ fontFamily: t.font.family.sans, fontWeight: t.font.weight.bold, fontSize: t.font.size.small, color: t.color.ink }}>
+      <Text style={{ ...t.face(t.font.weight.bold), fontSize: t.font.size.small, color: t.color.ink }}>
         {zone.name}
       </Text>
 
@@ -779,7 +779,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function inputStyle(t: ReturnType<typeof useTheme>) {
   return {
-    fontFamily: t.font.family.sans,
+    ...t.face(t.font.weight.regular),
     fontSize: t.font.size.small,
     minHeight: 34,
     paddingHorizontal: t.space.sm,
@@ -841,9 +841,8 @@ function Segmented<Value extends string | number>({
               flex: 1,
               textAlign: 'center',
               paddingVertical: 8,
-              fontFamily: t.font.family.sans,
+              ...t.face(on ? t.font.weight.bold : t.font.weight.regular),
               fontSize: t.font.size.small,
-              fontWeight: on ? t.font.weight.bold : t.font.weight.regular,
               color: on ? t.color.inkInverse : t.color.ink,
               backgroundColor: on ? t.color.action : t.color.surfaceRaised,
               borderLeftWidth: i > 0 ? t.border.hair : 0,

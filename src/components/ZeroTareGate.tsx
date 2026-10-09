@@ -99,10 +99,10 @@ function ZeroStep({
 
   return (
     <>
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.ink }}>
+      <Text style={{ ...t.face(t.font.weight.black), fontSize: t.font.size.title, color: t.color.ink }}>
         {pileName}
       </Text>
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.lead, color: t.color.ink, textAlign: 'center' }}>
+      <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.lead, color: t.color.ink, textAlign: 'center' }}>
         {msg('gate.zeroQuestion')}
       </Text>
 
@@ -128,7 +128,7 @@ function ZeroStep({
             style={{
               minWidth: 100,
               textAlign: 'center',
-              fontFamily: t.font.family.sans,
+              ...t.face(t.font.weight.regular),
               fontSize: t.font.size.lead,
               minHeight: 40,
               paddingHorizontal: t.space.sm,
@@ -162,7 +162,7 @@ function TareStep({ tareG, onTareConfirmed }: { tareG: number; onTareConfirmed: 
 
   return (
     <>
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.lead, color: t.color.ink, textAlign: 'center' }}>
+      <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.lead, color: t.color.ink, textAlign: 'center' }}>
         {msg('gate.tareQuestion')}
       </Text>
       <TextInput
@@ -173,9 +173,8 @@ function TareStep({ tareG, onTareConfirmed }: { tareG: number; onTareConfirmed: 
         style={{
           minWidth: 120,
           textAlign: 'center',
-          fontFamily: t.font.family.sans,
+          ...t.face(t.font.weight.black),
           fontSize: t.font.size.figure,
-          fontWeight: t.font.weight.black,
           minHeight: 56,
           paddingHorizontal: t.space.md,
           borderWidth: t.border.hair,
@@ -214,10 +213,10 @@ function ReadyStep({
 
   return (
     <>
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.ink }}>
+      <Text style={{ ...t.face(t.font.weight.black), fontSize: t.font.size.title, color: t.color.ink }}>
         {pileName}
       </Text>
-      <Text testID="read-back" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.lead, color: t.color.ink, textAlign: 'center' }}>
+      <Text testID="read-back" style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.lead, color: t.color.ink, textAlign: 'center' }}>
         {msg('gate.expected', { tare: kg(tareG), std: kg(stdNetG), expected: kg(expectedG) })}
         {'\n'}
         <Text style={{ fontSize: t.font.size.small, color: t.color.inkSoft }}>{msg('gate.readAloud')}</Text>

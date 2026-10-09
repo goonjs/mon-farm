@@ -260,16 +260,20 @@ export const tokens = {
 
   font: {
     /**
-     * System stacks only — see the no-web-fonts note at the top of this file.
-     * FarmMate specifies "Noto Sans Thai" (Thai) + "Inter" (Latin); Noto Sans
-     * Thai is already named here and is the Android system Thai face, so it
-     * renders wherever the OS has it. Inter is NOT added until the owner
-     * decides whether to bundle it. `sans` carries everything in the app. The serif in the docs shell is for
-     * documents; the instrument does not use it.
+     * The app's text face is the EMBEDDED Noto Sans Thai (E01-S13, owner
+     * §12.10 #1), one family per weight — app code asks for it with
+     * `t.face(weight)` (src/theme/fonts.ts), never with `family.sans`.
+     *
+     * `sans` is the fallback only: what web shows if the embedded face fails
+     * to load, and what the docs/ux prototypes (tokens.css) use. Inter is not
+     * bundled. `mono` stays a system stack for short labels; on web it names
+     * the embedded regular face before the generic, so Thai inside a mono
+     * label renders in Noto Sans Thai rather than an arbitrary OS face (on
+     * Android the system Thai fallback is Noto Sans Thai already).
      */
     family: {
       sans: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans Thai", sans-serif',
-      mono: 'ui-monospace, SFMono-Regular, Menlo, "Roboto Mono", monospace',
+      mono: 'ui-monospace, SFMono-Regular, Menlo, "Roboto Mono", NotoSansThai_400Regular, "Noto Sans Thai", monospace',
     },
 
     /**

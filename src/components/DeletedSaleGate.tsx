@@ -35,7 +35,7 @@ export function DeletedSaleGate({ children }: { children: ReactNode }) {
 
   return (
     <View testID="deleted-sale-notice" style={{ flex: 1, padding: t.space.md, gap: t.space.md, backgroundColor: t.color.surface }}>
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.ink }}>
+      <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.body, color: t.color.ink }}>
         {msg('deleted.saleNotice')}
       </Text>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>

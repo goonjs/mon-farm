@@ -49,7 +49,7 @@ export function DataStateBadge({ state }: { state: FieldDataState }) {
       <Text
         testID={`data-state-${state}-label`}
         style={{
-          fontFamily: theme.font.family.sans,
+          ...theme.face(theme.font.weight.regular),
           fontSize: theme.font.size.small,
           color: noValue ? theme.color.inkSoft : theme.color.ink,
         }}

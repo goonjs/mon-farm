@@ -45,7 +45,7 @@ export default function SettingsScreen() {
         crumb={msg('settings.title')}
         right={
           <Link href={LIST} asChild>
-            <Button testID="settings-back">{msg('settings.back')}</Button>
+            <Button testID="settings-back" icon="arrow-left">{msg('settings.back')}</Button>
           </Link>
         }
       />
@@ -92,7 +92,7 @@ export default function SettingsScreen() {
         />
 
         <Link href="/farm-profile" asChild>
-          <Button testID="open-farm-profile">{msg('settings.farmProfile')}</Button>
+          <Button testID="open-farm-profile" icon="map">{msg('settings.farmProfile')}</Button>
         </Link>
       </ScrollView>
     </View>
@@ -142,7 +142,7 @@ function Choice<T extends string>({
         ))}
       </View>
 
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkFaint }}>
+      <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkFaint }}>
         {note}
       </Text>
     </View>

@@ -62,7 +62,7 @@ export default function DeletedSalesScreen() {
         ) : sales.length === 0 ? (
           <Text
             testID="deleted-empty"
-            style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}
+            style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft }}
           >
             {msg('deleted.empty')}
           </Text>
@@ -73,7 +73,7 @@ export default function DeletedSalesScreen() {
               testID={`deleted-${s.id}`}
               style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}
             >
-              <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.ink }}>
+              <Text style={{ flex: 1, ...t.face(t.font.weight.regular), fontSize: t.font.size.body, color: t.color.ink }}>
                 {msg('sales.row', {
                   name: s.parties?.farmName || s.parties?.buyer || msg('sales.unnamed'),
                   status: msg(s.status === 'closed' ? 'status.closed' : 'status.open'),

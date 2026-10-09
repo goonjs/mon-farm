@@ -44,7 +44,7 @@ export function StorageWarning() {
         paddingVertical: t.space.sm,
       }}
     >
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.warn }}>
+      <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.body, color: t.color.warn }}>
         {msg('storage.notDurable')}
       </Text>
     </View>

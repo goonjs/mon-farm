@@ -54,7 +54,7 @@
   --shadow-button-blur                 : 10px;
   --shadow-button-color                : rgba(0, 40, 88, 0.10);
   --font-family-sans                   : ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans Thai", sans-serif;
-  --font-family-mono                   : ui-monospace, SFMono-Regular, Menlo, "Roboto Mono", monospace;
+  --font-family-mono                   : ui-monospace, SFMono-Regular, Menlo, "Roboto Mono", NotoSansThai_400Regular, "Noto Sans Thai", monospace;
   --font-size-display-xl               : 32px;
   --font-size-display-lg               : 28px;
   --font-size-heading-xl               : 24px;

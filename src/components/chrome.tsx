@@ -8,6 +8,7 @@
 
 import { Pressable, Text, View } from 'react-native';
 
+import { Icon, type IconName } from './Icon';
 import { useTheme } from '../theme';
 
 export type PillTone = 'neutral' | 'accept' | 'warn' | 'count';
@@ -91,9 +92,8 @@ export function TopBar({ crumb, right }: { crumb: string; right?: React.ReactNod
         testID="crumb"
         numberOfLines={1}
         style={{
-          fontFamily: t.font.family.sans,
+          ...t.face(t.font.weight.bold),
           fontSize: t.font.size.small,
-          fontWeight: t.font.weight.bold,
           color: t.color.ink,
           flexShrink: 1,
         }}
@@ -144,9 +144,8 @@ export function Tabs<T extends string>({
           >
             <Text
               style={{
-                fontFamily: t.font.family.sans,
+                ...t.face(on ? t.font.weight.bold : t.font.weight.medium),
                 fontSize: t.font.size.small,
-                fontWeight: on ? t.font.weight.bold : t.font.weight.medium,
                 color: on ? t.color.action : t.color.inkSoft,
               }}
             >
@@ -165,6 +164,8 @@ export function Button({
   variant = 'ghost',
   disabled,
   testID,
+  icon,
+  iconAfter,
   accessibilityLabel,
 }: {
   children: React.ReactNode;
@@ -172,6 +173,10 @@ export function Button({
   variant?: 'primary' | 'ghost' | 'destructive';
   disabled?: boolean;
   testID?: string;
+  /** Leading icon. Decorative — the button is named by its text. */
+  icon?: IconName;
+  /** Trailing icon, for forward navigation ("next"). Decorative too. */
+  iconAfter?: IconName;
   /** When the visible text alone does not say what the button acts on. */
   accessibilityLabel?: string;
 }) {
@@ -196,21 +201,24 @@ export function Button({
         borderWidth: t.border.hair,
         borderColor: styles.border,
         backgroundColor: styles.bg,
+        flexDirection: 'row',
+        gap: t.space.xs,
         alignItems: 'center',
         justifyContent: 'center',
         opacity: disabled ? t.opacity.disabled : 1,
       }}
     >
+      {icon ? <Icon name={icon} color={styles.fg} size={t.font.size.small * 1.25} /> : null}
       <Text
         style={{
-          fontFamily: t.font.family.sans,
+          ...t.face(t.font.weight.medium),
           fontSize: t.font.size.small,
-          fontWeight: t.font.weight.medium,
           color: styles.fg,
         }}
       >
         {children}
       </Text>
+      {iconAfter ? <Icon name={iconAfter} color={styles.fg} size={t.font.size.small * 1.25} /> : null}
     </Pressable>
   );
 }

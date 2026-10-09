@@ -53,14 +53,13 @@ export function WorkerPayoutCard({ worker: w, onVoidDeduction, zoneNames }: Work
           marginTop: w.deductions.length ? 2 : 0,
         }}
       >
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+        <Text style={{ ...t.face(t.font.weight.bold), fontSize: t.font.size.small, color: t.color.ink }}>
           {msg('settle.payout')}
         </Text>
         <Text
           style={{
-            fontFamily: t.font.family.sans,
+            ...t.face(t.font.weight.bold),
             fontSize: t.font.size.small,
-            fontWeight: t.font.weight.bold,
             color: w.payoutSatang < 0 ? t.color.reject : t.color.ink,
             fontVariant: ['tabular-nums'],
           }}
@@ -92,10 +91,10 @@ function DeductionRow({
   return (
     <View testID={`deduction-${d.id}`} style={{ gap: 2 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: t.space.sm, paddingVertical: 2 }}>
-        <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+        <Text style={{ flex: 1, ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft }}>
           {msg('settle.deductionRow', { reason: d.reason, agreedBy: d.agreedBy })}
         </Text>
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject, fontVariant: ['tabular-nums'] }}>
+        <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.reject, fontVariant: ['tabular-nums'] }}>
           −{formatBaht(d.satang)}
         </Text>
         <Button testID={`deduction-void-${d.id}`} onPress={() => setVoiding((v) => !v)}>
@@ -113,7 +112,7 @@ function DeductionRow({
             placeholderTextColor={t.color.inkFaint}
             style={{
               flex: 1,
-              fontFamily: t.font.family.sans,
+              ...t.face(t.font.weight.regular),
               fontSize: t.font.size.small,
               minHeight: 32,
               paddingHorizontal: t.space.sm,
@@ -145,14 +144,13 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
   const t = useTheme();
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: t.space.sm, paddingVertical: 2 }}>
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft, flexShrink: 1 }}>
+      <Text style={{ ...t.face(t.font.weight.regular), fontSize: t.font.size.small, color: t.color.inkSoft, flexShrink: 1 }}>
         {label}
       </Text>
       <Text
         style={{
-          fontFamily: t.font.family.sans,
+          ...t.face(bold ? t.font.weight.bold : t.font.weight.medium),
           fontSize: t.font.size.small,
-          fontWeight: bold ? t.font.weight.bold : t.font.weight.medium,
           color: t.color.ink,
           fontVariant: ['tabular-nums'],
         }}

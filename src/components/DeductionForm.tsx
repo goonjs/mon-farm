@@ -99,7 +99,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function inputStyle(t: ReturnType<typeof useTheme>) {
   return {
     minHeight: 36,
-    fontFamily: t.font.family.sans,
+    ...t.face(t.font.weight.regular),
     fontSize: t.font.size.small,
     paddingHorizontal: t.space.sm,
     borderWidth: t.border.hair,
