@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 
+import { seedPeople, seedSale, testSaleId } from './fixtures';
+import { workedExample } from '../src/core/fixtures';
+
 /**
  * Finance (E11-S01..S03) in the real web build, portrait, offline-first:
  * record expenses, see per-stage totals, set a payer in bulk, see what the
@@ -156,4 +159,40 @@ test('worker debt ledger — fertilizer split, loan from someone else, reconcili
   await page.getByTestId('debt-pay-save').click();
   await expect(page.locator('[data-testid^="debt-other-"]')).toContainText('500.00');
   await page.screenshot({ path: `${SHOTS}/11-debt-account-other-lender.png`, fullPage: true });
+});
+
+test('deduct debt at settlement — instalment proposed, capped, recorded against the sale', async ({ page }) => {
+  const saleId = testSaleId('money-deduct');
+  await seedPeople(page, [{ id: 'person-prayuth', name: 'ประยุทธ' }]);
+  await seedSale(page, saleId, workedExample(saleId));
+
+  await page.goto('/finance/expenses');
+  await page.getByTestId('open-debts').click();
+  await page.getByTestId('debt-person-person-prayuth').click();
+  await page.getByTestId('debt-add').click();
+  await page.getByTestId('debt-amount').fill('5000');
+  await page.getByTestId('debt-date').fill('2026-09-10');
+  await page.getByTestId('debt-save').click();
+  await page.getByTestId('debt-plan-edit').click();
+  await page.getByTestId('debt-plan-amount').fill('2000');
+  await page.getByTestId('debt-plan-save').click();
+  await expect(page.getByTestId('debt-balance')).toContainText('5,000.00');
+
+  await page.goto(`/sale/${saleId}/settlement`);
+  await expect(page.getByTestId('owner-share')).toContainText('149,367.25');
+  await page.getByTestId('deduct-open-person-prayuth').click();
+  await expect(page.getByTestId('deduct-amount-person-prayuth')).toHaveValue('2000.00');
+  await page.getByTestId('deduct-route-cash-from-share-person-prayuth').click();
+  await page.getByTestId('deduct-save-person-prayuth').click();
+  await expect(page.getByTestId('deduct-cash-person-prayuth')).toContainText('98,342.25');
+  // The owner's share does not move because of a worker's deduction.
+  await expect(page.getByTestId('owner-share')).toContainText('149,367.25');
+  await page.getByTestId('deduct-person-prayuth').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${SHOTS}/12-settlement-deduct.png`, fullPage: true });
+
+  await page.goto('/finance/expenses');
+  await page.getByTestId('open-debts').click();
+  await page.getByTestId('debt-account-person-prayuth').click();
+  await expect(page.getByTestId('debt-balance')).toContainText('3,000.00');
+  await expect(page.getByTestId('debt-summary-balance')).toContainText('3,000.00 ✓');
 });

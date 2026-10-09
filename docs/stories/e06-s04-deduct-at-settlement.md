@@ -1,6 +1,6 @@
 # Story E06-S04: หักหนี้ตอนสรุปเงิน ไม่เกินส่วนแบ่ง ยกยอด
 
-Status: Ready (เจ้าของตกลง AC 2026-10-03)
+Status: In Progress (เจ้าของตกลง AC 2026-10-03) — core + deduction card on `feature/e11-e06-money`; S29 removal waits on a deletion OK; awaiting independent review + CI
 
 ## Context
 
@@ -62,11 +62,17 @@ Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Verification
 
+- Unit: `src/core/finance/deduct.test.ts` (cap/proposal incl. plan and netting, rounding after deduction in 3 modes, needs-change subset check incl. the story's 2,860/500, 300 and 1,050/30 cases, piles = sale total, netting writes both sides and dies with a deleted sale) · Component: `src/__tests__/deduct.test.tsx` · Sandbox: `e2e/finance.spec.ts` third test + full e2e suite 147 passed 2026-10-09 · Screenshot `docs/ux/screenshots/overnight/money/12-settlement-deduct.png`
+
 - [ ] Sandbox run:
 - [ ] Screenshots (UI) — golden path:
 - [ ] Screenshots (UI) — edge cases:
 
 ## Dev notes
+
+- Core `src/core/finance/deduct.ts`: `deductionCap` (min(balance, share + netting), never below 0), `proposeDeduction` (instalment or whole balance), `roundCash` (worker/owner/none, adjustment as its own amount), `workerCash`, `cashNotes` + `needsChange` (largest notes first, subset sum), `pilesCheck` (D-72 to the satang), `overDeducted` (D-61), `nettingPayloads` (repayment + `netting` debt payment, both naming the sale). `projectFinance`/`projectDebts` take `saleCounts` so a deleted sale's deductions and netting stop counting and come back on restore.
+- UI: `DebtDeductionCard` under each worker on `sale/[id]/settlement` — balance + plan, "หักเงินคืนหนี้" (proposed amount, cap, 3 collection routes, netting offered not applied), lines recorded at this sale with void (voiding netting voids its repayment), cash to pay, needs-change warning (route 1), transfer add-on (route 3), D-61 flag.
+- Not covered yet: removing the S29 deduction code (asked the lead for the deletion OK; also touches shared sale types — coordinating with team SALE); rounding choice UI (E05-S02 — cash line is unrounded until then); the D-72 piles page and route 2 piles (E05-S03/S04); blocking close/pay on the D-61 flag (sale close lives in E05-S05); "Cancelled" sales (E04-S11) — only deleted sales are excluded today.
 
 ## Code review
 

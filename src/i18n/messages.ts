@@ -514,6 +514,26 @@ const th = {
   'debt.pay.over': 'จ่ายเกินยอดค้าง {amount} บาท',
   'debt.pay.fix': 'แก้จำนวน',
   'debt.pay.anyway': 'บันทึกต่อ',
+
+  // ── Deduct debt at settlement (E06-S04) ─────────────────────────────────
+  'deduct.owes': 'ค้างสวน {amount}',
+  'deduct.plan': 'แผนผ่อน {amount} / การขาย',
+  'deduct.button': 'หักเงินคืนหนี้',
+  'deduct.amount': 'ยอดหักหนี้ (ไม่เกิน {cap})',
+  'deduct.over': 'เกินเพดาน {cap} — ส่วนที่เหลือยกไปการขายหน้า',
+  'deduct.method': 'วิธีรับเงินคืนหนี้',
+  'deduct.netOffer': 'สวนต้องคืน{name} {amount} — นำมาหักกลบ?',
+  'deduct.netUse': 'ใช้หักกลบ',
+  'deduct.netAmount': 'ยอดหักกลบ (ไม่เกิน {max})',
+  'deduct.save': 'บันทึกการหัก',
+  'deduct.line': 'หักหนี้ · {method}',
+  'deduct.netLine': 'หักกลบเงินที่สวนต้องคืน',
+  'deduct.void': 'ยกเลิก',
+  'deduct.cash': 'เงินสดที่ต้องจ่าย',
+  'deduct.change': 'ต้องแตกเงิน — ดึง {amount} จากกองนี้พอดีไม่ได้',
+  'deduct.transfer': 'โอนเข้าบัญชีเจ้าของเพิ่ม {amount}',
+  'deduct.overFlag': 'หักเกินส่วนแบ่ง — แก้ยอดหักก่อนปิด/จ่าย',
+  'deduct.after': 'ยอดค้างหลังการขายนี้ {amount}',
 } as const;
 
 /**
@@ -966,6 +986,25 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'debt.pay.over': 'more than owed: {amount} baht',
   'debt.pay.fix': 'fix amount',
   'debt.pay.anyway': 'save anyway',
+
+  'deduct.owes': 'owes the farm {amount}',
+  'deduct.plan': 'plan {amount} per sale',
+  'deduct.button': 'deduct debt',
+  'deduct.amount': 'deduct (at most {cap})',
+  'deduct.over': 'above the cap {cap}; the rest carries to the next sale',
+  'deduct.method': 'how the repayment is collected',
+  'deduct.netOffer': 'the farm owes {name} {amount} — net it?',
+  'deduct.netUse': 'net it',
+  'deduct.netAmount': 'net amount (at most {max})',
+  'deduct.save': 'save deduction',
+  'deduct.line': 'debt deducted · {method}',
+  'deduct.netLine': 'netted against money the farm owed',
+  'deduct.void': 'void',
+  'deduct.cash': 'cash to pay',
+  'deduct.change': 'needs change: {amount} cannot be lifted from this pile as is',
+  'deduct.transfer': 'adds {amount} to the owner transfer',
+  'deduct.overFlag': 'deducted more than the share — fix before closing/paying',
+  'deduct.after': 'balance after this sale {amount}',
 };
 
 export const messages = { th, en } as const;

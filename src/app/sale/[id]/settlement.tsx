@@ -18,6 +18,7 @@ import { Link, useRouter } from 'expo-router';
 
 import { Button, TopBar } from '../../../components/chrome';
 import { DeductionForm, type DeductionFormInput } from '../../../components/DeductionForm';
+import { DebtDeductionCard } from '../../../components/finance/DebtDeductionCard';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { WorkerPayoutCard } from '../../../components/WorkerPayoutCard';
 import { formatBaht, formatKg, settle, SettlementUnavailable } from '../../../core/settle';
@@ -256,6 +257,8 @@ export default function SettlementScreen() {
                 return (
                   <View key={w.personId} style={{ marginBottom: t.space.sm }}>
                     <WorkerPayoutCard worker={w} onVoidDeduction={voidDeduction} zoneNames={zoneNames} />
+                    {/* E06-S04: debt from the worker's ledger, deducted at this sale. */}
+                    <DebtDeductionCard saleId={state.id} worker={{ id: w.personId, name: w.workerName }} shareSatang={w.workerSatang} />
                   </View>
                 );
               })
