@@ -590,6 +590,20 @@ const th = {
   'round.owner.line': 'เจ้าของสวน {amount}',
   'round.check': 'เจ้าของ + คนกรีด + ส่วนปรับ = ยอดการขาย ✓',
   'round.default': 'ค่าเริ่มต้นจากการขายครั้งก่อน',
+
+  // ── Sale history (E05-S06) ──────────────────────────────────────────────
+  'hist.open': 'ประวัติการขาย',
+  'hist.title': 'ประวัติการขาย',
+  'hist.empty': 'ยังไม่มีการขาย',
+  'hist.total': 'รวม {n} การขาย · {kg} กก. · {amount} บาท',
+  'hist.deleted': 'ที่ลบแล้ว {n} (กู้คืนได้)',
+  'hist.row.kg': '{kg} กก. · {baskets} เข่ง',
+  'hist.row.price': '{price} บาท/กก.',
+  'hist.row.noPrice': 'ยังไม่มีราคา',
+  'hist.row.owner': 'ส่วนเจ้าของ {amount}',
+  'hist.row.local': 'ในเครื่อง ยังไม่ซิงก์',
+  'hist.status.open': 'เปิดอยู่',
+  'hist.status.closed': 'ปิดแล้ว',
 } as const;
 
 /**
@@ -1115,6 +1129,19 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'round.owner.line': 'owner {amount}',
   'round.check': 'owner + workers + adjustments = sale total ✓',
   'round.default': 'default from the previous sale',
+
+  'hist.open': 'sale history',
+  'hist.title': 'sale history',
+  'hist.empty': 'no sales yet',
+  'hist.total': '{n} sales · {kg} kg · {amount} baht',
+  'hist.deleted': '{n} deleted (restorable)',
+  'hist.row.kg': '{kg} kg · {baskets} baskets',
+  'hist.row.price': '{price} baht/kg',
+  'hist.row.noPrice': 'no price yet',
+  'hist.row.owner': 'owner share {amount}',
+  'hist.row.local': 'on this device, not synced',
+  'hist.status.open': 'open',
+  'hist.status.closed': 'closed',
 };
 
 export const messages = { th, en } as const;

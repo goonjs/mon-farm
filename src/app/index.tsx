@@ -108,6 +108,9 @@ export default function SaleListScreen() {
         ) : (
           sales.map((s) => <SaleRow key={s.id} sale={s} onDelete={() => void remove(s.id)} />)
         )}
+        <Link href="/history" asChild>
+          <Button testID="open-history">{msg('hist.open')}</Button>
+        </Link>
         {deletedCount > 0 && (
           <Link href="/deleted" asChild>
             <Button testID="open-deleted">{msg('sales.deletedLink', { n: deletedCount })}</Button>

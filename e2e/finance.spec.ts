@@ -239,3 +239,17 @@ test('receiving accounts — add, default, show the buyer (offline)', async ({ p
   await expect(page.getByTestId('show-account-no')).toContainText('1234567890');
   await page.screenshot({ path: `${SHOTS}/16-show-account-bank.png`, fullPage: true });
 });
+
+test('sale history — rows from the log, deleted sales out of the totals', async ({ page }) => {
+  const saleId = testSaleId('money-history');
+  await seedPeople(page, [{ id: 'person-prayuth', name: 'ประยุทธ' }]);
+  await seedSale(page, saleId, workedExample(saleId));
+  await page.goto('/');
+  await page.getByTestId('open-history').click();
+  await expect(page.getByTestId(`history-${saleId}`)).toContainText('298,734.50');
+  await expect(page.getByTestId(`history-${saleId}`)).toContainText('ล้งเจริญทรัพย์');
+  await expect(page.getByTestId('history-total')).toContainText('298,734.50');
+  await page.screenshot({ path: `${SHOTS}/18-sale-history.png`, fullPage: true });
+  await page.getByTestId(`history-${saleId}`).click();
+  await expect(page.getByTestId('owner-share')).toContainText('149,367.25');
+});
