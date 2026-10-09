@@ -273,3 +273,26 @@ describe('status listeners', () => {
     expect(seen).toEqual(['pending', 'synced']);
   });
 });
+
+describe('media through the engine (E01-S12 AC2, AC5)', () => {
+  it('queued files count as pending, upload after the events, and retry with backoff', async () => {
+    const { MemoryMediaQueue, FakeStorage } = await import('./media');
+    const store = new MemoryStore();
+    const queue = new MemoryMediaQueue();
+    const storage = new FakeStorage();
+    const engine = new SyncEngine({
+      store,
+      remote: new FakeRemote(),
+      cursor: new MemoryCursor(),
+      media: { queue, remote: storage },
+      random: () => 0,
+    });
+    await queue.enqueue({ mediaId: 'm1', groupId: 'g1', contentType: 'image/jpeg', hash: 'h' }, new Uint8Array([1]));
+    storage.failNext('unavailable');
+    await engine.sync();
+    expect(engine.status()).toMatchObject({ state: 'pending', pending: 1 });
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(storage.objects.has('groups/g1/media/m1')).toBe(true);
+    expect(engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+});

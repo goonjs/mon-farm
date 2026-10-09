@@ -18,6 +18,7 @@ import { canonicalJson } from '../core/canonical';
 import type { SaleEvent } from '../core/types';
 import { IntegrityError } from '../store/errors';
 import type { EventStore } from '../store/store';
+import { uploadMedia, type MediaQueue, type RemoteMedia } from './media';
 import { isTransient, RemoteError, type PulledDoc, type RemoteEvents } from './remote';
 
 /** Firestore's limit for one write batch. */
@@ -37,7 +38,7 @@ export type SyncError = 'denied' | 'integrity' | 'invalid';
 
 export interface SyncStatus {
   readonly state: SyncState;
-  /** Events still in this phone's outbox. */
+  /** Events still in this phone's outbox, plus files not yet uploaded. */
   readonly pending: number;
   readonly error?: SyncError;
 }
@@ -64,6 +65,8 @@ export interface SyncDeps {
   readonly store: SyncStore;
   readonly remote: RemoteEvents;
   readonly cursor: CursorStore;
+  /** Files follow their `media.add` events, with the same retry rules (E01-S12). */
+  readonly media?: { readonly queue: MediaQueue; readonly remote: RemoteMedia };
   readonly random?: () => number;
 }
 
@@ -150,6 +153,7 @@ export class SyncEngine {
     try {
       try {
         await this.push();
+        if (this.deps.media) await uploadMedia(this.deps.media.queue, this.deps.media.remote);
       } catch (err) {
         if (!(err instanceof Permanent)) throw err;
         pushError = err.kind; // still pull: others' events are worth having
@@ -233,7 +237,8 @@ export class SyncEngine {
   }
 
   private async settle(outcome: { kind?: SyncError; transient?: boolean }): Promise<void> {
-    const pending = (await this.deps.store.pending()).length;
+    const media = this.deps.media ? (await this.deps.media.queue.pending()).length : 0;
+    const pending = (await this.deps.store.pending()).length + media;
     const next: SyncStatus = outcome.kind
       ? { state: 'error', pending, error: outcome.kind }
       : { state: pending > 0 || outcome.transient ? 'pending' : 'synced', pending };
