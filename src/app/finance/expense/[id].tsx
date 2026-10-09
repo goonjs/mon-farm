@@ -152,8 +152,9 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
       item: item.trim(),
       note: note.trim(),
       payer,
-      ...(isAid && worker ? { worker, aidKind } : {}),
-      ...(trip ? { trip } : {}),
+      // Leaving aid/travel clears what belonged to it (review #5) — null, since a stored key cannot be removed.
+      ...(isAid && worker ? { worker, aidKind } : existing?.worker ? { worker: null, aidKind: null } : {}),
+      ...(trip ? { trip } : existing?.trip ? { trip: null } : {}),
     };
     try {
       if (!existing) {

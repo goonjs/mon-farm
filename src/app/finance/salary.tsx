@@ -12,7 +12,7 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { Button, TopBar } from '../../components/chrome';
 import { Input, Label, Note, PayerPicker, StageTag } from '../../components/finance/parts';
-import { formatMonth, formatSatang, parseBahtToSatang, todayIso } from '../../core/finance/money';
+import { formatMonth, formatSatang, isMonth, parseBahtToSatang, todayIso } from '../../core/finance/money';
 import type { FinanceEvent, Payer, SalaryRule } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
@@ -35,7 +35,8 @@ export default function SalaryScreen() {
   const mark = (ruleTarget: string, month: string, amountSatang: number, date: string, paid: boolean) =>
     inFlight.run(async () => {
       const target = `${ruleTarget}:${month}`;
-      const marks = (fin.events ?? []).filter((e) => e.targetId === target);
+      // Only the paid/unpaid marks form this chain — not edits to the month's expense.
+      const marks = (fin.events ?? []).filter((e) => e.targetId === target && (e.payload.t === 'salary_paid' || e.payload.t === 'salary_unpaid'));
       const head = marks.filter((e) => !marks.some((o) => o.baseEventId === e.id)).map((e) => e.id).sort().at(-1) ?? null;
       await fin.write(target, head, paid ? { t: 'salary_paid', month, amountSatang, date } : { t: 'salary_unpaid', month });
     });
@@ -63,7 +64,7 @@ export default function SalaryScreen() {
           return (
             <View key={r.id} testID={`salary-${r.targetId}`} style={{ gap: t.space.xs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.rule }}>
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>
-                {`${r.payload.rule.recipient.name} · ${formatSatang(r.payload.rule.amountSatang)}`}
+                {`${r.payload.rule.recipient.name} · ${formatSatang(currentAmount(fin.events ?? [], r.targetId, r.payload.rule.amountSatang))}`}
               </Text>
               <Note>{`${msg('sal.payer')}: ${r.payload.rule.payer.name}`}</Note>
               <Note>{msg('sal.owedNote')}</Note>
@@ -94,6 +95,17 @@ export default function SalaryScreen() {
   );
 }
 
+/** The amount in force this month: the latest raise from a month not after now, else the rule's. */
+function currentAmount(events: readonly FinanceEvent[], target: string, base: number): number {
+  const now = todayIso().slice(0, 7);
+  const raises = events
+    .filter((e) => e.targetId === target && e.payload.t === 'salary_amount_set')
+    .map((e) => ({ id: e.id, ...(e.payload as { fromMonth: string; amountSatang: number }) }))
+    .filter((r) => isMonth(r.fromMonth) && r.fromMonth <= now)
+    .sort((a, b) => (a.id < b.id ? -1 : 1));
+  return raises.at(-1)?.amountSatang ?? base;
+}
+
 function RuleForm({ onSave, onCancel }: { onSave: (r: SalaryRule) => Promise<void>; onCancel: () => void }) {
   const t = useTheme();
   const msg = useT();
@@ -104,7 +116,7 @@ function RuleForm({ onSave, onCancel }: { onSave: (r: SalaryRule) => Promise<voi
   const [due, setDue] = useState('28');
   const satang = parseBahtToSatang(amount);
   const dueDay = Number(due);
-  const ok = !!recipient && !!payer && !!satang && /^\d{4}-\d{2}$/.test(start) && Number.isInteger(dueDay) && dueDay >= 1 && dueDay <= 28;
+  const ok = !!recipient && !!payer && !!satang && isMonth(start) && Number.isInteger(dueDay) && dueDay >= 1 && dueDay <= 28;
 
   return (
     <View testID="salary-form" style={{ gap: t.space.sm, padding: t.space.md, borderRadius: t.radius.lg, backgroundColor: t.color.surfaceSunk }}>
@@ -149,7 +161,7 @@ function Raise({ onSave }: { onSave: (fromMonth: string, amountSatang: number) =
       <Button
         testID="salary-raise-save"
         variant="primary"
-        disabled={!satang || !/^\d{4}-\d{2}$/.test(from)}
+        disabled={!satang || !isMonth(from)}
         onPress={() => void onSave(from, satang!).then(() => setOpen(false))}
       >
         {msg('common.save')}

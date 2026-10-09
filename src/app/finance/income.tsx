@@ -15,7 +15,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Button, TopBar } from '../../components/chrome';
 import { Chip, ChipRow, Input, Label, Note } from '../../components/finance/parts';
-import { formatDate, formatSatang, parseBahtToSatang, todayIso } from '../../core/finance/money';
+import { formatDate, formatSatang, isIsoDate, parseBahtToSatang, todayIso } from '../../core/finance/money';
 import { projectPlan } from '../../core/finance/plan';
 import type { IncomeFields, IncomeTag, LeaseFields } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
@@ -32,7 +32,7 @@ export default function IncomeScreen() {
   const msg = useT();
   const fin = useFinance();
   const inFlight = useInFlight();
-  const rubber = useRubberIncome();
+  const rubber = useRubberIncome().income;
   const plan = useMemo(() => projectPlan(fin.events ?? []), [fin.events]);
   const [leaseForm, setLeaseForm] = useState(false);
   const [incomeForm, setIncomeForm] = useState(false);
@@ -145,14 +145,14 @@ function LeaseForm({ onSave, onCancel }: { onSave: (f: LeaseFields) => Promise<v
   const [share, setShare] = useState('');
   const [shareUnknown, setShareUnknown] = useState(true);
   const [note, setNote] = useState('');
-  const date = /^\d{4}-\d{2}-\d{2}$/;
+
   const rentSatang = rentUnknown ? null : parseBahtToSatang(rent);
   const sharePct = shareUnknown || share.trim() === '' ? null : /^\d{1,3}$/.test(share.trim()) ? Number(share.trim()) : NaN;
   const ok =
     farm.trim() !== '' &&
     (rentUnknown || rentSatang !== null) &&
-    (startUnknown || date.test(start)) &&
-    (end.trim() === '' || date.test(end)) &&
+    (startUnknown || isIsoDate(start)) &&
+    (end.trim() === '' || isIsoDate(end)) &&
     (sharePct === null || (Number.isInteger(sharePct) && sharePct >= 0 && sharePct <= 100));
 
   return (
@@ -210,7 +210,7 @@ function IncomeForm({ leases, onSave, onCancel }: { leases: { id: string; name: 
   const [tag, setTag] = useState<IncomeTag | null>(null);
   const [note, setNote] = useState('');
   const satang = parseBahtToSatang(amount);
-  const ok = !!satang && /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const ok = !!satang && isIsoDate(date);
   return (
     <View testID="income-form" style={{ gap: t.space.sm, padding: t.space.md, borderRadius: t.radius.lg, backgroundColor: t.color.surfaceSunk }}>
       <Label>{msg('fin.form.amount')}</Label>
