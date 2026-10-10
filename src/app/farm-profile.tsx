@@ -15,7 +15,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import { Link } from 'expo-router';
 
-import { Button, TopBar } from '../components/chrome';
+import { Button, TopBar, cardStyle } from '../components/chrome';
 import { projectSale } from '../core/project';
 // Bare specifiers — Metro resolves each to its platform adapter; see the
 // note in SaleProvider.tsx for why a literal '.web'/'.native' import here
@@ -96,10 +96,7 @@ export default function FarmProfileScreen() {
             {zones.length === 0 && hasPastSale ? (
               <View
                 style={{
-                  borderWidth: t.border.hair,
-                  borderColor: t.color.rule,
-                  borderRadius: t.radius.md,
-                  backgroundColor: t.color.surfaceRaised,
+                  ...cardStyle(t),
                   padding: t.space.md,
                   gap: t.space.sm,
                 }}
@@ -177,11 +174,8 @@ function ZoneCard({ zone, onChange }: { zone: ProfileZone; onChange: () => void 
     <View
       testID={`zone-${zone.id}`}
       style={{
-        borderWidth: t.border.hair,
-        borderColor: t.color.rule,
-        borderRadius: t.radius.md,
-        padding: t.space.sm,
-        backgroundColor: t.color.surfaceRaised,
+        ...cardStyle(t),
+        padding: t.space.md,
         gap: t.space.sm,
       }}
     >

@@ -34,7 +34,7 @@ import { useEffect, useState } from 'react';
 import { Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Button, Pill, TopBar } from '../../../components/chrome';
+import { Button, CardLabel, Pill, TopBar, cardStyle } from '../../../components/chrome';
 import { PeoplePicker } from '../../../components/PeoplePicker';
 import { newId } from '../../../lib/id';
 import { useSale } from '../../../store/SaleProvider';
@@ -734,24 +734,11 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   return (
     <View
       style={{
-        borderWidth: t.border.hair,
-        borderColor: t.color.rule,
-        borderRadius: t.radius.md,
-        backgroundColor: t.color.surfaceRaised,
+        ...cardStyle(t),
         padding: t.space.md,
       }}
     >
-      <Text
-        style={{
-          fontFamily: t.font.family.mono,
-          fontSize: t.font.size.micro,
-          letterSpacing: t.font.tracking.wide,
-          color: t.color.inkSoft,
-          marginBottom: t.space.sm,
-        }}
-      >
-        {title}
-      </Text>
+      <CardLabel>{title}</CardLabel>
       {children}
     </View>
   );
