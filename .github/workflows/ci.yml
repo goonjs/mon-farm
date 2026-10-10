@@ -201,6 +201,7 @@ jobs:
           name: screenshots
           path: docs/ux/screenshots/
           if-no-files-found: warn
+          include-hidden-files: true
 
       - name: Upload Playwright report on failure
         if: failure()
@@ -208,6 +209,8 @@ jobs:
         with:
           name: playwright-results
           path: e2e/.results/
+          # The folder itself is hidden; v4 would otherwise upload nothing (#45).
+          include-hidden-files: true
 
   # A live URL per PR on the dev site; Firebase deletes the channel after 7
   # days, every push renews it, and preview-cleanup.yml deletes it when the PR
