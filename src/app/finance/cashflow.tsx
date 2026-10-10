@@ -173,7 +173,7 @@ function Reserve({ value, onSave }: { value: ReturnType<typeof projectPlan>['res
   const [source, setSource] = useState('');
   const satang = parseBahtToSatang(amount);
   return (
-    <View testID="cashflow-reserve" style={{ gap: t.space.xs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleFaint, backgroundColor: t.color.brandCream }}>
+    <View testID="cashflow-reserve" style={{ gap: t.space.xs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleFaint, backgroundColor: t.color.surfaceRaised }}>
       <Label>{msg('cf.reserve')}</Label>
       {value ? (
         <>
