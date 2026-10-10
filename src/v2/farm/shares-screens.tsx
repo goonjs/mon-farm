@@ -30,7 +30,7 @@ import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
 import { AppText, CalendarIcon, Card, Check, CTA, FactRow, FarmIcon, FieldError, IconTile, MenuItem, PercentIcon, PersonIcon, SegmentedControl, TextField } from '../../ui';
 import { NotFound } from './people-screens';
-import { FarmScreen, RowCard, useDay, useMaster, useMounted } from './pieces';
+import { FarmScreen, RowCard, useDay, useMaster, useMounted, useWrite } from './pieces';
 
 const SHARES = '/v2/shares' as Href;
 
@@ -85,7 +85,7 @@ function TapperShare({ tapperId }: { tapperId: string }) {
   const [pct, setPct] = useState('');
   const [from, setFrom] = useState(() => thaiDayInput(todayIso(now)));
   const [tried, setTried] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const write = useWrite();
 
   useEffect(() => {
     let live = true;
@@ -112,17 +112,20 @@ function TapperShare({ tapperId }: { tapperId: string }) {
 
   const save = async () => {
     setTried(true);
-    if (!parsed.ok || !fromDay || tooEarly || busy) return;
-    setBusy(true);
-    try {
-      await peopleStore.setShare(tapperId, parsed.tapperPct, fromDay);
-    } catch (err) {
-      // Saved before the latest closed sale had loaded: show it, as if it had.
-      if (err instanceof ShareTooEarlyError) return setLastClosed(err.lastClosedSaleDay);
-      throw err;
-    } finally {
-      setBusy(false);
-    }
+    if (!parsed.ok || !fromDay || tooEarly) return;
+    const tapperPct = parsed.tapperPct;
+    let early: string | null = null;
+    const saved = await write.run(async () => {
+      try {
+        await peopleStore.setShare(tapperId, tapperPct, fromDay);
+      } catch (err) {
+        // Saved before the latest closed sale had loaded: show it, as if it had.
+        if (!(err instanceof ShareTooEarlyError)) throw err;
+        early = err.lastClosedSaleDay;
+      }
+    });
+    if (early) return setLastClosed(early);
+    if (!saved) return;
     setTried(false);
     setMode('5050');
     setPct('');
@@ -134,6 +137,7 @@ function TapperShare({ tapperId }: { tapperId: string }) {
       title={msg('share.title')}
       subtitle={person.name}
       fallback={`/v2/person/${tapperId}` as Href}
+      failed={write.failed}
       testID="share"
       footer={
         <CTA testID="share-save" icon={(c) => <Check color={c} size={14} />} onPress={() => void save()}>

@@ -14,10 +14,12 @@
  * - ConfirmSheet: the delete confirmation (mockup 7, 12).
  * - HeaderButton: the round outlined "แก้" at the top right.
  * - Stepper: [−] value [+] (mockup 3, 13).
+ * - useWrite / SaveFailed: one write at a time, and a failed one is said
+ *   out loud while the form keeps what was typed.
  */
 
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { Children, Fragment, useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { Children, Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { formatThaiDate, type MasterState } from '../../core/master';
@@ -32,6 +34,7 @@ import {
   cardStyle,
   Check,
   CTA,
+  FieldError,
   Minus,
   PinnedActions,
   Plus,
@@ -65,6 +68,39 @@ export function useMounted(): boolean {
 }
 const noSubscribe = () => () => undefined;
 
+/**
+ * One write at a time, and never a silent failure. `run` resolves true when
+ * the write landed. When it throws (storage quota, IndexedDB errors) the
+ * error is logged, `failed` turns on so the screen can say so, and `run`
+ * resolves false so the caller keeps the form as typed.
+ */
+export function useWrite(): { run: (fn: () => Promise<unknown>) => Promise<boolean>; failed: boolean } {
+  const busy = useRef(false);
+  const [failed, setFailed] = useState(false);
+  const run = useCallback(async (fn: () => Promise<unknown>) => {
+    if (busy.current) return false;
+    busy.current = true;
+    setFailed(false);
+    try {
+      await fn();
+      return true;
+    } catch (err) {
+      console.error('Farm data could not be saved.', err);
+      setFailed(true);
+      return false;
+    } finally {
+      busy.current = false;
+    }
+  }, []);
+  return { run, failed };
+}
+
+/** "บันทึกไม่สำเร็จ ลองอีกครั้ง" — the last write did not land. */
+export function SaveFailed({ show }: { show: boolean }) {
+  const msg = useT();
+  return show ? <FieldError testID="save-failed">{msg('v2f.saveFailed')}</FieldError> : null;
+}
+
 /** Pop to where the user came from; a cold open (deep link) lands on `fallback`. */
 export function useBack(fallback: Href): () => void {
   const router = useRouter();
@@ -85,6 +121,7 @@ export function FarmScreen({
   children,
   footer,
   overlay,
+  failed,
   testID,
 }: {
   title: string;
@@ -97,6 +134,8 @@ export function FarmScreen({
   footer?: ReactNode;
   /** A sheet over the screen. */
   overlay?: ReactNode;
+  /** The last write failed: said just above the pinned actions. */
+  failed?: boolean;
   testID?: string;
 }) {
   const t = useTheme();
@@ -109,6 +148,11 @@ export function FarmScreen({
       <ScrollView testID={testID} contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.xl }}>
         {children}
       </ScrollView>
+      {failed ? (
+        <View style={{ paddingHorizontal: t.layout.screenPaddingX, paddingTop: t.space.sm }}>
+          <SaveFailed show />
+        </View>
+      ) : null}
       {footer ? <PinnedActions>{footer}</PinnedActions> : null}
       {overlay}
     </View>
@@ -303,6 +347,7 @@ export function ConfirmSheet({
   confirmLabel,
   onConfirm,
   onClose,
+  failed,
   testID = 'delete-confirm',
 }: {
   open: boolean;
@@ -312,6 +357,8 @@ export function ConfirmSheet({
   confirmLabel: string;
   onConfirm: () => void;
   onClose: () => void;
+  /** The delete did not land: say so, and stay open. */
+  failed?: boolean;
   testID?: string;
 }) {
   const t = useTheme();
@@ -338,6 +385,7 @@ export function ConfirmSheet({
           </AppText>
         ))}
       </View>
+      <SaveFailed show={!!failed} />
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
         <View style={{ flex: 1 }}>
           <Button testID={`${testID}-no`} onPress={onClose}>

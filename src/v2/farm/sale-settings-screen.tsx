@@ -17,7 +17,7 @@ import { readHoldMs, writeHoldMs } from '../../store/hold-preference';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
 import { AppText, BottomSheet, Button, Card, CardLabel, Check, Chip, CTA, FactRow, PersonIcon, Plus, RadioCard, SegmentedControl } from '../../ui';
-import { FarmScreen, HelpNote, Stepper, useMaster } from './pieces';
+import { FarmScreen, HelpNote, SaveFailed, Stepper, useMaster, useWrite } from './pieces';
 
 const ZERO: readonly ZeroCheckMode[] = ['every', 'first-per-farm', 'skip'];
 
@@ -31,9 +31,9 @@ export function SaleSettingsScreen() {
   const [basketKg, setBasketKg] = useState(2);
 
   const s = state ? saleSettings(state) : null;
+  const write = useWrite();
   const save = async (fn: () => Promise<unknown>) => {
-    await fn();
-    reload();
+    if (await write.run(fn)) reload();
   };
   const changeHold = (ms: number) => {
     if (!validHoldMs(ms)) return;
@@ -73,6 +73,7 @@ export function SaleSettingsScreen() {
       title={msg('saleSettings.title')}
       subtitle={msg('saleSettings.subtitle')}
       fallback={'/v2/farm' as Href}
+      failed={write.failed && !adding}
       testID="sale-settings"
       overlay={
         <BottomSheet open={adding} onClose={() => setAdding(false)} title={msg('v2f.addPair')} testID="pair-sheet">
@@ -82,6 +83,7 @@ export function SaleSettingsScreen() {
           <AppText variant="label">{msg('v2f.basketEmpty')}</AppText>
           <Stepper testID="new-basket" label={msg('saleSettings.basket')} value={String(basketKg)} unit={msg('common.kg')} onLess={() => setBasketKg((n) => Math.max(0, n - 1))} onMore={() => setBasketKg((n) => n + 1)} />
           <AppText style={{ fontWeight: t.font.weight.semibold }}>{msg('saleSettings.scaleShould', { n: netKg + basketKg })}</AppText>
+          <SaveFailed show={write.failed} />
           <CTA
             testID="save-pair"
             icon={(c) => <Check color={c} size={14} />}

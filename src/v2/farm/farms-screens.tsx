@@ -73,6 +73,8 @@ import {
   useDay,
   useMaster,
   useMounted,
+  useWrite,
+  SaveFailed,
 } from './pieces';
 
 const FARMS = '/v2/farms' as Href;
@@ -87,9 +89,9 @@ export function FarmsScreen() {
   const active = state?.properties.filter((p) => !p.deleted) ?? [];
   const deleted = state?.properties.filter((p) => p.deleted) ?? [];
 
+  const write = useWrite();
   const restore = async (id: string) => {
-    await peopleStore.restore(id);
-    reload();
+    if (await write.run(() => peopleStore.restore(id))) reload();
   };
 
   return (
@@ -97,6 +99,7 @@ export function FarmsScreen() {
       title={msg('properties.title')}
       subtitle={msg('farmData.title')}
       fallback={'/v2/farm' as Href}
+      failed={write.failed}
       testID="farms"
       footer={<AddCTA testID="add-farm" label={msg('v2f.addFarm')} onPress={() => router.push('/v2/property/new' as Href)} />}
     >
@@ -185,7 +188,9 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
   const [planted, setPlanted] = useState('');
   const [gps, setGps] = useState('');
   const [tried, setTried] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const write = useWrite();
+  /** A new farm whose first write landed but its area did not: a retry edits it, never adds a second (D-65). */
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
 
   const existing = propertyId ? (state?.properties.find((p) => p.id === propertyId) ?? null) : null;
@@ -210,21 +215,21 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
 
   const save = async () => {
     setTried(true);
-    if (problems.length || !crop || !rai.ok || !gpsParsed.ok || !year.ok || busy) return;
-    // One save at a time: a double tap must not create two farms.
-    setBusy(true);
-    try {
-      const fields = { name, crop, plantedYearBe: year.yearBe, gps: gpsParsed.gps };
-      if (existing) await peopleStore.editProperty(existing.id, fields);
+    if (problems.length || !crop || !rai.ok || !gpsParsed.ok || !year.ok) return;
+    const fields = { name, crop, plantedYearBe: year.yearBe, gps: gpsParsed.gps };
+    // One save at a time (useWrite): a double tap must not create two farms.
+    const saved = await write.run(async () => {
+      if (existing) return peopleStore.editProperty(existing.id, fields);
+      let id = createdId;
+      if (id) await peopleStore.editProperty(id, fields);
       else {
-        const made = await peopleStore.addProperty(fields);
-        // A new farm's area takes effect today; later changes are dated on the detail (MD-1).
-        if (rai.centiRai !== null) await peopleStore.recordArea(made.id, rai.centiRai, todayIso(now));
+        id = (await peopleStore.addProperty(fields)).id;
+        setCreatedId(id);
       }
-    } finally {
-      setBusy(false);
-    }
-    back();
+      // A new farm's area takes effect today; later changes are dated on the detail (MD-1).
+      if (rai.centiRai !== null) await peopleStore.recordArea(id, rai.centiRai, todayIso(now));
+    });
+    if (saved) back();
   };
 
   if (propertyId && state && !existing) return <NotFound fallback={FARMS} />;
@@ -234,6 +239,7 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
     <FarmScreen
       title={msg(propertyId ? 'propertyForm.editTitle' : 'propertyForm.addTitle')}
       fallback={FARMS}
+      failed={write.failed}
       testID="property-form"
       footer={
         <CTA testID="property-save" icon={(c) => <Check color={c} size={14} />} onPress={() => void save()}>
@@ -307,7 +313,7 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
   const [area, setArea] = useState('');
   const [areaDate, setAreaDate] = useState(() => thaiDayInput(todayIso(now)));
   const [tried, setTried] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const write = useWrite();
 
   const property = state?.properties.find((p) => p.id === propertyId);
   if (!state) return <FarmScreen title="" fallback={FARMS} />;
@@ -325,26 +331,21 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
 
   const saveArea = async () => {
     setTried(true);
-    if (!rai.ok || rai.centiRai === null || !effective || busy) return;
-    setBusy(true);
-    try {
-      await peopleStore.recordArea(property.id, rai.centiRai, effective);
-    } finally {
-      setBusy(false);
-    }
+    if (!rai.ok || rai.centiRai === null || !effective) return;
+    const centiRai = rai.centiRai;
+    if (!(await write.run(() => peopleStore.recordArea(property.id, centiRai, effective)))) return;
     setSheet('none');
     setArea('');
     setTried(false);
     reload();
   };
   const remove = async () => {
-    await peopleStore.remove(property.id);
+    if (!(await write.run(() => peopleStore.remove(property.id)))) return;
     setSheet('none');
     back();
   };
   const restore = async () => {
-    await peopleStore.restore(property.id);
-    reload();
+    if (await write.run(() => peopleStore.restore(property.id))) reload();
   };
 
   const value = (text: string) => <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm }}>{text}</AppText>;
@@ -354,6 +355,7 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
       title={property.name}
       subtitle={msg('properties.title')}
       fallback={FARMS}
+      failed={write.failed && sheet === 'none'}
       testID="property-detail"
       right={<HeaderButton testID="property-edit" label={msg('personDetail.edit')} onPress={() => router.push(`/v2/property/${property.id}?edit=1` as Href)} />}
       overlay={
@@ -378,6 +380,7 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
               error={tried && !effective ? msg('propertyForm.badDate') : undefined}
             />
             <AppText variant="bodySm">{msg('v2f.areaNewLine')}</AppText>
+            <SaveFailed show={write.failed} />
             <CTA testID="area-save" icon={(c) => <Check color={c} size={14} />} onPress={() => void saveArea()}>
               {msg('propertyDetail.areaSave')}
             </CTA>
@@ -390,6 +393,7 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
             confirmLabel={msg('propertyForm.deleteYes')}
             onConfirm={() => void remove()}
             onClose={() => setSheet('none')}
+            failed={write.failed}
           />
         </>
       }

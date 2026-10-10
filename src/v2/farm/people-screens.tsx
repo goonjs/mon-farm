@@ -74,6 +74,7 @@ import {
   useDay,
   useMaster,
   useMounted,
+  useWrite,
 } from './pieces';
 
 const PEOPLE = '/v2/people' as Href;
@@ -100,9 +101,9 @@ export function PeopleScreen() {
   const label = (f: Filter) => (f === 'all' ? msg('peopleList.all') : f === 'buyers' ? msg('peopleList.buyers') : msg(`role.${f}`));
   const tappers = state ? filterPeople(state.people, 'tapper') : [];
   const deleted = state ? [...state.people.filter((p) => p.deleted), ...state.buyers.filter((b) => b.deleted)] : [];
+  const write = useWrite();
   const restore = async (id: string) => {
-    await peopleStore.restore(id);
-    reload();
+    if (await write.run(() => peopleStore.restore(id))) reload();
   };
 
   return (
@@ -110,6 +111,7 @@ export function PeopleScreen() {
       title={msg('peopleList.title')}
       subtitle={msg('farmData.title')}
       fallback={'/v2/farm' as Href}
+      failed={write.failed}
       testID="people"
       footer={<AddCTA testID="add-person" label={msg('v2f.addPerson')} onPress={() => router.push('/v2/person/new' as Href)} />}
     >
@@ -207,7 +209,7 @@ function PersonForm({ personId }: { personId: string | null }) {
   const [otherDraft, setOtherDraft] = useState('');
   const [tried, setTried] = useState(false);
   const [roleWarning, setRoleWarning] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const write = useWrite();
   const [today] = useState(() => todayIso(Date.now()));
 
   const existing = personId ? (state?.people.find((p) => p.id === personId) ?? null) : null;
@@ -230,20 +232,14 @@ function PersonForm({ personId }: { personId: string | null }) {
 
   const save = async (confirmed = false) => {
     setTried(true);
-    if (errors.length || busy) return;
+    if (errors.length) return;
     // Taking the tapper role away while they still tap points: warn, never block (D-65).
     if (!confirmed && existing && points.length > 0 && existing.roles.includes('tapper') && !roles.includes('tapper')) {
       setRoleWarning(true);
       return;
     }
-    setBusy(true);
-    try {
-      if (existing) await peopleStore.edit(existing.id, { name, roles, otherRoles });
-      else await peopleStore.create(name, roles, otherRoles);
-    } finally {
-      setBusy(false);
-    }
-    back();
+    const saved = await write.run(() => (existing ? peopleStore.edit(existing.id, { name, roles, otherRoles }) : peopleStore.create(name, roles, otherRoles)));
+    if (saved) back();
   };
 
   if (personId && state && !existing) return <NotFound />;
@@ -252,6 +248,7 @@ function PersonForm({ personId }: { personId: string | null }) {
     <FarmScreen
       title={msg(personId ? 'personForm.editTitle' : 'personForm.addTitle')}
       fallback={PEOPLE}
+      failed={write.failed}
       testID="person-form"
       footer={
         <CTA testID="person-save" icon={(c) => <Check color={c} size={14} />} onPress={() => void save()}>
@@ -323,6 +320,7 @@ function PersonDetail({ personId }: { personId: string }) {
   const fin = useFinance();
   const counts = useSaleCounts();
   const [confirming, setConfirming] = useState(false);
+  const write = useWrite();
   const [today] = useState(() => todayIso(Date.now()));
   const debt = useMemo(() => projectDebts(fin.events ?? [], counts).get(personId), [fin.events, counts, personId]);
 
@@ -336,13 +334,12 @@ function PersonDetail({ personId }: { personId: string }) {
   const tone = personTone(person, filterPeople(state.people, 'tapper'));
 
   const remove = async () => {
-    await peopleStore.remove(person.id);
+    if (!(await write.run(() => peopleStore.remove(person.id)))) return;
     setConfirming(false);
     back();
   };
   const restore = async () => {
-    await peopleStore.restore(person.id);
-    reload();
+    if (await write.run(() => peopleStore.restore(person.id))) reload();
   };
 
   return (
@@ -350,6 +347,7 @@ function PersonDetail({ personId }: { personId: string }) {
       title={person.name}
       subtitle={msg('peopleList.title')}
       fallback={PEOPLE}
+      failed={write.failed && !confirming}
       testID="person-detail"
       right={<HeaderButton testID="person-edit" label={msg('personDetail.edit')} onPress={() => router.push(`/v2/person/${person.id}?edit=1` as Href)} />}
       overlay={
@@ -365,6 +363,7 @@ function PersonDetail({ personId }: { personId: string }) {
           confirmLabel={msg('personForm.deleteYes')}
           onConfirm={() => void remove()}
           onClose={() => setConfirming(false)}
+          failed={write.failed}
         />
       }
     >

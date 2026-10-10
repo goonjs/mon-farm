@@ -14,7 +14,7 @@ import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
 import { AppText, BottomSheet, Button, Check, Chip, CTA, IconTile, MenuItem, MoneyInIcon, TextField, TrashIcon } from '../../ui';
-import { AddCTA, ConfirmSheet, DeletedLink, DeletedList, FarmScreen, HelpNote, RowCard, useMaster } from './pieces';
+import { AddCTA, ConfirmSheet, DeletedLink, DeletedList, FarmScreen, HelpNote, RowCard, SaveFailed, useMaster, useWrite } from './pieces';
 
 type Sheet = { kind: 'none' } | { kind: 'form'; buyer: BuyerRecord | null } | { kind: 'delete'; buyer: BuyerRecord };
 
@@ -27,7 +27,7 @@ export function BuyersScreen() {
   const [name, setName] = useState('');
   const [tried, setTried] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const write = useWrite();
 
   const latest = state ? defaultBuyer(state, latestId) : null;
   const active = state?.buyers.filter((b) => !b.deleted) ?? [];
@@ -40,13 +40,7 @@ export function BuyersScreen() {
   };
   const close = () => setSheet({ kind: 'none' });
   const run = async (fn: () => Promise<unknown>) => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await fn();
-    } finally {
-      setBusy(false);
-    }
+    if (!(await write.run(fn))) return;
     close();
     reload();
   };
@@ -62,6 +56,7 @@ export function BuyersScreen() {
       title={msg('buyers.title')}
       subtitle={msg('farmData.title')}
       fallback={'/v2/farm' as Href}
+      failed={write.failed && sheet.kind === 'none'}
       testID="buyers"
       footer={<AddCTA testID="add-buyer" label={msg('v2f.addBuyer')} onPress={() => open(null)} />}
       overlay={
@@ -76,6 +71,7 @@ export function BuyersScreen() {
               onChangeText={setName}
               error={tried && !name.trim() ? msg('personForm.needName') : undefined}
             />
+            <SaveFailed show={write.failed} />
             <CTA testID="buyer-save" icon={(c) => <Check color={c} size={14} />} onPress={save}>
               {msg('common.save')}
             </CTA>
@@ -98,6 +94,7 @@ export function BuyersScreen() {
             lines={msg('personForm.deleteBody').split(' · ')}
             confirmLabel={msg('personForm.deleteYes')}
             onConfirm={() => sheet.kind === 'delete' && void run(() => peopleStore.remove(sheet.buyer.id))}
+            failed={write.failed}
             onClose={close}
           />
         </>

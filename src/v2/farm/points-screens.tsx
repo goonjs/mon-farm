@@ -79,6 +79,8 @@ import {
   useDay,
   useMaster,
   useMounted,
+  useWrite,
+  SaveFailed,
 } from './pieces';
 
 const FARMS = '/v2/farms' as Href;
@@ -95,9 +97,9 @@ export function PointsScreen() {
   // Deleted on their own; a point that went with its farm comes back with the farm (D-65).
   const deleted = state?.points.filter((p) => p.deleted && farms.some((f) => f.id === p.propertyId)) ?? [];
 
+  const write = useWrite();
   const restore = async (id: string) => {
-    await peopleStore.restore(id);
-    reload();
+    if (await write.run(() => peopleStore.restore(id))) reload();
   };
 
   return (
@@ -105,6 +107,7 @@ export function PointsScreen() {
       title={msg('v2.points')}
       subtitle={msg('farmData.title')}
       fallback={'/v2/farm' as Href}
+      failed={write.failed}
       testID="points"
       footer={farms.length && !showDeleted ? <AddCTA testID="add-point" label={msg('v2f.addPoint')} onPress={() => router.push('/v2/point/new' as Href)} /> : undefined}
     >
@@ -177,7 +180,7 @@ function PointForm({ pointId, propertyId }: { pointId: string | null; propertyId
   const [name, setName] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [made, setMade] = useState<{ id: string; name: string } | null>(null);
-  const [busy, setBusy] = useState(false);
+  const write = useWrite();
 
   const existing = pointId ? (state?.points.find((p) => p.id === pointId) ?? null) : null;
   if (existing && loaded !== existing.id) {
@@ -191,22 +194,23 @@ function PointForm({ pointId, propertyId }: { pointId: string | null; propertyId
   const save = async () => {
     if (!name.trim()) return setError(msg('pointForm.needName'));
     if (!farmId) return setError(msg('v2f.pickFarm'));
-    if (busy) return;
-    setBusy(true);
-    try {
-      if (existing) {
-        await peopleStore.renamePoint(existing.id, name);
-        back();
-      } else {
-        const p = await peopleStore.addPoint(farmId, name);
-        setMade({ id: p.id, name: p.name });
+    let taken = false;
+    await write.run(async () => {
+      try {
+        if (existing) {
+          await peopleStore.renamePoint(existing.id, name);
+          back();
+        } else {
+          const p = await peopleStore.addPoint(farmId, name);
+          setMade({ id: p.id, name: p.name });
+        }
+      } catch (err) {
+        // A taken name is the user's to fix, not a failed write.
+        if (!(err instanceof DuplicatePointNameError)) throw err;
+        taken = true;
       }
-    } catch (err) {
-      if (err instanceof DuplicatePointNameError) setError(msg('pointForm.taken', { name: name.trim() }));
-      else throw err;
-    } finally {
-      setBusy(false);
-    }
+    });
+    if (taken) setError(msg('pointForm.taken', { name: name.trim() }));
   };
 
   if (pointId && state && !existing) return <NotFound fallback={POINTS} />;
@@ -232,6 +236,7 @@ function PointForm({ pointId, propertyId }: { pointId: string | null; propertyId
     <FarmScreen
       title={msg(existing ? 'v2f.renamePoint' : 'pointForm.addTitle')}
       fallback={POINTS}
+      failed={write.failed}
       testID="point-form"
       footer={
         <CTA testID="point-save" icon={(c) => <Check color={c} size={14} />} onPress={() => void save()}>
@@ -290,6 +295,7 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
   const { state, reload } = useMaster();
   const [sheet, setSheet] = useState<Sheet>(openPlan ? { kind: 'plan', replacing: null } : { kind: 'none' });
   const [today] = useState(() => todayIso(Date.now()));
+  const write = useWrite();
 
   const point = state?.points.find((p) => p.id === pointId);
   const farm = state?.properties.find((f) => f.id === point?.propertyId);
@@ -306,17 +312,15 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
   const farmIndex = state.properties.filter((p) => !p.deleted).findIndex((p) => p.id === point.propertyId);
 
   const cancelPlan = async (id: string) => {
-    await peopleStore.remove(id);
-    reload();
+    if (await write.run(() => peopleStore.remove(id))) reload();
   };
   const remove = async () => {
-    await peopleStore.remove(point.id);
+    if (!(await write.run(() => peopleStore.remove(point.id)))) return;
     setSheet({ kind: 'none' });
     back();
   };
   const restore = async () => {
-    await peopleStore.restore(point.id);
-    reload();
+    if (await write.run(() => peopleStore.restore(point.id))) reload();
   };
 
   const planButtons = (assignmentId: string) => (
@@ -339,6 +343,7 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
       title={point.name}
       subtitle={farm?.name}
       fallback={farm ? (`/v2/property/${farm.id}` as Href) : POINTS}
+      failed={write.failed && sheet.kind === 'none'}
       testID="point-detail"
       right={<HeaderButton testID="point-rename" label={msg('pointDetail.rename')} onPress={() => router.push(`/v2/point/${point.id}?edit=1` as Href)} />}
       overlay={
@@ -363,6 +368,7 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
             confirmLabel={msg('pointForm.deleteYes')}
             onConfirm={() => void remove()}
             onClose={() => setSheet({ kind: 'none' })}
+            failed={write.failed}
           />
         </>
       }
@@ -446,7 +452,9 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
  * The plan (farm mockup 16): a new tapper from a start day — blank only for
  * a point's first assignment (D-63) — or a last day with nobody after it.
  * The outgoing tapper's end is derived (the day before) and shown first.
- * "แก้แผน" cancels the old plan in the same save.
+ * "แก้แผน" cancels the old plan in the same save — after the new one is
+ * written, so a failed write never leaves the point with neither; a retry
+ * then only cancels the old one.
  */
 function PlanForm({ state, pointId, replacing, onSaved }: { state: MasterState; pointId: string; replacing: string | null; onSaved: () => void }) {
   const t = useTheme();
@@ -457,7 +465,8 @@ function PlanForm({ state, pointId, replacing, onSaved }: { state: MasterState; 
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [tried, setTried] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [wrote, setWrote] = useState(false);
+  const write = useWrite();
 
   const tappers = filterPeople(state.people, 'tapper');
   const fromDay = from.trim() ? parseThaiDay(from) : null;
@@ -470,16 +479,16 @@ function PlanForm({ state, pointId, replacing, onSaved }: { state: MasterState; 
 
   const save = async () => {
     setTried(true);
-    if (!valid || busy) return;
-    setBusy(true);
-    try {
+    if (!valid) return;
+    const saved = await write.run(async () => {
+      if (!wrote) {
+        if (mode === 'new' && tapperId) await peopleStore.assignTapper(pointId, tapperId, fromDay);
+        if (mode === 'leave' && toDay) await peopleStore.endTapper(pointId, dayAfter(toDay));
+        setWrote(true);
+      }
       if (replacing) await peopleStore.remove(replacing);
-      if (mode === 'new' && tapperId) await peopleStore.assignTapper(pointId, tapperId, fromDay);
-      if (mode === 'leave' && toDay) await peopleStore.endTapper(pointId, dayAfter(toDay));
-    } finally {
-      setBusy(false);
-    }
-    onSaved();
+    });
+    if (saved) onSaved();
   };
 
   return (
@@ -515,6 +524,7 @@ function PlanForm({ state, pointId, replacing, onSaved }: { state: MasterState; 
           <TextField testID="plan-to" label={msg('assign.toLabel')} value={to} onChangeText={setTo} error={tried && !toDay ? msg('assign.badDate') : undefined} />
         </View>
       ) : null}
+      <SaveFailed show={write.failed} />
       <CTA testID="plan-save" icon={(c) => <Check color={c} size={14} />} onPress={() => void save()}>
         {msg('assign.save')}
       </CTA>
@@ -526,13 +536,13 @@ export function PointsWizardScreen() {
   const t = useTheme();
   const msg = useT();
   const back = useBack(FARMS);
-  const { state } = useMaster();
+  const { state, reload } = useMaster();
   const [farmId, setFarmId] = useState<string | null>(null);
   const [chosen, setChosen] = useState<string[]>([]);
   const [names, setNames] = useState<Record<string, string[]>>({});
   const [page, setPage] = useState<1 | 2>(1);
   const [tried, setTried] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const write = useWrite();
 
   const tappers = state ? filterPeople(state.people, 'tapper') : [];
   const farms = state?.properties.filter((p) => !p.deleted) ?? [];
@@ -556,15 +566,11 @@ export function PointsWizardScreen() {
 
   const create = async () => {
     setTried(true);
-    // One run at a time: a double tap must not create the set twice.
-    if (!plan?.ok || total === 0 || busy) return;
-    setBusy(true);
-    try {
-      await peopleStore.createStarterPoints(rows);
-    } finally {
-      setBusy(false);
-    }
-    back();
+    if (!plan?.ok || total === 0) return;
+    // One run at a time (useWrite): a double tap must not create the set twice.
+    if (await write.run(() => peopleStore.createStarterPoints(rows))) back();
+    // Part of the set may have landed: re-read, so its names show as taken rather than being made twice.
+    else reload();
   };
 
   const step = page === 2 ? 4 : chosen.length > 0 ? 3 : farmId ? 2 : 1;
@@ -602,6 +608,7 @@ export function PointsWizardScreen() {
       title={msg('wizard.title')}
       subtitle={page === 2 ? msg('wizard.lastStep') : undefined}
       fallback={FARMS}
+      failed={write.failed}
       testID="points-wizard"
       footer={
         page === 1 ? (
