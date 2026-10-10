@@ -364,6 +364,8 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     expect(within(list).getByText('จุด 2')).toBeTruthy();
     expect(within(list).getByText('สวนจันทเขลม')).toBeTruthy();
     expect(within(list).queryByText('จุดเก่า')).toBeNull();
+    // A screen reader hears which record the link restores.
+    expect(screen.getByTestId(`restore-${gone.id}`).props.accessibilityLabel).toBe('กู้คืน จุด 2');
     await press(`restore-${gone.id}`);
     expect((await m.state()).points.find((p) => p.id === gone.id)?.deleted).toBe(false);
     await press('hide-deleted');

@@ -239,6 +239,7 @@ export function DeletedList({
             <Pressable
               testID={`restore-${r.id}`}
               accessibilityRole="button"
+              accessibilityLabel={`${msg('peopleList.restore')} ${r.name}`}
               onPress={() => onRestore(r.id)}
               style={{ minHeight: t.target.min, flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}
             >
