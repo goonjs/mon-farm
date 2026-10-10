@@ -26,6 +26,30 @@ module.exports = [
     ],
   },
   {
+    // D-82: the v2 UI is built only from the new design system in src/ui.
+    // It may reuse logic (core, store, sync, i18n, theme tokens) but never
+    // the old UI in src/components or the template colours in
+    // src/constants/theme.
+    files: ['src/ui/**', 'src/app/(v2)/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/components', '**/components/**', '@/components', '@/components/**'],
+              message: 'v2 UI (D-82): build from src/ui, never import old UI from src/components.',
+            },
+            {
+              group: ['**/constants/theme', '@/constants/theme'],
+              message: 'v2 UI (D-82): read tokens via src/theme, not the old src/constants/theme.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     rules: {
       // The log is append-only and the projection is a fold; unused catch
       // bindings are common where a failure is deliberately swallowed (storage
