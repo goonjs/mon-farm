@@ -231,3 +231,38 @@ test('start → point → empty scale → count → short → switch and fill �
 
   expect(errors).toEqual([]);
 });
+
+test('back to a point already weighed: straight to its counter, the count goes on (owner 2026-10-10)', async ({ page, context }) => {
+  const id = on(page);
+  await seedMaster(page, FARM);
+  await page.evaluate(() => localStorage.setItem('mon-farm:hold-ms', '500'));
+  await page.goto('/v2');
+  await context.setOffline(true);
+  await id('home-sale-start').click();
+  await id('start-next').click();
+  await id('pick-farm-fa').click();
+  await id('pick-point-a1').click();
+  // The empty scale reads +1: accept the skew, so every move checks a new point (D-76).
+  await id('zero-not0').click();
+  await id('choose-skew').click();
+  await id('start-weigh').click();
+  for (let i = 0; i < 3; i++) await hold(page);
+  await expect(id('current-no')).toHaveText('4');
+
+  // จุด 2 is new to the sale: its empty scale is checked.
+  await id('switch-point').click();
+  await id('pick-point-a2').click();
+  await expect(id('zero-tare')).toBeVisible();
+  await id('zero-zero').click();
+  await id('start-weigh').click();
+  await expect(id('point-place')).toContainText('จุด 2');
+
+  // Back to จุด 1: no check, its counter at once, and the count goes on.
+  await id('switch-point').click();
+  await id('pick-point-a1').click();
+  await expect(id('point-place')).toContainText('จันทเขลม · จุด 1');
+  await expect(id('zero-tare')).toHaveCount(0);
+  await expect(id('current-no')).toHaveText('4');
+  await hold(page);
+  await expect(id('current-no')).toHaveText('5');
+});
