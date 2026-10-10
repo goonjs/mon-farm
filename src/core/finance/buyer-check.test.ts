@@ -60,6 +60,20 @@ describe('buyer check (E05-S03 · D-72 · SET-6)', () => {
     expect(checkBuyerCheck('total', '', null)).toEqual([]);
   });
 
+  it('review #1: a difference without a reason cannot even be built', () => {
+    expect(() => buyerCheckPayload('s1', 'diff', OURS, null, '  ')).toThrow(RangeError);
+    expect(() => buyerCheckPayload('s1', 'diff', OURS, { netG: -5, grossSatang: null, baskets: null }, 'x')).toThrow(RangeError);
+  });
+
+  it('review #5: merged heads against different figures — stale if any of them no longer holds', () => {
+    const late = { ...OURS, netG: OURS.netG - 50000, grossSatang: OURS.grossSatang - 132500, baskets: 225 };
+    const a = ev(T, buyerCheckPayload('s1', 'weight', OURS), null, 'dev-a');
+    const b = ev(T, buyerCheckPayload('s1', 'weight', late), null, 'dev-b');
+    // Whichever head sorts last, the one made against other figures keeps it from counting.
+    expect(buyerCheck([a, b], 's1', OURS)).toMatchObject({ status: 'pending', stale: true, conflict: false });
+    expect(buyerCheck([a, b], 's1', late)).toMatchObject({ status: 'pending', stale: true, conflict: false });
+  });
+
   it('undo the check: a pending event clears it', () => {
     const a = ev(T, buyerCheckPayload('s1', 'total', OURS));
     const b = ev(T, buyerCheckPayload('s1', 'pending', OURS), a.id);

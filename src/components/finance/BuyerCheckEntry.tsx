@@ -17,6 +17,8 @@ export function BuyerCheckEntry({ saleId, ours }: { saleId: string; ours: SaleFi
   const fin = useFinance();
   const check = useMemo(() => buyerCheck(fin.events ?? [], saleId, ours), [fin.events, saleId, ours]);
   const done = check.status !== 'pending';
+  // Until the log has loaded the status is not known — show nothing rather than a false "pending".
+  if (fin.events === null) return null;
   return (
     <View testID="check-entry" style={{ gap: t.space.xs }}>
       <CardTitle>{msg('chk.title')}</CardTitle>
@@ -24,6 +26,7 @@ export function BuyerCheckEntry({ saleId, ours }: { saleId: string; ours: SaleFi
         {msg(`chk.status.${check.status}`)}
       </Fact>
       {check.stale ? <Note tone="warn">{msg('chk.stale', { was: msg(`chk.status.${check.recorded!}`) })}</Note> : null}
+      {check.conflict ? <Note tone="reject" testID="check-entry-conflict">{msg('chk.conflict')}</Note> : null}
       <Button testID="open-check" onPress={() => router.push({ pathname: '/sale/[id]/check', params: { id: saleId } })}>
         {`${msg('chk.open')} ›`}
       </Button>

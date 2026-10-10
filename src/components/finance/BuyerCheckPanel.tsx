@@ -68,14 +68,29 @@ export function BuyerCheckPanel({
   };
   const problems = checkBuyerCheck('diff', reason, buyer);
 
+  const [failed, setFailed] = useState(false);
   const record = (status: BuyerCheckStatus, given: BuyerFigures | null = null, why = '') =>
     inFlight.run(async () => {
-      // Based on every head, so a write made while two phones disagree settles it.
-      const others = check.heads.filter((h) => h !== check.head);
-      const payload = buyerCheckPayload(saleId, status, ours, given, why);
-      await fin.write(buyerCheckTarget(saleId), check.head, others.length ? { ...payload, alsoBasedOn: others } : payload);
-      setMismatch(false);
+      setFailed(false);
+      try {
+        // Based on every head, so a write made while two phones disagree settles it.
+        const others = check.heads.filter((h) => h !== check.head);
+        const payload = buyerCheckPayload(saleId, status, ours, given, why);
+        await fin.write(buyerCheckTarget(saleId), check.head, others.length ? { ...payload, alsoBasedOn: others } : payload);
+        closeMismatch();
+      } catch (err) {
+        // Never silent (review #2): the person must know the check was not kept.
+        console.error('Buyer check could not be stored.', err);
+        setFailed(true);
+      }
     });
+  const closeMismatch = () => {
+    setMismatch(false);
+    setBuyerKg('');
+    setBuyerBaht('');
+    setBuyerBaskets('');
+    setReason('');
+  };
 
   if (fin.events === null) return <Note>{msg('counter.loading')}</Note>;
 
@@ -92,6 +107,7 @@ export function BuyerCheckPanel({
           </Note>
         ) : null}
         {check.conflict ? <Note tone="reject" testID="check-conflict">{msg('chk.conflict')}</Note> : null}
+        {failed ? <Note tone="reject" testID="check-failed">{msg('fin.form.saveFailed')}</Note> : null}
         {check.status === 'diff' ? (
           <>
             <Fact mark="note">{check.reason}</Fact>
@@ -101,7 +117,7 @@ export function BuyerCheckPanel({
                 <Text testID="check-diff-baht">{msg('chk.diff.baht', { amount: `${check.diff.grossSatang > 0 ? '+' : check.diff.grossSatang < 0 ? '−' : ''}${formatSatang(Math.abs(check.diff.grossSatang))}` })}</Text>
               </Fact>
             ) : null}
-            {check.diff?.baskets != null ? <Fact mark="money" tone="warn">{msg('chk.diff.baskets', { n: `${check.diff.baskets > 0 ? '+' : check.diff.baskets < 0 ? '−' : ''}${Math.abs(check.diff.baskets)}` })}</Fact> : null}
+            {check.diff?.baskets != null ? <Fact mark="money" tone="warn" testID="check-diff-baskets">{msg('chk.diff.baskets', { n: `${check.diff.baskets > 0 ? '+' : check.diff.baskets < 0 ? '−' : ''}${Math.abs(check.diff.baskets)}` })}</Fact> : null}
           </>
         ) : null}
       </Card>
@@ -159,7 +175,7 @@ export function BuyerCheckPanel({
           {problems.includes('buyer') ? <Note tone="reject" testID="check-buyer-bad">{msg('chk.buyerBad')}</Note> : null}
           <Note>{msg('chk.moneyOurs')}</Note>
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-            <Button onPress={() => setMismatch(false)}>{msg('common.cancel')}</Button>
+            <Button onPress={closeMismatch}>{msg('common.cancel')}</Button>
             <Button
               testID="check-diff-save"
               variant="primary"
