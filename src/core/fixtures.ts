@@ -99,6 +99,12 @@ export class LogBuilder {
     return this;
   }
 
+  /** A short basket at a weighing point with its number (E04-S05). */
+  shortAt(pointId: string, basketNo: number, readingG: number, tareG = 2_000): this {
+    this.events.push({ ...this.base(), kind: 'short', pileId: pointId, pointId, basketNo, readingG, tareG });
+    return this;
+  }
+
   /** An off-standard basket, given its gross scale reading. */
   short(pileId: string, readingG: number, tareG = 2_000): this {
     this.events.push({ ...this.base(), kind: 'short', pileId, readingG, tareG });

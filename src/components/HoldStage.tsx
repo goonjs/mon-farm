@@ -39,6 +39,11 @@ export interface HoldStageProps {
   enabled?: boolean;
   holdMs?: number;
   testID?: string;
+  /**
+   * Recorder mode (E04-S05, D-40): the stage shows only this text — the
+   * basket number lives on the card above it, never in the hold area.
+   */
+  label?: string;
 }
 
 export function HoldStage({
@@ -49,6 +54,7 @@ export function HoldStage({
   enabled = true,
   holdMs,
   testID = 'stage',
+  label,
 }: HoldStageProps) {
   const t = useTheme();
   const msg = useT();
@@ -431,7 +437,7 @@ export function HoldStage({
     >
       <Bezel pct={pct} width={box.width} height={box.height} rejected={rejected} />
 
-      {!clearsLegibilityFloor ? (
+      {!clearsLegibilityFloor && label === undefined ? (
         <View style={{ position: 'absolute', top: t.space.sm, alignItems: 'center' }} pointerEvents="none">
           <Text
             testID="rotate-hint"
@@ -451,22 +457,38 @@ export function HoldStage({
         </View>
       ) : null}
 
-      <Text
-        testID="count"
-        accessibilityLiveRegion="polite"
-        onLayout={onCountLayout}
-        style={{
-          fontFamily: t.font.family.sans,
-          fontWeight: t.font.weight.black,
-          fontVariant: ['tabular-nums'],
-          letterSpacing: fontSize * t.font.tracking.tight,
-          lineHeight: fontSize,
-          fontSize,
-          color: t.color.numeral,
-        }}
-      >
-        {count}
-      </Text>
+      {label !== undefined ? (
+        <Text
+          testID="hold-label"
+          style={{
+            fontFamily: t.font.family.sans,
+            fontWeight: t.font.weight.bold,
+            fontSize: t.font.size.headingXl,
+            color: t.color.ink,
+            textAlign: 'center',
+            paddingHorizontal: t.space.lg,
+          }}
+        >
+          {label}
+        </Text>
+      ) : (
+        <Text
+          testID="count"
+          accessibilityLiveRegion="polite"
+          onLayout={onCountLayout}
+          style={{
+            fontFamily: t.font.family.sans,
+            fontWeight: t.font.weight.black,
+            fontVariant: ['tabular-nums'],
+            letterSpacing: fontSize * t.font.tracking.tight,
+            lineHeight: fontSize,
+            fontSize,
+            color: t.color.numeral,
+          }}
+        >
+          {count}
+        </Text>
+      )}
 
       <View style={{ position: 'absolute', bottom: t.space.sm }}>
         <Text

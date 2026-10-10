@@ -22,7 +22,7 @@ export default function PickPointScreen() {
   const t = useTheme();
   const msg = useT();
   const router = useRouter();
-  const { pair: pairParam } = useLocalSearchParams<{ pair?: string }>();
+  const { pair: pairParam, switch: switching } = useLocalSearchParams<{ pair?: string; switch?: string }>();
   const { saleId, state: sale, append } = useSale();
   const [state, setState] = useState<MasterState | null>(null);
   const [farmId, setFarmId] = useState<string | null>(null);
@@ -46,7 +46,10 @@ export default function PickPointScreen() {
 
   const pick = (pointId: string) => {
     for (const payload of pointSetupPayloads(sale, state, pointId, pair)) append({ kind: 'sys', payload });
-    router.push({ pathname: '/sale/[id]/counter', params: { id: saleId, pile: pointId } });
+    // Switching from the counter (E04-S05) replaces this screen, so the
+    // history never grows a counter per switch.
+    const go = switching === '1' ? router.replace : router.push;
+    go({ pathname: '/sale/[id]/counter', params: { id: saleId, pile: pointId } });
   };
 
   const heading = (text: string) => (

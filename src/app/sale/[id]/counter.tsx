@@ -20,6 +20,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Pill, Tabs, TopBar } from '../../../components/chrome';
 import { HoldStage } from '../../../components/HoldStage';
 import { PileClosedTransition } from '../../../components/PileClosedTransition';
+import { RecorderView } from '../../../components/RecorderView';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { ShortBasketPanel } from '../../../components/ShortBasketPanel';
 import { ZeroTareGate } from '../../../components/ZeroTareGate';
@@ -33,11 +34,12 @@ import { useT, type Translate } from '../../../i18n';
 import { announceCount } from '../../../speech/announcer';
 import { speaker } from '../../../speech/speaker';
 import { useSpeech } from '../../../speech';
-import { saleSettings, tapperOn, todayIso, type MasterState } from '../../../core/master';
-import { nextBasketNo, saleNumbering } from '../../../core/sale-points';
+import { formatThaiDate, saleSettings, tapperOn, todayIso, type MasterState } from '../../../core/master';
+import { nextBasketNo, recorderFigures, saleNumbering } from '../../../core/sale-points';
 import { expectedReadingG, gateNeeded, saleSkewG } from '../../../core/scale-check';
 import { readHoldMs } from '../../../store/hold-preference';
 import { peopleStore } from '../../../store/people';
+import { store as eventStore } from '../../../store/store';
 import { useSale } from '../../../store/SaleProvider';
 import { useTheme, useThemeControls } from '../../../theme';
 
@@ -128,6 +130,18 @@ export default function CounterScreen() {
   }, [skipGate, pile?.id]);
   const [waiting, setWaiting] = useState(false);
   const skewG = saleSkewG(events);
+  // E04-S05: recorder mode at a weighing point; public mode is the classic stage.
+  const [publicMode, setPublicMode] = useState(false);
+  const [now] = useState(() => Date.now());
+  // Events of this sale not sent yet (SYNC-3) — re-read whenever the log grows.
+  const [pending, setPending] = useState(0);
+  useEffect(() => {
+    let live = true;
+    eventStore.pending().then((all) => live && setPending(all.filter((e) => e.saleId === saleId).length));
+    return () => {
+      live = false;
+    };
+  }, [events.length, saleId]);
 
   if (!ready || !pile || !zone) {
     return (
@@ -159,7 +173,7 @@ export default function CounterScreen() {
     // (E04-S01, SALE-10); a pile from the old setup flow stays as it was.
     if (!master || !master.points.some((p) => p.id === pile.id)) return {};
     const mode = saleNumbering(events, saleSettings(master).numbering);
-    const day = todayIso(state.startedTs ?? Date.now());
+    const day = todayIso(state.startedTs ?? now);
     return { pointId: pile.id, basketNo: nextBasketNo(events, pile.id, mode, (id) => tapperOn(master, id, day)) };
   };
   const nextCount = (totals?.baskets ?? 0) + 1;
@@ -269,6 +283,63 @@ export default function CounterScreen() {
     setConfirmCloseZone(false);
   };
 
+  const closeSaleOverlay = confirmCloseSale ? (
+    <CloseSaleConfirmOverlay state={state} events={events} onConfirm={doCloseSale} onCancel={() => setConfirmCloseSale(false)} />
+  ) : null;
+
+  const day = todayIso(state.startedTs ?? now);
+  const figures =
+    isPoint && master
+      ? recorderFigures(events, master, day, pile.id, saleNumbering(events, saleSettings(master).numbering), state.price?.satangPerKg ?? null)
+      : null;
+
+  if (figures && master && pile.status === 'counting' && !waiting && !publicMode) {
+    const tapperId = tapperOn(master, pile.id, day);
+    const pointName = (id: string) => master.points.find((p) => p.id === id)?.name ?? '';
+    return (
+      <View style={{ flex: 1 }}>
+        <RecorderView
+          saleDate={formatThaiDate(state.startedTs ?? now, 'be')}
+          pending={pending}
+          farmName={zone.name}
+          pointName={pile.name}
+          tapperName={tapperId ? (master.people.find((p) => p.id === tapperId)?.name ?? null) : null}
+          figures={figures}
+          expectedKg={formatKg(expectedReadingG(pile.stdNetG, pile.tareG, skewG))}
+          hold={{ onCount, onReject, enabled: countable, holdMs: holdMsOverride() ?? deviceHoldMs }}
+          baskets={[...liveBaskets(events)]
+            .filter((b) => b.pointId)
+            .reverse()
+            .map((b) => ({ id: b.id, basketNo: b.basketNo ?? 0, pointName: pointName(b.pointId!), netG: basketNetG(b), short: b.kind === 'short' }))}
+          onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          onSwitch={() => router.replace({ pathname: '/sale/[id]/points', params: { id: saleId, switch: '1' } })}
+          onShort={openShort}
+          onUndo={() => setConfirmUndo(true)}
+          onPublic={() => setPublicMode(true)}
+          onFinish={() => setConfirmCloseSale(true)}
+          canUndo={!!lastBasket}
+          below={
+            shortOpen ? (
+              <ShortBasketPanel
+                tareG={pile.tareG}
+                stdNetG={pile.stdNetG}
+                readingG={shortReadingG}
+                onChangeReading={setShortReadingG}
+                onConfirm={confirmShort}
+                onCancel={() => setShortOpen(false)}
+              />
+            ) : confirmUndo && lastBasket ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, padding: t.space.sm }}>
+                <UndoConfirmRow event={lastBasket} onConfirm={doUndo} onCancel={() => setConfirmUndo(false)} />
+              </View>
+            ) : undefined
+          }
+        />
+        {closeSaleOverlay}
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <TopBar
@@ -281,6 +352,11 @@ export default function CounterScreen() {
             <Pill tone={countable ? 'accept' : 'neutral'} dot={countable ? 'filled' : 'hollow'}>
               {countable ? msg('counter.counting') : msg('counter.stopped')}
             </Pill>
+            {isPoint && publicMode ? (
+              <Pill testID="public-exit">
+                <Text onPress={() => setPublicMode(false)}>{msg('rec.publicExit')}</Text>
+              </Pill>
+            ) : null}
             {state.clockSuspect ? <Pill tone="warn">{msg('counter.clockSuspect')}</Pill> : null}
             {speechDegraded ? <Pill tone="warn">{msg('counter.speechDegraded')}</Pill> : null}
             <Pill testID="open-switcher">
@@ -342,7 +418,8 @@ export default function CounterScreen() {
             />
           ) : (
             <HoldStage
-              count={totals?.baskets ?? 0}
+              // Public mode at a point shows the basket being weighed (D-40, E04-S07).
+              count={figures ? figures.currentNo : (totals?.baskets ?? 0)}
               onCount={onCount}
               onReject={onReject}
               enabled={countable}
@@ -459,14 +536,7 @@ export default function CounterScreen() {
         />
       ) : null}
 
-      {confirmCloseSale ? (
-        <CloseSaleConfirmOverlay
-          state={state}
-          events={events}
-          onConfirm={doCloseSale}
-          onCancel={() => setConfirmCloseSale(false)}
-        />
-      ) : null}
+      {closeSaleOverlay}
     </View>
   );
 }
@@ -734,7 +804,8 @@ function CloseSaleConfirmOverlay({
  * with a deliberate seam. Guarded so it cannot be reached in a native build.
  */
 function holdMsOverride(): number | undefined {
-  if (typeof window === 'undefined') return undefined;
+  // No location on native (and in the component tests).
+  if (typeof window === 'undefined' || !window.location) return undefined;
   const v = new URLSearchParams(window.location.search).get('holdMs');
   return v ? Number(v) : undefined;
 }

@@ -1,0 +1,80 @@
+import { expect, test, type Page } from '@playwright/test';
+
+import { tokens } from '../design/tokens';
+import { seedMaster } from './fixtures';
+
+/**
+ * E04-S05: the recorder screen at weighing points. แดง taps three points on
+ * two farms; weighing them in a mixed order keeps her numbers continuous,
+ * switching point is two taps, and a reload brings the same six values back.
+ */
+test.use({ viewport: tokens.viewport.portrait, isMobile: true, hasTouch: true });
+
+const SHOTS = 'docs/ux/screenshots/overnight/farm';
+
+async function hold(page: Page) {
+  const box = (await page.getByTestId('stage').last().boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(1_100);
+  await page.mouse.up();
+}
+
+async function pick(page: Page, farm: string, point: string) {
+  await page.locator('[data-testid^="pick-farm-"]', { hasText: farm }).last().click();
+  await page.locator('[data-testid^="pick-point-"]', { hasText: point }).last().click();
+}
+
+test('3 points on 2 farms in a mixed order: numbers run on, values survive a reload', async ({ page }, info) => {
+  const shot = async (name: string) => {
+    if (info.project.name === 'phone-landscape') await page.screenshot({ path: `${SHOTS}/${name}.png` });
+  };
+  await seedMaster(page, [
+    { t: 'settings_set', zeroCheck: 'skip' },
+    { t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] },
+    { t: 'property_added', propertyId: 'fA', name: 'จันทเขลม', crop: 'rubber' },
+    { t: 'property_added', propertyId: 'fB', name: 'คลองพลู', crop: 'rubber' },
+    { t: 'point_added', pointId: 'p1', propertyId: 'fA', name: 'จุด 1' },
+    { t: 'point_added', pointId: 'p2', propertyId: 'fA', name: 'จุด 2' },
+    { t: 'point_added', pointId: 'p3', propertyId: 'fB', name: 'จุด 3' },
+    { t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' },
+    { t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p2', tapperId: 'red' },
+    { t: 'tapper_assigned', assignmentId: 'a3', pointId: 'p3', tapperId: 'red' },
+  ]);
+  await page.goto('/');
+  await page.getByTestId('new-sale').click();
+  await page.getByTestId('start-next').click();
+
+  await pick(page, 'จันทเขลม', 'จุด 1');
+  await expect(page.getByTestId('rec-current')).toHaveText('1');
+  await expect(page.getByTestId('rec-tapper')).toHaveText('แดง');
+  await hold(page);
+  await expect(page.getByTestId('rec-current')).toHaveText('2');
+
+  // Switch: เปลี่ยนจุด → the point, two taps when the farm is already picked.
+  await page.getByTestId('rec-switch').click();
+  await pick(page, 'คลองพลู', 'จุด 3');
+  await expect(page.getByTestId('rec-point')).toContainText('คลองพลู · จุด 3');
+  await expect(page.getByTestId('rec-current')).toHaveText('2');
+  await hold(page);
+  await page.getByTestId('rec-switch').click();
+  await pick(page, 'จันทเขลม', 'จุด 2');
+  await hold(page);
+  await expect(page.getByTestId('rec-current')).toHaveText('4');
+  await expect(page.getByTestId('rec-card-1')).toContainText('3');
+  await expect(page.getByTestId('rec-card-kg')).toContainText('150');
+  await expect(page.getByTestId('hold-label')).toHaveText('กดค้างเพื่อบันทึกเข่งเต็ม');
+  await shot('e04-s05-recorder');
+
+  await page.getByTestId('rec-menu').click();
+  await page.getByTestId('rec-menu-list').click();
+  await expect(page.getByTestId('rec-list')).toContainText('#3');
+  await expect(page.getByTestId('rec-list')).toContainText('จุด 3');
+  await shot('e04-s05-basket-list');
+  await page.getByTestId('rec-list-close').click();
+
+  await page.reload();
+  await expect(page.getByTestId('rec-current')).toHaveText('4');
+  await expect(page.getByTestId('rec-card-kg')).toContainText('150');
+  await expect(page.getByTestId('rec-point')).toContainText('จันทเขลม · จุด 2');
+});

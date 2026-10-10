@@ -103,6 +103,50 @@ export function saleRollup(events: readonly SaleEvent[], master: MasterState, sa
   return { byPoint, byTapper, byFarm, unassigned, sale };
 }
 
+export interface RecorderFigures {
+  /** Whose figures these are: the tapper's sequence (D-79) or the point's own (D-46). */
+  readonly scope: { readonly tapperId: PersonId } | { readonly pointId: string };
+  /** The basket being weighed now — the number the next hold records. */
+  readonly currentNo: number;
+  readonly done: number;
+  readonly netG: number;
+  /** Net of the scope's last basket while it is a short one; null otherwise. */
+  readonly openShortG: number | null;
+  /** Money at the sale's price (D-40); null while no price is set. */
+  readonly satang: number | null;
+}
+
+/**
+ * The figures the recorder screen keeps in view at `pointId` (E04-S05,
+ * SALE-14): the same sequence `nextBasketNo` numbers in, so the big number,
+ * "done" and kg always agree with one another.
+ */
+export function recorderFigures(
+  events: readonly SaleEvent[],
+  master: MasterState,
+  saleDay: string,
+  pointId: string,
+  mode: NumberingMode,
+  satangPerKg: number | null,
+): RecorderFigures {
+  const tapperOf: TapperOf = (id) => tapperOn(master, id, saleDay);
+  const seq = sequenceOf(pointId, mode, tapperOf);
+  const mine = liveBaskets(events)
+    .filter((b) => b.pointId && sequenceOf(b.pointId, mode, tapperOf) === seq)
+    .sort(compareEvents);
+  const netG = mine.reduce((sum, b) => sum + basketNetG(b), 0);
+  const last = mine.at(-1);
+  const tapperId = tapperOf(pointId);
+  return {
+    scope: seq.startsWith('t:') && tapperId ? { tapperId } : { pointId },
+    currentNo: nextBasketNo(events, pointId, mode, tapperOf),
+    done: mine.length,
+    netG,
+    openShortG: last?.kind === 'short' ? basketNetG(last) : null,
+    satang: satangPerKg === null ? null : Math.floor((2 * netG * satangPerKg + 1000) / 2000),
+  };
+}
+
 export interface PointChoices {
   /** Points grouped under their tapper on the sale day, in point-name order (E04-S02). */
   readonly byTapper: readonly { tapperId: PersonId; points: readonly PointRecord[] }[];

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { LogBuilder } from './fixtures';
 import { MASTER_SCOPE, projectMaster } from './master';
 import { projectSale } from './project';
-import { nextBasketNo, parsePrice, pointChoices, pointSetupPayloads, saleNumbering, saleRollup } from './sale-points';
+import { nextBasketNo, parsePrice, pointChoices, pointSetupPayloads, recorderFigures, saleNumbering, saleRollup } from './sale-points';
 import type { MasterPayload, NumberingMode, SaleEvent } from './types';
 
 /** Farm: สวน ก (p1, p2 → แดง; p4 → นัด), สวน ข (p3 → แดง). */
@@ -150,5 +150,42 @@ describe('parsePrice — ฿/kg typed → integer satang (SALE-3)', () => {
     expect(parsePrice('52.505')).toEqual({ ok: false });
     expect(parsePrice('0')).toEqual({ ok: false });
     expect(parsePrice('x')).toEqual({ ok: false });
+  });
+});
+
+describe('E04-S05 — the recorder figures (SALE-14, D-40)', () => {
+  it("per tapper: current number, done, kg and money are the tapper's across points and farms", () => {
+    const m = master();
+    const b = new LogBuilder('sale-x').acceptAt('p1', 1).acceptAt('p3', 2, 40_000).acceptAt('p4', 1);
+    const f = recorderFigures(b.build(), m, DAY, 'p2', 'per-tapper', 4_850);
+    expect(f).toEqual({ scope: { tapperId: 'red' }, currentNo: 3, done: 2, netG: 90_000, openShortG: null, satang: 436_500 });
+  });
+
+  it('per point: only this point counts; a point with no tapper counts on its own', () => {
+    const m = master();
+    const b = new LogBuilder('sale-x').acceptAt('p1', 1).acceptAt('p2', 1).acceptAt('p2', 2);
+    expect(recorderFigures(b.build(), m, DAY, 'p2', 'per-point', null)).toMatchObject({
+      scope: { pointId: 'p2' },
+      currentNo: 3,
+      done: 2,
+      netG: 100_000,
+      satang: null,
+    });
+  });
+
+  it('the open short basket is the last one of the scope while it is a short one', () => {
+    const m = master();
+    const b = new LogBuilder('sale-x').acceptAt('p1', 1).shortAt('p1', 2, 37_000);
+    expect(recorderFigures(b.build(), m, DAY, 'p1', 'per-tapper', null).openShortG).toBe(35_000);
+    b.acceptAt('p2', 3);
+    expect(recorderFigures(b.build(), m, DAY, 'p1', 'per-tapper', null).openShortG).toBeNull();
+  });
+
+  it('a voided basket leaves done and kg but keeps its number', () => {
+    const m = master();
+    const b = new LogBuilder('sale-x').acceptAt('p1', 1).acceptAt('p1', 2);
+    const last = b.build().at(-1)!;
+    b.void('p1', last.id);
+    expect(recorderFigures(b.build(), m, DAY, 'p1', 'per-tapper', null)).toMatchObject({ currentNo: 3, done: 1, netG: 50_000 });
   });
 });

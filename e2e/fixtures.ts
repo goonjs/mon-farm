@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 
 import { LogBuilder, readyPile, setUpSale } from '../src/core/fixtures';
 import { MASTER_SCOPE } from '../src/core/master';
-import type { SaleEvent } from '../src/core/types';
+import type { MasterPayload, SaleEvent } from '../src/core/types';
 
 /**
  * A sale with one zone, one pile already checked and ready, and `standardBaskets`
@@ -152,4 +152,21 @@ export async function seedFarmProfile(
     },
     { key: 'mon-farm:farm-profile', zones },
   );
+}
+
+/** Seeds farm master data (E03) as `master` events, written like `seedSale`. */
+export async function seedMaster(page: Page, payloads: readonly MasterPayload[]): Promise<void> {
+  const events: SaleEvent[] = payloads.map((payload, i) => ({
+    id: `seed-master/${i}/${Math.random().toString(36).slice(2, 8)}`,
+    saleId: MASTER_SCOPE,
+    seq: i + 1,
+    deviceSeq: i + 1,
+    ts: Date.now(),
+    mono: i,
+    actor: { userId: 'pre-login', deviceId: 'dev-seed' },
+    source: 'app',
+    kind: 'master',
+    payload,
+  }));
+  await seedEvents(page, events);
 }

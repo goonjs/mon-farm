@@ -62,9 +62,10 @@ test('offline: start → pick point → first basket numbered at its point, pric
   await page.getByTestId('tare-input').fill('2');
   await page.getByTestId('tare-confirm').click();
   await page.getByTestId('ready-button').click();
-  await expect(page.getByTestId('count')).toHaveText('0');
+  // At a point the counter is the recorder screen (E04-S05): basket 1 is next.
+  await expect(page.getByTestId('rec-current')).toHaveText('1');
   await hold(page, 1100);
-  await expect(page.getByTestId('count')).toHaveText('1');
+  await expect(page.getByTestId('rec-current')).toHaveText('2');
   await shot('e04-s02-first-basket');
 
   const baskets = await page.evaluate(
@@ -115,12 +116,12 @@ test('zero check "first point of each farm": the 2nd point of the farm opens wit
   await page.getByTestId('tare-input').fill('2');
   await page.getByTestId('tare-confirm').click();
   await page.getByTestId('ready-button').click();
-  await expect(page.getByTestId('count')).toHaveText('0');
+  await expect(page.getByTestId('rec-current')).toHaveText('1');
 
   // Same farm, second point: no check asked.
   await page.goto(`${saleUrl}/points`);
   await page.locator('[data-testid^="pick-point-"]', { hasText: 'จุด 2' }).click();
-  await expect(page.getByTestId('count')).toHaveText('0');
+  await expect(page.getByTestId('rec-current')).toHaveText('1');
   await expect(page.getByTestId('zero-tare-gate')).toHaveCount(0);
   if (info.project.name === 'phone-landscape') await page.screenshot({ path: `${SHOTS}/e04-s03-second-point-no-check.png` });
 });
