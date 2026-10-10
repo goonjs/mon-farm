@@ -1,6 +1,24 @@
 import { render } from '@testing-library/react-native';
 
-import { Check, ChevronLeft, ChevronRight, MenuIcon, Minus, Plus, Scale, Undo } from './icons';
+import {
+  BankIcon,
+  CalendarIcon,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  DebtIcon,
+  FarmIcon,
+  MenuIcon,
+  Minus,
+  MoneyInIcon,
+  MoneyOutIcon,
+  PersonIcon,
+  Plus,
+  ReceiptIcon,
+  Scale,
+  ScaleIcon,
+  Undo,
+} from './icons';
 
 /** Every stroke/fill View an icon draws, as flat styles. */
 function strokes(el: React.ReactElement) {
@@ -26,6 +44,16 @@ describe('line icons — Views only, coloured by the caller (E01-S17 X8)', () =>
     ['Check', <Check key="f" color="sentinel" />],
     ['Undo', <Undo key="g" color="sentinel" />],
     ['Scale', <Scale key="h" color="sentinel" />],
+    // Money-team set (E01-S17 X4).
+    ['MoneyInIcon', <MoneyInIcon key="i" color="sentinel" />],
+    ['MoneyOutIcon', <MoneyOutIcon key="j" color="sentinel" />],
+    ['PersonIcon', <PersonIcon key="k" color="sentinel" />],
+    ['CalendarIcon', <CalendarIcon key="l" color="sentinel" />],
+    ['ReceiptIcon', <ReceiptIcon key="m" color="sentinel" />],
+    ['DebtIcon', <DebtIcon key="n" color="sentinel" />],
+    ['BankIcon', <BankIcon key="o" color="sentinel" />],
+    ['FarmIcon', <FarmIcon key="p" color="sentinel" size={24} />],
+    ['ScaleIcon', <ScaleIcon key="q" color="sentinel" size={20} />],
   ])('%s paints only in the colour it is given', (_name, icon) => {
     const s = strokes(icon);
     const colours = s.flatMap((x) =>
@@ -36,4 +64,14 @@ describe('line icons — Views only, coloured by the caller (E01-S17 X8)', () =>
     expect(colours.length).toBeGreaterThan(0);
     expect(new Set(colours)).toEqual(new Set(['sentinel']));
   });
+});
+
+describe('money-team icons take size', () => {
+  it.each([MoneyInIcon, MoneyOutIcon, PersonIcon, CalendarIcon, ReceiptIcon, DebtIcon, BankIcon, FarmIcon, ScaleIcon])(
+    '%p outer box follows size',
+    (Icon) => {
+      const s = strokes(<Icon color="x" size={24} />);
+      expect(s[0]).toMatchObject({ width: 24, height: 24 });
+    },
+  );
 });

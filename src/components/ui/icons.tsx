@@ -154,3 +154,193 @@ export function Scale({ color, size = 16 }: { color: string; size?: number }) {
     </View>
   );
 }
+
+// ── Money-team set (E01-S17 X4) ─────────────────────────────────────────────
+// Same contract as above: `size` is the outer square, `color` comes from the
+// theme at the call site, everything is aria-hidden. Stroke scales with size.
+
+type IconProps = { color: string; size?: number };
+const stroke = (size: number) => Math.max(1.5, size / 10);
+
+/** A coin ring with a mark inside — the base of the money icons. */
+function Coin({ color, size, children }: { color: string; size: number; children?: React.ReactNode }) {
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          position: 'absolute',
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderWidth: stroke(size),
+          borderColor: color,
+        }}
+      />
+      {children}
+    </View>
+  );
+}
+
+/** Money in — coin with +. Pair with a "+" amount and a word, never colour alone. */
+export function MoneyInIcon({ color, size = 18 }: IconProps) {
+  return (
+    <Coin color={color} size={size}>
+      <Plus color={color} size={size * 0.45} />
+    </Coin>
+  );
+}
+
+/** Money out — coin with −. */
+export function MoneyOutIcon({ color, size = 18 }: IconProps) {
+  return (
+    <Coin color={color} size={size}>
+      <View style={{ width: size * 0.45, height: stroke(size), borderRadius: stroke(size), backgroundColor: color }} />
+    </Coin>
+  );
+}
+
+/** Payer / person — head over shoulders. */
+export function PersonIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center' }}>
+      <View style={{ width: size * 0.45, height: size * 0.45, borderRadius: size, borderWidth: w, borderColor: color }} />
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          width: size * 0.85,
+          height: size * 0.42,
+          borderTopLeftRadius: size,
+          borderTopRightRadius: size,
+          borderWidth: w,
+          borderBottomWidth: 0,
+          borderColor: color,
+        }}
+      />
+    </View>
+  );
+}
+
+/** Calendar / date — page with a heavy top band and two rings. */
+export function CalendarIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  const ring = { position: 'absolute', top: 0, width: w, height: size * 0.25, backgroundColor: color } as const;
+  return (
+    <View aria-hidden style={{ width: size, height: size }}>
+      <View
+        style={{
+          position: 'absolute',
+          top: size * 0.12,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          borderWidth: w,
+          borderTopWidth: w * 2,
+          borderRadius: w,
+          borderColor: color,
+        }}
+      />
+      <View style={{ ...ring, left: size * 0.28 }} />
+      <View style={{ ...ring, right: size * 0.28 }} />
+    </View>
+  );
+}
+
+/** Receipt — a slip with three lines of text. */
+export function ReceiptIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  const line = { height: w, borderRadius: w, backgroundColor: color } as const;
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center' }}>
+      <View
+        style={{
+          width: size * 0.75,
+          height: size,
+          borderWidth: w,
+          borderRadius: w,
+          borderColor: color,
+          paddingHorizontal: size * 0.12,
+          paddingTop: size * 0.2,
+          gap: size * 0.12,
+        }}
+      >
+        <View style={line} />
+        <View style={line} />
+        <View style={{ ...line, width: '60%' }} />
+      </View>
+    </View>
+  );
+}
+
+/** Debt — a coin resting on an open tray: money held for someone. */
+export function DebtIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center' }}>
+      <View
+        style={{ width: size * 0.55, height: size * 0.55, borderRadius: size, borderWidth: w, borderColor: color }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: size * 0.35,
+          borderWidth: w,
+          borderTopWidth: 0,
+          borderBottomLeftRadius: size * 0.2,
+          borderBottomRightRadius: size * 0.2,
+          borderColor: color,
+        }}
+      />
+    </View>
+  );
+}
+
+/** Account / bank — roof, three columns, base. */
+export function BankIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  const col = { width: w, height: size * 0.38, backgroundColor: color } as const;
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center' }}>
+      <View
+        style={{
+          width: 0,
+          height: 0,
+          borderLeftWidth: size / 2,
+          borderRightWidth: size / 2,
+          borderBottomWidth: size * 0.3,
+          borderLeftColor: 'transparent',
+          borderRightColor: 'transparent',
+          borderBottomColor: color,
+        }}
+      />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: size * 0.7, marginTop: size * 0.08 }}>
+        <View style={col} />
+        <View style={col} />
+        <View style={col} />
+      </View>
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: w * 1.4, backgroundColor: color }} />
+    </View>
+  );
+}
+
+/** Farm — a tree: round canopy on a trunk (the mockup's farm mark). */
+export function FarmIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center' }}>
+      <View
+        style={{ width: size * 0.62, height: size * 0.62, borderRadius: size, borderWidth: w, borderColor: color }}
+      />
+      <View style={{ width: w, flex: 1, backgroundColor: color }} />
+    </View>
+  );
+}
+
+/** Scale / weighing point — the money team's name for `Scale`. */
+export function ScaleIcon({ color, size = 18 }: IconProps) {
+  return <Scale color={color} size={size} />;
+}
