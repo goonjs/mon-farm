@@ -355,6 +355,31 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     expect(screen.getByTestId(`point-${gone.id}`)).toBeTruthy();
   });
 
+  it('on the names page, back (header or ย้อนกลับ) returns to page 1 and keeps the names typed', async () => {
+    const m = master();
+    const farm = await m.addProperty({ name: 'สวน', crop: 'rubber' });
+    const daeng = await m.create('แดง', ['tapper']);
+    wrap(<PointsWizardScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId(`wizard-farm-${farm.id}`));
+    fireEvent.press(screen.getByTestId(`wizard-tapper-${daeng.id}`));
+    fireEvent.press(screen.getByTestId('wizard-next'));
+    fireEvent.changeText(screen.getByTestId(`wizard-name-${daeng.id}-0`), 'จุดริมคลอง');
+
+    fireEvent.press(screen.getByTestId('wizard-prev'));
+    expect(screen.getByTestId('wizard-next')).toBeTruthy();
+    expect(screen.getByTestId(`wizard-count-${daeng.id}-value`).props.children).toBe('1');
+    fireEvent.press(screen.getByTestId('wizard-next'));
+    expect(screen.getByTestId(`wizard-name-${daeng.id}-0`).props.value).toBe('จุดริมคลอง');
+
+    fireEvent.press(screen.getByTestId('v2-back'));
+    expect(screen.getByTestId('wizard-next')).toBeTruthy();
+    expect(mockRouter.back).not.toHaveBeenCalled();
+    // On page 1 the header back leaves the helper as before.
+    fireEvent.press(screen.getByTestId('v2-back'));
+    expect(mockRouter.back).toHaveBeenCalledTimes(1);
+  });
+
   it('farm → tappers → how many → names, then creates every point with its tapper at once', async () => {
     const m = master();
     const farm = await m.addProperty({ name: 'สวนจันทเขลม', crop: 'rubber' });

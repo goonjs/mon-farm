@@ -122,12 +122,15 @@ export function FarmScreen({
   footer,
   overlay,
   failed,
+  onBack,
   testID,
 }: {
   title: string;
   subtitle?: string;
   /** Where Back lands when there is nothing to pop. */
   fallback: Href;
+  /** Back stays inside the screen (a wizard's earlier page) instead of popping. */
+  onBack?: () => void;
   right?: ReactNode;
   children?: ReactNode;
   /** Pinned call to action(s) under the scroll body. */
@@ -144,7 +147,7 @@ export function FarmScreen({
   const back = useBack(fallback);
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <ScreenHeader title={title} subtitle={subtitle} back={{ label: msg('v2.back'), onPress: back, testID: 'v2-back' }} sync={sync} right={right} />
+      <ScreenHeader title={title} subtitle={subtitle} back={{ label: msg('v2.back'), onPress: onBack ?? back, testID: 'v2-back' }} sync={sync} right={right} />
       <ScrollView testID={testID} contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.xl }}>
         {children}
       </ScrollView>

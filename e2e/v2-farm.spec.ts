@@ -117,6 +117,10 @@ test('/ → splash → home → farm settings: add and edit everything offline, 
   const names = id('points-wizard').locator('[data-testid^="wizard-name-"]');
   await expect(names).toHaveCount(3);
   for (let i = 0; i < 3; i++) await names.nth(i).fill(`จุด ${i + 1}`);
+  // Back to page 1 and forward again keeps every name typed.
+  await id('wizard-prev').click();
+  await id('wizard-next').click();
+  await expect(names.nth(2)).toHaveValue('จุด 3');
   await shot(page, '13-points-wizard-names');
   await id('wizard-create').click();
   await expect(id('farms-list')).toContainText('3 จุดชั่ง');

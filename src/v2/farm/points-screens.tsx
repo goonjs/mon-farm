@@ -17,8 +17,8 @@
  */
 
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useState } from 'react';
-import { TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { BackHandler, TextInput, View } from 'react-native';
 
 import {
   activePoints,
@@ -573,6 +573,16 @@ export function PointsWizardScreen() {
     else reload();
   };
 
+  // Back from the names page is page 1, names kept — header, button and Android back alike.
+  useEffect(() => {
+    if (page !== 2) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setPage(1);
+      return true;
+    });
+    return () => sub.remove();
+  }, [page]);
+
   const step = page === 2 ? 4 : chosen.length > 0 ? 3 : farmId ? 2 : 1;
   const strip = (
     <View style={{ flexDirection: 'row', gap: t.space.xs }}>
@@ -609,6 +619,7 @@ export function PointsWizardScreen() {
       subtitle={page === 2 ? msg('wizard.lastStep') : undefined}
       fallback={FARMS}
       failed={write.failed}
+      onBack={page === 2 ? () => setPage(1) : undefined}
       testID="points-wizard"
       footer={
         page === 1 ? (
@@ -616,9 +627,16 @@ export function PointsWizardScreen() {
             {msg('wizard.next')}
           </CTA>
         ) : (
-          <CTA testID="wizard-create" disabled={total === 0} onPress={() => void create()}>
-            {msg('wizard.create', { n: total })}
-          </CTA>
+          <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+            <Button testID="wizard-prev" onPress={() => setPage(1)}>
+              {msg('wizard.prev')}
+            </Button>
+            <View style={{ flex: 1 }}>
+              <CTA testID="wizard-create" disabled={total === 0} onPress={() => void create()}>
+                {msg('wizard.create', { n: total })}
+              </CTA>
+            </View>
+          </View>
         )
       }
     >
