@@ -1,5 +1,6 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
-import type { ReactNode } from 'react';
+import type { ReactElement } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import { LogBuilder, readyPile, setUpSale } from '../core/fixtures';
 import type { FinanceEvent } from '../core/finance/types';
@@ -23,10 +24,13 @@ jest.mock('../store/store', () => {
   const { MemoryStore } = jest.requireActual('../store/memory-store');
   return { store: new MemoryStore() };
 });
+// A Link navigates like expo-router's: pressing its child pushes its href.
 jest.mock('expo-router', () => {
+  const { cloneElement } = jest.requireActual('react');
   const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: jest.fn(() => true) };
   return {
-    Link: ({ children }: { children: ReactNode }) => children,
+    Link: ({ children, href }: { children: ReactElement<{ onPress?: () => void }>; href: string }) =>
+      cloneElement(children, { onPress: () => router.push(href) }),
     useFocusEffect: () => undefined,
     useLocalSearchParams: () => ({}),
     useRouter: () => router,
@@ -89,7 +93,29 @@ describe('V2Home — empty farm', () => {
     expect(within(screen.getByTestId('home-sale-start')).getByText('เริ่มการขาย')).toBeTruthy();
     expect(within(screen.getByTestId('home-record-expense')).getByText('บันทึกค่าใช้จ่าย')).toBeTruthy();
     expect(screen.getByText('ควรรู้ / ควรจัดการ')).toBeTruthy();
+    expect(screen.getByText('สำคัญก่อน')).toBeTruthy();
     expect(screen.getByText('ไปที่')).toBeTruthy();
+  });
+
+  it('keeps the header date current when the app comes back the next day', async () => {
+    jest.useFakeTimers({ doNotFake: ['setTimeout', 'setImmediate', 'nextTick', 'queueMicrotask'] });
+    jest.setSystemTime(Date.UTC(2026, 9, 3, 5)); // Sat 3 Oct, noon Bangkok
+    let onChange: ((s: AppStateStatus) => void) | undefined;
+    const spy = jest.spyOn(AppState, 'addEventListener').mockImplementation((_e, fn) => {
+      onChange = fn as (s: AppStateStatus) => void;
+      return { remove: jest.fn() } as never;
+    });
+    try {
+      wrap(<V2Home />);
+      await flush();
+      expect(screen.getByText('ส. 3 ต.ค. 2569')).toBeTruthy();
+      jest.setSystemTime(Date.UTC(2026, 9, 4, 1)); // Sun 4 Oct, 08:00 Bangkok
+      act(() => onChange?.('active'));
+      expect(screen.getByText('อา. 4 ต.ค. 2569')).toBeTruthy();
+    } finally {
+      spy.mockRestore();
+      jest.useRealTimers();
+    }
   });
 
   it('says there is nothing to handle, rather than inventing rows', async () => {
@@ -109,6 +135,7 @@ describe('V2Home — empty farm', () => {
     expect(ids).toEqual(['mod-reports', 'mod-weather', 'mod-payables', 'mod-expenses', 'mod-stock', 'mod-workers']);
     expect(within(screen.getByTestId('mod-reports')).getByText('รายงานการขายย้อนหลัง')).toBeTruthy();
     expect(within(screen.getByTestId('mod-weather')).getByText('เปิดภายนอก')).toBeTruthy();
+    expect(within(screen.getByTestId('mod-weather')).getByTestId('external-icon', { includeHiddenElements: true })).toBeTruthy();
     expect(within(screen.getByTestId('mod-payables')).getByText('0.00')).toBeTruthy();
     expect(within(screen.getByTestId('mod-expenses')).getByText('ค่าใช้จ่ายทั้งหมด')).toBeTruthy();
     expect(within(screen.getByTestId('mod-stock')).getByText('รายการ stock')).toBeTruthy();
@@ -163,7 +190,7 @@ describe('V2Home — ☰ menu (v1.1.0 screen 1)', () => {
       fireEvent.press(screen.getAllByTestId(id)[0]);
       pushed.add(String(mockRouter.push.mock.lastCall?.[0]).split('?')[0]);
     };
-    for (const n of screen.getAllByTestId(/^(home|mod)-/)) if (n.props.accessibilityRole === 'button') press(n.props.testID);
+    for (const n of screen.getAllByTestId(/^(home|mod)-/)) if (['button', 'link'].includes(n.props.accessibilityRole)) press(n.props.testID);
     fireEvent.press(screen.getByTestId('open-menu'));
     const navIds: string[] = screen.getAllByTestId(/^nav-/).map((n) => n.props.testID);
     for (const id of navIds) {

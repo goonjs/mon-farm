@@ -10,9 +10,9 @@
  * so it is the same offline. Modules with no screen yet open a placeholder.
  */
 
-import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { Link, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { farmSection, SALE_STEPS, sectionHref } from './routes';
 import { useMaster, useMounted } from './farm/pieces';
@@ -36,8 +36,10 @@ import {
   Chip,
   ChevronRight,
   ClockIcon,
+  CoinIcon,
   DebtIcon,
   DeviceIcon,
+  ExternalIcon,
   Drawer,
   FactRow,
   FarmIcon,
@@ -46,7 +48,6 @@ import {
   ListIcon,
   MenuItem,
   MenuSection,
-  MoneyOutIcon,
   PercentIcon,
   PersonIcon,
   PinIcon,
@@ -67,13 +68,11 @@ export function V2Home() {
   const t = useTheme();
   const msg = useT();
   const { era } = useI18n();
-  const router = useRouter();
   const sync = useSyncStatus();
   // The date is today's on the device, not the build's: wait for the client.
   const mounted = useMounted();
-  const [now] = useState(() => Date.now());
+  const now = useNow();
   const [menuOpen, setMenuOpen] = useState(false);
-  const go = (to: Href) => router.push(to);
 
   const sales = useHomeSales();
   const { state: master } = useMaster();
@@ -84,7 +83,9 @@ export function V2Home() {
   const tappers = master ? filterPeople(master.people, 'tapper').length : 0;
 
   const saleLine = (s: SaleLine) =>
-    msg('home.saleLine', { date: s.ts === null ? '' : formatThaiDate(s.ts, era), kg: formatKg(s.netG) });
+    s.ts === null
+      ? msg('home.saleKg', { kg: formatKg(s.netG) })
+      : msg('home.saleLine', { date: formatThaiDate(s.ts, era), kg: formatKg(s.netG) });
 
   const knowRows = [
     sales?.open ? (
@@ -95,8 +96,8 @@ export function V2Home() {
         icon={(c) => <BasketIcon color={c} size={24} />}
         label={msg('home.openSale')}
         value={saleLine(sales.open)}
-        chip={<Chip tone="warn" label={msg('sales.weighing')} />}
-        onPress={() => go(href('sales'))}
+        chip={<Chip tone="warn" label={msg(sales.open.weighing ? 'sales.weighing' : 'status.open')} />}
+        to={href('sales')}
       />
     ) : null,
     sales?.latest ? (
@@ -108,7 +109,7 @@ export function V2Home() {
         label={msg('home.latestSale')}
         value={saleLine(sales.latest)}
         chip={<Chip tone="accept" label={msg('status.closed')} />}
-        onPress={() => go(href('sales'))}
+        to={href('sales')}
       />
     ) : null,
     owedTotal > 0 ? (
@@ -116,11 +117,11 @@ export function V2Home() {
         key="owed"
         testID="home-owed"
         tone="cream"
-        icon={(c) => <MoneyOutIcon color={c} size={24} />}
+        icon={(c) => <DebtIcon color={c} size={24} />}
         value={msg('v2.owed')}
-        onPress={() => go('/v2/owed' as Href)}
+        to={'/v2/owed' as Href}
       >
-        <FactRow icon={(c) => <WalletIcon color={c} size={13} />}>
+        <FactRow icon={(c) => <CoinIcon color={c} size={13} />}>
           <Text style={{ fontWeight: t.font.weight.semibold, color: t.color.ink, fontVariant: ['tabular-nums'] }}>{formatSatang(owedTotal)}</Text>{' '}
           {msg('v2m.baht')}
         </FactRow>
@@ -156,7 +157,7 @@ export function V2Home() {
             label={msg('v2.prepare')}
             tone="cream"
             icon={(c) => <ListIcon color={c} size={26} />}
-            onPress={() => go(href('prepare'))}
+            href={href('prepare')}
           />
           <ActionTile
             testID="home-sale-start"
@@ -164,18 +165,18 @@ export function V2Home() {
             tone="action"
             main
             icon={(c) => <BasketIcon color={c} size={26} />}
-            onPress={() => go(sectionHref(SALE_STEPS[0]))}
+            href={sectionHref(SALE_STEPS[0])}
           />
           <ActionTile
             testID="home-record-expense"
             label={msg('v2.recordExpense')}
             tone="accept"
             icon={(c) => <ReceiptIcon color={c} size={26} />}
-            onPress={() => go('/v2/expense/new' as Href)}
+            href={'/v2/expense/new' as Href}
           />
         </View>
 
-        <Heading>{msg('v2.toKnow')}</Heading>
+        <Heading hint={msg('home.importantFirst')}>{msg('v2.toKnow')}</Heading>
         <View testID="home-to-know" style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
           {knowRows.length === 0 ? (
             <Text style={{ ...body(t), color: t.color.inkSoft, paddingVertical: t.space.md }}>{msg('home.nothingToKnow')}</Text>
@@ -187,23 +188,24 @@ export function V2Home() {
             ))
           )}
         </View>
-        <Pressable
+        <Link href={href('sales')} asChild>
+          <Pressable
           testID="home-sales"
           accessibilityRole="link"
-          onPress={() => go(href('sales'))}
-          style={{ alignSelf: 'flex-end', minHeight: t.target.min, marginTop: -t.space.sm, flexDirection: 'row', alignItems: 'center', gap: t.space.xs, paddingHorizontal: t.space.xs }}
+          style={{ alignSelf: 'flex-end', minHeight: t.target.min, marginVertical: -t.space.md, flexDirection: 'row', alignItems: 'center', gap: t.space.xs, paddingHorizontal: t.space.xs }}
         >
           <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.semibold, color: t.color.action }}>
             {msg('home.allSales')}
           </Text>
           <ChevronRight color={t.color.action} size={7} />
-        </Pressable>
+          </Pressable>
+        </Link>
 
         <Heading>{msg('home.goTo')}</Heading>
         <View testID="home-go-to" style={{ gap: t.space.sm }}>
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-            <Mod slug="reports" tone="action" icon={(c) => <ChartIcon color={c} size={18} />} label={msg('v2.reports')} onPress={go} />
-            <Mod slug="weather" tone="action" icon={(c) => <WeatherIcon color={c} size={20} />} label={msg('v2.weather')} small={msg('home.external')} onPress={go} />
+            <Mod slug="reports" tone="action" icon={(c) => <ChartIcon color={c} size={18} />} label={msg('v2.reports')} />
+            <Mod slug="weather" tone="action" icon={(c) => <WeatherIcon color={c} size={20} />} label={msg('v2.weather')} small={msg('home.external')} external />
           </View>
           <Mod
             slug="payables"
@@ -211,11 +213,10 @@ export function V2Home() {
             icon={(c) => <WalletIcon color={c} size={20} />}
             label={msg('v2.payables')}
             badge={{ value: formatSatang(payable), word: msg('v2m.baht') }}
-            onPress={go}
           />
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-            <Mod slug="expenses" tone="cream" icon={(c) => <ReceiptIcon color={c} size={20} />} label={msg('v2.expenses')} onPress={go} />
-            <Mod slug="stock" tone="accept" icon={(c) => <BoxIcon color={c} size={20} />} label={msg('v2.stock')} onPress={go} />
+            <Mod slug="expenses" tone="cream" icon={(c) => <ReceiptIcon color={c} size={20} />} label={msg('v2.expenses')} />
+            <Mod slug="stock" tone="accept" icon={(c) => <BoxIcon color={c} size={20} />} label={msg('v2.stock')} />
           </View>
           <Mod
             slug="workers"
@@ -224,12 +225,11 @@ export function V2Home() {
             icon={(c) => <UsersIcon color={c} size={20} />}
             label={msg('v2.workers')}
             badge={{ value: String(tappers), word: msg('role.tapper') }}
-            onPress={go}
           />
         </View>
       </ScrollView>
 
-      <HomeMenu open={menuOpen} onClose={() => setMenuOpen(false)} go={go} />
+      <HomeMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
     </View>
   );
 }
@@ -237,7 +237,7 @@ export function V2Home() {
 type FactIcon = (p: { color: string; size?: number }) => React.ReactNode;
 
 /** The ☰ menu (v1.1.0 screen 1), then the built lists the mockup reaches elsewhere. */
-function HomeMenu({ open, onClose, go }: { open: boolean; onClose: () => void; go: (to: Href) => void }) {
+function HomeMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const msg = useT();
   const item = (slug: string, tone: TileTone, icon: IconRender, facts?: [FactIcon, string][]) => (
     <MenuItem
@@ -245,10 +245,8 @@ function HomeMenu({ open, onClose, go }: { open: boolean; onClose: () => void; g
       testID={`nav-${slug}`}
       label={msg(farmSection(slug).titleId)}
       leading={<IconTile tone={tone} icon={icon} />}
-      onPress={() => {
-        onClose();
-        go(href(slug));
-      }}
+      href={href(slug)}
+      onPress={onClose}
     >
       {facts?.map(([Icon, text]) => (
         <FactRow key={text} icon={(c) => <Icon color={c} size={12} />}>
@@ -306,16 +304,36 @@ function useHomeSales(): HomeSales | null {
 const body = (t: Theme) => ({ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, color: t.color.ink });
 
 /** Mockup `.sec-h b`: a bold section heading. */
-function Heading({ children }: { children: string }) {
+function Heading({ children, hint }: { children: string; hint?: string }) {
   const t = useTheme();
   return (
-    <Text
-      accessibilityRole="header"
-      style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingSm, fontWeight: t.font.weight.bold, color: t.color.ink, paddingHorizontal: t.space.xs }}
-    >
-      {children}
-    </Text>
+    <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: t.space.sm, paddingHorizontal: t.space.xs }}>
+      <Text
+        accessibilityRole="header"
+        style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingSm, fontWeight: t.font.weight.bold, color: t.color.ink }}
+      >
+        {children}
+      </Text>
+      {hint ? <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, color: t.color.inkSoft }}>{hint}</Text> : null}
+    </View>
   );
+}
+
+/**
+ * Now, kept current: read again whenever home is shown or the app comes back
+ * to the front, so the header date never shows yesterday.
+ */
+function useNow(): number {
+  const [now, setNow] = useState(() => Date.now());
+  useFocusEffect(useCallback(() => setNow(Date.now()), []));
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setNow(Date.now());
+    });
+    // Optional: the jest preset's AppState mock returns no subscription.
+    return () => sub?.remove();
+  }, []);
+  return now;
 }
 
 /** One "ควรรู้ / ควรจัดการ" row (mockup `.row`): tile, small label, value, facts or a chip, chevron. */
@@ -327,7 +345,7 @@ function KnowRow({
   value,
   chip,
   children,
-  onPress,
+  to,
 }: {
   testID: string;
   tone: TileTone;
@@ -336,14 +354,14 @@ function KnowRow({
   value: string;
   chip?: React.ReactNode;
   children?: React.ReactNode;
-  onPress: () => void;
+  to: Href;
 }) {
   const t = useTheme();
   return (
+    <Link href={to} asChild>
     <Pressable
       testID={testID}
-      accessibilityRole="button"
-      onPress={onPress}
+      accessibilityRole="link"
       style={{ minHeight: t.target.min, paddingVertical: t.space.sm, flexDirection: 'row', alignItems: 'center', gap: t.space.md }}
     >
       <IconTile tone={tone} icon={icon} />
@@ -355,6 +373,7 @@ function KnowRow({
       </View>
       <ChevronRight color={t.color.inkFaint} />
     </Pressable>
+    </Link>
   );
 }
 
@@ -366,8 +385,8 @@ function Mod({
   icon,
   label,
   small,
+  external,
   badge,
-  onPress,
 }: {
   slug: string;
   to?: Href;
@@ -375,15 +394,16 @@ function Mod({
   icon: IconRender;
   label: string;
   small?: string;
+  /** Opens outside the app: a small arrow-out after `small` (mockup `#i-ext`). */
+  external?: boolean;
   badge?: { value: string; word: string };
-  onPress: (to: Href) => void;
 }) {
   const t = useTheme();
   return (
+    <Link href={to ?? href(slug)} asChild>
     <Pressable
       testID={`mod-${slug}`}
-      accessibilityRole="button"
-      onPress={() => onPress(to ?? href(slug))}
+      accessibilityRole="link"
       style={{
         ...cardStyle(t),
         flex: 1,
@@ -401,7 +421,16 @@ function Mod({
         <Text style={{ ...body(t), fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, lineHeight: t.font.size.bodySm * t.font.lineHeight.snug }}>
           {label}
         </Text>
-        {small ? <Text style={{ ...body(t), fontSize: t.font.size.micro, color: t.color.inkSoft }}>{small}</Text> : null}
+        {small ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
+            <Text style={{ ...body(t), fontSize: t.font.size.micro, color: t.color.inkSoft }}>{small}</Text>
+            {external ? (
+              <View testID="external-icon" aria-hidden>
+                <ExternalIcon color={t.color.inkSoft} size={11} />
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </View>
       {badge ? (
         <View style={{ alignItems: 'flex-end' }}>
@@ -410,6 +439,7 @@ function Mod({
         </View>
       ) : null}
     </Pressable>
+    </Link>
   );
 }
 
