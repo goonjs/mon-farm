@@ -326,12 +326,11 @@ export function ScreenHeader({
 }
 
 /** A white card on the screen ground — the v1.1.0 unit of grouping. */
-export function Card({ children, tone = 'plain', testID }: { children: ReactNode; tone?: 'plain' | 'accent' | 'warm'; testID?: string }) {
+export function Card({ children, tone = 'plain', testID }: { children: ReactNode; tone?: 'plain' | 'accent'; testID?: string }) {
   const t = useTheme();
   const look = {
     plain: { bg: t.color.surfaceRaised, border: t.color.ruleFaint, style: 'solid' as const },
     accent: { bg: t.color.acceptSunk, border: t.color.accept, style: 'dashed' as const },
-    warm: { bg: t.color.brandCream, border: t.color.ruleFaint, style: 'solid' as const },
   }[tone];
   return (
     <View
@@ -436,7 +435,8 @@ export function Rule() {
 }
 
 /** The hero figure at the top of a summary card: caption, big number, unit. */
-export function BigAmount({ satang, caption, children, testID = 'big' }: { satang: number; caption?: string; children?: ReactNode; testID?: string }) {
+/** `unknown`: no figure exists yet — reads ไม่ทราบ, never a silent 0.00 (SYNC-12). */
+export function BigAmount({ satang, unknown, caption, children, testID = 'big' }: { satang: number; unknown?: boolean; caption?: string; children?: ReactNode; testID?: string }) {
   const t = useTheme();
   const msg = useT();
   return (
@@ -444,9 +444,9 @@ export function BigAmount({ satang, caption, children, testID = 'big' }: { satan
       {caption ? <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.inkSoft }}>{caption}</Text> : null}
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.xs }}>
         <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayXl, fontWeight: t.font.weight.bold, color: t.color.ink }}>
-          {formatSatang(satang)}
+          {unknown ? msg('fin.row.unknown') : formatSatang(satang)}
         </Text>
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>{msg('fin.baht')}</Text>
+        {unknown ? null : <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>{msg('fin.baht')}</Text>}
       </View>
       {children}
     </View>
