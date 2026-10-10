@@ -55,8 +55,7 @@ export default function SaleListScreen() {
   // its status or figures may have changed while this screen was off-screen.
   useFocusEffect(reload);
 
-  // E04-S02: a new sale starts from master data; the old setup screen stays reachable by URL.
-  const newSaleHref = { pathname: '/sale/[id]/start', params: { id: newId('sale-') } } as const;
+  const newSaleHref = { pathname: '/sale/[id]/setup', params: { id: newId('sale-') } } as const;
   // Settings live off the front door rather than off a working screen — see
   // the header comment in src/app/settings.tsx.
   const SETTINGS = '/settings' as const;
