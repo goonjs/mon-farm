@@ -63,7 +63,7 @@ export function lastLiveBasket(
 
 /** A short basket's net is derived, never stored: reading minus tare. */
 export function basketNetG(b: BasketEvent): number {
-  return b.kind === 'accept' ? b.netG : b.readingG - b.tareG;
+  return b.kind === 'accept' ? b.netG : b.readingG - b.tareG - (b.skewG ?? 0);
 }
 
 function tally(baskets: readonly BasketEvent[]): Totals {

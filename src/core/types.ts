@@ -95,10 +95,23 @@ export interface EventBase {
 export interface AcceptEvent extends EventBase {
   readonly kind: 'accept';
   readonly pileId: PileId;
-  /** How the basket was entered (renamed from `source` in E01-S04, which is now the envelope's channel). */
-  readonly input: 'hold' | 'hold-kbd';
+  /**
+   * The weighing point (E04-S01) and the basket's number, fixed when it is
+   * recorded (SALE-10) — per tapper or per point, by the sale's mode. Absent
+   * on baskets recorded by the pile counter before the move to points.
+   */
+  readonly pointId?: string;
+  readonly basketNo?: number;
+  /**
+   * How the basket was entered (renamed from `source` in E01-S04, which is
+   * now the envelope's channel). `edit` = re-recorded from the basket list
+   * (E04-S09), with `editOf` naming the basket it replaces.
+   */
+  readonly input: 'hold' | 'hold-kbd' | 'edit';
   readonly netG: number;
   readonly tareG: number;
+  /** The basket this one replaces (E04-S09): that one is voided with reason `edit` in the same step. */
+  readonly editOf?: EventId;
 }
 
 /**
@@ -112,8 +125,22 @@ export interface AcceptEvent extends EventBase {
 export interface ShortEvent extends EventBase {
   readonly kind: 'short';
   readonly pileId: PileId;
+  /**
+   * The weighing point (E04-S01) and the basket's number, fixed when it is
+   * recorded (SALE-10) — per tapper or per point, by the sale's mode. Absent
+   * on baskets recorded by the pile counter before the move to points.
+   */
+  readonly pointId?: string;
+  readonly basketNo?: number;
   readonly readingG: number;
   readonly tareG: number;
+  /**
+   * The scale's accepted skew at the time (E04-S03, D-75), snapshotted like
+   * the tare: net = reading − basket − skew. Absent = no skew.
+   */
+  readonly skewG?: number;
+  /** The basket this one replaces (E04-S09), as on `AcceptEvent`. */
+  readonly editOf?: EventId;
 }
 
 /**
@@ -158,11 +185,17 @@ export type SysPayload =
        * buyer" the next sale's default (MD-6). Absent for a typed-in name.
        */
       readonly buyerId?: string;
+      /** The manager picked from master data (E04-S02); `manager` stays the name snapshot. */
+      readonly managerId?: string;
+      /** Free note on the sale header (E04-S02, SALE-2). */
+      readonly note?: string;
       readonly manager: string;
       readonly workerLead: string;
       readonly where: 'farm' | 'buyer';
     }
   | { readonly t: 'price_set'; readonly satangPerKg: number; readonly indexRef: string }
+  /** The sale's basket-numbering mode, chosen at start; the group setting is the default (D-53). */
+  | { readonly t: 'numbering_set'; readonly numbering: NumberingMode }
   /**
    * FR-8.5: `settle()` refuses to run without a split resolvable for every
    * zone — either this sale-level default or a `zone_contract_set` override
@@ -212,6 +245,16 @@ export type SysPayload =
       readonly tareG: number;
       readonly stdNetG: number;
     }
+  /**
+   * The empty scale did not read zero and the operator chose to carry on
+   * with the skew (E04-S03, D-75): every expected reading includes it, and
+   * short baskets subtract it, until the next passing zero check.
+   */
+  | { readonly t: 'skew_accepted'; readonly pileId: PileId; readonly skewG: number }
+  /** The operator chose to wait for another scale instead (D-75): nothing is weighed until a zero check passes. */
+  | { readonly t: 'scale_wait'; readonly pileId: PileId }
+  /** The zero/tare check was not asked here, by the sale's check mode (SALE-6) — recorded, not silent. */
+  | { readonly t: 'gate_skipped'; readonly pileId: PileId; readonly mode: ZeroCheckMode }
   /** Non-blocking by design: a failed zero check flags and continues. */
   | { readonly t: 'zero_check'; readonly pileId: PileId; readonly ok: boolean; readonly readingG: number }
   | { readonly t: 'tare_confirmed'; readonly pileId: PileId; readonly tareG: number }
@@ -222,6 +265,18 @@ export type SysPayload =
   | { readonly t: 'zone_reopened'; readonly zoneId: ZoneId; readonly reason: string }
   | { readonly t: 'sale_closed' }
   | { readonly t: 'sale_reopened'; readonly reason: string }
+  /**
+   * The sale's business status (E04-S11, SALE-20): Draft until marked
+   * Completed (needs a price) or Cancelled. Separate from `sale_closed`, which
+   * still gates counting and the settlement screen until the owner decides
+   * whether the S13 close/reopen lifecycle goes.
+   */
+  | { readonly t: 'sale_status_set'; readonly status: SaleStatus; readonly reason?: string }
+  /**
+   * A money-changing edit made after the sale was Completed (SALE-21): why,
+   * and which event it changed. Read by E05-S05 as "recheck this payment".
+   */
+  | { readonly t: 'money_edit'; readonly reason: string; readonly targetId: EventId }
   /**
    * Written whether or not audio succeeded (FR-12.2, FR-11.10). The log records
    * what was ATTEMPTED plus whether it was heard, which is what makes silence
@@ -499,17 +554,23 @@ export interface Deduction {
   readonly voidReason: string | null;
 }
 
+export type SaleStatus = 'draft' | 'completed' | 'cancelled';
+
 export interface SaleState {
   readonly id: SaleId;
   /** Soft-deleted (SYNC-10): hidden from the sale list, shown under "deleted". */
   readonly deleted: boolean;
   readonly status: OpenClosed;
+  /** Business status (E04-S11). Cancelled keeps its baskets but counts in no cross-sale total. */
+  readonly saleStatus: SaleStatus;
   readonly startedTs: number | null;
   readonly parties: {
     readonly farmName: string;
     readonly buyer: string;
     readonly buyerId?: string;
     readonly manager: string;
+    readonly managerId?: string;
+    readonly note?: string;
     readonly workerLead: string;
     readonly where: 'farm' | 'buyer';
   } | null;

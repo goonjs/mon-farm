@@ -148,6 +148,18 @@ describe('MasterStore — people and buyers as events (E03-S01)', () => {
     expect(shareOn(await master.state(), red.id, '2026-09-19')).toMatchObject({ tapperPct: 55, ownerPct: 45 });
   });
 
+  it('a cancelled sale does not hold back a share; a completed one does (E04-S11)', async () => {
+    const red = await master.create('แดง', ['tapper']);
+    const cancelled = withZoneContract(setUpSale(new LogBuilder('sale-cancelled', 'dev-other')), 'zA', red.id, 'แดง', 50);
+    cancelled.sys({ t: 'sale_closed' }).sys({ t: 'sale_status_set', status: 'cancelled' });
+    for (const e of cancelled.build()) await events.append({ ...e, ts: Date.UTC(2026, 8, 20, 3) });
+    expect(await master.lastClosedSaleDay(red.id)).toBeNull();
+    const done = withZoneContract(setUpSale(new LogBuilder('sale-completed', 'dev-other')), 'zA', red.id, 'แดง', 50);
+    done.sys({ t: 'price_set', satangPerKg: 4_850, indexRef: '' }).sys({ t: 'sale_status_set', status: 'completed' });
+    for (const e of done.build()) await events.append({ ...e, ts: Date.UTC(2026, 8, 21, 3) });
+    expect(await master.lastClosedSaleDay(red.id)).toBe('2026-09-21');
+  });
+
   it('sale settings: patch, add a pair in whole kg, make it default; refuse out-of-range values (E03-S07)', async () => {
     await master.updateSettings({ zeroCheck: 'skip', dupWindowS: 9 });
     await expect(master.updateSettings({ dupWindowS: 12 })).rejects.toThrow();

@@ -211,16 +211,14 @@ async function cdpTouch(
   await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
 }
 
-test('a second finger touching down and lifting mid-hold does not cancel it (field report)', async ({ page, context }) => {
-  // A real field report: attempting to pinch-zoom on the counter screen
-  // sometimes left the app "still counting" confusingly after release.
-  // Root cause, found with real touch input (not mouse simulation): every
-  // window-level pointerup/pointermove listener in HoldStage reacted to ANY
-  // pointer, with no identity check — so a second, unrelated finger's
-  // ordinary touchdown-and-lift (exactly what a failed pinch attempt looks
-  // like) fired a genuine pointerup that cancelled the FIRST finger's
-  // still-in-progress, never-released hold.
-  const { count } = await openCounter(page, 5, 1200); // a real hold duration, not FAST_HOLD — this needs room for a second touch to land mid-hold
+test('a second finger touching down mid-hold cancels it at once (E04-S04, owner 2026-10-03)', async ({ page, context }) => {
+  // S8 let a second finger pass so that a stray touch could not cancel a real
+  // hold. The owner decided otherwise for E04-S04 (SALE-8): a second finger
+  // or a palm during a hold is a pinch or a mis-grip, never a basket — cancel
+  // immediately and record the reject. Window-level pointer identity (the
+  // original field fix) still matters: the FIRST finger's later lift must
+  // not count anything either.
+  const { count } = await openCounter(page, 5, 1200);
   const cdp = await context.newCDPSession(page);
   const box = (await page.getByTestId('stage').boundingBox())!;
   const ax = box.x + box.width / 2;
@@ -231,23 +229,19 @@ test('a second finger touching down and lifting mid-hold does not cancel it (fie
   await cdpTouch(cdp, 'touchStart', [{ x: ax, y: ay, id: 1 }]);
   await page.waitForTimeout(300);
 
-  // A second finger touches down alongside the first (the start of a pinch
-  // attempt) and lifts shortly after, while the first finger never moves.
+  // A second finger joins while the first is still holding.
   await cdpTouch(cdp, 'touchStart', [{ x: ax, y: ay, id: 1 }, { x: bx, y: by, id: 2 }]);
   await page.waitForTimeout(150);
   await cdpTouch(cdp, 'touchEnd', [{ x: bx, y: by, id: 2 }]);
 
-  // The first finger's hold must still be running, not rejected.
-  await page.waitForTimeout(200);
-  await expect(page.getByTestId('caption')).not.toContainText('ปล่อยเร็วไป');
-
-  // It completes on its own schedule, counting exactly once.
-  await page.waitForTimeout(900);
-  await expect(count).toHaveText('6');
+  // Cancelled on the spot, recorded as released early, nothing counted.
+  await expect(page.getByTestId('caption')).toContainText('ไม่นับ');
+  await page.waitForTimeout(1100);
+  await expect(count).toHaveText('5');
 
   await cdpTouch(cdp, 'touchEnd', []);
   await page.waitForTimeout(300);
-  await expect(count).toHaveText('6'); // lifting the first finger afterward changes nothing
+  await expect(count).toHaveText('5'); // lifting the first finger afterward counts nothing
 });
 
 test('a browser-cancelled pinch touch does not count a basket (S32, field report)', async ({ page, context }) => {

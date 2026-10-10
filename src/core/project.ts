@@ -33,6 +33,7 @@ export function emptySale(id: string): SaleState {
     id,
     deleted: false,
     status: 'open',
+    saleStatus: 'draft',
     startedTs: null,
     parties: null,
     price: null,
@@ -86,6 +87,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
   let startedTs: number | null = null;
   let parties = base.parties;
   let price = base.price;
+  let saleStatus = base.saleStatus;
   let split = base.split;
   let clockSuspect = false;
   let speechOn = base.speechOn;
@@ -111,6 +113,8 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
           farmName: payload.farmName,
           buyer: payload.buyer,
           ...(payload.buyerId ? { buyerId: payload.buyerId } : {}),
+          ...(payload.managerId ? { managerId: payload.managerId } : {}),
+          ...(payload.note ? { note: payload.note } : {}),
           manager: payload.manager,
           workerLead: payload.workerLead,
           where: payload.where,
@@ -233,6 +237,10 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
         status = 'open';
         break;
 
+      case 'sale_status_set':
+        saleStatus = payload.status;
+        break;
+
       case 'clock_anomaly':
         clockSuspect = true;
         break;
@@ -281,6 +289,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
     id,
     deleted: deleted.has(id),
     status,
+    saleStatus,
     startedTs,
     parties,
     price,

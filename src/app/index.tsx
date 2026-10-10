@@ -55,7 +55,8 @@ export default function SaleListScreen() {
   // its status or figures may have changed while this screen was off-screen.
   useFocusEffect(reload);
 
-  const newSaleHref = { pathname: '/sale/[id]/setup', params: { id: newId('sale-') } } as const;
+  // E04-S02: a new sale starts from master data; the old setup screen stays reachable by URL.
+  const newSaleHref = { pathname: '/sale/[id]/start', params: { id: newId('sale-') } } as const;
   // Settings live off the front door rather than off a working screen — see
   // the header comment in src/app/settings.tsx.
   const SETTINGS = '/settings' as const;
@@ -164,6 +165,20 @@ function SaleRow({ sale, onDelete }: { sale: SaleState; onDelete: () => void }) 
             </Button>
           </Link>
         </View>
+        {/* E04-S11: a finished sale says so; a draft needs no chip. */}
+        {sale.saleStatus !== 'draft' ? (
+          <Text
+            testID={`sale-status-${sale.id}`}
+            style={{
+              fontFamily: t.font.family.sans,
+              fontSize: t.font.size.small,
+              fontWeight: t.font.weight.bold,
+              color: sale.saleStatus === 'cancelled' ? t.color.reject : t.color.accept,
+            }}
+          >
+            {msg(`status.${sale.saleStatus}`)}
+          </Text>
+        ) : null}
         {!confirming && (
           <Button
             testID={`delete-${sale.id}`}

@@ -1,6 +1,6 @@
 # Story E04-S01: โมเดลการขายใหม่ — จุดชั่ง + เลขเข่งต่อเนื่อง (core)
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ (overnight 2026-10-09, branch `feature/e04-sale`)
 
 ## Context
 
@@ -43,9 +43,25 @@ Status: Draft
 
 ## Dev notes
 
+**ทำแล้ว (2026-10-09 คืน, ทีม FARM) — core อย่างเดียว, เพิ่มเข้าไปเท่านั้น (lead: ห้ามลบของเดิมจนเจ้าของตัดสิน)**
+
+- เข่ง (`accept`/`short`) ได้ฟิลด์ optional `pointId` + `basketNo` (กำหนดตอนบันทึก เก็บใน event — SALE-10); ระหว่างย้าย
+  ใช้ `pileId = pointId` เพื่อให้กติกา void/Soft Delete/`basketNetG` เดิมใช้ได้ทันที; `zone_added`/`pile_added` ยังอยู่
+- sys event ใหม่ `numbering_set` (โหมดของการขาย เลือกตอนเริ่ม ค่าเริ่มต้นจากตั้งค่ากลุ่ม — D-53); `saleNumbering(events, groupDefault)`
+- `nextBasketNo(events, pointId, mode, tapperOf)` (`src/core/sale-points.ts`): (a) `per-tapper` ลำดับต่อคนกรีดยาง ข้ามจุด/สวน (D-79);
+  (b) `per-point` ทุกจุดเริ่ม 1 (D-46); จุดที่ไม่มีคนกรีดนับแยกของตัวเอง; เลขของเข่งที่ถูก void/ลบไม่ถูกใช้ซ้ำ
+- `saleRollup(events, master, saleDay)`: ยอดต่อจุด / คนกรีด (ตาม `tapperOn` ณ วันขาย — SALE-4) / สวน / การขาย เป็นกรัมจำนวนเต็ม
+  รวมกันลงตัวทุกระดับ และเท่ากันทั้งสองโหมด; เข่งของจุดที่ไม่มีคนกรีดอยู่ใน `unassigned` ไม่หาย
+- snapshot น้ำหนักบนเข่งคงเดิม (ยอดอ่านจาก event ไม่อ่านตั้งค่าปัจจุบัน)
+
+**ยังไม่ทำใน story นี้**: หน้าจอ (E04-S02/S05), ตรวจเลขซ้ำตอนรวมหลายเครื่อง (E04-S14)
+
 ## Code review
 
 ## QA notes
+
+**2026-10-09 (FARM)** — Vitest `src/core/sale-points.test.ts`: โหมด (a) แดง 3 จุด 2 สวน + นัด ลำดับสลับ → แดง 1..5, นัด 1..2;
+โหมด (b) ทุกจุดเริ่ม 1; ยอดต่อจุด/คนกรีด/สวน/การขายเท่ากันสองโหมดและรวมลงตัว; void ไม่คืนเลข; snapshot น้ำหนัก; จุดไม่มีคนกรีดไม่ปน
 
 ## คำถามเจ้าของ
 
