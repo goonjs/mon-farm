@@ -13,7 +13,7 @@
  */
 
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { Button, CardLabel, cardStyle } from '../../../components/chrome';
@@ -36,6 +36,10 @@ export default function SettlementScreen() {
   const t = useTheme();
   const msg = useT();
   const sync = useSyncStatus();
+  // Two columns need room: below the phone/tablet line (600, Material's
+  // breakpoint, already a token) the columns stack, otherwise a 390px
+  // portrait phone squeezed the owner total to "฿ 1…" (E01-S17).
+  const narrow = useWindowDimensions().width < t.publicNumeral.tabletBreakpointPx;
   const { events, state, append } = useSale();
   const router = useRouter();
   const [reopening, setReopening] = useState(false);
@@ -162,13 +166,13 @@ export default function SettlementScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{
           padding: t.space.md,
-          flexDirection: 'row',
-          alignItems: 'flex-start',
+          flexDirection: narrow ? 'column' : 'row',
+          alignItems: narrow ? 'stretch' : 'flex-start',
           gap: t.space.md,
         }}
       >
         {/* ---- the derivation ---- */}
-        <View style={[card(t), { flex: 1.1 }]}>
+        <View style={[card(t), narrow ? null : { flex: 1.1 }]}>
           <CardLabel>{msg('settle.derivation')}</CardLabel>
           {s.steps.slice(0, 6).map((step) => (
             <View
@@ -205,7 +209,7 @@ export default function SettlementScreen() {
         </View>
 
         {/* ---- owner total, leading ---- */}
-        <View style={{ flex: 1, gap: t.space.md }}>
+        <View style={narrow ? { gap: t.space.md } : { flex: 1, gap: t.space.md }}>
           <View style={card(t)}>
             <CardLabel>{msg('settle.ownerTotal')}</CardLabel>
             <Figure testID="owner-share" colour={t.color.action}>{formatBaht(s.ownerSatang)}</Figure>
