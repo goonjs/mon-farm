@@ -14,7 +14,7 @@ test('an empty profile shows the empty state, not a blank screen', async ({ page
   await page.goto('/farm-profile');
   const empty = page.getByTestId('farm-profile-empty');
   await expect(empty).toBeVisible();
-  await expect(empty).toHaveText('ยังไม่มีโซนที่บันทึกไว้');
+  await expect(empty).toHaveText('ยังไม่มีสวนที่บันทึกไว้');
 
   await empty.screenshot({ path: `docs/ux/screenshots/${testInfo.project.name}/farm-profile-empty.png` });
 });

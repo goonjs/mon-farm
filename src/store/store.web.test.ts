@@ -43,6 +43,7 @@ describe('legacy cleanup (E01-S02/S03 AC: no migration)', () => {
     }
     cleanUpLegacy();
     const keys = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)).sort();
+    // People moved to master-data events in E03-S01, but the old key is kept: not read, not cleared.
     expect(keys).toEqual(['mon-farm:farm-profile', 'mon-farm:people', 'mon-farm:speech-on']);
   });
 
