@@ -21,6 +21,8 @@ import { Button, Pill, Tabs, TopBar } from '../../../components/chrome';
 import { HoldStage } from '../../../components/HoldStage';
 import { PileClosedTransition } from '../../../components/PileClosedTransition';
 import { BasketEditor } from '../../../components/BasketEditor';
+import { Card as FarmCard } from '../../../components/farm-ui';
+import { MoneyReasonPrompt } from '../../../components/MoneyReasonPrompt';
 import { RecorderView } from '../../../components/RecorderView';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { ShortBasketPanel } from '../../../components/ShortBasketPanel';
@@ -36,7 +38,8 @@ import { announceCount } from '../../../speech/announcer';
 import { speaker } from '../../../speech/speaker';
 import { useSpeech } from '../../../speech';
 import { formatThaiDate, saleSettings, tapperOn, todayIso, type MasterState } from '../../../core/master';
-import { basketList, nextBasketNo, pointSetupPayloads, recorderFigures, saleNumbering } from '../../../core/sale-points';
+import { basketList, nextBasketNo, pointSetupPayloads, recorderFigures, sameSequence, saleNumbering } from '../../../core/sale-points';
+import { canComplete } from '../../../core/sale-status';
 import { expectedReadingG, gateNeeded, saleSkewG } from '../../../core/scale-check';
 import { readHoldMs } from '../../../store/hold-preference';
 import { peopleStore } from '../../../store/people';
@@ -135,6 +138,9 @@ export default function CounterScreen() {
   const [publicMode, setPublicMode] = useState(false);
   // E04-S09: the basket being edited from the recorder's list.
   const [editingId, setEditingId] = useState<string | null>(null);
+  // E04-S11: a money-changing edit on a Completed sale waits here for its reason.
+  const [moneyGate, setMoneyGate] = useState<{ targetId: string; run: () => void } | null>(null);
+  const [confirmCancelSale, setConfirmCancelSale] = useState(false);
   const [now] = useState(() => Date.now());
   // Events of this sale not sent yet (SYNC-3) — re-read whenever the log grows.
   const [pending, setPending] = useState(0);
@@ -296,21 +302,53 @@ export default function CounterScreen() {
       ? recorderFigures(events, master, day, pile.id, saleNumbering(events, saleSettings(master).numbering), state.price?.satangPerKg ?? null)
       : null;
 
+  // At a point, undo means the last basket of the number sequence, in either
+  // mode (review S3); a finished sale is only edited from the recorder's list.
+  const sequenceLast = figures ? ((events.find((e) => e.id === figures.lastId) as BasketEvent | undefined) ?? null) : lastBasket;
+  const classicUndo = figures && state.saleStatus !== 'draft' ? null : sequenceLast;
+
   if (figures && master && pile.status === 'counting' && !waiting && !publicMode) {
     const tapperId = tapperOn(master, pile.id, day);
     const pointName = (id: string) => master.points.find((p) => p.id === id)?.name ?? '';
+    const numbering = saleNumbering(events, saleSettings(master).numbering);
     // "ย้อนกลับ" undoes the last basket of this number sequence, wherever it was weighed.
-    const undoTarget = (events.find((e) => e.id === figures.lastId) as BasketEvent | undefined) ?? null;
+    const undoTarget = sequenceLast;
     const editing = editingId ? (events.find((e) => e.id === editingId) as BasketEvent | undefined) : undefined;
     const rows = basketList(events);
     const editingRow = rows.find((r) => r.id === editingId);
     const saleDayPoints = master.points.filter((p) => !p.deleted && master.properties.some((f) => f.id === p.propertyId && !f.deleted));
 
+    // After Completed, an edit that changes money asks why first and flags the
+    // payment for a recheck (SALE-21); a draft edits straight away.
+    const guardMoney = (targetId: string, run: () => void) => {
+      if (state.saleStatus === 'completed') setMoneyGate({ targetId, run });
+      else run();
+    };
+    const confirmMoney = (reason: string) => {
+      if (!moneyGate) return;
+      append({ kind: 'sys', payload: { t: 'money_edit', reason, targetId: moneyGate.targetId } });
+      moneyGate.run();
+      setMoneyGate(null);
+    };
+    const draft = state.saleStatus === 'draft';
+
     // An edit is a void of the old basket plus a new one that names it (E04-S09):
     // same number, same kind; the original stays in the log.
-    const saveEdit = ({ netG, pointId }: { netG: number; pointId: string }) => {
+    const saveEdit = (change: { netG: number; pointId: string }) => {
+      if (!editing || !editingRow) return;
+      if (change.netG === editingRow.netG && change.pointId === editingRow.pointId) return setEditingId(null);
+      guardMoney(editing.id, () => applyEdit(change));
+    };
+    const applyEdit = ({ netG, pointId }: { netG: number; pointId: string }) => {
       if (!editing || editing.basketNo === undefined) return;
-      const pair = { pairId: '', netG: editing.kind === 'accept' ? editing.netG : pile.stdNetG, basketG: editing.tareG };
+      // Voided meanwhile (another device), or nothing changed: write nothing.
+      if (editingRow?.status !== 'live' || (netG === editingRow.netG && pointId === editingRow.pointId)) {
+        setEditingId(null);
+        return;
+      }
+      // A new pile takes the source pile's standard weights, never the edited basket's (review S2).
+      const source = state.piles.find((p) => p.id === editing.pileId) ?? pile;
+      const pair = { pairId: '', netG: source.stdNetG, basketG: source.tareG };
       for (const payload of pointSetupPayloads(state, master, pointId, pair)) append({ kind: 'sys', payload });
       append({ kind: 'correction', pileId: editing.pileId, targetId: editing.id, mode: 'void', reason: msg('edit.reason') });
       const at = { pileId: pointId, pointId, basketNo: editing.basketNo, editOf: editing.id };
@@ -320,8 +358,10 @@ export default function CounterScreen() {
     };
     const voidEditing = () => {
       if (!editing) return;
-      append({ kind: 'correction', pileId: editing.pileId, targetId: editing.id, mode: 'void', reason: msg('edit.voidReason') });
-      setEditingId(null);
+      guardMoney(editing.id, () => {
+        append({ kind: 'correction', pileId: editing.pileId, targetId: editing.id, mode: 'void', reason: msg('edit.voidReason') });
+        setEditingId(null);
+      });
     };
     return (
       <View style={{ flex: 1 }}>
@@ -333,7 +373,52 @@ export default function CounterScreen() {
           tapperName={tapperId ? (master.people.find((p) => p.id === tapperId)?.name ?? null) : null}
           figures={figures}
           expectedKg={formatKg(expectedReadingG(pile.stdNetG, pile.tareG, skewG))}
-          hold={{ onCount, onReject, enabled: countable, holdMs: holdMsOverride() ?? deviceHoldMs }}
+          // New baskets only while Draft; a finished sale is edited from the list (E04-S11).
+          hold={{ onCount, onReject, enabled: countable && draft, holdMs: holdMsOverride() ?? deviceHoldMs }}
+          status={state.saleStatus}
+          menuItems={
+            draft
+              ? [
+                  {
+                    testID: 'rec-menu-complete',
+                    label: msg('status.complete'),
+                    disabled: !canComplete(state),
+                    hint: state.price ? undefined : msg('status.needPrice'),
+                    onPress: () => append({ kind: 'sys', payload: { t: 'sale_status_set', status: 'completed' } }),
+                  },
+                  { testID: 'rec-menu-cancel', label: msg('status.cancel'), onPress: () => setConfirmCancelSale(true) },
+                ]
+              : []
+          }
+          overlay={
+            moneyGate ? (
+              <MoneyReasonPrompt onConfirm={confirmMoney} onCancel={() => setMoneyGate(null)} />
+            ) : confirmCancelSale ? (
+              <FarmCard testID="cancel-sale">
+                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+                  {msg('status.cancelTitle')}
+                </Text>
+                <Text testID="cancel-sale-body" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.ink }}>
+                  {msg('status.cancelBody')}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+                  <Button testID="cancel-sale-no" onPress={() => setConfirmCancelSale(false)}>
+                    {msg('common.cancel')}
+                  </Button>
+                  <Button
+                    testID="cancel-sale-confirm"
+                    variant="destructive"
+                    onPress={() => {
+                      append({ kind: 'sys', payload: { t: 'sale_status_set', status: 'cancelled' } });
+                      setConfirmCancelSale(false);
+                    }}
+                  >
+                    {msg('status.cancelConfirm')}
+                  </Button>
+                </View>
+              </FarmCard>
+            ) : undefined
+          }
           baskets={rows.map((r) => ({ ...r, pointName: pointName(r.pointId) }))}
           onRowPress={setEditingId}
           editor={
@@ -343,7 +428,11 @@ export default function CounterScreen() {
                 basketNo={editingRow.basketNo}
                 netG={editingRow.netG}
                 pointId={editingRow.pointId}
-                points={saleDayPoints.map((p) => ({ id: p.id, name: p.name }))}
+                // A move stays inside the basket's own number sequence, so no number
+                // is ever doubled or taken from someone else's (review S1, SALE-10).
+                points={saleDayPoints
+                  .filter((p) => sameSequence(p.id, editingRow.pointId, numbering, (id) => tapperOn(master, id, day)))
+                  .map((p) => ({ id: p.id, name: p.name }))}
                 by={msg('edit.by', { device: editingRow.by.deviceId, time: new Date(editingRow.by.ts).toLocaleTimeString('th-TH') })}
                 onSave={saveEdit}
                 onVoid={voidEditing}
@@ -352,7 +441,13 @@ export default function CounterScreen() {
             ) : undefined
           }
           onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-          onSwitch={() => router.replace({ pathname: '/sale/[id]/points', params: { id: saleId, switch: '1' } })}
+          // Opens on this farm and tapper, so another of their points is one tap (AC ≤ 2 taps).
+          onSwitch={() =>
+            router.replace({
+              pathname: '/sale/[id]/points',
+              params: { id: saleId, switch: '1', farm: zone.id, ...(tapperId ? { tapper: tapperId } : {}) },
+            })
+          }
           onShort={openShort}
           onUndo={() => setConfirmUndo(true)}
           onPublic={() => setPublicMode(true)}
@@ -370,7 +465,14 @@ export default function CounterScreen() {
               />
             ) : confirmUndo && undoTarget ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, padding: t.space.sm }}>
-                <UndoConfirmRow event={undoTarget} onConfirm={() => doUndo(undoTarget)} onCancel={() => setConfirmUndo(false)} />
+                <UndoConfirmRow
+                  event={undoTarget}
+                  onConfirm={() => {
+                    setConfirmUndo(false);
+                    guardMoney(undoTarget.id, () => doUndo(undoTarget));
+                  }}
+                  onCancel={() => setConfirmUndo(false)}
+                />
               </View>
             ) : undefined
           }
@@ -393,9 +495,10 @@ export default function CounterScreen() {
               {countable ? msg('counter.counting') : msg('counter.stopped')}
             </Pill>
             {isPoint && publicMode ? (
-              <Pill testID="public-exit">
-                <Text onPress={() => setPublicMode(false)}>{msg('rec.publicExit')}</Text>
-              </Pill>
+              // A full-size target: the only way back to the recorder (review S7).
+              <Button testID="public-exit" variant="primary" onPress={() => setPublicMode(false)}>
+                {msg('rec.publicExit')}
+              </Button>
             ) : null}
             {state.clockSuspect ? <Pill tone="warn">{msg('counter.clockSuspect')}</Pill> : null}
             {speechDegraded ? <Pill tone="warn">{msg('counter.speechDegraded')}</Pill> : null}
@@ -462,7 +565,7 @@ export default function CounterScreen() {
               count={figures ? figures.currentNo : (totals?.baskets ?? 0)}
               onCount={onCount}
               onReject={onReject}
-              enabled={countable}
+              enabled={countable && (!figures || state.saleStatus === 'draft')}
               caption={countable ? expected : msg('counter.pileNotReady')}
               holdMs={holdMsOverride() ?? deviceHoldMs}
             />
@@ -479,11 +582,11 @@ export default function CounterScreen() {
                 borderTopColor: t.color.rule,
               }}
             >
-              {confirmUndo && lastBasket ? (
-                <UndoConfirmRow event={lastBasket} onConfirm={() => doUndo()} onCancel={() => setConfirmUndo(false)} />
+              {confirmUndo && classicUndo ? (
+                <UndoConfirmRow event={classicUndo} onConfirm={() => doUndo(classicUndo)} onCancel={() => setConfirmUndo(false)} />
               ) : (
                 <>
-                  <Button testID="undo" onPress={() => setConfirmUndo(true)} disabled={!lastBasket}>
+                  <Button testID="undo" onPress={() => setConfirmUndo(true)} disabled={!classicUndo}>
                     {`↺ ${msg('counter.undo')}`}
                   </Button>
                   <Button testID="short" onPress={openShort} disabled={!countable || shortOpen}>

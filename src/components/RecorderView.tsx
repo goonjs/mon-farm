@@ -23,6 +23,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { compactBaht } from '../core/compact-baht';
 import { formatKg } from '../core/settle';
 import type { RecorderFigures } from '../core/sale-points';
+import type { SaleStatus } from '../core/types';
 import { useT } from '../i18n';
 import { useTheme } from '../theme';
 import { HoldStage, type HoldStageProps } from './HoldStage';
@@ -62,6 +63,12 @@ export interface RecorderViewProps {
   readonly onRowPress?: (id: string) => void;
   /** The row editor, shown in the list sheet in place of the rows while open. */
   readonly editor?: ReactNode;
+  /** The sale's business status (E04-S11), as a chip under the title. */
+  readonly status?: SaleStatus;
+  /** More ⋯ menu entries (E04-S11: complete / cancel the sale). */
+  readonly menuItems?: readonly { testID: string; label: string; onPress: () => void; disabled?: boolean; hint?: string }[];
+  /** Over everything: a prompt that must be answered first (E04-S11 money reason, cancel confirm). */
+  readonly overlay?: ReactNode;
 }
 
 export function RecorderView(props: RecorderViewProps) {
@@ -100,7 +107,20 @@ export function RecorderView(props: RecorderViewProps) {
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={text(th.font.size.headingLg, 'bold')}>{t('rec.title')}</Text>
-          <Text style={text(th.font.size.caption, 'regular', th.color.inkSoft)}>{t('rec.saleOf', { date: props.saleDate })}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: th.space.xs }}>
+            <Text style={text(th.font.size.caption, 'regular', th.color.inkSoft)}>{t('rec.saleOf', { date: props.saleDate })}</Text>
+            {props.status ? (
+              <Text
+                testID="rec-status"
+                style={[
+                  text(th.font.size.caption, 'bold', props.status === 'cancelled' ? th.color.reject : props.status === 'completed' ? th.color.accept : th.color.inkSoft),
+                  { paddingHorizontal: th.space.xs, borderRadius: th.radius.sm, borderWidth: th.border.hair, borderColor: th.color.rule },
+                ]}
+              >
+                {t(`status.${props.status}`)}
+              </Text>
+            ) : null}
+          </View>
         </View>
         <View
           testID="rec-sync"
@@ -213,6 +233,12 @@ export function RecorderView(props: RecorderViewProps) {
         >
           <MenuItem testID="rec-menu-list" label={t('rec.list')} onPress={() => { setMenu(false); setList(true); }} />
           <MenuItem testID="rec-menu-finish" label={t('rec.finish')} onPress={() => { setMenu(false); props.onFinish(); }} />
+          {(props.menuItems ?? []).map((m) => (
+            <View key={m.testID}>
+              <MenuItem testID={m.testID} label={m.label} disabled={m.disabled} onPress={() => { setMenu(false); m.onPress(); }} />
+              {m.hint ? <Text style={[text(th.font.size.small, 'regular', th.color.inkSoft), { paddingHorizontal: th.space.sm }]}>{m.hint}</Text> : null}
+            </View>
+          ))}
         </View>
       ) : null}
 
@@ -280,6 +306,10 @@ export function RecorderView(props: RecorderViewProps) {
           </ScrollView>
         </View>
       ) : null}
+
+      {props.overlay ? (
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: th.space.md }}>{props.overlay}</View>
+      ) : null}
     </View>
   );
 }
@@ -338,11 +368,18 @@ function BottomButton({ testID, icon, label, onPress, enabled = true }: { testID
   );
 }
 
-function MenuItem({ testID, label, onPress }: { testID: string; label: string; onPress: () => void }) {
+function MenuItem({ testID, label, onPress, disabled = false }: { testID: string; label: string; onPress: () => void; disabled?: boolean }) {
   const th = useTheme();
   return (
-    <Pressable testID={testID} accessibilityRole="button" onPress={onPress} style={{ minHeight: th.target.min, justifyContent: 'center', paddingHorizontal: th.space.sm }}>
-      <Text style={{ fontFamily: th.font.family.sans, fontSize: th.font.size.body, fontWeight: th.font.weight.bold, color: th.color.action }}>{label}</Text>
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={{ minHeight: th.target.min, justifyContent: 'center', paddingHorizontal: th.space.sm }}
+    >
+      <Text style={{ fontFamily: th.font.family.sans, fontSize: th.font.size.body, fontWeight: th.font.weight.bold, color: disabled ? th.color.inkFaint : th.color.action }}>{label}</Text>
     </Pressable>
   );
 }

@@ -266,6 +266,18 @@ export type SysPayload =
   | { readonly t: 'sale_closed' }
   | { readonly t: 'sale_reopened'; readonly reason: string }
   /**
+   * The sale's business status (E04-S11, SALE-20): Draft until marked
+   * Completed (needs a price) or Cancelled. Separate from `sale_closed`, which
+   * still gates counting and the settlement screen until the owner decides
+   * whether the S13 close/reopen lifecycle goes.
+   */
+  | { readonly t: 'sale_status_set'; readonly status: SaleStatus; readonly reason?: string }
+  /**
+   * A money-changing edit made after the sale was Completed (SALE-21): why,
+   * and which event it changed. Read by E05-S05 as "recheck this payment".
+   */
+  | { readonly t: 'money_edit'; readonly reason: string; readonly targetId: EventId }
+  /**
    * Written whether or not audio succeeded (FR-12.2, FR-11.10). The log records
    * what was ATTEMPTED plus whether it was heard, which is what makes silence
    * auditable rather than invisible.
@@ -542,11 +554,15 @@ export interface Deduction {
   readonly voidReason: string | null;
 }
 
+export type SaleStatus = 'draft' | 'completed' | 'cancelled';
+
 export interface SaleState {
   readonly id: SaleId;
   /** Soft-deleted (SYNC-10): hidden from the sale list, shown under "deleted". */
   readonly deleted: boolean;
   readonly status: OpenClosed;
+  /** Business status (E04-S11). Cancelled keeps its baskets but counts in no cross-sale total. */
+  readonly saleStatus: SaleStatus;
   readonly startedTs: number | null;
   readonly parties: {
     readonly farmName: string;

@@ -188,3 +188,95 @@ describe('E04-S09 — undo, edit and void from the recorder', () => {
     expect(screen.getByTestId('rec-current')).toHaveTextContent('3');
   });
 });
+
+describe('E04-S11 — sale status on the recorder', () => {
+  async function open(saleId: string, price: number | null) {
+    const ids = await setup(saleId, price);
+    render(saleId);
+    await flush();
+    await flush();
+    return ids;
+  }
+  const status = async (saleId: string) =>
+    ((await mockEventStore.load(saleId)) as { kind: string; payload?: { t: string } & Record<string, unknown> }[])
+      .filter((e) => e.kind === 'sys' && (e.payload?.t === 'sale_status_set' || e.payload?.t === 'money_edit'))
+      .map((e) => e.payload);
+
+  it('completing needs a price: without one the menu item is off and says why', async () => {
+    await open('sale-s11-1', null);
+    expect(screen.getByTestId('rec-status')).toHaveTextContent('ร่าง');
+    fireEvent.press(screen.getByTestId('rec-menu'));
+    expect(screen.getByTestId('rec-menu-complete').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId('rec-menu-sheet')).toHaveTextContent(/ใส่ราคาก่อน/);
+  });
+
+  it('completed: holds stop; an edit that changes money asks for a reason and flags it', async () => {
+    await open('sale-s11-2', 4_850);
+    fireEvent.press(screen.getByTestId('rec-menu'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('rec-menu-complete'));
+    });
+    await flush();
+    expect(screen.getByTestId('rec-status')).toHaveTextContent('เสร็จสิ้น');
+    expect(screen.getByTestId('rec-short').props.accessibilityState).toMatchObject({ disabled: true });
+
+    fireEvent.press(screen.getByTestId('rec-menu'));
+    fireEvent.press(screen.getByTestId('rec-menu-list'));
+    fireEvent.press(screen.getByTestId('rec-row-1'));
+    fireEvent.changeText(screen.getByTestId('edit-kg'), '45');
+    fireEvent.press(screen.getByTestId('edit-save'));
+    // No reason yet: nothing is written.
+    expect(screen.getByTestId('money-reason')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('reason-confirm'));
+    expect(screen.getByText('เลือกหรือพิมพ์เหตุผล')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('reason-0'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('reason-confirm'));
+    });
+    await flush();
+    expect(screen.getByTestId('rec-card-kg')).toHaveTextContent(/80\s*กก\./);
+    expect(await status('sale-s11-2')).toMatchObject([{ t: 'sale_status_set', status: 'completed' }, { t: 'money_edit', reason: 'ชั่งผิด' }]);
+  });
+
+  it('a typed reason (อื่นๆ) works for an undo after completed', async () => {
+    await open('sale-s11-3', 4_850);
+    fireEvent.press(screen.getByTestId('rec-menu'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('rec-menu-complete'));
+    });
+    await flush();
+    fireEvent.press(screen.getByTestId('rec-undo'));
+    fireEvent.press(screen.getByTestId('undo-confirm'));
+    fireEvent.press(screen.getByTestId('reason-other'));
+    fireEvent.changeText(screen.getByTestId('reason-text'), 'คนกรีดแจ้ง');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('reason-confirm'));
+    });
+    await flush();
+    expect(screen.getByTestId('rec-current')).toHaveTextContent('2');
+    expect((await status('sale-s11-3')).at(-1)).toMatchObject({ t: 'money_edit', reason: 'คนกรีดแจ้ง' });
+  });
+
+  it('a draft sale edits without asking; cancel asks once and is not a delete', async () => {
+    await open('sale-s11-4', null);
+    fireEvent.press(screen.getByTestId('rec-menu'));
+    fireEvent.press(screen.getByTestId('rec-menu-list'));
+    fireEvent.press(screen.getByTestId('rec-row-1'));
+    fireEvent.changeText(screen.getByTestId('edit-kg'), '45');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('edit-save'));
+    });
+    await flush();
+    expect(screen.queryByTestId('money-reason')).toBeNull();
+    fireEvent.press(screen.getByTestId('rec-list-close'));
+    fireEvent.press(screen.getByTestId('rec-menu'));
+    fireEvent.press(screen.getByTestId('rec-menu-cancel'));
+    expect(screen.getByTestId('cancel-sale-body')).toHaveTextContent(/ไม่นับในยอด/);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('cancel-sale-confirm'));
+    });
+    await flush();
+    expect(screen.getByTestId('rec-status')).toHaveTextContent('ยกเลิกแล้ว');
+    expect(await status('sale-s11-4')).toMatchObject([{ t: 'sale_status_set', status: 'cancelled' }]);
+  });
+});

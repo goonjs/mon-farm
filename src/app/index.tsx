@@ -155,6 +155,20 @@ function SaleRow({ sale, onDelete }: { sale: SaleState; onDelete: () => void }) 
             </Button>
           </Link>
         </View>
+        {/* E04-S11: a finished sale says so; a draft needs no chip. */}
+        {sale.saleStatus !== 'draft' ? (
+          <Text
+            testID={`sale-status-${sale.id}`}
+            style={{
+              fontFamily: t.font.family.sans,
+              fontSize: t.font.size.small,
+              fontWeight: t.font.weight.bold,
+              color: sale.saleStatus === 'cancelled' ? t.color.reject : t.color.accept,
+            }}
+          >
+            {msg(`status.${sale.saleStatus}`)}
+          </Text>
+        ) : null}
         {!confirming && (
           <Button
             testID={`delete-${sale.id}`}

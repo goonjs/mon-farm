@@ -33,6 +33,7 @@ import {
   validateProperty,
 } from '../core/master';
 import { projectSale } from '../core/project';
+import { statusCountsAsClosed } from '../core/sale-status';
 import type { BuiltinRole, Crop, Gps, MasterPayload, NumberingMode, PersonId, SaleEvent, ScaleType, ZeroCheckMode } from '../core/types';
 import { uuidv7 } from '../lib/id';
 import type { DeviceClock } from './device-clock';
@@ -260,7 +261,8 @@ export class MasterStore implements PeopleStore {
     let latest: string | null = null;
     for (const id of await this.events.listSales()) {
       const sale = projectSale(await this.events.load(id), id);
-      if (sale.deleted || sale.status !== 'closed' || sale.startedTs === null) continue;
+      // Completed or closed counts; a Cancelled sale never does (E04-S11).
+      if (sale.deleted || !statusCountsAsClosed(sale) || sale.startedTs === null) continue;
       if (!sale.zones.some((z) => z.contract?.personId === tapperId)) continue;
       const day = todayIso(sale.startedTs);
       if (!latest || day > latest) latest = day;
