@@ -14,7 +14,7 @@
  */
 
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { checkExpense, defaultPayer, isDerivedExpense, type Expense } from '../../core/finance/ledger';
@@ -27,7 +27,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, Button, Card, CTA, FactRow, PersonIcon, PinnedActions, ReceiptIcon, ScreenHeader, SegmentedControl, TextField } from '../../ui';
+import { AppText, Button, Card, FactRow, PersonIcon, ReceiptIcon, ScreenHeader, SegmentedControl, TextField, type HeaderPrimaryAction } from '../../ui';
 import { useFarms } from './expenses-screen';
 import { ChoiceChip, ChoiceRow, NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
 
@@ -46,19 +46,28 @@ export function ExpenseFormScreen() {
   const existing = id && id !== 'new' ? fin.state?.expenses.find((x) => x.id === id) ?? null : null;
   const ready = fin.state !== null && (id === 'new' || existing !== null) && fin.deviceId !== null;
 
+  const header = (action?: HeaderPrimaryAction) => (
+    <ScreenHeader
+      title={msg(existing ? 'fin.form.titleEdit' : 'fin.form.titleNew')}
+      back={{ label: msg('v2.back'), onPress: leave, testID: 'expense-back' }}
+      sync={sync}
+      action={action}
+    />
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <ScreenHeader
-        title={msg(existing ? 'fin.form.titleEdit' : 'fin.form.titleNew')}
-        back={{ label: msg('v2.back'), onPress: leave, testID: 'expense-back' }}
-        sync={sync}
-      />
-      {ready ? <Form key={existing?.headEventId ?? 'new'} existing={existing} fin={fin} /> : <AppText variant="bodySm" style={{ padding: t.space.lg }}>{msg('counter.loading')}</AppText>}
+      {ready ? <Form key={existing?.headEventId ?? 'new'} existing={existing} fin={fin} header={header} /> : (
+        <>
+          {header()}
+          <AppText variant="bodySm" style={{ padding: t.space.lg }}>{msg('counter.loading')}</AppText>
+        </>
+      )}
     </View>
   );
 }
 
-function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typeof useFinance> }) {
+function Form({ existing, fin, header }: { existing: Expense | null; fin: ReturnType<typeof useFinance>; header: (action?: HeaderPrimaryAction) => ReactNode }) {
   const t = useTheme();
   const msg = useT();
   const state = fin.state!;
@@ -198,6 +207,7 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
 
   return (
     <>
+      {header({ label: msg('fin.form.save'), testID: 'expense-save', saving: inFlight.busy, onPress: () => void inFlight.run(save) })}
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
         {existing?.deleted ? (
           <Card style={{ backgroundColor: t.color.warnSunk }}>
@@ -373,11 +383,6 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
         ) : null}
         <Text style={{ height: 1 }} />
       </ScrollView>
-      <PinnedActions>
-        <CTA testID="expense-save" disabled={inFlight.busy} onPress={() => void inFlight.run(save)}>
-          {msg('fin.form.save')}
-        </CTA>
-      </PinnedActions>
     </>
   );
 }
