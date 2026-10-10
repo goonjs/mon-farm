@@ -134,6 +134,12 @@ export class LogBuilder {
     return this;
   }
 
+  /** The re-recorded short basket of an edit (E04-S09). */
+  editShortAt(editOf: string, pointId: string, basketNo: number, readingG: number, tareG = 2_000): this {
+    this.events.push({ ...this.base(), kind: 'short', pileId: pointId, pointId, basketNo, readingG, tareG, editOf });
+    return this;
+  }
+
   /** An off-standard basket, given its gross scale reading. */
   short(pileId: string, readingG: number, tareG = 2_000): this {
     this.events.push({ ...this.base(), kind: 'short', pileId, readingG, tareG });

@@ -372,8 +372,11 @@ describe('E04-S06 — open short baskets and bridging on the recorder', () => {
     expect(screen.getByTestId('rec-card-short')).toHaveTextContent(/เข่งไม่เต็ม 1.*เหลือเติม.*15\s*กก\./);
     expect(screen.getByTestId('rec-open')).toHaveTextContent(/เข่ง 1 เปิดอยู่ · 35 กก\..*ตาชั่ง 37 - น้ำหนักเข่ง 2/);
     expect(screen.getByTestId('hold-label')).toHaveTextContent(/เข่ง 1 รอเติม/);
+    // It cannot be undone, so it asks once (review fix).
+    fireEvent.press(screen.getByTestId('rec-close-basket'));
+    expect((await log('sale-s06-1')).filter((e) => e.payload?.t === 'basket_closed')).toEqual([]);
     await act(async () => {
-      fireEvent.press(screen.getByTestId('rec-close-basket'));
+      fireEvent.press(screen.getByTestId('rec-close-basket-yes'));
     });
     await flush();
     expect((await log('sale-s06-1')).filter((e) => e.payload?.t === 'basket_closed')).toMatchObject([{ payload: { basketId: rootId, reason: 'scrap' } }]);
@@ -402,6 +405,23 @@ describe('E04-S06 — open short baskets and bridging on the recorder', () => {
     await flush();
     expect((await log('sale-s06-3')).filter((e) => e.payload?.t === 'basket_closed')).toMatchObject([{ payload: { basketId: rootId, reason: 'next' } }]);
     expect(screen.getByTestId('rec-current')).toHaveTextContent('2');
+  });
+
+  it('closing the sheet puts the choice off: nothing is written, nothing is weighed, and it can be chosen again (review fix)', async () => {
+    await bridge('sale-s06-5', 'B');
+    const before = (await log('sale-s06-5')).length;
+    fireEvent.press(screen.getByLabelText('ปิด'));
+    expect(screen.queryByTestId('fill-sheet')).toBeNull();
+    expect(screen.getByTestId('rec-short').props.accessibilityState).toMatchObject({ disabled: true });
+    expect((await log('sale-s06-5')).length).toBe(before);
+    fireEvent.press(screen.getByTestId('rec-fill-choose'));
+    expect(screen.getByTestId('fill-sheet')).toBeTruthy();
+  });
+
+  it('public mode waits too: with the basket open here, no hold and no short basket (review fix)', async () => {
+    await bridge('sale-s06-6', 'A');
+    fireEvent.press(screen.getByTestId('rec-public'));
+    expect(screen.getByTestId('short').props.accessibilityState).toMatchObject({ disabled: true });
   });
 
   it("another tapper's point closes it short without asking (SALE-12)", async () => {

@@ -27,11 +27,32 @@ export interface BasketGroup {
   readonly status: 'open' | 'full' | 'closed';
 }
 
-/** Point baskets that started short, with their parts. `stdNetGOf` is the standard net of a pile. */
-export function basketGroups(events: readonly SaleEvent[], stdNetGOf: (pileId: string) => number): Map<string, BasketGroup> {
+/**
+ * Point baskets that started short, with their parts. `stdNetGOf` is the
+ * standard net of a pile. With `sequenceOf` (the number sequence of a point),
+ * a short basket is also closed once a later basket of its sequence exists —
+ * logs from before E04-S06, and a basket the recorder already moved past.
+ */
+export function basketGroups(
+  events: readonly SaleEvent[],
+  stdNetGOf: (pileId: string) => number,
+  sequenceOf?: (pointId: string) => string,
+): Map<string, BasketGroup> {
   const live = liveBaskets(events);
   const closed = new Set<string>();
-  for (const e of events) if (e.kind === 'sys' && e.payload.t === 'basket_closed') closed.add(e.payload.basketId);
+  for (const e of [...events].sort(compareEvents)) {
+    if (e.kind === 'sys' && e.payload.t === 'basket_closed') closed.add(e.payload.basketId);
+    // An edit re-records a basket under a new id: a close follows it (review fix).
+    if ((e.kind === 'accept' || e.kind === 'short') && e.editOf && closed.has(e.editOf)) closed.add(e.id);
+  }
+  const top = new Map<string, number>();
+  if (sequenceOf) {
+    for (const b of live) {
+      if (b.partOf || !b.pointId || b.basketNo === undefined) continue;
+      const seq = sequenceOf(b.pointId);
+      top.set(seq, Math.max(top.get(seq) ?? 0, b.basketNo));
+    }
+  }
   const out = new Map<string, BasketGroup>();
   for (const root of live) {
     // A backfilled short basket is history (E04-S10): closed as entered, never open.
@@ -39,7 +60,10 @@ export function basketGroups(events: readonly SaleEvent[], stdNetGOf: (pileId: s
     const parts = [root, ...live.filter((b) => b.partOf === root.id)].sort(compareEvents);
     const partsG = parts.map(basketNetG);
     const netG = partsG.reduce((a, b) => a + b, 0);
-    const status = netG >= stdNetGOf(root.pileId) ? 'full' : closed.has(root.id) || root.backfill ? 'closed' : 'open';
+    const std = stdNetGOf(root.pileId);
+    const movedPast = sequenceOf ? (top.get(sequenceOf(root.pointId)) ?? 0) > root.basketNo : false;
+    // No standard weight known for the pile: nothing to fill up to, so never open.
+    const status = netG >= std ? 'full' : closed.has(root.id) || root.backfill || movedPast || !Number.isFinite(std) ? 'closed' : 'open';
     out.set(root.id, { rootId: root.id, basketNo: root.basketNo, pointId: root.pointId, parts, partsG, netG, status });
   }
   return out;
@@ -51,6 +75,8 @@ export interface OpenBasket {
   readonly pointId: string;
   readonly haveG: number;
   readonly missingG: number;
+  /** Its own basket weight: filling it up weighs this basket, wherever it is now (review fix). */
+  readonly tareG: number;
 }
 
 const sequence = (pointId: string, mode: NumberingMode, master: MasterState, day: string) => {
@@ -69,7 +95,7 @@ export function openBasketIn(
 ): OpenBasket | null {
   const seq = sequence(pointId, mode, master, day);
   let best: BasketGroup | null = null;
-  for (const g of basketGroups(events, stdNetGOf).values()) {
+  for (const g of basketGroups(events, stdNetGOf, (p) => sequence(p, mode, master, day)).values()) {
     if (g.status !== 'open' || sequence(g.pointId, mode, master, day) !== seq) continue;
     if (!best || g.basketNo > best.basketNo) best = g;
   }
@@ -81,6 +107,7 @@ export function openBasketIn(
     pointId: best.pointId,
     haveG: best.netG,
     missingG: Math.max(0, stdNetGOf(root.pileId) - best.netG),
+    tareG: root.tareG,
   };
 }
 
@@ -99,8 +126,13 @@ export function tapperChangeClosures(
 ): string[] {
   if (mode !== 'per-tapper') return [];
   const here = tapperOn(master, pointId, day);
-  return [...basketGroups(events, stdNetGOf).values()]
-    .filter((g) => g.status === 'open' && tapperOn(master, g.pointId, day) !== here)
+  // A point with no tapper is nobody's next point: it closes nothing (review fix).
+  if (!here) return [];
+  return [...basketGroups(events, stdNetGOf, (p) => sequence(p, mode, master, day)).values()]
+    .filter((g) => {
+      const theirs = tapperOn(master, g.pointId, day);
+      return g.status === 'open' && theirs !== null && theirs !== here;
+    })
     .map((g) => g.rootId);
 }
 

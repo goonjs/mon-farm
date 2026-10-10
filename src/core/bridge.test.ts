@@ -81,3 +81,33 @@ describe('E04-S06 — open short baskets and bridge baskets (SALE-9…13, D-42)'
     expect(saleTotals(b.build())).toMatchObject({ baskets: 2, netG: 30_000 });
   });
 });
+
+describe('review fixes — E04-S06', () => {
+  it('a later basket in the same sequence closes an earlier short one (old logs, and after it was finished)', () => {
+    const b = sale().shortAt('p1', 3, 30_000).acceptAt('p1', 4);
+    const root = b.build().at(-2)!;
+    expect(basketGroups(b.build(), STD, (p) => (p === 'p3' ? 't:nat' : 't:red')).get(root.id)?.status).toBe('closed');
+    expect(openBasketIn(b.build(), master(), DAY, 'p1', 'per-tapper', STD)).toBeNull();
+    expect(recorderFigures(b.build(), master(), DAY, 'p1', 'per-tapper', null).currentNo).toBe(5);
+  });
+
+  it('editing a finished short basket keeps it finished (the close follows the edit)', () => {
+    const b = sale().shortAt('p1', 1, 22_000);
+    const root = b.build().at(-1)!;
+    b.sys({ t: 'basket_closed', basketId: root.id, reason: 'scrap' });
+    b.void('p1', root.id, 'edit');
+    b.editShortAt(root.id, 'p1', 1, 27_000);
+    expect(openBasketIn(b.build(), master(), DAY, 'p1', 'per-tapper', STD)).toBeNull();
+  });
+
+  it('a point with no tapper closes nobody\'s basket; a pile with no standard weight is never open', () => {
+    const b = sale().shortAt('p1', 1, 22_000);
+    expect(tapperChangeClosures(b.build(), master(), DAY, 'nobody', 'per-tapper', STD)).toEqual([]);
+    expect(openBasketIn(b.build(), master(), DAY, 'p1', 'per-tapper', () => Number.POSITIVE_INFINITY)).toBeNull();
+  });
+
+  it('the open basket says its own basket weight: filling it up reads its own basket, not this point\'s', () => {
+    const b = sale().shortAt('p1', 1, 23_000, 3_000);
+    expect(openBasketIn(b.build(), master(), DAY, 'p2', 'per-tapper', STD)).toMatchObject({ haveG: 20_000, missingG: 30_000, tareG: 3_000 });
+  });
+});

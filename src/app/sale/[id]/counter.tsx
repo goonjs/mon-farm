@@ -163,7 +163,9 @@ export default function CounterScreen() {
 
   // E04-S06: the open short basket of this point's number sequence, and how
   // this point carries it on ('full' = fill it up, 'part' = weigh the top-up).
-  const [fill, setFill] = useState<{ rootId: string; mode: 'full' | 'part' } | null>(null);
+  // 'later' = the choice sheet was closed without choosing: the basket waits, nothing is written.
+  const [fill, setFill] = useState<{ rootId: string; mode: 'full' | 'part' | 'later' } | null>(null);
+  const [confirmCloseBasket, setConfirmCloseBasket] = useState(false);
   const numberingMode = master ? saleNumbering(events, saleSettings(master).numbering) : 'per-tapper';
   const saleDay = todayIso(state.startedTs ?? now);
   const openBasket =
@@ -215,7 +217,12 @@ export default function CounterScreen() {
   const nextCount = (totals?.baskets ?? 0) + 1;
 
   // Carrying on a basket opened at another point of the same tapper, in the way chosen.
-  const filling = openBasket && openBasket.pointId !== pile.id && fill?.rootId === openBasket.rootId ? fill.mode : null;
+  const chosen = openBasket && openBasket.pointId !== pile.id && fill?.rootId === openBasket.rootId ? fill.mode : null;
+  const filling = chosen === 'full' || chosen === 'part' ? chosen : null;
+  const openHere = !!openBasket && openBasket.pointId === pile.id;
+  // At the tapper's next point, nothing is weighed until a way on is chosen (review fix: also in public mode).
+  const choosing = !!openBasket && !openHere && !filling;
+  const sheetDismissed = chosen === 'later';
 
   const onCount = () => {
     if (filling && openBasket) {
@@ -257,7 +264,8 @@ export default function CounterScreen() {
   const openShort = () => {
     // "เติมไม่ถึง": start from what the scale should read for the way chosen.
     if (filling && openBasket) {
-      setShortReadingG(pile.tareG + (filling === 'full' ? openBasket.haveG + openBasket.missingG : openBasket.missingG));
+      // Filling up weighs the basket's own basket; weighing the top-up alone uses this point's (review fix).
+      setShortReadingG(filling === 'full' ? openBasket.tareG + openBasket.haveG + openBasket.missingG : pile.tareG + openBasket.missingG);
       setShortOpen(true);
       return;
     }
@@ -275,7 +283,7 @@ export default function CounterScreen() {
         kind: 'short',
         pileId: pile.id,
         readingG: shortReadingG,
-        tareG: pile.tareG + (filling === 'full' ? openBasket.haveG : 0),
+        tareG: filling === 'full' ? openBasket.tareG + openBasket.haveG : pile.tareG,
         ...(skewG ? { skewG } : {}),
         pointId: pile.id,
         basketNo: openBasket.basketNo,
@@ -393,8 +401,6 @@ export default function CounterScreen() {
 
     // E04-S06: an open short basket here waits to be filled at the tapper's next
     // point (or is finished short); at that next point, the way on is chosen first.
-    const openHere = !!openBasket && openBasket.pointId === pile.id;
-    const choosing = !!openBasket && !openHere && !filling;
     const kgText = (g: number) => `${formatKg(g)} ${msg('rec.kgUnit')}`;
     const openRoot = openBasket ? (events.find((e) => e.id === openBasket.rootId) as BasketEvent | undefined) : undefined;
     const tapperName = tapperId ? (master.people.find((p) => p.id === tapperId)?.name ?? '') : '';
@@ -412,7 +418,7 @@ export default function CounterScreen() {
           ? msg('rec.waitFillHint', { name: tapperName })
           : msg('rec.waitFillPoint')
         : openBasket && filling === 'full'
-          ? `${msg('rec.shouldRead')} ${kgText(expectedReadingG(pile.stdNetG, pile.tareG, skewG))} · ${msg('fill.sum', {
+          ? `${msg('rec.shouldRead')} ${kgText(expectedReadingG(openBasket.haveG + openBasket.missingG, openBasket.tareG, skewG))} · ${msg('fill.sum', {
               have: formatKg(openBasket.haveG),
               add: formatKg(openBasket.missingG),
               total: formatKg(openBasket.haveG + openBasket.missingG),
@@ -500,7 +506,8 @@ export default function CounterScreen() {
           holdCaption={fillCaption}
           shortLabel={filling ? msg('fill.short') : undefined}
           openCard={
-            openBasket && openHere ? (
+            // At its own point, while filling it at the next one, or after the choice was put off (review fixes).
+            openBasket && (openHere || filling || sheetDismissed) ? (
               <View
                 testID="rec-open"
                 style={{ backgroundColor: t.color.warnSunk, borderRadius: t.radius.lg, padding: t.space.md, gap: t.space.xs }}
@@ -513,32 +520,56 @@ export default function CounterScreen() {
                     {msg('rec.openReading', { reading: formatKg(openRoot.readingG), tare: formatKg(openRoot.tareG) })}
                   </Text>
                 ) : null}
-                <Button
-                  testID="rec-close-basket"
-                  onPress={() => append({ kind: 'sys', payload: { t: 'basket_closed', basketId: openBasket.rootId, reason: 'scrap' } })}
-                  disabled={!draft}
-                >
-                  {`⚑ ${msg('rec.closeBasket')}`}
-                </Button>
+                {sheetDismissed ? (
+                  <Button testID="rec-fill-choose" onPress={() => setFill(null)}>
+                    {msg('fill.choose')}
+                  </Button>
+                ) : null}
+                {/* Finishing it short cannot be undone, so it asks once (review fix). */}
+                {confirmCloseBasket ? (
+                  <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+                    <View style={{ flex: 1 }}>
+                      <Button testID="rec-close-basket-no" onPress={() => setConfirmCloseBasket(false)}>
+                        {msg('common.cancel')}
+                      </Button>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        testID="rec-close-basket-yes"
+                        variant="destructive"
+                        onPress={() => {
+                          append({ kind: 'sys', payload: { t: 'basket_closed', basketId: openBasket.rootId, reason: 'scrap' } });
+                          setConfirmCloseBasket(false);
+                        }}
+                      >
+                        {msg('fill.closeYes', { n: openBasket.basketNo })}
+                      </Button>
+                    </View>
+                  </View>
+                ) : (
+                  <Button testID="rec-close-basket" onPress={() => setConfirmCloseBasket(true)} disabled={!draft}>
+                    {`⚑ ${msg('rec.closeBasket')}`}
+                  </Button>
+                )}
               </View>
             ) : undefined
           }
           sheet={
-            openBasket && choosing && draft ? (
+            openBasket && choosing && !sheetDismissed && draft ? (
               <FillChoiceSheet
                 basketNo={openBasket.basketNo}
                 haveG={openBasket.haveG}
                 missingG={openBasket.missingG}
                 fromPoint={`${master.properties.find((f) => f.id === master.points.find((x) => x.id === openBasket.pointId)?.propertyId)?.name ?? ''} ${pointName(openBasket.pointId)}`.trim()}
                 tapperName={tapperName}
-                fullReadG={expectedReadingG(pile.stdNetG, pile.tareG, skewG)}
+                fullReadG={expectedReadingG(openBasket.haveG + openBasket.missingG, openBasket.tareG, skewG)}
                 partReadG={expectedReadingG(openBasket.missingG, pile.tareG, skewG)}
                 tareG={pile.tareG}
                 nextNo={nextBasketNo(events, pile.id, numbering, (id) => tapperOn(master, id, day))}
                 onFull={() => setFill({ rootId: openBasket.rootId, mode: 'full' })}
                 onPart={() => setFill({ rootId: openBasket.rootId, mode: 'part' })}
                 onNext={() => append({ kind: 'sys', payload: { t: 'basket_closed', basketId: openBasket.rootId, reason: 'next' } })}
-                onClose={() => undefined}
+                onClose={() => setFill({ rootId: openBasket.rootId, mode: 'later' })}
               />
             ) : undefined
           }
@@ -739,7 +770,7 @@ export default function CounterScreen() {
               count={figures ? figures.currentNo : (totals?.baskets ?? 0)}
               onCount={onCount}
               onReject={onReject}
-              enabled={countable && !finished}
+              enabled={countable && !finished && !openHere && !choosing}
               caption={countable ? expected : msg('counter.pileNotReady')}
               holdMs={holdMsOverride() ?? deviceHoldMs}
             />
@@ -763,7 +794,7 @@ export default function CounterScreen() {
                   <Button testID="undo" onPress={() => setConfirmUndo(true)} disabled={!classicUndo}>
                     {`↺ ${msg('counter.undo')}`}
                   </Button>
-                  <Button testID="short" onPress={openShort} disabled={!countable || shortOpen || finished}>
+                  <Button testID="short" onPress={openShort} disabled={!countable || shortOpen || finished || openHere || choosing}>
                     {`⚖ ${msg('short.open')}`}
                   </Button>
                   <Button

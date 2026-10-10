@@ -6,6 +6,13 @@ import { projectSale } from './project';
 import { basketList, nextBasketNo, parseKgG, sameSequence, parsePrice, pointChoices, pointSetupPayloads, recorderFigures, saleNumbering, saleRollup } from './sale-points';
 import type { MasterPayload, NumberingMode, SaleEvent } from './types';
 
+/** A sale whose points are piles with a standard weight (needed for open short baskets, E04-S06). */
+const withPiles = () => {
+  const b = new LogBuilder('sale-x');
+  for (const p of ['p1', 'p2', 'p3', 'p4']) b.sys({ t: 'pile_added', pileId: p, zoneId: 'fA', name: p, tareG: 2_000, stdNetG: 50_000 });
+  return b;
+};
+
 /** Farm: สวน ก (p1, p2 → แดง; p4 → นัด), สวน ข (p3 → แดง). */
 function master() {
   const events: SaleEvent[] = [];
@@ -176,7 +183,7 @@ describe('E04-S05 — the recorder figures (SALE-14, D-40)', () => {
 
   it('a short basket stays open until it is closed (E04-S06 replaces "while it is the last one")', () => {
     const m = master();
-    const b = new LogBuilder('sale-x').acceptAt('p1', 1).shortAt('p1', 2, 37_000);
+    const b = withPiles().acceptAt('p1', 1).shortAt('p1', 2, 37_000);
     const short = b.build().at(-1)!;
     expect(recorderFigures(b.build(), m, DAY, 'p1', 'per-tapper', null)).toMatchObject({ openShortG: 35_000, currentNo: 2, done: 1 });
     b.sys({ t: 'basket_closed', basketId: short.id, reason: 'scrap' });
@@ -261,7 +268,7 @@ describe('review fixes — E04-S05/S09', () => {
 
   it('an edited old short basket is not the open short basket; a real open short stays (B1)', () => {
     const m = master();
-    const b = new LogBuilder('sale-x').shortAt('p1', 1, 30_000).acceptAt('p1', 2).shortAt('p1', 3, 37_000);
+    const b = withPiles().shortAt('p1', 1, 30_000).acceptAt('p1', 2).shortAt('p1', 3, 37_000);
     const first = b.build()[0];
     b.void('p1', first.id, 'edit');
     b.editAt(first.id, 'p1', 1, 20_000);
