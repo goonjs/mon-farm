@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MASTER_SCOPE,
+  tapperPointsNow,
   blankStartAllowed,
   parsePlantedYear,
   plannedVacancies,
@@ -602,5 +603,24 @@ describe('review fixes (independent review 2026-10-09)', () => {
     expect(areaOn(r.properties[0], '2026-10-01')).toBe(areaOn(a.properties[0], '2026-10-01'));
     expect(tapperOn(r, 'p1', '2026-10-01')).toBe(tapperOn(a, 'p1', '2026-10-01'));
     expect(shareOn(r, 'red', '2026-10-01')).toEqual(shareOn(a, 'red', '2026-10-01'));
+  });
+});
+
+describe('tapperPointsNow — person detail (mockup v1.1.0 farm-05)', () => {
+  it('each point they tap today, with its farm, dates and whether a change is planned', () => {
+    const s = projectMaster(
+      log()
+        .master({ t: 'property_added', propertyId: 'f1', name: 'สวนจันทเขลม', crop: 'rubber' })
+        .master({ t: 'point_added', pointId: 'p1', propertyId: 'f1', name: 'จุด 1' })
+        .master({ t: 'point_added', pointId: 'p3', propertyId: 'f1', name: 'จุด 3' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a3', pointId: 'p3', tapperId: 'red' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a4', pointId: 'p3', tapperId: 'nat', from: '2026-11-01' })
+        .build(),
+    );
+    expect(tapperPointsNow(s, 'red', '2026-10-10')).toEqual([
+      { pointId: 'p1', name: 'จุด 1', farmName: 'สวนจันทเขลม', from: null, to: null, planned: false },
+      { pointId: 'p3', name: 'จุด 3', farmName: 'สวนจันทเขลม', from: null, to: '2026-10-31', planned: true },
+    ]);
   });
 });

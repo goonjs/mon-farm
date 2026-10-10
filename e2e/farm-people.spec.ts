@@ -64,6 +64,8 @@ test('people: create offline, survive a reload, filter, delete and restore', asy
   await shot('e03-s01-people-filter-tapper');
 
   await page.getByText('แดง', { exact: true }).click();
+  await expect(page.getByTestId('person-profile')).toContainText('แดง');
+  await shot('e03-person-detail');
   await page.getByTestId('person-delete').click();
   await expect(page.getByTestId('delete-confirm')).toContainText('กู้คืนได้');
   await shot('e03-s01-delete-confirm');
@@ -102,6 +104,9 @@ test('share: a tapper starts at 50/50; a custom share from a date is kept offlin
   await expect(page.getByTestId('add-person')).toBeVisible();
   await context.setOffline(true);
   await page.getByText('แดง', { exact: true }).click();
+  // The person's detail (farm-05) shows the share; it opens on its own screen.
+  await expect(page.getByTestId('share-summary')).toContainText('คนกรีดยาง 50%');
+  await page.getByTestId('share-summary').click();
   await expect(page.getByTestId('share-now')).toContainText('คนกรีดยาง 50%');
   await page.getByTestId('share-custom').click();
   await page.getByTestId('share-pct').fill('101');

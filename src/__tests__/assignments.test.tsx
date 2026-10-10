@@ -1,6 +1,7 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
+import { PersonDetail } from '../components/PersonDetail';
 import { PersonForm } from '../components/PersonForm';
 import { PointForm } from '../components/PointForm';
 import { tapperOn, todayIso } from '../core/master';
@@ -15,7 +16,7 @@ jest.mock('../store/people', () => {
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
   useFocusEffect: () => undefined,
-  useRouter: () => ({ back: jest.fn(), replace: jest.fn(), canGoBack: () => true }),
+  useRouter: () => ({ back: jest.fn(), replace: jest.fn(), push: jest.fn(), canGoBack: () => true }),
 }));
 
 async function flush() {
@@ -145,12 +146,12 @@ describe('People screen side (E03-S01 AC4/AC7, E03-S05)', () => {
     const { p, red } = await setup();
     await mockMaster.assignTapper(p.id, red.id, null);
     const onDone = jest.fn();
-    wrap(<PersonForm personId={red.id} onDone={onDone} />);
+    wrap(<PersonDetail personId={red.id} onEdit={jest.fn()} onDone={onDone} />);
     await flush();
     expect(screen.getByTestId('person-points')).toHaveTextContent(new RegExp(p.name));
     fireEvent.press(screen.getByTestId('person-delete'));
     expect(screen.getByTestId('delete-confirm')).toHaveTextContent(new RegExp(p.name));
-    expect(screen.getByTestId('delete-confirm')).toHaveTextContent(/ยังไม่มีคนกรีด/);
+    expect(screen.getByTestId('delete-confirm')).toHaveTextContent(/ยังไม่มีคนกรีดยาง/);
     await act(async () => {
       fireEvent.press(screen.getByTestId('delete-confirm-yes'));
     });

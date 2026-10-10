@@ -476,6 +476,34 @@ export function pointsOf(state: MasterState, tapperId: PersonId, day: string): P
   return activePoints(state).filter((p) => tapperOn(state, p.id, day) === tapperId);
 }
 
+export interface TapperPoint {
+  readonly pointId: string;
+  readonly name: string;
+  readonly farmName: string;
+  /** Their own segment on this point: from (null = no start date) to (inclusive, null = open). */
+  readonly from: string | null;
+  readonly to: string | null;
+  /** A change on this point starts after `day` — "มีแผนเปลี่ยน". */
+  readonly planned: boolean;
+}
+
+/** The points a tapper taps on `day`, for their detail screen (mockup v1.1.0 farm-05). */
+export function tapperPointsNow(state: MasterState, tapperId: PersonId, day: string): TapperPoint[] {
+  return pointsOf(state, tapperId, day).map((p) => {
+    const timeline = pointTimeline(state, p.id);
+    const mine = timeline.find((seg) => seg.tapperId === tapperId && (seg.from === null || seg.from <= day) && (seg.to === null || seg.to >= day));
+    const planned = timeline.some((seg) => seg.from !== null && seg.from > day) || plannedVacancies(state, p.id, day).length > 0;
+    return {
+      pointId: p.id,
+      name: p.name,
+      farmName: state.properties.find((f) => f.id === p.propertyId)?.name ?? '',
+      from: mine?.from ?? null,
+      to: mine?.to ?? null,
+      planned,
+    };
+  });
+}
+
 /** The ISO day before `day`. */
 export function dayBefore(day: string): string {
   const [y, m, d] = day.split('-').map(Number);
