@@ -97,13 +97,11 @@ export default function ExpensesScreen() {
         <ChipRow>
           <Chip testID="open-owed" onPress={() => router.push('/finance/owed')}>{`${msg('fin.list.owed')} ›`}</Chip>
           <Chip testID="open-debts" onPress={() => router.push('/finance/debts')}>{`${msg('debt.open')} ›`}</Chip>
-        </ChipRow>
-        {/* E11-S04..S08 */}
-        <ChipRow>
-          <Chip testID="open-salary" onPress={() => router.push('/finance/salary')}>{msg('sal.open')}</Chip>
-          <Chip testID="open-aid" onPress={() => router.push('/finance/aid')}>{msg('aid.open')}</Chip>
-          <Chip testID="open-income" onPress={() => router.push('/finance/income')}>{msg('inc.open')}</Chip>
-          <Chip testID="open-cashflow" onPress={() => router.push('/finance/cashflow')}>{msg('cf.open')}</Chip>
+          {/* E11-S04..S08 */}
+          <Chip testID="open-salary" onPress={() => router.push('/finance/salary')}>{`${msg('sal.open')} ›`}</Chip>
+          <Chip testID="open-aid" onPress={() => router.push('/finance/aid')}>{`${msg('aid.open')} ›`}</Chip>
+          <Chip testID="open-income" onPress={() => router.push('/finance/income')}>{`${msg('inc.open')} ›`}</Chip>
+          <Chip testID="open-cashflow" onPress={() => router.push('/finance/cashflow')}>{`${msg('cf.open')} ›`}</Chip>
         </ChipRow>
         <ChipRow>
           <Chip testID="filter-stage" on={!!filter.stage} onPress={() => set({ stage: nextStage(filter.stage) })}>
