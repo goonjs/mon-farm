@@ -13,13 +13,17 @@
  * never a silent undo.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Button, Pill, Tabs, TopBar } from '../../../components/chrome';
 import { HoldStage } from '../../../components/HoldStage';
 import { PileClosedTransition } from '../../../components/PileClosedTransition';
+import { BasketEditor } from '../../../components/BasketEditor';
+import { Card as FarmCard } from '../../../components/farm-ui';
+import { MoneyReasonPrompt } from '../../../components/MoneyReasonPrompt';
+import { RecorderView } from '../../../components/RecorderView';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { ShortBasketPanel } from '../../../components/ShortBasketPanel';
 import { ZeroTareGate } from '../../../components/ZeroTareGate';
@@ -33,10 +37,23 @@ import { useT, type Translate } from '../../../i18n';
 import { announceCount } from '../../../speech/announcer';
 import { speaker } from '../../../speech/speaker';
 import { useSpeech } from '../../../speech';
+import { formatThaiDate, saleSettings, tapperOn, todayIso, type MasterState } from '../../../core/master';
+import { basketList, nextBasketNo, pointSetupPayloads, recorderFigures, sameSequence, saleNumbering } from '../../../core/sale-points';
+import { canComplete } from '../../../core/sale-status';
+import { expectedReadingG, gateNeeded, saleSkewG } from '../../../core/scale-check';
+import { readHoldMs } from '../../../store/hold-preference';
+import { peopleStore } from '../../../store/people';
+import { store as eventStore } from '../../../store/store';
 import { useSale } from '../../../store/SaleProvider';
 import { useTheme, useThemeControls } from '../../../theme';
 
 type TabKey = 'count' | 'pile' | 'log';
+
+/** A money-changing edit from the recorder, waiting for its reason on a Completed sale (E04-S11). */
+type MoneyAction =
+  | { kind: 'undo' }
+  | { kind: 'edit'; id: string; change: { netG: number; pointId: string } }
+  | { kind: 'void'; id: string };
 
 /**
  * Message ids, resolved at the call site rather than here. `Tabs` stays a
@@ -63,6 +80,8 @@ type Overlay =
   | { kind: 'reopen-zone'; zoneId: string };
 
 export default function CounterScreen() {
+  // This device's hold time (E03-S07, D-7) — read once per visit to the counter.
+  const [deviceHoldMs] = useState(readHoldMs);
   const t = useTheme();
   const msg = useT();
   const router = useRouter();
@@ -72,7 +91,14 @@ export default function CounterScreen() {
   const [tab, setTab] = useState<TabKey>('count');
   const [shortOpen, setShortOpen] = useState(false);
   const [shortReadingG, setShortReadingG] = useState(0);
-  const [selectedPileId, setSelectedPileId] = useState<string | null>(null);
+  // E04-S02: the point-picking screen opens the counter on the point it chose.
+  const { pile: pileParam } = useLocalSearchParams<{ pile?: string }>();
+  const [selectedPileId, setSelectedPileId] = useState<string | null>(pileParam ?? null);
+  // Farm master data, for numbering baskets at weighing points (E04-S01).
+  const [master, setMaster] = useState<MasterState | null>(null);
+  useEffect(() => {
+    peopleStore.state().then(setMaster);
+  }, []);
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' });
   const [confirmUndo, setConfirmUndo] = useState(false);
   const [confirmCloseSale, setConfirmCloseSale] = useState(false);
@@ -100,6 +126,39 @@ export default function CounterScreen() {
   const countable = pile ? canCount(state, pile.id) : false;
   const lastBasket = pile ? lastLiveBasket(events, pile.id) : null;
 
+  // E04-S03: at a weighing point the gate follows the group's check mode.
+  // When this point needs no check, record that it was skipped and open it
+  // (SALE-6) — never silently. Piles from the old setup flow always ask.
+  const isPoint = !!master && !!pile && master.points.some((p) => p.id === pile.id);
+  const skipGate =
+    ready && isPoint && pile?.status === 'not-started' && !gateNeeded(state, events, pile.id, saleSettings(master!).zeroCheck);
+  useEffect(() => {
+    if (!skipGate || !pile || !master) return;
+    append({ kind: 'sys', payload: { t: 'gate_skipped', pileId: pile.id, mode: saleSettings(master).zeroCheck } });
+    append({ kind: 'sys', payload: { t: 'ready', pileId: pile.id } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once per point that needs no check; `append` and the log are read at that moment.
+  }, [skipGate, pile?.id]);
+  const [waiting, setWaiting] = useState(false);
+  const skewG = saleSkewG(events);
+  // E04-S05: recorder mode at a weighing point; public mode is the classic stage.
+  const [publicMode, setPublicMode] = useState(false);
+  // E04-S09: the basket being edited from the recorder's list.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  // E04-S11: a money-changing edit on a Completed sale waits here for its reason.
+  // What it waits to do is stored as data and re-checked against the log on confirm (review S3).
+  const [moneyGate, setMoneyGate] = useState<MoneyAction | null>(null);
+  const [confirmCancelSale, setConfirmCancelSale] = useState(false);
+  const [now] = useState(() => Date.now());
+  // Events of this sale not sent yet (SYNC-3) — re-read whenever the log grows.
+  const [pending, setPending] = useState(0);
+  useEffect(() => {
+    let live = true;
+    eventStore.pending().then((all) => live && setPending(all.filter((e) => e.saleId === saleId).length));
+    return () => {
+      live = false;
+    };
+  }, [events.length, saleId]);
+
   if (!ready || !pile || !zone) {
     return (
       <View style={{ flex: 1, backgroundColor: t.color.surface, alignItems: 'center', justifyContent: 'center' }}>
@@ -108,31 +167,49 @@ export default function CounterScreen() {
     );
   }
 
-  const expected = msg('gate.expected', {
-    tare: formatKg(pile.tareG),
-    std: formatKg(pile.stdNetG),
-    expected: formatKg(pile.tareG + pile.stdNetG),
-  });
+  // With a skew accepted, "the scale should read" includes it (D-75).
+  const expected = skewG
+    ? msg('gate.expectedSkew', {
+        tare: formatKg(pile.tareG),
+        std: formatKg(pile.stdNetG),
+        skew: formatKg(skewG),
+        expected: formatKg(expectedReadingG(pile.stdNetG, pile.tareG, skewG)),
+      })
+    : msg('gate.expected', {
+        tare: formatKg(pile.tareG),
+        std: formatKg(pile.stdNetG),
+        expected: formatKg(pile.tareG + pile.stdNetG),
+      });
 
   // The count about to exist once this basket lands — `totals` here is a
   // closure over state from before the append below, so this is the number
   // that needs speaking, not the one currently on screen (FR-11.3).
+  const pointFields = (): { pointId?: string; basketNo?: number } => {
+    // A pile that is a master-data weighing point gets its point and number
+    // (E04-S01, SALE-10); a pile from the old setup flow stays as it was.
+    if (!master || !master.points.some((p) => p.id === pile.id)) return {};
+    const mode = saleNumbering(events, saleSettings(master).numbering);
+    const day = todayIso(state.startedTs ?? now);
+    return { pointId: pile.id, basketNo: nextBasketNo(events, pile.id, mode, (id) => tapperOn(master, id, day)) };
+  };
   const nextCount = (totals?.baskets ?? 0) + 1;
 
   const onCount = () => {
-    append({ kind: 'accept', pileId: pile.id, input: 'hold', netG: pile.stdNetG, tareG: pile.tareG });
-    if (speechOn) announceCount(nextCount, speaker, append);
+    const point = pointFields();
+    append({ kind: 'accept', pileId: pile.id, input: 'hold', netG: pile.stdNetG, tareG: pile.tareG, ...point });
+    // At a point the spoken number is the basket's own number (D-79), else the pile count.
+    if (speechOn) announceCount(point.basketNo ?? nextCount, speaker, append);
   };
 
   const onReject = (heldMs: number) =>
     append({ kind: 'reject', pileId: pile.id, input: 'hold', reason: 'released-early', heldMs });
 
-  const doUndo = () => {
-    if (!lastBasket) return;
+  const doUndo = (target: BasketEvent | null = lastBasket) => {
+    if (!target) return;
     append({
       kind: 'correction',
-      pileId: pile.id,
-      targetId: lastBasket.id,
+      pileId: target.pileId,
+      targetId: target.id,
       mode: 'undo-last',
       reason: msg('counter.mistapReason'),
     });
@@ -145,13 +222,24 @@ export default function CounterScreen() {
   };
 
   const confirmShort = () => {
-    append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG });
-    if (speechOn) announceCount(nextCount, speaker, append);
+    // Another device may have completed the sale while the panel was open (review S1).
+    if (state.saleStatus !== 'draft') return setShortOpen(false);
+    const point = pointFields();
+    append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG, ...(skewG ? { skewG } : {}), ...point });
+    if (speechOn) announceCount(point.basketNo ?? nextCount, speaker, append);
     setShortOpen(false);
   };
 
-  const onZeroChecked = (ok: boolean, readingG: number) =>
+  const onZeroChecked = (ok: boolean, readingG: number) => {
     append({ kind: 'sys', payload: { t: 'zero_check', pileId: pile.id, ok, readingG } });
+    // At a weighing point a failed check carries on with the skew (D-75).
+    if (!ok && isPoint) append({ kind: 'sys', payload: { t: 'skew_accepted', pileId: pile.id, skewG: readingG } });
+  };
+
+  const onWait = () => {
+    append({ kind: 'sys', payload: { t: 'scale_wait', pileId: pile.id } });
+    setWaiting(true);
+  };
 
   const onTareConfirmed = (confirmedTareG: number) =>
     append({ kind: 'sys', payload: { t: 'tare_confirmed', pileId: pile.id, tareG: confirmedTareG } });
@@ -213,6 +301,218 @@ export default function CounterScreen() {
     setConfirmCloseZone(false);
   };
 
+  const closeSaleOverlay = confirmCloseSale ? (
+    <CloseSaleConfirmOverlay state={state} events={events} onConfirm={doCloseSale} onCancel={() => setConfirmCloseSale(false)} />
+  ) : null;
+
+  const day = todayIso(state.startedTs ?? now);
+  const figures =
+    isPoint && master
+      ? recorderFigures(events, master, day, pile.id, saleNumbering(events, saleSettings(master).numbering), state.price?.satangPerKg ?? null)
+      : null;
+
+  // At a point, undo means the last basket of the number sequence, in either
+  // mode (review S3); a finished sale is only edited from the recorder's list.
+  const sequenceLast = figures ? ((events.find((e) => e.id === figures.lastId) as BasketEvent | undefined) ?? null) : lastBasket;
+  // A finished sale takes no new basket and no undo outside the recorder's list (review S1/S2).
+  const finished = state.saleStatus !== 'draft';
+  const classicUndo = finished ? null : sequenceLast;
+
+  if (figures && master && pile.status === 'counting' && !waiting && !publicMode) {
+    const tapperId = tapperOn(master, pile.id, day);
+    const pointName = (id: string) => master.points.find((p) => p.id === id)?.name ?? '';
+    const numbering = saleNumbering(events, saleSettings(master).numbering);
+    // "ย้อนกลับ" undoes the last basket of this number sequence, wherever it was weighed.
+    const undoTarget = sequenceLast;
+    const editing = editingId ? (events.find((e) => e.id === editingId) as BasketEvent | undefined) : undefined;
+    const rows = basketList(events);
+    const editingRow = rows.find((r) => r.id === editingId);
+    const saleDayPoints = master.points.filter((p) => !p.deleted && master.properties.some((f) => f.id === p.propertyId && !f.deleted));
+
+    const draft = state.saleStatus === 'draft';
+
+    // The edit itself, against the log as it is now. Returns what it touched,
+    // or null when there is nothing to do any more (voided or changed meanwhile).
+    const perform = (action: MoneyAction): string | null => {
+      if (action.kind === 'undo') {
+        if (!sequenceLast) return null;
+        doUndo(sequenceLast);
+        return sequenceLast.id;
+      }
+      const target = events.find((e) => e.id === action.id) as BasketEvent | undefined;
+      const row = rows.find((r) => r.id === action.id);
+      if (!target || target.basketNo === undefined || row?.status !== 'live') return null;
+      if (action.kind === 'void') {
+        append({ kind: 'correction', pileId: target.pileId, targetId: target.id, mode: 'void', reason: msg('edit.voidReason') });
+        return target.id;
+      }
+      const { netG, pointId } = action.change;
+      if (netG === row.netG && pointId === row.pointId) return null;
+      // A new pile takes the source pile's standard weights, never the edited basket's (review S2).
+      const source = state.piles.find((p) => p.id === target.pileId) ?? pile;
+      const pair = { pairId: '', netG: source.stdNetG, basketG: source.tareG };
+      for (const payload of pointSetupPayloads(state, master, pointId, pair)) append({ kind: 'sys', payload });
+      append({ kind: 'correction', pileId: target.pileId, targetId: target.id, mode: 'void', reason: msg('edit.reason') });
+      const at = { pileId: pointId, pointId, basketNo: target.basketNo, editOf: target.id };
+      if (target.kind === 'accept') append({ kind: 'accept', input: 'edit', netG, tareG: target.tareG, ...at });
+      else append({ kind: 'short', readingG: netG + target.tareG + (target.skewG ?? 0), tareG: target.tareG, ...(target.skewG ? { skewG: target.skewG } : {}), ...at });
+      return target.id;
+    };
+    const targetOf = (action: MoneyAction): string | null => {
+      if (action.kind === 'undo') return sequenceLast?.id ?? null;
+      const row = rows.find((r) => r.id === action.id);
+      if (row?.status !== 'live') return null;
+      if (action.kind === 'edit' && action.change.netG === row.netG && action.change.pointId === row.pointId) return null;
+      return row.id;
+    };
+
+    // After Completed, an edit that changes money asks why first and flags the
+    // payment for a recheck (SALE-21); a draft edits straight away. On confirm the
+    // target is looked up again, so a flag is only ever written with a real change.
+    const act = (action: MoneyAction) => {
+      if (moneyGate) return; // one pending edit at a time
+      if (state.saleStatus === 'completed') setMoneyGate(action);
+      else perform(action);
+      if (action.kind !== 'undo') setEditingId(null);
+    };
+    const confirmMoney = (reason: string) => {
+      if (!moneyGate) return;
+      const targetId = targetOf(moneyGate);
+      if (targetId) {
+        append({ kind: 'sys', payload: { t: 'money_edit', reason, targetId } });
+        perform(moneyGate);
+      }
+      setMoneyGate(null);
+    };
+
+    const saveEdit = (change: { netG: number; pointId: string }) => {
+      if (!editingRow) return;
+      // Nothing changed: not an edit, never a reason prompt (AC: no-money edits ask nothing).
+      if (change.netG === editingRow.netG && change.pointId === editingRow.pointId) return setEditingId(null);
+      act({ kind: 'edit', id: editingRow.id, change });
+    };
+    const voidEditing = () => {
+      if (editingRow) act({ kind: 'void', id: editingRow.id });
+    };
+    return (
+      <View style={{ flex: 1 }}>
+        <RecorderView
+          saleDate={formatThaiDate(state.startedTs ?? now, 'be')}
+          pending={pending}
+          farmName={zone.name}
+          pointName={pile.name}
+          tapperName={tapperId ? (master.people.find((p) => p.id === tapperId)?.name ?? null) : null}
+          figures={figures}
+          expectedKg={formatKg(expectedReadingG(pile.stdNetG, pile.tareG, skewG))}
+          // New baskets only while Draft; a finished sale is edited from the list (E04-S11).
+          hold={{ onCount, onReject, enabled: countable && draft, holdMs: holdMsOverride() ?? deviceHoldMs }}
+          status={state.saleStatus}
+          menuItems={
+            draft
+              ? [
+                  {
+                    testID: 'rec-menu-complete',
+                    label: msg('status.complete'),
+                    disabled: !canComplete(state),
+                    hint: state.price ? undefined : msg('status.needPrice'),
+                    onPress: () => append({ kind: 'sys', payload: { t: 'sale_status_set', status: 'completed' } }),
+                  },
+                  { testID: 'rec-menu-cancel', label: msg('status.cancel'), onPress: () => setConfirmCancelSale(true) },
+                ]
+              : []
+          }
+          overlay={
+            moneyGate ? (
+              <MoneyReasonPrompt onConfirm={confirmMoney} onCancel={() => setMoneyGate(null)} />
+            ) : confirmCancelSale ? (
+              <FarmCard testID="cancel-sale">
+                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+                  {msg('status.cancelTitle')}
+                </Text>
+                <Text testID="cancel-sale-body" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.ink }}>
+                  {msg('status.cancelBody')}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+                  <Button testID="cancel-sale-no" onPress={() => setConfirmCancelSale(false)}>
+                    {msg('common.cancel')}
+                  </Button>
+                  <Button
+                    testID="cancel-sale-confirm"
+                    variant="destructive"
+                    onPress={() => {
+                      append({ kind: 'sys', payload: { t: 'sale_status_set', status: 'cancelled' } });
+                      setConfirmCancelSale(false);
+                    }}
+                  >
+                    {msg('status.cancelConfirm')}
+                  </Button>
+                </View>
+              </FarmCard>
+            ) : undefined
+          }
+          baskets={rows.map((r) => ({ ...r, pointName: pointName(r.pointId) }))}
+          onRowPress={setEditingId}
+          editor={
+            editing && editingRow ? (
+              <BasketEditor
+                key={editing.id}
+                basketNo={editingRow.basketNo}
+                netG={editingRow.netG}
+                pointId={editingRow.pointId}
+                // A move stays inside the basket's own number sequence, so no number
+                // is ever doubled or taken from someone else's (review S1, SALE-10).
+                points={saleDayPoints
+                  .filter((p) => sameSequence(p.id, editingRow.pointId, numbering, (id) => tapperOn(master, id, day)))
+                  .map((p) => ({ id: p.id, name: p.name }))}
+                by={msg('edit.by', { device: editingRow.by.deviceId, time: new Date(editingRow.by.ts).toLocaleTimeString('th-TH') })}
+                onSave={saveEdit}
+                onVoid={voidEditing}
+                onCancel={() => setEditingId(null)}
+              />
+            ) : undefined
+          }
+          onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          // Opens on this farm and tapper, so another of their points is one tap (AC ≤ 2 taps).
+          onSwitch={() =>
+            router.replace({
+              pathname: '/sale/[id]/points',
+              params: { id: saleId, switch: '1', farm: zone.id, ...(tapperId ? { tapper: tapperId } : {}) },
+            })
+          }
+          onShort={openShort}
+          onUndo={() => setConfirmUndo(true)}
+          onPublic={() => setPublicMode(true)}
+          onFinish={() => setConfirmCloseSale(true)}
+          canUndo={!!undoTarget}
+          below={
+            shortOpen ? (
+              <ShortBasketPanel
+                tareG={pile.tareG}
+                stdNetG={pile.stdNetG}
+                readingG={shortReadingG}
+                onChangeReading={setShortReadingG}
+                onConfirm={confirmShort}
+                onCancel={() => setShortOpen(false)}
+              />
+            ) : confirmUndo && undoTarget ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, padding: t.space.sm }}>
+                <UndoConfirmRow
+                  event={undoTarget}
+                  onConfirm={() => {
+                    setConfirmUndo(false);
+                    act({ kind: 'undo' });
+                  }}
+                  onCancel={() => setConfirmUndo(false)}
+                />
+              </View>
+            ) : undefined
+          }
+        />
+        {closeSaleOverlay}
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <TopBar
@@ -225,6 +525,12 @@ export default function CounterScreen() {
             <Pill tone={countable ? 'accept' : 'neutral'} dot={countable ? 'filled' : 'hollow'}>
               {countable ? msg('counter.counting') : msg('counter.stopped')}
             </Pill>
+            {isPoint && publicMode ? (
+              // A full-size target: the only way back to the recorder (review S7).
+              <Button testID="public-exit" variant="primary" onPress={() => setPublicMode(false)}>
+                {msg('rec.publicExit')}
+              </Button>
+            ) : null}
             {state.clockSuspect ? <Pill tone="warn">{msg('counter.clockSuspect')}</Pill> : null}
             {speechDegraded ? <Pill tone="warn">{msg('counter.speechDegraded')}</Pill> : null}
             <Pill testID="open-switcher">
@@ -259,6 +565,18 @@ export default function CounterScreen() {
               onCloseZone={() => setConfirmCloseZone(true)}
               onCloseSale={() => setConfirmCloseSale(true)}
             />
+          ) : waiting ? (
+            // D-75: the operator chose to wait for another scale; back to the check after.
+            <View testID="scale-waiting" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: t.space.md, padding: t.space.xl }}>
+              <Text style={{ fontSize: t.font.size.figure, color: t.color.action }}>⌛</Text>
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+                {msg('gate.waiting')}
+              </Text>
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.inkSoft }}>{msg('gate.waitingBody')}</Text>
+              <Button testID="waiting-ok" variant="primary" onPress={() => setWaiting(false)}>
+                {msg('gate.waitingOk')}
+              </Button>
+            </View>
           ) : pile.status === 'not-started' ? (
             <ZeroTareGate
               pileName={pile.name}
@@ -269,15 +587,18 @@ export default function CounterScreen() {
               onZeroChecked={onZeroChecked}
               onTareConfirmed={onTareConfirmed}
               onReady={onGateReady}
+              onWait={isPoint ? onWait : undefined}
+              skewG={skewG}
             />
           ) : (
             <HoldStage
-              count={totals?.baskets ?? 0}
+              // Public mode at a point shows the basket being weighed (D-40, E04-S07).
+              count={figures ? figures.currentNo : (totals?.baskets ?? 0)}
               onCount={onCount}
               onReject={onReject}
-              enabled={countable}
+              enabled={countable && !finished}
               caption={countable ? expected : msg('counter.pileNotReady')}
-              holdMs={holdMsOverride()}
+              holdMs={holdMsOverride() ?? deviceHoldMs}
             />
           )}
           {pile.status === 'counting' ? (
@@ -292,14 +613,14 @@ export default function CounterScreen() {
                 borderTopColor: t.color.rule,
               }}
             >
-              {confirmUndo && lastBasket ? (
-                <UndoConfirmRow event={lastBasket} onConfirm={doUndo} onCancel={() => setConfirmUndo(false)} />
+              {confirmUndo && classicUndo ? (
+                <UndoConfirmRow event={classicUndo} onConfirm={() => doUndo(classicUndo)} onCancel={() => setConfirmUndo(false)} />
               ) : (
                 <>
-                  <Button testID="undo" onPress={() => setConfirmUndo(true)} disabled={!lastBasket}>
+                  <Button testID="undo" onPress={() => setConfirmUndo(true)} disabled={!classicUndo}>
                     {`↺ ${msg('counter.undo')}`}
                   </Button>
-                  <Button testID="short" onPress={openShort} disabled={!countable || shortOpen}>
+                  <Button testID="short" onPress={openShort} disabled={!countable || shortOpen || finished}>
                     {`⚖ ${msg('short.open')}`}
                   </Button>
                   <Button
@@ -389,14 +710,7 @@ export default function CounterScreen() {
         />
       ) : null}
 
-      {confirmCloseSale ? (
-        <CloseSaleConfirmOverlay
-          state={state}
-          events={events}
-          onConfirm={doCloseSale}
-          onCancel={() => setConfirmCloseSale(false)}
-        />
-      ) : null}
+      {closeSaleOverlay}
     </View>
   );
 }
@@ -442,7 +756,8 @@ function UndoConfirmRow({
         style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}
       >
         {msg('counter.undoDetail', {
-          seq: event.seq,
+          // At a point, the basket's own number (E04-S09); else its log position.
+          seq: event.basketNo ?? event.seq,
           kind: kindLabel,
           weight: formatKg(basketNetG(event)),
         })}
@@ -664,7 +979,8 @@ function CloseSaleConfirmOverlay({
  * with a deliberate seam. Guarded so it cannot be reached in a native build.
  */
 function holdMsOverride(): number | undefined {
-  if (typeof window === 'undefined') return undefined;
+  // No location on native (and in the component tests).
+  if (typeof window === 'undefined' || !window.location) return undefined;
   const v = new URLSearchParams(window.location.search).get('holdMs');
   return v ? Number(v) : undefined;
 }
@@ -928,6 +1244,9 @@ function describe(
       return { mark: '·', colour: t.color.inkSoft, body: msg('log.deleted') };
     case 'restore':
       return { mark: '·', colour: t.color.inkSoft, body: msg('log.restored') };
+    // Farm master data never lives in a sale's log; listed only so the switch stays total.
+    case 'master':
+      return { mark: '·', colour: t.color.inkSoft, body: sysLabel(e.payload, msg) };
   }
 }
 

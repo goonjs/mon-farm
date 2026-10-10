@@ -1,6 +1,6 @@
 # Story E03-S01: บุคคลและผู้ซื้อ เป็นข้อมูลหลักที่ sync
 
-Status: Ready (เจ้าของตกลง AC 2026-10-03)
+Status: In Progress (overnight 2026-10-09, branch `feature/e03-farm-data`)
 
 ## Context
 
@@ -49,9 +49,71 @@ Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Dev notes
 
+**ทำแล้ว (2026-10-09 คืน, ทีม FARM)**
+
+- ข้อมูลหลักเป็น event ใน log เดียวกับการขาย: kind ใหม่ `master` (`person_added` / `person_edited` /
+  `buyer_added` / `buyer_edited`) + `delete` / `restore` เดิมชี้ `personId` / `buyerId` (D-27) —
+  `src/core/types.ts`, fold ที่ `src/core/master.ts` (`projectMaster`, ผลไม่ขึ้นกับลำดับที่ event มาถึง)
+- **ขอบเขต `MASTER_SCOPE = 'farm-master'`** แทน `saleId: null` ของ envelope ใน architecture ชั่วคราว:
+  envelope ตอนนี้ `saleId` ยัง not null และ store key ตามมัน — `listSales()` ทั้ง 3 adapter ไม่นับขอบเขตนี้
+  เมื่อ envelope ได้ `groupId`/`saleId: null` (E02-S02 / E04-S01) เปลี่ยนค่าคงที่นี้ที่เดียว (ยังไม่มีข้อมูลจริง
+  ใน field เพราะใช้งานจริงเริ่มหลัง E03/E04)
+- `src/store/master-store.ts` (`MasterStore`) แทนตาราง people ของ S16; `people.web.ts` / `people.native.ts`
+  เหลือแค่ผูก `MasterStore` กับ store ของ platform (ไม่ลบไฟล์) ไม่ย้ายรายชื่อเดิม (เจ้าของ: "เริ่มใหม่ ทิ้งของเดิม")
+  แต่ **ไม่ล้าง** คีย์ `mon-farm:people` / ตาราง `people` — แค่ไม่อ่านแล้ว เพราะการล้างย้อนกลับไม่ได้ (lead ถาม 2026-10-09);
+  จะล้างเมื่อไหร่ให้เจ้าของตัดสิน
+- บทบาท: `tapper · worker · manager · payer · tenant · owner` (คนกรีดยาง · คนงาน · ผู้จัดการสวน · ผู้จ่าย · ผู้เช่า ·
+  เจ้าของสวน ตาม mockup v1.1.0) + `otherRoles` พิมพ์เอง; ต้องมีอย่างน้อย 1 (D-68) — บังคับทั้งที่ฟอร์มและที่ store
+- `person_edited` ใส่เฉพาะฟิลด์ที่เปลี่ยน เพื่อให้ E01-S11 รวมการแก้คนละฟิลด์ได้ (D-30)
+- `PeoplePicker` มี prop `role` (กรอง + คนที่เพิ่มในตัวเลือกได้บทบาทนั้น, ค่าเริ่มต้น tapper); จุดเลือกคนกรีดของโซนใน setup ส่ง `role="tapper"`
+- ผู้ซื้อ: `sale_started` มีฟิลด์ optional `buyerId` คู่กับชื่อ snapshot เดิม; การขายใหม่เติมชื่อผู้ซื้อของการขาย
+  ล่าสุดให้ (`MasterStore.latestBuyerId` + `defaultBuyer`) ถ้าผู้ซื้อนั้นถูกลบ → ไม่เติม; ปุ่มเลือกผู้ซื้อจากรายการใต้ช่องชื่อ
+- จอ: `/farm-data` (ข้อมูลฟาร์ม) · `/people` (ตัวกรอง ทุกคน/คนกรีดยาง/คนงาน/ผู้จัดการสวน/คนรับซื้อยาง/เจ้าของสวน,
+  ลิงก์ "ที่ลบแล้ว (n)" → ป้าย "ลบแล้ว" + ลิงก์กู้คืนเล็ก) · `/person/[id]` (`PersonForm`) · `/buyers` (ป้าย "ใช้ล่าสุด")
+- วันที่ พ.ศ. แตะสลับ ค.ศ.: `formatThaiDate` (เวลากรุงเทพฯ คงที่) + `ThaiDate` — ใช้ที่ "เพิ่มเมื่อ" ในฟอร์มคน
+
+**เบี่ยงจากแผน / ยังไม่ครอบคลุม**
+
+- ทางเข้า: ยังไม่มีเมนู ☰ (หน้าแรกใหม่เป็นของ E13) → ใช้ปุ่ม "ข้อมูลฟาร์ม" บนแถบหัวหน้ารายการขายแทน;
+  การ์ด "ข้อมูลพนักงาน" อยู่ E13-S01
+- หน้ารายละเอียดคน (mockup จอ 6) ยังไม่ทำ: ลิงก์บัญชีหนี้/ส่วนแบ่ง/จุดที่รับผิดชอบ เป็นของ story ปลายทางที่ยังไม่ทำ
+  (AC7 บอกไม่ต้องแสดง) แตะแถว → ฟอร์มแก้ตรง ๆ
+- AC4 เตือนเมื่อลบคนกรีดที่ยังมีจุด / เอาบทบาทคนกรีดออก: ทำแล้วใน E03-S05 (คำเตือนพร้อมรายชื่อจุด ไม่ขวาง; จุดขึ้น "ยังไม่มีคนกรีด")
+- AC9 ป้าย "ขัดกัน" ต่อแถว: ยังไม่มีการตรวจ Conflict (E01-S11) จึงไม่มีอะไรให้แสดง ตอนนี้แก้ซ้อนกัน = ล่าสุดตามลำดับ fold ชนะ
+- AC10 เครื่องที่ 2 เห็นหลัง sync: ยังไม่มี sync (E01-S09) — event อยู่ใน outbox (`pending()`) พร้อมส่งแล้ว
+- ตัวกรอง "คนรับซื้อยาง" ในรายชื่อคนแสดงรายชื่อผู้ซื้อ (ผู้ซื้อเป็นข้อมูลหลักแยกจากคน ตาม MD-6)
+
 ## Code review
 
+**2026-10-09 — independent review (separate agent, read-only, `docs/checklists/code-review-checklist.md`) of `origin/dev...feature/e03-farm-data` (cac210f..9ffa401)**: ไม่มี blocker; tsc/eslint/Vitest/jest ผ่าน
+- แก้แล้ว (commit "fix(farm): address review findings"): วันเริ่มว่างใช้ได้เฉพาะการมอบหมายแรกของจุด (กันการเขียนทับอดีต) ·
+  แผน "ลาออก ยังไม่มีคนแทน" แสดงและยกเลิกได้ · กันกดซ้ำ (ตัวช่วยตั้งค่าจุด, ฟอร์มสวน, ส่วนแบ่ง) และจับ `ShareTooEarlyError` ·
+  ปีที่ปลูกรับ ค.ศ. แปลงเป็น พ.ศ. และไม่รับปีอนาคต · ไม่เขียน `person_edited` ว่าง · เทสต์ลำดับมาถึงสลับของพื้นที่/การมอบหมาย/ส่วนแบ่งจากสองเครื่อง · nit เล็ก ๆ
+- เลื่อน (มีเหตุผล): เวลากดค้าง/ขนาดตัวอักษร/เสียง ไม่ถูกจำบน native เพราะยังไม่มีที่เก็บค่าของเครื่องบน native (ช่องว่างเดิมของ
+  ค่าเสียง S10) — ต้องเพิ่ม key-value บน native (เช่นแถว `meta` ใน SQLite) เป็นงานแยก · ปุ่มตัวช่วยใช้ `firstPullDone = true` จนมี E01-S09 ·
+  "วันนี้" ของจอคงที่ตั้งแต่เปิดจอ · `ThaiDate` แสดงเดือนไทยแม้ภาษาอังกฤษ · ชื่อผู้ซื้อซ้ำกันใน setup ผูก id รายแรก
+
 ## QA notes
+
+**2026-10-09 (FARM, ในเครื่อง sandbox)** — `tokens:check` · `contrast` · `typecheck` · `lint` ผ่าน; Vitest 234 · jest-expo 81 ·
+Playwright 148 (ทั้งชุด, 2 project แนวนอน) ผ่าน; `e2e/farm-people.spec.ts` ล็อกจอแนวตั้ง (D-17)
+
+- ออฟไลน์: ปิดเน็ตตลอดการสร้าง/แก้/ลบ/กู้คืนคนและผู้ซื้อ → reload → ข้อมูลยังอยู่ (มาจาก log ในเครื่อง) — ยังไม่มี
+  service worker จึงต้องเปิดเน็ตชั่วขณะเพื่อโหลดตัวแอปใหม่ (ไม่ใช่ข้อมูล) เรื่อง app shell ออฟไลน์อยู่นอก story นี้
+- ภาพ (`docs/ux/screenshots/overnight/farm/`): `e03-s01-farm-data` · `e03-s01-people-list` · `e03-s01-people-filter-tapper` ·
+  `e03-s01-person-form` · `e03-s01-person-form-errors` · `e03-s01-delete-confirm` · `e03-s01-people-deleted` · `e03-s01-buyers`
+
+**Offline/sync checklist**
+- [x] ใช้ได้ไม่มีเน็ต (ทดสอบจริงใน Playwright `setOffline`)
+- [x] เขียนตอนออฟไลน์เก็บถาวร — event ใน IndexedDB/SQLite, อยู่ใน outbox (`pending()`; test `master-store.test.ts`)
+- [ ] sync เมื่อกลับมาออนไลน์ — ไม่อยู่ในขอบเขต: ยังไม่มี sync engine (E01-S09)
+- [ ] retry/resolve เมื่อ sync ล้มหรือขัดกัน — E01-S10/S11
+- [~] Conflict — ยังเป็น "ล่าสุดตามลำดับ fold ชนะ" (เหมือน record อื่นทั้งแอปตอนนี้); patch แก้เฉพาะฟิลด์ที่เปลี่ยน พร้อมสำหรับ E01-S11
+- [x] sync ล้มครึ่งทางไม่ทำให้ข้อมูลเสีย — append-only, idempotent ตาม id
+- [~] สถานะ sync — ไม่มีป้ายต่อแถวตาม D-65 Q20; ตัวบอกภาพรวมเป็นของ E01-S10
+- [x] ไม่พบกรณีข้อมูลหาย — ลบ = soft delete, ชื่อยัง resolve ได้ (`get`)
+
+**ยังต้องทำก่อน Done**: code review โดย session อื่น · CI เขียว · เจ้าของตรวจภาพ
 
 ## คำถามเจ้าของ
 
