@@ -1,6 +1,6 @@
 # Story E01-S12: คิวรูป/วิดีโอในเครื่อง → Cloud Storage
 
-Status: Ready
+Status: In Progress
 
 > **ติด D-48:** ส่วนอัปโหลดขึ้น Cloud Storage ทำจริงไม่ได้จนกว่าเจ้าของอัปเกรดแผน (bucket ยังไม่ถูกสร้าง) ทำได้เฉพาะคิวในเครื่อง/อินเทอร์เฟซ และ test ด้วย fake
 
@@ -45,6 +45,23 @@ Status: Ready
 
 ## Dev notes
 
+### 2026-10-09 (overnight, team INFRA) — core เท่านั้น (D-48)
+
+- `src/sync/media.ts`: port `MediaQueue` (ไฟล์ในเครื่อง) + `RemoteMedia` (Cloud Storage), `uploadMedia` (ปล่อยไฟล์ในเครื่อง
+  หลังอัปโหลดยืนยันแล้วเท่านั้น; object มีอยู่และ hash ตรง = สำเร็จ; hash ต่าง = error ห้ามทับ), path จาก id ที่ตรวจแล้ว
+  เท่านั้น, `MemoryMediaQueue` / `FakeStorage`
+- `SyncEngine` รับ `media` ได้: อัปโหลดหลังส่ง event, ใช้ backoff เดียวกัน, ไฟล์ค้างนับเป็น Pending (AC5)
+- ยังไม่ทำ: คิวถาวร (web: Blob ใน IndexedDB `mediaQueue` ต้องขึ้น version DB; native: ต้องเลือก lib ไฟล์ — gate
+  dependency), adapter Cloud Storage + Storage rules (ไม่มี bucket, D-48), Playwright; ไฟล์ที่ hash ต่างตัวเดียวทำให้
+  ไฟล์ถัดไปรอจนกด "ลองใหม่" และรอบนั้นข้าม pull — ควรเปลี่ยนเป็นข้ามทีละไฟล์เมื่อทำ adapter จริง
+
 ## Code review
+
+- 2026-10-09 independent review (separate agent, read-only), fixed in e64fe1a: pull/fetch had no timeout (the engine
+  could hang forever) → 30-second timeout; a corrupt doc's error vanished on the next run → its id is kept until `retry()`
+  re-checks it (`integrityIds()`); unhandled rejections from timers; one refused event held back the whole outbox;
+  `stop()` didn't stop retries; the cursor could move backwards; conflict options nested in two lines were lost.
+  Not fixed (minor): `unauthenticated` retries forever with no token refresh (needs login E02-S01); the first full
+  download is not paged; `foldRecord` recurses once per event in the chain
 
 ## QA notes

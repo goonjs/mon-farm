@@ -1,6 +1,6 @@
 # Story E01-S10: แสดงสถานะ sync + ปุ่ม "ลองใหม่" เมื่อ error
 
-Status: Ready
+Status: In Progress
 
 ## Context
 
@@ -53,6 +53,19 @@ Status: Ready
 
 ## Dev notes
 
+### 2026-10-09 (overnight, team INFRA) — core เท่านั้น
+
+- `src/sync/status.ts`: `saleSyncState` (Conflict → error → Pending → Synced ต่อการขาย), `overallBadge` (ออฟไลน์ =
+  รอส่ง ไม่ใช่ error; ปุ่มลองใหม่เฉพาะ error/Conflict; outbox ว่างแสดง ซิงก์แล้ว), คำไทยตามคำตอบเจ้าของใน `src/i18n/messages.ts`
+- ยังไม่ทำ: component ส่วนหัว/รายการขาย + screenshot (ยังไม่มี remote จริงให้ต่อ — ดู E01-S09 Dev notes) และธง Conflict ที่เข่ง
+
 ## Code review
+
+- 2026-10-09 independent review (separate agent, read-only), fixed in e64fe1a: pull/fetch had no timeout (the engine
+  could hang forever) → 30-second timeout; a corrupt doc's error vanished on the next run → its id is kept until `retry()`
+  re-checks it (`integrityIds()`); unhandled rejections from timers; one refused event held back the whole outbox;
+  `stop()` didn't stop retries; the cursor could move backwards; conflict options nested in two lines were lost.
+  Not fixed (minor): `unauthenticated` retries forever with no token refresh (needs login E02-S01); the first full
+  download is not paged; `foldRecord` recurses once per event in the chain
 
 ## QA notes
