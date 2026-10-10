@@ -476,3 +476,244 @@ export function SwapIcon({ color, size = 18 }: IconProps) {
     </View>
   );
 }
+
+// ── Home set (e03-v2-splash-home) ───────────────────────────────────────────
+// The home's action cards, rows and module tiles (flow-v1 screen 3, v1.1.0
+// screens 1 and 25), and the menu's fact lines. Same contract as above.
+
+/** Prepare / checklist — three marked lines. */
+export function ListIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  const row = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: size * 0.14 }}>
+      <View style={{ width: size * 0.18, height: size * 0.18, borderRadius: w, backgroundColor: color }} />
+      <View style={{ flex: 1, height: w, borderRadius: w, backgroundColor: color }} />
+    </View>
+  );
+  return (
+    <View aria-hidden style={{ width: size, height: size, justifyContent: 'space-around', paddingHorizontal: size * 0.06 }}>
+      {row}
+      {row}
+      {row}
+    </View>
+  );
+}
+
+/** Sale — a basket: a handle over a slatted body. */
+export function BasketIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  const slat = { width: w, height: '60%', backgroundColor: color } as const;
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center' }}>
+      <View
+        style={{
+          width: size * 0.5,
+          height: size * 0.32,
+          borderWidth: w,
+          borderBottomWidth: 0,
+          borderTopLeftRadius: size,
+          borderTopRightRadius: size,
+          borderColor: color,
+        }}
+      />
+      <View style={{ width: size, height: w, borderRadius: w, backgroundColor: color }} />
+      <View
+        style={{
+          width: size * 0.8,
+          flex: 1,
+          borderWidth: w,
+          borderTopWidth: 0,
+          borderBottomLeftRadius: size * 0.15,
+          borderBottomRightRadius: size * 0.15,
+          borderColor: color,
+          flexDirection: 'row',
+          justifyContent: 'space-evenly',
+          alignItems: 'center',
+        }}
+      >
+        <View style={slat} />
+        <View style={slat} />
+      </View>
+    </View>
+  );
+}
+
+/** Stock — a box with its lid line. */
+export function BoxIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: size * 0.86, height: size * 0.8, borderWidth: w, borderRadius: w, borderColor: color, alignItems: 'center' }}>
+        <View style={{ width: '100%', height: w, marginTop: size * 0.2, backgroundColor: color }} />
+        <View style={{ width: w, height: size * 0.18, backgroundColor: color }} />
+      </View>
+    </View>
+  );
+}
+
+/** Report — three bars on an axis. */
+export function ChartIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  const bar = (h: number) => <View style={{ width: size * 0.16, height: size * h, backgroundColor: color }} />;
+  return (
+    <View
+      aria-hidden
+      style={{
+        width: size,
+        height: size,
+        borderLeftWidth: w,
+        borderBottomWidth: w,
+        borderColor: color,
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        justifyContent: 'space-evenly',
+        paddingBottom: w,
+      }}
+    >
+      {bar(0.35)}
+      {bar(0.6)}
+      {bar(0.45)}
+    </View>
+  );
+}
+
+/** Due / hold time — a clock face with two hands. */
+export function ClockIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View
+      aria-hidden
+      style={{ width: size, height: size, borderRadius: size, borderWidth: w, borderColor: color, alignItems: 'center', justifyContent: 'center' }}
+    >
+      <View style={{ position: 'absolute', top: size * 0.16, width: w, height: size * 0.34, backgroundColor: color }} />
+      <View style={{ position: 'absolute', top: size * 0.44, left: size * 0.44, width: size * 0.24, height: w, backgroundColor: color }} />
+    </View>
+  );
+}
+
+/** This device — a phone with its home bar. */
+export function DeviceIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center' }}>
+      <View
+        style={{
+          width: size * 0.6,
+          height: size,
+          borderWidth: w,
+          borderRadius: size * 0.14,
+          borderColor: color,
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          paddingBottom: size * 0.1,
+        }}
+      >
+        <View style={{ width: size * 0.2, height: w, borderRadius: w, backgroundColor: color }} />
+      </View>
+    </View>
+  );
+}
+
+/** Sound — a speaker: a box and its cone. */
+export function SpeakerIcon({ color, size = 18 }: IconProps) {
+  return (
+    <View aria-hidden style={{ width: size, height: size, flexDirection: 'row', alignItems: 'center' }}>
+      <View style={{ width: size * 0.28, height: size * 0.4, backgroundColor: color }} />
+      <View
+        style={{
+          width: 0,
+          height: 0,
+          borderTopWidth: size * 0.35,
+          borderBottomWidth: size * 0.35,
+          borderRightWidth: size * 0.36,
+          borderTopColor: 'transparent',
+          borderBottomColor: 'transparent',
+          borderRightColor: color,
+        }}
+      />
+    </View>
+  );
+}
+
+/** Workers — two people, one behind the other. */
+export function UsersIcon({ color, size = 18 }: IconProps) {
+  return (
+    <View aria-hidden style={{ width: size, height: size }}>
+      <View style={{ position: 'absolute', right: 0, top: 0 }}>
+        <PersonIcon color={color} size={size * 0.7} />
+      </View>
+      <View style={{ position: 'absolute', left: 0, bottom: 0 }}>
+        <PersonIcon color={color} size={size * 0.8} />
+      </View>
+    </View>
+  );
+}
+
+/** To pay — a wallet with its clasp tab. */
+export function WalletIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View aria-hidden style={{ width: size, height: size, justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size,
+          height: size * 0.76,
+          borderWidth: w,
+          borderRadius: size * 0.14,
+          borderColor: color,
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+        }}
+      >
+        <View
+          style={{
+            width: size * 0.36,
+            height: size * 0.3,
+            borderWidth: w,
+            borderRightWidth: 0,
+            borderTopLeftRadius: w * 2,
+            borderBottomLeftRadius: w * 2,
+            borderColor: color,
+          }}
+        />
+      </View>
+    </View>
+  );
+}
+
+/** Weather — a sun peeking over a cloud. */
+export function WeatherIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View aria-hidden style={{ width: size, height: size }}>
+      <View style={{ position: 'absolute', left: size * 0.04, top: size * 0.06, width: size * 0.38, height: size * 0.38, borderRadius: size, backgroundColor: color }} />
+      <View
+        style={{
+          position: 'absolute',
+          right: 0,
+          bottom: size * 0.1,
+          width: size * 0.84,
+          height: size * 0.44,
+          borderRadius: size,
+          borderWidth: w,
+          borderColor: color,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          right: size * 0.18,
+          top: size * 0.2,
+          width: size * 0.42,
+          height: size * 0.42,
+          borderRadius: size,
+          borderWidth: w,
+          borderBottomColor: 'transparent',
+          borderLeftColor: color,
+          borderTopColor: color,
+          borderRightColor: color,
+        }}
+      />
+    </View>
+  );
+}

@@ -48,17 +48,32 @@ export function toneColours(t: Theme, tone: TileTone) {
   }
 }
 
-export function IconTile({ tone = 'accept', icon, testID }: { tone?: TileTone; icon: IconRender; testID?: string }) {
+/** Mockup `.tile.sm`: the home's module tiles. */
+const SMALL = 36;
+
+export function IconTile({
+  tone = 'accept',
+  size = 'regular',
+  icon,
+  testID,
+}: {
+  tone?: TileTone;
+  /** `sm` = 36 square, for dense tiles; the tile is decorative, so it is no touch target. */
+  size?: 'regular' | 'sm';
+  icon: IconRender;
+  testID?: string;
+}) {
   const t = useTheme();
   const { bg, fg } = toneColours(t, tone);
+  const side = size === 'sm' ? SMALL : t.target.min;
   return (
     <View
       testID={testID}
       aria-hidden
       style={{
-        width: t.target.min,
-        height: t.target.min,
-        borderRadius: t.radius.md,
+        width: side,
+        height: side,
+        borderRadius: size === 'sm' ? t.radius.sm : t.radius.md,
         backgroundColor: bg,
         alignItems: 'center',
         justifyContent: 'center',

@@ -23,7 +23,7 @@ describe('Drawer — the ☰ menu (v1.1.0 farm screen 1)', () => {
     expect(screen.queryByText('inside')).toBeNull();
   });
 
-  it('opens as a surface panel over a scrim that closes it', () => {
+  it('opens as a raised panel (mockup .drawer) over a scrim that closes it', () => {
     const onClose = jest.fn();
     wrap(
       <Drawer open onClose={onClose}>
@@ -31,7 +31,7 @@ describe('Drawer — the ☰ menu (v1.1.0 farm screen 1)', () => {
       </Drawer>,
     );
     expect(screen.getByText('inside')).toBeTruthy();
-    expect(flat(screen.getByTestId('drawer-panel').props.style).backgroundColor).toBe(c.surface);
+    expect(flat(screen.getByTestId('drawer-panel').props.style).backgroundColor).toBe(c.surfaceRaised);
     const scrim = screen.getByTestId('drawer-scrim');
     expect(flat(scrim.props.style)).toMatchObject({ backgroundColor: c.scrim, opacity: tokens.opacity.scrim });
     expect(scrim.props.accessibilityLabel).toBe('ปิดเมนู');
