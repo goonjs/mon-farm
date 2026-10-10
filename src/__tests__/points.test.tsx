@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import PropertiesScreen from '../app/properties';
 import { PointForm } from '../components/PointForm';
 import { PointsWizard } from '../components/PointsWizard';
-import { PropertyForm } from '../components/PropertyForm';
+import { PropertyDetail } from '../components/PropertyDetail';
 import { peopleStore as mockMaster } from '../store/people';
 import { wrap } from '../test/render';
 
@@ -82,9 +82,11 @@ describe('Farm screen lists its points — E03-S03', () => {
   it('shows the farm\'s points and flags a duplicate name', async () => {
     const f = await mockMaster.addProperty({ name: 'สวน ก', crop: 'rubber' });
     const p = await mockMaster.addPoint(f.id, 'จุด 1');
-    wrap(<PropertyForm propertyId={f.id} onDone={jest.fn()} />);
+    const dup = await mockMaster.addPoint(f.id, 'จุด 1').catch(() => null);
+    wrap(<PropertyDetail propertyId={f.id} onEdit={jest.fn()} onDone={jest.fn()} />);
     await flush();
     expect(screen.getByTestId(`point-${p.id}`)).toHaveTextContent(/จุด 1/);
+    expect(dup).toBeNull(); // the store refuses a duplicate name; a synced one would show the badge
   });
 });
 

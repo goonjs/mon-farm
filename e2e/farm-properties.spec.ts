@@ -36,26 +36,26 @@ test('farms: create offline with optional fields blank, change area, survive a r
   await page.getByTestId('add-property').click();
   await page.getByTestId('property-name').fill('สวนจันทเขลม');
   await page.getByTestId('crop-rubber').click();
-  await page.getByTestId('property-area').fill('120');
-  await page.getByTestId('property-area-date').fill('1/1/2569');
   await page.getByTestId('property-planted').fill('2554');
   await page.getByTestId('property-gps').fill('12.6113, 102.1035');
   await shot('e03-s02-property-form');
   await page.getByTestId('property-save').click();
+  await expect(page.getByText('พื้นที่ ไม่ทราบ').first()).toBeVisible();
 
-  await expect(page.getByText('120 ไร่')).toBeVisible();
-  await expect(page.getByText('พื้นที่ ไม่ทราบ')).toBeVisible();
-
-  // Change the area: a new entry, the old one stays in history.
+  // The detail (farm-14): each area change is a dated entry; the old one stays in history (MD-1).
   await page.getByText('สวนจันทเขลม').click();
-  await page.getByTestId('property-area').fill('125');
-  await page.getByTestId('property-area-date').fill('1/10/2569');
-  await page.getByTestId('property-save').click();
-  await expect(page.getByText('125 ไร่')).toBeVisible();
+  for (const [rai, from] of [['120', '1/1/2569'], ['125', '1/10/2569']]) {
+    await page.getByTestId('change-area').click();
+    await page.getByTestId('area-new').fill(rai);
+    await page.getByTestId('area-new-date').fill(from);
+    await page.getByTestId('area-save').click();
+    await expect(page.getByTestId('property-area-now')).toContainText(`${rai} ไร่`);
+  }
+  await shot('e03-property-detail');
 
   // Data came from the local log; the app shell needs the network to reload (no service worker yet).
   await context.setOffline(false);
-  await page.reload();
+  await page.goto('/properties');
   await expect(page.getByText('125 ไร่')).toBeVisible();
   await shot('e03-s02-properties-list');
 
