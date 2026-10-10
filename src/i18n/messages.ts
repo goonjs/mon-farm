@@ -1229,6 +1229,10 @@ const th = {
   'cf.ob.planned': 'วางแผน',
   'cf.ob.owed': 'เงินที่ต้องคืนคงเหลือ',
   'cf.pending': 'ยังไม่ซิงก์ — ตัวเลขอาจเปลี่ยนเมื่อข้อมูลจากเครื่องอื่นเข้ามา',
+
+  // ── Splash (D-83) ──
+  'splash.name': 'FarmMate',
+  'splash.tagline': 'แอปบริหารสวนยาง',
 } as const;
 
 /**
@@ -2373,6 +2377,8 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'cf.ob.planned': 'planned',
   'cf.ob.owed': 'owed back, remaining',
   'cf.pending': 'not synced; figures may change when other devices sync',
+  'splash.name': 'FarmMate',
+  'splash.tagline': 'rubber farm manager',
 };
 
 export const messages = { th, en } as const;
