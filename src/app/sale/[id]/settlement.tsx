@@ -425,7 +425,7 @@ function MoneyCards({ saleId, settlement }: { saleId: string; settlement: Settle
       <View style={card(t)}>
         <RoundingCard r={r} />
       </View>
-      <View style={[card(t), { backgroundColor: t.color.brandCream }]}>
+      <View style={card(t)}>
         <SaleAccountCard saleId={saleId} ownerSatang={r.result.ownerSatang} ready={r.ready} />
       </View>
     </>

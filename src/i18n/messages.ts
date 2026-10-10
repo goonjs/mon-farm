@@ -602,6 +602,7 @@ const th = {
   // ── Sale history (E05-S06) ──────────────────────────────────────────────
   'hist.open': 'ประวัติการขาย',
   'hist.title': 'ประวัติการขาย',
+  'hist.totalCaption': 'ยอดขายรวม',
   'hist.empty': 'ยังไม่มีการขาย',
   'hist.total': 'รวม {n} การขาย · {kg} กก. · {amount} บาท',
   'hist.deleted': 'ที่ลบแล้ว {n} (กู้คืนได้)',
@@ -1149,6 +1150,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
 
   'hist.open': 'sale history',
   'hist.title': 'sale history',
+  'hist.totalCaption': 'total sales',
   'hist.empty': 'no sales yet',
   'hist.total': '{n} sales · {kg} kg · {amount} baht',
   'hist.deleted': '{n} deleted (restorable)',
