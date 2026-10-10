@@ -26,52 +26,51 @@ entry. Two small fixes ride along: the people screens no longer show the
 
 Splash (`/`, flow-v1 screen 1):
 
-- [ ] The FarmMate mark (112 px: sun, two leaves, hill), the word "FarmMate"
+- [x] The FarmMate mark (112 px: sun, two leaves, hill), the word "FarmMate"
       (38 px, weight 800, tight tracking) and the tagline "แอปบริหารสวนยาง" in
       soft ink, centred, 12 px apart.
-- [ ] It still replaces itself with `/v2` after under a second, so Back never
+- [x] It still replaces itself with `/v2` after under a second, so Back never
       returns to it, and a deep link such as `/v2/farm` opens with no splash
       or home first.
-- [ ] Not shown: the Google sign-in button and the "ครั้งแรกต้องต่ออินเทอร์เน็ต"
+- [x] Not shown: the Google sign-in button and the "ครั้งแรกต้องต่ออินเทอร์เน็ต"
       banner (E02 sign-in is not built).
 
 Home (`/v2`, flow-v1 screen 3 + v1.1.0 screens 1 and 25), top to bottom:
 
-- [ ] Header: ☰, the title with today's date under it ("ส. 3 ต.ค. 2569"
+- [x] Header: ☰, the title with today's date under it ("ส. 3 ต.ค. 2569"
       style, the device's era), and the sync pill.
-- [ ] Cover: the drawn rubber-farm scene (sun, hills, trees) in a rounded
+- [x] Cover: the drawn rubber-farm scene (sun, hills, trees) in a rounded
       card, 148 px high.
-- [ ] Three action cards in a row: เตรียมขาย · **เริ่มการขาย** (main, thick
+- [x] Three action cards in a row: เตรียมขาย · **เริ่มการขาย** (main, thick
       action edge) · บันทึกค่าใช้จ่าย, each an icon tile over the word.
       เริ่มการขาย opens `/v2/sale/start`; บันทึกค่าใช้จ่าย opens a new expense;
       เตรียมขาย opens a placeholder.
-- [ ] "ควรรู้ / ควรจัดการ": one card of rows that appear only when they apply,
+- [x] "ควรรู้ / ควรจัดการ": one card of rows that appear only when they apply,
       most urgent first:
-  - a sync conflict ("ข้อมูลขัดกัน N รายการ") → `/v2/sync`;
   - an unfinished sale (date · kg, chip "กำลังชั่ง"), else the latest sale
     (date · kg, chip "ปิดแล้ว") → `/v2/sales`;
   - money the farm owes back (total in บาท and who) → `/v2/owed`.
   With none of these, the card says so in one line.
-- [ ] Under the card, "ดูการขายทั้งหมด" links to the sale list `/v2/sales`.
-- [ ] "ไปที่": the module grid in v1.1.0 order — รายงานการขายย้อนหลัง ·
+- [x] Under the card, "ดูการขายทั้งหมด" links to the sale list `/v2/sales`.
+- [x] "ไปที่": the module grid in v1.1.0 order — รายงานการขายย้อนหลัง ·
       พยากรณ์อากาศ (เปิดภายนอก) · รายการที่ต้องจ่าย (wide, total in บาท) ·
       ค่าใช้จ่ายทั้งหมด · รายการ stock · ข้อมูลคนงาน (wide, number of
       คนกรีดยาง). ข้อมูลคนงาน opens คน filtered to คนกรีดยาง (v1.1.0 screen 26).
       Modules with no screen yet open a "กำลังสร้าง" placeholder.
-- [ ] ☰ menu (v1.1.0 screen 1): "ของกลุ่ม · ทุกเครื่องเห็นเหมือนกัน" with
+- [x] ☰ menu (v1.1.0 screen 1): "ของกลุ่ม · ทุกเครื่องเห็นเหมือนกัน" with
       ข้อมูลฟาร์ม (facts: สวนและจุดชั่ง · คน · คนรับซื้อยาง · บัญชีรับเงิน ·
       ตั้งค่าวันขาย) and ค่าใช้จ่ายทั้งหมด; "เฉพาะเครื่องนี้ · ไม่ส่งไปเครื่องอื่น"
       with เครื่องนี้ (facts: ขนาดตัวอักษร · เวลากดค้าง · เสียง). Every farm
       section stays reachable from the home or the menu.
-- [ ] Every string comes from `src/i18n/messages.ts` with an English entry.
+- [x] Every string comes from `src/i18n/messages.ts` with an English entry.
 
 People and drawer fixes:
 
-- [ ] The people list, its role filters and the person form no longer offer
+- [x] The people list, its role filters and the person form no longer offer
       or show the "ผู้จ่าย" role. The data model keeps the role: a person who
       has it keeps it on save, it just isn't shown. MONEY's expense payer
       field is untouched.
-- [ ] The drawer and section title `v2.farms` reads "สวนและจุดชั่ง"
+- [x] The drawer and section title `v2.farms` reads "สวนและจุดชั่ง"
       ("Farms and weighing points").
 
 ## Offline / sync behavior
@@ -85,16 +84,16 @@ focus. The sync pill and the conflict row read the same local sync status.
 
 _Tests below are written to fail first (TDD), then implemented to green._
 
-- [ ] Unit (jest): splash look and hand-over; home order, copy, links, live
+- [x] Unit (jest): splash look and hand-over; home order, copy, links, live
       rows and the empty state; drawer rows; people screens without ผู้จ่าย.
-- [ ] Unit (vitest): the home's pure summaries (open/latest sale, owed).
-- [ ] e2e: `/` → splash → home offline, with seeded data, then a reload;
+- [x] Unit (vitest): the home's pure summaries (open/latest sale, owed).
+- [x] e2e: `/` → splash → home offline, with seeded data, then a reload;
       the deep-link test stays green.
 
 ## Verification
 
-- [ ] Sandbox run performed: web build in Playwright at 412×915.
-- [ ] Screenshots — splash, home (empty and with data), menu, and
+- [x] Sandbox run performed: web build (`npm run build:web`) in Playwright at 412×915, full e2e green.
+- [x] Screenshots — splash, home (empty and with data), menu, and
       mockup-vs-build pairs in `docs/ux/screenshots/ui-v2/home/`.
 
 ## Dev notes
@@ -105,6 +104,17 @@ cover photo (Cloud Storage); the cover's slow motion; the group block and
 "สลับกลุ่ม" in the menu (E02); "งานถึงกำหนด" rows (E08 tasks); the
 พยากรณ์อากาศ target (open question ?23); เตรียมขาย has no screen yet (?22),
 so it opens a "กำลังสร้าง" placeholder like the other unbuilt modules.
+
+The ผู้จ่าย role (owner 2026-10-10) is hidden in the people list, its
+filters, the detail and the form only. `BUILTIN_ROLES` and the stored roles
+are unchanged; a person who has it keeps it on save. MONEY's PayerPicker
+"+ คนอื่น" still adds people with that role, so they show with no role line.
+
+The menu keeps จุดชั่ง, ส่วนแบ่ง, บัญชีหนี้, การขายทั้งหมด and ซิงก์ under the
+mockup rows: those built lists are reachable from nowhere else yet.
+
+The header keeps the shared `ScreenHeader` (20 bold with a hairline; the
+mockup appbar is 18 semibold, no rule) — changing it touches every screen.
 
 ## Code review
 

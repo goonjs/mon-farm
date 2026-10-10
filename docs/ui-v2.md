@@ -39,8 +39,8 @@ counter bar), `Num` in `type.tsx`, and `FieldLabel`/`FieldError` in `form.tsx`.
 | `SyncPill` | `src/ui/sync-pill.tsx` | `status: SyncStatus` (shape + word + colour) |
 | `Drawer`, `MenuSection`, `MenuItem` | `src/ui/drawer.tsx` | Drawer `open`, `onClose`; MenuSection `title`; MenuItem `label`, `leading?` (an `IconTile`), `trailing?` (a badge before the chevron), `detail?` or children (one `FactRow` per fact, D-70), `href?`, `onPress?`, `testID?` |
 | `ActionTile` | `src/ui/action-tile.tsx` | `label`, `icon`, `tone?`, `main?` (thick action edge), `href?` \| `onPress?`, `testID?`. The home's three action cards; lay them in a row |
-| icons | `src/ui/icons.tsx` | `color`, `size?`. ChevronLeft/Right, MenuIcon, Plus, Minus, Check, Undo, Scale, MoneyIn/Out, Person, Calendar, Receipt, Debt, Bank, Farm, ScaleIcon; farm set (D-83): PinIcon, TagIcon, TrashIcon, GearIcon, PercentIcon, SwapIcon |
-| `IconTile`, `FactRow` | `src/ui/icon-tile.tsx` | IconTile `icon: (colour) => node`, `tone?` (`accept`, `action` = mockup t-blue, `cream` = t-cream, `warn`, `neutral`, `category1`–`6`); FactRow `icon?`, children |
+| icons | `src/ui/icons.tsx` | `color`, `size?`. ChevronLeft/Right, MenuIcon, Plus, Minus, Check, Undo, Scale, MoneyIn/Out, Person, Calendar, Receipt, Debt, Bank, Farm, ScaleIcon; farm set (D-83): PinIcon, TagIcon, TrashIcon, GearIcon, PercentIcon, SwapIcon; home set: ListIcon, BasketIcon, BoxIcon, ChartIcon, ClockIcon, DeviceIcon, SpeakerIcon, UsersIcon, WalletIcon, WeatherIcon |
+| `IconTile`, `FactRow` | `src/ui/icon-tile.tsx` | IconTile `icon: (colour) => node`, `tone?` (`accept`, `action` = mockup t-blue, `cream` = t-cream, `warn`, `neutral`, `category1`–`6`), `size?: regular \| sm` (48 / 36, mockup `.tile.sm`); FactRow `icon?`, children |
 | `Button`, `CTA`, `PinnedActions` | `src/ui/button.tsx` | `variant?: primary \| ghost \| destructive \| row`, `size?: regular \| large`, `icon?`, `disabled?`, `onPress?`; CTA = primary + large |
 | `SegmentedControl`, `RadioCard` | `src/ui/form.tsx` | Segmented `options`, `value`, `onChange`, `testID` (radiogroup of radios); RadioCard `selected`, `title`, `detail?`, `onPress`, `disabled?` |
 | `TextField` | `src/ui/text-field.tsx` | `label`, `required?` (red *), `hint?` (soft note beside the label), `helper?`, `error?`, `aside?` (unit or "ไม่ทราบ" beside the input), `testID`, plus TextInput props |
@@ -70,7 +70,7 @@ decided what N should mean. Until then the count stays as it is.
 ## Route map
 
 `/` (`src/app/index.tsx`, `src/v2/splash-screen.tsx`) shows the FarmMate
-mark, name and tagline for under a second, then `router.replace('/v2')`, so
+mark, name and tagline (flow-v1 screen 1 sizes) for under a second, then `router.replace('/v2')`, so
 Back never returns to it. Deep links are their own static pages and open
 directly with no splash or home first (e2e-checked). Each placeholder shows a
 `ScreenHeader` (back button and sync pill) and a "กำลังสร้าง" card. The table lives in
@@ -79,7 +79,7 @@ precedence over the dynamic one.
 
 | Path | Screen |
 |---|---|
-| `/v2` | Home: the card home and the ☰ drawer (farm mockup screens 9 and 1) |
+| `/v2` | Home as drawn (flow-v1 screen 3, farm v1.1.0 screens 1 and 25): cover, three actions, ควรรู้ / ควรจัดการ (open sale, latest sale, money owed back — only when they apply), ดูการขายทั้งหมด, the ไปที่ grid, and the ☰ menu. Story `docs/stories/e03-v2-splash-home.md` |
 | `/` | Splash, then `/v2` |
 | `/v2/farm` | ข้อมูลฟาร์ม hub (mockup 2). Built |
 | `/v2/people`, `/v2/person/<id\|new>` (`?edit=1`) | คน: list, form, detail, delete (mockup 4–7). Built |
@@ -95,6 +95,7 @@ precedence over the dynamic one.
 | `/v2/device` | เครื่องนี้: theme, hold time, spoken count, date era, language (device-only). Built |
 | `/v2/sales` | การขายทั้งหมด, with links to every sale step |
 | `/v2/sync` | ซิงก์และข้อมูลขัดกัน |
+| `/v2/prepare`, `/v2/reports`, `/v2/weather`, `/v2/payables`, `/v2/stock` | Home actions and modules with no screen yet: เตรียมขาย, รายงานการขายย้อนหลัง, พยากรณ์อากาศ, รายการที่ต้องจ่าย, รายการ stock (placeholders) |
 | `/v2/sale/start` | เริ่มการขาย |
 | `/v2/sale/point` | เลือกจุดชั่ง |
 | `/v2/sale/zero-tare` | ขึ้นศูนย์และตะกร้าเปล่า |
@@ -119,12 +120,45 @@ pre-renders one page per slug for the static web export. The local
 
 Screenshots at 390×844, light and dark: `docs/ux/screenshots/ui-v2/`.
 
+## Splash and home (e03-v2-splash-home)
+
+Built against `docs/ux/mockups/flow-v1.html` section 1 (screens 1 and 3) and
+`flow-farm-v1.1.0.html` screens 1 and 25. e2e `e2e/v2-home.spec.ts` (empty,
+then seeded sales, people and money, read offline; the selling entries) also
+writes mockup-vs-build pairs. Screenshots, 412×915, in
+`docs/ux/screenshots/ui-v2/home/` (same `UPDATE_SCREENSHOTS=1` rule as below).
+
+Not as drawn yet: the farm group name as the header title and the menu's
+group block with สลับกลุ่ม (E02); the Google sign-in and first-time banner on
+the splash (E02); "เปลี่ยนรูปปก", a picked cover photo and the cover's slow
+motion; the rubber cups on the cover trees; "งานถึงกำหนด" rows (E08); the
+header keeps the shared ScreenHeader (title 20 bold with a hairline, the
+mockup appbar is 18 semibold without one). The menu lists จุดชั่ง, ส่วนแบ่ง,
+บัญชีหนี้, การขายทั้งหมด and ซิงก์ under the mockup rows, so every built list
+stays reachable.
+
+| | |
+|---|---|
+| Splash | ![](ux/screenshots/ui-v2/home/00-splash.png) |
+| Home, empty | ![](ux/screenshots/ui-v2/home/01-home-empty.png) |
+| ☰ menu | ![](ux/screenshots/ui-v2/home/02-menu.png) |
+| Home, live rows | ![](ux/screenshots/ui-v2/home/03-home-live.png) |
+| Mockup vs build: splash | ![](ux/screenshots/ui-v2/home/cmp-splash.png) |
+| Mockup vs build: home (flow-v1) | ![](ux/screenshots/ui-v2/home/cmp-home-v1.png) |
+| Mockup vs build: home (v1.1.0 screen 25) | ![](ux/screenshots/ui-v2/home/cmp-home-v110.png) |
+| Mockup vs build: ☰ menu (v1.1.0 screen 1) | ![](ux/screenshots/ui-v2/home/cmp-menu-v110.png) |
+
 ## Farm settings (D-83)
 
 Built against `docs/ux/mockups/flow-farm-v1.1.0.html` sections 1–6 and 10.
 Tests: `src/__tests__/v2-farm-*.test.tsx`; e2e `e2e/v2-farm.spec.ts` (offline
 add/edit of every kind, reload) and `e2e/v2-store.spec.ts` (IndexedDB, no
 storage warning, two tabs, v0.4 keys).
+
+Roles (owner 2026-10-10): the people screens neither show nor offer
+ผู้จ่าย. The role stays in the data model and is kept on save; who paid is
+recorded on each expense (MONEY). A person added from the expense form's
+"+ คนอื่น" still gets it, so they show with no role line.
 
 Not as drawn yet: GPS is typed as "lat, lng" (no location or map picker
 installed); the durian lease file upload (needs Cloud Storage); a buyer's
