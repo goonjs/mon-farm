@@ -2,7 +2,7 @@ import { ESLint } from 'eslint';
 import { describe, expect, it } from 'vitest';
 
 /**
- * D-82: the v2 UI (src/ui and the (v2) route group) is built only from the
+ * D-82: the v2 UI (src/ui, src/v2 and the /v2 routes) is built only from the
  * new design system. The lint rule must reject old-UI imports there and
  * leave the old screens alone.
  */
@@ -18,7 +18,7 @@ const OLD = "import { a } from '../components/chrome';\nimport { b } from '@/con
 const NEW = "import { useTheme } from '../theme';\nimport { useT } from '../i18n';\nexport const z = [useTheme, useT];\n";
 
 describe('v2 import rule (D-82)', () => {
-  it.each(['src/ui/probe.tsx', 'src/app/(v2)/probe.tsx'])('%s may not import old UI or old theme', async (f) => {
+  it.each(['src/ui/probe.tsx', 'src/v2/probe.tsx', 'src/app/v2/probe.tsx'])('%s may not import old UI or old theme', async (f) => {
     const hits = await restricted(f, OLD);
     expect(hits).toHaveLength(2);
   });

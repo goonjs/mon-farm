@@ -9,3 +9,4 @@ export { Drawer, MenuItem, MenuSection } from './drawer';
 export { ScreenHeader, type BackAction, type HeaderAction } from './screen-header';
 export { SyncPill } from './sync-pill';
 export { TopBar } from './top-bar';
+export { AppText, Num, TYPE_VARIANTS, typeStyle, type TypeVariant } from './type';

@@ -26,11 +26,12 @@ module.exports = [
     ],
   },
   {
-    // D-82: the v2 UI is built only from the new design system in src/ui.
-    // It may reuse logic (core, store, sync, i18n, theme tokens) but never
+    // D-82: the v2 UI (src/ui, src/v2 and the /v2 routes) is built only from
+    // the new design system. It may reuse logic (core, store, sync, i18n,
+    // theme tokens) but never
     // the old UI in src/components or the template colours in
     // src/constants/theme.
-    files: ['src/ui/**', 'src/app/(v2)/**'],
+    files: ['src/ui/**', 'src/v2/**', 'src/app/v2/**'],
     rules: {
       'no-restricted-imports': [
         'error',
