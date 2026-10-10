@@ -22,7 +22,9 @@
 import { Link, type Href } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
-import { Button, TopBar } from '../components/chrome';
+import { Button } from '../components/chrome';
+import { ScreenHeader } from '../components/ui/screen-header';
+import { useSyncStatus } from '../sync/use-sync-status';
 import { useI18n, useT, type Locale } from '../i18n';
 import { useSpeech } from '../speech';
 import type { TextSize } from '../core/text-scale';
@@ -39,16 +41,14 @@ export default function SettingsScreen() {
   const { locale, setLocale } = useI18n();
   const { scheme, setScheme, textSize, setTextSize } = useThemeControls();
   const { speechOn, setSpeechOn } = useSpeech();
+  const sync = useSyncStatus();
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar
-        crumb={msg('settings.title')}
-        right={
-          <Link href={LIST} asChild>
-            <Button testID="settings-back">{msg('settings.back')}</Button>
-          </Link>
-        }
+      <ScreenHeader
+        title={msg('settings.title')}
+        back={{ label: msg('settings.back'), testID: 'settings-back', href: LIST }}
+        sync={sync}
       />
 
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.lg }}>

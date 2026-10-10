@@ -3,6 +3,12 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { Keyframe, Easing } from 'react-native-reanimated';
 
 import classes from './animated-icon.module.css';
+import { tokens } from '../../design/tokens';
+
+/** Brand gradient from roles (E01-S17); the CSS module keeps only size/shape. */
+const gradient = {
+  backgroundImage: `linear-gradient(180deg, ${tokens.color.light.brand}, ${tokens.color.light.brandStrong})`,
+};
 const DURATION = 300;
 
 export function AnimatedSplashOverlay() {
@@ -62,7 +68,7 @@ export function AnimatedIcon() {
       </Animated.View>
 
       <Animated.View style={styles.background} entering={keyframe.duration(DURATION)}>
-        <div className={classes.expoLogoBackground} />
+        <div className={classes.expoLogoBackground} style={gradient} />
       </Animated.View>
 
       <Animated.View style={styles.imageContainer} entering={logoKeyframe.duration(DURATION)}>

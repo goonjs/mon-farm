@@ -1,6 +1,6 @@
 # Story E01-S17: สี 2 ชั้น (palette → semantic token) + เปลี่ยนชุดสีด้วยค่าเดียว
 
-Status: Draft (2026-10-09 — ข้อเสนอจาก design-system designer ผ่าน lead; **เจ้าของยังไม่ได้ตกลง AC** ห้ามเริ่มทำจนกว่าจะตกลง)
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ
 
 ## Context
 

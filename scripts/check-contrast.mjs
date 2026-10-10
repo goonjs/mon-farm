@@ -9,13 +9,16 @@
  * is checkable. A colour tweak that quietly drops the count below its floor
  * should turn the pipeline red, not ship to a yard in direct sun.
  *
+ * Every palette in PALETTES is checked, not only the active one (E01-S17): the
+ * point of keeping palette B is that switching to it is always one safe edit.
+ *
  * Thresholds follow WCAG 2.2:
  *   4.5  normal text (AA)
  *   3.0  large text (AA), and UI component / graphical boundaries (1.4.11)
  *   7.0  normal text (AAA)
  */
 
-import { tokens } from '../design/tokens.ts';
+import { PALETTES, ACTIVE_PALETTE, colorFor } from '../design/tokens.ts';
 
 const srgb = (c) => {
   c /= 255;
@@ -94,6 +97,46 @@ const PAIRINGS = [
   ['accept', 'stage', 3, 'the dial fill against the stage'],
   ['inkInverse', 'brandStrong', 3, 'glyph on a filled brand control (FAB)'],
   ['ruleStrong', 'surfaceRaised', 3, 'control borders on cards'],
+
+  // ── E01-S17 roles ──────────────────────────────────────────────────────────
+  // Highlight card and selected rows.
+  ['ink', 'brandCream', 7, 'text on the highlight (cream) card'],
+  ['inkSoft', 'brandCream', 4.5, 'secondary text on the highlight card'],
+  ['warn', 'brandCream', 4.5, 'flag text on the highlight card'],
+  ['inkSoft', 'actionSunk', 4.5, 'secondary text on selected rows'],
+  ['action', 'actionSunk', 4.5, 'selected option label'],
+  ['ruleStrong', 'surfaceSunk', 3, 'control borders in wells'],
+  // App bar.
+  ['appBarInk', 'appBar', 7, 'app bar title and icons'],
+  ['inkSoft', 'appBar', 4.5, 'app bar subtitle'],
+  ['action', 'appBar', 3, 'controls on the app bar'],
+  // Focus ring on every ground it can sit on.
+  ['focusRing', 'stage', 3, 'focus ring on stage'],
+  ['focusRing', 'surface', 3, 'focus ring on screen ground'],
+  ['focusRing', 'surfaceRaised', 3, 'focus ring on cards'],
+  ['focusRing', 'surfaceSunk', 3, 'focus ring in wells'],
+  ['focusRing', 'actionSunk', 3, 'focus ring on selected rows'],
+  // Disabled controls stay readable.
+  ['disabledInk', 'disabledFill', 4.5, 'disabled button label'],
+  ['ruleStrong', 'disabledFill', 3, 'disabled button dashed border'],
+  // Money.
+  ['moneyIn', 'surface', 4.5, 'money-in figure on screen ground'],
+  ['moneyIn', 'surfaceRaised', 4.5, 'money-in figure on cards'],
+  ['moneyIn', 'moneyInSunk', 4.5, 'money-in figure on its summary card'],
+  ['ink', 'moneyInSunk', 7, 'text on the money-in summary card'],
+  ['moneyOut', 'surface', 4.5, 'money-out figure on screen ground'],
+  ['moneyOut', 'surfaceRaised', 4.5, 'money-out figure on cards'],
+  ['moneyOut', 'moneyOutSunk', 4.5, 'money-out figure on its summary card'],
+  ['ink', 'moneyOutSunk', 7, 'text on the money-out summary card'],
+  // Category colours: icon/line/bar (3:1) and the name on its tile.
+  ...[1, 2, 3, 4, 5, 6].flatMap((k) => [
+    [`category${k}`, 'surface', 3, `category ${k} mark on screen ground`],
+    [`category${k}`, 'surfaceRaised', 3, `category ${k} mark on cards`],
+    [`category${k}`, 'surfaceSunk', 3, `category ${k} mark in wells`],
+    [`category${k}`, `category${k}Sunk`, 3, `category ${k} icon on its tile`],
+    ['ink', `category${k}Sunk`, 7, `group name on category ${k} tile`],
+    ['inkSoft', `category${k}Sunk`, 4.5, `secondary text on category ${k} tile`],
+  ]),
 ];
 
 const grade = (r) => (r >= 7 ? 'AAA' : r >= 4.5 ? 'AA' : r >= 3 ? '3:1' : '—');
@@ -101,20 +144,34 @@ const grade = (r) => (r >= 7 ? 'AAA' : r >= 4.5 ? 'AA' : r >= 3 ? '3:1' : '—')
 let failures = 0;
 const strict = process.argv.includes('--strict');
 
-for (const scheme of ['light', 'dark']) {
-  const c = tokens.color[scheme];
-  console.log(`\n  ${scheme.toUpperCase()}${scheme === 'light' ? '  (default — field mode)' : '  (opt-in)'}`);
-  console.log('  ' + '─'.repeat(76));
+let checks = 0;
 
-  for (const [fg, bg, required, what] of PAIRINGS) {
-    const r = ratio(c[fg], c[bg]);
-    const ok = r >= required;
-    if (!ok) failures++;
-    const mark = ok ? '✓' : '✗';
+for (const [name, palette] of Object.entries(PALETTES)) {
+  const colors = colorFor(palette);
+  const active = name === ACTIVE_PALETTE ? '  ← active' : '';
+  for (const scheme of ['light', 'dark']) {
+    const c = colors[scheme];
     console.log(
-      `  ${mark} ${r.toFixed(2).padStart(5)}:1  need ${String(required).padStart(3)}  ` +
-        `${grade(r).padEnd(4)} ${what}`,
+      `\n  ${name} · ${scheme.toUpperCase()}${scheme === 'light' ? '  (default — field mode)' : '  (opt-in)'}${active}`,
     );
+    console.log('  ' + '─'.repeat(76));
+
+    for (const [fg, bg, required, what] of PAIRINGS) {
+      if (!(fg in c) || !(bg in c)) {
+        failures++;
+        console.log(`  ✗ unknown token in pairing ${fg} / ${bg}`);
+        continue;
+      }
+      const r = ratio(c[fg], c[bg]);
+      const ok = r >= required;
+      checks++;
+      if (!ok) failures++;
+      const mark = ok ? '✓' : '✗';
+      console.log(
+        `  ${mark} ${r.toFixed(2).padStart(5)}:1  need ${String(required).padStart(3)}  ` +
+          `${grade(r).padEnd(4)} ${fg} / ${bg} — ${what}`,
+      );
+    }
   }
 }
 
@@ -123,5 +180,8 @@ if (failures) {
   console.error(`  ✗ ${failures} pairing(s) below their required ratio.\n`);
   if (strict) process.exit(1);
 } else {
-  console.log(`  ✓ all ${PAIRINGS.length * 2} pairings clear their required ratio.\n`);
+  console.log(
+    `  ✓ all ${checks} checks clear their required ratio ` +
+      `(${PAIRINGS.length} pairings × 2 schemes × ${Object.keys(PALETTES).length} palettes).\n`,
+  );
 }

@@ -9,6 +9,8 @@ import { ThemeProvider, tokens, useTheme } from '../theme';
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
+  // Settings shows the sync pill (E01-S17), which refreshes on focus.
+  useFocusEffect: () => undefined,
 }));
 
 beforeAll(() => {
