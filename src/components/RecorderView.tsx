@@ -39,6 +39,8 @@ export interface RecorderBasket {
   readonly edited: boolean;
   /** A basket made of parts at several points (E04-S06). */
   readonly partsG?: readonly number[];
+  /** Entered afterwards as a point total (E04-S10). */
+  readonly backfill?: boolean;
 }
 
 export interface RecorderViewProps {
@@ -311,7 +313,9 @@ export function RecorderView(props: RecorderViewProps) {
                       <Text style={[text(th.font.size.body, 'bold'), { minWidth: 48, fontVariant: ['tabular-nums'] }, struck]}>
                         {voided ? `✗ #${b.basketNo}` : `#${b.basketNo}`}
                       </Text>
-                      <Text style={[text(th.font.size.body), { flex: 1 }, struck]}>{b.short ? `${b.pointName} · ${t('rec.short')}` : b.pointName}</Text>
+                      <Text style={[text(th.font.size.body), { flex: 1 }, struck]}>
+                        {[b.pointName, b.short ? t('rec.short') : null, b.backfill ? t('rec.backfillTag') : null].filter(Boolean).join(' · ')}
+                      </Text>
                       <Text style={[text(th.font.size.body), { fontVariant: ['tabular-nums'] }, struck]}>
                         {b.partsG
                           ? `${t('rec.parts', { parts: b.partsG.map((g) => formatKg(g)).join(' + '), total: formatKg(b.netG) })} ${t('rec.kgUnit')}`

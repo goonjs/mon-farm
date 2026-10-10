@@ -37,7 +37,7 @@ type NewEvent =
   | {
       kind: 'accept';
       pileId: string;
-      input: 'hold' | 'hold-kbd' | 'edit';
+      input: 'hold' | 'hold-kbd' | 'edit' | 'backfill';
       netG: number;
       tareG: number;
       pointId?: string;
@@ -55,6 +55,7 @@ type NewEvent =
       skewG?: number;
       editOf?: string;
       partOf?: string;
+      backfill?: true;
     }
   | {
       kind: 'reject';

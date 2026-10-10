@@ -222,3 +222,43 @@ test('bridge basket: แดง short 20 at จุด 1, topped up 30 at จุ�
   await expect(page.getByTestId('fill-sheet')).toHaveCount(0);
   await expect(page.getByTestId('rec-current')).toHaveText('1');
 });
+
+test('backfill a point offline: 3 full + 20 kg numbered on, labelled, and kept over a reload (E04-S10)', async ({ page, context }, info) => {
+  const shot = async (name: string) => {
+    if (info.project.name === 'phone-landscape') await page.screenshot({ path: `${SHOTS}/${name}.png` });
+  };
+  await seedMaster(page, [
+    { t: 'settings_set', zeroCheck: 'skip' },
+    { t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] },
+    { t: 'property_added', propertyId: 'fA', name: 'จันทเขลม', crop: 'rubber' },
+    { t: 'point_added', pointId: 'p1', propertyId: 'fA', name: 'จุด 3' },
+    { t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' },
+  ]);
+  await page.goto('/');
+  await page.getByTestId('new-sale').click();
+  await page.getByTestId('start-next').click();
+  await page.locator('[data-testid^="pick-point-"]', { hasText: 'จุด 3' }).last().click();
+  await hold(page);
+  await expect(page.getByTestId('rec-current')).toHaveText('2');
+
+  await context.setOffline(true);
+  await page.getByTestId('rec-menu').click();
+  await page.getByTestId('rec-menu-backfill').click();
+  await page.getByTestId('bf-full').fill('3');
+  await page.getByTestId('bf-short').fill('20');
+  await expect(page.getByTestId('bf-plan')).toContainText('เข่งที่ 2–4');
+  await expect(page.getByTestId('bf-plan')).toContainText('เข่งที่ 5');
+  await expect(page.getByTestId('bf-plan')).toContainText('170 กก.');
+  await shot('e04-s10-backfill');
+  await page.getByTestId('bf-save').click();
+  await expect(page.getByTestId('rec-current')).toHaveText('6');
+  await expect(page.getByTestId('rec-card-kg')).toContainText('220');
+
+  await context.setOffline(false);
+  await page.reload();
+  await expect(page.getByTestId('rec-current')).toHaveText('6');
+  await page.getByTestId('rec-menu').click();
+  await page.getByTestId('rec-menu-list').click();
+  await expect(page.getByTestId('rec-row-5')).toContainText('บันทึกย้อนหลัง');
+  await expect(page.getByTestId('rec-row-1')).not.toContainText('บันทึกย้อนหลัง');
+});

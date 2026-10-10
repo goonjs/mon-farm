@@ -34,11 +34,12 @@ export function basketGroups(events: readonly SaleEvent[], stdNetGOf: (pileId: s
   for (const e of events) if (e.kind === 'sys' && e.payload.t === 'basket_closed') closed.add(e.payload.basketId);
   const out = new Map<string, BasketGroup>();
   for (const root of live) {
+    // A backfilled short basket is history (E04-S10): closed as entered, never open.
     if (root.kind !== 'short' || root.partOf || !root.pointId || root.basketNo === undefined) continue;
     const parts = [root, ...live.filter((b) => b.partOf === root.id)].sort(compareEvents);
     const partsG = parts.map(basketNetG);
     const netG = partsG.reduce((a, b) => a + b, 0);
-    const status = netG >= stdNetGOf(root.pileId) ? 'full' : closed.has(root.id) ? 'closed' : 'open';
+    const status = netG >= stdNetGOf(root.pileId) ? 'full' : closed.has(root.id) || root.backfill ? 'closed' : 'open';
     out.set(root.id, { rootId: root.id, basketNo: root.basketNo, pointId: root.pointId, parts, partsG, netG, status });
   }
   return out;

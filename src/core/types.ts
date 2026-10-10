@@ -107,7 +107,7 @@ export interface AcceptEvent extends EventBase {
    * now the envelope's channel). `edit` = re-recorded from the basket list
    * (E04-S09), with `editOf` naming the basket it replaces.
    */
-  readonly input: 'hold' | 'hold-kbd' | 'edit';
+  readonly input: 'hold' | 'hold-kbd' | 'edit' | 'backfill';
   readonly netG: number;
   readonly tareG: number;
   /** The basket this one replaces (E04-S09): that one is voided with reason `edit` in the same step. */
@@ -152,6 +152,8 @@ export interface ShortEvent extends EventBase {
    * holds the rubber already in it: net = reading − (basket + what was there).
    */
   readonly partOf?: EventId;
+  /** Entered afterwards as a point total (E04-S10, SALE-18): labelled "บันทึกย้อนหลัง", never open. */
+  readonly backfill?: true;
 }
 
 /**

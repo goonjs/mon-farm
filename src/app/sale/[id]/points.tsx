@@ -22,9 +22,10 @@ export default function PickPointScreen() {
   const t = useTheme();
   const msg = useT();
   const router = useRouter();
-  const { pair: pairParam, switch: switching, farm: farmParam, tapper: tapperParam } = useLocalSearchParams<{
+  const { pair: pairParam, switch: switching, farm: farmParam, tapper: tapperParam, mode } = useLocalSearchParams<{
     pair?: string;
     switch?: string;
+    mode?: string;
     farm?: string;
     tapper?: string;
   }>();
@@ -55,7 +56,8 @@ export default function PickPointScreen() {
     // Switching from the counter (E04-S05) replaces this screen, so the
     // history never grows a counter per switch.
     const go = switching === '1' ? router.replace : router.push;
-    go({ pathname: '/sale/[id]/counter', params: { id: saleId, pile: pointId } });
+    // From the backfill screen, the pick goes back to it (E04-S10, D-49: the same flow).
+    go({ pathname: mode === 'backfill' ? '/sale/[id]/backfill' : '/sale/[id]/counter', params: { id: saleId, pile: pointId } });
   };
 
   const heading = (text: string) => (

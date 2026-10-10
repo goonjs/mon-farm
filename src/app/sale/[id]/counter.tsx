@@ -554,6 +554,12 @@ export default function CounterScreen() {
                     onPress: () => append({ kind: 'sys', payload: { t: 'sale_status_set', status: 'completed' } }),
                   },
                   { testID: 'rec-menu-cancel', label: msg('status.cancel'), onPress: () => setConfirmCancelSale(true) },
+                  // E04-S10: a point total entered afterwards, at this point (D-49).
+                  {
+                    testID: 'rec-menu-backfill',
+                    label: msg('backfill.title'),
+                    onPress: () => router.push({ pathname: '/sale/[id]/backfill', params: { id: saleId, pile: pile.id } }),
+                  },
                 ]
               : []
           }

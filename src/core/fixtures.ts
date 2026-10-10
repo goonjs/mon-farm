@@ -123,6 +123,17 @@ export class LogBuilder {
     return this;
   }
 
+  /** Backfilled baskets (E04-S10): a full one, and a short one given its reading. */
+  backfillAt(pointId: string, basketNo: number, netG = 50_000, tareG = 2_000): this {
+    this.events.push({ ...this.base(), kind: 'accept', pileId: pointId, pointId, basketNo, input: 'backfill', netG, tareG });
+    return this;
+  }
+
+  backfillShortAt(pointId: string, basketNo: number, readingG: number, tareG = 2_000): this {
+    this.events.push({ ...this.base(), kind: 'short', pileId: pointId, pointId, basketNo, readingG, tareG, backfill: true });
+    return this;
+  }
+
   /** An off-standard basket, given its gross scale reading. */
   short(pileId: string, readingG: number, tareG = 2_000): this {
     this.events.push({ ...this.base(), kind: 'short', pileId, readingG, tareG });

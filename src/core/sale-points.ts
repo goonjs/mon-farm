@@ -244,6 +244,8 @@ export interface BasketRow {
   readonly by: { readonly deviceId: string; readonly ts: number };
   /** A basket made of parts at several points: each part's net, "(20 + 30)" (E04-S06). */
   readonly partsG?: readonly number[];
+  /** Entered afterwards as a point total (E04-S10): "บันทึกย้อนหลัง". */
+  readonly backfill?: boolean;
 }
 
 /**
@@ -271,6 +273,7 @@ export function basketList(events: readonly SaleEvent[]): readonly BasketRow[] {
       netG: bridged ? bridged.netG : basketNetG(e),
       short: bridged ? bridged.status !== 'full' : e.kind === 'short',
       ...(bridged ? { partsG: bridged.partsG } : {}),
+      ...((e.kind === 'accept' && e.input === 'backfill') || (e.kind === 'short' && e.backfill) ? { backfill: true } : {}),
       status: live.has(e.id) ? 'live' : 'voided',
       edited: !!e.editOf,
       by: { deviceId: e.actor.deviceId, ts: e.ts },
