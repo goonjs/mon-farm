@@ -288,3 +288,29 @@ describe('v2 backfill (page 14, E04-S10)', () => {
     expect(screen.getByTestId('backfill-save').props.accessibilityState).toMatchObject({ disabled: true });
   });
 });
+
+describe('v2 counter edge cases (pages 8a, 12b)', () => {
+  it('a point with no tapper weighs on, with a warning (D-63)', async () => {
+    await started();
+    await readyAt(farm.a[4]);
+    await counterAt(farm.a[4]);
+    expect(screen.getByTestId('no-tapper')).toHaveTextContent(/จุดนี้ยังไม่มีคนกรีดยาง/);
+    await hold();
+    expect(screen.getByTestId('current-no')).toHaveTextContent('2');
+  });
+
+  it('a point deleted while the sale is open must be replaced before weighing on (D-65, D-67)', async () => {
+    await started();
+    await readyAt(farm.a[2]);
+    const c = await counterAt(farm.a[2]);
+    await hold();
+    c.unmount();
+    await master().remove(farm.a[2]);
+    await counterAt(farm.a[2]);
+    expect(screen.getByTestId('point-gone')).toHaveTextContent(/จุด 3 ถูกลบแล้ว/);
+    expect(screen.getByTestId('point-gone')).toHaveTextContent(/เข่ง 1 \(50 กก\.\)/);
+    await press(`gone-pick-${farm.a[0]}`);
+    expect(router.replace).toHaveBeenLastCalledWith(expect.stringContaining(`point=${farm.a[0]}`));
+    await master().restore(farm.a[2]);
+  });
+});

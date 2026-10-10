@@ -69,7 +69,8 @@ export function useSaleView() {
     mode,
     settings,
     nameOf,
-    saleTitle: msg('rec.saleOf', { date: formatThaiDate(sale.state.startedTs ?? now, era) }),
+    // Empty until the log is read, so a static page's first render matches its export (React 418).
+    saleTitle: sale.ready ? msg('rec.saleOf', { date: formatThaiDate(sale.state.startedTs ?? now, era) }) : '',
   };
 }
 
