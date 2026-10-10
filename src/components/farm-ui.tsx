@@ -20,12 +20,18 @@ export function FarmScreen({
   back,
   children,
   footer,
+  right,
+  overlay,
 }: {
   title: string;
   subtitle?: string;
   back: Href;
   children: ReactNode;
   footer?: ReactNode;
+  /** Top-right of the header (mockup: the round "แก้" button on a detail screen). */
+  right?: ReactNode;
+  /** Over the whole screen, e.g. a `Sheet`. */
+  overlay?: ReactNode;
 }) {
   const t = useTheme();
   const router = useRouter();
@@ -51,11 +57,13 @@ export function FarmScreen({
             <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, color: t.color.inkSoft }}>{subtitle}</Text>
           ) : null}
         </View>
+        {right}
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, paddingTop: 0, gap: t.space.md }}>
         {children}
       </ScrollView>
       {footer ? <View style={{ padding: t.space.md }}>{footer}</View> : null}
+      {overlay}
     </View>
   );
 }
@@ -238,5 +246,37 @@ export function LinkButton({ label, onPress, testID }: { label: string; onPress:
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+/**
+ * A bottom sheet (mockup v1.1.0: delete confirms): a dimmed backdrop that
+ * cancels on tap, a rounded top with a handle. Kept here until the shared
+ * sheet from the design-system work lands; then this becomes that.
+ */
+export function Sheet({ children, onClose, testID }: { children: ReactNode; onClose: () => void; testID?: string }) {
+  const t = useTheme();
+  return (
+    <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, justifyContent: 'flex-end' }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="ปิด"
+        onPress={onClose}
+        style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: t.color.ink, opacity: 0.45 }}
+      />
+      <View
+        testID={testID}
+        style={{
+          backgroundColor: t.color.surfaceRaised,
+          borderTopLeftRadius: t.radius.xxl,
+          borderTopRightRadius: t.radius.xxl,
+          padding: t.space.lg,
+          gap: t.space.md,
+        }}
+      >
+        <View style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: t.radius.pill, backgroundColor: t.color.ruleStrong }} />
+        {children}
+      </View>
+    </View>
   );
 }

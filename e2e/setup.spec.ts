@@ -36,11 +36,11 @@ test('start counting is disabled until price, split and a pile all exist', async
 
   await page.getByTestId('price-baht').fill('26.5');
   await expect(page.getByTestId('saved-price')).toContainText('บันทึกแล้ว');
-  await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีโซน'); // price set, no zone yet
+  await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีสวน'); // price set, no zone yet
 
   await page.getByTestId('new-zone-name').fill('โซน A');
   await page.getByTestId('add-zone').click();
-  await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีกอง'); // zone + split resolved, still no pile
+  await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีจุดชั่ง'); // zone + split resolved, still no pile
 
   const zoneEditor = page.locator('[data-testid^="zone-editor-"]');
   await zoneEditor.getByTestId(/^pile-name-/).fill('กอง 1');

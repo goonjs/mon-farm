@@ -119,22 +119,7 @@ describe('PersonForm — E03-S01', () => {
     expect(await mockPeople.get(p.id)).toMatchObject({ id: p.id, name: 'แดงใหม่' });
   });
 
-  it('delete says "ลบ" and "กู้คืนได้", asks first, then soft-deletes (D-65 Q3)', async () => {
-    const p = await mockPeople.create('แดง', ['tapper']);
-    const onDone = jest.fn();
-    wrap(<PersonForm personId={p.id} onDone={onDone} />);
-    await flush();
-    expect(screen.getByTestId('person-delete')).toHaveTextContent('ลบ (กู้คืนได้)');
-    fireEvent.press(screen.getByTestId('person-delete'));
-    expect(screen.getByTestId('delete-confirm')).toHaveTextContent(/กู้คืนได้/);
-    expect(screen.queryByText(/เก็บถาวร/)).toBeNull();
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('delete-confirm-yes'));
-    });
-    await flush();
-    expect((await mockPeople.get(p.id))?.deleted).toBe(true);
-    expect(onDone).toHaveBeenCalled();
-  });
+  // Delete moved to the read-only detail with its sheet: see person-detail.test.tsx.
 
   it('shows the added date in พ.ศ.; a tap switches to ค.ศ. (D-65 Q1)', async () => {
     const p = await mockPeople.create('แดง', ['tapper']);

@@ -1,7 +1,9 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
+import { PersonDetail } from '../components/PersonDetail';
 import { PersonForm } from '../components/PersonForm';
+import { PointDetail } from '../components/PointDetail';
 import { PointForm } from '../components/PointForm';
 import { tapperOn, todayIso } from '../core/master';
 import { peopleStore as mockMaster } from '../store/people';
@@ -15,7 +17,7 @@ jest.mock('../store/people', () => {
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
   useFocusEffect: () => undefined,
-  useRouter: () => ({ back: jest.fn(), replace: jest.fn(), canGoBack: () => true }),
+  useRouter: () => ({ back: jest.fn(), replace: jest.fn(), push: jest.fn(), canGoBack: () => true }),
 }));
 
 async function flush() {
@@ -35,7 +37,7 @@ async function setup() {
 describe('Point screen — tapper of the point (E03-S05)', () => {
   it('a point with no tapper warns "ยังไม่มีคนกรีด" and can be given one', async () => {
     const { p, red } = await setup();
-    wrap(<PointForm pointId={p.id} propertyId={null} onDone={jest.fn()} />);
+    wrap(<PointDetail pointId={p.id} onRename={jest.fn()} onDone={jest.fn()} />);
     await flush();
     expect(screen.getByTestId('no-tapper')).toHaveTextContent(/ยังไม่มีคนกรีด/);
     fireEvent.press(screen.getByTestId('plan-change'));
@@ -51,7 +53,7 @@ describe('Point screen — tapper of the point (E03-S05)', () => {
   it('planning a change shows when the old tapper ends — the day before (D-63)', async () => {
     const { p, red, nat } = await setup();
     await mockMaster.assignTapper(p.id, red.id, null);
-    wrap(<PointForm pointId={p.id} propertyId={null} onDone={jest.fn()} />);
+    wrap(<PointDetail pointId={p.id} onRename={jest.fn()} onDone={jest.fn()} />);
     await flush();
     fireEvent.press(screen.getByTestId('plan-change'));
     fireEvent.press(screen.getByTestId(`plan-tapper-${nat.id}`));
@@ -68,7 +70,7 @@ describe('Point screen — tapper of the point (E03-S05)', () => {
   it('leaving with no replacement takes only an end date', async () => {
     const { p, red } = await setup();
     await mockMaster.assignTapper(p.id, red.id, null);
-    wrap(<PointForm pointId={p.id} propertyId={null} onDone={jest.fn()} />);
+    wrap(<PointDetail pointId={p.id} onRename={jest.fn()} onDone={jest.fn()} />);
     await flush();
     fireEvent.press(screen.getByTestId('plan-change'));
     fireEvent.press(screen.getByTestId('plan-leave'));
@@ -85,7 +87,7 @@ describe('Point screen — tapper of the point (E03-S05)', () => {
     const { p, red, nat } = await setup();
     await mockMaster.assignTapper(p.id, red.id, null);
     const plan = await mockMaster.assignTapper(p.id, nat.id, '2099-01-01');
-    wrap(<PointForm pointId={p.id} propertyId={null} onDone={jest.fn()} />);
+    wrap(<PointDetail pointId={p.id} onRename={jest.fn()} onDone={jest.fn()} />);
     await flush();
     await act(async () => {
       fireEvent.press(screen.getByTestId(`cancel-plan-${plan}`));
@@ -114,7 +116,7 @@ describe('review fixes — E03-S05', () => {
   it('once a point has a tapper, a change needs a start day', async () => {
     const { p, red, nat } = await setup();
     await mockMaster.assignTapper(p.id, red.id, null);
-    wrap(<PointForm pointId={p.id} propertyId={null} onDone={jest.fn()} />);
+    wrap(<PointDetail pointId={p.id} onRename={jest.fn()} onDone={jest.fn()} />);
     await flush();
     fireEvent.press(screen.getByTestId('plan-change'));
     fireEvent.press(screen.getByTestId(`plan-tapper-${nat.id}`));
@@ -129,7 +131,7 @@ describe('review fixes — E03-S05', () => {
     const { p, red } = await setup();
     await mockMaster.assignTapper(p.id, red.id, null);
     const leave = await mockMaster.endTapper(p.id, '2099-01-01');
-    wrap(<PointForm pointId={p.id} propertyId={null} onDone={jest.fn()} />);
+    wrap(<PointDetail pointId={p.id} onRename={jest.fn()} onDone={jest.fn()} />);
     await flush();
     expect(screen.getByTestId(`vacancy-${leave}`)).toHaveTextContent(/ตามแผน/);
     await act(async () => {
@@ -145,12 +147,12 @@ describe('People screen side (E03-S01 AC4/AC7, E03-S05)', () => {
     const { p, red } = await setup();
     await mockMaster.assignTapper(p.id, red.id, null);
     const onDone = jest.fn();
-    wrap(<PersonForm personId={red.id} onDone={onDone} />);
+    wrap(<PersonDetail personId={red.id} onEdit={jest.fn()} onDone={onDone} />);
     await flush();
     expect(screen.getByTestId('person-points')).toHaveTextContent(new RegExp(p.name));
     fireEvent.press(screen.getByTestId('person-delete'));
     expect(screen.getByTestId('delete-confirm')).toHaveTextContent(new RegExp(p.name));
-    expect(screen.getByTestId('delete-confirm')).toHaveTextContent(/ยังไม่มีคนกรีด/);
+    expect(screen.getByTestId('delete-confirm')).toHaveTextContent(/ยังไม่มีคนกรีดยาง/);
     await act(async () => {
       fireEvent.press(screen.getByTestId('delete-confirm-yes'));
     });
@@ -182,5 +184,26 @@ describe('People screen side (E03-S01 AC4/AC7, E03-S05)', () => {
 
   it('todayIso is the Bangkok day', () => {
     expect(todayIso(Date.UTC(2026, 9, 1, 18, 0))).toBe('2026-10-02');
+  });
+});
+
+describe('Point detail — mockup v1.1.0 farm-20/21', () => {
+  it('"แก้แผน" replaces a plan not started yet in one save', async () => {
+    const { p, red, nat } = await setup();
+    await mockMaster.assignTapper(p.id, red.id, null);
+    const plan = await mockMaster.assignTapper(p.id, nat.id, '2099-01-01');
+    wrap(<PointDetail pointId={p.id} onRename={jest.fn()} onDone={jest.fn()} />);
+    await flush();
+    expect(screen.getByTestId('timeline')).toHaveTextContent(/ตามแผน ยังไม่ถึงวัน/);
+    fireEvent.press(screen.getByTestId(`edit-plan-${plan}`));
+    expect(screen.getByTestId('plan-sheet')).toHaveTextContent(new RegExp(`วางแผนเปลี่ยนคนกรีดยาง · ${p.name}`));
+    fireEvent.press(screen.getByTestId(`plan-tapper-${nat.id}`));
+    fireEvent.changeText(screen.getByTestId('plan-from'), '1/6/2642');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('plan-save'));
+    });
+    await flush();
+    const s = await mockMaster.state();
+    expect([tapperOn(s, p.id, '2099-03-01'), tapperOn(s, p.id, '2099-06-01')]).toEqual([red.id, nat.id]);
   });
 });

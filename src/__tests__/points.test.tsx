@@ -2,9 +2,10 @@ import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import PropertiesScreen from '../app/properties';
+import { PointDetail } from '../components/PointDetail';
 import { PointForm } from '../components/PointForm';
 import { PointsWizard } from '../components/PointsWizard';
-import { PropertyForm } from '../components/PropertyForm';
+import { PropertyDetail } from '../components/PropertyDetail';
 import { peopleStore as mockMaster } from '../store/people';
 import { wrap } from '../test/render';
 
@@ -16,7 +17,7 @@ jest.mock('../store/people', () => {
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
   useFocusEffect: () => undefined,
-  useRouter: () => ({ back: jest.fn(), replace: jest.fn(), canGoBack: () => true }),
+  useRouter: () => ({ back: jest.fn(), replace: jest.fn(), push: jest.fn(), canGoBack: () => true }),
 }));
 
 async function flush() {
@@ -64,7 +65,7 @@ describe('PointForm — E03-S03', () => {
   it('deletes a point (กู้คืนได้) after confirming', async () => {
     const f = await mockMaster.addProperty({ name: 'สวน ก', crop: 'rubber' });
     const p = await mockMaster.addPoint(f.id, 'จุด 1');
-    wrap(<PointForm pointId={p.id} propertyId={null} onDone={jest.fn()} />);
+    wrap(<PointDetail pointId={p.id} onRename={jest.fn()} onDone={jest.fn()} />);
     await flush();
     fireEvent.press(screen.getByTestId('point-delete'));
     expect(screen.getByTestId('delete-confirm')).toHaveTextContent(/กู้คืนได้/);
@@ -82,9 +83,11 @@ describe('Farm screen lists its points — E03-S03', () => {
   it('shows the farm\'s points and flags a duplicate name', async () => {
     const f = await mockMaster.addProperty({ name: 'สวน ก', crop: 'rubber' });
     const p = await mockMaster.addPoint(f.id, 'จุด 1');
-    wrap(<PropertyForm propertyId={f.id} onDone={jest.fn()} />);
+    const dup = await mockMaster.addPoint(f.id, 'จุด 1').catch(() => null);
+    wrap(<PropertyDetail propertyId={f.id} onEdit={jest.fn()} onDone={jest.fn()} />);
     await flush();
     expect(screen.getByTestId(`point-${p.id}`)).toHaveTextContent(/จุด 1/);
+    expect(dup).toBeNull(); // the store refuses a duplicate name; a synced one would show the badge
   });
 });
 

@@ -6,6 +6,7 @@
  * the sale stays listed with its baskets, and counts in no total across sales.
  */
 
+import { compareEvents } from './order';
 import type { SaleEvent, SaleState } from './types';
 
 /** The owner's preset reasons; "อื่นๆ" is typed (owner 2026-10-03). */
@@ -36,7 +37,7 @@ export function isMoneyChange(e: { kind: string; payload?: { t: string } }): boo
 /** Money edits recorded after the sale was Completed — each one a payment to recheck (E05-S05). */
 export function paymentRecheck(events: readonly SaleEvent[]): { reason: string; targetId: string; ts: number }[] {
   const out: { reason: string; targetId: string; ts: number }[] = [];
-  for (const e of events) {
+  for (const e of [...events].sort(compareEvents)) {
     if (e.kind !== 'sys') continue;
     if (e.payload.t === 'money_edit') out.push({ reason: e.payload.reason, targetId: e.payload.targetId, ts: e.ts });
   }

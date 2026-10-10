@@ -101,7 +101,7 @@ test('assignments: helper assigns, a planned change ends the old tapper the day 
   await page.getByText('สวน ก', { exact: true }).click();
   await page.locator('[data-testid^="point-"]', { hasText: 'จุด 1' }).last().click();
   await expect(page.getByTestId('timeline')).toContainText('แดง');
-  await expect(page.getByTestId('timeline')).toContainText('ไม่ระบุวันเริ่ม');
+  await expect(page.getByTestId('timeline')).toContainText('ไม่ระบุ');
 
   await page.getByTestId('plan-change').click();
   await page.locator('[data-testid^="plan-tapper-"]', { hasText: 'นัด' }).click();

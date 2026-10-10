@@ -257,6 +257,57 @@ describe('E04-S11 — sale status on the recorder', () => {
     expect((await status('sale-s11-3')).at(-1)).toMatchObject({ t: 'money_edit', reason: 'คนกรีดแจ้ง' });
   });
 
+  async function complete() {
+    fireEvent.press(screen.getByTestId('rec-menu'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('rec-menu-complete'));
+    });
+    await flush();
+  }
+
+  it('completed: a void asks why, and the flag comes before the void in the log (review S4)', async () => {
+    await open('sale-s11-5', 4_850);
+    await complete();
+    fireEvent.press(screen.getByTestId('rec-menu'));
+    fireEvent.press(screen.getByTestId('rec-menu-list'));
+    fireEvent.press(screen.getByTestId('rec-row-1'));
+    fireEvent.press(screen.getByTestId('edit-void'));
+    fireEvent.press(screen.getByTestId('edit-void-confirm'));
+    fireEvent.press(screen.getByTestId('reason-2'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('reason-confirm'));
+    });
+    await flush();
+    const log = (await mockEventStore.load('sale-s11-5')) as { kind: string; seq: number; payload?: { t: string } }[];
+    const flag = log.find((e) => e.kind === 'sys' && e.payload?.t === 'money_edit')!;
+    const voided = log.find((e) => e.kind === 'correction')!;
+    expect(flag.seq).toBeLessThan(voided.seq);
+    expect(screen.getByTestId('rec-card-1')).toHaveTextContent(/ราคารวม/);
+  });
+
+  it('completed: saving an edit that changes nothing asks nothing and writes nothing (review S4)', async () => {
+    await open('sale-s11-6', 4_850);
+    await complete();
+    const before = (await mockEventStore.load('sale-s11-6')).length;
+    fireEvent.press(screen.getByTestId('rec-menu'));
+    fireEvent.press(screen.getByTestId('rec-menu-list'));
+    fireEvent.press(screen.getByTestId('rec-row-1'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('edit-save'));
+    });
+    await flush();
+    expect(screen.queryByTestId('money-reason')).toBeNull();
+    expect((await mockEventStore.load('sale-s11-6')).length).toBe(before);
+  });
+
+  it('completed: public mode takes no new basket, short or undo either (review S1)', async () => {
+    await open('sale-s11-7', 4_850);
+    await complete();
+    fireEvent.press(screen.getByTestId('rec-public'));
+    expect(screen.getByTestId('short').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId('undo').props.accessibilityState).toMatchObject({ disabled: true });
+  });
+
   it('a draft sale edits without asking; cancel asks once and is not a delete', async () => {
     await open('sale-s11-4', null);
     fireEvent.press(screen.getByTestId('rec-menu'));

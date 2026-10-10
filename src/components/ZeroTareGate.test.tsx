@@ -75,7 +75,7 @@ describe('ZeroTareGate — E04-S03 (D-75)', () => {
     wrap(<ZeroTareGate {...baseProps} onZeroChecked={onZeroChecked} onWait={onWait} zeroChecked={false} tareConfirmed={false} />);
     fireEvent.press(screen.getByTestId('zero-no'));
     fireEvent.changeText(screen.getByTestId('zero-reading'), '2');
-    expect(screen.getByTestId('zero-flag-confirm')).toHaveTextContent('รับเข็มเบี้ยวและใช้ต่อ');
+    expect(screen.getByTestId('zero-flag-confirm')).toHaveTextContent('รับค่าเบี้ยวและใช้ต่อ');
     fireEvent.press(screen.getByTestId('zero-wait'));
     expect(onWait).toHaveBeenCalled();
     fireEvent.press(screen.getByTestId('zero-flag-confirm'));
@@ -84,7 +84,7 @@ describe('ZeroTareGate — E04-S03 (D-75)', () => {
 
   it('the read-back adds the skew on its own term', () => {
     wrap(<ZeroTareGate {...baseProps} skewG={2000} zeroChecked tareConfirmed />);
-    expect(screen.getByTestId('read-back')).toHaveTextContent(/เข็มเบี้ยว 2/);
+    expect(screen.getByTestId('read-back')).toHaveTextContent(/ค่าเบี้ยว 2/);
     expect(screen.getByTestId('read-back')).toHaveTextContent(/= 54/);
   });
 });

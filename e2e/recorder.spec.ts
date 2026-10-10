@@ -164,5 +164,6 @@ test('completed sale: an edit that changes money asks why, and the flag is in th
 
   // The sale list says it is completed.
   await page.goto('/');
-  await expect(page.getByTestId(`sale-status-${saleId}`)).toHaveText('เสร็จสิ้น');
+  await expect(page.getByTestId(`sale-${saleId}`)).toContainText('เสร็จสิ้น');
+  await expect(page.getByTestId(`sale-${saleId}`)).not.toContainText('เปิดอยู่');
 });

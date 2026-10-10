@@ -1,7 +1,7 @@
 /**
- * Add or edit one person (E03-S01, mockup v1.1.0 screen 5): a name, one or
- * more roles — built-in or typed in by hand — and, for an existing person,
- * "ลบ (กู้คืนได้)" behind a confirmation (D-65 Q3, D-68).
+ * Add or edit one person (E03-S01, mockup v1.1.0 farm-04): a name and one or
+ * more roles — built-in or typed in by hand (D-68). Viewing, the share and
+ * "ลบ (กู้คืนได้)" live on the read-only `PersonDetail` (farm-05/06).
  *
  * Errors show only after a save attempt, and what was typed is kept.
  */
@@ -16,7 +16,6 @@ import { peopleStore, type Person } from '../store/people';
 import { useTheme } from '../theme';
 import { Button } from './chrome';
 import { Card, Chip, ChipRow, FieldError, TextField } from './farm-ui';
-import { TapperShare } from './TapperShare';
 import { ThaiDate } from './ThaiDate';
 
 export function PersonForm({ personId, onDone }: { personId: string | null; onDone: () => void }) {
@@ -28,7 +27,6 @@ export function PersonForm({ personId, onDone }: { personId: string | null; onDo
   const [otherRoles, setOtherRoles] = useState<string[]>([]);
   const [otherDraft, setOtherDraft] = useState('');
   const [tried, setTried] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const [points, setPoints] = useState<PointRecord[]>([]);
   const [roleWarning, setRoleWarning] = useState(false);
 
@@ -65,12 +63,6 @@ export function PersonForm({ personId, onDone }: { personId: string | null; onDo
     }
     if (existing) await peopleStore.edit(existing.id, { name, roles, otherRoles });
     else await peopleStore.create(name, roles, otherRoles);
-    onDone();
-  };
-
-  const remove = async () => {
-    if (!existing) return;
-    await peopleStore.remove(existing.id);
     onDone();
   };
 
@@ -118,18 +110,6 @@ export function PersonForm({ personId, onDone }: { personId: string | null; onDo
         ) : null}
       </Card>
 
-      {existing && points.length > 0 ? (
-        <Card testID="person-points">
-          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
-            {msg('person.points')}
-          </Text>
-          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.ink }}>{pointList}</Text>
-        </Card>
-      ) : null}
-
-      {/* E03-S06: a tapper's share sits on their page (AC9). */}
-      {existing && existing.roles.includes('tapper') ? <TapperShare tapperId={existing.id} /> : null}
-
       {roleWarning ? (
         <Card testID="role-warning">
           <FieldError text={tapperWarning} />
@@ -143,37 +123,6 @@ export function PersonForm({ personId, onDone }: { personId: string | null; onDo
         {msg('common.save')}
       </Button>
 
-      {existing && !existing.deleted ? (
-        confirming ? (
-          <Card testID="delete-confirm">
-            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
-              {msg('personForm.deleteTitle', { name: existing.name })}
-            </Text>
-            {points.length > 0 ? <FieldError text={tapperWarning} /> : null}
-            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.ink }}>
-              {msg('personForm.deleteBody')}
-            </Text>
-            <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-              <View style={{ flex: 1 }}>
-                <Button testID="delete-confirm-no" onPress={() => setConfirming(false)}>
-                  {msg('common.cancel')}
-                </Button>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button testID="delete-confirm-yes" variant="destructive" onPress={() => void remove()}>
-                  {msg('personForm.deleteYes')}
-                </Button>
-              </View>
-            </View>
-          </Card>
-        ) : (
-          <View style={{ alignSelf: 'flex-start' }}>
-            <Button testID="person-delete" variant="destructive" onPress={() => setConfirming(true)}>
-              {msg('personForm.delete')}
-            </Button>
-          </View>
-        )
-      ) : null}
     </View>
   );
 }
