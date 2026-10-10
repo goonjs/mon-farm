@@ -14,8 +14,8 @@ const ROOT = join(__dirname, '..');
 const SRC = join(ROOT, 'src');
 const EXTENSIONS = /\.(ts|tsx|js|jsx|css|json)$/;
 
-/** A hex colour (3/4/6/8 digits), or an rgb()/rgba()/hsl()/hsla() call. */
-const RAW_COLOUR = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-zA-Z_-])|\b(?:rgba?|hsla?)\s*\(/;
+/** A hex colour (3/4/6/8 digits), or an rgb()/rgba()/hsl()/hsla() call, any case. */
+const RAW_COLOUR = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![0-9a-zA-Z_-])|\b(?:rgba?|hsla?)\s*\(/i;
 
 export function findRawColour(line: string): string | null {
   const m = RAW_COLOUR.exec(line);
@@ -40,6 +40,9 @@ describe('raw-colour detector', () => {
     'linear-gradient(180deg, #3c9ffe, #0274df)',
     'background: rgb(1, 2, 3)',
     "'#0A0B'",
+    'RGB(1, 2, 3)',
+    'Rgba(0,0,0,.1)',
+    'HSLA(0 0% 0% / .5)',
   ])('flags %s', (line) => {
     expect(findRawColour(line)).not.toBeNull();
   });
