@@ -136,6 +136,24 @@ export type SaleAccountChoice =
   | { readonly kind: 'cash' }
   | { readonly kind: 'note'; readonly note: string };
 
+/** SET-6: pending · weight verified · sale total verified · difference found. */
+export type BuyerCheckStatus = 'pending' | 'weight' | 'total' | 'diff';
+
+/** Our figures for a sale, from the recorded baskets. */
+export interface SaleFigures {
+  readonly netG: number;
+  readonly satangPerKg: number;
+  readonly grossSatang: number;
+  readonly baskets: number;
+}
+
+/** What the buyer said; null = not given. */
+export interface BuyerFigures {
+  readonly netG: number | null;
+  readonly grossSatang: number | null;
+  readonly baskets: number | null;
+}
+
 export type FinancePayload =
   | { readonly t: 'expense_created'; readonly fields: ExpenseFields }
   | { readonly t: 'expense_changed'; readonly patch: ExpensePatch; readonly alsoBasedOn?: readonly EventId[] }
@@ -156,7 +174,22 @@ export type FinancePayload =
   /** targetId `sale-account-<saleId>`; null clears the choice. */
   | { readonly t: 'sale_account_set'; readonly saleId: string; readonly choice: SaleAccountChoice | null }
   /** targetId `sale-rounding-<saleId>` (E05-S02). The latest one this device wrote is next sale's default. */
-  | { readonly t: 'sale_rounding_set'; readonly saleId: string; readonly mode: 'worker' | 'owner' | 'none' };
+  | { readonly t: 'sale_rounding_set'; readonly saleId: string; readonly mode: 'worker' | 'owner' | 'none' }
+  /**
+   * E05-S03: the one-time check against the buyer's figures, targetId
+   * `buyer-check-<saleId>`. `basis` is our figures at the moment of the
+   * check, so a basket edited afterwards shows as "check again" without a
+   * write. Money always comes from our baskets, never from `buyer` (D-15).
+   */
+  | {
+      readonly t: 'buyer_check_set';
+      readonly saleId: string;
+      readonly status: BuyerCheckStatus;
+      readonly basis: SaleFigures;
+      readonly buyer: BuyerFigures | null;
+      readonly reason: string;
+      readonly alsoBasedOn?: readonly EventId[];
+    };
 
 export interface FinanceEvent {
   readonly id: EventId;
