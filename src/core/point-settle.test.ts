@@ -122,6 +122,14 @@ describe('settlePoints — the money of a point sale, per tapper (E05-S01 on poi
     expect(settlePoints(events, projectSale(events, 'sale-1'), master(), DAY).totals.netG).toBe(50_000);
   });
 
+  it('refuses a sale mixing point baskets with pile baskets, never dropping weight (review #7)', () => {
+    const b = new LogBuilder('sale-1');
+    b.sys({ t: 'price_set', satangPerKg: 4850, indexRef: '' });
+    b.acceptAt('p1', 1).accept('old-pile');
+    const events = b.build();
+    expect(() => settlePoints(events, projectSale(events, 'sale-1'), master(), DAY)).toThrow(SettlementUnavailable);
+  });
+
   it('isPointSale: a sale with point baskets', () => {
     const b = new LogBuilder('sale-1');
     expect(isPointSale(b.build())).toBe(false);

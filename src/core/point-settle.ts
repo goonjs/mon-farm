@@ -29,6 +29,10 @@ export function unassignedPoints(events: readonly SaleEvent[], master: MasterSta
 
 export function settlePoints(events: readonly SaleEvent[], state: SaleState, master: MasterState, day: string): Settlement {
   if (!state.price) throw new SettlementUnavailable('No agreed price. A sale cannot be settled against a price nobody recorded.');
+  // A pile basket has no point and so no tapper: settling without it would drop its weight (review #7).
+  if (liveBaskets(events).some((b) => !b.pointId)) {
+    throw new SettlementUnavailable('This sale mixes point baskets with pile baskets; it cannot be settled per tapper.');
+  }
   const missing = unassignedPoints(events, master, day);
   if (missing.length) throw new SettlementUnavailable(`Points with no tapper on ${day}: ${missing.join(', ')} (D-63).`);
   const { satangPerKg } = state.price;
