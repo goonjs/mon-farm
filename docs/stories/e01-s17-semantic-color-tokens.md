@@ -175,43 +175,44 @@ step ไม่ได้เรียงห่างเท่ากันทุก
 
 **palette และ token**
 
-- [ ] `design/tokens.ts` มี `PALETTES = { farmmate, instrument }` (ramp ตามตารางด้านบน), `ACTIVE_PALETTE = 'farmmate'` และตารางบทบาทเดียว (`colorFor(palette)` → `{ light, dark }`); `tokens.color` = `colorFor(PALETTES[ACTIVE_PALETTE])`
-- [ ] type บังคับให้ทุก palette มี ramp/step ครบชุดเดียวกัน — ลบ step หนึ่งจาก B แล้ว `npm run typecheck` ต้องแดง
-- [ ] ชื่อสีเดิมทั้ง 30 ชื่อใน `tokens.color.light/dark` คงอยู่ และด้วย palette A ค่าเท่าเดิมทุกตัว ยกเว้น `dark.ruleStrong` `#7D8B99` → `#7A8998` (ดู Dev notes)
-- [ ] เพิ่ม 23 ชื่อใหม่ตามตาราง "รายชื่อ semantic token" — ชื่อ ค่า light/dark ตรงตามตาราง ไม่มีชื่ออื่นเพิ่ม
-- [ ] `export type ColorName` ครอบคลุมทั้ง 53 ชื่อ; `src/theme/index.tsx` ไม่ต้องแก้ (ยังใช้ `Record<ColorName, string>`)
-- [ ] ramp **ไม่**ถูกส่งออกไปที่ `docs/ux/tokens.css` (ไม่มี `--palette-*`) — หน้าจอและ mockup เข้าถึงได้แค่บทบาท
-- [ ] หัวไฟล์ `design/tokens.ts` อัปเดต: กฎ "NO IMPORTS, NO FUNCTIONS" ยอมให้มีฟังก์ชันบริสุทธิ์ตัวเดียว `colorFor` ที่เรียกตอนโหลดไฟล์ — `tokens` ที่ export ยังเป็น object ธรรมดา serialize ได้
+- [x] `design/tokens.ts` มี `PALETTES = { farmmate, instrument }` (ramp ตามตารางด้านบน), `ACTIVE_PALETTE = 'farmmate'` และตารางบทบาทเดียว (`colorFor(palette)` → `{ light, dark }`); `tokens.color` = `colorFor(PALETTES[ACTIVE_PALETTE])`
+- [x] type บังคับให้ทุก palette มี ramp/step ครบชุดเดียวกัน — ลบ step หนึ่งจาก B แล้ว `npm run typecheck` ต้องแดง
+- [x] ชื่อสีเดิมทั้ง 30 ชื่อใน `tokens.color.light/dark` คงอยู่ และด้วย palette A ค่าเท่าเดิมทุกตัว ยกเว้น `dark.ruleStrong` `#7D8B99` → `#7A8998` (ดู Dev notes)
+- [x] เพิ่ม 23 ชื่อใหม่ตามตาราง "รายชื่อ semantic token" — ชื่อ ค่า light/dark ตรงตามตาราง ไม่มีชื่ออื่นเพิ่ม
+- [ ] `export type ColorName` ครอบคลุมทั้ง 53 ชื่อ; `src/theme/index.tsx` ไม่ต้องแก้ (ยังใช้ `Record<ColorName, string>`) — **partial:** `Palette` type unchanged; `Theme` gained `shadow`/`layout` in Phase B (Dev notes)
+- [x] ramp **ไม่**ถูกส่งออกไปที่ `docs/ux/tokens.css` (ไม่มี `--palette-*`) — หน้าจอและ mockup เข้าถึงได้แค่บทบาท
+- [x] หัวไฟล์ `design/tokens.ts` อัปเดต: กฎ "NO IMPORTS, NO FUNCTIONS" ยอมให้มีฟังก์ชันบริสุทธิ์ตัวเดียว `colorFor` ที่เรียกตอนโหลดไฟล์ — `tokens` ที่ export ยังเป็น object ธรรมดา serialize ได้
 
 **tokens.css**
 
-- [ ] `npm run tokens` สร้าง `docs/ux/tokens.css` ใหม่ (`emit-tokens.mjs` ไม่ต้องแก้ตรรกะ); diff กับไฟล์เดิม = เพิ่ม 23 ตัวแปร × 4 block + `--color-rule-strong` ใน dark เท่านั้น
-- [ ] `npm run tokens:check` ผ่าน
+- [x] `npm run tokens` สร้าง `docs/ux/tokens.css` ใหม่ (`emit-tokens.mjs` ไม่ต้องแก้ตรรกะ); diff กับไฟล์เดิม = เพิ่ม 23 ตัวแปร × 4 block + `--color-rule-strong` ใน dark เท่านั้น
+- [x] `npm run tokens:check` ผ่าน
 
 **contrast (AA: ตัวอักษร 4.5, UI/ขอบ/ไอคอน 3; ตัวอักษรหลัก 7 ตามเดิม)**
 
-- [ ] `scripts/check-contrast.mjs` ตรวจ**ทุก palette ใน `PALETTES`** (ไม่ใช่แค่ตัวที่ active) — palette B ต้องสลับมาใช้ได้ทันทีเสมอ
-- [ ] เพิ่มคู่สีใหม่ 60 คู่ตามตาราง "ผลคำนวณ contrast" ใน Dev notes (เดิม 36 → 96 คู่ × 2 scheme × 2 palette = 384 การตรวจ) ทั้งหมดผ่าน
-- [ ] `docs/ux/design-system.md` §3 อัปเดตจำนวนคู่ที่ตรวจ (ตอนนี้ข้อความยังเขียน 46 / 72 ซึ่งเก่าแล้ว)
+- [x] `scripts/check-contrast.mjs` ตรวจ**ทุก palette ใน `PALETTES`** (ไม่ใช่แค่ตัวที่ active) — palette B ต้องสลับมาใช้ได้ทันทีเสมอ
+- [x] เพิ่มคู่สีใหม่ 60 คู่ตามตาราง "ผลคำนวณ contrast" ใน Dev notes (เดิม 36 → 96 คู่ × 2 scheme × 2 palette = 384 การตรวจ) ทั้งหมดผ่าน
+- [x] `docs/ux/design-system.md` §3 อัปเดตจำนวนคู่ที่ตรวจ (ตอนนี้ข้อความยังเขียน 46 / 72 ซึ่งเก่าแล้ว)
 
 **ย้ายสีดิบออกจาก `src/`**
 
-- [ ] `src/constants/theme.ts` — `Colors` อ่านค่าจาก `tokens.color` (ไม่มี hex): `text`→`ink`, `background`→`surface`, `backgroundElement`→`surfaceSunk`, `backgroundSelected`→`actionSunk`, `textSecondary`→`inkSoft`, เพิ่ม `link`→`action`; ชื่อ key และ type `ThemeColor` เดิมคงอยู่ (ไฟล์ที่ใช้ `Colors`/`ThemeColor` ไม่ต้องแก้)
-- [ ] `src/components/themed-text.tsx` — `linkPrimary` ใช้ `theme.link` แทน `#3c87f7`
-- [ ] `src/components/animated-icon.tsx` — gradient ใช้ `brand` → `brandStrong`; พื้น splash overlay ใช้ `stage` (ตรงกับ `backgroundColor: #FFFFFF` ของ splash ใน `app.json` — เลิกกระพริบสีฟ้า Expo)
-- [ ] `src/components/animated-icon.module.css` — ไม่มีสีใน CSS แล้ว; gradient ย้ายไปเป็น style จาก token ใน `animated-icon.web.tsx` (ไฟล์ CSS เหลือแค่ขนาด/มุม — ไม่ลบไฟล์)
-- [ ] `src/components/chrome.tsx` แถบบน (`TopBar`) ใช้ `appBar` / `appBarInk` — ให้ token ใหม่มีผู้ใช้จริงอย่างน้อยหนึ่งที่; หน้าตาไม่เปลี่ยน (ค่าเท่ากับ `surface` / `ink`)
+- [x] `src/constants/theme.ts` — `Colors` อ่านค่าจาก `tokens.color` (ไม่มี hex): `text`→`ink`, `background`→`surface`, `backgroundElement`→`surfaceSunk`, `backgroundSelected`→`actionSunk`, `textSecondary`→`inkSoft`, เพิ่ม `link`→`action`; ชื่อ key และ type `ThemeColor` เดิมคงอยู่ (ไฟล์ที่ใช้ `Colors`/`ThemeColor` ไม่ต้องแก้)
+- [x] `src/components/themed-text.tsx` — `linkPrimary` ใช้ `theme.link` แทน `#3c87f7`
+- [x] `src/components/animated-icon.tsx` — gradient ใช้ `brand` → `brandStrong`; พื้น splash overlay ใช้ `stage` (ตรงกับ `backgroundColor: #FFFFFF` ของ splash ใน `app.json` — เลิกกระพริบสีฟ้า Expo)
+- [x] `src/components/animated-icon.module.css` — ไม่มีสีใน CSS แล้ว; gradient ย้ายไปเป็น style จาก token ใน `animated-icon.web.tsx` (ไฟล์ CSS เหลือแค่ขนาด/มุม — ไม่ลบไฟล์)
+- [x] `src/components/chrome.tsx` แถบบน (`TopBar`) ใช้ `appBar` / `appBarInk` — ให้ token ใหม่มีผู้ใช้จริงอย่างน้อยหนึ่งที่; หน้าตาไม่เปลี่ยน (ค่าเท่ากับ `surface` / `ink`)
 
 **กันสีดิบกลับมา**
 
-- [ ] test ใหม่ `scripts/no-raw-colour.test.ts` (vitest — `scripts/*.test.ts` อยู่ใน include แล้ว) อ่านทุกไฟล์ใต้ `src/` (`.ts .tsx .js .jsx .css .json`) แล้วแดงถ้าเจอ hex (`#` + 3/4/6/8 หลัก hex), `rgb(`/`rgba(`, `hsl(`/`hsla(` — รวมใน comment ด้วย ไม่มี allowlist; ข้อความ error บอกไฟล์:บรรทัด และบอกให้ใช้ `theme.color.<ชื่อ>`
-- [ ] `'transparent'` ใช้ได้ (ไม่ใช่ค่าสี — ใช้อยู่ใน `chrome.tsx`)
-- [ ] `design/` ไม่ถูกตรวจ (เป็นที่เดียวที่มี hex ได้)
+- [x] test ใหม่ `scripts/no-raw-colour.test.ts` (vitest — `scripts/*.test.ts` อยู่ใน include แล้ว) อ่านทุกไฟล์ใต้ `src/` (`.ts .tsx .js .jsx .css .json`) แล้วแดงถ้าเจอ hex (`#` + 3/4/6/8 หลัก hex), `rgb(`/`rgba(`, `hsl(`/`hsla(` — รวมใน comment ด้วย ไม่มี allowlist; ข้อความ error บอกไฟล์:บรรทัด และบอกให้ใช้ `theme.color.<ชื่อ>`
+- [x] `'transparent'` ใช้ได้ (ไม่ใช่ค่าสี — ใช้อยู่ใน `chrome.tsx`)
+- [x] `design/` ไม่ถูกตรวจ (เป็นที่เดียวที่มี hex ได้)
 
 **เอกสาร**
 
-- [ ] `docs/ux/design-system.md` เพิ่มหัวข้อ "วิธีเปลี่ยนสี" ภาษาไทย ≤10 บรรทัด (ร่างใน Dev notes) และตาราง §12.2 ชี้มาที่ตารางบทบาทของ story นี้ ระบุ "สีประจำกลุ่มและเงินเข้า/ออกไม่เป็นตัวบอกความหมายอย่างเดียว"
-- [ ] หน้าตาหน้าจอที่ใช้ token อยู่แล้วไม่เปลี่ยน (screenshot ก่อน/หลังเหมือนกัน); หน้าจาก template (explore, แท็บ, ลิงก์) เปลี่ยนเป็นสีระบบ
+- [x] `docs/ux/design-system.md` เพิ่มหัวข้อ "วิธีเปลี่ยนสี" ภาษาไทย ≤10 บรรทัด (ร่างใน Dev notes) และตาราง §12.2 ชี้มาที่ตารางบทบาทของ story นี้ ระบุ "สีประจำกลุ่มและเงินเข้า/ออกไม่เป็นตัวบอกความหมายอย่างเดียว"
+- [ ] หน้าตาหน้าจอที่ใช้ token อยู่แล้วไม่เปลี่ยน (screenshot ก่อน/หลังเหมือนกัน); หน้าจาก template (explore, แท็บ, ลิงก์) เปลี่ยนเป็นสีระบบ — **met for Phase A** (light pixel-identical, dark = ruleStrong only); Phase B then restyles on purpose (Verification)
+
 
 ## Offline / sync behavior
 
@@ -221,12 +222,13 @@ step ไม่ได้เรียงห่างเท่ากันทุก
 
 _เขียน test ก่อน (TDD) เห็นแดงก่อนแล้วค่อยทำให้เขียว_
 
-- [ ] vitest `scripts/no-raw-colour.test.ts`: (1) ตัวตรวจจับเจอ `'#FFF'`, `'#ffffff80'`, `rgba(0,0,0,.1)`, `hsl(210 20% 50%)`, `linear-gradient(180deg, #3c9ffe, #0274df)` และไม่เจอ `'transparent'`, `'#'` เดี่ยว ๆ; (2) สแกน `src/` จริง — **ต้องแดงก่อนย้าย** (เจอ 4 ไฟล์ 14 บรรทัด) แล้วเขียวหลังย้าย
-- [ ] vitest `scripts/tokens.test.ts` (ใหม่): `colorFor(PALETTES.farmmate)` เท่ากับค่าเดิมทุกชื่อ (snapshot ของ 30 ค่าเดิม ยกเว้น `dark.ruleStrong`); ทั้งสอง palette ได้ชุดชื่อ 53 ชื่อเท่ากันทั้ง light/dark; ทุกค่าเป็น `#RRGGBB`
-- [ ] `npm run contrast` — เพิ่มคู่ใหม่ก่อน เห็นแดง (ชื่อ token ยังไม่มี) แล้วเขียวหลังเพิ่ม token; สลับ `ACTIVE_PALETTE = 'instrument'` ชั่วคราว → `tokens:check` แดง (ไฟล์ CSS ต่าง) แต่ `contrast` ยังเขียว → สลับกลับ
-- [ ] `npm run tokens:check`, `npm run typecheck`, `npm run lint`
-- [ ] jest-expo: `ThemedText type="linkPrimary"` ได้สี `action`; `TopBar` ได้ `appBar` / `appBarInk`
-- [ ] Playwright: screenshot หน้าหลัก / การขาย ก่อน-หลัง ที่ viewport `portrait` ต้องไม่ต่าง (palette A)
+- [x] vitest `scripts/no-raw-colour.test.ts`: (1) ตัวตรวจจับเจอ `'#FFF'`, `'#ffffff80'`, `rgba(0,0,0,.1)`, `hsl(210 20% 50%)`, `linear-gradient(180deg, #3c9ffe, #0274df)` และไม่เจอ `'transparent'`, `'#'` เดี่ยว ๆ; (2) สแกน `src/` จริง — **ต้องแดงก่อนย้าย** (เจอ 4 ไฟล์ 14 บรรทัด) แล้วเขียวหลังย้าย
+- [x] vitest `scripts/tokens.test.ts` (ใหม่): `colorFor(PALETTES.farmmate)` เท่ากับค่าเดิมทุกชื่อ (snapshot ของ 30 ค่าเดิม ยกเว้น `dark.ruleStrong`); ทั้งสอง palette ได้ชุดชื่อ 53 ชื่อเท่ากันทั้ง light/dark; ทุกค่าเป็น `#RRGGBB`
+- [x] `npm run contrast` — เพิ่มคู่ใหม่ก่อน เห็นแดง (ชื่อ token ยังไม่มี) แล้วเขียวหลังเพิ่ม token; สลับ `ACTIVE_PALETTE = 'instrument'` ชั่วคราว → `tokens:check` แดง (ไฟล์ CSS ต่าง) แต่ `contrast` ยังเขียว → สลับกลับ
+- [x] `npm run tokens:check`, `npm run typecheck`, `npm run lint`
+- [x] jest-expo: `ThemedText type="linkPrimary"` ได้สี `action`; `TopBar` ได้ `appBar` / `appBarInk`
+- [ ] Playwright: screenshot หน้าหลัก / การขาย ก่อน-หลัง ที่ viewport `portrait` ต้องไม่ต่าง (palette A) — done as a manual pixel diff of Phase A shots (light identical); not added to e2e, which deliberately avoids pixel diffs (playwright.config.ts)
+
 
 ## ต้องให้เจ้าของทำ/อนุมัติ
 
@@ -244,10 +246,15 @@ _เขียน test ก่อน (TDD) เห็นแดงก่อนแล
 
 ## Verification
 
-- [ ] Sandbox run performed:
-- [ ] Screenshots — golden path (ก่อน/หลัง ต้องเหมือนกัน):
-- [ ] Screenshots — edge cases (dark scheme; หน้าจาก template ที่เปลี่ยนสี):
-- [ ] `npm run verify` เขียว
+_Filled 2026-10-10 by the implementing agent session (branch `feature/e01-s17-app-design`). Status stays In Progress — AC per D-81 awaiting the owner's review._
+
+- [x] Sandbox run performed: `npm run build:web` (expo export) served by `scripts/serve-dist.mjs`, driven by Playwright on the sandbox Chromium 1194 at 390×844 (light + dark, palette A and B). Full e2e suite green at the end of each phase (last run: 145 passed, 6 skipped). Every commit preceded by `tokens:check`, `contrast` (384 checks), `typecheck`, `lint`, `test:core`, `test:ui`; commit subjects linted with `scripts/release.mjs lint`.
+- [x] Screenshots — before: `docs/ux/screenshots/e01-s17/before/` (home, counter top bar + tabs, settlement cards; light/dark) taken from the build before any change.
+  Phase A alone (tokens + raw-colour moves, before any restyle) was pixel-diffed against these: **light identical on all three screens**; dark differs only where `ruleStrong` borders are drawn (`#7D8B99` → `#7A8998`, the one intended change). Those Phase A shots were not committed (scratchpad).
+- [x] Screenshots — after (Phase B restyle to the v1.1.0 mockups — the look changes **on purpose**, per the plan the owner said "continue" to): `docs/ux/screenshots/e01-s17/after/` — `home-`, `menu-`, `tabbar-counter-`, `cards-settlement-` × `{a,b}-{light,dark}` and the side-by-side `a-vs-b.png`. Palette B shots come from a local build with `ACTIVE_PALETTE = 'instrument'` that was then reverted (never committed).
+- [x] Palette switch check (test plan): with `ACTIVE_PALETTE = 'instrument'`, `tokens:check` goes red (CSS differs) and `contrast` stays green (384/384); switched back.
+- [x] Type enforcement check: removing `red.950` from palette B makes `npm run typecheck` fail (TS2741); restored.
+- [ ] `npm run verify` as one command — not run as a single script; every step in it was run separately (above) with the sandbox Chromium config. `test:rules` (Firestore emulator) was not run — untouched by this story.
 
 ## Dev notes
 
@@ -329,6 +336,27 @@ export const tokens = { color: colorFor(PALETTES[ACTIVE_PALETTE]), space: { /* �
 6. ห้ามเขียน hex / rgb() / hsl() ใน `src/` (CI แดง) — หน้าจอใช้ `theme.color.<ชื่อบทบาท>` เท่านั้น
 7. สีไม่เป็นตัวบอกความหมายอย่างเดียว: สถานะมีไอคอน + คำ, เงินมี + / −, กลุ่มมีชื่อกำกับ
 ```
+
+**Implementation notes (2026-10-10)**
+
+- Phase A followed the role → step table above exactly. `scripts/tokens.test.ts` pins the 30 legacy values and the 23 new ones for palette A, and checks that every palette yields the same 53 names as `#RRGGBB`. The `flash*` roles stay after `brandCream`, so the regenerated `tokens.css` diff is pure additions (23 × 4) plus the two dark `--color-rule-strong` lines.
+- `scripts/no-raw-colour.test.ts` was seen red first on exactly 4 files / 14 lines, as predicted above. It runs in CI through `test:core` (`scripts/*.test.ts` is already in `vitest.config.ts`).
+- `jest.config.js`: the `.css` stub mapper now comes before the `@/` alias, because `@/global.css` used to be parsed as JS. Without that, nothing importing `src/constants/theme.ts` could be component-tested.
+- **Deviation from AC "src/theme/index.tsx ไม่ต้องแก้":** `Palette = Record<ColorName, string>` is unchanged, but Phase B adds `shadow` and `layout` to `Theme` so that shared components can read `tokens.shadow.card` / `layout.*` through `useTheme()`.
+- **Phase B (owner-approved plan + coordinator priority change):** shell restyled to the v1.1.0 mockups, with shared components under `src/components/ui/`:
+  - `screen-header` (ScreenHeader), `sync-pill` (SyncPill), `drawer` (Drawer, MenuSection, MenuItem), `icons` (line icons drawn with Views), `icon-tile` (IconTile, FactRow), `form` (SegmentedControl, RadioCard, FieldLabel, FieldError), `bottom-sheet` (BottomSheet), `type` (AppText, typeStyle, Num).
+  - Also new: `src/sync/status.ts` and `src/sync/use-sync-status.ts`.
+  - In `components/chrome.tsx`: pill `Button` (`variant` row, `size` large, `icon`), `PinnedActions`, `cardStyle`/`CardLabel`, and a TopBar crumb path.
+  - Nothing depends on `react-native-svg`, which is not installed. No dependency was added.
+- **Counter keeps the thin `TopBar`, not ScreenHeader.** At 360px landscape the F-9.7 numeral floor (e2e `minHeightRatio` 0.62) has only a few px of slack. Larger chrome failed it at 0.608–0.616 until the top bar was kept at xs padding, snug leading and xxs pill padding. Any future growth of counter chrome must re-run that test.
+- **Navigation change:** settings moved from the home bar into the ☰ menu (as in the farm mockup, screen 1). `e2e/language.spec.ts` opens the menu first. The back controls are now chevrons, so the spec checks the accessible name ("รายการ"), not the "← รายการ" text.
+- **Sync pill honesty:** there is no backend yet. The pill shows `store.pending()`, so any recorded sale reads "รอส่ง N" and never "ขัดกัน".
+- Not done yet (polish pass):
+  - the ~20 remaining mono labels on working screens (not swept to `AppText`);
+  - the log-row marks ✓ ✗ ⚖ and the ◐/◑ theme-toggle glyph, which the system font renders as a broken half-glyph;
+  - IconTile, FactRow, RadioCard, FieldError and BottomSheet are not yet adopted on any screen;
+  - the template `app-tabs*.tsx` / `explore.tsx` are unused by the router and were not restyled beyond their colours now coming from roles.
+- Committed e2e evidence screenshots under `docs/ux/screenshots/<project>/` and `docs/stories/screenshots/` were restored after each local run, not regenerated. The suite rewrites them on every run, so they still show the pre-restyle look until CI regenerates them.
 
 ## Code review
 
