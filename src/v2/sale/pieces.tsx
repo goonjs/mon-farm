@@ -309,6 +309,130 @@ export function NumChip({ children, tone = 'plain', testID }: { children: ReactN
   );
 }
 
+/**
+ * The mockup's segmented choice with a small line under each label (`.seg`
+ * with `<small>`): the selected one is filled navy; a disabled one is dashed
+ * and cannot be picked. `vertical` stacks them (mockup `.seg.stack.col`).
+ */
+export function SegOptions<T extends string>({
+  options,
+  value,
+  onChange,
+  vertical,
+  testID,
+}: {
+  options: readonly { value: T; label: string; detail?: string; disabled?: boolean; icon?: IconRender }[];
+  value: T | null;
+  onChange: (v: T) => void;
+  vertical?: boolean;
+  testID: string;
+}) {
+  const t = useTheme();
+  return (
+    <View testID={testID} accessibilityRole="radiogroup" style={{ flexDirection: vertical ? 'column' : 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.lg, padding: t.space.xs, gap: t.space.xs }}>
+      {options.map((o) => {
+        const on = o.value === value;
+        const fg = o.disabled ? t.color.disabledInk : on ? t.color.inkInverse : t.color.inkSoft;
+        return (
+          <Pressable
+            key={o.value}
+            testID={`${testID}-${o.value}`}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: on, disabled: !!o.disabled }}
+            aria-checked={on}
+            aria-disabled={!!o.disabled}
+            disabled={o.disabled}
+            onPress={() => onChange(o.value)}
+            style={{
+              flex: vertical ? undefined : 1,
+              minHeight: t.target.min,
+              borderRadius: t.radius.md,
+              backgroundColor: on ? t.color.action : 'transparent',
+              borderWidth: o.disabled ? t.border.hair : 0,
+              borderStyle: 'dashed',
+              borderColor: t.color.ruleStrong,
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingHorizontal: t.space.sm,
+              paddingVertical: t.space.xs,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.xs, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {o.icon ? <View aria-hidden style={{ alignSelf: 'center' }}>{o.icon(fg)}</View> : null}
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, color: fg, textAlign: 'center' }}>{o.label}</Text>
+              {!vertical && o.detail && !o.disabled ? (
+                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, color: fg }}>{o.detail}</Text>
+              ) : null}
+            </View>
+            {o.detail && (vertical || o.disabled) ? (
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, color: fg, textAlign: 'center' }}>{o.detail}</Text>
+            ) : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** A form row: small tile, a soft label over a bold value, soft lines, and a trailing mark (mockup `.frow`). */
+export function FieldRow({
+  icon,
+  label,
+  value,
+  lines = [],
+  trailing,
+  onPress,
+  testID,
+}: {
+  icon: IconRender;
+  label: string;
+  value?: ReactNode;
+  lines?: readonly string[];
+  trailing?: ReactNode;
+  onPress?: () => void;
+  testID?: string;
+}) {
+  const t = useTheme();
+  const body = (
+    <View style={{ flexDirection: 'row', gap: t.space.md, paddingVertical: t.space.md, alignItems: 'flex-start' }}>
+      <IconTile tone="action" icon={icon} />
+      <View style={{ flex: 1, gap: t.space.xxs }}>
+        <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>
+          {label}
+        </AppText>
+        {typeof value === 'string' ? (
+          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>{value}</Text>
+        ) : (
+          value
+        )}
+        {lines.map((l) => (
+          <AppText key={l} variant="bodySm">
+            {l}
+          </AppText>
+        ))}
+      </View>
+      {trailing ? <View style={{ alignSelf: 'center' }}>{trailing}</View> : null}
+    </View>
+  );
+  return onPress ? (
+    <Pressable testID={testID} accessibilityRole="button" onPress={onPress}>
+      {body}
+    </Pressable>
+  ) : (
+    <View testID={testID}>{body}</View>
+  );
+}
+
+/** "ไม่ได้บันทึก" — a soft grey pill for a field left empty (Unknown, SYNC-12). */
+export function EmptyPill({ label }: { label: string }) {
+  const t = useTheme();
+  return (
+    <Text style={{ alignSelf: 'flex-start', fontFamily: t.font.family.sans, fontSize: t.font.size.caption, color: t.color.inkSoft, backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.pill, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs }}>
+      {label}
+    </Text>
+  );
+}
+
 /** A line with a small leading icon in soft ink (mockup `.mi`). */
 export function IconLine({ icon, children, testID, strong }: { icon?: IconRender; children: ReactNode; testID?: string; strong?: boolean }) {
   const t = useTheme();
