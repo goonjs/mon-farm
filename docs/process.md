@@ -186,7 +186,8 @@ release's changelog will therefore only list commits made under this rule.
   `dev` after the merge.
 - **Hosting:** `dev` deploys to the dev site on every push
   (`deploy-dev.yml`); each PR from this repo gets a preview URL that expires in
-  7 days (job `preview` in `ci.yml`, link in the job summary); Deploy Prod
+  7 days (job `preview` in `ci.yml`; the link is one PR comment that each push
+  updates, and `preview-cleanup.yml` deletes the channel when the PR closes); Deploy Prod
   deploys the prod site. All go through `scripts/deploy.sh`.
 - **One-time GitHub setup (owner):** Settings, Secrets and variables, Actions,
   *Variables* tab (identifiers, not secrets):
