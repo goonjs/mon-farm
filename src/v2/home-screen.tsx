@@ -48,7 +48,7 @@ export function V2Home() {
           {item(farmSection('sales'), close)}
         </MenuSection>
         <MenuSection title={msg('menu.shared')}>
-          {['farm', 'farms', 'points', 'people', 'buyers', 'accounts', 'shares', 'expenses', 'debts'].map((slug) =>
+          {['farm', 'farms', 'points', 'people', 'buyers', 'accounts', 'shares', 'sale-settings', 'expenses', 'debts'].map((slug) =>
             item(farmSection(slug), close),
           )}
         </MenuSection>

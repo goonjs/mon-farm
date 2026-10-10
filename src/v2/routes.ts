@@ -27,6 +27,7 @@ export const FARM_SECTIONS: readonly V2Section[] = [
   farm('farms', 'v2.farms'),
   farm('points', 'v2.points'),
   farm('shares', 'v2.shares'),
+  farm('sale-settings', 'saleSettings.title'),
   farm('expenses', 'v2.expenses'),
   farm('debts', 'v2.debts'),
   farm('device', 'v2.device'),
@@ -50,7 +51,7 @@ export const SALE_STEPS: readonly V2Section[] = [
 ];
 
 /** Sections with their own route file; the rest render the placeholder. */
-export const BUILT_SECTIONS: ReadonlySet<string> = new Set(['farm', 'people', 'buyers', 'farms', 'points', 'expenses', 'debts', 'device']);
+export const BUILT_SECTIONS: ReadonlySet<string> = new Set(['farm', 'people', 'buyers', 'farms', 'points', 'shares', 'sale-settings', 'expenses', 'debts', 'device']);
 
 export const V2_HOME = '/v2' as Href;
 

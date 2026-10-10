@@ -1318,6 +1318,9 @@ const th = {
   'v2f.eraNote': 'แตะวันที่ที่ไหนก็สลับได้ · จำไว้ในเครื่องนี้',
   'v2f.notFound': 'ไม่พบรายการนี้',
   'v2f.pointOf': 'ของ{name} {n}',
+  'v2f.shareRow': 'คนกรีดยาง {tapper}% · เจ้าของสวน {owner}%',
+  'v2f.secondsUnit': 'วินาที',
+  'v2f.shareFifty': '50/50',
 } as const;
 
 /**
@@ -2547,6 +2550,9 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'v2f.eraNote': 'tap any date to switch · remembered on this device',
   'v2f.notFound': 'not found',
   'v2f.pointOf': '{name}\'s {n}',
+  'v2f.shareRow': 'tapper {tapper}% · owner {owner}%',
+  'v2f.secondsUnit': 's',
+  'v2f.shareFifty': '50/50',
 };
 
 export const messages = { th, en } as const;
