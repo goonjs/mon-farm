@@ -1,6 +1,6 @@
 # Story E03-S08: ขนาดตัวอักษร S / M / L
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ (overnight 2026-10-09, branch `feature/e03-farm-data`)
 
 ## Context
 
@@ -35,6 +35,20 @@ Status: Draft
 
 ## Dev notes
 
+**ทำแล้ว (2026-10-09 คืน, ทีม FARM)**
+
+- `scaleSizes` (`src/core/text-scale.ts`) คูณทุก `font.size` ด้วย token `textScale` (0.875 / 1 / 1.125) ปัดเป็น px เต็ม
+  — body 14 / 16 / 18; `ThemeProvider` ส่ง `font.size` ที่คูณแล้ว + `textSize`/`setTextSize` ใน `useThemeControls`
+- ตัวเลขนับบนจอสาธารณะไม่ใช่ token ขนาดตัวอักษร (คำนวณจากขนาดจอใน `HoldStage`) จึงไม่ขยายตามโดยโครงสร้าง — e2e วัด
+  `font-size` ที่ S กับ L เท่ากัน
+- ค่าของเครื่อง: `src/theme/text-size-preference.ts` (localStorage `mon-farm:text-size`) ค่าเริ่มต้น M; ตัวเลือก S / M / L ในหน้าตั้งค่าเครื่อง
+- ข้อจำกัดเดียวกับเสียงเปิด/ปิด: บน native ยังไม่มีที่เก็บค่าของเครื่อง (ไม่มี localStorage) → กลับเป็น M เมื่อเปิดแอปใหม่ จนกว่าจะมี key-value บน native
+- ปุ่มของ `chrome.tsx` สูง 40 (ของเดิม) ต่ำกว่า 48 ตาม §12.10 ข้อ 6 — ไม่ได้แก้ใน story นี้ (กระทบหน้านับเข่ง)
+
 ## Code review
 
 ## QA notes
+
+**2026-10-09 (FARM, sandbox)** — Vitest `text-scale.test.ts` · jest-expo `text-size.test.tsx` (L → 18, ตัวเลขนับไม่เปลี่ยน, คงอยู่หลัง remount) ·
+Playwright `e2e/text-size.spec.ts` แนวตั้ง: หน้าแรก + หน้านับเข่ง ที่ S/M/L ปุ่มหลักอยู่ในจอเต็ม, ขนาดตัวเลขนับ S = L ·
+ชุด e2e เต็ม 166 ผ่าน ภาพ `docs/ux/screenshots/overnight/farm/e03-s08-*.png`

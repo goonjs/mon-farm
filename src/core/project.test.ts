@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { readyPile, setUpSale, withZoneContract, workedExample } from './fixtures';
+import { LogBuilder, readyPile, setUpSale, withZoneContract, workedExample } from './fixtures';
 import {
   canCount,
   canReady,
@@ -416,5 +416,25 @@ describe('events from more than one device — E01-S02 AC5, NFR-3', () => {
   it('still refuses a log carrying the same event id twice', () => {
     const events = setUpSale().build();
     expect(() => projectSale([...events, { ...events[0], seq: 99 }])).toThrow(/Duplicate event id/);
+  });
+});
+
+describe('sale header buyer reference (E03-S01, MD-6)', () => {
+  it('keeps the buyer id next to the name snapshot when one was picked', () => {
+    const b = new LogBuilder().sys({
+      t: 'sale_started',
+      farmName: 'สวน',
+      buyer: 'ล้ง ก',
+      buyerId: 'b1',
+      manager: '',
+      workerLead: '',
+      where: 'farm',
+    });
+    expect(projectSale(b.build()).parties).toMatchObject({ buyer: 'ล้ง ก', buyerId: 'b1' });
+  });
+
+  it('a typed buyer with no id projects without one', () => {
+    const s = projectSale(setUpSale().build());
+    expect(s.parties && 'buyerId' in s.parties).toBe(false);
   });
 });

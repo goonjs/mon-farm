@@ -1,4 +1,5 @@
 import { compareEvents } from '../core/order';
+import { MASTER_SCOPE } from '../core/master';
 import type { EventId, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
 import { checkAppend, checkPulled, type DeviceState } from './append-rule';
@@ -51,6 +52,7 @@ export class MemoryStore implements EventStore {
   async listSales(): Promise<string[]> {
     const firstTs = new Map<string, number>();
     for (const e of this.rows.values()) {
+      if (e.saleId === MASTER_SCOPE) continue;
       firstTs.set(e.saleId, Math.min(firstTs.get(e.saleId) ?? Infinity, e.ts));
     }
     return [...firstTs.keys()].sort((a, b) => firstTs.get(b)! - firstTs.get(a)!);

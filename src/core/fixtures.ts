@@ -197,7 +197,7 @@ export function setUpSale(b = new LogBuilder()): LogBuilder {
       where: 'farm',
     })
     .sys({ t: 'price_set', satangPerKg: 2650, indexRef: 'ตลาดกลางหาดใหญ่' })
-    .sys({ t: 'split_set', ownerPct: 50, basis: 'gross' })
+    .sys({ t: 'split_set', ownerPct: 50 })
     .sys({ t: 'zone_added', zoneId: 'zA', name: 'โซน A' })
     .sys({ t: 'zone_added', zoneId: 'zB', name: 'โซน B' })
     .sys({ t: 'pile_added', pileId: 'p1', zoneId: 'zA', name: 'กอง 1', tareG: 2_000, stdNetG: 50_000 })
