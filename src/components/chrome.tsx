@@ -76,6 +76,7 @@ export function TopBar({ crumb, right }: { crumb: string; right?: React.ReactNod
   const t = useTheme();
   return (
     <View
+      testID="top-bar"
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -84,7 +85,7 @@ export function TopBar({ crumb, right }: { crumb: string; right?: React.ReactNod
         paddingVertical: t.space.xs,
         borderBottomWidth: t.border.hair,
         borderBottomColor: t.color.rule,
-        backgroundColor: t.color.surface,
+        backgroundColor: t.color.appBar,
       }}
     >
       <Text
@@ -94,7 +95,7 @@ export function TopBar({ crumb, right }: { crumb: string; right?: React.ReactNod
           fontFamily: t.font.family.sans,
           fontSize: t.font.size.small,
           fontWeight: t.font.weight.bold,
-          color: t.color.ink,
+          color: t.color.appBarInk,
           flexShrink: 1,
         }}
       >
