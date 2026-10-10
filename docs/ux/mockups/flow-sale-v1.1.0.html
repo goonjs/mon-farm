@@ -1,94 +1,50 @@
 <title>mon-farm Flow การขาย v1.1.0</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="./palette-proposal.css">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
 
 /* ---------------------------------------------------------------------------
-   Tokens. Values are copied from docs/ux/tokens.css (generated from
-   design/tokens.ts). Two families:
-   --pg-*  the documentation page around the phones; follows light/dark.
-   --c-*   the app screens inside the phones; stays in the app's light field
-           theme in both page themes (the app's dark theme is opt-in and is
-           not what this flow review is about).
-   --note-* the yellow "?" open-question markers; constant, readable on both.
-   --ans-*  the green "ตอบแล้ว" answered markers; constant, readable on both.
-   No literal colour appears below the token blocks.
+   Colour. Every colour below is a --color-* semantic role from
+   ../tokens.css (generated from design/tokens.ts) or ./palette-proposal.css
+   (E01-S17 Draft proposal: the new roles + palette B). No literal colour in
+   this file — change a colour in design/tokens.ts (or, until E01-S17 is
+   agreed, palette-proposal.css), never here.
+   The phones follow the page theme (light = field mode, dark = opt-in) and
+   the palette toggle (bottom right; or ?palette=b&theme=dark).
+   The aliases below are page chrome around the phones (docs only), the
+   "?" open-question and "ตอบแล้ว" answered markers, the sheet scrim, and the
+   non-colour layout shorthands.
    ------------------------------------------------------------------------- */
 :root {
-  color-scheme: light;
-  --pg-bg: #F7FAFC;
-  --pg-card: #FFFFFF;
-  --pg-ink: #002858;
-  --pg-ink-soft: #52657A;
-  --pg-rule: #CBD4DC;
-  --pg-accent: #006F52;
-  --frame-bezel: #13202E;
-  --frame-ring: #CBD4DC;
-  --frame-shadow: rgba(0, 40, 88, 0.14);
+  --pg-bg: var(--color-surface);
+  --pg-card: var(--color-surface-raised);
+  --pg-ink: var(--color-ink);
+  --pg-ink-soft: var(--color-ink-soft);
+  --pg-rule: var(--color-rule);
+  --pg-accent: var(--color-accept);
+  --frame-bezel: var(--color-scrim);
+  --frame-ring: var(--color-rule);
+  --frame-shadow: color-mix(in srgb, var(--color-scrim) 14%, transparent);
 
-  --note-bg: #FECB56;
-  --note-ink: #002858;
-  --ans-bg: #E8F8F2;
-  --ans-ink: #006F52;
+  --note-bg: var(--color-brand-yellow);
+  --note-ink: var(--color-ink);
+  --ans-bg: var(--color-accept-sunk);
+  --ans-ink: var(--color-accept);
 
-  --c-stage: #FFFFFF;
-  --c-surface: #F7FAFC;
-  --c-sunk: #F1F3F5;
-  --c-raised: #FFFFFF;
-  --c-numeral: #002858;
-  --c-ink: #002858;
-  --c-ink-soft: #52657A;
-  --c-ink-faint: #7A8998;
-  --c-inverse: #FFFFFF;
-  --c-rule: #CBD4DC;
-  --c-rule-faint: #E4E9EE;
-  --c-rule-strong: #7A8998;
-  --c-action: #002858;
-  --c-action-sunk: #EAF5FC;
-  --c-accept: #006F52;
-  --c-accept-sunk: #E8F8F2;
-  --c-reject: #BB1C1C;
-  --c-reject-sunk: #FDECEC;
-  --c-warn: #815908;
-  --c-warn-sunk: #FFF5D8;
-  --c-brand: #00AA7D;
-  --c-brand-strong: #008F6C;
-  --c-brand-yellow: #FECB56;
-  --c-brand-cream: #FFF8E8;
-  --c-brand-light: #48C090;
-  --c-shadow-card: rgba(0, 40, 88, 0.06);
-  --c-shadow-float: rgba(0, 40, 88, 0.10);
-  --c-scrim: rgba(0, 40, 88, 0.55);
+  /* scrim = colour role x opacity token (E01-S17 Dev notes; was 0.55 hand-written) */
+  --scrim: color-mix(in srgb, var(--color-scrim) calc(var(--opacity-scrim) * 100%), transparent);
 
   --font: "Noto Sans Thai", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px; --r-pill: 999px;
   --target: 48px; --target-c: 56px;
 }
+/* brandYellow stays light in both themes, so the "?" ink must stay dark. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --pg-bg: #0B1520;
-    --pg-card: #13202E;
-    --pg-ink: #F4F5F6;
-    --pg-ink-soft: #A3B1C0;
-    --pg-rule: #2E3B49;
-    --pg-accent: #48C090;
-    --frame-bezel: #02070C;
-    --frame-ring: #2E3B49;
-    --frame-shadow: rgba(0, 0, 0, 0.5);
-  }
+  :root:not([data-theme="light"]) { color-scheme: dark; --note-ink: var(--color-ink-inverse); }
 }
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --pg-bg: #0B1520;
-  --pg-card: #13202E;
-  --pg-ink: #F4F5F6;
-  --pg-ink-soft: #A3B1C0;
-  --pg-rule: #2E3B49;
-  --pg-accent: #48C090;
-  --frame-bezel: #02070C;
-  --frame-ring: #2E3B49;
-  --frame-shadow: rgba(0, 0, 0, 0.5);
-}
+:root[data-theme="dark"] { color-scheme: dark; --note-ink: var(--color-ink-inverse); }
+:root[data-theme="light"] { color-scheme: light; }
 
 * { box-sizing: border-box; }
 body {
@@ -166,19 +122,20 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .screen {
   position: relative; height: 100%; border-radius: 30px; overflow: hidden;
   display: flex; flex-direction: column;
-  background: var(--c-surface); color: var(--c-ink); font-size: 16px; line-height: 1.4;
+  background: var(--color-surface); color: var(--color-ink); font-size: 16px; line-height: 1.4;
 }
 .sbar {
   height: 28px; flex: none; display: flex; align-items: center; justify-content: space-between;
-  padding: 0 22px; font-size: 12px; font-weight: 600; color: var(--c-ink);
+  padding: 0 22px; font-size: 12px; font-weight: 600; color: var(--color-ink);
 }
 .sbar .ic { width: 16px; height: 16px; }
-.appbar { height: 56px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 8px 0 4px; }
+.appbar { height: 56px; flex: none; background: var(--color-app-bar); color: var(--color-app-bar-ink); display: flex; align-items: center; gap: 4px; padding: 0 8px 0 4px; }
 .appbar h3 { flex: 1; margin: 0; font-size: 18px; font-weight: 600; line-height: 1.25; min-width: 0; }
-.appbar h3 small { display: block; font-size: 12px; font-weight: 400; color: var(--c-ink-soft); }
+.appbar h3 small { display: block; font-size: 12px; font-weight: 400; color: var(--color-ink-soft); }
+.appbar .iconbtn { color: var(--color-app-bar-ink); }
 .iconbtn {
   width: var(--target); height: var(--target); flex: none; display: grid; place-items: center;
-  border-radius: var(--r-pill); color: var(--c-ink);
+  border-radius: var(--r-pill); color: var(--color-ink);
 }
 .body { flex: 1; min-height: 0; overflow: hidden; padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 12px; }
 .foot { flex: none; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 10px; }
@@ -192,38 +149,38 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 
 /* ---- cards and icon tiles (FarmMate pattern) ---- */
 .card {
-  background: var(--c-raised); border: 1px solid var(--c-rule-faint); border-radius: var(--r-lg);
-  box-shadow: 0 2px 12px var(--c-shadow-card); padding: 12px;
+  background: var(--color-surface-raised); border: 1px solid var(--color-rule-faint); border-radius: var(--r-lg);
+  box-shadow: 0 2px 12px var(--shadow-card-color); padding: 12px;
 }
-.card.cream { background: var(--c-brand-cream); }
+.card.cream { background: var(--color-brand-cream); }
 .card.tight { padding: 4px 12px; }
-.card h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--c-ink-soft); }
+.card h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--color-ink-soft); }
 .row { display: flex; align-items: center; gap: 12px; min-height: var(--target); }
-.row + .row { border-top: 1px solid var(--c-rule-faint); }
+.row + .row { border-top: 1px solid var(--color-rule-faint); }
 .row .grow { flex: 1; min-width: 0; }
-.row .lbl { font-size: 14px; color: var(--c-ink-soft); }
+.row .lbl { font-size: 14px; color: var(--color-ink-soft); }
 .row .val { font-size: 16px; font-weight: 600; }
-.row .sub { display: block; font-size: 13px; color: var(--c-ink-soft); font-weight: 400; }
+.row .sub { display: block; font-size: 13px; color: var(--color-ink-soft); font-weight: 400; }
 .tile {
   width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: var(--r-md);
 }
 .tile.sm { width: 36px; height: 36px; border-radius: 10px; }
 .tile.sm .ic { width: 20px; height: 20px; }
-.t-green { background: var(--c-accept-sunk); color: var(--c-accept); }
-.t-cream { background: var(--c-brand-cream); color: var(--c-warn); }
-.t-blue { background: var(--c-action-sunk); color: var(--c-action); }
-.t-red { background: var(--c-reject-sunk); color: var(--c-reject); }
-.t-gray { background: var(--c-sunk); color: var(--c-ink-soft); }
-.chev { color: var(--c-ink-faint); }
+.t-green { background: var(--color-accept-sunk); color: var(--color-accept); }
+.t-cream { background: var(--color-brand-cream); color: var(--color-warn); }
+.t-blue { background: var(--color-action-sunk); color: var(--color-action); }
+.t-red { background: var(--color-reject-sunk); color: var(--color-reject); }
+.t-gray { background: var(--color-surface-sunk); color: var(--color-ink-soft); }
+.chev { color: var(--color-ink-faint); }
 
 /* ---- buttons ---- */
 .btn {
   min-height: 52px; width: 100%; border-radius: var(--r-pill); display: flex; align-items: center;
   justify-content: center; gap: 8px; font-size: 16px; font-weight: 600; padding: 0 20px; text-align: center;
 }
-.btn-primary { background: var(--c-action); color: var(--c-inverse); box-shadow: 0 3px 10px var(--c-shadow-float); }
-.btn-secondary { background: var(--c-raised); color: var(--c-action); border: 2px solid var(--c-action); }
-.btn-disabled { background: var(--c-sunk); color: var(--c-ink-soft); border: 2px dashed var(--c-rule-strong); }
+.btn-primary { background: var(--color-action); color: var(--color-ink-inverse); box-shadow: 0 3px 10px var(--shadow-floating-color); }
+.btn-secondary { background: var(--color-surface-raised); color: var(--color-action); border: 2px solid var(--color-action); }
+.btn-disabled { background: var(--color-disabled-fill); color: var(--color-disabled-ink); border: 2px dashed var(--color-rule-strong); }
 .btn.small { min-height: var(--target); width: auto; font-size: 14px; padding: 0 16px; }
 
 /* ---- sync pill (SYNC-3): icon + word, colour agrees ---- */
@@ -232,19 +189,19 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
   border-radius: var(--r-pill); font-size: 13px; font-weight: 600; white-space: nowrap; flex: none;
 }
 .pill .ic { width: 16px; height: 16px; }
-.p-ok { background: var(--c-accept-sunk); color: var(--c-accept); }
-.p-pend { background: var(--c-warn-sunk); color: var(--c-warn); }
-.p-conf { background: var(--c-reject-sunk); color: var(--c-reject); }
+.p-ok { background: var(--color-accept-sunk); color: var(--color-accept); }
+.p-pend { background: var(--color-warn-sunk); color: var(--color-warn); }
+.p-conf { background: var(--color-reject-sunk); color: var(--color-reject); }
 
 /* ---- field data-state badges (SYNC-12, E01-S15) ---- */
 .ds {
   display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: var(--r-pill);
-  font-size: 12px; font-weight: 500; color: var(--c-ink-soft); border: 1px solid var(--c-rule); background: var(--c-raised);
+  font-size: 12px; font-weight: 500; color: var(--color-ink-soft); border: 1px solid var(--color-rule); background: var(--color-surface-raised);
   white-space: nowrap;
 }
 .ds .ic { width: 13px; height: 13px; }
-.ds-unknown { border: 1.5px dashed var(--c-rule-strong); }
-.ds-none { background: var(--c-sunk); border-color: var(--c-rule-faint); }
+.ds-unknown { border: 1.5px dashed var(--color-rule-strong); }
+.ds-none { background: var(--color-surface-sunk); border-color: var(--color-rule-faint); }
 
 /* ---- flags / status chips ---- */
 .chip {
@@ -252,57 +209,57 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
   font-size: 13px; font-weight: 600; white-space: nowrap;
 }
 .chip .ic { width: 15px; height: 15px; }
-.ch-ok { background: var(--c-accept-sunk); color: var(--c-accept); }
-.ch-warn { background: var(--c-warn-sunk); color: var(--c-warn); }
-.ch-bad { background: var(--c-reject-sunk); color: var(--c-reject); }
-.ch-plain { background: var(--c-sunk); color: var(--c-ink-soft); }
+.ch-ok { background: var(--color-accept-sunk); color: var(--color-accept); }
+.ch-warn { background: var(--color-warn-sunk); color: var(--color-warn); }
+.ch-bad { background: var(--color-reject-sunk); color: var(--color-reject); }
+.ch-plain { background: var(--color-surface-sunk); color: var(--color-ink-soft); }
 
 /* ---- segmented choices ---- */
-.seg { display: flex; gap: 6px; background: var(--c-sunk); border-radius: var(--r-pill); padding: 4px; }
+.seg { display: flex; gap: 6px; background: var(--color-surface-sunk); border-radius: var(--r-pill); padding: 4px; }
 .seg > span {
   flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center;
-  border-radius: var(--r-pill); font-size: 15px; font-weight: 600; color: var(--c-ink-soft); line-height: 1.2;
+  border-radius: var(--r-pill); font-size: 15px; font-weight: 600; color: var(--color-ink-soft); line-height: 1.2;
 }
 .seg > span small { display: block; font-size: 11px; font-weight: 400; }
-.seg > span.on { background: var(--c-action); color: var(--c-inverse); }
+.seg > span.on { background: var(--color-action); color: var(--color-ink-inverse); }
 
 /* ---- figures: big value + smaller unit (§12.3) ---- */
 .fig { font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; }
-.fig .u { font-size: 0.5em; font-weight: 500; color: var(--c-ink-soft); margin-left: 4px; letter-spacing: 0; }
+.fig .u { font-size: 0.5em; font-weight: 500; color: var(--color-ink-soft); margin-left: 4px; letter-spacing: 0; }
 .kv { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; min-height: 24px; }
-.kv span:first-child { color: var(--c-ink-soft); }
+.kv span:first-child { color: var(--color-ink-soft); }
 .kv span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
-.kv.total { border-top: 1px solid var(--c-rule-faint); margin-top: 4px; padding-top: 6px; }
+.kv.total { border-top: 1px solid var(--color-rule-faint); margin-top: 4px; padding-top: 6px; }
 
 /* ---- screen-specific ---- */
 .hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 0 24px; }
 .hero h2 { margin: 4px 0 0; font-size: 32px; font-weight: 700; line-height: 1.2; }
-.hero p { margin: 0; color: var(--c-ink-soft); }
-.gmark { width: 28px; height: 28px; border-radius: var(--r-pill); display: grid; place-items: center; border: 2px solid var(--c-rule-strong); font-weight: 800; font-size: 15px; color: var(--c-ink); }
+.hero p { margin: 0; color: var(--color-ink-soft); }
+.gmark { width: 28px; height: 28px; border-radius: var(--r-pill); display: grid; place-items: center; border: 2px solid var(--color-rule-strong); font-weight: 800; font-size: 15px; color: var(--color-ink); }
 .greet { padding: 0 4px; }
 .greet b { display: block; font-size: 24px; line-height: 1.25; }
-.greet span { font-size: 14px; color: var(--c-ink-soft); }
-.steps { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--c-ink-soft); flex-wrap: wrap; }
-.steps .done { color: var(--c-accept); font-weight: 600; display: inline-flex; align-items: center; gap: 2px; }
-.steps .now { color: var(--c-ink); font-weight: 700; }
+.greet span { font-size: 14px; color: var(--color-ink-soft); }
+.steps { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--color-ink-soft); flex-wrap: wrap; }
+.steps .done { color: var(--color-accept); font-weight: 600; display: inline-flex; align-items: center; gap: 2px; }
+.steps .now { color: var(--color-ink); font-weight: 700; }
 .expect { text-align: center; padding: 14px 12px; }
 .expect .fig { font-size: 44px; }
-.expect p { margin: 4px 0 0; font-size: 14px; color: var(--c-ink-soft); }
+.expect p { margin: 4px 0 0; font-size: 14px; color: var(--color-ink-soft); }
 
-.sixhd { font-size: 13px; font-weight: 700; line-height: 1.2; color: var(--c-ink-soft); margin: 0 0 -6px 2px; }
+.sixhd { font-size: 13px; font-weight: 700; line-height: 1.2; color: var(--color-ink-soft); margin: 0 0 -6px 2px; }
 .six { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .six .card { padding: 8px 10px; }
-.six .lbl { font-size: 12px; color: var(--c-ink-soft); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.six .lbl .ic.sr { width: 19px; height: 19px; vertical-align: -4px; color: var(--c-action); }
+.six .lbl { font-size: 12px; color: var(--color-ink-soft); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.six .lbl .ic.sr { width: 19px; height: 19px; vertical-align: -4px; color: var(--color-action); }
 .ic.xs { width: 13px; height: 13px; margin-right: 1px; }
 .six .fig { font-size: 22px; }
-.six .sm2 { display: block; font-size: 11px; color: var(--c-warn); font-weight: 600; line-height: 1.2; margin-top: 2px; }
-.card.warn { background: var(--c-warn-sunk); border-color: var(--c-warn-sunk); }
-.card.warn .lbl { color: var(--c-warn); font-weight: 600; }
+.six .sm2 { display: block; font-size: 11px; color: var(--color-warn); font-weight: 600; line-height: 1.2; margin-top: 2px; }
+.card.warn { background: var(--color-warn-sunk); border-color: var(--color-warn-sunk); }
+.card.warn .lbl { color: var(--color-warn); font-weight: 600; }
 
 /* current / next basket card (owner answer 8, revised 2026-10-03: back to v1) */
 .bigc { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
-.bigc .lbl { font-size: 12px; color: var(--c-ink-soft); display: block; }
+.bigc .lbl { font-size: 12px; color: var(--color-ink-soft); display: block; }
 .bigc .fig.xl { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; }
 .bigc .next { text-align: right; }
 .bigc .next .fig { font-size: 28px; }
@@ -311,42 +268,42 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .stepper { display: flex; align-items: center; gap: 8px; }
 .stepper .sb {
   width: var(--target); height: var(--target); flex: none; border-radius: var(--r-pill); display: grid; place-items: center;
-  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); color: var(--c-action);
+  border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised); color: var(--color-action);
 }
 .inp {
   flex: 1; min-width: 64px; min-height: var(--target); padding: 0 12px; border-radius: var(--r-sm);
-  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); display: flex; align-items: center; justify-content: flex-end; gap: 6px;
-  font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--c-ink);
+  border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised); display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+  font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--color-ink);
 }
-.inp.focus { border: 2px solid var(--c-action); }
-.inp .u { font-size: 13px; font-weight: 500; color: var(--c-ink-soft); }
-.inp.text { justify-content: flex-start; font-size: 14px; font-weight: 400; color: var(--c-ink-faint); }
+.inp.focus { border: 2px solid var(--color-focus-ring); }
+.inp .u { font-size: 13px; font-weight: 500; color: var(--color-ink-soft); }
+.inp.text { justify-content: flex-start; font-size: 14px; font-weight: 400; color: var(--color-ink-faint); }
 .btnrow { display: flex; gap: 8px; }
 .btnrow .btn { min-height: var(--target); }
 
 /* big two-way choice (bridge basket) */
 .choice {
   display: flex; align-items: center; gap: 12px; min-height: 76px; padding: 10px 14px; border-radius: var(--r-lg);
-  border: 2px solid var(--c-action); background: var(--c-raised); color: var(--c-action); text-align: left;
+  border: 2px solid var(--color-action); background: var(--color-surface-raised); color: var(--color-action); text-align: left;
 }
 .choice b { display: block; font-size: 17px; line-height: 1.3; }
-.choice small { display: block; font-size: 13px; line-height: 1.35; font-weight: 500; color: var(--c-ink-soft); }
-.choice.pri { background: var(--c-action); color: var(--c-inverse); }
-.choice.pri small { color: var(--c-inverse); }
-.choice .tile { background: var(--c-action-sunk); color: var(--c-action); }
+.choice small { display: block; font-size: 13px; line-height: 1.35; font-weight: 500; color: var(--color-ink-soft); }
+.choice.pri { background: var(--color-action); color: var(--color-ink-inverse); }
+.choice.pri small { color: var(--color-ink-inverse); }
+.choice .tile { background: var(--color-action-sunk); color: var(--color-action); }
 /* v4: sheet options rewritten for outdoor reading — bold title, then 1–2 short
    lines, key numbers in a chip. The recommended option is a tinted outline,
    not a dark fill, so its small lines stay ink-on-light. */
-.choice.cmp { min-height: var(--target-c); gap: 10px; padding: 8px 12px; border-radius: var(--r-md); align-items: flex-start; border-width: 1.5px; border-color: var(--c-rule-strong); }
-.choice.cmp b { font-size: 16px; color: var(--c-ink); margin-bottom: 2px; }
-.choice.cmp .ln { display: block; font-size: 14px; line-height: 1.45; font-weight: 500; color: var(--c-ink-soft); }
+.choice.cmp { min-height: var(--target-c); gap: 10px; padding: 8px 12px; border-radius: var(--r-md); align-items: flex-start; border-width: 1.5px; border-color: var(--color-rule-strong); }
+.choice.cmp b { font-size: 16px; color: var(--color-ink); margin-bottom: 2px; }
+.choice.cmp .ln { display: block; font-size: 14px; line-height: 1.45; font-weight: 500; color: var(--color-ink-soft); }
 .choice.cmp .tile { width: 32px; height: 32px; border-radius: var(--r-sm); margin-top: 2px; }
 .choice.cmp .tile .ic { width: 18px; height: 18px; }
-.choice.cmp.pri { background: var(--c-action-sunk); border: 2px solid var(--c-action); }
-.choice.cmp.pri .tile { background: var(--c-raised); }
+.choice.cmp.pri { background: var(--color-action-sunk); border: 2px solid var(--color-action); }
+.choice.cmp.pri .tile { background: var(--color-surface-raised); }
 .nchip {
-  display: inline-block; padding: 0 6px; border-radius: var(--r-sm); background: var(--c-brand-cream);
-  border: 1px solid var(--c-brand-yellow); color: var(--c-ink); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
+  display: inline-block; padding: 0 6px; border-radius: var(--r-sm); background: var(--color-brand-cream);
+  border: 1px solid var(--color-brand-yellow); color: var(--color-ink); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 
 /* v4 home (screen 3): long screenshot phone, cover, action cards, module grid */
@@ -361,23 +318,23 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .phone.long .body { overflow: visible; }
 .cover {
   position: relative; flex: none; height: 148px; margin: 0 16px; border-radius: var(--r-lg); overflow: hidden;
-  background: var(--c-action-sunk);
+  background: var(--color-action-sunk);
 }
 .cover svg.scene { position: absolute; inset: 0; width: 100%; height: 100%; }
-.cover .sun { fill: var(--c-brand-yellow); }
-.cover .rays { stroke: var(--c-brand-yellow); stroke-width: 2.5; stroke-linecap: round; fill: none; transform-origin: 62px 40px; }
-.cover .cloud { fill: var(--c-raised); }
-.cover .hill-back { fill: var(--c-brand-light); }
-.cover .hill { fill: var(--c-brand); }
-.cover .trunk { fill: var(--c-ink-soft); }
-.cover .crown { fill: var(--c-brand-strong); }
-.cover .crown2 { fill: var(--c-brand); }
-.cover .cup { fill: var(--c-raised); stroke: var(--c-ink-soft); stroke-width: 1; }
-.cover .tap { stroke: var(--c-raised); stroke-width: 1.5; fill: none; }
+.cover .sun { fill: var(--color-brand-yellow); }
+.cover .rays { stroke: var(--color-brand-yellow); stroke-width: 2.5; stroke-linecap: round; fill: none; transform-origin: 62px 40px; }
+.cover .cloud { fill: var(--color-surface-raised); }
+.cover .hill-back { fill: var(--color-brand-light); }
+.cover .hill { fill: var(--color-brand); }
+.cover .trunk { fill: var(--color-ink-soft); }
+.cover .crown { fill: var(--color-brand-strong); }
+.cover .crown2 { fill: var(--color-brand); }
+.cover .cup { fill: var(--color-surface-raised); stroke: var(--color-ink-soft); stroke-width: 1; }
+.cover .tap { stroke: var(--color-surface-raised); stroke-width: 1.5; fill: none; }
 .cover .chg {
   position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px;
-  border-radius: var(--r-pill); background: var(--c-raised); color: var(--c-action); font-size: 12px; font-weight: 600;
-  box-shadow: 0 2px 8px var(--c-shadow-float);
+  border-radius: var(--r-pill); background: var(--color-surface-raised); color: var(--color-action); font-size: 12px; font-weight: 600;
+  box-shadow: 0 2px 8px var(--shadow-floating-color);
 }
 .cover .chg .ic { width: 16px; height: 16px; }
 @media (prefers-reduced-motion: no-preference) {
@@ -389,135 +346,135 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 
 .acts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .act {
-  min-height: 104px; padding: 10px 6px; border-radius: var(--r-lg); background: var(--c-raised);
-  border: 1px solid var(--c-rule-faint); box-shadow: 0 2px 12px var(--c-shadow-card);
+  min-height: 104px; padding: 10px 6px; border-radius: var(--r-lg); background: var(--color-surface-raised);
+  border: 1px solid var(--color-rule-faint); box-shadow: 0 2px 12px var(--shadow-card-color);
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; text-align: center;
-  font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--c-ink);
+  font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--color-ink);
 }
 .act .tile { width: 48px; height: 48px; }
 .act .ic { width: 26px; height: 26px; }
-.act.main { border: 2px solid var(--c-action); }
+.act.main { border: 2px solid var(--color-action); }
 .sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 4px; }
 .sec-h b { font-size: 16px; }
-.sec-h a, .sec-h span.lnk { font-size: 14px; color: var(--c-action); font-weight: 600; text-decoration: none; }
+.sec-h a, .sec-h span.lnk { font-size: 14px; color: var(--color-action); font-weight: 600; text-decoration: none; }
 .mods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .mod {
   display: flex; align-items: center; gap: 8px; min-height: var(--target-c); padding: 8px 10px; border-radius: var(--r-md);
-  background: var(--c-raised); border: 1px solid var(--c-rule-faint); box-shadow: 0 2px 12px var(--c-shadow-card);
-  font-size: 13px; font-weight: 600; line-height: 1.25; color: var(--c-ink);
+  background: var(--color-surface-raised); border: 1px solid var(--color-rule-faint); box-shadow: 0 2px 12px var(--shadow-card-color);
+  font-size: 13px; font-weight: 600; line-height: 1.25; color: var(--color-ink);
 }
-.mod small { display: block; font-size: 11px; font-weight: 400; color: var(--c-ink-soft); }
+.mod small { display: block; font-size: 11px; font-weight: 400; color: var(--color-ink-soft); }
 .mod.wide { grid-column: span 2; }
 .mod small .ic { width: 11px; height: 11px; vertical-align: -1px; }
-.more-hint { font-size: 12px; color: var(--c-ink-soft); padding: 0 4px; line-height: 1.4; }
+.more-hint { font-size: 12px; color: var(--color-ink-soft); padding: 0 4px; line-height: 1.4; }
 
 /* photo type picker (E04-S10) */
 .types { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .type {
   display: flex; align-items: center; gap: 8px; min-height: var(--target-c); padding: 6px 8px; border-radius: var(--r-md);
-  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); font-size: 14px; font-weight: 600; line-height: 1.25;
+  border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised); font-size: 14px; font-weight: 600; line-height: 1.25;
 }
-.type.on { border: 2px solid var(--c-action); background: var(--c-action-sunk); }
-.type .ck { margin-left: auto; color: var(--c-action); }
+.type.on { border: 2px solid var(--color-action); background: var(--color-action-sunk); }
+.type .ck { margin-left: auto; color: var(--color-action); }
 
 /* compact select (settlement bank account) */
 .sel {
   display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 8px; border-radius: var(--r-sm);
-  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised); color: var(--c-action); font-weight: 600;
+  border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised); color: var(--color-action); font-weight: 600;
 }
 .sel .ic { width: 14px; height: 14px; }
-.sel small { font-size: 11px; font-weight: 400; color: var(--c-ink-soft); }
+.sel small { font-size: 11px; font-weight: 400; color: var(--color-ink-soft); }
 
 /* conflict choice rows */
 .optrow { display: flex; align-items: center; gap: 8px; }
-.optrow .who { flex: 1; min-width: 0; font-size: 13px; line-height: 1.3; color: var(--c-ink-soft); }
-.optrow .who b { display: block; color: var(--c-ink); font-size: 14px; }
+.optrow .who { flex: 1; min-width: 0; font-size: 13px; line-height: 1.3; color: var(--color-ink-soft); }
+.optrow .who b { display: block; color: var(--color-ink); font-size: 14px; }
 .optrow .btn { flex: none; }
 
 /* insets below a phone: app-themed (light field theme), sit on the page */
 .extras { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
 .inset {
-  background: var(--c-surface); color: var(--c-ink); border: 1px solid var(--pg-rule); border-radius: var(--r-lg);
+  background: var(--color-surface); color: var(--color-ink); border: 1px solid var(--pg-rule); border-radius: var(--r-lg);
   padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 14px;
 }
-.inset > .ttl { font-size: 13px; font-weight: 700; color: var(--c-ink); }
-.inset > .note { font-size: 12px; color: var(--c-ink-soft); line-height: 1.45; }
+.inset > .ttl { font-size: 13px; font-weight: 700; color: var(--color-ink); }
+.inset > .note { font-size: 12px; color: var(--color-ink-soft); line-height: 1.45; }
 .mini-row { display: flex; align-items: center; gap: 8px; font-size: 13px; min-height: 28px; }
 .mini-row .grow { flex: 1; min-width: 0; }
 
 /* FarmMate logo (drawn in the spirit of the reference, not copied) */
 .fm-logo { width: 112px; height: 112px; }
-.hero h2.fm-word { margin: 0; font-size: 38px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; color: var(--c-ink); }
+.hero h2.fm-word { margin: 0; font-size: 38px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; color: var(--color-ink); }
 
 .stage {
-  position: relative; flex: 0 0 auto; min-height: 124px; border-radius: var(--r-xl); background: var(--c-stage);
-  border: 2px solid var(--c-rule-strong); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; flex: 0 0 auto; min-height: 124px; border-radius: var(--r-xl); background: var(--color-stage);
+  border: 2px solid var(--color-rule-strong); display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 4px; text-align: center; padding: 12px;
 }
 .stage svg.sweep { position: absolute; inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); overflow: visible; }
-.stage svg.sweep rect { fill: none; stroke: var(--c-action); stroke-width: 6; stroke-linecap: round; }
+.stage svg.sweep rect { fill: none; stroke: var(--color-action); stroke-width: 6; stroke-linecap: round; }
 .stage b { font-size: 20px; }
-.stage span { font-size: 14px; color: var(--c-ink-soft); }
+.stage span { font-size: 14px; color: var(--color-ink-soft); }
 .tools { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: auto; }
 .tool {
-  min-height: var(--target-c); border-radius: var(--r-md); background: var(--c-raised); border: 1.5px solid var(--c-rule-strong);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--c-action);
+  min-height: var(--target-c); border-radius: var(--r-md); background: var(--color-surface-raised); border: 1.5px solid var(--color-rule-strong);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--color-action);
 }
 .tool .ic { width: 20px; height: 20px; }
 
 /* public mode: §12.8 — white flat stage, numeral token only, nothing else */
-.pub-bar { height: 56px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; background: var(--c-action); color: var(--c-inverse); }
+.pub-bar { height: 56px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; background: var(--color-action); color: var(--color-ink-inverse); }
 .pub-bar span { flex: 1; font-size: 14px; font-weight: 600; }
-.pub-bar .pill { background: var(--c-raised); }
-.pub-stage { position: relative; flex: 1; background: var(--c-stage); display: grid; place-items: center; overflow: hidden; }
+.pub-bar .pill { background: var(--color-surface-raised); }
+.pub-stage { position: relative; flex: 1; background: var(--color-stage); display: grid; place-items: center; overflow: hidden; }
 .pub-stage svg.sweep { position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); }
-.pub-stage svg.sweep rect { fill: none; stroke: var(--c-action); stroke-width: 10; stroke-linecap: round; }
-.pub-num { font-size: 240px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--c-numeral); font-variant-numeric: tabular-nums; }
-.pub-foot { height: 64px; flex: none; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--c-sunk); color: var(--c-action); font-size: 14px; font-weight: 600; }
+.pub-stage svg.sweep rect { fill: none; stroke: var(--color-action); stroke-width: 10; stroke-linecap: round; }
+.pub-num { font-size: 240px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--color-numeral); font-variant-numeric: tabular-nums; }
+.pub-foot { height: 64px; flex: none; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--color-surface-sunk); color: var(--color-action); font-size: 14px; font-weight: 600; }
 
 .cmp { width: 100%; border-collapse: collapse; font-size: 14px; }
-.cmp th { font-size: 12px; font-weight: 600; color: var(--c-ink-soft); text-align: right; padding: 4px 0 6px; vertical-align: bottom; }
+.cmp th { font-size: 12px; font-weight: 600; color: var(--color-ink-soft); text-align: right; padding: 4px 0 6px; vertical-align: bottom; }
 .cmp th:first-child, .cmp td:first-child { text-align: left; }
-.cmp td { padding: 8px 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; border-top: 1px solid var(--c-rule-faint); }
-.cmp td:first-child { font-weight: 500; color: var(--c-ink-soft); }
-.cmp .ok { color: var(--c-accept); display: inline-flex; align-items: center; gap: 2px; }
+.cmp td { padding: 8px 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; border-top: 1px solid var(--color-rule-faint); }
+.cmp td:first-child { font-weight: 500; color: var(--color-ink-soft); }
+.cmp .ok { color: var(--color-accept); display: inline-flex; align-items: center; gap: 2px; }
 
-.sheet-scrim { position: absolute; inset: 0; background: var(--c-scrim); }
+.sheet-scrim { position: absolute; inset: 0; background: var(--scrim); }
 .sheet {
-  position: absolute; left: 0; right: 0; bottom: 0; background: var(--c-raised); border-radius: 24px 24px 0 0;
-  padding: 10px 16px 20px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -6px 24px var(--c-shadow-float);
+  position: absolute; left: 0; right: 0; bottom: 0; background: var(--color-surface-raised); border-radius: 24px 24px 0 0;
+  padding: 10px 16px 20px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -6px 24px var(--shadow-floating-color);
 }
-.sheet .grab { width: 40px; height: 4px; border-radius: var(--r-pill); background: var(--c-rule); align-self: center; }
+.sheet .grab { width: 40px; height: 4px; border-radius: var(--r-pill); background: var(--color-rule); align-self: center; }
 .sheet h4 { margin: 4px 0 0; font-size: 20px; line-height: 1.3; }
-.sheet p { margin: 0; font-size: 14px; color: var(--c-ink-soft); }
+.sheet p { margin: 0; font-size: 14px; color: var(--color-ink-soft); }
 .radio {
   display: flex; align-items: center; gap: 12px; min-height: var(--target-c); padding: 8px 12px; border-radius: var(--r-md);
-  border: 1.5px solid var(--c-rule-strong); font-size: 15px; line-height: 1.3;
+  border: 1.5px solid var(--color-rule-strong); font-size: 15px; line-height: 1.3;
 }
-.radio .dot { width: 22px; height: 22px; border-radius: var(--r-pill); border: 2px solid var(--c-rule-strong); flex: none; display: grid; place-items: center; }
-.radio.on { border: 2px solid var(--c-action); background: var(--c-action-sunk); }
-.radio.on .dot { border-color: var(--c-action); }
-.radio.on .dot::after { content: ""; width: 10px; height: 10px; border-radius: var(--r-pill); background: var(--c-action); }
-.radio small { display: block; font-size: 12px; color: var(--c-ink-soft); }
+.radio .dot { width: 22px; height: 22px; border-radius: var(--r-pill); border: 2px solid var(--color-rule-strong); flex: none; display: grid; place-items: center; }
+.radio.on { border: 2px solid var(--color-action); background: var(--color-action-sunk); }
+.radio.on .dot { border-color: var(--color-action); }
+.radio.on .dot::after { content: ""; width: 10px; height: 10px; border-radius: var(--r-pill); background: var(--color-action); }
+.radio small { display: block; font-size: 12px; color: var(--color-ink-soft); }
 .dim { filter: saturate(0.7); }
 
 .tick {
   display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 12px;
-  border-radius: var(--r-md); border: 1.5px solid var(--c-rule-strong); background: var(--c-raised);
+  border-radius: var(--r-md); border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised);
 }
-.tick .box { width: 28px; height: 28px; border-radius: var(--r-sm); border: 2px solid var(--c-rule-strong); flex: none; display: grid; place-items: center; }
-.tick.on { border-color: var(--c-accept); background: var(--c-accept-sunk); }
-.tick.on .box { border-color: var(--c-accept); background: var(--c-accept); color: var(--c-inverse); }
+.tick .box { width: 28px; height: 28px; border-radius: var(--r-sm); border: 2px solid var(--color-rule-strong); flex: none; display: grid; place-items: center; }
+.tick.on { border-color: var(--color-accept); background: var(--color-accept-sunk); }
+.tick.on .box { border-color: var(--color-accept); background: var(--color-accept); color: var(--color-ink-inverse); }
 .tick .grow { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.3; }
-.tick .grow small { display: block; font-size: 12px; font-weight: 400; color: var(--c-ink-soft); }
+.tick .grow small { display: block; font-size: 12px; font-weight: 400; color: var(--color-ink-soft); }
 .tick .amt { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
 
 .banner { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-md); font-size: 14px; line-height: 1.4; }
-.banner.bad { background: var(--c-reject-sunk); color: var(--c-reject); }
-.banner.info { background: var(--c-sunk); color: var(--c-ink-soft); }
-.banner b { color: var(--c-ink); display: block; }
+.banner.bad { background: var(--color-reject-sunk); color: var(--color-reject); }
+.banner.info { background: var(--color-surface-sunk); color: var(--color-ink-soft); }
+.banner b { color: var(--color-ink); display: block; }
 .opt { display: flex; flex-direction: column; gap: 8px; }
-.opt .who { font-size: 13px; color: var(--c-ink-soft); }
+.opt .who { font-size: 13px; color: var(--color-ink-soft); }
 
 /* ---- open questions list ---- */
 .qs { margin-top: 48px; padding: 20px; border-radius: var(--r-lg); background: var(--pg-card); border: 1px solid var(--pg-rule); }
@@ -536,151 +493,188 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .sub-h { margin: 32px 0 4px; font-size: 17px; line-height: 1.3; font-weight: 700; }
 .sub-p { margin: 0 0 20px; color: var(--pg-ink-soft); font-size: 14px; }
 /* ---- v1.1.0 additions (sale flow) — tokens only, no literal colours ---- */
-.seg > span.off { color: var(--c-ink-faint); background: transparent; border: 1.5px dashed var(--c-rule-strong); }
-.seg > span.off small { color: var(--c-ink-soft); }
+.seg > span.off { color: var(--color-ink-faint); background: transparent; border: 1.5px dashed var(--color-rule-strong); }
+.seg > span.off small { color: var(--color-ink-soft); }
 .seg.stack > span { flex-direction: column; gap: 0; padding: 6px 8px; border-radius: var(--r-md); }
 .seg.stack { border-radius: var(--r-md); }
 .seg.col { flex-direction: column; }
-.banner.warn { background: var(--c-warn-sunk); color: var(--c-warn); }
-.banner.warn b { color: var(--c-warn); }
-.choice.cmp.off { border-style: dashed; color: var(--c-ink-faint); }
-.kv.minus span:last-child { color: var(--c-reject); }
-.kv.plus span:last-child { color: var(--c-accept); }
-.kv.muted span { color: var(--c-ink-faint) !important; font-weight: 500; }
+.banner.warn { background: var(--color-warn-sunk); color: var(--color-warn); }
+.banner.warn b { color: var(--color-warn); }
+.choice.cmp.off { border-style: dashed; color: var(--color-ink-faint); }
+.kv.minus span:last-child { color: var(--color-money-out); }
+.kv.plus span:last-child { color: var(--color-money-in); }
+.kv.muted span { color: var(--color-ink-faint) !important; font-weight: 500; }
 .ded {
   display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--r-md);
-  border: 1.5px solid var(--c-rule-strong); background: var(--c-raised);
+  border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised);
 }
-.ded.on { border: 2px solid var(--c-action); background: var(--c-action-sunk); }
-.ded.offer { border: 1.5px dashed var(--c-accept); background: var(--c-accept-sunk); }
+.ded.on { border: 2px solid var(--color-action); background: var(--color-action-sunk); }
+.ded.offer { border: 1.5px dashed var(--color-accept); background: var(--color-accept-sunk); }
 .ded .hd { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
 .ded .hd .grow { flex: 1; min-width: 0; }
-.ded small { font-size: 12px; color: var(--c-ink-soft); line-height: 1.35; }
+.ded small { font-size: 12px; color: var(--color-ink-soft); line-height: 1.35; }
 .stepper.sm .sb { width: 40px; height: 40px; }
 .stepper.sm .inp { min-height: 40px; font-size: 18px; }
 .btn.slim { min-height: 40px; font-size: 14px; padding: 0 12px; }
 .chg td:nth-child(1) { width: 14%; white-space: nowrap; }
 .chg td:nth-child(3) { width: 18%; }
 .qs .chg td:first-child { width: 14%; }
-.lnk2 { color: var(--c-action); font-weight: 600; font-size: 13px; }
-.flag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--c-reject); }
+.lnk2 { color: var(--color-action); font-weight: 600; font-size: 13px; }
+.flag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--color-reject); }
 .flag .ic { width: 14px; height: 14px; }
 /* owner UI comments 2026-10-05 */
 .ic.xs { width: 15px; height: 15px; vertical-align: -2px; }
 .frow { align-items: flex-start; padding: 8px 0; min-height: 0; }
 .frow .tile { margin-top: 2px; }
-.frow .fval { display: block; font-size: 16px; font-weight: 700; color: var(--c-ink); line-height: 1.3; overflow-wrap: anywhere; }
+.frow .fval { display: block; font-size: 16px; font-weight: 700; color: var(--color-ink); line-height: 1.3; overflow-wrap: anywhere; }
 .frow .fval.ds { font-weight: 500; }
 .prow { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; }
-.prow .pl { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 17px; font-weight: 700; color: var(--c-ink); }
-.prow .pl .ic { color: var(--c-accept); width: 20px; height: 20px; }
+.prow .pl { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 17px; font-weight: 700; color: var(--color-ink); }
+.prow .pl .ic { color: var(--color-accept); width: 20px; height: 20px; }
 .prow .pr2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .prow .pr2 .mi { font-size: 14px; }
 .prow .pr2 .mi .ic { width: 18px; height: 18px; }
 .prow .pr2 .btn { margin-left: auto; width: auto; min-height: 40px; }
 .bigc2 { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 8px 12px; }
-.bigc2 .lbl { font-size: 13px; color: var(--c-ink-soft); }
+.bigc2 .lbl { font-size: 13px; color: var(--color-ink-soft); }
 .bigc2 .fig.xl { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; }
-.bigc2 .cnt { font-size: 13px; color: var(--c-ink-soft); }
-.scaleval { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: var(--r-md); background: var(--c-action-sunk); border: 2px solid var(--c-action); color: var(--c-action); font-weight: 800; }
+.bigc2 .cnt { font-size: 13px; color: var(--color-ink-soft); }
+.scaleval { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: var(--r-md); background: var(--color-action-sunk); border: 2px solid var(--color-action); color: var(--color-action); font-weight: 800; }
 .scaleval .ic { width: 22px; height: 22px; }
-.nchip.scale { background: var(--c-action-sunk); color: var(--c-action); border: 1.5px solid var(--c-action); font-weight: 800; }
-.nchip.warn { background: var(--c-warn-sunk); border-color: var(--c-warn); color: var(--c-warn); }
-.tip { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; font-size: 14px; font-weight: 600; color: var(--c-action); }
+.nchip.scale { background: var(--color-action-sunk); color: var(--color-action); border: 1.5px solid var(--color-action); font-weight: 800; }
+.nchip.warn { background: var(--color-warn-sunk); border-color: var(--color-warn); color: var(--color-warn); }
+.tip { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; font-size: 14px; font-weight: 600; color: var(--color-action); }
 .tip .ic { width: 18px; height: 18px; }
 .bf { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; font-size: 14px; }
-.bf .k { color: var(--c-ink-soft); }
-.bf .v { font-weight: 700; color: var(--c-ink); }
+.bf .k { color: var(--color-ink-soft); }
+.bf .v { font-weight: 700; color: var(--color-ink); }
 .bf .w { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
 /* D-70 app-wide rule: one fact per line, with a symbol; times on their own line */
-.mi { display: flex; align-items: center; gap: 5px; font-size: 12px; line-height: 1.35; color: var(--c-ink-soft); font-weight: 500; }
+.mi { display: flex; align-items: center; gap: 5px; font-size: 12px; line-height: 1.35; color: var(--color-ink-soft); font-weight: 500; }
 .mi .ic { width: 14px; height: 14px; flex: none; }
-.mi b { color: var(--c-ink); font-weight: 600; }
+.mi b { color: var(--color-ink); font-weight: 600; }
 .row .mi { margin-top: 1px; }
 .lines { display: flex; flex-direction: column; gap: 3px; }
 /* D-70 S9: slide-up weight picker — drag ruler + ±1 kg (scale step) */
 .wsheet { gap: 8px; }
 .wval { display: flex; align-items: center; justify-content: center; gap: 14px; }
-.wval .sb { width: 56px; height: 56px; border-radius: var(--r-pill); display: grid; place-items: center; border: 2px solid var(--c-action); color: var(--c-action); background: var(--c-raised); flex: none; }
+.wval .sb { width: 56px; height: 56px; border-radius: var(--r-pill); display: grid; place-items: center; border: 2px solid var(--color-action); color: var(--color-action); background: var(--color-surface-raised); flex: none; }
 .wval .sb .ic { width: 28px; height: 28px; stroke-width: 2.5; }
-.wval .big { color: var(--c-action); font-size: 56px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; min-width: 112px; text-align: center; }
-.wval .big .u { font-size: 18px; font-weight: 600; color: var(--c-ink-soft); margin-left: 4px; letter-spacing: 0; }
-.ruler { position: relative; height: 72px; border-radius: var(--r-md); background: var(--c-sunk); overflow: hidden; touch-action: pan-x; }
+.wval .big { color: var(--color-action); font-size: 56px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; min-width: 112px; text-align: center; }
+.wval .big .u { font-size: 18px; font-weight: 600; color: var(--color-ink-soft); margin-left: 4px; letter-spacing: 0; }
+.ruler { position: relative; height: 72px; border-radius: var(--r-md); background: var(--color-surface-sunk); overflow: hidden; touch-action: pan-x; }
 .ruler svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.ruler .tk { stroke: var(--c-rule-strong); stroke-width: 2; }
-.ruler .tk5 { stroke: var(--c-ink-soft); stroke-width: 2.5; }
-.ruler .lb { fill: var(--c-ink-soft); font-size: 13px; font-weight: 600; font-family: var(--font); }
-.ruler .lb.cur { fill: var(--c-ink); font-size: 15px; font-weight: 800; }
-.ruler .ndl { stroke: var(--c-action); stroke-width: 4; stroke-linecap: round; }
-.ruler .fade { fill: var(--c-rule); opacity: .55; }
-.ruler .over { fill: var(--c-warn); opacity: .28; }
-.ruler .mk { stroke: var(--c-accept); stroke-width: 3; stroke-dasharray: 4 3; }
-.ruler .lb.mkl { fill: var(--c-accept); font-weight: 800; }
-.ruler .lb.mkt { fill: var(--c-accept); font-size: 11px; font-weight: 700; }
-.rhint { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 12px; color: var(--c-ink-soft); }
+.ruler .tk { stroke: var(--color-rule-strong); stroke-width: 2; }
+.ruler .tk5 { stroke: var(--color-ink-soft); stroke-width: 2.5; }
+.ruler .lb { fill: var(--color-ink-soft); font-size: 13px; font-weight: 600; font-family: var(--font); }
+.ruler .lb.cur { fill: var(--color-ink); font-size: 15px; font-weight: 800; }
+.ruler .ndl { stroke: var(--color-action); stroke-width: 4; stroke-linecap: round; }
+.ruler .fade { fill: var(--color-rule); opacity: .55; }
+.ruler .over { fill: var(--color-warn); opacity: .28; }
+.ruler .mk { stroke: var(--color-accept); stroke-width: 3; stroke-dasharray: 4 3; }
+.ruler .lb.mkl { fill: var(--color-accept); font-weight: 800; }
+.ruler .lb.mkt { fill: var(--color-accept); font-size: 11px; font-weight: 700; }
+.rhint { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 12px; color: var(--color-ink-soft); }
 .rhint .ic { width: 16px; height: 16px; }
 .wres { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.wres > div { background: var(--c-surface); border: 1px solid var(--c-rule-faint); border-radius: var(--r-md); padding: 6px 10px; }
-.wres span { display: block; font-size: 12px; color: var(--c-ink-soft); }
+.wres > div { background: var(--color-surface); border: 1px solid var(--color-rule-faint); border-radius: var(--r-md); padding: 6px 10px; }
+.wres span { display: block; font-size: 12px; color: var(--color-ink-soft); }
 .wres b { font-size: 20px; font-variant-numeric: tabular-nums; }
-.wres small { font-size: 11px; color: var(--c-ink-soft); }
+.wres small { font-size: 11px; color: var(--color-ink-soft); }
 /* D-75: waiting for a replacement scale — slow spin, still when reduced motion */
 .waitbox { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 0 24px; }
-.waitbox .spin { width: 112px; height: 112px; color: var(--c-action); stroke-width: 1.4; animation: hg-turn 2.4s ease-in-out infinite; }
+.waitbox .spin { width: 112px; height: 112px; color: var(--color-action); stroke-width: 1.4; animation: hg-turn 2.4s ease-in-out infinite; }
 .waitbox h2 { margin: 0; font-size: 28px; font-weight: 800; line-height: 1.2; }
-.waitbox p { margin: 0; font-size: 15px; color: var(--c-ink-soft); }
+.waitbox p { margin: 0; font-size: 15px; color: var(--color-ink-soft); }
 @keyframes hg-turn { 0%, 40% { transform: rotate(0deg); } 60%, 100% { transform: rotate(180deg); } }
 @media (prefers-reduced-motion: reduce) { .waitbox .spin { animation: none; } }
-.skew { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--r-pill); background: var(--c-warn-sunk); color: var(--c-warn); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.skew { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--r-pill); background: var(--color-warn-sunk); color: var(--color-warn); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .skew .ic { width: 15px; height: 15px; }
 /* D-71: how the debt money comes in — per tapper */
 .bills { display: flex; flex-wrap: wrap; gap: 4px; }
-.bill { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--c-rule-strong); background: var(--c-raised); color: var(--c-ink); }
-.bill.take { border: 2px solid var(--c-accept); background: var(--c-accept-sunk); }
-.radio .opt-l { display: block; font-size: 12px; color: var(--c-ink-soft); line-height: 1.35; }
+.bill { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--color-rule-strong); background: var(--color-surface-raised); color: var(--color-ink); }
+.bill.take { border: 2px solid var(--color-accept); background: var(--color-accept-sunk); }
+.radio .opt-l { display: block; font-size: 12px; color: var(--color-ink-soft); line-height: 1.35; }
 .radio .chip { margin-top: 3px; }
 /* sale list: kg per tapper under each sale row (owner comment, D-70/D-78) */
 .row.salerow { flex-wrap: wrap; align-items: flex-start; padding: 8px 0; row-gap: 4px; }
 .row.salerow > .tile { margin-top: 2px; }
-.tpl { flex: 0 0 calc(100% - 56px); display: flex; flex-direction: column; gap: 4px; margin-left: 56px; padding: 2px 0 2px 10px; border-left: 2px solid var(--c-rule-faint); }
-.tpl .tr { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 1.3; color: var(--c-ink); font-weight: 600; }
-.tpl .tr .ic { width: 16px; height: 16px; color: var(--c-ink-soft); }
+.tpl { flex: 0 0 calc(100% - 56px); display: flex; flex-direction: column; gap: 4px; margin-left: 56px; padding: 2px 0 2px 10px; border-left: 2px solid var(--color-rule-faint); }
+.tpl .tr { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 1.3; color: var(--color-ink); font-weight: 600; }
+.tpl .tr .ic { width: 16px; height: 16px; color: var(--color-ink-soft); }
 .tpl .tr .w { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
 .tot { display: inline-flex; align-items: center; gap: 4px; }
-.tot .ic { width: 16px; height: 16px; color: var(--c-ink-soft); }
+.tot .ic { width: 16px; height: 16px; color: var(--color-ink-soft); }
 /* D-80 / E05-S07: receiving account on the owner card */
-.acct { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--c-rule-faint); display: flex; flex-direction: column; gap: 8px; }
-.acct .lab { font-size: 13px; color: var(--c-ink-soft); }
+.acct { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-rule-faint); display: flex; flex-direction: column; gap: 8px; }
+.acct .lab { font-size: 13px; color: var(--color-ink-soft); }
 .acct .row { min-height: 0; gap: 10px; }
 .acct .row .val { font-size: 17px; }
 .btn.full { width: 100%; }
 .acc-opt .val { font-size: 15px; font-weight: 700; display: block; }
 /* D-80: buyer view — full screen, turned toward the buyer, read at arm's length */
-.bv { background: var(--c-raised); }
+.bv { background: var(--color-surface-raised); }
 .bv .bvtop { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 12px 0; }
 .bv .bvbody { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 18px 12px; text-align: center; }
-.bv .hello { font-size: 18px; font-weight: 600; color: var(--c-ink-soft); }
-.bv .amt { font-size: 46px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; color: var(--c-numeral); font-variant-numeric: tabular-nums; }
-.bv .amt .u { font-size: 22px; font-weight: 700; color: var(--c-ink-soft); margin-left: 4px; letter-spacing: 0; }
-.bv .how { display: inline-flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 700; color: var(--c-accept); }
+.bv .hello { font-size: 18px; font-weight: 600; color: var(--color-ink-soft); }
+.bv .amt { font-size: 46px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; color: var(--color-numeral); font-variant-numeric: tabular-nums; }
+.bv .amt .u { font-size: 22px; font-weight: 700; color: var(--color-ink-soft); margin-left: 4px; letter-spacing: 0; }
+.bv .how { display: inline-flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 700; color: var(--color-accept); }
 .bv .how .ic { width: 22px; height: 22px; }
-.bv .qrbox { width: 208px; padding: 8px; border-radius: var(--r-md); border: 2px solid var(--c-rule); background: var(--c-stage); }
+.bv .qrbox { width: 208px; padding: 8px; border-radius: var(--r-md); border: 2px solid var(--color-rule); background: var(--color-stage); }
 .bv .qrbox svg { display: block; width: 100%; height: auto; }
-.bv .qrbox { color: var(--c-ink); }
-.bv .qrcap { font-size: 16px; font-weight: 600; color: var(--c-ink-soft); }
+.bv .qrbox { color: var(--color-ink); }
+.bv .qrcap { font-size: 16px; font-weight: 600; color: var(--color-ink-soft); }
 .bv .fld { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0; }
-.bv .fld .k { font-size: 16px; color: var(--c-ink-soft); }
-.bv .fld .v { font-size: 30px; font-weight: 800; line-height: 1.2; color: var(--c-ink); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+.bv .fld .k { font-size: 16px; color: var(--color-ink-soft); }
+.bv .fld .v { font-size: 30px; font-weight: 800; line-height: 1.2; color: var(--color-ink); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
 .bv .fld .v.nm { font-size: 24px; font-weight: 700; }
 .bv .bvfoot { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 0 16px 18px; }
-.sw { display: flex; align-items: center; gap: 10px; min-height: var(--target); padding: 0 12px; border-radius: var(--r-md); background: var(--c-sunk); font-size: 15px; font-weight: 600; }
+.sw { display: flex; align-items: center; gap: 10px; min-height: var(--target); padding: 0 12px; border-radius: var(--r-md); background: var(--color-surface-sunk); font-size: 15px; font-weight: 600; }
 .sw .grow { flex: 1; min-width: 0; }
-.sw .knob { width: 46px; height: 28px; border-radius: var(--r-pill); background: var(--c-rule-strong); position: relative; flex: none; }
-.sw .knob::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: var(--r-pill); background: var(--c-raised); }
-.sw.on .knob { background: var(--c-accept); }
+.sw .knob { width: 46px; height: 28px; border-radius: var(--r-pill); background: var(--color-rule-strong); position: relative; flex: none; }
+.sw .knob::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: var(--r-pill); background: var(--color-surface-raised); }
+.sw.on .knob { background: var(--color-accept); }
 .sw.on .knob::after { left: 21px; }
-.copy { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--target); padding: 0 18px; border-radius: var(--r-pill); border: 2px solid var(--c-action); color: var(--c-action); background: var(--c-raised); font-size: 16px; font-weight: 700; }
+.copy { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--target); padding: 0 18px; border-radius: var(--r-pill); border: 2px solid var(--color-action); color: var(--color-action); background: var(--color-surface-raised); font-size: 16px; font-weight: 700; }
 .copy .ic { width: 20px; height: 20px; }
+
+/* ===== E01-S17 proposal (2026-10-09): identity + money roles =====
+   Colour agrees with a name or a sign; it never carries meaning alone.
+   Identity (สวน / จุดชั่ง follow their สวน / คนกรีดยาง): categoryN on
+   categoryN-sunk, always next to the name. Fixed per entity in this mockup:
+   สวนจันทเขลม 1 · สวนฝั่งคลองพลู 2 · แดง 3 · นัด 4 · ทุเรียน คลองพลู 5 ·
+   ทุเรียน ตะเคียนทอง 6. */
+.t-cat1 { background: var(--color-category1-sunk); color: var(--color-category1); }
+.t-cat2 { background: var(--color-category2-sunk); color: var(--color-category2); }
+.t-cat3 { background: var(--color-category3-sunk); color: var(--color-category3); }
+.t-cat4 { background: var(--color-category4-sunk); color: var(--color-category4); }
+.t-cat5 { background: var(--color-category5-sunk); color: var(--color-category5); }
+.t-cat6 { background: var(--color-category6-sunk); color: var(--color-category6); }
+.screen .ic.cat1 { color: var(--color-category1); }
+.screen .ic.cat2 { color: var(--color-category2); }
+.screen .ic.cat3 { color: var(--color-category3); }
+.screen .ic.cat4 { color: var(--color-category4); }
+.screen .ic.cat5 { color: var(--color-category5); }
+.screen .ic.cat6 { color: var(--color-category6); }
+/* money: "+" in moneyIn, "−" in moneyOut — the sign and the line's word carry it */
+.money-in { color: var(--color-money-in); }
+.money-out { color: var(--color-money-out); }
+
+/* ===== palette / theme toggle (docs only — not an app control) ===== */
+.palette-toggle {
+  position: fixed; right: 12px; bottom: 12px; z-index: 50; display: flex; align-items: center; gap: 2px;
+  padding: 4px 6px; border-radius: var(--r-pill); background: var(--color-surface-raised);
+  border: 1px solid var(--color-rule-strong); box-shadow: 0 6px 24px var(--shadow-floating-color);
+  font-family: var(--font); font-size: 13px; font-weight: 600; line-height: 1; color: var(--color-ink-soft);
+}
+.palette-toggle .pt-l { padding: 0 4px 0 6px; }
+.palette-toggle button {
+  min-width: 44px; min-height: 40px; padding: 0 10px; border: 0; border-radius: var(--r-pill);
+  background: transparent; color: var(--color-action); font: inherit; cursor: pointer;
+}
+.palette-toggle button[aria-pressed="true"] { background: var(--color-action); color: var(--color-ink-inverse); }
+.palette-toggle button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 </style>
 
 <!-- Icon sprite: hand-drawn 24px stroke icons, inherit currentColor -->
@@ -750,7 +744,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     <symbol id="i-copy" viewBox="0 0 24 24"><rect class="fillsoft" x="8" y="8" width="12" height="12" rx="2"/><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
     <symbol id="i-qr" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 19v1M19 14h1"/></symbol>
     <!-- placeholder only: QR-looking pattern, NOT a scannable PromptPay code -->
-    <symbol id="qr-demo" viewBox="0 0 29 29"><path style="fill:currentColor;stroke:none" d="M2 2h7v1h-7zM14 2h1v1h-1zM16 2h3v1h-3zM20 2h7v1h-7zM2 3h1v1h-1zM8 3h1v1h-1zM10 3h1v1h-1zM17 3h1v1h-1zM20 3h1v1h-1zM26 3h1v1h-1zM2 4h1v1h-1zM4 4h3v1h-3zM8 4h1v1h-1zM12 4h1v1h-1zM15 4h2v1h-2zM18 4h1v1h-1zM20 4h1v1h-1zM22 4h3v1h-3zM26 4h1v1h-1zM2 5h1v1h-1zM4 5h3v1h-3zM8 5h1v1h-1zM11 5h2v1h-2zM14 5h3v1h-3zM20 5h1v1h-1zM22 5h3v1h-3zM26 5h1v1h-1zM2 6h1v1h-1zM4 6h3v1h-3zM8 6h1v1h-1zM10 6h2v1h-2zM13 6h1v1h-1zM15 6h1v1h-1zM17 6h2v1h-2zM20 6h1v1h-1zM22 6h3v1h-3zM26 6h1v1h-1zM2 7h1v1h-1zM8 7h1v1h-1zM11 7h2v1h-2zM14 7h1v1h-1zM16 7h2v1h-2zM20 7h1v1h-1zM26 7h1v1h-1zM2 8h7v1h-7zM10 8h1v1h-1zM12 8h1v1h-1zM14 8h1v1h-1zM16 8h1v1h-1zM18 8h1v1h-1zM20 8h7v1h-7zM10 9h2v1h-2zM13 9h1v1h-1zM15 9h2v1h-2zM4 10h2v1h-2zM7 10h4v1h-4zM13 10h1v1h-1zM15 10h5v1h-5zM23 10h3v1h-3zM3 11h1v1h-1zM10 11h2v1h-2zM18 11h7v1h-7zM26 11h1v1h-1zM3 12h3v1h-3zM7 12h2v1h-2zM20 12h1v1h-1zM22 12h3v1h-3zM2 13h2v1h-2zM10 13h1v1h-1zM18 13h3v1h-3zM22 13h2v1h-2zM26 13h1v1h-1zM2 14h2v1h-2zM7 14h3v1h-3zM18 14h2v1h-2zM21 14h1v1h-1zM23 14h1v1h-1zM25 14h2v1h-2zM4 15h2v1h-2zM9 15h2v1h-2zM18 15h3v1h-3zM22 15h1v1h-1zM24 15h3v1h-3zM3 16h1v1h-1zM6 16h1v1h-1zM8 16h1v1h-1zM18 16h5v1h-5zM24 16h1v1h-1zM3 17h3v1h-3zM7 17h1v1h-1zM9 17h2v1h-2zM15 17h1v1h-1zM18 17h3v1h-3zM22 17h1v1h-1zM3 18h3v1h-3zM8 18h2v1h-2zM12 18h1v1h-1zM14 18h1v1h-1zM17 18h6v1h-6zM24 18h1v1h-1zM26 18h1v1h-1zM12 19h4v1h-4zM18 19h1v1h-1zM22 19h2v1h-2zM2 20h7v1h-7zM13 20h4v1h-4zM18 20h1v1h-1zM20 20h1v1h-1zM22 20h3v1h-3zM2 21h1v1h-1zM8 21h1v1h-1zM11 21h2v1h-2zM14 21h3v1h-3zM18 21h1v1h-1zM22 21h1v1h-1zM24 21h1v1h-1zM26 21h1v1h-1zM2 22h1v1h-1zM4 22h3v1h-3zM8 22h1v1h-1zM11 22h2v1h-2zM16 22h7v1h-7zM24 22h3v1h-3zM2 23h1v1h-1zM4 23h3v1h-3zM8 23h1v1h-1zM10 23h5v1h-5zM16 23h1v1h-1zM18 23h2v1h-2zM21 23h1v1h-1zM2 24h1v1h-1zM4 24h3v1h-3zM8 24h1v1h-1zM11 24h1v1h-1zM18 24h1v1h-1zM20 24h1v1h-1zM23 24h2v1h-2zM26 24h1v1h-1zM2 25h1v1h-1zM8 25h1v1h-1zM10 25h1v1h-1zM12 25h2v1h-2zM15 25h1v1h-1zM18 25h3v1h-3zM23 25h1v1h-1zM25 25h2v1h-2zM2 26h7v1h-7zM10 26h1v1h-1zM14 26h2v1h-2zM18 26h3v1h-3zM22 26h5v1h-5z"/><rect style="fill:var(--c-stage);stroke:currentColor;stroke-width:.3" x="11" y="12" width="7" height="5" rx="1"/><text style="fill:currentColor;font-size:3.6px;font-weight:800" x="14.5" y="15.6" text-anchor="middle">฿</text></symbol>
+    <symbol id="qr-demo" viewBox="0 0 29 29"><path style="fill:currentColor;stroke:none" d="M2 2h7v1h-7zM14 2h1v1h-1zM16 2h3v1h-3zM20 2h7v1h-7zM2 3h1v1h-1zM8 3h1v1h-1zM10 3h1v1h-1zM17 3h1v1h-1zM20 3h1v1h-1zM26 3h1v1h-1zM2 4h1v1h-1zM4 4h3v1h-3zM8 4h1v1h-1zM12 4h1v1h-1zM15 4h2v1h-2zM18 4h1v1h-1zM20 4h1v1h-1zM22 4h3v1h-3zM26 4h1v1h-1zM2 5h1v1h-1zM4 5h3v1h-3zM8 5h1v1h-1zM11 5h2v1h-2zM14 5h3v1h-3zM20 5h1v1h-1zM22 5h3v1h-3zM26 5h1v1h-1zM2 6h1v1h-1zM4 6h3v1h-3zM8 6h1v1h-1zM10 6h2v1h-2zM13 6h1v1h-1zM15 6h1v1h-1zM17 6h2v1h-2zM20 6h1v1h-1zM22 6h3v1h-3zM26 6h1v1h-1zM2 7h1v1h-1zM8 7h1v1h-1zM11 7h2v1h-2zM14 7h1v1h-1zM16 7h2v1h-2zM20 7h1v1h-1zM26 7h1v1h-1zM2 8h7v1h-7zM10 8h1v1h-1zM12 8h1v1h-1zM14 8h1v1h-1zM16 8h1v1h-1zM18 8h1v1h-1zM20 8h7v1h-7zM10 9h2v1h-2zM13 9h1v1h-1zM15 9h2v1h-2zM4 10h2v1h-2zM7 10h4v1h-4zM13 10h1v1h-1zM15 10h5v1h-5zM23 10h3v1h-3zM3 11h1v1h-1zM10 11h2v1h-2zM18 11h7v1h-7zM26 11h1v1h-1zM3 12h3v1h-3zM7 12h2v1h-2zM20 12h1v1h-1zM22 12h3v1h-3zM2 13h2v1h-2zM10 13h1v1h-1zM18 13h3v1h-3zM22 13h2v1h-2zM26 13h1v1h-1zM2 14h2v1h-2zM7 14h3v1h-3zM18 14h2v1h-2zM21 14h1v1h-1zM23 14h1v1h-1zM25 14h2v1h-2zM4 15h2v1h-2zM9 15h2v1h-2zM18 15h3v1h-3zM22 15h1v1h-1zM24 15h3v1h-3zM3 16h1v1h-1zM6 16h1v1h-1zM8 16h1v1h-1zM18 16h5v1h-5zM24 16h1v1h-1zM3 17h3v1h-3zM7 17h1v1h-1zM9 17h2v1h-2zM15 17h1v1h-1zM18 17h3v1h-3zM22 17h1v1h-1zM3 18h3v1h-3zM8 18h2v1h-2zM12 18h1v1h-1zM14 18h1v1h-1zM17 18h6v1h-6zM24 18h1v1h-1zM26 18h1v1h-1zM12 19h4v1h-4zM18 19h1v1h-1zM22 19h2v1h-2zM2 20h7v1h-7zM13 20h4v1h-4zM18 20h1v1h-1zM20 20h1v1h-1zM22 20h3v1h-3zM2 21h1v1h-1zM8 21h1v1h-1zM11 21h2v1h-2zM14 21h3v1h-3zM18 21h1v1h-1zM22 21h1v1h-1zM24 21h1v1h-1zM26 21h1v1h-1zM2 22h1v1h-1zM4 22h3v1h-3zM8 22h1v1h-1zM11 22h2v1h-2zM16 22h7v1h-7zM24 22h3v1h-3zM2 23h1v1h-1zM4 23h3v1h-3zM8 23h1v1h-1zM10 23h5v1h-5zM16 23h1v1h-1zM18 23h2v1h-2zM21 23h1v1h-1zM2 24h1v1h-1zM4 24h3v1h-3zM8 24h1v1h-1zM11 24h1v1h-1zM18 24h1v1h-1zM20 24h1v1h-1zM23 24h2v1h-2zM26 24h1v1h-1zM2 25h1v1h-1zM8 25h1v1h-1zM10 25h1v1h-1zM12 25h2v1h-2zM15 25h1v1h-1zM18 25h3v1h-3zM23 25h1v1h-1zM25 25h2v1h-2zM2 26h7v1h-7zM10 26h1v1h-1zM14 26h2v1h-2zM18 26h3v1h-3zM22 26h5v1h-5z"/><rect style="fill:var(--color-stage);stroke:currentColor;stroke-width:.3" x="11" y="12" width="7" height="5" rx="1"/><text style="fill:currentColor;font-size:3.6px;font-weight:800" x="14.5" y="15.6" text-anchor="middle">฿</text></symbol>
   </defs>
 </svg>
 
@@ -780,11 +774,11 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="sbar num"><span>06:43</span><span><svg class="ic"><use href="#i-signal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>การขายทั้งหมด <small>สวนครอบครัว</small></h3><span class="pill p-conf"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน 1</span></div>
         <div class="body">
-          <span style="font-size:13px;color:var(--c-ink-soft)">ใหม่สุดก่อน · แตะเพื่อดูสรุปการขาย</span>
+          <span style="font-size:13px;color:var(--color-ink-soft)">ใหม่สุดก่อน · แตะเพื่อดูสรุปการขาย</span>
           <div class="card tight">
-            <div class="row salerow"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">18 ก.ย. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>คนรับซื้อยาง ก</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>42 เข่ง</span><span class="chip ch-bad" style="margin-top:2px"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span></span><span style="text-align:right;align-self:flex-start;padding-top:6px"><span class="val num tot" style="display:flex"><svg class="ic"><use href="#i-rubber"/></svg>2,100 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span><span class="tpl"><span class="tr"><svg class="ic"><use href="#i-tapper"/></svg>แดง<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>1,400 กก.</span></span><span class="tr"><svg class="ic"><use href="#i-tapper"/></svg>นัด<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>700 กก.</span></span></span></div>
-            <div class="row salerow"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">4 ก.ย. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>คนรับซื้อยาง ก</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>37 เข่ง</span></span><span style="text-align:right;align-self:flex-start;padding-top:6px"><span class="val num tot" style="display:flex"><svg class="ic"><use href="#i-rubber"/></svg>1,850 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span><span class="tpl"><span class="tr"><svg class="ic"><use href="#i-tapper"/></svg>แดง<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>1,250 กก.</span></span><span class="tr"><svg class="ic"><use href="#i-tapper"/></svg>นัด<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>600 กก.</span></span></span></div>
-            <div class="row salerow"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">21 ส.ค. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>คนรับซื้อยาง ข</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>40 เข่ง</span></span><span style="text-align:right;align-self:flex-start;padding-top:6px"><span class="val num tot" style="display:flex"><svg class="ic"><use href="#i-rubber"/></svg>1,960 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span><span class="tpl"><span class="tr"><svg class="ic"><use href="#i-tapper"/></svg>แดง<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>1,310 กก.</span></span><span class="tr"><svg class="ic"><use href="#i-tapper"/></svg>นัด<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>650 กก.</span></span></span></div>
+            <div class="row salerow"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">18 ก.ย. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>คนรับซื้อยาง ก</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>42 เข่ง</span><span class="chip ch-bad" style="margin-top:2px"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span></span><span style="text-align:right;align-self:flex-start;padding-top:6px"><span class="val num tot" style="display:flex"><svg class="ic"><use href="#i-rubber"/></svg>2,100 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span><span class="tpl"><span class="tr"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>1,400 กก.</span></span><span class="tr"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>700 กก.</span></span></span></div>
+            <div class="row salerow"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">4 ก.ย. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>คนรับซื้อยาง ก</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>37 เข่ง</span></span><span style="text-align:right;align-self:flex-start;padding-top:6px"><span class="val num tot" style="display:flex"><svg class="ic"><use href="#i-rubber"/></svg>1,850 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span><span class="tpl"><span class="tr"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>1,250 กก.</span></span><span class="tr"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>600 กก.</span></span></span></div>
+            <div class="row salerow"><span class="tile t-green"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">21 ส.ค. 2569</span><span class="mi"><svg class="ic"><use href="#i-users"/></svg>คนรับซื้อยาง ข</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>40 เข่ง</span></span><span style="text-align:right;align-self:flex-start;padding-top:6px"><span class="val num tot" style="display:flex"><svg class="ic"><use href="#i-rubber"/></svg>1,960 กก.</span><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ปิดแล้ว</span></span><span class="tpl"><span class="tr"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>1,310 กก.</span></span><span class="tr"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด<span class="w"><svg class="ic"><use href="#i-rubber"/></svg>650 กก.</span></span></span></div>
           </div>
           <div class="banner info"><svg class="ic sm"><use href="#i-help"/></svg><span class="lines"><span>การขายที่ยังไม่ปิดแสดงสถานะ เช่น <b style="display:inline">กำลังชั่ง</b></span><span>ป้ายต่อแถวแสดงเฉพาะ <b style="display:inline">ขัดกัน</b> · สถานะรวมอยู่ที่หัวแอป</span><span>วันที่เป็น พ.ศ. แตะเพื่อสลับ ค.ศ.</span></span></div>
         </div>
@@ -873,9 +867,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="seg"><span class="on">แดง<small>3 จุด</small></span><span>นัด<small>1 จุด</small></span></div>
           </div>
           <div class="card tight">
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 2</span><span class="sub">ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-cat1"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-cat1"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 2</span><span class="sub">ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-cat1"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
           </div>
           <div class="card tight">
             <h4 style="margin:8px 0 0">จุดที่ยังไม่มีคนกรีดยาง</h4>
@@ -912,7 +906,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="seg"><span class="on num">50 กก.</span><span class="num">60 กก.</span><span><svg class="ic sm"><use href="#i-plus"/></svg></span></div>
           </div>
           <div class="card expect">
-            <span class="lbl mi" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน</span>
+            <span class="lbl mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน</span>
             <div class="fig num">52<span class="u">กก.</span></div>
             <p class="num"><svg class="ic xs"><use href="#i-rubber"/></svg> น้ำหนักยางสุทธิ 50 กก.<br>+ น้ำหนักเข่ง 2 กก.</p>
           </div>
@@ -935,7 +929,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 23</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
         <div class="body" style="gap:10px">
           <div class="card tight">
-            <div class="prow"><div class="pl"><svg class="ic"><use href="#i-pin"/></svg>จันทเขลม · จุด 1</div><div class="pr2"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
+            <div class="prow"><div class="pl"><svg class="ic cat1"><use href="#i-pin"/></svg>จันทเขลม · จุด 1</div><div class="pr2"><span class="mi"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
           </div>
           <div class="card bigc2" aria-label="เข่งปัจจุบัน 23"><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">23</div></div>
           <span class="mi sixhd"><svg class="ic"><use href="#i-tapper"/></svg>ยอดของแดง</span>
@@ -990,7 +984,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 30</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
         <div class="body" style="gap:10px">
           <div class="card tight">
-            <div class="prow"><div class="pl"><svg class="ic"><use href="#i-pin"/></svg>จันทเขลม · จุดใหม่ (ตัวอย่าง)</div><div class="pr2"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>ยังไม่มีคนกรีดยาง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
+            <div class="prow"><div class="pl"><svg class="ic cat1"><use href="#i-pin"/></svg>จันทเขลม · จุดใหม่ (ตัวอย่าง)</div><div class="pr2"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>ยังไม่มีคนกรีดยาง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
           </div>
           <div class="banner warn" style="flex-wrap:wrap"><svg class="ic sm"><use href="#i-alert"/></svg><span style="flex:1;min-width:0"><b>จุดนี้ยังไม่มีคนกรีดยาง</b><span style="display:block">ชั่งต่อได้ตามปกติ</span><span style="display:block">ต้องมอบหมายคนกรีดยางก่อนสรุปยอดส่วนแบ่ง</span></span><span class="btn btn-secondary slim" style="width:100%"><svg class="ic sm"><use href="#i-tapper"/></svg>มอบหมายตอนนี้</span></div>
           <div class="card bigc2" aria-label="เข่งปัจจุบัน 28"><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">28</div></div>
@@ -1036,7 +1030,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 
     <figure class="step">
       <div class="phone"><div class="screen" aria-label="นับเข่ง โหมดสาธารณะ">
-        <div class="sbar num" style="background:var(--c-action);color:var(--c-inverse)"><span>07:49</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="sbar num" style="background:var(--color-action);color:var(--color-ink-inverse)"><span>07:49</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
         <div class="pub-bar"><span>จันทเขลม · จุด 1 · แดง</span><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 23</span><svg class="ic" aria-label="เสียงเปิด"><use href="#i-speaker"/></svg></div>
         <div class="pub-stage">
           <svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="4" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg>
@@ -1069,7 +1063,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <span class="grab"></span>
           <h4>ตาชั่งเปล่าอ่านไม่เป็น 0</h4>
           <span class="mi"><svg class="ic"><use href="#i-alert"/></svg>เข็มเอียง หรือตาชั่งไม่ได้มาตรฐาน</span>
-          <span class="lbl" style="font-size:13px;color:var(--c-ink-soft)">ตาชั่งเปล่าอ่าน (กก.)</span>
+          <span class="lbl" style="font-size:13px;color:var(--color-ink-soft)">ตาชั่งเปล่าอ่าน (กก.)</span>
           <div class="stepper sm"><span class="sb"><svg class="ic"><use href="#i-minus"/></svg></span><span class="inp focus">+2<span class="u">กก.</span></span><span class="sb"><svg class="ic"><use href="#i-plus"/></svg></span></div>
           <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-hourglass"/></svg></span><span><b>1 · รอเปลี่ยนตาชั่ง</b><span class="ln">ยังชั่งไม่ได้</span><span class="ln">ได้ตาชั่งใหม่แล้ว ตรวจตาชั่งเปล่าอีกครั้ง</span></span></div>
           <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-scale"/></svg></span><span><b>2 · รับเข็มเบี้ยวและใช้ต่อ</b><span class="ln">ค่าเบี้ยว <span class="nchip">+2 กก.</span></span><span class="ln">แอปรวมค่าเบี้ยวในตาชั่งควรอ่านให้เอง</span><span class="ln">ใช้จนตรวจตาชั่งเปล่าครั้งหน้า</span></span></div>
@@ -1121,8 +1115,8 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <div class="card expect" style="text-align:left">
             <div class="kv"><span class="mi"><svg class="ic xs"><use href="#i-rubber"/></svg>ยางสุทธิ</span><span>50 กก.</span></div>
             <div class="kv"><span>+ น้ำหนักเข่ง</span><span>2 กก.</span></div>
-            <div class="kv" style="color:var(--c-warn)"><span style="color:var(--c-warn)">+ ค่าเบี้ยว</span><span>2 กก.</span></div>
-            <div class="kv total"><span class="mi">= <svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน</span><span class="fig" style="font-size:40px;color:var(--c-action)">54<span class="u">กก.</span></span></div>
+            <div class="kv" style="color:var(--color-warn)"><span style="color:var(--color-warn)">+ ค่าเบี้ยว</span><span>2 กก.</span></div>
+            <div class="kv total"><span class="mi">= <svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน</span><span class="fig" style="font-size:40px;color:var(--color-action)">54<span class="u">กก.</span></span></div>
           </div>
           <span class="mi"><svg class="ic"><use href="#i-clock"/></svg>ค่าเบี้ยวใช้จนตรวจตาชั่งเปล่าครั้งหน้า</span>
         </div>
@@ -1143,7 +1137,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 3</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
         <div class="body" style="gap:10px">
           <div class="card tight">
-            <div class="prow"><div class="pl"><svg class="ic"><use href="#i-pin"/></svg>จันทเขลม · จุด 1<span class="skew" style="margin-left:auto"><svg class="ic"><use href="#i-alert"/></svg>ค่าเบี้ยว +2 กก.</span></div><div class="pr2"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
+            <div class="prow"><div class="pl"><svg class="ic cat1"><use href="#i-pin"/></svg>จันทเขลม · จุด 1<span class="skew" style="margin-left:auto"><svg class="ic"><use href="#i-alert"/></svg>ค่าเบี้ยว +2 กก.</span></div><div class="pr2"><span class="mi"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
           </div>
           <div class="card bigc2" aria-label="เข่งปัจจุบัน 3"><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">3</div></div>
           <span class="mi sixhd"><svg class="ic"><use href="#i-tapper"/></svg>ยอดของแดง</span>
@@ -1158,9 +1152,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="lines" style="align-items:center;gap:0">
               <span class="num mi" style="font-size:13px"><svg class="ic xs"><use href="#i-rubber"/></svg>ยางสุทธิ 50</span>
               <span class="num" style="font-size:13px">+ น้ำหนักเข่ง 2</span>
-              <span class="num" style="font-size:13px;color:var(--c-warn);font-weight:700">+ ค่าเบี้ยว 2</span>
+              <span class="num" style="font-size:13px;color:var(--color-warn);font-weight:700">+ ค่าเบี้ยว 2</span>
             </div>
-            <div class="fig num" style="font-size:28px;color:var(--c-ink)"><span style="font-size:15px;font-weight:600">= <svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน </span><span style="color:var(--c-action)">54</span><span class="u">กก.</span></div>
+            <div class="fig num" style="font-size:28px;color:var(--color-ink)"><span style="font-size:15px;font-weight:600">= <svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน </span><span style="color:var(--color-action)">54</span><span class="u">กก.</span></div>
           </div>
           <div class="tools">
             <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เข่งไม่เต็ม</span>
@@ -1185,7 +1179,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 4</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
         <div class="body" style="gap:10px">
           <div class="card tight">
-            <div class="prow"><div class="pl"><svg class="ic"><use href="#i-pin"/></svg>จันทเขลม · จุด 1<span class="skew" style="margin-left:auto"><svg class="ic"><use href="#i-alert"/></svg>ค่าเบี้ยว +2 กก.</span></div><div class="pr2"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
+            <div class="prow"><div class="pl"><svg class="ic cat1"><use href="#i-pin"/></svg>จันทเขลม · จุด 1<span class="skew" style="margin-left:auto"><svg class="ic"><use href="#i-alert"/></svg>ค่าเบี้ยว +2 กก.</span></div><div class="pr2"><span class="mi"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
           </div>
           <div class="card bigc2" aria-label="เข่งปัจจุบัน 3"><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">3</div></div>
         </div>
@@ -1203,9 +1197,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <span class="rhint"><svg class="ic"><use href="#i-drag"/></svg>ลากซ้าย–ขวา หรือกด ± ทีละ 1 กก.</span>
           <span class="rhint num">เลื่อนได้ถึง 79 กก. · เลยขีด (สีส้ม) = เกินเต็มเข่ง</span>
           <div class="card" style="box-shadow:none;padding:8px 10px">
-            <div class="kv"><span class="scaleval" style="font-size:14px;padding:1px 8px"><svg class="ic" style="width:18px;height:18px"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน</span><span style="color:var(--c-action);font-weight:800">39 กก.</span></div>
+            <div class="kv"><span class="scaleval" style="font-size:14px;padding:1px 8px"><svg class="ic" style="width:18px;height:18px"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน</span><span style="color:var(--color-action);font-weight:800">39 กก.</span></div>
             <div class="kv"><span>− น้ำหนักเข่ง</span><span>2 กก.</span></div>
-            <div class="kv" style="color:var(--c-warn)"><span style="color:var(--c-warn)">− ค่าเบี้ยว</span><span>2 กก.</span></div>
+            <div class="kv" style="color:var(--color-warn)"><span style="color:var(--color-warn)">− ค่าเบี้ยว</span><span>2 กก.</span></div>
             <div class="kv total"><span><svg class="ic xs"><use href="#i-rubber"/></svg> = ยางสุทธิ</span><span>35 กก.</span></div>
             <div class="kv"><span>ยังขาดอีก (จะเต็ม 50)</span><span>15 กก.</span></div>
           </div>
@@ -1227,7 +1221,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 5</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
         <div class="body" style="gap:10px">
           <div class="card tight">
-            <div class="prow"><div class="pl"><svg class="ic"><use href="#i-pin"/></svg>จันทเขลม · จุด 1<span class="skew" style="margin-left:auto"><svg class="ic"><use href="#i-alert"/></svg>ค่าเบี้ยว +2 กก.</span></div><div class="pr2"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
+            <div class="prow"><div class="pl"><svg class="ic cat1"><use href="#i-pin"/></svg>จันทเขลม · จุด 1<span class="skew" style="margin-left:auto"><svg class="ic"><use href="#i-alert"/></svg>ค่าเบี้ยว +2 กก.</span></div><div class="pr2"><span class="mi"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
           </div>
           <div class="card bigc2" aria-label="เข่งปัจจุบัน 3"><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">3</div></div>
           <span class="mi sixhd"><svg class="ic"><use href="#i-tapper"/></svg>ยอดของแดง</span>
@@ -1237,7 +1231,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="card warn"><span class="lbl">เข่งไม่เต็ม 3</span><span class="sm2">เหลือเติม</span><div class="fig num">15<span class="u">กก.</span></div></div>
           </div>
           <div class="card warn" style="flex:none">
-            <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--c-raised)"><svg class="ic"><use href="#i-scale"/></svg></span><span class="grow"><span class="val num">เข่ง 3 เปิดอยู่</span><span class="sub num">ตาชั่ง 39 − น้ำหนักเข่ง 2 − <b style="color:var(--c-warn)">ค่าเบี้ยว 2</b> = 35 กก.</span></span></div>
+            <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--color-surface-raised)"><svg class="ic"><use href="#i-scale"/></svg></span><span class="grow"><span class="val num">เข่ง 3 เปิดอยู่</span><span class="sub num">ตาชั่ง 39 − น้ำหนักเข่ง 2 − <b style="color:var(--color-warn)">ค่าเบี้ยว 2</b> = 35 กก.</span></span></div>
             <div class="btn btn-secondary small" style="width:100%;margin-top:8px"><svg class="ic sm"><use href="#i-flag"/></svg>จบเข่งนี้ (เข่งไม่เต็ม)</div>
           </div>
           <div class="stage" style="min-height:0">
@@ -1307,7 +1301,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>คนกรีดยางคนเดิม: แดง</span>
             <span class="skew" style="align-self:flex-start"><svg class="ic"><use href="#i-alert"/></svg>ค่าเบี้ยว +2 กก.</span>
           </div>
-          <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมให้เต็มเข่ง</b><span class="ln num"><span style="color:var(--c-warn);font-weight:700">เติมอีก</span> <span class="nchip warn">15 กก.</span> <span style="white-space:nowrap">เป็นเข่ง 3</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน <span class="nchip scale">54 กก.</span> ทั้งเข่ง</span><span class="ln num">(50 + น้ำหนักเข่ง 2 + ค่าเบี้ยว 2)</span></span></div>
+          <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมให้เต็มเข่ง</b><span class="ln num"><span style="color:var(--color-warn);font-weight:700">เติมอีก</span> <span class="nchip warn">15 กก.</span> <span style="white-space:nowrap">เป็นเข่ง 3</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน <span class="nchip scale">54 กก.</span> ทั้งเข่ง</span><span class="ln num">(50 + น้ำหนักเข่ง 2 + ค่าเบี้ยว 2)</span></span></div>
           <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-scale"/></svg></span><span><b>2 · ชั่งแยกให้ครบน้ำหนักยางสุทธิ</b><span class="ln num">ชั่งส่วนที่เติม <span class="nchip">15 กก.</span> <span style="white-space:nowrap">นับรวมเป็นเข่ง 3</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน <span class="nchip scale">19 กก.</span></span><span class="ln num"><span style="white-space:nowrap">(15 + น้ำหนักเข่ง 2 + ค่าเบี้ยว 2)</span></span></span></div>
           <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-plus"/></svg></span><span><b>3 · ปล่อยเข่งไม่เต็มไว้ แล้วนับเข่งเต็มถัดไป</b><span class="ln num">เข่ง 3 ไม่เต็ม <span class="nchip">35 กก.</span></span><span class="ln num">เข่งเต็มถัดไปคือ <span class="nchip">เข่ง 4</span></span></span></div>
           <p style="font-size:12px;line-height:1.35">ไปจุดของคนกรีดยางคนอื่น → เข่ง 3 ปิดไม่เต็มเองโดยไม่ถาม</p>
@@ -1328,7 +1322,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 5</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
         <div class="body" style="gap:10px">
           <div class="card tight">
-            <div class="prow"><div class="pl"><svg class="ic"><use href="#i-pin"/></svg>จันทเขลม · จุด 2<span class="skew" style="margin-left:auto"><svg class="ic"><use href="#i-alert"/></svg>ค่าเบี้ยว +2 กก.</span></div><div class="pr2"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
+            <div class="prow"><div class="pl"><svg class="ic cat1"><use href="#i-pin"/></svg>จันทเขลม · จุด 2<span class="skew" style="margin-left:auto"><svg class="ic"><use href="#i-alert"/></svg>ค่าเบี้ยว +2 กก.</span></div><div class="pr2"><span class="mi"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
           </div>
           <div class="card bigc2" aria-label="เข่งปัจจุบัน 3"><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">3</div></div>
           <span class="mi sixhd"><svg class="ic"><use href="#i-tapper"/></svg>ยอดของแดง</span>
@@ -1340,13 +1334,13 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <div class="stage">
             <svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg>
             <b>เติมเข่ง 3</b>
-            <div class="fig num" style="font-size:32px;color:var(--c-ink)"><span style="font-size:16px;font-weight:600">เติมอีก </span>15<span class="u">กก.</span></div>
+            <div class="fig num" style="font-size:32px;color:var(--color-ink)"><span style="font-size:16px;font-weight:600">เติมอีก </span>15<span class="u">กก.</span></div>
             <div class="lines" style="align-items:center;gap:0">
               <span class="num" style="font-size:13px">เต็มเข่ง 50</span>
               <span class="num" style="font-size:13px">+ น้ำหนักเข่ง 2</span>
-              <span class="num" style="font-size:13px;color:var(--c-warn);font-weight:700">+ ค่าเบี้ยว 2</span>
+              <span class="num" style="font-size:13px;color:var(--color-warn);font-weight:700">+ ค่าเบี้ยว 2</span>
             </div>
-            <span class="num"><b style="font-size:16px;color:var(--c-ink)">= <svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน <span class="nchip scale">54 กก.</span></b></span>
+            <span class="num"><b style="font-size:16px;color:var(--color-ink)">= <svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน <span class="nchip scale">54 กก.</span></b></span>
             <span>แล้วกดค้างเพื่อนับ</span>
           </div>
           <div class="tools">
@@ -1375,7 +1369,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 38</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
         <div class="body" style="gap:10px">
           <div class="card tight">
-            <div class="prow"><div class="pl"><svg class="ic"><use href="#i-pin"/></svg>จันทเขลม · จุด 4</div><div class="pr2"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>นัด</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
+            <div class="prow"><div class="pl"><svg class="ic cat1"><use href="#i-pin"/></svg>จันทเขลม · จุด 4</div><div class="pr2"><span class="mi"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
           </div>
           <div class="card bigc2" aria-label="เข่งปัจจุบัน 9"><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">9</div></div>
           <span class="mi sixhd"><svg class="ic"><use href="#i-tapper"/></svg>ยอดของนัด</span>
@@ -1426,7 +1420,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 39</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
         <div class="body" style="gap:10px">
           <div class="card tight">
-            <div class="prow"><div class="pl"><svg class="ic"><use href="#i-pin"/></svg>จันทเขลม · จุด 4</div><div class="pr2"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>นัด</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
+            <div class="prow"><div class="pl"><svg class="ic cat1"><use href="#i-pin"/></svg>จันทเขลม · จุด 4</div><div class="pr2"><span class="mi"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
           </div>
           <div class="card bigc2" aria-label="เข่งปัจจุบัน 9"><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">9</div></div>
           <span class="mi sixhd"><svg class="ic"><use href="#i-tapper"/></svg>ยอดของนัด</span>
@@ -1436,7 +1430,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="card warn"><span class="lbl">เข่งไม่เต็ม 9</span><span class="sm2">เหลือเติม</span><div class="fig num">15<span class="u">กก.</span></div></div>
           </div>
           <div class="card warn" style="flex:none">
-            <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--c-raised)"><svg class="ic"><use href="#i-scale"/></svg></span><span class="grow"><span class="val num">เข่ง 9 เปิดอยู่ · 35 กก.</span><span class="sub num">ตาชั่ง 37 − น้ำหนักเข่ง 2</span></span></div>
+            <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--color-surface-raised)"><svg class="ic"><use href="#i-scale"/></svg></span><span class="grow"><span class="val num">เข่ง 9 เปิดอยู่ · 35 กก.</span><span class="sub num">ตาชั่ง 37 − น้ำหนักเข่ง 2</span></span></div>
             <div class="btn btn-secondary small" style="width:100%;margin-top:8px"><svg class="ic sm"><use href="#i-flag"/></svg>จบเข่งนี้ (เข่งไม่เต็ม)</div>
           </div>
           <div class="stage" style="min-height:0">
@@ -1471,14 +1465,14 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="body dim">
           <div class="card"><h4>สวน</h4><div class="seg"><span>จันทเขลม</span><span class="on">คลองพลู</span></div></div>
           <div class="card"><h4>คนกรีดยาง</h4><div class="seg"><span class="on">นัด<small>1 จุด</small></span></div></div>
-          <div class="card tight"><div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div>
+          <div class="card tight"><div class="row"><span class="tile t-cat1"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">ยังไม่ชั่ง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div></div>
         </div>
         <div class="sheet-scrim"></div>
         <div class="sheet">
           <span class="grab"></span>
           <h4>เข่ง 9 ยังไม่เต็ม</h4>
           <div class="lines"><span class="mi"><svg class="ic"><use href="#i-scale"/></svg>มีแล้ว <b class="num">35 กก.</b></span><span class="mi"><svg class="ic"><use href="#i-pin"/></svg>จาก จันทเขลม จุด 4</span><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>คนกรีดยางคนเดิม: นัด</span></div>
-          <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมให้เต็มเข่ง</b><span class="ln num"><span style="color:var(--c-warn);font-weight:700">เติมอีก</span> <span class="nchip warn">15 กก.</span> <span style="white-space:nowrap">เป็นเข่ง 9</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน <span class="nchip scale">52 กก.</span> ทั้งเข่ง</span></span></div>
+          <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมให้เต็มเข่ง</b><span class="ln num"><span style="color:var(--color-warn);font-weight:700">เติมอีก</span> <span class="nchip warn">15 กก.</span> <span style="white-space:nowrap">เป็นเข่ง 9</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน <span class="nchip scale">52 กก.</span> ทั้งเข่ง</span></span></div>
           <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-scale"/></svg></span><span><b>2 · ชั่งแยกให้ครบน้ำหนักยางสุทธิ</b><span class="ln num">ชั่งส่วนที่เติม <span class="nchip">15 กก.</span> <span style="white-space:nowrap">นับรวมเป็นเข่ง 9</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน <span class="nchip scale">17 กก.</span> <span style="white-space:nowrap">(15 + น้ำหนักเข่ง 2)</span></span></span></div>
           <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-plus"/></svg></span><span><b>3 · ปล่อยเข่งไม่เต็มไว้ แล้วนับเข่งเต็มถัดไป</b><span class="ln num">เข่ง 9 ไม่เต็ม <span class="nchip">35 กก.</span></span><span class="ln num">เข่งเต็มถัดไปคือ <span class="nchip">เข่ง 10</span></span></span></div>
           <p style="font-size:12px;line-height:1.35">ไปจุดของคนกรีดยางคนอื่น → เข่ง 9 ปิดไม่เต็มเองโดยไม่ถาม (ยางของคนกรีดยางต่างคนรวมเข่งเดียวกันไม่ได้)</p>
@@ -1517,7 +1511,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 39</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
         <div class="body" style="gap:10px">
           <div class="card tight">
-            <div class="prow"><div class="pl"><svg class="ic"><use href="#i-pin"/></svg>คลองพลู · จุด 1</div><div class="pr2"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>นัด</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
+            <div class="prow"><div class="pl"><svg class="ic cat2"><use href="#i-pin"/></svg>คลองพลู · จุด 1</div><div class="pr2"><span class="mi"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
           </div>
           <div class="card bigc2" aria-label="เข่งปัจจุบัน 9"><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">9</div></div>
           <span class="mi sixhd"><svg class="ic"><use href="#i-tapper"/></svg>ยอดของนัด</span>
@@ -1529,8 +1523,8 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <div class="stage">
             <svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg>
             <b>เติมเข่ง 9</b>
-            <div class="fig num" style="font-size:36px;color:var(--c-ink)"><span style="font-size:18px;font-weight:600">เติมอีก </span>15<span class="u">กก.</span></div>
-            <span class="num"><b style="font-size:16px;color:var(--c-ink)"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน <span class="nchip scale">52 กก.</span></b> แล้วกดค้างเพื่อนับ</span>
+            <div class="fig num" style="font-size:36px;color:var(--color-ink)"><span style="font-size:18px;font-weight:600">เติมอีก </span>15<span class="u">กก.</span></div>
+            <span class="num"><b style="font-size:16px;color:var(--color-ink)"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน <span class="nchip scale">52 กก.</span></b> แล้วกดค้างเพื่อนับ</span>
             <span class="num">(35 + 15) = 50 กก. → ปิดเป็นเข่งเต็มเอง</span>
           </div>
           <div class="tools">
@@ -1571,7 +1565,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>คนกรีดยางคนเดิม: นัด</span>
             <span class="mi"><svg class="ic"><use href="#i-pin"/></svg>จุดใหม่: คลองพลู จุด 1 (เริ่มที่เข่ง 1)</span>
           </div>
-          <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมให้เต็มเข่ง</b><span class="ln num"><span style="color:var(--c-warn);font-weight:700">เติมอีก</span> <span class="nchip warn">15 กก.</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน <span class="nchip scale">52 กก.</span> ทั้งเข่ง</span><span class="ln"><span style="white-space:nowrap">นับเป็นเข่ง 9</span> ของจันทเขลม จุด 4</span></span></div>
+          <div class="choice cmp pri"><span class="tile"><svg class="ic"><use href="#i-basket"/></svg></span><span><b>1 · เติมให้เต็มเข่ง</b><span class="ln num"><span style="color:var(--color-warn);font-weight:700">เติมอีก</span> <span class="nchip warn">15 กก.</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน <span class="nchip scale">52 กก.</span> ทั้งเข่ง</span><span class="ln"><span style="white-space:nowrap">นับเป็นเข่ง 9</span> ของจันทเขลม จุด 4</span></span></div>
           <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-scale"/></svg></span><span><b>2 · ชั่งแยกให้ครบน้ำหนักยางสุทธิ</b><span class="ln num">ชั่งส่วนที่เติม <span class="nchip">15 กก.</span></span><span class="ln num"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งอ่าน <span class="nchip scale">17 กก.</span> <span style="white-space:nowrap">(15 + น้ำหนักเข่ง 2)</span></span><span class="ln"><span style="white-space:nowrap">นับรวมเป็นเข่ง 9</span> ของจันทเขลม จุด 4</span></span></div>
           <div class="choice cmp"><span class="tile"><svg class="ic"><use href="#i-plus"/></svg></span><span><b>3 · ปล่อยเข่งไม่เต็มไว้ แล้วนับเข่งเต็มถัดไป</b><span class="ln num">เข่ง 9 ของจันทเขลม จุด 4 <span class="nchip">35 กก.</span></span><span class="ln num">จุดนี้เริ่มที่ <span class="nchip">เข่ง 1</span></span></span></div>
         </div>
@@ -1605,19 +1599,19 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="appbar dim"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>จันทเขลม <small>ข้อมูลฟาร์ม · จุดชั่ง</small></h3></div>
         <div class="body dim">
           <div class="card tight">
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>แดง</span></span></div>
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 2</span><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>แดง</span></span></div>
+            <div class="row"><span class="tile t-cat1"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="mi"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง</span></span></div>
+            <div class="row"><span class="tile t-cat1"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 2</span><span class="mi"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง</span></span></div>
           </div>
         </div>
         <div class="sheet-scrim"></div>
         <div class="sheet">
           <span class="grab"></span>
-          <h4>ลบ จุด 2? <span style="font-size:14px;font-weight:500;color:var(--c-ink-soft)">กู้คืนได้</span></h4>
+          <h4>ลบ จุด 2? <span style="font-size:14px;font-weight:500;color:var(--color-ink-soft)">กู้คืนได้</span></h4>
           <div class="banner warn"><svg class="ic sm"><use href="#i-alert"/></svg><span class="num lines"><b>การขาย 3 ต.ค. 2569 ยังไม่ปิด ใช้จุดนี้อยู่</b><span>ชั่งแล้ว 3 เข่ง (เข่ง 25–27)</span><span>150 กก. · คนกรีดยาง แดง</span><span>การขายนั้นต้องเลือกจุดใหม่ก่อนชั่งต่อ</span></span></div>
-          <p style="font-weight:600;color:var(--c-ink)">เข่งที่ชั่งแล้วที่จุดนี้</p>
+          <p style="font-weight:600;color:var(--color-ink)">เข่งที่ชั่งแล้วที่จุดนี้</p>
           <div class="radio"><span class="dot"></span><span>คงไว้ที่ จุด 2<small>ในการขายแสดงว่า "จุด 2 · ลบแล้ว"</small><small>ยอดของแดงไม่เปลี่ยน</small></span></div>
           <div class="radio"><span class="dot"></span><span>ย้ายไปจุดใหม่<small>เลือกจุดใหม่ในการขายนั้น (หน้า 12b)</small></span></div>
-          <span style="font-size:12px;color:var(--c-ink-soft)">ต้องเลือกก่อน จึงกดลบได้</span>
+          <span style="font-size:12px;color:var(--color-ink-soft)">ต้องเลือกก่อน จึงกดลบได้</span>
           <div class="btnrow"><span class="btn btn-secondary">ยกเลิก</span><span class="btn btn-disabled"><svg class="ic sm"><use href="#i-trash"/></svg>ลบ</span></div>
         </div>
       </div></div>
@@ -1648,8 +1642,8 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <h4>จุด 2 ถูกลบแล้ว — เลือกจุดใหม่</h4>
           <div class="lines"><span class="mi"><svg class="ic"><use href="#i-lock"/></svg>ต้องเลือกจุดก่อนชั่งต่อ</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>เข่ง 25–27 (150 กก.) คงไว้ที่ "จุด 2 · ลบแล้ว"</span></div>
           <div class="card tight" style="box-shadow:none">
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">คนกรีดยาง: แดง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
-            <div class="row"><span class="tile t-green"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">คนกรีดยาง: แดง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-cat1"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 1</span><span class="sub">คนกรีดยาง: แดง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile t-cat1"><svg class="ic"><use href="#i-pin"/></svg></span><span class="grow"><span class="val">จุด 3</span><span class="sub">คนกรีดยาง: แดง</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
             <div class="row"><span class="tile t-blue"><svg class="ic"><use href="#i-plus"/></svg></span><span class="grow"><span class="val">สร้างจุดใหม่</span><span class="sub">ในสวนจันทเขลม</span><span class="sub">ตั้งชื่อแล้วใช้ทันที</span></span><svg class="ic chev"><use href="#i-chev"/></svg></div>
           </div>
           <p style="font-size:12px">ถ้าตอนลบเลือก "ย้ายไปจุดใหม่" → เข่ง 25–27 ย้ายไปจุดที่เลือกตรงนี้</p>
@@ -1683,7 +1677,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="body">
           <div class="steps"><span class="done"><svg class="ic sm"><use href="#i-check"/></svg>สวน</span>›<span class="done"><svg class="ic sm"><use href="#i-check"/></svg>คนกรีดยาง</span>›<span class="done"><svg class="ic sm"><use href="#i-check"/></svg>จุดชั่ง</span>›<span class="now">ใส่ตัวเลข</span></div>
           <div class="card tight">
-            <div class="prow"><div class="pl"><svg class="ic"><use href="#i-pin"/></svg>จันทเขลม · จุด 3</div><div class="pr2"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
+            <div class="prow"><div class="pl"><svg class="ic cat1"><use href="#i-pin"/></svg>จันทเขลม · จุด 3</div><div class="pr2"><span class="mi"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
           </div>
           <div class="card tight">
             <div class="row" style="min-height:52px"><span class="grow"><span class="lbl">เข่งเต็ม (เข่ง)</span><span class="sub num mi"><svg class="ic xs"><use href="#i-rubber"/></svg>น้ำหนักยางสุทธิ 50 กก.</span></span><span class="inp focus" style="flex:none;width:104px">3</span></div>
@@ -1749,7 +1743,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <span class="type"><span class="tile sm t-blue"><svg class="ic"><use href="#i-bank"/></svg></span>สลิปโอน / หลักฐานเงิน</span>
             <span class="type"><span class="tile sm t-gray"><svg class="ic"><use href="#i-plus"/></svg></span>เพิ่มรูปอื่น</span>
           </div>
-          <span style="font-size:13px;color:var(--c-ink-soft)">คำอธิบาย (ไม่บังคับ)</span>
+          <span style="font-size:13px;color:var(--color-ink-soft)">คำอธิบาย (ไม่บังคับ)</span>
           <span class="inp text">เช่น จดโดย อ.สมหวัง</span>
           <div class="btnrow"><span class="btn btn-secondary"><svg class="ic sm"><use href="#i-camera"/></svg>ถ่ายรูป</span><span class="btn btn-secondary"><svg class="ic sm"><use href="#i-image"/></svg>เลือกรูป</span></div>
           <div class="lines"><span class="mi"><svg class="ic"><use href="#i-half"/></svg>รูปเก็บในเครื่องก่อน (รอส่ง)</span><span class="mi"><svg class="ic"><use href="#i-check"/></svg>ข้ามได้ — บันทึกเข่งได้โดยไม่มีรูป</span></div>
@@ -1795,8 +1789,8 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="btn btn-secondary small" style="width:100%;margin-top:8px"><svg class="ic sm"><use href="#i-search"/></svg>ไม่ตรงกัน</div>
           </div>
           <div class="card tight">
-            <div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-tapper"/></svg></span><span class="grow"><span class="val">แดง</span><span class="mi"><svg class="ic"><use href="#i-pin"/></svg>3 จุด</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>31 เข่ง</span></span><span class="val num">1,520 กก.</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
-            <div class="row"><span class="tile sm t-green"><svg class="ic"><use href="#i-tapper"/></svg></span><span class="grow"><span class="val">นัด</span><span class="mi"><svg class="ic"><use href="#i-pin"/></svg>2 จุด</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>15 เข่ง</span></span><span class="val num">735 กก.</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile sm t-cat3"><svg class="ic"><use href="#i-tapper"/></svg></span><span class="grow"><span class="val">แดง</span><span class="mi"><svg class="ic"><use href="#i-pin"/></svg>3 จุด</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>31 เข่ง</span></span><span class="val num">1,520 กก.</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
+            <div class="row"><span class="tile sm t-cat4"><svg class="ic"><use href="#i-tapper"/></svg></span><span class="grow"><span class="val">นัด</span><span class="mi"><svg class="ic"><use href="#i-pin"/></svg>2 จุด</span><span class="mi"><svg class="ic"><use href="#i-basket"/></svg>15 เข่ง</span></span><span class="val num">735 กก.</span><svg class="ic sm chev"><use href="#i-chev"/></svg></div>
           </div>
         </div>
       </div></div>
@@ -1842,7 +1836,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="body" style="gap:10px">
           <span class="mi"><svg class="ic"><use href="#i-coin"/></svg>ราคา <b class="num">48.50 ฿/กก.</b></span>
           <div class="card">
-            <div class="row" style="min-height:0"><span class="tile sm t-green"><svg class="ic"><use href="#i-tapper"/></svg></span><span class="grow val">แดง</span></div>
+            <div class="row" style="min-height:0"><span class="tile sm t-cat3"><svg class="ic"><use href="#i-tapper"/></svg></span><span class="grow val">แดง</span></div>
             <div class="kv"><span>น้ำหนัก</span><span>1,520 กก.</span></div>
             <div class="kv"><span>ยอดขาย</span><span>73,720.00</span></div>
             <div class="kv"><span>ส่วนแบ่งคนกรีดยาง 50%</span><span>36,860.00</span></div>
@@ -1855,7 +1849,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <span class="lnk2">แก้ยอดหัก / วิธีรับเงิน ›</span>
           </div>
           <div class="card">
-            <div class="row" style="min-height:0"><span class="tile sm t-green"><svg class="ic"><use href="#i-tapper"/></svg></span><span class="grow val">นัด</span></div>
+            <div class="row" style="min-height:0"><span class="tile sm t-cat4"><svg class="ic"><use href="#i-tapper"/></svg></span><span class="grow val">นัด</span></div>
             <div class="kv"><span>น้ำหนัก</span><span>735 กก.</span></div>
             <div class="kv"><span>ยอดขาย</span><span>35,647.50</span></div>
             <div class="kv"><span>ส่วนแบ่งคนกรีดยาง 50%</span><span>17,823.75</span></div>
@@ -1868,21 +1862,21 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="btn btn-secondary small" style="width:100%;margin-top:8px"><svg class="ic sm"><use href="#i-minus"/></svg>หักเงินคืนหนี้</div>
           </div>
           <div class="card cream">
-            <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--c-raised)"><svg class="ic"><use href="#i-bank"/></svg></span><span class="grow val">ส่วนแบ่งเจ้าของสวน</span></div>
+            <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--color-surface-raised)"><svg class="ic"><use href="#i-bank"/></svg></span><span class="grow val">ส่วนแบ่งเจ้าของสวน</span></div>
             <div class="kv"><span>ส่วนของสวน (ยางของแดง)</span><span>36,860.00</span></div>
             <div class="kv"><span>ส่วนของสวน (ยางของนัด)</span><span>17,823.75</span></div>
             <div class="kv total"><span>โอนเข้าบัญชี</span><span class="fig" style="font-size:22px">54,683.75<span class="u">บาท</span></span></div>
             <div class="acct">
               <div class="kv" style="align-items:center"><span class="lab">รับเข้าบัญชี (ไม่บังคับ)</span><span class="sel">เปลี่ยน<svg class="ic"><use href="#i-down"/></svg></span></div>
-              <div class="row"><span class="tile sm t-cream" style="background:var(--c-raised)"><svg class="ic"><use href="#i-bank"/></svg></span><span class="grow"><span class="val num" style="white-space:nowrap">กสิกรไทย ••1234</span><span class="mi"><svg class="ic"><use href="#i-check"/></svg>บัญชีค่าเริ่มต้น</span><span class="mi"><svg class="ic"><use href="#i-qr"/></svg>มีพร้อมเพย์</span></span></div>
+              <div class="row"><span class="tile sm t-cream" style="background:var(--color-surface-raised)"><svg class="ic"><use href="#i-bank"/></svg></span><span class="grow"><span class="val num" style="white-space:nowrap">กสิกรไทย ••1234</span><span class="mi"><svg class="ic"><use href="#i-check"/></svg>บัญชีค่าเริ่มต้น</span><span class="mi"><svg class="ic"><use href="#i-qr"/></svg>มีพร้อมเพย์</span></span></div>
               <div class="btn btn-secondary small full"><svg class="ic sm"><use href="#i-expand"/></svg>ให้คนรับซื้อยางดูบัญชี</div>
             </div>
             <div class="ded" style="margin-top:8px;padding:8px 10px">
               <div class="hd"><svg class="ic sm"><use href="#i-wallet"/></svg><span class="grow">เงินสดวันนี้ (ไม่รวมยอดโอน)</span></div>
-              <span style="font-size:14px;color:var(--c-ink)">หักไว้จากเงินสดที่จ่ายคนกรีดยาง</span>
+              <span style="font-size:14px;color:var(--color-ink)">หักไว้จากเงินสดที่จ่ายคนกรีดยาง</span>
               <div class="kv plus"><span>แดง คืนหนี้ให้สวน</span><span>+2,000.00</span></div>
               <span class="mi"><svg class="ic"><use href="#i-coin"/></svg>หยิบจากกองเงินสดของแดง</span>
-              <div class="kv total"><span><b style="color:var(--c-ink)">เงินสดเข้าสวนวันนี้</b></span><span class="fig" style="font-size:20px">2,000.00</span></div>
+              <div class="kv total"><span><b style="color:var(--color-ink)">เงินสดเข้าสวนวันนี้</b></span><span class="fig" style="font-size:20px">2,000.00</span></div>
             </div>
           </div>
         </div>
@@ -1906,7 +1900,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <div class="radio acc-opt"><span class="dot"></span><span><span class="val num">ออมสิน ••9012</span><small>นายตัวอย่าง ใจดี</small><small>ไม่มีพร้อมเพย์</small></span></div>
           <div class="radio acc-opt"><span class="dot"></span><span><span class="val">รับเงินสด</span><small>คนรับซื้อยางจ่ายเงินสด ไม่โอน</small></span></div>
           <div class="radio on acc-opt"><span class="dot"></span><span><span class="val">หมายเหตุว่าเข้าบัญชีไหน</span><small>พิมพ์สั้น ๆ</small></span></div>
-          <div style="min-height:44px;display:flex;align-items:center;padding:0 12px;border-radius:var(--r-md);border:2px solid var(--c-action);background:var(--c-raised);font-size:16px;color:var(--c-ink)">บัญชีลูกสาว</div>
+          <div style="min-height:44px;display:flex;align-items:center;padding:0 12px;border-radius:var(--r-md);border:2px solid var(--color-action);background:var(--color-surface-raised);font-size:16px;color:var(--color-ink)">บัญชีลูกสาว</div>
           <div class="mini-row"><span class="grow">หรือไม่เลือกเลย — ไปต่อได้ (ไม่บังคับ)</span></div>
           <span class="note">ไม่มีบัญชีค่าเริ่มต้น → ไม่เลือกไว้ล่วงหน้า · "รับเงินสด" และ "หมายเหตุ" ไม่มีเลขบัญชี จึงไม่มีปุ่ม "ให้คนรับซื้อยางดูบัญชี" · ลบบัญชีค่าเริ่มต้นต้องยืนยันก่อน (หน้าตั้งค่า — คำตอบเจ้าของ 2026-10-09)</span>
         </div>
@@ -1921,12 +1915,12 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
               <div class="hd"><svg class="ic sm"><use href="#i-wallet"/></svg><span class="grow">เงินสดวันนี้ (ไม่รวมยอดโอน)</span></div>
               <div class="kv plus"><span>แดง คืนหนี้ให้สวน</span><span>+2,000.00</span></div>
               <span class="mi"><svg class="ic"><use href="#i-coin"/></svg>หยิบจากกองเงินสดของแดง</span>
-              <div class="kv total"><span><b style="color:var(--c-ink)">เงินสดเข้าสวนวันนี้</b></span><span class="fig" style="font-size:20px">2,000.00</span></div>
+              <div class="kv total"><span><b style="color:var(--color-ink)">เงินสดเข้าสวนวันนี้</b></span><span class="fig" style="font-size:20px">2,000.00</span></div>
             </div>
           </div>
           <div class="mini-row"><svg class="ic sm"><use href="#i-receipt"/></svg><b>บันทึกในบัญชีหนี้ (เท่ากันทุกทาง)</b></div>
-          <div class="mini-row num"><span class="grow mi"><svg class="ic"><use href="#i-tapper"/></svg>แดง คืนหนี้ 2,000</span></div>
-          <div class="mini-row num"><span class="grow mi"><svg class="ic"><use href="#i-tapper"/></svg>นัด คืนหนี้ 1,500</span></div>
+          <div class="mini-row num"><span class="grow mi"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง คืนหนี้ 2,000</span></div>
+          <div class="mini-row num"><span class="grow mi"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด คืนหนี้ 1,500</span></div>
           <div class="mini-row num"><span class="grow">สวนคืนเงินนัด 640</span></div>
           <span class="note num">นัดคืนหนี้ 1,500 และสวนคืน 640 บันทึกแยกเหมือนเดิม — ต่างแค่เงินสุทธิ 860 มากับยอดโอน · ตรวจยอดหลังปัดเศษ (หน้า 18: นัด 16,963.75 → 16,964 · ส่วนของสวนจากนัด 17,823.75 → 17,823.50): เงินสดแดง 34,860 + เงินสดนัด 16,964 + โอน 55,543.50 + เงินสดเข้าสวน 2,000 = 109,367.50 = ยอดขาย</span>
         </div>
@@ -1983,13 +1977,13 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <div class="ded on">
             <div class="hd"><span class="grow">หนี้ที่ติดสวน — หักได้</span><b class="num">1,500.00</b></div>
             <div class="lines"><span class="mi"><svg class="ic"><use href="#i-receipt"/></svg>ค่าปุ๋ย <b class="num">1,500.00</b></span><span class="mi"><svg class="ic"><use href="#i-help"/></svg>ไม่มีแผนผ่อน → เสนอยอดค้างทั้งหมด</span></div>
-            <span class="lbl" style="font-size:13px;color:var(--c-ink-soft)">หักครั้งนี้ (แก้ได้ 0 – 1,500.00)</span>
+            <span class="lbl" style="font-size:13px;color:var(--color-ink-soft)">หักครั้งนี้ (แก้ได้ 0 – 1,500.00)</span>
             <div class="stepper sm"><span class="sb"><svg class="ic"><use href="#i-minus"/></svg></span><span class="inp focus">1,500.00<span class="u">บาท</span></span><span class="sb"><svg class="ic"><use href="#i-plus"/></svg></span></div>
           </div>
           <div class="ded offer">
             <div class="hd"><svg class="ic sm"><use href="#i-wallet"/></svg><span class="grow">แนะนำ: นำเงินที่สวนต้องคืนมาหักกลบ</span></div>
             <div class="lines"><span class="mi"><svg class="ic"><use href="#i-in"/></svg>สวนต้องคืนนัด <b class="num">640.00</b></span><span class="mi"><svg class="ic"><use href="#i-receipt"/></svg>สำรองจ่ายค่าน้ำมันตัดหญ้า</span><span class="mi"><svg class="ic"><use href="#i-cal"/></svg>12 ก.ย. 2569</span></div>
-            <span class="lbl" style="font-size:13px;color:var(--c-ink-soft)">ใช้ครั้งนี้ (แก้ได้ 0 – 640.00)</span>
+            <span class="lbl" style="font-size:13px;color:var(--color-ink-soft)">ใช้ครั้งนี้ (แก้ได้ 0 – 640.00)</span>
             <div class="stepper sm"><span class="sb"><svg class="ic"><use href="#i-minus"/></svg></span><span class="inp">640.00<span class="u">บาท</span></span><span class="sb"><svg class="ic"><use href="#i-plus"/></svg></span></div>
             <div class="hd"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ใช้หักกลบแล้ว</span><span class="grow"></span><span class="lnk2">ไม่ใช้</span></div>
             <small>ค่าเริ่มต้น = ไม่ใช้ จนเจ้าของสวนกด "ใช้หักกลบ"</small><small>บันทึกเป็น "การคืนเงิน" แยกจากการหักหนี้</small><small>ส่วนที่ไม่ใช้ยังค้างคืน</small>
@@ -1999,9 +1993,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="kv minus"><span>หักหนี้</span><span>−1,500.00</span></div>
             <div class="kv minus"><span>หักกลบ: ค่าน้ำมันที่สวนต้องคืนนัด</span><span>−640.00</span></div>
             <div class="kv total"><span>นัดต้องคืนสวนจริง</span><span>860.00</span></div>
-            <div class="radio"><span class="dot"></span><span><b>1 · ดึงเงินสดจากส่วนแบ่ง</b><span class="opt-l"><b style="display:inline;font-size:12px;color:var(--c-ink)">→ เงินสดเข้ามือ 860</b></span><span class="chip ch-warn"><svg class="ic"><use href="#i-alert"/></svg>ต้องแตกเงิน</span><span class="tip"><svg class="ic"><use href="#i-help"/></svg>ทำไม? ดูแบงค์ในกอง</span></span></div>
-            <div class="radio"><span class="dot"></span><span><b>2 · ให้คนรับซื้อยางแบ่งเงินสด 2 กอง</b><span class="opt-l num"><b style="display:inline;font-size:12px;color:var(--c-ink)">→ เงินสดเข้ามือ 860</b> (กองคืนเจ้าของสวน)</span><span class="opt-l num">→ กองนัด 16,963.75</span></span></div>
-            <div class="radio on"><span class="dot"></span><span><b>3 · ให้คนรับซื้อยางโอนรวมกับส่วนเจ้าของสวน</b><span class="opt-l num"><b style="display:inline;font-size:12px;color:var(--c-ink)">→ เข้าบัญชี 860</b> (รวมกับยอดโอน)</span><span class="opt-l num">→ กองนัด 16,963.75</span></span></div>
+            <div class="radio"><span class="dot"></span><span><b>1 · ดึงเงินสดจากส่วนแบ่ง</b><span class="opt-l"><b style="display:inline;font-size:12px;color:var(--color-ink)">→ เงินสดเข้ามือ 860</b></span><span class="chip ch-warn"><svg class="ic"><use href="#i-alert"/></svg>ต้องแตกเงิน</span><span class="tip"><svg class="ic"><use href="#i-help"/></svg>ทำไม? ดูแบงค์ในกอง</span></span></div>
+            <div class="radio"><span class="dot"></span><span><b>2 · ให้คนรับซื้อยางแบ่งเงินสด 2 กอง</b><span class="opt-l num"><b style="display:inline;font-size:12px;color:var(--color-ink)">→ เงินสดเข้ามือ 860</b> (กองคืนเจ้าของสวน)</span><span class="opt-l num">→ กองนัด 16,963.75</span></span></div>
+            <div class="radio on"><span class="dot"></span><span><b>3 · ให้คนรับซื้อยางโอนรวมกับส่วนเจ้าของสวน</b><span class="opt-l num"><b style="display:inline;font-size:12px;color:var(--color-ink)">→ เข้าบัญชี 860</b> (รวมกับยอดโอน)</span><span class="opt-l num">→ กองนัด 16,963.75</span></span></div>
           </div>
           <div class="card" style="box-shadow:none;padding:10px 12px">
             <div class="kv"><span>ส่วนแบ่ง</span><span>17,823.75</span></div>
@@ -2046,14 +2040,14 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="sbar num"><span>10:20</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
         <div class="appbar dim"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>สรุปยอดส่วนแบ่ง</h3></div>
         <div class="body dim">
-          <div class="card"><div class="kv"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>แดง</span><span>34,860.00</span></div></div>
-          <div class="card"><div class="kv"><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>นัด</span><span>16,963.75</span></div></div>
+          <div class="card"><div class="kv"><span class="mi"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง</span><span>34,860.00</span></div></div>
+          <div class="card"><div class="kv"><span class="mi"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด</span><span>16,963.75</span></div></div>
         </div>
         <div class="sheet-scrim"></div>
         <div class="sheet">
           <span class="grab"></span>
           <h4>ปัดเศษสตางค์อย่างไร?</h4>
-          <div class="lines"><span class="mi"><svg class="ic"><use href="#i-check"/></svg>เลือกครั้งเดียวทั้งการขาย</span><span class="mi"><svg class="ic"><use href="#i-minus"/></svg>คิดจากเงินสดหลังหักหนี้</span><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>นัด <b class="num">16,963.75</b> (เศษ 75 สตางค์)</span><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>แดง ไม่มีเศษ</span></div>
+          <div class="lines"><span class="mi"><svg class="ic"><use href="#i-check"/></svg>เลือกครั้งเดียวทั้งการขาย</span><span class="mi"><svg class="ic"><use href="#i-minus"/></svg>คิดจากเงินสดหลังหักหนี้</span><span class="mi"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด <b class="num">16,963.75</b> (เศษ 75 สตางค์)</span><span class="mi"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง ไม่มีเศษ</span></div>
           <div class="radio on"><span class="dot"></span><span>ปัดเป็นบาทเต็ม ให้คนกรีดยางได้ประโยชน์<small class="num">นัด 16,964</small><small class="num">เจ้าของสวนจากนัด 17,823.50</small><small>✓ ใช้ครั้งก่อนของกลุ่ม</small></span></div>
           <div class="radio"><span class="dot"></span><span>ให้เจ้าของสวนได้ประโยชน์<small class="num">นัด 16,963</small><small class="num">เจ้าของสวนจากนัด 17,824.50</small></span></div>
           <div class="radio"><span class="dot"></span><span>ไม่ปัด (เก็บสตางค์)<small class="num">นัด 16,963.75</small><small class="num">เจ้าของสวนจากนัด 17,823.75</small></span></div>
@@ -2081,18 +2075,18 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="body" style="gap:10px">
           <div class="card">
             <h4>เงินสดให้คนกรีดยาง</h4>
-            <div class="kv"><span class="mi" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic"><use href="#i-tapper"/></svg>แดง</span><span>34,860.00</span></div>
-            <div class="kv"><span class="mi" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic"><use href="#i-tapper"/></svg>นัด</span><span>16,964.00</span></div>
+            <div class="kv"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง</span><span>34,860.00</span></div>
+            <div class="kv"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด</span><span>16,964.00</span></div>
             <h4 style="margin-top:8px">เงินเข้าสวน</h4>
-            <div class="kv"><span class="mi" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic"><use href="#i-bank"/></svg>โอนเข้าบัญชีเจ้าของสวน</span><span>55,543.50</span></div>
+            <div class="kv"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic"><use href="#i-bank"/></svg>โอนเข้าบัญชีเจ้าของสวน</span><span>55,543.50</span></div>
             <span class="mi" style="padding-left:19px">ส่วนเจ้าของสวน 54,683.50</span>
             <span class="mi" style="padding-left:19px">+ นัดคืนหนี้ 860 (หลังหักกลบ 640)</span>
-            <div class="kv"><span class="mi" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic"><use href="#i-wallet"/></svg>แดงคืนหนี้ (เงินสด)</span><span>2,000.00</span></div>
+            <div class="kv"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic"><use href="#i-wallet"/></svg>แดงคืนหนี้ (เงินสด)</span><span>2,000.00</span></div>
             <span class="mi" style="padding-left:19px">หักจากเงินแดงแล้ว</span>
-            <div class="kv muted"><span class="mi" style="font-size:14px;color:var(--c-ink-soft)"><svg class="ic"><use href="#i-coin"/></svg>กองคืนหนี้แยก</span><span>ไม่มี</span></div>
+            <div class="kv muted"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic"><use href="#i-coin"/></svg>กองคืนหนี้แยก</span><span>ไม่มี</span></div>
             <div class="kv total"><span>รวมทุกกอง</span><span class="fig" style="font-size:20px">109,367.50</span></div>
             <div class="kv"><span>ยอดขายทั้งหมด</span><span>109,367.50</span></div>
-            <span style="font-size:14px;color:var(--c-ink);margin-top:6px;display:block">เงินทุกกองรวมกันต้องเท่ายอดขาย</span>
+            <span style="font-size:14px;color:var(--color-ink);margin-top:6px;display:block">เงินทุกกองรวมกันต้องเท่ายอดขาย</span>
             <span class="mi" style="margin-top:4px">ปัดเศษแล้ว ไม่ต้องบวกเพิ่ม</span>
             <span class="mi" style="padding-left:19px">นัด +0.25</span>
             <span class="mi" style="padding-left:19px">เจ้าของสวน −0.25</span>
@@ -2219,7 +2213,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="bvbody" style="gap:14px">
           <span class="hello">ยอดโอนให้เจ้าของสวน</span>
           <span class="amt">55,543.50<span class="u">บาท</span></span>
-          <span class="how" style="color:var(--c-action)"><svg class="ic"><use href="#i-bank"/></svg>โอนเข้าบัญชีธนาคาร</span>
+          <span class="how" style="color:var(--color-action)"><svg class="ic"><use href="#i-bank"/></svg>โอนเข้าบัญชีธนาคาร</span>
           <div class="fld"><span class="k">ธนาคาร</span><span class="v nm" style="font-size:28px">ออมสิน</span></div>
           <div class="fld"><span class="k">เลขบัญชี</span><span class="v" style="font-size:32px">0201-2345-9012</span></div>
           <span class="copy"><svg class="ic"><use href="#i-copy"/></svg>คัดลอกเลขบัญชี</span>
@@ -2266,7 +2260,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <div class="body" style="gap:10px">
           <div class="banner bad"><svg class="ic sm"><use href="#i-lock"/></svg><span><b>ปิดการขายและบันทึกการจ่ายเงินไม่ได้</b><span style="display:block">จนกว่าจะเลือกค่า</span><span style="display:block">ระหว่างนี้คิดเงินจากค่าเดิม</span></span></div>
           <div class="card">
-            <div class="row" style="min-height:0"><span class="tile t-red"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">เข่ง 15 (ไม่เต็ม)</span><span class="mi"><svg class="ic"><use href="#i-tapper"/></svg>นัด</span><span class="mi"><svg class="ic"><use href="#i-pin"/></svg>คลองพลู จุด 1</span></span><span class="chip ch-bad"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span></div>
+            <div class="row" style="min-height:0"><span class="tile t-red"><svg class="ic"><use href="#i-basket"/></svg></span><span class="grow"><span class="val num">เข่ง 15 (ไม่เต็ม)</span><span class="mi"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด</span><span class="mi"><svg class="ic cat2"><use href="#i-pin"/></svg>คลองพลู จุด 1</span></span><span class="chip ch-bad"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span></div>
           </div>
           <div class="opt">
             <div class="card optrow"><span class="who"><b>ค่าจากเครื่อง A</b><span class="mi"><svg class="ic"><use href="#i-person"/></svg>เจ้าของสวน · มือถือ</span><span class="mi"><svg class="ic"><use href="#i-clock"/></svg>18:05</span></span><span class="fig num" style="font-size:22px">36<span class="u">กก.</span></span><span class="btn btn-secondary small">ใช้ค่านี้</span></div>
@@ -2434,3 +2428,40 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 </section>
 
 </div>
+
+<!-- Palette/theme toggle (docs only). ?palette=a|b&theme=light|dark sets it from the URL. -->
+<div class="palette-toggle" role="group" aria-label="ชุดสี (ข้อเสนอ E01-S17)">
+  <span class="pt-l">ชุดสี</span>
+  <button type="button" data-set-palette="a" title="A farmmate (ใช้อยู่)">A</button>
+  <button type="button" data-set-palette="b" title="B instrument (ทางเลือก)">B</button>
+  <span class="pt-l">โหมด</span>
+  <button type="button" data-set-theme="light">สว่าง</button>
+  <button type="button" data-set-theme="dark">มืด</button>
+</div>
+<script>
+(function () {
+  var root = document.documentElement;
+  var dark = window.matchMedia('(prefers-color-scheme: dark)');
+  function sync() {
+    var p = root.getAttribute('data-palette') === 'b' ? 'b' : 'a';
+    var t = root.getAttribute('data-theme') || (dark.matches ? 'dark' : 'light');
+    document.querySelectorAll('[data-set-palette]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.setPalette === p)); });
+    document.querySelectorAll('[data-set-theme]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.setTheme === t)); });
+  }
+  function setParam(k, v) {
+    try { var u = new URL(location.href); u.searchParams.set(k, v); history.replaceState(null, '', u); } catch (e) { /* file:// may refuse */ }
+  }
+  function palette(p) { if (p === 'b') root.setAttribute('data-palette', 'b'); else root.removeAttribute('data-palette'); }
+  function theme(t) { if (t === 'light' || t === 'dark') root.setAttribute('data-theme', t); }
+  var q = new URLSearchParams(location.search);
+  palette(q.get('palette')); theme(q.get('theme')); sync();
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-set-palette],[data-set-theme]');
+    if (!b) return;
+    if (b.dataset.setPalette) { palette(b.dataset.setPalette); setParam('palette', b.dataset.setPalette); }
+    else { theme(b.dataset.setTheme); setParam('theme', b.dataset.setTheme); }
+    sync();
+  });
+  dark.addEventListener('change', sync);
+})();
+</script>

@@ -8,9 +8,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { Link, useFocusEffect, type Href } from 'expo-router';
+import { useFocusEffect, type Href } from 'expo-router';
 
-import { Button, TopBar } from '../components/chrome';
+import { Button } from '../components/chrome';
+import { ScreenHeader } from '../components/ui/screen-header';
+import { useSyncStatus } from '../sync/use-sync-status';
 import { projectSale } from '../core/project';
 import type { SaleState } from '../core/types';
 import { useT } from '../i18n';
@@ -24,6 +26,7 @@ const LIST: Href = '/';
 export default function DeletedSalesScreen() {
   const t = useTheme();
   const msg = useT();
+  const sync = useSyncStatus();
   const [sales, setSales] = useState<SaleState[] | null>(null);
 
   const reload = useCallback(() => {
@@ -48,13 +51,10 @@ export default function DeletedSalesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar
-        crumb={msg('deleted.title')}
-        right={
-          <Link href={LIST} asChild>
-            <Button testID="deleted-back">{msg('deleted.back')}</Button>
-          </Link>
-        }
+      <ScreenHeader
+        title={msg('deleted.title')}
+        back={{ label: msg('deleted.back'), testID: 'deleted-back', href: LIST }}
+        sync={sync}
       />
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.sm }}>
         {sales === null ? (

@@ -36,6 +36,8 @@ export interface Theme {
   readonly publicNumeral: typeof tokens.publicNumeral;
   readonly bezel: typeof tokens.bezel;
   readonly opacity: typeof tokens.opacity;
+  readonly shadow: typeof tokens.shadow;
+  readonly layout: typeof tokens.layout;
 }
 
 function themeFor(scheme: ColorScheme): Theme {
@@ -51,6 +53,8 @@ function themeFor(scheme: ColorScheme): Theme {
     publicNumeral: tokens.publicNumeral,
     bezel: tokens.bezel,
     opacity: tokens.opacity,
+    shadow: tokens.shadow,
+    layout: tokens.layout,
   };
 }
 

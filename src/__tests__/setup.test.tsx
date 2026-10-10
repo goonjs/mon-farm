@@ -65,6 +65,8 @@ jest.mock('../store/store', () => {
 // these tests assert on.
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
+  // The header's sync pill reads the store on focus; not under test here.
+  useFocusEffect: () => undefined,
   useRouter: () => ({ back: jest.fn(), replace: jest.fn(), push: jest.fn() }),
 }));
 

@@ -13,8 +13,10 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|react-native-css-interop)',
   ],
+  // Order matters — the first matching pattern wins. The stylesheet stub goes
+  // first so `@/global.css` is stubbed rather than resolved through `@/`.
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
     '\\.css$': '<rootDir>/jest.style-mock.js',
+    '^@/(.*)$': '<rootDir>/src/$1',
   },
 };
