@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { newId } from '../src/lib/id';
+
 /**
  * The real sale setup screen (S6), replacing S17's stub. Parties, price,
  * split and each zone's contract auto-save (debounced, no Save button) —
@@ -15,8 +17,8 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 async function openSetup(page: Page) {
-  await page.goto('/');
-  await page.getByTestId('new-sale').click();
+  // Since E04-S02 "new sale" opens the start screen; the setup screen is reached by URL.
+  await page.goto(`/sale/${newId('sale-')}/setup`);
   await expect(page.getByTestId('start-counting')).toBeVisible();
   return page;
 }
@@ -34,11 +36,11 @@ test('start counting is disabled until price, split and a pile all exist', async
 
   await page.getByTestId('price-baht').fill('26.5');
   await expect(page.getByTestId('saved-price')).toContainText('บันทึกแล้ว');
-  await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีโซน'); // price set, no zone yet
+  await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีสวน'); // price set, no zone yet
 
   await page.getByTestId('new-zone-name').fill('โซน A');
   await page.getByTestId('add-zone').click();
-  await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีกอง'); // zone + split resolved, still no pile
+  await expect(page.getByTestId('start-blocker')).toContainText('ยังไม่มีจุดชั่ง'); // zone + split resolved, still no pile
 
   const zoneEditor = page.locator('[data-testid^="zone-editor-"]');
   await zoneEditor.getByTestId(/^pile-name-/).fill('กอง 1');

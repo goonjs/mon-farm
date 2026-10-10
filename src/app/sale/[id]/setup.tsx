@@ -38,7 +38,8 @@ import { Button, Pill, TopBar } from '../../../components/chrome';
 import { PeoplePicker } from '../../../components/PeoplePicker';
 import { newId } from '../../../lib/id';
 import { useSale } from '../../../store/SaleProvider';
-import type { Person } from '../../../store/people';
+import { peopleStore, type Buyer, type Person } from '../../../store/people';
+import { defaultBuyer } from '../../../core/master';
 // Bare specifier — Metro resolves this to farm.native.ts / farm.web.ts, same
 // as the `store` import in SaleProvider.tsx. Read-only here: this screen
 // never writes the farm profile, only copies its ids into ordinary events
@@ -153,6 +154,7 @@ export default function SetupScreen() {
 }
 
 function PartiesCard() {
+  const t = useTheme();
   const msg = useT();
   const { state, append } = useSale();
   const p = state.parties;
@@ -163,6 +165,28 @@ function PartiesCard() {
   const [where, setWhere] = useState<'farm' | 'buyer'>(p?.where ?? 'farm');
   const [touched, setTouched] = useState(false);
   const canSave = farmName.trim().length > 0 && buyer.trim().length > 0;
+  const [buyers, setBuyers] = useState<readonly Buyer[]>([]);
+
+  // Buyers come from farm master data (E03-S01). A new sale starts with the
+  // latest sale's buyer — or none, if that buyer has since been deleted
+  // (MD-6, D-65 Q6). The name typed or picked is still the sale's snapshot;
+  // the id rides along only when it names a listed buyer.
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const master = await peopleStore.state();
+      if (!live) return;
+      setBuyers(master.buyers.filter((b) => !b.deleted));
+      if (p) return;
+      const fallback = defaultBuyer(master, await peopleStore.latestBuyerId());
+      if (live && fallback) setBuyer((cur) => cur || fallback.name);
+    })();
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per mount: the default is for a sale that has no parties yet.
+  }, []);
+  const buyerId = buyers.find((b) => b.name === buyer.trim())?.id;
 
   const status = useAutoSave(
     [farmName, buyer, manager, workerLead, where],
@@ -176,6 +200,7 @@ function PartiesCard() {
           t: 'sale_started',
           farmName: farmName.trim(),
           buyer: buyer.trim(),
+          ...(buyerId ? { buyerId } : {}),
           manager: manager.trim(),
           workerLead: workerLead.trim(),
           where,
@@ -192,6 +217,15 @@ function PartiesCard() {
     <Card title={msg('setup.parties')}>
       <LabeledInput testID="farm-name" label={msg('setup.farm')} value={farmName} onChangeText={dirty(setFarmName)} />
       <LabeledInput testID="buyer" label={msg('setup.buyer')} value={buyer} onChangeText={dirty(setBuyer)} />
+      {buyers.length > 0 ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.xs }}>
+          {buyers.map((b) => (
+            <Button key={b.id} testID={`buyer-pick-${b.id}`} variant={b.id === buyerId ? 'primary' : 'ghost'} onPress={() => dirty(setBuyer)(b.name)}>
+              {b.name}
+            </Button>
+          ))}
+        </View>
+      ) : null}
       <LabeledInput testID="manager" label={msg('setup.manager')} value={manager} onChangeText={dirty(setManager)} />
       <LabeledInput
         testID="worker-lead"
@@ -262,15 +296,14 @@ function SplitCard() {
   const msg = useT();
   const { state, append } = useSale();
   const [ownerPct, setOwnerPct] = useState(state.split?.ownerPct ?? 50);
-  const [basis, setBasis] = useState<'gross' | 'final'>(state.split?.basis ?? 'gross');
-  // 50/50 gross is always a valid split (unlike farm name or price, which
+  // 50/50 is always a valid split (unlike farm name or price, which
   // have no valid empty/default value) — a sale that has never saved one yet
   // starts "touched" so the default itself auto-saves, rather than needing a
   // decoy click on a control that already visibly shows it as selected.
   const [touched, setTouched] = useState(!state.split);
 
-  const status = useAutoSave([ownerPct, basis], touched, true, !!state.split, () =>
-    append({ kind: 'sys', payload: { t: 'split_set', ownerPct, basis } }),
+  const status = useAutoSave([ownerPct], touched, true, !!state.split, () =>
+    append({ kind: 'sys', payload: { t: 'split_set', ownerPct } }),
   );
 
   return (
@@ -289,19 +322,6 @@ function SplitCard() {
           onChange={(v) => {
             setTouched(true);
             setOwnerPct(v);
-          }}
-        />
-      </Field>
-      <Field label={msg('setup.appliesTo')}>
-        <Segmented
-          options={[
-            { value: 'gross' as const, label: msg('setup.gross') },
-            { value: 'final' as const, label: msg('setup.final') },
-          ]}
-          value={basis}
-          onChange={(v) => {
-            setTouched(true);
-            setBasis(v);
           }}
         />
       </Field>
@@ -568,7 +588,7 @@ function ZoneEditor({ zone }: { zone: Zone }) {
   const piles = state.piles.filter((p) => p.zoneId === zone.id);
 
   const [worker, setWorker] = useState<Person | null>(
-    zone.contract ? { id: zone.contract.personId, name: zone.contract.workerName, createdTs: 0, archivedTs: null } : null,
+    zone.contract ? { id: zone.contract.personId, name: zone.contract.workerName, roles: ['tapper'], otherRoles: [], deleted: false, createdTs: 0 } : null,
   );
   const [ownerPct, setOwnerPct] = useState(zone.contract?.ownerPct ?? 50);
   const [contractTouched, setContractTouched] = useState(false);
@@ -630,6 +650,7 @@ function ZoneEditor({ zone }: { zone: Zone }) {
         <Field label={msg('setup.zoneWorker')}>
           <PeoplePicker
             testID={`zone-worker-${zone.id}`}
+            role="tapper"
             value={worker}
             onChange={(v) => {
               setContractTouched(true);

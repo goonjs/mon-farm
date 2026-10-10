@@ -928,6 +928,9 @@ function describe(
       return { mark: '·', colour: t.color.inkSoft, body: msg('log.deleted') };
     case 'restore':
       return { mark: '·', colour: t.color.inkSoft, body: msg('log.restored') };
+    // Farm master data (E03) never sits in a sale's log; listed only for exhaustiveness.
+    case 'master':
+      return { mark: '·', colour: t.color.inkSoft, body: '' };
   }
 }
 
