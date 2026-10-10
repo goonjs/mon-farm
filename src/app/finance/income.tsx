@@ -11,10 +11,10 @@
 
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
-import { Button, TopBar } from '../../components/chrome';
-import { Chip, ChipRow, Input, Label, Note } from '../../components/finance/parts';
+import { Button } from '../../components/chrome';
+import { Card, CardTitle, Chip, ChipRow, Fact, Input, Label, MoneyLine, Note, ScreenHeader } from '../../components/finance/parts';
 import { formatDate, formatSatang, isIsoDate, parseBahtToSatang, todayIso } from '../../core/finance/money';
 import { projectPlan } from '../../core/finance/plan';
 import type { IncomeFields, IncomeTag, LeaseFields } from '../../core/finance/types';
@@ -40,7 +40,7 @@ export default function IncomeScreen() {
   const unknown = msg('inc.unknown');
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar crumb={msg('inc.title')} right={<Button testID="income-back" onPress={() => router.back()}>{msg('common.back')}</Button>} />
+      <ScreenHeader testID="income" title={msg('inc.title')} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.lg }}>
         <View style={{ gap: t.space.xs }}>
           <Label>{msg('inc.rubber')}</Label>
@@ -51,10 +51,9 @@ export default function IncomeScreen() {
               testID={`rubber-${r.saleId}`}
               accessibilityRole="button"
               onPress={() => router.push({ pathname: '/sale/[id]/settlement', params: { id: r.saleId } })}
-              style={{ flexDirection: 'row', padding: t.space.sm, borderRadius: t.radius.md, backgroundColor: t.color.surfaceSunk }}
+              style={{ padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleFaint, backgroundColor: t.color.surfaceRaised }}
             >
-              <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>{formatDate(r.date)}</Text>
-              <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.small, color: t.color.ink }}>{`+${formatSatang(r.satang)}`}</Text>
+              <MoneyLine testID={`rubber-amount-${r.saleId}`} label={formatDate(r.date)} satang={r.satang} dir="in" />
             </Pressable>
           ))}
         </View>
@@ -62,21 +61,19 @@ export default function IncomeScreen() {
         <View style={{ gap: t.space.xs }}>
           <Label>{msg('inc.leases')}</Label>
           {plan.leases.filter((l) => !l.deleted).map((l) => (
-            <Note key={l.id} testID={`lease-${l.id}`}>
-              {[
-                msg('inc.leaseLine', {
+            <Card key={l.id} testID={`lease-${l.id}`}>
+              <CardTitle>
+                {msg('inc.leaseLine', {
                   farm: l.farmName || unknown,
                   tenant: l.tenant || unknown,
                   rent: l.rentSatang === null ? unknown : formatSatang(l.rentSatang),
                   period: l.period ? msg(`inc.period.${l.period}`) : '',
-                }),
-                `${msg('inc.start')}: ${l.start ? formatDate(l.start) : unknown}`,
-                `${msg('inc.share')}: ${l.sharePct === null ? unknown : `${l.sharePct}%`}`,
-                l.note,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </Note>
+                })}
+              </CardTitle>
+              <Fact mark="date" tone={l.start ? 'soft' : 'warn'}>{`${msg('inc.start')}: ${l.start ? formatDate(l.start) : unknown}`}</Fact>
+              <Fact mark="person" tone={l.sharePct === null ? 'warn' : 'soft'}>{`${msg('inc.share')}: ${l.sharePct === null ? unknown : `${l.sharePct}%`}`}</Fact>
+              {l.note ? <Fact mark="note">{l.note}</Fact> : null}
+            </Card>
           ))}
           {leaseForm ? (
             <LeaseForm
@@ -91,11 +88,12 @@ export default function IncomeScreen() {
         <View style={{ gap: t.space.xs }}>
           <Label>{msg('inc.received')}</Label>
           {plan.incomes.filter((i) => !i.deleted).map((i) => (
-            <Note key={i.id} testID={`income-${i.id}`}>
-              {[formatDate(i.date), `+${formatSatang(i.amountSatang)}`, msg(`inc.stage.${i.stage}`), i.tag ? msg(`inc.tag.${i.tag}`) : null, i.note]
-                .filter(Boolean)
-                .join(' · ')}
-            </Note>
+            <Card key={i.id} testID={`income-${i.id}`}>
+              <MoneyLine testID={`income-amount-${i.id}`} strong label={formatDate(i.date)} satang={i.amountSatang} dir="in" />
+              <Fact mark={i.stage === 'actual' ? 'check' : 'half'} tone={i.stage === 'actual' ? 'accept' : 'warn'}>{msg(`inc.stage.${i.stage}`)}</Fact>
+              {i.tag ? <Fact mark="note">{msg(`inc.tag.${i.tag}`)}</Fact> : null}
+              {i.note ? <Fact mark="note">{i.note}</Fact> : null}
+            </Card>
           ))}
           {incomeForm ? (
             <IncomeForm
