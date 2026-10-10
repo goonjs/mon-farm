@@ -35,6 +35,7 @@ import {
   defaultBuyer,
   filterPeople,
   formatThaiDate,
+  formatThaiDay,
   projectMaster,
   validatePerson,
 } from './master';
@@ -188,6 +189,14 @@ describe('formatThaiDate (D-65 Q1)', () => {
   });
   it('Common era on request', () => {
     expect(formatThaiDate(ts, 'ce')).toBe('1 ต.ค. 2026');
+  });
+});
+
+describe('formatThaiDay — the home header date (flow-v1 screen 3)', () => {
+  it('leads with the short weekday, in Bangkok time', () => {
+    // Sat 3 Oct 2026, 23:30 Bangkok = 16:30 UTC; Sun once past midnight there.
+    expect(formatThaiDay(Date.UTC(2026, 9, 3, 16, 30), 'be')).toBe('ส. 3 ต.ค. 2569');
+    expect(formatThaiDay(Date.UTC(2026, 9, 3, 17, 30), 'ce')).toBe('อา. 4 ต.ค. 2026');
   });
 });
 
