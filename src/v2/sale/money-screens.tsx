@@ -658,9 +658,10 @@ function PaymentBody({ bump }: { bump: () => void }) {
     router.dismissTo('/v2/sales' as Href);
   };
   const closed = view.closed;
-  // No tick while closed, while ticks conflict (review #5), or for a tapper deducted over the share (D-61).
+  // Ticks stay open after close (owner 2026-10-10, N1 option ก); none while ticks
+  // conflict (review #5), or for a tapper deducted over the share (D-61).
   const locked = (tp: (typeof money.tappers)[number] | null) =>
-    closed || conflicts.length > 0 || flight.busy || (!!tp && overDeducted(tp.debtDeductedSatang, tp.shareSatang, tp.nettedSatang));
+    conflicts.length > 0 || flight.busy || (!!tp && overDeducted(tp.debtDeductedSatang, tp.shareSatang, tp.nettedSatang));
 
   return (
     <FarmScreen

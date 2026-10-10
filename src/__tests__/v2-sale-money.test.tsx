@@ -145,7 +145,7 @@ describe('v2 sale money (pages 16–19)', () => {
     expect(ev.some((e) => e.kind === 'sys' && e.payload.t === 'sale_status_set' && e.payload.status === 'completed')).toBe(true);
   });
 
-  it('a closed sale is read-only: no deduction, account, rounding, check or tick (review #2)', async () => {
+  it('a closed sale is read-only: no deduction, account, rounding or check (review #2)', async () => {
     const s = await inSale(<SettlementScreen />);
     expect(screen.queryByTestId(`deduct-${farm.nat}`)).toBeNull();
     expect(screen.queryByTestId('account-change')).toBeNull();
@@ -154,8 +154,20 @@ describe('v2 sale money (pages 16–19)', () => {
     expect(screen.queryByTestId('check-match')).toBeNull();
     c.unmount();
     await inSale(<PaymentScreen />);
-    expect(screen.getByTestId(`tick-${farm.nat}`).props.accessibilityState).toMatchObject({ disabled: true });
     expect(screen.queryByTestId('close-sale')).toBeNull();
+  });
+
+  it('after close, payment ticks stay open: tick, untick and tick again (owner, option ก)', async () => {
+    const tick = () => screen.getAllByTestId(`tick-${farm.nat}`).pop()!;
+    await inSale(<PaymentScreen />);
+    expect(tick().props.accessibilityState).toMatchObject({ disabled: false, checked: false });
+    await press(`tick-${farm.nat}`);
+    expect(tick().props.accessibilityState).toMatchObject({ checked: true });
+    await press(`tick-${farm.nat}`);
+    expect(tick().props.accessibilityState).toMatchObject({ checked: false });
+    // The sale itself stays closed and untouched.
+    const ev = await store().load(SALE);
+    expect(ev.filter((e) => e.kind === 'sys' && e.payload.t === 'sale_status_set')).toHaveLength(1);
   });
 });
 

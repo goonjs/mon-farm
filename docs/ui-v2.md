@@ -251,8 +251,12 @@ Not as drawn yet:
 - A closed sale is fully read-only on v2: there is no reopen and no
   edit-with-reason (D-16, SALE-21, `money_edit`) yet. Its write screens
   (counter, public, point, zero-tare, backfill, rounding) go to its payment
-  page; the money pages show it without actions. Payment ticks after close
-  wait on an owner decision (re-review N1).
+  page; the money pages show it without actions. The one exception is the
+  payment ticks: tick, untick and clearing "ต้องตรวจใหม่" stay open after a
+  close, and closing does not need every tick (owner 2026-10-10, N1 option ก).
+- Going back to a point already weighed in this sale (at least one basket
+  there) goes straight to its counter, skew or not; only a point with no
+  baskets yet asks for the empty-scale check (owner 2026-10-10).
 - Closing pops the sale's whole stack in one navigation (home → sales). A web
   browser keeps its own history, so going back there reaches the sale's pages
   again, each read-only.
