@@ -1325,6 +1325,13 @@ const th = {
   'v2f.shareRow': 'คนกรีดยาง {tapper}% · เจ้าของสวน {owner}%',
   'v2f.secondsUnit': 'วินาที',
   'v2f.shareFifty': '50/50',
+  // ── v2 sale flow (E04 v2, sale mockup v1.1.0) ──
+  'v2s.empty': 'ยังไม่มีการขาย',
+  'v2s.listInfo1': 'การขายที่ยังไม่ปิดแสดงสถานะ เช่น กำลังชั่ง',
+  'v2s.listInfo2': 'ป้ายต่อแถวแสดงเฉพาะ ขัดกัน · สถานะรวมอยู่ที่หัวแอป',
+  'v2s.listInfoBe': 'วันที่เป็น พ.ศ. แตะเพื่อสลับ ค.ศ.',
+  'v2s.listInfoCe': 'วันที่เป็น ค.ศ. แตะเพื่อสลับ พ.ศ.',
+  // ── end v2 sale (th) ──
 } as const;
 
 /**
@@ -2561,6 +2568,13 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'v2f.shareRow': 'tapper {tapper}% · owner {owner}%',
   'v2f.secondsUnit': 's',
   'v2f.shareFifty': '50/50',
+  // ── v2 sale flow (E04 v2) ──
+  'v2s.empty': 'no sales yet',
+  'v2s.listInfo1': 'a sale still open shows its state, such as weighing',
+  'v2s.listInfo2': 'a row badge shows only conflicts · overall state is in the app header',
+  'v2s.listInfoBe': 'dates in the Buddhist era · tap to switch',
+  'v2s.listInfoCe': 'dates in the Common era · tap to switch',
+  // ── end v2 sale (en) ──
 };
 
 export const messages = { th, en } as const;

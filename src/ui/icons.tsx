@@ -476,3 +476,6 @@ export function SwapIcon({ color, size = 18 }: IconProps) {
     </View>
   );
 }
+
+// Sale set (E04 v2): basket, leaf, tapper, users, alert, flag, clock, expand, dots, hourglass, camera, coin.
+export * from './sale-icons';

@@ -24,6 +24,18 @@ import {
   TagIcon,
   TrashIcon,
   Undo,
+  BasketIcon,
+  LeafIcon,
+  TapperIcon,
+  UsersIcon,
+  AlertIcon,
+  FlagIcon,
+  ClockIcon,
+  ExpandIcon,
+  DotsIcon,
+  HourglassIcon,
+  CameraIcon,
+  CoinIcon,
 } from './icons';
 
 /** Every stroke/fill View an icon draws, as flat styles. */
@@ -67,6 +79,19 @@ describe('line icons — Views only, coloured by the caller (E01-S17 X8)', () =>
     ['GearIcon', <GearIcon key="u" color="sentinel" />],
     ['PercentIcon', <PercentIcon key="v" color="sentinel" />],
     ['SwapIcon', <SwapIcon key="w" color="sentinel" />],
+    // Sale set (E04 v2).
+    ['BasketIcon', <BasketIcon key="s0" color="sentinel" />],
+    ['LeafIcon', <LeafIcon key="s1" color="sentinel" />],
+    ['TapperIcon', <TapperIcon key="s2" color="sentinel" />],
+    ['UsersIcon', <UsersIcon key="s3" color="sentinel" />],
+    ['AlertIcon', <AlertIcon key="s4" color="sentinel" />],
+    ['FlagIcon', <FlagIcon key="s5" color="sentinel" />],
+    ['ClockIcon', <ClockIcon key="s6" color="sentinel" />],
+    ['ExpandIcon', <ExpandIcon key="s7" color="sentinel" />],
+    ['DotsIcon', <DotsIcon key="s8" color="sentinel" />],
+    ['HourglassIcon', <HourglassIcon key="s9" color="sentinel" />],
+    ['CameraIcon', <CameraIcon key="s10" color="sentinel" />],
+    ['CoinIcon', <CoinIcon key="s11" color="sentinel" />],
   ])('%s paints only in the colour it is given', (_name, icon) => {
     const s = strokes(icon);
     const colours = s.flatMap((x) =>
@@ -80,7 +105,7 @@ describe('line icons — Views only, coloured by the caller (E01-S17 X8)', () =>
 });
 
 describe('money-team icons take size', () => {
-  it.each([MoneyInIcon, MoneyOutIcon, PersonIcon, CalendarIcon, ReceiptIcon, DebtIcon, BankIcon, FarmIcon, ScaleIcon, PinIcon, TagIcon, TrashIcon, GearIcon, PercentIcon, SwapIcon])(
+  it.each([MoneyInIcon, MoneyOutIcon, PersonIcon, CalendarIcon, ReceiptIcon, DebtIcon, BankIcon, FarmIcon, ScaleIcon, PinIcon, TagIcon, TrashIcon, GearIcon, PercentIcon, SwapIcon, BasketIcon, LeafIcon, TapperIcon, UsersIcon, AlertIcon, FlagIcon, ClockIcon, ExpandIcon, DotsIcon, HourglassIcon, CameraIcon, CoinIcon])(
     '%p outer box follows size',
     (Icon) => {
       const s = strokes(<Icon color="x" size={24} />);

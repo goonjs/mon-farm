@@ -1,0 +1,323 @@
+/**
+ * What the v2 sale screens share (sale mockup v1.1.0), built from src/ui and
+ * theme tokens only (D-82):
+ *
+ * - useSaleView: the sale log (SaleProvider) with farm master data, the sale
+ *   day, its numbering mode and the header's "การขาย <date>".
+ * - Kv: one label / value line (mockup `.kv`), with total, minus, plus, muted
+ *   and warn tones.
+ * - Banner: the info / warn / bad note with its icon and lines.
+ * - Crumbs: "✓ สวน › ✓ คนกรีดยาง › จุดชั่ง", drawn (no glyphs).
+ * - PointBar: the recorder's point row — farm · point, its skew, the tapper
+ *   and "เปลี่ยนจุด" (mockup `.prow`).
+ * - Choice: a sheet option with a tile, a bold title and lines.
+ * - tones for farms and tappers, and kg / baht text.
+ */
+
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { Pressable, Text, View } from 'react-native';
+
+import { formatSatang } from '../../core/finance/money';
+import { filterPeople, formatThaiDate, saleSettings, type MasterState } from '../../core/master';
+import { saleDay } from '../../core/sale-list';
+import { saleNumbering } from '../../core/sale-points';
+import { useI18n, useT } from '../../i18n';
+import { useSale } from '../../store/SaleProvider';
+import { useTheme } from '../../theme';
+import { AlertIcon, AppText, Check, ChevronRight, IconTile, PinIcon, SwapIcon, TapperIcon, type IconRender, type TileTone } from '../../ui';
+import { categoryTone, useMaster } from '../farm/pieces';
+
+/** Grams as the app shows kg: "1,520", "37.5". */
+export function kgText(g: number): string {
+  return (g / 1000).toLocaleString('en-US', { maximumFractionDigits: 3 });
+}
+
+/** Satang as baht: "34,860" when whole, else "17,823.75". */
+export function bahtText(satang: number): string {
+  const full = formatSatang(satang);
+  return satang % 100 === 0 ? full.slice(0, -3) : full;
+}
+
+/** A farm's tile tone: its place among the shown farms (mockup t-cat1, t-cat2 …). */
+export function farmTone(master: MasterState, farmId: string): TileTone {
+  return categoryTone(Math.max(0, master.properties.filter((p) => !p.deleted).findIndex((p) => p.id === farmId)));
+}
+
+/** A tapper's tone, as the farm screens give it (after the farm colours). */
+export function tapperTone(master: MasterState, tapperId: string | null): TileTone {
+  if (!tapperId) return 'neutral';
+  return categoryTone(4 + Math.max(0, filterPeople(master.people, 'tapper').findIndex((p) => p.id === tapperId)));
+}
+
+/** The sale in context plus everything the sale screens read beside it. */
+export function useSaleView() {
+  const sale = useSale();
+  const { state: master, reload } = useMaster();
+  const { era } = useI18n();
+  const msg = useT();
+  const [now] = useState(() => Date.now());
+  const day = saleDay(sale.state.startedTs, now);
+  const settings = master ? saleSettings(master) : null;
+  const mode = useMemo(() => saleNumbering(sale.events, settings?.numbering ?? 'per-tapper'), [sale.events, settings?.numbering]);
+  const nameOf = useCallback((id: string | null) => (id ? (master?.people.find((p) => p.id === id)?.name ?? '') : ''), [master]);
+  return {
+    ...sale,
+    master,
+    reloadMaster: reload,
+    ready: sale.ready && master !== null,
+    day,
+    mode,
+    settings,
+    nameOf,
+    saleTitle: msg('rec.saleOf', { date: formatThaiDate(sale.state.startedTs ?? now, era) }),
+  };
+}
+
+export type KvTone = 'plain' | 'total' | 'minus' | 'plus' | 'muted' | 'warn';
+
+/** One label / value line. `total` sits under a rule, bold. */
+export function Kv({ label, value, tone = 'plain', testID, indent }: { label: ReactNode; value: ReactNode; tone?: KvTone; testID?: string; indent?: boolean }) {
+  const t = useTheme();
+  const colour = tone === 'muted' ? t.color.inkSoft : tone === 'warn' ? t.color.warn : tone === 'plus' ? t.color.accept : t.color.ink;
+  const total = tone === 'total';
+  return (
+    <View
+      testID={testID}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        justifyContent: 'space-between',
+        gap: t.space.sm,
+        paddingVertical: t.space.xxs,
+        paddingLeft: indent ? t.space.md : 0,
+        ...(total ? { marginTop: t.space.xs, paddingTop: t.space.sm, borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint } : {}),
+      }}
+    >
+      <Text style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: total ? t.font.weight.bold : t.font.weight.regular, color: tone === 'plain' || total ? t.color.inkSoft : colour }}>
+        {label}
+      </Text>
+      <Text
+        style={{
+          fontFamily: t.font.family.sans,
+          fontSize: t.font.size.bodyLg,
+          fontWeight: t.font.weight.bold,
+          fontVariant: ['tabular-nums'],
+          color: colour,
+          textAlign: 'right',
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+/** A note band: `info` grey with "?", `warn` amber, `bad` red. */
+export function Banner({
+  tone = 'info',
+  icon,
+  title,
+  lines = [],
+  children,
+  testID,
+}: {
+  tone?: 'info' | 'warn' | 'bad';
+  icon?: IconRender;
+  title?: string;
+  lines?: readonly ReactNode[];
+  children?: ReactNode;
+  testID?: string;
+}) {
+  const t = useTheme();
+  const bg = tone === 'warn' ? t.color.warnSunk : tone === 'bad' ? t.color.rejectSunk : t.color.surfaceSunk;
+  const fg = tone === 'warn' ? t.color.warn : tone === 'bad' ? t.color.reject : t.color.inkSoft;
+  return (
+    <View testID={testID} style={{ flexDirection: 'row', gap: t.space.sm, backgroundColor: bg, borderRadius: t.radius.md, padding: t.space.md }}>
+      <View aria-hidden style={{ width: 16, alignItems: 'center', paddingTop: 2 }}>
+        {icon ? icon(fg) : <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: fg }}>?</Text>}
+      </View>
+      <View style={{ flex: 1, gap: t.space.xxs }}>
+        {title ? <AppText style={{ fontWeight: t.font.weight.bold, color: tone === 'info' ? t.color.ink : fg }}>{title}</AppText> : null}
+        {lines.map((l, i) => (
+          <AppText key={i} variant="bodySm" style={{ color: tone === 'info' ? t.color.inkSoft : t.color.ink }}>
+            {l}
+          </AppText>
+        ))}
+        {children}
+      </View>
+    </View>
+  );
+}
+
+/** "✓ สวน › ✓ คนกรีดยาง › จุดชั่ง" — done steps with a check, the current one bold. */
+export function Crumbs({ done, now }: { done: readonly string[]; now: string }) {
+  const t = useTheme();
+  const step = (label: string, isDone: boolean) => (
+    <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xxs }}>
+      {isDone ? <Check color={t.color.accept} size={10} /> : null}
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: isDone ? t.color.accept : t.color.ink }}>{label}</Text>
+    </View>
+  );
+  return (
+    <View testID="crumbs" style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: t.space.xs }}>
+      {done.map((d) => (
+        <View key={d} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
+          {step(d, true)}
+          <ChevronRight color={t.color.inkFaint} size={6} />
+        </View>
+      ))}
+      {step(now, false)}
+    </View>
+  );
+}
+
+/** A small warn-toned "ค่าเบี้ยว +2 กก." tag. */
+export function SkewTag({ label, testID }: { label: string; testID?: string }) {
+  const t = useTheme();
+  return (
+    <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs, alignSelf: 'flex-start', backgroundColor: t.color.warnSunk, borderRadius: t.radius.sm, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs }}>
+      <AlertIcon color={t.color.warn} size={12} />
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{label}</Text>
+    </View>
+  );
+}
+
+/** The recorder's point row: farm · point (and skew), then the tapper and "เปลี่ยนจุด". */
+export function PointBar({
+  place,
+  farmToneName,
+  tapper,
+  tapperToneName,
+  skew,
+  onSwitch,
+}: {
+  place: string;
+  farmToneName: TileTone;
+  tapper: string;
+  tapperToneName: TileTone;
+  skew?: string | null;
+  onSwitch?: () => void;
+}) {
+  const t = useTheme();
+  const msg = useT();
+  const ink = (tone: TileTone) => (tone === 'neutral' ? t.color.inkSoft : t.color[tone as 'category1']);
+  return (
+    <View testID="point-bar" style={{ backgroundColor: t.color.surfaceRaised, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleFaint, paddingHorizontal: t.space.lg, paddingVertical: t.space.md, gap: t.space.sm }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+        <PinIcon color={ink(farmToneName)} size={18} />
+        <Text testID="point-place" style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+          {place}
+        </Text>
+        {skew ? <SkewTag label={skew} testID="skew-tag" /> : null}
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+        <TapperIcon color={ink(tapperToneName)} size={16} />
+        <Text testID="point-tapper" style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, color: t.color.ink }}>
+          {tapper}
+        </Text>
+        {onSwitch ? (
+          <Pressable
+            testID="switch-point"
+            accessibilityRole="button"
+            onPress={onSwitch}
+            style={{
+              minHeight: t.target.min,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: t.space.sm,
+              paddingHorizontal: t.space.lg,
+              borderRadius: t.radius.pill,
+              borderWidth: t.border.thick,
+              borderColor: t.color.action,
+              backgroundColor: t.color.surfaceRaised,
+            }}
+          >
+            <SwapIcon color={t.color.action} size={16} />
+            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.action }}>{msg('rec.switch')}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+/** A sheet option: a tile, a bold title and its lines (mockup `.choice`). `primary` = the suggested one. */
+export function Choice({
+  icon,
+  title,
+  lines,
+  onPress,
+  primary,
+  testID,
+}: {
+  icon: IconRender;
+  title: string;
+  lines: readonly ReactNode[];
+  onPress: () => void;
+  primary?: boolean;
+  testID?: string;
+}) {
+  const t = useTheme();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={{
+        flexDirection: 'row',
+        gap: t.space.md,
+        padding: t.space.md,
+        borderRadius: t.radius.lg,
+        borderWidth: primary ? t.border.thick : t.border.hair,
+        borderColor: primary ? t.color.action : t.color.ruleStrong,
+        backgroundColor: primary ? t.color.actionSunk : t.color.surfaceRaised,
+      }}
+    >
+      <IconTile tone="action" icon={icon} />
+      <View style={{ flex: 1, gap: t.space.xxs }}>
+        <AppText style={{ fontWeight: t.font.weight.bold }}>{title}</AppText>
+        {lines.map((l, i) => (
+          <AppText key={i} variant="bodySm" style={{ color: t.color.ink }}>
+            {l}
+          </AppText>
+        ))}
+      </View>
+    </Pressable>
+  );
+}
+
+/** A rounded number chip inside a sentence: "52 กก." (mockup `.nchip`). */
+export function NumChip({ children, tone = 'plain', testID }: { children: ReactNode; tone?: 'plain' | 'warn' | 'scale'; testID?: string }) {
+  const t = useTheme();
+  const fg = tone === 'warn' ? t.color.warn : t.color.ink;
+  return (
+    <Text
+      testID={testID}
+      style={{
+        fontFamily: t.font.family.sans,
+        fontWeight: t.font.weight.bold,
+        fontVariant: ['tabular-nums'],
+        color: fg,
+        borderWidth: tone === 'scale' ? t.border.thick : t.border.hair,
+        borderColor: tone === 'warn' ? t.color.warn : t.color.ink,
+        borderRadius: t.radius.sm,
+        paddingHorizontal: t.space.xs,
+      }}
+    >
+      {children}
+    </Text>
+  );
+}
+
+/** A line with a small leading icon in soft ink (mockup `.mi`). */
+export function IconLine({ icon, children, testID, strong }: { icon?: IconRender; children: ReactNode; testID?: string; strong?: boolean }) {
+  const t = useTheme();
+  return (
+    <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
+      {icon ? <View aria-hidden style={{ width: 16, alignItems: 'center' }}>{icon(t.color.inkSoft)}</View> : null}
+      <Text style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: strong ? t.font.weight.bold : t.font.weight.regular, color: strong ? t.color.ink : t.color.inkSoft }}>
+        {children}
+      </Text>
+    </View>
+  );
+}
