@@ -1,0 +1,492 @@
+[
+ {
+  "pair": "farm-00.png",
+  "label": "farm",
+  "i": 0,
+  "caption": "1. เมนู ☰ — ข้อมูลฟาร์ม · ค่าใช้จ่ายทั้งหมด · เครื่องนี้ · สลับกลุ่มแตะ ☰ ที่หัว",
+  "app": "home"
+ },
+ {
+  "pair": "farm-01.png",
+  "label": "farm",
+  "i": 1,
+  "caption": "2. ข้อมูลฟาร์ม5 หมวดของกลุ่ม (บัญชีรับเงิน → หน้า 8b) · ตัวบอก sync ภาพรวมอยู่ที",
+  "app": "farm-data"
+ },
+ {
+  "pair": "farm-02.png",
+  "label": "farm",
+  "i": 2,
+  "caption": "3. ตั้งค่าวันขาย — ตาชั่ง · โหมดเลขเข่ง · น้ำหนักยางสุทธิคู่น้ำหนักเข่งประเภทตาช",
+  "app": "sale-settings"
+ },
+ {
+  "pair": "farm-03.png",
+  "label": "farm",
+  "i": 3,
+  "caption": "4. คน — รายการ + ตัวกรองตัวกรอง: ทุกคน · คนกรีดยาง · ผู้จัดการสวน · คนรับซื้อยาง",
+  "app": "people"
+ },
+ {
+  "pair": "farm-04.png",
+  "label": "farm",
+  "i": 4,
+  "caption": "5. คน — ฟอร์ม (เพิ่ม/แก้ใช้หน้าเดียวกัน)ชื่อ* · บทบาท* หลายอย่างได้ · บทบาทอื่นพ",
+  "app": "person-new"
+ },
+ {
+  "pair": "farm-05.png",
+  "label": "farm",
+  "i": 5,
+  "caption": "6. รายละเอียดคนกรีดยางทางไป จุดที่รับผิดชอบ · ส่วนแบ่ง (ประวัติอยู่หน้า 17) · บั",
+  "app": "person-detail"
+ },
+ {
+  "pair": "farm-06.png",
+  "label": "farm",
+  "i": 6,
+  "caption": "7. ลบคนกรีดยางที่ยังมีจุด — เตือน ไม่ขวางบอกรายชื่อจุดที่จะว่าง แต่กดลบได้ · เอา",
+  "app": "person-detail"
+ },
+ {
+  "pair": "farm-07.png",
+  "label": "farm",
+  "i": 7,
+  "caption": "8. คนรับซื้อยาง — รายการ + ฟอร์มป้าย \"ใช้ล่าสุด\" บอกค่าเริ่มต้นของการขายใหม่ · ฟ",
+  "app": "buyers"
+ },
+ {
+  "pair": "farm-08.png",
+  "label": "farm",
+  "i": 8,
+  "caption": "8b. บัญชีรับเงิน — รายการหลายบัญชี · ป้าย \"ค่าเริ่มต้น\" เล็ก ต่อท้ายชื่อธนาคาร ท",
+  "app": "fin-accounts"
+ },
+ {
+  "pair": "farm-09.png",
+  "label": "farm",
+  "i": 9,
+  "caption": "8c. บัญชีรับเงิน — ฟอร์ม (เพิ่ม/แก้ใช้หน้าเดียวกัน)ธนาคาร (เลือกจากรายการ) · เลข",
+  "app": "fin-accounts"
+ },
+ {
+  "pair": "farm-10.png",
+  "label": "farm",
+  "i": 10,
+  "caption": "8d. ลบบัญชีค่าเริ่มต้น — ต้องยืนยันบอกตรง ๆ ว่าหลังลบไม่มีบัญชีค่าเริ่มต้น และตอ",
+  "app": "fin-accounts"
+ },
+ {
+  "pair": "farm-11.png",
+  "label": "farm",
+  "i": 11,
+  "caption": "8e. เปลี่ยนบัญชีค่าเริ่มต้น — ไม่ถาม แต่เห็นผลทันทีป้าย \"ค่าเริ่มต้น\" ย้ายไปที่อ",
+  "app": "fin-accounts"
+ },
+ {
+  "pair": "farm-12.png",
+  "label": "farm",
+  "i": 12,
+  "caption": "9. สวน — รายการประเภท · พื้นที่ ณ วันนี้ · จำนวนจุดชั่ง คนละบรรทัด · พื้นที่ไม่ใ",
+  "app": "properties"
+ },
+ {
+  "pair": "farm-13.png",
+  "label": "farm",
+  "i": 13,
+  "caption": "10. สวน — ฟอร์มบังคับแค่ชื่อ + ประเภท · พื้นที่/ปีที่ปลูก/GPS ว่างได้ = \"ไม่ทราบ",
+  "app": "property-new"
+ },
+ {
+  "pair": "farm-14.png",
+  "label": "farm",
+  "i": 14,
+  "caption": "11. สวน — รายละเอียด + ประวัติพื้นที่เปลี่ยนพื้นที่ = เพิ่มบรรทัดใหม่พร้อมวันที่",
+  "app": "properties"
+ },
+ {
+  "pair": "farm-15.png",
+  "label": "farm",
+  "i": 15,
+  "caption": "12. ลบสวน (กู้คืนได้) — จุดชั่งหายตามลบได้เสมอ ไม่ขวางเพราะรายการหักเงินคนกรีดยา",
+  "app": "properties"
+ },
+ {
+  "pair": "farm-16.png",
+  "label": "farm",
+  "i": 16,
+  "caption": "13. ตัวช่วยตั้งค่าจุดชั่ง — เลือกสวน → คนกรีดยาง → จำนวนจุดตัวช่วยแบบทั่วไป ไม่ม",
+  "app": "points-wizard"
+ },
+ {
+  "pair": "farm-17.png",
+  "label": "farm",
+  "i": 17,
+  "caption": "13b. ตัวช่วยตั้งค่าจุดชั่ง — ใส่ชื่อจุด แล้วสร้างทีเดียวชื่อจุดบังคับทุกช่อง ไม่",
+  "app": "points-wizard"
+ },
+ {
+  "pair": "farm-18.png",
+  "label": "farm",
+  "i": 18,
+  "caption": "14. จุดชั่ง — ชื่อซ้ำในสวนเดียวกันไม่ได้ · หลังบันทึกเสนอมอบหมายข้อความบอกเหตุ ไ",
+  "app": "points-wizard"
+ },
+ {
+  "pair": "farm-19.png",
+  "label": "farm",
+  "i": 19,
+  "caption": "",
+  "app": "points-wizard"
+ },
+ {
+  "pair": "farm-20.png",
+  "label": "farm",
+  "i": 20,
+  "caption": "15. หน้าจุดชั่ง → คนกรีดยางของจุด + แผนที่ตั้งไว้จุดละ 1 คน ณ วันหนึ่ง · แผนล่วง",
+  "app": null
+ },
+ {
+  "pair": "farm-21.png",
+  "label": "farm",
+  "i": 21,
+  "caption": "16. วางแผนเปลี่ยนคนกรีดยางมีคนใหม่ (คนเดิมสิ้นสุดวันก่อนอัตโนมัติ) · ลาออกไม่มีค",
+  "app": null
+ },
+ {
+  "pair": "farm-22.png",
+  "label": "farm",
+  "i": 22,
+  "caption": "17. ส่วนแบ่ง — ปุ่มสำเร็จรูป / กำหนดเอง + วันที่มีผล + ประวัติตัวเลือกเหลือ 50/5",
+  "app": "person-detail"
+ },
+ {
+  "pair": "farm-23.png",
+  "label": "farm",
+  "i": 23,
+  "caption": "18. ค่าใช้จ่าย — ฟอร์มบังคับแค่จำนวนเงิน + วันที่ · วงจรเริ่มต้น = เกิดจริง · หม",
+  "app": "fin-expenses"
+ },
+ {
+  "pair": "farm-24.png",
+  "label": "farm",
+  "i": 24,
+  "caption": "19. ค่าใช้จ่าย — รายการ + ตัวกรองเกิดจริง = ทึบ · ผูกพันแล้ว = มีกรอบ · วางแผน =",
+  "app": "fin-expenses"
+ },
+ {
+  "pair": "farm-25.png",
+  "label": "farm",
+  "i": 25,
+  "caption": "19b. ยังไม่บันทึกผู้จ่าย → เลือกหลายรายการ → ใส่ผู้จ่ายทีเดียวค่าใช้จ่ายส่วนเจ้า",
+  "app": "fin-expenses"
+ },
+ {
+  "pair": "farm-26.png",
+  "label": "farm",
+  "i": 26,
+  "caption": "19c. ยังไม่คืนผู้จ่าย → กรองผู้จ่าย → บันทึกการคืนทีเดียวกรองสองชั้น (ยังไม่คืน ",
+  "app": "fin-expenses"
+ },
+ {
+  "pair": "farm-27.png",
+  "label": "farm",
+  "i": 27,
+  "caption": "20. หน้า \"ค้างใคร\"ยอดคงเหลือรวมต่อคน เจาะลงถึงค่าใช้จ่ายต้นทาง · สถานะ ค้าง / คื",
+  "app": "fin-owed"
+ },
+ {
+  "pair": "farm-28.png",
+  "label": "farm",
+  "i": 28,
+  "caption": "21. บันทึกการคืนใครคืนให้ใคร (ผู้คืนเริ่มต้น = เงินสวน) · ใส่ยอดได้ · หลายรายการ",
+  "app": "fin-repay"
+ },
+ {
+  "pair": "farm-29.png",
+  "label": "farm",
+  "i": 29,
+  "caption": "22. บัญชีหนี้คนงาน — ยอดค้าง · แผนผ่อน · สรุปเทียบยอด · ประวัติสรุปเทียบยอด: Σ ห",
+  "app": "fin-debts"
+ },
+ {
+  "pair": "farm-30.png",
+  "label": "farm",
+  "i": 30,
+  "caption": "23. เพิ่มหนี้ — ค่าปุ๋ย + % + ผู้จ่ายไม่บังคับประเภท เงินยืม/เบิกล่วงหน้า · ค่าป",
+  "app": "fin-debts-add"
+ },
+ {
+  "pair": "farm-31.png",
+  "label": "farm",
+  "i": 31,
+  "caption": "24. จ่ายคืนนอกการขายตัวอย่าง: นัดคืน อาจารย์สมหวัง 500 เอง (ไม่ผ่านเงินสวน) · ยอ",
+  "app": "fin-debts-pay"
+ },
+ {
+  "pair": "farm-32.png",
+  "label": "farm",
+  "i": 32,
+  "caption": "25. หน้าแรก — รายการที่ต้องจ่าย · ค่าใช้จ่ายทั้งหมด · ข้อมูลคนงานส่วนล่างของหน้า",
+  "app": "home"
+ },
+ {
+  "pair": "farm-33.png",
+  "label": "farm",
+  "i": 33,
+  "caption": "26. ข้อมูลคนงาน → รายชื่อคน กรองคนกรีดยางเปิดรายชื่อคน (หน้า 4) โดยเลือกตัวกรอง ",
+  "app": "people"
+ },
+ {
+  "pair": "farm-34.png",
+  "label": "farm",
+  "i": 34,
+  "caption": "27. รายการที่ต้องจ่ายยอดรวมเดียวด้านบน · ตัวกรองแยก เงินที่สวนต้องคืน (คงเหลือ >",
+  "app": "home"
+ },
+ {
+  "pair": "farm-35.png",
+  "label": "farm",
+  "i": 35,
+  "caption": "28. กติกาทั่วไป (รวมรูปแบบที่ใช้ทุกหน้า — ไม่ใช่หน้าจริง)หนึ่งข้อมูลต่อบรรทัด มี",
+  "app": null
+ },
+ {
+  "pair": "sale-00.png",
+  "label": "sale",
+  "i": 0,
+  "caption": "4. รายการการขายทั้งหมด",
+  "app": "home"
+ },
+ {
+  "pair": "sale-01.png",
+  "label": "sale",
+  "i": 1,
+  "caption": "5. เริ่มการขาย — หัวการขาย",
+  "app": "sale-new-setup"
+ },
+ {
+  "pair": "sale-02.png",
+  "label": "sale",
+  "i": 2,
+  "caption": "6. เลือก สวน → คนกรีดยาง → จุดชั่ง",
+  "app": "sale-new-setup"
+ },
+ {
+  "pair": "sale-03.png",
+  "label": "sale",
+  "i": 3,
+  "caption": "7. ตรวจตาชั่งเปล่า + น้ำหนักยางสุทธิ",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-04.png",
+  "label": "sale",
+  "i": 4,
+  "caption": "8. นับเข่ง — โหมดผู้บันทึก (ปรับตามคอมเมนต์เจ้าของ)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-05.png",
+  "label": "sale",
+  "i": 5,
+  "caption": "8a. ชั่งที่จุดที่ยังไม่มีคนกรีดยาง (ใหม่)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-06.png",
+  "label": "sale",
+  "i": 6,
+  "caption": "9. นับเข่ง — โหมดสาธารณะ",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-07.png",
+  "label": "sale",
+  "i": 7,
+  "caption": "7a. ตาชั่งเปล่าอ่านไม่เป็น 0 — เลือก 2 ทาง (ใหม่)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-08.png",
+  "label": "sale",
+  "i": 8,
+  "caption": "7b. รอเปลี่ยนตาชั่ง (ใหม่)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-09.png",
+  "label": "sale",
+  "i": 9,
+  "caption": "7c. ตรวจตาชั่งเปล่าเมื่อรับเข็มเบี้ยว (ใหม่)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-10.png",
+  "label": "sale",
+  "i": 10,
+  "caption": "8b. นับเข่ง เมื่อมีค่าเบี้ยว +2 กก. (ใหม่)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-11.png",
+  "label": "sale",
+  "i": 11,
+  "caption": "10-เบี้ยว. บันทึกเข่งไม่เต็ม เมื่อมีค่าเบี้ยว (ใหม่)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-12.png",
+  "label": "sale",
+  "i": 12,
+  "caption": "11-เบี้ยว. มีเข่งไม่เต็มเปิดอยู่ เมื่อมีค่าเบี้ยว (ใหม่)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-13.png",
+  "label": "sale",
+  "i": 13,
+  "caption": "8c. ย้ายจุดเมื่อมีค่าเบี้ยว — ตรวจตาชั่งเปล่าทุกครั้ง (ใหม่)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-14.png",
+  "label": "sale",
+  "i": 14,
+  "caption": "12-เบี้ยว. เปลี่ยนจุด — คนกรีดยางคนเดิม เมื่อมีค่าเบี้ยว (ใหม่)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-15.png",
+  "label": "sale",
+  "i": 15,
+  "caption": "13-เบี้ยว. เติมให้เต็มเข่งที่จุดใหม่ เมื่อมีค่าเบี้ยว (ใหม่)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-16.png",
+  "label": "sale",
+  "i": 16,
+  "caption": "10. บันทึกเข่งไม่เต็ม — แผ่นเลื่อนขึ้นเลือกน้ำหนัก",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-17.png",
+  "label": "sale",
+  "i": 17,
+  "caption": "11. มีเข่งไม่เต็มเปิดอยู่",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-18.png",
+  "label": "sale",
+  "i": 18,
+  "caption": "12. เปลี่ยนจุด — คนกรีดยางคนเดิม มีเข่งเปิดอยู่ (โหมดนับต่อเนื่องตามคนกรีดยาง)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-19.png",
+  "label": "sale",
+  "i": 19,
+  "caption": "13. เติมให้เต็มเข่งที่จุดใหม่ (ทางเลือก 1)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-20.png",
+  "label": "sale",
+  "i": 20,
+  "caption": "12-ต่อจุด. เปลี่ยนจุด — คนกรีดยางคนเดิม (โหมดเริ่มนับเข่ง 1 ทุกจุด)",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-21.png",
+  "label": "sale",
+  "i": 21,
+  "caption": "12a. ลบจุดที่การขายเปิดอยู่ใช้ — ถามทุกครั้ง",
+  "app": "properties"
+ },
+ {
+  "pair": "sale-22.png",
+  "label": "sale",
+  "i": 22,
+  "caption": "12b. การขายต้องเลือกจุดใหม่",
+  "app": "properties"
+ },
+ {
+  "pair": "sale-23.png",
+  "label": "sale",
+  "i": 23,
+  "caption": "14. บันทึกย้อนหลัง — ใส่ตัวเลขแทนกดค้าง",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-24.png",
+  "label": "sale",
+  "i": 24,
+  "caption": "15. แนบหลักฐาน — เลือกประเภทก่อน",
+  "app": "sale-open-counter"
+ },
+ {
+  "pair": "sale-25.png",
+  "label": "sale",
+  "i": 25,
+  "caption": "16. ชั่งครบแล้ว → ตรวจยอดกับคนรับซื้อยาง (กดยืนยัน)",
+  "app": "sale-closed-settlement"
+ },
+ {
+  "pair": "sale-26.png",
+  "label": "sale",
+  "i": 26,
+  "caption": "17. สรุปยอดส่วนแบ่ง + หักหนี้ (ใหม่ — แทนหน้า 18 \"สรุปเงิน\" ของ v4)",
+  "app": "sale-closed-settlement"
+ },
+ {
+  "pair": "sale-27.png",
+  "label": "sale",
+  "i": 27,
+  "caption": "17a. หักเงินคืนหนี้ — นัด (ใหม่)",
+  "app": "sale-closed-settlement"
+ },
+ {
+  "pair": "sale-28.png",
+  "label": "sale",
+  "i": 28,
+  "caption": "18. ถามการปัดเศษ — หลังหักหนี้ (ย้ายจาก v4 หน้า 17)",
+  "app": "sale-closed-settlement"
+ },
+ {
+  "pair": "sale-29.png",
+  "label": "sale",
+  "i": 29,
+  "caption": "18a. เทียบยอด (ใหม่)",
+  "app": "sale-closed-settlement"
+ },
+ {
+  "pair": "sale-30.png",
+  "label": "sale",
+  "i": 30,
+  "caption": "19. สถานะการจ่ายเงิน และปิดการขาย",
+  "app": "sale-closed-settlement"
+ },
+ {
+  "pair": "sale-31.png",
+  "label": "sale",
+  "i": 31,
+  "caption": "17b. ให้คนรับซื้อยางดูบัญชี — บัญชีมีพร้อมเพย์ (ใหม่)",
+  "app": "fin-show-account"
+ },
+ {
+  "pair": "sale-32.png",
+  "label": "sale",
+  "i": 32,
+  "caption": "17c. ให้คนรับซื้อยางดูบัญชี — บัญชีไม่มีพร้อมเพย์ (ใหม่)",
+  "app": "fin-show-account"
+ },
+ {
+  "pair": "sale-33.png",
+  "label": "sale",
+  "i": 33,
+  "caption": "20. สถานะ sync และตัดสินรายการขัดกัน",
+  "app": "home"
+ }
+]
