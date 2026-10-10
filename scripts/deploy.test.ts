@@ -12,7 +12,7 @@ let log: string;
 
 // A throwaway repo root with a fake `firebase` that records its argv, so the
 // script is exercised end to end without ever touching Google.
-function setup({ dist = true, firebaseExit = 0 } = {}) {
+function setup({ dist = true, firebaseExit = 0, firebaseOut = '' } = {}) {
   work = mkdtempSync(join(tmpdir(), 'deploy-'));
   log = join(work, 'firebase.log');
   if (dist) {
@@ -23,7 +23,7 @@ function setup({ dist = true, firebaseExit = 0 } = {}) {
   mkdirSync(bin);
   writeFileSync(
     join(bin, 'firebase'),
-    `#!/usr/bin/env bash\necho "$@" >> "${log}"\nexit ${firebaseExit}\n`,
+    `#!/usr/bin/env bash\necho "$@" >> "${log}"\ncat <<'OUT'\n${firebaseOut}\nOUT\nexit ${firebaseExit}\n`,
   );
   chmodSync(join(bin, 'firebase'), 0o755);
   return bin;
@@ -105,6 +105,58 @@ describe('deploy.sh preview', () => {
   });
 });
 
+describe('deploy.sh preview-delete', () => {
+  const channels = (...names: string[]) =>
+    JSON.stringify({
+      status: 'success',
+      result: {
+        channels: names.map((n) => ({ name: `projects/1/sites/mon-farm-dev/channels/${n}` })),
+      },
+    });
+
+  it('deletes an existing channel from the dev site', () => {
+    setup({ dist: false, firebaseOut: channels('live', 'pr-12') });
+    const r = run(['preview-delete', 'pr-12']);
+    expect(r.status).toBe(0);
+    const calls = readFileSync(log, 'utf8');
+    expect(calls).toMatch(/hosting:channel:list --site mon-farm-dev --json/);
+    expect(calls).toMatch(/hosting:channel:delete pr-12 --site mon-farm-dev --force/);
+  });
+
+  // Docs-only PRs never get a channel, and Firebase may already have expired
+  // it: closing such a PR must not go red.
+  it('succeeds without deleting when the channel does not exist', () => {
+    setup({ dist: false, firebaseOut: channels('live', 'pr-120') });
+    const r = run(['preview-delete', 'pr-12']);
+    expect(r.status).toBe(0);
+    expect(readFileSync(log, 'utf8')).not.toMatch(/channel:delete/);
+  });
+
+  it('never deletes the live channel', () => {
+    setup({ dist: false, firebaseOut: channels('live') });
+    expect(run(['preview-delete', 'live']).status).not.toBe(0);
+    expect(() => readFileSync(log, 'utf8')).toThrow();
+  });
+
+  it('requires a safe channel name', () => {
+    setup({ dist: false });
+    expect(run(['preview-delete']).status).not.toBe(0);
+    expect(run(['preview-delete', 'x;rm -rf']).status).not.toBe(0);
+    expect(() => readFileSync(log, 'utf8')).toThrow();
+  });
+
+  it('fails when the channel list cannot be read', () => {
+    setup({ dist: false, firebaseExit: 1 });
+    expect(run(['preview-delete', 'pr-12']).status).not.toBe(0);
+  });
+
+  it('in CI, refuses without a service credential', () => {
+    setup({ dist: false, firebaseOut: channels('pr-12') });
+    expect(run(['preview-delete', 'pr-12'], { CI: 'true' }).status).not.toBe(0);
+    expect(() => readFileSync(log, 'utf8')).toThrow();
+  });
+});
+
 describe('firebase config', () => {
   const firebase = JSON.parse(readFileSync(join(root, 'firebase.json'), 'utf8'));
   const rc = JSON.parse(readFileSync(join(root, '.firebaserc'), 'utf8'));
@@ -115,6 +167,12 @@ describe('firebase config', () => {
     expect(targets.hosting.dev).toEqual(['mon-farm-dev']);
     expect(targets.hosting.prod).toEqual(['mon-farm-prod']);
     expect(sites.map((s) => s.target).sort()).toEqual(['dev', 'prod']);
+  });
+
+  // preview-delete has to name the site (channel commands take no target).
+  it('deploy.sh deletes previews on the site the dev target maps to', () => {
+    const targets = Object.values(rc.targets)[0] as any;
+    expect(readFileSync(script, 'utf8')).toContain(`dev_site=${targets.hosting.dev[0]}`);
   });
 
   it.each(['dev', 'prod'])('%s serves dist/ as an SPA', (t) => {
