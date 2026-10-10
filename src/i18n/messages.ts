@@ -349,6 +349,9 @@ const th = {
   // ── Finance: expenses, money owed back, repayments (E11-S01..S03) ───────
   'fin.open': 'ค่าใช้จ่ายทั้งหมด',
   'fin.list.title': 'ค่าใช้จ่ายทั้งหมด',
+  'fin.baht': 'บาท',
+  'fin.money.in': 'เข้า',
+  'fin.money.out': 'ออก',
   'fin.list.add': 'บันทึกค่าใช้จ่าย',
   'fin.list.empty': 'ยังไม่มีค่าใช้จ่าย',
   'fin.list.owed': 'ค้างใคร',
@@ -453,6 +456,7 @@ const th = {
   'debt.list.title': 'บัญชีหนี้คนงาน',
   'debt.list.empty': 'ยังไม่มีบัญชีหนี้ — เลือกคนงานเพื่อเพิ่มหนี้',
   'debt.list.pick': 'เพิ่มหนี้ให้',
+  'debt.list.owes': 'หนี้ที่ติดสวน {amount}',
   'debt.title': 'บัญชีหนี้ {name}',
   'debt.balance': '{name}ค้างสวน',
   'debt.farmOwes': 'สวนติดเงิน{name}',
@@ -517,7 +521,8 @@ const th = {
   'debt.pay.anyway': 'บันทึกต่อ',
 
   // ── Deduct debt at settlement (E06-S04) ─────────────────────────────────
-  'deduct.owes': 'ค้างสวน {amount}',
+  'deduct.owes': 'หนี้ที่ติดสวน {amount}',
+  'deduct.owedBack': 'สวนต้องคืน{name} {amount}',
   'deduct.plan': 'แผนผ่อน {amount} / การขาย',
   'deduct.button': 'หักเงินคืนหนี้',
   'deduct.amount': 'ยอดหักหนี้ (ไม่เกิน {cap})',
@@ -824,6 +829,9 @@ const en: Partial<Record<keyof typeof th, string>> = {
 
   'fin.open': 'all expenses',
   'fin.list.title': 'all expenses',
+  'fin.baht': 'baht',
+  'fin.money.in': 'in',
+  'fin.money.out': 'out',
   'fin.list.add': 'record expense',
   'fin.list.empty': 'no expenses yet',
   'fin.list.owed': 'owed to whom',
@@ -927,6 +935,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'debt.list.title': 'worker debts',
   'debt.list.empty': 'no debt accounts yet — pick a worker to add a debt',
   'debt.list.pick': 'add a debt for',
+  'debt.list.owes': 'owes the farm {amount}',
   'debt.title': 'debts of {name}',
   'debt.balance': '{name} owes the farm',
   'debt.farmOwes': 'the farm owes {name}',
@@ -991,6 +1000,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'debt.pay.anyway': 'save anyway',
 
   'deduct.owes': 'owes the farm {amount}',
+  'deduct.owedBack': 'the farm owes {name} {amount}',
   'deduct.plan': 'plan {amount} per sale',
   'deduct.button': 'deduct debt',
   'deduct.amount': 'deduct (at most {cap})',

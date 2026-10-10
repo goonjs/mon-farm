@@ -12,8 +12,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import { Button, TopBar } from '../../components/chrome';
-import { Chip, ChipRow, Input, Label, Note, PayerPicker } from '../../components/finance/parts';
+import { Button } from '../../components/chrome';
+import { Chip, ChipRow, Input, Label, Note, PayerPicker, ScreenHeader } from '../../components/finance/parts';
 import { allocateOldestFirst, type Reimbursement } from '../../core/finance/ledger';
 import { formatDate, formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../core/finance/money';
 import { FARM_FUNDS, type Allocation, type Payer } from '../../core/finance/types';
@@ -38,10 +38,7 @@ export default function RepayScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar
-        crumb={msg('fin.repay.title')}
-        right={<Button testID="repay-back" onPress={leave}>{msg('common.back')}</Button>}
-      />
+      <ScreenHeader testID="repay" title={msg('fin.repay.title')} onBack={leave} />
       {fin.state === null ? (
         <Text style={{ padding: t.space.md, fontFamily: t.font.family.mono, color: t.color.inkSoft }}>{msg('counter.loading')}</Text>
       ) : debts.length === 0 ? (

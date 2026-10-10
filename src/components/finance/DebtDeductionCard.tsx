@@ -27,7 +27,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useTheme } from '../../theme';
 import { Button } from '../chrome';
-import { Chip, ChipRow, Input, Note } from './parts';
+import { Card, Chip, ChipRow, Fact, Input, MoneyLine, Note } from './parts';
 import { useInFlight } from '../../finance/use-in-flight';
 
 type Route = Exclude<DebtPaymentMethod, 'outside' | 'netting'>;
@@ -125,22 +125,29 @@ export function DebtDeductionCard({ saleId, worker, shareSatang }: { saleId: str
 
   return (
     <View testID={`deduct-${worker.id}`} style={{ gap: t.space.xs, paddingTop: t.space.xs }}>
-      {account ? (
-        <Note testID={`deduct-owes-${worker.id}`}>
-          {msg('deduct.owes', { amount: formatSatang(balance) })}
-          {account.planPerSaleSatang != null ? ` · ${msg('deduct.plan', { amount: formatSatang(account.planPerSaleSatang) })}` : ''}
-        </Note>
+      {account || owedBackSatang > 0 ? (
+        <Card tone="accent">
+          {account ? (
+            <Fact mark="money" testID={`deduct-owes-${worker.id}`}>
+              {msg('deduct.owes', { amount: formatSatang(balance) })}
+              {account.planPerSaleSatang != null ? ` · ${msg('deduct.plan', { amount: formatSatang(account.planPerSaleSatang) })}` : ''}
+            </Fact>
+          ) : null}
+          {owedBackSatang > 0 ? <Fact mark="note">{msg('deduct.owedBack', { name: worker.name, amount: formatSatang(owedBackSatang) })}</Fact> : null}
+        </Card>
       ) : null}
 
       {atThisSale.map((p) => (
-        <View key={p.id} style={{ gap: t.space.xxs }}>
-          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>
-            {p.method === 'netting' ? msg('deduct.netLine') : msg('deduct.line', { method: msg(`debt.method.${p.method}`) })}
-          </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.xs }}>
-            <Text style={{ flex: 1, fontFamily: t.font.family.mono, fontSize: t.font.size.small, color: t.color.ink }}>{`−${formatSatang(p.amountSatang)}`}</Text>
-            <Button testID={`deduct-void-${p.id}`} variant="destructive" onPress={() => void inFlight.run(() => voidPayment(p.id))}>{msg('deduct.void')}</Button>
+        <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
+          <View style={{ flex: 1 }}>
+            <MoneyLine
+              testID={`deduct-line-${p.id}`}
+              label={p.method === 'netting' ? msg('deduct.netLine') : msg('deduct.line', { method: msg(`debt.method.${p.method}`) })}
+              satang={p.amountSatang}
+              dir="out"
+            />
           </View>
+          <Button testID={`deduct-void-${p.id}`} variant="destructive" onPress={() => void inFlight.run(() => voidPayment(p.id))}>{msg('deduct.void')}</Button>
         </View>
       ))}
       {atThisSale.some((p) => p.method === 'cash-from-share' && needsChange(shareSatang, p.amountSatang)) ? (
@@ -154,9 +161,9 @@ export function DebtDeductionCard({ saleId, worker, shareSatang }: { saleId: str
         </Note>
       ) : null}
       {atThisSale.length ? (
-        <View style={{ flexDirection: 'row' }}>
-          <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('deduct.cash')}</Text>
-          <Text testID={`deduct-cash-${worker.id}`} style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, paddingTop: t.space.xs }}>
+          <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>{msg('deduct.cash')}</Text>
+          <Text testID={`deduct-cash-${worker.id}`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingXl, fontWeight: t.font.weight.bold, color: t.color.ink }}>
             {formatSatang(cash)}
           </Text>
         </View>
@@ -168,7 +175,7 @@ export function DebtDeductionCard({ saleId, worker, shareSatang }: { saleId: str
           <Button testID={`deduct-open-${worker.id}`} onPress={() => setEditing(true)}>{msg('deduct.button')}</Button>
         ) : null
       ) : (
-        <View style={{ gap: t.space.xs, padding: t.space.sm, borderRadius: t.radius.md, backgroundColor: t.color.surfaceSunk }}>
+        <View style={{ gap: t.space.xs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.thick, borderColor: t.color.action, backgroundColor: t.color.actionSunk }}>
           {owedBackSatang > 0 ? (
             <View style={{ gap: t.space.xs }}>
               <Note tone="warn">{msg('deduct.netOffer', { name: worker.name, amount: formatSatang(owedBackSatang) })}</Note>
