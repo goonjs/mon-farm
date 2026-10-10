@@ -49,6 +49,12 @@ import { useTheme, useThemeControls } from '../../../theme';
 
 type TabKey = 'count' | 'pile' | 'log';
 
+/** A money-changing edit from the recorder, waiting for its reason on a Completed sale (E04-S11). */
+type MoneyAction =
+  | { kind: 'undo' }
+  | { kind: 'edit'; id: string; change: { netG: number; pointId: string } }
+  | { kind: 'void'; id: string };
+
 /**
  * Message ids, resolved at the call site rather than here. `Tabs` stays a
  * presentational component that renders whatever string it is handed — it has
@@ -139,7 +145,8 @@ export default function CounterScreen() {
   // E04-S09: the basket being edited from the recorder's list.
   const [editingId, setEditingId] = useState<string | null>(null);
   // E04-S11: a money-changing edit on a Completed sale waits here for its reason.
-  const [moneyGate, setMoneyGate] = useState<{ targetId: string; run: () => void } | null>(null);
+  // What it waits to do is stored as data and re-checked against the log on confirm (review S3).
+  const [moneyGate, setMoneyGate] = useState<MoneyAction | null>(null);
   const [confirmCancelSale, setConfirmCancelSale] = useState(false);
   const [now] = useState(() => Date.now());
   // Events of this sale not sent yet (SYNC-3) — re-read whenever the log grows.
@@ -215,6 +222,8 @@ export default function CounterScreen() {
   };
 
   const confirmShort = () => {
+    // Another device may have completed the sale while the panel was open (review S1).
+    if (state.saleStatus !== 'draft') return setShortOpen(false);
     const point = pointFields();
     append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG, ...(skewG ? { skewG } : {}), ...point });
     if (speechOn) announceCount(point.basketNo ?? nextCount, speaker, append);
@@ -305,7 +314,9 @@ export default function CounterScreen() {
   // At a point, undo means the last basket of the number sequence, in either
   // mode (review S3); a finished sale is only edited from the recorder's list.
   const sequenceLast = figures ? ((events.find((e) => e.id === figures.lastId) as BasketEvent | undefined) ?? null) : lastBasket;
-  const classicUndo = figures && state.saleStatus !== 'draft' ? null : sequenceLast;
+  // A finished sale takes no new basket and no undo outside the recorder's list (review S1/S2).
+  const finished = state.saleStatus !== 'draft';
+  const classicUndo = finished ? null : sequenceLast;
 
   if (figures && master && pile.status === 'counting' && !waiting && !publicMode) {
     const tapperId = tapperOn(master, pile.id, day);
@@ -318,50 +329,70 @@ export default function CounterScreen() {
     const editingRow = rows.find((r) => r.id === editingId);
     const saleDayPoints = master.points.filter((p) => !p.deleted && master.properties.some((f) => f.id === p.propertyId && !f.deleted));
 
+    const draft = state.saleStatus === 'draft';
+
+    // The edit itself, against the log as it is now. Returns what it touched,
+    // or null when there is nothing to do any more (voided or changed meanwhile).
+    const perform = (action: MoneyAction): string | null => {
+      if (action.kind === 'undo') {
+        if (!sequenceLast) return null;
+        doUndo(sequenceLast);
+        return sequenceLast.id;
+      }
+      const target = events.find((e) => e.id === action.id) as BasketEvent | undefined;
+      const row = rows.find((r) => r.id === action.id);
+      if (!target || target.basketNo === undefined || row?.status !== 'live') return null;
+      if (action.kind === 'void') {
+        append({ kind: 'correction', pileId: target.pileId, targetId: target.id, mode: 'void', reason: msg('edit.voidReason') });
+        return target.id;
+      }
+      const { netG, pointId } = action.change;
+      if (netG === row.netG && pointId === row.pointId) return null;
+      // A new pile takes the source pile's standard weights, never the edited basket's (review S2).
+      const source = state.piles.find((p) => p.id === target.pileId) ?? pile;
+      const pair = { pairId: '', netG: source.stdNetG, basketG: source.tareG };
+      for (const payload of pointSetupPayloads(state, master, pointId, pair)) append({ kind: 'sys', payload });
+      append({ kind: 'correction', pileId: target.pileId, targetId: target.id, mode: 'void', reason: msg('edit.reason') });
+      const at = { pileId: pointId, pointId, basketNo: target.basketNo, editOf: target.id };
+      if (target.kind === 'accept') append({ kind: 'accept', input: 'edit', netG, tareG: target.tareG, ...at });
+      else append({ kind: 'short', readingG: netG + target.tareG + (target.skewG ?? 0), tareG: target.tareG, ...(target.skewG ? { skewG: target.skewG } : {}), ...at });
+      return target.id;
+    };
+    const targetOf = (action: MoneyAction): string | null => {
+      if (action.kind === 'undo') return sequenceLast?.id ?? null;
+      const row = rows.find((r) => r.id === action.id);
+      if (row?.status !== 'live') return null;
+      if (action.kind === 'edit' && action.change.netG === row.netG && action.change.pointId === row.pointId) return null;
+      return row.id;
+    };
+
     // After Completed, an edit that changes money asks why first and flags the
-    // payment for a recheck (SALE-21); a draft edits straight away.
-    const guardMoney = (targetId: string, run: () => void) => {
-      if (state.saleStatus === 'completed') setMoneyGate({ targetId, run });
-      else run();
+    // payment for a recheck (SALE-21); a draft edits straight away. On confirm the
+    // target is looked up again, so a flag is only ever written with a real change.
+    const act = (action: MoneyAction) => {
+      if (moneyGate) return; // one pending edit at a time
+      if (state.saleStatus === 'completed') setMoneyGate(action);
+      else perform(action);
+      if (action.kind !== 'undo') setEditingId(null);
     };
     const confirmMoney = (reason: string) => {
       if (!moneyGate) return;
-      append({ kind: 'sys', payload: { t: 'money_edit', reason, targetId: moneyGate.targetId } });
-      moneyGate.run();
+      const targetId = targetOf(moneyGate);
+      if (targetId) {
+        append({ kind: 'sys', payload: { t: 'money_edit', reason, targetId } });
+        perform(moneyGate);
+      }
       setMoneyGate(null);
     };
-    const draft = state.saleStatus === 'draft';
 
-    // An edit is a void of the old basket plus a new one that names it (E04-S09):
-    // same number, same kind; the original stays in the log.
     const saveEdit = (change: { netG: number; pointId: string }) => {
-      if (!editing || !editingRow) return;
+      if (!editingRow) return;
+      // Nothing changed: not an edit, never a reason prompt (AC: no-money edits ask nothing).
       if (change.netG === editingRow.netG && change.pointId === editingRow.pointId) return setEditingId(null);
-      guardMoney(editing.id, () => applyEdit(change));
-    };
-    const applyEdit = ({ netG, pointId }: { netG: number; pointId: string }) => {
-      if (!editing || editing.basketNo === undefined) return;
-      // Voided meanwhile (another device), or nothing changed: write nothing.
-      if (editingRow?.status !== 'live' || (netG === editingRow.netG && pointId === editingRow.pointId)) {
-        setEditingId(null);
-        return;
-      }
-      // A new pile takes the source pile's standard weights, never the edited basket's (review S2).
-      const source = state.piles.find((p) => p.id === editing.pileId) ?? pile;
-      const pair = { pairId: '', netG: source.stdNetG, basketG: source.tareG };
-      for (const payload of pointSetupPayloads(state, master, pointId, pair)) append({ kind: 'sys', payload });
-      append({ kind: 'correction', pileId: editing.pileId, targetId: editing.id, mode: 'void', reason: msg('edit.reason') });
-      const at = { pileId: pointId, pointId, basketNo: editing.basketNo, editOf: editing.id };
-      if (editing.kind === 'accept') append({ kind: 'accept', input: 'edit', netG, tareG: editing.tareG, ...at });
-      else append({ kind: 'short', readingG: netG + editing.tareG + (editing.skewG ?? 0), tareG: editing.tareG, ...(editing.skewG ? { skewG: editing.skewG } : {}), ...at });
-      setEditingId(null);
+      act({ kind: 'edit', id: editingRow.id, change });
     };
     const voidEditing = () => {
-      if (!editing) return;
-      guardMoney(editing.id, () => {
-        append({ kind: 'correction', pileId: editing.pileId, targetId: editing.id, mode: 'void', reason: msg('edit.voidReason') });
-        setEditingId(null);
-      });
+      if (editingRow) act({ kind: 'void', id: editingRow.id });
     };
     return (
       <View style={{ flex: 1 }}>
@@ -469,7 +500,7 @@ export default function CounterScreen() {
                   event={undoTarget}
                   onConfirm={() => {
                     setConfirmUndo(false);
-                    guardMoney(undoTarget.id, () => doUndo(undoTarget));
+                    act({ kind: 'undo' });
                   }}
                   onCancel={() => setConfirmUndo(false)}
                 />
@@ -565,7 +596,7 @@ export default function CounterScreen() {
               count={figures ? figures.currentNo : (totals?.baskets ?? 0)}
               onCount={onCount}
               onReject={onReject}
-              enabled={countable && (!figures || state.saleStatus === 'draft')}
+              enabled={countable && !finished}
               caption={countable ? expected : msg('counter.pileNotReady')}
               holdMs={holdMsOverride() ?? deviceHoldMs}
             />
@@ -589,7 +620,7 @@ export default function CounterScreen() {
                   <Button testID="undo" onPress={() => setConfirmUndo(true)} disabled={!classicUndo}>
                     {`↺ ${msg('counter.undo')}`}
                   </Button>
-                  <Button testID="short" onPress={openShort} disabled={!countable || shortOpen}>
+                  <Button testID="short" onPress={openShort} disabled={!countable || shortOpen || finished}>
                     {`⚖ ${msg('short.open')}`}
                   </Button>
                   <Button

@@ -149,26 +149,13 @@ function SaleRow({ sale, onDelete }: { sale: SaleState; onDelete: () => void }) 
             <Button testID={`sale-${sale.id}`}>
               {msg('sales.row', {
                 name: label,
-                status: msg(sale.status === 'closed' ? 'status.closed' : 'status.open'),
+                // A finished sale says its business status, not open/closed (E04-S11, review S5).
+                status: msg(sale.saleStatus !== 'draft' ? `status.${sale.saleStatus}` : sale.status === 'closed' ? 'status.closed' : 'status.open'),
                 zones: sale.zones.length,
               })}
             </Button>
           </Link>
         </View>
-        {/* E04-S11: a finished sale says so; a draft needs no chip. */}
-        {sale.saleStatus !== 'draft' ? (
-          <Text
-            testID={`sale-status-${sale.id}`}
-            style={{
-              fontFamily: t.font.family.sans,
-              fontSize: t.font.size.small,
-              fontWeight: t.font.weight.bold,
-              color: sale.saleStatus === 'cancelled' ? t.color.reject : t.color.accept,
-            }}
-          >
-            {msg(`status.${sale.saleStatus}`)}
-          </Text>
-        ) : null}
         {!confirming && (
           <Button
             testID={`delete-${sale.id}`}
