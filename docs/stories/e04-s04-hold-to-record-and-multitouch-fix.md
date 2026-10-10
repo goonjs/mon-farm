@@ -1,6 +1,6 @@
 # Story E04-S04: กดค้างสั้นบันทึกเข่ง + แก้บั๊กสองนิ้วแตะแล้วนับ (S32)
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ (2026-10-10, branch `feature/e04-sale`)
 
 ## Context
 
@@ -36,9 +36,23 @@ Status: Draft
 
 ## Dev notes
 
+**ทำแล้ว (2026-10-10, ทีม FARM)**
+
+- เวลากดค้างมาจากค่าของเครื่อง (E03-S07, ค่าเริ่มต้น 0.7 วินาที) แล้ว — หน้านับใช้ `readHoldMs()`
+- นิ้วที่สอง/ฝ่ามือแตะลง **ระหว่าง** กดค้าง → ยกเลิกทันที บันทึก `reject` (คำตอบเจ้าของ 2026-10-03, SALE-8):
+  native/เว็บผ่าน `onTouchStart` (นับ touches > 1) และบนเว็บ pointer อื่นใดที่ลงขณะกดค้าง (window listener) — แทนพฤติกรรม S8
+  ที่ปล่อยให้นิ้วที่สองผ่าน; `pointercancel`/`touchCancel` ยังยกเลิกตามเดิม (S32)
+- e2e "a second finger … does not cancel it" (S8) เปลี่ยนเป็น "cancels it at once" ตามคำตอบเจ้าของ (ไม่ได้ข้ามหรือปิดเทสต์)
+- ขอบเวลา (fake timers): เวลาที่ตั้ง − 1 ms ไม่นับ, + 1 ms นับครั้งเดียว
+
+**ยังไม่ครอบคลุม (LIMIT)**: ทดสอบบน Android จริงผ่าน dev client (pinch 20 ครั้ง) — sandbox ไม่มีเครื่อง Android; ต้องให้เจ้าของ/ทีมทดสอบบนเครื่อง
+
 ## Code review
 
 ## QA notes
+
+**2026-10-10 (FARM, sandbox)** — jest-expo `HoldStage.test.tsx` (นิ้วที่สองยกเลิก + reject, ขอบ 699/701 ms ที่ 700) · Playwright
+`counter.spec.ts` 28/28 (รวม CDP touch: นิ้วที่สองยกเลิกทันที, touchCancel ไม่นับ) · ชุด e2e เต็ม 170 ผ่าน
 
 ## คำถามเจ้าของ
 

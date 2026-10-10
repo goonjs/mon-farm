@@ -82,4 +82,33 @@ describe('HoldStage', () => {
     // is looking at.
     expect(onCount).not.toHaveBeenCalled();
   });
+
+  it('a second finger touching down mid-hold cancels it at once and records the reject (E04-S04, owner 2026-10-03)', () => {
+    const onCount = jest.fn();
+    const onReject = jest.fn();
+    wrap(<HoldStage count={0} onCount={onCount} onReject={onReject} caption="c" holdMs={700} />);
+    act(() => {
+      fireEvent(screen.getByTestId('stage'), 'pressIn');
+      jest.advanceTimersByTime(300);
+      fireEvent(screen.getByTestId('stage'), 'touchStart', { nativeEvent: { touches: [{}, {}] } });
+      jest.advanceTimersByTime(1_000);
+    });
+    expect(onCount).not.toHaveBeenCalled();
+    expect(onReject).toHaveBeenCalledTimes(1);
+  });
+
+  it('one finger only: the hold completes at its set time, not 1 ms before (E04-S04 edge)', () => {
+    const onCount = jest.fn();
+    wrap(<HoldStage count={0} onCount={onCount} onReject={jest.fn()} caption="c" holdMs={700} />);
+    act(() => {
+      fireEvent(screen.getByTestId('stage'), 'pressIn');
+      fireEvent(screen.getByTestId('stage'), 'touchStart', { nativeEvent: { touches: [{}] } });
+      jest.advanceTimersByTime(699);
+    });
+    expect(onCount).not.toHaveBeenCalled();
+    act(() => {
+      jest.advanceTimersByTime(2);
+    });
+    expect(onCount).toHaveBeenCalledTimes(1);
+  });
 });
