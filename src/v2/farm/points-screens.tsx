@@ -22,6 +22,7 @@ import { BackHandler, TextInput, View } from 'react-native';
 
 import {
   activePoints,
+  activeProperty,
   activeTapperOn,
   blankStartAllowed,
   dayAfter,
@@ -193,7 +194,8 @@ function PointForm({ pointId, propertyId }: { pointId: string | null; propertyId
 
   const save = async () => {
     if (!name.trim()) return setError(msg('pointForm.needName'));
-    if (!farmId) return setError(msg('v2f.pickFarm'));
+    // A new point goes only under a farm still there (the store refuses the rest too).
+    if (!farmId || (!existing && !farm)) return setError(msg('v2f.pickFarm'));
     let taken = false;
     await write.run(async () => {
       try {
@@ -214,6 +216,8 @@ function PointForm({ pointId, propertyId }: { pointId: string | null; propertyId
   };
 
   if (pointId && state && !existing) return <NotFound fallback={POINTS} />;
+  // `?property=` naming a farm that is missing or deleted: say so, never an orphan point.
+  if (!pointId && propertyId && state && !activeProperty(state, propertyId)) return <NotFound fallback={POINTS} />;
 
   if (made) {
     return (

@@ -379,6 +379,11 @@ export function formatRai(centiRai: number): string {
 
 const nameKey = (propertyId: string, name: string) => `${propertyId}\u0000${name.trim()}`;
 
+/** The farm by id, or null when there is none or it is deleted — a new point may go only under this. */
+export function activeProperty(state: MasterState, id: string): PropertyRecord | null {
+  return state.properties.find((p) => p.id === id && !p.deleted) ?? null;
+}
+
 /** Points that can be offered: not deleted, and their farm not deleted either. */
 export function activePoints(state: MasterState, propertyId?: string): PointRecord[] {
   return state.points.filter((p) => !p.hidden && (propertyId === undefined || p.propertyId === propertyId));

@@ -13,6 +13,7 @@
 
 import {
   MASTER_SCOPE,
+  activeProperty,
   blankStartAllowed,
   filterPeople,
   projectMaster,
@@ -215,7 +216,10 @@ export class MasterStore implements PeopleStore {
   async addPoint(propertyId: string, name: string): Promise<Point> {
     const trimmed = name.trim();
     if (!trimmed) throw new InvalidInputError('A point needs a name.');
-    if (pointNameTaken(await this.state(), propertyId, trimmed)) throw new DuplicatePointNameError(trimmed);
+    const state = await this.state();
+    // No orphan points: the farm must exist and not be deleted.
+    if (!activeProperty(state, propertyId)) throw new InvalidInputError('A point needs a farm that exists.');
+    if (pointNameTaken(state, propertyId, trimmed)) throw new DuplicatePointNameError(trimmed);
     const pointId = uuidv7();
     await this.write({ t: 'point_added', pointId, propertyId, name: trimmed });
     return (await this.state()).points.find((p) => p.id === pointId)!;

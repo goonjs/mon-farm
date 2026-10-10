@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { MASTER_SCOPE, saleSettings, shareOn, tapperOn } from '../core/master';
 import { createDeviceClock } from './device-clock';
-import { DuplicatePointNameError, MasterStore, ShareTooEarlyError } from './master-store';
+import { DuplicatePointNameError, InvalidInputError, MasterStore, ShareTooEarlyError } from './master-store';
 import { MemoryStore } from './memory-store';
 import { LogBuilder, setUpSale, withZoneContract } from '../core/fixtures';
 
@@ -106,6 +106,14 @@ describe('MasterStore — people and buyers as events (E03-S01)', () => {
     await expect(master.renamePoint(p1.id, ' ')).rejects.toThrow();
     await master.renamePoint(p1.id, 'จุดหน้า');
     expect((await master.state()).points.find((p) => p.id === p1.id)?.name).toBe('จุดหน้า');
+  });
+
+  it('refuses a point under a farm that is missing or deleted — no orphan points', async () => {
+    const f = await master.addProperty({ name: 'ก', crop: 'rubber' });
+    await master.remove(f.id);
+    await expect(master.addPoint(f.id, 'จุด 1')).rejects.toBeInstanceOf(InvalidInputError);
+    await expect(master.addPoint('no-such-farm', 'จุด 1')).rejects.toBeInstanceOf(InvalidInputError);
+    expect((await master.state()).points).toEqual([]);
   });
 
   it('the starter wizard writes one point per typed name and returns them with their tapper', async () => {

@@ -278,6 +278,21 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     expect((await m.state()).assignments).toEqual([expect.objectContaining({ tapperId: daeng.id, from: null })]);
   });
 
+  it('?property= naming a missing or deleted farm says not found, and nothing can be saved', async () => {
+    const m = master();
+    const farm = await m.addProperty({ name: 'สวนเก่า', crop: 'rubber' });
+    await m.remove(farm.id);
+    for (const property of [farm.id, 'no-such-farm']) {
+      mockParams.current = { id: 'new', property };
+      const { unmount } = wrap(<PointScreen />);
+      await flush();
+      expect(screen.getByTestId('not-found')).toBeTruthy();
+      expect(screen.queryByTestId('point-save')).toBeNull();
+      unmount();
+    }
+    expect((await m.state()).points).toEqual([]);
+  });
+
   it('renames and soft-deletes a point', async () => {
     const m = master();
     const farm = await m.addProperty({ name: 'สวน', crop: 'rubber' });

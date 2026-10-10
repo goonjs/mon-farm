@@ -21,6 +21,7 @@ import {
   pointsOf,
   tapperOn,
   activePoints,
+  activeProperty,
   planStarterPoints,
   pointNameTaken,
   showStarterButton,
@@ -315,6 +316,13 @@ describe('weighing points — E03-S03 (MD-3)', () => {
     expect(projectMaster(b.build()).points.map((p) => p.duplicateName)).toEqual([true, true]);
     b.master({ t: 'point_renamed', pointId: 'p2', name: 'จุด 2' });
     expect(projectMaster(b.build()).points.map((p) => p.duplicateName)).toEqual([false, false]);
+  });
+
+  it('a point can go only under a farm that exists and is not deleted', () => {
+    const s = projectMaster(log().master(farm('f1', 'สวนบน')).master(farm('f2')).remove('f2').build());
+    expect(activeProperty(s, 'f1')?.name).toBe('สวนบน');
+    expect(activeProperty(s, 'f2')).toBeNull();
+    expect(activeProperty(s, 'nope')).toBeNull();
   });
 
   it('the starter button shows only with no points at all, after the first pull', () => {
