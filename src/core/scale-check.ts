@@ -43,3 +43,18 @@ export function gateNeeded(state: SaleState, events: readonly SaleEvent[], pileI
   const pile = state.piles.find((p) => p.id === pileId);
   return !state.piles.some((p) => p.id !== pileId && p.zoneId === pile?.zoneId && p.status !== 'not-started');
 }
+
+/**
+ * The check when weighing moves to `pointId` of farm `farmId` (v2 picker): a
+ * point already weighing is not asked again unless the sale ever took a skew
+ * (D-76); a point new to the sale is asked by mode, its farm known before its
+ * pile is added.
+ */
+export function pointGateNeeded(state: SaleState, events: readonly SaleEvent[], pointId: PileId, farmId: string, mode: ZeroCheckMode): boolean {
+  if (hadSkew(events)) return true;
+  const pile = state.piles.find((p) => p.id === pointId);
+  if (pile && pile.status !== 'not-started') return false;
+  if (mode === 'every') return true;
+  if (mode === 'skip') return false;
+  return !state.piles.some((p) => p.id !== pointId && p.zoneId === farmId && p.status !== 'not-started');
+}
