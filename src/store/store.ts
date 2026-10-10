@@ -40,6 +40,17 @@ export interface EventStore {
   /** The outbox: events not yet synced, in `deviceSeq` order. */
   pending(): Promise<SaleEvent[]>;
   markSynced(ids: readonly EventId[]): Promise<void>;
+  /**
+   * Stores an event pulled from the server (E01-S09): verbatim — never
+   * renumbered, even one carrying this device's id (a cloned install) — and
+   * already synced. The same id with the same content is a no-op, except
+   * that an own event still in the outbox leaves it (its ack was lost); the
+   * same id with different content rejects with `IntegrityError`.
+   */
+  insertPulled(event: SaleEvent): Promise<void>;
+  /** Where pull resumes: the newest server `receivedAt` already stored (0 = never pulled). */
+  syncCursor(): Promise<number>;
+  setSyncCursor(value: number): Promise<void>;
   /** Sale ids present in the store, newest first. */
   listSales(): Promise<string[]>;
   /**

@@ -13,7 +13,7 @@
  * app falls back to memory and says so (`isDurable`).
  */
 
-import { checkAppend, type DeviceState } from './append-rule';
+import { checkAppend, checkPulled, type DeviceState } from './append-rule';
 import { markNotDurable } from './durability';
 import { IntegrityError } from './errors';
 import { MemoryStore } from './memory-store';
@@ -215,6 +215,47 @@ export class IndexedDbStore implements EventStore {
     await done;
   }
 
+  async insertPulled(event: SaleEvent): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction('events', 'readwrite');
+    const events = tx.objectStore('events');
+    const done = committed(tx);
+    try {
+      const existing = (await request(events.get(event.id))) as EventRecord | undefined;
+      if (checkPulled(event, existing?.event)) {
+        events.add({
+          id: event.id,
+          saleId: event.saleId,
+          ts: event.ts,
+          deviceSeq: event.deviceSeq,
+          pending: 0,
+          event,
+        } satisfies EventRecord);
+      } else if (existing?.pending) {
+        events.put({ ...existing, pending: 0 } satisfies EventRecord);
+      }
+    } catch (err) {
+      tx.abort();
+      await done.catch(() => undefined);
+      throw err;
+    }
+    await done;
+  }
+
+  // In `meta` under its own key: no schema change, no version bump.
+  async syncCursor(): Promise<number> {
+    const db = await this.open();
+    const v = await request(db.transaction('meta', 'readonly').objectStore('meta').get('syncCursor'));
+    return typeof v === 'number' ? v : 0;
+  }
+
+  async setSyncCursor(value: number): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction('meta', 'readwrite');
+    tx.objectStore('meta').put(value, 'syncCursor');
+    await committed(tx);
+  }
+
   async listSales(): Promise<string[]> {
     const db = await this.open();
     const tx = db.transaction('events', 'readonly');
@@ -288,6 +329,15 @@ export class WebStore implements EventStore {
   }
   async markSynced(ids: readonly EventId[]) {
     return (await this.pick()).markSynced(ids);
+  }
+  async insertPulled(event: SaleEvent) {
+    return (await this.pick()).insertPulled(event);
+  }
+  async syncCursor() {
+    return (await this.pick()).syncCursor();
+  }
+  async setSyncCursor(value: number) {
+    return (await this.pick()).setSyncCursor(value);
   }
   async listSales() {
     return (await this.pick()).listSales();

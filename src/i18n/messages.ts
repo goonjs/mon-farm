@@ -363,6 +363,15 @@ const th = {
   'date.month10': 'ต.ค.',
   'date.month11': 'พ.ย.',
   'date.month12': 'ธ.ค.',
+  // ── Sync status (E01-S10; design-system §7, owner 2026-10-03) ───────────
+  'sync.synced': 'ซิงก์แล้ว',
+  'sync.pendingN': 'รอส่ง {n}',
+  'sync.conflictN': 'ขัดกัน {n}',
+  'sync.errorRetry': 'ส่งไม่สำเร็จ · ลองใหม่',
+  'sync.salePending': 'รอส่ง',
+  'sync.saleConflict': 'ข้อมูลขัดกัน',
+  'sync.saleError': 'ส่งไม่สำเร็จ',
+  'sync.retry': 'ลองใหม่',
 } as const;
 
 /**
@@ -664,6 +673,15 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'date.month10': 'Oct',
   'date.month11': 'Nov',
   'date.month12': 'Dec',
+
+  'sync.synced': 'synced',
+  'sync.pendingN': '{n} to send',
+  'sync.conflictN': '{n} in conflict',
+  'sync.errorRetry': 'not sent · retry',
+  'sync.salePending': 'to send',
+  'sync.saleConflict': 'in conflict',
+  'sync.saleError': 'not sent',
+  'sync.retry': 'retry',
 };
 
 export const messages = { th, en } as const;
