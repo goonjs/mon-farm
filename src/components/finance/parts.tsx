@@ -10,11 +10,14 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { formatSatang } from '../../core/finance/money';
+import { useSyncStatus } from '../../sync/use-sync-status';
 import { FARM_FUNDS, type Payer, type Stage } from '../../core/finance/types';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
 import { Button } from '../chrome';
+import { BankIcon, CalendarIcon, Check, DebtIcon, FarmIcon, MoneyInIcon, MoneyOutIcon, PersonIcon, ReceiptIcon } from '../ui/icons';
+import { ScreenHeader as SharedHeader } from '../ui/screen-header';
 
 export function Chip({
   children,
@@ -266,9 +269,9 @@ export function PayerPicker({
 // ── v1.1.0 screen language (flow-farm / flow-sale mockups) ──────────────────
 
 /**
- * The v1.1.0 app bar: a back arrow, the title with its context line under
- * it, and a slot on the right (a status chip). Replaces the old "กลับ"
- * text button on the finance screens.
+ * The v1.1.0 app bar for finance screens: COLOR's shared ScreenHeader
+ * (E01-S17) — back chevron, title over its context line, sync pill — with
+ * the back button keeping the `<testID>-back` id these screens' tests use.
  */
 export function ScreenHeader({
   title,
@@ -283,46 +286,10 @@ export function ScreenHeader({
   onBack?: () => void;
   testID?: string;
 }) {
-  const t = useTheme();
   const msg = useT();
+  const sync = useSyncStatus();
   const back = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: t.space.xs,
-        paddingHorizontal: t.space.xs,
-        paddingVertical: t.space.xs,
-        backgroundColor: t.color.surface,
-      }}
-    >
-      <Pressable
-        testID={`${testID}-back`}
-        accessibilityRole="button"
-        accessibilityLabel={msg('common.back')}
-        onPress={back}
-        style={{ width: t.target.min, height: t.target.min, alignItems: 'center', justifyContent: 'center' }}
-      >
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, color: t.color.ink }}>‹</Text>
-      </Pressable>
-      <View style={{ flex: 1 }}>
-        <Text
-          testID="crumb"
-          numberOfLines={1}
-          style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}
-        >
-          {title}
-        </Text>
-        {subtitle ? (
-          <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
-            {subtitle}
-          </Text>
-        ) : null}
-      </View>
-      {right ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>{right}</View> : null}
-    </View>
-  );
+  return <SharedHeader title={title} subtitle={subtitle} right={right} sync={sync} back={{ label: msg('common.back'), onPress: back, testID: `${testID}-back` }} />;
 }
 
 /** A white card on the screen ground — the v1.1.0 unit of grouping. */
@@ -358,29 +325,40 @@ export function CardTitle({ children }: { children: ReactNode }) {
   );
 }
 
-export type FactMark = 'date' | 'person' | 'place' | 'money' | 'note' | 'check' | 'half';
+export type FactMark = 'date' | 'person' | 'place' | 'money' | 'in' | 'out' | 'note' | 'bank' | 'debt' | 'check' | 'half';
 
-/**
- * One fact per line, led by its mark (D-70). The mark is a slot: E01-S13's
- * line icons go here when they land; until then a small shape keeps the
- * line's rhythm without inventing glyphs.
- */
+/** One fact per line, led by its line icon (D-70, E01-S17 icons). */
 export function Fact({ mark, children, tone = 'soft', testID }: { mark: FactMark; children: ReactNode; tone?: 'soft' | 'warn' | 'accept'; testID?: string }) {
   const t = useTheme();
   const color = { soft: t.color.inkSoft, warn: t.color.warn, accept: t.color.accept }[tone];
+  const Icon = {
+    date: CalendarIcon,
+    person: PersonIcon,
+    place: FarmIcon,
+    money: ReceiptIcon,
+    in: MoneyInIcon,
+    out: MoneyOutIcon,
+    note: ReceiptIcon,
+    bank: BankIcon,
+    debt: DebtIcon,
+    check: null,
+    half: null,
+  }[mark];
   return (
     <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
-      <View
-        testID={`fact-mark-${mark}`}
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: mark === 'person' || mark === 'half' ? 4 : 2,
-          borderWidth: t.border.hair,
-          borderColor: color,
-          backgroundColor: mark === 'check' || mark === 'half' ? color : 'transparent',
-        }}
-      />
+      <View testID={`fact-mark-${mark}`} style={{ width: 16, alignItems: 'center' }}>
+        {Icon ? (
+          <Icon color={color} size={14} />
+        ) : mark === 'check' ? (
+          <Check color={color} size={12} />
+        ) : (
+          // Half-filled dot: pending / partly done — shape, not colour alone.
+          <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: t.border.hair, borderColor: color, overflow: 'hidden', flexDirection: 'row' }}>
+            <View style={{ flex: 1, backgroundColor: color }} />
+            <View style={{ flex: 1 }} />
+          </View>
+        )}
+      </View>
       <Text style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color }}>{children}</Text>
     </View>
   );

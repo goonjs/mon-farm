@@ -144,7 +144,7 @@ export default function SettlementScreen() {
   }
 
   const s = result;
-  // The derivation sits under the money on a phone; rendered in that order so screen readers and Tab follow what is seen.
+  // Derivation first in source and on screen, so screen readers and Tab follow what is seen (E01-S17 stacks it above on a phone).
   const derivation = (
     <View style={[card(t), narrow ? null : { flex: 1.1 }]}>
       <CardLabel>{msg('settle.derivation')}</CardLabel>
@@ -206,7 +206,7 @@ export default function SettlementScreen() {
           gap: t.space.md,
         }}
       >
-        {narrow ? null : derivation}
+        {derivation}
 
         {/* ---- owner total, leading ---- */}
         <View style={narrow ? { gap: t.space.md } : { flex: 1, gap: t.space.md }}>
@@ -275,7 +275,6 @@ export default function SettlementScreen() {
             <DeductionForm onAdd={addDeduction} />
           </View>
         </View>
-        {narrow ? derivation : null}
       </ScrollView>
 
       <View
