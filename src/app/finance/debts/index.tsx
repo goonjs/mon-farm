@@ -44,7 +44,7 @@ export default function DebtsScreen() {
           >
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>{a.worker.name}</Text>
-              <Fact mark="money">{msg('debt.list.owes', { amount: formatSatang(a.balanceSatang) })}</Fact>
+              <Fact mark="money">{a.balanceSatang < 0 ? `${msg('debt.farmOwes', { name: a.worker.name })} ${formatSatang(-a.balanceSatang)}` : msg('debt.list.owes', { amount: formatSatang(a.balanceSatang) })}</Fact>
               {a.planPerSaleSatang != null ? <Fact mark="date">{msg('debt.planValue', { amount: formatSatang(a.planPerSaleSatang) })}</Fact> : null}
               {a.overpaid ? <Fact mark="half" tone="warn">{msg('debt.flag')}</Fact> : null}
             </View>
