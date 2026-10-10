@@ -28,14 +28,17 @@ function sequenceOf(pointId: string, mode: NumberingMode, tapperOf: TapperOf): s
 
 /**
  * The number the next basket at `pointId` gets: one above the highest in its
- * sequence. Voided and deleted baskets still hold their number — a number
- * once spoken at the scale is never handed out again.
+ * sequence. Voided and deleted baskets still hold their number — the gap
+ * shows (E04-S09). Only an undone last basket gives its number back.
  */
 export function nextBasketNo(events: readonly SaleEvent[], pointId: string, mode: NumberingMode, tapperOf: TapperOf): number {
   const seq = sequenceOf(pointId, mode, tapperOf);
+  // An undone basket hands its number back (owner 2026-10-03, E04-S09).
+  const undone = undoneIds(events);
   let max = 0;
   for (const e of events) {
     if ((e.kind !== 'accept' && e.kind !== 'short') || !e.pointId || e.basketNo === undefined) continue;
+    if (undone.has(e.id)) continue;
     if (sequenceOf(e.pointId, mode, tapperOf) === seq) max = Math.max(max, e.basketNo);
   }
   return max + 1;
@@ -114,6 +117,8 @@ export interface RecorderFigures {
   readonly openShortG: number | null;
   /** Money at the sale's price (D-40); null while no price is set. */
   readonly satang: number | null;
+  /** The scope's last live basket — what "ย้อนกลับ" undoes (E04-S09). */
+  readonly lastId: string | null;
 }
 
 /**
@@ -144,6 +149,7 @@ export function recorderFigures(
     netG,
     openShortG: last?.kind === 'short' ? basketNetG(last) : null,
     satang: satangPerKg === null ? null : Math.floor((2 * netG * satangPerKg + 1000) / 2000),
+    lastId: last?.id ?? null,
   };
 }
 
@@ -183,6 +189,14 @@ export function pointSetupPayloads(sale: SaleState, master: MasterState, pointId
   return out;
 }
 
+/** A weight as typed (kg, up to 3 decimals) → integer grams; null if not a weight > 0. */
+export function parseKgG(text: string): number | null {
+  const m = /^(\d+)(?:\.(\d{1,3}))?$/.exec(text.trim());
+  if (!m) return null;
+  const g = Number(m[1]) * 1000 + Number((m[2] ?? '').padEnd(3, '0'));
+  return g > 0 ? g : null;
+}
+
 /** A price as typed (฿/kg, up to 2 decimals) → integer satang; blank = not set yet (SALE-3). */
 export function parsePrice(text: string): { ok: true; satang: number | null } | { ok: false } {
   const t = text.trim();
@@ -191,4 +205,52 @@ export function parsePrice(text: string): { ok: true; satang: number | null } | 
   if (!m) return { ok: false };
   const satang = Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0'));
   return satang > 0 ? { ok: true, satang } : { ok: false };
+}
+
+function undoneIds(events: readonly SaleEvent[]): Set<string> {
+  const out = new Set<string>();
+  for (const e of events) if (e.kind === 'correction' && e.mode === 'undo-last') out.add(e.targetId);
+  return out;
+}
+
+export interface BasketRow {
+  readonly id: string;
+  readonly basketNo: number;
+  readonly pointId: string;
+  readonly netG: number;
+  readonly short: boolean;
+  /** Voided rows stay in the list, struck through (SALE-17). */
+  readonly status: 'live' | 'voided';
+  /** Re-recorded from the list (E04-S09); the replaced basket stays in the log only. */
+  readonly edited: boolean;
+  /** Who recorded this row — the device and when (SYNC-9). */
+  readonly by: { readonly deviceId: string; readonly ts: number };
+}
+
+/**
+ * The sale's point baskets for the recorder's list, newest first (E04-S09):
+ * live and voided rows; an undone basket drops out (its number is used
+ * again) and an edited one shows as its replacement.
+ */
+export function basketList(events: readonly SaleEvent[]): readonly BasketRow[] {
+  const live = new Set(liveBaskets(events).map((b) => b.id));
+  const undone = undoneIds(events);
+  const replaced = new Set<string>();
+  for (const e of events) if ((e.kind === 'accept' || e.kind === 'short') && e.editOf) replaced.add(e.editOf);
+  const rows: BasketRow[] = [];
+  for (const e of [...events].sort(compareEvents).reverse()) {
+    if ((e.kind !== 'accept' && e.kind !== 'short') || !e.pointId || e.basketNo === undefined) continue;
+    if (undone.has(e.id) || replaced.has(e.id)) continue;
+    rows.push({
+      id: e.id,
+      basketNo: e.basketNo,
+      pointId: e.pointId,
+      netG: basketNetG(e),
+      short: e.kind === 'short',
+      status: live.has(e.id) ? 'live' : 'voided',
+      edited: !!e.editOf,
+      by: { deviceId: e.actor.deviceId, ts: e.ts },
+    });
+  }
+  return rows;
 }

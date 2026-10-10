@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { LogBuilder } from './fixtures';
 import { MASTER_SCOPE, projectMaster } from './master';
 import { projectSale } from './project';
-import { nextBasketNo, parsePrice, pointChoices, pointSetupPayloads, recorderFigures, saleNumbering, saleRollup } from './sale-points';
+import { basketList, nextBasketNo, parseKgG, parsePrice, pointChoices, pointSetupPayloads, recorderFigures, saleNumbering, saleRollup } from './sale-points';
 import type { MasterPayload, NumberingMode, SaleEvent } from './types';
 
 /** Farm: สวน ก (p1, p2 → แดง; p4 → นัด), สวน ข (p3 → แดง). */
@@ -158,7 +158,8 @@ describe('E04-S05 — the recorder figures (SALE-14, D-40)', () => {
     const m = master();
     const b = new LogBuilder('sale-x').acceptAt('p1', 1).acceptAt('p3', 2, 40_000).acceptAt('p4', 1);
     const f = recorderFigures(b.build(), m, DAY, 'p2', 'per-tapper', 4_850);
-    expect(f).toEqual({ scope: { tapperId: 'red' }, currentNo: 3, done: 2, netG: 90_000, openShortG: null, satang: 436_500 });
+    expect(f).toMatchObject({ scope: { tapperId: 'red' }, currentNo: 3, done: 2, netG: 90_000, openShortG: null, satang: 436_500 });
+    expect(f.lastId).toBe(b.build()[1].id);
   });
 
   it('per point: only this point counts; a point with no tapper counts on its own', () => {
@@ -187,5 +188,51 @@ describe('E04-S05 — the recorder figures (SALE-14, D-40)', () => {
     const last = b.build().at(-1)!;
     b.void('p1', last.id);
     expect(recorderFigures(b.build(), m, DAY, 'p1', 'per-tapper', null)).toMatchObject({ currentNo: 3, done: 1, netG: 50_000 });
+  });
+});
+
+describe('E04-S09 — undo, edit and void at points (SALE-17)', () => {
+  const tapperOf = (pointId: string) => (['p1', 'p2', 'p3'].includes(pointId) ? 'red' : 'nat');
+
+  it('undoing the last basket gives its number to the next one (owner 2026-10-03)', () => {
+    const b = new LogBuilder('sale-x').acceptAt('p1', 1).acceptAt('p1', 2);
+    b.undo('p1', b.build().at(-1)!.id);
+    expect(nextBasketNo(b.build(), 'p2', 'per-tapper', tapperOf)).toBe(2);
+  });
+
+  it('a voided basket keeps its number: the others stay, the gap shows', () => {
+    const b = new LogBuilder('sale-x').acceptAt('p1', 1).acceptAt('p1', 2).acceptAt('p1', 3);
+    b.void('p1', b.build()[1].id);
+    expect(nextBasketNo(b.build(), 'p1', 'per-tapper', tapperOf)).toBe(4);
+    expect(basketList(b.build()).map((r) => [r.basketNo, r.status])).toEqual([
+      [3, 'live'],
+      [2, 'voided'],
+      [1, 'live'],
+    ]);
+  });
+
+  it('an edit replaces the row: the new weight shows, marked edited; the old stays in the log only', () => {
+    const b = new LogBuilder('sale-x').acceptAt('p1', 1);
+    const old = b.build()[0];
+    b.void('p1', old.id, 'edit');
+    b.editAt(old.id, 'p2', 1, 48_000);
+    const rows = basketList(b.build());
+    expect(rows).toMatchObject([{ basketNo: 1, pointId: 'p2', netG: 48_000, status: 'live', edited: true }]);
+    expect(rows[0].by).toEqual({ deviceId: 'dev-A', ts: expect.any(Number) });
+  });
+
+  it('an undone basket leaves the list (its number is used again)', () => {
+    const b = new LogBuilder('sale-x').acceptAt('p1', 1).acceptAt('p1', 2);
+    b.undo('p1', b.build().at(-1)!.id);
+    expect(basketList(b.build()).map((r) => r.basketNo)).toEqual([1]);
+  });
+});
+
+describe('parseKgG — E04-S09 edit form', () => {
+  it('kg with up to 3 decimals → grams; anything else, or 0, is refused', () => {
+    expect(parseKgG('48.5')).toBe(48_500);
+    expect(parseKgG(' 50 ')).toBe(50_000);
+    expect(parseKgG('0.125')).toBe(125);
+    expect([parseKgG(''), parseKgG('0'), parseKgG('1.2345'), parseKgG('-3'), parseKgG('a')]).toEqual([null, null, null, null, null]);
   });
 });

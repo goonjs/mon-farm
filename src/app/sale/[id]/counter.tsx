@@ -20,6 +20,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Pill, Tabs, TopBar } from '../../../components/chrome';
 import { HoldStage } from '../../../components/HoldStage';
 import { PileClosedTransition } from '../../../components/PileClosedTransition';
+import { BasketEditor } from '../../../components/BasketEditor';
 import { RecorderView } from '../../../components/RecorderView';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { ShortBasketPanel } from '../../../components/ShortBasketPanel';
@@ -35,7 +36,7 @@ import { announceCount } from '../../../speech/announcer';
 import { speaker } from '../../../speech/speaker';
 import { useSpeech } from '../../../speech';
 import { formatThaiDate, saleSettings, tapperOn, todayIso, type MasterState } from '../../../core/master';
-import { nextBasketNo, recorderFigures, saleNumbering } from '../../../core/sale-points';
+import { basketList, nextBasketNo, pointSetupPayloads, recorderFigures, saleNumbering } from '../../../core/sale-points';
 import { expectedReadingG, gateNeeded, saleSkewG } from '../../../core/scale-check';
 import { readHoldMs } from '../../../store/hold-preference';
 import { peopleStore } from '../../../store/people';
@@ -132,6 +133,8 @@ export default function CounterScreen() {
   const skewG = saleSkewG(events);
   // E04-S05: recorder mode at a weighing point; public mode is the classic stage.
   const [publicMode, setPublicMode] = useState(false);
+  // E04-S09: the basket being edited from the recorder's list.
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
   // Events of this sale not sent yet (SYNC-3) — re-read whenever the log grows.
   const [pending, setPending] = useState(0);
@@ -188,12 +191,12 @@ export default function CounterScreen() {
   const onReject = (heldMs: number) =>
     append({ kind: 'reject', pileId: pile.id, input: 'hold', reason: 'released-early', heldMs });
 
-  const doUndo = () => {
-    if (!lastBasket) return;
+  const doUndo = (target: BasketEvent | null = lastBasket) => {
+    if (!target) return;
     append({
       kind: 'correction',
-      pileId: pile.id,
-      targetId: lastBasket.id,
+      pileId: target.pileId,
+      targetId: target.id,
       mode: 'undo-last',
       reason: msg('counter.mistapReason'),
     });
@@ -296,6 +299,30 @@ export default function CounterScreen() {
   if (figures && master && pile.status === 'counting' && !waiting && !publicMode) {
     const tapperId = tapperOn(master, pile.id, day);
     const pointName = (id: string) => master.points.find((p) => p.id === id)?.name ?? '';
+    // "ย้อนกลับ" undoes the last basket of this number sequence, wherever it was weighed.
+    const undoTarget = (events.find((e) => e.id === figures.lastId) as BasketEvent | undefined) ?? null;
+    const editing = editingId ? (events.find((e) => e.id === editingId) as BasketEvent | undefined) : undefined;
+    const rows = basketList(events);
+    const editingRow = rows.find((r) => r.id === editingId);
+    const saleDayPoints = master.points.filter((p) => !p.deleted && master.properties.some((f) => f.id === p.propertyId && !f.deleted));
+
+    // An edit is a void of the old basket plus a new one that names it (E04-S09):
+    // same number, same kind; the original stays in the log.
+    const saveEdit = ({ netG, pointId }: { netG: number; pointId: string }) => {
+      if (!editing || editing.basketNo === undefined) return;
+      const pair = { pairId: '', netG: editing.kind === 'accept' ? editing.netG : pile.stdNetG, basketG: editing.tareG };
+      for (const payload of pointSetupPayloads(state, master, pointId, pair)) append({ kind: 'sys', payload });
+      append({ kind: 'correction', pileId: editing.pileId, targetId: editing.id, mode: 'void', reason: msg('edit.reason') });
+      const at = { pileId: pointId, pointId, basketNo: editing.basketNo, editOf: editing.id };
+      if (editing.kind === 'accept') append({ kind: 'accept', input: 'edit', netG, tareG: editing.tareG, ...at });
+      else append({ kind: 'short', readingG: netG + editing.tareG + (editing.skewG ?? 0), tareG: editing.tareG, ...(editing.skewG ? { skewG: editing.skewG } : {}), ...at });
+      setEditingId(null);
+    };
+    const voidEditing = () => {
+      if (!editing) return;
+      append({ kind: 'correction', pileId: editing.pileId, targetId: editing.id, mode: 'void', reason: msg('edit.voidReason') });
+      setEditingId(null);
+    };
     return (
       <View style={{ flex: 1 }}>
         <RecorderView
@@ -307,17 +334,30 @@ export default function CounterScreen() {
           figures={figures}
           expectedKg={formatKg(expectedReadingG(pile.stdNetG, pile.tareG, skewG))}
           hold={{ onCount, onReject, enabled: countable, holdMs: holdMsOverride() ?? deviceHoldMs }}
-          baskets={[...liveBaskets(events)]
-            .filter((b) => b.pointId)
-            .reverse()
-            .map((b) => ({ id: b.id, basketNo: b.basketNo ?? 0, pointName: pointName(b.pointId!), netG: basketNetG(b), short: b.kind === 'short' }))}
+          baskets={rows.map((r) => ({ ...r, pointName: pointName(r.pointId) }))}
+          onRowPress={setEditingId}
+          editor={
+            editing && editingRow ? (
+              <BasketEditor
+                key={editing.id}
+                basketNo={editingRow.basketNo}
+                netG={editingRow.netG}
+                pointId={editingRow.pointId}
+                points={saleDayPoints.map((p) => ({ id: p.id, name: p.name }))}
+                by={msg('edit.by', { device: editingRow.by.deviceId, time: new Date(editingRow.by.ts).toLocaleTimeString('th-TH') })}
+                onSave={saveEdit}
+                onVoid={voidEditing}
+                onCancel={() => setEditingId(null)}
+              />
+            ) : undefined
+          }
           onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
           onSwitch={() => router.replace({ pathname: '/sale/[id]/points', params: { id: saleId, switch: '1' } })}
           onShort={openShort}
           onUndo={() => setConfirmUndo(true)}
           onPublic={() => setPublicMode(true)}
           onFinish={() => setConfirmCloseSale(true)}
-          canUndo={!!lastBasket}
+          canUndo={!!undoTarget}
           below={
             shortOpen ? (
               <ShortBasketPanel
@@ -328,9 +368,9 @@ export default function CounterScreen() {
                 onConfirm={confirmShort}
                 onCancel={() => setShortOpen(false)}
               />
-            ) : confirmUndo && lastBasket ? (
+            ) : confirmUndo && undoTarget ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, padding: t.space.sm }}>
-                <UndoConfirmRow event={lastBasket} onConfirm={doUndo} onCancel={() => setConfirmUndo(false)} />
+                <UndoConfirmRow event={undoTarget} onConfirm={() => doUndo(undoTarget)} onCancel={() => setConfirmUndo(false)} />
               </View>
             ) : undefined
           }
@@ -440,7 +480,7 @@ export default function CounterScreen() {
               }}
             >
               {confirmUndo && lastBasket ? (
-                <UndoConfirmRow event={lastBasket} onConfirm={doUndo} onCancel={() => setConfirmUndo(false)} />
+                <UndoConfirmRow event={lastBasket} onConfirm={() => doUndo()} onCancel={() => setConfirmUndo(false)} />
               ) : (
                 <>
                   <Button testID="undo" onPress={() => setConfirmUndo(true)} disabled={!lastBasket}>
@@ -582,7 +622,8 @@ function UndoConfirmRow({
         style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.reject }}
       >
         {msg('counter.undoDetail', {
-          seq: event.seq,
+          // At a point, the basket's own number (E04-S09); else its log position.
+          seq: event.basketNo ?? event.seq,
           kind: kindLabel,
           weight: formatKg(basketNetG(event)),
         })}

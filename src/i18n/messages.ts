@@ -604,6 +604,19 @@ const th = {
   'rec.listEmpty': 'ยังไม่มีเข่ง',
   'rec.listClose': 'ปิด',
   'rec.finish': 'ชั่งครบแล้ว → ตรวจยอด',
+  'rec.edited': 'แก้แล้ว',
+  'rec.voided': 'ยกเลิกแล้ว',
+  'edit.title': 'แก้เข่ง #{n}',
+  'edit.kg': 'น้ำหนักยางสุทธิ (กก.)',
+  'edit.badKg': 'ใส่น้ำหนักเป็นตัวเลขมากกว่า 0 (ทศนิยมไม่เกิน 3 ตำแหน่ง)',
+  'edit.point': 'จุดชั่ง',
+  'edit.save': 'บันทึกการแก้',
+  'edit.void': 'ยกเลิกเข่งนี้',
+  'edit.voidBody': 'เข่ง #{n} จะขีดฆ่า ✗ ในรายการ เลขเข่งอื่นคงเดิม ของเดิมยังอยู่ในบันทึก',
+  'edit.voidConfirm': 'ยืนยันยกเลิกเข่ง',
+  'edit.by': 'บันทึกโดยเครื่อง {device} · {time}',
+  'edit.reason': 'แก้จากรายการเข่ง',
+  'edit.voidReason': 'ยกเลิกจากรายการเข่ง',
 } as const;
 
 /**
@@ -1131,6 +1144,19 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'rec.listEmpty': 'no baskets yet',
   'rec.listClose': 'close',
   'rec.finish': 'all weighed → review totals',
+  'rec.edited': 'edited',
+  'rec.voided': 'voided',
+  'edit.title': 'edit basket #{n}',
+  'edit.kg': 'net rubber (kg)',
+  'edit.badKg': 'enter a weight above 0 (up to 3 decimals)',
+  'edit.point': 'weighing point',
+  'edit.save': 'save the edit',
+  'edit.void': 'void this basket',
+  'edit.voidBody': 'basket #{n} is struck through ✗ in the list; other numbers stay; the original stays in the log',
+  'edit.voidConfirm': 'confirm void',
+  'edit.by': 'recorded by device {device} · {time}',
+  'edit.reason': 'edited from the basket list',
+  'edit.voidReason': 'voided from the basket list',
 };
 
 export const messages = { th, en } as const;

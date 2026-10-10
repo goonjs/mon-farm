@@ -33,6 +33,9 @@ export interface RecorderBasket {
   readonly pointName: string;
   readonly netG: number;
   readonly short: boolean;
+  /** Voided rows stay, struck through ✗ (E04-S09). */
+  readonly status: 'live' | 'voided';
+  readonly edited: boolean;
 }
 
 export interface RecorderViewProps {
@@ -55,6 +58,10 @@ export interface RecorderViewProps {
   readonly canUndo: boolean;
   /** Shown under the hold area instead of the bottom row (undo confirm, short basket panel). */
   readonly below?: ReactNode;
+  /** A live row was tapped in the list: edit or void it (E04-S09). */
+  readonly onRowPress?: (id: string) => void;
+  /** The row editor, shown in the list sheet in place of the rows while open. */
+  readonly editor?: ReactNode;
 }
 
 export function RecorderView(props: RecorderViewProps) {
@@ -232,17 +239,44 @@ export function RecorderView(props: RecorderViewProps) {
             <MenuItem testID="rec-list-close" label={t('rec.listClose')} onPress={() => setList(false)} />
           </View>
           <ScrollView testID="rec-list">
-            {props.baskets.length === 0 ? <Text style={text(th.font.size.body, 'regular', th.color.inkSoft)}>{t('rec.listEmpty')}</Text> : null}
-            {props.baskets.map((b) => (
-              <View
-                key={b.id}
-                style={{ flexDirection: 'row', gap: th.space.sm, paddingVertical: th.space.sm, borderBottomWidth: th.border.hair, borderColor: th.color.ruleFaint }}
-              >
-                <Text style={[text(th.font.size.body, 'bold'), { minWidth: 48, fontVariant: ['tabular-nums'] }]}>{`#${b.basketNo}`}</Text>
-                <Text style={[text(th.font.size.body), { flex: 1 }]}>{b.short ? `${b.pointName} · ${t('rec.short')}` : b.pointName}</Text>
-                <Text style={[text(th.font.size.body), { fontVariant: ['tabular-nums'] }]}>{`${formatKg(b.netG)} ${t('rec.kgUnit')}`}</Text>
-              </View>
-            ))}
+            {props.editor ?? null}
+            {!props.editor && props.baskets.length === 0 ? (
+              <Text style={text(th.font.size.body, 'regular', th.color.inkSoft)}>{t('rec.listEmpty')}</Text>
+            ) : null}
+            {props.editor
+              ? null
+              : props.baskets.map((b) => {
+                  const voided = b.status === 'voided';
+                  const struck = voided ? ({ textDecorationLine: 'line-through', color: th.color.inkSoft } as const) : null;
+                  return (
+                    <Pressable
+                      key={b.id}
+                      testID={`rec-row-${b.basketNo}`}
+                      accessibilityRole="button"
+                      disabled={voided || !props.onRowPress}
+                      onPress={() => props.onRowPress?.(b.id)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: th.space.sm,
+                        minHeight: th.target.min,
+                        borderBottomWidth: th.border.hair,
+                        borderColor: th.color.ruleFaint,
+                      }}
+                    >
+                      <Text style={[text(th.font.size.body, 'bold'), { minWidth: 48, fontVariant: ['tabular-nums'] }, struck]}>
+                        {voided ? `✗ #${b.basketNo}` : `#${b.basketNo}`}
+                      </Text>
+                      <Text style={[text(th.font.size.body), { flex: 1 }, struck]}>{b.short ? `${b.pointName} · ${t('rec.short')}` : b.pointName}</Text>
+                      <Text style={[text(th.font.size.body), { fontVariant: ['tabular-nums'] }, struck]}>{`${formatKg(b.netG)} ${t('rec.kgUnit')}`}</Text>
+                      {b.edited || voided ? (
+                        <Text style={text(th.font.size.small, 'bold', voided ? th.color.reject : th.color.warn)}>
+                          {voided ? t('rec.voided') : t('rec.edited')}
+                        </Text>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
           </ScrollView>
         </View>
       ) : null}

@@ -25,7 +25,7 @@ async function pick(page: Page, farm: string, point: string) {
   await page.locator('[data-testid^="pick-point-"]', { hasText: point }).last().click();
 }
 
-test('3 points on 2 farms in a mixed order: numbers run on, values survive a reload', async ({ page }, info) => {
+test('3 points on 2 farms in a mixed order: numbers run on, values survive a reload', async ({ page, context }, info) => {
   const shot = async (name: string) => {
     if (info.project.name === 'phone-landscape') await page.screenshot({ path: `${SHOTS}/${name}.png` });
   };
@@ -77,4 +77,27 @@ test('3 points on 2 farms in a mixed order: numbers run on, values survive a rel
   await expect(page.getByTestId('rec-current')).toHaveText('4');
   await expect(page.getByTestId('rec-card-kg')).toContainText('150');
   await expect(page.getByTestId('rec-point')).toContainText('จันทเขลม · จุด 2');
+
+  // E04-S09: undo offline, once confirmed; the number comes back; a reload agrees.
+  await context.setOffline(true);
+  await page.getByTestId('rec-undo').click();
+  await expect(page.getByTestId('undo-confirm-detail')).toContainText('#3');
+  await page.getByTestId('undo-confirm').click();
+  await expect(page.getByTestId('rec-current')).toHaveText('3');
+  await expect(page.getByTestId('rec-card-kg')).toContainText('100');
+  await context.setOffline(false);
+  await page.reload();
+  await expect(page.getByTestId('rec-current')).toHaveText('3');
+  await expect(page.getByTestId('rec-card-kg')).toContainText('100');
+
+  // Void basket 1 from the list: struck through, the gap stays.
+  await page.getByTestId('rec-menu').click();
+  await page.getByTestId('rec-menu-list').click();
+  await page.getByTestId('rec-row-1').click();
+  await shot('e04-s09-edit');
+  await page.getByTestId('edit-void').click();
+  await page.getByTestId('edit-void-confirm').click();
+  await expect(page.getByTestId('rec-row-1')).toContainText('✗');
+  await expect(page.getByTestId('rec-current')).toHaveText('3');
+  await shot('e04-s09-voided');
 });

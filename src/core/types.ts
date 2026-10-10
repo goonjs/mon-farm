@@ -102,10 +102,16 @@ export interface AcceptEvent extends EventBase {
    */
   readonly pointId?: string;
   readonly basketNo?: number;
-  /** How the basket was entered (renamed from `source` in E01-S04, which is now the envelope's channel). */
-  readonly input: 'hold' | 'hold-kbd';
+  /**
+   * How the basket was entered (renamed from `source` in E01-S04, which is
+   * now the envelope's channel). `edit` = re-recorded from the basket list
+   * (E04-S09), with `editOf` naming the basket it replaces.
+   */
+  readonly input: 'hold' | 'hold-kbd' | 'edit';
   readonly netG: number;
   readonly tareG: number;
+  /** The basket this one replaces (E04-S09): that one is voided with reason `edit` in the same step. */
+  readonly editOf?: EventId;
 }
 
 /**
@@ -133,6 +139,8 @@ export interface ShortEvent extends EventBase {
    * the tare: net = reading − basket − skew. Absent = no skew.
    */
   readonly skewG?: number;
+  /** The basket this one replaces (E04-S09), as on `AcceptEvent`. */
+  readonly editOf?: EventId;
 }
 
 /**

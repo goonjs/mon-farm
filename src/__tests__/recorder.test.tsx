@@ -123,3 +123,68 @@ describe('E04-S05 — recorder mode at a weighing point', () => {
     );
   });
 });
+
+describe('E04-S09 — undo, edit and void from the recorder', () => {
+  async function open(saleId: string) {
+    const ids = await setup(saleId, null);
+    render(saleId);
+    await flush();
+    await flush();
+    return ids;
+  }
+
+  it('undo asks once, takes the last basket off, and its number comes back', async () => {
+    await open('sale-s09-1');
+    fireEvent.press(screen.getByTestId('rec-undo'));
+    expect(screen.getByTestId('undo-confirm-detail')).toHaveTextContent(/2/);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('undo-confirm'));
+    });
+    await flush();
+    expect(screen.getByTestId('rec-current')).toHaveTextContent('2');
+    expect(screen.getByTestId('rec-card-kg')).toHaveTextContent(/50\s*กก\./);
+  });
+
+  it('edit a basket weight from the list: totals follow, the row says แก้แล้ว', async () => {
+    await open('sale-s09-2');
+    fireEvent.press(screen.getByTestId('rec-menu'));
+    fireEvent.press(screen.getByTestId('rec-menu-list'));
+    fireEvent.press(screen.getByTestId('rec-row-1'));
+    fireEvent.changeText(screen.getByTestId('edit-kg'), '48.5');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('edit-save'));
+    });
+    await flush();
+    expect(screen.getByTestId('rec-row-1')).toHaveTextContent(/48.5 กก\..*แก้แล้ว/);
+    expect(screen.getByTestId('rec-card-kg')).toHaveTextContent(/83.5\s*กก\./);
+  });
+
+  it('move a basket to another point keeps its number', async () => {
+    const { p1, p2 } = await open('sale-s09-3');
+    fireEvent.press(screen.getByTestId('rec-menu'));
+    fireEvent.press(screen.getByTestId('rec-menu-list'));
+    fireEvent.press(screen.getByTestId('rec-row-1'));
+    fireEvent.press(screen.getByTestId(`edit-point-${p1.id}`));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('edit-save'));
+    });
+    await flush();
+    expect(screen.getByTestId('rec-row-1')).toHaveTextContent(new RegExp(p1.name));
+    expect(screen.getByTestId('rec-row-1')).not.toHaveTextContent(new RegExp(p2.name));
+  });
+
+  it('void a basket: it stays in the list struck through ✗, totals drop, numbers keep their gap', async () => {
+    await open('sale-s09-4');
+    fireEvent.press(screen.getByTestId('rec-menu'));
+    fireEvent.press(screen.getByTestId('rec-menu-list'));
+    fireEvent.press(screen.getByTestId('rec-row-1'));
+    fireEvent.press(screen.getByTestId('edit-void'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('edit-void-confirm'));
+    });
+    await flush();
+    expect(screen.getByTestId('rec-row-1')).toHaveTextContent(/✗/);
+    expect(screen.getByTestId('rec-card-1')).toHaveTextContent(/1\s*เข่ง/);
+    expect(screen.getByTestId('rec-current')).toHaveTextContent('3');
+  });
+});

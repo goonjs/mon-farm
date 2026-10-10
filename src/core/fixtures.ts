@@ -105,6 +105,18 @@ export class LogBuilder {
     return this;
   }
 
+  /** Undo the last basket (S12): its number goes back to the sequence (E04-S09). */
+  undo(pileId: string, targetId: string, reason = 'mistap'): this {
+    this.events.push({ ...this.base(), kind: 'correction', pileId, targetId, mode: 'undo-last', reason });
+    return this;
+  }
+
+  /** The re-recorded basket of an edit (E04-S09); the caller voids `editOf` first. */
+  editAt(editOf: string, pointId: string, basketNo: number, netG: number, tareG = 2_000): this {
+    this.events.push({ ...this.base(), kind: 'accept', pileId: pointId, pointId, basketNo, input: 'edit', netG, tareG, editOf });
+    return this;
+  }
+
   /** An off-standard basket, given its gross scale reading. */
   short(pileId: string, readingG: number, tareG = 2_000): this {
     this.events.push({ ...this.base(), kind: 'short', pileId, readingG, tareG });
