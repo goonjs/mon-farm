@@ -56,6 +56,8 @@ test('start → point → empty scale → count → short → switch and fill �
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await seedMaster(page, FARM);
+  // This device's hold time, pinned so a 1 s hold always clears it with room to spare.
+  await page.evaluate(() => localStorage.setItem('mon-farm:hold-ms', '500'));
   await page.goto('/v2');
   await context.setOffline(true);
 
@@ -113,6 +115,13 @@ test('start → point → empty scale → count → short → switch and fill �
   await shot(page, '13-fill');
   await hold(page);
   await expect(id('current-no')).toHaveText('5');
+
+  // ── back after a switch never opens the old point's counter (review #3) ──
+  await page.goBack();
+  await expect(page).not.toHaveURL(/point=a1/);
+  await expect(id('point-place')).toHaveCount(0);
+  await page.goForward();
+  await expect(id('point-place')).toContainText('จันทเขลม · จุด 2');
   await expect(id('fig-kg')).toContainText('200');
 
   // ── reload (the page needs the network; the data does not) ──
@@ -206,6 +215,11 @@ test('start → point → empty scale → count → short → switch and fill �
   await expect(id('sales')).toBeVisible();
   await expect(id('sale-rows')).toContainText('470 กก.');
   await expect(id('sale-rows')).toContainText('ปิดแล้ว');
+  // ── back after closing finds no live counter (review #2) ──
+  await page.goBack();
+  await expect(id('hold')).toHaveCount(0);
+  await page.goForward();
+  await expect(id('sales')).toBeVisible();
   await shot(page, '04-sales');
 
   expect(errors).toEqual([]);
