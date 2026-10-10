@@ -129,7 +129,7 @@ export function DebtDeductionCard({ saleId, worker, shareSatang }: { saleId: str
         <Card tone="accent">
           {account ? (
             <Fact mark="money" testID={`deduct-owes-${worker.id}`}>
-              {msg('deduct.owes', { amount: formatSatang(balance) })}
+              {balance < 0 ? `${msg('debt.farmOwes', { name: worker.name })} ${formatSatang(-balance)}` : msg('deduct.owes', { amount: formatSatang(balance) })}
               {account.planPerSaleSatang != null ? ` · ${msg('deduct.plan', { amount: formatSatang(account.planPerSaleSatang) })}` : ''}
             </Fact>
           ) : null}

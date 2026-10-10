@@ -326,12 +326,11 @@ export function ScreenHeader({
 }
 
 /** A white card on the screen ground — the v1.1.0 unit of grouping. */
-export function Card({ children, tone = 'plain', testID }: { children: ReactNode; tone?: 'plain' | 'accent' | 'warm'; testID?: string }) {
+export function Card({ children, tone = 'plain', testID }: { children: ReactNode; tone?: 'plain' | 'accent'; testID?: string }) {
   const t = useTheme();
   const look = {
     plain: { bg: t.color.surfaceRaised, border: t.color.ruleFaint, style: 'solid' as const },
     accent: { bg: t.color.acceptSunk, border: t.color.accept, style: 'dashed' as const },
-    warm: { bg: t.color.brandCream, border: t.color.ruleFaint, style: 'solid' as const },
   }[tone];
   return (
     <View
