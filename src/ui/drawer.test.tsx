@@ -1,7 +1,8 @@
 import { fireEvent, screen } from '@testing-library/react-native';
-import { Modal, Text } from 'react-native';
+import { Modal, Text, View } from 'react-native';
 
 import { Drawer, MenuItem, MenuSection } from './drawer';
+import { FactRow, IconTile } from './icon-tile';
 import { wrap } from '../test/render';
 import { tokens } from '../../design/tokens';
 
@@ -51,6 +52,38 @@ describe('Drawer — the ☰ menu (v1.1.0 farm screen 1)', () => {
     expect(screen.getByText('ตั้งค่า')).toBeTruthy();
     fireEvent.press(item);
     expect(onPress).toHaveBeenCalled();
+  });
+});
+
+describe('MenuItem — mockup rows: icon tile + value + one fact per line (review S6, D-70)', () => {
+  it('takes a leading IconTile and several FactRow lines under the label', () => {
+    const onPress = jest.fn();
+    wrap(
+      <MenuItem
+        testID="row-farm"
+        label="ข้อมูลฟาร์ม"
+        leading={<IconTile testID="row-tile" tone="accept" icon={(colour) => <View style={{ backgroundColor: colour }} />} />}
+        onPress={onPress}
+      >
+        <FactRow>สวนและจุดชั่ง</FactRow>
+        <FactRow>คน · คนรับซื้อยาง</FactRow>
+        <FactRow>บัญชีรับเงิน</FactRow>
+      </MenuItem>,
+    );
+    const row = screen.getByTestId('row-farm');
+    expect(flat(row.props.style).minHeight).toBe(tokens.target.min);
+    expect(screen.getByTestId('row-tile', { includeHiddenElements: true })).toBeTruthy();
+    for (const fact of ['สวนและจุดชั่ง', 'คน · คนรับซื้อยาง', 'บัญชีรับเงิน']) {
+      expect(flat(screen.getByText(fact).props.style).color).toBe(c.inkSoft);
+    }
+    expect(flat(screen.getByText('ข้อมูลฟาร์ม').props.style).color).toBe(c.ink);
+    fireEvent.press(row);
+    expect(onPress).toHaveBeenCalled();
+  });
+
+  it('still renders the plain label + detail row', () => {
+    wrap(<MenuItem testID="row" label="เครื่องนี้" detail="ขนาดตัวอักษร" />);
+    expect(screen.getByText('ขนาดตัวอักษร')).toBeTruthy();
   });
 });
 

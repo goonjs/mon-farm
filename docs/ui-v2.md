@@ -32,9 +32,10 @@ counter bar), `Num` in `type.tsx`, and `FieldLabel`/`FieldError` in `form.tsx`.
 |---|---|---|
 | `ScreenHeader` | `src/ui/screen-header.tsx` | `title`, `subtitle?`, `back?: {label, href? \| onPress?, testID?}`, `menu?: {onPress}`, `sync?: SyncStatus \| null`, `right?` |
 | `SyncPill` | `src/ui/sync-pill.tsx` | `status: SyncStatus` (shape + word + colour) |
-| `Drawer`, `MenuSection`, `MenuItem` | `src/ui/drawer.tsx` | Drawer `open`, `onClose`; MenuSection `title`; MenuItem `label`, `detail?`, `href?`, `onPress?`, `testID?` |
+| `Drawer`, `MenuSection`, `MenuItem` | `src/ui/drawer.tsx` | Drawer `open`, `onClose`; MenuSection `title`; MenuItem `label`, `leading?` (an `IconTile`), `detail?` or children (one `FactRow` per fact, D-70), `href?`, `onPress?`, `testID?` |
+| `ActionTile` | `src/ui/action-tile.tsx` | `label`, `icon`, `tone?`, `main?` (thick action edge), `href?` \| `onPress?`, `testID?`. The home's three action cards; lay them in a row |
 | icons | `src/ui/icons.tsx` | `color`, `size?`. ChevronLeft/Right, MenuIcon, Plus, Minus, Check, Undo, Scale, MoneyIn/Out, Person, Calendar, Receipt, Debt, Bank, Farm, ScaleIcon |
-| `IconTile`, `FactRow` | `src/ui/icon-tile.tsx` | IconTile `icon: (colour) => node`, `tone?`; FactRow `icon?`, children |
+| `IconTile`, `FactRow` | `src/ui/icon-tile.tsx` | IconTile `icon: (colour) => node`, `tone?` (`accept`, `action` = mockup t-blue, `cream` = t-cream, `warn`, `neutral`, `category1`–`6`); FactRow `icon?`, children |
 | `Button`, `CTA`, `PinnedActions` | `src/ui/button.tsx` | `variant?: primary \| ghost \| destructive \| row`, `size?: regular \| large`, `icon?`, `disabled?`, `onPress?`; CTA = primary + large |
 | `SegmentedControl`, `RadioCard` | `src/ui/form.tsx` | Segmented `options`, `value`, `onChange`, `testID` (radiogroup of radios); RadioCard `selected`, `title`, `detail?`, `onPress`, `disabled?` |
 | `TextField` | `src/ui/text-field.tsx` | `label`, `required?` (red *), `helper?`, `error?`, `testID`, plus TextInput props |

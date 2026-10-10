@@ -7,6 +7,7 @@
  */
 
 export * from './icons';
+export { ActionTile } from './action-tile';
 export { BottomSheet } from './bottom-sheet';
 export { Button, CTA, PinnedActions, type ButtonVariant } from './button';
 export { Card, CardLabel, cardStyle } from './card';

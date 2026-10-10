@@ -1,8 +1,8 @@
 /**
- * The v2 home (D-82): v1.1.0 farm mockup screen 9 — the card home under a
- * ScreenHeader whose ☰ opens the app menu (screen 1). Cards only link to
- * placeholders for now; no figures are shown until the real screens exist,
- * so nothing here is invented data.
+ * The v2 home (D-82) — a STUB, not yet farm mockup screen 9 (the card home):
+ * menu rows under a ScreenHeader whose ☰ opens the app menu (screen 1). FARM
+ * rebuilds it with ActionTile and real figures; rows only link to
+ * placeholders for now, so nothing here is invented data.
  */
 
 import { useState } from 'react';

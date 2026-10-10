@@ -15,6 +15,8 @@ import { useTheme, type Theme } from '../theme';
 
 export type TileTone =
   | 'accept'
+  | 'action'
+  | 'cream'
   | 'warn'
   | 'neutral'
   | 'category1'
@@ -27,12 +29,18 @@ export type TileTone =
 /** Icons in ui/icons.tsx take their colour; the tile decides it. */
 export type IconRender = (colour: string) => React.ReactNode;
 
-function toneColours(t: Theme, tone: TileTone) {
+export function toneColours(t: Theme, tone: TileTone) {
   switch (tone) {
     case 'accept':
       return { bg: t.color.acceptSunk, fg: t.color.accept };
     case 'warn':
       return { bg: t.color.warnSunk, fg: t.color.warn };
+    case 'action':
+      // Mockup `t-blue`.
+      return { bg: t.color.actionSunk, fg: t.color.action };
+    case 'cream':
+      // Mockup `t-cream`: warn ink on the cream ground (checked pair).
+      return { bg: t.color.brandCream, fg: t.color.warn };
     case 'neutral':
       return { bg: t.color.surfaceSunk, fg: t.color.inkSoft };
     default:

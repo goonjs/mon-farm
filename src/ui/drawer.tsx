@@ -108,21 +108,35 @@ export function MenuSection({ title, children }: { title: string; children: Reac
   );
 }
 
-/** One menu row: label (+ optional detail line), chevron right. */
+/**
+ * One menu row (farm mockup screens 1 and 2): an optional leading IconTile,
+ * the label, then either one `detail` line or several fact lines passed as
+ * children (`<FactRow>`s — D-70: one fact per line), chevron right.
+ */
 export function MenuItem({
   label,
   detail,
+  leading,
+  children,
   href,
   onPress,
   testID,
 }: {
   label: string;
   detail?: string;
+  /** Usually an `<IconTile>`; decorative, the label names the row. */
+  leading?: React.ReactNode;
+  /** Fact lines under the label, usually `<FactRow>`s. */
+  children?: React.ReactNode;
   href?: Href;
   onPress?: () => void;
   testID?: string;
 }) {
-  const row = <MenuRow label={label} detail={detail} testID={testID} onItemPress={onPress} />;
+  const row = (
+    <MenuRow label={label} detail={detail} leading={leading} testID={testID} onItemPress={onPress}>
+      {children}
+    </MenuRow>
+  );
   return href ? (
     <Link href={href} asChild>
       {row}
@@ -135,6 +149,8 @@ export function MenuItem({
 function MenuRow({
   label,
   detail,
+  leading,
+  children,
   testID,
   onItemPress,
   onPress,
@@ -142,6 +158,8 @@ function MenuRow({
 }: {
   label: string;
   detail?: string;
+  leading?: React.ReactNode;
+  children?: React.ReactNode;
   testID?: string;
   onItemPress?: () => void;
   /** Supplied by `<Link asChild>`. */
@@ -165,7 +183,8 @@ function MenuRow({
         gap: t.space.sm,
       }}
     >
-      <View style={{ flex: 1 }}>
+      {leading}
+      <View style={{ flex: 1, gap: t.space.xxs }}>
         <Text
           style={{
             fontFamily: t.font.family.sans,
@@ -187,6 +206,7 @@ function MenuRow({
             {detail}
           </Text>
         ) : null}
+        {children}
       </View>
       <ChevronRight color={t.color.inkFaint} />
     </Pressable>
