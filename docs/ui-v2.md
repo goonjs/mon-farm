@@ -213,6 +213,14 @@ Not as drawn yet:
   clipboard module); amount, number, bank and name are shown large.
 - Voice announcements (E04-S08) and the basket list / edit / void (E04-S09)
   are not on v2 yet.
+- A closed sale is fully read-only on v2: there is no reopen and no
+  edit-with-reason (D-16, SALE-21, `money_edit`) yet. Its write screens
+  (counter, public, point, zero-tare, backfill, rounding) go to its payment
+  page; the money pages show it without actions. Payment ticks after close
+  wait on an owner decision (re-review N1).
+- Closing pops the sale's whole stack in one navigation (home → sales). A web
+  browser keeps its own history, so going back there reaches the sale's pages
+  again, each read-only.
 
 Screenshots, 412×915 (`docs/ux/screenshots/ui-v2/sale/`), written only with
 `UPDATE_SCREENSHOTS=1` as above.

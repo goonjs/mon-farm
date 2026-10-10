@@ -105,6 +105,9 @@ totals, settle, sale-status, compact-baht, finance/*) และ hook ของ M
   `src/core/sale-list.ts`, `pointGateNeeded` in `src/core/scale-check.ts`.
   `use-sale-money` uses `settlePoints` for point sales.
 - Gaps against the mockup are listed in `docs/ui-v2.md`; the unticked AC above are the ones they touch.
+- Gap (review of PR #81): a closed sale is fully read-only on v2 — no reopen and no
+  edit-with-reason (D-16, SALE-21) yet; its write screens go to its payment page.
+  Payment ticks after close wait on an owner decision (re-review N1).
 
 ## Code review
 
