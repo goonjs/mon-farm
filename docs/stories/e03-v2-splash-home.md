@@ -45,10 +45,13 @@ Home (`/v2`, flow-v1 screen 3 + v1.1.0 screens 1 and 25), top to bottom:
       action edge) · บันทึกค่าใช้จ่าย, each an icon tile over the word.
       เริ่มการขาย opens `/v2/sale/start`; บันทึกค่าใช้จ่าย opens a new expense;
       เตรียมขาย opens a placeholder.
-- [x] "ควรรู้ / ควรจัดการ": one card of rows that appear only when they apply,
-      most urgent first:
-  - an unfinished sale (date · kg, chip "กำลังชั่ง"), else the latest sale
-    (date · kg, chip "ปิดแล้ว") → `/v2/sales`;
+- [x] "ควรรู้ / ควรจัดการ" with "สำคัญก่อน" beside it: one card of rows that
+      appear only when they apply, most urgent first:
+  - the unfinished sale, when there is one (date · kg; chip "กำลังชั่ง"
+    while a pile is being counted, else "เปิดอยู่") → `/v2/sales`. flow-v1
+    screen 3 lists "การขายที่ยังไม่ปิด" among the rows that appear "มีเมื่อเกิดขึ้น";
+  - and the latest finished sale (date · kg, chip "ปิดแล้ว") → `/v2/sales`,
+    the mockup's "การขายล่าสุด" row. Both show when both exist;
   - money the farm owes back (total in บาท and who) → `/v2/owed`.
   With none of these, the card says so in one line.
 - [x] Under the card, "ดูการขายทั้งหมด" links to the sale list `/v2/sales`.
@@ -105,10 +108,19 @@ cover photo (Cloud Storage); the cover's slow motion; the group block and
 พยากรณ์อากาศ target (open question ?23); เตรียมขาย has no screen yet (?22),
 so it opens a "กำลังสร้าง" placeholder like the other unbuilt modules.
 
+The open and latest sale rows go to `/v2/sales`, still the placeholder list
+with links to the sale steps: there is no way yet to resume the unfinished
+sale from home. That comes with the sale screens (separate builder).
+
+The header date is read again when home regains focus and when the app
+comes back to the front, so it never shows yesterday.
+
 The ผู้จ่าย role (owner 2026-10-10) is hidden in the people list, its
 filters, the detail and the form only. `BUILTIN_ROLES` and the stored roles
 are unchanged; a person who has it keeps it on save. MONEY's PayerPicker
 "+ คนอื่น" still adds people with that role, so they show with no role line.
+On the form, such a payer-only person has no role ticked, yet saving passes
+(the hidden role still counts) and the role cannot be taken off there.
 
 The menu keeps จุดชั่ง, ส่วนแบ่ง, บัญชีหนี้, การขายทั้งหมด and ซิงก์ under the
 mockup rows: those built lists are reachable from nowhere else yet.
@@ -118,8 +130,12 @@ mockup appbar is 18 semibold, no rule) — changing it touches every screen.
 
 ## Code review
 
-- Reviewer (separate agent/session):
-- Findings:
-- Resolution:
+- Reviewer (separate agent/session): independent review of b1a54a5..1bc7cd3
+- Findings: `?filter=` lost on a direct load; header date went stale; the
+  sale-row AC disagreed with code; the mockup-vs-build e2e ran in CI; the
+  e2e did not prove the tapper filter; nits (separator, chip word, links,
+  icons, splash hill, seeded dates).
+- Resolution: all should-fix items and the listed nits fixed with tests;
+  the reload-every-sale-log on focus (same as `use-live-sales`) left as is.
 
 ## QA notes

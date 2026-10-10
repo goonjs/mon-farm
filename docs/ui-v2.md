@@ -125,7 +125,8 @@ Screenshots at 390×844, light and dark: `docs/ux/screenshots/ui-v2/`.
 Built against `docs/ux/mockups/flow-v1.html` section 1 (screens 1 and 3) and
 `flow-farm-v1.1.0.html` screens 1 and 25. e2e `e2e/v2-home.spec.ts` (empty,
 then seeded sales, people and money, read offline; the selling entries) also
-writes mockup-vs-build pairs. Screenshots, 412×915, in
+writes mockup-vs-build pairs (that test runs only with
+`UPDATE_SCREENSHOTS=1`, so a mockup edit never fails CI). Screenshots, 412×915, in
 `docs/ux/screenshots/ui-v2/home/` (same `UPDATE_SCREENSHOTS=1` rule as below).
 
 Not as drawn yet: the farm group name as the header title and the menu's
