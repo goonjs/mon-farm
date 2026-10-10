@@ -25,6 +25,18 @@ describe('TextField — label, required *, helper, inline error', () => {
     expect(screen.getByTestId('f').props.accessibilityLabel).toBe('ชื่อสวน, จำเป็น');
   });
 
+  it('a short hint sits beside the label (mockup: "พื้นที่ (ไร่) ไม่บังคับ") and joins the accessible name', () => {
+    wrap(<TextField testID="f" label="พื้นที่ (ไร่)" hint="ไม่บังคับ" value="" onChangeText={() => {}} />);
+    expect(flat(screen.getByText('ไม่บังคับ').props.style).color).toBe(c.inkSoft);
+    expect(screen.getByTestId('f').props.accessibilityLabel).toBe('พื้นที่ (ไร่), ไม่บังคับ');
+  });
+
+  it('takes something beside the input, e.g. a unit or a "ไม่ทราบ" label', () => {
+    const { Text } = jest.requireActual('react-native');
+    wrap(<TextField testID="f" label="ส่วนแบ่ง" aside={<Text testID="aside">%</Text>} value="" onChangeText={() => {}} />);
+    expect(screen.getByTestId('aside')).toBeTruthy();
+  });
+
   it('helper text shows in soft ink and is the hint', () => {
     wrap(<TextField testID="f" label="เบอร์" helper="ไม่บังคับ" value="" onChangeText={() => {}} />);
     expect(flat(screen.getByText('ไม่บังคับ').props.style).color).toBe(c.inkSoft);

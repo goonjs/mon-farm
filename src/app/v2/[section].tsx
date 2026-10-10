@@ -1,16 +1,13 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
 
 import { useT } from '../../i18n';
-import { FARM_SECTIONS, findSection, SALE_STEPS, sectionHref, V2_HOME } from '../../v2/routes';
+import { BUILT_SECTIONS, FARM_SECTIONS, findSection, SALE_STEPS, sectionHref, V2_HOME } from '../../v2/routes';
 import { Placeholder } from '../../v2/placeholder-screen';
 import { MenuItem, MenuSection } from '../../ui';
 
-/** Sections that already have their own route file (not placeholders). */
-const BUILT = new Set(['device']);
-
 /** Pre-render one page per placeholder section for the static web export. */
 export function generateStaticParams() {
-  return FARM_SECTIONS.filter((s) => !BUILT.has(s.slug)).map((s) => ({ section: s.slug }));
+  return FARM_SECTIONS.filter((s) => !BUILT_SECTIONS.has(s.slug)).map((s) => ({ section: s.slug }));
 }
 
 /** /v2/<section>: a placeholder until the section's real screen exists. */

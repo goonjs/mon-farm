@@ -6,7 +6,7 @@
  * non-colour cue too: a diamond and a thicker edge (NFR-4).
  */
 
-import { TextInput, View, type TextInputProps } from 'react-native';
+import { Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { FieldError, FieldLabel } from './form';
 import { AppText } from './type';
@@ -16,43 +16,67 @@ import { useTheme } from '../theme';
 export function TextField({
   label,
   required,
+  hint: labelHint,
   helper,
   error,
+  aside,
   testID,
   ...input
 }: Omit<TextInputProps, 'style' | 'accessibilityLabel' | 'accessibilityHint'> & {
   label: string;
   required?: boolean;
+  /** A short soft note beside the label ("ไม่บังคับ"). */
+  hint?: string;
   helper?: string;
   error?: string;
+  /** Beside the input: a unit, or a field-state label such as "ไม่ทราบ". */
+  aside?: React.ReactNode;
   testID: string;
 }) {
   const t = useTheme();
   const msg = useT();
   const hint = error ?? helper;
+  const name = [label, required ? msg('form.required') : null, labelHint ?? null].filter(Boolean).join(', ');
+
+  const field = (
+    <TextInput
+      {...input}
+      testID={testID}
+      accessibilityLabel={name}
+      accessibilityHint={hint}
+      aria-invalid={!!error}
+      placeholderTextColor={t.color.inkFaint}
+      style={{
+        flex: aside ? 1 : undefined,
+        minHeight: t.target.min,
+        paddingHorizontal: t.space.md,
+        borderRadius: t.radius.md,
+        borderWidth: error ? t.border.thick : t.border.hair,
+        borderColor: error ? t.color.reject : t.color.ruleStrong,
+        backgroundColor: t.color.surfaceRaised,
+        color: t.color.ink,
+        fontFamily: t.font.family.sans,
+        fontSize: t.font.size.bodyLg,
+      }}
+    />
+  );
 
   return (
     <View style={{ gap: t.space.xs }}>
-      <FieldLabel required={required}>{label}</FieldLabel>
-      <TextInput
-        {...input}
-        testID={testID}
-        accessibilityLabel={required ? `${label}, ${msg('form.required')}` : label}
-        accessibilityHint={hint}
-        aria-invalid={!!error}
-        placeholderTextColor={t.color.inkFaint}
-        style={{
-          minHeight: t.target.min,
-          paddingHorizontal: t.space.md,
-          borderRadius: t.radius.md,
-          borderWidth: error ? t.border.thick : t.border.hair,
-          borderColor: error ? t.color.reject : t.color.ruleStrong,
-          backgroundColor: t.color.surfaceRaised,
-          color: t.color.ink,
-          fontFamily: t.font.family.sans,
-          fontSize: t.font.size.bodyLg,
-        }}
-      />
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.xs, flexWrap: 'wrap' }}>
+        <FieldLabel required={required}>{label}</FieldLabel>
+        {labelHint ? (
+          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, color: t.color.inkSoft }}>{labelHint}</Text>
+        ) : null}
+      </View>
+      {aside ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+          {field}
+          {aside}
+        </View>
+      ) : (
+        field
+      )}
       {error ? (
         <FieldError testID={`${testID}-error`}>{error}</FieldError>
       ) : helper ? (

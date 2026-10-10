@@ -14,7 +14,7 @@ export { Card, CardLabel, cardStyle } from './card';
 export { Chip, type ChipTone } from './chip';
 export { DateText, type DateFormatter } from './date-text';
 export { Drawer, MenuItem, MenuSection } from './drawer';
-export { RadioCard, SegmentedControl } from './form';
+export { FieldError, RadioCard, SegmentedControl } from './form';
 export { FactRow, IconTile, type IconRender, type TileTone } from './icon-tile';
 export { MoneyText } from './money-text';
 export { ScreenHeader, type BackAction, type HeaderAction } from './screen-header';
