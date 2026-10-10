@@ -105,6 +105,16 @@ describe('pointGateNeeded — the check on moving to a point (v2 picker, SALE-6,
     expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a2', 'A', 'skip')).toBe(true);
   });
 
+  it('a point whose only basket was voided counts as unweighed again', () => {
+    const b = pass(sale(), 'a1').sys({ t: 'skew_accepted', pileId: 'a1', skewG: 2_000 });
+    const basketId = b.nextId();
+    let ev = b.acceptAt('a1', 1).build();
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a1', 'A', 'skip')).toBe(false);
+    // Nothing left to count there, so the skew rule asks again before it.
+    ev = b.void('a1', basketId).build();
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a1', 'A', 'skip')).toBe(true);
+  });
+
   it('a point weighed only by backfill does not ask either', () => {
     const ev = sale().backfillAt('b1', 1).build();
     expect(pointGateNeeded(projectSale(ev, 's'), ev, 'b1', 'B', 'every')).toBe(false);

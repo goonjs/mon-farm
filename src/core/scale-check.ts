@@ -46,10 +46,10 @@ export function gateNeeded(state: SaleState, events: readonly SaleEvent[], pileI
 }
 
 /**
- * The check when weighing moves to `pointId` of farm `farmId` (v2 picker): a
- * point already weighed is never asked again; a point with no baskets is asked if the sale ever took a skew
- * (D-76); a point new to the sale is asked by mode, its farm known before its
- * pile is added.
+ * The check when weighing moves to `pointId` of farm `farmId` (v2 picker).
+ * A point with a live basket is never asked again. A point with none (new,
+ * readied, or every basket undone or voided) is asked if the sale ever took
+ * a skew (D-76), else by mode; its farm is known before its pile is added.
  */
 export function pointGateNeeded(state: SaleState, events: readonly SaleEvent[], pointId: PileId, farmId: string, mode: ZeroCheckMode): boolean {
   // Back to a point already weighed in this sale: go straight on counting, skew or
