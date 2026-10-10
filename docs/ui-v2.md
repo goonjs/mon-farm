@@ -93,19 +93,21 @@ precedence over the dynamic one.
 | `/v2/expenses` | ค่าใช้จ่ายทั้งหมด |
 | `/v2/debts` | บัญชีหนี้ |
 | `/v2/device` | เครื่องนี้: theme, hold time, spoken count, date era, language (device-only). Built |
-| `/v2/sales` | การขายทั้งหมด, with links to every sale step |
+| `/v2/sales` | การขายทั้งหมด (sale mockup 4). Built |
 | `/v2/sync` | ซิงก์และข้อมูลขัดกัน |
-| `/v2/sale/start` | เริ่มการขาย |
-| `/v2/sale/point` | เลือกจุดชั่ง |
-| `/v2/sale/zero-tare` | ขึ้นศูนย์และตะกร้าเปล่า |
-| `/v2/sale/counter` | นับเข่ง (recorder) |
-| `/v2/sale/public` | จอให้คนรับซื้อดู (public) |
-| `/v2/sale/partial` | เข่งไม่เต็ม |
-| `/v2/sale/backfill` | บันทึกย้อนหลัง |
-| `/v2/sale/reconcile` | ตรวจยอด |
-| `/v2/sale/settlement` | สรุปยอดส่วนแบ่ง |
-| `/v2/sale/rounding` | ปัดเศษ |
-| `/v2/sale/payment` | จ่ายเงิน |
+| `/v2/sale/start` | เริ่มการขาย (sale mockup 5). Built — mints the sale id, writes on ถัดไป |
+| `/v2/sale/<id>/point` (`?mode=switch\|backfill`, `?farm=`, `?tapper=`, `?pair=`) | เลือกจุดชั่ง / เปลี่ยนจุด / first steps of บันทึกย้อนหลัง (6, 12). Built |
+| `/v2/sale/<id>/zero-tare?point=` | ก่อนชั่ง, wait for a scale, accept a skew, move check (7, 7a–7c, 8c). Built |
+| `/v2/sale/<id>/counter?point=` (`?fill=full\|part`) | นับเข่ง (8, 8a, 8b, 11, 13, 12b). Built |
+| `/v2/sale/<id>/partial?point=` | นับเข่ง with the short-basket sheet open (10). Built |
+| `/v2/sale/<id>/public?point=` | โหมดสาธารณะ (9). Built |
+| `/v2/sale/<id>/backfill?point=` | บันทึกย้อนหลัง (14). Built |
+| `/v2/sale/<id>/check` | ตรวจยอดกับคนรับซื้อยาง (16). Built |
+| `/v2/sale/<id>/settlement`, `/rounding` | สรุปยอดส่วนแบ่ง, หักหนี้, ปัดเศษ (17, 17a, 18). Built |
+| `/v2/sale/<id>/tally` | เทียบยอด (18a). Built |
+| `/v2/sale/<id>/payment` | การจ่ายเงิน (19). Built |
+| `/v2/sale/<id>/show-account` | ให้คนรับซื้อยางดูบัญชี (17b, 17c). Built |
+| `/v2/sale/<step>` | the earlier reserved placeholders (all but `start`), still in `SALE_STEPS` for the home stub |
 
 Files: `src/app/v2/_layout.tsx`, `index.tsx`, one file per built screen,
 `[section].tsx` for the placeholders (`BUILT_SECTIONS` in `src/v2/routes.ts`
@@ -167,3 +169,66 @@ The same flag covers `docs/ux/screenshots/v2/money/` (`e2e/v2-money.spec.ts`).
 | ตั้งค่าวันขาย | ![](ux/screenshots/ui-v2/farm/19-sale-settings.png) |
 | เครื่องนี้ | ![](ux/screenshots/ui-v2/farm/20-device.png) |
 | No storage warning | ![](ux/screenshots/ui-v2/farm/21-storage-warning.png) |
+
+## Sale flow (E04 v2, `docs/stories/e04-v2-sale-flow.md`)
+
+Built against `docs/ux/mockups/flow-sale-v1.1.0.html` sections 1–4, on the
+existing logic: `src/core` (sale-points, bridge, backfill, scale-check, totals,
+sale-status, compact-baht, finance/*) plus three small pure additions —
+`point-settle.ts` (a point sale settled per tapper with the share on the sale
+day, E05-S01), `sale-move.ts` (what a move to a point asks, closes and checks)
+and `sale-list.ts` (list rows, the sale's current point and day). Screens are
+in `src/v2/sale/`; the money screens read MONEY's `use-sale-money`, which now
+settles point sales with `settlePoints`. Every action is an event in the sale
+log or the finance log, so it all works offline and survives a reload. A sale
+screen's subtitle stays empty until the log is read, so an exported `[id]`
+page hydrates cleanly.
+
+Tests: `src/core/{point-settle,sale-list,sale-move,scale-check}.test.ts`,
+`src/__tests__/v2-sale-{list,weigh,money}.test.tsx`; e2e `e2e/v2-sale.spec.ts`
+(home → start → point → empty scale → count → short → switch and fill →
+reload → public → backfill → another tapper → check → settle → round → tally
+→ pay with a reload → close, all offline).
+
+Not as drawn yet:
+
+- Sale list: no group name under the title, no per-row ขัดกัน (no groups and
+  no conflict check on v2 yet).
+- Start: เวลาเริ่มชั่ง shows ไม่ได้บันทึก only (the log has no field for it);
+  the note is text only. The buyer is preselected once a sale has picked one
+  (MD-6, as before). The picker's first farm is the first by Thai name.
+- "มอบหมายตอนนี้" opens the point's tapper plan (point settings): an
+  assignment for this sale only (D-70 S5) has no event yet.
+- With a skew, the fill question comes before the move's empty-scale check
+  (the mockup shows 8c, then 12-เบี้ยว).
+- "เริ่มนับเข่ง 1 ทุกจุด": a move to the same tapper's next point does not ask
+  (12-ต่อจุด); the open basket stays at its point.
+- 12a (deleting a point an open sale uses) is FARM's delete sheet and asks
+  nothing yet; the counter does make the sale pick a new point (12b).
+- Backfill evidence photos (15) are off: no picker, uploads wait for Cloud
+  Storage (D-48).
+- 17a: no netting against money the farm owes back; "ต้องแตกเงิน" is a note on
+  route 1, without the notes-in-the-pile breakdown.
+- 17b/17c: no PromptPay QR (no QR encoder installed) and no copy button (no
+  clipboard module); amount, number, bank and name are shown large.
+- Voice announcements (E04-S08) and the basket list / edit / void (E04-S09)
+  are not on v2 yet.
+
+Screenshots, 412×915 (`docs/ux/screenshots/ui-v2/sale/`), written only with
+`UPDATE_SCREENSHOTS=1` as above.
+
+| | |
+|---|---|
+| การขายทั้งหมด | ![](ux/screenshots/ui-v2/sale/04-sales.png) |
+| เริ่มการขาย | ![](ux/screenshots/ui-v2/sale/05-start.png) |
+| เลือกจุดชั่ง | ![](ux/screenshots/ui-v2/sale/06-point.png) |
+| ก่อนชั่ง | ![](ux/screenshots/ui-v2/sale/07-zero-tare.png) |
+| นับเข่ง | ![](ux/screenshots/ui-v2/sale/08-counter.png) |
+| โหมดสาธารณะ | ![](ux/screenshots/ui-v2/sale/09-public.png) |
+| เข่งไม่เต็ม | ![](ux/screenshots/ui-v2/sale/10-short.png) ![](ux/screenshots/ui-v2/sale/11-open-short.png) |
+| เปลี่ยนจุด, เติมเข่ง | ![](ux/screenshots/ui-v2/sale/12-switch-same-tapper.png) ![](ux/screenshots/ui-v2/sale/13-fill.png) |
+| บันทึกย้อนหลัง | ![](ux/screenshots/ui-v2/sale/14-backfill.png) |
+| ตรวจยอด | ![](ux/screenshots/ui-v2/sale/16-check.png) |
+| สรุปยอดส่วนแบ่ง, ปัดเศษ | ![](ux/screenshots/ui-v2/sale/17-settlement.png) ![](ux/screenshots/ui-v2/sale/18-rounding.png) |
+| เทียบยอด | ![](ux/screenshots/ui-v2/sale/18a-tally.png) |
+| การจ่ายเงิน | ![](ux/screenshots/ui-v2/sale/19-payment.png) |
