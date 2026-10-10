@@ -7,6 +7,7 @@ import { SaleProvider } from '../store/SaleProvider';
 import type { EventStore } from '../store/store';
 import { seedMockFarm, type MockFarm } from '../test/sale-fixture';
 import { wrap } from '../test/render';
+import { BackfillScreen } from '../v2/sale/backfill-screen';
 import { CounterScreen } from '../v2/sale/counter-screen';
 import { PointScreen } from '../v2/sale/point-screen';
 import { StartSaleScreen } from '../v2/sale/start-screen';
@@ -25,7 +26,7 @@ jest.mock('../store/people', () => {
 });
 jest.mock('expo-router', () => {
   const params: { current: Record<string, string> } = { current: {} };
-  const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: jest.fn(() => true) };
+  const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: jest.fn(() => true), canDismiss: jest.fn(() => true), dismiss: jest.fn() };
   return {
     Link: ({ children }: { children: ReactNode }) => children,
     useFocusEffect: () => undefined,
@@ -39,7 +40,7 @@ jest.mock('expo-router', () => {
 const master = () => (jest.requireMock('../store/people') as { peopleStore: MasterStore }).peopleStore;
 const store = () => (jest.requireMock('../store/store') as { store: EventStore }).store;
 const { router, __params: params } = jest.requireMock('expo-router') as {
-  router: Record<'push' | 'replace' | 'back', jest.Mock>;
+  router: Record<'push' | 'replace' | 'back' | 'dismiss', jest.Mock>;
   __params: { current: Record<string, string> };
 };
 
@@ -253,5 +254,37 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     await press(`pick-point-${farm.a[3]}`);
     expect(screen.queryByTestId('fill-sheet')).toBeNull();
     expect(sys(await store().load(saleId), 'basket_closed')[0]).toMatchObject({ reason: 'tapper-change' });
+  });
+});
+
+describe('v2 backfill (page 14, E04-S10)', () => {
+  it('numbers run on from the tapper last basket; the baskets count and are labelled', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    await hold();
+    c.unmount();
+    await inSale(<BackfillScreen />, { point: farm.a[2] });
+    await act(async () => fireEvent.changeText(screen.getByTestId('backfill-full'), '3'));
+    await act(async () => fireEvent.changeText(screen.getByTestId('backfill-short'), '20'));
+    expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/จะได้ 4 เข่ง/);
+    expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/เข่งที่ 3–5/);
+    expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/เข่งที่ 6/);
+    expect(screen.getByTestId('backfill-total')).toHaveTextContent(/170 กก\./);
+    expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/ต่อจากเข่งล่าสุดของแดง \(2\)/);
+    await press('backfill-save');
+    const ev = await store().load(saleId);
+    expect(ev.filter((e) => e.kind === 'accept' && e.input === 'backfill').map((e) => (e as { basketNo: number }).basketNo)).toEqual([3, 4, 5]);
+    expect(ev.find((e) => e.kind === 'short')).toMatchObject({ basketNo: 6, backfill: true, readingG: 22_000 });
+    expect(router.dismiss).toHaveBeenCalledWith(2);
+  });
+
+  it('a count that is not a whole number is refused', async () => {
+    await started();
+    await inSale(<BackfillScreen />, { point: farm.a[2] });
+    await act(async () => fireEvent.changeText(screen.getByTestId('backfill-full'), '2.5'));
+    expect(screen.getByTestId('backfill-bad-count')).toBeTruthy();
+    expect(screen.getByTestId('backfill-save').props.accessibilityState).toMatchObject({ disabled: true });
   });
 });

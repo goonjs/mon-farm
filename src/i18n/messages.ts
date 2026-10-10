@@ -1457,6 +1457,9 @@ const th = {
   'v2s.fillSum': '({have} + {add}) = {total} กก. → ปิดเป็นเข่งเต็มเอง',
   'v2s.tapToExit': 'แตะเพื่อกลับโหมดผู้บันทึก',
   'v2s.speechOn': 'เสียงเปิด',
+  'v2s.evidence': 'แนบหลักฐาน',
+  'v2s.noPhoto': 'ยังไม่มีรูป',
+  'v2s.addPhoto': 'เพิ่มรูป',
   // ── end v2 sale (th) ──
 } as const;
 
@@ -2826,6 +2829,9 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'v2s.fillSum': '({have} + {add}) = {total} kg → closes as a full basket',
   'v2s.tapToExit': 'tap to go back to the recorder',
   'v2s.speechOn': 'voice on',
+  'v2s.evidence': 'attach evidence',
+  'v2s.noPhoto': 'no photo yet',
+  'v2s.addPhoto': 'add photo',
   // ── end v2 sale (en) ──
 };
 
