@@ -11,8 +11,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
-import { Button, TopBar } from '../../../components/chrome';
-import { Chip, ChipRow, Input, Label, Note } from '../../../components/finance/parts';
+import { Button } from '../../../components/chrome';
+import { Chip, ChipRow, Input, Label, Note, ScreenHeader } from '../../../components/finance/parts';
 import { projectDebts } from '../../../core/finance/debts';
 import { formatDate, formatSatang, parseBahtToSatang, todayIso } from '../../../core/finance/money';
 import { FARM_FUNDS, type Payer } from '../../../core/finance/types';
@@ -71,7 +71,7 @@ export default function DebtPaymentScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar crumb={msg('debt.pay.title', { name: worker.name })} right={<Button testID="debt-pay-back" onPress={() => router.back()}>{msg('common.back')}</Button>} />
+      <ScreenHeader testID="debt-pay" title={msg('debt.pay.title', { name: worker.name })} onBack={() => router.back()} />
       {/* Until the log has loaded the balance is unknown, not zero (review #8). */}
       {fin.events === null ? null : (
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.lg }}>
