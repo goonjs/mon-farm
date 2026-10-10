@@ -18,9 +18,11 @@ test('people: create offline, survive a reload, filter, delete and restore', asy
   };
 
   await page.goto('/');
-  await expect(page.getByTestId('open-farm-data')).toBeVisible();
+  await expect(page.getByTestId('open-menu')).toBeVisible();
   await context.setOffline(true);
 
+  // Lives in the ☰ menu since E01-S17.
+  await page.getByTestId('open-menu').click();
   await page.getByTestId('open-farm-data').click();
   await expect(page.getByTestId('farm-data-people')).toBeVisible();
   await shot('e03-s01-farm-data');
@@ -81,6 +83,8 @@ test('people: create offline, survive a reload, filter, delete and restore', asy
 test('buyers: add two, and the form keeps working offline', async ({ page, context }, info) => {
   await page.goto('/');
   await context.setOffline(true);
+  // Lives in the ☰ menu since E01-S17.
+  await page.getByTestId('open-menu').click();
   await page.getByTestId('open-farm-data').click();
   await page.getByTestId('farm-data-buyers').click();
   for (const name of ['คนรับซื้อยาง ก', 'คนรับซื้อยาง ข']) {

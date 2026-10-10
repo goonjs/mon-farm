@@ -18,6 +18,8 @@ test('farms: create offline with optional fields blank, change area, survive a r
 
   await page.goto('/');
   await context.setOffline(true);
+  // Lives in the ☰ menu since E01-S17.
+  await page.getByTestId('open-menu').click();
   await page.getByTestId('open-farm-data').click();
   await page.getByTestId('farm-data-properties').click();
 

@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { Button, Pill, Tabs, TopBar } from '../../../components/chrome';
+import { Button, CardLabel, Pill, Tabs, TopBar, cardStyle } from '../../../components/chrome';
 import { HoldStage } from '../../../components/HoldStage';
 import { PileClosedTransition } from '../../../components/PileClosedTransition';
 import { BasketEditor } from '../../../components/BasketEditor';
@@ -1263,24 +1263,11 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       style={{
         flex: 1,
         minWidth: 220,
-        borderWidth: t.border.hair,
-        borderColor: t.color.rule,
-        borderRadius: t.radius.md,
-        backgroundColor: t.color.surfaceRaised,
+        ...cardStyle(t),
         padding: t.space.md,
       }}
     >
-      <Text
-        style={{
-          fontFamily: t.font.family.mono,
-          fontSize: t.font.size.micro,
-          letterSpacing: t.font.tracking.wide,
-          color: t.color.inkSoft,
-          marginBottom: t.space.sm,
-        }}
-      >
-        {title}
-      </Text>
+      <CardLabel>{title}</CardLabel>
       {children}
     </View>
   );

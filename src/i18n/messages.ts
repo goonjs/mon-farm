@@ -277,6 +277,19 @@ const th = {
   'sales.deleteCancel': 'ไม่ลบ',
   'sales.deleteHint': 'ลบแล้วยังกู้คืนได้',
   'sales.deletedLink': 'ที่ลบแล้ว ({n})',
+
+  // ── Sync status pill (SYNC-3, D-28) — v1.1.0 mockup wording ─────────────
+  'sync.synced': 'ซิงก์แล้ว',
+  'sync.pending': 'รอส่ง {n}',
+  'sync.conflict': 'ขัดกัน {n}',
+  'sync.label': 'สถานะซิงก์: {status}',
+
+  // ── App menu (☰) ────────────────────────────────────────────────────────
+  'menu.open': 'เมนู',
+  'menu.close': 'ปิดเมนู',
+  'menu.sales': 'การขายทั้งหมด',
+  'menu.shared': 'ของกลุ่ม · ทุกเครื่องเห็นเหมือนกัน',
+  'menu.device': 'เฉพาะเครื่องนี้ · ไม่ส่งไปเครื่องอื่น',
   'deleted.title': 'ที่ลบแล้ว',
   'deleted.back': '← รายการ',
   'deleted.empty': 'ไม่มีรายการที่ลบ',
@@ -361,7 +374,6 @@ const th = {
   'date.month11': 'พ.ย.',
   'date.month12': 'ธ.ค.',
   // ── Sync status (E01-S10; design-system §7, owner 2026-10-03) ───────────
-  'sync.synced': 'ซิงก์แล้ว',
   'sync.pendingN': 'รอส่ง {n}',
   'sync.conflictN': 'ขัดกัน {n}',
   'sync.errorRetry': 'ส่งไม่สำเร็จ · ลองใหม่',
@@ -1234,6 +1246,17 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'sales.deleteCancel': 'keep',
   'sales.deleteHint': 'a deleted sale can be restored',
   'sales.deletedLink': 'deleted ({n})',
+
+  'sync.synced': 'synced',
+  'sync.pending': '{n} pending',
+  'sync.conflict': '{n} conflicts',
+  'sync.label': 'sync status: {status}',
+
+  'menu.open': 'menu',
+  'menu.close': 'close menu',
+  'menu.sales': 'all sales',
+  'menu.shared': 'shared · same on every device',
+  'menu.device': 'this device only · not sent elsewhere',
   'deleted.title': 'deleted',
   'deleted.back': '← list',
   'deleted.empty': 'nothing deleted',
@@ -1309,7 +1332,6 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'date.month11': 'Nov',
   'date.month12': 'Dec',
 
-  'sync.synced': 'synced',
   'sync.pendingN': '{n} to send',
   'sync.conflictN': '{n} in conflict',
   'sync.errorRetry': 'not sent · retry',
