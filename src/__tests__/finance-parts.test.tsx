@@ -6,8 +6,13 @@ import { wrap } from '../test/render';
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
+  useFocusEffect: () => undefined,
   router: { back: jest.fn(), canGoBack: () => true, replace: jest.fn() },
 }));
+jest.mock('../store/store', () => {
+  const { MemoryStore } = jest.requireActual('../store/memory-store');
+  return { store: new MemoryStore() };
+});
 const { router: mockRouter } = jest.requireMock('expo-router') as { router: { back: jest.Mock; replace: jest.Mock } };
 
 describe('ScreenHeader (v1.1.0 app bar)', () => {

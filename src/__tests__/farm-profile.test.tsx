@@ -61,7 +61,11 @@ jest.mock('../store/store', () => {
 // expo-router pulls in ESM that jest's transformIgnorePatterns doesn't cover
 // (see jest.config.js) — this screen's only use of it is the back Link, which
 // nothing here asserts on, so a bare pass-through stub is enough.
-jest.mock('expo-router', () => ({ Link: ({ children }: { children: ReactNode }) => children }));
+jest.mock('expo-router', () => ({
+  Link: ({ children }: { children: ReactNode }) => children,
+  // The header's sync pill reads the store on focus; not under test here.
+  useFocusEffect: () => undefined,
+}));
 
 async function flush() {
   await act(async () => {

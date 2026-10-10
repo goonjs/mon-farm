@@ -16,18 +16,20 @@ test('opens in Thai with no stored preference', async ({ page }) => {
   await page.goto('/');
   // Not `toContainText('sales')` inverted — assert the Thai is actually there,
   // so a blank render cannot pass by failing to contain English.
+  // Settings live in the ☰ menu since E01-S17 (v1.1.0 farm screen 1).
+  await page.getByTestId('open-menu').click();
   await expect(page.getByTestId('open-settings')).toHaveText('ตั้งค่า');
 });
 
 test('switching to English changes the screen, and back again', async ({ page }, testInfo) => {
   await page.goto('/settings');
-  await expect(page.getByTestId('settings-back')).toHaveText('← รายการ');
+  await expect(page.getByTestId('settings-back')).toHaveAccessibleName('รายการ');
 
   await page.getByTestId('language-en').click();
-  await expect(page.getByTestId('settings-back')).toHaveText('← list');
+  await expect(page.getByTestId('settings-back')).toHaveAccessibleName('list');
 
   await page.getByTestId('language-th').click();
-  await expect(page.getByTestId('settings-back')).toHaveText('← รายการ');
+  await expect(page.getByTestId('settings-back')).toHaveAccessibleName('รายการ');
 
   await page.screenshot({ path: `docs/ux/screenshots/${testInfo.project.name}/settings.png` });
 });
@@ -35,13 +37,14 @@ test('switching to English changes the screen, and back again', async ({ page },
 test('the choice survives a reload', async ({ page }) => {
   await page.goto('/settings');
   await page.getByTestId('language-en').click();
-  await expect(page.getByTestId('settings-back')).toHaveText('← list');
+  await expect(page.getByTestId('settings-back')).toHaveAccessibleName('list');
 
   await page.reload();
-  await expect(page.getByTestId('settings-back')).toHaveText('← list');
+  await expect(page.getByTestId('settings-back')).toHaveAccessibleName('list');
 
   // And it is the whole app, not just the screen it was set on.
   await page.goto('/');
+  await page.getByTestId('open-menu').click();
   await expect(page.getByTestId('open-settings')).toHaveText('settings');
 });
 
