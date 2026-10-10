@@ -28,6 +28,8 @@ export function TopBar({ crumb, right }: { crumb: string | readonly string[]; ri
     >
       <Text
         testID="crumb"
+        // Drawn separators are silent; give screen readers the pauses.
+        accessibilityLabel={typeof crumb === 'string' ? undefined : crumb.join(', ')}
         numberOfLines={1}
         style={{
           fontFamily: t.font.family.sans,
