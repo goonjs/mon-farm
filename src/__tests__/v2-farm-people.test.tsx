@@ -1,5 +1,5 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { BuyersScreen } from '../v2/farm/buyers-screen';
 import { FarmHubScreen } from '../v2/farm/farm-hub';
@@ -123,7 +123,9 @@ describe('คน — list, filter, deleted (farm mockup 4)', () => {
     expect(within(row).getByText('2 จุด')).toBeTruthy();
     const list = screen.getByTestId('people-list');
     expect(within(list).getByText('ผู้จัดการสวน')).toBeTruthy();
-    expect(within(list).getByText('ผู้จ่าย')).toBeTruthy();
+    // ผู้จ่าย is not a person role on screen any more (owner 2026-10-10); the data keeps it.
+    expect(within(list).queryByText('ผู้จ่าย')).toBeNull();
+    expect(screen.queryByTestId('filter-payer')).toBeNull();
 
     fireEvent.press(screen.getByTestId('filter-tapper'));
     expect(screen.queryByText('อาจารย์สมหวัง')).toBeNull();
@@ -133,6 +135,35 @@ describe('คน — list, filter, deleted (farm mockup 4)', () => {
     expect(mockRouter.push).toHaveBeenLastCalledWith(`/v2/person/${daeng.id}`);
     fireEvent.press(screen.getByTestId('add-person'));
     expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/person/new');
+  });
+
+  it('opens with a role filter picked when asked (?filter=tapper, from the home card ข้อมูลคนงาน)', async () => {
+    await people().create('แดง', ['tapper']);
+    await people().create('อาจารย์สมหวัง', ['manager']);
+    mockParams.current = { filter: 'tapper' };
+    wrap(<PeopleScreen />);
+    await flush();
+    expect(screen.getByText('แดง')).toBeTruthy();
+    expect(screen.queryByText('อาจารย์สมหวัง')).toBeNull();
+  });
+
+  it('follows ?filter= when it arrives after the first render (a static page hydrates without it)', async () => {
+    await people().create('แดง', ['tapper']);
+    await people().create('อาจารย์สมหวัง', ['manager']);
+    let bump = () => {};
+    function Host() {
+      const [, set] = useState(0);
+      bump = () => set((n) => n + 1);
+      return <PeopleScreen />;
+    }
+    wrap(<Host />);
+    await flush();
+    expect(screen.getByText('อาจารย์สมหวัง')).toBeTruthy();
+    mockParams.current = { filter: 'tapper' };
+    act(() => bump());
+    await flush();
+    expect(screen.queryByText('อาจารย์สมหวัง')).toBeNull();
+    expect(screen.getByText('แดง')).toBeTruthy();
   });
 
   it('the buyers filter lists buyers', async () => {
@@ -181,6 +212,19 @@ describe('คน — form (farm mockup 5)', () => {
     const [p] = await people().list();
     expect(p).toMatchObject({ name: 'แดง', roles: ['tapper'], otherRoles: ['ลูกคนงาน'] });
     expect(mockRouter.back).toHaveBeenCalled();
+  });
+
+  it('offers no ผู้จ่าย role, and keeps it on save for someone who already has it', async () => {
+    const p = await people().create('อาจารย์สมหวัง', ['manager', 'payer']);
+    mockParams.current = { id: p.id, edit: '1' };
+    wrap(<PersonScreen />);
+    await flush();
+    expect(screen.queryByTestId('role-payer')).toBeNull();
+    expect(screen.queryByText('ผู้จ่าย')).toBeNull();
+    fireEvent.changeText(screen.getByTestId('person-name'), 'อ.สมหวัง');
+    await act(async () => fireEvent.press(screen.getByTestId('person-save')));
+    await flush();
+    expect(await people().get(p.id)).toMatchObject({ name: 'อ.สมหวัง', roles: ['manager', 'payer'] });
   });
 
   it('edits a name in place; the id stays', async () => {

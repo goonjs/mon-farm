@@ -33,6 +33,12 @@ export const FARM_SECTIONS: readonly V2Section[] = [
   farm('device', 'v2.device'),
   farm('sales', 'v2.sales'),
   farm('sync', 'v2.sync'),
+  // Home actions and modules with no screen yet (flow-v1 screen 3, v1.1.0 screen 25).
+  farm('prepare', 'v2.prepare'),
+  farm('reports', 'v2.reports'),
+  farm('weather', 'v2.weather'),
+  farm('payables', 'v2.payables'),
+  farm('stock', 'v2.stock'),
 ];
 
 /** Sale mockup steps, in flow order, at /v2/sale/<slug>. */

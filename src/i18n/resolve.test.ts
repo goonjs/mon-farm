@@ -18,6 +18,11 @@ describe('resolve', () => {
     expect(resolve('th', 'counter.undo')).toBe('ยกเลิกเข่งล่าสุด');
   });
 
+  it('names the farms section after its weighing points, not zones', () => {
+    expect(resolve('th', 'v2.farms')).toBe('สวนและจุดชั่ง');
+    expect(resolve('en', 'v2.farms')).toBe('farms and weighing points');
+  });
+
   it('returns the English string when the locale is en', () => {
     expect(resolve('en', 'counter.undo')).toBe('undo last');
   });

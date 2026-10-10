@@ -305,6 +305,13 @@ export function formatThaiDate(ts: number, era: 'be' | 'ce'): string {
   return `${d.getUTCDate()} ${THAI_MONTHS[d.getUTCMonth()]} ${year}`;
 }
 
+const THAI_WEEKDAYS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+
+/** "ส. 3 ต.ค. 2569": the short weekday, then `formatThaiDate` (home header, flow-v1 screen 3). */
+export function formatThaiDay(ts: number, era: 'be' | 'ce'): string {
+  return `${THAI_WEEKDAYS[new Date(ts + BANGKOK_OFFSET_MS).getUTCDay()]} ${formatThaiDate(ts, era)}`;
+}
+
 /**
  * The property's area (centi-rai) in effect on `day` (ISO), or null when no
  * entry had taken effect yet — "ไม่ทราบ", never 0 (SYNC-12).

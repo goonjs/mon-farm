@@ -55,7 +55,7 @@ test('/ → splash → home → farm settings: add and edit everything offline, 
   await expect(id('people')).toBeVisible();
   await addPerson(page, 'แดง', ['tapper'], '04-person-form');
   await addPerson(page, 'นัด', ['tapper']);
-  await addPerson(page, 'อาจารย์สมหวัง', ['manager', 'payer']);
+  await addPerson(page, 'อาจารย์สมหวัง', ['manager']);
   await addPerson(page, 'คุณพนม ครองแก้ว', ['tenant']);
   await shot(page, '03-people');
   // Edit: rename keeps the same person.

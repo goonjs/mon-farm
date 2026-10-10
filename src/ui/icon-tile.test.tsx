@@ -25,6 +25,15 @@ describe('IconTile and FactRow (E01-S17 X4, D-70)', () => {
     expect(flat(screen.getByTestId('glyph', { includeHiddenElements: true }).props.style).backgroundColor).toBe(fg);
   });
 
+  it('a small tile is 36 square (mockup `.tile.sm`, the home module tiles)', () => {
+    wrap(<IconTile testID="tile" size="sm" icon={() => null} />);
+    expect(flat(screen.getByTestId('tile', { includeHiddenElements: true }).props.style)).toMatchObject({
+      width: 36,
+      height: 36,
+      borderRadius: tokens.radius.sm,
+    });
+  });
+
   it('fact row: one fact per line, small icon + secondary text', () => {
     wrap(
       <FactRow icon={(colour) => <View testID="fact-icon" style={{ backgroundColor: colour }} />}>4 จุดชั่ง</FactRow>,

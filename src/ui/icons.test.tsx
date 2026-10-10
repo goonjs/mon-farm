@@ -2,6 +2,18 @@ import { render } from '@testing-library/react-native';
 
 import {
   BankIcon,
+  BasketIcon,
+  BoxIcon,
+  ChartIcon,
+  ClockIcon,
+  CoinIcon,
+  DeviceIcon,
+  ExternalIcon,
+  ListIcon,
+  SpeakerIcon,
+  UsersIcon,
+  WalletIcon,
+  WeatherIcon,
   CalendarIcon,
   Check,
   ChevronLeft,
@@ -24,18 +36,14 @@ import {
   TagIcon,
   TrashIcon,
   Undo,
-  BasketIcon,
   LeafIcon,
   TapperIcon,
-  UsersIcon,
   AlertIcon,
   FlagIcon,
-  ClockIcon,
   ExpandIcon,
   DotsIcon,
   HourglassIcon,
   CameraIcon,
-  CoinIcon,
 } from './icons';
 
 /** Every stroke/fill View an icon draws, as flat styles. */
@@ -79,19 +87,28 @@ describe('line icons — Views only, coloured by the caller (E01-S17 X8)', () =>
     ['GearIcon', <GearIcon key="u" color="sentinel" />],
     ['PercentIcon', <PercentIcon key="v" color="sentinel" />],
     ['SwapIcon', <SwapIcon key="w" color="sentinel" />],
+    // Home set (e03-v2-splash-home).
+    ['CoinIcon', <CoinIcon key="hc" color="sentinel" />],
+    ['ExternalIcon', <ExternalIcon key="he" color="sentinel" />],
+    ['BasketIcon', <BasketIcon key="h1" color="sentinel" />],
+    ['BoxIcon', <BoxIcon key="h2" color="sentinel" />],
+    ['ChartIcon', <ChartIcon key="h3" color="sentinel" />],
+    ['ClockIcon', <ClockIcon key="h4" color="sentinel" />],
+    ['DeviceIcon', <DeviceIcon key="h5" color="sentinel" />],
+    ['ListIcon', <ListIcon key="h6" color="sentinel" />],
+    ['SpeakerIcon', <SpeakerIcon key="h7" color="sentinel" />],
+    ['UsersIcon', <UsersIcon key="h8" color="sentinel" />],
+    ['WalletIcon', <WalletIcon key="h9" color="sentinel" />],
+    ['WeatherIcon', <WeatherIcon key="h10" color="sentinel" />],
     // Sale set (E04 v2).
-    ['BasketIcon', <BasketIcon key="s0" color="sentinel" />],
     ['LeafIcon', <LeafIcon key="s1" color="sentinel" />],
     ['TapperIcon', <TapperIcon key="s2" color="sentinel" />],
-    ['UsersIcon', <UsersIcon key="s3" color="sentinel" />],
     ['AlertIcon', <AlertIcon key="s4" color="sentinel" />],
     ['FlagIcon', <FlagIcon key="s5" color="sentinel" />],
-    ['ClockIcon', <ClockIcon key="s6" color="sentinel" />],
     ['ExpandIcon', <ExpandIcon key="s7" color="sentinel" />],
     ['DotsIcon', <DotsIcon key="s8" color="sentinel" />],
     ['HourglassIcon', <HourglassIcon key="s9" color="sentinel" />],
     ['CameraIcon', <CameraIcon key="s10" color="sentinel" />],
-    ['CoinIcon', <CoinIcon key="s11" color="sentinel" />],
   ])('%s paints only in the colour it is given', (_name, icon) => {
     const s = strokes(icon);
     const colours = s.flatMap((x) =>
@@ -105,7 +122,7 @@ describe('line icons — Views only, coloured by the caller (E01-S17 X8)', () =>
 });
 
 describe('money-team icons take size', () => {
-  it.each([MoneyInIcon, MoneyOutIcon, PersonIcon, CalendarIcon, ReceiptIcon, DebtIcon, BankIcon, FarmIcon, ScaleIcon, PinIcon, TagIcon, TrashIcon, GearIcon, PercentIcon, SwapIcon, BasketIcon, LeafIcon, TapperIcon, UsersIcon, AlertIcon, FlagIcon, ClockIcon, ExpandIcon, DotsIcon, HourglassIcon, CameraIcon, CoinIcon])(
+  it.each([MoneyInIcon, MoneyOutIcon, PersonIcon, CalendarIcon, ReceiptIcon, DebtIcon, BankIcon, FarmIcon, ScaleIcon, PinIcon, TagIcon, TrashIcon, GearIcon, PercentIcon, SwapIcon, CoinIcon, ExternalIcon, BasketIcon, BoxIcon, ChartIcon, ClockIcon, DeviceIcon, ListIcon, SpeakerIcon, UsersIcon, WalletIcon, WeatherIcon, LeafIcon, TapperIcon, AlertIcon, FlagIcon, ExpandIcon, DotsIcon, HourglassIcon, CameraIcon])(
     '%p outer box follows size',
     (Icon) => {
       const s = strokes(<Icon color="x" size={24} />);
