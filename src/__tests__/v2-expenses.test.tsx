@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import { ExpenseFormScreen as ExpenseScreen } from '../v2/money/expense-form-screen';
@@ -191,5 +191,23 @@ describe('repayment (E11-S03)', () => {
     wrap(<OwedScreen />);
     await flush();
     expect(screen.getByTestId(`owed-amount-${SOMWANG.id}`).props.children).toBe('200.00');
+  });
+});
+
+describe('Save sits in the header (keyboard never covers it)', () => {
+  it('expense-save renders inside screen-header', async () => {
+    mockParams.current = { id: 'new' };
+    wrap(<ExpenseScreen />);
+    await flush();
+    expect(within(screen.getByTestId('screen-header')).getByTestId('expense-save')).toBeTruthy();
+  });
+
+  it('repay-save renders inside screen-header and keeps its total while saving', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    fireEvent.changeText(screen.getByTestId('repay-amount'), '100');
+    const btn = within(screen.getByTestId('screen-header')).getByTestId('repay-save');
+    expect(btn.props.accessibilityLabel).toContain('100.00');
   });
 });

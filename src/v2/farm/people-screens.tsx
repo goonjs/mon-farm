@@ -40,7 +40,7 @@ import {
   CalendarIcon,
   Card,
   Check,
-    DebtIcon,
+  DebtIcon,
   FactRow,
   FarmIcon,
   FieldError,

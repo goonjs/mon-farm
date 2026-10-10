@@ -503,54 +503,59 @@ function PlanForm({ state, pointId, pointName, replacing, onClose, onSaved }: { 
       testID="plan-sheet"
       action={{ label: msg('assign.save'), testID: 'plan-save', onPress: () => void save(), saving: write.saving }}
     >
-    <View testID="plan" style={{ gap: t.space.md }}>
-      <RadioCard testID="plan-new" selected={mode === 'new'} title={msg('assign.newPerson')} detail={msg('assign.newPersonHint')} onPress={() => setMode('new')} />
-      {mode === 'new' ? (
-        <View style={{ gap: t.space.sm, paddingLeft: t.space.xl }}>
-          <AppText variant="label">{msg('assign.pickTapper')}</AppText>
-          <ChipWrap>
-            {tappers.map((p) => (
-              <ToggleChip key={p.id} check testID={`plan-tapper-${p.id}`} label={p.name} on={tapperId === p.id} onPress={() => setTapperId(p.id)} />
-            ))}
-          </ChipWrap>
-          {tried && !tapperId ? <FieldError>{msg('assign.pickTapper')}</FieldError> : null}
-          <TextField
-            testID="plan-from"
-            label={msg(blankOk ? 'assign.fromLabel' : 'assign.fromRequired')}
-            value={from}
-            onChangeText={setFrom}
-            error={tried && fromBad ? msg(from.trim() ? 'assign.badDate' : 'assign.needFrom') : undefined}
-          />
-          {outgoing && fromDay && outgoing.id !== tapperId ? (
-            <View testID="plan-preview" style={{ backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.md, padding: t.space.md, gap: t.space.xxs }}>
-              <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{`${outgoing.name} ${msg('v2f.until', { date: day(dayBefore(fromDay)) })}`}</FactRow>
-              {incoming ? <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{`${incoming.name} ${msg('v2f.startOn', { date: day(fromDay) })}`}</FactRow> : null}
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-      <RadioCard testID="plan-leave" selected={mode === 'leave'} title={msg('assign.leave')} detail={msg('assign.leaveHint')} onPress={() => setMode('leave')} />
-      {mode === 'leave' ? (
-        <View style={{ paddingLeft: t.space.xl }}>
-          <TextField
-            testID="plan-to"
-            label={msg('assign.toLabel')}
-            value={to}
-            onChangeText={setTo}
-            error={
-              tried && leaveProblem
-                ? msg(leaveProblem === 'date' ? 'assign.badDate' : leaveProblem === 'noTapper' ? 'assign.leaveNoTapper' : 'assign.leaveBeforeStart')
-                : undefined
-            }
-          />
-        </View>
-      ) : null}
-      <SaveFailed show={write.failed} />
-    </View>
+      <View testID="plan" style={{ gap: t.space.md }}>
+        <RadioCard testID="plan-new" selected={mode === 'new'} title={msg('assign.newPerson')} detail={msg('assign.newPersonHint')} onPress={() => setMode('new')} />
+        {mode === 'new' ? (
+          <View style={{ gap: t.space.sm, paddingLeft: t.space.xl }}>
+            <AppText variant="label">{msg('assign.pickTapper')}</AppText>
+            <ChipWrap>
+              {tappers.map((p) => (
+                <ToggleChip key={p.id} check testID={`plan-tapper-${p.id}`} label={p.name} on={tapperId === p.id} onPress={() => setTapperId(p.id)} />
+              ))}
+            </ChipWrap>
+            {tried && !tapperId ? <FieldError>{msg('assign.pickTapper')}</FieldError> : null}
+            <TextField
+              testID="plan-from"
+              label={msg(blankOk ? 'assign.fromLabel' : 'assign.fromRequired')}
+              value={from}
+              onChangeText={setFrom}
+              error={tried && fromBad ? msg(from.trim() ? 'assign.badDate' : 'assign.needFrom') : undefined}
+            />
+            {outgoing && fromDay && outgoing.id !== tapperId ? (
+              <View testID="plan-preview" style={{ backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.md, padding: t.space.md, gap: t.space.xxs }}>
+                <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{`${outgoing.name} ${msg('v2f.until', { date: day(dayBefore(fromDay)) })}`}</FactRow>
+                {incoming ? <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{`${incoming.name} ${msg('v2f.startOn', { date: day(fromDay) })}`}</FactRow> : null}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+        <RadioCard testID="plan-leave" selected={mode === 'leave'} title={msg('assign.leave')} detail={msg('assign.leaveHint')} onPress={() => setMode('leave')} />
+        {mode === 'leave' ? (
+          <View style={{ paddingLeft: t.space.xl }}>
+            <TextField
+              testID="plan-to"
+              label={msg('assign.toLabel')}
+              value={to}
+              onChangeText={setTo}
+              error={
+                tried && leaveProblem
+                  ? msg(leaveProblem === 'date' ? 'assign.badDate' : leaveProblem === 'noTapper' ? 'assign.leaveNoTapper' : 'assign.leaveBeforeStart')
+                  : undefined
+              }
+            />
+          </View>
+        ) : null}
+        <SaveFailed show={write.failed} />
+      </View>
     </BottomSheet>
   );
 }
 
+/**
+ * No first-pull wait yet: there is no sync, so this device's log is all there is.
+ * When E01-S09 lands, creating must wait for a first pull (it was the
+ * `showStarterButton` gate), or two offline phones can both create "จุด 1".
+ */
 export function PointsWizardScreen() {
   const t = useTheme();
   const msg = useT();

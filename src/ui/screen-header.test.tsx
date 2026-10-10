@@ -102,3 +102,11 @@ describe('ScreenHeader — one header for every screen (v1.1.0)', () => {
     });
   });
 });
+
+describe('ScreenHeader action keeps its width while saving', () => {
+  it('shows savingLabel instead of the bare saving word when given, and never shrinks', () => {
+    wrap(<ScreenHeader title="x" action={{ label: 'บันทึก · 300', savingLabel: 'กำลังบันทึก · 300', saving: true, testID: 'hdr-save' }} />);
+    expect(screen.getByText('กำลังบันทึก · 300')).toBeTruthy();
+    expect(flat(screen.getByTestId('hdr-save').props.style).flexShrink).toBe(0);
+  });
+});

@@ -105,7 +105,7 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
 
   return (
     <>
-      {header({ label: `${msg('fin.form.save')} · ${formatSatang(total)}`, testID: 'repay-save', disabled: !canSave, saving: inFlight.busy, onPress: () => void inFlight.run(save) })}
+      {header({ label: `${msg('fin.form.save')} · ${formatSatang(total)}`, savingLabel: `${msg('common.saving')} · ${formatSatang(total)}`, testID: 'repay-save', disabled: !canSave, saving: inFlight.busy, onPress: () => void inFlight.run(save) })}
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
         <View style={{ gap: t.space.sm }}>
           <SectionLabel>{msg('fin.repay.who')}</SectionLabel>

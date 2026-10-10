@@ -17,6 +17,8 @@ export interface HeaderPrimaryAction {
   readonly disabled?: boolean;
   /** A write is in flight: shows "กำลังบันทึก", busy, and ignores taps. */
   readonly saving?: boolean;
+  /** Shown while saving instead of "กำลังบันทึก", so the width does not jump (repay keeps its total). */
+  readonly savingLabel?: string;
 }
 
 export function ActionButton({ action }: { action: HeaderPrimaryAction }) {
@@ -32,6 +34,7 @@ export function ActionButton({ action }: { action: HeaderPrimaryAction }) {
       accessibilityLabel={action.label}
       accessibilityState={{ disabled: off, busy: !!action.saving }}
       style={{
+        flexShrink: 0,
         minHeight: t.target.min,
         minWidth: t.target.min,
         paddingHorizontal: t.space.md,
@@ -52,7 +55,7 @@ export function ActionButton({ action }: { action: HeaderPrimaryAction }) {
           color: off ? t.color.disabledInk : t.color.inkInverse,
         }}
       >
-        {action.saving ? msg('common.saving') : action.label}
+        {action.saving ? (action.savingLabel ?? msg('common.saving')) : action.label}
       </Text>
     </Pressable>
   );

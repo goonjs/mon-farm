@@ -53,6 +53,9 @@ sync engine หลัง port (`RemoteEvents`): ส่ง `pending()` ขึ้�
   database `dev` (D-48); ยังไม่ต่อ trigger ในแอป (เปิดแอป / online / AppState) เพราะยังไม่มี remote ให้ต่อ;
   integration บน emulator และ Playwright offline→online รอ adapter
 - `insertPulled` บน SQLite ยังไม่ได้รันบนเครื่องจริง (E01-S06)
+- **ต้องทำเมื่อต่อ sync (2026-10-10)**: ตัวช่วยตั้งค่าจุดชั่ง (`/v2/points-wizard`) เปิดให้ใช้ซ้ำได้เสมอ และเดิมมี gate
+  `showStarterButton` (รอ first pull) ที่เอาออกแล้วเพราะยังไม่มี sync — เมื่อมี sync ต้องให้ตัวช่วยรอ first pull ก่อนสร้างจุด
+  ไม่งั้นสองเครื่องที่ออฟไลน์อาจสร้าง "จุด 1" ซ้ำกัน
 - cursor ของ pull เก็บถาวรใน store (`syncCursor` ใน `meta` ทั้ง IndexedDB และ SQLite ไม่ต้องขึ้น version) ใช้ผ่าน
   `storeCursor(store)` — เปิดแอปใหม่ดึงต่อจากเดิม ไม่ดาวน์โหลดทั้งกลุ่มซ้ำ
 
