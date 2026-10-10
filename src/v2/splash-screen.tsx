@@ -83,29 +83,36 @@ function BrandMark({ size }: { size: number }) {
     transform: [{ rotate: `${deg}deg` }],
   });
   /**
-   * A leaf: two opposite corners fully round, so the other two are its tips
-   * and its axis is the box's diagonal — rising (tips bottom-left and
-   * top-right) or falling (top-left and bottom-right).
+   * A leaf: a square with two opposite corners fully round, so it is a lens
+   * along the diagonal — rising (tips bottom-left and top-right) or falling.
+   * `deg` then turns it onto the mockup's axis.
    */
-  const leaf = (w: number, h: number, axis: 'rising' | 'falling') => {
-    const r = Math.max(w, h) * u;
+  const leaf = (side: number, axis: 'rising' | 'falling') => {
+    const r = side * u;
     return axis === 'rising' ? { borderTopLeftRadius: r, borderBottomRightRadius: r } : { borderTopRightRadius: r, borderBottomLeftRadius: r };
   };
   return (
     <View testID="splash-mark" aria-hidden style={{ width: size, height: size }}>
-      <View style={{ ...at(17, 27, 14, 14, 0), borderRadius: 7 * u, backgroundColor: t.color.brandYellow }} />
-      <View style={{ ...at(42.5, 26.5, 20, 40, 4), ...leaf(20, 40, 'rising'), backgroundColor: t.color.brand }} />
-      <View style={{ ...at(17.5, 39, 22, 10, 6), ...leaf(22, 10, 'falling'), backgroundColor: t.color.brandLight }} />
+      {/*
+        Hill: a swoosh that tapers to a point at each end — the top border of
+        an ellipse with no side borders, turned so the right end rises.
+      */}
       <View
         style={{
-          ...at(31, 51, 54, 7, -9),
-          borderTopLeftRadius: 40 * u,
-          borderTopRightRadius: 40 * u,
-          borderBottomLeftRadius: 6 * u,
-          borderBottomRightRadius: 2 * u,
-          backgroundColor: t.color.brandStrong,
+          ...at(33, 52, 58, 24, -10),
+          borderRadius: '50%',
+          borderTopWidth: 7 * u,
+          borderLeftWidth: 0,
+          borderRightWidth: 0,
+          borderBottomWidth: 0,
+          borderColor: t.color.brandStrong,
         }}
       />
+      <View style={{ ...at(17, 27, 14, 14, 0), borderRadius: 7 * u, backgroundColor: t.color.brandYellow }} />
+      {/* Big leaf: (31,46) to (54,7), 30° off upright. */}
+      <View style={{ ...at(42.5, 26.5, 31, 31, -15), ...leaf(31, 'rising'), backgroundColor: t.color.brand }} />
+      {/* Small leaf: (7,33) to (28,45), 30° below level. */}
+      <View style={{ ...at(17.5, 39, 17, 17, -15), ...leaf(17, 'falling'), backgroundColor: t.color.brandLight }} />
     </View>
   );
 }
