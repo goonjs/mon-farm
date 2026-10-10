@@ -13,15 +13,16 @@
  */
 
 import { useState } from 'react';
-import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { useRouter } from 'expo-router';
 
-import { Button, TopBar } from '../../../components/chrome';
+import { Button, CardLabel, cardStyle } from '../../../components/chrome';
+import { ScreenHeader } from '../../../components/ui/screen-header';
+import { useSyncStatus } from '../../../sync/use-sync-status';
 import { DeductionForm, type DeductionFormInput } from '../../../components/DeductionForm';
 import { BuyerCheckEntry } from '../../../components/finance/BuyerCheckEntry';
 import { DebtDeductionCard } from '../../../components/finance/DebtDeductionCard';
 import { PaymentStatusCard } from '../../../components/finance/PaymentStatusCard';
-import { ScreenHeader } from '../../../components/finance/parts';
 import { RoundingCard } from '../../../components/finance/RoundingCard';
 import { SaleAccountCard } from '../../../components/finance/SaleAccountCard';
 import { useSaleRounding, type SaleRounding } from '../../../finance/use-sale-rounding';
@@ -37,9 +38,12 @@ import { useTheme } from '../../../theme';
 
 export default function SettlementScreen() {
   const t = useTheme();
-  // A phone held upright has no room for two columns (v1.1.0 is portrait-first).
-  const narrow = useWindowDimensions().width < 600;
   const msg = useT();
+  const sync = useSyncStatus();
+  // Two columns need room: below the phone/tablet line (600, Material's
+  // breakpoint, already a token) the columns stack, otherwise a 390px
+  // portrait phone squeezed the owner total to "฿ 1…" (E01-S17).
+  const narrow = useWindowDimensions().width < t.publicNumeral.tabletBreakpointPx;
   const { events, state, append } = useSale();
   const router = useRouter();
   const [reopening, setReopening] = useState(false);
@@ -109,13 +113,10 @@ export default function SettlementScreen() {
         : 'Something in the log could not be settled.';
     return (
       <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-        <TopBar
-          crumb={msg('settle.title')}
-          right={
-            <Link href="/" asChild>
-              <Button testID="to-sale-list">{msg('settle.list')}</Button>
-            </Link>
-          }
+        <ScreenHeader
+          title={msg('settle.title')}
+          back={{ label: msg('settle.list'), testID: 'to-sale-list', href: '/' }}
+          sync={sync}
         />
         <View style={{ flex: 1, padding: t.space.xl, justifyContent: 'center' }}>
           <Text
@@ -150,10 +151,10 @@ export default function SettlementScreen() {
   }
 
   const s = result;
-  // The derivation sits under the money on a phone; rendered in that order so screen readers and Tab follow what is seen.
+  // Derivation first in source and on screen, so screen readers and Tab follow what is seen (E01-S17 stacks it above on a phone).
   const derivation = (
     <View style={[card(t), narrow ? null : { flex: 1.1 }]}>
-      <CardTitle>{msg('settle.derivation')}</CardTitle>
+      <CardLabel>{msg('settle.derivation')}</CardLabel>
       {s.steps.slice(0, 6).map((step) => (
         <View
           key={step.key}
@@ -192,15 +193,10 @@ export default function SettlementScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <ScreenHeader
-        testID="settle"
         title={msg('settle.title')}
-        subtitle={state.parties?.farmName ?? undefined}
-        onBack={() => router.replace('/')}
-        right={
-          <Link href="/" asChild>
-            <Button testID="to-sale-list">{msg('settle.list')}</Button>
-          </Link>
-        }
+        subtitle={state.parties?.farmName || undefined}
+        back={{ label: msg('settle.list'), testID: 'to-sale-list', href: '/' }}
+        sync={sync}
       />
 
       {/* alignItems: 'flex-start' so each column is as tall as its own content.
@@ -217,23 +213,23 @@ export default function SettlementScreen() {
           gap: t.space.md,
         }}
       >
-        {narrow ? null : derivation}
+        {derivation}
 
         {/* ---- owner total, leading ---- */}
-        <View style={{ flex: narrow ? undefined : 1, gap: t.space.md }}>
+        <View style={narrow ? { gap: t.space.md } : { flex: 1, gap: t.space.md }}>
           {/* E05-S03: check against the buyer before paying anyone. */}
           <View style={card(t)}>
             <BuyerCheckEntry saleId={state.id} ours={saleFigures(s)} />
           </View>
 
           <View style={card(t)}>
-            <CardTitle>{msg('settle.ownerTotal')}</CardTitle>
+            <CardLabel>{msg('settle.ownerTotal')}</CardLabel>
             <Figure testID="owner-share" colour={t.color.action}>{formatBaht(s.ownerSatang)}</Figure>
             <ShareLabel>{msg('settle.ownerNote')}</ShareLabel>
           </View>
 
           <View style={card(t)}>
-            <CardTitle>{msg('settle.perZone')}</CardTitle>
+            <CardLabel>{msg('settle.perZone')}</CardLabel>
             {s.perZone.map((z) => (
               <View key={z.zoneId} testID={`zone-${z.zoneId}`} style={{ marginBottom: t.space.sm }}>
                 <Row
@@ -265,7 +261,7 @@ export default function SettlementScreen() {
           </View>
 
           <View style={card(t)}>
-            <CardTitle>{msg('settle.perWorker')}</CardTitle>
+            <CardLabel>{msg('settle.perWorker')}</CardLabel>
             {s.perWorker.length === 0 ? (
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
                 {msg('settle.noWorker')}
@@ -289,11 +285,10 @@ export default function SettlementScreen() {
           <MoneyCards saleId={state.id} settlement={s} />
 
           <View style={card(t)}>
-            <CardTitle>{msg('settle.deductionAdd')}</CardTitle>
+            <CardLabel>{msg('settle.deductionAdd')}</CardLabel>
             <DeductionForm onAdd={addDeduction} />
           </View>
         </View>
-        {narrow ? derivation : null}
       </ScrollView>
 
       <View
@@ -338,30 +333,7 @@ export default function SettlementScreen() {
   );
 }
 
-const card = (t: ReturnType<typeof useTheme>) => ({
-  borderWidth: t.border.hair,
-  borderColor: t.color.ruleFaint,
-  borderRadius: t.radius.lg,
-  backgroundColor: t.color.surfaceRaised,
-  padding: t.space.md,
-});
-
-function CardTitle({ children }: { children: React.ReactNode }) {
-  const t = useTheme();
-  return (
-    <Text
-      style={{
-        fontFamily: t.font.family.mono,
-        fontSize: t.font.size.micro,
-        letterSpacing: t.font.tracking.wide,
-        color: t.color.inkSoft,
-        marginBottom: t.space.sm,
-      }}
-    >
-      {children}
-    </Text>
-  );
-}
+const card = (t: ReturnType<typeof useTheme>) => ({ ...cardStyle(t), padding: t.space.md });
 
 function ShareLabel({ children }: { children: React.ReactNode }) {
   const t = useTheme();
