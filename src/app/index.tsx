@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Link, useFocusEffect, type Href } from 'expo-router';
 
-import { Button } from '../components/chrome';
+import { Button, cardStyle } from '../components/chrome';
 import { projectSale } from '../core/project';
 import type { SaleState } from '../core/types';
 import { newId } from '../lib/id';
@@ -62,47 +62,56 @@ export default function SaleListScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
+      {/* App bar — v1.1.0 mockups: title over a soft subtitle on appBar. */}
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           gap: t.space.sm,
-          padding: t.space.md,
+          paddingHorizontal: t.space.lg,
+          paddingVertical: t.space.md,
+          backgroundColor: t.color.appBar,
           borderBottomWidth: t.border.hair,
-          borderBottomColor: t.color.rule,
+          borderBottomColor: t.color.ruleFaint,
         }}
       >
-        <Text
-          style={{
-            fontFamily: t.font.family.sans,
-            fontSize: t.font.size.title,
-            fontWeight: t.font.weight.black,
-            color: t.color.ink,
-          }}
-        >
-          mon-farm
-        </Text>
-        <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, color: t.color.inkSoft }}>
-          {msg('sales.title')}
-        </Text>
+        <View style={{ flexShrink: 1 }}>
+          <Text
+            style={{
+              fontFamily: t.font.family.sans,
+              fontSize: t.font.size.headingLg,
+              fontWeight: t.font.weight.bold,
+              color: t.color.appBarInk,
+            }}
+          >
+            mon-farm
+          </Text>
+          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.inkSoft }}>
+            {msg('sales.title')}
+          </Text>
+        </View>
         <View style={{ flex: 1 }} />
         <Link href={SETTINGS} asChild>
           <Button testID="open-settings">{msg('settings.open')}</Button>
         </Link>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.md, gap: t.space.sm }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.lg, gap: t.space.md }}>
         {sales === null ? (
-          <Text style={{ fontFamily: t.font.family.mono, color: t.color.inkSoft }}>{msg('counter.loading')}</Text>
+          <Text style={{ fontFamily: t.font.family.sans, color: t.color.inkSoft }}>{msg('counter.loading')}</Text>
         ) : sales.length === 0 ? (
           <Text
             testID="empty-state"
-            style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}
+            style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, color: t.color.inkSoft }}
           >
             {msg('sales.empty')}
           </Text>
         ) : (
-          sales.map((s) => <SaleRow key={s.id} sale={s} onDelete={() => void remove(s.id)} />)
+          <View style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
+            {sales.map((s, i) => (
+              <SaleRow key={s.id} sale={s} first={i === 0} onDelete={() => void remove(s.id)} />
+            ))}
+          </View>
         )}
         {deletedCount > 0 && (
           <Link href="/deleted" asChild>
@@ -111,13 +120,7 @@ export default function SaleListScreen() {
         )}
       </ScrollView>
 
-      <View
-        style={{
-          padding: t.space.sm,
-          borderTopWidth: t.border.hair,
-          borderTopColor: t.color.rule,
-        }}
-      >
+      <View style={{ paddingHorizontal: t.space.lg, paddingVertical: t.space.md }}>
         <Link href={newSaleHref} asChild>
           <Button testID="new-sale" variant="primary">{msg('sales.new')}</Button>
         </Link>
@@ -126,7 +129,7 @@ export default function SaleListScreen() {
   );
 }
 
-function SaleRow({ sale, onDelete }: { sale: SaleState; onDelete: () => void }) {
+function SaleRow({ sale, first, onDelete }: { sale: SaleState; first: boolean; onDelete: () => void }) {
   const t = useTheme();
   const msg = useT();
   // Two steps, like every destructive action here; keeping it is the default.
@@ -138,11 +141,19 @@ function SaleRow({ sale, onDelete }: { sale: SaleState; onDelete: () => void }) 
   const label = sale.parties?.farmName || sale.parties?.buyer || msg('sales.unnamed');
 
   return (
-    <View style={{ gap: t.space.xs }}>
+    <View
+      style={{
+        gap: t.space.xs,
+        paddingVertical: t.space.sm,
+        // Rows inside the list card are split by a hairline, as in the mockups.
+        borderTopWidth: first ? 0 : t.border.hair,
+        borderTopColor: t.color.ruleFaint,
+      }}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
         <View style={{ flex: 1 }}>
           <Link href={href} asChild>
-            <Button testID={`sale-${sale.id}`}>
+            <Button testID={`sale-${sale.id}`} variant="row">
               {msg('sales.row', {
                 name: label,
                 status: msg(sale.status === 'closed' ? 'status.closed' : 'status.open'),
@@ -164,7 +175,7 @@ function SaleRow({ sale, onDelete }: { sale: SaleState; onDelete: () => void }) 
       </View>
       {confirming && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
-          <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+          <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.inkSoft }}>
             {msg('sales.deleteHint')}
           </Text>
           <Button testID={`delete-cancel-${sale.id}`} onPress={() => setConfirming(false)}>

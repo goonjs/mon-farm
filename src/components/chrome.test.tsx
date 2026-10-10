@@ -93,4 +93,16 @@ describe('chrome — v1.1.0 shell styling', () => {
     expect(flat(screen.getByText('นับ').props.style)).toMatchObject({ color: c.action, fontWeight: tokens.font.weight.bold });
     expect(flat(screen.getByText('กอง').props.style).color).toBe(c.inkSoft);
   });
+
+  it('row button: a borderless, left-aligned list row with a decorative chevron', () => {
+    wrap(<Button testID="r" variant="row">ไร่คุณพ่อ · เปิดอยู่</Button>);
+    const s = flat(screen.getByTestId('r').props.style);
+    expect(s).toMatchObject({ borderWidth: 0, alignItems: 'stretch', minHeight: tokens.target.min });
+    expect(flat(screen.getByText('ไร่คุณพ่อ · เปิดอยู่').props.style)).toMatchObject({
+      color: c.ink,
+      textAlign: 'left',
+      fontSize: tokens.font.size.bodyLg,
+    });
+    expect(flat(screen.getByText('›', { includeHiddenElements: true }).props.style).color).toBe(c.inkFaint);
+  });
 });

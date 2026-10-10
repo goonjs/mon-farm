@@ -207,13 +207,59 @@ export function Button({
 }: {
   children: React.ReactNode;
   onPress?: () => void;
-  variant?: 'primary' | 'ghost' | 'destructive';
+  /** `row`: a list row inside a card (v1.1.0 home) — text left, chevron right. */
+  variant?: 'primary' | 'ghost' | 'destructive' | 'row';
   disabled?: boolean;
   testID?: string;
   /** When the visible text alone does not say what the button acts on. */
   accessibilityLabel?: string;
 }) {
   const t = useTheme();
+  if (variant === 'row') {
+    return (
+      <Pressable
+        testID={testID}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="button"
+        onPress={onPress}
+        disabled={disabled}
+        style={{
+          minHeight: t.target.min,
+          borderWidth: 0,
+          borderRadius: t.radius.md,
+          paddingHorizontal: t.space.xs,
+          flexDirection: 'row',
+          alignItems: 'stretch',
+          gap: t.space.sm,
+        }}
+      >
+        <Text
+          style={{
+            flex: 1,
+            alignSelf: 'center',
+            fontFamily: t.font.family.sans,
+            fontSize: t.font.size.bodyLg,
+            fontWeight: t.font.weight.semibold,
+            color: disabled ? t.color.disabledInk : t.color.ink,
+            textAlign: 'left',
+          }}
+        >
+          {children}
+        </Text>
+        <Text
+          aria-hidden
+          style={{
+            alignSelf: 'center',
+            fontFamily: t.font.family.sans,
+            fontSize: t.font.size.headingLg,
+            color: t.color.inkFaint,
+          }}
+        >
+          ›
+        </Text>
+      </Pressable>
+    );
+  }
   // v1.1.0 mockups: pill buttons. Primary = navy fill; secondary ("ghost") =
   // raised fill with a navy outline; destructive = red outline. Disabled is a
   // state of its own (story recipe) rather than a faded copy: a disabled fill,
