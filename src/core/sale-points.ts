@@ -26,6 +26,11 @@ function sequenceOf(pointId: string, mode: NumberingMode, tapperOf: TapperOf): s
   return tapper ? `t:${tapper}` : `p:${pointId}`;
 }
 
+/** Whether two points number their baskets in one sequence (review S1: a move stays inside it). */
+export function sameSequence(a: string, b: string, mode: NumberingMode, tapperOf: TapperOf): boolean {
+  return sequenceOf(a, mode, tapperOf) === sequenceOf(b, mode, tapperOf);
+}
+
 /**
  * The number the next basket at `pointId` gets: one above the highest in its
  * sequence. Voided and deleted baskets still hold their number — the gap
@@ -140,7 +145,9 @@ export function recorderFigures(
     .filter((b) => b.pointId && sequenceOf(b.pointId, mode, tapperOf) === seq)
     .sort(compareEvents);
   const netG = mine.reduce((sum, b) => sum + basketNetG(b), 0);
-  const last = mine.at(-1);
+  // The last basket is the highest number (fold order breaks ties), not the
+  // newest event: an edit re-records an old number later in the log.
+  const last = mine.reduce<BasketEvent | undefined>((top, b) => (!top || (b.basketNo ?? 0) >= (top.basketNo ?? 0) ? b : top), undefined);
   const tapperId = tapperOf(pointId);
   return {
     scope: seq.startsWith('t:') && tapperId ? { tapperId } : { pointId },
@@ -236,7 +243,8 @@ export function basketList(events: readonly SaleEvent[]): readonly BasketRow[] {
   const live = new Set(liveBaskets(events).map((b) => b.id));
   const undone = undoneIds(events);
   const replaced = new Set<string>();
-  for (const e of events) if ((e.kind === 'accept' || e.kind === 'short') && e.editOf) replaced.add(e.editOf);
+  // Only a replacement still standing hides its original; an undone edit gives the row back.
+  for (const e of events) if ((e.kind === 'accept' || e.kind === 'short') && e.editOf && !undone.has(e.id)) replaced.add(e.editOf);
   const rows: BasketRow[] = [];
   for (const e of [...events].sort(compareEvents).reverse()) {
     if ((e.kind !== 'accept' && e.kind !== 'short') || !e.pointId || e.basketNo === undefined) continue;

@@ -22,11 +22,17 @@ export default function PickPointScreen() {
   const t = useTheme();
   const msg = useT();
   const router = useRouter();
-  const { pair: pairParam, switch: switching } = useLocalSearchParams<{ pair?: string; switch?: string }>();
+  const { pair: pairParam, switch: switching, farm: farmParam, tapper: tapperParam } = useLocalSearchParams<{
+    pair?: string;
+    switch?: string;
+    farm?: string;
+    tapper?: string;
+  }>();
   const { saleId, state: sale, append } = useSale();
   const [state, setState] = useState<MasterState | null>(null);
-  const [farmId, setFarmId] = useState<string | null>(null);
-  const [tapperId, setTapperId] = useState<string | null>(null);
+  // Switching from the counter opens on its farm and tapper (E04-S05, ≤ 2 taps).
+  const [farmId, setFarmId] = useState<string | null>(farmParam ?? null);
+  const [tapperId, setTapperId] = useState<string | null>(tapperParam ?? null);
   const [now] = useState(() => Date.now());
 
   useEffect(() => {

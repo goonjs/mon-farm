@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { LogBuilder } from './fixtures';
 import { MASTER_SCOPE, projectMaster } from './master';
 import { projectSale } from './project';
-import { basketList, nextBasketNo, parseKgG, parsePrice, pointChoices, pointSetupPayloads, recorderFigures, saleNumbering, saleRollup } from './sale-points';
+import { basketList, nextBasketNo, parseKgG, sameSequence, parsePrice, pointChoices, pointSetupPayloads, recorderFigures, saleNumbering, saleRollup } from './sale-points';
 import type { MasterPayload, NumberingMode, SaleEvent } from './types';
 
 /** Farm: สวน ก (p1, p2 → แดง; p4 → นัด), สวน ข (p3 → แดง). */
@@ -234,5 +234,44 @@ describe('parseKgG — E04-S09 edit form', () => {
     expect(parseKgG(' 50 ')).toBe(50_000);
     expect(parseKgG('0.125')).toBe(125);
     expect([parseKgG(''), parseKgG('0'), parseKgG('1.2345'), parseKgG('-3'), parseKgG('a')]).toEqual([null, null, null, null, null]);
+  });
+});
+
+describe('review fixes — E04-S05/S09', () => {
+  it('after an edit, "the last basket" is still the highest number, not the newest event (B1)', () => {
+    const m = master();
+    const b = new LogBuilder('sale-x').acceptAt('p1', 1).acceptAt('p1', 2).acceptAt('p1', 3);
+    const first = b.build()[0];
+    b.void('p1', first.id, 'edit');
+    b.editAt(first.id, 'p1', 1, 45_000);
+    const f = recorderFigures(b.build(), m, DAY, 'p1', 'per-tapper', null);
+    expect(f.lastId).toBe(b.build()[2].id);
+    expect(f.currentNo).toBe(4);
+  });
+
+  it('an edit that was undone gives the original row back, voided (B1)', () => {
+    const b = new LogBuilder('sale-x').acceptAt('p1', 1);
+    const first = b.build()[0];
+    b.void('p1', first.id, 'edit');
+    b.editAt(first.id, 'p1', 1, 45_000);
+    b.undo('p1', b.build().at(-1)!.id);
+    expect(basketList(b.build())).toMatchObject([{ id: first.id, status: 'voided' }]);
+  });
+
+  it('an edited old short basket is not the open short basket; a real open short stays (B1)', () => {
+    const m = master();
+    const b = new LogBuilder('sale-x').shortAt('p1', 1, 30_000).acceptAt('p1', 2).shortAt('p1', 3, 37_000);
+    const first = b.build()[0];
+    b.void('p1', first.id, 'edit');
+    b.editAt(first.id, 'p1', 1, 20_000);
+    expect(recorderFigures(b.build(), m, DAY, 'p1', 'per-tapper', null).openShortG).toBe(35_000);
+  });
+});
+
+describe('sameSequence — review S1', () => {
+  const tapperOf = (pointId: string) => (pointId === 'p4' ? 'nat' : 'red');
+  it('per tapper: points of the same tapper share one; per point: only the point itself', () => {
+    expect([sameSequence('p1', 'p3', 'per-tapper', tapperOf), sameSequence('p1', 'p4', 'per-tapper', tapperOf)]).toEqual([true, false]);
+    expect([sameSequence('p1', 'p1', 'per-point', tapperOf), sameSequence('p1', 'p2', 'per-point', tapperOf)]).toEqual([true, false]);
   });
 });
