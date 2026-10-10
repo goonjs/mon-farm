@@ -11,7 +11,7 @@ import { ScrollView, View } from 'react-native';
 import { BuyerCheckPanel } from '../../../components/finance/BuyerCheckPanel';
 import { Note, ScreenHeader } from '../../../components/finance/parts';
 import { drillDown, saleFigures, shortByZone } from '../../../core/finance/buyer-check';
-import { settle } from '../../../core/settle';
+import { settle, SettlementUnavailable } from '../../../core/settle';
 import { useT } from '../../../i18n';
 import { useSale } from '../../../store/SaleProvider';
 import { useTheme } from '../../../theme';
@@ -24,9 +24,10 @@ export default function CheckScreen() {
     try {
       const s = settle(events, state);
       return { ours: saleFigures(s), shorts: shortByZone(s), drill: drillDown(events, state) };
-    } catch {
-      // No price yet, or nothing weighed: there is nothing to check against.
-      return null;
+    } catch (err) {
+      // No price yet, or nothing weighed: there is nothing to check against. Anything else is a bug (review #4).
+      if (err instanceof SettlementUnavailable) return null;
+      throw err;
     }
   }, [events, state]);
 

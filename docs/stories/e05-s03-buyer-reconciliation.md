@@ -54,9 +54,9 @@ Status: In Progress — AC ตาม D-81 รอเจ้าของตรว�
 
 ## Code review
 
-- Reviewer (agent/session แยก):
-- Findings:
-- Resolution:
+- Reviewer (agent/session แยก): review subagent (read-only), 2026-10-10, on `2c85be6..c4d2b46`
+- Findings: ไม่มี major · minor 5: (1) core ไม่บังคับเหตุผลของ "พบส่วนต่าง" (2) บันทึกล้มเหลวเงียบ (3) การ์ดบนหน้าสรุปไม่บอก Conflict (4) `check.tsx` กลืนทุก error (5) head ที่รวมกันใช้ basis ของ head ท้ายสุดอย่างเดียว · nit หลายข้อ
+- Resolution: แก้ทั้ง 5 (1 และ 5 มี unit test เขียนก่อน); nit ที่แก้: ข้อความ `chk.buyerBad`, testID ของส่วนต่างเข่ง, ล้างฟอร์มหลังบันทึก/ยกเลิก, ปุ่มบนการ์ดไม่ซ้ำหัวข้อ, ไม่แสดง "รอตรวจ" ระหว่างโหลด. ไม่แก้: testID บน Text ซ้อน (ใช้ได้บนเว็บ/jest; ย้ายเมื่อมี native e2e), คิดกรัมด้วย float + Math.round (ปลอดภัยที่ ≤ 3 ตำแหน่ง), เลขเข่งนับต่อกอง (ผูกกับ D-46 ที่ยังเปิด)
 
 ## QA notes
 

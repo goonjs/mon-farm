@@ -46,6 +46,8 @@ export function buyerCheckPayload(
   buyer: BuyerFigures | null = null,
   reason = '',
 ): CheckPayload {
+  // The rule lives here, not only in the form: "พบส่วนต่าง" always has a reason (review #1).
+  if (checkBuyerCheck(status, reason, buyer).length) throw new RangeError('buyer check: a difference needs a reason and whole, non-negative figures');
   // "ตรงกันทั้งหมด" records the buyer's figures as ours in the same tap (D-72).
   const given = status === 'total' ? { netG: ours.netG, grossSatang: ours.grossSatang, baskets: ours.baskets } : buyer;
   return { t: 'buyer_check_set', saleId, status, basis: ours, buyer: given, reason: reason.trim() };
@@ -77,7 +79,8 @@ export function buyerCheck(events: readonly FinanceEvent[], saleId: string, ours
   const p = payloads[payloads.length - 1];
   if (p.status === 'pending') return { ...empty, head };
 
-  const holds = p.status === 'weight' ? sameWeight(p.basis, ours) : sameTotal(p.basis, ours);
+  // Every merged head must still hold, not just the one that sorts last (review #5).
+  const holds = payloads.every((x) => (x.status === 'weight' ? sameWeight(x.basis, ours) : sameTotal(x.basis, ours)));
   const gap = (b: number | null | undefined, o: number) => (b === null || b === undefined ? null : b - o);
   return {
     status: holds ? p.status : 'pending',
