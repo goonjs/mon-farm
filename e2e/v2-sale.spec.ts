@@ -145,11 +145,67 @@ test('start → point → empty scale → count → short → switch and fill �
   await id('backfill-save').click();
   await expect(id('counter')).toBeVisible();
 
-  // ── การขายทั้งหมด (page 4) ──
+  // ── นัด at จันทเขลม จุด 4: another tapper, nothing asked ──
+  await id('switch-point').click();
+  await id('pick-tapper-nat').click();
+  await id('pick-point-a4').click();
+  await id('start-weigh').click();
+  await expect(id('point-tapper')).toContainText('นัด');
+  await expect(id('current-no')).toHaveText('1');
+  await hold(page);
+  await hold(page);
+  await expect(id('fig-kg')).toContainText('100');
+
+  // ── ชั่งครบแล้ว → ตรวจยอด (page 16): the price first, then one tap ──
   await id('counter-menu').click();
-  await id('menu-sales').click();
+  await id('menu-finish').click();
+  await expect(id('check')).toBeVisible();
+  await id('check-price').fill('48.50');
+  await id('check-price-save').click();
+  await expect(id('check-total')).toContainText('22,795.00');
+  await expect(id('check-weight')).toContainText('470 กก.');
+  await shot(page, '16-check');
+  await id('check-match').click();
+  await expect(id('check-status')).toContainText('ตรงกัน');
+  await id('to-settlement').click();
+
+  // ── สรุปยอดส่วนแบ่ง (page 17), ปัดเศษ (page 18) ──
+  await expect(id('settlement')).toBeVisible();
+  await expect(id('share-amt-red')).toContainText('8,972.50');
+  await expect(id('share-amt-nat')).toContainText('2,425.00');
+  await expect(id('owner-transfer')).toContainText('11,397.50');
+  await shot(page, '17-settlement');
+  await id('to-rounding').click();
+  await expect(id('rounding-sheet')).toBeVisible();
+  await id('round-worker').click();
+  await shot(page, '18-rounding');
+  await id('round-confirm').click();
+
+  // ── เทียบยอด (page 18a) ──
+  await expect(id('tally')).toBeVisible();
+  await expect(id('tally-ok')).toBeVisible();
+  await expect(id('tally-sum')).toContainText('22,795.00');
+  await shot(page, '18a-tally');
+  await id('to-payment').click();
+
+  // ── การจ่ายเงิน (page 19): ticks survive a reload; then close ──
+  await expect(id('payment')).toBeVisible();
+  await expect(id('tick-amt-red')).toContainText('8,973');
+  await id('tick-red').click();
+  await expect(id('tick-red')).toHaveAttribute('aria-checked', 'true');
+  await id('tick-owner').click();
+  await context.setOffline(false);
+  await page.reload();
+  await context.setOffline(true);
+  await expect(id('tick-red')).toHaveAttribute('aria-checked', 'true');
+  await expect(id('pay-check')).toContainText('ตรงกัน');
+  await shot(page, '19-payment');
+  await id('close-sale').click();
+
+  // ── การขายทั้งหมด (page 4) ──
   await expect(id('sales')).toBeVisible();
-  await expect(id('sale-rows')).toContainText('370 กก.');
+  await expect(id('sale-rows')).toContainText('470 กก.');
+  await expect(id('sale-rows')).toContainText('ปิดแล้ว');
   await shot(page, '04-sales');
 
   expect(errors).toEqual([]);

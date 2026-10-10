@@ -99,8 +99,8 @@ export function Kv({ label, value, tone = 'plain', testID, indent }: { label: Re
       <Text
         style={{
           fontFamily: t.font.family.sans,
-          fontSize: t.font.size.bodyLg,
-          fontWeight: t.font.weight.bold,
+          fontSize: tone === 'muted' ? t.font.size.bodyMd : t.font.size.bodyLg,
+          fontWeight: tone === 'muted' ? t.font.weight.regular : t.font.weight.bold,
           fontVariant: ['tabular-nums'],
           color: colour,
           textAlign: 'right',
