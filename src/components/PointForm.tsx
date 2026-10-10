@@ -1,9 +1,8 @@
 /**
- * Add or rename one weighing point (จุดชั่ง, E03-S03, mockup v1.1.0 screen
- * 14): a farm and a name unique within that farm (D-65 Q10). Delete is
- * "ลบจุดชั่ง (กู้คืนได้)" behind a confirmation, always allowed (D-58).
- * An existing point shows its tappers over time (E03-S05); right after a new
- * point is saved, the screen offers to assign one now or later (D-74 F15).
+ * Add or rename one weighing point (จุดชั่ง, E03-S03, mockup v1.1.0 farm-18):
+ * a farm and a name unique within that farm (D-65 Q10). Right after a new
+ * point is saved, the screen offers to assign a tapper now or later (D-74
+ * F15). Its tappers over time and delete are on `PointDetail` (farm-20).
  */
 
 import { useEffect, useState } from 'react';
@@ -34,7 +33,6 @@ export function PointForm({
   const [farmId, setFarmId] = useState<string | null>(propertyId);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
   const [offer, setOffer] = useState<Point | null>(null);
   const [assignNow, setAssignNow] = useState(false);
 
@@ -63,12 +61,6 @@ export function PointForm({
       if (err instanceof DuplicatePointNameError) setError(msg('pointForm.taken', { name: name.trim() }));
       else throw err;
     }
-  };
-
-  const remove = async () => {
-    if (!existing) return;
-    await master.remove(existing.id);
-    onDone();
   };
 
   if (offer && !assignNow) {
@@ -121,36 +113,6 @@ export function PointForm({
         {msg('common.save')}
       </Button>
 
-      {existing ? <TapperAssignments pointId={existing.id} /> : null}
-
-      {existing && !existing.deleted ? (
-        confirming ? (
-          <Card testID="delete-confirm">
-            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
-              {msg('pointForm.deleteTitle', { name: existing.name })}
-            </Text>
-            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.ink }}>{msg('pointForm.deleteBody')}</Text>
-            <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-              <View style={{ flex: 1 }}>
-                <Button testID="delete-confirm-no" onPress={() => setConfirming(false)}>
-                  {msg('common.cancel')}
-                </Button>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button testID="delete-confirm-yes" variant="destructive" onPress={() => void remove()}>
-                  {msg('pointForm.deleteYes')}
-                </Button>
-              </View>
-            </View>
-          </Card>
-        ) : (
-          <View style={{ alignSelf: 'flex-start' }}>
-            <Button testID="point-delete" variant="destructive" onPress={() => setConfirming(true)}>
-              {msg('pointForm.delete')}
-            </Button>
-          </View>
-        )
-      ) : null}
     </View>
   );
 }

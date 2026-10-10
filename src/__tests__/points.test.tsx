@@ -2,6 +2,7 @@ import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import PropertiesScreen from '../app/properties';
+import { PointDetail } from '../components/PointDetail';
 import { PointForm } from '../components/PointForm';
 import { PointsWizard } from '../components/PointsWizard';
 import { PropertyDetail } from '../components/PropertyDetail';
@@ -16,7 +17,7 @@ jest.mock('../store/people', () => {
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
   useFocusEffect: () => undefined,
-  useRouter: () => ({ back: jest.fn(), replace: jest.fn(), canGoBack: () => true }),
+  useRouter: () => ({ back: jest.fn(), replace: jest.fn(), push: jest.fn(), canGoBack: () => true }),
 }));
 
 async function flush() {
@@ -64,7 +65,7 @@ describe('PointForm — E03-S03', () => {
   it('deletes a point (กู้คืนได้) after confirming', async () => {
     const f = await mockMaster.addProperty({ name: 'สวน ก', crop: 'rubber' });
     const p = await mockMaster.addPoint(f.id, 'จุด 1');
-    wrap(<PointForm pointId={p.id} propertyId={null} onDone={jest.fn()} />);
+    wrap(<PointDetail pointId={p.id} onRename={jest.fn()} onDone={jest.fn()} />);
     await flush();
     fireEvent.press(screen.getByTestId('point-delete'));
     expect(screen.getByTestId('delete-confirm')).toHaveTextContent(/กู้คืนได้/);
