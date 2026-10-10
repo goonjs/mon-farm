@@ -23,7 +23,7 @@ test('an open sale appears and resumes into the counter screen', async ({ page }
   const row = page.getByTestId(`sale-${saleId}`);
   await expect(row).toBeVisible();
   await expect(row).toContainText('ไร่คุณพ่อ');
-  await expect(row).toContainText('เปิดอยู่'); // open, not closed
+  await expect(row).toContainText('กำลังชั่ง'); // open: still weighing (mockup sale-00)
 
   await row.click();
   await expect(page.getByTestId('count')).toHaveText('3');
