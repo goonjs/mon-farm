@@ -18,6 +18,7 @@ import { store } from '../../store/store';
 import { useTheme } from '../../theme';
 import { AppText, BasketIcon, Chip, CTA, IconTile, LeafIcon, TapperIcon, toneColours, UsersIcon } from '../../ui';
 import { FarmScreen, RowCard } from '../farm/pieces';
+import { saleHref } from '../routes';
 import { Banner, clearClosing, IconLine, kgText, tapperTone } from './pieces';
 
 interface Loaded {
@@ -50,11 +51,7 @@ export function SalesScreen() {
   // A sale closed on the way here is done closing.
   useEffect(clearClosing, []);
 
-  const open = (r: SaleListRow & { point: string | null }) => {
-    const base = `/v2/sale/${r.id}`;
-    if (r.closed) router.push(`${base}/payment` as Href);
-    else router.push((r.point ? `${base}/counter?point=${r.point}` : `${base}/point`) as Href);
-  };
+  const open = (r: SaleListRow & { point: string | null }) => router.push(saleHref(r.id, r));
 
   return (
     <FarmScreen

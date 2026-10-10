@@ -243,8 +243,11 @@ describe('V2Home — live rows from the local log', () => {
     expect(within(screen.getByTestId('mod-payables')).getByText('1,200.00')).toBeTruthy();
     expect(within(screen.getByTestId('mod-workers')).getByText('2')).toBeTruthy();
 
+    // The open sale resumes at its counter, the latest one opens its payment (v2 sale flow).
     fireEvent.press(open);
-    expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/sales');
+    expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/sale/s-now/counter?point=p1');
+    fireEvent.press(latest);
+    expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/sale/s-old/payment');
     fireEvent.press(owed);
     expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/owed');
   });

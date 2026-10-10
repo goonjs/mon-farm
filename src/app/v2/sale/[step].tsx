@@ -1,17 +1,15 @@
-import { Redirect, useLocalSearchParams } from 'expo-router';
+import { Redirect } from 'expo-router';
 
-import { BUILT_SECTIONS, findSection, SALE_STEPS, V2_HOME } from '../../../v2/routes';
-import { Placeholder } from '../../../v2/placeholder-screen';
-
-/** Pre-render one page per sale step for the static web export. */
+/**
+ * /v2/sale/<anything> with no page of its own. The reserved sale-step
+ * placeholders are gone — the sale flow is built (`/v2/sale/start`,
+ * `/v2/sale/<id>/…`) — so an old or mistyped address lands on the sale list.
+ * Kept only because removing a file waits on the owner; nothing links here.
+ */
 export function generateStaticParams() {
-  return SALE_STEPS.filter((s) => !BUILT_SECTIONS.has(`sale/${s.slug}`)).map((s) => ({ step: s.slug }));
+  return [];
 }
 
-/** /v2/sale/<step>: a placeholder until the step's real screen exists. */
-export default function V2SaleStep() {
-  const { step } = useLocalSearchParams<{ step: string }>();
-  const s = findSection(SALE_STEPS, step);
-  if (!s) return <Redirect href={V2_HOME} />;
-  return <Placeholder titleId={s.titleId} />;
+export default function OldSaleStep() {
+  return <Redirect href="/v2/sales" />;
 }
