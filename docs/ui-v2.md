@@ -113,7 +113,7 @@ keeps them apart), `sale/[step].tsx`. Farm screens are in `src/v2/farm/`;
 they read and write farm master data through `peopleStore` (`MasterStore`
 over the local event log), so all of it works offline and survives a reload.
 Dynamic routes render a neutral shell while hydrating (`useMounted`) so the
-exported `[id]` page never mismatches (React #418). Screen code is in `src/v2/`. `generateStaticParams`
+exported `[id]` page never mismatches (React error 418). Screen code is in `src/v2/`. `generateStaticParams`
 pre-renders one page per slug for the static web export. The local
 `scripts/serve-dist.mjs` serves the home at `/v2/` (with the trailing slash).
 

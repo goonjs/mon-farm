@@ -58,7 +58,7 @@ export function useMaster(): { state: MasterState | null; reload: () => void } {
  * False while hydrating a static page, true otherwise. A dynamic route's static page
  * is rendered once, at export, for the pattern (`/v2/person/[id]`), so the
  * first client render must match that neutral shell before it reads the real
- * id — otherwise React fails to hydrate (#418).
+ * id — otherwise React fails to hydrate (minified error 418).
  */
 export function useMounted(): boolean {
   return useSyncExternalStore(noSubscribe, () => true, () => false);
