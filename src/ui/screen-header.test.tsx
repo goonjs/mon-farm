@@ -42,6 +42,8 @@ describe('ScreenHeader — one header for every screen (v1.1.0)', () => {
     wrap(<ScreenHeader title="mon-farm" menu={{ onPress }} />);
     const menu = screen.getByTestId('open-menu');
     expect(menu.props.accessibilityLabel).toBe('เมนู');
+    expect(menu.props.accessibilityRole).toBe('button');
+    expect(flat(menu.props.style)).toMatchObject({ minWidth: tokens.target.min, minHeight: tokens.target.min });
     fireEvent.press(menu);
     expect(onPress).toHaveBeenCalled();
   });

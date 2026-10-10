@@ -1,14 +1,17 @@
 import { fireEvent, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
+import { V2Device } from './device-screen';
 import { V2Home } from './home-screen';
 import { Placeholder } from './placeholder-screen';
 import { FARM_SECTIONS, SALE_STEPS, sectionHref } from './routes';
 import { wrap } from '../test/render';
 
+const mockRouter = { canGoBack: jest.fn(() => true), back: jest.fn(), replace: jest.fn() };
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
   useFocusEffect: () => undefined,
+  useRouter: () => mockRouter,
 }));
 
 describe('v2 route table (D-82) — one placeholder per v1.1.0 mockup section', () => {
@@ -49,6 +52,15 @@ describe('Placeholder screen', () => {
     expect(screen.getByTestId('v2-back').props.accessibilityLabel).toBe('กลับ');
     expect(screen.getByText('กำลังสร้าง')).toBeTruthy();
   });
+
+  it('back returns to where the user came from, or replaces with home on a cold open', () => {
+    wrap(<Placeholder titleId="v2.people" />);
+    fireEvent.press(screen.getByTestId('v2-back'));
+    expect(mockRouter.back).toHaveBeenCalled();
+    mockRouter.canGoBack.mockReturnValueOnce(false);
+    fireEvent.press(screen.getByTestId('v2-back'));
+    expect(mockRouter.replace).toHaveBeenCalledWith('/v2');
+  });
 });
 
 describe('V2Home — v1.1.0 card home with the ☰ drawer', () => {
@@ -77,5 +89,16 @@ describe('V2Home — v1.1.0 card home with the ☰ drawer', () => {
     fireEvent.press(screen.getByTestId('open-menu'));
     fireEvent.press(screen.getAllByTestId('nav-people')[0]);
     expect(screen.queryByTestId('drawer')).toBeNull();
+  });
+});
+
+describe('V2Device — เครื่องนี้ holds the theme choice (device-only)', () => {
+  it('switches light/dark through the shared theme, as a radio group', () => {
+    wrap(<V2Device />);
+    expect(screen.getByTestId('screen-title').props.children).toBe('เครื่องนี้');
+    expect(screen.getByTestId('device-theme-light').props.accessibilityState).toMatchObject({ checked: true });
+    fireEvent.press(screen.getByTestId('device-theme-dark'));
+    expect(screen.getByTestId('device-theme-dark').props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByText('กำลังสร้าง')).toBeTruthy();
   });
 });

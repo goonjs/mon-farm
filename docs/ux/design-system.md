@@ -148,7 +148,7 @@ the only thing defining a target, it must be `ruleStrong`.
 ### วิธีเปลี่ยนสี
 
 สี 2 ชั้นใน `design/tokens.ts` (E01-S17): `PALETTES` (ramp ดิบ) → `colorFor` (ตารางบทบาท 53 ชื่อ) → `tokens.color`
-1. เปลี่ยนทั้งชุด: แก้ `ACTIVE_PALETTE` เป็น `'farmmate'` (A, ค่าเริ่มต้น) หรือ `'instrument'` (B) — บรรทัดเดียว
+1. เปลี่ยนทั้งชุด: แก้ `ACTIVE_PALETTE` เป็น `'farmmate'` (A, ค่าเริ่มต้น) หรือ `'instrument'` (B) — ค่าเดียว ไม่ต้องแก้ test: `scripts/tokens.test.ts` อ่าน `ACTIVE_PALETTE` ไม่ได้ตรึงว่า palette ไหนเปิดอยู่ (การทดสอบค่าของ palette A ยังอ้าง `PALETTES.farmmate` ตรง ๆ เพราะตรวจค่าของ A เอง)
 2. ปรับเฉด: แก้ hex ใน ramp ของ `PALETTES.<ชื่อ>` · ให้บทบาทใช้สีอื่น: แก้บรรทัดของบทบาทนั้นใน `colorFor` ที่เดียว
 3. รัน `npm run tokens` แล้ว `npm run contrast` (ตรวจทุก palette × light/dark) — commit `design/tokens.ts` กับ `docs/ux/tokens.css` ด้วยกัน
 4. หน้าจอใช้แค่ `theme.color.<บทบาท>` (เว็บ/mockup: `var(--color-<บทบาท>)`) — hex / `rgb()` / `hsl()` ใน `src/` ทำให้ CI แดง (`scripts/no-raw-colour.test.ts`)

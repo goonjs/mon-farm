@@ -24,4 +24,9 @@ describe('TopBar — the thin counter bar', () => {
     expect(screen.getAllByTestId('crumb-sep', { includeHiddenElements: true })).toHaveLength(1);
     expect(screen.queryByText(/▸/)).toBeNull();
   });
+
+  it('a path is read with separators, not run together', () => {
+    wrap(<TopBar crumb={['ไร่คุณพ่อ', 'โซน A', 'กอง 1']} />);
+    expect(screen.getByTestId('crumb').props.accessibilityLabel).toBe('ไร่คุณพ่อ, โซน A, กอง 1');
+  });
 });

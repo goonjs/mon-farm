@@ -3,6 +3,7 @@
  * shared ScreenHeader (back to the v2 home, sync pill) over one card.
  */
 
+import { useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 
 import { V2_HOME } from './routes';
@@ -16,9 +17,13 @@ export function Placeholder({ titleId, children }: { titleId: MessageId; childre
   const t = useTheme();
   const msg = useT();
   const sync = useSyncStatus();
+  const router = useRouter();
+  // Back pops the stack; a cold open (deep link) has nothing to pop, so it
+  // replaces with home rather than pushing a second home on top.
+  const back = () => (router.canGoBack() ? router.back() : router.replace(V2_HOME));
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <ScreenHeader title={msg(titleId)} back={{ label: msg('v2.back'), href: V2_HOME, testID: 'v2-back' }} sync={sync} />
+      <ScreenHeader title={msg(titleId)} back={{ label: msg('v2.back'), onPress: back, testID: 'v2-back' }} sync={sync} />
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg }}>
         <Card testID="v2-building">
           <CardLabel>{msg('v2.building')}</CardLabel>

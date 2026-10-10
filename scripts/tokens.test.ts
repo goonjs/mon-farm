@@ -62,9 +62,11 @@ const ADDED = {
 const sorted = (o: object) => Object.keys(o).sort();
 
 describe('design tokens — palette → semantic roles (E01-S17)', () => {
-  it('palette A is the active palette and feeds tokens.color', () => {
-    expect(ACTIVE_PALETTE).toBe('farmmate');
-    expect(tokens.color).toEqual(colorFor(PALETTES.farmmate));
+  // Switching palette is one value (ACTIVE_PALETTE), so no test pins which
+  // palette is active — only that whichever one it is feeds tokens.color.
+  it('the active palette is a known palette and feeds tokens.color', () => {
+    expect(Object.keys(PALETTES)).toContain(ACTIVE_PALETTE);
+    expect(tokens.color).toEqual(colorFor(PALETTES[ACTIVE_PALETTE]));
   });
 
   it('palette A keeps every legacy name at its legacy value', () => {
