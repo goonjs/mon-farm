@@ -4,7 +4,8 @@
  * change).
  *
  * - PointsScreen (/v2/points): every shown point under its farm, with today's
- *   tapper or "ยังไม่มีคนกรีด".
+ *   tapper or "ยังไม่มีคนกรีด"; points deleted on their own behind the small
+ *   link, restorable there or on their detail.
  * - PointScreen (/v2/point/<id|new>): `new?property=` adds (a name unique in
  *   its farm, D-65) then offers "เลือกคนกรีดยาง" or "ทำทีหลัง" (D-74 F15);
  *   `?edit=1` renames; otherwise the detail — who taps it when, "ตอนนี้" and
@@ -66,6 +67,8 @@ import {
   categoryTone,
   ChipWrap,
   ConfirmSheet,
+  DeletedLink,
+  DeletedList,
   FarmScreen,
   HeaderButton,
   HelpNote,
@@ -84,10 +87,18 @@ const POINTS = '/v2/points' as Href;
 export function PointsScreen() {
   const msg = useT();
   const router = useRouter();
-  const { state } = useMaster();
+  const { state, reload } = useMaster();
+  const [showDeleted, setShowDeleted] = useState(false);
   const [today] = useState(() => todayIso(Date.now()));
   const farms = state?.properties.filter((p) => !p.deleted) ?? [];
   const nameOf = (id: string | null) => state?.people.find((p) => p.id === id && !p.deleted)?.name ?? null;
+  // Deleted on their own; a point that went with its farm comes back with the farm (D-65).
+  const deleted = state?.points.filter((p) => p.deleted && farms.some((f) => f.id === p.propertyId)) ?? [];
+
+  const restore = async (id: string) => {
+    await peopleStore.restore(id);
+    reload();
+  };
 
   return (
     <FarmScreen
@@ -95,36 +106,52 @@ export function PointsScreen() {
       subtitle={msg('farmData.title')}
       fallback={'/v2/farm' as Href}
       testID="points"
-      footer={farms.length ? <AddCTA testID="add-point" label={msg('v2f.addPoint')} onPress={() => router.push('/v2/point/new' as Href)} /> : undefined}
+      footer={farms.length && !showDeleted ? <AddCTA testID="add-point" label={msg('v2f.addPoint')} onPress={() => router.push('/v2/point/new' as Href)} /> : undefined}
     >
-      {state && farms.length === 0 ? <AppText variant="bodySm">{msg('v2f.noFarmsYet')}</AppText> : null}
-      {state && farms.length > 0 && activePoints(state).length === 0 ? (
-        <Button testID="open-wizard" variant="primary" icon={(c) => <PinIcon color={c} size={16} />} onPress={() => router.push('/v2/points-wizard' as Href)}>
-          {msg('wizard.open')}
-        </Button>
-      ) : null}
-      {state
-        ? farms.map((f, i) => {
-            const points = activePoints(state, f.id);
-            if (points.length === 0) return null;
-            return (
-              <RowCard key={f.id} testID={`points-of-${f.id}`} title={f.name}>
-                {points.map((p) => (
-                  <MenuItem
-                    key={p.id}
-                    testID={`point-${p.id}`}
-                    label={p.name}
-                    onPress={() => router.push(`/v2/point/${p.id}` as Href)}
-                    leading={<IconTile tone={categoryTone(i)} icon={(c) => <PinIcon color={c} size={20} />} />}
-                    trailing={p.duplicateName ? <Chip tone="warn" label={msg('points.duplicate')} /> : undefined}
-                  >
-                    <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{nameOf(tapperOn(state, p.id, today)) ?? msg('assign.none')}</FactRow>
-                  </MenuItem>
-                ))}
-              </RowCard>
-            );
-          })
-        : null}
+      {showDeleted ? (
+        <>
+          <AppText variant="label">{msg('v2f.deletedTitle')}</AppText>
+          <DeletedList
+            rows={deleted.map((p) => ({ id: p.id, name: p.name, facts: [farms.find((f) => f.id === p.propertyId)?.name ?? ''] }))}
+            onRestore={(id) => void restore(id)}
+          />
+          <Button testID="hide-deleted" onPress={() => setShowDeleted(false)}>
+            {msg('v2.back')}
+          </Button>
+        </>
+      ) : (
+        <>
+          {state && farms.length === 0 ? <AppText variant="bodySm">{msg('v2f.noFarmsYet')}</AppText> : null}
+          {state && farms.length > 0 && activePoints(state).length === 0 ? (
+            <Button testID="open-wizard" variant="primary" icon={(c) => <PinIcon color={c} size={16} />} onPress={() => router.push('/v2/points-wizard' as Href)}>
+              {msg('wizard.open')}
+            </Button>
+          ) : null}
+          {state
+            ? farms.map((f, i) => {
+                const points = activePoints(state, f.id);
+                if (points.length === 0) return null;
+                return (
+                  <RowCard key={f.id} testID={`points-of-${f.id}`} title={f.name}>
+                    {points.map((p) => (
+                      <MenuItem
+                        key={p.id}
+                        testID={`point-${p.id}`}
+                        label={p.name}
+                        onPress={() => router.push(`/v2/point/${p.id}` as Href)}
+                        leading={<IconTile tone={categoryTone(i)} icon={(c) => <PinIcon color={c} size={20} />} />}
+                        trailing={p.duplicateName ? <Chip tone="warn" label={msg('points.duplicate')} /> : undefined}
+                      >
+                        <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{nameOf(tapperOn(state, p.id, today)) ?? msg('assign.none')}</FactRow>
+                      </MenuItem>
+                    ))}
+                  </RowCard>
+                );
+              })
+            : null}
+          <DeletedLink n={deleted.length} onPress={() => setShowDeleted(true)} />
+        </>
+      )}
     </FarmScreen>
   );
 }
@@ -287,6 +314,10 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
     setSheet({ kind: 'none' });
     back();
   };
+  const restore = async () => {
+    await peopleStore.restore(point.id);
+    reload();
+  };
 
   const planButtons = (assignmentId: string) => (
     <View style={{ flexDirection: 'row', gap: t.space.sm, paddingBottom: t.space.sm }}>
@@ -398,13 +429,15 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
       </Button>
       <HelpNote lines={[msg('assign.planHelp')]} />
 
-      {!point.deleted ? (
+      {point.deleted ? (
+        <DeletedList rows={[{ id: point.id, name: point.name }]} onRestore={() => void restore()} />
+      ) : (
         <View style={{ alignSelf: 'flex-start' }}>
           <Button testID="point-delete" variant="destructive" icon={(c) => <TrashIcon color={c} size={16} />} onPress={() => setSheet({ kind: 'delete' })}>
             {msg('pointForm.delete')}
           </Button>
         </View>
-      ) : null}
+      )}
     </FarmScreen>
   );
 }

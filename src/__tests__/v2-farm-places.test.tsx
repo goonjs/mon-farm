@@ -297,6 +297,21 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     await press('delete-confirm-yes');
     expect((await m.state()).points[0].deleted).toBe(true);
   });
+
+  it('a deleted point can be restored from its detail', async () => {
+    const m = master();
+    const farm = await m.addProperty({ name: 'สวน', crop: 'rubber' });
+    const pt = await m.addPoint(farm.id, 'จุด 1');
+    await m.remove(pt.id);
+    mockParams.current = { id: pt.id };
+    wrap(<PointScreen />);
+    await flush();
+    expect(screen.queryByTestId('point-delete')).toBeNull();
+    expect(within(screen.getByTestId('deleted-list')).getByText('ลบแล้ว')).toBeTruthy();
+    await press(`restore-${pt.id}`);
+    expect((await m.state()).points[0].deleted).toBe(false);
+    expect(screen.getByTestId('point-delete')).toBeTruthy();
+  });
 });
 
 describe('จุดชั่ง — all points and the set-up helper (farm mockup 13, 13b)', () => {
@@ -312,6 +327,32 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     expect(within(screen.getByTestId(`point-${pt.id}`)).getByText('แดง')).toBeTruthy();
     fireEvent.press(screen.getByTestId(`point-${pt.id}`));
     expect(mockRouter.push).toHaveBeenLastCalledWith(`/v2/point/${pt.id}`);
+  });
+
+  it('deleted points sit behind the small link, with their farm, and can be restored', async () => {
+    const m = master();
+    const farm = await m.addProperty({ name: 'สวนจันทเขลม', crop: 'rubber' });
+    const keep = await m.addPoint(farm.id, 'จุด 1');
+    const gone = await m.addPoint(farm.id, 'จุด 2');
+    await m.remove(gone.id);
+    // A point that went with its farm comes back with the farm, not from here.
+    const old = await m.addProperty({ name: 'สวนเก่า', crop: 'rubber' });
+    await m.addPoint(old.id, 'จุดเก่า');
+    await m.remove(old.id);
+    wrap(<PointsScreen />);
+    await flush();
+    expect(screen.getByTestId(`point-${keep.id}`)).toBeTruthy();
+    expect(screen.queryByText('จุด 2')).toBeNull();
+    expect(screen.getByText('ที่ลบแล้ว (1)')).toBeTruthy();
+    await press('show-deleted');
+    const list = screen.getByTestId('deleted-list');
+    expect(within(list).getByText('จุด 2')).toBeTruthy();
+    expect(within(list).getByText('สวนจันทเขลม')).toBeTruthy();
+    expect(within(list).queryByText('จุดเก่า')).toBeNull();
+    await press(`restore-${gone.id}`);
+    expect((await m.state()).points.find((p) => p.id === gone.id)?.deleted).toBe(false);
+    await press('hide-deleted');
+    expect(screen.getByTestId(`point-${gone.id}`)).toBeTruthy();
   });
 
   it('farm → tappers → how many → names, then creates every point with its tapper at once', async () => {
