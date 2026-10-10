@@ -19,7 +19,7 @@ import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
 import { AppText, BasketIcon, Button, CameraIcon, cardStyle, CTA, FieldError, IconTile, LeafIcon, Plus, ScaleIcon } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
-import { Crumbs, IconLine, Kv, kgText, PointBar, farmTone, tapperTone, useSaleView } from './pieces';
+import { Crumbs, IconLine, Kv, kgText, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 
 export function BackfillScreen() {
   const t = useTheme();
@@ -27,6 +27,8 @@ export function BackfillScreen() {
   const router = useRouter();
   const { point: pointId = '' } = useLocalSearchParams<{ point?: string }>();
   const view = useSaleView();
+  // A closed sale takes no more weighing (review #2).
+  useLeaveIfClosed(view);
   const { saleId, events, state, master, day, mode, settings, append, nameOf, saleTitle } = view;
   const [full, setFull] = useState('');
   const [short, setShort] = useState('');

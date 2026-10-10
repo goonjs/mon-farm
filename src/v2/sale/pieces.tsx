@@ -26,7 +26,7 @@ import { statusCountsAsClosed } from '../../core/sale-status';
 import { useI18n, useT } from '../../i18n';
 import { useSale } from '../../store/SaleProvider';
 import { useTheme } from '../../theme';
-import { AlertIcon, AppText, Check, ChevronRight, IconTile, PinIcon, SwapIcon, TapperIcon, type IconRender, type TileTone } from '../../ui';
+import { AlertIcon, AppText, Check, ChevronRight, IconTile, PinIcon, SwapIcon, TapperIcon, toneColours, type IconRender, type TileTone } from '../../ui';
 import { categoryTone, useMaster } from '../farm/pieces';
 
 /** Grams as the app shows kg: "1,520", "37.5". */
@@ -214,7 +214,7 @@ export function PointBar({
 }) {
   const t = useTheme();
   const msg = useT();
-  const ink = (tone: TileTone) => (tone === 'neutral' ? t.color.inkSoft : t.color[tone as 'category1']);
+  const ink = (tone: TileTone) => toneColours(t, tone).fg;
   return (
     <View testID="point-bar" style={{ backgroundColor: t.color.surfaceRaised, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleFaint, paddingHorizontal: t.space.lg, paddingVertical: t.space.md, gap: t.space.sm }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>

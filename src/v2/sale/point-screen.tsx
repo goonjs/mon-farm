@@ -25,7 +25,7 @@ import { useTheme } from '../../theme';
 import { AlertIcon, AppText, BasketIcon, BottomSheet, cardStyle, ChevronRight, CTA, IconTile, PinIcon, Plus, Scale, TapperIcon, type TileTone } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { signed, useGoToPoint, type Fill } from './move';
-import { Choice, Crumbs, IconLine, kgText, NumChip, SegOptions, SkewTag, farmTone, useSaleView } from './pieces';
+import { Choice, Crumbs, IconLine, kgText, NumChip, SegOptions, SkewTag, farmTone, useLeaveIfClosed, useSaleView } from './pieces';
 
 export function PointScreen() {
   const t = useTheme();
@@ -33,6 +33,8 @@ export function PointScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ pair?: string; mode?: string; farm?: string; tapper?: string }>();
   const view = useSaleView();
+  // A closed sale takes no more weighing (review #2).
+  useLeaveIfClosed(view);
   const goTo = useGoToPoint(view);
   const { saleId, events, state, master, day, mode, settings, append, nameOf, saleTitle } = view;
   const [farmId, setFarmId] = useState<string | null>(params.farm ?? null);

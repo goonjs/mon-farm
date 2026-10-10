@@ -39,7 +39,7 @@ import {
   ScaleIcon,
 } from '../../ui';
 import { FarmScreen, Stepper } from '../farm/pieces';
-import { Banner, Choice, IconLine, Kv, kgText, NumChip, SegOptions, SkewTag, useSaleView } from './pieces';
+import { Banner, Choice, IconLine, Kv, kgText, NumChip, SegOptions, SkewTag, useLeaveIfClosed, useSaleView } from './pieces';
 import { signed } from './move';
 
 type Answer = 'zero' | 'not0';
@@ -50,6 +50,8 @@ export function ZeroTareScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ point?: string; net?: string; basket?: string; fill?: string }>();
   const view = useSaleView();
+  // A closed sale takes no more weighing (review #2).
+  useLeaveIfClosed(view);
   const { saleId, events, state, master, day, settings, append, nameOf, reloadMaster } = view;
   const pointId = params.point ?? '';
   const [phase, setPhase] = useState<'ask' | 'wait' | 'skewed'>('ask');

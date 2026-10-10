@@ -16,7 +16,7 @@ import { useI18n, useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { store } from '../../store/store';
 import { useTheme } from '../../theme';
-import { AppText, BasketIcon, Chip, CTA, IconTile, LeafIcon, TapperIcon, UsersIcon } from '../../ui';
+import { AppText, BasketIcon, Chip, CTA, IconTile, LeafIcon, TapperIcon, toneColours, UsersIcon } from '../../ui';
 import { FarmScreen, RowCard } from '../farm/pieces';
 import { Banner, IconLine, kgText, tapperTone } from './pieces';
 
@@ -98,7 +98,7 @@ export function SalesScreen() {
                 <View style={{ marginLeft: t.target.min + t.space.md, borderLeftWidth: t.border.thick, borderLeftColor: t.color.ruleFaint, paddingLeft: t.space.md, gap: t.space.xxs }}>
                   {[...r.tappers, ...(r.unassignedG ? [{ id: '', name: msg('rec.noTapper'), netG: r.unassignedG }] : [])].map((tp) => (
                     <View key={tp.id || 'none'} testID={`sale-tapper-${r.id}-${tp.id || 'none'}`} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
-                      <TapperIcon color={tp.id ? t.color[tapperTone(data.master, tp.id) as 'category3'] : t.color.inkSoft} size={14} />
+                      <TapperIcon color={toneColours(t, tapperTone(data.master, tp.id || null)).fg} size={14} />
                       <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.semibold, color: t.color.ink }}>{tp.name}</Text>
                       <LeafIcon color={t.color.inkSoft} size={12} />
                       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.semibold, fontVariant: ['tabular-nums'], color: t.color.ink }}>

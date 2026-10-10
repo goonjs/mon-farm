@@ -32,6 +32,7 @@ import { unassignedPoints } from '../../core/point-settle';
 import { canComplete } from '../../core/sale-status';
 import { basketList, parsePrice, saleRollup } from '../../core/sale-points';
 import { useFinance } from '../../finance/use-finance';
+import { useInFlight } from '../../finance/use-in-flight';
 import { newId } from '../../lib/id';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -62,6 +63,7 @@ import {
   TextField,
   UsersIcon,
   ClockIcon,
+  toneColours,
 } from '../../ui';
 import { useSaleMoney } from '../money/sale/use-sale-money';
 import { FarmScreen } from '../farm/pieces';
@@ -118,6 +120,8 @@ function CheckBody({ bump }: { bump: () => void }) {
   const view = useSaleView();
   const money = useSaleMoney();
   const fin = useFinance();
+  // One money write at a time: a double tap must not write twice (review #4).
+  const flight = useInFlight();
   const { saleId, events, state, master, day, append, nameOf, saleTitle } = view;
   const [price, setPrice] = useState('');
   const [diffOpen, setDiffOpen] = useState(false);
@@ -131,7 +135,7 @@ function CheckBody({ bump }: { bump: () => void }) {
   if (!view.ready || !master || !money.loaded || fin.events === null) return shell();
 
   const missing = unassignedPoints(events, master, day);
-  if (!state.price) {
+  if (!state.price && !view.closed) {
     const p = parsePrice(price);
     return shell(
       <View style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.sm }}>
@@ -180,12 +184,15 @@ function CheckBody({ bump }: { bump: () => void }) {
     const pt = master.points.find((p) => p.id === pointId);
     return `${master.properties.find((f) => f.id === pt?.propertyId)?.name ?? ''} ${pt?.name ?? ''}`;
   };
-  const record = async (status: 'total' | 'diff') => {
-    await fin.write(buyerCheckTarget(saleId), check.head, buyerCheckPayload(saleId, status, ours, null, status === 'diff' ? reason : ''));
-    setDiffOpen(false);
-    bump();
-  };
+  const record = (status: 'total' | 'diff') =>
+    flight.run(async () => {
+      await fin.write(buyerCheckTarget(saleId), check.head, buyerCheckPayload(saleId, status, ours, null, status === 'diff' ? reason : ''));
+      setDiffOpen(false);
+      bump();
+    });
   const done = check.status === 'total' || check.status === 'weight' || check.status === 'diff';
+  // A closed sale is read-only (review #2): its result shows, nothing is asked.
+  const closed = view.closed;
 
   return shell(
     <>
@@ -201,9 +208,9 @@ function CheckBody({ bump }: { bump: () => void }) {
         ))}
         <TotalRow label={msg('v2s.saleTotal')} value={baht(s.grossSatang)} unit={msg('v2s.bahtUnit')} testID="check-total" size={26} />
         {state.parties?.buyer ? <IconLine icon={(c) => <UsersIcon color={c} size={13} />}>{state.parties.buyer}</IconLine> : null}
-        {done ? (
+        {done || closed ? (
           <View style={{ marginTop: t.space.sm }}>
-            <Chip tone={check.status === 'diff' ? 'warn' : 'accept'} label={msg(check.status === 'diff' ? 'v2s.diffFound' : 'v2s.matched')} testID="check-status" />
+            <Chip tone={check.status === 'diff' ? 'warn' : done ? 'accept' : 'neutral'} label={msg(check.status === 'diff' ? 'v2s.diffFound' : done ? 'v2s.matched' : 'v2s.notChecked')} testID="check-status" />
           </View>
         ) : (
           <View style={{ gap: t.space.sm, marginTop: t.space.sm }}>
@@ -241,7 +248,7 @@ function CheckBody({ bump }: { bump: () => void }) {
     <BottomSheet open={diffOpen} onClose={() => setDiffOpen(false)} title={msg('v2s.noMatch')} testID="diff-sheet">
       <IconLine>{msg('v2s.diffHint')}</IconLine>
       <TextField testID="diff-reason" label={msg('v2s.diffReason')} required value={reason} onChangeText={setReason} />
-      <CTA testID="diff-save" disabled={!reason.trim()} onPress={() => void record('diff')}>
+      <CTA testID="diff-save" disabled={!reason.trim() || flight.busy} onPress={() => void record('diff')}>
         {msg('v2s.diffSave')}
       </CTA>
     </BottomSheet>,
@@ -263,6 +270,8 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
   const view = useSaleView();
   const money = useSaleMoney();
   const fin = useFinance();
+  // One money write at a time: a double tap must not write twice (review #4).
+  const flight = useInFlight();
   const { saleId, master, saleTitle } = view;
   const [deductFor, setDeductFor] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
@@ -300,35 +309,40 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
     setMethod('cash-from-share');
     setDeductFor(id);
   };
-  const saveDeduct = async () => {
-    if (!who || !amountOk || typed === null) return;
-    await fin.write(newId('dpay-'), null, {
-      t: 'debt_payment_recorded',
-      fields: { worker: { id: who.id, name: who.name }, creditor: { id: FARM_FUNDS, name: msg('fin.payer.farm') }, amountSatang: typed, date: todayIso(), note: '', method, saleId },
+  const saveDeduct = () =>
+    flight.run(async () => {
+      if (!who || !amountOk || typed === null || view.closed) return;
+      await fin.write(newId('dpay-'), null, {
+        t: 'debt_payment_recorded',
+        fields: { worker: { id: who.id, name: who.name }, creditor: { id: FARM_FUNDS, name: msg('fin.payer.farm') }, amountSatang: typed, date: todayIso(), note: '', method, saleId },
+      });
+      setDeductFor(null);
+      bump();
     });
-    setDeductFor(null);
-    bump();
-  };
 
   // ── rounding previews (page 18) ──
   const fraction = r.before.filter((b) => b.cashBeforeSatang % 100 !== 0);
   const preview = (mode: RoundingMode) => r.before.map((b) => ({ ...b, ...roundCash(b.cashBeforeSatang, mode) }));
   const chosenMode = roundMode ?? r.choice.mode;
-  const confirmRounding = async () => {
-    await r.set(chosenMode);
-    setRoundOpen(false);
-    router.push(`${base}/tally` as Href);
-  };
+  const confirmRounding = () =>
+    flight.run(async () => {
+      if (view.closed) return;
+      await r.set(chosenMode);
+      setRoundOpen(false);
+      router.push(`${base}/tally` as Href);
+    });
   const next = () => {
-    if (r.result.needsAsking && !asked) setRoundOpen(true);
+    if (r.result.needsAsking && !asked && !view.closed) setRoundOpen(true);
     else router.push(`${base}/tally` as Href);
   };
 
-  const setAccount = async (c: SaleAccountChoice | null) => {
-    await fin.write(`sale-account-${saleId}`, accounts.saleChoiceHead(saleId), { t: 'sale_account_set', saleId, choice: c });
-    setAcctOpen(false);
-    bump();
-  };
+  const setAccount = (c: SaleAccountChoice | null) =>
+    flight.run(async () => {
+      if (view.closed) return;
+      await fin.write(`sale-account-${saleId}`, accounts.saleChoiceHead(saleId), { t: 'sale_account_set', saleId, choice: c });
+      setAcctOpen(false);
+      bump();
+    });
   const bank = (a: Account) => BANKS.find((b) => b.code === a.bankCode)?.name ?? a.label;
 
   return shell(
@@ -365,7 +379,7 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
                 ))}
               </>
             ) : null}
-            {tp.account && tp.account.balanceSatang > 0 ? (
+            {tp.account && tp.account.balanceSatang > 0 && !view.closed ? (
               <>
                 <View style={{ backgroundColor: t.color.brandCream, borderRadius: t.radius.md, padding: t.space.sm, marginTop: t.space.xs }}>
                   <IconLine icon={(c) => <DebtIcon color={c} size={12} />}>{msg('v2s.debtOwed', { amount: baht(tp.account.balanceSatang) })}</IconLine>
@@ -393,9 +407,11 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
         <View style={{ backgroundColor: t.color.surfaceRaised, borderRadius: t.radius.md, padding: t.space.md, gap: t.space.xs, marginTop: t.space.sm }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <AppText variant="label">{msg('v2s.intoAccount')}</AppText>
-            <Button testID="account-change" onPress={() => setAcctOpen(true)}>
-              {msg(choice ? 'v2s.change' : 'v2s.choose')}
-            </Button>
+            {view.closed ? null : (
+              <Button testID="account-change" onPress={() => setAcctOpen(true)}>
+                {msg(choice ? 'v2s.change' : 'v2s.choose')}
+              </Button>
+            )}
           </View>
           {account ? (
             <View testID="account-chosen" style={{ gap: t.space.xxs }}>
@@ -463,7 +479,7 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
                 </Button>
               </View>
               <View style={{ flex: 1 }}>
-                <Button testID="deduct-save" variant="primary" disabled={!amountOk} onPress={() => void saveDeduct()}>
+                <Button testID="deduct-save" variant="primary" disabled={!amountOk || flight.busy} onPress={() => void saveDeduct()}>
                   {msg('common.save')}
                 </Button>
               </View>
@@ -545,7 +561,7 @@ export function TallyScreen() {
   const cashIn = sum('cash-from-share');
   const split = sum('buyer-split');
   const piles = s ? pilesCheck([...money.tappers.map((tp) => ({ satang: tp.cashSatang })), { satang: money.ownerTransferSatang }, { satang: cashIn }, { satang: split }], s.grossSatang) : null;
-  const tone = (id: string) => (master ? tapperTone(master, id) : 'neutral');
+  const ink = (id: string) => toneColours(t, master ? tapperTone(master, id) : 'neutral').fg;
 
   return (
     <FarmScreen
@@ -564,7 +580,7 @@ export function TallyScreen() {
           <View style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.xxs }}>
             <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.cashTappers')}</AppText>
             {money.tappers.map((tp) => (
-              <Kv key={tp.id} label={<Text><TapperIcon color={t.color[tone(tp.id) as 'category3']} size={12} /> {tp.name}</Text>} value={baht(tp.cashSatang)} />
+              <Kv key={tp.id} label={<Text><TapperIcon color={ink(tp.id)} size={12} /> {tp.name}</Text>} value={baht(tp.cashSatang)} />
             ))}
             <AppText style={{ fontWeight: t.font.weight.bold, marginTop: t.space.sm }}>{msg('v2s.moneyIn')}</AppText>
             <Kv label={msg('v2s.transferOwner')} value={baht(money.ownerTransferSatang)} testID="tally-transfer" />
@@ -602,6 +618,8 @@ function PaymentBody({ bump }: { bump: () => void }) {
   const view = useSaleView();
   const money = useSaleMoney();
   const fin = useFinance();
+  // One money write at a time: a double tap must not write twice (review #4).
+  const flight = useInFlight();
   const { saleId, state, master, append, saleTitle } = view;
   const draft = state.saleStatus === 'draft';
   const subtitle = draft ? msg('v2s.draftOf', { title: saleTitle }) : saleTitle;
@@ -616,15 +634,28 @@ function PaymentBody({ bump }: { bump: () => void }) {
   const over = money.tappers.some((tp) => overDeducted(tp.debtDeductedSatang, tp.shareSatang, tp.nettedSatang));
   const conflicts = salePaymentConflicts(fin.events, saleId);
   const payees = [...money.tappers.map((tp) => ({ id: tp.id, name: tp.name, satang: tp.cashSatang, tp })), { id: OWNER_PAYEE, name: '', satang: money.ownerTransferSatang, tp: null }];
-  const tick = async (payee: string, amount: number, done: boolean, head: string | null) => {
-    await fin.write(paymentTarget(saleId, payee), head, paymentMarkPayload(saleId, payee, done, amount));
-    bump();
-  };
+  const tick = (payee: string, amount: number, done: boolean, head: string | null) =>
+    flight.run(async () => {
+      await fin.write(paymentTarget(saleId, payee), head, paymentMarkPayload(saleId, payee, done, amount));
+      bump();
+    });
+  // Close only when every pile adds up and the rounding was answered (review #6), with
+  // no tick in conflict (#5) and nothing deducted over a share (D-61).
+  const sum = (m: DebtPaymentMethod) =>
+    money.tappers.reduce((a, tp) => a + (money.debts.get(tp.id)?.payments ?? []).filter((x) => x.saleId === saleId && !x.deleted && x.method === m).reduce((y, x) => y + x.amountSatang, 0), 0);
+  const piles = pilesCheck([...money.tappers.map((tp) => ({ satang: tp.cashSatang })), { satang: money.ownerTransferSatang }, { satang: sum('cash-from-share') }, { satang: sum('buyer-split') }], s.grossSatang);
+  const canClose = piles.ok && money.rounding.ready && conflicts.length === 0 && !over;
   const closeSale = () => {
+    if (!canClose) return;
     if (canComplete(state)) append({ kind: 'sys', payload: { t: 'sale_status_set', status: 'completed' } });
+    // Drop the whole sale stack, so back never reaches a live counter (review #2).
+    if (router.canDismiss()) router.dismissAll();
     router.replace('/v2/sales' as Href);
   };
-  const closed = state.saleStatus === 'completed';
+  const closed = view.closed;
+  // No tick while closed, while ticks conflict (review #5), or for a tapper deducted over the share (D-61).
+  const locked = (tp: (typeof money.tappers)[number] | null) =>
+    closed || conflicts.length > 0 || flight.busy || (!!tp && overDeducted(tp.debtDeductedSatang, tp.shareSatang, tp.nettedSatang));
 
   return (
     <FarmScreen
@@ -634,7 +665,7 @@ function PaymentBody({ bump }: { bump: () => void }) {
       testID="payment"
       footer={
         closed ? null : (
-          <Button testID="close-sale" size="large" disabled={over || conflicts.length > 0} icon={(c) => <Check color={c} size={14} />} onPress={closeSale}>
+          <Button testID="close-sale" size="large" disabled={!canClose} icon={(c) => <Check color={c} size={14} />} onPress={closeSale}>
             {msg('v2s.closeSale')}
           </Button>
         )
@@ -647,6 +678,7 @@ function PaymentBody({ bump }: { bump: () => void }) {
           <Chip tone={check.status === 'diff' ? 'warn' : check.status === 'pending' ? 'neutral' : 'accept'} label={msg(check.status === 'diff' ? 'v2s.diffFound' : check.status === 'pending' ? 'v2s.notChecked' : 'v2s.matched')} testID="pay-check" />
         </View>
       </View>
+      {conflicts.length ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.tickConflict')} lines={[msg('v2s.tickConflictLine')]} testID="pay-conflict" /> : null}
       {over ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.overTitle')} lines={[msg('v2s.overLine')]} /> : null}
       {payees.map((p) => {
         const st = paymentStatus(fin.events!, saleId, p.id, p.satang);
@@ -665,8 +697,9 @@ function PaymentBody({ bump }: { bump: () => void }) {
             key={p.id}
             testID={`tick-${p.id}`}
             accessibilityRole="checkbox"
-            accessibilityState={{ checked: st.done }}
             aria-checked={st.done}
+            disabled={locked(p.tp)}
+            accessibilityState={{ checked: st.done, disabled: locked(p.tp) }}
             onPress={() => void tick(p.id, p.satang, !st.done, st.head)}
             style={{ ...cardStyle(t), flexDirection: 'row', gap: t.space.md, padding: t.space.md, borderWidth: st.done ? t.border.thick : t.border.hair, borderColor: st.done ? t.color.accept : t.color.ruleStrong, backgroundColor: st.done ? t.color.acceptSunk : t.color.surfaceRaised }}
           >
