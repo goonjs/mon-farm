@@ -1,6 +1,6 @@
 # Story E11-S05: เงินช่วยเหลือพิเศษคนงาน
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ
 
 ## Context
 
@@ -35,8 +35,14 @@ Status: Draft
 
 ## Verification
 
+- Unit `plan.test.ts` (`aidByWorker` per worker and period; non-farm payer owed back) · Component `plan.test.tsx` (form records worker + kind) · Screenshot: covered by the expense form
+
 ## Dev notes
 
+- A special payment is an expense in category ช่วยเหลือคนงาน with `worker` + `aidKind` (accident · general · food · other); it lives only in the finance log, so it never reaches a sale's settlement or the share. `/finance/aid` lists totals per worker over a date range, each opening its payments.
+
 ## Code review
+
+- Independent review (separate agent, 2026-10-09) on `feature/e11-e06-money..30322b3`: 9 findings. Fixed with tests: an invalid start month ("2025-13") made salary generation loop forever on every device — months are now validated and a bad rule is skipped (#1); rubber income dated by the local day, not UTC (#2); rent recorded against a lease replaces that month's expected rent (#3); cashflow generates salary to its own horizon (#4); moving an expense out of worker aid/travel clears worker/trip and aid totals check the category (#5); unknown lease start/share and unpriced closed sales flag their months (#6); overdue unpaid salary stays in "coming up" (#7); rule card shows the current amount; date/month inputs validated. Open: concurrent paid/undone, raises and reserve edits pick one silently (#8, D-30 Conflict not yet); "paid" records the scheduled amount (no paid-amount entry); trip split by % not offered (amounts only) and farms are typed names.
 
 ## QA notes

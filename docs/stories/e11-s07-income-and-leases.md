@@ -1,6 +1,6 @@
 # Story E11-S07: รายได้และสัญญาเช่าทุเรียน
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ
 
 ## Context
 
@@ -38,8 +38,16 @@ Status: Draft
 
 ## Verification
 
+- Unit `plan.test.ts` (rubber income from closed, not-deleted sales; yearly lease expected each year; unknown rent flags months, never zero; received vs expected, tags) · e2e `finance.spec.ts` (lease with unknown rent, income tagged reserve) · Screenshot 20
+
 ## Dev notes
 
+- Rubber income = owner share of each closed sale (`rubberIncome` over sale history), linked to the sale. Leases (`lease_added`) keep unknown rent/period/start/share as null = "ไม่ทราบ". Income (`income_recorded`) is actual or planned, optionally linked to a lease and tagged family · insurance · reserve. `/finance/income`.
+- The confirmed facts (ตะเคียนทอง 1,000,000/ปี; คลองพลู from 2029, % unknown) are entered by the owner as leases — no farm names are built into code (D-73).
+- Not covered: contract file attachment (E01-S12); editing a lease/income in the UI (core supports `lease_changed`/`income_changed`).
+
 ## Code review
+
+- Independent review (separate agent, 2026-10-09) on `feature/e11-e06-money..30322b3`: 9 findings. Fixed with tests: an invalid start month ("2025-13") made salary generation loop forever on every device — months are now validated and a bad rule is skipped (#1); rubber income dated by the local day, not UTC (#2); rent recorded against a lease replaces that month's expected rent (#3); cashflow generates salary to its own horizon (#4); moving an expense out of worker aid/travel clears worker/trip and aid totals check the category (#5); unknown lease start/share and unpriced closed sales flag their months (#6); overdue unpaid salary stays in "coming up" (#7); rule card shows the current amount; date/month inputs validated. Open: concurrent paid/undone, raises and reserve edits pick one silently (#8, D-30 Conflict not yet); "paid" records the scheduled amount (no paid-amount entry); trip split by % not offered (amounts only) and farms are typed names.
 
 ## QA notes

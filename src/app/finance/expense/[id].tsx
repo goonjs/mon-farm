@@ -18,9 +18,10 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { Button, TopBar } from '../../../components/chrome';
 import { Chip, ChipRow, Input, Label, Note, PayerPicker } from '../../../components/finance/parts';
-import { checkExpense, defaultPayer, OWNER_SHARE_SUFFIX, type Expense } from '../../../core/finance/ledger';
+import { checkExpense, defaultPayer, isDerivedExpense, type Expense } from '../../../core/finance/ledger';
 import { formatDate, formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../../core/finance/money';
-import { FARM_FUNDS, type ExpenseFields, type ExpensePatch, type Payer, type Stage } from '../../../core/finance/types';
+import { FARM_FUNDS, type AidKind, type ExpenseFields, type ExpensePatch, type Payer, type Stage, type Trip, type TripCostKind } from '../../../core/finance/types';
+import { checkTrip } from '../../../core/finance/plan';
 import { useFinance } from '../../../finance/use-finance';
 import { useT } from '../../../i18n';
 import { newId } from '../../../lib/id';
@@ -28,6 +29,8 @@ import { useTheme } from '../../../theme';
 import { useInFlight } from '../../../finance/use-in-flight';
 
 const STAGES: readonly Stage[] = ['actual', 'committed', 'planned'];
+const AID_KINDS: readonly AidKind[] = ['accident', 'general', 'food', 'other'];
+const TRIP_KINDS: readonly TripCostKind[] = ['fuel', 'toll', 'lodging', 'food', 'other'];
 const LIST = '/finance/expenses' as const;
 
 export default function ExpenseScreen() {
@@ -80,6 +83,21 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
   const [payer, setPayer] = useState<Payer | null>(initialPayer);
   const [item, setItem] = useState(existing?.item ?? '');
   const [note, setNote] = useState(existing?.note ?? '');
+  // E11-S05 special payment to a worker; E11-S06 trip.
+  const [worker, setWorker] = useState<Payer | null>(existing?.worker ?? null);
+  const [aidKind, setAidKind] = useState<AidKind>(existing?.aidKind ?? 'general');
+  const [tripFrom, setTripFrom] = useState(existing?.trip?.from ?? '');
+  const [tripTo, setTripTo] = useState(existing?.trip?.to ?? '');
+  const [purposes, setPurposes] = useState((existing?.trip?.purposes ?? []).join(', '));
+  const [farms, setFarms] = useState((existing?.trip?.farms ?? []).map((f) => f.name).join(', '));
+  const [lines, setLines] = useState<Record<TripCostKind, string>>(() => {
+    const out = { fuel: '', toll: '', lodging: '', food: '', other: '' } as Record<TripCostKind, string>;
+    for (const l of existing?.trip?.lines ?? []) out[l.kind] = satangToInput(l.satang);
+    return out;
+  });
+  const [split, setSplit] = useState<Record<string, string> | null>(() =>
+    existing?.trip?.split ? Object.fromEntries(existing.trip.split.map((x) => [x.farmId, satangToInput(x.satang)])) : null,
+  );
   const [addingCat, setAddingCat] = useState<'add' | 'rename' | null>(null);
   const [catName, setCatName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -87,11 +105,29 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
   const [showErrors, setShowErrors] = useState(false);
   const inFlight = useInFlight();
   const saving = inFlight.busy;
-  // The owner share of a fertilizer debt follows the debt: only its payer, item and note are edited here (review #5).
-  const ownerShare = !!existing?.id.endsWith(OWNER_SHARE_SUFFIX);
+  // Derived records (a fertilizer debt's owner share, a salary month) follow their source:
+  // only payer, item and note are edited here (review #5).
+  const ownerShare = !!existing && isDerivedExpense(existing.id);
 
   const unknown = stage === 'planned' && unknownWanted;
-  const amountSatang = unknown ? null : parseBahtToSatang(amount);
+  const isAid = categoryId === 'cat-worker-aid';
+  const isTrip = categoryId === 'cat-travel';
+  const tripLines = TRIP_KINDS.map((k) => ({ kind: k, satang: parseBahtToSatang(lines[k]) ?? 0 })).filter((l) => l.satang > 0);
+  const tripFarms = farms.split(',').map((f) => f.trim()).filter(Boolean).map((name) => ({ id: `farm:${name}`, name }));
+  // A trip with cost lines is the sum of its lines (FIN-7); otherwise the typed amount.
+  const fromLines = isTrip && tripLines.length > 0;
+  const amountSatang = fromLines ? tripLines.reduce((a, l) => a + l.satang, 0) : unknown ? null : parseBahtToSatang(amount);
+  const trip: Trip | undefined = isTrip
+    ? {
+        from: tripFrom.trim(),
+        to: tripTo.trim(),
+        purposes: purposes.split(',').map((x) => x.trim()).filter(Boolean),
+        farms: tripFarms,
+        lines: tripLines,
+        split: split ? tripFarms.map((f) => ({ farmId: f.id, satang: parseBahtToSatang(split[f.id] ?? '') ?? 0 })) : null,
+      }
+    : undefined;
+  const tripProblems = trip && amountSatang !== null ? checkTrip(trip, amountSatang).filter((p) => p !== 'lines-total' || fromLines) : [];
   const amountTyped = !unknown && amount.trim() !== '';
   // Something typed that does not parse is "invalid", not "missing".
   const problems = checkExpense({ amountSatang, date, stage }).map((p) =>
@@ -106,8 +142,20 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
 
   const save = async () => {
     setShowErrors(true);
-    if (problems.length) return;
-    const fields: ExpenseFields = { amountSatang, date, stage, categoryId, propertyId: existing?.propertyId ?? null, item: item.trim(), note: note.trim(), payer };
+    if (problems.length || tripProblems.length) return;
+    const fields: ExpenseFields = {
+      amountSatang,
+      date,
+      stage,
+      categoryId,
+      propertyId: existing?.propertyId ?? null,
+      item: item.trim(),
+      note: note.trim(),
+      payer,
+      // Leaving aid/travel clears what belonged to it (review #5) — null, since a stored key cannot be removed.
+      ...(isAid && worker ? { worker, aidKind } : existing?.worker ? { worker: null, aidKind: null } : {}),
+      ...(trip ? { trip } : existing?.trip ? { trip: null } : {}),
+    };
     try {
       if (!existing) {
         await fin.write(newId('exp-'), null, { t: 'expense_created', fields });
@@ -263,6 +311,61 @@ function Form({ existing, fin }: { existing: Expense | null; fin: ReturnType<typ
       </View>
 
       <View style={{ gap: t.space.xs }}>
+        {isAid ? (
+          <View testID="aid-section" style={{ gap: t.space.xs, paddingBottom: t.space.md }}>
+            <Label>{msg('aid.worker')}</Label>
+            <PayerPicker testID="aid-worker" value={worker} onChange={setWorker} />
+            <Label>{msg('aid.kind')}</Label>
+            <ChipRow>
+              {AID_KINDS.map((k) => (
+                <Chip key={k} testID={`aid-kind-${k}`} on={aidKind === k} onPress={() => setAidKind(k)}>{msg(`aid.kind.${k}`)}</Chip>
+              ))}
+            </ChipRow>
+            <Note>{msg('aid.note')}</Note>
+          </View>
+        ) : null}
+        {isTrip ? (
+          <View testID="trip-section" style={{ gap: t.space.xs, paddingBottom: t.space.md }}>
+            <Label>{msg('trip.title')}</Label>
+            <Input testID="trip-from" value={tripFrom} onChangeText={setTripFrom} placeholder={msg('trip.from')} accessibilityLabel={msg('trip.from')} />
+            <Input testID="trip-to" value={tripTo} onChangeText={setTripTo} placeholder={msg('trip.to')} accessibilityLabel={msg('trip.to')} />
+            <Input testID="trip-purposes" value={purposes} onChangeText={setPurposes} placeholder={msg('trip.purposes')} accessibilityLabel={msg('trip.purposes')} />
+            <Input testID="trip-farms" value={farms} onChangeText={setFarms} placeholder={msg('trip.farms')} accessibilityLabel={msg('trip.farms')} />
+            <Label>{msg('trip.lines')}</Label>
+            {TRIP_KINDS.map((k) => (
+              <Input
+                key={k}
+                testID={`trip-line-${k}`}
+                numeric
+                value={lines[k]}
+                onChangeText={(v) => setLines((l) => ({ ...l, [k]: v }))}
+                placeholder={msg(`trip.kind.${k}`)}
+                accessibilityLabel={msg(`trip.kind.${k}`)}
+              />
+            ))}
+            {fromLines ? <Note testID="trip-total">{msg('trip.total', { amount: formatSatang(amountSatang ?? 0) })}</Note> : null}
+            {tripFarms.length ? (
+              <ChipRow>
+                <Chip testID="trip-unsplit" on={split === null} onPress={() => setSplit(null)}>{msg('trip.unsplit')}</Chip>
+                <Chip testID="trip-split" on={split !== null} onPress={() => setSplit(split ?? {})}>{msg('trip.split')}</Chip>
+              </ChipRow>
+            ) : null}
+            {split
+              ? tripFarms.map((f) => (
+                  <Input
+                    key={f.id}
+                    testID={`trip-split-${f.name}`}
+                    numeric
+                    value={split[f.id] ?? ''}
+                    onChangeText={(v) => setSplit((x) => ({ ...(x ?? {}), [f.id]: v }))}
+                    placeholder={f.name}
+                    accessibilityLabel={f.name}
+                  />
+                ))
+              : null}
+            {showErrors && tripProblems.includes('split-total') ? <Note tone="reject" testID="trip-err-split">{msg('trip.err.split-total')}</Note> : null}
+          </View>
+        ) : null}
         <Label hint={existing ? undefined : msg('fin.form.payerHint')}>{msg('fin.form.payer')}</Label>
         <PayerPicker testID="expense-payer" value={payer} onChange={setPayer} extra={knownPayers} allowNone />
         {owedPreview ? <Note tone="warn" testID="owed-preview">{owedPreview}</Note> : null}

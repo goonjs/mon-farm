@@ -98,6 +98,13 @@ export default function ExpensesScreen() {
       />
 
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.md }}>
+        {/* E11-S04..S08 */}
+        <ChipRow>
+          <Chip testID="open-salary" onPress={() => router.push('/finance/salary')}>{msg('sal.open')}</Chip>
+          <Chip testID="open-aid" onPress={() => router.push('/finance/aid')}>{msg('aid.open')}</Chip>
+          <Chip testID="open-income" onPress={() => router.push('/finance/income')}>{msg('inc.open')}</Chip>
+          <Chip testID="open-cashflow" onPress={() => router.push('/finance/cashflow')}>{msg('cf.open')}</Chip>
+        </ChipRow>
         <ChipRow>
           <Chip testID="filter-stage" on={!!filter.stage} onPress={() => set({ stage: nextStage(filter.stage) })}>
             {filter.stage ? msg(`fin.stage.${filter.stage}`) : `${msg('fin.filter.stage')} ▾`}

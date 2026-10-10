@@ -1,6 +1,6 @@
 # Story E11-S06: การเดินทางหลายวัตถุประสงค์
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ
 
 ## Context
 
@@ -31,8 +31,15 @@ Status: Draft
 
 ## Verification
 
+- Unit `plan.test.ts` (`checkTrip`: lines sum, split must add up, unsplit allowed) · Component `plan.test.tsx` (trip total from lines, split error, saved split)
+
 ## Dev notes
 
+- A trip is a travel expense with `trip` {from, to, purposes, farms, cost lines (fuel · toll · lodging · food · other), split | null}. With cost lines the amount is their sum; "ไม่ได้แบ่ง" by default, never split automatically; a split must equal the trip.
+- Not covered: farms are typed names (no property store yet, E03-S02); receipt photos (E01-S12).
+
 ## Code review
+
+- Independent review (separate agent, 2026-10-09) on `feature/e11-e06-money..30322b3`: 9 findings. Fixed with tests: an invalid start month ("2025-13") made salary generation loop forever on every device — months are now validated and a bad rule is skipped (#1); rubber income dated by the local day, not UTC (#2); rent recorded against a lease replaces that month's expected rent (#3); cashflow generates salary to its own horizon (#4); moving an expense out of worker aid/travel clears worker/trip and aid totals check the category (#5); unknown lease start/share and unpriced closed sales flag their months (#6); overdue unpaid salary stays in "coming up" (#7); rule card shows the current amount; date/month inputs validated. Open: concurrent paid/undone, raises and reserve edits pick one silently (#8, D-30 Conflict not yet); "paid" records the scheduled amount (no paid-amount entry); trip split by % not offered (amounts only) and farms are typed names.
 
 ## QA notes

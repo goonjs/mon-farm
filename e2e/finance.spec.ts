@@ -255,3 +255,73 @@ test('sale history — rows from the log, deleted sales out of the totals', asyn
   await page.getByTestId(`history-${saleId}`).click();
   await expect(page.getByTestId('owner-share')).toContainText('149,367.25');
 });
+
+test('salary, leases with unknowns, cashflow and reserve (E11-S04..S08, offline)', async ({ page, context }) => {
+  await page.goto('/');
+  await context.setOffline(true);
+  await page.getByTestId('open-expenses').click();
+
+  // Salary: rule from this month; months committed; mark one paid.
+  await page.getByTestId('open-salary').click();
+  await page.getByTestId('salary-add').click();
+  await page.getByTestId('salary-recipient-add').click();
+  await page.getByTestId('salary-recipient-name').fill('อาจารย์สมหวัง');
+  await page.getByTestId('salary-recipient-add-save').click();
+  await page.getByTestId('salary-payer-add').click();
+  await page.getByTestId('salary-payer-name').fill('เจ้าของสวน');
+  await page.getByTestId('salary-payer-add-save').click();
+  const month = await page.evaluate(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  await page.getByTestId('salary-start').fill(month);
+  await page.getByTestId('salary-save').click();
+  await page.getByTestId(`salary-pay-${month}`).click();
+  await expect(page.getByTestId(`salary-undo-${month}`)).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/19-salary.png`, fullPage: true });
+  await page.getByTestId('salary-back').click();
+
+  // A planned expense with an unknown amount next month.
+  await page.getByTestId('expense-new').click();
+  await page.getByTestId('expense-stage-planned').click();
+  await page.getByTestId('expense-unknown').click();
+  const next = await page.evaluate(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1, 15);
+    return d.toISOString().slice(0, 10);
+  });
+  await page.getByTestId('expense-date').fill(next);
+  await page.getByTestId('expense-cat-cat-fertilizer').click();
+  await page.getByTestId('expense-save').click();
+
+  // A lease whose rent is not known yet.
+  await page.getByTestId('open-income').click();
+  await page.getByTestId('lease-add').click();
+  await page.getByTestId('lease-farm').fill('สวนตัวอย่าง');
+  await page.getByTestId('lease-rent-unknown').click();
+  await page.getByTestId('lease-start').fill('2029-01-01');
+  await page.getByTestId('lease-note').fill('คาดว่าเริ่มปี 2029');
+  await page.getByTestId('lease-save').click();
+  await expect(page.locator('[data-testid^="lease-lease-"]')).toContainText('ไม่ทราบ');
+  await page.getByTestId('income-add').click();
+  await page.getByTestId('income-amount').fill('5000');
+  await page.getByTestId('income-tag-reserve').click();
+  await page.getByTestId('income-save').click();
+  await page.screenshot({ path: `${SHOTS}/20-income-leases.png`, fullPage: true });
+  await page.getByTestId('income-back').click();
+
+  // Cashflow: this month shows salary paid; next month is incomplete; enter the reserve.
+  await page.getByTestId('open-cashflow').click();
+  await expect(page.getByTestId(`cf-out-actual-${month}`)).toContainText('15,000.00');
+  await expect(page.getByTestId(`cf-in-actual-${month}`)).toContainText('5,000.00');
+  await expect(page.getByTestId(`cf-incomplete-${next.slice(0, 7)}`)).toBeVisible();
+  await expect(page.getByTestId('reserve-none')).toBeVisible();
+  await page.getByTestId('reserve-edit').click();
+  await page.getByTestId('reserve-input').fill('500000');
+  await page.getByTestId('reserve-assumption').fill('ค่าใช้จ่าย 6 เดือน');
+  await page.getByTestId('reserve-source').fill('บัญชีออมทรัพย์');
+  await page.getByTestId('reserve-save').click();
+  await expect(page.getByTestId('reserve-amount')).toContainText('500,000.00');
+  await page.getByTestId(`cf-sources-${month}`).click();
+  await page.screenshot({ path: `${SHOTS}/21-cashflow.png`, fullPage: true });
+});

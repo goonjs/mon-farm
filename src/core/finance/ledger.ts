@@ -10,6 +10,7 @@
  */
 
 import type { EventId } from '../types';
+import { isMonth } from './money';
 import {
   FARM_FUNDS,
   type Allocation,
@@ -241,9 +242,11 @@ function groupByTarget(events: readonly FinanceEvent[], kinds: readonly string[]
 export function projectFinance(
   events: readonly FinanceEvent[],
   saleCounts: (saleId: string) => boolean = () => true,
+  /** "YYYY-MM": salary months are made up to the month after this (E11-S04); omitted → none. The cashflow passes its own horizon. */
+  asOfMonth?: string,
 ): FinanceState {
   const expenses: Expense[] = [];
-  const all = [...events, ...ownerShareEvents(events)];
+  const all = [...events, ...ownerShareEvents(events), ...(asOfMonth ? salaryEvents(events, asOfMonth) : [])];
   for (const [id, evs] of groupByTarget(all, ['expense_created', 'expense_changed'])) {
     const f = foldRecord(
       evs,
@@ -361,6 +364,68 @@ function ownerShareEvents(events: readonly FinanceEvent[]): FinanceEvent[] {
         ...(p.patch.fertilizer === null || (p.patch.kind !== undefined && p.patch.kind !== 'fertilizer') ? { deleted: true } : {}),
       };
       out.push(syn({ t: 'expense_changed', patch, alsoBasedOn: (p.alsoBasedOn ?? []).map((a) => a + OWNER_SHARE_SUFFIX) }));
+    }
+  }
+  return out;
+}
+
+/** Records the app makes from another record — edited at their source, not in the expense form. */
+export function isDerivedExpense(id: string): boolean {
+  return id.endsWith(OWNER_SHARE_SUFFIX) || /^salary-.+:\d{4}-\d{2}$/.test(id);
+}
+
+/** "2026-09" → "2026-10". */
+export function nextMonth(month: string): string {
+  const [y, m] = month.split('-').map(Number);
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+}
+
+/**
+ * Manager salary (E11-S04): each month from the rule's start up to the month
+ * after `asOfMonth` is an expense — committed until marked paid, then actual
+ * at the amount paid. Made from the rule on every device, never stored, so
+ * syncing two devices cannot duplicate a month; "paid" is one record per
+ * month, so two taps count once.
+ */
+function salaryEvents(events: readonly FinanceEvent[], asOfMonth: string): FinanceEvent[] {
+  const out: FinanceEvent[] = [];
+  const last = nextMonth(asOfMonth);
+  for (const create of events) {
+    if (create.payload.t !== 'salary_set') continue;
+    const rule = create.payload.rule;
+    // A malformed month would never be reached by counting up — skip the rule rather than loop forever (review #1).
+    if (!isMonth(rule.startMonth) || !isMonth(last)) continue;
+    const raises = events
+      .filter((e) => e.targetId === create.targetId && e.payload.t === 'salary_amount_set')
+      .sort(byId)
+      .map((e) => e.payload as { fromMonth: string; amountSatang: number })
+      .filter((r) => isMonth(r.fromMonth));
+    for (let m = rule.startMonth; m <= last; m = nextMonth(m)) {
+      const target = `${create.targetId}:${m}`;
+      const marks = events.filter((e) => e.targetId === target && (e.payload.t === 'salary_paid' || e.payload.t === 'salary_unpaid'));
+      const head = marks.length ? headsOf(marks, target).at(-1) : undefined;
+      const mark = marks.find((e) => e.id === head)?.payload;
+      const paid = mark?.t === 'salary_paid' ? mark : null;
+      const effective = raises.filter((r) => r.fromMonth <= m).at(-1)?.amountSatang ?? rule.amountSatang;
+      out.push({
+        ...create,
+        id: `${create.id}:${m}`,
+        targetId: target,
+        baseEventId: null,
+        payload: {
+          t: 'expense_created',
+          fields: {
+            amountSatang: paid ? paid.amountSatang : effective,
+            date: paid ? paid.date : `${m}-${String(rule.dueDay).padStart(2, '0')}`,
+            stage: paid ? 'actual' : 'committed',
+            categoryId: 'cat-salary',
+            propertyId: null,
+            item: rule.recipient.name,
+            note: '',
+            payer: rule.payer,
+          },
+        },
+      });
     }
   }
   return out;
