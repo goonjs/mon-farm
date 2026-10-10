@@ -1,6 +1,6 @@
 # Story E05-S06: รายการการขายย้อนหลัง + รายละเอียด
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ (บางส่วน)
 
 ## Context
 
@@ -32,13 +32,20 @@ Status: Draft
 
 ## Verification
 
+- Unit: `src/core/finance/history.test.ts` (row from the worked example to the satang; no price → no amount; deleted out of list and totals) · Sandbox: `e2e/finance.spec.ts` history test · Screenshot `docs/ux/screenshots/overnight/money/18-sale-history.png`
+
 - [ ] Sandbox run:
 - [ ] Screenshots (UI) — golden path:
 - [ ] Screenshots (UI) — edge cases:
 
 ## Dev notes
 
+- `/history` (front door → ประวัติการขาย): rows newest first with date (พ.ศ.), buyer, kg, baskets, price, amount, owner share, open/closed, "on this device, not synced"; totals exclude deleted sales; link to the deleted list; tap → settlement (SET-7 detail) or counter if still open. Amounts come from `settle()`, so history cannot disagree with settlement.
+- Not covered (depends on stories not built): check status (E05-S03), payment summary (E05-S05), Cancelled shown apart (E04-S11), real sync status (E01-S09); SET-7 detail fields not yet on the settlement screen (rounding is, receiving account is; media is not).
+
 ## Code review
+
+- Independent review (separate agent, 2026-10-09) on `feature/e11-e06-money..42a8e26` → `4ed90d8`: 3 major + 7 minor. Fixed with tests: PromptPay payload refuses a non-positive/fractional amount and the buyer screen refuses a bad one (#1); rounding default remembered for the whole group per D-67, not per device (#2); a sale's account is recorded when shown to the buyer, and "following today's default" is told apart from "recorded" (#3); deleting the default writes "no default" so a restore does not revive it (#4); the rounding ✓ is now computed against the sale total (#5); in-flight guards on account writes (#7); one debt projection for both cards (#8); unpriced sales counted apart in history (#9); stale docs (#10). Open: concurrent rounding/default choices keep one silently (#6, SYNC-4).
 
 - Reviewer (agent/session แยก):
 - Findings:

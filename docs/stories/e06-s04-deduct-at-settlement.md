@@ -72,7 +72,18 @@ Status: In Progress (เจ้าของตกลง AC 2026-10-03) — core +
 
 - Core `src/core/finance/deduct.ts`: `deductionCap` (min(balance, share + netting), never below 0), `proposeDeduction` (instalment or whole balance), `roundCash` (worker/owner/none, adjustment as its own amount), `workerCash`, `cashNotes` + `needsChange` (largest notes first, subset sum), `pilesCheck` (D-72 to the satang), `overDeducted` (D-61), `nettingPayloads` (repayment + `netting` debt payment, both naming the sale). `projectFinance`/`projectDebts` take `saleCounts` so a deleted sale's deductions and netting stop counting and come back on restore.
 - UI: `DebtDeductionCard` under each worker on `sale/[id]/settlement` — balance + plan, "หักเงินคืนหนี้" (proposed amount, cap, 3 collection routes, netting offered not applied), lines recorded at this sale with void (voiding netting voids its repayment), cash to pay, needs-change warning (route 1), transfer add-on (route 3), D-61 flag.
-- Not covered yet: removing the S29 deduction code (asked the lead for the deletion OK; also touches shared sale types — coordinating with team SALE); rounding choice UI (E05-S02 — cash line is unrounded until then); the D-72 piles page and route 2 piles (E05-S03/S04); blocking close/pay on the D-61 flag (sale close lives in E05-S05); "Cancelled" sales (E04-S11) — only deleted sales are excluded today.
+- Not covered yet: removing the S29 deduction code (list below) (asked the lead for the deletion OK; also touches shared sale types — coordinating with team SALE); rounding choice UI (E05-S02 — cash line is unrounded until then); the D-72 piles page and route 2 piles (E05-S03/S04); blocking close/pay on the D-61 flag (sale close lives in E05-S05); "Cancelled" sales (E04-S11) — only deleted sales are excluded today.
+
+- **S29 removal — deletion list for the owner (not done; deletion is the owner's call, lead 2026-10-09):**
+  - Delete files: `src/components/DeductionForm.tsx`, `src/components/DeductionForm.test.tsx`, `e2e/deductions.spec.ts`, screenshots `docs/ux/screenshots/{phone-landscape,phone-landscape-floor}/deduction-{payout,negative-payout,voided}.png`.
+  - Remove from `src/core/types.ts`: `deduction_added` / `deduction_voided` in `SysPayload`, `Deduction`, `SaleState.deductions`.
+  - `src/core/project.ts` (+ `project.test.ts`): the two deduction folds.
+  - `src/core/settle.ts` (+ `settle.test.ts`): `WorkerSettlement.deductions`, `deductionSatang`, `payoutSatang` (payout = share); people with only a deduction drop out of `perWorker`.
+  - `src/components/WorkerPayoutCard.tsx` (+ test): deduction rows and void UI; `src/app/sale/[id]/settlement.tsx`: `addDeduction`/`voidDeduction`, the "+ เพิ่มรายการหัก" card; `DebtDeductionCard` then takes `w.workerSatang`.
+  - `src/app/sale/[id]/counter.tsx` lines ~957–959: log labels for the two events (keep if old logs must still read — owner's call).
+  - `src/core/delete-guard.ts`: the D-44 live-deduction rule (D-58) and its use in `soft-delete.test.ts`; `src/core/fixtures.ts` `deduction()` helper.
+  - i18n keys `settle.deduction*`, `log.deductionAdded/Voided`.
+  - Old logs that already hold `deduction_added` events: decide whether to keep reading them (no migration — D-65).
 
 ## Code review
 

@@ -196,3 +196,62 @@ test('deduct debt at settlement — instalment proposed, capped, recorded agains
   await expect(page.getByTestId('debt-balance')).toContainText('3,000.00');
   await expect(page.getByTestId('debt-summary-balance')).toContainText('3,000.00 ✓');
 });
+
+test('receiving accounts — add, default, show the buyer (offline)', async ({ page, context }) => {
+  const saleId = testSaleId('money-accounts');
+  await seedPeople(page, [{ id: 'person-prayuth', name: 'ประยุทธ' }]);
+  await seedSale(page, saleId, workedExample(saleId));
+  await page.goto('/settings');
+  await context.setOffline(true);
+  await page.getByTestId('settings-open-accounts').click();
+  await expect(page.getByTestId('accounts-empty')).toBeVisible();
+
+  await page.getByTestId('account-add').click();
+  await page.getByTestId('account-label').fill('บัญชีหลัก');
+  await page.getByTestId('account-bank-KBANK').click();
+  await page.getByTestId('account-number').fill('1234567890');
+  await page.getByTestId('account-name').fill('สมชาย ใจดี');
+  await page.getByTestId('account-pp-mobile').click();
+  await page.getByTestId('account-pp-number').fill('0812345678');
+  await page.screenshot({ path: `${SHOTS}/13-account-form.png`, fullPage: true });
+  await page.getByTestId('account-save').click();
+  await expect(page.locator('[data-testid^="account-default-"]')).toHaveCount(1);
+  await page.screenshot({ path: `${SHOTS}/14-accounts.png`, fullPage: true });
+
+  await context.setOffline(false);
+  await page.goto(`/sale/${saleId}/settlement`);
+  await context.setOffline(true);
+  await expect(page.getByTestId('sale-account-amount')).toContainText('149,367.25');
+  // ?B1: the buyer view waits for the rounding question (E05-S02).
+  await expect(page.getByTestId('round-ask')).toBeVisible();
+  await expect(page.getByTestId('show-account')).toHaveCount(0);
+  await page.getByTestId('round-owner').click();
+  await expect(page.locator('[data-testid="round-line-person-prayuth"]')).toContainText('100,342.00');
+  await expect(page.getByTestId('round-owner-total')).toContainText('149,367.50');
+  await expect(page.getByTestId('round-check')).toBeVisible();
+  await expect(page.getByTestId('sale-account-unrecorded')).toBeVisible();
+  await expect(page.getByTestId('sale-account-amount')).toContainText('149,367.50');
+  await page.getByTestId('rounding').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${SHOTS}/17-rounding.png`, fullPage: true });
+  await page.getByTestId('show-account').click();
+  await expect(page.getByTestId('show-amount')).toContainText('149,367.50');
+  await expect(page.getByTestId('show-pp-id')).toContainText('0812345678');
+  await page.screenshot({ path: `${SHOTS}/15-show-account-promptpay.png`, fullPage: true });
+  await page.getByTestId('show-bank').click();
+  await expect(page.getByTestId('show-account-no')).toContainText('1234567890');
+  await page.screenshot({ path: `${SHOTS}/16-show-account-bank.png`, fullPage: true });
+});
+
+test('sale history — rows from the log, deleted sales out of the totals', async ({ page }) => {
+  const saleId = testSaleId('money-history');
+  await seedPeople(page, [{ id: 'person-prayuth', name: 'ประยุทธ' }]);
+  await seedSale(page, saleId, workedExample(saleId));
+  await page.goto('/');
+  await page.getByTestId('open-history').click();
+  await expect(page.getByTestId(`history-${saleId}`)).toContainText('298,734.50');
+  await expect(page.getByTestId(`history-${saleId}`)).toContainText('ล้งเจริญทรัพย์');
+  await expect(page.getByTestId('history-total')).toContainText('298,734.50');
+  await page.screenshot({ path: `${SHOTS}/18-sale-history.png`, fullPage: true });
+  await page.getByTestId(`history-${saleId}`).click();
+  await expect(page.getByTestId('owner-share')).toContainText('149,367.25');
+});

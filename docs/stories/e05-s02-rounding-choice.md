@@ -1,6 +1,6 @@
 # Story E05-S02: ถามการปัดเศษทุกครั้ง จำค่าล่าสุด
 
-Status: Draft
+Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ
 
 ## Context
 
@@ -37,13 +37,23 @@ Status: Draft
 
 ## Verification
 
+- Unit: `src/core/finance/rounding.test.ts` (3 modes; owner + workers + adjustments = sale to the satang; no fraction → no question; per-sale choice, changeable, last choice = next default) and `deduct.test.ts` (`roundCash`) · Sandbox: `e2e/finance.spec.ts` accounts test answers the rounding question first · Screenshot `docs/ux/screenshots/overnight/money/17-rounding.png`
+
 - [ ] Sandbox run:
 - [ ] Screenshots (UI) — golden path:
 - [ ] Screenshots (UI) — edge cases:
 
 ## Dev notes
 
+- Order share → debt deduction → rounding → cash (D-60): `useSaleRounding` takes each worker's cash after this sale's deductions (`DebtDeductionCard`), `roundSettlement()` rounds it, the owner absorbs the opposite adjustment.
+- The choice is a finance-log event `sale_rounding_set` keyed by sale (`sale-rounding-<saleId>`), not a sale event — no shared sale-type change while team SALE reworks the sale model; the group's latest choice (any device, D-67) preselects the next sale but is not taken until tapped. Changing it recomputes from the log.
+- "ให้คนรับซื้อยางดูบัญชี" (E05-S07) appears only after the question is answered (?B1).
+- `settle.ts` keeps only valuation rounding (gram×price → satang, the owner/worker split); there is no cash rounding in it. If the owner wants the choice inside the sale's own log, move the event when E04-S01 lands.
+- Not covered: two devices choosing different roundings for the same sale offline keeps one silently (no Conflict yet, SYNC-4); the S29 deduction payout still feeds `shareSatang` until S29 is removed (E06-S04); settlement layout in portrait (E05-S04).
+
 ## Code review
+
+- Independent review (separate agent, 2026-10-09) on `feature/e11-e06-money..42a8e26` → `4ed90d8`: 3 major + 7 minor. Fixed with tests: PromptPay payload refuses a non-positive/fractional amount and the buyer screen refuses a bad one (#1); rounding default remembered for the whole group per D-67, not per device (#2); a sale's account is recorded when shown to the buyer, and "following today's default" is told apart from "recorded" (#3); deleting the default writes "no default" so a restore does not revive it (#4); the rounding ✓ is now computed against the sale total (#5); in-flight guards on account writes (#7); one debt projection for both cards (#8); unpriced sales counted apart in history (#9); stale docs (#10). Open: concurrent rounding/default choices keep one silently (#6, SYNC-4).
 
 - Reviewer (agent/session แยก):
 - Findings:
