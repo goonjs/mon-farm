@@ -242,7 +242,7 @@ export function ZeroTareScreen() {
           <View testID="expect" style={card}>
             <Kv label={msg('v2s.net')} value={kg(pair.netG)} />
             <Kv label={msg('v2s.plusBasket')} value={kg(pair.basketG)} />
-            <Kv tone="warn" label={msg('v2s.plusSkew')} value={kg(Math.abs(skew))} />
+            <Kv tone="warn" label={msg('v2s.skewWord')} value={`${signed(kgText(skew))} ${msg('common.kg')}`} testID="expect-skew" />
             <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, paddingTop: t.space.sm }}>
               <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.eqShould')}</AppText>
               <Text testID="expect-kg" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayXl + 8, fontWeight: t.font.weight.bold, color: t.color.action }}>
@@ -288,7 +288,7 @@ export function ZeroTareScreen() {
           </View>
           {moveWithSkew ? (
             <View style={{ gap: t.space.xs }}>
-              <IconLine icon={(c) => <Check color={c} size={10} />}>{msg('v2s.ok0Drops', { skew: kgText(skew) })}</IconLine>
+              <IconLine icon={(c) => <Check color={c} size={10} />}>{msg('v2s.ok0Drops', { skew: signed(kgText(skew)) })}</IconLine>
               <IconLine icon={(c) => <FlagIcon color={c} size={12} />}>{msg('v2s.not0Enter')}</IconLine>
               <IconLine>{msg('v2s.not0Then')}</IconLine>
             </View>

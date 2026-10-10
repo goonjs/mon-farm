@@ -10,17 +10,23 @@ import { useCallback } from 'react';
 
 import { pairForNewPoint, planMove } from '../../core/sale-move';
 import { pointSetupPayloads } from '../../core/sale-points';
+import type { Fill } from './count';
 import type { useSaleView } from './pieces';
 
-export type Fill = 'full' | 'part';
+export type { Fill };
 
 export function useGoToPoint(view: ReturnType<typeof useSaleView>) {
   const router = useRouter();
   const { saleId, events, state, master, day, mode, settings, append } = view;
   return useCallback(
-    (pointId: string, opts: { fill?: Fill; replace?: boolean; pairId?: string | null } = {}) => {
+    (pointId: string, opts: { fill?: Fill; replace?: boolean; pairId?: string | null; fromSwitch?: boolean } = {}) => {
       if (!master || !settings) return;
-      const nav = (path: string) => (opts.replace ? router.replace : router.push)(path as Href);
+      // From "เปลี่ยนจุด": drop the picker, then replace the old point's counter,
+      // so back never opens a live counter at the point just left (review #3).
+      const nav = (path: string) => {
+        if (opts.fromSwitch && router.canDismiss()) router.dismiss(1);
+        (opts.replace || opts.fromSwitch ? router.replace : router.push)(path as Href);
+      };
       const plan = planMove(events, state, master, day, pointId, mode, settings.zeroCheck);
       for (const id of plan.closes) append({ kind: 'sys', payload: { t: 'basket_closed', basketId: id, reason: 'tapper-change' } });
       const pair = pairForNewPoint(events, settings, opts.pairId);

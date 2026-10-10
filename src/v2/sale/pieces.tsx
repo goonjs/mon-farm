@@ -14,13 +14,15 @@
  * - tones for farms and tappers, and kg / baht text.
  */
 
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useRouter, type Href } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { formatSatang } from '../../core/finance/money';
 import { filterPeople, formatThaiDate, saleSettings, type MasterState } from '../../core/master';
 import { saleDay } from '../../core/sale-list';
 import { saleNumbering } from '../../core/sale-points';
+import { statusCountsAsClosed } from '../../core/sale-status';
 import { useI18n, useT } from '../../i18n';
 import { useSale } from '../../store/SaleProvider';
 import { useTheme } from '../../theme';
@@ -65,6 +67,8 @@ export function useSaleView() {
     master,
     reloadMaster: reload,
     ready: sale.ready && master !== null,
+    /** Completed (or the older sale_closed): every write screen is read-only (review #2, D-16). */
+    closed: sale.ready && statusCountsAsClosed(sale.state),
     day,
     mode,
     settings,
@@ -72,6 +76,15 @@ export function useSaleView() {
     // Empty until the log is read, so a static page's first render matches its export (React 418).
     saleTitle: sale.ready ? msg('rec.saleOf', { date: formatThaiDate(sale.state.startedTs ?? now, era) }) : '',
   };
+}
+
+/** A write screen of a closed sale goes to its payment page, read-only (review #2). */
+export function useLeaveIfClosed(view: { ready: boolean; closed: boolean; saleId: string }) {
+  const router = useRouter();
+  const { ready, closed, saleId } = view;
+  useEffect(() => {
+    if (ready && closed) router.replace(`/v2/sale/${saleId}/payment` as Href);
+  }, [ready, closed, saleId, router]);
 }
 
 export type KvTone = 'plain' | 'total' | 'minus' | 'plus' | 'muted' | 'warn';

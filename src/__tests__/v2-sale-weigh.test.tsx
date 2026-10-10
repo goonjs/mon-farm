@@ -102,7 +102,7 @@ describe('v2 start a sale (page 5)', () => {
     expect(sys(ev, 'sale_started')[0]).toMatchObject({ buyer: 'คนรับซื้อยาง ก', buyerId: farm.buyer, manager: 'อ.สมหวัง' });
     expect(sys(ev, 'numbering_set')[0]).toMatchObject({ numbering: 'per-point' });
     expect(sys(ev, 'price_set')).toEqual([]);
-    expect(router.replace).toHaveBeenCalledWith(`/v2/sale/${saleId}/point?pair=builtin-50`);
+    expect(router.replace).toHaveBeenCalledWith(`/v2/sale/${saleId}/point`);
   });
 
   it('a typed price is written with the header', async () => {

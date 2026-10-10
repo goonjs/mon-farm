@@ -92,8 +92,10 @@ export function StartSaleScreen() {
       },
     });
     append({ kind: 'sys', payload: { t: 'numbering_set', numbering: mode } });
+    // Kept in the log, so a reload before the first point still weighs with it (review #10).
+    append({ kind: 'sys', payload: { t: 'pair_set', netG: pair.netG, basketG: pair.basketG } });
     if (priceParsed.satang !== null) append({ kind: 'sys', payload: { t: 'price_set', satangPerKg: priceParsed.satang, indexRef: '' } });
-    router.replace(`/v2/sale/${saleId}/point?pair=${pair.pairId}` as Href);
+    router.replace(`/v2/sale/${saleId}/point` as Href);
   };
 
   const groupDefault = <IconLine icon={(c) => <UsersIcon color={c} size={13} />}>{msg('start.groupDefault')}</IconLine>;

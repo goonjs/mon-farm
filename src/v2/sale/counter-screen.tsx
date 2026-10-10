@@ -17,11 +17,10 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { openBasketIn, stdNetOfLog } from '../../core/bridge';
 import { compactBaht } from '../../core/compact-baht';
 import { pointsOf, tapperOn } from '../../core/master';
 import { saleSkewG } from '../../core/scale-check';
-import { basketList, recorderFigures } from '../../core/sale-points';
+import { basketList } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
@@ -48,9 +47,10 @@ import {
   Undo,
 } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
+import { countModel } from './count';
 import { HoldStage } from './hold';
 import { signed, useGoToPoint } from './move';
-import { Banner, IconLine, Kv, kgText, NumChip, PointBar, farmTone, tapperTone, useSaleView } from './pieces';
+import { Banner, IconLine, Kv, kgText, NumChip, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 import { Ruler } from './ruler';
 
 type Sheet = 'none' | 'partial' | 'menu' | 'new-point';
@@ -62,6 +62,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const params = useLocalSearchParams<{ point?: string; fill?: string }>();
   const view = useSaleView();
   const goTo = useGoToPoint(view);
+  useLeaveIfClosed(view);
   const { saleId, events, state, master, day, mode, append, nameOf, saleTitle, reloadMaster } = view;
   const pointId = params.point ?? '';
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
@@ -71,9 +72,9 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
 
   const point = master?.points.find((p) => p.id === pointId);
   const farm = master?.properties.find((f) => f.id === point?.propertyId);
-  const pile = state.piles.find((p) => p.id === pointId);
-  if (!view.ready || !master || !point || !farm) return <FarmScreen title={msg('rec.title')} subtitle={saleTitle} fallback={'/v2/sales' as Href} />;
-  if (!pile) {
+  const model = countModel(view, pointId, params.fill);
+  if (!view.ready || !master || !point || !farm || view.closed) return <FarmScreen title={msg('rec.title')} subtitle={saleTitle} fallback={'/v2/sales' as Href} />;
+  if (!model) {
     return (
       <FarmScreen title={msg('rec.title')} subtitle={saleTitle} fallback={'/v2/sales' as Href} footer={<CTA testID="to-pick" onPress={() => router.replace(`${base}/point` as Href)}>{msg('pick.title')}</CTA>} />
     );
@@ -82,11 +83,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const tapper = tapperOn(master, pointId, day);
   const tapperName = tapper ? nameOf(tapper) : msg('rec.noTapper');
   const price = state.price?.satangPerKg ?? null;
-  const figs = recorderFigures(events, master, day, pointId, mode, price);
-  const open = openBasketIn(events, master, day, pointId, mode, stdNetOfLog(events));
-  const filling = !!open && open.pointId !== pointId;
-  const waiting = !!open && open.pointId === pointId;
-  const fill = params.fill === 'part' ? 'part' : 'full';
+  const { pile, figs, open, filling, waiting, fill, basketTare, ready } = model;
   const skew = saleSkewG(events);
   const std = pile.stdNetG;
   const tare = pile.tareG;
@@ -95,15 +92,9 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const place = msg('v2s.place', { farm: farm.name, point: point.name });
   const scopeTitle = 'tapperId' in figs.scope ? msg('rec.totalsOf', { name: nameOf(figs.scope.tapperId) }) : msg('rec.totalsOfPoint');
 
-  // ── writes ──
-  const countFull = (input: 'hold' | 'hold-kbd') => {
-    if (filling && open) {
-      append({ kind: 'accept', pileId: pointId, pointId, basketNo: open.basketNo, input, netG: open.missingG, tareG: fill === 'full' ? open.tareG : tare, partOf: open.rootId });
-    } else {
-      append({ kind: 'accept', pileId: pointId, pointId, basketNo: figs.currentNo, input, netG: std, tareG: tare });
-    }
-  };
-  const early = (heldMs: number) => append({ kind: 'reject', pileId: pointId, input: 'hold', reason: 'released-early', heldMs });
+  // ── writes ── (one count path with public mode, review #1)
+  const countFull = model.count;
+  const early = model.early;
   const undo = () => {
     const last = events.find((e) => e.id === figs.lastId);
     if (last && (last.kind === 'accept' || last.kind === 'short')) {
@@ -113,22 +104,24 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const closeOpen = () => open && append({ kind: 'sys', payload: { t: 'basket_closed', basketId: open.rootId, reason: 'scrap' } });
 
   // ── the short-basket sheet (page 10) ──
-  const fullReadKg = (std + tare + skew) / 1000;
-  const mark = filling && open && fill === 'part' ? (open.missingG + tare + skew) / 1000 : fullReadKg;
-  const minKg = Math.ceil((tare + skew) / 1000) + 1;
-  const maxKg = Math.round((tare + skew + std * 1.5) / 1000);
+  // A whole-basket top-up weighs the open basket with its own tare (review #9).
+  const bt = basketTare;
+  const fullReadKg = (std + bt + skew) / 1000;
+  const mark = filling && open && fill === 'part' ? (open.missingG + bt + skew) / 1000 : fullReadKg;
+  const minKg = Math.ceil((bt + skew) / 1000) + 1;
+  const maxKg = Math.round((bt + skew + std * 1.5) / 1000);
   const reading = readingKg ?? Math.max(minKg, Math.round(mark - (filling && fill === 'part' ? 5 : std / 1000 * 0.3)));
   const readingG = reading * 1000;
   // What the reading adds: a whole-basket top-up also weighs what was already in it.
   const heldG = filling && open && fill === 'full' ? open.haveG : 0;
-  const netG = readingG - tare - skew - heldG;
+  const netG = readingG - bt - skew - heldG;
   const lackG = (filling && open ? open.missingG : std) - netG;
   const tooLow = netG <= 0;
   const saveShort = () => {
     if (tooLow) return;
     const skewPart = skew ? { skewG: skew } : {};
     if (filling && open) {
-      append({ kind: 'short', pileId: pointId, pointId, basketNo: open.basketNo, readingG, tareG: tare + heldG, partOf: open.rootId, ...skewPart });
+      append({ kind: 'short', pileId: pointId, pointId, basketNo: open.basketNo, readingG, tareG: bt + heldG, partOf: open.rootId, ...skewPart });
     } else {
       append({ kind: 'short', pileId: pointId, pointId, basketNo: figs.currentNo, readingG, tareG: tare, ...skewPart });
     }
@@ -205,9 +198,9 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       }
       footer={
         <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-          {tool(filling ? msg('fill.short') : msg('rec.short'), (c) => <ScaleIcon color={c} size={20} />, () => setSheet('partial'), 'tool-short', waiting)}
-          {tool(msg('rec.undo'), (c) => <Undo color={c} size={16} />, undo, 'tool-undo', !figs.lastId)}
-          {tool(msg('rec.public'), (c) => <ExpandIcon color={c} size={16} />, () => router.push(`${base}/public?point=${pointId}` as Href), 'tool-public')}
+          {tool(filling ? msg('fill.short') : msg('rec.short'), (c) => <ScaleIcon color={c} size={20} />, () => setSheet('partial'), 'tool-short', waiting || !ready)}
+          {tool(msg('rec.undo'), (c) => <Undo color={c} size={16} />, undo, 'tool-undo', !figs.lastId || !ready)}
+          {tool(msg('rec.public'), (c) => <ExpandIcon color={c} size={16} />, () => router.push(`${base}/public?point=${pointId}${params.fill ? `&fill=${params.fill}` : ''}` as Href), 'tool-public')}
         </View>
       }
       overlay={
@@ -245,7 +238,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
                 <Kv label={msg('v2s.scaleReads')} value={kg(readingG)} />
                 <Kv label={msg('v2s.minusBasket')} value={kg(tare)} />
                 {heldG ? <Kv label={msg('v2s.minusHave')} value={kg(heldG)} /> : null}
-                {skew ? <Kv tone="warn" label={msg('v2s.minusSkew')} value={kg(skew)} /> : null}
+                {skew ? <Kv tone="warn" label={msg('v2s.skewWord')} value={`${signed(kgText(-skew))} ${msg('common.kg')}`} /> : null}
                 <Kv tone="total" label={msg('v2s.eqNet')} value={kg(netG)} testID="short-net" />
                 <Kv label={msg('v2s.lackingFull', { n: kgText(std) })} value={kg(Math.max(0, lackG))} />
               </View>
@@ -396,7 +389,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
               {rootReading !== null ? (
                 <AppText variant="bodySm">
                   {skew
-                    ? msg('v2s.openReadingSkew', { reading: kgText(rootReading), tare: kgText(tare), skew: kgText(skew), net: kgText(open.haveG) })
+                    ? msg('v2s.openReadingSkew', { reading: kgText(rootReading), tare: kgText(tare), skew: signed(kgText(skew)), net: kgText(open.haveG) })
                     : msg('v2s.openReading', { reading: kgText(rootReading), tare: kgText(tare) })}
                 </AppText>
               ) : null}
@@ -408,7 +401,14 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
         </View>
       ) : null}
 
-      {waiting && open ? (
+      {!ready ? (
+        <View testID="not-ready" style={{ ...cardStyle(t), borderWidth: t.border.thick, borderColor: t.color.ruleStrong, alignItems: 'center', padding: t.space.lg, gap: t.space.sm }}>
+          <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.notReady')}</AppText>
+          <Button testID="to-check" icon={(c) => <ScaleIcon color={c} size={14} />} onPress={() => router.replace(`${base}/zero-tare?point=${pointId}&net=${std}&basket=${tare}` as Href)}>
+            {msg('v2s.startWeigh')}
+          </Button>
+        </View>
+      ) : waiting && open ? (
         <View testID="stage-wait" style={{ ...cardStyle(t), borderWidth: t.border.thick, borderColor: t.color.ruleStrong, alignItems: 'center', padding: t.space.lg, gap: t.space.xs }}>
           <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('rec.waitFill', { n: open.basketNo })}</Text>
           <AppText variant="bodySm">{tapper && mode === 'per-tapper' ? msg('rec.waitFillHint', { name: tapperName }) : msg('rec.waitFillPoint')}</AppText>
@@ -423,7 +423,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.semibold, color: t.color.ink }}>
                 {msg('v2s.fillMore')} <Text style={{ fontSize: 36, fontWeight: t.font.weight.black }}>{kgText(open.missingG)}</Text> {msg('common.kg')}
               </Text>
-              {fill === 'full' && skew ? [smallLine(msg('v2s.fullLine', { n: kgText(std) })), smallLine(msg('v2s.lineBasket', { n: kgText(open.tareG) })), smallLine(msg('v2s.lineSkew', { n: kgText(skew) }), 'warn')] : null}
+              {fill === 'full' && skew ? [smallLine(msg('v2s.fullLine', { n: kgText(std) })), smallLine(msg('v2s.lineBasket', { n: kgText(open.tareG) })), smallLine(msg('v2s.lineSkew', { n: signed(kgText(skew)) }), 'warn')] : null}
               {shouldRead(fill === 'full' ? std + open.tareG + skew : open.missingG + tare + skew)}
               <AppText variant="bodySm">{msg('v2s.thenHold')}</AppText>
               {fill === 'full' ? <AppText variant="bodySm">{msg('v2s.fillSum', { have: kgText(open.haveG), add: kgText(open.missingG), total: kgText(open.haveG + open.missingG) })}</AppText> : null}
@@ -431,7 +431,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           ) : (
             <>
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.bold, color: t.color.ink, textAlign: 'center' }}>{msg('rec.hold')}</Text>
-              {skew ? [smallLine(msg('v2s.lineNet', { n: kgText(std) })), smallLine(msg('v2s.lineBasket', { n: kgText(tare) })), smallLine(msg('v2s.lineSkew', { n: kgText(skew) }), 'warn')] : null}
+              {skew ? [smallLine(msg('v2s.lineNet', { n: kgText(std) })), smallLine(msg('v2s.lineBasket', { n: kgText(tare) })), smallLine(msg('v2s.lineSkew', { n: signed(kgText(skew)) }), 'warn')] : null}
               {shouldRead(std + tare + skew)}
             </>
           )}

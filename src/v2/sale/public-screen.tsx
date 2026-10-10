@@ -10,31 +10,42 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { tapperOn } from '../../core/master';
-import { recorderFigures } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
 import { ExpandIcon, SyncPill } from '../../ui';
+import { countModel } from './count';
 import { HoldStage } from './hold';
-import { useSaleView } from './pieces';
+import { useLeaveIfClosed, useSaleView } from './pieces';
 
 export function PublicScreen() {
   const t = useTheme();
   const msg = useT();
   const router = useRouter();
   const sync = useSyncStatus();
-  const { point: pointId = '' } = useLocalSearchParams<{ point?: string }>();
+  const { point: pointId = '', fill } = useLocalSearchParams<{ point?: string; fill?: string }>();
   const view = useSaleView();
-  const { saleId, events, state, master, day, mode, append, nameOf } = view;
+  useLeaveIfClosed(view);
+  const { saleId, master, day, nameOf } = view;
   const back = () => (router.canGoBack() ? router.back() : router.replace(`/v2/sale/${saleId}/counter?point=${pointId}` as Href));
   const point = master?.points.find((p) => p.id === pointId);
   const farm = master?.properties.find((f) => f.id === point?.propertyId);
-  const pile = state.piles.find((p) => p.id === pointId);
-  if (!view.ready || !master || !point || !farm || !pile) return <View style={{ flex: 1, backgroundColor: t.color.stage }} />;
+  // The recorder's own count: a top-up at the next point, nothing while the short basket waits (review #1).
+  const model = countModel(view, pointId, fill);
+  if (!view.ready || !master || !point || !farm || !model || view.closed) return <View style={{ flex: 1, backgroundColor: t.color.stage }} />;
 
   const tapper = tapperOn(master, pointId, day);
-  const figs = recorderFigures(events, master, day, pointId, mode, null);
-  const count = (input: 'hold' | 'hold-kbd') => append({ kind: 'accept', pileId: pointId, pointId, basketNo: figs.currentNo, input, netG: pile.stdNetG, tareG: pile.tareG });
+  const { figs, open, waiting, ready } = model;
+  const number = (
+    <Text
+      testID="public-no"
+      adjustsFontSizeToFit
+      numberOfLines={1}
+      style={{ fontFamily: t.font.family.sans, fontSize: 240, lineHeight: 260, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral, textAlign: 'center' }}
+    >
+      {figs.currentNo}
+    </Text>
+  );
 
   return (
     <View testID="public" style={{ flex: 1, backgroundColor: t.color.stage }}>
@@ -44,16 +55,18 @@ export function PublicScreen() {
         </Text>
         {sync ? <SyncPill status={sync} /> : null}
       </View>
-      <HoldStage fill testID="public-hold" label={msg('rec.hold')} onHold={count} onEarly={(heldMs) => append({ kind: 'reject', pileId: pointId, input: 'hold', reason: 'released-early', heldMs })}>
-        <Text
-          testID="public-no"
-          adjustsFontSizeToFit
-          numberOfLines={1}
-          style={{ fontFamily: t.font.family.sans, fontSize: 240, lineHeight: 260, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral, textAlign: 'center' }}
-        >
-          {figs.currentNo}
-        </Text>
-      </HoldStage>
+      {waiting || !ready ? (
+        <View testID="public-wait" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: t.space.md }}>
+          {number}
+          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+            {waiting && open ? msg('rec.waitFill', { n: open.basketNo }) : msg('v2s.notReady')}
+          </Text>
+        </View>
+      ) : (
+        <HoldStage fill testID="public-hold" label={msg('rec.hold')} onHold={model.count} onEarly={model.early}>
+          {number}
+        </HoldStage>
+      )}
       <Pressable testID="public-exit" accessibilityRole="button" onPress={back} style={{ minHeight: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: t.space.sm, backgroundColor: t.color.surfaceSunk }}>
         <ExpandIcon color={t.color.action} size={16} />
         <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.action }}>{msg('v2s.tapToExit')}</Text>

@@ -2,12 +2,12 @@
  * The hold-to-count stage (E04-S04, mockup `.stage`): press and hold for this
  * device's hold time (D-7, D-79) to record one basket; a progress line runs
  * along the bottom edge while held. Letting go early records nothing but the
- * attempt (`onEarly`, F-7). A screen reader's activate action counts too, as
- * a keyboard-style hold.
+ * attempt (`onEarly`, F-7). A screen reader's activate action, an AT click
+ * on web and Enter/Space count once too, as a keyboard-style hold.
  */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Animated, Easing, Pressable, View } from 'react-native';
+import { Animated, Easing, Pressable, View, type GestureResponderEvent } from 'react-native';
 
 import { readHoldMs } from '../../store/hold-preference';
 import { useTheme } from '../../theme';
@@ -51,8 +51,10 @@ export function HoldStage({
     progress.setValue(0);
     setHeld(false);
   };
-  const pressIn = () => {
-    if (disabled) return;
+  /** A key press (Enter/Space on web) is a click, not a hold: counted once on press, never as an early release (review #8). */
+  const isKey = (e?: GestureResponderEvent) => !!e && typeof (e.nativeEvent as { key?: unknown }).key === 'string';
+  const pressIn = (e?: GestureResponderEvent) => {
+    if (disabled || isKey(e)) return;
     const ms = readHoldMs();
     started.current = Date.now();
     setHeld(true);
@@ -63,11 +65,20 @@ export function HoldStage({
       onHold('hold');
     }, ms);
   };
-  const pressOut = () => {
-    if (!timer.current) return;
+  const pressOut = (e?: GestureResponderEvent) => {
+    if (isKey(e) || !timer.current) return;
     const heldMs = Date.now() - started.current;
     stop();
     onEarly?.(heldMs);
+  };
+
+  // A click with no pointer behind it — a screen reader's activate or a key on
+  // web (`detail` 0) — counts as a keyboard-style hold. A mouse or touch click
+  // (`detail` ≥ 1) after a hold is already handled by the timer.
+  const press = (e?: GestureResponderEvent) => {
+    if (disabled) return;
+    const detail = (e?.nativeEvent as { detail?: unknown } | undefined)?.detail;
+    if (detail === 0 || isKey(e)) onHold('hold-kbd');
   };
 
   return (
@@ -83,6 +94,7 @@ export function HoldStage({
       disabled={disabled}
       onPressIn={pressIn}
       onPressOut={pressOut}
+      onPress={press}
       style={{
         flex: fill ? 1 : undefined,
         minHeight,

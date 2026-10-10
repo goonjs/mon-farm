@@ -58,7 +58,7 @@ export function PointScreen() {
   /** Opens the counter (or backfill) at `pointId`, after writing what the move needs. */
   const go = (pointId: string, fill?: Fill) => {
     if (backfill) return (switching ? router.replace : router.push)(`/v2/sale/${saleId}/backfill?point=${pointId}` as Href);
-    goTo(pointId, { fill, replace: switching, pairId: params.pair });
+    goTo(pointId, { fill, fromSwitch: switching, pairId: params.pair });
   };
 
   const pick = (pointId: string) => {
@@ -159,7 +159,7 @@ export function PointScreen() {
     const tapper = nameOf(group?.tapperId ?? null) || nameOf(choices.byTapper.find((g) => g.points.some((p) => p.id === a.pointId))?.tapperId ?? null);
     const std = o.haveG + o.missingG;
     const kg = (g: number) => msg('v2f.kg', { n: kgText(g) });
-    const skewKg = kgText(skew);
+    const skewKg = signed(kgText(skew));
     return (
       <BottomSheet open onClose={onClose} title={msg('v2s.fillTitle', { n: o.basketNo })} testID="fill-sheet">
         <View style={{ gap: t.space.xs }}>
