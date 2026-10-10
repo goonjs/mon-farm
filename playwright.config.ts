@@ -6,29 +6,19 @@ import { tokens } from './design/tokens';
  * Playwright runs against the EXPORTED web build, never the dev server.
  * See scripts/serve-dist.mjs for why.
  *
- * This tier verifies the four things nothing else can:
- *   1. the build boots at all (a blank page is a bundling failure)
- *   2. the public numeral actually fills the stage — a measurement, and the
- *      constraint the whole cross-check rests on (F-9.7)
- *   3. real pointer press-and-hold, which is the only place the react-native-web
- *      pointer path gets exercised
- *   4. orientation (S19): a phone in portrait past two digits should show the
- *      rotate hint instead of silently under-sizing the count; a tablet in
- *      portrait should not need it at all
+ * This tier verifies what nothing else can: the build boots at all (a blank
+ * page is a bundling failure), the v2 screens work end to end in a real
+ * browser — offline, from the local event log, across a reload — and real
+ * pointer and keyboard input (typing key by key, focus) on react-native-web.
  *
- * Screenshots here are evidence for a human plus a handful of computed geometry
- * assertions. Pixel-diff comparison is deliberately not used: font rendering
- * differs between a developer's macOS and CI's Linux runner, and the resulting
- * golden-file churn would cost more than it catches.
+ * The v2 specs are portrait-first and run in `phone-portrait`. The landscape
+ * projects match every spec but each v2 spec skips itself there, and
+ * `tablet-portrait` matches only `orientation.spec.ts`, which no longer
+ * exists — both are kept, untouched, until landscape and tablet layouts are
+ * decided.
  *
- * Orientation projects only run `orientation.spec.ts`, not the whole suite.
- * The interaction tests (holds, phantom-count guards, undo, ...) exercise JS
- * event handling that doesn't depend on viewport dimensions; re-running all of
- * them at every screen size would be bulk, not additional signal. Only what
- * genuinely depends on viewport — layout and the numeral's measured size —
- * gets its own viewport-specific test. Tablet landscape has no project of its
- * own: it shares the phone landscape layout (nothing in it is viewport-driven
- * in a way orientation could break), so it is asserted, not separately tested.
+ * Screenshots are evidence for a human, not goldens: font rendering differs
+ * between machines, so there is no pixel diff.
  */
 export default defineConfig({
   testDir: './e2e',
