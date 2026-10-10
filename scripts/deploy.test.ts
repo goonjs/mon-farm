@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 const root = resolve(__dirname, '..');
@@ -16,9 +16,11 @@ function setup({ dist = true, firebaseExit = 0, firebaseOut = '' } = {}) {
   work = mkdtempSync(join(tmpdir(), 'deploy-'));
   log = join(work, 'firebase.log');
   if (dist) {
-    mkdirSync(join(work, 'dist'));
+    mkdirSync(join(work, 'dist', 'sale', '[id]'), { recursive: true });
     writeFileSync(join(work, 'dist', 'index.html'), '<html></html>');
+    writeFileSync(join(work, 'dist', 'sale', '[id]', 'counter.html'), '<html></html>');
   }
+  writeFileSync(join(work, 'firebase.json'), readFileSync(join(root, 'firebase.json')));
   const bin = join(work, 'bin');
   mkdirSync(bin);
   writeFileSync(
@@ -34,7 +36,7 @@ function run(args: string[], env: Record<string, string> = {}) {
   return spawnSync('bash', [script, ...args], {
     cwd: work,
     encoding: 'utf8',
-    env: { PATH: `${bin}:/usr/bin:/bin`, HOME: work, ...env } as unknown as NodeJS.ProcessEnv,
+    env: { PATH: `${bin}:${dirname(process.execPath)}:/usr/bin:/bin`, HOME: work, ...env } as unknown as NodeJS.ProcessEnv,
   });
 }
 
@@ -47,6 +49,19 @@ describe('deploy.sh', () => {
     const r = run(['dev']);
     expect(r.status).toBe(0);
     expect(readFileSync(log, 'utf8')).toMatch(/deploy --only hosting:dev/);
+  });
+
+  it('deploys with a config that routes each dynamic page before the SPA fallback', () => {
+    const r = run(['prod']);
+    expect(r.status).toBe(0);
+    expect(readFileSync(log, 'utf8')).toMatch(/--config firebase\.deploy\.json/);
+    const deployed = JSON.parse(readFileSync(join(work, 'firebase.deploy.json'), 'utf8'));
+    for (const site of deployed.hosting) {
+      expect(site.rewrites).toEqual([
+        { source: '/sale/*/counter', destination: '/sale/[id]/counter.html' },
+        { source: '**', destination: '/index.html' },
+      ]);
+    }
   });
 
   it('deploys prod to the prod hosting target', () => {
@@ -181,11 +196,12 @@ describe('firebase config', () => {
     expect(site.rewrites).toContainEqual({ source: '**', destination: '/index.html' });
   });
 
-  it.each(['dev', 'prod'])('%s caches hashed assets long and index.html short', (t) => {
+  it.each(['dev', 'prod'])('%s caches hashed assets long and every page short', (t) => {
     const site = sites.find((s) => s.target === t);
     const cc = (src: string) =>
       site.headers.find((h: any) => h.source === src)?.headers.find((h: any) => h.key === 'Cache-Control')?.value;
     expect(cc('/_expo/static/**')).toMatch(/max-age=31536000.*immutable/);
-    expect(cc('/index.html')).toMatch(/no-cache|max-age=0/);
+    // A page is the root, a clean URL (no extension) or an .html file.
+    for (const page of ['/', '**/!(*.*)', '**/*.html']) expect(cc(page)).toMatch(/no-cache|max-age=0/);
   });
 });

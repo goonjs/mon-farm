@@ -42,6 +42,13 @@ if [ "${CI:-}" = "true" ] && [ -z "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
   exit 1
 fi
 
+# firebase.json plus one rewrite per dynamic route in dist/ (see
+# hosting-config.mjs); written next to firebase.json so its relative paths hold.
+# preview-delete deploys nothing, so it needs no config (and has no dist/).
+if [ "$env" != "preview-delete" ]; then
+  node "$(dirname "$0")/hosting-config.mjs"
+fi
+
 if command -v firebase >/dev/null 2>&1; then
   firebase=(firebase)
 else
@@ -58,7 +65,7 @@ if [ "$env" = "preview-delete" ]; then
   fi
   "${firebase[@]}" hosting:channel:delete "$channel" --site "$dev_site" --force
 elif [ "$env" = "preview" ]; then
-  "${firebase[@]}" hosting:channel:deploy "$channel" --only dev --expires 7d --non-interactive
+  "${firebase[@]}" hosting:channel:deploy "$channel" --only dev --expires 7d --non-interactive --config firebase.deploy.json
 else
-  "${firebase[@]}" deploy --only "hosting:$env" --non-interactive
+  "${firebase[@]}" deploy --only "hosting:$env" --non-interactive --config firebase.deploy.json
 fi
