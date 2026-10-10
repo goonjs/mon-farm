@@ -10,8 +10,8 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import { Button, TopBar } from '../../components/chrome';
-import { Input, Label, Note, PayerPicker, StageTag } from '../../components/finance/parts';
+import { Button } from '../../components/chrome';
+import { Input, Label, Note, PayerPicker, ScreenHeader, StageTag } from '../../components/finance/parts';
 import { formatMonth, formatSatang, isMonth, parseBahtToSatang, todayIso } from '../../core/finance/money';
 import type { FinanceEvent, Payer, SalaryRule } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
@@ -43,7 +43,7 @@ export default function SalaryScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar crumb={msg('sal.title')} right={<Button testID="salary-back" onPress={() => router.back()}>{msg('common.back')}</Button>} />
+      <ScreenHeader testID="salary" title={msg('sal.title')} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.md }}>
         {adding ? (
           <RuleForm
@@ -62,7 +62,7 @@ export default function SalaryScreen() {
         {rules.map((r) => {
           const months = (fin.state?.expenses ?? []).filter((x) => x.id.startsWith(`${r.targetId}:`));
           return (
-            <View key={r.id} testID={`salary-${r.targetId}`} style={{ gap: t.space.xs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.rule }}>
+            <View key={r.id} testID={`salary-${r.targetId}`} style={{ gap: t.space.xs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleFaint, backgroundColor: t.color.surfaceRaised }}>
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>
                 {`${r.payload.rule.recipient.name} · ${formatSatang(currentAmount(fin.events ?? [], r.targetId, r.payload.rule.amountSatang))}`}
               </Text>

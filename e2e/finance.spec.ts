@@ -40,8 +40,6 @@ test('expenses, money owed back and repayment — offline, end to end', async ({
   await page.goto('/');
   await context.setOffline(true);
 
-  // Lives in the ☰ menu since E01-S17.
-  await page.getByTestId('open-menu').click();
   await page.getByTestId('open-expenses').click();
   await expect(page.getByTestId('expenses-empty')).toBeVisible();
 
@@ -106,8 +104,6 @@ test('expenses, money owed back and repayment — offline, end to end', async ({
 test('worker debt ledger — fertilizer split, loan from someone else, reconciliation', async ({ page, context }) => {
   await page.goto('/');
   await context.setOffline(true);
-  // Lives in the ☰ menu since E01-S17.
-  await page.getByTestId('open-menu').click();
   await page.getByTestId('open-expenses').click();
   await page.getByTestId('open-debts').click();
   await expect(page.getByTestId('debts-empty')).toBeVisible();
@@ -263,8 +259,6 @@ test('sale history — rows from the log, deleted sales out of the totals', asyn
 test('salary, leases with unknowns, cashflow and reserve (E11-S04..S08, offline)', async ({ page, context }) => {
   await page.goto('/');
   await context.setOffline(true);
-  // Lives in the ☰ menu since E01-S17.
-  await page.getByTestId('open-menu').click();
   await page.getByTestId('open-expenses').click();
 
   // Salary: rule from this month; months committed; mark one paid.

@@ -11,7 +11,7 @@
 
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { projectAccounts } from '../../core/finance/accounts';
 import { projectDebts } from '../../core/finance/debts';
@@ -24,7 +24,7 @@ import { useInFlight } from '../../finance/use-in-flight';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
 import { Button } from '../chrome';
-import { Chip, ChipRow, Input, Label, Note } from './parts';
+import { CardTitle, Chip, ChipRow, Input, Note } from './parts';
 
 export function SaleAccountCard({ saleId, ownerSatang, ready = true }: { saleId: string; ownerSatang: number; ready?: boolean }) {
   const t = useTheme();
@@ -59,8 +59,14 @@ export function SaleAccountCard({ saleId, ownerSatang, ready = true }: { saleId:
 
   return (
     <View testID="sale-account" style={{ gap: t.space.xs }}>
-      <Label>{msg('acct.sale.title')}</Label>
-      <Note testID="sale-account-amount">{msg('acct.sale.amount', { amount: formatSatang(amount) })}</Note>
+      <CardTitle>{msg('acct.sale.title')}</CardTitle>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.xs }}>
+        <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>{msg('acct.sale.toAccount')}</Text>
+        <Text testID="sale-account-amount" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingXl, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+          {formatSatang(amount)}
+        </Text>
+        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>{msg('fin.baht')}</Text>
+      </View>
       <ChipRow>
         {live.map((a) => (
           <Chip key={a.id} testID={`sale-account-${a.id}`} on={choice?.kind === 'account' && choice.accountId === a.id} onPress={() => void set({ kind: 'account', accountId: a.id })}>

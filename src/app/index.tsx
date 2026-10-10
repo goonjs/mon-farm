@@ -106,6 +106,11 @@ export default function SaleListScreen() {
         <Link href={newSaleHref} asChild>
           <Button testID="new-sale" variant="primary">{msg('sales.new')}</Button>
         </Link>
+        {/* D-74 F5: "all expenses" is reachable from the front door and the menu. */}
+        <View style={{ height: t.space.sm }} />
+        <Link href="/finance/expenses" asChild>
+          <Button testID="open-expenses">{msg('fin.open')}</Button>
+        </Link>
       </View>
 
       {/* ☰ menu (v1.1.0 farm screen 1). Settings moved here off the front
@@ -125,13 +130,8 @@ export default function SaleListScreen() {
             href={'/farm-data' as Href}
             onPress={() => setMenuOpen(false)}
           />
-          {/* D-74 F5: "all expenses" is reachable from the front door's menu. */}
-          <MenuItem
-            testID="open-expenses"
-            label={msg('fin.open')}
-            href="/finance/expenses"
-            onPress={() => setMenuOpen(false)}
-          />
+          <MenuItem testID="menu-expenses" label={msg('fin.open')} href="/finance/expenses" onPress={() => setMenuOpen(false)} />
+          <MenuItem testID="menu-history" label={msg('hist.open')} href="/history" onPress={() => setMenuOpen(false)} />
         </MenuSection>
         <MenuSection title={msg('menu.device')}>
           <MenuItem

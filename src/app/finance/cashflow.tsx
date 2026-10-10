@@ -14,8 +14,8 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import { Button, TopBar } from '../../components/chrome';
-import { Input, Label, Note, StageTag, stageFrame } from '../../components/finance/parts';
+import { Button } from '../../components/chrome';
+import { Input, Label, MoneyLine, Note, Rule, ScreenHeader } from '../../components/finance/parts';
 import { isDerivedExpense, nextMonth, projectFinance } from '../../core/finance/ledger';
 import { formatDate, formatMonth, formatSatang, parseBahtToSatang, todayIso } from '../../core/finance/money';
 import { cashflow, projectPlan, type CashflowRow } from '../../core/finance/plan';
@@ -73,14 +73,14 @@ export default function CashflowScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar crumb={msg('cf.title')} right={<Button testID="cashflow-back" onPress={() => router.back()}>{msg('common.back')}</Button>} />
+      <ScreenHeader testID="cashflow" title={msg('cf.title')} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.md }}>
         <Note>{msg('cf.pending')}</Note>
         {rows.map((r) => (
           <Month key={r.month} r={r} open={open === r.month} onToggle={() => setOpen(open === r.month ? null : r.month)} state={state} plan={plan} />
         ))}
 
-        <View testID="cashflow-obligations" style={{ gap: t.space.xxs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.rule }}>
+        <View testID="cashflow-obligations" style={{ gap: t.space.xxs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleFaint, backgroundColor: t.color.surfaceRaised }}>
           <Label>{msg('cf.obligations')}</Label>
           <Line label={msg('cf.ob.committed')} value={signed(-ob.committed)} />
           <Line label={msg('cf.ob.planned')} value={`${signed(-ob.planned)}${ob.plannedUnknown ? ` + ${msg('fin.total.unknown', { n: ob.plannedUnknown })}` : ''}`} />
@@ -105,7 +105,7 @@ function Line({ label, value, testID }: { label: string; value: string; testID?:
   return (
     <View style={{ flexDirection: 'row', gap: t.space.sm }}>
       <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>{label}</Text>
-      <Text testID={testID} style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.small, color: t.color.ink }}>{value}</Text>
+      <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>{value}</Text>
     </View>
   );
 }
@@ -113,24 +113,21 @@ function Line({ label, value, testID }: { label: string; value: string; testID?:
 function Month({ r, open, onToggle, state, plan }: { r: CashflowRow; open: boolean; onToggle: () => void; state: ReturnType<typeof projectFinance> | null; plan: ReturnType<typeof projectPlan> }) {
   const t = useTheme();
   const msg = useT();
-  const sign = signed;
   return (
-    <View testID={`cf-${r.month}`} style={{ gap: t.space.xs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.rule }}>
+    <View testID={`cf-${r.month}`} style={{ gap: t.space.xs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleFaint, backgroundColor: t.color.surfaceRaised }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
         <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>{formatMonth(r.month)}</Text>
         {r.incomplete ? <Note tone="warn" testID={`cf-incomplete-${r.month}`}>{`⚠ ${msg('cf.incomplete')}`}</Note> : null}
       </View>
-      <View style={{ flexDirection: 'row', gap: t.space.xs }}>
-        <Cell stage="actual" label={`${msg('cf.in')} · ${msg('fin.stage.actual')}`} value={signed(r.inActual)} testID={`cf-in-actual-${r.month}`} />
-        <Cell stage="planned" label={`${msg('cf.in')} · ${msg('fin.stage.planned')}`} value={signed(r.inPlanned)} />
-      </View>
-      <View style={{ flexDirection: 'row', gap: t.space.xs }}>
-        <Cell stage="actual" label={`${msg('cf.out')} · ${msg('fin.stage.actual')}`} value={signed(-r.outActual)} testID={`cf-out-actual-${r.month}`} />
-        <Cell stage="committed" label={`${msg('cf.out')} · ${msg('fin.stage.committed')}`} value={signed(-r.outCommitted)} />
-        <Cell stage="planned" label={`${msg('cf.out')} · ${msg('fin.stage.planned')}`} value={signed(-r.outPlanned)} />
-      </View>
-      <Line label={msg('cf.net')} value={sign(r.netActual)} testID={`cf-net-${r.month}`} />
-      <Line label={msg('cf.netAll')} value={sign(r.netAll)} />
+      <MoneyLine testID={`cf-in-actual-${r.month}`} label={`${msg('cf.in')} · ${msg('fin.stage.actual')}`} satang={r.inActual} dir="in" />
+      <MoneyLine testID={`cf-in-planned-${r.month}`} label={`${msg('cf.in')} · ${msg('fin.stage.planned')}`} satang={r.inPlanned} dir="in" />
+      <Rule />
+      <MoneyLine testID={`cf-out-actual-${r.month}`} label={`${msg('cf.out')} · ${msg('fin.stage.actual')}`} satang={r.outActual} dir="out" />
+      <MoneyLine testID={`cf-out-committed-${r.month}`} label={`${msg('cf.out')} · ${msg('fin.stage.committed')}`} satang={r.outCommitted} dir="out" />
+      <MoneyLine testID={`cf-out-planned-${r.month}`} label={`${msg('cf.out')} · ${msg('fin.stage.planned')}`} satang={r.outPlanned} dir="out" />
+      <Rule />
+      <MoneyLine testID={`cf-net-${r.month}`} strong label={msg('cf.net')} satang={r.netActual} dir={r.netActual < 0 ? 'out' : r.netActual > 0 ? 'in' : undefined} />
+      <MoneyLine testID={`cf-netall-${r.month}`} label={msg('cf.netAll')} satang={r.netAll} dir={r.netAll < 0 ? 'out' : r.netAll > 0 ? 'in' : undefined} />
       {r.sources.length ? (
         <Button testID={`cf-sources-${r.month}`} onPress={onToggle}>{`${open ? '▴' : '▾'} ${msg('cf.sources', { n: r.sources.length })}`}</Button>
       ) : null}
@@ -167,17 +164,6 @@ function Month({ r, open, onToggle, state, plan }: { r: CashflowRow; open: boole
   );
 }
 
-function Cell({ stage, label, value, testID }: { stage: 'actual' | 'committed' | 'planned'; label: string; value: string; testID?: string }) {
-  const t = useTheme();
-  return (
-    <View style={{ flex: 1, gap: 2, ...stageFrame(stage, t), padding: t.space.xs }}>
-      <StageTag stage={stage} />
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.inkSoft }}>{label}</Text>
-      <Text testID={testID} style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.micro, fontWeight: t.font.weight.bold, color: t.color.ink }}>{value}</Text>
-    </View>
-  );
-}
-
 function Reserve({ value, onSave }: { value: ReturnType<typeof projectPlan>['reserve']; onSave: (amount: number, assumption: string, source: string) => Promise<void> }) {
   const t = useTheme();
   const msg = useT();
@@ -187,11 +173,11 @@ function Reserve({ value, onSave }: { value: ReturnType<typeof projectPlan>['res
   const [source, setSource] = useState('');
   const satang = parseBahtToSatang(amount);
   return (
-    <View testID="cashflow-reserve" style={{ gap: t.space.xs, padding: t.space.md, borderRadius: t.radius.lg, backgroundColor: t.color.surfaceSunk }}>
+    <View testID="cashflow-reserve" style={{ gap: t.space.xs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleFaint, backgroundColor: t.color.surfaceRaised }}>
       <Label>{msg('cf.reserve')}</Label>
       {value ? (
         <>
-          <Text testID="reserve-amount" style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>{formatSatang(value.amountSatang)}</Text>
+          <Text testID="reserve-amount" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>{formatSatang(value.amountSatang)}</Text>
           <Note>{`${msg('cf.reserveAssumption')}: ${value.assumption}`}</Note>
           <Note>{`${msg('cf.reserveSource')}: ${value.source}`}</Note>
         </>

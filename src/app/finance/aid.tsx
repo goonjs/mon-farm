@@ -8,8 +8,8 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
-import { Button, TopBar } from '../../components/chrome';
-import { Input, Label, Note } from '../../components/finance/parts';
+import { Button } from '../../components/chrome';
+import { Card, CardTitle, Input, Label, Note, ScreenHeader } from '../../components/finance/parts';
 import { formatDate, formatSatang, todayIso } from '../../core/finance/money';
 import { aidByWorker } from '../../core/finance/plan';
 import { useFinance } from '../../finance/use-finance';
@@ -26,7 +26,7 @@ export default function AidScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar crumb={msg('aid.title')} right={<Button testID="aid-back" onPress={() => router.back()}>{msg('common.back')}</Button>} />
+      <ScreenHeader testID="aid" title={msg('aid.title')} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.md }}>
         <View style={{ flexDirection: 'row', gap: t.space.xs }}>
           <View style={{ flex: 1 }}>
@@ -40,7 +40,8 @@ export default function AidScreen() {
         <Note>{msg('aid.note')}</Note>
         {rows.length === 0 ? <Note testID="aid-empty">{msg('aid.empty')}</Note> : null}
         {rows.map((r) => (
-          <View key={r.worker.id} style={{ gap: t.space.xxs }}>
+          <Card key={r.worker.id}>
+            <CardTitle>{r.worker.name}</CardTitle>
             <Note testID={`aid-${r.worker.id}`}>{msg('aid.row', { name: r.worker.name, amount: formatSatang(r.totalSatang), n: r.ids.length })}</Note>
             {r.ids.map((id) => (
               <Button key={id} testID={`aid-item-${id}`} onPress={() => router.push({ pathname: '/finance/expense/[id]', params: { id } })}>
@@ -50,7 +51,7 @@ export default function AidScreen() {
                 })()}
               </Button>
             ))}
-          </View>
+          </Card>
         ))}
       </ScrollView>
     </View>
