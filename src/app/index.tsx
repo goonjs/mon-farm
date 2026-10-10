@@ -65,6 +65,9 @@ export default function SaleListScreen() {
       <View
         style={{
           flexDirection: 'row',
+          // Farm data, expenses and settings no longer fit one portrait row
+          // beside the title; wrap rather than push the page sideways.
+          flexWrap: 'wrap',
           alignItems: 'center',
           gap: t.space.sm,
           padding: t.space.md,

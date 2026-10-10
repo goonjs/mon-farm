@@ -220,7 +220,7 @@ export function PayerPicker({
   const add = async () => {
     const n = name.trim();
     if (!n) return;
-    const person = await peopleStore.create(n);
+    const person = await peopleStore.create(n, ['payer']);
     const p = { id: person.id, name: person.name };
     setPeople((list) => [...list, p]);
     setName('');
