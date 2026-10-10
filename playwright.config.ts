@@ -71,7 +71,8 @@ export default defineConfig({
     {
       // Same phone, portrait — the binding case for the rotate hint.
       name: 'phone-portrait',
-      testMatch: /orientation\.spec\.ts/,
+      // Finance screens (E11) are portrait-first, so their spec runs here.
+      testMatch: /(orientation|finance)\.spec\.ts/,
       use: { ...devices['Pixel 7'], viewport: tokens.viewport.portrait, isMobile: true, hasTouch: true },
     },
     {

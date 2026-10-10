@@ -1,6 +1,6 @@
 # Story E11-S03: บันทึกการคืนเงินและยอดคงเหลือ
 
-Status: Ready (เจ้าของตกลง AC 2026-10-03)
+Status: In Progress (เจ้าของตกลง AC 2026-10-03) — implemented on `feature/e11-e06-money`, awaiting independent review + CI
 
 ## Context
 
@@ -52,8 +52,16 @@ Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Verification
 
+- Unit (Vitest): `src/core/finance/*.test.ts`, `src/store/finance.test.ts` · Component (Jest): `src/__tests__/finance.test.tsx` · Sandbox: `e2e/finance.spec.ts` (phone-portrait, offline) passed 2026-10-09 · Screenshots: `docs/ux/screenshots/overnight/money/`
+
 ## Dev notes
 
+- `repayment_recorded` with from/to (default farm funds → payee, both changeable), amount, date, note, allocations, `saleId` (for D-60 netting). `allocateOldestFirst()` + manual split; over-repay refused before save; two devices over-repaying → `overpaid` flag.
+- Repayments can be deleted (restorable) from the owed page; balances recompute from the log.
+- Not covered: editing a repayment in place from the UI (core supports `repayment_changed`; UI offers delete + re-record); netting at settlement written by E06-S04.
+
 ## Code review
+
+- Independent review (separate agent, 2026-10-09) on `f7b1373..804696d`: 4 major + 5 minor findings. Fixed: conflict detection now compares each guarded field's branch tips (not only direct siblings) and shows edits made while a conflict is open (#1, #2, confirmed by tests); one money write at a time per form via a ref guard (#3, double-tap test); netting's repayment and debt payment linked by id, compensated if the second write fails, voided together (#4); owner-share expense amount/date read-only in the expense form, conflict resolution uses projected heads (#5); fertilizer→other deletes the owner-share expense (#6); netting default capped at the balance with a message (#7); payment form waits for the log and reports save errors (#8); 0% fertilizer allowed (#9); new card capped by what is left after old S29 deductions. Open: `useSaleCounts` treats sales as live until loaded (brief window); D-72 piles page, rounding UI, D-61 blocking — listed under Dev notes.
 
 ## QA notes

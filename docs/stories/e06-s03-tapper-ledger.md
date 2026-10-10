@@ -1,6 +1,6 @@
 # Story E06-S03: บัญชีหนี้คนงาน — ยอดค้าง แผนผ่อน ประวัติ
 
-Status: Ready (เจ้าของตกลง AC 2026-10-03)
+Status: In Progress (เจ้าของตกลง AC 2026-10-03) — implemented on `feature/e11-e06-money`, awaiting independent review + CI
 
 ## Context
 
@@ -55,13 +55,23 @@ Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Verification
 
+- Unit: `src/core/finance/debts.test.ts` (balance across carried-forward + 3 kinds + 3 settlement methods + outside payment; void; deleted sale; D-69 other lender; F10 overpaid; plan; history; fertilizer owner-share expense follows edit/void) · Component: `src/__tests__/debts.test.tsx` · Sandbox: `e2e/finance.spec.ts` second test (phone-portrait, offline) passed 2026-10-09 · Screenshots 08–11 in `docs/ux/screenshots/overnight/money/`
+
 - [ ] Sandbox run:
 - [ ] Screenshots (UI) — golden path:
 - [ ] Screenshots (UI) — edge cases:
 
 ## Dev notes
 
+- Core `src/core/finance/debts.ts` over the same finance log as E11: `debt_added/changed`, `debt_payment_recorded/changed` (method = outside · cash-from-share · buyer-split · transfer-with-owner · netting, optional `saleId`), `debt_plan_set` (one per worker, `null` cancels). Balance = only debts owed to the farm; loans from others sit in their own box (D-69), repaid directly.
+- Manual fertilizer debt: `fertilizerSplit()` — whole % only, worker share rounded half-up to the satang. The owner share is a synthesised expense `<debtId>:owner` (category ปุ๋ย, payer unset) that follows edits/voids of the debt; its payer is set later via the expense form or the F7 bulk filter.
+- A deduction at a deleted sale stops counting (restored → counts again). "Cancelled" joins once E04-S11 defines it.
+- Screens: `/finance/debts` (accounts + pick a person), `/finance/debts/[workerId]` (balance, plan edit/cancel, D-72 reconciliation with ✓ against the balance, other lenders, history filter + void/restore), `/finance/debts/add`, `/finance/debts/pay` (over-pay → fix / save anyway, F10). Entry: expenses header and settings — the worker page (E03-S01 card) does not exist yet.
+- Not covered: editing a debt amount in place from the UI (void + re-add; core supports `debt_changed`); deduction lines are written by E06-S04; linking a history line to its sale screen shows the sale id only.
+
 ## Code review
+
+- Independent review (separate agent, 2026-10-09) on `f7b1373..804696d`: 4 major + 5 minor findings. Fixed: conflict detection now compares each guarded field's branch tips (not only direct siblings) and shows edits made while a conflict is open (#1, #2, confirmed by tests); one money write at a time per form via a ref guard (#3, double-tap test); netting's repayment and debt payment linked by id, compensated if the second write fails, voided together (#4); owner-share expense amount/date read-only in the expense form, conflict resolution uses projected heads (#5); fertilizer→other deletes the owner-share expense (#6); netting default capped at the balance with a message (#7); payment form waits for the log and reports save errors (#8); 0% fertilizer allowed (#9); new card capped by what is left after old S29 deductions. Open: `useSaleCounts` treats sales as live until loaded (brief window); D-72 piles page, rounding UI, D-61 blocking — listed under Dev notes.
 
 - Reviewer (agent/session แยก):
 - Findings:

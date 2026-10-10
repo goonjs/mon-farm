@@ -55,7 +55,8 @@ export default function SaleListScreen() {
   // its status or figures may have changed while this screen was off-screen.
   useFocusEffect(reload);
 
-  const newSaleHref = { pathname: '/sale/[id]/setup', params: { id: newId('sale-') } } as const;
+  // E04-S02: a new sale starts from master data; the old setup screen stays reachable by URL.
+  const newSaleHref = { pathname: '/sale/[id]/start', params: { id: newId('sale-') } } as const;
   // Settings live off the front door rather than off a working screen — see
   // the header comment in src/app/settings.tsx.
   const SETTINGS = '/settings' as const;
@@ -65,6 +66,9 @@ export default function SaleListScreen() {
       <View
         style={{
           flexDirection: 'row',
+          // Farm data, expenses and settings no longer fit one portrait row
+          // beside the title; wrap rather than push the page sideways.
+          flexWrap: 'wrap',
           alignItems: 'center',
           gap: t.space.sm,
           padding: t.space.md,
@@ -89,6 +93,10 @@ export default function SaleListScreen() {
         <Link href={'/farm-data' as Href} asChild>
           <Button testID="open-farm-data">{msg('farmData.open')}</Button>
         </Link>
+        {/* D-74 F5: "all expenses" is reachable from the front door and the menu (settings). */}
+        <Link href="/finance/expenses" asChild>
+          <Button testID="open-expenses">{msg('fin.open')}</Button>
+        </Link>
         <Link href={SETTINGS} asChild>
           <Button testID="open-settings">{msg('settings.open')}</Button>
         </Link>
@@ -107,6 +115,9 @@ export default function SaleListScreen() {
         ) : (
           sales.map((s) => <SaleRow key={s.id} sale={s} onDelete={() => void remove(s.id)} />)
         )}
+        <Link href="/history" asChild>
+          <Button testID="open-history">{msg('hist.open')}</Button>
+        </Link>
         {deletedCount > 0 && (
           <Link href="/deleted" asChild>
             <Button testID="open-deleted">{msg('sales.deletedLink', { n: deletedCount })}</Button>

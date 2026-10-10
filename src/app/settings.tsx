@@ -109,6 +109,14 @@ export default function SettingsScreen() {
         <Link href="/farm-profile" asChild>
           <Button testID="open-farm-profile">{msg('settings.farmProfile')}</Button>
         </Link>
+
+        <Link href="/finance/expenses" asChild>
+          <Button testID="settings-open-expenses">{msg('fin.open')}</Button>
+        </Link>
+
+        <Link href="/finance/debts" asChild>
+          <Button testID="settings-open-debts">{msg('debt.open')}</Button>
+        </Link>
       </ScrollView>
     </View>
   );
