@@ -52,7 +52,8 @@ export function paymentStatus(events: readonly FinanceEvent[], saleId: string, p
   return {
     done: p.done,
     amountAtMarkSatang: p.done ? p.amountSatang : null,
-    recheck: p.done && p.amountSatang !== amountSatang,
+    // Any tick not at today's amount needs a recheck, whichever head sorts last (review #2).
+    recheck: p.done && evs.some((e) => (e.payload as MarkPayload).amountSatang !== amountSatang),
     conflict: false,
     head,
     heads,

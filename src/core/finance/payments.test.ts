@@ -58,4 +58,19 @@ describe('separate payment statuses (E05-S05 · SET-6)', () => {
     expect(salePaymentConflicts([a, c, d], 's1')).toEqual(['person-daeng']);
     expect(salePaymentConflicts([a, c, d], 's2')).toEqual([]);
   });
+
+  it('review #2: two phones ticked at different amounts → recheck if any tick is not at today\'s amount', () => {
+    const old = ev(T, paymentMarkPayload('s1', 'person-daeng', true, 3486000), null, 'dev-a');
+    const now = ev(T, paymentMarkPayload('s1', 'person-daeng', true, 3436000), null, 'dev-b');
+    expect(paymentStatus([old, now], 's1', 'person-daeng', 3436000)).toMatchObject({ done: true, recheck: true, conflict: false });
+    expect(paymentStatus([now, old], 's1', 'person-daeng', 3436000).recheck).toBe(true);
+  });
+
+  it('review #5: a write based on both conflicting heads settles it', () => {
+    const a = ev(T, paymentMarkPayload('s1', 'person-daeng', true, 3486000), null, 'dev-a');
+    const b = ev(T, paymentMarkPayload('s1', 'person-daeng', false, 3486000), null, 'dev-b');
+    expect(paymentStatus([a, b], 's1', 'person-daeng', 3486000).conflict).toBe(true);
+    const c = ev(T, { ...paymentMarkPayload('s1', 'person-daeng', false, 3486000), alsoBasedOn: [a.id] }, b.id);
+    expect(paymentStatus([a, b, c], 's1', 'person-daeng', 3486000)).toMatchObject({ conflict: false, done: false, heads: [c.id] });
+  });
 });

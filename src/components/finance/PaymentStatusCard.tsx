@@ -9,7 +9,7 @@
 import { useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { formatSatang } from '../../core/finance/money';
+import { formatDate, formatSatang, todayIso } from '../../core/finance/money';
 import { paymentMarkPayload, paymentStatus, paymentTarget, type PaymentStatus } from '../../core/finance/payments';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
@@ -25,9 +25,12 @@ export interface Payee {
   readonly kind: 'cash' | 'transfer';
 }
 
-const clock = (ts: number) => {
+/** HH:MM today; the date too when it was another day (review #1). */
+const when = (ts: number) => {
   const d = new Date(ts);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return iso === todayIso() ? hm : `${formatDate(iso)} ${hm}`;
 };
 
 export function PaymentStatusCard({ saleId, payees }: { saleId: string; payees: readonly Payee[] }) {
@@ -35,7 +38,7 @@ export function PaymentStatusCard({ saleId, payees }: { saleId: string; payees: 
   const msg = useT();
   const fin = useFinance();
   const inFlight = useInFlight();
-  const rows = useMemo(() => payees.map((p) => ({ p, s: paymentStatus(fin.events ?? [], saleId, p.id, p.satang) })), [fin.events, saleId, payees]);
+  const rows = useMemo(() => payees.filter((p) => p.satang > 0 || p.kind === 'transfer').map((p) => ({ p, s: paymentStatus(fin.events ?? [], saleId, p.id, p.satang) })), [fin.events, saleId, payees]);
 
   const mark = (p: Payee, s: PaymentStatus, done: boolean) =>
     inFlight.run(async () => {
@@ -54,7 +57,7 @@ export function PaymentStatusCard({ saleId, payees }: { saleId: string; payees: 
           <Pressable
             testID={`pay-toggle-${p.id}`}
             accessibilityRole="checkbox"
-            accessibilityState={{ checked: s.done, disabled: inFlight.busy }}
+            accessibilityState={{ checked: s.conflict ? 'mixed' : s.done, disabled: inFlight.busy }}
             disabled={inFlight.busy}
             onPress={() => void mark(p, s, !s.done)}
             style={{
@@ -86,14 +89,14 @@ export function PaymentStatusCard({ saleId, payees }: { saleId: string; payees: 
             </View>
             <View style={{ flex: 1 }}>
               <Text testID={`pay-${p.id}`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>
-                {p.id === 'owner' ? msg('pay.owner') : msg('pay.cash', { name: p.name })}
+                {p.kind === 'transfer' ? msg('pay.owner') : msg('pay.cash', { name: p.name })}
               </Text>
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>{`${formatSatang(p.satang)} ${msg('fin.baht')}`}</Text>
             </View>
           </Pressable>
           {s.done && !s.recheck ? (
             <Fact mark="check" tone="accept" testID={`pay-done-${p.id}`}>
-              {msg('pay.doneBy', { device: s.by?.deviceId ?? '', time: s.at ? clock(s.at) : '' })}
+              {msg('pay.doneBy', { device: s.by?.deviceId ?? '', time: s.at ? when(s.at) : '' })}
             </Fact>
           ) : null}
           {s.recheck ? (
@@ -106,7 +109,16 @@ export function PaymentStatusCard({ saleId, payees }: { saleId: string; payees: 
               </Button>
             </View>
           ) : null}
-          {s.conflict ? <Note tone="reject" testID={`pay-conflict-${p.id}`}>{msg('pay.conflict')}</Note> : null}
+          {s.conflict ? (
+            <View style={{ gap: t.space.xxs }}>
+              <Note tone="reject" testID={`pay-conflict-${p.id}`}>{msg('pay.conflict')}</Note>
+              {/* Two explicit choices (review #4): settling a conflict as "not paid" must not take two taps. */}
+              <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+                <Button testID={`pay-pick-done-${p.id}`} variant="primary" disabled={inFlight.busy} onPress={() => void mark(p, s, true)}>{msg('pay.pickDone')}</Button>
+                <Button testID={`pay-pick-undone-${p.id}`} disabled={inFlight.busy} onPress={() => void mark(p, s, false)}>{msg('pay.pickUndone')}</Button>
+              </View>
+            </View>
+          ) : null}
         </View>
       ))}
     </View>
