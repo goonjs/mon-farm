@@ -34,8 +34,17 @@ import { store } from './store';
 
 /** Every event minus the fields the provider stamps. */
 type NewEvent =
-  | { kind: 'accept'; pileId: string; input: 'hold' | 'hold-kbd'; netG: number; tareG: number }
-  | { kind: 'short'; pileId: string; readingG: number; tareG: number }
+  | {
+      kind: 'accept';
+      pileId: string;
+      input: 'hold' | 'hold-kbd' | 'edit';
+      netG: number;
+      tareG: number;
+      pointId?: string;
+      basketNo?: number;
+      editOf?: string;
+    }
+  | { kind: 'short'; pileId: string; readingG: number; tareG: number; pointId?: string; basketNo?: number; skewG?: number; editOf?: string }
   | {
       kind: 'reject';
       pileId: string;

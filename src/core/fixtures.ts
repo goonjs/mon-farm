@@ -90,6 +90,33 @@ export class LogBuilder {
     return this;
   }
 
+  /**
+   * A standard basket at a weighing point with its number (E04-S01). The
+   * point stands in as the pile until the counter screen moves to points.
+   */
+  acceptAt(pointId: string, basketNo: number, netG = 50_000, tareG = 2_000): this {
+    this.events.push({ ...this.base(), kind: 'accept', pileId: pointId, pointId, basketNo, input: 'hold', netG, tareG });
+    return this;
+  }
+
+  /** A short basket at a weighing point with its number (E04-S05). */
+  shortAt(pointId: string, basketNo: number, readingG: number, tareG = 2_000): this {
+    this.events.push({ ...this.base(), kind: 'short', pileId: pointId, pointId, basketNo, readingG, tareG });
+    return this;
+  }
+
+  /** Undo the last basket (S12): its number goes back to the sequence (E04-S09). */
+  undo(pileId: string, targetId: string, reason = 'mistap'): this {
+    this.events.push({ ...this.base(), kind: 'correction', pileId, targetId, mode: 'undo-last', reason });
+    return this;
+  }
+
+  /** The re-recorded basket of an edit (E04-S09); the caller voids `editOf` first. */
+  editAt(editOf: string, pointId: string, basketNo: number, netG: number, tareG = 2_000): this {
+    this.events.push({ ...this.base(), kind: 'accept', pileId: pointId, pointId, basketNo, input: 'edit', netG, tareG, editOf });
+    return this;
+  }
+
   /** An off-standard basket, given its gross scale reading. */
   short(pileId: string, readingG: number, tareG = 2_000): this {
     this.events.push({ ...this.base(), kind: 'short', pileId, readingG, tareG });
@@ -197,7 +224,7 @@ export function setUpSale(b = new LogBuilder()): LogBuilder {
       where: 'farm',
     })
     .sys({ t: 'price_set', satangPerKg: 2650, indexRef: 'ตลาดกลางหาดใหญ่' })
-    .sys({ t: 'split_set', ownerPct: 50, basis: 'gross' })
+    .sys({ t: 'split_set', ownerPct: 50 })
     .sys({ t: 'zone_added', zoneId: 'zA', name: 'โซน A' })
     .sys({ t: 'zone_added', zoneId: 'zB', name: 'โซน B' })
     .sys({ t: 'pile_added', pileId: 'p1', zoneId: 'zA', name: 'กอง 1', tareG: 2_000, stdNetG: 50_000 })

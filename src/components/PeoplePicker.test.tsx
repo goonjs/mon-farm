@@ -41,7 +41,7 @@ describe('PeoplePicker', () => {
   beforeEach(async () => {
     // Same store instance across the whole file (jest.mock's factory only
     // runs once and is memoised), so tests clear it rather than recreate it.
-    for (const p of await mockStore.list()) await mockStore.archive(p.id);
+    for (const p of await mockStore.list()) await mockStore.remove(p.id);
   });
 
   it('shows nobody selected and an empty list initially', async () => {
@@ -52,7 +52,7 @@ describe('PeoplePicker', () => {
   });
 
   it('lists an existing person and selecting them calls onChange', async () => {
-    const p = await mockStore.create('ประยุทธ');
+    const p = await mockStore.create('ประยุทธ', ['tapper']);
     const onChange = jest.fn();
     wrap(<PeoplePicker value={null} onChange={onChange} />);
     await flush();
@@ -82,7 +82,7 @@ describe('PeoplePicker', () => {
   });
 
   it('shows the selected person and "change" clears the selection', async () => {
-    const p = await mockStore.create('มานพ');
+    const p = await mockStore.create('มานพ', ['tapper']);
     const onChange = jest.fn();
     wrap(<PeoplePicker value={p} onChange={onChange} />);
     await flush();
@@ -94,5 +94,35 @@ describe('PeoplePicker', () => {
     expect(screen.getByText('มานพ')).toBeTruthy();
     fireEvent.press(screen.getByTestId('people-picker-change'));
     expect(onChange).toHaveBeenCalledWith(null);
+  });
+
+  it('with a role, lists only people holding it (E03-S01)', async () => {
+    const tapper = await mockStore.create('แดง', ['tapper']);
+    const manager = await mockStore.create('สมหวัง', ['manager']);
+    wrap(<PeoplePicker value={null} onChange={jest.fn()} role="tapper" />);
+    await flush();
+    expect(screen.getByTestId(`people-picker-option-${tapper.id}`)).toBeTruthy();
+    expect(screen.queryByTestId(`people-picker-option-${manager.id}`)).toBeNull();
+  });
+
+  it('a person created inline gets the picker role, and is picked in the same step', async () => {
+    const onChange = jest.fn();
+    wrap(<PeoplePicker value={null} onChange={onChange} role="payer" />);
+    await flush();
+    fireEvent.press(screen.getByTestId('people-picker-add'));
+    fireEvent.changeText(screen.getByTestId('people-picker-new-name'), 'กมล');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('people-picker-confirm-new'));
+      await Promise.resolve();
+    });
+    expect(onChange.mock.calls[0][0]).toMatchObject({ name: 'กมล', roles: ['payer'] });
+  });
+
+  it('a deleted person is not offered', async () => {
+    const p = await mockStore.create('แดง', ['tapper']);
+    await mockStore.remove(p.id);
+    wrap(<PeoplePicker value={null} onChange={jest.fn()} />);
+    await flush();
+    expect(screen.queryByTestId(`people-picker-option-${p.id}`)).toBeNull();
   });
 });

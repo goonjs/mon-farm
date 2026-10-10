@@ -193,7 +193,7 @@ describe('settle — rounding closes exactly', () => {
     // A third of an odd number of satang is where naive rounding loses a unit.
     const b = setUpSale(new LogBuilder());
     // Rebuild with a 33% split by appending a later split_set.
-    b.sys({ t: 'split_set', ownerPct: 33, basis: 'gross' });
+    b.sys({ t: 'split_set', ownerPct: 33 });
     readyPile(b, 'p1');
     b.accept('p1', 33_333);
     readyPile(b, 'p3');
@@ -216,7 +216,7 @@ describe('settle — refuses rather than guesses', () => {
         t: 'sale_started',
         farmName: 'f', buyer: 'b', manager: 'm', workerLead: 'w', where: 'farm',
       })
-      .sys({ t: 'split_set', ownerPct: 60, basis: 'gross' });
+      .sys({ t: 'split_set', ownerPct: 60 });
     const events = b.build();
     expect(() => settle(events, projectSale(events))).toThrow(SettlementUnavailable);
   });
@@ -374,5 +374,19 @@ describe('totals — the rollups agree with each other', () => {
     expect(t.netG).toBe(41_000);
     expect(t.shortBaskets).toBe(1);
     expect(t.standardBaskets).toBe(0);
+  });
+});
+
+describe('settle — a log written before `basis` was removed (E03-S06)', () => {
+  it('loads and settles exactly as before: the extra field is ignored', () => {
+    const current = workedExample();
+    // The same log as an older build wrote it: every split_set also carried basis: 'gross'.
+    const old = current.map((e) =>
+      e.kind === 'sys' && e.payload.t === 'split_set' ? ({ ...e, payload: { ...e.payload, basis: 'gross' } } as typeof e) : e,
+    );
+    expect(old.some((e) => e.kind === 'sys' && 'basis' in e.payload)).toBe(true);
+    const stateOld = projectSale(old);
+    expect(stateOld).toEqual(projectSale(current));
+    expect(settle(old, stateOld)).toEqual(settle(current, projectSale(current)));
   });
 });

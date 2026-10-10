@@ -39,6 +39,11 @@ export interface HoldStageProps {
   enabled?: boolean;
   holdMs?: number;
   testID?: string;
+  /**
+   * Recorder mode (E04-S05, D-40): the stage shows only this text — the
+   * basket number lives on the card above it, never in the hold area.
+   */
+  label?: string;
 }
 
 export function HoldStage({
@@ -49,6 +54,7 @@ export function HoldStage({
   enabled = true,
   holdMs,
   testID = 'stage',
+  label,
 }: HoldStageProps) {
   const t = useTheme();
   const msg = useT();
@@ -236,14 +242,23 @@ export function HoldStage({
       if (!belongsToActivePointer(e)) return;
       lastPointer.current = { x: e.clientX, y: e.clientY };
     };
+    // E04-S04: any OTHER pointer touching down while a hold runs — a
+    // second finger anywhere on screen, a palm — cancels the hold at once.
+    const onDown = (e: PointerEvent) => {
+      if (holding.current && activePointerId.current !== null && e.pointerId !== activePointerId.current) {
+        cancelRef.current();
+        return;
+      }
+      onMove(e);
+    };
     window.addEventListener('pointermove', onMove, true);
-    window.addEventListener('pointerdown', onMove, true);
+    window.addEventListener('pointerdown', onDown, true);
     window.addEventListener('pointerup', onEnd);
     window.addEventListener('pointercancel', onCancel);
     document.addEventListener('visibilitychange', onHide);
     return () => {
       window.removeEventListener('pointermove', onMove, true);
-      window.removeEventListener('pointerdown', onMove, true);
+      window.removeEventListener('pointerdown', onDown, true);
       window.removeEventListener('pointerup', onEnd);
       window.removeEventListener('pointercancel', onCancel);
       document.removeEventListener('visibilitychange', onHide);
@@ -380,6 +395,16 @@ export function HoldStage({
         if (typeof n.pointerId === 'number') activePointerId.current = n.pointerId;
       }}
       /**
+       * E04-S04 (owner 2026-10-03, SALE-8): a second finger or a palm
+       * touching down DURING a hold cancels it at once — it is a pinch or a
+       * mis-grip, never a basket. Native reports it as a touch count; the web
+       * path is the window-level second-pointer check below.
+       */
+      onTouchStart={(e) => {
+        const touches = (e.nativeEvent as unknown as { touches?: readonly unknown[] }).touches;
+        if (holding.current && (touches?.length ?? 0) > 1) cancel();
+      }}
+      /**
        * The load-bearing one, and it has to be onPointerMove rather than
        * anything simpler.
        *
@@ -412,7 +437,7 @@ export function HoldStage({
     >
       <Bezel pct={pct} width={box.width} height={box.height} rejected={rejected} />
 
-      {!clearsLegibilityFloor ? (
+      {!clearsLegibilityFloor && label === undefined ? (
         <View style={{ position: 'absolute', top: t.space.sm, alignItems: 'center' }} pointerEvents="none">
           <Text
             testID="rotate-hint"
@@ -432,22 +457,38 @@ export function HoldStage({
         </View>
       ) : null}
 
-      <Text
-        testID="count"
-        accessibilityLiveRegion="polite"
-        onLayout={onCountLayout}
-        style={{
-          fontFamily: t.font.family.sans,
-          fontWeight: t.font.weight.black,
-          fontVariant: ['tabular-nums'],
-          letterSpacing: fontSize * t.font.tracking.tight,
-          lineHeight: fontSize,
-          fontSize,
-          color: t.color.numeral,
-        }}
-      >
-        {count}
-      </Text>
+      {label !== undefined ? (
+        <Text
+          testID="hold-label"
+          style={{
+            fontFamily: t.font.family.sans,
+            fontWeight: t.font.weight.bold,
+            fontSize: t.font.size.headingXl,
+            color: t.color.ink,
+            textAlign: 'center',
+            paddingHorizontal: t.space.lg,
+          }}
+        >
+          {label}
+        </Text>
+      ) : (
+        <Text
+          testID="count"
+          accessibilityLiveRegion="polite"
+          onLayout={onCountLayout}
+          style={{
+            fontFamily: t.font.family.sans,
+            fontWeight: t.font.weight.black,
+            fontVariant: ['tabular-nums'],
+            letterSpacing: fontSize * t.font.tracking.tight,
+            lineHeight: fontSize,
+            fontSize,
+            color: t.color.numeral,
+          }}
+        >
+          {count}
+        </Text>
+      )}
 
       <View style={{ position: 'absolute', bottom: t.space.sm }}>
         <Text

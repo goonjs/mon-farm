@@ -23,7 +23,7 @@ test('an open sale appears and resumes into the counter screen', async ({ page }
   const row = page.getByTestId(`sale-${saleId}`);
   await expect(row).toBeVisible();
   await expect(row).toContainText('ไร่คุณพ่อ');
-  await expect(row).toContainText('เปิดอยู่'); // open, not closed
+  await expect(row).toContainText('กำลังชั่ง'); // open: still weighing (mockup sale-00)
 
   await row.click();
   await expect(page.getByTestId('count')).toHaveText('3');
@@ -55,14 +55,14 @@ test('settlement has a way back to the list — and from there, to a new sale', 
   await expect(page.getByTestId(`sale-${saleId}`)).toBeVisible();
 
   await page.getByTestId('new-sale').click();
-  await expect(page).toHaveURL(/\/sale\/sale-[0-9a-f-]{36}\/setup$/);
+  // E04-S02: a new sale starts from master data.
+  await expect(page).toHaveURL(/\/sale\/sale-[0-9a-f-]{36}\/start$/);
 });
 
-test('starting a new sale navigates to a fresh, unrecorded setup screen', async ({ page }) => {
-  await page.goto('/');
-  await page.getByTestId('new-sale').click();
+test('the old setup screen opens fresh and unrecorded', async ({ page }) => {
+  // Since E04-S02 the home button opens the start screen; setup stays reachable by URL.
+  await page.goto('/sale/sale-00000000-0000-7000-8000-000000000001/setup');
 
-  await expect(page).toHaveURL(/\/sale\/sale-[0-9a-f-]{36}\/setup$/);
   // Nothing has been saved for it yet, so start-counting is disabled.
   await expect(page.getByTestId('start-counting')).toBeDisabled();
 
@@ -70,6 +70,7 @@ test('starting a new sale navigates to a fresh, unrecorded setup screen', async 
   // not make it appear on the list (see src/app/sale/[id]/setup.tsx's header:
   // a sale that never gets a `sale_started` event never existed as far as the
   // store is concerned).
-  await page.getByTestId('back-to-list').click();
+  // Opened by URL there is no history to go back to, so leave by URL.
+  await page.goto('/');
   await expect(page.getByTestId('empty-state')).toBeVisible();
 });

@@ -14,6 +14,8 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import { tokens, type ColorName, type ColorScheme } from '../../design/tokens';
+import { scaleSizes, type TextSize } from '../core/text-scale';
+import { readTextSize, writeTextSize } from './text-size-preference';
 
 /**
  * `Record<ColorName, string>`, not `typeof tokens.color.light`.
@@ -30,7 +32,8 @@ export interface Theme {
   readonly space: typeof tokens.space;
   readonly radius: typeof tokens.radius;
   readonly border: typeof tokens.border;
-  readonly font: typeof tokens.font;
+  /** Sizes follow the device's text size S / M / L (E03-S08). */
+  readonly font: Omit<typeof tokens.font, 'size'> & { readonly size: Record<keyof typeof tokens.font.size, number> };
   readonly duration: typeof tokens.duration;
   readonly target: typeof tokens.target;
   readonly publicNumeral: typeof tokens.publicNumeral;
@@ -40,14 +43,14 @@ export interface Theme {
   readonly layout: typeof tokens.layout;
 }
 
-function themeFor(scheme: ColorScheme): Theme {
+function themeFor(scheme: ColorScheme, textSize: TextSize): Theme {
   return {
     scheme,
     color: tokens.color[scheme],
     space: tokens.space,
     radius: tokens.radius,
     border: tokens.border,
-    font: tokens.font,
+    font: { ...tokens.font, size: scaleSizes(tokens.font.size, textSize) },
     duration: tokens.duration,
     target: tokens.target,
     publicNumeral: tokens.publicNumeral,
@@ -63,6 +66,8 @@ interface ThemeContextValue {
   scheme: ColorScheme;
   setScheme: (s: ColorScheme) => void;
   toggle: () => void;
+  textSize: TextSize;
+  setTextSize: (s: TextSize) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -75,15 +80,22 @@ export function ThemeProvider({
   initial?: ColorScheme;
 }) {
   const [scheme, setScheme] = useState<ColorScheme>(initial);
+  // The stored choice, else M; a device preference, never synced.
+  const [textSize, setTextSizeState] = useState<TextSize>(() => readTextSize() ?? 'm');
 
   const value = useMemo<ThemeContextValue>(
     () => ({
-      theme: themeFor(scheme),
+      theme: themeFor(scheme, textSize),
       scheme,
       setScheme,
       toggle: () => setScheme((s) => (s === 'light' ? 'dark' : 'light')),
+      textSize,
+      setTextSize: (s: TextSize) => {
+        writeTextSize(s);
+        setTextSizeState(s);
+      },
     }),
-    [scheme],
+    [scheme, textSize],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

@@ -85,7 +85,7 @@ test('reopening a closed pile requires a typed reason and a second confirm', asy
   await expect(page.getByTestId('close-pile')).toBeVisible();
 
   await page.getByTestId('tab-log').click();
-  await expect(page.getByTestId('log')).toContainText('เปิดกองอีกครั้ง');
+  await expect(page.getByTestId('log')).toContainText('เปิดจุดชั่งอีกครั้ง');
   await expect(page.getByTestId('log')).toContainText('นับผิด ต้องแก้');
 });
 
@@ -107,7 +107,7 @@ test('closing a zone names any pile still counting before force-closing it', asy
   await expect(page.getByTestId('reopen-zone')).toBeVisible();
 
   await page.getByTestId('tab-log').click();
-  await expect(page.getByTestId('log')).toContainText('ปิดโซน');
+  await expect(page.getByTestId('log')).toContainText('ปิดสวน');
 });
 
 test('closing the current pile is reachable from the count tab itself', async ({ page }) => {
@@ -160,14 +160,14 @@ test('closing a zone from the decision point also takes two steps, not one', asy
   await page.getByTestId('decision-close-zone-cancel').click();
   await expect(page.getByTestId('pile-closed-transition')).toBeVisible();
   await page.getByTestId('tab-log').click();
-  await expect(page.getByTestId('log')).not.toContainText('ปิดโซน');
+  await expect(page.getByTestId('log')).not.toContainText('ปิดสวน');
 
   // Only the second, explicit confirm actually closes it.
   await page.getByTestId('tab-count').click();
   await page.getByTestId('decision-close-zone').click();
   await page.getByTestId('decision-close-zone-confirm').click();
   await page.getByTestId('tab-log').click();
-  await expect(page.getByTestId('log')).toContainText('ปิดโซน');
+  await expect(page.getByTestId('log')).toContainText('ปิดสวน');
 });
 
 test('closing the sale writes a real event and settlement offers reopening it', async ({ page }) => {
