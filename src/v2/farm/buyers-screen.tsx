@@ -13,7 +13,7 @@ import { defaultBuyer, type BuyerRecord } from '../../core/master';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Check, Chip, CTA, IconTile, MenuItem, MoneyInIcon, TextField, TrashIcon } from '../../ui';
+import { AppText, BottomSheet, Button, Chip, IconTile, MenuItem, MoneyInIcon, TextField, TrashIcon } from '../../ui';
 import { AddCTA, ConfirmSheet, DeletedLink, DeletedList, FarmScreen, HelpNote, RowCard, SaveFailed, useMaster, useWrite } from './pieces';
 
 type Sheet = { kind: 'none' } | { kind: 'form'; buyer: BuyerRecord | null } | { kind: 'delete'; buyer: BuyerRecord };
@@ -61,7 +61,7 @@ export function BuyersScreen() {
       footer={<AddCTA testID="add-buyer" label={msg('v2f.addBuyer')} onPress={() => open(null)} />}
       overlay={
         <>
-          <BottomSheet open={sheet.kind === 'form'} onClose={close} title={msg(sheet.kind === 'form' && sheet.buyer ? 'v2f.editBuyer' : 'v2f.addBuyer')} testID="buyer-sheet">
+          <BottomSheet open={sheet.kind === 'form'} onClose={close} title={msg(sheet.kind === 'form' && sheet.buyer ? 'v2f.editBuyer' : 'v2f.addBuyer')} testID="buyer-sheet" action={{ label: msg('common.save'), testID: 'buyer-save', onPress: save, saving: write.saving }}>
             <TextField
               testID="buyer-name"
               label={msg('v2f.buyerName')}
@@ -72,9 +72,6 @@ export function BuyersScreen() {
               error={tried && !name.trim() ? msg('personForm.needName') : undefined}
             />
             <SaveFailed show={write.failed} />
-            <CTA testID="buyer-save" icon={(c) => <Check color={c} size={14} />} onPress={save}>
-              {msg('common.save')}
-            </CTA>
             {sheet.kind === 'form' && sheet.buyer ? (
               <View style={{ alignSelf: 'flex-start' }}>
                 <Button

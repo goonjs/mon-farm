@@ -4,8 +4,8 @@
  *
  * - useMaster: the folded farm master data, reloaded when a screen regains
  *   focus so a list shows what a form just saved.
- * - FarmScreen: ScreenHeader (back + sync pill) over a scroll body, with an
- *   optional pinned call to action and a sheet on top.
+ * - FarmScreen: ScreenHeader (back + sync pill + optional Save `action`) over
+ *   a scroll body, with an optional pinned call to action and a sheet on top.
  * - RowCard: one card of rows split by hairlines (mockup `.card.tight`).
  * - DeletedLink / DeletedList: "ที่ลบแล้ว (n)" as a small link, each row a
  *   large "ลบแล้ว" label with a small restore link (D-74 F13).
@@ -40,6 +40,7 @@ import {
   Plus,
   ScreenHeader,
   TrashIcon,
+  type HeaderPrimaryAction,
   Undo,
   type TileTone,
 } from '../../ui';
@@ -74,13 +75,15 @@ const noSubscribe = () => () => undefined;
  * error is logged, `failed` turns on so the screen can say so, and `run`
  * resolves false so the caller keeps the form as typed.
  */
-export function useWrite(): { run: (fn: () => Promise<unknown>) => Promise<boolean>; failed: boolean } {
+export function useWrite(): { run: (fn: () => Promise<unknown>) => Promise<boolean>; failed: boolean; saving: boolean } {
   const busy = useRef(false);
   const [failed, setFailed] = useState(false);
+  const [saving, setSaving] = useState(false);
   const run = useCallback(async (fn: () => Promise<unknown>) => {
     if (busy.current) return false;
     busy.current = true;
     setFailed(false);
+    setSaving(true);
     try {
       await fn();
       return true;
@@ -90,9 +93,10 @@ export function useWrite(): { run: (fn: () => Promise<unknown>) => Promise<boole
       return false;
     } finally {
       busy.current = false;
+      setSaving(false);
     }
   }, []);
-  return { run, failed };
+  return { run, failed, saving };
 }
 
 /** "บันทึกไม่สำเร็จ ลองอีกครั้ง" — the last write did not land. */
@@ -118,6 +122,7 @@ export function FarmScreen({
   subtitle,
   fallback,
   right,
+  action,
   children,
   footer,
   overlay,
@@ -132,12 +137,14 @@ export function FarmScreen({
   /** Back stays inside the screen (a wizard's earlier page) instead of popping. */
   onBack?: () => void;
   right?: ReactNode;
+  /** Save (forms): top-right, right of the sync pill, so the keyboard never covers it. */
+  action?: HeaderPrimaryAction;
   children?: ReactNode;
   /** Pinned call to action(s) under the scroll body. */
   footer?: ReactNode;
   /** A sheet over the screen. */
   overlay?: ReactNode;
-  /** The last write failed: said just above the pinned actions. */
+  /** The last write failed: said just under the header. */
   failed?: boolean;
   testID?: string;
 }) {
@@ -147,15 +154,15 @@ export function FarmScreen({
   const back = useBack(fallback);
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <ScreenHeader title={title} subtitle={subtitle} back={{ label: msg('v2.back'), onPress: onBack ?? back, testID: 'v2-back' }} sync={sync} right={right} />
-      <ScrollView testID={testID} contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.xl }}>
-        {children}
-      </ScrollView>
+      <ScreenHeader title={title} subtitle={subtitle} back={{ label: msg('v2.back'), onPress: onBack ?? back, testID: 'v2-back' }} sync={sync} right={right} action={action} />
       {failed ? (
         <View style={{ paddingHorizontal: t.layout.screenPaddingX, paddingTop: t.space.sm }}>
           <SaveFailed show />
         </View>
       ) : null}
+      <ScrollView testID={testID} contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.xl }}>
+        {children}
+      </ScrollView>
       {footer ? <PinnedActions>{footer}</PinnedActions> : null}
       {overlay}
     </View>

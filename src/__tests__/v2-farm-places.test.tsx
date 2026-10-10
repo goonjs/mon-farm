@@ -88,7 +88,8 @@ describe('สวนและจุดชั่ง — list (farm mockup 9)', () 
     expect(within(rowB).getByText('ทุเรียน')).toBeTruthy();
     expect(within(rowB).getByText('ไม่ทราบ')).toBeTruthy();
     expect(screen.queryByText('สวนเก่า')).toBeNull();
-    expect(screen.queryByTestId('open-wizard')).toBeNull();
+    // The helper stays on offer once points exist (repeatable set-up).
+    expect(screen.getByTestId('open-wizard')).toBeTruthy();
 
     fireEvent.press(rowA);
     expect(mockRouter.push).toHaveBeenLastCalledWith(`/v2/property/${a.id}`);
@@ -108,6 +109,15 @@ describe('สวนและจุดชั่ง — list (farm mockup 9)', () 
 });
 
 describe('สวน — form (farm mockup 10)', () => {
+  it('Save sits in the header, with no pinned bar at the bottom', async () => {
+    mockParams.current = { id: 'new' };
+    wrap(<PropertyScreen />);
+    await flush();
+    const header = screen.getByTestId('screen-header');
+    expect(within(header).getByTestId('property-save')).toBeTruthy();
+    expect(screen.getAllByTestId(/-save$/)).toHaveLength(1);
+  });
+
   it('needs only a name and a crop; blank area, year and GPS stay unknown', async () => {
     mockParams.current = { id: 'new' };
     wrap(<PropertyScreen />);
@@ -461,6 +471,44 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     const state = await m.state();
     expect(state.points.map((p) => p.name).sort()).toEqual(['จุด 1', 'จุด 2', 'จุด 3']);
     expect(state.assignments.filter((a) => a.tapperId === daeng.id)).toHaveLength(2);
+    expect(mockRouter.back).toHaveBeenCalled();
+  });
+
+  it('keeps the helper on the points list when points already exist', async () => {
+    const m = master();
+    const farm = await m.addProperty({ name: 'สวนจันทเขลม', crop: 'rubber' });
+    await m.addPoint(farm.id, 'จุด 1');
+    wrap(<PointsScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('open-wizard'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/points-wizard');
+  });
+
+  it('can be used again on a farm that has points: shows them, refuses a repeated name, adds the next person', async () => {
+    const m = master();
+    const farm = await m.addProperty({ name: 'สวนจันทเขลม', crop: 'rubber' });
+    const daeng = await m.create('แดง', ['tapper']);
+    const nat = await m.create('นัด', ['tapper']);
+    const p1 = await m.addPoint(farm.id, 'จุด 1');
+    await m.assignTapper(p1.id, daeng.id, null);
+    wrap(<PointsWizardScreen />);
+    await flush();
+
+    fireEvent.press(screen.getByTestId(`wizard-farm-${farm.id}`));
+    expect(screen.getByTestId('wizard-existing').props.children).toContain('จุด 1');
+    fireEvent.press(screen.getByTestId(`wizard-tapper-${nat.id}`));
+    fireEvent.press(screen.getByTestId('wizard-next'));
+
+    fireEvent.changeText(screen.getByTestId(`wizard-name-${nat.id}-0`), 'จุด 1');
+    await press('wizard-create');
+    expect(screen.getByTestId('wizard-duplicates')).toBeTruthy();
+    expect((await m.state()).points).toHaveLength(1);
+
+    fireEvent.changeText(screen.getByTestId(`wizard-name-${nat.id}-0`), 'จุด 2');
+    await press('wizard-create');
+    const state = await m.state();
+    expect(state.points.map((p) => p.name).sort()).toEqual(['จุด 1', 'จุด 2']);
+    expect(state.assignments.filter((a) => a.tapperId === nat.id)).toHaveLength(1);
     expect(mockRouter.back).toHaveBeenCalled();
   });
 });

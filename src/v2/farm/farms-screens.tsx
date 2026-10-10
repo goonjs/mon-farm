@@ -27,7 +27,6 @@ import {
   parsePlantedYear,
   parseRai,
   parseThaiDay,
-  showStarterButton,
   tapperOn,
   thaiDayInput,
   todayIso,
@@ -45,8 +44,7 @@ import {
   Button,
   CalendarIcon,
   Check,
-  CTA,
-  FactRow,
+    FactRow,
   FarmIcon,
   FieldError,
   IconTile,
@@ -56,7 +54,7 @@ import {
   Plus,
   SegmentedControl,
   TextField,
-  TrashIcon,
+  TrashIcon
 } from '../../ui';
 import { UnknownPill } from '../money/pieces';
 import { NotFound } from './people-screens';
@@ -116,9 +114,9 @@ export function FarmsScreen() {
         </>
       ) : (
         <>
-          {/* No sync yet (E01-S09): this device's log is all there is, so its first pull is done. */}
-          {state && active.length > 0 && showStarterButton(state, true) ? (
-            <Button testID="open-wizard" variant="primary" icon={(c) => <PinIcon color={c} size={16} />} onPress={() => router.push('/v2/points-wizard' as Href)}>
+          {/* Always on offer, not only when empty: it can be used again for the next person (names already used are refused). */}
+          {state && active.length > 0 ? (
+            <Button testID="open-wizard" variant={activePoints(state).length === 0 ? 'primary' : 'ghost'} icon={(c) => <PinIcon color={c} size={16} />} onPress={() => router.push('/v2/points-wizard' as Href)}>
               {msg('wizard.open')}
             </Button>
           ) : null}
@@ -241,11 +239,7 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
       fallback={FARMS}
       failed={write.failed}
       testID="property-form"
-      footer={
-        <CTA testID="property-save" icon={(c) => <Check color={c} size={14} />} onPress={() => void save()}>
-          {msg('common.save')}
-        </CTA>
-      }
+      action={{ label: msg('common.save'), testID: 'property-save', onPress: () => void save(), saving: write.saving }}
     >
       <TextField testID="property-name" label={msg('v2f.farmName')} required value={name} onChangeText={setName} error={show('name') ? msg('propertyForm.needName') : undefined} />
       <View style={{ gap: t.space.xs }}>
@@ -360,7 +354,7 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
       right={<HeaderButton testID="property-edit" label={msg('personDetail.edit')} onPress={() => router.push(`/v2/property/${property.id}?edit=1` as Href)} />}
       overlay={
         <>
-          <BottomSheet open={sheet === 'area'} onClose={() => setSheet('none')} title={msg('propertyDetail.changeArea')} testID="area-sheet">
+          <BottomSheet open={sheet === 'area'} onClose={() => setSheet('none')} title={msg('propertyDetail.changeArea')} testID="area-sheet" action={{ label: msg('propertyDetail.areaSave'), testID: 'area-save', onPress: () => void saveArea(), saving: write.saving }}>
             <TextField
               testID="area-new"
               label={msg('v2f.newArea')}
@@ -381,9 +375,6 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
             />
             <AppText variant="bodySm">{msg('v2f.areaNewLine')}</AppText>
             <SaveFailed show={write.failed} />
-            <CTA testID="area-save" icon={(c) => <Check color={c} size={14} />} onPress={() => void saveArea()}>
-              {msg('propertyDetail.areaSave')}
-            </CTA>
           </BottomSheet>
           <ConfirmSheet
             open={sheet === 'delete'}
