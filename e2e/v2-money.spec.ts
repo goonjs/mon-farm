@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { seedPeople } from './fixtures';
+
 /**
  * v2 money screens (D-82) in the real web build, portrait, offline: the
  * v1.1.0 farm mockup section 7 — record expenses, see totals by stage, set a
@@ -79,4 +81,36 @@ test('v2 expenses, owed and repay — offline, end to end', async ({ page, conte
   await page.screenshot({ path: `${SHOTS}/21-repay.png`, fullPage: true });
   await page.getByTestId('repay-save').click();
   await expect(page.getByTestId('owed-total')).toContainText('1,540.00');
+});
+
+test('v2 worker debts — fertilizer split, account reconciliation, pay back outside a sale (offline)', async ({ page, context }) => {
+  await seedPeople(page, [{ id: 'person-daeng', name: 'แดง' }]);
+  await page.goto('/v2/debts');
+  await context.setOffline(true);
+  await page.getByTestId('debt-person-person-daeng').click();
+  await page.getByTestId('debt-add').click();
+
+  await page.getByTestId('debt-kind-fertilizer').click();
+  await page.getByTestId('debt-amount').fill('4000');
+  await expect(page.getByTestId('debt-worker-share')).toContainText('2,000.00');
+  await page.getByTestId('debt-date').fill('2026-09-20');
+  await page.getByTestId('debt-note').fill('ปุ๋ยรอบ ก.ย.');
+  await page.screenshot({ path: `${SHOTS}/23-debt-add.png`, fullPage: true });
+  await page.getByTestId('debt-save').click();
+
+  await page.getByTestId('debt-add').click();
+  await page.getByTestId('debt-amount').fill('3000');
+  await page.getByTestId('debt-date').fill('2026-09-10');
+  await page.getByTestId('debt-save').click();
+
+  await expect(page.getByTestId('debt-balance')).toContainText('5,000.00');
+  await expect(page.getByTestId('debt-summary-balance')).toContainText('5,000.00');
+  await page.screenshot({ path: `${SHOTS}/22-debt-account.png`, fullPage: true });
+
+  await page.getByTestId('debt-pay').click();
+  await page.getByTestId('debt-pay-amount').fill('500');
+  await expect(page.getByTestId('debt-pay-after')).toContainText('4,500.00');
+  await page.screenshot({ path: `${SHOTS}/24-debt-pay.png`, fullPage: true });
+  await page.getByTestId('debt-pay-save').click();
+  await expect(page.getByTestId('debt-balance')).toContainText('4,500.00');
 });
