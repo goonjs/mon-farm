@@ -1,5 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { Modal, Text } from 'react-native';
 
 import { Drawer, MenuItem, MenuSection } from './drawer';
 import { wrap } from '../test/render';
@@ -51,5 +51,35 @@ describe('Drawer — the ☰ menu (v1.1.0 farm screen 1)', () => {
     expect(screen.getByText('ตั้งค่า')).toBeTruthy();
     fireEvent.press(item);
     expect(onPress).toHaveBeenCalled();
+  });
+});
+
+describe('Drawer is modal (review S1)', () => {
+  it('sits in a transparent Modal whose back request (Android back) closes it', () => {
+    const onClose = jest.fn();
+    wrap(
+      <Drawer open onClose={onClose}>
+        <Text>inside</Text>
+      </Drawer>,
+    );
+    const modal = screen.UNSAFE_getByType(Modal);
+    expect(modal.props.transparent).toBe(true);
+    expect(modal.props.visible).toBe(true);
+    modal.props.onRequestClose();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('the overlay is a modal dialog that takes focus and hides what is behind', () => {
+    const onClose = jest.fn();
+    wrap(
+      <Drawer open onClose={onClose}>
+        <Text>inside</Text>
+      </Drawer>,
+    );
+    const panel = screen.getByTestId('drawer');
+    expect(panel.props.accessibilityViewIsModal).toBe(true);
+    expect(panel.props['aria-modal']).toBe(true);
+    expect(panel.props.role).toBe('dialog');
+    expect(panel.props.accessibilityLabel).toBeTruthy();
   });
 });

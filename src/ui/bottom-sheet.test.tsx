@@ -1,5 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { Modal, Text } from 'react-native';
 
 import { BottomSheet } from './bottom-sheet';
 import { wrap } from '../test/render';
@@ -39,5 +39,35 @@ describe('BottomSheet (E01-S17 X7)', () => {
     fireEvent.press(scrim);
     expect(onClose).toHaveBeenCalled();
     expect(screen.getByText('body')).toBeTruthy();
+  });
+});
+
+describe('BottomSheet is modal (review S1)', () => {
+  it('sits in a transparent Modal whose back request (Android back) closes it', () => {
+    const onClose = jest.fn();
+    wrap(
+      <BottomSheet open onClose={onClose} title="เปลี่ยนจุด" testID="sheet">
+        <Text>body</Text>
+      </BottomSheet>,
+    );
+    const modal = screen.UNSAFE_getByType(Modal);
+    expect(modal.props.transparent).toBe(true);
+    expect(modal.props.visible).toBe(true);
+    modal.props.onRequestClose();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('the overlay is a modal dialog that takes focus and hides what is behind', () => {
+    const onClose = jest.fn();
+    wrap(
+      <BottomSheet open onClose={onClose} title="เปลี่ยนจุด" testID="sheet">
+        <Text>body</Text>
+      </BottomSheet>,
+    );
+    const panel = screen.getByTestId('sheet');
+    expect(panel.props.accessibilityViewIsModal).toBe(true);
+    expect(panel.props['aria-modal']).toBe(true);
+    expect(panel.props.role).toBe('dialog');
+    expect(panel.props.accessibilityLabel).toBeTruthy();
   });
 });

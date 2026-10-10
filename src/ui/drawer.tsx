@@ -2,68 +2,74 @@
  * Drawer — the ☰ app menu (v1.1.0 farm mockup screen 1): a panel from the
  * left over a scrim, holding titled card sections of menu rows. Tokens only.
  *
- * Drawn as an absolute overlay inside the screen rather than a native Modal,
- * so it behaves the same on web and device and stays testable. Closing is the
- * scrim (named "ปิดเมนู" for screen readers) or picking an item.
+ * Modal (review S1): it lives in a transparent RN Modal, so focus moves into
+ * the panel (web traps it), what is behind is hidden from screen readers,
+ * and the Android back button closes it (onRequestClose). Closing is also
+ * the scrim (named "ปิดเมนู" for screen readers) or picking an item.
  */
 
 import { Link, type Href } from 'expo-router';
 import { Children, Fragment } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ChevronRight } from './icons';
 import { cardStyle } from './card';
 import { useT } from '../i18n';
 import { useTheme } from '../theme';
 
-export function Drawer({
-  open,
-  onClose,
-  children,
-}: {
-  open: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
+export function Drawer({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
   const t = useTheme();
   const msg = useT();
   if (!open) return null;
 
   return (
-    <View
-      testID="drawer"
-      style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 20, flexDirection: 'row' }}
-    >
-      <Pressable
-        testID="drawer-scrim"
-        accessibilityRole="button"
-        accessibilityLabel={msg('menu.close')}
-        onPress={onClose}
+    <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      <View
+        testID="drawer"
+        role="dialog"
+        aria-modal
+        accessibilityViewIsModal
+        accessibilityLabel={msg('menu.open')}
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: t.color.scrim,
-          opacity: t.opacity.scrim,
-        }}
-      />
-      <View
-        testID="drawer-panel"
-        style={{
-          width: '85%',
-          maxWidth: 360,
-          height: '100%',
-          backgroundColor: t.color.surface,
-          borderTopRightRadius: t.radius.xxl,
-          borderBottomRightRadius: t.radius.xxl,
-          overflow: 'hidden',
+          flexDirection: 'row',
         }}
       >
-        <ScrollView contentContainerStyle={{ padding: t.space.lg, gap: t.space.lg }}>{children}</ScrollView>
+        <Pressable
+          testID="drawer-scrim"
+          accessibilityRole="button"
+          accessibilityLabel={msg('menu.close')}
+          onPress={onClose}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: t.color.scrim,
+            opacity: t.opacity.scrim,
+          }}
+        />
+        <View
+          testID="drawer-panel"
+          style={{
+            width: '85%',
+            maxWidth: 360,
+            height: '100%',
+            backgroundColor: t.color.surface,
+            borderTopRightRadius: t.radius.xxl,
+            borderBottomRightRadius: t.radius.xxl,
+            overflow: 'hidden',
+          }}
+        >
+          <ScrollView contentContainerStyle={{ padding: t.space.lg, gap: t.space.lg }}>{children}</ScrollView>
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 }
 
@@ -86,7 +92,14 @@ export function MenuSection({ title, children }: { title: string; children: Reac
       <View style={{ ...cardStyle(t), paddingHorizontal: t.space.md }}>
         {rows.map((row, i) => (
           <Fragment key={i}>
-            {i > 0 ? <View style={{ height: t.border.hair, backgroundColor: t.color.ruleFaint }} /> : null}
+            {i > 0 ? (
+              <View
+                style={{
+                  height: t.border.hair,
+                  backgroundColor: t.color.ruleFaint,
+                }}
+              />
+            ) : null}
             {row}
           </Fragment>
         ))}
@@ -164,7 +177,13 @@ function MenuRow({
           {label}
         </Text>
         {detail ? (
-          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.inkSoft }}>
+          <Text
+            style={{
+              fontFamily: t.font.family.sans,
+              fontSize: t.font.size.bodySm,
+              color: t.color.inkSoft,
+            }}
+          >
             {detail}
           </Text>
         ) : null}
