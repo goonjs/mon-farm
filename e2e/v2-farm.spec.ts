@@ -87,8 +87,16 @@ test('/ → splash → home → farm settings: add and edit everything offline, 
   await id('add-farm').click();
   await id('property-name').fill('สวนจันทเขลม');
   await id('property-crop-rubber').click();
-  await id('property-area').fill('125');
-  await id('property-planted').fill('2554');
+  // Typed key by key, as on a phone: the "ไม่ทราบ" beside each field goes on
+  // the first key, and the input must keep its focus through that.
+  await id('property-area').pressSequentially('125');
+  await expect(id('property-area')).toHaveValue('125');
+  await expect(id('property-area')).toBeFocused();
+  await id('property-planted').pressSequentially('2554');
+  await expect(id('property-planted')).toHaveValue('2554');
+  await id('property-gps').pressSequentially('13.5, 100.2');
+  await expect(id('property-gps')).toHaveValue('13.5, 100.2');
+  await id('property-gps').fill('');
   await id('property-save').click();
   await id('add-farm').click();
   await id('property-name').fill('ทุเรียน ตะเคียนทอง');

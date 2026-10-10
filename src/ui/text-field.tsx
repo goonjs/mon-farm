@@ -47,7 +47,7 @@ export function TextField({
       aria-invalid={!!error}
       placeholderTextColor={t.color.inkFaint}
       style={{
-        flex: aside ? 1 : undefined,
+        flex: 1,
         minHeight: t.target.min,
         paddingHorizontal: t.space.md,
         borderRadius: t.radius.md,
@@ -69,14 +69,12 @@ export function TextField({
           <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, color: t.color.inkSoft }}>{labelHint}</Text>
         ) : null}
       </View>
-      {aside ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
-          {field}
-          {aside}
-        </View>
-      ) : (
-        field
-      )}
+      {/* Always the same row, aside or not: swapping the input's parent would
+          remount it, and focus (and the phone keyboard) would go with it. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+        {field}
+        {aside ?? null}
+      </View>
       {error ? (
         <FieldError testID={`${testID}-error`}>{error}</FieldError>
       ) : helper ? (

@@ -1,4 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react-native';
+import { useState } from 'react';
 
 import { TextField } from './text-field';
 import { wrap } from '../test/render';
@@ -35,6 +36,22 @@ describe('TextField — label, required *, helper, inline error', () => {
     const { Text } = jest.requireActual('react-native');
     wrap(<TextField testID="f" label="ส่วนแบ่ง" aside={<Text testID="aside">%</Text>} value="" onChangeText={() => {}} />);
     expect(screen.getByTestId('aside')).toBeTruthy();
+  });
+
+  it('keeps the same input when the aside comes and goes, so typing never drops focus', () => {
+    const { Text } = jest.requireActual('react-native');
+    function Area() {
+      const [v, setV] = useState('');
+      return <TextField testID="f" label="พื้นที่" aside={v.trim() ? undefined : <Text>ไม่ทราบ</Text>} value={v} onChangeText={setV} />;
+    }
+    wrap(<Area />);
+    const before = screen.getByTestId('f');
+    fireEvent.changeText(before, '1');
+    expect(screen.queryByText('ไม่ทราบ')).toBeNull();
+    expect(screen.getByTestId('f')).toBe(before);
+    fireEvent.changeText(before, '');
+    expect(screen.getByText('ไม่ทราบ')).toBeTruthy();
+    expect(screen.getByTestId('f')).toBe(before);
   });
 
   it('helper text shows in soft ink and is the hint', () => {
