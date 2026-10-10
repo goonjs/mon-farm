@@ -22,6 +22,7 @@ import { HoldStage } from '../../../components/HoldStage';
 import { PileClosedTransition } from '../../../components/PileClosedTransition';
 import { BasketEditor } from '../../../components/BasketEditor';
 import { Card as FarmCard } from '../../../components/farm-ui';
+import { FillChoiceSheet } from '../../../components/FillChoiceSheet';
 import { MoneyReasonPrompt } from '../../../components/MoneyReasonPrompt';
 import { RecorderView } from '../../../components/RecorderView';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
@@ -39,6 +40,7 @@ import { speaker } from '../../../speech/speaker';
 import { useSpeech } from '../../../speech';
 import { formatThaiDate, saleSettings, tapperOn, todayIso, type MasterState } from '../../../core/master';
 import { basketList, nextBasketNo, pointSetupPayloads, recorderFigures, sameSequence, saleNumbering } from '../../../core/sale-points';
+import { openBasketIn, stdNetOfLog, tapperChangeClosures } from '../../../core/bridge';
 import { canComplete } from '../../../core/sale-status';
 import { expectedReadingG, gateNeeded, saleSkewG } from '../../../core/scale-check';
 import { readHoldMs } from '../../../store/hold-preference';
@@ -159,6 +161,24 @@ export default function CounterScreen() {
     };
   }, [events.length, saleId]);
 
+  // E04-S06: the open short basket of this point's number sequence, and how
+  // this point carries it on ('full' = fill it up, 'part' = weigh the top-up).
+  const [fill, setFill] = useState<{ rootId: string; mode: 'full' | 'part' } | null>(null);
+  const numberingMode = master ? saleNumbering(events, saleSettings(master).numbering) : 'per-tapper';
+  const saleDay = todayIso(state.startedTs ?? now);
+  const openBasket =
+    isPoint && master && pile ? openBasketIn(events, master, saleDay, pile.id, numberingMode, stdNetOfLog(events)) : null;
+  // Weighing at another tapper's point closes their open basket short, without asking (SALE-12).
+  const closures =
+    isPoint && master && pile && pile.status === 'counting' && state.saleStatus === 'draft'
+      ? tapperChangeClosures(events, master, saleDay, pile.id, numberingMode, stdNetOfLog(events))
+      : [];
+  const closuresKey = closures.join(',');
+  useEffect(() => {
+    for (const basketId of closures) append({ kind: 'sys', payload: { t: 'basket_closed', basketId, reason: 'tapper-change' } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per set of baskets to close; `append` is stable.
+  }, [closuresKey]);
+
   if (!ready || !pile || !zone) {
     return (
       <View style={{ flex: 1, backgroundColor: t.color.surface, alignItems: 'center', justifyContent: 'center' }}>
@@ -194,7 +214,25 @@ export default function CounterScreen() {
   };
   const nextCount = (totals?.baskets ?? 0) + 1;
 
+  // Carrying on a basket opened at another point of the same tapper, in the way chosen.
+  const filling = openBasket && openBasket.pointId !== pile.id && fill?.rootId === openBasket.rootId ? fill.mode : null;
+
   const onCount = () => {
+    if (filling && openBasket) {
+      // The top-up as its own part of basket N: it closes full by itself (owner 2026-10-03).
+      append({
+        kind: 'accept',
+        pileId: pile.id,
+        input: 'hold',
+        netG: openBasket.missingG,
+        tareG: pile.tareG,
+        pointId: pile.id,
+        basketNo: openBasket.basketNo,
+        partOf: openBasket.rootId,
+      });
+      if (speechOn) announceCount(openBasket.basketNo, speaker, append);
+      return;
+    }
     const point = pointFields();
     append({ kind: 'accept', pileId: pile.id, input: 'hold', netG: pile.stdNetG, tareG: pile.tareG, ...point });
     // At a point the spoken number is the basket's own number (D-79), else the pile count.
@@ -217,6 +255,12 @@ export default function CounterScreen() {
   };
 
   const openShort = () => {
+    // "เติมไม่ถึง": start from what the scale should read for the way chosen.
+    if (filling && openBasket) {
+      setShortReadingG(pile.tareG + (filling === 'full' ? openBasket.haveG + openBasket.missingG : openBasket.missingG));
+      setShortOpen(true);
+      return;
+    }
     setShortReadingG(pile.tareG + pile.stdNetG);
     setShortOpen(true);
   };
@@ -224,6 +268,22 @@ export default function CounterScreen() {
   const confirmShort = () => {
     // Another device may have completed the sale while the panel was open (review S1).
     if (state.saleStatus !== 'draft') return setShortOpen(false);
+    if (filling && openBasket) {
+      // A top-up that falls short. Filling up weighs the whole basket, so what
+      // was already in it counts with the basket weight: net = reading − (basket + have).
+      append({
+        kind: 'short',
+        pileId: pile.id,
+        readingG: shortReadingG,
+        tareG: pile.tareG + (filling === 'full' ? openBasket.haveG : 0),
+        ...(skewG ? { skewG } : {}),
+        pointId: pile.id,
+        basketNo: openBasket.basketNo,
+        partOf: openBasket.rootId,
+      });
+      setShortOpen(false);
+      return;
+    }
     const point = pointFields();
     append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG, ...(skewG ? { skewG } : {}), ...point });
     if (speechOn) announceCount(point.basketNo ?? nextCount, speaker, append);
@@ -331,6 +391,36 @@ export default function CounterScreen() {
 
     const draft = state.saleStatus === 'draft';
 
+    // E04-S06: an open short basket here waits to be filled at the tapper's next
+    // point (or is finished short); at that next point, the way on is chosen first.
+    const openHere = !!openBasket && openBasket.pointId === pile.id;
+    const choosing = !!openBasket && !openHere && !filling;
+    const kgText = (g: number) => `${formatKg(g)} ${msg('rec.kgUnit')}`;
+    const openRoot = openBasket ? (events.find((e) => e.id === openBasket.rootId) as BasketEvent | undefined) : undefined;
+    const tapperName = tapperId ? (master.people.find((p) => p.id === tapperId)?.name ?? '') : '';
+    const fillLabel =
+      openBasket && openHere
+        ? msg('rec.waitFill', { n: openBasket.basketNo })
+        : openBasket && filling === 'full'
+          ? msg('fill.holdFull', { n: openBasket.basketNo, kg: formatKg(openBasket.missingG) })
+          : openBasket && filling === 'part'
+            ? msg('fill.holdPart', { n: openBasket.basketNo, kg: formatKg(openBasket.missingG) })
+            : undefined;
+    const fillCaption =
+      openBasket && openHere
+        ? numbering === 'per-tapper' && tapperName
+          ? msg('rec.waitFillHint', { name: tapperName })
+          : msg('rec.waitFillPoint')
+        : openBasket && filling === 'full'
+          ? `${msg('rec.shouldRead')} ${kgText(expectedReadingG(pile.stdNetG, pile.tareG, skewG))} · ${msg('fill.sum', {
+              have: formatKg(openBasket.haveG),
+              add: formatKg(openBasket.missingG),
+              total: formatKg(openBasket.haveG + openBasket.missingG),
+            })}`
+          : openBasket && filling === 'part'
+            ? `${msg('rec.shouldRead')} ${kgText(expectedReadingG(openBasket.missingG, pile.tareG, skewG))}`
+            : undefined;
+
     // The edit itself, against the log as it is now. Returns what it touched,
     // or null when there is nothing to do any more (voided or changed meanwhile).
     const perform = (action: MoneyAction): string | null => {
@@ -405,7 +495,53 @@ export default function CounterScreen() {
           figures={figures}
           expectedKg={formatKg(expectedReadingG(pile.stdNetG, pile.tareG, skewG))}
           // New baskets only while Draft; a finished sale is edited from the list (E04-S11).
-          hold={{ onCount, onReject, enabled: countable && draft, holdMs: holdMsOverride() ?? deviceHoldMs }}
+          hold={{ onCount, onReject, enabled: countable && draft && !openHere && !choosing, holdMs: holdMsOverride() ?? deviceHoldMs }}
+          holdLabel={fillLabel}
+          holdCaption={fillCaption}
+          shortLabel={filling ? msg('fill.short') : undefined}
+          openCard={
+            openBasket && openHere ? (
+              <View
+                testID="rec-open"
+                style={{ backgroundColor: t.color.warnSunk, borderRadius: t.radius.lg, padding: t.space.md, gap: t.space.xs }}
+              >
+                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+                  {msg('rec.openCard', { n: openBasket.basketNo, kg: formatKg(openBasket.haveG) })}
+                </Text>
+                {openRoot?.kind === 'short' ? (
+                  <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+                    {msg('rec.openReading', { reading: formatKg(openRoot.readingG), tare: formatKg(openRoot.tareG) })}
+                  </Text>
+                ) : null}
+                <Button
+                  testID="rec-close-basket"
+                  onPress={() => append({ kind: 'sys', payload: { t: 'basket_closed', basketId: openBasket.rootId, reason: 'scrap' } })}
+                  disabled={!draft}
+                >
+                  {`⚑ ${msg('rec.closeBasket')}`}
+                </Button>
+              </View>
+            ) : undefined
+          }
+          sheet={
+            openBasket && choosing && draft ? (
+              <FillChoiceSheet
+                basketNo={openBasket.basketNo}
+                haveG={openBasket.haveG}
+                missingG={openBasket.missingG}
+                fromPoint={`${master.properties.find((f) => f.id === master.points.find((x) => x.id === openBasket.pointId)?.propertyId)?.name ?? ''} ${pointName(openBasket.pointId)}`.trim()}
+                tapperName={tapperName}
+                fullReadG={expectedReadingG(pile.stdNetG, pile.tareG, skewG)}
+                partReadG={expectedReadingG(openBasket.missingG, pile.tareG, skewG)}
+                tareG={pile.tareG}
+                nextNo={nextBasketNo(events, pile.id, numbering, (id) => tapperOn(master, id, day))}
+                onFull={() => setFill({ rootId: openBasket.rootId, mode: 'full' })}
+                onPart={() => setFill({ rootId: openBasket.rootId, mode: 'part' })}
+                onNext={() => append({ kind: 'sys', payload: { t: 'basket_closed', basketId: openBasket.rootId, reason: 'next' } })}
+                onClose={() => undefined}
+              />
+            ) : undefined
+          }
           status={state.saleStatus}
           menuItems={
             draft
@@ -451,7 +587,8 @@ export default function CounterScreen() {
             ) : undefined
           }
           baskets={rows.map((r) => ({ ...r, pointName: pointName(r.pointId) }))}
-          onRowPress={setEditingId}
+          // A basket made of parts at several points is not edited from here (yet): its parts would split.
+          onRowPress={(id) => (rows.find((r) => r.id === id)?.partsG ? undefined : setEditingId(id))}
           editor={
             editing && editingRow ? (
               <BasketEditor

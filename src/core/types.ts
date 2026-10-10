@@ -112,6 +112,11 @@ export interface AcceptEvent extends EventBase {
   readonly tareG: number;
   /** The basket this one replaces (E04-S09): that one is voided with reason `edit` in the same step. */
   readonly editOf?: EventId;
+  /**
+   * A later part of an open short basket (E04-S06, SALE-11): the first part's
+   * id. Same `basketNo`; counts toward that one basket, never as its own.
+   */
+  readonly partOf?: EventId;
 }
 
 /**
@@ -141,6 +146,12 @@ export interface ShortEvent extends EventBase {
   readonly skewG?: number;
   /** The basket this one replaces (E04-S09), as on `AcceptEvent`. */
   readonly editOf?: EventId;
+  /**
+   * A later part of an open short basket (E04-S06), as on `AcceptEvent`. A
+   * top-up that falls short weighs the whole basket, so its `tareG` also
+   * holds the rubber already in it: net = reading − (basket + what was there).
+   */
+  readonly partOf?: EventId;
 }
 
 /**
@@ -277,6 +288,12 @@ export type SysPayload =
    * and which event it changed. Read by E05-S05 as "recheck this payment".
    */
   | { readonly t: 'money_edit'; readonly reason: string; readonly targetId: EventId }
+  /**
+   * An open short basket closed as it is (E04-S06): "จบเข่งแล้ว / เป็นเศษ"
+   * (`scrap`), a move to another tapper's point (`tapper-change`, SALE-12),
+   * or "start the next full basket" (`next`). `basketId` is its first part.
+   */
+  | { readonly t: 'basket_closed'; readonly basketId: EventId; readonly reason: 'scrap' | 'tapper-change' | 'next' }
   /**
    * Written whether or not audio succeeded (FR-12.2, FR-11.10). The log records
    * what was ATTEMPTED plus whether it was heard, which is what makes silence

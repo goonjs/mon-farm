@@ -9,6 +9,7 @@
  * All weights are integer grams (NFR-3).
  */
 
+import { basketGroups, openBasketIn, stdNetOfLog } from './bridge';
 import { activePoints, tapperOn, type BasketPair, type MasterState, type PointRecord } from './master';
 import { compareEvents } from './order';
 import { ZERO_TOTALS, addTotals, basketNetG, liveBaskets } from './totals';
@@ -118,8 +119,12 @@ export interface RecorderFigures {
   readonly currentNo: number;
   readonly done: number;
   readonly netG: number;
-  /** Net of the scope's last basket while it is a short one; null otherwise. */
+  /** What the open short basket of the scope holds so far (E04-S06); null when none is open. */
   readonly openShortG: number | null;
+  /** How much it still lacks to be full: "เหลือเติม" (E04-S06). */
+  readonly missingG: number | null;
+  /** The open short basket's first part, when one is open. */
+  readonly openId: string | null;
   /** Money at the sale's price (D-40); null while no price is set. */
   readonly satang: number | null;
   /** The scope's last live basket — what "ย้อนกลับ" undoes (E04-S09). */
@@ -145,16 +150,21 @@ export function recorderFigures(
     .filter((b) => b.pointId && sequenceOf(b.pointId, mode, tapperOf) === seq)
     .sort(compareEvents);
   const netG = mine.reduce((sum, b) => sum + basketNetG(b), 0);
+  // An open short basket is the one being worked on (E04-S06): its number stays current.
+  const open = openBasketIn(events, master, saleDay, pointId, mode, stdNetOfLog(events));
   // The last basket is the highest number (fold order breaks ties), not the
   // newest event: an edit re-records an old number later in the log.
   const last = mine.reduce<BasketEvent | undefined>((top, b) => (!top || (b.basketNo ?? 0) >= (top.basketNo ?? 0) ? b : top), undefined);
   const tapperId = tapperOf(pointId);
   return {
     scope: seq.startsWith('t:') && tapperId ? { tapperId } : { pointId },
-    currentNo: nextBasketNo(events, pointId, mode, tapperOf),
-    done: mine.length,
+    currentNo: open ? open.basketNo : nextBasketNo(events, pointId, mode, tapperOf),
+    // One basket per number: later parts of a bridged basket and the open one are not "done".
+    done: mine.filter((b) => !b.partOf && b.id !== open?.rootId).length,
     netG,
-    openShortG: last?.kind === 'short' ? basketNetG(last) : null,
+    openShortG: open ? open.haveG : null,
+    missingG: open ? open.missingG : null,
+    openId: open?.rootId ?? null,
     satang: satangPerKg === null ? null : Math.floor((2 * netG * satangPerKg + 1000) / 2000),
     lastId: last?.id ?? null,
   };
@@ -232,6 +242,8 @@ export interface BasketRow {
   readonly edited: boolean;
   /** Who recorded this row — the device and when (SYNC-9). */
   readonly by: { readonly deviceId: string; readonly ts: number };
+  /** A basket made of parts at several points: each part's net, "(20 + 30)" (E04-S06). */
+  readonly partsG?: readonly number[];
 }
 
 /**
@@ -242,19 +254,23 @@ export interface BasketRow {
 export function basketList(events: readonly SaleEvent[]): readonly BasketRow[] {
   const live = new Set(liveBaskets(events).map((b) => b.id));
   const undone = undoneIds(events);
+  const groups = basketGroups(events, stdNetOfLog(events));
   const replaced = new Set<string>();
   // Only a replacement still standing hides its original; an undone edit gives the row back.
   for (const e of events) if ((e.kind === 'accept' || e.kind === 'short') && e.editOf && !undone.has(e.id)) replaced.add(e.editOf);
   const rows: BasketRow[] = [];
   for (const e of [...events].sort(compareEvents).reverse()) {
     if ((e.kind !== 'accept' && e.kind !== 'short') || !e.pointId || e.basketNo === undefined) continue;
-    if (undone.has(e.id) || replaced.has(e.id)) continue;
+    if (undone.has(e.id) || replaced.has(e.id) || e.partOf) continue;
+    const group = groups.get(e.id);
+    const bridged = group && group.parts.length > 1 ? group : null;
     rows.push({
       id: e.id,
       basketNo: e.basketNo,
       pointId: e.pointId,
-      netG: basketNetG(e),
-      short: e.kind === 'short',
+      netG: bridged ? bridged.netG : basketNetG(e),
+      short: bridged ? bridged.status !== 'full' : e.kind === 'short',
+      ...(bridged ? { partsG: bridged.partsG } : {}),
       status: live.has(e.id) ? 'live' : 'voided',
       edited: !!e.editOf,
       by: { deviceId: e.actor.deviceId, ts: e.ts },

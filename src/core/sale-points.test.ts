@@ -174,12 +174,13 @@ describe('E04-S05 — the recorder figures (SALE-14, D-40)', () => {
     });
   });
 
-  it('the open short basket is the last one of the scope while it is a short one', () => {
+  it('a short basket stays open until it is closed (E04-S06 replaces "while it is the last one")', () => {
     const m = master();
     const b = new LogBuilder('sale-x').acceptAt('p1', 1).shortAt('p1', 2, 37_000);
-    expect(recorderFigures(b.build(), m, DAY, 'p1', 'per-tapper', null).openShortG).toBe(35_000);
-    b.acceptAt('p2', 3);
-    expect(recorderFigures(b.build(), m, DAY, 'p1', 'per-tapper', null).openShortG).toBeNull();
+    const short = b.build().at(-1)!;
+    expect(recorderFigures(b.build(), m, DAY, 'p1', 'per-tapper', null)).toMatchObject({ openShortG: 35_000, currentNo: 2, done: 1 });
+    b.sys({ t: 'basket_closed', basketId: short.id, reason: 'scrap' });
+    expect(recorderFigures(b.build(), m, DAY, 'p1', 'per-tapper', null)).toMatchObject({ openShortG: null, currentNo: 3, done: 2 });
   });
 
   it('a voided basket leaves done and kg but keeps its number', () => {

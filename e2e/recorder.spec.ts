@@ -167,3 +167,58 @@ test('completed sale: an edit that changes money asks why, and the flag is in th
   await expect(page.getByTestId(`sale-${saleId}`)).toContainText('เสร็จสิ้น');
   await expect(page.getByTestId(`sale-${saleId}`)).not.toContainText('เปิดอยู่');
 });
+
+test('bridge basket: แดง short 20 at จุด 1, topped up 30 at จุด 2 → (20 + 30) = 50; นัด\'s point asks nothing (E04-S06)', async ({ page }, info) => {
+  const shot = async (name: string) => {
+    if (info.project.name === 'phone-landscape') await page.screenshot({ path: `${SHOTS}/${name}.png` });
+  };
+  await seedMaster(page, [
+    { t: 'settings_set', zeroCheck: 'skip' },
+    { t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] },
+    { t: 'person_added', personId: 'nat', name: 'นัด', roles: ['tapper'], otherRoles: [] },
+    { t: 'property_added', propertyId: 'fA', name: 'จันทเขลม', crop: 'rubber' },
+    { t: 'point_added', pointId: 'p1', propertyId: 'fA', name: 'จุด 1' },
+    { t: 'point_added', pointId: 'p2', propertyId: 'fA', name: 'จุด 2' },
+    { t: 'point_added', pointId: 'p3', propertyId: 'fA', name: 'จุด 3' },
+    { t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' },
+    { t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p2', tapperId: 'red' },
+    { t: 'tapper_assigned', assignmentId: 'a3', pointId: 'p3', tapperId: 'nat' },
+  ]);
+  await page.goto('/');
+  await page.getByTestId('new-sale').click();
+  await page.getByTestId('start-next').click();
+  await page.locator('[data-testid^="pick-tapper-"]', { hasText: 'แดง' }).last().click();
+  await page.locator('[data-testid^="pick-point-"]', { hasText: 'จุด 1' }).last().click();
+
+  // A short basket of 20 kg (scale 22, basket 2): it stays open, 30 still to fill.
+  await page.getByTestId('rec-short').click();
+  await page.getByTestId('short-reading-typed').fill('22');
+  await page.getByTestId('short-confirm').click();
+  await expect(page.getByTestId('rec-open')).toContainText('เข่ง 1 เปิดอยู่ · 20 กก.');
+  await expect(page.getByTestId('rec-card-short')).toContainText('30');
+  await shot('e04-s06-open');
+
+  // แดง's next point: three ways; weigh the top-up on its own.
+  await page.getByTestId('rec-switch').click();
+  await page.locator('[data-testid^="pick-tapper-"]', { hasText: 'แดง' }).last().click();
+  await page.locator('[data-testid^="pick-point-"]', { hasText: 'จุด 2' }).last().click();
+  await expect(page.getByTestId('fill-sheet')).toContainText('เข่ง 1 ยังไม่เต็ม');
+  await shot('e04-s06-fill-choice');
+  await page.getByTestId('fill-part').click();
+  await expect(page.getByTestId('caption')).toContainText('ตาชั่งควรอ่าน 32 กก.');
+  await hold(page);
+  await expect(page.getByTestId('rec-current')).toHaveText('2');
+  await page.getByTestId('rec-menu').click();
+  await page.getByTestId('rec-menu-list').click();
+  await expect(page.getByTestId('rec-row-1')).toContainText('(20 + 30) = 50 กก.');
+  await shot('e04-s06-bridged');
+  await page.getByTestId('rec-list-close').click();
+
+  // นัด's point: nothing to ask.
+  await page.getByTestId('rec-switch').click();
+  await page.locator('[data-testid^="pick-tapper-"]', { hasText: 'นัด' }).last().click();
+  await page.locator('[data-testid^="pick-point-"]', { hasText: 'จุด 3' }).last().click();
+  await expect(page.getByTestId('rec-point')).toContainText('จุด 3');
+  await expect(page.getByTestId('fill-sheet')).toHaveCount(0);
+  await expect(page.getByTestId('rec-current')).toHaveText('1');
+});

@@ -73,11 +73,13 @@ function tally(baskets: readonly BasketEvent[]): Totals {
   let shortNetG = 0;
 
   for (const b of baskets) {
+    // A later part of a bridged basket (E04-S06) adds its weight, never another basket.
+    const part = b.partOf !== undefined;
     if (b.kind === 'accept') {
-      standardBaskets++;
+      if (!part) standardBaskets++;
       standardNetG += b.netG;
     } else {
-      shortBaskets++;
+      if (!part) shortBaskets++;
       shortNetG += b.readingG - b.tareG;
     }
   }

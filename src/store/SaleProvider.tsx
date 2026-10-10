@@ -43,8 +43,19 @@ type NewEvent =
       pointId?: string;
       basketNo?: number;
       editOf?: string;
+      partOf?: string;
     }
-  | { kind: 'short'; pileId: string; readingG: number; tareG: number; pointId?: string; basketNo?: number; skewG?: number; editOf?: string }
+  | {
+      kind: 'short';
+      pileId: string;
+      readingG: number;
+      tareG: number;
+      pointId?: string;
+      basketNo?: number;
+      skewG?: number;
+      editOf?: string;
+      partOf?: string;
+    }
   | {
       kind: 'reject';
       pileId: string;

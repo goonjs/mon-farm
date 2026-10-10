@@ -37,6 +37,8 @@ export interface RecorderBasket {
   /** Voided rows stay, struck through ✗ (E04-S09). */
   readonly status: 'live' | 'voided';
   readonly edited: boolean;
+  /** A basket made of parts at several points (E04-S06). */
+  readonly partsG?: readonly number[];
 }
 
 export interface RecorderViewProps {
@@ -69,6 +71,15 @@ export interface RecorderViewProps {
   readonly menuItems?: readonly { testID: string; label: string; onPress: () => void; disabled?: boolean; hint?: string }[];
   /** Over everything: a prompt that must be answered first (E04-S11 money reason, cancel confirm). */
   readonly overlay?: ReactNode;
+  /** A full-screen sheet, e.g. how to carry on an open short basket (E04-S06). */
+  readonly sheet?: ReactNode;
+  /** Above the hold area: the open short basket card (E04-S06). */
+  readonly openCard?: ReactNode;
+  /** The hold area's words and caption when not the plain full basket (E04-S06 fill / wait). */
+  readonly holdLabel?: string;
+  readonly holdCaption?: string;
+  /** The bottom-left button's label: "เติมไม่ถึง" while filling (E04-S06). */
+  readonly shortLabel?: string;
 }
 
 export function RecorderView(props: RecorderViewProps) {
@@ -200,27 +211,34 @@ export function RecorderView(props: RecorderViewProps) {
             unit={money ? '฿' : t('rec.baskets')}
           />
           <SmallCard testID="rec-card-kg" label={t('rec.kg')} value={formatKg(f.netG)} unit={t('rec.kgUnit')} />
-          <SmallCard
-            testID="rec-card-short"
-            label={t('rec.short')}
-            value={f.openShortG === null ? t('rec.none') : formatKg(f.openShortG)}
-            unit={f.openShortG === null ? '' : t('rec.kgUnit')}
-          />
+          {f.openShortG === null || f.missingG === null ? (
+            <SmallCard testID="rec-card-short" label={t('rec.short')} value={t('rec.none')} unit="" />
+          ) : (
+            // An open short basket: how much is still missing to fill it (E04-S06).
+            <SmallCard
+              testID="rec-card-short"
+              label={`${t('rec.shortOf', { n: f.currentNo })}\n${t('rec.missing')}`}
+              value={formatKg(f.missingG)}
+              unit={t('rec.kgUnit')}
+              tone="warn"
+            />
+          )}
         </View>
 
+        {props.openCard ?? null}
         <View style={{ flex: 1, minHeight: 160, borderRadius: th.radius.lg, overflow: 'hidden', borderWidth: th.border.thick, borderColor: th.color.ruleStrong }}>
           <HoldStage
             count={f.currentNo}
             {...props.hold}
-            label={t('rec.hold')}
-            caption={`${t('rec.shouldRead')} ${props.expectedKg} ${t('rec.kgUnit')}`}
+            label={props.holdLabel ?? t('rec.hold')}
+            caption={props.holdCaption ?? `${t('rec.shouldRead')} ${props.expectedKg} ${t('rec.kgUnit')}`}
           />
         </View>
       </View>
 
       {props.below ?? (
         <View style={{ flexDirection: 'row', gap: th.space.sm, padding: th.space.md }}>
-          <BottomButton testID="rec-short" icon="⚖" label={t('rec.short')} onPress={props.onShort} enabled={props.hold.enabled !== false} />
+          <BottomButton testID="rec-short" icon="⚖" label={props.shortLabel ?? t('rec.short')} onPress={props.onShort} enabled={props.hold.enabled !== false} />
           <BottomButton testID="rec-undo" icon="↺" label={t('rec.undo')} onPress={props.onUndo} enabled={props.canUndo} />
           <BottomButton testID="rec-public" icon="⛶" label={t('rec.public')} onPress={props.onPublic} />
         </View>
@@ -294,7 +312,11 @@ export function RecorderView(props: RecorderViewProps) {
                         {voided ? `✗ #${b.basketNo}` : `#${b.basketNo}`}
                       </Text>
                       <Text style={[text(th.font.size.body), { flex: 1 }, struck]}>{b.short ? `${b.pointName} · ${t('rec.short')}` : b.pointName}</Text>
-                      <Text style={[text(th.font.size.body), { fontVariant: ['tabular-nums'] }, struck]}>{`${formatKg(b.netG)} ${t('rec.kgUnit')}`}</Text>
+                      <Text style={[text(th.font.size.body), { fontVariant: ['tabular-nums'] }, struck]}>
+                        {b.partsG
+                          ? `${t('rec.parts', { parts: b.partsG.map((g) => formatKg(g)).join(' + '), total: formatKg(b.netG) })} ${t('rec.kgUnit')}`
+                          : `${formatKg(b.netG)} ${t('rec.kgUnit')}`}
+                      </Text>
                       {b.edited || voided ? (
                         <Text style={text(th.font.size.small, 'bold', voided ? th.color.reject : th.color.warn)}>
                           {voided ? t('rec.voided') : t('rec.edited')}
@@ -307,6 +329,7 @@ export function RecorderView(props: RecorderViewProps) {
         </View>
       ) : null}
 
+      {props.sheet ?? null}
       {props.overlay ? (
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: th.space.md }}>{props.overlay}</View>
       ) : null}
@@ -314,14 +337,14 @@ export function RecorderView(props: RecorderViewProps) {
   );
 }
 
-function SmallCard({ testID, label, value, unit }: { testID: string; label: string; value: string; unit: string }) {
+function SmallCard({ testID, label, value, unit, tone }: { testID: string; label: string; value: string; unit: string; tone?: 'warn' }) {
   const th = useTheme();
   return (
     <View
       testID={testID}
       style={{
         flex: 1,
-        backgroundColor: th.color.surfaceRaised,
+        backgroundColor: tone === 'warn' ? th.color.warnSunk : th.color.surfaceRaised,
         borderRadius: th.radius.md,
         borderWidth: th.border.hair,
         borderColor: th.color.ruleFaint,
