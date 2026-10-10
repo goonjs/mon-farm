@@ -6,7 +6,9 @@ import {
   BoxIcon,
   ChartIcon,
   ClockIcon,
+  CoinIcon,
   DeviceIcon,
+  ExternalIcon,
   ListIcon,
   SpeakerIcon,
   UsersIcon,
@@ -78,6 +80,8 @@ describe('line icons — Views only, coloured by the caller (E01-S17 X8)', () =>
     ['PercentIcon', <PercentIcon key="v" color="sentinel" />],
     ['SwapIcon', <SwapIcon key="w" color="sentinel" />],
     // Home set (e03-v2-splash-home).
+    ['CoinIcon', <CoinIcon key="hc" color="sentinel" />],
+    ['ExternalIcon', <ExternalIcon key="he" color="sentinel" />],
     ['BasketIcon', <BasketIcon key="h1" color="sentinel" />],
     ['BoxIcon', <BoxIcon key="h2" color="sentinel" />],
     ['ChartIcon', <ChartIcon key="h3" color="sentinel" />],
@@ -101,7 +105,7 @@ describe('line icons — Views only, coloured by the caller (E01-S17 X8)', () =>
 });
 
 describe('money-team icons take size', () => {
-  it.each([MoneyInIcon, MoneyOutIcon, PersonIcon, CalendarIcon, ReceiptIcon, DebtIcon, BankIcon, FarmIcon, ScaleIcon, PinIcon, TagIcon, TrashIcon, GearIcon, PercentIcon, SwapIcon, BasketIcon, BoxIcon, ChartIcon, ClockIcon, DeviceIcon, ListIcon, SpeakerIcon, UsersIcon, WalletIcon, WeatherIcon])(
+  it.each([MoneyInIcon, MoneyOutIcon, PersonIcon, CalendarIcon, ReceiptIcon, DebtIcon, BankIcon, FarmIcon, ScaleIcon, PinIcon, TagIcon, TrashIcon, GearIcon, PercentIcon, SwapIcon, CoinIcon, ExternalIcon, BasketIcon, BoxIcon, ChartIcon, ClockIcon, DeviceIcon, ListIcon, SpeakerIcon, UsersIcon, WalletIcon, WeatherIcon])(
     '%p outer box follows size',
     (Icon) => {
       const s = strokes(<Icon color="x" size={24} />);

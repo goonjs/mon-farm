@@ -429,17 +429,20 @@ export function TrashIcon({ color, size = 18 }: IconProps) {
   );
 }
 
-/** Settings — a gear: a disc with eight teeth. */
+/** Settings — a gear: a ring with eight short teeth around it, open in the middle. */
 export function GearIcon({ color, size = 18 }: IconProps) {
   const w = stroke(size);
-  const tooth = { position: 'absolute', width: w * 1.6, height: size, borderRadius: w, backgroundColor: color } as const;
+  const ring = size * 0.56;
+  // Each tooth sits at the top of a full-size layer turned about the centre.
+  const tooth = (deg: number) => (
+    <View key={deg} style={{ position: 'absolute', width: size, height: size, alignItems: 'center', transform: [{ rotate: `${deg}deg` }] }}>
+      <View style={{ width: w * 1.6, height: size * 0.26, borderRadius: w * 0.4, backgroundColor: color }} />
+    </View>
+  );
   return (
     <View aria-hidden style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={tooth} />
-      <View style={{ ...tooth, transform: [{ rotate: '90deg' }] }} />
-      <View style={{ ...tooth, transform: [{ rotate: '45deg' }] }} />
-      <View style={{ ...tooth, transform: [{ rotate: '-45deg' }] }} />
-      <View style={{ width: size * 0.62, height: size * 0.62, borderRadius: size, backgroundColor: color }} />
+      {[0, 45, 90, 135, 180, 225, 270, 315].map(tooth)}
+      <View style={{ width: ring, height: ring, borderRadius: size, borderWidth: w, borderColor: color }} />
     </View>
   );
 }
@@ -614,18 +617,32 @@ export function DeviceIcon({ color, size = 18 }: IconProps) {
   );
 }
 
-/** Sound — a speaker: a box and its cone. */
+/** Sound — a speaker: a box, its cone and one sound wave. */
 export function SpeakerIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
   return (
     <View aria-hidden style={{ width: size, height: size, flexDirection: 'row', alignItems: 'center' }}>
-      <View style={{ width: size * 0.28, height: size * 0.4, backgroundColor: color }} />
+      <View style={{ width: size * 0.2, height: size * 0.36, backgroundColor: color }} />
       <View
         style={{
           width: 0,
           height: 0,
-          borderTopWidth: size * 0.35,
-          borderBottomWidth: size * 0.35,
-          borderRightWidth: size * 0.36,
+          borderTopWidth: size * 0.3,
+          borderBottomWidth: size * 0.3,
+          borderRightWidth: size * 0.3,
+          borderTopColor: 'transparent',
+          borderBottomColor: 'transparent',
+          borderRightColor: color,
+        }}
+      />
+      <View
+        style={{
+          marginLeft: size * 0.04,
+          width: size * 0.36,
+          height: size * 0.6,
+          borderRadius: size,
+          borderWidth: w,
+          borderLeftColor: 'transparent',
           borderTopColor: 'transparent',
           borderBottomColor: 'transparent',
           borderRightColor: color,
@@ -635,16 +652,74 @@ export function SpeakerIcon({ color, size = 18 }: IconProps) {
   );
 }
 
-/** Workers — two people, one behind the other. */
+/** Workers — two people side by side, the second a step behind. */
 export function UsersIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  const person = (scale: number) => (
+    <View style={{ width: size * 0.5 * scale, height: size * scale, alignItems: 'center', justifyContent: 'flex-end' }}>
+      <View style={{ width: size * 0.32 * scale, height: size * 0.32 * scale, borderRadius: size, borderWidth: w, borderColor: color, marginBottom: size * 0.06 }} />
+      <View
+        style={{
+          width: size * 0.5 * scale,
+          height: size * 0.32 * scale,
+          borderTopLeftRadius: size,
+          borderTopRightRadius: size,
+          borderWidth: w,
+          borderBottomWidth: 0,
+          borderColor: color,
+        }}
+      />
+    </View>
+  );
+  return (
+    <View aria-hidden style={{ width: size, height: size, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+      {person(1)}
+      {person(0.86)}
+    </View>
+  );
+}
+
+/** Money — a coin with a bar through it (the mockup's ฿ coin, drawn). */
+export function CoinIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <Coin color={color} size={size}>
+      <View style={{ width: size * 0.28, height: size * 0.44, borderWidth: w, borderRadius: w, borderColor: color }} />
+      <View style={{ position: 'absolute', width: w, height: size * 0.62, backgroundColor: color }} />
+    </Coin>
+  );
+}
+
+/** Opens outside the app — a box with an arrow leaving its corner. */
+export function ExternalIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
   return (
     <View aria-hidden style={{ width: size, height: size }}>
-      <View style={{ position: 'absolute', right: 0, top: 0 }}>
-        <PersonIcon color={color} size={size * 0.7} />
-      </View>
-      <View style={{ position: 'absolute', left: 0, bottom: 0 }}>
-        <PersonIcon color={color} size={size * 0.8} />
-      </View>
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          bottom: 0,
+          width: size * 0.78,
+          height: size * 0.78,
+          borderWidth: w,
+          borderRadius: w,
+          borderTopRightRadius: 0,
+          borderColor: color,
+        }}
+      />
+      <View style={{ position: 'absolute', right: 0, top: 0, width: size * 0.4, height: size * 0.4, borderTopWidth: w, borderRightWidth: w, borderColor: color }} />
+      <View
+        style={{
+          position: 'absolute',
+          right: size * 0.18,
+          top: size * 0.04,
+          width: w,
+          height: size * 0.6,
+          backgroundColor: color,
+          transform: [{ rotate: '45deg' }],
+        }}
+      />
     </View>
   );
 }
