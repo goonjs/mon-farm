@@ -407,6 +407,8 @@ export function MoneyLine({
 }) {
   const t = useTheme();
   const msg = useT();
+  // Zero moves no money: no sign, no word, no colour.
+  if (satang === 0) dir = undefined;
   const text =
     satang === null ? msg('fin.row.unknown') : dir === 'in' ? `+${formatSatang(Math.abs(satang))}` : dir === 'out' ? `−${formatSatang(Math.abs(satang))}` : formatSatang(satang);
   const color = dir === 'in' ? t.color.accept : dir === 'out' ? t.color.reject : t.color.ink;

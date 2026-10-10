@@ -46,6 +46,12 @@ describe('MoneyLine — money in/out carries a sign and a word, never colour alo
     expect(screen.queryByTestId('m-word')).toBeNull();
   });
 
+  it('zero moves no money: no sign, no word', () => {
+    wrap(<MoneyLine label="เงินออก" satang={0} dir="out" testID="m" />);
+    expect(screen.getByTestId('m-amount').props.children).toBe('0.00');
+    expect(screen.queryByTestId('m-word')).toBeNull();
+  });
+
   it('an unknown amount reads ไม่ทราบ, never zero', () => {
     wrap(<MoneyLine label="ปุ๋ย" satang={null} testID="m" />);
     expect(screen.getByTestId('m-amount').props.children).toBe('ไม่ทราบ');
