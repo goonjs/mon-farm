@@ -52,7 +52,13 @@ export function useSaleRounding(
       await fin.write(`sale-rounding-${saleId}`, choice.head, { t: 'sale_rounding_set', saleId, mode });
     });
 
-  return { loaded: fin.events !== null, before, choice, result, check, ready, set, busy: inFlight.busy };
+  // Debt repayments the buyer transfers together with the owner share (D-71 route 3).
+  let transferInSatang = 0;
+  for (const a of debts.values()) {
+    for (const p of a.payments) if (p.saleId === saleId && !p.deleted && p.method === 'transfer-with-owner') transferInSatang += p.amountSatang;
+  }
+
+  return { loaded: fin.events !== null, before, choice, result, check, ready, set, busy: inFlight.busy, transferInSatang };
 }
 
 export type SaleRounding = ReturnType<typeof useSaleRounding>;

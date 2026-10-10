@@ -20,6 +20,7 @@ import { Button, TopBar } from '../../../components/chrome';
 import { DeductionForm, type DeductionFormInput } from '../../../components/DeductionForm';
 import { BuyerCheckEntry } from '../../../components/finance/BuyerCheckEntry';
 import { DebtDeductionCard } from '../../../components/finance/DebtDeductionCard';
+import { PaymentStatusCard } from '../../../components/finance/PaymentStatusCard';
 import { ScreenHeader } from '../../../components/finance/parts';
 import { RoundingCard } from '../../../components/finance/RoundingCard';
 import { SaleAccountCard } from '../../../components/finance/SaleAccountCard';
@@ -27,6 +28,7 @@ import { useSaleRounding, type SaleRounding } from '../../../finance/use-sale-ro
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { WorkerPayoutCard } from '../../../components/WorkerPayoutCard';
 import { saleFigures } from '../../../core/finance/buyer-check';
+import { OWNER_PAYEE } from '../../../core/finance/payments';
 import { formatBaht, formatKg, settle, SettlementUnavailable, type Settlement } from '../../../core/settle';
 import { newId } from '../../../lib/id';
 import { useSale } from '../../../store/SaleProvider';
@@ -435,6 +437,18 @@ function MoneyCards({ saleId, settlement }: { saleId: string; settlement: Settle
       <View style={card(t)}>
         <SaleAccountCard saleId={saleId} ownerSatang={r.result.ownerSatang} ready={r.ready} />
       </View>
+      {/* E05-S05: once the amounts are final (rounding answered), tick each payment on its own. */}
+      {r.ready ? (
+        <View style={card(t)}>
+          <PaymentStatusCard
+            saleId={saleId}
+            payees={[
+              ...r.result.workers.map((w, i) => ({ id: w.id, name: r.before[i].name, satang: w.cashSatang, kind: 'cash' as const })),
+              { id: OWNER_PAYEE, name: '', satang: r.result.ownerSatang + r.transferInSatang, kind: 'transfer' as const },
+            ]}
+          />
+        </View>
+      ) : null}
     </>
   );
 }

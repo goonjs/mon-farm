@@ -293,3 +293,31 @@ test('buyer check — one tap match, then a difference closed with a reason (off
   await expect(page.getByTestId('check-entry-status')).toContainText('พบส่วนต่าง');
   await expect(page.getByTestId('owner-share')).toContainText('149,367.25');
 });
+
+test('payment statuses — ticked one by one; an edit flags only the payee it changed (offline)', async ({ page, context }) => {
+  const saleId = testSaleId('money-pay');
+  await seedPeople(page, [{ id: 'person-prayuth', name: 'ประยุทธ' }, { id: 'person-manop', name: 'มานพ' }]);
+  await seedSale(page, saleId, workedExample(saleId));
+  await page.goto(`/sale/${saleId}/settlement`);
+  await context.setOffline(true);
+  await page.getByTestId('round-none').click();
+  await expect(page.getByTestId('payments')).toBeVisible();
+  await page.getByTestId('pay-toggle-person-prayuth').click();
+  await page.getByTestId('pay-toggle-person-manop').click();
+  await expect(page.getByTestId('pay-done-person-prayuth')).toBeVisible();
+  await page.getByTestId('payments').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${SHOTS}/26-payments.png`, fullPage: true });
+
+  // An edit after the tick: 50 baht more taken from ประยุทธ's share (S29 deduction).
+  await page.getByTestId('deduction-person-option-person-prayuth').click();
+  await page.getByTestId('deduction-amount').fill('50');
+  await page.getByTestId('deduction-reason').fill('ค่าปุ๋ย');
+  await page.getByTestId('deduction-agreed-by').fill('สมชาย');
+  await page.getByTestId('deduction-add').click();
+  await expect(page.getByTestId('pay-recheck-person-prayuth')).toContainText('100,342.25 → ใหม่ 100,292.25');
+  await expect(page.getByTestId('pay-recheck-person-manop')).toHaveCount(0);
+  await page.getByTestId('payments').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${SHOTS}/27-payments-recheck.png`, fullPage: true });
+  await page.getByTestId('pay-confirm-person-prayuth').click();
+  await expect(page.getByTestId('pay-recheck-person-prayuth')).toHaveCount(0);
+});

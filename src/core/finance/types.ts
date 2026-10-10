@@ -181,6 +181,12 @@ export type FinancePayload =
    * check, so a basket edited afterwards shows as "check again" without a
    * write. Money always comes from our baskets, never from `buyer` (D-15).
    */
+  /**
+   * E05-S05: one payee's money handed over (a worker's cash, or 'owner' for
+   * the owner's transfer), targetId `payment-<saleId>-<payee>`. Keeps the
+   * amount it was ticked at, so a later change to that amount flags a recheck.
+   */
+  | { readonly t: 'payment_mark_set'; readonly saleId: string; readonly payee: string; readonly done: boolean; readonly amountSatang: number; readonly alsoBasedOn?: readonly EventId[] }
   | {
       readonly t: 'buyer_check_set';
       readonly saleId: string;
