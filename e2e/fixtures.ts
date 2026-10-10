@@ -60,10 +60,11 @@ export async function seedSale(page: Page, saleId: string, events: readonly Sale
 
 /** Writes any events (a sale's, or farm master data's) straight into IndexedDB — see `seedSale`. */
 async function seedEvents(page: Page, events: readonly SaleEvent[]): Promise<void> {
-  await page.goto('/');
-  // The list renders only after `listSales()` resolved, i.e. after the app
-  // created the database with its own schema — so the seed never creates it.
-  await page.locator('[data-testid="empty-state"], [data-testid^="sale-"]').first().waitFor();
+  await page.goto('/v2');
+  // The header's sync pill renders only after `pending()` resolved, i.e. after
+  // the app created the database with its own schema — so the seed never
+  // creates it.
+  await page.getByTestId('sync-pill').first().waitFor();
   await page.evaluate(
     (events) =>
       new Promise<void>((resolve, reject) => {

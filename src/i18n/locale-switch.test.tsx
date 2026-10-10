@@ -1,10 +1,16 @@
 import { fireEvent, screen } from '@testing-library/react-native';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 import { useI18n, useT } from '.';
-import { ShortBasketPanel } from '../components/ShortBasketPanel';
 import { wrap } from '../test/render';
+import { Placeholder } from '../v2/placeholder-screen';
+
+jest.mock('expo-router', () => ({
+  Link: ({ children }: { children: ReactNode }) => children,
+  useFocusEffect: () => undefined,
+  useRouter: () => ({ canGoBack: () => true, back: jest.fn(), replace: jest.fn() }),
+}));
 
 /**
  * Two claims the pure resolver tests cannot make, because both are about a
@@ -22,50 +28,21 @@ import { wrap } from '../test/render';
 
 describe('a screen renders one language', () => {
   it('shows no ไทย · English pair anywhere in the output', () => {
-    wrap(
-      <ShortBasketPanel
-        tareG={2000}
-        stdNetG={50000}
-        readingG={43000}
-        onChangeReading={jest.fn()}
-        onConfirm={jest.fn()}
-        onCancel={jest.fn()}
-      />,
-    );
-
-    // The separator only ever joined two languages in this component, so its
-    // absence is the assertion. (Where a middle dot separates two DATA values
-    // it stays — see the catalogue header — but this panel has none.)
+    wrap(<Placeholder titleId="v2.people" />);
     expect(screen.toJSON()).toBeTruthy();
-    expect(JSON.stringify(screen.toJSON())).not.toContain(' · ');
+    const out = JSON.stringify(screen.toJSON());
+    expect(out).not.toContain(' · ');
+    expect(out).toContain('กำลังสร้าง');
+    expect(out).not.toContain('under construction');
   });
 
   it('renders Thai by default and English when asked', () => {
-    const { unmount } = wrap(
-      <ShortBasketPanel
-        tareG={2000}
-        stdNetG={50000}
-        readingG={43000}
-        onChangeReading={jest.fn()}
-        onConfirm={jest.fn()}
-        onCancel={jest.fn()}
-      />,
-    );
-    expect(screen.getByTestId('short-confirm')).toHaveTextContent('บันทึกเข่งนี้');
+    const { unmount } = wrap(<Placeholder titleId="v2.people" />);
+    expect(screen.getByTestId('v2-building')).toHaveTextContent(/กำลังสร้าง/);
     unmount();
 
-    wrap(
-      <ShortBasketPanel
-        tareG={2000}
-        stdNetG={50000}
-        readingG={43000}
-        onChangeReading={jest.fn()}
-        onConfirm={jest.fn()}
-        onCancel={jest.fn()}
-      />,
-      { locale: 'en' },
-    );
-    expect(screen.getByTestId('short-confirm')).toHaveTextContent('log this basket');
+    wrap(<Placeholder titleId="v2.people" />, { locale: 'en' });
+    expect(screen.getByTestId('v2-building')).toHaveTextContent(/under construction/);
   });
 });
 

@@ -8,17 +8,26 @@ import { describe, expect, it } from 'vitest';
  * src/components, src/constants/theme, the old hooks, and old app routes
  * outside src/app/v2. It must leave old screens alone and must not block a
  * future folder that merely happens to be named "components".
+ *
+ * The v1 UI (src/components, the old routes) has since been removed (D-83).
+ * An import of a path that no longer exists is rejected by `import/no-unresolved`
+ * (`commonjs` on, so `require()` too) instead of the path rule, which only
+ * sees resolved files — so that counts as the fence holding. If the folders
+ * ever come back, the path rule takes over again.
  */
 
 const eslint = new ESLint();
 
+const FENCE_RULES = ['import/no-restricted-paths', 'no-restricted-imports', 'no-restricted-syntax'];
+
 /** Messages from the fence rules only (other lint rules are not under test). */
-async function fenced(filePath: string, source: string): Promise<string[]> {
+async function fenced(filePath: string, source: string, rules = FENCE_RULES): Promise<string[]> {
   const [result] = await eslint.lintText(source, { filePath });
-  return result.messages
-    .filter((m) => ['import/no-restricted-paths', 'no-restricted-imports', 'no-restricted-syntax'].includes(m.ruleId ?? ''))
-    .map((m) => m.message);
+  return result.messages.filter((m) => rules.includes(m.ruleId ?? '')).map((m) => m.message);
 }
+
+/** A fenced path, or one that no longer exists (the v1 UI was removed, D-83). */
+const rejected = (filePath: string, source: string) => fenced(filePath, source, [...FENCE_RULES, 'import/no-unresolved']);
 
 const V2_FILES = ['src/ui/probe.tsx', 'src/v2/probe.tsx', 'src/app/v2/probe.tsx'];
 
@@ -37,12 +46,12 @@ const VIOLATIONS: Record<string, string> = {
 
 describe('v2 import fence (D-82)', () => {
   it.each(Object.entries(VIOLATIONS))('rejects %s', async (_kind, source) => {
-    expect(await fenced('src/ui/probe.tsx', source)).not.toEqual([]);
+    expect(await rejected('src/ui/probe.tsx', source)).not.toEqual([]);
   });
 
   it.each(V2_FILES)('%s is fenced', async (f) => {
     const deep = f.startsWith('src/app/v2') ? '../../components/chrome' : '../components/chrome';
-    expect(await fenced(f, `import { Pill } from '${deep}';\nexport const z = Pill;\n`)).not.toEqual([]);
+    expect(await rejected(f, `import { Pill } from '${deep}';\nexport const z = Pill;\n`)).not.toEqual([]);
   });
 
   it('allows tokens, strings, logic, other v2 routes and a folder named components inside src/ui', async () => {

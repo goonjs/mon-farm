@@ -64,6 +64,10 @@ module.exports = [
   },
   {
     rules: {
+      // `require()` of a missing file fails lint like an import does. Since
+      // the v1 UI was removed (D-83) this is also what keeps v2 from reaching
+      // for it: the path fence above only sees files that exist.
+      'import/no-unresolved': ['error', { commonjs: true }],
       // The log is append-only and the projection is a fold; unused catch
       // bindings are common where a failure is deliberately swallowed (storage
       // quota must never block counting).
