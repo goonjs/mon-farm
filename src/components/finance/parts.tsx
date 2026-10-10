@@ -435,7 +435,8 @@ export function Rule() {
 }
 
 /** The hero figure at the top of a summary card: caption, big number, unit. */
-export function BigAmount({ satang, caption, children, testID = 'big' }: { satang: number; caption?: string; children?: ReactNode; testID?: string }) {
+/** `unknown`: no figure exists yet — reads ไม่ทราบ, never a silent 0.00 (SYNC-12). */
+export function BigAmount({ satang, unknown, caption, children, testID = 'big' }: { satang: number; unknown?: boolean; caption?: string; children?: ReactNode; testID?: string }) {
   const t = useTheme();
   const msg = useT();
   return (
@@ -443,9 +444,9 @@ export function BigAmount({ satang, caption, children, testID = 'big' }: { satan
       {caption ? <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.inkSoft }}>{caption}</Text> : null}
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.xs }}>
         <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayXl, fontWeight: t.font.weight.bold, color: t.color.ink }}>
-          {formatSatang(satang)}
+          {unknown ? msg('fin.row.unknown') : formatSatang(satang)}
         </Text>
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>{msg('fin.baht')}</Text>
+        {unknown ? null : <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>{msg('fin.baht')}</Text>}
       </View>
       {children}
     </View>
