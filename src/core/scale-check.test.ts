@@ -89,11 +89,24 @@ describe('pointGateNeeded — the check on moving to a point (v2 picker, SALE-6,
     expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a2', 'A', 'skip')).toBe(false);
   });
 
-  it('does not ask again at a point already weighing, unless the sale took a skew (D-76)', () => {
-    const b = pass(sale(), 'a1');
-    let ev = b.build();
+  it('does not ask again at a point already weighing', () => {
+    const ev = pass(sale(), 'a1').build();
     expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a1', 'A', 'every')).toBe(false);
-    ev = b.sys({ t: 'skew_accepted', pileId: 'a1', skewG: 2_000 }).build();
+  });
+
+  it('a skew asks at a point with no baskets yet (D-76), never at one already weighed (owner 2026-10-10)', () => {
+    const b = pass(sale(), 'a1').sys({ t: 'skew_accepted', pileId: 'a1', skewG: 2_000 });
+    let ev = b.build();
+    // Readied but nothing counted there: still a move to an unweighed point.
     expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a1', 'A', 'skip')).toBe(true);
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a2', 'A', 'skip')).toBe(true);
+    ev = b.acceptAt('a1', 1).acceptAt('a1', 2).acceptAt('a1', 3).build();
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a1', 'A', 'every')).toBe(false);
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a2', 'A', 'skip')).toBe(true);
+  });
+
+  it('a point weighed only by backfill does not ask either', () => {
+    const ev = sale().backfillAt('b1', 1).build();
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'b1', 'B', 'every')).toBe(false);
   });
 });

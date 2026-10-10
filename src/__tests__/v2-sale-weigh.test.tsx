@@ -313,4 +313,29 @@ describe('v2 counter edge cases (pages 8a, 12b)', () => {
     expect(router.replace).toHaveBeenLastCalledWith(expect.stringContaining(`point=${farm.a[0]}`));
     await master().restore(farm.a[2]);
   });
+
+  it('back to a point already weighed goes straight to its counter; the count goes on (owner 2026-10-10)', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    await hold();
+    await hold();
+    c.unmount();
+    // To จุด 2: new to the sale, so its empty scale is checked.
+    const p = await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red });
+    await press(`pick-point-${farm.a[1]}`);
+    expect(router.replace).toHaveBeenLastCalledWith(expect.stringContaining(`/zero-tare?point=${farm.a[1]}`));
+    p.unmount();
+    await readyAt(farm.a[1]);
+    // Back to จุด 1: no check, its counter at once.
+    await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red });
+    await press(`pick-point-${farm.a[0]}`);
+    expect(router.replace).toHaveBeenLastCalledWith(`/v2/sale/${saleId}/counter?point=${farm.a[0]}`);
+    await counterAt(farm.a[0]);
+    expect(screen.getAllByTestId('current-no').pop()).toHaveTextContent('4');
+    await hold();
+    const nos = (await store().load(saleId)).filter((e) => e.kind === 'accept').map((e) => (e as { basketNo: number }).basketNo);
+    expect(nos).toEqual([1, 2, 3, 4]);
+  });
 });
