@@ -11,8 +11,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import { Button, TopBar } from '../../components/chrome';
-import { Note } from '../../components/finance/parts';
+import { Button } from '../../components/chrome';
+import { BigAmount, Card, Fact, Note, ScreenHeader } from '../../components/finance/parts';
 import { owedByPerson, type OwedTo, type Repayment } from '../../core/finance/ledger';
 import { formatDate, formatSatang } from '../../core/finance/money';
 import { useFinance } from '../../finance/use-finance';
@@ -34,18 +34,13 @@ export default function OwedScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar
-        crumb={msg('fin.owed.title')}
-        right={<Button testID="owed-back" onPress={() => router.replace('/finance/expenses')}>{msg('common.back')}</Button>}
-      />
+      <ScreenHeader testID="owed" title={msg('fin.owed.title')} onBack={() => router.replace('/finance/expenses')} />
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.md }}>
-        <View style={{ padding: t.space.md, borderRadius: t.radius.lg, backgroundColor: t.color.surfaceSunk, gap: t.space.xxs }}>
-          <Note>{msg('fin.owed.total')}</Note>
-          <Text testID="owed-total" style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.ink }}>
-            {formatSatang(total)}
-          </Text>
-          <Note>{msg('fin.owed.summary', { people, items })}</Note>
-        </View>
+        <Card>
+          <BigAmount testID="owed-total" satang={total} caption={msg('fin.owed.total')}>
+            <Fact mark="person">{msg('fin.owed.summary', { people, items })}</Fact>
+          </BigAmount>
+        </Card>
 
         {owed === null ? (
           <Note>{msg('counter.loading')}</Note>
@@ -101,18 +96,18 @@ function Person({
   const flagged = o.items.some((i) => i.status === 'overpaid');
 
   return (
-    <View testID={`owed-${o.payer.id}`} style={{ borderWidth: t.border.hair, borderColor: t.color.rule, borderRadius: t.radius.lg, padding: t.space.md, gap: t.space.sm }}>
+    <View testID={`owed-${o.payer.id}`} style={{ borderWidth: t.border.hair, borderColor: t.color.ruleFaint, backgroundColor: t.color.surfaceRaised, borderRadius: t.radius.lg, padding: t.space.md, gap: t.space.sm }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>{o.payer.name}</Text>
-          <Note>
-            {o.remainingSatang > 0
-              ? msg('fin.owed.person', { n: o.items.filter((i) => i.remainingSatang > 0).length, date: formatDate(o.oldestDate) })
-              : msg('fin.status.repaid')}
-          </Note>
+          {o.remainingSatang > 0 ? (
+            <Fact mark="half" tone="warn">{msg('fin.owed.person', { n: o.items.filter((i) => i.remainingSatang > 0).length, date: formatDate(o.oldestDate) })}</Fact>
+          ) : (
+            <Fact mark="check" tone="accept">{msg('fin.status.repaid')}</Fact>
+          )}
           {flagged ? <Note tone="reject" testID={`owed-flag-${o.payer.id}`}>{msg('fin.status.overpaid')}</Note> : null}
         </View>
-        <Text testID={`owed-amount-${o.payer.id}`} style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+        <Text testID={`owed-amount-${o.payer.id}`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>
           {formatSatang(o.remainingSatang)}
         </Text>
       </View>

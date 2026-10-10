@@ -13,8 +13,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
-import { Button, TopBar } from '../../../components/chrome';
-import { Chip, ChipRow, Input, Label, Note, PayerPicker } from '../../../components/finance/parts';
+import { Button } from '../../../components/chrome';
+import { Chip, ChipRow, Input, Label, Note, PayerPicker, ScreenHeader } from '../../../components/finance/parts';
 import { checkDebt, fertilizerSplit } from '../../../core/finance/debts';
 import { OWNER_SHARE_SUFFIX } from '../../../core/finance/ledger';
 import { formatDate, formatSatang, parseBahtToSatang, todayIso } from '../../../core/finance/money';
@@ -86,7 +86,7 @@ export default function AddDebtScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar crumb={msg('debt.form.title', { name: worker.name })} right={<Button testID="debt-add-back" onPress={() => router.back()}>{msg('common.back')}</Button>} />
+      <ScreenHeader testID="debt-add" title={msg('debt.form.title', { name: worker.name })} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.lg }}>
         <View style={{ gap: t.space.xs }}>
           <Label>{msg('debt.form.kind')}</Label>

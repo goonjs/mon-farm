@@ -12,8 +12,8 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { Button, TopBar } from '../../components/chrome';
-import { Chip, ChipRow, Note, PayerPicker, StageTag, stageFrame } from '../../components/finance/parts';
+import { Button } from '../../components/chrome';
+import { Card, Chip, ChipRow, Fact, MoneyLine, Note, PayerPicker, ScreenHeader, StageTag, stageFrame } from '../../components/finance/parts';
 import { filterExpenses, stageTotals, type Expense, type ExpenseFilter, type Reimbursement } from '../../core/finance/ledger';
 import { formatDate, formatMonth, formatSatang } from '../../core/finance/money';
 import { FARM_FUNDS, type Payer, type Stage } from '../../core/finance/types';
@@ -86,18 +86,18 @@ export default function ExpensesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar
-        crumb={filterCount ? `${msg('fin.list.title')} · ${msg('fin.list.filtering', { n: filterCount })}` : msg('fin.list.title')}
-        right={
-          <>
-            <Button testID="open-owed" onPress={() => router.push('/finance/owed')}>{msg('fin.list.owed')}</Button>
-            <Button testID="open-debts" onPress={() => router.push('/finance/debts')}>{msg('debt.open')}</Button>
-            <Button testID="expenses-back" onPress={() => router.replace('/')}>{msg('common.back')}</Button>
-          </>
-        }
+      <ScreenHeader
+        testID="expenses"
+        title={msg('fin.list.title')}
+        subtitle={filterCount ? msg('fin.list.filtering', { n: filterCount }) : undefined}
+        onBack={() => router.replace('/')}
       />
 
-      <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.md }}>
+      <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.sm }}>
+        <ChipRow>
+          <Chip testID="open-owed" onPress={() => router.push('/finance/owed')}>{`${msg('fin.list.owed')} ›`}</Chip>
+          <Chip testID="open-debts" onPress={() => router.push('/finance/debts')}>{`${msg('debt.open')} ›`}</Chip>
+        </ChipRow>
         <ChipRow>
           <Chip testID="filter-stage" on={!!filter.stage} onPress={() => set({ stage: nextStage(filter.stage) })}>
             {filter.stage ? msg(`fin.stage.${filter.stage}`) : `${msg('fin.filter.stage')} ▾`}
@@ -149,17 +149,14 @@ export default function ExpensesScreen() {
           </ChipRow>
         ) : null}
 
-        <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-          <Total testID="total-actual" label={msg('fin.total.actual')} value={formatSatang(totals.actual)} stage="actual" />
-          <Total testID="total-committed" label={msg('fin.total.committed')} value={formatSatang(totals.committed)} stage="committed" />
-          <Total
-            testID="total-planned"
-            label={msg('fin.total.planned')}
-            value={formatSatang(totals.planned.knownSatang)}
-            extra={totals.planned.unknownCount ? msg('fin.total.unknown', { n: totals.planned.unknownCount }) : undefined}
-            stage="planned"
-          />
-        </View>
+        <Card testID="totals">
+          <MoneyLine testID="total-actual" strong label={msg('fin.total.actual')} satang={totals.actual} />
+          <MoneyLine testID="total-committed" label={msg('fin.total.committed')} satang={totals.committed} />
+          <View testID="total-planned" style={{ gap: 2 }}>
+            <MoneyLine testID="total-planned-line" label={msg('fin.total.planned')} satang={totals.planned.knownSatang} />
+            {totals.planned.unknownCount ? <Fact mark="half" tone="warn">{msg('fin.total.unknown', { n: totals.planned.unknownCount })}</Fact> : null}
+          </View>
+        </Card>
 
         {state === null ? (
           <Note>{msg('counter.loading')}</Note>
@@ -227,17 +224,6 @@ function nextStage(s: Stage | undefined): Stage | undefined {
   return i === STAGES.length - 1 ? undefined : STAGES[i + 1];
 }
 
-function Total({ label, value, extra, stage, testID }: { label: string; value: string; extra?: string; stage: Stage; testID: string }) {
-  const t = useTheme();
-  return (
-    <View testID={testID} style={{ flex: 1, gap: t.space.xxs, ...stageFrame(stage, t), padding: t.space.sm }}>
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.inkSoft }}>{label}</Text>
-      <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink }}>{value}</Text>
-      {extra ? <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.warn }}>{extra}</Text> : null}
-    </View>
-  );
-}
-
 function Row({
   x,
   category,
@@ -268,6 +254,7 @@ function Row({
       onPress={() => (selectable ? onToggle() : router.push({ pathname: '/finance/expense/[id]', params: { id: x.id } }))}
       style={{
         ...stageFrame(x.stage, t),
+        ...(x.stage === 'actual' ? { backgroundColor: t.color.surfaceRaised, borderColor: t.color.ruleFaint } : null),
         flexDirection: 'row',
         gap: t.space.sm,
         alignItems: 'center',
@@ -290,11 +277,9 @@ function Row({
         <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink }}>
           {x.item ? `${category} · ${x.item}` : category}
         </Text>
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.inkSoft }}>{formatDate(x.date)}</Text>
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: x.payer ? t.color.inkSoft : t.color.warn }}>
-          {x.payer ? msg('fin.row.payer', { name: x.payer.name }) : msg('fin.row.noPayer')}
-          {status ? ` · ${status}` : ''}
-        </Text>
+        <Fact mark="date">{formatDate(x.date)}</Fact>
+        <Fact mark="person" tone={x.payer ? 'soft' : 'warn'}>{x.payer ? msg('fin.row.payer', { name: x.payer.name }) : msg('fin.row.noPayer')}</Fact>
+        {status ? <Fact mark={reimb?.status === 'repaid' ? 'check' : 'half'} tone={reimb?.status === 'repaid' ? 'accept' : 'warn'}>{status}</Fact> : null}
         {x.conflicts.length ? (
           <Text testID={`expense-conflict-${x.id}`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, fontWeight: t.font.weight.bold, color: t.color.reject }}>
             {msg('fin.row.conflict')}
@@ -302,7 +287,7 @@ function Row({
         ) : null}
       </View>
       <View style={{ alignItems: 'flex-end', gap: t.space.xxs }}>
-        <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>
           {x.amountSatang === null ? msg('fin.row.unknown') : formatSatang(x.amountSatang)}
         </Text>
         <StageTag stage={x.stage} />

@@ -13,12 +13,13 @@
  */
 
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 
 import { Button, TopBar } from '../../../components/chrome';
 import { DeductionForm, type DeductionFormInput } from '../../../components/DeductionForm';
 import { DebtDeductionCard } from '../../../components/finance/DebtDeductionCard';
+import { ScreenHeader } from '../../../components/finance/parts';
 import { RoundingCard } from '../../../components/finance/RoundingCard';
 import { SaleAccountCard } from '../../../components/finance/SaleAccountCard';
 import { useSaleRounding, type SaleRounding } from '../../../finance/use-sale-rounding';
@@ -32,6 +33,8 @@ import { useTheme } from '../../../theme';
 
 export default function SettlementScreen() {
   const t = useTheme();
+  // A phone held upright has no room for two columns (v1.1.0 is portrait-first).
+  const narrow = useWindowDimensions().width < 600;
   const msg = useT();
   const { events, state, append } = useSale();
   const router = useRouter();
@@ -146,8 +149,11 @@ export default function SettlementScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar
-        crumb={`${state.parties?.farmName ?? ''} ▸ ${msg('settle.title')}`}
+      <ScreenHeader
+        testID="settle"
+        title={msg('settle.title')}
+        subtitle={state.parties?.farmName ?? undefined}
+        onBack={() => router.replace('/')}
         right={
           <Link href="/" asChild>
             <Button testID="to-sale-list">{msg('settle.list')}</Button>
@@ -164,13 +170,13 @@ export default function SettlementScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{
           padding: t.space.md,
-          flexDirection: 'row',
-          alignItems: 'flex-start',
+          flexDirection: narrow ? 'column-reverse' : 'row',
+          alignItems: narrow ? 'stretch' : 'flex-start',
           gap: t.space.md,
         }}
       >
-        {/* ---- the derivation ---- */}
-        <View style={[card(t), { flex: 1.1 }]}>
+        {/* ---- the derivation (under the money on a phone) ---- */}
+        <View style={[card(t), narrow ? null : { flex: 1.1 }]}>
           <CardTitle>{msg('settle.derivation')}</CardTitle>
           {s.steps.slice(0, 6).map((step) => (
             <View
@@ -207,7 +213,7 @@ export default function SettlementScreen() {
         </View>
 
         {/* ---- owner total, leading ---- */}
-        <View style={{ flex: 1, gap: t.space.md }}>
+        <View style={{ flex: narrow ? undefined : 1, gap: t.space.md }}>
           <View style={card(t)}>
             <CardTitle>{msg('settle.ownerTotal')}</CardTitle>
             <Figure testID="owner-share" colour={t.color.action}>{formatBaht(s.ownerSatang)}</Figure>
@@ -321,8 +327,8 @@ export default function SettlementScreen() {
 
 const card = (t: ReturnType<typeof useTheme>) => ({
   borderWidth: t.border.hair,
-  borderColor: t.color.rule,
-  borderRadius: t.radius.md,
+  borderColor: t.color.ruleFaint,
+  borderRadius: t.radius.lg,
   backgroundColor: t.color.surfaceRaised,
   padding: t.space.md,
 });
