@@ -1503,7 +1503,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'v2m.pctLabel': 'tapper carries (%)',
   'v2m.pctHint': 'whole number · default 50',
   'v2m.custom': 'custom',
-  'v2m.workerDebt': '{name}’s debt',
+  'v2m.workerDebt': 'debt of {name}',
   'v2m.ownerShareExpense': 'owner-share expense',
   'v2m.optionalLater': 'optional · can add later',
   'v2m.fertNoteHint': 'used to match once fertilizer records exist',
