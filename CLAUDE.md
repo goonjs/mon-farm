@@ -65,6 +65,38 @@ Ask again, every time.
   tags, force-pushes to a branch the agent did not create, and every Deploy
   Prod run. The owner can withdraw this delegation at any time in chat.
 
+  **Amendment, 2026-10-10 — standing push allowance, replaces
+  per-push confirmation for work branches.** The owner has no time to
+  confirm each push and decides to allow it. An agent may push a branch of
+  its own named `feature/`, `fix/`, `docs/` or `chore/` without asking
+  first. This is enforced and bounded by `.claude/settings.json` (allow for
+  those four prefixes; deny for force-push, delete, tags, `--all`,
+  `--mirror`, refspecs and `dev`/`main`). In exchange the acknowledgement
+  moves from before the push to after it, and is not optional:
+
+  1. **Ledger.** Right after a push, add one document to the Push Ledger
+     artifact (https://claude.ai/artifact/8Z5XJR9ZfvV7Wq17HGiZFr) with
+     `ArtifactData` into collection `pushes`, id `<branch-with-dashes>`:
+     `repo` ("goonjs/mon-farm"), `branch`, `title`, `session`, `pr_url`
+     (empty until a PR exists; update it when opened), `commits` (list of
+     subjects), `what`, `why_ready`, `not_covered`, `irreversible`
+     (the same six-point brief as above), `pushed_at` (ISO), `acked: false`.
+     The owner opens the PR from there and presses Acknowledge.
+  2. **Say so in the same response**: one short summary of what went up.
+  3. **Reminder line.** While this session has a push that is not yet
+     acknowledged, end every response with one line:
+     `👉 N PR รอ ack: <short title> — ดูที่นี่ <ledger url>`. Check the
+     ledger (one `query` on `acked == false`) at session start and when the
+     owner says they acknowledged something; do not poll otherwise.
+  4. The owner still alone decides: pushes to `dev`/`main`, tags,
+     force-pushes, every Deploy Prod run, and merging any PR. The owner can
+     withdraw this allowance at any time in chat.
+
+  The reasoning in the "Reconsidered" note below still describes what the
+  gate is for. This amendment is the owner's own informed decision to keep
+  that awareness through the ledger and the reminder line instead of a
+  per-push word; it is not an agent's proposal to relax the gate.
+
   **Reconsidered and deliberately kept, 2026-08-11. Do not propose
   relaxing this again.** It was argued that the gate had become redundant
   once "never commit ahead of an unanswered question" was added below —
