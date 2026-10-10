@@ -253,3 +253,23 @@ test('a deep link opens its screen directly, with no splash or home first', asyn
   expect(seen).not.toContain('splash');
   expect(seen).not.toContain('home');
 });
+
+test('an old v1 link lands on the v2 home, not an unmatched-route page', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  // The page itself comes back as a 404 locally; anything else logged is a fault (React #418 = hydration).
+  page.on('console', (m) => m.type() === 'error' && !/status of 404/.test(m.text()) && errors.push(m.text()));
+
+  // serve-dist answers an unknown path with the app's +not-found page, as a 404.
+  await page.goto('/settings');
+  await expect(page).toHaveURL(/\/v2\/?$/);
+  await expect(page.getByTestId('v2-home')).toBeVisible();
+
+  // Firebase Hosting answers it with the same page, as a 200 (firebase.json `** → /+not-found.html`).
+  await page.route('**/sale/abc/counter', (route) => route.fulfill({ path: 'dist/+not-found.html', contentType: 'text/html' }));
+  await page.goto('/sale/abc/counter');
+  await expect(page).toHaveURL(/\/v2\/?$/);
+  await expect(page.getByTestId('v2-home')).toBeVisible();
+
+  expect(errors).toEqual([]);
+});

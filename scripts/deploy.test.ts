@@ -51,7 +51,7 @@ describe('deploy.sh', () => {
     expect(readFileSync(log, 'utf8')).toMatch(/deploy --only hosting:dev/);
   });
 
-  it('deploys with a config that routes each dynamic page before the SPA fallback', () => {
+  it('deploys with a config that routes each dynamic page before the not-found fallback', () => {
     const r = run(['prod']);
     expect(r.status).toBe(0);
     expect(readFileSync(log, 'utf8')).toMatch(/--config firebase\.deploy\.json/);
@@ -59,7 +59,7 @@ describe('deploy.sh', () => {
     for (const site of deployed.hosting) {
       expect(site.rewrites).toEqual([
         { source: '/sale/*/counter', destination: '/sale/[id]/counter.html' },
-        { source: '**', destination: '/index.html' },
+        { source: '**', destination: '/+not-found.html' },
       ]);
     }
   });
@@ -190,10 +190,10 @@ describe('firebase config', () => {
     expect(readFileSync(script, 'utf8')).toContain(`dev_site=${targets.hosting.dev[0]}`);
   });
 
-  it.each(['dev', 'prod'])('%s serves dist/ as an SPA', (t) => {
+  it.each(['dev', 'prod'])('%s serves dist/, unknown paths on the not-found page', (t) => {
     const site = sites.find((s) => s.target === t);
     expect(site.public).toBe('dist');
-    expect(site.rewrites).toContainEqual({ source: '**', destination: '/index.html' });
+    expect(site.rewrites).toContainEqual({ source: '**', destination: '/+not-found.html' });
   });
 
   it.each(['dev', 'prod'])('%s caches hashed assets long and every page short', (t) => {

@@ -17,6 +17,7 @@ function fakeDist() {
     writeFileSync(join(dist, path), body);
   };
   file('index.html', 'home');
+  file('+not-found.html', 'not found');
   file('settings.html', 'settings');
   file('v2/index.html', 'v2 home');
   file('v2/farm.html', 'v2 farm');
@@ -58,10 +59,10 @@ describe('dynamicRewrites', () => {
 describe('the committed firebase.json', () => {
   const config = JSON.parse(readFileSync(join(root, 'firebase.json'), 'utf8'));
 
-  it('serves clean URLs and keeps the SPA fallback last, on every hosting target', () => {
+  it('serves clean URLs and keeps the not-found fallback last, on every hosting target', () => {
     for (const h of config.hosting) {
       expect(h.cleanUrls).toBe(true);
-      expect(h.rewrites.at(-1)).toEqual({ source: '**', destination: '/index.html' });
+      expect(h.rewrites.at(-1)).toEqual({ source: '**', destination: '/+not-found.html' });
     }
   });
 
@@ -69,7 +70,7 @@ describe('the committed firebase.json', () => {
     const out = deployConfig(config, fakeDist());
     for (const h of out.hosting) {
       expect(h.rewrites[0]).toEqual({ source: '/v2/sale/*', destination: '/v2/sale/[step].html' });
-      expect(h.rewrites.at(-1)).toEqual({ source: '**', destination: '/index.html' });
+      expect(h.rewrites.at(-1)).toEqual({ source: '**', destination: '/+not-found.html' });
     }
     expect(out.firestore).toEqual(config.firestore);
   });
@@ -135,8 +136,8 @@ describe('served through superstatic', () => {
     expect(bare.status === 200 ? bare.body : bare.location).toMatch(/v2 home|\/v2\/?$/);
   });
 
-  it('anything else still falls back to the app shell', async () => {
-    expect(await get('/no/such/page')).toMatchObject({ status: 200, body: 'home' });
+  it('anything else gets the app\'s +not-found page, which matches what the client renders there', async () => {
+    expect(await get('/no/such/page')).toMatchObject({ status: 200, body: 'not found' });
   });
 
   it('pages are never cached; hashed bundles are cached for good', async () => {

@@ -16,6 +16,7 @@ beforeAll(async () => {
   mkdirSync(join(dist, 'v2'));
   writeFileSync(join(dist, 'v2', 'index.html'), 'v2 home');
   writeFileSync(join(dist, 'v2', 'farm.html'), 'v2 farm');
+  writeFileSync(join(dist, '+not-found.html'), 'not found page');
   server = spawn(process.execPath, ['scripts/serve-dist.mjs'], {
     env: { ...process.env, PORT: String(PORT), DIST_DIR: dist },
     stdio: 'pipe',
@@ -45,5 +46,9 @@ describe('serve-dist', () => {
     expect(await get('/settings')).toEqual({ status: 200, body: 'settings' });
     expect(await get('/v2/farm')).toEqual({ status: 200, body: 'v2 farm' });
     expect((await get('/nope')).status).toBe(404);
+  });
+
+  it('answers an unknown page with the app\'s +not-found page, still a 404', async () => {
+    expect(await get('/settings/old')).toEqual({ status: 404, body: 'not found page' });
   });
 });

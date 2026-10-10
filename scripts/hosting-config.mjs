@@ -7,12 +7,12 @@
  * is the literal file `dist/sale/[id]/counter.html`. `cleanUrls` lets Hosting
  * serve static routes from their own page, but it cannot match `/sale/abc/counter`
  * to a file with brackets in its name. Without a rewrite that request falls
- * through to the root page, which renders the home screen first and then
+ * through to the fallback page, which renders a different route first and then
  * fails to hydrate (React #418). The routes come from the build, not a
  * hand-kept list, so a new screen can never be forgotten.
  *
  * Rewrites only apply when no file matches, and the first matching rewrite
- * wins. So the generated ones go before the `** → /index.html` fallback, in
+ * wins. So the generated ones go before the `** → /+not-found.html` fallback, in
  * the order expo-router itself resolves routes.
  */
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';

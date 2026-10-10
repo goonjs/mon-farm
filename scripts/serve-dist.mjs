@@ -109,7 +109,13 @@ createServer(async (req, res) => {
     res.writeHead(200, { 'content-type': TYPES[extname(path)] ?? 'application/octet-stream' });
     res.end(body);
   } catch {
-    res.writeHead(404, { 'content-type': 'text/plain' }).end('not found');
+    // The app's own +not-found page (it sends old v1 links to /v2), as a 404.
+    try {
+      const page = await readFile(join(ROOT, '+not-found.html'));
+      res.writeHead(404, { 'content-type': TYPES['.html'] }).end(page);
+    } catch {
+      res.writeHead(404, { 'content-type': 'text/plain' }).end('not found');
+    }
   }
 }).listen(PORT, () =>
   console.log(
