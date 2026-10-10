@@ -91,7 +91,8 @@ Anything spoken is designed here, not bolted on. Two consequences:
 No hue does double duty. This is the load-bearing decision in the palette.
 
 *Superseded in part 2026-10-03 (§12.2): blue → FarmMate navy; signal
-values darkened FarmMate hues; contrast now 72 pairings. The disjoint-roles
+values darkened FarmMate hues; contrast now 96 pairings × 2 schemes × 2
+palettes (E01-S17). The disjoint-roles
 rule itself is kept.*
 
 | Hue | Token | Means | Never means |
@@ -112,8 +113,9 @@ those four channels alone carries the meaning.
 
 ### Contrast is verified, not asserted
 
-`node scripts/check-contrast.mjs --strict` checks all 46 pairings the system
-actually uses, each against a floor chosen for its use:
+`node scripts/check-contrast.mjs --strict` checks all 96 pairings the system
+actually uses, in both schemes and in **every** palette (E01-S17: 96 × 2 × 2 =
+384 checks), each against a floor chosen for its use:
 
 - **7:1 (AAA)** — the count, and all primary operator text
 - **4.5:1 (AA)** — secondary text, chips, button labels
@@ -440,8 +442,9 @@ the 4.5 floor, for margin in direct sun:
 | white on brandGreen `#00AA7D` (FAB) | 2.98 ✗ (3:1 glyph) | fill `#008F6C` | 4.08 | — |
 
 FarmMate navy text (`#002858`) passes at 14.54:1 on white, so `ink` takes it
-unchanged. `npm run contrast` now checks **72 pairings (36 × 2 themes)**, all
-passing.
+unchanged. `npm run contrast` checked **72 pairings (36 × 2 themes)** at
+adoption; since E01-S17 it checks **384 (96 pairings × 2 themes × 2 palettes)**,
+all passing.
 
 **Dark theme.** FarmMate has none; the dark palette is this repo's,
 re-derived from FarmMate hues (navy-tinted grounds `#0B1520`, light navy
