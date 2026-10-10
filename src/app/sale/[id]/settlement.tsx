@@ -148,6 +148,44 @@ export default function SettlementScreen() {
   }
 
   const s = result;
+  // The derivation sits under the money on a phone; rendered in that order so screen readers and Tab follow what is seen.
+  const derivation = (
+    <View style={[card(t), narrow ? null : { flex: 1.1 }]}>
+      <CardTitle>{msg('settle.derivation')}</CardTitle>
+      {s.steps.slice(0, 6).map((step) => (
+        <View
+          key={step.key}
+          testID={`step-${step.key}`}
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            gap: t.space.md,
+            paddingVertical: t.space.sm,
+            borderBottomWidth: step.key === 'gross' ? 0 : t.border.hair,
+            borderBottomColor: t.color.ruleFaint,
+            borderTopWidth: step.key === 'gross' ? t.border.thick : 0,
+            borderTopColor: t.color.ink,
+          }}
+        >
+          <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+            {step.thai}
+          </Text>
+          <Text
+            style={{
+              fontFamily: t.font.family.sans,
+              fontSize: step.key === 'gross' ? t.font.size.lead : t.font.size.small,
+              fontWeight: t.font.weight.bold,
+              color: t.color.ink,
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {step.value}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
@@ -172,47 +210,12 @@ export default function SettlementScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{
           padding: t.space.md,
-          flexDirection: narrow ? 'column-reverse' : 'row',
+          flexDirection: narrow ? 'column' : 'row',
           alignItems: narrow ? 'stretch' : 'flex-start',
           gap: t.space.md,
         }}
       >
-        {/* ---- the derivation (under the money on a phone) ---- */}
-        <View style={[card(t), narrow ? null : { flex: 1.1 }]}>
-          <CardTitle>{msg('settle.derivation')}</CardTitle>
-          {s.steps.slice(0, 6).map((step) => (
-            <View
-              key={step.key}
-              testID={`step-${step.key}`}
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'baseline',
-                gap: t.space.md,
-                paddingVertical: t.space.sm,
-                borderBottomWidth: step.key === 'gross' ? 0 : t.border.hair,
-                borderBottomColor: t.color.ruleFaint,
-                borderTopWidth: step.key === 'gross' ? t.border.thick : 0,
-                borderTopColor: t.color.ink,
-              }}
-            >
-              <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
-                {step.thai}
-              </Text>
-              <Text
-                style={{
-                  fontFamily: t.font.family.sans,
-                  fontSize: step.key === 'gross' ? t.font.size.lead : t.font.size.small,
-                  fontWeight: t.font.weight.bold,
-                  color: t.color.ink,
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                {step.value}
-              </Text>
-            </View>
-          ))}
-        </View>
+        {narrow ? null : derivation}
 
         {/* ---- owner total, leading ---- */}
         <View style={{ flex: narrow ? undefined : 1, gap: t.space.md }}>
@@ -288,6 +291,7 @@ export default function SettlementScreen() {
             <DeductionForm onAdd={addDeduction} />
           </View>
         </View>
+        {narrow ? derivation : null}
       </ScrollView>
 
       <View
@@ -428,7 +432,7 @@ function MoneyCards({ saleId, settlement }: { saleId: string; settlement: Settle
       <View style={card(t)}>
         <RoundingCard r={r} />
       </View>
-      <View style={[card(t), { backgroundColor: t.color.brandCream }]}>
+      <View style={card(t)}>
         <SaleAccountCard saleId={saleId} ownerSatang={r.result.ownerSatang} ready={r.ready} />
       </View>
     </>

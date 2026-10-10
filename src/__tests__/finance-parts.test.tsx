@@ -66,6 +66,12 @@ describe('BigAmount and Fact', () => {
     expect(screen.getByText('สวนต้องคืนรวม')).toBeTruthy();
   });
 
+  it('an unknown total reads ไม่ทราบ, never 0.00 (SYNC-12)', () => {
+    wrap(<BigAmount satang={0} unknown caption="ยอดขายรวม" testID="big" />);
+    expect(screen.getByTestId('big').props.children).toBe('ไม่ทราบ');
+    expect(screen.queryByText('บาท')).toBeNull();
+  });
+
   it('one fact per line with its lead mark (D-70)', () => {
     wrap(<Fact mark="date">15 ก.ย. 2569</Fact>);
     expect(screen.getByText('15 ก.ย. 2569')).toBeTruthy();

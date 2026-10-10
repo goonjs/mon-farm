@@ -50,7 +50,7 @@ export default function HistoryScreen() {
         ) : (
           <>
             <Card>
-              <BigAmount testID="history-total-amount" satang={h.totalSatang} caption={msg('hist.title')}>
+              <BigAmount testID="history-total-amount" satang={h.totalSatang} unknown={h.unpricedCount === h.visible.length} caption={msg('hist.totalCaption')}>
                 <Note testID="history-total">
                   {msg('hist.total', { n: h.visible.length, kg: kg(h.totalNetG), amount: formatSatang(h.totalSatang) })}
                   {h.unpricedCount ? ` · ${msg('hist.unpriced', { n: h.unpricedCount })}` : ''}
