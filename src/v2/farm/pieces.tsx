@@ -250,6 +250,7 @@ export function ToggleChip({
       testID={testID}
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
+      aria-pressed={on}
       onPress={onPress}
       style={{
         minHeight: t.target.min,

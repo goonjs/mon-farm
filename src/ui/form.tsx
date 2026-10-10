@@ -43,6 +43,8 @@ export function SegmentedControl<T extends string>({
             testID={`${testID}-${o.value}`}
             accessibilityRole="radio"
             accessibilityState={{ checked: on }}
+            // react-native-web reads aria-* only; without this the web build never says which is on.
+            aria-checked={on}
             onPress={() => onChange(o.value)}
             style={{
               flex: 1,
@@ -97,6 +99,8 @@ export function RadioCard({
       testID={testID}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected, disabled: !!disabled }}
+      aria-checked={selected}
+      aria-disabled={!!disabled}
       onPress={onPress}
       disabled={disabled}
       style={{

@@ -178,7 +178,7 @@ function TapperShare({ tapperId }: { tapperId: string }) {
           value={pct}
           onChangeText={setPct}
           aside={
-            <AppText testID="share-owner" variant="bodySm">
+            <AppText testID="share-owner" variant="bodySm" style={{ flexShrink: 0 }}>
               {parsed.ok ? msg('share.ownerGets', { n: 100 - parsed.tapperPct }) : ''}
             </AppText>
           }
