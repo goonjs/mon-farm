@@ -71,3 +71,17 @@ describe('BottomSheet is modal (review S1)', () => {
     expect(panel.props.accessibilityLabel).toBeTruthy();
   });
 });
+
+describe('BottomSheet action (Save in the title row)', () => {
+  it('shows the action next to the title and fires it', () => {
+    const onPress = jest.fn();
+    wrap(
+      <BottomSheet open onClose={jest.fn()} title="เพิ่ม" testID="sheet" action={{ label: 'บันทึก', testID: 'sheet-save', onPress }}>
+        <Text>body</Text>
+      </BottomSheet>,
+    );
+    expect(screen.getByTestId('sheet-save').props.accessibilityLabel).toBe('บันทึก');
+    fireEvent.press(screen.getByTestId('sheet-save'));
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+});
