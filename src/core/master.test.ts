@@ -22,6 +22,7 @@ import {
   tapperOn,
   activePoints,
   activeProperty,
+  leaveDayProblem,
   planStarterPoints,
   pointNameTaken,
   showStarterButton,
@@ -373,6 +374,28 @@ describe('tapper assignments — E03-S05 (MD-4, D-63)', () => {
     log()
       .master({ t: 'property_added', propertyId: 'f1', name: 'ก', crop: 'rubber' })
       .master({ t: 'point_added', pointId: 'p1', propertyId: 'f1', name: 'จุด 1' });
+
+  it('a last day ("leaving, no replacement") must fall on a tapper still in place, not before they started', () => {
+    expect(leaveDayProblem(projectMaster(base().build()), 'p1', '2026-10-20', '2026-10-10')).toBe('noTapper');
+    const s = projectMaster(
+      base()
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p1', tapperId: 'nat', from: '2026-10-01' })
+        .build(),
+    );
+    const today = '2026-10-10';
+    expect(leaveDayProblem(s, 'p1', null, today)).toBe('date');
+    expect(leaveDayProblem(s, 'p1', '2026-09-15', today)).toBe('beforeStart'); // red's days, before nat started
+    expect(leaveDayProblem(s, 'p1', '2026-10-01', today)).toBeNull();
+    expect(leaveDayProblem(s, 'p1', '2026-12-31', today)).toBeNull();
+    const vacant = projectMaster(
+      base()
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+        .master({ t: 'tapper_unassigned', assignmentId: 'a2', pointId: 'p1', from: '2026-11-01' })
+        .build(),
+    );
+    expect(leaveDayProblem(vacant, 'p1', '2026-11-05', today)).toBe('noTapper');
+  });
 
   it('no assignment → no tapper', () => {
     expect(tapperOn(projectMaster(base().build()), 'p1', '2026-10-01')).toBeNull();

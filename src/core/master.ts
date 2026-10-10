@@ -620,6 +620,20 @@ export function blankStartAllowed(state: MasterState, pointId: string): boolean 
   return liveChanges(state, pointId).length === 0;
 }
 
+/**
+ * Why a last day for "leaving, no replacement" cannot be used, or null: no
+ * date; nobody taps the point that day; or the day lies in a tapper's
+ * stretch that has already ended — before the current tapper started — so
+ * ending it would rewrite who tapped before (D-63).
+ */
+export function leaveDayProblem(state: MasterState, pointId: string, lastDay: string | null, today: string): 'date' | 'noTapper' | 'beforeStart' | null {
+  if (!lastDay) return 'date';
+  const seg = pointTimeline(state, pointId).find((x) => (x.from === null || x.from <= lastDay) && (x.to === null || x.to >= lastDay));
+  if (!seg) return 'noTapper';
+  if (seg.to !== null && seg.to < today) return 'beforeStart';
+  return null;
+}
+
 /** "No tapper from X" changes not yet started — listed so they can be cancelled (D-74 F3). */
 export function plannedVacancies(state: MasterState, pointId: string, today: string): { assignmentId: string; from: string }[] {
   return liveChanges(state, pointId)

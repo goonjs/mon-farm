@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
-import { dayAfter, thaiDayInput, todayIso } from '../core/master';
+import { dayAfter, dayBefore, thaiDayInput, todayIso } from '../core/master';
 import { FarmsScreen, PropertyScreen } from '../v2/farm/farms-screens';
 import { PointScreen, PointsScreen, PointsWizardScreen } from '../v2/farm/points-screens';
 import type { MasterStore } from '../store/master-store';
@@ -291,6 +291,44 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
       unmount();
     }
     expect((await m.state()).points).toEqual([]);
+  });
+
+  it('ลาออก: the last day is checked like the others — a date, a tapper in place, not before they started', async () => {
+    const m = master();
+    const farm = await m.addProperty({ name: 'สวน', crop: 'rubber' });
+    const daeng = await m.create('แดง', ['tapper']);
+    const nat = await m.create('นัด', ['tapper']);
+    const empty = await m.addPoint(farm.id, 'จุดว่าง');
+    const pt = await m.addPoint(farm.id, 'จุด 1');
+    await m.assignTapper(pt.id, daeng.id, null);
+    let tenAgo = TODAY;
+    for (let i = 0; i < 10; i++) tenAgo = dayBefore(tenAgo);
+    await m.assignTapper(pt.id, nat.id, tenAgo);
+    const before = (await m.state()).assignments.length;
+
+    mockParams.current = { id: empty.id };
+    const { unmount } = wrap(<PointScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('plan-change'));
+    fireEvent.press(screen.getByTestId('plan-leave'));
+    fireEvent.changeText(screen.getByTestId('plan-to'), thaiDayInput(ahead(5)));
+    await press('plan-save');
+    expect(within(screen.getByTestId('plan-to-error')).getByText('วันนั้นจุดนี้ไม่มีคนกรีด')).toBeTruthy();
+    unmount();
+
+    mockParams.current = { id: pt.id };
+    wrap(<PointScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('plan-change'));
+    fireEvent.press(screen.getByTestId('plan-leave'));
+    fireEvent.changeText(screen.getByTestId('plan-to'), thaiDayInput(dayBefore(dayBefore(tenAgo))));
+    await press('plan-save');
+    expect(within(screen.getByTestId('plan-to-error')).getByText('ก่อนวันที่คนกรีดตอนนี้เริ่ม')).toBeTruthy();
+    expect((await m.state()).assignments).toHaveLength(before);
+
+    fireEvent.changeText(screen.getByTestId('plan-to'), thaiDayInput(ahead(5)));
+    await press('plan-save');
+    expect((await m.state()).assignments).toHaveLength(before + 1);
   });
 
   it('renames and soft-deletes a point', async () => {

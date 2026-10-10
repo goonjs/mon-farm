@@ -28,6 +28,7 @@ import {
   dayAfter,
   dayBefore,
   filterPeople,
+  leaveDayProblem,
   parseThaiDay,
   planStarterPoints,
   plannedVacancies,
@@ -466,6 +467,7 @@ function PlanForm({ state, pointId, replacing, onSaved }: { state: MasterState; 
   const day = useDay();
   const [mode, setMode] = useState<'new' | 'leave'>('new');
   const [tapperId, setTapperId] = useState<string | null>(null);
+  const [today] = useState(() => todayIso(Date.now()));
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [tried, setTried] = useState(false);
@@ -477,7 +479,8 @@ function PlanForm({ state, pointId, replacing, onSaved }: { state: MasterState; 
   const toDay = parseThaiDay(to);
   const blankOk = blankStartAllowed(state, pointId) && !replacing;
   const fromBad = from.trim() ? !fromDay : !blankOk;
-  const valid = mode === 'new' ? !!tapperId && !fromBad : !!toDay;
+  const leaveProblem = leaveDayProblem(state, pointId, toDay, today);
+  const valid = mode === 'new' ? !!tapperId && !fromBad : !leaveProblem;
   const outgoing = fromDay ? activeTapperOn(state, pointId, fromDay) : null;
   const incoming = state.people.find((p) => p.id === tapperId);
 
@@ -525,7 +528,17 @@ function PlanForm({ state, pointId, replacing, onSaved }: { state: MasterState; 
       <RadioCard testID="plan-leave" selected={mode === 'leave'} title={msg('assign.leave')} detail={msg('assign.leaveHint')} onPress={() => setMode('leave')} />
       {mode === 'leave' ? (
         <View style={{ paddingLeft: t.space.xl }}>
-          <TextField testID="plan-to" label={msg('assign.toLabel')} value={to} onChangeText={setTo} error={tried && !toDay ? msg('assign.badDate') : undefined} />
+          <TextField
+            testID="plan-to"
+            label={msg('assign.toLabel')}
+            value={to}
+            onChangeText={setTo}
+            error={
+              tried && leaveProblem
+                ? msg(leaveProblem === 'date' ? 'assign.badDate' : leaveProblem === 'noTapper' ? 'assign.leaveNoTapper' : 'assign.leaveBeforeStart')
+                : undefined
+            }
+          />
         </View>
       ) : null}
       <SaveFailed show={write.failed} />
