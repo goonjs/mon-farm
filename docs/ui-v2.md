@@ -8,10 +8,16 @@ through `src/theme`.
 
 ## Import rule
 
-`src/ui/**`, `src/v2/**` and `src/app/v2/**` must not import `src/components/**`
-or `src/constants/theme`. The ESLint `no-restricted-imports` rule in
-`eslint.config.js` enforces this, and `scripts/ui-import-rule.test.ts` tests the
-rule. Screens import components from `src/ui` (the `index.ts`) and nowhere else.
+`src/ui/**`, `src/v2/**` and `src/app/v2/**` must not reach old UI:
+`src/components/**`, `src/constants/theme.ts`, the template hooks
+`src/hooks/use-theme.ts` and `use-color-scheme(.web).ts`, or any screen in
+`src/app/**` outside `src/app/v2/**`. The `import/no-restricted-paths` rule in
+`eslint.config.js` enforces this. It matches the **resolved** path, so it
+catches relative and `@/` imports, `export … from`, `require()` and dynamic
+`import()`. A folder that is only named `components`, such as a future
+`src/ui/components`, is not blocked. `scripts/ui-import-rule.test.ts` lints one
+fixture for each kind of violation, plus the allowed imports. Screens import
+components from `src/ui` (the `index.ts`) and nowhere else.
 Colours come from `theme.color.<role>` only; `scripts/no-raw-colour.test.ts`
 fails on any hex, `rgb()` or `hsl()` value in `src/`, in any letter case.
 
