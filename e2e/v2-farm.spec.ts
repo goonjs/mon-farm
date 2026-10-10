@@ -214,7 +214,7 @@ test('/ → splash → home → farm settings: add and edit everything offline, 
   await expect(id('hub-people')).toContainText('4 คน');
   await expect(id('hub-buyers')).toContainText('2 ราย');
   await expect(id('hub-farms')).toContainText('2 สวน');
-  await expect(id('hub-farms')).toContainText('4 จุดชั่ง');
+  await expect(id('hub-farms')).toContainText('5 จุดชั่ง');
   await expect(id('sync-pill')).toContainText('รอส่ง');
   await shot(page, '02-farm-hub');
 
