@@ -23,6 +23,7 @@ import { Link, type Href } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
 import { Button } from '../components/chrome';
+import { FieldLabel, SegmentedControl } from '../components/ui/form';
 import { ScreenHeader } from '../components/ui/screen-header';
 import { useSyncStatus } from '../sync/use-sync-status';
 import { useI18n, useT, type Locale } from '../i18n';
@@ -118,29 +119,9 @@ function Choice<T extends string>({
 
   return (
     <View style={{ gap: t.space.xs }}>
-      <Text
-        style={{
-          fontFamily: t.font.family.mono,
-          fontSize: t.font.size.micro,
-          letterSpacing: t.font.tracking.wide,
-          color: t.color.inkSoft,
-        }}
-      >
-        {label}
-      </Text>
+      <FieldLabel>{label}</FieldLabel>
 
-      <View style={{ flexDirection: 'row', gap: t.space.xs }}>
-        {options.map((o) => (
-          <Button
-            key={o.value}
-            testID={`${testID}-${o.value}`}
-            variant={o.value === value ? 'primary' : 'ghost'}
-            onPress={() => onChange(o.value)}
-          >
-            {o.label}
-          </Button>
-        ))}
-      </View>
+      <SegmentedControl testID={testID} value={value} onChange={onChange} options={options} />
 
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkFaint }}>
         {note}

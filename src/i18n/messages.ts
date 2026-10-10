@@ -293,6 +293,9 @@ const th = {
   'menu.sales': 'การขายทั้งหมด',
   'menu.shared': 'ของกลุ่ม · ทุกเครื่องเห็นเหมือนกัน',
   'menu.device': 'เฉพาะเครื่องนี้ · ไม่ส่งไปเครื่องอื่น',
+
+  // ── Form primitives ─────────────────────────────────────────────────────
+  'form.required': 'จำเป็น',
   'deleted.title': 'ที่ลบแล้ว',
   'deleted.back': '← รายการ',
   'deleted.empty': 'ไม่มีรายการที่ลบ',
@@ -596,6 +599,8 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'menu.sales': 'all sales',
   'menu.shared': 'shared · same on every device',
   'menu.device': 'this device only · not sent elsewhere',
+
+  'form.required': 'required',
   'deleted.title': 'deleted',
   'deleted.back': '← list',
   'deleted.empty': 'nothing deleted',
