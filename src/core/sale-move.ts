@@ -6,6 +6,7 @@
 
 import { openBasketIn, stdNetOfLog, tapperChangeClosures, type OpenBasket } from './bridge';
 import type { BasketPair, MasterState, SaleSettings } from './master';
+import { compareEvents } from './order';
 import { pointGateNeeded } from './scale-check';
 import type { NumberingMode, SaleEvent, SaleState, ZeroCheckMode } from './types';
 
@@ -39,13 +40,18 @@ export function planMove(
 
 /**
  * The net + basket pair a point new to the sale is weighed with: the one
- * picked at the start (`pairId`), else the sale's last point's, else the
+ * picked at the start (`pairId`, or the sale's `pair_set`), else the sale's last point's, else the
  * group default (MD-7).
  */
 export function pairForNewPoint(events: readonly SaleEvent[], settings: SaleSettings, pairId?: string | null): BasketPair {
   const picked = pairId ? settings.pairs.find((p) => p.pairId === pairId) : undefined;
   if (picked) return picked;
   let last: BasketPair | null = null;
-  for (const e of events) if (e.kind === 'sys' && e.payload.t === 'pile_added') last = { pairId: '', netG: e.payload.stdNetG, basketG: e.payload.tareG };
+  for (const e of [...events].sort(compareEvents)) {
+    if (e.kind !== 'sys') continue;
+    if (e.payload.t === 'pile_added') last = { pairId: '', netG: e.payload.stdNetG, basketG: e.payload.tareG };
+    // The pair picked at the start, kept in the log so a reload keeps it (review #10).
+    if (e.payload.t === 'pair_set') last = { pairId: '', netG: e.payload.netG, basketG: e.payload.basketG };
+  }
   return last ?? settings.pairs.find((p) => p.isDefault) ?? settings.pairs[0];
 }

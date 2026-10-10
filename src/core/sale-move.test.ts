@@ -88,4 +88,14 @@ describe('pairForNewPoint (MD-7)', () => {
     const ev = new LogBuilder('s').sys({ t: 'pile_added', pileId: 'p1', zoneId: 'fA', name: 'p1', tareG: 3_000, stdNetG: 60_000 }).build();
     expect(pairForNewPoint(ev, settings, null)).toMatchObject({ netG: 60_000, basketG: 3_000 });
   });
+
+  it('the pair the sale started with is read from the log, not the URL (review #10)', () => {
+    const ev = new LogBuilder('s').sys({ t: 'pair_set', netG: 60_000, basketG: 3_000 }).build();
+    expect(pairForNewPoint(ev, settings, null)).toMatchObject({ netG: 60_000, basketG: 3_000 });
+    const later = new LogBuilder('s')
+      .sys({ t: 'pair_set', netG: 60_000, basketG: 3_000 })
+      .sys({ t: 'pile_added', pileId: 'p1', zoneId: 'fA', name: 'p1', tareG: 2_000, stdNetG: 50_000 })
+      .build();
+    expect(pairForNewPoint(later, settings, null)).toMatchObject({ netG: 50_000, basketG: 2_000 });
+  });
 });
