@@ -14,9 +14,11 @@
 
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 
-import { Button, CardLabel, TopBar, cardStyle } from '../../../components/chrome';
+import { Button, CardLabel, cardStyle } from '../../../components/chrome';
+import { ScreenHeader } from '../../../components/ui/screen-header';
+import { useSyncStatus } from '../../../sync/use-sync-status';
 import { DeductionForm, type DeductionFormInput } from '../../../components/DeductionForm';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { WorkerPayoutCard } from '../../../components/WorkerPayoutCard';
@@ -29,6 +31,7 @@ import { useTheme } from '../../../theme';
 export default function SettlementScreen() {
   const t = useTheme();
   const msg = useT();
+  const sync = useSyncStatus();
   const { events, state, append } = useSale();
   const router = useRouter();
   const [reopening, setReopening] = useState(false);
@@ -98,13 +101,10 @@ export default function SettlementScreen() {
         : 'Something in the log could not be settled.';
     return (
       <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-        <TopBar
-          crumb={msg('settle.title')}
-          right={
-            <Link href="/" asChild>
-              <Button testID="to-sale-list">{msg('settle.list')}</Button>
-            </Link>
-          }
+        <ScreenHeader
+          title={msg('settle.title')}
+          back={{ label: msg('settle.list'), testID: 'to-sale-list', href: '/' }}
+          sync={sync}
         />
         <View style={{ flex: 1, padding: t.space.xl, justifyContent: 'center' }}>
           <Text
@@ -142,13 +142,11 @@ export default function SettlementScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar
-        crumb={`${state.parties?.farmName ?? ''} ▸ ${msg('settle.title')}`}
-        right={
-          <Link href="/" asChild>
-            <Button testID="to-sale-list">{msg('settle.list')}</Button>
-          </Link>
-        }
+      <ScreenHeader
+        title={msg('settle.title')}
+        subtitle={state.parties?.farmName || undefined}
+        back={{ label: msg('settle.list'), testID: 'to-sale-list', href: '/' }}
+        sync={sync}
       />
 
       {/* alignItems: 'flex-start' so each column is as tall as its own content.

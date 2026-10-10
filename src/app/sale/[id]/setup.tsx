@@ -34,7 +34,9 @@ import { useEffect, useState } from 'react';
 import { Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Button, CardLabel, Pill, TopBar, cardStyle } from '../../../components/chrome';
+import { Button, CardLabel, Pill, cardStyle } from '../../../components/chrome';
+import { ScreenHeader } from '../../../components/ui/screen-header';
+import { useSyncStatus } from '../../../sync/use-sync-status';
 import { PeoplePicker } from '../../../components/PeoplePicker';
 import { newId } from '../../../lib/id';
 import { useSale } from '../../../store/SaleProvider';
@@ -52,6 +54,7 @@ import type { Zone } from '../../../core/types';
 export default function SetupScreen() {
   const t = useTheme();
   const msg = useT();
+  const sync = useSyncStatus();
   const router = useRouter();
   const { saleId, state, ready } = useSale();
 
@@ -69,26 +72,25 @@ export default function SetupScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar
-        crumb={msg('setup.title')}
-        right={
-          // router.back(), not a Link — see the same note on the counter and
-          // settlement screens. The list screen this was pushed from is
-          // already on the stack; reusing it is what keeps repeated
-          // list → setup → list round trips from stacking up hidden screens.
-          //
-          // Deliberately does NOT flush pending saves: leaving to the list is
-          // the abandon path (S17 — "starting a new sale writes no event;
-          // leaving the stub loses nothing"), and the split card auto-saves
-          // its 50/50 default with no interaction at all, so a completely
-          // untouched sale can still have a save pending in its first
-          // AUTOSAVE_DELAY_MS. Flushing here would write that default for a
-          // sale the operator never touched, and it would then wrongly stop
-          // appearing as empty. Only the forward path (start counting) flushes.
-          <Button testID="back-to-list" onPress={() => router.back()}>
-            {msg('setup.backToList')}
-          </Button>
-        }
+      {/*
+       * router.back(), not a Link — see the same note on the counter and
+       * settlement screens. The list screen this was pushed from is
+       * already on the stack; reusing it is what keeps repeated
+       * list → setup → list round trips from stacking up hidden screens.
+       *
+       * Deliberately does NOT flush pending saves: leaving to the list is
+       * the abandon path (S17 — "starting a new sale writes no event;
+       * leaving the stub loses nothing"), and the split card auto-saves
+       * its 50/50 default with no interaction at all, so a completely
+       * untouched sale can still have a save pending in its first
+       * AUTOSAVE_DELAY_MS. Flushing here would write that default for a
+       * sale the operator never touched, and it would then wrongly stop
+       * appearing as empty. Only the forward path (start counting) flushes.
+       */}
+      <ScreenHeader
+        title={msg('setup.title')}
+        back={{ label: msg('setup.backToList'), testID: 'back-to-list', onPress: () => router.back() }}
+        sync={sync}
       />
       <ScrollView
         style={{ flex: 1 }}
