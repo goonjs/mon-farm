@@ -145,16 +145,15 @@ are deliberately below 3:1. `ruleStrong` is for boundaries that tell you where a
 control begins: input borders, unfilled buttons, the dial track. If the line is
 the only thing defining a target, it must be `ruleStrong`.
 
-### วิธีเปลี่ยนสี (ข้อเสนอ — รอ E01-S17)
+### วิธีเปลี่ยนสี
 
-*ข้อเสนอ ยังไม่ใช่กติกา — เจ้าของยังไม่ได้ตกลง AC ของ [`stories/e01-s17-semantic-color-tokens.md`](../stories/e01-s17-semantic-color-tokens.md)*
-
-- **วันนี้ (mockup เท่านั้น):** mockup v1.1.0 อ่านสีจาก `tokens.css` + [`mockups/palette-proposal.css`](mockups/palette-proposal.css) ผ่าน `var(--color-<บทบาท>)` เท่านั้น ไม่มี hex ในไฟล์ mockup
-  สลับชุดสีด้วย `data-palette="b"` / โหมดด้วย `data-theme="dark"` บน `<html>` — ปุ่มมุมขวาล่าง หรือ `?palette=b&theme=dark`
-- `palette-proposal.css` เขียนมือ ไม่ได้ generate และ CI ไม่ตรวจ — ลบ/แทนด้วยไฟล์จาก `emit-tokens.mjs` เมื่อ E01-S17 ตกลงแล้ว
-- **หลัง E01-S17 ตกลง (แอป):** เปลี่ยนทั้งชุดด้วยค่าคงที่ตัวเดียว `ACTIVE_PALETTE` ใน `design/tokens.ts` (`'farmmate'` / `'instrument'`) แล้ว `npm run tokens` + `npm run contrast`
-- หน้าจอใช้แค่ชื่อบทบาท (`theme.color.<ชื่อ>` / `var(--color-<ชื่อ>)`) — เปลี่ยนสีที่เดียว ไม่ต้องแก้หน้าจอ
-- สีไม่เป็นตัวบอกความหมายอย่างเดียว: สถานะมีไอคอน + คำ, เงินมี + / − และคำ, สีประจำกลุ่มมีชื่อกำกับเสมอ
+สี 2 ชั้นใน `design/tokens.ts` (E01-S17): `PALETTES` (ramp ดิบ) → `colorFor` (ตารางบทบาท 53 ชื่อ) → `tokens.color`
+1. เปลี่ยนทั้งชุด: แก้ `ACTIVE_PALETTE` เป็น `'farmmate'` (A, ค่าเริ่มต้น) หรือ `'instrument'` (B) — บรรทัดเดียว
+2. ปรับเฉด: แก้ hex ใน ramp ของ `PALETTES.<ชื่อ>` · ให้บทบาทใช้สีอื่น: แก้บรรทัดของบทบาทนั้นใน `colorFor` ที่เดียว
+3. รัน `npm run tokens` แล้ว `npm run contrast` (ตรวจทุก palette × light/dark) — commit `design/tokens.ts` กับ `docs/ux/tokens.css` ด้วยกัน
+4. หน้าจอใช้แค่ `theme.color.<บทบาท>` (เว็บ/mockup: `var(--color-<บทบาท>)`) — hex / `rgb()` / `hsl()` ใน `src/` ทำให้ CI แดง (`scripts/no-raw-colour.test.ts`)
+5. สีไม่เป็นตัวบอกความหมายอย่างเดียว: สถานะมีไอคอน + คำ, เงินมี + / − และคำ, สีประจำกลุ่มมีชื่อกำกับเสมอ
+6. mockup v1.1.0 ยังใช้ `mockups/palette-proposal.css` (เขียนมือ, `data-palette="b"`) — mockup ใหม่ให้ `@import` `tokens.css`
 
 ---
 
@@ -403,6 +402,10 @@ of state. Where a FarmMate colour failed a floor, its hue was kept and only
 its lightness reduced.
 
 ### 12.2 Palette (light — field mode)
+
+*Since E01-S17 the authoritative role list (53 names, light/dark, palettes A/B) is the
+table in [`stories/e01-s17-semantic-color-tokens.md`](../stories/e01-s17-semantic-color-tokens.md);
+this table is the FarmMate-adoption record. สีประจำกลุ่มและเงินเข้า/ออกไม่เป็นตัวบอกความหมายอย่างเดียว.*
 
 | Token | Value | FarmMate source | Role |
 |---|---|---|---|
