@@ -63,3 +63,14 @@ export function checkAppend(
     device: { ...device, nextDeviceSeq: deviceSeq + 1 },
   };
 }
+
+/**
+ * The pull rule: true when the event must be inserted, false when the same
+ * content is already stored. Pulled events are compared whole, deviceSeq
+ * included — the server copy is the one this device sent or another wrote.
+ */
+export function checkPulled(event: SaleEvent, existing: SaleEvent | undefined): boolean {
+  if (!existing) return true;
+  if (canonicalJson(existing) === canonicalJson(event)) return false;
+  throw new IntegrityError(`Event ${event.id} already exists with different content.`);
+}

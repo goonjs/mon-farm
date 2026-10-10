@@ -53,7 +53,17 @@ Status: In Progress
 - [x] typecheck + test:core ผ่าน; CI มีขั้น `test:rules` (JDK 21 + cache emulator) — รอ CI จริงของ PR
 - [x] reviewer อิสระ (agent แยก session) ตรวจแล้ว — ดู Code review; แก้ข้อ major ทั้งสองแล้ว
 - [ ] deploy rules เข้า database `dev` — ต้องมี database `dev` และ credential ก่อน (E01-S07; owner สร้าง database) — เลื่อนตาม D-48 จนกว่าจะอัปเกรดแผน
-- [ ] client adapter แปลง "มีอยู่แล้วและ canonical JSON เท่ากัน" เป็นสำเร็จ (AC ข้อ 4) — อยู่ใน E01-S09 (outbox) ไม่ได้ทำใน PR นี้; rules ฝั่งนี้ปฏิเสธการสร้างซ้ำตามที่ test ยืนยันแล้ว
+- [x] client adapter แปลง "มีอยู่แล้วและ canonical JSON เท่ากัน" เป็นสำเร็จ (AC ข้อ 4) — ทำใน `SyncEngine` (E01-S09) กับ fake ที่จำลอง rules; adapter Firestore จริงรอ E02/D-48
+
+### สถานะ 2026-10-09 (overnight, team INFRA)
+
+- AC4 ฝั่ง client: ทำใน `SyncEngine` (E01-S09, branch `feature/e01-sync`) — batch ถูกปฏิเสธ (`permission-denied`) → ส่งทีละตัว →
+  `fetch` เทียบ canonical JSON: เท่ากัน = สำเร็จ (ack หาย), ต่าง = error ความถูกต้อง ไม่ทับ, ไม่มี = ถูกปฏิเสธจริง; test
+  "an ack lost in transit…" / "the server holding different content…" กับ `FakeRemote` ที่จำลอง rules create-only
+  (เขียน id ที่มีแล้ว = `permission-denied`) — adapter Firestore จริงยังรอ envelope + E02 + database `dev` (ดู E01-S09)
+- `npm run test:rules` บน emulator ใน sandbox: 57/57 ผ่าน (2026-10-09) — ไม่ได้ deploy rules และไม่ได้แตะโปรเจกต์ cloud
+- D4: `overrides` grpc-js ^1.14.5 / basic-ftp ^6.2.1 **มีอยู่แล้ว** ใน `package.json` บน `dev` — หมายเหตุ "ยังไม่พบ" ข้างบนล้าสมัย
+- เหลือ: deploy rules เข้า database `dev` (D-48) และอนุมัติ deploy prod — ของเจ้าของ
 
 ### สถานะ 2026-10-03
 
