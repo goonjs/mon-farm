@@ -51,7 +51,7 @@ export const SALE_STEPS: readonly V2Section[] = [
 ];
 
 /** Sections with their own route file; the rest render the placeholder. */
-export const BUILT_SECTIONS: ReadonlySet<string> = new Set(['farm', 'people', 'buyers', 'farms', 'points', 'shares', 'sale-settings', 'expenses', 'debts', 'device', 'sales']);
+export const BUILT_SECTIONS: ReadonlySet<string> = new Set(['farm', 'people', 'buyers', 'farms', 'points', 'shares', 'sale-settings', 'expenses', 'debts', 'device', 'sales', 'sale/start']);
 
 export const V2_HOME = '/v2' as Href;
 

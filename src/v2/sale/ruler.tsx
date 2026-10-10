@@ -41,7 +41,7 @@ export function Ruler({
   };
   const ticks: number[] = [];
   for (let kg = min; kg <= max; kg++) ticks.push(kg);
-  const label = (kg: number) => kg % 5 === 0 && Math.abs(kg - value) > 2 && Math.abs(kg - mark) > 2;
+  const label = (kg: number) => kg % 5 === 0 && Math.abs(kg - value) > 3 && Math.abs(kg - mark) > 3;
 
   return (
     <View

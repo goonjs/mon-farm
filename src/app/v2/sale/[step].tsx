@@ -1,11 +1,11 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
 
-import { findSection, SALE_STEPS, V2_HOME } from '../../../v2/routes';
+import { BUILT_SECTIONS, findSection, SALE_STEPS, V2_HOME } from '../../../v2/routes';
 import { Placeholder } from '../../../v2/placeholder-screen';
 
 /** Pre-render one page per sale step for the static web export. */
 export function generateStaticParams() {
-  return SALE_STEPS.map((s) => ({ step: s.slug }));
+  return SALE_STEPS.filter((s) => !BUILT_SECTIONS.has(`sale/${s.slug}`)).map((s) => ({ step: s.slug }));
 }
 
 /** /v2/sale/<step>: a placeholder until the step's real screen exists. */
