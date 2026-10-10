@@ -143,6 +143,17 @@ are deliberately below 3:1. `ruleStrong` is for boundaries that tell you where a
 control begins: input borders, unfilled buttons, the dial track. If the line is
 the only thing defining a target, it must be `ruleStrong`.
 
+### วิธีเปลี่ยนสี (ข้อเสนอ — รอ E01-S17)
+
+*ข้อเสนอ ยังไม่ใช่กติกา — เจ้าของยังไม่ได้ตกลง AC ของ [`stories/e01-s17-semantic-color-tokens.md`](../stories/e01-s17-semantic-color-tokens.md)*
+
+- **วันนี้ (mockup เท่านั้น):** mockup v1.1.0 อ่านสีจาก `tokens.css` + [`mockups/palette-proposal.css`](mockups/palette-proposal.css) ผ่าน `var(--color-<บทบาท>)` เท่านั้น ไม่มี hex ในไฟล์ mockup
+  สลับชุดสีด้วย `data-palette="b"` / โหมดด้วย `data-theme="dark"` บน `<html>` — ปุ่มมุมขวาล่าง หรือ `?palette=b&theme=dark`
+- `palette-proposal.css` เขียนมือ ไม่ได้ generate และ CI ไม่ตรวจ — ลบ/แทนด้วยไฟล์จาก `emit-tokens.mjs` เมื่อ E01-S17 ตกลงแล้ว
+- **หลัง E01-S17 ตกลง (แอป):** เปลี่ยนทั้งชุดด้วยค่าคงที่ตัวเดียว `ACTIVE_PALETTE` ใน `design/tokens.ts` (`'farmmate'` / `'instrument'`) แล้ว `npm run tokens` + `npm run contrast`
+- หน้าจอใช้แค่ชื่อบทบาท (`theme.color.<ชื่อ>` / `var(--color-<ชื่อ>)`) — เปลี่ยนสีที่เดียว ไม่ต้องแก้หน้าจอ
+- สีไม่เป็นตัวบอกความหมายอย่างเดียว: สถานะมีไอคอน + คำ, เงินมี + / − และคำ, สีประจำกลุ่มมีชื่อกำกับเสมอ
+
 ---
 
 ## 4. The public numeral
