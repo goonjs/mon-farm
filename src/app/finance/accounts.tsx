@@ -11,8 +11,8 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import { Button, TopBar } from '../../components/chrome';
-import { Chip, ChipRow, Input, Label, Note } from '../../components/finance/parts';
+import { Button } from '../../components/chrome';
+import { Chip, ChipRow, Fact, Input, Label, Note, ScreenHeader } from '../../components/finance/parts';
 import { checkAccountFields, projectAccounts, type Account } from '../../core/finance/accounts';
 import { BANKS } from '../../core/finance/promptpay';
 import type { AccountFields } from '../../core/finance/types';
@@ -52,7 +52,7 @@ export default function AccountsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar crumb={msg('acct.title')} right={<Button testID="accounts-back" onPress={() => router.back()}>{msg('common.back')}</Button>} />
+      <ScreenHeader testID="accounts" title={msg('acct.title')} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.md }}>
         {editing ? (
           <AccountForm
@@ -90,7 +90,8 @@ export default function AccountsScreen() {
                 padding: t.space.md,
                 borderRadius: t.radius.lg,
                 borderWidth: isDefault ? t.border.thick : t.border.hair,
-                borderColor: isDefault ? t.color.action : t.color.rule,
+                borderColor: isDefault ? t.color.action : t.color.ruleFaint,
+                backgroundColor: t.color.surfaceRaised,
                 opacity: a.deleted ? t.opacity.muted : 1,
               }}
             >
@@ -105,8 +106,9 @@ export default function AccountsScreen() {
                 ) : null}
                 {a.deleted ? <Note>{msg('acct.deleted')}</Note> : null}
               </View>
-              {a.bankCode ? <Note>{`${BANKS.find((b) => b.code === a.bankCode)?.name ?? a.bankCode} · ${a.accountNo} · ${a.accountName}`}</Note> : null}
-              {a.promptPay ? <Note>{`${msg('acct.show.pp')} · ${a.promptPay.id}`}</Note> : null}
+              {a.bankCode ? <Fact mark="money">{`${BANKS.find((b) => b.code === a.bankCode)?.name ?? a.bankCode} · ${a.accountNo}`}</Fact> : null}
+              {a.bankCode && a.accountName ? <Fact mark="person">{a.accountName}</Fact> : null}
+              {a.promptPay ? <Fact mark="check">{`${msg('acct.show.pp')} · ${a.promptPay.id}`}</Fact> : null}
               {a.conflicts.length ? <Note tone="reject">{msg('acct.conflict')}</Note> : null}
               {a.deleted ? (
                 <Button testID={`account-restore-${a.id}`} onPress={() => void setDeleted(a, false)}>{msg('acct.restore')}</Button>

@@ -130,6 +130,7 @@ export default function SaleListScreen() {
             onPress={() => setMenuOpen(false)}
           />
           <MenuItem testID="menu-expenses" label={msg('fin.open')} href="/finance/expenses" onPress={() => setMenuOpen(false)} />
+          <MenuItem testID="menu-history" label={msg('hist.open')} href="/history" onPress={() => setMenuOpen(false)} />
         </MenuSection>
         <MenuSection title={msg('menu.device')}>
           <MenuItem

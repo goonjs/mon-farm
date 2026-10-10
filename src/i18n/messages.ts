@@ -810,7 +810,7 @@ const th = {
   'acct.sale.note': 'หมายเหตุ',
   'acct.sale.none': 'ไม่กรอก',
   'acct.sale.notePlaceholder': 'เข้าบัญชีไหน',
-  'acct.sale.amount': 'ยอดโอนเข้าเจ้าของสวน {amount}',
+  'acct.sale.toAccount': 'โอนเข้าบัญชี',
   'acct.show': 'ให้คนรับซื้อยางดูบัญชี',
   'acct.show.title': 'โอนเข้าบัญชีนี้',
   'acct.show.amount': 'ยอดโอน',
@@ -837,6 +837,7 @@ const th = {
   // ── Sale history (E05-S06) ──────────────────────────────────────────────
   'hist.open': 'ประวัติการขาย',
   'hist.title': 'ประวัติการขาย',
+  'hist.totalCaption': 'ยอดขายรวม',
   'hist.empty': 'ยังไม่มีการขาย',
   'hist.total': 'รวม {n} การขาย · {kg} กก. · {amount} บาท',
   'hist.deleted': 'ที่ลบแล้ว {n} (กู้คืนได้)',
@@ -1668,7 +1669,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'acct.sale.note': 'note',
   'acct.sale.none': 'not recorded',
   'acct.sale.notePlaceholder': 'which account',
-  'acct.sale.amount': 'transfer to the owner {amount}',
+  'acct.sale.toAccount': 'to the account',
   'acct.show': 'show the buyer the account',
   'acct.show.title': 'transfer to this account',
   'acct.show.amount': 'amount',
@@ -1693,6 +1694,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
 
   'hist.open': 'sale history',
   'hist.title': 'sale history',
+  'hist.totalCaption': 'total sales',
   'hist.empty': 'no sales yet',
   'hist.total': '{n} sales · {kg} kg · {amount} baht',
   'hist.deleted': '{n} deleted (restorable)',
