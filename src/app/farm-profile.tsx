@@ -13,9 +13,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
-import { Link } from 'expo-router';
 
-import { Button, TopBar } from '../components/chrome';
+import { Button, cardStyle } from '../components/chrome';
+import { ScreenHeader } from '../components/ui/screen-header';
+import { useSyncStatus } from '../sync/use-sync-status';
 import { projectSale } from '../core/project';
 // Bare specifiers — Metro resolves each to its platform adapter; see the
 // note in SaleProvider.tsx for why a literal '.web'/'.native' import here
@@ -29,6 +30,7 @@ import { useTheme } from '../theme';
 export default function FarmProfileScreen() {
   const t = useTheme();
   const msg = useT();
+  const sync = useSyncStatus();
 
   const [zones, setZones] = useState<ProfileZone[] | null>(null); // null = loading
   const [hasPastSale, setHasPastSale] = useState(false);
@@ -79,13 +81,10 @@ export default function FarmProfileScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar
-        crumb={msg('farmProfile.title')}
-        right={
-          <Link href="/settings" asChild>
-            <Button testID="farm-profile-back">{msg('farmProfile.back')}</Button>
-          </Link>
-        }
+      <ScreenHeader
+        title={msg('farmProfile.title')}
+        back={{ label: msg('farmProfile.back'), testID: 'farm-profile-back', href: '/settings' }}
+        sync={sync}
       />
 
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.md }}>
@@ -96,10 +95,7 @@ export default function FarmProfileScreen() {
             {zones.length === 0 && hasPastSale ? (
               <View
                 style={{
-                  borderWidth: t.border.hair,
-                  borderColor: t.color.rule,
-                  borderRadius: t.radius.md,
-                  backgroundColor: t.color.surfaceRaised,
+                  ...cardStyle(t),
                   padding: t.space.md,
                   gap: t.space.sm,
                 }}
@@ -177,11 +173,8 @@ function ZoneCard({ zone, onChange }: { zone: ProfileZone; onChange: () => void 
     <View
       testID={`zone-${zone.id}`}
       style={{
-        borderWidth: t.border.hair,
-        borderColor: t.color.rule,
-        borderRadius: t.radius.md,
-        padding: t.space.sm,
-        backgroundColor: t.color.surfaceRaised,
+        ...cardStyle(t),
+        padding: t.space.md,
         gap: t.space.sm,
       }}
     >
