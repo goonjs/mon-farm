@@ -784,6 +784,23 @@ const th = {
   'sync.saleConflict': 'ข้อมูลขัดกัน',
   'sync.saleError': 'ส่งไม่สำเร็จ',
   'sync.retry': 'ลองใหม่',
+  // ── Dates (D-74 F14) ────────────────────────────────────────────────────
+  'date.short': '{day} {month} {year}',
+  'date.eraBe': 'พ.ศ.',
+  'date.eraCe': 'ค.ศ.',
+  'date.a11y': '{date} ({era}) แตะเพื่อแสดงเป็น {other}',
+  'date.month1': 'ม.ค.',
+  'date.month2': 'ก.พ.',
+  'date.month3': 'มี.ค.',
+  'date.month4': 'เม.ย.',
+  'date.month5': 'พ.ค.',
+  'date.month6': 'มิ.ย.',
+  'date.month7': 'ก.ค.',
+  'date.month8': 'ส.ค.',
+  'date.month9': 'ก.ย.',
+  'date.month10': 'ต.ค.',
+  'date.month11': 'พ.ย.',
+  'date.month12': 'ธ.ค.',
 } as const;
 
 /**
@@ -1485,6 +1502,22 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'sync.saleConflict': 'in conflict',
   'sync.saleError': 'not sent',
   'sync.retry': 'retry',
+  'date.short': '{day} {month} {year}',
+  'date.eraBe': 'BE',
+  'date.eraCe': 'CE',
+  'date.a11y': '{date} ({era}) tap to show in {other}',
+  'date.month1': 'Jan',
+  'date.month2': 'Feb',
+  'date.month3': 'Mar',
+  'date.month4': 'Apr',
+  'date.month5': 'May',
+  'date.month6': 'Jun',
+  'date.month7': 'Jul',
+  'date.month8': 'Aug',
+  'date.month9': 'Sep',
+  'date.month10': 'Oct',
+  'date.month11': 'Nov',
+  'date.month12': 'Dec',
 };
 
 export const messages = { th, en } as const;
