@@ -97,6 +97,15 @@ Ask again, every time.
   that awareness through the ledger and the reminder line instead of a
   per-push word; it is not an agent's proposal to relax the gate.
 
+  **Amendment, 2026-10-10 (PRD D-83) — acknowledge means merge.** Only a
+  PR that has been independently reviewed, fixed and is ready to merge is
+  put to the owner for acknowledgement in the Push Ledger. The owner's
+  acknowledgement of that PR is the owner's explicit instruction to merge
+  it; the owner does not review the code. Work runs with one developer team
+  at a time (UX and QA inside it); the infra team only maintains CI and
+  helps in emergencies. A team being disbanded hands over first, then
+  raises 🙋🏻‍♂️✅ to the owner, who deletes the session.
+
   **Reconsidered and deliberately kept, 2026-08-11. Do not propose
   relaxing this again.** It was argued that the gate had become redundant
   once "never commit ahead of an unanswered question" was added below —
