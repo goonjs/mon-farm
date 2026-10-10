@@ -255,3 +255,41 @@ test('sale history — rows from the log, deleted sales out of the totals', asyn
   await page.getByTestId(`history-${saleId}`).click();
   await expect(page.getByTestId('owner-share')).toContainText('149,367.25');
 });
+
+test('buyer check — one tap match, then a difference closed with a reason (offline)', async ({ page, context }) => {
+  const saleId = testSaleId('money-check');
+  await seedSale(page, saleId, workedExample(saleId));
+  await page.goto(`/sale/${saleId}/settlement`);
+  await context.setOffline(true);
+  await expect(page.getByTestId('check-entry-status')).toContainText('รอตรวจสอบเทียบยอด');
+  await page.getByTestId('open-check').click();
+
+  await expect(page.getByTestId('check-ours-gross')).toContainText('298,734.50');
+  await expect(page.getByTestId('check-ours-kg')).toContainText('11,273');
+  await expect(page.getByTestId('check-short-zA')).toContainText('3 เข่ง · 123 กก.');
+  await page.screenshot({ path: `${SHOTS}/22-buyer-check.png`, fullPage: true });
+  await page.getByTestId('check-all-match').click();
+  await expect(page.getByTestId('check-status')).toHaveText('ยอดผู้ขายและผู้ซื้อตรงกัน');
+  await page.screenshot({ path: `${SHOTS}/23-buyer-check-match.png`, fullPage: true });
+
+  // Changed their mind: undo, then the buyer says one basket fewer.
+  await page.getByTestId('check-undo').click();
+  await expect(page.getByTestId('check-status')).toHaveText('รอตรวจสอบเทียบยอด');
+  await page.getByTestId('check-mismatch').click();
+  await page.getByTestId('drill-zone-zA').click();
+  await page.getByTestId('drill-pile-p1').click();
+  await page.getByTestId('check-buyer-kg').fill('11223');
+  await page.getByTestId('check-buyer-baskets').fill('225');
+  await expect(page.getByTestId('check-diff-save')).toBeDisabled();
+  await page.getByTestId('check-reason').fill('ผู้ซื้อนับเข่งขาดหนึ่ง');
+  await page.screenshot({ path: `${SHOTS}/24-buyer-check-drill.png`, fullPage: true });
+  await page.getByTestId('check-diff-save').click();
+  await expect(page.getByTestId('check-status')).toHaveText('พบส่วนต่าง');
+  await expect(page.getByTestId('check-diff-kg')).toHaveText('ผู้ซื้อ −50 กก.');
+  await page.screenshot({ path: `${SHOTS}/25-buyer-check-diff.png`, fullPage: true });
+
+  // The money stays ours (D-15), and the settlement shows where the check stands.
+  await page.getByTestId('check-back').click();
+  await expect(page.getByTestId('check-entry-status')).toContainText('พบส่วนต่าง');
+  await expect(page.getByTestId('owner-share')).toContainText('149,367.25');
+});

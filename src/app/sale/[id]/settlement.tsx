@@ -18,6 +18,7 @@ import { Link, useRouter } from 'expo-router';
 
 import { Button, TopBar } from '../../../components/chrome';
 import { DeductionForm, type DeductionFormInput } from '../../../components/DeductionForm';
+import { BuyerCheckEntry } from '../../../components/finance/BuyerCheckEntry';
 import { DebtDeductionCard } from '../../../components/finance/DebtDeductionCard';
 import { ScreenHeader } from '../../../components/finance/parts';
 import { RoundingCard } from '../../../components/finance/RoundingCard';
@@ -25,6 +26,7 @@ import { SaleAccountCard } from '../../../components/finance/SaleAccountCard';
 import { useSaleRounding, type SaleRounding } from '../../../finance/use-sale-rounding';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { WorkerPayoutCard } from '../../../components/WorkerPayoutCard';
+import { saleFigures } from '../../../core/finance/buyer-check';
 import { formatBaht, formatKg, settle, SettlementUnavailable, type Settlement } from '../../../core/settle';
 import { newId } from '../../../lib/id';
 import { useSale } from '../../../store/SaleProvider';
@@ -214,6 +216,11 @@ export default function SettlementScreen() {
 
         {/* ---- owner total, leading ---- */}
         <View style={{ flex: narrow ? undefined : 1, gap: t.space.md }}>
+          {/* E05-S03: check against the buyer before paying anyone. */}
+          <View style={card(t)}>
+            <BuyerCheckEntry saleId={state.id} ours={saleFigures(s)} />
+          </View>
+
           <View style={card(t)}>
             <CardTitle>{msg('settle.ownerTotal')}</CardTitle>
             <Figure testID="owner-share" colour={t.color.action}>{formatBaht(s.ownerSatang)}</Figure>
