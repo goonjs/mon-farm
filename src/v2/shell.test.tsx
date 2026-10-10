@@ -6,9 +6,11 @@ import { Placeholder } from './placeholder-screen';
 import { FARM_SECTIONS, SALE_STEPS, sectionHref } from './routes';
 import { wrap } from '../test/render';
 
+const mockRouter = { canGoBack: jest.fn(() => true), back: jest.fn(), replace: jest.fn() };
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
   useFocusEffect: () => undefined,
+  useRouter: () => mockRouter,
 }));
 
 describe('v2 route table (D-82) — one placeholder per v1.1.0 mockup section', () => {
@@ -48,6 +50,15 @@ describe('Placeholder screen', () => {
     expect(screen.getByTestId('screen-title').props.children).toBe('คน');
     expect(screen.getByTestId('v2-back').props.accessibilityLabel).toBe('กลับ');
     expect(screen.getByText('กำลังสร้าง')).toBeTruthy();
+  });
+
+  it('back returns to where the user came from, or replaces with home on a cold open', () => {
+    wrap(<Placeholder titleId="v2.people" />);
+    fireEvent.press(screen.getByTestId('v2-back'));
+    expect(mockRouter.back).toHaveBeenCalled();
+    mockRouter.canGoBack.mockReturnValueOnce(false);
+    fireEvent.press(screen.getByTestId('v2-back'));
+    expect(mockRouter.replace).toHaveBeenCalledWith('/v2');
   });
 });
 
