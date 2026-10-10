@@ -13,7 +13,7 @@ import { formatSatang } from '../../core/finance/money';
 import type { SaleRounding } from '../../finance/use-sale-rounding';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { Chip, ChipRow, Label, Note } from './parts';
+import { CardTitle, Chip, ChipRow, Fact, Note } from './parts';
 
 const MODES: readonly { mode: RoundingMode; key: 'round.worker' | 'round.owner' | 'round.keep' }[] = [
   { mode: 'worker', key: 'round.worker' },
@@ -29,7 +29,7 @@ export function RoundingCard({ r }: { r: SaleRounding }) {
 
   return (
     <View testID="rounding" style={{ gap: t.space.xs }}>
-      <Label>{msg('round.title')}</Label>
+      <CardTitle>{msg('round.title')}</CardTitle>
       {!r.choice.asked ? <Note tone="warn" testID="round-ask">{msg('round.ask')}</Note> : null}
       <ChipRow>
         {MODES.map((m) => (
@@ -54,7 +54,7 @@ export function RoundingCard({ r }: { r: SaleRounding }) {
         <>
           <Note testID="round-owner-total">{msg('round.owner.line', { amount: formatSatang(r.result.ownerSatang) })}</Note>
           {r.check.ok ? (
-            <Note testID="round-check">{msg('round.check')}</Note>
+            <Fact mark="check" tone="accept" testID="round-check">{msg('round.check')}</Fact>
           ) : (
             <Note tone="reject" testID="round-check-off">{msg('round.checkOff', { diff: formatSatang(r.check.diffSatang) })}</Note>
           )}

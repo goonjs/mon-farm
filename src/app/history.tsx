@@ -11,8 +11,8 @@ import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { Button, TopBar } from '../components/chrome';
-import { Note } from '../components/finance/parts';
+import { Button } from '../components/chrome';
+import { BigAmount, Card, Fact, Note, ScreenHeader } from '../components/finance/parts';
 import { saleHistory, type SaleRow } from '../core/finance/history';
 import { formatDate, formatSatang } from '../core/finance/money';
 import { useT } from '../i18n';
@@ -41,7 +41,7 @@ export default function HistoryScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar crumb={msg('hist.title')} right={<Button testID="history-back" onPress={() => router.back()}>{msg('common.back')}</Button>} />
+      <ScreenHeader testID="history" title={msg('hist.title')} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.sm }}>
         {h === null ? (
           <Note>{msg('counter.loading')}</Note>
@@ -49,10 +49,14 @@ export default function HistoryScreen() {
           <Note testID="history-empty">{msg('hist.empty')}</Note>
         ) : (
           <>
-            <Note testID="history-total">
-              {msg('hist.total', { n: h.visible.length, kg: kg(h.totalNetG), amount: formatSatang(h.totalSatang) })}
-              {h.unpricedCount ? ` · ${msg('hist.unpriced', { n: h.unpricedCount })}` : ''}
-            </Note>
+            <Card>
+              <BigAmount testID="history-total-amount" satang={h.totalSatang} caption={msg('hist.title')}>
+                <Note testID="history-total">
+                  {msg('hist.total', { n: h.visible.length, kg: kg(h.totalNetG), amount: formatSatang(h.totalSatang) })}
+                  {h.unpricedCount ? ` · ${msg('hist.unpriced', { n: h.unpricedCount })}` : ''}
+                </Note>
+              </BigAmount>
+            </Card>
             {h.visible.map((r) => (
               <Row key={r.saleId} r={r} />
             ))}
@@ -82,26 +86,24 @@ function Row({ r }: { r: SaleRow }) {
       testID={`history-${r.saleId}`}
       accessibilityRole="button"
       onPress={open}
-      style={{ padding: t.space.md, gap: 2, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.rule, backgroundColor: t.color.surfaceRaised }}
+      style={{ padding: t.space.md, gap: 2, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleFaint, backgroundColor: t.color.surfaceRaised }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.sm }}>
         <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink }}>
           {[r.startedTs ? formatDate(isoOf(r.startedTs)) : null, r.buyer || r.farmName].filter(Boolean).join(' · ')}
         </Text>
-        <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, fontWeight: t.font.weight.bold, color: t.color.ink }}>
           {r.grossSatang === null ? '—' : formatSatang(r.grossSatang)}
         </Text>
       </View>
-      <Note>
-        {[
-          msg('hist.row.kg', { kg: kg(r.netG), baskets: r.baskets }),
-          r.satangPerKg === null ? msg('hist.row.noPrice') : msg('hist.row.price', { price: formatSatang(r.satangPerKg) }),
-          r.ownerSatang === null ? null : msg('hist.row.owner', { amount: formatSatang(r.ownerSatang) }),
-        ]
-          .filter(Boolean)
-          .join(' · ')}
-      </Note>
-      <Note>{`${msg(r.status === 'closed' ? 'hist.status.closed' : 'hist.status.open')} · ${msg('hist.row.local')}`}</Note>
+      <Fact mark="note">{msg('hist.row.kg', { kg: kg(r.netG), baskets: r.baskets })}</Fact>
+      <Fact mark="money" tone={r.satangPerKg === null ? 'warn' : 'soft'}>
+        {r.satangPerKg === null ? msg('hist.row.noPrice') : msg('hist.row.price', { price: formatSatang(r.satangPerKg) })}
+      </Fact>
+      {r.ownerSatang === null ? null : <Fact mark="person">{msg('hist.row.owner', { amount: formatSatang(r.ownerSatang) })}</Fact>}
+      <Fact mark={r.status === 'closed' ? 'check' : 'half'} tone={r.status === 'closed' ? 'accept' : 'warn'}>
+        {`${msg(r.status === 'closed' ? 'hist.status.closed' : 'hist.status.open')} · ${msg('hist.row.local')}`}
+      </Fact>
     </Pressable>
   );
 }
