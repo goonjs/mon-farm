@@ -1,0 +1,357 @@
+/* ============================================================================
+ * PROPOSAL — mirrors docs/stories/e01-s17-semantic-color-tokens.md (Draft,
+ * 2026-10-09); NOT GENERATED. Delete/replace by the emitter
+ * (scripts/emit-tokens.mjs -> docs/ux/tokens.css) once the story is agreed.
+ *
+ * Docs/mockups only. Load AFTER ../tokens.css. Never imported by src/.
+ *
+ * (a) The 23 NEW semantic roles from E01-S17 (appBar, appBarInk, focusRing,
+ *     disabledFill, disabledInk, moneyIn/Sunk, moneyOut/Sunk, category1..6 +
+ *     Sunk, brandLight, scrim) as --color-* vars, light + dark, palette A
+ *     ("farmmate") values. Palette A for the 30 existing roles = tokens.css
+ *     as it is today (incl. dark rule-strong #7D8B99 — E01-S17 would move it
+ *     to #7A8998; not applied here).
+ * (b) Palette B ("instrument") overrides of ALL 53 colour vars, scoped under
+ *     :root[data-palette='b'], light + dark — values exactly as the story's
+ *     ramp table x role->step table.
+ *
+ * Switch in a mockup: <html data-palette="b" data-theme="dark">, or the
+ * mockup's toggle / ?palette=b&theme=dark. Same selector rules as tokens.css:
+ * the media query is the signal, data-theme is the override both ways.
+ * Contrast for every pair here is computed in the story (Dev notes); CI does
+ * not check this file.
+ * ==========================================================================*/
+
+/* ---- (a) new roles, palette A, light (default) ---- */
+:root {
+  --color-app-bar       : #F7FAFC;
+  --color-app-bar-ink   : #002858;
+  --color-focus-ring    : #002858;
+  --color-disabled-fill : #F1F3F5;
+  --color-disabled-ink  : #52657A;
+  --color-money-in      : #006F52;
+  --color-money-in-sunk : #E8F8F2;
+  --color-money-out     : #002858;
+  --color-money-out-sunk: #F1F3F5;
+  --color-brand-light   : #48C090;
+  --color-scrim         : #002858;
+  --color-category1     : #0F7985;
+  --color-category1-sunk: #E7FBFE;
+  --color-category2     : #535DCD;
+  --color-category2-sunk: #E9EAFC;
+  --color-category3     : #9940BF;
+  --color-category3-sunk: #F6E9FB;
+  --color-category4     : #BE2F7B;
+  --color-category4-sunk: #FCE8F3;
+  --color-category5     : #AA5718;
+  --color-category5-sunk: #FEF1E7;
+  --color-category6     : #667314;
+  --color-category6-sunk: #FBFEE7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-app-bar       : #0B1520;
+    --color-app-bar-ink   : #F4F5F6;
+    --color-focus-ring    : #8FB4EC;
+    --color-disabled-fill : #060E17;
+    --color-disabled-ink  : #A3B1C0;
+    --color-money-in      : #48C090;
+    --color-money-in-sunk : #0B2A21;
+    --color-money-out     : #F4F5F6;
+    --color-money-out-sunk: #060E17;
+    --color-brand-light   : #008F6C;
+    --color-scrim         : #000000;
+    --color-category1     : #14A5B5;
+    --color-category1-sunk: #143134;
+    --color-category2     : #7981D8;
+    --color-category2-sunk: #141634;
+    --color-category3     : #B06CCE;
+    --color-category3-sunk: #2A1434;
+    --color-category4     : #D65C9D;
+    --color-category4-sunk: #341425;
+    --color-category5     : #DD7220;
+    --color-category5-sunk: #342214;
+    --color-category6     : #93A51D;
+    --color-category6-sunk: #2F3414;
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-app-bar       : #0B1520;
+  --color-app-bar-ink   : #F4F5F6;
+  --color-focus-ring    : #8FB4EC;
+  --color-disabled-fill : #060E17;
+  --color-disabled-ink  : #A3B1C0;
+  --color-money-in      : #48C090;
+  --color-money-in-sunk : #0B2A21;
+  --color-money-out     : #F4F5F6;
+  --color-money-out-sunk: #060E17;
+  --color-brand-light   : #008F6C;
+  --color-scrim         : #000000;
+  --color-category1     : #14A5B5;
+  --color-category1-sunk: #143134;
+  --color-category2     : #7981D8;
+  --color-category2-sunk: #141634;
+  --color-category3     : #B06CCE;
+  --color-category3-sunk: #2A1434;
+  --color-category4     : #D65C9D;
+  --color-category4-sunk: #341425;
+  --color-category5     : #DD7220;
+  --color-category5-sunk: #342214;
+  --color-category6     : #93A51D;
+  --color-category6-sunk: #2F3414;
+}
+
+:root[data-theme='light'] {
+  --color-app-bar       : #F7FAFC;
+  --color-app-bar-ink   : #002858;
+  --color-focus-ring    : #002858;
+  --color-disabled-fill : #F1F3F5;
+  --color-disabled-ink  : #52657A;
+  --color-money-in      : #006F52;
+  --color-money-in-sunk : #E8F8F2;
+  --color-money-out     : #002858;
+  --color-money-out-sunk: #F1F3F5;
+  --color-brand-light   : #48C090;
+  --color-scrim         : #002858;
+  --color-category1     : #0F7985;
+  --color-category1-sunk: #E7FBFE;
+  --color-category2     : #535DCD;
+  --color-category2-sunk: #E9EAFC;
+  --color-category3     : #9940BF;
+  --color-category3-sunk: #F6E9FB;
+  --color-category4     : #BE2F7B;
+  --color-category4-sunk: #FCE8F3;
+  --color-category5     : #AA5718;
+  --color-category5-sunk: #FEF1E7;
+  --color-category6     : #667314;
+  --color-category6-sunk: #FBFEE7;
+}
+
+/* ---- (b) palette B "instrument" — all 53 roles ---- */
+:root[data-palette='b'] {
+  --color-stage          : #FFFFFF;
+  --color-surface        : #F2F3F4;
+  --color-surface-sunk   : #E4E6E8;
+  --color-surface-raised : #FFFFFF;
+  --color-numeral        : #0A0B0C;
+  --color-ink            : #0A0B0C;
+  --color-ink-soft       : #55595E;
+  --color-ink-faint      : #788087;
+  --color-ink-inverse    : #FFFFFF;
+  --color-rule           : #C4C8CC;
+  --color-rule-faint     : #DDE0E3;
+  --color-rule-strong    : #788087;
+  --color-action         : #17458C;
+  --color-action-hover   : #0F3068;
+  --color-action-sunk    : #E7EDF7;
+  --color-accept         : #06542C;
+  --color-accept-sunk    : #E0EFE6;
+  --color-reject         : #9E2015;
+  --color-reject-sunk    : #FAE4E1;
+  --color-warn           : #6F4000;
+  --color-warn-sunk      : #F7EBD6;
+  --color-status-synced  : #06542C;
+  --color-status-pending : #6F4000;
+  --color-status-conflict: #9E2015;
+  --color-brand          : #2E9E6B;
+  --color-brand-strong   : #1F7A50;
+  --color-brand-yellow   : #E0A03C;
+  --color-brand-cream    : #FBF4E6;
+  --color-flash-accept   : #06542C;
+  --color-flash-reject   : #9E2015;
+  --color-app-bar        : #F2F3F4;
+  --color-app-bar-ink    : #0A0B0C;
+  --color-focus-ring     : #17458C;
+  --color-disabled-fill  : #E4E6E8;
+  --color-disabled-ink   : #55595E;
+  --color-money-in       : #06542C;
+  --color-money-in-sunk  : #E0EFE6;
+  --color-money-out      : #0A0B0C;
+  --color-money-out-sunk : #E4E6E8;
+  --color-brand-light    : #4FBF85;
+  --color-scrim          : #0A0B0C;
+  --color-category1      : #0F7985;
+  --color-category1-sunk : #E7FBFE;
+  --color-category2      : #535DCD;
+  --color-category2-sunk : #E9EAFC;
+  --color-category3      : #9940BF;
+  --color-category3-sunk : #F6E9FB;
+  --color-category4      : #BE2F7B;
+  --color-category4-sunk : #FCE8F3;
+  --color-category5      : #AA5718;
+  --color-category5-sunk : #FEF1E7;
+  --color-category6      : #667314;
+  --color-category6-sunk : #FBFEE7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-palette='b']:not([data-theme='light']) {
+    --color-stage          : #000000;
+    --color-surface        : #15171A;
+    --color-surface-sunk   : #0D0F11;
+    --color-surface-raised : #1D2024;
+    --color-numeral        : #F4F5F6;
+    --color-ink            : #F4F5F6;
+    --color-ink-soft       : #A0A6AC;
+    --color-ink-faint      : #6B7278;
+    --color-ink-inverse    : #0A0B0C;
+    --color-rule           : #3A4046;
+    --color-rule-faint     : #24282D;
+    --color-rule-strong    : #788087;
+    --color-action         : #7FA8E8;
+    --color-action-hover   : #9BBDF0;
+    --color-action-sunk    : #152239;
+    --color-accept         : #4FBF85;
+    --color-accept-sunk    : #0E2A1B;
+    --color-reject         : #F0796A;
+    --color-reject-sunk    : #331310;
+    --color-warn           : #E0A03C;
+    --color-warn-sunk      : #2E2109;
+    --color-status-synced  : #4FBF85;
+    --color-status-pending : #E0A03C;
+    --color-status-conflict: #F0796A;
+    --color-brand          : #4FBF85;
+    --color-brand-strong   : #4FBF85;
+    --color-brand-yellow   : #E0A03C;
+    --color-brand-cream    : #221A0C;
+    --color-flash-accept   : #4FBF85;
+    --color-flash-reject   : #F0796A;
+    --color-app-bar        : #15171A;
+    --color-app-bar-ink    : #F4F5F6;
+    --color-focus-ring     : #7FA8E8;
+    --color-disabled-fill  : #0D0F11;
+    --color-disabled-ink   : #A0A6AC;
+    --color-money-in       : #4FBF85;
+    --color-money-in-sunk  : #0E2A1B;
+    --color-money-out      : #F4F5F6;
+    --color-money-out-sunk : #0D0F11;
+    --color-brand-light    : #1F7A50;
+    --color-scrim          : #000000;
+    --color-category1      : #14A5B5;
+    --color-category1-sunk : #143134;
+    --color-category2      : #7981D8;
+    --color-category2-sunk : #141634;
+    --color-category3      : #B06CCE;
+    --color-category3-sunk : #2A1434;
+    --color-category4      : #D65C9D;
+    --color-category4-sunk : #341425;
+    --color-category5      : #DD7220;
+    --color-category5-sunk : #342214;
+    --color-category6      : #93A51D;
+    --color-category6-sunk : #2F3414;
+  }
+}
+
+:root[data-palette='b'][data-theme='dark'] {
+  --color-stage          : #000000;
+  --color-surface        : #15171A;
+  --color-surface-sunk   : #0D0F11;
+  --color-surface-raised : #1D2024;
+  --color-numeral        : #F4F5F6;
+  --color-ink            : #F4F5F6;
+  --color-ink-soft       : #A0A6AC;
+  --color-ink-faint      : #6B7278;
+  --color-ink-inverse    : #0A0B0C;
+  --color-rule           : #3A4046;
+  --color-rule-faint     : #24282D;
+  --color-rule-strong    : #788087;
+  --color-action         : #7FA8E8;
+  --color-action-hover   : #9BBDF0;
+  --color-action-sunk    : #152239;
+  --color-accept         : #4FBF85;
+  --color-accept-sunk    : #0E2A1B;
+  --color-reject         : #F0796A;
+  --color-reject-sunk    : #331310;
+  --color-warn           : #E0A03C;
+  --color-warn-sunk      : #2E2109;
+  --color-status-synced  : #4FBF85;
+  --color-status-pending : #E0A03C;
+  --color-status-conflict: #F0796A;
+  --color-brand          : #4FBF85;
+  --color-brand-strong   : #4FBF85;
+  --color-brand-yellow   : #E0A03C;
+  --color-brand-cream    : #221A0C;
+  --color-flash-accept   : #4FBF85;
+  --color-flash-reject   : #F0796A;
+  --color-app-bar        : #15171A;
+  --color-app-bar-ink    : #F4F5F6;
+  --color-focus-ring     : #7FA8E8;
+  --color-disabled-fill  : #0D0F11;
+  --color-disabled-ink   : #A0A6AC;
+  --color-money-in       : #4FBF85;
+  --color-money-in-sunk  : #0E2A1B;
+  --color-money-out      : #F4F5F6;
+  --color-money-out-sunk : #0D0F11;
+  --color-brand-light    : #1F7A50;
+  --color-scrim          : #000000;
+  --color-category1      : #14A5B5;
+  --color-category1-sunk : #143134;
+  --color-category2      : #7981D8;
+  --color-category2-sunk : #141634;
+  --color-category3      : #B06CCE;
+  --color-category3-sunk : #2A1434;
+  --color-category4      : #D65C9D;
+  --color-category4-sunk : #341425;
+  --color-category5      : #DD7220;
+  --color-category5-sunk : #342214;
+  --color-category6      : #93A51D;
+  --color-category6-sunk : #2F3414;
+}
+
+:root[data-palette='b'][data-theme='light'] {
+  --color-stage          : #FFFFFF;
+  --color-surface        : #F2F3F4;
+  --color-surface-sunk   : #E4E6E8;
+  --color-surface-raised : #FFFFFF;
+  --color-numeral        : #0A0B0C;
+  --color-ink            : #0A0B0C;
+  --color-ink-soft       : #55595E;
+  --color-ink-faint      : #788087;
+  --color-ink-inverse    : #FFFFFF;
+  --color-rule           : #C4C8CC;
+  --color-rule-faint     : #DDE0E3;
+  --color-rule-strong    : #788087;
+  --color-action         : #17458C;
+  --color-action-hover   : #0F3068;
+  --color-action-sunk    : #E7EDF7;
+  --color-accept         : #06542C;
+  --color-accept-sunk    : #E0EFE6;
+  --color-reject         : #9E2015;
+  --color-reject-sunk    : #FAE4E1;
+  --color-warn           : #6F4000;
+  --color-warn-sunk      : #F7EBD6;
+  --color-status-synced  : #06542C;
+  --color-status-pending : #6F4000;
+  --color-status-conflict: #9E2015;
+  --color-brand          : #2E9E6B;
+  --color-brand-strong   : #1F7A50;
+  --color-brand-yellow   : #E0A03C;
+  --color-brand-cream    : #FBF4E6;
+  --color-flash-accept   : #06542C;
+  --color-flash-reject   : #9E2015;
+  --color-app-bar        : #F2F3F4;
+  --color-app-bar-ink    : #0A0B0C;
+  --color-focus-ring     : #17458C;
+  --color-disabled-fill  : #E4E6E8;
+  --color-disabled-ink   : #55595E;
+  --color-money-in       : #06542C;
+  --color-money-in-sunk  : #E0EFE6;
+  --color-money-out      : #0A0B0C;
+  --color-money-out-sunk : #E4E6E8;
+  --color-brand-light    : #4FBF85;
+  --color-scrim          : #0A0B0C;
+  --color-category1      : #0F7985;
+  --color-category1-sunk : #E7FBFE;
+  --color-category2      : #535DCD;
+  --color-category2-sunk : #E9EAFC;
+  --color-category3      : #9940BF;
+  --color-category3-sunk : #F6E9FB;
+  --color-category4      : #BE2F7B;
+  --color-category4-sunk : #FCE8F3;
+  --color-category5      : #AA5718;
+  --color-category5-sunk : #FEF1E7;
+  --color-category6      : #667314;
+  --color-category6-sunk : #FBFEE7;
+}

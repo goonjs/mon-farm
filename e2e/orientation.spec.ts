@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { openPileScenario, seedSale, testSaleId } from './fixtures';
+import { workedExample } from '../src/core/fixtures';
 
 /**
  * Orientation (S19). Only runs on `phone-portrait` and `tablet-portrait` —
@@ -78,4 +79,27 @@ test('the sale list and settlement screens hold their layout in portrait', async
   expect(scrollWidth).toBeLessThanOrEqual(viewport.width + 1);
 
   await page.screenshot({ path: `docs/ux/screenshots/${testInfo.project.name}/sale-list.png` });
+});
+
+test('settlement stacks its columns on a narrow screen so nothing clips (E01-S17)', async ({ page }) => {
+  const viewport = page.viewportSize()!;
+  test.skip(viewport.width >= 600, 'two columns are right on a tablet');
+  const saleId = testSaleId('orient-settle');
+  await seedSale(page, saleId, workedExample(saleId));
+  await page.goto(`/sale/${saleId}/settlement`);
+  const owner = page.getByTestId('owner-share');
+  await expect(owner).toBeVisible();
+
+  // The owner total is the figure two parties settle on: it must be shown in
+  // full, never cut to "฿ 1…" by a column too narrow for it.
+  const clipped = await owner.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
+  expect(clipped).toBe(false);
+  await expect(owner).toContainText('149,367.25');
+
+  // Derivation card above the totals, both full width.
+  const derivation = (await page.getByTestId('step-gross').boundingBox())!;
+  const ownerBox = (await owner.boundingBox())!;
+  expect(ownerBox.y).toBeGreaterThan(derivation.y);
+  const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(scrollWidth).toBeLessThanOrEqual(viewport.width + 1);
 });

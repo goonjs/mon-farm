@@ -15,8 +15,16 @@
  * needs `16px`. The emitter appends the unit. Storing `'16px'` here would force
  * a parseInt on the RN side, which is how token systems rot.
  *
- * NO IMPORTS, NO FUNCTIONS. This object must stay plain and serializable so the
- * emitter can walk it and so it costs nothing to import on a low-end Android.
+ * NO IMPORTS, ONE FUNCTION. The exported `tokens` object must stay plain and
+ * serializable so the emitter can walk it and so it costs nothing to import on
+ * a low-end Android. The single exception is `colorFor`, a pure function from
+ * a palette to the semantic colours, called once at load (E01-S17) — its
+ * result is a plain object like everything else in `tokens`.
+ *
+ * TWO COLOUR LAYERS (E01-S17). `PALETTES` holds raw ramps; `colorFor` maps
+ * them onto semantic roles; `ACTIVE_PALETTE` picks the palette. Screens read
+ * roles only (`theme.color.<role>`), and no raw colour may appear in `src/`
+ * (scripts/no-raw-colour.test.ts). Ramps are not emitted to tokens.css.
  *
  * ── Design thesis (FarmMate adoption, 2026-10-03) ───────────────────────────
  *
@@ -47,140 +55,277 @@
  * system stacks only.
  */
 
-export const tokens = {
-  /**
-   * Light is the default and the field mode.
-   *
-   * Finding F-15: phone displays are additive, so dark-ink-on-white at maximum
-   * brightness is the brightest, highest-contrast thing a phone can put in
-   * direct sun — which is the exact condition this screen exists for. The
-   * battery cost is real and flagged in F-15 as needing a field measurement.
-   *
-   * Dark exists for evening and indoor weighing at the ล้ง, and is opt-in.
-   * FarmMate defines no dark theme; the dark values below are derived from the
-   * FarmMate hues and are this repo's own.
-   */
-  color: {
+// ── Colour, layer 1: palettes (raw ramps) ────────────────────────────────────
+//
+// Screens never read these. They are not emitted to tokens.css. Only
+// `colorFor` below reads them, to fill the semantic roles screens do read.
+//
+// Two kinds of ramp (docs/stories/e01-s17-semantic-color-tokens.md):
+//   - channel ramps — `neutral`, `ink`, `primary`: the palette's look; free to
+//     change hue between palettes.
+//   - hue ramps — `green`, `red`, `amber` and the six category hues: same hue
+//     in every palette, lightness only, so a signal keeps its meaning.
+//
+// Steps are not evenly spaced: palette A has to land on the pre-existing
+// values exactly. Nobody outside this file addresses a step by number.
+
+/**
+ * A — FarmMate (navy, brand green, warm yellow). The default.
+ * Signal steps are FarmMate hues darkened in lightness only to clear AA:
+ * green.700 ← success #00AA7D (2.98 → 6.18:1), red.700 ← error #E55353
+ * (3.69 → 6.37:1), amber.800 ← warning #F2B233 (1.88 → 6.24:1).
+ */
+const farmmate = {
+  neutral: {
+    0: '#FFFFFF', 50: '#F7FAFC', 100: '#F1F3F5', 150: '#E4E9EE', 200: '#CBD4DC', 300: '#A3B1C0',
+    400: '#7A8998', 500: '#6E7D8C', 600: '#52657A', 700: '#2E3B49', 800: '#1B2632', 850: '#13202E',
+    900: '#0B1520', 950: '#060E17', 975: '#0A0B0C', 1000: '#000000',
+  },
+  ink: { 50: '#F4F5F6', 900: '#002858' },
+  primary: { 50: '#EAF5FC', 200: '#A9C6F1', 300: '#8FB4EC', 900: '#002858', 925: '#002850', 950: '#0F2340' },
+  green: { 50: '#E8F8F2', 400: '#48C090', 500: '#00AA7D', 600: '#008F6C', 700: '#006F52', 950: '#0B2A21' },
+  red: { 50: '#FDECEC', 300: '#F0796A', 700: '#BB1C1C', 950: '#331310' },
+  amber: { 25: '#FFF8E8', 50: '#FFF5D8', 300: '#FECB56', 800: '#815908', 900: '#2E2409', 950: '#221D10' },
+  teal: { 50: '#E7FBFE', 400: '#14A5B5', 700: '#0F7985', 900: '#143134' },
+  indigo: { 50: '#E9EAFC', 400: '#7981D8', 700: '#535DCD', 900: '#141634' },
+  purple: { 50: '#F6E9FB', 400: '#B06CCE', 700: '#9940BF', 900: '#2A1434' },
+  magenta: { 50: '#FCE8F3', 400: '#D65C9D', 700: '#BE2F7B', 900: '#341425' },
+  orange: { 50: '#FEF1E7', 400: '#DD7220', 700: '#AA5718', 900: '#342214' },
+  olive: { 50: '#FBFEE7', 400: '#93A51D', 700: '#667314', 900: '#2F3414' },
+} as const;
+
+/**
+ * Every palette has exactly palette A's ramps and steps — no more, no fewer.
+ * Drop a step from B and `npm run typecheck` goes red.
+ */
+export type PaletteShape = {
+  readonly [R in keyof typeof farmmate]: { readonly [S in keyof (typeof farmmate)[R]]: string };
+};
+
+/**
+ * B — "instrument": the pre-FarmMate colours (commit 7bdc160), the set already
+ * tested in a sunlit yard. Near-black ink on neutral grey, canvas-blue action,
+ * deeper signal hues. The way back if navy reads poorly in sun (§12.10 Q3).
+ * One change from the original: neutral.400 #7E858C → #788087 (3:1 on sunk).
+ */
+const instrument = {
+  neutral: {
+    0: '#FFFFFF', 50: '#F2F3F4', 100: '#E4E6E8', 150: '#DDE0E3', 200: '#C4C8CC', 300: '#A0A6AC',
+    400: '#788087', 500: '#6B7278', 600: '#55595E', 700: '#3A4046', 800: '#24282D', 850: '#1D2024',
+    900: '#15171A', 950: '#0D0F11', 975: '#0A0B0C', 1000: '#000000',
+  },
+  ink: { 50: '#F4F5F6', 900: '#0A0B0C' },
+  primary: { 50: '#E7EDF7', 200: '#9BBDF0', 300: '#7FA8E8', 900: '#17458C', 925: '#0F3068', 950: '#152239' },
+  green: { 50: '#E0EFE6', 400: '#4FBF85', 500: '#2E9E6B', 600: '#1F7A50', 700: '#06542C', 950: '#0E2A1B' },
+  red: { 50: '#FAE4E1', 300: '#F0796A', 700: '#9E2015', 950: '#331310' },
+  amber: { 25: '#FBF4E6', 50: '#F7EBD6', 300: '#E0A03C', 800: '#6F4000', 900: '#2E2109', 950: '#221A0C' },
+  teal: farmmate.teal,
+  indigo: farmmate.indigo,
+  purple: farmmate.purple,
+  magenta: farmmate.magenta,
+  orange: farmmate.orange,
+  olive: farmmate.olive,
+} satisfies PaletteShape;
+
+export const PALETTES = { farmmate, instrument } as const;
+export type PaletteKey = keyof typeof PALETTES;
+
+/**
+ * THE switch. Change this one value to re-colour the whole app, then run
+ * `npm run tokens` and `npm run contrast` (contrast checks every palette).
+ */
+export const ACTIVE_PALETTE: PaletteKey = 'farmmate';
+
+// ── Colour, layer 2: semantic roles ──────────────────────────────────────────
+//
+// The ONE role table, shared by every palette. Screens read only these names
+// (`theme.color.<name>`). The names are a contract with other teams: add,
+// never rename or remove without a story.
+
+/**
+ * Palette → `{ light, dark }` semantic colours. The only function in this
+ * file; it is pure and runs once at load, so `tokens` stays a plain object.
+ */
+export function colorFor(p: PaletteShape) {
+  const n = p.neutral;
+  const g = p.green;
+  const r = p.red;
+  const a = p.amber;
+  const pr = p.primary;
+  return {
+    /**
+     * Light is the default and the field mode.
+     *
+     * Finding F-15: phone displays are additive, so dark-ink-on-white at
+     * maximum brightness is the brightest, highest-contrast thing a phone can
+     * put in direct sun — the exact condition this screen exists for.
+     */
     light: {
-      /** The public stage. Pure white (FarmMate surfaceBackground). */
-      stage: '#FFFFFF',
-      /** Screen ground behind cards. FarmMate surfaceSubtle. */
-      surface: '#F7FAFC',
-      /** Recessed: inputs, wells, segmented-control track. FarmMate surfaceGray. */
-      surfaceSunk: '#F1F3F5',
-      /** Raised: cards over surface. FarmMate surfaceCard. */
-      surfaceRaised: '#FFFFFF',
+      /** The public stage — flat, no shadow. */
+      stage: n[0],
+      /** Screen ground behind cards. */
+      surface: n[50],
+      /** Recessed: inputs, wells, segmented-control track, neutral chip. */
+      surfaceSunk: n[100],
+      /** Cards: with a `ruleFaint` hairline and `shadow.card`. */
+      surfaceRaised: n[0],
+      /** The public weighing numeral only. Own token so it can diverge from `ink`. */
+      numeral: p.ink[900],
+      /** Primary text. */
+      ink: p.ink[900],
+      /** Secondary text, units beside numbers. */
+      inkSoft: n[600],
+      /** Placeholders, chevrons — decorative only (below AA). */
+      inkFaint: n[400],
+      /** Text/glyph on a filled colour. */
+      inkInverse: n[0],
+      /** Top app bar ground and its title/icons. */
+      appBar: n[50],
+      appBarInk: p.ink[900],
 
-      /**
-       * The public weighing numeral. Owner decision 2026-10-03 (§12.9 Q3):
-       * follow FarmMate first — navy like all text (14.54:1 on stage, AAA).
-       * Kept as its own token so it can return to near-black (#0A0B0C) if the
-       * field test shows a problem, without touching `ink`.
-       */
-      numeral: '#002858',
-      /** Primary text. FarmMate textPrimary (brand navy). */
-      ink: '#002858',
-      /** Secondary text. FarmMate textSecondary. */
-      inkSoft: '#52657A',
-      /** Tertiary — placeholders, disabled. FarmMate textMuted. Below AA; decorative only. */
-      inkFaint: '#7A8998',
-      /** Text/glyph on a filled signal colour. */
-      inkInverse: '#FFFFFF',
+      /** Decorative dividers only — carries no meaning. */
+      rule: n[200],
+      /** Card hairlines, row separators. */
+      ruleFaint: n[150],
+      /** Boundaries that define a control (WCAG 1.4.11, ≥3:1). */
+      ruleStrong: n[400],
+      /** Keyboard / switch-access focus ring. */
+      focusRing: pr[900],
 
-      /** Decorative dividers only. FarmMate borderStrong. Below 3:1 — carries no meaning. */
-      rule: '#CBD4DC',
-      /** FarmMate borderDefault. Card hairlines. */
-      ruleFaint: '#E4E9EE',
-      /**
-       * Boundaries that define a control: input borders, unfilled button
-       * outlines. WCAG 1.4.11 requires 3:1 and no FarmMate border clears it, so
-       * this borrows FarmMate textMuted (3.42:1 on surface).
-       */
-      ruleStrong: '#7A8998',
+      /** navy — interactive: primary button, link, selected tab. */
+      action: pr[900],
+      actionHover: pr[925],
+      /** Selected row / option wash. */
+      actionSunk: pr[50],
+      /** Disabled control fill (dashed `ruleStrong` border) and its still-AA label. */
+      disabledFill: n[100],
+      disabledInk: n[600],
 
-      /** navy — interactive. FarmMate brandNavy: primary buttons, active tab, links. */
-      action: '#002858',
-      /** FarmMate brandNavyDeep. */
-      actionHover: '#002850',
-      /** FarmMate surfaceBlue. Selected rows, secondary-button wash. */
-      actionSunk: '#EAF5FC',
+      /** green — counted / done. Shape + word always carry it too. */
+      accept: g[700],
+      acceptSunk: g[50],
+      /** red — rejected, voided, destructive, conflict. */
+      reject: r[700],
+      rejectSunk: r[50],
+      /** amber — flagged / pending. Recorded, non-blocking. */
+      warn: a[800],
+      warnSunk: a[50],
+      /** Sync status (SYNC-3) — aliases of the signal hues. */
+      statusSynced: g[700],
+      statusPending: a[800],
+      statusConflict: r[700],
 
-      /** green — counted / done. FarmMate success #00AA7D, darkened (2.98:1 → 6.18:1). */
-      accept: '#006F52',
-      /** FarmMate surfaceGreen. */
-      acceptSunk: '#E8F8F2',
+      /** Money in / out — always with + / − and a word. */
+      moneyIn: g[700],
+      moneyInSunk: g[50],
+      moneyOut: p.ink[900],
+      moneyOutSunk: n[100],
 
-      /** red — rejected, voided, destructive, conflict. FarmMate error #E55353, darkened (3.69:1 → 6.37:1). */
-      reject: '#BB1C1C',
-      /** Derived tint of the error hue — FarmMate has no red surface. */
-      rejectSunk: '#FDECEC',
-
-      /** amber — flagged / pending. FarmMate warning #F2B233, darkened (1.88:1 → 6.24:1). */
-      warn: '#815908',
-      /** FarmMate surfaceYellow / brandYellowSoft. */
-      warnSunk: '#FFF5D8',
-
-      /** Sync status (SYNC-3). Aliases of the signal hues — shape + word carry it too. */
-      statusSynced: '#006F52',
-      statusPending: '#815908',
-      statusConflict: '#BB1C1C',
+      /** Group colours (farm / zone / tapper / chart series) — decoration, always named. */
+      category1: p.teal[700],
+      category1Sunk: p.teal[50],
+      category2: p.indigo[700],
+      category2Sunk: p.indigo[50],
+      category3: p.purple[700],
+      category3Sunk: p.purple[50],
+      category4: p.magenta[700],
+      category4Sunk: p.magenta[50],
+      category5: p.orange[700],
+      category5Sunk: p.orange[50],
+      category6: p.olive[700],
+      category6Sunk: p.olive[50],
 
       /** Brand accents — decorative fills only, never text, never sole state. */
-      brand: '#00AA7D',
-      /** FarmMate brandGreenDark. Filled brand controls (e.g. FAB) — white glyph clears 3:1 (4.08). */
-      brandStrong: '#008F6C',
-      /** FarmMate brandYellow. Illustration, chart series. */
-      brandYellow: '#FECB56',
-      /** FarmMate brandCream. Warm highlight ground. */
-      brandCream: '#FFF8E8',
-
+      brand: g[500],
+      /** Icon-only filled brand control (FAB): white glyph clears 3:1, not 4.5. */
+      brandStrong: g[600],
+      brandLight: g[400],
+      brandYellow: a[300],
+      /** Highlight card ground (e.g. owner's share) — not a warning. */
+      brandCream: a[25],
       /** Full-stage feedback washes, driven by opacity at the call site. */
-      flashAccept: '#006F52',
-      flashReject: '#BB1C1C',
+      flashAccept: g[700],
+      flashReject: r[700],
+      /** Sheet/dialog scrim colour — always with `opacity.scrim`. */
+      scrim: p.ink[900],
     },
 
+    /**
+     * Dark is opt-in, for evening and indoor weighing at the ล้ง. FarmMate
+     * defines no dark theme; these derive from the same hues.
+     */
     dark: {
-      stage: '#000000',
-      surface: '#0B1520',
-      surfaceSunk: '#060E17',
-      surfaceRaised: '#13202E',
+      stage: n[1000],
+      surface: n[900],
+      surfaceSunk: n[950],
+      surfaceRaised: n[850],
+      numeral: p.ink[50],
+      ink: p.ink[50],
+      inkSoft: n[300],
+      inkFaint: n[500],
+      inkInverse: n[975],
+      appBar: n[900],
+      appBarInk: p.ink[50],
 
-      numeral: '#F4F5F6',
-      ink: '#F4F5F6',
-      inkSoft: '#A3B1C0',
-      inkFaint: '#6E7D8C',
-      inkInverse: '#0A0B0C',
+      rule: n[700],
+      ruleFaint: n[800],
+      ruleStrong: n[400],
+      focusRing: pr[300],
 
-      rule: '#2E3B49',
-      ruleFaint: '#1B2632',
-      ruleStrong: '#7D8B99',
+      action: pr[300],
+      actionHover: pr[200],
+      actionSunk: pr[950],
+      disabledFill: n[950],
+      disabledInk: n[300],
 
-      action: '#8FB4EC',
-      actionHover: '#A9C6F1',
-      actionSunk: '#0F2340',
+      accept: g[400],
+      acceptSunk: g[950],
+      reject: r[300],
+      rejectSunk: r[950],
+      warn: a[300],
+      warnSunk: a[900],
+      statusSynced: g[400],
+      statusPending: a[300],
+      statusConflict: r[300],
 
-      accept: '#48C090',
-      acceptSunk: '#0B2A21',
+      moneyIn: g[400],
+      moneyInSunk: g[950],
+      moneyOut: p.ink[50],
+      moneyOutSunk: n[950],
 
-      reject: '#F0796A',
-      rejectSunk: '#331310',
+      category1: p.teal[400],
+      category1Sunk: p.teal[900],
+      category2: p.indigo[400],
+      category2Sunk: p.indigo[900],
+      category3: p.purple[400],
+      category3Sunk: p.purple[900],
+      category4: p.magenta[400],
+      category4Sunk: p.magenta[900],
+      category5: p.orange[400],
+      category5Sunk: p.orange[900],
+      category6: p.olive[400],
+      category6Sunk: p.olive[900],
 
-      warn: '#FECB56',
-      warnSunk: '#2E2409',
-
-      statusSynced: '#48C090',
-      statusPending: '#FECB56',
-      statusConflict: '#F0796A',
-
-      brand: '#48C090',
-      brandStrong: '#48C090',
-      brandYellow: '#FECB56',
-      brandCream: '#221D10',
-
-      flashAccept: '#48C090',
-      flashReject: '#F0796A',
+      brand: g[400],
+      brandStrong: g[400],
+      brandLight: g[600],
+      brandYellow: a[300],
+      brandCream: a[950],
+      flashAccept: g[400],
+      flashReject: r[300],
+      scrim: n[1000],
     },
-  },
+  };
+}
+
+export type SemanticColors = ReturnType<typeof colorFor>;
+
+export const tokens = {
+  /**
+   * Semantic colours of the active palette — see `colorFor` above.
+   * Light is the default and the field mode (F-15); dark is opt-in.
+   */
+  color: colorFor(PALETTES[ACTIVE_PALETTE]),
 
   /**
    * 4px base. Numeric keys are FarmMate's scale (emit as `--space-1` …
@@ -493,7 +638,7 @@ export const tokens = {
 } as const;
 
 export type Tokens = typeof tokens;
-export type ColorScheme = keyof Tokens['color'];
-export type ColorName = keyof Tokens['color']['light'];
+export type ColorScheme = keyof SemanticColors;
+export type ColorName = keyof SemanticColors['light'];
 
 export default tokens;
