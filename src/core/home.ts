@@ -18,6 +18,8 @@ export interface SaleLine {
   readonly ts: number | null;
   readonly netG: number;
   readonly baskets: number;
+  /** A pile is being counted right now ("กำลังชั่ง"), not just open. */
+  readonly weighing: boolean;
 }
 
 export interface HomeSales {
@@ -35,7 +37,13 @@ export function homeSales(sales: readonly { id: string; events: readonly SaleEve
     const state = projectSale(events, id);
     if (state.deleted || state.saleStatus === 'cancelled') continue;
     const totals = saleTotals(events);
-    const line: SaleLine = { id, ts: state.startedTs ?? events[0]?.ts ?? null, netG: totals.netG, baskets: totals.baskets };
+    const line: SaleLine = {
+      id,
+      ts: state.startedTs ?? events[0]?.ts ?? null,
+      netG: totals.netG,
+      baskets: totals.baskets,
+      weighing: state.piles.some((p) => p.status === 'counting'),
+    };
     if (statusCountsAsClosed(state)) {
       if (newer(line, latest)) latest = line;
     } else if (newer(line, open)) {

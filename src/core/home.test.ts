@@ -26,6 +26,13 @@ describe('homeSales — the home rows for sales (flow-v1 screen 3)', () => {
     expect(out.open?.ts).toBe(events.find((e) => e.kind === 'sys' && e.payload.t === 'sale_started')?.ts);
   });
 
+  it('says weighing only while a pile is being counted', () => {
+    const counting = sale('s1', 1).build();
+    expect(homeSales([{ id: 's1', events: counting }]).open?.weighing).toBe(true);
+    const between = sale('s2', 1).sys({ t: 'pile_closed', pileId: 'p1', forced: false }).build();
+    expect(homeSales([{ id: 's2', events: between }]).open?.weighing).toBe(false);
+  });
+
   it('a completed or closed sale is the latest one; the newest start wins', () => {
     const older = sale('s1', 2).sys({ t: 'sale_status_set', status: 'completed' }).build();
     const newer = sale('s2', 1, 5).sys({ t: 'sale_closed' }).build();
