@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import { LogBuilder, readyPile, setUpSale } from '../src/core/fixtures';
+import { MASTER_SCOPE } from '../src/core/master';
 import type { SaleEvent } from '../src/core/types';
 
 /**
@@ -54,6 +55,11 @@ export function unreadyPileScenario(saleId: string): SaleEvent[] {
  */
 export async function seedSale(page: Page, saleId: string, events: readonly SaleEvent[]): Promise<void> {
   if (events.some((e) => e.saleId !== saleId)) throw new Error(`seedSale: events not all for ${saleId}`);
+  await seedEvents(page, events);
+}
+
+/** Writes any events (a sale's, or farm master data's) straight into IndexedDB — see `seedSale`. */
+async function seedEvents(page: Page, events: readonly SaleEvent[]): Promise<void> {
   await page.goto('/');
   // The list renders only after `listSales()` resolved, i.e. after the app
   // created the database with its own schema — so the seed never creates it.
@@ -98,24 +104,29 @@ export function testSaleId(label: string): string {
 }
 
 /**
- * Seeds the reusable people list (src/store/people.web.ts's localStorage
- * schema) before the app boots — same idempotent-by-key pattern as
- * `seedSale`. Needed so `PeoplePicker` (used by the S29 deduction form) has
- * someone to pick — a `zone_contract_set` event only snapshots a name against
- * a `personId`, it never populates this list.
+ * Seeds people into farm master data (E03-S01): one `person_added` event
+ * each, under `MASTER_SCOPE`, written like `seedSale`. Needed so
+ * `PeoplePicker` (used by the S29 deduction form) has someone to pick — a
+ * `zone_contract_set` event only snapshots a name against a `personId`, it
+ * never adds a person.
  */
 export async function seedPeople(
   page: Page,
   people: readonly { id: string; name: string }[],
 ): Promise<void> {
-  await page.addInitScript(
-    ({ key, people }) => {
-      if (window.localStorage.getItem(key) !== null) return;
-      const rows = people.map((p) => ({ id: p.id, name: p.name, createdTs: Date.now(), archivedTs: null }));
-      window.localStorage.setItem(key, JSON.stringify(rows));
-    },
-    { key: 'mon-farm:people', people },
-  );
+  const events: SaleEvent[] = people.map((p, i) => ({
+    id: `seed-person/${p.id}`,
+    saleId: MASTER_SCOPE,
+    seq: i + 1,
+    deviceSeq: i + 1,
+    ts: Date.now(),
+    mono: i,
+    actor: { userId: 'pre-login', deviceId: 'dev-seed' },
+    source: 'app',
+    kind: 'master',
+    payload: { t: 'person_added', personId: p.id, name: p.name, roles: ['tapper'], otherRoles: [] },
+  }));
+  await seedEvents(page, events);
 }
 
 /**

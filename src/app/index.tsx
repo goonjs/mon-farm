@@ -86,6 +86,9 @@ export default function SaleListScreen() {
           {msg('sales.title')}
         </Text>
         <View style={{ flex: 1 }} />
+        <Link href={'/farm-data' as Href} asChild>
+          <Button testID="open-farm-data">{msg('farmData.open')}</Button>
+        </Link>
         <Link href={SETTINGS} asChild>
           <Button testID="open-settings">{msg('settings.open')}</Button>
         </Link>

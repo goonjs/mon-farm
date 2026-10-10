@@ -20,12 +20,12 @@ async function flush() {
 
 describe('DeductionForm', () => {
   beforeEach(async () => {
-    for (const p of await mockStore.list()) await mockStore.archive(p.id);
+    for (const p of await mockStore.list()) await mockStore.remove(p.id);
   });
 
   it('keeps the add button disabled until a person, an amount, a reason and who agreed are all present', async () => {
     const onAdd = jest.fn();
-    await mockStore.create('ประยุทธ');
+    await mockStore.create('ประยุทธ', ['tapper']);
     wrap(<DeductionForm onAdd={onAdd} />);
     await flush();
 
@@ -56,7 +56,7 @@ describe('DeductionForm', () => {
 
   it('does not submit when amount is zero or non-numeric', async () => {
     const onAdd = jest.fn();
-    await mockStore.create('ประยุทธ');
+    await mockStore.create('ประยุทธ', ['tapper']);
     wrap(<DeductionForm onAdd={onAdd} />);
     await flush();
 

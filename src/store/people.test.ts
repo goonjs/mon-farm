@@ -17,18 +17,18 @@ describe('MemoryPeopleStore', () => {
     expect(await store.list()).toEqual([]);
   });
 
-  it('creates a person with a name, an id, and no archive date', async () => {
-    const p = await store.create('ประยุทธ');
+  it('creates a person with a name, an id, and not deleted', async () => {
+    const p = await store.create('ประยุทธ', ['tapper']);
     expect(p.name).toBe('ประยุทธ');
     expect(p.id).toBeTruthy();
-    expect(p.archivedTs).toBeNull();
+    expect(p.deleted).toBe(false);
     expect(await store.get(p.id)).toEqual(p);
   });
 
   it('lists active people alphabetically', async () => {
-    await store.create('สมหญิง');
-    await store.create('ประยุทธ');
-    await store.create('มานพ');
+    await store.create('สมหญิง', ['tapper']);
+    await store.create('ประยุทธ', ['tapper']);
+    await store.create('มานพ', ['tapper']);
     const names = (await store.list()).map((p) => p.name);
     // Thai collation order — not insertion order.
     expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'th')));
@@ -36,25 +36,24 @@ describe('MemoryPeopleStore', () => {
   });
 
   it('rename changes the name but not the id', async () => {
-    const p = await store.create('ประยุทธ');
+    const p = await store.create('ประยุทธ', ['tapper']);
     await store.rename(p.id, 'ประยุทธ์');
     const after = await store.get(p.id);
     expect(after?.id).toBe(p.id);
     expect(after?.name).toBe('ประยุทธ์');
   });
 
-  it('archive removes a person from list() but not from get()', async () => {
-    const p = await store.create('ประยุทธ');
-    await store.archive(p.id);
+  it('remove (soft delete) removes a person from list() but not from get()', async () => {
+    const p = await store.create('ประยุทธ', ['tapper']);
+    await store.remove(p.id);
 
     expect(await store.list()).toEqual([]);
     const after = await store.get(p.id);
-    expect(after?.archivedTs).not.toBeNull();
+    expect(after?.deleted).toBe(true);
     expect(after?.name).toBe('ประยุทธ'); // still resolvable — a past settlement can still show the name
   });
 
-  it('rename or archive on an unknown id is a no-op, not an error', async () => {
+  it('rename on an unknown id is a no-op, not an error', async () => {
     await expect(store.rename('nope', 'x')).resolves.toBeUndefined();
-    await expect(store.archive('nope')).resolves.toBeUndefined();
   });
 });

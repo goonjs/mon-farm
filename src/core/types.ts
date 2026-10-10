@@ -35,7 +35,7 @@ export interface Actor {
   readonly deviceId: DeviceId;
 }
 
-export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys' | 'delete' | 'restore';
+export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys' | 'delete' | 'restore' | 'master';
 
 /**
  * Any record an event can create or change: a sale, zone, pile, deduction —
@@ -152,6 +152,12 @@ export type SysPayload =
       readonly t: 'sale_started';
       readonly farmName: string;
       readonly buyer: string;
+      /**
+       * The master-data buyer picked (E03-S01), when one was. `buyer` stays
+       * the name SNAPSHOT for the record; this id is what makes "the latest
+       * buyer" the next sale's default (MD-6). Absent for a typed-in name.
+       */
+      readonly buyerId?: string;
       readonly manager: string;
       readonly workerLead: string;
       readonly where: 'farm' | 'buyer';
@@ -305,7 +311,92 @@ export interface RestoreEvent extends EventBase {
   readonly targetId: RecordId;
 }
 
+/**
+ * Farm master data (E03): people and buyers, shared by the farm group rather
+ * than owned by one sale. Stored in the same append-only log under the
+ * reserved scope `MASTER_SCOPE` (src/core/master.ts) — the envelope's
+ * `saleId` stands in for the architecture's `saleId: null` until the
+ * `groupId` envelope lands (E02-S02 / E04-S01). Delete and restore are the
+ * ordinary `delete`/`restore` events naming `personId`/`buyerId` (D-27).
+ *
+ * `person_edited` / `buyer_edited` are patches: a field left out is unchanged.
+ */
+export type BuiltinRole = 'tapper' | 'worker' | 'manager' | 'payer' | 'tenant' | 'owner';
+
+export type MasterPayload =
+  | {
+      readonly t: 'person_added';
+      readonly personId: PersonId;
+      readonly name: string;
+      readonly roles: readonly BuiltinRole[];
+      /** Roles typed in by hand, e.g. "ลูกคนงาน" (D-68). */
+      readonly otherRoles: readonly string[];
+    }
+  | {
+      readonly t: 'person_edited';
+      readonly personId: PersonId;
+      readonly name?: string;
+      readonly roles?: readonly BuiltinRole[];
+      readonly otherRoles?: readonly string[];
+    }
+  | { readonly t: 'buyer_added'; readonly buyerId: string; readonly name: string }
+  | { readonly t: 'buyer_edited'; readonly buyerId: string; readonly name: string }
+  /**
+   * A farm property (สวน, E03-S02, MD-1). Planted year and GPS are optional
+   * and absent means Unknown (SYNC-12). Canonical JSON allows integers only,
+   * so GPS is microdegrees.
+   */
+  | {
+      readonly t: 'property_added';
+      readonly propertyId: string;
+      readonly name: string;
+      readonly crop: Crop;
+      readonly plantedYearBe?: number;
+      readonly gps?: Gps;
+    }
+  | {
+      readonly t: 'property_edited';
+      readonly propertyId: string;
+      readonly name?: string;
+      readonly crop?: Crop;
+      readonly plantedYearBe?: number;
+      readonly gps?: Gps;
+      /** Optional fields set back to Unknown — canonical JSON has no null. */
+      readonly cleared?: readonly ('plantedYearBe' | 'gps')[];
+    }
+  /**
+   * One dated area entry: appended, never overwritten (MD-1). `centiRai` is
+   * rai × 100 (integers only); `effective` is an ISO day, `YYYY-MM-DD`.
+   */
+  | {
+      readonly t: 'area_recorded';
+      readonly propertyId: string;
+      readonly entryId: string;
+      readonly centiRai: number;
+      readonly effective: string;
+    }
+  /**
+   * A weighing point (จุดชั่ง = กอง, E03-S03, MD-3): a place under a farm,
+   * reused by every sale. No tare or basket weight of its own — those are
+   * group settings (MD-7).
+   */
+  | { readonly t: 'point_added'; readonly pointId: string; readonly propertyId: string; readonly name: string }
+  | { readonly t: 'point_renamed'; readonly pointId: string; readonly name: string };
+
+export type Crop = 'rubber' | 'durian';
+
+export interface Gps {
+  readonly latE6: number;
+  readonly lngE6: number;
+}
+
+export interface MasterEvent extends EventBase {
+  readonly kind: 'master';
+  readonly payload: MasterPayload;
+}
+
 export type SaleEvent =
+  | MasterEvent
   | AcceptEvent
   | ShortEvent
   | RejectEvent
@@ -377,6 +468,7 @@ export interface SaleState {
   readonly parties: {
     readonly farmName: string;
     readonly buyer: string;
+    readonly buyerId?: string;
     readonly manager: string;
     readonly workerLead: string;
     readonly where: 'farm' | 'buyer';
