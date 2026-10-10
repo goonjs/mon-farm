@@ -26,7 +26,8 @@ import { readFile } from 'node:fs/promises';
 import { readdirSync, statSync } from 'node:fs';
 import { extname, join, normalize, relative } from 'node:path';
 
-const ROOT = new URL('../dist/', import.meta.url).pathname;
+// DIST_DIR lets the server's own test point it at a fixture folder.
+const ROOT = process.env.DIST_DIR ? join(process.env.DIST_DIR, '/') : new URL('../dist/', import.meta.url).pathname;
 const PORT = Number(process.env.PORT ?? 8080);
 
 const TYPES = {
@@ -85,21 +86,25 @@ createServer(async (req, res) => {
     if (!path.startsWith(ROOT)) { res.writeHead(403).end('forbidden'); return; }
     if (url.endsWith('/')) path = join(path, 'index.html');
 
+    // The path itself, its literal `.html` sibling (static routes), or a
+    // folder's index without the trailing slash (`/v2` → v2/index.html, which
+    // Firebase Hosting answers by redirecting to `/v2/`).
     let body;
-    try {
-      body = await readFile(path);
-    } catch {
+    for (const candidate of [path, path + '.html', join(path, 'index.html')]) {
       try {
-        // A literal `.html` sibling of the route (static routes).
-        body = await readFile(path + '.html');
-        path += '.html';
+        body = await readFile(candidate);
+        path = candidate;
+        break;
       } catch {
-        // A dynamic route ([id], etc) — match by pattern instead of by path.
-        const matched = resolveDynamic(url);
-        if (!matched) throw new Error('no route matched');
-        body = await readFile(matched);
-        path = matched;
+        // next candidate
       }
+    }
+    if (body === undefined) {
+      // A dynamic route ([id], etc) — match by pattern instead of by path.
+      const matched = resolveDynamic(url);
+      if (!matched) throw new Error('no route matched');
+      body = await readFile(matched);
+      path = matched;
     }
     res.writeHead(200, { 'content-type': TYPES[extname(path)] ?? 'application/octet-stream' });
     res.end(body);
