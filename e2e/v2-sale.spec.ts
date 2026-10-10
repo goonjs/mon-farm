@@ -216,9 +216,16 @@ test('start → point → empty scale → count → short → switch and fill �
   await expect(id('sale-rows')).toContainText('470 กก.');
   await expect(id('sale-rows')).toContainText('ปิดแล้ว');
   // ── back after closing finds no live counter (review #2) ──
-  await page.goBack();
-  await expect(id('hold')).toHaveCount(0);
-  await page.goForward();
+  // However far back the browser goes, every page of the closed sale is read-only.
+  // (Online for this: going back past the earlier reload loads that document again.)
+  await context.setOffline(false);
+  for (let i = 0; i < 6; i++) {
+    await page.goBack();
+    await page.waitForLoadState();
+    await page.waitForTimeout(400);
+    await expect(id('hold')).toHaveCount(0);
+  }
+  await page.goto('/v2/sales');
   await expect(id('sales')).toBeVisible();
   await shot(page, '04-sales');
 

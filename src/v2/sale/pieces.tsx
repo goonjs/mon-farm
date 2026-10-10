@@ -78,12 +78,26 @@ export function useSaleView() {
   };
 }
 
+/**
+ * Sales being closed right now. Closing pops the sale's whole stack in one
+ * navigation; a screen still mounted under it must not answer the closed
+ * status by sending the sale to /payment on the way out (re-review N3).
+ * Cleared when the sale list shows.
+ */
+const closing = new Set<string>();
+export function markClosing(saleId: string): void {
+  closing.add(saleId);
+}
+export function clearClosing(): void {
+  closing.clear();
+}
+
 /** A write screen of a closed sale goes to its payment page, read-only (review #2). */
 export function useLeaveIfClosed(view: { ready: boolean; closed: boolean; saleId: string }) {
   const router = useRouter();
   const { ready, closed, saleId } = view;
   useEffect(() => {
-    if (ready && closed) router.replace(`/v2/sale/${saleId}/payment` as Href);
+    if (ready && closed && !closing.has(saleId)) router.replace(`/v2/sale/${saleId}/payment` as Href);
   }, [ready, closed, saleId, router]);
 }
 

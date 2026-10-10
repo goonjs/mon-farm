@@ -67,7 +67,7 @@ import {
 } from '../../ui';
 import { useSaleMoney } from '../money/sale/use-sale-money';
 import { FarmScreen } from '../farm/pieces';
-import { Banner, IconLine, Kv, bahtText, kgText, tapperTone, useSaleView } from './pieces';
+import { Banner, IconLine, Kv, bahtText, kgText, markClosing, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 
 const baht = formatSatang;
 
@@ -277,6 +277,8 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<(typeof METHODS)[number]>('cash-from-share');
   const [roundOpen, setRoundOpen] = useState(openRounding);
+  // /rounding is a write screen: a closed sale goes to its payment (re-review N4).
+  useLeaveIfClosed({ ready: view.ready, closed: view.closed && openRounding, saleId: view.saleId });
   const [roundMode, setRoundMode] = useState<RoundingMode | null>(null);
   const [acctOpen, setAcctOpen] = useState(false);
   const [note, setNote] = useState('');
@@ -488,7 +490,7 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
         ) : null}
       </BottomSheet>
 
-      <BottomSheet open={roundOpen} onClose={() => setRoundOpen(false)} title={msg('v2s.roundTitle')} testID="rounding-sheet">
+      <BottomSheet open={roundOpen && !view.closed} onClose={() => setRoundOpen(false)} title={msg('v2s.roundTitle')} testID="rounding-sheet">
         <View style={{ gap: t.space.xxs }}>
           <IconLine icon={(c) => <Check color={c} size={10} />}>{msg('v2s.roundOnce')}</IconLine>
           <IconLine icon={(c) => <Minus color={c} size={10} />}>{msg('v2s.roundAfterDebt')}</IconLine>
@@ -647,13 +649,13 @@ function PaymentBody({ bump }: { bump: () => void }) {
   const canClose = piles.ok && money.rounding.ready && conflicts.length === 0 && !over;
   const closeSale = () => {
     if (!canClose) return;
+    // One navigation, no timing: the list is not in the sale's stack, so dismissTo pops
+    // the whole sale (home → sales) and back never reaches a live counter (review #2, N3).
+    // A browser keeps its own history: going back there reaches the sale's pages again,
+    // each read-only now, and the write ones hand over to /payment.
+    markClosing(saleId);
     if (canComplete(state)) append({ kind: 'sys', payload: { t: 'sale_status_set', status: 'completed' } });
-    // Drop the whole sale stack, so back never reaches a live counter (review #2).
-    // On web the drop is a history pop, so the move to the list waits a tick for it.
-    if (router.canDismiss()) {
-      router.dismissAll();
-      setTimeout(() => router.replace('/v2/sales' as Href), 0);
-    } else router.replace('/v2/sales' as Href);
+    router.dismissTo('/v2/sales' as Href);
   };
   const closed = view.closed;
   // No tick while closed, while ticks conflict (review #5), or for a tapper deducted over the share (D-61).

@@ -18,7 +18,7 @@ import { store } from '../../store/store';
 import { useTheme } from '../../theme';
 import { AppText, BasketIcon, Chip, CTA, IconTile, LeafIcon, TapperIcon, toneColours, UsersIcon } from '../../ui';
 import { FarmScreen, RowCard } from '../farm/pieces';
-import { Banner, IconLine, kgText, tapperTone } from './pieces';
+import { Banner, clearClosing, IconLine, kgText, tapperTone } from './pieces';
 
 interface Loaded {
   readonly master: MasterState;
@@ -47,6 +47,8 @@ export function SalesScreen() {
   const router = useRouter();
   const { era, toggleEra } = useI18n();
   const data = useSales();
+  // A sale closed on the way here is done closing.
+  useEffect(clearClosing, []);
 
   const open = (r: SaleListRow & { point: string | null }) => {
     const base = `/v2/sale/${r.id}`;
