@@ -280,6 +280,17 @@ const th = {
   'sales.deleteCancel': 'ไม่ลบ',
   'sales.deleteHint': 'ลบแล้วยังกู้คืนได้',
   'sales.deletedLink': 'ที่ลบแล้ว ({n})',
+
+  // ── Sync status pill (SYNC-3, D-28) — v1.1.0 mockup wording ─────────────
+  'sync.synced': 'ซิงก์แล้ว',
+  'sync.pending': 'รอส่ง {n}',
+  'sync.conflict': 'ขัดกัน {n}',
+  'sync.label': 'สถานะซิงก์: {status}',
+
+  // ── App menu (☰) ────────────────────────────────────────────────────────
+  'menu.open': 'เมนู',
+  'menu.close': 'ปิดเมนู',
+  'menu.sales': 'การขายทั้งหมด',
   'deleted.title': 'ที่ลบแล้ว',
   'deleted.back': '← รายการ',
   'deleted.empty': 'ไม่มีรายการที่ลบ',
@@ -572,6 +583,15 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'sales.deleteCancel': 'keep',
   'sales.deleteHint': 'a deleted sale can be restored',
   'sales.deletedLink': 'deleted ({n})',
+
+  'sync.synced': 'synced',
+  'sync.pending': '{n} pending',
+  'sync.conflict': '{n} conflicts',
+  'sync.label': 'sync status: {status}',
+
+  'menu.open': 'menu',
+  'menu.close': 'close menu',
+  'menu.sales': 'all sales',
   'deleted.title': 'deleted',
   'deleted.back': '← list',
   'deleted.empty': 'nothing deleted',
