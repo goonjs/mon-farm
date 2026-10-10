@@ -649,8 +649,11 @@ function PaymentBody({ bump }: { bump: () => void }) {
     if (!canClose) return;
     if (canComplete(state)) append({ kind: 'sys', payload: { t: 'sale_status_set', status: 'completed' } });
     // Drop the whole sale stack, so back never reaches a live counter (review #2).
-    if (router.canDismiss()) router.dismissAll();
-    router.replace('/v2/sales' as Href);
+    // On web the drop is a history pop, so the move to the list waits a tick for it.
+    if (router.canDismiss()) {
+      router.dismissAll();
+      setTimeout(() => router.replace('/v2/sales' as Href), 0);
+    } else router.replace('/v2/sales' as Href);
   };
   const closed = view.closed;
   // No tick while closed, while ticks conflict (review #5), or for a tapper deducted over the share (D-61).
