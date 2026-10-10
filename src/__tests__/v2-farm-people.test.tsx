@@ -1,5 +1,5 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { BuyersScreen } from '../v2/farm/buyers-screen';
 import { FarmHubScreen } from '../v2/farm/farm-hub';
@@ -145,6 +145,25 @@ describe('คน — list, filter, deleted (farm mockup 4)', () => {
     await flush();
     expect(screen.getByText('แดง')).toBeTruthy();
     expect(screen.queryByText('อาจารย์สมหวัง')).toBeNull();
+  });
+
+  it('follows ?filter= when it arrives after the first render (a static page hydrates without it)', async () => {
+    await people().create('แดง', ['tapper']);
+    await people().create('อาจารย์สมหวัง', ['manager']);
+    let bump = () => {};
+    function Host() {
+      const [, set] = useState(0);
+      bump = () => set((n) => n + 1);
+      return <PeopleScreen />;
+    }
+    wrap(<Host />);
+    await flush();
+    expect(screen.getByText('อาจารย์สมหวัง')).toBeTruthy();
+    mockParams.current = { filter: 'tapper' };
+    act(() => bump());
+    await flush();
+    expect(screen.queryByText('อาจารย์สมหวัง')).toBeNull();
+    expect(screen.getByText('แดง')).toBeTruthy();
   });
 
   it('the buyers filter lists buyers', async () => {

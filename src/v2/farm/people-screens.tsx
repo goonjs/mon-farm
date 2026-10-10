@@ -107,7 +107,15 @@ export function PeopleScreen() {
   const { state, reload } = useMaster();
   // `?filter=tapper` — the home card ข้อมูลคนงาน opens the list on its tappers (v1.1.0 screen 26).
   const params = useLocalSearchParams<{ filter?: string }>();
-  const [filter, setFilter] = useState<Filter>(() => FILTERS.find((f) => f === params.filter) ?? 'all');
+  const [filter, setFilter] = useState<Filter>('all');
+  // Follow the param whenever it changes, not only on the first render: the
+  // static page hydrates without search params and gets them a render later.
+  const asked = FILTERS.find((f) => f === params.filter) ?? null;
+  const [seen, setSeen] = useState<Filter | null>(null);
+  if (asked !== seen) {
+    setSeen(asked);
+    if (asked) setFilter(asked);
+  }
   const [showDeleted, setShowDeleted] = useState(false);
   const [today] = useState(() => todayIso(Date.now()));
 
