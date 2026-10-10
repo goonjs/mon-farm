@@ -138,4 +138,11 @@ describe('chrome — v1.1.0 shell styling', () => {
       paddingHorizontal: tokens.layout.screenPaddingX,
     });
   });
+
+  it('top bar crumb path: parts split by drawn chevrons, not a ▸ glyph', () => {
+    wrap(<TopBar crumb={['ไร่คุณพ่อ', 'โซน A', 'กอง 1']} />);
+    expect(screen.queryByText(/▸/)).toBeNull();
+    expect(screen.getByTestId('crumb')).toHaveTextContent(/ไร่คุณพ่อ.*โซน A.*กอง 1/);
+    expect(screen.getAllByTestId('crumb-sep', { includeHiddenElements: true })).toHaveLength(2);
+  });
 });

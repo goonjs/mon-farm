@@ -18,6 +18,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { Button, CardLabel, Pill, Tabs, TopBar, cardStyle } from '../../../components/chrome';
+import { Scale, Undo } from '../../../components/ui/icons';
 import { HoldStage } from '../../../components/HoldStage';
 import { PileClosedTransition } from '../../../components/PileClosedTransition';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
@@ -216,7 +217,7 @@ export default function CounterScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <TopBar
-        crumb={`${state.parties?.farmName ?? ''} ▸ ${zone.name} ▸ ${pile.name}`}
+        crumb={[state.parties?.farmName ?? '', zone.name, pile.name]}
         right={
           <>
             {tab !== 'count' && totals ? (
@@ -296,11 +297,21 @@ export default function CounterScreen() {
                 <UndoConfirmRow event={lastBasket} onConfirm={doUndo} onCancel={() => setConfirmUndo(false)} />
               ) : (
                 <>
-                  <Button testID="undo" onPress={() => setConfirmUndo(true)} disabled={!lastBasket}>
-                    {`↺ ${msg('counter.undo')}`}
+                  <Button
+                    testID="undo"
+                    icon={(c) => <Undo color={c} size={12} />}
+                    onPress={() => setConfirmUndo(true)}
+                    disabled={!lastBasket}
+                  >
+                    {msg('counter.undo')}
                   </Button>
-                  <Button testID="short" onPress={openShort} disabled={!countable || shortOpen}>
-                    {`⚖ ${msg('short.open')}`}
+                  <Button
+                    testID="short"
+                    icon={(c) => <Scale color={c} size={14} />}
+                    onPress={openShort}
+                    disabled={!countable || shortOpen}
+                  >
+                    {msg('short.open')}
                   </Button>
                   <Button
                     testID="row-close-pile"

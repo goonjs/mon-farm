@@ -6,9 +6,10 @@
  * (docs/ux/design-system.md §4).
  */
 
-import { Children } from 'react';
+import { Children, Fragment } from 'react';
 import { Pressable, Text, View, type TextStyle, type ViewStyle } from 'react-native';
 
+import { ChevronRight } from './ui/icons';
 import { useTheme, type Theme } from '../theme';
 
 /**
@@ -105,7 +106,7 @@ export function Pill({
   );
 }
 
-export function TopBar({ crumb, right }: { crumb: string; right?: React.ReactNode }) {
+export function TopBar({ crumb, right }: { crumb: string | readonly string[]; right?: React.ReactNode }) {
   const t = useTheme();
   return (
     <View
@@ -136,7 +137,20 @@ export function TopBar({ crumb, right }: { crumb: string; right?: React.ReactNod
           flexShrink: 1,
         }}
       >
-        {crumb}
+        {typeof crumb === 'string'
+          ? crumb
+          : crumb.map((part, i) => (
+              <Fragment key={i}>
+                {i > 0 ? (
+                  // A drawn chevron between path parts — the ▸ glyph depended
+                  // on the system font carrying it.
+                  <View testID="crumb-sep" aria-hidden style={{ paddingHorizontal: t.space.xs }}>
+                    <ChevronRight color={t.color.inkSoft} size={7} />
+                  </View>
+                ) : null}
+                {part}
+              </Fragment>
+            ))}
       </Text>
       <View style={{ flex: 1 }} />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>{right}</View>
