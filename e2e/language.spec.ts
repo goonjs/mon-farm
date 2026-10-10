@@ -16,6 +16,8 @@ test('opens in Thai with no stored preference', async ({ page }) => {
   await page.goto('/');
   // Not `toContainText('sales')` inverted — assert the Thai is actually there,
   // so a blank render cannot pass by failing to contain English.
+  // Settings live in the ☰ menu since E01-S17 (v1.1.0 farm screen 1).
+  await page.getByTestId('open-menu').click();
   await expect(page.getByTestId('open-settings')).toHaveText('ตั้งค่า');
 });
 
@@ -42,6 +44,7 @@ test('the choice survives a reload', async ({ page }) => {
 
   // And it is the whole app, not just the screen it was set on.
   await page.goto('/');
+  await page.getByTestId('open-menu').click();
   await expect(page.getByTestId('open-settings')).toHaveText('settings');
 });
 

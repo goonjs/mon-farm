@@ -14,6 +14,9 @@ import { ScrollView, Text, View } from 'react-native';
 import { Link, useFocusEffect, type Href } from 'expo-router';
 
 import { Button, cardStyle } from '../components/chrome';
+import { Drawer, MenuItem, MenuSection } from '../components/ui/drawer';
+import { ScreenHeader } from '../components/ui/screen-header';
+import { useSyncStatus } from '../sync/use-sync-status';
 import { projectSale } from '../core/project';
 import type { SaleState } from '../core/types';
 import { newId } from '../lib/id';
@@ -29,6 +32,8 @@ export default function SaleListScreen() {
   const [sales, setSales] = useState<SaleState[] | null>(null); // null = loading
   // Soft-deleted sales (E01-S04) are hidden here and listed under "deleted".
   const [deletedCount, setDeletedCount] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const sync = useSyncStatus();
 
   const reload = useCallback(() => {
     (async () => {
@@ -62,39 +67,12 @@ export default function SaleListScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      {/* App bar — v1.1.0 mockups: title over a soft subtitle on appBar. */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: t.space.sm,
-          paddingHorizontal: t.space.lg,
-          paddingVertical: t.space.md,
-          backgroundColor: t.color.appBar,
-          borderBottomWidth: t.border.hair,
-          borderBottomColor: t.color.ruleFaint,
-        }}
-      >
-        <View style={{ flexShrink: 1 }}>
-          <Text
-            style={{
-              fontFamily: t.font.family.sans,
-              fontSize: t.font.size.headingLg,
-              fontWeight: t.font.weight.bold,
-              color: t.color.appBarInk,
-            }}
-          >
-            mon-farm
-          </Text>
-          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.inkSoft }}>
-            {msg('sales.title')}
-          </Text>
-        </View>
-        <View style={{ flex: 1 }} />
-        <Link href={SETTINGS} asChild>
-          <Button testID="open-settings">{msg('settings.open')}</Button>
-        </Link>
-      </View>
+      <ScreenHeader
+        title="mon-farm"
+        subtitle={msg('sales.title')}
+        menu={{ onPress: () => setMenuOpen(true) }}
+        sync={sync}
+      />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: t.space.lg, gap: t.space.md }}>
         {sales === null ? (
@@ -107,7 +85,7 @@ export default function SaleListScreen() {
             {msg('sales.empty')}
           </Text>
         ) : (
-          <View style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
+          <View testID="home-sales" style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
             {sales.map((s, i) => (
               <SaleRow key={s.id} sale={s} first={i === 0} onDelete={() => void remove(s.id)} />
             ))}
@@ -125,6 +103,28 @@ export default function SaleListScreen() {
           <Button testID="new-sale" variant="primary">{msg('sales.new')}</Button>
         </Link>
       </View>
+
+      {/* ☰ menu (v1.1.0 farm screen 1). Settings moved here off the front
+          door; the sale list stays the home screen's main card. */}
+      <Drawer open={menuOpen} onClose={() => setMenuOpen(false)}>
+        <MenuSection title={msg('menu.shared')}>
+          <MenuItem
+            testID="menu-farm-profile"
+            label={msg('settings.farmProfile')}
+            href="/farm-profile"
+            onPress={() => setMenuOpen(false)}
+          />
+          <MenuItem testID="menu-sales" label={msg('menu.sales')} onPress={() => setMenuOpen(false)} />
+        </MenuSection>
+        <MenuSection title={msg('menu.device')}>
+          <MenuItem
+            testID="open-settings"
+            label={msg('settings.open')}
+            href={SETTINGS}
+            onPress={() => setMenuOpen(false)}
+          />
+        </MenuSection>
+      </Drawer>
     </View>
   );
 }
