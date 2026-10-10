@@ -80,7 +80,9 @@ function tally(baskets: readonly BasketEvent[]): Totals {
       standardNetG += b.netG;
     } else {
       if (!part) shortBaskets++;
-      shortNetG += b.readingG - b.tareG;
+      // Through basketNetG so an accepted skew is taken off here too —
+      // settlement must never disagree with the recorder (E04 skew).
+      shortNetG += basketNetG(b);
     }
   }
 
