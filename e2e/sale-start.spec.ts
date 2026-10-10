@@ -42,6 +42,7 @@ test('offline: start → pick point → first basket numbered at its point, pric
   await page.getByTestId('open-wizard').click();
   await page.locator('[data-testid^="wizard-farm-"]', { hasText: 'สวน ก' }).click();
   await page.locator('[data-testid^="wizard-tapper-"]', { hasText: 'แดง' }).click();
+  await page.getByTestId('wizard-next').click();
   await page.locator('[data-testid^="wizard-name-"]').first().fill('จุด 1');
   await page.getByTestId('wizard-create').click();
   await expect(page.getByTestId('open-wizard')).toHaveCount(0);
@@ -99,6 +100,7 @@ test('zero check "first point of each farm": the 2nd point of the farm opens wit
   await page.locator('[data-testid^="wizard-farm-"]', { hasText: 'สวน ก' }).click();
   await page.locator('[data-testid^="wizard-tapper-"]', { hasText: 'แดง' }).click();
   await page.locator('[data-testid^="wizard-more-"]').first().click();
+  await page.getByTestId('wizard-next').click();
   await page.locator('[data-testid^="wizard-name-"]').nth(0).fill('จุด 1');
   await page.locator('[data-testid^="wizard-name-"]').nth(1).fill('จุด 2');
   await page.getByTestId('wizard-create').click();

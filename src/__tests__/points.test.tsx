@@ -105,12 +105,17 @@ describe('PointsWizard — the generic starter (D-73)', () => {
     fireEvent.press(screen.getByTestId(`wizard-tapper-${red.id}`));
     fireEvent.press(screen.getByTestId(`wizard-tapper-${nat.id}`));
     fireEvent.press(screen.getByTestId(`wizard-more-${red.id}`)); // แดง: 2
+    expect(screen.getByTestId('wizard-step-3').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.queryByTestId(`wizard-name-${red.id}-0`)).toBeNull();
+    fireEvent.press(screen.getByTestId('wizard-next'));
+    expect(screen.getByTestId('wizard-step-4').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId(`wizard-group-${red.id}`)).toHaveTextContent(/สวน ก · แดง \(2 จุด\)/);
 
     // Names are required — nothing invented.
     await act(async () => {
       fireEvent.press(screen.getByTestId('wizard-create'));
     });
-    expect(screen.getByText('ใส่ชื่อจุดให้ครบทุกจุด')).toBeTruthy();
+    expect(screen.getByText('ใส่ชื่อให้ครบทุกจุด')).toBeTruthy();
 
     fireEvent.changeText(screen.getByTestId(`wizard-name-${red.id}-0`), 'จุด 1');
     fireEvent.changeText(screen.getByTestId(`wizard-name-${red.id}-1`), 'จุด 2');

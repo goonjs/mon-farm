@@ -45,8 +45,9 @@ test('points: the helper creates every named point offline; names repeat only ac
   await page.locator('[data-testid^="wizard-tapper-"]', { hasText: 'แดง' }).click();
   await page.locator('[data-testid^="wizard-tapper-"]', { hasText: 'นัด' }).click();
   await page.locator('[data-testid^="wizard-more-"]').first().click();
+  await page.getByTestId('wizard-next').click();
   await page.getByTestId('wizard-create').click();
-  await expect(page.getByText('ใส่ชื่อจุดให้ครบทุกจุด')).toBeVisible();
+  await expect(page.getByText('ใส่ชื่อให้ครบทุกจุด')).toBeVisible();
   const inputs = page.locator('[data-testid^="wizard-name-"]');
   await inputs.nth(0).fill('จุด 1');
   await inputs.nth(1).fill('จุด 2');
@@ -94,6 +95,7 @@ test('assignments: helper assigns, a planned change ends the old tapper the day 
   await page.getByTestId('open-wizard').click();
   await page.locator('[data-testid^="wizard-farm-"]', { hasText: 'สวน ก' }).click();
   await page.locator('[data-testid^="wizard-tapper-"]', { hasText: 'แดง' }).click();
+  await page.getByTestId('wizard-next').click();
   await page.locator('[data-testid^="wizard-name-"]').first().fill('จุด 1');
   await page.getByTestId('wizard-create').click();
   await expect(page.getByTestId('open-wizard')).toHaveCount(0);
