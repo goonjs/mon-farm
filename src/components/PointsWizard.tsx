@@ -24,6 +24,7 @@ export function PointsWizard({ onDone }: { onDone: () => void }) {
   const [tappers, setTappers] = useState<string[]>([]);
   const [names, setNames] = useState<Record<string, string[]>>({});
   const [tried, setTried] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     master.state().then(setState);
@@ -49,8 +50,14 @@ export function PointsWizard({ onDone }: { onDone: () => void }) {
 
   const create = async () => {
     setTried(true);
-    if (!plan?.ok || total === 0) return;
-    await master.createStarterPoints(rows);
+    // One run at a time: a double tap must not create the set twice.
+    if (!plan?.ok || total === 0 || busy) return;
+    setBusy(true);
+    try {
+      await master.createStarterPoints(rows);
+    } finally {
+      setBusy(false);
+    }
     onDone();
   };
 

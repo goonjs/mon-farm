@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { MASTER_SCOPE } from '../core/master';
+import { MASTER_SCOPE, saleSettings, shareOn, tapperOn } from '../core/master';
 import { createDeviceClock } from './device-clock';
-import { DuplicatePointNameError, MasterStore } from './master-store';
+import { DuplicatePointNameError, MasterStore, ShareTooEarlyError } from './master-store';
 import { MemoryStore } from './memory-store';
-import { LogBuilder } from '../core/fixtures';
+import { LogBuilder, setUpSale, withZoneContract } from '../core/fixtures';
 
 describe('MasterStore — people and buyers as events (E03-S01)', () => {
   let events: MemoryStore;
@@ -112,7 +112,57 @@ describe('MasterStore — people and buyers as events (E03-S01)', () => {
     const f = await master.addProperty({ name: 'ก', crop: 'rubber' });
     const made = await master.createStarterPoints([{ propertyId: f.id, tapperId: 't1', names: ['จุด 1', 'จุด 2'] }]);
     expect(made.map((m) => [m.name, m.tapperId])).toEqual([['จุด 1', 't1'], ['จุด 2', 't1']]);
+    // E03-S05: each point starts with its tapper, no start date (D-63).
+    const st = await master.state();
+    expect(made.map((m) => tapperOn(st, m.id, '2000-01-01'))).toEqual(['t1', 't1']);
     expect((await master.state()).points).toHaveLength(2);
     await expect(master.createStarterPoints([{ propertyId: f.id, tapperId: 't1', names: ['จุด 1'] }])).rejects.toThrow();
+  });
+
+  it('assign, plan a change, leave without replacement, cancel a plan (E03-S05)', async () => {
+    const f = await master.addProperty({ name: 'ก', crop: 'rubber' });
+    const p = await master.addPoint(f.id, 'จุด 1');
+    await master.assignTapper(p.id, 'red', null);
+    const plan = await master.assignTapper(p.id, 'nat', '2026-12-01');
+    let s = await master.state();
+    expect([tapperOn(s, p.id, '2026-11-30'), tapperOn(s, p.id, '2026-12-01')]).toEqual(['red', 'nat']);
+    await master.remove(plan);
+    s = await master.state();
+    expect(tapperOn(s, p.id, '2026-12-01')).toBe('red');
+    await master.endTapper(p.id, '2027-01-01');
+    s = await master.state();
+    expect(tapperOn(s, p.id, '2027-01-01')).toBeNull();
+  });
+
+  it('shares: set from a date; refuse a start on or before the tapper\'s latest closed sale (E03-S06)', async () => {
+    const red = await master.create('แดง', ['tapper']);
+    // A closed sale in which แดง holds a zone, started 18 Sep 2026 (Bangkok).
+    const b = withZoneContract(setUpSale(new LogBuilder('sale-closed', 'dev-other')), 'zA', red.id, 'แดง', 50);
+    b.sys({ t: 'sale_closed' });
+    const ts = Date.UTC(2026, 8, 18, 3);
+    for (const e of b.build()) await events.append({ ...e, ts });
+    expect(await master.lastClosedSaleDay(red.id)).toBe('2026-09-18');
+    await expect(master.setShare(red.id, 55, '2026-09-18')).rejects.toBeInstanceOf(ShareTooEarlyError);
+    await master.setShare(red.id, 55, '2026-09-19');
+    await expect(master.setShare(red.id, 101, '2026-10-01')).rejects.toThrow();
+    expect(shareOn(await master.state(), red.id, '2026-09-19')).toMatchObject({ tapperPct: 55, ownerPct: 45 });
+  });
+
+  it('sale settings: patch, add a pair in whole kg, make it default; refuse out-of-range values (E03-S07)', async () => {
+    await master.updateSettings({ zeroCheck: 'skip', dupWindowS: 9 });
+    await expect(master.updateSettings({ dupWindowS: 12 })).rejects.toThrow();
+    const id = await master.addPair(55, 3);
+    await master.setDefaultPair(id);
+    await expect(master.addPair(0, 3)).rejects.toThrow();
+    const s = saleSettings(await master.state());
+    expect(s).toMatchObject({ zeroCheck: 'skip', dupWindowS: 9 });
+    expect(s.pairs.find((p) => p.isDefault)).toMatchObject({ netG: 55_000, basketG: 3_000 });
+  });
+
+  it('refuses a blank start once the point has an assignment (review fix)', async () => {
+    const f = await master.addProperty({ name: 'ก', crop: 'rubber' });
+    const p = await master.addPoint(f.id, 'จุด 1');
+    await master.assignTapper(p.id, 'red', null);
+    await expect(master.assignTapper(p.id, 'nat', null)).rejects.toThrow();
   });
 });

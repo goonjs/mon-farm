@@ -2,6 +2,23 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MASTER_SCOPE,
+  blankStartAllowed,
+  parsePlantedYear,
+  plannedVacancies,
+  saleSettings,
+  validDupWindow,
+  validHoldMs,
+  validPairKg,
+  earliestShareDay,
+  parseTapperPct,
+  shareFromAllowed,
+  shareHistory,
+  shareOn,
+  activeTapperOn,
+  dayBefore,
+  pointTimeline,
+  pointsOf,
+  tapperOn,
   activePoints,
   planStarterPoints,
   pointNameTaken,
@@ -339,5 +356,251 @@ describe('planStarterPoints — the generic wizard (D-73)', () => {
         { propertyId: 'f1', tapperId: 't2', names: ['จุด 1'] },
       ]),
     ).toEqual({ ok: false, missing: 0, duplicates: ['จุด 1'] });
+  });
+});
+
+describe('tapper assignments — E03-S05 (MD-4, D-63)', () => {
+  const base = () =>
+    log()
+      .master({ t: 'property_added', propertyId: 'f1', name: 'ก', crop: 'rubber' })
+      .master({ t: 'point_added', pointId: 'p1', propertyId: 'f1', name: 'จุด 1' });
+
+  it('no assignment → no tapper', () => {
+    expect(tapperOn(projectMaster(base().build()), 'p1', '2026-10-01')).toBeNull();
+  });
+
+  it('an assignment with no start date covers all of the past', () => {
+    const s = projectMaster(base().master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' }).build());
+    expect(tapperOn(s, 'p1', '2000-01-01')).toBe('red');
+    expect(tapperOn(s, 'p1', '2030-01-01')).toBe('red');
+  });
+
+  it('a change from 1 Oct: the old tapper ends 30 Sep, inclusive; earlier sales keep the old tapper', () => {
+    const s = projectMaster(
+      base()
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p1', tapperId: 'nat', from: '2026-10-01' })
+        .build(),
+    );
+    expect(tapperOn(s, 'p1', '2026-09-30')).toBe('red');
+    expect(tapperOn(s, 'p1', '2026-10-01')).toBe('nat');
+    expect(pointTimeline(s, 'p1')).toEqual([
+      { assignmentId: 'a1', tapperId: 'red', from: null, to: '2026-09-30' },
+      { assignmentId: 'a2', tapperId: 'nat', from: '2026-10-01', to: null },
+    ]);
+  });
+
+  it('leaving with no replacement: no tapper from the next day', () => {
+    const s = projectMaster(
+      base()
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+        .master({ t: 'tapper_unassigned', assignmentId: 'a2', pointId: 'p1', from: '2026-11-01' })
+        .build(),
+    );
+    expect(tapperOn(s, 'p1', '2026-10-31')).toBe('red');
+    expect(tapperOn(s, 'p1', '2026-11-01')).toBeNull();
+    expect(pointTimeline(s, 'p1')[0]).toMatchObject({ tapperId: 'red', to: '2026-10-31' });
+  });
+
+  it('a planned change can be cancelled (soft delete) and the old tapper simply carries on', () => {
+    const b = base()
+      .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+      .master({ t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p1', tapperId: 'nat', from: '2026-12-01' })
+      .remove('a2');
+    const s = projectMaster(b.build());
+    expect(tapperOn(s, 'p1', '2027-01-01')).toBe('red');
+    expect(pointTimeline(s, 'p1')).toEqual([{ assignmentId: 'a1', tapperId: 'red', from: null, to: null }]);
+  });
+
+  it('a later assignment back-dated before a sale changes who owns that day (retroactive)', () => {
+    const s = projectMaster(base().master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red', from: '2026-09-01' }).build());
+    expect(tapperOn(s, 'p1', '2026-09-15')).toBe('red');
+    expect(tapperOn(s, 'p1', '2026-08-31')).toBeNull();
+  });
+
+  it('two changes on the same start day: the one later in fold order wins', () => {
+    const s = projectMaster(
+      base()
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red', from: '2026-10-01' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p1', tapperId: 'nat', from: '2026-10-01' })
+        .build(),
+    );
+    expect(tapperOn(s, 'p1', '2026-10-01')).toBe('nat');
+  });
+
+  it("a person's points on a day, for the people screen and the delete warning", () => {
+    const s = projectMaster(
+      base()
+        .master({ t: 'point_added', pointId: 'p2', propertyId: 'f1', name: 'จุด 2' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p2', tapperId: 'red' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a3', pointId: 'p2', tapperId: 'nat', from: '2026-10-01' })
+        .build(),
+    );
+    expect(pointsOf(s, 'red', '2026-09-01').map((p) => p.name)).toEqual(['จุด 1', 'จุด 2']);
+    expect(pointsOf(s, 'red', '2026-10-01').map((p) => p.name)).toEqual(['จุด 1']);
+  });
+
+  it('dayBefore handles month and year ends', () => {
+    expect(dayBefore('2026-10-01')).toBe('2026-09-30');
+    expect(dayBefore('2026-01-01')).toBe('2025-12-31');
+    expect(dayBefore('2024-03-01')).toBe('2024-02-29');
+  });
+});
+
+describe('activeTapperOn — the point reads "no tapper" once its tapper is gone (E03-S01 AC4)', () => {
+  const b = () =>
+    log()
+      .master({ t: 'property_added', propertyId: 'f1', name: 'ก', crop: 'rubber' })
+      .master({ t: 'point_added', pointId: 'p1', propertyId: 'f1', name: 'จุด 1' })
+      .master({ t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] })
+      .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' });
+
+  it('is the assigned tapper while they exist and hold the role', () => {
+    expect(activeTapperOn(projectMaster(b().build()), 'p1', '2026-10-01')?.name).toBe('แดง');
+  });
+  it('is none once the person is deleted, and back on restore', () => {
+    const x = b().remove('red');
+    expect(activeTapperOn(projectMaster(x.build()), 'p1', '2026-10-01')).toBeNull();
+    expect(activeTapperOn(projectMaster(x.restore('red').build()), 'p1', '2026-10-01')?.name).toBe('แดง');
+  });
+  it('is none once the tapper role is removed', () => {
+    const x = b().master({ t: 'person_edited', personId: 'red', roles: ['worker'] });
+    expect(activeTapperOn(projectMaster(x.build()), 'p1', '2026-10-01')).toBeNull();
+  });
+});
+
+describe('tapper share — E03-S06 (MD-8, D-63)', () => {
+  const b = () => log().master({ t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] });
+
+  it('50/50 by default, flagged as the default', () => {
+    expect(shareOn(projectMaster(b().build()), 'red', '2026-10-01')).toEqual({ tapperPct: 50, ownerPct: 50, isDefault: true });
+  });
+
+  it('a share from a date applies from that day on; earlier days keep the old one', () => {
+    const s = projectMaster(
+      b()
+        .master({ t: 'share_set', shareId: 's1', tapperId: 'red', tapperPct: 55, from: '2026-10-01' })
+        .master({ t: 'share_set', shareId: 's2', tapperId: 'red', tapperPct: 60, from: '2027-01-01' })
+        .build(),
+    );
+    expect(shareOn(s, 'red', '2026-09-30')).toMatchObject({ tapperPct: 50, isDefault: true });
+    expect(shareOn(s, 'red', '2026-10-01')).toEqual({ tapperPct: 55, ownerPct: 45, isDefault: false });
+    expect(shareOn(s, 'red', '2027-01-01')).toMatchObject({ tapperPct: 60 });
+    expect(shareHistory(s, 'red').map((h) => h.tapperPct)).toEqual([60, 55]);
+  });
+
+  it('custom: the tapper side, a whole number 0–100 (D-63 Q17)', () => {
+    expect(parseTapperPct('45')).toEqual({ ok: true, tapperPct: 45 });
+    expect(parseTapperPct('0')).toEqual({ ok: true, tapperPct: 0 });
+    expect(parseTapperPct('100')).toEqual({ ok: true, tapperPct: 100 });
+    expect(parseTapperPct('45.5')).toEqual({ ok: false, reason: 'whole' });
+    expect(parseTapperPct('101')).toEqual({ ok: false, reason: 'range' });
+    expect(parseTapperPct('-1')).toEqual({ ok: false, reason: 'range' });
+    expect(parseTapperPct('')).toEqual({ ok: false, reason: 'whole' });
+  });
+
+  it('the start day must be after the tapper\'s latest closed sale — the same day is not allowed (D-74 F17)', () => {
+    expect(earliestShareDay(null)).toBeNull();
+    expect(earliestShareDay('2026-09-18')).toBe('2026-09-19');
+    expect(shareFromAllowed('2026-09-18', '2026-09-18')).toBe(false);
+    expect(shareFromAllowed('2026-09-19', '2026-09-18')).toBe(true);
+    expect(shareFromAllowed('2020-01-01', null)).toBe(true);
+  });
+});
+
+describe('sale settings — E03-S07 (MD-7, MD-9, SYNC-6)', () => {
+  it('defaults: whole-kg scale, numbering per tapper, zero check every point, 8 s window, 50 and 60 kg built in', () => {
+    const s = saleSettings(projectMaster([]));
+    expect(s).toMatchObject({ scaleType: 'whole', numbering: 'per-tapper', zeroCheck: 'every', dupWindowS: 8 });
+    expect(s.pairs.map((p) => [p.netG, p.basketG, p.isDefault])).toEqual([
+      [50_000, 2_000, true],
+      [60_000, 3_000, false],
+    ]);
+  });
+
+  it('a settings change patches only the fields it names', () => {
+    const s = saleSettings(
+      projectMaster(log().master({ t: 'settings_set', zeroCheck: 'first-per-farm' }).master({ t: 'settings_set', dupWindowS: 10 }).build()),
+    );
+    expect(s).toMatchObject({ zeroCheck: 'first-per-farm', dupWindowS: 10, numbering: 'per-tapper' });
+  });
+
+  it('adds a pair, makes it the default, and a deleted pair drops out (default falls back to the first left)', () => {
+    const b = log()
+      .master({ t: 'basket_pair_added', pairId: 'x', netG: 55_000, basketG: 3_000 })
+      .master({ t: 'basket_pair_default', pairId: 'x' });
+    let s = saleSettings(projectMaster(b.build()));
+    expect(s.pairs.find((p) => p.isDefault)?.netG).toBe(55_000);
+    s = saleSettings(projectMaster(b.remove('x').build()));
+    expect(s.pairs.map((p) => p.pairId)).toEqual(['builtin-50', 'builtin-60']);
+    expect(s.pairs.find((p) => p.isDefault)?.pairId).toBe('builtin-50');
+  });
+
+  it('validates ranges: duplicate window 7–10 s, hold 0.5–1 s, weights in whole kg above 0', () => {
+    expect([6, 7, 10, 11].map(validDupWindow)).toEqual([false, true, true, false]);
+    expect([400, 500, 1000, 1100].map(validHoldMs)).toEqual([false, true, true, false]);
+    expect(validPairKg(55, 3)).toBe(true);
+    expect(validPairKg(0, 3)).toBe(false);
+    expect(validPairKg(55.5, 3)).toBe(false);
+    expect(validPairKg(55, 0)).toBe(true);
+  });
+});
+
+describe('review fixes (independent review 2026-10-09)', () => {
+  const base = () =>
+    log()
+      .master({ t: 'property_added', propertyId: 'f1', name: 'ก', crop: 'rubber' })
+      .master({ t: 'point_added', pointId: 'p1', propertyId: 'f1', name: 'จุด 1' });
+
+  it('a blank start date is only for a point with no assignment yet — later changes go forward', () => {
+    expect(blankStartAllowed(projectMaster(base().build()), 'p1')).toBe(true);
+    const s = projectMaster(base().master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' }).build());
+    expect(blankStartAllowed(s, 'p1')).toBe(false);
+  });
+
+  it('a planned vacancy is listed so it can be cancelled before it starts', () => {
+    const s = projectMaster(
+      base()
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red' })
+        .master({ t: 'tapper_unassigned', assignmentId: 'a2', pointId: 'p1', from: '2099-01-01' })
+        .build(),
+    );
+    expect(plannedVacancies(s, 'p1', '2026-10-01')).toEqual([{ assignmentId: 'a2', from: '2099-01-01' }]);
+    expect(plannedVacancies(s, 'p1', '2099-01-01')).toEqual([]);
+  });
+
+  it('planted year: พ.ศ. as typed, ค.ศ. converted, a future year refused', () => {
+    const now = Date.UTC(2026, 5, 1);
+    expect(parsePlantedYear('', now)).toEqual({ ok: true, yearBe: null });
+    expect(parsePlantedYear('2554', now)).toEqual({ ok: true, yearBe: 2554 });
+    expect(parsePlantedYear('2011', now)).toEqual({ ok: true, yearBe: 2554 });
+    expect(parsePlantedYear('2570', now)).toEqual({ ok: false });
+    expect(parsePlantedYear('25x4', now)).toEqual({ ok: false });
+  });
+
+  it('area, assignment and share events from two devices fold the same whatever order they arrive in', () => {
+    const b = log();
+    const events = [
+      ...b
+        .master({ t: 'property_added', propertyId: 'f1', name: 'ก', crop: 'rubber' })
+        .master({ t: 'point_added', pointId: 'p1', propertyId: 'f1', name: 'จุด 1' })
+        .master({ t: 'area_recorded', propertyId: 'f1', entryId: 'x1', centiRai: 100, effective: '2026-10-01' })
+        .master({ t: 'tapper_assigned', assignmentId: 'a1', pointId: 'p1', tapperId: 'red', from: '2026-10-01' })
+        .master({ t: 'share_set', shareId: 's1', tapperId: 'red', tapperPct: 55, from: '2026-10-01' })
+        .build(),
+    ];
+    const other = events.map((e, i) => ({ ...e, id: `${e.id}-B`, actor: { ...e.actor, deviceId: 'dev-B' }, deviceSeq: i + 1 }));
+    const tieB = [
+      { ...other[2], payload: { t: 'area_recorded', propertyId: 'f1', entryId: 'x2', centiRai: 200, effective: '2026-10-01' } },
+      { ...other[3], payload: { t: 'tapper_assigned', assignmentId: 'a2', pointId: 'p1', tapperId: 'nat', from: '2026-10-01' } },
+      { ...other[4], payload: { t: 'share_set', shareId: 's2', tapperId: 'red', tapperPct: 60, from: '2026-10-01' } },
+    ] as SaleEvent[];
+    const all = [...events, ...tieB];
+    const a = projectMaster(all);
+    const r = projectMaster([...all].reverse());
+    expect(areaOn(r.properties[0], '2026-10-01')).toBe(areaOn(a.properties[0], '2026-10-01'));
+    expect(tapperOn(r, 'p1', '2026-10-01')).toBe(tapperOn(a, 'p1', '2026-10-01'));
+    expect(shareOn(r, 'red', '2026-10-01')).toEqual(shareOn(a, 'red', '2026-10-01'));
   });
 });

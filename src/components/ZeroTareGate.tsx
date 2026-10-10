@@ -33,6 +33,10 @@ export interface ZeroTareGateProps {
   onZeroChecked: (ok: boolean, readingG: number) => void;
   onTareConfirmed: (tareG: number) => void;
   onReady: () => void;
+  /** The empty scale is off and the operator waits for another scale (D-75). */
+  onWait?: () => void;
+  /** The sale's accepted skew, in grams — part of what the scale should read (D-75). */
+  skewG?: number;
 }
 
 const kg = (g: number) => (g / 1000).toLocaleString('en-US', { maximumFractionDigits: 3 });
@@ -46,6 +50,8 @@ export function ZeroTareGate({
   onZeroChecked,
   onTareConfirmed,
   onReady,
+  onWait,
+  skewG = 0,
 }: ZeroTareGateProps) {
   const t = useTheme();
   const msg = useT();
@@ -75,11 +81,11 @@ export function ZeroTareGate({
       </Text>
 
       {step === 1 ? (
-        <ZeroStep pileName={pileName} onZeroChecked={onZeroChecked} />
+        <ZeroStep pileName={pileName} onZeroChecked={onZeroChecked} onWait={onWait} />
       ) : step === 2 ? (
         <TareStep tareG={tareG} onTareConfirmed={onTareConfirmed} />
       ) : (
-        <ReadyStep pileName={pileName} tareG={tareG} stdNetG={stdNetG} onReady={onReady} />
+        <ReadyStep pileName={pileName} tareG={tareG} stdNetG={stdNetG} skewG={skewG} onReady={onReady} />
       )}
     </View>
   );
@@ -88,9 +94,11 @@ export function ZeroTareGate({
 function ZeroStep({
   pileName,
   onZeroChecked,
+  onWait,
 }: {
   pileName: string;
   onZeroChecked: (ok: boolean, readingG: number) => void;
+  onWait?: () => void;
 }) {
   const t = useTheme();
   const msg = useT();
@@ -147,8 +155,13 @@ function ZeroStep({
               onZeroChecked(false, g);
             }}
           >
-            {msg('gate.flagAndContinue')}
+            {msg(onWait ? 'gate.acceptSkew' : 'gate.flagAndContinue')}
           </Button>
+          {onWait ? (
+            <Button testID="zero-wait" onPress={onWait}>
+              {msg('gate.wait')}
+            </Button>
+          ) : null}
         </View>
       )}
     </>
@@ -201,16 +214,18 @@ function ReadyStep({
   pileName,
   tareG,
   stdNetG,
+  skewG,
   onReady,
 }: {
   pileName: string;
   tareG: number;
   stdNetG: number;
+  skewG: number;
   onReady: () => void;
 }) {
   const t = useTheme();
   const msg = useT();
-  const expectedG = tareG + stdNetG;
+  const expectedG = tareG + stdNetG + skewG;
 
   return (
     <>
@@ -218,7 +233,9 @@ function ReadyStep({
         {pileName}
       </Text>
       <Text testID="read-back" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.lead, color: t.color.ink, textAlign: 'center' }}>
-        {msg('gate.expected', { tare: kg(tareG), std: kg(stdNetG), expected: kg(expectedG) })}
+        {skewG
+          ? msg('gate.expectedSkew', { tare: kg(tareG), std: kg(stdNetG), skew: kg(skewG), expected: kg(expectedG) })
+          : msg('gate.expected', { tare: kg(tareG), std: kg(stdNetG), expected: kg(expectedG) })}
         {'\n'}
         <Text style={{ fontSize: t.font.size.small, color: t.color.inkSoft }}>{msg('gate.readAloud')}</Text>
       </Text>

@@ -13,7 +13,7 @@
 
 import { compareEvents } from './order';
 import { deletedIds } from './soft-delete';
-import type { BuiltinRole, Crop, Gps, PersonId, SaleEvent } from './types';
+import type { BuiltinRole, Crop, Gps, NumberingMode, PersonId, SaleEvent, ScaleType, ZeroCheckMode } from './types';
 
 /**
  * The scope master-data events are stored under, in place of a sale id. The
@@ -75,7 +75,46 @@ export interface PointRecord {
   readonly createdTs: number;
 }
 
+/** One dated change of a point's tapper; `tapperId` null = no tapper from then. */
+export interface AssignmentChange {
+  readonly assignmentId: string;
+  readonly pointId: string;
+  readonly tapperId: PersonId | null;
+  /** ISO day; null = no start date (covers all of the past). */
+  readonly from: string | null;
+  /** Cancelled plan (soft delete). */
+  readonly deleted: boolean;
+}
+
+export interface ShareEntry {
+  readonly shareId: string;
+  readonly tapperId: PersonId;
+  readonly tapperPct: number;
+  readonly from: string;
+}
+
+export interface BasketPair {
+  readonly pairId: string;
+  readonly netG: number;
+  readonly basketG: number;
+}
+
+interface SettingsFold {
+  readonly scaleType: ScaleType;
+  readonly numbering: NumberingMode;
+  readonly zeroCheck: ZeroCheckMode;
+  readonly dupWindowS: number;
+  /** Added pairs, in fold order, deleted ones included (filtered in `saleSettings`). */
+  readonly added: readonly (BasketPair & { deleted: boolean })[];
+  readonly defaultPairId: string | null;
+}
+
 export interface MasterState {
+  readonly settings: SettingsFold;
+  /** In fold order — same-day tie-breaker, like assignments. */
+  readonly shares: readonly ShareEntry[];
+  /** In fold order — the tie-breaker for two changes on the same day. */
+  readonly assignments: readonly AssignmentChange[];
   /** Including deleted ones — old records still resolve their names. */
   readonly people: readonly PersonRecord[];
   readonly buyers: readonly BuyerRecord[];
@@ -90,6 +129,10 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
   const buyers = new Map<string, BuyerRecord>();
   const properties = new Map<string, PropertyRecord & { areas: AreaEntry[] }>();
   const points = new Map<string, { id: string; propertyId: string; name: string; createdTs: number }>();
+  const changes: Omit<AssignmentChange, 'deleted'>[] = [];
+  const shares: ShareEntry[] = [];
+  let settings: Omit<SettingsFold, 'added'> = { scaleType: 'whole', numbering: 'per-tapper', zeroCheck: 'every', dupWindowS: 8, defaultPairId: null };
+  const pairs: BasketPair[] = [];
   const ordered = events.filter((e) => e.kind === 'master').sort(compareEvents);
 
   for (const e of ordered) {
@@ -165,6 +208,26 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
         if (cur) points.set(p.pointId, { ...cur, name: p.name });
         break;
       }
+      case 'tapper_assigned':
+        changes.push({ assignmentId: p.assignmentId, pointId: p.pointId, tapperId: p.tapperId, from: p.from ?? null });
+        break;
+      case 'tapper_unassigned':
+        changes.push({ assignmentId: p.assignmentId, pointId: p.pointId, tapperId: null, from: p.from });
+        break;
+      case 'share_set':
+        shares.push({ shareId: p.shareId, tapperId: p.tapperId, tapperPct: p.tapperPct, from: p.from });
+        break;
+      case 'settings_set': {
+        const { t: _t, ...patch } = p;
+        settings = { ...settings, ...patch };
+        break;
+      }
+      case 'basket_pair_added':
+        pairs.push({ pairId: p.pairId, netG: p.netG, basketG: p.basketG });
+        break;
+      case 'basket_pair_default':
+        settings = { ...settings, defaultPairId: p.pairId };
+        break;
     }
   }
 
@@ -177,6 +240,9 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
   const shownNames = new Map<string, number>();
   for (const x of pointList) if (!x.hidden) shownNames.set(nameKey(x.propertyId, x.name), (shownNames.get(nameKey(x.propertyId, x.name)) ?? 0) + 1);
   return {
+    settings: { ...settings, added: pairs.map((x) => ({ ...x, deleted: gone.has(x.pairId) })) },
+    shares: shares.filter((x) => !gone.has(x.shareId)),
+    assignments: changes.map((c) => ({ ...c, deleted: gone.has(c.assignmentId) })),
     points: pointList
       .map((x) => ({ ...x, duplicateName: !x.hidden && (shownNames.get(nameKey(x.propertyId, x.name)) ?? 0) > 1 }))
       .sort(byThaiName),
@@ -360,4 +426,190 @@ export function planStarterPoints(state: MasterState, rows: readonly StarterRow[
     seen.add(k);
   }
   return missing || duplicates.size ? { ok: false, missing, duplicates: [...duplicates] } : { ok: true, points };
+}
+
+/**
+ * A point's live changes, earliest first: no start date first, then by day;
+ * on the same day the change later in fold order comes last, so it wins.
+ */
+function liveChanges(state: MasterState, pointId: string): AssignmentChange[] {
+  return state.assignments
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => c.pointId === pointId && !c.deleted)
+    .sort((a, b) => {
+      const fa = a.c.from ?? '';
+      const fb = b.c.from ?? '';
+      return fa === fb ? a.i - b.i : fa < fb ? -1 : 1;
+    })
+    .map(({ c }) => c);
+}
+
+/** The point's tapper on `day`, or null — "ยังไม่มีคนกรีด" (SALE-4). */
+export function tapperOn(state: MasterState, pointId: string, day: string): PersonId | null {
+  let who: PersonId | null = null;
+  for (const c of liveChanges(state, pointId)) if (c.from === null || c.from <= day) who = c.tapperId;
+  return who;
+}
+
+export interface TimelineSegment {
+  readonly assignmentId: string;
+  readonly tapperId: PersonId;
+  readonly from: string | null;
+  /** Inclusive last day; null = still in effect. The day before the next change (D-63). */
+  readonly to: string | null;
+}
+
+/** Who had the point when — vacancies are the gaps between segments. */
+export function pointTimeline(state: MasterState, pointId: string): TimelineSegment[] {
+  const live = liveChanges(state, pointId);
+  // A change superseded on its own start day never took effect.
+  const effective = live.filter((c, i) => live[i + 1]?.from !== c.from);
+  return effective.flatMap((c, i) => {
+    if (c.tapperId === null) return [];
+    const next = effective[i + 1];
+    return [{ assignmentId: c.assignmentId, tapperId: c.tapperId, from: c.from, to: next?.from ? dayBefore(next.from) : null }];
+  });
+}
+
+/** The shown points a person is the tapper of on `day` (D-65). */
+export function pointsOf(state: MasterState, tapperId: PersonId, day: string): PointRecord[] {
+  return activePoints(state).filter((p) => tapperOn(state, p.id, day) === tapperId);
+}
+
+/** The ISO day before `day`. */
+export function dayBefore(day: string): string {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+}
+
+/**
+ * The point's tapper on `day` as a person who can still tap: null when none
+ * is assigned, or the assigned person was deleted or lost the tapper role —
+ * the point then reads "ยังไม่มีคนกรีด" (E03-S01 AC4, D-65). The assignment
+ * itself is untouched, so restoring the person restores the point.
+ */
+export function activeTapperOn(state: MasterState, pointId: string, day: string): PersonRecord | null {
+  const id = tapperOn(state, pointId, day);
+  const person = id ? state.people.find((p) => p.id === id) : undefined;
+  return person && !person.deleted && person.roles.includes('tapper') ? person : null;
+}
+
+/** A tapper's share entries, newest effective first; same day → later in fold order first. */
+export function shareHistory(state: MasterState, tapperId: PersonId): ShareEntry[] {
+  return state.shares
+    .map((x, i) => ({ x, i }))
+    .filter(({ x }) => x.tapperId === tapperId)
+    .sort((a, b) => (a.x.from === b.x.from ? b.i - a.i : a.x.from < b.x.from ? 1 : -1))
+    .map(({ x }) => x);
+}
+
+export interface Share {
+  readonly tapperPct: number;
+  readonly ownerPct: number;
+  /** Nothing was ever set: 50/50 (MD-8). */
+  readonly isDefault: boolean;
+}
+
+/** The tapper's share of gross on `day`. A change never reaches back before its start. */
+export function shareOn(state: MasterState, tapperId: PersonId, day: string): Share {
+  const entry = shareHistory(state, tapperId).find((x) => x.from <= day);
+  const tapperPct = entry?.tapperPct ?? 50;
+  return { tapperPct, ownerPct: 100 - tapperPct, isDefault: !entry };
+}
+
+/** The tapper's side as typed: a whole number 0–100 (D-63 Q17). */
+export function parseTapperPct(text: string): { ok: true; tapperPct: number } | { ok: false; reason: 'whole' | 'range' } {
+  const t = text.trim();
+  if (/^-\d+$/.test(t)) return { ok: false, reason: 'range' };
+  if (!/^\d+$/.test(t)) return { ok: false, reason: 'whole' };
+  const n = Number(t);
+  return n <= 100 ? { ok: true, tapperPct: n } : { ok: false, reason: 'range' };
+}
+
+/** The first day a new share may start: the day after the latest closed sale (D-74 F17), or any day. */
+export function earliestShareDay(lastClosedSaleDay: string | null): string | null {
+  return lastClosedSaleDay ? dayAfter(lastClosedSaleDay) : null;
+}
+
+export function shareFromAllowed(from: string, lastClosedSaleDay: string | null): boolean {
+  const earliest = earliestShareDay(lastClosedSaleDay);
+  return !earliest || from >= earliest;
+}
+
+/** The two standard nets every group starts with (MD-7); their basket weights follow the v1.1.0 mockup. */
+const BUILTIN_PAIRS: readonly BasketPair[] = [
+  { pairId: 'builtin-50', netG: 50_000, basketG: 2_000 },
+  { pairId: 'builtin-60', netG: 60_000, basketG: 3_000 },
+];
+
+export interface SaleSettings {
+  readonly scaleType: ScaleType;
+  readonly numbering: NumberingMode;
+  readonly zeroCheck: ZeroCheckMode;
+  readonly dupWindowS: number;
+  /** Exactly one is the default for a new sale. */
+  readonly pairs: readonly (BasketPair & { isDefault: boolean })[];
+}
+
+/**
+ * The group's sale settings with defaults filled in. A new sale snapshots
+ * these when it starts (E04-S02); changing them later never touches a basket
+ * already recorded.
+ */
+export function saleSettings(state: MasterState): SaleSettings {
+  const { added, defaultPairId, ...rest } = state.settings;
+  const live = [...BUILTIN_PAIRS, ...added.filter((p) => !p.deleted).map(({ deleted: _d, ...p }) => p)];
+  const def = live.find((p) => p.pairId === defaultPairId) ?? live[0];
+  return { ...rest, pairs: live.map((p) => ({ ...p, isDefault: p.pairId === def?.pairId })) };
+}
+
+/** Duplicate-count window, whole seconds 7–10 (SYNC-6). */
+export function validDupWindow(s: number): boolean {
+  return Number.isInteger(s) && s >= 7 && s <= 10;
+}
+
+/** Hold time, ms, 0.5–1 s (D-7). */
+export function validHoldMs(ms: number): boolean {
+  return Number.isInteger(ms) && ms >= 500 && ms <= 1000;
+}
+
+/** A pair in whole kg (whole-kg scale, D-66): net above 0, basket 0 or more. */
+export function validPairKg(netKg: number, basketKg: number): boolean {
+  return Number.isInteger(netKg) && netKg > 0 && Number.isInteger(basketKg) && basketKg >= 0;
+}
+
+/**
+ * A change with no start date reaches back over all of the past, so it is
+ * only for a point's first assignment; after that a change needs a day and
+ * goes forward (D-63) — otherwise it would rewrite who tapped before.
+ */
+export function blankStartAllowed(state: MasterState, pointId: string): boolean {
+  return liveChanges(state, pointId).length === 0;
+}
+
+/** "No tapper from X" changes not yet started — listed so they can be cancelled (D-74 F3). */
+export function plannedVacancies(state: MasterState, pointId: string, today: string): { assignmentId: string; from: string }[] {
+  return liveChanges(state, pointId)
+    .filter((c) => c.tapperId === null && c.from !== null && c.from > today)
+    .map((c) => ({ assignmentId: c.assignmentId, from: c.from! }));
+}
+
+/** The ISO day after `day`. */
+export function dayAfter(day: string): string {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+}
+
+/**
+ * Planted year as typed: 4 digits in พ.ศ., or ค.ศ. (below 2400) converted;
+ * a year after this one is refused. Blank = unknown.
+ */
+export function parsePlantedYear(text: string, nowTs: number): { ok: true; yearBe: number | null } | { ok: false } {
+  const t = text.trim();
+  if (!t) return { ok: true, yearBe: null };
+  if (!/^\d{4}$/.test(t)) return { ok: false };
+  const n = Number(t);
+  const yearBe = n < 2400 ? n + 543 : n;
+  const thisYearBe = new Date(nowTs + BANGKOK_OFFSET_MS).getUTCFullYear() + 543;
+  return yearBe <= thisYearBe ? { ok: true, yearBe } : { ok: false };
 }

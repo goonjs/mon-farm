@@ -111,6 +111,8 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
           farmName: payload.farmName,
           buyer: payload.buyer,
           ...(payload.buyerId ? { buyerId: payload.buyerId } : {}),
+          ...(payload.managerId ? { managerId: payload.managerId } : {}),
+          ...(payload.note ? { note: payload.note } : {}),
           manager: payload.manager,
           workerLead: payload.workerLead,
           where: payload.where,
@@ -122,7 +124,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
         break;
 
       case 'split_set':
-        split = { ownerPct: payload.ownerPct, basis: payload.basis };
+        split = { ownerPct: payload.ownerPct };
         break;
 
       case 'zone_added':

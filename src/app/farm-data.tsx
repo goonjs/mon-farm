@@ -1,7 +1,7 @@
 /**
  * ข้อมูลฟาร์ม — the entry to the farm group's master data (E03-S01 AC7,
  * mockup v1.1.0 screen 2). Rows appear as their stories land: people and
- * buyers (S01), farms (S02); weighing points, accounts and sale settings later.
+ * buyers (S01), farms and points (S02/S03), sale settings (S07); accounts later.
  */
 
 import { Link, useFocusEffect, type Href } from 'expo-router';
@@ -39,6 +39,9 @@ export default function FarmDataScreen() {
         </Link>
         <Link href={'/buyers' as Href} asChild>
           <ListRow testID="farm-data-buyers" title={msg('farmData.buyers')} lines={[msg('farmData.buyersCount', { n: buyers })]} />
+        </Link>
+        <Link href={'/sale-settings' as Href} asChild>
+          <ListRow testID="farm-data-sale-settings" title={msg('farmData.saleSettings')} lines={[msg('farmData.saleSettingsLine')]} />
         </Link>
       </Card>
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>

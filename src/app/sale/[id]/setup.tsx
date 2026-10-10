@@ -154,6 +154,7 @@ export default function SetupScreen() {
 }
 
 function PartiesCard() {
+  const t = useTheme();
   const msg = useT();
   const { state, append } = useSale();
   const p = state.parties;
@@ -217,7 +218,7 @@ function PartiesCard() {
       <LabeledInput testID="farm-name" label={msg('setup.farm')} value={farmName} onChangeText={dirty(setFarmName)} />
       <LabeledInput testID="buyer" label={msg('setup.buyer')} value={buyer} onChangeText={dirty(setBuyer)} />
       {buyers.length > 0 ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.xs }}>
           {buyers.map((b) => (
             <Button key={b.id} testID={`buyer-pick-${b.id}`} variant={b.id === buyerId ? 'primary' : 'ghost'} onPress={() => dirty(setBuyer)(b.name)}>
               {b.name}
@@ -295,15 +296,14 @@ function SplitCard() {
   const msg = useT();
   const { state, append } = useSale();
   const [ownerPct, setOwnerPct] = useState(state.split?.ownerPct ?? 50);
-  const [basis, setBasis] = useState<'gross' | 'final'>(state.split?.basis ?? 'gross');
-  // 50/50 gross is always a valid split (unlike farm name or price, which
+  // 50/50 is always a valid split (unlike farm name or price, which
   // have no valid empty/default value) — a sale that has never saved one yet
   // starts "touched" so the default itself auto-saves, rather than needing a
   // decoy click on a control that already visibly shows it as selected.
   const [touched, setTouched] = useState(!state.split);
 
-  const status = useAutoSave([ownerPct, basis], touched, true, !!state.split, () =>
-    append({ kind: 'sys', payload: { t: 'split_set', ownerPct, basis } }),
+  const status = useAutoSave([ownerPct], touched, true, !!state.split, () =>
+    append({ kind: 'sys', payload: { t: 'split_set', ownerPct } }),
   );
 
   return (
@@ -322,19 +322,6 @@ function SplitCard() {
           onChange={(v) => {
             setTouched(true);
             setOwnerPct(v);
-          }}
-        />
-      </Field>
-      <Field label={msg('setup.appliesTo')}>
-        <Segmented
-          options={[
-            { value: 'gross' as const, label: msg('setup.gross') },
-            { value: 'final' as const, label: msg('setup.final') },
-          ]}
-          value={basis}
-          onChange={(v) => {
-            setTouched(true);
-            setBasis(v);
           }}
         />
       </Field>

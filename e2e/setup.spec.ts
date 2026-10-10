@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { newId } from '../src/lib/id';
+
 /**
  * The real sale setup screen (S6), replacing S17's stub. Parties, price,
  * split and each zone's contract auto-save (debounced, no Save button) —
@@ -15,8 +17,8 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 async function openSetup(page: Page) {
-  await page.goto('/');
-  await page.getByTestId('new-sale').click();
+  // Since E04-S02 "new sale" opens the start screen; the setup screen is reached by URL.
+  await page.goto(`/sale/${newId('sale-')}/setup`);
   await expect(page.getByTestId('start-counting')).toBeVisible();
   return page;
 }

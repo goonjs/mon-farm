@@ -25,6 +25,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { Button, TopBar } from '../components/chrome';
 import { useI18n, useT, type Locale } from '../i18n';
 import { useSpeech } from '../speech';
+import type { TextSize } from '../core/text-scale';
 import { useTheme, useThemeControls } from '../theme';
 import type { ColorScheme } from '../../design/tokens';
 
@@ -36,7 +37,7 @@ export default function SettingsScreen() {
   const t = useTheme();
   const msg = useT();
   const { locale, setLocale } = useI18n();
-  const { scheme, setScheme } = useThemeControls();
+  const { scheme, setScheme, textSize, setTextSize } = useThemeControls();
   const { speechOn, setSpeechOn } = useSpeech();
 
   return (
@@ -76,6 +77,20 @@ export default function SettingsScreen() {
           options={[
             { value: 'light', label: msg('common.themeLight') },
             { value: 'dark', label: msg('common.themeDark') },
+          ]}
+        />
+
+        {/* E03-S08: device text size; the public counting numeral does not follow it. */}
+        <Choice<TextSize>
+          testID="text-size"
+          label={msg('settings.textSize')}
+          note={msg('settings.textSizeNote')}
+          value={textSize}
+          onChange={setTextSize}
+          options={[
+            { value: 's', label: 'S' },
+            { value: 'm', label: 'M' },
+            { value: 'l', label: 'L' },
           ]}
         />
 

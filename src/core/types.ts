@@ -95,6 +95,13 @@ export interface EventBase {
 export interface AcceptEvent extends EventBase {
   readonly kind: 'accept';
   readonly pileId: PileId;
+  /**
+   * The weighing point (E04-S01) and the basket's number, fixed when it is
+   * recorded (SALE-10) — per tapper or per point, by the sale's mode. Absent
+   * on baskets recorded by the pile counter before the move to points.
+   */
+  readonly pointId?: string;
+  readonly basketNo?: number;
   /** How the basket was entered (renamed from `source` in E01-S04, which is now the envelope's channel). */
   readonly input: 'hold' | 'hold-kbd';
   readonly netG: number;
@@ -112,8 +119,20 @@ export interface AcceptEvent extends EventBase {
 export interface ShortEvent extends EventBase {
   readonly kind: 'short';
   readonly pileId: PileId;
+  /**
+   * The weighing point (E04-S01) and the basket's number, fixed when it is
+   * recorded (SALE-10) — per tapper or per point, by the sale's mode. Absent
+   * on baskets recorded by the pile counter before the move to points.
+   */
+  readonly pointId?: string;
+  readonly basketNo?: number;
   readonly readingG: number;
   readonly tareG: number;
+  /**
+   * The scale's accepted skew at the time (E04-S03, D-75), snapshotted like
+   * the tare: net = reading − basket − skew. Absent = no skew.
+   */
+  readonly skewG?: number;
 }
 
 /**
@@ -158,29 +177,25 @@ export type SysPayload =
        * buyer" the next sale's default (MD-6). Absent for a typed-in name.
        */
       readonly buyerId?: string;
+      /** The manager picked from master data (E04-S02); `manager` stays the name snapshot. */
+      readonly managerId?: string;
+      /** Free note on the sale header (E04-S02, SALE-2). */
+      readonly note?: string;
       readonly manager: string;
       readonly workerLead: string;
       readonly where: 'farm' | 'buyer';
     }
   | { readonly t: 'price_set'; readonly satangPerKg: number; readonly indexRef: string }
+  /** The sale's basket-numbering mode, chosen at start; the group setting is the default (D-53). */
+  | { readonly t: 'numbering_set'; readonly numbering: NumberingMode }
   /**
-   * FR-8.5: the basis has no safe default. `settle()` refuses to run without
-   * one being resolvable for every zone — either this sale-level default or a
-   * `zone_contract_set` override (below).
-   *
-   * `ownerPct` here is the DEFAULT applied to any zone that never gets its own
-   * contract. `basis` (gross vs final) is sale-level only — it does not vary
-   * per zone, unlike the percentage.
-   *
-   * `basis` IS INERT (S29, owner decision 2026-09-03). Deductions come off a
-   * worker's own share AFTER the owner/worker split runs, so `settle()`
-   * always splits on gross — there is no arithmetic left for `'final'` to
-   * select. The field stays because FR-8.5 still requires every contract to
-   * record a basis explicitly and the setup screen still forces the choice;
-   * removing it is an event-shape change affecting logs that already exist,
-   * and belongs in its own story, not this one.
+   * FR-8.5: `settle()` refuses to run without a split resolvable for every
+   * zone — either this sale-level default or a `zone_contract_set` override
+   * (below). `ownerPct` is the DEFAULT for any zone with no contract of its
+   * own. The split is always on gross (D-12); the old `basis` field was inert
+   * and is gone (E03-S06) — no stored log carries it (owner: start fresh).
    */
-  | { readonly t: 'split_set'; readonly ownerPct: number; readonly basis: 'gross' | 'final' }
+  | { readonly t: 'split_set'; readonly ownerPct: number }
   | { readonly t: 'zone_added'; readonly zoneId: ZoneId; readonly name: string }
   /**
    * Overrides the sale default for one zone. Workers are per zone (multiple
@@ -222,6 +237,16 @@ export type SysPayload =
       readonly tareG: number;
       readonly stdNetG: number;
     }
+  /**
+   * The empty scale did not read zero and the operator chose to carry on
+   * with the skew (E04-S03, D-75): every expected reading includes it, and
+   * short baskets subtract it, until the next passing zero check.
+   */
+  | { readonly t: 'skew_accepted'; readonly pileId: PileId; readonly skewG: number }
+  /** The operator chose to wait for another scale instead (D-75): nothing is weighed until a zero check passes. */
+  | { readonly t: 'scale_wait'; readonly pileId: PileId }
+  /** The zero/tare check was not asked here, by the sale's check mode (SALE-6) — recorded, not silent. */
+  | { readonly t: 'gate_skipped'; readonly pileId: PileId; readonly mode: ZeroCheckMode }
   /** Non-blocking by design: a failed zero check flags and continues. */
   | { readonly t: 'zero_check'; readonly pileId: PileId; readonly ok: boolean; readonly readingG: number }
   | { readonly t: 'tare_confirmed'; readonly pileId: PileId; readonly tareG: number }
@@ -381,7 +406,57 @@ export type MasterPayload =
    * group settings (MD-7).
    */
   | { readonly t: 'point_added'; readonly pointId: string; readonly propertyId: string; readonly name: string }
-  | { readonly t: 'point_renamed'; readonly pointId: string; readonly name: string };
+  | { readonly t: 'point_renamed'; readonly pointId: string; readonly name: string }
+  /**
+   * A point's tapper from `from` (an ISO day; absent = no start, covering all
+   * of the past) until the next change on that point (E03-S05, MD-4, D-63).
+   * Whoever had it before ends the day before — derived, never stored.
+   * Cancelling a planned change is a `delete` naming `assignmentId`.
+   */
+  | {
+      readonly t: 'tapper_assigned';
+      readonly assignmentId: string;
+      readonly pointId: string;
+      readonly tapperId: PersonId;
+      readonly from?: string;
+    }
+  /** No tapper from `from`: someone left with no replacement yet. */
+  | { readonly t: 'tapper_unassigned'; readonly assignmentId: string; readonly pointId: string; readonly from: string }
+  /**
+   * A tapper's share from `from` (ISO day) on (E03-S06, MD-8): the tapper's
+   * whole-number percent of GROSS sale value; the owner gets the rest. No
+   * entry = 50/50. Money: two devices editing it concurrently must become a
+   * Conflict (D-30) once E01-S11 exists.
+   */
+  | {
+      readonly t: 'share_set';
+      readonly shareId: string;
+      readonly tapperId: PersonId;
+      readonly tapperPct: number;
+      readonly from: string;
+    }
+  /**
+   * Group-wide sale settings (E03-S07, MD-7/MD-9/SYNC-6) — a patch; a field
+   * left out is unchanged. Hold time and speech are per device (owner
+   * 2026-10-03) and never appear here.
+   */
+  | {
+      readonly t: 'settings_set';
+      readonly scaleType?: ScaleType;
+      readonly numbering?: NumberingMode;
+      readonly zeroCheck?: ZeroCheckMode;
+      readonly dupWindowS?: number;
+    }
+  /** A standard net + basket weight pair, integer grams (MD-7). Removed with `delete`. */
+  | { readonly t: 'basket_pair_added'; readonly pairId: string; readonly netG: number; readonly basketG: number }
+  | { readonly t: 'basket_pair_default'; readonly pairId: string };
+
+/** Scale resolution: whole kg (default) or one decimal (not available yet, D-66). */
+export type ScaleType = 'whole' | 'decimal1';
+/** Basket numbers run on per tapper across their points, or restart at 1 per point (D-79). */
+export type NumberingMode = 'per-tapper' | 'per-point';
+/** Zero/tare check before weighing: every point, the first point of each farm, or none (MD-9). */
+export type ZeroCheckMode = 'every' | 'first-per-farm' | 'skip';
 
 export type Crop = 'rubber' | 'durian';
 
@@ -470,15 +545,14 @@ export interface SaleState {
     readonly buyer: string;
     readonly buyerId?: string;
     readonly manager: string;
+    readonly managerId?: string;
+    readonly note?: string;
     readonly workerLead: string;
     readonly where: 'farm' | 'buyer';
   } | null;
   readonly price: { readonly satangPerKg: number; readonly indexRef: string } | null;
-  /**
-   * `basis` IS INERT here too — see the comment on `split_set` above. Kept
-   * verbatim because the projection is a straight fold of the event.
-   */
-  readonly split: { readonly ownerPct: number; readonly basis: 'gross' | 'final' } | null;
+  /** Always on gross (D-12) — see `split_set`. */
+  readonly split: { readonly ownerPct: number } | null;
   readonly zones: readonly Zone[];
   readonly piles: readonly Pile[];
   /** FR-12.7 — surfaced as a non-blocking indicator, never a gate. */

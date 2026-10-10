@@ -118,6 +118,19 @@ describe('PropertyForm — E03-S02', () => {
     expect(f.areaHistory).toMatchObject([{ centiRai: 7600, effective: '2026-10-03' }]);
   });
 
+  it('a planted year typed in ค.ศ. is stored as พ.ศ. (review fix)', async () => {
+    wrap(<PropertyForm propertyId={null} onDone={jest.fn()} />);
+    await flush();
+    fireEvent.changeText(screen.getByTestId('property-name'), 'สวน ค.ศ.');
+    fireEvent.press(screen.getByTestId('crop-rubber'));
+    fireEvent.changeText(screen.getByTestId('property-planted'), '2011');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('property-save'));
+    });
+    await flush();
+    expect((await active()).find((p) => p.name === 'สวน ค.ศ.')?.plantedYearBe).toBe(2554);
+  });
+
   it('changing the area adds a history entry instead of overwriting (MD-1)', async () => {
     const f = await mockMaster.addProperty({ name: 'สวน', crop: 'rubber' });
     await mockMaster.recordArea(f.id, 12_000, '2026-01-01');

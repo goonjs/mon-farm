@@ -2,7 +2,8 @@
  * Add or rename one weighing point (จุดชั่ง, E03-S03, mockup v1.1.0 screen
  * 14): a farm and a name unique within that farm (D-65 Q10). Delete is
  * "ลบจุดชั่ง (กู้คืนได้)" behind a confirmation, always allowed (D-58).
- * Tapper assignments join this screen in E03-S05.
+ * An existing point shows its tappers over time (E03-S05); right after a new
+ * point is saved, the screen offers to assign one now or later (D-74 F15).
  */
 
 import { useEffect, useState } from 'react';
@@ -14,6 +15,7 @@ import { peopleStore as master, type Point, type Property } from '../store/peopl
 import { useTheme } from '../theme';
 import { Button } from './chrome';
 import { Card, Chip, ChipRow, TextField } from './farm-ui';
+import { TapperAssignments } from './TapperAssignments';
 
 export function PointForm({
   pointId,
@@ -33,6 +35,8 @@ export function PointForm({
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [offer, setOffer] = useState<Point | null>(null);
+  const [assignNow, setAssignNow] = useState(false);
 
   useEffect(() => {
     master.state().then((s) => {
@@ -49,9 +53,12 @@ export function PointForm({
   const save = async () => {
     if (!name.trim() || !farmId) return setError(msg('pointForm.needName'));
     try {
-      if (existing) await master.renamePoint(existing.id, name);
-      else await master.addPoint(farmId, name);
-      onDone();
+      if (existing) {
+        await master.renamePoint(existing.id, name);
+        onDone();
+      } else {
+        setOffer(await master.addPoint(farmId, name));
+      }
     } catch (err) {
       if (err instanceof DuplicatePointNameError) setError(msg('pointForm.taken', { name: name.trim() }));
       else throw err;
@@ -63,6 +70,26 @@ export function PointForm({
     await master.remove(existing.id);
     onDone();
   };
+
+  if (offer && !assignNow) {
+    return (
+      <Card testID="offer-assign">
+        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+          {msg('assign.offerTitle')}
+        </Text>
+        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.ink }}>
+          {msg('assign.offerBody', { name: offer.name })}
+        </Text>
+        <Button testID="offer-now" variant="primary" onPress={() => setAssignNow(true)}>
+          {msg('assign.offerNow')}
+        </Button>
+        <Button testID="offer-later" onPress={onDone}>
+          {msg('assign.offerLater')}
+        </Button>
+      </Card>
+    );
+  }
+  if (offer) return <TapperAssignments pointId={offer.id} startOpen />;
 
   return (
     <View style={{ gap: t.space.md }}>
@@ -93,6 +120,8 @@ export function PointForm({
       <Button testID="point-save" variant="primary" onPress={() => void save()} disabled={!farmId}>
         {msg('common.save')}
       </Button>
+
+      {existing ? <TapperAssignments pointId={existing.id} /> : null}
 
       {existing && !existing.deleted ? (
         confirming ? (

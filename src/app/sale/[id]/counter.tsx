@@ -13,9 +13,9 @@
  * never a silent undo.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Button, Pill, Tabs, TopBar } from '../../../components/chrome';
 import { HoldStage } from '../../../components/HoldStage';
@@ -33,6 +33,11 @@ import { useT, type Translate } from '../../../i18n';
 import { announceCount } from '../../../speech/announcer';
 import { speaker } from '../../../speech/speaker';
 import { useSpeech } from '../../../speech';
+import { saleSettings, tapperOn, todayIso, type MasterState } from '../../../core/master';
+import { nextBasketNo, saleNumbering } from '../../../core/sale-points';
+import { expectedReadingG, gateNeeded, saleSkewG } from '../../../core/scale-check';
+import { readHoldMs } from '../../../store/hold-preference';
+import { peopleStore } from '../../../store/people';
 import { useSale } from '../../../store/SaleProvider';
 import { useTheme, useThemeControls } from '../../../theme';
 
@@ -63,6 +68,8 @@ type Overlay =
   | { kind: 'reopen-zone'; zoneId: string };
 
 export default function CounterScreen() {
+  // This device's hold time (E03-S07, D-7) — read once per visit to the counter.
+  const [deviceHoldMs] = useState(readHoldMs);
   const t = useTheme();
   const msg = useT();
   const router = useRouter();
@@ -72,7 +79,14 @@ export default function CounterScreen() {
   const [tab, setTab] = useState<TabKey>('count');
   const [shortOpen, setShortOpen] = useState(false);
   const [shortReadingG, setShortReadingG] = useState(0);
-  const [selectedPileId, setSelectedPileId] = useState<string | null>(null);
+  // E04-S02: the point-picking screen opens the counter on the point it chose.
+  const { pile: pileParam } = useLocalSearchParams<{ pile?: string }>();
+  const [selectedPileId, setSelectedPileId] = useState<string | null>(pileParam ?? null);
+  // Farm master data, for numbering baskets at weighing points (E04-S01).
+  const [master, setMaster] = useState<MasterState | null>(null);
+  useEffect(() => {
+    peopleStore.state().then(setMaster);
+  }, []);
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' });
   const [confirmUndo, setConfirmUndo] = useState(false);
   const [confirmCloseSale, setConfirmCloseSale] = useState(false);
@@ -100,6 +114,21 @@ export default function CounterScreen() {
   const countable = pile ? canCount(state, pile.id) : false;
   const lastBasket = pile ? lastLiveBasket(events, pile.id) : null;
 
+  // E04-S03: at a weighing point the gate follows the group's check mode.
+  // When this point needs no check, record that it was skipped and open it
+  // (SALE-6) — never silently. Piles from the old setup flow always ask.
+  const isPoint = !!master && !!pile && master.points.some((p) => p.id === pile.id);
+  const skipGate =
+    ready && isPoint && pile?.status === 'not-started' && !gateNeeded(state, events, pile.id, saleSettings(master!).zeroCheck);
+  useEffect(() => {
+    if (!skipGate || !pile || !master) return;
+    append({ kind: 'sys', payload: { t: 'gate_skipped', pileId: pile.id, mode: saleSettings(master).zeroCheck } });
+    append({ kind: 'sys', payload: { t: 'ready', pileId: pile.id } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once per point that needs no check; `append` and the log are read at that moment.
+  }, [skipGate, pile?.id]);
+  const [waiting, setWaiting] = useState(false);
+  const skewG = saleSkewG(events);
+
   if (!ready || !pile || !zone) {
     return (
       <View style={{ flex: 1, backgroundColor: t.color.surface, alignItems: 'center', justifyContent: 'center' }}>
@@ -108,20 +137,38 @@ export default function CounterScreen() {
     );
   }
 
-  const expected = msg('gate.expected', {
-    tare: formatKg(pile.tareG),
-    std: formatKg(pile.stdNetG),
-    expected: formatKg(pile.tareG + pile.stdNetG),
-  });
+  // With a skew accepted, "the scale should read" includes it (D-75).
+  const expected = skewG
+    ? msg('gate.expectedSkew', {
+        tare: formatKg(pile.tareG),
+        std: formatKg(pile.stdNetG),
+        skew: formatKg(skewG),
+        expected: formatKg(expectedReadingG(pile.stdNetG, pile.tareG, skewG)),
+      })
+    : msg('gate.expected', {
+        tare: formatKg(pile.tareG),
+        std: formatKg(pile.stdNetG),
+        expected: formatKg(pile.tareG + pile.stdNetG),
+      });
 
   // The count about to exist once this basket lands — `totals` here is a
   // closure over state from before the append below, so this is the number
   // that needs speaking, not the one currently on screen (FR-11.3).
+  const pointFields = (): { pointId?: string; basketNo?: number } => {
+    // A pile that is a master-data weighing point gets its point and number
+    // (E04-S01, SALE-10); a pile from the old setup flow stays as it was.
+    if (!master || !master.points.some((p) => p.id === pile.id)) return {};
+    const mode = saleNumbering(events, saleSettings(master).numbering);
+    const day = todayIso(state.startedTs ?? Date.now());
+    return { pointId: pile.id, basketNo: nextBasketNo(events, pile.id, mode, (id) => tapperOn(master, id, day)) };
+  };
   const nextCount = (totals?.baskets ?? 0) + 1;
 
   const onCount = () => {
-    append({ kind: 'accept', pileId: pile.id, input: 'hold', netG: pile.stdNetG, tareG: pile.tareG });
-    if (speechOn) announceCount(nextCount, speaker, append);
+    const point = pointFields();
+    append({ kind: 'accept', pileId: pile.id, input: 'hold', netG: pile.stdNetG, tareG: pile.tareG, ...point });
+    // At a point the spoken number is the basket's own number (D-79), else the pile count.
+    if (speechOn) announceCount(point.basketNo ?? nextCount, speaker, append);
   };
 
   const onReject = (heldMs: number) =>
@@ -145,13 +192,22 @@ export default function CounterScreen() {
   };
 
   const confirmShort = () => {
-    append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG });
-    if (speechOn) announceCount(nextCount, speaker, append);
+    const point = pointFields();
+    append({ kind: 'short', pileId: pile.id, readingG: shortReadingG, tareG: pile.tareG, ...(skewG ? { skewG } : {}), ...point });
+    if (speechOn) announceCount(point.basketNo ?? nextCount, speaker, append);
     setShortOpen(false);
   };
 
-  const onZeroChecked = (ok: boolean, readingG: number) =>
+  const onZeroChecked = (ok: boolean, readingG: number) => {
     append({ kind: 'sys', payload: { t: 'zero_check', pileId: pile.id, ok, readingG } });
+    // At a weighing point a failed check carries on with the skew (D-75).
+    if (!ok && isPoint) append({ kind: 'sys', payload: { t: 'skew_accepted', pileId: pile.id, skewG: readingG } });
+  };
+
+  const onWait = () => {
+    append({ kind: 'sys', payload: { t: 'scale_wait', pileId: pile.id } });
+    setWaiting(true);
+  };
 
   const onTareConfirmed = (confirmedTareG: number) =>
     append({ kind: 'sys', payload: { t: 'tare_confirmed', pileId: pile.id, tareG: confirmedTareG } });
@@ -259,6 +315,18 @@ export default function CounterScreen() {
               onCloseZone={() => setConfirmCloseZone(true)}
               onCloseSale={() => setConfirmCloseSale(true)}
             />
+          ) : waiting ? (
+            // D-75: the operator chose to wait for another scale; back to the check after.
+            <View testID="scale-waiting" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: t.space.md, padding: t.space.xl }}>
+              <Text style={{ fontSize: t.font.size.figure, color: t.color.action }}>⌛</Text>
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.title, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+                {msg('gate.waiting')}
+              </Text>
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.body, color: t.color.inkSoft }}>{msg('gate.waitingBody')}</Text>
+              <Button testID="waiting-ok" variant="primary" onPress={() => setWaiting(false)}>
+                {msg('gate.waitingOk')}
+              </Button>
+            </View>
           ) : pile.status === 'not-started' ? (
             <ZeroTareGate
               pileName={pile.name}
@@ -269,6 +337,8 @@ export default function CounterScreen() {
               onZeroChecked={onZeroChecked}
               onTareConfirmed={onTareConfirmed}
               onReady={onGateReady}
+              onWait={isPoint ? onWait : undefined}
+              skewG={skewG}
             />
           ) : (
             <HoldStage
@@ -277,7 +347,7 @@ export default function CounterScreen() {
               onReject={onReject}
               enabled={countable}
               caption={countable ? expected : msg('counter.pileNotReady')}
-              holdMs={holdMsOverride()}
+              holdMs={holdMsOverride() ?? deviceHoldMs}
             />
           )}
           {pile.status === 'counting' ? (
@@ -927,7 +997,8 @@ function describe(
     case 'delete':
       return { mark: '·', colour: t.color.inkSoft, body: msg('log.deleted') };
     case 'restore':
-      return { mark: '·', colour: t.color.inkSoft, body: msg('log.restored') };    // Farm master data never lives in a sale's log; listed only so the switch stays total.
+      return { mark: '·', colour: t.color.inkSoft, body: msg('log.restored') };
+    // Farm master data never lives in a sale's log; listed only so the switch stays total.
     case 'master':
       return { mark: '·', colour: t.color.inkSoft, body: sysLabel(e.payload, msg) };
   }

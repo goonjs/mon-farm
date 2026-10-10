@@ -13,6 +13,7 @@
 
 import {
   MASTER_SCOPE,
+  blankStartAllowed,
   filterPeople,
   projectMaster,
   validatePerson,
@@ -21,14 +22,18 @@ import {
   type PeopleFilter,
   type PersonRecord,
   type PropertyRecord,
+  shareFromAllowed,
+  validDupWindow,
+  validPairKg,
   type StarterRow,
+  todayIso,
   planStarterPoints,
   pointNameTaken,
   type PointRecord,
   validateProperty,
 } from '../core/master';
 import { projectSale } from '../core/project';
-import type { BuiltinRole, Crop, Gps, MasterPayload, PersonId, SaleEvent } from '../core/types';
+import type { BuiltinRole, Crop, Gps, MasterPayload, NumberingMode, PersonId, SaleEvent, ScaleType, ZeroCheckMode } from '../core/types';
 import { uuidv7 } from '../lib/id';
 import type { DeviceClock } from './device-clock';
 import { PRE_LOGIN_USER_ID } from './session';
@@ -72,6 +77,13 @@ export class InvalidInputError extends Error {}
 export class DuplicatePointNameError extends InvalidInputError {}
 
 export type Point = PointRecord;
+
+/** A share may not start on or before the tapper's latest closed sale (D-63, D-74 F17). */
+export class ShareTooEarlyError extends InvalidInputError {
+  constructor(readonly lastClosedSaleDay: string) {
+    super(`A share must start after ${lastClosedSaleDay}.`);
+  }
+}
 
 export class PersonInvalidError extends Error {
   constructor(readonly fields: readonly ('name' | 'roles')[]) {
@@ -120,6 +132,8 @@ export class MasterStore implements PeopleStore {
     };
     const invalid = validatePerson(next);
     if (invalid.length) throw new PersonInvalidError(invalid);
+    const changed = next.name !== cur.name || !sameList(next.roles, cur.roles) || !sameList(next.otherRoles, cur.otherRoles);
+    if (!changed) return;
     // Only the fields that changed go in the patch, so a concurrent edit of a
     // different field on another phone can merge (D-30) once E01-S11 lands.
     await this.write({
@@ -216,6 +230,79 @@ export class MasterStore implements PeopleStore {
     await this.write({ t: 'point_renamed', pointId, name: trimmed });
   }
 
+  /**
+   * The point's tapper from `from` (ISO day), or with no start date; the
+   * previous tapper ends the day before (D-63). Returns the change's id —
+   * a planned change is cancelled by `remove(id)` before it starts.
+   */
+  async assignTapper(pointId: string, tapperId: string, from: string | null): Promise<string> {
+    if (!from && !blankStartAllowed(await this.state(), pointId)) {
+      throw new InvalidInputError('A change to an assigned point needs a start day.');
+    }
+    const assignmentId = uuidv7();
+    await this.write({ t: 'tapper_assigned', assignmentId, pointId, tapperId, ...(from ? { from } : {}) });
+    return assignmentId;
+  }
+
+  /** The tapper leaves with no replacement: no tapper from `from`. */
+  async endTapper(pointId: string, from: string): Promise<string> {
+    const assignmentId = uuidv7();
+    await this.write({ t: 'tapper_unassigned', assignmentId, pointId, from });
+    return assignmentId;
+  }
+
+  /**
+   * The Bangkok day of the latest closed sale this tapper took part in, or
+   * null. Sales do not reference weighing points until E04-S01, so "took part"
+   * is read from the link sales carry today: a zone contract naming them.
+   */
+  async lastClosedSaleDay(tapperId: string): Promise<string | null> {
+    let latest: string | null = null;
+    for (const id of await this.events.listSales()) {
+      const sale = projectSale(await this.events.load(id), id);
+      if (sale.deleted || sale.status !== 'closed' || sale.startedTs === null) continue;
+      if (!sale.zones.some((z) => z.contract?.personId === tapperId)) continue;
+      const day = todayIso(sale.startedTs);
+      if (!latest || day > latest) latest = day;
+    }
+    return latest;
+  }
+
+  /** The tapper's whole-number % of gross from `from` on (E03-S06, MD-8). */
+  async setShare(tapperId: string, tapperPct: number, from: string): Promise<void> {
+    if (!Number.isInteger(tapperPct) || tapperPct < 0 || tapperPct > 100) {
+      throw new InvalidInputError('A share is a whole percent from 0 to 100.');
+    }
+    const last = await this.lastClosedSaleDay(tapperId);
+    if (last && !shareFromAllowed(from, last)) throw new ShareTooEarlyError(last);
+    await this.write({ t: 'share_set', shareId: uuidv7(), tapperId, tapperPct, from });
+  }
+
+  /** Group-wide sale settings (E03-S07): only the fields given change. */
+  async updateSettings(patch: {
+    scaleType?: ScaleType;
+    numbering?: NumberingMode;
+    zeroCheck?: ZeroCheckMode;
+    dupWindowS?: number;
+  }): Promise<void> {
+    if (patch.dupWindowS !== undefined && !validDupWindow(patch.dupWindowS)) {
+      throw new InvalidInputError('The duplicate window is 7 to 10 seconds.');
+    }
+    await this.write({ t: 'settings_set', ...patch });
+  }
+
+  /** A net + basket pair in whole kg (whole-kg scale, D-66), stored in grams. */
+  async addPair(netKg: number, basketKg: number): Promise<string> {
+    if (!validPairKg(netKg, basketKg)) throw new InvalidInputError('Weights are whole kg; net above 0.');
+    const pairId = uuidv7();
+    await this.write({ t: 'basket_pair_added', pairId, netG: netKg * 1000, basketG: basketKg * 1000 });
+    return pairId;
+  }
+
+  async setDefaultPair(pairId: string): Promise<void> {
+    await this.write({ t: 'basket_pair_default', pairId });
+  }
+
   /** The generic wizard (D-73): all points or none; each comes back with its tapper. */
   async createStarterPoints(rows: readonly StarterRow[]): Promise<(Point & { tapperId: string })[]> {
     const plan = planStarterPoints(await this.state(), rows);
@@ -224,6 +311,8 @@ export class MasterStore implements PeopleStore {
     for (const p of plan.points) {
       const pointId = uuidv7();
       await this.write({ t: 'point_added', pointId, propertyId: p.propertyId, name: p.name });
+      // The helper's assignments carry no start date (D-63).
+      await this.write({ t: 'tapper_assigned', assignmentId: uuidv7(), pointId, tapperId: p.tapperId });
       made.push({ pointId, tapperId: p.tapperId });
     }
     const points = (await this.state()).points;

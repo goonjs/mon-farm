@@ -60,6 +60,10 @@ test('points: the helper creates every named point offline; names repeat only ac
   await page.getByTestId('add-point').click();
   await page.getByTestId('point-name').fill('จุด 1');
   await page.getByTestId('point-save').click();
+  // E03-S05: a new point offers a tapper now or later (D-74 F15).
+  await expect(page.getByTestId('offer-assign')).toBeVisible();
+  await shot('e03-s05-offer-assign');
+  await page.getByTestId('offer-later').click();
   await expect(page.getByTestId('property-points')).toContainText('จุด 1');
   await page.getByTestId('back').last().click();
   await page.getByText('สวน ก', { exact: true }).click();
@@ -77,4 +81,40 @@ test('points: the helper creates every named point offline; names repeat only ac
   await page.getByText('สวน ก', { exact: true }).click();
   await expect(page.getByTestId('property-points')).toContainText('จุด 3');
   await shot('e03-s03-farm-points');
+});
+
+test('assignments: helper assigns, a planned change ends the old tapper the day before, offline', async ({ page, context }, info) => {
+  const shot = async (name: string) => {
+    if (info.project.name === 'phone-landscape') await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
+  };
+  for (const n of ['แดง', 'นัด']) await addTapper(page, n);
+  await addFarm(page, 'สวน ก');
+  await page.goto('/properties');
+  await context.setOffline(true);
+  await page.getByTestId('open-wizard').click();
+  await page.locator('[data-testid^="wizard-farm-"]', { hasText: 'สวน ก' }).click();
+  await page.locator('[data-testid^="wizard-tapper-"]', { hasText: 'แดง' }).click();
+  await page.locator('[data-testid^="wizard-name-"]').first().fill('จุด 1');
+  await page.getByTestId('wizard-create').click();
+  await expect(page.getByTestId('open-wizard')).toHaveCount(0);
+
+  await page.getByText('สวน ก', { exact: true }).click();
+  await page.locator('[data-testid^="point-"]', { hasText: 'จุด 1' }).last().click();
+  await expect(page.getByTestId('timeline')).toContainText('แดง');
+  await expect(page.getByTestId('timeline')).toContainText('ไม่ระบุวันเริ่ม');
+
+  await page.getByTestId('plan-change').click();
+  await page.locator('[data-testid^="plan-tapper-"]', { hasText: 'นัด' }).click();
+  await page.getByTestId('plan-from').fill('1/1/2600');
+  await expect(page.getByTestId('plan-preview')).toContainText('แดง ถึง');
+  await expect(page.getByTestId('plan-preview')).toContainText('31 ธ.ค. 2599');
+  await shot('e03-s05-plan-change');
+  await page.getByTestId('plan-save').click();
+  await expect(page.getByTestId('timeline')).toContainText('ตามแผน');
+
+  await context.setOffline(false);
+  await page.reload();
+  await expect(page.getByTestId('timeline')).toContainText('นัด');
+  await expect(page.getByTestId('timeline')).toContainText('31 ธ.ค. 2599');
+  await shot('e03-s05-point-timeline');
 });
