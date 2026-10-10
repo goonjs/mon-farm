@@ -81,6 +81,11 @@ describe('MenuItem — mockup rows: icon tile + value + one fact per line (revie
     expect(onPress).toHaveBeenCalled();
   });
 
+  it('takes a trailing badge between the text and the chevron (mockup 4, 8: ขัดกัน, ใช้ล่าสุด)', () => {
+    wrap(<MenuItem testID="row" label="คนรับซื้อยาง ก" trailing={<Text testID="row-badge">ใช้ล่าสุด</Text>} />);
+    expect(screen.getByTestId('row-badge')).toBeTruthy();
+  });
+
   it('still renders the plain label + detail row', () => {
     wrap(<MenuItem testID="row" label="เครื่องนี้" detail="ขนาดตัวอักษร" />);
     expect(screen.getByText('ขนาดตัวอักษร')).toBeTruthy();

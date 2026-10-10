@@ -344,3 +344,135 @@ export function FarmIcon({ color, size = 18 }: IconProps) {
 export function ScaleIcon({ color, size = 18 }: IconProps) {
   return <Scale color={color} size={size} />;
 }
+
+// ── Farm-team set (D-83) ────────────────────────────────────────────────────
+// Same contract: `size` is the outer square, colour from the caller, hidden.
+
+/** Weighing point — a map pin: a ring on a point. */
+export function PinIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  const head = size * 0.7;
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center' }}>
+      <View
+        style={{
+          width: head,
+          height: head,
+          borderRadius: head / 2,
+          borderBottomRightRadius: 0,
+          borderWidth: w,
+          borderColor: color,
+          transform: [{ rotate: '45deg' }],
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View style={{ width: head * 0.3, height: head * 0.3, borderRadius: head, backgroundColor: color }} />
+      </View>
+    </View>
+  );
+}
+
+/** Role — a tag: a rounded label with a hole. */
+export function TagIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          width: size * 0.72,
+          height: size * 0.72,
+          borderWidth: w,
+          borderColor: color,
+          borderTopLeftRadius: size * 0.12,
+          borderTopRightRadius: size,
+          borderBottomLeftRadius: size * 0.12,
+          borderBottomRightRadius: size * 0.12,
+          transform: [{ rotate: '-45deg' }],
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View style={{ width: w * 1.6, height: w * 1.6, borderRadius: size, backgroundColor: color }} />
+      </View>
+    </View>
+  );
+}
+
+/** Delete — a bin: lid, handle and body. */
+export function TrashIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center' }}>
+      <View style={{ width: size * 0.36, height: size * 0.14, borderWidth: w, borderBottomWidth: 0, borderColor: color }} />
+      <View style={{ width: size * 0.9, height: w, backgroundColor: color }} />
+      <View
+        style={{
+          width: size * 0.66,
+          flex: 1,
+          borderWidth: w,
+          borderTopWidth: 0,
+          borderBottomLeftRadius: w * 1.5,
+          borderBottomRightRadius: w * 1.5,
+          borderColor: color,
+          flexDirection: 'row',
+          justifyContent: 'center',
+          gap: size * 0.14,
+          paddingTop: size * 0.12,
+          paddingBottom: size * 0.12,
+        }}
+      >
+        <View style={{ width: w, backgroundColor: color }} />
+        <View style={{ width: w, backgroundColor: color }} />
+      </View>
+    </View>
+  );
+}
+
+/** Settings — a gear: a disc with eight teeth. */
+export function GearIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  const tooth = { position: 'absolute', width: w * 1.6, height: size, borderRadius: w, backgroundColor: color } as const;
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={tooth} />
+      <View style={{ ...tooth, transform: [{ rotate: '90deg' }] }} />
+      <View style={{ ...tooth, transform: [{ rotate: '45deg' }] }} />
+      <View style={{ ...tooth, transform: [{ rotate: '-45deg' }] }} />
+      <View style={{ width: size * 0.62, height: size * 0.62, borderRadius: size, backgroundColor: color }} />
+    </View>
+  );
+}
+
+/** Share — a percent sign: two small rings and a slash. */
+export function PercentIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  const ring = { position: 'absolute', width: size * 0.32, height: size * 0.32, borderRadius: size, borderWidth: w, borderColor: color } as const;
+  return (
+    <View aria-hidden style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ ...ring, top: size * 0.04, left: size * 0.04 }} />
+      <View style={{ ...ring, bottom: size * 0.04, right: size * 0.04 }} />
+      <View style={{ width: w, height: size * 1.1, borderRadius: w, backgroundColor: color, transform: [{ rotate: '45deg' }] }} />
+    </View>
+  );
+}
+
+/** Change over — two arrows, one each way. */
+export function SwapIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  const head = size * 0.28;
+  const bar = { position: 'absolute', left: size * 0.08, right: size * 0.08, height: w, borderRadius: w, backgroundColor: color } as const;
+  const tip = { position: 'absolute', width: head, height: head, borderColor: color } as const;
+  return (
+    <View aria-hidden style={{ width: size, height: size }}>
+      <View style={{ ...bar, top: size * 0.3 }} />
+      <View
+        style={{ ...tip, right: size * 0.08, top: size * 0.3 - head / 2 + w / 2, borderTopWidth: w, borderRightWidth: w, transform: [{ rotate: '45deg' }] }}
+      />
+      <View style={{ ...bar, top: size * 0.68 }} />
+      <View
+        style={{ ...tip, left: size * 0.08, top: size * 0.68 - head / 2 + w / 2, borderBottomWidth: w, borderLeftWidth: w, transform: [{ rotate: '45deg' }] }}
+      />
+    </View>
+  );
+}

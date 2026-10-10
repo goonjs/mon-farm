@@ -8,15 +8,21 @@ import {
   ChevronRight,
   DebtIcon,
   FarmIcon,
+  GearIcon,
   MenuIcon,
   Minus,
   MoneyInIcon,
   MoneyOutIcon,
+  PercentIcon,
   PersonIcon,
+  PinIcon,
   Plus,
   ReceiptIcon,
   Scale,
   ScaleIcon,
+  SwapIcon,
+  TagIcon,
+  TrashIcon,
   Undo,
 } from './icons';
 
@@ -54,6 +60,13 @@ describe('line icons — Views only, coloured by the caller (E01-S17 X8)', () =>
     ['BankIcon', <BankIcon key="o" color="sentinel" />],
     ['FarmIcon', <FarmIcon key="p" color="sentinel" size={24} />],
     ['ScaleIcon', <ScaleIcon key="q" color="sentinel" size={20} />],
+    // Farm-team set (D-83).
+    ['PinIcon', <PinIcon key="r" color="sentinel" />],
+    ['TagIcon', <TagIcon key="s" color="sentinel" />],
+    ['TrashIcon', <TrashIcon key="t" color="sentinel" />],
+    ['GearIcon', <GearIcon key="u" color="sentinel" />],
+    ['PercentIcon', <PercentIcon key="v" color="sentinel" />],
+    ['SwapIcon', <SwapIcon key="w" color="sentinel" />],
   ])('%s paints only in the colour it is given', (_name, icon) => {
     const s = strokes(icon);
     const colours = s.flatMap((x) =>
@@ -67,7 +80,7 @@ describe('line icons — Views only, coloured by the caller (E01-S17 X8)', () =>
 });
 
 describe('money-team icons take size', () => {
-  it.each([MoneyInIcon, MoneyOutIcon, PersonIcon, CalendarIcon, ReceiptIcon, DebtIcon, BankIcon, FarmIcon, ScaleIcon])(
+  it.each([MoneyInIcon, MoneyOutIcon, PersonIcon, CalendarIcon, ReceiptIcon, DebtIcon, BankIcon, FarmIcon, ScaleIcon, PinIcon, TagIcon, TrashIcon, GearIcon, PercentIcon, SwapIcon])(
     '%p outer box follows size',
     (Icon) => {
       const s = strokes(<Icon color="x" size={24} />);

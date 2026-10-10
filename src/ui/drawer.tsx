@@ -117,6 +117,7 @@ export function MenuItem({
   label,
   detail,
   leading,
+  trailing,
   children,
   href,
   onPress,
@@ -126,6 +127,8 @@ export function MenuItem({
   detail?: string;
   /** Usually an `<IconTile>`; decorative, the label names the row. */
   leading?: React.ReactNode;
+  /** A badge before the chevron, e.g. a `<Chip>` ("ใช้ล่าสุด", "ขัดกัน"). */
+  trailing?: React.ReactNode;
   /** Fact lines under the label, usually `<FactRow>`s. */
   children?: React.ReactNode;
   href?: Href;
@@ -133,7 +136,7 @@ export function MenuItem({
   testID?: string;
 }) {
   const row = (
-    <MenuRow label={label} detail={detail} leading={leading} testID={testID} onItemPress={onPress}>
+    <MenuRow label={label} detail={detail} leading={leading} trailing={trailing} testID={testID} onItemPress={onPress}>
       {children}
     </MenuRow>
   );
@@ -150,6 +153,7 @@ function MenuRow({
   label,
   detail,
   leading,
+  trailing,
   children,
   testID,
   onItemPress,
@@ -159,6 +163,7 @@ function MenuRow({
   label: string;
   detail?: string;
   leading?: React.ReactNode;
+  trailing?: React.ReactNode;
   children?: React.ReactNode;
   testID?: string;
   onItemPress?: () => void;
@@ -208,6 +213,7 @@ function MenuRow({
         ) : null}
         {children}
       </View>
+      {trailing}
       <ChevronRight color={t.color.inkFaint} />
     </Pressable>
   );
