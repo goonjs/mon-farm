@@ -89,6 +89,10 @@ export default function SaleListScreen() {
         <Link href={'/farm-data' as Href} asChild>
           <Button testID="open-farm-data">{msg('farmData.open')}</Button>
         </Link>
+        {/* D-74 F5: "all expenses" is reachable from the front door and the menu (settings). */}
+        <Link href="/finance/expenses" asChild>
+          <Button testID="open-expenses">{msg('fin.open')}</Button>
+        </Link>
         <Link href={SETTINGS} asChild>
           <Button testID="open-settings">{msg('settings.open')}</Button>
         </Link>
