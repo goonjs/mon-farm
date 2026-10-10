@@ -13,7 +13,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Link, useFocusEffect, type Href } from 'expo-router';
 
-import { Button, cardStyle } from '../components/chrome';
+import { Button, PinnedActions, cardStyle } from '../components/chrome';
+import { Plus } from '../components/ui/icons';
 import { Drawer, MenuItem, MenuSection } from '../components/ui/drawer';
 import { ScreenHeader } from '../components/ui/screen-header';
 import { useSyncStatus } from '../sync/use-sync-status';
@@ -98,11 +99,13 @@ export default function SaleListScreen() {
         )}
       </ScrollView>
 
-      <View style={{ paddingHorizontal: t.space.lg, paddingVertical: t.space.md }}>
+      <PinnedActions>
         <Link href={newSaleHref} asChild>
-          <Button testID="new-sale" variant="primary">{msg('sales.new')}</Button>
+          <Button testID="new-sale" variant="primary" size="large" icon={(c) => <Plus color={c} />}>
+            {msg('sales.new')}
+          </Button>
         </Link>
-      </View>
+      </PinnedActions>
 
       {/* ☰ menu (v1.1.0 farm screen 1). Settings moved here off the front
           door; the sale list stays the home screen's main card. */}

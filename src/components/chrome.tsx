@@ -6,6 +6,7 @@
  * (docs/ux/design-system.md §4).
  */
 
+import { Children } from 'react';
 import { Pressable, Text, View, type TextStyle, type ViewStyle } from 'react-native';
 
 import { useTheme, type Theme } from '../theme';
@@ -201,6 +202,8 @@ export function Button({
   children,
   onPress,
   variant = 'ghost',
+  size = 'regular',
+  icon,
   disabled,
   testID,
   accessibilityLabel,
@@ -209,6 +212,10 @@ export function Button({
   onPress?: () => void;
   /** `row`: a list row inside a card (v1.1.0 home) — text left, chevron right. */
   variant?: 'primary' | 'ghost' | 'destructive' | 'row';
+  /** `large`: the 56pt pinned call to action of the v1.1.0 mockups. */
+  size?: 'regular' | 'large';
+  /** Leading icon from ui/icons.tsx, painted in the label colour. */
+  icon?: (colour: string) => React.ReactNode;
   disabled?: boolean;
   testID?: string;
   /** When the visible text alone does not say what the button acts on. */
@@ -280,21 +287,24 @@ export function Button({
       onPress={onPress}
       disabled={disabled}
       style={{
-        minHeight: t.target.min,
-        paddingHorizontal: t.space.lg,
+        minHeight: size === 'large' ? t.target.comfortable : t.target.min,
+        paddingHorizontal: size === 'large' ? t.space.xl : t.space.lg,
         borderRadius: t.radius.pill,
         borderWidth: t.border.thick,
         borderStyle: disabled ? 'dashed' : 'solid',
         borderColor: styles.border,
         backgroundColor: styles.bg,
+        flexDirection: 'row',
+        gap: t.space.sm,
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
+      {icon ? <View aria-hidden>{icon(styles.fg)}</View> : null}
       <Text
         style={{
           fontFamily: t.font.family.sans,
-          fontSize: variant === 'primary' ? t.font.size.bodyLg : t.font.size.bodyMd,
+          fontSize: variant === 'primary' || size === 'large' ? t.font.size.bodyLg : t.font.size.bodyMd,
           fontWeight: variant === 'primary' ? t.font.weight.bold : t.font.weight.semibold,
           color: styles.fg,
           textAlign: 'center',
@@ -303,5 +313,28 @@ export function Button({
         {children}
       </Text>
     </Pressable>
+  );
+}
+
+/**
+ * The pinned bottom bar for a screen's main action(s) (v1.1.0: a large pill
+ * CTA floating on the screen ground, no rule above it). Children share the
+ * width; put it after the ScrollView, outside it.
+ */
+export function PinnedActions({ children, testID }: { children: React.ReactNode; testID?: string }) {
+  const t = useTheme();
+  return (
+    <View
+      testID={testID}
+      style={{
+        flexDirection: 'row',
+        gap: t.space.sm,
+        paddingHorizontal: t.layout.screenPaddingX,
+        paddingVertical: t.space.md,
+        backgroundColor: t.color.surface,
+      }}
+    >
+      {Children.map(children, (child) => (child ? <View style={{ flex: 1 }}>{child}</View> : null))}
+    </View>
   );
 }

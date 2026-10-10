@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { Button, CardLabel, cardStyle } from '../../../components/chrome';
 import { ScreenHeader } from '../../../components/ui/screen-header';
 import { useSyncStatus } from '../../../sync/use-sync-status';
+import { Undo } from '../../../components/ui/icons';
 import { DeductionForm, type DeductionFormInput } from '../../../components/DeductionForm';
 import { ReopenPrompt } from '../../../components/ReopenPrompt';
 import { WorkerPayoutCard } from '../../../components/WorkerPayoutCard';
@@ -286,7 +287,12 @@ export default function SettlementScreen() {
           สรุปนี้คำนวณจากบันทึกทั้งหมด — ไม่ได้เก็บเป็นตัวเลขตายตัว
         </Text>
         {state.status === 'closed' ? (
-          <Button variant="primary" testID="reopen-sale" onPress={() => setReopening(true)}>
+          <Button
+            variant="primary"
+            testID="reopen-sale"
+            icon={(c) => <Undo color={c} />}
+            onPress={() => setReopening(true)}
+          >
             {msg('settle.reopen')}
           </Button>
         ) : (

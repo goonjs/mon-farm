@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react-native';
 import { View } from 'react-native';
 
-import { Button, CardLabel, Pill, Tabs, TopBar, cardStyle } from './chrome';
+import { Button, CardLabel, PinnedActions, Pill, Tabs, TopBar, cardStyle } from './chrome';
 import { useTheme } from '../theme';
 import { wrap } from '../test/render';
 import { tokens } from '../../design/tokens';
@@ -104,5 +104,38 @@ describe('chrome — v1.1.0 shell styling', () => {
       fontSize: tokens.font.size.bodyLg,
     });
     expect(flat(screen.getByText('›', { includeHiddenElements: true }).props.style).color).toBe(c.inkFaint);
+  });
+
+  it('large CTA: 56pt pill with a leading icon painted in the label colour', () => {
+    wrap(
+      <Button
+        testID="cta"
+        variant="primary"
+        size="large"
+        icon={(colour) => <View testID="cta-icon" style={{ backgroundColor: colour }} />}
+      >
+        เริ่มการขายใหม่
+      </Button>,
+    );
+    expect(flat(screen.getByTestId('cta').props.style)).toMatchObject({
+      minHeight: tokens.target.comfortable,
+      borderRadius: tokens.radius.pill,
+      flexDirection: 'row',
+    });
+    expect(flat(screen.getByTestId('cta-icon', { includeHiddenElements: true }).props.style).backgroundColor).toBe(
+      c.inkInverse,
+    );
+  });
+
+  it('pinned actions: a bottom bar on the screen ground, no rule, gutters per layout', () => {
+    wrap(
+      <PinnedActions testID="pinned">
+        <Button>หนึ่ง</Button>
+      </PinnedActions>,
+    );
+    expect(flat(screen.getByTestId('pinned').props.style)).toMatchObject({
+      backgroundColor: c.surface,
+      paddingHorizontal: tokens.layout.screenPaddingX,
+    });
   });
 });
