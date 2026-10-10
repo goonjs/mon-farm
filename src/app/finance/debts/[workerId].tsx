@@ -12,8 +12,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import { Button, TopBar } from '../../../components/chrome';
-import { Chip, ChipRow, Input, Label, Note } from '../../../components/finance/parts';
+import { Button } from '../../../components/chrome';
+import { BigAmount, Card, CardTitle, Chip, ChipRow, Input, Label, Note, Rule, ScreenHeader } from '../../../components/finance/parts';
 import { projectDebts, type DebtAccount, type HistoryLine } from '../../../core/finance/debts';
 import { formatDate, formatSatang, parseBahtToSatang, satangToInput } from '../../../core/finance/money';
 import { useFinance } from '../../../finance/use-finance';
@@ -35,9 +35,9 @@ export default function DebtAccountScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar crumb={msg('debt.title', { name: worker.name })} right={<Button testID="debt-back" onPress={() => router.back()}>{msg('common.back')}</Button>} />
+      <ScreenHeader testID="debt" title={msg('debt.title', { name: worker.name })} onBack={() => router.back()} />
       {fin.events === null ? (
-        <Text style={{ padding: t.space.md, fontFamily: t.font.family.mono, color: t.color.inkSoft }}>{msg('counter.loading')}</Text>
+        <Text style={{ padding: t.space.md, fontFamily: t.font.family.sans, color: t.color.inkSoft }}>{msg('counter.loading')}</Text>
       ) : (
         <Account account={account} worker={worker} fin={fin} />
       )}
@@ -83,21 +83,18 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
   const row = (label: string, value: number, sign: '+' | '−', testID?: string) => (
     <View key={label} style={{ flexDirection: 'row' }}>
       <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>{`${sign} ${label}`}</Text>
-      <Text testID={testID} style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.small, color: t.color.ink }}>{formatSatang(value)}</Text>
+      <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>{formatSatang(value)}</Text>
     </View>
   );
 
   return (
     <ScrollView contentContainerStyle={{ padding: t.space.md, gap: t.space.md }}>
-      <View style={{ padding: t.space.md, borderRadius: t.radius.lg, backgroundColor: t.color.surfaceSunk, gap: t.space.xxs }}>
-        <Note>{balance < 0 ? msg('debt.farmOwes', { name: worker.name }) : msg('debt.balance', { name: worker.name })}</Note>
-        <Text testID="debt-balance" style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.title, fontWeight: t.font.weight.black, color: t.color.ink }}>
-          {formatSatang(Math.abs(balance))}
-        </Text>
-        {account?.overpaid ? <Note tone="reject" testID="debt-flag">{msg('debt.flag')}</Note> : null}
-      </View>
-
-      <View style={{ gap: t.space.xs }}>
+      <Card>
+        <BigAmount testID="debt-balance" satang={Math.abs(balance)} caption={balance < 0 ? msg('debt.farmOwes', { name: worker.name }) : msg('debt.balance', { name: worker.name })}>
+          {account?.overpaid ? <Note tone="reject" testID="debt-flag">{msg('debt.flag')}</Note> : null}
+        </BigAmount>
+        <Rule />
+        <View style={{ gap: t.space.xs }}>
         <Label>{msg('debt.plan')}</Label>
         {planDraft === null ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
@@ -130,9 +127,11 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
         )}
       </View>
 
+      </Card>
+
       {s ? (
-        <View testID="debt-summary" style={{ gap: t.space.xxs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.rule }}>
-          <Label>{msg('debt.summary')}</Label>
+        <Card testID="debt-summary">
+          <CardTitle>{msg('debt.summary')}</CardTitle>
           <Note>{msg('debt.sum.owedTitle')}</Note>
           {row(msg('debt.kind.loan'), s.owed.loan, '+')}
           {row(msg('debt.kind.fertilizer'), s.owed.fertilizer, '+')}
@@ -148,26 +147,26 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
             <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink }}>
               {msg('debt.sum.balance')}
             </Text>
-            <Text testID="debt-summary-balance" style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+            <Text testID="debt-summary-balance" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink }}>
               {`${formatSatang(s.balanceSatang)} ${s.balanceSatang === balance ? `✓ ${msg('debt.sum.match')}` : '✗'}`}
             </Text>
           </View>
-        </View>
+        </Card>
       ) : null}
 
-      <View style={{ gap: t.space.xxs, padding: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderStyle: 'dashed', borderColor: t.color.ruleStrong }}>
-        <Label>{msg('debt.others')}</Label>
+      <Card>
+        <CardTitle>{msg('debt.others')}</CardTitle>
         {account?.others.length ? (
           account.others.map((o) => (
             <View key={o.lender.id} testID={`debt-other-${o.lender.id}`} style={{ flexDirection: 'row' }}>
               <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>{o.lender.name}</Text>
-              <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.small, color: t.color.ink }}>{formatSatang(o.balanceSatang)}</Text>
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>{formatSatang(o.balanceSatang)}</Text>
             </View>
           ))
         ) : (
           <Note>{msg('debt.othersNone')}</Note>
         )}
-      </View>
+      </Card>
 
       <View style={{ gap: t.space.xs }}>
         <Label>{msg('debt.history')}</Label>
@@ -179,7 +178,7 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
           ))}
         </ChipRow>
         {lines.map((h) => (
-          <View key={h.id} testID={`debt-line-${h.id}`} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, padding: t.space.sm, borderRadius: t.radius.md, backgroundColor: t.color.surfaceSunk, opacity: h.deleted ? t.opacity.muted : 1 }}>
+          <View key={h.id} testID={`debt-line-${h.id}`} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, padding: t.space.sm, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleFaint, backgroundColor: t.color.surfaceRaised, opacity: h.deleted ? t.opacity.muted : 1 }}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink, textDecorationLine: h.deleted ? 'line-through' : 'none' }}>
                 {msg(`debt.kind.${h.type}`)}
@@ -195,7 +194,7 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
                   .join(' · ')}
               </Note>
             </View>
-            <Text style={{ fontFamily: t.font.family.mono, fontSize: t.font.size.small, color: t.color.ink }}>
+            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.ink }}>
               {`${h.signedSatang >= 0 ? '+' : ''}${formatSatang(h.signedSatang)}`}
             </Text>
             <Button testID={`debt-void-${h.id}`} variant={h.deleted ? 'ghost' : 'destructive'} onPress={() => void voidLine(h, !h.deleted)}>

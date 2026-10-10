@@ -5,14 +5,19 @@
  * outlined, planned = dashed outline — always with a word, §12.9 rule 9).
  */
 
+import { router } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { formatSatang } from '../../core/finance/money';
+import { useSyncStatus } from '../../sync/use-sync-status';
 import { FARM_FUNDS, type Payer, type Stage } from '../../core/finance/types';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
 import { Button } from '../chrome';
+import { BankIcon, CalendarIcon, Check, DebtIcon, FarmIcon, MoneyInIcon, MoneyOutIcon, PersonIcon, ReceiptIcon } from '../ui/icons';
+import { ScreenHeader as SharedHeader } from '../ui/screen-header';
 
 export function Chip({
   children,
@@ -257,6 +262,171 @@ export function PayerPicker({
           </Button>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+// ── v1.1.0 screen language (flow-farm / flow-sale mockups) ──────────────────
+
+/**
+ * The v1.1.0 app bar for finance screens: COLOR's shared ScreenHeader
+ * (E01-S17) — back chevron, title over its context line, sync pill — with
+ * the back button keeping the `<testID>-back` id these screens' tests use.
+ */
+export function ScreenHeader({
+  title,
+  subtitle,
+  right,
+  onBack,
+  testID = 'screen',
+}: {
+  title: string;
+  subtitle?: string;
+  right?: ReactNode;
+  onBack?: () => void;
+  testID?: string;
+}) {
+  const msg = useT();
+  const sync = useSyncStatus();
+  const back = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
+  return <SharedHeader title={title} subtitle={subtitle} right={right} sync={sync} back={{ label: msg('common.back'), onPress: back, testID: `${testID}-back` }} />;
+}
+
+/** A white card on the screen ground — the v1.1.0 unit of grouping. */
+export function Card({ children, tone = 'plain', testID }: { children: ReactNode; tone?: 'plain' | 'accent'; testID?: string }) {
+  const t = useTheme();
+  const look = {
+    plain: { bg: t.color.surfaceRaised, border: t.color.ruleFaint, style: 'solid' as const },
+    accent: { bg: t.color.acceptSunk, border: t.color.accept, style: 'dashed' as const },
+  }[tone];
+  return (
+    <View
+      testID={testID}
+      style={{
+        gap: t.space.xs,
+        padding: t.space.md,
+        borderRadius: t.radius.lg,
+        borderWidth: t.border.hair,
+        borderStyle: look.style,
+        borderColor: look.border,
+        backgroundColor: look.bg,
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+
+/** A card's small heading ("สรุปเทียบยอด", "ประวัติ"). */
+export function CardTitle({ children }: { children: ReactNode }) {
+  const t = useTheme();
+  return (
+    <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: t.color.ink }}>{children}</Text>
+  );
+}
+
+export type FactMark = 'date' | 'person' | 'place' | 'money' | 'in' | 'out' | 'note' | 'bank' | 'debt' | 'check' | 'half';
+
+/** One fact per line, led by its line icon (D-70, E01-S17 icons). */
+export function Fact({ mark, children, tone = 'soft', testID }: { mark: FactMark; children: ReactNode; tone?: 'soft' | 'warn' | 'accept'; testID?: string }) {
+  const t = useTheme();
+  const color = { soft: t.color.inkSoft, warn: t.color.warn, accept: t.color.accept }[tone];
+  const Icon = {
+    date: CalendarIcon,
+    person: PersonIcon,
+    place: FarmIcon,
+    money: ReceiptIcon,
+    in: MoneyInIcon,
+    out: MoneyOutIcon,
+    note: ReceiptIcon,
+    bank: BankIcon,
+    debt: DebtIcon,
+    check: null,
+    half: null,
+  }[mark];
+  return (
+    <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
+      <View testID={`fact-mark-${mark}`} style={{ width: 16, alignItems: 'center' }}>
+        {Icon ? (
+          <Icon color={color} size={14} />
+        ) : mark === 'check' ? (
+          <Check color={color} size={12} />
+        ) : (
+          // Half-filled dot: pending / partly done — shape, not colour alone.
+          <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: t.border.hair, borderColor: color, overflow: 'hidden', flexDirection: 'row' }}>
+            <View style={{ flex: 1, backgroundColor: color }} />
+            <View style={{ flex: 1 }} />
+          </View>
+        )}
+      </View>
+      <Text style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color }}>{children}</Text>
+    </View>
+  );
+}
+
+/**
+ * A label and an amount on one line. Money in or out always carries its
+ * sign and a word — "+2,000.00 เข้า" / "−1,500.00 ออก" — so the colour is
+ * never the only carrier (NFR-4). null reads "ไม่ทราบ", never 0 (SYNC-12).
+ */
+export function MoneyLine({
+  label,
+  satang,
+  dir,
+  strong,
+  testID = 'money',
+}: {
+  label: string;
+  satang: number | null;
+  dir?: 'in' | 'out';
+  strong?: boolean;
+  testID?: string;
+}) {
+  const t = useTheme();
+  const msg = useT();
+  // Zero moves no money: no sign, no word, no colour.
+  if (satang === 0) dir = undefined;
+  const text =
+    satang === null ? msg('fin.row.unknown') : dir === 'in' ? `+${formatSatang(Math.abs(satang))}` : dir === 'out' ? `−${formatSatang(Math.abs(satang))}` : formatSatang(satang);
+  const color = dir === 'in' ? t.color.accept : dir === 'out' ? t.color.reject : t.color.ink;
+  return (
+    <View testID={testID} style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.sm }}>
+      <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: strong ? t.color.ink : t.color.inkSoft, fontWeight: strong ? t.font.weight.bold : t.font.weight.regular }}>
+        {label}
+      </Text>
+      <Text testID={`${testID}-amount`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, fontWeight: t.font.weight.bold, color: satang === null ? t.color.inkSoft : color }}>
+        {text}
+      </Text>
+      {dir && satang !== null ? (
+        <Text testID={`${testID}-word`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color }}>
+          {msg(dir === 'in' ? 'fin.money.in' : 'fin.money.out')}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+/** A thin divider inside a card. */
+export function Rule() {
+  const t = useTheme();
+  return <View style={{ height: t.border.hair, backgroundColor: t.color.ruleFaint, marginVertical: t.space.xs }} />;
+}
+
+/** The hero figure at the top of a summary card: caption, big number, unit. */
+/** `unknown`: no figure exists yet — reads ไม่ทราบ, never a silent 0.00 (SYNC-12). */
+export function BigAmount({ satang, unknown, caption, children, testID = 'big' }: { satang: number; unknown?: boolean; caption?: string; children?: ReactNode; testID?: string }) {
+  const t = useTheme();
+  const msg = useT();
+  return (
+    <View testID={`${testID}-card`} style={{ alignItems: 'center', gap: 2 }}>
+      {caption ? <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.micro, color: t.color.inkSoft }}>{caption}</Text> : null}
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.xs }}>
+        <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayXl, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+          {unknown ? msg('fin.row.unknown') : formatSatang(satang)}
+        </Text>
+        {unknown ? null : <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>{msg('fin.baht')}</Text>}
+      </View>
+      {children}
     </View>
   );
 }

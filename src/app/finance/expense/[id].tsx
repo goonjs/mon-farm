@@ -16,8 +16,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import { Button, TopBar } from '../../../components/chrome';
-import { Chip, ChipRow, Input, Label, Note, PayerPicker } from '../../../components/finance/parts';
+import { Button } from '../../../components/chrome';
+import { Chip, ChipRow, Input, Label, Note, PayerPicker, ScreenHeader } from '../../../components/finance/parts';
 import { checkExpense, defaultPayer, isDerivedExpense, type Expense } from '../../../core/finance/ledger';
 import { formatDate, formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../../core/finance/money';
 import { FARM_FUNDS, type AidKind, type ExpenseFields, type ExpensePatch, type Payer, type Stage, type Trip, type TripCostKind } from '../../../core/finance/types';
@@ -44,14 +44,7 @@ export default function ExpenseScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <TopBar
-        crumb={msg(existing ? 'fin.form.titleEdit' : 'fin.form.titleNew')}
-        right={
-          <Button testID="expense-back" onPress={leave}>
-            {msg('common.back')}
-          </Button>
-        }
-      />
+      <ScreenHeader testID="expense" title={msg(existing ? 'fin.form.titleEdit' : 'fin.form.titleNew')} onBack={leave} />
       {ready ? (
         <Form key={existing?.headEventId ?? 'new'} existing={existing} fin={fin} />
       ) : (

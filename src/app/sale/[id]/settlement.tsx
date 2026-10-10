@@ -147,6 +147,44 @@ export default function SettlementScreen() {
   }
 
   const s = result;
+  // Derivation first in source and on screen, so screen readers and Tab follow what is seen (E01-S17 stacks it above on a phone).
+  const derivation = (
+    <View style={[card(t), narrow ? null : { flex: 1.1 }]}>
+      <CardLabel>{msg('settle.derivation')}</CardLabel>
+      {s.steps.slice(0, 6).map((step) => (
+        <View
+          key={step.key}
+          testID={`step-${step.key}`}
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            gap: t.space.md,
+            paddingVertical: t.space.sm,
+            borderBottomWidth: step.key === 'gross' ? 0 : t.border.hair,
+            borderBottomColor: t.color.ruleFaint,
+            borderTopWidth: step.key === 'gross' ? t.border.thick : 0,
+            borderTopColor: t.color.ink,
+          }}
+        >
+          <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
+            {step.thai}
+          </Text>
+          <Text
+            style={{
+              fontFamily: t.font.family.sans,
+              fontSize: step.key === 'gross' ? t.font.size.lead : t.font.size.small,
+              fontWeight: t.font.weight.bold,
+              color: t.color.ink,
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {step.value}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
@@ -171,42 +209,7 @@ export default function SettlementScreen() {
           gap: t.space.md,
         }}
       >
-        {/* ---- the derivation ---- */}
-        <View style={[card(t), narrow ? null : { flex: 1.1 }]}>
-          <CardLabel>{msg('settle.derivation')}</CardLabel>
-          {s.steps.slice(0, 6).map((step) => (
-            <View
-              key={step.key}
-              testID={`step-${step.key}`}
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'baseline',
-                gap: t.space.md,
-                paddingVertical: t.space.sm,
-                borderBottomWidth: step.key === 'gross' ? 0 : t.border.hair,
-                borderBottomColor: t.color.ruleFaint,
-                borderTopWidth: step.key === 'gross' ? t.border.thick : 0,
-                borderTopColor: t.color.ink,
-              }}
-            >
-              <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.small, color: t.color.inkSoft }}>
-                {step.thai}
-              </Text>
-              <Text
-                style={{
-                  fontFamily: t.font.family.sans,
-                  fontSize: step.key === 'gross' ? t.font.size.lead : t.font.size.small,
-                  fontWeight: t.font.weight.bold,
-                  color: t.color.ink,
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                {step.value}
-              </Text>
-            </View>
-          ))}
-        </View>
+        {derivation}
 
         {/* ---- owner total, leading ---- */}
         <View style={narrow ? { gap: t.space.md } : { flex: 1, gap: t.space.md }}>
