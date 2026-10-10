@@ -60,13 +60,14 @@ export function Drawer({ open, onClose, children }: { open: boolean; onClose: ()
             width: '85%',
             maxWidth: 360,
             height: '100%',
-            backgroundColor: t.color.surface,
+            // Mockup `.drawer`: raised, cards on it, 40 clear at the top.
+            backgroundColor: t.color.surfaceRaised,
             borderTopRightRadius: t.radius.xxl,
             borderBottomRightRadius: t.radius.xxl,
             overflow: 'hidden',
           }}
         >
-          <ScrollView contentContainerStyle={{ padding: t.space.lg, gap: t.space.lg }}>{children}</ScrollView>
+          <ScrollView contentContainerStyle={{ padding: t.space.md, paddingTop: t.space.xxl, gap: t.space.md }}>{children}</ScrollView>
         </View>
       </View>
     </Modal>

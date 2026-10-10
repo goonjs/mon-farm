@@ -20,6 +20,10 @@ import { AppText } from '../ui';
 /** Long enough to read the name, short enough not to be in the way. */
 export const SPLASH_MS = 900;
 
+/** flow-v1 `.fm-logo` (112px) and `.fm-word` (38px, -0.02em): larger than any type token. */
+const MARK = 112;
+const WORD = 38;
+
 export function SplashScreen() {
   const t = useTheme();
   const msg = useT();
@@ -42,14 +46,14 @@ export function SplashScreen() {
         paddingHorizontal: t.space.xl,
       }}
     >
-      <BrandMark size={96} />
+      <BrandMark size={MARK} />
       <AppText
         accessibilityRole="header"
         style={{
-          fontSize: t.font.size.displayXl + 6,
-          lineHeight: Math.round((t.font.size.displayXl + 6) * 1.2),
+          fontSize: WORD,
+          lineHeight: Math.round(WORD * 1.1),
           fontWeight: t.font.weight.black,
-          letterSpacing: -0.5,
+          letterSpacing: WORD * -0.02,
           color: t.color.ink,
         }}
       >
@@ -62,51 +66,53 @@ export function SplashScreen() {
   );
 }
 
-/** Sun, a tall leaf, a small leaf and the hill, on the mockup's 64-unit grid. */
+/**
+ * Sun, a tall leaf, a small leaf and the hill, on the mockup's 64-unit grid
+ * (flow-v1 `.fm-logo`). Each shape is placed by its centre, then turned.
+ */
 function BrandMark({ size }: { size: number }) {
   const t = useTheme();
   const u = size / 64;
-  /** A leaf: two rounded corners, the other two are its tips. */
-  const leaf = (w: number, h: number, tips: 'rising' | 'falling') => {
-    const r = Math.max(w, h) * u;
-    return {
-      position: 'absolute' as const,
-      width: w * u,
-      height: h * u,
-      ...(tips === 'rising'
-        ? { borderTopLeftRadius: r, borderBottomRightRadius: r }
-        : { borderTopRightRadius: r, borderBottomLeftRadius: r }),
-    };
+  /** A shape `w`×`h` units centred on (`cx`, `cy`), turned by `deg`. */
+  const at = (cx: number, cy: number, w: number, h: number, deg: number) => ({
+    position: 'absolute' as const,
+    left: (cx - w / 2) * u,
+    top: (cy - h / 2) * u,
+    width: w * u,
+    height: h * u,
+    transform: [{ rotate: `${deg}deg` }],
+  });
+  /**
+   * A leaf: a square with two opposite corners fully round, so it is a lens
+   * along the diagonal — rising (tips bottom-left and top-right) or falling.
+   * `deg` then turns it onto the mockup's axis.
+   */
+  const leaf = (side: number, axis: 'rising' | 'falling') => {
+    const r = side * u;
+    return axis === 'rising' ? { borderTopLeftRadius: r, borderBottomRightRadius: r } : { borderTopRightRadius: r, borderBottomLeftRadius: r };
   };
   return (
     <View testID="splash-mark" aria-hidden style={{ width: size, height: size }}>
+      {/*
+        Hill: a swoosh that tapers to a point at each end — the top border of
+        an ellipse with no side borders, turned so the right end rises.
+      */}
       <View
         style={{
-          position: 'absolute',
-          left: 10 * u,
-          top: 20 * u,
-          width: 14 * u,
-          height: 14 * u,
-          borderRadius: 7 * u,
-          backgroundColor: t.color.brandYellow,
+          ...at(33, 52, 58, 24, -10),
+          borderRadius: '50%',
+          borderTopWidth: 7 * u,
+          borderLeftWidth: 0,
+          borderRightWidth: 0,
+          borderBottomWidth: 0,
+          borderColor: t.color.brandStrong,
         }}
       />
-      <View style={{ ...leaf(21, 40, 'rising'), left: 32 * u, top: 6 * u, backgroundColor: t.color.brand, transform: [{ rotate: '6deg' }] }} />
-      <View style={{ ...leaf(21, 12, 'falling'), left: 7 * u, top: 33 * u, backgroundColor: t.color.brandLight, transform: [{ rotate: '8deg' }] }} />
-      <View
-        style={{
-          position: 'absolute',
-          left: 4 * u,
-          top: 47 * u,
-          width: 56 * u,
-          height: 9 * u,
-          borderTopLeftRadius: 40 * u,
-          borderTopRightRadius: 6 * u,
-          borderBottomLeftRadius: 4 * u,
-          backgroundColor: t.color.brandStrong,
-          transform: [{ rotate: '-8deg' }],
-        }}
-      />
+      <View style={{ ...at(17, 27, 14, 14, 0), borderRadius: 7 * u, backgroundColor: t.color.brandYellow }} />
+      {/* Big leaf: (31,46) to (54,7), 30° off upright. */}
+      <View style={{ ...at(42.5, 26.5, 31, 31, -15), ...leaf(31, 'rising'), backgroundColor: t.color.brand }} />
+      {/* Small leaf: (7,33) to (28,45), 30° below level. */}
+      <View style={{ ...at(17.5, 39, 17, 17, -15), ...leaf(17, 'falling'), backgroundColor: t.color.brandLight }} />
     </View>
   );
 }

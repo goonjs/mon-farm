@@ -1,7 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
-import { V2Home } from './home-screen';
 import { Placeholder } from './placeholder-screen';
 import { FARM_SECTIONS, SALE_STEPS, sectionHref } from './routes';
 import { wrap } from '../test/render';
@@ -17,6 +16,12 @@ describe('v2 route table (D-82) — one placeholder per v1.1.0 mockup section', 
   it('covers every farm-mockup section', () => {
     expect(FARM_SECTIONS.map((s) => s.slug)).toEqual(
       expect.arrayContaining(['farm', 'people', 'buyers', 'accounts', 'farms', 'points', 'shares', 'expenses', 'debts', 'sales', 'sync']),
+    );
+  });
+
+  it('has a placeholder for each home module not built yet (flow-v1 screen 3, v1.1.0 screen 25)', () => {
+    expect(FARM_SECTIONS.map((s) => s.slug)).toEqual(
+      expect.arrayContaining(['prepare', 'reports', 'weather', 'payables', 'stock']),
     );
   });
 
@@ -59,34 +64,5 @@ describe('Placeholder screen', () => {
     mockRouter.canGoBack.mockReturnValueOnce(false);
     fireEvent.press(screen.getByTestId('v2-back'));
     expect(mockRouter.replace).toHaveBeenCalledWith('/v2');
-  });
-});
-
-describe('V2Home — v1.1.0 card home with the ☰ drawer', () => {
-  it('shows the card home and opens the menu from ☰', () => {
-    wrap(<V2Home />);
-    expect(screen.getByTestId('screen-title').props.children).toBe('หน้าแรก');
-    expect(screen.getByText('เตรียมขาย')).toBeTruthy();
-    expect(screen.getByTestId('home-sale-start')).toBeTruthy();
-    expect(screen.queryByTestId('drawer')).toBeNull();
-    fireEvent.press(screen.getByTestId('open-menu'));
-    expect(screen.getByTestId('drawer')).toBeTruthy();
-    expect(screen.getByText('ของกลุ่ม · ทุกเครื่องเห็นเหมือนกัน')).toBeTruthy();
-    expect(screen.getByText('เฉพาะเครื่องนี้ · ไม่ส่งไปเครื่องอื่น')).toBeTruthy();
-  });
-
-  it('every farm section is reachable from the drawer or the home cards', () => {
-    wrap(<V2Home />);
-    fireEvent.press(screen.getByTestId('open-menu'));
-    for (const s of FARM_SECTIONS) {
-      expect(screen.queryAllByTestId(`nav-${s.slug}`).length).toBeGreaterThan(0);
-    }
-  });
-
-  it('picking a menu item closes the drawer', () => {
-    wrap(<V2Home />);
-    fireEvent.press(screen.getByTestId('open-menu'));
-    fireEvent.press(screen.getAllByTestId('nav-people')[0]);
-    expect(screen.queryByTestId('drawer')).toBeNull();
   });
 });

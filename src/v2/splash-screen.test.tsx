@@ -1,4 +1,5 @@
 import { act, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
 import { SPLASH_MS, SplashScreen } from './splash-screen';
 import { wrap } from '../test/render';
@@ -24,6 +25,15 @@ describe('SplashScreen', () => {
     expect(screen.getByTestId('splash-mark', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByText('FarmMate')).toBeTruthy();
     expect(screen.getByText('แอปบริหารสวนยาง')).toBeTruthy();
+  });
+
+  it('is drawn at the mockup sizes: a 112 mark, the name at 38/800 tight, 12 apart', () => {
+    wrap(<SplashScreen />);
+    const flat = (el: { props: Record<string, unknown> }) => StyleSheet.flatten(el.props.style as never) as Record<string, unknown>;
+    expect(flat(screen.getByTestId('splash-mark', { includeHiddenElements: true }))).toMatchObject({ width: 112, height: 112 });
+    expect(flat(screen.getByText('FarmMate'))).toMatchObject({ fontSize: 38, fontWeight: '800' });
+    expect(flat(screen.getByText('FarmMate')).letterSpacing).toBeCloseTo(-0.76);
+    expect(flat(screen.getByTestId('splash'))).toMatchObject({ gap: 12 });
   });
 
   it('replaces itself with the v2 home after a moment, leaving no way back to it', () => {
