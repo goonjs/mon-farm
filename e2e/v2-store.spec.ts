@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { seedMaster } from './fixtures';
+import { evidence, seedMaster } from './fixtures';
 import type { MasterPayload } from '../src/core/types';
 
 /**
@@ -114,7 +114,7 @@ test('without IndexedDB the farm screens still work and warn in Thai that nothin
 
   await addPerson(page, 'แดง');
   await expect(page.getByTestId('storage-warning')).toBeVisible();
-  await page.screenshot({ path: 'docs/ux/screenshots/ui-v2/farm/21-storage-warning.png' });
+  await evidence(page, 'docs/ux/screenshots/ui-v2/farm/21-storage-warning.png');
 });
 
 test('two tabs saving in turn lose nothing (NFR-2)', async ({ context, page }) => {

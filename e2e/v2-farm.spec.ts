@@ -1,12 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { evidence } from './fixtures';
+
 /**
  * D-83: one working sandbox app on v2, in the real web build. `/` shows the
  * splash and hands over to the v2 home; from the ☰ menu, ข้อมูลฟาร์ม and
  * every settings screen work offline (farm mockup v1.1.0 sections 1–6) and
  * what was saved is still there after a reload, read back from the local
  * event log. Screenshots at 412×915 are evidence for the owner, beside the
- * mockup frames.
+ * mockup frames (written to docs/ only with UPDATE_SCREENSHOTS=1).
  */
 
 const SHOTS = 'docs/ux/screenshots/ui-v2/farm';
@@ -17,7 +19,7 @@ test.use({ viewport: { width: 412, height: 915 } });
 
 /** The visible one: screens under the top of the stack stay in the DOM. */
 const on = (page: Page) => (id: string) => page.getByTestId(id).filter({ visible: true });
-const shot = (page: Page, name: string) => page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
+const shot = (page: Page, name: string) => evidence(page, `${SHOTS}/${name}.png`, { fullPage: true });
 
 async function addPerson(page: Page, name: string, roles: string[], snap?: string) {
   const id = on(page);

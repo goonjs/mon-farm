@@ -1,4 +1,6 @@
-import type { Page } from '@playwright/test';
+import { basename } from 'node:path';
+
+import { test, type Page } from '@playwright/test';
 
 import { MASTER_SCOPE } from '../src/core/master';
 import type { MasterPayload, SaleEvent } from '../src/core/types';
@@ -91,4 +93,16 @@ export async function seedMaster(page: Page, payloads: readonly MasterPayload[])
     payload,
   }));
   await seedEvents(page, events);
+}
+
+/**
+ * Screenshot evidence for the owner. It is written to its place under docs/
+ * only when UPDATE_SCREENSHOTS=1, so an ordinary run (CI, `npm run verify`)
+ * never rewrites tracked PNGs whose fonts render a little differently on
+ * each machine; otherwise it lands in the test's own output folder
+ * (e2e/.results, ignored). See docs/ui-v2.md.
+ */
+export function evidence(page: Page, docsPath: string, options: { fullPage?: boolean } = {}) {
+  const path = process.env.UPDATE_SCREENSHOTS === '1' ? docsPath : test.info().outputPath(basename(docsPath));
+  return page.screenshot({ path, ...options });
 }

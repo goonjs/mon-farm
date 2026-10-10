@@ -132,7 +132,17 @@ installed); the durian lease file upload (needs Cloud Storage); a buyer's
 on v2 yet); the group name under the header (no groups, E02); text size on
 เครื่องนี้ (the v2 theme has no text scale yet).
 
-Screenshots, 412×915 (`docs/ux/screenshots/ui-v2/farm/`, written by the e2e run):
+Screenshots, 412×915 (`docs/ux/screenshots/ui-v2/farm/`), written by the e2e
+run only when asked, so an ordinary run (CI, `npm run verify`) never rewrites
+these tracked PNGs; without the flag they go to `e2e/.results/` (ignored).
+To refresh them after a visible change, rebuild and run:
+
+```sh
+npm run build:web && UPDATE_SCREENSHOTS=1 npx playwright test --project=phone-portrait
+```
+
+The same flag covers `docs/ux/screenshots/v2/money/` (`e2e/v2-money.spec.ts`).
+
 
 | | |
 |---|---|

@@ -18,7 +18,9 @@ import { tokens } from './design/tokens';
  * decided.
  *
  * Screenshots are evidence for a human, not goldens: font rendering differs
- * between machines, so there is no pixel diff.
+ * between machines, so there is no pixel diff. The specs write them into
+ * docs/ only when UPDATE_SCREENSHOTS=1 (see docs/ui-v2.md and `evidence` in
+ * e2e/fixtures.ts).
  */
 export default defineConfig({
   testDir: './e2e',
