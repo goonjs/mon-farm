@@ -81,7 +81,18 @@ const PEOPLE = '/v2/people' as Href;
 type Filter = 'all' | 'buyers' | BuiltinRole;
 const FILTERS: readonly Filter[] = ['all', 'tapper', 'worker', 'manager', 'buyers', 'owner'];
 
-const roleNames = (p: PersonRecord, msg: Translate) => [...p.roles.map((r) => msg(`role.${r}`)), ...p.otherRoles];
+/**
+ * Roles the people screens show and offer. ผู้จ่าย is left out (owner
+ * 2026-10-10): who paid is recorded on each expense (MONEY), not as a person
+ * role. The data model keeps it, so someone who has it keeps it on save.
+ */
+const HIDDEN_ROLES: ReadonlySet<BuiltinRole> = new Set(['payer']);
+const SHOWN_ROLES = BUILTIN_ROLES.filter((r) => !HIDDEN_ROLES.has(r));
+
+const roleNames = (p: PersonRecord, msg: Translate) => [
+  ...p.roles.filter((r) => !HIDDEN_ROLES.has(r)).map((r) => msg(`role.${r}`)),
+  ...p.otherRoles,
+];
 
 /** Tappers take a category colour in turn; a tenant cream; everyone else action blue (mockup 4). */
 function personTone(p: PersonRecord, tappers: readonly PersonRecord[]): TileTone {
@@ -94,7 +105,9 @@ export function PeopleScreen() {
   const msg = useT();
   const router = useRouter();
   const { state, reload } = useMaster();
-  const [filter, setFilter] = useState<Filter>('all');
+  // `?filter=tapper` — the home card ข้อมูลคนงาน opens the list on its tappers (v1.1.0 screen 26).
+  const params = useLocalSearchParams<{ filter?: string }>();
+  const [filter, setFilter] = useState<Filter>(() => FILTERS.find((f) => f === params.filter) ?? 'all');
   const [showDeleted, setShowDeleted] = useState(false);
   const [today] = useState(() => todayIso(Date.now()));
 
@@ -273,7 +286,7 @@ function PersonForm({ personId }: { personId: string | null }) {
           <AppText variant="caption">{msg('v2f.rolesHint')}</AppText>
         </View>
         <ChipWrap>
-          {BUILTIN_ROLES.map((r) => (
+          {SHOWN_ROLES.map((r) => (
             <ToggleChip key={r} check testID={`role-${r}`} label={msg(`role.${r}`)} on={roles.includes(r)} onPress={() => toggle(r)} />
           ))}
           {otherRoles.map((r) => (
