@@ -222,3 +222,40 @@ question blocks the commit, and the commit is what a push is waiting on.
   are authored collaboratively, not assumed.
 - Docs are live documents: update them in the same session a decision is
   made or scope shifts, not as after-the-fact cleanup.
+
+## Discord
+
+Shared server, project code `farm`. Skill:
+`.claude/skills/discord-project-management` (routing, alert format, naming).
+The channels exist. Always use the full names:
+
+`#farm-talk` `#farm-design-and-specs` `#farm-playground`
+`#farm-ai-updates` `#farm-ai-alerts`
+
+Human action needed → `#farm-ai-alerts`; otherwise `#farm-ai-updates`.
+A push proposal (see Security gates) is a `🔎 REVIEW` alert: the push brief
+goes there. This adds a notification route only; it does not relax any gate.
+
+**When to post** (agents post to the two `ai-` channels only):
+
+- PR reviewed, CI green, waiting for the owner's acknowledgement →
+  `#farm-ai-alerts`, `🔎 REVIEW`: PR link, one-line summary, what to check.
+- PR merged, or a deployment finished (preview or Deploy Prod) →
+  `#farm-ai-updates`, `✅ DONE`: what shipped, link, result.
+- A deployment or PR is stuck on a human (Deploy Prod yes, missing
+  credential, red CI that needs a decision) → `#farm-ai-alerts`,
+  `⚠️ BLOCKED` or `❓ NEED DECISION`.
+
+**How:** post with `curl` to the webhook URL held in an environment
+variable, JSON body `{"content": "..."}`. The URL is a secret: never print
+it, commit it, or put it in a PR, log or chat. If the variable is empty or
+the post fails, say so once and carry on; a missing notification never
+blocks work. Variables (set in the cloud environment, not in this repo):
+
+| Variable | Used for |
+|---|---|
+| `DISCORD_WEBHOOK_FARM_AI_UPDATES` | `#farm-ai-updates` webhook URL |
+| `DISCORD_WEBHOOK_FARM_AI_ALERTS` | `#farm-ai-alerts` webhook URL |
+| `DISCORD_OWNER_ID` | owner's Discord user id, for the `<@id>` mention in alerts (optional) |
+
+Posting to `discord.com` needs it on the environment's allowed domains.
