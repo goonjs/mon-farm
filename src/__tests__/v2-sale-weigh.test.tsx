@@ -5,10 +5,13 @@ import type { SaleEvent, SysPayload } from '../core/types';
 import type { MasterStore } from '../store/master-store';
 import { SaleProvider } from '../store/SaleProvider';
 import type { EventStore } from '../store/store';
-import { seedMockFarm, type MockFarm } from '../test/sale-fixture';
+import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
+import { LogBuilder } from '../core/fixtures';
 import { wrap } from '../test/render';
 import { BackfillScreen } from '../v2/sale/backfill-screen';
+import { countModel } from '../v2/sale/count';
 import { CounterScreen } from '../v2/sale/counter-screen';
+import { useSaleView } from '../v2/sale/pieces';
 import { HistoryScreen } from '../v2/sale/history-screen';
 import { PointScreen } from '../v2/sale/point-screen';
 import { StartSaleScreen } from '../v2/sale/start-screen';
@@ -446,6 +449,30 @@ describe('v2 counter toolbar, hold-to-undo, history (E04-S15)', () => {
     expect(screen.getByTestId('undo-notice')).toHaveTextContent(/ยกเลิกส่วนที่เติมของเข่ง 2 แล้ว/);
   });
 
+  it('a count that is refused records nothing and says nothing; one that records says what it wrote', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    const probe: { current: ReturnType<typeof countModel> } = { current: null };
+    const Probe = () => {
+      probe.current = countModel(useSaleView(), farm.a[0]);
+      return null;
+    };
+    const c = await inSale(<Probe />);
+    expect(probe.current!.count('hold')).toEqual({ basketNo: 1, netG: 50_000 });
+    c.unmount();
+    const d = await inSale(<CounterScreen />, { point: farm.a[0] });
+    await press('tool-short');
+    await press('short-save');
+    d.unmount();
+    const before = (await store().load(saleId)).length;
+    await inSale(<Probe />);
+    // The short basket waits at its own point: a hold has nothing to write.
+    expect(probe.current!.waiting).toBe(true);
+    expect(probe.current!.count('hold')).toBeNull();
+    await flush();
+    expect((await store().load(saleId)).length).toBe(before);
+  });
+
   it('a notice from one point does not follow you to the next', async () => {
     await started();
     await readyAt(farm.a[0]);
@@ -582,6 +609,56 @@ describe('v2 basket history (page 8d, E04-S15)', () => {
     expect(screen.getByTestId('hist-filter-empty')).toBeTruthy();
     await press('hist-filter-clear');
     expect(rowsOf()).toHaveLength(2);
+  });
+
+  /** Baskets written straight into this sale's log (as if pulled): for cases the counter itself cannot make. */
+  const seeded = async (build: (b: LogBuilder) => void) => {
+    const b = new LogBuilder(saleId);
+    for (const p of [farm.a[0], farm.a[3]]) b.sys({ t: 'pile_added', pileId: p, zoneId: farm.farmA, name: p, tareG: 2_000, stdNetG: 50_000 });
+    build(b);
+    await seedSale(store(), b.build());
+  };
+
+  it('numbers that repeat or skip raise a warning that names the tapper and the numbers; the check ignores the filters', async () => {
+    await started();
+    await seeded((b) => b.acceptAt(farm.a[0], 1).acceptAt(farm.a[0], 1).acceptAt(farm.a[0], 3));
+    await inSale(<HistoryScreen />, { point: farm.a[0] });
+    expect(screen.getByTestId('hist-numbers-bad')).toHaveTextContent(/แดง: ขาด 2 · ซ้ำ 1/);
+    expect(screen.queryByTestId('hist-numbers-ok')).toBeNull();
+    await press('hist-kind-short');
+    expect(screen.getByTestId('hist-numbers-bad')).toBeTruthy();
+  });
+
+  it('a voided basket stays in the list struck through, is not in the totals, and leaves its gap in the number check', async () => {
+    await started();
+    await seeded((b) => {
+      b.acceptAt(farm.a[0], 1).acceptAt(farm.a[0], 2).acceptAt(farm.a[0], 3);
+      b.void(farm.a[0], b.build().find((e) => e.kind === 'accept' && e.basketNo === 2)!.id);
+    });
+    await inSale(<HistoryScreen />, { point: farm.a[0] });
+    expect(rowsOf()).toHaveLength(3);
+    expect(screen.getAllByText('ยกเลิกแล้ว')).toHaveLength(1);
+    expect(screen.getByTestId('hist-summary')).toHaveTextContent(/เต็ม 2 เข่ง/);
+    expect(screen.getByTestId('hist-summary')).toHaveTextContent(/รวม 100 กก\./);
+    expect(screen.getByTestId('hist-equation')).toHaveTextContent('2 × 50 = 100 กก.');
+    expect(screen.getByTestId('hist-numbers-bad')).toHaveTextContent(/ขาด 2/);
+  });
+
+  it('the summary, the sum and the running totals follow the filters; the rows add up to them', async () => {
+    await started();
+    await seeded((b) => b.acceptAt(farm.a[0], 1).acceptAt(farm.a[0], 2).shortAt(farm.a[3], 1, 22_000, 2_000));
+    await inSale(<HistoryScreen />, { point: farm.a[0] });
+    expect(screen.getByTestId('hist-equation')).toHaveTextContent('2 × 50 + 20 = 120 กก.');
+    expect(screen.getByTestId('hist-summary')).toHaveTextContent(/รวม 120 กก\./);
+    await press('hist-kind-full');
+    expect(screen.getByTestId('hist-equation')).toHaveTextContent('2 × 50 = 100 กก.');
+    expect(screen.getByTestId('hist-summary')).toHaveTextContent(/ไม่เต็ม 0 เข่ง/);
+    await press('hist-kind-all');
+    await press(`hist-tapper-${farm.nat}`);
+    expect(screen.getByTestId('hist-equation')).toHaveTextContent('20 = 20 กก.');
+    expect(rowsOf()).toHaveLength(1);
+    expect(screen.getByTestId(rowsOf()[0])).toHaveTextContent(/สะสม 20 กก\./);
+    expect(screen.getByTestId('hist-numbers-ok')).toBeTruthy();
   });
 
   it('a sale with no baskets says so', async () => {
