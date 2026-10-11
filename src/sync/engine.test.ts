@@ -736,6 +736,50 @@ describe('a stopped engine writes no cursor (follow-up 5)', () => {
     release();
     await run;
     expect(await p.cursor.get()).toBe(0);
+    expect(await p.store.load('s9')).toEqual([]); // nothing written locally either
+  });
+});
+
+describe('transient and integrity edge cases of checkEach (review F2, F3)', () => {
+  it('a transient failure of the "can I read the group" check does not mark a good event rejected; it goes out next run', async () => {
+    const p = await phone();
+    const [e] = new LogBuilder('s1', p.deviceId).accept('p1').build();
+    p.remote.rulesRejectIds.add(e.id); // refused once (e.g. membership in flux)
+    await record(p.store, [e]);
+    const real = p.remote.check.bind(p.remote);
+    let calls = 0;
+    p.remote.check = async () => {
+      calls += 1;
+      if (calls === 2) throw new RemoteError('unavailable', 'dropped');
+      return real();
+    };
+    await p.engine.sync();
+    expect(calls).toBe(2);
+    expect(p.engine.status()).toMatchObject({ state: 'pending', pending: 1 }); // transient backoff, not an error
+
+    p.remote.rulesRejectIds.clear();
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+    expect(p.server.docs.has(e.id)).toBe(true);
+  });
+
+  it('an event the server holds with other content is shown as integrity, skipped by the slow retry and nudge, and sent again only by retry()', async () => {
+    const p = await phone();
+    const [e] = new LogBuilder('s1', p.deviceId).accept('p1').build() as AcceptEvent[];
+    p.server.docs.set(e.id, { event: { ...e, netG: 1 }, receivedAt: 7 });
+    await record(p.store, [e]);
+    await p.engine.sync();
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'integrity', pending: 1 });
+    const sent = p.remote.batches.length;
+
+    await vi.advanceTimersByTimeAsync(30 * 60_000);
+    p.engine.nudge();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(p.remote.batches.length).toBe(sent); // not one more push
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'integrity' }); // still visible
+
+    await p.engine.retry();
+    expect(p.remote.batches.length).toBeGreaterThan(sent);
   });
 });
 
