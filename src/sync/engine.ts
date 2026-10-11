@@ -165,6 +165,12 @@ export class SyncEngine {
   private readonly pageSize: number;
   /** Events the server refused as invalid: kept locally, not re-sent every run, tried again by `retry()`. */
   private rejected = new Set<EventId>();
+  /**
+   * Our events the server holds with other content: re-sending cannot fix them, so they are skipped
+   * like `rejected` (by push, the slow retry and `nudge()`), shown as `integrity`, and tried again
+   * only by `retry()` or a restart.
+   */
+  private conflicting = new Set<EventId>();
   /** Pulled ids the server holds with other content than ours; shown until a retry finds them fixed. */
   private corrupt = new Set<EventId>();
   private corruptLoaded = false;
@@ -212,6 +218,7 @@ export class SyncEngine {
     this.attempt = 0;
     this.stopped = false;
     this.rejected.clear();
+    this.conflicting.clear();
     await this.loadCorrupt();
     const before = this.corrupt.size;
     for (const id of [...this.corrupt]) {
@@ -384,7 +391,7 @@ export class SyncEngine {
     // another account's or group's events could only be refused by the rules:
     // they stay on the device (E02-S02). Events the server already called invalid
     // wait for `retry()`.
-    const outbox = (await this.deps.store.pending()).filter((e) => this.mine(e) && !this.rejected.has(e.id));
+    const outbox = (await this.deps.store.pending()).filter((e) => this.mine(e) && !this.rejected.has(e.id) && !this.conflicting.has(e.id));
     let refused: Permanent | undefined;
     for (let i = 0; i < outbox.length; i += BATCH_SIZE) {
       if (this.stopped) return;
@@ -429,6 +436,7 @@ export class SyncEngine {
       if (there && canonicalJson(there) === canonicalJson(e)) {
         await this.deps.store.markSynced([e.id]);
       } else if (there) {
+        this.conflicting.add(e.id);
         refused ??= new Permanent('integrity');
       } else if ((readable ??= await withTimeout(this.deps.remote.check(), this.ackMs))) {
         // Firestore reports a rules-rejected (malformed) event as permission-denied too. The user
@@ -463,9 +471,12 @@ export class SyncEngine {
 
   /** Stores docs, remembers corrupt ones, and moves the cursor forward only. */
   private async store(docs: readonly PulledDoc[]): Promise<void> {
+    // A stopped engine's page that arrives late writes nothing at all (the next engine reads it again).
+    if (this.stopped) return;
     let newest = 0;
     let corruptChanged = false;
     for (const doc of docs) {
+      if (this.stopped) return;
       if (doc.receivedAt === null) continue;
       try {
         await this.deps.store.insertPulled(doc.event);
@@ -479,7 +490,6 @@ export class SyncEngine {
       }
       newest = Math.max(newest, doc.receivedAt);
     }
-    // A stopped engine's page that arrives late writes nothing more (the next engine reads it again).
     if (this.stopped) return;
     // Remember the bad ids before the cursor moves past them, so a restart cannot lose them.
     if (corruptChanged) await this.saveCorrupt();
@@ -495,7 +505,7 @@ export class SyncEngine {
     // created is waiting, as one item.
     const pending =
       waitingCount(this.deps.scope, await this.deps.store.pending(), await this.deps.accounts.pendingOps()) + media;
-    const kind = outcome.kind ?? (this.corrupt.size ? 'integrity' : this.rejected.size ? 'invalid' : undefined);
+    const kind = outcome.kind ?? (this.corrupt.size || this.conflicting.size ? 'integrity' : this.rejected.size ? 'invalid' : undefined);
     if (outcome.kind) this.permanentFailure = true;
     const next: SyncStatus = kind
       ? { state: 'error', pending, error: kind }
