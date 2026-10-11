@@ -40,7 +40,7 @@ import {
 import { useT } from '../../i18n';
 import { DuplicatePointNameError } from '../../store/master-store';
 import { peopleStore } from '../../store/people';
-import { useFirstPullDone } from '../../sync/use-first-pull';
+import { useFirstPullGate } from '../../sync/use-first-pull';
 import { useTheme } from '../../theme';
 import {
   AppText,
@@ -553,9 +553,11 @@ function PlanForm({ state, pointId, pointName, replacing, onClose, onSaved }: { 
 }
 
 /**
- * Creating waits for this device's first pull while sync is running (E01-S09):
- * otherwise two offline phones can both create "จุด 1". A build that does not
- * sync is never held (`useFirstPullDone`).
+ * While sync is running and online, creating waits for this device's first pull
+ * (E01-S09): otherwise two offline phones can both create "จุด 1". The wait is
+ * bounded and never a trap (`first-pull.ts`): offline, a sync error, a slow
+ * connection or a group that exists only on this phone lets the person go on,
+ * with a plain warning that a name another phone used may repeat.
  */
 export function PointsWizardScreen() {
   const t = useTheme();
@@ -568,7 +570,8 @@ export function PointsWizardScreen() {
   const [page, setPage] = useState<1 | 2>(1);
   const [tried, setTried] = useState(false);
   const write = useWrite();
-  const pulled = useFirstPullDone();
+  const gate = useFirstPullGate();
+  const pulled = gate.kind !== 'waiting';
 
   const tappers = state ? filterPeople(state.people, 'tapper') : [];
   const farms = state?.properties.filter((p) => !p.deleted) ?? [];
@@ -759,10 +762,13 @@ export function PointsWizardScreen() {
               </Card>
             );
           })}
-          {!pulled ? (
+          {gate.kind === 'waiting' ? (
             <AppText variant="bodySm" testID="wizard-wait-pull">
               {msg('wizard.waitPull')}
             </AppText>
+          ) : null}
+          {gate.kind === 'unavailable' ? (
+            <FieldError testID="wizard-no-sync">{msg(gate.reason === 'offline' ? 'wizard.noSyncOffline' : 'wizard.noSyncError')}</FieldError>
           ) : null}
           {tried && plan && !plan.ok && plan.missing > 0 ? <FieldError testID="wizard-missing">{msg('wizard.needNames')}</FieldError> : null}
           {tried && plan && !plan.ok && plan.duplicates.length > 0 ? <FieldError testID="wizard-duplicates">{msg('wizard.duplicates', { names: plan.duplicates.join(', ') })}</FieldError> : null}

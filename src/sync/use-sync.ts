@@ -16,7 +16,7 @@ import { onAppended } from '../store/append-signal';
 import { store } from '../store/store';
 import { connectRemote, type SyncRemote } from './client';
 import { startSync, type SyncHandle } from './runtime';
-import { emitSyncChanged, setSyncMode } from './changed';
+import { emitSyncChanged, setEngineStatus, setSyncMode } from './changed';
 
 /** The browser's `online` event; native has no such global, and there the client is not built anyway. */
 const onOnline = (listener: () => void) => {
@@ -52,7 +52,7 @@ export function useSync(
           onPulled: emitSyncChanged,
           isOnline,
         });
-        handle.engine.subscribe(emitSyncChanged);
+        handle.engine.subscribe(setEngineStatus);
         setSyncMode('on');
       })
       .catch((err) => {

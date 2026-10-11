@@ -6,7 +6,10 @@ import { FarmsScreen, PropertyScreen } from '../v2/farm/farms-screens';
 import { PointScreen, PointsScreen, PointsWizardScreen } from '../v2/farm/points-screens';
 import type { MasterStore } from '../store/master-store';
 import { store as mockStore } from '../store/store';
-import { emitSyncChanged, setSyncMode } from '../sync/changed';
+import { emitSyncChanged, setEngineStatus, setSyncMode } from '../sync/changed';
+import { newGroup } from '../core/group';
+import { userFromSignIn } from '../core/user';
+import { accountStore as mockAccounts } from '../store/account';
 import { wrap } from '../test/render';
 
 jest.mock('../store/people', () => {
@@ -20,6 +23,10 @@ jest.mock('../store/people', () => {
       holder.current = new MemoryPeopleStore();
     },
   };
+});
+jest.mock('../store/account', () => {
+  const { MemoryAccountStore } = jest.requireActual('../store/account-memory');
+  return { accountStore: new MemoryAccountStore() };
 });
 jest.mock('../store/store', () => {
   const { MemoryStore } = jest.requireActual('../store/memory-store');
@@ -477,9 +484,16 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
   });
 
   describe('first pull (E01-S09: two offline phones must not both create "จุด 1")', () => {
+    const offline = (value: boolean) =>
+      Object.defineProperty(globalThis.navigator, 'onLine', { configurable: true, get: () => !value });
+
     afterEach(async () => {
       setSyncMode('off');
+      setEngineStatus(null);
+      offline(false);
+      jest.restoreAllMocks();
       await mockStore.setSyncCursor('group-1', 0);
+      for (const op of await mockAccounts.pendingOps()) await mockAccounts.completeOp(op);
     });
 
     async function toNamesPage() {
@@ -523,6 +537,52 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
       setSyncMode('connecting');
       await toNamesPage();
       expect(screen.getByTestId('wizard-wait-pull')).toBeTruthy();
+    });
+
+    it('offline on a first launch is never a trap: says so, and creates anyway', async () => {
+      setSyncMode('on');
+      offline(true);
+      const m = await toNamesPage();
+      expect(screen.getByTestId('wizard-no-sync')).toBeTruthy();
+      expect(within(screen.getByTestId('wizard-no-sync')).getByText(/ไม่มีอินเทอร์เน็ต/)).toBeTruthy();
+      expect(screen.queryByTestId('wizard-wait-pull')).toBeNull();
+      await press('wizard-create');
+      expect((await m.state()).points.map((p) => p.name)).toEqual(['จุด 1']);
+    });
+
+    it('a sync error (rules not deployed, no database, refused) says it cannot sync and lets the person go on', async () => {
+      setSyncMode('on');
+      setEngineStatus({ state: 'error', pending: 3, error: 'denied' });
+      const m = await toNamesPage();
+      expect(within(screen.getByTestId('wizard-no-sync')).getByText(/ซิงก์กับกลุ่มไม่ได้/)).toBeTruthy();
+      await press('wizard-create');
+      expect((await m.state()).points.map((p) => p.name)).toEqual(['จุด 1']);
+    });
+
+    it('after the grace period without a first pull it stops waiting and says it cannot sync', async () => {
+      setSyncMode('on');
+      const m = await toNamesPage();
+      expect(screen.getByTestId('wizard-wait-pull')).toBeTruthy();
+      const later = Date.now() + 25_000;
+      jest.spyOn(Date, 'now').mockReturnValue(later);
+      await act(async () => emitSyncChanged());
+      await flush();
+      expect(screen.queryByTestId('wizard-wait-pull')).toBeNull();
+      expect(screen.getByTestId('wizard-no-sync')).toBeTruthy();
+      await press('wizard-create');
+      expect((await m.state()).points).toHaveLength(1);
+    });
+
+    it('a brand-new group made on this phone (not on the server yet) has nobody to duplicate: no wait at all', async () => {
+      const somchai = userFromSignIn('test-user', 'สมชาย', { provider: 'google', subject: 'g-1' });
+      const { membership, op } = newGroup('group-1', 'สวน', somchai, 1);
+      await mockAccounts.createGroup(membership, op);
+      setSyncMode('on');
+      const m = await toNamesPage();
+      expect(screen.queryByTestId('wizard-wait-pull')).toBeNull();
+      expect(screen.queryByTestId('wizard-no-sync')).toBeNull();
+      await press('wizard-create');
+      expect((await m.state()).points.map((p) => p.name)).toEqual(['จุด 1']);
     });
 
     it('a build that does not sync is never held up', async () => {
