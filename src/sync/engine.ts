@@ -23,7 +23,8 @@
 
 import { canonicalJson } from '../core/canonical';
 import type { CreateGroupOp } from '../core/group';
-import type { EventId, GroupId, SaleEvent, UserId } from '../core/types';
+import { belongsTo, waitingCount, type Scope } from '../core/scope';
+import type { EventId, SaleEvent } from '../core/types';
 import type { AccountStore } from '../store/account';
 import { IntegrityError } from '../store/errors';
 import type { EventStore } from '../store/store';
@@ -76,17 +77,11 @@ export const storeCursor = (store: Pick<EventStore, 'syncCursor' | 'setSyncCurso
 
 export type SyncStore = Pick<EventStore, 'pending' | 'markSynced' | 'insertPulled'>;
 
-/** Whose events this engine sends, and into which group. */
-export interface SyncScope {
-  readonly userId: UserId;
-  readonly groupId: GroupId;
-}
-
 export interface SyncDeps {
   readonly store: SyncStore;
   /** Where the pending `create_group` ops wait (E02-S02). */
   readonly accounts: Pick<AccountStore, 'pendingOps' | 'completeOp'>;
-  readonly scope: SyncScope;
+  readonly scope: Scope;
   readonly remote: RemoteEvents & RemoteGroups;
   readonly cursor: CursorStore;
   /** How long to wait for a server ack before treating it as lost; tests shorten it. */
@@ -237,8 +232,7 @@ export class SyncEngine {
   }
 
   /** This engine's user's events of this engine's group. */
-  private readonly mine = (e: SaleEvent) =>
-    e.groupId === this.deps.scope.groupId && e.actor.userId === this.deps.scope.userId;
+  private readonly mine = (e: SaleEvent) => belongsTo(this.deps.scope, e);
 
   /** The `create_group` ops only this user can send, for this group. */
   private async ownOps(): Promise<CreateGroupOp[]> {
@@ -337,7 +331,8 @@ export class SyncEngine {
     const media = this.deps.media ? (await this.deps.media.queue.pending()).length : 0;
     // Events this engine never sends are not waiting either. A group still to be
     // created is waiting, as one item.
-    const pending = (await this.deps.store.pending()).filter(this.mine).length + (await this.ownOps()).length + media;
+    const pending =
+      waitingCount(this.deps.scope, await this.deps.store.pending(), await this.deps.accounts.pendingOps()) + media;
     const kind = outcome.kind ?? (this.corrupt.size ? 'integrity' : undefined);
     const next: SyncStatus = kind
       ? { state: 'error', pending, error: kind }
