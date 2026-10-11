@@ -258,7 +258,6 @@ const th = {
   'settle.zoneWorkerDefaultName': 'คนงาน (ค่าเริ่มต้น)',
   'settle.payout': 'ยอดจ่ายจริง',
   'settle.deductionRow': '{reason} — {agreedBy}',
-  'settle.deductionAdd': '+ เพิ่มรายการหัก',
   'settle.deductionAmount': 'จำนวนเงิน (บาท)',
   'settle.deductionReason': 'เหตุผล',
   'settle.deductionAgreedBy': 'ผู้ตกลง',
@@ -383,8 +382,6 @@ const th = {
   'log.saleClosed': 'ปิดการขาย',
   'log.saleReopened': 'เปิดการขายอีกครั้ง — {reason}',
   'log.clockAnomaly': 'เวลาเครื่องผิด ({anomaly})',
-  'log.deductionAdded': 'หักเงิน {amount} — {reason}',
-  'log.deductionVoided': 'ยกเลิกรายการหัก — {reason}',
   // `note` and `state` are precomputed by the caller (sysLabel in counter.tsx)
   // rather than expressed as conditional logic here — the resolver's
   // `interpolate()` is deliberately a plain `{name}` substitution (see
@@ -1870,7 +1867,6 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'settle.zoneWorkerDefaultName': 'worker (default)',
   'settle.payout': 'payout',
   'settle.deductionRow': '{reason} — {agreedBy}',
-  'settle.deductionAdd': '+ add a deduction',
   'settle.deductionAmount': 'amount (baht)',
   'settle.deductionReason': 'reason',
   'settle.deductionAgreedBy': 'agreed by',
@@ -1988,8 +1984,6 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'log.saleClosed': 'sale closed',
   'log.saleReopened': 'sale reopened — {reason}',
   'log.clockAnomaly': "device clock looks wrong ({anomaly})",
-  'log.deductionAdded': 'deduction {amount} — {reason}',
-  'log.deductionVoided': 'deduction voided — {reason}',
   'log.announced': 'said "{thai}"{note}',
   'log.announceFailed': ' — not heard',
   'log.speechSet': 'spoken count {state}',
