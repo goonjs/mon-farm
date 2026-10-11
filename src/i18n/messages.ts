@@ -1317,6 +1317,10 @@ const th = {
   'acct.group.createFailed': 'สร้างกลุ่มไม่สำเร็จ — ลองอีกครั้ง',
   'acct.group.join': 'เข้าร่วมด้วยรหัสเชิญ',
   'acct.group.joinSoon': 'รหัส 6 หลัก · เปิดให้ใช้เร็ว ๆ นี้',
+  'acct.check.busy': 'กำลังดึงรายการกลุ่มฟาร์มของคุณ…',
+  'acct.check.failed': 'ดึงรายการกลุ่มไม่สำเร็จ — ต่อเน็ตแล้วลองอีกครั้ง',
+  'acct.check.why': 'เพื่อไม่ให้สร้างกลุ่มซ้ำ แอปต้องรู้ก่อนว่าคุณมีกลุ่มฟาร์มอยู่แล้วหรือไม่',
+  'acct.check.retry': 'ลองอีกครั้ง',
 
   // ── v2 farm settings (D-83) ──
   'v2f.pointsCount': '{n} จุดชั่ง',
@@ -2934,6 +2938,10 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'acct.group.createFailed': 'could not create the group — try again',
   'acct.group.join': 'join with an invite code',
   'acct.group.joinSoon': '6-digit code · coming soon',
+  'acct.check.busy': 'fetching your farm groups…',
+  'acct.check.failed': 'could not fetch your groups — connect to the internet and try again',
+  'acct.check.why': 'to avoid making a duplicate group, the app must first know whether you already have a farm group',
+  'acct.check.retry': 'try again',
   'v2f.pointsCount': '{n} weighing points',
   'v2f.accountsCount': '{n} accounts',
   'v2f.scale': 'scale',

@@ -12,9 +12,16 @@
  */
 
 import type { GroupId, UserId } from '../core/types';
-import type { RemoteEvents, RemoteGroups } from './remote';
+import type { RemoteEvents, RemoteGroups, RemoteMemberships } from './remote';
 
 export type SyncRemote = RemoteEvents & RemoteGroups;
 
 /** Ambient declaration only — see the matching note in `src/store/store.ts`. */
 export declare const connectRemote: (userId: UserId, groupId: GroupId) => Promise<SyncRemote | null>;
+
+/**
+ * The member lookup for a user who has no group on this device yet (E02-S05):
+ * not tied to a group, so it can run before one is open. Resolves `null` under
+ * the same conditions as `connectRemote` — nothing to ask.
+ */
+export declare const connectMemberships: (userId: UserId) => Promise<RemoteMemberships | null>;

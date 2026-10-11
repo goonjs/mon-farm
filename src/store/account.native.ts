@@ -75,6 +75,23 @@ export class SqliteAccountStore implements AccountStore {
     });
   }
 
+  async saveMemberships(memberships: readonly Membership[]): Promise<void> {
+    const db = await this.open();
+    await db.withExclusiveTransactionAsync(async (tx) => {
+      for (const m of memberships) {
+        // Upsert, but keep what the row already knows (member count, state) — only the name and role come from the server.
+        await tx.runAsync(
+          `INSERT INTO memberships (group_id, user_id, name, role, member_count, state) VALUES (?, ?, ?, ?, NULL, 'active')
+           ON CONFLICT(group_id) DO UPDATE SET name = excluded.name, role = excluded.role`,
+          m.groupId,
+          m.userId,
+          m.name,
+          m.role,
+        );
+      }
+    });
+  }
+
   async pendingOps(): Promise<CreateGroupOp[]> {
     const db = await this.open();
     const rows = await db.getAllAsync<{ body: string }>(`SELECT body FROM pending_ops ORDER BY rowid`);

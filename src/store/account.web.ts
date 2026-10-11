@@ -108,6 +108,16 @@ export class WebAccountStore implements AccountStore {
     await done;
   }
 
+  async saveMemberships(memberships: readonly Membership[]): Promise<void> {
+    const db = await this.pick();
+    if (db instanceof MemoryAccountStore) return db.saveMemberships(memberships);
+    const tx = db.transaction('memberships', 'readwrite');
+    const done = committed(tx);
+    // `put`: asking the server again must not fail on a group already kept.
+    for (const m of memberships) tx.objectStore('memberships').put(m);
+    await done;
+  }
+
   async pendingOps(): Promise<CreateGroupOp[]> {
     const db = await this.pick();
     if (db instanceof MemoryAccountStore) return db.pendingOps();
