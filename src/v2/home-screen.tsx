@@ -16,14 +16,14 @@ import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { farmSection, SALE_START, saleHref, sectionHref } from './routes';
 import { useMaster, useMounted } from './farm/pieces';
+import { loadHomeSales } from './sale/open-sale';
 import { owedByPerson, payableSatang } from '../core/finance/ledger';
 import { formatSatang } from '../core/finance/money';
-import { homeSales, type HomeSales, type SaleLine } from '../core/home';
+import type { HomeSales, SaleLine } from '../core/home';
 import { filterPeople, formatThaiDate, formatThaiDay } from '../core/master';
 import { formatKg } from '../core/settle';
 import { useFinance } from '../finance/use-finance';
 import { useI18n, useT } from '../i18n';
-import { store } from '../store/store';
 import { useSyncStatus } from '../sync/use-sync-status';
 import { useTheme, type Theme } from '../theme';
 import {
@@ -288,9 +288,8 @@ function useHomeSales(): HomeSales | null {
   const reload = useCallback(() => {
     let live = true;
     (async () => {
-      const ids = await store.listSales();
-      const logs = await Promise.all(ids.map(async (id) => ({ id, events: await store.load(id) })));
-      if (live) setSales(homeSales(logs));
+      const loaded = await loadHomeSales();
+      if (live) setSales(loaded);
     })().catch((err) => console.error('Sales could not be read.', err));
     return () => {
       live = false;

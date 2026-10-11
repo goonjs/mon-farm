@@ -22,9 +22,10 @@ import { planMove } from '../../core/sale-move';
 import { pointChoices, saleRollup } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AlertIcon, AppText, BasketIcon, BottomSheet, cardStyle, ChevronRight, CTA, IconTile, PinIcon, Plus, Scale, TapperIcon, type TileTone } from '../../ui';
+import { AlertIcon, AppText, BasketIcon, BottomSheet, DotsIcon, cardStyle, ChevronRight, CTA, IconTile, PinIcon, Plus, Scale, TapperIcon, type TileTone } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { signed, useGoToPoint, type Fill } from './move';
+import { SaleOptionRows, SaleOptionSheets, type OptionSheet } from './sale-options';
 import { Choice, Crumbs, IconLine, kgText, NumChip, SegOptions, SkewTag, farmTone, useLeaveIfClosed, useSaleView } from './pieces';
 
 export function PointScreen() {
@@ -40,6 +41,7 @@ export function PointScreen() {
   const [farmId, setFarmId] = useState<string | null>(params.farm ?? null);
   const [tapperId, setTapperId] = useState<string | null>(params.tapper ?? null);
   const [ask, setAsk] = useState<{ pointId: string; open: OpenBasket } | null>(null);
+  const [menu, setMenu] = useState<'none' | 'menu' | OptionSheet>('none');
   const switching = params.mode === 'switch';
   const backfill = params.mode === 'backfill';
   const title = backfill ? msg('backfill.title') : switching ? msg('rec.switch') : msg('pick.title');
@@ -90,6 +92,13 @@ export function PointScreen() {
       subtitle={saleTitle}
       fallback={fallback}
       testID="pick"
+      right={
+        backfill ? undefined : (
+          <Pressable testID="pick-menu" accessibilityRole="button" accessibilityLabel={msg('rec.menu')} onPress={() => setMenu('menu')} style={{ minWidth: t.target.min, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center' }}>
+            <DotsIcon color={t.color.appBarInk} size={18} />
+          </Pressable>
+        )
+      }
       footer={
         switching && allWeighed && rollup.sale.baskets > 0 ? (
           <CTA testID="pick-finish" onPress={() => router.push(`/v2/sale/${saleId}/check` as Href)}>
@@ -97,7 +106,15 @@ export function PointScreen() {
           </CTA>
         ) : null
       }
-      overlay={ask ? fillSheet(ask) : null}
+      overlay={
+        <>
+          {ask ? fillSheet(ask) : null}
+          <BottomSheet open={menu === 'menu'} onClose={() => setMenu('none')} title={msg('rec.menu')} testID="pick-menu-sheet">
+            <SaleOptionRows view={view} pick={setMenu} />
+          </BottomSheet>
+          <SaleOptionSheets view={view} open={menu === 'price' || menu === 'info' || menu === 'delete' ? menu : 'none'} onClose={() => setMenu('none')} />
+        </>
+      }
     >
       <Crumbs done={[msg('pick.farm'), msg('pick.tapper')]} now={backfill ? msg('v2s.pointStep') : msg('v2s.pointStep')} />
       {farms.length === 0 ? <AppText variant="bodySm">{msg('pick.noFarms')}</AppText> : null}

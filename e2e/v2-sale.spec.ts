@@ -18,6 +18,50 @@ const SHOTS = 'docs/ux/screenshots/ui-v2/sale';
 test.beforeEach(() => test.skip(test.info().project.name !== 'phone-portrait', 'the sale flow is portrait-first'));
 test.use({ viewport: { width: 412, height: 915 } });
 
+test('one open sale: เริ่มการขาย goes back to it; the ⋯ menu adds the price, shows the info and deletes it (owner 2026-10-11)', async ({ page }) => {
+  const id = on(page);
+  await seedMaster(page, FARM);
+  await page.goto('/v2');
+  await id('home-sale-start').click();
+  await id('start-buyer').click();
+  await id('start-buyer-buyer-a').click();
+  await id('start-next').click();
+  await expect(id('pick')).toBeVisible();
+
+  // The agreed price, added from the menu of the point picker.
+  await id('pick-menu').click();
+  await expect(id('menu-price')).toContainText('ใส่ราคาที่ตกลง');
+  await id('menu-price').click();
+  await id('option-price').fill('52.50');
+  await shot(page, '20-option-price');
+  await id('option-price-save').click();
+  await id('pick-menu').click();
+  await expect(id('menu-price')).toContainText('52.50');
+  await id('menu-info').click();
+  await expect(id('info-buyer')).toContainText('คนรับซื้อยาง ก');
+  await expect(id('info-price')).toContainText('52.50');
+  await shot(page, '21-sale-info');
+  await id('info-done').click();
+
+  // Home → เริ่มการขาย opens the sale still open, not a second one.
+  await page.goto('/v2');
+  await id('home-sale-start').click();
+  await expect(id('pick')).toBeVisible();
+  await expect(id('sale-start')).toHaveCount(0);
+  await page.goto('/v2/sales');
+  await expect(id('sale-rows').locator('[data-testid^="sale-row-"]')).toHaveCount(1);
+
+  // A stray open sale can be deleted; then เริ่มการขาย starts a new one.
+  await id('sale-rows').locator('[data-testid^="sale-row-"]').first().click();
+  await id('pick-menu').click();
+  await id('menu-delete').click();
+  await shot(page, '22-delete-sale');
+  await id('delete-confirm').click();
+  await expect(id('v2-home')).toBeVisible();
+  await id('home-sale-start').click();
+  await expect(id('sale-start')).toBeVisible();
+});
+
 const on = (page: Page) => (id: string) => page.getByTestId(id).filter({ visible: true });
 const shot = (page: Page, name: string, fullPage = false) => evidence(page, `${SHOTS}/${name}.png`, { fullPage });
 
