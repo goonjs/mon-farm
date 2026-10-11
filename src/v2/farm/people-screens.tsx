@@ -40,7 +40,6 @@ import {
   CalendarIcon,
   Card,
   Check,
-  CTA,
   DebtIcon,
   FactRow,
   FarmIcon,
@@ -56,7 +55,7 @@ import {
   TagIcon,
   TextField,
   TrashIcon,
-  type TileTone,
+  type TileTone
 } from '../../ui';
 import {
   AddCTA,
@@ -271,11 +270,7 @@ function PersonForm({ personId }: { personId: string | null }) {
       fallback={PEOPLE}
       failed={write.failed}
       testID="person-form"
-      footer={
-        <CTA testID="person-save" icon={(c) => <Check color={c} size={14} />} onPress={() => void save()}>
-          {msg('common.save')}
-        </CTA>
-      }
+      action={{ label: msg('common.save'), testID: 'person-save', onPress: () => void save(), saving: write.saving }}
     >
       <TextField
         testID="person-name"

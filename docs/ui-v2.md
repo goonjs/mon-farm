@@ -35,7 +35,7 @@ counter bar), `Num` in `type.tsx`, and `FieldLabel`/`FieldError` in `form.tsx`.
 
 | Component | File | Props (main) |
 |---|---|---|
-| `ScreenHeader` | `src/ui/screen-header.tsx` | `title`, `subtitle?`, `back?: {label, href? \| onPress?, testID?}`, `menu?: {onPress}`, `sync?: SyncStatus \| null`, `right?` |
+| `ScreenHeader` | `src/ui/screen-header.tsx` | `title`, `subtitle?`, `back?: {label, href? \| onPress?, testID?}`, `menu?: {onPress}`, `sync?: SyncStatus \| null`, `right?`, `action?: {label, onPress?, testID?, disabled?, saving?, savingLabel?}` (the Save pill, right of the sync pill) |
 | `SyncPill` | `src/ui/sync-pill.tsx` | `status: SyncStatus` (shape + word + colour) |
 | `Drawer`, `MenuSection`, `MenuItem` | `src/ui/drawer.tsx` | Drawer `open`, `onClose`; MenuSection `title`; MenuItem `label`, `leading?` (an `IconTile`), `trailing?` (a badge before the chevron), `detail?` or children (one `FactRow` per fact, D-70), `href?`, `onPress?`, `testID?` |
 | `ActionTile` | `src/ui/action-tile.tsx` | `label`, `icon`, `tone?`, `main?` (thick action edge), `href?` \| `onPress?`, `testID?`. The home's three action cards; lay them in a row |
@@ -45,7 +45,7 @@ counter bar), `Num` in `type.tsx`, and `FieldLabel`/`FieldError` in `form.tsx`.
 | `SegmentedControl`, `RadioCard` | `src/ui/form.tsx` | Segmented `options`, `value`, `onChange`, `testID` (radiogroup of radios); RadioCard `selected`, `title`, `detail?`, `onPress`, `disabled?` |
 | `TextField` | `src/ui/text-field.tsx` | `label`, `required?` (red *), `hint?` (soft note beside the label), `helper?`, `error?`, `aside?` (unit or "ไม่ทราบ" beside the input), `testID`, plus TextInput props |
 | `FieldError` | `src/ui/form.tsx` | inline red error with a diamond; `testID?` |
-| `BottomSheet` | `src/ui/bottom-sheet.tsx` | `open`, `onClose`, `title?`, `testID?` |
+| `BottomSheet` | `src/ui/bottom-sheet.tsx` | `open`, `onClose`, `title?`, `action?` (same Save pill, in the title row), `testID?` |
 | `Card`, `CardLabel`, `cardStyle` | `src/ui/card.tsx` | Card `style?`, `testID?` |
 | `Chip` | `src/ui/chip.tsx` | `label`, `tone?: accept \| warn \| reject \| neutral` (drawn icon + word) |
 | `MoneyText` | `src/ui/money-text.tsx` | `amount` (preformatted, no sign), `direction: in \| out`, `word?`, `size?` |
@@ -87,7 +87,7 @@ precedence over the dynamic one.
 | `/v2/accounts` | บัญชีรับเงิน (placeholder; MONEY) |
 | `/v2/farms`, `/v2/property/<id\|new>` (`?edit=1`) | สวนและจุดชั่ง: list, form, detail with area history, delete (mockup 9–12). Built |
 | `/v2/points`, `/v2/point/<id\|new>` (`?property=`, `?edit=1`, `?plan=1`) | จุดชั่ง: all points, add + offer to assign, detail, tapper plan (mockup 14–16). Built |
-| `/v2/points-wizard` | ตัวช่วยตั้งค่าจุดชั่ง (mockup 13, 13b). Built |
+| `/v2/points-wizard` | ตัวช่วยตั้งค่าจุดชั่ง (mockup 13, 13b). Built. Always offered from สวนและจุดชั่ง and จุดชั่ง (not only when empty); can be run again on a farm that has points, which it lists, and a name already used in that farm is refused. Once sync exists the helper must wait for a first pull before it creates points (decision 2026-10-10, was `showStarterButton`), or two offline phones can both create "จุด 1" |
 | `/v2/shares`, `/v2/share/<tapperId>` | ส่วนแบ่ง (mockup 17). Built |
 | `/v2/sale-settings` | ตั้งค่าวันขาย (mockup 3). Built |
 | `/v2/expenses` | ค่าใช้จ่ายทั้งหมด |
@@ -157,6 +157,16 @@ Built against `docs/ux/mockups/flow-farm-v1.1.0.html` sections 1–6 and 10.
 Tests: `src/__tests__/v2-farm-*.test.tsx`; e2e `e2e/v2-farm.spec.ts` (offline
 add/edit of every kind, reload) and `e2e/v2-store.spec.ts` (IndexedDB, no
 storage warning, two tabs, v0.4 keys).
+
+**Save is in the header (owner 2026-10-10).** The on-screen keyboard covered
+a bottom Save, so every form puts it top right, with the sync pill on its
+left, through `ScreenHeader`'s `action` (disabled, and "กำลังบันทึก" while a
+write is in flight). This covers the farm forms (person, farm, point, share),
+the wizard's "สร้าง", the money forms (expense, repay, debt add and pay) and,
+through `BottomSheet`'s `action`, the sheets that are forms (buyer, new area,
+tapper plan, scale pair). Delete and other secondary actions, and the "add"
+buttons on lists, stay pinned at the bottom. The sale screens are not changed
+here.
 
 Roles (owner 2026-10-10): the people screens neither show nor offer
 ผู้จ่าย. The role stays in the data model and is kept on save; who paid is

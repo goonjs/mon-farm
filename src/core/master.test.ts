@@ -25,7 +25,6 @@ import {
   leaveDayProblem,
   planStarterPoints,
   pointNameTaken,
-  showStarterButton,
   ageInYears,
   areaOn,
   parseGps,
@@ -333,14 +332,6 @@ describe('weighing points — E03-S03 (MD-3)', () => {
     expect(activeProperty(s, 'f1')?.name).toBe('สวนบน');
     expect(activeProperty(s, 'f2')).toBeNull();
     expect(activeProperty(s, 'nope')).toBeNull();
-  });
-
-  it('the starter button shows only with no points at all, after the first pull', () => {
-    const empty = projectMaster(log().master(farm('f1')).build());
-    const some = projectMaster(log().master(farm('f1')).master(point('p1', 'f1', 'จุด 1')).build());
-    expect(showStarterButton(empty, true)).toBe(true);
-    expect(showStarterButton(empty, false)).toBe(false);
-    expect(showStarterButton(some, true)).toBe(false);
   });
 });
 

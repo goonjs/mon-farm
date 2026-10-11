@@ -28,7 +28,7 @@ import { useT } from '../../i18n';
 import { ShareTooEarlyError } from '../../store/master-store';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
-import { AppText, CalendarIcon, Card, Check, CTA, FactRow, FarmIcon, FieldError, IconTile, MenuItem, PercentIcon, PersonIcon, SegmentedControl, TextField } from '../../ui';
+import { AppText, CalendarIcon, Card, Check, FactRow, FarmIcon, FieldError, IconTile, MenuItem, PercentIcon, PersonIcon, SegmentedControl, TextField } from '../../ui';
 import { NotFound } from './people-screens';
 import { FarmScreen, RowCard, useDay, useMaster, useMounted, useWrite } from './pieces';
 
@@ -139,11 +139,7 @@ function TapperShare({ tapperId }: { tapperId: string }) {
       fallback={`/v2/person/${tapperId}` as Href}
       failed={write.failed}
       testID="share"
-      footer={
-        <CTA testID="share-save" icon={(c) => <Check color={c} size={14} />} onPress={() => void save()}>
-          {msg('common.save')}
-        </CTA>
-      }
+      action={{ label: msg('common.save'), testID: 'share-save', onPress: () => void save(), saving: write.saving }}
     >
       <Card testID="share-now" style={{ alignItems: 'center' }}>
         <AppText variant="bodySm">{msg('share.now')}</AppText>

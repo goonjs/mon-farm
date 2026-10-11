@@ -127,8 +127,9 @@ export function PointsScreen() {
       ) : (
         <>
           {state && farms.length === 0 ? <AppText variant="bodySm">{msg('v2f.noFarmsYet')}</AppText> : null}
-          {state && farms.length > 0 && activePoints(state).length === 0 ? (
-            <Button testID="open-wizard" variant="primary" icon={(c) => <PinIcon color={c} size={16} />} onPress={() => router.push('/v2/points-wizard' as Href)}>
+          {/* Always on offer: set up the next person's points later too (names already used are refused). */}
+          {state && farms.length > 0 ? (
+            <Button testID="open-wizard" variant={activePoints(state).length === 0 ? 'primary' : 'ghost'} icon={(c) => <PinIcon color={c} size={16} />} onPress={() => router.push('/v2/points-wizard' as Href)}>
               {msg('wizard.open')}
             </Button>
           ) : null}
@@ -243,11 +244,7 @@ function PointForm({ pointId, propertyId }: { pointId: string | null; propertyId
       fallback={POINTS}
       failed={write.failed}
       testID="point-form"
-      footer={
-        <CTA testID="point-save" icon={(c) => <Check color={c} size={14} />} onPress={() => void save()}>
-          {msg('common.save')}
-        </CTA>
-      }
+      action={{ label: msg('common.save'), testID: 'point-save', onPress: () => void save(), saving: write.saving }}
     >
       <View style={{ gap: t.space.xs }}>
         <AppText variant="label">{msg('pointForm.farm')}</AppText>
@@ -353,19 +350,19 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
       right={<HeaderButton testID="point-rename" label={msg('pointDetail.rename')} onPress={() => router.push(`/v2/point/${point.id}?edit=1` as Href)} />}
       overlay={
         <>
-          <BottomSheet open={sheet.kind === 'plan'} onClose={() => setSheet({ kind: 'none' })} title={msg('assign.planTitle', { point: point.name })} testID="plan-sheet">
-            {sheet.kind === 'plan' ? (
-              <PlanForm
-                state={state}
-                pointId={point.id}
-                replacing={sheet.replacing}
-                onSaved={() => {
-                  setSheet({ kind: 'none' });
-                  reload();
-                }}
-              />
-            ) : null}
-          </BottomSheet>
+          {sheet.kind === 'plan' ? (
+            <PlanForm
+              state={state}
+              pointId={point.id}
+              pointName={point.name}
+              replacing={sheet.replacing}
+              onClose={() => setSheet({ kind: 'none' })}
+              onSaved={() => {
+                setSheet({ kind: 'none' });
+                reload();
+              }}
+            />
+          ) : null}
           <ConfirmSheet
             open={sheet.kind === 'delete'}
             title={msg('pointForm.deleteTitle', { name: point.name })}
@@ -461,7 +458,7 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
  * written, so a failed write never leaves the point with neither; a retry
  * then only cancels the old one.
  */
-function PlanForm({ state, pointId, replacing, onSaved }: { state: MasterState; pointId: string; replacing: string | null; onSaved: () => void }) {
+function PlanForm({ state, pointId, pointName, replacing, onClose, onSaved }: { state: MasterState; pointId: string; pointName: string; replacing: string | null; onClose: () => void; onSaved: () => void }) {
   const t = useTheme();
   const msg = useT();
   const day = useDay();
@@ -499,56 +496,66 @@ function PlanForm({ state, pointId, replacing, onSaved }: { state: MasterState; 
   };
 
   return (
-    <View testID="plan" style={{ gap: t.space.md }}>
-      <RadioCard testID="plan-new" selected={mode === 'new'} title={msg('assign.newPerson')} detail={msg('assign.newPersonHint')} onPress={() => setMode('new')} />
-      {mode === 'new' ? (
-        <View style={{ gap: t.space.sm, paddingLeft: t.space.xl }}>
-          <AppText variant="label">{msg('assign.pickTapper')}</AppText>
-          <ChipWrap>
-            {tappers.map((p) => (
-              <ToggleChip key={p.id} check testID={`plan-tapper-${p.id}`} label={p.name} on={tapperId === p.id} onPress={() => setTapperId(p.id)} />
-            ))}
-          </ChipWrap>
-          {tried && !tapperId ? <FieldError>{msg('assign.pickTapper')}</FieldError> : null}
-          <TextField
-            testID="plan-from"
-            label={msg(blankOk ? 'assign.fromLabel' : 'assign.fromRequired')}
-            value={from}
-            onChangeText={setFrom}
-            error={tried && fromBad ? msg(from.trim() ? 'assign.badDate' : 'assign.needFrom') : undefined}
-          />
-          {outgoing && fromDay && outgoing.id !== tapperId ? (
-            <View testID="plan-preview" style={{ backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.md, padding: t.space.md, gap: t.space.xxs }}>
-              <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{`${outgoing.name} ${msg('v2f.until', { date: day(dayBefore(fromDay)) })}`}</FactRow>
-              {incoming ? <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{`${incoming.name} ${msg('v2f.startOn', { date: day(fromDay) })}`}</FactRow> : null}
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-      <RadioCard testID="plan-leave" selected={mode === 'leave'} title={msg('assign.leave')} detail={msg('assign.leaveHint')} onPress={() => setMode('leave')} />
-      {mode === 'leave' ? (
-        <View style={{ paddingLeft: t.space.xl }}>
-          <TextField
-            testID="plan-to"
-            label={msg('assign.toLabel')}
-            value={to}
-            onChangeText={setTo}
-            error={
-              tried && leaveProblem
-                ? msg(leaveProblem === 'date' ? 'assign.badDate' : leaveProblem === 'noTapper' ? 'assign.leaveNoTapper' : 'assign.leaveBeforeStart')
-                : undefined
-            }
-          />
-        </View>
-      ) : null}
-      <SaveFailed show={write.failed} />
-      <CTA testID="plan-save" icon={(c) => <Check color={c} size={14} />} onPress={() => void save()}>
-        {msg('assign.save')}
-      </CTA>
-    </View>
+    <BottomSheet
+      open
+      onClose={onClose}
+      title={msg('assign.planTitle', { point: pointName })}
+      testID="plan-sheet"
+      action={{ label: msg('assign.save'), testID: 'plan-save', onPress: () => void save(), saving: write.saving }}
+    >
+      <View testID="plan" style={{ gap: t.space.md }}>
+        <RadioCard testID="plan-new" selected={mode === 'new'} title={msg('assign.newPerson')} detail={msg('assign.newPersonHint')} onPress={() => setMode('new')} />
+        {mode === 'new' ? (
+          <View style={{ gap: t.space.sm, paddingLeft: t.space.xl }}>
+            <AppText variant="label">{msg('assign.pickTapper')}</AppText>
+            <ChipWrap>
+              {tappers.map((p) => (
+                <ToggleChip key={p.id} check testID={`plan-tapper-${p.id}`} label={p.name} on={tapperId === p.id} onPress={() => setTapperId(p.id)} />
+              ))}
+            </ChipWrap>
+            {tried && !tapperId ? <FieldError>{msg('assign.pickTapper')}</FieldError> : null}
+            <TextField
+              testID="plan-from"
+              label={msg(blankOk ? 'assign.fromLabel' : 'assign.fromRequired')}
+              value={from}
+              onChangeText={setFrom}
+              error={tried && fromBad ? msg(from.trim() ? 'assign.badDate' : 'assign.needFrom') : undefined}
+            />
+            {outgoing && fromDay && outgoing.id !== tapperId ? (
+              <View testID="plan-preview" style={{ backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.md, padding: t.space.md, gap: t.space.xxs }}>
+                <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{`${outgoing.name} ${msg('v2f.until', { date: day(dayBefore(fromDay)) })}`}</FactRow>
+                {incoming ? <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{`${incoming.name} ${msg('v2f.startOn', { date: day(fromDay) })}`}</FactRow> : null}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+        <RadioCard testID="plan-leave" selected={mode === 'leave'} title={msg('assign.leave')} detail={msg('assign.leaveHint')} onPress={() => setMode('leave')} />
+        {mode === 'leave' ? (
+          <View style={{ paddingLeft: t.space.xl }}>
+            <TextField
+              testID="plan-to"
+              label={msg('assign.toLabel')}
+              value={to}
+              onChangeText={setTo}
+              error={
+                tried && leaveProblem
+                  ? msg(leaveProblem === 'date' ? 'assign.badDate' : leaveProblem === 'noTapper' ? 'assign.leaveNoTapper' : 'assign.leaveBeforeStart')
+                  : undefined
+              }
+            />
+          </View>
+        ) : null}
+        <SaveFailed show={write.failed} />
+      </View>
+    </BottomSheet>
   );
 }
 
+/**
+ * No first-pull wait yet: there is no sync, so this device's log is all there is.
+ * When E01-S09 lands, creating must wait for a first pull (it was the
+ * `showStarterButton` gate), or two offline phones can both create "จุด 1".
+ */
 export function PointsWizardScreen() {
   const t = useTheme();
   const msg = useT();
@@ -565,6 +572,7 @@ export function PointsWizardScreen() {
   const farms = state?.properties.filter((p) => !p.deleted) ?? [];
   const farm = farms.find((f) => f.id === farmId);
   const nameOf = (id: string) => tappers.find((p) => p.id === id)?.name ?? '';
+  const existing = state && farmId ? activePoints(state, farmId) : [];
   const rows = farmId ? chosen.map((id) => ({ propertyId: farmId, tapperId: id, names: names[id] ?? [''] })) : [];
   const plan = state ? planStarterPoints(state, rows) : null;
   const total = rows.reduce((n, r) => n + r.names.length, 0);
@@ -637,6 +645,7 @@ export function PointsWizardScreen() {
       fallback={FARMS}
       failed={write.failed}
       onBack={page === 2 ? () => setPage(1) : undefined}
+      action={page === 2 ? { label: msg('wizard.create', { n: total }), testID: 'wizard-create', disabled: total === 0, saving: write.saving, onPress: () => void create() } : undefined}
       testID="points-wizard"
       footer={
         page === 1 ? (
@@ -648,11 +657,6 @@ export function PointsWizardScreen() {
             <Button testID="wizard-prev" onPress={() => setPage(1)}>
               {msg('wizard.prev')}
             </Button>
-            <View style={{ flex: 1 }}>
-              <CTA testID="wizard-create" disabled={total === 0} onPress={() => void create()}>
-                {msg('wizard.create', { n: total })}
-              </CTA>
-            </View>
           </View>
         )
       }
@@ -669,6 +673,11 @@ export function PointsWizardScreen() {
                 ))}
               </ChipWrap>
               <AppText variant="bodySm">{msg('wizard.farmHint')}</AppText>
+              {existing.length > 0 ? (
+                <AppText variant="bodySm" testID="wizard-existing">
+                  {msg('wizard.existing', { n: existing.length, names: existing.map((p) => p.name).join(', ') })}
+                </AppText>
+              ) : null}
             </>,
           )}
           {card(

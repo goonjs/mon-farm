@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import { AddDebtScreen, PayDebtScreen as DebtPaymentScreen } from '../v2/money/debt-forms';
@@ -105,5 +105,17 @@ describe('debt ledger (E06-S03)', () => {
     await act(async () => fireEvent.press(screen.getByTestId(`debt-void-${id}`)));
     await flush();
     expect(projectDebts(await mockFinance.load()).get('p-daeng')?.balanceSatang).toBe(200000);
+  });
+});
+
+describe('Save sits in the header (keyboard never covers it)', () => {
+  it('debt-save and debt-pay-save render inside screen-header', async () => {
+    wrap(<AddDebtScreen />);
+    await flush();
+    expect(within(screen.getByTestId('screen-header')).getByTestId('debt-save')).toBeTruthy();
+    screen.unmount();
+    wrap(<DebtPaymentScreen />);
+    await flush();
+    expect(within(screen.getByTestId('screen-header')).getByTestId('debt-pay-save')).toBeTruthy();
   });
 });

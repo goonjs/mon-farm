@@ -16,7 +16,7 @@ import { useT } from '../../i18n';
 import { readHoldMs, writeHoldMs } from '../../store/hold-preference';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Card, CardLabel, Check, Chip, CTA, FactRow, PersonIcon, Plus, RadioCard, SegmentedControl } from '../../ui';
+import { AppText, BottomSheet, Button, Card, CardLabel, Chip, FactRow, PersonIcon, Plus, RadioCard, SegmentedControl } from '../../ui';
 import { FarmScreen, HelpNote, SaveFailed, Stepper, useMaster, useWrite } from './pieces';
 
 const ZERO: readonly ZeroCheckMode[] = ['every', 'first-per-farm', 'skip'];
@@ -76,7 +76,7 @@ export function SaleSettingsScreen() {
       failed={write.failed && !adding}
       testID="sale-settings"
       overlay={
-        <BottomSheet open={adding} onClose={() => setAdding(false)} title={msg('v2f.addPair')} testID="pair-sheet">
+        <BottomSheet open={adding} onClose={() => setAdding(false)} title={msg('v2f.addPair')} testID="pair-sheet" action={{ label: msg('common.save'), testID: 'save-pair', saving: write.saving, onPress: () => void save(async () => { await peopleStore.addPair(netKg, basketKg); setAdding(false); }) }}>
           <AppText variant="bodySm">{msg('v2f.addPairHint')}</AppText>
           <AppText variant="label">{msg('saleSettings.net')}</AppText>
           <Stepper testID="new-net" label={msg('saleSettings.net')} value={String(netKg)} unit={msg('common.kg')} onLess={() => setNetKg((n) => Math.max(1, n - 1))} onMore={() => setNetKg((n) => n + 1)} />
@@ -84,18 +84,6 @@ export function SaleSettingsScreen() {
           <Stepper testID="new-basket" label={msg('saleSettings.basket')} value={String(basketKg)} unit={msg('common.kg')} onLess={() => setBasketKg((n) => Math.max(0, n - 1))} onMore={() => setBasketKg((n) => n + 1)} />
           <AppText style={{ fontWeight: t.font.weight.semibold }}>{msg('saleSettings.scaleShould', { n: netKg + basketKg })}</AppText>
           <SaveFailed show={write.failed} />
-          <CTA
-            testID="save-pair"
-            icon={(c) => <Check color={c} size={14} />}
-            onPress={() =>
-              void save(async () => {
-                await peopleStore.addPair(netKg, basketKg);
-                setAdding(false);
-              })
-            }
-          >
-            {msg('saleSettings.savePair')}
-          </CTA>
         </BottomSheet>
       }
     >

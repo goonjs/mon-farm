@@ -402,15 +402,6 @@ export function pointNameTaken(state: MasterState, propertyId: string, name: str
   return activePoints(state, propertyId).some((p) => p.id !== exceptId && p.name.trim() === key);
 }
 
-/**
- * The starter-structure button: only while the group has no points in use
- * (deleted ones do not count — they cannot be duplicated), and only once this device has pulled the group's data, so a phone that has
- * not yet seen another phone's points cannot create a second set.
- */
-export function showStarterButton(state: MasterState, firstPullDone: boolean): boolean {
-  return firstPullDone && activePoints(state).length === 0;
-}
-
 export interface StarterRow {
   readonly propertyId: string;
   readonly tapperId: string;

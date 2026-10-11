@@ -11,6 +11,7 @@
 
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { ActionButton, type HeaderPrimaryAction } from './action-button';
 import { useT } from '../i18n';
 import { useTheme } from '../theme';
 
@@ -18,12 +19,15 @@ export function BottomSheet({
   open,
   onClose,
   title,
+  action,
   children,
   testID = 'sheet',
 }: {
   open: boolean;
   onClose: () => void;
   title?: string;
+  /** Save for a form in the sheet: top-right of the title row, clear of the keyboard. */
+  action?: HeaderPrimaryAction;
   children: React.ReactNode;
   testID?: string;
 }) {
@@ -87,19 +91,29 @@ export function BottomSheet({
             }}
           />
           {title ? (
-            <Text
-              accessibilityRole="header"
+            <View
               style={{
-                fontFamily: t.font.family.sans,
-                fontSize: t.font.size.headingMd,
-                fontWeight: t.font.weight.bold,
-                color: t.color.ink,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: t.space.sm,
                 paddingHorizontal: t.layout.screenPaddingX,
                 paddingBottom: t.space.sm,
               }}
             >
-              {title}
-            </Text>
+              <Text
+                accessibilityRole="header"
+                style={{
+                  flex: 1,
+                  fontFamily: t.font.family.sans,
+                  fontSize: t.font.size.headingMd,
+                  fontWeight: t.font.weight.bold,
+                  color: t.color.ink,
+                }}
+              >
+                {title}
+              </Text>
+              {action ? <ActionButton action={action} /> : null}
+            </View>
           ) : null}
           <ScrollView
             contentContainerStyle={{

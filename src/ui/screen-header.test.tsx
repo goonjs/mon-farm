@@ -63,4 +63,50 @@ describe('ScreenHeader — one header for every screen (v1.1.0)', () => {
     wrap(<ScreenHeader title="ที่ลบแล้ว" back={{ label: '← รายการ', testID: 'deleted-back', href: '/' }} />);
     expect(screen.getByTestId('deleted-back').props.accessibilityLabel).toBe('รายการ');
   });
+
+  describe('action slot (Save in the top-right corner)', () => {
+    it('renders right of the sync pill, named, and fires onPress', () => {
+      const onPress = jest.fn();
+      wrap(<ScreenHeader title="x" sync={{ state: 'pending', count: 1 }} action={{ label: 'บันทึก', onPress, testID: 'hdr-save' }} />);
+      const btn = screen.getByTestId('hdr-save');
+      expect(btn.props.accessibilityRole).toBe('button');
+      expect(btn.props.accessibilityLabel).toBe('บันทึก');
+      expect(flat(btn.props.style).minHeight).toBeGreaterThanOrEqual(tokens.target.min);
+      const row = screen.getByTestId('screen-header');
+      const kids = [row.props.children].flat(Infinity).filter(Boolean);
+      const pillIdx = kids.findIndex((k: any) => k?.props?.status !== undefined);
+      const actionIdx = kids.findIndex((k: any) => k?.props?.action?.testID === 'hdr-save');
+      expect(pillIdx).toBeGreaterThan(-1);
+      expect(actionIdx).toBeGreaterThan(pillIdx);
+      fireEvent.press(btn);
+      expect(onPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('disabled does not fire and says so', () => {
+      const onPress = jest.fn();
+      wrap(<ScreenHeader title="x" action={{ label: 'บันทึก', onPress, testID: 'hdr-save', disabled: true }} />);
+      const btn = screen.getByTestId('hdr-save');
+      expect(btn.props.accessibilityState).toMatchObject({ disabled: true });
+      fireEvent.press(btn);
+      expect(onPress).not.toHaveBeenCalled();
+    });
+
+    it('saving shows the saving word, is busy and does not fire', () => {
+      const onPress = jest.fn();
+      wrap(<ScreenHeader title="x" action={{ label: 'บันทึก', onPress, testID: 'hdr-save', saving: true }} />);
+      const btn = screen.getByTestId('hdr-save');
+      expect(btn.props.accessibilityState).toMatchObject({ disabled: true, busy: true });
+      expect(screen.getByText('กำลังบันทึก')).toBeTruthy();
+      fireEvent.press(btn);
+      expect(onPress).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('ScreenHeader action keeps its width while saving', () => {
+  it('shows savingLabel instead of the bare saving word when given, and never shrinks', () => {
+    wrap(<ScreenHeader title="x" action={{ label: 'บันทึก · 300', savingLabel: 'กำลังบันทึก · 300', saving: true, testID: 'hdr-save' }} />);
+    expect(screen.getByText('กำลังบันทึก · 300')).toBeTruthy();
+    expect(flat(screen.getByTestId('hdr-save').props.style).flexShrink).toBe(0);
+  });
 });

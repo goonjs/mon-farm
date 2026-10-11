@@ -27,6 +27,9 @@ async function addPerson(page: Page, name: string, roles: string[], snap?: strin
   await id('person-name').fill(name);
   for (const r of roles) await id(`role-${r}`).click();
   if (snap) await shot(page, snap);
+  // Save lives in the header (top right), so an open keyboard never covers it.
+  await expect(id('screen-header').getByTestId('person-save')).toBeVisible();
+  expect((await id('person-save').boundingBox())!.y).toBeLessThan(100);
   await id('person-save').click();
   await expect(id('people-list')).toContainText(name);
 }
@@ -128,6 +131,21 @@ test('/ → splash → home → farm settings: add and edit everything offline, 
   await expect(id('farms-list')).toContainText('3 จุดชั่ง');
   await shot(page, '08-farms');
 
+  // The helper stays on offer and can be used again on a farm that has points:
+  // it lists them, refuses a name already taken, and adds the next one.
+  await id('open-wizard').click();
+  await id('points-wizard').locator('[data-testid^="wizard-farm-"]').filter({ hasText: 'สวนจันทเขลม' }).click();
+  await expect(id('wizard-existing')).toContainText('จุด 1');
+  await id('points-wizard').locator('[data-testid^="wizard-tapper-"]').filter({ hasText: 'แดง' }).click();
+  await id('wizard-next').click();
+  await id('points-wizard').locator('[data-testid^="wizard-name-"]').first().fill('จุด 1');
+  await expect(id('screen-header').getByTestId('wizard-create')).toBeVisible();
+  await id('wizard-create').click();
+  await expect(id('wizard-duplicates')).toBeVisible();
+  await id('points-wizard').locator('[data-testid^="wizard-name-"]').first().fill('จุด 5');
+  await id('wizard-create').click();
+  await expect(id('farms-list')).toContainText('4 จุดชั่ง');
+
   // ── สวน detail: new dated area, edit, add a point and assign it ──────────
   await id('farms-list').getByText('สวนจันทเขลม').click();
   await expect(id('property-detail')).toBeVisible();
@@ -196,7 +214,7 @@ test('/ → splash → home → farm settings: add and edit everything offline, 
   await expect(id('hub-people')).toContainText('4 คน');
   await expect(id('hub-buyers')).toContainText('2 ราย');
   await expect(id('hub-farms')).toContainText('2 สวน');
-  await expect(id('hub-farms')).toContainText('4 จุดชั่ง');
+  await expect(id('hub-farms')).toContainText('5 จุดชั่ง');
   await expect(id('sync-pill')).toContainText('รอส่ง');
   await shot(page, '02-farm-hub');
 
