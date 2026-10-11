@@ -27,7 +27,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E01-S13: ฝัง font Noto Sans Thai + ชุดไอคอนเส้น open-licence](e01-s13-thai-font-and-icons.md)
 - ~~[E01-S14: preview A/B รูปแบบ card — เงา+เส้น vs แบน+เส้น](e01-s14-card-style-ab-preview.md)~~ ยกเลิก (D-52)
 - [E01-S15: สถานะข้อมูลรายฟิลด์ 6 แบบ + ป้ายใช้ซ้ำ](e01-s15-field-data-states.md)
-- [E01-S16: ลบเขตไม่ได้ถ้าคนกรีดของเขตยังมียอดหัก](e01-s16-zone-delete-guard.md)
+- [E01-S16: ลบเขตไม่ได้ถ้าคนกรีดของเขตยังมียอดหัก](e01-s16-zone-delete-guard.md) (Superseded โดย E06-S07)
 
 ### E02 การเข้าใช้ & กลุ่มฟาร์ม — [epic](../epics/e02-access-farm-groups.md)
 
@@ -82,7 +82,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E06-S04: หักหนี้ตอนสรุปเงิน ไม่เกินส่วนแบ่ง ยกยอด](e06-s04-deduct-at-settlement.md)
 - ~~[E06-S05: ย้ายข้อมูลหัก S29 เดิม เข้าบัญชีคนกรีด](e06-s05-migrate-s29-deductions.md)~~ ยกเลิก (D-65 — ลบโค้ดเก่าใน E06-S04)
 - [E06-S06: แผนปุ๋ย (ไม่บังคับ) → ค่าใช้จ่ายวางแผน](e06-s06-fertilizer-plan.md)
-- [E06-S07: ลบโค้ดหักเงิน S29 เดิม](e06-s07-remove-s29-code.md) (Draft — รอเจ้าของ)
+- [E06-S07: ลบโค้ดหักเงิน S29 เดิม](e06-s07-remove-s29-code.md) (Review) — การหักเงินใหม่อยู่ที่ [E06-S04](e06-s04-deduct-at-settlement.md)
 
 ### E07 งานในสวน — [epic](../epics/e07-field-operations.md)
 

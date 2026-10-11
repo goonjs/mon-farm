@@ -1,6 +1,6 @@
 # Story E01-S16: ลบเขตไม่ได้ถ้าคนกรีดของเขตยังมียอดหัก
 
-Status: Done
+Status: Superseded (E06-S07 — D-58 ยกเลิกกติกา D-44; `src/core/delete-guard.ts` ถูกลบแล้ว ลบเขต/สวนได้เสมอ)
 
 ## Context
 

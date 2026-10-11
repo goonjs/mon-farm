@@ -8,7 +8,7 @@ Status: Draft
 
 - Epic: `docs/epics/e03-master-data.md`
 - PRD: MD-2, D-43, D-44
-- กติกา D-44 มีใน core แล้ว: `assertAllowed()` / `deleteBlockers()` ใน `src/core/delete-guard.ts` (E01-S16) — ใช้ตัวนี้ ไม่สร้างใหม่
+- ~~กติกา D-44 ใน `src/core/delete-guard.ts` (E01-S16)~~ — ถูกเอาออกใน E06-S07 (D-58): ลบโซนได้เสมอ ไม่มี guard ให้ใช้
 - แทนที่: โซนใน S27 (`ProfileZone`) และ `zone_added` ในการขาย (S3/S6)
 - ขึ้นกับ: E03-S02, E03-S03
 

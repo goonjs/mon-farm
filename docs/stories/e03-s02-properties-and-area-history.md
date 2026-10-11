@@ -47,7 +47,7 @@ Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Dev notes
 
-- D-58: `src/core/delete-guard.ts` (E01-S16) ใช้กติกา D-44 ซึ่งใช้ไม่ได้กับโมเดล MVP — story นี้ **ไม่** ต่อสวนเข้า guard นั้น; การเขียนใหม่/เอาออกอยู่ใน E03-S06/E06-S04
+- D-58: `src/core/delete-guard.ts` (E01-S16) ใช้กติกา D-44 ซึ่งใช้ไม่ได้กับโมเดล MVP — story นี้ **ไม่** ต่อสวนเข้า guard นั้น; guard ถูกเอาออกแล้วใน E06-S07
 
 ## Code review
 
