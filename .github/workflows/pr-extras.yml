@@ -1,0 +1,133 @@
+name: PR extras
+
+# Opt-in, label-driven extras for a pull request (E01-S17). CI (ci.yml) runs
+# only the cheap gates on a PR; the two expensive things are asked for here:
+#
+#   label `e2e`      run the Playwright suite against this PR's build
+#   label `preview`  deploy a Firebase preview channel (expires in 7 days)
+#
+# Both labels together share one install and one build. The run starts when a
+# label is added and again on every new push while the label is still on, so a
+# labelled PR stays covered. A label that is not one of the two does nothing.
+# After merge, e2e always runs from ci.yml, so an unlabelled PR is still
+# covered before it can reach production.
+#
+# Skipped for forks, which get no OIDC token and must not reach the deploy
+# credential, and for draft PRs. The preview step is skipped (not failed)
+# until the keyless-auth repo variables are set.
+
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened, ready_for_review]
+
+# One run per PR; a newer push or label replaces the one in flight.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  extras:
+    if: >
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft &&
+      (github.event.action == 'labeled'
+        && (github.event.label.name == 'e2e' || github.event.label.name == 'preview')
+       || github.event.action != 'labeled'
+        && (contains(github.event.pull_request.labels.*.name, 'e2e')
+         || contains(github.event.pull_request.labels.*.name, 'preview')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      WANT_E2E: ${{ contains(github.event.pull_request.labels.*.name, 'e2e') }}
+      WANT_PREVIEW: ${{ contains(github.event.pull_request.labels.*.name, 'preview') }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build web
+        run: npm run build:web
+
+      # --- e2e (label `e2e`) -------------------------------------------------
+      - name: Playwright version
+        if: env.WANT_E2E == 'true'
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        if: env.WANT_E2E == 'true'
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: env.WANT_E2E == 'true' && steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps
+        if: env.WANT_E2E == 'true' && steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: End-to-end
+        if: env.WANT_E2E == 'true'
+        run: npm run test:e2e
+
+      - name: Upload screenshots
+        if: always() && env.WANT_E2E == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: docs/ux/screenshots/
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Upload Playwright report on failure
+        if: failure() && env.WANT_E2E == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: e2e/.results/
+          retention-days: 3
+
+      # --- preview (label `preview`) -----------------------------------------
+      - name: Note when PR previews are off
+        if: >
+          env.WANT_PREVIEW == 'true' &&
+          (vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT == '')
+        run: >
+          echo "::notice title=PR preview off::Set repo variables
+          GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT to deploy previews."
+
+      - uses: google-github-actions/auth@v2
+        if: >
+          env.WANT_PREVIEW == 'true' &&
+          vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != ''
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy preview channel (expires in 7 days)
+        if: >
+          env.WANT_PREVIEW == 'true' &&
+          vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != ''
+        run: ./scripts/deploy.sh preview "pr-${{ github.event.pull_request.number }}" | tee preview.log
+
+      - name: Show the preview URL
+        if: >
+          env.WANT_PREVIEW == 'true' &&
+          vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != ''
+        run: |
+          url=$(grep -Eo 'https://[^ ]+\.web\.app[^ ]*' preview.log | head -1)
+          echo "Preview: $url" >> "$GITHUB_STEP_SUMMARY"

@@ -16,10 +16,18 @@ name: CI
 # on merge. Running on push to every branch as well
 # doubled every PR's minutes, since the two runs never shared a concurrency
 # group (owner rule 2026-10-02: save Actions minutes).
+#
+# Minutes (E01-S17): a PR runs the cheap gates only (changes + verify). The
+# browser suite (e2e) runs after merge on dev/main, and on a PR only when it
+# carries the `e2e` label; the PR preview is label-driven too. Both live in
+# pr-extras.yml so that adding a label never re-runs this workflow. Draft PRs
+# run nothing until they are marked ready. The Firestore rules tests (JDK +
+# emulator) run on a PR only when rules, tooling or dependencies changed.
 on:
   push:
     branches: [dev, main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 # Only PR runs cancel each other. A push run on dev/main must finish: the next
 # push diffs from its own `before`, so a cancelled code merge followed by a
@@ -35,10 +43,13 @@ jobs:
   # No install: plain git plus the runner's preinstalled node, so a docs-only
   # PR costs one billed minute instead of a full build.
   changes:
+    # A draft PR is skipped (counts as passing); ready_for_review starts it.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      rules: ${{ steps.diff.outputs.rules }}
 
     steps:
       - uses: actions/checkout@v4
@@ -60,16 +71,6 @@ jobs:
           node scripts/ci-changes.mjs
           ${{ github.event.pull_request.base.sha || github.event.before }}
           ${{ github.sha }} >> "$GITHUB_OUTPUT"
-
-      # The preview job skips silently while keyless auth is unconfigured; say
-      # so on the run page, at no extra job cost.
-      - name: Note when PR previews are off
-        if: >
-          github.event_name == 'pull_request' &&
-          (vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT == '')
-        run: >
-          echo "::notice title=PR preview off::Set repo variables
-          GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT to deploy previews."
 
   verify:
     needs: changes
@@ -117,17 +118,22 @@ jobs:
       # Java program (firebase-tools needs JDK 21+) and a ~60 MB download, so
       # both the JDK and the JAR are cached.
       - uses: actions/setup-java@v4
+        if: github.event_name == 'push' || needs.changes.outputs.rules == 'true'
         with:
           distribution: temurin
           java-version: 21
 
       - name: Cache Firestore emulator
+        if: github.event_name == 'push' || needs.changes.outputs.rules == 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/firebase/emulators
           key: firebase-emulators-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
+      # On a PR this runs only when scripts/ci-changes.mjs says rules, tooling
+      # or dependencies changed; after merge it always runs.
       - name: Firestore rules tests
+        if: github.event_name == 'push' || needs.changes.outputs.rules == 'true'
         run: npm run test:rules
 
       # Doubles as the build gate: a bundling failure exits non-zero here rather
@@ -135,8 +141,10 @@ jobs:
       - name: Build web
         run: npm run build:web
 
-      # e2e tests this exact bundle instead of building it a second time.
+      # e2e tests this exact bundle instead of building it a second time. Only
+      # pushes have an e2e job, so a PR skips the upload.
       - name: Upload web build
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: dist
@@ -146,8 +154,10 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
+  # After merge only (dev/main). On a PR, add the `e2e` label (pr-extras.yml).
   e2e:
     needs: verify
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -211,71 +221,3 @@ jobs:
           path: e2e/.results/
           # The folder itself is hidden; v4 would otherwise upload nothing (#45).
           include-hidden-files: true
-
-  # A live URL per PR on the dev site; Firebase deletes the channel after 7
-  # days, every push renews it, and preview-cleanup.yml deletes it when the PR
-  # closes. The link is posted as one PR comment that later pushes edit. Runs
-  # only after e2e is green, and is skipped with it on docs-only changes.
-  # Skipped for forks, which get no OIDC token and must not reach the deploy
-  # credential. Deploys the `dist` artifact verify already built.
-  # Skipped (not failed) until the owner sets the keyless-auth repo variables
-  # GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT: without them every
-  # same-repo PR went red at google-github-actions/auth, hiding real failures.
-  # A skipped job counts as passing.
-  preview:
-    needs: e2e
-    if: >
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' &&
-      vars.GCP_SERVICE_ACCOUNT != ''
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      id-token: write
-      pull-requests: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
-
-      # The PR may have closed while CI ran; preview-cleanup.yml has then
-      # already deleted the channel, and deploying would bring it back.
-      - name: Check the PR is still open
-        id: open
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
-        run: echo "state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .state)" >> "$GITHUB_OUTPUT"
-
-      - name: Deploy preview channel (expires in 7 days)
-        if: steps.open.outputs.state == 'open'
-        run: ./scripts/deploy.sh preview "pr-${{ github.event.pull_request.number }}" | tee preview.log
-
-      # One comment per PR: edit ours if it is there, otherwise post it.
-      - name: Comment the preview URL on the PR
-        if: steps.open.outputs.state == 'open'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
-          SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          node scripts/preview-comment.mjs preview.log "$SHA" > comment.md
-          head -2 comment.md | tail -1 >> "$GITHUB_STEP_SUMMARY"
-          id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
-            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- mon-farm-preview -->"))) | .id' | sed -n 1p)
-          if [ -n "$id" ]; then
-            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@comment.md >/dev/null
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@comment.md >/dev/null
-          fi
