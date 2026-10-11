@@ -23,7 +23,9 @@ import type { BuiltinRole, Crop, Gps, NumberingMode, PersonId, SaleEvent, ScaleT
  */
 export const MASTER_SCOPE = 'farm-master';
 
-export const BUILTIN_ROLES: readonly BuiltinRole[] = ['tapper', 'worker', 'manager', 'payer', 'tenant', 'owner'];
+/** Display order: owner, manager, assistant, tapper, then the rest (owner 2026-10-11). */
+export const BUILTIN_ROLES: readonly BuiltinRole[] = ['owner', 'manager', 'assistant', 'tapper', 'worker', 'payer', 'tenant'];
+const ROLE_ORDER: readonly BuiltinRole[] = ['owner', 'manager', 'assistant', 'tapper'];
 
 export interface PersonRecord {
   readonly id: PersonId;
@@ -267,6 +269,17 @@ export type PeopleFilter = 'all' | BuiltinRole;
 /** Active people, alphabetical, optionally only those holding `role` (D-74 F12). */
 export function filterPeople(people: readonly PersonRecord[], filter: PeopleFilter): PersonRecord[] {
   return people.filter((p) => !p.deleted && (filter === 'all' || p.roles.includes(filter)));
+}
+
+/** Rank of a person's senior-most listed role; anyone else (อื่นๆ) sorts last. */
+const roleRank = (p: PersonRecord) => {
+  const ranks = p.roles.map((r) => ROLE_ORDER.indexOf(r)).filter((i) => i >= 0);
+  return ranks.length ? Math.min(...ranks) : ROLE_ORDER.length;
+};
+
+/** Groups people by role (owner, manager, assistant, tapper, other); input order holds within a group. */
+export function sortPeopleByRole(people: readonly PersonRecord[]): PersonRecord[] {
+  return people.map((p, i) => ({ p, i })).sort((a, b) => roleRank(a.p) - roleRank(b.p) || a.i - b.i).map(({ p }) => p);
 }
 
 /** Field names that block saving: a name, and at least one role (D-68). */
