@@ -138,15 +138,22 @@ describe('v2 sale money (pages 16–19)', () => {
     expect(screen.getByTestId('tally-sale')).toHaveTextContent(/11,397\.50/);
   });
 
-  it('tally: each pile says where it comes from', async () => {
+  it('tally: each pile says where it comes from, and the parts add up to the cash', async () => {
     await inSale(<TallyScreen />);
-    // แดง: share 3,637.50, nothing deducted, rounded up to 3,638.
-    expect(screen.getByTestId(`tally-from-${farm.red}`)).toHaveTextContent(/ส่วนแบ่ง 3,637\.50/);
-    // นัด: share 2,061.25 less the debt taken with the owner's transfer.
-    expect(screen.getByTestId(`tally-from-${farm.nat}`)).toHaveTextContent(/ส่วนแบ่ง 2,061\.25/);
-    expect(screen.getByTestId(`tally-from-${farm.nat}`)).toHaveTextContent(/หักหนี้/);
-    expect(screen.getByTestId('tally-owner-from')).toHaveTextContent(/ส่วนเจ้าของสวน/);
-    expect(screen.getByTestId('tally-owner-debt')).toHaveTextContent(/1,500\.00/);
+    // แดง: share 3,637.50 rounded up 0.50 → 3,638.00.
+    expect(screen.getByTestId(`tally-from-${farm.red}`)).toHaveTextContent('ส่วนแบ่ง 3,637.50 + ปัดเศษ 0.50');
+    expect(screen.getByTestId(`tally-cash-${farm.red}`)).toHaveTextContent(/3,638\.00$/);
+    // นัด: share 2,061.25, the 1,500 debt taken with the owner's transfer, rounded up 0.75 → 562.00.
+    expect(screen.getByTestId(`tally-from-${farm.nat}`)).toHaveTextContent('ส่วนแบ่ง 2,061.25 − หักหนี้ 1,500.00 + ปัดเศษ 0.75');
+    expect(screen.getByTestId(`tally-cash-${farm.nat}`)).toHaveTextContent(/562\.00$/);
+    expect(screen.queryByTestId(`tally-net-${farm.nat}`)).toBeNull();
+    // Owner: the transfer is his share plus the 1,500 repaid with it.
+    expect(screen.getByTestId('tally-owner-from')).toHaveTextContent('ส่วนเจ้าของสวน 5,697.50');
+    expect(screen.getByTestId('tally-owner-debt')).toHaveTextContent(/1,500\.00$/);
+    expect(screen.getByTestId('tally-transfer')).toHaveTextContent(/7,197\.50$/);
+    expect(screen.getByTestId('tally-sum')).toHaveTextContent('11,397.50');
+    expect(screen.getByTestId('tally-sale')).toHaveTextContent(/11,397\.50$/);
+    expect(screen.getByTestId('tally-ok')).toBeTruthy();
   });
 
   it('payment: each payee ticks on its own; close completes the sale', async () => {
@@ -286,3 +293,43 @@ describe('close stays off when the tally does not add up (re-review N5)', () => 
   });
 });
 
+
+describe('tally detail edge cases (E05-S08)', () => {
+  const inSaleId = async (id: string, ui: ReactElement) => {
+    const r = wrap(<SaleProvider saleId={id}>{ui}</SaleProvider>);
+    await flush();
+    return r;
+  };
+
+  it('a voided basket is not in the weight, the baskets or the amounts', async () => {
+    const ID = 'sale-money-void';
+    const b = new LogBuilder(ID);
+    b.sys({ t: 'sale_started', farmName: '', buyer: 'x', manager: '', workerLead: '', where: 'farm' });
+    b.sys({ t: 'price_set', satangPerKg: 4850, indexRef: '' });
+    b.sys({ t: 'pile_added', pileId: farm.a[0], zoneId: farm.farmA, name: 'p', tareG: 2_000, stdNetG: 50_000 });
+    b.acceptAt(farm.a[0], 1).acceptAt(farm.a[0], 2);
+    const target = b.nextId();
+    b.acceptAt(farm.a[0], 3);
+    b.void(farm.a[0], target);
+    await seedSale(store(), b.build().map((e) => ({ ...e, ts: Date.now() })));
+    await inSaleId(ID, <TallyScreen />);
+    expect(screen.getByTestId('tally-weight')).toHaveTextContent(/100 กก\./);
+    expect(screen.getByTestId('tally-baskets')).toHaveTextContent(/2 เข่ง/);
+    expect(screen.getByTestId('tally-total')).toHaveTextContent(/4,850\.00/);
+    expect(screen.getByTestId(`tally-tapper-${farm.red}`)).toHaveTextContent(/100 กก\./);
+    expect(screen.getByTestId('tally-ok')).toBeTruthy();
+  });
+
+  it('a sale with no baskets yet: no tapper rows, nothing to add up, no crash', async () => {
+    const ID = 'sale-money-empty';
+    const b = new LogBuilder(ID);
+    b.sys({ t: 'sale_started', farmName: '', buyer: 'x', manager: '', workerLead: '', where: 'farm' });
+    b.sys({ t: 'price_set', satangPerKg: 4850, indexRef: '' });
+    await seedSale(store(), b.build().map((e) => ({ ...e, ts: Date.now() })));
+    await inSaleId(ID, <TallyScreen />);
+    expect(screen.getByTestId('tally-weight')).toHaveTextContent(/0 กก\./);
+    expect(screen.getByTestId('tally-total')).toHaveTextContent(/0\.00/);
+    expect(screen.queryByTestId(`tally-tapper-${farm.red}`)).toBeNull();
+    expect(screen.getByTestId('tally-sum')).toHaveTextContent(/0\.00/);
+  });
+});

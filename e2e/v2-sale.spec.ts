@@ -97,9 +97,18 @@ test('settlement: netting the money the farm owes back against a debt (E06-S04)'
   await id('deduct-nat').click();
   await expect(id('net-card')).toContainText('640.00');
   await id('net-amount').fill('400');
+  await id('deduct-amount').fill('300');
   await shot(page, '23-netting');
   await id('deduct-save').click();
   await expect(id('netted-nat')).toContainText('400.00');
+
+  // ── เทียบยอด (page 18a) with a deduction and a netting: the origin line adds up to the cash ──
+  await page.goto('/v2/sale/sale-net/tally');
+  await expect(id('tally')).toBeVisible();
+  await expect(id('tally-from-nat')).toContainText('ส่วนแบ่ง 2,625.00 − หักหนี้ 300.00');
+  await expect(id('tally-net-nat')).toContainText('หักกลบ 400.00 (ไม่กระทบเงินสด)');
+  await expect(id('tally-ok')).toBeVisible();
+  await shot(page, '18a-tally', true);
 });
 
 const on = (page: Page) => (id: string) => page.getByTestId(id).filter({ visible: true });
@@ -280,7 +289,8 @@ test('start → point → empty scale → count → short → switch and fill �
   await expect(id('tally-weight')).toContainText('470 กก.');
   await expect(id('tally-total')).toContainText('22,795.00');
   await expect(id('tally-sum')).toContainText('22,795.00');
-  await shot(page, '18a-tally');
+  await expect(id('tally-from-red')).toContainText('ส่วนแบ่ง 8,972.50 + ปัดเศษ 0.50');
+  await expect(id('tally-owner-from')).toContainText('ส่วนเจ้าของสวน 11,397.00');
   await id('to-payment').click();
 
   // ── การจ่ายเงิน (page 19): ticks survive a reload; then close ──
