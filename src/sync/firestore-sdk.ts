@@ -13,14 +13,17 @@ import {
   doc,
   getDocFromServer,
   getDocsFromServer,
+  limit as limitTo,
   orderBy,
   query,
+  startAfter,
   serverTimestamp,
   Timestamp,
   where,
   writeBatch,
   type DocumentData,
   type Firestore,
+  type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 
 import { SERVER_TIMESTAMP, type DocWrite, type FirestoreLayer } from './firestore-remote';
@@ -49,13 +52,19 @@ export function sdkLayer(db: Firestore): FirestoreLayer {
       return snap.exists() ? readable(snap.data()) : null;
     },
 
-    async eventsSince(groupId, sinceMs) {
+    async eventsSince(groupId, sinceMs, after, limit) {
+      // Ordered by receivedAt, then by document id (implicit): the documents of one batch share a
+      // stamp, so a page may end inside it and the next starts right after the last document seen.
       const q = query(
         collection(db, 'groups', groupId, 'events'),
         where('receivedAt', '>=', Timestamp.fromMillis(sinceMs)),
         orderBy('receivedAt'),
+        ...(after ? [startAfter(after as QueryDocumentSnapshot)] : []),
+        ...(limit ? [limitTo(limit)] : []),
       );
-      return (await getDocsFromServer(q)).docs.map((d) => readable(d.data()));
+      const snap = await getDocsFromServer(q);
+      const last = snap.docs[snap.docs.length - 1];
+      return { docs: snap.docs.map((d) => readable(d.data())), next: limit && snap.docs.length === limit ? last : null };
     },
   };
 }

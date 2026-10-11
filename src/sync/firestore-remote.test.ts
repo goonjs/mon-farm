@@ -65,12 +65,16 @@ class FakeLayer implements FirestoreLayer {
     return this.docs.get(path) ?? null;
   }
 
-  async eventsSince(groupId: string, sinceMs: number) {
+  async eventsSince(groupId: string, sinceMs: number, after?: unknown, limit = Infinity) {
     this.maybeFail();
-    return [...this.docs]
+    const all = [...this.docs]
       .filter(([path, d]) => path.startsWith(`groups/${groupId}/events/`) && (d.receivedAt as number) >= sinceMs)
-      .map(([, d]) => d)
-      .sort((a, b) => (a.receivedAt as number) - (b.receivedAt as number));
+      .map(([path, d]) => ({ path, d }))
+      .sort((a, b) => (a.d.receivedAt as number) - (b.d.receivedAt as number) || (a.path < b.path ? -1 : 1));
+    const from = after === undefined ? 0 : all.findIndex((x) => x.path === after) + 1;
+    const rest = all.slice(from);
+    const page = rest.slice(0, limit);
+    return { docs: page.map((x) => x.d), next: rest.length > page.length ? page[page.length - 1].path : null };
   }
 }
 
@@ -223,16 +227,49 @@ describe('FirestoreRemote', () => {
     await remote.push([a]);
     await remote.push([b]);
     const all = await remote.pull(0);
-    expect(all.map((d) => d.event.id)).toEqual([a.id, b.id]);
-    expect(all.map((d) => d.receivedAt)).toEqual([1_001, 1_002]);
-    expect((await remote.pull(1_002)).map((d) => d.event.id)).toEqual([b.id]);
+    expect(all.docs.map((d) => d.event.id)).toEqual([a.id, b.id]);
+    expect(all.docs.map((d) => d.receivedAt)).toEqual([1_001, 1_002]);
+    expect((await remote.pull(1_002)).docs.map((d) => d.event.id)).toEqual([b.id]);
+  });
+
+  it('pulls in pages: each call continues after the last document of the one before, none twice or missed', async () => {
+    const { remote } = make();
+    const evs = new LogBuilder('s1', 'dev-A').accept('p1').accept('p1').accept('p1').accept('p1').accept('p1').build();
+    for (const e of evs) await remote.push([e]);
+    const seen: string[] = [];
+    let token: unknown;
+    let pages = 0;
+    do {
+      const page = await remote.pull(0, token, 2);
+      seen.push(...page.docs.map((d) => d.event.id));
+      token = page.next ?? undefined;
+      pages += 1;
+    } while (token !== undefined);
+    expect(pages).toBe(3);
+    expect(seen).toEqual(evs.map((e) => e.id));
+  });
+
+  it('check() reads the group document from the server and is happy with any answer, even "not allowed"', async () => {
+    const { layer, remote } = make();
+    await expect(remote.check()).resolves.toBeUndefined();
+    layer.failWith = Object.assign(new Error('rules'), { code: 'permission-denied' });
+    await expect(remote.check()).resolves.toBeUndefined();
+  });
+
+  it('check() fails with the real reason when the server cannot be reached or the database is missing', async () => {
+    const { layer, remote } = make();
+    layer.failWith = Object.assign(new Error('offline'), { code: 'unavailable' });
+    await expect(remote.check()).rejects.toMatchObject({ code: 'unavailable' });
+    layer.failWith = Object.assign(new Error('The database does not exist'), { code: 'not-found' });
+    await expect(remote.check()).rejects.toMatchObject({ code: 'invalid-argument' });
+    expect(layer.commits).toEqual([]);
   });
 
   it('keeps a document the server has not stamped yet as receivedAt null', async () => {
     const { layer, remote } = make();
     const [e] = events();
     layer.docs.set(`groups/${FIXTURE_GROUP_ID}/events/${e.id}`, { ...toEnvelope(e), receivedAt: null });
-    expect((await remote.pull(0)).map((d) => d.receivedAt)).toEqual([null]);
+    expect((await remote.pull(0)).docs.map((d) => d.receivedAt)).toEqual([null]);
   });
 
   it('skips a malformed document and carries on with the rest', async () => {
@@ -242,7 +279,7 @@ describe('FirestoreRemote', () => {
     await remote.push([a]);
     layer.docs.set(`groups/${FIXTURE_GROUP_ID}/events/bad`, { id: 'bad', receivedAt: 1_500 });
     await remote.push([b]);
-    expect((await remote.pull(0)).map((d) => d.event.id)).toEqual([a.id, b.id]);
+    expect((await remote.pull(0)).docs.map((d) => d.event.id)).toEqual([a.id, b.id]);
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });
@@ -295,7 +332,7 @@ describe('whenSignedInAs', () => {
     const guarded = whenSignedInAs(layer, async () => 'user-somchai', 'user-somchai');
     await guarded.commit(write);
     expect(await guarded.get('groups/g/events/e')).not.toBeNull();
-    await expect(guarded.eventsSince('g', 0)).resolves.toEqual([]);
+    await expect(guarded.eventsSince('g', 0)).resolves.toEqual({ docs: [], next: null });
   });
 
   it.each([null, 'someone-else'])('with session %j nothing is sent, and it is "unauthenticated" (transient), not "denied"', async (uid) => {

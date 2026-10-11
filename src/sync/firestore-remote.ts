@@ -15,7 +15,8 @@ import { createGroupWrites, type CreateGroupOp } from '../core/group';
 import type { EventId, GroupId, SaleEvent, UserId } from '../core/types';
 import {
   RemoteError,
-  type PulledDoc,
+  type PullToken,
+  type PulledPage,
   type RemoteErrorCode,
   type RemoteEvents,
   type RemoteGroups,
@@ -40,8 +41,17 @@ export interface FirestoreLayer {
   /** One atomic batch of creates; resolves when the server confirmed it. */
   commit(writes: readonly DocWrite[]): Promise<void>;
   get(path: string): Promise<Readonly<Record<string, unknown>> | null>;
-  /** Documents of `groups/{groupId}/events` with `receivedAt >= sinceMs`, ordered by `receivedAt`. */
-  eventsSince(groupId: GroupId, sinceMs: number): Promise<readonly Readonly<Record<string, unknown>>[]>;
+  /**
+   * Documents of `groups/{groupId}/events` with `receivedAt >= sinceMs`, ordered by `receivedAt` (then id),
+   * at most `limit`, after the position `after`. `next` is the position after the last document, or null when
+   * there is no more.
+   */
+  eventsSince(
+    groupId: GroupId,
+    sinceMs: number,
+    after?: PullToken,
+    limit?: number,
+  ): Promise<{ readonly docs: readonly Readonly<Record<string, unknown>>[]; readonly next: PullToken | null }>;
 }
 
 // ── event ⇄ envelope ───────────────────────────────────────────────────────
@@ -217,9 +227,9 @@ export function whenSignedInAs(
       await check();
       return layer.get(path);
     },
-    async eventsSince(groupId, sinceMs) {
+    async eventsSince(groupId, sinceMs, after, limit) {
       await check();
-      return layer.eventsSince(groupId, sinceMs);
+      return layer.eventsSince(groupId, sinceMs, after, limit);
     },
   };
 }
@@ -251,10 +261,20 @@ export class FirestoreRemote implements RemoteEvents, RemoteGroups {
     return data ? fromEnvelope(data) : null;
   }
 
-  async pull(since: number): Promise<PulledDoc[]> {
-    const docs = await guarded(() => this.layer.eventsSince(this.groupId, since));
-    const out: PulledDoc[] = [];
-    for (const data of docs) {
+  async check(): Promise<void> {
+    try {
+      await guarded(() => this.layer.get(`groups/${this.groupId}`));
+    } catch (err) {
+      // Not (yet) allowed to read the group is an answer from the server, which is all this asks.
+      if (err instanceof RemoteError && err.code === 'permission-denied') return;
+      throw err;
+    }
+  }
+
+  async pull(since: number, after?: PullToken, limit?: number): Promise<PulledPage> {
+    const page = await guarded(() => this.layer.eventsSince(this.groupId, since, after, limit));
+    const out: PulledPage['docs'] = [];
+    for (const data of page.docs) {
       try {
         const receivedAt = typeof data.receivedAt === 'number' ? data.receivedAt : null;
         out.push({ event: fromEnvelope(data), receivedAt });
@@ -264,7 +284,7 @@ export class FirestoreRemote implements RemoteEvents, RemoteGroups {
         console.warn(err.message);
       }
     }
-    return out;
+    return { docs: out, next: page.next };
   }
 
   /**

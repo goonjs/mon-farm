@@ -7,6 +7,7 @@ import { userFromSignIn } from '../core/user';
 import { MemoryAccountStore } from '../store/account-memory';
 import { MemoryStore } from '../store/memory-store';
 import { backoffMs, FIRST_PULL_DONE, MemoryCursor, PULL_OVERLAP_MS, SyncEngine } from './engine';
+import { RemoteError } from './remote';
 import { FakeRemote, FakeServer } from './fake-remote';
 
 /** The user and group the fixtures record under (`LogBuilder`). */
@@ -194,7 +195,7 @@ describe('pull', () => {
     await p.engine.sync();
     expect(await p.cursor.get()).toBe(2_000_000);
     await p.engine.sync();
-    expect(pull).toHaveBeenLastCalledWith(2_000_000 - PULL_OVERLAP_MS);
+    expect(pull).toHaveBeenLastCalledWith(2_000_000 - PULL_OVERLAP_MS, undefined, expect.any(Number));
   });
 
   it('remembers a first pull that found an empty group, so "never pulled" and "nothing there" differ', async () => {
@@ -204,7 +205,7 @@ describe('pull', () => {
     await p.engine.sync();
     expect(await p.cursor.get()).toBe(FIRST_PULL_DONE);
     await p.engine.sync();
-    expect(pull).toHaveBeenLastCalledWith(0); // never before the epoch
+    expect(pull).toHaveBeenLastCalledWith(0, undefined, expect.any(Number)); // never before the epoch
   });
 
   it('a pull that failed is not a first pull', async () => {
@@ -352,7 +353,7 @@ describe('review fixes', () => {
     const p = await phone();
     p.remote.pull = () => new Promise(() => undefined);
     const first = p.engine.sync();
-    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.advanceTimersByTimeAsync(60_000);
     await first;
     expect(p.engine.status().state).toBe('pending');
   });
@@ -461,7 +462,7 @@ describe('scope and group creation (E01-S09, E02-S02 review gaps)', () => {
     p.remote.offline = true;
 
     await p.engine.sync();
-    expect(p.remote.calls).toEqual([`group:${FIXTURE_GROUP_ID}`]);
+    expect(p.remote.calls).toEqual([]); // not even the group: the server was not reached
     expect(p.engine.status()).toMatchObject({ state: 'pending', pending: 2 });
 
     p.remote.offline = false;
@@ -527,5 +528,143 @@ describe('scope and group creation (E01-S09, E02-S02 review gaps)', () => {
     await p.engine.sync();
     expect(p.remote.calls).toEqual([]);
     expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+});
+
+describe('one bad event never wedges the outbox (review A F1)', () => {
+  it('the server calls one event invalid: the rest go, pulling goes on, the bad one shows as an error and is kept', async () => {
+    const p = await phone();
+    const [a, bad, c] = new LogBuilder('s1', p.deviceId).accept('p1').accept('p1').accept('p1').build();
+    p.remote.invalidIds.add(bad.id);
+    await record(p.store, [a, bad, c]);
+    const other = new LogBuilder('s9', 'dev-other').accept('p1').build()[0];
+    p.server.docs.set(other.id, { event: other, receivedAt: 5 });
+
+    await p.engine.sync();
+    expect([...p.server.docs.keys()].sort()).toEqual([a.id, c.id, other.id].sort());
+    expect((await p.store.pending()).map((e) => e.id)).toEqual([bad.id]); // kept, never dropped
+    expect(await p.store.load('s9')).toEqual([other]); // pulled although the push had a bad event
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid', pending: 1 });
+  });
+
+  it('does not keep re-sending the rejected event on every run; retry() tries it again', async () => {
+    const p = await phone();
+    const [bad, ok] = new LogBuilder('s1', p.deviceId).accept('p1').accept('p1').build();
+    p.remote.invalidIds.add(bad.id);
+    await record(p.store, [bad]);
+    await p.engine.sync();
+    p.remote.calls.length = 0;
+
+    await record(p.store, [ok]);
+    await p.engine.sync();
+    expect(p.remote.batches.at(-1)!.map((e) => e.id)).toEqual([ok.id]); // the bad one is not in the batch
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid', pending: 1 });
+
+    p.remote.invalidIds.clear(); // fixed server side
+    await p.engine.retry();
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+    expect(p.server.docs.has(bad.id)).toBe(true);
+  });
+});
+
+describe('fail fast before writing (review A F3/F4)', () => {
+  it('offline: reads the server first and queues no write at all', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.offline = true;
+    await p.engine.sync();
+    expect(p.remote.checks).toBe(1);
+    expect(p.remote.calls).toEqual([]);
+    expect(p.engine.status()).toMatchObject({ state: 'pending', pending: 1 });
+  });
+
+  it('a database that does not exist is an error state with the events kept, not endless Pending', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.check = async () => {
+      throw new RemoteError('invalid-argument', 'database does not exist');
+    };
+    await p.engine.sync();
+    expect(p.remote.calls).toEqual([]);
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid', pending: 1 });
+    expect(await p.store.pending()).toHaveLength(1);
+  });
+});
+
+describe('pulling a big group (review A F5)', () => {
+  const docs = (n: number) =>
+    Array.from({ length: n }, (_, i) => {
+      const event = new LogBuilder(`s${i}`, 'dev-other').accept('p1').build()[0];
+      return { event, receivedAt: 1_000 + Math.floor(i / 2) }; // pairs share a stamp, as a batch does
+    });
+
+  function engineWith(p: Awaited<ReturnType<typeof phone>>, pullPageSize: number) {
+    const engine = new SyncEngine({ store: p.store, accounts: p.accounts, scope: SCOPE, remote: p.remote, cursor: p.cursor, pullPageSize, random: () => 0 });
+    return engine;
+  }
+
+  it('reads page by page, every doc once even when a page ends inside one timestamp, moving the cursor after each page', async () => {
+    const p = await phone();
+    for (const d of docs(5)) p.server.docs.set(d.event.id, d);
+    const sets: number[] = [];
+    const set = p.cursor.set.bind(p.cursor);
+    p.cursor.set = async (v) => {
+      sets.push(v);
+      await set(v);
+    };
+    const pull = vi.spyOn(p.remote, 'pull');
+
+    await engineWith(p, 2).sync();
+    expect(pull).toHaveBeenCalledTimes(3);
+    expect((await Promise.all(docs(5).map((d) => p.store.load(d.event.saleId)))).flat()).toHaveLength(5);
+    expect(sets).toEqual([1_000, 1_001, 1_002]); // after each page, not once at the end
+  });
+
+  it('a failure on a later page keeps the earlier pages and the next run carries on', async () => {
+    const p = await phone();
+    for (const d of docs(5)) p.server.docs.set(d.event.id, d);
+    const real = p.remote.pull.bind(p.remote);
+    let calls = 0;
+    p.remote.pull = async (...args) => {
+      if (++calls === 2) throw new RemoteError('unavailable');
+      return real(...args);
+    };
+    const engine = engineWith(p, 2);
+    await engine.sync();
+    expect(await p.cursor.get()).toBe(1_000); // page 1 is safe
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect((await Promise.all(docs(5).map((d) => p.store.load(d.event.saleId)))).flat()).toHaveLength(5);
+    engine.stop();
+  });
+
+  it('re-reads no more than two minutes behind the cursor', () => {
+    expect(PULL_OVERLAP_MS).toBeLessThanOrEqual(120_000);
+  });
+});
+
+describe('stop() (review B M2)', () => {
+  it('stops an in-flight run: nothing more is sent or pulled and nobody is told after it', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    let release: () => void = () => undefined;
+    const real = p.remote.push.bind(p.remote);
+    p.remote.push = async (events) => {
+      await new Promise<void>((resolve) => (release = resolve));
+      return real(events);
+    };
+    const heard = vi.fn();
+    const onPulled = vi.fn();
+    const engine = new SyncEngine({ store: p.store, accounts: p.accounts, scope: SCOPE, remote: p.remote, cursor: p.cursor, onPulled, random: () => 0 });
+    engine.subscribe(heard);
+    const pull = vi.spyOn(p.remote, 'pull');
+
+    const run = engine.sync();
+    await vi.advanceTimersByTimeAsync(0);
+    engine.stop();
+    release();
+    await run;
+    expect(pull).not.toHaveBeenCalled();
+    expect(onPulled).not.toHaveBeenCalled();
+    expect(heard).not.toHaveBeenCalled();
   });
 });

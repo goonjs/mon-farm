@@ -14,7 +14,8 @@ import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/
 import { collection, disableNetwork, doc, enableNetwork, getDoc, getDocs, setDoc, setLogLevel, type Firestore } from 'firebase/firestore';
 
 import { newGroup } from '../src/core/group';
-import type { AcceptEvent, GroupId, SaleEvent } from '../src/core/types';
+import { MASTER_SCOPE } from '../src/core/master';
+import type { AcceptEvent, GroupId, MasterEvent, SaleEvent } from '../src/core/types';
 import { userFromSignIn } from '../src/core/user';
 import { uuidv7 } from '../src/lib/id';
 import { MemoryAccountStore } from '../src/store/account-memory';
@@ -82,10 +83,11 @@ interface PhoneOptions {
   readonly groupId?: GroupId;
   readonly wrap?: (layer: FirestoreLayer) => FirestoreLayer;
   readonly ackTimeoutMs?: number;
+  readonly pullPageSize?: number;
 }
 
 /** One phone, signed in as `uid`, talking to the emulator as that user. */
-async function phone(uid: string, { groupId = GID, wrap = (l) => l, ackTimeoutMs }: PhoneOptions = {}) {
+async function phone(uid: string, { groupId = GID, wrap = (l) => l, ackTimeoutMs, pullPageSize }: PhoneOptions = {}) {
   // The test kit types its instance as the compat one; at runtime it is the modular SDK's.
   const db = env.authenticatedContext(uid).firestore() as unknown as Firestore;
   const store = new MemoryStore();
@@ -100,6 +102,7 @@ async function phone(uid: string, { groupId = GID, wrap = (l) => l, ackTimeoutMs
     cursor: new MemoryCursor(),
     random: () => 0,
     ackTimeoutMs,
+    pullPageSize,
   });
   engines.push(engine);
   const record = async (...events: SaleEvent[]) => {
@@ -350,24 +353,64 @@ describe('events the user must not send are never sent', () => {
 });
 
 describe('offline, then back online (SYNC-1, SYNC-2)', () => {
-  it('records while the network is cut, sends by itself when it returns, and the outbox ends empty', async () => {
+  it('records while the network is cut, queues nothing in the SDK, and sends by itself when it returns', async () => {
     await seedMember('alice');
-    const alice = await phone('alice', { ackTimeoutMs: 400 });
+    const alice = await phone('alice', { ackTimeoutMs: 3_000 });
     await disableNetwork(alice.db);
     const events = [basket('alice', alice.deviceId, 1), basket('alice', alice.deviceId, 2)];
     await alice.record(...events);
 
-    await alice.engine.sync(); // no ack: stays in the outbox
+    await alice.engine.sync(); // the server read fails at once: nothing was written, so nothing is queued
     expect(alice.engine.status()).toMatchObject({ state: 'pending', pending: 2 });
     expect(await alice.store.pending()).toHaveLength(2);
 
     await enableNetwork(alice.db);
-    // The SDK delivers the write it queued meanwhile; the engine's retry then
-    // finds those events already there and clears them without sending twice.
-    await alice.engine.sync();
+    await new Promise((r) => setTimeout(r, 300));
+    expect(await serverIds()).toEqual([]); // no stale write landed behind the engine's back
+
     await alice.engine.sync();
     expect(alice.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
     expect(await alice.store.pending()).toEqual([]);
     expect(await serverIds()).toEqual(events.map((e) => e.id).sort());
+  });
+});
+
+describe('what real documents look like (review A: coverage)', () => {
+  it('a master event with Thai text and an emoji survives the trip exactly', async () => {
+    await seedMember('alice');
+    await seedMember('bob');
+    const alice = await phone('alice');
+    const bob = await phone('bob');
+    const person: MasterEvent = {
+      id: uuidv7(),
+      groupId: GID,
+      saleId: MASTER_SCOPE,
+      seq: 1,
+      deviceSeq: 1,
+      ts: 1_790_000_000_000,
+      mono: 5,
+      actor: { userId: 'alice', deviceId: alice.deviceId },
+      source: 'app',
+      kind: 'master',
+      payload: { t: 'person_added', personId: uuidv7(), name: 'สมหญิง ใจดี 🌿 "ตัวอย่าง"', roles: ['tapper'], otherRoles: ['ลูกคนงาน'] },
+    };
+    await alice.record(person);
+    await alice.engine.sync();
+    await bob.engine.sync();
+    expect(await bob.store.load(MASTER_SCOPE)).toEqual([person]);
+  });
+
+  it('a big outbox (60 events: more than the rules\' 20 access calls would allow if each needed a lookup) goes up and comes down in pages', async () => {
+    await seedMember('alice');
+    await seedMember('bob');
+    const alice = await phone('alice');
+    const bob = await phone('bob', { pullPageSize: 7 });
+    const events = Array.from({ length: 60 }, (_, i) => basket('alice', alice.deviceId, i + 1));
+    await alice.record(...events);
+    await alice.engine.sync();
+    expect(await serverIds()).toHaveLength(60);
+
+    await bob.engine.sync();
+    expect(await idsOf(bob)).toEqual(events.map((e) => e.id).sort());
   });
 });

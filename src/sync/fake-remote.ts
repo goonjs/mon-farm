@@ -1,6 +1,14 @@
 import type { CreateGroupOp } from '../core/group';
 import type { EventId, GroupId, SaleEvent, UserId } from '../core/types';
-import { RemoteError, type PulledDoc, type RemoteErrorCode, type RemoteEvents, type RemoteGroups } from './remote';
+import {
+  RemoteError,
+  type PullToken,
+  type PulledDoc,
+  type PulledPage,
+  type RemoteErrorCode,
+  type RemoteEvents,
+  type RemoteGroups,
+} from './remote';
 
 /**
  * An in-memory backend with Firestore's create-only rules, shared by any
@@ -22,6 +30,8 @@ export class FakeServer {
 export class FakeRemote implements RemoteEvents, RemoteGroups {
   /** Every batch `push` received, accepted or not. */
   readonly batches: SaleEvent[][] = [];
+  /** Server reads made by `check()`: they never queue a write. */
+  checks = 0;
   /** `createGroup` and `push` calls in the order they arrived, for ordering tests. */
   readonly calls: string[] = [];
   /** Highest number of pushes in flight at once. */
@@ -30,6 +40,8 @@ export class FakeRemote implements RemoteEvents, RemoteGroups {
   private failures: RemoteErrorCode[] = [];
   private loseAcks = 0;
   offline = false;
+  /** A batch holding any of these is refused as invalid (a malformed or oversized document). */
+  readonly invalidIds = new Set<EventId>();
   /** The rules refuse every write from this client (e.g. no longer a member). */
   denied = false;
 
@@ -51,6 +63,11 @@ export class FakeRemote implements RemoteEvents, RemoteGroups {
     if (code) throw new RemoteError(code);
   }
 
+  async check(): Promise<void> {
+    this.checks += 1;
+    if (this.offline) throw new RemoteError('unavailable', 'offline');
+  }
+
   async createGroup(op: CreateGroupOp): Promise<void> {
     this.calls.push(`group:${op.groupId}`);
     await Promise.resolve();
@@ -70,6 +87,7 @@ export class FakeRemote implements RemoteEvents, RemoteGroups {
       await Promise.resolve();
       this.gate();
       if (this.denied) throw new RemoteError('permission-denied');
+      if (events.some((e) => this.invalidIds.has(e.id))) throw new RemoteError('invalid-argument');
       if (this.server.requireGroups && events.some((e) => !this.server.groups.has(e.groupId))) {
         throw new RemoteError('permission-denied');
       }
@@ -93,10 +111,17 @@ export class FakeRemote implements RemoteEvents, RemoteGroups {
     return this.server.docs.get(id)?.event ?? null;
   }
 
-  async pull(since: number): Promise<PulledDoc[]> {
+  async pull(since: number, after?: PullToken, limit = Infinity): Promise<PulledPage> {
     this.gate();
-    return [...this.server.docs.values()]
+    const last = after as readonly [number, string] | undefined;
+    const sorted = [...this.server.docs.values()]
       .filter((d) => d.receivedAt !== null && d.receivedAt >= since)
-      .sort((a, b) => a.receivedAt! - b.receivedAt!);
+      .sort((a, b) => a.receivedAt! - b.receivedAt! || (a.event.id < b.event.id ? -1 : a.event.id > b.event.id ? 1 : 0));
+    const rest = last
+      ? sorted.filter((d) => d.receivedAt! > last[0] || (d.receivedAt === last[0] && d.event.id > last[1]))
+      : sorted;
+    const docs = rest.slice(0, limit);
+    const tail = docs[docs.length - 1];
+    return { docs, next: rest.length > docs.length ? ([tail.receivedAt!, tail.event.id] as const) : null };
   }
 }
