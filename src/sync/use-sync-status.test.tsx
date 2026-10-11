@@ -9,7 +9,7 @@ import { accountStore as mockAccounts } from '../store/account';
 import { emitAppended } from '../store/append-signal';
 import { setSessionGroup, setSessionUser } from '../store/session';
 import { store as mockStore } from '../store/store';
-import { emitSyncChanged } from './changed';
+import { emitSyncChanged, setEngineStatus } from './changed';
 import { useSyncStatus } from './use-sync-status';
 
 jest.mock('../store/store', () => {
@@ -78,6 +78,23 @@ describe('useSyncStatus', () => {
     emitSyncChanged();
     await flush();
     expect(screen.getByTestId('badge').props.children).toBe('synced:0');
+  });
+
+  it('an engine error is shown as an error, not as pending, and goes away when it recovers', async () => {
+    const { deviceId } = await mockStore.device();
+    await record(new LogBuilder('s4', deviceId).accept('p1').build());
+    render(<Badge />);
+    await flush();
+    expect(screen.getByTestId('badge').props.children).toBe('pending:1');
+
+    setEngineStatus({ state: 'error', pending: 1, error: 'denied' });
+    await flush();
+    expect(screen.getByTestId('badge').props.children).toBe('error:1');
+
+    setEngineStatus({ state: 'pending', pending: 1 });
+    await flush();
+    expect(screen.getByTestId('badge').props.children).toBe('pending:1');
+    setEngineStatus(null);
   });
 
   it('shows a new write at once, without waiting for the screen to be focused again', async () => {

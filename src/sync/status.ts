@@ -21,7 +21,7 @@ import type { EventId, SaleEvent } from '../core/types';
 import type { MessageId } from '../i18n/messages';
 import type { SyncStatus as EngineSyncStatus } from './engine';
 
-export type SyncState = 'synced' | 'pending' | 'conflict';
+export type SyncState = 'synced' | 'pending' | 'error' | 'conflict';
 
 export interface SyncStatus {
   readonly state: SyncState;
@@ -29,15 +29,26 @@ export interface SyncStatus {
   readonly count: number;
 }
 
-export function syncStatusFrom({ pending, conflicts = 0 }: { pending: number; conflicts?: number }): SyncStatus {
+export function syncStatusFrom({
+  pending,
+  conflicts = 0,
+  error = false,
+}: {
+  pending: number;
+  conflicts?: number;
+  /** The sync engine is in an error state: refused by the rules, no database, an event the server rejects. */
+  error?: boolean;
+}): SyncStatus {
   if (conflicts > 0) return { state: 'conflict', count: conflicts };
+  // Not 'pending': waiting for a network is normal, being refused is not, and must not look alike.
+  if (error) return { state: 'error', count: pending };
   if (pending > 0) return { state: 'pending', count: pending };
   return { state: 'synced', count: 0 };
 }
 
 /** The catalogue entry carrying each state's word (with `{n}` where counted). */
 export function syncWordId(state: SyncState): MessageId {
-  return ({ synced: 'sync.synced', pending: 'sync.pending', conflict: 'sync.conflict' } as const)[state];
+  return ({ synced: 'sync.synced', pending: 'sync.pending', error: 'sync.saleError', conflict: 'sync.conflict' } as const)[state];
 }
 
 export type SaleSyncState = 'conflict' | 'error' | 'pending' | 'synced';

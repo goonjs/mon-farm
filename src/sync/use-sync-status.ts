@@ -19,14 +19,14 @@ import { accountStore } from '../store/account';
 import { onAppended } from '../store/append-signal';
 import { sessionGroupId, sessionUserId } from '../store/session';
 import { store } from '../store/store';
-import { onSyncChanged } from './changed';
+import { engineStatus, onSyncChanged } from './changed';
 import { syncStatusFrom, type SyncStatus } from './status';
 
 async function readStatus(): Promise<SyncStatus> {
   const scope = { userId: sessionUserId(), groupId: sessionGroupId() };
   // A group list that cannot be read must not hide the events that can be.
   const [events, ops] = await Promise.all([store.pending(), accountStore.pendingOps().catch(() => [])]);
-  return syncStatusFrom({ pending: waitingCount(scope, events, ops) });
+  return syncStatusFrom({ pending: waitingCount(scope, events, ops), error: engineStatus()?.state === 'error' });
 }
 
 export function useSyncStatus(): SyncStatus | null {

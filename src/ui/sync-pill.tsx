@@ -20,13 +20,14 @@ function tone(t: Theme, state: SyncState) {
   return {
     synced: { bg: t.color.acceptSunk, fg: t.color.statusSynced },
     pending: { bg: t.color.warnSunk, fg: t.color.statusPending },
+    error: { bg: t.color.rejectSunk, fg: t.color.statusConflict },
     conflict: { bg: t.color.rejectSunk, fg: t.color.statusConflict },
   }[state];
 }
 
 function Shape({ state, color }: { state: SyncState; color: string }) {
   const testID = `sync-shape-${state}`;
-  if (state === 'conflict') {
+  if (state === 'conflict' || state === 'error') {
     return (
       <View
         testID={testID}
