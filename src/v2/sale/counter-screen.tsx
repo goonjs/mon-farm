@@ -128,8 +128,9 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const lastIsPart = !!lastBasket && (lastBasket.kind === 'accept' || lastBasket.kind === 'short') && !!lastBasket.partOf;
   const lastKg = lastBasket && (lastBasket.kind === 'accept' || lastBasket.kind === 'short') ? kgText(basketNetG(lastBasket)) : '';
   const count = (input: 'hold' | 'hold-kbd') => {
-    setNotice({ pointId, kind: 'recorded', n: filling && open ? open.basketNo : figs.currentNo, kg: kgText(filling && open ? open.missingG : std) });
-    countFull(input);
+    // Say what was written, and only when something was (a refused count announces nothing).
+    const written = countFull(input);
+    if (written) setNotice({ pointId, kind: 'recorded', n: written.basketNo, kg: kgText(written.netG) });
   };
   const closeOpen = () => open && append({ kind: 'sys', payload: { t: 'basket_closed', basketId: open.rootId, reason: 'scrap' } });
 
@@ -496,9 +497,10 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           )}
         </HoldStage>
       )}
-      {notice !== null && notice.pointId === pointId ? (
-        <View accessibilityLiveRegion="polite" accessibilityRole="alert">
-          {notice.kind !== 'recorded' ? (
+      {/* Always mounted, only its text changes, so web and TalkBack announce each confirmation. */}
+      <View accessibilityLiveRegion="polite" accessibilityRole="alert">
+        {notice !== null && notice.pointId === pointId ? (
+          notice.kind !== 'recorded' ? (
             <IconLine testID="undo-notice" icon={(c) => <Undo color={c} size={13} />}>
               {msg(notice.kind === 'undone-part' ? 'rec.undonePart' : 'rec.undone', { n: notice.n })}
             </IconLine>
@@ -506,9 +508,9 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
             <IconLine testID="count-notice" icon={(c) => <BasketIcon color={c} size={13} />}>
               {msg('rec.recorded', { n: notice.n, kg: notice.kg ?? '' })}
             </IconLine>
-          )}
-        </View>
-      ) : null}
+          )
+        ) : null}
+      </View>
     </FarmScreen>
   );
 }

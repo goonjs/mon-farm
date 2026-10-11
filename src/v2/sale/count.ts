@@ -27,13 +27,15 @@ export function countModel(view: ReturnType<typeof useSaleView>, pointId: string
   const basketTare = filling && open && fill === 'full' ? open.tareG : pile.tareG;
   const ready = canCount(state, pointId) && !closed;
 
-  const count = (input: 'hold' | 'hold-kbd') => {
-    if (!ready || waiting) return;
+  /** What was written (the basket's number and net weight), or null when there was nothing to write — callers announce only a real record. */
+  const count = (input: 'hold' | 'hold-kbd'): { basketNo: number; netG: number } | null => {
+    if (!ready || waiting) return null;
     if (filling && open) {
       append({ kind: 'accept', pileId: pointId, pointId, basketNo: open.basketNo, input, netG: open.missingG, tareG: basketTare, partOf: open.rootId });
-    } else {
-      append({ kind: 'accept', pileId: pointId, pointId, basketNo: figs.currentNo, input, netG: pile.stdNetG, tareG: pile.tareG });
+      return { basketNo: open.basketNo, netG: open.missingG };
     }
+    append({ kind: 'accept', pileId: pointId, pointId, basketNo: figs.currentNo, input, netG: pile.stdNetG, tareG: pile.tareG });
+    return { basketNo: figs.currentNo, netG: pile.stdNetG };
   };
   const early = (heldMs: number) => {
     if (ready) append({ kind: 'reject', pileId: pointId, input: 'hold', reason: 'released-early', heldMs });
