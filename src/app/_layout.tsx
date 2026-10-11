@@ -1,23 +1,16 @@
 import { Stack } from 'expo-router';
 import { View } from 'react-native';
 
-import { StorageWarning } from '../components/StorageWarning';
 import { I18nProvider } from '../i18n';
 import { SpeechProvider } from '../speech';
 import { ThemeProvider } from '../theme';
+import { StorageWarning } from '../v2/storage-warning';
 
 /**
- * Root layout. Theme, language, and speech — there is no sale-wide provider
- * here any more.
- *
- * A sale is now something the app navigates TO (`/sale/[id]/...`), not
- * something baked into every screen from launch. `<SaleProvider>` moved to
- * `src/app/sale/[id]/_layout.tsx`, which reads the id from the route. The
- * screens outside that segment (the sale list, this layout) have no current
- * sale and shouldn't pretend to.
- *
- * All three providers here are device preferences rather than sale data,
- * which is exactly why they sit above the sale segment instead of inside it.
+ * Root layout. Theme, language, and speech — device preferences, not sale
+ * data, so they sit above every route. The app opens on the splash at `/`,
+ * which hands over to the v2 home (`/v2`); the storage warning (E01-S03)
+ * sits above whatever screen is showing.
  */
 export default function RootLayout() {
   return (

@@ -5,7 +5,7 @@ push to CI and an independent review, neither authorized.
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: Legacy (PRD v0.4) — ไม่มี epic v1.0 รองรับโดยตรง รอเจ้าของตัดสิน; ดู `docs/prd.md` NFR
 - Owner instruction: "make sure this app allow vertical mode in mobile or
   tablet too."
 - Placed before S6/S9/S11/S13 deliberately — authoring the remaining screens

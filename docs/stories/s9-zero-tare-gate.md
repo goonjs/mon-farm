@@ -5,7 +5,7 @@ push to CI and an independent review, neither authorized.
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: `docs/epics/e04-sale-weighing.md`
 - Related PRD section(s): FR-3, F-21 (`docs/ux/counter-screen-findings.md`)
 - Design reference: `docs/ux/mvp-screens.html` screen 2
 - Depends on: S3 (the `zero_check`/`tare_confirmed`/`ready` events and the

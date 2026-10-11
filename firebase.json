@@ -8,10 +8,11 @@
         "**/.*",
         "**/node_modules/**"
       ],
+      "cleanUrls": true,
       "rewrites": [
         {
           "source": "**",
-          "destination": "/index.html"
+          "destination": "/+not-found.html"
         }
       ],
       "headers": [
@@ -25,7 +26,25 @@
           ]
         },
         {
-          "source": "/index.html",
+          "source": "/",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "**/!(*.*)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "**/*.html",
           "headers": [
             {
               "key": "Cache-Control",
@@ -43,10 +62,11 @@
         "**/.*",
         "**/node_modules/**"
       ],
+      "cleanUrls": true,
       "rewrites": [
         {
           "source": "**",
-          "destination": "/index.html"
+          "destination": "/+not-found.html"
         }
       ],
       "headers": [
@@ -60,7 +80,25 @@
           ]
         },
         {
-          "source": "/index.html",
+          "source": "/",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "**/!(*.*)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "**/*.html",
           "headers": [
             {
               "key": "Cache-Control",

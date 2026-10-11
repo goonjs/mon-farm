@@ -5,7 +5,7 @@ push to CI and an independent review, neither authorized.
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: `docs/epics/e03-master-data.md`
 - Related PRD section(s): FR-1 (partial — the smallest possible slice: id + name)
 - Depends on: S15 (per-zone contracts reference `PersonId`)
 - Owner feedback that prompted this story: worker identity should be a

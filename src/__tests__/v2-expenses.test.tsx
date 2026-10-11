@@ -1,0 +1,213 @@
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import type { ReactNode } from 'react';
+
+import { ExpenseFormScreen as ExpenseScreen } from '../v2/money/expense-form-screen';
+import { ExpensesScreen } from '../v2/money/expenses-screen';
+import { OwedScreen } from '../v2/money/owed-screen';
+import { RepayScreen } from '../v2/money/repay-screen';
+import { projectFinance } from '../core/finance/ledger';
+import type { ExpenseFields, FinanceEvent } from '../core/finance/types';
+import { financeStore as mockFinance } from '../store/finance';
+import { wrap } from '../test/render';
+
+jest.mock('../store/finance', () => {
+  const { MemoryFinanceStore } = jest.requireActual('../store/finance-memory');
+  return { financeStore: new MemoryFinanceStore() };
+});
+jest.mock('../store/people', () => {
+  const { MemoryPeopleStore } = jest.requireActual('../store/people-memory');
+  return { peopleStore: new MemoryPeopleStore() };
+});
+jest.mock('../store/store', () => {
+  const { MemoryStore } = jest.requireActual('../store/memory-store');
+  return { store: new MemoryStore() };
+});
+
+// Built inside the factory: jest.mock is hoisted above any outer const.
+jest.mock('expo-router', () => {
+  const params: { current: Record<string, string> } = { current: {} };
+  return {
+    Link: ({ children }: { children: ReactNode }) => children,
+    useFocusEffect: () => undefined,
+    useLocalSearchParams: () => params.current,
+    router: { replace: jest.fn(), push: jest.fn(), back: jest.fn(), canGoBack: () => false },
+    __params: params,
+  };
+});
+const { router: mockRouter, __params: mockParams } = jest.requireMock('expo-router') as {
+  router: { replace: jest.Mock; push: jest.Mock };
+  __params: { current: Record<string, string> };
+};
+
+async function flush() {
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 0));
+  });
+}
+
+async function state() {
+  return projectFinance(await mockFinance.load());
+}
+
+let seq = 0;
+async function seedExpense(id: string, over: Partial<ExpenseFields>) {
+  seq += 1;
+  const e: FinanceEvent = {
+    id: `seed-${seq}`,
+    deviceSeq: seq,
+    ts: seq,
+    actor: { userId: 'u', deviceId: 'dev-other' },
+    source: 'app',
+    targetId: id,
+    baseEventId: null,
+    payload: {
+      t: 'expense_created',
+      fields: { amountSatang: 1000, date: '2026-09-01', stage: 'actual', categoryId: null, propertyId: null, item: '', note: '', payer: null, ...over },
+    },
+  };
+  await mockFinance.append(e);
+}
+
+const SOMWANG = { id: 'p-somwang', name: 'อาจารย์สมหวัง' };
+
+describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
+  beforeEach(() => {
+    mockParams.current = { id: 'new' };
+    mockRouter.replace.mockClear();
+  });
+
+  it('saves with only amount + date, stage defaults to actual, all nine categories offered', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    for (const id of ['fertilizer', 'labour', 'fuel', 'herbicide', 'travel', 'salary', 'worker-aid', 'repair', 'other']) {
+      expect(screen.getByTestId(`expense-cat-cat-${id}`)).toBeTruthy();
+    }
+    fireEvent.changeText(screen.getByTestId('expense-amount'), '640');
+    fireEvent.changeText(screen.getByTestId('expense-date'), '2026-09-28');
+    await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
+    await flush();
+
+    const s = await state();
+    const x = s.expenses.find((e) => e.amountSatang === 64000);
+    expect(x).toMatchObject({ amountSatang: 64000, date: '2026-09-28', stage: 'actual' });
+    expect(mockRouter.replace).toHaveBeenCalledWith('/v2/expenses');
+  });
+
+  it('refuses committed without an amount; planned may be "unknown"', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-stage-committed'));
+    await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
+    expect(screen.getByTestId('expense-amount-error')).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId('expense-stage-planned'));
+    fireEvent.press(screen.getByTestId('expense-unknown'));
+    fireEvent.changeText(screen.getByTestId('expense-date'), '2026-11-15');
+    await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
+    await flush();
+    const s = await state();
+    expect(s.expenses.some((e) => e.stage === 'planned' && e.amountSatang === null && e.date === '2026-11-15')).toBe(true);
+  });
+
+  it('a payer other than farm funds previews what the farm will owe back', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    fireEvent.changeText(screen.getByTestId('expense-amount'), '400');
+    fireEvent.press(screen.getByTestId('expense-payer-add'));
+    fireEvent.changeText(screen.getByTestId('expense-payer-name'), 'นัด');
+    await act(async () => fireEvent.press(screen.getByTestId('expense-payer-add-save')));
+    await flush();
+    expect(screen.getByTestId('owed-preview')).toBeTruthy();
+    expect(screen.getByText('400.00 บาท')).toBeTruthy();
+  });
+
+  it('adds a category from the form', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-cat-add'));
+    fireEvent.changeText(screen.getByTestId('expense-cat-name'), 'ค่าไฟ');
+    await act(async () => fireEvent.press(screen.getByTestId('expense-cat-save')));
+    await flush();
+    expect((await state()).categories.map((c) => c.name)).toContain('ค่าไฟ');
+  });
+});
+
+describe('expense list (F4, F7)', () => {
+  it('bulk-sets the payer on expenses with none, and the farm then owes them', async () => {
+    await seedExpense('bulk-1', { amountSatang: 200000, date: '2026-09-20' });
+    await seedExpense('bulk-2', { amountSatang: 150000, date: '2026-09-20' });
+    wrap(<ExpensesScreen />);
+    await flush();
+
+    fireEvent.press(screen.getByTestId('filter-payer-missing'));
+    fireEvent.press(screen.getByTestId('expense-bulk-1'));
+    fireEvent.press(screen.getByTestId('expense-bulk-2'));
+    fireEvent.press(screen.getByTestId('bulk-payer-add'));
+    fireEvent.changeText(screen.getByTestId('bulk-payer-name'), 'เจ้าของสวน');
+    await act(async () => fireEvent.press(screen.getByTestId('bulk-payer-add-save')));
+    await flush();
+    expect(screen.getByText(/3,500\.00/)).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('bulk-payer-save')));
+    await flush();
+
+    const s = await state();
+    const owed = s.reimbursements.filter((r) => r.expenseId.startsWith('bulk-'));
+    expect(owed.map((r) => r.originalSatang).sort()).toEqual([150000, 200000]);
+    expect(owed.every((r) => r.to.name === 'เจ้าของสวน')).toBe(true);
+  });
+});
+
+describe('repayment (E11-S03)', () => {
+  beforeAll(async () => {
+    await seedExpense('rp-a', { amountSatang: 80000, date: '2026-09-15', payer: SOMWANG });
+    await seedExpense('rp-b', { amountSatang: 40000, date: '2026-09-22', payer: SOMWANG });
+  });
+
+  it('refuses more than is owed', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    fireEvent.changeText(screen.getByTestId('repay-amount'), '1300');
+    expect(screen.getByTestId('repay-amount-error')).toBeTruthy();
+  });
+
+  it('one amount over two debts, oldest first, from farm funds by default', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    fireEvent.changeText(screen.getByTestId('repay-amount'), '1000');
+    await act(async () => fireEvent.press(screen.getByTestId('repay-save')));
+    await flush();
+
+    const s = await state();
+    const a = s.reimbursements.find((r) => r.expenseId === 'rp-a');
+    const b = s.reimbursements.find((r) => r.expenseId === 'rp-b');
+    expect(a).toMatchObject({ remainingSatang: 0, status: 'repaid' });
+    expect(b).toMatchObject({ remainingSatang: 20000, status: 'partial' });
+    expect(s.repayments[s.repayments.length - 1].from.id).toBe('farm');
+  });
+
+  it('the owed page totals what is left per person', async () => {
+    wrap(<OwedScreen />);
+    await flush();
+    expect(screen.getByTestId(`owed-amount-${SOMWANG.id}`).props.children).toBe('200.00');
+  });
+});
+
+describe('Save sits in the header (keyboard never covers it)', () => {
+  it('expense-save renders inside screen-header', async () => {
+    mockParams.current = { id: 'new' };
+    wrap(<ExpenseScreen />);
+    await flush();
+    expect(within(screen.getByTestId('screen-header')).getByTestId('expense-save')).toBeTruthy();
+  });
+
+  it('repay-save renders inside screen-header and keeps its total while saving', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    fireEvent.changeText(screen.getByTestId('repay-amount'), '100');
+    const btn = within(screen.getByTestId('screen-header')).getByTestId('repay-save');
+    expect(btn.props.accessibilityLabel).toContain('100.00');
+  });
+});

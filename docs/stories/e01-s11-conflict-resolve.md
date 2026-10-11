@@ -1,6 +1,6 @@
 # Story E01-S11: ตรวจจับ Conflict + หน้าจอให้เจ้าของเลือก
 
-Status: Ready
+Status: In Progress
 
 ## Context
 
@@ -54,6 +54,21 @@ Status: Ready
 
 ## Dev notes
 
+### 2026-10-09 (overnight, team INFRA) — core เท่านั้น
+
+- `src/core/conflicts.ts`: `foldRecord` (กราฟ `baseEventId`/`alsoBasedOn`, head, ค่า base ของ ancestor ร่วม, กฎ D-30
+  ต่อฟิลด์, ลบ vs แก้, change ที่มาก่อน base = รอ), `resolution` (based on ทุก head), `blockingConflicts`
+- ยังไม่ทำ: AC1 (event การแก้ทุกตัวยังไม่มี `baseEventId` — ต้องแก้ envelope/projection), ต่อเข้า projection,
+  หน้าจอตัดสิน 3 ตัวเลือก (D-39), integration บน emulator; registry ฟิลด์ strict ใน `STRICT_FIELDS` เป็นชุดเริ่มต้นที่ต้องตรวจกับ
+  payload จริงเมื่อ envelope มา
+
 ## Code review
+
+- 2026-10-09 independent review (separate agent, read-only), fixed in e64fe1a: pull/fetch had no timeout (the engine
+  could hang forever) → 30-second timeout; a corrupt doc's error vanished on the next run → its id is kept until `retry()`
+  re-checks it (`integrityIds()`); unhandled rejections from timers; one refused event held back the whole outbox;
+  `stop()` didn't stop retries; the cursor could move backwards; conflict options nested in two lines were lost.
+  Not fixed (minor): `unauthenticated` retries forever with no token refresh (needs login E02-S01); the first full
+  download is not paged; `foldRecord` recurses once per event in the chain
 
 ## QA notes

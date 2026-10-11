@@ -5,7 +5,7 @@ push to CI and an independent review, neither authorized.
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: Legacy (PRD v0.4) — ไม่มี epic v1.0 รองรับโดยตรง รอเจ้าของตัดสิน; ดู `docs/prd.md` NFR
 - Depends on: S15 (per-zone contracts), S16 (people store)
 - Owner instruction: no hardcoded or seeded data in the app.
 

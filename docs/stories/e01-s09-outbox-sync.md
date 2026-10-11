@@ -1,6 +1,6 @@
 # Story E01-S09: sync อัตโนมัติ — outbox ส่งขึ้น + ดึงลง
 
-Status: Ready
+Status: In Progress
 
 ## Context
 
@@ -39,6 +39,33 @@ sync engine หลัง port (`RemoteEvents`): ส่ง `pending()` ขึ้�
 
 ## Dev notes
 
+### 2026-10-09 (overnight, team INFRA) — engine ส่วนแรก
+
+- สร้างแล้ว: port `RemoteEvents` (`src/sync/remote.ts`), `SyncEngine` (`src/sync/engine.ts`), `FakeRemote`/`FakeServer`
+  (rules แบบ create-only), `EventStore.insertPulled` ทั้ง memory / IndexedDB / SQLite (เก็บตามที่ได้รับ ไม่ renumber,
+  เป็น synced ทันที, ของเราที่ ack หายถูกเอาออกจาก outbox)
+- ทำตาม architecture §Sync engine: batch ≤ 500 ทีละ batch, รอ ack 30 วินาที, `permission-denied` → ส่งทีละตัว + `fetch`
+  เทียบ canonical JSON, error ชั่วคราว → backoff 2 วิ → 60 วิ + jitter (แสดงเป็น Pending), error ถาวร → `error` + รอ
+  `retry()`, pull ซ้อน 10 นาที, cursor เลื่อนหลังเขียนในเครื่องเสร็จ, doc เสียข้ามแล้วไปต่อ, `poke()` debounce 2 วิ
+- Vitest ครอบ AC1–AC6 กับ fake remote (`src/sync/engine.test.ts`) และ contract `insertPulled` ทุก adapter ที่รันได้ใน node
+- **ยังไม่ได้ทำ / ติด**: adapter Firestore จริง — rules (E01-S08) ต้องการ envelope (`schema`, `groupId`, `targetId`,
+  `payload`, `actor.userId == uid`) ที่ event ในเครื่องยังไม่มี และต้องมี login (E02-S01) + group id (E02-S02) และ
+  database `dev` (D-48); ยังไม่ต่อ trigger ในแอป (เปิดแอป / online / AppState) เพราะยังไม่มี remote ให้ต่อ;
+  integration บน emulator และ Playwright offline→online รอ adapter
+- `insertPulled` บน SQLite ยังไม่ได้รันบนเครื่องจริง (E01-S06)
+- **ต้องทำเมื่อต่อ sync (2026-10-10)**: ตัวช่วยตั้งค่าจุดชั่ง (`/v2/points-wizard`) เปิดให้ใช้ซ้ำได้เสมอ และเดิมมี gate
+  `showStarterButton` (รอ first pull) ที่เอาออกแล้วเพราะยังไม่มี sync — เมื่อมี sync ต้องให้ตัวช่วยรอ first pull ก่อนสร้างจุด
+  ไม่งั้นสองเครื่องที่ออฟไลน์อาจสร้าง "จุด 1" ซ้ำกัน
+- cursor ของ pull เก็บถาวรใน store (`syncCursor` ใน `meta` ทั้ง IndexedDB และ SQLite ไม่ต้องขึ้น version) ใช้ผ่าน
+  `storeCursor(store)` — เปิดแอปใหม่ดึงต่อจากเดิม ไม่ดาวน์โหลดทั้งกลุ่มซ้ำ
+
 ## Code review
+
+- 2026-10-09 independent review (separate agent, read-only), fixed in e64fe1a: pull/fetch had no timeout (the engine
+  could hang forever) → 30-second timeout; a corrupt doc's error vanished on the next run → its id is kept until `retry()`
+  re-checks it (`integrityIds()`); unhandled rejections from timers; one refused event held back the whole outbox;
+  `stop()` didn't stop retries; the cursor could move backwards; conflict options nested in two lines were lost.
+  Not fixed (minor): `unauthenticated` retries forever with no token refresh (needs login E02-S01); the first full
+  download is not paged; `foldRecord` recurses once per event in the chain
 
 ## QA notes

@@ -24,8 +24,9 @@ export default defineConfig({
     // `src/speech/*.test.ts` (S10) is the port and the announcer — pure, no RN
     // import — never the `speaker.web.ts` / `speaker.native.ts` adapters,
     // which belong to the component/e2e tier exactly as `store.web.ts` /
-    // `store.native.ts` do.
-    include: ['scripts/*.test.ts', 'src/lib/*.test.ts', 'src/core/**/*.test.ts', 'src/store/*.test.ts', 'src/i18n/*.test.ts', 'src/speech/*.test.ts'],
+    // `store.native.ts` do. `src/sync/*.test.ts` is the pure sync-status
+    // derivation behind the header pill — no store, no React.
+    include: ['scripts/*.test.ts', 'src/lib/*.test.ts', 'src/core/**/*.test.ts', 'src/store/*.test.ts', 'src/i18n/*.test.ts', 'src/speech/*.test.ts', 'src/sync/*.test.ts'],
     environment: 'node',
     globals: false,
     coverage: {

@@ -13,12 +13,13 @@
  * app falls back to memory and says so (`isDurable`).
  */
 
-import { checkAppend, type DeviceState } from './append-rule';
+import { checkAppend, checkPulled, type DeviceState } from './append-rule';
 import { markNotDurable } from './durability';
 import { IntegrityError } from './errors';
 import { MemoryStore } from './memory-store';
 import type { EventStore } from './store';
 import { compareEvents } from '../core/order';
+import { MASTER_SCOPE } from '../core/master';
 import type { EventId, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
 
@@ -44,8 +45,10 @@ interface Meta extends DeviceState {
 
 /**
  * v0.4 sale-log keys (architecture §ข้อมูลเก่า), plus the `mon-farm-v1:`
- * localStorage keys E01-S02 used briefly on dev builds. Farm/people keys stay
- * until E03.
+ * localStorage keys E01-S02 used briefly on dev builds. S16's people list
+ * (`mon-farm:people`) is no longer read since E03-S01 but is deliberately
+ * left in place — clearing it is irreversible and the owner decides when;
+ * the farm-profile key stays until E03 moves it.
  */
 const LEGACY_EXACT = ['mon-farm:sales', 'mon-farm:synced', 'mon-farm:locale'];
 const LEGACY_PREFIXES = ['mon-farm:events:', 'mon-farm-v1:'];
@@ -215,12 +218,53 @@ export class IndexedDbStore implements EventStore {
     await done;
   }
 
+  async insertPulled(event: SaleEvent): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction('events', 'readwrite');
+    const events = tx.objectStore('events');
+    const done = committed(tx);
+    try {
+      const existing = (await request(events.get(event.id))) as EventRecord | undefined;
+      if (checkPulled(event, existing?.event)) {
+        events.add({
+          id: event.id,
+          saleId: event.saleId,
+          ts: event.ts,
+          deviceSeq: event.deviceSeq,
+          pending: 0,
+          event,
+        } satisfies EventRecord);
+      } else if (existing?.pending) {
+        events.put({ ...existing, pending: 0 } satisfies EventRecord);
+      }
+    } catch (err) {
+      tx.abort();
+      await done.catch(() => undefined);
+      throw err;
+    }
+    await done;
+  }
+
+  // In `meta` under its own key: no schema change, no version bump.
+  async syncCursor(): Promise<number> {
+    const db = await this.open();
+    const v = await request(db.transaction('meta', 'readonly').objectStore('meta').get('syncCursor'));
+    return typeof v === 'number' ? v : 0;
+  }
+
+  async setSyncCursor(value: number): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction('meta', 'readwrite');
+    tx.objectStore('meta').put(value, 'syncCursor');
+    await committed(tx);
+  }
+
   async listSales(): Promise<string[]> {
     const db = await this.open();
     const tx = db.transaction('events', 'readonly');
     const rows = (await request(tx.objectStore('events').getAll())) as EventRecord[];
     const firstTs = new Map<string, number>();
-    for (const r of rows) firstTs.set(r.saleId, Math.min(firstTs.get(r.saleId) ?? Infinity, r.ts));
+    for (const r of rows) if (r.saleId !== MASTER_SCOPE) firstTs.set(r.saleId, Math.min(firstTs.get(r.saleId) ?? Infinity, r.ts));
     return [...firstTs.keys()].sort((a, b) => firstTs.get(b)! - firstTs.get(a)!);
   }
 
@@ -288,6 +332,15 @@ export class WebStore implements EventStore {
   }
   async markSynced(ids: readonly EventId[]) {
     return (await this.pick()).markSynced(ids);
+  }
+  async insertPulled(event: SaleEvent) {
+    return (await this.pick()).insertPulled(event);
+  }
+  async syncCursor() {
+    return (await this.pick()).syncCursor();
+  }
+  async setSyncCursor(value: number) {
+    return (await this.pick()).setSyncCursor(value);
   }
   async listSales() {
     return (await this.pick()).listSales();

@@ -23,8 +23,9 @@
 
 import * as SQLite from 'expo-sqlite';
 
-import { checkAppend, type DeviceState } from './append-rule';
+import { checkAppend, checkPulled, type DeviceState } from './append-rule';
 import type { EventStore } from './store';
+import { MASTER_SCOPE } from '../core/master';
 import type { EventId, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
 
@@ -166,10 +167,55 @@ export class SqliteStore implements EventStore {
     });
   }
 
+  insertPulled(event: SaleEvent): Promise<void> {
+    return this.serial(async () => {
+      const db = await this.open();
+      await db.withExclusiveTransactionAsync(async (txn) => {
+        const row = await txn.getFirstAsync<{ body: string }>(`SELECT body FROM events WHERE id = ?`, event.id);
+        if (!checkPulled(event, row ? (JSON.parse(row.body) as SaleEvent) : undefined)) {
+          await txn.runAsync(`UPDATE events SET synced_at = ? WHERE id = ? AND synced_at IS NULL`, Date.now(), event.id);
+          return;
+        }
+        await txn.runAsync(
+          `INSERT INTO events (id, sale_id, device_id, device_seq, user_id, kind, seq, ts, body, synced_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          event.id,
+          event.saleId,
+          event.actor.deviceId,
+          event.deviceSeq,
+          event.actor.userId,
+          event.kind,
+          event.seq,
+          event.ts,
+          JSON.stringify(event),
+          Date.now(),
+        );
+      });
+    });
+  }
+
+  async syncCursor(): Promise<number> {
+    const db = await this.open();
+    const row = await db.getFirstAsync<{ value: string }>(`SELECT value FROM meta WHERE key = 'syncCursor'`);
+    return row ? Number(row.value) : 0;
+  }
+
+  setSyncCursor(value: number): Promise<void> {
+    return this.serial(async () => {
+      const db = await this.open();
+      await db.runAsync(
+        `INSERT INTO meta (key, value) VALUES ('syncCursor', ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+        String(value),
+      );
+    });
+  }
+
   async listSales(): Promise<string[]> {
     const db = await this.open();
     const rows = await db.getAllAsync<{ sale_id: string; started: number }>(
-      `SELECT sale_id, MIN(ts) AS started FROM events GROUP BY sale_id ORDER BY started DESC`,
+      `SELECT sale_id, MIN(ts) AS started FROM events WHERE sale_id != ? GROUP BY sale_id ORDER BY started DESC`,
+      MASTER_SCOPE,
     );
     return rows.map((r) => r.sale_id);
   }

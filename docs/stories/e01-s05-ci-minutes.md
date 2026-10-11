@@ -18,11 +18,11 @@ Status: In Progress
 
 - [ ] job `changes` ราคาถูก: PR ที่แก้เฉพาะเอกสาร (`docs/**`, `*.md`) ข้าม verify/e2e แต่ check ที่บังคับยังผ่าน (ไม่ขวาง merge) (NFR-6)
 - [ ] ลำดับ `changes → verify → e2e` ทีละขั้น, ขั้นแรกแดง → ขั้นต่อไปไม่รัน, ทุก job มี `timeout-minutes`
-- [ ] e2e ใช้ `dist/` ที่ verify build ไว้ (artifact) ไม่ build ซ้ำ
-- [ ] cache Playwright browsers ตามเวอร์ชันใน lockfile; รอบที่ cache hit ไม่ดาวน์โหลดใหม่
-- [ ] trigger ยังเป็น `push: [dev, main]` + `pull_request` (PR รันครั้งเดียว; merge เข้า dev/main ตรวจซ้ำ)
+- [x] e2e ใช้ `dist/` ที่ verify build ไว้ (artifact) ไม่ build ซ้ำ
+- [x] cache Playwright browsers ตามเวอร์ชันใน lockfile; รอบที่ cache hit ไม่ดาวน์โหลดใหม่
+- [x] trigger ยังเป็น `push: [dev, main]` + `pull_request` (PR รันครั้งเดียว; merge เข้า dev/main ตรวจซ้ำ)
 - [x] ประเมิน bun: เทียบเวลา install กับ `npm ci` บน runner, ตรวจ dependency tree + `trustedDependencies`, เขียนข้อเสนอใน Dev notes — ปิดด้วย ADR 0002 (เจ้าของรับผล POC จาก sandbox แทนการวัดบน runner, 2026-10-03)
-- [ ] บันทึกนาที CI ก่อน/หลัง (median 3 รอบ) ใน Dev notes
+- [x] บันทึกนาที CI ก่อน/หลัง (median 3 รอบ) ใน Dev notes
 
 ## Offline / sync behavior
 
@@ -113,6 +113,35 @@ median PR เอกสารล้วน = **5.3 นาที → คิดเ�
 
 - ประเมิน bun: ผล POC และข้อเสนออยู่ที่ `docs/adr/0002-bun-package-manager-ci.md` (Accepted 2026-10-03: คง npm — เจ้าของรับผล POC จาก sandbox, AC ปิดแล้ว)
 
+
+### นาที CI หลังเปลี่ยน (2026-10-09, overnight team INFRA — วัดจาก run บน GitHub)
+
+| run | ประเภท | job (wall-clock → นาทีคิดเงิน) | รวมคิดเงิน |
+|---|---|---|---|
+| #229 / #228 / #227 | PR เอกสารล้วน | `changes` 0.3 / 0.5 / 0.2 นาที → 1 | **1 นาที** (เดิม 6) |
+| #211 | PR โค้ด | changes 0:09 → 1 · verify 3:07 → 4 · e2e 4:43 → 5 · preview 0:52 → 1 | 11 |
+| #208 | PR โค้ด | changes 0:11 → 1 · verify 3:15 → 4 · e2e 3:31 → 4 · preview 0:45 → 1 | 10 |
+| #205 | PR โค้ด | changes 0:10 → 1 · verify 3:11 → 4 · e2e 4:46 → 5 · preview 0:52 → 1 | 11 |
+
+- median PR เอกสารล้วน: **6 → 1 นาทีคิดเงิน** (เป้าหลักของ story)
+- median PR โค้ด: **6 → 11 นาทีคิดเงิน** — ไม่ใช่เพราะการแยก job อย่างเดียว: ตั้งแต่ baseline เพิ่ม Firestore rules test
+  (~20 วิ + JDK), e2e โตขึ้น (150 → ~210–280 วิ), preview deploy (~1 นาที) และการปัดขึ้นต่อ job 4 job;
+  ต้นทุนของการแยกเองคือ `npm ci` ซ้ำใน e2e (~22–38 วิ) + การปัด
+- cache Playwright: ทั้งสามรอบ "Install Playwright browsers" = skipped (cache hit) เหลือ `install-deps` ~15–24 วิ
+- (ผลพลอยได้) ทั้งสามรอบ job `preview` deploy channel สำเร็จ — preview ต่อ PR ทำงานจริงบน CI แล้ว
+- แก้ (2026-10-09): artifact `playwright-results` อัปโหลดว่างเพราะ `e2e/.results` เป็นโฟลเดอร์ซ่อนและ
+  upload-artifact v4 ข้ามไฟล์ซ่อน (#45 เจอ) → `include-hidden-files: true` + test `scripts/ci-workflow.test.ts`
+  (เห็นแดงก่อน)
+- AC1 / AC2 ยังไม่ติ๊ก: ส่วนข้าม docs เห็นจริงแล้ว (ข้างบน) แต่ "check ที่บังคับยังผ่าน" ขึ้นกับ branch protection (D8, เจ้าของ;
+  repo private แบบ free อาจตั้ง required check ไม่ได้) และ "ขั้นแรกแดง → ขั้นต่อไปไม่รัน" ยังไม่ได้พิสูจน์บน CI
+- review อิสระ (devops-ci-engineer, 2026-10-09): approve; แก้ตาม: test เปลี่ยนเป็น "ทุก upload-artifact ทุก workflow ระบุ
+  `include-hidden-files`" (แยก step ทุกรูปแบบ, ตัด comment) และใส่ให้ upload screenshots ด้วย; หมายเหตุ: ตัวเลข e2e 150 วิ ของ baseline
+  เป็นเวลาขั้น test ส่วน 210–280 วิ เป็นเวลาทั้ง job — เทียบตรง ๆ ไม่ได้; `e2e/data-states.spec.ts` เขียน screenshot ไป
+  `docs/stories/screenshots/` ซึ่งไม่ถูกอัปโหลด
+- ยังเปิด: test plan "ทำ typecheck แดงโดยตั้งใจ → e2e ไม่รัน" ยังไม่ได้รันจริงบน CI (ต้อง push PR ทดสอบ); branch protection
+  (`changes` เป็น required check, D8) เจ้าของตั้งเอง
+- ข้อเสนอถ้าจะลดนาที PR โค้ดต่อ: รวม `e2e` เข้า `verify` (ตัด `npm ci` ซ้ำ + การปัด 1 job ≈ −1–2 นาที) แลกกับ fail-fast
+  ระหว่างสองขั้น — ไม่ได้ทำ ให้เจ้าของเลือก
 
 ## Code review
 
