@@ -96,8 +96,8 @@ export function SaleOptionSheets({ view, open, onClose }: { view: View_; open: O
       <BottomSheet open={open === 'info'} onClose={onClose} title={msg('opt.infoTitle')} testID="info-sheet">
         <View style={{ gap: t.space.xs }}>
           {row(msg('start.date'), state.startedTs ? formatThaiDate(state.startedTs, era) : msg('v2s.notRecorded'), 'info-date')}
-          {row(msg('start.buyer'), state.parties?.buyer || msg('start.noBuyer'), 'info-buyer')}
-          {row(msg('start.manager'), state.parties?.manager || msg('start.noBuyer'), 'info-manager')}
+          {row(msg('start.buyer'), state.parties?.buyer || msg('opt.noValue'), 'info-buyer')}
+          {row(msg('start.manager'), state.parties?.manager || msg('opt.noValue'), 'info-manager')}
           {row(msg('opt.infoPrice'), current === null ? msg('opt.infoNotSet') : msg('v2s.perKg', { price: formatSatang(current) }), 'info-price')}
           {pair ? row(msg('start.pair'), `${msg('v2f.kg', { n: pair.netG / 1000 })} · ${msg('v2s.basketKg', { n: pair.basketG / 1000 })}`, 'info-pair') : null}
           {row(msg('opt.infoNumbering'), msg(view.mode === 'per-tapper' ? 'saleSettings.perTapper' : 'saleSettings.perPoint'), 'info-numbering')}

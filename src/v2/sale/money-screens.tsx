@@ -297,7 +297,7 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
   const accounts = projectAccounts(fin.events);
   const choice = accounts.choiceFor(saleId);
   const account = choice?.kind === 'account' ? accounts.accounts.find((a) => a.id === choice.accountId && !a.deleted) ?? null : null;
-  const hereAll = (id: string) => (money.debts.get(id)?.payments ?? []).filter((p) => p.saleId === saleId && !p.deleted);
+  const hereAll = (id: string) => (money.debts.get(id)?.payments ?? []).filter((p) => p.saleId === saleId && !p.deleted && p.counts);
   const here = (id: string) => hereAll(id).filter((p) => p.method !== 'netting');
   const cashIn = money.tappers.flatMap((tp) => here(tp.id).filter((p) => p.method === 'cash-from-share').map((p) => ({ name: tp.name, satang: p.amountSatang })));
   const farmPayer = { id: FARM_FUNDS, name: msg('fin.payer.farm') };
@@ -331,8 +331,9 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
         const repaymentId = newId('rep-');
         const plan = nettingPayloads({ worker: { id: who.id, name: who.name }, farm: farmPayer, owed: owedList, amountSatang: net, saleId, date: todayIso(), repaymentId });
         if (!plan.ok) return;
-        await fin.write(repaymentId, null, plan.repayment);
+        // The debt payment counts only with its repayment, so writing it first means a stop between the two changes nothing.
         await fin.write(newId('dpay-'), null, plan.debtPayment);
+        await fin.write(repaymentId, null, plan.repayment);
       }
       if (typed > 0) {
         await fin.write(newId('dpay-'), null, {
@@ -347,9 +348,10 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
   const undoDeduct = (p: { id: string; headEventId: string; method: DebtPaymentMethod; repaymentId?: string }) =>
     flight.run(async () => {
       if (view.closed) return;
-      await fin.write(p.id, p.headEventId, { t: 'debt_payment_changed', patch: { deleted: true } });
+      // Repayment first: a netting payment stops counting with it, so a stop between the two leaves nothing half-done.
       const rep = p.method === 'netting' && p.repaymentId ? fin.state?.repayments.find((r) => r.id === p.repaymentId) : undefined;
       if (rep) await fin.write(rep.id, rep.headEventId, { t: 'repayment_changed', patch: { deleted: true } });
+      await fin.write(p.id, p.headEventId, { t: 'debt_payment_changed', patch: { deleted: true } });
       bump();
     });
 
@@ -694,7 +696,7 @@ function PaymentBody({ bump }: { bump: () => void }) {
   // Close only when every pile adds up and the rounding was answered (review #6), with
   // no tick in conflict (#5) and nothing deducted over a share (D-61).
   const sum = (m: DebtPaymentMethod) =>
-    money.tappers.reduce((a, tp) => a + (money.debts.get(tp.id)?.payments ?? []).filter((x) => x.saleId === saleId && !x.deleted && x.method === m).reduce((y, x) => y + x.amountSatang, 0), 0);
+    money.tappers.reduce((a, tp) => a + (money.debts.get(tp.id)?.payments ?? []).filter((x) => x.saleId === saleId && !x.deleted && x.counts && x.method === m).reduce((y, x) => y + x.amountSatang, 0), 0);
   const piles = pilesCheck([...money.tappers.map((tp) => ({ satang: tp.cashSatang })), { satang: money.ownerTransferSatang }, { satang: sum('cash-from-share') }, { satang: sum('buyer-split') }], s.grossSatang);
   const canClose = piles.ok && money.rounding.ready && conflicts.length === 0 && !over;
   const closeSale = () => {
@@ -738,7 +740,7 @@ function PaymentBody({ bump }: { bump: () => void }) {
       {over ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.overTitle')} lines={[msg('v2s.overLine')]} /> : null}
       {payees.map((p) => {
         const st = paymentStatus(fin.events!, saleId, p.id, p.satang);
-        const ded = p.tp ? (money.debts.get(p.id)?.payments ?? []).filter((x) => x.saleId === saleId && !x.deleted) : [];
+        const ded = p.tp ? (money.debts.get(p.id)?.payments ?? []).filter((x) => x.saleId === saleId && !x.deleted && x.counts) : [];
         const lines: { icon?: (c: string) => ReactNode; text: string }[] = [];
         if (st.done && st.at) {
           lines.push({ icon: (c) => <PersonIcon color={c} size={12} />, text: msg('v2s.byDevice') });

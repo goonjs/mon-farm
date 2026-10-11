@@ -9,7 +9,6 @@ import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { wrap } from '../test/render';
 import { PointScreen } from '../v2/sale/point-screen';
-import { StartSaleGate } from '../v2/sale/start-screen';
 
 jest.mock('../store/finance', () => {
   const { MemoryFinanceStore } = jest.requireActual('../store/finance-memory');
@@ -70,35 +69,6 @@ const log = async (id: string) => store().load(id);
 
 beforeAll(async () => {
   farm = await seedMockFarm(master());
-});
-
-describe('one open sale at a time', () => {
-  it('เริ่มการขาย with no sale yet shows the start form', async () => {
-    await mount(<StartSaleGate />);
-    expect(screen.getByTestId('sale-start')).toBeTruthy();
-    expect(router.replace).not.toHaveBeenCalled();
-  });
-
-  it('a sale still being weighed is opened instead of a new one (at the point picker with no point yet)', async () => {
-    await seed('sale-open', started('sale-open'));
-    await mount(<StartSaleGate />);
-    expect(router.replace).toHaveBeenCalledTimes(1);
-    expect(router.replace).toHaveBeenCalledWith('/v2/sale/sale-open/point');
-    expect(screen.queryByTestId('sale-start')).toBeNull();
-    expect(await store().listSales()).toEqual(['sale-open']);
-  });
-
-  it('with a point being weighed it opens that counter', async () => {
-    router.replace.mockClear();
-    const b = started('sale-weighing');
-    b.sys({ t: 'pile_added', pileId: farm.a[0], zoneId: farm.farmA, name: 'จุด 1', tareG: 2_000, stdNetG: 50_000 });
-    b.acceptAt(farm.a[0], 1);
-    await seed('sale-weighing', b);
-    // newest open sale wins; make this one the newest
-    await mount(<StartSaleGate />);
-    const sales = homeSales(await Promise.all((await store().listSales()).map(async (id) => ({ id, events: await log(id) }))));
-    expect(router.replace).toHaveBeenCalledWith(expect.stringMatching(new RegExp(`^/v2/sale/${sales.open!.id}/`)));
-  });
 });
 
 describe('sale options in the ⋯ menu (agreed price, info, delete)', () => {

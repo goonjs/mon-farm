@@ -54,6 +54,8 @@ export function StartSaleGate() {
   const msg = useT();
   const router = useRouter();
   const [fresh, setFresh] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let live = true;
     loadHomeSales().then(
@@ -63,14 +65,28 @@ export function StartSaleGate() {
         else setFresh(newId('sale-'));
       },
       (err) => {
+        // Not knowing whether a sale is open must not start a second one: ask again.
         console.error('Sales could not be read.', err);
-        if (live) setFresh(newId('sale-'));
+        if (live) setFailed(true);
       },
     );
     return () => {
       live = false;
     };
-  }, [router]);
+  }, [router, attempt]);
+  if (failed) {
+    return (
+      <FarmScreen title={msg('start.title')} fallback={'/v2' as Href} testID="sale-start-failed">
+        <AppText variant="bodySm">{msg('start.checkFailed')}</AppText>
+        <CTA testID="sale-start-retry" onPress={() => {
+            setFailed(false);
+            setAttempt((n) => n + 1);
+          }}>
+          {msg('start.retry')}
+        </CTA>
+      </FarmScreen>
+    );
+  }
   if (!fresh) return <FarmScreen title={msg('start.title')} fallback={'/v2' as Href} testID="sale-start-check" />;
   return (
     <SaleProvider saleId={fresh}>
