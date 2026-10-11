@@ -1,7 +1,8 @@
 # Story: Google login and farm group on the v2 shell (E02-S01 + E02-S02, rework)
 
-Status: Draft — acceptance criteria NOT yet agreed by the owner. Do not start
-implementation until they are.
+Status: Draft — owner answers of 2026-10-11 are recorded below (option A, skip
+login, no second group). Acceptance criteria are still NOT agreed as a whole; do
+not start implementation until the owner says so.
 
 ## Context
 
@@ -19,14 +20,30 @@ implementation until they are.
   builds (`chore/firebase-web-config`). See `docs/runbooks/firebase-setup.md`.
 - Import rule: new screens use only `src/ui` and tokens (`docs/ui-v2.md`).
 
+## Owner decisions (2026-10-11)
+
+- **Login is not the priority now; prepare for it.** The app must keep working
+  fully offline with no sign-in: there is a **skip login** path (offline-only
+  mode). This relaxes the 2026-10-03 answer "must sign in before first use" in
+  E02-S01; the PRD needs a new D-entry for it (ACC-1/ACC-6 wording) in the same
+  session the owner confirms this story.
+- `groupId` option **A** (one session-level group id stamped in each store's write
+  function, no screen changes).
+- No second group.
+- PR previews stay on the existing `mon-farm-dev` site channels (no separate
+  preview site or build); add a CI change only if a later story needs it.
+
 ## Description
 
-Before anything else renders, the app asks the person to sign in with Google
-(web; Android is a stub until E01-S06). A signed-in person with no farm group
-sees only "create group" (join-by-code is shown but disabled until E02-S03).
-One group means straight in. Every new event carries `actor.userId` and the open
-group's `groupId`. Sign-in and the group list persist on the device, so after the
-first sign-in the app opens offline.
+Two phases. **Phase 1 (now): offline-only mode.** The app runs as it does today,
+with no visible gate. Behind the scenes the device has a local user (`userId`
+made on the device) and one local group created silently on first launch, so every
+event carries `actor.userId` and `groupId` (D-24) without any sign-in.
+**Phase 2 (later, not the priority): Google sign-in.** A sign-in screen with a
+"skip" button that goes to offline-only mode; signing in links the Google identity
+to the existing local user, so nothing recorded offline is lost or duplicated.
+With sign-in, a person with no group sees "create group" (join-by-code disabled
+until E02-S03); one group means straight in.
 
 ## What is reused from PR #67 and what is dropped
 
@@ -42,11 +59,24 @@ screens are written fresh in `src/ui` + `src/app` (v2).
 
 ## Acceptance criteria
 
-Sign-in (E02-S01):
+Offline-only mode (Phase 1 — this is what is built first):
 
-- [ ] First launch, not signed in: only the sign-in screen shows; nothing can be
-      saved (ACC-6). It matches flow-v1 screen 1: mark, "เข้าสู่ระบบด้วย Google",
-      and the note that the first sign-in needs internet.
+- [ ] First launch on a device creates a local user and one local group (name
+      default, e.g. "กลุ่มฟาร์มของฉัน"), both stored on the device. No screen
+      appears; the app opens on the splash and home as today.
+- [ ] Every new event from every v2 store (sale, farm, people, money) carries
+      `actor.userId` and `groupId`; the screens do not change (option A).
+- [ ] A write with no open group fails with `NoGroupError` and stores nothing.
+- [ ] The local user and group survive reload, force-close and airplane mode.
+- [ ] Nothing in this mode needs the network or Firebase config.
+
+Sign-in (E02-S01) — Phase 2, written now so Phase 1 does not block it:
+
+- [ ] First launch, not signed in: the sign-in screen shows, with "เข้าสู่ระบบด้วย
+      Google" and a **skip** button that continues in offline-only mode. It
+      follows flow-v1 screen 1 plus the skip button (needs a mockup update).
+- [ ] Signing in later links the Google identity to the existing local user; the
+      `userId` and all earlier events keep working under it (open question 2).
 - [ ] First launch offline: a Thai message says the first sign-in needs internet.
 - [ ] Google sign-in works on web against the real project on the dev site, and
       against the Auth emulator in tests (ACC-1). Android is out of scope (E01-S06).
@@ -60,19 +90,19 @@ Sign-in (E02-S01):
 
 Group (E02-S02):
 
-- [ ] Signed in with no group: only "create group" (name required) and a disabled
-      "join with code" (E02-S03). Creating works offline: the id is made on the
-      device, the creator gets an `owner` membership, and a `create_group` op is
-      queued for the outbox (E01-S09).
-- [ ] One group on the device (for this user): the app opens straight into it,
-      with no picker (ACC-3). Two or more groups: picker is E02-S04.
+- [ ] The silent local group of Phase 1 is a normal group: the creator is its
+      `owner` membership, and a `create_group` op is queued for the outbox
+      (E01-S09) so it syncs once a user signs in.
+- [ ] One group on the device: the app opens straight into it, with no picker
+      (ACC-3). No second group can be created in this story; the picker and a
+      second group are E02-S04.
 - [ ] Every new event has `groupId` and `actor.userId` from the first one; an
       append without a group fails with `NoGroupError` and stores nothing (D-24).
 - [ ] Memberships and queued ops live in IndexedDB on web (`memberships`,
       `pendingOps`, one transaction per create) and survive reload.
 - [ ] Rules: the creator can write the group and their own membership only.
 
-## Open design question (needs the owner or the lead before coding)
+## Design question (decided: option A — owner, 2026-10-11)
 
 PR #67 made `groupId` required on `EventBase` and stamped it in
 `src/store/record.ts`. On `dev` the v2 farm, people and money screens write
@@ -80,10 +110,10 @@ through their own stores (`farm.ts`, `people.ts`, `finance*.ts`, `master-store.t
 as well as the sale event log. The first implementation task is to list every
 write path and decide, per store, how it gets `groupId`:
 
-- **A (recommended):** one session-level `sessionGroupId()`, stamped in each
+- **A (chosen):** one session-level `sessionGroupId()`, stamped in each
   store's single write function, so no screen changes. The root gate guarantees a
   group exists before any screen renders.
-- **B:** pass `groupId` explicitly through every v2 write. More explicit, touches
+- **B (rejected):** pass `groupId` explicitly through every v2 write. More explicit, touches
   all screens.
 
 Events already on a dev device without `groupId` stay readable but are never
@@ -113,19 +143,19 @@ synced (as in #67); dev data only.
 
 ## Not covered
 
-Android sign-in (E01-S06), join by code (E02-S03), group picker and leave
-(E02-S04), LINE, sync of the group to Firestore (E01-S09), fetching existing
-groups on a new device (needs a backend), PR previews (no real Firebase config
-in the shared bundle).
+Android sign-in (E01-S06), join by code (E02-S03), group picker, second group and
+leave (E02-S04), LINE, sync of the group to Firestore (E01-S09), fetching existing
+groups on a new device (needs a backend), PR previews with real Firebase config
+(previews stay on the dev site without it).
 
 ## Questions for the owner
 
-1. Option A or B for `groupId` (above)?
-2. Single preview site: you plan to use `mon-farm-preview` for all agents'
-   previews. For login to work there, that site's build needs the real config;
-   that is a CI change (a separate preview build) — in this story or its own?
-3. Accept the rule that the first sign-in on a new device with an existing group
-   can create a second group until fetch-from-server exists (E02-S03/S04)?
+1. Phase 1 shows no new screen at all (the app opens as today). Is that right, or
+   do you want the sign-in screen with the skip button visible from the start?
+2. When a person who has recorded data offline later signs in with an account that
+   already has a group on another device, what should happen to the offline data?
+   Proposal: it stays in its own local group, shown beside the other group once the
+   picker exists (E02-S04); nothing is merged automatically.
 
 ## Verification
 
