@@ -26,7 +26,7 @@ const onOnline = (listener: () => void) => {
 };
 
 /** The tab became visible again (web); native has no `document`, and there the client is not built. */
-const onForeground = (listener: () => void) => {
+export const onForeground = (listener: () => void) => {
   const doc = (globalThis as { document?: { visibilityState?: string; addEventListener?: (t: string, l: () => void) => void; removeEventListener?: (t: string, l: () => void) => void } }).document;
   const handler = () => {
     if (doc?.visibilityState === 'visible') listener();
