@@ -1,0 +1,62 @@
+# Posts an agent message to Discord from a GitHub runner, which holds the webhook secrets.
+# Agents in a Claude Remote session cannot read secrets, so scripts/notify.sh starts this workflow
+# (`gh workflow run discord-notify.yml -f channel=... -f message=...`) when no URL is set locally.
+# workflow_dispatch only works once this file is on the repo's default branch (standards 04).
+# Needs scripts/notify.sh (a copy of dev-pose tools/discord/notify.sh) and the three secrets
+# DISCORD_WEBHOOK_AI_UPDATES, DISCORD_WEBHOOK_AI_ALERTS, DISCORD_WEBHOOK_PLAYGROUND.
+name: discord-notify
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Channel to post to
+        type: choice
+        required: true
+        options: [updates, alerts, playground]
+      need:
+        description: "alerts only: decision, review or blocked"
+        type: string
+        required: false
+      mention:
+        description: "alerts only: numeric Discord user id to mention"
+        type: string
+        required: false
+      message:
+        description: Message text (plain text, 2000 characters at most)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+# No concurrency group: GitHub keeps only one pending run per group, which would drop a message
+# queued while another is waiting. Discord webhooks accept parallel posts.
+
+jobs:
+  post:
+    # Secrets are only handed to runs of the default branch, so a branch an agent pushed cannot change
+    # this file or scripts/notify.sh and read them (`gh workflow run --ref <branch>`).
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Post to Discord
+        env:
+          # Inputs go through the environment, never into the script text (no injection).
+          CHANNEL: ${{ inputs.channel }}
+          NEED: ${{ inputs.need }}
+          MENTION: ${{ inputs.mention }}
+          MESSAGE: ${{ inputs.message }}
+          DISCORD_WEBHOOK_AI_UPDATES: ${{ secrets.DISCORD_WEBHOOK_AI_UPDATES }}
+          DISCORD_WEBHOOK_AI_ALERTS: ${{ secrets.DISCORD_WEBHOOK_AI_ALERTS }}
+          DISCORD_WEBHOOK_PLAYGROUND: ${{ secrets.DISCORD_WEBHOOK_PLAYGROUND }}
+        run: |
+          args=()
+          [ -n "$NEED" ] && args+=(--need "$NEED")
+          [ -n "$MENTION" ] && args+=(--mention "$MENTION")
+          bash scripts/notify.sh "$CHANNEL" "${args[@]}" -- "$MESSAGE"
