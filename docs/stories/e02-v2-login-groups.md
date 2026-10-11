@@ -1,8 +1,7 @@
 # Story: Google login and farm group on the v2 shell (E02-S01 + E02-S02, rework)
 
-Status: Draft — owner answers of 2026-10-11 are recorded below (option A, skip
-login, no second group). Acceptance criteria are still NOT agreed as a whole; do
-not start implementation until the owner says so.
+Status: Draft — owner decisions of 2026-10-11 recorded below. Acceptance
+criteria are still NOT agreed; do not start implementation until the owner says so.
 
 ## Context
 
@@ -20,30 +19,28 @@ not start implementation until the owner says so.
   builds (`chore/firebase-web-config`). See `docs/runbooks/firebase-setup.md`.
 - Import rule: new screens use only `src/ui` and tokens (`docs/ui-v2.md`).
 
-## Owner decisions (2026-10-11)
+## Owner decisions (2026-10-11, final)
 
-- **Login is not the priority now; prepare for it.** The app must keep working
-  fully offline with no sign-in: there is a **skip login** path (offline-only
-  mode). This relaxes the 2026-10-03 answer "must sign in before first use" in
-  E02-S01; the PRD needs a new D-entry for it (ACC-1/ACC-6 wording) in the same
-  session the owner confirms this story.
+- **Do Google login now. No skip button, no offline-only mode.** (An earlier draft
+  of this story added a skip path; the owner withdrew it the same day.) The
+  2026-10-03 answers in E02-S01 stand: sign in before first use, first sign-in
+  needs internet.
 - `groupId` option **A** (one session-level group id stamped in each store's write
   function, no screen changes).
-- No second group.
-- PR previews stay on the existing `mon-farm-dev` site channels (no separate
-  preview site or build); add a CI change only if a later story needs it.
+- No second group in this story.
+- Preview: ordinary PR previews stay on the `mon-farm-dev` channels (they have no
+  real Firebase config, so login does not work there). A new CI job deploys one
+  chosen PR to the single site `mon-farm-preview` with the real config, so login
+  can be tried there. That CI job is its own story/PR, not part of this one.
 
 ## Description
 
-Two phases. **Phase 1 (now): offline-only mode.** The app runs as it does today,
-with no visible gate. Behind the scenes the device has a local user (`userId`
-made on the device) and one local group created silently on first launch, so every
-event carries `actor.userId` and `groupId` (D-24) without any sign-in.
-**Phase 2 (later, not the priority): Google sign-in.** A sign-in screen with a
-"skip" button that goes to offline-only mode; signing in links the Google identity
-to the existing local user, so nothing recorded offline is lost or duplicated.
-With sign-in, a person with no group sees "create group" (join-by-code disabled
-until E02-S03); one group means straight in.
+Before anything else renders, the app asks the person to sign in with Google
+(web; Android is a stub until E01-S06). A signed-in person with no farm group sees
+only "create group" (join-by-code is shown but disabled until E02-S03). One group
+means straight in. Every new event carries `actor.userId` and the open group's
+`groupId`. Sign-in and the group list persist on the device, so after the first
+sign-in the app opens offline.
 
 ## What is reused from PR #67 and what is dropped
 
@@ -59,24 +56,11 @@ screens are written fresh in `src/ui` + `src/app` (v2).
 
 ## Acceptance criteria
 
-Offline-only mode (Phase 1 — this is what is built first):
+Sign-in (E02-S01):
 
-- [ ] First launch on a device creates a local user and one local group (name
-      default, e.g. "กลุ่มฟาร์มของฉัน"), both stored on the device. No screen
-      appears; the app opens on the splash and home as today.
-- [ ] Every new event from every v2 store (sale, farm, people, money) carries
-      `actor.userId` and `groupId`; the screens do not change (option A).
-- [ ] A write with no open group fails with `NoGroupError` and stores nothing.
-- [ ] The local user and group survive reload, force-close and airplane mode.
-- [ ] Nothing in this mode needs the network or Firebase config.
-
-Sign-in (E02-S01) — Phase 2, written now so Phase 1 does not block it:
-
-- [ ] First launch, not signed in: the sign-in screen shows, with "เข้าสู่ระบบด้วย
-      Google" and a **skip** button that continues in offline-only mode. It
-      follows flow-v1 screen 1 plus the skip button (needs a mockup update).
-- [ ] Signing in later links the Google identity to the existing local user; the
-      `userId` and all earlier events keep working under it (open question 2).
+- [ ] First launch, not signed in: only the sign-in screen shows; nothing can be
+      saved (ACC-6). It matches flow-v1 screen 1: mark, "เข้าสู่ระบบด้วย Google",
+      and the note that the first sign-in needs internet.
 - [ ] First launch offline: a Thai message says the first sign-in needs internet.
 - [ ] Google sign-in works on web against the real project on the dev site, and
       against the Auth emulator in tests (ACC-1). Android is out of scope (E01-S06).
@@ -90,9 +74,10 @@ Sign-in (E02-S01) — Phase 2, written now so Phase 1 does not block it:
 
 Group (E02-S02):
 
-- [ ] The silent local group of Phase 1 is a normal group: the creator is its
-      `owner` membership, and a `create_group` op is queued for the outbox
-      (E01-S09) so it syncs once a user signs in.
+- [ ] Signed in with no group: only "create group" (name required) and a disabled
+      "join with code" (E02-S03). Creating works offline: the id is made on the
+      device, the creator gets an `owner` membership, and a `create_group` op is
+      queued for the outbox (E01-S09).
 - [ ] One group on the device: the app opens straight into it, with no picker
       (ACC-3). No second group can be created in this story; the picker and a
       second group are E02-S04.
@@ -150,12 +135,10 @@ groups on a new device (needs a backend), PR previews with real Firebase config
 
 ## Questions for the owner
 
-1. Phase 1 shows no new screen at all (the app opens as today). Is that right, or
-   do you want the sign-in screen with the skip button visible from the start?
-2. When a person who has recorded data offline later signs in with an account that
-   already has a group on another device, what should happen to the offline data?
-   Proposal: it stays in its own local group, shown beside the other group once the
-   picker exists (E02-S04); nothing is merged automatically.
+1. Agree these acceptance criteria so implementation can start?
+2. E2E tests cannot use real Google (the sandbox blocks it): they run against the
+   Auth emulator with a preloaded session, as #67 did. The real login is tried by
+   hand on `mon-farm-dev.web.app` and `mon-farm-preview.web.app`. OK?
 
 ## Verification
 
