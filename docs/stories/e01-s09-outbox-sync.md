@@ -157,12 +157,43 @@ Decisions:
   page, overlap 2 minutes (stamps are commit times; only two commits finishing out of order need covering).
 - `stop()` halts an in-flight run (no more runs, pulls, `onPulled` or status events); `emitSyncChanged` isolates listener failures.
 
+### 2026-10-11 — follow-ups from the re-review (fix/sync-review-followups)
+
+- **Rules-rejected event.** Firestore reports a malformed event as `permission-denied`, same as "not a member". When a single push is
+  denied and the fetch finds nothing, the engine asks `RemoteEvents.check()` (now returns `true` when the group is readable, `false`
+  when the rules refused that read; asked at most once per batch). Readable → the event is `rejected` (error `invalid`), skipped on
+  later runs, the others go. Not readable → still `denied`.
+- **Slow retry.** After a permanent error the engine tries a full attempt again every 5 min (+ up to 1 min jitter), and `nudge()`
+  retries at once when the tab becomes visible (`visibilitychange`, throttled to 30 s); both stop with the engine. **Rejected events are
+  not re-included** by either: an invalid event stays invalid, and each re-send costs a write and a read; `retry()` or a restart
+  sends them again.
+- **Corrupt ids are persisted** per group in the store meta (`syncCorrupt`, next to the cursor; all three adapters), saved before the
+  cursor moves past them, so a restart still shows the integrity error; `retry()` or a pull that finds the server copy fixed clears it.
+  (Chosen over holding the cursor back, which would re-download everything after the bad stamp on every run.)
+- **Wizard gate.** `cursor > 0` is ready in every mode (no ~20 s wait while `connecting`); the engine calls `onChanged` after clearing
+  the `create_group` op so the gate re-reads; `wizard.noSyncError` now says the data stays on the phone until the problem is gone
+  instead of promising it will be sent when syncing works.
+- **A stopped engine's late page** writes neither the corrupt ids nor the cursor.
+- **Rejected event and the fold.** Checked with a test (`src/core/rejected-gap.test.ts`): a log with a deviceSeq hole and events
+  pointing at the missing one projects and totals without throwing; a void of a basket that never arrived finds nothing; in
+  `foldRecord` a change based on the missing event stays `waiting` (not applied) while the rest of the record is intact. The local
+  events carry no `baseEventId` yet (E04-S01), so this only matters once they do: such changes will not show until the base arrives.
+
 ### Known gaps (not fixed here, by decision)
 
 - `initializeAuth` still gets the popup resolver, which loads apis.google.com at launch; whether that can drop a restored session
   offline cannot be checked without a real Google sign-in. The owner checks it on the first real run.
 - A lost ack is recovered with one round trip per event (O(n)); no retry cap, quota back-off or re-sign-in prompt; round-trip edge cases
   (NaN, lone surrogates) are not handled; a rejected event is only visible as the error state until E01-S10 adds a list and retry.
+- A rejected event is held for the session only (the list is in memory): after a restart it is pushed and refused once more, then
+  skipped again. A change recorded on top of a rejected event waits on other phones until a base that never arrives (see the fold note above).
+- A good event can be marked `invalid` for the session if the user's membership changes in the milliseconds between the denied single
+  push and the `check()` read that follows (it looks like a member whose event was refused); it stays skipped until `retry()` or a
+  restart. Accepted: the window is tiny and nothing is lost.
+- Events refused as `integrity` (the server holds other content under our id) and `invalid` ones are skipped by the push, the slow
+  retry and `nudge()`; only `retry()` or a restart tries them again. The first time one is found it costs about 2N+1 operations
+  (N = events in the refused batch); after that nothing. The sets (`rejected`, `conflicting`) are in memory only, so the cost repeats once per app start.
+- The slow retry and the foreground nudge are covered with fake timers and fakes only; not seen against the real database.
 - The Playwright sync specs are not wired into CI.
 - Finance log, farm profile and media are not synced.
 

@@ -261,12 +261,13 @@ export class FirestoreRemote implements RemoteEvents, RemoteGroups {
     return data ? fromEnvelope(data) : null;
   }
 
-  async check(): Promise<void> {
+  async check(): Promise<boolean> {
     try {
       await guarded(() => this.layer.get(`groups/${this.groupId}`));
+      return true;
     } catch (err) {
       // Not (yet) allowed to read the group is an answer from the server, which is all this asks.
-      if (err instanceof RemoteError && err.code === 'permission-denied') return;
+      if (err instanceof RemoteError && err.code === 'permission-denied') return false;
       throw err;
     }
   }

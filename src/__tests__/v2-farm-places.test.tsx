@@ -533,6 +533,25 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
       expect((await m.state()).points.map((p) => p.name)).toEqual(['จุด 1']);
     });
 
+    it('a cold start with a stored cursor does not wait while the connection is still being set up', async () => {
+      await mockStore.setSyncCursor('group-1', 1_790_000_000_000);
+      setSyncMode('connecting');
+      const m = await toNamesPage();
+      expect(screen.queryByTestId('wizard-wait-pull')).toBeNull();
+      expect(screen.queryByTestId('wizard-no-sync')).toBeNull();
+      await press('wizard-create');
+      expect((await m.state()).points.map((p) => p.name)).toEqual(['จุด 1']);
+    });
+
+    it('the error warning does not promise that the data will be sent when syncing works', async () => {
+      setSyncMode('on');
+      setEngineStatus({ state: 'error', pending: 1, error: 'invalid' });
+      await toNamesPage();
+      const warning = within(screen.getByTestId('wizard-no-sync'));
+      expect(warning.getByText(/จะยังไม่ขึ้นกลุ่มจนกว่าปัญหานี้จะหาย/)).toBeTruthy();
+      expect(warning.queryByText(/จะส่งเมื่อซิงก์ได้/)).toBeNull();
+    });
+
     it('waits too while the connection is still being set up', async () => {
       setSyncMode('connecting');
       await toNamesPage();

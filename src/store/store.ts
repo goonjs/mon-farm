@@ -56,6 +56,12 @@ export interface EventStore {
    */
   syncCursor(groupId: GroupId): Promise<number>;
   setSyncCursor(groupId: GroupId, value: number): Promise<void>;
+  /**
+   * Ids of pulled documents the server holds with other content than the stored copy. The pull cursor
+   * moves past them, so they are remembered here (per group, like the cursor) and survive a restart.
+   */
+  syncCorrupt(groupId: GroupId): Promise<EventId[]>;
+  setSyncCorrupt(groupId: GroupId, ids: readonly EventId[]): Promise<void>;
   /** Sale ids present in the store, newest first. */
   listSales(): Promise<string[]>;
   /**

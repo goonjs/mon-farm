@@ -6,7 +6,7 @@ import type { AcceptEvent, SaleEvent } from '../core/types';
 import { userFromSignIn } from '../core/user';
 import { MemoryAccountStore } from '../store/account-memory';
 import { MemoryStore } from '../store/memory-store';
-import { backoffMs, FIRST_PULL_DONE, MemoryCursor, PULL_OVERLAP_MS, SyncEngine } from './engine';
+import { backoffMs, FIRST_PULL_DONE, MemoryCursor, PULL_OVERLAP_MS, storeCursor, SyncEngine } from './engine';
 import { RemoteError } from './remote';
 import { FakeRemote, FakeServer } from './fake-remote';
 
@@ -567,6 +567,37 @@ describe('one bad event never wedges the outbox (review A F1)', () => {
   });
 });
 
+describe('a rules-rejected event (follow-up 1)', () => {
+  it('a member whose malformed event is refused as permission-denied: that event is rejected and skipped on later runs, the rest go', async () => {
+    const p = await phone();
+    const [a, bad, c] = new LogBuilder('s1', p.deviceId).accept('p1').accept('p1').accept('p1').build();
+    p.remote.rulesRejectIds.add(bad.id); // the rules say permission-denied, but the user can read the group
+    await record(p.store, [a, bad, c]);
+    await p.engine.sync();
+    expect([...p.server.docs.keys()].sort()).toEqual([a.id, c.id].sort());
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid', pending: 1 });
+
+    // later runs do not push it again, not even alone
+    const [d] = new LogBuilder('s2', p.deviceId).accept('p1').build();
+    await record(p.store, [d]);
+    p.remote.batches.length = 0;
+    await p.engine.sync();
+    expect(p.remote.batches.flat().map((e) => e.id)).toEqual([d.id]);
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid', pending: 1 });
+  });
+
+  it('a user who cannot read the group (not a member) stays denied, nothing is marked rejected', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.denied = true; // writes refused and the group unreadable
+    await p.engine.sync();
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'denied', pending: 1 });
+    p.remote.denied = false;
+    await p.engine.retry();
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+});
+
 describe('fail fast before writing (review A F3/F4)', () => {
   it('offline: reads the server first and queues no write at all', async () => {
     const p = await phone();
@@ -639,6 +670,217 @@ describe('pulling a big group (review A F5)', () => {
 
   it('re-reads no more than two minutes behind the cursor', () => {
     expect(PULL_OVERLAP_MS).toBeLessThanOrEqual(120_000);
+  });
+});
+
+describe('corrupt documents survive a restart (follow-up 3)', () => {
+  const T = 1_800_000_000_000; // stamps far past the 2-minute overlap, so a restart does not re-read them
+
+  async function corruptGroup() {
+    const p = await phone();
+    const persisted = storeCursor(p.store, SCOPE.groupId);
+    const [mine] = new LogBuilder('s1', 'dev-x').accept('p1').build() as AcceptEvent[];
+    await p.store.insertPulled(mine);
+    const [good] = new LogBuilder('s2', 'dev-y').accept('p1').build();
+    p.server.docs.set(mine.id, { event: { ...mine, netG: 1 }, receivedAt: T });
+    p.server.docs.set(good.id, { event: good, receivedAt: T + 10 });
+    const engine = () =>
+      new SyncEngine({ store: p.store, accounts: p.accounts, scope: SCOPE, remote: p.remote, cursor: persisted, random: () => 0 });
+    return { p, mine, engine, persisted };
+  }
+
+  it('the id is stored with the group; a new engine on the same store still shows the integrity error', async () => {
+    const { p, mine, engine, persisted } = await corruptGroup();
+    const first = engine();
+    await first.sync();
+    expect(first.integrityIds()).toEqual([mine.id]);
+    expect(await p.store.syncCorrupt(SCOPE.groupId)).toEqual([mine.id]);
+    expect(await persisted.get()).toBe(T + 10); // the cursor did move past it
+
+    const restarted = engine(); // app restarted: nothing in memory
+    await restarted.sync();
+    expect(restarted.status()).toMatchObject({ state: 'error', error: 'integrity' });
+    expect(restarted.integrityIds()).toEqual([mine.id]);
+  });
+
+  it('retry() on a restarted engine finds it fixed on the server and forgets it for good', async () => {
+    const { p, mine, engine } = await corruptGroup();
+    await engine().sync();
+    p.server.docs.set(mine.id, { event: mine, receivedAt: T + 20 });
+
+    const restarted = engine();
+    await restarted.retry();
+    expect(restarted.status().state).toBe('synced');
+    expect(await p.store.syncCorrupt(SCOPE.groupId)).toEqual([]);
+    const again = engine();
+    await again.sync();
+    expect(again.status().state).toBe('synced');
+  });
+});
+
+describe('a stopped engine writes no cursor (follow-up 5)', () => {
+  it('an in-flight page that comes back after stop() leaves the cursor alone', async () => {
+    const p = await phone();
+    const [other] = new LogBuilder('s9', 'dev-other').accept('p1').build();
+    p.server.docs.set(other.id, { event: other, receivedAt: 5_000_000 });
+    let release: () => void = () => undefined;
+    const real = p.remote.pull.bind(p.remote);
+    p.remote.pull = async (...args: Parameters<typeof real>) => {
+      const page = await real(...args);
+      await new Promise<void>((resolve) => (release = resolve));
+      return page;
+    };
+    const run = p.engine.sync();
+    await vi.advanceTimersByTimeAsync(0);
+    p.engine.stop();
+    release();
+    await run;
+    expect(await p.cursor.get()).toBe(0);
+    expect(await p.store.load('s9')).toEqual([]); // nothing written locally either
+  });
+});
+
+describe('transient and integrity edge cases of checkEach (review F2, F3)', () => {
+  it('a transient failure of the "can I read the group" check does not mark a good event rejected; it goes out next run', async () => {
+    const p = await phone();
+    const [e] = new LogBuilder('s1', p.deviceId).accept('p1').build();
+    p.remote.rulesRejectIds.add(e.id); // refused once (e.g. membership in flux)
+    await record(p.store, [e]);
+    const real = p.remote.check.bind(p.remote);
+    let calls = 0;
+    p.remote.check = async () => {
+      calls += 1;
+      if (calls === 2) throw new RemoteError('unavailable', 'dropped');
+      return real();
+    };
+    await p.engine.sync();
+    expect(calls).toBe(2);
+    expect(p.engine.status()).toMatchObject({ state: 'pending', pending: 1 }); // transient backoff, not an error
+
+    p.remote.rulesRejectIds.clear();
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+    expect(p.server.docs.has(e.id)).toBe(true);
+  });
+
+  it('an event the server holds with other content is shown as integrity, skipped by the slow retry and nudge, and sent again only by retry()', async () => {
+    const p = await phone();
+    const [e] = new LogBuilder('s1', p.deviceId).accept('p1').build() as AcceptEvent[];
+    p.server.docs.set(e.id, { event: { ...e, netG: 1 }, receivedAt: 7 });
+    await record(p.store, [e]);
+    await p.engine.sync();
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'integrity', pending: 1 });
+    const sent = p.remote.batches.length;
+
+    await vi.advanceTimersByTimeAsync(30 * 60_000);
+    p.engine.nudge();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(p.remote.batches.length).toBe(sent); // not one more push
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'integrity' }); // still visible
+
+    await p.engine.retry();
+    expect(p.remote.batches.length).toBeGreaterThan(sent);
+  });
+});
+
+describe('telling the wizard the group reached the server (follow-up 4)', () => {
+  it('completing the create_group op emits onChanged, so the wizard gate re-reads', async () => {
+    const p = await phone();
+    const { membership, op } = newGroup(FIXTURE_GROUP_ID, 'สวนบ้านนา', somchai, 1_790_000_000_000);
+    await p.accounts.createGroup(membership, op);
+    const onChanged = vi.fn();
+    const engine = new SyncEngine({ store: p.store, accounts: p.accounts, scope: SCOPE, remote: p.remote, cursor: p.cursor, onChanged, random: () => 0 });
+    await engine.sync();
+    expect(await p.accounts.pendingOps()).toEqual([]);
+    expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('slow retry of a permanent error (follow-up 2)', () => {
+  const SLOW = 5 * 60_000;
+
+  it('an error clears itself once the cause is fixed, within about five minutes and with no trigger', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.denied = true;
+    await p.engine.sync();
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'denied' });
+
+    p.remote.denied = false; // rules deployed, membership added ...
+    await vi.advanceTimersByTimeAsync(SLOW - 1_000);
+    expect(p.engine.status().state).toBe('error'); // not before its time
+    await vi.advanceTimersByTimeAsync(2_000 + 60_000); // ... plus the jitter
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+    expect(p.server.docs.size).toBe(1);
+  });
+
+  it('never a hot loop: while the cause stays, one attempt per ~5 minutes, and none after stop()', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.denied = true;
+    await p.engine.sync();
+    const first = p.remote.checks;
+    await vi.advanceTimersByTimeAsync(30 * 60_000);
+    const runs = (p.remote.checks - first) / 2; // two reads per run here: the check, then the "can I read the group" probe
+    expect(runs).toBeGreaterThanOrEqual(4);
+    expect(runs).toBeLessThanOrEqual(6);
+
+    p.engine.stop();
+    const after = p.remote.checks;
+    await vi.advanceTimersByTimeAsync(30 * 60_000);
+    expect(p.remote.checks).toBe(after);
+  });
+
+  it('a transient failure does not use it (its own backoff does), and a clean run schedules nothing', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.offline = true;
+    await p.engine.sync();
+    p.remote.offline = false;
+    await vi.advanceTimersByTimeAsync(5_000); // backoff (2 s) sends it
+    expect(p.engine.status().state).toBe('synced');
+    const checks = p.remote.checks;
+    await vi.advanceTimersByTimeAsync(30 * 60_000);
+    expect(p.remote.checks).toBe(checks);
+  });
+
+  it('keeps skipping a rejected event: only retry() or a restart sends it again', async () => {
+    const p = await phone();
+    const [bad] = new LogBuilder('s1', p.deviceId).accept('p1').build();
+    p.remote.invalidIds.add(bad.id);
+    await record(p.store, [bad]);
+    await p.engine.sync();
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid' });
+    const sent = p.remote.batches.length;
+    await vi.advanceTimersByTimeAsync(30 * 60_000);
+    expect(p.remote.batches.length).toBe(sent); // not one more push for it, and no run loop for it either
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid' });
+  });
+
+  it('nudge() (app back in the foreground) retries a permanent error at once, but not more than every 30 s', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.denied = true;
+    await p.engine.sync();
+    p.remote.denied = false;
+
+    p.engine.nudge(); // too soon after the attempt that just failed
+    await vi.advanceTimersByTimeAsync(0);
+    expect(p.engine.status().state).toBe('error');
+
+    await vi.advanceTimersByTimeAsync(31_000);
+    p.engine.nudge();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+
+  it('nudge() does nothing when there is no permanent error', async () => {
+    const p = await phone();
+    await p.engine.sync();
+    const checks = p.remote.checks;
+    p.engine.nudge();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(p.remote.checks).toBe(checks);
   });
 });
 

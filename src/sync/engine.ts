@@ -47,6 +47,16 @@ export const PULL_PAGE = 500;
 export const PULL_TIMEOUT_MS = 60_000;
 export const APPEND_DEBOUNCE_MS = 2_000;
 /**
+ * After a permanent error (denied, invalid, integrity ...) nothing else would ever try again on its own,
+ * yet the cause is often fixed outside the app (rules deployed, database created, membership added).
+ * So one full attempt every five minutes (plus up to a minute of jitter), never faster; each is a
+ * check, a pull and the sends, and stops with the engine.
+ */
+export const SLOW_RETRY_MS = 5 * 60_000;
+export const SLOW_RETRY_JITTER_MS = 60_000;
+/** The app coming to the foreground retries a permanent error at once, but not more often than this. */
+export const NUDGE_MIN_MS = 30_000;
+/**
  * The cursor of a device that has pulled but found nothing to remember (a new,
  * empty group): 0 means "never pulled", and the pull-from-the-start rule
  * (`since` 0) is unchanged. The points wizard waits for it (E01-S09, D-83).
@@ -72,22 +82,41 @@ export interface SyncStatus {
 export interface CursorStore {
   get(): Promise<number>;
   set(value: number): Promise<void>;
+  /**
+   * Ids of documents the server holds with other content than ours. The cursor moves past them, so
+   * without this a restart would forget the integrity error. Optional: a cursor that cannot keep them
+   * (tests) just keeps them in memory.
+   */
+  getCorrupt?(): Promise<EventId[]>;
+  setCorrupt?(ids: readonly EventId[]): Promise<void>;
 }
 
 export class MemoryCursor implements CursorStore {
   private value = 0;
+  private corrupt: EventId[] = [];
   async get() {
     return this.value;
   }
   async set(value: number) {
     this.value = value;
   }
+  async getCorrupt() {
+    return [...this.corrupt];
+  }
+  async setCorrupt(ids: readonly EventId[]) {
+    this.corrupt = [...ids];
+  }
 }
 
 /** The store's own cursor, so a restart resumes pulling instead of re-downloading the group. */
-export const storeCursor = (store: Pick<EventStore, 'syncCursor' | 'setSyncCursor'>, groupId: GroupId): CursorStore => ({
+export const storeCursor = (
+  store: Pick<EventStore, 'syncCursor' | 'setSyncCursor' | 'syncCorrupt' | 'setSyncCorrupt'>,
+  groupId: GroupId,
+): CursorStore => ({
   get: () => store.syncCursor(groupId),
   set: (value) => store.setSyncCursor(groupId, value),
+  getCorrupt: () => store.syncCorrupt(groupId),
+  setCorrupt: (ids) => store.setSyncCorrupt(groupId, ids),
 });
 
 export type SyncStore = Pick<EventStore, 'pending' | 'markSynced' | 'insertPulled'>;
@@ -101,6 +130,8 @@ export interface SyncDeps {
   readonly cursor: CursorStore;
   /** Called after every successful pull (and so after the first one). */
   readonly onPulled?: () => void;
+  /** Called when the group's `create_group` was sent and cleared: the points wizard stops treating it as only-here. */
+  readonly onChanged?: () => void;
   /** How long to wait for a server ack before treating it as lost; tests shorten it. */
   readonly ackTimeoutMs?: number;
   /** Documents per pull page; tests make it small. */
@@ -124,14 +155,25 @@ export class SyncEngine {
   private attempt = 0;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private pokeTimer: ReturnType<typeof setTimeout> | null = null;
+  private slowTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The last run ended in a permanent error: the slow retry and `nudge()` apply. */
+  private permanentFailure = false;
+  private lastAttemptAt = 0;
   private stopped = false;
   private readonly ackMs: number;
   private readonly pullMs: number;
   private readonly pageSize: number;
   /** Events the server refused as invalid: kept locally, not re-sent every run, tried again by `retry()`. */
   private rejected = new Set<EventId>();
+  /**
+   * Our events the server holds with other content: re-sending cannot fix them, so they are skipped
+   * like `rejected` (by push, the slow retry and `nudge()`), shown as `integrity`, and tried again
+   * only by `retry()` or a restart.
+   */
+  private conflicting = new Set<EventId>();
   /** Pulled ids the server holds with other content than ours; shown until a retry finds them fixed. */
   private corrupt = new Set<EventId>();
+  private corruptLoaded = false;
 
   constructor(private readonly deps: SyncDeps) {
     this.ackMs = deps.ackTimeoutMs ?? ACK_TIMEOUT_MS;
@@ -176,6 +218,9 @@ export class SyncEngine {
     this.attempt = 0;
     this.stopped = false;
     this.rejected.clear();
+    this.conflicting.clear();
+    await this.loadCorrupt();
+    const before = this.corrupt.size;
     for (const id of [...this.corrupt]) {
       const there = await withTimeout(this.deps.remote.fetch(id), this.ackMs).catch(() => undefined);
       if (!there) continue;
@@ -186,7 +231,18 @@ export class SyncEngine {
         if (!(err instanceof IntegrityError)) throw err;
       }
     }
+    if (this.corrupt.size !== before) await this.saveCorrupt();
     return this.sync();
+  }
+
+  private async loadCorrupt(): Promise<void> {
+    if (this.corruptLoaded) return;
+    for (const id of (await this.deps.cursor.getCorrupt?.()) ?? []) this.corrupt.add(id);
+    this.corruptLoaded = true;
+  }
+
+  private async saveCorrupt(): Promise<void> {
+    await this.deps.cursor.setCorrupt?.([...this.corrupt].sort());
   }
 
   /** Ids whose server copy differs from the stored one (integrity errors). */
@@ -203,8 +259,20 @@ export class SyncEngine {
     }, APPEND_DEBOUNCE_MS);
   }
 
+  /**
+   * The app came to the foreground. Retries a permanent error now (it may have been fixed while the
+   * app was away), at most every `NUDGE_MIN_MS`; does nothing otherwise, so it is safe on every
+   * `visibilitychange`.
+   */
+  nudge(): void {
+    if (this.stopped || !this.permanentFailure || this.running) return;
+    if (Date.now() - this.lastAttemptAt < NUDGE_MIN_MS) return;
+    this.sync().catch(() => undefined);
+  }
+
   /** Documents from a realtime listener; same rules as a pull. */
   async ingest(docs: readonly PulledDoc[]): Promise<void> {
+    await this.loadCorrupt();
     await this.store(docs);
     if (this.corrupt.size) await this.settle({});
   }
@@ -214,18 +282,46 @@ export class SyncEngine {
     this.stopped = true;
     if (this.retryTimer) clearTimeout(this.retryTimer);
     if (this.pokeTimer) clearTimeout(this.pokeTimer);
-    this.retryTimer = this.pokeTimer = null;
+    if (this.slowTimer) clearTimeout(this.slowTimer);
+    this.retryTimer = this.pokeTimer = this.slowTimer = null;
   }
 
   private async runOnce(): Promise<void> {
     if (this.stopped) return;
     if (this.retryTimer) clearTimeout(this.retryTimer);
-    this.retryTimer = null;
+    if (this.slowTimer) clearTimeout(this.slowTimer);
+    this.retryTimer = this.slowTimer = null;
+    this.permanentFailure = false;
+    this.lastAttemptAt = Date.now();
+    try {
+      await this.runBody();
+    } finally {
+      this.armSlowRetry();
+    }
+  }
+
+  /**
+   * Rejected events are not re-included by the slow retry: an event the server called invalid stays
+   * invalid unless it is edited, and re-sending it costs one write and one read each time. Only
+   * `retry()` (the owner's action) or a restart tries them again. What the slow retry does re-test
+   * is everything else that can be fixed from outside: rules, database, membership, session.
+   */
+  private armSlowRetry(): void {
+    if (this.stopped || !this.permanentFailure || this.retryTimer || this.slowTimer) return;
+    const delay = SLOW_RETRY_MS + Math.floor((this.deps.random ?? Math.random)() * SLOW_RETRY_JITTER_MS);
+    this.slowTimer = setTimeout(() => {
+      this.slowTimer = null;
+      this.sync().catch(() => undefined); // a failure arms the next one itself
+    }, delay);
+  }
+
+  private async runBody(): Promise<void> {
     let pushError: SyncError | undefined;
     try {
       // Read the server before writing anything: offline this fails here (transient)
       // instead of leaving a write queued inside the SDK, and a database that does
       // not exist is an error now rather than a write that stays pending for ever.
+      await this.loadCorrupt();
       await withTimeout(this.deps.remote.check(), this.ackMs);
       try {
         // Until the group exists on the server there is nothing to send into and
@@ -286,6 +382,7 @@ export class SyncEngine {
         throw err;
       }
       await this.deps.accounts.completeOp(op);
+      this.deps.onChanged?.();
     }
   }
 
@@ -294,7 +391,7 @@ export class SyncEngine {
     // another account's or group's events could only be refused by the rules:
     // they stay on the device (E02-S02). Events the server already called invalid
     // wait for `retry()`.
-    const outbox = (await this.deps.store.pending()).filter((e) => this.mine(e) && !this.rejected.has(e.id));
+    const outbox = (await this.deps.store.pending()).filter((e) => this.mine(e) && !this.rejected.has(e.id) && !this.conflicting.has(e.id));
     let refused: Permanent | undefined;
     for (let i = 0; i < outbox.length; i += BATCH_SIZE) {
       if (this.stopped) return;
@@ -320,6 +417,7 @@ export class SyncEngine {
    */
   private async checkEach(batch: readonly SaleEvent[]): Promise<Permanent | undefined> {
     let refused: Permanent | undefined;
+    let readable: boolean | undefined; // asked at most once per batch, and only when needed
     for (const e of batch) {
       if (this.stopped) return refused;
       try {
@@ -337,8 +435,17 @@ export class SyncEngine {
       const there = await withTimeout(this.deps.remote.fetch(e.id), this.ackMs);
       if (there && canonicalJson(there) === canonicalJson(e)) {
         await this.deps.store.markSynced([e.id]);
+      } else if (there) {
+        this.conflicting.add(e.id);
+        refused ??= new Permanent('integrity');
+      } else if ((readable ??= await withTimeout(this.deps.remote.check(), this.ackMs))) {
+        // Firestore reports a rules-rejected (malformed) event as permission-denied too. The user
+        // can read the group, so they are a member and it is this event that is refused: skip it
+        // on later runs instead of one push and one fetch per event every run.
+        this.rejected.add(e.id);
+        refused ??= new Permanent('invalid');
       } else {
-        refused ??= new Permanent(there ? 'integrity' : 'denied');
+        refused ??= new Permanent('denied'); // cannot read the group: not a member
       }
     }
     return refused;
@@ -364,18 +471,28 @@ export class SyncEngine {
 
   /** Stores docs, remembers corrupt ones, and moves the cursor forward only. */
   private async store(docs: readonly PulledDoc[]): Promise<void> {
+    // A stopped engine's page that arrives late writes nothing at all (the next engine reads it again).
+    if (this.stopped) return;
     let newest = 0;
+    let corruptChanged = false;
     for (const doc of docs) {
+      if (this.stopped) return;
       if (doc.receivedAt === null) continue;
       try {
         await this.deps.store.insertPulled(doc.event);
+        // The server copy matches now (it was fixed): no longer an error.
+        if (this.corrupt.delete(doc.event.id)) corruptChanged = true;
       } catch (err) {
         if (!(err instanceof IntegrityError)) throw err;
         // One bad document must not stall the whole group: skip it, report it.
+        if (!this.corrupt.has(doc.event.id)) corruptChanged = true;
         this.corrupt.add(doc.event.id);
       }
       newest = Math.max(newest, doc.receivedAt);
     }
+    if (this.stopped) return;
+    // Remember the bad ids before the cursor moves past them, so a restart cannot lose them.
+    if (corruptChanged) await this.saveCorrupt();
     // Only after the local writes committed; re-read so a concurrent run's
     // newer cursor is never lowered.
     const current = await this.deps.cursor.get();
@@ -388,7 +505,8 @@ export class SyncEngine {
     // created is waiting, as one item.
     const pending =
       waitingCount(this.deps.scope, await this.deps.store.pending(), await this.deps.accounts.pendingOps()) + media;
-    const kind = outcome.kind ?? (this.corrupt.size ? 'integrity' : this.rejected.size ? 'invalid' : undefined);
+    const kind = outcome.kind ?? (this.corrupt.size || this.conflicting.size ? 'integrity' : this.rejected.size ? 'invalid' : undefined);
+    if (outcome.kind) this.permanentFailure = true;
     const next: SyncStatus = kind
       ? { state: 'error', pending, error: kind }
       : { state: pending > 0 || outcome.transient ? 'pending' : 'synced', pending };

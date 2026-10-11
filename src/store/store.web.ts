@@ -19,7 +19,7 @@ import { markNotDurable } from './durability';
 import { IntegrityError } from './errors';
 import { emitAppended } from './append-signal';
 import { MemoryStore } from './memory-store';
-import { cursorFor, type StoredCursor } from './sync-cursor';
+import { corruptFor, cursorFor, type StoredCorrupt, type StoredCursor } from './sync-cursor';
 import type { EventStore } from './store';
 import { compareEvents } from '../core/order';
 import { MASTER_SCOPE } from '../core/master';
@@ -209,6 +209,18 @@ export class IndexedDbStore implements EventStore {
     await committed(tx);
   }
 
+  async syncCorrupt(groupId: GroupId): Promise<EventId[]> {
+    const db = await this.open();
+    return corruptFor(await request(db.transaction('meta', 'readonly').objectStore('meta').get('syncCorrupt')), groupId);
+  }
+
+  async setSyncCorrupt(groupId: GroupId, ids: readonly EventId[]): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction('meta', 'readwrite');
+    tx.objectStore('meta').put({ groupId, ids: [...ids] } satisfies StoredCorrupt, 'syncCorrupt');
+    await committed(tx);
+  }
+
   async listSales(): Promise<string[]> {
     const db = await this.open();
     const tx = db.transaction('events', 'readonly');
@@ -292,6 +304,12 @@ export class WebStore implements EventStore {
   }
   async setSyncCursor(groupId: GroupId, value: number) {
     return (await this.pick()).setSyncCursor(groupId, value);
+  }
+  async syncCorrupt(groupId: GroupId) {
+    return (await this.pick()).syncCorrupt(groupId);
+  }
+  async setSyncCorrupt(groupId: GroupId, ids: readonly EventId[]) {
+    return (await this.pick()).setSyncCorrupt(groupId, ids);
   }
   async listSales() {
     return (await this.pick()).listSales();

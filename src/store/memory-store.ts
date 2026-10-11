@@ -3,7 +3,7 @@ import { MASTER_SCOPE } from '../core/master';
 import type { EventId, GroupId, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
 import { checkAppend, checkPulled, type DeviceState } from './append-rule';
-import { cursorFor, type StoredCursor } from './sync-cursor';
+import { corruptFor, cursorFor, type StoredCorrupt, type StoredCursor } from './sync-cursor';
 import type { EventStore } from './store';
 
 /**
@@ -14,6 +14,7 @@ export class MemoryStore implements EventStore {
   private rows = new Map<EventId, SaleEvent>();
   private synced = new Set<EventId>();
   private cursor: StoredCursor | null = null;
+  private corrupt: StoredCorrupt | null = null;
   private state: DeviceState = { deviceId: uuidv7(), nextDeviceSeq: 1 };
 
   async append(event: SaleEvent): Promise<void> {
@@ -48,6 +49,14 @@ export class MemoryStore implements EventStore {
 
   async setSyncCursor(groupId: GroupId, value: number): Promise<void> {
     this.cursor = { groupId, value };
+  }
+
+  async syncCorrupt(groupId: GroupId): Promise<EventId[]> {
+    return corruptFor(this.corrupt, groupId);
+  }
+
+  async setSyncCorrupt(groupId: GroupId, ids: readonly EventId[]): Promise<void> {
+    this.corrupt = { groupId, ids: [...ids] };
   }
 
   async listSales(): Promise<string[]> {

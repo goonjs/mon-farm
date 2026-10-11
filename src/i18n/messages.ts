@@ -557,7 +557,7 @@ const th = {
   'wizard.infoLater': 'แก้ชื่อหรือคนกรีดยางทีหลังได้',
   'wizard.waitPull': 'รอรับข้อมูลจากกลุ่มก่อน จึงจะสร้างจุดชั่งได้ — ต่ออินเทอร์เน็ตไว้สักครู่ จะได้ไม่สร้างซ้ำกับเครื่องอื่น',
   'wizard.noSyncOffline': 'ตอนนี้ไม่มีอินเทอร์เน็ต จึงยังไม่รู้ว่าเครื่องอื่นตั้งจุดชั่งไว้แล้วหรือยัง — สร้างต่อได้เลย แต่ถ้าเครื่องอื่นตั้งชื่อเดียวกันไว้ ชื่ออาจซ้ำ (แก้ชื่อทีหลังได้)',
-  'wizard.noSyncError': 'ซิงก์กับกลุ่มไม่ได้ในตอนนี้ — สร้างต่อได้เลย ข้อมูลอยู่ในเครื่องและจะส่งเมื่อซิงก์ได้ แต่ถ้าเครื่องอื่นตั้งชื่อเดียวกันไว้ ชื่ออาจซ้ำ (แก้ชื่อทีหลังได้)',
+  'wizard.noSyncError': 'ซิงก์กับกลุ่มไม่ได้ในตอนนี้ — สร้างต่อได้เลย ข้อมูลอยู่ในเครื่องนี้ แต่จะยังไม่ขึ้นกลุ่มจนกว่าปัญหานี้จะหาย (เช่น ไม่มีสิทธิ์ในกลุ่ม หรือข้อมูลบางรายการถูกปฏิเสธ) ถ้าเครื่องอื่นตั้งชื่อเดียวกันไว้ ชื่ออาจซ้ำ (แก้ชื่อทีหลังได้)',
 
   // ── Tapper assignments (E03-S05) ────────────────────────────────────────
   'assign.title': 'คนกรีดยางของจุด',
@@ -2158,7 +2158,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'wizard.infoLater': 'names and tappers can be changed later',
   'wizard.waitPull': 'waiting for the group\'s data before points can be created — stay online a moment so they are not duplicated on another phone',
   'wizard.noSyncOffline': 'no internet right now, so we cannot tell if another phone already set up points — go ahead; if another phone used the same name it may repeat (names can be changed later)',
-  'wizard.noSyncError': 'cannot sync with the group right now — go ahead; your data is kept on this phone and sent when syncing works; if another phone used the same name it may repeat (names can be changed later)',
+  'wizard.noSyncError': 'cannot sync with the group right now — go ahead; your data stays on this phone and will not reach the group until the problem is gone (for example no access to the group, or the server refused something); if another phone used the same name it may repeat (names can be changed later)',
   'assign.title': 'Tapper of this point',
   'assign.none': 'no tapper yet',
   'assign.now': 'now',
