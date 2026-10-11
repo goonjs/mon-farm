@@ -19,6 +19,7 @@ import {
   type DebtPaymentMethod,
   type FinanceEvent,
   type Payer,
+  type RepaymentFields,
 } from './types';
 
 export { fertilizerSplit };
@@ -126,7 +127,17 @@ export function projectDebts(
       if (f) debts.push({ ...f.state, id, headEventId: f.head });
     } else if (t === 'debt_payment_recorded') {
       const f = foldRecordPublic(evs, (c) => ({ ...(c.payload as { fields: DebtPaymentFields }).fields, deleted: false }), ['amountSatang', 'creditor', 'worker']);
-      if (f) payments.push({ ...f.state, id, headEventId: f.head, counts: !f.state.saleId || saleCounts(f.state.saleId) });
+      if (f) {
+        // A netting payment counts only while the repayment it was written with is live: the two are
+        // separate events, so a write that stopped between them (or an undo that did) cancels out.
+        let paired = true;
+        if (f.state.method === 'netting' && f.state.repaymentId) {
+          const rev = byTarget.get(f.state.repaymentId);
+          const rf = rev && foldRecordPublic(rev, (c) => ({ ...(c.payload as { fields: RepaymentFields }).fields, deleted: false }), ['amountSatang', 'allocations', 'from', 'to']);
+          paired = !!rf && !rf.state.deleted;
+        }
+        payments.push({ ...f.state, id, headEventId: f.head, counts: paired && (!f.state.saleId || saleCounts(f.state.saleId)) });
+      }
     } else if (t === 'debt_plan_set') {
       // Plans carry no patch: the current head of the chain is the plan.
       const head = headOf(evs);

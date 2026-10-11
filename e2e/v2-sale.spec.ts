@@ -1,7 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import type { MasterPayload } from '../src/core/types';
-import { evidence, seedMaster } from './fixtures';
+import { LogBuilder } from '../src/core/fixtures';
+import type { FinanceEvent, FinancePayload } from '../src/core/finance/types';
+import { evidence, seedEvents, seedMaster } from './fixtures';
 
 /**
  * The v2 sale flow in the real web build, offline (sale mockup v1.1.0
@@ -17,6 +19,87 @@ const SHOTS = 'docs/ux/screenshots/ui-v2/sale';
 
 test.beforeEach(() => test.skip(test.info().project.name !== 'phone-portrait', 'the sale flow is portrait-first'));
 test.use({ viewport: { width: 412, height: 915 } });
+
+test('one open sale: เริ่มการขาย goes back to it; the ⋯ menu adds the price, shows the info and deletes it (owner 2026-10-11)', async ({ page }) => {
+  const id = on(page);
+  await seedMaster(page, FARM);
+  await page.goto('/v2');
+  await id('home-sale-start').click();
+  await id('start-buyer').click();
+  await id('start-buyer-buyer-a').click();
+  await id('start-next').click();
+  await expect(id('pick')).toBeVisible();
+
+  // The agreed price, added from the menu of the point picker.
+  await id('pick-menu').click();
+  await expect(id('menu-price')).toContainText('ใส่ราคาที่ตกลง');
+  await id('menu-price').click();
+  await id('option-price').fill('52.50');
+  await shot(page, '20-option-price');
+  await id('option-price-save').click();
+  await id('pick-menu').click();
+  await expect(id('menu-price')).toContainText('52.50');
+  await id('menu-info').click();
+  await expect(id('info-buyer')).toContainText('คนรับซื้อยาง ก');
+  await expect(id('info-price')).toContainText('52.50');
+  await shot(page, '21-sale-info');
+  await id('info-done').click();
+
+  // Home → เริ่มการขาย opens the sale still open, not a second one.
+  await page.goto('/v2');
+  await id('home-sale-start').click();
+  await expect(id('pick')).toBeVisible();
+  await expect(id('sale-start')).toHaveCount(0);
+  await page.goto('/v2/sales');
+  await expect(id('sale-rows').locator('[data-testid^="sale-row-"]')).toHaveCount(1);
+
+  // A stray open sale can be deleted; then เริ่มการขาย starts a new one.
+  await id('sale-rows').locator('[data-testid^="sale-row-"]').first().click();
+  await id('pick-menu').click();
+  await id('menu-delete').click();
+  await shot(page, '22-delete-sale');
+  await id('delete-confirm').click();
+  await expect(id('v2-home')).toBeVisible();
+  await id('home-sale-start').click();
+  await expect(id('sale-start')).toBeVisible();
+});
+
+test('settlement: netting the money the farm owes back against a debt (E06-S04)', async ({ page }) => {
+  const id = on(page);
+  await seedMaster(page, FARM);
+  // นัด: one full basket at จุด 4 (share ฿1,455 at 52.50), owes the farm ฿3,000, and the farm owes นัด ฿640.
+  const b = new LogBuilder('sale-net');
+  b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+  b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+  b.sys({ t: 'pile_added', pileId: 'a4', zoneId: 'fa', name: 'a4', tareG: 2_000, stdNetG: 50_000 });
+  b.acceptAt('a4', 1).acceptAt('a4', 2);
+  const now = Date.now();
+  await seedEvents(page, b.build().map((e) => ({ ...e, ts: now })));
+  const fin = (n: number, targetId: string, payload: FinancePayload): FinanceEvent => ({
+    id: `e2e-net-${n}`,
+    deviceSeq: n,
+    ts: now,
+    actor: { userId: 'pre-login', deviceId: 'dev-seed' },
+    source: 'app',
+    targetId,
+    baseEventId: null,
+    payload,
+  });
+  const NAT = { id: 'nat', name: 'นัด' };
+  const events = [
+    fin(1, 'debt-nat', { t: 'debt_added', fields: { worker: NAT, kind: 'loan', amountSatang: 300_000, date: '2026-09-01', note: '', lender: { id: 'farm', name: 'เงินสวน' }, fertilizer: null, carriedForward: false } }),
+    fin(2, 'exp-nat', { t: 'expense_created', fields: { amountSatang: 64_000, date: '2026-09-28', stage: 'actual', categoryId: null, propertyId: null, item: '', note: '', payer: NAT } }),
+  ];
+  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), events);
+  await page.goto('/v2/sale/sale-net/settlement');
+  await expect(id('settlement')).toBeVisible();
+  await id('deduct-nat').click();
+  await expect(id('net-card')).toContainText('640.00');
+  await id('net-amount').fill('400');
+  await shot(page, '23-netting');
+  await id('deduct-save').click();
+  await expect(id('netted-nat')).toContainText('400.00');
+});
 
 const on = (page: Page) => (id: string) => page.getByTestId(id).filter({ visible: true });
 const shot = (page: Page, name: string, fullPage = false) => evidence(page, `${SHOTS}/${name}.png`, { fullPage });

@@ -68,6 +68,9 @@ Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Dev notes
 
+- 2026-10-11 v2 settlement screen (`src/v2/sale/money-screens.tsx`): หักกลบ built — netting card in the deduct sheet (only when the farm owes the worker, never automatic, partial ok), ceiling = share + netting, two events kept apart (repayment + debt payment with `repaymentId`), undo per line voids both, `overDeducted` now counts netting in the total. Tests: `src/__tests__/v2-sale-netting.test.tsx`, `deduct.test.ts`.
+- Still open: removal of old S29 code (needs owner OK to delete files), ธง/Conflict across devices.
+
 ## Code review
 
 - Reviewer (agent/session แยก):
