@@ -27,8 +27,6 @@ export interface TapperMoney {
   /** The tapper's % of their zones (the first zone's when they differ). */
   readonly pct: number;
   readonly shareSatang: number;
-  /** Old S29 deductions (kept until the owner decides, D-81 deletion list). */
-  readonly s29Satang: number;
   /** Debt deducted at this sale, netting excluded. */
   readonly debtDeductedSatang: number;
   readonly nettedSatang: number;
@@ -59,7 +57,7 @@ export function useSaleMoney() {
   }, [events, state, master, pointSale, now]);
 
   const workers = useMemo(
-    () => (settlement?.perWorker ?? EMPTY).map((w) => ({ id: w.personId, name: w.workerName || w.personId, shareSatang: Math.max(0, w.payoutSatang) })),
+    () => (settlement?.perWorker ?? EMPTY).map((w) => ({ id: w.personId, name: w.workerName || w.personId, shareSatang: Math.max(0, w.workerSatang) })),
     [settlement],
   );
   const rounding = useSaleRounding(state.id, workers, settlement?.ownerSatang ?? 0, settlement?.grossSatang ?? 0);
@@ -78,7 +76,6 @@ export function useSaleMoney() {
       grossSatang: zones.reduce((s, z) => s + z.grossSatang, 0),
       pct: zones.length ? 100 - zones[0].ownerPct : 0,
       shareSatang: w.workerSatang,
-      s29Satang: w.deductionSatang,
       debtDeductedSatang: here.filter((p) => p.method !== 'netting').reduce((s, p) => s + p.amountSatang, 0),
       nettedSatang: here.filter((p) => p.method === 'netting').reduce((s, p) => s + p.amountSatang, 0),
       cashBeforeSatang: rounding.before[i]?.cashBeforeSatang ?? 0,

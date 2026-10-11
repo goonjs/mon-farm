@@ -13,7 +13,7 @@
 import { shareOn, tapperOn, type MasterState } from './master';
 import { SettlementUnavailable, formatBaht, formatKg, type Settlement, type WorkerSettlement, type ZoneSettlement } from './settle';
 import { addTotals, liveBaskets, subsetTotals, ZERO_TOTALS } from './totals';
-import type { Deduction, PersonId, SaleEvent, SaleState } from './types';
+import type { PersonId, SaleEvent, SaleState } from './types';
 
 /** A sale recorded on weighing points: some basket carries a `pointId`. */
 export function isPointSale(events: readonly SaleEvent[]): boolean {
@@ -65,12 +65,12 @@ export function settlePoints(events: readonly SaleEvent[], state: SaleState, mas
     };
   });
 
-  // Old S29 deductions still come off a worker's own share, as in settle().
-  const live = state.deductions.filter((d) => !d.voided);
-  const perWorker: WorkerSettlement[] = perZone.map((z) => worker(z.personId!, z.workerName ?? '', [z.zoneId], z.workerSatang, live));
-  for (const d of live) {
-    if (!pointsOf.has(d.personId) && !perWorker.some((w) => w.personId === d.personId)) perWorker.push(worker(d.personId, d.personName, [], 0, live));
-  }
+  const perWorker: WorkerSettlement[] = perZone.map((z) => ({
+    personId: z.personId!,
+    workerName: z.workerName ?? '',
+    zoneIds: [z.zoneId],
+    workerSatang: z.workerSatang,
+  }));
 
   const totals = perZone.reduce((t, z) => addTotals(t, z.totals), ZERO_TOTALS);
   const grossSatang = perZone.reduce((s, z) => s + z.grossSatang, 0);
@@ -88,10 +88,4 @@ export function settlePoints(events: readonly SaleEvent[], state: SaleState, mas
       { key: 'gross', thai: `× ${formatBaht(satangPerKg)} ต่อ กก.`, english: `× ${formatBaht(satangPerKg)} per kg`, value: formatBaht(grossSatang) },
     ],
   };
-}
-
-function worker(personId: PersonId, workerName: string, zoneIds: string[], workerSatang: number, live: readonly Deduction[]): WorkerSettlement {
-  const deductions = live.filter((d) => d.personId === personId);
-  const deductionSatang = deductions.reduce((s, d) => s + d.satang, 0);
-  return { personId, workerName, zoneIds, workerSatang, deductions, deductionSatang, payoutSatang: workerSatang - deductionSatang };
 }

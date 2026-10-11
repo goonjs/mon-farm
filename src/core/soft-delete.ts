@@ -80,10 +80,9 @@ function touches(e: SaleEvent, id: RecordId): boolean {
       const p = e.payload as {
         zoneId?: string;
         pileId?: string;
-        deductionId?: string;
         forcedPiles?: readonly string[];
       };
-      return p.zoneId === id || p.pileId === id || p.deductionId === id || !!p.forcedPiles?.includes(id);
+      return p.zoneId === id || p.pileId === id || !!p.forcedPiles?.includes(id);
     }
     case 'master': {
       const p = e.payload as {

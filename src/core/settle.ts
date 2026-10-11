@@ -9,7 +9,7 @@
  * Workers ARE per zone (FR-8.6): each zone resolves its own owner/worker split
  * from a `zone_contract_set` event, falling back to the sale-level
  * `split_set` default when a zone has none of its own. The split is always
- * on gross (D-12); deductions come off a worker's own share afterwards.
+ * on gross (D-12).
  *
  * FR-7.4 forbids a single opaque total, so this returns the DERIVATION, not
  * just the number. Each step is one arithmetic operation, rendered verbatim on
@@ -18,7 +18,7 @@
  */
 
 import { saleTotals, zoneTotals } from './totals';
-import type { Deduction, PersonId, SaleEvent, SaleState, Totals, ZoneId } from './types';
+import type { PersonId, SaleEvent, SaleState, Totals, ZoneId } from './types';
 
 export interface SettlementStep {
   /** Machine-readable, for tests and for the announced register. */
@@ -45,24 +45,13 @@ export interface ZoneSettlement {
   readonly workerSatang: number;
 }
 
-/**
- * One worker's total across every zone with a contract naming them, plus
- * their own deductions (S29). `workerSatang` keeps meaning the SHARE — what
- * the zone contracts say this worker earned, before deductions — so nothing
- * downstream (this screen, existing tests) needed renaming.
- */
+/** One worker's total across every zone with a contract naming them. */
 export interface WorkerSettlement {
   readonly personId: PersonId;
   readonly workerName: string;
   readonly zoneIds: readonly ZoneId[];
-  /** The share, per the zone contract(s) naming this worker. Zero for someone with no contract in this sale. */
+  /** The share, per the zone contract(s) naming this worker. */
   readonly workerSatang: number;
-  /** Live (non-voided) deductions only, itemised, in log order. */
-  readonly deductions: readonly Deduction[];
-  /** Sum of `deductions[].satang`. */
-  readonly deductionSatang: number;
-  /** `workerSatang - deductionSatang`. Never clamped — can go negative. */
-  readonly payoutSatang: number;
 }
 
 export interface Settlement {
@@ -164,41 +153,12 @@ export function settle(events: readonly SaleEvent[], state: SaleState): Settleme
     entry.workerSatang += z.workerSatang;
     byWorker.set(z.personId, entry);
   }
-  // Deductions come off AFTER the split (S29, owner decision 2026-08-11) —
-  // folded in here, once per-zone shares are already final, never touching
-  // grossSatang/ownerSatang/workerSatang or any ZoneSettlement above.
-  const perWorkerMut = new Map<
-    PersonId,
-    { workerName: string; zoneIds: ZoneId[]; workerSatang: number; deductions: Deduction[] }
-  >();
-  for (const [personId, w] of byWorker) {
-    perWorkerMut.set(personId, { ...w, deductions: [] });
-  }
-  for (const d of state.deductions) {
-    if (d.voided) continue; // live ones only — itemised, never netted before this point
-    // Someone with no zone contract in this sale has no contract to read a
-    // name from, so fall back to the name snapshotted on the deduction itself.
-    // Without this the row renders nameless, which is worse than not at all:
-    // money left the record attributed to nobody.
-    const entry =
-      perWorkerMut.get(d.personId) ??
-      { workerName: d.personName, zoneIds: [], workerSatang: 0, deductions: [] };
-    entry.deductions.push(d);
-    perWorkerMut.set(d.personId, entry);
-  }
-
-  const perWorker: WorkerSettlement[] = [...perWorkerMut.entries()].map(([personId, w]) => {
-    const deductionSatang = w.deductions.reduce((sum, d) => sum + d.satang, 0);
-    return {
-      personId,
-      workerName: w.workerName,
-      zoneIds: w.zoneIds,
-      workerSatang: w.workerSatang,
-      deductions: w.deductions,
-      deductionSatang,
-      payoutSatang: w.workerSatang - deductionSatang,
-    };
-  });
+  const perWorker: WorkerSettlement[] = [...byWorker.entries()].map(([personId, w]) => ({
+    personId,
+    workerName: w.workerName,
+    zoneIds: w.zoneIds,
+    workerSatang: w.workerSatang,
+  }));
 
   const steps: SettlementStep[] = [
     {
