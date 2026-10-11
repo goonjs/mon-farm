@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { LogBuilder } from './fixtures';
 import { projectSale } from './project';
-import { expectedReadingG, gateNeeded, saleSkewG } from './scale-check';
+import { expectedReadingG, gateNeeded, pointGateNeeded, saleSkewG } from './scale-check';
 import { basketNetG } from './totals';
 import type { ShortEvent } from './types';
 
@@ -73,5 +73,50 @@ describe('E04-S03 — the skew (D-75)', () => {
     expect(basketNetG({ ...e, skewG: 2_000 })).toBe(36_000);
     expect(basketNetG({ ...e, skewG: -1_000 })).toBe(39_000);
     expect(basketNetG(e)).toBe(38_000);
+  });
+});
+
+describe('pointGateNeeded — the check on moving to a point (v2 picker, SALE-6, D-76)', () => {
+  it('asks before a new point by mode, knowing its farm before it joins the sale', () => {
+    const b = new LogBuilder('s').sys({ t: 'zone_added', zoneId: 'A', name: 'A' });
+    let ev = b.build();
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a1', 'A', 'first-per-farm')).toBe(true);
+    b.sys({ t: 'pile_added', pileId: 'a1', zoneId: 'A', name: 'a1', tareG: 2_000, stdNetG: 50_000 });
+    ev = pass(b, 'a1').build();
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a2', 'A', 'first-per-farm')).toBe(false);
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'b1', 'B', 'first-per-farm')).toBe(true);
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a2', 'A', 'every')).toBe(true);
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a2', 'A', 'skip')).toBe(false);
+  });
+
+  it('does not ask again at a point already weighing', () => {
+    const ev = pass(sale(), 'a1').build();
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a1', 'A', 'every')).toBe(false);
+  });
+
+  it('a skew asks at a point with no baskets yet (D-76), never at one already weighed (owner 2026-10-10)', () => {
+    const b = pass(sale(), 'a1').sys({ t: 'skew_accepted', pileId: 'a1', skewG: 2_000 });
+    let ev = b.build();
+    // Readied but nothing counted there: still a move to an unweighed point.
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a1', 'A', 'skip')).toBe(true);
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a2', 'A', 'skip')).toBe(true);
+    ev = b.acceptAt('a1', 1).acceptAt('a1', 2).acceptAt('a1', 3).build();
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a1', 'A', 'every')).toBe(false);
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a2', 'A', 'skip')).toBe(true);
+  });
+
+  it('a point whose only basket was voided counts as unweighed again', () => {
+    const b = pass(sale(), 'a1').sys({ t: 'skew_accepted', pileId: 'a1', skewG: 2_000 });
+    const basketId = b.nextId();
+    let ev = b.acceptAt('a1', 1).build();
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a1', 'A', 'skip')).toBe(false);
+    // Nothing left to count there, so the skew rule asks again before it.
+    ev = b.void('a1', basketId).build();
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a1', 'A', 'skip')).toBe(true);
+  });
+
+  it('a point weighed only by backfill does not ask either', () => {
+    const ev = sale().backfillAt('b1', 1).build();
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'b1', 'B', 'every')).toBe(false);
   });
 });

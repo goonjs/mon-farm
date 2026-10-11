@@ -94,6 +94,15 @@ test('/ → splash → home: as drawn, empty, then live rows from the local log,
   await expect(page.getByTestId('mod-workers')).toContainText('2');
   await shot(page, '03-home-live', true);
 
+  // The sale rows open the sale itself: the open one where it was weighing,
+  // the latest (closed) one at its payment.
+  await page.getByTestId('home-open-sale').click();
+  await expect(page).toHaveURL(/\/v2\/sale\/e2e-now\/counter\?point=p1$/);
+  await page.goBack();
+  await page.getByTestId('home-latest-sale').click();
+  await expect(page).toHaveURL(/\/v2\/sale\/e2e-old\/payment\/?$/);
+  await page.goBack();
+
   // Selling is one tap away; the sale list hangs off the home too.
   await page.getByTestId('home-sale-start').click();
   await expect(page).toHaveURL(/\/v2\/sale\/start\/?$/);

@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import { Placeholder } from './placeholder-screen';
-import { FARM_SECTIONS, SALE_STEPS, sectionHref } from './routes';
+import { FARM_SECTIONS, SALE_START, saleHref, sectionHref } from './routes';
 import { wrap } from '../test/render';
 
 const mockRouter = { canGoBack: jest.fn(() => true), back: jest.fn(), replace: jest.fn() };
@@ -25,26 +25,15 @@ describe('v2 route table (D-82) — one placeholder per v1.1.0 mockup section', 
     );
   });
 
-  it('covers every sale-mockup step', () => {
-    expect(SALE_STEPS.map((s) => s.slug)).toEqual([
-      'start',
-      'point',
-      'zero-tare',
-      'counter',
-      'public',
-      'partial',
-      'backfill',
-      'reconcile',
-      'settlement',
-      'rounding',
-      'payment',
-    ]);
+  it('the sale flow is real screens: start, and each sale resumes where it stands', () => {
+    expect(SALE_START).toBe('/v2/sale/start');
+    expect(saleHref('s1', { closed: false, point: 'p1' })).toBe('/v2/sale/s1/counter?point=p1');
+    expect(saleHref('s1', { closed: false, point: null })).toBe('/v2/sale/s1/point');
+    expect(saleHref('s1', { closed: true, point: 'p1' })).toBe('/v2/sale/s1/payment');
   });
 
   it('slugs are unique and hrefs live under /v2', () => {
-    const all = [...FARM_SECTIONS, ...SALE_STEPS];
-    expect(new Set(all.map((s) => sectionHref(s))).size).toBe(all.length);
-    expect(sectionHref(SALE_STEPS[0])).toBe('/v2/sale/start');
+    expect(new Set(FARM_SECTIONS.map((s) => sectionHref(s))).size).toBe(FARM_SECTIONS.length);
     expect(sectionHref(FARM_SECTIONS[0])).toMatch(/^\/v2\/[a-z-]+$/);
   });
 });

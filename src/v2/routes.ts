@@ -1,8 +1,9 @@
 /**
  * The v2 route map (D-82): one entry per section of the v1.1.0 mockups
- * (docs/ux/mockups/flow-farm-v1.1.0.html, flow-sale-v1.1.0.html). Every entry
- * is a placeholder until its screen is rebuilt; a real screen later gets its
- * own static route file, which expo-router prefers over the dynamic one.
+ * (docs/ux/mockups/flow-farm-v1.1.0.html). Every entry is a placeholder until
+ * its screen is rebuilt; a real screen gets its own static route file, which
+ * expo-router prefers over the dynamic one. The sale flow (flow-sale-v1.1.0)
+ * is built: `SALE_START` and `saleHref` address it.
  */
 
 import type { Href } from 'expo-router';
@@ -16,7 +17,6 @@ export interface V2Section {
 }
 
 const farm = (slug: string, titleId: MessageId): V2Section => ({ slug, titleId, kind: 'farm' });
-const sale = (slug: string, titleId: MessageId): V2Section => ({ slug, titleId, kind: 'sale' });
 
 /** Farm mockup sections, plus the sale list and sync screens, at /v2/<slug>. */
 export const FARM_SECTIONS: readonly V2Section[] = [
@@ -41,23 +41,21 @@ export const FARM_SECTIONS: readonly V2Section[] = [
   farm('stock', 'v2.stock'),
 ];
 
-/** Sale mockup steps, in flow order, at /v2/sale/<slug>. */
-export const SALE_STEPS: readonly V2Section[] = [
-  sale('start', 'v2.saleStart'),
-  sale('point', 'v2.salePoint'),
-  sale('zero-tare', 'v2.saleZeroTare'),
-  sale('counter', 'v2.saleCounter'),
-  sale('public', 'v2.salePublic'),
-  sale('partial', 'v2.salePartial'),
-  sale('backfill', 'v2.saleBackfill'),
-  sale('reconcile', 'v2.saleReconcile'),
-  sale('settlement', 'v2.saleSettlement'),
-  sale('rounding', 'v2.saleRounding'),
-  sale('payment', 'v2.salePayment'),
-];
+/** เริ่มการขาย — the real start screen (sale mockup page 5). */
+export const SALE_START = '/v2/sale/start' as Href;
+
+/**
+ * Where a sale opens from the home or the sale list: a closed one at its
+ * payment, an open one at its counter (the point it was last weighing), or
+ * the point picker when it has none yet.
+ */
+export function saleHref(id: string, at: { closed: boolean; point: string | null }): Href {
+  if (at.closed) return `/v2/sale/${id}/payment` as Href;
+  return (at.point ? `/v2/sale/${id}/counter?point=${at.point}` : `/v2/sale/${id}/point`) as Href;
+}
 
 /** Sections with their own route file; the rest render the placeholder. */
-export const BUILT_SECTIONS: ReadonlySet<string> = new Set(['farm', 'people', 'buyers', 'farms', 'points', 'shares', 'sale-settings', 'expenses', 'debts', 'device']);
+export const BUILT_SECTIONS: ReadonlySet<string> = new Set(['farm', 'people', 'buyers', 'farms', 'points', 'shares', 'sale-settings', 'expenses', 'debts', 'device', 'sales']);
 
 export const V2_HOME = '/v2' as Href;
 

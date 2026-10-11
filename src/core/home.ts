@@ -7,6 +7,7 @@
  * across sales (E04-S11), so neither is shown.
  */
 
+import { currentPoint } from './sale-list';
 import { projectSale } from './project';
 import { statusCountsAsClosed } from './sale-status';
 import { saleTotals } from './totals';
@@ -20,6 +21,8 @@ export interface SaleLine {
   readonly baskets: number;
   /** A pile is being counted right now ("กำลังชั่ง"), not just open. */
   readonly weighing: boolean;
+  /** Where the sale was last weighing — the home opens it there (v2 sale flow). */
+  readonly point: string | null;
 }
 
 export interface HomeSales {
@@ -43,6 +46,7 @@ export function homeSales(sales: readonly { id: string; events: readonly SaleEve
       netG: totals.netG,
       baskets: totals.baskets,
       weighing: state.piles.some((p) => p.status === 'counting'),
+      point: currentPoint(events),
     };
     if (statusCountsAsClosed(state)) {
       if (newer(line, latest)) latest = line;

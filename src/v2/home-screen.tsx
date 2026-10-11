@@ -14,7 +14,7 @@ import { Link, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { farmSection, SALE_STEPS, sectionHref } from './routes';
+import { farmSection, SALE_START, saleHref, sectionHref } from './routes';
 import { useMaster, useMounted } from './farm/pieces';
 import { owedByPerson, payableSatang } from '../core/finance/ledger';
 import { formatSatang } from '../core/finance/money';
@@ -97,7 +97,7 @@ export function V2Home() {
         label={msg('home.openSale')}
         value={saleLine(sales.open)}
         chip={<Chip tone="warn" label={msg(sales.open.weighing ? 'sales.weighing' : 'status.open')} />}
-        to={href('sales')}
+        to={saleHref(sales.open.id, { closed: false, point: sales.open.point })}
       />
     ) : null,
     sales?.latest ? (
@@ -109,7 +109,7 @@ export function V2Home() {
         label={msg('home.latestSale')}
         value={saleLine(sales.latest)}
         chip={<Chip tone="accept" label={msg('status.closed')} />}
-        to={href('sales')}
+        to={saleHref(sales.latest.id, { closed: true, point: sales.latest.point })}
       />
     ) : null,
     owedTotal > 0 ? (
@@ -165,7 +165,7 @@ export function V2Home() {
             tone="action"
             main
             icon={(c) => <BasketIcon color={c} size={26} />}
-            href={sectionHref(SALE_STEPS[0])}
+            href={SALE_START}
           />
           <ActionTile
             testID="home-record-expense"

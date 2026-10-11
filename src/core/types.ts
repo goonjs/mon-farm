@@ -210,6 +210,12 @@ export type SysPayload =
   /** The sale's basket-numbering mode, chosen at start; the group setting is the default (D-53). */
   | { readonly t: 'numbering_set'; readonly numbering: NumberingMode }
   /**
+   * The standard net + basket weight the sale weighs a new point with,
+   * picked at the start (MD-7, v2). Snapshot grams; each point's own
+   * `pile_added` still carries what it was weighed with.
+   */
+  | { readonly t: 'pair_set'; readonly netG: number; readonly basketG: number }
+  /**
    * FR-8.5: `settle()` refuses to run without a split resolvable for every
    * zone — either this sale-level default or a `zone_contract_set` override
    * (below). `ownerPct` is the DEFAULT for any zone with no contract of its

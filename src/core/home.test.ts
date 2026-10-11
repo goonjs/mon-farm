@@ -22,7 +22,7 @@ describe('homeSales — the home rows for sales (flow-v1 screen 3)', () => {
     const events = sale('s1', 3).build();
     const out = homeSales([{ id: 's1', events }]);
     expect(out.latest).toBeNull();
-    expect(out.open).toMatchObject({ id: 's1', netG: 150_000, baskets: 3 });
+    expect(out.open).toMatchObject({ id: 's1', netG: 150_000, baskets: 3, point: 'p1' });
     expect(out.open?.ts).toBe(events.find((e) => e.kind === 'sys' && e.payload.t === 'sale_started')?.ts);
   });
 

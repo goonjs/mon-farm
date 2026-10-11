@@ -5,14 +5,17 @@
  * owner's transfer. Logic only — every v2 sale screen reads the same numbers.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { projectDebts, type DebtAccount } from '../../../core/finance/debts';
+import { isPointSale, settlePoints } from '../../../core/point-settle';
+import { saleDay } from '../../../core/sale-list';
 import { settle, SettlementUnavailable, type Settlement } from '../../../core/settle';
 import { useFinance } from '../../../finance/use-finance';
 import { useSaleCounts } from '../../../finance/use-live-sales';
 import { useSaleRounding } from '../../../finance/use-sale-rounding';
 import { useSale } from '../../../store/SaleProvider';
+import { useMaster } from '../../farm/pieces';
 
 export interface TapperMoney {
   readonly id: string;
@@ -41,14 +44,19 @@ export function useSaleMoney() {
   const { events, state, append } = useSale();
   const fin = useFinance();
   const counts = useSaleCounts();
+  const { state: master } = useMaster();
+  const [now] = useState(() => Date.now());
+  // A sale weighed on points settles per tapper on the sale day (E05-S01); older pile sales per zone.
+  const pointSale = isPointSale(events);
   const settlement = useMemo<Settlement | null>(() => {
     try {
+      if (pointSale) return master ? settlePoints(events, state, master, saleDay(state.startedTs, now)) : null;
       return settle(events, state);
     } catch (err) {
       if (err instanceof SettlementUnavailable) return null;
       throw err;
     }
-  }, [events, state]);
+  }, [events, state, master, pointSale, now]);
 
   const workers = useMemo(
     () => (settlement?.perWorker ?? EMPTY).map((w) => ({ id: w.personId, name: w.workerName || w.personId, shareSatang: Math.max(0, w.payoutSatang) })),
@@ -81,7 +89,8 @@ export function useSaleMoney() {
   });
 
   return {
-    loaded: fin.events !== null,
+    loaded: fin.events !== null && (!pointSale || master !== null),
+    master,
     events,
     state,
     append,

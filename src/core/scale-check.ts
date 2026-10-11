@@ -4,6 +4,7 @@
  */
 
 import { compareEvents } from './order';
+import { liveBaskets } from './totals';
 import type { PileId, SaleEvent, SaleState, ZeroCheckMode } from './types';
 
 /**
@@ -42,4 +43,22 @@ export function gateNeeded(state: SaleState, events: readonly SaleEvent[], pileI
   if (mode === 'skip') return false;
   const pile = state.piles.find((p) => p.id === pileId);
   return !state.piles.some((p) => p.id !== pileId && p.zoneId === pile?.zoneId && p.status !== 'not-started');
+}
+
+/**
+ * The check when weighing moves to `pointId` of farm `farmId` (v2 picker).
+ * A point with a live basket is never asked again. A point with none (new,
+ * readied, or every basket undone or voided) is asked if the sale ever took
+ * a skew (D-76), else by mode; its farm is known before its pile is added.
+ */
+export function pointGateNeeded(state: SaleState, events: readonly SaleEvent[], pointId: PileId, farmId: string, mode: ZeroCheckMode): boolean {
+  // Back to a point already weighed in this sale: go straight on counting, skew or
+  // not — only a point with no baskets yet is checked (owner 2026-10-10).
+  if (liveBaskets(events).some((b) => b.pointId === pointId)) return false;
+  if (hadSkew(events)) return true;
+  const pile = state.piles.find((p) => p.id === pointId);
+  if (pile && pile.status !== 'not-started') return false;
+  if (mode === 'every') return true;
+  if (mode === 'skip') return false;
+  return !state.piles.some((p) => p.id !== pointId && p.zoneId === farmId && p.status !== 'not-started');
 }
