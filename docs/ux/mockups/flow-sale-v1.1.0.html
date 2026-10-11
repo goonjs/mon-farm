@@ -2069,15 +2069,28 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กด <b>ยืนยัน</b> → เทียบยอด</span></div>
 
     <figure class="step">
-      <div class="phone"><div class="screen" aria-label="เทียบยอด ทุกกองรวมกันเท่ากับยอดขาย">
+      <div class="phone long"><div class="screen" aria-label="เทียบยอด ทุกกองรวมกันเท่ากับยอดขาย (หน้ายาว)">
         <div class="sbar num"><span>10:22</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
         <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>เทียบยอด <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 52</span></div>
         <div class="body" style="gap:10px">
           <div class="card">
-            <h4>เงินสดให้คนกรีดยาง</h4>
-            <div class="kv"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง</span><span>34,860.00</span></div>
-            <div class="kv"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด</span><span>16,964.00</span></div>
-            <h4 style="margin-top:8px">เงินเข้าสวน</h4>
+            <h4>ยอดขายทั้งหมด (ตรงกับที่ตรวจกับคนรับซื้อยาง)</h4>
+            <div class="kv"><span>น้ำหนัก</span><span>2,255 กก.</span></div>
+            <div class="kv"><span>ราคา</span><span>48.50 ฿/กก.</span></div>
+            <div class="kv"><span>จำนวนเข่ง</span><span>46 เข่ง</span></div>
+            <div class="kv"><span>เข่งไม่เต็ม (2 เข่ง)</span><span>55 กก.</span></div>
+            <div class="kv muted" style="padding-left:12px"><span>↳ จันทเขลม จุด 3 · เข่ง 31</span><span>20 กก.</span></div>
+            <div class="kv muted" style="padding-left:12px"><span>↳ คลองพลู จุด 1 · เข่ง 15</span><span>35 กก.</span></div>
+            <div class="kv"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง 1,520 กก.</span><span>73,720.00</span></div>
+            <div class="kv"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic cat4"><use href="#i-tapper"/></svg>นัด 735 กก.</span><span>35,647.50</span></div>
+            <div class="kv total"><span>ยอดขายทั้งหมด</span><span class="fig" style="font-size:22px">109,367.50<span class="u">บาท</span></span></div>
+          </div>
+          <div class="card">
+            <h4>เงินที่ต้องได้แต่ละกอง</h4>
+            <div class="kv"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic cat3"><use href="#i-tapper"/></svg>เงินสดให้แดง</span><span>34,860.00</span></div>
+            <span class="mi" style="padding-left:19px">ส่วนแบ่ง 36,860.00 − หักหนี้ 2,000.00</span>
+            <div class="kv"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic cat4"><use href="#i-tapper"/></svg>เงินสดให้นัด</span><span>16,964.00</span></div>
+            <span class="mi" style="padding-left:19px">ส่วนแบ่ง 17,823.75 − หักหนี้ 860.00 + ปัดเศษ 0.25</span>
             <div class="kv"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic"><use href="#i-bank"/></svg>โอนเข้าบัญชีเจ้าของสวน</span><span>55,543.50</span></div>
             <span class="mi" style="padding-left:19px">ส่วนเจ้าของสวน 54,683.50</span>
             <span class="mi" style="padding-left:19px">+ นัดคืนหนี้ 860 (หลังหักกลบ 640)</span>
@@ -2085,13 +2098,14 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <span class="mi" style="padding-left:19px">หักจากเงินแดงแล้ว</span>
             <div class="kv muted"><span class="mi" style="font-size:14px;color:var(--color-ink-soft)"><svg class="ic"><use href="#i-coin"/></svg>กองคืนหนี้แยก</span><span>ไม่มี</span></div>
             <div class="kv total"><span>รวมทุกกอง</span><span class="fig" style="font-size:20px">109,367.50</span></div>
+            <span class="mi" style="margin-top:4px">ปัดเศษแล้ว ไม่ต้องบวกเพิ่ม (นัด +0.25 · เจ้าของสวน −0.25)</span>
+          </div>
+          <div class="card tight">
+            <div class="kv"><span>รวมทุกกอง</span><span>109,367.50</span></div>
             <div class="kv"><span>ยอดขายทั้งหมด</span><span>109,367.50</span></div>
             <span style="font-size:14px;color:var(--color-ink);margin-top:6px;display:block">เงินทุกกองรวมกันต้องเท่ายอดขาย</span>
-            <span class="mi" style="margin-top:4px">ปัดเศษแล้ว ไม่ต้องบวกเพิ่ม</span>
-            <span class="mi" style="padding-left:19px">นัด +0.25</span>
-            <span class="mi" style="padding-left:19px">เจ้าของสวน −0.25</span>
+            <div class="mini-row" style="margin-top:6px"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ตรงกันถึงสตางค์</span></div>
           </div>
-          <div class="mini-row"><span class="chip ch-ok"><svg class="ic"><use href="#i-check"/></svg>ตรงกันถึงสตางค์</span></div>
         </div>
         <div class="foot"><div class="btn btn-primary">ถัดไป: การจ่ายเงิน</div></div>
       </div></div>
@@ -2106,8 +2120,8 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         </div>
       </div>
       <figcaption>
-        <span class="t">18a. เทียบยอด (ใหม่)</span>
-        หลังสรุปยอดส่วนแบ่งและปัดเศษ: เงินทุกกอง — เงินสดคนกรีดยางแต่ละคน · โอนเจ้าของสวน (รวมเงินคืนหนี้ที่มากับโอน) · เงินสดเข้าสวน (เงินที่หยิบคืนหนี้) · กองคืนหนี้แยก (ทาง 2 — การขายนี้ไม่มี) · ส่วนปรับปัดเศษ — รวมกัน = ยอดขายทั้งหมด <b>ตรงถึงสตางค์</b> · ไม่ตรง → ส่วนต่างสีเตือน ปิดการขายไม่ได้
+        <span class="t">18a. เทียบยอด (ใหม่) — ร่างแก้: การ์ดยอดขายแสดงกิโล/ราคา/เข่ง เหมือนหน้า 16</span>
+        <b>ร่างรอเจ้าของสวนดู:</b> บนสุดเป็นการ์ดยอดขายทั้งหมดที่ละเอียดเท่าหน้า 16 (น้ำหนัก ราคา เข่ง เข่งไม่เต็ม ยอดต่อคน) · ล่างเป็นเงินแต่ละกอง พร้อมบรรทัดที่มาของแต่ละยอด · สุดท้ายเทียบ รวมทุกกอง = ยอดขายทั้งหมด หลังสรุปยอดส่วนแบ่งและปัดเศษ: เงินทุกกอง — เงินสดคนกรีดยางแต่ละคน · โอนเจ้าของสวน (รวมเงินคืนหนี้ที่มากับโอน) · เงินสดเข้าสวน (เงินที่หยิบคืนหนี้) · กองคืนหนี้แยก (ทาง 2 — การขายนี้ไม่มี) · ส่วนปรับปัดเศษ — รวมกัน = ยอดขายทั้งหมด <b>ตรงถึงสตางค์</b> · ไม่ตรง → ส่วนต่างสีเตือน ปิดการขายไม่ได้
         <span class="ids">SET-4, SET-5, NFR-3 · D-71, D-72 · E05-S04, E06-S04</span>
         <ul>
           <li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>D-72</span><span>หน้าเทียบยอด: ทุกกองรวมกัน = ยอดขายทั้งหมด ตรงถึงสตางค์</span></li>
