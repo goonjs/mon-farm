@@ -22,7 +22,7 @@ Status: In Progress
 - [x] rule ตรวจ `actor.userId == request.auth.uid` และ document id ตรงกับ `id` ใน event
 - [ ] client ถือว่า "มีเอกสารนี้อยู่แล้ว **และ canonical JSON เท่ากัน**" = ส่งสำเร็จ (push ซ้ำ idempotent); มีอยู่แต่เนื้อหาต่าง = error ด้านความถูกต้อง ห้ามทับ (architecture §Sync engine)
 - [x] batch 500 event ที่ทุกตัวเรียก `isMember` ไม่ชนเพดาน 20 access call ของ rules (test บน emulator)
-- [ ] rules + index อยู่ใน repo, deploy เข้า database `dev` ผ่านสคริปต์ (เลื่อนตาม D-48 — ยังไม่มี database `dev`; ตอนนี้ test บน emulator เท่านั้น); `(default)` (prod) ต้องเจ้าของอนุมัติ
+- [ ] rules + index อยู่ใน repo, deploy เข้า database `(default)` ซึ่งใช้เป็น dev ไปก่อน (D-84; ไม่มี database `dev`); prod จริงแยกทีหลัง
 
 ## Offline / sync behavior
 
@@ -52,7 +52,7 @@ Status: In Progress
 - [x] บันทึก `npm audit` ก่อน/หลัง (ด้านล่าง)
 - [x] typecheck + test:core ผ่าน; CI มีขั้น `test:rules` (JDK 21 + cache emulator) — รอ CI จริงของ PR
 - [x] reviewer อิสระ (agent แยก session) ตรวจแล้ว — ดู Code review; แก้ข้อ major ทั้งสองแล้ว
-- [ ] deploy rules เข้า database `dev` — ต้องมี database `dev` และ credential ก่อน (E01-S07; owner สร้าง database) — เลื่อนตาม D-48 จนกว่าจะอัปเกรดแผน
+- [x] deploy rules เข้า database `(default)` (ใช้เป็น dev ตาม D-84, 2026-10-11) — ไม่มี database `dev` จนกว่าจะอัปเกรดแผน
 - [x] client adapter แปลง "มีอยู่แล้วและ canonical JSON เท่ากัน" เป็นสำเร็จ (AC ข้อ 4) — ทำใน `SyncEngine` (E01-S09) กับ fake ที่จำลอง rules; adapter Firestore จริงรอ E02/D-48
 
 ### สถานะ 2026-10-09 (overnight, team INFRA)

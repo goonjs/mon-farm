@@ -17,8 +17,8 @@
 
 - [x] database `(default)` = **prod** — สร้างแล้ว 2026-10-03: `asia-southeast3` (กรุงเทพฯ), Standard, native mode,
   production mode; ห้ามเปลี่ยนชื่อหรือลบ (D-48)
-- [ ] **เลื่อนตาม D-48 (ยังไม่อัปเกรดแผน):** สร้าง database ชื่อ `dev` (`asia-southeast3 (กรุงเทพฯ)`) — build dev/preview ใช้ตัวนี้เท่านั้น (NFR-5)
-- [ ] ยังไม่ต้อง deploy rules — ทีม platform ทำผ่าน CI หลังเจ้าของอนุมัติ deploy
+- [ ] **ยกเลิกชั่วคราวตาม D-84 (2026-10-11): ใช้ `(default)` เป็น dev ไปก่อน ไม่สร้าง `dev`** — (เดิม: เลื่อนตาม D-48) สร้าง database ชื่อ `dev` (`asia-southeast3 (กรุงเทพฯ)`) — build dev/preview ใช้ตัวนี้เท่านั้น (NFR-5)
+- [x] deploy rules เข้า `(default)` ด้วย `firebase deploy --only 'firestore:(default)' --project mon-farmmate` (D-84) — ตัวที่รันคือ CLI ของเจ้าของ ไม่ใช่ CI
 
 ## 3. Cloud Storage (E01-S12)
 
