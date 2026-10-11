@@ -5,6 +5,7 @@
  */
 
 import { canonicalJson } from '../core/canonical';
+import { requireGroupId } from '../core/scope';
 import type { DeviceId, SaleEvent } from '../core/types';
 import { IntegrityError } from './errors';
 
@@ -43,6 +44,9 @@ export function checkAppend(
   existing: SaleEvent | undefined,
   device: DeviceState,
 ): { event: SaleEvent; device: DeviceState } | null {
+  // D-24 backstop: the write path already refuses this (record.ts); no
+  // adapter may store an event outside a group either.
+  requireGroupId(event.groupId);
   const own = event.actor.deviceId === device.deviceId;
   if (existing) {
     // An own event may have been renumbered on its way in; its number is the

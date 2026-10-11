@@ -21,6 +21,7 @@ function master() {
     n += 1;
     events.push({
       id: `m${n}`,
+      groupId: 'group-1',
       saleId: MASTER_SCOPE,
       seq: n,
       deviceSeq: n,

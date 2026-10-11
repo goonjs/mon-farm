@@ -13,6 +13,7 @@ describe('device clock — one counter for every screen (E01-S02 AC3)', () => {
 
     const basket = (saleId: string, seq: number): AcceptEvent => ({
       id: `${saleId}-${seq}`,
+      groupId: 'group-1',
       saleId,
       seq,
       deviceSeq: clock.take(),

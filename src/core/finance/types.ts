@@ -21,7 +21,7 @@
  * two meet in one `events` table then.
  */
 
-import type { Actor, EventId, Source } from '../types';
+import type { Actor, EventId, GroupId, Source } from '../types';
 
 /** The payer id for the farm's own money — "เงินสวน" (D-62). Creates nothing owed back. */
 export const FARM_FUNDS = 'farm';
@@ -277,6 +277,8 @@ export type FinancePayload =
 
 export interface FinanceEvent {
   readonly id: EventId;
+  /** The farm group this was recorded in — never absent (D-24, E02-S02). */
+  readonly groupId: GroupId;
   readonly deviceSeq: number;
   /** Wall clock, for people reading the log. Never orders anything. */
   readonly ts: number;

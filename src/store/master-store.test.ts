@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { MASTER_SCOPE, saleSettings, shareOn, tapperOn } from '../core/master';
 import { createDeviceClock } from './device-clock';
+import { NotSignedInError, setSessionGroup, setSessionUser } from './session';
+import { NoGroupError } from '../core/scope';
 import { DuplicatePointNameError, InvalidInputError, MasterStore, ShareTooEarlyError } from './master-store';
 import { MemoryStore } from './memory-store';
 import { LogBuilder, setUpSale, withZoneContract } from '../core/fixtures';
@@ -10,8 +12,33 @@ describe('MasterStore — people and buyers as events (E03-S01)', () => {
   let events: MemoryStore;
   let master: MasterStore;
   beforeEach(() => {
+    setSessionUser('user-1');
+    setSessionGroup('group-1');
     events = new MemoryStore();
     master = new MasterStore(events, createDeviceClock(events));
+  });
+
+  it('every farm-data event names the signed-in user and the open group (E02-S01/S02, D-24)', async () => {
+    const p = await master.create('แดง', ['tapper']);
+    await master.remove(p.id);
+    const log = await events.load(MASTER_SCOPE);
+    expect(log).toHaveLength(2);
+    for (const e of log) {
+      expect(e.groupId).toBe('group-1');
+      expect(e.actor.userId).toBe('user-1');
+    }
+  });
+
+  it('with no open group a write fails and stores nothing (D-24)', async () => {
+    setSessionGroup(null);
+    await expect(master.create('แดง', ['tapper'])).rejects.toBeInstanceOf(NoGroupError);
+    expect(await events.load(MASTER_SCOPE)).toEqual([]);
+  });
+
+  it('with nobody signed in a write fails and stores nothing (ACC-6)', async () => {
+    setSessionUser(null);
+    await expect(master.create('แดง', ['tapper'])).rejects.toBeInstanceOf(NotSignedInError);
+    expect(await events.load(MASTER_SCOPE)).toEqual([]);
   });
 
   it('every write is an event in the master scope, waiting in the outbox', async () => {

@@ -207,7 +207,9 @@ export class SyncEngine {
   }
 
   private async push(): Promise<void> {
-    const outbox = await this.deps.store.pending();
+    // Events recorded before groups existed (dev devices) have no `groupId`;
+    // the server would refuse them, so they stay on the device (E02-S02).
+    const outbox = (await this.deps.store.pending()).filter((e) => typeof e.groupId === 'string' && e.groupId !== '');
     let refused: Permanent | undefined;
     for (let i = 0; i < outbox.length; i += BATCH_SIZE) {
       const batch = outbox.slice(i, i + BATCH_SIZE);

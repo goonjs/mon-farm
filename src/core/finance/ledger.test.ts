@@ -24,6 +24,7 @@ function ev(
   n += 1;
   return {
     id: opts.id ?? `e${String(n).padStart(4, '0')}`,
+    groupId: 'group-1',
     deviceSeq: n,
     ts: 1_000 + n,
     actor: { userId: 'u', deviceId: opts.device ?? 'dev-a' },

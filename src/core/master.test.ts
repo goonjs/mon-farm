@@ -48,6 +48,7 @@ function log() {
     n += 1;
     return {
       id: `m/${deviceId}/${n}`,
+      groupId: 'group-1',
       saleId: MASTER_SCOPE,
       seq: n,
       deviceSeq: n,

@@ -6,7 +6,7 @@ import type { FinanceEvent, FinancePayload } from './types';
 let n = 0;
 function ev(targetId: string, payload: FinancePayload, base: string | null = null, device = 'dev-a'): FinanceEvent {
   n += 1;
-  return { id: `r${String(n).padStart(4, '0')}`, deviceSeq: n, ts: n, actor: { userId: 'u', deviceId: device }, source: 'app', targetId, baseEventId: base, payload };
+  return { id: `r${String(n).padStart(4, '0')}`, groupId: 'group-1', deviceSeq: n, ts: n, actor: { userId: 'u', deviceId: device }, source: 'app', targetId, baseEventId: base, payload };
 }
 
 describe('rounding choice (E05-S02)', () => {

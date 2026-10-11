@@ -12,7 +12,7 @@ import type { EventId } from '../core/types';
 import { todayIso } from '../core/finance/money';
 import { financeStore } from '../store/finance';
 import { writeFinance } from '../store/finance-write';
-import { actorNow } from '../store/record';
+import { deviceClock } from '../store/record';
 import { useSaleCounts } from './use-live-sales';
 
 export interface UseFinance {
@@ -36,7 +36,7 @@ export function useFinance(): UseFinance {
 
   useEffect(() => {
     reload();
-    actorNow().then((a) => setDeviceId(a.deviceId), () => setDeviceId(null));
+    deviceClock.load().then(setDeviceId, () => setDeviceId(null));
   }, [reload]);
   useFocusEffect(reload);
 

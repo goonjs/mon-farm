@@ -13,7 +13,7 @@ function master() {
   let n = 0;
   const add = (payload: MasterPayload) => {
     n += 1;
-    events.push({ id: `m${n}`, saleId: MASTER_SCOPE, seq: n, deviceSeq: n, ts: 0, mono: 0, actor: { userId: 'u', deviceId: 'd' }, source: 'app', kind: 'master', payload });
+    events.push({ id: `m${n}`, groupId: 'group-1', saleId: MASTER_SCOPE, seq: n, deviceSeq: n, ts: 0, mono: 0, actor: { userId: 'u', deviceId: 'd' }, source: 'app', kind: 'master', payload });
   };
   add({ t: 'property_added', propertyId: 'fA', name: 'ก', crop: 'rubber' });
   for (const p of ['p1', 'p2', 'p3']) add({ t: 'point_added', pointId: p, propertyId: 'fA', name: p });

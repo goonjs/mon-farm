@@ -38,7 +38,7 @@ import { statusCountsAsClosed } from '../core/sale-status';
 import type { BuiltinRole, Crop, Gps, MasterPayload, NumberingMode, PersonId, SaleEvent, ScaleType, ZeroCheckMode } from '../core/types';
 import { uuidv7 } from '../lib/id';
 import type { DeviceClock } from './device-clock';
-import { PRE_LOGIN_USER_ID } from './session';
+import { sessionGroupId, sessionUserId } from './session';
 import type { EventStore } from './store';
 
 export type Person = PersonRecord;
@@ -343,12 +343,13 @@ export class MasterStore implements PeopleStore {
     await this.events.append(
       make({
         id: uuidv7(),
+        groupId: sessionGroupId(),
         saleId: MASTER_SCOPE,
         seq: log.reduce((max, e) => Math.max(max, e.seq), 0) + 1,
         deviceSeq: this.clock.take(),
         ts: Date.now(),
         mono: Math.round(typeof performance !== 'undefined' ? performance.now() : Date.now()),
-        actor: { userId: PRE_LOGIN_USER_ID, deviceId },
+        actor: { userId: sessionUserId(), deviceId },
         source: 'app',
       } as Omit<SaleEvent, 'kind'>),
     );

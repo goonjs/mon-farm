@@ -9,6 +9,7 @@ function ev(targetId: string, payload: FinancePayload, opts: { base?: string | n
   n += 1;
   return {
     id: `d${String(n).padStart(4, '0')}`,
+    groupId: 'group-1',
     deviceSeq: n,
     ts: n,
     actor: { userId: 'u', deviceId: opts.device ?? 'dev-a' },

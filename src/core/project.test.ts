@@ -151,6 +151,7 @@ describe('sale lifecycle — the hard boundary', () => {
     const last = events[events.length - 1];
     events.push({
       id: 'reopen-1',
+      groupId: 'group-1',
       saleId: last.saleId,
       seq: last.seq + 1,
       deviceSeq: last.deviceSeq + 1,
@@ -321,7 +322,7 @@ describe('deductions (S29) — projected, voided by mark not removal', () => {
 
 describe('clock anomalies (FR-12.6) — flagged, never ordering', () => {
   const ev = (ts: number) =>
-    ({ id: 'e1', saleId: 's', seq: 1, deviceSeq: 1, ts, mono: 0, actor: { userId: 'u', deviceId: 'd' }, source: 'app',
+    ({ id: 'e1', groupId: 'group-1', saleId: 's', seq: 1, deviceSeq: 1, ts, mono: 0, actor: { userId: 'u', deviceId: 'd' }, source: 'app',
        kind: 'reject', pileId: 'p',
        input: 'hold', reason: 'released-early', heldMs: 1 }) as const;
 

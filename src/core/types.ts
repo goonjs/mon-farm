@@ -21,8 +21,10 @@ export type PileId = string;
 export type PersonId = string;
 /** UUIDv7 (RFC 9562), lowercase canonical form — see src/lib/id.ts. */
 export type EventId = string;
-/** Firebase Auth uid once login exists (E02-S01). */
+/** The Firebase Auth uid of the signed-in user (E02-S01). */
 export type UserId = string;
+/** A farm group; minted on the device as a UUIDv7 (E02-S02). */
+export type GroupId = string;
 /** UUIDv7 minted once per install (web: per browser profile). */
 export type DeviceId = string;
 
@@ -73,6 +75,8 @@ export type Source = 'app' | 'line' | 'import' | 'ai';
  */
 export interface EventBase {
   readonly id: EventId;
+  /** The farm group this was recorded in — never absent (D-24, E02-S02; see scope.ts). */
+  readonly groupId: GroupId;
   readonly saleId: SaleId;
   readonly seq: number;
   readonly deviceSeq: number;

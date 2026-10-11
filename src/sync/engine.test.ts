@@ -55,6 +55,15 @@ describe('push (SYNC-1, SYNC-2)', () => {
     expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
   });
 
+  it('leaves an event recorded before groups existed on the device (E02-S02)', async () => {
+    const p = await phone();
+    const [e] = new LogBuilder('s1', p.deviceId).accept('p1').build();
+    const { groupId: _none, ...old } = e;
+    vi.spyOn(p.store, 'pending').mockResolvedValue([old as SaleEvent]);
+    await p.engine.sync();
+    expect(p.server.docs.size).toBe(0);
+  });
+
   it('sends in batches of at most 500, one batch at a time, in device order', async () => {
     const p = await phone();
     const b = new LogBuilder('s1', p.deviceId);
