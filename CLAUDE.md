@@ -222,3 +222,48 @@ question blocks the commit, and the commit is what a push is waiting on.
   are authored collaboratively, not assumed.
 - Docs are live documents: update them in the same session a decision is
   made or scope shifts, not as after-the-fact cleanup.
+
+## Discord
+
+Shared server, project code `farm`. Skill:
+`.claude/skills/discord-project-management` (routing, alert format, naming).
+The channels exist. Always use the full names:
+
+`#farm-talk` `#farm-design-and-specs` `#farm-playground`
+`#farm-ai-updates` `#farm-ai-alerts`
+
+Human action needed → `#farm-ai-alerts`; otherwise `#farm-ai-updates`.
+A push proposal (see Security gates) is a `🔎 REVIEW` alert: the push brief
+goes there. This adds a notification route only; it does not relax any gate.
+
+**When to post** (agents post to the two `ai-` channels only):
+
+- PR reviewed, CI green, waiting for the owner's acknowledgement →
+  `#farm-ai-alerts`, `🔎 REVIEW`: PR link, one-line summary, what to check.
+- PR merged, or a deployment finished (preview or Deploy Prod) →
+  `#farm-ai-updates`, `✅ DONE`: what shipped, link, result.
+- A deployment or PR is stuck on a human (Deploy Prod yes, missing
+  credential, red CI that needs a decision) → `#farm-ai-alerts`,
+  `⚠️ BLOCKED` or `❓ NEED DECISION`.
+
+**How:** post with `scripts/notify.sh` (a copy of dev-pose
+`tools/discord/notify.sh`), never with hand-written curl. The owner's Discord
+id is `398028551888306178`; pass it as `--mention` on every alert.
+
+```bash
+scripts/notify.sh updates "PR #12 merged: <one line>. <link>"
+scripts/notify.sh alerts --need review --mention 398028551888306178 "PR #12 is green. Please check A and B, reply OK or the issue. <link>"
+scripts/notify.sh alerts --need blocked --mention 398028551888306178 "Deploy Prod needs your yes. <link>"
+```
+
+`--need` is `decision`, `review` or `blocked`; the script adds the prefix and
+the `<@owner>` mention. Post **before** you stop and wait for the owner, once,
+after the thing actually happened. The webhook URLs are secrets (repo secrets
+`DISCORD_WEBHOOK_AI_UPDATES`, `DISCORD_WEBHOOK_AI_ALERTS`,
+`DISCORD_WEBHOOK_PLAYGROUND`): never print, commit or paste them. You do not
+need them: with no URL on the machine, the script starts the
+`.github/workflows/discord-notify.yml` workflow, whose runner holds them (this
+is how a Claude Remote session posts). Read the result:
+
+- `sent to ...` or `queued via GitHub Action` → say it was posted / queued.
+- exit `3` = **NOT SENT** → say so in your summary; never write "pinged Discord".

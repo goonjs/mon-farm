@@ -52,8 +52,9 @@ import { HoldStage } from './hold';
 import { signed, useGoToPoint } from './move';
 import { Banner, IconLine, Kv, kgText, NumChip, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 import { Ruler } from './ruler';
+import { SaleOptionRows, SaleOptionSheets, type OptionSheet } from './sale-options';
 
-type Sheet = 'none' | 'partial' | 'menu' | 'new-point';
+type Sheet = 'none' | 'partial' | 'menu' | 'new-point' | OptionSheet;
 
 export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet }) {
   const t = useTheme();
@@ -286,10 +287,13 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
             <Button variant="row" testID="menu-finish" onPress={() => { setSheet('none'); router.push(`${base}/check` as Href); }}>
               {msg('rec.finish')}
             </Button>
+            <SaleOptionRows view={view} pick={setSheet} />
             <Button variant="row" testID="menu-sales" onPress={() => { setSheet('none'); router.push('/v2/sales' as Href); }}>
               {msg('v2.sales')}
             </Button>
           </BottomSheet>
+
+          <SaleOptionSheets view={view} open={sheet === 'price' || sheet === 'info' || sheet === 'delete' ? sheet : 'none'} onClose={() => setSheet('none')} />
 
           <BottomSheet open={point.hidden && sheet !== 'new-point'} onClose={() => router.replace('/v2/sales' as Href)} title={msg('v2s.pointGoneTitle', { point: point.name })} testID="point-gone">
             <View style={{ gap: t.space.xxs }}>

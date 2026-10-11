@@ -21,6 +21,7 @@ import {
   BUILTIN_ROLES,
   filterPeople,
   pointsOf,
+  sortPeopleByRole,
   shareOn,
   tapperPointsNow,
   todayIso,
@@ -78,7 +79,7 @@ import {
 
 const PEOPLE = '/v2/people' as Href;
 type Filter = 'all' | 'buyers' | BuiltinRole;
-const FILTERS: readonly Filter[] = ['all', 'tapper', 'worker', 'manager', 'buyers', 'owner'];
+const FILTERS: readonly Filter[] = ['all', 'owner', 'manager', 'assistant', 'tapper', 'worker', 'buyers'];
 
 /**
  * Roles the people screens show and offer. ผู้จ่าย is left out (owner
@@ -133,7 +134,7 @@ export function PeopleScreen() {
       fallback={'/v2/farm' as Href}
       failed={write.failed}
       testID="people"
-      footer={<AddCTA testID="add-person" label={msg('v2f.addPerson')} onPress={() => router.push('/v2/person/new' as Href)} />}
+      footer={<AddCTA testID="add-person" label={msg('v2f.addPerson')} onPress={() => router.push((filter === 'all' || filter === 'buyers' ? '/v2/person/new' : `/v2/person/new?role=${filter}`) as Href)} />}
     >
       {showDeleted ? (
         <>
@@ -180,7 +181,7 @@ function PeopleRows({ state, filter, today, tappers }: { state: MasterState; fil
       </RowCard>
     );
   }
-  const list = filterPeople(state.people, filter);
+  const list = sortPeopleByRole(filterPeople(state.people, filter));
   if (list.length === 0) return <AppText variant="bodySm">{msg('peopleList.empty')}</AppText>;
   return (
     <RowCard testID="people-list">
@@ -209,22 +210,23 @@ function PeopleRows({ state, filter, today, tappers }: { state: MasterState; fil
 
 /** /v2/person/<id|new>: the form for `new` or `?edit=1`, else the detail. */
 export function PersonScreen() {
-  const { id, edit } = useLocalSearchParams<{ id: string; edit?: string }>();
+  const { id, edit, role } = useLocalSearchParams<{ id: string; edit?: string; role?: string }>();
   const mounted = useMounted();
   if (!mounted) return <FarmScreen title="" fallback={PEOPLE} />;
   const personId = id && id !== 'new' ? id : null;
   if (personId && edit !== '1') return <PersonDetail key={personId} personId={personId} />;
-  return <PersonForm key={personId ?? 'new'} personId={personId} />;
+  return <PersonForm key={personId ?? 'new'} personId={personId} startRole={BUILTIN_ROLES.find((r) => r === role) ?? null} />;
 }
 
-function PersonForm({ personId }: { personId: string | null }) {
+function PersonForm({ personId, startRole }: { personId: string | null; startRole: BuiltinRole | null }) {
   const t = useTheme();
   const msg = useT();
   const back = useBack(PEOPLE);
   const { state } = useMaster();
   const [loaded, setLoaded] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [roles, setRoles] = useState<BuiltinRole[]>([]);
+  // A new person starts with the role of the list filter they were added from.
+  const [roles, setRoles] = useState<BuiltinRole[]>(startRole && !personId ? [startRole] : []);
   const [otherRoles, setOtherRoles] = useState<string[]>([]);
   const [otherDraft, setOtherDraft] = useState('');
   const [tried, setTried] = useState(false);

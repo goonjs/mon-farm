@@ -74,6 +74,12 @@ test('/ → splash → home: as drawn, empty, then live rows from the local log,
   await shot(page, '02-menu');
   await page.keyboard.press('Escape');
 
+  // No sale is open: เริ่มการขาย shows the start form.
+  await page.getByTestId('home-sale-start').click();
+  await expect(page).toHaveURL(/\/v2\/sale\/start\/?$/);
+  await expect(page.getByTestId('sale-start')).toBeVisible();
+  await page.goBack();
+
   // The local log is what the home reads: seed it, reload (the static host
   // needs the network for that), then use the home with the network gone.
   await seedEvents(page, [...sale('e2e-old', '2026-09-18', 42, true), ...sale('e2e-now', '2026-10-09', 3, false)]);
@@ -104,9 +110,11 @@ test('/ → splash → home: as drawn, empty, then live rows from the local log,
   await expect(page).toHaveURL(/\/v2\/sale\/e2e-old\/payment\/?$/);
   await page.goBack();
 
-  // Selling is one tap away; the sale list hangs off the home too.
+  // Selling is one tap away: with a sale still open (one at a time), เริ่มการขาย resumes it
+  // where it was weighing instead of starting another; the sale list hangs off the home too.
   await page.getByTestId('home-sale-start').click();
-  await expect(page).toHaveURL(/\/v2\/sale\/start\/?$/);
+  await expect(page).toHaveURL(/\/v2\/sale\/e2e-now\/counter\?point=p1$/);
+  await expect(page.getByTestId('sale-start')).toHaveCount(0);
   await page.goBack();
   await page.getByTestId('home-sales').click();
   await expect(page).toHaveURL(/\/v2\/sales\/?$/);

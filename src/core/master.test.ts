@@ -33,6 +33,7 @@ import {
   validateProperty,
   defaultBuyer,
   filterPeople,
+  sortPeopleByRole,
   formatThaiDate,
   formatThaiDay,
   projectMaster,
@@ -654,5 +655,20 @@ describe('tapperPointsNow — person detail (mockup v1.1.0 farm-05)', () => {
       { pointId: 'p1', name: 'จุด 1', farmName: 'สวนจันทเขลม', from: null, to: null, planned: false },
       { pointId: 'p3', name: 'จุด 3', farmName: 'สวนจันทเขลม', from: null, to: '2026-10-31', planned: true },
     ]);
+  });
+});
+
+describe('sortPeopleByRole', () => {
+  it('orders owner, manager, assistant, tapper, other; name order holds within a group', () => {
+    const state = projectMaster(
+      log()
+        .master({ t: 'person_added', personId: 'a', name: 'กก', roles: ['tapper'], otherRoles: [] })
+        .master({ t: 'person_added', personId: 'b', name: 'ขข', roles: ['tenant'], otherRoles: [] })
+        .master({ t: 'person_added', personId: 'c', name: 'คค', roles: ['assistant'], otherRoles: [] })
+        .master({ t: 'person_added', personId: 'd', name: 'งง', roles: ['tapper', 'manager'], otherRoles: [] })
+        .master({ t: 'person_added', personId: 'e', name: 'จจ', roles: ['owner'], otherRoles: [] })
+        .build(),
+    );
+    expect(sortPeopleByRole(state.people).map((p) => p.id)).toEqual(['e', 'd', 'c', 'a', 'b']);
   });
 });

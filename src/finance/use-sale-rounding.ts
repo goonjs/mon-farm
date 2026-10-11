@@ -25,7 +25,7 @@ export function useSaleRounding(
   const debts = useMemo(() => projectDebts(fin.events ?? [], counts), [fin.events, counts]);
 
   const before = workers.map((w) => {
-    const here = (debts.get(w.id)?.payments ?? []).filter((p) => p.saleId === saleId && !p.deleted);
+    const here = (debts.get(w.id)?.payments ?? []).filter((p) => p.saleId === saleId && !p.deleted && p.counts);
     const deducted = here.filter((p) => p.method !== 'netting').reduce((s, p) => s + p.amountSatang, 0);
     const netted = here.filter((p) => p.method === 'netting').reduce((s, p) => s + p.amountSatang, 0);
     return {

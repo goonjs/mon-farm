@@ -395,7 +395,7 @@ export interface RestoreEvent extends EventBase {
  *
  * `person_edited` / `buyer_edited` are patches: a field left out is unchanged.
  */
-export type BuiltinRole = 'tapper' | 'worker' | 'manager' | 'payer' | 'tenant' | 'owner';
+export type BuiltinRole = 'owner' | 'manager' | 'assistant' | 'tapper' | 'worker' | 'payer' | 'tenant';
 
 export type MasterPayload =
   | {
