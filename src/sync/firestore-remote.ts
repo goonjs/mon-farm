@@ -47,7 +47,7 @@ export interface FirestoreLayer {
    * Ids of the groups with a `members` document whose `uid` is `userId`: the
    * collection-group query the rules allow only for one's own uid.
    */
-  groupsOf(userId: UserId): Promise<readonly GroupId[]>;
+  groupsOf(userId: UserId): Promise<readonly { readonly groupId: GroupId; readonly role: unknown }[]>;
   /**
    * Documents of `groups/{groupId}/events` with `receivedAt >= sinceMs`, ordered by `receivedAt` (then id),
    * at most `limit`, after the position `after`. `next` is the position after the last document, or null when
@@ -258,14 +258,15 @@ export class FirestoreMemberships implements RemoteMemberships {
   ) {}
 
   async myGroups(): Promise<RemoteGroupRef[]> {
-    const ids = [...new Set(await guarded(() => this.layer.groupsOf(this.userId)))].sort();
+    const mine = new Map<GroupId, unknown>();
+    for (const m of await guarded(() => this.layer.groupsOf(this.userId))) mine.set(m.groupId, m.role);
     return Promise.all(
-      ids.map(async (groupId) => {
+      [...mine.keys()].sort().map(async (groupId) => {
         const group = await guarded(() => this.layer.get(`groups/${groupId}`));
         if (!group || typeof group.name !== 'string' || !group.name) {
           throw new RemoteError('internal', `group ${groupId} could not be read`);
         }
-        return { groupId, name: group.name };
+        return { groupId, name: group.name, role: mine.get(groupId) === 'owner' ? ('owner' as const) : ('member' as const) };
       }),
     );
   }

@@ -74,6 +74,11 @@ memberships only), because there is nothing to split.
 - [x] AC8 After the restored group opens, sync pulls its events (no local
       `create_group` op exists): the points wizard waits for the first pull, and the
       data appears (proved on the emulator, e2e).
+- [x] AC10 The role kept for a restored group is the one on the user's own member
+      document (`owner`/`member`); a missing or unknown value reads as `member`.
+- [x] AC11 The failed state also offers `เข้าสู่ระบบด้วย Google อีกครั้ง`, reusing the
+      sign-in path, so a Firebase session that is gone for good (there is no sign-out,
+      D-23) cannot loop on retry; a cancelled sign-in stays on the failed state.
 - [x] AC9 Rules: a signed-in user can list only their own `members` documents
       across groups (already true; the existing rules tests are kept and one is added
       for reading the group doc after listing). No rules or index change.
@@ -126,7 +131,17 @@ See QA notes.
 
 ## Code review
 
-(pending: independent reviewer)
+Independent review (separate session): no blockers, ready to merge. Follow-ups, all done in the
+second commit:
+
+1. `askServer` hard-coded role `owner`: now read from the member document (fallback `member`; `Role`
+   widened to `owner | member`), with tests (AC10).
+2. A user saved locally whose Firebase session is gone looped on retry: the failed state now offers
+   signing in again (AC11), with tests.
+3. Screenshot numbers 03-/04- collided with existing files: new files renamed to 05-/06-/07-.
+
+Caveats from the reviewer: the Playwright, full jest and emulator results are the author's own
+claims; that the index and rules are deployed to `(default)` was not verified by the reviewer.
 
 ## QA notes
 
@@ -134,8 +149,8 @@ See QA notes.
   before), vitest 901 pass, jest 393 pass, `npm run test:rules` 80 pass (emulator, incl. real-SDK
   restore in `firestore/sync.test.ts`), Playwright on the emulators: `sync-restore`, `sync-emulator`,
   `sync-wizard` pass; `v2-account` (no backend build) passes.
-- Screenshots (real run on the emulators): `docs/ux/screenshots/ui-v2/account/03-fetching-groups.png`,
-  `04-fetching-groups-failed.png`, `05-restored-group-data.png`.
+- Screenshots (real run on the emulators): `docs/ux/screenshots/ui-v2/account/05-fetching-groups.png`,
+  `06-fetching-groups-failed.png`, `07-restored-group-data.png`.
 - Not covered: the Google popup path in the browser (the sign-in spec cannot run in the sandbox;
   proven in the gate's jest tests instead); native/Android (no sync adapter yet); the picker for
   2+ groups (E02-S04).

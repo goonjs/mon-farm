@@ -12,7 +12,7 @@ describe('FakeRemote.myGroups (the member lookup of E02-S05)', () => {
     const first = new FakeRemote(server, 'uid-1');
     await first.createGroup(newGroup('g-1', 'สวนบ้านนา', somchai, 1).op);
     // A second device of the same account: a different client, the same server.
-    expect(await new FakeRemote(server, 'uid-1').myGroups()).toEqual([{ groupId: 'g-1', name: 'สวนบ้านนา' }]);
+    expect(await new FakeRemote(server, 'uid-1').myGroups()).toEqual([{ groupId: 'g-1', name: 'สวนบ้านนา', role: 'owner' }]);
   });
 
   it("never lists another user's group", async () => {

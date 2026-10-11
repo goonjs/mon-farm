@@ -24,12 +24,12 @@ jest.mock('expo-router', () => ({
 const somchai = userFromSignIn('uid-1', 'สมชาย', { provider: 'google', subject: 'g-1' });
 const home = <Text testID="app-inside">inside</Text>;
 
-type Ref = { groupId: string; name: string };
+type Ref = { groupId: string; name: string; role: 'owner' | 'member' };
 type Lookup = (userId: string) => Promise<{ myGroups: () => Promise<Ref[]> } | null>;
 const groupsOf =
   (...groups: Ref[]): Lookup =>
   async () => ({ myGroups: async () => groups });
-const farm: Ref = { groupId: 'g-farm', name: 'สวนสมชาย' };
+const farm: Ref = { groupId: 'g-farm', name: 'สวนสมชาย', role: 'owner' };
 
 beforeEach(() => {
   setSessionUser(null);
@@ -99,7 +99,7 @@ it('AC8: the restored group starts sync for it, so its events are pulled', async
 
 it('AC3: several groups are all kept and the oldest one opens', async () => {
   const accounts = await signedInAccounts();
-  await render(accounts, groupsOf({ groupId: 'g-second', name: 'สวนสอง' }, farm));
+  await render(accounts, groupsOf({ groupId: 'g-second', name: 'สวนสอง', role: 'owner' }, farm));
   expect(screen.getByTestId('app-inside')).toBeTruthy();
   expect(sessionGroupId()).toBe('g-farm');
   expect((await accounts.memberships()).map((m) => m.groupId)).toEqual(['g-farm', 'g-second']);
@@ -206,4 +206,60 @@ it('when the device cannot keep what the server said, it does not enter and does
   expect(screen.getByTestId('group-check-failed')).toBeTruthy();
   expect(screen.queryByTestId('group-start')).toBeNull();
   expect(screen.queryByTestId('app-inside')).toBeNull();
+});
+
+it("keeps the role the server holds for the user, not a fixed one (a member who joined by invite)", async () => {
+  const accounts = await signedInAccounts();
+  await render(accounts, groupsOf({ ...farm, role: 'member' }));
+  expect(await accounts.memberships()).toEqual([{ groupId: 'g-farm', userId: 'uid-1', name: 'สวนสมชาย', role: 'member' }]);
+  expect(screen.getByTestId('app-inside')).toBeTruthy();
+});
+
+it('a lost Firebase session cannot be retried forever: the failed state offers signing in again, which then finds the farm', async () => {
+  jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  let signedInAgain = false;
+  const lookup: Lookup = async () => ({
+    myGroups: async () => {
+      if (!signedInAgain) throw new Error('unauthenticated');
+      return [farm];
+    },
+  });
+  const signIn = jest.fn(async () => {
+    signedInAgain = true;
+    return somchai;
+  });
+  const accounts = await signedInAccounts();
+  wrap(
+    <AccountGate accounts={accounts} google={{ signIn }} lookup={lookup} connect={jest.fn(async () => null)}>
+      {home}
+    </AccountGate>,
+  );
+  for (let i = 0; i < 4; i++) await flush();
+  await press('group-check-retry');
+  expect(screen.getByTestId('group-check-failed')).toBeTruthy();
+  expect(screen.queryByTestId('group-start')).toBeNull();
+
+  await press('group-check-signin');
+  expect(signIn).toHaveBeenCalledTimes(1);
+  expect(screen.getByTestId('app-inside')).toBeTruthy();
+  expect(sessionGroupId()).toBe('g-farm');
+});
+
+it('signing in again that is cancelled stays on the failed state, with no create-group', async () => {
+  jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const accounts = await signedInAccounts();
+  wrap(
+    <AccountGate
+      accounts={accounts}
+      google={{ signIn: async () => Promise.reject(new Error('cancelled')) }}
+      lookup={async () => Promise.reject(new Error('unauthenticated'))}
+      connect={jest.fn(async () => null)}
+    >
+      {home}
+    </AccountGate>,
+  );
+  for (let i = 0; i < 4; i++) await flush();
+  await press('group-check-signin');
+  expect(screen.getByTestId('group-check-failed')).toBeTruthy();
+  expect(screen.queryByTestId('group-start')).toBeNull();
 });

@@ -5,7 +5,7 @@
  * would make a second farm and split their data.
  *
  * Two states: asking (the mark and a line), and could-not-ask (offline, timed
- * out, refused) with a retry. There is deliberately no way past it other than
+ * out, refused) with a retry, and a sign-in again for a Firebase session that is gone. There is deliberately no way past it other than
  * the answer.
  */
 
@@ -13,10 +13,10 @@ import { View } from 'react-native';
 
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AppText, CTA } from '../../ui';
+import { AppText, Button, CTA } from '../../ui';
 import { BrandMark } from '../brand-mark';
 
-export function GroupCheckScreen({ failed, onRetry }: { failed: boolean; onRetry: () => void }) {
+export function GroupCheckScreen({ failed, onRetry, onSignInAgain }: { failed: boolean; onRetry: () => void; onSignInAgain: () => void }) {
   const t = useTheme();
   const msg = useT();
   return (
@@ -37,10 +37,13 @@ export function GroupCheckScreen({ failed, onRetry }: { failed: boolean; onRetry
         ) : null}
       </View>
       {failed ? (
-        <View style={{ padding: t.layout.screenPaddingX }}>
+        <View style={{ padding: t.layout.screenPaddingX, gap: t.space.sm }}>
           <CTA testID="group-check-retry" onPress={onRetry}>
             {msg('acct.check.retry')}
           </CTA>
+          <Button testID="group-check-signin" variant="row" onPress={onSignInAgain}>
+            {msg('acct.check.signIn')}
+          </Button>
         </View>
       ) : null}
     </View>

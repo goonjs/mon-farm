@@ -68,9 +68,9 @@ class FakeLayer implements FirestoreLayer {
 
   async groupsOf(userId: string) {
     this.maybeFail();
-    return [...this.docs.keys()].flatMap((path) => {
+    return [...this.docs].flatMap(([path, d]) => {
       const m = /^groups\/([^/]+)\/members\/([^/]+)$/.exec(path);
-      return m && m[2] === userId ? [m[1]] : [];
+      return m && m[2] === userId ? [{ groupId: m[1], role: d.role }] : [];
     });
   }
 
@@ -371,9 +371,20 @@ describe('FirestoreMemberships', () => {
     seed(layer, 'g-3', 'สวนคนอื่น', 'user-other');
     const groups = await new FirestoreMemberships(layer, 'user-somchai').myGroups();
     expect(groups).toEqual([
-      { groupId: 'g-1', name: 'สวนบ้านนา' },
-      { groupId: 'g-2', name: 'สวนริมน้ำ' },
+      { groupId: 'g-1', name: 'สวนบ้านนา', role: 'owner' },
+      { groupId: 'g-2', name: 'สวนริมน้ำ', role: 'owner' },
     ]);
+  });
+
+  it('carries the role from the member document, and reads a missing or unknown one as member', async () => {
+    const layer = new FakeLayer();
+    seed(layer, 'g-1', 'หนึ่ง', 'user-somchai');
+    seed(layer, 'g-2', 'สอง', 'user-somchai');
+    seed(layer, 'g-3', 'สาม', 'user-somchai');
+    layer.docs.set('groups/g-2/members/user-somchai', { uid: 'user-somchai', role: 'member' });
+    layer.docs.set('groups/g-3/members/user-somchai', { uid: 'user-somchai', role: 'superuser' });
+    const groups = await new FirestoreMemberships(layer, 'user-somchai').myGroups();
+    expect(groups.map((g) => g.role)).toEqual(['owner', 'member', 'member']);
   });
 
   it('a user with no group gets an empty list: a real answer, not an error', async () => {

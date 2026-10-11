@@ -1321,6 +1321,7 @@ const th = {
   'acct.check.failed': 'ดึงรายการกลุ่มไม่สำเร็จ — ต่อเน็ตแล้วลองอีกครั้ง',
   'acct.check.why': 'เพื่อไม่ให้สร้างกลุ่มซ้ำ แอปต้องรู้ก่อนว่าคุณมีกลุ่มฟาร์มอยู่แล้วหรือไม่',
   'acct.check.retry': 'ลองอีกครั้ง',
+  'acct.check.signIn': 'เข้าสู่ระบบด้วย Google อีกครั้ง',
 
   // ── v2 farm settings (D-83) ──
   'v2f.pointsCount': '{n} จุดชั่ง',
@@ -2942,6 +2943,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'acct.check.failed': 'could not fetch your groups — connect to the internet and try again',
   'acct.check.why': 'to avoid making a duplicate group, the app must first know whether you already have a farm group',
   'acct.check.retry': 'try again',
+  'acct.check.signIn': 'sign in with Google again',
   'v2f.pointsCount': '{n} weighing points',
   'v2f.accountsCount': '{n} accounts',
   'v2f.scale': 'scale',

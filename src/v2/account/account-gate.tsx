@@ -143,7 +143,7 @@ export function AccountGate({
     const remote = await lookup(user.userId);
     if (!remote) return [];
     const groups = [...(await remote.myGroups())].sort((a, b) => (a.groupId < b.groupId ? -1 : a.groupId > b.groupId ? 1 : 0));
-    const memberships = groups.map((g): Membership => ({ groupId: g.groupId, userId: user.userId, name: g.name, role: 'owner' }));
+    const memberships = groups.map((g): Membership => ({ groupId: g.groupId, userId: user.userId, name: g.name, role: g.role }));
     // An answer that came too late, or for a check since retried, is dropped, not kept behind the screen's back.
     if (memberships.length > 0 && alive()) await accounts.saveMemberships(memberships);
     return memberships;
@@ -184,7 +184,14 @@ export function AccountGate({
   if (phase.kind === 'signed-out') return <SignInScreen onSignIn={signIn} />;
   if (phase.kind === 'checking') {
     const { user } = phase;
-    return <GroupCheckScreen failed={phase.failed} onRetry={() => void checkServer(user)} />;
+    return (
+      <GroupCheckScreen
+        failed={phase.failed}
+        onRetry={() => void checkServer(user)}
+        // The Firebase session may be gone for good (the person has no sign-out, D-23): signing in again mends it.
+        onSignInAgain={() => void signIn().catch((err) => console.warn('Signing in again did not complete.', err))}
+      />
+    );
   }
   if (phase.kind === 'no-group') {
     const { user } = phase;

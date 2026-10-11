@@ -346,10 +346,10 @@ describe('the same account on a new device (E02-S05)', () => {
 
     // The incognito window: a signed-in user, an empty device.
     const groups = await new FirestoreMemberships(sdkLayer(dbOf('somchai')), 'somchai').myGroups();
-    expect(groups).toEqual([{ groupId: gid, name: 'สวนบ้านนา' }]);
+    expect(groups).toEqual([{ groupId: gid, name: 'สวนบ้านนา', role: 'owner' }]);
 
     const second = await phone('somchai', { groupId: gid });
-    await second.accounts.saveMemberships(groups.map((g) => ({ groupId: g.groupId, userId: 'somchai', name: g.name, role: 'owner' as const })));
+    await second.accounts.saveMemberships(groups.map((g) => ({ groupId: g.groupId, userId: 'somchai', name: g.name, role: g.role })));
     expect(await second.accounts.pendingOps()).toEqual([]);
     await second.engine.sync();
     expect(second.engine.status()).toMatchObject({ state: 'synced', pending: 0 });

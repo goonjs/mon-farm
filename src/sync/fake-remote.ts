@@ -1,4 +1,4 @@
-import type { CreateGroupOp } from '../core/group';
+import type { CreateGroupOp, Role } from '../core/group';
 import type { EventId, GroupId, SaleEvent, UserId } from '../core/types';
 import {
   RemoteError,
@@ -28,10 +28,10 @@ export class FakeServer {
    */
   requireGroups = false;
   /** Member documents (`groups/{gid}/members/{uid}`) with the group's name, as the member lookup sees them. */
-  readonly members: { readonly uid: UserId; readonly groupId: GroupId; readonly name: string }[] = [];
+  readonly members: { readonly uid: UserId; readonly groupId: GroupId; readonly name: string; readonly role: Role }[] = [];
 
-  addMember(uid: UserId, groupId: GroupId, name: string): void {
-    if (!this.members.some((m) => m.uid === uid && m.groupId === groupId)) this.members.push({ uid, groupId, name });
+  addMember(uid: UserId, groupId: GroupId, name: string, role: Role = 'owner'): void {
+    if (!this.members.some((m) => m.uid === uid && m.groupId === groupId)) this.members.push({ uid, groupId, name, role });
   }
 }
 
@@ -66,7 +66,7 @@ export class FakeRemote implements RemoteEvents, RemoteGroups, RemoteMemberships
     this.gate();
     return this.server.members
       .filter((m) => m.uid === this.userId)
-      .map(({ groupId, name }) => ({ groupId, name }))
+      .map(({ groupId, name, role }) => ({ groupId, name, role }))
       .sort((a, b) => (a.groupId < b.groupId ? -1 : a.groupId > b.groupId ? 1 : 0));
   }
 

@@ -57,7 +57,7 @@ export function sdkLayer(db: Firestore): FirestoreLayer {
       // The rules allow this listing only when filtered to one's own uid; the `members.uid`
       // collection-group index is in firestore.indexes.json.
       const snap = await getDocsFromServer(query(collectionGroup(db, 'members'), where('uid', '==', userId)));
-      return snap.docs.flatMap((d) => (d.ref.parent.parent ? [d.ref.parent.parent.id] : []));
+      return snap.docs.flatMap((d) => (d.ref.parent.parent ? [{ groupId: d.ref.parent.parent.id, role: d.data().role }] : []));
     },
 
     async eventsSince(groupId, sinceMs, after, limit) {

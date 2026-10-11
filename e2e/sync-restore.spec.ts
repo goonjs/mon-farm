@@ -86,14 +86,14 @@ test('a second device of the same account finds the existing farm group and its 
     // Asking: nothing else is offered meanwhile.
     await expect(second.getByTestId('group-check')).toBeVisible();
     await expect(second.getByTestId('group-start')).toHaveCount(0);
-    await evidence(second, `${SHOTS}/03-fetching-groups.png`);
+    await evidence(second, `${SHOTS}/05-fetching-groups.png`);
 
     // No answer within the bound: said plainly, with retry, and still no create-group.
     await expect(second.getByTestId('group-check-failed')).toBeVisible({ timeout: 30_000 });
     await expect(second.getByText('ดึงรายการกลุ่มไม่สำเร็จ — ต่อเน็ตแล้วลองอีกครั้ง')).toBeVisible();
     await expect(second.getByTestId('group-start')).toHaveCount(0);
     await expect(second.getByTestId('group-create')).toHaveCount(0);
-    await evidence(second, `${SHOTS}/04-fetching-groups-failed.png`);
+    await evidence(second, `${SHOTS}/06-fetching-groups-failed.png`);
 
     // The server answers: retry finds the existing group and goes in.
     answering = true;
@@ -109,7 +109,7 @@ test('a second device of the same account finds the existing farm group and its 
     // Sync's first pull brings the farm's data: the person recorded in window one.
     await second.goto('/v2/people');
     await expect(id('people-list')).toContainText('สมหญิง', { timeout: 45_000 });
-    await evidence(second, `${SHOTS}/05-restored-group-data.png`);
+    await evidence(second, `${SHOTS}/07-restored-group-data.png`);
 
     // Reopening goes straight in, and no second group exists on the server.
     await second.reload();

@@ -7,7 +7,7 @@
  * `update: false` make Firestore do), whatever its content.
  */
 
-import type { CreateGroupOp } from '../core/group';
+import type { CreateGroupOp, Role } from '../core/group';
 import type { EventId, GroupId, SaleEvent } from '../core/types';
 
 export type RemoteErrorCode =
@@ -70,6 +70,8 @@ export interface RemoteEvents {
 export interface RemoteGroupRef {
   readonly groupId: GroupId;
   readonly name: string;
+  /** From the user's own member document; an unknown value reads as `member` (least privilege). */
+  readonly role: Role;
 }
 
 /**
