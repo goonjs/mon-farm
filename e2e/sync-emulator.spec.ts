@@ -9,7 +9,8 @@ import { E2E_USER, readStore, signedInNoGroup } from './session';
  * empties, with no Sync button anywhere.
  *
  * Needs a build pointed at the emulators and the emulators running, so it is
- * skipped in the default run: `npm run test:e2e:sync` does both. Nothing here
+ * skipped in the default run: `npm run test:e2e:sync` does both (with
+ * `firebase.e2e.json`: one database, so the emulator loads the rules). Nothing here
  * touches a real Firebase project. The Firebase session is made by signing the
  * test user up on the Auth emulator and writing it where the SDK keeps its
  * persisted user (the Google popup is covered separately, `auth-emulator.spec.ts`).

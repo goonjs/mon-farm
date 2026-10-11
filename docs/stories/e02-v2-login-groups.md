@@ -180,10 +180,9 @@ path. Try the popup by hand on `mon-farm-preview.web.app` (workflow
 
 Known gaps, not fixed in this PR:
 
-- Sync pushes by "has a `groupId`", not "belongs to the signed-in user and a
-  group they belong to"; pending ops (`create_group`) are not ordered before
-  events, and the pending badge counts all groups and users. Safe today (no real
-  remote, rules reject mismatches); must be solved with the outbox (E01-S09).
+- ~~Sync pushes by "has a `groupId`"...~~ **Fixed in E01-S09 (2026-10-11):** the engine sends only the signed-in user's events of the
+  open group, sends the pending `create_group` first, and the pending badge counts only that user and group.
+  Events with no `groupId` stay on the device, unsent and uncounted (decision recorded in E01-S09 Dev notes).
 - Local events from before this change (no `groupId`, `actor.userId` `pre-login`)
   are neither migrated nor isolated: never pushed, never lost, but still visible,
   and a later edit of an old sale is stamped with the current group. Dev devices
