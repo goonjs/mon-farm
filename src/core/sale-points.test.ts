@@ -237,6 +237,42 @@ describe('E04-S09 — undo, edit and void at points (SALE-17)', () => {
   });
 });
 
+describe('basketList with undone baskets — E04-S15 audit', () => {
+  it('on request an undone basket stays in the list, marked, with when it was undone; the totals still ignore it', () => {
+    const b = new LogBuilder('sale-x').acceptAt('p1', 1).acceptAt('p1', 2);
+    const second = b.build().at(-1)!;
+    b.undo('p1', second.id);
+    b.acceptAt('p1', 2);
+    expect(basketList(b.build()).map((r) => [r.basketNo, r.status])).toEqual([[2, 'live'], [1, 'live']]);
+    const rows = basketList(b.build(), { withUndone: true });
+    expect(rows.map((r) => [r.basketNo, r.status])).toEqual([[2, 'live'], [2, 'undone'], [1, 'live']]);
+    expect(rows[1].undoneTs).toEqual(expect.any(Number));
+    expect(rows[0].undoneTs).toBeUndefined();
+  });
+});
+
+describe('basketList with an undone top-up part — E04-S15 audit', () => {
+  it('taking back the part that filled a short basket is listed as a part, out of the totals; the basket is short again', () => {
+    const b = withPiles().shortAt('p1', 1, 32_000);
+    const first = b.build()[b.build().length - 1];
+    b.partAt(first.id, 'p2', 1, 20_000);
+    const part = b.build().at(-1)!;
+    b.undo('p2', part.id);
+    expect(basketList(b.build()).map((r) => [r.basketNo, r.status, r.short])).toEqual([[1, 'live', true]]);
+    const rows = basketList(b.build(), { withUndone: true });
+    expect(rows.map((r) => [r.basketNo, r.status, !!r.part, r.netG])).toEqual([[1, 'undone', true, 20_000], [1, 'live', false, 30_000]]);
+  });
+});
+
+describe('basketList short-basket reading — E04-S15', () => {
+  it('a short basket row carries the scale reading and the basket weight; a full one does not', () => {
+    const b = withPiles().acceptAt('p1', 1).shortAt('p1', 2, 22_000, 2_000);
+    const rows = basketList(b.build());
+    expect(rows[0]).toMatchObject({ basketNo: 2, short: true, netG: 20_000, reading: { readingG: 22_000, tareG: 2_000 } });
+    expect(rows[1].reading).toBeUndefined();
+  });
+});
+
 describe('parseKgG — E04-S09 edit form', () => {
   it('kg with up to 3 decimals → grams; anything else, or 0, is refused', () => {
     expect(parseKgG('48.5')).toBe(48_500);

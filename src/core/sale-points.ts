@@ -236,8 +236,15 @@ export interface BasketRow {
   readonly pointId: string;
   readonly netG: number;
   readonly short: boolean;
-  /** Voided rows stay in the list, struck through (SALE-17). */
-  readonly status: 'live' | 'voided';
+  /**
+   * Voided rows stay in the list, struck through (SALE-17). `undone` rows (the
+   * last basket taken back) are only listed on request, for the audit view (E04-S15).
+   */
+  readonly status: 'live' | 'voided' | 'undone';
+  /** When an undone basket was taken back. */
+  readonly undoneTs?: number;
+  /** A later part that topped up a short basket (listed only when it was taken back, E04-S15). */
+  readonly part?: boolean;
   /** Re-recorded from the list (E04-S09); the replaced basket stays in the log only. */
   readonly edited: boolean;
   /** Who recorded this row — the device and when (SYNC-9). */
@@ -246,6 +253,8 @@ export interface BasketRow {
   readonly partsG?: readonly number[];
   /** Entered afterwards as a point total (E04-S10): "บันทึกย้อนหลัง". */
   readonly backfill?: boolean;
+  /** A short basket weighed on its own: what the scale read and the basket's weight (E04-S15 "22 − 2 = 20"). */
+  readonly reading?: { readonly readingG: number; readonly tareG: number };
 }
 
 /**
@@ -253,9 +262,11 @@ export interface BasketRow {
  * live and voided rows; an undone basket drops out (its number is used
  * again) and an edited one shows as its replacement.
  */
-export function basketList(events: readonly SaleEvent[]): readonly BasketRow[] {
+export function basketList(events: readonly SaleEvent[], opts: { withUndone?: boolean } = {}): readonly BasketRow[] {
   const live = new Set(liveBaskets(events).map((b) => b.id));
   const undone = undoneIds(events);
+  const undoneAt = new Map<string, number>();
+  for (const e of events) if (e.kind === 'correction' && e.mode === 'undo-last') undoneAt.set(e.targetId, e.ts);
   const groups = basketGroups(events, stdNetOfLog(events));
   const replaced = new Set<string>();
   // Only a replacement still standing hides its original; an undone edit gives the row back.
@@ -263,9 +274,10 @@ export function basketList(events: readonly SaleEvent[]): readonly BasketRow[] {
   const rows: BasketRow[] = [];
   for (const e of [...events].sort(compareEvents).reverse()) {
     if ((e.kind !== 'accept' && e.kind !== 'short') || !e.pointId || e.basketNo === undefined) continue;
-    if (undone.has(e.id) || replaced.has(e.id) || e.partOf) continue;
+    const wasUndone = undone.has(e.id);
+    if ((wasUndone && !opts.withUndone) || replaced.has(e.id) || (e.partOf && !wasUndone)) continue;
     const group = groups.get(e.id);
-    const bridged = group && group.parts.length > 1 ? group : null;
+    const bridged = !wasUndone && group && group.parts.length > 1 ? group : null;
     rows.push({
       id: e.id,
       basketNo: e.basketNo,
@@ -274,7 +286,10 @@ export function basketList(events: readonly SaleEvent[]): readonly BasketRow[] {
       short: bridged ? bridged.status !== 'full' : e.kind === 'short',
       ...(bridged ? { partsG: bridged.partsG } : {}),
       ...((e.kind === 'accept' && e.input === 'backfill') || (e.kind === 'short' && e.backfill) ? { backfill: true } : {}),
-      status: live.has(e.id) ? 'live' : 'voided',
+      ...(e.kind === 'short' && !bridged ? { reading: { readingG: e.readingG, tareG: e.tareG } } : {}),
+      status: wasUndone ? 'undone' : live.has(e.id) ? 'live' : 'voided',
+      ...(wasUndone ? { undoneTs: undoneAt.get(e.id) } : {}),
+      ...(e.partOf ? { part: true } : {}),
       edited: !!e.editOf,
       by: { deviceId: e.actor.deviceId, ts: e.ts },
     });
