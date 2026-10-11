@@ -247,27 +247,23 @@ goes there. This adds a notification route only; it does not relax any gate.
   `⚠️ BLOCKED` or `❓ NEED DECISION`.
 
 **How:** post with `scripts/notify.sh` (a copy of dev-pose
-`tools/discord/notify.sh`), never with hand-written curl:
+`tools/discord/notify.sh`), never with hand-written curl. The owner's Discord
+id is `398028551888306178`; pass it as `--mention` on every alert.
 
 ```bash
 scripts/notify.sh updates "PR #12 merged: <one line>. <link>"
-scripts/notify.sh alerts --need review "PR #12 is green. Please check A and B, reply OK or the issue. <link>"
-scripts/notify.sh alerts --need blocked "Deploy Prod needs your yes. <link>"
+scripts/notify.sh alerts --need review --mention 398028551888306178 "PR #12 is green. Please check A and B, reply OK or the issue. <link>"
+scripts/notify.sh alerts --need blocked --mention 398028551888306178 "Deploy Prod needs your yes. <link>"
 ```
 
 `--need` is `decision`, `review` or `blocked`; the script adds the prefix and
 the `<@owner>` mention. Post **before** you stop and wait for the owner, once,
-after the thing actually happened. Exit code `3` means **NOT SENT**: say so in
-your summary and never write "pinged Discord" unless the script printed
-`sent to ...`. The webhook URLs are secrets: never print, commit or paste them.
-The script reads them from the environment, a gitignored `.env`, or a GitHub
-repo variable (`gh variable get`). Variables (the same names the repo's
-Actions secrets use):
+after the thing actually happened. The webhook URLs are secrets (repo secrets
+`DISCORD_WEBHOOK_AI_UPDATES`, `DISCORD_WEBHOOK_AI_ALERTS`,
+`DISCORD_WEBHOOK_PLAYGROUND`): never print, commit or paste them. You do not
+need them: with no URL on the machine, the script starts the
+`.github/workflows/discord-notify.yml` workflow, whose runner holds them (this
+is how a Claude Remote session posts). Read the result:
 
-| Variable | Used for |
-|---|---|
-| `DISCORD_WEBHOOK_AI_UPDATES` | `#farm-ai-updates` webhook URL |
-| `DISCORD_WEBHOOK_AI_ALERTS` | `#farm-ai-alerts` webhook URL |
-| `DISCORD_OWNER_ID` | owner's Discord user id, for the `<@id>` mention in alerts |
-
-Posting to `discord.com` needs it on the environment's allowed domains.
+- `sent to ...` or `queued via GitHub Action` → say it was posted / queued.
+- exit `3` = **NOT SENT** → say so in your summary; never write "pinged Discord".

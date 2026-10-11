@@ -11,10 +11,13 @@
 #               person given by --mention or $DISCORD_OWNER_ID. Never @everyone or @here.
 # playground -> playground, no prefix.
 #
-# The webhook URL is a secret. It is read from, in order: the environment, ./.env, then
-# `gh variable get` for this repo. It is never printed. The script exits 0 only when Discord accepted
-# the message. Exit 2 = bad usage; exit 3 = NOT SENT (no URL, or Discord refused). On exit 3, tell the
-# human the message was not sent; never claim a ping happened.
+# The webhook URL is a secret and is never printed. Two ways to post:
+#   1. Direct: the URL is in the environment or in ./.env (a local machine). Prints "sent to <channel>".
+#   2. Via GitHub Action: no URL here (a Claude Remote session), but the repo has
+#      .github/workflows/discord-notify.yml, whose runner holds the secrets. The script starts that
+#      workflow with `gh workflow run`. Prints "queued via GitHub Action": accepted, not yet delivered.
+# Exit 0 = sent or queued. Exit 2 = bad usage. Exit 3 = NOT SENT (no URL and no way to dispatch, or
+# Discord refused). On exit 3, tell the human the message was not sent; never claim a ping happened.
 set -u
 
 die_usage() { echo "notify.sh: $*" >&2; echo "usage: notify.sh updates|alerts|playground [--need decision|review|blocked] [--mention ID] [--dry-run] \"message\"" >&2; exit 2; }
@@ -66,11 +69,19 @@ url=${!var:-}
 if [ -z "$url" ] && [ -f .env ]; then
   url=$(sed -n "s/^${var}=//p" .env | head -1 | tr -d "\"'\r")
 fi
-if [ -z "$url" ] && command -v gh >/dev/null 2>&1; then
-  url=$(gh variable get "$var" 2>/dev/null || true)
-fi
 if [ -z "$url" ]; then
-  echo "NOT SENT: $var is not set (environment, .env or a GitHub repo variable). Tell the human; do not claim a Discord post happened." >&2
+  # No URL on this machine. Outside GitHub Actions, ask the repo's discord-notify workflow to post.
+  if [ -z "${GITHUB_ACTIONS:-}" ] && [ -f .github/workflows/discord-notify.yml ] && command -v gh >/dev/null 2>&1; then
+    args=(-f "channel=$channel" -f "message=$text")
+    [ -n "$need" ] && args+=(-f "need=$need")
+    [ -n "$mention" ] && args+=(-f "mention=$mention")
+    if gh workflow run discord-notify.yml "${args[@]}" >/dev/null 2>&1; then
+      echo "queued via GitHub Action (discord-notify) for $channel"; exit 0
+    fi
+    echo "NOT SENT: no $var here and 'gh workflow run discord-notify.yml' failed (not logged in, no Actions permission, or the workflow is not on the default branch). Tell the human; do not claim a Discord post happened." >&2
+    exit 3
+  fi
+  echo "NOT SENT: $var is not set (environment or .env) and this repo has no discord-notify workflow. Tell the human; do not claim a Discord post happened." >&2
   exit 3
 fi
 
