@@ -54,6 +54,7 @@ async function seedExpense(id: string, over: Partial<ExpenseFields>) {
   seq += 1;
   const e: FinanceEvent = {
     id: `seed-${seq}`,
+    groupId: 'group-1',
     deviceSeq: seq,
     ts: seq,
     actor: { userId: 'u', deviceId: 'dev-other' },

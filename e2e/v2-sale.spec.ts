@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import type { MasterPayload } from '../src/core/types';
-import { LogBuilder } from '../src/core/fixtures';
+import { FIXTURE_GROUP_ID, LogBuilder } from '../src/core/fixtures';
 import type { FinanceEvent, FinancePayload } from '../src/core/finance/types';
 import { evidence, seedEvents, seedMaster } from './fixtures';
 
@@ -77,6 +77,7 @@ test('settlement: netting the money the farm owes back against a debt (E06-S04)'
   await seedEvents(page, b.build().map((e) => ({ ...e, ts: now })));
   const fin = (n: number, targetId: string, payload: FinancePayload): FinanceEvent => ({
     id: `e2e-net-${n}`,
+    groupId: FIXTURE_GROUP_ID,
     deviceSeq: n,
     ts: now,
     actor: { userId: 'pre-login', deviceId: 'dev-seed' },

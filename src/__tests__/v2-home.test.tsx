@@ -56,6 +56,7 @@ async function seedSale(id: string, baskets: number, finish?: (b: LogBuilder) =>
 async function seedOwed(name: string, satang: number) {
   const e: FinanceEvent = {
     id: `owed-${name}`,
+    groupId: 'group-1',
     deviceSeq: 1,
     ts: 1,
     actor: { userId: 'u', deviceId: 'dev-other' },

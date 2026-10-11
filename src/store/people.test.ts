@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { MemoryPeopleStore } from './people-memory';
+import { setSessionGroup, setSessionUser } from './session';
 
 /**
  * MemoryPeopleStore only — the platform adapters (people.web.ts,
@@ -10,6 +11,8 @@ import { MemoryPeopleStore } from './people-memory';
 describe('MemoryPeopleStore', () => {
   let store: MemoryPeopleStore;
   beforeEach(() => {
+    setSessionUser('user-1');
+    setSessionGroup('group-1');
     store = new MemoryPeopleStore();
   });
 

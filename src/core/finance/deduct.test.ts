@@ -90,7 +90,7 @@ describe('netting (D-60): one repayment naming the sale + one debt payment, kept
   let n = 0;
   const ev = (targetId: string, payload: FinancePayload): FinanceEvent => {
     n += 1;
-    return { id: `n${n}`, deviceSeq: n, ts: n, actor: { userId: 'u', deviceId: 'd' }, source: 'app', targetId, baseEventId: null, payload };
+    return { id: `n${n}`, groupId: 'group-1', deviceSeq: n, ts: n, actor: { userId: 'u', deviceId: 'd' }, source: 'app', targetId, baseEventId: null, payload };
   };
 
   it('uses part of what the farm owes, oldest first; both ledgers move by the same amount', () => {

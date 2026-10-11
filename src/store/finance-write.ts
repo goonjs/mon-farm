@@ -11,17 +11,18 @@ import type { FinanceEvent, FinancePayload } from '../core/finance/types';
 import type { EventId } from '../core/types';
 import { uuidv7 } from '../lib/id';
 import { financeStore } from './finance';
-import { actorNow } from './record';
+import { writerNow } from './record';
 
 export async function writeFinance(
   targetId: string,
   baseEventId: EventId | null,
   payload: FinancePayload,
 ): Promise<FinanceEvent> {
-  const actor = await actorNow();
+  const { actor, groupId } = await writerNow();
   const mine = (await financeStore.load()).filter((e) => e.actor.deviceId === actor.deviceId);
   const event: FinanceEvent = {
     id: uuidv7(),
+    groupId,
     deviceSeq: mine.reduce((max, e) => Math.max(max, e.deviceSeq), 0) + 1,
     ts: Date.now(),
     actor,

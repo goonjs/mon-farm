@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { LogBuilder, readyPile, setUpSale } from '../src/core/fixtures';
+import { FIXTURE_GROUP_ID, LogBuilder, readyPile, setUpSale } from '../src/core/fixtures';
 import type { FinanceEvent } from '../src/core/finance/types';
 import type { BuiltinRole, MasterPayload } from '../src/core/types';
 import { evidence, seedEvents, seedMaster } from './fixtures';
@@ -41,6 +41,7 @@ const person = (personId: string, name: string, roles: BuiltinRole[]): MasterPay
 async function seedOwed(page: Page, name: string, satang: number) {
   const e: FinanceEvent = {
     id: `e2e-owed-${satang}`,
+    groupId: FIXTURE_GROUP_ID,
     deviceSeq: 1,
     ts: Date.now(),
     actor: { userId: 'pre-login', deviceId: 'dev-seed' },

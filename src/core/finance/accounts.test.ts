@@ -6,7 +6,7 @@ import type { AccountFields, FinanceEvent, FinancePayload } from './types';
 let n = 0;
 function ev(targetId: string, payload: FinancePayload, base: string | null = null): FinanceEvent {
   n += 1;
-  return { id: `a${String(n).padStart(4, '0')}`, deviceSeq: n, ts: n, actor: { userId: 'u', deviceId: 'd' }, source: 'app', targetId, baseEventId: base, payload };
+  return { id: `a${String(n).padStart(4, '0')}`, groupId: 'group-1', deviceSeq: n, ts: n, actor: { userId: 'u', deviceId: 'd' }, source: 'app', targetId, baseEventId: base, payload };
 }
 
 const BANK: AccountFields = { label: 'บัญชีหลัก', bankCode: 'KBANK', accountNo: '1234567890', accountName: 'สมชาย', promptPay: null };

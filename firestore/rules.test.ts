@@ -36,6 +36,8 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 
+import { createGroupWrites, newGroup } from '../src/core/group';
+
 const GID = 'g1';
 const OTHER_GID = 'g2';
 const MEMBER = 'alice';
@@ -258,6 +260,40 @@ describe('creating a group', () => {
     batch.set(doc(fs, `groups/${GID}`), grp(CAROL));
     batch.set(doc(fs, `groups/${GID}/members/${CAROL}`), { uid: CAROL, role: 'owner' });
     await assertFails(batch.commit());
+  });
+});
+
+// E02-S02: the batch the app queues when a group is created offline
+// (`createGroupWrites`), and nothing more — the creator may write the group
+// and their own owner membership, never anyone else's (ACC-5).
+describe('E02-S02: the app\'s create_group batch', () => {
+  const { op } = newGroup('g-local', 'สวนบ้านนา', { userId: CAROL, displayName: 'แครอล' }, 1_790_000_000_000);
+  const w = createGroupWrites(op);
+
+  it('is accepted exactly as the app builds it', async () => {
+    const fs = db(CAROL);
+    const batch = writeBatch(fs);
+    batch.set(doc(fs, w.group.path), w.group.data);
+    batch.set(doc(fs, w.member.path), w.member.data);
+    await assertSucceeds(batch.commit());
+  });
+
+  it('cannot also add another person as a member of the new group', async () => {
+    const fs = db(CAROL);
+    const batch = writeBatch(fs);
+    batch.set(doc(fs, w.group.path), w.group.data);
+    batch.set(doc(fs, w.member.path), w.member.data);
+    batch.set(doc(fs, `groups/g-local/members/${BOB}`), { uid: BOB, role: 'owner' });
+    await assertFails(batch.commit());
+  });
+
+  it('the creator cannot add another person afterwards either', async () => {
+    const fs = db(CAROL);
+    const batch = writeBatch(fs);
+    batch.set(doc(fs, w.group.path), w.group.data);
+    batch.set(doc(fs, w.member.path), w.member.data);
+    await assertSucceeds(batch.commit());
+    await assertFails(setDoc(doc(db(CAROL), `groups/g-local/members/${BOB}`), { uid: BOB, role: 'owner' }));
   });
 });
 

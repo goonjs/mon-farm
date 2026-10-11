@@ -6,11 +6,14 @@
 
 import { canonicalJson } from '../core/canonical';
 import type { FinanceEvent } from '../core/finance/types';
+import { requireGroupId } from '../core/scope';
 import { IntegrityError } from './errors';
 import type { FinanceStore } from './finance';
 
 /** True when `event` must be inserted; false for an exact repeat; throws on a rewrite. */
 export function shouldInsert(existing: FinanceEvent | undefined, event: FinanceEvent): boolean {
+  // D-24 backstop, as in append-rule.ts: no adapter stores an event outside a group.
+  requireGroupId(event.groupId);
   if (!existing) return true;
   if (canonicalJson(existing) === canonicalJson(event)) return false;
   throw new IntegrityError(`Finance event ${event.id} already stored with different content.`);

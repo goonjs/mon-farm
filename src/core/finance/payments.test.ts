@@ -6,7 +6,7 @@ import type { FinanceEvent, FinancePayload } from './types';
 let n = 0;
 function ev(targetId: string, payload: FinancePayload, base: string | null = null, device = 'dev-a', ts = 1_770_000_000_000 + n): FinanceEvent {
   n += 1;
-  return { id: `p${String(n).padStart(4, '0')}`, deviceSeq: n, ts, actor: { userId: 'u', deviceId: device }, source: 'app', targetId, baseEventId: base, payload };
+  return { id: `p${String(n).padStart(4, '0')}`, groupId: 'group-1', deviceSeq: n, ts, actor: { userId: 'u', deviceId: device }, source: 'app', targetId, baseEventId: base, payload };
 }
 
 const T = paymentTarget('s1', 'person-daeng');

@@ -9,7 +9,7 @@ import type { FinanceEvent, FinancePayload } from './types';
 let n = 0;
 function ev(targetId: string, payload: FinancePayload, base: string | null = null, device = 'dev-a'): FinanceEvent {
   n += 1;
-  return { id: `b${String(n).padStart(4, '0')}`, deviceSeq: n, ts: n, actor: { userId: 'u', deviceId: device }, source: 'app', targetId, baseEventId: base, payload };
+  return { id: `b${String(n).padStart(4, '0')}`, groupId: 'group-1', deviceSeq: n, ts: n, actor: { userId: 'u', deviceId: device }, source: 'app', targetId, baseEventId: base, payload };
 }
 
 const OURS: SaleFigures = { netG: 11273000, satangPerKg: 2650, grossSatang: 29873450, baskets: 226 };

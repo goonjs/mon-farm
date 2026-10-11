@@ -228,12 +228,14 @@ event มีสองตระกูล และ registry ใน `src/core/merg
 `correction.targetSeq` ของ v0.4 กลายเป็น change ที่ชี้ `targetId`; `sys` payload ของการขายถูกจัดเข้า registry
 ใน E01-S02 การออกแบบโมเดลการขายใหม่ทั้งชุดอยู่ใน E04-S01
 
-**ช่วงเปลี่ยนผ่าน (E01-S02 → E04-S01)**: event การขายของ v0.4 ได้ `id`, `deviceSeq` และ `actor` ใหม่แล้ว แต่ยังไม่มี
-`groupId`/`targetId`/`baseEventId` (E02-S02 / E04-S01) `correction` ชี้เข่งด้วย **`targetId` = id ของ event เข่ง**
+**ช่วงเปลี่ยนผ่าน (E01-S02 → E04-S01)**: event การขายของ v0.4 ได้ `id`, `deviceSeq`, `actor` และ `groupId` (E02-S02 —
+ไม่มี group id → `NoGroupError` ทั้งที่ write path `record.ts` และที่ `checkAppend` ของทุก adapter, `src/core/scope.ts`)
+แล้ว แต่ยังไม่มี `targetId`/`baseEventId` (E04-S01) ยังไม่ได้เพิ่ม index ที่มี `groupId` ใน IndexedDB และคอลัมน์
+`group_id` ในตาราง `events` ของ native (`body` มี `groupId` อยู่แล้ว) — เพิ่มพร้อม query ที่กรองตามกลุ่ม (E02-S04) `correction` ชี้เข่งด้วย **`targetId` = id ของ event เข่ง**
 แล้ว (ไม่ใช่ `seq`) เพราะสองเครื่องที่ออฟไลน์อาจได้ `seq` ต่อการขายเลขเดียวกัน `seq` จึงยังอยู่แต่ไม่ unique และ
 ลำดับการ fold คือ `(seq, deviceId, deviceSeq, id)` (`src/core/order.ts`) ไม่อ่าน `ts` ตัวนับ `deviceSeq` มีตัวเดียวทั้งแอป
-(`src/store/device-clock.ts`) ไม่ใช่ต่อหน้าจอการขาย `userId` เป็นค่าแทน
-`'pre-login'` จนกว่า E02-S01 จะมี login (`src/store/session.ts`) เว็บเป็น IndexedDB ตั้งแต่ E01-S03
+(`src/store/device-clock.ts`) ไม่ใช่ต่อหน้าจอการขาย `userId` = uid ของผู้ใช้ที่
+login แล้ว (E02-S01, `src/store/session.ts`; ยังไม่ login → `NotSignedInError` บันทึกไม่ได้) เว็บเป็น IndexedDB ตั้งแต่ E01-S03
 
 **Soft Delete + provenance (E01-S04)**: event `delete` / `restore` ชี้ `targetId` ใดก็ได้ (การขาย, โซน, กอง, รายการหัก,
 เข่ง = id ของ event เข่ง) ตัดสินด้วย event ล่าสุดตามลำดับ fold (`src/core/soft-delete.ts`) — ยังไม่มี `baseEventId`/DAG
@@ -288,8 +290,9 @@ CREATE INDEX events_sale   ON events(group_id, sale_id);
 
 CREATE TABLE meta        (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   -- device = JSON {deviceId, nextDeviceSeq} (E01-S02), pull_cursor:<gid>, session (userId, activeGroupId)
-CREATE TABLE memberships (group_id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL,
+CREATE TABLE memberships (group_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL, role TEXT NOT NULL,
                           member_count INTEGER, state TEXT NOT NULL);   -- 'active' | 'leaving'
+  -- user_id = เจ้าของแถว: gate เปิดเฉพาะกลุ่มของผู้ใช้ที่ login อยู่ (E02-S02, review F5); pending_ops ใช้ body.createdBy
 CREATE TABLE pending_ops (id TEXT PRIMARY KEY, group_id TEXT NOT NULL, op TEXT NOT NULL,
                           body TEXT NOT NULL, error TEXT);              -- 'create_group' (การออกกลุ่มใช้ memberships.state)
 CREATE TABLE media_queue (media_id TEXT PRIMARY KEY, group_id TEXT NOT NULL, local_uri TEXT NOT NULL,
@@ -321,8 +324,13 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
 
 - **สร้างแล้ว (E01-S03)**: record ใน `events` = `{ id, saleId, ts, deviceSeq, pending, event }` (เก็บ event ทั้งตัวใน
   `event`), index `saleId` และ `pending` — index ที่มี `groupId` เพิ่มเมื่อ envelope มี `groupId` (E02-S02); `meta`
-  คีย์ `device` = `{ deviceId, nextDeviceSeq, legacyCleanupV1 }`; ยังไม่สร้าง `memberships`/`pendingOps`/`mediaQueue`
-  (สร้างใน story ที่ใช้)
+  คีย์ `device` = `{ deviceId, nextDeviceSeq, legacyCleanupV1 }`; ยังไม่สร้าง `mediaQueue` (สร้างใน story ที่ใช้)
+- **สร้างแล้ว (E02-S01/S02, DB version 2)**: `meta` คีย์ `session` = ผู้ใช้ที่ login; `memberships` (keyPath `groupId`);
+  `pendingOps` (คีย์ `${op}:${groupId}` เหมือน `pending_ops.id` ของ native); membership มี `userId` และ op มี
+  `createdBy` = ผู้ใช้เจ้าของ — `decideEntry` นับเฉพาะกลุ่มของผู้ใช้ที่ login อยู่ — schema ทั้งหมดอยู่ที่ `src/store/idb.ts`
+  ที่ event store และ account store ใช้ร่วมกัน (เปิด version เดียวกัน, upgrade สร้าง store ที่ขาด) ไม่มี cache: อ่านจาก
+  DB ทุกครั้ง และเขียน 1 ครั้ง = transaction `readwrite` เดียว (สร้างกลุ่ม = `memberships` + `pendingOps` ใน transaction
+  เดียวด้วย `add`) จึงไม่มีแท็บไหนเขียนสำเนาเก่าทับของใหม่ได้
 - append 1 ครั้ง = transaction `readwrite` เดียวครอบ `events` + `meta` (ตัวนับ seq) ปลอดภัยแม้เปิดหลายแท็บ:
   **store เป็นผู้กำหนด `deviceSeq` ของเครื่องตัวเองใน transaction** (`checkAppend`) — เลขที่หน้าจอเสนอมาใช้ได้ถ้ายังว่าง
   ถ้าแท็บอื่นใช้ไปแล้วจะได้เลขว่างถัดไปแทนการถูกปฏิเสธ IndexedDB เรียง transaction ข้ามแท็บให้ จึงไม่มี event หาย
@@ -331,7 +339,8 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
   (ลำดับ fold ตัดสินด้วย `deviceSeq` ตามลำดับที่ commit) — ไม่มีข้อมูลหาย
 - เรียก `navigator.storage.persist()` เพื่อลดโอกาสเบราว์เซอร์ลบข้อมูล
 - ใช้ IndexedDB ไม่ได้ (เช่น private mode) → ใช้ `MemoryStore` และเตือนเป็นภาษาไทย (E01-S03) — `EventStore.isDurable()`
-  + แถบ `StorageWarning` บนทุกหน้าจอ
+  + แถบ `StorageWarning` บนทุกหน้าจอ; account store ก็ใช้หน่วยความจำเช่นกัน (session + กลุ่มอยู่แค่ใน session นี้ เปิดใหม่
+  ต้อง login ใหม่) และเตือนแบบเดียวกัน
 
 ### กติกาของ `EventStore`
 
@@ -513,6 +522,10 @@ retry/backoff ชุดเดียวกัน ถ้า object มีอยู
 
 - **สร้างกลุ่ม**: ทำออฟไลน์ได้ `gid` = UUIDv7 สร้างในเครื่อง → แถว `memberships` + `pending_ops.create_group`
   มีเน็ตแล้วส่ง batch `{groups/{gid}, members/{uid}}` (ส่งซ้ำ → ตรวจแบบข้อ 4 ด้วย `getDoc` ของ members/{uid})
+  — **สร้างแล้ว (E02-S02)**: `src/core/group.ts` (`newGroup`, `decideEntry`, `createGroupWrites` = batch ที่ outbox จะส่ง
+  และที่ rules test ใช้ยืนยัน) + `AccountStore.createGroup` (native: `memberships` + `pending_ops` ใน transaction
+  เดียว; เว็บ: IndexedDB `memberships` + `pendingOps` ใน transaction เดียว) ยังไม่มีการส่งขึ้นเซิร์ฟเวอร์ (E01-S09) และยังไม่ทำ
+  "login ครั้งแรกบนเครื่องใหม่ → ดึงรายการกลุ่มจากเซิร์ฟเวอร์ก่อน" (ต้องมี backend)
 - **เข้าร่วม**: ต้องมีเน็ต (callable `acceptInvite`) เสร็จแล้วดึงข้อมูลทั้งกลุ่มลงมา
 - **รีเฟรชรายการกลุ่ม**: ตอนเปิดแอปและทุกครั้งที่กลับมาออนไลน์ query collection-group `members` (`uid == me`)
   แล้วอ่าน `groups/{gid}` ของแต่ละกลุ่ม → อัปเดต `memberships` (ชื่อ, `member_count` ที่ใช้คุมปุ่มออก, กลุ่มที่
@@ -629,6 +642,13 @@ Java นอก repo — ขออนุญาตใน E01-S08)
   LINE ในอนาคตห้ามเชื่อถือ ต้องตรวจจาก Firebase Auth `providerData` เอง session ต้องคงอยู่หลัง force-close: บน RN
   ต้องมี persistence adapter (ผ่าน gate ใน E02-S01) ไม่มี logout ใน MVP บันทึกออฟไลน์ไม่ต้องใช้ ID token ที่ยัง
   ไม่หมดอายุ — token refresh เองเมื่อมีเน็ต
+- **สร้างแล้ว (E02-S01)**: ผู้ใช้ที่ login แล้ว (`userId` + รายการตัวตน, `src/core/user.ts`) เก็บในเครื่องผ่าน
+  `AccountStore` (`src/store/account.*`) และ gate อ่านจากที่นั้น ไม่อ่านจาก Firebase Auth ตอนเปิดแอป — เปิดออฟไลน์
+  ได้โดยไม่ขึ้นกับ token และไม่ต้องใช้ persistence adapter ของ Firebase บน RN เพื่อการนี้ native = `meta` คีย์
+  `session` ใน `mon-farm-v1.db`; เว็บ = IndexedDB `meta` คีย์ `session` ตาม §Schema — เว็บ (ร่วมกับ `memberships` /
+  `pendingOps`; e2e preload ผ่าน `storageState` ที่ restore IndexedDB ได้); login บนเว็บ = Firebase Auth popup
+  (กับโปรเจกต์จริงเมื่อ build มี `EXPO_PUBLIC_FIREBASE_*` — deploy dev/prod/preview-site; ไม่มี config และไม่มี emulator → ปฏิเสธที่จะลอง);
+  Android ยังไม่ทำ (E01-S06); ยังไม่เขียน `users/{uid}` ขึ้น Firestore
 - **`deviceId` ไม่ใช่ตัวตน**: rules ผูก event กับ `actor.userId == request.auth.uid` เท่านั้น
 - **ไม่มีอะไรถูกแก้หรือลบที่เซิร์ฟเวอร์**: events และ media สร้างได้อย่างเดียว; การลบ = Soft Delete event
 

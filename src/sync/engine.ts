@@ -15,6 +15,7 @@
  */
 
 import { canonicalJson } from '../core/canonical';
+import { hasGroup } from '../core/scope';
 import type { EventId, SaleEvent } from '../core/types';
 import { IntegrityError } from '../store/errors';
 import type { EventStore } from '../store/store';
@@ -207,7 +208,9 @@ export class SyncEngine {
   }
 
   private async push(): Promise<void> {
-    const outbox = await this.deps.store.pending();
+    // Events recorded before groups existed (dev devices) have no `groupId`;
+    // the server would refuse them, so they stay on the device (E02-S02).
+    const outbox = (await this.deps.store.pending()).filter(hasGroup);
     let refused: Permanent | undefined;
     for (let i = 0; i < outbox.length; i += BATCH_SIZE) {
       const batch = outbox.slice(i, i + BATCH_SIZE);
@@ -276,7 +279,8 @@ export class SyncEngine {
 
   private async settle(outcome: { kind?: SyncError; transient?: boolean }): Promise<void> {
     const media = this.deps.media ? (await this.deps.media.queue.pending()).length : 0;
-    const pending = (await this.deps.store.pending()).length + media;
+    // Events with no group are never sent, so they are not waiting either.
+    const pending = (await this.deps.store.pending()).filter(hasGroup).length + media;
     const kind = outcome.kind ?? (this.corrupt.size ? 'integrity' : undefined);
     const next: SyncStatus = kind
       ? { state: 'error', pending, error: kind }

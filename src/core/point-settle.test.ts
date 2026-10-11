@@ -25,6 +25,7 @@ function master(extra: MasterPayload[] = []) {
   ];
   const events: SaleEvent[] = payloads.map((payload, i) => ({
     id: `m${i}`,
+    groupId: 'group-1',
     saleId: MASTER_SCOPE,
     seq: i + 1,
     deviceSeq: i + 1,

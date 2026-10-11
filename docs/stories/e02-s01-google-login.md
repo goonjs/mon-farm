@@ -2,6 +2,8 @@
 
 Status: Ready
 
+> สร้างบน v2 shell ใน story [`e02-v2-login-groups.md`](e02-v2-login-groups.md) — พฤติกรรมตาม story นี้ไม่เปลี่ยน
+
 ## Context
 
 - Epic: `docs/epics/e02-access-farm-groups.md`

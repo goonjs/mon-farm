@@ -4,13 +4,16 @@ import { View } from 'react-native';
 import { I18nProvider } from '../i18n';
 import { SpeechProvider } from '../speech';
 import { ThemeProvider } from '../theme';
+import { AccountGate } from '../v2/account/account-gate';
 import { StorageWarning } from '../v2/storage-warning';
 
 /**
  * Root layout. Theme, language, and speech — device preferences, not sale
- * data, so they sit above every route. The app opens on the splash at `/`,
- * which hands over to the v2 home (`/v2`); the storage warning (E01-S03)
- * sits above whatever screen is showing.
+ * data, so they sit above every route. Before any route renders, the account
+ * gate (E02) asks for a Google sign-in and a farm group; only then does the app
+ * open on the splash at `/`, which hands over to the v2 home (`/v2`). The
+ * storage warning (E01-S03) sits above whatever screen is showing, the gate
+ * included.
  */
 export default function RootLayout() {
   return (
@@ -24,7 +27,9 @@ export default function RootLayout() {
         <SpeechProvider initial>
           <View style={{ flex: 1 }}>
             <StorageWarning />
-            <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
+            <AccountGate>
+              <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
+            </AccountGate>
           </View>
         </SpeechProvider>
       </I18nProvider>

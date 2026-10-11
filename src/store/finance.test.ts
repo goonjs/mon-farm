@@ -6,6 +6,7 @@ import { MemoryFinanceStore } from './finance-memory';
 
 const e: FinanceEvent = {
   id: 'e1',
+  groupId: 'group-1',
   deviceSeq: 1,
   ts: 1,
   actor: { userId: 'u', deviceId: 'd' },

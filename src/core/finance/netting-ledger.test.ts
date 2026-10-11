@@ -12,7 +12,7 @@ const SALE = 'sale-1';
 let n = 0;
 const ev = (targetId: string, payload: FinancePayload, base: string | null = null): FinanceEvent => {
   n += 1;
-  return { id: `n${String(n).padStart(4, '0')}`, deviceSeq: n, ts: n, actor: { userId: 'u', deviceId: 'dev-a' }, source: 'app', targetId, baseEventId: base, payload };
+  return { id: `n${String(n).padStart(4, '0')}`, groupId: 'group-1', deviceSeq: n, ts: n, actor: { userId: 'u', deviceId: 'dev-a' }, source: 'app', targetId, baseEventId: base, payload };
 };
 
 /** นัด owes the farm ฿3,000 and the farm owes นัด ฿640. */
