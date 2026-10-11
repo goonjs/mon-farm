@@ -229,18 +229,71 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red });
     await press(`pick-point-${farm.a[1]}`);
     expect(screen.getByTestId('fill-sheet')).toHaveTextContent(/เข่ง 2 ยังไม่เต็ม/);
+    // Choose, then confirm: every row shows what the scale should read, the chosen one its steps (D-57, owner 2026-10-11).
+    expect(screen.getByTestId('fill-full')).toHaveTextContent(/ตราชั่ง\s*52/);
+    expect(screen.getByTestId('fill-part')).toHaveTextContent(/ตราชั่ง\s*17/);
+    expect(screen.getByTestId('fill-part')).toHaveTextContent(/เข่งเปล่าใบใหม่ เติมยาง\s*15 กก\./);
+    expect(screen.getByTestId('fill-steps')).toHaveTextContent(/เทยางเพิ่ม\s*15 กก\.\s*ลงเข่ง 2 ใบเดิม/);
+    expect(screen.getByTestId('fill-steps')).toHaveTextContent(/ตราชั่งต้องอ่าน\s*52/);
+    expect(screen.getByTestId('fill-steps')).not.toHaveTextContent(/กดค้าง/);
+    expect(screen.getByTestId('fill-go')).toHaveTextContent(/ตราชั่งต้องอ่าน\s*52/);
+    const moved = (router.replace as jest.Mock).mock.calls.length;
+    await press('fill-part');
+    expect(screen.getByTestId('fill-go')).toHaveTextContent(/ตราชั่งต้องอ่าน\s*17/);
     await press('fill-full');
+    expect(router.replace).toHaveBeenCalledTimes(moved);
+    await press('fill-go');
     expect(router.replace).toHaveBeenLastCalledWith(`/v2/sale/${saleId}/zero-tare?point=${farm.a[1]}&net=50000&basket=2000&fill=full`);
     await readyAt(farm.a[1]);
     await counterAt(farm.a[1], { fill: 'full' });
-    expect(screen.getByTestId('hold')).toHaveTextContent(/เติมเข่ง 2/);
-    expect(screen.getByTestId('should-read')).toHaveTextContent('52 กก.');
+    expect(screen.getByTestId('fill-title')).toHaveTextContent(/เติมให้เต็มเข่ง 2/);
+    expect(screen.getByTestId('fill-steps')).toHaveTextContent(/เทยางเพิ่ม\s*15 กก\.\s*ลงเข่ง 2 ใบเดิม/);
+    expect(screen.getByTestId('fill-after')).toHaveTextContent(/เข่ง 2 เต็ม\s*35 กก\.\s*\+\s*15 กก\.\s*=\s*50 กก\./);
+    expect(screen.getByTestId('hold')).toHaveTextContent(/ตราชั่งต้องอ่าน/);
+    expect(screen.getByTestId('should-read')).toHaveTextContent(/52\s*กก\./);
     await hold();
     const part = (await store().load(saleId)).filter((e) => e.kind === 'accept').pop();
     expect(part).toMatchObject({ pointId: farm.a[1], basketNo: 2, netG: 15_000 });
     expect(screen.getByTestId('current-no')).toHaveTextContent('3');
     expect(screen.queryByTestId('fig-missing')).toBeNull();
     expect(screen.getByTestId('fig-kg')).toHaveTextContent(/^100/);
+  });
+
+  it('weigh the added part separately: the scale should read part + basket, steps say weigh in an empty basket (D-57)', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    await press('tool-short');
+    await press('short-save');
+    c.unmount();
+    await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red });
+    await press(`pick-point-${farm.a[1]}`);
+    await press('fill-part');
+    await press('fill-go');
+    expect(router.replace).toHaveBeenLastCalledWith(`/v2/sale/${saleId}/zero-tare?point=${farm.a[1]}&net=50000&basket=2000&fill=part`);
+    await readyAt(farm.a[1]);
+    await counterAt(farm.a[1], { fill: 'part' });
+    expect(screen.getByTestId('fill-title')).toHaveTextContent(/ชั่งแยกส่วนที่เติม · เข่ง 2/);
+    expect(screen.getByTestId('fill-steps')).toHaveTextContent(/ชั่งยาง\s*15 กก\.\s*ในเข่งเปล่าใบใหม่/);
+    expect(screen.getByTestId('should-read')).toHaveTextContent(/17\s*กก\./);
+  });
+
+  it('leave it short: the open basket closes and the next full basket is the next number', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    await press('tool-short');
+    await press('short-save');
+    c.unmount();
+    await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red });
+    await press(`pick-point-${farm.a[1]}`);
+    await press('fill-next');
+    expect(screen.getByTestId('fill-go')).toHaveTextContent(/เข่ง 3/);
+    expect(sys(await store().load(saleId), 'basket_closed')).toHaveLength(0);
+    await press('fill-go');
+    expect(sys(await store().load(saleId), 'basket_closed')[0]).toMatchObject({ reason: 'next' });
   });
 
   it('another tapper\'s point closes the open basket without asking (SALE-12)', async () => {

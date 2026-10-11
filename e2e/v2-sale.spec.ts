@@ -200,11 +200,12 @@ test('start → point → empty scale → count → short → switch and fill �
   await expect(id('fill-sheet')).toContainText('เข่ง 4 ยังไม่เต็ม');
   await shot(page, '12-switch-same-tapper');
   await id('fill-full').click();
+  await id('fill-go').click();
   await expect(id('zero-tare')).toBeVisible();
   await id('start-weigh').click();
 
   // ── เติมให้เต็มเข่งที่จุดใหม่ (page 13) ──
-  await expect(id('hold')).toContainText('เติมเข่ง 4');
+  await expect(id('fill-title')).toContainText('เติมให้เต็มเข่ง 4');
   await shot(page, '13-fill');
   await hold(page);
   await expect(id('current-no')).toHaveText('5');

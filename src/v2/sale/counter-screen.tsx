@@ -50,7 +50,7 @@ import { FarmScreen } from '../farm/pieces';
 import { countModel } from './count';
 import { HoldStage } from './hold';
 import { signed, useGoToPoint } from './move';
-import { Banner, IconLine, Kv, kgText, NumChip, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
+import { Banner, BasketBar, IconLine, Kv, kgText, NumChip, PointBar, RubberKg, ScaleNum, WrapLine, Words, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 import { Ruler } from './ruler';
 import { SaleOptionRows, SaleOptionSheets, type OptionSheet } from './sale-options';
 
@@ -89,6 +89,10 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const std = pile.stdNetG;
   const tare = pile.tareG;
   const kg = (g: number) => msg('v2f.kg', { n: kgText(g) });
+  const fillReadG = filling && open ? (fill === 'full' ? std + open.tareG + skew : open.missingG + tare + skew) : 0;
+  const fillEq = filling && open ? `(${kgText(fill === 'full' ? std : open.missingG)} + ${msg('v2s.eqBasket', { n: kgText(fill === 'full' ? open.tareG : tare) })}${skew ? ` + ${msg('v2s.skewWord')} ${kgText(skew)}` : ''})` : '';
+  const heldFrom = filling && open ? master?.points.find((p) => p.id === open.pointId) : undefined;
+  const heldPlace = heldFrom ? msg('v2s.place', { farm: master?.properties.find((f) => f.id === heldFrom.propertyId)?.name ?? '', point: heldFrom.name }) : '';
   const skewLabel = skew ? msg('v2s.skewTag', { skew: signed(kgText(skew)) }) : null;
   const place = msg('v2s.place', { farm: farm.name, point: point.name });
   const scopeTitle = 'tapperId' in figs.scope ? msg('rec.totalsOf', { name: nameOf(figs.scope.tapperId) }) : msg('rec.totalsOfPoint');
@@ -179,6 +183,69 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       {icon(disabled ? t.color.disabledInk : t.color.ink)}
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.semibold, color: disabled ? t.color.disabledInk : t.color.ink }}>{label}</Text>
     </Pressable>
+  );
+
+  // ── the fill-up guide (owner 2026-10-11, mockup fill-sheet v2, page 4/5): the basket, three steps, what comes after ──
+  const fillGuide = (o: NonNullable<typeof open>) => {
+    const steps: React.ReactNode[] =
+      fill === 'full'
+        ? [
+            <WrapLine key="a">
+              <Words>{msg('v2s.stepPour')}</Words>
+              <RubberKg g={o.missingG} />
+              <Words>{msg('v2s.stepIntoOld', { n: o.basketNo })}</Words>
+            </WrapLine>,
+            <WrapLine key="b">
+              <Words>{msg('v2s.stepRead')}</Words>
+              <ScaleNum kg={fillReadG / 1000} />
+            </WrapLine>,
+            <Words key="c">{msg('v2s.stepHold')}</Words>,
+          ]
+        : [
+            <WrapLine key="a">
+              <Words>{msg('v2s.stepWeighIn')}</Words>
+              <RubberKg g={o.missingG} />
+              <Words>{msg('v2s.stepEmptyNew')}</Words>
+            </WrapLine>,
+            <WrapLine key="b">
+              <Words>{msg('v2s.stepRead')}</Words>
+              <ScaleNum kg={fillReadG / 1000} />
+            </WrapLine>,
+            <Words key="c">{msg('v2s.stepHold')}</Words>,
+          ];
+    return (
+      <View testID="fill-guide" style={{ gap: t.space.sm }}>
+        <View style={{ ...cardStyle(t), backgroundColor: t.color.warnSunk, padding: t.space.md, gap: t.space.sm }}>
+          <Text testID="fill-title" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+            {fill === 'full' ? msg('v2s.stageFull', { n: o.basketNo }) : msg('v2s.stageSplit', { n: o.basketNo })}
+          </Text>
+          <BasketBar haveG={o.haveG} addG={o.missingG} stdG={o.haveG + o.missingG} held={fill === 'part' ? msg('v2s.barHeld', { place: heldPlace }) : undefined} addLabel={fill === 'part' ? msg('v2s.barNow') : msg('v2s.barAdd')} />
+        </View>
+        <View testID="fill-steps" style={{ gap: t.space.xs }}>
+          {steps.map((body, i) => (
+            <View key={i} style={{ ...cardStyle(t), flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm, paddingHorizontal: t.space.md }}>
+              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: t.color.action, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: t.color.inkInverse, fontWeight: t.font.weight.bold, fontSize: t.font.size.bodySm }}>{i + 1}</Text>
+              </View>
+              <View style={{ flex: 1 }}>{body}</View>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  };
+  const fillAfter = (o: NonNullable<typeof open>) => (
+    <View testID="fill-after" style={{ alignItems: 'center' }}>
+      <WrapLine>
+        <Words>{msg('v2s.afterPre', { n: o.basketNo })}</Words>
+        <RubberKg g={o.haveG} />
+        <Words>+</Words>
+        <RubberKg g={o.missingG} />
+        <Words>=</Words>
+        <RubberKg g={o.haveG + o.missingG} />
+        <Words>{msg('v2s.afterPost', { n: o.basketNo + 1 })}</Words>
+      </WrapLine>
+    </View>
   );
 
   const rootReading = (() => {
@@ -352,6 +419,9 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           </View>
         </Banner>
       ) : null}
+      {/* While filling up a basket the page is the guide, not the count: the hold stays in view (mockup fill-sheet v2, pages 4–5). */}
+      {filling && open && ready ? null : (
+        <>
       <View testID="current" accessibilityLabel={`${msg('rec.current')} ${figs.currentNo}`} style={{ ...cardStyle(t), alignItems: 'center', paddingVertical: t.space.md }}>
         <AppText variant="bodySm">{msg('rec.current')}</AppText>
         <Text testID="current-no" style={{ fontFamily: t.font.family.sans, fontSize: 80, lineHeight: 88, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
@@ -383,6 +453,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
             )
           : card(<><AppText variant="bodySm">{msg('rec.short')}</AppText><AppText style={{ fontWeight: t.font.weight.bold }}>{msg('rec.none')}</AppText></>, 'short')}
       </View>
+        </>
+      )}
 
       {waiting && open ? (
         <View testID="open-card" style={{ ...cardStyle(t), backgroundColor: t.color.warnSunk, padding: t.space.lg, gap: t.space.sm }}>
@@ -418,19 +490,18 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           <AppText variant="bodySm">{tapper && mode === 'per-tapper' ? msg('rec.waitFillHint', { name: tapperName }) : msg('rec.waitFillPoint')}</AppText>
         </View>
       ) : (
+        <>
+          {filling && open ? fillGuide(open) : null}
         <HoldStage testID="hold" label={filling && open ? msg('v2s.fillStage', { n: open.basketNo }) : msg('rec.hold')} onHold={countFull} onEarly={early} minHeight={filling ? 150 : 120}>
           {filling && open ? (
             <>
-              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.bold, color: t.color.ink }}>
-                {msg(fill === 'full' ? 'v2s.fillStage' : 'v2s.fillStagePart', { n: open.basketNo })}
-              </Text>
-              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.semibold, color: t.color.ink }}>
-                {msg('v2s.fillMore')} <Text style={{ fontSize: 36, fontWeight: t.font.weight.black }}>{kgText(open.missingG)}</Text> {msg('common.kg')}
-              </Text>
-              {fill === 'full' && skew ? [smallLine(msg('v2s.fullLine', { n: kgText(std) })), smallLine(msg('v2s.lineBasket', { n: kgText(open.tareG) })), smallLine(msg('v2s.lineSkew', { n: signed(kgText(skew)) }), 'warn')] : null}
-              {shouldRead(fill === 'full' ? std + open.tareG + skew : open.missingG + tare + skew)}
-              <AppText variant="bodySm">{msg('v2s.thenHold')}</AppText>
-              {fill === 'full' ? <AppText variant="bodySm">{msg('v2s.fillSum', { have: kgText(open.haveG), add: kgText(open.missingG), total: kgText(open.haveG + open.missingG) })}</AppText> : null}
+              <AppText variant="bodySm">{msg('rec.shouldRead')}</AppText>
+              <View testID="should-read" accessibilityLabel={`${msg('rec.shouldRead')} ${kg(fillReadG)}`} style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.xs }}>
+                <ScaleNum kg={fillReadG / 1000} size="xl" />
+                <AppText style={{ color: t.color.inkSoft }}>{msg('common.kg')}</AppText>
+              </View>
+              <AppText variant="bodySm">{fillEq}</AppText>
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('v2s.thenHold')}</Text>
             </>
           ) : (
             <>
@@ -440,6 +511,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
             </>
           )}
         </HoldStage>
+          {filling && open ? fillAfter(open) : null}
+        </>
       )}
     </FarmScreen>
   );
