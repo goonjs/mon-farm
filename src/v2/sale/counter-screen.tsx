@@ -51,6 +51,7 @@ import { countModel } from './count';
 import { HoldStage } from './hold';
 import { signed, useGoToPoint } from './move';
 import { Banner, BasketBar, IconLine, Kv, kgText, NumChip, PointBar, RubberKg, ScaleNum, WrapLine, Words, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
+import { MoneyFigure } from './money-figure';
 import { Ruler } from './ruler';
 import { SaleOptionRows, SaleOptionSheets, type OptionSheet } from './sale-options';
 
@@ -432,7 +433,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       <IconLine icon={(c) => <TapperIcon color={c} size={13} />}>{scopeTitle}</IconLine>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
         {price !== null
-          ? card(<><AppText variant="bodySm">{msg('rec.money')}</AppText>{figure(compactBaht(figs.satang ?? 0), '฿', 'fig-money')}</>, 'first')
+          ? card(<><AppText variant="bodySm">{msg('rec.money')} ฿</AppText><MoneyFigure value={compactBaht(figs.satang ?? 0)} testID="fig-money" /></>, 'first')
           : card(<><AppText variant="bodySm">{msg('rec.done')}</AppText>{figure(String(figs.done), msg('rec.baskets'), 'fig-done')}</>, 'first')}
         {card(
           <>
