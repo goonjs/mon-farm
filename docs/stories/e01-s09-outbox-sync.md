@@ -33,7 +33,7 @@ sync engine หลัง port (`RemoteEvents`): ส่ง `pending()` ขึ้�
 
 - [x] Vitest: sync engine กับ fake remote — ส่ง, ล้มเหลว + retry, ดึงซ้ำ, ลำดับสลับ (+ scope, create_group ก่อน event, adapter/error mapping กับ fake Firestore layer)
 - [x] integration บน emulator: 2 client เขียนคนละเข่ง → ทั้งสองเห็นครบ (`firestore/sync.test.ts`, รันด้วย `npm run test:rules`)
-- [x] Playwright: `setOffline(true)` → บันทึก → online → outbox ว่าง (`e2e/sync-emulator.spec.ts`, `npm run test:e2e:sync`) — session Firebase ใส่ผ่าน Auth emulator ไม่ได้ผ่านป๊อปอัป Google (sandbox บล็อก apis.google.com); ไม่ได้นับเข่ง แต่บันทึกคน
+- [x] Playwright: `setOffline(true)` → บันทึก → online → outbox ว่าง (`e2e/sync-emulator.spec.ts`, `npm run test:e2e:sync`) — เห็นผ่านในเครื่องนี้ **ไม่ได้รันใน CI** (ข้ามเมื่อไม่ตั้ง `E2E_SYNC_EMULATOR`; ต่อเข้า CI = follow-up) จึงไม่ใช่การรับประกันของ CI; session Firebase ใส่ผ่าน Auth emulator ไม่ได้ผ่านป๊อปอัป Google (sandbox บล็อก apis.google.com); ไม่ได้นับเข่ง แต่บันทึกคน
 
 ## Verification
 
@@ -45,6 +45,7 @@ Run 2026-10-11 in the sandbox, all against the **emulators** (nothing touched th
   content → integrity error and not overwritten; non-member → `denied`, events kept; `create_group` before events (the other order is
   refused by the rules); create_group ack lost → resent safely; a taken group id → refused; other group's / other user's events never
   sent; network cut then back (the SDK's own queued write lands, the engine's retry recognises it).
+- **Not run in CI:** `e2e/sync-emulator.spec.ts` and `e2e/sync-wizard.spec.ts` are skipped unless `E2E_SYNC_EMULATOR` is set (`npm run test:e2e:sync`), and CI does not set it. Only the emulator Vitest tests (`npm run test:rules`) run in CI. What follows was seen on this machine.
 - `e2e/sync-emulator.spec.ts` (Chromium, Firestore + Auth emulators, rules loaded, build with `EXPO_PUBLIC_FIREBASE_*_EMULATOR_HOST`):
   a new group reaches the server by itself; offline a person is recorded and waits; back online it is sent and the outbox empties;
   the documents on the server are exactly the local events. Existing Playwright suite (phone-portrait, after a clean build): 19 passed, 3 skipped (the two emulator specs and the mockup compare).
@@ -55,7 +56,7 @@ Google sign-in; a real force-close; three devices; Android (the native client is
 ## Not covered
 
 Real Firestore `(default)` database and deployed rules not yet exercised; Android/native sync (E01-S06); a retry button and conflict UI
-(E01-S10/S11); finance log, farm profile and media sync; 3-device merge; real force-close; per-group cursor (E02-S04).
+(E01-S10/S11); finance log, farm profile and media sync; 3-device merge; real force-close.
 
 ## Dev notes
 
@@ -107,9 +108,8 @@ Decisions:
 - **Database id** is one env value, `EXPO_PUBLIC_FIREBASE_DATABASE_ID`, default `(default)` (D-84). Sync starts only with a real project
   config or `EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST`; the e2e/preview builds without config stay local.
 - **First pull.** `cursor` 0 = never pulled; a first pull that finds an empty group stores `FIRST_PULL_DONE` (1) so "never pulled" and
-  "nothing there" differ. The points wizard (`/v2/points-wizard`) will not create points while sync is running and the cursor is 0
-  (shows a Thai wait line); a build/session without sync is never held up. The cursor is still one per device, not per group:
-  E02-S04 (second group) must make it per group.
+  "nothing there" differ. The points wizard's bounded wait on it is described under "fixes after the first independent reviews";
+  the cursor is now stored per group.
 - Not synced yet: the finance log (`financeStore`), farm profile config and media; they have their own stories. Their writes are not in `EventStore.pending()`.
 - `initializeAuth` still gets the popup resolver, which loads `apis.google.com` at launch; whether that can drop a restored session
   offline is **unverified** (the sandbox blocks the host). Worth a look when E01-S10 / the real run happens.
@@ -127,8 +127,44 @@ Decisions:
    record more, turn it off: the new events appear without any button.
 3. If nothing appears: the app stays fully usable and the events stay in the outbox. Rules not deployed or a database that does not exist
    show up as an error state in `engine.status()` (no crash, no data loss); fixing it and opening the app again resends everything.
-4. Note: all builds (dev, preview with config, prod) write to the same `(default)` database until a separate database or project is
+4. Record more than 20 events while offline (the emulator does not enforce the rules' 20 access-call limit, so only the real database
+   can show it), go online and confirm they all arrive in `groups/{id}/events`.
+5. The first real Google sign-in may be slow or blocked by apis.google.com. If the session does not restore after reopening the app, tell the lead.
+6. Note: all builds (dev, preview with config, prod) write to the same `(default)` database until a separate database or project is
    configured via `EXPO_PUBLIC_FIREBASE_DATABASE_ID` (D-84).
+
+### 2026-10-11 — fixes after the first independent reviews (PR #95)
+
+- **Wizard is never a trap.** `first-pull.ts`: waits only while online, trying, and within 20 s; otherwise ready. Ready at once when sync is
+  off, the first pull is done, or the group was made on this phone and is not on the server yet. Unavailable (create allowed, plain Thai
+  warning, offline and error worded differently) when offline, when the engine is in an error state, or after the grace period. The
+  "log for the group is empty" condition from the review was replaced by "the group's `create_group` is still pending": the wizard needs a
+  farm and a tapper in the log first, so the log is never empty there, while a group that exists only on this phone has no other phone in it.
+  Screenshots: `docs/ux/screenshots/ui-v2/sync/wizard-waiting.png`, `wizard-cannot-sync.png`, `wizard-offline.png` (from `e2e/sync-wizard.spec.ts`).
+- **Emulator hosts only for `demo-` projects** (`src/auth/firebase-env.ts`, tested); `build:web` now uses `expo export --clear` because Expo
+  kept inlined `EXPO_PUBLIC_*` values between builds.
+- **One bad event never wedges the outbox.** Any non-transient batch failure is isolated per event; an event the server calls invalid is
+  kept locally, shown as error `invalid`, not re-sent every run (`retry()` tries it again), and the rest are sent and pulling goes on.
+- **Fail fast.** `RemoteEvents.check()` reads the group document from the server before any write each run: offline it fails at once
+  (no write is queued inside the SDK; seen on the emulator with `disableNetwork`: nothing landed behind the engine's back after
+  `enableNetwork`); a missing database (`not-found`) becomes error `invalid`; "not allowed to read the group" is not a failure there.
+  **Unverified:** a non-existent database id against the emulator (the emulator ignores database ids), so the missing-database path is
+  tested only with a fake remote.
+- **The badge shows errors** (`error` state of the sync pill, existing word "ส่งไม่สำเร็จ", reject tone); no retry UI (E01-S10).
+- **Cursor per group** (`syncCursor(groupId)`): stored with its group; another group reads 0; an old unscoped cursor reads as 0 (one safe,
+  idempotent re-download). One slot: switching groups back and forth re-downloads.
+- **Paged pull**: 500 per page with a position token (the documents of one batch share a stamp), cursor moves after each page, 60 s per
+  page, overlap 2 minutes (stamps are commit times; only two commits finishing out of order need covering).
+- `stop()` halts an in-flight run (no more runs, pulls, `onPulled` or status events); `emitSyncChanged` isolates listener failures.
+
+### Known gaps (not fixed here, by decision)
+
+- `initializeAuth` still gets the popup resolver, which loads apis.google.com at launch; whether that can drop a restored session
+  offline cannot be checked without a real Google sign-in. The owner checks it on the first real run.
+- A lost ack is recovered with one round trip per event (O(n)); no retry cap, quota back-off or re-sign-in prompt; round-trip edge cases
+  (NaN, lone surrogates) are not handled; a rejected event is only visible as the error state until E01-S10 adds a list and retry.
+- The Playwright sync specs are not wired into CI.
+- Finance log, farm profile and media are not synced.
 
 ## Code review
 
