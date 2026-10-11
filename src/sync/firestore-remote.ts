@@ -192,6 +192,38 @@ async function guarded<T>(work: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Only talk to the server as the user this device has signed in. The SDK may
+ * have no session (a first launch offline-restored from our own store, a token
+ * the browser dropped): requests would then go out unauthenticated and the
+ * rules would answer `permission-denied`, which reads as "you are not allowed"
+ * and stops the engine. It is the session that is missing, and that mends
+ * itself, so say `unauthenticated` (transient) instead.
+ */
+export function whenSignedInAs(
+  layer: FirestoreLayer,
+  currentUid: () => Promise<string | null>,
+  userId: UserId,
+): FirestoreLayer {
+  const check = async () => {
+    if ((await currentUid()) !== userId) throw new RemoteError('unauthenticated', 'no Firebase session for this user');
+  };
+  return {
+    async commit(writes) {
+      await check();
+      return layer.commit(writes);
+    },
+    async get(path) {
+      await check();
+      return layer.get(path);
+    },
+    async eventsSince(groupId, sinceMs) {
+      await check();
+      return layer.eventsSince(groupId, sinceMs);
+    },
+  };
+}
+
 // ── the remote ─────────────────────────────────────────────────────────────
 
 export class FirestoreRemote implements RemoteEvents, RemoteGroups {

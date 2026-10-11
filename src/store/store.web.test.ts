@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LogBuilder } from '../core/fixtures';
+import { emitAppended, onAppended } from './append-signal';
 import { durabilityLost } from './durability';
 import { IntegrityError } from './errors';
 import { MemoryStore } from './memory-store';
@@ -101,5 +102,40 @@ describe('WebStore without IndexedDB (E01-S03 AC4)', () => {
     await store.append(e);
     expect(await store.load('s1')).toEqual([e]);
     expect(await store.isDurable()).toBe(false);
+  });
+});
+
+describe('append signal (E01-S09: sync soon after a local write)', () => {
+  it('tells listeners once per stored event, and not when the append is refused', async () => {
+    const heard = vi.fn();
+    const off = onAppended(heard);
+    const backing = new MemoryStore();
+    const store = new WebStore(async () => backing);
+    const { deviceId } = await store.device();
+    const [e] = new LogBuilder('s1', deviceId).accept('p1').build();
+
+    await store.append(e);
+    expect(heard).toHaveBeenCalledTimes(1);
+
+    backing.append = async () => {
+      throw new IntegrityError('refused.');
+    };
+    await expect(store.append(e)).rejects.toBeInstanceOf(IntegrityError);
+    expect(heard).toHaveBeenCalledTimes(1);
+    off();
+  });
+
+  it("a listener that throws cannot fail the write or stop the others", () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const heard = vi.fn();
+    const offBad = onAppended(() => {
+      throw new Error('boom');
+    });
+    const offGood = onAppended(heard);
+    expect(() => emitAppended()).not.toThrow();
+    expect(heard).toHaveBeenCalledTimes(1);
+    offBad();
+    offGood();
+    warn.mockRestore();
   });
 });

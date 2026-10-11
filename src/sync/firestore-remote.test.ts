@@ -13,6 +13,7 @@ import {
   SERVER_TIMESTAMP,
   toEnvelope,
   toRemoteError,
+  whenSignedInAs,
   type DocWrite,
   type FirestoreLayer,
 } from './firestore-remote';
@@ -283,5 +284,28 @@ describe('FirestoreRemote.createGroup', () => {
       code: 'unavailable',
     });
     expect(layer.docs.size).toBe(0);
+  });
+});
+
+describe('whenSignedInAs', () => {
+  const write: DocWrite[] = [{ path: 'groups/g/events/e', data: {} }];
+
+  it('passes calls through when the SDK session is the signed-in user', async () => {
+    const layer = new FakeLayer();
+    const guarded = whenSignedInAs(layer, async () => 'user-somchai', 'user-somchai');
+    await guarded.commit(write);
+    expect(await guarded.get('groups/g/events/e')).not.toBeNull();
+    await expect(guarded.eventsSince('g', 0)).resolves.toEqual([]);
+  });
+
+  it.each([null, 'someone-else'])('with session %j nothing is sent, and it is "unauthenticated" (transient), not "denied"', async (uid) => {
+    const layer = new FakeLayer();
+    const guarded = whenSignedInAs(layer, async () => uid, 'user-somchai');
+    for (const call of [() => guarded.commit(write), () => guarded.get('x'), () => guarded.eventsSince('g', 0)]) {
+      const err = await call().catch((e: unknown) => e);
+      expect(err).toMatchObject({ name: 'RemoteError', code: 'unauthenticated' });
+      expect(isTransient((err as RemoteError).code)).toBe(true);
+    }
+    expect(layer.commits).toEqual([]);
   });
 });

@@ -1,0 +1,67 @@
+/**
+ * The one Firebase app and Auth instance of the web build, shared by Google
+ * sign-in (`google.web.ts`) and the sync client (`../sync/client.web.ts`).
+ *
+ * The public web config comes from `EXPO_PUBLIC_FIREBASE_*` (set by the dev and
+ * prod deploy builds; the values are not secrets). Without it a build has
+ * `demo-` defaults and may only talk to emulators: a build with neither a real
+ * config nor an emulator refuses to try rather than talk to anything real
+ * (NFR-5, E01-S07's "no real backend from dev/preview" rule).
+ *
+ * `process.env.EXPO_PUBLIC_*` must be read with dot access: Expo inlines them
+ * at build time only in that form.
+ */
+
+import { getApps, initializeApp, type FirebaseApp } from 'firebase/app';
+import {
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+  connectAuthEmulator,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  type Auth,
+} from 'firebase/auth';
+
+const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? 'demo-mon-farm';
+const config = {
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY ?? 'demo-api-key',
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ?? `${projectId}.firebaseapp.com`,
+  projectId,
+};
+
+export const authEmulatorHost = process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST;
+/** `host:port` of the Firestore emulator, e.g. `127.0.0.1:8085`. */
+export const firestoreEmulatorHost = process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST;
+/**
+ * Which Firestore database this build uses. `dev` unless told otherwise: dev
+ * and preview builds must never reach the production database (NFR-5, D-48);
+ * the production build sets `(default)`.
+ */
+export const firestoreDatabaseId = process.env.EXPO_PUBLIC_FIREBASE_DATABASE_ID || 'dev';
+
+/** A real project, or an emulator to stand in for one. */
+const isReal = !projectId.startsWith('demo-');
+
+/** Sign-in can run: a real project, or the Auth emulator. */
+export const authAvailable = isReal || !!authEmulatorHost;
+/** Sync can run: a real project, or the Firestore emulator. */
+export const syncAvailable = isReal || !!firestoreEmulatorHost;
+
+export function firebaseApp(): FirebaseApp {
+  return getApps()[0] ?? initializeApp(config);
+}
+
+let auth: Auth | null = null;
+
+export function firebaseAuth(): Auth {
+  if (auth) return auth;
+  if (!authAvailable) throw new Error('Firebase is not configured (E01-S07) and no Auth emulator is set.');
+  // The SDK keeps its own refresh token (and restores it on the next launch);
+  // the app's own record of who signed in is the account store.
+  auth = initializeAuth(firebaseApp(), {
+    persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+    popupRedirectResolver: browserPopupRedirectResolver,
+  });
+  if (authEmulatorHost) connectAuthEmulator(auth, `http://${authEmulatorHost}`, { disableWarnings: true });
+  return auth;
+}

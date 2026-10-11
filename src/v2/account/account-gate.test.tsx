@@ -6,6 +6,7 @@ import { SignInError } from '../../auth/errors';
 import type { GoogleSignIn } from '../../auth/google';
 import { userFromSignIn } from '../../core/user';
 import { MemoryAccountStore } from '../../store/account-memory';
+import type { SyncRemote } from '../../sync/client';
 import { NotSignedInError, sessionGroupId, sessionUserId, setSessionGroup, setSessionUser } from '../../store/session';
 import { wrap } from '../../test/render';
 
@@ -14,6 +15,11 @@ import { wrap } from '../../test/render';
  * global jest setup signs a test user in; these tests are about the door
  * itself, so each starts from a device nobody has signed in on.
  */
+
+// Sync (E01-S09) is wired by the gate; the engine itself is proven in Vitest and on the emulator.
+const mockStop = jest.fn();
+const mockStartSync = jest.fn(() => ({ engine: { subscribe: jest.fn() }, stop: mockStop }));
+jest.mock('../../sync/runtime', () => ({ startSync: (...args: unknown[]) => (mockStartSync as (...a: unknown[]) => unknown)(...args) }));
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: unknown }) => children,
@@ -26,6 +32,8 @@ const home = <Text testID="app-inside">inside</Text>;
 beforeEach(() => {
   setSessionUser(null);
   setSessionGroup(null);
+  mockStartSync.mockClear();
+  mockStop.mockClear();
 });
 
 async function flush() {
@@ -280,5 +288,86 @@ describe('group start (E02-S02)', () => {
     await flush();
     await flush();
     expect(await accounts.memberships()).toHaveLength(1);
+  });
+});
+
+/** E01-S09: sync runs beside the app for the open session, and never in front of it. */
+describe('sync wiring', () => {
+  const remote = {} as SyncRemote;
+
+  async function inGroup() {
+    const accounts = new MemoryAccountStore();
+    await accounts.saveUser(somchai);
+    await accounts.createGroup(
+      { groupId: 'g-farm', userId: 'uid-1', name: 'สวนสมชาย', role: 'owner' },
+      { op: 'create_group', groupId: 'g-farm', name: 'สวนสมชาย', createdBy: 'uid-1', displayName: 'สมชาย', createdAt: 1 },
+    );
+    return accounts;
+  }
+
+  const render = async (accounts: MemoryAccountStore, connect: jest.Mock) => {
+    const view = wrap(
+      <AccountGate accounts={accounts} google={{ signIn: async () => somchai }} connect={connect}>
+        {home}
+      </AccountGate>,
+    );
+    for (let i = 0; i < 4; i++) await flush();
+    return view;
+  };
+
+  it('starts for the signed-in user in their open group, and stops when the session ends', async () => {
+    const connect = jest.fn(async () => remote);
+    const view = await render(await inGroup(), connect);
+    expect(screen.getByTestId('app-inside')).toBeTruthy();
+    expect(connect).toHaveBeenCalledWith('uid-1', 'g-farm');
+    expect(mockStartSync).toHaveBeenCalledTimes(1);
+    expect(mockStartSync).toHaveBeenCalledWith(expect.objectContaining({ scope: { userId: 'uid-1', groupId: 'g-farm' }, remote }));
+    view.unmount();
+    expect(mockStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not start before there is a user and a group', async () => {
+    const connect = jest.fn(async () => remote);
+    const signedOut = await render(new MemoryAccountStore(), connect);
+    signedOut.unmount();
+    const accounts = new MemoryAccountStore();
+    await accounts.saveUser(somchai);
+    const noGroup = await render(accounts, connect);
+    noGroup.unmount();
+    expect(connect).not.toHaveBeenCalled();
+    expect(mockStartSync).not.toHaveBeenCalled();
+  });
+
+  it('a build that cannot sync (no adapter, no config) just stays local and fully usable', async () => {
+    await render(await inGroup(), jest.fn(async () => null));
+    expect(screen.getByTestId('app-inside')).toBeTruthy();
+    expect(mockStartSync).not.toHaveBeenCalled();
+  });
+
+  it('a connection that fails to set up never blocks or breaks the app', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await render(await inGroup(), jest.fn(async () => Promise.reject(new Error('no network'))));
+    expect(screen.getByTestId('app-inside')).toBeTruthy();
+    expect(mockStartSync).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('opens the app at once, before the connection has answered', async () => {
+    let answer: (r: SyncRemote | null) => void = () => undefined;
+    const connect = jest.fn(() => new Promise<SyncRemote | null>((resolve) => (answer = resolve)));
+    await render(await inGroup(), connect);
+    expect(screen.getByTestId('app-inside')).toBeTruthy();
+    expect(mockStartSync).not.toHaveBeenCalled();
+    await act(async () => answer(remote));
+    expect(mockStartSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('a connection that answers after the session ended is dropped, not started', async () => {
+    let answer: (r: SyncRemote | null) => void = () => undefined;
+    const connect = jest.fn(() => new Promise<SyncRemote | null>((resolve) => (answer = resolve)));
+    const view = await render(await inGroup(), connect);
+    view.unmount();
+    await act(async () => answer(remote));
+    expect(mockStartSync).not.toHaveBeenCalled();
   });
 });

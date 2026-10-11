@@ -17,6 +17,7 @@ import { checkAppend, checkPulled, type DeviceState } from './append-rule';
 import { committed, connection, request } from './idb';
 import { markNotDurable } from './durability';
 import { IntegrityError } from './errors';
+import { emitAppended } from './append-signal';
 import { MemoryStore } from './memory-store';
 import type { EventStore } from './store';
 import { compareEvents } from '../core/order';
@@ -266,6 +267,7 @@ export class WebStore implements EventStore {
     const store = await this.pick();
     try {
       await store.append(event);
+      emitAppended();
     } catch (err) {
       // A refused append (IntegrityError) is the log protecting itself; any
       // other failure means storage has stopped keeping what is counted.
