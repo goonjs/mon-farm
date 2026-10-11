@@ -98,7 +98,7 @@ totals, settle, sale-status, compact-baht, finance/*) และ hook ของ M
 - [x] Sandbox run performed: web build, `e2e/v2-sale.spec.ts` offline end to end (2026-10-10)
 - [x] Screenshots — golden path: `docs/ux/screenshots/ui-v2/sale/`
 - [x] Screenshots — sale options: `20-option-price`, `21-sale-info`, `22-delete-sale` (2026-10-11)
-- [ ] Screenshots — netting sheet (หักกลบ) covered by jest `v2-sale-netting.test.tsx`, no screenshot yet
+- [x] Screenshots — netting sheet (หักกลบ): `23-netting` (e2e `settlement: netting…`)
 - [ ] Screenshots — edge cases: skew (7a–7c, 8b, 8c), deleted point (12b), no-tapper point (8a) are covered by jest (`v2-sale-weigh.test.tsx`) but have no screenshots yet
 
 ## Dev notes

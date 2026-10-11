@@ -1,7 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import type { MasterPayload } from '../src/core/types';
-import { evidence, seedMaster } from './fixtures';
+import { LogBuilder } from '../src/core/fixtures';
+import type { FinanceEvent, FinancePayload } from '../src/core/finance/types';
+import { evidence, seedEvents, seedMaster } from './fixtures';
 
 /**
  * The v2 sale flow in the real web build, offline (sale mockup v1.1.0
@@ -60,6 +62,43 @@ test('one open sale: เริ่มการขาย goes back to it; the ⋯ 
   await expect(id('v2-home')).toBeVisible();
   await id('home-sale-start').click();
   await expect(id('sale-start')).toBeVisible();
+});
+
+test('settlement: netting the money the farm owes back against a debt (E06-S04)', async ({ page }) => {
+  const id = on(page);
+  await seedMaster(page, FARM);
+  // นัด: one full basket at จุด 4 (share ฿1,455 at 52.50), owes the farm ฿3,000, and the farm owes นัด ฿640.
+  const b = new LogBuilder('sale-net');
+  b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+  b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+  b.sys({ t: 'pile_added', pileId: 'a4', zoneId: 'fa', name: 'a4', tareG: 2_000, stdNetG: 50_000 });
+  b.acceptAt('a4', 1).acceptAt('a4', 2);
+  const now = Date.now();
+  await seedEvents(page, b.build().map((e) => ({ ...e, ts: now })));
+  const fin = (n: number, targetId: string, payload: FinancePayload): FinanceEvent => ({
+    id: `e2e-net-${n}`,
+    deviceSeq: n,
+    ts: now,
+    actor: { userId: 'pre-login', deviceId: 'dev-seed' },
+    source: 'app',
+    targetId,
+    baseEventId: null,
+    payload,
+  });
+  const NAT = { id: 'nat', name: 'นัด' };
+  const events = [
+    fin(1, 'debt-nat', { t: 'debt_added', fields: { worker: NAT, kind: 'loan', amountSatang: 300_000, date: '2026-09-01', note: '', lender: { id: 'farm', name: 'เงินสวน' }, fertilizer: null, carriedForward: false } }),
+    fin(2, 'exp-nat', { t: 'expense_created', fields: { amountSatang: 64_000, date: '2026-09-28', stage: 'actual', categoryId: null, propertyId: null, item: '', note: '', payer: NAT } }),
+  ];
+  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), events);
+  await page.goto('/v2/sale/sale-net/settlement');
+  await expect(id('settlement')).toBeVisible();
+  await id('deduct-nat').click();
+  await expect(id('net-card')).toContainText('640.00');
+  await id('net-amount').fill('400');
+  await shot(page, '23-netting');
+  await id('deduct-save').click();
+  await expect(id('netted-nat')).toContainText('400.00');
 });
 
 const on = (page: Page) => (id: string) => page.getByTestId(id).filter({ visible: true });
