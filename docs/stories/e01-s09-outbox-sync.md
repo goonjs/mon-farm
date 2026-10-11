@@ -187,6 +187,12 @@ Decisions:
   (NaN, lone surrogates) are not handled; a rejected event is only visible as the error state until E01-S10 adds a list and retry.
 - A rejected event is held for the session only (the list is in memory): after a restart it is pushed and refused once more, then
   skipped again. A change recorded on top of a rejected event waits on other phones until a base that never arrives (see the fold note above).
+- A good event can be marked `invalid` for the session if the user's membership changes in the milliseconds between the denied single
+  push and the `check()` read that follows (it looks like a member whose event was refused); it stays skipped until `retry()` or a
+  restart. Accepted: the window is tiny and nothing is lost.
+- Events refused as `integrity` (the server holds other content under our id) and `invalid` ones are skipped by the push, the slow
+  retry and `nudge()`; only `retry()` or a restart tries them again. The first time one is found it costs about 2N+1 operations
+  (N = events in the refused batch); after that nothing. The sets (`rejected`, `conflicting`) are in memory only, so the cost repeats once per app start.
 - The slow retry and the foreground nudge are covered with fake timers and fakes only; not seen against the real database.
 - The Playwright sync specs are not wired into CI.
 - Finance log, farm profile and media are not synced.
