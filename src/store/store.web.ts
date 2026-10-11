@@ -7,13 +7,14 @@
  * and `meta`, so the device-sequence check and the insert commit together —
  * and IndexedDB serialises overlapping readwrite transactions across tabs.
  *
- * Database `mon-farm-v1` (architecture §Schema — เว็บ). The v0.4 log in
+ * Database `mon-farm-v1` (architecture §Schema — เว็บ; schema in `idb.ts`). The v0.4 log in
  * localStorage is not migrated (owner 2026-10-03); its sale keys are removed
  * once, best-effort. Where IndexedDB is unavailable (some private modes) the
  * app falls back to memory and says so (`isDurable`).
  */
 
 import { checkAppend, checkPulled, type DeviceState } from './append-rule';
+import { committed, connection, request } from './idb';
 import { markNotDurable } from './durability';
 import { IntegrityError } from './errors';
 import { MemoryStore } from './memory-store';
@@ -22,9 +23,6 @@ import { compareEvents } from '../core/order';
 import { MASTER_SCOPE } from '../core/master';
 import type { EventId, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
-
-const DB_NAME = 'mon-farm-v1';
-const DB_VERSION = 1;
 
 /**
  * One row per event. `pending` is 1|0 rather than a nullable `syncedAt`
@@ -72,67 +70,18 @@ export function cleanUpLegacy(given?: Storage): void {
   }
 }
 
-function request<T>(r: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    r.onsuccess = () => resolve(r.result);
-    r.onerror = () => reject(r.error);
-  });
-}
-
-function committed(tx: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error ?? new Error('IndexedDB transaction aborted.'));
-  });
-}
-
-function openDb(factory: IDBFactory): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const open = factory.open(DB_NAME, DB_VERSION);
-    open.onupgradeneeded = () => {
-      const db = open.result;
-      const events = db.createObjectStore('events', { keyPath: 'id' });
-      events.createIndex('saleId', 'saleId');
-      events.createIndex('pending', 'pending');
-      db.createObjectStore('meta');
-    };
-    open.onsuccess = () => resolve(open.result);
-    open.onerror = () => reject(open.error);
-    // Another tab holds an older version open; nothing to do but wait.
-    open.onblocked = () => console.warn('IndexedDB upgrade blocked by another tab.');
-  });
-}
-
 export class IndexedDbStore implements EventStore {
-  private db: Promise<IDBDatabase> | null = null;
+  private readonly open: () => Promise<IDBDatabase>;
 
-  constructor(private readonly factory: IDBFactory) {}
-
-  private open(): Promise<IDBDatabase> {
-    this.db ??= (async () => {
-      const db = await openDb(this.factory);
-      // The browser can drop the connection (Safari does on backgrounded
-      // tabs). Reopen on next use rather than failing every write after.
-      db.onclose = () => {
-        this.db = null;
-      };
-      db.onversionchange = () => {
-        db.close();
-        this.db = null;
-      };
-      try {
+  constructor(factory: IDBFactory) {
+    this.open = connection(
+      () => factory,
+      async (db) => {
         await this.ensureMeta(db);
-      } catch (err) {
-        db.close();
-        this.db = null;
-        throw err;
-      }
-      // Best-effort: asks the browser not to evict this origin's data.
-      void globalThis.navigator?.storage?.persist?.().catch(() => undefined);
-      return db;
-    })();
-    return this.db;
+        // Best-effort: asks the browser not to evict this origin's data.
+        void globalThis.navigator?.storage?.persist?.().catch(() => undefined);
+      },
+    );
   }
 
   /** Mints the device id and runs the one-time legacy cleanup, once per profile. */
