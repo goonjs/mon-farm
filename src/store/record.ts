@@ -4,15 +4,12 @@
  * `SaleProvider` — one device clock for the whole app, see device-clock.ts.
  */
 
-import { assertAllowed } from '../core/delete-guard';
 import { requireGroupId } from '../core/scope';
 import type { Actor, GroupId, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
 import { createDeviceClock } from './device-clock';
 import { sessionGroupId, sessionUserId } from './session';
 import { store } from './store';
-
-export { DeleteBlockedError } from '../core/delete-guard';
 
 /** Shared by every writer — see device-clock.ts for why it cannot be per sale. */
 export const deviceClock = createDeviceClock(store);
@@ -59,7 +56,6 @@ export async function writerNow(): Promise<Writer> {
 export async function setDeleted(saleId: string, deleted: boolean, targetId = saleId): Promise<void> {
   const writer = await writerNow();
   const events = await store.load(saleId);
-  assertAllowed(events, targetId, deleted);
   await store.append({
     ...stamp(saleId, nextSeq(events), writer),
     kind: deleted ? 'delete' : 'restore',
