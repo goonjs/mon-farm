@@ -70,6 +70,12 @@ gcloud builds triggers create github --name=deploy-dev \
 - ไม่ต้องทำอะไรกับ `deploy-dev.yml` (ไม่รันอัตโนมัติแล้ว) — ใช้เป็นสำรองกดเอง
 - ถ้า trigger ยังไม่ได้ตั้ง **dev จะไม่ deploy อัตโนมัติ** หลังรวม story นี้เข้า dev จนกว่าจะทำข้อ 1–3 (ระหว่างนั้นกด Deploy Dev เองจากแท็บ Actions)
 
+## ข้อควรรู้
+
+- Cloud Build ไม่ยกเลิก build เก่าเมื่อมี push ใหม่ (GitHub workflow เดิมเคยยกเลิก) ถ้า push ติดกันสองครั้ง
+  build เก่าอาจเสร็จทีหลังและ dev ค้างที่ commit เก่า — ถ้าเจอ ให้กด Run trigger อีกรอบ (ยอมรับได้สำหรับ dev)
+- `gcloud config set project` เปลี่ยนค่าเริ่มต้นในเครื่องคุณ ถ้าไม่ต้องการ ให้ใส่ `--project mon-farmmate` ทุกคำสั่งแทน
+
 ## ย้อนกลับ
 
 ลบ trigger `deploy-dev` และคืน `push: branches: [dev]` ใน `.github/workflows/deploy-dev.yml`

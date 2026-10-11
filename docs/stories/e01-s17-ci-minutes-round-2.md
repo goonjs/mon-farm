@@ -79,8 +79,17 @@ Status: Review
 
 ## Code review
 
-- Reviewer (separate agent/session): ยังไม่ได้ทำ — ต้องให้ session แยก (เช่น `devops-ci-engineer`) ตรวจก่อน Done
-- Findings:
-- Resolution:
+- Reviewer (separate agent/session): subagent `devops-ci-engineer` (ไม่ได้เขียนโค้ดนี้), 2026-10-11 — ไม่มี must-fix, 3 should-fix
+- Findings / Resolution:
+
+| # | ระดับ | ประเด็น | ผล |
+|---|---|---|---|
+| 1 | should-fix | label อื่นที่ไม่เกี่ยว (เช่น `bug`) ยกเลิก run e2e/preview ที่กำลังรัน เพราะ concurrency group เดียวกัน | แก้: label ที่ไม่ใช่ e2e/preview ได้ group แยก (ต่อ run_id) |
+| 2 | should-fix | โค้ด PR (npm install scripts, build) รันใน job ที่มี `id-token: write` | แก้: แยก 3 job — `build` และ `e2e` สิทธิ์ `contents: read`; เฉพาะ `preview` มี `id-token` และไม่ติดตั้ง dependency |
+| 3 | should-fix | Cloud Build ไม่ยกเลิก build เก่า → dev อาจค้าง commit เก่า | บันทึกใน runbook ("ข้อควรรู้") ยอมรับสำหรับ dev |
+| nit | | build รันโดยไม่มีตัวแปร deploy ทั้งที่ขอแค่ preview | แก้: ขั้น `What was asked for` ตัดสินก่อน build |
+| nit | | preview ไม่ควรถูกซ่อนเมื่อ e2e แดง | แก้: `preview` เป็น job อิสระ |
+| nit | | re-run ใช้ label เก่า | ยอมรับ: ติด/ถอด label แล้วรันใหม่แทนการ re-run |
+| nit | | `gcloud config set project` เปลี่ยนค่าเครื่อง | บันทึกใน runbook |
 
 ## QA notes

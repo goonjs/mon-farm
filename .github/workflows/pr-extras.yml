@@ -6,7 +6,7 @@ name: PR extras
 #   label `e2e`      run the Playwright suite against this PR's build
 #   label `preview`  deploy a Firebase preview channel (expires in 7 days)
 #
-# Both labels together share one install and one build. The run starts when a
+# Both labels together share one install and one build (job `build`). The run starts when a
 # label is added and again on every new push while the label is still on, so a
 # labelled PR stays covered. A label that is not one of the two does nothing.
 # After merge, e2e always runs from ci.yml, so an unlabelled PR is still
@@ -20,13 +20,26 @@ on:
   pull_request:
     types: [labeled, synchronize, reopened, ready_for_review]
 
-# One run per PR; a newer push or label replaces the one in flight.
+# One run per PR; a newer push or label replaces the one in flight. A label
+# that does nothing (anything but e2e/preview) gets its own group, so it cannot
+# cancel a run that is doing real work.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: >-
+    ${{ github.workflow }}-${{ github.event.pull_request.number }}-${{
+    github.event.action == 'labeled' && github.event.label.name != 'e2e'
+    && github.event.label.name != 'preview' && github.run_id || '' }}
   cancel-in-progress: true
 
+env:
+  WANT_E2E: ${{ contains(github.event.pull_request.labels.*.name, 'e2e') }}
+  WANT_PREVIEW: ${{ contains(github.event.pull_request.labels.*.name, 'preview') }}
+  # Preview needs the keyless-auth repo variables; without them it is skipped.
+  CAN_PREVIEW: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
+
 jobs:
-  extras:
+  # Untrusted PR code (npm install scripts, the build) runs here with read-only
+  # permissions and no OIDC token. The jobs that can deploy never run it.
+  build:
     if: >
       github.event.pull_request.head.repo.full_name == github.repository &&
       !github.event.pull_request.draft &&
@@ -36,13 +49,61 @@ jobs:
         && (contains(github.event.pull_request.labels.*.name, 'e2e')
          || contains(github.event.pull_request.labels.*.name, 'preview')))
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     permissions:
       contents: read
-      id-token: write
-    env:
-      WANT_E2E: ${{ contains(github.event.pull_request.labels.*.name, 'e2e') }}
-      WANT_PREVIEW: ${{ contains(github.event.pull_request.labels.*.name, 'preview') }}
+    outputs:
+      e2e: ${{ steps.want.outputs.e2e }}
+      preview: ${{ steps.want.outputs.preview }}
+
+    steps:
+      # Decide once, so a preview-only label with no deploy variables builds nothing.
+      - name: What was asked for
+        id: want
+        run: |
+          echo "e2e=$WANT_E2E" >> "$GITHUB_OUTPUT"
+          preview=false
+          if [ "$WANT_PREVIEW" = true ] && [ "$CAN_PREVIEW" = true ]; then preview=true; fi
+          echo "preview=$preview" >> "$GITHUB_OUTPUT"
+          if [ "$WANT_PREVIEW" = true ] && [ "$CAN_PREVIEW" != true ]; then
+            echo "::notice title=PR preview off::Set repo variables GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT to deploy previews."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+        run: npm ci
+
+      - name: Build web
+        if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+        run: npm run build:web
+
+      - name: Upload web build
+        if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
+
+  # Label `e2e`. Read-only, like ci.yml's e2e job.
+  e2e:
+    needs: build
+    if: needs.build.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -55,17 +116,16 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Build web
-        run: npm run build:web
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
-      # --- e2e (label `e2e`) -------------------------------------------------
       - name: Playwright version
-        if: env.WANT_E2E == 'true'
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
-        if: env.WANT_E2E == 'true'
         id: pw-cache
         uses: actions/cache@v4
         with:
@@ -73,19 +133,18 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
       - name: Install Playwright browsers
-        if: env.WANT_E2E == 'true' && steps.pw-cache.outputs.cache-hit != 'true'
+        if: steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Install Playwright system deps
-        if: env.WANT_E2E == 'true' && steps.pw-cache.outputs.cache-hit == 'true'
+        if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
       - name: End-to-end
-        if: env.WANT_E2E == 'true'
         run: npm run test:e2e
 
       - name: Upload screenshots
-        if: always() && env.WANT_E2E == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: screenshots
@@ -94,40 +153,42 @@ jobs:
           retention-days: 3
 
       - name: Upload Playwright report on failure
-        if: failure() && env.WANT_E2E == 'true'
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-results
           path: e2e/.results/
           retention-days: 3
 
-      # --- preview (label `preview`) -----------------------------------------
-      - name: Note when PR previews are off
-        if: >
-          env.WANT_PREVIEW == 'true' &&
-          (vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT == '')
-        run: >
-          echo "::notice title=PR preview off::Set repo variables
-          GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT to deploy previews."
+  # Label `preview`. Holds the OIDC permission but runs no PR code except the
+  # prebuilt, static dist and scripts/deploy.sh from the PR's checkout; it does
+  # not install dependencies. Independent of e2e, so a red e2e does not hide it.
+  preview:
+    needs: build
+    if: needs.build.outputs.preview == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
       - uses: google-github-actions/auth@v2
-        if: >
-          env.WANT_PREVIEW == 'true' &&
-          vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != ''
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
       - name: Deploy preview channel (expires in 7 days)
-        if: >
-          env.WANT_PREVIEW == 'true' &&
-          vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != ''
         run: ./scripts/deploy.sh preview "pr-${{ github.event.pull_request.number }}" | tee preview.log
 
       - name: Show the preview URL
-        if: >
-          env.WANT_PREVIEW == 'true' &&
-          vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != ''
         run: |
           url=$(grep -Eo 'https://[^ ]+\.web\.app[^ ]*' preview.log | head -1)
           echo "Preview: $url" >> "$GITHUB_STEP_SUMMARY"
