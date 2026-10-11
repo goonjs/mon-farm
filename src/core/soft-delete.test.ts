@@ -65,17 +65,6 @@ describe('soft delete — one rule for every record (E01-S04, SYNC-10, D-27)', (
     expect(() => settle(b.build(), projectSale(b.build()))).not.toThrow();
     expect(projectSale(b.build()).zones.map((z) => z.id)).toEqual(['zA']);
   });
-
-  it('a deleted deduction leaves the payout; a voided one is still a different thing', () => {
-    const b = setUpSale();
-    readyPile(b, 'p1');
-    b.accept('p1').deduction('person-x', 10_000, 'advance', 'สมชาย');
-    const id = b.lastDeductionId();
-    b.remove(id);
-    expect(projectSale(b.build()).deductions).toEqual([]);
-    b.restore(id);
-    expect(projectSale(b.build()).deductions.map((d) => d.id)).toEqual([id]);
-  });
 });
 
 describe('provenance — from the log, not stored separately (SYNC-11)', () => {
@@ -100,21 +89,17 @@ describe('provenance — from the log, not stored separately (SYNC-11)', () => {
     expect(provenance(setUpSale().remove('nope').build(), 'nope')).toBeNull();
   });
 
-  it('covers every record kind: basket (by correction), zone (by a pile added), deduction (by a void), sale', () => {
+  it('covers every record kind: basket (by correction), zone (by a pile added), sale', () => {
     const b = setUpSale();
     readyPile(b, 'p1');
     b.accept('p1');
     const basket = b.build()[b.build().length - 1];
     b.on('dev-B').void('p1', basket.id);
-    b.deduction('person-x', 5_000, 'advance', 'สมชาย');
-    const ded = b.lastDeductionId();
-    b.voidDeduction();
     const events = b.build();
     const last = events[events.length - 1];
 
     expect(provenance(events, basket.id)!.changed!.actor.deviceId).toBe('dev-B');
     expect(provenance(events, 'zA')!.changed).not.toBeNull(); // p1, p2 were added to it
-    expect(provenance(events, ded)!.changed!.ts).toBe(last.ts);
     expect(provenance(events, 'sale-1')!.changed!.ts).toBe(last.ts);
   });
 

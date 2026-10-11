@@ -12,6 +12,7 @@ import { LogBuilder, workedExampleLog } from './fixtures';
 import { MASTER_SCOPE, projectMaster } from './master';
 import { settlePoints } from './point-settle';
 import { projectSale } from './project';
+import { isMoneyChange } from './sale-status';
 import { settle } from './settle';
 import type { MasterPayload, SaleEvent, SysPayload } from './types';
 
@@ -65,5 +66,15 @@ describe('a log still holding deduction_added / deduction_voided (E06-S07)', () 
     const z = settlePoints(plain, projectSale(plain, 'sale-1'), master, '2026-10-03');
     expect(a).toEqual(z);
     expect(a.perWorker.map((w) => w.personId)).toEqual(['red']); // no row for the old "outsider"
+  });
+
+  it('the rest of the projection is unchanged', () => {
+    const plain = workedExampleLog().build();
+    const withOld = addOldEvents(workedExampleLog()).build();
+    expect(projectSale(withOld)).toEqual(projectSale(plain));
+  });
+
+  it('an old deduction event is not a money change', () => {
+    expect(isMoneyChange({ kind: 'sys', payload: { t: 'deduction_added' } })).toBe(false);
   });
 });

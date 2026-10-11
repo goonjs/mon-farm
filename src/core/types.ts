@@ -40,7 +40,7 @@ export interface Actor {
 export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys' | 'delete' | 'restore' | 'master';
 
 /**
- * Any record an event can create or change: a sale, zone, pile, deduction —
+ * Any record an event can create or change: a sale, zone, pile —
  * or a basket, whose record id is its own event id.
  */
 export type RecordId = string;
@@ -325,43 +325,7 @@ export type SysPayload =
       readonly t: 'clock_anomaly';
       readonly anomaly: 'backwards' | 'before-sale-start' | 'implausible-jump';
       readonly deltaMs: number;
-    }
-  /**
-   * Money leaving one worker's own share (S29, FR-7.3). `satang` is a
-   * POSITIVE integer — the sign lives in the arithmetic (`settle()` computes
-   * `payoutSatang = workerSatang - deductionSatang`), never in the event.
-   * `reason` and `agreedBy` are both required at the point a deduction is
-   * created — see the form in settlement.tsx.
-   *
-   * `agreedBy` is a snapshotted free-text name, not a `personId` reference —
-   * the same reasoning `zone_contract_set` uses for `workerName`: renaming
-   * someone next month must not rewrite what a past sale recorded.
-   */
-  | {
-      readonly t: 'deduction_added';
-      readonly deductionId: string;
-      readonly personId: PersonId;
-      /**
-       * Snapshot of the person's name at the time, for the same reason
-       * `zone_contract_set` snapshots `workerName`: renaming someone next
-       * month must not rewrite what a past sale recorded. It is also the ONLY
-       * way to name someone who holds no zone contract in this sale — there is
-       * no contract to read a name from, and settle() must still show them.
-       */
-      readonly personName: string;
-      readonly satang: number;
-      readonly reason: string;
-      readonly agreedBy: string;
-    }
-  /**
-   * Voids a deduction by id (FR-7.3, NFR-3) — append-only, same bar
-   * `pile_reopened` and `correction` already meet: the target is never
-   * mutated or removed, only marked. Naming the target by `deductionId`
-   * rather than `seq` means a void survives being replayed in any order —
-   * the projection tolerates one arriving before the deduction it names, and
-   * silently ignores an id it has never seen (see `project.ts`).
-   */
-  | { readonly t: 'deduction_voided'; readonly deductionId: string; readonly reason: string };
+    };
 
 export interface SysEvent extends EventBase {
   readonly kind: 'sys';
@@ -566,23 +530,6 @@ export interface Zone {
   readonly contract: ZoneContract | null;
 }
 
-/**
- * One deduction, projected from `deduction_added` and any `deduction_voided`
- * naming it (S29). A void MARKS this — `voided`/`voidReason` — it never
- * removes the entry, so the log stays complete (NFR-3).
- */
-export interface Deduction {
-  readonly id: string;
-  readonly personId: PersonId;
-  /** Snapshotted on the event — see `deduction_added`. */
-  readonly personName: string;
-  readonly satang: number;
-  readonly reason: string;
-  readonly agreedBy: string;
-  readonly voided: boolean;
-  readonly voidReason: string | null;
-}
-
 export type SaleStatus = 'draft' | 'completed' | 'cancelled';
 
 export interface SaleState {
@@ -612,8 +559,6 @@ export interface SaleState {
   readonly clockSuspect: boolean;
   /** FR-11.11. Defaults on; flipped by `speech_set` events. */
   readonly speechOn: boolean;
-  /** In log order. Includes voided ones — settle() is what filters to live. */
-  readonly deductions: readonly Deduction[];
 }
 
 export interface Totals {
