@@ -14,12 +14,13 @@
  */
 
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { compactBaht } from '../../core/compact-baht';
 import { pointsOf, tapperOn } from '../../core/master';
 import { saleSkewG } from '../../core/scale-check';
+import { basketNetG } from '../../core/totals';
 import { basketList } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
@@ -32,9 +33,9 @@ import {
   Button,
   cardStyle,
   ChevronRight,
+  ClockIcon,
   CTA,
   DotsIcon,
-  ExpandIcon,
   FlagIcon,
   IconTile,
   LeafIcon,
@@ -48,14 +49,23 @@ import {
 } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { countModel } from './count';
-import { HoldStage } from './hold';
+import { HoldButton, HoldStage } from './hold';
 import { signed, useGoToPoint } from './move';
 import { Banner, BasketBar, IconLine, Kv, kgText, NumChip, PointBar, RubberKg, ScaleNum, WrapLine, Words, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 import { MoneyFigure } from './money-figure';
 import { Ruler } from './ruler';
 import { SaleOptionRows, SaleOptionSheets, type OptionSheet } from './sale-options';
 
-type Sheet = 'none' | 'partial' | 'menu' | 'new-point' | OptionSheet;
+type Sheet = 'none' | 'partial' | 'menu' | 'new-point' | 'undo-confirm' | OptionSheet;
+
+/** The one-line confirmation under the stage: what a count recorded or an undo took back. */
+interface Notice {
+  /** A confirmation belongs to the point it was made at. */
+  readonly pointId: string;
+  readonly kind: 'recorded' | 'undone' | 'undone-part';
+  readonly n: number;
+  readonly kg?: string;
+}
 
 export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet }) {
   const t = useTheme();
@@ -69,6 +79,13 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const pointId = params.point ?? '';
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
   const [readingKg, setReadingKg] = useState<number | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
+  useEffect(() => {
+    if (notice === null) return undefined;
+    const timer = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   const [newName, setNewName] = useState('');
   const base = `/v2/sale/${saleId}`;
 
@@ -101,11 +118,24 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   // ── writes ── (one count path with public mode, review #1)
   const countFull = model.count;
   const early = model.early;
+  // Undo needs the same hold as a count (E04-S15): the number comes back, none is skipped.
   const undo = () => {
     const last = events.find((e) => e.id === figs.lastId);
     if (last && (last.kind === 'accept' || last.kind === 'short')) {
       append({ kind: 'correction', pileId: last.pileId, targetId: last.id, mode: 'undo-last', reason: msg('rec.undo') });
+      setNotice({ pointId, kind: last.partOf ? 'undone-part' : 'undone', n: last.basketNo ?? figs.currentNo - 1 });
     }
+  };
+  // The basket the undo would take back, named on the button and in the question.
+  const lastBasket = events.find((e) => e.id === figs.lastId);
+  const lastNo = lastBasket && (lastBasket.kind === 'accept' || lastBasket.kind === 'short') ? (lastBasket.basketNo ?? null) : null;
+  // What the undo removes is exactly this event — a whole basket, or the top-up part of a short one.
+  const lastIsPart = !!lastBasket && (lastBasket.kind === 'accept' || lastBasket.kind === 'short') && !!lastBasket.partOf;
+  const lastKg = lastBasket && (lastBasket.kind === 'accept' || lastBasket.kind === 'short') ? kgText(basketNetG(lastBasket)) : '';
+  const count = (input: 'hold' | 'hold-kbd') => {
+    // Say what was written, and only when something was (a refused count announces nothing).
+    const written = countFull(input);
+    if (written) setNotice({ pointId, kind: 'recorded', n: written.basketNo, kg: kgText(written.netG) });
   };
   const closeOpen = () => open && append({ kind: 'sys', payload: { t: 'basket_closed', basketId: open.rootId, reason: 'scrap' } });
 
@@ -217,9 +247,17 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
     return (
       <View testID="fill-guide" style={{ gap: t.space.sm }}>
         <View style={{ ...cardStyle(t), backgroundColor: t.color.warnSunk, padding: t.space.md, gap: t.space.sm }}>
-          <Text testID="fill-title" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
-            {fill === 'full' ? msg('v2s.stageFull', { n: o.basketNo }) : msg('v2s.stageSplit', { n: o.basketNo })}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: t.space.sm }}>
+            <Text testID="fill-title" style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
+              {fill === 'full' ? msg('v2s.stageFull', { n: o.basketNo }) : msg('v2s.stageSplit', { n: o.basketNo })}
+            </Text>
+            <View style={{ alignItems: 'center' }} accessibilityLabel={`${msg('rec.current')} ${figs.currentNo}`}>
+              <AppText variant="caption">{msg('rec.current')}</AppText>
+              <Text testID="current-no" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingXl, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
+                {figs.currentNo}
+              </Text>
+            </View>
+          </View>
           <BasketBar haveG={o.haveG} addG={o.missingG} stdG={o.haveG + o.missingG} held={fill === 'part' ? msg('v2s.barHeld', { place: heldPlace }) : undefined} addLabel={fill === 'part' ? msg('v2s.barNow') : msg('v2s.barAdd')} />
         </View>
         <View testID="fill-steps" style={{ gap: t.space.xs }}>
@@ -267,9 +305,9 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       }
       footer={
         <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+          <HoldButton testID="tool-undo" label={msg('rec.undo')} a11yLabel={lastNo !== null ? msg('rec.undoA11y', { n: lastNo }) : undefined} hint={lastNo !== null ? msg('rec.undoHint', { n: lastNo }) : msg('rec.undoHold')} icon={(c) => <Undo color={c} size={16} />} onHold={(input) => (input === 'hold-kbd' ? setSheet('undo-confirm') : undo())} disabled={!figs.lastId || !ready} />
+          {tool(msg('rec.history'), (c) => <ClockIcon color={c} size={20} />, () => router.push(`${base}/history?point=${pointId}` as Href), 'tool-history')}
           {tool(filling ? msg('fill.short') : msg('rec.short'), (c) => <ScaleIcon color={c} size={20} />, () => setSheet('partial'), 'tool-short', waiting || !ready)}
-          {tool(msg('rec.undo'), (c) => <Undo color={c} size={16} />, undo, 'tool-undo', !figs.lastId || !ready)}
-          {tool(msg('rec.public'), (c) => <ExpandIcon color={c} size={16} />, () => router.push(`${base}/public?point=${pointId}${params.fill ? `&fill=${params.fill}` : ''}` as Href), 'tool-public')}
         </View>
       }
       overlay={
@@ -349,6 +387,9 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           </BottomSheet>
 
           <BottomSheet open={sheet === 'menu'} onClose={() => setSheet('none')} title={msg('rec.menu')} testID="menu-sheet">
+            <Button variant="row" testID="menu-public" onPress={() => { setSheet('none'); router.push(`${base}/public?point=${pointId}${params.fill ? `&fill=${params.fill}` : ''}` as Href); }}>
+              {msg('rec.public')}
+            </Button>
             <Button variant="row" testID="menu-backfill" onPress={() => { setSheet('none'); router.push(`${base}/point?mode=backfill&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}` as Href); }}>
               {msg('backfill.title')}
             </Button>
@@ -359,6 +400,29 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
             <Button variant="row" testID="menu-sales" onPress={() => { setSheet('none'); router.push('/v2/sales' as Href); }}>
               {msg('v2.sales')}
             </Button>
+          </BottomSheet>
+
+          <BottomSheet open={sheet === 'undo-confirm' && lastNo !== null} onClose={() => setSheet('none')} title={lastNo !== null ? msg(lastIsPart ? 'rec.undoPartAsk' : 'rec.undoAsk', { n: lastNo }) : undefined} testID="undo-confirm">
+            {lastNo !== null ? <AppText>{msg(lastIsPart ? 'rec.undoPartBody' : 'rec.undoAskBody', { n: lastNo, kg: lastKg })}</AppText> : null}
+            <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+              <View style={{ flex: 1 }}>
+                <Button testID="undo-confirm-no" onPress={() => setSheet('none')}>
+                  {msg('common.cancel')}
+                </Button>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button
+                  testID="undo-confirm-yes"
+                  variant="primary"
+                  onPress={() => {
+                    setSheet('none');
+                    undo();
+                  }}
+                >
+                  {lastNo !== null ? (lastIsPart ? msg('rec.undoPartDo') : msg('rec.undoDo', { n: lastNo })) : msg('rec.undo')}
+                </Button>
+              </View>
+            </View>
           </BottomSheet>
 
           <SaleOptionSheets view={view} open={sheet === 'price' || sheet === 'info' || sheet === 'delete' ? sheet : 'none'} onClose={() => setSheet('none')} />
@@ -493,7 +557,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       ) : (
         <>
           {filling && open ? fillGuide(open) : null}
-        <HoldStage testID="hold" label={filling && open ? msg('v2s.fillStage', { n: open.basketNo }) : msg('rec.hold')} onHold={countFull} onEarly={early} minHeight={filling ? 150 : 120}>
+        <HoldStage testID="hold" label={filling && open ? msg('v2s.fillStage', { n: open.basketNo }) : msg('rec.hold')} onHold={count} onEarly={early} minHeight={filling ? 150 : 120}>
           {filling && open ? (
             <>
               <AppText variant="bodySm">{msg('rec.shouldRead')}</AppText>
@@ -515,6 +579,20 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           {filling && open ? fillAfter(open) : null}
         </>
       )}
+      {/* Always mounted, only its text changes, so web and TalkBack announce each confirmation. */}
+      <View accessibilityLiveRegion="polite" accessibilityRole="alert">
+        {notice !== null && notice.pointId === pointId ? (
+          notice.kind !== 'recorded' ? (
+            <IconLine testID="undo-notice" icon={(c) => <Undo color={c} size={13} />}>
+              {msg(notice.kind === 'undone-part' ? 'rec.undonePart' : 'rec.undone', { n: notice.n })}
+            </IconLine>
+          ) : (
+            <IconLine testID="count-notice" icon={(c) => <BasketIcon color={c} size={13} />}>
+              {msg('rec.recorded', { n: notice.n, kg: notice.kg ?? '' })}
+            </IconLine>
+          )
+        ) : null}
+      </View>
     </FarmScreen>
   );
 }

@@ -64,6 +64,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E04-S12: ส่งต่อ / รับช่วง การขายระหว่างเครื่อง (ออฟไลน์)](e04-s12-handoff-and-claim.md) ❓
 - [E04-S13: รวมข้อมูลด้วย QR ตอนปิดการขาย](e04-s13-qr-merge-at-close.md)
 - [E04-S14: จับการนับซ้ำ 7–10 วินาที + ไทม์ไลน์รายเครื่อง](e04-s14-duplicate-detection-timeline.md) ❓
+- [E04-S15: ประวัติการบันทึกเข่ง + ย้อนกลับแบบกดค้าง](e04-s15-basket-history-and-hold-undo.md) ❓
 
 ### E05 กระทบยอด & สรุปเงิน — [epic](../epics/e05-reconciliation-settlement.md)
 

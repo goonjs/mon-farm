@@ -226,8 +226,37 @@ test('start → point → empty scale → count → short → switch and fill �
   await expect(id('fig-kg')).toContainText('200');
   await expect(id('point-place')).toContainText('จันทเขลม · จุด 2');
 
-  // ── โหมดสาธารณะ (page 9) ──
-  await id('tool-public').click();
+  // ── รายการเข่ง (page 8d): every basket so far, the time to the second ──
+  await id('tool-history').click();
+  await expect(id('history')).toBeVisible();
+  await expect(id('hist-summary')).toContainText('รวม 200 กก.');
+  await expect(page.locator('[data-testid^="hist-row-"]').first()).toContainText(/\d\d:\d\d:\d\d/);
+  await shot(page, '8d-history');
+  await id('v2-back').click();
+  await expect(id('counter')).toBeVisible();
+
+  // ── ย้อนกลับ is a hold: a tap does nothing, a full hold gives the number back ──
+  await id('tool-undo').click();
+  await expect(id('current-no')).toHaveText('5');
+  await hold(page, 'tool-undo');
+  await expect(id('current-no')).toHaveText('4');
+  await expect(id('undo-notice')).toContainText('ยกเลิกส่วนที่เติมของเข่ง 4 แล้ว');
+  await hold(page);
+  await expect(id('current-no')).toHaveText('5');
+  await expect(id('count-notice')).toContainText('บันทึกเข่ง 4');
+
+  // ── the list says what was done: the basket taken back stays, marked, out of the totals ──
+  await id('tool-history').click();
+  await expect(page.getByText(/ถูกย้อนกลับ \d\d:\d\d:\d\d/)).toHaveCount(1);
+  await expect(id('hist-numbers-ok')).toBeVisible();
+  await expect(id('hist-summary')).toContainText('รวม 200 กก.');
+  await shot(page, '8e-history-undone');
+  await id('v2-back').click();
+  await expect(id('counter')).toBeVisible();
+
+  // ── โหมดสาธารณะ (page 9): in the ⋯ menu ──
+  await id('counter-menu').click();
+  await id('menu-public').click();
   await expect(id('public-no')).toHaveText('5');
   await shot(page, '09-public');
   await id('public-exit').click();

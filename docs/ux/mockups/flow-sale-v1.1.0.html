@@ -490,6 +490,28 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .qs td { padding: 8px; border-top: 1px solid var(--pg-rule); vertical-align: top; }
 .qs td:first-child { width: 36%; color: var(--pg-ink-soft); }
 .qs td:first-child .ans { margin-right: 4px; }
+/* ---- 2d: last-basket strip + basket list (draft) ---- */
+.tool.hold { position: relative; }
+.tool.hold small { font-size: 10px; font-weight: 500; color: var(--color-ink-soft); line-height: 1; }
+.tool.hold svg.sweep { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); overflow: visible; pointer-events: none; }
+.tool.hold svg.sweep rect { fill: none; stroke: var(--color-action); stroke-width: 5; stroke-linecap: round; }
+.fchips { display: flex; gap: 6px; flex-wrap: wrap; }
+.fchips .chip { min-height: 36px; padding: 0 12px; background: var(--color-surface-sunk); color: var(--color-ink-soft); border: 1px solid var(--color-rule-faint); }
+.fchips .chip.on { background: var(--color-action); color: var(--color-ink-inverse); border-color: var(--color-action); }
+.brow { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; }
+.brow + .brow { border-top: 1px solid var(--color-rule-faint); }
+.brow .bn { flex: none; width: 44px; text-align: center; font-size: 24px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.brow .bn small { display: block; font-size: 10px; font-weight: 500; color: var(--color-ink-soft); }
+.brow .bm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.brow .l1 { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; flex-wrap: wrap; }
+.brow .l1 .ic { width: 18px; height: 18px; }
+.brow .l1 .kg { margin-left: auto; font-variant-numeric: tabular-nums; }
+.brow .l2, .brow .l3 { font-size: 12px; color: var(--color-ink-soft); line-height: 1.35; }
+.brow .l3 { display: flex; gap: 6px; flex-wrap: wrap; }
+.brow.void .bn, .brow.void .l1 .kg { text-decoration: line-through; color: var(--color-ink-faint); }
+.brow .chip { padding: 0 8px; font-size: 12px; min-height: 22px; }
+.sumline { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--color-ink-soft); }
+.sumline b { color: var(--color-ink); font-variant-numeric: tabular-nums; }
 .sub-h { margin: 32px 0 4px; font-size: 17px; line-height: 1.3; font-weight: 700; }
 .sub-p { margin: 0 0 20px; color: var(--pg-ink-soft); font-size: 14px; }
 /* ---- v1.1.0 additions (sale flow) — tokens only, no literal colours ---- */
@@ -944,9 +966,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <span class="num mi"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน <span class="nchip scale">52 กก.</span></span>
           </div>
           <div class="tools">
+            <span class="tool hold"><svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ<small>กดค้าง</small></span>
+            <span class="tool"><svg class="ic"><use href="#i-clock"/></svg>ประวัติ</span>
             <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เข่งไม่เต็ม</span>
-            <span class="tool"><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ</span>
-            <span class="tool"><svg class="ic"><use href="#i-expand"/></svg>โหมดสาธารณะ</span>
           </div>
         </div>
       </div></div>
@@ -1000,9 +1022,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <span class="num mi"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน <span class="nchip scale">52 กก.</span></span>
           </div>
           <div class="tools">
+            <span class="tool hold"><svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ<small>กดค้าง</small></span>
+            <span class="tool"><svg class="ic"><use href="#i-clock"/></svg>ประวัติ</span>
             <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เข่งไม่เต็ม</span>
-            <span class="tool"><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ</span>
-            <span class="tool"><svg class="ic"><use href="#i-expand"/></svg>โหมดสาธารณะ</span>
           </div>
         </div>
       </div></div>
@@ -1026,7 +1048,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       </figcaption>
     </figure>
 
-    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กลับการขายหลัก · แตะ <b>โหมดสาธารณะ</b></span></div>
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กลับการขายหลัก · เมนู <b>⋯</b> ▸ <b>โหมดสาธารณะ</b></span></div>
 
     <figure class="step">
       <div class="phone"><div class="screen" aria-label="นับเข่ง โหมดสาธารณะ">
@@ -1157,9 +1179,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="fig num" style="font-size:28px;color:var(--color-ink)"><span style="font-size:15px;font-weight:600">= <svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน </span><span style="color:var(--color-action)">54</span><span class="u">กก.</span></div>
           </div>
           <div class="tools">
+            <span class="tool hold"><svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ<small>กดค้าง</small></span>
+            <span class="tool"><svg class="ic"><use href="#i-clock"/></svg>ประวัติ</span>
             <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เข่งไม่เต็ม</span>
-            <span class="tool"><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ</span>
-            <span class="tool"><svg class="ic"><use href="#i-expand"/></svg>โหมดสาธารณะ</span>
           </div>
         </div>
       </div></div>
@@ -1240,9 +1262,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <span>ไปจุดถัดไปของ แดง แล้วเติมต่อได้</span>
           </div>
           <div class="tools">
+            <span class="tool hold"><svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ<small>กดค้าง</small></span>
+            <span class="tool"><svg class="ic"><use href="#i-clock"/></svg>ประวัติ</span>
             <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เข่งไม่เต็ม</span>
-            <span class="tool"><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ</span>
-            <span class="tool"><svg class="ic"><use href="#i-expand"/></svg>โหมดสาธารณะ</span>
           </div>
         </div>
       </div></div>
@@ -1344,9 +1366,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <span>แล้วกดค้างเพื่อนับ</span>
           </div>
           <div class="tools">
+            <span class="tool hold"><svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ<small>กดค้าง</small></span>
+            <span class="tool"><svg class="ic"><use href="#i-clock"/></svg>ประวัติ</span>
             <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เติมไม่ถึง</span>
-            <span class="tool"><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ</span>
-            <span class="tool"><svg class="ic"><use href="#i-expand"/></svg>โหมดสาธารณะ</span>
           </div>
         </div>
       </div></div>
@@ -1439,9 +1461,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <span>ไปจุดถัดไปของ นัด แล้วเติมต่อได้</span>
           </div>
           <div class="tools">
+            <span class="tool hold"><svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ<small>กดค้าง</small></span>
+            <span class="tool"><svg class="ic"><use href="#i-clock"/></svg>ประวัติ</span>
             <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เข่งไม่เต็ม</span>
-            <span class="tool"><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ</span>
-            <span class="tool"><svg class="ic"><use href="#i-expand"/></svg>โหมดสาธารณะ</span>
           </div>
         </div>
       </div></div>
@@ -1528,9 +1550,9 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <span class="num">(35 + 15) = 50 กก. → ปิดเป็นเข่งเต็มเอง</span>
           </div>
           <div class="tools">
+            <span class="tool hold"><svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ<small>กดค้าง</small></span>
+            <span class="tool"><svg class="ic"><use href="#i-clock"/></svg>ประวัติ</span>
             <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เติมไม่ถึง</span>
-            <span class="tool"><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ</span>
-            <span class="tool"><svg class="ic"><use href="#i-expand"/></svg>โหมดสาธารณะ</span>
           </div>
         </div>
       </div></div>
@@ -1655,6 +1677,188 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
         <span class="ids">MD-3 · D-65, D-67 · E03-S03</span>
         <ul>
           <li><svg class="ic sm"><use href="#i-help"/></svg><span>ลบสวนแล้วจุดชั่งของสวนนั้นหายตาม (D-65) — กรณีลบสวนระหว่างการขายยังไม่วาด</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+  </div>
+
+  <h3 class="sub-h">2d · ปุ่มประวัติ + ย้อนกลับกดค้าง + รายการเข่ง (E04-S15 · ใหม่)</h3>
+  <p class="sub-p">ปัญหา: บันทึกเข่งไปแล้วดูย้อนไม่ได้ ไม่รู้ว่าเข่งไหนเต็ม เข่งไหนไม่เต็ม จบด้วยทางเลือกอะไร · แก้: แถบปุ่มล่างเรียงใหม่ <b>ย้อนกลับ · ประวัติ · เข่งไม่เต็ม</b> (เข่งไม่เต็มอยู่ขวาสุด) ย้าย <b>โหมดสาธารณะ</b> ไปเมนู ⋯ และ <b>ย้อนกลับต้องกดค้าง</b> เท่ากับปุ่มนับเข่ง · ตัวอย่างแยก: แดง จุด 1 เสร็จ 22 เข่ง (เต็ม 21 + ไม่เต็ม 1) รวม 1,070 กก. · เวลาที่บันทึกมีวินาทีทุกที่ · ตัวกรองคนกรีดยางเริ่มที่ "ทุกคน" (เจ้าของตอบแล้ว 2026-10-11)</p>
+  <div class="flow">
+
+    <figure class="step">
+      <div class="phone"><div class="screen" aria-label="นับเข่ง มีแถบเข่งล่าสุด">
+        <div class="sbar num"><span>07:48</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>นับเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 23</span><span class="iconbtn"><svg class="ic"><use href="#i-dots"/></svg></span></div>
+        <div class="body" style="gap:10px">
+          <div class="card tight">
+            <div class="prow"><div class="pl"><svg class="ic cat1"><use href="#i-pin"/></svg>จันทเขลม · จุด 1</div><div class="pr2"><span class="mi"><svg class="ic cat3"><use href="#i-tapper"/></svg>แดง</span><span class="btn btn-secondary slim"><svg class="ic sm"><use href="#i-swap"/></svg>เปลี่ยนจุด</span></div></div>
+          </div>
+          <div class="card bigc2" aria-label="เข่งปัจจุบัน 23"><span class="lbl">เข่งปัจจุบัน</span><div class="fig xl num">23</div></div>
+          <span class="mi sixhd"><svg class="ic"><use href="#i-tapper"/></svg>ยอดของแดง<svg class="ic xs"><use href="#i-chev"/></svg></span>
+          <div class="six">
+            <div class="card"><span class="lbl">เสร็จแล้ว</span><div class="fig num">22<span class="u">เข่ง</span></div></div>
+            <div class="card"><span class="lbl"><svg class="ic xs"><use href="#i-rubber"/></svg> น้ำหนักสะสม</span><div class="fig num">1,070<span class="u">กก.</span></div></div>
+            <div class="card"><span class="lbl">เข่งไม่เต็ม</span><div class="fig" style="font-size:16px;padding-top:4px">ไม่มี</div></div>
+          </div>
+          <div class="stage">
+            <svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg>
+            <b>กดค้างเพื่อบันทึกเข่งเต็ม</b>
+            <span class="num mi"><svg class="ic sr"><use href="#i-scaleread"/></svg>ตาชั่งควรอ่าน <span class="nchip scale">52 กก.</span></span>
+          </div>
+          <div class="tools">
+            <span class="tool hold"><svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="0 100" vector-effect="non-scaling-stroke"/></svg><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ<small>กดค้าง · เข่ง 22</small></span>
+            <span class="tool"><svg class="ic"><use href="#i-clock"/></svg>ประวัติ</span>
+            <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เข่งไม่เต็ม</span>
+          </div>
+        </div>
+      </div></div>
+      <div class="extras">
+        <div class="inset">
+          <span class="ttl">ย้อนกลับ = กดค้าง เท่าปุ่มนับเข่ง</span>
+          <div class="tools">
+            <span class="tool hold"><svg class="sweep" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="100" rx="6" pathLength="100" stroke-dasharray="55 100" vector-effect="non-scaling-stroke"/></svg><svg class="ic"><use href="#i-undo"/></svg>ย้อนกลับ<small>กดค้าง</small></span>
+            <span class="tool"><svg class="ic"><use href="#i-clock"/></svg>ประวัติ</span>
+            <span class="tool"><svg class="ic"><use href="#i-scale"/></svg>เข่งไม่เต็ม</span>
+          </div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-undo"/></svg><span class="grow num">ค้างครบเวลาเท่ากดค้างนับเข่ง → <b>ย้อนกลับเข่ง 22</b> · แถบวิ่งรอบปุ่มเหมือนพื้นที่นับ (ภาพบน = วิ่งไป 55%)</span></div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-help"/></svg><span class="grow">ปล่อยก่อนครบ = ไม่ทำอะไร · แตะครั้งเดียวไม่ทำอะไร (แถบวิ่งย้อนกลับค่าเดิม) · การกดค้างด้วยนิ้วไม่มีกล่องยืนยันแยก เพราะการกดค้างคือการยืนยัน (ส่วนคีย์บอร์ด/TalkBack ถามก่อน — ดูกรอบ "กันพลาด")</span></div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-check"/></svg><span class="grow num">เสร็จ → ข้อความสั้น "ย้อนกลับเข่ง 22 แล้ว — เข่งถัดไปคือ 22"</span></div>
+          <span class="note">ย้อนกลับ = ยกเลิกเข่งล่าสุดแล้วใช้เลขเดิมนับซ้ำ ไม่มีการข้ามเลข (เลข 22 ถูกใช้ซ้ำกับเข่งถัดไป) · ไม่มีเข่งให้ย้อน → ปุ่มกดไม่ได้</span>
+        </div>
+        <div class="inset">
+          <span class="ttl">กันพลาด</span>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-undo"/></svg><span class="grow num">ปุ่มบอกเลขที่จะย้อน: <b>กดค้าง · เข่ง 22</b> ไม่มีเข่ง → เหลือ "กดค้าง" และกดไม่ได้</span></div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-basket"/></svg><span class="grow num">หลังกดค้างนับสำเร็จ ขึ้นบรรทัด 4 วินาที: <b>บันทึกเข่ง 23 · 50 กก.</b> (ไม่ใช่การ์ด)</span></div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-alert"/></svg><span class="grow num">กดย้อนกลับด้วยคีย์บอร์ด / TalkBack (ไม่มีการกดค้าง) → ถามก่อน: <b>ย้อนกลับเข่ง 22 ไหม?</b> เข่ง 22 · 50 กก. · เลข 22 จะถูกใช้ซ้ำ [ยกเลิก] [ย้อนกลับเข่ง 22]</span></div>
+        </div>
+        <div class="inset">
+          <span class="ttl">เมนู ⋯ (โหมดสาธารณะย้ายมาที่นี่)</span>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-expand"/></svg><span class="grow"><b>โหมดสาธารณะ</b> (ย้ายมาจากแถบปุ่ม)</span></div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-note"/></svg><span class="grow">บันทึกย้อนหลัง</span></div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-coin"/></svg><span class="grow">ราคาที่ตกลง · ข้อมูลการขาย · ลบการขาย (ของเดิม)</span></div>
+        </div>
+        <div class="inset">
+          <span class="ttl">ทางเข้ารายการเข่ง</span>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-clock"/></svg><span class="grow">1 · ปุ่ม <b>ประวัติ</b> (ทางหลัก)</span></div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-tapper"/></svg><span class="grow">2 · แตะหัว "ยอดของแดง ›" (เปิดโดยกรองเฉพาะแดง)</span></div>
+          <div class="mini-row"><svg class="ic sm"><use href="#i-receipt"/></svg><span class="grow">3 · หน้าเทียบยอด / สรุปการขาย (อ่านอย่างเดียว ใช้ส่วนแสดงเดียวกัน)</span></div>
+        </div>
+      </div>
+      <figcaption>
+        <span class="t">8c. นับเข่ง — แถบปุ่มใหม่ ใช้ทุกหน้านับเข่ง</span>
+        แถบปุ่มล่างเป็น 3 ปุ่มเรียงซ้าย→ขวา <b>(ใช้เหมือนกันทุกหน้านับเข่ง: 8, 8a, 10, 11, 12b, 13 และเวอร์ชันเบี้ยว)</b>: <b>ย้อนกลับ</b> (กดค้าง) · <b>ประวัติ</b> (ไอคอนนาฬิกา) · <b>เข่งไม่เต็ม</b> (ขวาสุด) · <b>โหมดสาธารณะ</b> ย้ายไปเมนู ⋯ · ไม่เพิ่มการ์ดหรือแถบใหม่บนหน้า
+        <span class="ids">SALE-14, SALE-15, SALE-17 · E04-S05, S07, S09, S15</span>
+        <ul>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>ลูกศร › ที่หัว "ยอดของแดง" บอกว่าแตะได้</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>ไม่ใช้แท็บ เพราะหน้านี้ต้องกดค้างมือเดียวและโล่ง (D-40)</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>ย้อนกลับกดค้างใช้เวลาเท่ากดค้างนับเข่ง (ค่าเดียวกันในโค้ด) กันกดพลาดตอนมือเปียกหรือเป็นยาง</span></li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>แตะ <b>ประวัติ</b></span></div>
+
+    <figure class="step long-step">
+      <span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span>
+      <div class="phone long"><div class="screen" aria-label="รายการเข่ง">
+        <div class="sbar num"><span>07:49</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>รายการเข่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 23</span></div>
+        <div class="body" style="gap:10px">
+          <div class="card tight" style="padding:8px 12px">
+            <div class="sumline num"><span>เต็ม <b>21</b> เข่ง</span><span>ไม่เต็ม <b>1</b> เข่ง</span><span>รวม <b>1,070 กก.</b></span></div>
+            <div class="num" style="margin-top:6px;font-weight:700">21 × 50 + 20 = 1,070 กก.</div>
+          </div>
+          <div class="mini-row num"><svg class="ic sm" style="color:var(--color-accept)"><use href="#i-check"/></svg><span class="grow">เลขเข่งต่อเนื่อง ไม่ขาด ไม่ซ้ำ</span></div>
+          <div class="fchips" role="group" aria-label="กรองชนิดเข่ง">
+            <span class="chip on">ทั้งหมด</span><span class="chip">เต็ม</span><span class="chip">ไม่เต็ม</span>
+          </div>
+          <div class="fchips" role="group" aria-label="กรองคนกรีดยาง">
+            <span class="chip"><svg class="ic"><use href="#i-tapper"/></svg>แดง</span><span class="chip"><svg class="ic"><use href="#i-tapper"/></svg>นัด</span><span class="chip on">ทุกคน</span>
+          </div>
+          <div class="card tight num">
+            <div class="brow">
+              <div class="bn">22<small>ล่าสุด</small></div>
+              <div class="bm">
+                <div class="l1"><svg class="ic" style="color:var(--color-accept)"><use href="#i-basket"/></svg>เต็ม<span class="kg">50 กก.</span></div>
+                <div class="l2">จันทเขลม · จุด 1 · แดง · 07:46:12</div>
+                <div class="l3"><span>สะสม 1,070 กก.</span></div>
+              </div>
+            </div>
+            <div class="brow void">
+              <div class="bn">22</div>
+              <div class="bm">
+                <div class="l1"><svg class="ic"><use href="#i-basket"/></svg>เต็ม<span class="kg">50 กก.</span></div>
+                <div class="l2">จันทเขลม · จุด 1 · แดง · 07:45:58</div>
+                <div class="l3"><span class="chip ch-bad">ถูกย้อนกลับ 07:46:09</span><span>ไม่นับในยอด · เลข 22 ถูกใช้ซ้ำ</span></div>
+              </div>
+            </div>
+            <div class="brow">
+              <div class="bn">21</div>
+              <div class="bm">
+                <div class="l1"><svg class="ic" style="color:var(--color-warn)"><use href="#i-scale"/></svg>ไม่เต็ม<span class="kg">20 กก.</span></div>
+                <div class="l2">จันทเขลม · จุด 1 · แดง · 07:44:51</div>
+                <div class="l3"><span>ตาชั่งอ่าน 22 − เข่ง 2 = 20 กก.</span><span>สะสม 1,020 กก.</span><span class="chip ch-plain"><svg class="ic"><use href="#i-flag"/></svg>จบด้วย "จบเข่งนี้"</span></div>
+              </div>
+            </div>
+            <div class="brow">
+              <div class="bn">20</div>
+              <div class="bm">
+                <div class="l1"><svg class="ic" style="color:var(--color-accept)"><use href="#i-basket"/></svg>เต็ม<span class="kg">50 กก.</span></div>
+                <div class="l2">จุด 1 + จุด 2 · แดง · 07:38:27</div>
+                <div class="l3"><span class="chip ch-plain">เข่งเชื่อม</span><span>(20 + 30) กก.</span><span>สะสม 1,000 กก.</span></div>
+              </div>
+            </div>
+            <div class="brow">
+              <div class="bn">19</div>
+              <div class="bm">
+                <div class="l1"><svg class="ic" style="color:var(--color-accept)"><use href="#i-basket"/></svg>เต็ม<span class="kg">50 กก.</span></div>
+                <div class="l2">จันทเขลม · จุด 1 · แดง · 07:35:09</div>
+                <div class="l3"><span class="chip ch-warn"><svg class="ic"><use href="#i-help"/></svg>สงสัยนับซ้ำ</span><span>ตรงกับเครื่องของ อ.สมหวัง 07:35:14</span></div>
+              </div>
+            </div>
+            <div class="brow">
+              <div class="bn">18</div>
+              <div class="bm">
+                <div class="l1"><svg class="ic" style="color:var(--color-accept)"><use href="#i-basket"/></svg>เต็ม<span class="kg">50 กก.</span></div>
+                <div class="l2">จันทเขลม · จุด 1 · แดง · 07:32:40</div>
+                <div class="l3"><span class="pill p-conf" style="min-height:22px;font-size:12px;padding:0 8px"><svg class="ic"><use href="#i-alert"/></svg>ขัดกัน</span><span>แตะเพื่อเลือกค่า</span></div>
+              </div>
+            </div>
+          </div>
+          <span class="note" style="font-size:12px;color:var(--color-ink-soft);text-align:center">เลื่อนลงดูเข่ง 17 ถึง 1 · เรียงใหม่สุดก่อน</span>
+        </div>
+      </div></div>
+      <div class="extras">
+        <div class="inset">
+          <span class="ttl">ทุกแถวบอก 6 อย่าง</span>
+          <div class="mini-row"><span class="grow">เลขเข่ง · ชนิด (ไอคอน + คำ) · น้ำหนักสุทธิ · จุดและคนกรีด · เวลาที่บันทึก <b>มีวินาที (ชม:นาที:วินาที)</b> · ยอดสะสม</span></div>
+          <span class="note">บรรทัดที่ 3 บอก "คอนดิชัน" เฉพาะเมื่อมี: ที่มาของเข่งไม่เต็ม (เติมจนเต็มเอง · จบเข่งนี้ · ปิดเองเพราะเปลี่ยนจุด) · ค่าเบี้ยวของตาชั่ง (เช่น +2 กก.) · ส่วนของเข่งเชื่อม · บันทึกย้อนหลัง · ขัดกัน · สงสัยนับซ้ำ</span>
+        </div>
+        <div class="inset">
+          <span class="ttl">ป้าย sync ต่อแถว</span>
+          <div class="mini-row"><span class="grow">ไม่ใส่ "รอส่ง" ทุกแถว — ใช้ pill บนแถบบนเหมือนทุกหน้า แสดงต่อแถวเฉพาะ <b>ขัดกัน</b> และ <b>ส่งไม่สำเร็จ</b> (D-65)</span></div>
+        </div>
+        <div class="inset">
+          <span class="ttl">โหมดเริ่มนับเข่ง 1 ทุกจุด</span>
+          <div class="mini-row"><span class="grow">เลขเข่งซ้ำข้ามจุดได้ → จัดกลุ่มใต้หัวจุด "จันทเขลม · จุด 1" แทนการเรียงต่อกัน</span></div>
+        </div>
+        <div class="inset">
+          <span class="ttl">ว่าง</span>
+          <div class="mini-row"><span class="grow">ยังไม่มีเข่ง — กลับไปกดค้างที่หน้านับเข่ง</span></div>
+          <span class="note">กรองแล้วไม่เจอ: "ไม่มีเข่งชนิดนี้" + ปุ่มล้างตัวกรอง</span>
+        </div>
+      </div>
+      <figcaption>
+        <span class="t">8d. รายการเข่ง — อ่านอย่างเดียวรอบแรก</span>
+        สรุปบนสุด 3 ค่า (เต็ม · ไม่เต็ม · รวม กก. — ตามตัวกรองที่เลือก) → ตัวกรองชนิด + คนกรีดยาง (เริ่มที่ "ทุกคน") → แถวเข่งเรียงใหม่สุดก่อน · เลขเข่งเรียงต่อเนื่อง ไม่มีช่องว่าง · <b>เข่งที่ถูกย้อนกลับยังอยู่ในรายการ</b> ขีดฆ่าบวกคำ "ถูกย้อนกลับ ชม:นาที:วินาที" ไม่นับในยอด (รายการบอกว่าทำอะไรไปบ้าง) · เหนือรายการมี <b>สมการยอดรวม</b> (เทียบกับใบจด/สลิป) กับ <b>ตรวจเลขเข่ง</b> (ขาดหรือซ้ำจะขึ้นเตือนสีเหลือง) · ทุกแถวมี <b>ยอดสะสม</b> · ตัวกรองคนกรีดเริ่มที่ "ทุกคน"
+        <span class="ids">SALE-14, SALE-17 · SYNC-9 · E04-S09, S15 · E05-S08</span>
+        <ul>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>ป้าย "ขัดกัน" และ "สงสัยนับซ้ำ" ในภาพเป็นของ E01-S11 / E04-S14 — story S15 ยังไม่ทำ แต่เผื่อที่ไว้ให้</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>รอบแรกอ่านอย่างเดียว · แตะแถวเพื่อแก้น้ำหนักเป็นงาน E04-S09 ขั้นถัดไป</span></li><li><span class="ans"><svg class="ic"><use href="#i-check"/></svg>เจ้าของตอบ 2026-10-11</span><span>ไม่ให้ยกเลิกเข่งกลางทางจากรายการ (ขัดกฎไม่ข้ามเลข เลขบนใบจดกับในแอปจะไม่ตรง) · ย้อนได้เฉพาะเข่งล่าสุด · แก้น้ำหนักเป็นของ E04-S09 ขั้นถัดไป</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>คำนวณจาก event ในเครื่อง ทำงานออฟไลน์ · เป็นหน้ายาวเลื่อนได้ (การขายหนึ่งครั้งเกิน 100 เข่งได้)</span></li>
+          <li><svg class="ic sm"><use href="#i-help"/></svg><span>ยังไม่ครอบคลุม: ดูข้ามการขาย (ใช้ประวัติการขาย E05-S06 ไปก่อน)</span></li>
         </ul>
       </figcaption>
     </figure>
@@ -2320,6 +2524,8 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
       <tr><td>7</td><td>ตาชั่งเปล่าไม่อ่าน 0 → เลือก 2 ทาง (แทนติดธงแล้วไปต่อ)</td><td>D-75</td></tr>
       <tr><td>8</td><td>เลขเข่ง · เสร็จแล้ว · น้ำหนักสะสม นับของคนกรีดยางคนนี้ (นับต่อเนื่องตามคนกรีดยาง) · กรอบอธิบายโหมดเริ่มนับเข่ง 1 ทุกจุด</td><td>D-46, D-79</td></tr>
       <tr><td>7a–7c<br>8b, 8c<br>10–13<br>-เบี้ยว<br>(ใหม่)</td><td>เลือก รอเปลี่ยนตาชั่ง / รับเข็มเบี้ยว · หน้ารอ (นาฬิกาทราย + ตกลง) · ตาชั่งควรอ่านรวมค่าเบี้ยว แยกบรรทัด สุทธิ · น้ำหนักเข่ง · ค่าเบี้ยว · 8c ย้ายจุดเมื่อมีค่าเบี้ยว → ตรวจตาชั่งเปล่าทุกครั้ง ไม่สนโหมดในตั้งค่า · 8b มีการ์ด 3 ใบครบ · หน้าเข่งไม่เต็ม / เข่งเปิดอยู่ / เปลี่ยนจุด / เติมเข่ง ฉบับมีค่าเบี้ยว: ตาชั่งควรอ่านรวมค่าเบี้ยว + บรรทัดค่าเบี้ยวแยก</td><td>D-70, D-75, D-76</td></tr>
+      <tr><td>8, 8a, 10–13, 8c</td><td>แถบปุ่มล่าง: ย้อนกลับ (กดค้างเท่าปุ่มนับ มีแถบ animate) · ประวัติ (ไอคอนนาฬิกา) · เข่งไม่เต็มขวาสุด · โหมดสาธารณะย้ายไปเมนู ⋯ · ย้อนกลับ = เลขเดิมนับซ้ำ ไม่ข้ามเลข</td><td>E04-S15</td></tr>
+      <tr><td>8d (ใหม่)</td><td>รายการเข่ง (ประวัติการบันทึก) พร้อมเวลามีวินาที</td><td>E04-S15</td></tr>
       <tr><td>8a (ใหม่)</td><td>จุดที่ยังไม่มีคนกรีดยาง: แถบเตือน ชั่งต่อได้ + ปุ่ม "มอบหมายตอนนี้" · มอบหมายมีผลเฉพาะการขายนี้ ไม่มีช่องวันเริ่ม</td><td>D-63, D-70</td></tr>
       <tr><td>10</td><td>แผ่นเลื่อนขึ้นเลือกน้ำหนัก: ลากไม้บรรทัด + ± ทีละ 1 กก. ตามประเภทตาชั่ง (แทนแผงพิมพ์ในหน้า)</td><td>D-66, D-70</td></tr>
       <tr><td>12</td><td>เหลือ 3 ทางเลือก ใช้คำตาม D-57 · ข้อ 4 เดิมย้ายไปเป็นโหมดเลขเข่งที่หน้า 5</td><td>D-46, D-53, D-57</td></tr>
