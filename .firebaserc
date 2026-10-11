@@ -6,7 +6,8 @@
     "mon-farmmate": {
       "hosting": {
         "dev": ["mon-farm-dev"],
-        "prod": ["mon-farm-prod"]
+        "prod": ["mon-farm-prod"],
+        "preview": ["mon-farm-preview"]
       }
     }
   }

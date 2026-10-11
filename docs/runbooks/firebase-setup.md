@@ -32,6 +32,9 @@
 - [x] 2 site: site ของ `dev` (ใช้ preview channel ของ PR ด้วย) และ site ของ `prod`
 - [x] สร้างแล้ว (2026-10-03): site `mon-farm-dev` (dev + preview channel ของ PR) และ `mon-farm-prod` (prod) ใน `mon-farmmate`
 
+- [ ] Site `mon-farm-preview` (E01-S18): ไซต์เดียวสำหรับดู PR ทีละอัน (ล็อกอิน Google ใช้ได้เพราะเป็นโดเมนที่ authorize แล้ว)
+  — สร้างในคอนโซล Hosting ถ้ายังไม่มี; deploy ด้วย workflow **Deploy Preview Site** (ใส่หมายเลข PR)
+
 ## 5. Auth (E02-S01)
 
 - [x] เปิด Google sign-in provider (2026-10-03)
