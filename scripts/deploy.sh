@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Deploys the built web bundle (dist/) to Firebase Hosting:
 #   deploy.sh dev | prod       live site (dev -> mon-farm-dev, prod -> mon-farm-prod)
+#   deploy.sh preview-site     live channel of the shared preview site (mon-farm-preview)
 #   deploy.sh preview <name>   temporary channel on the dev site, expires in 7 days
 #   deploy.sh preview-delete <name>   remove that channel (PR closed); a channel
 #                              that is already gone is success, not an error
@@ -21,7 +22,7 @@ dev_site=mon-farm-dev
 env="${1:-}"
 channel="${2:-}"
 case "$env" in
-  dev | prod) ;;
+  dev | prod | preview-site) ;;
   preview | preview-delete)
     if [ "$channel" = "live" ]; then
       echo "deploy.sh: refusing to touch the live channel" >&2; exit 2
@@ -29,7 +30,7 @@ case "$env" in
     if ! [[ "$channel" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]]; then
       echo "deploy.sh: preview needs a channel name like pr-12" >&2; exit 2
     fi ;;
-  *) echo "usage: deploy.sh dev|prod|preview <name>|preview-delete <name>" >&2; exit 2 ;;
+  *) echo "usage: deploy.sh dev|prod|preview-site|preview <name>|preview-delete <name>" >&2; exit 2 ;;
 esac
 
 if [ "$env" != "preview-delete" ] && [ ! -f dist/index.html ]; then
@@ -66,6 +67,8 @@ if [ "$env" = "preview-delete" ]; then
   "${firebase[@]}" hosting:channel:delete "$channel" --site "$dev_site" --force
 elif [ "$env" = "preview" ]; then
   "${firebase[@]}" hosting:channel:deploy "$channel" --only dev --expires 7d --non-interactive --config firebase.deploy.json
+elif [ "$env" = "preview-site" ]; then
+  "${firebase[@]}" deploy --only hosting:preview --non-interactive --config firebase.deploy.json
 else
   "${firebase[@]}" deploy --only "hosting:$env" --non-interactive --config firebase.deploy.json
 fi

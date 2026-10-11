@@ -120,6 +120,25 @@ describe('deploy.sh preview', () => {
   });
 });
 
+describe('deploy.sh preview-site', () => {
+  it('deploys the preview hosting target', () => {
+    setup();
+    const r = run(['preview-site']);
+    expect(r.status).toBe(0);
+    expect(readFileSync(log, 'utf8')).toMatch(/deploy --only hosting:preview/);
+  });
+
+  it('fails closed when dist/ was not built', () => {
+    setup({ dist: false });
+    expect(run(['preview-site']).status).not.toBe(0);
+  });
+
+  it('in CI, refuses to deploy without a service credential', () => {
+    setup();
+    expect(run(['preview-site'], { CI: 'true' }).status).not.toBe(0);
+  });
+});
+
 describe('deploy.sh preview-delete', () => {
   const channels = (...names: string[]) =>
     JSON.stringify({
@@ -177,11 +196,12 @@ describe('firebase config', () => {
   const rc = JSON.parse(readFileSync(join(root, '.firebaserc'), 'utf8'));
   const sites: any[] = firebase.hosting;
 
-  it('maps dev and prod targets to separate sites', () => {
+  it('maps dev, prod and preview targets to separate sites', () => {
     const targets = Object.values(rc.targets)[0] as any;
     expect(targets.hosting.dev).toEqual(['mon-farm-dev']);
     expect(targets.hosting.prod).toEqual(['mon-farm-prod']);
-    expect(sites.map((s) => s.target).sort()).toEqual(['dev', 'prod']);
+    expect(targets.hosting.preview).toEqual(['mon-farm-preview']);
+    expect(sites.map((s) => s.target).sort()).toEqual(['dev', 'preview', 'prod']);
   });
 
   // preview-delete has to name the site (channel commands take no target).
@@ -190,13 +210,13 @@ describe('firebase config', () => {
     expect(readFileSync(script, 'utf8')).toContain(`dev_site=${targets.hosting.dev[0]}`);
   });
 
-  it.each(['dev', 'prod'])('%s serves dist/, unknown paths on the not-found page', (t) => {
+  it.each(['dev', 'prod', 'preview'])('%s serves dist/, unknown paths on the not-found page', (t) => {
     const site = sites.find((s) => s.target === t);
     expect(site.public).toBe('dist');
     expect(site.rewrites).toContainEqual({ source: '**', destination: '/+not-found.html' });
   });
 
-  it.each(['dev', 'prod'])('%s caches hashed assets long and every page short', (t) => {
+  it.each(['dev', 'prod', 'preview'])('%s caches hashed assets long and every page short', (t) => {
     const site = sites.find((s) => s.target === t);
     const cc = (src: string) =>
       site.headers.find((h: any) => h.source === src)?.headers.find((h: any) => h.key === 'Cache-Control')?.value;

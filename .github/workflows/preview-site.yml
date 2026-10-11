@@ -1,0 +1,75 @@
+name: Deploy Preview Site
+
+# One shared preview site (mon-farm-preview) that shows one PR at a time.
+# Firebase Auth cannot authorize per-PR channel URLs, so Google login is tried
+# here. Start it by hand with a PR number; the latest run wins. This builds that
+# PR with the real public web config; the shared CI bundle is not touched.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number to show on mon-farm-preview.web.app
+        required: true
+        type: number
+
+concurrency:
+  group: preview-site
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Find the PR head (open, same repository only)
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ inputs.pr }}
+        run: |
+          json=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR")
+          state=$(jq -r .state <<<"$json")
+          head_repo=$(jq -r .head.repo.full_name <<<"$json")
+          if [ "$state" != "open" ]; then echo "PR $PR is $state, not open" >&2; exit 1; fi
+          if [ "$head_repo" != "$GITHUB_REPOSITORY" ]; then echo "PR $PR comes from a fork ($head_repo)" >&2; exit 1; fi
+          echo "sha=$(jq -r .head.sha <<<"$json")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build web
+        env:
+          # Public web config for project mon-farmmate (not secrets; E02-S01).
+          EXPO_PUBLIC_FIREBASE_PROJECT_ID: mon-farmmate
+          EXPO_PUBLIC_FIREBASE_API_KEY: AIzaSyA2LpIyAf0Sae1q0O5I1mRTb75AEv6hPwY
+          EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: mon-farmmate.firebaseapp.com
+        run: npm run build:web
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy to the preview site
+        run: ./scripts/deploy.sh preview-site
+
+      - name: Say what is on the site
+        run: |
+          {
+            echo "### mon-farm-preview"
+            echo "PR #${{ inputs.pr }} at \`${{ steps.pr.outputs.sha }}\`"
+            echo "https://mon-farm-preview.web.app"
+          } >> "$GITHUB_STEP_SUMMARY"
