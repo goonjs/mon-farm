@@ -320,6 +320,7 @@ export class SyncEngine {
    */
   private async checkEach(batch: readonly SaleEvent[]): Promise<Permanent | undefined> {
     let refused: Permanent | undefined;
+    let readable: boolean | undefined; // asked at most once per batch, and only when needed
     for (const e of batch) {
       if (this.stopped) return refused;
       try {
@@ -337,8 +338,16 @@ export class SyncEngine {
       const there = await withTimeout(this.deps.remote.fetch(e.id), this.ackMs);
       if (there && canonicalJson(there) === canonicalJson(e)) {
         await this.deps.store.markSynced([e.id]);
+      } else if (there) {
+        refused ??= new Permanent('integrity');
+      } else if ((readable ??= await withTimeout(this.deps.remote.check(), this.ackMs))) {
+        // Firestore reports a rules-rejected (malformed) event as permission-denied too. The user
+        // can read the group, so they are a member and it is this event that is refused: skip it
+        // on later runs instead of one push and one fetch per event every run.
+        this.rejected.add(e.id);
+        refused ??= new Permanent('invalid');
       } else {
-        refused ??= new Permanent(there ? 'integrity' : 'denied');
+        refused ??= new Permanent('denied'); // cannot read the group: not a member
       }
     }
     return refused;

@@ -251,9 +251,9 @@ describe('FirestoreRemote', () => {
 
   it('check() reads the group document from the server and is happy with any answer, even "not allowed"', async () => {
     const { layer, remote } = make();
-    await expect(remote.check()).resolves.toBeUndefined();
+    await expect(remote.check()).resolves.toBe(true);
     layer.failWith = Object.assign(new Error('rules'), { code: 'permission-denied' });
-    await expect(remote.check()).resolves.toBeUndefined();
+    await expect(remote.check()).resolves.toBe(false); // an answer, and it says the group is not readable
   });
 
   it('check() fails with the real reason when the server cannot be reached or the database is missing', async () => {

@@ -42,8 +42,10 @@ export class FakeRemote implements RemoteEvents, RemoteGroups {
   offline = false;
   /** A batch holding any of these is refused as invalid (a malformed or oversized document). */
   readonly invalidIds = new Set<EventId>();
-  /** The rules refuse every write from this client (e.g. no longer a member). */
+  /** The rules refuse every write from this client and it cannot read the group (e.g. no longer a member). */
   denied = false;
+  /** A batch holding any of these is refused as `permission-denied` although the client is a member (malformed event). */
+  readonly rulesRejectIds = new Set<EventId>();
 
   constructor(readonly server = new FakeServer()) {}
 
@@ -63,9 +65,10 @@ export class FakeRemote implements RemoteEvents, RemoteGroups {
     if (code) throw new RemoteError(code);
   }
 
-  async check(): Promise<void> {
+  async check(): Promise<boolean> {
     this.checks += 1;
     if (this.offline) throw new RemoteError('unavailable', 'offline');
+    return !this.denied;
   }
 
   async createGroup(op: CreateGroupOp): Promise<void> {
@@ -88,6 +91,7 @@ export class FakeRemote implements RemoteEvents, RemoteGroups {
       this.gate();
       if (this.denied) throw new RemoteError('permission-denied');
       if (events.some((e) => this.invalidIds.has(e.id))) throw new RemoteError('invalid-argument');
+      if (events.some((e) => this.rulesRejectIds.has(e.id))) throw new RemoteError('permission-denied');
       if (this.server.requireGroups && events.some((e) => !this.server.groups.has(e.groupId))) {
         throw new RemoteError('permission-denied');
       }

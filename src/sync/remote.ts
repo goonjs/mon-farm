@@ -53,9 +53,11 @@ export interface RemoteEvents {
    * server answered. Fails fast with `unavailable` when offline (so no write is
    * queued behind the SDK's back) and with the real code when the database does
    * not exist. A refusal to read the group (not a member yet, rules) is not a
-   * failure here: the operation that follows reports it.
+   * failure here: the operation that follows reports it. Resolves `true` when the
+   * user can read the group, `false` when the rules refused that read — which is
+   * how the engine tells "not a member" from "a member whose event was refused".
    */
-  check(): Promise<void>;
+  check(): Promise<boolean>;
   /** Creates up to 500 events as one batch; resolves once the server confirmed all of them. */
   push(events: readonly SaleEvent[]): Promise<void>;
   /** The server's copy of one event, or null — never answered from a cache. */

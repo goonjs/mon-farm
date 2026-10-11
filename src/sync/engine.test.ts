@@ -567,6 +567,37 @@ describe('one bad event never wedges the outbox (review A F1)', () => {
   });
 });
 
+describe('a rules-rejected event (follow-up 1)', () => {
+  it('a member whose malformed event is refused as permission-denied: that event is rejected and skipped on later runs, the rest go', async () => {
+    const p = await phone();
+    const [a, bad, c] = new LogBuilder('s1', p.deviceId).accept('p1').accept('p1').accept('p1').build();
+    p.remote.rulesRejectIds.add(bad.id); // the rules say permission-denied, but the user can read the group
+    await record(p.store, [a, bad, c]);
+    await p.engine.sync();
+    expect([...p.server.docs.keys()].sort()).toEqual([a.id, c.id].sort());
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid', pending: 1 });
+
+    // later runs do not push it again, not even alone
+    const [d] = new LogBuilder('s2', p.deviceId).accept('p1').build();
+    await record(p.store, [d]);
+    p.remote.batches.length = 0;
+    await p.engine.sync();
+    expect(p.remote.batches.flat().map((e) => e.id)).toEqual([d.id]);
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid', pending: 1 });
+  });
+
+  it('a user who cannot read the group (not a member) stays denied, nothing is marked rejected', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.denied = true; // writes refused and the group unreadable
+    await p.engine.sync();
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'denied', pending: 1 });
+    p.remote.denied = false;
+    await p.engine.retry();
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+});
+
 describe('fail fast before writing (review A F3/F4)', () => {
   it('offline: reads the server first and queues no write at all', async () => {
     const p = await phone();
