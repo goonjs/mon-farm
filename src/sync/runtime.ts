@@ -25,6 +25,8 @@ export interface SyncRuntimeDeps {
   readonly onAppended: (listener: () => void) => () => void;
   /** The network came back; returns the unsubscribe. */
   readonly onOnline: (listener: () => void) => () => void;
+  /** A pull completed (the first one unlocks the points wizard). */
+  readonly onPulled?: () => void;
   /** False while the device knows it has no network: an attempt would only wait out its timeout. */
   readonly isOnline: () => boolean;
 }
@@ -42,6 +44,7 @@ export function startSync(deps: SyncRuntimeDeps): SyncHandle {
     scope: deps.scope,
     remote: deps.remote,
     cursor: storeCursor(deps.store),
+    onPulled: deps.onPulled,
   });
   // A failed run has already scheduled its own retry; nothing to do with the rejection.
   const now = () => {

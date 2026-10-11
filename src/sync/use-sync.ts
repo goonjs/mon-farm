@@ -16,7 +16,7 @@ import { onAppended } from '../store/append-signal';
 import { store } from '../store/store';
 import { connectRemote, type SyncRemote } from './client';
 import { startSync, type SyncHandle } from './runtime';
-import { emitSyncChanged } from './changed';
+import { emitSyncChanged, setSyncMode } from './changed';
 
 /** The browser's `online` event; native has no such global, and there the client is not built anyway. */
 const onOnline = (listener: () => void) => {
@@ -36,16 +36,33 @@ export function useSync(
   useEffect(() => {
     let live = true;
     let handle: SyncHandle | null = null;
+    // Until we know, the points wizard waits (a first pull may be coming).
+    setSyncMode('connecting');
     connect(userId, groupId)
       .then((remote) => {
-        if (!live || !remote) return;
-        handle = startSync({ scope: { userId, groupId }, store, accounts, remote, onAppended, onOnline, isOnline });
+        if (!live) return;
+        if (!remote) return setSyncMode('off');
+        handle = startSync({
+          scope: { userId, groupId },
+          store,
+          accounts,
+          remote,
+          onAppended,
+          onOnline,
+          onPulled: emitSyncChanged,
+          isOnline,
+        });
         handle.engine.subscribe(emitSyncChanged);
+        setSyncMode('on');
       })
-      .catch((err) => console.warn('Sync could not start; the app stays local.', err));
+      .catch((err) => {
+        console.warn('Sync could not start; the app stays local.', err);
+        if (live) setSyncMode('off');
+      });
     return () => {
       live = false;
       handle?.stop();
+      setSyncMode('off');
     };
   }, [userId, groupId, accounts, connect]);
 }

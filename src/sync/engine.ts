@@ -37,6 +37,12 @@ export const ACK_TIMEOUT_MS = 30_000;
 /** Re-read window behind the cursor: server stamps need not follow commit order. */
 export const PULL_OVERLAP_MS = 10 * 60_000;
 export const APPEND_DEBOUNCE_MS = 2_000;
+/**
+ * The cursor of a device that has pulled but found nothing to remember (a new,
+ * empty group): 0 means "never pulled", and the pull-from-the-start rule
+ * (`since` 0) is unchanged. The points wizard waits for it (E01-S09, D-83).
+ */
+export const FIRST_PULL_DONE = 1;
 
 export function backoffMs(attempt: number, random: () => number = Math.random): number {
   return Math.min(60_000, 2_000 * 2 ** Math.min(attempt, 10)) + Math.floor(random() * 1_000);
@@ -84,6 +90,8 @@ export interface SyncDeps {
   readonly scope: Scope;
   readonly remote: RemoteEvents & RemoteGroups;
   readonly cursor: CursorStore;
+  /** Called after every successful pull (and so after the first one). */
+  readonly onPulled?: () => void;
   /** How long to wait for a server ack before treating it as lost; tests shorten it. */
   readonly ackTimeoutMs?: number;
   /** Files follow their `media.add` events, with the same retry rules (E01-S12). */
@@ -303,8 +311,11 @@ export class SyncEngine {
 
   private async pull(): Promise<void> {
     const cursor = await this.deps.cursor.get();
-    const since = cursor > 0 ? cursor - PULL_OVERLAP_MS : 0;
+    const since = cursor > 0 ? Math.max(0, cursor - PULL_OVERLAP_MS) : 0;
     await this.store(await withTimeout(this.deps.remote.pull(since), this.ackMs));
+    // An empty group leaves no server stamp to remember, yet this device has now seen it.
+    if ((await this.deps.cursor.get()) === 0) await this.deps.cursor.set(FIRST_PULL_DONE);
+    this.deps.onPulled?.();
   }
 
   /** Stores docs, remembers corrupt ones, and moves the cursor forward only. */

@@ -5,6 +5,8 @@ import { dayAfter, dayBefore, thaiDayInput, todayIso } from '../core/master';
 import { FarmsScreen, PropertyScreen } from '../v2/farm/farms-screens';
 import { PointScreen, PointsScreen, PointsWizardScreen } from '../v2/farm/points-screens';
 import type { MasterStore } from '../store/master-store';
+import { store as mockStore } from '../store/store';
+import { emitSyncChanged, setSyncMode } from '../sync/changed';
 import { wrap } from '../test/render';
 
 jest.mock('../store/people', () => {
@@ -472,6 +474,62 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     expect(state.points.map((p) => p.name).sort()).toEqual(['จุด 1', 'จุด 2', 'จุด 3']);
     expect(state.assignments.filter((a) => a.tapperId === daeng.id)).toHaveLength(2);
     expect(mockRouter.back).toHaveBeenCalled();
+  });
+
+  describe('first pull (E01-S09: two offline phones must not both create "จุด 1")', () => {
+    afterEach(async () => {
+      setSyncMode('off');
+      await mockStore.setSyncCursor(0);
+    });
+
+    async function toNamesPage() {
+      const m = master();
+      const farm = await m.addProperty({ name: 'สวนจันทเขลม', crop: 'rubber' });
+      const daeng = await m.create('แดง', ['tapper']);
+      wrap(<PointsWizardScreen />);
+      await flush();
+      fireEvent.press(screen.getByTestId(`wizard-farm-${farm.id}`));
+      fireEvent.press(screen.getByTestId(`wizard-tapper-${daeng.id}`));
+      fireEvent.press(screen.getByTestId('wizard-next'));
+      fireEvent.changeText(screen.getByTestId(`wizard-name-${daeng.id}-0`), 'จุด 1');
+      return m;
+    }
+
+    it('while sync is running and nothing has been pulled yet, says so and creates nothing', async () => {
+      await mockStore.setSyncCursor(0);
+      setSyncMode('on');
+      const m = await toNamesPage();
+      expect(screen.getByTestId('wizard-wait-pull')).toBeTruthy();
+      await press('wizard-create');
+      expect((await m.state()).points).toHaveLength(0);
+      expect(mockRouter.back).not.toHaveBeenCalled();
+    });
+
+    it('creates once the first pull has finished, without leaving the screen', async () => {
+      await mockStore.setSyncCursor(0);
+      setSyncMode('on');
+      const m = await toNamesPage();
+      await act(async () => {
+        await mockStore.setSyncCursor(1); // the engine's first pull found an empty group
+        emitSyncChanged();
+      });
+      await flush();
+      expect(screen.queryByTestId('wizard-wait-pull')).toBeNull();
+      await press('wizard-create');
+      expect((await m.state()).points.map((p) => p.name)).toEqual(['จุด 1']);
+    });
+
+    it('waits too while the connection is still being set up', async () => {
+      setSyncMode('connecting');
+      await toNamesPage();
+      expect(screen.getByTestId('wizard-wait-pull')).toBeTruthy();
+    });
+
+    it('a build that does not sync is never held up', async () => {
+      setSyncMode('off');
+      await toNamesPage();
+      expect(screen.queryByTestId('wizard-wait-pull')).toBeNull();
+    });
   });
 
   it('keeps the helper on the points list when points already exist', async () => {

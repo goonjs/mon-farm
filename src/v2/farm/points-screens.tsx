@@ -40,6 +40,7 @@ import {
 import { useT } from '../../i18n';
 import { DuplicatePointNameError } from '../../store/master-store';
 import { peopleStore } from '../../store/people';
+import { useFirstPullDone } from '../../sync/use-first-pull';
 import { useTheme } from '../../theme';
 import {
   AppText,
@@ -552,9 +553,9 @@ function PlanForm({ state, pointId, pointName, replacing, onClose, onSaved }: { 
 }
 
 /**
- * No first-pull wait yet: there is no sync, so this device's log is all there is.
- * When E01-S09 lands, creating must wait for a first pull (it was the
- * `showStarterButton` gate), or two offline phones can both create "จุด 1".
+ * Creating waits for this device's first pull while sync is running (E01-S09):
+ * otherwise two offline phones can both create "จุด 1". A build that does not
+ * sync is never held (`useFirstPullDone`).
  */
 export function PointsWizardScreen() {
   const t = useTheme();
@@ -567,6 +568,7 @@ export function PointsWizardScreen() {
   const [page, setPage] = useState<1 | 2>(1);
   const [tried, setTried] = useState(false);
   const write = useWrite();
+  const pulled = useFirstPullDone();
 
   const tappers = state ? filterPeople(state.people, 'tapper') : [];
   const farms = state?.properties.filter((p) => !p.deleted) ?? [];
@@ -591,7 +593,7 @@ export function PointsWizardScreen() {
 
   const create = async () => {
     setTried(true);
-    if (!plan?.ok || total === 0) return;
+    if (!pulled || !plan?.ok || total === 0) return;
     // One run at a time (useWrite): a double tap must not create the set twice.
     if (await write.run(() => peopleStore.createStarterPoints(rows))) back();
     // Part of the set may have landed: re-read, so its names show as taken rather than being made twice.
@@ -645,7 +647,7 @@ export function PointsWizardScreen() {
       fallback={FARMS}
       failed={write.failed}
       onBack={page === 2 ? () => setPage(1) : undefined}
-      action={page === 2 ? { label: msg('wizard.create', { n: total }), testID: 'wizard-create', disabled: total === 0, saving: write.saving, onPress: () => void create() } : undefined}
+      action={page === 2 ? { label: msg('wizard.create', { n: total }), testID: 'wizard-create', disabled: total === 0 || !pulled, saving: write.saving, onPress: () => void create() } : undefined}
       testID="points-wizard"
       footer={
         page === 1 ? (
@@ -757,6 +759,11 @@ export function PointsWizardScreen() {
               </Card>
             );
           })}
+          {!pulled ? (
+            <AppText variant="bodySm" testID="wizard-wait-pull">
+              {msg('wizard.waitPull')}
+            </AppText>
+          ) : null}
           {tried && plan && !plan.ok && plan.missing > 0 ? <FieldError testID="wizard-missing">{msg('wizard.needNames')}</FieldError> : null}
           {tried && plan && !plan.ok && plan.duplicates.length > 0 ? <FieldError testID="wizard-duplicates">{msg('wizard.duplicates', { names: plan.duplicates.join(', ') })}</FieldError> : null}
           <RowCard>

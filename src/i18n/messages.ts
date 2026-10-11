@@ -558,6 +558,7 @@ const th = {
   'wizard.namePlaceholder': 'ใส่ชื่อจุด',
   'wizard.infoStart': 'เริ่มมีผล: ไม่ระบุวัน',
   'wizard.infoLater': 'แก้ชื่อหรือคนกรีดยางทีหลังได้',
+  'wizard.waitPull': 'รอรับข้อมูลจากกลุ่มก่อน จึงจะสร้างจุดชั่งได้ — ต่ออินเทอร์เน็ตไว้สักครู่ จะได้ไม่สร้างซ้ำกับเครื่องอื่น',
 
   // ── Tapper assignments (E03-S05) ────────────────────────────────────────
   'assign.title': 'คนกรีดยางของจุด',
@@ -2152,6 +2153,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'wizard.namePlaceholder': 'point name',
   'wizard.infoStart': 'in effect: no start date',
   'wizard.infoLater': 'names and tappers can be changed later',
+  'wizard.waitPull': 'waiting for the group\'s data before points can be created — stay online a moment so they are not duplicated on another phone',
   'assign.title': 'Tapper of this point',
   'assign.none': 'no tapper yet',
   'assign.now': 'now',

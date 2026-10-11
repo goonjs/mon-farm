@@ -6,7 +6,7 @@ import type { AcceptEvent, SaleEvent } from '../core/types';
 import { userFromSignIn } from '../core/user';
 import { MemoryAccountStore } from '../store/account-memory';
 import { MemoryStore } from '../store/memory-store';
-import { backoffMs, MemoryCursor, PULL_OVERLAP_MS, SyncEngine } from './engine';
+import { backoffMs, FIRST_PULL_DONE, MemoryCursor, PULL_OVERLAP_MS, SyncEngine } from './engine';
 import { FakeRemote, FakeServer } from './fake-remote';
 
 /** The user and group the fixtures record under (`LogBuilder`). */
@@ -195,6 +195,35 @@ describe('pull', () => {
     expect(await p.cursor.get()).toBe(2_000_000);
     await p.engine.sync();
     expect(pull).toHaveBeenLastCalledWith(2_000_000 - PULL_OVERLAP_MS);
+  });
+
+  it('remembers a first pull that found an empty group, so "never pulled" and "nothing there" differ', async () => {
+    const p = await phone();
+    const pull = vi.spyOn(p.remote, 'pull');
+    expect(await p.cursor.get()).toBe(0);
+    await p.engine.sync();
+    expect(await p.cursor.get()).toBe(FIRST_PULL_DONE);
+    await p.engine.sync();
+    expect(pull).toHaveBeenLastCalledWith(0); // never before the epoch
+  });
+
+  it('a pull that failed is not a first pull', async () => {
+    const p = await phone();
+    p.remote.failNext('unavailable');
+    await p.engine.sync();
+    expect(await p.cursor.get()).toBe(0);
+  });
+
+  it('tells the app after each successful pull', async () => {
+    const onPulled = vi.fn();
+    const p = await phone();
+    const engine = new SyncEngine({ store: p.store, accounts: p.accounts, scope: SCOPE, remote: p.remote, cursor: p.cursor, onPulled, random: () => 0 });
+    p.remote.failNext('unavailable');
+    await engine.sync();
+    expect(onPulled).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(onPulled).toHaveBeenCalledTimes(1);
+    engine.stop();
   });
 
   it('skips a document with the same id but different content and keeps going', async () => {
