@@ -17,7 +17,7 @@ Decision log D-1…D-21):
 
 | Area | Decision | Why |
 |---|---|---|
-| Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert (เลื่อนตาม D-48 — ยังไม่อัปเกรดแผน), asia-southeast3 (กรุงเทพฯ), **one Firebase project** for MVP (D-34): dev/preview on a named Firestore database `dev` + a dev Storage bucket, prod on `(default)` + the default bucket; split into two projects before commercial launch | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
+| Backend | **Firestore (Standard) via Firebase JS SDK**, Blaze plan + budget alert (เลื่อนตาม D-48 — ยังไม่อัปเกรดแผน), asia-southeast3 (กรุงเทพฯ), **one Firebase project** for MVP (D-34; D-84: dev/preview use `(default)` for now, no `dev` db): dev/preview on a named Firestore database `dev` + a dev Storage bucket, prod on `(default)` + the default bucket; split into two projects before commercial launch | Free-tier quotas cover 3 users; RTDB rejected (100-connection cap, weak queries, no offline advantage). Spark can't do Storage, LINE login, scheduled reminders or Cloud Run. |
 | Sync unit | **Keep the append-only event log as source of truth and sync unit.** Each event = one immutable Firestore doc (`groups/{gid}/events/{eventId}`), create-only security rules → idempotent re-push, nothing overwritten. Edits are new events carrying `targetId` + `baseEventId`; concurrent edits merge only when they touch different non-money/weight/count/status fields, otherwise **Conflict** surfaced to the user (see §Sync engine). | Firestore is last-write-wins per document and transactions fail offline, so platform defaults can't satisfy "never silently overwrite money". Basket events are additive → different devices merge for free. |
 | Pending Sync | Our own outbox (`synced_at IS NULL`), not Firestore's cache | JS SDK persistence on React Native is memory-only; our SQLite store owns durability. Avoids `@react-native-firebase`. |
 | IDs & ordering | Globally unique event ids (**UUIDv7**, owner 2026-10-03) + per-device sequence; causal order only, no clock ordering; `(sale_id, seq)` PK retired; `actor` → user id + device id | Two offline phones would collide on per-sale `seq`. |
@@ -237,13 +237,11 @@ event มีสองตระกูล และ registry ใน `src/core/merg
 (`src/store/device-clock.ts`) ไม่ใช่ต่อหน้าจอการขาย `userId` = uid ของผู้ใช้ที่
 login แล้ว (E02-S01, `src/store/session.ts`; ยังไม่ login → `NotSignedInError` บันทึกไม่ได้) เว็บเป็น IndexedDB ตั้งแต่ E01-S03
 
-**Soft Delete + provenance (E01-S04)**: event `delete` / `restore` ชี้ `targetId` ใดก็ได้ (การขาย, โซน, กอง, รายการหัก,
+**Soft Delete + provenance (E01-S04)**: event `delete` / `restore` ชี้ `targetId` ใดก็ได้ (การขาย, โซน, กอง,
 เข่ง = id ของ event เข่ง) ตัดสินด้วย event ล่าสุดตามลำดับ fold (`src/core/soft-delete.ts`) — ยังไม่มี `baseEventId`/DAG
 (E01-S11 จะแทนกฎ "ล่าสุดชนะ" นี้ด้วย Conflict เมื่อสองเครื่องลบ/กู้คืนพร้อมกัน) ลบโซน = ซ่อนกองและเข่งในโซนด้วย envelope
 ได้ฟิลด์ `source` (`'app'` ตอนนี้) ตามแบบด้านบน และฟิลด์วิธีป้อนของเข่ง (`hold`/`hold-kbd`) เปลี่ยนชื่อจาก `source`
-เป็น `input` เพื่อไม่ชนกัน ลบเขตที่คนกรีดยังมีรายการหักมีผลไม่ได้จนกว่าจะยกเลิกรายการหักก่อน และกู้คืนรายการหักของคนกรีด
-ในเขตที่ถูกลบไม่ได้จนกว่าจะกู้คืนเขตก่อน (D-44, `src/core/delete-guard.ts`; ตรวจทุกทางเขียน: `setDeleted` และ
-`SaleProvider.append`; E01-S16)
+เป็น `input` เพื่อไม่ชนกัน ลบเขต/สวนได้เสมอและกู้คืนได้ (D-58; กติกา D-44 และ `delete-guard.ts` ถูกเอาออกใน E06-S07)
 
 **UUIDv7 (RFC 9562, เจ้าของเลือก 2026-10-03)**: เป็นมาตรฐาน IETF (ULID ไม่ใช่) id ที่สร้างใกล้เวลากันเรียงใกล้กัน
 ทำให้ index ของ SQLite/IndexedDB มี locality ดีและ debug ง่าย เขียน generator เองราว 20 บรรทัดใน
@@ -464,7 +462,7 @@ memory อยู่แล้ว; บนเว็บถ้าเปิดจะ�
 - `resolve` = change ที่ `baseEventId` = head หนึ่ง, `alsoBasedOn` = head ที่เหลือ, payload = ค่าที่เลือก →
   เป็น head ใหม่ตัวเดียว ตัดสินได้ออฟไลน์ เครื่องที่แก้ต่อหลังรวมอัตโนมัติก็ใส่ `alsoBasedOn` แบบเดียวกัน
 - change ที่มาถึงก่อน base ของมัน → record เป็น "รอข้อมูล" แสดงค่าล่าสุดที่รู้จนกว่า base มาถึง (รูปแบบเดียวกับที่
-  `deduction_voided` ทนลำดับสลับอยู่แล้ว)
+  void ที่มาก่อนเป้าหมายทนลำดับสลับอยู่แล้ว)
 - การแก้ที่มาถึงหลังการขาย Completed (เช่น เข่งจากเครื่องที่ออฟไลน์) → ติดธงสถานะการจ่ายให้ตรวจใหม่ตาม D-16
   และถ้าเกิด fork ก็เป็น Conflict
 

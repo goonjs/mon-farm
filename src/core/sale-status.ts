@@ -26,7 +26,7 @@ export function statusCountsAsClosed(sale: SaleState): boolean {
   return sale.saleStatus === 'completed' || sale.status === 'closed';
 }
 
-const MONEY_SYS = new Set(['price_set', 'split_set', 'zone_contract_set', 'zone_contract_cleared', 'deduction_added', 'deduction_voided']);
+const MONEY_SYS = new Set(['price_set', 'split_set', 'zone_contract_set', 'zone_contract_cleared']);
 
 /** Whether recording this would change a tapper's total, the owner's share or the sale total. */
 export function isMoneyChange(e: { kind: string; payload?: { t: string } }): boolean {

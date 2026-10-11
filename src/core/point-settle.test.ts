@@ -81,6 +81,22 @@ describe('settlePoints — the money of a point sale, per tapper (E05-S01 on poi
     expect(red.zoneIds).toEqual([s.perZone[0].zoneId]);
   });
 
+  it('locks every money figure of the mockup sale, to the satang (E06-S07)', () => {
+    const events = mockupSale();
+    const s = settlePoints(events, projectSale(events, 'sale-1'), master(), DAY);
+    expect(
+      s.perZone.map((z) => [z.personId, z.grossSatang, z.ownerSatang, z.workerSatang]),
+    ).toEqual([
+      ['red', 7_372_000, 3_686_000, 3_686_000],
+      ['nat', 3_564_750, 1_782_375, 1_782_375],
+    ]);
+    expect(s.perWorker.map((w) => [w.personId, w.workerSatang])).toEqual([
+      ['red', 3_686_000],
+      ['nat', 1_782_375],
+    ]);
+    expect([s.grossSatang, s.ownerSatang, s.workerSatang]).toEqual([10_936_750, 5_468_375, 5_468_375]);
+  });
+
   it('uses the share in force on the sale day (MD-8)', () => {
     const events = mockupSale();
     const m = master([{ t: 'share_set', shareId: 's1', tapperId: 'red', tapperPct: 40, from: '2026-10-01' }]);

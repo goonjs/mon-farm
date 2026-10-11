@@ -1,6 +1,6 @@
 # Runbook: ตั้งค่า Firebase โปรเจกต์ `mon-farmmate`
 
-> สถานะ: รอเจ้าของทำในเครื่องตัวเอง (เขียน 2026-10-03) — **ข้อที่ต้องอัปเกรดแผนเลื่อนทั้งหมดตาม D-48** (ฐานข้อมูล `dev`, bucket, budget alert)
+> สถานะ: รอเจ้าของทำในเครื่องตัวเอง (เขียน 2026-10-03) — **ข้อที่ต้องอัปเกรดแผนเลื่อนทั้งหมดตาม D-48** (ฐานข้อมูล `dev`, bucket, budget alert); ใช้ `(default)` เป็น dev ไปก่อนตาม D-84
 > ที่มา: PRD D-34 (1 โปรเจกต์สำหรับ MVP), ADR 0001 amendment 2, story E01-S07, E01-S08, E01-S12, E02-S01
 > ใครทำ: เจ้าของ (หรือ session ในเครื่องเจ้าของ เช่น session ที่ชื่อ mon-farm-a7 — ชื่อนี้เป็นชื่อ session ไม่ใช่ชื่อโปรเจกต์) เพราะต้องใช้สิทธิ์ console และสร้าง secret
 
@@ -17,8 +17,8 @@
 
 - [x] database `(default)` = **prod** — สร้างแล้ว 2026-10-03: `asia-southeast3` (กรุงเทพฯ), Standard, native mode,
   production mode; ห้ามเปลี่ยนชื่อหรือลบ (D-48)
-- [ ] **เลื่อนตาม D-48 (ยังไม่อัปเกรดแผน):** สร้าง database ชื่อ `dev` (`asia-southeast3 (กรุงเทพฯ)`) — build dev/preview ใช้ตัวนี้เท่านั้น (NFR-5)
-- [ ] ยังไม่ต้อง deploy rules — ทีม platform ทำผ่าน CI หลังเจ้าของอนุมัติ deploy
+- [ ] ~~สร้าง database ชื่อ `dev` (`asia-southeast3 (กรุงเทพฯ)`) — build dev/preview ใช้ตัวนี้เท่านั้น (NFR-5)~~ — พักไว้ตาม D-84 (2026-10-11): ใช้ `(default)` เป็น dev ไปก่อน
+- [x] deploy rules เข้า `(default)` ด้วย `firebase deploy --only 'firestore:(default)' --project mon-farmmate` (D-84) — รันด้วย Firebase CLI จากเครื่องเจ้าของ (ผ่าน session ของ Claude) ไม่ใช่ CI
 
 ## 3. Cloud Storage (E01-S12)
 
