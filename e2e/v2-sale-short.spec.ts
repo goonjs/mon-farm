@@ -56,8 +56,8 @@ const FARM: MasterPayload[] = [
   { t: 'tapper_assigned', assignmentId: 's5', pointId: 'b1', tapperId: 'nat' },
 ];
 
-async function hold(page: Page) {
-  const box = (await on(page)('hold').boundingBox())!;
+async function hold(page: Page, testId = 'hold') {
+  const box = (await on(page)(testId).boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.waitForTimeout(800);
@@ -169,7 +169,7 @@ test('B · ย้อนกลับ (undo) เข่งไม่เต็ม', a
   await id('tool-short').click();
   await id('short-save').click();
   await page.waitForTimeout(300);
-  await id('tool-undo').click();
+  await hold(page, 'tool-undo');
   await page.waitForTimeout(300);
   await snap(page, 'B1-after-undo');
   await expectEq(S, 'ย้อนกลับเข่งไม่เต็ม → เลขเข่งกลับเป็น 4', '4', await text(page, 'current-no'), 'B1-after-undo');
@@ -399,7 +399,8 @@ test('H · โหมดสาธารณะขณะมีเข่งเปิ
   await begin(page);
   await id('tool-short').click();
   await id('short-save').click();
-  await id('tool-public').click();
+  await id('counter-menu').click();
+  await id('menu-public').click();
   await page.waitForTimeout(400);
   await snap(page, 'H1-public-waiting');
   await rec(S, 'โหมดสาธารณะ ณ จุดที่เข่งรอเติม: ยังแสดงเลขเข่ง 4 ไม่นับเพิ่ม', '4', (await text(page, 'public-no')) || '(ไม่พบ)', (await text(page, 'public-no')) === '4', 'H1-public-waiting');

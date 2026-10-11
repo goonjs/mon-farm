@@ -25,3 +25,13 @@ export function dateParts(ts: number, era: Era): DateParts {
   const ce = d.getUTCFullYear();
   return { day: d.getUTCDate(), month: d.getUTCMonth() + 1, year: era === 'be' ? ce + BE_OFFSET : ce };
 }
+
+/**
+ * The time on the farm (Bangkok), to the second — "07:46:12" (E04-S15: the
+ * basket list shows when each basket was recorded, seconds included).
+ */
+export function clockSeconds(ts: number): string {
+  const d = new Date(ts + BANGKOK_OFFSET_MS);
+  const p = (x: number) => String(x).padStart(2, '0');
+  return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
+}
