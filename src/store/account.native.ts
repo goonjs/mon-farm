@@ -80,6 +80,11 @@ export class SqliteAccountStore implements AccountStore {
     const rows = await db.getAllAsync<{ body: string }>(`SELECT body FROM pending_ops ORDER BY rowid`);
     return rows.map((r) => JSON.parse(r.body) as CreateGroupOp);
   }
+
+  async completeOp(op: CreateGroupOp): Promise<void> {
+    const db = await this.open();
+    await db.runAsync(`DELETE FROM pending_ops WHERE id = ?`, `${op.op}:${op.groupId}`);
+  }
 }
 
 export const accountStore: AccountStore = new SqliteAccountStore();

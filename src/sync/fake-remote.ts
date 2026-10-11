@@ -1,5 +1,6 @@
-import type { EventId, SaleEvent } from '../core/types';
-import { RemoteError, type PulledDoc, type RemoteErrorCode, type RemoteEvents } from './remote';
+import type { CreateGroupOp } from '../core/group';
+import type { EventId, GroupId, SaleEvent, UserId } from '../core/types';
+import { RemoteError, type PulledDoc, type RemoteErrorCode, type RemoteEvents, type RemoteGroups } from './remote';
 
 /**
  * An in-memory backend with Firestore's create-only rules, shared by any
@@ -9,11 +10,20 @@ export class FakeServer {
   readonly docs = new Map<EventId, PulledDoc>();
   /** Server clock for `receivedAt`; tests move it. */
   now = 1_000_000;
+  /** Groups created through `createGroup`, with their creator. */
+  readonly groups = new Map<GroupId, UserId>();
+  /**
+   * Like the rules: an event of a group nobody created is refused. Off by
+   * default so tests that are not about groups need not create one.
+   */
+  requireGroups = false;
 }
 
-export class FakeRemote implements RemoteEvents {
+export class FakeRemote implements RemoteEvents, RemoteGroups {
   /** Every batch `push` received, accepted or not. */
   readonly batches: SaleEvent[][] = [];
+  /** `createGroup` and `push` calls in the order they arrived, for ordering tests. */
+  readonly calls: string[] = [];
   /** Highest number of pushes in flight at once. */
   maxInFlight = 0;
   private inFlight = 0;
@@ -41,7 +51,18 @@ export class FakeRemote implements RemoteEvents {
     if (code) throw new RemoteError(code);
   }
 
+  async createGroup(op: CreateGroupOp): Promise<void> {
+    this.calls.push(`group:${op.groupId}`);
+    await Promise.resolve();
+    this.gate();
+    if (this.denied) throw new RemoteError('permission-denied');
+    const creator = this.server.groups.get(op.groupId);
+    if (creator === undefined) this.server.groups.set(op.groupId, op.createdBy);
+    else if (creator !== op.createdBy) throw new RemoteError('permission-denied');
+  }
+
   async push(events: readonly SaleEvent[]): Promise<void> {
+    this.calls.push('push');
     this.batches.push([...events]);
     this.inFlight += 1;
     this.maxInFlight = Math.max(this.maxInFlight, this.inFlight);
@@ -49,6 +70,9 @@ export class FakeRemote implements RemoteEvents {
       await Promise.resolve();
       this.gate();
       if (this.denied) throw new RemoteError('permission-denied');
+      if (this.server.requireGroups && events.some((e) => !this.server.groups.has(e.groupId))) {
+        throw new RemoteError('permission-denied');
+      }
       // A batch is atomic, and rules refuse any write to an existing id.
       if (events.some((e) => this.server.docs.has(e.id))) throw new RemoteError('permission-denied');
       for (const e of events) {

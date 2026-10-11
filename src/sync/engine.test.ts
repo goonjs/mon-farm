@@ -1,19 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LogBuilder } from '../core/fixtures';
+import { newGroup } from '../core/group';
+import { FIXTURE_GROUP_ID, LogBuilder } from '../core/fixtures';
 import type { AcceptEvent, SaleEvent } from '../core/types';
+import { userFromSignIn } from '../core/user';
+import { MemoryAccountStore } from '../store/account-memory';
 import { MemoryStore } from '../store/memory-store';
 import { backoffMs, MemoryCursor, PULL_OVERLAP_MS, SyncEngine } from './engine';
 import { FakeRemote, FakeServer } from './fake-remote';
 
+/** The user and group the fixtures record under (`LogBuilder`). */
+const SCOPE = { userId: 'user-somchai', groupId: FIXTURE_GROUP_ID };
+const somchai = userFromSignIn(SCOPE.userId, 'สมชาย', { provider: 'google', subject: 'g-1' });
+
 /** A phone: its own store and cursor, talking to a shared server. */
 async function phone(server = new FakeServer()) {
   const store = new MemoryStore();
+  const accounts = new MemoryAccountStore();
   const remote = new FakeRemote(server);
   const cursor = new MemoryCursor();
-  const engine = new SyncEngine({ store, remote, cursor, random: () => 0 });
+  const engine = new SyncEngine({ store, accounts, scope: SCOPE, remote, cursor, random: () => 0 });
   const { deviceId } = await store.device();
-  return { store, remote, cursor, engine, deviceId, server };
+  return { store, accounts, remote, cursor, engine, deviceId, server };
 }
 
 async function record(store: MemoryStore, events: SaleEvent[]) {
@@ -257,7 +265,7 @@ describe('several phones (SYNC-4, NFR-2)', () => {
     // Relaunch: same durable store, new engine.
     const store = p.store;
     store.markSynced = MemoryStore.prototype.markSynced.bind(store);
-    const relaunched = new SyncEngine({ store, remote: new FakeRemote(p.server), cursor: p.cursor, random: () => 0 });
+    const relaunched = new SyncEngine({ store, accounts: p.accounts, scope: SCOPE, remote: new FakeRemote(p.server), cursor: p.cursor, random: () => 0 });
     await relaunched.sync();
     expect(await store.pending()).toEqual([]);
     expect(p.server.docs.size).toBe(2);
@@ -293,6 +301,8 @@ describe('media through the engine (E01-S12 AC2, AC5)', () => {
     const storage = new FakeStorage();
     const engine = new SyncEngine({
       store,
+      accounts: new MemoryAccountStore(),
+      scope: SCOPE,
       remote: new FakeRemote(),
       cursor: new MemoryCursor(),
       media: { queue, remote: storage },
@@ -385,5 +395,101 @@ describe('storeCursor', () => {
     const cursor = storeCursor(store);
     await cursor.set(99);
     expect(await storeCursor(store).get()).toBe(99);
+  });
+});
+
+describe('scope and group creation (E01-S09, E02-S02 review gaps)', () => {
+  const created = () => newGroup(FIXTURE_GROUP_ID, 'สวนบ้านนา', somchai, 1_790_000_000_000);
+
+  it('sends the pending create_group first, and only then that group\'s events', async () => {
+    const p = await phone();
+    p.server.requireGroups = true;
+    const { membership, op } = created();
+    await p.accounts.createGroup(membership, op);
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').accept('p1').build());
+
+    await p.engine.sync();
+    expect(p.remote.calls).toEqual([`group:${FIXTURE_GROUP_ID}`, 'push']);
+    expect(p.server.groups.get(FIXTURE_GROUP_ID)).toBe(SCOPE.userId);
+    expect(await p.accounts.pendingOps()).toEqual([]);
+    expect(await p.accounts.memberships()).toEqual([membership]);
+    expect(p.server.docs.size).toBe(2);
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+
+  it('while the group cannot be created, no event is sent and the badge counts the op too', async () => {
+    const p = await phone();
+    const { membership, op } = created();
+    await p.accounts.createGroup(membership, op);
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.offline = true;
+
+    await p.engine.sync();
+    expect(p.remote.calls).toEqual([`group:${FIXTURE_GROUP_ID}`]);
+    expect(p.engine.status()).toMatchObject({ state: 'pending', pending: 2 });
+
+    p.remote.offline = false;
+    await p.engine.sync();
+    expect(p.server.docs.size).toBe(1);
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+
+  it('a create_group that failed once is sent again, and sending it twice is harmless', async () => {
+    const p = await phone();
+    const { membership, op } = created();
+    await p.accounts.createGroup(membership, op);
+    p.remote.failNext('unavailable');
+    await p.engine.sync();
+    expect(await p.accounts.pendingOps()).toEqual([op]);
+    await vi.advanceTimersByTimeAsync(2_000);
+    await p.engine.sync();
+    expect(await p.accounts.pendingOps()).toEqual([]);
+    expect(p.server.groups.size).toBe(1);
+  });
+
+  it('a refused create_group is an error with a retry, sends no events and does not pull', async () => {
+    const p = await phone();
+    const { membership, op } = created();
+    await p.accounts.createGroup(membership, op);
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.denied = true;
+    const pull = vi.spyOn(p.remote, 'pull');
+
+    await p.engine.sync();
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'denied', pending: 2 });
+    expect(p.remote.batches).toEqual([]);
+    expect(pull).not.toHaveBeenCalled();
+    expect(await p.accounts.pendingOps()).toEqual([op]);
+
+    p.remote.denied = false;
+    await p.engine.retry();
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+
+  it('never sends or counts events of another group or another user', async () => {
+    const p = await phone();
+    const mine = new LogBuilder('s1', p.deviceId).accept('p1').build();
+    const [other] = new LogBuilder('s2', p.deviceId).accept('p1').build();
+    const elsewhere = { ...other, id: 'x-1', groupId: 'group-9' } as SaleEvent;
+    const someoneElse = { ...other, id: 'x-2', actor: { ...other.actor, userId: 'user-mallory' } } as SaleEvent;
+    await record(p.store, [...mine, elsewhere, someoneElse]);
+
+    await p.engine.sync();
+    expect([...p.server.docs.keys()]).toEqual(mine.map((e) => e.id));
+    expect((await p.store.pending()).map((e) => e.id).sort()).toEqual(['x-1', 'x-2']);
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+
+  it('does not send another user\'s or another group\'s pending create_group', async () => {
+    const p = await phone();
+    const stranger = userFromSignIn('user-mallory', null, { provider: 'google', subject: 'g-9' });
+    const theirs = newGroup(FIXTURE_GROUP_ID, 'ของคนอื่น', stranger, 1);
+    const elsewhere = newGroup('group-8', 'อีกกลุ่ม', somchai, 2);
+    await p.accounts.createGroup(theirs.membership, theirs.op);
+    await p.accounts.createGroup(elsewhere.membership, elsewhere.op);
+
+    await p.engine.sync();
+    expect(p.remote.calls).toEqual([]);
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
   });
 });

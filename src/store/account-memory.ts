@@ -32,4 +32,8 @@ export class MemoryAccountStore implements AccountStore {
   async pendingOps(): Promise<CreateGroupOp[]> {
     return [...this.ops];
   }
+
+  async completeOp(op: CreateGroupOp): Promise<void> {
+    this.ops = this.ops.filter((o) => !(o.op === op.op && o.groupId === op.groupId));
+  }
 }
