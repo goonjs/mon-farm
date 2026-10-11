@@ -101,7 +101,9 @@ export function AccountGate({
   const createGroup = async (user: User, name: string) => {
     const { membership, op } = newGroup(uuidv7(), name, user, Date.now());
     await accounts.createGroup(membership, op);
-    enter(user, await accounts.memberships());
+    // Not re-read: once written, a failed read must not look like a failed create
+    // (a retry would make a second group). One group only, until E02-S04.
+    enter(user, [membership]);
   };
 
   if (phase.kind === 'loading') return <Opening />;

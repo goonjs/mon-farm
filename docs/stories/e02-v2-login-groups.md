@@ -115,16 +115,16 @@ synced (as in #67); dev data only.
 
 ## Test plan (tests first)
 
-- [ ] Vitest: user identity linking; group entry decision (0 → create, 1 → in,
+- [x] Vitest: user identity linking; group entry decision (0 → create, 1 → in,
       2+ → pick); an append with no group fails and stores nothing; `groupId` and
       `actor.userId` present on events from every store from the design question.
-- [ ] jest-expo: sign-in screen states (signed out, offline first launch, error);
+- [x] jest-expo: sign-in screen states (signed out, offline first launch, error);
       group start (empty name, create, offline create); the gate shows nothing
       else before sign-in.
-- [ ] Rules tests on the emulator: creator writes group + own membership only.
-- [ ] Playwright with the Auth emulator: sign in, create group, reload offline,
+- [x] Rules tests on the emulator: creator writes group + own membership only.
+- [x] Playwright with the Auth emulator: sign in, create group, reload offline,
       still inside; screenshots of both screens, light and dark.
-- [ ] `npm run verify` green; independent review by a separate agent.
+- [x] `npm run verify` green; independent review by a separate agent.
 
 ## Not covered
 

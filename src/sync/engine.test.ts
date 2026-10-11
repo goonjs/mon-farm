@@ -62,6 +62,8 @@ describe('push (SYNC-1, SYNC-2)', () => {
     vi.spyOn(p.store, 'pending').mockResolvedValue([old as SaleEvent]);
     await p.engine.sync();
     expect(p.server.docs.size).toBe(0);
+    // ...and it is not counted as waiting: nothing can ever send it.
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
   });
 
   it('sends in batches of at most 500, one batch at a time, in device order', async () => {

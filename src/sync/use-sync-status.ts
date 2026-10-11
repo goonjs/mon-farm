@@ -8,6 +8,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 
 // Bare specifier — see the note in SaleProvider.tsx for why this matters.
+import { hasGroup } from '../core/scope';
 import { store } from '../store/store';
 import { syncStatusFrom, type SyncStatus } from './status';
 
@@ -18,7 +19,7 @@ export function useSyncStatus(): SyncStatus | null {
       let live = true;
       store
         .pending()
-        .then((events) => live && setStatus(syncStatusFrom({ pending: events.length })))
+        .then((events) => live && setStatus(syncStatusFrom({ pending: events.filter(hasGroup).length })))
         .catch(() => live && setStatus(null));
       return () => {
         live = false;

@@ -14,6 +14,11 @@ export class NoGroupError extends Error {
   }
 }
 
+/** False for an event recorded before groups existed (dev devices): it is never sent. */
+export function hasGroup(event: { readonly groupId?: unknown }): boolean {
+  return typeof event.groupId === 'string' && event.groupId !== '';
+}
+
 export function requireGroupId(groupId: unknown): GroupId {
   if (typeof groupId !== 'string' || groupId === '') throw new NoGroupError();
   return groupId;

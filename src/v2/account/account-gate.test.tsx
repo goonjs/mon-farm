@@ -261,6 +261,17 @@ describe('group start (E02-S02)', () => {
     expect(() => sessionGroupId()).toThrow();
   });
 
+  it('a failed read after the group was written still goes in, so a retry cannot make a second group', async () => {
+    const accounts = await signedInNoGroup();
+    accounts.memberships = async () => {
+      throw new Error('read dropped');
+    };
+    fireEvent.changeText(screen.getByTestId('group-name'), 'สวนใหม่');
+    await press('group-create');
+    expect(screen.getByTestId('app-inside')).toBeTruthy();
+    expect(await accounts.pendingOps()).toHaveLength(1);
+  });
+
   it('two presses in one frame create one group', async () => {
     const accounts = await signedInNoGroup();
     fireEvent.changeText(screen.getByTestId('group-name'), 'สวนใหม่');

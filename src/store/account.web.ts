@@ -57,15 +57,20 @@ export class WebAccountStore implements AccountStore {
   }
 
   async user(): Promise<User | null> {
-    try {
-      const db = await this.pick();
-      if (db instanceof MemoryAccountStore) return db.user();
-      const stored = await request(db.transaction('meta', 'readonly').objectStore('meta').get(SESSION));
-      if (stored === undefined) return this.unsaved;
-      if (isUser(stored)) return stored;
-      console.warn('Stored session is not a user; treating as signed out.', stored);
-    } catch (err) {
-      console.warn('Stored session could not be read; treating as signed out.', err);
+    // A dropped connection (Safari, a transient error) must not read as "never
+    // signed in" — that would ask for internet at the farm. Try once more first.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const db = await this.pick();
+        if (db instanceof MemoryAccountStore) return db.user();
+        const stored = await request(db.transaction('meta', 'readonly').objectStore('meta').get(SESSION));
+        if (stored === undefined) return this.unsaved;
+        if (isUser(stored)) return stored;
+        console.warn('Stored session is not a user; treating as signed out.', stored);
+        return this.unsaved;
+      } catch (err) {
+        if (attempt === 1) console.warn('Stored session could not be read; treating as signed out.', err);
+      }
     }
     return this.unsaved;
   }
