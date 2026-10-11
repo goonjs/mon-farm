@@ -35,12 +35,16 @@
 ## 5. Auth (E02-S01)
 
 - [x] เปิด Google sign-in provider (2026-10-03)
-- [ ] Authorized domains: โดเมน `*.web.app` / `*.firebaseapp.com` ของทั้ง 2 site
-  (preview channel ใช้ subdomain ของ site dev)
+- [x] Authorized domains (2026-10-11): `mon-farm-dev.web.app`, `mon-farm-dev.firebaseapp.com`,
+  `mon-farm-prod.web.app`, `mon-farm-prod.firebaseapp.com` (+ ค่าเริ่มต้น `localhost`, `mon-farmmate.*`)
+  Firebase ไม่รับ wildcard — URL ของ preview channel ต่อ PR ไม่ได้อยู่ในรายการ จึง**ล็อกอิน Google บน preview ไม่ได้**
+  (preview ใช้ bundle เดียวกับ e2e ที่ไม่มี config จริง) — ทดสอบล็อกอินที่ `mon-farm-dev.web.app`
 
 ## 6. OAuth client (E02-S01) — หลังมี keystore (D1: เจ้าของสร้างในเครื่องตัวเอง เก็บเป็น GitHub secret — E01-S06)
 
-- [ ] Web client: Firebase สร้างให้อัตโนมัติเมื่อเปิด Google provider — จด client ID
+- [x] Web client (2026-10-11): `626311237893-jqmthtpje2vnrsvrs77t3o3aohgl5bhb.apps.googleusercontent.com`
+  (Firebase สร้างให้อัตโนมัติ; ล็อกอินแบบ popup บนเว็บไม่ต้องใช้ค่านี้ในโค้ด)
+- [x] Web app "Mon FarmMate Web" ลงทะเบียนแล้ว (2026-10-11): appId `1:626311237893:web:7ff3feb8e5f307cc20676c`
 - [x] Android app ลงทะเบียนแล้ว (2026-10-03): package name `com.goonjs.monfarm`, nickname "Mon FarmMate"
 - [x] เพิ่ม fingerprint SHA-1 และ SHA-256 ของ release key แล้ว (2026-10-03; ค่าอยู่ใน ADR 0003) —
   คาดว่าไม่ต้องใช้ `google-services.json` (แอปใช้ Firebase JS SDK) — ยืนยันอีกครั้งตอนเลือก lib
@@ -77,7 +81,7 @@
 | project ID | `mon-farmmate` (หมายเลข 626311237893) |
 | ชื่อ site dev / prod | |
 | ชื่อ bucket dev / prod | |
-| web app config (`apiKey`, `authDomain`, `appId`, `messagingSenderId`) | ค่าเหล่านี้ไม่ใช่ความลับ |
+| web app config (`apiKey`, `authDomain`, `appId`, `messagingSenderId`) | ค่าเหล่านี้ไม่ใช่ความลับ — ใส่แล้วเป็น env `EXPO_PUBLIC_FIREBASE_PROJECT_ID` / `_API_KEY` / `_AUTH_DOMAIN` ในขั้น Build web ของ `deploy-dev.yml` และ `deploy-prod.yml` (2026-10-11; ค่าตรงในไฟล์ workflow ไม่ใช้ repo variable) |
 | GitHub variables ที่ตั้งแล้ว | `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` (ค่าไม่ใช่ความลับ) |
 
 ## 9. ต้องทบทวนหลังออกแบบ flow ทั้งหมดเสร็จ (Region / Storage)

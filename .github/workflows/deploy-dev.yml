@@ -34,6 +34,11 @@ jobs:
       - run: npm ci
 
       - name: Build web
+        env:
+          # Public web config for project mon-farmmate (not secrets; E02-S01).
+          EXPO_PUBLIC_FIREBASE_PROJECT_ID: mon-farmmate
+          EXPO_PUBLIC_FIREBASE_API_KEY: AIzaSyA2LpIyAf0Sae1q0O5I1mRTb75AEv6hPwY
+          EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: mon-farmmate.firebaseapp.com
         run: npm run build:web
 
       - uses: google-github-actions/auth@v2
