@@ -22,30 +22,30 @@ import {
   type Auth,
 } from 'firebase/auth';
 
-const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? 'demo-mon-farm';
+import { firebaseSettings } from './firebase-env';
+
+// What this build may talk to, decided in one tested place (`firebase-env.ts`): the
+// emulator variables count only for a `demo-` project, never for a real one.
+const settings = firebaseSettings({
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  authEmulatorHost: process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST,
+  firestoreEmulatorHost: process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST,
+  databaseId: process.env.EXPO_PUBLIC_FIREBASE_DATABASE_ID,
+});
+const { projectId } = settings;
 const config = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY ?? 'demo-api-key',
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ?? `${projectId}.firebaseapp.com`,
   projectId,
 };
 
-export const authEmulatorHost = process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST;
-/** `host:port` of the Firestore emulator, e.g. `127.0.0.1:8085`. */
-export const firestoreEmulatorHost = process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST;
+export const { authEmulatorHost, firestoreEmulatorHost, authAvailable, syncAvailable } = settings;
 /**
  * Which Firestore database this build uses: one config value, `(default)`
  * unless told otherwise (owner decision 2026-10-11), so a separate database or
  * project can be swapped in later without touching code.
  */
-export const firestoreDatabaseId = process.env.EXPO_PUBLIC_FIREBASE_DATABASE_ID || '(default)';
-
-/** A real project, or an emulator to stand in for one. */
-const isReal = !projectId.startsWith('demo-');
-
-/** Sign-in can run: a real project, or the Auth emulator. */
-export const authAvailable = isReal || !!authEmulatorHost;
-/** Sync can run: a real project, or the Firestore emulator. */
-export const syncAvailable = isReal || !!firestoreEmulatorHost;
+export const firestoreDatabaseId = settings.databaseId;
 
 export function firebaseApp(): FirebaseApp {
   return getApps()[0] ?? initializeApp(config);

@@ -15,7 +15,7 @@
     "lint": "eslint .",
     "test:core": "vitest run",
     "test:ui": "jest",
-    "build:web": "expo export --platform web --output-dir dist",
+    "build:web": "expo export --clear --platform web --output-dir dist",
     "serve:web": "node scripts/serve-dist.mjs",
     "test:e2e": "playwright test",
     "test:e2e:auth": "EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 expo export --platform web --output-dir dist && firebase emulators:exec --only auth --project demo-mon-farm \"E2E_AUTH_EMULATOR=1 playwright test e2e/auth-emulator.spec.ts --project=phone-portrait\"",
