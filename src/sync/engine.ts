@@ -72,22 +72,41 @@ export interface SyncStatus {
 export interface CursorStore {
   get(): Promise<number>;
   set(value: number): Promise<void>;
+  /**
+   * Ids of documents the server holds with other content than ours. The cursor moves past them, so
+   * without this a restart would forget the integrity error. Optional: a cursor that cannot keep them
+   * (tests) just keeps them in memory.
+   */
+  getCorrupt?(): Promise<EventId[]>;
+  setCorrupt?(ids: readonly EventId[]): Promise<void>;
 }
 
 export class MemoryCursor implements CursorStore {
   private value = 0;
+  private corrupt: EventId[] = [];
   async get() {
     return this.value;
   }
   async set(value: number) {
     this.value = value;
   }
+  async getCorrupt() {
+    return [...this.corrupt];
+  }
+  async setCorrupt(ids: readonly EventId[]) {
+    this.corrupt = [...ids];
+  }
 }
 
 /** The store's own cursor, so a restart resumes pulling instead of re-downloading the group. */
-export const storeCursor = (store: Pick<EventStore, 'syncCursor' | 'setSyncCursor'>, groupId: GroupId): CursorStore => ({
+export const storeCursor = (
+  store: Pick<EventStore, 'syncCursor' | 'setSyncCursor' | 'syncCorrupt' | 'setSyncCorrupt'>,
+  groupId: GroupId,
+): CursorStore => ({
   get: () => store.syncCursor(groupId),
   set: (value) => store.setSyncCursor(groupId, value),
+  getCorrupt: () => store.syncCorrupt(groupId),
+  setCorrupt: (ids) => store.setSyncCorrupt(groupId, ids),
 });
 
 export type SyncStore = Pick<EventStore, 'pending' | 'markSynced' | 'insertPulled'>;
@@ -132,6 +151,7 @@ export class SyncEngine {
   private rejected = new Set<EventId>();
   /** Pulled ids the server holds with other content than ours; shown until a retry finds them fixed. */
   private corrupt = new Set<EventId>();
+  private corruptLoaded = false;
 
   constructor(private readonly deps: SyncDeps) {
     this.ackMs = deps.ackTimeoutMs ?? ACK_TIMEOUT_MS;
@@ -176,6 +196,8 @@ export class SyncEngine {
     this.attempt = 0;
     this.stopped = false;
     this.rejected.clear();
+    await this.loadCorrupt();
+    const before = this.corrupt.size;
     for (const id of [...this.corrupt]) {
       const there = await withTimeout(this.deps.remote.fetch(id), this.ackMs).catch(() => undefined);
       if (!there) continue;
@@ -186,7 +208,18 @@ export class SyncEngine {
         if (!(err instanceof IntegrityError)) throw err;
       }
     }
+    if (this.corrupt.size !== before) await this.saveCorrupt();
     return this.sync();
+  }
+
+  private async loadCorrupt(): Promise<void> {
+    if (this.corruptLoaded) return;
+    for (const id of (await this.deps.cursor.getCorrupt?.()) ?? []) this.corrupt.add(id);
+    this.corruptLoaded = true;
+  }
+
+  private async saveCorrupt(): Promise<void> {
+    await this.deps.cursor.setCorrupt?.([...this.corrupt].sort());
   }
 
   /** Ids whose server copy differs from the stored one (integrity errors). */
@@ -205,6 +238,7 @@ export class SyncEngine {
 
   /** Documents from a realtime listener; same rules as a pull. */
   async ingest(docs: readonly PulledDoc[]): Promise<void> {
+    await this.loadCorrupt();
     await this.store(docs);
     if (this.corrupt.size) await this.settle({});
   }
@@ -226,6 +260,7 @@ export class SyncEngine {
       // Read the server before writing anything: offline this fails here (transient)
       // instead of leaving a write queued inside the SDK, and a database that does
       // not exist is an error now rather than a write that stays pending for ever.
+      await this.loadCorrupt();
       await withTimeout(this.deps.remote.check(), this.ackMs);
       try {
         // Until the group exists on the server there is nothing to send into and
@@ -374,17 +409,25 @@ export class SyncEngine {
   /** Stores docs, remembers corrupt ones, and moves the cursor forward only. */
   private async store(docs: readonly PulledDoc[]): Promise<void> {
     let newest = 0;
+    let corruptChanged = false;
     for (const doc of docs) {
       if (doc.receivedAt === null) continue;
       try {
         await this.deps.store.insertPulled(doc.event);
+        // The server copy matches now (it was fixed): no longer an error.
+        if (this.corrupt.delete(doc.event.id)) corruptChanged = true;
       } catch (err) {
         if (!(err instanceof IntegrityError)) throw err;
         // One bad document must not stall the whole group: skip it, report it.
+        if (!this.corrupt.has(doc.event.id)) corruptChanged = true;
         this.corrupt.add(doc.event.id);
       }
       newest = Math.max(newest, doc.receivedAt);
     }
+    // A stopped engine's page that arrives late writes nothing more (the next engine reads it again).
+    if (this.stopped) return;
+    // Remember the bad ids before the cursor moves past them, so a restart cannot lose them.
+    if (corruptChanged) await this.saveCorrupt();
     // Only after the local writes committed; re-read so a concurrent run's
     // newer cursor is never lowered.
     const current = await this.deps.cursor.get();

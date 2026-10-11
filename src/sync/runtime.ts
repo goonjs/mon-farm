@@ -18,7 +18,7 @@ import type { EventStore } from '../store/store';
 
 export interface SyncRuntimeDeps {
   readonly scope: Scope;
-  readonly store: SyncStore & Pick<EventStore, 'syncCursor' | 'setSyncCursor'>;
+  readonly store: SyncStore & Pick<EventStore, 'syncCursor' | 'setSyncCursor' | 'syncCorrupt' | 'setSyncCorrupt'>;
   readonly accounts: Pick<AccountStore, 'pendingOps' | 'completeOp'>;
   readonly remote: SyncRemote;
   /** A local write happened; returns the unsubscribe. */

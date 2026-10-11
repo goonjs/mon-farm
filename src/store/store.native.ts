@@ -24,7 +24,7 @@
 import * as SQLite from 'expo-sqlite';
 
 import { checkAppend, checkPulled, type DeviceState } from './append-rule';
-import { cursorFor } from './sync-cursor';
+import { corruptFor, cursorFor } from './sync-cursor';
 import type { EventStore } from './store';
 import { MASTER_SCOPE } from '../core/master';
 import type { EventId, GroupId, SaleEvent } from '../core/types';
@@ -213,6 +213,28 @@ export class SqliteStore implements EventStore {
         `INSERT INTO meta (key, value) VALUES ('syncCursor', ?)
          ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
         JSON.stringify({ groupId, value }),
+      );
+    });
+  }
+
+  async syncCorrupt(groupId: GroupId): Promise<EventId[]> {
+    const db = await this.open();
+    const row = await db.getFirstAsync<{ value: string }>(`SELECT value FROM meta WHERE key = 'syncCorrupt'`);
+    if (!row) return [];
+    try {
+      return corruptFor(JSON.parse(row.value), groupId);
+    } catch {
+      return [];
+    }
+  }
+
+  setSyncCorrupt(groupId: GroupId, ids: readonly EventId[]): Promise<void> {
+    return this.serial(async () => {
+      const db = await this.open();
+      await db.runAsync(
+        `INSERT INTO meta (key, value) VALUES ('syncCorrupt', ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+        JSON.stringify({ groupId, ids }),
       );
     });
   }

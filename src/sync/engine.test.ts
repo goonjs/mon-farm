@@ -6,7 +6,7 @@ import type { AcceptEvent, SaleEvent } from '../core/types';
 import { userFromSignIn } from '../core/user';
 import { MemoryAccountStore } from '../store/account-memory';
 import { MemoryStore } from '../store/memory-store';
-import { backoffMs, FIRST_PULL_DONE, MemoryCursor, PULL_OVERLAP_MS, SyncEngine } from './engine';
+import { backoffMs, FIRST_PULL_DONE, MemoryCursor, PULL_OVERLAP_MS, storeCursor, SyncEngine } from './engine';
 import { RemoteError } from './remote';
 import { FakeRemote, FakeServer } from './fake-remote';
 
@@ -670,6 +670,72 @@ describe('pulling a big group (review A F5)', () => {
 
   it('re-reads no more than two minutes behind the cursor', () => {
     expect(PULL_OVERLAP_MS).toBeLessThanOrEqual(120_000);
+  });
+});
+
+describe('corrupt documents survive a restart (follow-up 3)', () => {
+  const T = 1_800_000_000_000; // stamps far past the 2-minute overlap, so a restart does not re-read them
+
+  async function corruptGroup() {
+    const p = await phone();
+    const persisted = storeCursor(p.store, SCOPE.groupId);
+    const [mine] = new LogBuilder('s1', 'dev-x').accept('p1').build() as AcceptEvent[];
+    await p.store.insertPulled(mine);
+    const [good] = new LogBuilder('s2', 'dev-y').accept('p1').build();
+    p.server.docs.set(mine.id, { event: { ...mine, netG: 1 }, receivedAt: T });
+    p.server.docs.set(good.id, { event: good, receivedAt: T + 10 });
+    const engine = () =>
+      new SyncEngine({ store: p.store, accounts: p.accounts, scope: SCOPE, remote: p.remote, cursor: persisted, random: () => 0 });
+    return { p, mine, engine, persisted };
+  }
+
+  it('the id is stored with the group; a new engine on the same store still shows the integrity error', async () => {
+    const { p, mine, engine, persisted } = await corruptGroup();
+    const first = engine();
+    await first.sync();
+    expect(first.integrityIds()).toEqual([mine.id]);
+    expect(await p.store.syncCorrupt(SCOPE.groupId)).toEqual([mine.id]);
+    expect(await persisted.get()).toBe(T + 10); // the cursor did move past it
+
+    const restarted = engine(); // app restarted: nothing in memory
+    await restarted.sync();
+    expect(restarted.status()).toMatchObject({ state: 'error', error: 'integrity' });
+    expect(restarted.integrityIds()).toEqual([mine.id]);
+  });
+
+  it('retry() on a restarted engine finds it fixed on the server and forgets it for good', async () => {
+    const { p, mine, engine } = await corruptGroup();
+    await engine().sync();
+    p.server.docs.set(mine.id, { event: mine, receivedAt: T + 20 });
+
+    const restarted = engine();
+    await restarted.retry();
+    expect(restarted.status().state).toBe('synced');
+    expect(await p.store.syncCorrupt(SCOPE.groupId)).toEqual([]);
+    const again = engine();
+    await again.sync();
+    expect(again.status().state).toBe('synced');
+  });
+});
+
+describe('a stopped engine writes no cursor (follow-up 5)', () => {
+  it('an in-flight page that comes back after stop() leaves the cursor alone', async () => {
+    const p = await phone();
+    const [other] = new LogBuilder('s9', 'dev-other').accept('p1').build();
+    p.server.docs.set(other.id, { event: other, receivedAt: 5_000_000 });
+    let release: () => void = () => undefined;
+    const real = p.remote.pull.bind(p.remote);
+    p.remote.pull = async (...args: Parameters<typeof real>) => {
+      const page = await real(...args);
+      await new Promise<void>((resolve) => (release = resolve));
+      return page;
+    };
+    const run = p.engine.sync();
+    await vi.advanceTimersByTimeAsync(0);
+    p.engine.stop();
+    release();
+    await run;
+    expect(await p.cursor.get()).toBe(0);
   });
 });
 

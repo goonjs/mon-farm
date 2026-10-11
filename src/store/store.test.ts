@@ -219,7 +219,25 @@ describe.each(adapters)('%s — sync cursor (E01-S09)', (_name, makeStore) => {
   });
 });
 
+describe.each(adapters)('%s — corrupt document ids (follow-up 3)', (_name, makeStore) => {
+  it('starts empty, keeps what it is given, and is only right for its own group', async () => {
+    const store = makeStore();
+    expect(await store.syncCorrupt('g1')).toEqual([]);
+    await store.setSyncCorrupt('g1', ['a', 'b']);
+    expect(await store.syncCorrupt('g1')).toEqual(['a', 'b']);
+    expect(await store.syncCorrupt('g2')).toEqual([]);
+    await store.setSyncCorrupt('g1', []);
+    expect(await store.syncCorrupt('g1')).toEqual([]);
+  });
+});
+
 describe('IndexedDbStore — what only a persistent store must do', () => {
+  it('corrupt ids survive a reopen', async () => {
+    const factory = new IDBFactory();
+    await new IndexedDbStore(factory).setSyncCorrupt('g1', ['x']);
+    expect(await new IndexedDbStore(factory).syncCorrupt('g1')).toEqual(['x']);
+  });
+
   it('a reopened store resumes the device and its sequence (force-close, NFR-2)', async () => {
     const factory = new IDBFactory();
     const first = new IndexedDbStore(factory);
