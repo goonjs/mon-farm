@@ -47,6 +47,16 @@ export const PULL_PAGE = 500;
 export const PULL_TIMEOUT_MS = 60_000;
 export const APPEND_DEBOUNCE_MS = 2_000;
 /**
+ * After a permanent error (denied, invalid, integrity ...) nothing else would ever try again on its own,
+ * yet the cause is often fixed outside the app (rules deployed, database created, membership added).
+ * So one full attempt every five minutes (plus up to a minute of jitter), never faster; each is a
+ * check, a pull and the sends, and stops with the engine.
+ */
+export const SLOW_RETRY_MS = 5 * 60_000;
+export const SLOW_RETRY_JITTER_MS = 60_000;
+/** The app coming to the foreground retries a permanent error at once, but not more often than this. */
+export const NUDGE_MIN_MS = 30_000;
+/**
  * The cursor of a device that has pulled but found nothing to remember (a new,
  * empty group): 0 means "never pulled", and the pull-from-the-start rule
  * (`since` 0) is unchanged. The points wizard waits for it (E01-S09, D-83).
@@ -120,6 +130,8 @@ export interface SyncDeps {
   readonly cursor: CursorStore;
   /** Called after every successful pull (and so after the first one). */
   readonly onPulled?: () => void;
+  /** Called when the group's `create_group` was sent and cleared: the points wizard stops treating it as only-here. */
+  readonly onChanged?: () => void;
   /** How long to wait for a server ack before treating it as lost; tests shorten it. */
   readonly ackTimeoutMs?: number;
   /** Documents per pull page; tests make it small. */
@@ -143,6 +155,10 @@ export class SyncEngine {
   private attempt = 0;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private pokeTimer: ReturnType<typeof setTimeout> | null = null;
+  private slowTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The last run ended in a permanent error: the slow retry and `nudge()` apply. */
+  private permanentFailure = false;
+  private lastAttemptAt = 0;
   private stopped = false;
   private readonly ackMs: number;
   private readonly pullMs: number;
@@ -236,6 +252,17 @@ export class SyncEngine {
     }, APPEND_DEBOUNCE_MS);
   }
 
+  /**
+   * The app came to the foreground. Retries a permanent error now (it may have been fixed while the
+   * app was away), at most every `NUDGE_MIN_MS`; does nothing otherwise, so it is safe on every
+   * `visibilitychange`.
+   */
+  nudge(): void {
+    if (this.stopped || !this.permanentFailure || this.running) return;
+    if (Date.now() - this.lastAttemptAt < NUDGE_MIN_MS) return;
+    this.sync().catch(() => undefined);
+  }
+
   /** Documents from a realtime listener; same rules as a pull. */
   async ingest(docs: readonly PulledDoc[]): Promise<void> {
     await this.loadCorrupt();
@@ -248,13 +275,40 @@ export class SyncEngine {
     this.stopped = true;
     if (this.retryTimer) clearTimeout(this.retryTimer);
     if (this.pokeTimer) clearTimeout(this.pokeTimer);
-    this.retryTimer = this.pokeTimer = null;
+    if (this.slowTimer) clearTimeout(this.slowTimer);
+    this.retryTimer = this.pokeTimer = this.slowTimer = null;
   }
 
   private async runOnce(): Promise<void> {
     if (this.stopped) return;
     if (this.retryTimer) clearTimeout(this.retryTimer);
-    this.retryTimer = null;
+    if (this.slowTimer) clearTimeout(this.slowTimer);
+    this.retryTimer = this.slowTimer = null;
+    this.permanentFailure = false;
+    this.lastAttemptAt = Date.now();
+    try {
+      await this.runBody();
+    } finally {
+      this.armSlowRetry();
+    }
+  }
+
+  /**
+   * Rejected events are not re-included by the slow retry: an event the server called invalid stays
+   * invalid unless it is edited, and re-sending it costs one write and one read each time. Only
+   * `retry()` (the owner's action) or a restart tries them again. What the slow retry does re-test
+   * is everything else that can be fixed from outside: rules, database, membership, session.
+   */
+  private armSlowRetry(): void {
+    if (this.stopped || !this.permanentFailure || this.retryTimer || this.slowTimer) return;
+    const delay = SLOW_RETRY_MS + Math.floor((this.deps.random ?? Math.random)() * SLOW_RETRY_JITTER_MS);
+    this.slowTimer = setTimeout(() => {
+      this.slowTimer = null;
+      this.sync().catch(() => undefined); // a failure arms the next one itself
+    }, delay);
+  }
+
+  private async runBody(): Promise<void> {
     let pushError: SyncError | undefined;
     try {
       // Read the server before writing anything: offline this fails here (transient)
@@ -321,6 +375,7 @@ export class SyncEngine {
         throw err;
       }
       await this.deps.accounts.completeOp(op);
+      this.deps.onChanged?.();
     }
   }
 
@@ -441,6 +496,7 @@ export class SyncEngine {
     const pending =
       waitingCount(this.deps.scope, await this.deps.store.pending(), await this.deps.accounts.pendingOps()) + media;
     const kind = outcome.kind ?? (this.corrupt.size ? 'integrity' : this.rejected.size ? 'invalid' : undefined);
+    if (outcome.kind) this.permanentFailure = true;
     const next: SyncStatus = kind
       ? { state: 'error', pending, error: kind }
       : { state: pending > 0 || outcome.transient ? 'pending' : 'synced', pending };

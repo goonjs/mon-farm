@@ -30,6 +30,7 @@ async function app({ online = true } = {}) {
   const remote = new FakeRemote();
   const appended = signal();
   const network = signal();
+  const foreground = signal();
   let up = online;
   const start = () =>
     startSync({
@@ -39,10 +40,11 @@ async function app({ online = true } = {}) {
       remote,
       onAppended: appended.on,
       onOnline: network.on,
+      onForeground: foreground.on,
       isOnline: () => up,
     });
   const { deviceId } = await store.device();
-  return { store, accounts, remote, appended, network, start, deviceId, setOnline: (v: boolean) => (up = v) };
+  return { store, accounts, remote, appended, network, foreground, start, deviceId, setOnline: (v: boolean) => (up = v) };
 }
 
 beforeEach(() => {
@@ -113,6 +115,25 @@ describe('startSync (E01-S09 wiring)', () => {
     await vi.advanceTimersByTimeAsync(3_000); // first backoff: 2 s plus up to 1 s jitter
     expect(handle.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
     handle.stop();
+  });
+
+  it('coming back to the foreground retries a permanent error by itself, and stop() unsubscribes', async () => {
+    const a = await app();
+    for (const e of new LogBuilder('s1', a.deviceId).accept('p1').build()) await a.store.append(e);
+    a.remote.denied = true;
+    const handle = a.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(handle.engine.status()).toMatchObject({ state: 'error', error: 'denied' });
+
+    a.remote.denied = false; // fixed while the app was away
+    await vi.advanceTimersByTimeAsync(60_000);
+    a.foreground.fire();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(handle.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+
+    expect(a.foreground.count()).toBe(1);
+    handle.stop();
+    expect(a.foreground.count()).toBe(0);
   });
 
   it('stop() leaves nothing listening and cancels pending retries', async () => {

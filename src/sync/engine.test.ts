@@ -739,6 +739,107 @@ describe('a stopped engine writes no cursor (follow-up 5)', () => {
   });
 });
 
+describe('telling the wizard the group reached the server (follow-up 4)', () => {
+  it('completing the create_group op emits onChanged, so the wizard gate re-reads', async () => {
+    const p = await phone();
+    const { membership, op } = newGroup(FIXTURE_GROUP_ID, 'สวนบ้านนา', somchai, 1_790_000_000_000);
+    await p.accounts.createGroup(membership, op);
+    const onChanged = vi.fn();
+    const engine = new SyncEngine({ store: p.store, accounts: p.accounts, scope: SCOPE, remote: p.remote, cursor: p.cursor, onChanged, random: () => 0 });
+    await engine.sync();
+    expect(await p.accounts.pendingOps()).toEqual([]);
+    expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('slow retry of a permanent error (follow-up 2)', () => {
+  const SLOW = 5 * 60_000;
+
+  it('an error clears itself once the cause is fixed, within about five minutes and with no trigger', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.denied = true;
+    await p.engine.sync();
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'denied' });
+
+    p.remote.denied = false; // rules deployed, membership added ...
+    await vi.advanceTimersByTimeAsync(SLOW - 1_000);
+    expect(p.engine.status().state).toBe('error'); // not before its time
+    await vi.advanceTimersByTimeAsync(2_000 + 60_000); // ... plus the jitter
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+    expect(p.server.docs.size).toBe(1);
+  });
+
+  it('never a hot loop: while the cause stays, one attempt per ~5 minutes, and none after stop()', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.denied = true;
+    await p.engine.sync();
+    const first = p.remote.checks;
+    await vi.advanceTimersByTimeAsync(30 * 60_000);
+    const runs = (p.remote.checks - first) / 2; // two reads per run here: the check, then the "can I read the group" probe
+    expect(runs).toBeGreaterThanOrEqual(4);
+    expect(runs).toBeLessThanOrEqual(6);
+
+    p.engine.stop();
+    const after = p.remote.checks;
+    await vi.advanceTimersByTimeAsync(30 * 60_000);
+    expect(p.remote.checks).toBe(after);
+  });
+
+  it('a transient failure does not use it (its own backoff does), and a clean run schedules nothing', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.offline = true;
+    await p.engine.sync();
+    p.remote.offline = false;
+    await vi.advanceTimersByTimeAsync(5_000); // backoff (2 s) sends it
+    expect(p.engine.status().state).toBe('synced');
+    const checks = p.remote.checks;
+    await vi.advanceTimersByTimeAsync(30 * 60_000);
+    expect(p.remote.checks).toBe(checks);
+  });
+
+  it('keeps skipping a rejected event: only retry() or a restart sends it again', async () => {
+    const p = await phone();
+    const [bad] = new LogBuilder('s1', p.deviceId).accept('p1').build();
+    p.remote.invalidIds.add(bad.id);
+    await record(p.store, [bad]);
+    await p.engine.sync();
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid' });
+    const sent = p.remote.batches.length;
+    await vi.advanceTimersByTimeAsync(30 * 60_000);
+    expect(p.remote.batches.length).toBe(sent); // not one more push for it, and no run loop for it either
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid' });
+  });
+
+  it('nudge() (app back in the foreground) retries a permanent error at once, but not more than every 30 s', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.denied = true;
+    await p.engine.sync();
+    p.remote.denied = false;
+
+    p.engine.nudge(); // too soon after the attempt that just failed
+    await vi.advanceTimersByTimeAsync(0);
+    expect(p.engine.status().state).toBe('error');
+
+    await vi.advanceTimersByTimeAsync(31_000);
+    p.engine.nudge();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+
+  it('nudge() does nothing when there is no permanent error', async () => {
+    const p = await phone();
+    await p.engine.sync();
+    const checks = p.remote.checks;
+    p.engine.nudge();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(p.remote.checks).toBe(checks);
+  });
+});
+
 describe('stop() (review B M2)', () => {
   it('stops an in-flight run: nothing more is sent or pulled and nobody is told after it', async () => {
     const p = await phone();

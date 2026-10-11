@@ -27,6 +27,10 @@ export interface SyncRuntimeDeps {
   readonly onOnline: (listener: () => void) => () => void;
   /** A pull completed (the first one unlocks the points wizard). */
   readonly onPulled?: () => void;
+  /** Something the points wizard waits on changed without a pull (the group reached the server). */
+  readonly onChanged?: () => void;
+  /** The app came to the foreground (web: the tab became visible); returns the unsubscribe. */
+  readonly onForeground?: (listener: () => void) => () => void;
   /** False while the device knows it has no network: an attempt would only wait out its timeout. */
   readonly isOnline: () => boolean;
 }
@@ -45,6 +49,7 @@ export function startSync(deps: SyncRuntimeDeps): SyncHandle {
     remote: deps.remote,
     cursor: storeCursor(deps.store, deps.scope.groupId),
     onPulled: deps.onPulled,
+    onChanged: deps.onChanged,
   });
   // A failed run has already scheduled its own retry; nothing to do with the rejection.
   const now = () => {
@@ -55,6 +60,8 @@ export function startSync(deps: SyncRuntimeDeps): SyncHandle {
       if (deps.isOnline()) engine.poke();
     }),
     deps.onOnline(now),
+    // Coming back to the app retries a permanent error (the engine throttles it).
+    ...(deps.onForeground ? [deps.onForeground(() => engine.nudge())] : []),
   ];
   now();
   let stopped = false;

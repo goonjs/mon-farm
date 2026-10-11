@@ -25,6 +25,16 @@ const onOnline = (listener: () => void) => {
   return () => target.removeEventListener?.('online', listener);
 };
 
+/** The tab became visible again (web); native has no `document`, and there the client is not built. */
+const onForeground = (listener: () => void) => {
+  const doc = (globalThis as { document?: { visibilityState?: string; addEventListener?: (t: string, l: () => void) => void; removeEventListener?: (t: string, l: () => void) => void } }).document;
+  const handler = () => {
+    if (doc?.visibilityState === 'visible') listener();
+  };
+  doc?.addEventListener?.('visibilitychange', handler);
+  return () => doc?.removeEventListener?.('visibilitychange', handler);
+};
+
 const isOnline = () => globalThis.navigator?.onLine !== false;
 
 export function useSync(
@@ -50,6 +60,8 @@ export function useSync(
           onAppended,
           onOnline,
           onPulled: emitSyncChanged,
+          onChanged: emitSyncChanged,
+          onForeground,
           isOnline,
         });
         handle.engine.subscribe(setEngineStatus);
