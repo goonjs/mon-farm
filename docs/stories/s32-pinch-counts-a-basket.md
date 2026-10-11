@@ -8,7 +8,7 @@ notes.**
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: `docs/epics/e04-sale-weighing.md`
 - Related PRD section(s): FR-5.5, FR-5.7, F-9.7 (physical single-finger
   design), Open question 1 (counter screen error-prevention)
 - Depends on / follows: S8 (hold to count), and directly on the

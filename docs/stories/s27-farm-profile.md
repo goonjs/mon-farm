@@ -10,7 +10,7 @@ and the owner's word. See Code review.
 
 ## Context
 
-- Epic: `docs/epics/epic-2-second-field-round.md` (item 6, S27)
+- Epic: `docs/epics/e03-master-data.md`
 - Related PRD section(s): FR-1.4 (zones and the contract that governs them),
   FR-3 (piles, tare and standard net), FR-10.3 (historical reporting — the
   part this story makes possible but does not deliver), NFR-1 (usable with no

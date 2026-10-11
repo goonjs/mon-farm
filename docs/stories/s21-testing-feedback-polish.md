@@ -5,7 +5,7 @@ push to CI and an independent review, neither authorized.
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: Legacy (PRD v0.4) — ไม่มี epic v1.0 รองรับโดยตรง รอเจ้าของตัดสิน; ดู `docs/prd.md` NFR
 - Related PRD section(s): F-7 (feedback loudness), FR-6, FR-12
 - Depends on: S13 (close lifecycle — this modifies its confirm flows), S18
   (settlement screen — this modifies its navigation)

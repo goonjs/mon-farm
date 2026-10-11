@@ -6,7 +6,7 @@ which is authorized.
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: `docs/epics/e01-foundation-sync.md`
 - Architecture: `docs/architecture.md`
 
 ## Description

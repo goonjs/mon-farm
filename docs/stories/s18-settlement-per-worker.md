@@ -5,7 +5,7 @@ push to CI and an independent review, neither authorized.
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: `docs/epics/e05-reconciliation-settlement.md`
 - Related PRD section(s): FR-7.4, FR-8.6
 - Design reference: `docs/ux/mvp-screens.html` screen 7 (predates per-zone
   contracts; this story is the refresh referenced in its own fixture

@@ -5,7 +5,7 @@ push to CI and an independent review, neither authorized.
 
 ## Context
 
-- Epic: `docs/epics/epic-1-run-and-settle-one-sale.md`
+- Epic: `docs/epics/e04-sale-weighing.md`
 - Related PRD section(s): FR-1 (partial), FR-2.1–2.4, FR-4, FR-8.5
 - Depends on: S15 (per-zone contracts), S16 (people picker), S17 (the stub this replaces)
 - Design reference: `docs/ux/mvp-screens.html` screen 1, adapted for per-zone
