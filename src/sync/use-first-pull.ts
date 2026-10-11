@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { sessionGroupId } from '../store/session';
 import { store } from '../store/store';
 import { onSyncChanged, syncMode } from './changed';
 import { firstPullDone } from './first-pull';
@@ -21,7 +22,7 @@ export function useFirstPullDone(): boolean {
         return;
       }
       store
-        .syncCursor()
+        .syncCursor(sessionGroupId())
         .then((cursor) => live && setDone(firstPullDone(mode, cursor)))
         .catch(() => live && setDone(false));
     };

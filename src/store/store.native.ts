@@ -24,9 +24,10 @@
 import * as SQLite from 'expo-sqlite';
 
 import { checkAppend, checkPulled, type DeviceState } from './append-rule';
+import { cursorFor } from './sync-cursor';
 import type { EventStore } from './store';
 import { MASTER_SCOPE } from '../core/master';
-import type { EventId, SaleEvent } from '../core/types';
+import type { EventId, GroupId, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
 
 const DB_NAME = 'mon-farm-v1.db';
@@ -194,19 +195,24 @@ export class SqliteStore implements EventStore {
     });
   }
 
-  async syncCursor(): Promise<number> {
+  async syncCursor(groupId: GroupId): Promise<number> {
     const db = await this.open();
     const row = await db.getFirstAsync<{ value: string }>(`SELECT value FROM meta WHERE key = 'syncCursor'`);
-    return row ? Number(row.value) : 0;
+    if (!row) return 0;
+    try {
+      return cursorFor(JSON.parse(row.value), groupId); // an old bare number parses to a number: read as 0
+    } catch {
+      return 0;
+    }
   }
 
-  setSyncCursor(value: number): Promise<void> {
+  setSyncCursor(groupId: GroupId, value: number): Promise<void> {
     return this.serial(async () => {
       const db = await this.open();
       await db.runAsync(
         `INSERT INTO meta (key, value) VALUES ('syncCursor', ?)
          ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-        String(value),
+        JSON.stringify({ groupId, value }),
       );
     });
   }

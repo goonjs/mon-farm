@@ -479,7 +479,7 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
   describe('first pull (E01-S09: two offline phones must not both create "จุด 1")', () => {
     afterEach(async () => {
       setSyncMode('off');
-      await mockStore.setSyncCursor(0);
+      await mockStore.setSyncCursor('group-1', 0);
     });
 
     async function toNamesPage() {
@@ -496,7 +496,7 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     }
 
     it('while sync is running and nothing has been pulled yet, says so and creates nothing', async () => {
-      await mockStore.setSyncCursor(0);
+      await mockStore.setSyncCursor('group-1', 0);
       setSyncMode('on');
       const m = await toNamesPage();
       expect(screen.getByTestId('wizard-wait-pull')).toBeTruthy();
@@ -506,11 +506,11 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     });
 
     it('creates once the first pull has finished, without leaving the screen', async () => {
-      await mockStore.setSyncCursor(0);
+      await mockStore.setSyncCursor('group-1', 0);
       setSyncMode('on');
       const m = await toNamesPage();
       await act(async () => {
-        await mockStore.setSyncCursor(1); // the engine's first pull found an empty group
+        await mockStore.setSyncCursor('group-1', 1); // the engine's first pull found an empty group
         emitSyncChanged();
       });
       await flush();

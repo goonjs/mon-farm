@@ -1,8 +1,9 @@
 import { compareEvents } from '../core/order';
 import { MASTER_SCOPE } from '../core/master';
-import type { EventId, SaleEvent } from '../core/types';
+import type { EventId, GroupId, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
 import { checkAppend, checkPulled, type DeviceState } from './append-rule';
+import { cursorFor, type StoredCursor } from './sync-cursor';
 import type { EventStore } from './store';
 
 /**
@@ -12,7 +13,7 @@ import type { EventStore } from './store';
 export class MemoryStore implements EventStore {
   private rows = new Map<EventId, SaleEvent>();
   private synced = new Set<EventId>();
-  private cursor = 0;
+  private cursor: StoredCursor | null = null;
   private state: DeviceState = { deviceId: uuidv7(), nextDeviceSeq: 1 };
 
   async append(event: SaleEvent): Promise<void> {
@@ -41,12 +42,12 @@ export class MemoryStore implements EventStore {
     this.synced.add(event.id);
   }
 
-  async syncCursor(): Promise<number> {
-    return this.cursor;
+  async syncCursor(groupId: GroupId): Promise<number> {
+    return cursorFor(this.cursor, groupId);
   }
 
-  async setSyncCursor(value: number): Promise<void> {
-    this.cursor = value;
+  async setSyncCursor(groupId: GroupId, value: number): Promise<void> {
+    this.cursor = { groupId, value };
   }
 
   async listSales(): Promise<string[]> {

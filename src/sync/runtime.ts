@@ -43,7 +43,7 @@ export function startSync(deps: SyncRuntimeDeps): SyncHandle {
     accounts: deps.accounts,
     scope: deps.scope,
     remote: deps.remote,
-    cursor: storeCursor(deps.store),
+    cursor: storeCursor(deps.store, deps.scope.groupId),
     onPulled: deps.onPulled,
   });
   // A failed run has already scheduled its own retry; nothing to do with the rejection.

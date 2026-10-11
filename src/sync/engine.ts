@@ -24,7 +24,7 @@
 import { canonicalJson } from '../core/canonical';
 import type { CreateGroupOp } from '../core/group';
 import { belongsTo, waitingCount, type Scope } from '../core/scope';
-import type { EventId, SaleEvent } from '../core/types';
+import type { EventId, GroupId, SaleEvent } from '../core/types';
 import type { AccountStore } from '../store/account';
 import { IntegrityError } from '../store/errors';
 import type { EventStore } from '../store/store';
@@ -76,9 +76,9 @@ export class MemoryCursor implements CursorStore {
 }
 
 /** The store's own cursor, so a restart resumes pulling instead of re-downloading the group. */
-export const storeCursor = (store: Pick<EventStore, 'syncCursor' | 'setSyncCursor'>): CursorStore => ({
-  get: () => store.syncCursor(),
-  set: (value) => store.setSyncCursor(value),
+export const storeCursor = (store: Pick<EventStore, 'syncCursor' | 'setSyncCursor'>, groupId: GroupId): CursorStore => ({
+  get: () => store.syncCursor(groupId),
+  set: (value) => store.setSyncCursor(groupId, value),
 });
 
 export type SyncStore = Pick<EventStore, 'pending' | 'markSynced' | 'insertPulled'>;

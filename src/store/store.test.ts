@@ -5,6 +5,7 @@ import { LogBuilder } from '../core/fixtures';
 import type { AcceptEvent } from '../core/types';
 import { canonicalJson } from '../core/canonical';
 import { IntegrityError, MemoryStore, type EventStore } from './store';
+import { openDb } from './idb';
 import { IndexedDbStore } from './store.web';
 
 const UUIDV7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -203,9 +204,18 @@ describe.each(adapters)('%s — insertPulled (E01-S09)', (_name, makeStore) => {
 describe.each(adapters)('%s — sync cursor (E01-S09)', (_name, makeStore) => {
   it('starts at 0 and keeps what it is given', async () => {
     const store = makeStore();
-    expect(await store.syncCursor()).toBe(0);
-    await store.setSyncCursor(1_234);
-    expect(await store.syncCursor()).toBe(1_234);
+    expect(await store.syncCursor('g1')).toBe(0);
+    await store.setSyncCursor('g1', 1_234);
+    expect(await store.syncCursor('g1')).toBe(1_234);
+  });
+
+  it('is only right for the group it was stored for: another group starts from 0 (no silent skipping)', async () => {
+    const store = makeStore();
+    await store.setSyncCursor('g1', 1_234);
+    expect(await store.syncCursor('g2')).toBe(0);
+    await store.setSyncCursor('g2', 99);
+    expect(await store.syncCursor('g2')).toBe(99);
+    expect(await store.syncCursor('g1')).toBe(0); // one slot: the newer group replaced it, a re-download is safe
   });
 });
 
@@ -226,7 +236,22 @@ describe('IndexedDbStore — what only a persistent store must do', () => {
 
   it('a reopened store resumes pulling where it stopped, not from the start', async () => {
     const factory = new IDBFactory();
-    await new IndexedDbStore(factory).setSyncCursor(42);
-    expect(await new IndexedDbStore(factory).syncCursor()).toBe(42);
+    await new IndexedDbStore(factory).setSyncCursor('g1', 42);
+    expect(await new IndexedDbStore(factory).syncCursor('g1')).toBe(42);
+  });
+
+  it('a cursor stored before it was scoped to a group (a bare number) reads as 0: one safe re-download', async () => {
+    const factory = new IDBFactory();
+    const store = new IndexedDbStore(factory);
+    await store.device();
+    const db = await openDb(factory);
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction('meta', 'readwrite');
+      tx.objectStore('meta').put(42, 'syncCursor');
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+    expect(await new IndexedDbStore(factory).syncCursor('g1')).toBe(0);
   });
 });

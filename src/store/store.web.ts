@@ -19,10 +19,11 @@ import { markNotDurable } from './durability';
 import { IntegrityError } from './errors';
 import { emitAppended } from './append-signal';
 import { MemoryStore } from './memory-store';
+import { cursorFor, type StoredCursor } from './sync-cursor';
 import type { EventStore } from './store';
 import { compareEvents } from '../core/order';
 import { MASTER_SCOPE } from '../core/master';
-import type { EventId, SaleEvent } from '../core/types';
+import type { EventId, GroupId, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
 
 /**
@@ -196,16 +197,15 @@ export class IndexedDbStore implements EventStore {
   }
 
   // In `meta` under its own key: no schema change, no version bump.
-  async syncCursor(): Promise<number> {
+  async syncCursor(groupId: GroupId): Promise<number> {
     const db = await this.open();
-    const v = await request(db.transaction('meta', 'readonly').objectStore('meta').get('syncCursor'));
-    return typeof v === 'number' ? v : 0;
+    return cursorFor(await request(db.transaction('meta', 'readonly').objectStore('meta').get('syncCursor')), groupId);
   }
 
-  async setSyncCursor(value: number): Promise<void> {
+  async setSyncCursor(groupId: GroupId, value: number): Promise<void> {
     const db = await this.open();
     const tx = db.transaction('meta', 'readwrite');
-    tx.objectStore('meta').put(value, 'syncCursor');
+    tx.objectStore('meta').put({ groupId, value } satisfies StoredCursor, 'syncCursor');
     await committed(tx);
   }
 
@@ -287,11 +287,11 @@ export class WebStore implements EventStore {
   async insertPulled(event: SaleEvent) {
     return (await this.pick()).insertPulled(event);
   }
-  async syncCursor() {
-    return (await this.pick()).syncCursor();
+  async syncCursor(groupId: GroupId) {
+    return (await this.pick()).syncCursor(groupId);
   }
-  async setSyncCursor(value: number) {
-    return (await this.pick()).setSyncCursor(value);
+  async setSyncCursor(groupId: GroupId, value: number) {
+    return (await this.pick()).setSyncCursor(groupId, value);
   }
   async listSales() {
     return (await this.pick()).listSales();

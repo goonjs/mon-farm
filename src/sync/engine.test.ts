@@ -421,9 +421,16 @@ describe('storeCursor', () => {
   it('keeps the pull cursor in the store, so a restart resumes instead of re-downloading', async () => {
     const { storeCursor } = await import('./engine');
     const store = new MemoryStore();
-    const cursor = storeCursor(store);
+    const cursor = storeCursor(store, 'g1');
     await cursor.set(99);
-    expect(await storeCursor(store).get()).toBe(99);
+    expect(await storeCursor(store, 'g1').get()).toBe(99);
+  });
+
+  it('a second group on the device starts from the beginning, not from the first group\'s position', async () => {
+    const { storeCursor } = await import('./engine');
+    const store = new MemoryStore();
+    await storeCursor(store, 'g1').set(99);
+    expect(await storeCursor(store, 'g2').get()).toBe(0);
   });
 });
 
