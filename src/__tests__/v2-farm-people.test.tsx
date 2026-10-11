@@ -133,8 +133,25 @@ describe('คน — list, filter, deleted (farm mockup 4)', () => {
 
     fireEvent.press(screen.getByTestId(`person-${daeng.id}`));
     expect(mockRouter.push).toHaveBeenLastCalledWith(`/v2/person/${daeng.id}`);
+    // Adding from a role filter starts the new person on that role.
+    fireEvent.press(screen.getByTestId('add-person'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/person/new?role=tapper');
+    fireEvent.press(screen.getByTestId('filter-all'));
     fireEvent.press(screen.getByTestId('add-person'));
     expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/person/new');
+  });
+
+  it('groups the list owner, manager, assistant, tapper, other', async () => {
+    const m = people();
+    await m.create('กก', ['tapper']);
+    await m.create('ขข', ['tenant']);
+    await m.create('คค', ['assistant']);
+    await m.create('งง', ['manager']);
+    await m.create('จจ', ['owner']);
+    wrap(<PeopleScreen />);
+    await flush();
+    const rows = within(screen.getByTestId('people-list')).getAllByText(/^(กก|ขข|คค|งง|จจ)$/).map((n) => n.props.children);
+    expect(rows).toEqual(['จจ', 'งง', 'คค', 'กก', 'ขข']);
   });
 
   it('opens with a role filter picked when asked (?filter=tapper, from the home card ข้อมูลคนงาน)', async () => {
@@ -190,6 +207,23 @@ describe('คน — list, filter, deleted (farm mockup 4)', () => {
 });
 
 describe('คน — form (farm mockup 5)', () => {
+  it('starts a new person on the role of the filter they were added from (?role=)', async () => {
+    mockParams.current = { id: 'new', role: 'assistant' };
+    wrap(<PersonScreen />);
+    await flush();
+    expect(screen.getByTestId('role-assistant')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('person-name'), 'สมศรี');
+    fireEvent.press(screen.getByTestId('person-save'));
+    await flush();
+    mockParams.current = {};
+    screen.unmount();
+    wrap(<PeopleScreen />);
+    await flush();
+    const row = within(screen.getByTestId('people-list')).getByText('สมศรี');
+    expect(row).toBeTruthy();
+    expect(within(screen.getByTestId('people-list')).getByText('ผู้ช่วยสวน')).toBeTruthy();
+  });
+
   it('adds a person with built-in and typed roles; errors only after a save attempt and keep what was typed', async () => {
     mockParams.current = { id: 'new' };
     wrap(<PersonScreen />);
