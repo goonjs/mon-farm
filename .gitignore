@@ -56,3 +56,4 @@ example
 /android
 e2e/.results/
 .firebase/
+.env

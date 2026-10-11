@@ -246,16 +246,28 @@ goes there. This adds a notification route only; it does not relax any gate.
   credential, red CI that needs a decision) → `#farm-ai-alerts`,
   `⚠️ BLOCKED` or `❓ NEED DECISION`.
 
-**How:** post with `curl` to the webhook URL held in an environment
-variable, JSON body `{"content": "..."}`. The URL is a secret: never print
-it, commit it, or put it in a PR, log or chat. If the variable is empty or
-the post fails, say so once and carry on; a missing notification never
-blocks work. Variables (set in the cloud environment, not in this repo):
+**How:** post with `scripts/notify.sh` (a copy of dev-pose
+`tools/discord/notify.sh`), never with hand-written curl:
+
+```bash
+scripts/notify.sh updates "PR #12 merged: <one line>. <link>"
+scripts/notify.sh alerts --need review "PR #12 is green. Please check A and B, reply OK or the issue. <link>"
+scripts/notify.sh alerts --need blocked "Deploy Prod needs your yes. <link>"
+```
+
+`--need` is `decision`, `review` or `blocked`; the script adds the prefix and
+the `<@owner>` mention. Post **before** you stop and wait for the owner, once,
+after the thing actually happened. Exit code `3` means **NOT SENT**: say so in
+your summary and never write "pinged Discord" unless the script printed
+`sent to ...`. The webhook URLs are secrets: never print, commit or paste them.
+The script reads them from the environment, a gitignored `.env`, or a GitHub
+repo variable (`gh variable get`). Variables (the same names the repo's
+Actions secrets use):
 
 | Variable | Used for |
 |---|---|
-| `DISCORD_WEBHOOK_FARM_AI_UPDATES` | `#farm-ai-updates` webhook URL |
-| `DISCORD_WEBHOOK_FARM_AI_ALERTS` | `#farm-ai-alerts` webhook URL |
-| `DISCORD_OWNER_ID` | owner's Discord user id, for the `<@id>` mention in alerts (optional) |
+| `DISCORD_WEBHOOK_AI_UPDATES` | `#farm-ai-updates` webhook URL |
+| `DISCORD_WEBHOOK_AI_ALERTS` | `#farm-ai-alerts` webhook URL |
+| `DISCORD_OWNER_ID` | owner's Discord user id, for the `<@id>` mention in alerts |
 
 Posting to `discord.com` needs it on the environment's allowed domains.
