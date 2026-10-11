@@ -145,3 +145,46 @@ describe('netting against money the farm owes back (E06-S04, D-60, D-67)', () =>
     expect(screen.queryByTestId(`netted-${farm.nat}`)).toBeNull();
   });
 });
+
+describe('tally origin lines with a deduction, a netting and a rounding (E05-S08)', () => {
+  const SALE2 = 'sale-net-2';
+  beforeAll(async () => {
+    const b = new LogBuilder(SALE2);
+    b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+    b.sys({ t: 'price_set', satangPerKg: 4850, indexRef: '' });
+    for (const p of [farm.a[0], farm.a[3]]) b.sys({ t: 'pile_added', pileId: p, zoneId: farm.farmA, name: p, tareG: 2_000, stdNetG: 50_000 });
+    b.acceptAt(farm.a[0], 1).acceptAt(farm.a[0], 2).acceptAt(farm.a[0], 3);
+    b.acceptAt(farm.a[3], 1).shortAt(farm.a[3], 2, 37_000);
+    await seedSale(store(), b.build().map((e) => ({ ...e, ts: Date.now() })));
+  });
+  const inSale2 = async (ui: ReactElement) => {
+    const r = wrap(<SaleProvider saleId={SALE2}>{ui}</SaleProvider>);
+    await flush();
+    return r;
+  };
+  /** The amounts after the first "ส่วนแบ่ง", as numbers: share, then each signed part. */
+  const parts = (line: string) => {
+    const m = [...line.matchAll(/([+−]?)\s*(?:ส่วนแบ่ง|หักหนี้|ปัดเศษ)\s*([\d,]+\.\d\d)/g)];
+    return m.map((x) => (x[1] === '−' ? -1 : 1) * Math.round(parseFloat(x[2].replace(/,/g, '')) * 100));
+  };
+
+  it('netting is shown apart: the parts of the origin line add up to the cash above it', async () => {
+    const r = await inSale2(<SettlementScreen />);
+    await press(`deduct-${farm.nat}`);
+    await type('net-amount', '200');
+    await type('deduct-amount', '300');
+    await press('deduct-save');
+    await press('to-rounding');
+    await press('round-worker');
+    await press('round-confirm');
+    r.unmount();
+    await inSale2(<TallyScreen />);
+    const line = screen.getByTestId(`tally-from-${farm.nat}`).props.children as string;
+    // share 2,061.25 − 300 debt = 1,761.25, rounded up to 1,762.00; the 200 netted does not touch it.
+    expect(line).toBe('ส่วนแบ่ง 2,061.25 − หักหนี้ 300.00 + ปัดเศษ 0.75');
+    expect(parts(line).reduce((a, x) => a + x, 0)).toBe(176_200);
+    expect(screen.getByTestId(`tally-cash-${farm.nat}`)).toHaveTextContent(/1,762\.00$/);
+    expect(screen.getByTestId(`tally-net-${farm.nat}`)).toHaveTextContent('หักกลบ 200.00 (ไม่กระทบเงินสด)');
+    expect(screen.getByTestId('tally-ok')).toBeTruthy();
+  });
+});
