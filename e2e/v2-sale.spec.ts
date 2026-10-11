@@ -277,6 +277,8 @@ test('start → point → empty scale → count → short → switch and fill �
   // ── เทียบยอด (page 18a) ──
   await expect(id('tally')).toBeVisible();
   await expect(id('tally-ok')).toBeVisible();
+  await expect(id('tally-weight')).toContainText('470 กก.');
+  await expect(id('tally-total')).toContainText('22,795.00');
   await expect(id('tally-sum')).toContainText('22,795.00');
   await shot(page, '18a-tally');
   await id('to-payment').click();

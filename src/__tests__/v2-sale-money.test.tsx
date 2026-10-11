@@ -128,6 +128,27 @@ describe('v2 sale money (pages 16–19)', () => {
     expect(screen.getByTestId('tally-sum')).toHaveTextContent(/11,397\.50/);
   });
 
+  it('tally: shows the sale in detail (E05-S08), as page 16 does', async () => {
+    await inSale(<TallyScreen />);
+    expect(screen.getByTestId('tally-weight')).toHaveTextContent(/235 กก\./);
+    expect(screen.getByTestId('tally-baskets')).toHaveTextContent(/5 เข่ง/);
+    expect(screen.getByTestId('tally-total')).toHaveTextContent(/11,397\.50/);
+    expect(screen.getByTestId(`tally-tapper-${farm.red}`)).toHaveTextContent(/150 กก\./);
+    expect(screen.getByTestId(`tally-tapper-${farm.nat}`)).toHaveTextContent(/85 กก\./);
+    expect(screen.getByTestId('tally-sale')).toHaveTextContent(/11,397\.50/);
+  });
+
+  it('tally: each pile says where it comes from', async () => {
+    await inSale(<TallyScreen />);
+    // แดง: share 3,637.50, nothing deducted, rounded up to 3,638.
+    expect(screen.getByTestId(`tally-from-${farm.red}`)).toHaveTextContent(/ส่วนแบ่ง 3,637\.50/);
+    // นัด: share 2,061.25 less the debt taken with the owner's transfer.
+    expect(screen.getByTestId(`tally-from-${farm.nat}`)).toHaveTextContent(/ส่วนแบ่ง 2,061\.25/);
+    expect(screen.getByTestId(`tally-from-${farm.nat}`)).toHaveTextContent(/หักหนี้/);
+    expect(screen.getByTestId('tally-owner-from')).toHaveTextContent(/ส่วนเจ้าของสวน/);
+    expect(screen.getByTestId('tally-owner-debt')).toHaveTextContent(/1,500\.00/);
+  });
+
   it('payment: each payee ticks on its own; close completes the sale', async () => {
     await inSale(<PaymentScreen />);
     expect(screen.getByTestId(`tick-amt-${farm.red}`)).toHaveTextContent('3,638');
