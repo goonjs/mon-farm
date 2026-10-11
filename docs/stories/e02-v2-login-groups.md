@@ -62,9 +62,9 @@ Sign-in (E02-S01):
       saved (ACC-6). It matches flow-v1 screen 1: mark, "เข้าสู่ระบบด้วย Google",
       and the note that the first sign-in needs internet.
 - [x] First launch offline: a Thai message says the first sign-in needs internet.
-- [x] Google sign-in works on web against the real project on the dev site, and
+- [ ] Google sign-in works on web against the real project on the dev site, and
       against the Auth emulator in tests (ACC-1). Android is out of scope (E01-S06).
-- [x] The same Google account on two devices gives the same `userId`; the user
+- [ ] The same Google account on two devices gives the same `userId`; the user
       model keeps the linked sign-in identities apart from `userId`.
 - [x] After the first sign-in, closing and reopening the app in airplane mode
       does not ask to sign in again; the session is stored on the device, not in
@@ -122,7 +122,7 @@ synced (as in #67); dev data only.
       group start (empty name, create, offline create); the gate shows nothing
       else before sign-in.
 - [x] Rules tests on the emulator: creator writes group + own membership only.
-- [x] Playwright with the Auth emulator: sign in, create group, reload offline,
+- [ ] Playwright with the Auth emulator: sign in, create group, reload offline,
       still inside; screenshots of both screens, light and dark.
 - [x] `npm run verify` green; independent review by a separate agent.
 
@@ -169,5 +169,34 @@ Dark screenshots are not taken: the app cannot switch to dark yet.
 - IndexedDB is v2 (`idb.ts`, shared by the event and account stores).
 
 ## Code review
+
+Two independent reviewers (separate agents, 2026-10-11): data layer and auth/UI.
+Verdicts: data layer ready to merge for this scope; auth/UI fix first, small. The
+three boxes above are unticked because nothing observed them: the real popup
+login was never run (sandbox blocks `apis.google.com`), `e2e/auth-emulator.spec.ts`
+never passed, and the two-devices `userId` claim has no test through the auth
+path. Try the popup by hand on `mon-farm-preview.web.app` (workflow
+`preview-site.yml`, PR number) and `mon-farm-dev.web.app`, then tick them.
+
+Known gaps, not fixed in this PR:
+
+- Sync pushes by "has a `groupId`", not "belongs to the signed-in user and a
+  group they belong to"; pending ops (`create_group`) are not ordered before
+  events, and the pending badge counts all groups and users. Safe today (no real
+  remote, rules reject mismatches); must be solved with the outbox (E01-S09).
+- Local events from before this change (no `groupId`, `actor.userId` `pre-login`)
+  are neither migrated nor isolated: never pushed, never lost, but still visible,
+  and a later edit of an old sale is stamped with the current group. Dev devices
+  only; decide "abandon old local data" or an adopt step before real users.
+- Builds without Google sign-in (Android, Expo Go, previews without Firebase
+  config) show the generic "sign-in failed, try again"; a distinct "not available
+  on this build" message is still to do.
+- The opening state has no timeout (a blocked IndexedDB upgrade would leave the
+  mark showing); the group that opens with several memberships is the first in
+  store order, not sorted; a failed `saveUser` after a good popup shows
+  "sign-in failed"; no screenshots for the busy, popup-blocked, failed and
+  create-failed states.
+- `MasterStore.append` takes a `deviceSeq` before it checks the user (a gap, harmless).
+  `SaleProvider` captures the writer at mount (revisit when E02-S04 adds switching).
 
 ## QA notes
