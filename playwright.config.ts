@@ -68,7 +68,7 @@ export default defineConfig({
     {
       // Same phone, portrait — the binding case for the rotate hint.
       name: 'phone-portrait',
-      testMatch: /(orientation|v2-money|v2-farm|v2-store|v2-home|v2-sale|v2-account|auth-emulator)\.spec\.ts/,
+      testMatch: /(orientation|v2-money|v2-farm|v2-store|v2-home|v2-sale|v2-account|auth-emulator|sync-emulator)\.spec\.ts/,
       use: { ...devices['Pixel 7'], viewport: tokens.viewport.portrait, isMobile: true, hasTouch: true },
     },
     {

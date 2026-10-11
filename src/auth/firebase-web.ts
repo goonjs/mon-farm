@@ -33,11 +33,11 @@ export const authEmulatorHost = process.env.EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_H
 /** `host:port` of the Firestore emulator, e.g. `127.0.0.1:8085`. */
 export const firestoreEmulatorHost = process.env.EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST;
 /**
- * Which Firestore database this build uses. `dev` unless told otherwise: dev
- * and preview builds must never reach the production database (NFR-5, D-48);
- * the production build sets `(default)`.
+ * Which Firestore database this build uses: one config value, `(default)`
+ * unless told otherwise (owner decision 2026-10-11), so a separate database or
+ * project can be swapped in later without touching code.
  */
-export const firestoreDatabaseId = process.env.EXPO_PUBLIC_FIREBASE_DATABASE_ID || 'dev';
+export const firestoreDatabaseId = process.env.EXPO_PUBLIC_FIREBASE_DATABASE_ID || '(default)';
 
 /** A real project, or an emulator to stand in for one. */
 const isReal = !projectId.startsWith('demo-');
