@@ -16,8 +16,8 @@
 #   2. Via GitHub Action: no URL here (a Claude Remote session), but the repo has
 #      .github/workflows/discord-notify.yml, whose runner holds the secrets. The script starts that
 #      workflow with `gh workflow run`. Prints "queued via GitHub Action": accepted, not yet delivered.
-# Exit 0 = sent or queued. Exit 2 = bad usage. Exit 3 = NOT SENT (no URL and no way to dispatch, or
-# Discord refused). On exit 3, tell the human the message was not sent; never claim a ping happened.
+# Exit 0 = sent or queued. Exit 2 = bad usage. Exit 3 = NOT SENT (no URL and no way to dispatch,
+# the message could not be built, or Discord refused). Text over 2000 characters is cut and ends in "…". On exit 3, tell the human the message was not sent; never claim a ping happened.
 set -u
 
 die_usage() { echo "notify.sh: $*" >&2; echo "usage: notify.sh updates|alerts|playground [--need decision|review|blocked] [--mention ID] [--dry-run] \"message\"" >&2; exit 2; }
@@ -58,8 +58,10 @@ import json, os
 head = " ".join(p for p in (os.environ["PREFIX"], "<@%s>" % os.environ["MENTION"] if os.environ["MENTION"] else "") if p)
 content = (head + "\n" if head else "") + os.environ["TEXT"]
 allowed = {"parse": [], "users": [os.environ["MENTION"]] if os.environ["MENTION"] else []}
-print(json.dumps({"content": content[:2000], "allowed_mentions": allowed}, ensure_ascii=False))
-') || { echo "notify.sh: could not build the message (python3 needed)" >&2; exit 2; }
+if len(content) > 2000:
+    content = content[:1999] + "\u2026"
+print(json.dumps({"content": content, "allowed_mentions": allowed}, ensure_ascii=False))
+') || { echo "NOT SENT: could not build the message (python3 needed, or the text is not valid UTF-8). Tell the human; do not claim a Discord post happened." >&2; exit 3; }
 
 if [ "$dry" = 1 ]; then
   echo "channel: $channel ($var)"; echo "$payload"; exit 0
@@ -81,7 +83,7 @@ if [ -z "$url" ]; then
     echo "NOT SENT: no $var here and 'gh workflow run discord-notify.yml' failed (not logged in, no Actions permission, or the workflow is not on the default branch). Tell the human; do not claim a Discord post happened." >&2
     exit 3
   fi
-  echo "NOT SENT: $var is not set (environment or .env) and this repo has no discord-notify workflow. Tell the human; do not claim a Discord post happened." >&2
+  echo "NOT SENT: $var is not set (environment or .env) and no discord-notify workflow can be started from here (not a dispatchable checkout, no gh, or already inside Actions). Tell the human; do not claim a Discord post happened." >&2
   exit 3
 fi
 
