@@ -46,7 +46,8 @@ export interface GateInput {
 
 export function firstPullGate(i: GateInput): FirstPullGate {
   if (i.mode === 'off') return { kind: 'ready' };
-  if (i.mode === 'on' && i.cursor > 0) return { kind: 'ready' };
+  // A stored cursor is a completed pull of this group, whether or not the engine is up yet.
+  if (i.cursor > 0) return { kind: 'ready' };
   if (i.groupOnlyHere) return { kind: 'ready' };
   if (!i.online) return { kind: 'unavailable', reason: 'offline' };
   if (i.syncError || i.elapsedMs >= GRACE_MS) return { kind: 'unavailable', reason: 'error' };

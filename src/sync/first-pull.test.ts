@@ -20,6 +20,12 @@ describe('firstPullGate (points wizard)', () => {
     expect(gate({ cursor: 1_790_000_000_000, syncError: true, online: false })).toBe('ready');
   });
 
+  it('a stored cursor means ready whatever the mode: a cold start does not wait while still connecting', () => {
+    expect(gate({ mode: 'connecting', cursor: 1 })).toBe('ready');
+    expect(gate({ mode: 'connecting', cursor: 1_790_000_000_000, elapsedMs: 0 })).toBe('ready');
+    expect(gate({ mode: 'connecting', cursor: 0 })).toBe('waiting');
+  });
+
   it('a brand-new group that exists only on this device has nobody to duplicate: ready at once, even offline', () => {
     expect(gate({ groupOnlyHere: true, online: false })).toBe('ready');
     expect(gate({ groupOnlyHere: true, mode: 'connecting' })).toBe('ready');
