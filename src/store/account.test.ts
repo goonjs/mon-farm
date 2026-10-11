@@ -107,6 +107,19 @@ describe.each<[string, () => () => AccountStore]>([
     expect(await reopened.pendingOps()).toEqual([created.op]);
   });
 
+  it('completing an op removes that op only, keeps the membership, and survives a reload (E01-S09)', async () => {
+    const open = device();
+    const other = newGroup('g-other', 'สวนริมน้ำ', somchai, 1_790_000_000_001);
+    await open().createGroup(created.membership, created.op);
+    await open().createGroup(other.membership, other.op);
+    await open().completeOp(created.op);
+    expect(await open().pendingOps()).toEqual([other.op]);
+    expect(await open().memberships()).toHaveLength(2);
+    // Completing it again (a repeated drain) is harmless.
+    await open().completeOp(created.op);
+    expect(await open().pendingOps()).toEqual([other.op]);
+  });
+
   it('the signed-in user and the memberships do not overwrite each other', async () => {
     const open = device();
     await open().saveUser(somchai);

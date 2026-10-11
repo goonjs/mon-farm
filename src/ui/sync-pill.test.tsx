@@ -11,6 +11,7 @@ describe('SyncPill — icon + word, never colour alone (SYNC-3, NFR-4)', () => {
   it.each([
     ['synced', 0, 'ซิงก์แล้ว', c.acceptSunk, c.statusSynced],
     ['pending', 3, 'รอส่ง 3', c.warnSunk, c.statusPending],
+    ['error', 3, 'ส่งไม่สำเร็จ', c.rejectSunk, c.statusConflict],
     ['conflict', 1, 'ขัดกัน 1', c.rejectSunk, c.statusConflict],
   ] as const)('%s shows its word, a shape and its signal colours', (state, count, word, bg, fg) => {
     wrap(<SyncPill status={{ state, count }} />);

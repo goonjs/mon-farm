@@ -16,7 +16,7 @@
  * Do not "simplify" this to one adapter.
  */
 
-import type { EventId, SaleEvent } from '../core/types';
+import type { EventId, GroupId, SaleEvent } from '../core/types';
 import type { DeviceState } from './append-rule';
 
 // Re-exported for existing importers — these live in unsuffixed files, off
@@ -48,9 +48,14 @@ export interface EventStore {
    * same id with different content rejects with `IntegrityError`.
    */
   insertPulled(event: SaleEvent): Promise<void>;
-  /** Where pull resumes: the newest server `receivedAt` already stored (0 = never pulled). */
-  syncCursor(): Promise<number>;
-  setSyncCursor(value: number): Promise<void>;
+  /**
+   * Where pull resumes for `groupId`: the newest server `receivedAt` already stored (0 = never pulled).
+   * Kept with the group it belongs to: asked about another group (a second group, another account on
+   * this device) it answers 0, never a position that is only right for the first. A cursor stored before
+   * this was scoped (a bare number) is read as 0 — the safe choice: one full re-download, which is idempotent.
+   */
+  syncCursor(groupId: GroupId): Promise<number>;
+  setSyncCursor(groupId: GroupId, value: number): Promise<void>;
   /** Sale ids present in the store, newest first. */
   listSales(): Promise<string[]>;
   /**

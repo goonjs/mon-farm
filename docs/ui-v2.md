@@ -87,7 +87,7 @@ precedence over the dynamic one.
 | `/v2/accounts` | บัญชีรับเงิน (placeholder; MONEY) |
 | `/v2/farms`, `/v2/property/<id\|new>` (`?edit=1`) | สวนและจุดชั่ง: list, form, detail with area history, delete (mockup 9–12). Built |
 | `/v2/points`, `/v2/point/<id\|new>` (`?property=`, `?edit=1`, `?plan=1`) | จุดชั่ง: all points, add + offer to assign, detail, tapper plan (mockup 14–16). Built |
-| `/v2/points-wizard` | ตัวช่วยตั้งค่าจุดชั่ง (mockup 13, 13b). Built. Always offered from สวนและจุดชั่ง and จุดชั่ง (not only when empty); can be run again on a farm that has points, which it lists, and a name already used in that farm is refused. Once sync exists the helper must wait for a first pull before it creates points (decision 2026-10-10, was `showStarterButton`), or two offline phones can both create "จุด 1" |
+| `/v2/points-wizard` | ตัวช่วยตั้งค่าจุดชั่ง (mockup 13, 13b). Built. Always offered from สวนและจุดชั่ง and จุดชั่ง (not only when empty); can be run again on a farm that has points, which it lists, and a name already used in that farm is refused. While sync is running the helper waits for this device's first pull before it creates points (E01-S09, decision 2026-10-10, was `showStarterButton`), or two offline phones can both create "จุด 1"; a build without sync is not held |
 | `/v2/shares`, `/v2/share/<tapperId>` | ส่วนแบ่ง (mockup 17). Built |
 | `/v2/sale-settings` | ตั้งค่าวันขาย (mockup 3). Built |
 | `/v2/expenses` | ค่าใช้จ่ายทั้งหมด |

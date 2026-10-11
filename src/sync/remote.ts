@@ -7,6 +7,7 @@
  * `update: false` make Firestore do), whatever its content.
  */
 
+import type { CreateGroupOp } from '../core/group';
 import type { EventId, SaleEvent } from '../core/types';
 
 export type RemoteErrorCode =
@@ -37,11 +38,42 @@ export interface PulledDoc {
   readonly receivedAt: number | null;
 }
 
+/** Where the next page of a pull starts; opaque to the engine, only the adapter that issued it reads it. */
+export type PullToken = unknown;
+
+export interface PulledPage {
+  readonly docs: PulledDoc[];
+  /** Pass to `pull` for the next page; null when this was the last. */
+  readonly next: PullToken | null;
+}
+
 export interface RemoteEvents {
+  /**
+   * Cheap read from the server, made before anything is sent: resolves when the
+   * server answered. Fails fast with `unavailable` when offline (so no write is
+   * queued behind the SDK's back) and with the real code when the database does
+   * not exist. A refusal to read the group (not a member yet, rules) is not a
+   * failure here: the operation that follows reports it.
+   */
+  check(): Promise<void>;
   /** Creates up to 500 events as one batch; resolves once the server confirmed all of them. */
   push(events: readonly SaleEvent[]): Promise<void>;
   /** The server's copy of one event, or null — never answered from a cache. */
   fetch(id: EventId): Promise<SaleEvent | null>;
-  /** Every event with `receivedAt >= since`, ordered by `receivedAt`. */
-  pull(since: number): Promise<PulledDoc[]>;
+  /** Events with `receivedAt >= since`, ordered by `receivedAt`, at most `limit` per page. */
+  pull(since: number, after?: PullToken, limit?: number): Promise<PulledPage>;
+}
+
+/**
+ * Server writes that are not events: the batch that creates a group and its
+ * creator's membership (architecture §การดำเนินการด้านสมาชิกภาพ). Sent before
+ * that group's first event, because the rules only let members write events.
+ */
+export interface RemoteGroups {
+  /**
+   * Creates the group doc and the creator's owner member doc as one batch.
+   * Idempotent: a group the same user already created counts as done (an ack
+   * lost on the way). Another user's group, or a refusal, is `permission-denied`.
+   */
+  createGroup(op: CreateGroupOp): Promise<void>;
 }

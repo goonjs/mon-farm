@@ -113,6 +113,15 @@ export class WebAccountStore implements AccountStore {
     if (db instanceof MemoryAccountStore) return db.pendingOps();
     return (await request(db.transaction('pendingOps', 'readonly').objectStore('pendingOps').getAll())) as CreateGroupOp[];
   }
+
+  async completeOp(op: CreateGroupOp): Promise<void> {
+    const db = await this.pick();
+    if (db instanceof MemoryAccountStore) return db.completeOp(op);
+    const tx = db.transaction('pendingOps', 'readwrite');
+    const done = committed(tx);
+    tx.objectStore('pendingOps').delete(`${op.op}:${op.groupId}`);
+    await done;
+  }
 }
 
 export const accountStore: AccountStore = new WebAccountStore();

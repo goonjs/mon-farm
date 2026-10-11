@@ -8,6 +8,19 @@ const sale = new LogBuilder('s1', 'dev-A').accept('p1').accept('p1').accept('p1'
 const ids = sale.map((e) => e.id);
 const none = new Set<string>();
 
+describe('syncStatusFrom — an engine error (E01-S09 review)', () => {
+  it('is its own state, shown in place of pending, but below a conflict', () => {
+    expect(syncStatusFrom({ pending: 3, error: true })).toEqual({ state: 'error', count: 3 });
+    expect(syncStatusFrom({ pending: 0, error: true })).toEqual({ state: 'error', count: 0 });
+    expect(syncStatusFrom({ pending: 3, conflicts: 1, error: true })).toEqual({ state: 'conflict', count: 1 });
+    expect(syncStatusFrom({ pending: 3 })).toEqual({ state: 'pending', count: 3 });
+  });
+
+  it('uses the existing "not sent" word', () => {
+    expect(resolve('th', syncWordId('error'))).toBe('ส่งไม่สำเร็จ');
+  });
+});
+
 describe('saleSyncState (E01-S10 AC2/AC3)', () => {
   it('everything sent → synced', () => {
     expect(saleSyncState(sale, none)).toBe('synced');

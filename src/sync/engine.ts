@@ -12,22 +12,46 @@
  * normal case, not an error. Permanent ones (refused by the rules, integrity)
  * show as an error with a retry action and wait for it (D-3). Local data is
  * never changed by either.
+ *
+ * Scope: an engine serves one signed-in user in one open group. It sends only
+ * that user's events of that group, and only once the group exists on the
+ * server: a pending `create_group` op is sent first (the rules let only
+ * members write events), then the events. Anything else on the device (another
+ * account's events, another group, events from before groups existed) is
+ * neither sent nor counted as waiting.
  */
 
 import { canonicalJson } from '../core/canonical';
-import { hasGroup } from '../core/scope';
-import type { EventId, SaleEvent } from '../core/types';
+import type { CreateGroupOp } from '../core/group';
+import { belongsTo, waitingCount, type Scope } from '../core/scope';
+import type { EventId, GroupId, SaleEvent } from '../core/types';
+import type { AccountStore } from '../store/account';
 import { IntegrityError } from '../store/errors';
 import type { EventStore } from '../store/store';
 import { uploadMedia, type MediaQueue, type RemoteMedia } from './media';
-import { isTransient, RemoteError, type PulledDoc, type RemoteEvents } from './remote';
+import { isTransient, RemoteError, type PullToken, type PulledDoc, type RemoteEvents, type RemoteGroups } from './remote';
 
 /** Firestore's limit for one write batch. */
 export const BATCH_SIZE = 500;
 export const ACK_TIMEOUT_MS = 30_000;
-/** Re-read window behind the cursor: server stamps need not follow commit order. */
-export const PULL_OVERLAP_MS = 10 * 60_000;
+/**
+ * Re-read window behind the cursor. `receivedAt` is the server's commit time, so stamps follow
+ * commit order; the window only covers two commits finishing out of order, which is seconds,
+ * not minutes. Two minutes is that with a wide margin. Re-reading is harmless (idempotent), a
+ * bigger window only costs downloads.
+ */
+export const PULL_OVERLAP_MS = 2 * 60_000;
+/** Documents per pull page; the cursor moves after every page. */
+export const PULL_PAGE = 500;
+/** One page of a (possibly first, full) download may take longer than a write ack. */
+export const PULL_TIMEOUT_MS = 60_000;
 export const APPEND_DEBOUNCE_MS = 2_000;
+/**
+ * The cursor of a device that has pulled but found nothing to remember (a new,
+ * empty group): 0 means "never pulled", and the pull-from-the-start rule
+ * (`since` 0) is unchanged. The points wizard waits for it (E01-S09, D-83).
+ */
+export const FIRST_PULL_DONE = 1;
 
 export function backoffMs(attempt: number, random: () => number = Math.random): number {
   return Math.min(60_000, 2_000 * 2 ** Math.min(attempt, 10)) + Math.floor(random() * 1_000);
@@ -61,17 +85,26 @@ export class MemoryCursor implements CursorStore {
 }
 
 /** The store's own cursor, so a restart resumes pulling instead of re-downloading the group. */
-export const storeCursor = (store: Pick<EventStore, 'syncCursor' | 'setSyncCursor'>): CursorStore => ({
-  get: () => store.syncCursor(),
-  set: (value) => store.setSyncCursor(value),
+export const storeCursor = (store: Pick<EventStore, 'syncCursor' | 'setSyncCursor'>, groupId: GroupId): CursorStore => ({
+  get: () => store.syncCursor(groupId),
+  set: (value) => store.setSyncCursor(groupId, value),
 });
 
 export type SyncStore = Pick<EventStore, 'pending' | 'markSynced' | 'insertPulled'>;
 
 export interface SyncDeps {
   readonly store: SyncStore;
-  readonly remote: RemoteEvents;
+  /** Where the pending `create_group` ops wait (E02-S02). */
+  readonly accounts: Pick<AccountStore, 'pendingOps' | 'completeOp'>;
+  readonly scope: Scope;
+  readonly remote: RemoteEvents & RemoteGroups;
   readonly cursor: CursorStore;
+  /** Called after every successful pull (and so after the first one). */
+  readonly onPulled?: () => void;
+  /** How long to wait for a server ack before treating it as lost; tests shorten it. */
+  readonly ackTimeoutMs?: number;
+  /** Documents per pull page; tests make it small. */
+  readonly pullPageSize?: number;
   /** Files follow their `media.add` events, with the same retry rules (E01-S12). */
   readonly media?: { readonly queue: MediaQueue; readonly remote: RemoteMedia };
   readonly random?: () => number;
@@ -92,10 +125,19 @@ export class SyncEngine {
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private pokeTimer: ReturnType<typeof setTimeout> | null = null;
   private stopped = false;
+  private readonly ackMs: number;
+  private readonly pullMs: number;
+  private readonly pageSize: number;
+  /** Events the server refused as invalid: kept locally, not re-sent every run, tried again by `retry()`. */
+  private rejected = new Set<EventId>();
   /** Pulled ids the server holds with other content than ours; shown until a retry finds them fixed. */
   private corrupt = new Set<EventId>();
 
-  constructor(private readonly deps: SyncDeps) {}
+  constructor(private readonly deps: SyncDeps) {
+    this.ackMs = deps.ackTimeoutMs ?? ACK_TIMEOUT_MS;
+    this.pullMs = deps.ackTimeoutMs ?? PULL_TIMEOUT_MS;
+    this.pageSize = deps.pullPageSize ?? PULL_PAGE;
+  }
 
   status(): SyncStatus {
     return this.current;
@@ -121,7 +163,7 @@ export class SyncEngine {
         do {
           this.again = false;
           await this.runOnce();
-        } while (this.again);
+        } while (this.again && !this.stopped);
       } finally {
         this.running = null;
       }
@@ -133,8 +175,9 @@ export class SyncEngine {
   async retry(): Promise<void> {
     this.attempt = 0;
     this.stopped = false;
+    this.rejected.clear();
     for (const id of [...this.corrupt]) {
-      const there = await withTimeout(this.deps.remote.fetch(id), ACK_TIMEOUT_MS).catch(() => undefined);
+      const there = await withTimeout(this.deps.remote.fetch(id), this.ackMs).catch(() => undefined);
       if (!there) continue;
       try {
         await this.deps.store.insertPulled(there);
@@ -175,10 +218,24 @@ export class SyncEngine {
   }
 
   private async runOnce(): Promise<void> {
+    if (this.stopped) return;
     if (this.retryTimer) clearTimeout(this.retryTimer);
     this.retryTimer = null;
     let pushError: SyncError | undefined;
     try {
+      // Read the server before writing anything: offline this fails here (transient)
+      // instead of leaving a write queued inside the SDK, and a database that does
+      // not exist is an error now rather than a write that stays pending for ever.
+      await withTimeout(this.deps.remote.check(), this.ackMs);
+      try {
+        // Until the group exists on the server there is nothing to send into and
+        // nothing to pull (the rules answer non-members with permission-denied).
+        await this.createGroups();
+      } catch (err) {
+        if (!(err instanceof Permanent)) throw err;
+        await this.settle({ kind: err.kind });
+        return;
+      }
       try {
         await this.push();
         if (this.deps.media) await uploadMedia(this.deps.media.queue, this.deps.media.remote);
@@ -207,19 +264,47 @@ export class SyncEngine {
     }
   }
 
+  /** This engine's user's events of this engine's group. */
+  private readonly mine = (e: SaleEvent) => belongsTo(this.deps.scope, e);
+
+  /** The `create_group` ops only this user can send, for this group. */
+  private async ownOps(): Promise<CreateGroupOp[]> {
+    const { userId, groupId } = this.deps.scope;
+    return (await this.deps.accounts.pendingOps()).filter((op) => op.groupId === groupId && op.createdBy === userId);
+  }
+
+  /**
+   * Sends the group's pending `create_group` first; resolves once nothing is left
+   * to create, i.e. the group exists on the server. A refusal is permanent.
+   */
+  private async createGroups(): Promise<void> {
+    for (const op of await this.ownOps()) {
+      try {
+        await withTimeout(this.deps.remote.createGroup(op), this.ackMs);
+      } catch (err) {
+        if (err instanceof RemoteError && err.code === 'permission-denied') throw new Permanent('denied');
+        throw err;
+      }
+      await this.deps.accounts.completeOp(op);
+    }
+  }
+
   private async push(): Promise<void> {
-    // Events recorded before groups existed (dev devices) have no `groupId`;
-    // the server would refuse them, so they stay on the device (E02-S02).
-    const outbox = (await this.deps.store.pending()).filter(hasGroup);
+    // Events recorded before groups existed (dev devices) have no `groupId`, and
+    // another account's or group's events could only be refused by the rules:
+    // they stay on the device (E02-S02). Events the server already called invalid
+    // wait for `retry()`.
+    const outbox = (await this.deps.store.pending()).filter((e) => this.mine(e) && !this.rejected.has(e.id));
     let refused: Permanent | undefined;
     for (let i = 0; i < outbox.length; i += BATCH_SIZE) {
+      if (this.stopped) return;
       const batch = outbox.slice(i, i + BATCH_SIZE);
       try {
-        await withTimeout(this.deps.remote.push(batch), ACK_TIMEOUT_MS);
+        await withTimeout(this.deps.remote.push(batch), this.ackMs);
         await this.deps.store.markSynced(batch.map((e) => e.id));
       } catch (err) {
-        if (!(err instanceof RemoteError) || err.code !== 'permission-denied') throw err;
-        // One refused event must not hold back the rest of the outbox.
+        if (!(err instanceof RemoteError) || isTransient(err.code)) throw err;
+        // One refused or invalid event must not hold back the rest of the outbox.
         refused ??= await this.checkEach(batch);
       }
     }
@@ -229,19 +314,27 @@ export class SyncEngine {
   /**
    * A refused batch is not yet an error: an earlier ack may have been lost,
    * so the server could already hold some of it. Each event is sent alone;
-   * one the server holds with the same content counts as sent.
+   * one the server holds with the same content counts as sent. One the server
+   * calls invalid is remembered as rejected (visible error, kept locally) and
+   * the others still go.
    */
   private async checkEach(batch: readonly SaleEvent[]): Promise<Permanent | undefined> {
     let refused: Permanent | undefined;
     for (const e of batch) {
+      if (this.stopped) return refused;
       try {
-        await withTimeout(this.deps.remote.push([e]), ACK_TIMEOUT_MS);
+        await withTimeout(this.deps.remote.push([e]), this.ackMs);
         await this.deps.store.markSynced([e.id]);
         continue;
       } catch (err) {
-        if (!(err instanceof RemoteError) || err.code !== 'permission-denied') throw err;
+        if (!(err instanceof RemoteError) || isTransient(err.code)) throw err;
+        if (err.code !== 'permission-denied') {
+          this.rejected.add(e.id);
+          refused ??= new Permanent('invalid');
+          continue;
+        }
       }
-      const there = await withTimeout(this.deps.remote.fetch(e.id), ACK_TIMEOUT_MS);
+      const there = await withTimeout(this.deps.remote.fetch(e.id), this.ackMs);
       if (there && canonicalJson(there) === canonicalJson(e)) {
         await this.deps.store.markSynced([e.id]);
       } else {
@@ -253,8 +346,20 @@ export class SyncEngine {
 
   private async pull(): Promise<void> {
     const cursor = await this.deps.cursor.get();
-    const since = cursor > 0 ? cursor - PULL_OVERLAP_MS : 0;
-    await this.store(await withTimeout(this.deps.remote.pull(since), ACK_TIMEOUT_MS));
+    const since = cursor > 0 ? Math.max(0, cursor - PULL_OVERLAP_MS) : 0;
+    // Page by page; the cursor moves after each page, so a failure or a restart
+    // halfway through a big download resumes there instead of starting over.
+    let token: PullToken | undefined;
+    do {
+      if (this.stopped) return;
+      const page = await withTimeout(this.deps.remote.pull(since, token, this.pageSize), this.pullMs);
+      await this.store(page.docs);
+      token = page.next ?? undefined;
+    } while (token !== undefined);
+    if (this.stopped) return;
+    // An empty group leaves no server stamp to remember, yet this device has now seen it.
+    if ((await this.deps.cursor.get()) === 0) await this.deps.cursor.set(FIRST_PULL_DONE);
+    this.deps.onPulled?.();
   }
 
   /** Stores docs, remembers corrupt ones, and moves the cursor forward only. */
@@ -279,13 +384,15 @@ export class SyncEngine {
 
   private async settle(outcome: { kind?: SyncError; transient?: boolean }): Promise<void> {
     const media = this.deps.media ? (await this.deps.media.queue.pending()).length : 0;
-    // Events with no group are never sent, so they are not waiting either.
-    const pending = (await this.deps.store.pending()).filter(hasGroup).length + media;
-    const kind = outcome.kind ?? (this.corrupt.size ? 'integrity' : undefined);
+    // Events this engine never sends are not waiting either. A group still to be
+    // created is waiting, as one item.
+    const pending =
+      waitingCount(this.deps.scope, await this.deps.store.pending(), await this.deps.accounts.pendingOps()) + media;
+    const kind = outcome.kind ?? (this.corrupt.size ? 'integrity' : this.rejected.size ? 'invalid' : undefined);
     const next: SyncStatus = kind
       ? { state: 'error', pending, error: kind }
       : { state: pending > 0 || outcome.transient ? 'pending' : 'synced', pending };
-    if (canonicalJson(next) === canonicalJson(this.current)) return;
+    if (this.stopped || canonicalJson(next) === canonicalJson(this.current)) return;
     this.current = next;
     for (const l of this.listeners) l(next);
   }

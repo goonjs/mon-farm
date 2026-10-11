@@ -18,6 +18,9 @@
  *
  * The session user and group (`store/session.ts`) are set before the app
  * renders: every write path stamps `actor.userId` and `groupId` from there.
+ *
+ * Once a user is in a group, sync runs for them (E01-S09) beside the app, never
+ * in front of it: it starts in the background and stops with the session.
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
@@ -31,6 +34,8 @@ import { useT } from '../../i18n';
 import { uuidv7 } from '../../lib/id';
 import { accountStore, type AccountStore } from '../../store/account';
 import { setSessionGroup, setSessionUser } from '../../store/session';
+import { connectRemote, type SyncRemote } from '../../sync/client';
+import { useSync } from '../../sync/use-sync';
 import { useTheme } from '../../theme';
 import { BrandMark } from '../brand-mark';
 import { GroupStartScreen } from './group-start-screen';
@@ -58,11 +63,13 @@ export function AccountGate({
   children,
   accounts = accountStore,
   google = defaultGoogle,
+  connect = connectRemote,
 }: {
   children: ReactNode;
   /** Injected by tests; the app uses the platform adapters. */
   accounts?: AccountStore;
   google?: GoogleSignIn;
+  connect?: (userId: UserId, groupId: GroupId) => Promise<SyncRemote | null>;
 }) {
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' });
 
@@ -112,7 +119,23 @@ export function AccountGate({
     const { user } = phase;
     return <GroupStartScreen displayName={user.displayName} onCreate={(name) => createGroup(user, name)} />;
   }
-  return <>{children}</>;
+  return (
+    <>
+      <SyncRunner userId={phase.user.userId} groupId={phase.groupId} accounts={accounts} connect={connect} />
+      {children}
+    </>
+  );
+}
+
+/** Keeps the sync engine running for the open session; renders nothing. */
+function SyncRunner(props: {
+  userId: UserId;
+  groupId: GroupId;
+  accounts: AccountStore;
+  connect: (userId: UserId, groupId: GroupId) => Promise<SyncRemote | null>;
+}) {
+  useSync(props.userId, props.groupId, props.accounts, props.connect);
+  return null;
 }
 
 /** Until the stored account is read: only the mark, so nothing flashes. */

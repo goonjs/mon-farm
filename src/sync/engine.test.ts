@@ -1,19 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LogBuilder } from '../core/fixtures';
+import { newGroup } from '../core/group';
+import { FIXTURE_GROUP_ID, LogBuilder } from '../core/fixtures';
 import type { AcceptEvent, SaleEvent } from '../core/types';
+import { userFromSignIn } from '../core/user';
+import { MemoryAccountStore } from '../store/account-memory';
 import { MemoryStore } from '../store/memory-store';
-import { backoffMs, MemoryCursor, PULL_OVERLAP_MS, SyncEngine } from './engine';
+import { backoffMs, FIRST_PULL_DONE, MemoryCursor, PULL_OVERLAP_MS, SyncEngine } from './engine';
+import { RemoteError } from './remote';
 import { FakeRemote, FakeServer } from './fake-remote';
+
+/** The user and group the fixtures record under (`LogBuilder`). */
+const SCOPE = { userId: 'user-somchai', groupId: FIXTURE_GROUP_ID };
+const somchai = userFromSignIn(SCOPE.userId, 'สมชาย', { provider: 'google', subject: 'g-1' });
 
 /** A phone: its own store and cursor, talking to a shared server. */
 async function phone(server = new FakeServer()) {
   const store = new MemoryStore();
+  const accounts = new MemoryAccountStore();
   const remote = new FakeRemote(server);
   const cursor = new MemoryCursor();
-  const engine = new SyncEngine({ store, remote, cursor, random: () => 0 });
+  const engine = new SyncEngine({ store, accounts, scope: SCOPE, remote, cursor, random: () => 0 });
   const { deviceId } = await store.device();
-  return { store, remote, cursor, engine, deviceId, server };
+  return { store, accounts, remote, cursor, engine, deviceId, server };
 }
 
 async function record(store: MemoryStore, events: SaleEvent[]) {
@@ -186,7 +195,36 @@ describe('pull', () => {
     await p.engine.sync();
     expect(await p.cursor.get()).toBe(2_000_000);
     await p.engine.sync();
-    expect(pull).toHaveBeenLastCalledWith(2_000_000 - PULL_OVERLAP_MS);
+    expect(pull).toHaveBeenLastCalledWith(2_000_000 - PULL_OVERLAP_MS, undefined, expect.any(Number));
+  });
+
+  it('remembers a first pull that found an empty group, so "never pulled" and "nothing there" differ', async () => {
+    const p = await phone();
+    const pull = vi.spyOn(p.remote, 'pull');
+    expect(await p.cursor.get()).toBe(0);
+    await p.engine.sync();
+    expect(await p.cursor.get()).toBe(FIRST_PULL_DONE);
+    await p.engine.sync();
+    expect(pull).toHaveBeenLastCalledWith(0, undefined, expect.any(Number)); // never before the epoch
+  });
+
+  it('a pull that failed is not a first pull', async () => {
+    const p = await phone();
+    p.remote.failNext('unavailable');
+    await p.engine.sync();
+    expect(await p.cursor.get()).toBe(0);
+  });
+
+  it('tells the app after each successful pull', async () => {
+    const onPulled = vi.fn();
+    const p = await phone();
+    const engine = new SyncEngine({ store: p.store, accounts: p.accounts, scope: SCOPE, remote: p.remote, cursor: p.cursor, onPulled, random: () => 0 });
+    p.remote.failNext('unavailable');
+    await engine.sync();
+    expect(onPulled).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(onPulled).toHaveBeenCalledTimes(1);
+    engine.stop();
   });
 
   it('skips a document with the same id but different content and keeps going', async () => {
@@ -257,7 +295,7 @@ describe('several phones (SYNC-4, NFR-2)', () => {
     // Relaunch: same durable store, new engine.
     const store = p.store;
     store.markSynced = MemoryStore.prototype.markSynced.bind(store);
-    const relaunched = new SyncEngine({ store, remote: new FakeRemote(p.server), cursor: p.cursor, random: () => 0 });
+    const relaunched = new SyncEngine({ store, accounts: p.accounts, scope: SCOPE, remote: new FakeRemote(p.server), cursor: p.cursor, random: () => 0 });
     await relaunched.sync();
     expect(await store.pending()).toEqual([]);
     expect(p.server.docs.size).toBe(2);
@@ -293,6 +331,8 @@ describe('media through the engine (E01-S12 AC2, AC5)', () => {
     const storage = new FakeStorage();
     const engine = new SyncEngine({
       store,
+      accounts: new MemoryAccountStore(),
+      scope: SCOPE,
       remote: new FakeRemote(),
       cursor: new MemoryCursor(),
       media: { queue, remote: storage },
@@ -313,7 +353,7 @@ describe('review fixes', () => {
     const p = await phone();
     p.remote.pull = () => new Promise(() => undefined);
     const first = p.engine.sync();
-    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.advanceTimersByTimeAsync(60_000);
     await first;
     expect(p.engine.status().state).toBe('pending');
   });
@@ -382,8 +422,249 @@ describe('storeCursor', () => {
   it('keeps the pull cursor in the store, so a restart resumes instead of re-downloading', async () => {
     const { storeCursor } = await import('./engine');
     const store = new MemoryStore();
-    const cursor = storeCursor(store);
+    const cursor = storeCursor(store, 'g1');
     await cursor.set(99);
-    expect(await storeCursor(store).get()).toBe(99);
+    expect(await storeCursor(store, 'g1').get()).toBe(99);
+  });
+
+  it('a second group on the device starts from the beginning, not from the first group\'s position', async () => {
+    const { storeCursor } = await import('./engine');
+    const store = new MemoryStore();
+    await storeCursor(store, 'g1').set(99);
+    expect(await storeCursor(store, 'g2').get()).toBe(0);
+  });
+});
+
+describe('scope and group creation (E01-S09, E02-S02 review gaps)', () => {
+  const created = () => newGroup(FIXTURE_GROUP_ID, 'สวนบ้านนา', somchai, 1_790_000_000_000);
+
+  it('sends the pending create_group first, and only then that group\'s events', async () => {
+    const p = await phone();
+    p.server.requireGroups = true;
+    const { membership, op } = created();
+    await p.accounts.createGroup(membership, op);
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').accept('p1').build());
+
+    await p.engine.sync();
+    expect(p.remote.calls).toEqual([`group:${FIXTURE_GROUP_ID}`, 'push']);
+    expect(p.server.groups.get(FIXTURE_GROUP_ID)).toBe(SCOPE.userId);
+    expect(await p.accounts.pendingOps()).toEqual([]);
+    expect(await p.accounts.memberships()).toEqual([membership]);
+    expect(p.server.docs.size).toBe(2);
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+
+  it('while the group cannot be created, no event is sent and the badge counts the op too', async () => {
+    const p = await phone();
+    const { membership, op } = created();
+    await p.accounts.createGroup(membership, op);
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.offline = true;
+
+    await p.engine.sync();
+    expect(p.remote.calls).toEqual([]); // not even the group: the server was not reached
+    expect(p.engine.status()).toMatchObject({ state: 'pending', pending: 2 });
+
+    p.remote.offline = false;
+    await p.engine.sync();
+    expect(p.server.docs.size).toBe(1);
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+
+  it('a create_group that failed once is sent again, and sending it twice is harmless', async () => {
+    const p = await phone();
+    const { membership, op } = created();
+    await p.accounts.createGroup(membership, op);
+    p.remote.failNext('unavailable');
+    await p.engine.sync();
+    expect(await p.accounts.pendingOps()).toEqual([op]);
+    await vi.advanceTimersByTimeAsync(2_000);
+    await p.engine.sync();
+    expect(await p.accounts.pendingOps()).toEqual([]);
+    expect(p.server.groups.size).toBe(1);
+  });
+
+  it('a refused create_group is an error with a retry, sends no events and does not pull', async () => {
+    const p = await phone();
+    const { membership, op } = created();
+    await p.accounts.createGroup(membership, op);
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.denied = true;
+    const pull = vi.spyOn(p.remote, 'pull');
+
+    await p.engine.sync();
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'denied', pending: 2 });
+    expect(p.remote.batches).toEqual([]);
+    expect(pull).not.toHaveBeenCalled();
+    expect(await p.accounts.pendingOps()).toEqual([op]);
+
+    p.remote.denied = false;
+    await p.engine.retry();
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+
+  it('never sends or counts events of another group or another user', async () => {
+    const p = await phone();
+    const mine = new LogBuilder('s1', p.deviceId).accept('p1').build();
+    const [other] = new LogBuilder('s2', p.deviceId).accept('p1').build();
+    const elsewhere = { ...other, id: 'x-1', groupId: 'group-9' } as SaleEvent;
+    const someoneElse = { ...other, id: 'x-2', actor: { ...other.actor, userId: 'user-mallory' } } as SaleEvent;
+    await record(p.store, [...mine, elsewhere, someoneElse]);
+
+    await p.engine.sync();
+    expect([...p.server.docs.keys()]).toEqual(mine.map((e) => e.id));
+    expect((await p.store.pending()).map((e) => e.id).sort()).toEqual(['x-1', 'x-2']);
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+
+  it('does not send another user\'s or another group\'s pending create_group', async () => {
+    const p = await phone();
+    const stranger = userFromSignIn('user-mallory', null, { provider: 'google', subject: 'g-9' });
+    const theirs = newGroup(FIXTURE_GROUP_ID, 'ของคนอื่น', stranger, 1);
+    const elsewhere = newGroup('group-8', 'อีกกลุ่ม', somchai, 2);
+    await p.accounts.createGroup(theirs.membership, theirs.op);
+    await p.accounts.createGroup(elsewhere.membership, elsewhere.op);
+
+    await p.engine.sync();
+    expect(p.remote.calls).toEqual([]);
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+  });
+});
+
+describe('one bad event never wedges the outbox (review A F1)', () => {
+  it('the server calls one event invalid: the rest go, pulling goes on, the bad one shows as an error and is kept', async () => {
+    const p = await phone();
+    const [a, bad, c] = new LogBuilder('s1', p.deviceId).accept('p1').accept('p1').accept('p1').build();
+    p.remote.invalidIds.add(bad.id);
+    await record(p.store, [a, bad, c]);
+    const other = new LogBuilder('s9', 'dev-other').accept('p1').build()[0];
+    p.server.docs.set(other.id, { event: other, receivedAt: 5 });
+
+    await p.engine.sync();
+    expect([...p.server.docs.keys()].sort()).toEqual([a.id, c.id, other.id].sort());
+    expect((await p.store.pending()).map((e) => e.id)).toEqual([bad.id]); // kept, never dropped
+    expect(await p.store.load('s9')).toEqual([other]); // pulled although the push had a bad event
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid', pending: 1 });
+  });
+
+  it('does not keep re-sending the rejected event on every run; retry() tries it again', async () => {
+    const p = await phone();
+    const [bad, ok] = new LogBuilder('s1', p.deviceId).accept('p1').accept('p1').build();
+    p.remote.invalidIds.add(bad.id);
+    await record(p.store, [bad]);
+    await p.engine.sync();
+    p.remote.calls.length = 0;
+
+    await record(p.store, [ok]);
+    await p.engine.sync();
+    expect(p.remote.batches.at(-1)!.map((e) => e.id)).toEqual([ok.id]); // the bad one is not in the batch
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid', pending: 1 });
+
+    p.remote.invalidIds.clear(); // fixed server side
+    await p.engine.retry();
+    expect(p.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+    expect(p.server.docs.has(bad.id)).toBe(true);
+  });
+});
+
+describe('fail fast before writing (review A F3/F4)', () => {
+  it('offline: reads the server first and queues no write at all', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.offline = true;
+    await p.engine.sync();
+    expect(p.remote.checks).toBe(1);
+    expect(p.remote.calls).toEqual([]);
+    expect(p.engine.status()).toMatchObject({ state: 'pending', pending: 1 });
+  });
+
+  it('a database that does not exist is an error state with the events kept, not endless Pending', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    p.remote.check = async () => {
+      throw new RemoteError('invalid-argument', 'database does not exist');
+    };
+    await p.engine.sync();
+    expect(p.remote.calls).toEqual([]);
+    expect(p.engine.status()).toMatchObject({ state: 'error', error: 'invalid', pending: 1 });
+    expect(await p.store.pending()).toHaveLength(1);
+  });
+});
+
+describe('pulling a big group (review A F5)', () => {
+  const docs = (n: number) =>
+    Array.from({ length: n }, (_, i) => {
+      const event = new LogBuilder(`s${i}`, 'dev-other').accept('p1').build()[0];
+      return { event, receivedAt: 1_000 + Math.floor(i / 2) }; // pairs share a stamp, as a batch does
+    });
+
+  function engineWith(p: Awaited<ReturnType<typeof phone>>, pullPageSize: number) {
+    const engine = new SyncEngine({ store: p.store, accounts: p.accounts, scope: SCOPE, remote: p.remote, cursor: p.cursor, pullPageSize, random: () => 0 });
+    return engine;
+  }
+
+  it('reads page by page, every doc once even when a page ends inside one timestamp, moving the cursor after each page', async () => {
+    const p = await phone();
+    for (const d of docs(5)) p.server.docs.set(d.event.id, d);
+    const sets: number[] = [];
+    const set = p.cursor.set.bind(p.cursor);
+    p.cursor.set = async (v) => {
+      sets.push(v);
+      await set(v);
+    };
+    const pull = vi.spyOn(p.remote, 'pull');
+
+    await engineWith(p, 2).sync();
+    expect(pull).toHaveBeenCalledTimes(3);
+    expect((await Promise.all(docs(5).map((d) => p.store.load(d.event.saleId)))).flat()).toHaveLength(5);
+    expect(sets).toEqual([1_000, 1_001, 1_002]); // after each page, not once at the end
+  });
+
+  it('a failure on a later page keeps the earlier pages and the next run carries on', async () => {
+    const p = await phone();
+    for (const d of docs(5)) p.server.docs.set(d.event.id, d);
+    const real = p.remote.pull.bind(p.remote);
+    let calls = 0;
+    p.remote.pull = async (...args) => {
+      if (++calls === 2) throw new RemoteError('unavailable');
+      return real(...args);
+    };
+    const engine = engineWith(p, 2);
+    await engine.sync();
+    expect(await p.cursor.get()).toBe(1_000); // page 1 is safe
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect((await Promise.all(docs(5).map((d) => p.store.load(d.event.saleId)))).flat()).toHaveLength(5);
+    engine.stop();
+  });
+
+  it('re-reads no more than two minutes behind the cursor', () => {
+    expect(PULL_OVERLAP_MS).toBeLessThanOrEqual(120_000);
+  });
+});
+
+describe('stop() (review B M2)', () => {
+  it('stops an in-flight run: nothing more is sent or pulled and nobody is told after it', async () => {
+    const p = await phone();
+    await record(p.store, new LogBuilder('s1', p.deviceId).accept('p1').build());
+    let release: () => void = () => undefined;
+    const real = p.remote.push.bind(p.remote);
+    p.remote.push = async (events) => {
+      await new Promise<void>((resolve) => (release = resolve));
+      return real(events);
+    };
+    const heard = vi.fn();
+    const onPulled = vi.fn();
+    const engine = new SyncEngine({ store: p.store, accounts: p.accounts, scope: SCOPE, remote: p.remote, cursor: p.cursor, onPulled, random: () => 0 });
+    engine.subscribe(heard);
+    const pull = vi.spyOn(p.remote, 'pull');
+
+    const run = engine.sync();
+    await vi.advanceTimersByTimeAsync(0);
+    engine.stop();
+    release();
+    await run;
+    expect(pull).not.toHaveBeenCalled();
+    expect(onPulled).not.toHaveBeenCalled();
+    expect(heard).not.toHaveBeenCalled();
   });
 });

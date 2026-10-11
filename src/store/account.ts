@@ -34,8 +34,13 @@ export interface AccountStore {
    * would lose.
    */
   createGroup(membership: Membership, op: CreateGroupOp): Promise<void>;
-  /** Server writes not yet sent — drained by the outbox (E01-S09, not built). */
+  /** Server writes not yet sent — drained by the sync engine, before that group's events (E01-S09). */
   pendingOps(): Promise<CreateGroupOp[]>;
+  /**
+   * The server confirmed `op`: forget it. The membership stays. Completing an
+   * op that is already gone is a no-op, so a repeated drain is harmless.
+   */
+  completeOp(op: CreateGroupOp): Promise<void>;
 }
 
 /** Ambient declaration only — see the matching note in `store.ts`. */
