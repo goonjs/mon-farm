@@ -22,7 +22,7 @@ Status: In Progress
 - [x] rule ตรวจ `actor.userId == request.auth.uid` และ document id ตรงกับ `id` ใน event
 - [ ] client ถือว่า "มีเอกสารนี้อยู่แล้ว **และ canonical JSON เท่ากัน**" = ส่งสำเร็จ (push ซ้ำ idempotent); มีอยู่แต่เนื้อหาต่าง = error ด้านความถูกต้อง ห้ามทับ (architecture §Sync engine)
 - [x] batch 500 event ที่ทุกตัวเรียก `isMember` ไม่ชนเพดาน 20 access call ของ rules (test บน emulator)
-- [ ] rules + index อยู่ใน repo, deploy เข้า database `(default)` ซึ่งใช้เป็น dev ไปก่อน (D-84; ไม่มี database `dev`); prod จริงแยกทีหลัง
+- [x] rules + index อยู่ใน repo, deploy เข้า database `(default)` ซึ่งใช้เป็น dev ไปก่อน (D-84; ไม่มี database `dev`); prod จริงแยกทีหลัง
 
 ## Offline / sync behavior
 
@@ -37,7 +37,7 @@ Status: In Progress
 
 - อนุมัติติดตั้ง `firebase` (JS SDK) และ `@firebase/rules-unit-testing` (gate dependency + ผลตรวจ, ทำ `npm audit` baseline ใหม่)
 - emulator ต้องใช้ Java ที่อยู่นอก repo → ขออนุญาต
-- อนุมัติ deploy rules เข้า prod (database `(default)`)
+- อนุมัติ deploy rules เข้า prod (database `(default)`) — เจ้าของอนุมัติ deploy เข้า `(default)` แล้ว 2026-10-11 (D-84); prod จริงแยกทีหลัง
 - D4 (ตัดสินแล้ว 2026-10-03): **คง `overrides` grpc-js ^1.14.5 / basic-ftp ^6.2.1 ไว้จนกว่า upstream จะแก้** — ณ 2026-10-03 ยังไม่พบ override นี้ใน `package.json` บน `dev`; เมื่อเพิ่มพร้อม dependency ของ story นี้ ให้คงไว้และตรวจทุกครั้งที่อัปเดต upstream ว่าเอาออกได้หรือยัง
 
 ## Verification
@@ -63,11 +63,11 @@ Status: In Progress
   (เขียน id ที่มีแล้ว = `permission-denied`) — adapter Firestore จริงยังรอ envelope + E02 + database `dev` (ดู E01-S09)
 - `npm run test:rules` บน emulator ใน sandbox: 57/57 ผ่าน (2026-10-09) — ไม่ได้ deploy rules และไม่ได้แตะโปรเจกต์ cloud
 - D4: `overrides` grpc-js ^1.14.5 / basic-ftp ^6.2.1 **มีอยู่แล้ว** ใน `package.json` บน `dev` — หมายเหตุ "ยังไม่พบ" ข้างบนล้าสมัย
-- เหลือ: deploy rules เข้า database `dev` (D-48) และอนุมัติ deploy prod — ของเจ้าของ
+- ~~เหลือ: deploy rules เข้า database `dev` (D-48) และอนุมัติ deploy prod~~ — ปิดแล้วตาม D-84 (deploy เข้า `(default)` 2026-10-11)
 
 ### สถานะ 2026-10-03
 
-- โปรเจกต์เดียว (D-34): prod = database `(default)`, dev/preview = database `dev`; `firebase.json` deploy rules + indexes ชุดเดียวกันเข้าทั้งสอง database
+- (แทนที่โดย D-84 ชั่วคราว: dev/preview ใช้ `(default)`) โปรเจกต์เดียว (D-34): prod = database `(default)`, dev/preview = database `dev`; `firebase.json` deploy rules + indexes ชุดเดียวกันเข้าทั้งสอง database
   ⚠️ rules แยกไม่ได้ว่าคำขอมาจาก build prod หรือ preview — การแยก database กันความผิดพลาด ไม่ใช่ขอบเขตความปลอดภัย (ADR 0001 amendment 2)
 - ติดตั้ง `firebase@12.19.0` (dependencies), `@firebase/rules-unit-testing@5.0.2` และ `firebase-tools@15.32.1` (dev) ด้วย `--ignore-scripts` ตามที่เจ้าของอนุมัติ; ผู้เผยแพร่เป็นบัญชี Google/Firebase (firebase-ops, google-wombot)
 - `overrides` `@grpc/grpc-js ^1.14.5`, `basic-ftp ^6.2.1` คงไว้ตาม D4 — ⚠️ grpc-js ^1.14.5 อยู่นอกช่วงที่ `firebase` ประกาศ (ใช้เป็น Node transport ของ emulator test; test ผ่านแล้ว) ให้เจ้าของตรวจ และตรวจซ้ำทุกครั้งที่อัปเดต upstream
