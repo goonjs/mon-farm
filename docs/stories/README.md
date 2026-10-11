@@ -33,6 +33,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 
 - [E02-S01: Google Login + ใช้ออฟไลน์ต่อได้หลัง login](e02-s01-google-login.md)
 - [E02-S02: สร้างกลุ่มฟาร์ม + กลุ่มเดียวเข้าเลย](e02-s02-create-farm-group.md)
+- [E02 v2: Google login + กลุ่มฟาร์มบน v2 shell (rework ของ S01+S02)](e02-v2-login-groups.md)
 - [E02-S03: เชิญเจ้าของร่วม → ตอบรับ](e02-s03-invite-and-accept.md)
 - [E02-S04: เลือก/สลับกลุ่มฟาร์ม + ออกจากกลุ่ม](e02-s04-pick-switch-leave-group.md)
 

@@ -122,6 +122,34 @@ pre-renders one page per slug for the static web export. The local
 
 Screenshots at 390×844, light and dark: `docs/ux/screenshots/ui-v2/`.
 
+## Sign-in and farm group (e02-v2-login-groups)
+
+`AccountGate` (`src/v2/account/`) wraps the whole route tree in
+`src/app/_layout.tsx`, so no route renders before it has read the device's
+stored account (only the mark shows meanwhile). Three screens, flow-v1
+screens 1 and 2 and `docs/ux/flows/e02-access-and-sync-states.md` §2–3:
+
+| State | Screen |
+|---|---|
+| No stored user | `SignInScreen` (`testID signin`): mark, name, the first-sign-in-needs-internet note, the Google button. No skip, no offline mode, no sign-out (D-23) |
+| User, no group of theirs | `GroupStartScreen` (`group-start`): a required name and สร้างกลุ่มฟาร์ม; เข้าร่วมด้วยรหัสเชิญ is shown but disabled until E02-S03 |
+| User and one group | the app, straight in: splash → `/v2`. No picker (ACC-3) |
+
+The signed-in user and the open group are set in `src/store/session.ts` before
+the app renders. Every write path stamps `actor.userId` and `groupId` from there
+in the one function each store writes through: `stamp`/`writerNow`
+(`record.ts`: sale events and soft delete), `MasterStore.append` (people, farm
+data, sale settings), `writeFinance` (finance log). No screen passes a
+`groupId`. The farm profile (`farm.*.ts`) is device configuration, not events,
+and is not group-scoped yet. An append with no group or no user throws and
+stores nothing, and both event stores refuse a groupless event as well.
+
+The sign-in and group screens are shown in light only: the app has no way to
+switch to dark yet (`ThemeProvider initial="light"`), and the screens use
+colour roles only. Screenshots: `docs/ux/screenshots/ui-v2/account/`. e2e specs
+start from a preloaded signed-in device (`e2e/session.ts`); real Google sign-in
+is only tried by hand on the dev and preview sites.
+
 ## Splash and home (e03-v2-splash-home)
 
 Built against `docs/ux/mockups/flow-v1.html` section 1 (screens 1 and 3) and
@@ -132,8 +160,7 @@ writes mockup-vs-build pairs (that test runs only with
 `docs/ux/screenshots/ui-v2/home/` (same `UPDATE_SCREENSHOTS=1` rule as below).
 
 Not as drawn yet: the farm group name as the header title and the menu's
-group block with สลับกลุ่ม (E02); the Google sign-in and first-time banner on
-the splash (E02); "เปลี่ยนรูปปก", a picked cover photo and the cover's slow
+group block with สลับกลุ่ม (E02-S04); "เปลี่ยนรูปปก", a picked cover photo and the cover's slow
 motion; the rubber cups on the cover trees; "งานถึงกำหนด" rows (E08); the
 header keeps the shared ScreenHeader (title 20 bold with a hairline, the
 mockup appbar is 18 semibold without one). The menu lists จุดชั่ง, ส่วนแบ่ง,

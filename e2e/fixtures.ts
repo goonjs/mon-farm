@@ -2,6 +2,7 @@ import { basename } from 'node:path';
 
 import { test, type Page } from '@playwright/test';
 
+import { FIXTURE_GROUP_ID } from '../src/core/fixtures';
 import { MASTER_SCOPE } from '../src/core/master';
 import type { MasterPayload, SaleEvent } from '../src/core/types';
 
@@ -24,7 +25,7 @@ export async function seedEvents(page: Page, events: readonly SaleEvent[]): Prom
   await page.evaluate(
     (events) =>
       new Promise<void>((resolve, reject) => {
-        const open = indexedDB.open('mon-farm-v1', 1);
+        const open = indexedDB.open('mon-farm-v1');
         open.onupgradeneeded = () => {
           open.transaction?.abort();
           reject(new Error('seedEvents: app has not created mon-farm-v1 yet'));
@@ -65,6 +66,7 @@ export async function seedPeople(
 ): Promise<void> {
   const events: SaleEvent[] = people.map((p, i) => ({
     id: `seed-person/${p.id}`,
+    groupId: FIXTURE_GROUP_ID,
     saleId: MASTER_SCOPE,
     seq: i + 1,
     deviceSeq: i + 1,
@@ -82,6 +84,7 @@ export async function seedPeople(
 export async function seedMaster(page: Page, payloads: readonly MasterPayload[]): Promise<void> {
   const events: SaleEvent[] = payloads.map((payload, i) => ({
     id: `seed-master/${i}/${Math.random().toString(36).slice(2, 8)}`,
+    groupId: FIXTURE_GROUP_ID,
     saleId: MASTER_SCOPE,
     seq: i + 1,
     deviceSeq: i + 1,

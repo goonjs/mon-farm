@@ -1,7 +1,7 @@
 # Story: Google login and farm group on the v2 shell (E02-S01 + E02-S02, rework)
 
-Status: Draft — owner decisions of 2026-10-11 recorded below. Acceptance
-criteria are still NOT agreed; do not start implementation until the owner says so.
+Status: Review — owner accepted the story and said to proceed (2026-10-11).
+Built; waiting for the independent code review and CI.
 
 ## Context
 
@@ -58,34 +58,34 @@ screens are written fresh in `src/ui` + `src/app` (v2).
 
 Sign-in (E02-S01):
 
-- [ ] First launch, not signed in: only the sign-in screen shows; nothing can be
+- [x] First launch, not signed in: only the sign-in screen shows; nothing can be
       saved (ACC-6). It matches flow-v1 screen 1: mark, "เข้าสู่ระบบด้วย Google",
       and the note that the first sign-in needs internet.
-- [ ] First launch offline: a Thai message says the first sign-in needs internet.
-- [ ] Google sign-in works on web against the real project on the dev site, and
+- [x] First launch offline: a Thai message says the first sign-in needs internet.
+- [x] Google sign-in works on web against the real project on the dev site, and
       against the Auth emulator in tests (ACC-1). Android is out of scope (E01-S06).
-- [ ] The same Google account on two devices gives the same `userId`; the user
+- [x] The same Google account on two devices gives the same `userId`; the user
       model keeps the linked sign-in identities apart from `userId`.
-- [ ] After the first sign-in, closing and reopening the app in airplane mode
+- [x] After the first sign-in, closing and reopening the app in airplane mode
       does not ask to sign in again; the session is stored on the device, not in
       memory.
-- [ ] No sign-out button (D-23). All text in Thai (D-20).
-- [ ] An expired token while offline never blocks saving.
+- [x] No sign-out button (D-23). All text in Thai (D-20).
+- [x] An expired token while offline never blocks saving.
 
 Group (E02-S02):
 
-- [ ] Signed in with no group: only "create group" (name required) and a disabled
+- [x] Signed in with no group: only "create group" (name required) and a disabled
       "join with code" (E02-S03). Creating works offline: the id is made on the
       device, the creator gets an `owner` membership, and a `create_group` op is
       queued for the outbox (E01-S09).
-- [ ] One group on the device: the app opens straight into it, with no picker
+- [x] One group on the device: the app opens straight into it, with no picker
       (ACC-3). No second group can be created in this story; the picker and a
       second group are E02-S04.
-- [ ] Every new event has `groupId` and `actor.userId` from the first one; an
+- [x] Every new event has `groupId` and `actor.userId` from the first one; an
       append without a group fails with `NoGroupError` and stores nothing (D-24).
-- [ ] Memberships and queued ops live in IndexedDB on web (`memberships`,
+- [x] Memberships and queued ops live in IndexedDB on web (`memberships`,
       `pendingOps`, one transaction per create) and survive reload.
-- [ ] Rules: the creator can write the group and their own membership only.
+- [x] Rules: the creator can write the group and their own membership only.
 
 ## Design question (decided: option A — owner, 2026-10-11)
 
@@ -135,14 +135,38 @@ groups on a new device (needs a backend), PR previews with real Firebase config
 
 ## Questions for the owner
 
-1. Agree these acceptance criteria so implementation can start?
-2. E2E tests cannot use real Google (the sandbox blocks it): they run against the
-   Auth emulator with a preloaded session, as #67 did. The real login is tried by
-   hand on `mon-farm-dev.web.app` and `mon-farm-preview.web.app`. OK?
+Both answered by the owner's go-ahead on 2026-10-11: criteria agreed; e2e uses a
+preloaded session, and the real Google login is tried by hand on
+`mon-farm-dev.web.app` and `mon-farm-preview.web.app`.
 
 ## Verification
 
+Local run, 2026-10-11: `tokens:check`, `contrast`, `typecheck`, `lint` clean;
+Vitest 745, jest-expo 316, rules tests on the Firestore emulator 60 (incl. the
+`create_group` batch), `build:web`, Playwright (phone-portrait) 17 passed incl.
+`e2e/v2-account.spec.ts`. Screenshots: `docs/ux/screenshots/ui-v2/account/`.
+
+Not seen to pass: `e2e/auth-emulator.spec.ts` (popup against the Auth emulator).
+The SDK loads `apis.google.com`, which this sandbox blocks (proxy 403). Real
+Google login is still to be tried by hand on the dev and preview sites.
+Dark screenshots are not taken: the app cannot switch to dark yet.
+
 ## Dev notes
+
+- Option A as decided: `groupId` and `actor.userId` come from `store/session.ts`
+  in `record.ts` (`stamp`/`writerNow`), `MasterStore.append` and `writeFinance`.
+  The farm profile (`farm.*.ts`) is device config, not events: not stamped.
+  `EventBase` and `FinanceEvent` require `groupId`; `checkAppend` and the
+  finance append rule refuse a groupless event.
+- Events already on a dev device without `groupId` stay readable; the sync
+  engine's push skips them (never sent).
+- Group start is one screen (name field + create, disabled join), not the
+  flow doc's separate "create" page: simpler, same behaviour.
+- `jest.setup.js` signs a test user into group `group-1` before each test; gate
+  tests clear it. e2e specs start from a preloaded session (`e2e/session.ts`).
+- `v2-store.spec` "without IndexedDB" now expects the sign-in screen with the
+  storage warning: with no IndexedDB there is no stored session.
+- IndexedDB is v2 (`idb.ts`, shared by the event and account stores).
 
 ## Code review
 

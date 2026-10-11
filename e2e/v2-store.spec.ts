@@ -101,19 +101,18 @@ test('an IndexedDB that refuses to open falls back, with the warning on every sc
   await expect(page.getByTestId('storage-warning')).toBeVisible();
 });
 
-test('without IndexedDB the farm screens still work and warn in Thai that nothing is kept', async ({ page }) => {
+test('without IndexedDB the app warns in Thai that nothing is kept, from the first screen', async ({ page }) => {
   await page.setViewportSize({ width: 412, height: 915 });
   await page.addInitScript(() => {
     Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });
   });
   await page.goto('/');
+  // Nothing was ever signed in here (the session lives in IndexedDB), so the
+  // first screen is the sign-in screen — with the warning above it (E02-S01).
+  await expect(page.getByTestId('signin')).toBeVisible();
   const warning = page.getByTestId('storage-warning');
   await expect(warning).toBeVisible();
   await expect(warning).toContainText('ไม่ได้บันทึก');
-  await expect(page).toHaveURL(/\/v2\/?$/);
-
-  await addPerson(page, 'แดง');
-  await expect(page.getByTestId('storage-warning')).toBeVisible();
   await evidence(page, 'docs/ux/screenshots/ui-v2/farm/21-storage-warning.png');
 });
 
