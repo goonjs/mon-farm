@@ -22,6 +22,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { projectAccounts, type Account } from '../../core/finance/accounts';
 import { buyerCheck, buyerCheckPayload, buyerCheckTarget, saleFigures } from '../../core/finance/buyer-check';
+import type { Settlement } from '../../core/settle';
 import { needsChange, nettingPayloads, overDeducted, pilesCheck, proposeDeduction, deductionCap, roundCash, type RoundingMode } from '../../core/finance/deduct';
 import { formatSatang, parseBahtToSatang, todayIso } from '../../core/finance/money';
 import { OWNER_PAYEE, paymentMarkPayload, paymentStatus, paymentTarget, salePaymentConflicts } from '../../core/finance/payments';
@@ -107,6 +108,34 @@ function LinkRow({ label, onPress, testID }: { label: string; onPress: () => voi
   );
 }
 
+/**
+ * Our figures for the sale (pages 16 and 18a): weight, price, baskets, the short
+ * baskets and where each was weighed, then the sale total. Straight from the
+ * settlement (D-15). `prefix` names the test ids so a screen's ids stay its own.
+ */
+function SaleFigures({ s, prefix, children }: { s: Settlement; prefix: string; children?: ReactNode }) {
+  const msg = useT();
+  const { events, master } = useSaleView();
+  const shorts = basketList(events).filter((r) => r.status === 'live' && r.short);
+  const placeOf = (pointId: string) => {
+    const pt = master?.points.find((p) => p.id === pointId);
+    return `${master?.properties.find((f) => f.id === pt?.propertyId)?.name ?? ''} ${pt?.name ?? ''}`;
+  };
+  return (
+    <>
+      <Kv label={msg('v2s.weight')} value={msg('v2f.kg', { n: kgText(s.totals.netG) })} testID={`${prefix}-weight`} />
+      <Kv label={msg('v2s.priceLabel')} value={msg('v2s.perKg', { price: baht(s.satangPerKg) })} />
+      <Kv label={msg('v2s.basketCount')} value={msg('sales.baskets', { n: s.totals.baskets })} testID={`${prefix}-baskets`} />
+      <Kv label={msg('v2s.shortCount', { n: s.totals.shortBaskets })} value={msg('v2f.kg', { n: kgText(s.totals.shortNetG) })} />
+      {shorts.map((r) => (
+        <Kv key={r.id} indent tone="muted" label={msg('v2s.shortAt', { place: placeOf(r.pointId), n: r.basketNo })} value={msg('v2f.kg', { n: kgText(r.netG) })} />
+      ))}
+      {children}
+      <TotalRow label={msg('v2s.saleTotal')} value={baht(s.grossSatang)} unit={msg('v2s.bahtUnit')} testID={`${prefix}-total`} size={26} />
+    </>
+  );
+}
+
 // ── 16 · ตรวจยอดกับคนรับซื้อยาง ───────────────────────────────────────────────
 
 export function CheckScreen() {
@@ -178,12 +207,7 @@ function CheckBody({ bump }: { bump: () => void }) {
   const s = money.settlement;
   const ours = saleFigures(s);
   const check = buyerCheck(fin.events, saleId, ours);
-  const shorts = basketList(events).filter((r) => r.status === 'live' && r.short);
   const rollup = saleRollup(events, master, day);
-  const placeOf = (pointId: string) => {
-    const pt = master.points.find((p) => p.id === pointId);
-    return `${master.properties.find((f) => f.id === pt?.propertyId)?.name ?? ''} ${pt?.name ?? ''}`;
-  };
   const record = (status: 'total' | 'diff') =>
     flight.run(async () => {
       await fin.write(buyerCheckTarget(saleId), check.head, buyerCheckPayload(saleId, status, ours, null, status === 'diff' ? reason : ''));
@@ -199,14 +223,7 @@ function CheckBody({ bump }: { bump: () => void }) {
       <View testID="check-card" style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.xxs }}>
         <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{msg('v2s.buyerGotThis')}</AppText>
         <AppText variant="label">{msg('v2s.computed')}</AppText>
-        <Kv label={msg('v2s.weight')} value={msg('v2f.kg', { n: kgText(s.totals.netG) })} testID="check-weight" />
-        <Kv label={msg('v2s.priceLabel')} value={msg('v2s.perKg', { price: baht(s.satangPerKg) })} />
-        <Kv label={msg('v2s.basketCount')} value={msg('sales.baskets', { n: s.totals.baskets })} testID="check-baskets" />
-        <Kv label={msg('v2s.shortCount', { n: s.totals.shortBaskets })} value={msg('v2f.kg', { n: kgText(s.totals.shortNetG) })} />
-        {shorts.map((r) => (
-          <Kv key={r.id} indent tone="muted" label={msg('v2s.shortAt', { place: placeOf(r.pointId), n: r.basketNo })} value={msg('v2f.kg', { n: kgText(r.netG) })} />
-        ))}
-        <TotalRow label={msg('v2s.saleTotal')} value={baht(s.grossSatang)} unit={msg('v2s.bahtUnit')} testID="check-total" size={26} />
+        <SaleFigures s={s} prefix="check" />
         {state.parties?.buyer ? <IconLine icon={(c) => <UsersIcon color={c} size={13} />}>{state.parties.buyer}</IconLine> : null}
         {done || closed ? (
           <View style={{ marginTop: t.space.sm }}>
@@ -605,7 +622,7 @@ export function TallyScreen() {
   const router = useRouter();
   const view = useSaleView();
   const money = useSaleMoney();
-  const { saleId, master, saleTitle } = view;
+  const { saleId, master, saleTitle, nameOf } = view;
   const base = `/v2/sale/${saleId}`;
   const ready = view.ready && master && money.loaded && money.settlement;
   const s = money.settlement;
@@ -632,18 +649,42 @@ export function TallyScreen() {
       {ready && s && piles ? (
         <>
           <View style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.xxs }}>
-            <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.cashTappers')}</AppText>
-            {money.tappers.map((tp) => (
-              <Kv key={tp.id} label={<Text><TapperIcon color={ink(tp.id)} size={12} /> {tp.name}</Text>} value={baht(tp.cashSatang)} />
-            ))}
-            <AppText style={{ fontWeight: t.font.weight.bold, marginTop: t.space.sm }}>{msg('v2s.moneyIn')}</AppText>
+            <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{msg('v2s.saleAll')}</AppText>
+            <SaleFigures s={s} prefix="tally">
+              {s.perZone.flatMap((z) => (z.personId ? [{ z, personId: z.personId }] : [])).map(({ z, personId }) => (
+                <Kv key={z.zoneId} testID={`tally-tapper-${personId}`} label={<Text><TapperIcon color={ink(personId)} size={12} /> {nameOf(personId)} {msg('v2f.kg', { n: kgText(z.totals.netG) })}</Text>} value={baht(z.grossSatang)} />
+              ))}
+            </SaleFigures>
+          </View>
+          <View style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.xxs }}>
+            <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{msg('v2s.pilesTitle')}</AppText>
+            {money.tappers.map((tp) => {
+              // cash = share − debt deducted ± rounding (netting is taken out of the deduction and added to the cash, so it cancels: workerCash).
+              const from = [
+                msg('v2s.fromShare', { amount: baht(tp.shareSatang) }),
+                tp.debtDeductedSatang ? msg('v2s.fromDebt', { amount: baht(tp.debtDeductedSatang) }) : '',
+                tp.adjustSatang ? msg(tp.adjustSatang > 0 ? 'v2s.fromRoundUp' : 'v2s.fromRoundDown', { amount: baht(Math.abs(tp.adjustSatang)) }) : '',
+              ].filter(Boolean);
+              return (
+                <View key={tp.id}>
+                  <Kv label={<Text><TapperIcon color={ink(tp.id)} size={12} /> {msg('v2s.cashTo', { name: tp.name })}</Text>} value={baht(tp.cashSatang)} testID={`tally-cash-${tp.id}`} />
+                  <AppText variant="caption" testID={`tally-from-${tp.id}`}>{from.join(' ')}</AppText>
+                  {tp.nettedSatang ? <AppText variant="caption" testID={`tally-net-${tp.id}`}>{msg('v2s.fromNet', { amount: baht(tp.nettedSatang) })}</AppText> : null}
+                </View>
+              );
+            })}
             <Kv label={msg('v2s.transferOwner')} value={baht(money.ownerTransferSatang)} testID="tally-transfer" />
+            <AppText variant="caption" testID="tally-owner-from">{msg('v2s.ownerPart', { amount: baht(r.result.ownerSatang) })}</AppText>
+            {r.transferInSatang ? <AppText variant="caption" testID="tally-owner-debt">{msg('v2s.debtWithTransfer')} {baht(r.transferInSatang)}</AppText> : null}
             <Kv label={msg('v2s.cashDebt')} value={cashIn ? baht(cashIn) : msg('rec.none')} tone={cashIn ? 'plain' : 'muted'} />
             <Kv label={msg('v2s.splitPile')} value={split ? baht(split) : msg('rec.none')} tone={split ? 'plain' : 'muted'} />
             <TotalRow label={msg('v2s.allPiles')} value={baht(piles.sumSatang)} testID="tally-sum" size={20} />
+            {r.result.workers.some((w) => w.adjustSatang) ? <IconLine>{msg('v2s.roundedNoAdd')}</IconLine> : null}
+          </View>
+          <View style={{ ...cardStyle(t), padding: t.space.md, gap: t.space.xxs }}>
+            <Kv label={msg('v2s.allPiles')} value={baht(piles.sumSatang)} />
             <Kv label={msg('v2s.saleAll')} value={baht(s.grossSatang)} testID="tally-sale" />
             <AppText style={{ marginTop: t.space.xs }}>{msg('v2s.pilesRule')}</AppText>
-            {r.result.workers.some((w) => w.adjustSatang) ? <IconLine>{msg('v2s.roundedNoAdd')}</IconLine> : null}
           </View>
           {piles.ok ? (
             <Chip tone="accept" label={msg('v2s.exact')} testID="tally-ok" />
