@@ -5,6 +5,7 @@ import {
   deductionCap,
   needsChange,
   nettingPayloads,
+  overDeducted,
   pilesCheck,
   proposeDeduction,
   roundCash,
@@ -128,5 +129,20 @@ describe('netting (D-60): one repayment naming the sale + one debt payment, kept
   it('refuses more than the farm owes', () => {
     const p = nettingPayloads({ worker: NAT, farm: FARM, owed: [], amountSatang: 1, saleId: 's', date: '2026-10-03', repaymentId: 'rp' });
     expect(p.ok).toBe(false);
+  });
+});
+
+describe('overDeducted (D-61): the total taken at a sale, netting included, against share + netting', () => {
+  it('cash taken up to the whole share is fine, with or without netting', () => {
+    expect(overDeducted(286_000, 286_000, 0)).toBe(false);
+    // 2,860 from cash + 640 netted = 3,500 taken, ceiling 2,860 + 640
+    expect(overDeducted(286_000 + 64_000, 286_000, 64_000)).toBe(false);
+  });
+  it('one satang past the share is over, netting or not', () => {
+    expect(overDeducted(286_001, 286_000, 0)).toBe(true);
+    expect(overDeducted(286_001 + 64_000, 286_000, 64_000)).toBe(true);
+  });
+  it('a sale edit that shrinks the share flags the deduction already taken', () => {
+    expect(overDeducted(200_000, 150_000, 0)).toBe(true);
   });
 });

@@ -17,7 +17,9 @@ import { defaultBuyer, filterPeople, formatThaiDate } from '../../core/master';
 import { parsePrice } from '../../core/sale-points';
 import type { NumberingMode } from '../../core/types';
 import { useI18n, useT } from '../../i18n';
+import { newId } from '../../lib/id';
 import { peopleStore } from '../../store/people';
+import { SaleProvider } from '../../store/SaleProvider';
 import { useTheme } from '../../theme';
 import {
   AppText,
@@ -37,9 +39,61 @@ import {
   UsersIcon,
 } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
+import { loadHomeSales } from './open-sale';
 import { EmptyPill, FieldRow, IconLine, SegOptions, useSaleView } from './pieces';
+import { saleHref } from '../routes';
 
 type Sheet = 'none' | 'buyer' | 'price' | 'pair' | 'note';
+
+/**
+ * One sale at a time: while a sale is still open, เริ่มการขาย opens it (at its
+ * counter, or the point picker) instead of starting another. Only with no open
+ * sale does the form below mint a new sale id.
+ */
+export function StartSaleGate() {
+  const msg = useT();
+  const router = useRouter();
+  const [fresh, setFresh] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let live = true;
+    loadHomeSales().then(
+      ({ open }) => {
+        if (!live) return;
+        if (open) router.replace(saleHref(open.id, { closed: false, point: open.point }));
+        else setFresh(newId('sale-'));
+      },
+      (err) => {
+        // Not knowing whether a sale is open must not start a second one: ask again.
+        console.error('Sales could not be read.', err);
+        if (live) setFailed(true);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [router, attempt]);
+  if (failed) {
+    return (
+      <FarmScreen title={msg('start.title')} fallback={'/v2' as Href} testID="sale-start-failed">
+        <AppText variant="bodySm">{msg('start.checkFailed')}</AppText>
+        <CTA testID="sale-start-retry" onPress={() => {
+            setFailed(false);
+            setAttempt((n) => n + 1);
+          }}>
+          {msg('start.retry')}
+        </CTA>
+      </FarmScreen>
+    );
+  }
+  if (!fresh) return <FarmScreen title={msg('start.title')} fallback={'/v2' as Href} testID="sale-start-check" />;
+  return (
+    <SaleProvider saleId={fresh}>
+      <StartSaleScreen />
+    </SaleProvider>
+  );
+}
 
 export function StartSaleScreen() {
   const t = useTheme();

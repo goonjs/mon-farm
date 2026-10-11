@@ -67,7 +67,7 @@ export function useSaleMoney() {
 
   const tappers: TapperMoney[] = (settlement?.perWorker ?? EMPTY).map((w, i) => {
     const zones = settlement!.perZone.filter((z) => w.zoneIds.includes(z.zoneId));
-    const here = (debts.get(w.personId)?.payments ?? []).filter((p) => p.saleId === state.id && !p.deleted);
+    const here = (debts.get(w.personId)?.payments ?? []).filter((p) => p.saleId === state.id && !p.deleted && p.counts);
     const r = rounding.result.workers[i];
     return {
       id: w.personId,

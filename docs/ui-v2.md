@@ -252,10 +252,11 @@ Not as drawn yet:
   nothing yet; the counter does make the sale pick a new point (12b).
 - Backfill evidence photos (15) are off: no picker, uploads wait for Cloud
   Storage (D-48).
-- 17a: no netting against money the farm owes back; "ต้องแตกเงิน" is a note on
+- 17a: netting against money the farm owes back is built (owner presses it, part is fine, undo per line); "ต้องแตกเงิน" is a note on
   route 1, without the notes-in-the-pile breakdown.
 - 17b/17c: no PromptPay QR (no QR encoder installed) and no copy button (no
   clipboard module); amount, number, bank and name are shown large.
+- One open sale at a time (owner 2026-10-11): `/v2/sale/start` opens the sale still open (`StartSaleGate`, `loadHomeSales`) instead of starting another. The ⋯ menu of the point picker and counter (`sale-options.tsx`) adds/changes the agreed price, shows the sale info and deletes the sale. Screenshots `20`–`23` (23 = netting sheet).
 - Voice announcements (E04-S08) and the basket list / edit / void (E04-S09)
   are not on v2 yet.
 - A closed sale is fully read-only on v2: there is no reopen and no
