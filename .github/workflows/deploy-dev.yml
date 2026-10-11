@@ -1,15 +1,17 @@
 name: Deploy Dev
 
-# Every push to dev (merged PRs, and the release commit Deploy Prod writes back)
-# goes to the dev site. PRs were already verified by CI before they merged, so
-# this builds and deploys only -- no second test run (Actions minutes).
+# MANUAL FALLBACK (E01-S17). The automatic dev deploy moved to Google Cloud
+# Build (cloudbuild.yaml, trigger on push to dev) to save GitHub Actions
+# minutes -- see docs/runbooks/cloud-build-deploy-dev.md. This workflow stays
+# so a dev deploy can still be started by hand from the Actions tab if the
+# Cloud Build trigger is down or not set up yet. It builds and deploys only --
+# no test run.
 #
 # Keyless: GitHub's OIDC token is exchanged for a short-lived Google
 # credential. The two repo *variables* below are identifiers, not secrets.
 
 on:
-  push:
-    branches: [dev]
+  workflow_dispatch:
 
 concurrency:
   group: deploy-dev
