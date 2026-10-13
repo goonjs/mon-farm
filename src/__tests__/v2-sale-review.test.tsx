@@ -15,6 +15,7 @@ import { SaleProvider } from '../store/SaleProvider';
 import type { EventStore } from '../store/store';
 import { seedMockFarm, type MockFarm } from '../test/sale-fixture';
 import { wrap } from '../test/render';
+import { writeWeighMode } from '../store/weigh-mode-preference';
 import { CounterScreen } from '../v2/sale/counter-screen';
 import { HoldStage } from '../v2/sale/hold';
 import { PointScreen } from '../v2/sale/point-screen';
@@ -98,10 +99,23 @@ async function openShortAt(pointId: string) {
 }
 const events = () => store().load(saleId);
 
+// The device preference stores use localStorage, as on web; React Native's test env has none.
+const mockStorage = new Map<string, string>();
+Object.defineProperty(globalThis, 'localStorage', {
+  configurable: true,
+  value: {
+    getItem: (k: string) => mockStorage.get(k) ?? null,
+    setItem: (k: string, v: string) => void mockStorage.set(k, v),
+    removeItem: (k: string) => void mockStorage.delete(k),
+    clear: () => mockStorage.clear(),
+  },
+});
+
 beforeAll(async () => {
   farm = await seedMockFarm(master());
 });
 beforeEach(() => {
+  mockStorage.clear();
   n += 1;
   saleId = `sale-r${n}`;
   jest.clearAllMocks();
@@ -176,6 +190,7 @@ describe('#11 the counter needs a passed check (canCount)', () => {
 
 describe('#9 a top-up that falls short weighs its own basket', () => {
   it('uses the open basket\'s tare, not the new point\'s', async () => {
+    writeWeighMode('dial'); // the dial is what this walks with ± (E04-S16)
     await started();
     await readyAt(farm.a[0]);
     await openShortAt(farm.a[0]);

@@ -7,6 +7,7 @@ import { SaleSettingsScreen } from '../v2/farm/sale-settings-screen';
 import { ShareScreen, SharesScreen } from '../v2/farm/shares-screens';
 import { SpeechProvider } from '../speech';
 import { V2Device } from '../v2/device-screen';
+import { readWeighMode } from '../store/weigh-mode-preference';
 import type { MasterStore } from '../store/master-store';
 import { wrap } from '../test/render';
 
@@ -191,6 +192,11 @@ describe('เครื่องนี้ (device-only settings)', () => {
 
     fireEvent.press(screen.getByTestId('device-hold-less'));
     expect(readHoldMs()).toBe(600);
+
+    expect(screen.getByTestId('device-weigh-mode-type').props.accessibilityState).toMatchObject({ checked: true });
+    fireEvent.press(screen.getByTestId('device-weigh-mode-dial'));
+    expect(screen.getByTestId('device-weigh-mode-dial').props.accessibilityState).toMatchObject({ checked: true });
+    expect(readWeighMode()).toBe('dial');
 
     fireEvent.press(screen.getByTestId('device-speech-off'));
     expect(screen.getByTestId('device-speech-off').props.accessibilityState).toMatchObject({ checked: true });

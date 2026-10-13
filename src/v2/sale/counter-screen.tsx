@@ -20,10 +20,12 @@ import { Pressable, Text, View } from 'react-native';
 import { compactBaht } from '../../core/compact-baht';
 import { pointsOf, tapperOn } from '../../core/master';
 import { saleSkewG } from '../../core/scale-check';
+import { fieldKg, netFromReading, readingFromNet } from '../../core/short-reading';
 import { basketNetG } from '../../core/totals';
 import { basketList } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
+import { readWeighBasis, readWeighMode, writeWeighBasis, type WeighBasis, type WeighMode } from '../../store/weigh-mode-preference';
 import { useTheme } from '../../theme';
 import {
   AlertIcon,
@@ -53,6 +55,7 @@ import { HoldButton, HoldStage } from './hold';
 import { signed, useGoToPoint } from './move';
 import { Banner, IconLine, Kv, kgText, NumChip, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 import { Ruler } from './ruler';
+import { BasisToggle, TypedReading } from './short-reading';
 import { SaleOptionRows, SaleOptionSheets, type OptionSheet } from './sale-options';
 
 type Sheet = 'none' | 'partial' | 'menu' | 'new-point' | 'undo-confirm' | OptionSheet;
@@ -78,6 +81,14 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const pointId = params.point ?? '';
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
   const [readingKg, setReadingKg] = useState<number | null>(null);
+  // How the short sheet is filled is the device's choice (E04-S16): typed, or the dial following scale or net.
+  const [weighMode, setWeighMode] = useState<WeighMode>(readWeighMode);
+  const [basis, setBasisState] = useState<WeighBasis>(readWeighBasis);
+  const setBasis = (b: WeighBasis) => {
+    writeWeighBasis(b);
+    setBasisState(b);
+  };
+  const [typedEmpty, setTypedEmpty] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   useEffect(() => {
     if (notice === null) return undefined;
@@ -142,12 +153,23 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const minKg = Math.ceil((bt + skew) / 1000) + 1;
   const maxKg = Math.round((bt + skew + std * 1.5) / 1000);
   const reading = readingKg ?? Math.max(minKg, Math.round(mark - (filling && fill === 'part' ? 5 : std / 1000 * 0.3)));
-  const readingG = reading * 1000;
+  const readingG = Math.round(reading * 1000);
   // What the reading adds: a whole-basket top-up also weighs what was already in it.
   const heldG = filling && open && fill === 'full' ? open.haveG : 0;
   const netG = readingG - bt - skew - heldG;
   const lackG = (filling && open ? open.missingG : std) - netG;
-  const tooLow = netG <= 0;
+  const tooLow = netG <= 0 || typedEmpty;
+  // The dial follows the scale reading, or the net rubber when the device is set to that (E04-S16).
+  const offsetKg = (bt + skew + heldG) / 1000;
+  const onNet = basis === 'net';
+  const dialMin = onNet ? Math.max(1, Math.ceil(minKg - offsetKg)) : minKg;
+  const dialMax = onNet ? Math.max(dialMin + 1, Math.floor(maxKg - offsetKg)) : maxKg;
+  const dialMark = onNet ? mark - offsetKg : mark;
+  const dialValue = onNet ? netFromReading(reading, offsetKg) : reading;
+  const dialTo = (v: number) => {
+    const c = Math.min(dialMax, Math.max(dialMin, v));
+    setReadingKg(onNet ? readingFromNet(c, offsetKg) : c);
+  };
   const saveShort = () => {
     if (tooLow) return;
     const skewPart = skew ? { skewG: skew } : {};
@@ -231,7 +253,11 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
         <View style={{ flexDirection: 'row', gap: t.space.sm }}>
           <HoldButton testID="tool-undo" label={msg('rec.undo')} a11yLabel={lastNo !== null ? msg('rec.undoA11y', { n: lastNo }) : undefined} hint={lastNo !== null ? msg('rec.undoHint', { n: lastNo }) : msg('rec.undoHold')} icon={(c) => <Undo color={c} size={16} />} onHold={(input) => (input === 'hold-kbd' ? setSheet('undo-confirm') : undo())} disabled={!figs.lastId || !ready} />
           {tool(msg('rec.history'), (c) => <ClockIcon color={c} size={20} />, () => router.push(`${base}/history?point=${pointId}` as Href), 'tool-history')}
-          {tool(filling ? msg('fill.short') : msg('rec.short'), (c) => <ScaleIcon color={c} size={20} />, () => setSheet('partial'), 'tool-short', waiting || !ready)}
+          {tool(filling ? msg('fill.short') : msg('rec.short'), (c) => <ScaleIcon color={c} size={20} />, () => {
+    setTypedEmpty(false);
+    setWeighMode(readWeighMode()); // the device setting may have changed since this screen opened
+    setSheet('partial');
+  }, 'tool-short', waiting || !ready)}
         </View>
       }
       overlay={
@@ -241,29 +267,40 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
               <IconLine strong icon={(c) => <PinIcon color={c} size={14} />}>{place}</IconLine>
               <IconLine icon={(c) => <TapperIcon color={c} size={14} />}>{msg('v2s.tapperIs', { name: tapperName })}</IconLine>
             </View>
-            <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: t.space.xs, borderWidth: t.border.thick, borderColor: t.color.ink, borderRadius: t.radius.md, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs }}>
-              <ScaleIcon color={t.color.ink} size={16} />
-              <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.scaleReads')}</AppText>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: t.space.lg }}>
-              <RoundButton testID="reading-less" label={msg('v2s.less1')} onPress={() => setReadingKg(Math.max(minKg, reading - 1))}>
-                <Minus color={t.color.ink} size={20} />
-              </RoundButton>
-              <Text testID="reading" style={{ minWidth: 110, textAlign: 'center', fontFamily: t.font.family.sans, fontSize: 52, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
-                {reading}
-                <Text style={{ fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.regular }}> {msg('common.kg')}</Text>
-              </Text>
-              <RoundButton testID="reading-more" label={msg('v2s.more1')} onPress={() => setReadingKg(Math.min(maxKg, reading + 1))}>
-                <Plus color={t.color.ink} size={20} />
-              </RoundButton>
-            </View>
-            <Ruler min={minKg} max={maxKg} mark={mark} value={reading} onChange={setReadingKg} />
-            <AppText variant="caption" style={{ textAlign: 'center' }}>
-              {msg('v2s.dragHint')}
-            </AppText>
-            <AppText variant="caption" style={{ textAlign: 'center' }}>
-              {msg('v2s.rulerMax', { n: maxKg })}
-            </AppText>
+            {weighMode === 'dial' ? (
+              <>
+                <BasisToggle value={basis} onChange={setBasis} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: t.space.lg }}>
+                  <RoundButton testID="reading-less" label={msg('v2s.less1')} onPress={() => dialTo(dialValue - 1)}>
+                    <Minus color={t.color.ink} size={20} />
+                  </RoundButton>
+                  <Text testID="reading" style={{ minWidth: 110, textAlign: 'center', fontFamily: t.font.family.sans, fontSize: 52, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: onNet ? t.color.accept : t.color.ink }}>
+                    {fieldKg(dialValue)}
+                    <Text style={{ fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.regular }}> {msg('common.kg')}</Text>
+                  </Text>
+                  <RoundButton testID="reading-more" label={msg('v2s.more1')} onPress={() => dialTo(dialValue + 1)}>
+                    <Plus color={t.color.ink} size={20} />
+                  </RoundButton>
+                </View>
+                <Ruler min={dialMin} max={dialMax} mark={dialMark} value={dialValue} onChange={dialTo} markLabel={msg(onNet ? 'v2s.netShould' : 'rec.shouldRead')} />
+                <AppText variant="caption" style={{ textAlign: 'center' }}>
+                  {msg('v2s.dragHint')}
+                </AppText>
+                <AppText variant="caption" style={{ textAlign: 'center' }}>
+                  {msg('v2s.rulerMax', { n: dialMax })}
+                </AppText>
+              </>
+            ) : (
+              <TypedReading
+                key={String(sheet === 'partial')}
+                startKg={reading}
+                offsetKg={offsetKg}
+                onChange={(kgValue) => {
+                  setTypedEmpty(kgValue === null);
+                  if (kgValue !== null) setReadingKg(kgValue);
+                }}
+              />
+            )}
             {skew || heldG ? (
               <View style={{ ...cardStyle(t), padding: t.space.md }}>
                 <Kv label={msg('v2s.scaleReads')} value={kg(readingG)} />
@@ -275,26 +312,43 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
               </View>
             ) : (
               <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-                {card(
-                  <>
-                    <IconLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('v2s.net')}</IconLine>
-                    {figure(kgText(netG), msg('common.kg'), 'short-net')}
-                    <AppText variant="caption">{msg('v2s.netLine', { reading, tare: kgText(tare) })}</AppText>
-                  </>,
-                  'net',
-                )}
-                {card(
-                  <>
-                    <AppText variant="bodySm">{msg('v2s.lacking')}</AppText>
-                    {figure(kgText(Math.max(0, lackG)), msg('common.kg'))}
-                    <AppText variant="caption">{msg('v2s.untilFull', { n: kgText(filling && open ? open.missingG : std) })}</AppText>
-                  </>,
-                  'lack',
-                )}
+                {weighMode === 'dial' && !onNet
+                  ? card(
+                      <>
+                        <IconLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('v2s.net')}</IconLine>
+                        {figure(kgText(netG), msg('common.kg'), 'short-net')}
+                        <AppText variant="caption">{msg('v2s.netLine', { reading: fieldKg(reading), tare: kgText(tare) })}</AppText>
+                      </>,
+                      'net',
+                    )
+                  : null}
+                {weighMode === 'dial' && onNet
+                  ? card(
+                      <>
+                        <IconLine icon={(c) => <ScaleIcon color={c} size={12} />}>{msg('v2s.scaleWillRead')}</IconLine>
+                        {figure(fieldKg(reading), msg('common.kg'), 'reading-other')}
+                        <AppText variant="caption">{`${kgText(netG)} ${msg('v2s.plusBasket')} ${kgText(tare)}`}</AppText>
+                      </>,
+                      'scale',
+                    )
+                  : null}
+                {typedEmpty
+                  ? null
+                  : card(
+                      <>
+                        <AppText variant="bodySm">{msg('v2s.lacking')}</AppText>
+                        {figure(kgText(Math.max(0, lackG)), msg('common.kg'))}
+                        <AppText variant="caption">{msg('v2s.untilFull', { n: kgText(filling && open ? open.missingG : std) })}</AppText>
+                      </>,
+                      'lack',
+                    )}
               </View>
             )}
+            {weighMode === 'type' && !typedEmpty && lackG < 0 ? (
+              <Banner tone="warn" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg('v2s.over', { n: kgText(-lackG) })]} testID="short-over" />
+            ) : null}
             {tooLow ? (
-              <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg('v2s.tooLow')]} testID="short-too-low" />
+              <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg(typedEmpty ? 'v2s.typeNothing' : 'v2s.tooLow')]} testID="short-too-low" />
             ) : null}
             <View style={{ flexDirection: 'row', gap: t.space.sm }}>
               <View style={{ flex: 1 }}>

@@ -188,8 +188,22 @@ test('start → point → empty scale → count → short → switch and fill �
   // ── เข่งไม่เต็ม (pages 10, 11) ──
   await id('tool-short').click();
   await expect(id('short-sheet')).toBeVisible();
-  await expect(id('reading')).toContainText('37');
+  await expect(id('reading-scale-input')).toHaveValue('37');
+  await expect(id('reading-net-input')).toHaveValue('35');
   await shot(page, '10-short');
+  // The dial mode (device setting, E04-S16) follows the net rubber when asked, then back to typing.
+  await id('short-cancel').click();
+  await page.evaluate(() => localStorage.setItem('mon-farm:weigh-mode', 'dial'));
+  await id('tool-short').click();
+  await id('basis-net').click();
+  await expect(id('reading')).toContainText('35');
+  await shot(page, '10b-short-dial-net');
+  await id('basis-scale').click();
+  await expect(id('reading')).toContainText('37');
+  await id('short-cancel').click();
+  await page.evaluate(() => localStorage.removeItem('mon-farm:weigh-mode'));
+  await id('tool-short').click();
+  await expect(id('reading-scale-input')).toHaveValue('37');
   await id('short-save').click();
   await expect(id('open-card')).toContainText('เข่ง 4 เปิดอยู่ · 35 กก.');
   await shot(page, '11-open-short');
