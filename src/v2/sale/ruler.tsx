@@ -19,6 +19,7 @@ export function Ruler({
   mark,
   value,
   onChange,
+  markLabel,
   testID = 'ruler',
 }: {
   min: number;
@@ -26,6 +27,8 @@ export function Ruler({
   mark: number;
   value: number;
   onChange: (kg: number) => void;
+  /** Under the dashed mark; "ตาชั่งควรอ่าน" unless the ruler counts net rubber (E04-S16). */
+  markLabel?: string;
   testID?: string;
 }) {
   const t = useTheme();
@@ -75,7 +78,7 @@ export function Ruler({
             {mark}
           </Text>
           <Text style={{ position: 'absolute', top: 56, left: x(mark) - 40, width: 80, textAlign: 'center', fontFamily: t.font.family.sans, fontSize: t.font.size.micro, fontWeight: t.font.weight.bold, color: t.color.accept }}>
-            {msg('rec.shouldRead')}
+            {markLabel ?? msg('rec.shouldRead')}
           </Text>
           <View testID={`${testID}-needle`} style={{ position: 'absolute', top: 4, left: x(value) - 1.5, width: 3, height: 34, borderRadius: 2, backgroundColor: t.color.ink }} />
           <Text style={{ position: 'absolute', top: 40, left: x(value) - 14, width: 28, textAlign: 'center', fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.black, color: t.color.ink }}>

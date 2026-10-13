@@ -8,6 +8,7 @@ import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { LogBuilder } from '../core/fixtures';
 import { wrap } from '../test/render';
+import { readWeighBasis, writeWeighBasis, writeWeighMode } from '../store/weigh-mode-preference';
 import { BackfillScreen } from '../v2/sale/backfill-screen';
 import { countModel } from '../v2/sale/count';
 import { CounterScreen } from '../v2/sale/counter-screen';
@@ -84,10 +85,28 @@ async function inSale(ui: ReactElement, p: Record<string, string> = {}) {
   return r;
 }
 
+// The device preference stores use localStorage, as on web; React Native's test env has none.
+const mockStorage = new Map<string, string>();
+Object.defineProperty(globalThis, 'localStorage', {
+  configurable: true,
+  value: {
+    getItem: (k: string) => mockStorage.get(k) ?? null,
+    setItem: (k: string, v: string) => void mockStorage.set(k, v),
+    removeItem: (k: string) => void mockStorage.delete(k),
+    clear: () => mockStorage.clear(),
+  },
+});
+/** The short-basket sheet starts in typing mode (E04-S16); the dial tests ask for the dial. */
+const useDial = (basis: 'scale' | 'net' = 'scale') => {
+  writeWeighMode('dial');
+  writeWeighBasis(basis);
+};
+
 beforeAll(async () => {
   farm = await seedMockFarm(master());
 });
 beforeEach(() => {
+  mockStorage.clear();
   n += 1;
   saleId = `sale-${n}`;
   jest.clearAllMocks();
@@ -202,6 +221,7 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
   });
 
   it('a short basket: reading − basket = net; it stays open and waits, or closes as is', async () => {
+    useDial();
     await started();
     await readyAt(farm.a[3]);
     await counterAt(farm.a[3]);
@@ -221,6 +241,7 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
   });
 
   it('a reading at or below the basket is refused', async () => {
+    useDial();
     await started();
     await readyAt(farm.a[0]);
     await counterAt(farm.a[0]);
@@ -674,5 +695,102 @@ describe('v2 basket history (page 8d, E04-S15)', () => {
     await press('backfill-save');
     await inSale(<HistoryScreen />, { point: farm.a[0] });
     expect(screen.getAllByText('บันทึกย้อนหลัง').length).toBeGreaterThan(0);
+  });
+});
+
+describe('short basket: how it is recorded (E04-S16)', () => {
+  const openSheet = async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    await press('tool-short');
+  };
+  const typeIn = (id: string, text: string) => act(async () => fireEvent.changeText(screen.getByTestId(id), text));
+  const lastShort = async () => (await store().load(saleId)).filter((e) => e.kind === 'short').pop();
+
+  it('starts in typing mode with both weights shown: scale 37, net 35', async () => {
+    await openSheet();
+    expect(screen.getByTestId('reading-scale-input').props.value).toBe('37');
+    expect(screen.getByTestId('reading-net-input').props.value).toBe('35');
+    expect(screen.getByTestId('reading-scale-tag')).toHaveTextContent('กำลังกรอก');
+    expect(screen.getByTestId('reading-net-tag')).toHaveTextContent('คำนวณให้');
+    expect(screen.queryByTestId('reading')).toBeNull();
+    await press('short-save');
+    expect(await lastShort()).toMatchObject({ readingG: 37_000, tareG: 2_000 });
+  });
+
+  it('typing the scale reading works the net out, and records that reading', async () => {
+    await openSheet();
+    await typeIn('reading-scale-input', '40');
+    expect(screen.getByTestId('reading-net-input').props.value).toBe('38');
+    expect(screen.getByTestId('reading-net-tag')).toHaveTextContent('คำนวณให้');
+    await press('short-save');
+    expect(await lastShort()).toMatchObject({ readingG: 40_000, tareG: 2_000 });
+  });
+
+  it('typing the net rubber works the scale out, and the tags swap', async () => {
+    await openSheet();
+    await typeIn('reading-net-input', '30');
+    expect(screen.getByTestId('reading-scale-input').props.value).toBe('32');
+    expect(screen.getByTestId('reading-net-tag')).toHaveTextContent('กำลังกรอก');
+    expect(screen.getByTestId('reading-scale-tag')).toHaveTextContent('คำนวณให้');
+    await press('short-save');
+    expect(await lastShort()).toMatchObject({ readingG: 32_000, tareG: 2_000 });
+  });
+
+  it('keeps one decimal and drops letters', async () => {
+    await openSheet();
+    await typeIn('reading-net-input', '30.5');
+    expect(screen.getByTestId('reading-scale-input').props.value).toBe('32.5');
+    await typeIn('reading-net-input', '3x');
+    expect(screen.getByTestId('reading-net-input').props.value).toBe('3');
+  });
+
+  it('nothing typed, or a net of zero or less, cannot be saved and says why', async () => {
+    await openSheet();
+    await typeIn('reading-scale-input', '');
+    expect(screen.getByTestId('short-save').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId('reading-net-input').props.value).toBe('');
+    await typeIn('reading-scale-input', '2');
+    expect(screen.getByTestId('short-too-low')).toBeTruthy();
+    expect(screen.getByTestId('short-save').props.accessibilityState).toMatchObject({ disabled: true });
+    await typeIn('reading-scale-input', '3');
+    expect(screen.queryByTestId('short-too-low')).toBeNull();
+  });
+
+  it('over a full basket warns but still saves', async () => {
+    await openSheet();
+    await typeIn('reading-scale-input', '55');
+    expect(screen.getByTestId('short-over')).toBeTruthy();
+    await press('short-save');
+    expect(await lastShort()).toMatchObject({ readingG: 55_000 });
+  });
+
+  it('shows how much is still lacking in typing mode', async () => {
+    await openSheet();
+    expect(screen.getByTestId('card-lack')).toHaveTextContent(/ยังขาด\s*15/);
+  });
+
+  it('dial on the net rubber: the big number is the net, ± moves the net, the record is the reading', async () => {
+    useDial('net');
+    await openSheet();
+    expect(screen.getByTestId('reading')).toHaveTextContent(/^35/);
+    expect(screen.getByTestId('reading-other')).toHaveTextContent(/37/);
+    await press('reading-more');
+    expect(screen.getByTestId('reading')).toHaveTextContent(/^36/);
+    await press('short-save');
+    expect(await lastShort()).toMatchObject({ readingG: 38_000, tareG: 2_000 });
+  });
+
+  it('switching the dial between scale and net keeps the same weight, and remembers the choice', async () => {
+    useDial('scale');
+    await openSheet();
+    expect(screen.getByTestId('reading')).toHaveTextContent(/^37/);
+    await press('basis-net');
+    expect(screen.getByTestId('reading')).toHaveTextContent(/^35/);
+    expect(readWeighBasis()).toBe('net');
+    await press('basis-scale');
+    expect(screen.getByTestId('reading')).toHaveTextContent(/^37/);
+    expect(readWeighBasis()).toBe('scale');
   });
 });

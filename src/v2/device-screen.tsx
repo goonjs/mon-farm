@@ -1,7 +1,8 @@
 /**
  * /v2/device — เครื่องนี้ (farm mockup 1, the drawer's device group):
  * settings of THIS device only, never synced and never in the event log —
- * screen theme, the hold time to count a basket (D-79), the spoken count,
+ * screen theme, the hold time to count a basket (D-79), how a short basket is
+ * recorded (E04-S16), the spoken count,
  * the date era (D-74 F14) and the language. Each is remembered on the device
  * by its own provider or preference store.
  */
@@ -15,6 +16,7 @@ import type { Era } from '../core/thai-date';
 import { useI18n, useT, type Locale } from '../i18n';
 import { useSpeech } from '../speech';
 import { readHoldMs, writeHoldMs } from '../store/hold-preference';
+import { readWeighMode, writeWeighMode, type WeighMode } from '../store/weigh-mode-preference';
 import { useThemeControls, useTheme } from '../theme';
 import { AppText, Card, CardLabel, SegmentedControl } from '../ui';
 import { FarmScreen, Stepper } from './farm/pieces';
@@ -27,6 +29,7 @@ export function V2Device() {
   const { locale, setLocale, era, toggleEra } = useI18n();
   const { speechOn, setSpeechOn } = useSpeech();
   const [holdMs, setHoldMs] = useState(readHoldMs);
+  const [weighMode, setWeighMode] = useState<WeighMode>(readWeighMode);
 
   const changeHold = (ms: number) => {
     if (!validHoldMs(ms)) return;
@@ -68,6 +71,22 @@ export function V2Device() {
           onLess={() => changeHold(holdMs - 100)}
           onMore={() => changeHold(holdMs + 100)}
         />,
+      )}
+      {section(
+        msg('v2.weighMode'),
+        <SegmentedControl<WeighMode>
+          testID="device-weigh-mode"
+          value={weighMode}
+          onChange={(m) => {
+            writeWeighMode(m);
+            setWeighMode(m);
+          }}
+          options={[
+            { value: 'type', label: msg('v2.weighModeType') },
+            { value: 'dial', label: msg('v2.weighModeDial') },
+          ]}
+        />,
+        msg('v2.weighModeNote'),
       )}
       {section(
         msg('settings.speech'),
