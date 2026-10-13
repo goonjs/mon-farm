@@ -164,7 +164,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const onNet = basis === 'net';
   const dialMin = onNet ? Math.max(1, Math.ceil(minKg - offsetKg)) : minKg;
   const dialMax = onNet ? Math.max(dialMin + 1, Math.floor(maxKg - offsetKg)) : maxKg;
-  const dialMark = onNet ? mark - offsetKg : mark;
+  const dialMark = onNet ? Math.min(dialMax, Math.max(dialMin, netFromReading(mark, offsetKg))) : mark;
   const dialValue = onNet ? netFromReading(reading, offsetKg) : reading;
   const dialTo = (v: number) => {
     const c = Math.min(dialMax, Math.max(dialMin, v));
@@ -255,6 +255,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           {tool(msg('rec.history'), (c) => <ClockIcon color={c} size={20} />, () => router.push(`${base}/history?point=${pointId}` as Href), 'tool-history')}
           {tool(filling ? msg('fill.short') : msg('rec.short'), (c) => <ScaleIcon color={c} size={20} />, () => {
     setTypedEmpty(false);
+    setReadingKg(null); // a cancelled sheet leaves nothing typed behind
     setWeighMode(readWeighMode()); // the device setting may have changed since this screen opened
     setSheet('partial');
   }, 'tool-short', waiting || !ready)}
