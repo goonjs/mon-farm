@@ -1,5 +1,7 @@
 # mon-farm
 
+**Class:** `personal` (product owner, 2026-10-13; dev-pose standards 11, no line means commercial)
+
 ## Product shape
 
 A web app built to also run as a mobile app, **offline-first**: the app must be
