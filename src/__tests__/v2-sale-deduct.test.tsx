@@ -2,6 +2,7 @@ import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { ReactElement, ReactNode } from 'react';
 
 import { LogBuilder } from '../core/fixtures';
+import { projectFinance } from '../core/finance/ledger';
 import { FARM_FUNDS } from '../core/finance/types';
 import { financeStore } from '../store/finance';
 import { writeFinance } from '../store/finance-write';
@@ -137,6 +138,9 @@ describe('page 17a — the deduct sheet', () => {
     expect(value('deduct-amount')).toBe('1,500.00');
     await press('net-amount-plus');
     expect(value('net-amount')).toBe('100.00');
+    await press('net-amount-minus');
+    await press('net-amount-minus');
+    expect(value('net-amount')).toBe('0.00');
   });
 
   it('netting is a + line; the route collects only the difference and says what it moves', async () => {
@@ -163,8 +167,16 @@ describe('page 17a — the deduct sheet', () => {
     await type('net-amount', '640');
     await type('deduct-amount', '500');
     expect(screen.getByTestId('deduct-save')).toBeDisabled();
+    expect(screen.getByTestId('deduct-amount-error')).toHaveTextContent('หักหนี้ต้องไม่น้อยกว่ายอดหักกลบ 640.00');
     await type('deduct-amount', '1500.01');
     expect(screen.getByTestId('deduct-save')).toBeDisabled();
+    expect(screen.getByTestId('deduct-amount-error')).toHaveTextContent('หักได้ไม่เกิน 1,500.00');
+    // − stops at the netting, not at 0 (review 2 #5)
+    await type('deduct-amount', '700');
+    await press('deduct-amount-minus');
+    expect(value('deduct-amount')).toBe('640.00');
+    await press('deduct-amount-minus');
+    expect(value('deduct-amount')).toBe('640.00');
     // an empty box is 0, not the proposal (review F8): with nothing saved yet there is nothing to write
     await type('net-amount', '');
     await type('deduct-amount', '');
@@ -206,6 +218,33 @@ describe('page 17a — the deduct sheet', () => {
     expect(screen.getByTestId(`debt-left-${farm.red}`)).toHaveTextContent(/3,500\.00/);
   });
 
+  it('saving an edit that changes nothing writes nothing (review 2 #2)', async () => {
+    await inSale(<SettlementScreen />);
+    const before = (await financeStore.load()).length;
+    await press(`edit-deduct-${farm.red}`);
+    await press('deduct-save');
+    expect((await financeStore.load()).length).toBe(before);
+    expect(screen.queryByTestId('deduct-sheet')).toBeNull();
+  });
+
+  it('editing keeps the netting and changes the route: the owed money is placed again, not lost (review 2 #4)', async () => {
+    await inSale(<SettlementScreen />);
+    await press(`edit-deduct-${farm.nat}`);
+    expect(value('net-amount')).toBe('640.00');
+    // the 640 the old netting took is back on offer while editing
+    expect(screen.getByTestId('net-card')).toHaveTextContent(/สวนต้องคืนนัด 640\.00/);
+    await press('method-cash-from-share');
+    await press('deduct-save');
+    expect((await live(farm.nat)).map((p) => [p.method, p.amountSatang]).sort()).toEqual([['cash-from-share', 86_000], ['netting', 64_000]]);
+    const all = await financeStore.load();
+    const gone = new Set(all.filter((e) => e.payload.t === 'repayment_changed' && e.payload.patch.deleted).map((e) => e.targetId));
+    expect(all.filter((e) => e.payload.t === 'repayment_recorded' && !gone.has(e.targetId))).toHaveLength(1);
+    const owed = projectFinance(all).reimbursements.find((r) => r.to.id === farm.nat)!;
+    expect(owed.remainingSatang).toBe(0);
+    expect(screen.getByTestId(`deducted-${farm.nat}`)).toHaveTextContent(/−1,500\.00/);
+    expect(screen.getByTestId(`netted-${farm.nat}`)).toHaveTextContent(/\+640\.00/);
+  });
+
   it('editing a netted deduction to 0 removes both lines and the repayment', async () => {
     await inSale(<SettlementScreen />);
     await press(`edit-deduct-${farm.nat}`);
@@ -215,10 +254,38 @@ describe('page 17a — the deduct sheet', () => {
     await type('deduct-amount', '0');
     await press('deduct-save');
     expect(await live(farm.nat)).toEqual([]);
-    const reps = (await financeStore.load()).filter((e) => e.payload.t === 'repayment_changed');
-    expect(reps).toHaveLength(1);
+    const all = await financeStore.load();
+    const gone = new Set(all.filter((e) => e.payload.t === 'repayment_changed' && e.payload.patch.deleted).map((e) => e.targetId));
+    expect(all.filter((e) => e.payload.t === 'repayment_recorded' && !gone.has(e.targetId))).toHaveLength(0);
     expect(screen.queryByTestId(`netted-${farm.nat}`)).toBeNull();
     expect(screen.getByTestId(`deduct-${farm.nat}`)).toBeTruthy();
+  });
+});
+
+describe('an older sale (review 2 #1, #3)', () => {
+  const OLD = 'sale-old';
+  const day = '2026-10-03';
+  beforeAll(async () => {
+    await seedSale(store(), saleOf(OLD).map((e) => ({ ...e, ts: Date.parse(`${day}T08:00:00`) })));
+    // Two routes left by the old "add another deduction" button.
+    for (const [id, method] of [['old-1', 'cash-from-share'], ['old-2', 'transfer-with-owner']] as const) {
+      await writeFinance(id, null, { t: 'debt_payment_recorded', fields: { worker: { id: farm.red, name: 'แดง' }, creditor: FARM, amountSatang: 10_000, date: day, note: '', method, saleId: OLD } });
+    }
+  });
+
+  it('warns before two routes become one', async () => {
+    await inSale(<SettlementScreen />, OLD);
+    await press(`edit-deduct-${farm.red}`);
+    expect(screen.getByTestId('deduct-merge-warning')).toBeTruthy();
+  });
+
+  it('dates what it writes by the sale, not by today', async () => {
+    await inSale(<SettlementScreen />, OLD);
+    await press(`edit-deduct-${farm.red}`);
+    await type('deduct-amount', '300');
+    await press('deduct-save');
+    const mine = (await financeStore.load()).flatMap((e) => (e.payload.t === 'debt_payment_recorded' && e.payload.fields.saleId === OLD ? [e.payload.fields] : []));
+    expect(mine.filter((p) => p.amountSatang === 30_000).map((p) => p.date)).toEqual([day]);
   });
 });
 
