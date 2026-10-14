@@ -3,7 +3,7 @@ name: Preview Cleanup
 # Deletes a PR's preview channel (pr-<N> on the dev site) when the PR is closed
 # or merged, instead of leaving it live until Firebase expires it (E01-S07,
 # D-21). A PR that never got a channel (docs-only, or previews were off) is a
-# no-op. Same guards as the preview job in ci.yml: same-repo PRs only, and
+# no-op. Same guards as the preview job in pr-extras.yml: same-repo PRs only, and
 # skipped until the keyless-auth repo variables are set.
 
 on:

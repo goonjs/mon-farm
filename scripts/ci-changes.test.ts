@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diffArgs, needsVerify } from './ci-changes.mjs';
+import { diffArgs, needsRulesTests, needsVerify } from './ci-changes.mjs';
 
 describe('needsVerify', () => {
   it('skips a change made only of docs and markdown', () => {
@@ -45,5 +45,37 @@ describe('diffArgs', () => {
 
   it('diffs from the merge base', () => {
     expect(diffArgs('a', 'b').at(-1)).toBe('a...b');
+  });
+});
+
+// The Firestore rules job needs a JDK and the emulator; a PR that cannot have
+// changed a rule or the tooling around it should not pay for it.
+describe('needsRulesTests', () => {
+  it('skips an app-only change', () => {
+    expect(needsRulesTests(['src/core/money.ts', 'e2e/counter.spec.ts', 'docs/prd.md'])).toBe(false);
+  });
+
+  it('runs when rules, indexes or their tests changed', () => {
+    expect(needsRulesTests(['firestore.rules'])).toBe(true);
+    expect(needsRulesTests(['firestore.indexes.json'])).toBe(true);
+    expect(needsRulesTests(['firestore/rules.test.ts'])).toBe(true);
+    expect(needsRulesTests(['vitest.rules.config.ts'])).toBe(true);
+    expect(needsRulesTests(['firebase.json'])).toBe(true);
+  });
+
+  // A dependency bump can change firebase-tools or the emulator itself.
+  it('runs when dependencies or the workflow changed', () => {
+    expect(needsRulesTests(['package-lock.json'])).toBe(true);
+    expect(needsRulesTests(['package.json'])).toBe(true);
+    expect(needsRulesTests(['.github/workflows/ci.yml'])).toBe(true);
+  });
+
+  it('runs when the changed list is empty', () => {
+    expect(needsRulesTests([])).toBe(true);
+  });
+
+  // A path that merely contains the word is not the rules directory.
+  it('matches paths exactly, not by substring', () => {
+    expect(needsRulesTests(['src/firestore-helpers.ts'])).toBe(false);
   });
 });

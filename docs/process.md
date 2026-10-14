@@ -184,11 +184,15 @@ release's changelog will therefore only list commits made under this rule.
   run while `main` has commits `dev` lacks, so it waits for that merge. The PR
   is opened with the workflow token, so it has no CI run of its own; CI runs on
   `dev` after the merge.
-- **Hosting:** `dev` deploys to the dev site on every push
-  (`deploy-dev.yml`); each PR from this repo gets a preview URL that expires in
-  7 days (job `preview` in `ci.yml`; the link is one PR comment that each push
-  updates, and `preview-cleanup.yml` deletes the channel when the PR closes); Deploy Prod
-  deploys the prod site. All go through `scripts/deploy.sh`.
+- **Hosting:** `dev` deploys to the dev site on every push (`deploy-dev.yml`;
+  `cloudbuild.yaml` + `docs/runbooks/cloud-build-deploy-dev.md` are an unused
+  option for moving it to Cloud Build). A PR gets a preview URL
+  (expires in 7 days; the link is one PR comment each push updates, and
+  `preview-cleanup.yml` deletes the channel when the PR closes) only when it
+  carries the `preview` label, and runs the
+  browser suite early only with the `e2e` label (both in `pr-extras.yml`); e2e
+  always runs after merge to dev/main. Deploy Prod deploys the prod site. All
+  go through `scripts/deploy.sh`. (E01-S17)
 - **One-time GitHub setup (owner):** Settings, Secrets and variables, Actions,
   *Variables* tab (identifiers, not secrets):
   - `GCP_WORKLOAD_IDENTITY_PROVIDER` =

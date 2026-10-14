@@ -4,12 +4,18 @@ name: Deploy Dev
 # goes to the dev site. PRs were already verified by CI before they merged, so
 # this builds and deploys only -- no second test run (Actions minutes).
 #
+# E01-S17: cloudbuild.yaml + docs/runbooks/cloud-build-deploy-dev.md are an
+# optional way to move this off GitHub Actions if the repo goes private again
+# and minutes run short. Until a Cloud Build trigger exists, this stays the
+# automatic deploy (owner, 2026-10-14: setup was blocked, repo made public).
+#
 # Keyless: GitHub's OIDC token is exchanged for a short-lived Google
 # credential. The two repo *variables* below are identifiers, not secrets.
 
 on:
   push:
     branches: [dev]
+  workflow_dispatch:
 
 concurrency:
   group: deploy-dev

@@ -1,0 +1,226 @@
+name: PR extras
+
+# Opt-in, label-driven extras for a pull request (E01-S17). CI (ci.yml) runs
+# only the cheap gates on a PR; the two expensive things are asked for here:
+#
+#   label `e2e`      run the Playwright suite against this PR's build
+#   label `preview`  deploy a Firebase preview channel (expires in 7 days)
+#
+# Both labels together share one install and one build (job `build`). The run starts when a
+# label is added and again on every new push while the label is still on, so a
+# labelled PR stays covered. A label that is not one of the two does nothing.
+# After merge, e2e always runs from ci.yml, so an unlabelled PR is still
+# covered before it can reach production.
+#
+# Skipped for forks, which get no OIDC token and must not reach the deploy
+# credential, and for draft PRs. The preview step is skipped (not failed)
+# until the keyless-auth repo variables are set.
+
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened, ready_for_review]
+
+# One run per PR; a newer push or label replaces the one in flight. A label
+# that does nothing (anything but e2e/preview) gets its own group, so it cannot
+# cancel a run that is doing real work.
+concurrency:
+  group: >-
+    ${{ github.workflow }}-${{ github.event.pull_request.number }}-${{
+    github.event.action == 'labeled' && github.event.label.name != 'e2e'
+    && github.event.label.name != 'preview' && github.run_id || '' }}
+  cancel-in-progress: true
+
+env:
+  WANT_E2E: ${{ contains(github.event.pull_request.labels.*.name, 'e2e') }}
+  WANT_PREVIEW: ${{ contains(github.event.pull_request.labels.*.name, 'preview') }}
+  # Preview needs the keyless-auth repo variables; without them it is skipped.
+  CAN_PREVIEW: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
+
+jobs:
+  # Untrusted PR code (npm install scripts, the build) runs here with read-only
+  # permissions and no OIDC token. The jobs that can deploy never run it.
+  build:
+    if: >
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft &&
+      (github.event.action == 'labeled'
+        && (github.event.label.name == 'e2e' || github.event.label.name == 'preview')
+       || github.event.action != 'labeled'
+        && (contains(github.event.pull_request.labels.*.name, 'e2e')
+         || contains(github.event.pull_request.labels.*.name, 'preview')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      e2e: ${{ steps.want.outputs.e2e }}
+      preview: ${{ steps.want.outputs.preview }}
+
+    steps:
+      # Decide once, so a preview-only label with no deploy variables builds nothing.
+      - name: What was asked for
+        id: want
+        run: |
+          echo "e2e=$WANT_E2E" >> "$GITHUB_OUTPUT"
+          preview=false
+          if [ "$WANT_PREVIEW" = true ] && [ "$CAN_PREVIEW" = true ]; then preview=true; fi
+          echo "preview=$preview" >> "$GITHUB_OUTPUT"
+          if [ "$WANT_PREVIEW" = true ] && [ "$CAN_PREVIEW" != true ]; then
+            echo "::notice title=PR preview off::Set repo variables GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT to deploy previews."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+        run: npm ci
+
+      - name: Build web
+        if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+        env:
+          # Public web config for project mon-farmmate (not secrets; E02-S01).
+          EXPO_PUBLIC_FIREBASE_PROJECT_ID: mon-farmmate
+          EXPO_PUBLIC_FIREBASE_API_KEY: AIzaSyA2LpIyAf0Sae1q0O5I1mRTb75AEv6hPwY
+          EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: mon-farmmate.firebaseapp.com
+        run: npm run build:web
+
+      - name: Upload web build
+        if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
+
+  # Label `e2e`. Read-only, like ci.yml's e2e job.
+  e2e:
+    needs: build
+    if: needs.build.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: End-to-end
+        run: npm run test:e2e
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: docs/ux/screenshots/
+          if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 3
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: e2e/.results/
+          # The folder itself is hidden; v4 would otherwise upload nothing (#45).
+          include-hidden-files: true
+          retention-days: 3
+
+  # Label `preview`. Holds the OIDC permission but runs no PR code except the
+  # prebuilt, static dist and scripts/deploy.sh from the PR's checkout; it does
+  # not install dependencies. Independent of e2e, so a red e2e does not hide it.
+  preview:
+    needs: build
+    if: needs.build.outputs.preview == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      # The PR may have closed while this ran; preview-cleanup.yml has then
+      # already deleted the channel, and deploying would bring it back.
+      - name: Check the PR is still open
+        id: open
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: echo "state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .state)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy preview channel (expires in 7 days)
+        if: steps.open.outputs.state == 'open'
+        run: ./scripts/deploy.sh preview "pr-${{ github.event.pull_request.number }}" | tee preview.log
+
+      # One comment per PR: edit ours if it is there, otherwise post it.
+      - name: Comment the preview URL on the PR
+        if: steps.open.outputs.state == 'open'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node scripts/preview-comment.mjs preview.log "$SHA" > comment.md
+          head -2 comment.md | tail -1 >> "$GITHUB_STEP_SUMMARY"
+          id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- mon-farm-preview -->"))) | .id' | sed -n 1p)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@comment.md >/dev/null
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@comment.md >/dev/null
+          fi
