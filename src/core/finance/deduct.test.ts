@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   cashNotes,
+  deductSheet,
+  pickNotes,
   deductionCap,
   needsChange,
   nettingPayloads,
@@ -144,5 +146,65 @@ describe('overDeducted (D-61): the total taken at a sale, netting included, agai
   });
   it('a sale edit that shrinks the share flags the deduction already taken', () => {
     expect(overDeducted(200_000, 150_000, 0)).toBe(true);
+  });
+});
+
+describe('the deduct sheet as on mockup page 17a (owner 2026-10-14)', () => {
+  // นัด: share 17,823.75, owes the farm 1,500, the farm owes นัด 640.
+  const base = { balanceSatang: 150000, shareSatang: 1782375, owedBackSatang: 64000, planPerSaleSatang: null };
+
+  it('proposes the whole debt as หักหนี้; netting is a + line, and only the rest comes out of the cash', () => {
+    const s = deductSheet({ ...base, totalSatang: null, nettingSatang: 64000 });
+    expect(s.proposedSatang).toBe(150000);
+    expect(s.totalSatang).toBe(150000);
+    expect(s.routeSatang).toBe(86000);
+    expect(s.cashSatang).toBe(1782375 - 150000 + 64000);
+    expect(s.debtLeftSatang).toBe(0);
+    expect(s.problem).toBeNull();
+  });
+
+  it('the netting can be at most what is owed back, and at most the debt', () => {
+    expect(deductSheet({ ...base, totalSatang: null, nettingSatang: 64001 }).problem).toBe('net-range');
+    expect(deductSheet({ ...base, owedBackSatang: 300000, totalSatang: null, nettingSatang: 0 }).netCapSatang).toBe(150000);
+  });
+
+  it('the ceiling is the smaller of the debt and share + netting (D-18, D-67)', () => {
+    const small = { ...base, balanceSatang: 500000, shareSatang: 100000 };
+    expect(deductSheet({ ...small, totalSatang: null, nettingSatang: 0 }).capSatang).toBe(100000);
+    expect(deductSheet({ ...small, totalSatang: null, nettingSatang: 64000 }).capSatang).toBe(164000);
+    expect(deductSheet({ ...small, totalSatang: 164001, nettingSatang: 64000 }).problem).toBe('total-range');
+    // untouched, the proposal follows the netting up to the new ceiling
+    expect(deductSheet({ ...small, totalSatang: null, nettingSatang: 64000 }).totalSatang).toBe(164000);
+  });
+
+  it('the debt deducted cannot be less than what is netted', () => {
+    expect(deductSheet({ ...base, totalSatang: 50000, nettingSatang: 64000 }).problem).toBe('below-netting');
+  });
+
+  it('a plan proposes the instalment (FERT-6, D-59)', () => {
+    expect(deductSheet({ ...base, balanceSatang: 500000, planPerSaleSatang: 200000, totalSatang: null, nettingSatang: 0 }).proposedSatang).toBe(200000);
+  });
+
+  it('an empty box is 0, not the proposal (review F8); 0 with nothing to remove is nothing to save', () => {
+    const s = deductSheet({ ...base, totalSatang: 0, nettingSatang: 0 });
+    expect(s.totalSatang).toBe(0);
+    expect(s.problem).toBe('nothing');
+    expect(deductSheet({ ...base, totalSatang: 0, nettingSatang: 0, editing: true }).problem).toBeNull();
+  });
+});
+
+describe('which notes to lift out of a cash pile (D-71 route 1)', () => {
+  it('names the notes when the amount can be taken as it is', () => {
+    expect(pickNotes(286000, 200000)).toEqual([100000, 100000]);
+    expect(pickNotes(286000, 30000)).toEqual([10000, 10000, 10000]);
+  });
+  it('null when a note must be broken', () => {
+    expect(pickNotes(105000, 3000)).toBeNull();
+    expect(pickNotes(242500, 86000)).toBeNull();
+  });
+  it('agrees with needsChange', () => {
+    for (const [pile, take] of [[286000, 50000], [286000, 30000], [105000, 3000], [242500, 150000]] as const) {
+      expect(pickNotes(pile, take) === null).toBe(needsChange(pile, take));
+    }
   });
 });

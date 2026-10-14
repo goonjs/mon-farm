@@ -1,6 +1,6 @@
 # Story E06-S04: หักหนี้ตอนสรุปเงิน ไม่เกินส่วนแบ่ง ยกยอด
 
-Status: Ready (เจ้าของตกลง AC 2026-10-03)
+Status: Review (เจ้าของตกลง AC 2026-10-03 · ยืนยัน mockup หน้า 17/17a 2026-10-14) — v2 settlement screen on `dev`; fixes on `fix/e06-s04-deduct-v2`; open: F1 cancelled sales (E04-S11), F2 two-device duplicate
 
 ## Context
 
@@ -18,24 +18,24 @@ Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Acceptance criteria
 
-- [ ] หน้า 17 (สรุปยอดส่วนแบ่ง) การ์ดคนงานที่มียอดค้าง มีปุ่ม **"หักเงินคืนหนี้"**; กดแล้วเพิ่มบรรทัด **"หักหนี้"** (D-60)
-- [ ] หักได้ **เฉพาะหนี้ที่ติดสวน** (ผู้ให้ = เงินสวน รวมค่าปุ๋ยและอื่น ๆ ที่ติดสวน); หนี้ที่ยืมคนอื่นหักตอนสรุปเงินไม่ได้ (D-69)
-- [ ] ยอดเสนอ = งวดผ่อน (ถ้ามีแผน — งวดละการขาย) หรือยอดค้างทั้งหมด แล้วตัดที่ส่วนแบ่งคนงาน (FERT-6, D-59)
-- [ ] แก้ยอดหักได้ 0 ถึงเพดาน (= min(ยอดค้าง, ส่วนแบ่ง)); เกินเพดานกดบันทึกไม่ได้ ส่วนที่เหลือยกไป (D-18)
+- [x] หน้า 17 (สรุปยอดส่วนแบ่ง) การ์ดคนงานที่มียอดค้าง มีปุ่ม **"หักเงินคืนหนี้"**; กดแล้วเพิ่มบรรทัด **"หักหนี้"** (D-60)
+- [x] หักได้ **เฉพาะหนี้ที่ติดสวน** (ผู้ให้ = เงินสวน รวมค่าปุ๋ยและอื่น ๆ ที่ติดสวน); หนี้ที่ยืมคนอื่นหักตอนสรุปเงินไม่ได้ (D-69)
+- [x] ยอดเสนอ = งวดผ่อน (ถ้ามีแผน — งวดละการขาย) หรือยอดค้างทั้งหมด แล้วตัดที่ส่วนแบ่งคนงาน (FERT-6, D-59)
+- [x] แก้ยอดหักได้ 0 ถึงเพดาน (= min(ยอดค้าง, ส่วนแบ่ง)); เกินเพดานกดบันทึกไม่ได้ ส่วนที่เหลือยกไป (D-18)
 - [ ] เมื่อเจ้าของใช้การหักกลบ: ใช้ **บางส่วน** ของเงินที่สวนต้องคืนได้ (แก้ยอด) และเพดานหักหนี้ขยายเป็น **ส่วนแบ่ง + เงินที่สวนคืนครั้งนี้**; การขายถูกยกเลิก/ลบ → การคืนจากการหักกลบยกเลิกตาม (D-67)
-- [ ] หลังเลือกหักหนี้ เลือก **วิธีรับเงินคืนหนี้แยกต่อคนกรีด** 3 ทาง (D-71): (1) ดึงเงินสดจากส่วนแบ่ง · (2) ให้คนซื้อแบ่งเงินสดเป็นกองคนกรีด + กองคืนเจ้าของ · (3) ให้คนซื้อโอนรวมมากับส่วนเจ้าของ
-- [ ] ทาง (1): แอปคำนวณว่าต้องแตกแบงค์/เหรียญไหม โดยถือว่ากองเงินสดจากคนซื้อใช้แบงค์ใหญ่สุดให้เต็มก่อน (1000/500/100/50/20 · 10/5/2/1); ถ้าดึงยอดหักออกจากกองนั้นพอดีไม่ได้ → ขึ้นเตือน "ต้องแตกเงิน" (D-71)
-- [ ] ทาง (3): ยอดโอนเข้าบัญชีเจ้าของ = ส่วนเจ้าของ + เงินคืนหนี้ของคนกรีดที่เลือกทางนี้; กองเงินสดคนกรีดลดลงเท่ายอดหัก (D-71)
-- [ ] ทุกทางบันทึกรายรับและการคืนหนี้ถูกต้อง: การคืนเข้าบัญชีหนี้คนงาน (E06-S03) ยอดเท่ากันทุกทาง; ต่างกันแค่เงินเข้ามาทางไหน (เงินสด/โอน) (D-71)
+- [x] หลังเลือกหักหนี้ เลือก **วิธีรับเงินคืนหนี้แยกต่อคนกรีด** 3 ทาง (D-71): (1) ดึงเงินสดจากส่วนแบ่ง · (2) ให้คนซื้อแบ่งเงินสดเป็นกองคนกรีด + กองคืนเจ้าของ · (3) ให้คนซื้อโอนรวมมากับส่วนเจ้าของ
+- [x] ทาง (1): แอปคำนวณว่าต้องแตกแบงค์/เหรียญไหม โดยถือว่ากองเงินสดจากคนซื้อใช้แบงค์ใหญ่สุดให้เต็มก่อน (1000/500/100/50/20 · 10/5/2/1); ถ้าดึงยอดหักออกจากกองนั้นพอดีไม่ได้ → ขึ้นเตือน "ต้องแตกเงิน" (D-71)
+- [x] ทาง (3): ยอดโอนเข้าบัญชีเจ้าของ = ส่วนเจ้าของ + เงินคืนหนี้ของคนกรีดที่เลือกทางนี้; กองเงินสดคนกรีดลดลงเท่ายอดหัก (D-71)
+- [x] ทุกทางบันทึกรายรับและการคืนหนี้ถูกต้อง: การคืนเข้าบัญชีหนี้คนงาน (E06-S03) ยอดเท่ากันทุกทาง; ต่างกันแค่เงินเข้ามาทางไหน (เงินสด/โอน) (D-71)
 - [ ] **หน้าเทียบยอดกับยอดขายทั้งหมด** (D-72): แสดงทุกกอง — เงินสดคนกรีดแต่ละคน, กองคืนหนี้ (ทาง 2), เงินสดที่ดึงคืนหนี้ (ทาง 1), ยอดโอนเจ้าของรวมเงินคืนหนี้ (ทาง 3), เงินสดเข้าสวน, ส่วนปรับปัดเศษ — รวมกัน **= ยอดขายทั้งหมด ตรงถึงสตางค์**; ไม่ตรง → แสดงส่วนต่างเป็นสีเตือน ปิดการขายไม่ได้
-- [ ] **ปัดเศษหลังหัก**: ลำดับ = ส่วนแบ่ง → หักหนี้ → ปัดเศษ (E05-S02) → เงินสดที่ต้องจ่าย (D-60)
-- [ ] เงินสดที่ต้องจ่าย = ส่วนแบ่ง − หักหนี้ (± ปัดเศษ) ไม่ต่ำกว่า 0 (D-18)
-- [ ] คนงานที่สวนต้องคืนเงิน (E11-S02) → แอป **เสนอ** "นำเงินที่สวนต้องคืนมาหักกลบ" — **เจ้าของกดใช้เอง** ไม่ใช้อัตโนมัติ; เมื่อใช้ บันทึกเป็นการคืน (E11-S03) **แยกจาก** การหักหนี้ แต่คิดรวมในยอดที่คนงานรับครั้งนี้ (D-60)
-- [ ] การหักเข้าบัญชีหนี้ (E06-S03); ยอดคงเหลือแสดงบนหน้าสรุปเงินและบันทึกการขาย (SET-7)
+- [x] **ปัดเศษหลังหัก**: ลำดับ = ส่วนแบ่ง → หักหนี้ → ปัดเศษ (E05-S02) → เงินสดที่ต้องจ่าย (D-60)
+- [x] เงินสดที่ต้องจ่าย = ส่วนแบ่ง − หักหนี้ (± ปัดเศษ) ไม่ต่ำกว่า 0 (D-18)
+- [x] คนงานที่สวนต้องคืนเงิน (E11-S02) → แอป **เสนอ** "นำเงินที่สวนต้องคืนมาหักกลบ" — **เจ้าของกดใช้เอง** ไม่ใช้อัตโนมัติ; เมื่อใช้ บันทึกเป็นการคืน (E11-S03) **แยกจาก** การหักหนี้ แต่คิดรวมในยอดที่คนงานรับครั้งนี้ (D-60)
+- [x] การหักเข้าบัญชีหนี้ (E06-S03); ยอดคงเหลือแสดงบนหน้าสรุปเงินและบันทึกการขาย (SET-7)
 - [ ] การขายที่ **Cancelled หรือถูกลบ** → การหักของการขายนั้นไม่ลดยอดค้าง (กู้คืน → กลับมานับ)
-- [ ] แก้การขายแล้วส่วนแบ่งลดจนยอดหักเกินส่วนแบ่ง → ติดธง **"หักเกินส่วนแบ่ง"** — **ปิดการขาย/ติ๊กจ่ายไม่ได้** จนเจ้าของแก้ยอดหัก; ไม่ปรับเงินเงียบ ๆ (D-61)
-- [ ] ยอดขายรวม และส่วนแบ่งเจ้าของ ไม่เปลี่ยนเพราะการหัก
-- [ ] ลบโค้ดเก่า (เดิม E06-S05): `deduction_added`/`deduction_voided`, `WorkerSettlement.deductions`, ฟอร์มหักเงิน S29 และ test ที่เกี่ยวข้อง; ถ้า `src/core/delete-guard.ts` ยังอยู่ (E03-S06 ยังไม่ทำ) เอาส่วนที่อ่าน deduction ออกด้วย ไม่เหลือกติกา D-44 (D-58) (ขอยืนยันก่อนลบไฟล์)
+- [x] แก้การขายแล้วส่วนแบ่งลดจนยอดหักเกินส่วนแบ่ง → ติดธง **"หักเกินส่วนแบ่ง"** — **ปิดการขาย/ติ๊กจ่ายไม่ได้** จนเจ้าของแก้ยอดหัก; ไม่ปรับเงินเงียบ ๆ (D-61)
+- [x] ยอดขายรวม และส่วนแบ่งเจ้าของ ไม่เปลี่ยนเพราะการหัก
+- [x] ลบโค้ดเก่า (เดิม E06-S05): `deduction_added`/`deduction_voided`, `WorkerSettlement.deductions`, ฟอร์มหักเงิน S29 และ test ที่เกี่ยวข้อง; ถ้า `src/core/delete-guard.ts` ยังอยู่ (E03-S06 ยังไม่ทำ) เอาส่วนที่อ่าน deduction ออกด้วย ไม่เหลือกติกา D-44 (D-58) (ขอยืนยันก่อนลบไฟล์)
 
 ## Offline / sync
 
@@ -62,20 +62,30 @@ Status: Ready (เจ้าของตกลง AC 2026-10-03)
 
 ## Verification
 
-- [ ] Sandbox run:
-- [ ] Screenshots (UI) — golden path:
-- [ ] Screenshots (UI) — edge cases:
+Partly met, left open (owner 2026-10-14):
+- AC "เมื่อเจ้าของใช้การหักกลบ … การขายถูกยกเลิก/ลบ → ยกเลิกตาม" and AC "การขายที่ Cancelled หรือถูกลบ": **deleted** sales stop counting and come back on restore; **cancelled** does not yet (review F1) — `useSaleCounts` reads only `deleted`, and nothing can cancel a sale until E04-S11.
+- AC "หน้าเทียบยอด" (D-72): the tally adds every pile and blocks on a difference, but its piles come from the same deductions it checks (review F5), so it catches only a few kinds of mismatch.
+- Offline: the same deduction re-entered on two offline phones adds up after sync with no Conflict (review F2); close is blocked only if the total passes the share.
+
+- [x] Unit (vitest, 2026-10-14): `src/core/finance/deduct.test.ts` (cap, proposal, rounding, needs-change incl. 2,860/500, 300 and 1,050/30; `deductSheet` −1,500 / +640 / route 860, ceiling = share + netting, หักหนี้ ≥ netting, empty box = 0; `pickNotes`), `src/core/finance/debts.test.ts` (`balanceAfterSale`). 174 finance tests, 925 core in all, pass.
+- [x] Component (jest): `src/__tests__/v2-sale-deduct.test.tsx` (mockup 17/17a: owed-back hint, breakdown + reason, −/+ steppers, + netting line, route lines, ต้องแตกเงิน + notes, edit replaces, edit keeping the netting, an unchanged edit writes nothing, edit to 0 removes netting + repayment, an older sale dated by its day, owner tick locked under D-61), `v2-sale-netting.test.tsx`, `v2-sale-money.test.tsx`. 419 pass (`--runInBand`).
+- [x] Sandbox run (2026-10-14): exported web build, Playwright phone-portrait, offline — `e2e/v2-sale.spec.ts` netting test and the full v2 suite: 21 passed, 5 skipped (landscape-only).
+- [x] Screenshots (UI) — golden path: `docs/ux/screenshots/ui-v2/sale/e06-s04/17-before.png`, `17a-red-sheet.png`, `17a-nat-open.png`, `17-after.png`, `17-after-nat.png`, `18a-tally.png`; side by side with the mockup: `after-fix-vs-mockup-17.png`, `after-fix-vs-mockup-17a.png` (before the fix: `before-fix-vs-mockup-17*.png`).
+- [x] Screenshots (UI) — edge cases: `17a-nat-why.png` (ต้องแตกเงิน + the notes in the pile), `17a-nat-overcap.png` (above the ceiling, save disabled).
 
 ## Dev notes
 
 - 2026-10-11 v2 settlement screen (`src/v2/sale/money-screens.tsx`): หักกลบ built — netting card in the deduct sheet (only when the farm owes the worker, never automatic, partial ok), ceiling = share + netting, two events kept apart (repayment + debt payment with `repaymentId`), undo per line voids both, `overDeducted` now counts netting in the total. Tests: `src/__tests__/v2-sale-netting.test.tsx`, `deduct.test.ts`.
 - Removal of old S29 code: done in E06-S07. Still open: ธง/Conflict across devices.
+- 2026-10-14 owner confirmed mockup 17/17a against the v2 screen and agreed: (A) หักหนี้ is the whole debt taken at this sale and the netting is a **+** line (−1,500 / +640), only the difference (860) goes by the chosen route — the stored events are unchanged (a `netting` debt payment with its repayment, and a route payment of the difference), and the tally page (18a) reads the same way as page 17 (owner 2026-10-14, item 2): "ส่วนแบ่ง 2,425 − หักหนี้ 1,500 + สวนคืน (หักกลบ) 640", with "หักกลบไม่มีเงินสดเคลื่อน: หนี้ลด 640 = สวนคืนนัด 640" under it; (B) the sheet shows the debt by kind and why the amount is proposed, −/+ steppers (฿100), what each route moves, the ต้องแตกเงิน chip with "ทำไม? ดูแบงค์ในกอง"; the card shows "สวนต้องคืน{name}" before a deduction, the notes to lift out after it, and "แก้ยอดหัก / วิธีรับเงิน" — one deduction per worker per sale, edited as a whole (old lines voided first, then the new ones written), replacing the per-line undo; "หักหนี้ (งวดผ่อน)" when there is a plan.
+- Core: `deductSheet` (deduct.ts) holds the sheet's arithmetic; `pickNotes` names the notes for route 1 (`needsChange` now uses it); `balanceAfterSale` (debts.ts) gives the debt left after an older sale — records carry a day, not a time, so the rest of the sale day counts as before it.
+- `src/ui/text-field.tsx`: the input gets `minWidth: 0`, so an aside (the steppers) never pushes past the card on web.
 
 ## Code review
 
-- Reviewer (agent/session แยก):
-- Findings:
-- Resolution:
+- Reviewer 1 (separate agent, 2026-10-14, read-only on `602c37f`): 2 major, 9 minor. Fixed on this branch: F4 (`counts` filtered in the tally sum and `transferInSatang`), F6 (owner's tick locked under D-61), F7 (editing shows what was saved, no second instalment), F8 (an empty box is 0), F9 (`balanceAfterSale`), F10 (the ceiling now does grow with the netting), F11 (a netting that cannot be placed is said, nothing written), plus the mockup differences above. Open by the owner's choice: F1 cancelled sales (waits on E04-S11), F2 two-device duplicates (needs one guarded record per sale × tapper), F5 tally piles derived from the same numbers.
+- Reviewer 2 (separate agent, 2026-10-14) on the fix diff: money math checked by hand on every path (new, edit, edit to 0, partial netting, plan, balance > share, debt > share + netting) — holds to the satang; write order and part-way stops safe; 7 minor/nit findings. All fixed: (1) lines are dated by the sale day and "debt left" uses it, not today; (2) an edit that changes nothing writes nothing; (3) a warning before several old routes become one; (4) tests for editing a netted deduction while keeping the netting (owed money placed again, one live repayment, nothing owed left), the error texts, and the steppers' floors; (5) − stops at the netting; (6) the save error clears on any change; (7) "ทำไม? ดูแบงค์ในกอง" sits under the radio card, not inside it.
+- Resolution: ready for the owner. Gate on the final code (2026-10-14): typecheck, lint (one warning already on `dev`), vitest 925, jest 419 (`--runInBand`), web build, Playwright phone-portrait 21 passed. Open items as listed above (F1, F2, F5).
 
 ## QA notes
 

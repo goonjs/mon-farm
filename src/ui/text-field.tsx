@@ -48,6 +48,8 @@ export function TextField({
       placeholderTextColor={t.color.inkFaint}
       style={{
         flex: 1,
+        // A web input keeps its intrinsic width otherwise and pushes an aside past the edge.
+        minWidth: 0,
         minHeight: t.target.min,
         paddingHorizontal: t.space.md,
         borderRadius: t.radius.md,

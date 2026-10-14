@@ -218,3 +218,22 @@ export function projectDebts(
   }
   return out;
 }
+
+/**
+ * The farm debt left right after one sale (review F9): today's balance plus
+ * what later days' sales and payments took off, less the debts added since.
+ * Records carry a day, not a time, so the rest of the sale day counts as
+ * before it; for the latest sale this is today's balance.
+ */
+export function balanceAfterSale(account: DebtAccount, saleId: string, saleDate: string): number {
+  let b = account.balanceSatang;
+  for (const p of account.payments) {
+    if (p.deleted || !p.counts || !toFarm(p.creditor) || p.saleId === saleId) continue;
+    if (p.date > saleDate) b += p.amountSatang;
+  }
+  for (const d of account.debts) {
+    if (d.deleted || (d.kind === 'loan' && !toFarm(d.lender))) continue;
+    if (d.date > saleDate) b -= d.amountSatang;
+  }
+  return b;
+}

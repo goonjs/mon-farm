@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkDebt, fertilizerSplit, projectDebts } from './debts';
+import { balanceAfterSale, checkDebt, fertilizerSplit, projectDebts } from './debts';
 import { projectFinance } from './ledger';
 import { FARM_FUNDS, type DebtFields, type DebtPaymentFields, type FinanceEvent, type FinancePayload, type Payer } from './types';
 
@@ -206,5 +206,23 @@ describe('E06-S03 tapper ledger', () => {
     const m = projectDebts([debt('b1', {}), debt('b2', { worker: NAT, amountSatang: 150000 })]);
     expect(m.get(DAENG.id)!.balanceSatang).toBe(300000);
     expect(m.get(NAT.id)!.balanceSatang).toBe(150000);
+  });
+});
+
+describe('debt left after a given sale (review F9)', () => {
+  it('is today\'s balance plus what later sales and payments took off, minus debts added later', () => {
+    const log = [
+      debt('d1', { amountSatang: 500000, date: '2026-09-01' }),
+      pay('s1', { amountSatang: 200000, date: '2026-10-03', method: 'cash-from-share', saleId: 'sale-1' }),
+      pay('s2', { amountSatang: 100000, date: '2026-10-10', method: 'cash-from-share', saleId: 'sale-2' }),
+      debt('d2', { amountSatang: 50000, date: '2026-10-12' }),
+      pay('o1', { amountSatang: 30000, date: '2026-10-13', method: 'outside' }),
+    ];
+    const acc = projectDebts(log).get(DAENG.id)!;
+    expect(acc.balanceSatang).toBe(500000 - 200000 - 100000 + 50000 - 30000);
+    expect(balanceAfterSale(acc, 'sale-1', '2026-10-03')).toBe(300000);
+    expect(balanceAfterSale(acc, 'sale-2', '2026-10-10')).toBe(200000);
+    // the latest sale: today's balance
+    expect(balanceAfterSale(acc, 'sale-3', '2026-10-14')).toBe(acc.balanceSatang);
   });
 });
