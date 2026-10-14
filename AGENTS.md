@@ -1,6 +1,11 @@
 # mon-farm
 
-**Class:** `personal` (product owner, 2026-10-13; dev-pose standards 11, no line means commercial)
+<!-- dev-pose:begin -->
+> **Follows [dev-pose standards](https://github.com/gomusoft/dev-pose/tree/1d732a7b92a861d07285f3d7f3384a43d224306b/standards) v0.4.0.** **Class: `personal`.** May skip the commercial-only rules in [11](https://github.com/gomusoft/dev-pose/blob/1d732a7b92a861d07285f3d7f3384a43d224306b/standards/11-commercial-products.md). Never skips security (07), no secrets in git, and free-first cost (06).
+>
+> - A rule that is not written in this file is in the standards: read [the standards](https://github.com/gomusoft/dev-pose/tree/1d732a7b92a861d07285f3d7f3384a43d224306b/standards), do not guess. What this repo does differently is in its own rules below.
+> - This block is maintained by dev-pose through pull requests. Only the owner changes the class (no class means commercial). To change it or opt out, edit `.dev-pose.json`; do not edit the block by hand.
+<!-- dev-pose:end -->
 
 ## Product shape
 

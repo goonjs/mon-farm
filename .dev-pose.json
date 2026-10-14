@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "source": "https://github.com/gomusoft/dev-pose",
+  "standards": "0.4.0",
+  "ref": "1d732a7b92a861d07285f3d7f3384a43d224306b",
+  "class": "personal",
+  "lang": "en",
+  "rulesFile": "AGENTS.md",
+  "sync": true,
+  "blockSha256": "3fbba7df949e00195e52d53ed949d59e624790b15dde205ed5bc890ac3d15237"
+}
