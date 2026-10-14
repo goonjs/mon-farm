@@ -1,4 +1,5 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
+import { useEffect } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
 import type { SaleEvent, SysPayload } from '../core/types';
@@ -473,13 +474,17 @@ describe('v2 counter toolbar, hold-to-undo, history (E04-S15)', () => {
   it('a count that is refused records nothing and says nothing; one that records says what it wrote', async () => {
     await started();
     await readyAt(farm.a[0]);
-    const probe: { current: ReturnType<typeof countModel> } = { current: null };
+    const probeRef: { current: ReturnType<typeof countModel> } = { current: null };
     const Probe = () => {
-      probe.current = countModel(useSaleView(), farm.a[0]);
+      const model = countModel(useSaleView(), farm.a[0]);
+      // Written in an effect: render must not mutate a value from outside.
+      useEffect(() => {
+        probeRef.current = model;
+      });
       return null;
     };
     const c = await inSale(<Probe />);
-    expect(probe.current!.count('hold')).toEqual({ basketNo: 1, netG: 50_000 });
+    expect(probeRef.current!.count('hold')).toEqual({ basketNo: 1, netG: 50_000 });
     c.unmount();
     const d = await inSale(<CounterScreen />, { point: farm.a[0] });
     await press('tool-short');
@@ -488,8 +493,8 @@ describe('v2 counter toolbar, hold-to-undo, history (E04-S15)', () => {
     const before = (await store().load(saleId)).length;
     await inSale(<Probe />);
     // The short basket waits at its own point: a hold has nothing to write.
-    expect(probe.current!.waiting).toBe(true);
-    expect(probe.current!.count('hold')).toBeNull();
+    expect(probeRef.current!.waiting).toBe(true);
+    expect(probeRef.current!.count('hold')).toBeNull();
     await flush();
     expect((await store().load(saleId)).length).toBe(before);
   });

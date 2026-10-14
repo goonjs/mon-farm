@@ -30,9 +30,9 @@ interface PreloadedMembership {
 }
 
 /** Playwright's storage-state shape for one IndexedDB database (restored by `newContext`). */
-function database(memberships: PreloadedMembership[]) {
+function database(memberships: PreloadedMembership[], user: typeof E2E_USER) {
   const records: Record<string, { key?: unknown; value: unknown }[]> = {
-    meta: [{ key: 'session', value: E2E_USER }],
+    meta: [{ key: 'session', value: user }],
     memberships: memberships.map((m) => ({ value: m })),
   };
   return {
@@ -48,9 +48,9 @@ function database(memberships: PreloadedMembership[]) {
   };
 }
 
-const account = (memberships: PreloadedMembership[]) => ({
+const account = (memberships: PreloadedMembership[], user = E2E_USER) => ({
   cookies: [],
-  origins: [{ origin: BASE_URL, localStorage: [], indexedDB: [database(memberships)] }],
+  origins: [{ origin: BASE_URL, localStorage: [], indexedDB: [database(memberships, user)] }],
 });
 
 /** Signed in, one farm group — the group the fixtures' events are recorded in. */
@@ -60,6 +60,9 @@ export const signedIn = account([
 
 /** Signed in, no farm group yet (E02-S02). */
 export const signedInNoGroup = account([]);
+
+/** Signed in as someone else, no farm group yet — for specs that must not share a server-side user with the others. */
+export const signedInNoGroupAs = (user: typeof E2E_USER) => account([], user);
 
 /** A browser that has never signed in — for the login screen itself. */
 export const signedOut = { cookies: [], origins: [] };

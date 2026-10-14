@@ -6,7 +6,12 @@
 
 import type { GroupId, UserId } from '../core/types';
 import type { SyncRemote } from './client';
+import type { RemoteMemberships } from './remote';
 
 export async function connectRemote(_userId: UserId, _groupId: GroupId): Promise<SyncRemote | null> {
+  return null;
+}
+
+export async function connectMemberships(_userId: UserId): Promise<RemoteMemberships | null> {
   return null;
 }

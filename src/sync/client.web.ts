@@ -14,8 +14,9 @@ import { connectFirestoreEmulator, initializeFirestore, memoryLocalCache, type F
 import { authAvailable, firebaseApp, firebaseAuth, firestoreDatabaseId, firestoreEmulatorHost, syncAvailable } from '../auth/firebase-web';
 import type { GroupId, UserId } from '../core/types';
 import type { SyncRemote } from './client';
-import { FirestoreRemote, whenSignedInAs } from './firestore-remote';
+import { FirestoreMemberships, FirestoreRemote, whenSignedInAs } from './firestore-remote';
 import { sdkLayer } from './firestore-sdk';
+import type { RemoteMemberships } from './remote';
 
 let db: Firestore | null = null;
 
@@ -29,12 +30,23 @@ function firestore(): Firestore {
   return db;
 }
 
-export async function connectRemote(userId: UserId, groupId: GroupId): Promise<SyncRemote | null> {
+/** The layer that only talks to the server as the signed-in user (see `whenSignedInAs`), or null when this build cannot sync. */
+function signedInLayer(userId: UserId) {
   if (!syncAvailable || !authAvailable) return null;
   const auth = firebaseAuth();
   const currentUid = async () => {
     await auth.authStateReady();
     return auth.currentUser?.uid ?? null;
   };
-  return new FirestoreRemote(whenSignedInAs(sdkLayer(firestore()), currentUid, userId), groupId, userId);
+  return whenSignedInAs(sdkLayer(firestore()), currentUid, userId);
+}
+
+export async function connectRemote(userId: UserId, groupId: GroupId): Promise<SyncRemote | null> {
+  const layer = signedInLayer(userId);
+  return layer && new FirestoreRemote(layer, groupId, userId);
+}
+
+export async function connectMemberships(userId: UserId): Promise<RemoteMemberships | null> {
+  const layer = signedInLayer(userId);
+  return layer && new FirestoreMemberships(layer, userId);
 }

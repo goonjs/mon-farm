@@ -522,8 +522,11 @@ retry/backoff ชุดเดียวกัน ถ้า object มีอยู
   มีเน็ตแล้วส่ง batch `{groups/{gid}, members/{uid}}` (ส่งซ้ำ → ตรวจแบบข้อ 4 ด้วย `getDoc` ของ members/{uid})
   — **สร้างแล้ว (E02-S02)**: `src/core/group.ts` (`newGroup`, `decideEntry`, `createGroupWrites` = batch ที่ outbox จะส่ง
   และที่ rules test ใช้ยืนยัน) + `AccountStore.createGroup` (native: `memberships` + `pending_ops` ใน transaction
-  เดียว; เว็บ: IndexedDB `memberships` + `pendingOps` ใน transaction เดียว) ยังไม่มีการส่งขึ้นเซิร์ฟเวอร์ (E01-S09) และยังไม่ทำ
-  "login ครั้งแรกบนเครื่องใหม่ → ดึงรายการกลุ่มจากเซิร์ฟเวอร์ก่อน" (ต้องมี backend)
+  เดียว; เว็บ: IndexedDB `memberships` + `pendingOps` ใน transaction เดียว) ส่งขึ้นเซิร์ฟเวอร์ผ่าน outbox (E01-S09)
+  — **login ครั้งแรกบนเครื่องใหม่ (E02-S05, สร้างแล้ว)**: เครื่องที่ไม่มี membership ของผู้ใช้ จะถามเซิร์ฟเวอร์ก่อน
+  (`RemoteMemberships.myGroups()`: collection-group `members` `uid == me` แล้วอ่าน `groups/{gid}` — รอไม่เกิน 10 วินาที)
+  เก็บกลุ่มที่ได้ลง `memberships` (ไม่มี `create_group` op) แล้วเข้ากลุ่ม; ได้ "ไม่มี" จริงจึงแสดงหน้าสร้างกลุ่ม;
+  ถามไม่ได้ (ออฟไลน์/หมดเวลา/ถูกปฏิเสธ) แสดงข้อความ + ปุ่มลองอีกครั้ง ไม่เสนอสร้างกลุ่ม; เครื่องที่มี membership อยู่แล้วเข้าเลยโดยไม่รอเน็ต
 - **เข้าร่วม**: ต้องมีเน็ต (callable `acceptInvite`) เสร็จแล้วดึงข้อมูลทั้งกลุ่มลงมา
 - **รีเฟรชรายการกลุ่ม**: ตอนเปิดแอปและทุกครั้งที่กลับมาออนไลน์ query collection-group `members` (`uid == me`)
   แล้วอ่าน `groups/{gid}` ของแต่ละกลุ่ม → อัปเดต `memberships` (ชื่อ, `member_count` ที่ใช้คุมปุ่มออก, กลุ่มที่

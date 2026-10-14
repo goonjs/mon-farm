@@ -7,8 +7,8 @@
  * `update: false` make Firestore do), whatever its content.
  */
 
-import type { CreateGroupOp } from '../core/group';
-import type { EventId, SaleEvent } from '../core/types';
+import type { CreateGroupOp, Role } from '../core/group';
+import type { EventId, GroupId, SaleEvent } from '../core/types';
 
 export type RemoteErrorCode =
   | 'unavailable'
@@ -64,6 +64,29 @@ export interface RemoteEvents {
   fetch(id: EventId): Promise<SaleEvent | null>;
   /** Events with `receivedAt >= since`, ordered by `receivedAt`, at most `limit` per page. */
   pull(since: number, after?: PullToken, limit?: number): Promise<PulledPage>;
+}
+
+/** A farm group the signed-in user belongs to, as the server holds it. */
+export interface RemoteGroupRef {
+  readonly groupId: GroupId;
+  readonly name: string;
+  /** From the user's own member document; an unknown value reads as `member` (least privilege). */
+  readonly role: Role;
+}
+
+/**
+ * Which groups this user is in, asked of the server when the device knows
+ * none (E02-S05, architecture §การดำเนินการด้านสมาชิกภาพ, "my groups"). It is
+ * not tied to one group: it runs before any group is open.
+ */
+export interface RemoteMemberships {
+  /**
+   * The user's groups, oldest id first. An empty list is the server's answer
+   * "none"; anything that stops it answering (offline, refused, no index) is a
+   * `RemoteError` — never an empty list, because "none" lets a person create a
+   * second group.
+   */
+  myGroups(): Promise<RemoteGroupRef[]>;
 }
 
 /**
