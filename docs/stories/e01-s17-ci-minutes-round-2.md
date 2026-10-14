@@ -19,7 +19,7 @@ Status: Review
 
 | เรื่อง | ตัดสิน | เหตุผล |
 |---|---|---|
-| deploy dev | Cloud Build trigger ที่ push เข้า `dev` (`cloudbuild.yaml`); `deploy-dev.yml` เหลือ `workflow_dispatch` สำรอง | ใช้โควตา Cloud Build ฟรี 2,500 นาที/เดือน ไม่แตะโควตา GitHub; ตัดงาน build ซ้ำที่เคยเกิดทุก merge |
+| deploy dev | **เปลี่ยนแล้ว (2026-10-14):** เตรียม Cloud Build (`cloudbuild.yaml` + runbook) ไว้เป็นทางเลือก แต่ตั้ง trigger ไม่สำเร็จและเจ้าของเปิด repo เป็น public จึงคง `deploy-dev.yml` อัตโนมัติ — เดิมตั้งใจให้ Cloud Build trigger ที่ push เข้า `dev` แทน | ใช้โควตา Cloud Build ฟรี 2,500 นาที/เดือน ไม่แตะโควตา GitHub; ตัดงาน build ซ้ำที่เคยเกิดทุก merge |
 | e2e บน PR | ไม่รันอัตโนมัติ; รันเมื่อติด label `e2e` (workflow `pr-extras.yml`) และ **รันเสมอหลัง merge เข้า dev/main** | e2e ~150 วิจาก ~5 นาที (ตัวใหญ่สุด) แต่ยังเป็นด่านสุดท้ายก่อนถึงผู้ใช้ dev; PR ที่เสี่ยงติด label ได้ |
 | preview บน PR | รันเมื่อติด label `preview` เท่านั้น | preview ต้องผ่าน build + deploy; ส่วนใหญ่ไม่มีใครเปิดดู |
 | label อยู่ workflow แยก | `pr-extras.yml` ไม่ใช่ `ci.yml` | การติด label ไม่ไปรัน `changes`/`verify` ซ้ำ |
@@ -34,8 +34,8 @@ Status: Review
 - [x] `ci.yml`: draft PR ถูกข้าม; ประเภท PR = opened, synchronize, reopened, ready_for_review
 - [x] `ci.yml`: ขั้น rules tests (JDK, cache emulator, test) รันบน PR เฉพาะ `rules=true`
 - [x] `pr-extras.yml`: label `e2e` รัน e2e, label `preview` deploy preview; ทั้งคู่ใช้ install+build ครั้งเดียว; ไม่รันกับ fork/draft; label อื่นไม่ทำอะไร
-- [x] `cloudbuild.yaml` + `deploy-dev.yml` เป็น manual + runbook `docs/runbooks/cloud-build-deploy-dev.md`
-- [ ] **เจ้าของ:** ตั้ง Cloud Build trigger ตาม runbook และยืนยันการ deploy ครั้งแรก
+- [x] `cloudbuild.yaml` + runbook `docs/runbooks/cloud-build-deploy-dev.md` เป็นทางเลือก (ไม่ใช้งานตอนนี้); `deploy-dev.yml` ยัง push-triggered
+- [~] Cloud Build trigger: ยกเลิกตอนนี้ (ตั้งไม่สำเร็จ, repo public)
 - [ ] **เจ้าของ:** สร้าง label `e2e` และ `preview` ใน GitHub (ไม่งั้นติดไม่ได้)
 - [ ] บันทึกนาที CI ก่อน/หลังจาก run จริง (median 3 รอบ) ใน Dev notes — ทำได้หลัง merge
 

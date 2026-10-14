@@ -184,10 +184,9 @@ release's changelog will therefore only list commits made under this rule.
   run while `main` has commits `dev` lacks, so it waits for that merge. The PR
   is opened with the workflow token, so it has no CI run of its own; CI runs on
   `dev` after the merge.
-- **Hosting:** `dev` deploys to the dev site on every push through a Google
-  Cloud Build trigger (`cloudbuild.yaml`, setup in
-  `docs/runbooks/cloud-build-deploy-dev.md`; `deploy-dev.yml` is the manual
-  fallback), so it costs no GitHub Actions minutes. A PR gets a preview URL
+- **Hosting:** `dev` deploys to the dev site on every push (`deploy-dev.yml`;
+  `cloudbuild.yaml` + `docs/runbooks/cloud-build-deploy-dev.md` are an unused
+  option for moving it to Cloud Build). A PR gets a preview URL
   (expires in 7 days; the link is one PR comment each push updates, and
   `preview-cleanup.yml` deletes the channel when the PR closes) only when it
   carries the `preview` label, and runs the

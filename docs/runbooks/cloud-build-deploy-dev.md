@@ -3,8 +3,12 @@
 เป้าหมาย: ทุก push เข้า `dev` ให้ Google Cloud Build build + deploy ไปที่ site `mon-farm-dev`
 แทน GitHub Actions เพื่อไม่กินโควตานาทีของ GitHub (repo เป็น private)
 
+> **สถานะ 2026-10-14: ไม่ได้ใช้** — ตั้ง trigger ไม่สำเร็จ เจ้าของเปิด repo เป็น public (Actions ฟรี) จึงให้
+> `deploy-dev.yml` ยัง deploy อัตโนมัติเหมือนเดิม เก็บ runbook นี้ไว้เผื่อกลับไปเป็น private แล้วนาทีไม่พอ
+> ถ้าจะใช้: ตั้ง trigger ตามด้านล่าง แล้วเปลี่ยน `deploy-dev.yml` ให้เหลือ `workflow_dispatch` อย่างเดียวเพื่อไม่ deploy ซ้ำ
+
 ไฟล์ใน repo ที่เกี่ยวข้อง: `cloudbuild.yaml` (ขั้นตอน build/deploy), `scripts/deploy.sh` (คำสั่ง deploy เดียวกับที่ CI ใช้),
-`.github/workflows/deploy-dev.yml` (เหลือเป็น **สำรอง กดรันเอง** จากแท็บ Actions)
+`.github/workflows/deploy-dev.yml` (ยัง deploy อัตโนมัติ + กดรันเองได้)
 
 ขั้นตอนด้านล่าง **เจ้าของต้องทำเอง** (เป็นการตั้งค่าบัญชี Google Cloud/GitHub ที่ agent ไม่ควรทำ และการเชื่อม GitHub ต้องล็อกอินผ่านเบราว์เซอร์)
 
@@ -67,8 +71,7 @@ gcloud builds triggers create github --name=deploy-dev \
 
 ## 5. เมื่อใช้ได้แล้ว
 
-- ไม่ต้องทำอะไรกับ `deploy-dev.yml` (ไม่รันอัตโนมัติแล้ว) — ใช้เป็นสำรองกดเอง
-- ถ้า trigger ยังไม่ได้ตั้ง **dev จะไม่ deploy อัตโนมัติ** หลังรวม story นี้เข้า dev จนกว่าจะทำข้อ 1–3 (ระหว่างนั้นกด Deploy Dev เองจากแท็บ Actions)
+- แก้ `deploy-dev.yml` ให้เหลือ `workflow_dispatch` (ลบ `push: branches: [dev]`) ไม่งั้น dev deploy ซ้ำสองทาง
 
 ## ข้อควรรู้
 
@@ -78,4 +81,4 @@ gcloud builds triggers create github --name=deploy-dev \
 
 ## ย้อนกลับ
 
-ลบ trigger `deploy-dev` และคืน `push: branches: [dev]` ใน `.github/workflows/deploy-dev.yml`
+ลบ trigger `deploy-dev` และให้ `deploy-dev.yml` มี `push: branches: [dev]` (เป็นค่าปัจจุบัน)
