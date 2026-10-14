@@ -106,8 +106,8 @@ test('settlement: netting the money the farm owes back against a debt (E06-S04)'
   // ── เทียบยอด (page 18a) with a deduction and a netting: the origin line adds up to the cash ──
   await page.goto('/v2/sale/sale-net/tally');
   await expect(id('tally')).toBeVisible();
-  await expect(id('tally-from-nat')).toContainText('ส่วนแบ่ง 2,625.00 − หักหนี้ 300.00');
-  await expect(id('tally-net-nat')).toContainText('หักกลบ 400.00 (ไม่กระทบเงินสด)');
+  await expect(id('tally-from-nat')).toContainText('ส่วนแบ่ง 2,625.00 − หักหนี้ 700.00 + สวนคืน (หักกลบ) 400.00');
+  await expect(id('tally-net-nat')).toContainText('หักกลบไม่มีเงินสดเคลื่อน: หนี้ลด 400.00 = สวนคืนนัด 400.00');
   await expect(id('tally-ok')).toBeVisible();
   await shot(page, '18a-tally', true);
 });
