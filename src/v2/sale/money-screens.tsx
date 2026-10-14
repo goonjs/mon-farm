@@ -815,17 +815,18 @@ export function TallyScreen() {
           <View style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.xxs }}>
             <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{msg('v2s.pilesTitle')}</AppText>
             {money.tappers.map((tp) => {
-              // cash = share − debt deducted ± rounding (netting is taken out of the deduction and added to the cash, so it cancels: workerCash).
+              // As page 17 reads (owner 2026-10-14): cash = share − the whole debt taken + what the farm repaid by netting ± rounding.
               const from = [
                 msg('v2s.fromShare', { amount: baht(tp.shareSatang) }),
-                tp.debtDeductedSatang ? msg('v2s.fromDebt', { amount: baht(tp.debtDeductedSatang) }) : '',
+                tp.debtDeductedSatang + tp.nettedSatang ? msg('v2s.fromDebt', { amount: baht(tp.debtDeductedSatang + tp.nettedSatang) }) : '',
+                tp.nettedSatang ? msg('v2s.fromNetBack', { amount: baht(tp.nettedSatang) }) : '',
                 tp.adjustSatang ? msg(tp.adjustSatang > 0 ? 'v2s.fromRoundUp' : 'v2s.fromRoundDown', { amount: baht(Math.abs(tp.adjustSatang)) }) : '',
               ].filter(Boolean);
               return (
                 <View key={tp.id}>
                   <Kv label={<Text><TapperIcon color={ink(tp.id)} size={12} /> {msg('v2s.cashTo', { name: tp.name })}</Text>} value={baht(tp.cashSatang)} testID={`tally-cash-${tp.id}`} />
                   <AppText variant="caption" testID={`tally-from-${tp.id}`}>{from.join(' ')}</AppText>
-                  {tp.nettedSatang ? <AppText variant="caption" testID={`tally-net-${tp.id}`}>{msg('v2s.fromNet', { amount: baht(tp.nettedSatang) })}</AppText> : null}
+                  {tp.nettedSatang ? <AppText variant="caption" testID={`tally-net-${tp.id}`}>{msg('v2s.fromNet', { amount: baht(tp.nettedSatang), name: tp.name })}</AppText> : null}
                 </View>
               );
             })}
