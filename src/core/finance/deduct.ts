@@ -60,19 +60,29 @@ export function cashNotes(satang: number): number[] {
   return out;
 }
 
+/**
+ * D-71 route 1: the notes to lift out of the worker's cash pile (paid largest
+ * first) to take exactly `take`, or null when a note must be broken.
+ */
+export function pickNotes(pileSatang: number, takeSatang: number): number[] | null {
+  if (takeSatang <= 0) return [];
+  if (takeSatang > pileSatang) return null;
+  // Subset sum over the notes in the pile — a handful of items, so a map of reachable totals is enough.
+  let reach = new Map<number, number[]>([[0, []]]);
+  for (const n of cashNotes(pileSatang)) {
+    const next = new Map(reach);
+    for (const [r, used] of reach) if (r + n <= takeSatang && !next.has(r + n)) next.set(r + n, [...used, n]);
+    reach = next;
+    const hit = reach.get(takeSatang);
+    if (hit) return hit;
+  }
+  return null;
+}
+
 /** D-71 route 1: can `take` be lifted out of the worker's cash pile as it is, without breaking a note? */
 export function needsChange(pileSatang: number, takeSatang: number): boolean {
   if (takeSatang <= 0 || takeSatang === pileSatang) return false;
-  if (takeSatang > pileSatang) return true;
-  // Subset sum over the notes in the pile — a handful of items, so a set of reachable totals is enough.
-  let reach = new Set<number>([0]);
-  for (const n of cashNotes(pileSatang)) {
-    const next = new Set(reach);
-    for (const r of reach) if (r + n <= takeSatang) next.add(r + n);
-    reach = next;
-    if (reach.has(takeSatang)) return false;
-  }
-  return true;
+  return pickNotes(pileSatang, takeSatang) === null;
 }
 
 /** Every pile on the reconciliation page must add up to the sale total, to the satang (D-72). */
@@ -84,6 +94,54 @@ export function pilesCheck(piles: readonly { readonly satang: number }[], saleTo
 /** D-61: after a sale edit, the deductions may exceed what the share (+ netting) now allows. */
 export function overDeducted(deductionSatang: number, shareSatang: number, nettingSatang: number): boolean {
   return deductionSatang > shareSatang + nettingSatang;
+}
+
+export type DeductProblem = 'net-range' | 'total-range' | 'below-netting' | 'nothing';
+
+/**
+ * The deduct sheet (mockup page 17a, owner 2026-10-14). The owner enters the
+ * whole debt deducted at this sale (หักหนี้) and, apart, what the farm repays
+ * the worker by netting (+ line). Only the difference is collected by the
+ * chosen route; cash = share − หักหนี้ + netting. Every amount is "as if
+ * nothing were deducted at this sale yet": the sheet replaces this sale's lines.
+ */
+export function deductSheet(i: {
+  readonly balanceSatang: number;
+  readonly shareSatang: number;
+  readonly owedBackSatang: number;
+  readonly planPerSaleSatang: number | null;
+  /** What the owner typed; null = untouched, follow the proposal. An empty box is 0 (review F8). */
+  readonly totalSatang: number | null;
+  readonly nettingSatang: number;
+  /** This sale already has lines: saving 0 removes them. */
+  readonly editing?: boolean;
+}) {
+  const balance = Math.max(0, i.balanceSatang);
+  const share = Math.max(0, i.shareSatang);
+  const netCapSatang = Math.max(0, Math.min(i.owedBackSatang, balance));
+  const netOk = i.nettingSatang >= 0 && i.nettingSatang <= netCapSatang;
+  const net = netOk ? i.nettingSatang : 0;
+  const capSatang = deductionCap({ balanceSatang: balance, shareSatang: share, nettingSatang: net });
+  const proposedSatang = Math.max(net, proposeDeduction({ balanceSatang: balance, shareSatang: share, nettingSatang: net, planPerSaleSatang: i.planPerSaleSatang }));
+  const totalSatang = i.totalSatang ?? proposedSatang;
+  let problem: DeductProblem | null = null;
+  if (!netOk) problem = 'net-range';
+  else if (totalSatang < 0 || totalSatang > capSatang) problem = 'total-range';
+  else if (totalSatang < net) problem = 'below-netting';
+  else if (totalSatang === 0 && !i.editing) problem = 'nothing';
+  const routeSatang = Math.max(0, totalSatang - net);
+  return {
+    netCapSatang,
+    capSatang,
+    proposedSatang,
+    totalSatang,
+    nettingSatang: net,
+    /** Collected by the chosen route (D-71): the worker's real repayment in money. */
+    routeSatang,
+    cashSatang: Math.max(0, share - routeSatang),
+    debtLeftSatang: Math.max(0, balance - totalSatang),
+    problem,
+  };
 }
 
 export type NettingPlan =
