@@ -34,6 +34,13 @@ export interface AccountStore {
    * would lose.
    */
   createGroup(membership: Membership, op: CreateGroupOp): Promise<void>;
+  /**
+   * Keeps groups the server says this user belongs to (E02-S05: a returning
+   * member on a new device). An upsert by `groupId`, all in one transaction, and
+   * no `create_group` op: the group already exists on the server. Rejects when
+   * it cannot be kept, so the app never enters a group a reload would forget.
+   */
+  saveMemberships(memberships: readonly Membership[]): Promise<void>;
   /** Server writes not yet sent — drained by the sync engine, before that group's events (E01-S09). */
   pendingOps(): Promise<CreateGroupOp[]>;
   /**

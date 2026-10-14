@@ -19,7 +19,9 @@ import {
   type PulledPage,
   type RemoteErrorCode,
   type RemoteEvents,
+  type RemoteGroupRef,
   type RemoteGroups,
+  type RemoteMemberships,
 } from './remote';
 
 /** In a write's data, "let the server stamp this" (`serverTimestamp()` in the SDK layer). */
@@ -41,6 +43,11 @@ export interface FirestoreLayer {
   /** One atomic batch of creates; resolves when the server confirmed it. */
   commit(writes: readonly DocWrite[]): Promise<void>;
   get(path: string): Promise<Readonly<Record<string, unknown>> | null>;
+  /**
+   * Ids of the groups with a `members` document whose `uid` is `userId`: the
+   * collection-group query the rules allow only for one's own uid.
+   */
+  groupsOf(userId: UserId): Promise<readonly { readonly groupId: GroupId; readonly role: unknown }[]>;
   /**
    * Documents of `groups/{groupId}/events` with `receivedAt >= sinceMs`, ordered by `receivedAt` (then id),
    * at most `limit`, after the position `after`. `next` is the position after the last document, or null when
@@ -227,11 +234,42 @@ export function whenSignedInAs(
       await check();
       return layer.get(path);
     },
+    async groupsOf(uid) {
+      await check();
+      return layer.groupsOf(uid);
+    },
     async eventsSince(groupId, sinceMs, after, limit) {
       await check();
       return layer.eventsSince(groupId, sinceMs, after, limit);
     },
   };
+}
+
+/**
+ * "My groups" (E02-S05): the member documents that name this user, then each
+ * group's name. Every failure is a `RemoteError`; a group that cannot be read
+ * or has no name fails the whole lookup rather than being left out, because a
+ * list with a farm missing could send a person to create a second one.
+ */
+export class FirestoreMemberships implements RemoteMemberships {
+  constructor(
+    private readonly layer: FirestoreLayer,
+    private readonly userId: UserId,
+  ) {}
+
+  async myGroups(): Promise<RemoteGroupRef[]> {
+    const mine = new Map<GroupId, unknown>();
+    for (const m of await guarded(() => this.layer.groupsOf(this.userId))) mine.set(m.groupId, m.role);
+    return Promise.all(
+      [...mine.keys()].sort().map(async (groupId) => {
+        const group = await guarded(() => this.layer.get(`groups/${groupId}`));
+        if (!group || typeof group.name !== 'string' || !group.name) {
+          throw new RemoteError('internal', `group ${groupId} could not be read`);
+        }
+        return { groupId, name: group.name, role: mine.get(groupId) === 'owner' ? ('owner' as const) : ('member' as const) };
+      }),
+    );
+  }
 }
 
 // ── the remote ─────────────────────────────────────────────────────────────

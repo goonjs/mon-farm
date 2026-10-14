@@ -120,6 +120,24 @@ describe.each<[string, () => () => AccountStore]>([
     expect(await open().pendingOps()).toEqual([other.op]);
   });
 
+  it('restoring groups from the server keeps them across a reload, queues no op, and is idempotent (E02-S05)', async () => {
+    const open = device();
+    const restored = { groupId: 'g-server', userId: 'uid-1', name: 'สวนบ้านนา', role: 'owner' as const };
+    const second = { ...restored, groupId: 'g-two', name: 'สวนสอง' };
+    await open().saveMemberships([restored]);
+    await open().saveMemberships([restored, second]);
+    expect(await open().memberships()).toEqual([restored, second]);
+    expect(await open().pendingOps()).toEqual([]);
+  });
+
+  it('restoring a group never touches the pending op of a group made here (E02-S05)', async () => {
+    const open = device();
+    await open().createGroup(created.membership, created.op);
+    await open().saveMemberships([{ ...created.membership, name: 'ชื่อจากเซิร์ฟเวอร์' }]);
+    expect(await open().pendingOps()).toEqual([created.op]);
+    expect(await open().memberships()).toHaveLength(1);
+  });
+
   it('the signed-in user and the memberships do not overwrite each other', async () => {
     const open = device();
     await open().saveUser(somchai);

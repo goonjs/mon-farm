@@ -15,7 +15,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   assertFails,
   assertSucceeds,
@@ -405,6 +405,18 @@ describe('leaving and removal', () => {
 describe('member lookup across groups', () => {
   it('lists your own memberships with a uid filter', async () => {
     await assertSucceeds(getDocs(query(collectionGroup(db(MEMBER), 'members'), where('uid', '==', MEMBER))));
+  });
+
+  it('then reads the name of each group listed, the whole restore of E02-S05 as the signed-in user', async () => {
+    const found = await getDocs(query(collectionGroup(db(MEMBER), 'members'), where('uid', '==', MEMBER)));
+    const ids = found.docs.map((d) => d.ref.parent.parent?.id);
+    expect(ids).toEqual([GID]);
+    await assertSucceeds(getDoc(doc(db(MEMBER), `groups/${GID}`)));
+  });
+
+  it('a user with no membership gets an empty list (a real answer: "none")', async () => {
+    const found = await assertSucceeds(getDocs(query(collectionGroup(db('nobody'), 'members'), where('uid', '==', 'nobody'))));
+    expect(found.empty).toBe(true);
   });
 
   it('refuses a filter for someone else', async () => {

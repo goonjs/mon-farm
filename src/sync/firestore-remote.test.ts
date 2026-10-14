@@ -6,6 +6,7 @@ import { newGroup } from '../core/group';
 import type { SaleEvent } from '../core/types';
 import { userFromSignIn } from '../core/user';
 import {
+  FirestoreMemberships,
   FirestoreRemote,
   fromEnvelope,
   MalformedDocError,
@@ -63,6 +64,14 @@ class FakeLayer implements FirestoreLayer {
   async get(path: string) {
     this.maybeFail();
     return this.docs.get(path) ?? null;
+  }
+
+  async groupsOf(userId: string) {
+    this.maybeFail();
+    return [...this.docs].flatMap(([path, d]) => {
+      const m = /^groups\/([^/]+)\/members\/([^/]+)$/.exec(path);
+      return m && m[2] === userId ? [{ groupId: m[1], role: d.role }] : [];
+    });
   }
 
   async eventsSince(groupId: string, sinceMs: number, after?: unknown, limit = Infinity) {
@@ -333,16 +342,78 @@ describe('whenSignedInAs', () => {
     await guarded.commit(write);
     expect(await guarded.get('groups/g/events/e')).not.toBeNull();
     await expect(guarded.eventsSince('g', 0)).resolves.toEqual({ docs: [], next: null });
+    await expect(guarded.groupsOf('user-somchai')).resolves.toEqual([]);
   });
 
   it.each([null, 'someone-else'])('with session %j nothing is sent, and it is "unauthenticated" (transient), not "denied"', async (uid) => {
     const layer = new FakeLayer();
     const guarded = whenSignedInAs(layer, async () => uid, 'user-somchai');
-    for (const call of [() => guarded.commit(write), () => guarded.get('x'), () => guarded.eventsSince('g', 0)]) {
+    for (const call of [() => guarded.commit(write), () => guarded.get('x'), () => guarded.eventsSince('g', 0), () => guarded.groupsOf('user-somchai')]) {
       const err = await call().catch((e: unknown) => e);
       expect(err).toMatchObject({ name: 'RemoteError', code: 'unauthenticated' });
       expect(isTransient((err as RemoteError).code)).toBe(true);
     }
     expect(layer.commits).toEqual([]);
+  });
+});
+
+/** E02-S05: "my groups" for a device that has none yet. */
+describe('FirestoreMemberships', () => {
+  const seed = (layer: FakeLayer, gid: string, name: string, uid: string) => {
+    layer.docs.set(`groups/${gid}`, { name, createdBy: uid, createdAt: 1, memberCount: 1 });
+    layer.docs.set(`groups/${gid}/members/${uid}`, { uid, role: 'owner', displayName: null, joinedAt: 1 });
+  };
+
+  it('lists the groups this user is a member of, with their names, oldest id first', async () => {
+    const layer = new FakeLayer();
+    seed(layer, 'g-2', 'สวนริมน้ำ', 'user-somchai');
+    seed(layer, 'g-1', 'สวนบ้านนา', 'user-somchai');
+    seed(layer, 'g-3', 'สวนคนอื่น', 'user-other');
+    const groups = await new FirestoreMemberships(layer, 'user-somchai').myGroups();
+    expect(groups).toEqual([
+      { groupId: 'g-1', name: 'สวนบ้านนา', role: 'owner' },
+      { groupId: 'g-2', name: 'สวนริมน้ำ', role: 'owner' },
+    ]);
+  });
+
+  it('carries the role from the member document, and reads a missing or unknown one as member', async () => {
+    const layer = new FakeLayer();
+    seed(layer, 'g-1', 'หนึ่ง', 'user-somchai');
+    seed(layer, 'g-2', 'สอง', 'user-somchai');
+    seed(layer, 'g-3', 'สาม', 'user-somchai');
+    layer.docs.set('groups/g-2/members/user-somchai', { uid: 'user-somchai', role: 'member' });
+    layer.docs.set('groups/g-3/members/user-somchai', { uid: 'user-somchai', role: 'superuser' });
+    const groups = await new FirestoreMemberships(layer, 'user-somchai').myGroups();
+    expect(groups.map((g) => g.role)).toEqual(['owner', 'member', 'member']);
+  });
+
+  it('a user with no group gets an empty list: a real answer, not an error', async () => {
+    const layer = new FakeLayer();
+    seed(layer, 'g-3', 'สวนคนอื่น', 'user-other');
+    expect(await new FirestoreMemberships(layer, 'user-somchai').myGroups()).toEqual([]);
+  });
+
+  it.each([
+    ['unavailable', 'unavailable'],
+    ['permission-denied', 'permission-denied'],
+    ['failed-precondition', 'invalid-argument'], // a missing index
+  ])('a %s from the server is a RemoteError (%s), never an empty list', async (sdk, ours) => {
+    const layer = new FakeLayer();
+    seed(layer, 'g-1', 'สวนบ้านนา', 'user-somchai');
+    layer.failWith = Object.assign(new Error('x'), { code: sdk });
+    await expect(new FirestoreMemberships(layer, 'user-somchai').myGroups()).rejects.toMatchObject({ name: 'RemoteError', code: ours });
+  });
+
+  it('a membership whose group cannot be read is an error, so a farm is never skipped silently', async () => {
+    const layer = new FakeLayer();
+    layer.docs.set('groups/g-1/members/user-somchai', { uid: 'user-somchai', role: 'owner' });
+    await expect(new FirestoreMemberships(layer, 'user-somchai').myGroups()).rejects.toMatchObject({ code: 'internal' });
+  });
+
+  it('a group document with no usable name is an error too', async () => {
+    const layer = new FakeLayer();
+    seed(layer, 'g-1', '', 'user-somchai');
+    layer.docs.set('groups/g-1', { createdBy: 'user-somchai' });
+    await expect(new FirestoreMemberships(layer, 'user-somchai').myGroups()).rejects.toMatchObject({ code: 'internal' });
   });
 });

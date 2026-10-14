@@ -21,7 +21,7 @@ import { uuidv7 } from '../src/lib/id';
 import { MemoryAccountStore } from '../src/store/account-memory';
 import { MemoryStore } from '../src/store/memory-store';
 import { MemoryCursor, SyncEngine } from '../src/sync/engine';
-import { FirestoreRemote, type DocWrite, type FirestoreLayer } from '../src/sync/firestore-remote';
+import { FirestoreMemberships, FirestoreRemote, type DocWrite, type FirestoreLayer } from '../src/sync/firestore-remote';
 import { sdkLayer } from '../src/sync/firestore-sdk';
 
 // The refusals these tests provoke are logged by the SDK; they are the point, not news.
@@ -327,6 +327,44 @@ describe('a group created offline (E02-S02)', () => {
     await p.engine.sync();
     expect(p.engine.status()).toMatchObject({ state: 'error', error: 'denied' });
     expect(await serverIds()).toEqual([]);
+  });
+});
+
+describe('the same account on a new device (E02-S05)', () => {
+  const somchai = userFromSignIn('somchai', 'สมชาย', { provider: 'google', subject: 'g-1' });
+  const dbOf = (uid: string) => env.authenticatedContext(uid).firestore() as unknown as Firestore;
+
+  it('finds the group it created elsewhere, keeps it without a create_group op, and pulls its events', async () => {
+    const gid = 'old-farm';
+    const first = await phone('somchai', { groupId: gid });
+    const { membership, op } = newGroup(gid, 'สวนบ้านนา', somchai, Date.now());
+    await first.accounts.createGroup(membership, op);
+    const events = [basket('somchai', first.deviceId, 1, gid), basket('somchai', first.deviceId, 2, gid)];
+    await first.record(...events);
+    await first.engine.sync();
+    expect(first.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+
+    // The incognito window: a signed-in user, an empty device.
+    const groups = await new FirestoreMemberships(sdkLayer(dbOf('somchai')), 'somchai').myGroups();
+    expect(groups).toEqual([{ groupId: gid, name: 'สวนบ้านนา', role: 'owner' }]);
+
+    const second = await phone('somchai', { groupId: gid });
+    await second.accounts.saveMemberships(groups.map((g) => ({ groupId: g.groupId, userId: 'somchai', name: g.name, role: g.role })));
+    expect(await second.accounts.pendingOps()).toEqual([]);
+    await second.engine.sync();
+    expect(second.engine.status()).toMatchObject({ state: 'synced', pending: 0 });
+    expect((await second.store.load(SALE)).map((e) => e.id).sort()).toEqual(events.map((e) => e.id).sort());
+  });
+
+  it('a user with no group gets "none", and never sees another user\'s group', async () => {
+    await seedMember('alice');
+    expect(await new FirestoreMemberships(sdkLayer(dbOf('somchai')), 'somchai').myGroups()).toEqual([]);
+    expect((await new FirestoreMemberships(sdkLayer(dbOf('alice')), 'alice').myGroups()).map((g) => g.groupId)).toEqual([GID]);
+  });
+
+  it('asking for someone else\'s groups is refused by the rules: an error, not an empty answer', async () => {
+    await seedMember('alice');
+    await expect(new FirestoreMemberships(sdkLayer(dbOf('somchai')), 'alice').myGroups()).rejects.toMatchObject({ code: 'permission-denied' });
   });
 });
 

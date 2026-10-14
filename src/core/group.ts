@@ -11,7 +11,8 @@
 
 import type { GroupId, UserId } from './types';
 
-export type Role = 'owner';
+/** `member` joins through an invite (E02-S03); a group's creator is its `owner` (ACC-4). */
+export type Role = 'owner' | 'member';
 
 /**
  * One group a user of this device belongs to, as kept on the device. Kept

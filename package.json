@@ -20,7 +20,7 @@
     "test:e2e": "playwright test",
     "test:e2e:auth": "EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 expo export --platform web --output-dir dist && firebase emulators:exec --only auth --project demo-mon-farm \"E2E_AUTH_EMULATOR=1 playwright test e2e/auth-emulator.spec.ts --project=phone-portrait\"",
     "verify": "npm run tokens:check && npm run contrast && npm run typecheck && npm run lint && npm run test:core && npm run test:ui && npm run build:web && npm run test:e2e",
-    "test:e2e:sync": "EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 expo export --clear --platform web --output-dir dist && firebase emulators:exec --config firebase.e2e.json --only auth,firestore --project demo-mon-farm \"E2E_SYNC_EMULATOR=1 playwright test e2e/sync-emulator.spec.ts e2e/sync-wizard.spec.ts --project=phone-portrait\"",
+    "test:e2e:sync": "EXPO_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 EXPO_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 expo export --clear --platform web --output-dir dist && firebase emulators:exec --config firebase.e2e.json --only auth,firestore --project demo-mon-farm \"E2E_SYNC_EMULATOR=1 playwright test e2e/sync-emulator.spec.ts e2e/sync-restore.spec.ts e2e/sync-wizard.spec.ts --project=phone-portrait\"",
     "test:rules": "firebase emulators:exec --only firestore --project demo-mon-farm \"vitest run --config vitest.rules.config.ts\""
   },
   "dependencies": {

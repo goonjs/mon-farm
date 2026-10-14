@@ -29,6 +29,16 @@ export class MemoryAccountStore implements AccountStore {
     this.ops = [...this.ops, op];
   }
 
+  async saveMemberships(memberships: readonly Membership[]): Promise<void> {
+    const next = [...this.groups];
+    for (const m of memberships) {
+      const at = next.findIndex((g) => g.groupId === m.groupId);
+      if (at >= 0) next[at] = m;
+      else next.push(m);
+    }
+    this.groups = next;
+  }
+
   async pendingOps(): Promise<CreateGroupOp[]> {
     return [...this.ops];
   }

@@ -10,6 +10,7 @@
 
 import {
   collection,
+  collectionGroup,
   doc,
   getDocFromServer,
   getDocsFromServer,
@@ -50,6 +51,13 @@ export function sdkLayer(db: Firestore): FirestoreLayer {
     async get(path) {
       const snap = await getDocFromServer(doc(db, path));
       return snap.exists() ? readable(snap.data()) : null;
+    },
+
+    async groupsOf(userId) {
+      // The rules allow this listing only when filtered to one's own uid; the `members.uid`
+      // collection-group index is in firestore.indexes.json.
+      const snap = await getDocsFromServer(query(collectionGroup(db, 'members'), where('uid', '==', userId)));
+      return snap.docs.flatMap((d) => (d.ref.parent.parent ? [{ groupId: d.ref.parent.parent.id, role: d.data().role }] : []));
     },
 
     async eventsSince(groupId, sinceMs, after, limit) {

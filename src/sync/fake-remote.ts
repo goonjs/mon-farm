@@ -1,4 +1,4 @@
-import type { CreateGroupOp } from '../core/group';
+import type { CreateGroupOp, Role } from '../core/group';
 import type { EventId, GroupId, SaleEvent, UserId } from '../core/types';
 import {
   RemoteError,
@@ -7,7 +7,9 @@ import {
   type PulledPage,
   type RemoteErrorCode,
   type RemoteEvents,
+  type RemoteGroupRef,
   type RemoteGroups,
+  type RemoteMemberships,
 } from './remote';
 
 /**
@@ -25,9 +27,15 @@ export class FakeServer {
    * default so tests that are not about groups need not create one.
    */
   requireGroups = false;
+  /** Member documents (`groups/{gid}/members/{uid}`) with the group's name, as the member lookup sees them. */
+  readonly members: { readonly uid: UserId; readonly groupId: GroupId; readonly name: string; readonly role: Role }[] = [];
+
+  addMember(uid: UserId, groupId: GroupId, name: string, role: Role = 'owner'): void {
+    if (!this.members.some((m) => m.uid === uid && m.groupId === groupId)) this.members.push({ uid, groupId, name, role });
+  }
 }
 
-export class FakeRemote implements RemoteEvents, RemoteGroups {
+export class FakeRemote implements RemoteEvents, RemoteGroups, RemoteMemberships {
   /** Every batch `push` received, accepted or not. */
   readonly batches: SaleEvent[][] = [];
   /** Server reads made by `check()`: they never queue a write. */
@@ -47,7 +55,20 @@ export class FakeRemote implements RemoteEvents, RemoteGroups {
   /** A batch holding any of these is refused as `permission-denied` although the client is a member (malformed event). */
   readonly rulesRejectIds = new Set<EventId>();
 
-  constructor(readonly server = new FakeServer()) {}
+  /** `userId` is whose groups `myGroups` lists; only that lookup needs it. */
+  constructor(
+    readonly server = new FakeServer(),
+    private readonly userId: UserId = '',
+  ) {}
+
+  async myGroups(): Promise<RemoteGroupRef[]> {
+    await Promise.resolve();
+    this.gate();
+    return this.server.members
+      .filter((m) => m.uid === this.userId)
+      .map(({ groupId, name, role }) => ({ groupId, name, role }))
+      .sort((a, b) => (a.groupId < b.groupId ? -1 : a.groupId > b.groupId ? 1 : 0));
+  }
 
   /** The next `push`/`pull` calls fail with these codes, one each. */
   failNext(...codes: RemoteErrorCode[]): void {
@@ -79,6 +100,7 @@ export class FakeRemote implements RemoteEvents, RemoteGroups {
     const creator = this.server.groups.get(op.groupId);
     if (creator === undefined) this.server.groups.set(op.groupId, op.createdBy);
     else if (creator !== op.createdBy) throw new RemoteError('permission-denied');
+    this.server.addMember(op.createdBy, op.groupId, op.name);
   }
 
   async push(events: readonly SaleEvent[]): Promise<void> {

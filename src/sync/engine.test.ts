@@ -187,6 +187,22 @@ describe('pull', () => {
     expect(await b.store.pending()).toEqual([]);
   });
 
+  it("a restored group (membership from the server, no create_group op) pulls the farm's events (E02-S05)", async () => {
+    const server = new FakeServer();
+    const a = await phone(server);
+    await record(a.store, new LogBuilder('s1', a.deviceId).accept('p1').accept('p1').build());
+    await a.engine.sync();
+
+    const b = await phone(server);
+    await b.accounts.saveMemberships([{ groupId: FIXTURE_GROUP_ID, userId: SCOPE.userId, name: 'สวน', role: 'owner' }]);
+    expect(await b.accounts.pendingOps()).toEqual([]);
+    expect(await b.cursor.get()).toBe(0);
+    await b.engine.sync();
+    expect(await b.store.load('s1')).toEqual(await a.store.load('s1'));
+    expect(await b.cursor.get()).toBeGreaterThan(0);
+    expect(b.engine.status()).toMatchObject({ state: 'synced' });
+  });
+
   it('moves the cursor to the newest receivedAt, and re-reads a 10-minute overlap', async () => {
     const p = await phone();
     const other = new LogBuilder('s1', 'dev-other').accept('p1').build();
