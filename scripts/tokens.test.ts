@@ -59,6 +59,18 @@ const ADDED = {
   },
 } as const;
 
+/** Debt-repayment roles (owner 2026-10-14), palette A values. */
+const DEBT = {
+  light: {
+    debtIn: '#006299', debtInSunk: '#E3F3FD', debtOut: '#994400', debtOutSunk: '#FDEEE3',
+    debtNet: '#52657A', debtNetSunk: '#F1F3F5',
+  },
+  dark: {
+    debtIn: '#0AA7FF', debtInSunk: '#142834', debtOut: '#FF760A', debtOutSunk: '#342214',
+    debtNet: '#A3B1C0', debtNetSunk: '#1B2632',
+  },
+} as const;
+
 const sorted = (o: object) => Object.keys(o).sort();
 
 describe('design tokens — palette → semantic roles (E01-S17)', () => {
@@ -78,17 +90,17 @@ describe('design tokens — palette → semantic roles (E01-S17)', () => {
     }
   });
 
-  it('palette A adds exactly the 23 new roles, at the agreed values', () => {
+  it('palette A has the 23 E01-S17 roles and the 6 debt roles, at the agreed values', () => {
     const c = colorFor(PALETTES.farmmate);
     for (const scheme of ['light', 'dark'] as const) {
-      const expected = { ...LEGACY[scheme], ...ADDED[scheme] };
-      expect(Object.keys(expected)).toHaveLength(53);
+      const expected = { ...LEGACY[scheme], ...ADDED[scheme], ...DEBT[scheme] };
+      expect(Object.keys(expected)).toHaveLength(59);
       expect(c[scheme]).toEqual(expected);
     }
   });
 
-  it('every palette yields the same 53 names in both schemes, all #RRGGBB', () => {
-    const names = sorted({ ...LEGACY.light, ...ADDED.light });
+  it('every palette yields the same 59 names in both schemes, all #RRGGBB', () => {
+    const names = sorted({ ...LEGACY.light, ...ADDED.light, ...DEBT.light });
     for (const [key, palette] of Object.entries(PALETTES)) {
       const c = colorFor(palette);
       for (const scheme of ['light', 'dark'] as const) {

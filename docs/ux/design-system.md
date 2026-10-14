@@ -91,8 +91,8 @@ Anything spoken is designed here, not bolted on. Two consequences:
 No hue does double duty. This is the load-bearing decision in the palette.
 
 *Superseded in part 2026-10-03 (§12.2): blue → FarmMate navy; signal
-values darkened FarmMate hues; contrast now 96 pairings × 2 schemes × 2
-palettes (E01-S17). The disjoint-roles
+values darkened FarmMate hues; contrast now 117 pairings × 2 schemes × 2
+palettes (E01-S17 + debt roles 2026-10-14). The disjoint-roles
 rule itself is kept.*
 
 | Hue | Token | Means | Never means |
@@ -111,11 +111,37 @@ position, motion) **agree with** colour instead of competing with it. A rejected
 basket is red *and* struck through *and* marked `✗` *and* announced. Any one of
 those four channels alone carries the meaning.
 
+### Debt repayment has its own hues (owner 2026-10-14)
+
+On settlement screens, money that moves because of **debt** is shown apart
+from the sale (weight × price). Each direction has its own colour **and** its
+own arrow **and** a word — colour is never the only carrier. The pair is
+Okabe-Ito (colour-blind safe), on an accountant reviewer's advice; it is
+deliberately **not** green/red (= accept/sync, reject) and **not** amber
+(= warn), so no signal hue does double duty.
+
+| Role (sunk) | Direction | Mark + word | Light text / sunk | Dark text / sunk |
+|---|---|---|---|---|
+| `debtIn` (`debtInSunk`) | tapper → farm — the tapper repays debt | ↘ + word, e.g. "หักหนี้" | blue `#006299` / `#E3F3FD` | `#0AA7FF` / `#142834` |
+| `debtOut` (`debtOutSunk`) | farm → tapper — the farm repays money it owes | ↗ + word, e.g. "คืนเงิน" | vermillion `#994400` / `#FDEEE3` | `#FF760A` / `#342214` |
+| `debtNet` (`debtNetSunk`) | netting — no cash moves | ⇄ + word, e.g. "หักกลบ" | grey `#52657A` / `#F1F3F5` | `#A3B1C0` / `#1B2632` |
+
+Ramps: `blue` (from Okabe-Ito `#0072B2`) and `vermillion` (from `#D55E00`),
+hue kept and lightness searched against every ground, same in both palettes;
+`debtNet` uses `neutral`. The Thai words above are placeholders — UI copy
+is set by the screen's story. Every role is CI-checked on stage, surface,
+cards, wells and its own sunk tint (≥4.5:1; light-mode text ≥5.77:1 on its
+tint in palette A), plus `ink` (≥7:1) and `inkSoft` (≥4.5:1) on each tint.
+
+Known near-neighbours, kept apart by arrow + word rather than hue:
+`debtInSunk` is close to `actionSunk` (selected row), `debtOut` shares its hue
+with `category5` (orange, decoration only), and `debtNet` = `inkSoft`.
+
 ### Contrast is verified, not asserted
 
-`node scripts/check-contrast.mjs --strict` checks all 96 pairings the system
-actually uses, in both schemes and in **every** palette (E01-S17: 96 × 2 × 2 =
-384 checks), each against a floor chosen for its use:
+`node scripts/check-contrast.mjs --strict` checks all 117 pairings the system
+actually uses, in both schemes and in **every** palette (E01-S17 + debt roles:
+117 × 2 × 2 = 468 checks), each against a floor chosen for its use:
 
 - **7:1 (AAA)** — the count, and all primary operator text
 - **4.5:1 (AA)** — secondary text, chips, button labels
@@ -147,12 +173,12 @@ the only thing defining a target, it must be `ruleStrong`.
 
 ### วิธีเปลี่ยนสี
 
-สี 2 ชั้นใน `design/tokens.ts` (E01-S17): `PALETTES` (ramp ดิบ) → `colorFor` (ตารางบทบาท 53 ชื่อ) → `tokens.color`
+สี 2 ชั้นใน `design/tokens.ts` (E01-S17): `PALETTES` (ramp ดิบ) → `colorFor` (ตารางบทบาท 59 ชื่อ) → `tokens.color`
 1. เปลี่ยนทั้งชุด: แก้ `ACTIVE_PALETTE` เป็น `'farmmate'` (A, ค่าเริ่มต้น) หรือ `'instrument'` (B) — ค่าเดียว ไม่ต้องแก้ test: `scripts/tokens.test.ts` อ่าน `ACTIVE_PALETTE` ไม่ได้ตรึงว่า palette ไหนเปิดอยู่ (การทดสอบค่าของ palette A ยังอ้าง `PALETTES.farmmate` ตรง ๆ เพราะตรวจค่าของ A เอง)
 2. ปรับเฉด: แก้ hex ใน ramp ของ `PALETTES.<ชื่อ>` · ให้บทบาทใช้สีอื่น: แก้บรรทัดของบทบาทนั้นใน `colorFor` ที่เดียว
 3. รัน `npm run tokens` แล้ว `npm run contrast` (ตรวจทุก palette × light/dark) — commit `design/tokens.ts` กับ `docs/ux/tokens.css` ด้วยกัน
 4. หน้าจอใช้แค่ `theme.color.<บทบาท>` (เว็บ/mockup: `var(--color-<บทบาท>)`) — hex / `rgb()` / `hsl()` ใน `src/` ทำให้ CI แดง (`scripts/no-raw-colour.test.ts`)
-5. สีไม่เป็นตัวบอกความหมายอย่างเดียว: สถานะมีไอคอน + คำ, เงินมี + / − และคำ, สีประจำกลุ่มมีชื่อกำกับเสมอ
+5. สีไม่เป็นตัวบอกความหมายอย่างเดียว: สถานะมีไอคอน + คำ, เงินมี + / − และคำ, หนี้มีลูกศร ↘ / ↗ / ⇄ และคำ, สีประจำกลุ่มมีชื่อกำกับเสมอ
 6. mockup v1.1.0 ยังใช้ `mockups/palette-proposal.css` (เขียนมือ, `data-palette="b"`) — mockup ใหม่ให้ `@import` `tokens.css`
 
 ---

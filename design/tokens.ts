@@ -46,6 +46,10 @@
  *     red    → rejected / voided / conflict.
  *     amber  → flagged / pending. Recorded, non-blocking.
  *
+ * Debt repayment (owner 2026-10-14) has its own colour-blind-safe pair, apart
+ * from the sale and from the signals above: blue ↘ tapper → farm, vermillion
+ * ↗ farm → tapper, grey ⇄ netting (no cash). Arrow + word always carry it.
+ *
  * Brand accents (`brand*`) are decorative fills only — illustration, icon
  * tiles, chart bars. They never carry text and never carry state alone.
  *
@@ -63,7 +67,8 @@
 // Two kinds of ramp (docs/stories/e01-s17-semantic-color-tokens.md):
 //   - channel ramps — `neutral`, `ink`, `primary`: the palette's look; free to
 //     change hue between palettes.
-//   - hue ramps — `green`, `red`, `amber` and the six category hues: same hue
+//   - hue ramps — `green`, `red`, `amber`, the six category hues and the two
+//     debt hues (`blue`, `vermillion`): same hue
 //     in every palette, lightness only, so a signal keeps its meaning.
 //
 // Steps are not evenly spaced: palette A has to land on the pre-existing
@@ -92,6 +97,11 @@ const farmmate = {
   magenta: { 50: '#FCE8F3', 400: '#D65C9D', 700: '#BE2F7B', 900: '#341425' },
   orange: { 50: '#FEF1E7', 400: '#DD7220', 700: '#AA5718', 900: '#342214' },
   olive: { 50: '#FBFEE7', 400: '#93A51D', 700: '#667314', 900: '#2F3414' },
+  // Debt hues (owner 2026-10-14): Okabe-Ito colour-blind-safe pair, kept at
+  // their hue and searched in lightness only. blue ← #0072B2 (light text
+  // 4.95 → 6.25:1 on surface), vermillion ← #D55E00 (3.69 → 6.30:1).
+  blue: { 50: '#E3F3FD', 400: '#0AA7FF', 700: '#006299', 900: '#142834' },
+  vermillion: { 50: '#FDEEE3', 400: '#FF760A', 700: '#994400', 900: '#342214' },
 } as const;
 
 /**
@@ -125,6 +135,8 @@ const instrument = {
   magenta: farmmate.magenta,
   orange: farmmate.orange,
   olive: farmmate.olive,
+  blue: farmmate.blue,
+  vermillion: farmmate.vermillion,
 } satisfies PaletteShape;
 
 export const PALETTES = { farmmate, instrument } as const;
@@ -221,6 +233,21 @@ export function colorFor(p: PaletteShape) {
       moneyOut: p.ink[900],
       moneyOutSunk: n[100],
 
+      /**
+       * Debt repayment, shown apart from the sale (weight × price) on
+       * settlement screens. Always with its arrow AND a word — never colour
+       * alone. Not green/red (accept/reject) and not amber (warn).
+       */
+      /** blue ↘ — tapper → farm: the tapper repays debt. */
+      debtIn: p.blue[700],
+      debtInSunk: p.blue[50],
+      /** vermillion ↗ — farm → tapper: the farm repays money it owes. */
+      debtOut: p.vermillion[700],
+      debtOutSunk: p.vermillion[50],
+      /** grey ⇄ — netting; no cash moves. */
+      debtNet: n[600],
+      debtNetSunk: n[100],
+
       /** Group colours (farm / zone / tapper / chart series) — decoration, always named. */
       category1: p.teal[700],
       category1Sunk: p.teal[50],
@@ -292,6 +319,13 @@ export function colorFor(p: PaletteShape) {
       moneyInSunk: g[950],
       moneyOut: p.ink[50],
       moneyOutSunk: n[950],
+
+      debtIn: p.blue[400],
+      debtInSunk: p.blue[900],
+      debtOut: p.vermillion[400],
+      debtOutSunk: p.vermillion[900],
+      debtNet: n[300],
+      debtNetSunk: n[800],
 
       category1: p.teal[400],
       category1Sunk: p.teal[900],
