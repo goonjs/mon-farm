@@ -68,7 +68,7 @@ Partly met, left open (owner 2026-10-14):
 - Offline: the same deduction re-entered on two offline phones adds up after sync with no Conflict (review F2); close is blocked only if the total passes the share.
 
 - [x] Unit (vitest, 2026-10-14): `src/core/finance/deduct.test.ts` (cap, proposal, rounding, needs-change incl. 2,860/500, 300 and 1,050/30; `deductSheet` −1,500 / +640 / route 860, ceiling = share + netting, หักหนี้ ≥ netting, empty box = 0; `pickNotes`), `src/core/finance/debts.test.ts` (`balanceAfterSale`). 174 finance tests, 925 core in all, pass.
-- [x] Component (jest): `src/__tests__/v2-sale-deduct.test.tsx` (mockup 17/17a: owed-back hint, breakdown + reason, −/+ steppers, + netting line, route lines, ต้องแตกเงิน + notes, edit replaces, edit to 0 removes netting + repayment, owner tick locked under D-61), `v2-sale-netting.test.tsx`, `v2-sale-money.test.tsx`. 415 pass (`--runInBand`).
+- [x] Component (jest): `src/__tests__/v2-sale-deduct.test.tsx` (mockup 17/17a: owed-back hint, breakdown + reason, −/+ steppers, + netting line, route lines, ต้องแตกเงิน + notes, edit replaces, edit keeping the netting, an unchanged edit writes nothing, edit to 0 removes netting + repayment, an older sale dated by its day, owner tick locked under D-61), `v2-sale-netting.test.tsx`, `v2-sale-money.test.tsx`. 419 pass (`--runInBand`).
 - [x] Sandbox run (2026-10-14): exported web build, Playwright phone-portrait, offline — `e2e/v2-sale.spec.ts` netting test and the full v2 suite: 21 passed, 5 skipped (landscape-only).
 - [x] Screenshots (UI) — golden path: `docs/ux/screenshots/ui-v2/sale/e06-s04/17-before.png`, `17a-red-sheet.png`, `17a-nat-open.png`, `17-after.png`, `17-after-nat.png`, `18a-tally.png`; side by side with the mockup: `after-fix-vs-mockup-17.png`, `after-fix-vs-mockup-17a.png` (before the fix: `before-fix-vs-mockup-17*.png`).
 - [x] Screenshots (UI) — edge cases: `17a-nat-why.png` (ต้องแตกเงิน + the notes in the pile), `17a-nat-overcap.png` (above the ceiling, save disabled).
@@ -84,8 +84,8 @@ Partly met, left open (owner 2026-10-14):
 ## Code review
 
 - Reviewer 1 (separate agent, 2026-10-14, read-only on `602c37f`): 2 major, 9 minor. Fixed on this branch: F4 (`counts` filtered in the tally sum and `transferInSatang`), F6 (owner's tick locked under D-61), F7 (editing shows what was saved, no second instalment), F8 (an empty box is 0), F9 (`balanceAfterSale`), F10 (the ceiling now does grow with the netting), F11 (a netting that cannot be placed is said, nothing written), plus the mockup differences above. Open by the owner's choice: F1 cancelled sales (waits on E04-S11), F2 two-device duplicates (needs one guarded record per sale × tapper), F5 tally piles derived from the same numbers.
-- Reviewer 2 (separate agent, 2026-10-14) on the fix diff: see below.
-- Resolution:
+- Reviewer 2 (separate agent, 2026-10-14) on the fix diff: money math checked by hand on every path (new, edit, edit to 0, partial netting, plan, balance > share, debt > share + netting) — holds to the satang; write order and part-way stops safe; 7 minor/nit findings. All fixed: (1) lines are dated by the sale day and "debt left" uses it, not today; (2) an edit that changes nothing writes nothing; (3) a warning before several old routes become one; (4) tests for editing a netted deduction while keeping the netting (owed money placed again, one live repayment, nothing owed left), the error texts, and the steppers' floors; (5) − stops at the netting; (6) the save error clears on any change; (7) "ทำไม? ดูแบงค์ในกอง" sits under the radio card, not inside it.
+- Resolution: ready for the owner. Gate on the final code (2026-10-14): typecheck, lint (one warning already on `dev`), vitest 925, jest 419 (`--runInBand`), web build, Playwright phone-portrait 21 passed. Open items as listed above (F1, F2, F5).
 
 ## QA notes
 
