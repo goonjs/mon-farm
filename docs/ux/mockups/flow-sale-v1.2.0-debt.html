@@ -704,7 +704,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .band .fig { font-size: 30px; }
 .sect { font-size: 13px; font-weight: 700; color: var(--color-ink-soft); letter-spacing: .02em; margin: 6px 2px -2px; display: flex; gap: 6px; align-items: center; }
 .sect .tag { font-weight: 600; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--color-surface-sunk); color: var(--color-ink-soft); }
-.dir { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 14px; font-weight: 700; flex: none; }
+.dir { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-size: 17px; font-weight: 700; flex: none; }
 .dir.in  { background: var(--color-debt-in-sunk);  color: var(--color-debt-in);  border: 1.5px solid var(--color-debt-in); }
 .dir.out { background: var(--color-debt-out-sunk); color: var(--color-debt-out); border: 1.5px solid var(--color-debt-out); }
 .dir.net { background: var(--color-debt-net-sunk); color: var(--color-debt-net); border: 1.5px dashed var(--color-debt-net); }
@@ -734,6 +734,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .chk .ok { color: var(--color-accept); font-weight: 700; }
 .nocash { border: 1.5px dashed var(--color-debt-net); background: var(--color-debt-net-sunk); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .pending { border: 1.5px dashed var(--color-warn); border-radius: 12px; padding: 8px 10px; }
+.legend2 .off { opacity: .45; }
 .qlist { margin: 8px 0 0; padding-left: 18px; font-size: 14px; color: var(--pg-ink, inherit); line-height: 1.6; }
 
 </style>
@@ -857,16 +858,17 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 
           <div class="sect">ข · เรื่องหนี้ <span class="tag">ไม่ใช่ยอดขาย</span></div>
           <div class="card debt">
-            <div class="legend2"><span><span class="dir in">↘</span>คนกรีดยาง → สวน</span><span><span class="dir out">↗</span>สวน → คนกรีดยาง</span><span><span class="dir net">⇄</span>ไม่มีเงินสด</span></div>
+            <div class="legend2"><span><span class="dir in">↘</span>คนกรีดยาง → สวน</span><span class="off"><span class="dir out">↗</span>สวน → คนกรีดยาง (วันนี้ไม่มี)</span><span><span class="dir net">⇄</span>หักกลบ ไม่ใช้เงินสด</span></div>
             <div class="who">แดง</div>
             <div class="mv in"><span class="dir in">↘</span><span class="t">แดงจ่ายหนี้สวน · งวดผ่อน<small>เงินสด · หยิบจากเงินของแดง · หยิบแบงค์พัน 2 ใบ ไม่ต้องแตก</small></span><span class="a">2,000.00</span></div>
             <div class="kv"><span>หนี้แดงคงค้างหลังการขายนี้</span><span>3,000.00</span></div>
             <span class="lnk2">แก้ยอดหัก / วิธีรับเงิน ›</span>
             <div class="who" style="margin-top:6px">นัด</div>
-            <div class="mv net"><span class="dir net">⇄</span><span class="t">หักกลบ: หักหนี้กับเงินที่สวนติดนัด<small>ค่าน้ำมันตัดหญ้าที่นัดสำรองจ่าย · ไม่มีเงินสด</small></span><span class="a">640.00</span></div>
-            <div class="mv in"><span class="dir in">↘</span><span class="t">นัดจ่ายหนี้สวน (ส่วนที่เหลือ)<small>มากับยอดโอนเจ้าของสวน (ทาง 3)</small></span><span class="a">860.00</span></div>
+            <div class="mv net"><span class="dir net">⇄</span><span class="t">หักกลบ: หักหนี้กับเงินที่สวนติดนัด<small>ค่าน้ำมันตัดหญ้าที่นัดสำรองจ่าย · ไม่ใช้เงินสด</small></span><span class="a">640.00</span></div>
+            <div class="mv in"><span class="dir in">↘</span><span class="t">นัดจ่ายหนี้สวน (ส่วนที่เหลือ)<small>คนรับซื้อยางโอนมาพร้อมส่วนของสวน</small></span><span class="a">860.00</span></div>
             <div class="kv"><span>หนี้นัดลดรวม (640 + 860)</span><span>1,500.00</span></div>
-            <div class="kv"><span>หนี้นัดคงค้าง · สวนยังติดนัด</span><span>0.00 · 0.00</span></div>
+            <div class="kv"><span>หนี้นัดคงค้างหลังการขายนี้</span><span>0.00</span></div>
+            <div class="kv"><span>สวนยังติดนัด</span><span>0.00</span></div>
             <span class="lnk2">แก้ยอดหัก / วิธีรับเงิน ›</span>
           </div>
 
@@ -874,20 +876,20 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
           <div class="card">
             <div class="who"><span class="tile sm t-cat3"><svg class="ic"><use href="#i-tapper"/></svg></span>เงินสดให้แดง</div>
             <div class="kv"><span>ส่วนแบ่ง</span><span>36,860.00</span></div>
-            <div class="kv din"><span class="dl"><span class="dir in">↘</span>จ่ายหนี้สวน (เงินสด)</span><span>−2,000.00</span></div>
+            <div class="kv din"><span class="dl"><span class="dir in">↘</span>แดง → สวน จ่ายหนี้ (หยิบออก)</span><span>2,000.00</span></div>
             <div class="kv total"><span>เงินสดที่ต้องจ่ายแดง <small>(ยังไม่ปัดเศษ)</small></span><span class="fig" style="font-size:24px">34,860<span class="u">บาท</span></span></div>
             <div class="say">“แดง ขายได้ 73,720 แบ่งครึ่ง <b>36,860</b> · จ่ายหนี้สวนงวดนี้ 2,000 · วันนี้รับ <b>34,860</b> · เหลือหนี้ 3,000”</div>
             <div class="who" style="margin-top:10px"><span class="tile sm t-cat4"><svg class="ic"><use href="#i-tapper"/></svg></span>เงินสดให้นัด</div>
             <div class="kv"><span>ส่วนแบ่ง</span><span>17,823.75</span></div>
-            <div class="kv din"><span class="dl"><span class="dir in">↘</span>จ่ายหนี้สวน (มากับยอดโอน)</span><span>−860.00</span></div>
+            <div class="kv din"><span class="dl"><span class="dir in">↘</span>นัด → สวน จ่ายหนี้ (มากับยอดโอน)</span><span>860.00</span></div>
             <div class="kv total"><span>เงินสดที่ต้องจ่ายนัด <small>(ยังไม่ปัดเศษ)</small></span><span class="fig" style="font-size:24px">16,963.75<span class="u">บาท</span></span></div>
-            <div class="say">“นัด ขายได้ 35,647.50 แบ่งครึ่ง <b>17,823.75</b> · หนี้ 1,500 หักกับเงินที่สวนติดนัด 640 เหลือ 860 · วันนี้รับ <b>16,963.75</b> · หนี้หมด”</div>
+            <div class="say">“นัด ขายได้ 35,647.50 แบ่งครึ่ง <b>17,823.75</b> · หนี้ 1,500 หักกับเงินที่สวนติดนัด 640 เหลือ 860 · วันนี้รับ <b>16,963.75</b> (ปัดเป็น 16,964 ที่หน้าถัดไป) · หนี้หมด”</div>
           </div>
           <div class="card cream">
             <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--color-surface-raised)"><svg class="ic"><use href="#i-bank"/></svg></span><span class="grow val">โอนเข้าบัญชีเจ้าของสวน</span></div>
             <div class="kv"><span>ส่วนของสวน (จากยอดขาย)</span><span>54,683.75</span></div>
-            <div class="kv din"><span class="dl"><span class="dir in">↘</span>นัดจ่ายหนี้ มากับโอน</span><span>+860.00</span></div>
-            <div class="kv total"><span>คนรับซื้อยางโอน</span><span class="fig" style="font-size:22px">55,543.75<span class="u">บาท</span></span></div>
+            <div class="kv din"><span class="dl"><span class="dir in">↘</span>นัด → สวน จ่ายหนี้ (มากับโอน)</span><span>860.00</span></div>
+            <div class="kv total"><span>คนรับซื้อยางโอน <small>(ยังไม่ปัดเศษ)</small></span><span class="fig" style="font-size:22px">55,543.75<span class="u">บาท</span></span></div>
             <span class="mi"><svg class="ic"><use href="#i-help"/></svg>860 เป็นเงินคืนหนี้ ไม่ใช่ส่วนของสวน</span>
             <div class="acct"><div class="kv" style="align-items:center"><span class="lab">รับเข้าบัญชี (ไม่บังคับ)</span><span class="sel">เปลี่ยน<svg class="ic"><use href="#i-down"/></svg></span></div><span class="val num">กสิกรไทย ••1234</span></div>
           </div>
@@ -895,6 +897,7 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="row" style="min-height:0"><span class="dir in">↘</span><span class="grow val">เงินสดคืนหนี้เข้าสวนวันนี้</span></div>
             <span style="font-size:13px;color:var(--color-ink-soft)">หยิบจากเงินสดที่จ่ายคนกรีดยาง · ไม่ใช่ส่วนของสวน</span>
             <div class="kv din"><span>แดง (หยิบจากเงินของแดง)</span><span>2,000.00</span></div>
+            <div class="kv muted"><span>นัด 860 มากับยอดโอน (ไม่ใช่เงินสด)</span><span>—</span></div>
             <div class="kv total"><span>รวมเงินสดคืนหนี้</span><span class="fig" style="font-size:20px">2,000.00</span></div>
           </div>
         </div>
@@ -930,21 +933,25 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <div class="kv"><span>หักหนี้ครั้งนี้ (0 – 1,500.00)</span><span>[ − ] 1,500.00 [ + ]</span></div>
           </div>
           <div class="nocash">
-            <div class="mv net" style="border:0;padding:0"><span class="dir net">⇄</span><span class="t">แนะนำ: หักกลบกับเงินที่สวนติดนัด<small>ค่าน้ำมันตัดหญ้า · 12 ก.ย. 2569 · ไม่มีเงินสดเคลื่อน</small></span><span class="a">640.00</span></div>
+            <div class="mv net" style="border:0;padding:0"><span class="dir net">⇄</span><span class="t">แนะนำ: หักกลบกับเงินที่สวนติดนัด<small>ค่าน้ำมันตัดหญ้า · 12 ก.ย. 2569 · ไม่ใช้เงินสด</small></span><span class="a">640.00</span></div>
             <div class="kv"><span>หักกลบครั้งนี้ (0 – 640.00)</span><span>[ − ] 640.00 [ + ]</span></div>
-            <small>เจ้าของกดใช้เอง (D-60) · ยังไม่ได้ใช้ → ขึ้นเตือน "สวนยังติดนัด 640 ยังไม่ได้หักกลบ" ก่อนบันทึก</small>
+            <span class="chip ch-plain"><svg class="ic"><use href="#i-check"/></svg>ใช้หักกลบ 640.00 แล้ว</span>
           </div>
           <div class="kv"><span>หนี้ 1,500 − หักกลบ 640 = นัดต้องจ่ายเป็นเงินจริง</span><span class="num" style="color:var(--color-debt-in)">860.00</span></div>
           <b style="font-size:14px">เงิน 860 มาทางไหน</b>
           <div class="radio"><span class="dot"></span><span><b>1 · หยิบจากเงินสดของนัด</b><small>↘ เงินสดเข้าสวน 860 · ต้องแตกเงิน (แตะดูแบงค์)</small></span></div>
-          <div class="radio"><span class="dot"></span><span><b>2 · คนรับซื้อยางแยกเงินสดอีกกอง</b><small>↘ กองคืนหนี้ 860 · เงินของนัด 16,963.75</small></span></div>
+          <div class="radio"><span class="dot"></span><span><b>2 · คนรับซื้อยางแยกเงินสดคืนหนี้อีกก้อน</b><small>↘ เงินคืนหนี้ 860 · เงินของนัด 16,963.75</small></span></div>
           <div class="radio on"><span class="dot"></span><span><b>3 · มากับยอดโอนเจ้าของสวน</b><small>↘ โอนเพิ่ม 860 · เงินของนัด 16,963.75</small></span></div>
           <div class="card" style="padding:10px 12px">
             <div class="kv"><span>ส่วนแบ่ง</span><span>17,823.75</span></div>
-            <div class="kv din"><span class="dl"><span class="dir in">↘</span>จ่ายหนี้เป็นเงินจริง</span><span>−860.00</span></div>
+            <div class="kv din"><span class="dl"><span class="dir in">↘</span>นัด → สวน จ่ายหนี้ (มากับยอดโอน)</span><span>860.00</span></div>
             <div class="kv total"><span><b>วันนี้นัดรับ (ยังไม่ปัดเศษ)</b></span><span class="fig" style="font-size:20px">16,963.75</span></div>
-            <div class="kv dnet"><span class="dl"><span class="dir net">⇄</span>หักกลบ (ไม่มีเงินสด)</span><span>640.00</span></div>
-            <div class="kv"><span>หนี้นัดลดรวม · คงค้าง</span><span>1,500.00 · 0.00</span></div>
+          </div>
+          <div class="card debt" style="padding:10px 12px">
+            <div class="kv dnet"><span class="dl"><span class="dir net">⇄</span>หักกลบ (ไม่ใช้เงินสด)</span><span>640.00</span></div>
+            <div class="kv din"><span class="dl"><span class="dir in">↘</span>นัด → สวน จ่ายเป็นเงิน</span><span>860.00</span></div>
+            <div class="kv total"><span>หนี้นัดลดรวม</span><span>1,500.00</span></div>
+            <div class="kv"><span>หนี้นัดคงค้างหลังการขายนี้</span><span>0.00</span></div>
           </div>
           <div style="display:flex;gap:8px"><div class="btn btn-secondary" style="flex:1">ยกเลิก</div><div class="btn btn-primary" style="flex:1">บันทึก</div></div>
         </div>
@@ -969,23 +976,23 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
             <span class="fig num">109,367.50<span class="u">บาท</span></span>
           </div>
           <div class="card">
-            <h4>เงินแต่ละกอง — มาจากไหน</h4>
-            <div class="pile"><div class="top"><span>เงินสดให้แดง</span><span class="v">34,860.00</span></div><div class="parts"><span>จากยอดขาย 36,860.00</span><span class="din">↘ จ่ายหนี้ −2,000.00</span></div></div>
-            <div class="pile"><div class="top"><span>เงินสดให้นัด</span><span class="v">16,964.00</span></div><div class="parts"><span>จากยอดขาย 17,823.75</span><span class="din">↘ จ่ายหนี้ −860.00</span><span>ปัดเศษ +0.25</span></div></div>
-            <div class="pile"><div class="top"><span>โอนเข้าบัญชีเจ้าของสวน</span><span class="v">55,543.50</span></div><div class="parts"><span>จากยอดขาย 54,683.75</span><span class="din">↘ นัดจ่ายหนี้ +860.00</span><span>ปัดเศษ −0.25</span></div></div>
-            <div class="pile"><div class="top"><span>เงินสดคืนหนี้เข้าสวน</span><span class="v">2,000.00</span></div><div class="parts"><span>จากยอดขาย 0.00</span><span class="din">↘ แดงจ่ายหนี้ +2,000.00</span></div></div>
-            <div class="kv total"><span><b>รวมทุกกอง</b></span><span class="fig" style="font-size:20px">109,367.50</span></div>
+            <h4>ยื่นเงินให้ใคร เท่าไหร่ — มาจากไหน</h4>
+            <div class="pile"><div class="top"><span>เงินสดให้แดง</span><span class="v">34,860.00</span></div><div class="parts"><span>จากยอดขาย 36,860.00</span><span class="din">↘ แดง → สวน −2,000.00</span></div></div>
+            <div class="pile"><div class="top"><span>เงินสดให้นัด</span><span class="v">16,964.00</span></div><div class="parts"><span>จากยอดขาย 17,823.75</span><span class="din">↘ นัด → สวน −860.00</span><span>ปัดเศษ +0.25</span></div></div>
+            <div class="pile"><div class="top"><span>โอนเข้าบัญชีเจ้าของสวน</span><span class="v">55,543.50</span></div><div class="parts"><span>จากยอดขาย 54,683.75</span><span class="din">↘ นัด → สวน +860.00</span><span>ปัดเศษ −0.25</span></div></div>
+            <div class="pile"><div class="top"><span>เงินสดคืนหนี้เข้าสวน</span><span class="v">2,000.00</span></div><div class="parts"><span class="din">↘ แดง → สวน จ่ายหนี้ +2,000.00</span></div></div>
+            <div class="kv total"><span><b>รวมเงินทุกก้อน</b></span><span class="fig" style="font-size:20px">109,367.50</span></div>
           </div>
           <div class="card">
             <h4>ตรวจ 3 ข้อ</h4>
             <div class="chk"><span>รวม "จากยอดขาย" = ยอดขาย 109,367.50</span><span class="ok">✓</span></div>
             <div class="chk"><span>รวม "จ่ายหนี้" −2,000 −860 +860 +2,000 = 0.00</span><span class="ok">✓</span></div>
             <div class="chk"><span>รวม "ปัดเศษ" +0.25 −0.25 = 0.00</span><span class="ok">✓</span></div>
-            <span class="chip ch-ok" style="margin-top:6px"><svg class="ic"><use href="#i-check"/></svg>ทุกกองรวมกันเท่ายอดขาย ตรงถึงสตางค์</span>
-            <span class="mi" style="margin-top:4px">หนี้แค่ย้ายเงินระหว่างกอง จึงรวมได้ 0 เสมอ — ยอดขายไม่เปลี่ยนเพราะหนี้</span>
+            <span class="chip ch-ok" style="margin-top:6px"><svg class="ic"><use href="#i-check"/></svg>เงินทุกก้อนรวมกันเท่ายอดขาย ตรงถึงสตางค์</span>
+            <span class="mi" style="margin-top:4px">หนี้แค่ย้ายเงินจากก้อนหนึ่งไปอีกก้อน จึงรวมได้ 0 เสมอ — ยอดขายไม่เปลี่ยนเพราะหนี้</span>
           </div>
           <div class="nocash">
-            <b>ไม่มีเงินสด ไม่อยู่ในกอง</b>
+            <b>ไม่ใช้เงินสด (ไม่อยู่ในเงินก้อนไหน)</b>
             <div class="mv net" style="border:0;padding:0"><span class="dir net">⇄</span><span class="t">นัด หักกลบ<small>หนี้นัดลด 640 = สวนจ่ายคืนนัด 640</small></span><span class="a">640.00</span></div>
           </div>
         </div>
@@ -1006,6 +1013,15 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
     </figure>
 
   </div>
+</section>
+
+<section class="qs">
+  <h2>บันทึกการรีวิว (2026-10-14)</h2>
+  <ol class="qlist">
+    <li><b>รอบ 1</b> นักบัญชี: หนี้ปนในการ์ดยอดขาย, "+" สีเขียวใช้กับสองทิศ, เงินสดคืนหนี้อยู่ใต้หัวข้อส่วนแบ่งเจ้าของสวน, หน้า 17 ไม่บอกยอดขาย → เสนอโครง ก/ข/ค และหน้า 18a แบบสะพาน (คอลัมน์หนี้รวม = 0) · persona เจ้าของสวน: หา "วันนี้ขายได้เท่าไหร่" ไม่เจอ, สับสนสองทิศ, ตัวเลขนัด 1,500 กับ 860 ไม่ตรงกัน</li>
+    <li><b>รอบ 2</b> นักบัญชี: "พร้อมสร้าง" — แก้คำ 3 จุด · persona: "ใช้ได้" — แก้เล็ก 5 จุด · แก้ในหน้านี้แล้ว: ป้าย "ยังไม่ปัดเศษ" ที่ยอดโอนด้วย, บรรทัดละตัวเลขเดียว, ป้ายหักกลบเปลี่ยนตามสถานะ, ไอคอนทิศใหญ่ขึ้น, ใช้คำ "นัด → สวน" แทน −/+, เอา "D-60", "ทาง 3", "กอง" ออกจากจอ, ย้ายหักกลบออกจากใต้ "วันนี้นัดรับ", เงินสดคืนหนี้บอกว่านัด 860 มากับโอน</li>
+    <li><b>ยังไม่ทำ (ทีหลัง)</b>: หน้า 18a แบบคอลัมน์ (ตอนนี้เป็นบรรทัดย่อยต่อก้อน อ่านบนจอ 360 ได้ดีกว่า) · ตัวอย่างสีส้ม ↗ จะใส่เมื่อเขียน E11-S09</li>
+  </ol>
 </section>
 
 <section class="qs">
