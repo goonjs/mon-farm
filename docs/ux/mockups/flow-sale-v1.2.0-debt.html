@@ -1,0 +1,1060 @@
+<title>mon-farm Flow การขาย v1.2.0 · หนี้แยกจากยอดขาย</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="./palette-proposal.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
+
+/* ---------------------------------------------------------------------------
+   Colour. Every colour below is a --color-* semantic role from
+   ../tokens.css (generated from design/tokens.ts) or ./palette-proposal.css
+   (E01-S17 Draft proposal: the new roles + palette B). No literal colour in
+   this file — change a colour in design/tokens.ts (or, until E01-S17 is
+   agreed, palette-proposal.css), never here.
+   The phones follow the page theme (light = field mode, dark = opt-in) and
+   the palette toggle (bottom right; or ?palette=b&theme=dark).
+   The aliases below are page chrome around the phones (docs only), the
+   "?" open-question and "ตอบแล้ว" answered markers, the sheet scrim, and the
+   non-colour layout shorthands.
+   ------------------------------------------------------------------------- */
+:root {
+  --pg-bg: var(--color-surface);
+  --pg-card: var(--color-surface-raised);
+  --pg-ink: var(--color-ink);
+  --pg-ink-soft: var(--color-ink-soft);
+  --pg-rule: var(--color-rule);
+  --pg-accent: var(--color-accept);
+  --frame-bezel: var(--color-scrim);
+  --frame-ring: var(--color-rule);
+  --frame-shadow: color-mix(in srgb, var(--color-scrim) 14%, transparent);
+
+  --note-bg: var(--color-brand-yellow);
+  --note-ink: var(--color-ink);
+  --ans-bg: var(--color-accept-sunk);
+  --ans-ink: var(--color-accept);
+
+  /* scrim = colour role x opacity token (E01-S17 Dev notes; was 0.55 hand-written) */
+  --scrim: color-mix(in srgb, var(--color-scrim) calc(var(--opacity-scrim) * 100%), transparent);
+
+  --font: "Noto Sans Thai", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px; --r-pill: 999px;
+  --target: 48px; --target-c: 56px;
+}
+/* brandYellow stays light in both themes, so the "?" ink must stay dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { color-scheme: dark; --note-ink: var(--color-ink-inverse); }
+}
+:root[data-theme="dark"] { color-scheme: dark; --note-ink: var(--color-ink-inverse); }
+:root[data-theme="light"] { color-scheme: light; }
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--pg-bg);
+  color: var(--pg-ink);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+.num { font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; }
+
+/* ---- page header ---- */
+.hdr h1 { margin: 0; font-size: 28px; line-height: 1.25; font-weight: 700; }
+.hdr p { margin: 6px 0 0; color: var(--pg-ink-soft); }
+.hdr .date { font-size: 14px; }
+.legend {
+  margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px 20px;
+  padding: 12px 16px; border: 1px solid var(--pg-rule); border-radius: var(--r-lg);
+  background: var(--pg-card); font-size: 14px; color: var(--pg-ink-soft);
+}
+.legend > span { display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---- flow layout ---- */
+.sec { margin-top: 40px; }
+.sec h2 { font-size: 20px; line-height: 1.25; margin: 0 0 4px; font-weight: 700; }
+.sec > p { margin: 0 0 20px; color: var(--pg-ink-soft); font-size: 14px; }
+.flow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: 28px 8px; }
+.step { margin: 0; width: min(360px, 100%); }
+.arrow {
+  width: 112px; align-self: center; display: flex; flex-direction: column;
+  align-items: center; gap: 6px; text-align: center; font-size: 13px;
+  line-height: 1.35; color: var(--pg-ink-soft); padding-bottom: 120px;
+}
+.arrow .ic { width: 40px; height: 40px; color: var(--pg-accent); stroke-width: 2.25; }
+.arrow b { color: var(--pg-ink); font-weight: 600; }
+@media (max-width: 860px) {
+  .flow { flex-direction: column; align-items: center; }
+  .arrow { width: min(360px, 100%); flex-direction: row; justify-content: center; text-align: left; padding: 0; }
+  .arrow .ic { transform: rotate(90deg); flex: none; }
+}
+figcaption { margin-top: 12px; font-size: 14px; color: var(--pg-ink-soft); }
+figcaption .t { display: block; font-size: 16px; font-weight: 700; color: var(--pg-ink); }
+figcaption .ids { display: block; margin-top: 4px; font-size: 12px; letter-spacing: 0.02em; }
+figcaption ul { margin: 8px 0 0; padding: 0; list-style: none; }
+figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; }
+
+/* ---- "?" open-question marker ---- */
+.q {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  min-width: 26px; height: 20px; padding: 0 6px; border-radius: var(--r-pill);
+  background: var(--note-bg); color: var(--note-ink);
+  font-size: 11px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+/* ---- green "ตอบแล้ว" answered marker ---- */
+.ans {
+  display: inline-flex; align-items: center; gap: 3px; flex: none;
+  height: 20px; padding: 0 7px; border-radius: var(--r-pill);
+  background: var(--ans-bg); color: var(--ans-ink);
+  font-size: 11px; font-weight: 700; line-height: 1; white-space: nowrap; vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+.ans .ic { width: 12px; height: 12px; stroke-width: 3; }
+
+/* ---- phone frame ---- */
+.phone {
+  width: 100%; height: 740px; padding: 10px; border-radius: 40px;
+  background: var(--frame-bezel);
+  box-shadow: 0 0 0 1px var(--frame-ring), 0 12px 32px var(--frame-shadow);
+}
+.screen {
+  position: relative; height: 100%; border-radius: 30px; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--color-surface); color: var(--color-ink); font-size: 16px; line-height: 1.4;
+}
+.sbar {
+  height: 28px; flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 22px; font-size: 12px; font-weight: 600; color: var(--color-ink);
+}
+.sbar .ic { width: 16px; height: 16px; }
+.appbar { height: 56px; flex: none; background: var(--color-app-bar); color: var(--color-app-bar-ink); display: flex; align-items: center; gap: 4px; padding: 0 8px 0 4px; }
+.appbar h3 { flex: 1; margin: 0; font-size: 18px; font-weight: 600; line-height: 1.25; min-width: 0; }
+.appbar h3 small { display: block; font-size: 12px; font-weight: 400; color: var(--color-ink-soft); }
+.appbar .iconbtn { color: var(--color-app-bar-ink); }
+.iconbtn {
+  width: var(--target); height: var(--target); flex: none; display: grid; place-items: center;
+  border-radius: var(--r-pill); color: var(--color-ink);
+}
+.body { flex: 1; min-height: 0; overflow: hidden; padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 12px; }
+.foot { flex: none; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+
+/* ---- icons ---- */
+.ic { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ic.sm { width: 18px; height: 18px; }
+.ic.lg { width: 28px; height: 28px; }
+.fillsoft { fill: currentColor; fill-opacity: 0.16; }
+.fillsolid { fill: currentColor; stroke: none; }
+
+/* ---- cards and icon tiles (FarmMate pattern) ---- */
+.card {
+  background: var(--color-surface-raised); border: 1px solid var(--color-rule-faint); border-radius: var(--r-lg);
+  box-shadow: 0 2px 12px var(--shadow-card-color); padding: 12px;
+}
+.card.cream { background: var(--color-brand-cream); }
+.card.tight { padding: 4px 12px; }
+.card h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--color-ink-soft); }
+.row { display: flex; align-items: center; gap: 12px; min-height: var(--target); }
+.row + .row { border-top: 1px solid var(--color-rule-faint); }
+.row .grow { flex: 1; min-width: 0; }
+.row .lbl { font-size: 14px; color: var(--color-ink-soft); }
+.row .val { font-size: 16px; font-weight: 600; }
+.row .sub { display: block; font-size: 13px; color: var(--color-ink-soft); font-weight: 400; }
+.tile {
+  width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: var(--r-md);
+}
+.tile.sm { width: 36px; height: 36px; border-radius: 10px; }
+.tile.sm .ic { width: 20px; height: 20px; }
+.t-green { background: var(--color-accept-sunk); color: var(--color-accept); }
+.t-cream { background: var(--color-brand-cream); color: var(--color-warn); }
+.t-blue { background: var(--color-action-sunk); color: var(--color-action); }
+.t-red { background: var(--color-reject-sunk); color: var(--color-reject); }
+.t-gray { background: var(--color-surface-sunk); color: var(--color-ink-soft); }
+.chev { color: var(--color-ink-faint); }
+
+/* ---- buttons ---- */
+.btn {
+  min-height: 52px; width: 100%; border-radius: var(--r-pill); display: flex; align-items: center;
+  justify-content: center; gap: 8px; font-size: 16px; font-weight: 600; padding: 0 20px; text-align: center;
+}
+.btn-primary { background: var(--color-action); color: var(--color-ink-inverse); box-shadow: 0 3px 10px var(--shadow-floating-color); }
+.btn-secondary { background: var(--color-surface-raised); color: var(--color-action); border: 2px solid var(--color-action); }
+.btn-disabled { background: var(--color-disabled-fill); color: var(--color-disabled-ink); border: 2px dashed var(--color-rule-strong); }
+.btn.small { min-height: var(--target); width: auto; font-size: 14px; padding: 0 16px; }
+
+/* ---- sync pill (SYNC-3): icon + word, colour agrees ---- */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px;
+  border-radius: var(--r-pill); font-size: 13px; font-weight: 600; white-space: nowrap; flex: none;
+}
+.pill .ic { width: 16px; height: 16px; }
+.p-ok { background: var(--color-accept-sunk); color: var(--color-accept); }
+.p-pend { background: var(--color-warn-sunk); color: var(--color-warn); }
+.p-conf { background: var(--color-reject-sunk); color: var(--color-reject); }
+
+/* ---- field data-state badges (SYNC-12, E01-S15) ---- */
+.ds {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 500; color: var(--color-ink-soft); border: 1px solid var(--color-rule); background: var(--color-surface-raised);
+  white-space: nowrap;
+}
+.ds .ic { width: 13px; height: 13px; }
+.ds-unknown { border: 1.5px dashed var(--color-rule-strong); }
+.ds-none { background: var(--color-surface-sunk); border-color: var(--color-rule-faint); }
+
+/* ---- flags / status chips ---- */
+.chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: var(--r-pill);
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.chip .ic { width: 15px; height: 15px; }
+.ch-ok { background: var(--color-accept-sunk); color: var(--color-accept); }
+.ch-warn { background: var(--color-warn-sunk); color: var(--color-warn); }
+.ch-bad { background: var(--color-reject-sunk); color: var(--color-reject); }
+.ch-plain { background: var(--color-surface-sunk); color: var(--color-ink-soft); }
+
+/* ---- segmented choices ---- */
+.seg { display: flex; gap: 6px; background: var(--color-surface-sunk); border-radius: var(--r-pill); padding: 4px; }
+.seg > span {
+  flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center;
+  border-radius: var(--r-pill); font-size: 15px; font-weight: 600; color: var(--color-ink-soft); line-height: 1.2;
+}
+.seg > span small { display: block; font-size: 11px; font-weight: 400; }
+.seg > span.on { background: var(--color-action); color: var(--color-ink-inverse); }
+
+/* ---- figures: big value + smaller unit (§12.3) ---- */
+.fig { font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; }
+.fig .u { font-size: 0.5em; font-weight: 500; color: var(--color-ink-soft); margin-left: 4px; letter-spacing: 0; }
+.kv { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; min-height: 24px; }
+.kv span:first-child { color: var(--color-ink-soft); }
+.kv span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.kv.total { border-top: 1px solid var(--color-rule-faint); margin-top: 4px; padding-top: 6px; }
+
+/* ---- screen-specific ---- */
+.hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 0 24px; }
+.hero h2 { margin: 4px 0 0; font-size: 32px; font-weight: 700; line-height: 1.2; }
+.hero p { margin: 0; color: var(--color-ink-soft); }
+.gmark { width: 28px; height: 28px; border-radius: var(--r-pill); display: grid; place-items: center; border: 2px solid var(--color-rule-strong); font-weight: 800; font-size: 15px; color: var(--color-ink); }
+.greet { padding: 0 4px; }
+.greet b { display: block; font-size: 24px; line-height: 1.25; }
+.greet span { font-size: 14px; color: var(--color-ink-soft); }
+.steps { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--color-ink-soft); flex-wrap: wrap; }
+.steps .done { color: var(--color-accept); font-weight: 600; display: inline-flex; align-items: center; gap: 2px; }
+.steps .now { color: var(--color-ink); font-weight: 700; }
+.expect { text-align: center; padding: 14px 12px; }
+.expect .fig { font-size: 44px; }
+.expect p { margin: 4px 0 0; font-size: 14px; color: var(--color-ink-soft); }
+
+.sixhd { font-size: 13px; font-weight: 700; line-height: 1.2; color: var(--color-ink-soft); margin: 0 0 -6px 2px; }
+.six { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.six .card { padding: 8px 10px; }
+.six .lbl { font-size: 12px; color: var(--color-ink-soft); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.six .lbl .ic.sr { width: 19px; height: 19px; vertical-align: -4px; color: var(--color-action); }
+.ic.xs { width: 13px; height: 13px; margin-right: 1px; }
+.six .fig { font-size: 22px; }
+.six .sm2 { display: block; font-size: 11px; color: var(--color-warn); font-weight: 600; line-height: 1.2; margin-top: 2px; }
+.card.warn { background: var(--color-warn-sunk); border-color: var(--color-warn-sunk); }
+.card.warn .lbl { color: var(--color-warn); font-weight: 600; }
+
+/* current / next basket card (owner answer 8, revised 2026-10-03: back to v1) */
+.bigc { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.bigc .lbl { font-size: 12px; color: var(--color-ink-soft); display: block; }
+.bigc .fig.xl { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; }
+.bigc .next { text-align: right; }
+.bigc .next .fig { font-size: 28px; }
+
+/* inline weight entry (F-13, F-22) */
+.stepper { display: flex; align-items: center; gap: 8px; }
+.stepper .sb {
+  width: var(--target); height: var(--target); flex: none; border-radius: var(--r-pill); display: grid; place-items: center;
+  border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised); color: var(--color-action);
+}
+.inp {
+  flex: 1; min-width: 64px; min-height: var(--target); padding: 0 12px; border-radius: var(--r-sm);
+  border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised); display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+  font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--color-ink);
+}
+.inp.focus { border: 2px solid var(--color-focus-ring); }
+.inp .u { font-size: 13px; font-weight: 500; color: var(--color-ink-soft); }
+.inp.text { justify-content: flex-start; font-size: 14px; font-weight: 400; color: var(--color-ink-faint); }
+.btnrow { display: flex; gap: 8px; }
+.btnrow .btn { min-height: var(--target); }
+
+/* big two-way choice (bridge basket) */
+.choice {
+  display: flex; align-items: center; gap: 12px; min-height: 76px; padding: 10px 14px; border-radius: var(--r-lg);
+  border: 2px solid var(--color-action); background: var(--color-surface-raised); color: var(--color-action); text-align: left;
+}
+.choice b { display: block; font-size: 17px; line-height: 1.3; }
+.choice small { display: block; font-size: 13px; line-height: 1.35; font-weight: 500; color: var(--color-ink-soft); }
+.choice.pri { background: var(--color-action); color: var(--color-ink-inverse); }
+.choice.pri small { color: var(--color-ink-inverse); }
+.choice .tile { background: var(--color-action-sunk); color: var(--color-action); }
+/* v4: sheet options rewritten for outdoor reading — bold title, then 1–2 short
+   lines, key numbers in a chip. The recommended option is a tinted outline,
+   not a dark fill, so its small lines stay ink-on-light. */
+.choice.cmp { min-height: var(--target-c); gap: 10px; padding: 8px 12px; border-radius: var(--r-md); align-items: flex-start; border-width: 1.5px; border-color: var(--color-rule-strong); }
+.choice.cmp b { font-size: 16px; color: var(--color-ink); margin-bottom: 2px; }
+.choice.cmp .ln { display: block; font-size: 14px; line-height: 1.45; font-weight: 500; color: var(--color-ink-soft); }
+.choice.cmp .tile { width: 32px; height: 32px; border-radius: var(--r-sm); margin-top: 2px; }
+.choice.cmp .tile .ic { width: 18px; height: 18px; }
+.choice.cmp.pri { background: var(--color-action-sunk); border: 2px solid var(--color-action); }
+.choice.cmp.pri .tile { background: var(--color-surface-raised); }
+.nchip {
+  display: inline-block; padding: 0 6px; border-radius: var(--r-sm); background: var(--color-brand-cream);
+  border: 1px solid var(--color-brand-yellow); color: var(--color-ink); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+/* v4 home (screen 3): long screenshot phone, cover, action cards, module grid */
+.step.long-step { position: relative; }
+.longtag {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 2px 10px; border-radius: var(--r-pill);
+  border: 1px dashed var(--pg-rule); color: var(--pg-ink-soft); font-size: 13px; font-weight: 600;
+}
+.longtag .ic { width: 16px; height: 16px; }
+.phone.long { height: auto; }
+.phone.long .screen { height: auto; }
+.phone.long .body { overflow: visible; }
+.cover {
+  position: relative; flex: none; height: 148px; margin: 0 16px; border-radius: var(--r-lg); overflow: hidden;
+  background: var(--color-action-sunk);
+}
+.cover svg.scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cover .sun { fill: var(--color-brand-yellow); }
+.cover .rays { stroke: var(--color-brand-yellow); stroke-width: 2.5; stroke-linecap: round; fill: none; transform-origin: 62px 40px; }
+.cover .cloud { fill: var(--color-surface-raised); }
+.cover .hill-back { fill: var(--color-brand-light); }
+.cover .hill { fill: var(--color-brand); }
+.cover .trunk { fill: var(--color-ink-soft); }
+.cover .crown { fill: var(--color-brand-strong); }
+.cover .crown2 { fill: var(--color-brand); }
+.cover .cup { fill: var(--color-surface-raised); stroke: var(--color-ink-soft); stroke-width: 1; }
+.cover .tap { stroke: var(--color-surface-raised); stroke-width: 1.5; fill: none; }
+.cover .chg {
+  position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px;
+  border-radius: var(--r-pill); background: var(--color-surface-raised); color: var(--color-action); font-size: 12px; font-weight: 600;
+  box-shadow: 0 2px 8px var(--shadow-floating-color);
+}
+.cover .chg .ic { width: 16px; height: 16px; }
+@media (prefers-reduced-motion: no-preference) {
+  .cover .rays { animation: cover-spin 24s linear infinite; }
+  .cover .cloud { animation: cover-drift 18s ease-in-out infinite alternate; }
+}
+@keyframes cover-spin { to { transform: rotate(360deg); } }
+@keyframes cover-drift { from { transform: translateX(0); } to { transform: translateX(26px); } }
+
+.acts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.act {
+  min-height: 104px; padding: 10px 6px; border-radius: var(--r-lg); background: var(--color-surface-raised);
+  border: 1px solid var(--color-rule-faint); box-shadow: 0 2px 12px var(--shadow-card-color);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; text-align: center;
+  font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--color-ink);
+}
+.act .tile { width: 48px; height: 48px; }
+.act .ic { width: 26px; height: 26px; }
+.act.main { border: 2px solid var(--color-action); }
+.sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 4px; }
+.sec-h b { font-size: 16px; }
+.sec-h a, .sec-h span.lnk { font-size: 14px; color: var(--color-action); font-weight: 600; text-decoration: none; }
+.mods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mod {
+  display: flex; align-items: center; gap: 8px; min-height: var(--target-c); padding: 8px 10px; border-radius: var(--r-md);
+  background: var(--color-surface-raised); border: 1px solid var(--color-rule-faint); box-shadow: 0 2px 12px var(--shadow-card-color);
+  font-size: 13px; font-weight: 600; line-height: 1.25; color: var(--color-ink);
+}
+.mod small { display: block; font-size: 11px; font-weight: 400; color: var(--color-ink-soft); }
+.mod.wide { grid-column: span 2; }
+.mod small .ic { width: 11px; height: 11px; vertical-align: -1px; }
+.more-hint { font-size: 12px; color: var(--color-ink-soft); padding: 0 4px; line-height: 1.4; }
+
+/* photo type picker (E04-S10) */
+.types { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.type {
+  display: flex; align-items: center; gap: 8px; min-height: var(--target-c); padding: 6px 8px; border-radius: var(--r-md);
+  border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised); font-size: 14px; font-weight: 600; line-height: 1.25;
+}
+.type.on { border: 2px solid var(--color-action); background: var(--color-action-sunk); }
+.type .ck { margin-left: auto; color: var(--color-action); }
+
+/* compact select (settlement bank account) */
+.sel {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 8px; border-radius: var(--r-sm);
+  border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised); color: var(--color-action); font-weight: 600;
+}
+.sel .ic { width: 14px; height: 14px; }
+.sel small { font-size: 11px; font-weight: 400; color: var(--color-ink-soft); }
+
+/* conflict choice rows */
+.optrow { display: flex; align-items: center; gap: 8px; }
+.optrow .who { flex: 1; min-width: 0; font-size: 13px; line-height: 1.3; color: var(--color-ink-soft); }
+.optrow .who b { display: block; color: var(--color-ink); font-size: 14px; }
+.optrow .btn { flex: none; }
+
+/* insets below a phone: app-themed (light field theme), sit on the page */
+.extras { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.inset {
+  background: var(--color-surface); color: var(--color-ink); border: 1px solid var(--pg-rule); border-radius: var(--r-lg);
+  padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 14px;
+}
+.inset > .ttl { font-size: 13px; font-weight: 700; color: var(--color-ink); }
+.inset > .note { font-size: 12px; color: var(--color-ink-soft); line-height: 1.45; }
+.mini-row { display: flex; align-items: center; gap: 8px; font-size: 13px; min-height: 28px; }
+.mini-row .grow { flex: 1; min-width: 0; }
+
+/* FarmMate logo (drawn in the spirit of the reference, not copied) */
+.fm-logo { width: 112px; height: 112px; }
+.hero h2.fm-word { margin: 0; font-size: 38px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; color: var(--color-ink); }
+
+.stage {
+  position: relative; flex: 0 0 auto; min-height: 124px; border-radius: var(--r-xl); background: var(--color-stage);
+  border: 2px solid var(--color-rule-strong); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; text-align: center; padding: 12px;
+}
+.stage svg.sweep { position: absolute; inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); overflow: visible; }
+.stage svg.sweep rect { fill: none; stroke: var(--color-action); stroke-width: 6; stroke-linecap: round; }
+.stage b { font-size: 20px; }
+.stage span { font-size: 14px; color: var(--color-ink-soft); }
+.tools { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: auto; }
+.tool {
+  min-height: var(--target-c); border-radius: var(--r-md); background: var(--color-surface-raised); border: 1.5px solid var(--color-rule-strong);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--color-action);
+}
+.tool .ic { width: 20px; height: 20px; }
+
+/* public mode: §12.8 — white flat stage, numeral token only, nothing else */
+.pub-bar { height: 56px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; background: var(--color-action); color: var(--color-ink-inverse); }
+.pub-bar span { flex: 1; font-size: 14px; font-weight: 600; }
+.pub-bar .pill { background: var(--color-surface-raised); }
+.pub-stage { position: relative; flex: 1; background: var(--color-stage); display: grid; place-items: center; overflow: hidden; }
+.pub-stage svg.sweep { position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); }
+.pub-stage svg.sweep rect { fill: none; stroke: var(--color-action); stroke-width: 10; stroke-linecap: round; }
+.pub-num { font-size: 240px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--color-numeral); font-variant-numeric: tabular-nums; }
+.pub-foot { height: 64px; flex: none; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--color-surface-sunk); color: var(--color-action); font-size: 14px; font-weight: 600; }
+
+.cmp { width: 100%; border-collapse: collapse; font-size: 14px; }
+.cmp th { font-size: 12px; font-weight: 600; color: var(--color-ink-soft); text-align: right; padding: 4px 0 6px; vertical-align: bottom; }
+.cmp th:first-child, .cmp td:first-child { text-align: left; }
+.cmp td { padding: 8px 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; border-top: 1px solid var(--color-rule-faint); }
+.cmp td:first-child { font-weight: 500; color: var(--color-ink-soft); }
+.cmp .ok { color: var(--color-accept); display: inline-flex; align-items: center; gap: 2px; }
+
+.sheet-scrim { position: absolute; inset: 0; background: var(--scrim); }
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; background: var(--color-surface-raised); border-radius: 24px 24px 0 0;
+  padding: 10px 16px 20px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -6px 24px var(--shadow-floating-color);
+}
+.sheet .grab { width: 40px; height: 4px; border-radius: var(--r-pill); background: var(--color-rule); align-self: center; }
+.sheet h4 { margin: 4px 0 0; font-size: 20px; line-height: 1.3; }
+.sheet p { margin: 0; font-size: 14px; color: var(--color-ink-soft); }
+.radio {
+  display: flex; align-items: center; gap: 12px; min-height: var(--target-c); padding: 8px 12px; border-radius: var(--r-md);
+  border: 1.5px solid var(--color-rule-strong); font-size: 15px; line-height: 1.3;
+}
+.radio .dot { width: 22px; height: 22px; border-radius: var(--r-pill); border: 2px solid var(--color-rule-strong); flex: none; display: grid; place-items: center; }
+.radio.on { border: 2px solid var(--color-action); background: var(--color-action-sunk); }
+.radio.on .dot { border-color: var(--color-action); }
+.radio.on .dot::after { content: ""; width: 10px; height: 10px; border-radius: var(--r-pill); background: var(--color-action); }
+.radio small { display: block; font-size: 12px; color: var(--color-ink-soft); }
+.dim { filter: saturate(0.7); }
+
+.tick {
+  display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 12px;
+  border-radius: var(--r-md); border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised);
+}
+.tick .box { width: 28px; height: 28px; border-radius: var(--r-sm); border: 2px solid var(--color-rule-strong); flex: none; display: grid; place-items: center; }
+.tick.on { border-color: var(--color-accept); background: var(--color-accept-sunk); }
+.tick.on .box { border-color: var(--color-accept); background: var(--color-accept); color: var(--color-ink-inverse); }
+.tick .grow { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.3; }
+.tick .grow small { display: block; font-size: 12px; font-weight: 400; color: var(--color-ink-soft); }
+.tick .amt { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
+
+.banner { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-md); font-size: 14px; line-height: 1.4; }
+.banner.bad { background: var(--color-reject-sunk); color: var(--color-reject); }
+.banner.info { background: var(--color-surface-sunk); color: var(--color-ink-soft); }
+.banner b { color: var(--color-ink); display: block; }
+.opt { display: flex; flex-direction: column; gap: 8px; }
+.opt .who { font-size: 13px; color: var(--color-ink-soft); }
+
+/* ---- open questions list ---- */
+.qs { margin-top: 48px; padding: 20px; border-radius: var(--r-lg); background: var(--pg-card); border: 1px solid var(--pg-rule); }
+.qs h2 { margin: 0 0 4px; font-size: 20px; }
+.qs > p { margin: 0 0 12px; color: var(--pg-ink-soft); font-size: 14px; }
+.qs ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.qs li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; }
+.qs .not { margin-top: 20px; font-size: 14px; color: var(--pg-ink-soft); }
+.qs .not b { color: var(--pg-ink); }
+.qs h3 { margin: 24px 0 4px; font-size: 17px; }
+.qs table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.45; }
+.qs th { text-align: left; font-size: 12px; font-weight: 600; color: var(--pg-ink-soft); padding: 6px 8px; border-bottom: 1px solid var(--pg-rule); }
+.qs td { padding: 8px; border-top: 1px solid var(--pg-rule); vertical-align: top; }
+.qs td:first-child { width: 36%; color: var(--pg-ink-soft); }
+.qs td:first-child .ans { margin-right: 4px; }
+/* ---- 2d: last-basket strip + basket list (draft) ---- */
+.tool.hold { position: relative; }
+.tool.hold small { font-size: 10px; font-weight: 500; color: var(--color-ink-soft); line-height: 1; }
+.tool.hold svg.sweep { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); overflow: visible; pointer-events: none; }
+.tool.hold svg.sweep rect { fill: none; stroke: var(--color-action); stroke-width: 5; stroke-linecap: round; }
+.fchips { display: flex; gap: 6px; flex-wrap: wrap; }
+.fchips .chip { min-height: 36px; padding: 0 12px; background: var(--color-surface-sunk); color: var(--color-ink-soft); border: 1px solid var(--color-rule-faint); }
+.fchips .chip.on { background: var(--color-action); color: var(--color-ink-inverse); border-color: var(--color-action); }
+.brow { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; }
+.brow + .brow { border-top: 1px solid var(--color-rule-faint); }
+.brow .bn { flex: none; width: 44px; text-align: center; font-size: 24px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.brow .bn small { display: block; font-size: 10px; font-weight: 500; color: var(--color-ink-soft); }
+.brow .bm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.brow .l1 { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; flex-wrap: wrap; }
+.brow .l1 .ic { width: 18px; height: 18px; }
+.brow .l1 .kg { margin-left: auto; font-variant-numeric: tabular-nums; }
+.brow .l2, .brow .l3 { font-size: 12px; color: var(--color-ink-soft); line-height: 1.35; }
+.brow .l3 { display: flex; gap: 6px; flex-wrap: wrap; }
+.brow.void .bn, .brow.void .l1 .kg { text-decoration: line-through; color: var(--color-ink-faint); }
+.brow .chip { padding: 0 8px; font-size: 12px; min-height: 22px; }
+.sumline { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--color-ink-soft); }
+.sumline b { color: var(--color-ink); font-variant-numeric: tabular-nums; }
+.sub-h { margin: 32px 0 4px; font-size: 17px; line-height: 1.3; font-weight: 700; }
+.sub-p { margin: 0 0 20px; color: var(--pg-ink-soft); font-size: 14px; }
+/* ---- v1.1.0 additions (sale flow) — tokens only, no literal colours ---- */
+.seg > span.off { color: var(--color-ink-faint); background: transparent; border: 1.5px dashed var(--color-rule-strong); }
+.seg > span.off small { color: var(--color-ink-soft); }
+.seg.stack > span { flex-direction: column; gap: 0; padding: 6px 8px; border-radius: var(--r-md); }
+.seg.stack { border-radius: var(--r-md); }
+.seg.col { flex-direction: column; }
+.banner.warn { background: var(--color-warn-sunk); color: var(--color-warn); }
+.banner.warn b { color: var(--color-warn); }
+.choice.cmp.off { border-style: dashed; color: var(--color-ink-faint); }
+.kv.minus span:last-child { color: var(--color-money-out); }
+.kv.plus span:last-child { color: var(--color-money-in); }
+.kv.muted span { color: var(--color-ink-faint) !important; font-weight: 500; }
+.ded {
+  display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--r-md);
+  border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised);
+}
+.ded.on { border: 2px solid var(--color-action); background: var(--color-action-sunk); }
+.ded.offer { border: 1.5px dashed var(--color-accept); background: var(--color-accept-sunk); }
+.ded .hd { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.ded .hd .grow { flex: 1; min-width: 0; }
+.ded small { font-size: 12px; color: var(--color-ink-soft); line-height: 1.35; }
+.stepper.sm .sb { width: 40px; height: 40px; }
+.stepper.sm .inp { min-height: 40px; font-size: 18px; }
+.btn.slim { min-height: 40px; font-size: 14px; padding: 0 12px; }
+.chg td:nth-child(1) { width: 14%; white-space: nowrap; }
+.chg td:nth-child(3) { width: 18%; }
+.qs .chg td:first-child { width: 14%; }
+.lnk2 { color: var(--color-action); font-weight: 600; font-size: 13px; }
+.flag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--color-reject); }
+.flag .ic { width: 14px; height: 14px; }
+/* owner UI comments 2026-10-05 */
+.ic.xs { width: 15px; height: 15px; vertical-align: -2px; }
+.frow { align-items: flex-start; padding: 8px 0; min-height: 0; }
+.frow .tile { margin-top: 2px; }
+.frow .fval { display: block; font-size: 16px; font-weight: 700; color: var(--color-ink); line-height: 1.3; overflow-wrap: anywhere; }
+.frow .fval.ds { font-weight: 500; }
+.prow { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; }
+.prow .pl { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 17px; font-weight: 700; color: var(--color-ink); }
+.prow .pl .ic { color: var(--color-accept); width: 20px; height: 20px; }
+.prow .pr2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.prow .pr2 .mi { font-size: 14px; }
+.prow .pr2 .mi .ic { width: 18px; height: 18px; }
+.prow .pr2 .btn { margin-left: auto; width: auto; min-height: 40px; }
+.bigc2 { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 8px 12px; }
+.bigc2 .lbl { font-size: 13px; color: var(--color-ink-soft); }
+.bigc2 .fig.xl { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; }
+.bigc2 .cnt { font-size: 13px; color: var(--color-ink-soft); }
+.scaleval { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: var(--r-md); background: var(--color-action-sunk); border: 2px solid var(--color-action); color: var(--color-action); font-weight: 800; }
+.scaleval .ic { width: 22px; height: 22px; }
+.nchip.scale { background: var(--color-action-sunk); color: var(--color-action); border: 1.5px solid var(--color-action); font-weight: 800; }
+.nchip.warn { background: var(--color-warn-sunk); border-color: var(--color-warn); color: var(--color-warn); }
+.tip { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; font-size: 14px; font-weight: 600; color: var(--color-action); }
+.tip .ic { width: 18px; height: 18px; }
+.bf { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; font-size: 14px; }
+.bf .k { color: var(--color-ink-soft); }
+.bf .v { font-weight: 700; color: var(--color-ink); }
+.bf .w { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+/* D-70 app-wide rule: one fact per line, with a symbol; times on their own line */
+.mi { display: flex; align-items: center; gap: 5px; font-size: 12px; line-height: 1.35; color: var(--color-ink-soft); font-weight: 500; }
+.mi .ic { width: 14px; height: 14px; flex: none; }
+.mi b { color: var(--color-ink); font-weight: 600; }
+.row .mi { margin-top: 1px; }
+.lines { display: flex; flex-direction: column; gap: 3px; }
+/* D-70 S9: slide-up weight picker — drag ruler + ±1 kg (scale step) */
+.wsheet { gap: 8px; }
+.wval { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.wval .sb { width: 56px; height: 56px; border-radius: var(--r-pill); display: grid; place-items: center; border: 2px solid var(--color-action); color: var(--color-action); background: var(--color-surface-raised); flex: none; }
+.wval .sb .ic { width: 28px; height: 28px; stroke-width: 2.5; }
+.wval .big { color: var(--color-action); font-size: 56px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; min-width: 112px; text-align: center; }
+.wval .big .u { font-size: 18px; font-weight: 600; color: var(--color-ink-soft); margin-left: 4px; letter-spacing: 0; }
+.ruler { position: relative; height: 72px; border-radius: var(--r-md); background: var(--color-surface-sunk); overflow: hidden; touch-action: pan-x; }
+.ruler svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ruler .tk { stroke: var(--color-rule-strong); stroke-width: 2; }
+.ruler .tk5 { stroke: var(--color-ink-soft); stroke-width: 2.5; }
+.ruler .lb { fill: var(--color-ink-soft); font-size: 13px; font-weight: 600; font-family: var(--font); }
+.ruler .lb.cur { fill: var(--color-ink); font-size: 15px; font-weight: 800; }
+.ruler .ndl { stroke: var(--color-action); stroke-width: 4; stroke-linecap: round; }
+.ruler .fade { fill: var(--color-rule); opacity: .55; }
+.ruler .over { fill: var(--color-warn); opacity: .28; }
+.ruler .mk { stroke: var(--color-accept); stroke-width: 3; stroke-dasharray: 4 3; }
+.ruler .lb.mkl { fill: var(--color-accept); font-weight: 800; }
+.ruler .lb.mkt { fill: var(--color-accept); font-size: 11px; font-weight: 700; }
+.rhint { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 12px; color: var(--color-ink-soft); }
+.rhint .ic { width: 16px; height: 16px; }
+.wres { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.wres > div { background: var(--color-surface); border: 1px solid var(--color-rule-faint); border-radius: var(--r-md); padding: 6px 10px; }
+.wres span { display: block; font-size: 12px; color: var(--color-ink-soft); }
+.wres b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.wres small { font-size: 11px; color: var(--color-ink-soft); }
+/* D-75: waiting for a replacement scale — slow spin, still when reduced motion */
+.waitbox { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 0 24px; }
+.waitbox .spin { width: 112px; height: 112px; color: var(--color-action); stroke-width: 1.4; animation: hg-turn 2.4s ease-in-out infinite; }
+.waitbox h2 { margin: 0; font-size: 28px; font-weight: 800; line-height: 1.2; }
+.waitbox p { margin: 0; font-size: 15px; color: var(--color-ink-soft); }
+@keyframes hg-turn { 0%, 40% { transform: rotate(0deg); } 60%, 100% { transform: rotate(180deg); } }
+@media (prefers-reduced-motion: reduce) { .waitbox .spin { animation: none; } }
+.skew { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--r-pill); background: var(--color-warn-sunk); color: var(--color-warn); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.skew .ic { width: 15px; height: 15px; }
+/* D-71: how the debt money comes in — per tapper */
+.bills { display: flex; flex-wrap: wrap; gap: 4px; }
+.bill { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--color-rule-strong); background: var(--color-surface-raised); color: var(--color-ink); }
+.bill.take { border: 2px solid var(--color-accept); background: var(--color-accept-sunk); }
+.radio .opt-l { display: block; font-size: 12px; color: var(--color-ink-soft); line-height: 1.35; }
+.radio .chip { margin-top: 3px; }
+/* sale list: kg per tapper under each sale row (owner comment, D-70/D-78) */
+.row.salerow { flex-wrap: wrap; align-items: flex-start; padding: 8px 0; row-gap: 4px; }
+.row.salerow > .tile { margin-top: 2px; }
+.tpl { flex: 0 0 calc(100% - 56px); display: flex; flex-direction: column; gap: 4px; margin-left: 56px; padding: 2px 0 2px 10px; border-left: 2px solid var(--color-rule-faint); }
+.tpl .tr { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 1.3; color: var(--color-ink); font-weight: 600; }
+.tpl .tr .ic { width: 16px; height: 16px; color: var(--color-ink-soft); }
+.tpl .tr .w { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.tot { display: inline-flex; align-items: center; gap: 4px; }
+.tot .ic { width: 16px; height: 16px; color: var(--color-ink-soft); }
+/* D-80 / E05-S07: receiving account on the owner card */
+.acct { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-rule-faint); display: flex; flex-direction: column; gap: 8px; }
+.acct .lab { font-size: 13px; color: var(--color-ink-soft); }
+.acct .row { min-height: 0; gap: 10px; }
+.acct .row .val { font-size: 17px; }
+.btn.full { width: 100%; }
+.acc-opt .val { font-size: 15px; font-weight: 700; display: block; }
+/* D-80: buyer view — full screen, turned toward the buyer, read at arm's length */
+.bv { background: var(--color-surface-raised); }
+.bv .bvtop { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 12px 0; }
+.bv .bvbody { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 18px 12px; text-align: center; }
+.bv .hello { font-size: 18px; font-weight: 600; color: var(--color-ink-soft); }
+.bv .amt { font-size: 46px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; color: var(--color-numeral); font-variant-numeric: tabular-nums; }
+.bv .amt .u { font-size: 22px; font-weight: 700; color: var(--color-ink-soft); margin-left: 4px; letter-spacing: 0; }
+.bv .how { display: inline-flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 700; color: var(--color-accept); }
+.bv .how .ic { width: 22px; height: 22px; }
+.bv .qrbox { width: 208px; padding: 8px; border-radius: var(--r-md); border: 2px solid var(--color-rule); background: var(--color-stage); }
+.bv .qrbox svg { display: block; width: 100%; height: auto; }
+.bv .qrbox { color: var(--color-ink); }
+.bv .qrcap { font-size: 16px; font-weight: 600; color: var(--color-ink-soft); }
+.bv .fld { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0; }
+.bv .fld .k { font-size: 16px; color: var(--color-ink-soft); }
+.bv .fld .v { font-size: 30px; font-weight: 800; line-height: 1.2; color: var(--color-ink); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+.bv .fld .v.nm { font-size: 24px; font-weight: 700; }
+.bv .bvfoot { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 0 16px 18px; }
+.sw { display: flex; align-items: center; gap: 10px; min-height: var(--target); padding: 0 12px; border-radius: var(--r-md); background: var(--color-surface-sunk); font-size: 15px; font-weight: 600; }
+.sw .grow { flex: 1; min-width: 0; }
+.sw .knob { width: 46px; height: 28px; border-radius: var(--r-pill); background: var(--color-rule-strong); position: relative; flex: none; }
+.sw .knob::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: var(--r-pill); background: var(--color-surface-raised); }
+.sw.on .knob { background: var(--color-accept); }
+.sw.on .knob::after { left: 21px; }
+.copy { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--target); padding: 0 18px; border-radius: var(--r-pill); border: 2px solid var(--color-action); color: var(--color-action); background: var(--color-surface-raised); font-size: 16px; font-weight: 700; }
+.copy .ic { width: 20px; height: 20px; }
+
+/* ===== E01-S17 proposal (2026-10-09): identity + money roles =====
+   Colour agrees with a name or a sign; it never carries meaning alone.
+   Identity (สวน / จุดชั่ง follow their สวน / คนกรีดยาง): categoryN on
+   categoryN-sunk, always next to the name. Fixed per entity in this mockup:
+   สวนจันทเขลม 1 · สวนฝั่งคลองพลู 2 · แดง 3 · นัด 4 · ทุเรียน คลองพลู 5 ·
+   ทุเรียน ตะเคียนทอง 6. */
+.t-cat1 { background: var(--color-category1-sunk); color: var(--color-category1); }
+.t-cat2 { background: var(--color-category2-sunk); color: var(--color-category2); }
+.t-cat3 { background: var(--color-category3-sunk); color: var(--color-category3); }
+.t-cat4 { background: var(--color-category4-sunk); color: var(--color-category4); }
+.t-cat5 { background: var(--color-category5-sunk); color: var(--color-category5); }
+.t-cat6 { background: var(--color-category6-sunk); color: var(--color-category6); }
+.screen .ic.cat1 { color: var(--color-category1); }
+.screen .ic.cat2 { color: var(--color-category2); }
+.screen .ic.cat3 { color: var(--color-category3); }
+.screen .ic.cat4 { color: var(--color-category4); }
+.screen .ic.cat5 { color: var(--color-category5); }
+.screen .ic.cat6 { color: var(--color-category6); }
+/* money: "+" in moneyIn, "−" in moneyOut — the sign and the line's word carry it */
+.money-in { color: var(--color-money-in); }
+.money-out { color: var(--color-money-out); }
+
+/* ===== palette / theme toggle (docs only — not an app control) ===== */
+.palette-toggle {
+  position: fixed; right: 12px; bottom: 12px; z-index: 50; display: flex; align-items: center; gap: 2px;
+  padding: 4px 6px; border-radius: var(--r-pill); background: var(--color-surface-raised);
+  border: 1px solid var(--color-rule-strong); box-shadow: 0 6px 24px var(--shadow-floating-color);
+  font-family: var(--font); font-size: 13px; font-weight: 600; line-height: 1; color: var(--color-ink-soft);
+}
+.palette-toggle .pt-l { padding: 0 4px 0 6px; }
+.palette-toggle button {
+  min-width: 44px; min-height: 40px; padding: 0 10px; border: 0; border-radius: var(--r-pill);
+  background: transparent; color: var(--color-action); font: inherit; cursor: pointer;
+}
+.palette-toggle button[aria-pressed="true"] { background: var(--color-action); color: var(--color-ink-inverse); }
+.palette-toggle button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+/* ── v1.2.0: debt apart from the sale (owner 2026-10-14) ── */
+.band { background: var(--color-surface-raised); border: 1px solid var(--color-rule-faint); border-radius: var(--r-lg, 14px); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.band .lbl { font-size: 13px; color: var(--color-ink-soft); font-weight: 600; }
+.band .eq { font-size: 15px; font-variant-numeric: tabular-nums; color: var(--color-ink); }
+.band .fig { font-size: 30px; }
+.sect { font-size: 13px; font-weight: 700; color: var(--color-ink-soft); letter-spacing: .02em; margin: 6px 2px -2px; display: flex; gap: 6px; align-items: center; }
+.sect .tag { font-weight: 600; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--color-surface-sunk); color: var(--color-ink-soft); }
+.dir { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 14px; font-weight: 700; flex: none; }
+.dir.in  { background: var(--color-debt-in-sunk);  color: var(--color-debt-in);  border: 1.5px solid var(--color-debt-in); }
+.dir.out { background: var(--color-debt-out-sunk); color: var(--color-debt-out); border: 1.5px solid var(--color-debt-out); }
+.dir.net { background: var(--color-debt-net-sunk); color: var(--color-debt-net); border: 1.5px dashed var(--color-debt-net); }
+.card.debt { border: 1px solid var(--color-rule-faint); background: var(--color-surface-raised); }
+.mv { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-top: 1px solid var(--color-rule-faint); }
+.mv:first-of-type { border-top: 0; }
+.mv .t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 14px; color: var(--color-ink); }
+.mv .t small { font-size: 12px; color: var(--color-ink-soft); }
+.mv .a { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; white-space: nowrap; }
+.mv.in .a { color: var(--color-debt-in); } .mv.out .a { color: var(--color-debt-out); } .mv.net .a { color: var(--color-debt-net); }
+.who { font-weight: 700; font-size: 14px; margin-top: 4px; display: flex; gap: 6px; align-items: center; }
+.kv.din span:last-child { color: var(--color-debt-in); }
+.kv.dout span:last-child { color: var(--color-debt-out); }
+.kv.dnet span:last-child { color: var(--color-debt-net); }
+.kv .dl { display: inline-flex; gap: 6px; align-items: center; }
+.say { font-size: 13px; color: var(--color-ink); background: var(--color-surface-sunk); border-radius: 10px; padding: 6px 10px; line-height: 1.45; }
+.say b { font-weight: 700; }
+.legend2 { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--color-ink-soft); }
+.legend2 span { display: inline-flex; align-items: center; gap: 4px; }
+.pile { padding: 8px 0; border-top: 1px solid var(--color-rule-faint); display: flex; flex-direction: column; gap: 2px; }
+.pile:first-of-type { border-top: 0; }
+.pile .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 600; }
+.pile .top .v { font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 700; }
+.pile .parts { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 12px; color: var(--color-ink-soft); font-variant-numeric: tabular-nums; }
+.pile .parts .din { color: var(--color-debt-in); font-weight: 600; } .pile .parts .dout { color: var(--color-debt-out); font-weight: 600; }
+.chk { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums; padding: 3px 0; }
+.chk .ok { color: var(--color-accept); font-weight: 700; }
+.nocash { border: 1.5px dashed var(--color-debt-net); background: var(--color-debt-net-sunk); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.pending { border: 1.5px dashed var(--color-warn); border-radius: 12px; padding: 8px 10px; }
+.qlist { margin: 8px 0 0; padding-left: 18px; font-size: 14px; color: var(--pg-ink, inherit); line-height: 1.6; }
+
+</style>
+
+<!-- Icon sprite: hand-drawn 24px stroke icons, inherit currentColor -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c0-8.5 6-14 15-14 0 9-6 15-14 15"/><path d="M5 19l8.5-8.5"/></symbol>
+    <symbol id="i-basket" viewBox="0 0 24 24"><path class="fillsoft" d="M3 10h18l-2.2 9.2a1 1 0 0 1-1 .8H6.2a1 1 0 0 1-1-.8z"/><path d="M7.5 10l3-6M16.5 10l-3-6M9 14v2.5M12 14v2.5M15 14v2.5"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><rect class="fillsoft" x="4" y="7" width="16" height="14" rx="2.5"/><circle cx="12" cy="14" r="3.5"/><path d="M12 14l1.8-1.8M9 3.5h6M12 3.5V7"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17.5 14c2 .3 3.4 1.8 4 4.5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.3-7 8-7s7 2.5 8 7"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path class="fillsoft" d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-cloud-ok" viewBox="0 0 24 24"><path d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.6 9.6 4.5 4.5 0 0 0 7 18.5z"/><path d="M9.5 14l2 2 3.5-3.5"/></symbol>
+    <symbol id="i-half" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5L2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4"/><path class="fillsoft" d="M5 4h12l-2.5 4L17 12H5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.6L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.3 4.6L20 16"/><path d="M20 20.5V16h-4.5"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle class="fillsoft" cx="12" cy="12" r="8.5"/><path d="M10 7.5h2.8a2 2 0 0 1 0 4.1H10h3.2a2.1 2.1 0 0 1 0 4.2H10z"/><path d="M11.5 6v1.5M11.5 15.8v1.7"/></symbol>
+    <symbol id="i-bank" viewBox="0 0 24 24"><path class="fillsoft" d="M3 9.5L12 4l9 5.5z"/><path d="M3 9.5L12 4l9 5.5M4.5 10v8M9.5 10v8M14.5 10v8M19.5 10v8M3 20.5h18"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path class="fillsoft" d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></symbol>
+    <symbol id="i-tree" viewBox="0 0 24 24"><circle class="fillsoft" cx="12" cy="9" r="5.5"/><path d="M12 14.5V21M9 21h6"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M5 8h13l-3.5-3.5M19 16H6l3.5 3.5"/></symbol>
+    <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-shrink" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect class="fillsoft" x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16 7l2.5 2.5"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24"><path d="M4 20v-3M9 20v-7M14 20V9M19 20V4"/></symbol>
+    <symbol id="i-nosignal" viewBox="0 0 24 24"><path d="M4 20v-3M9 20v-7M14 20V9M19 20V4" opacity=".35"/><path d="M3 4l18 16"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 24 24"><rect x="2.5" y="7" width="17" height="10" rx="2"/><path d="M22 10.5v3"/><rect x="4.5" y="9" width="11" height="6" rx="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+    <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18h.01M12 18h3.5"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7v.5M12 16.5v.01"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path class="fillsoft" d="M3.5 8.5a2 2 0 0 1 2-2h2.2L9.5 4h5l1.8 2.5h2.2a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect class="fillsoft" x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.5" r="1.6"/><path d="M4 17l5-5 4 4 2.5-2.5L20 18"/></symbol>
+    <symbol id="i-receipt" viewBox="0 0 24 24"><path class="fillsoft" d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z"/><path d="M9 8h6M9 11.5h6M9 15h3.5"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 4v16h16"/><path class="fillsoft" d="M8 17v-5h3v5zM13 17V8h3v9z"/><path d="M8 17v-5h3v5M13 17V8h3v9"/></symbol>
+    <symbol id="i-weather" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.5"/><path d="M9 2.5v1.5M2.5 9H4M4.4 4.4l1 1M13.6 4.4l-1 1"/><path class="fillsoft" d="M9 20h9a3.5 3.5 0 0 0 .3-7A5 5 0 0 0 9 14.2 3 3 0 0 0 9 20z"/><path d="M9 20h9a3.5 3.5 0 0 0 .3-7A5 5 0 0 0 9 14.2 3 3 0 0 0 9 20z"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path class="fillsoft" d="M3.5 7.5h15a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M3.5 7.5V6a2 2 0 0 1 2-2H16v3.5M15.5 13.5h5"/><circle cx="16.5" cy="13.5" r=".6"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path class="fillsoft" d="M3.5 8L12 4l8.5 4v8.5L12 20.5l-8.5-4z"/><path d="M3.5 8L12 12l8.5-4M12 12v8.5M7.8 6l8.4 4"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h3.5l1.5 4.5-2 1.5a11 11 0 0 0 6 6l1.5-2 4.5 1.5V19a1.5 1.5 0 0 1-1.5 1.5A15.5 15.5 0 0 1 3.5 5.5 1.5 1.5 0 0 1 5 4z"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path class="fillsoft" d="M4 5.5h16v10.5H10l-4.5 3.5V16H4z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M10 6.5h10M10 12h10M10 17.5h10"/><path d="M3.5 6.5l1.5 1.5L7.5 5.5M3.5 12l1.5 1.5L7.5 11"/><circle cx="5" cy="17.5" r="1.2"/></symbol>
+    <symbol id="i-pile" viewBox="0 0 24 24"><path class="fillsoft" d="M3 19c1.5-4 4-6.5 5.5-6.5 1 0 1.7.8 2.3 1.6.9-2.6 2.6-5.1 4.2-5.1 2 0 4.5 4.6 6 10z"/><path d="M2.5 19.5h19"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7"/><path class="fillsoft" d="M6 7l1 12.2a1 1 0 0 0 1 .8h8a1 1 0 0 0 1-.8L18 7z"/><path d="M10 11v5M14 11v5"/></symbol>
+    <symbol id="i-drag" viewBox="0 0 24 24"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M4 12h16"/></symbol>
+    <symbol id="i-in" viewBox="0 0 24 24"><path d="M20 6v7a3 3 0 0 1-3 3H6"/><path d="M10 12l-4 4 4 4"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M4 6v7a3 3 0 0 0 3 3h11"/><path d="M14 12l4 4-4 4"/></symbol>
+    <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M6 3h12M6 21h12"/><path class="fillsoft" d="M7 3c0 5 5 6 5 9s-5 4-5 9h10c0-5-5-6-5-9s5-4 5-9z"/><path d="M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/></symbol>
+    <symbol id="i-scaleread" viewBox="0 0 24 24"><path d="M12 1.5v2"/><circle class="fillsoft" cx="12" cy="8.5" r="5"/><circle cx="12" cy="8.5" r="5"/><path d="M12 8.5l2-2"/><path d="M12 13.5v3.5a3 3 0 1 1-4.2 2.7"/></symbol>
+    <symbol id="i-rubber" viewBox="0 0 24 24"><path class="fillsoft" d="M5 19.5c0-8.5 5.5-14.5 15-15 .3 9.8-5.6 15.4-15 15z"/><path d="M5 19.5c0-8.5 5.5-14.5 15-15 .3 9.8-5.6 15.4-15 15z"/><path d="M5 19.5l9.5-9.5M9 15.5h3.5M11.5 13v-3"/></symbol>
+    <symbol id="i-tapper" viewBox="0 0 24 24"><path class="fillsoft" d="M3 9.5L12 4l9 5.5z"/><path d="M3 9.5L12 4l9 5.5z"/><path d="M8.5 9.5a3.5 3.5 0 0 0 7 0"/><path d="M5.5 20.5c.7-3.6 3.3-5.5 6.5-5.5s5.8 1.9 6.5 5.5"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path class="fillsoft" d="M5 4h11l3 3v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M5 4h11l3 3v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 4v4.5h7V4"/><path d="M9 16l2 2 4-4"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect class="fillsoft" x="8" y="8" width="12" height="12" rx="2"/><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 19v1M19 14h1"/></symbol>
+    <!-- placeholder only: QR-looking pattern, NOT a scannable PromptPay code -->
+    <symbol id="qr-demo" viewBox="0 0 29 29"><path style="fill:currentColor;stroke:none" d="M2 2h7v1h-7zM14 2h1v1h-1zM16 2h3v1h-3zM20 2h7v1h-7zM2 3h1v1h-1zM8 3h1v1h-1zM10 3h1v1h-1zM17 3h1v1h-1zM20 3h1v1h-1zM26 3h1v1h-1zM2 4h1v1h-1zM4 4h3v1h-3zM8 4h1v1h-1zM12 4h1v1h-1zM15 4h2v1h-2zM18 4h1v1h-1zM20 4h1v1h-1zM22 4h3v1h-3zM26 4h1v1h-1zM2 5h1v1h-1zM4 5h3v1h-3zM8 5h1v1h-1zM11 5h2v1h-2zM14 5h3v1h-3zM20 5h1v1h-1zM22 5h3v1h-3zM26 5h1v1h-1zM2 6h1v1h-1zM4 6h3v1h-3zM8 6h1v1h-1zM10 6h2v1h-2zM13 6h1v1h-1zM15 6h1v1h-1zM17 6h2v1h-2zM20 6h1v1h-1zM22 6h3v1h-3zM26 6h1v1h-1zM2 7h1v1h-1zM8 7h1v1h-1zM11 7h2v1h-2zM14 7h1v1h-1zM16 7h2v1h-2zM20 7h1v1h-1zM26 7h1v1h-1zM2 8h7v1h-7zM10 8h1v1h-1zM12 8h1v1h-1zM14 8h1v1h-1zM16 8h1v1h-1zM18 8h1v1h-1zM20 8h7v1h-7zM10 9h2v1h-2zM13 9h1v1h-1zM15 9h2v1h-2zM4 10h2v1h-2zM7 10h4v1h-4zM13 10h1v1h-1zM15 10h5v1h-5zM23 10h3v1h-3zM3 11h1v1h-1zM10 11h2v1h-2zM18 11h7v1h-7zM26 11h1v1h-1zM3 12h3v1h-3zM7 12h2v1h-2zM20 12h1v1h-1zM22 12h3v1h-3zM2 13h2v1h-2zM10 13h1v1h-1zM18 13h3v1h-3zM22 13h2v1h-2zM26 13h1v1h-1zM2 14h2v1h-2zM7 14h3v1h-3zM18 14h2v1h-2zM21 14h1v1h-1zM23 14h1v1h-1zM25 14h2v1h-2zM4 15h2v1h-2zM9 15h2v1h-2zM18 15h3v1h-3zM22 15h1v1h-1zM24 15h3v1h-3zM3 16h1v1h-1zM6 16h1v1h-1zM8 16h1v1h-1zM18 16h5v1h-5zM24 16h1v1h-1zM3 17h3v1h-3zM7 17h1v1h-1zM9 17h2v1h-2zM15 17h1v1h-1zM18 17h3v1h-3zM22 17h1v1h-1zM3 18h3v1h-3zM8 18h2v1h-2zM12 18h1v1h-1zM14 18h1v1h-1zM17 18h6v1h-6zM24 18h1v1h-1zM26 18h1v1h-1zM12 19h4v1h-4zM18 19h1v1h-1zM22 19h2v1h-2zM2 20h7v1h-7zM13 20h4v1h-4zM18 20h1v1h-1zM20 20h1v1h-1zM22 20h3v1h-3zM2 21h1v1h-1zM8 21h1v1h-1zM11 21h2v1h-2zM14 21h3v1h-3zM18 21h1v1h-1zM22 21h1v1h-1zM24 21h1v1h-1zM26 21h1v1h-1zM2 22h1v1h-1zM4 22h3v1h-3zM8 22h1v1h-1zM11 22h2v1h-2zM16 22h7v1h-7zM24 22h3v1h-3zM2 23h1v1h-1zM4 23h3v1h-3zM8 23h1v1h-1zM10 23h5v1h-5zM16 23h1v1h-1zM18 23h2v1h-2zM21 23h1v1h-1zM2 24h1v1h-1zM4 24h3v1h-3zM8 24h1v1h-1zM11 24h1v1h-1zM18 24h1v1h-1zM20 24h1v1h-1zM23 24h2v1h-2zM26 24h1v1h-1zM2 25h1v1h-1zM8 25h1v1h-1zM10 25h1v1h-1zM12 25h2v1h-2zM15 25h1v1h-1zM18 25h3v1h-3zM23 25h1v1h-1zM25 25h2v1h-2zM2 26h7v1h-7zM10 26h1v1h-1zM14 26h2v1h-2zM18 26h3v1h-3zM22 26h5v1h-5z"/><rect style="fill:var(--color-stage);stroke:currentColor;stroke-width:.3" x="11" y="12" width="7" height="5" rx="1"/><text style="fill:currentColor;font-size:3.6px;font-weight:800" x="14.5" y="15.6" text-anchor="middle">฿</text></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header class="hdr">
+  <h1>Flow การขาย · v1.2.0 (ร่าง) · หนี้แยกจากยอดขาย · 2026-10-14</h1>
+  <p>แก้ส่วนที่ 4 ของ <a href="./flow-sale-v1.1.0.html">Flow การขาย v1.1.0</a> เฉพาะหน้า 17, 17a และ 18a ตามที่เจ้าของสั่ง (2026-10-14): เงินที่คืนกันเพราะ<b>หนี้</b> (คนกรีดยาง → สวน และ สวน → คนกรีดยาง) ไม่ใช่ยอดขาย (น้ำหนัก × ราคา) — แยกออกมาตามหลักบัญชี ใช้สีและสัญลักษณ์ต่างกันต่อทิศ และให้เห็นชัดว่า<b>วันนี้ขายได้เท่าไหร่ ราคาเท่าไหร่</b> · ทุกกองยังรวมกันเท่ายอดขาย (D-72) · หน้าอื่นเหมือน v1.1.0</p>
+  <p class="date num">ร่าง v1.2.0 · ตัวเลขและชื่อเป็นตัวอย่างเดียวกับ v1.1.0 (แดง 1,520 กก. · นัด 735 กก. · 48.50 ฿/กก.) · รีวิวโดย agent นักบัญชี และ persona เจ้าของสวน · <b>รอเจ้าของยืนยัน</b></p>
+  <div class="legend2" style="margin-top:8px">
+    <span><span class="dir in">↘</span> คนกรีดยาง → สวน · จ่ายหนี้ (สีน้ำเงิน)</span>
+    <span><span class="dir out">↗</span> สวน → คนกรีดยาง · สวนจ่ายคืน (สีส้ม)</span>
+    <span><span class="dir net">⇄</span> หักกลบ · ไม่มีเงินสด (สีเทา เส้นประ)</span>
+  </div>
+  <p class="date">สี + ลูกศร + คำ เสมอ ไม่ใช้สีอย่างเดียว · ไม่ใช้เขียว/แดง (เขียว = ตรงกัน/ซิงก์, แดง = ผิด) และไม่ใช้เหลือง (= เตือน) กับเรื่องหนี้ · ตัวเลขหนี้ในกล่อง "เรื่องหนี้" ไม่มีเครื่องหมาย + / − ลูกศรบอกทิศ</p>
+</header>
+
+<section class="sec">
+  <h2>4 · สรุปยอดส่วนแบ่ง (หน้า 17) — ยอดขาย · เรื่องหนี้ · เงินแต่ละคน</h2>
+  <p class="num">ลำดับหน้าเรียงตามที่เจ้าของพูดกับคนกรีดยาง: <b>ขายได้เท่าไหร่ → แบ่งกันเท่าไหร่ → เรื่องหนี้ (แยก) → วันนี้รับเท่าไหร่</b> · แดงจ่ายงวดผ่อน 2,000 เป็นเงินสด · นัดติดสวน 1,500 สวนติดนัด 640 หักกลบแล้ว เหลือจ่ายหนี้ 860 มากับยอดโอน (ทาง 3)</p>
+  <div class="flow">
+
+    <figure class="step long-step">
+      <span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว เลื่อนได้ · ภาพทั้งหน้า</span>
+      <div class="phone long"><div class="screen" aria-label="สรุปยอดส่วนแบ่ง แยกยอดขายกับเรื่องหนี้">
+        <div class="sbar num"><span>10:17</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>สรุปยอดส่วนแบ่ง <small class="num">การขาย 3 ต.ค. 2569</small></h3><span class="pill p-pend"><svg class="ic"><use href="#i-half"/></svg>รอส่ง 52</span></div>
+        <div class="body" style="gap:10px">
+
+          <div class="band">
+            <span class="lbl">ขายวันนี้</span>
+            <span class="eq num">2,255 กก. × 48.50 ฿/กก.</span>
+            <span class="fig num">109,367.50<span class="u">บาท</span></span>
+            <span class="mi"><svg class="ic"><use href="#i-check"/></svg>ตรวจกับคนรับซื้อยางแล้ว ตรงกัน (หน้า 16)</span>
+          </div>
+
+          <div class="sect">ก · แบ่งยอดขาย</div>
+          <div class="card">
+            <div class="who"><span class="tile sm t-cat3"><svg class="ic"><use href="#i-tapper"/></svg></span>แดง <span class="mi" style="font-weight:400">1,520 กก. · ขายได้ 73,720.00</span></div>
+            <div class="kv"><span>ส่วนแบ่งแดง 50%</span><span>36,860.00</span></div>
+            <div class="kv"><span>ส่วนของสวน</span><span>36,860.00</span></div>
+            <div class="who" style="margin-top:8px"><span class="tile sm t-cat4"><svg class="ic"><use href="#i-tapper"/></svg></span>นัด <span class="mi" style="font-weight:400">735 กก. · ขายได้ 35,647.50</span></div>
+            <div class="kv"><span>ส่วนแบ่งนัด 50%</span><span>17,823.75</span></div>
+            <div class="kv"><span>ส่วนของสวน</span><span>17,823.75</span></div>
+            <div class="kv total"><span>รวมส่วนแบ่งคนกรีดยาง</span><span>54,683.75</span></div>
+            <div class="kv"><span>รวมส่วนของสวน</span><span>54,683.75</span></div>
+            <div class="kv"><span><b style="color:var(--color-ink)">รวม = ขายวันนี้</b></span><span>109,367.50</span></div>
+          </div>
+
+          <div class="sect">ข · เรื่องหนี้ <span class="tag">ไม่ใช่ยอดขาย</span></div>
+          <div class="card debt">
+            <div class="legend2"><span><span class="dir in">↘</span>คนกรีดยาง → สวน</span><span><span class="dir out">↗</span>สวน → คนกรีดยาง</span><span><span class="dir net">⇄</span>ไม่มีเงินสด</span></div>
+            <div class="who">แดง</div>
+            <div class="mv in"><span class="dir in">↘</span><span class="t">แดงจ่ายหนี้สวน · งวดผ่อน<small>เงินสด · หยิบจากเงินของแดง · หยิบแบงค์พัน 2 ใบ ไม่ต้องแตก</small></span><span class="a">2,000.00</span></div>
+            <div class="kv"><span>หนี้แดงคงค้างหลังการขายนี้</span><span>3,000.00</span></div>
+            <span class="lnk2">แก้ยอดหัก / วิธีรับเงิน ›</span>
+            <div class="who" style="margin-top:6px">นัด</div>
+            <div class="mv net"><span class="dir net">⇄</span><span class="t">หักกลบ: หักหนี้กับเงินที่สวนติดนัด<small>ค่าน้ำมันตัดหญ้าที่นัดสำรองจ่าย · ไม่มีเงินสด</small></span><span class="a">640.00</span></div>
+            <div class="mv in"><span class="dir in">↘</span><span class="t">นัดจ่ายหนี้สวน (ส่วนที่เหลือ)<small>มากับยอดโอนเจ้าของสวน (ทาง 3)</small></span><span class="a">860.00</span></div>
+            <div class="kv"><span>หนี้นัดลดรวม (640 + 860)</span><span>1,500.00</span></div>
+            <div class="kv"><span>หนี้นัดคงค้าง · สวนยังติดนัด</span><span>0.00 · 0.00</span></div>
+            <span class="lnk2">แก้ยอดหัก / วิธีรับเงิน ›</span>
+          </div>
+
+          <div class="sect">ค · วันนี้ยื่นเงินให้ใคร เท่าไหร่</div>
+          <div class="card">
+            <div class="who"><span class="tile sm t-cat3"><svg class="ic"><use href="#i-tapper"/></svg></span>เงินสดให้แดง</div>
+            <div class="kv"><span>ส่วนแบ่ง</span><span>36,860.00</span></div>
+            <div class="kv din"><span class="dl"><span class="dir in">↘</span>จ่ายหนี้สวน (เงินสด)</span><span>−2,000.00</span></div>
+            <div class="kv total"><span>เงินสดที่ต้องจ่ายแดง <small>(ยังไม่ปัดเศษ)</small></span><span class="fig" style="font-size:24px">34,860<span class="u">บาท</span></span></div>
+            <div class="say">“แดง ขายได้ 73,720 แบ่งครึ่ง <b>36,860</b> · จ่ายหนี้สวนงวดนี้ 2,000 · วันนี้รับ <b>34,860</b> · เหลือหนี้ 3,000”</div>
+            <div class="who" style="margin-top:10px"><span class="tile sm t-cat4"><svg class="ic"><use href="#i-tapper"/></svg></span>เงินสดให้นัด</div>
+            <div class="kv"><span>ส่วนแบ่ง</span><span>17,823.75</span></div>
+            <div class="kv din"><span class="dl"><span class="dir in">↘</span>จ่ายหนี้สวน (มากับยอดโอน)</span><span>−860.00</span></div>
+            <div class="kv total"><span>เงินสดที่ต้องจ่ายนัด <small>(ยังไม่ปัดเศษ)</small></span><span class="fig" style="font-size:24px">16,963.75<span class="u">บาท</span></span></div>
+            <div class="say">“นัด ขายได้ 35,647.50 แบ่งครึ่ง <b>17,823.75</b> · หนี้ 1,500 หักกับเงินที่สวนติดนัด 640 เหลือ 860 · วันนี้รับ <b>16,963.75</b> · หนี้หมด”</div>
+          </div>
+          <div class="card cream">
+            <div class="row" style="min-height:0"><span class="tile sm t-cream" style="background:var(--color-surface-raised)"><svg class="ic"><use href="#i-bank"/></svg></span><span class="grow val">โอนเข้าบัญชีเจ้าของสวน</span></div>
+            <div class="kv"><span>ส่วนของสวน (จากยอดขาย)</span><span>54,683.75</span></div>
+            <div class="kv din"><span class="dl"><span class="dir in">↘</span>นัดจ่ายหนี้ มากับโอน</span><span>+860.00</span></div>
+            <div class="kv total"><span>คนรับซื้อยางโอน</span><span class="fig" style="font-size:22px">55,543.75<span class="u">บาท</span></span></div>
+            <span class="mi"><svg class="ic"><use href="#i-help"/></svg>860 เป็นเงินคืนหนี้ ไม่ใช่ส่วนของสวน</span>
+            <div class="acct"><div class="kv" style="align-items:center"><span class="lab">รับเข้าบัญชี (ไม่บังคับ)</span><span class="sel">เปลี่ยน<svg class="ic"><use href="#i-down"/></svg></span></div><span class="val num">กสิกรไทย ••1234</span></div>
+          </div>
+          <div class="card debt">
+            <div class="row" style="min-height:0"><span class="dir in">↘</span><span class="grow val">เงินสดคืนหนี้เข้าสวนวันนี้</span></div>
+            <span style="font-size:13px;color:var(--color-ink-soft)">หยิบจากเงินสดที่จ่ายคนกรีดยาง · ไม่ใช่ส่วนของสวน</span>
+            <div class="kv din"><span>แดง (หยิบจากเงินของแดง)</span><span>2,000.00</span></div>
+            <div class="kv total"><span>รวมเงินสดคืนหนี้</span><span class="fig" style="font-size:20px">2,000.00</span></div>
+          </div>
+        </div>
+        <div class="foot"><div class="btn btn-primary">ถัดไป: ปัดเศษ</div></div>
+      </div></div>
+      <figcaption class="cap">
+        <span class="t">17. สรุปยอดส่วนแบ่ง — แยกยอดขาย / เรื่องหนี้ / เงินแต่ละคน (v1.2.0)</span>
+        บนสุดคือ <b>ขายวันนี้ กก. × ราคา = ยอด</b> ตัวใหญ่ · <b>ก</b> แบ่งยอดขายเท่านั้น ไม่มีหนี้ปน · <b>ข</b> เรื่องหนี้ (ไม่ใช่ยอดขาย) ทุกการเคลื่อนไหวมีลูกศรทิศ + คำ + สี ตัวเลขไม่มีเครื่องหมาย ปุ่มหัก/แก้ยอดหักอยู่ที่นี่ · <b>ค</b> เงินแต่ละกอง: ส่วนแบ่ง − ส่วนที่จ่ายหนี้เป็นเงินจริง (860 ไม่ใช่ 1,500 — หักกลบ 640 ไม่มีเงินสดเคลื่อน) ตัวเลขใหญ่เขียนว่า "ยังไม่ปัดเศษ" จนกว่าจะตอบหน้า 18 · บรรทัดคำพูดสำหรับอธิบายให้คนกรีดยางฟัง · เงินสดคืนหนี้ย้ายออกจากการ์ดส่วนแบ่งเจ้าของสวน (เดิมอยู่ใต้หัวข้อ "ส่วนแบ่งเจ้าของสวน" ทำให้ดูเหมือนรายได้)
+      </figcaption>
+      <div class="extras">
+        <div class="inset">
+          <span class="ttl">ก่อนหักหนี้ — กล่อง "ข · เรื่องหนี้" ของนัด</span>
+          <div class="mv in"><span class="dir in">↘</span><span class="t">นัดติดสวน<small>ค่าปุ๋ย</small></span><span class="a">1,500.00</span></div>
+          <div class="mv out"><span class="dir out">↗</span><span class="t">สวนติดนัด<small>ค่าน้ำมันตัดหญ้า 12 ก.ย.</small></span><span class="a">640.00</span></div>
+          <div class="btn btn-secondary small" style="width:100%"><svg class="ic sm"><use href="#i-minus"/></svg>หักเงินคืนหนี้</div>
+          <span class="note">ยอดที่ค้างแสดงเป็นทิศเดียวกับการเคลื่อนไหว · การ์ด "ค" ของนัดยังขึ้นเงินสดที่ต้องจ่าย 17,823.75 แต่มีป้าย <b>"ยังไม่ได้หักหนี้"</b> ข้างตัวเลข (ข้อ 4 ของ persona: ตัวเลขใหญ่ต้องไม่หลอกว่าจ่ายได้เลย)</span>
+        </div>
+      </div>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>กล่องข นัด: แตะ <b>หักเงินคืนหนี้</b></span></div>
+
+    <figure class="step long-step">
+      <span class="longtag"><svg class="ic"><use href="#i-down"/></svg>แผ่นล่างยาว</span>
+      <div class="phone long"><div class="screen" aria-label="หักเงินคืนหนี้ นัด v1.2.0" style="min-height:1010px">
+        <div class="sbar num"><span>10:18</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar dim"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>สรุปยอดส่วนแบ่ง</h3></div>
+        <div class="sheet" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+          <h4 style="margin:0">หักเงินคืนหนี้ · นัด</h4>
+          <div class="kv"><span>ส่วนแบ่งนัดครั้งนี้ (จากยอดขาย)</span><span>17,823.75</span></div>
+          <div class="card debt">
+            <div class="mv in"><span class="dir in">↘</span><span class="t">นัดติดสวน — หักได้<small>ค่าปุ๋ย 1,500.00 · ไม่มีแผนผ่อน → เสนอยอดค้างทั้งหมด</small></span><span class="a">1,500.00</span></div>
+            <div class="kv"><span>หักหนี้ครั้งนี้ (0 – 1,500.00)</span><span>[ − ] 1,500.00 [ + ]</span></div>
+          </div>
+          <div class="nocash">
+            <div class="mv net" style="border:0;padding:0"><span class="dir net">⇄</span><span class="t">แนะนำ: หักกลบกับเงินที่สวนติดนัด<small>ค่าน้ำมันตัดหญ้า · 12 ก.ย. 2569 · ไม่มีเงินสดเคลื่อน</small></span><span class="a">640.00</span></div>
+            <div class="kv"><span>หักกลบครั้งนี้ (0 – 640.00)</span><span>[ − ] 640.00 [ + ]</span></div>
+            <small>เจ้าของกดใช้เอง (D-60) · ยังไม่ได้ใช้ → ขึ้นเตือน "สวนยังติดนัด 640 ยังไม่ได้หักกลบ" ก่อนบันทึก</small>
+          </div>
+          <div class="kv"><span>หนี้ 1,500 − หักกลบ 640 = นัดต้องจ่ายเป็นเงินจริง</span><span class="num" style="color:var(--color-debt-in)">860.00</span></div>
+          <b style="font-size:14px">เงิน 860 มาทางไหน</b>
+          <div class="radio"><span class="dot"></span><span><b>1 · หยิบจากเงินสดของนัด</b><small>↘ เงินสดเข้าสวน 860 · ต้องแตกเงิน (แตะดูแบงค์)</small></span></div>
+          <div class="radio"><span class="dot"></span><span><b>2 · คนรับซื้อยางแยกเงินสดอีกกอง</b><small>↘ กองคืนหนี้ 860 · เงินของนัด 16,963.75</small></span></div>
+          <div class="radio on"><span class="dot"></span><span><b>3 · มากับยอดโอนเจ้าของสวน</b><small>↘ โอนเพิ่ม 860 · เงินของนัด 16,963.75</small></span></div>
+          <div class="card" style="padding:10px 12px">
+            <div class="kv"><span>ส่วนแบ่ง</span><span>17,823.75</span></div>
+            <div class="kv din"><span class="dl"><span class="dir in">↘</span>จ่ายหนี้เป็นเงินจริง</span><span>−860.00</span></div>
+            <div class="kv total"><span><b>วันนี้นัดรับ (ยังไม่ปัดเศษ)</b></span><span class="fig" style="font-size:20px">16,963.75</span></div>
+            <div class="kv dnet"><span class="dl"><span class="dir net">⇄</span>หักกลบ (ไม่มีเงินสด)</span><span>640.00</span></div>
+            <div class="kv"><span>หนี้นัดลดรวม · คงค้าง</span><span>1,500.00 · 0.00</span></div>
+          </div>
+          <div style="display:flex;gap:8px"><div class="btn btn-secondary" style="flex:1">ยกเลิก</div><div class="btn btn-primary" style="flex:1">บันทึก</div></div>
+        </div>
+      </div></div>
+      <figcaption class="cap">
+        <span class="t">17a. หักเงินคืนหนี้ — นัด (v1.2.0)</span>
+        เลขเดียวกับหน้า 17 ทุกที่: หนี้ลด 1,500 = หักกลบ 640 (⇄ ไม่มีเงินสด) + จ่ายเป็นเงินจริง 860 (↘) · บรรทัด "นัดต้องจ่ายเป็นเงินจริง 860" อยู่เหนือ 3 ทางเลือก ทุกทางพูดถึง 860 · สรุปท้ายแผ่นแยก "เงินสดวันนี้" ออกจาก "หนี้" · หักกลบยังเป็นปุ่มที่เจ้าของกดเอง (D-60) แต่<b>เตือนก่อนบันทึก</b>ถ้าสวนยังติดเงินคนกรีดยางอยู่และยังไม่ได้ใช้
+      </figcaption>
+    </figure>
+
+    <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg><span>ปัดเศษ (หน้า 18 เหมือนเดิม) → <b>เทียบยอด</b></span></div>
+
+    <figure class="step long-step">
+      <span class="longtag"><svg class="ic"><use href="#i-down"/></svg>หน้ายาว</span>
+      <div class="phone long"><div class="screen" aria-label="เทียบยอด v1.2.0">
+        <div class="sbar num"><span>10:22</span><span><svg class="ic"><use href="#i-nosignal"/></svg> <svg class="ic"><use href="#i-battery"/></svg></span></div>
+        <div class="appbar"><span class="iconbtn"><svg class="ic"><use href="#i-back"/></svg></span><h3>เทียบยอด <small class="num">การขาย 3 ต.ค. 2569</small></h3></div>
+        <div class="body" style="gap:10px">
+          <div class="band">
+            <span class="lbl">ขายวันนี้</span>
+            <span class="eq num">2,255 กก. × 48.50 ฿/กก. · 46 เข่ง</span>
+            <span class="fig num">109,367.50<span class="u">บาท</span></span>
+          </div>
+          <div class="card">
+            <h4>เงินแต่ละกอง — มาจากไหน</h4>
+            <div class="pile"><div class="top"><span>เงินสดให้แดง</span><span class="v">34,860.00</span></div><div class="parts"><span>จากยอดขาย 36,860.00</span><span class="din">↘ จ่ายหนี้ −2,000.00</span></div></div>
+            <div class="pile"><div class="top"><span>เงินสดให้นัด</span><span class="v">16,964.00</span></div><div class="parts"><span>จากยอดขาย 17,823.75</span><span class="din">↘ จ่ายหนี้ −860.00</span><span>ปัดเศษ +0.25</span></div></div>
+            <div class="pile"><div class="top"><span>โอนเข้าบัญชีเจ้าของสวน</span><span class="v">55,543.50</span></div><div class="parts"><span>จากยอดขาย 54,683.75</span><span class="din">↘ นัดจ่ายหนี้ +860.00</span><span>ปัดเศษ −0.25</span></div></div>
+            <div class="pile"><div class="top"><span>เงินสดคืนหนี้เข้าสวน</span><span class="v">2,000.00</span></div><div class="parts"><span>จากยอดขาย 0.00</span><span class="din">↘ แดงจ่ายหนี้ +2,000.00</span></div></div>
+            <div class="kv total"><span><b>รวมทุกกอง</b></span><span class="fig" style="font-size:20px">109,367.50</span></div>
+          </div>
+          <div class="card">
+            <h4>ตรวจ 3 ข้อ</h4>
+            <div class="chk"><span>รวม "จากยอดขาย" = ยอดขาย 109,367.50</span><span class="ok">✓</span></div>
+            <div class="chk"><span>รวม "จ่ายหนี้" −2,000 −860 +860 +2,000 = 0.00</span><span class="ok">✓</span></div>
+            <div class="chk"><span>รวม "ปัดเศษ" +0.25 −0.25 = 0.00</span><span class="ok">✓</span></div>
+            <span class="chip ch-ok" style="margin-top:6px"><svg class="ic"><use href="#i-check"/></svg>ทุกกองรวมกันเท่ายอดขาย ตรงถึงสตางค์</span>
+            <span class="mi" style="margin-top:4px">หนี้แค่ย้ายเงินระหว่างกอง จึงรวมได้ 0 เสมอ — ยอดขายไม่เปลี่ยนเพราะหนี้</span>
+          </div>
+          <div class="nocash">
+            <b>ไม่มีเงินสด ไม่อยู่ในกอง</b>
+            <div class="mv net" style="border:0;padding:0"><span class="dir net">⇄</span><span class="t">นัด หักกลบ<small>หนี้นัดลด 640 = สวนจ่ายคืนนัด 640</small></span><span class="a">640.00</span></div>
+          </div>
+        </div>
+        <div class="foot"><div class="btn btn-primary">ถัดไป: การจ่ายเงิน</div></div>
+      </div></div>
+      <figcaption class="cap">
+        <span class="t">18a. เทียบยอด (v1.2.0)</span>
+        แต่ละกองบอกว่ามาจาก <b>ยอดขาย</b> เท่าไหร่ และ <b>ย้ายเพราะหนี้</b> เท่าไหร่ (↘ สีน้ำเงิน) · ตรวจ 3 ข้อ: ส่วนจากยอดขายรวม = ยอดขาย, ส่วนที่ย้ายเพราะหนี้รวม = 0, ปัดเศษรวม = 0 — พิสูจน์ว่าหนี้ไม่ได้เปลี่ยนยอดขาย · หักกลบอยู่กล่องแยก "ไม่มีเงินสด" · เอาบรรทัด "กองคืนหนี้แยก ไม่มี" และการ์ดรวมที่ซ้ำออก
+      </figcaption>
+      <div class="extras">
+        <div class="inset pending">
+          <span class="ttl">ถ้าทำ E11-S09 (รอเจ้าของตัดสินใจ): สวนจ่ายคืนนัด 640 โดยนัดไม่มีหนี้ — ย้ายจากส่วนของสวน</span>
+          <div class="pile"><div class="top"><span>เงินสดให้นัด</span><span class="v">18,463.75</span></div><div class="parts"><span>จากยอดขาย 17,823.75</span><span class="dout">↗ สวนจ่ายคืน +640.00</span></div></div>
+          <div class="pile"><div class="top"><span>โอนเข้าบัญชีเจ้าของสวน</span><span class="v">54,043.75</span></div><div class="parts"><span>จากยอดขาย 54,683.75</span><span class="dout">↗ จ่ายคืนนัด −640.00</span></div></div>
+          <span class="note">สีส้ม ↗ = เงินออกจากสวนไปหาคนกรีดยาง · รวม "ย้ายเพราะหนี้" ยังเป็น 0 · ยอดขายและส่วนแบ่งนัดไม่เปลี่ยน · ถ้าเจ้าของจ่ายจากเงินในมือเอง (ไม่ใช่เงินจากการขาย) จะไม่อยู่ในกองเลย มีแค่บรรทัด ↗ ในกล่อง "ข · เรื่องหนี้"</span>
+        </div>
+      </div>
+    </figure>
+
+  </div>
+</section>
+
+<section class="qs">
+  <h2>ต้องให้เจ้าของตัดสินใจ</h2>
+  <ol class="qlist">
+    <li><b>โครงหน้า 17</b> ก/ข/ค แบบนี้ใช่ไหม (แยกยอดขาย / เรื่องหนี้ / เงินแต่ละคน) — แทนการ์ดต่อคนที่มีหนี้ปนอยู่ (v1.1.0 และที่เพิ่ง merge ใน #107)</li>
+  <li><b>ตัวเลขในกอง</b> ใช้ 860 (เงินที่ย้ายจริง) ส่วน 1,500 = 640 + 860 อยู่ในกล่องเรื่องหนี้ — เปลี่ยนจากที่ตกลงเมื่อเช้า (−1,500 / +640 ในการ์ด) เพราะนักบัญชีและ persona ชี้ว่า +640 อ่านเหมือนการขายจ่ายนัดเพิ่ม</li>
+    <li><b>สี/สัญลักษณ์</b>: ↘ น้ำเงิน คนกรีดยาง → สวน · ↗ ส้ม สวน → คนกรีดยาง · ⇄ เทาเส้นประ หักกลบ ไม่มีเงินสด</li>
+    <li><b>คำ</b>: "จ่ายหนี้สวน", "สวนจ่ายคืน", "หักกลบ: หักหนี้กับเงินที่สวนติดนัด", "เงินของนัด" แทน "กองนัด" — persona บอกว่า "หักกลบ" และ "กอง" ไม่เข้าใจ</li>
+    <li><b>เตือนก่อนบันทึก</b> เมื่อสวนยังติดเงินคนกรีดยางแต่ยังไม่ได้หักกลบ (persona อยากให้เปิดหักกลบเป็นค่าเริ่มต้น — ขัดกับ D-60 "ไม่ใช้อัตโนมัติ" จึงเสนอแค่เตือน)</li>
+    <li><b>ข้อเสนอของ persona ที่ไม่ได้ใส่</b> เพราะขัดกับที่ตกลงไว้: ซ่อน 3 ทางเลือกรับเงิน (D-71), เอารายการแบงค์ในกองออก (ตกลงวันนี้), เอาป้ายซิงก์ออก — ต้องการเปลี่ยนข้อไหนไหม</li>
+    <li><b>E11-S09</b> สวนจ่ายคืนคนที่ไม่มีหนี้ตอนขาย: ทำไหม เงินมาจากส่วนของสวน หรือจ่ายนอกการขาย (กรอบเส้นประใต้หน้า 18a)</li>
+  </ol>
+</section>
+
+</div>
+
+<div class="palette-toggle" role="group" aria-label="ชุดสี (ข้อเสนอ E01-S17)">
+  <span class="pt-l">ชุดสี</span>
+  <button type="button" data-set-palette="a" title="A farmmate (ใช้อยู่)">A</button>
+  <button type="button" data-set-palette="b" title="B instrument (ทางเลือก)">B</button>
+  <span class="pt-l">โหมด</span>
+  <button type="button" data-set-theme="light">สว่าง</button>
+  <button type="button" data-set-theme="dark">มืด</button>
+</div>
+<script>
+(function () {
+  var root = document.documentElement;
+  var dark = window.matchMedia('(prefers-color-scheme: dark)');
+  function sync() {
+    var p = root.getAttribute('data-palette') === 'b' ? 'b' : 'a';
+    var t = root.getAttribute('data-theme') || (dark.matches ? 'dark' : 'light');
+    document.querySelectorAll('[data-set-palette]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.setPalette === p)); });
+    document.querySelectorAll('[data-set-theme]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.setTheme === t)); });
+  }
+  function setParam(k, v) {
+    try { var u = new URL(location.href); u.searchParams.set(k, v); history.replaceState(null, '', u); } catch (e) { /* file:// may refuse */ }
+  }
+  function palette(p) { if (p === 'b') root.setAttribute('data-palette', 'b'); else root.removeAttribute('data-palette'); }
+  function theme(t) { if (t === 'light' || t === 'dark') root.setAttribute('data-theme', t); }
+  var q = new URLSearchParams(location.search);
+  palette(q.get('palette')); theme(q.get('theme')); sync();
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-set-palette],[data-set-theme]');
+    if (!b) return;
+    if (b.dataset.setPalette) { palette(b.dataset.setPalette); setParam('palette', b.dataset.setPalette); }
+    else { theme(b.dataset.setTheme); setParam('theme', b.dataset.setTheme); }
+    sync();
+  });
+  dark.addEventListener('change', sync);
+})();
+</script>
