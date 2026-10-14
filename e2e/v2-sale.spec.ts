@@ -106,8 +106,8 @@ test('settlement: netting the money the farm owes back against a debt (E06-S04)'
   // ── เทียบยอด (page 18a) with a deduction and a netting: the origin line adds up to the cash ──
   await page.goto('/v2/sale/sale-net/tally');
   await expect(id('tally')).toBeVisible();
-  await expect(id('tally-from-nat')).toContainText('ส่วนแบ่ง 2,625.00 − หักหนี้ 700.00 + สวนคืน (หักกลบ) 400.00');
-  await expect(id('tally-net-nat')).toContainText('หักกลบไม่มีเงินสดเคลื่อน: หนี้ลด 400.00 = สวนคืนนัด 400.00');
+  await expect(id('tally-from-nat')).toContainText('จากยอดขาย 2,625.00 · นัด → สวน −700.00 · สวน → นัด +400.00');
+  await expect(id('tally-net-nat')).toContainText('หักกลบ ไม่ใช้เงินสด: หนี้นัดลด 400.00 = สวนคืนนัด 400.00');
   await expect(id('tally-ok')).toBeVisible();
   await shot(page, '18a-tally', true);
 });
@@ -333,8 +333,8 @@ test('start → point → empty scale → count → short → switch and fill �
   await expect(id('tally-weight')).toContainText('470 กก.');
   await expect(id('tally-total')).toContainText('22,795.00');
   await expect(id('tally-sum')).toContainText('22,795.00');
-  await expect(id('tally-from-red')).toContainText('ส่วนแบ่ง 8,972.50 + ปัดเศษ 0.50');
-  await expect(id('tally-owner-from')).toContainText('ส่วนเจ้าของสวน 11,397.00');
+  await expect(id('tally-from-red')).toContainText('จากยอดขาย 8,972.50 · ปัดเศษ +0.50');
+  await expect(id('tally-owner-from')).toContainText('จากยอดขาย 11,397.50 · ปัดเศษ −0.50');
   await id('to-payment').click();
 
   // ── การจ่ายเงิน (page 19): ticks survive a reload; then close ──

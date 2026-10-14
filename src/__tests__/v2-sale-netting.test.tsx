@@ -166,11 +166,11 @@ describe('tally origin lines with a deduction, a netting and a rounding (E05-S08
   };
   /** The amounts after the first "ส่วนแบ่ง", as numbers: share, then each signed part. */
   const parts = (line: string) => {
-    const m = [...line.matchAll(/([+−]?)\s*(?:ส่วนแบ่ง|หักหนี้|สวนคืน \(หักกลบ\)|ปัดเศษ)\s*([\d,]+\.\d\d)/g)];
+    const m = [...line.matchAll(/(?:จากยอดขาย|→ สวน|→ นัด|ปัดเศษ)\s*([+−]?)([\d,]+\.\d\d)/g)];
     return m.map((x) => (x[1] === '−' ? -1 : 1) * Math.round(parseFloat(x[2].replace(/,/g, '')) * 100));
   };
 
-  it('the origin line reads as page 17 does (−หักหนี้ +สวนคืน), and its parts add up to the cash above it', async () => {
+  it('the origin line shows นัด repaying and the farm repaying apart (owner 2026-10-14), and its parts add up to the cash', async () => {
     const r = await inSale2(<SettlementScreen />);
     await press(`deduct-${farm.nat}`);
     await type('net-amount', '200');
@@ -183,11 +183,11 @@ describe('tally origin lines with a deduction, a netting and a rounding (E05-S08
     r.unmount();
     await inSale2(<TallyScreen />);
     const line = screen.getByTestId(`tally-from-${farm.nat}`).props.children as string;
-    // share 2,061.25 − 500 debt + 200 the farm repaid by netting = 1,761.25, rounded up to 1,762.00.
-    expect(line).toBe('ส่วนแบ่ง 2,061.25 − หักหนี้ 500.00 + สวนคืน (หักกลบ) 200.00 + ปัดเศษ 0.75');
+    // share 2,061.25 − 500 นัด repaid + 200 the farm repaid นัด (by netting) = 1,761.25, rounded up to 1,762.00.
+    expect(line).toBe('จากยอดขาย 2,061.25 · นัด → สวน −500.00 · สวน → นัด +200.00 · ปัดเศษ +0.75');
     expect(parts(line).reduce((a, x) => a + x, 0)).toBe(176_200);
     expect(screen.getByTestId(`tally-cash-${farm.nat}`)).toHaveTextContent(/1,762\.00$/);
-    expect(screen.getByTestId(`tally-net-${farm.nat}`)).toHaveTextContent('หักกลบไม่มีเงินสดเคลื่อน: หนี้ลด 200.00 = สวนคืนนัด 200.00');
+    expect(screen.getByTestId(`tally-net-${farm.nat}`)).toHaveTextContent('หักกลบ ไม่ใช้เงินสด: หนี้นัดลด 200.00 = สวนคืนนัด 200.00');
     expect(screen.getByTestId('tally-ok')).toBeTruthy();
   });
 });

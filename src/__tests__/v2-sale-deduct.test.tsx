@@ -109,9 +109,18 @@ beforeAll(async () => {
 describe('page 17 before anything is deducted', () => {
   it('a worker who owes shows the debt and, beside it, what the farm owes them back', async () => {
     await inSale(<SettlementScreen />);
-    expect(screen.getByTestId(`owed-hint-${farm.nat}`)).toHaveTextContent(/หนี้ที่ติดสวน 1,500\.00/);
-    expect(screen.getByTestId(`owed-hint-${farm.nat}`)).toHaveTextContent(/สวนต้องคืนนัด 640\.00/);
-    expect(screen.getByTestId(`owed-hint-${farm.red}`)).not.toHaveTextContent(/สวนต้องคืน/);
+    expect(screen.getByTestId(`owed-hint-${farm.nat}`)).toHaveTextContent(/นัดติดสวน.*1,500\.00/);
+    expect(screen.getByTestId(`owed-hint-${farm.nat}`)).toHaveTextContent(/สวนติดนัด\s*640\.00/);
+    expect(screen.getByTestId(`owed-hint-${farm.red}`)).not.toHaveTextContent(/สวนติด/);
+  });
+
+  it('says today\'s sale first: kg × price = total (owner 2026-10-14, mockup v1.2.0)', async () => {
+    await inSale(<SettlementScreen />);
+    expect(screen.getByTestId('sale-today')).toHaveTextContent(/235 กก\. × 48\.50 ฿\/กก\./);
+    expect(screen.getByTestId('sale-today')).toHaveTextContent(/11,397\.50/);
+    // the sale block holds no debt; debt has its own block, "not the sale"
+    expect(screen.getByTestId('sale-split')).not.toHaveTextContent(/หนี้/);
+    expect(screen.getByTestId('debt-block')).toHaveTextContent(/ไม่ใช่ยอดขาย/);
   });
 });
 
@@ -147,12 +156,16 @@ describe('page 17a — the deduct sheet', () => {
     await inSale(<SettlementScreen />);
     await press(`deduct-${farm.nat}`);
     await type('net-amount', '640');
-    expect(screen.getByTestId('sheet-deducted')).toHaveTextContent(/−1,500\.00/);
-    expect(screen.getByTestId('sheet-netted')).toHaveTextContent(/\+640\.00/);
-    expect(screen.getByTestId('route-amount')).toHaveTextContent(/นัดต้องคืนสวนจริง\s*860\.00/);
+    expect(screen.getByTestId('sheet-deducted')).toHaveTextContent(/หนี้นัดลดรวม\s*1,500\.00/);
+    // นัด repays 1,500 (↘); the farm repays นัด 640 (↗, by netting); only 860 is money
+    expect(screen.getByTestId('sheet-repay')).toHaveTextContent(/นัด → สวน จ่ายหนี้.*1,500\.00/);
+    expect(screen.getByTestId('sheet-back')).toHaveTextContent(/สวน → นัด คืนเงิน.*640\.00/);
+    expect(screen.getByTestId('sheet-netted')).toHaveTextContent(/640\.00/);
+    expect(screen.getByTestId('sheet-netted')).not.toHaveTextContent(/[+−]/);
+    expect(screen.getByTestId('route-amount')).toHaveTextContent(/นัดต้องจ่ายหนี้เป็นเงินจริง\s*860\.00/);
     expect(screen.getByTestId('method-cash-from-share')).toHaveTextContent(/เงินสดเข้ามือ 860\.00/);
     expect(screen.getByTestId('method-transfer-with-owner')).toHaveTextContent(/เข้าบัญชี 860\.00/);
-    expect(screen.getByTestId('method-buyer-split')).toHaveTextContent(/กองนัด 1,201\.25/);
+    expect(screen.getByTestId('method-buyer-split')).toHaveTextContent(/เงินของนัด 1,201\.25/);
     // the pile 1,000 + 1,000 + 50 + 10 + 1 + 0.25 cannot give 860 as it is
     expect(screen.getByTestId('needs-change')).toHaveTextContent('ต้องแตกเงิน');
     await press('why-notes');
@@ -188,12 +201,21 @@ describe('page 17a — the deduct sheet', () => {
     await press(`deduct-${farm.nat}`);
     await type('net-amount', '640');
     await press('method-transfer-with-owner');
+    expect(screen.getByTestId('net-applied')).toHaveTextContent('ใช้หักกลบ 640.00 แล้ว');
     await press('deduct-save');
     const pays = await live(farm.nat);
     expect(pays.map((p) => [p.method, p.amountSatang]).sort()).toEqual([['netting', 64_000], ['transfer-with-owner', 86_000]]);
-    expect(screen.getByTestId(`deducted-${farm.nat}`)).toHaveTextContent(/−1,500\.00/);
-    expect(screen.getByTestId(`netted-${farm.nat}`)).toHaveTextContent(/\+640\.00/);
+    // ข, two separate chunks (owner 2026-10-14): tappers pay the farm (↘) — นัด 1,500; the farm repays tappers (↗) — นัด 640, by netting
+    expect(screen.getByTestId('debt-in-chunk')).toHaveTextContent(/คนกรีดยางจ่ายหนี้สวน/);
+    expect(screen.getByTestId(`deducted-${farm.nat}`)).toHaveTextContent(/นัดจ่ายหนี้สวน.*1,500\.00/);
+    expect(screen.getByTestId('debt-out-chunk')).toHaveTextContent(/สวนคืนเงินคนกรีดยาง/);
+    expect(screen.getByTestId(`netted-${farm.nat}`)).toHaveTextContent(/สวนคืนเงินนัด.*หักกลบ.*640\.00/);
+    expect(screen.getByTestId(`netted-${farm.nat}`)).not.toHaveTextContent(/[+−]/);
+    // ค: นัด's money = share − 1,500 repaid + 640 the farm repaid
+    expect(screen.getByTestId(`pay-route-${farm.nat}`)).toHaveTextContent(/นัด → สวน จ่ายหนี้.*1,500\.00/);
+    expect(screen.getByTestId(`pay-back-${farm.nat}`)).toHaveTextContent(/สวน → นัด คืนเงิน.*640\.00/);
     expect(screen.getByTestId(`cash-${farm.nat}`)).toHaveTextContent(/1,201/);
+    expect(screen.getByTestId('owner-transfer-in')).toHaveTextContent(/เงินจากนัด.*860\.00/);
     // one deduction per worker per sale: it is edited from here, not added to
     expect(screen.queryByTestId(`deduct-${farm.nat}`)).toBeNull();
     expect(screen.getByTestId(`edit-deduct-${farm.nat}`)).toHaveTextContent('แก้ยอดหัก / วิธีรับเงิน');
@@ -203,7 +225,9 @@ describe('page 17a — the deduct sheet', () => {
     await inSale(<SettlementScreen />);
     await press(`deduct-${farm.red}`);
     await press('deduct-save');
-    expect(screen.getByTestId(`deducted-${farm.red}`)).toHaveTextContent(/หักหนี้ \(งวดผ่อน\)/);
+    expect(screen.getByTestId(`deducted-${farm.red}`)).toHaveTextContent(/แดงจ่ายหนี้สวน · งวดผ่อน/);
+    expect(screen.getByTestId(`deducted-${farm.red}`)).toHaveTextContent(/2,000\.00/);
+    expect(screen.getByTestId('cash-today')).toHaveTextContent(/แดง.*2,000\.00/);
     expect(screen.getByTestId(`notes-${farm.red}`)).toHaveTextContent('หยิบแบงค์พัน 2 ใบ — ไม่ต้องแตก');
     expect(screen.getByTestId(`debt-left-${farm.red}`)).toHaveTextContent(/3,000\.00/);
   });
@@ -232,7 +256,7 @@ describe('page 17a — the deduct sheet', () => {
     await press(`edit-deduct-${farm.nat}`);
     expect(value('net-amount')).toBe('640.00');
     // the 640 the old netting took is back on offer while editing
-    expect(screen.getByTestId('net-card')).toHaveTextContent(/สวนต้องคืนนัด 640\.00/);
+    expect(screen.getByTestId('net-card')).toHaveTextContent(/สวนติดนัด 640\.00/);
     await press('method-cash-from-share');
     await press('deduct-save');
     expect((await live(farm.nat)).map((p) => [p.method, p.amountSatang]).sort()).toEqual([['cash-from-share', 86_000], ['netting', 64_000]]);
@@ -241,8 +265,8 @@ describe('page 17a — the deduct sheet', () => {
     expect(all.filter((e) => e.payload.t === 'repayment_recorded' && !gone.has(e.targetId))).toHaveLength(1);
     const owed = projectFinance(all).reimbursements.find((r) => r.to.id === farm.nat)!;
     expect(owed.remainingSatang).toBe(0);
-    expect(screen.getByTestId(`deducted-${farm.nat}`)).toHaveTextContent(/−1,500\.00/);
-    expect(screen.getByTestId(`netted-${farm.nat}`)).toHaveTextContent(/\+640\.00/);
+    expect(screen.getByTestId(`deducted-${farm.nat}`)).toHaveTextContent(/นัดจ่ายหนี้สวน.*1,500\.00/);
+    expect(screen.getByTestId(`netted-${farm.nat}`)).toHaveTextContent(/640\.00/);
   });
 
   it('editing a netted deduction to 0 removes both lines and the repayment', async () => {
@@ -259,6 +283,24 @@ describe('page 17a — the deduct sheet', () => {
     expect(all.filter((e) => e.payload.t === 'repayment_recorded' && !gone.has(e.targetId))).toHaveLength(0);
     expect(screen.queryByTestId(`netted-${farm.nat}`)).toBeNull();
     expect(screen.getByTestId(`deduct-${farm.nat}`)).toBeTruthy();
+  });
+});
+
+describe('netting is pressed by the owner, never by itself (D-60): a warning before saving without it', () => {
+  const WARN = 'sale-warn';
+  beforeAll(async () => {
+    await seedSale(store(), saleOf(WARN));
+  });
+  it('the first save without netting warns; the second saves as asked', async () => {
+    await inSale(<SettlementScreen />, WARN);
+    await press(`deduct-${farm.nat}`);
+    const before = (await financeStore.load()).length;
+    await press('deduct-save');
+    expect(screen.getByTestId('deduct-net-warning')).toHaveTextContent(/สวนยังติดนัด 640\.00/);
+    expect((await financeStore.load()).length).toBe(before);
+    await press('deduct-save');
+    expect(screen.queryByTestId('deduct-sheet')).toBeNull();
+    expect((await financeStore.load()).length).toBe(before + 1);
   });
 });
 
