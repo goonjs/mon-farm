@@ -25,7 +25,7 @@ import { buyerCheck, buyerCheckPayload, buyerCheckTarget, saleFigures } from '..
 import type { Settlement } from '../../core/settle';
 import { cashNotes, deductSheet, nettingPayloads, overDeducted, pickNotes, pilesCheck, roundCash, type RoundingMode } from '../../core/finance/deduct';
 import { balanceAfterSale } from '../../core/finance/debts';
-import { formatSatang, parseBahtToSatang, todayIso } from '../../core/finance/money';
+import { formatSatang, parseBahtToSatang } from '../../core/finance/money';
 import { OWNER_PAYEE, paymentMarkPayload, paymentStatus, paymentTarget, salePaymentConflicts } from '../../core/finance/payments';
 import { BANKS } from '../../core/finance/promptpay';
 import { FARM_FUNDS, type DebtPaymentMethod, type SaleAccountChoice } from '../../core/finance/types';
@@ -273,12 +273,12 @@ function CheckBody({ bump }: { bump: () => void }) {
   );
 }
 
-/** An amount box with − and + beside it, ฿100 a step, kept between 0 and `max` (mockup 17a). */
-function AmountStepper({ testID, label, value, placeholder, max, onChange, error }: { testID: string; label: string; value: string; placeholder?: string; max: number; onChange: (v: string) => void; error?: string }) {
+/** An amount box with − and + beside it, ฿100 a step, kept between `min` and `max` (mockup 17a). */
+function AmountStepper({ testID, label, value, placeholder, min = 0, max, onChange, error }: { testID: string; label: string; value: string; placeholder?: string; min?: number; max: number; onChange: (v: string) => void; error?: string }) {
   const t = useTheme();
   const msg = useT();
   const now = value.trim() === '' ? 0 : parseBahtToSatang(value) ?? 0;
-  const step = (d: number) => onChange(formatSatang(Math.max(0, Math.min(max, now + d))));
+  const step = (d: number) => onChange(formatSatang(Math.max(min, Math.min(max, now + d))));
   const round = (sign: 1 | -1, id: string, label2: string) => (
     <Pressable testID={id} accessibilityRole="button" accessibilityLabel={label2} onPress={() => step(sign * 10_000)} style={{ width: t.target.min, height: t.target.min, borderRadius: t.target.min / 2, borderWidth: t.border.hair, borderColor: t.color.ruleStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: t.color.surface }}>
       {sign < 0 ? <Minus color={t.color.ink} size={14} /> : <Plus color={t.color.ink} size={14} />}
@@ -402,8 +402,14 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
   const saveDeduct = () =>
     flight.run(async () => {
       if (!who || !amountOk || view.closed) return;
+      // Nothing changed: no new events, and the lines keep their history (review 2 #2).
+      const was = whoHere.reduce((a, p) => a + p.amountSatang, 0);
+      const wasNet = whoNetHere.reduce((a, p) => a + p.amountSatang, 0);
+      const wasRoutes = new Set(whoHere.filter((p) => p.method !== 'netting').map((p) => p.method));
+      const sameRoute = sheet.routeSatang === 0 ? wasRoutes.size === 0 : wasRoutes.size === 1 && wasRoutes.has(method);
+      if (whoHere.length && was === sheet.totalSatang && wasNet === sheet.nettingSatang && sameRoute) return setDeductFor(null);
       const repaymentId = newId('rep-');
-      const plan = sheet.nettingSatang > 0 ? nettingPayloads({ worker: { id: who.id, name: who.name }, farm: farmPayer, owed: owedList, amountSatang: sheet.nettingSatang, saleId, date: todayIso(), repaymentId }) : null;
+      const plan = sheet.nettingSatang > 0 ? nettingPayloads({ worker: { id: who.id, name: who.name }, farm: farmPayer, owed: owedList, amountSatang: sheet.nettingSatang, saleId, date: view.day, repaymentId }) : null;
       // Said, not swallowed (review F11): nothing is written when the netting cannot be placed.
       if (plan && !plan.ok) return setSaveError(true);
       // Replace this sale's lines: the old ones go first, so a stop part-way leaves less deducted, never twice.
@@ -416,7 +422,7 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
       if (sheet.routeSatang > 0) {
         await fin.write(newId('dpay-'), null, {
           t: 'debt_payment_recorded',
-          fields: { worker: { id: who.id, name: who.name }, creditor: farmPayer, amountSatang: sheet.routeSatang, date: todayIso(), note: '', method, saleId },
+          fields: { worker: { id: who.id, name: who.name }, creditor: farmPayer, amountSatang: sheet.routeSatang, date: view.day, note: '', method, saleId },
         });
       }
       setDeductFor(null);
@@ -435,7 +441,6 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
     for (const n of notes) counts.set(n, (counts.get(n) ?? 0) + 1);
     return [...counts].map(([n, k]) => msg(n >= 2000 ? 'v2s.noteBills' : n >= 100 ? 'v2s.noteCoins' : 'v2s.noteSatang', { name: noteName(msg, n), n: k, amount: baht(n) })).join(' + ');
   };
-  const saleDate = (id: string) => hereAll(id).reduce((d, p) => (p.date > d ? p.date : d), '') || todayIso();
 
   // ── rounding previews (page 18) ──
   const fraction = r.before.filter((b) => b.cashBeforeSatang % 100 !== 0);
@@ -500,7 +505,7 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
             {asked ? <Kv label={msg('v2s.rounding')} value={baht(tp.adjustSatang)} /> : <Kv tone="muted" label={msg('v2s.rounding')} value={msg('v2s.nextStep')} />}
             <TotalRow label={msg('v2s.cashToPay')} value={bahtText(cash)} unit={msg('v2s.bahtUnit')} testID={`cash-${tp.id}`} />
             {tp.account && (tp.account.balanceSatang > 0 || total > 0) ? (
-              <Kv label={msg('v2s.debtLeft')} value={baht(Math.max(0, balanceAfterSale(tp.account, saleId, saleDate(tp.id))))} testID={`debt-left-${tp.id}`} />
+              <Kv label={msg('v2s.debtLeft')} value={baht(Math.max(0, balanceAfterSale(tp.account, saleId, view.day)))} testID={`debt-left-${tp.id}`} />
             ) : null}
             {ded.length ? (
               <View style={{ gap: t.space.xxs, marginTop: t.space.xs }}>
@@ -615,8 +620,12 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
                 testID="deduct-amount"
                 label={msg('v2s.deductNow', { max: baht(sheet.capSatang) })}
                 value={amount ?? formatSatang(sheet.totalSatang)}
+                min={sheet.nettingSatang}
                 max={sheet.capSatang}
-                onChange={setAmount}
+                onChange={(v) => {
+                  setAmount(v);
+                  setSaveError(false);
+                }}
                 error={sheet.problem === 'total-range' ? msg('v2s.deductRange', { max: baht(sheet.capSatang) }) : sheet.problem === 'below-netting' ? msg('v2s.belowNet', { min: baht(sheet.nettingSatang) }) : undefined}
               />
             </View>
@@ -634,13 +643,19 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
                   value={netAmount}
                   placeholder={formatSatang(0)}
                   max={sheet.netCapSatang}
-                  onChange={setNetAmount}
+                  onChange={(v) => {
+                    setNetAmount(v);
+                    setSaveError(false);
+                  }}
                   error={sheet.problem === 'net-range' ? msg('v2s.netRange', { max: baht(sheet.netCapSatang) }) : undefined}
                 />
                 <AppText variant="caption">{msg('v2s.netHint')}</AppText>
               </View>
             ) : null}
             <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.howRepay', { name: who.name })}</AppText>
+            {new Set(whoHere.filter((p) => p.method !== 'netting').map((p) => p.method)).size > 1 ? (
+              <Banner tone="warn" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.mergeRoutes')} lines={[]} testID="deduct-merge-warning" />
+            ) : null}
             {sheet.nettingSatang > 0 ? (
               <View testID="route-amount">
                 <Kv label={msg('v2s.routeAmount', { name: who.name })} value={baht(sheet.routeSatang)} />
@@ -655,10 +670,13 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
                     ? [msg('v2s.toHandSplit', { amount: baht(sheet.routeSatang) }), msg('v2s.toPile', { name: who.name, amount: baht(sheet.cashSatang) })]
                     : [msg('v2s.toAccount', { amount: baht(sheet.routeSatang) }), msg('v2s.toPile', { name: who.name, amount: baht(sheet.cashSatang) })];
               return (
-                <RadioCard key={m} testID={`method-${m}`} selected={method === m} title={msg(`v2s.method.${m}` as 'v2s.method.cash-from-share', { n: k + 1 })} detail={lines.join('\n')} onPress={() => setMethod(m)}>
+                <View key={m} style={{ gap: t.space.xxs }}>
+                  <RadioCard testID={`method-${m}`} selected={method === m} title={msg(`v2s.method.${m}` as 'v2s.method.cash-from-share', { n: k + 1 })} detail={lines.join('\n')} onPress={() => setMethod(m)}>
+                    {change ? <Chip tone="warn" label={msg('v2s.needsChange')} testID="needs-change" /> : null}
+                  </RadioCard>
+                  {/* Beside the card, not inside it: a button within a radio confuses a screen reader (review 2 #7). */}
                   {change ? (
-                    <View style={{ gap: t.space.xxs, alignItems: 'flex-start' }}>
-                      <Chip tone="warn" label={msg('v2s.needsChange')} testID="needs-change" />
+                    <View style={{ paddingHorizontal: t.space.md, gap: t.space.xxs }}>
                       <Pressable testID="why-notes" accessibilityRole="button" onPress={() => setShowNotes((x) => !x)} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
                         <AppText variant="bodySm" style={{ color: t.color.action, fontWeight: t.font.weight.bold }}>{msg('v2s.whyNotes')}</AppText>
                       </Pressable>
@@ -669,7 +687,7 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
                       ) : null}
                     </View>
                   ) : null}
-                </RadioCard>
+                </View>
               );
             })}
             <View style={{ ...cardStyle(t), padding: t.space.md }}>

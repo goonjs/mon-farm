@@ -1764,6 +1764,7 @@ const th = {
   'v2s.netFailed': 'บันทึกหักกลบไม่ได้ ยอดที่สวนต้องคืนเปลี่ยนไปแล้ว ปิดแล้วเปิดใหม่',
   'v2s.stepDown': 'ลด 100 บาท',
   'v2s.stepUp': 'เพิ่ม 100 บาท',
+  'v2s.mergeRoutes': 'การหักเดิมรับคืนหลายทาง บันทึกแล้วจะรวมเป็นทางที่เลือกทางเดียว',
   // ── end v2 sale (th) ──
 } as const;
 
@@ -3437,6 +3438,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'v2s.netFailed': 'the netting could not be saved: what the farm owes has changed. Close and open again',
   'v2s.stepDown': '100 baht less',
   'v2s.stepUp': '100 baht more',
+  'v2s.mergeRoutes': 'this deduction came by several routes; saving makes it the one route chosen',
   // ── end v2 sale (en) ──
 };
 
