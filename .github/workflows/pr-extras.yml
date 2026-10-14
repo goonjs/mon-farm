@@ -84,6 +84,11 @@ jobs:
 
       - name: Build web
         if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+        env:
+          # Public web config for project mon-farmmate (not secrets; E02-S01).
+          EXPO_PUBLIC_FIREBASE_PROJECT_ID: mon-farmmate
+          EXPO_PUBLIC_FIREBASE_API_KEY: AIzaSyA2LpIyAf0Sae1q0O5I1mRTb75AEv6hPwY
+          EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: mon-farmmate.firebaseapp.com
         run: npm run build:web
 
       - name: Upload web build
@@ -150,6 +155,7 @@ jobs:
           name: screenshots
           path: docs/ux/screenshots/
           if-no-files-found: warn
+          include-hidden-files: true
           retention-days: 3
 
       - name: Upload Playwright report on failure
@@ -158,6 +164,8 @@ jobs:
         with:
           name: playwright-results
           path: e2e/.results/
+          # The folder itself is hidden; v4 would otherwise upload nothing (#45).
+          include-hidden-files: true
           retention-days: 3
 
   # Label `preview`. Holds the OIDC permission but runs no PR code except the
@@ -171,6 +179,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -185,10 +194,33 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
+      # The PR may have closed while this ran; preview-cleanup.yml has then
+      # already deleted the channel, and deploying would bring it back.
+      - name: Check the PR is still open
+        id: open
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: echo "state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .state)" >> "$GITHUB_OUTPUT"
+
       - name: Deploy preview channel (expires in 7 days)
+        if: steps.open.outputs.state == 'open'
         run: ./scripts/deploy.sh preview "pr-${{ github.event.pull_request.number }}" | tee preview.log
 
-      - name: Show the preview URL
+      # One comment per PR: edit ours if it is there, otherwise post it.
+      - name: Comment the preview URL on the PR
+        if: steps.open.outputs.state == 'open'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          url=$(grep -Eo 'https://[^ ]+\.web\.app[^ ]*' preview.log | head -1)
-          echo "Preview: $url" >> "$GITHUB_STEP_SUMMARY"
+          node scripts/preview-comment.mjs preview.log "$SHA" > comment.md
+          head -2 comment.md | tail -1 >> "$GITHUB_STEP_SUMMARY"
+          id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- mon-farm-preview -->"))) | .id' | sed -n 1p)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@comment.md >/dev/null
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@comment.md >/dev/null
+          fi

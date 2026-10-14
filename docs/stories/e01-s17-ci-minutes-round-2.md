@@ -61,6 +61,13 @@ Status: Review
   โค้ดที่ทำ e2e พังอาจเข้า dev ก่อนถูกจับ (ถ้าไม่ได้ติด label) แล้ว CI บน dev จะแดง
 - required checks ใน branch protection: ไม่ต้องเพิ่ม `e2e`/`preview` (ถูกข้ามแล้วนับว่าผ่าน) ตามที่ตัดสินไว้ใน E01-S05 D8
 
+## หลัง rebase บน dev (2026-10-14)
+
+dev เดินไปมาก (#83 ตัวแปร `EXPO_PUBLIC_*` ตอน build, #84 preview site, preview comment + `preview-cleanup.yml`,
+test `ci-workflow.test.ts` ที่บังคับ `include-hidden-files` ทุก upload) จึงปรับให้ตรง: ย้าย job `preview` ของ ci.yml
+(รวม check PR ยังเปิด + comment URL) ไปอยู่ `pr-extras.yml`, ใส่ env `EXPO_PUBLIC_*` ใน build ของ pr-extras และ `cloudbuild.yaml`,
+ใส่ `include-hidden-files` ทุก upload. `preview-cleanup.yml` ใช้ได้ตามเดิม (ลบ channel `pr-N` เมื่อปิด PR)
+
 ## Verification
 
 - [x] Sandbox run: `npx vitest run scripts/` เขียว, YAML parse ผ่าน (ci, pr-extras, deploy-dev, cloudbuild)
