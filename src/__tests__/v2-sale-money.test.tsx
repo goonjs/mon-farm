@@ -141,14 +141,14 @@ describe('v2 sale money (pages 16–19)', () => {
   it('tally: each pile says where it comes from, and the parts add up to the cash', async () => {
     await inSale(<TallyScreen />);
     // แดง: share 3,637.50 rounded up 0.50 → 3,638.00.
-    expect(screen.getByTestId(`tally-from-${farm.red}`)).toHaveTextContent('จากยอดขาย 3,637.50 · ปัดเศษ +0.50');
+    expect(screen.getByTestId(`tally-from-${farm.red}`)).toHaveTextContent(/^จากยอดขาย3,637\.50ปัดเศษ\+0\.50$/);
     expect(screen.getByTestId(`tally-cash-${farm.red}`)).toHaveTextContent(/3,638\.00$/);
     // นัด: share 2,061.25, the 1,500 debt taken with the owner's transfer, rounded up 0.75 → 562.00.
-    expect(screen.getByTestId(`tally-from-${farm.nat}`)).toHaveTextContent('จากยอดขาย 2,061.25 · นัด → สวน −1,500.00 · ปัดเศษ +0.75');
+    expect(screen.getByTestId(`tally-from-${farm.nat}`)).toHaveTextContent(/^จากยอดขาย2,061\.25↘ นัด → สวน จ่ายหนี้−1,500\.00ปัดเศษ\+0\.75$/);
     expect(screen.getByTestId(`tally-cash-${farm.nat}`)).toHaveTextContent(/562\.00$/);
     expect(screen.queryByTestId(`tally-net-${farm.nat}`)).toBeNull();
     // Owner: the transfer is his share plus the 1,500 repaid with it.
-    expect(screen.getByTestId('tally-owner-from')).toHaveTextContent('จากยอดขาย 5,698.75 · นัด → สวน +1,500.00 · ปัดเศษ −1.25');
+    expect(screen.getByTestId('tally-owner-from')).toHaveTextContent(/^จากยอดขาย5,698\.75↘ เงินจากนัด \(มากับยอดโอน\)\+1,500\.00ปัดเศษ−1\.25$/);
     // three checks: the sale parts add to the sale, the debt moves and the rounding each add to 0
     expect(screen.getByTestId('tally-check-sale')).toHaveTextContent(/11,397\.50/);
     expect(screen.getByTestId('tally-check-debt')).toHaveTextContent(/= 0\.00/);

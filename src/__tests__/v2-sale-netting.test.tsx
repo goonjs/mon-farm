@@ -182,7 +182,9 @@ describe('tally origin lines with a deduction, a netting and a rounding (E05-S08
     await press('round-confirm');
     r.unmount();
     await inSale2(<TallyScreen />);
-    const line = screen.getByTestId(`tally-from-${farm.nat}`).props.children as string;
+    // one row per amount, each with its sign (owner 2026-10-14)
+    const rows = (['sale', 'debt', 'back', 'round'] as const).map((k) => screen.getByTestId(`tally-part-${farm.nat}-${k}`));
+    const line = rows.map((r) => r.props.accessibilityLabel ?? '').join(' · ');
     // share 2,061.25 − 500 นัด repaid + 200 the farm repaid นัด (by netting) = 1,761.25, rounded up to 1,762.00.
     expect(line).toBe('จากยอดขาย 2,061.25 · นัด → สวน −500.00 · สวน → นัด +200.00 · ปัดเศษ +0.75');
     expect(parts(line).reduce((a, x) => a + x, 0)).toBe(176_200);

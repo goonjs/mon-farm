@@ -11,7 +11,7 @@ import { SaleProvider } from '../store/SaleProvider';
 import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { wrap } from '../test/render';
-import { PaymentScreen, SettlementScreen } from '../v2/sale/money-screens';
+import { PaymentScreen, SettlementScreen, TallyScreen } from '../v2/sale/money-screens';
 
 /**
  * The deduct sheet and the settlement card as on sale mockup v1.1.0 pages
@@ -302,6 +302,21 @@ describe('netting is pressed by the owner, never by itself (D-60): a warning bef
     expect(screen.queryByTestId('deduct-sheet')).toBeNull();
     expect((await financeStore.load()).length).toBe(before + 1);
   });
+
+  it('editing a saved deduction does not warn again (review 3 #6)', async () => {
+    await inSale(<SettlementScreen />, WARN);
+    await press(`edit-deduct-${farm.nat}`);
+    await type('deduct-amount', '1400');
+    await press('deduct-save');
+    expect(screen.queryByTestId('deduct-net-warning')).toBeNull();
+    expect(screen.queryByTestId('deduct-sheet')).toBeNull();
+  });
+
+  it('before rounding is answered, the owner card shows the transfer unrounded (review 3 #2)', async () => {
+    await inSale(<SettlementScreen />, WARN);
+    // นัด pays from his cash here, so the transfer is the farm part as it stands before rounding
+    expect(screen.getByTestId('owner-transfer')).toHaveTextContent(/5,698\.75/);
+  });
 });
 
 describe('an older sale (review 2 #1, #3)', () => {
@@ -342,7 +357,14 @@ describe('D-61: deducted over the share', () => {
     });
   });
 
-  it('locks the owner\'s transfer tick too (review F6)', async () => {
+  it('the tally checks are real: over-deducted, the debt check and the tapper line show ✗ (review 3 #1)', async () => {
+    await inSale(<TallyScreen />, OVER);
+    expect(screen.getByTestId('tally-off')).toBeTruthy();
+    expect(screen.getByTestId('tally-check-debt')).toHaveTextContent(/✗/);
+    expect(screen.getByTestId(`tally-mismatch-${farm.red}`)).toBeTruthy();
+  });
+
+    it('locks the owner\'s transfer tick too (review F6)', async () => {
     await inSale(<PaymentScreen />, OVER);
     expect(screen.getAllByTestId('tick-owner').pop()!.props.accessibilityState).toMatchObject({ disabled: true });
     expect(screen.getAllByTestId(`tick-${farm.red}`).pop()!.props.accessibilityState).toMatchObject({ disabled: true });

@@ -279,7 +279,7 @@ function Dir({ way }: { way: DebtWay }) {
   const fg = way === 'in' ? t.color.debtIn : way === 'out' ? t.color.debtOut : t.color.debtNet;
   const bg = way === 'in' ? t.color.debtInSunk : way === 'out' ? t.color.debtOutSunk : t.color.debtNetSunk;
   return (
-    <View accessible={false} style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderStyle: way === 'net' ? 'dashed' : 'solid', borderColor: fg, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+    <View accessible={false} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden aria-hidden style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderStyle: way === 'net' ? 'dashed' : 'solid', borderColor: fg, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
       <Text style={{ color: fg, fontSize: 15, fontWeight: t.font.weight.bold, lineHeight: 18 }}>{way === 'in' ? '↘' : way === 'out' ? '↗' : '⇄'}</Text>
     </View>
   );
@@ -301,12 +301,12 @@ function Move({ way, title, detail, amount, testID }: { way: DebtWay; title: str
   );
 }
 
-/** A label with its direction mark, for a `din`/`dout`/`dnet` Kv. */
+/** A label with its direction mark, for a `din`/`dout`/`dnet` Kv: nested Text, so it keeps Kv's font and colour on native too. */
 const DirLabel = ({ way, text }: { way: DebtWay; text: string }) => (
-  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-    <Dir way={way} />
-    <Text>{text}</Text>
-  </View>
+  <Text>
+    <Text style={{ fontWeight: '700' }}>{way === 'in' ? '↘ ' : way === 'out' ? '↗ ' : '⇄ '}</Text>
+    {text}
+  </Text>
 );
 
 /** Section heading on page 17: ก / ข / ค, with an optional tag ("ไม่ใช่ยอดขาย"). */
@@ -316,6 +316,23 @@ function Section({ children, tag }: { children: string; tag?: string }) {
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs, marginTop: t.space.sm }}>
       <AppText variant="label">{children}</AppText>
       {tag ? <Chip tone="neutral" label={tag} /> : null}
+    </View>
+  );
+}
+
+/** One amount in a tally pile's breakdown: its own row, sign, colour and direction mark (owner 2026-10-14). */
+function Part({ testID, way, label, short, satang, base }: { testID: string; way?: DebtWay; label: string; short: string; satang: number; base?: boolean }) {
+  const t = useTheme();
+  const sign = base ? '' : satang >= 0 ? '+' : '−';
+  const value = `${sign}${baht(Math.abs(satang))}`;
+  const fg = way === 'in' ? t.color.debtIn : way === 'out' ? t.color.debtOut : t.color.inkSoft;
+  return (
+    <View testID={testID} accessible accessibilityLabel={`${short} ${value}`} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: t.space.sm, paddingVertical: 1 }}>
+      <Text style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: fg }}>
+        {way ? <Text style={{ fontWeight: '700' }}>{way === 'in' ? '↘ ' : '↗ '}</Text> : null}
+        {label}
+      </Text>
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'], color: fg }}>{value}</Text>
     </View>
   );
 }
@@ -490,7 +507,7 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
       const wasRoutes = new Set(whoHere.filter((p) => p.method !== 'netting').map((p) => p.method));
       const sameRoute = sheet.routeSatang === 0 ? wasRoutes.size === 0 : wasRoutes.size === 1 && wasRoutes.has(method);
       if (whoHere.length && was === sheet.totalSatang && wasNet === sheet.nettingSatang && sameRoute) return setDeductFor(null);
-      if (owedBack > 0 && sheet.nettingSatang === 0 && sheet.routeSatang > 0 && !netWarned) return setNetWarned(true);
+      if (!whoHere.length && owedBack > 0 && sheet.nettingSatang === 0 && sheet.routeSatang > 0 && !netWarned) return setNetWarned(true);
       const repaymentId = newId('rep-');
       const plan = sheet.nettingSatang > 0 ? nettingPayloads({ worker: { id: who.id, name: who.name }, farm: farmPayer, owed: owedList, amountSatang: sheet.nettingSatang, saleId, date: view.day, repaymentId }) : null;
       // Said, not swallowed (review F11): nothing is written when the netting cannot be placed.
@@ -611,8 +628,8 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
           repays tappers (↗) are two separate chunks; amounts carry no sign, the arrow and words say which way. */}
       {debtTappers.length ? (
         <>
-          <Section tag={msg('v2s.notSale')}>{msg('v2s.secDebt')}</Section>
           <View testID="debt-block" style={{ gap: t.space.sm }}>
+            <Section tag={msg('v2s.notSale')}>{msg('v2s.secDebt')}</Section>
             {payers.length ? (
               <View testID="debt-in-chunk" style={{ ...cardStyle(t), backgroundColor: t.color.debtInSunk, borderColor: t.color.debtIn, borderWidth: 1.5, padding: t.space.lg, gap: t.space.xxs }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
@@ -630,7 +647,7 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
                         title={msg(d.plan ? 'v2s.mvPlan' : 'v2s.mvPay', { name: tp.name })}
                         detail={[
                           ...d.routeLines.map((p) => msg(`v2s.how.${p.method}` as 'v2s.how.cash-from-share', { name: tp.name })),
-                          tp.nettedSatang ? msg('v2s.repaySplit', { money: baht(d.route), net: baht(tp.nettedSatang) }) : '',
+                          tp.nettedSatang && d.route ? msg('v2s.repaySplit', { money: baht(d.route), net: baht(tp.nettedSatang) }) : '',
                         ].filter(Boolean).join(' · ')}
                         amount={d.total}
                       />
@@ -737,7 +754,7 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
             ))}
           </View>
         ) : null}
-        <TotalRow label={`${msg('v2s.transferBy')}${asked ? '' : ` ${msg('v2s.notRounded')}`}`} value={baht(money.ownerTransferSatang)} unit={msg('v2s.bahtUnit')} testID="owner-transfer" size={22} />
+        <TotalRow label={`${msg('v2s.transferBy')}${asked ? '' : ` ${msg('v2s.notRounded')}`}`} value={baht(asked ? money.ownerTransferSatang : s.ownerSatang + r.transferInSatang)} unit={msg('v2s.bahtUnit')} testID="owner-transfer" size={22} />
         {transferIn.length ? <IconLine>{msg('v2s.transferRepayNote', { amount: baht(transferIn.reduce((a, x) => a + x.satang, 0)) })}</IconLine> : null}
         <View style={{ backgroundColor: t.color.surfaceRaised, borderRadius: t.radius.md, padding: t.space.md, gap: t.space.xs, marginTop: t.space.sm }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -995,13 +1012,18 @@ export function TallyScreen() {
   const transfers = by('transfer-with-owner');
   const total = (xs: readonly { satang: number }[]) => xs.reduce((a2, x) => a2 + x.satang, 0);
   const piles = s ? pilesCheck([...money.tappers.map((tp) => ({ satang: tp.cashSatang })), { satang: money.ownerTransferSatang }, { satang: total(cashIn) }, { satang: total(splitIn) }], s.grossSatang) : null;
-  // The three checks: the sale parts add to the sale; debt only moves money (sums to 0); so does rounding.
+  // The three checks, from the money as it stands (review 3 #1), so a wrong pile shows ✗:
+  // the sale parts add to the sale; what debt moved, pile by pile, sums to 0; so does what rounding moved.
   const saleSum = s ? money.tappers.reduce((a2, tp) => a2 + tp.shareSatang, 0) + s.ownerSatang : 0;
-  const debtParts = [...money.tappers.flatMap((tp) => [-(routeOf(tp.id) + tp.nettedSatang), tp.nettedSatang]).filter(Boolean), ...[...transfers, ...cashIn, ...splitIn].map((x) => x.satang)];
-  const debtSum = debtParts.reduce((a2, x) => a2 + x, 0);
   const ownerRound = s ? r.result.ownerSatang - s.ownerSatang : 0;
-  const roundParts = [...money.tappers.map((tp) => tp.adjustSatang), ownerRound].filter(Boolean);
+  // Listed as the rows above read them (นัด −1,500, +640, …); the sum itself comes from the piles as they stand,
+  // so a pile that does not add up (D-61: cash held at 0) makes it non-zero and shows ✗.
+  const debtParts = [...money.tappers.flatMap((tp) => [-(routeOf(tp.id) + tp.nettedSatang), tp.nettedSatang]), ...[...transfers, ...cashIn, ...splitIn].map((x) => x.satang)].filter(Boolean);
+  const debtSum = piles ? piles.sumSatang - (s?.grossSatang ?? 0) - (money.tappers.reduce((a2, tp) => a2 + tp.cashSatang - tp.cashBeforeSatang, 0) + ownerRound) : 0;
+  const roundParts = [...money.tappers.map((tp) => tp.cashSatang - tp.cashBeforeSatang), ownerRound].filter(Boolean);
   const roundSum = roundParts.reduce((a2, x) => a2 + x, 0);
+  // A tapper whose line does not add up to the money shown (D-61: deducted over the share, cash held at 0).
+  const lineOff = (tp: (typeof money.tappers)[number]) => tp.shareSatang - routeOf(tp.id) + tp.adjustSatang - tp.cashSatang;
   const signed = (n: number) => `${n >= 0 ? '+' : '−'}${baht(Math.abs(n))}`;
   const ink = (id: string) => toneColours(t, master ? tapperTone(master, id) : 'neutral').fg;
 
@@ -1031,40 +1053,48 @@ export function TallyScreen() {
           <View style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.xs }}>
             <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{msg('v2s.tallyWhoGets')}</AppText>
             {money.tappers.map((tp) => {
-              const route = routeOf(tp.id);
-              const parts = [
-                msg('v2s.partSale', { amount: baht(tp.shareSatang) }),
-                route + tp.nettedSatang ? msg('v2s.partDebt', { name: tp.name, amount: signed(-(route + tp.nettedSatang)) }) : '',
-                tp.nettedSatang ? msg('v2s.partBack', { name: tp.name, amount: signed(tp.nettedSatang) }) : '',
-                tp.adjustSatang ? msg('v2s.partRound', { amount: signed(tp.adjustSatang) }) : '',
-              ].filter(Boolean);
+              const repaid = routeOf(tp.id) + tp.nettedSatang;
               return (
-                <View key={tp.id}>
+                <View key={tp.id} style={{ gap: 2 }}>
                   <Kv label={<Text><TapperIcon color={ink(tp.id)} size={12} /> {msg('v2s.cashTo', { name: tp.name })}</Text>} value={baht(tp.cashSatang)} testID={`tally-cash-${tp.id}`} />
-                  <AppText variant="caption" testID={`tally-from-${tp.id}`}>{parts.join(' · ')}</AppText>
+                  <View testID={`tally-from-${tp.id}`} style={{ gap: 2, marginLeft: t.space.md, paddingLeft: t.space.sm, borderLeftWidth: 2, borderLeftColor: t.color.ruleFaint }}>
+                    <Part testID={`tally-part-${tp.id}-sale`} base label={msg('v2s.fromSale')} short={msg('v2s.fromSale')} satang={tp.shareSatang} />
+                    {repaid ? <Part testID={`tally-part-${tp.id}-debt`} way="in" label={msg('v2s.payRouteAll', { name: tp.name })} short={msg('v2s.wayTo', { from: tp.name, to: msg('v2s.farmWord') })} satang={-repaid} /> : null}
+                    {tp.nettedSatang ? <Part testID={`tally-part-${tp.id}-back`} way="out" label={msg('v2s.payBack', { name: tp.name })} short={msg('v2s.wayTo', { from: msg('v2s.farmWord'), to: tp.name })} satang={tp.nettedSatang} /> : null}
+                    {tp.adjustSatang ? <Part testID={`tally-part-${tp.id}-round`} label={msg('v2s.rounding')} short={msg('v2s.rounding')} satang={tp.adjustSatang} /> : null}
+                  </View>
+                  {lineOff(tp) ? <Chip tone="reject" label={msg('v2s.lineOff', { amount: baht(Math.abs(lineOff(tp))) })} testID={`tally-mismatch-${tp.id}`} /> : null}
                 </View>
               );
             })}
             <View>
               <Kv label={msg('v2s.transferOwner')} value={baht(money.ownerTransferSatang)} testID="tally-transfer" />
-              <AppText variant="caption" testID="tally-owner-from">
-                {[
-                  msg('v2s.partSale', { amount: baht(s.ownerSatang) }),
-                  ...transfers.map((x) => msg('v2s.partDebt', { name: x.name, amount: signed(x.satang) })),
-                  ownerRound ? msg('v2s.partRound', { amount: signed(ownerRound) }) : '',
-                ].filter(Boolean).join(' · ')}
-              </AppText>
+              <View testID="tally-owner-from" style={{ gap: 2, marginLeft: t.space.md, paddingLeft: t.space.sm, borderLeftWidth: 2, borderLeftColor: t.color.ruleFaint }}>
+                <Part testID="tally-part-owner-sale" base label={msg('v2s.fromSale')} short={msg('v2s.fromSale')} satang={s.ownerSatang} />
+                {transfers.map((x, k) => (
+                  <Part key={k} testID={k ? `tally-part-owner-debt-${k}` : 'tally-part-owner-debt'} way="in" label={msg('v2s.moneyFrom', { name: x.name, how: msg('v2s.via2.transfer-with-owner') })} short={msg('v2s.wayTo', { from: x.name, to: msg('v2s.farmWord') })} satang={x.satang} />
+                ))}
+                {ownerRound ? <Part testID="tally-part-owner-round" label={msg('v2s.rounding')} short={msg('v2s.rounding')} satang={ownerRound} /> : null}
+              </View>
             </View>
             {cashIn.length ? (
               <View>
                 <Kv label={msg('v2s.cashDebt')} value={baht(cashIn.reduce((a2, x) => a2 + x.satang, 0))} testID="tally-cash-debt" />
-                <AppText variant="caption">{cashIn.map((x) => msg('v2s.partDebt', { name: x.name, amount: signed(x.satang) })).join(' · ')}</AppText>
+                <View style={{ gap: 2, marginLeft: t.space.md, paddingLeft: t.space.sm, borderLeftWidth: 2, borderLeftColor: t.color.ruleFaint }}>
+                {cashIn.map((x, k) => (
+                  <Part key={k} testID={`tally-part-cash-${k}`} way="in" label={msg('v2s.payRouteAll', { name: x.name })} short={msg('v2s.wayTo', { from: x.name, to: msg('v2s.farmWord') })} satang={x.satang} />
+                ))}
+                </View>
               </View>
             ) : null}
             {splitIn.length ? (
               <View>
                 <Kv label={msg('v2s.splitMoney')} value={baht(splitIn.reduce((a2, x) => a2 + x.satang, 0))} testID="tally-split" />
-                <AppText variant="caption">{splitIn.map((x) => msg('v2s.partDebt', { name: x.name, amount: signed(x.satang) })).join(' · ')}</AppText>
+                <View style={{ gap: 2, marginLeft: t.space.md, paddingLeft: t.space.sm, borderLeftWidth: 2, borderLeftColor: t.color.ruleFaint }}>
+                {splitIn.map((x, k) => (
+                  <Part key={k} testID={`tally-part-split-${k}`} way="in" label={msg('v2s.payRouteAll', { name: x.name })} short={msg('v2s.wayTo', { from: x.name, to: msg('v2s.farmWord') })} satang={x.satang} />
+                ))}
+                </View>
               </View>
             ) : null}
             <TotalRow label={msg('v2s.allMoney')} value={baht(piles.sumSatang)} testID="tally-sum" size={20} />
