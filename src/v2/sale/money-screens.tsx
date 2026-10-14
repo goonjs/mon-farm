@@ -23,7 +23,8 @@ import { Pressable, Text, View } from 'react-native';
 import { projectAccounts, type Account } from '../../core/finance/accounts';
 import { buyerCheck, buyerCheckPayload, buyerCheckTarget, saleFigures } from '../../core/finance/buyer-check';
 import type { Settlement } from '../../core/settle';
-import { needsChange, nettingPayloads, overDeducted, pilesCheck, proposeDeduction, deductionCap, roundCash, type RoundingMode } from '../../core/finance/deduct';
+import { cashNotes, deductSheet, nettingPayloads, overDeducted, pickNotes, pilesCheck, roundCash, type RoundingMode } from '../../core/finance/deduct';
+import { balanceAfterSale } from '../../core/finance/debts';
 import { formatSatang, parseBahtToSatang, todayIso } from '../../core/finance/money';
 import { OWNER_PAYEE, paymentMarkPayload, paymentStatus, paymentTarget, salePaymentConflicts } from '../../core/finance/payments';
 import { BANKS } from '../../core/finance/promptpay';
@@ -272,6 +273,40 @@ function CheckBody({ bump }: { bump: () => void }) {
   );
 }
 
+/** An amount box with − and + beside it, ฿100 a step, kept between 0 and `max` (mockup 17a). */
+function AmountStepper({ testID, label, value, placeholder, max, onChange, error }: { testID: string; label: string; value: string; placeholder?: string; max: number; onChange: (v: string) => void; error?: string }) {
+  const t = useTheme();
+  const msg = useT();
+  const now = value.trim() === '' ? 0 : parseBahtToSatang(value) ?? 0;
+  const step = (d: number) => onChange(formatSatang(Math.max(0, Math.min(max, now + d))));
+  const round = (sign: 1 | -1, id: string, label2: string) => (
+    <Pressable testID={id} accessibilityRole="button" accessibilityLabel={label2} onPress={() => step(sign * 10_000)} style={{ width: t.target.min, height: t.target.min, borderRadius: t.target.min / 2, borderWidth: t.border.hair, borderColor: t.color.ruleStrong, alignItems: 'center', justifyContent: 'center', backgroundColor: t.color.surface }}>
+      {sign < 0 ? <Minus color={t.color.ink} size={14} /> : <Plus color={t.color.ink} size={14} />}
+    </Pressable>
+  );
+  // In the field's own aside, so the row is the field's and the input never runs under the buttons.
+  return (
+    <TextField
+      testID={testID}
+      label={label}
+      value={value}
+      placeholder={placeholder}
+      onChangeText={onChange}
+      keyboardType="decimal-pad"
+      error={error}
+      aside={
+        <View style={{ flexDirection: 'row', gap: t.space.xs }}>
+          {round(-1, `${testID}-minus`, msg('v2s.stepDown'))}
+          {round(1, `${testID}-plus`, msg('v2s.stepUp'))}
+        </View>
+      }
+    />
+  );
+}
+
+const NOTE_KEYS: Record<number, string> = { 100000: '1000', 50000: '500', 10000: '100', 5000: '50', 2000: '20', 1000: '10', 500: '5', 200: '2', 100: '1' };
+const noteName = (msg: ReturnType<typeof useT>, satang: number) => (NOTE_KEYS[satang] ? msg(`v2s.note.${NOTE_KEYS[satang]}` as 'v2s.note.1000') : baht(satang));
+
 // ── 17 · สรุปยอดส่วนแบ่ง + 17a หักหนี้ + 18 ปัดเศษ ──────────────────────────────
 
 export function SettlementScreen({ rounding = false }: { rounding?: boolean }) {
@@ -291,9 +326,12 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
   const flight = useInFlight();
   const { saleId, master, saleTitle } = view;
   const [deductFor, setDeductFor] = useState<string | null>(null);
-  const [amount, setAmount] = useState('');
+  // null = untouched: the box follows the proposal; an empty box is 0 (review F8).
+  const [amount, setAmount] = useState<string | null>(null);
   const [netAmount, setNetAmount] = useState('');
   const [method, setMethod] = useState<(typeof METHODS)[number]>('cash-from-share');
+  const [showNotes, setShowNotes] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [roundOpen, setRoundOpen] = useState(openRounding);
   // /rounding is a write screen: a closed sale goes to its payment (re-review N4).
   useLeaveIfClosed({ ready: view.ready, closed: view.closed && openRounding, saleId: view.saleId });
@@ -319,58 +357,85 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
   const cashIn = money.tappers.flatMap((tp) => here(tp.id).filter((p) => p.method === 'cash-from-share').map((p) => ({ name: tp.name, satang: p.amountSatang })));
   const farmPayer = { id: FARM_FUNDS, name: msg('fin.payer.farm') };
 
-  // ── the deduction sheet ──
+  // ── the deduction sheet (page 17a, owner 2026-10-14) ──
+  // One deduction per worker per sale: the sheet edits this sale's lines as a whole,
+  // so every amount below is "as if nothing were deducted here yet".
   const who = money.tappers.find((tp) => tp.id === deductFor) ?? null;
-  const balance = Math.max(0, who?.account?.balanceSatang ?? 0);
-  // Money the farm owes this worker (E11): the owner may set part of it against the debt (D-60, D-67).
-  const owedList = who && fin.state ? fin.state.reimbursements.filter((r) => r.to.id === who.id) : [];
+  const whoHere = who ? hereAll(who.id) : [];
+  const whoNetHere = whoHere.filter((p) => p.method === 'netting');
+  const voidedReps = whoNetHere.flatMap((p) => fin.state?.repayments.filter((r) => r.id === p.repaymentId && !r.deleted) ?? []);
+  // Money the farm owes this worker (E11), with what this sale's netting took added back (D-60, D-67).
+  const owedList = who && fin.state
+    ? fin.state.reimbursements
+        .filter((r) => r.to.id === who.id)
+        .map((r) => {
+          const back = voidedReps.reduce((a, rep) => a + rep.allocations.filter((x) => x.expenseId === r.expenseId).reduce((y, x) => y + x.satang, 0), 0);
+          return { ...r, remainingSatang: r.remainingSatang + back };
+        })
+    : [];
   const owedBack = owedList.reduce((a, r) => a + Math.max(0, r.remainingSatang), 0);
-  const netCap = Math.min(owedBack, balance);
+  const whoBalance = who ? (who.account?.balanceSatang ?? 0) + whoHere.reduce((a, p) => a + p.amountSatang, 0) : 0;
   const netTyped = netAmount.trim() === '' ? 0 : parseBahtToSatang(netAmount);
-  const netOk = netTyped !== null && netTyped >= 0 && netTyped <= netCap;
-  const net = netOk && netTyped !== null ? netTyped : 0;
-  const shareLeft = who ? who.shareSatang - who.debtDeductedSatang : 0;
-  // The ceiling grows by what is netted: share + netting, less what is netted (D-18, D-60).
-  const cap = who ? Math.max(0, deductionCap({ balanceSatang: balance, shareSatang: shareLeft, nettingSatang: net }) - net) : 0;
-  const proposed = who ? Math.min(cap, proposeDeduction({ balanceSatang: balance - net, shareSatang: shareLeft, nettingSatang: 0, planPerSaleSatang: who.account?.planPerSaleSatang ?? null })) : 0;
-  const typed = amount.trim() === '' ? proposed : parseBahtToSatang(amount);
-  const amountOk = netOk && typed !== null && typed >= 0 && typed <= cap && typed + net > 0;
+  const totalTyped = amount === null ? null : amount.trim() === '' ? 0 : parseBahtToSatang(amount);
+  const sheet = deductSheet({
+    balanceSatang: whoBalance,
+    shareSatang: who?.shareSatang ?? 0,
+    owedBackSatang: owedBack,
+    planPerSaleSatang: who?.account?.planPerSaleSatang ?? null,
+    totalSatang: totalTyped ?? (amount === null ? null : -1),
+    nettingSatang: netTyped ?? -1,
+    editing: whoHere.length > 0,
+  });
+  const amountOk = sheet.problem === null;
   const openDeduct = (id: string) => {
-    setAmount('');
-    setNetAmount('');
-    setMethod('cash-from-share');
+    const tp = money.tappers.find((x) => x.id === id);
+    const lines = hereAll(id);
+    const net = lines.filter((p) => p.method === 'netting').reduce((a, p) => a + p.amountSatang, 0);
+    const route = lines.find((p) => p.method !== 'netting')?.method;
+    setAmount(lines.length && tp ? formatSatang(lines.reduce((a, p) => a + p.amountSatang, 0)) : null);
+    setNetAmount(net ? formatSatang(net) : '');
+    setMethod(route && route !== 'outside' && route !== 'netting' ? route : 'cash-from-share');
+    setShowNotes(false);
+    setSaveError(false);
     setDeductFor(id);
   };
   const saveDeduct = () =>
     flight.run(async () => {
-      if (!who || !amountOk || typed === null || view.closed) return;
-      if (net > 0) {
-        const repaymentId = newId('rep-');
-        const plan = nettingPayloads({ worker: { id: who.id, name: who.name }, farm: farmPayer, owed: owedList, amountSatang: net, saleId, date: todayIso(), repaymentId });
-        if (!plan.ok) return;
+      if (!who || !amountOk || view.closed) return;
+      const repaymentId = newId('rep-');
+      const plan = sheet.nettingSatang > 0 ? nettingPayloads({ worker: { id: who.id, name: who.name }, farm: farmPayer, owed: owedList, amountSatang: sheet.nettingSatang, saleId, date: todayIso(), repaymentId }) : null;
+      // Said, not swallowed (review F11): nothing is written when the netting cannot be placed.
+      if (plan && !plan.ok) return setSaveError(true);
+      // Replace this sale's lines: the old ones go first, so a stop part-way leaves less deducted, never twice.
+      for (const p of whoHere) await voidLine(p);
+      if (plan?.ok) {
         // The debt payment counts only with its repayment, so writing it first means a stop between the two changes nothing.
         await fin.write(newId('dpay-'), null, plan.debtPayment);
         await fin.write(repaymentId, null, plan.repayment);
       }
-      if (typed > 0) {
+      if (sheet.routeSatang > 0) {
         await fin.write(newId('dpay-'), null, {
           t: 'debt_payment_recorded',
-          fields: { worker: { id: who.id, name: who.name }, creditor: farmPayer, amountSatang: typed, date: todayIso(), note: '', method, saleId },
+          fields: { worker: { id: who.id, name: who.name }, creditor: farmPayer, amountSatang: sheet.routeSatang, date: todayIso(), note: '', method, saleId },
         });
       }
       setDeductFor(null);
       bump();
     });
-  // Undo one line (the owner can fix a deduction before closing, D-61); a netting line takes its repayment with it.
-  const undoDeduct = (p: { id: string; headEventId: string; method: DebtPaymentMethod; repaymentId?: string }) =>
-    flight.run(async () => {
-      if (view.closed) return;
-      // Repayment first: a netting payment stops counting with it, so a stop between the two leaves nothing half-done.
-      const rep = p.method === 'netting' && p.repaymentId ? fin.state?.repayments.find((r) => r.id === p.repaymentId) : undefined;
-      if (rep) await fin.write(rep.id, rep.headEventId, { t: 'repayment_changed', patch: { deleted: true } });
-      await fin.write(p.id, p.headEventId, { t: 'debt_payment_changed', patch: { deleted: true } });
-      bump();
-    });
+  // One line out (the owner fixes a deduction before closing, D-61); a netting line takes its repayment with it.
+  const voidLine = async (p: { id: string; headEventId: string; method: DebtPaymentMethod; repaymentId?: string }) => {
+    // Repayment first: a netting payment stops counting with it, so a stop between the two leaves nothing half-done.
+    const rep = p.method === 'netting' && p.repaymentId ? fin.state?.repayments.find((r) => r.id === p.repaymentId) : undefined;
+    if (rep) await fin.write(rep.id, rep.headEventId, { t: 'repayment_changed', patch: { deleted: true } });
+    await fin.write(p.id, p.headEventId, { t: 'debt_payment_changed', patch: { deleted: true } });
+  };
+  const owedTo = (id: string) => (fin.state?.reimbursements ?? []).filter((r) => r.to.id === id).reduce((a, r) => a + Math.max(0, r.remainingSatang), 0);
+  const notesText = (notes: readonly number[]) => {
+    const counts = new Map<number, number>();
+    for (const n of notes) counts.set(n, (counts.get(n) ?? 0) + 1);
+    return [...counts].map(([n, k]) => msg(n >= 2000 ? 'v2s.noteBills' : n >= 100 ? 'v2s.noteCoins' : 'v2s.noteSatang', { name: noteName(msg, n), n: k, amount: baht(n) })).join(' + ');
+  };
+  const saleDate = (id: string) => hereAll(id).reduce((d, p) => (p.date > d ? p.date : d), '') || todayIso();
 
   // ── rounding previews (page 18) ──
   const fraction = r.before.filter((b) => b.cashBeforeSatang % 100 !== 0);
@@ -404,10 +469,17 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
       </IconLine>
       {money.tappers.map((tp) => {
         const z = s.perZone.find((x) => x.personId === tp.id);
-        const deducted = tp.debtDeductedSatang;
         const ded = hereAll(tp.id);
-        const over = overDeducted(deducted + tp.nettedSatang, tp.shareSatang, tp.nettedSatang);
+        const routeLines = ded.filter((p) => p.method !== 'netting');
+        const total = tp.debtDeductedSatang + tp.nettedSatang;
+        const over = overDeducted(total, tp.shareSatang, tp.nettedSatang);
         const cash = asked ? tp.cashSatang : tp.cashBeforeSatang;
+        const owed = owedTo(tp.id);
+        const plan = tp.account?.planPerSaleSatang ?? null;
+        // The pile the buyer hands over for this worker, before anything is lifted out of it (D-71 route 1).
+        const pile = tp.shareSatang - routeLines.filter((p) => p.method !== 'cash-from-share').reduce((a, p) => a + p.amountSatang, 0);
+        const taken = routeLines.filter((p) => p.method === 'cash-from-share').reduce((a, p) => a + p.amountSatang, 0);
+        const notes = taken ? pickNotes(pile, taken) : null;
         return (
           <View key={tp.id} testID={`share-${tp.id}`} style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.xxs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, marginBottom: t.space.xs }}>
@@ -418,33 +490,42 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
             <Kv label={msg('v2s.weight')} value={msg('v2f.kg', { n: kgText(tp.netG) })} />
             <Kv label={msg('v2s.sales')} value={baht(tp.grossSatang)} />
             <Kv label={msg('v2s.tapperShare', { pct: z ? 100 - z.ownerPct : tp.pct })} value={baht(tp.shareSatang)} testID={`share-amt-${tp.id}`} />
-            {deducted ? <Kv tone="minus" label={msg('v2s.debtDeducted')} value={`−${baht(deducted)}`} /> : tp.nettedSatang ? null : <Kv tone="muted" label={msg('v2s.debtDeductedShort')} value={msg('v2s.notDeducted')} />}
-            {tp.nettedSatang ? <Kv tone="minus" label={msg('v2s.netTitle')} value={`−${baht(tp.nettedSatang)}`} testID={`netted-${tp.id}`} /> : null}
+            {/* หักหนี้ is the whole debt taken at this sale; what the farm owed back is netted in as a + line (mockup 17a). */}
+            {total ? (
+              <Kv tone="minus" label={msg(plan !== null ? 'v2s.debtDeductedPlan' : 'v2s.debtDeductedShort')} value={`−${baht(total)}`} testID={`deducted-${tp.id}`} />
+            ) : (
+              <Kv tone="muted" label={msg('v2s.debtDeductedShort')} value={msg('v2s.notDeducted')} />
+            )}
+            {tp.nettedSatang ? <Kv tone="plus" label={msg('v2s.nettedBack', { name: tp.name })} value={`+${baht(tp.nettedSatang)}`} testID={`netted-${tp.id}`} /> : null}
             {asked ? <Kv label={msg('v2s.rounding')} value={baht(tp.adjustSatang)} /> : <Kv tone="muted" label={msg('v2s.rounding')} value={msg('v2s.nextStep')} />}
             <TotalRow label={msg('v2s.cashToPay')} value={bahtText(cash)} unit={msg('v2s.bahtUnit')} testID={`cash-${tp.id}`} />
-            {tp.account && (tp.account.balanceSatang > 0 || deducted > 0 || tp.nettedSatang > 0) ? <Kv label={msg('v2s.debtLeft')} value={baht(Math.max(0, tp.account.balanceSatang))} /> : null}
-            {ded.length ? (
-              <>
-                {ded.map((p) => (
-                  <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
-                    <View style={{ flex: 1 }}>
-                      <IconLine icon={(c) => <CoinIcon color={c} size={12} />}>
-                        {msg(`v2s.how.${p.method}` as 'v2s.how.cash-from-share', { name: tp.name })}
-                      </IconLine>
-                    </View>
-                    {view.closed ? null : (
-                      <Button testID={`undo-deduct-${p.id}`} disabled={flight.busy} onPress={() => void undoDeduct(p)}>
-                        {msg('v2s.undoDeduct')}
-                      </Button>
-                    )}
-                  </View>
-                ))}
-              </>
+            {tp.account && (tp.account.balanceSatang > 0 || total > 0) ? (
+              <Kv label={msg('v2s.debtLeft')} value={baht(Math.max(0, balanceAfterSale(tp.account, saleId, saleDate(tp.id))))} testID={`debt-left-${tp.id}`} />
             ) : null}
-            {tp.account && tp.account.balanceSatang > 0 && !view.closed ? (
+            {ded.length ? (
+              <View style={{ gap: t.space.xxs, marginTop: t.space.xs }}>
+                {routeLines.map((p) => (
+                  <IconLine key={p.id} icon={(c) => <CoinIcon color={c} size={12} />}>
+                    {msg(`v2s.how.${p.method}` as 'v2s.how.cash-from-share', { name: tp.name })}
+                  </IconLine>
+                ))}
+                {taken ? (
+                  notes ? (
+                    <View testID={`notes-${tp.id}`}>
+                      <IconLine icon={(c) => <Check color={c} size={10} />}>{msg('v2s.pickNotes', { notes: notesText(notes) })}</IconLine>
+                    </View>
+                  ) : (
+                    <Chip tone="warn" label={msg('v2s.needsChange')} testID={`notes-${tp.id}`} />
+                  )
+                ) : null}
+                {tp.nettedSatang ? <IconLine icon={(c) => <CoinIcon color={c} size={12} />}>{msg('v2s.how.netting', { name: tp.name })}</IconLine> : null}
+                {view.closed ? null : <LinkRow testID={`edit-deduct-${tp.id}`} label={msg('v2s.editDeduct')} onPress={() => openDeduct(tp.id)} />}
+              </View>
+            ) : tp.account && tp.account.balanceSatang > 0 && !view.closed ? (
               <>
-                <View style={{ backgroundColor: t.color.brandCream, borderRadius: t.radius.md, padding: t.space.sm, marginTop: t.space.xs }}>
+                <View testID={`owed-hint-${tp.id}`} style={{ backgroundColor: t.color.brandCream, borderRadius: t.radius.md, padding: t.space.sm, marginTop: t.space.xs, gap: t.space.xxs }}>
                   <IconLine icon={(c) => <DebtIcon color={c} size={12} />}>{msg('v2s.debtOwed', { amount: baht(tp.account.balanceSatang) })}</IconLine>
+                  {owed > 0 ? <IconLine icon={(c) => <ChevronLeft color={c} size={12} />}>{msg('v2s.netOwed', { name: tp.name, amount: baht(owed) })}</IconLine> : null}
                 </View>
                 <Button testID={`deduct-${tp.id}`} icon={(c) => <Minus color={c} size={12} />} onPress={() => openDeduct(tp.id)}>
                   {msg('v2s.deduct')}
@@ -514,35 +595,92 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
         {who ? (
           <>
             <Kv label={msg('v2s.shareNow')} value={baht(who.shareSatang)} />
+            <View testID="deduct-breakdown" style={{ backgroundColor: t.color.actionSunk, borderRadius: t.radius.md, padding: t.space.md, gap: t.space.xs }}>
+              <Kv label={msg('v2s.canDeduct')} value={baht(Math.max(0, whoBalance))} />
+              {(['fertilizer', 'loan', 'other'] as const).map((k) =>
+                who.account?.summary.owed[k] ? <IconLine key={k} icon={(c) => <DebtIcon color={c} size={10} />}>{`${msg(`debt.kind.${k}`)} ${baht(who.account.summary.owed[k])}`}</IconLine> : null,
+              )}
+              {who.account && who.account.summary.owed.loan + who.account.summary.owed.fertilizer + who.account.summary.owed.other > whoBalance ? (
+                <IconLine>{`${msg('v2s.repaidSoFar')} −${baht(who.account.summary.owed.loan + who.account.summary.owed.fertilizer + who.account.summary.owed.other - whoBalance)}`}</IconLine>
+              ) : null}
+              <View testID="deduct-reason">
+                <IconLine>
+                  {[
+                    who.account?.planPerSaleSatang != null ? msg('v2s.reasonPlan', { amount: baht(who.account.planPerSaleSatang) }) : msg('v2s.reasonAll'),
+                    sheet.proposedSatang < Math.min(Math.max(0, whoBalance), who.account?.planPerSaleSatang ?? Infinity) ? msg('v2s.reasonCut') : '',
+                  ].filter(Boolean).join(' · ')}
+                </IconLine>
+              </View>
+              <AmountStepper
+                testID="deduct-amount"
+                label={msg('v2s.deductNow', { max: baht(sheet.capSatang) })}
+                value={amount ?? formatSatang(sheet.totalSatang)}
+                max={sheet.capSatang}
+                onChange={setAmount}
+                error={sheet.problem === 'total-range' ? msg('v2s.deductRange', { max: baht(sheet.capSatang) }) : sheet.problem === 'below-netting' ? msg('v2s.belowNet', { min: baht(sheet.nettingSatang) }) : undefined}
+              />
+            </View>
             {owedBack > 0 ? (
               <View testID="net-card" style={{ backgroundColor: t.color.brandCream, borderRadius: t.radius.md, padding: t.space.md, gap: t.space.xs }}>
-                <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.netTitle')}</AppText>
+                <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.netSuggest')}</AppText>
                 <IconLine icon={(c) => <DebtIcon color={c} size={12} />}>{msg('v2s.netOwed', { name: who.name, amount: baht(owedBack) })}</IconLine>
+                {owedList.filter((r) => r.remainingSatang > 0).map((r) => {
+                  const e = fin.state?.expenses.find((x) => x.id === r.expenseId);
+                  return e?.item ? <AppText key={r.expenseId} variant="caption">{`${e.item} · ${r.date}`}</AppText> : null;
+                })}
+                <AmountStepper
+                  testID="net-amount"
+                  label={msg('v2s.netAmount', { max: baht(sheet.netCapSatang) })}
+                  value={netAmount}
+                  placeholder={formatSatang(0)}
+                  max={sheet.netCapSatang}
+                  onChange={setNetAmount}
+                  error={sheet.problem === 'net-range' ? msg('v2s.netRange', { max: baht(sheet.netCapSatang) }) : undefined}
+                />
                 <AppText variant="caption">{msg('v2s.netHint')}</AppText>
-                <TextField testID="net-amount" label={msg('v2s.netAmount', { max: baht(netCap) })} value={netAmount} placeholder={formatSatang(0)} onChangeText={setNetAmount} keyboardType="decimal-pad" error={netAmount.trim() && !netOk ? msg('v2s.netRange', { max: baht(netCap) }) : undefined} />
               </View>
             ) : null}
-            <View style={{ backgroundColor: t.color.actionSunk, borderRadius: t.radius.md, padding: t.space.md, gap: t.space.xs }}>
-              <Kv label={msg('v2s.canDeduct')} value={baht(balance - net)} />
-              <TextField testID="deduct-amount" label={msg('v2s.deductNow', { max: baht(cap) })} value={amount} placeholder={formatSatang(proposed)} onChangeText={setAmount} keyboardType="decimal-pad" error={amount.trim() && !amountOk ? msg('v2s.deductRange', { max: baht(cap) }) : undefined} />
-            </View>
             <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.howRepay', { name: who.name })}</AppText>
-            {METHODS.map((m, k) => (
-              <RadioCard
-                key={m}
-                testID={`method-${m}`}
-                selected={method === m}
-                title={msg(`v2s.method.${m}` as 'v2s.method.cash-from-share', { n: k + 1 })}
-                detail={m === 'cash-from-share' && typed !== null && needsChange(who.cashBeforeSatang, typed) ? msg('v2s.needsChange') : undefined}
-                onPress={() => setMethod(m)}
-              />
-            ))}
+            {sheet.nettingSatang > 0 ? (
+              <View testID="route-amount">
+                <Kv label={msg('v2s.routeAmount', { name: who.name })} value={baht(sheet.routeSatang)} />
+              </View>
+            ) : null}
+            {METHODS.map((m, k) => {
+              const change = m === 'cash-from-share' && pickNotes(who.shareSatang, sheet.routeSatang) === null;
+              const lines =
+                m === 'cash-from-share'
+                  ? [msg('v2s.toHand', { amount: baht(sheet.routeSatang) })]
+                  : m === 'buyer-split'
+                    ? [msg('v2s.toHandSplit', { amount: baht(sheet.routeSatang) }), msg('v2s.toPile', { name: who.name, amount: baht(sheet.cashSatang) })]
+                    : [msg('v2s.toAccount', { amount: baht(sheet.routeSatang) }), msg('v2s.toPile', { name: who.name, amount: baht(sheet.cashSatang) })];
+              return (
+                <RadioCard key={m} testID={`method-${m}`} selected={method === m} title={msg(`v2s.method.${m}` as 'v2s.method.cash-from-share', { n: k + 1 })} detail={lines.join('\n')} onPress={() => setMethod(m)}>
+                  {change ? (
+                    <View style={{ gap: t.space.xxs, alignItems: 'flex-start' }}>
+                      <Chip tone="warn" label={msg('v2s.needsChange')} testID="needs-change" />
+                      <Pressable testID="why-notes" accessibilityRole="button" onPress={() => setShowNotes((x) => !x)} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
+                        <AppText variant="bodySm" style={{ color: t.color.action, fontWeight: t.font.weight.bold }}>{msg('v2s.whyNotes')}</AppText>
+                      </Pressable>
+                      {showNotes ? (
+                        <View testID="pile-notes">
+                          <AppText variant="caption">{msg('v2s.pileNotes', { name: who.name, notes: cashNotes(who.shareSatang).map((n) => baht(n)).join(' · ') })}</AppText>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </RadioCard>
+              );
+            })}
             <View style={{ ...cardStyle(t), padding: t.space.md }}>
               <Kv label={msg('v2s.share')} value={baht(who.shareSatang)} />
-              <Kv tone="minus" label={msg('v2s.debtDeductedShort')} value={`−${baht((typed ?? 0) + who.debtDeductedSatang)}`} />
-              {net > 0 ? <Kv tone="minus" label={msg('v2s.netTitle')} value={`−${baht(net + who.nettedSatang)}`} /> : null}
-              <TotalRow label={msg('v2s.payBeforeRound', { name: who.name })} value={baht(Math.max(0, who.shareSatang - (typed ?? 0) - who.debtDeductedSatang))} size={18} />
+              <Kv tone="minus" label={msg('v2s.debtDeductedShort')} value={`−${baht(sheet.totalSatang)}`} testID="sheet-deducted" />
+              {sheet.nettingSatang > 0 ? <Kv tone="plus" label={msg('v2s.nettedBack', { name: who.name })} value={`+${baht(sheet.nettingSatang)}`} testID="sheet-netted" /> : null}
+              <TotalRow label={msg('v2s.payBeforeRound', { name: who.name })} value={baht(sheet.cashSatang)} size={18} testID="sheet-pay" />
+              <Kv label={msg('v2s.debtLeft')} value={baht(sheet.debtLeftSatang)} testID="sheet-debt-left" />
+              {sheet.routeSatang > 0 ? <Kv label={msg('v2s.repayVia')} value={msg(`v2s.via.${method}` as 'v2s.via.cash-from-share')} /> : null}
             </View>
+            {saveError ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.netFailed')} lines={[]} testID="deduct-error" /> : null}
             <View style={{ flexDirection: 'row', gap: t.space.sm }}>
               <View style={{ flex: 1 }}>
                 <Button testID="deduct-cancel" onPress={() => setDeductFor(null)}>
@@ -628,7 +766,7 @@ export function TallyScreen() {
   const s = money.settlement;
   const r = money.rounding;
   const sum = (m: DebtPaymentMethod) =>
-    money.tappers.reduce((a, tp) => a + (money.debts.get(tp.id)?.payments ?? []).filter((p) => p.saleId === saleId && !p.deleted && p.method === m).reduce((x, p) => x + p.amountSatang, 0), 0);
+    money.tappers.reduce((a, tp) => a + (money.debts.get(tp.id)?.payments ?? []).filter((p) => p.saleId === saleId && !p.deleted && p.counts && p.method === m).reduce((x, p) => x + p.amountSatang, 0), 0);
   const cashIn = sum('cash-from-share');
   const split = sum('buyer-split');
   const piles = s ? pilesCheck([...money.tappers.map((tp) => ({ satang: tp.cashSatang })), { satang: money.ownerTransferSatang }, { satang: cashIn }, { satang: split }], s.grossSatang) : null;
@@ -753,8 +891,9 @@ function PaymentBody({ bump }: { bump: () => void }) {
   const closed = view.closed;
   // Ticks stay open after close (owner 2026-10-10, N1 option ก); none while ticks
   // conflict (review #5), or for a tapper deducted over the share (D-61).
+  // The owner's tick waits on any over-deducted tapper too: route-3 repayments ride on his transfer (review F6).
   const locked = (tp: (typeof money.tappers)[number] | null) =>
-    conflicts.length > 0 || flight.busy || (!!tp && overDeducted(tp.debtDeductedSatang + tp.nettedSatang, tp.shareSatang, tp.nettedSatang));
+    conflicts.length > 0 || flight.busy || (tp ? overDeducted(tp.debtDeductedSatang + tp.nettedSatang, tp.shareSatang, tp.nettedSatang) : over);
 
   return (
     <FarmScreen

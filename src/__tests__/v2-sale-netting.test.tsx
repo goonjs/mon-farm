@@ -111,10 +111,10 @@ describe('netting against money the farm owes back (E06-S04, D-60, D-67)', () =>
     await inSale(<SettlementScreen />);
     await press(`deduct-${farm.nat}`);
     await type('net-amount', '400');
-    // the deduction ceiling is the share (2,061.25) while the debt is large, whatever is netted
-    await type('deduct-amount', '2061.26');
+    // หักหนี้ is the whole debt taken: the ceiling is share + netting (2,061.25 + 400) while the debt is large
+    await type('deduct-amount', '2461.26');
     expect(screen.getByTestId('deduct-save')).toBeDisabled();
-    await type('deduct-amount', '');
+    await type('deduct-amount', '2461.25');
     await press('deduct-save');
     const rep = await events('repayment_recorded');
     expect(rep).toHaveLength(1);
@@ -136,12 +136,14 @@ describe('netting against money the farm owes back (E06-S04, D-60, D-67)', () =>
     expect(screen.getByTestId('tally-sum')).toHaveTextContent(/11,397\.50/);
   });
 
-  it('undoing the netting line voids both its debt payment and the repayment', async () => {
+  it('taking the netting out of the deduction voids both its debt payment and the repayment', async () => {
     await inSale(<SettlementScreen />);
-    const netting = (await events('debt_payment_recorded')).find((e) => e.payload.t === 'debt_payment_recorded' && e.payload.fields.method === 'netting')!;
-    await press(`undo-deduct-${netting.targetId}`);
+    await press(`edit-deduct-${farm.nat}`);
+    await type('net-amount', '0');
+    await type('deduct-amount', '0');
+    await press('deduct-save');
     const changed = (await financeStore.load()).filter((e) => e.payload.t === 'debt_payment_changed' || e.payload.t === 'repayment_changed');
-    expect(changed.map((e) => e.payload.t).sort()).toEqual(['debt_payment_changed', 'repayment_changed']);
+    expect(changed.map((e) => e.payload.t).sort()).toEqual(['debt_payment_changed', 'debt_payment_changed', 'repayment_changed']);
     expect(screen.queryByTestId(`netted-${farm.nat}`)).toBeNull();
   });
 });
@@ -172,7 +174,8 @@ describe('tally origin lines with a deduction, a netting and a rounding (E05-S08
     const r = await inSale2(<SettlementScreen />);
     await press(`deduct-${farm.nat}`);
     await type('net-amount', '200');
-    await type('deduct-amount', '300');
+    // 500 of debt: 200 netted, 300 out of the cash
+    await type('deduct-amount', '500');
     await press('deduct-save');
     await press('to-rounding');
     await press('round-worker');

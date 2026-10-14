@@ -55,7 +55,7 @@ export function useSaleRounding(
   // Debt repayments the buyer transfers together with the owner share (D-71 route 3).
   let transferInSatang = 0;
   for (const a of debts.values()) {
-    for (const p of a.payments) if (p.saleId === saleId && !p.deleted && p.method === 'transfer-with-owner') transferInSatang += p.amountSatang;
+    for (const p of a.payments) if (p.saleId === saleId && !p.deleted && p.counts && p.method === 'transfer-with-owner') transferInSatang += p.amountSatang;
   }
 
   return { loaded: fin.events !== null, before, choice, result, check, ready, set, busy: inFlight.busy, transferInSatang };

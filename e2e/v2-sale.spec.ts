@@ -97,7 +97,8 @@ test('settlement: netting the money the farm owes back against a debt (E06-S04)'
   await id('deduct-nat').click();
   await expect(id('net-card')).toContainText('640.00');
   await id('net-amount').fill('400');
-  await id('deduct-amount').fill('300');
+  // หักหนี้ 700 in all: 400 netted, 300 out of the cash (mockup 17a)
+  await id('deduct-amount').fill('700');
   await shot(page, '23-netting');
   await id('deduct-save').click();
   await expect(id('netted-nat')).toContainText('400.00');
