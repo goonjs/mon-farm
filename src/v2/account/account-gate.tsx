@@ -170,6 +170,9 @@ export function AccountGate({
     return () => {
       live = false;
     };
+    // Once per account store: this reads what is stored at start-up. `resolve` is a fresh closure every
+    // render, so listing it would re-run the read (and a server check) on each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accounts]);
 
   const createGroup = async (user: User, name: string) => {
