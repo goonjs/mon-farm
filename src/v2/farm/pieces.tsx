@@ -36,7 +36,6 @@ import {
   CTA,
   FieldError,
   Minus,
-  PinnedActions,
   ScrollCue,
   Plus,
   ScreenHeader,
@@ -130,7 +129,6 @@ export function FarmScreen({
   failed,
   onBack,
   testID,
-  scrollCue,
 }: {
   title: string;
   subtitle?: string;
@@ -149,8 +147,6 @@ export function FarmScreen({
   /** The last write failed: said just under the header. */
   failed?: boolean;
   testID?: string;
-  /** Long review page: the footer bar shows when there is more to scroll (E05-S09). */
-  scrollCue?: boolean;
 }) {
   const t = useTheme();
   const msg = useT();
@@ -165,17 +161,14 @@ export function FarmScreen({
           <SaveFailed show />
         </View>
       ) : null}
-      {scrollCue ? (
+      {footer ? (
         <ScrollCue testID={testID} footer={footer} contentContainerStyle={body}>
           {children}
         </ScrollCue>
       ) : (
-        <>
-          <ScrollView testID={testID} contentContainerStyle={body}>
-            {children}
-          </ScrollView>
-          {footer ? <PinnedActions>{footer}</PinnedActions> : null}
-        </>
+        <ScrollView testID={testID} contentContainerStyle={body}>
+          {children}
+        </ScrollView>
       )}
       {overlay}
     </View>

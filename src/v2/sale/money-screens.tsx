@@ -42,7 +42,6 @@ import {
   AlertIcon,
   AppText,
   BankIcon,
-  BasketIcon,
   BottomSheet,
   Button,
   cardStyle,
@@ -154,25 +153,6 @@ function SaleCard({ s, title, subtitle, prefix, testID, children }: { s: Settlem
   );
 }
 
-/** One dot per basket: filled = full, ring = short (page 16). Past `CAP` the rest is a count. */
-const DOT_CAP = 24;
-function BasketDots({ id, total, short }: { id: string; total: number; short: number }) {
-  const t = useTheme();
-  // Short baskets are what the page is about: they are always drawn, the full ones fill what is left.
-  const shortShown = Math.min(short, DOT_CAP);
-  const fullShown = Math.min(total - short, DOT_CAP - shortShown);
-  const hidden = total - fullShown - shortShown;
-  return (
-    <View accessible={false} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 3, alignItems: 'center' }}>
-      {Array.from({ length: fullShown + shortShown }, (_, i) => {
-        const isShort = i >= fullShown;
-        return <View key={i} testID={`check-dot-${id}-${i}${isShort ? '-short' : ''}`} style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: isShort ? t.color.warn : t.color.accept, backgroundColor: isShort ? 'transparent' : t.color.accept }} />;
-      })}
-      {hidden > 0 ? <AppText variant="caption">{`+${hidden}`}</AppText> : null}
-    </View>
-  );
-}
-
 // ── 16 · ตรวจยอดกับคนรับซื้อยาง ───────────────────────────────────────────────
 
 export function CheckScreen() {
@@ -194,7 +174,7 @@ function CheckBody({ bump }: { bump: () => void }) {
   const [reason, setReason] = useState('');
   const base = `/v2/sale/${saleId}`;
   const shell = (children?: ReactNode, footer?: ReactNode, overlay?: ReactNode) => (
-    <FarmScreen title={msg('v2s.checkTitle')} subtitle={saleTitle} fallback={`${base}/counter` as Href} testID="check" scrollCue footer={footer} overlay={overlay}>
+    <FarmScreen title={msg('v2s.checkTitle')} subtitle={saleTitle} fallback={`${base}/counter` as Href} testID="check" footer={footer} overlay={overlay}>
       {children}
     </FarmScreen>
   );
@@ -276,16 +256,18 @@ function CheckBody({ bump }: { bump: () => void }) {
       </SaleCard>
       <View style={{ ...cardStyle(t), paddingHorizontal: t.space.lg }}>
         {s.perZone.map((z, i) => {
-          const points = [...rollup.byPoint.keys()].filter((p) => tapperOn(master, p, day) === z.personId).length;
+          const points = [...rollup.byPoint.entries()].filter(([p]) => tapperOn(master, p, day) === z.personId);
           return (
             <View key={z.zoneId} testID={`check-tapper-${z.personId}`} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, paddingVertical: t.space.sm, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint }}>
               <IconTile tone={tapperTone(master, z.personId)} icon={(c) => <TapperIcon color={c} size={20} />} />
               <View style={{ flex: 1 }}>
                 <AppText style={{ fontWeight: t.font.weight.bold }}>{nameOf(z.personId)}</AppText>
-                <IconLine icon={(c) => <PinIcon color={c} size={12} />}>{msg('pick.points', { n: points })}</IconLine>
-                <BasketDots id={z.personId ?? z.zoneId} total={z.totals.baskets} short={z.totals.shortBaskets} />
-                <IconLine icon={(c) => <BasketIcon color={c} size={12} />}>{msg('sales.baskets', { n: z.totals.baskets })}</IconLine>
-                {z.totals.shortBaskets ? <IconLine icon={(c) => <AlertIcon color={c} size={12} />}>{msg('v2s.shortTapper', { n: z.totals.shortBaskets })}</IconLine> : null}
+                <IconLine icon={(c) => <PinIcon color={c} size={12} />}>{msg('pick.points', { n: points.length })}</IconLine>
+                {points.map(([pid, tot]) => (
+                  <AppText key={pid} variant="bodySm" testID={`check-point-${pid}`}>
+                    {msg(tot.shortBaskets ? 'v2s.pointLineShort' : 'v2s.pointLine', { n: tot.standardBaskets, kg: kgText(tot.shortNetG), place: master.points.find((x) => x.id === pid)?.name ?? '' })}
+                  </AppText>
+                ))}
               </View>
               <Big value={msg('v2f.kg', { n: kgText(z.totals.netG) })} size={16} />
             </View>
@@ -448,7 +430,7 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
   const [note, setNote] = useState('');
   const base = `/v2/sale/${saleId}`;
   const shell = (children?: ReactNode, footer?: ReactNode, overlay?: ReactNode) => (
-    <FarmScreen title={msg('v2s.settleTitle')} subtitle={saleTitle} fallback={`${base}/check` as Href} testID="settlement" scrollCue footer={footer} overlay={overlay}>
+    <FarmScreen title={msg('v2s.settleTitle')} subtitle={saleTitle} fallback={`${base}/check` as Href} testID="settlement" footer={footer} overlay={overlay}>
       {children}
     </FarmScreen>
   );
@@ -1211,7 +1193,6 @@ function PaymentBody({ bump }: { bump: () => void }) {
       subtitle={subtitle}
       fallback={'/v2/sales' as Href}
       testID="payment"
-      scrollCue
       footer={
         closed ? null : (
           <Button testID="close-sale" size="large" disabled={!canClose} icon={(c) => <Check color={c} size={14} />} onPress={closeSale}>
