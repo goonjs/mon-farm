@@ -128,6 +128,16 @@ const PAIRINGS = [
   ['moneyOut', 'surfaceRaised', 4.5, 'money-out figure on cards'],
   ['moneyOut', 'moneyOutSunk', 4.5, 'money-out figure on its summary card'],
   ['ink', 'moneyOutSunk', 7, 'text on the money-out summary card'],
+  // Debt repayment (owner 2026-10-14) — figure and label on every ground.
+  ...['debtIn', 'debtOut', 'debtNet'].flatMap((k) => [
+    [k, 'stage', 4.5, `${k} figure on stage / white screens`],
+    [k, 'surface', 4.5, `${k} figure on screen ground`],
+    [k, 'surfaceRaised', 4.5, `${k} figure on cards`],
+    [k, 'surfaceSunk', 4.5, `${k} figure in wells`],
+    [k, `${k}Sunk`, 4.5, `${k} figure on its own chip / row`],
+    ['ink', `${k}Sunk`, 7, `text on the ${k} chip / row`],
+    ['inkSoft', `${k}Sunk`, 4.5, `secondary text on the ${k} chip / row`],
+  ]),
   // Category colours: icon/line/bar (3:1) and the name on its tile.
   ...[1, 2, 3, 4, 5, 6].flatMap((k) => [
     [`category${k}`, 'surface', 3, `category ${k} mark on screen ground`],

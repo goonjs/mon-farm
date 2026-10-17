@@ -101,12 +101,20 @@ export function useLeaveIfClosed(view: { ready: boolean; closed: boolean; saleId
   }, [ready, closed, saleId, router]);
 }
 
-export type KvTone = 'plain' | 'total' | 'minus' | 'plus' | 'muted' | 'warn';
+/** `din` / `dout` / `dnet`: money moved by debt, not the sale — tapper → farm, farm → tapper, netting (owner 2026-10-14). */
+export type KvTone = 'plain' | 'total' | 'minus' | 'plus' | 'muted' | 'warn' | 'din' | 'dout' | 'dnet';
 
 /** One label / value line. `total` sits under a rule, bold. */
 export function Kv({ label, value, tone = 'plain', testID, indent }: { label: ReactNode; value: ReactNode; tone?: KvTone; testID?: string; indent?: boolean }) {
   const t = useTheme();
-  const colour = tone === 'muted' ? t.color.inkSoft : tone === 'warn' ? t.color.warn : tone === 'plus' ? t.color.accept : t.color.ink;
+  const colour =
+    tone === 'muted' ? t.color.inkSoft
+    : tone === 'warn' ? t.color.warn
+    : tone === 'plus' ? t.color.accept
+    : tone === 'din' ? t.color.debtIn
+    : tone === 'dout' ? t.color.debtOut
+    : tone === 'dnet' ? t.color.debtNet
+    : t.color.ink;
   const total = tone === 'total';
   return (
     <View
