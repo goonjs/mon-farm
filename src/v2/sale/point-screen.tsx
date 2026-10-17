@@ -37,7 +37,7 @@ export function PointScreen() {
   // A closed sale takes no more weighing (review #2).
   useLeaveIfClosed(view);
   const goTo = useGoToPoint(view);
-  const { saleId, events, state, master, day, mode, settings, append, nameOf, saleTitle } = view;
+  const { saleId, events, state, master, day, mode, settings, nameOf, saleTitle } = view;
   const [farmId, setFarmId] = useState<string | null>(params.farm ?? null);
   const [tapperId, setTapperId] = useState<string | null>(params.tapper ?? null);
   const [ask, setAsk] = useState<{ pointId: string; open: OpenBasket } | null>(null);
@@ -168,10 +168,8 @@ export function PointScreen() {
     const o = a.open;
     const onClose = () => setAsk(null);
     const onFill = (f: Fill) => go(a.pointId, f);
-    const onNext = () => {
-      append({ kind: 'sys', payload: { t: 'basket_closed', basketId: o.rootId, reason: 'next' } });
-      go(a.pointId);
-    };
+    // Not closed here: the basket closes when the next full one is counted, so this stays a choice (E04-S17).
+    const onNext = () => go(a.pointId, 'next');
     const skew = saleSkewG(events);
     const from = master!.points.find((p) => p.id === o.pointId);
     const fromFarm = master!.properties.find((f) => f.id === from?.propertyId);

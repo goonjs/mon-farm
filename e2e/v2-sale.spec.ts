@@ -182,7 +182,7 @@ test('start → point → empty scale → count → short → switch and fill �
   // ── นับเข่ง (page 8) ──
   await expect(id('counter')).toBeVisible();
   for (let i = 0; i < 3; i++) await hold(page);
-  await expect(id('current-no')).toHaveText('4');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 4$/);
   await expect(id('fig-done')).toContainText('3');
   await expect(id('fig-kg')).toContainText('150');
   await shot(page, '08-counter');
@@ -223,7 +223,7 @@ test('start → point → empty scale → count → short → switch and fill �
   await expect(id('hold')).toContainText('เติมเข่ง 4');
   await shot(page, '13-fill');
   await hold(page);
-  await expect(id('current-no')).toHaveText('5');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
 
   // ── back after a switch never opens the old point's counter (review #3) ──
   await page.goBack();
@@ -237,7 +237,7 @@ test('start → point → empty scale → count → short → switch and fill �
   await context.setOffline(false);
   await page.reload();
   await context.setOffline(true);
-  await expect(id('current-no')).toHaveText('5');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
   await expect(id('fig-kg')).toContainText('200');
   await expect(id('point-place')).toContainText('จันทเขลม · จุด 2');
 
@@ -252,12 +252,12 @@ test('start → point → empty scale → count → short → switch and fill �
 
   // ── ย้อนกลับ is a hold: a tap does nothing, a full hold gives the number back ──
   await id('tool-undo').click();
-  await expect(id('current-no')).toHaveText('5');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
   await hold(page, 'tool-undo');
-  await expect(id('current-no')).toHaveText('4');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 4$/);
   await expect(id('undo-notice')).toContainText('ยกเลิกส่วนที่เติมของเข่ง 4 แล้ว');
   await hold(page);
-  await expect(id('current-no')).toHaveText('5');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
   await expect(id('count-notice')).toContainText('บันทึกเข่ง 4');
 
   // ── the list says what was done: the basket taken back stays, marked, out of the totals ──
@@ -298,7 +298,7 @@ test('start → point → empty scale → count → short → switch and fill �
   await id('pick-point-a4').click();
   await id('start-weigh').click();
   await expect(id('point-tapper')).toContainText('นัด');
-  await expect(id('current-no')).toHaveText('1');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 1$/);
   await hold(page);
   await hold(page);
   await expect(id('fig-kg')).toContainText('100');
@@ -390,7 +390,7 @@ test('back to a point already weighed: straight to its counter, the count goes o
   await id('choose-skew').click();
   await id('start-weigh').click();
   for (let i = 0; i < 3; i++) await hold(page);
-  await expect(id('current-no')).toHaveText('4');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 4$/);
 
   // จุด 2 is new to the sale: its empty scale is checked.
   await id('switch-point').click();
@@ -405,7 +405,7 @@ test('back to a point already weighed: straight to its counter, the count goes o
   await id('pick-point-a1').click();
   await expect(id('point-place')).toContainText('จันทเขลม · จุด 1');
   await expect(id('zero-tare')).toHaveCount(0);
-  await expect(id('current-no')).toHaveText('4');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 4$/);
   await hold(page);
-  await expect(id('current-no')).toHaveText('5');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
 });

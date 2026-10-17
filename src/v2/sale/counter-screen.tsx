@@ -38,7 +38,6 @@ import {
   ClockIcon,
   CTA,
   DotsIcon,
-  FlagIcon,
   IconTile,
   LeafIcon,
   Minus,
@@ -51,7 +50,7 @@ import {
 } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { countModel } from './count';
-import { HoldButton, HoldStage } from './hold';
+import { countKey, HoldButton, HoldStage } from './hold';
 import { signed, useGoToPoint } from './move';
 import { Banner, IconLine, Kv, kgText, NumChip, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 import { Ruler } from './ruler';
@@ -114,6 +113,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const price = state.price?.satangPerKg ?? null;
   const { pile, figs, open, filling, waiting, fill, basketTare, ready } = model;
   const skew = saleSkewG(events);
+  const holdKey = countKey();
   const std = pile.stdNetG;
   const tare = pile.tareG;
   const kg = (g: number) => msg('v2f.kg', { n: kgText(g) });
@@ -143,7 +143,6 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
     const written = countFull(input);
     if (written) setNotice({ pointId, kind: 'recorded', n: written.basketNo, kg: kgText(written.netG) });
   };
-  const closeOpen = () => open && append({ kind: 'sys', payload: { t: 'basket_closed', basketId: open.rootId, reason: 'scrap' } });
 
   // ── the short-basket sheet (page 10) ──
   // A whole-basket top-up weighs the open basket with its own tare (review #9).
@@ -464,11 +463,11 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
         </Banner>
       ) : null}
       <View testID="current" accessibilityLabel={`${msg('rec.current')} ${figs.currentNo}`} style={{ ...cardStyle(t), alignItems: 'center', paddingVertical: t.space.md }}>
-        <AppText variant="bodySm">{msg('rec.current')}</AppText>
-        <Text testID="current-no" style={{ fontFamily: t.font.family.sans, fontSize: 80, lineHeight: 88, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
-          {figs.currentNo}
+        <AppText variant="bodySm">{msg('rec.counted')}</AppText>
+        <Text testID="current-done" style={{ fontFamily: t.font.family.sans, fontSize: 80, lineHeight: 88, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
+          {figs.done}
         </Text>
-        {price !== null ? <AppText variant="bodySm">{msg('rec.counted', { n: figs.done })}</AppText> : null}
+        <AppText testID="current-no" variant="bodySm">{msg('rec.nextNo', { n: figs.currentNo })}</AppText>
       </View>
       <IconLine icon={(c) => <TapperIcon color={c} size={13} />}>{scopeTitle}</IconLine>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
@@ -510,9 +509,6 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
               ) : null}
             </View>
           </View>
-          <Button testID="close-open" icon={(c) => <FlagIcon color={c} size={14} />} onPress={closeOpen}>
-            {msg('rec.closeBasket')}
-          </Button>
         </View>
       ) : null}
 
@@ -529,7 +525,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           <AppText variant="bodySm">{tapper && mode === 'per-tapper' ? msg('rec.waitFillHint', { name: tapperName }) : msg('rec.waitFillPoint')}</AppText>
         </View>
       ) : (
-        <HoldStage testID="hold" label={filling && open ? msg('v2s.fillStage', { n: open.basketNo }) : msg('rec.hold')} onHold={count} onEarly={early} minHeight={filling ? 150 : 120}>
+        <HoldStage testID="hold" label={filling && open ? msg('v2s.fillStage', { n: open.basketNo }) : msg(holdKey, { n: figs.currentNo })} onHold={count} onEarly={early} minHeight={filling ? 150 : 120}>
           {filling && open ? (
             <>
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.bold, color: t.color.ink }}>
@@ -545,7 +541,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
             </>
           ) : (
             <>
-              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.bold, color: t.color.ink, textAlign: 'center' }}>{msg('rec.hold')}</Text>
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.bold, color: t.color.ink, textAlign: 'center' }}>{msg(holdKey, { n: figs.currentNo })}</Text>
               {skew ? [smallLine(msg('v2s.lineNet', { n: kgText(std) })), smallLine(msg('v2s.lineBasket', { n: kgText(tare) })), smallLine(msg('v2s.lineSkew', { n: signed(kgText(skew)) }), 'warn')] : null}
               {shouldRead(std + tare + skew)}
             </>

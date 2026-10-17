@@ -11,7 +11,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, Pressable, Text, View, type GestureResponderEvent } from 'react-native';
 
-import { readHoldMs } from '../../store/hold-preference';
+import { readCountMode, readHoldMs } from '../../store/hold-preference';
 import { useTheme } from '../../theme';
 
 /**
@@ -19,7 +19,7 @@ import { useTheme } from '../../theme';
  * the same hold time, the same progress line, the same early-release and
  * screen-reader/keyboard rules.
  */
-export function useHold({ onHold, onEarly, disabled }: { onHold: (input: 'hold' | 'hold-kbd') => void; onEarly?: (heldMs: number) => void; disabled?: boolean }) {
+export function useHold({ onHold, onEarly, disabled, tap }: { onHold: (input: 'hold' | 'hold-kbd') => void; onEarly?: (heldMs: number) => void; disabled?: boolean; tap?: boolean }) {
   const [progress] = useState(() => new Animated.Value(0));
   const [width] = useState(() => progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -45,7 +45,7 @@ export function useHold({ onHold, onEarly, disabled }: { onHold: (input: 'hold' 
   /** A key press (Enter/Space on web) is a click, not a hold: counted once on press, never as an early release (review #8). */
   const isKey = (e?: GestureResponderEvent) => !!e && typeof (e.nativeEvent as { key?: unknown }).key === 'string';
   const pressIn = (e?: GestureResponderEvent) => {
-    if (disabled || isKey(e)) return;
+    if (disabled || tap || isKey(e)) return;
     const ms = readHoldMs();
     started.current = Date.now();
     setHeld(true);
@@ -68,6 +68,8 @@ export function useHold({ onHold, onEarly, disabled }: { onHold: (input: 'hold' 
   // (`detail` ≥ 1) after a hold is already handled by the timer.
   const press = (e?: GestureResponderEvent) => {
     if (disabled) return;
+    // This device counts by one tap (E04-S17): any click counts, a key or screen reader as a keyboard-style one.
+    if (tap) return onHold(isKey(e) || (e?.nativeEvent as { detail?: unknown } | undefined)?.detail === 0 ? 'hold-kbd' : 'hold');
     const detail = (e?.nativeEvent as { detail?: unknown } | undefined)?.detail;
     if (detail === 0 || isKey(e)) onHold('hold-kbd');
   };
@@ -97,6 +99,9 @@ function HoldLine({ width, testID, height = 6 }: { width: ReturnType<typeof useH
   );
 }
 
+/** The message for the count stage: hold or tap, by this device's choice (E04-S17). */
+export const countKey = () => (readCountMode() === 'tap' ? 'rec.tap' : 'rec.hold');
+
 export function HoldStage({
   onHold,
   onEarly,
@@ -119,7 +124,7 @@ export function HoldStage({
   fill?: boolean;
 }) {
   const t = useTheme();
-  const { held, width, pressableProps } = useHold({ onHold, onEarly, disabled });
+  const { held, width, pressableProps } = useHold({ onHold, onEarly, disabled, tap: readCountMode() === 'tap' });
 
   return (
     <Pressable

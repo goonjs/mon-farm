@@ -15,7 +15,7 @@ import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
 import { ExpandIcon, SyncPill } from '../../ui';
 import { countModel } from './count';
-import { HoldStage } from './hold';
+import { countKey, HoldStage } from './hold';
 import { useLeaveIfClosed, useSaleView } from './pieces';
 
 export function PublicScreen() {
@@ -63,7 +63,7 @@ export function PublicScreen() {
           </Text>
         </View>
       ) : (
-        <HoldStage fill testID="public-hold" label={msg('rec.hold')} onHold={model.count} onEarly={model.early}>
+        <HoldStage fill testID="public-hold" label={msg(countKey(), { n: model.figs.currentNo })} onHold={model.count} onEarly={model.early}>
           {number}
         </HoldStage>
       )}

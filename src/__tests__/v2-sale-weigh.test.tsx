@@ -9,6 +9,7 @@ import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { LogBuilder } from '../core/fixtures';
 import { wrap } from '../test/render';
+import { writeCountMode } from '../store/hold-preference';
 import { readWeighBasis, writeWeighBasis, writeWeighMode } from '../store/weigh-mode-preference';
 import { BackfillScreen } from '../v2/sale/backfill-screen';
 import { countModel } from '../v2/sale/count';
@@ -210,15 +211,15 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     await started();
     await readyAt(farm.a[0]);
     await counterAt(farm.a[0]);
-    expect(screen.getByTestId('current-no')).toHaveTextContent('1');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 1$/);
     expect(screen.getByTestId('should-read')).toHaveTextContent('52 กก.');
     await hold();
     await hold();
-    expect(screen.getByTestId('current-no')).toHaveTextContent('3');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 3$/);
     expect(screen.getByTestId('fig-done')).toHaveTextContent(/^2/);
     expect(screen.getByTestId('fig-kg')).toHaveTextContent(/^100/);
     await holdTool('tool-undo', 900);
-    expect(screen.getByTestId('current-no')).toHaveTextContent('2');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 2$/);
   });
 
   it('a short basket: reading − basket = net; it stays open and waits, or closes as is', async () => {
@@ -236,9 +237,58 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     expect(screen.getByTestId('open-card')).toHaveTextContent(/เข่ง 2 เปิดอยู่ · 35 กก\./);
     expect(screen.getByTestId('fig-missing')).toHaveTextContent(/^15/);
     expect(screen.getByTestId('stage-wait')).toHaveTextContent(/เข่ง 2 รอเติม/);
-    await press('close-open');
-    expect(screen.queryByTestId('open-card')).toBeNull();
-    expect(screen.getByTestId('current-no')).toHaveTextContent('3');
+    // The choice is made at the next step only (E04-S17): no finish button here.
+    expect(screen.queryByTestId('close-open')).toBeNull();
+  });
+
+  it('option 3 closes nothing until a full basket is counted, and can be re-chosen (E04-S17)', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    await press('tool-short');
+    await press('short-save');
+    c.unmount();
+    await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red });
+    await press(`pick-point-${farm.a[1]}`);
+    await press('fill-next');
+    expect(sys(await store().load(saleId), 'basket_closed')).toHaveLength(0);
+    expect(router.replace).toHaveBeenLastCalledWith(expect.stringContaining('fill=next'));
+    // Back to the picker before counting: the sheet asks again and option 1 still works.
+    await press(`pick-point-${farm.a[1]}`);
+    expect(screen.getByTestId('fill-sheet')).toBeTruthy();
+    expect(screen.getByTestId('fill-full')).toBeTruthy();
+    expect(screen.getByTestId('fill-part')).toBeTruthy();
+    expect(screen.getByTestId('fill-next')).toBeTruthy();
+    await press('fill-next');
+    await readyAt(farm.a[1]);
+    await counterAt(farm.a[1], { fill: 'next' });
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 3$/);
+    await hold();
+    const ev = await store().load(saleId);
+    expect(sys(ev, 'basket_closed')[0]).toMatchObject({ reason: 'next' });
+    expect(ev.filter((e) => e.kind === 'accept').pop()).toMatchObject({ pointId: farm.a[1], basketNo: 3, netG: 50_000 });
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 4$/);
+  });
+
+  it('the card leads with the counted figure; the next basket is the small line (E04-S17)', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    await hold();
+    expect(screen.getByTestId('current-done')).toHaveTextContent('1');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 2$/);
+    expect(screen.getByTestId('hold')).toHaveTextContent(/กดค้างเพื่อนับเข่งเต็ม 2/);
+  });
+
+  it('in tap mode one tap counts and the label says tap (E04-S17)', async () => {
+    writeCountMode('tap');
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    expect(screen.getByTestId('hold')).toHaveTextContent(/แตะเพื่อนับเข่งเต็ม 1/);
+    await press('hold');
+    expect(screen.getByTestId('fig-done')).toHaveTextContent(/^1/);
   });
 
   it('a reading at or below the basket is refused', async () => {
@@ -272,7 +322,7 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     await hold();
     const part = (await store().load(saleId)).filter((e) => e.kind === 'accept').pop();
     expect(part).toMatchObject({ pointId: farm.a[1], basketNo: 2, netG: 15_000 });
-    expect(screen.getByTestId('current-no')).toHaveTextContent('3');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 3$/);
     expect(screen.queryByTestId('fig-missing')).toBeNull();
     expect(screen.getByTestId('fig-kg')).toHaveTextContent(/^100/);
   });
@@ -330,7 +380,7 @@ describe('v2 counter edge cases (pages 8a, 12b)', () => {
     await counterAt(farm.a[4]);
     expect(screen.getByTestId('no-tapper')).toHaveTextContent(/จุดนี้ยังไม่มีคนกรีดยาง/);
     await hold();
-    expect(screen.getByTestId('current-no')).toHaveTextContent('2');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 2$/);
   });
 
   it('a point deleted while the sale is open must be replaced before weighing on (D-65, D-67)', async () => {
@@ -367,7 +417,7 @@ describe('v2 counter edge cases (pages 8a, 12b)', () => {
     await press(`pick-point-${farm.a[0]}`);
     expect(router.replace).toHaveBeenLastCalledWith(`/v2/sale/${saleId}/counter?point=${farm.a[0]}`);
     await counterAt(farm.a[0]);
-    expect(screen.getAllByTestId('current-no').pop()).toHaveTextContent('4');
+    expect(screen.getAllByTestId('current-no').pop()).toHaveTextContent(/เข่งถัดไป 4$/);
     await hold();
     const nos = (await store().load(saleId)).filter((e) => e.kind === 'accept').map((e) => (e as { basketNo: number }).basketNo);
     expect(nos).toEqual([1, 2, 3, 4]);
@@ -401,16 +451,16 @@ describe('v2 counter toolbar, hold-to-undo, history (E04-S15)', () => {
     await hold();
     await hold();
     await hold();
-    expect(screen.getByTestId('current-no')).toHaveTextContent('4');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 4$/);
     await press('tool-undo');
-    expect(screen.getByTestId('current-no')).toHaveTextContent('4');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 4$/);
     await holdTool('tool-undo', 150);
-    expect(screen.getByTestId('current-no')).toHaveTextContent('4');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 4$/);
     await holdTool('tool-undo', 900);
-    expect(screen.getByTestId('current-no')).toHaveTextContent('3');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 3$/);
     expect(screen.getByTestId('undo-notice')).toHaveTextContent('ย้อนกลับเข่ง 3 แล้ว — เข่งถัดไปคือ 3');
     await hold();
-    expect(screen.getByTestId('current-no')).toHaveTextContent('4');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 4$/);
     expect(screen.queryByTestId('undo-notice')).toBeNull();
     const ev = await store().load(saleId);
     expect(ev.filter((e) => e.kind === 'correction')).toHaveLength(1);
@@ -438,13 +488,13 @@ describe('v2 counter toolbar, hold-to-undo, history (E04-S15)', () => {
     await act(async () => fireEvent(screen.getByTestId('tool-undo'), 'accessibilityAction', { nativeEvent: { actionName: 'activate' } }));
     await flush();
     expect(screen.getByTestId('undo-confirm')).toHaveTextContent(/ย้อนกลับเข่ง 2 ไหม/);
-    expect(screen.getByTestId('current-no')).toHaveTextContent('3');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 3$/);
     await press('undo-confirm-no');
-    expect(screen.getByTestId('current-no')).toHaveTextContent('3');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 3$/);
     await act(async () => fireEvent(screen.getByTestId('tool-undo'), 'accessibilityAction', { nativeEvent: { actionName: 'activate' } }));
     await flush();
     await press('undo-confirm-yes');
-    expect(screen.getByTestId('current-no')).toHaveTextContent('2');
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 2$/);
     expect(screen.getByTestId('undo-notice')).toHaveTextContent(/ย้อนกลับเข่ง 2 แล้ว/);
   });
 
@@ -541,7 +591,6 @@ describe('v2 basket history (page 8d, E04-S15)', () => {
     await hold();
     await press('tool-short');
     await press('short-save');
-    await press('close-open');
     await inSale(<HistoryScreen />, { point: farm.a[0] });
     const ids = rowsOf();
     expect(ids).toHaveLength(3);
