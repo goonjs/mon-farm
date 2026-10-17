@@ -97,10 +97,9 @@ describe('v2 sale money (pages 16–19)', () => {
     expect(screen.getByTestId(`check-tapper-${farm.red}`)).toHaveTextContent(/150 กก\./);
     // E05-S09: unit in the label line, dots + short count per tapper, whose short basket it is.
     expect(screen.getByTestId('check-total')).not.toHaveTextContent('บาท');
-    expect(screen.getAllByTestId(new RegExp(`^check-dot-${farm.nat}-`))).toHaveLength(2);
-    expect(screen.getAllByTestId(new RegExp(`^check-dot-${farm.nat}-.*short$`))).toHaveLength(1);
-    expect(screen.getAllByTestId(new RegExp(`^check-dot-${farm.red}-`))).toHaveLength(3);
-    expect(screen.getByTestId(`check-tapper-${farm.nat}`)).toHaveTextContent(/เข่งไม่เต็ม 1/);
+    // per tapper: how many full baskets + the short kg, at which point
+    expect(screen.getByTestId(`check-point-${farm.a[3]}`)).toHaveTextContent(/^- 1 เข่ง \+ 35 กก\. @ \S+/);
+    expect(screen.getByTestId(`check-point-${farm.a[0]}`)).toHaveTextContent(/^- 3 เข่ง @ \S+/);
     expect(screen.getByTestId('check-card')).toHaveTextContent(/เข่ง 2 · นัด/);
     await doubleTap('check-match');
     expect(screen.getByTestId('check-status').props.accessibilityLabel).toBe('ยอดผู้ขายและคนรับซื้อยางตรงกัน');
