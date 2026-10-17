@@ -1,0 +1,225 @@
+<title>mon-farm Flow ค่าใช้จ่าย v1.3.0 · แบ่งกับคนกรีดยาง</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
+
+/* ---------------------------------------------------------------------------
+   Colour: only --color-* roles from ../tokens.css. No literal colour here.
+   --------------------------------------------------------------------------- */
+:root {
+  --pg-bg: var(--color-surface);
+  --pg-card: var(--color-surface-raised);
+  --pg-ink: var(--color-ink);
+  --pg-ink-soft: var(--color-ink-soft);
+  --pg-rule: var(--color-rule);
+  --font: "Noto Sans Thai", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-pill: 999px;
+  --target: 48px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--pg-bg); color: var(--pg-ink); font-family: var(--font); font-size: 16px; line-height: 1.5; overflow-x: hidden; }
+.num { font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; }
+.hdr h1 { margin: 0; font-size: 28px; line-height: 1.25; font-weight: 700; }
+.hdr p { margin: 6px 0 0; color: var(--pg-ink-soft); }
+.decision { margin-top: 16px; padding: 12px 16px; border: 1px solid var(--pg-rule); border-radius: var(--r-lg); background: var(--pg-card); }
+.decision ul { margin: 6px 0 0; padding-left: 1.2em; }
+.sec { margin-top: 40px; }
+.sec h2 { font-size: 20px; margin: 0 0 4px; font-weight: 700; }
+.sec > p { margin: 0 0 20px; color: var(--pg-ink-soft); font-size: 14px; }
+.flow { display: flex; flex-wrap: wrap; justify-content: center; gap: 28px 20px; align-items: flex-start; }
+.step { margin: 0; width: min(360px, 100%); }
+figcaption { margin-top: 12px; font-size: 14px; color: var(--pg-ink-soft); }
+figcaption .t { display: block; font-size: 16px; font-weight: 700; color: var(--pg-ink); }
+figcaption ul { margin: 8px 0 0; padding-left: 1.2em; }
+
+.phone { width: 100%; padding: 10px; border-radius: 40px; background: var(--color-scrim); box-shadow: 0 0 0 1px var(--color-rule); }
+.screen { background: var(--color-surface); border-radius: 30px; overflow: hidden; display: flex; flex-direction: column; }
+.appbar { height: 56px; flex: none; background: var(--color-app-bar); color: var(--color-app-bar-ink); display: flex; align-items: center; gap: 8px; padding: 0 16px 0 12px; }
+.appbar h3 { flex: 1; margin: 0; font-size: 18px; font-weight: 600; }
+.appbar .save { font-weight: 700; font-size: 15px; }
+.body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.lbl { font-size: 13px; font-weight: 600; color: var(--color-ink-soft); }
+.fld { min-height: var(--target); border: 1px solid var(--color-rule); border-radius: var(--r-sm); background: var(--color-surface-raised); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fld b { font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 36px; padding: 0 14px; border-radius: var(--r-pill); display: inline-flex; align-items: center; background: var(--color-surface-sunk); color: var(--color-ink-soft); border: 1px solid var(--color-rule-faint); font-size: 14px; }
+.chip.on { background: var(--color-action); color: var(--color-ink-inverse); border-color: var(--color-action); font-weight: 600; }
+.card { background: var(--color-surface-raised); border: 1px solid var(--color-rule); border-radius: var(--r-md); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.card.new { border: 2px solid var(--color-action); background: var(--color-action-sunk); }
+.card.warn { background: var(--color-warn-sunk); border-color: var(--color-warn-sunk); }
+.card h4 { margin: 0; font-size: 14px; font-weight: 700; color: var(--color-action); }
+.row { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 15px; }
+.row.sum { border-top: 1px solid var(--color-rule); padding-top: 8px; font-weight: 700; }
+.debt { color: var(--color-debt-out); font-weight: 700; }
+.ok { color: var(--color-accept); font-weight: 700; }
+.tick { width: 26px; height: 26px; border-radius: 6px; border: 2px solid var(--color-rule-strong); flex: none; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; }
+.tick.on { background: var(--color-action); border-color: var(--color-action); color: var(--color-ink-inverse); }
+.who { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.stepper { display: inline-flex; align-items: center; gap: 6px; }
+.stepper span { min-width: 40px; text-align: center; font-weight: 700; border: 1px solid var(--color-rule); border-radius: var(--r-sm); padding: 6px; background: var(--color-surface-raised); }
+.stepper i { font-style: normal; width: 36px; height: 36px; border-radius: 50%; background: var(--color-surface-sunk); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; }
+.sw { width: 44px; height: 24px; border-radius: 12px; background: var(--color-action); position: relative; flex: none; }
+.sw::after { content: ""; position: absolute; right: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--color-surface-raised); }
+.btn { min-height: 52px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; font-weight: 700; background: var(--color-action); color: var(--color-ink-inverse); }
+.btn.sec2 { background: var(--color-surface-raised); color: var(--color-action); border: 2px solid var(--color-action); }
+.hint { font-size: 13px; color: var(--color-ink-soft); }
+.banner { border-radius: var(--r-md); background: var(--color-brand-yellow); color: var(--color-ink-inverse); padding: 10px 12px; font-size: 14px; font-weight: 600; }
+.q { display: inline-flex; min-width: 26px; height: 20px; padding: 0 6px; border-radius: var(--r-pill); align-items: center; justify-content: center; background: var(--color-brand-yellow); color: var(--color-ink-inverse); font-size: 11px; font-weight: 800; }
+</style>
+
+<div class="wrap">
+  <header class="hdr">
+    <h1>Flow ค่าใช้จ่าย v1.3.0 · แบ่งกับคนกรีดยาง</h1>
+    <p>Story E11-S10 · ร่างให้เจ้าของดูก่อนเขียนโค้ด (ตัวเลขเป็นตัวอย่าง)</p>
+    <div class="decision">
+      <b>ข้อสรุป (ตัดสินใจแทนเจ้าของตามที่มอบหมาย 2026-10-17)</b>
+      <ul>
+        <li>รวมแบบ 3 กับแบบ 4: <b>เลือกหมวดปุ๋ยแล้วพาไปหน้า "ซื้อปุ๋ย"</b> ซึ่งเป็นฟอร์มค่าใช้จ่ายของหมวดนั้นเอง ไม่ใช่ระบบแยก</li>
+        <li>หมวดอื่น (เช่น ซ่อมแซม) ใช้ช่อง "แบ่งกับคนกรีดยาง" ในฟอร์มค่าใช้จ่ายปกติ (แบบ 1)</li>
+        <li>บิลหนึ่งใบ = ค่าใช้จ่ายหนึ่งรายการ ยอดเต็มนับครั้งเดียว หนี้คนกรีดแตกออกมาต่อคน จึงไม่นับซ้ำ</li>
+        <li>ค่าเริ่มต้นที่ผมเลือก (<span class="q">?</span> ถ้าไม่ใช่ บอกได้): กระสอบเป็นจำนวนเต็ม · ไม่ใส่โซนในรอบแรก · กระสอบที่ไม่ได้แบ่งเป็นต้นทุนของสวน</li>
+      </ul>
+    </div>
+  </header>
+
+  <section class="sec">
+    <h2>A. ตั้งค่าหมวด</h2>
+    <p>เจ้าของตั้งสัดส่วนที่หมวด ครั้งเดียว ตอนบันทึกแก้ได้ต่อครั้ง</p>
+    <div class="flow">
+      <figure class="step">
+        <div class="phone"><div class="screen">
+          <div class="appbar"><h3>← หมวด: ปุ๋ย</h3><span class="save">บันทึก</span></div>
+          <div class="body">
+            <div><div class="lbl">ชื่อหมวด</div><div class="fld"><b>ปุ๋ย</b></div></div>
+            <div class="card new">
+              <h4>แบ่งกับคนกรีดยาง</h4>
+              <div class="row"><span>เปิดใช้</span><span class="sw"></span></div>
+              <div class="row"><span>คนกรีดรับ</span><b class="num">50 %</b></div>
+              <div class="row"><span>เจ้าของสวนรับ</span><b class="num">50 %</b></div>
+              <div class="hint">หมวดปุ๋ยที่เปิดใช้ จะเปิดหน้า "ซื้อปุ๋ย" แทนฟอร์มทั่วไป</div>
+              <div class="row"><span>ซื้อแบบแบ่งกระสอบ</span><span class="sw"></span></div>
+            </div>
+          </div>
+        </div></div>
+        <figcaption><span class="t">1 · ตั้งค่าหมวดปุ๋ย</span>เปิด/ปิดการแบ่ง, % คนกรีด, และเปิดโหมดแบ่งกระสอบ หมวดซ่อมแซมตั้งได้แบบเดียวกัน (ไม่เปิดโหมดกระสอบ)</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>B. หมวดทั่วไป (แบบ 1): ซ่อมแซม</h2>
+    <p>คนกรีดหนึ่งคนต่อหนึ่งรายการ</p>
+    <div class="flow">
+      <figure class="step">
+        <div class="phone"><div class="screen">
+          <div class="appbar"><h3>← ค่าใช้จ่ายใหม่</h3><span class="save">บันทึก</span></div>
+          <div class="body">
+            <div><div class="lbl">จำนวนเงินตามบิล *</div><div class="fld num"><b>6,000</b><span>บาท</span></div></div>
+            <div><div class="lbl">หมวด</div><div class="chips"><span class="chip">ปุ๋ย</span><span class="chip on">ซ่อมแซม</span><span class="chip">ค่าแรง</span></div></div>
+            <div class="card new">
+              <h4>แบ่งกับคนกรีดยาง</h4>
+              <div><div class="lbl">คนกรีด</div><div class="chips"><span class="chip on">แดง</span><span class="chip">นัด</span><span class="chip">ต้อม</span></div></div>
+              <div class="row"><span>ส่วนลด (บาท)</span><b class="num">0</b></div>
+              <div class="row"><span>คนกรีดรับ</span><b class="num">50 %</b></div>
+              <div class="row"><span>เป็นหนี้ทันที</span><span class="sw"></span></div>
+              <div class="row"><span>แดงเป็นหนี้</span><b class="debt num">3,000</b></div>
+              <div class="row"><span>สวนรับ</span><b class="num">3,000</b></div>
+            </div>
+            <div class="btn">บันทึก</div>
+          </div>
+        </div></div>
+        <figcaption><span class="t">2 · ฟอร์มค่าใช้จ่าย + ส่วนแบ่ง</span>ไม่เลือกคนกรีด = บันทึกเต็มจำนวนตามเดิม ไม่มีหนี้ ปิดสวิตช์ = เก็บส่วนแบ่งไว้เฉย ๆ ไม่เป็นหนี้</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>C. หมวดปุ๋ย (แบบ 3 + 4 รวมกัน)</h2>
+    <p>เลือกหมวดปุ๋ยในฟอร์มค่าใช้จ่าย แล้วพาไปหน้าซื้อปุ๋ย กรอกบิลครั้งเดียว ติ๊กคนกรีดและใส่กระสอบ</p>
+    <div class="flow">
+      <figure class="step">
+        <div class="phone"><div class="screen">
+          <div class="appbar"><h3>← ค่าใช้จ่ายใหม่</h3><span class="save">บันทึก</span></div>
+          <div class="body">
+            <div><div class="lbl">จำนวนเงินตามบิล *</div><div class="fld num"><b>8,000</b><span>บาท</span></div></div>
+            <div><div class="lbl">หมวด</div><div class="chips"><span class="chip on">ปุ๋ย</span><span class="chip">ซ่อมแซม</span><span class="chip">ค่าแรง</span></div></div>
+            <div class="banner">หมวดปุ๋ยแบ่งตามกระสอบ กดต่อไปเพื่อเลือกคนกรีด</div>
+            <div class="btn">ต่อไป: ซื้อปุ๋ย</div>
+          </div>
+        </div></div>
+        <figcaption><span class="t">3 · เลือกหมวดปุ๋ย</span>ยอดและวันที่ที่กรอกไว้ถูกพาไปด้วย ไม่ต้องกรอกซ้ำ</figcaption>
+      </figure>
+
+      <figure class="step">
+        <div class="phone"><div class="screen">
+          <div class="appbar"><h3>← ซื้อปุ๋ย</h3><span class="save">บันทึก</span></div>
+          <div class="body">
+            <div class="row"><span>ยอดตามบิล</span><b class="num">8,000</b></div>
+            <div class="row"><span>ส่วนลด (บาท)</span><b class="num">500</b></div>
+            <div class="row sum"><span>ยอดสุทธิ</span><b class="num">7,500</b></div>
+            <div class="row"><span>กระสอบทั้งหมด</span><div class="stepper"><i>−</i><span class="num">10</span><i>+</i></div></div>
+            <div class="lbl">ใครรับปุ๋ยครั้งนี้ (ติ๊กเลือก)</div>
+            <div class="card">
+              <div class="row"><div class="who"><span class="tick on">✓</span><b>แดง</b></div><div class="stepper"><i>−</i><span class="num">6</span><i>+</i></div></div>
+              <div class="hint num">ต้นทุน 4,500 · เป็นหนี้ 2,250</div>
+            </div>
+            <div class="card">
+              <div class="row"><div class="who"><span class="tick on">✓</span><b>นัด</b></div><div class="stepper"><i>−</i><span class="num">4</span><i>+</i></div></div>
+              <div class="hint num">ต้นทุน 3,000 · เป็นหนี้ 1,500</div>
+            </div>
+            <div class="card">
+              <div class="row"><div class="who"><span class="tick"></span><b>ต้อม</b></div><span class="hint">ไม่ร่วม</span></div>
+            </div>
+            <div class="row"><span>แบ่งแล้ว</span><b class="ok num">10 / 10 กระสอบ</b></div>
+            <div class="row"><span>เป็นหนี้ทันที</span><span class="sw"></span></div>
+            <div class="row sum"><span>สวนรับ</span><b class="num">3,750</b></div>
+            <div class="btn">บันทึก</div>
+          </div>
+        </div></div>
+        <figcaption><span class="t">4 · หน้าซื้อปุ๋ย</span><ul><li>ผลรวมกระสอบเกินกระสอบทั้งหมดไม่ได้ (แสดง "เหลือ n")</li><li>แตะการ์ดคนกรีดเพื่อเปิดรายละเอียด (ภาพถัดไป)</li><li>ผลรวมหนี้ + ส่วนสวน = ยอดสุทธิตรงสตางค์</li></ul></figcaption>
+      </figure>
+
+      <figure class="step">
+        <div class="phone"><div class="screen">
+          <div class="appbar"><h3>← แดง · ซื้อปุ๋ย</h3><span class="save">ตกลง</span></div>
+          <div class="body">
+            <div class="row"><div class="who"><span class="tick on">✓</span><b>ร่วมรับครั้งนี้</b></div></div>
+            <div class="row"><span>กระสอบที่รับ</span><div class="stepper"><i>−</i><span class="num">6</span><i>+</i></div></div>
+            <div class="chips"><span class="chip">ใช้ที่เหลือทั้งหมด</span></div>
+            <div class="row"><span>คนกรีดรับ</span><b class="num">50 %</b></div>
+            <div class="hint">เริ่มจากค่าของหมวด แก้เฉพาะคนนี้ได้</div>
+            <div class="card">
+              <div class="row"><span>ต้นทุนหลังลด</span><b class="num">4,500</b></div>
+              <div class="row"><span>เป็นหนี้</span><b class="debt num">2,250</b></div>
+              <div class="row"><span>เป็นหนี้ทันที</span><span class="sw"></span></div>
+            </div>
+            <div><div class="lbl">หมายเหตุ</div><div class="fld"><span class="hint">พิมพ์หมายเหตุ…</span></div></div>
+          </div>
+        </div></div>
+        <figcaption><span class="t">5 · การ์ดของแดง</span>กระสอบ, % เฉพาะคน, สวิตช์หนี้ของคนนี้, หมายเหตุ ต้นทุนและหนี้ระบบคิดให้ แก้ไม่ได้ (โซนไม่ใส่ในรอบแรก)</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>D. ผลที่ได้</h2>
+    <p>หนี้ไปโผล่ในหน้าจัดการหนี้เดิม และถูกหักตอนสรุปยอดขายตามกลไกเดิม ไม่แก้</p>
+    <div class="flow">
+      <figure class="step">
+        <div class="phone"><div class="screen">
+          <div class="appbar"><h3>← หนี้ของแดง</h3></div>
+          <div class="body">
+            <div class="card warn"><div class="row"><span>ยอดค้างรวม</span><b class="debt num">2,250</b></div></div>
+            <div class="card">
+              <div class="row"><b>ปุ๋ย 10 กระสอบ</b><b class="debt num">2,250</b></div>
+              <div class="hint num">17 ต.ค. 2569 · 6 กระสอบ · ส่วนลดแบ่งแล้ว · จากค่าใช้จ่าย</div>
+            </div>
+            <div class="btn sec2">เพิ่มหนี้</div>
+          </div>
+        </div></div>
+        <figcaption><span class="t">6 · หน้าจัดการหนี้ของแดง</span>รายการหนี้อ้างถึงค่าใช้จ่ายต้นทาง แก้/ลบค่าใช้จ่าย หนี้ปรับตาม</figcaption>
+      </figure>
+    </div>
+  </section>
+</div>
