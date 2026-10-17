@@ -94,6 +94,13 @@ describe('v2 sale money (pages 16–19)', () => {
     expect(screen.getByTestId('check-baskets')).toHaveTextContent(/5 เข่ง/);
     expect(screen.getByTestId('check-total')).toHaveTextContent(/11,397\.50/);
     expect(screen.getByTestId(`check-tapper-${farm.red}`)).toHaveTextContent(/150 กก\./);
+    // E05-S09: unit in the label line, dots + short count per tapper, whose short basket it is.
+    expect(screen.getByTestId('check-total')).not.toHaveTextContent('บาท');
+    expect(screen.getAllByTestId(new RegExp(`^check-dot-${farm.nat}-`))).toHaveLength(2);
+    expect(screen.getAllByTestId(new RegExp(`^check-dot-${farm.nat}-.*short$`))).toHaveLength(1);
+    expect(screen.getAllByTestId(new RegExp(`^check-dot-${farm.red}-`))).toHaveLength(3);
+    expect(screen.getByTestId(`check-tapper-${farm.nat}`)).toHaveTextContent(/เข่งไม่เต็ม 1/);
+    expect(screen.getByTestId('check-card')).toHaveTextContent(/เข่ง 2 · นัด/);
     await doubleTap('check-match');
     expect(screen.getByTestId('check-status').props.accessibilityLabel).toBe('ยอดผู้ขายและคนรับซื้อยางตรงกัน');
     const fin = await financeStore.load();
@@ -105,6 +112,10 @@ describe('v2 sale money (pages 16–19)', () => {
     expect(screen.getByTestId(`share-amt-${farm.red}`)).toHaveTextContent(/3,637\.50/);
     expect(screen.getByTestId(`share-amt-${farm.nat}`)).toHaveTextContent(/2,061\.25/);
     expect(screen.getByTestId('owner-transfer')).toHaveTextContent(/5,698\.75/);
+    // E05-S09: same top card as page 16; money in from the farm is +, money out is −.
+    expect(screen.getByTestId('settle-weight')).toHaveTextContent(/235 กก\./);
+    expect(screen.getByTestId('settle-total')).toHaveTextContent(/11,397\.50/);
+    expect(screen.getByTestId(`pm-${farm.red}-share`)).toHaveTextContent(/\+3,637\.50$/);
     expect(screen.queryByTestId(`deduct-${farm.red}`)).toBeNull();
     await press(`deduct-${farm.nat}`);
     expect(screen.getByTestId('deduct-sheet')).toBeTruthy();
@@ -112,6 +123,8 @@ describe('v2 sale money (pages 16–19)', () => {
     await doubleTap('deduct-save');
     expect((await financeStore.load()).filter((e) => e.payload.t === 'debt_payment_recorded')).toHaveLength(1);
     expect(screen.getByTestId(`cash-${farm.nat}`)).toHaveTextContent(/561\.25/);
+    expect(screen.getByTestId(`pm-${farm.nat}-share`)).toHaveTextContent(/\+2,061\.25$/);
+    expect(screen.getByTestId(`pay-route-${farm.nat}`)).toHaveTextContent(/−1,500\.00$/);
     expect(screen.getByTestId('owner-transfer')).toHaveTextContent(/7,198\.75/);
     await press('to-rounding');
     expect(screen.getByTestId('rounding-sheet')).toBeTruthy();
@@ -162,6 +175,9 @@ describe('v2 sale money (pages 16–19)', () => {
   it('payment: each payee ticks on its own; close completes the sale', async () => {
     await inSale(<PaymentScreen />);
     expect(screen.getByTestId(`tick-amt-${farm.red}`)).toHaveTextContent('3,638');
+    // E05-S09: the same person card as the share summary.
+    expect(screen.getByTestId(`pm-${farm.nat}-share`)).toHaveTextContent(/\+2,061\.25$/);
+    expect(screen.getByTestId(`pay-route-${farm.nat}`)).toHaveTextContent(/−1,500\.00$/);
     await doubleTap(`tick-${farm.red}`);
     expect(screen.getByTestId(`tick-${farm.red}`).props.accessibilityState).toMatchObject({ checked: true });
     expect((await financeStore.load()).filter((e) => e.payload.t === 'payment_mark_set')).toHaveLength(1);

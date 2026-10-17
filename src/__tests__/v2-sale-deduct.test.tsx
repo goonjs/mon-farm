@@ -116,8 +116,10 @@ describe('page 17 before anything is deducted', () => {
 
   it('says today\'s sale first: kg × price = total (owner 2026-10-14, mockup v1.2.0)', async () => {
     await inSale(<SettlementScreen />);
-    expect(screen.getByTestId('sale-today')).toHaveTextContent(/235 กก\. × 48\.50 ฿\/กก\./);
-    expect(screen.getByTestId('sale-today')).toHaveTextContent(/11,397\.50/);
+    // E05-S09: the top card is page 16's (weight, price, baskets, total) instead of the one-line equation.
+    expect(screen.getByTestId('settle-card')).toHaveTextContent(/235 กก\./);
+    expect(screen.getByTestId('settle-card')).toHaveTextContent(/48\.50/);
+    expect(screen.getByTestId('settle-card')).toHaveTextContent(/11,397\.50/);
     // the sale block holds no debt; debt has its own block, "not the sale"
     expect(screen.getByTestId('sale-split')).not.toHaveTextContent(/หนี้/);
     expect(screen.getByTestId('debt-block')).toHaveTextContent(/ไม่ใช่ยอดขาย/);
