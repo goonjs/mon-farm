@@ -76,7 +76,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const view = useSaleView();
   const goTo = useGoToPoint(view);
   useLeaveIfClosed(view);
-  const { saleId, events, state, master, day, append, nameOf, saleTitle, reloadMaster } = view;
+  const { saleId, events, state, master, day, mode, append, nameOf, saleTitle, reloadMaster } = view;
   const pointId = params.point ?? '';
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
   const [readingKg, setReadingKg] = useState<number | null>(null);
@@ -509,7 +509,6 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
               ) : null}
             </View>
           </View>
-          <AppText testID="open-hint" variant="bodySm">{msg('rec.openHint', { n: open.basketNo, next: figs.currentNo })}</AppText>
         </View>
       ) : null}
 
@@ -519,6 +518,11 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           <Button testID="to-check" icon={(c) => <ScaleIcon color={c} size={14} />} onPress={() => router.replace(`${base}/zero-tare?point=${pointId}&net=${std}&basket=${tare}` as Href)}>
             {msg('v2s.startWeigh')}
           </Button>
+        </View>
+      ) : waiting && open ? (
+        <View testID="stage-wait" style={{ ...cardStyle(t), borderWidth: t.border.thick, borderColor: t.color.ruleStrong, alignItems: 'center', padding: t.space.lg, gap: t.space.xs }}>
+          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('rec.waitFill', { n: open.basketNo })}</Text>
+          <AppText variant="bodySm">{tapper && mode === 'per-tapper' ? msg('rec.waitFillHint', { name: tapperName }) : msg('rec.waitFillPoint')}</AppText>
         </View>
       ) : (
         <HoldStage testID="hold" label={filling && open ? msg('v2s.fillStage', { n: open.basketNo }) : msg(holdKey, { n: figs.currentNo })} onHold={count} onEarly={early} minHeight={filling ? 150 : 120}>

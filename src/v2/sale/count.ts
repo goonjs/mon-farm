@@ -21,9 +21,9 @@ export function countModel(view: ReturnType<typeof useSaleView>, pointId: string
   if (!pile) return null;
   const counted = recorderFigures(events, master, day, pointId, mode, state.price?.satangPerKg ?? null);
   const open = openBasketIn(events, master, day, pointId, mode, stdNetOfLog(events));
-  // The short basket is left as it is — chosen at the next point (`next`), or by counting a full basket at its own point (owner 2026-10-17).
-  const leftShort = open && (open.pointId === pointId || fillParam === 'next') ? open : null;
-  const filling = !!open && !leftShort;
+  // `next`: the short basket is left as it is, chosen at the next point. At its own point the point is finished: nothing counts there (owner 2026-10-17).
+  const leftShort = open && open.pointId !== pointId && fillParam === 'next' ? open : null;
+  const filling = !!open && open.pointId !== pointId && !leftShort;
   const waiting = !!open && open.pointId === pointId;
   const fill: Fill = fillParam === 'part' ? 'part' : 'full';
   const figs = leftShort ? { ...counted, currentNo: leftShort.basketNo + 1 } : counted;
@@ -33,7 +33,7 @@ export function countModel(view: ReturnType<typeof useSaleView>, pointId: string
 
   /** What was written (the basket's number and net weight), or null when there was nothing to write — callers announce only a real record. */
   const count = (input: 'hold' | 'hold-kbd'): { basketNo: number; netG: number } | null => {
-    if (!ready) return null;
+    if (!ready || waiting) return null;
     if (filling && open) {
       append({ kind: 'accept', pileId: pointId, pointId, basketNo: open.basketNo, input, netG: open.missingG, tareG: basketTare, partOf: open.rootId });
       return { basketNo: open.basketNo, netG: open.missingG };

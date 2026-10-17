@@ -236,19 +236,16 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     expect(ev.find((e) => e.kind === 'short')).toMatchObject({ readingG: 37_000, tareG: 2_000, basketNo: 2 });
     expect(screen.getByTestId('open-card')).toHaveTextContent(/เข่ง 2 เปิดอยู่ · 35 กก\./);
     expect(screen.getByTestId('fig-missing')).toHaveTextContent(/^15/);
-    // No finish button (E04-S17); the hint says what a hold does (owner 2026-10-17).
+    // The point is finished (owner 2026-10-17): no finish button, nothing counts here.
+    expect(screen.getByTestId('stage-wait')).toHaveTextContent(/เข่ง 2 รอเติม/);
     expect(screen.queryByTestId('close-open')).toBeNull();
-    expect(screen.getByTestId('open-hint')).toHaveTextContent(/ไม่เต็มไว้ แล้วนับเป็นเข่ง 3/);
-    await hold();
-    const after = await store().load(saleId);
-    expect(sys(after, 'basket_closed')).toHaveLength(0);
-    expect(after.filter((e) => e.kind === 'accept').pop()).toMatchObject({ basketNo: 3, netG: 50_000 });
-    expect(screen.queryByTestId('open-card')).toBeNull();
-    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 4$/);
-    // Undoing the full basket reopens the short one (nothing closed it for good).
+    expect(screen.queryByTestId('hold')).toBeNull();
+    // The only way on is undo: the short basket goes, the number comes back.
     await holdTool('tool-undo', 900);
-    expect(screen.getByTestId('open-card')).toHaveTextContent(/เข่ง 2 เปิดอยู่/);
-    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 3$/);
+    expect(screen.queryByTestId('open-card')).toBeNull();
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 2$/);
+    await hold();
+    expect(screen.getByTestId('fig-done')).toHaveTextContent(/^2/);
   });
 
   it('option 3 closes nothing until a full basket is counted, and can be re-chosen (E04-S17)', async () => {
@@ -562,10 +559,13 @@ describe('v2 counter toolbar, hold-to-undo, history (E04-S15)', () => {
     await press('tool-short');
     await press('short-save');
     d.unmount();
+    const before = (await store().load(saleId)).length;
     await inSale(<Probe />);
-    // The short basket waits at its own point: a hold counts a full basket over it (owner 2026-10-17).
+    // The short basket waits at its own point: the point is finished, a hold has nothing to write.
     expect(probeRef.current!.waiting).toBe(true);
-    expect(probeRef.current!.count('hold')).toEqual({ basketNo: 3, netG: 50_000 });
+    expect(probeRef.current!.count('hold')).toBeNull();
+    await flush();
+    expect((await store().load(saleId)).length).toBe(before);
   });
 
   it('a notice from one point does not follow you to the next', async () => {
