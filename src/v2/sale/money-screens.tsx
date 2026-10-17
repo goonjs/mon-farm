@@ -68,7 +68,7 @@ import {
 } from '../../ui';
 import { useSaleMoney } from '../money/sale/use-sale-money';
 import { FarmScreen } from '../farm/pieces';
-import { MoneyLines } from './person-money';
+import { MoneyLines, WayLabel } from './person-money';
 import { Banner, IconLine, Kv, bahtText, kgText, markClosing, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 
 const baht = formatSatang;
@@ -158,14 +158,17 @@ function SaleCard({ s, title, subtitle, prefix, testID, children }: { s: Settlem
 const DOT_CAP = 24;
 function BasketDots({ id, total, short }: { id: string; total: number; short: number }) {
   const t = useTheme();
-  const shown = Math.min(total, DOT_CAP);
+  // Short baskets are what the page is about: they are always drawn, the full ones fill what is left.
+  const shortShown = Math.min(short, DOT_CAP);
+  const fullShown = Math.min(total - short, DOT_CAP - shortShown);
+  const hidden = total - fullShown - shortShown;
   return (
     <View accessible={false} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 3, alignItems: 'center' }}>
-      {Array.from({ length: shown }, (_, i) => {
-        const isShort = i >= total - short;
+      {Array.from({ length: fullShown + shortShown }, (_, i) => {
+        const isShort = i >= fullShown;
         return <View key={i} testID={`check-dot-${id}-${i}${isShort ? '-short' : ''}`} style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: isShort ? t.color.warn : t.color.accept, backgroundColor: isShort ? 'transparent' : t.color.accept }} />;
       })}
-      {total > shown ? <AppText variant="caption">{`+${total - shown}`}</AppText> : null}
+      {hidden > 0 ? <AppText variant="caption">{`+${hidden}`}</AppText> : null}
     </View>
   );
 }
@@ -335,12 +338,7 @@ function Move({ way, title, detail, amount, testID }: { way: DebtWay; title: str
 }
 
 /** A label with its direction mark, for a `din`/`dout`/`dnet` Kv: nested Text, so it keeps Kv's font and colour on native too. */
-const DirLabel = ({ way, text }: { way: DebtWay; text: string }) => (
-  <Text>
-    <Text style={{ fontWeight: '700' }}>{way === 'in' ? '↘ ' : way === 'out' ? '↗ ' : '⇄ '}</Text>
-    {text}
-  </Text>
-);
+const DirLabel = ({ way, text }: { way: DebtWay; text: string }) => <WayLabel mark={way === 'in' ? '↘' : way === 'out' ? '↗' : '⇄'} text={text} />;
 
 /** Section heading on page 17: ก / ข / ค, with an optional tag ("ไม่ใช่ยอดขาย"). */
 function Section({ children, tag }: { children: string; tag?: string }) {

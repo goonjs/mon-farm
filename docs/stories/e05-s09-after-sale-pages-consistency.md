@@ -58,4 +58,4 @@ N/A — หน้าอ่านอย่างเดียว ไม่เพ�
 
 ## Code review
 
-- Reviewer (agent/session แยก): รอ
+- Reviewer (agent แยก, read-only): ไม่มี blocking; medium 1 (จุดเข่งไม่เต็มถูกตัดเมื่อเกิน 24) แก้แล้ว; low: ใช้ WayLabel ร่วมกับ DirLabel, signed(0) ไม่ใส่เครื่องหมาย, guard testID ของ ScrollCue, เพิ่ม unit test ของ MoneyLines ครบทุกบรรทัด — แก้แล้ว

@@ -33,7 +33,7 @@ export function ScrollCue({ children, footer, testID, contentContainerStyle }: {
         {children}
       </ScrollView>
       {footer ? (
-        <View testID={more ? `${testID}-cue` : undefined} style={more ? { boxShadow: `0px -8px 12px -6px ${t.shadow.floating.color}`, zIndex: 1 } : undefined}>
+        <View testID={more && testID ? `${testID}-cue` : undefined} style={more ? { boxShadow: `0px -8px 12px -6px ${t.shadow.floating.color}`, zIndex: 1 } : undefined}>
           <View style={{ opacity: more ? 0.55 : 1 }}>
             <PinnedActions>{footer}</PinnedActions>
           </View>
