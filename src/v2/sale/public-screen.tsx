@@ -35,7 +35,7 @@ export function PublicScreen() {
   if (!view.ready || !master || !point || !farm || !model || view.closed) return <View style={{ flex: 1, backgroundColor: t.color.stage }} />;
 
   const tapper = tapperOn(master, pointId, day);
-  const { figs, open, waiting, ready } = model;
+  const { figs, ready } = model;
   const number = (
     <Text
       testID="public-no"
@@ -55,11 +55,11 @@ export function PublicScreen() {
         </Text>
         {sync ? <SyncPill status={sync} /> : null}
       </View>
-      {waiting || !ready ? (
+      {!ready ? (
         <View testID="public-wait" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: t.space.md }}>
           {number}
           <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.bold, color: t.color.ink }}>
-            {waiting && open ? msg('rec.waitFill', { n: open.basketNo }) : msg('v2s.notReady')}
+            {msg('v2s.notReady')}
           </Text>
         </View>
       ) : (

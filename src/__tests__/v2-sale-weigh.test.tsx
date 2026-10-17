@@ -236,9 +236,15 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     expect(ev.find((e) => e.kind === 'short')).toMatchObject({ readingG: 37_000, tareG: 2_000, basketNo: 2 });
     expect(screen.getByTestId('open-card')).toHaveTextContent(/เข่ง 2 เปิดอยู่ · 35 กก\./);
     expect(screen.getByTestId('fig-missing')).toHaveTextContent(/^15/);
-    expect(screen.getByTestId('stage-wait')).toHaveTextContent(/เข่ง 2 รอเติม/);
-    // The choice is made at the next step only (E04-S17): no finish button here.
+    // No finish button (E04-S17); the hint says what a hold does (owner 2026-10-17).
     expect(screen.queryByTestId('close-open')).toBeNull();
+    expect(screen.getByTestId('open-hint')).toHaveTextContent(/ไม่เต็มไว้ แล้วนับเป็นเข่ง 3/);
+    await hold();
+    const after = await store().load(saleId);
+    expect(sys(after, 'basket_closed')[0]).toMatchObject({ reason: 'next' });
+    expect(after.filter((e) => e.kind === 'accept').pop()).toMatchObject({ basketNo: 3, netG: 50_000 });
+    expect(screen.queryByTestId('open-card')).toBeNull();
+    expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 4$/);
   });
 
   it('option 3 closes nothing until a full basket is counted, and can be re-chosen (E04-S17)', async () => {
@@ -269,6 +275,18 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     expect(sys(ev, 'basket_closed')[0]).toMatchObject({ reason: 'next' });
     expect(ev.filter((e) => e.kind === 'accept').pop()).toMatchObject({ pointId: farm.a[1], basketNo: 3, netG: 50_000 });
     expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 4$/);
+  });
+
+  it('in tap mode the undo button still needs a hold (E04-S17)', async () => {
+    writeCountMode('tap');
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    await press('hold');
+    await press('tool-undo');
+    expect(screen.getByTestId('fig-done')).toHaveTextContent(/^1/);
+    await holdTool('tool-undo', 900);
+    expect(screen.getByTestId('fig-done')).toHaveTextContent(/^0/);
   });
 
   it('the card leads with the counted figure; the next basket is the small line (E04-S17)', async () => {
@@ -540,13 +558,10 @@ describe('v2 counter toolbar, hold-to-undo, history (E04-S15)', () => {
     await press('tool-short');
     await press('short-save');
     d.unmount();
-    const before = (await store().load(saleId)).length;
     await inSale(<Probe />);
-    // The short basket waits at its own point: a hold has nothing to write.
+    // The short basket waits at its own point: a hold counts a full basket over it (owner 2026-10-17).
     expect(probeRef.current!.waiting).toBe(true);
-    expect(probeRef.current!.count('hold')).toBeNull();
-    await flush();
-    expect((await store().load(saleId)).length).toBe(before);
+    expect(probeRef.current!.count('hold')).toEqual({ basketNo: 3, netG: 50_000 });
   });
 
   it('a notice from one point does not follow you to the next', async () => {

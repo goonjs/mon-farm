@@ -122,13 +122,17 @@ beforeEach(() => {
 });
 
 describe('#1 public mode shares the counter\'s count', () => {
-  it('waits, not counts, while the short basket is open at this point', async () => {
+  it('counts a full basket over the short one open at this point, closing it (owner 2026-10-17)', async () => {
     await started();
     await readyAt(farm.a[0]);
     await openShortAt(farm.a[0]);
     await inSale(<PublicScreen />, { point: farm.a[0] });
-    expect(screen.queryByTestId('public-hold')).toBeNull();
-    expect(screen.getByTestId('public-wait')).toHaveTextContent(/เข่ง 1 รอเติม/);
+    expect(screen.getByTestId('public-hold')).toBeTruthy();
+    await act(async () => fireEvent(screen.getByTestId('public-hold'), 'accessibilityAction', { nativeEvent: { actionName: 'activate' } }));
+    await flush();
+    const ev = await store().load(saleId);
+    expect(ev.filter((e) => e.kind === 'sys' && e.payload.t === 'basket_closed')).toHaveLength(1);
+    expect(ev.filter((e) => e.kind === 'accept').pop()).toMatchObject({ basketNo: 2 });
   });
 
   it('at the next point it tops the open basket up, as the counter does', async () => {
