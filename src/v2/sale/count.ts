@@ -38,7 +38,7 @@ export function countModel(view: ReturnType<typeof useSaleView>, pointId: string
       append({ kind: 'accept', pileId: pointId, pointId, basketNo: open.basketNo, input, netG: open.missingG, tareG: basketTare, partOf: open.rootId });
       return { basketNo: open.basketNo, netG: open.missingG };
     }
-    if (leftShort) append({ kind: 'sys', payload: { t: 'basket_closed', basketId: leftShort.rootId, reason: 'next' } });
+    // Nothing closes the short basket explicitly: a later live basket does (`movedPast`), so undoing this one reopens it.
     append({ kind: 'accept', pileId: pointId, pointId, basketNo: figs.currentNo, input, netG: pile.stdNetG, tareG: pile.tareG });
     return { basketNo: figs.currentNo, netG: pile.stdNetG };
   };

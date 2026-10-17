@@ -35,7 +35,7 @@ export function PublicScreen() {
   if (!view.ready || !master || !point || !farm || !model || view.closed) return <View style={{ flex: 1, backgroundColor: t.color.stage }} />;
 
   const tapper = tapperOn(master, pointId, day);
-  const { figs, ready } = model;
+  const { figs, open, filling, ready } = model;
   const number = (
     <Text
       testID="public-no"
@@ -63,7 +63,7 @@ export function PublicScreen() {
           </Text>
         </View>
       ) : (
-        <HoldStage fill testID="public-hold" label={msg(countKey(), { n: model.figs.currentNo })} onHold={model.count} onEarly={model.early}>
+        <HoldStage fill testID="public-hold" label={filling && open ? msg('v2s.fillStage', { n: open.basketNo }) : msg(countKey(), { n: figs.currentNo })} onHold={model.count} onEarly={model.early}>
           {number}
         </HoldStage>
       )}

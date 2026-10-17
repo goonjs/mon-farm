@@ -131,7 +131,6 @@ describe('#1 public mode shares the counter\'s count', () => {
     await act(async () => fireEvent(screen.getByTestId('public-hold'), 'accessibilityAction', { nativeEvent: { actionName: 'activate' } }));
     await flush();
     const ev = await store().load(saleId);
-    expect(ev.filter((e) => e.kind === 'sys' && e.payload.t === 'basket_closed')).toHaveLength(1);
     expect(ev.filter((e) => e.kind === 'accept').pop()).toMatchObject({ basketNo: 2 });
   });
 
