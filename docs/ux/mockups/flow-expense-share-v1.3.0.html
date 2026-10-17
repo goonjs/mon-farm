@@ -62,6 +62,10 @@ figcaption ul { margin: 8px 0 0; padding-left: 1.2em; }
 .sw { width: 44px; height: 24px; border-radius: 12px; background: var(--color-action); position: relative; flex: none; }
 .sw::after { content: ""; position: absolute; right: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--color-surface-raised); }
 .btn { min-height: 52px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; font-weight: 700; background: var(--color-action); color: var(--color-ink-inverse); }
+.arrow { width: 96px; align-self: center; text-align: center; font-size: 13px; line-height: 1.35; color: var(--pg-ink-soft); }
+.arrow b { display: block; color: var(--color-action); font-size: 14px; }
+.arrow::before { content: "→"; display: block; font-size: 28px; color: var(--color-action); }
+@media (max-width: 860px) { .arrow::before { content: "↓"; } .arrow { width: 100%; } }
 .btn.sec2 { background: var(--color-surface-raised); color: var(--color-action); border: 2px solid var(--color-action); }
 .hint { font-size: 13px; color: var(--color-ink-soft); }
 .banner { border-radius: var(--r-md); background: var(--color-brand-yellow); color: var(--color-ink-inverse); padding: 10px 12px; font-size: 14px; font-weight: 600; }
@@ -136,7 +140,7 @@ figcaption ul { margin: 8px 0 0; padding-left: 1.2em; }
 
   <section class="sec">
     <h2>C. หมวดปุ๋ย (แบบ 3 + 4 รวมกัน)</h2>
-    <p>เลือกหมวดปุ๋ยในฟอร์มค่าใช้จ่าย แล้วพาไปหน้าซื้อปุ๋ย กรอกบิลครั้งเดียว ติ๊กคนกรีดและใส่กระสอบ</p>
+    <p>ลำดับ: <b>3</b> เลือกหมวดปุ๋ย → <b>4</b> หน้าซื้อปุ๋ย (ติ๊กคนกรีด ใส่กระสอบ) → <b>5</b> แตะการ์ดคนกรีดเพื่อดูรายละเอียด → "ตกลง" กลับ <b>4</b> → "บันทึก" ที่ <b>4</b> → ผลเป็นภาพ <b>6</b></p>
     <div class="flow">
       <figure class="step">
         <div class="phone"><div class="screen">
@@ -144,17 +148,19 @@ figcaption ul { margin: 8px 0 0; padding-left: 1.2em; }
           <div class="body">
             <div><div class="lbl">จำนวนเงินตามบิล *</div><div class="fld num"><b>8,000</b><span>บาท</span></div></div>
             <div><div class="lbl">หมวด</div><div class="chips"><span class="chip on">ปุ๋ย</span><span class="chip">ซ่อมแซม</span><span class="chip">ค่าแรง</span></div></div>
-            <div class="banner">หมวดปุ๋ยแบ่งตามกระสอบ กดต่อไปเพื่อเลือกคนกรีด</div>
-            <div class="btn">ต่อไป: ซื้อปุ๋ย</div>
+            <div class="hint">เลือก "ปุ๋ย" แล้วเปิดหน้าซื้อปุ๋ย (ภาพที่ 4) ทันที ไม่มีปุ่มกดต่อ</div>
           </div>
         </div></div>
-        <figcaption><span class="t">3 · เลือกหมวดปุ๋ย</span>ยอดและวันที่ที่กรอกไว้ถูกพาไปด้วย ไม่ต้องกรอกซ้ำ</figcaption>
+        <figcaption><span class="t">3 · เลือกหมวดปุ๋ยในฟอร์มค่าใช้จ่าย</span>ยอดบิลที่กรอกไว้ถูกพาไปด้วย ไม่ต้องกรอกซ้ำ</figcaption>
       </figure>
+
+      <div class="arrow"><b>แตะ "ปุ๋ย"</b>เปิดหน้า 4 ทันที</div>
 
       <figure class="step">
         <div class="phone"><div class="screen">
           <div class="appbar"><h3>← ซื้อปุ๋ย</h3><span class="save">บันทึก</span></div>
           <div class="body">
+            <div class="row"><span>รายละเอียดบิล ▸</span><span class="hint">วันที่ · วงจร · ผู้จ่าย · ผู้สั่ง · ร้าน · รูปใบเสร็จ</span></div>
             <div class="row"><span>ยอดตามบิล</span><b class="num">8,000</b></div>
             <div class="row"><span>ส่วนลด (บาท)</span><b class="num">500</b></div>
             <div class="row sum"><span>ยอดสุทธิ</span><b class="num">7,500</b></div>
@@ -177,8 +183,10 @@ figcaption ul { margin: 8px 0 0; padding-left: 1.2em; }
             <div class="btn">บันทึก</div>
           </div>
         </div></div>
-        <figcaption><span class="t">4 · หน้าซื้อปุ๋ย</span><ul><li>ผลรวมกระสอบเกินกระสอบทั้งหมดไม่ได้ (แสดง "เหลือ n")</li><li>แตะการ์ดคนกรีดเพื่อเปิดรายละเอียด (ภาพถัดไป)</li><li>ผลรวมหนี้ + ส่วนสวน = ยอดสุทธิตรงสตางค์</li></ul></figcaption>
+        <figcaption><span class="t">4 · หน้าซื้อปุ๋ย</span><ul><li>ผลรวมกระสอบเกินกระสอบทั้งหมดไม่ได้ (แสดง "เหลือ n")</li><li>แตะการ์ดคนกรีดเพื่อเปิดรายละเอียด (ภาพ 5)</li><li>กด "บันทึก" ที่นี่ = จบ (ผลคือภาพ 6) · ถอยกลับ = กลับไปภาพ 3 โดยข้อมูลไม่หาย</li><li>ผลรวมหนี้ + ส่วนสวน = ยอดสุทธิตรงสตางค์</li></ul></figcaption>
       </figure>
+
+      <div class="arrow"><b>แตะการ์ดแดง</b>เปิดภาพ 5<br>"ตกลง" = กลับภาพ 4</div>
 
       <figure class="step">
         <div class="phone"><div class="screen">
