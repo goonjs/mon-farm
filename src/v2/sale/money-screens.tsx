@@ -258,18 +258,30 @@ function CheckBody({ bump }: { bump: () => void }) {
         {s.perZone.map((z, i) => {
           const points = [...rollup.byPoint.entries()].filter(([p]) => tapperOn(master, p, day) === z.personId);
           return (
-            <View key={z.zoneId} testID={`check-tapper-${z.personId}`} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, paddingVertical: t.space.sm, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint }}>
-              <IconTile tone={tapperTone(master, z.personId)} icon={(c) => <TapperIcon color={c} size={20} />} />
-              <View style={{ flex: 1 }}>
-                <AppText style={{ fontWeight: t.font.weight.bold }}>{nameOf(z.personId)}</AppText>
-                <IconLine icon={(c) => <PinIcon color={c} size={12} />}>{msg('pick.points', { n: points.length })}</IconLine>
-                {points.map(([pid, tot]) => (
-                  <AppText key={pid} variant="bodySm" testID={`check-point-${pid}`}>
-                    {msg(tot.shortBaskets ? 'v2s.pointLineShort' : 'v2s.pointLine', { n: tot.standardBaskets, kg: kgText(tot.shortNetG), place: master.points.find((x) => x.id === pid)?.name ?? '' })}
-                  </AppText>
-                ))}
+            <View key={z.zoneId} testID={`check-tapper-${z.personId}`} style={{ paddingVertical: t.space.sm, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md }}>
+                <IconTile tone={tapperTone(master, z.personId)} icon={(c) => <TapperIcon color={c} size={20} />} />
+                <View style={{ flex: 1 }}>
+                  <AppText style={{ fontWeight: t.font.weight.bold }}>{nameOf(z.personId)}</AppText>
+                  <IconLine icon={(c) => <PinIcon color={c} size={12} />}>{msg('pick.points', { n: points.length })}</IconLine>
+                </View>
+                <Big value={msg('v2f.kg', { n: kgText(z.totals.netG) })} size={20} />
               </View>
-              <Big value={msg('v2f.kg', { n: kgText(z.totals.netG) })} size={16} />
+              {points.map(([pid, tot]) => {
+                const parts = [
+                  tot.standardBaskets ? msg('sales.baskets', { n: tot.standardBaskets }) : '',
+                  tot.shortBaskets ? msg('v2s.pointShort', { kg: kgText(tot.shortNetG) }) : '',
+                ].filter(Boolean);
+                return (
+                  <View key={pid} testID={`check-point-${pid}`} style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: t.space.md, paddingTop: t.space.xs, paddingLeft: t.space.xs }}>
+                    <View style={{ flex: 1 }}>
+                      <AppText variant="bodySm" style={{ color: t.color.ink }}>{master.points.find((x) => x.id === pid)?.name ?? ''}</AppText>
+                      <AppText variant="label">{parts.join(' · ')}</AppText>
+                    </View>
+                    <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontVariant: ['tabular-nums'], color: t.color.inkSoft }}>{msg('v2f.kg', { n: kgText(tot.netG) })}</Text>
+                  </View>
+                );
+              })}
             </View>
           );
         })}
