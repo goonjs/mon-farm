@@ -11,10 +11,10 @@ import { useT } from '../../i18n';
 import { Kv } from './pieces';
 
 /** "+1,500.00" / "−1,500.00": the sign is always written. */
-export const signed = (satang: number) => `${satang >= 0 ? '+' : '−'}${formatSatang(Math.abs(satang))}`;
+export const signed = (satang: number) => `${satang === 0 ? '' : satang > 0 ? '+' : '−'}${formatSatang(Math.abs(satang))}`;
 
 /** A label with its direction mark (↘ person → farm, ↗ farm → person), nested so it keeps Kv's font. */
-const WayLabel = ({ mark, text }: { mark: string; text: string }) => (
+export const WayLabel = ({ mark, text }: { mark: string; text: string }) => (
   <Text>
     <Text style={{ fontWeight: '700' }}>{mark} </Text>
     {text}

@@ -12,6 +12,7 @@ import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { wrap } from '../test/render';
 import { CheckScreen, PaymentScreen, SettlementScreen, TallyScreen } from '../v2/sale/money-screens';
 import { clearClosing, markClosing } from '../v2/sale/pieces';
+import { MoneyLines, signed } from '../v2/sale/person-money';
 import { PointScreen } from '../v2/sale/point-screen';
 
 jest.mock('../store/finance', () => {
@@ -351,4 +352,21 @@ describe('tally detail edge cases (E05-S08)', () => {
     expect(screen.queryByTestId(`tally-tapper-${farm.red}`)).toBeNull();
     expect(screen.getByTestId('tally-sum')).toHaveTextContent(/0\.00/);
   });
+});
+
+describe('MoneyLines (E05-S09 AC3): + from the farm, − paid out', () => {
+  it('signs every line', () => {
+    wrap(<MoneyLines personId="p" name="นัด" shareSatang={320_000} paidSatang={150_000} backSatang={64_000} adjustSatang={-50} />);
+    expect(screen.getByTestId('pm-p-share')).toHaveTextContent(/\+3,200\.00$/);
+    expect(screen.getByTestId('pay-route-p')).toHaveTextContent(/−1,500\.00$/);
+    expect(screen.getByTestId('pay-back-p')).toHaveTextContent(/\+640\.00$/);
+    expect(screen.getByTestId('pm-p-round')).toHaveTextContent(/−0\.50$/);
+  });
+  it('hides debt, netting and rounding when there are none', () => {
+    wrap(<MoneyLines personId="p" name="นัด" shareSatang={100} paidSatang={0} backSatang={0} adjustSatang={0} />);
+    expect(screen.queryByTestId('pay-route-p')).toBeNull();
+    expect(screen.queryByTestId('pay-back-p')).toBeNull();
+    expect(screen.queryByTestId('pm-p-round')).toBeNull();
+  });
+  it('writes no sign on zero', () => expect(signed(0)).toBe('0.00'));
 });
