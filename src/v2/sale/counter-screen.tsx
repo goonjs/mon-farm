@@ -28,7 +28,6 @@ import { peopleStore } from '../../store/people';
 import { readWeighBasis, readWeighMode, writeWeighBasis, type WeighBasis, type WeighMode } from '../../store/weigh-mode-preference';
 import { useTheme } from '../../theme';
 import {
-  ActionTile,
   AlertIcon,
   AppText,
   BasketIcon,
@@ -49,7 +48,6 @@ import {
   PinIcon,
   Plus,
   ScaleIcon,
-  SwapIcon,
   TapperIcon,
   TextField,
   Undo,
@@ -564,14 +562,11 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           </Button>
         </View>
       ) : waiting && open ? (
-        <View testID="stage-wait" style={{ flexDirection: 'row', justifyContent: 'center', gap: t.space.md }}>
-          <View style={{ width: 150 }}>
-            <ActionTile testID="next-point" label={msg('rec.nextPoint')} icon={(c) => <SwapIcon color={c} size={26} />} main={!lastPoint} onPress={() => router.push(`${base}/point?mode=switch&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}` as Href)} />
-          </View>
+        <View testID="stage-wait" style={{ alignSelf: 'stretch' }}>
           {lastPoint ? (
-            <View style={{ width: 150 }}>
-              <ActionTile testID="to-summary" label={msg('rec.finish')} icon={(c) => <ChartIcon color={c} size={26} />} main onPress={() => router.push(`${base}/check` as Href)} />
-            </View>
+            <CTA testID="to-summary" icon={(c) => <ChartIcon color={c} size={20} />} onPress={() => router.push(`${base}/check` as Href)}>
+              {msg('rec.finish')}
+            </CTA>
           ) : null}
         </View>
       ) : (

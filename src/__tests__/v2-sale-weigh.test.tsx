@@ -240,9 +240,9 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     expect(screen.getByTestId('current-short')).toHaveTextContent('+35 กก.');
     expect(screen.queryByTestId('current-no')).toBeNull();
     expect(screen.getByTestId('fig-missing')).toHaveTextContent(/^15/);
-    // The point is finished (owner 2026-10-17): no finish button, no hold, no hint — one button to the next point.
+    // The point is finished (owner 2026-10-17): no finish button, no hold, no hint. The switch-point button is the one at the top (owner 2026-10-18: no second button here).
     expect(screen.queryByText(/รอเติม/)).toBeNull();
-    expect(screen.getByTestId('next-point')).toBeTruthy();
+    expect(screen.queryByTestId('next-point')).toBeNull();
     expect(screen.queryByTestId('close-open')).toBeNull();
     expect(screen.queryByTestId('hold')).toBeNull();
     // The only way on is undo: the short basket goes, the number comes back.
@@ -253,18 +253,19 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     expect(screen.getByTestId('fig-done')).toHaveTextContent(/^2/);
   });
 
-  it('the last point offers the summary beside the next-point button; another point left means no summary (E04-S17)', async () => {
+  it('another point left: no summary button and no next-point button, the switch-point button does the job (E04-S18)', async () => {
     await started();
     await readyAt(farm.a[0]);
     await counterAt(farm.a[0]);
     await press('tool-short');
     await press('short-save');
     expect(screen.queryByTestId('to-summary')).toBeNull();
-    await press('next-point');
+    expect(screen.queryByTestId('next-point')).toBeNull();
+    await press('switch-point');
     expect(router.push).toHaveBeenLastCalledWith(expect.stringContaining('/point?mode=switch'));
   });
 
-  it('at the last point the summary button joins the next-point button (E04-S17)', async () => {
+  it('at the last point one full-width summary button goes to the review; there is no next-point button (E04-S18)', async () => {
     await started();
     for (const id of [...farm.a.slice(1), farm.b1]) {
       await readyAt(id);
@@ -276,6 +277,8 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     await counterAt(farm.a[0]);
     await press('tool-short');
     await press('short-save');
+    expect(screen.queryByTestId('next-point')).toBeNull();
+    expect(screen.getByTestId('to-summary')).toHaveTextContent('ชั่งครบแล้ว → ตรวจยอด');
     await press('to-summary');
     expect(router.push).toHaveBeenLastCalledWith(`/v2/sale/${saleId}/check`);
   });
