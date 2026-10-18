@@ -207,8 +207,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
 
   // One height for the three small cards (E04-S18): room for the tallest, the three-line short card.
   const cardHeight = Math.ceil(t.space.sm * 2 + t.space.xxs * 2 + (t.font.size.bodySm + t.font.size.caption + t.font.size.headingXl) * 1.5);
-  const card = (child: React.ReactNode, key: string, warn = false) => (
-    <View key={key} testID={`card-${key}`} style={{ flex: 1, height: cardHeight, overflow: 'hidden', ...cardStyle(t), padding: t.space.sm, gap: t.space.xxs, backgroundColor: warn ? t.color.warnSunk : t.color.surfaceRaised }}>
+  const card = (child: React.ReactNode, key: string, warn = false, fixed = false) => (
+    <View key={key} testID={`card-${key}`} style={{ flex: 1, ...(fixed ? { height: cardHeight, overflow: 'hidden' as const } : {}), ...cardStyle(t), padding: t.space.sm, gap: t.space.xxs, backgroundColor: warn ? t.color.warnSunk : t.color.surfaceRaised }}>
       {child}
     </View>
   );
@@ -263,9 +263,9 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           <Pressable testID="counter-home" accessibilityRole="button" accessibilityLabel={msg('rec.home')} onPress={() => router.push(V2_HOME)} style={{ minWidth: t.target.min, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center' }}>
             <HomeIcon color={t.color.appBarInk} size={18} />
           </Pressable>
-        <Pressable testID="counter-menu" accessibilityRole="button" accessibilityLabel={msg('rec.menu')} onPress={() => setSheet('menu')} style={{ minWidth: t.target.min, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center' }}>
-          <DotsIcon color={t.color.appBarInk} size={18} />
-        </Pressable>
+          <Pressable testID="counter-menu" accessibilityRole="button" accessibilityLabel={msg('rec.menu')} onPress={() => setSheet('menu')} style={{ minWidth: t.target.min, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center' }}>
+            <DotsIcon color={t.color.appBarInk} size={18} />
+          </Pressable>
         </View>
       }
       footer={
@@ -505,26 +505,29 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       <IconLine icon={(c) => <TapperIcon color={c} size={13} />}>{scopeTitle}</IconLine>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
         {price !== null
-          ? card(<><AppText variant="bodySm">{msg('rec.money')}</AppText>{figure(compactBaht(figs.satang ?? 0), '฿', 'fig-money')}</>, 'first')
-          : card(<><AppText variant="bodySm">{msg('rec.done')}</AppText>{figure(String(figs.done), msg('rec.baskets'), 'fig-done')}</>, 'first')}
+          ? card(<><AppText variant="bodySm">{msg('rec.money')}</AppText>{figure(compactBaht(figs.satang ?? 0), '฿', 'fig-money')}</>, 'first', false, true)
+          : card(<><AppText variant="bodySm">{msg('rec.done')}</AppText>{figure(String(figs.done), msg('rec.baskets'), 'fig-done')}</>, 'first', false, true)}
         {card(
           <>
             <IconLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')}</IconLine>
             {figure(kgText(figs.netG), msg('common.kg'), 'fig-kg')}
           </>,
           'kg',
+          false,
+          true,
         )}
         {open
           ? card(
               <>
-                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.shortOf', { n: open.basketNo })}</Text>
-                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.missing')}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.shortOf', { n: open.basketNo })}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.missing')}</Text>
                 {figure(kgText(open.missingG), msg('common.kg'), 'fig-missing')}
               </>,
               'short',
               true,
+              true,
             )
-          : card(<><AppText variant="bodySm">{msg('rec.short')}</AppText><AppText style={{ fontWeight: t.font.weight.bold }}>{msg('rec.none')}</AppText></>, 'short')}
+          : card(<><AppText variant="bodySm">{msg('rec.short')}</AppText><AppText style={{ fontWeight: t.font.weight.bold }}>{msg('rec.none')}</AppText></>, 'short', false, true)}
       </View>
 
       {waiting && open ? (
