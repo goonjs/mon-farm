@@ -34,7 +34,8 @@ export function figSize(text: string, base: number): number {
   if (text.length <= 5) return base;
   if (text.length <= 7) return Math.round(base * 0.83);
   if (text.length <= 9) return Math.round(base * 0.71);
-  return Math.round(base * 0.58);
+  if (text.length <= 11) return Math.round(base * 0.58);
+  return Math.round(base * 0.5);
 }
 
 /** Grams as the app shows kg: "1,520", "37.5". */
@@ -483,7 +484,7 @@ export function IconLine({ icon, children, testID, strong }: { icon?: IconRender
   return (
     <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
       {icon ? <View aria-hidden style={{ width: 16, alignItems: 'center' }}>{icon(t.color.inkSoft)}</View> : null}
-      <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: strong ? t.font.weight.bold : t.font.weight.regular, color: strong ? t.color.ink : t.color.inkSoft }}>
+      <Text style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: strong ? t.font.weight.bold : t.font.weight.regular, color: strong ? t.color.ink : t.color.inkSoft }}>
         {children}
       </Text>
     </View>

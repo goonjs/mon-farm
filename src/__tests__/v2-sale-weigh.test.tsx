@@ -922,7 +922,7 @@ describe('v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)', (
     expect(heightOf('card-short')).toBe(h);
     expect(screen.getByTestId('card-kg')).toHaveTextContent(/น้ำหนัก \(กก\.\)/);
     expect(screen.getByTestId('fig-kg')).toHaveTextContent(/^[\d,.]+$/);
-    expect(screen.getByTestId('fig-kg').props.numberOfLines).toBeUndefined();
+    expect(screen.getByTestId('fig-kg').props.numberOfLines).toBe(1);
   });
 
   it('the short card (an open short basket) has the same height, its unit in the label too', async () => {
@@ -944,7 +944,8 @@ describe('v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)', (
     expect(figSize('1,234', 24)).toBe(24);
     expect(figSize('12,345.5', 24)).toBeLessThan(24);
     expect(figSize('1,234,567.5', 24)).toBeLessThan(figSize('12,345.5', 24));
-    expect(figSize('1,234,567.5', 24)).toBeGreaterThanOrEqual(14);
+    expect(figSize('1,234,567.5', 24)).toBeGreaterThanOrEqual(12);
+    expect(figSize('123,456,789.5', 24)).toBeLessThan(figSize('1,234,567.5', 24));
   });
 
   it('the menu is grouped: finish · record · price and info · go to · delete last', async () => {

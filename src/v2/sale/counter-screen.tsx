@@ -15,7 +15,7 @@
 
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { PixelRatio, Pressable, Text, View } from 'react-native';
 
 import { compactBaht } from '../../core/compact-baht';
 import { pointsOf, tapperOn } from '../../core/master';
@@ -206,7 +206,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   };
 
   // One height for the three small cards (E04-S18): room for the tallest, the three-line short card.
-  const cardHeight = Math.ceil(t.space.sm * 2 + t.space.xxs * 2 + (t.font.size.bodySm + t.font.size.caption + t.font.size.headingXl) * 1.5);
+  const cardHeight = Math.ceil((t.space.sm * 2 + t.space.xxs * 2 + (t.font.size.bodySm + t.font.size.caption + t.font.size.headingXl) * 1.5) * Math.max(1, PixelRatio.getFontScale()));
   const card = (child: React.ReactNode, key: string, warn = false, fixed = false) => (
     <View key={key} testID={`card-${key}`} style={{ flex: 1, ...(fixed ? { height: cardHeight, overflow: 'hidden' as const } : {}), ...cardStyle(t), padding: t.space.sm, gap: t.space.xxs, backgroundColor: warn ? t.color.warnSunk : t.color.surfaceRaised }}>
       {child}
@@ -218,9 +218,9 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       {unit ? <Text style={{ fontSize: t.font.size.caption, fontWeight: t.font.weight.regular, color: t.color.inkSoft }}> {unit}</Text> : null}
     </Text>
   );
-  // The small cards' figure: the number alone (the unit is in the label above), stepped down by length.
+  // The small cards' figure: the number (the unit is in the label above), stepped down by length; one line, so a card never grows.
   const cardFigure = (value: string, testID: string) => (
-    <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: figSize(value, t.font.size.headingXl), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+    <Text testID={testID} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figSize(value, t.font.size.headingXl), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
       {value}
     </Text>
   );
@@ -515,7 +515,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           : card(<><AppText variant="bodySm" numberOfLines={1}>{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
         {card(
           <>
-            <IconLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')} ({msg('common.kg')})</IconLine>
+            <AppText variant="bodySm" numberOfLines={1}>{msg('rec.kg')} ({msg('common.kg')})</AppText>
             {cardFigure(kgText(figs.netG), 'fig-kg')}
           </>,
           'kg',
