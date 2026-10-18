@@ -42,6 +42,9 @@ Status: Draft
 
 ## Dev notes
 
+- **ส่วนเล็กดึงไปทำใน E11-S10 (เจ้าของ 2026-10-18):** โซนเป็นของสวน (D-43) — event master `farm_zone_added` (`zoneId`, `propertyId`, `name`, `effective`) และ `farm_zone_renamed`; projection `MasterState.zones`, `activeZones`, `zoneNameTaken` (`src/core/master.ts`); `MasterStore.addZone` / `renameZone`; UI เพิ่ม/แก้ชื่อโซนอยู่ในขั้นโซนของ flow ซื้อปุ๋ย. ชื่อ `farm_zone_*` เพื่อไม่ชนกับ `zone_added` (sys event ของการขายยุคเดิม)
+- **ยังเหลือใน story นี้:** เลิกใช้โซนพร้อมวันที่, แยก/รวมโซน (จุดชั่งย้ายโซน), โซน ณ วันที่ (ประวัติโครงสร้าง), กำหนดย้อนหลัง, กติกาการลบ, หน้าจัดการโซนในข้อมูลสวน
+
 ## Code review
 
 ## QA notes
