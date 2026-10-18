@@ -29,3 +29,23 @@ export function writeHoldMs(ms: number): void {
     /* a quota or privacy-mode error must not take the app down */
   }
 }
+
+/** Whether a basket is counted by pressing and holding, or by one tap (E04-S17). Also this device's own. */
+export type CountMode = 'hold' | 'tap';
+const MODE_KEY = 'mon-farm:count-mode';
+
+export function readCountMode(): CountMode {
+  try {
+    return globalThis.localStorage?.getItem(MODE_KEY) === 'tap' ? 'tap' : 'hold';
+  } catch {
+    return 'hold';
+  }
+}
+
+export function writeCountMode(mode: CountMode): void {
+  try {
+    globalThis.localStorage?.setItem(MODE_KEY, mode);
+  } catch {
+    /* a quota or privacy-mode error must not take the app down */
+  }
+}

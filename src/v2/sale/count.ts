@@ -11,18 +11,22 @@ import { canCount } from '../../core/project';
 import { recorderFigures } from '../../core/sale-points';
 import type { useSaleView } from './pieces';
 
-export type Fill = 'full' | 'part';
+/** `next`: the open short basket is left as it is, and closes with the first full basket counted (E04-S17). */
+export type Fill = 'full' | 'part' | 'next';
 
 export function countModel(view: ReturnType<typeof useSaleView>, pointId: string, fillParam?: string) {
   const { events, state, master, day, mode, append, closed } = view;
   if (!master) return null;
   const pile = state.piles.find((p) => p.id === pointId);
   if (!pile) return null;
-  const figs = recorderFigures(events, master, day, pointId, mode, state.price?.satangPerKg ?? null);
+  const counted = recorderFigures(events, master, day, pointId, mode, state.price?.satangPerKg ?? null);
   const open = openBasketIn(events, master, day, pointId, mode, stdNetOfLog(events));
-  const filling = !!open && open.pointId !== pointId;
+  // `next`: the short basket is left as it is, chosen at the next point. At its own point the point is finished: nothing counts there (owner 2026-10-17).
+  const leftShort = open && open.pointId !== pointId && fillParam === 'next' ? open : null;
+  const filling = !!open && open.pointId !== pointId && !leftShort;
   const waiting = !!open && open.pointId === pointId;
   const fill: Fill = fillParam === 'part' ? 'part' : 'full';
+  const figs = leftShort ? { ...counted, currentNo: leftShort.basketNo + 1 } : counted;
   // A whole-basket top-up weighs the open basket itself, with its own tare (review #9).
   const basketTare = filling && open && fill === 'full' ? open.tareG : pile.tareG;
   const ready = canCount(state, pointId) && !closed;
@@ -34,6 +38,7 @@ export function countModel(view: ReturnType<typeof useSaleView>, pointId: string
       append({ kind: 'accept', pileId: pointId, pointId, basketNo: open.basketNo, input, netG: open.missingG, tareG: basketTare, partOf: open.rootId });
       return { basketNo: open.basketNo, netG: open.missingG };
     }
+    // Nothing closes the short basket explicitly: a later live basket does (`movedPast`), so undoing this one reopens it.
     append({ kind: 'accept', pileId: pointId, pointId, basketNo: figs.currentNo, input, netG: pile.stdNetG, tareG: pile.tareG });
     return { basketNo: figs.currentNo, netG: pile.stdNetG };
   };

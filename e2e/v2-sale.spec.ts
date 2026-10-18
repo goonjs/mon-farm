@@ -182,7 +182,7 @@ test('start → point → empty scale → count → short → switch and fill �
   // ── นับเข่ง (page 8) ──
   await expect(id('counter')).toBeVisible();
   for (let i = 0; i < 3; i++) await hold(page);
-  await expect(id('current-no')).toHaveText('4');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 4$/);
   await expect(id('fig-done')).toContainText('3');
   await expect(id('fig-kg')).toContainText('150');
   await shot(page, '08-counter');
@@ -207,7 +207,7 @@ test('start → point → empty scale → count → short → switch and fill �
   await id('tool-short').click();
   await expect(id('reading-scale-input')).toHaveValue('37');
   await id('short-save').click();
-  await expect(id('open-card')).toContainText('เข่ง 4 เปิดอยู่ · 35 กก.');
+  await expect(id('open-card')).toContainText('เข่ง 4 · 35 / 50 กก.');
   await shot(page, '11-open-short');
 
   // ── เปลี่ยนจุด → จุด 2 ของคนกรีดยางคนเดิม (page 12) ──
@@ -223,7 +223,7 @@ test('start → point → empty scale → count → short → switch and fill �
   await expect(id('hold')).toContainText('เติมเข่ง 4');
   await shot(page, '13-fill');
   await hold(page);
-  await expect(id('current-no')).toHaveText('5');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
 
   // ── back after a switch never opens the old point's counter (review #3) ──
   await page.goBack();
@@ -237,7 +237,7 @@ test('start → point → empty scale → count → short → switch and fill �
   await context.setOffline(false);
   await page.reload();
   await context.setOffline(true);
-  await expect(id('current-no')).toHaveText('5');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
   await expect(id('fig-kg')).toContainText('200');
   await expect(id('point-place')).toContainText('จันทเขลม · จุด 2');
 
@@ -252,12 +252,12 @@ test('start → point → empty scale → count → short → switch and fill �
 
   // ── ย้อนกลับ is a hold: a tap does nothing, a full hold gives the number back ──
   await id('tool-undo').click();
-  await expect(id('current-no')).toHaveText('5');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
   await hold(page, 'tool-undo');
-  await expect(id('current-no')).toHaveText('4');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 4$/);
   await expect(id('undo-notice')).toContainText('ยกเลิกส่วนที่เติมของเข่ง 4 แล้ว');
   await hold(page);
-  await expect(id('current-no')).toHaveText('5');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
   await expect(id('count-notice')).toContainText('บันทึกเข่ง 4');
 
   // ── the list says what was done: the basket taken back stays, marked, out of the totals ──
@@ -298,7 +298,7 @@ test('start → point → empty scale → count → short → switch and fill �
   await id('pick-point-a4').click();
   await id('start-weigh').click();
   await expect(id('point-tapper')).toContainText('นัด');
-  await expect(id('current-no')).toHaveText('1');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 1$/);
   await hold(page);
   await hold(page);
   await expect(id('fig-kg')).toContainText('100');
@@ -390,7 +390,7 @@ test('back to a point already weighed: straight to its counter, the count goes o
   await id('choose-skew').click();
   await id('start-weigh').click();
   for (let i = 0; i < 3; i++) await hold(page);
-  await expect(id('current-no')).toHaveText('4');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 4$/);
 
   // จุด 2 is new to the sale: its empty scale is checked.
   await id('switch-point').click();
@@ -405,7 +405,32 @@ test('back to a point already weighed: straight to its counter, the count goes o
   await id('pick-point-a1').click();
   await expect(id('point-place')).toContainText('จันทเขลม · จุด 1');
   await expect(id('zero-tare')).toHaveCount(0);
-  await expect(id('current-no')).toHaveText('4');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 4$/);
   await hold(page);
-  await expect(id('current-no')).toHaveText('5');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
+});
+
+test('last point: the next-point tile and the review tile side by side (E04-S17)', async ({ page }) => {
+  const id = on(page);
+  await seedMaster(page, FARM);
+  const b = new LogBuilder('sale-last');
+  b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+  b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+  b.sys({ t: 'zone_added', zoneId: 'fa', name: 'จันทเขลม' });
+  b.sys({ t: 'zone_added', zoneId: 'fb', name: 'คลองพลู' });
+  for (const p of ['a1', 'a2', 'a3', 'a4', 'b1']) {
+    b.sys({ t: 'pile_added', pileId: p, zoneId: p.startsWith('a') ? 'fa' : 'fb', name: p, tareG: 2_000, stdNetG: 50_000 });
+    b.sys({ t: 'zero_check', pileId: p, ok: true, readingG: 0 });
+    b.sys({ t: 'tare_confirmed', pileId: p, tareG: 2_000 });
+    b.sys({ t: 'ready', pileId: p });
+    b.acceptAt(p, 1).acceptAt(p, 2);
+  }
+  b.shortAt('a1', 3, 24_000);
+  const now = Date.now();
+  await seedEvents(page, b.build().map((e) => ({ ...e, ts: now })));
+  await page.goto('/v2/sale/sale-last/counter?point=a1');
+  await expect(id('open-card')).toContainText('เข่ง 3 · 22 / 50 กก.');
+  await expect(id('next-point')).toBeVisible();
+  await expect(id('to-summary')).toContainText('ชั่งครบแล้ว → ตรวจยอด');
+  await shot(page, '11b-last-point');
 });
