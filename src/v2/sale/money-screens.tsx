@@ -268,15 +268,17 @@ function CheckBody({ bump }: { bump: () => void }) {
                 <Big value={msg('v2f.kg', { n: kgText(z.totals.netG) })} size={20} />
               </View>
               {points.map(([pid, tot]) => {
-                const parts = [
-                  tot.standardBaskets ? msg('sales.baskets', { n: tot.standardBaskets }) : '',
-                  tot.shortBaskets ? msg('v2s.pointShort', { kg: kgText(tot.shortNetG) }) : '',
-                ].filter(Boolean);
+                // "3 × 50 + 35 กก.": full baskets × the standard basket, plus the short basket's kg.
+                const std = tot.standardBaskets ? tot.standardNetG / tot.standardBaskets : 0;
+                const sum = [
+                  tot.standardBaskets ? (Number.isInteger(std / 1000) ? `${tot.standardBaskets} × ${kgText(std)}` : kgText(tot.standardNetG)) : '',
+                  tot.shortBaskets ? kgText(tot.shortNetG) : '',
+                ].filter(Boolean).join(' + ');
                 return (
                   <View key={pid} testID={`check-point-${pid}`} style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: t.space.md, paddingTop: t.space.xs, paddingLeft: t.space.xs }}>
                     <View style={{ flex: 1 }}>
                       <AppText variant="bodySm" style={{ color: t.color.ink }}>{master.points.find((x) => x.id === pid)?.name ?? ''}</AppText>
-                      <AppText variant="label">{parts.join(' · ')}</AppText>
+                      <AppText variant="label" style={{ paddingLeft: t.space.lg }}>{msg('v2f.kg', { n: sum })}</AppText>
                     </View>
                     <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontVariant: ['tabular-nums'], color: t.color.inkSoft }}>{msg('v2f.kg', { n: kgText(tot.netG) })}</Text>
                   </View>
@@ -634,7 +636,11 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
         })}
         <Kv tone="total" label={msg('v2s.sumShares')} value={baht(money.tappers.reduce((a, tp) => a + tp.shareSatang, 0))} />
         <Kv label={msg('v2s.sumFarm')} value={baht(s.ownerSatang)} />
-        <Kv label={msg('v2s.sumSale')} value={baht(s.grossSatang)} />
+        {/* The line the whole block adds up to: as strong as the top card's total, in the accept colour with a ✓ (owner 2026-10-18). */}
+        <View testID="sum-sale" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: t.space.sm, borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, paddingTop: t.space.sm, marginTop: t.space.xs }}>
+          <AppText style={{ flexShrink: 1, fontWeight: t.font.weight.bold, fontSize: t.font.size.bodyLg, color: t.color.accept }}>{`✓ ${msg('v2s.sumSale')}`}</AppText>
+          <Big value={baht(s.grossSatang)} size={24} tone={t.color.accept} />
+        </View>
       </View>
 
       {/* ข · debt, not the sale (owner 2026-10-14): what tappers pay the farm (↘, one colour) and what the farm
