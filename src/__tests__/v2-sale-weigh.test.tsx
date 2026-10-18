@@ -899,3 +899,92 @@ describe('short basket: how it is recorded (E04-S16)', () => {
     expect(readWeighBasis()).toBe('scale');
   });
 });
+
+describe("v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)", () => {
+  const heightOf = (id: string) => {
+    const style = ([] as unknown[])
+      .concat(screen.getByTestId(id).props.style)
+      .flat(3)
+      .reduce<Record<string, unknown>>(
+        (a, s) => ({ ...a, ...(s as object) }),
+        {},
+      );
+    return style.height;
+  };
+
+  it("the three small cards keep one fixed height, with or without an open short basket", async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    const h = heightOf("card-kg");
+    expect(typeof h).toBe("number");
+    expect(heightOf("card-first")).toBe(h);
+    expect(heightOf("card-short")).toBe(h);
+    expect(screen.getByTestId("fig-kg").props.numberOfLines).toBe(1);
+  });
+
+  it("the menu is grouped: finish · record · price and info · go to · delete last", async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    await press("counter-menu");
+    expect(
+      screen
+        .getAllByTestId(/^menu-(?!sheet)[a-z]+$/)
+        .map((x) => x.props.testID),
+    ).toEqual([
+      "menu-finish",
+      "menu-backfill",
+      "menu-public",
+      "menu-price",
+      "menu-info",
+      "menu-home",
+      "menu-debts",
+      "menu-sales",
+      "menu-delete",
+    ]);
+  });
+
+  it("home and debts are two separate rows in the menu", async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    await press("counter-menu");
+    await press("menu-home");
+    expect(router.push).toHaveBeenLastCalledWith("/v2");
+    await press("counter-menu");
+    await press("menu-debts");
+    expect(router.push).toHaveBeenLastCalledWith("/v2/debts");
+  });
+
+  it("the app bar has a home button", async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    await press("counter-home");
+    expect(router.push).toHaveBeenLastCalledWith("/v2");
+  });
+
+  it("the point picker menu has the same go-to rows, without the finish and record groups", async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await inSale(<PointScreen />, {
+      mode: "switch",
+      farm: farm.farmA,
+      tapper: farm.red,
+    });
+    await press("pick-menu");
+    expect(
+      screen
+        .getAllByTestId(/^menu-(?!sheet)[a-z]+$/)
+        .map((x) => x.props.testID),
+    ).toEqual([
+      "menu-price",
+      "menu-info",
+      "menu-home",
+      "menu-debts",
+      "menu-sales",
+      "menu-delete",
+    ]);
+  });
+});

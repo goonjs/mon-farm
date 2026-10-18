@@ -305,6 +305,7 @@ test('start → point → empty scale → count → short → switch and fill �
 
   // ── ชั่งครบแล้ว → ตรวจยอด (page 16): the price first, then one tap ──
   await id('counter-menu').click();
+  await shot(page, '08m-menu');
   await id('menu-finish').click();
   await expect(id('check')).toBeVisible();
   await id('check-price').fill('48.50');

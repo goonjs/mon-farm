@@ -35,7 +35,10 @@ import {
   BottomSheet,
   Button,
   cardStyle,
+  Check,
   ChartIcon,
+  DeviceIcon,
+  HomeIcon,
   ChevronRight,
   ClockIcon,
   CTA,
@@ -52,13 +55,15 @@ import {
   Undo,
 } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
+import { V2_HOME } from '../routes';
 import { countModel } from './count';
 import { countKey, HoldButton, HoldStage } from './hold';
 import { signed, useGoToPoint } from './move';
 import { Banner, IconLine, Kv, kgText, NumChip, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 import { Ruler } from './ruler';
 import { BasisToggle, TypedReading } from './short-reading';
-import { SaleOptionRows, SaleOptionSheets, type OptionSheet } from './sale-options';
+import { MenuGroup, MenuRow, SaleMenu } from './sale-menu';
+import { SaleOptionSheets, type OptionSheet } from './sale-options';
 
 type Sheet = 'none' | 'partial' | 'menu' | 'new-point' | 'undo-confirm' | OptionSheet;
 
@@ -200,13 +205,15 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
     goTo(p.id, { replace: true });
   };
 
+  // One height for the three small cards (E04-S18): room for the tallest, the three-line short card.
+  const cardHeight = Math.ceil(t.space.sm * 2 + t.space.xxs * 2 + (t.font.size.bodySm + t.font.size.caption + t.font.size.headingXl) * 1.5);
   const card = (child: React.ReactNode, key: string, warn = false) => (
-    <View key={key} testID={`card-${key}`} style={{ flex: 1, ...cardStyle(t), padding: t.space.sm, gap: t.space.xxs, backgroundColor: warn ? t.color.warnSunk : t.color.surfaceRaised }}>
+    <View key={key} testID={`card-${key}`} style={{ flex: 1, height: cardHeight, overflow: 'hidden', ...cardStyle(t), padding: t.space.sm, gap: t.space.xxs, backgroundColor: warn ? t.color.warnSunk : t.color.surfaceRaised }}>
       {child}
     </View>
   );
   const figure = (value: string, unit?: string, testID?: string) => (
-    <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingXl, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+    <Text testID={testID} numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingXl, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
       {value}
       {unit ? <Text style={{ fontSize: t.font.size.caption, fontWeight: t.font.weight.regular, color: t.color.inkSoft }}> {unit}</Text> : null}
     </Text>
@@ -252,9 +259,14 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       fallback={'/v2/sales' as Href}
       testID="counter"
       right={
+        <View style={{ flexDirection: 'row' }}>
+          <Pressable testID="counter-home" accessibilityRole="button" accessibilityLabel={msg('rec.home')} onPress={() => router.push(V2_HOME)} style={{ minWidth: t.target.min, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center' }}>
+            <HomeIcon color={t.color.appBarInk} size={18} />
+          </Pressable>
         <Pressable testID="counter-menu" accessibilityRole="button" accessibilityLabel={msg('rec.menu')} onPress={() => setSheet('menu')} style={{ minWidth: t.target.min, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center' }}>
           <DotsIcon color={t.color.appBarInk} size={18} />
         </Pressable>
+        </View>
       }
       footer={
         <View style={{ flexDirection: 'row', gap: t.space.sm }}>
@@ -373,19 +385,26 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           </BottomSheet>
 
           <BottomSheet open={sheet === 'menu'} onClose={() => setSheet('none')} title={msg('rec.menu')} testID="menu-sheet">
-            <Button variant="row" testID="menu-public" onPress={() => { setSheet('none'); router.push(`${base}/public?point=${pointId}${params.fill ? `&fill=${params.fill}` : ''}` as Href); }}>
-              {msg('rec.public')}
-            </Button>
-            <Button variant="row" testID="menu-backfill" onPress={() => { setSheet('none'); router.push(`${base}/point?mode=backfill&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}` as Href); }}>
-              {msg('backfill.title')}
-            </Button>
-            <Button variant="row" testID="menu-finish" onPress={() => { setSheet('none'); router.push(`${base}/check` as Href); }}>
-              {msg('rec.finish')}
-            </Button>
-            <SaleOptionRows view={view} pick={setSheet} />
-            <Button variant="row" testID="menu-sales" onPress={() => { setSheet('none'); router.push('/v2/sales' as Href); }}>
-              {msg('v2.sales')}
-            </Button>
+            <SaleMenu
+              view={view}
+              pick={setSheet}
+              close={() => setSheet('none')}
+              lead={
+                <>
+                  <MenuRow testID="menu-finish" tone="accept" main icon={(c) => <Check color={c} size={16} />} onPress={() => { setSheet('none'); router.push(`${base}/check` as Href); }}>
+                    {msg('rec.finish')}
+                  </MenuRow>
+                  <MenuGroup title={msg('menu.grpRecord')}>
+                    <MenuRow testID="menu-backfill" tone="action" icon={(c) => <ClockIcon color={c} size={16} />} onPress={() => { setSheet('none'); router.push(`${base}/point?mode=backfill&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}` as Href); }}>
+                      {msg('backfill.title')}
+                    </MenuRow>
+                    <MenuRow testID="menu-public" tone="action" icon={(c) => <DeviceIcon color={c} size={16} />} onPress={() => { setSheet('none'); router.push(`${base}/public?point=${pointId}${params.fill ? `&fill=${params.fill}` : ''}` as Href); }}>
+                      {msg('rec.public')}
+                    </MenuRow>
+                  </MenuGroup>
+                </>
+              }
+            />
           </BottomSheet>
 
           <BottomSheet open={sheet === 'undo-confirm' && lastNo !== null} onClose={() => setSheet('none')} title={lastNo !== null ? msg(lastIsPart ? 'rec.undoPartAsk' : 'rec.undoAsk', { n: lastNo }) : undefined} testID="undo-confirm">
