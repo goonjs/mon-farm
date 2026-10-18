@@ -409,3 +409,28 @@ test('back to a point already weighed: straight to its counter, the count goes o
   await hold(page);
   await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
 });
+
+test('last point: the next-point tile and the review tile side by side (E04-S17)', async ({ page }) => {
+  const id = on(page);
+  await seedMaster(page, FARM);
+  const b = new LogBuilder('sale-last');
+  b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+  b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+  b.sys({ t: 'zone_added', zoneId: 'fa', name: 'จันทเขลม' });
+  b.sys({ t: 'zone_added', zoneId: 'fb', name: 'คลองพลู' });
+  for (const p of ['a1', 'a2', 'a3', 'a4', 'b1']) {
+    b.sys({ t: 'pile_added', pileId: p, zoneId: p.startsWith('a') ? 'fa' : 'fb', name: p, tareG: 2_000, stdNetG: 50_000 });
+    b.sys({ t: 'zero_check', pileId: p, ok: true, readingG: 0 });
+    b.sys({ t: 'tare_confirmed', pileId: p, tareG: 2_000 });
+    b.sys({ t: 'ready', pileId: p });
+    b.acceptAt(p, 1).acceptAt(p, 2);
+  }
+  b.shortAt('a1', 3, 24_000);
+  const now = Date.now();
+  await seedEvents(page, b.build().map((e) => ({ ...e, ts: now })));
+  await page.goto('/v2/sale/sale-last/counter?point=a1');
+  await expect(id('open-card')).toContainText('เข่ง 3 · 22 / 50 กก.');
+  await expect(id('next-point')).toBeVisible();
+  await expect(id('to-summary')).toContainText('ชั่งครบแล้ว → ตรวจยอด');
+  await shot(page, '11b-last-point');
+});

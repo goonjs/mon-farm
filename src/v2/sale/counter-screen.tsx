@@ -542,7 +542,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           </View>
           {lastPoint ? (
             <View style={{ width: 150 }}>
-              <ActionTile testID="to-summary" label={msg('rec.summary')} icon={(c) => <ChartIcon color={c} size={26} />} main onPress={() => router.push(`${base}/check` as Href)} />
+              <ActionTile testID="to-summary" label={msg('rec.finish')} icon={(c) => <ChartIcon color={c} size={26} />} main onPress={() => router.push(`${base}/check` as Href)} />
             </View>
           ) : null}
         </View>
