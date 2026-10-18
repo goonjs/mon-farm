@@ -1,5 +1,6 @@
 /**
- * ตั้งค่าปุ๋ย — mockup 7b screen 21h (E11-S10 C). The saved choices the
+ * ตั้งค่าปุ๋ย — mockup 7b screen 21h (E11-S10 C). The fertilizer category's
+ * default tapper %, and the saved choices the
  * fertilizer flow offers: reasons (name + description) and formulas, brands
  * and sack sizes. Add, edit, hide and show; nothing is ever removed, so an
  * old purchase still reads its reason's name. Hidden is said in words, not
@@ -10,7 +11,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
-import type { FertOption } from '../../core/finance/ledger';
+import { headOf, type FertOption } from '../../core/finance/ledger';
 import type { FertOptionKind } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
@@ -22,6 +23,7 @@ import { setFertOption } from './fert-options';
 import { ChoiceChip, ChoiceRow } from './pieces';
 
 const KINDS: readonly FertOptionKind[] = ['reason', 'formula', 'brand', 'sackKg'];
+const FERTILIZER = 'cat-fertilizer';
 
 const back = () => (router.canGoBack() ? router.back() : router.replace('/v2/expenses'));
 
@@ -35,6 +37,18 @@ export function FertilizerSettingsScreen() {
   const [search, setSearch] = useState('');
   /** The row being edited, or `{}` for a new one. */
   const [editing, setEditing] = useState<{ option?: FertOption; name: string; description: string } | null>(null);
+
+  // The fertilizer category's default tapper % (E11-S10 C), the flow's starting value per tapper.
+  const catPct = fin.state?.categories.find((c) => c.id === FERTILIZER)?.workerPct ?? 50;
+  const [pct, setPct] = useState<string | null>(null);
+  const pctText = pct ?? String(catPct);
+  const pctOk = /^\d{1,3}$/.test(pctText.trim()) && Number(pctText) <= 100;
+  const savePct = async () => {
+    if (!pctOk) return;
+    const prior = (fin.events ?? []).filter((e) => e.targetId === FERTILIZER && e.payload.t === 'category_share_set');
+    await fin.write(FERTILIZER, prior.length ? headOf(prior) : null, { t: 'category_share_set', workerPct: Number(pctText) });
+    setPct(null);
+  };
 
   const q = search.trim().toLowerCase();
   const rows = (fin.state?.fertOptions ?? []).filter((o) => o.kind === kind && (!q || o.name.toLowerCase().includes(q) || o.description.toLowerCase().includes(q)));
@@ -69,6 +83,10 @@ export function FertilizerSettingsScreen() {
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <ScreenHeader title={msg('fert.set.title')} back={{ label: msg('v2.back'), onPress: back, testID: 'fert-set-back' }} sync={sync} />
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
+        <Card style={{ gap: t.space.sm }}>
+          <TextField testID="fert-set-pct" label={msg('fert.set.pct')} keyboardType="number-pad" value={pctText} onChangeText={setPct} helper={msg('fert.set.pctHint')} error={pctOk ? undefined : msg('xshare.err.pct')} />
+          <Button testID="fert-set-pct-save" disabled={!pctOk || pct === null || inFlight.busy} onPress={() => void inFlight.run(savePct)}>{msg('fert.set.pctSave')}</Button>
+        </Card>
         <SegmentedControl
           testID="fert-set-tab"
           value={kind}
