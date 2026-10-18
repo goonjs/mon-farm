@@ -48,7 +48,8 @@ test('v2 expenses, owed and repay — offline, end to end', async ({ page, conte
   await page.getByTestId('expense-save').click();
   await addExpense(page, { amount: '15000', date: '2026-10-31', stage: 'committed', cat: 'cat-salary', payer: 'farm' });
   await page.getByTestId('expense-save').click();
-  await addExpense(page, { stage: 'planned', unknown: true, date: '2026-11-15', cat: 'cat-fertilizer', payer: 'farm' });
+  // ปุ๋ย opens its own purchase flow now (E11-S10); a planned unknown amount is shown with another category.
+  await addExpense(page, { stage: 'planned', unknown: true, date: '2026-11-15', cat: 'cat-labour', payer: 'farm' });
   await page.getByTestId('expense-save').click();
 
   await expect(page.getByTestId('total-actual')).toContainText('1,840.00');
@@ -83,20 +84,30 @@ test('v2 expenses, owed and repay — offline, end to end', async ({ page, conte
   await expect(page.getByTestId('owed-total')).toContainText('1,540.00');
 });
 
-test('v2 worker debts — fertilizer split, account reconciliation, pay back outside a sale (offline)', async ({ page, context }) => {
+test('v2 worker debts — fertilizer via the purchase flow, account reconciliation, pay back outside a sale (offline)', async ({ page, context }) => {
   await seedPeople(page, [{ id: 'person-daeng', name: 'แดง' }]);
   await page.goto('/v2/debts');
   await context.setOffline(true);
   await page.getByTestId('debt-person-person-daeng').click();
   await page.getByTestId('debt-add').click();
 
-  await page.getByTestId('debt-kind-fertilizer').click();
-  await page.getByTestId('debt-amount').fill('4000');
-  await expect(page.getByTestId('debt-worker-share')).toContainText('2,000.00');
-  await page.getByTestId('debt-date').fill('2026-09-20');
-  await page.getByTestId('debt-note').fill('ปุ๋ยรอบ ก.ย.');
   await evidence(page, `${SHOTS}/23-debt-add.png`, { fullPage: true });
-  await page.getByTestId('debt-save').click();
+  // Kind ปุ๋ย opens the fertilizer purchase flow with แดง picked (E11-S10 C).
+  await page.getByTestId('debt-kind-fertilizer').click();
+  await page.getByTestId('fert-product').click();
+  await page.getByTestId('fert-formula').fill('ปุ๋ยรอบ ก.ย.');
+  await page.getByTestId('fert-product-done').click();
+  await page.getByTestId('fert-sacks').fill('2');
+  await page.getByTestId('fert-bill').fill('4000');
+  await page.getByTestId('fert-next').click();
+  await page.getByTestId('fert-next').click();
+  await page.getByTestId('fert-date').fill('2026-09-20');
+  await page.getByTestId('fert-next').click();
+  await page.getByTestId('fert-next').click();
+  await expect(page.getByTestId('fert-line-person-daeng-sacks')).toHaveValue('2');
+  await page.getByTestId('fert-next').click();
+  await expect(page.getByTestId('fert-sum-tappers')).toContainText('2,000.00');
+  await page.getByTestId('fert-save').click();
 
   await page.getByTestId('debt-add').click();
   await page.getByTestId('debt-amount').fill('3000');
