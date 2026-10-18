@@ -214,7 +214,8 @@ describe('fertilizer purchase flow (E11-S10 C)', () => {
     expect(options.some((o) => o.kind === 'brand')).toBe(false);
     expect(projectDebts(events).get(daeng)?.balanceSatang).toBe(285_000);
     expect(projectDebts(events).get(nat)?.balanceSatang ?? 0).toBe(0);
-  });
+    // Drives all six steps; on a cold CI runner the first test also pays the module load (5 s default ran out).
+  }, 20_000);
 
   it('going back keeps what was entered; a reason typed once is not saved', async () => {
     wrap(<FertilizerFlowScreen />);
