@@ -72,7 +72,7 @@ test('a keyboard undo asks first; the undo button shows the hold in progress; th
   const id = on(page);
   await sale(page, 'h-undo', (b) => b.acceptAt('a1', 1).acceptAt('a1', 2));
   await page.goto('/v2/sale/h-undo/counter?point=a1');
-  await expect(id('current-no')).toHaveText('3');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 3$/);
   await expect(id('tool-undo')).toContainText('กดค้าง · เข่ง 2');
 
   // Held part way: the line runs along the button, nothing is undone yet.
@@ -82,7 +82,7 @@ test('a keyboard undo asks first; the undo button shows the hold in progress; th
   await page.waitForTimeout(350);
   await shot(page, '8i-undo-holding');
   await page.mouse.up();
-  await expect(id('current-no')).toHaveText('3');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 3$/);
 
   // Enter on the focused button has no hold behind it: it asks first.
   await id('tool-undo').focus();
@@ -90,7 +90,7 @@ test('a keyboard undo asks first; the undo button shows the hold in progress; th
   await expect(id('undo-confirm')).toContainText('ย้อนกลับเข่ง 2 ไหม');
   await shot(page, '8j-undo-confirm');
   await id('undo-confirm-yes').click();
-  await expect(id('current-no')).toHaveText('2');
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 2$/);
 
   // The largest text size: the tool row and the history rows stay inside the screen.
   await page.evaluate(() => localStorage.setItem('mon-farm:text-size', 'l'));

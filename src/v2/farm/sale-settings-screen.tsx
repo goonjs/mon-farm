@@ -13,7 +13,7 @@ import { View } from 'react-native';
 import { saleSettings, validDupWindow, validHoldMs } from '../../core/master';
 import type { NumberingMode, ZeroCheckMode } from '../../core/types';
 import { useT } from '../../i18n';
-import { readHoldMs, writeHoldMs } from '../../store/hold-preference';
+import { readCountMode, readHoldMs, writeCountMode, writeHoldMs, type CountMode } from '../../store/hold-preference';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
 import { AppText, BottomSheet, Button, Card, CardLabel, Chip, FactRow, PersonIcon, Plus, RadioCard, SegmentedControl } from '../../ui';
@@ -26,6 +26,7 @@ export function SaleSettingsScreen() {
   const msg = useT();
   const { state, reload } = useMaster();
   const [holdMs, setHoldMs] = useState(readHoldMs);
+  const [countMode, setCountMode] = useState<CountMode>(readCountMode);
   const [adding, setAdding] = useState(false);
   const [netKg, setNetKg] = useState(50);
   const [basketKg, setBasketKg] = useState(2);
@@ -156,11 +157,23 @@ export function SaleSettingsScreen() {
           </Card>
 
           <Card>
-            <CardLabel>{msg('saleSettings.hold')}</CardLabel>
+            <CardLabel>{msg('saleSettings.countMode')}</CardLabel>
             <FactRow testID="hold-device-only" icon={(c) => <PersonIcon color={c} size={12} />}>
               {msg('saleSettings.deviceOnly')}
             </FactRow>
-            <Stepper testID="hold" label={msg('saleSettings.hold')} value={(holdMs / 1000).toFixed(1)} unit={msg('v2f.secondsUnit')} onLess={() => changeHold(holdMs - 100)} onMore={() => changeHold(holdMs + 100)} />
+            <SegmentedControl<CountMode>
+              testID="count-mode"
+              value={countMode}
+              onChange={(m) => {
+                writeCountMode(m);
+                setCountMode(m);
+              }}
+              options={[
+                { value: 'hold', label: msg('saleSettings.countHold') },
+                { value: 'tap', label: msg('saleSettings.countTap') },
+              ]}
+            />
+            {countMode === 'hold' ? <Stepper testID="hold" label={msg('saleSettings.hold')} value={(holdMs / 1000).toFixed(1)} unit={msg('v2f.secondsUnit')} onLess={() => changeHold(holdMs - 100)} onMore={() => changeHold(holdMs + 100)} /> : null}
           </Card>
 
           <Card>

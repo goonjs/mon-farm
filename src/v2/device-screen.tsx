@@ -15,7 +15,7 @@ import { validHoldMs } from '../core/master';
 import type { Era } from '../core/thai-date';
 import { useI18n, useT, type Locale } from '../i18n';
 import { useSpeech } from '../speech';
-import { readHoldMs, writeHoldMs } from '../store/hold-preference';
+import { readCountMode, readHoldMs, writeCountMode, writeHoldMs, type CountMode } from '../store/hold-preference';
 import { readWeighMode, writeWeighMode, type WeighMode } from '../store/weigh-mode-preference';
 import { useThemeControls, useTheme } from '../theme';
 import { AppText, Card, CardLabel, SegmentedControl } from '../ui';
@@ -29,6 +29,7 @@ export function V2Device() {
   const { locale, setLocale, era, toggleEra } = useI18n();
   const { speechOn, setSpeechOn } = useSpeech();
   const [holdMs, setHoldMs] = useState(readHoldMs);
+  const [countMode, setCountMode] = useState<CountMode>(readCountMode);
   const [weighMode, setWeighMode] = useState<WeighMode>(readWeighMode);
 
   const changeHold = (ms: number) => {
@@ -62,6 +63,21 @@ export function V2Device() {
         msg('settings.themeNote'),
       )}
       {section(
+        msg('saleSettings.countMode'),
+        <SegmentedControl<CountMode>
+          testID="device-count-mode"
+          value={countMode}
+          onChange={(m) => {
+            writeCountMode(m);
+            setCountMode(m);
+          }}
+          options={[
+            { value: 'hold', label: msg('saleSettings.countHold') },
+            { value: 'tap', label: msg('saleSettings.countTap') },
+          ]}
+        />,
+      )}
+      {countMode === 'hold' ? section(
         msg('saleSettings.hold'),
         <Stepper
           testID="device-hold"
@@ -71,7 +87,7 @@ export function V2Device() {
           onLess={() => changeHold(holdMs - 100)}
           onMore={() => changeHold(holdMs + 100)}
         />,
-      )}
+      ) : null}
       {section(
         msg('v2.weighMode'),
         <SegmentedControl<WeighMode>

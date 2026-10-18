@@ -2,7 +2,7 @@ import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import { formatThaiDate, saleSettings, thaiDayInput, todayIso } from '../core/master';
-import { readHoldMs } from '../store/hold-preference';
+import { readCountMode, readHoldMs } from '../store/hold-preference';
 import { SaleSettingsScreen } from '../v2/farm/sale-settings-screen';
 import { ShareScreen, SharesScreen } from '../v2/farm/shares-screens';
 import { SpeechProvider } from '../speech';
@@ -176,6 +176,18 @@ describe('ตั้งค่าวันขาย (farm mockup 3)', () => {
     for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('hold-more'));
     expect(readHoldMs()).toBe(1000);
   });
+
+  it('counting by hold or by tap is this device\'s choice; tap hides the hold time (E04-S17)', async () => {
+    wrap(<SaleSettingsScreen />);
+    await flush();
+    expect(readCountMode()).toBe('hold');
+    expect(screen.getByTestId('count-mode-hold').props.accessibilityState).toMatchObject({ checked: true });
+    fireEvent.press(screen.getByTestId('count-mode-tap'));
+    expect(readCountMode()).toBe('tap');
+    expect(screen.queryByTestId('hold')).toBeNull();
+    fireEvent.press(screen.getByTestId('count-mode-hold'));
+    expect(screen.getByTestId('hold-more')).toBeTruthy();
+  });
 });
 
 describe('เครื่องนี้ (device-only settings)', () => {
@@ -192,6 +204,9 @@ describe('เครื่องนี้ (device-only settings)', () => {
 
     fireEvent.press(screen.getByTestId('device-hold-less'));
     expect(readHoldMs()).toBe(600);
+    fireEvent.press(screen.getByTestId('device-count-mode-tap'));
+    expect(readCountMode()).toBe('tap');
+    fireEvent.press(screen.getByTestId('device-count-mode-hold'));
 
     expect(screen.getByTestId('device-weigh-mode-type').props.accessibilityState).toMatchObject({ checked: true });
     fireEvent.press(screen.getByTestId('device-weigh-mode-dial'));

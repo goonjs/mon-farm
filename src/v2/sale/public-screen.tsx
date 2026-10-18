@@ -15,7 +15,7 @@ import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
 import { ExpandIcon, SyncPill } from '../../ui';
 import { countModel } from './count';
-import { HoldStage } from './hold';
+import { countKey, HoldStage } from './hold';
 import { useLeaveIfClosed, useSaleView } from './pieces';
 
 export function PublicScreen() {
@@ -35,7 +35,7 @@ export function PublicScreen() {
   if (!view.ready || !master || !point || !farm || !model || view.closed) return <View style={{ flex: 1, backgroundColor: t.color.stage }} />;
 
   const tapper = tapperOn(master, pointId, day);
-  const { figs, open, waiting, ready } = model;
+  const { figs, open, filling, waiting, ready } = model;
   const number = (
     <Text
       testID="public-no"
@@ -63,7 +63,7 @@ export function PublicScreen() {
           </Text>
         </View>
       ) : (
-        <HoldStage fill testID="public-hold" label={msg('rec.hold')} onHold={model.count} onEarly={model.early}>
+        <HoldStage fill testID="public-hold" label={filling && open ? msg('v2s.fillStage', { n: open.basketNo }) : msg(countKey(), { n: figs.currentNo })} onHold={model.count} onEarly={model.early}>
           {number}
         </HoldStage>
       )}
