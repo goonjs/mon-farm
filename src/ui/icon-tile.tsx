@@ -19,6 +19,7 @@ export type TileTone =
   | 'cream'
   | 'warn'
   | 'neutral'
+  | 'reject'
   | 'category1'
   | 'category2'
   | 'category3'

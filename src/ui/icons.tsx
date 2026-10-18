@@ -794,3 +794,71 @@ export function WeatherIcon({ color, size = 18 }: IconProps) {
 }
 // Sale set (E04 v2): basket, leaf, tapper, users, alert, flag, clock, expand, dots, hourglass, camera, coin.
 export * from './sale-icons';
+
+/** Home — a roof over a house body. */
+export function HomeIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View
+      aria-hidden
+      style={{
+        width: size,
+        height: size,
+        alignItems: "center",
+        justifyContent: "flex-end",
+      }}
+    >
+      <View
+        style={{
+          position: "absolute",
+          top: size * 0.12,
+          width: size * 0.56,
+          height: size * 0.56,
+          borderLeftWidth: w,
+          borderTopWidth: w,
+          borderColor: color,
+          transform: [{ rotate: "45deg" }],
+        }}
+      />
+      <View
+        style={{
+          width: size * 0.62,
+          height: size * 0.42,
+          borderWidth: w,
+          borderTopWidth: 0,
+          borderColor: color,
+        }}
+      />
+    </View>
+  );
+}
+
+/** Info — a ring with a dot over a short stem. */
+export function InfoIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View
+      aria-hidden
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size,
+        borderWidth: w,
+        borderColor: color,
+        alignItems: "center",
+        justifyContent: "center",
+        gap: size * 0.07,
+      }}
+    >
+      <View
+        style={{
+          width: w * 1.2,
+          height: w * 1.2,
+          borderRadius: w,
+          backgroundColor: color,
+        }}
+      />
+      <View style={{ width: w, height: size * 0.28, backgroundColor: color }} />
+    </View>
+  );
+}

@@ -305,6 +305,7 @@ test('start → point → empty scale → count → short → switch and fill �
 
   // ── ชั่งครบแล้ว → ตรวจยอด (page 16): the price first, then one tap ──
   await id('counter-menu').click();
+  await shot(page, '08m-menu');
   await id('menu-finish').click();
   await expect(id('check')).toBeVisible();
   await id('check-price').fill('48.50');
@@ -410,7 +411,7 @@ test('back to a point already weighed: straight to its counter, the count goes o
   await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
 });
 
-test('last point: the next-point tile and the review tile side by side (E04-S17)', async ({ page }) => {
+test('last point: one full-width review button, no next-point tile (E04-S18)', async ({ page }) => {
   const id = on(page);
   await seedMaster(page, FARM);
   const b = new LogBuilder('sale-last');
@@ -430,7 +431,9 @@ test('last point: the next-point tile and the review tile side by side (E04-S17)
   await seedEvents(page, b.build().map((e) => ({ ...e, ts: now })));
   await page.goto('/v2/sale/sale-last/counter?point=a1');
   await expect(id('open-card')).toContainText('เข่ง 3 · 22 / 50 กก.');
-  await expect(id('next-point')).toBeVisible();
+  await expect(id('next-point')).toHaveCount(0);
   await expect(id('to-summary')).toContainText('ชั่งครบแล้ว → ตรวจยอด');
+  const wide = await id('to-summary').boundingBox();
+  expect(wide!.width).toBeGreaterThan(300);
   await shot(page, '11b-last-point');
 });
