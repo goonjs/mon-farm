@@ -10,18 +10,20 @@
  * - An edit writes only the fields that changed, naming the head it saw, so
  *   a concurrent edit merges or surfaces as a conflict to pick (D-30).
  * - Derived expenses (a fertilizer debt's owner share, a salary month) keep
- *   their amount and date from the source.
+ *   their amount and date from the source; a fertilizer purchase (sacks,
+ *   details) is shown only, and edited in its own flow.
+ * - A share and its net amount are always written together (E11-S10).
  */
 
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { checkExpense, defaultPayer, isDerivedExpense, type Expense } from '../../core/finance/ledger';
+import { checkExpense, defaultPayer, headOf, isDerivedExpense, type Expense } from '../../core/finance/ledger';
 import { formatDate, formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../core/finance/money';
 import { checkTrip } from '../../core/finance/plan';
 import { checkShare } from '../../core/finance/share';
-import { FARM_FUNDS, type AidKind, type ExpenseFields, type ExpensePatch, type Payer, type Stage, type Trip, type TripCostKind } from '../../core/finance/types';
+import { FARM_FUNDS, type AidKind, type ExpenseFields, type ExpensePatch, type ExpenseShare, type Payer, type Stage, type Trip, type TripCostKind } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
 import { useT } from '../../i18n';
@@ -119,6 +121,9 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   const [showErrors, setShowErrors] = useState(false);
   const inFlight = useInFlight();
   const derived = !!existing && isDerivedExpense(existing.id);
+  // A fertilizer purchase is edited in its flow only: this form cannot carry sacks or details,
+  // and saving here would drop the share (and void its debts).
+  const fertLocked = !!existing && (!!existing.fertilizer || existing.share?.totalSacks != null);
 
   const unknown = stage === 'planned' && unknownWanted;
   const isAid = categoryId === 'cat-worker-aid';
@@ -139,9 +144,13 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
     : undefined;
   const tripProblems = trip && amountSatang !== null ? checkTrip(trip, amountSatang).filter((p) => p !== 'lines-total' || fromLines) : [];
   const category = state.categories.find((c) => c.id === categoryId) ?? null;
-  const sharable = !!category && category.workerPct !== null && category.id !== FERTILIZER && !isTrip && !isAid;
+  // A share already stored stays editable even if the category stopped sharing since.
+  const sharable = !!category && (category.workerPct !== null || !!existing?.share) && category.id !== FERTILIZER && !isTrip && !isAid;
   const share = sharable && amountSatang !== null ? shareOf(shareDraft, amountSatang) : null;
   const shareProblems = share ? checkShare(share) : [];
+  // No tapper but a discount typed (or kept from a removed share): the amount is still the net.
+  const draftDiscount = sharable && !share && shareDraft.discount.trim() ? parseBahtToSatang(shareDraft.discount) : null;
+  const unsharedNet = draftDiscount !== null && amountSatang !== null && draftDiscount <= amountSatang ? amountSatang - draftDiscount : null;
   const amountTyped = !unknown && amount.trim() !== '';
   const problems = checkExpense({ amountSatang, date, stage }).map((p) => (p === 'amount-required' && amountTyped ? 'amount-invalid' : p));
 
@@ -153,10 +162,10 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
 
   const save = async () => {
     setShowErrors(true);
-    if (problems.length || tripProblems.length || shareProblems.length) return;
+    if (fertLocked || problems.length || tripProblems.length || shareProblems.length) return;
     setFailed(false);
     const fields: ExpenseFields = {
-      amountSatang: share ? share.billSatang - share.discountSatang : amountSatang,
+      amountSatang: share ? share.billSatang - share.discountSatang : (unsharedNet ?? amountSatang),
       date,
       stage,
       categoryId,
@@ -177,6 +186,11 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
         for (const k of Object.keys(fields) as (keyof ExpenseFields)[]) {
           if (JSON.stringify(fields[k]) !== JSON.stringify(existing[k])) patch[k] = fields[k];
         }
+        // The share and the net amount travel together, so a concurrent edit conflicts on both or neither.
+        if (('share' in patch || 'amountSatang' in patch) && (fields.share || existing.share)) {
+          patch.share = fields.share ?? null;
+          patch.amountSatang = fields.amountSatang;
+        }
         if (Object.keys(patch).length) await fin.write(existing.id, existing.headEventId, { t: 'expense_changed', patch: patch as ExpensePatch });
       }
       leave();
@@ -195,13 +209,17 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   const pickConflict = async (field: string, value: unknown) => {
     if (!existing) return;
     const others = existing.heads.filter((h) => h !== existing.headEventId);
-    await fin.write(existing.id, existing.headEventId, { t: 'expense_changed', patch: { [field]: value } as ExpensePatch, alsoBasedOn: others });
+    // Picking a share picks its net amount too (E11-S10 review).
+    const v = value as ExpenseShare | null;
+    const patch = (field === 'share' ? { share: v, amountSatang: v ? v.billSatang - v.discountSatang : existing.amountSatang } : { [field]: value }) as ExpensePatch;
+    await fin.write(existing.id, existing.headEventId, { t: 'expense_changed', patch, alsoBasedOn: others });
   };
 
   const pickCategory = (id: string) => {
     // The fertilizer category is its own flow (E11-S10 C): what was typed goes with it.
+    // Replaced, not pushed: after saving there the user is not sent back to this half-filled form.
     if (id === FERTILIZER && !existing) {
-      router.push({ pathname: FLOW, params: { bill: amount, date } });
+      router.replace({ pathname: FLOW, params: { bill: amount, date, stage, payerId: payer?.id ?? 'none', payerName: payer?.name ?? '' } });
       return;
     }
     if (id !== categoryId) setShareDraft((d) => ({ ...d, pct: String(state.categories.find((c) => c.id === id)?.workerPct ?? d.pct) }));
@@ -211,7 +229,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   const saveCategoryShare = async (pct: number | null) => {
     if (!categoryId) return;
     const prior = (fin.events ?? []).filter((e) => e.targetId === categoryId && e.payload.t === 'category_share_set');
-    await fin.write(categoryId, prior.length ? prior[prior.length - 1].id : null, { t: 'category_share_set', workerPct: pct });
+    await fin.write(categoryId, prior.length ? headOf(prior) : null, { t: 'category_share_set', workerPct: pct });
     if (pct !== null) setShareDraft((d) => ({ ...d, pct: String(pct) }));
     setCatShareOpen(false);
   };
@@ -231,16 +249,22 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   };
 
   const owed = payer && payer.id !== FARM_FUNDS;
-  const fieldLabel = (f: string) => (f === 'amountSatang' ? msg('fin.field.amountSatang') : f === 'stage' ? msg('fin.field.stage') : msg('fin.field.payer'));
+  const fieldLabel = (f: string) => (f === 'amountSatang' ? msg('fin.field.amountSatang') : f === 'stage' ? msg('fin.field.stage') : f === 'share' ? msg('fin.field.share') : msg('fin.field.payer'));
+  const shareLabel = (v: ExpenseShare | null) =>
+    v
+      ? msg('xshare.summary', { bill: formatSatang(v.billSatang), discount: formatSatang(v.discountSatang), lines: v.lines.map((l) => msg('xshare.summaryLine', { name: l.worker.name, pct: l.workerPct })).join(', ') })
+      : msg('xshare.none');
   const valueLabel = (f: string, v: unknown) =>
     f === 'amountSatang'
       ? v === null ? msg('fin.row.unknown') : formatSatang(v as number)
-      : f === 'stage' ? msg(`fin.stage.${v as Stage}`) : ((v as Payer | null)?.name ?? msg('fin.form.payerLater'));
+      : f === 'stage' ? msg(`fin.stage.${v as Stage}`) : f === 'share' ? shareLabel(v as ExpenseShare | null) : ((v as Payer | null)?.name ?? msg('fin.form.payerLater'));
+  // A share conflict carries its amount: one card, resolved together.
+  const conflicts = (existing?.conflicts ?? []).filter((c) => !(c.field === 'amountSatang' && existing?.conflicts.some((o) => o.field === 'share')));
   const err = (key: 'amount-required' | 'amount-invalid' | 'date-required') => (showErrors && (problems as string[]).includes(key) ? msg(`fin.form.err.${key}`) : undefined);
 
   return (
     <>
-      {header({ label: msg('fin.form.save'), testID: 'expense-save', saving: inFlight.busy, onPress: () => void inFlight.run(save) })}
+      {header(fertLocked ? undefined : { label: msg('fin.form.save'), testID: 'expense-save', saving: inFlight.busy, onPress: () => void inFlight.run(save) })}
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
         {existing?.deleted ? (
           <Card style={{ backgroundColor: t.color.warnSunk }}>
@@ -249,7 +273,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
           </Card>
         ) : null}
 
-        {existing?.conflicts.map((c) => (
+        {conflicts.map((c) => (
           <Card key={c.field} testID={`conflict-${c.field}`} style={{ backgroundColor: t.color.rejectSunk }}>
             <AppText>{msg('fin.form.conflict', { field: fieldLabel(c.field) })}</AppText>
             <ChoiceRow>
@@ -260,11 +284,13 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
           </Card>
         ))}
 
-        {existing?.fertilizer && !existing.deleted ? (
-          <Button testID="expense-open-fert" variant="primary" onPress={() => router.push({ pathname: FLOW, params: { id: existing.id } })}>{msg('fert.openFlow')}</Button>
-        ) : null}
-
-        {derived ? (
+        {fertLocked && existing ? (
+          <Card testID="fert-locked" style={{ backgroundColor: t.color.surfaceSunk }}>
+            <AppText>{existing.fertilizer?.formula || existing.item}</AppText>
+            <AppText variant="bodySm">{`${existing.amountSatang === null ? msg('fin.row.unknown') : formatSatang(existing.amountSatang)} · ${formatDate(existing.date)} · ${msg(`fin.stage.${existing.stage}`)}`}</AppText>
+            {!existing.deleted ? <Button testID="expense-open-fert" variant="primary" onPress={() => router.push({ pathname: FLOW, params: { id: existing.id } })}>{msg('fert.openFlow')}</Button> : null}
+          </Card>
+        ) : derived ? (
           <Card testID="owner-share-locked" style={{ backgroundColor: t.color.surfaceSunk }}>
             <AppText>{msg('fin.form.ownerShareLocked')}</AppText>
             <AppText variant="bodySm">{`${amountSatang === null ? msg('fin.row.unknown') : formatSatang(amountSatang)} · ${formatDate(date)}`}</AppText>
@@ -316,6 +342,8 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
           </>
         )}
 
+        {fertLocked ? null : (
+        <>
         <View style={{ gap: t.space.sm }}>
           <SectionLabel hint={msg('v2m.categoryHint')}>{msg('fin.form.category')}</SectionLabel>
           <ChoiceRow>
@@ -357,6 +385,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
                   })
                 : msg('xshare.rowOff')}
             </AppText>
+            {unsharedNet !== null ? <AppText testID="share-unshared-net" variant="caption">{msg('xshare.unsharedNet', { net: formatSatang(unsharedNet) })}</AppText> : null}
             {showErrors && shareProblems.length ? <AppText testID="share-err" style={{ color: t.color.reject }}>{msg(shareProblems.includes('discount-over') ? 'xshare.err.discount' : 'xshare.err.pct')}</AppText> : null}
           </Card>
           </Pressable>
@@ -428,6 +457,8 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
 
         <TextField testID="expense-item" label={msg('fin.form.item')} value={item} onChangeText={setItem} placeholder={msg('fin.form.itemPlaceholder')} />
         <TextField testID="expense-note" label={msg('fin.form.note')} multiline value={note} onChangeText={setNote} placeholder={msg('fin.form.notePlaceholder')} />
+        </>
+        )}
 
         {failed ? <AppText testID="save-failed" style={{ color: t.color.reject }}>{msg('fin.form.saveFailed')}</AppText> : null}
 

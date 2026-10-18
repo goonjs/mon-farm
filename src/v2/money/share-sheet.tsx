@@ -43,7 +43,8 @@ export function shareOf(d: ShareDraft, billSatang: number): ExpenseShare | null 
     billSatang,
     discountSatang: d.discount.trim() ? (parseBahtToSatang(d.discount) ?? -1) : 0,
     totalSacks: null,
-    lines: [{ worker: d.worker, sacks: null, workerPct: Number(d.pct), settle: d.settle }],
+    // Only whole digits: an empty or partial % must fail `checkShare`, never read as 0.
+    lines: [{ worker: d.worker, sacks: null, workerPct: /^\d+$/.test(d.pct.trim()) ? Number(d.pct.trim()) : NaN, settle: d.settle }],
   };
 }
 

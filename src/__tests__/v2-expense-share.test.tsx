@@ -34,7 +34,7 @@ jest.mock('expo-router', () => {
 });
 const { __params: mockParams, router: mockRouter } = jest.requireMock('expo-router') as {
   __params: { current: Record<string, string> };
-  router: { push: jest.Mock };
+  router: { push: jest.Mock; replace: jest.Mock };
 };
 
 async function flush() {
@@ -44,19 +44,21 @@ async function flush() {
 }
 
 let seq = 0;
-async function seed(targetId: string, payload: FinanceEvent['payload']) {
+async function seed(targetId: string, payload: FinanceEvent['payload'], base: string | null = null) {
   seq += 1;
+  const id = `seed-${String(seq).padStart(3, '0')}`;
   await mockFinance.append({
-    id: `seed-${seq}`,
+    id,
     groupId: 'group-1',
     deviceSeq: seq,
     ts: seq,
     actor: { userId: 'u', deviceId: 'dev-other' },
     source: 'app',
     targetId,
-    baseEventId: null,
+    baseEventId: base,
     payload,
   });
+  return id;
 }
 
 describe('share an expense with a tapper (E11-S10 B)', () => {
@@ -136,7 +138,8 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     await flush();
     fireEvent.changeText(screen.getByTestId('expense-amount'), '10000');
     fireEvent.press(screen.getByTestId('expense-cat-cat-fertilizer'));
-    expect(mockRouter.push).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/v2/fertilizer', params: expect.objectContaining({ bill: '10000' }) }));
+    // Replaced, not pushed: after saving the flow the half-filled form is not waiting underneath.
+    expect(mockRouter.replace).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/v2/fertilizer', params: expect.objectContaining({ bill: '10000', stage: 'actual', payerId: expect.any(String) }) }));
   });
 
   it('a fertilizer purchase opens in its own flow to be edited', async () => {
@@ -151,7 +154,119 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     mockParams.current = { id: 'exp-fert-1' };
     wrap(<ExpenseFormScreen />);
     await flush();
+    // Locked like a derived expense: saving here would drop the share (review 2026-10-18).
+    expect(screen.queryByTestId('expense-save')).toBeNull();
+    expect(screen.queryByTestId('expense-amount')).toBeNull();
+    expect(screen.queryByTestId('share-row')).toBeNull();
+    expect(screen.getByTestId('fert-locked')).toHaveTextContent(/1,000\.00/);
     fireEvent.press(screen.getByTestId('expense-open-fert'));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { id: 'exp-fert-1' } });
+  });
+
+  it('an empty % is refused, never saved as 0', async () => {
+    wrap(<ExpenseFormScreen />);
+    await flush();
+    fireEvent.changeText(screen.getByTestId('expense-amount'), '100');
+    fireEvent.press(screen.getByTestId('expense-cat-cat-repair'));
+    fireEvent.press(screen.getByTestId('share-row'));
+    await flush();
+    fireEvent.press(screen.getByTestId(`share-worker-${daengId}`));
+    fireEvent.changeText(screen.getByTestId('share-pct'), '');
+    expect(screen.getByTestId('share-pct-error')).toBeTruthy();
+  });
+
+  it('the net line reads bill − discount = net', async () => {
+    wrap(<ExpenseFormScreen />);
+    await flush();
+    fireEvent.changeText(screen.getByTestId('expense-amount'), '1000');
+    fireEvent.press(screen.getByTestId('expense-cat-cat-repair'));
+    fireEvent.press(screen.getByTestId('share-row'));
+    await flush();
+    fireEvent.press(screen.getByTestId('share-discount-switch'));
+    fireEvent.changeText(screen.getByTestId('share-discount'), '100');
+    expect(screen.getByTestId('share-net')).toHaveTextContent('ยอดบิล 1,000.00 − ส่วนลด = ยอดสุทธิ 900.00');
+  });
+
+  const shared = (bill: number, discount: number, pct = 50) => ({
+    t: 'expense_created' as const,
+    fields: {
+      amountSatang: bill - discount, date: '2026-10-02', stage: 'actual' as const, categoryId: 'cat-labour', propertyId: null, item: '', note: '', payer: { id: 'farm', name: 'เงินสวน' },
+      share: { billSatang: bill, discountSatang: discount, totalSacks: null, lines: [{ worker: { id: daengId, name: 'แดง' }, sacks: null, workerPct: pct, settle: 'debt' as const }] },
+    },
+  });
+
+  it('a share stays editable after its category stops sharing; saving unchanged writes nothing', async () => {
+    await seed('exp-kept', shared(100_000, 10_000));
+    mockParams.current = { id: 'exp-kept' };
+    wrap(<ExpenseFormScreen />);
+    await flush();
+    expect(screen.getByTestId('share-row')).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
+    await flush();
+    expect((await mockFinance.load()).some((e) => e.targetId === 'exp-kept' && e.payload.t === 'expense_changed')).toBe(false);
+  });
+
+  it('removing the tapper on purpose keeps the discount: the amount stays the net', async () => {
+    await seed('exp-unshare', shared(100_000, 10_000));
+    mockParams.current = { id: 'exp-unshare' };
+    wrap(<ExpenseFormScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('share-row'));
+    await flush();
+    fireEvent.press(screen.getByTestId('share-worker-none'));
+    fireEvent.press(screen.getByTestId('share-done'));
+    await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
+    await flush();
+    const x = projectFinance(await mockFinance.load()).expenses.find((e) => e.id === 'exp-unshare');
+    expect(x).toMatchObject({ amountSatang: 90_000, share: null });
+  });
+
+  it('a share edit always writes the net amount with it', async () => {
+    await seed('exp-pair', shared(100_000, 0));
+    mockParams.current = { id: 'exp-pair' };
+    wrap(<ExpenseFormScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('share-row'));
+    await flush();
+    fireEvent.changeText(screen.getByTestId('share-pct'), '30');
+    fireEvent.press(screen.getByTestId('share-done'));
+    await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
+    await flush();
+    const change = (await mockFinance.load()).find((e) => e.targetId === 'exp-pair' && e.payload.t === 'expense_changed');
+    expect(Object.keys((change!.payload as { patch: object }).patch).sort()).toEqual(['amountSatang', 'share']);
+  });
+
+  it('two devices change the share: one conflict card that reads the share; picking writes the matching net', async () => {
+    const head = await seed('exp-two', shared(100_000, 0));
+    const a = shared(100_000, 20_000).fields;
+    const b = shared(100_000, 0, 30).fields;
+    await seed('exp-two', { t: 'expense_changed', patch: { share: a.share, amountSatang: a.amountSatang } }, head);
+    await seed('exp-two', { t: 'expense_changed', patch: { share: b.share, amountSatang: b.amountSatang } }, head);
+    mockParams.current = { id: 'exp-two' };
+    wrap(<ExpenseFormScreen />);
+    await flush();
+    expect(screen.queryByTestId('conflict-amountSatang')).toBeNull();
+    expect(screen.getByTestId('conflict-share')).toHaveTextContent(/แชร์กับคนกรีดยาง/);
+    expect(screen.getByTestId('conflict-share')).toHaveTextContent(/ลด 200\.00/);
+    await act(async () => fireEvent.press(screen.getByTestId('conflict-share-0')));
+    await flush();
+    const x = projectFinance(await mockFinance.load()).expenses.find((e) => e.id === 'exp-two')!;
+    expect(x.conflicts).toEqual([]);
+    expect(x.amountSatang).toBe(x.share!.billSatang - x.share!.discountSatang);
+  });
+
+  it('category share settings name the head they saw', async () => {
+    wrap(<ExpenseFormScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-cat-cat-fuel'));
+    for (const pct of ['20', '25']) {
+      fireEvent.press(screen.getByTestId('expense-cat-share'));
+      if (pct === '20') fireEvent.press(screen.getByTestId('cat-share-switch'));
+      fireEvent.changeText(screen.getByTestId('cat-share-pct'), pct);
+      await act(async () => fireEvent.press(screen.getByTestId('cat-share-save')));
+      await flush();
+    }
+    const evs = (await mockFinance.load()).filter((e) => e.targetId === 'cat-fuel' && e.payload.t === 'category_share_set');
+    expect(evs[1].baseEventId).toBe(evs[0].id);
   });
 });
