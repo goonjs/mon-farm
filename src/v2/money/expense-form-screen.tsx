@@ -260,6 +260,10 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
           </Card>
         ))}
 
+        {existing?.fertilizer && !existing.deleted ? (
+          <Button testID="expense-open-fert" variant="primary" onPress={() => router.push({ pathname: FLOW, params: { id: existing.id } })}>{msg('fert.openFlow')}</Button>
+        ) : null}
+
         {derived ? (
           <Card testID="owner-share-locked" style={{ backgroundColor: t.color.surfaceSunk }}>
             <AppText>{msg('fin.form.ownerShareLocked')}</AppText>
