@@ -59,7 +59,7 @@ import { V2_HOME } from '../routes';
 import { countModel } from './count';
 import { countKey, HoldButton, HoldStage } from './hold';
 import { signed, useGoToPoint } from './move';
-import { Banner, IconLine, Kv, kgText, NumChip, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
+import { Banner, figSize, IconLine, Kv, kgText, NumChip, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 import { Ruler } from './ruler';
 import { BasisToggle, TypedReading } from './short-reading';
 import { MenuGroup, MenuRow, SaleMenu } from './sale-menu';
@@ -213,9 +213,15 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
     </View>
   );
   const figure = (value: string, unit?: string, testID?: string) => (
-    <Text testID={testID} numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingXl, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+    <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingXl, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
       {value}
       {unit ? <Text style={{ fontSize: t.font.size.caption, fontWeight: t.font.weight.regular, color: t.color.inkSoft }}> {unit}</Text> : null}
+    </Text>
+  );
+  // The small cards' figure: the number alone (the unit is in the label above), stepped down by length.
+  const cardFigure = (value: string, testID: string) => (
+    <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: figSize(value, t.font.size.headingXl), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+      {value}
     </Text>
   );
   const smallLine = (text: string, tone: 'plain' | 'warn' = 'plain') => (
@@ -505,12 +511,12 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       <IconLine icon={(c) => <TapperIcon color={c} size={13} />}>{scopeTitle}</IconLine>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
         {price !== null
-          ? card(<><AppText variant="bodySm">{msg('rec.money')}</AppText>{figure(compactBaht(figs.satang ?? 0), '฿', 'fig-money')}</>, 'first', false, true)
-          : card(<><AppText variant="bodySm">{msg('rec.done')}</AppText>{figure(String(figs.done), msg('rec.baskets'), 'fig-done')}</>, 'first', false, true)}
+          ? card(<><AppText variant="bodySm" numberOfLines={1}>{msg('rec.money')} (฿)</AppText>{cardFigure(compactBaht(figs.satang ?? 0), 'fig-money')}</>, 'first', false, true)
+          : card(<><AppText variant="bodySm" numberOfLines={1}>{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
         {card(
           <>
-            <IconLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')}</IconLine>
-            {figure(kgText(figs.netG), msg('common.kg'), 'fig-kg')}
+            <IconLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')} ({msg('common.kg')})</IconLine>
+            {cardFigure(kgText(figs.netG), 'fig-kg')}
           </>,
           'kg',
           false,
@@ -520,8 +526,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           ? card(
               <>
                 <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.shortOf', { n: open.basketNo })}</Text>
-                <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.missing')}</Text>
-                {figure(kgText(open.missingG), msg('common.kg'), 'fig-missing')}
+                <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.missing')} ({msg('common.kg')})</Text>
+                {cardFigure(kgText(open.missingG), 'fig-missing')}
               </>,
               'short',
               true,

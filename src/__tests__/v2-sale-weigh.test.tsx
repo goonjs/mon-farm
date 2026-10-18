@@ -14,7 +14,7 @@ import { readWeighBasis, writeWeighBasis, writeWeighMode } from '../store/weigh-
 import { BackfillScreen } from '../v2/sale/backfill-screen';
 import { countModel } from '../v2/sale/count';
 import { CounterScreen } from '../v2/sale/counter-screen';
-import { useSaleView } from '../v2/sale/pieces';
+import { figSize, useSaleView } from '../v2/sale/pieces';
 import { HistoryScreen } from '../v2/sale/history-screen';
 import { PointScreen } from '../v2/sale/point-screen';
 import { StartSaleScreen } from '../v2/sale/start-screen';
@@ -900,7 +900,7 @@ describe('short basket: how it is recorded (E04-S16)', () => {
   });
 });
 
-describe("v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)", () => {
+describe('v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)', () => {
   const heightOf = (id: string) => {
     const style = ([] as unknown[])
       .concat(screen.getByTestId(id).props.style)
@@ -912,79 +912,103 @@ describe("v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)", (
     return style.height;
   };
 
-  it("the three small cards keep one fixed height, with or without an open short basket", async () => {
+  it('the three small cards keep one fixed height; units sit in the label line, the figure is the number alone', async () => {
     await started();
     await readyAt(farm.a[0]);
     await counterAt(farm.a[0]);
-    const h = heightOf("card-kg");
-    expect(typeof h).toBe("number");
-    expect(heightOf("card-first")).toBe(h);
-    expect(heightOf("card-short")).toBe(h);
-    expect(screen.getByTestId("fig-kg").props.numberOfLines).toBe(1);
+    const h = heightOf('card-kg');
+    expect(typeof h).toBe('number');
+    expect(heightOf('card-first')).toBe(h);
+    expect(heightOf('card-short')).toBe(h);
+    expect(screen.getByTestId('card-kg')).toHaveTextContent(/น้ำหนัก \(กก\.\)/);
+    expect(screen.getByTestId('fig-kg')).toHaveTextContent(/^[\d,.]+$/);
+    expect(screen.getByTestId('fig-kg').props.numberOfLines).toBeUndefined();
   });
 
-  it("the menu is grouped: finish · record · price and info · go to · delete last", async () => {
+  it('the short card (an open short basket) has the same height, its unit in the label too', async () => {
+    useDial();
+    await started();
+    await readyAt(farm.a[3]);
+    await counterAt(farm.a[3]);
+    await hold();
+    await press('tool-short');
+    await press('short-save');
+    const h = heightOf('card-kg');
+    expect(heightOf('card-first')).toBe(h);
+    expect(heightOf('card-short')).toBe(h);
+    expect(screen.getByTestId('card-short')).toHaveTextContent(/เหลือเติม \(กก\.\)/);
+    expect(screen.getByTestId('fig-missing')).toHaveTextContent(/^15$/);
+  });
+
+  it('a long figure is stepped down in size, never cut with an ellipsis', () => {
+    expect(figSize('1,234', 24)).toBe(24);
+    expect(figSize('12,345.5', 24)).toBeLessThan(24);
+    expect(figSize('1,234,567.5', 24)).toBeLessThan(figSize('12,345.5', 24));
+    expect(figSize('1,234,567.5', 24)).toBeGreaterThanOrEqual(14);
+  });
+
+  it('the menu is grouped: finish · record · price and info · go to · delete last', async () => {
     await started();
     await readyAt(farm.a[0]);
     await counterAt(farm.a[0]);
-    await press("counter-menu");
+    await press('counter-menu');
     expect(
       screen
         .getAllByTestId(/^menu-(?!sheet)[a-z]+$/)
         .map((x) => x.props.testID),
     ).toEqual([
-      "menu-finish",
-      "menu-backfill",
-      "menu-public",
-      "menu-price",
-      "menu-info",
-      "menu-home",
-      "menu-debts",
-      "menu-sales",
-      "menu-delete",
+      'menu-finish',
+      'menu-backfill',
+      'menu-public',
+      'menu-price',
+      'menu-info',
+      'menu-home',
+      'menu-debts',
+      'menu-sales',
+      'menu-delete',
     ]);
   });
 
-  it("home and debts are two separate rows in the menu", async () => {
+  it('home and debts are two separate rows in the menu', async () => {
     await started();
     await readyAt(farm.a[0]);
     await counterAt(farm.a[0]);
-    await press("counter-menu");
-    await press("menu-home");
-    expect(router.push).toHaveBeenLastCalledWith("/v2");
-    await press("counter-menu");
-    await press("menu-debts");
-    expect(router.push).toHaveBeenLastCalledWith("/v2/debts");
+    await press('counter-menu');
+    await press('menu-home');
+    expect(router.push).toHaveBeenLastCalledWith('/v2');
+    await press('counter-menu');
+    await press('menu-debts');
+    expect(router.push).toHaveBeenLastCalledWith('/v2/debts');
   });
 
-  it("the app bar has a home button", async () => {
+  it('the app bar has a home button', async () => {
     await started();
     await readyAt(farm.a[0]);
     await counterAt(farm.a[0]);
-    await press("counter-home");
-    expect(router.push).toHaveBeenLastCalledWith("/v2");
+    await press('counter-home');
+    expect(router.push).toHaveBeenLastCalledWith('/v2');
   });
 
-  it("the point picker menu has the same go-to rows, without the finish and record groups", async () => {
+  it('the point picker menu has the same go-to rows, without the finish and record groups', async () => {
     await started();
     await readyAt(farm.a[0]);
     await inSale(<PointScreen />, {
-      mode: "switch",
+      mode: 'switch',
       farm: farm.farmA,
       tapper: farm.red,
     });
-    await press("pick-menu");
+    await press('pick-menu');
     expect(
       screen
         .getAllByTestId(/^menu-(?!sheet)[a-z]+$/)
         .map((x) => x.props.testID),
     ).toEqual([
-      "menu-price",
-      "menu-info",
-      "menu-home",
-      "menu-debts",
-      "menu-sales",
-      "menu-delete",
+      'menu-price',
+      'menu-info',
+      'menu-home',
+      'menu-debts',
+      'menu-sales',
+      'menu-delete',
     ]);
   });
 });
