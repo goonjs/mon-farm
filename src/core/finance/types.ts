@@ -51,7 +51,58 @@ export interface ExpenseFields {
   readonly aidKind?: AidKind | null;
   /** E11-S06: a trip — the amount is the sum of its lines. null clears it (an absent key cannot, once stored). */
   readonly trip?: Trip | null;
+  /** E11-S10: split with tappers (by sacks for fertilizer). `amountSatang` is then the net bill. null = not shared. */
+  readonly share?: ExpenseShare | null;
+  /** E11-S10: what was bought and why — data for tracking, no money in it. */
+  readonly fertilizer?: FertilizerDetails | null;
 }
+
+/** "ลงหนี้" makes a worker debt once the expense is actual; "จ่ายแล้ว" records that they paid their part. */
+export type ShareSettle = 'debt' | 'paid';
+
+export interface ShareLine {
+  readonly worker: Payer;
+  /** Whole sacks; null when the expense is not counted in sacks (one tapper only). */
+  readonly sacks: number | null;
+  readonly workerPct: number;
+  readonly settle: ShareSettle;
+}
+
+export interface ExpenseShare {
+  readonly billSatang: number;
+  readonly discountSatang: number;
+  /** null = not counted in sacks. Sacks no line takes are the farm's (and stock, E10-S04). */
+  readonly totalSacks: number | null;
+  readonly lines: readonly ShareLine[];
+}
+
+export type FertilizerType = 'chemical' | 'manure' | 'other';
+
+export interface FertilizerZoneUse {
+  readonly zoneId: string;
+  readonly zoneName: string;
+  readonly sacks: number;
+  /** Ids of saved reasons, or a typed reason prefixed `text:`. */
+  readonly reasons: readonly string[];
+  readonly note: string;
+}
+
+export interface FertilizerDetails {
+  readonly type: FertilizerType;
+  /** Free text or a saved option's name, snapshot like `Payer.name`. */
+  readonly formula: string;
+  readonly brand: string;
+  /** null = ไม่ทราบ. */
+  readonly sackKg: number | null;
+  readonly reasons: readonly string[];
+  /** Empty = not recorded yet ("บันทึกภายหลังได้"). */
+  readonly zones: readonly FertilizerZoneUse[];
+  readonly shop: string;
+  readonly orderedBy: string;
+}
+
+/** Saved choices the fertilizer flow offers again (ตั้งค่าปุ๋ย). */
+export type FertOptionKind = 'reason' | 'formula' | 'brand' | 'sackKg';
 
 export type AidKind = 'accident' | 'general' | 'food' | 'other';
 
@@ -115,6 +166,8 @@ export interface DebtFields {
   readonly fertilizer: { readonly totalSatang: number; readonly workerPct: number } | null;
   /** Balance from before the app (F6) — still one of the three kinds. */
   readonly carriedForward: boolean;
+  /** Set on a debt made from an expense's share (E11-S10) — edited at the expense, not here. */
+  readonly expenseId?: string;
 }
 
 export type DebtPatch = Partial<DebtFields> & { readonly deleted?: boolean };
@@ -224,6 +277,10 @@ export type FinancePayload =
   | { readonly t: 'expense_changed'; readonly patch: ExpensePatch; readonly alsoBasedOn?: readonly EventId[] }
   | { readonly t: 'category_added'; readonly name: string }
   | { readonly t: 'category_renamed'; readonly name: string }
+  /** E11-S10, targetId the category id: the default tapper % (whole 0–100); null = not shared. */
+  | { readonly t: 'category_share_set'; readonly workerPct: number | null }
+  /** E11-S10, targetId `fopt-<kind>-<key>` where key is the normalised name, so two devices adding one name meet. */
+  | { readonly t: 'fert_option_set'; readonly kind: FertOptionKind; readonly name: string; readonly description: string; readonly hidden: boolean }
   | { readonly t: 'repayment_recorded'; readonly fields: RepaymentFields }
   | { readonly t: 'repayment_changed'; readonly patch: RepaymentPatch; readonly alsoBasedOn?: readonly EventId[] }
   | { readonly t: 'debt_added'; readonly fields: DebtFields }
