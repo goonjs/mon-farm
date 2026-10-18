@@ -160,7 +160,8 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
   const sourceOf = (h: HistoryLine) => account?.debts.find((d) => d.id === h.id)?.expenseId;
   const openSource = (expenseId: string) => {
     const x = fin.state?.expenses.find((e) => e.id === expenseId);
-    if (x?.fertilizer || x?.share?.totalSacks != null) router.push({ pathname: '/v2/fertilizer', params: { id: expenseId } });
+    // A deleted purchase opens in the expense form: restore lives there, not in the flow.
+    if (!x?.deleted && (x?.fertilizer || x?.share?.totalSacks != null)) router.push({ pathname: '/v2/fertilizer', params: { id: expenseId } });
     else router.push({ pathname: '/v2/expense/[id]', params: { id: expenseId } });
   };
   const lines = (account?.history ?? []).filter((h) => filter === 'all' || h.type === filter);

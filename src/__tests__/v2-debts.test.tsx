@@ -147,6 +147,25 @@ describe('a debt made from an expense share (E11-S10)', () => {
     fireEvent.press(screen.getByTestId(`debt-open-${id}`));
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { id: 'exp-share-1' } });
   });
+
+  it('once its purchase is deleted, the line opens the expense form, where it can be restored', async () => {
+    mockParams.current = { workerId: 'p-som', name: 'สม' };
+    await mockFinance.append({
+      id: 'share-exp-1-del',
+      groupId: 'group-1',
+      deviceSeq: 10,
+      ts: 10,
+      actor: { userId: 'u', deviceId: 'dev-old' },
+      source: 'app',
+      targetId: 'exp-share-1',
+      baseEventId: 'share-exp-1',
+      payload: { t: 'expense_changed', patch: { deleted: true } },
+    });
+    wrap(<DebtAccountScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('debt-open-exp-share-1:share:p-som'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/expense/[id]', params: { id: 'exp-share-1' } });
+  });
 });
 
 describe('Save sits in the header (keyboard never covers it)', () => {

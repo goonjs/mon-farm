@@ -151,6 +151,8 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   // No tapper but a discount typed (or kept from a removed share): the amount is still the net.
   const draftDiscount = sharable && !share && shareDraft.discount.trim() ? parseBahtToSatang(shareDraft.discount) : null;
   const unsharedNet = draftDiscount !== null && amountSatang !== null && draftDiscount <= amountSatang ? amountSatang - draftDiscount : null;
+  // A discount that cannot apply is refused, not silently dropped.
+  const badDiscount = sharable && !share && shareDraft.discount.trim() !== '' && amountSatang !== null && unsharedNet === null;
   const amountTyped = !unknown && amount.trim() !== '';
   const problems = checkExpense({ amountSatang, date, stage }).map((p) => (p === 'amount-required' && amountTyped ? 'amount-invalid' : p));
 
@@ -162,7 +164,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
 
   const save = async () => {
     setShowErrors(true);
-    if (fertLocked || problems.length || tripProblems.length || shareProblems.length) return;
+    if (fertLocked || problems.length || tripProblems.length || shareProblems.length || badDiscount) return;
     setFailed(false);
     const fields: ExpenseFields = {
       amountSatang: share ? share.billSatang - share.discountSatang : (unsharedNet ?? amountSatang),
@@ -386,7 +388,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
                 : msg('xshare.rowOff')}
             </AppText>
             {unsharedNet !== null ? <AppText testID="share-unshared-net" variant="caption">{msg('xshare.unsharedNet', { net: formatSatang(unsharedNet) })}</AppText> : null}
-            {showErrors && shareProblems.length ? <AppText testID="share-err" style={{ color: t.color.reject }}>{msg(shareProblems.includes('discount-over') ? 'xshare.err.discount' : 'xshare.err.pct')}</AppText> : null}
+            {showErrors && (shareProblems.length || badDiscount) ? <AppText testID="share-err" style={{ color: t.color.reject }}>{msg(badDiscount || shareProblems.includes('discount-over') ? 'xshare.err.discount' : 'xshare.err.pct')}</AppText> : null}
           </Card>
           </Pressable>
         ) : null}

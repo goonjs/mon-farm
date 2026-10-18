@@ -221,6 +221,22 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     expect(x).toMatchObject({ amountSatang: 90_000, share: null });
   });
 
+  it('with no tapper, a discount above the bill is refused, not dropped', async () => {
+    await seed('exp-baddisc', shared(100_000, 10_000));
+    mockParams.current = { id: 'exp-baddisc' };
+    wrap(<ExpenseFormScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('share-row'));
+    await flush();
+    fireEvent.press(screen.getByTestId('share-worker-none'));
+    fireEvent.changeText(screen.getByTestId('share-discount'), '2000');
+    fireEvent.press(screen.getByTestId('share-done'));
+    await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
+    await flush();
+    expect(screen.getByTestId('share-err')).toBeTruthy();
+    expect((await mockFinance.load()).some((e) => e.targetId === 'exp-baddisc' && e.payload.t === 'expense_changed')).toBe(false);
+  });
+
   it('a share edit always writes the net amount with it', async () => {
     await seed('exp-pair', shared(100_000, 0));
     mockParams.current = { id: 'exp-pair' };
