@@ -21,6 +21,8 @@ import {
   pointsOf,
   tapperOn,
   activePoints,
+  activeZones,
+  zoneNameTaken,
   activeProperty,
   leaveDayProblem,
   planStarterPoints,
@@ -670,5 +672,41 @@ describe('sortPeopleByRole', () => {
         .build(),
     );
     expect(sortPeopleByRole(state.people).map((p) => p.id)).toEqual(['e', 'd', 'c', 'a', 'b']);
+  });
+});
+
+describe('farm zones — minimal E03-S04 for the fertilizer flow (E11-S10, D-43)', () => {
+  const farm = (id: string) => ({ t: 'property_added', propertyId: id, name: id, crop: 'rubber' }) as const;
+  const zone = (zoneId: string, propertyId: string, name: string, effective = '2026-10-01') =>
+    ({ t: 'farm_zone_added', zoneId, propertyId, name, effective }) as const;
+
+  it('adds and renames a zone under its farm; the id stays, the effective date is kept', () => {
+    const b = log().master(farm('f1')).master(zone('z1', 'f1', 'โซนริมคลอง', '2026-09-15')).master({ t: 'farm_zone_renamed', zoneId: 'z1', name: 'ริมคลอง' });
+    expect(projectMaster(b.build()).zones).toEqual([
+      expect.objectContaining({ id: 'z1', propertyId: 'f1', name: 'ริมคลอง', effective: '2026-09-15', deleted: false, hidden: false }),
+    ]);
+  });
+
+  it('lists only the shown zones of one farm, by name', () => {
+    const s = projectMaster(
+      log().master(farm('f1')).master(farm('f2')).master(zone('z2', 'f1', 'หลังบ้าน')).master(zone('z1', 'f1', 'ก่อนบ้าน')).master(zone('z3', 'f2', 'โซนอื่น')).build(),
+    );
+    expect(activeZones(s, 'f1').map((z) => z.id)).toEqual(['z1', 'z2']);
+  });
+
+  it('a deleted zone, or a zone of a deleted farm, is not offered', () => {
+    const b = log().master(farm('f1')).master(farm('f2')).master(zone('z1', 'f1', 'ก')).master(zone('z2', 'f2', 'ข')).remove('z1').remove('f2');
+    const s = projectMaster(b.build());
+    expect(activeZones(s, 'f1')).toEqual([]);
+    expect(activeZones(s, 'f2')).toEqual([]);
+    expect(s.zones.find((z) => z.id === 'z1')).toMatchObject({ deleted: true, hidden: true });
+  });
+
+  it('a rename of an unknown zone is ignored; a name is taken only within its farm', () => {
+    const s = projectMaster(log().master(farm('f1')).master(farm('f2')).master({ t: 'farm_zone_renamed', zoneId: 'nope', name: 'x' }).master(zone('z1', 'f1', 'ริมคลอง')).build());
+    expect(s.zones).toHaveLength(1);
+    expect(zoneNameTaken(s, 'f1', ' ริมคลอง ')).toBe(true);
+    expect(zoneNameTaken(s, 'f2', 'ริมคลอง')).toBe(false);
+    expect(zoneNameTaken(s, 'f1', 'ริมคลอง', 'z1')).toBe(false);
   });
 });

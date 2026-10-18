@@ -135,6 +135,18 @@ describe('MasterStore — people and buyers as events (E03-S01)', () => {
     expect((await master.state()).points.find((p) => p.id === p1.id)?.name).toBe('จุดหน้า');
   });
 
+  it('zones: add under a farm with an effective day, refuse a taken name or a bad day, rename (E11-S10)', async () => {
+    const f = await master.addProperty({ name: 'ก', crop: 'rubber' });
+    const z = await master.addZone(f.id, ' โซนริมคลอง ', '2026-10-01');
+    expect(z).toMatchObject({ propertyId: f.id, name: 'โซนริมคลอง', effective: '2026-10-01' });
+    await expect(master.addZone(f.id, 'โซนริมคลอง', '2026-10-01')).rejects.toBeInstanceOf(InvalidInputError);
+    await expect(master.addZone(f.id, ' ', '2026-10-01')).rejects.toBeInstanceOf(InvalidInputError);
+    await expect(master.addZone(f.id, 'หลังบ้าน', '1/10')).rejects.toBeInstanceOf(InvalidInputError);
+    await expect(master.addZone('no-such-farm', 'หลังบ้าน', '2026-10-01')).rejects.toBeInstanceOf(InvalidInputError);
+    await master.renameZone(z.id, 'ริมคลอง');
+    expect((await master.state()).zones.map((x) => x.name)).toEqual(['ริมคลอง']);
+  });
+
   it('refuses a point under a farm that is missing or deleted — no orphan points', async () => {
     const f = await master.addProperty({ name: 'ก', crop: 'rubber' });
     await master.remove(f.id);

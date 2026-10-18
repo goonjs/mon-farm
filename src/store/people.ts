@@ -14,7 +14,7 @@
 
 import type { MasterStore } from './master-store';
 
-export type { Buyer, PeopleStore, Person, PersonPatch, Point, Property, PropertyDraft } from './master-store';
+export type { Buyer, FarmZone, PeopleStore, Person, PersonPatch, Point, Property, PropertyDraft } from './master-store';
 // No value re-exports from './master-store' here: on device and web a bare
 // './people' resolves to people.native.ts / people.web.ts, which export only
 // `peopleStore`. Import classes (errors, MasterStore) from './master-store'.

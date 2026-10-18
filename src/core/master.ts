@@ -77,6 +77,19 @@ export interface PointRecord {
   readonly createdTs: number;
 }
 
+/** A zone inside a farm (D-43). Minimal for E11-S10: no split/merge yet (E03-S04). */
+export interface FarmZoneRecord {
+  readonly id: string;
+  readonly propertyId: string;
+  readonly name: string;
+  /** ISO day the zone takes effect. */
+  readonly effective: string;
+  readonly deleted: boolean;
+  /** Not offered: deleted itself, or its farm is. */
+  readonly hidden: boolean;
+  readonly createdTs: number;
+}
+
 /** One dated change of a point's tapper; `tapperId` null = no tapper from then. */
 export interface AssignmentChange {
   readonly assignmentId: string;
@@ -122,6 +135,7 @@ export interface MasterState {
   readonly buyers: readonly BuyerRecord[];
   readonly properties: readonly PropertyRecord[];
   readonly points: readonly PointRecord[];
+  readonly zones: readonly FarmZoneRecord[];
 }
 
 const byThaiName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, 'th');
@@ -131,6 +145,7 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
   const buyers = new Map<string, BuyerRecord>();
   const properties = new Map<string, PropertyRecord & { areas: AreaEntry[] }>();
   const points = new Map<string, { id: string; propertyId: string; name: string; createdTs: number }>();
+  const zones = new Map<string, Omit<FarmZoneRecord, 'deleted' | 'hidden'>>();
   const changes: Omit<AssignmentChange, 'deleted'>[] = [];
   const shares: ShareEntry[] = [];
   let settings: Omit<SettingsFold, 'added'> = { scaleType: 'whole', numbering: 'per-tapper', zeroCheck: 'every', dupWindowS: 8, defaultPairId: null };
@@ -210,6 +225,14 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
         if (cur) points.set(p.pointId, { ...cur, name: p.name });
         break;
       }
+      case 'farm_zone_added':
+        zones.set(p.zoneId, { id: p.zoneId, propertyId: p.propertyId, name: p.name, effective: p.effective, createdTs: e.ts });
+        break;
+      case 'farm_zone_renamed': {
+        const cur = zones.get(p.zoneId);
+        if (cur) zones.set(p.zoneId, { ...cur, name: p.name });
+        break;
+      }
       case 'tapper_assigned':
         changes.push({ assignmentId: p.assignmentId, pointId: p.pointId, tapperId: p.tapperId, from: p.from ?? null });
         break;
@@ -248,6 +271,7 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
     points: pointList
       .map((x) => ({ ...x, duplicateName: !x.hidden && (shownNames.get(nameKey(x.propertyId, x.name)) ?? 0) > 1 }))
       .sort(byThaiName),
+    zones: [...zones.values()].map((x) => ({ ...x, deleted: gone.has(x.id), hidden: gone.has(x.id) || gone.has(x.propertyId) })).sort(byThaiName),
     people: [...people.values()].map((x) => ({ ...x, deleted: gone.has(x.id) })).sort(byThaiName),
     buyers: [...buyers.values()].map((x) => ({ ...x, deleted: gone.has(x.id) })).sort(byThaiName),
     properties: [...properties.values()]
@@ -407,6 +431,17 @@ export function activeProperty(state: MasterState, id: string): PropertyRecord |
 /** Points that can be offered: not deleted, and their farm not deleted either. */
 export function activePoints(state: MasterState, propertyId?: string): PointRecord[] {
   return state.points.filter((p) => !p.hidden && (propertyId === undefined || p.propertyId === propertyId));
+}
+
+/** Zones that can be offered for one farm, by name. */
+export function activeZones(state: MasterState, propertyId: string): FarmZoneRecord[] {
+  return state.zones.filter((z) => !z.hidden && z.propertyId === propertyId);
+}
+
+/** Is `name` already used by a shown zone of this farm (other than `exceptId`)? */
+export function zoneNameTaken(state: MasterState, propertyId: string, name: string, exceptId?: string): boolean {
+  const key = name.trim();
+  return activeZones(state, propertyId).some((z) => z.id !== exceptId && z.name.trim() === key);
 }
 
 /** Is `name` already used by a shown point of this farm (other than `exceptId`)? (D-65 Q10) */
