@@ -98,8 +98,12 @@ describe('v2 sale money (pages 16–19)', () => {
     // E05-S09: unit in the label line, dots + short count per tapper, whose short basket it is.
     expect(screen.getByTestId('check-total')).not.toHaveTextContent('บาท');
     // per tapper: how many full baskets + the short kg, at which point
-    expect(screen.getByTestId(`check-point-${farm.a[3]}`)).toHaveTextContent(/1\s×\s50\s\+\s35\sกก\.85\sกก\./);
-    expect(screen.getByTestId(`check-point-${farm.a[0]}`)).toHaveTextContent(/3\s×\s50\sกก\.150\sกก\./);
+    // point total, then indented "full N baskets" and "short N baskets" rows, each with its own kg
+    expect(screen.getByTestId(`check-point-${farm.a[3]}`)).toHaveTextContent(/85\sกก\.เต็ม\s1\sเข่ง50\sกก\.ไม่เต็ม\s1\sเข่ง35\sกก\./);
+    expect(screen.getByTestId(`check-full-${farm.a[3]}`)).toHaveTextContent(/เต็ม 1 เข่ง.*50 กก\./);
+    expect(screen.getByTestId(`check-short-${farm.a[3]}`)).toHaveTextContent(/ไม่เต็ม 1 เข่ง.*35 กก\./);
+    expect(screen.getByTestId(`check-point-${farm.a[0]}`)).toHaveTextContent(/150\sกก\.เต็ม\s3\sเข่ง150\sกก\./);
+    expect(screen.queryByTestId(`check-short-${farm.a[0]}`)).toBeNull();
     expect(screen.getByTestId('check-card')).toHaveTextContent(/เข่ง 2 · นัด/);
     await doubleTap('check-match');
     expect(screen.getByTestId('check-status').props.accessibilityLabel).toBe('ยอดผู้ขายและคนรับซื้อยางตรงกัน');

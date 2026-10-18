@@ -268,19 +268,23 @@ function CheckBody({ bump }: { bump: () => void }) {
                 <Big value={msg('v2f.kg', { n: kgText(z.totals.netG) })} size={20} />
               </View>
               {points.map(([pid, tot]) => {
-                // "3 × 50 + 35 กก.": full baskets × the standard basket, plus the short basket's kg.
-                const std = tot.standardBaskets ? tot.standardNetG / tot.standardBaskets : 0;
-                const sum = [
-                  tot.standardBaskets ? (Number.isInteger(std / 1000) ? `${tot.standardBaskets} × ${kgText(std)}` : kgText(tot.standardNetG)) : '',
-                  tot.shortBaskets ? kgText(tot.shortNetG) : '',
-                ].filter(Boolean).join(' + ');
+                // Slip-style: point name + total kg, then indented rows "full N baskets … kg" and
+                // "short N baskets … kg" in the same right-hand kg column (words, not colour, mark short).
+                const num = { fontFamily: t.font.family.sans, fontVariant: ['tabular-nums' as const] };
+                const sub = (key: 'v2s.chkFull' | 'v2s.chkShort', n: number, g: number, id: string) => (
+                  <View key={id} testID={`${id}-${pid}`} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: t.space.md, paddingLeft: t.space.xl }}>
+                    <AppText variant="label" style={{ flex: 1 }}>{msg(key, { n })}</AppText>
+                    <Text style={{ ...num, fontSize: t.font.size.bodySm, color: t.color.inkSoft }}>{msg('v2f.kg', { n: kgText(g) })}</Text>
+                  </View>
+                );
                 return (
-                  <View key={pid} testID={`check-point-${pid}`} style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: t.space.md, paddingTop: t.space.xs, paddingLeft: t.space.xs }}>
-                    <View style={{ flex: 1 }}>
-                      <AppText variant="bodySm" style={{ color: t.color.ink }}>{master.points.find((x) => x.id === pid)?.name ?? ''}</AppText>
-                      <AppText variant="label" style={{ paddingLeft: t.space.lg }}>{msg('v2f.kg', { n: sum })}</AppText>
+                  <View key={pid} testID={`check-point-${pid}`} style={{ paddingTop: t.space.sm, paddingLeft: t.space.xs, gap: t.space.xs }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: t.space.md }}>
+                      <AppText variant="bodySm" style={{ flex: 1, color: t.color.ink }}>{master.points.find((x) => x.id === pid)?.name ?? ''}</AppText>
+                      <Text style={{ ...num, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('v2f.kg', { n: kgText(tot.netG) })}</Text>
                     </View>
-                    <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontVariant: ['tabular-nums'], color: t.color.inkSoft }}>{msg('v2f.kg', { n: kgText(tot.netG) })}</Text>
+                    {tot.standardBaskets ? sub('v2s.chkFull', tot.standardBaskets, tot.standardNetG, 'check-full') : null}
+                    {tot.shortBaskets ? sub('v2s.chkShort', tot.shortBaskets, tot.shortNetG, 'check-short') : null}
                   </View>
                 );
               })}
