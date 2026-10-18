@@ -242,7 +242,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
     return root && root.kind === 'short' ? root.readingG : null;
   })();
 
-  const openPct = open ? Math.round((open.haveG / (open.haveG + open.missingG)) * 100) : 0;
+  const openFull = open ? open.haveG + open.missingG : 0;
+  const openPct = open && openFull > 0 ? Math.min(100, Math.round((open.haveG / openFull) * 100)) : 0;
 
   return (
     <FarmScreen
@@ -511,13 +512,14 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
         <View testID="open-card" style={{ ...cardStyle(t), backgroundColor: t.color.warnSunk, paddingVertical: t.space.sm, paddingHorizontal: t.space.md, gap: t.space.xs }}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: t.space.sm }}>
             <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.warn }}>
-              {msg('rec.openBar', { n: open.basketNo, have: kgText(open.haveG), full: kgText(open.haveG + open.missingG) })}
+              {msg('rec.openBar', { n: open.basketNo, have: kgText(open.haveG), full: kgText(openFull) })}
             </Text>
             {rootReading !== null ? <AppText variant="caption">{msg('rec.scaleSmall', { reading: kgText(rootReading) })}</AppText> : null}
           </View>
           <View
             testID="open-bar"
             accessibilityRole="progressbar"
+            accessibilityLabel={msg('rec.openBar', { n: open.basketNo, have: kgText(open.haveG), full: kgText(openFull) })}
             accessibilityValue={{ min: 0, max: 100, now: openPct }}
             style={{ height: 10, borderRadius: t.radius.pill, backgroundColor: t.color.surfaceSunk, overflow: 'hidden' }}
           >
