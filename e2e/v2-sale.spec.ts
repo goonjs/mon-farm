@@ -207,7 +207,7 @@ test('start → point → empty scale → count → short → switch and fill �
   await id('tool-short').click();
   await expect(id('reading-scale-input')).toHaveValue('37');
   await id('short-save').click();
-  await expect(id('open-card')).toContainText('เข่ง 4 เปิดอยู่ · 35 กก.');
+  await expect(id('open-card')).toContainText('เข่ง 4 · 35 / 50 กก.');
   await shot(page, '11-open-short');
 
   // ── เปลี่ยนจุด → จุด 2 ของคนกรีดยางคนเดิม (page 12) ──

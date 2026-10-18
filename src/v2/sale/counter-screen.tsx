@@ -22,18 +22,20 @@ import { pointsOf, tapperOn } from '../../core/master';
 import { saleSkewG } from '../../core/scale-check';
 import { fieldKg, netFromReading, readingFromNet } from '../../core/short-reading';
 import { basketNetG } from '../../core/totals';
-import { basketList } from '../../core/sale-points';
+import { basketList, saleRollup } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { readWeighBasis, readWeighMode, writeWeighBasis, type WeighBasis, type WeighMode } from '../../store/weigh-mode-preference';
 import { useTheme } from '../../theme';
 import {
+  ActionTile,
   AlertIcon,
   AppText,
   BasketIcon,
   BottomSheet,
   Button,
   cardStyle,
+  ChartIcon,
   ChevronRight,
   ClockIcon,
   CTA,
@@ -44,6 +46,7 @@ import {
   PinIcon,
   Plus,
   ScaleIcon,
+  SwapIcon,
   TapperIcon,
   TextField,
   Undo,
@@ -76,7 +79,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const view = useSaleView();
   const goTo = useGoToPoint(view);
   useLeaveIfClosed(view);
-  const { saleId, events, state, master, day, mode, append, nameOf, saleTitle, reloadMaster } = view;
+  const { saleId, events, state, master, day, append, nameOf, saleTitle, reloadMaster } = view;
   const pointId = params.point ?? '';
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
   const [readingKg, setReadingKg] = useState<number | null>(null);
@@ -114,6 +117,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const { pile, figs, open, filling, waiting, fill, basketTare, ready } = model;
   const skew = saleSkewG(events);
   const holdKey = countKey();
+  const rollup = saleRollup(events, master, day);
+  const lastPoint = master.points.filter((p) => !p.hidden && p.id !== pointId).every((p) => (rollup.byPoint.get(p.id)?.baskets ?? 0) > 0);
   const std = pile.stdNetG;
   const tare = pile.tareG;
   const kg = (g: number) => msg('v2f.kg', { n: kgText(g) });
@@ -236,6 +241,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
     const root = open ? events.find((e) => e.id === open.rootId) : undefined;
     return root && root.kind === 'short' ? root.readingG : null;
   })();
+
+  const openPct = open ? Math.round((open.haveG / (open.haveG + open.missingG)) * 100) : 0;
 
   return (
     <FarmScreen
@@ -467,7 +474,13 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
         <Text testID="current-done" style={{ fontFamily: t.font.family.sans, fontSize: 80, lineHeight: 88, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
           {figs.done}
         </Text>
-        <AppText testID="current-no" variant="bodySm">{msg('rec.nextNo', { n: figs.currentNo })}</AppText>
+        {waiting && open ? (
+          <Text testID="current-short" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.warn }}>
+            {msg('rec.shortKg', { kg: kgText(open.haveG) })}
+          </Text>
+        ) : (
+          <AppText testID="current-no" variant="bodySm">{msg('rec.nextNo', { n: figs.currentNo })}</AppText>
+        )}
       </View>
       <IconLine icon={(c) => <TapperIcon color={c} size={13} />}>{scopeTitle}</IconLine>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
@@ -495,19 +508,20 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       </View>
 
       {waiting && open ? (
-        <View testID="open-card" style={{ ...cardStyle(t), backgroundColor: t.color.warnSunk, padding: t.space.lg, gap: t.space.sm }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md }}>
-            <IconTile tone="neutral" icon={(c) => <ScaleIcon color={c} size={18} />} />
-            <View style={{ flex: 1 }}>
-              <AppText style={{ fontWeight: t.font.weight.bold }}>{skew ? msg('v2s.openNo', { n: open.basketNo }) : msg('rec.openCard', { n: open.basketNo, kg: kgText(open.haveG) })}</AppText>
-              {rootReading !== null ? (
-                <AppText variant="bodySm">
-                  {skew
-                    ? msg('v2s.openReadingSkew', { reading: kgText(rootReading), tare: kgText(tare), skew: signed(kgText(skew)), net: kgText(open.haveG) })
-                    : msg('v2s.openReading', { reading: kgText(rootReading), tare: kgText(tare) })}
-                </AppText>
-              ) : null}
-            </View>
+        <View testID="open-card" style={{ ...cardStyle(t), backgroundColor: t.color.warnSunk, paddingVertical: t.space.sm, paddingHorizontal: t.space.md, gap: t.space.xs }}>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: t.space.sm }}>
+            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.warn }}>
+              {msg('rec.openBar', { n: open.basketNo, have: kgText(open.haveG), full: kgText(open.haveG + open.missingG) })}
+            </Text>
+            {rootReading !== null ? <AppText variant="caption">{msg('rec.scaleSmall', { reading: kgText(rootReading) })}</AppText> : null}
+          </View>
+          <View
+            testID="open-bar"
+            accessibilityRole="progressbar"
+            accessibilityValue={{ min: 0, max: 100, now: openPct }}
+            style={{ height: 10, borderRadius: t.radius.pill, backgroundColor: t.color.surfaceSunk, overflow: 'hidden' }}
+          >
+            <View style={{ width: `${openPct}%`, height: '100%', backgroundColor: t.color.warn }} />
           </View>
         </View>
       ) : null}
@@ -520,9 +534,15 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           </Button>
         </View>
       ) : waiting && open ? (
-        <View testID="stage-wait" style={{ ...cardStyle(t), borderWidth: t.border.thick, borderColor: t.color.ruleStrong, alignItems: 'center', padding: t.space.lg, gap: t.space.xs }}>
-          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('rec.waitFill', { n: open.basketNo })}</Text>
-          <AppText variant="bodySm">{tapper && mode === 'per-tapper' ? msg('rec.waitFillHint', { name: tapperName }) : msg('rec.waitFillPoint')}</AppText>
+        <View testID="stage-wait" style={{ flexDirection: 'row', justifyContent: 'center', gap: t.space.md }}>
+          <View style={{ width: 150 }}>
+            <ActionTile testID="next-point" label={msg('rec.nextPoint')} icon={(c) => <SwapIcon color={c} size={26} />} main={!lastPoint} onPress={() => router.push(`${base}/point?mode=switch&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}` as Href)} />
+          </View>
+          {lastPoint ? (
+            <View style={{ width: 150 }}>
+              <ActionTile testID="to-summary" label={msg('rec.summary')} icon={(c) => <ChartIcon color={c} size={26} />} main onPress={() => router.push(`${base}/check` as Href)} />
+            </View>
+          ) : null}
         </View>
       ) : (
         <HoldStage testID="hold" label={filling && open ? msg('v2s.fillStage', { n: open.basketNo }) : msg(holdKey, { n: figs.currentNo })} onHold={count} onEarly={early} minHeight={filling ? 150 : 120}>

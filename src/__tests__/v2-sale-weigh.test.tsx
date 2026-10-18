@@ -234,10 +234,15 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     await press('short-save');
     const ev = await store().load(saleId);
     expect(ev.find((e) => e.kind === 'short')).toMatchObject({ readingG: 37_000, tareG: 2_000, basketNo: 2 });
-    expect(screen.getByTestId('open-card')).toHaveTextContent(/เข่ง 2 เปิดอยู่ · 35 กก\./);
+    // One line: a bar of the rubber held against a full basket, the scale reading small (owner 2026-10-18).
+    expect(screen.getByTestId('open-card')).toHaveTextContent(/เข่ง 2.*35 \/ 50 กก\..*ตาชั่ง 37/);
+    expect(screen.getByTestId('open-bar').props.accessibilityValue).toMatchObject({ now: 70, min: 0, max: 100 });
+    expect(screen.getByTestId('current-short')).toHaveTextContent('+35 กก.');
+    expect(screen.queryByTestId('current-no')).toBeNull();
     expect(screen.getByTestId('fig-missing')).toHaveTextContent(/^15/);
-    // The point is finished (owner 2026-10-17): no finish button, nothing counts here.
-    expect(screen.getByTestId('stage-wait')).toHaveTextContent(/เข่ง 2 รอเติม/);
+    // The point is finished (owner 2026-10-17): no finish button, no hold, no hint — one button to the next point.
+    expect(screen.queryByText(/รอเติม/)).toBeNull();
+    expect(screen.getByTestId('next-point')).toBeTruthy();
     expect(screen.queryByTestId('close-open')).toBeNull();
     expect(screen.queryByTestId('hold')).toBeNull();
     // The only way on is undo: the short basket goes, the number comes back.
@@ -246,6 +251,33 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 2$/);
     await hold();
     expect(screen.getByTestId('fig-done')).toHaveTextContent(/^2/);
+  });
+
+  it('the last point offers the summary beside the next-point button; another point left means no summary (E04-S17)', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    await press('tool-short');
+    await press('short-save');
+    expect(screen.queryByTestId('to-summary')).toBeNull();
+    await press('next-point');
+    expect(router.push).toHaveBeenLastCalledWith(expect.stringContaining('/point?mode=switch'));
+  });
+
+  it('at the last point the summary button joins the next-point button (E04-S17)', async () => {
+    await started();
+    for (const id of [...farm.a.slice(1), farm.b1]) {
+      await readyAt(id);
+      const c = await counterAt(id);
+      await hold();
+      c.unmount();
+    }
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    await press('tool-short');
+    await press('short-save');
+    await press('to-summary');
+    expect(router.push).toHaveBeenLastCalledWith(`/v2/sale/${saleId}/check`);
   });
 
   it('option 3 closes nothing until a full basket is counted, and can be re-chosen (E04-S17)', async () => {
