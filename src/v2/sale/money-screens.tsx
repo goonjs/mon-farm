@@ -636,10 +636,10 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
         })}
         <Kv tone="total" label={msg('v2s.sumShares')} value={baht(money.tappers.reduce((a, tp) => a + tp.shareSatang, 0))} />
         <Kv label={msg('v2s.sumFarm')} value={baht(s.ownerSatang)} />
-        {/* The line the whole block adds up to: as strong as the top card's total, in the accept colour with a ✓ (owner 2026-10-18). */}
+        {/* The line the whole block adds up to: as strong as the top card's total, in the ordinary ink (owner 2026-10-18). */}
         <View testID="sum-sale" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: t.space.sm, borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, paddingTop: t.space.sm, marginTop: t.space.xs }}>
-          <AppText style={{ flexShrink: 1, fontWeight: t.font.weight.bold, fontSize: t.font.size.bodyLg, color: t.color.accept }}>{`✓ ${msg('v2s.sumSale')}`}</AppText>
-          <Big value={baht(s.grossSatang)} size={24} tone={t.color.accept} />
+          <AppText style={{ flexShrink: 1, fontWeight: t.font.weight.bold, fontSize: t.font.size.bodyLg }}>{msg('v2s.sumSale')}</AppText>
+          <Big value={baht(s.grossSatang)} size={24} />
         </View>
       </View>
 
