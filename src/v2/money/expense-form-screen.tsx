@@ -15,11 +15,12 @@
 
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { checkExpense, defaultPayer, isDerivedExpense, type Expense } from '../../core/finance/ledger';
 import { formatDate, formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../core/finance/money';
 import { checkTrip } from '../../core/finance/plan';
+import { checkShare } from '../../core/finance/share';
 import { FARM_FUNDS, type AidKind, type ExpenseFields, type ExpensePatch, type Payer, type Stage, type Trip, type TripCostKind } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
@@ -30,6 +31,10 @@ import { useTheme } from '../../theme';
 import { AppText, Button, Card, FactRow, PersonIcon, ReceiptIcon, ScreenHeader, SegmentedControl, TextField, type HeaderPrimaryAction } from '../../ui';
 import { useFarms } from './expenses-screen';
 import { ChoiceChip, ChoiceRow, NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
+import { CategoryShareSheet, draftOf, shareOf, ShareSheet, type ShareDraft } from './share-sheet';
+
+const FERTILIZER = 'cat-fertilizer';
+const FLOW = '/v2/fertilizer' as const;
 
 const STAGES: readonly Stage[] = ['actual', 'committed', 'planned'];
 const AID_KINDS: readonly AidKind[] = ['accident', 'general', 'food', 'other'];
@@ -79,7 +84,9 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
     [],
   );
 
-  const [amount, setAmount] = useState(existing?.amountSatang != null ? satangToInput(existing.amountSatang) : '');
+  // A shared expense stores the net bill; the form edits the bill (E11-S10).
+  const shownAmount = existing?.share ? existing.share.billSatang : existing?.amountSatang;
+  const [amount, setAmount] = useState(shownAmount != null ? satangToInput(shownAmount) : '');
   const [unknownWanted, setUnknown] = useState(existing ? existing.amountSatang === null : false);
   const [date, setDate] = useState(existing?.date ?? todayIso());
   const [stage, setStage] = useState<Stage>(existing?.stage ?? 'actual');
@@ -102,6 +109,9 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   const [split, setSplit] = useState<Record<string, string> | null>(() =>
     existing?.trip?.split ? Object.fromEntries(existing.trip.split.map((x) => [x.farmId, satangToInput(x.satang)])) : null,
   );
+  const [shareDraft, setShareDraft] = useState<ShareDraft>(() => draftOf(existing?.share, state.categories.find((c) => c.id === existing?.categoryId)?.workerPct ?? null));
+  const [shareOpen, setShareOpen] = useState(false);
+  const [catShareOpen, setCatShareOpen] = useState(false);
   const [addingCat, setAddingCat] = useState<'add' | 'rename' | null>(null);
   const [catName, setCatName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -128,6 +138,10 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
       }
     : undefined;
   const tripProblems = trip && amountSatang !== null ? checkTrip(trip, amountSatang).filter((p) => p !== 'lines-total' || fromLines) : [];
+  const category = state.categories.find((c) => c.id === categoryId) ?? null;
+  const sharable = !!category && category.workerPct !== null && category.id !== FERTILIZER && !isTrip && !isAid;
+  const share = sharable && amountSatang !== null ? shareOf(shareDraft, amountSatang) : null;
+  const shareProblems = share ? checkShare(share) : [];
   const amountTyped = !unknown && amount.trim() !== '';
   const problems = checkExpense({ amountSatang, date, stage }).map((p) => (p === 'amount-required' && amountTyped ? 'amount-invalid' : p));
 
@@ -139,10 +153,10 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
 
   const save = async () => {
     setShowErrors(true);
-    if (problems.length || tripProblems.length) return;
+    if (problems.length || tripProblems.length || shareProblems.length) return;
     setFailed(false);
     const fields: ExpenseFields = {
-      amountSatang,
+      amountSatang: share ? share.billSatang - share.discountSatang : amountSatang,
       date,
       stage,
       categoryId,
@@ -153,6 +167,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
       // Leaving aid/travel clears what belonged to it — null, since a stored key cannot be removed.
       ...(isAid && worker ? { worker, aidKind } : existing?.worker ? { worker: null, aidKind: null } : {}),
       ...(trip ? { trip } : existing?.trip ? { trip: null } : {}),
+      ...(share ? { share } : existing?.share ? { share: null } : {}),
     };
     try {
       if (!existing) {
@@ -181,6 +196,24 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
     if (!existing) return;
     const others = existing.heads.filter((h) => h !== existing.headEventId);
     await fin.write(existing.id, existing.headEventId, { t: 'expense_changed', patch: { [field]: value } as ExpensePatch, alsoBasedOn: others });
+  };
+
+  const pickCategory = (id: string) => {
+    // The fertilizer category is its own flow (E11-S10 C): what was typed goes with it.
+    if (id === FERTILIZER && !existing) {
+      router.push({ pathname: FLOW, params: { bill: amount, date } });
+      return;
+    }
+    if (id !== categoryId) setShareDraft((d) => ({ ...d, pct: String(state.categories.find((c) => c.id === id)?.workerPct ?? d.pct) }));
+    setCategoryId(categoryId === id ? null : id);
+  };
+
+  const saveCategoryShare = async (pct: number | null) => {
+    if (!categoryId) return;
+    const prior = (fin.events ?? []).filter((e) => e.targetId === categoryId && e.payload.t === 'category_share_set');
+    await fin.write(categoryId, prior.length ? prior[prior.length - 1].id : null, { t: 'category_share_set', workerPct: pct });
+    if (pct !== null) setShareDraft((d) => ({ ...d, pct: String(pct) }));
+    setCatShareOpen(false);
   };
 
   const saveCategory = async () => {
@@ -283,13 +316,21 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
           <SectionLabel hint={msg('v2m.categoryHint')}>{msg('fin.form.category')}</SectionLabel>
           <ChoiceRow>
             {state.categories.map((c) => (
-              <ChoiceChip key={c.id} testID={`expense-cat-${c.id}`} label={c.name} on={categoryId === c.id} onPress={() => setCategoryId(categoryId === c.id ? null : c.id)} />
+              <ChoiceChip key={c.id} testID={`expense-cat-${c.id}`} label={c.name} on={categoryId === c.id} onPress={() => pickCategory(c.id)} />
             ))}
             <ChoiceChip testID="expense-cat-add" label={msg('fin.form.addCategory')} onPress={() => { setAddingCat('add'); setCatName(''); }} />
             {categoryId ? (
               <ChoiceChip testID="expense-cat-rename" label={msg('fin.form.renameCategory')} onPress={() => { setAddingCat('rename'); setCatName(state.categories.find((c) => c.id === categoryId)?.name ?? ''); }} />
             ) : null}
           </ChoiceRow>
+          {categoryId && categoryId !== FERTILIZER ? (
+            <ChoiceRow>
+              <ChoiceChip testID="expense-cat-share" label={msg('xshare.catSettings')} onPress={() => setCatShareOpen(true)} />
+            </ChoiceRow>
+          ) : null}
+          {catShareOpen && category ? (
+            <CategoryShareSheet open onClose={() => setCatShareOpen(false)} name={category.name} pct={category.workerPct} onSave={saveCategoryShare} />
+          ) : null}
           {addingCat ? (
             <View style={{ gap: t.space.sm }}>
               <TextField testID="expense-cat-name" label={msg('fin.form.categoryPlaceholder')} value={catName} onChangeText={setCatName} />
@@ -297,6 +338,28 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
             </View>
           ) : null}
         </View>
+
+        {sharable ? (
+          <Pressable testID="share-row" accessibilityRole="button" onPress={() => setShareOpen(true)}>
+          <Card style={{ gap: t.space.xs }}>
+            <SectionLabel>{msg('xshare.row')}</SectionLabel>
+            <AppText variant="bodySm">
+              {shareDraft.worker
+                ? msg(shareDraft.discount.trim() ? 'xshare.rowDiscount' : 'xshare.rowOn', {
+                    summary: msg('xshare.rowOn', { name: shareDraft.worker.name, pct: shareDraft.pct, settle: msg(`xshare.settle.${shareDraft.settle}`) }),
+                    name: shareDraft.worker.name,
+                    pct: shareDraft.pct,
+                    settle: msg(`xshare.settle.${shareDraft.settle}`),
+                  })
+                : msg('xshare.rowOff')}
+            </AppText>
+            {showErrors && shareProblems.length ? <AppText testID="share-err" style={{ color: t.color.reject }}>{msg(shareProblems.includes('discount-over') ? 'xshare.err.discount' : 'xshare.err.pct')}</AppText> : null}
+          </Card>
+          </Pressable>
+        ) : null}
+        {shareOpen && category ? (
+          <ShareSheet open onClose={() => setShareOpen(false)} billSatang={amountSatang ?? 0} title={category.name} draft={shareDraft} onChange={setShareDraft} />
+        ) : null}
 
         {isAid ? (
           <Card testID="aid-section">
