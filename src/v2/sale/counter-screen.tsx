@@ -515,7 +515,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           : card(<><AppText variant="bodySm" numberOfLines={1}>{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
         {card(
           <>
-            <AppText variant="bodySm" numberOfLines={1}>{msg('rec.kg')} ({msg('common.kg')})</AppText>
+            <IconLine oneLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')} ({msg('common.kg')})</IconLine>
             {cardFigure(kgText(figs.netG), 'fig-kg')}
           </>,
           'kg',

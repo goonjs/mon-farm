@@ -479,12 +479,12 @@ export function EmptyPill({ label }: { label: string }) {
 }
 
 /** A line with a small leading icon in soft ink (mockup `.mi`). */
-export function IconLine({ icon, children, testID, strong }: { icon?: IconRender; children: ReactNode; testID?: string; strong?: boolean }) {
+export function IconLine({ icon, children, testID, strong, oneLine }: { icon?: IconRender; children: ReactNode; testID?: string; strong?: boolean; oneLine?: boolean }) {
   const t = useTheme();
   return (
     <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
       {icon ? <View aria-hidden style={{ width: 16, alignItems: 'center' }}>{icon(t.color.inkSoft)}</View> : null}
-      <Text style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: strong ? t.font.weight.bold : t.font.weight.regular, color: strong ? t.color.ink : t.color.inkSoft }}>
+      <Text numberOfLines={oneLine ? 1 : undefined} style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: strong ? t.font.weight.bold : t.font.weight.regular, color: strong ? t.color.ink : t.color.inkSoft }}>
         {children}
       </Text>
     </View>
