@@ -148,6 +148,7 @@ export function projectDebts(
   }
 
   // Tappers' parts of shared expenses (E11-S10) — projected from the expense, never stored.
+  // Re-projects the finance log for the share debts: accepted at MVP volume (E11-S10 review).
   debts.push(...shareDebts(projectFinance(events).expenses));
 
   const workers = new Map<string, Payer>();
