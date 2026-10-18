@@ -32,8 +32,9 @@ jest.mock('expo-router', () => {
     __params: params,
   };
 });
-const { __params: mockParams } = jest.requireMock('expo-router') as {
+const { __params: mockParams, router: mockRouter } = jest.requireMock('expo-router') as {
   __params: { current: Record<string, string> };
+  router: { push: jest.Mock };
 };
 
 async function flush() {
@@ -49,21 +50,29 @@ describe('debt ledger (E06-S03)', () => {
     mockParams.current = DAENG;
   });
 
-  it('manual fertilizer debt: bill × % (default 50) and the owner share becomes an expense', async () => {
+  it('kind fertilizer opens the one fertilizer purchase flow with this tapper (E11-S10 C)', async () => {
     wrap(<AddDebtScreen />);
     await flush();
     fireEvent.press(screen.getByTestId('debt-kind-fertilizer'));
-    fireEvent.changeText(screen.getByTestId('debt-amount'), '4000');
-    expect(screen.getByTestId('debt-worker-share')).toHaveTextContent(/2,000\.00/);
-    fireEvent.press(screen.getByTestId('debt-pct-mode-custom'));
-    fireEvent.changeText(screen.getByTestId('debt-pct'), '33.5');
-    expect(screen.getByTestId('debt-pct-error')).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId('debt-pct'), '50');
-    fireEvent.changeText(screen.getByTestId('debt-date'), '2026-09-20');
-    fireEvent.changeText(screen.getByTestId('debt-note'), 'ปุ๋ยรอบ ก.ย.');
-    await act(async () => fireEvent.press(screen.getByTestId('debt-save')));
-    await flush();
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { workerId: 'p-daeng', name: 'แดง' } });
+    expect(screen.queryByTestId('debt-pct-mode')).toBeNull();
+  });
 
+  it('an old manual fertilizer debt (bill × %) still reads, with its owner-share expense', async () => {
+    await mockFinance.append({
+      id: 'old-fert-1',
+      groupId: 'group-1',
+      deviceSeq: 1,
+      ts: 1,
+      actor: { userId: 'u', deviceId: 'dev-old' },
+      source: 'app',
+      targetId: 'debt-old-fert',
+      baseEventId: null,
+      payload: {
+        t: 'debt_added',
+        fields: { worker: { id: 'p-daeng', name: 'แดง' }, kind: 'fertilizer', amountSatang: 200000, date: '2026-09-20', note: 'ปุ๋ยรอบ ก.ย.', lender: null, fertilizer: { totalSatang: 400000, workerPct: 50 }, carriedForward: false },
+      },
+    });
     const events = await mockFinance.load();
     expect(projectDebts(events).get('p-daeng')?.summary.owed.fertilizer).toBe(200000);
     const owner = projectFinance(events).expenses.find((x) => x.id.endsWith(':owner'));

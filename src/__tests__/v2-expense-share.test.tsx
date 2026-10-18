@@ -138,4 +138,20 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     fireEvent.press(screen.getByTestId('expense-cat-cat-fertilizer'));
     expect(mockRouter.push).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/v2/fertilizer', params: expect.objectContaining({ bill: '10000' }) }));
   });
+
+  it('a fertilizer purchase opens in its own flow to be edited', async () => {
+    await seed('exp-fert-1', {
+      t: 'expense_created',
+      fields: {
+        amountSatang: 100_000, date: '2026-10-01', stage: 'actual', categoryId: 'cat-fertilizer', propertyId: null, item: 'ยูเรีย', note: '', payer: null,
+        share: { billSatang: 100_000, discountSatang: 0, totalSacks: 1, lines: [] },
+        fertilizer: { type: 'chemical', formula: 'ยูเรีย', brand: '', sackKg: null, reasons: [], zones: [], shop: '', orderedBy: '' },
+      },
+    });
+    mockParams.current = { id: 'exp-fert-1' };
+    wrap(<ExpenseFormScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-open-fert'));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { id: 'exp-fert-1' } });
+  });
 });
