@@ -21,7 +21,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { checkFertilizer, reasonLabel, TYPED_REASON } from '../../core/finance/fertilizer';
-import { checkExpense, defaultPayer, fertOptionId, type Expense, type FertOption } from '../../core/finance/ledger';
+import { checkExpense, defaultPayer, type Expense, type FertOption } from '../../core/finance/ledger';
 import { formatDate, formatSatang, isIsoDate, parseBahtToSatang, satangToInput, todayIso } from '../../core/finance/money';
 import { checkShare, lastLineSacks, splitShare } from '../../core/finance/share';
 import {
@@ -73,7 +73,8 @@ interface ZoneDraft {
   readonly note: string;
 }
 
-type Params = { bill?: string; date?: string; id?: string; workerId?: string; name?: string };
+/** From the expense form: bill, date, stage, payer (`payerId` 'none' = not recorded). From เพิ่มหนี้: workerId + name. Edit: id. */
+type Params = { bill?: string; date?: string; stage?: string; payerId?: string; payerName?: string; id?: string; workerId?: string; name?: string };
 
 export function FertilizerFlowScreen() {
   const params = useLocalSearchParams<Params>();
@@ -108,7 +109,12 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
   const sh = existing?.share;
 
   const initialPayer = useMemo<Payer | null>(
-    () => (existing ? existing.payer : (defaultPayer(fin.events ?? [], fin.deviceId ?? '') ?? farmPayer)),
+    () =>
+      existing
+        ? existing.payer
+        : params.payerId
+          ? params.payerId === 'none' ? null : params.payerId === FARM_FUNDS ? farmPayer : { id: params.payerId, name: params.payerName ?? '' }
+          : (defaultPayer(fin.events ?? [], fin.deviceId ?? '') ?? farmPayer),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the default is taken once, when the flow opens
     [],
   );
@@ -130,7 +136,7 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
   const [reasons, setReasons] = useState<readonly string[]>(f?.reasons ?? []);
   // 3 — who paid, when
   const [date, setDate] = useState(existing?.date ?? params.date ?? todayIso());
-  const [stage, setStage] = useState<Stage>(existing?.stage ?? 'actual');
+  const [stage, setStage] = useState<Stage>(existing?.stage ?? (STAGES.find((x) => x === params.stage) ?? 'actual'));
   const [payer, setPayer] = useState<Payer | null>(initialPayer);
   const [shop, setShop] = useState(f?.shop ?? '');
   const [orderedBy, setOrderedBy] = useState(f?.orderedBy ?? '');
@@ -236,7 +242,7 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
       stage,
       categoryId: FERTILIZER,
       propertyId: farmId,
-      item: existing?.item ?? details.formula,
+      item: details.formula,
       note: existing?.note ?? '',
       payer,
       share,
@@ -249,6 +255,11 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
         const patch: Record<string, unknown> = {};
         for (const k of Object.keys(fields) as (keyof ExpenseFields)[]) {
           if (JSON.stringify(fields[k]) !== JSON.stringify(existing[k])) patch[k] = fields[k];
+        }
+        // The share and the net amount travel together, so a concurrent edit conflicts on both or neither.
+        if ('share' in patch || 'amountSatang' in patch) {
+          patch.share = fields.share;
+          patch.amountSatang = fields.amountSatang;
         }
         if (Object.keys(patch).length) await fin.write(existing.id, existing.headEventId, { t: 'expense_changed', patch: patch as ExpensePatch });
       }
@@ -372,7 +383,7 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
             </View>
             <View style={{ gap: t.space.sm }}>
               <SectionLabel hint={existing ? undefined : msg('fert.payerHint')}>{msg('fin.form.payer')}</SectionLabel>
-              <PayerPicker testID="fert-payer" value={payer} onChange={setPayer} />
+              <PayerPicker testID="fert-payer" value={payer} onChange={setPayer} allowNone />
             </View>
             <Card style={{ gap: t.space.sm }}>
               <AppText variant="label">{msg('v2m.optional')}</AppText>
@@ -429,7 +440,9 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
                   <TextField testID={`fert-line-${l.worker.id}-pct`} label={msg('xshare.pct')} keyboardType="number-pad" value={l.pct} onChangeText={(v) => setLine(i, { pct: v })} error={!WHOLE.test(l.pct.trim()) || Number(l.pct) > 100 ? msg('xshare.err.pct') : undefined} />
                   {s ? <AppText testID={`fert-line-${l.worker.id}-cost`} variant="bodySm">{msg('fert.lineCost', { cost: formatSatang(s.costSatang), pct: l.pct, part: formatSatang(s.workerSatang) })}</AppText> : null}
                   <SegmentedControl testID={`fert-line-${l.worker.id}-settle`} value={l.settle} onChange={(v) => setLine(i, { settle: v })} options={[{ value: 'debt', label: msg('xshare.settle.debt') }, { value: 'paid', label: msg('xshare.settle.paid') }]} />
-                  <AppText variant="caption">{msg(l.settle === 'debt' ? 'xshare.settle.debtHint' : 'xshare.settle.paidHint', { name: l.worker.name })}</AppText>
+                  <AppText testID={`fert-line-${l.worker.id}-hint`} variant="caption">
+                    {msg(l.settle === 'paid' ? 'xshare.settle.paidHint' : stage === 'actual' ? 'xshare.settle.debtHint' : 'fert.debtLater', { name: l.worker.name })}
+                  </AppText>
                   <ChoiceRow>
                     <ChoiceChip testID={`fert-line-${l.worker.id}-remove`} label={msg('fert.removeTapper')} onPress={() => setLines((ls) => ls.filter((_, j) => j !== i))} />
                   </ChoiceRow>
@@ -437,6 +450,9 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
               );
             })}
             {tappers.length === 0 ? <AppText variant="bodySm">{msg('fert.noTappers')}</AppText> : null}
+            <ChoiceRow>
+              <ChoiceChip testID="fert-pct-settings" label={msg('fert.pctSettings', { pct: catPct })} onPress={() => router.push('/v2/fertilizer-settings')} />
+            </ChoiceRow>
             {tappers.length ? <SectionLabel>{msg('fert.pickLabel')}</SectionLabel> : null}
             <ChoiceRow>
               {tappers.filter((p) => !lines.some((l) => l.worker.id === p.id)).map((p) => (
@@ -471,15 +487,16 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
                 <SumTitle onEdit={() => setStep('tapper')} testID="fert-sum-edit-tapper" label={msg('fert.editStep', { n: 5 })}>
                   {msg('fert.splitTitle', { n: split.leftoverSacks })}
                 </SumTitle>
-                <Line label={msg('fert.ownerPart')} value={formatSatang(split.ownerTotalSatang)} />
-                <Line label={msg('fert.tapperPart')} value={formatSatang(split.workerTotalSatang)} />
+                {/* Owner, tappers and leftover each once: the three add up to the net. */}
+                <Line testID="fert-sum-owner" label={msg('fert.ownerPart')} value={formatSatang(split.ownerTotalSatang - split.leftoverSatang)} />
+                <Line testID="fert-sum-tappers" label={msg('fert.tapperPart')} value={formatSatang(split.workerTotalSatang)} />
+                {split.leftoverSacks > 0 ? <Line testID="fert-sum-leftover" label={msg('fert.leftoverLine', { n: split.leftoverSacks })} value={formatSatang(split.leftoverSatang)} /> : null}
                 {split.lines.map((s, i) => (
                   <View key={s.worker.id} testID={`fert-sum-line-${s.worker.id}`} style={{ gap: 2 }}>
                     <Line label={msg('fert.lineSummary', { name: s.worker.name, sacks: s.sacks ?? 0, pct: share.lines[i].workerPct })} value={formatSatang(s.workerSatang)} />
-                    <AppText variant="caption">{s.settle === 'paid' ? msg('fert.paidDone') : msg('xshare.settle.debt')}</AppText>
+                    <AppText variant="caption">{s.settle === 'paid' ? msg('fert.paidDone') : stage === 'actual' ? msg('xshare.settle.debt') : msg('fert.debtLaterShort')}</AppText>
                   </View>
                 ))}
-                {split.leftoverSacks > 0 ? <Line label={msg('fert.leftoverLine', { n: split.leftoverSacks })} value={formatSatang(split.leftoverSatang)} /> : null}
                 <View testID="fert-sum-total" style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, paddingTop: t.space.sm }}>
                   <AppText style={{ flex: 1 }}>{msg('fert.total')}</AppText>
                   <Amount satang={split.ownerTotalSatang + split.workerTotalSatang} />
@@ -683,7 +700,7 @@ function ProductSheet({ onClose, options, value, onDone }: { onClose: () => void
   const field = (k: (typeof PRODUCT_KINDS)[number]) => {
     const typed = v[k].trim();
     const saved = options.filter((o) => o.kind === k && !o.hidden);
-    const known = !typed || saved.some((o) => o.id === fertOptionId(k, typed));
+    const known = !typed || saved.some((o) => sameName(o.name, typed));
     const matches = saved.filter((o) => !typed || o.name.toLowerCase().includes(typed.toLowerCase())).slice(0, 8);
     return (
       <View key={k} style={{ gap: t.space.sm }}>
@@ -698,7 +715,7 @@ function ProductSheet({ onClose, options, value, onDone }: { onClose: () => void
         />
         <ChoiceRow>
           {matches.map((o) => (
-            <ChoiceChip key={o.id} testID={`fert-opt-${k}-${o.name}`} label={k === 'sackKg' ? msg('fert.kg', { kg: o.name }) : o.name} on={o.id === fertOptionId(k, typed)} onPress={() => setV((p) => ({ ...p, [k]: o.name }))} />
+            <ChoiceChip key={o.id} testID={`fert-opt-${k}-${o.name}`} label={k === 'sackKg' ? msg('fert.kg', { kg: o.name }) : o.name} on={sameName(o.name, typed)} onPress={() => setV((p) => ({ ...p, [k]: o.name }))} />
           ))}
           {!known ? <ChoiceChip testID={`fert-add-${k}`} dashed label={msg('fert.addTyped', { name: typed })} on={keep.has(k)} onPress={() => toggle(k, true)} /> : null}
         </ChoiceRow>
@@ -721,7 +738,7 @@ function ProductSheet({ onClose, options, value, onDone }: { onClose: () => void
         disabled: !ok,
         onPress: () => {
           const out = { formula: v.formula.trim(), brand: v.brand.trim(), sackKg: kg };
-          void onDone(out, PRODUCT_KINDS.filter((k) => keep.has(k) && out[k] && !options.some((o) => o.id === fertOptionId(k, out[k]) && !o.hidden)));
+          void onDone(out, PRODUCT_KINDS.filter((k) => keep.has(k) && out[k] && !options.some((o) => o.kind === k && !o.hidden && sameName(o.name, out[k]))));
         },
       }}
     >
@@ -741,7 +758,8 @@ function Reasons({
   options: readonly FertOption[];
   chosen: readonly string[];
   onChange: (r: readonly string[]) => void;
-  onRemember: (name: string, description: string) => Promise<unknown>;
+  /** Saves the reason for reuse; resolves to its option id. */
+  onRemember: (name: string, description: string) => Promise<string>;
   onSettings: () => void;
 }) {
   const t = useTheme();
@@ -754,19 +772,20 @@ function Reasons({
   const saved = options.filter((o) => o.kind === 'reason' && (!o.hidden || chosen.includes(o.id)));
   const typedOnes = chosen.filter((r) => r.startsWith(TYPED_REASON)).map((r) => ({ id: r, name: r.slice(TYPED_REASON.length), description: '', typed: true }));
   const rows = [...saved.map((o) => ({ ...o, typed: false })), ...typedOnes].filter((o) => !q || o.name.toLowerCase().includes(q.toLowerCase()) || o.description.toLowerCase().includes(q.toLowerCase()));
-  const exists = !q || saved.some((o) => o.id === fertOptionId('reason', q)) || chosen.includes(TYPED_REASON + q);
+  // By name, not id: a renamed option frees its old name; a hidden one may be brought back.
+  const exists = !q || saved.some((o) => !o.hidden && sameName(o.name, q)) || chosen.includes(TYPED_REASON + q);
 
   const toggle = (id: string) => onChange(chosen.includes(id) ? chosen.filter((r) => r !== id) : [...chosen, id]);
   const add = async () => {
     if (keep) {
-      await onRemember(q, desc);
-      const id = fertOptionId('reason', q);
+      const id = await onRemember(q, desc);
       if (!chosen.includes(id)) onChange([...chosen, id]);
     } else {
       onChange([...chosen, TYPED_REASON + q]);
     }
     setDesc('');
     setKeep(false);
+    setSearch('');
   };
 
   return (
@@ -923,6 +942,8 @@ function Zones({
     </View>
   );
 }
+
+const sameName = (a: string, b: string) => a.trim().replace(/\s+/g, ' ').toLowerCase() === b.trim().replace(/\s+/g, ' ').toLowerCase();
 
 /** Back to where the user came from. */
 function leave() {

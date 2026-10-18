@@ -137,7 +137,8 @@ describe('fertilizer purchase flow (E11-S10 C)', () => {
     press('fert-remember-reason');
     await act(async () => press('fert-reason-add'));
     await flush();
-    type('fert-reason-search', '');
+    // The search clears once the reason is added.
+    expect(screen.getByTestId('fert-reason-search').props.value).toBe('');
     expect(screen.getByText('เลือกแล้ว 2 · เลือกได้หลายข้อ')).toBeTruthy();
     next();
     await flush();
@@ -250,6 +251,11 @@ describe('fertilizer purchase flow (E11-S10 C)', () => {
     expect(screen.getByTestId('fert-leftover')).toHaveTextContent(/เหลือ 4 กระสอบ.*4,000\.00/);
     next();
     await flush();
+    // Owner, tappers and leftover each once, adding up to the net.
+    expect(screen.getByTestId('fert-sum-owner')).toHaveTextContent(/3,000\.00/);
+    expect(screen.getByTestId('fert-sum-tappers')).toHaveTextContent(/3,000\.00/);
+    expect(screen.getByTestId('fert-sum-leftover')).toHaveTextContent(/4 กระสอบ.*4,000\.00/);
+    expect(screen.getByTestId('fert-sum-total')).toHaveTextContent(/10,000\.00.*ตรง/);
     await act(async () => press('fert-save'));
     await flush();
     const made = await created();
@@ -327,6 +333,118 @@ describe('fertilizer purchase flow (E11-S10 C)', () => {
     const change = (await mockFinance.load()).find((e) => e.targetId === 'exp-edit' && e.payload.t === 'expense_changed');
     expect(change?.baseEventId).toBe(head);
     expect(Object.keys((change?.payload as { patch: object }).patch).sort()).toEqual(['amountSatang', 'share']);
+  });
+});
+
+describe('fertilizer flow — review fixes (E11-S10)', () => {
+  beforeEach(() => {
+    mockRouter.push.mockClear();
+  });
+
+  it('carries stage and payer from the expense form; a planned share says the debt comes when actual', async () => {
+    mockParams.current = { bill: '1000', date: '2026-10-14', stage: 'planned', payerId: nat, payerName: 'นัด' };
+    wrap(<FertilizerFlowScreen />);
+    await flush();
+    await buy({ bill: '1000', discount: '' });
+    next();
+    await flush();
+    next();
+    await flush();
+    expect(screen.getByTestId('fert-stage-planned').props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByTestId(`fert-payer-${nat}`).props.accessibilityState).toMatchObject({ selected: true });
+    next();
+    await flush();
+    next();
+    await flush();
+    press(`fert-pick-${daeng}`);
+    expect(screen.getByTestId(`fert-line-${daeng}-hint`)).toHaveTextContent(/เกิดจริง/);
+    expect(screen.getByTestId(`fert-line-${daeng}-hint`)).not.toHaveTextContent(/สรุปยอดขาย/);
+    press('fert-pct-settings');
+    expect(mockRouter.push).toHaveBeenCalledWith('/v2/fertilizer-settings');
+    next();
+    await flush();
+    expect(screen.getByTestId(`fert-sum-line-${daeng}`)).toHaveTextContent(/เกิดจริง/);
+  });
+
+  const purchase = (over: Partial<ExpenseFields> = {}): ExpenseFields => ({
+    amountSatang: 200_000,
+    date: '2026-10-01',
+    stage: 'actual',
+    categoryId: 'cat-fertilizer',
+    propertyId: null,
+    item: 'ยูเรีย',
+    note: '',
+    payer: { id: 'farm', name: 'เงินสวน' },
+    share: { billSatang: 200_000, discountSatang: 0, totalSacks: 2, lines: [{ worker: { id: daeng, name: 'แดง' }, sacks: 2, workerPct: 50, settle: 'debt' }] },
+    fertilizer: { type: 'chemical', formula: 'ยูเรีย', brand: '', sackKg: null, reasons: [], zones: [], shop: '', orderedBy: '' },
+    ...over,
+  });
+  const lastPatch = async (id: string) => {
+    const evs = (await mockFinance.load()).filter((e) => e.targetId === id && e.payload.t === 'expense_changed');
+    return (evs[evs.length - 1].payload as { patch: Record<string, unknown> }).patch;
+  };
+
+  it('edit: a share change writes the net amount with it; the item follows the formula', async () => {
+    await seed('exp-r1', { t: 'expense_created', fields: purchase() });
+    mockParams.current = { id: 'exp-r1' };
+    wrap(<FertilizerFlowScreen />);
+    await flush();
+    press('fert-product');
+    await flush();
+    type('fert-formula', '46-0-0');
+    press('fert-product-done');
+    await flush();
+    press('fert-step-tapper');
+    type(`fert-line-${daeng}-pct`, '40');
+    press('fert-step-sum');
+    await act(async () => press('fert-save'));
+    await flush();
+    const patch = await lastPatch('exp-r1');
+    expect(Object.keys(patch).sort()).toEqual(['amountSatang', 'fertilizer', 'item', 'share']);
+    expect(patch.item).toBe('46-0-0');
+    expect(patch.amountSatang).toBe(200_000);
+  });
+
+  it('the % for fertilizer is set in fertilizer settings, naming the head it saw', async () => {
+    wrap(<FertilizerSettingsScreen />);
+    await flush();
+    type('fert-set-pct', '40');
+    await act(async () => press('fert-set-pct-save'));
+    await flush();
+    type('fert-set-pct', '45');
+    await act(async () => press('fert-set-pct-save'));
+    await flush();
+    const evs = (await mockFinance.load()).filter((e) => e.targetId === 'cat-fertilizer' && e.payload.t === 'category_share_set');
+    expect(evs).toHaveLength(2);
+    expect(evs[1].baseEventId).toBe(evs[0].id);
+    expect(projectFinance(await mockFinance.load()).categories.find((c) => c.id === 'cat-fertilizer')?.workerPct).toBe(45);
+  });
+
+  it('a renamed option frees its old name; remembering a hidden one keeps its description', async () => {
+    const oldId = fertOptionId('formula', '13-13-21');
+    await seed(oldId, { t: 'fert_option_set', kind: 'formula', name: '13-13-21 ตราม้า', description: '', hidden: false });
+    const burnt = fertOptionId('reason', 'ใบไหม้');
+    await seed(burnt, { t: 'fert_option_set', kind: 'reason', name: 'ใบไหม้', description: 'ขอบใบไหม้', hidden: true });
+    mockParams.current = { bill: '1000' };
+    wrap(<FertilizerFlowScreen />);
+    await flush();
+    press('fert-product');
+    await flush();
+    type('fert-formula', '13-13-21');
+    press('fert-add-formula');
+    press('fert-product-done');
+    await flush();
+    type('fert-sacks', '1');
+    next();
+    await flush();
+    type('fert-reason-search', 'ใบไหม้');
+    press('fert-remember-reason');
+    await act(async () => press('fert-reason-add'));
+    await flush();
+    const options = projectFinance(await mockFinance.load()).fertOptions;
+    expect(options.find((o) => o.id === oldId)?.name).toBe('13-13-21 ตราม้า');
+    expect(options.filter((o) => o.kind === 'formula' && o.name === '13-13-21')).toHaveLength(1);
+    expect(options.find((o) => o.id === burnt)).toMatchObject({ hidden: false, description: 'ขอบใบไหม้' });
   });
 });
 
