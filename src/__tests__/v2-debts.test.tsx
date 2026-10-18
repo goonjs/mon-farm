@@ -34,7 +34,7 @@ jest.mock('expo-router', () => {
 });
 const { __params: mockParams, router: mockRouter } = jest.requireMock('expo-router') as {
   __params: { current: Record<string, string> };
-  router: { push: jest.Mock };
+  router: { push: jest.Mock; replace: jest.Mock };
 };
 
 async function flush() {
@@ -54,7 +54,8 @@ describe('debt ledger (E06-S03)', () => {
     wrap(<AddDebtScreen />);
     await flush();
     fireEvent.press(screen.getByTestId('debt-kind-fertilizer'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { workerId: 'p-daeng', name: 'แดง' } });
+    // Replaced: after saving the purchase the user lands on the tapper's debts, not this form again.
+    expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { workerId: 'p-daeng', name: 'แดง' } });
     expect(screen.queryByTestId('debt-pct-mode')).toBeNull();
   });
 
@@ -114,6 +115,37 @@ describe('debt ledger (E06-S03)', () => {
     await act(async () => fireEvent.press(screen.getByTestId(`debt-void-${id}`)));
     await flush();
     expect(projectDebts(await mockFinance.load()).get('p-daeng')?.balanceSatang).toBe(200000);
+  });
+});
+
+describe('a debt made from an expense share (E11-S10)', () => {
+  it('cannot be voided here: it opens its expense (the flow for fertilizer)', async () => {
+    mockParams.current = { workerId: 'p-som', name: 'สม' };
+    await mockFinance.append({
+      id: 'share-exp-1',
+      groupId: 'group-1',
+      deviceSeq: 9,
+      ts: 9,
+      actor: { userId: 'u', deviceId: 'dev-old' },
+      source: 'app',
+      targetId: 'exp-share-1',
+      baseEventId: null,
+      payload: {
+        t: 'expense_created',
+        fields: {
+          amountSatang: 100000, date: '2026-10-01', stage: 'actual', categoryId: 'cat-fertilizer', propertyId: null, item: '', note: '', payer: null,
+          share: { billSatang: 100000, discountSatang: 0, totalSacks: 2, lines: [{ worker: { id: 'p-som', name: 'สม' }, sacks: 2, workerPct: 50, settle: 'debt' }] },
+          fertilizer: { type: 'chemical', formula: 'ยูเรีย', brand: '', sackKg: null, reasons: [], zones: [], shop: '', orderedBy: '' },
+        },
+      },
+    });
+    wrap(<DebtAccountScreen />);
+    await flush();
+    const id = 'exp-share-1:share:p-som';
+    expect(screen.getByTestId(`debt-line-${id}`)).toBeTruthy();
+    expect(screen.queryByTestId(`debt-void-${id}`)).toBeNull();
+    fireEvent.press(screen.getByTestId(`debt-open-${id}`));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { id: 'exp-share-1' } });
   });
 });
 

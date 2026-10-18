@@ -59,7 +59,8 @@ export function AddDebtScreen() {
 
   const pickKind = (k: DebtKind) => {
     // Fertilizer is a purchase: the same flow as the expense form, this tapper picked.
-    if (k === 'fertilizer') router.push({ pathname: FLOW, params: { workerId, name: worker.name } });
+    // Replaced, so saving the purchase goes back to the tapper's debts, not to this form.
+    if (k === 'fertilizer') router.replace({ pathname: FLOW, params: { workerId, name: worker.name } });
     else setKind(k);
   };
 
