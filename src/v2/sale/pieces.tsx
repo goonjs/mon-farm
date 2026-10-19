@@ -29,6 +29,15 @@ import { useTheme } from '../../theme';
 import { AlertIcon, AppText, Check, ChevronRight, IconTile, PinIcon, SwapIcon, TapperIcon, toneColours, type IconRender, type TileTone } from '../../ui';
 import { categoryTone, useMaster } from '../farm/pieces';
 
+/** A figure's font size by its length, so a long number shrinks instead of being cut (E04-S18; `adjustsFontSizeToFit` does nothing on web). */
+export function figSize(text: string, base: number): number {
+  if (text.length <= 5) return base;
+  if (text.length <= 7) return Math.round(base * 0.83);
+  if (text.length <= 9) return Math.round(base * 0.71);
+  if (text.length <= 11) return Math.round(base * 0.58);
+  return Math.round(base * 0.5);
+}
+
 /** Grams as the app shows kg: "1,520", "37.5". */
 export function kgText(g: number): string {
   return (g / 1000).toLocaleString('en-US', { maximumFractionDigits: 3 });
@@ -470,12 +479,12 @@ export function EmptyPill({ label }: { label: string }) {
 }
 
 /** A line with a small leading icon in soft ink (mockup `.mi`). */
-export function IconLine({ icon, children, testID, strong }: { icon?: IconRender; children: ReactNode; testID?: string; strong?: boolean }) {
+export function IconLine({ icon, children, testID, strong, oneLine }: { icon?: IconRender; children: ReactNode; testID?: string; strong?: boolean; oneLine?: boolean }) {
   const t = useTheme();
   return (
     <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
       {icon ? <View aria-hidden style={{ width: 16, alignItems: 'center' }}>{icon(t.color.inkSoft)}</View> : null}
-      <Text style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: strong ? t.font.weight.bold : t.font.weight.regular, color: strong ? t.color.ink : t.color.inkSoft }}>
+      <Text numberOfLines={oneLine ? 1 : undefined} style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: strong ? t.font.weight.bold : t.font.weight.regular, color: strong ? t.color.ink : t.color.inkSoft }}>
         {children}
       </Text>
     </View>

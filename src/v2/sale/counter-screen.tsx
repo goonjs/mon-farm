@@ -15,7 +15,7 @@
 
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { PixelRatio, Pressable, Text, View } from 'react-native';
 
 import { compactBaht } from '../../core/compact-baht';
 import { pointsOf, tapperOn } from '../../core/master';
@@ -28,14 +28,16 @@ import { peopleStore } from '../../store/people';
 import { readWeighBasis, readWeighMode, writeWeighBasis, type WeighBasis, type WeighMode } from '../../store/weigh-mode-preference';
 import { useTheme } from '../../theme';
 import {
-  ActionTile,
   AlertIcon,
   AppText,
   BasketIcon,
   BottomSheet,
   Button,
   cardStyle,
+  Check,
   ChartIcon,
+  DeviceIcon,
+  HomeIcon,
   ChevronRight,
   ClockIcon,
   CTA,
@@ -46,19 +48,20 @@ import {
   PinIcon,
   Plus,
   ScaleIcon,
-  SwapIcon,
   TapperIcon,
   TextField,
   Undo,
 } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
+import { V2_HOME } from '../routes';
 import { countModel } from './count';
 import { countKey, HoldButton, HoldStage } from './hold';
 import { signed, useGoToPoint } from './move';
-import { Banner, IconLine, Kv, kgText, NumChip, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
+import { Banner, figSize, IconLine, Kv, kgText, NumChip, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 import { Ruler } from './ruler';
 import { BasisToggle, TypedReading } from './short-reading';
-import { SaleOptionRows, SaleOptionSheets, type OptionSheet } from './sale-options';
+import { MenuGroup, MenuRow, SaleMenu } from './sale-menu';
+import { SaleOptionSheets, type OptionSheet } from './sale-options';
 
 type Sheet = 'none' | 'partial' | 'menu' | 'new-point' | 'undo-confirm' | OptionSheet;
 
@@ -200,8 +203,10 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
     goTo(p.id, { replace: true });
   };
 
-  const card = (child: React.ReactNode, key: string, warn = false) => (
-    <View key={key} testID={`card-${key}`} style={{ flex: 1, ...cardStyle(t), padding: t.space.sm, gap: t.space.xxs, backgroundColor: warn ? t.color.warnSunk : t.color.surfaceRaised }}>
+  // One height for the three small cards (E04-S18): room for the tallest, the three-line short card.
+  const cardHeight = Math.ceil((t.space.sm * 2 + t.space.xxs * 2 + (t.font.size.bodySm + t.font.size.caption + t.font.size.headingXl) * 1.5) * Math.max(1, PixelRatio.getFontScale()));
+  const card = (child: React.ReactNode, key: string, warn = false, fixed = false) => (
+    <View key={key} testID={`card-${key}`} style={{ flex: 1, ...(fixed ? { height: cardHeight, overflow: 'hidden' as const } : {}), ...cardStyle(t), padding: t.space.sm, gap: t.space.xxs, backgroundColor: warn ? t.color.warnSunk : t.color.surfaceRaised }}>
       {child}
     </View>
   );
@@ -209,6 +214,12 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
     <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingXl, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
       {value}
       {unit ? <Text style={{ fontSize: t.font.size.caption, fontWeight: t.font.weight.regular, color: t.color.inkSoft }}> {unit}</Text> : null}
+    </Text>
+  );
+  // The small cards' figure: the number (the unit is in the label above), stepped down by length; one line, so a card never grows.
+  const cardFigure = (value: string, testID: string) => (
+    <Text testID={testID} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figSize(value, t.font.size.headingXl), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+      {value}
     </Text>
   );
   const smallLine = (text: string, tone: 'plain' | 'warn' = 'plain') => (
@@ -252,9 +263,14 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       fallback={'/v2/sales' as Href}
       testID="counter"
       right={
-        <Pressable testID="counter-menu" accessibilityRole="button" accessibilityLabel={msg('rec.menu')} onPress={() => setSheet('menu')} style={{ minWidth: t.target.min, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center' }}>
-          <DotsIcon color={t.color.appBarInk} size={18} />
-        </Pressable>
+        <View style={{ flexDirection: 'row' }}>
+          <Pressable testID="counter-home" accessibilityRole="button" accessibilityLabel={msg('rec.home')} onPress={() => router.push(V2_HOME)} style={{ minWidth: t.target.min, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center' }}>
+            <HomeIcon color={t.color.appBarInk} size={18} />
+          </Pressable>
+          <Pressable testID="counter-menu" accessibilityRole="button" accessibilityLabel={msg('rec.menu')} onPress={() => setSheet('menu')} style={{ minWidth: t.target.min, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center' }}>
+            <DotsIcon color={t.color.appBarInk} size={18} />
+          </Pressable>
+        </View>
       }
       footer={
         <View style={{ flexDirection: 'row', gap: t.space.sm }}>
@@ -373,19 +389,26 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           </BottomSheet>
 
           <BottomSheet open={sheet === 'menu'} onClose={() => setSheet('none')} title={msg('rec.menu')} testID="menu-sheet">
-            <Button variant="row" testID="menu-public" onPress={() => { setSheet('none'); router.push(`${base}/public?point=${pointId}${params.fill ? `&fill=${params.fill}` : ''}` as Href); }}>
-              {msg('rec.public')}
-            </Button>
-            <Button variant="row" testID="menu-backfill" onPress={() => { setSheet('none'); router.push(`${base}/point?mode=backfill&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}` as Href); }}>
-              {msg('backfill.title')}
-            </Button>
-            <Button variant="row" testID="menu-finish" onPress={() => { setSheet('none'); router.push(`${base}/check` as Href); }}>
-              {msg('rec.finish')}
-            </Button>
-            <SaleOptionRows view={view} pick={setSheet} />
-            <Button variant="row" testID="menu-sales" onPress={() => { setSheet('none'); router.push('/v2/sales' as Href); }}>
-              {msg('v2.sales')}
-            </Button>
+            <SaleMenu
+              view={view}
+              pick={setSheet}
+              close={() => setSheet('none')}
+              lead={
+                <>
+                  <MenuRow testID="menu-finish" tone="accept" main icon={(c) => <Check color={c} size={16} />} onPress={() => { setSheet('none'); router.push(`${base}/check` as Href); }}>
+                    {msg('rec.finish')}
+                  </MenuRow>
+                  <MenuGroup title={msg('menu.grpRecord')}>
+                    <MenuRow testID="menu-backfill" tone="action" icon={(c) => <ClockIcon color={c} size={16} />} onPress={() => { setSheet('none'); router.push(`${base}/point?mode=backfill&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}` as Href); }}>
+                      {msg('backfill.title')}
+                    </MenuRow>
+                    <MenuRow testID="menu-public" tone="action" icon={(c) => <DeviceIcon color={c} size={16} />} onPress={() => { setSheet('none'); router.push(`${base}/public?point=${pointId}${params.fill ? `&fill=${params.fill}` : ''}` as Href); }}>
+                      {msg('rec.public')}
+                    </MenuRow>
+                  </MenuGroup>
+                </>
+              }
+            />
           </BottomSheet>
 
           <BottomSheet open={sheet === 'undo-confirm' && lastNo !== null} onClose={() => setSheet('none')} title={lastNo !== null ? msg(lastIsPart ? 'rec.undoPartAsk' : 'rec.undoAsk', { n: lastNo }) : undefined} testID="undo-confirm">
@@ -486,26 +509,29 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       <IconLine icon={(c) => <TapperIcon color={c} size={13} />}>{scopeTitle}</IconLine>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
         {price !== null
-          ? card(<><AppText variant="bodySm">{msg('rec.money')}</AppText>{figure(compactBaht(figs.satang ?? 0), '฿', 'fig-money')}</>, 'first')
-          : card(<><AppText variant="bodySm">{msg('rec.done')}</AppText>{figure(String(figs.done), msg('rec.baskets'), 'fig-done')}</>, 'first')}
+          ? card(<><AppText variant="bodySm" numberOfLines={1}>{msg('rec.money')} (฿)</AppText>{cardFigure(compactBaht(figs.satang ?? 0), 'fig-money')}</>, 'first', false, true)
+          : card(<><AppText variant="bodySm" numberOfLines={1}>{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
         {card(
           <>
-            <IconLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')}</IconLine>
-            {figure(kgText(figs.netG), msg('common.kg'), 'fig-kg')}
+            <IconLine oneLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')} ({msg('common.kg')})</IconLine>
+            {cardFigure(kgText(figs.netG), 'fig-kg')}
           </>,
           'kg',
+          false,
+          true,
         )}
         {open
           ? card(
               <>
-                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.shortOf', { n: open.basketNo })}</Text>
-                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.missing')}</Text>
-                {figure(kgText(open.missingG), msg('common.kg'), 'fig-missing')}
+                <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.shortOf', { n: open.basketNo })}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.missing')} ({msg('common.kg')})</Text>
+                {cardFigure(kgText(open.missingG), 'fig-missing')}
               </>,
               'short',
               true,
+              true,
             )
-          : card(<><AppText variant="bodySm">{msg('rec.short')}</AppText><AppText style={{ fontWeight: t.font.weight.bold }}>{msg('rec.none')}</AppText></>, 'short')}
+          : card(<><AppText variant="bodySm">{msg('rec.short')}</AppText><AppText style={{ fontWeight: t.font.weight.bold }}>{msg('rec.none')}</AppText></>, 'short', false, true)}
       </View>
 
       {waiting && open ? (
@@ -536,14 +562,11 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           </Button>
         </View>
       ) : waiting && open ? (
-        <View testID="stage-wait" style={{ flexDirection: 'row', justifyContent: 'center', gap: t.space.md }}>
-          <View style={{ width: 150 }}>
-            <ActionTile testID="next-point" label={msg('rec.nextPoint')} icon={(c) => <SwapIcon color={c} size={26} />} main={!lastPoint} onPress={() => router.push(`${base}/point?mode=switch&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}` as Href)} />
-          </View>
+        <View testID="stage-wait" style={{ alignSelf: 'stretch' }}>
           {lastPoint ? (
-            <View style={{ width: 150 }}>
-              <ActionTile testID="to-summary" label={msg('rec.finish')} icon={(c) => <ChartIcon color={c} size={26} />} main onPress={() => router.push(`${base}/check` as Href)} />
-            </View>
+            <CTA testID="to-summary" icon={(c) => <ChartIcon color={c} size={20} />} onPress={() => router.push(`${base}/check` as Href)}>
+              {msg('rec.finish')}
+            </CTA>
           ) : null}
         </View>
       ) : (

@@ -25,7 +25,8 @@ import { useTheme } from '../../theme';
 import { AlertIcon, AppText, BasketIcon, BottomSheet, DotsIcon, cardStyle, ChevronRight, CTA, IconTile, PinIcon, Plus, Scale, TapperIcon, type TileTone } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { signed, useGoToPoint, type Fill } from './move';
-import { SaleOptionRows, SaleOptionSheets, type OptionSheet } from './sale-options';
+import { SaleMenu } from './sale-menu';
+import { SaleOptionSheets, type OptionSheet } from './sale-options';
 import { Choice, Crumbs, IconLine, kgText, NumChip, SegOptions, SkewTag, farmTone, useLeaveIfClosed, useSaleView } from './pieces';
 
 export function PointScreen() {
@@ -110,7 +111,7 @@ export function PointScreen() {
         <>
           {ask ? fillSheet(ask) : null}
           <BottomSheet open={menu === 'menu'} onClose={() => setMenu('none')} title={msg('rec.menu')} testID="pick-menu-sheet">
-            <SaleOptionRows view={view} pick={setMenu} />
+            <SaleMenu view={view} pick={setMenu} close={() => setMenu('none')} />
           </BottomSheet>
           <SaleOptionSheets view={view} open={menu === 'price' || menu === 'info' || menu === 'delete' ? menu : 'none'} onClose={() => setMenu('none')} />
         </>

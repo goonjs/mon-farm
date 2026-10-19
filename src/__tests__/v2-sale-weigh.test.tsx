@@ -14,7 +14,7 @@ import { readWeighBasis, writeWeighBasis, writeWeighMode } from '../store/weigh-
 import { BackfillScreen } from '../v2/sale/backfill-screen';
 import { countModel } from '../v2/sale/count';
 import { CounterScreen } from '../v2/sale/counter-screen';
-import { useSaleView } from '../v2/sale/pieces';
+import { figSize, useSaleView } from '../v2/sale/pieces';
 import { HistoryScreen } from '../v2/sale/history-screen';
 import { PointScreen } from '../v2/sale/point-screen';
 import { StartSaleScreen } from '../v2/sale/start-screen';
@@ -240,9 +240,9 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     expect(screen.getByTestId('current-short')).toHaveTextContent('+35 กก.');
     expect(screen.queryByTestId('current-no')).toBeNull();
     expect(screen.getByTestId('fig-missing')).toHaveTextContent(/^15/);
-    // The point is finished (owner 2026-10-17): no finish button, no hold, no hint — one button to the next point.
+    // The point is finished (owner 2026-10-17): no finish button, no hold, no hint. The switch-point button is the one at the top (owner 2026-10-18: no second button here).
     expect(screen.queryByText(/รอเติม/)).toBeNull();
-    expect(screen.getByTestId('next-point')).toBeTruthy();
+    expect(screen.queryByTestId('next-point')).toBeNull();
     expect(screen.queryByTestId('close-open')).toBeNull();
     expect(screen.queryByTestId('hold')).toBeNull();
     // The only way on is undo: the short basket goes, the number comes back.
@@ -253,18 +253,19 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     expect(screen.getByTestId('fig-done')).toHaveTextContent(/^2/);
   });
 
-  it('the last point offers the summary beside the next-point button; another point left means no summary (E04-S17)', async () => {
+  it('another point left: no summary button and no next-point button, the switch-point button does the job (E04-S18)', async () => {
     await started();
     await readyAt(farm.a[0]);
     await counterAt(farm.a[0]);
     await press('tool-short');
     await press('short-save');
     expect(screen.queryByTestId('to-summary')).toBeNull();
-    await press('next-point');
+    expect(screen.queryByTestId('next-point')).toBeNull();
+    await press('switch-point');
     expect(router.push).toHaveBeenLastCalledWith(expect.stringContaining('/point?mode=switch'));
   });
 
-  it('at the last point the summary button joins the next-point button (E04-S17)', async () => {
+  it('at the last point one full-width summary button goes to the review; there is no next-point button (E04-S18)', async () => {
     await started();
     for (const id of [...farm.a.slice(1), farm.b1]) {
       await readyAt(id);
@@ -276,6 +277,8 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     await counterAt(farm.a[0]);
     await press('tool-short');
     await press('short-save');
+    expect(screen.queryByTestId('next-point')).toBeNull();
+    expect(screen.getByTestId('to-summary')).toHaveTextContent('ชั่งครบแล้ว → ตรวจยอด');
     await press('to-summary');
     expect(router.push).toHaveBeenLastCalledWith(`/v2/sale/${saleId}/check`);
   });
@@ -897,5 +900,119 @@ describe('short basket: how it is recorded (E04-S16)', () => {
     await press('basis-scale');
     expect(screen.getByTestId('reading')).toHaveTextContent(/^37/);
     expect(readWeighBasis()).toBe('scale');
+  });
+});
+
+describe('v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)', () => {
+  const heightOf = (id: string) => {
+    const style = ([] as unknown[])
+      .concat(screen.getByTestId(id).props.style)
+      .flat(3)
+      .reduce<Record<string, unknown>>(
+        (a, s) => ({ ...a, ...(s as object) }),
+        {},
+      );
+    return style.height;
+  };
+
+  it('the three small cards keep one fixed height; units sit in the label line, the figure is the number alone', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    const h = heightOf('card-kg');
+    expect(typeof h).toBe('number');
+    expect(heightOf('card-first')).toBe(h);
+    expect(heightOf('card-short')).toBe(h);
+    expect(screen.getByTestId('card-kg')).toHaveTextContent(/น้ำหนัก \(กก\.\)/);
+    expect(screen.getByTestId('fig-kg')).toHaveTextContent(/^[\d,.]+$/);
+    expect(screen.getByTestId('fig-kg').props.numberOfLines).toBe(1);
+  });
+
+  it('the short card (an open short basket) has the same height, its unit in the label too', async () => {
+    useDial();
+    await started();
+    await readyAt(farm.a[3]);
+    await counterAt(farm.a[3]);
+    await hold();
+    await press('tool-short');
+    await press('short-save');
+    const h = heightOf('card-kg');
+    expect(heightOf('card-first')).toBe(h);
+    expect(heightOf('card-short')).toBe(h);
+    expect(screen.getByTestId('card-short')).toHaveTextContent(/เหลือเติม \(กก\.\)/);
+    expect(screen.getByTestId('fig-missing')).toHaveTextContent(/^15$/);
+  });
+
+  it('a long figure is stepped down in size, never cut with an ellipsis', () => {
+    expect(figSize('1,234', 24)).toBe(24);
+    expect(figSize('12,345.5', 24)).toBeLessThan(24);
+    expect(figSize('1,234,567.5', 24)).toBeLessThan(figSize('12,345.5', 24));
+    expect(figSize('1,234,567.5', 24)).toBeGreaterThanOrEqual(12);
+    expect(figSize('123,456,789.5', 24)).toBeLessThan(figSize('1,234,567.5', 24));
+  });
+
+  it('the menu is grouped: finish · record · price and info · go to · delete last', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    await press('counter-menu');
+    expect(
+      screen
+        .getAllByTestId(/^menu-(?!sheet)[a-z]+$/)
+        .map((x) => x.props.testID),
+    ).toEqual([
+      'menu-finish',
+      'menu-backfill',
+      'menu-public',
+      'menu-price',
+      'menu-info',
+      'menu-home',
+      'menu-debts',
+      'menu-sales',
+      'menu-delete',
+    ]);
+  });
+
+  it('home and debts are two separate rows in the menu', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    await press('counter-menu');
+    await press('menu-home');
+    expect(router.push).toHaveBeenLastCalledWith('/v2');
+    await press('counter-menu');
+    await press('menu-debts');
+    expect(router.push).toHaveBeenLastCalledWith('/v2/debts');
+  });
+
+  it('the app bar has a home button', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    await press('counter-home');
+    expect(router.push).toHaveBeenLastCalledWith('/v2');
+  });
+
+  it('the point picker menu has the same go-to rows, without the finish and record groups', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await inSale(<PointScreen />, {
+      mode: 'switch',
+      farm: farm.farmA,
+      tapper: farm.red,
+    });
+    await press('pick-menu');
+    expect(
+      screen
+        .getAllByTestId(/^menu-(?!sheet)[a-z]+$/)
+        .map((x) => x.props.testID),
+    ).toEqual([
+      'menu-price',
+      'menu-info',
+      'menu-home',
+      'menu-debts',
+      'menu-sales',
+      'menu-delete',
+    ]);
   });
 });

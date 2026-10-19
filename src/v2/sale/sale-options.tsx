@@ -23,25 +23,6 @@ export type OptionSheet = 'none' | 'price' | 'info' | 'delete';
 
 type View_ = ReturnType<typeof useSaleView>;
 
-/** The menu rows. `pick` closes the menu and opens the chosen sheet. */
-export function SaleOptionRows({ view, pick }: { view: View_; pick: (s: OptionSheet) => void }) {
-  const msg = useT();
-  const price = view.state.price?.satangPerKg ?? null;
-  return (
-    <>
-      <Button variant="row" testID="menu-price" onPress={() => pick('price')}>
-        {price === null ? msg('opt.priceNone') : msg('opt.priceHave', { price: formatSatang(price) })}
-      </Button>
-      <Button variant="row" testID="menu-info" onPress={() => pick('info')}>
-        {msg('opt.info')}
-      </Button>
-      <Button variant="row" testID="menu-delete" onPress={() => pick('delete')}>
-        {msg('opt.delete')}
-      </Button>
-    </>
-  );
-}
-
 /** The sheets behind those rows; the screen owns which one is open. */
 export function SaleOptionSheets({ view, open, onClose }: { view: View_; open: OptionSheet; onClose: () => void }) {
   const t = useTheme();
