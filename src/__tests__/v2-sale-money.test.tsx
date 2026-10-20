@@ -12,6 +12,7 @@ import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { wrap } from '../test/render';
 import { CheckScreen, PaymentScreen, SettlementScreen, TallyScreen } from '../v2/sale/money-screens';
 import { clearClosing, markClosing } from '../v2/sale/pieces';
+import { MoneyLines, signed } from '../v2/sale/person-money';
 import { PointScreen } from '../v2/sale/point-screen';
 
 jest.mock('../store/finance', () => {
@@ -94,6 +95,16 @@ describe('v2 sale money (pages 16–19)', () => {
     expect(screen.getByTestId('check-baskets')).toHaveTextContent(/5 เข่ง/);
     expect(screen.getByTestId('check-total')).toHaveTextContent(/11,397\.50/);
     expect(screen.getByTestId(`check-tapper-${farm.red}`)).toHaveTextContent(/150 กก\./);
+    // E05-S09: unit in the label line, dots + short count per tapper, whose short basket it is.
+    expect(screen.getByTestId('check-total')).not.toHaveTextContent('บาท');
+    // per tapper: how many full baskets + the short kg, at which point
+    // point total, then indented "full N baskets" and "short N baskets" rows, each with its own kg
+    expect(screen.getByTestId(`check-point-${farm.a[3]}`)).toHaveTextContent(/85\sกก\.เต็ม\s1\sเข่ง50\sกก\.ไม่เต็ม\s1\sเข่ง35\sกก\./);
+    expect(screen.getByTestId(`check-full-${farm.a[3]}`)).toHaveTextContent(/เต็ม 1 เข่ง.*50 กก\./);
+    expect(screen.getByTestId(`check-short-${farm.a[3]}`)).toHaveTextContent(/ไม่เต็ม 1 เข่ง.*35 กก\./);
+    expect(screen.getByTestId(`check-point-${farm.a[0]}`)).toHaveTextContent(/150\sกก\.เต็ม\s3\sเข่ง150\sกก\./);
+    expect(screen.queryByTestId(`check-short-${farm.a[0]}`)).toBeNull();
+    expect(screen.getByTestId('check-card')).toHaveTextContent(/เข่ง 2 · นัด/);
     await doubleTap('check-match');
     expect(screen.getByTestId('check-status').props.accessibilityLabel).toBe('ยอดผู้ขายและคนรับซื้อยางตรงกัน');
     const fin = await financeStore.load();
@@ -105,6 +116,10 @@ describe('v2 sale money (pages 16–19)', () => {
     expect(screen.getByTestId(`share-amt-${farm.red}`)).toHaveTextContent(/3,637\.50/);
     expect(screen.getByTestId(`share-amt-${farm.nat}`)).toHaveTextContent(/2,061\.25/);
     expect(screen.getByTestId('owner-transfer')).toHaveTextContent(/5,698\.75/);
+    // E05-S09: same top card as page 16; money in from the farm is +, money out is −.
+    expect(screen.getByTestId('settle-weight')).toHaveTextContent(/235 กก\./);
+    expect(screen.getByTestId('settle-total')).toHaveTextContent(/11,397\.50/);
+    expect(screen.getByTestId(`pm-${farm.red}-share`)).toHaveTextContent(/\+3,637\.50$/);
     expect(screen.queryByTestId(`deduct-${farm.red}`)).toBeNull();
     await press(`deduct-${farm.nat}`);
     expect(screen.getByTestId('deduct-sheet')).toBeTruthy();
@@ -112,6 +127,8 @@ describe('v2 sale money (pages 16–19)', () => {
     await doubleTap('deduct-save');
     expect((await financeStore.load()).filter((e) => e.payload.t === 'debt_payment_recorded')).toHaveLength(1);
     expect(screen.getByTestId(`cash-${farm.nat}`)).toHaveTextContent(/561\.25/);
+    expect(screen.getByTestId(`pm-${farm.nat}-share`)).toHaveTextContent(/\+2,061\.25$/);
+    expect(screen.getByTestId(`pay-route-${farm.nat}`)).toHaveTextContent(/−1,500\.00$/);
     expect(screen.getByTestId('owner-transfer')).toHaveTextContent(/7,198\.75/);
     await press('to-rounding');
     expect(screen.getByTestId('rounding-sheet')).toBeTruthy();
@@ -162,6 +179,9 @@ describe('v2 sale money (pages 16–19)', () => {
   it('payment: each payee ticks on its own; close completes the sale', async () => {
     await inSale(<PaymentScreen />);
     expect(screen.getByTestId(`tick-amt-${farm.red}`)).toHaveTextContent('3,638');
+    // E05-S09: the same person card as the share summary.
+    expect(screen.getByTestId(`pm-${farm.nat}-share`)).toHaveTextContent(/\+2,061\.25$/);
+    expect(screen.getByTestId(`pay-route-${farm.nat}`)).toHaveTextContent(/−1,500\.00$/);
     await doubleTap(`tick-${farm.red}`);
     expect(screen.getByTestId(`tick-${farm.red}`).props.accessibilityState).toMatchObject({ checked: true });
     expect((await financeStore.load()).filter((e) => e.payload.t === 'payment_mark_set')).toHaveLength(1);
@@ -335,4 +355,21 @@ describe('tally detail edge cases (E05-S08)', () => {
     expect(screen.queryByTestId(`tally-tapper-${farm.red}`)).toBeNull();
     expect(screen.getByTestId('tally-sum')).toHaveTextContent(/0\.00/);
   });
+});
+
+describe('MoneyLines (E05-S09 AC3): + from the farm, − paid out', () => {
+  it('signs every line', () => {
+    wrap(<MoneyLines personId="p" name="นัด" shareSatang={320_000} paidSatang={150_000} backSatang={64_000} adjustSatang={-50} />);
+    expect(screen.getByTestId('pm-p-share')).toHaveTextContent(/\+3,200\.00$/);
+    expect(screen.getByTestId('pay-route-p')).toHaveTextContent(/−1,500\.00$/);
+    expect(screen.getByTestId('pay-back-p')).toHaveTextContent(/\+640\.00$/);
+    expect(screen.getByTestId('pm-p-round')).toHaveTextContent(/−0\.50$/);
+  });
+  it('hides debt, netting and rounding when there are none', () => {
+    wrap(<MoneyLines personId="p" name="นัด" shareSatang={100} paidSatang={0} backSatang={0} adjustSatang={0} />);
+    expect(screen.queryByTestId('pay-route-p')).toBeNull();
+    expect(screen.queryByTestId('pay-back-p')).toBeNull();
+    expect(screen.queryByTestId('pm-p-round')).toBeNull();
+  });
+  it('writes no sign on zero', () => expect(signed(0)).toBe('0.00'));
 });

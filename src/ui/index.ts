@@ -18,6 +18,7 @@ export { FieldError, RadioCard, SegmentedControl } from './form';
 export { FactRow, IconTile, toneColours, type IconRender, type TileTone } from './icon-tile';
 export { MoneyText } from './money-text';
 export type { HeaderPrimaryAction } from './action-button';
+export { ScrollCue } from './scroll-cue';
 export { ScreenHeader, type BackAction, type HeaderAction } from './screen-header';
 export { SyncPill } from './sync-pill';
 export { TextField } from './text-field';

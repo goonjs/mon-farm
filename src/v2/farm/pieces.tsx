@@ -36,7 +36,7 @@ import {
   CTA,
   FieldError,
   Minus,
-  PinnedActions,
+  ScrollCue,
   Plus,
   ScreenHeader,
   TrashIcon,
@@ -152,6 +152,7 @@ export function FarmScreen({
   const msg = useT();
   const sync = useSyncStatus();
   const back = useBack(fallback);
+  const body = { padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.xl };
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <ScreenHeader title={title} subtitle={subtitle} back={{ label: msg('v2.back'), onPress: onBack ?? back, testID: 'v2-back' }} sync={sync} right={right} action={action} />
@@ -160,10 +161,15 @@ export function FarmScreen({
           <SaveFailed show />
         </View>
       ) : null}
-      <ScrollView testID={testID} contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.xl }}>
-        {children}
-      </ScrollView>
-      {footer ? <PinnedActions>{footer}</PinnedActions> : null}
+      {footer ? (
+        <ScrollCue testID={testID} footer={footer} contentContainerStyle={body}>
+          {children}
+        </ScrollCue>
+      ) : (
+        <ScrollView testID={testID} contentContainerStyle={body}>
+          {children}
+        </ScrollView>
+      )}
       {overlay}
     </View>
   );

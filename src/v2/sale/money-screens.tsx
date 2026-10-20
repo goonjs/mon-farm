@@ -42,7 +42,6 @@ import {
   AlertIcon,
   AppText,
   BankIcon,
-  BasketIcon,
   BottomSheet,
   Button,
   cardStyle,
@@ -68,6 +67,7 @@ import {
 } from '../../ui';
 import { useSaleMoney } from '../money/sale/use-sale-money';
 import { FarmScreen } from '../farm/pieces';
+import { MoneyLines, WayLabel } from './person-money';
 import { Banner, IconLine, Kv, bahtText, kgText, markClosing, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 
 const baht = formatSatang;
@@ -92,8 +92,8 @@ function TotalRow({ label, value, unit, testID, size }: { label: string; value: 
   const t = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, paddingTop: t.space.sm, marginTop: t.space.xs }}>
-      <AppText style={{ fontWeight: t.font.weight.bold }}>{label}</AppText>
-      <Big value={value} unit={unit} testID={testID} size={size} />
+      <AppText style={{ flexShrink: 1, fontWeight: t.font.weight.bold }}>{unit ? `${label} (${unit})` : label}</AppText>
+      <Big value={value} testID={testID} size={size} />
     </View>
   );
 }
@@ -115,11 +115,15 @@ function LinkRow({ label, onPress, testID }: { label: string; onPress: () => voi
  */
 function SaleFigures({ s, prefix, children }: { s: Settlement; prefix: string; children?: ReactNode }) {
   const msg = useT();
-  const { events, master } = useSaleView();
+  const { events, master, day, nameOf } = useSaleView();
   const shorts = basketList(events).filter((r) => r.status === 'live' && r.short);
   const placeOf = (pointId: string) => {
     const pt = master?.points.find((p) => p.id === pointId);
     return `${master?.properties.find((f) => f.id === pt?.propertyId)?.name ?? ''} ${pt?.name ?? ''}`;
+  };
+  const ownerOf = (pointId: string) => {
+    const id = master ? tapperOn(master, pointId, day) : null;
+    return id ? nameOf(id) : '';
   };
   return (
     <>
@@ -128,11 +132,24 @@ function SaleFigures({ s, prefix, children }: { s: Settlement; prefix: string; c
       <Kv label={msg('v2s.basketCount')} value={msg('sales.baskets', { n: s.totals.baskets })} testID={`${prefix}-baskets`} />
       <Kv label={msg('v2s.shortCount', { n: s.totals.shortBaskets })} value={msg('v2f.kg', { n: kgText(s.totals.shortNetG) })} />
       {shorts.map((r) => (
-        <Kv key={r.id} indent tone="muted" label={msg('v2s.shortAt', { place: placeOf(r.pointId), n: r.basketNo })} value={msg('v2f.kg', { n: kgText(r.netG) })} />
+        <Kv key={r.id} indent tone="muted" label={ownerOf(r.pointId) ? msg('v2s.shortAtBy', { place: placeOf(r.pointId), n: r.basketNo, name: ownerOf(r.pointId) }) : msg('v2s.shortAt', { place: placeOf(r.pointId), n: r.basketNo })} value={msg('v2f.kg', { n: kgText(r.netG) })} />
       ))}
       {children}
       <TotalRow label={msg('v2s.saleTotal')} value={baht(s.grossSatang)} unit={msg('v2s.bahtUnit')} testID={`${prefix}-total`} size={26} />
     </>
+  );
+}
+
+/** The top card of pages 16 and 17: title, then our figures (owner 2026-10-17, "the top card is very good"). */
+function SaleCard({ s, title, subtitle, prefix, testID, children }: { s: Settlement; title: string; subtitle?: string; prefix: string; testID: string; children?: ReactNode }) {
+  const t = useTheme();
+  return (
+    <View testID={testID} style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.xxs }}>
+      <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{title}</AppText>
+      {subtitle ? <AppText variant="label">{subtitle}</AppText> : null}
+      <SaleFigures s={s} prefix={prefix} />
+      {children}
+    </View>
   );
 }
 
@@ -220,10 +237,7 @@ function CheckBody({ bump }: { bump: () => void }) {
 
   return shell(
     <>
-      <View testID="check-card" style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.xxs }}>
-        <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{msg('v2s.buyerGotThis')}</AppText>
-        <AppText variant="label">{msg('v2s.computed')}</AppText>
-        <SaleFigures s={s} prefix="check" />
+      <SaleCard s={s} title={msg('v2s.buyerGotThis')} subtitle={msg('v2s.computed')} prefix="check" testID="check-card">
         {state.parties?.buyer ? <IconLine icon={(c) => <UsersIcon color={c} size={13} />}>{state.parties.buyer}</IconLine> : null}
         {done || closed ? (
           <View style={{ marginTop: t.space.sm }}>
@@ -239,19 +253,41 @@ function CheckBody({ bump }: { bump: () => void }) {
             </Button>
           </View>
         )}
-      </View>
+      </SaleCard>
       <View style={{ ...cardStyle(t), paddingHorizontal: t.space.lg }}>
         {s.perZone.map((z, i) => {
-          const points = [...rollup.byPoint.keys()].filter((p) => tapperOn(master, p, day) === z.personId).length;
+          const points = [...rollup.byPoint.entries()].filter(([p]) => tapperOn(master, p, day) === z.personId);
           return (
-            <View key={z.zoneId} testID={`check-tapper-${z.personId}`} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, paddingVertical: t.space.sm, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint }}>
-              <IconTile tone={tapperTone(master, z.personId)} icon={(c) => <TapperIcon color={c} size={20} />} />
-              <View style={{ flex: 1 }}>
-                <AppText style={{ fontWeight: t.font.weight.bold }}>{nameOf(z.personId)}</AppText>
-                <IconLine icon={(c) => <PinIcon color={c} size={12} />}>{msg('pick.points', { n: points })}</IconLine>
-                <IconLine icon={(c) => <BasketIcon color={c} size={12} />}>{msg('sales.baskets', { n: z.totals.baskets })}</IconLine>
+            <View key={z.zoneId} testID={`check-tapper-${z.personId}`} style={{ paddingVertical: t.space.sm, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md }}>
+                <IconTile tone={tapperTone(master, z.personId)} icon={(c) => <TapperIcon color={c} size={20} />} />
+                <View style={{ flex: 1 }}>
+                  <AppText style={{ fontWeight: t.font.weight.bold }}>{nameOf(z.personId)}</AppText>
+                  <IconLine icon={(c) => <PinIcon color={c} size={12} />}>{msg('pick.points', { n: points.length })}</IconLine>
+                </View>
+                <Big value={msg('v2f.kg', { n: kgText(z.totals.netG) })} size={20} />
               </View>
-              <Big value={msg('v2f.kg', { n: kgText(z.totals.netG) })} size={16} />
+              {points.map(([pid, tot]) => {
+                // Slip-style: point name + total kg, then indented rows "full N baskets … kg" and
+                // "short N baskets … kg" in the same right-hand kg column (words, not colour, mark short).
+                const num = { fontFamily: t.font.family.sans, fontVariant: ['tabular-nums' as const] };
+                const sub = (key: 'v2s.chkFull' | 'v2s.chkShort', n: number, g: number, id: string) => (
+                  <View key={id} testID={`${id}-${pid}`} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: t.space.md, paddingLeft: t.space.xl }}>
+                    <AppText variant="label" style={{ flex: 1 }}>{msg(key, { n })}</AppText>
+                    <Text style={{ ...num, fontSize: t.font.size.bodySm, color: t.color.inkSoft }}>{msg('v2f.kg', { n: kgText(g) })}</Text>
+                  </View>
+                );
+                return (
+                  <View key={pid} testID={`check-point-${pid}`} style={{ paddingTop: t.space.sm, paddingLeft: t.space.xs, gap: t.space.xs }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: t.space.md }}>
+                      <AppText variant="bodySm" style={{ flex: 1, color: t.color.ink }}>{master.points.find((x) => x.id === pid)?.name ?? ''}</AppText>
+                      <Text style={{ ...num, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('v2f.kg', { n: kgText(tot.netG) })}</Text>
+                    </View>
+                    {tot.standardBaskets ? sub('v2s.chkFull', tot.standardBaskets, tot.standardNetG, 'check-full') : null}
+                    {tot.shortBaskets ? sub('v2s.chkShort', tot.shortBaskets, tot.shortNetG, 'check-short') : null}
+                  </View>
+                );
+              })}
             </View>
           );
         })}
@@ -302,12 +338,7 @@ function Move({ way, title, detail, amount, testID }: { way: DebtWay; title: str
 }
 
 /** A label with its direction mark, for a `din`/`dout`/`dnet` Kv: nested Text, so it keeps Kv's font and colour on native too. */
-const DirLabel = ({ way, text }: { way: DebtWay; text: string }) => (
-  <Text>
-    <Text style={{ fontWeight: '700' }}>{way === 'in' ? '↘ ' : way === 'out' ? '↗ ' : '⇄ '}</Text>
-    {text}
-  </Text>
-);
+const DirLabel = ({ way, text }: { way: DebtWay; text: string }) => <WayLabel mark={way === 'in' ? '↘' : way === 'out' ? '↗' : '⇄'} text={text} />;
 
 /** Section heading on page 17: ก / ข / ค, with an optional tag ("ไม่ใช่ยอดขาย"). */
 function Section({ children, tag }: { children: string; tag?: string }) {
@@ -344,20 +375,6 @@ function CheckLine({ ok, children, testID }: { ok: boolean; children: string; te
     <View testID={testID} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: t.space.sm }}>
       <AppText variant="bodySm" style={{ flex: 1 }}>{children}</AppText>
       <AppText style={{ color: ok ? t.color.accept : t.color.reject, fontWeight: t.font.weight.bold }}>{ok ? '✓' : '✗'}</AppText>
-    </View>
-  );
-}
-
-/** "ขายวันนี้ kg × price = total", first on pages 17 and 18a (owner 2026-10-14). */
-function SaleToday({ s, checked }: { s: Settlement; checked?: boolean }) {
-  const t = useTheme();
-  const msg = useT();
-  return (
-    <View testID="sale-today" style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.xxs }}>
-      <AppText variant="label">{msg('v2s.saleToday')}</AppText>
-      <AppText>{msg('v2s.saleTodayEq', { kg: kgText(s.totals.netG), price: baht(s.satangPerKg) })}</AppText>
-      <Big value={baht(s.grossSatang)} unit={msg('v2s.bahtUnit')} size={30} />
-      {checked ? <IconLine icon={(c) => <Check color={c} size={10} />}>{msg('v2s.checkedWithBuyer')}</IconLine> : null}
     </View>
   );
 }
@@ -600,7 +617,9 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
 
   return shell(
     <>
-      <SaleToday s={s} checked={checkedWithBuyer} />
+      <SaleCard s={s} title={msg('v2s.saleToday')} prefix="settle" testID="settle-card">
+        {checkedWithBuyer ? <IconLine icon={(c) => <Check color={c} size={10} />}>{msg('v2s.checkedWithBuyer')}</IconLine> : null}
+      </SaleCard>
 
       {/* ก · the sale, split: weight × price and the shares, nothing about debt (owner 2026-10-14). */}
       <Section>{msg('v2s.secSale')}</Section>
@@ -621,7 +640,11 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
         })}
         <Kv tone="total" label={msg('v2s.sumShares')} value={baht(money.tappers.reduce((a, tp) => a + tp.shareSatang, 0))} />
         <Kv label={msg('v2s.sumFarm')} value={baht(s.ownerSatang)} />
-        <Kv label={msg('v2s.sumSale')} value={baht(s.grossSatang)} />
+        {/* The line the whole block adds up to: as strong as the top card's total, in the ordinary ink (owner 2026-10-18). */}
+        <View testID="sum-sale" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: t.space.sm, borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, paddingTop: t.space.sm, marginTop: t.space.xs }}>
+          <AppText style={{ flexShrink: 1, fontWeight: t.font.weight.bold, fontSize: t.font.size.bodyLg }}>{msg('v2s.sumSale')}</AppText>
+          <Big value={baht(s.grossSatang)} size={24} />
+        </View>
       </View>
 
       {/* ข · debt, not the sale (owner 2026-10-14): what tappers pay the farm (↘, one colour) and what the farm
@@ -728,10 +751,7 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
               <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{msg('v2s.cashFor', { name: tp.name })}</AppText>
               {d.over ? <Chip tone="reject" label={msg('v2s.overDeducted')} /> : null}
             </View>
-            <Kv label={msg('v2s.share')} value={baht(tp.shareSatang)} />
-            {d.total ? <Kv tone="din" testID={`pay-route-${tp.id}`} label={<DirLabel way="in" text={msg('v2s.payRouteAll', { name: tp.name })} />} value={baht(d.total)} /> : null}
-            {tp.nettedSatang ? <Kv tone="dout" testID={`pay-back-${tp.id}`} label={<DirLabel way="out" text={msg('v2s.payBack', { name: tp.name })} />} value={baht(tp.nettedSatang)} /> : null}
-            {asked && tp.adjustSatang ? <Kv label={msg('v2s.rounding')} value={`${tp.adjustSatang > 0 ? '+' : '−'}${baht(Math.abs(tp.adjustSatang))}`} /> : null}
+            <MoneyLines personId={tp.id} name={tp.name} shareSatang={tp.shareSatang} paidSatang={d.total} backSatang={tp.nettedSatang} adjustSatang={asked ? tp.adjustSatang : 0} />
             <TotalRow label={`${msg('v2s.cashToPayOf', { name: tp.name })}${asked ? '' : ` ${msg('v2s.notRounded')}`}`} value={bahtText(cash)} unit={msg('v2s.bahtUnit')} testID={`cash-${tp.id}`} />
             <View style={{ backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.md, padding: t.space.sm, marginTop: t.space.xs }}>
               <AppText variant="bodySm" testID={`say-${tp.id}`}>{`“${say.join(' · ')}”`}</AppText>
@@ -1220,7 +1240,6 @@ function PaymentBody({ bump }: { bump: () => void }) {
           lines.push({ icon: (c) => <PersonIcon color={c} size={12} />, text: msg('v2s.byDevice') });
           lines.push({ icon: (c) => <ClockIcon color={c} size={12} />, text: new Date(st.at + 7 * 3_600_000).toISOString().slice(11, 16) });
         } else lines.push({ text: msg(p.tp ? 'v2s.notPaid' : 'v2s.notReceived') });
-        for (const d of ded) lines.push({ icon: (c) => <Minus color={c} size={10} />, text: msg(d.method === 'cash-from-share' ? 'v2s.dedCash' : d.method === 'transfer-with-owner' ? 'v2s.dedTransfer' : 'v2s.dedOther', { amount: bahtText(d.amountSatang) }) });
         if (!p.tp && account) lines.push({ icon: (c) => <BankIcon color={c} size={12} />, text: `${BANKS.find((b) => b.code === account.bankCode)?.name ?? account.label} ••${account.accountNo.slice(-4)}` });
         if (!p.tp && money.rounding.transferInSatang) lines.push({ icon: (c) => <Plus color={c} size={10} />, text: msg('v2s.withDebt', { amount: bahtText(money.rounding.transferInSatang) }) });
         if (st.recheck) lines.push({ icon: (c) => <AlertIcon color={c} size={12} />, text: msg('v2s.recheck') });
@@ -1245,6 +1264,7 @@ function PaymentBody({ bump }: { bump: () => void }) {
                   {l.text}
                 </IconLine>
               ))}
+              {p.tp ? <MoneyLines personId={p.id} name={p.name} shareSatang={p.tp.shareSatang} paidSatang={ded.reduce((a, x) => a + x.amountSatang, 0)} backSatang={p.tp.nettedSatang} adjustSatang={money.rounding.choice.asked ? p.tp.adjustSatang : 0} /> : null}
             </View>
             <Big value={bahtText(p.satang)} size={18} testID={`tick-amt-${p.id}`} />
           </Pressable>
