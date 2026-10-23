@@ -1,7 +1,10 @@
 /**
- * บันทึกค่าใช้จ่าย — v1.1.0 farm mockup screen 18 (E11-S01, E11-S02,
- * E11-S05 aid, E11-S06 trip), rebuilt on src/ui (D-82). Behaviour is the
- * old screen's, unchanged:
+ * บันทึกค่าใช้จ่าย — simple design E1 (owner 2026-10-23; E11-S01, E11-S02,
+ * E11-S05 aid, E11-S06 trip), on src/ui (D-82). One phone screen: the
+ * amount big, the category as tiles (most used first, the rest under
+ * "อื่น ๆ"), who paid first, the share row for sharing categories, and
+ * "เพิ่มรายละเอียด" (date, stage, farm, item, note) in a sheet. Category
+ * upkeep sits behind "จัดการหมวด". Save is pinned at the bottom.
  *
  * - Only amount + date are required (D-62); the stage starts at เกิดจริง; a
  *   planned expense may say ไม่ทราบ instead of an amount (SYNC-12).
@@ -10,26 +13,33 @@
  * - An edit writes only the fields that changed, naming the head it saw, so
  *   a concurrent edit merges or surfaces as a conflict to pick (D-30).
  * - Derived expenses (a fertilizer debt's owner share, a salary month) keep
- *   their amount and date from the source.
+ *   their amount and date from the source; a fertilizer purchase (sacks,
+ *   details) is shown only, and edited in its own flow.
+ * - A share and its net amount are always written together (E11-S10).
  */
 
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { checkExpense, defaultPayer, isDerivedExpense, type Expense } from '../../core/finance/ledger';
+import { checkExpense, defaultPayer, headOf, isDerivedExpense, type Expense } from '../../core/finance/ledger';
 import { formatDate, formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../core/finance/money';
 import { checkTrip } from '../../core/finance/plan';
-import { FARM_FUNDS, type AidKind, type ExpenseFields, type ExpensePatch, type Payer, type Stage, type Trip, type TripCostKind } from '../../core/finance/types';
+import { checkShare, splitShare } from '../../core/finance/share';
+import { FARM_FUNDS, type AidKind, type ExpenseFields, type ExpensePatch, type ExpenseShare, type Payer, type Stage, type Trip, type TripCostKind } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
 import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, Button, Card, FactRow, PersonIcon, ReceiptIcon, ScreenHeader, SegmentedControl, TextField, type HeaderPrimaryAction } from '../../ui';
+import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CoinIcon, CTA, DotsIcon, FactRow, GearIcon, LeafIcon, PersonIcon, PinIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TapperIcon, TextField, UsersIcon, WalletIcon, type HeaderPrimaryAction } from '../../ui';
 import { useFarms } from './expenses-screen';
 import { ChoiceChip, ChoiceRow, NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
+import { CategoryShareSheet, draftOf, shareOf, ShareSheet, type ShareDraft } from './share-sheet';
+
+const FERTILIZER = 'cat-fertilizer';
+const FLOW = '/v2/fertilizer' as const;
 
 const STAGES: readonly Stage[] = ['actual', 'committed', 'planned'];
 const AID_KINDS: readonly AidKind[] = ['accident', 'general', 'food', 'other'];
@@ -73,13 +83,17 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   const state = fin.state!;
   const farmsList = useFarms();
 
+  // Same payer as last time on this device; the first time, farm funds (AC A, D-62).
+  const lastPayer = useMemo(() => defaultPayer(fin.events ?? [], fin.deviceId ?? ''), []); // eslint-disable-line react-hooks/exhaustive-deps -- taken once
   const initialPayer = useMemo<Payer | null>(
-    () => (existing ? existing.payer : defaultPayer(fin.events ?? [], fin.deviceId ?? '')),
+    () => (existing ? existing.payer : (lastPayer ?? { id: FARM_FUNDS, name: msg('fin.payer.farm') })),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the default is taken once, when the form opens
     [],
   );
 
-  const [amount, setAmount] = useState(existing?.amountSatang != null ? satangToInput(existing.amountSatang) : '');
+  // A shared expense stores the net bill; the form edits the bill (E11-S10).
+  const shownAmount = existing?.share ? existing.share.billSatang : existing?.amountSatang;
+  const [amount, setAmount] = useState(shownAmount != null ? satangToInput(shownAmount) : '');
   const [unknownWanted, setUnknown] = useState(existing ? existing.amountSatang === null : false);
   const [date, setDate] = useState(existing?.date ?? todayIso());
   const [stage, setStage] = useState<Stage>(existing?.stage ?? 'actual');
@@ -102,13 +116,22 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   const [split, setSplit] = useState<Record<string, string> | null>(() =>
     existing?.trip?.split ? Object.fromEntries(existing.trip.split.map((x) => [x.farmId, satangToInput(x.satang)])) : null,
   );
+  const [shareDraft, setShareDraft] = useState<ShareDraft>(() => draftOf(existing?.share, state.categories.find((c) => c.id === existing?.categoryId)?.workerPct ?? null));
+  const [shareOpen, setShareOpen] = useState(false);
+  const [catShareOpen, setCatShareOpen] = useState(false);
   const [addingCat, setAddingCat] = useState<'add' | 'rename' | null>(null);
+  const [catSheet, setCatSheet] = useState(false);
+  const [payerSheet, setPayerSheet] = useState(false);
+  const [detailsSheet, setDetailsSheet] = useState(false);
   const [catName, setCatName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [failed, setFailed] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const inFlight = useInFlight();
   const derived = !!existing && isDerivedExpense(existing.id);
+  // A fertilizer purchase is edited in its flow only: this form cannot carry sacks or details,
+  // and saving here would drop the share (and void its debts).
+  const fertLocked = !!existing && (!!existing.fertilizer || existing.share?.totalSacks != null);
 
   const unknown = stage === 'planned' && unknownWanted;
   const isAid = categoryId === 'cat-worker-aid';
@@ -128,6 +151,16 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
       }
     : undefined;
   const tripProblems = trip && amountSatang !== null ? checkTrip(trip, amountSatang).filter((p) => p !== 'lines-total' || fromLines) : [];
+  const category = state.categories.find((c) => c.id === categoryId) ?? null;
+  // A share already stored stays editable even if the category stopped sharing since.
+  const sharable = !!category && (category.workerPct !== null || !!existing?.share) && category.id !== FERTILIZER && !isTrip && !isAid;
+  const share = sharable && amountSatang !== null ? shareOf(shareDraft, amountSatang) : null;
+  const shareProblems = share ? checkShare(share) : [];
+  // No tapper but a discount typed (or kept from a removed share): the amount is still the net.
+  const draftDiscount = sharable && !share && shareDraft.discount.trim() ? parseBahtToSatang(shareDraft.discount) : null;
+  const unsharedNet = draftDiscount !== null && amountSatang !== null && draftDiscount <= amountSatang ? amountSatang - draftDiscount : null;
+  // A discount that cannot apply is refused, not silently dropped.
+  const badDiscount = sharable && !share && shareDraft.discount.trim() !== '' && amountSatang !== null && unsharedNet === null;
   const amountTyped = !unknown && amount.trim() !== '';
   const problems = checkExpense({ amountSatang, date, stage }).map((p) => (p === 'amount-required' && amountTyped ? 'amount-invalid' : p));
 
@@ -139,10 +172,10 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
 
   const save = async () => {
     setShowErrors(true);
-    if (problems.length || tripProblems.length) return;
+    if (fertLocked || problems.length || tripProblems.length || shareProblems.length || badDiscount) return;
     setFailed(false);
     const fields: ExpenseFields = {
-      amountSatang,
+      amountSatang: share ? share.billSatang - share.discountSatang : (unsharedNet ?? amountSatang),
       date,
       stage,
       categoryId,
@@ -153,6 +186,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
       // Leaving aid/travel clears what belonged to it — null, since a stored key cannot be removed.
       ...(isAid && worker ? { worker, aidKind } : existing?.worker ? { worker: null, aidKind: null } : {}),
       ...(trip ? { trip } : existing?.trip ? { trip: null } : {}),
+      ...(share ? { share } : existing?.share ? { share: null } : {}),
     };
     try {
       if (!existing) {
@@ -161,6 +195,11 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
         const patch: Record<string, unknown> = {};
         for (const k of Object.keys(fields) as (keyof ExpenseFields)[]) {
           if (JSON.stringify(fields[k]) !== JSON.stringify(existing[k])) patch[k] = fields[k];
+        }
+        // The share and the net amount travel together, so a concurrent edit conflicts on both or neither.
+        if (('share' in patch || 'amountSatang' in patch) && (fields.share || existing.share)) {
+          patch.share = fields.share ?? null;
+          patch.amountSatang = fields.amountSatang;
         }
         if (Object.keys(patch).length) await fin.write(existing.id, existing.headEventId, { t: 'expense_changed', patch: patch as ExpensePatch });
       }
@@ -180,7 +219,29 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   const pickConflict = async (field: string, value: unknown) => {
     if (!existing) return;
     const others = existing.heads.filter((h) => h !== existing.headEventId);
-    await fin.write(existing.id, existing.headEventId, { t: 'expense_changed', patch: { [field]: value } as ExpensePatch, alsoBasedOn: others });
+    // Picking a share picks its net amount too (E11-S10 review).
+    const v = value as ExpenseShare | null;
+    const patch = (field === 'share' ? { share: v, amountSatang: v ? v.billSatang - v.discountSatang : existing.amountSatang } : { [field]: value }) as ExpensePatch;
+    await fin.write(existing.id, existing.headEventId, { t: 'expense_changed', patch, alsoBasedOn: others });
+  };
+
+  const pickCategory = (id: string) => {
+    // The fertilizer category is its own flow (E11-S10 C): what was typed goes with it.
+    // Replaced, not pushed: after saving there the user is not sent back to this half-filled form.
+    if (id === FERTILIZER && !existing) {
+      router.replace({ pathname: FLOW, params: { bill: amount, date, stage, payerId: payer?.id ?? 'none', payerName: payer?.name ?? '' } });
+      return;
+    }
+    if (id !== categoryId) setShareDraft((d) => ({ ...d, pct: String(state.categories.find((c) => c.id === id)?.workerPct ?? d.pct) }));
+    setCategoryId(categoryId === id ? null : id);
+  };
+
+  const saveCategoryShare = async (pct: number | null) => {
+    if (!categoryId) return;
+    const prior = (fin.events ?? []).filter((e) => e.targetId === categoryId && e.payload.t === 'category_share_set');
+    await fin.write(categoryId, prior.length ? headOf(prior) : null, { t: 'category_share_set', workerPct: pct });
+    if (pct !== null) setShareDraft((d) => ({ ...d, pct: String(pct) }));
+    setCatShareOpen(false);
   };
 
   const saveCategory = async () => {
@@ -198,17 +259,37 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   };
 
   const owed = payer && payer.id !== FARM_FUNDS;
-  const fieldLabel = (f: string) => (f === 'amountSatang' ? msg('fin.field.amountSatang') : f === 'stage' ? msg('fin.field.stage') : msg('fin.field.payer'));
+  const fieldLabel = (f: string) => (f === 'amountSatang' ? msg('fin.field.amountSatang') : f === 'stage' ? msg('fin.field.stage') : f === 'share' ? msg('fin.field.share') : msg('fin.field.payer'));
+  const shareLabel = (v: ExpenseShare | null) =>
+    v
+      ? msg('xshare.summary', { bill: formatSatang(v.billSatang), discount: formatSatang(v.discountSatang), lines: v.lines.map((l) => msg('xshare.summaryLine', { name: l.worker.name, pct: l.workerPct })).join(', ') })
+      : msg('xshare.none');
   const valueLabel = (f: string, v: unknown) =>
     f === 'amountSatang'
       ? v === null ? msg('fin.row.unknown') : formatSatang(v as number)
-      : f === 'stage' ? msg(`fin.stage.${v as Stage}`) : ((v as Payer | null)?.name ?? msg('fin.form.payerLater'));
+      : f === 'stage' ? msg(`fin.stage.${v as Stage}`) : f === 'share' ? shareLabel(v as ExpenseShare | null) : ((v as Payer | null)?.name ?? msg('fin.form.payerLater'));
+  // A share conflict carries its amount: one card, resolved together.
+  const conflicts = (existing?.conflicts ?? []).filter((c) => !(c.field === 'amountSatang' && existing?.conflicts.some((o) => o.field === 'share')));
   const err = (key: 'amount-required' | 'amount-invalid' | 'date-required') => (showErrors && (problems as string[]).includes(key) ? msg(`fin.form.err.${key}`) : undefined);
+
+  // Five tiles, most used first (the chosen one always among them); the rest one tap away.
+  const topTiles = useMemo(() => {
+    const uses = new Map<string, number>();
+    for (const x of state.expenses) if (x.categoryId) uses.set(x.categoryId, (uses.get(x.categoryId) ?? 0) + 1);
+    const order = [...state.categories].sort((a, b) => (uses.get(b.id) ?? 0) - (uses.get(a.id) ?? 0));
+    return order.slice(0, TILES);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the order is taken when the form opens, so tiles do not jump while choosing
+  }, [state.categories.length]);
+  // The chosen one is always among the tiles: it takes the last tile's place.
+  const picked = state.categories.find((c) => c.id === categoryId);
+  const tiles = picked && !topTiles.some((c) => c.id === picked.id) ? [...topTiles.slice(0, TILES - 1), picked] : topTiles;
+  const farmName = farmsList.find((f) => f.id === propertyId)?.name;
+  const sameAsLast = !existing && !!lastPayer && !!payer && payer.id === lastPayer.id;
 
   return (
     <>
-      {header({ label: msg('fin.form.save'), testID: 'expense-save', saving: inFlight.busy, onPress: () => void inFlight.run(save) })}
-      <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
+      {header()}
+      <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.lg }}>
         {existing?.deleted ? (
           <Card style={{ backgroundColor: t.color.warnSunk }}>
             <AppText testID="expense-deleted">{msg('fin.form.deleted')}</AppText>
@@ -216,7 +297,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
           </Card>
         ) : null}
 
-        {existing?.conflicts.map((c) => (
+        {conflicts.map((c) => (
           <Card key={c.field} testID={`conflict-${c.field}`} style={{ backgroundColor: t.color.rejectSunk }}>
             <AppText>{msg('fin.form.conflict', { field: fieldLabel(c.field) })}</AppText>
             <ChoiceRow>
@@ -227,140 +308,148 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
           </Card>
         ))}
 
-        {derived ? (
+        {fertLocked && existing ? (
+          <Card testID="fert-locked" style={{ backgroundColor: t.color.surfaceSunk }}>
+            <AppText>{existing.fertilizer?.formula || existing.item}</AppText>
+            <AppText variant="bodySm">{`${existing.amountSatang === null ? msg('fin.row.unknown') : formatSatang(existing.amountSatang)} · ${formatDate(existing.date)} · ${msg(`fin.stage.${existing.stage}`)}`}</AppText>
+            {!existing.deleted ? <Button testID="expense-open-fert" variant="primary" onPress={() => router.push({ pathname: FLOW, params: { id: existing.id } })}>{msg('fert.openFlow')}</Button> : null}
+          </Card>
+        ) : derived ? (
           <Card testID="owner-share-locked" style={{ backgroundColor: t.color.surfaceSunk }}>
             <AppText>{msg('fin.form.ownerShareLocked')}</AppText>
             <AppText variant="bodySm">{`${amountSatang === null ? msg('fin.row.unknown') : formatSatang(amountSatang)} · ${formatDate(date)}`}</AppText>
           </Card>
         ) : (
-          <>
-            <View style={{ gap: t.space.sm }}>
-              {unknown ? (
-                <View style={{ gap: t.space.xs }}>
-                  <SectionLabel required>{msg('fin.form.amount')}</SectionLabel>
-                  <AppText testID="amount-unknown">{msg('fin.row.unknown')}</AppText>
-                </View>
-              ) : (
-                <TextField
-                  testID="expense-amount"
-                  label={msg('fin.form.amount')}
-                  required
-                  keyboardType="decimal-pad"
-                  value={amount}
-                  onChangeText={setAmount}
-                  placeholder="0.00"
-                  helper={msg('v2m.baht')}
-                  error={err('amount-required') ?? err('amount-invalid')}
-                />
-              )}
-              {stage === 'planned' ? (
-                <ChoiceRow>
-                  <ChoiceChip testID="expense-unknown" dashed label={msg('fin.form.amountUnknown')} on={unknown} onPress={() => setUnknown((u) => !u)} />
-                </ChoiceRow>
-              ) : null}
-            </View>
-
-            <TextField
-              testID="expense-date"
-              label={msg('fin.form.date')}
-              required
-              value={date}
-              onChangeText={setDate}
-              placeholder="2026-09-28"
-              helper={msg('v2m.dateShown', { shown: formatDate(date) })}
-              error={err('date-required')}
-            />
-
-            <View style={{ gap: t.space.sm }}>
-              <SectionLabel>{msg('fin.form.stage')}</SectionLabel>
-              <SegmentedControl testID="expense-stage" value={stage} onChange={setStage} options={STAGES.map((s) => ({ value: s, label: msg(`fin.stage.${s}`) }))} />
-              {stage === 'planned' ? <AppText variant="caption">{msg('v2m.plannedHint')}</AppText> : null}
-            </View>
-          </>
-        )}
-
-        <View style={{ gap: t.space.sm }}>
-          <SectionLabel hint={msg('v2m.categoryHint')}>{msg('fin.form.category')}</SectionLabel>
-          <ChoiceRow>
-            {state.categories.map((c) => (
-              <ChoiceChip key={c.id} testID={`expense-cat-${c.id}`} label={c.name} on={categoryId === c.id} onPress={() => setCategoryId(categoryId === c.id ? null : c.id)} />
-            ))}
-            <ChoiceChip testID="expense-cat-add" label={msg('fin.form.addCategory')} onPress={() => { setAddingCat('add'); setCatName(''); }} />
-            {categoryId ? (
-              <ChoiceChip testID="expense-cat-rename" label={msg('fin.form.renameCategory')} onPress={() => { setAddingCat('rename'); setCatName(state.categories.find((c) => c.id === categoryId)?.name ?? ''); }} />
-            ) : null}
-          </ChoiceRow>
-          {addingCat ? (
-            <View style={{ gap: t.space.sm }}>
-              <TextField testID="expense-cat-name" label={msg('fin.form.categoryPlaceholder')} value={catName} onChangeText={setCatName} />
-              <Button testID="expense-cat-save" onPress={() => void saveCategory()}>{msg('common.save')}</Button>
-            </View>
-          ) : null}
-        </View>
-
-        {isAid ? (
-          <Card testID="aid-section">
-            <SectionLabel>{msg('aid.worker')}</SectionLabel>
-            <PayerPicker testID="aid-worker" role="worker" value={worker} onChange={setWorker} />
-            <SectionLabel>{msg('aid.kind')}</SectionLabel>
-            <ChoiceRow>
-              {AID_KINDS.map((k) => <ChoiceChip key={k} testID={`aid-kind-${k}`} label={msg(`aid.kind.${k}`)} on={aidKind === k} onPress={() => setAidKind(k)} />)}
-            </ChoiceRow>
-            <AppText variant="caption">{msg('aid.note')}</AppText>
-          </Card>
-        ) : null}
-
-        {isTrip ? (
-          <Card testID="trip-section">
-            <SectionLabel>{msg('trip.title')}</SectionLabel>
-            <TextField testID="trip-from" label={msg('trip.from')} value={tripFrom} onChangeText={setTripFrom} />
-            <TextField testID="trip-to" label={msg('trip.to')} value={tripTo} onChangeText={setTripTo} />
-            <TextField testID="trip-purposes" label={msg('trip.purposes')} value={purposes} onChangeText={setPurposes} />
-            <TextField testID="trip-farms" label={msg('trip.farms')} value={farms} onChangeText={setFarms} />
-            <SectionLabel>{msg('trip.lines')}</SectionLabel>
-            {TRIP_KINDS.map((k) => (
-              <TextField key={k} testID={`trip-line-${k}`} label={msg(`trip.kind.${k}`)} keyboardType="decimal-pad" value={lines[k]} onChangeText={(v) => setLines((l) => ({ ...l, [k]: v }))} />
-            ))}
-            {fromLines ? <AppText testID="trip-total">{msg('trip.total', { amount: formatSatang(amountSatang ?? 0) })}</AppText> : null}
-            {tripFarms.length ? (
+          <View style={{ gap: t.space.sm }}>
+            {unknown ? (
+              <View style={{ gap: t.space.xs }}>
+                <SectionLabel required>{msg('fin.form.amountQ')}</SectionLabel>
+                <AppText testID="amount-unknown">{msg('fin.row.unknown')}</AppText>
+              </View>
+            ) : (
+              <TextField
+                testID="expense-amount"
+                label={msg('fin.form.amountQ')}
+                size="large"
+                keyboardType="decimal-pad"
+                value={amount}
+                onChangeText={setAmount}
+                onBlur={() => {
+                  // Read back as money once typed (prop-01 "3,500.00"); the parser takes the commas.
+                  const v = parseBahtToSatang(amount);
+                  if (v !== null) setAmount(formatSatang(v));
+                }}
+                placeholder="0.00"
+                unit={msg('v2m.baht')}
+                error={err('amount-required') ?? err('amount-invalid')}
+              />
+            )}
+            {stage === 'planned' ? (
               <ChoiceRow>
-                <ChoiceChip testID="trip-unsplit" label={msg('trip.unsplit')} on={split === null} onPress={() => setSplit(null)} />
-                <ChoiceChip testID="trip-split" label={msg('trip.split')} on={split !== null} onPress={() => setSplit(split ?? {})} />
+                <ChoiceChip testID="expense-unknown" dashed label={msg('fin.form.amountUnknown')} on={unknown} onPress={() => setUnknown((u) => !u)} />
               </ChoiceRow>
             ) : null}
-            {split
-              ? tripFarms.map((f) => (
-                  <TextField key={f.id} testID={`trip-split-${f.name}`} label={f.name} keyboardType="decimal-pad" value={split[f.id] ?? ''} onChangeText={(v) => setSplit((x) => ({ ...(x ?? {}), [f.id]: v }))} />
-                ))
-              : null}
-            {showErrors && tripProblems.includes('split-total') ? <AppText testID="trip-err-split" style={{ color: t.color.reject }}>{msg('trip.err.split-total')}</AppText> : null}
-          </Card>
-        ) : null}
+          </View>
+        )}
 
-        <View style={{ gap: t.space.sm }}>
-          <SectionLabel hint={existing ? undefined : msg('fin.form.payerHint')}>{msg('fin.form.payer')}</SectionLabel>
-          <PayerPicker testID="expense-payer" value={payer} onChange={setPayer} extra={knownPayers} allowNone />
-          {owed ? (
-            <Card testID="owed-preview" style={{ backgroundColor: t.color.surfaceSunk }}>
-              <FactRow icon={(c) => <PersonIcon color={c} size={14} />}>{msg('v2m.owedTo', { name: payer!.name })}</FactRow>
-              <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>
-                {stage === 'actual' && amountSatang !== null ? `${formatSatang(amountSatang)} ${msg('v2m.baht')}` : msg('fin.form.owedLater', { name: payer!.name })}
-              </FactRow>
-              <AppText variant="caption">{msg('v2m.owedWhy', { name: payer!.name })}</AppText>
+        {fertLocked ? null : (
+          <>
+            <View style={{ gap: t.space.sm }}>
+              <SectionLabel>{msg('fin.form.categoryQ')}</SectionLabel>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+                {tiles.map((c) => <CategoryTile key={c.id} testID={`expense-cat-${c.id}`} label={c.name} on={categoryId === c.id} icon={CATEGORY_ICONS[c.id] ?? TagIcon} onPress={() => pickCategory(c.id)} />)}
+                <CategoryTile testID="expense-cat-more" label={msg('fin.form.moreCategories', { n: state.categories.length - tiles.length })} icon={DotsIcon} onPress={() => setCatSheet(true)} />
+              </View>
+            </View>
+
+            <Card style={{ gap: 0, paddingVertical: t.space.xs }}>
+              <Pressable testID="expense-payer-row" accessibilityRole="button" onPress={() => setPayerSheet(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, minHeight: t.target.comfortable }}>
+                <WalletIcon color={t.color.inkSoft} />
+                <View style={{ flex: 1 }}>
+                  <AppText variant="caption">{msg('fin.form.payerQ')}</AppText>
+                  <AppText style={{ fontWeight: t.font.weight.bold }}>{payer?.name ?? msg('fin.form.payerLater')}</AppText>
+                </View>
+                {sameAsLast ? <AppText variant="caption">{msg('fert.sameAsLast')}</AppText> : null}
+                <ChevronRight color={t.color.inkFaint} />
+              </Pressable>
+              {sharable ? (
+                <Pressable testID="share-row" accessibilityRole="button" onPress={() => setShareOpen(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, minHeight: t.target.comfortable, borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint }}>
+                  <TapperIcon color={t.color.inkSoft} />
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="caption">{msg('xshare.row')}</AppText>
+                    <AppText style={{ fontWeight: t.font.weight.bold }}>
+                      {shareDraft.worker
+                        ? share && !shareProblems.length
+                          ? msg('xshare.rowAmount', { name: shareDraft.worker.name, amount: formatSatang(splitShare(share).lines[0].workerSatang), settle: msg(`xshare.settle.${shareDraft.settle}`) })
+                          : msg('xshare.rowOn', { name: shareDraft.worker.name, pct: shareDraft.pct, settle: msg(`xshare.settle.${shareDraft.settle}`) })
+                        : msg('xshare.rowOff')}
+                    </AppText>
+                    {shareDraft.worker ? (
+                      <AppText variant="caption">
+                        {share?.discountSatang ? msg('xshare.rowSub', { discount: formatSatang(share.discountSatang), name: shareDraft.worker.name, pct: shareDraft.pct }) : msg('xshare.rowPct', { name: shareDraft.worker.name, pct: shareDraft.pct })}
+                      </AppText>
+                    ) : null}
+                    {unsharedNet !== null ? <AppText testID="share-unshared-net" variant="caption">{msg('xshare.unsharedNet', { net: formatSatang(unsharedNet) })}</AppText> : null}
+                    {showErrors && (shareProblems.length || badDiscount) ? <AppText testID="share-err" style={{ color: t.color.reject }}>{msg(badDiscount || shareProblems.includes('discount-over') ? 'xshare.err.discount' : 'xshare.err.pct')}</AppText> : null}
+                  </View>
+                  <ChevronRight color={t.color.inkFaint} />
+                </Pressable>
+              ) : null}
             </Card>
-          ) : null}
-        </View>
 
-        <View style={{ gap: t.space.sm }}>
-          <SectionLabel hint={msg('v2m.optional')}>{msg('v2m.farm')}</SectionLabel>
-          <ChoiceRow>
-            {farmsList.map((f) => <ChoiceChip key={f.id} testID={`expense-farm-${f.id}`} label={f.name} on={propertyId === f.id} onPress={() => setPropertyId(propertyId === f.id ? null : f.id)} />)}
-            {propertyId === null ? <NotRecordedPill testID="expense-farm-none" /> : null}
-          </ChoiceRow>
-        </View>
+            {isAid ? (
+              <Card testID="aid-section">
+                <SectionLabel>{msg('aid.worker')}</SectionLabel>
+                <PayerPicker testID="aid-worker" role="worker" value={worker} onChange={setWorker} />
+                <SectionLabel>{msg('aid.kind')}</SectionLabel>
+                <ChoiceRow>
+                  {AID_KINDS.map((k) => <ChoiceChip key={k} testID={`aid-kind-${k}`} label={msg(`aid.kind.${k}`)} on={aidKind === k} onPress={() => setAidKind(k)} />)}
+                </ChoiceRow>
+                <AppText variant="caption">{msg('aid.note')}</AppText>
+              </Card>
+            ) : null}
 
-        <TextField testID="expense-item" label={msg('fin.form.item')} value={item} onChangeText={setItem} placeholder={msg('fin.form.itemPlaceholder')} />
-        <TextField testID="expense-note" label={msg('fin.form.note')} multiline value={note} onChangeText={setNote} placeholder={msg('fin.form.notePlaceholder')} />
+            {isTrip ? (
+              <Card testID="trip-section">
+                <SectionLabel>{msg('trip.title')}</SectionLabel>
+                <TextField testID="trip-from" label={msg('trip.from')} value={tripFrom} onChangeText={setTripFrom} />
+                <TextField testID="trip-to" label={msg('trip.to')} value={tripTo} onChangeText={setTripTo} />
+                <TextField testID="trip-purposes" label={msg('trip.purposes')} value={purposes} onChangeText={setPurposes} />
+                <TextField testID="trip-farms" label={msg('trip.farms')} value={farms} onChangeText={setFarms} />
+                <SectionLabel>{msg('trip.lines')}</SectionLabel>
+                {TRIP_KINDS.map((k) => (
+                  <TextField key={k} testID={`trip-line-${k}`} label={msg(`trip.kind.${k}`)} keyboardType="decimal-pad" value={lines[k]} onChangeText={(v) => setLines((l) => ({ ...l, [k]: v }))} />
+                ))}
+                {fromLines ? <AppText testID="trip-total">{msg('trip.total', { amount: formatSatang(amountSatang ?? 0) })}</AppText> : null}
+                {tripFarms.length ? (
+                  <ChoiceRow>
+                    <ChoiceChip testID="trip-unsplit" label={msg('trip.unsplit')} on={split === null} onPress={() => setSplit(null)} />
+                    <ChoiceChip testID="trip-split" label={msg('trip.split')} on={split !== null} onPress={() => setSplit(split ?? {})} />
+                  </ChoiceRow>
+                ) : null}
+                {split
+                  ? tripFarms.map((f) => (
+                      <TextField key={f.id} testID={`trip-split-${f.name}`} label={f.name} keyboardType="decimal-pad" value={split[f.id] ?? ''} onChangeText={(v) => setSplit((x) => ({ ...(x ?? {}), [f.id]: v }))} />
+                    ))
+                  : null}
+                {showErrors && tripProblems.includes('split-total') ? <AppText testID="trip-err-split" style={{ color: t.color.reject }}>{msg('trip.err.split-total')}</AppText> : null}
+              </Card>
+            ) : null}
+
+            <Pressable testID="expense-details" accessibilityRole="button" onPress={() => setDetailsSheet(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md, borderRadius: t.radius.lg, backgroundColor: t.color.surfaceSunk }}>
+              <Plus color={t.color.inkSoft} />
+              <View style={{ flex: 1 }}>
+                <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('fert.details')}</AppText>
+                <AppText variant="caption" numberOfLines={1}>
+                  {farmName ? msg('fin.form.detailsFarm', { date: formatDate(date), stage: msg(`fin.stage.${stage}`), farm: farmName }) : msg('fin.form.detailsNoFarm', { date: formatDate(date), stage: msg(`fin.stage.${stage}`) })}
+                </AppText>
+                <AppText variant="caption">{msg('fin.form.detailsWhat')}</AppText>
+                {err('date-required') ? <AppText testID="expense-date-row-error" style={{ color: t.color.reject }}>{err('date-required')}</AppText> : null}
+              </View>
+              <ChevronRight color={t.color.inkFaint} />
+            </Pressable>
+          </>
+        )}
 
         {failed ? <AppText testID="save-failed" style={{ color: t.color.reject }}>{msg('fin.form.saveFailed')}</AppText> : null}
 
@@ -381,11 +470,136 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
             <Button testID="expense-delete" variant="destructive" onPress={() => setConfirmDelete(true)}>{msg('fin.form.delete')}</Button>
           )
         ) : null}
-        <Text style={{ height: 1 }} />
       </ScrollView>
+      {fertLocked ? null : (
+        <PinnedActions testID="expense-actions">
+          <CTA testID="expense-save" icon={(c) => <Check color={c} />} disabled={inFlight.busy} onPress={() => void inFlight.run(save)}>{msg('fin.form.save')}</CTA>
+        </PinnedActions>
+      )}
+
+      {shareOpen && category ? (
+        <ShareSheet open onClose={() => setShareOpen(false)} billSatang={amountSatang ?? 0} title={category.name} draft={shareDraft} onChange={setShareDraft} stage={stage} />
+      ) : null}
+
+      {catSheet ? (
+        <BottomSheet open onClose={() => { setCatSheet(false); setAddingCat(null); }} testID="expense-cat-sheet" title={msg('fin.form.categoryQ')}>
+          <View style={{ gap: t.space.md }}>
+            <ChoiceRow>
+              {state.categories.map((c) => (
+                <ChoiceChip key={c.id} testID={`expense-catall-${c.id}`} label={c.name} on={categoryId === c.id} onPress={() => { setCatSheet(false); pickCategory(c.id); }} />
+              ))}
+            </ChoiceRow>
+            <SectionLabel>{msg('fin.form.manageCategories')}</SectionLabel>
+            <ChoiceRow>
+              <ChoiceChip testID="expense-cat-add" label={msg('fin.form.addCategory')} onPress={() => { setAddingCat('add'); setCatName(''); }} />
+              {categoryId ? (
+                <ChoiceChip testID="expense-cat-rename" label={msg('fin.form.renameCategory')} onPress={() => { setAddingCat('rename'); setCatName(state.categories.find((c) => c.id === categoryId)?.name ?? ''); }} />
+              ) : null}
+              {categoryId && categoryId !== FERTILIZER ? (
+                <ChoiceChip testID="expense-cat-share" label={msg('xshare.catSettings')} onPress={() => { setCatSheet(false); setCatShareOpen(true); }} />
+              ) : null}
+            </ChoiceRow>
+            {addingCat ? (
+              <View style={{ gap: t.space.sm }}>
+                <TextField testID="expense-cat-name" label={msg('fin.form.categoryPlaceholder')} value={catName} onChangeText={setCatName} />
+                <Button testID="expense-cat-save" onPress={() => void saveCategory()}>{msg('common.save')}</Button>
+              </View>
+            ) : null}
+          </View>
+        </BottomSheet>
+      ) : null}
+      {catShareOpen && category ? (
+        <CategoryShareSheet open onClose={() => setCatShareOpen(false)} name={category.name} pct={category.workerPct} onSave={saveCategoryShare} />
+      ) : null}
+
+      {payerSheet ? (
+        <BottomSheet open onClose={() => setPayerSheet(false)} testID="expense-payer-sheet" title={msg('fin.form.payerQ')}>
+          <View style={{ gap: t.space.md }}>
+            {!existing ? <AppText variant="caption">{msg('fin.form.payerHint')}</AppText> : null}
+            <PayerPicker testID="expense-payer" value={payer} onChange={setPayer} extra={knownPayers} allowNone />
+            {owed ? (
+              <Card testID="owed-preview" style={{ backgroundColor: t.color.surfaceSunk }}>
+                <FactRow icon={(c) => <PersonIcon color={c} size={14} />}>{msg('v2m.owedTo', { name: payer!.name })}</FactRow>
+                <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>
+                  {stage === 'actual' && amountSatang !== null ? `${formatSatang(amountSatang)} ${msg('v2m.baht')}` : msg('fin.form.owedLater', { name: payer!.name })}
+                </FactRow>
+                <AppText variant="caption">{msg('v2m.owedWhy', { name: payer!.name })}</AppText>
+              </Card>
+            ) : null}
+            <CTA testID="expense-payer-done" onPress={() => setPayerSheet(false)}>{msg('fert.done')}</CTA>
+          </View>
+        </BottomSheet>
+      ) : null}
+
+      {detailsSheet ? (
+        <BottomSheet open onClose={() => setDetailsSheet(false)} testID="expense-details-sheet" title={msg('fert.details')}>
+          <View style={{ gap: t.space.md }}>
+            {!derived ? (
+              <>
+                <TextField testID="expense-date" label={msg('fin.form.date')} value={date} onChangeText={setDate} placeholder="2026-09-28" helper={msg('v2m.dateShown', { shown: formatDate(date) })} error={err('date-required')} />
+                <View style={{ gap: t.space.xs }}>
+                  <SectionLabel>{msg('fin.form.stage')}</SectionLabel>
+                  <SegmentedControl testID="expense-stage" value={stage} onChange={setStage} options={STAGES.map((x) => ({ value: x, label: msg(`fin.stage.${x}`) }))} />
+                  {stage === 'planned' ? <AppText variant="caption">{msg('v2m.plannedHint')}</AppText> : null}
+                </View>
+              </>
+            ) : null}
+            <View style={{ gap: t.space.xs }}>
+              <SectionLabel hint={msg('v2m.optional')}>{msg('v2m.farm')}</SectionLabel>
+              <ChoiceRow>
+                {farmsList.map((f) => <ChoiceChip key={f.id} testID={`expense-farm-${f.id}`} label={f.name} on={propertyId === f.id} onPress={() => setPropertyId(propertyId === f.id ? null : f.id)} />)}
+                {propertyId === null ? <NotRecordedPill testID="expense-farm-none" /> : null}
+              </ChoiceRow>
+            </View>
+            <TextField testID="expense-item" label={msg('fin.form.item')} value={item} onChangeText={setItem} placeholder={msg('fin.form.itemPlaceholder')} />
+            <TextField testID="expense-note" label={msg('fin.form.note')} value={note} onChangeText={setNote} placeholder={msg('fin.form.notePlaceholder')} />
+            <CTA testID="expense-details-done" onPress={() => setDetailsSheet(false)}>{msg('fert.done')}</CTA>
+          </View>
+        </BottomSheet>
+      ) : null}
     </>
   );
 }
+
+const TILES = 5;
+
+/** A big category tile: icon over the name; chosen = action edge and tint. */
+function CategoryTile({ label, on, onPress, icon: Icon, testID }: { label: string; on?: boolean; onPress: () => void; icon: IconComponent; testID: string }) {
+  const t = useTheme();
+  // Chosen = ✓ in the corner as well as the edge and tint (never colour alone).
+  const tick = on ? (
+    <View testID={`${testID}-check`} style={{ position: 'absolute', top: t.space.xs, right: t.space.xs, width: 20, height: 20, borderRadius: t.radius.pill, backgroundColor: t.color.action, alignItems: 'center', justifyContent: 'center' }}>
+      <Check color={t.color.inkInverse} size={10} />
+    </View>
+  ) : null;
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!on }}
+      onPress={onPress}
+      style={{ flexBasis: '31%', flexGrow: 1, minHeight: 72, alignItems: 'center', justifyContent: 'center', gap: t.space.xs, padding: t.space.sm, borderRadius: t.radius.lg, borderWidth: on ? t.border.thick : t.border.hair, borderColor: on ? t.color.action : t.color.ruleStrong, backgroundColor: on ? t.color.actionSunk : t.color.surfaceRaised }}
+    >
+      {tick}
+      <View aria-hidden>
+        <Icon color={t.color.ink} />
+      </View>
+      <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: t.color.ink, textAlign: 'center' }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+type IconComponent = (p: { color: string; size?: number }) => ReactNode;
+
+const CATEGORY_ICONS: Record<string, IconComponent> = {
+  'cat-fertilizer': LeafIcon,
+  'cat-labour': UsersIcon,
+  'cat-fuel': CoinIcon,
+  'cat-repair': GearIcon,
+  'cat-salary': WalletIcon,
+  'cat-worker-aid': PersonIcon,
+  'cat-travel': PinIcon,
+};
 
 /** Back to where the user came from — replacing would stack a second copy of that screen. */
 function leave() {

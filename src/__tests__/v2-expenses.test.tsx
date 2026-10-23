@@ -77,14 +77,30 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     mockRouter.replace.mockClear();
   });
 
-  it('saves with only amount + date, stage defaults to actual, all nine categories offered', async () => {
+  it('saves with only the amount (today, เกิดจริง); five category tiles, all nine one tap away', async () => {
     wrap(<ExpenseScreen />);
     await flush();
+    // Simple design (owner 2026-10-23): five tiles + "อื่น ๆ · อีก N"; date, stage, farm, item, note behind "เพิ่มรายละเอียด".
+    expect(screen.getAllByTestId(/^expense-cat-cat-[a-z-]+$/).filter((n) => !n.props.testID.endsWith('-check'))).toHaveLength(5);
+    expect(screen.getByTestId('expense-cat-more')).toHaveTextContent(/อีก 4/);
+    expect(screen.queryByTestId('expense-date')).toBeNull();
+    // First time on this device: farm funds, and no "same as last time" (AC A).
+    expect(screen.getByTestId('expense-payer-row')).toHaveTextContent(/เงินสวน/);
+    expect(screen.getByTestId('expense-payer-row')).not.toHaveTextContent(/เหมือนครั้งก่อน/);
+    expect(screen.getByTestId('expense-details')).toHaveTextContent(/เกิดจริง/);
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
     for (const id of ['fertilizer', 'labour', 'fuel', 'herbicide', 'travel', 'salary', 'worker-aid', 'repair', 'other']) {
-      expect(screen.getByTestId(`expense-cat-cat-${id}`)).toBeTruthy();
+      expect(screen.getByTestId(`expense-catall-cat-${id}`)).toBeTruthy();
     }
+    fireEvent.press(screen.getByTestId('expense-cat-sheet-scrim'));
     fireEvent.changeText(screen.getByTestId('expense-amount'), '640');
+    // Formatted on leaving the box; "บาท" sits inside it.
+    fireEvent(screen.getByTestId('expense-amount'), 'blur');
+    expect(screen.getByTestId('expense-amount').props.value).toBe('640.00');
+    expect(screen.getByTestId('expense-amount-box')).toHaveTextContent('บาท');
+    fireEvent.press(screen.getByTestId('expense-details'));
     fireEvent.changeText(screen.getByTestId('expense-date'), '2026-09-28');
+    fireEvent.press(screen.getByTestId('expense-details-done'));
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
     await flush();
 
@@ -97,13 +113,17 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
   it('refuses committed without an amount; planned may be "unknown"', async () => {
     wrap(<ExpenseScreen />);
     await flush();
+    fireEvent.press(screen.getByTestId('expense-details'));
     fireEvent.press(screen.getByTestId('expense-stage-committed'));
+    fireEvent.press(screen.getByTestId('expense-details-done'));
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
     expect(screen.getByTestId('expense-amount-error')).toBeTruthy();
 
+    fireEvent.press(screen.getByTestId('expense-details'));
     fireEvent.press(screen.getByTestId('expense-stage-planned'));
-    fireEvent.press(screen.getByTestId('expense-unknown'));
     fireEvent.changeText(screen.getByTestId('expense-date'), '2026-11-15');
+    fireEvent.press(screen.getByTestId('expense-details-done'));
+    fireEvent.press(screen.getByTestId('expense-unknown'));
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
     await flush();
     const s = await state();
@@ -114,17 +134,35 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     wrap(<ExpenseScreen />);
     await flush();
     fireEvent.changeText(screen.getByTestId('expense-amount'), '400');
+    // "ใครจ่ายไปก่อน" is one row; the choice opens in a sheet.
+    expect(screen.getByTestId('expense-payer-row')).toHaveTextContent(/ใครจ่ายไปก่อน/);
+    fireEvent.press(screen.getByTestId('expense-payer-row'));
     fireEvent.press(screen.getByTestId('expense-payer-add'));
     fireEvent.changeText(screen.getByTestId('expense-payer-name'), 'นัด');
     await act(async () => fireEvent.press(screen.getByTestId('expense-payer-add-save')));
     await flush();
     expect(screen.getByTestId('owed-preview')).toBeTruthy();
     expect(screen.getByText('400.00 บาท')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('expense-payer-done'));
+    expect(screen.getByTestId('expense-payer-row')).toHaveTextContent(/นัด/);
+  });
+
+  it('a category picked under "อื่น ๆ" becomes a tile, ticked', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    const hidden = ['salary', 'worker-aid', 'repair', 'other', 'travel', 'herbicide'].find((c) => !screen.queryByTestId(`expense-cat-cat-${c}`))!;
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    fireEvent.press(screen.getByTestId(`expense-catall-cat-${hidden}`));
+    expect(screen.getByTestId(`expense-cat-cat-${hidden}`).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId(`expense-cat-cat-${hidden}-check`)).toBeTruthy();
+    expect(screen.getAllByTestId(/^expense-cat-cat-[a-z-]+$/).filter((n) => !n.props.testID.endsWith('-check'))).toHaveLength(5);
   });
 
   it('adds a category from the form', async () => {
     wrap(<ExpenseScreen />);
     await flush();
+    // Category upkeep moved off the form: "จัดการหมวด" opens it in a sheet.
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
     fireEvent.press(screen.getByTestId('expense-cat-add'));
     fireEvent.changeText(screen.getByTestId('expense-cat-name'), 'ค่าไฟ');
     await act(async () => fireEvent.press(screen.getByTestId('expense-cat-save')));
@@ -147,7 +185,7 @@ describe('expense list (F4, F7)', () => {
     fireEvent.changeText(screen.getByTestId('bulk-payer-name'), 'เจ้าของสวน');
     await act(async () => fireEvent.press(screen.getByTestId('bulk-payer-add-save')));
     await flush();
-    expect(screen.getByText(/3,500\.00/)).toBeTruthy();
+    expect(screen.getByTestId('bulk-owed')).toHaveTextContent(/3,500\.00/);
     await act(async () => fireEvent.press(screen.getByTestId('bulk-payer-save')));
     await flush();
 
@@ -196,11 +234,12 @@ describe('repayment (E11-S03)', () => {
 });
 
 describe('Save sits in the header (keyboard never covers it)', () => {
-  it('expense-save renders inside screen-header', async () => {
+  it('expense-save is pinned at the bottom in the simple design (owner 2026-10-23), not in the header', async () => {
     mockParams.current = { id: 'new' };
     wrap(<ExpenseScreen />);
     await flush();
-    expect(within(screen.getByTestId('screen-header')).getByTestId('expense-save')).toBeTruthy();
+    expect(within(screen.getByTestId('screen-header')).queryByTestId('expense-save')).toBeNull();
+    expect(within(screen.getByTestId('expense-actions')).getByTestId('expense-save')).toBeTruthy();
   });
 
   it('repay-save renders inside screen-header and keeps its total while saving', async () => {

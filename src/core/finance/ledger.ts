@@ -17,6 +17,7 @@ import {
   type DebtFields,
   type ExpenseFields,
   type ExpensePatch,
+  type FertOptionKind,
   type FinanceEvent,
   type Payer,
   type RepaymentFields,
@@ -29,13 +30,15 @@ import {
 export interface Category {
   readonly id: string;
   readonly name: string;
+  /** E11-S10: default tapper % for sharing; null = this category is not shared. */
+  readonly workerPct: number | null;
 }
 
 /**
  * The starting set (D-62). Fixed ids so a rename is an event against a known
  * record, the same on every device, with nothing to seed or sync.
  */
-export const DEFAULT_CATEGORIES: readonly Category[] = [
+export const DEFAULT_CATEGORIES: readonly Omit<Category, 'workerPct'>[] = [
   { id: 'cat-fertilizer', name: 'ปุ๋ย' },
   { id: 'cat-labour', name: 'ค่าแรง' },
   { id: 'cat-fuel', name: 'น้ำมันตัดหญ้า' },
@@ -213,14 +216,29 @@ export interface Reimbursement {
   readonly repayments: readonly Repayment[];
 }
 
+/** A saved choice in the fertilizer flow (ตั้งค่าปุ๋ย, E11-S10). */
+export interface FertOption {
+  readonly id: string;
+  readonly kind: FertOptionKind;
+  readonly name: string;
+  readonly description: string;
+  readonly hidden: boolean;
+}
+
+/** One record per kind + name however it was typed: trims, folds spaces and case. */
+export function fertOptionId(kind: FertOptionKind, name: string): string {
+  return `fopt-${kind}-${name.trim().replace(/\s+/g, ' ').toLowerCase()}`;
+}
+
 export interface FinanceState {
   readonly expenses: readonly Expense[];
   readonly categories: readonly Category[];
+  readonly fertOptions: readonly FertOption[];
   readonly repayments: readonly Repayment[];
   readonly reimbursements: readonly Reimbursement[];
 }
 
-const EXPENSE_GUARDED = ['amountSatang', 'stage', 'payer'] as const;
+const EXPENSE_GUARDED = ['amountSatang', 'stage', 'payer', 'share'] as const;
 const REPAYMENT_GUARDED = ['amountSatang', 'allocations', 'from', 'to'] as const;
 
 function groupByTarget(events: readonly FinanceEvent[], kinds: readonly string[]) {
@@ -285,7 +303,19 @@ export function projectFinance(
     const p = e.payload as { name: string };
     names.set(e.targetId, p.name);
   }
-  const categories = [...names].map(([id, name]) => ({ id, name }));
+  const pct = new Map<string, number | null>();
+  for (const [id, evs] of groupByTarget(events, ['category_share_set'])) {
+    const p = evs.find((e) => e.id === headOf(evs))?.payload;
+    if (p?.t === 'category_share_set') pct.set(id, p.workerPct);
+  }
+  const categories = [...names].map(([id, name]) => ({ id, name, workerPct: pct.get(id) ?? null }));
+
+  const fertOptions: FertOption[] = [];
+  for (const [id, evs] of groupByTarget(events, ['fert_option_set'])) {
+    const p = evs.find((e) => e.id === headOf(evs))?.payload;
+    if (p?.t === 'fert_option_set') fertOptions.push({ id, kind: p.kind, name: p.name, description: p.description, hidden: p.hidden });
+  }
+  fertOptions.sort((a, b) => a.name.localeCompare(b.name, 'th'));
 
   const live = repayments.filter((r) => !r.deleted && (!r.saleId || saleCounts(r.saleId)));
   const reimbursements: Reimbursement[] = [];
@@ -310,7 +340,7 @@ export function projectFinance(
   }
   reimbursements.sort(oldestFirst);
 
-  return { expenses, categories, repayments, reimbursements };
+  return { expenses, categories, fertOptions, repayments, reimbursements };
 }
 
 /**

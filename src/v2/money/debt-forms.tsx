@@ -3,10 +3,12 @@
  * D-59, D-69, D-74 F6–F10), rebuilt on src/ui (D-82). Behaviour is the old
  * screens', ported:
  *
- * - A debt is one of three kinds; "อื่น ๆ" needs a note. Fertilizer: the bill
- *   × the worker's whole-number % is their debt, the rest becomes the
- *   owner-share expense (its payer may be left for later). A loan from
+ * - A debt is one of three kinds; "อื่น ๆ" needs a note. A loan from
  *   someone other than farm funds is shown, never deducted.
+ * - Fertilizer opens the one fertilizer purchase flow with this tapper
+ *   picked (E11-S10 C, owner 2026-10-18): the purchase is one expense and
+ *   the tapper's part is projected from its share. Debts recorded the old
+ *   way (bill × %, with an owner-share expense) still read as before.
  * - Paying back outside a sale: to the farm or to the outside lender; paying
  *   more than is owed warns first, then records if confirmed.
  */
@@ -16,7 +18,6 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { checkDebt, projectDebts } from '../../core/finance/debts';
-import { fertilizerSplit, OWNER_SHARE_SUFFIX } from '../../core/finance/ledger';
 import { formatDate, formatSatang, parseBahtToSatang, todayIso } from '../../core/finance/money';
 import { FARM_FUNDS, type DebtKind, type Payer } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
@@ -30,6 +31,7 @@ import { AppText, Button, Card, Check, RadioCard, ScreenHeader, SegmentedControl
 import { PayerPicker, SectionLabel } from './pieces';
 
 const KINDS: readonly DebtKind[] = ['loan', 'fertilizer', 'other'];
+const FLOW = '/v2/fertilizer' as const;
 
 const back = () => (router.canGoBack() ? router.back() : router.replace('/v2/debts'));
 
@@ -42,26 +44,25 @@ export function AddDebtScreen() {
   const fin = useFinance();
   const inFlight = useInFlight();
 
-  const [kind, setKind] = useState<DebtKind>('loan');
+  const [kind, setKind] = useState<Exclude<DebtKind, 'fertilizer'>>('loan');
   const [amount, setAmount] = useState('');
-  const [pctMode, setPctMode] = useState<'half' | 'custom'>('half');
-  const [pct, setPct] = useState('50');
   const [lender, setLender] = useState<Payer | null>({ id: FARM_FUNDS, name: msg('fin.payer.farm') });
-  const [ownerPayer, setOwnerPayer] = useState<Payer | null>(null);
   const [date, setDate] = useState(todayIso());
   const [note, setNote] = useState('');
   const [carried, setCarried] = useState(false);
   const [tried, setTried] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  const entered = parseBahtToSatang(amount) ?? 0;
-  const pctText = pctMode === 'half' ? '50' : pct.trim();
-  const pctNum = /^\d{1,3}$/.test(pctText) ? Number(pctText) : NaN;
-  const pctOk = Number.isInteger(pctNum) && pctNum >= 0 && pctNum <= 100;
-  const split = kind === 'fertilizer' && pctOk ? fertilizerSplit(entered, pctNum) : null;
-  const debtSatang = kind === 'fertilizer' ? (split?.workerSatang ?? 0) : entered;
-  const problems = checkDebt({ kind, amountSatang: debtSatang, date, note, fertilizerTotalSatang: kind === 'fertilizer' ? entered : undefined });
-  const ok = problems.length === 0 && (kind !== 'fertilizer' || pctOk) && (kind !== 'loan' || !!lender);
+  const debtSatang = parseBahtToSatang(amount) ?? 0;
+  const problems = checkDebt({ kind, amountSatang: debtSatang, date, note });
+  const ok = problems.length === 0 && (kind !== 'loan' || !!lender);
+
+  const pickKind = (k: DebtKind) => {
+    // Fertilizer is a purchase: the same flow as the expense form, this tapper picked.
+    // Replaced, so saving the purchase goes back to the tapper's debts, not to this form.
+    if (k === 'fertilizer') router.replace({ pathname: FLOW, params: { workerId, name: worker.name } });
+    else setKind(k);
+  };
 
   const save = async () => {
     setTried(true);
@@ -69,7 +70,7 @@ export function AddDebtScreen() {
     setFailed(false);
     const id = newId('debt-');
     try {
-      const created = await fin.write(id, null, {
+      await fin.write(id, null, {
         t: 'debt_added',
         fields: {
           worker,
@@ -78,13 +79,10 @@ export function AddDebtScreen() {
           date,
           note: note.trim(),
           lender: kind === 'loan' ? lender : null,
-          fertilizer: kind === 'fertilizer' ? { totalSatang: entered, workerPct: pctNum } : null,
+          fertilizer: null,
           carriedForward: carried,
         },
       });
-      if (kind === 'fertilizer' && ownerPayer) {
-        await fin.write(id + OWNER_SHARE_SUFFIX, created.id + OWNER_SHARE_SUFFIX, { t: 'expense_changed', patch: { payer: ownerPayer } });
-      }
       back();
     } catch (err) {
       console.error('Debt could not be stored.', err);
@@ -98,12 +96,12 @@ export function AddDebtScreen() {
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
         <View style={{ gap: t.space.sm }}>
           <SectionLabel required>{msg('debt.form.kind').replace(' *', '')}</SectionLabel>
-          <SegmentedControl testID="debt-kind" value={kind} onChange={setKind} options={KINDS.map((k) => ({ value: k, label: msg(`debt.kind.${k}`) }))} />
+          <SegmentedControl testID="debt-kind" value={kind} onChange={pickKind} options={KINDS.map((k) => ({ value: k, label: msg(`debt.kind.${k}`) }))} />
         </View>
 
         <TextField
           testID="debt-amount"
-          label={(kind === 'fertilizer' ? msg('debt.form.fertTotal') : msg('debt.form.amount')).replace(' *', '')}
+          label={msg('debt.form.amount').replace(' *', '')}
           required
           keyboardType="decimal-pad"
           value={amount}
@@ -112,24 +110,6 @@ export function AddDebtScreen() {
           helper={msg('v2m.baht')}
           error={tried && problems.includes('amount-required') ? msg('debt.form.err.amount-required') : undefined}
         />
-
-        {kind === 'fertilizer' ? (
-          <View style={{ gap: t.space.sm }}>
-            <SectionLabel hint={msg('v2m.pctHint')}>{msg('v2m.pctLabel')}</SectionLabel>
-            <SegmentedControl testID="debt-pct-mode" value={pctMode} onChange={setPctMode} options={[{ value: 'half', label: '50%' }, { value: 'custom', label: msg('v2m.custom') }]} />
-            {pctMode === 'custom' ? (
-              <TextField testID="debt-pct" label={msg('v2m.pctLabel')} keyboardType="number-pad" value={pct} onChangeText={setPct} error={!pctOk ? msg('debt.form.pctBad') : undefined} />
-            ) : null}
-            {split ? (
-              <Card>
-                <Row label={msg('v2m.workerDebt', { name: worker.name })} value={formatSatang(split.workerSatang)} testID="debt-worker-share" />
-                <Row label={msg('v2m.ownerShareExpense')} value={formatSatang(split.ownerSatang)} testID="debt-owner-share" />
-              </Card>
-            ) : null}
-            <SectionLabel hint={msg('v2m.optionalLater')}>{msg('debt.form.ownerPayer')}</SectionLabel>
-            <PayerPicker testID="debt-owner-payer" value={ownerPayer} onChange={setOwnerPayer} allowNone />
-          </View>
-        ) : null}
 
         {kind === 'loan' ? (
           <View style={{ gap: t.space.sm }}>
@@ -160,7 +140,6 @@ export function AddDebtScreen() {
           value={note}
           onChangeText={setNote}
           placeholder={msg('fin.form.notePlaceholder')}
-          helper={kind === 'fertilizer' ? msg('v2m.fertNoteHint') : undefined}
           error={tried && problems.includes('note-required') ? msg('debt.form.err.note-required') : undefined}
         />
 

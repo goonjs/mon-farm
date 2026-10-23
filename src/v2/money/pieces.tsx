@@ -21,7 +21,7 @@ import type { BuiltinRole } from '../../core/types';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { useTheme, type Theme } from '../../theme';
-import { AppText, Button, DateText, TextField } from '../../ui';
+import { AppText, Button, Check, DateText, TextField } from '../../ui';
 
 export function ChoiceChip({
   label,
@@ -199,5 +199,57 @@ export function PayerPicker({
         </View>
       ) : null}
     </View>
+  );
+}
+
+/**
+ * A switch row ("มีส่วนลด"): title, one-line hint, and a drawn switch that
+ * also says เปิด/ปิด in its accessible state (never colour alone).
+ */
+export function SwitchRow({ title, hint, on, onToggle, testID, icon }: { title: string; hint?: string; on: boolean; onToggle: () => void; testID: string; icon?: ReactNode }) {
+  const t = useTheme();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: on }}
+      aria-checked={on}
+      accessibilityLabel={title}
+      onPress={onToggle}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, minHeight: t.target.comfortable, paddingHorizontal: t.space.md, paddingVertical: t.space.sm, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleStrong, backgroundColor: t.color.surfaceRaised }}
+    >
+      {icon ?? null}
+      <View style={{ flex: 1 }}>
+        <AppText style={{ fontWeight: t.font.weight.bold }}>{title}</AppText>
+        {hint ? <AppText variant="caption">{hint}</AppText> : null}
+      </View>
+      <View aria-hidden style={{ width: 52, height: 30, borderRadius: t.radius.pill, padding: 3, backgroundColor: on ? t.color.accept : t.color.ruleStrong, alignItems: on ? 'flex-end' : 'flex-start' }}>
+        <View style={{ width: 24, height: 24, borderRadius: t.radius.pill, backgroundColor: t.color.surfaceRaised }} />
+      </View>
+    </Pressable>
+  );
+}
+
+/** A big tick row for a multi-select list (≥ 60pt): box, title, one-line detail, ticked = tinted. */
+export function TickCard({ title, detail, on, onPress, testID, aside }: { title: string; detail?: string; on: boolean; onPress: () => void; testID: string; aside?: ReactNode }) {
+  const t = useTheme();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: on }}
+      aria-checked={on}
+      onPress={onPress}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, minHeight: 60, paddingHorizontal: t.space.md, paddingVertical: t.space.sm, borderRadius: t.radius.lg, borderWidth: on ? t.border.thick : t.border.hair, borderColor: on ? t.color.accept : t.color.ruleStrong, backgroundColor: on ? t.color.acceptSunk : t.color.surfaceRaised }}
+    >
+      <View aria-hidden style={{ width: 26, height: 26, borderRadius: t.radius.sm, borderWidth: t.border.thick, borderColor: on ? t.color.accept : t.color.ruleStrong, backgroundColor: on ? t.color.accept : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+        {on ? <Check color={t.color.inkInverse} /> : null}
+      </View>
+      <View style={{ flex: 1 }}>
+        <AppText style={{ fontWeight: t.font.weight.bold }}>{title}</AppText>
+        {detail ? <AppText variant="caption" numberOfLines={1}>{detail}</AppText> : null}
+      </View>
+      {aside ?? null}
+    </Pressable>
   );
 }
