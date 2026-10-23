@@ -20,6 +20,7 @@ export function TextField({
   helper,
   error,
   aside,
+  size,
   testID,
   ...input
 }: Omit<TextInputProps, 'style' | 'accessibilityLabel' | 'accessibilityHint'> & {
@@ -31,6 +32,8 @@ export function TextField({
   error?: string;
   /** Beside the input: a unit, or a field-state label such as "ไม่ทราบ". */
   aside?: React.ReactNode;
+  /** `large`: the one big figure of a simple form ("จ่ายไปเท่าไหร่"). */
+  size?: 'large';
   testID: string;
 }) {
   const t = useTheme();
@@ -50,7 +53,7 @@ export function TextField({
         flex: 1,
         // A web input keeps its intrinsic width otherwise and pushes an aside past the edge.
         minWidth: 0,
-        minHeight: t.target.min,
+        minHeight: size === 'large' ? t.target.comfortable : t.target.min,
         paddingHorizontal: t.space.md,
         borderRadius: t.radius.md,
         borderWidth: error ? t.border.thick : t.border.hair,
@@ -58,7 +61,8 @@ export function TextField({
         backgroundColor: t.color.surfaceRaised,
         color: t.color.ink,
         fontFamily: t.font.family.sans,
-        fontSize: t.font.size.bodyLg,
+        fontSize: size === 'large' ? t.font.size.displayXl : t.font.size.bodyLg,
+        fontWeight: size === 'large' ? t.font.weight.bold : undefined,
       }}
     />
   );
