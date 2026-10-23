@@ -61,6 +61,14 @@ async function seed(targetId: string, payload: FinanceEvent['payload'], base: st
   return id;
 }
 
+/** A category tile when it is one of the five, else through "อื่น ๆ · อีก N". */
+function pickCat(id: string) {
+  const tile = screen.queryByTestId(`expense-cat-${id}`);
+  if (tile) return fireEvent.press(tile);
+  fireEvent.press(screen.getByTestId('expense-cat-more'));
+  fireEvent.press(screen.getByTestId(`expense-catall-${id}`));
+}
+
 describe('share an expense with a tapper (E11-S10 B)', () => {
   let daengId = '';
   beforeAll(async () => {
@@ -74,7 +82,7 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
   it('a category without sharing shows no share row', async () => {
     wrap(<ExpenseFormScreen />);
     await flush();
-    fireEvent.press(screen.getByTestId('expense-cat-cat-labour'));
+    pickCat('cat-labour');
     expect(screen.queryByTestId('share-row')).toBeNull();
   });
 
@@ -82,7 +90,7 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     wrap(<ExpenseFormScreen />);
     await flush();
     fireEvent.changeText(screen.getByTestId('expense-amount'), '1250.25');
-    fireEvent.press(screen.getByTestId('expense-cat-cat-repair'));
+    pickCat('cat-repair');
     fireEvent.press(screen.getByTestId('share-row'));
     await flush();
     // The discount switch is off by default and sits above the tapper choice.
@@ -90,7 +98,8 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     fireEvent.press(screen.getByTestId('share-discount-switch'));
     fireEvent.changeText(screen.getByTestId('share-discount'), '100');
     fireEvent.press(screen.getByTestId(`share-worker-${daengId}`));
-    expect(screen.getByTestId('share-pct').props.value).toBe('50');
+    // The % is a small button with the category's value; tapping it opens the field.
+    expect(screen.getByTestId('share-pct-button')).toHaveTextContent('50%');
     expect(screen.getByTestId('share-preview')).toHaveTextContent(/575\.13.*575\.12/);
     fireEvent.press(screen.getByTestId('share-done'));
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
@@ -106,7 +115,7 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     wrap(<ExpenseFormScreen />);
     await flush();
     fireEvent.changeText(screen.getByTestId('expense-amount'), '200');
-    fireEvent.press(screen.getByTestId('expense-cat-cat-repair'));
+    pickCat('cat-repair');
     fireEvent.press(screen.getByTestId('share-row'));
     await flush();
     fireEvent.press(screen.getByTestId(`share-worker-${daengId}`));
@@ -123,7 +132,8 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
   it('category settings turn sharing on with a %', async () => {
     wrap(<ExpenseFormScreen />);
     await flush();
-    fireEvent.press(screen.getByTestId('expense-cat-cat-herbicide'));
+    pickCat('cat-herbicide');
+    fireEvent.press(screen.getByTestId('expense-cat-manage'));
     fireEvent.press(screen.getByTestId('expense-cat-share'));
     fireEvent.press(screen.getByTestId('cat-share-switch'));
     fireEvent.changeText(screen.getByTestId('cat-share-pct'), '30');
@@ -137,7 +147,7 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     wrap(<ExpenseFormScreen />);
     await flush();
     fireEvent.changeText(screen.getByTestId('expense-amount'), '10000');
-    fireEvent.press(screen.getByTestId('expense-cat-cat-fertilizer'));
+    pickCat('cat-fertilizer');
     // Replaced, not pushed: after saving the flow the half-filled form is not waiting underneath.
     expect(mockRouter.replace).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/v2/fertilizer', params: expect.objectContaining({ bill: '10000', stage: 'actual', payerId: expect.any(String) }) }));
   });
@@ -167,24 +177,25 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     wrap(<ExpenseFormScreen />);
     await flush();
     fireEvent.changeText(screen.getByTestId('expense-amount'), '100');
-    fireEvent.press(screen.getByTestId('expense-cat-cat-repair'));
+    pickCat('cat-repair');
     fireEvent.press(screen.getByTestId('share-row'));
     await flush();
     fireEvent.press(screen.getByTestId(`share-worker-${daengId}`));
+    fireEvent.press(screen.getByTestId('share-pct-button'));
     fireEvent.changeText(screen.getByTestId('share-pct'), '');
     expect(screen.getByTestId('share-pct-error')).toBeTruthy();
   });
 
-  it('the net line reads bill − discount = net', async () => {
+  it('the discount sits on top and the net is shown beside it as "จ่ายจริง"', async () => {
     wrap(<ExpenseFormScreen />);
     await flush();
     fireEvent.changeText(screen.getByTestId('expense-amount'), '1000');
-    fireEvent.press(screen.getByTestId('expense-cat-cat-repair'));
+    pickCat('cat-repair');
     fireEvent.press(screen.getByTestId('share-row'));
     await flush();
     fireEvent.press(screen.getByTestId('share-discount-switch'));
     fireEvent.changeText(screen.getByTestId('share-discount'), '100');
-    expect(screen.getByTestId('share-net')).toHaveTextContent('ยอดบิล 1,000.00 − ส่วนลด = ยอดสุทธิ 900.00');
+    expect(screen.getByTestId('share-net')).toHaveTextContent(/จ่ายจริง\s*900\.00/);
   });
 
   const shared = (bill: number, discount: number, pct = 50) => ({
@@ -244,6 +255,7 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     await flush();
     fireEvent.press(screen.getByTestId('share-row'));
     await flush();
+    fireEvent.press(screen.getByTestId('share-pct-button'));
     fireEvent.changeText(screen.getByTestId('share-pct'), '30');
     fireEvent.press(screen.getByTestId('share-done'));
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
@@ -274,9 +286,10 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
   it('category share settings name the head they saw', async () => {
     wrap(<ExpenseFormScreen />);
     await flush();
-    fireEvent.press(screen.getByTestId('expense-cat-cat-fuel'));
+    pickCat('cat-fuel');
     for (const pct of ['20', '25']) {
-      fireEvent.press(screen.getByTestId('expense-cat-share'));
+      fireEvent.press(screen.getByTestId('expense-cat-manage'));
+    fireEvent.press(screen.getByTestId('expense-cat-share'));
       if (pct === '20') fireEvent.press(screen.getByTestId('cat-share-switch'));
       fireEvent.changeText(screen.getByTestId('cat-share-pct'), pct);
       await act(async () => fireEvent.press(screen.getByTestId('cat-share-save')));
