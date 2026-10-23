@@ -21,6 +21,7 @@ export function TextField({
   error,
   aside,
   size,
+  unit,
   testID,
   ...input
 }: Omit<TextInputProps, 'style' | 'accessibilityLabel' | 'accessibilityHint'> & {
@@ -34,6 +35,8 @@ export function TextField({
   aside?: React.ReactNode;
   /** `large`: the one big figure of a simple form ("จ่ายไปเท่าไหร่"). */
   size?: 'large';
+  /** A unit drawn inside the box, after the value ("บาท", prop-01). */
+  unit?: string;
   testID: string;
 }) {
   const t = useTheme();
@@ -41,7 +44,14 @@ export function TextField({
   const hint = error ?? helper;
   const name = [label, required ? msg('form.required') : null, labelHint ?? null].filter(Boolean).join(', ');
 
-  const field = (
+  const frame = {
+    minHeight: size === 'large' ? t.target.comfortable : t.target.min,
+    borderRadius: t.radius.md,
+    borderWidth: error ? t.border.thick : t.border.hair,
+    borderColor: error ? t.color.reject : t.color.ruleStrong,
+    backgroundColor: t.color.surfaceRaised,
+  } as const;
+  const input0 = (
     <TextInput
       {...input}
       testID={testID}
@@ -53,18 +63,22 @@ export function TextField({
         flex: 1,
         // A web input keeps its intrinsic width otherwise and pushes an aside past the edge.
         minWidth: 0,
-        minHeight: size === 'large' ? t.target.comfortable : t.target.min,
         paddingHorizontal: t.space.md,
-        borderRadius: t.radius.md,
-        borderWidth: error ? t.border.thick : t.border.hair,
-        borderColor: error ? t.color.reject : t.color.ruleStrong,
-        backgroundColor: t.color.surfaceRaised,
+        ...(unit ? { minHeight: frame.minHeight - 2 * frame.borderWidth, borderWidth: 0, backgroundColor: 'transparent' } : frame),
         color: t.color.ink,
         fontFamily: t.font.family.sans,
         fontSize: size === 'large' ? t.font.size.displayXl : t.font.size.bodyLg,
         fontWeight: size === 'large' ? t.font.weight.bold : undefined,
       }}
     />
+  );
+  const field = unit ? (
+    <View testID={`${testID}-box`} style={{ ...frame, flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', paddingRight: t.space.md }}>
+      {input0}
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, color: t.color.inkSoft }}>{unit}</Text>
+    </View>
+  ) : (
+    input0
   );
 
   return (
