@@ -78,6 +78,8 @@ type Params = { bill?: string; date?: string; stage?: string; payerId?: string; 
 
 type Sheet = 'new' | 'reason' | 'details' | 'tapper' | 'zones' | { pct: number } | null;
 
+const EMPTY_PRODUCT: ProductDraft = { type: 'chemical', formula: '', brand: '', sackKg: '' };
+
 const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
 
 export function FertilizerFlowScreen() {
@@ -113,7 +115,9 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
   const sh = existing?.share;
 
   // "เหมือนครั้งก่อน": the payer of this device's last expense (D-62); first time = farm funds.
-  const lastPayer = useMemo(() => defaultPayer(fin.events ?? [], fin.deviceId ?? '') ?? farmPayer, [fin.deviceId]); // eslint-disable-line react-hooks/exhaustive-deps -- taken once
+  const last = useMemo(() => defaultPayer(fin.events ?? [], fin.deviceId ?? ''), [fin.deviceId]); // eslint-disable-line react-hooks/exhaustive-deps -- taken once
+  const hadLast = last !== null;
+  const lastPayer = last ?? farmPayer;
   const initialPayer = useMemo<Payer | null>(
     () =>
       existing
@@ -130,6 +134,7 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
   const [tried, setTried] = useState<ReadonlySet<Step>>(new Set());
   const [sheet, setSheet] = useState<Sheet>(null);
   const [search, setSearch] = useState<string | null>(null);
+  const [newInitial, setNewInitial] = useState<ProductDraft>(EMPTY_PRODUCT);
   // 1 — what
   const [product, setProduct] = useState<ProductDraft>({ type: f?.type ?? 'chemical', formula: f?.formula ?? '', brand: f?.brand ?? '', sackKg: f?.sackKg != null ? String(f.sackKg) : '' });
   // 2 — how many, what price
@@ -189,8 +194,11 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
   const split = shareProblems.length ? null : splitShare(share);
   const given = share.lines.reduce((s, l) => s + (Number.isFinite(l.sacks) ? (l.sacks ?? 0) : 0), 0);
 
+  const farms = master.state ? master.state.properties.filter((p) => !p.deleted) : [];
+  // One farm: it is the farm, nothing to pick.
+  const zoneFarm = farmId ?? (farms.length === 1 ? farms[0].id : null);
   const zoneUses = Object.entries(zones)
-    .filter(([, z]) => z.farmId === farmId && (z.sacks.trim() !== '' || z.reasons.length > 0 || z.note.trim() !== ''))
+    .filter(([, z]) => z.farmId === zoneFarm && (z.sacks.trim() !== '' || z.reasons.length > 0 || z.note.trim() !== ''))
     .map(([zoneId, z]) => ({ zoneId, zoneName: z.name, sacks: z.sacks.trim() === '' ? 0 : WHOLE.test(z.sacks.trim()) ? Number(z.sacks.trim()) : NaN, reasons: z.reasons.filter((r) => reasons.includes(r)), note: z.note.trim() }));
   const zoneTotal = zoneUses.reduce((s, z) => s + (Number.isFinite(z.sacks) ? z.sacks : 0), 0);
   const details: FertilizerDetails = {
@@ -247,7 +255,7 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
       date,
       stage,
       categoryId: FERTILIZER,
-      propertyId: farmId,
+      propertyId: farmId ?? (zoneUses.length ? zoneFarm : null),
       item: details.formula,
       note: existing?.note ?? '',
       payer,
@@ -291,22 +299,25 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
   const bump = (i: number, by: number) => setLine(i, { sacks: String(Math.max(0, (lineSacks(i) || 0) + by)), auto: false });
 
   const tappers = master.state ? filterPeople(master.state.people, 'tapper').map((p) => ({ id: p.id, name: p.name })) : [];
-  const farms = master.state ? master.state.properties.filter((p) => !p.deleted) : [];
-  const farmZones = master.state && farmId ? activeZones(master.state, farmId) : [];
+  const farmZones = master.state && zoneFarm ? activeZones(master.state, zoneFarm) : [];
   const reasonName = (r: string) => reasonLabel(r, state.fertOptions);
   const productName = (p: { formula: string; brand: string }) => (p.brand ? msg('fert.prodName', { formula: p.formula, brand: p.brand }) : p.formula);
   const stageWord = msg(`fert.stage.${stage}`);
 
   // ── Steps ────────────────────────────────────────────────────────────────
   const products = fertProducts(state.expenses, state.fertOptions);
-  const sameProduct = (p: { type: string; formula: string; brand: string; sackKg: number | null }) =>
+  const openNew = (initial: ProductDraft) => {
+    setNewInitial(initial);
+    setSheet('new');
+  };
+  const sameProduct = (p: { type: string | null; formula: string; brand: string; sackKg: number | null }) =>
     p.type === product.type && norm(p.formula) === norm(product.formula) && norm(p.brand) === norm(product.brand) && String(p.sackKg ?? '') === product.sackKg.trim();
   const pickedListed = products.some(sameProduct);
 
   const what = (
     <View style={{ gap: t.space.sm }}>
       {product.formula && !pickedListed ? (
-        <RadioCard testID="fert-picked" selected title={productName(product)} detail={productDetail(product.type, product.sackKg)} onPress={() => setSheet('new')} />
+        <RadioCard testID="fert-picked" selected title={productName(product)} detail={productDetail(product.type, product.sackKg)} onPress={() => openNew(product)} />
       ) : null}
       {products
         .filter((p) => pickedListed || !product.formula || p.lastPerSackSatang !== null || norm(p.formula) !== norm(product.formula))
@@ -317,11 +328,14 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
             testID={`fert-prod-${p.key}`}
             selected={sameProduct(p)}
             title={productName(p)}
-            detail={p.lastPerSackSatang !== null ? msg('fert.prodLast', { detail: productDetail(p.type, p.sackKg === null ? '' : String(p.sackKg)), price: formatSatang(p.lastPerSackSatang) }) : productDetail(p.type, p.sackKg === null ? '' : String(p.sackKg))}
-            onPress={() => setProduct({ type: p.type, formula: p.formula, brand: p.brand, sackKg: p.sackKg === null ? '' : String(p.sackKg) })}
+            detail={p.type === null ? msg('fert.prodSavedOnly') : p.lastPerSackSatang !== null ? msg('fert.prodLast', { detail: productDetail(p.type, p.sackKg === null ? '' : String(p.sackKg)), price: formatSatang(p.lastPerSackSatang) }) : productDetail(p.type, p.sackKg === null ? '' : String(p.sackKg))}
+            onPress={() =>
+              // A saved formula never bought has no type or size yet: the sheet asks for them.
+              p.type === null ? openNew({ ...EMPTY_PRODUCT, formula: p.formula }) : setProduct({ type: p.type, formula: p.formula, brand: p.brand, sackKg: p.sackKg === null ? '' : String(p.sackKg) })
+            }
           />
         ))}
-      <Row testID="fert-new" dashed icon={<Plus color={t.color.action} />} title={msg('fert.newProduct')} detail={msg('fert.newProductHint')} onPress={() => setSheet('new')} />
+      <Row testID="fert-new" dashed icon={<Plus color={t.color.action} />} title={msg('fert.newProduct')} detail={msg('fert.newProductHint')} onPress={() => openNew(EMPTY_PRODUCT)} />
       {err('what', 'formula') ? <AppText testID="fert-err" style={{ color: t.color.reject }}>{msg('fert.err.pick')}</AppText> : null}
     </View>
   );
@@ -405,8 +419,10 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
     };
     add(initialPayer);
     for (const x of [...state.expenses].sort((a, b) => (a.date < b.date ? 1 : -1))) if (out.length < 4) add(x.payer);
+    // Known people next, as direct choices (prop-07), up to four rows in all.
+    for (const p of people) if (out.length < 4) add(p);
     return out;
-  }, [state.expenses]); // eslint-disable-line react-hooks/exhaustive-deps -- farmPayer/initialPayer are fixed for the flow
+  }, [state.expenses, people]); // eslint-disable-line react-hooks/exhaustive-deps -- farmPayer/initialPayer are fixed for the flow
   const shownPayers = payer && !payers.some((p) => p.id === payer.id) ? [...payers, payer] : payers;
 
   const pay = (
@@ -420,7 +436,7 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
           detail={p.id === FARM_FUNDS ? undefined : msg(stage === 'actual' ? 'fert.owedBack' : 'fert.owedBackLater', { amount: formatSatang(net) })}
           onPress={() => setPayer(p)}
         >
-          {p.id === lastPayer.id && !existing ? <AppText variant="caption">{msg('fert.sameAsLast')}</AppText> : null}
+          {hadLast && p.id === lastPayer.id && !existing ? <AppText variant="caption">{msg('fert.sameAsLast')}</AppText> : null}
         </RadioCard>
       ))}
       {morePayers ? (
@@ -467,9 +483,14 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
           <Card key={l.worker.id} testID={`fert-line-${l.worker.id}`} style={{ gap: t.space.sm }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
               <TapperIcon color={t.color.ink} />
-              <View style={{ flex: 1 }}>
-                <AppText style={{ fontWeight: t.font.weight.bold }}>{l.worker.name}</AppText>
-                {l.auto ? <AppText testID={`fert-line-${l.worker.id}-auto`} variant="caption">{msg('fert.autoFilled')}</AppText> : null}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.sm }}>
+                  <AppText numberOfLines={1} style={{ fontWeight: t.font.weight.bold, flexShrink: 1 }}>{l.worker.name}</AppText>
+                  <Pressable testID={`fert-line-${l.worker.id}-remove`} accessibilityRole="button" accessibilityLabel={msg('fert.removeNamed', { name: l.worker.name })} hitSlop={12} onPress={() => setLines((ls) => ls.filter((_, j) => j !== i))}>
+                    <AppText variant="caption" style={{ textDecorationLine: 'underline' }}>{msg('fert.removeTapper')}</AppText>
+                  </Pressable>
+                </View>
+                {l.auto ? <AppText testID={`fert-line-${l.worker.id}-auto`} variant="caption" numberOfLines={1}>{msg('fert.autoFilled')}</AppText> : null}
               </View>
               <BigStepper testID={`fert-line-${l.worker.id}-sacks`} bumpID={`fert-line-${l.worker.id}`} size="small" value={l.auto ? String(lineSacks(i)) : l.sacks} caption={msg('fert.sacksUnit')} onChange={(v) => setLine(i, { sacks: v, auto: false })} onBump={(by) => bump(i, by)} />
             </View>
@@ -539,13 +560,21 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
           title={msg('fert.sumZones')}
           detail={zoneUses.length ? zoneUses.map((z) => msg('fert.zoneShort', { name: z.zoneName, n: z.sacks })).join(' · ') : msg('fert.sumZonesNone')}
           onPress={() => setSheet('zones')}
-          aside={<ChoiceChip dashed label={msg('fert.put')} onPress={() => setSheet('zones')} />}
+          aside={zoneUses.length ? undefined : <ChoiceChip dashed label={msg('fert.put')} onPress={() => setSheet('zones')} />}
+          chevron={zoneUses.length > 0}
           flat
         />
       </Card>
       <AppText variant="caption" style={{ textAlign: 'center' }}>{msg('fert.tapToEdit')}</AppText>
       {saveTried && STEPS.some((s) => problemsOf(s).length) ? (
-        <AppText testID="fert-err" style={{ color: t.color.reject }}>{msg('fert.err.fix', { n: STEPS.findIndex((s) => problemsOf(s).length) + 1 })}</AppText>
+        STEPS.findIndex((s) => problemsOf(s).length) === STEPS.length - 1 ? (
+          // Only the zones are wrong: say so and open them.
+          <Pressable testID="fert-err" accessibilityRole="button" onPress={() => setSheet('zones')}>
+            <AppText style={{ color: t.color.reject, textDecorationLine: 'underline' }}>{msg('fert.err.fixZones')}</AppText>
+          </Pressable>
+        ) : (
+          <AppText testID="fert-err" style={{ color: t.color.reject }}>{msg('fert.err.fix', { n: STEPS.findIndex((s) => problemsOf(s).length) + 1 })}</AppText>
+        )
       ) : null}
       {failed ? <AppText testID="fert-save-failed" style={{ color: t.color.reject }}>{msg('fin.form.saveFailed')}</AppText> : null}
     </View>
@@ -559,7 +588,7 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <ScreenHeader
         title={msg(existing ? 'fert.titleEdit' : 'fert.title')}
-        back={{ label: msg('v2.back'), onPress: prev, testID: 'fert-back' }}
+        back={{ label: msg('v2.back'), onPress: existing ? leave : prev, testID: 'fert-back' }}
         sync={sync}
         right={
           step === 'why' ? (
@@ -589,7 +618,7 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
       {sheet === 'new' ? (
         <NewProductSheet
           options={state.fertOptions}
-          initial={product}
+          initial={newInitial}
           onClose={() => setSheet(null)}
           onDone={async (v, keep) => {
             setProduct(v);
@@ -661,7 +690,7 @@ function Flow({ params, existing, fin }: { params: Params; existing: Expense | n
       {sheet === 'zones' ? (
         <ZonesSheet
           farms={farms}
-          farmId={farmId}
+          farmId={zoneFarm}
           onFarm={setFarmId}
           zones={farmZones}
           drafts={zones}
@@ -695,7 +724,7 @@ function Progress({ idx, reached, onPick }: { idx: number; reached: number; onPi
             accessibilityState={{ selected: i === idx, disabled: i > reached }}
             disabled={i > reached}
             onPress={() => onPick(i)}
-            hitSlop={{ top: 16, bottom: 16 }}
+            hitSlop={{ top: 21, bottom: 21 }}
             style={{ flex: 1, height: 6, borderRadius: t.radius.pill, backgroundColor: i === idx ? t.color.action : i < idx || i <= reached ? t.color.accept : t.color.surfaceSunk }}
           />
         ))}

@@ -63,7 +63,7 @@ describe('fertProducts — "ซื้อปุ๋ยอะไร" (E11-S10 F1)',
     const list = fertProducts(xs, [opt('formula', '8-24-24', true), opt('formula', '0-0-60')]);
     expect(list.map((p) => p.formula)).toEqual(['0-0-60']);
     // 0-0-60 comes from the saved option alone: no purchase left, so no last price.
-    expect(list[0]).toMatchObject({ brand: '', sackKg: null, lastPerSackSatang: null });
+    expect(list[0]).toMatchObject({ type: null, brand: '', sackKg: null, lastPerSackSatang: null });
   });
 
   it('a saved formula never bought yet is offered after the bought ones', () => {

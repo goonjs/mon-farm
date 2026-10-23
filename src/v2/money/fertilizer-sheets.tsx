@@ -50,20 +50,22 @@ export function BigStepper({ testID, bumpID, value, onChange, onBump, caption, s
   const t = useTheme();
   const msg = useT();
   const d = size === 'large' ? t.target.comfortable : t.target.min;
+  // A fixed width: on the web a TextInput otherwise takes the browser's default width and pushes − / + off screen.
+  const w = size === 'large' ? 120 : 56;
   const round = { width: d, height: d, borderRadius: t.radius.pill, borderWidth: t.border.hair, borderColor: t.color.ruleStrong, backgroundColor: t.color.surfaceRaised, alignItems: 'center', justifyContent: 'center' } as const;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs, flexShrink: 0 }}>
       <Pressable testID={`${bumpID}-less`} accessibilityRole="button" accessibilityLabel={msg('fert.less')} onPress={() => onBump(-1)} style={round}>
         <Minus color={t.color.ink} size={size === 'large' ? 18 : 14} />
       </Pressable>
-      <View style={{ alignItems: 'center', minWidth: size === 'large' ? 96 : 52 }}>
+      <View style={{ alignItems: 'center', width: w }}>
         <TextInput
           testID={testID}
           accessibilityLabel={caption}
           keyboardType="number-pad"
           value={value}
           onChangeText={onChange}
-          style={{ minWidth: size === 'large' ? 96 : 52, textAlign: 'center', padding: 0, fontFamily: t.font.family.sans, fontSize: size === 'large' ? t.font.size.figure : t.font.size.headingXl, fontWeight: t.font.weight.bold, color: t.color.ink, fontVariant: ['tabular-nums'] }}
+          style={{ width: w, textAlign: 'center', padding: 0, fontFamily: t.font.family.sans, fontSize: size === 'large' ? t.font.size.figure : t.font.size.headingXl, fontWeight: t.font.weight.bold, color: t.color.ink, fontVariant: ['tabular-nums'] }}
         />
         <AppText variant="caption">{caption}</AppText>
       </View>
@@ -330,9 +332,13 @@ export function ZonesSheet({
     <BottomSheet open onClose={onClose} testID="fert-zone-sheet" title={msg('fert.zonesSheet')}>
       <View style={{ gap: t.space.md }}>
         {farms.length === 0 ? <AppText variant="bodySm">{msg('fert.noFarm')}</AppText> : null}
-        <ChoiceRow>
-          {farms.map((f) => <ChoiceChip key={f.id} testID={`fert-farm-${f.id}`} label={f.name} on={farmId === f.id} onPress={() => onFarm(f.id)} />)}
-        </ChoiceRow>
+        {farms.length === 1 ? (
+          <AppText testID="fert-zone-farm" style={{ fontWeight: t.font.weight.bold }}>{farms[0].name}</AppText>
+        ) : (
+          <ChoiceRow>
+            {farms.map((f) => <ChoiceChip key={f.id} testID={`fert-farm-${f.id}`} label={f.name} on={farmId === f.id} onPress={() => onFarm(f.id)} />)}
+          </ChoiceRow>
+        )}
         {farmId ? (
           <>
             <Card testID="fert-zones-sum" style={{ backgroundColor: given === total ? t.color.acceptSunk : t.color.surfaceSunk }}>

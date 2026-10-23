@@ -200,7 +200,9 @@ describe('fertilizer purchase flow — simple design (E11-S10, approved 2026-10-
     expect(screen.getByTestId('fert-sum-zones')).toHaveTextContent(/บันทึกภายหลังได้/);
     press('fert-sum-zones');
     await flush();
-    press(`fert-farm-${farm}`);
+    // One farm: its name as text, already chosen — no chips to tap.
+    expect(screen.queryByTestId(`fert-farm-${farm}`)).toBeNull();
+    expect(screen.getByTestId('fert-zone-farm')).toHaveTextContent('สวนจันทเขลม');
     type(`fert-zone-${zA}-sacks`, '6');
     press(`fert-zone-${zA}-reason-${YELLOW}`);
     press(`fert-zone-${zA}-add-note`);
@@ -212,6 +214,7 @@ describe('fertilizer purchase flow — simple design (E11-S10, approved 2026-10-
     press('fert-zone-done');
     await flush();
     expect(screen.getByTestId('fert-sum-zones')).toHaveTextContent(/โซนริมคลอง 6 · โซนหลังบ้าน 4/);
+    expect(screen.getByTestId('fert-sum-zones')).not.toHaveTextContent(/\+ ใส่/);
     await act(async () => press('fert-save'));
     await flush();
 
@@ -253,6 +256,13 @@ describe('fertilizer purchase flow — simple design (E11-S10, approved 2026-10-
     expect(screen.getByTestId(`fert-prod-${PRODUCT}`)).toHaveTextContent(/1,000\.00/);
     press(`fert-prod-${PRODUCT}`);
     expect(screen.getByTestId(`fert-prod-${PRODUCT}`).props.accessibilityState).toMatchObject({ checked: true });
+    // ปุ๋ยใหม่ opens empty, not carrying the picked product into a new one.
+    press('fert-new');
+    await flush();
+    expect(screen.getByTestId('fert-formula').props.value).toBe('');
+    expect(screen.getByTestId('fert-brand').props.value).toBe('');
+    fireEvent.press(screen.getByTestId('fert-new-sheet-scrim'));
+    await flush();
     next();
     await flush();
     expect(screen.getByTestId('fert-product-line')).toHaveTextContent(/15-15-15 · ตราใบไม้ทอง/);
@@ -399,6 +409,103 @@ describe('fertilizer purchase flow — simple design (E11-S10, approved 2026-10-
     press('fert-sum-bill');
     await flush();
     expect(screen.getByTestId('fert-progress')).toHaveTextContent('2 จาก 6');
+  });
+});
+
+describe('fertilizer flow — fit and review round 3 (E11-S10)', () => {
+  beforeEach(() => {
+    mockParams.current = { bill: '10000', date: '2026-10-14' };
+  });
+
+  it('the number boxes have a fixed width, so −/+ stay on screen on the web', async () => {
+    wrap(<FertilizerFlowScreen />);
+    await flush();
+    await buy();
+    const box = Object.assign({}, ...[screen.getByTestId('fert-sacks').props.style].flat(Infinity).filter(Boolean));
+    expect(typeof box.width).toBe('number');
+    for (let i = 0; i < 3; i++) {
+      next();
+      await flush();
+    }
+    press('fert-add-tapper');
+    await flush();
+    press(`fert-pick-${daeng}`);
+    await flush();
+    const small = Object.assign({}, ...[screen.getByTestId(`fert-line-${daeng}-sacks`).props.style].flat(Infinity).filter(Boolean));
+    expect(typeof small.width).toBe('number');
+    expect(small.width).toBeLessThan(box.width);
+    // A remove control on the card itself.
+    press(`fert-line-${daeng}-remove`);
+    expect(screen.queryByTestId(`fert-line-${daeng}`)).toBeNull();
+  });
+
+  it('progress segments are full-size touch targets', async () => {
+    wrap(<FertilizerFlowScreen />);
+    await flush();
+    const seg = screen.getByTestId('fert-step-1');
+    const h = Object.assign({}, ...[seg.props.style].flat(Infinity).filter(Boolean)).height ?? 0;
+    const slop = seg.props.hitSlop ?? {};
+    expect(h + (slop.top ?? 0) + (slop.bottom ?? 0)).toBeGreaterThanOrEqual(48);
+  });
+
+  it('a saved formula never bought shows no type; picking it asks for the rest', async () => {
+    await seed(fertOptionId('formula', '0-0-60'), { t: 'fert_option_set', kind: 'formula', name: '0-0-60', description: '', hidden: false });
+    wrap(<FertilizerFlowScreen />);
+    await flush();
+    const row = screen.getByTestId(`fert-prod-option|${fertOptionId('formula', '0-0-60')}`);
+    expect(row).toHaveTextContent(/0-0-60/);
+    expect(row).not.toHaveTextContent(/เคมี|ขี้ไก่|อื่น ๆ/);
+    fireEvent.press(screen.getByTestId(`fert-prod-option|${fertOptionId('formula', '0-0-60')}`));
+    await flush();
+    expect(screen.getByTestId('fert-formula').props.value).toBe('0-0-60');
+  });
+
+  it('who paid: known people are offered directly; "คนอื่น" reads once', async () => {
+    wrap(<FertilizerFlowScreen />);
+    await flush();
+    await buy();
+    next();
+    await flush();
+    next();
+    await flush();
+    expect(screen.getByTestId(`fert-payer-${daeng}`)).toBeTruthy();
+    expect(screen.getByTestId('fert-payer-other')).toHaveTextContent(/^\+?\s*คนอื่น$/);
+    expect(screen.getByTestId('fert-payer-other')).not.toHaveTextContent(/\+ \+/);
+  });
+
+  it('on an existing purchase the header back leaves the flow', async () => {
+    const head = await seed('exp-back', { t: 'expense_created', fields: { amountSatang: 100_000, date: '2026-10-01', stage: 'actual', categoryId: 'cat-fertilizer', propertyId: null, item: 'ยูเรีย', note: '', payer: null, share: { billSatang: 100_000, discountSatang: 0, totalSacks: 1, lines: [] }, fertilizer: { type: 'chemical', formula: 'ยูเรีย', brand: '', sackKg: null, reasons: [], zones: [], shop: '', orderedBy: '' } } });
+    void head;
+    mockParams.current = { id: 'exp-back' };
+    mockRouter.replace.mockClear();
+    wrap(<FertilizerFlowScreen />);
+    await flush();
+    press('fert-sum-bill');
+    await flush();
+    press('fert-back');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/v2/expenses');
+  });
+
+  it('a zone error says "แก้โซน" and opens the zones sheet', async () => {
+    wrap(<FertilizerFlowScreen />);
+    await flush();
+    await buy({ sacks: '2' });
+    for (let i = 0; i < 4; i++) {
+      next();
+      await flush();
+    }
+    press('fert-sum-zones');
+    await flush();
+    press(`fert-farm-${farm}`);
+    type(`fert-zone-${zA}-sacks`, '5');
+    fireEvent.press(screen.getByTestId('fert-zone-sheet-scrim'));
+    await flush();
+    await act(async () => press('fert-save'));
+    await flush();
+    expect(screen.getByTestId('fert-err')).toHaveTextContent(/แก้โซน/);
+    press('fert-err');
+    await flush();
+    expect(screen.getByTestId('fert-zone-sheet')).toBeTruthy();
   });
 });
 

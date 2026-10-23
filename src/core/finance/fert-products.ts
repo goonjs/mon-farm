@@ -15,7 +15,8 @@ import type { FertilizerType } from './types';
 
 export interface FertProduct {
   readonly key: string;
-  readonly type: FertilizerType;
+  /** null = only a saved formula, never bought: its type is not known yet. */
+  readonly type: FertilizerType | null;
   readonly formula: string;
   readonly brand: string;
   readonly sackKg: number | null;
@@ -48,7 +49,7 @@ export function fertProducts(expenses: readonly Expense[], options: readonly Fer
   const bought = new Set([...out.values()].map((p) => norm(p.formula)));
   for (const [k, o] of saved) {
     if (bought.has(k)) continue;
-    out.set(`option|${o.id}`, { key: `option|${o.id}`, type: 'chemical', formula: o.name, brand: '', sackKg: null, lastPerSackSatang: null });
+    out.set(`option|${o.id}`, { key: `option|${o.id}`, type: null, formula: o.name, brand: '', sackKg: null, lastPerSackSatang: null });
   }
   return [...out.values()];
 }
