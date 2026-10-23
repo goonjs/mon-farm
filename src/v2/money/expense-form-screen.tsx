@@ -83,8 +83,10 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   const state = fin.state!;
   const farmsList = useFarms();
 
+  // Same payer as last time on this device; the first time, farm funds (AC A, D-62).
+  const lastPayer = useMemo(() => defaultPayer(fin.events ?? [], fin.deviceId ?? ''), []); // eslint-disable-line react-hooks/exhaustive-deps -- taken once
   const initialPayer = useMemo<Payer | null>(
-    () => (existing ? existing.payer : defaultPayer(fin.events ?? [], fin.deviceId ?? '')),
+    () => (existing ? existing.payer : (lastPayer ?? { id: FARM_FUNDS, name: msg('fin.payer.farm') })),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the default is taken once, when the form opens
     [],
   );
@@ -271,18 +273,18 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   const err = (key: 'amount-required' | 'amount-invalid' | 'date-required') => (showErrors && (problems as string[]).includes(key) ? msg(`fin.form.err.${key}`) : undefined);
 
   // Five tiles, most used first (the chosen one always among them); the rest one tap away.
-  const tiles = useMemo(() => {
+  const topTiles = useMemo(() => {
     const uses = new Map<string, number>();
     for (const x of state.expenses) if (x.categoryId) uses.set(x.categoryId, (uses.get(x.categoryId) ?? 0) + 1);
     const order = [...state.categories].sort((a, b) => (uses.get(b.id) ?? 0) - (uses.get(a.id) ?? 0));
-    const top = order.slice(0, TILES);
-    const picked = state.categories.find((c) => c.id === categoryId);
-    if (picked && !top.some((c) => c.id === picked.id)) top[TILES - 1] = picked;
-    return top;
+    return order.slice(0, TILES);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the order is taken when the form opens, so tiles do not jump while choosing
   }, [state.categories.length]);
+  // The chosen one is always among the tiles: it takes the last tile's place.
+  const picked = state.categories.find((c) => c.id === categoryId);
+  const tiles = picked && !topTiles.some((c) => c.id === picked.id) ? [...topTiles.slice(0, TILES - 1), picked] : topTiles;
   const farmName = farmsList.find((f) => f.id === propertyId)?.name;
-  const sameAsLast = !existing && !!payer && payer.id === (initialPayer?.id ?? null);
+  const sameAsLast = !existing && !!lastPayer && !!payer && payer.id === lastPayer.id;
 
   return (
     <>
@@ -332,8 +334,13 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
                 keyboardType="decimal-pad"
                 value={amount}
                 onChangeText={setAmount}
+                onBlur={() => {
+                  // Read back as money once typed (prop-01 "3,500.00"); the parser takes the commas.
+                  const v = parseBahtToSatang(amount);
+                  if (v !== null) setAmount(formatSatang(v));
+                }}
                 placeholder="0.00"
-                aside={<AppText variant="bodySm">{msg('v2m.baht')}</AppText>}
+                unit={msg('v2m.baht')}
                 error={err('amount-required') ?? err('amount-invalid')}
               />
             )}
@@ -353,9 +360,6 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
                 {tiles.map((c) => <CategoryTile key={c.id} testID={`expense-cat-${c.id}`} label={c.name} on={categoryId === c.id} icon={CATEGORY_ICONS[c.id] ?? TagIcon} onPress={() => pickCategory(c.id)} />)}
                 <CategoryTile testID="expense-cat-more" label={msg('fin.form.moreCategories', { n: state.categories.length - tiles.length })} icon={DotsIcon} onPress={() => setCatSheet(true)} />
               </View>
-              <ChoiceRow>
-                <ChoiceChip testID="expense-cat-manage" label={msg('fin.form.manageCategories')} onPress={() => setCatSheet(true)} />
-              </ChoiceRow>
             </View>
 
             <Card style={{ gap: 0, paddingVertical: t.space.xs }}>
@@ -562,6 +566,12 @@ const TILES = 5;
 /** A big category tile: icon over the name; chosen = action edge and tint. */
 function CategoryTile({ label, on, onPress, icon: Icon, testID }: { label: string; on?: boolean; onPress: () => void; icon: IconComponent; testID: string }) {
   const t = useTheme();
+  // Chosen = ✓ in the corner as well as the edge and tint (never colour alone).
+  const tick = on ? (
+    <View testID={`${testID}-check`} style={{ position: 'absolute', top: t.space.xs, right: t.space.xs, width: 20, height: 20, borderRadius: t.radius.pill, backgroundColor: t.color.action, alignItems: 'center', justifyContent: 'center' }}>
+      <Check color={t.color.inkInverse} size={10} />
+    </View>
+  ) : null;
   return (
     <Pressable
       testID={testID}
@@ -570,6 +580,7 @@ function CategoryTile({ label, on, onPress, icon: Icon, testID }: { label: strin
       onPress={onPress}
       style={{ flexBasis: '31%', flexGrow: 1, minHeight: 72, alignItems: 'center', justifyContent: 'center', gap: t.space.xs, padding: t.space.sm, borderRadius: t.radius.lg, borderWidth: on ? t.border.thick : t.border.hair, borderColor: on ? t.color.action : t.color.ruleStrong, backgroundColor: on ? t.color.actionSunk : t.color.surfaceRaised }}
     >
+      {tick}
       <View aria-hidden>
         <Icon color={t.color.ink} />
       </View>

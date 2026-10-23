@@ -81,9 +81,12 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     wrap(<ExpenseScreen />);
     await flush();
     // Simple design (owner 2026-10-23): five tiles + "อื่น ๆ · อีก N"; date, stage, farm, item, note behind "เพิ่มรายละเอียด".
-    expect(screen.getAllByTestId(/^expense-cat-cat-/)).toHaveLength(5);
+    expect(screen.getAllByTestId(/^expense-cat-cat-[a-z-]+$/).filter((n) => !n.props.testID.endsWith('-check'))).toHaveLength(5);
     expect(screen.getByTestId('expense-cat-more')).toHaveTextContent(/อีก 4/);
     expect(screen.queryByTestId('expense-date')).toBeNull();
+    // First time on this device: farm funds, and no "same as last time" (AC A).
+    expect(screen.getByTestId('expense-payer-row')).toHaveTextContent(/เงินสวน/);
+    expect(screen.getByTestId('expense-payer-row')).not.toHaveTextContent(/เหมือนครั้งก่อน/);
     expect(screen.getByTestId('expense-details')).toHaveTextContent(/เกิดจริง/);
     fireEvent.press(screen.getByTestId('expense-cat-more'));
     for (const id of ['fertilizer', 'labour', 'fuel', 'herbicide', 'travel', 'salary', 'worker-aid', 'repair', 'other']) {
@@ -91,6 +94,10 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     }
     fireEvent.press(screen.getByTestId('expense-cat-sheet-scrim'));
     fireEvent.changeText(screen.getByTestId('expense-amount'), '640');
+    // Formatted on leaving the box; "บาท" sits inside it.
+    fireEvent(screen.getByTestId('expense-amount'), 'blur');
+    expect(screen.getByTestId('expense-amount').props.value).toBe('640.00');
+    expect(screen.getByTestId('expense-amount-box')).toHaveTextContent('บาท');
     fireEvent.press(screen.getByTestId('expense-details'));
     fireEvent.changeText(screen.getByTestId('expense-date'), '2026-09-28');
     fireEvent.press(screen.getByTestId('expense-details-done'));
@@ -140,11 +147,22 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     expect(screen.getByTestId('expense-payer-row')).toHaveTextContent(/นัด/);
   });
 
+  it('a category picked under "อื่น ๆ" becomes a tile, ticked', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    const hidden = ['salary', 'worker-aid', 'repair', 'other', 'travel', 'herbicide'].find((c) => !screen.queryByTestId(`expense-cat-cat-${c}`))!;
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    fireEvent.press(screen.getByTestId(`expense-catall-cat-${hidden}`));
+    expect(screen.getByTestId(`expense-cat-cat-${hidden}`).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId(`expense-cat-cat-${hidden}-check`)).toBeTruthy();
+    expect(screen.getAllByTestId(/^expense-cat-cat-[a-z-]+$/).filter((n) => !n.props.testID.endsWith('-check'))).toHaveLength(5);
+  });
+
   it('adds a category from the form', async () => {
     wrap(<ExpenseScreen />);
     await flush();
     // Category upkeep moved off the form: "จัดการหมวด" opens it in a sheet.
-    fireEvent.press(screen.getByTestId('expense-cat-manage'));
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
     fireEvent.press(screen.getByTestId('expense-cat-add'));
     fireEvent.changeText(screen.getByTestId('expense-cat-name'), 'ค่าไฟ');
     await act(async () => fireEvent.press(screen.getByTestId('expense-cat-save')));
@@ -167,7 +185,7 @@ describe('expense list (F4, F7)', () => {
     fireEvent.changeText(screen.getByTestId('bulk-payer-name'), 'เจ้าของสวน');
     await act(async () => fireEvent.press(screen.getByTestId('bulk-payer-add-save')));
     await flush();
-    expect(screen.getByText(/3,500\.00/)).toBeTruthy();
+    expect(screen.getByTestId('bulk-owed')).toHaveTextContent(/3,500\.00/);
     await act(async () => fireEvent.press(screen.getByTestId('bulk-payer-save')));
     await flush();
 

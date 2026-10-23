@@ -133,7 +133,7 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     wrap(<ExpenseFormScreen />);
     await flush();
     pickCat('cat-herbicide');
-    fireEvent.press(screen.getByTestId('expense-cat-manage'));
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
     fireEvent.press(screen.getByTestId('expense-cat-share'));
     fireEvent.press(screen.getByTestId('cat-share-switch'));
     fireEvent.changeText(screen.getByTestId('cat-share-pct'), '30');
@@ -288,7 +288,7 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     await flush();
     pickCat('cat-fuel');
     for (const pct of ['20', '25']) {
-      fireEvent.press(screen.getByTestId('expense-cat-manage'));
+      fireEvent.press(screen.getByTestId('expense-cat-more'));
     fireEvent.press(screen.getByTestId('expense-cat-share'));
       if (pct === '20') fireEvent.press(screen.getByTestId('cat-share-switch'));
       fireEvent.changeText(screen.getByTestId('cat-share-pct'), pct);
