@@ -37,7 +37,7 @@
     "status": "pass-with-warnings",
     "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/nav.notifications/nav.notifications.svg",
     "checkSummary": "check.py FAIL (fails: edge_recall, edge_precision); silhouette_iou 0.9827, tol_de_p95 8.34, edge_recall 0.5006, edge_precision 0.5209",
-    "note": "Independent checker PASS in round 1. Bell uses legend Yellow #FECB56 (coordinator decision: the brand token wins over the measured mockup orange #FEAC2B). Confirmed in the built SVG. Low: the clapper is about 2 px rounder."
+    "note": "Independent checker PASS in round 1. Bell uses legend Yellow #FECB56 (coordinator decision: the brand token wins over the measured mockup orange #FEAC2B). Confirmed in the built SVG. Low: the clapper is about 2 px rounder. | final review: snapped-yellow accent was too far off source (ΔE>10); recoloured to measured #FEAB1E (consistent with sale.rubberPrice sides) and re-approved."
   },
   {
     "id": "nav.profile",
@@ -305,7 +305,7 @@
     "status": "pass-with-warnings",
     "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/sale.weigh/sale.weigh.svg",
     "checkSummary": "Independent checker: PASS. check.py 6x: FAIL (IoU 0.8919, ΔEp95 24.49, edge recall 0.4878); 1x: FAIL (IoU 0.8842, ΔEp95 14.93). check.py cannot pass on a ~110 px source upscaled 6x (the error maps show only an even ring at every edge). vector_src4x.png shows the vector placed on the source grid with the build's own transform; the checker measured geometry on it.",
-    "note": "Independent checker PASS (rounds 2 and 3). The dial hand and ticks are now legend Yellow #FECB56 (coordinator decision). Open, minor: a kink under the plate at ≈(208,125) and its mirror; the body's bottom corners are tighter than the source by about 8 px of radius."
+    "note": "Independent checker PASS (rounds 2 and 3). The dial hand and ticks are now legend Yellow #FECB56 (coordinator decision). Open, minor: a kink under the plate at ≈(208,125) and its mirror; the body's bottom corners are tighter than the source by about 8 px of radius. | final review: snapped-yellow accent was too far off source (ΔE>10); recoloured to measured #FEAB1E (consistent with sale.rubberPrice sides) and re-approved."
   },
   {
     "id": "sale.sale",
@@ -313,7 +313,7 @@
     "status": "pass-with-warnings",
     "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/sale.sale/polished/sale.sale.svg",
     "checkSummary": "Independent checker: PASS. check.py 6x: FAIL (IoU 0.8562, ΔEp95 54.52, edge recall 0.2596); 1x: FAIL (IoU 0.8667, ΔEp95 18.0). check.py cannot pass on a ~110 px source upscaled 6x (the error maps show only an even ring at every edge). vector_src4x.png shows the vector placed on the source grid with the build's own transform; the checker measured geometry on it.",
-    "note": "Independent checker PASS (final round, fidelity 9). The final file is the polish.py output (sigma 1.4, yellow layer only). The gap under the face matches within 1-2 px; the '$' top arm is the right length; the tail foot is rounded. The coin is legend Yellow #FECB56 (coordinator decision). Optional: a 0.4 px bump at the tail foot."
+    "note": "Independent checker PASS (final round, fidelity 9). The final file is the polish.py output (sigma 1.4, yellow layer only). The gap under the face matches within 1-2 px; the '$' top arm is the right length; the tail foot is rounded. The coin is legend Yellow #FECB56 (coordinator decision). Optional: a 0.4 px bump at the tail foot. | final review: snapped-yellow accent was too far off source (ΔE>10); recoloured to measured #FEAB1E (consistent with sale.rubberPrice sides) and re-approved."
   },
   {
     "id": "sale.yieldStats",
