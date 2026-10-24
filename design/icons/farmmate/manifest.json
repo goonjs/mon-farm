@@ -354,5 +354,1387 @@
     "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/sale.salesReport/sale.salesReport.svg",
     "checkSummary": "Independent checker: PASS. check.py 6x: FAIL (IoU 0.9688, ΔEp95 17.01, edge recall 0.4281); 1x: FAIL (IoU 0.9478, ΔEp95 8.12). check.py cannot pass on a ~110 px source upscaled 6x (the error maps show only an even ring at every edge). vector_src4x.png shows the vector placed on the source grid with the build's own transform; the checker measured geometry on it.",
     "note": "Independent checker PASS (fidelity 9; circle within 0.3 px). Legend Blue and legend Red."
+  },
+  {
+    "id": "farmwork.tapping",
+    "labelTh": "กรีดยาง",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.tapping/farmwork.tapping.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9417,
+        "tol_de_p95": 29.17,
+        "worst_window_de": 24.6,
+        "edge_recall": 0.2926,
+        "edge_precision": 0.5661,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)"
+        ]
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9354,
+        "tol_de_p95": 13.53,
+        "worst_window_de": 7.52,
+        "edge_recall": 0.7017,
+        "edge_precision": 0.7126,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)",
+          "pinholes: 1 tiny transparent holes where the source has artwork (stack the lower layer under)",
+          "seams: 1 thin transparent gaps inside the silhouette (196 px at 4x)"
+        ]
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.tapping/chk/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.tapping/chk1x/review.png"
+    },
+    "note": "Independent checker PASS (round 2). Drip measured #FEBF22 snapped to legend Yellow #FECB56 (dE 4.5) per rule, so it is visibly paler than the source. Browns and bucket panel are measured values (dE > 16). Assumption: the white bucket opening is white artwork, not a hole. check.py verdict is FAIL on every icon (strict thresholds vs a blurry 6x upscale of a ~110 px crop); the numbers are hints only. File verification (qpdf/pdffonts/poppler) did not run: the tools are missing."
+  },
+  {
+    "id": "farmwork.fertilize",
+    "labelTh": "ใส่ปุ๋ย",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.fertilize/farmwork.fertilize.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9854,
+        "tol_de_p95": 19.48,
+        "worst_window_de": 13.5,
+        "edge_recall": 0.3366,
+        "edge_precision": 0.523,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)"
+        ]
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9811,
+        "tol_de_p95": 11.54,
+        "worst_window_de": 8.21,
+        "edge_recall": 0.7661,
+        "edge_precision": 0.6433,
+        "warnings": []
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.fertilize/chk/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.fertilize/chk1x/review.png"
+    },
+    "note": "Checker FAIL in round 2 on the stem end only. Fixed after the last round (round 2 was the cap): the stem now ends in a symmetric round cap. Verified by my own look at review.png, not by the checker. Small notch where the stem meets the leaf on the left (low). Ears kept as measured #FDBA3B (dE 5.2 to Yellow) instead of snapping, which would have merged them into the body. Band #5CC562 is borderline (dE 10.6 mine, 9.8 by the checker). check.py verdict is FAIL on every icon (strict thresholds vs a blurry 6x upscale of a ~110 px crop); the numbers are hints only. File verification (qpdf/pdffonts/poppler) did not run: the tools are missing."
+  },
+  {
+    "id": "farmwork.mow",
+    "labelTh": "ตัดหญ้า",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.mow/farmwork.mow.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9544,
+        "tol_de_p95": 24.32,
+        "worst_window_de": 13.91,
+        "edge_recall": 0.3868,
+        "edge_precision": 0.5068,
+        "warnings": [
+          "seams: 1 thin transparent gaps inside the silhouette (48 px at 4x)"
+        ]
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9496,
+        "tol_de_p95": 13.11,
+        "worst_window_de": 8.0,
+        "edge_recall": 0.7152,
+        "edge_precision": 0.8034,
+        "warnings": [
+          "seams: 2 thin transparent gaps inside the silhouette (59 px at 4x)"
+        ]
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.mow/chk/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.mow/chk1x/review.png"
+    },
+    "note": "Independent checker PASS (round 1). One flat legend Green; the source soft darker inner-blade shading is not reproduced. check.py verdict is FAIL on every icon (strict thresholds vs a blurry 6x upscale of a ~110 px crop); the numbers are hints only. File verification (qpdf/pdffonts/poppler) did not run: the tools are missing."
+  },
+  {
+    "id": "farmwork.spray",
+    "labelTh": "ฉีดยา/กำจัดวัชพืช",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.spray/farmwork.spray.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9353,
+        "tol_de_p95": 26.49,
+        "worst_window_de": 17.5,
+        "edge_recall": 0.2684,
+        "edge_precision": 0.5997,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9021,
+        "tol_de_p95": 12.06,
+        "worst_window_de": 6.87,
+        "edge_recall": 0.6369,
+        "edge_precision": 0.6415,
+        "warnings": []
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.spray/chk/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.spray/chk1x/review.png"
+    },
+    "note": "Independent checker PASS (round 2). Bottle legend Blue (source #179BF4, dE 7.5), so it is duller than the source. Trigger head measured #027A67. The drop is a transparent hole. check.py verdict is FAIL on every icon (strict thresholds vs a blurry 6x upscale of a ~110 px crop); the numbers are hints only. File verification (qpdf/pdffonts/poppler) did not run: the tools are missing."
+  },
+  {
+    "id": "farmwork.today",
+    "labelTh": "งานวันนี้",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.today/farmwork.today.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8354,
+        "tol_de_p95": 55.28,
+        "worst_window_de": 22.58,
+        "edge_recall": 0.2683,
+        "edge_precision": 0.4545,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8331,
+        "tol_de_p95": 23.79,
+        "worst_window_de": 11.78,
+        "edge_recall": 0.9548,
+        "edge_precision": 0.681,
+        "warnings": []
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.today/chk/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.today/chk1x/review.png"
+    },
+    "note": "Independent checker PASS (round 2). Bars use #0561C4 (measured, dE 12-17). The crop has only 1 px of margin above the clip. check.py verdict is FAIL on every icon (strict thresholds vs a blurry 6x upscale of a ~110 px crop); the numbers are hints only. File verification (qpdf/pdffonts/poppler) did not run: the tools are missing."
+  },
+  {
+    "id": "farmwork.calendar",
+    "labelTh": "ปฏิทินงาน",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.calendar/farmwork.calendar.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8845,
+        "tol_de_p95": 38.78,
+        "worst_window_de": 13.91,
+        "edge_recall": 0.4073,
+        "edge_precision": 0.7253,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8621,
+        "tol_de_p95": 18.31,
+        "worst_window_de": 7.89,
+        "edge_recall": 0.869,
+        "edge_precision": 0.6881,
+        "warnings": []
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.calendar/chk/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.calendar/chk1x/review.png"
+    },
+    "note": "Independent checker PASS (round 2). Frame measured #0561C4; rings Navy; dots legend Blue. check.py verdict is FAIL on every icon (strict thresholds vs a blurry 6x upscale of a ~110 px crop); the numbers are hints only. File verification (qpdf/pdffonts/poppler) did not run: the tools are missing."
+  },
+  {
+    "id": "farmwork.history",
+    "labelTh": "ประวัติงาน",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.history/farmwork.history.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8412,
+        "tol_de_p95": 33.31,
+        "worst_window_de": 17.65,
+        "edge_recall": 0.3026,
+        "edge_precision": 0.5067,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8161,
+        "tol_de_p95": 16.67,
+        "worst_window_de": 7.18,
+        "edge_recall": 0.913,
+        "edge_precision": 0.6458,
+        "warnings": [
+          "seams: 1 thin transparent gaps inside the silhouette (55 px at 4x)"
+        ]
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.history/chk/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.history/chk1x/review.png"
+    },
+    "note": "Independent checker PASS (round 2). The fold-edge gradient is flattened to measured #084B6C (borderline: dE 13.4 mine, 9.5 by the checker). Text lines #0472DD measured (dE 10.3, borderline). Clock face and gap ring are transparent. check.py verdict is FAIL on every icon (strict thresholds vs a blurry 6x upscale of a ~110 px crop); the numbers are hints only. File verification (qpdf/pdffonts/poppler) did not run: the tools are missing."
+  },
+  {
+    "id": "farmwork.maintenance",
+    "labelTh": "บำรุงรักษา",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.maintenance/farmwork.maintenance.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9106,
+        "tol_de_p95": 29.38,
+        "worst_window_de": 18.4,
+        "edge_recall": 0.3452,
+        "edge_precision": 0.519,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8993,
+        "tol_de_p95": 13.38,
+        "worst_window_de": 5.66,
+        "edge_recall": 0.8371,
+        "edge_precision": 0.9207,
+        "warnings": [
+          "holes_over_content: transparent hole in the vector where the source has artwork",
+          "seams: 3 thin transparent gaps inside the silhouette (390 px at 4x)"
+        ]
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.maintenance/chk/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/farmwork.maintenance/chk1x/review.png"
+    },
+    "note": "Independent checker PASS (round 1). All Navy; gaps and holes are transparent. Optional nit: the jaw tip is slightly angular. check.py verdict is FAIL on every icon (strict thresholds vs a blurry 6x upscale of a ~110 px crop); the numbers are hints only. File verification (qpdf/pdffonts/poppler) did not run: the tools are missing."
+  },
+  {
+    "id": "materials.chemFert",
+    "labelTh": "ปุ๋ยเคมี",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/materials.chemFert/materials.chemFert.svg",
+    "checkSummary": {
+      "vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8958,
+        "tol_de_p95": 29.28,
+        "worst_window_de": 15.66,
+        "edge_recall": 0.2205,
+        "edge_precision": 0.2821,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)"
+        ]
+      },
+      "vs_1x": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9052,
+        "tol_de_p95": 13.47,
+        "worst_window_de": 7.75,
+        "edge_recall": 0.8,
+        "edge_precision": 0.5995,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)"
+        ]
+      },
+      "independentChecker": "FAIL round 1 -> PASS round 2"
+    },
+    "note": "Independent checker PASS in round 2 (fidelity 9). Optional low item: small kink mid-vein. Self-check: source-coordinate profiles + side-by-side viewed. check.py FAIL is expected on blurry 6x crops; .ai/.eps not verified by qpdf."
+  },
+  {
+    "id": "materials.manureFert",
+    "labelTh": "ปุ๋ยมูลไก่",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/materials.manureFert/materials.manureFert.svg",
+    "checkSummary": {
+      "vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9876,
+        "tol_de_p95": 14.25,
+        "worst_window_de": 13.78,
+        "edge_recall": 0.3138,
+        "edge_precision": 0.6001,
+        "warnings": []
+      },
+      "vs_1x": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9823,
+        "tol_de_p95": 8.59,
+        "worst_window_de": 6.13,
+        "edge_recall": 0.5915,
+        "edge_precision": 0.6087,
+        "warnings": []
+      },
+      "independentChecker": "FAIL round 1, FAIL round 2 (fidelity 7); round-2 fixes applied afterwards and confirmed by self-check only (no 3rd checker round, per skill max 2)"
+    },
+    "note": "Final self-look at review.png after round-2 fixes: (1) right-half pile dark band now rises to y~100-110 over the right lobe as the checker measured; it reads as a smooth rise, not the source's sharper second peak (minor); (2) blob two-tone crease is now a downward-bowing curve meeting the outline near the tip and follows the source crease by eye; (3) blob top edge raised, tip/notch/lumps intact. Not re-verified by the independent checker. Colours all measured (sack #D69754, highlight #E5AE6F, pile #B36A2D/#9B5E2C, blob #653D1B/#4C2E12). check.py FAIL expected on blurry 6x crop; .ai/.eps not verified by qpdf."
+  },
+  {
+    "id": "materials.fuel",
+    "labelTh": "น้ำมัน/เชื้อเพลิง",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/materials.fuel/materials.fuel.svg",
+    "checkSummary": {
+      "vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9327,
+        "tol_de_p95": 34.92,
+        "worst_window_de": 17.75,
+        "edge_recall": 0.3503,
+        "edge_precision": 0.5105,
+        "warnings": [
+          "seams: 2 thin transparent gaps inside the silhouette (168 px at 4x)"
+        ]
+      },
+      "vs_1x": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9457,
+        "tol_de_p95": 15.38,
+        "worst_window_de": 8.6,
+        "edge_recall": 0.6364,
+        "edge_precision": 0.5576,
+        "warnings": [
+          "pinholes: 1 tiny transparent holes where the source has artwork (stack the lower layer under)",
+          "seams: 1 thin transparent gaps inside the silhouette (45 px at 4x)"
+        ]
+      },
+      "independentChecker": "PASS round 1"
+    },
+    "note": "Independent checker PASS round 1. Legend Red #E55353 (source ~#F9544F, dE00 4.2); cap shadow #C43233 measured. Handle and triangle are transparent holes. Edges within 1-3 px. check.py FAIL is expected on blurry 6x crops. .ai/.eps written but qpdf file-check unavailable."
+  },
+  {
+    "id": "materials.pesticide",
+    "labelTh": "สารกำจัดวัชพืช",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/materials.pesticide/materials.pesticide.svg",
+    "checkSummary": {
+      "vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8897,
+        "tol_de_p95": 28.36,
+        "worst_window_de": 14.52,
+        "edge_recall": 0.4393,
+        "edge_precision": 0.5187,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)"
+        ]
+      },
+      "vs_1x": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8784,
+        "tol_de_p95": 11.57,
+        "worst_window_de": 6.69,
+        "edge_recall": 0.9071,
+        "edge_precision": 0.7047,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)",
+          "seams: 1 thin transparent gaps inside the silhouette (364 px at 4x)"
+        ]
+      },
+      "independentChecker": "PASS round 1"
+    },
+    "note": "Independent checker PASS round 1. Bottle legend Green; leaf #4EBA50, vein #7FD66C measured. Window white artwork. Edges within 1-4 px. check.py FAIL is expected on blurry 6x crops. .ai/.eps written but qpdf file-check unavailable."
+  },
+  {
+    "id": "materials.stock",
+    "labelTh": "สต็อกวัสดุ",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/materials.stock/materials.stock.svg",
+    "checkSummary": {
+      "vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9842,
+        "tol_de_p95": 11.54,
+        "worst_window_de": 10.71,
+        "edge_recall": 0.3352,
+        "edge_precision": 0.3456,
+        "warnings": []
+      },
+      "vs_1x": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9783,
+        "tol_de_p95": 5.44,
+        "worst_window_de": 3.45,
+        "edge_recall": 0.8742,
+        "edge_precision": 0.6592,
+        "warnings": []
+      },
+      "independentChecker": "PASS round 1"
+    },
+    "note": "Independent checker PASS round 1. Faces measured #ECB473/#D79652/#B87A3E, tape #F7D5B5. Face gradients and left corner tape tab simplified to flat shapes. check.py FAIL is expected on blurry 6x crops. .ai/.eps written but qpdf file-check unavailable."
+  },
+  {
+    "id": "materials.orderMaterials",
+    "labelTh": "สั่งซื้อวัสดุ",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/materials.orderMaterials/materials.orderMaterials.svg",
+    "checkSummary": {
+      "vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8401,
+        "tol_de_p95": 34.34,
+        "worst_window_de": 17.85,
+        "edge_recall": 0.2784,
+        "edge_precision": 0.4402,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)",
+          "holes_over_content: transparent hole in the vector where the source has artwork"
+        ]
+      },
+      "vs_1x": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8079,
+        "tol_de_p95": 16.74,
+        "worst_window_de": 8.01,
+        "edge_recall": 0.8712,
+        "edge_precision": 0.7725,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)",
+          "holes_over_content: transparent hole in the vector where the source has artwork",
+          "pinholes: 1 tiny transparent holes where the source has artwork (stack the lower layer under)",
+          "seams: 1 thin transparent gaps inside the silhouette (60 px at 4x)"
+        ]
+      },
+      "independentChecker": "PASS round 1"
+    },
+    "note": "Independent checker PASS round 1. Legend Navy + Red; plus is white artwork; wheel centres transparent. Strokes within 1-2 px. check.py FAIL is expected on blurry 6x crops. .ai/.eps written but qpdf file-check unavailable."
+  },
+  {
+    "id": "materials.materialCost",
+    "labelTh": "ค่าใช้จ่ายวัสดุ",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/materials.materialCost/materials.materialCost.svg",
+    "checkSummary": {
+      "vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8331,
+        "tol_de_p95": 42.89,
+        "worst_window_de": 22.21,
+        "edge_recall": 0.3559,
+        "edge_precision": 0.6302,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)"
+        ]
+      },
+      "vs_1x": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.7713,
+        "tol_de_p95": 18.98,
+        "worst_window_de": 6.82,
+        "edge_recall": 0.8889,
+        "edge_precision": 0.6516,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)",
+          "seams: 2 thin transparent gaps inside the silhouette (146 px at 4x)"
+        ]
+      },
+      "independentChecker": "FAIL round 1 -> PASS round 2"
+    },
+    "note": "Independent checker PASS in round 2 (fidelity 9). Optional low item: right outline stroke ends ~5 px above the source end. Self-check: source-coordinate profiles + side-by-side viewed. check.py FAIL is expected on blurry 6x crops; .ai/.eps not verified by qpdf."
+  },
+  {
+    "id": "materials.costSummary",
+    "labelTh": "สรุปต้นทุน",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/materials.costSummary/materials.costSummary.svg",
+    "checkSummary": {
+      "vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9216,
+        "tol_de_p95": 25.1,
+        "worst_window_de": 11.63,
+        "edge_recall": 0.5348,
+        "edge_precision": 0.6699,
+        "warnings": []
+      },
+      "vs_1x": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8965,
+        "tol_de_p95": 17.1,
+        "worst_window_de": 6.29,
+        "edge_recall": 0.9038,
+        "edge_precision": 0.6832,
+        "warnings": [
+          "seams: 1 thin transparent gaps inside the silhouette (134 px at 4x)"
+        ]
+      },
+      "independentChecker": "PASS round 1"
+    },
+    "note": "Independent checker PASS round 1. Bars legend Green, base #05715E measured (dE00 21). Within 1-2 px. check.py FAIL is expected on blurry 6x crops. .ai/.eps written but qpdf file-check unavailable."
+  },
+  {
+    "id": "finance.income",
+    "labelTh": "รายรับ",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/finance.income/finance.income.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9355,
+        "tol_de_p95": 25.4,
+        "worst_window_de": 16.61,
+        "edge_recall": 0.2909,
+        "edge_precision": 0.4459,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)"
+        ]
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9279,
+        "tol_de_p95": 7.64,
+        "worst_window_de": 7.43,
+        "edge_recall": 0.875,
+        "edge_precision": 0.744,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)"
+        ]
+      },
+      "independent_checker_r1": "FAIL",
+      "independent_checker_r2": "FAIL (pre-fix)",
+      "final_fix": "maker self-check only (review.png + crops); independent checker NOT re-run - 2-round limit reached"
+    },
+    "note": "Final fix (approved extra round, built WITHOUT construct fit): lobes hand-set (243,58,r27)/(315,54,r30)/(387,57,r27); connector top now sits at notch floors y44 (left) / y47 (right); layer fillet cut 18->5 so it no longer refills the notches. Root cause was fit inflating the centre lobe to r43. NOT independently re-verified. | Checker r2 FAIL: top-lobe notches still too shallow (floor 36/38 vs orig 44/47) - the connector change did not change the silhouette (layer fillet likely re-fills it). Baht glyph fixes confirmed. | Checker r1 FAIL (medium: shallow top-lobe notches; low: neck joint, baht right ticks/bowl). Fixed in r1 (lobe connector lowered, glyph widened); round-2 re-check not received. Bag #FEB728 snapped to Yellow #FECB56 (dE2000 6.3, per rule) - visibly paler than source; owner may want to override. Band #F59721 kept (dE 15.6). Baht = white artwork clipped to bag (not a hole) - owner decision. check.py verdict FAIL on all icons (strict thresholds vs blurry 6x upscale); numbers are hints."
+  },
+  {
+    "id": "finance.expense",
+    "labelTh": "รายจ่าย",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/finance.expense/finance.expense.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9158,
+        "tol_de_p95": 36.55,
+        "worst_window_de": 32.43,
+        "edge_recall": 0.2972,
+        "edge_precision": 0.4058,
+        "warnings": [
+          "seams: 2 thin transparent gaps inside the silhouette (517 px at 4x)"
+        ]
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9238,
+        "tol_de_p95": 10.41,
+        "worst_window_de": 6.42,
+        "edge_recall": 0.8533,
+        "edge_precision": 0.7395,
+        "warnings": [
+          "seams: 7 thin transparent gaps inside the silhouette (542 px at 4x)"
+        ]
+      },
+      "independent_checker_r1": "FAIL",
+      "independent_checker_r2": "PASS"
+    },
+    "note": "Checker r2 PASS. Low: coin A left edge 7px wide; 1-2px slivers at arrowhead inner corners. Coin side #FEAC1E unsnapped (dE 9.6) = owner call. | Checker r1 FAIL (medium: small coin C too big, arrow shaft thin/round end). Fixed in r1; round-2 not received. Coin side #FEAC1E kept measured despite dE 9.6 to Yellow (snapping merges face+side) - RULE DEVIATION, owner call. check.py verdict FAIL on all icons (strict thresholds vs blurry 6x upscale); numbers are hints."
+  },
+  {
+    "id": "finance.profitCost",
+    "labelTh": "กำไร/ต้นทุน",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/finance.profitCost/finance.profitCost.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9429,
+        "tol_de_p95": 20.34,
+        "worst_window_de": 13.46,
+        "edge_recall": 0.252,
+        "edge_precision": 0.5315,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9486,
+        "tol_de_p95": 7.77,
+        "worst_window_de": 4.87,
+        "edge_recall": 0.777,
+        "edge_precision": 0.8835,
+        "warnings": []
+      },
+      "independent_checker_r1": "FAIL",
+      "independent_checker_r2": "PASS"
+    },
+    "note": "Checker r2 PASS, no open items (red-blue gap constant 33px vs orig 31-34). | Checker r1 FAIL (medium: red/blue gap tapered 38->20px vs constant 32). Blue edge recomputed parallel to red; visually confirmed improved; round-2 not received. Blue #015CBB kept (dE 17). check.py verdict FAIL on all icons (strict thresholds vs blurry 6x upscale); numbers are hints."
+  },
+  {
+    "id": "finance.summary",
+    "labelTh": "สรุปการเงิน",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/finance.summary/finance.summary.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8266,
+        "tol_de_p95": 52.59,
+        "worst_window_de": 21.44,
+        "edge_recall": 0.33,
+        "edge_precision": 0.5458,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8543,
+        "tol_de_p95": 27.21,
+        "worst_window_de": 23.83,
+        "edge_recall": 0.8633,
+        "edge_precision": 0.5645,
+        "warnings": []
+      },
+      "independent_checker_r1": "PASS",
+      "independent_checker_r2": "PASS"
+    },
+    "note": "Checker PASS (r1, unchanged). Low: frame 3-5px large; legend Blue duller than source azure. | Checker r1 PASS (low: frame 3-5px large, legend Blue duller than source azure). Interior soft tint treated as transparent. check.py verdict FAIL on all icons (strict thresholds vs blurry 6x upscale); numbers are hints."
+  },
+  {
+    "id": "finance.split50",
+    "labelTh": "เงินที่ต้องแบ่ง 50%",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/finance.split50/finance.split50.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9428,
+        "tol_de_p95": 35.23,
+        "worst_window_de": 30.93,
+        "edge_recall": 0.4359,
+        "edge_precision": 0.4903,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9492,
+        "tol_de_p95": 9.45,
+        "worst_window_de": 7.82,
+        "edge_recall": 0.8559,
+        "edge_precision": 0.609,
+        "warnings": [
+          "seams: 2 thin transparent gaps inside the silhouette (266 px at 4x)"
+        ]
+      },
+      "independent_checker_r1": "FAIL",
+      "independent_checker_r2": "FAIL (pre-fix)",
+      "final_fix": "maker self-check only (review.png + crops); independent checker NOT re-run - 2-round limit reached"
+    },
+    "note": "Final fix (no fit): card centreline moved 1.37px down and started at the foot point (186.4,109.7) so the stroke is internally tangent to the body top-left corner arc - no protrusion (verified in an 8x crop). Card apex fillet r24 + smooth quadratic leg. Clasp tab right edge 494 (orig ~495), tab top/bottom aligned to slits. NOT independently re-verified. | Checker r2 FAIL: card stroke left end still bulges 2-3px past body corner. Low: clasp tab right edge 499 vs 495 - the pull-in was undone because construct fit re-fits that rect (fit:[x,y,w,h]). | Checker r1 FAIL (medium: card-stroke nub at body corner). Card restarted inside body tangent to corner, apex fillet enlarged, tab trimmed 3px; round-2 not received. Body #2B527F kept (dE 13.5). check.py verdict FAIL on all icons (strict thresholds vs blurry 6x upscale); numbers are hints."
+  },
+  {
+    "id": "finance.workerPay",
+    "labelTh": "ค่าตอบแทนคนงาน",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/finance.workerPay/finance.workerPay.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9373,
+        "tol_de_p95": 22.3,
+        "worst_window_de": 14.98,
+        "edge_recall": 0.3325,
+        "edge_precision": 0.6238,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.936,
+        "tol_de_p95": 9.14,
+        "worst_window_de": 3.71,
+        "edge_recall": 0.8284,
+        "edge_precision": 0.7692,
+        "warnings": []
+      },
+      "independent_checker_r1": "FAIL",
+      "independent_checker_r2": "FAIL (pre-fix)",
+      "final_fix": "maker self-check only (review.png + crops); independent checker NOT re-run - 2-round limit reached"
+    },
+    "note": "Final fix (no fit): bottom corners r22 via cubic-path bases (rect r was being clamped to h/2); front body bottom-left ~158 at y335 (orig 159), bottom-right ~408, bottom 341/336; back body right edge 537/532/527 at y296/302/305 (orig 538/533/529); dome cut where tangent, no side step. NOT independently re-verified. | Checker r2 FAIL (regression): bottom corner radius 7 too tight, orig ~22; back body 6-15px too wide at bottom-right, front body bottom-left 11px out. Side-step issue resolved. | Checker r1 FAIL (medium: 1.5-2px step where dome meets base rect). Bodies rebuilt with dome cut at widest point; round-2 not received. Front body #214B7C kept (dE 11.4). check.py verdict FAIL on all icons (strict thresholds vs blurry 6x upscale); numbers are hints."
+  },
+  {
+    "id": "finance.otherCost",
+    "labelTh": "ค่าใช้จ่ายอื่นๆ",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/finance.otherCost/finance.otherCost.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.7963,
+        "tol_de_p95": 60.07,
+        "worst_window_de": 24.97,
+        "edge_recall": 0.2894,
+        "edge_precision": 0.4391,
+        "warnings": [
+          "holes_over_content: transparent hole in the vector where the source has artwork"
+        ]
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8147,
+        "tol_de_p95": 17.68,
+        "worst_window_de": 7.08,
+        "edge_recall": 0.9306,
+        "edge_precision": 0.7081,
+        "warnings": [
+          "holes_over_content: transparent hole in the vector where the source has artwork"
+        ]
+      },
+      "independent_checker_r1": "FAIL",
+      "independent_checker_r2": "PASS"
+    },
+    "note": "Checker r2 PASS. Low: right side ~4-6px wide; top 3px high. Wave + fold fixes confirmed. | Checker r1 FAIL (medium: bottom wave bumps shallow/broad, baseline low; low: fold chamfer). Wave/baseline/fold fixed; round-2 not received. Fold #0458A9 kept (dE ~16). check.py verdict FAIL on all icons (strict thresholds vs blurry 6x upscale); numbers are hints."
+  },
+  {
+    "id": "finance.financeReport",
+    "labelTh": "รายงานการเงิน",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/finance.financeReport/finance.financeReport.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8745,
+        "tol_de_p95": 27.83,
+        "worst_window_de": 16.61,
+        "edge_recall": 0.3267,
+        "edge_precision": 0.4919,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8914,
+        "tol_de_p95": 11.58,
+        "worst_window_de": 4.71,
+        "edge_recall": 0.7632,
+        "edge_precision": 0.7862,
+        "warnings": []
+      },
+      "independent_checker_r1": "PASS",
+      "independent_checker_r2": "PASS"
+    },
+    "note": "Checker r2 PASS. Low: bars still 3-4px low - the move was undone because the bars have fit:true and construct fit re-places them. | Checker r1 PASS (low: bars 3px low - moved up 3px after). check.py verdict FAIL on all icons (strict thresholds vs blurry 6x upscale); numbers are hints."
+  },
+  {
+    "id": "analysis.overview",
+    "labelTh": "สถิติภาพรวม",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.overview/analysis.overview.svg",
+    "checkSummary": {
+      "independentChecker": "Checker R1 PASS (fid 9, sharp 10, colour 9). Bars within 1 px at 1x.",
+      "script_vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9305,
+        "tol_de_p95": 24.92,
+        "worst_window_de": 11.08,
+        "edge_recall": 0.5003,
+        "edge_precision": 0.7567,
+        "warnings": []
+      },
+      "script_vs_1x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8959,
+        "tol_de_p95": 13.96,
+        "worst_window_de": 6.57,
+        "edge_recall": 0.7391,
+        "edge_precision": 0.6026,
+        "warnings": []
+      },
+      "colours": [
+        "#00AA7D"
+      ],
+      "spec": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/icons/analysis.overview.spec.json",
+      "files": "svg/eps/ai/png(1024) in /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.overview; review.png + check1x/review.png"
+    },
+    "note": "Green #00AA7D (measured #04A16A, dE2000 4.1). Source has 3 bars, not 4 as in the brief; the vector has 3."
+  },
+  {
+    "id": "analysis.yieldTrend",
+    "labelTh": "แนวโน้มผลผลิต",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.yieldTrend/analysis.yieldTrend.svg",
+    "checkSummary": {
+      "independentChecker": "Checker R1 PASS (fid 9, sharp 10, colour 9).",
+      "script_vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9059,
+        "tol_de_p95": 25.0,
+        "worst_window_de": 13.04,
+        "edge_recall": 0.3543,
+        "edge_precision": 0.5321,
+        "warnings": []
+      },
+      "script_vs_1x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8683,
+        "tol_de_p95": 12.22,
+        "worst_window_de": 4.46,
+        "edge_recall": 0.7258,
+        "edge_precision": 0.8866,
+        "warnings": []
+      },
+      "colours": [
+        "#00AA7D"
+      ],
+      "spec": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/icons/analysis.yieldTrend.spec.json",
+      "files": "svg/eps/ai/png(1024) in /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.yieldTrend; review.png + check1x/review.png"
+    },
+    "note": "Green #00AA7D (measured #06AB70, dE2000 3.4)."
+  },
+  {
+    "id": "analysis.comparePlots",
+    "labelTh": "เปรียบเทียบแปลง",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.comparePlots/analysis.comparePlots.svg",
+    "checkSummary": {
+      "independentChecker": "Checker R1 PASS (colour 8). One low item: the left bar's snap to Blue is borderline (dE2000 9.6-9.97) and reads duller and more teal than the source.",
+      "script_vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9307,
+        "tol_de_p95": 35.78,
+        "worst_window_de": 29.13,
+        "edge_recall": 0.3536,
+        "edge_precision": 0.6086,
+        "warnings": []
+      },
+      "script_vs_1x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9211,
+        "tol_de_p95": 31.13,
+        "worst_window_de": 24.97,
+        "edge_recall": 0.648,
+        "edge_precision": 0.5118,
+        "warnings": []
+      },
+      "colours": [
+        "#0358AB",
+        "#1689C7",
+        "#E55353"
+      ],
+      "spec": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/icons/analysis.comparePlots.spec.json",
+      "files": "svg/eps/ai/png(1024) in /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.comparePlots; review.png + check1x/review.png"
+    },
+    "note": "Bars Blue #1689C7 (measured #0572D6-#057AD8, dE2000 7.3-9.97: snapped under the <=10 rule, borderline). Baseline kept as measured #0358AB (dE2000 17.5). Red #E55353 (dE2000 4.4)."
+  },
+  {
+    "id": "analysis.historyReport",
+    "labelTh": "รายงานย้อนหลัง",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.historyReport/analysis.historyReport.svg",
+    "checkSummary": {
+      "independentChecker": "Checker R1 PASS (fid 9, sharp 10, colour 9).",
+      "script_vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.7714,
+        "tol_de_p95": 52.02,
+        "worst_window_de": 20.68,
+        "edge_recall": 0.4197,
+        "edge_precision": 0.6139,
+        "warnings": []
+      },
+      "script_vs_1x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.7602,
+        "tol_de_p95": 23.25,
+        "worst_window_de": 9.03,
+        "edge_recall": 0.9113,
+        "edge_precision": 0.6282,
+        "warnings": []
+      },
+      "colours": [
+        "#002858",
+        "#075EB6"
+      ],
+      "spec": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/icons/analysis.historyReport.spec.json",
+      "files": "svg/eps/ai/png(1024) in /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.historyReport; review.png + check1x/review.png"
+    },
+    "note": "Navy #002858 (dE2000 3.0). Fold kept as measured #075EB6 (dE2000 16.6). Paper interior is transparent."
+  },
+  {
+    "id": "analysis.worldPrice",
+    "labelTh": "ราคาตลาดโลก",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.worldPrice/analysis.worldPrice.svg",
+    "checkSummary": {
+      "independentChecker": "Checker R1 PASS (fid 8). One low item: the outer ring may be about 1-1.5 px larger at 1x (checker measured 319 vs 310-314 at 6x). Not changed. holes_over_content flags are white paper cells, which are correct per the brief.",
+      "script_vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.7551,
+        "tol_de_p95": 32.93,
+        "worst_window_de": 14.21,
+        "edge_recall": 0.3342,
+        "edge_precision": 0.5299,
+        "warnings": [
+          "holes_over_content: transparent hole in the vector where the source has artwork",
+          "pinholes: 1 tiny transparent holes where the source has artwork (stack the lower layer under)"
+        ]
+      },
+      "script_vs_1x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.7796,
+        "tol_de_p95": 13.65,
+        "worst_window_de": 8.52,
+        "edge_recall": 0.9082,
+        "edge_precision": 0.8377,
+        "warnings": [
+          "holes_over_content: transparent hole in the vector where the source has artwork"
+        ]
+      },
+      "colours": [
+        "#1689C7"
+      ],
+      "spec": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/icons/analysis.worldPrice.spec.json",
+      "files": "svg/eps/ai/png(1024) in /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.worldPrice; review.png + check1x/review.png"
+    },
+    "note": "Blue #1689C7 (measured #1196F3, dE2000 6.7). Meridians are lens arcs and parallels are circular arcs, clipped to the ring."
+  },
+  {
+    "id": "analysis.tradingChart",
+    "labelTh": "กราฟ TradingView",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.tradingChart/analysis.tradingChart.svg",
+    "checkSummary": {
+      "independentChecker": "Checker R1+R2 FAIL (arrowhead inner notch blue where source green). Final coordinator-approved fix: head = filled triangle (polygon, straight lower-left edge x-y=420 from (498,78) to (543,123)) + round-capped chevron for the rounded corners, green over the blue line. Head layer IoU 0.89 -> 0.94. Self-verified by eye on a side-by-side crop and review.png only; NOT re-verified by the independent checker (no 3rd round, per coordinator). Note: the checker's row-start numbers implied an edge near x-y=433, but the side-by-side crop showed the source edge at x-y~418-420; I followed the visual.",
+      "script_vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9058,
+        "tol_de_p95": 33.76,
+        "worst_window_de": 28.75,
+        "edge_recall": 0.3371,
+        "edge_precision": 0.5959,
+        "warnings": []
+      },
+      "script_vs_1x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8808,
+        "tol_de_p95": 31.44,
+        "worst_window_de": 18.57,
+        "edge_recall": 0.6628,
+        "edge_precision": 0.7624,
+        "warnings": []
+      },
+      "colours": [
+        "#00AA7D",
+        "#1689C7"
+      ],
+      "spec": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/icons/analysis.tradingChart.spec.json",
+      "files": "svg/eps/ai/png(1024) in /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.tradingChart; review.png + check1x/review.png"
+    },
+    "note": "Line Blue #1689C7 (measured #0877DB, dE2000 8.5; check.py's cruder dE reads 24.9, so the line looks duller than the source). Head Green #00AA7D (dE2000 3.2)."
+  },
+  {
+    "id": "analysis.costAnalysis",
+    "labelTh": "วิเคราะห์ต้นทุน",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.costAnalysis/analysis.costAnalysis.svg",
+    "checkSummary": {
+      "independentChecker": "Checker R1+R2 FAIL (teal outer edge too full). Final coordinator-approved fix: outer edge = smooth convex quadratic x(y) least-squares-fitted to source points (484,190.6),(480,202),(470,233),(460,249),(455,259),(435,282.5) (residuals <=1 px). Mask now: col 460 bottom 250 (src 249), col 470 232 (233), col 480 207 (202); row 240 right 466 (468), row 260 454 (455). Self-verified by eye on crop + review.png only; NOT re-verified by the independent checker. Open low item: wedge gaps 3-4 px wider than source (unchanged).",
+      "script_vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9288,
+        "tol_de_p95": 20.82,
+        "worst_window_de": 12.56,
+        "edge_recall": 0.3183,
+        "edge_precision": 0.5203,
+        "warnings": []
+      },
+      "script_vs_1x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9072,
+        "tol_de_p95": 9.5,
+        "worst_window_de": 4.71,
+        "edge_recall": 0.6894,
+        "edge_precision": 0.8087,
+        "warnings": []
+      },
+      "colours": [
+        "#1689C7",
+        "#244C7C",
+        "#5BD8CB"
+      ],
+      "spec": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/icons/analysis.costAnalysis.spec.json",
+      "files": "svg/eps/ai/png(1024) in /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.costAnalysis; review.png + check1x/review.png"
+    },
+    "note": "Big wedge Blue #1689C7 (measured #1699F1, dE2000 6.9). Dark wedge kept as measured #244C7C (dE2000 11.3-12.3 to Navy, NOT snapped). Teal kept as measured #5BD8CB (dE2000 12.9 to BrightGreen, NOT snapped)."
+  },
+  {
+    "id": "analysis.saleHistory",
+    "labelTh": "ประวัติการขาย",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.saleHistory/analysis.saleHistory.svg",
+    "checkSummary": {
+      "independentChecker": "Checker R1 FAIL (medium): square end needed on the right stroke. Fixed; checker R2 PASS (fid 9, sharp 10, colour 9). The seam warning is the real gap between the document and the clock (source 10 px, vector 11 px).",
+      "script_vs_6x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8326,
+        "tol_de_p95": 42.2,
+        "worst_window_de": 18.33,
+        "edge_recall": 0.3183,
+        "edge_precision": 0.5253,
+        "warnings": []
+      },
+      "script_vs_1x_clean": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.7782,
+        "tol_de_p95": 13.77,
+        "worst_window_de": 7.23,
+        "edge_recall": 0.9091,
+        "edge_precision": 0.7526,
+        "warnings": [
+          "seams: 1 thin transparent gaps inside the silhouette (105 px at 4x)"
+        ]
+      },
+      "colours": [
+        "#002858",
+        "#00AA7D",
+        "#0351B0",
+        "#0669BD"
+      ],
+      "spec": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/icons/analysis.saleHistory.spec.json",
+      "files": "svg/eps/ai/png(1024) in /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/analysis.saleHistory; review.png + check1x/review.png"
+    },
+    "note": "Navy #002858 (dE2000 2.2). Fold kept as measured #0669BD (dE2000 12.6). Text lines kept as measured #0351B0 (dE2000 16.1). Clock Green #00AA7D (dE2000 3.3). Clock face and paper are transparent."
+  },
+  {
+    "id": "people.manager",
+    "labelTh": "ผู้จัดการสวน",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.manager/people.manager.svg",
+    "checkSummary": {
+      "checkpy_verdict": "FAIL",
+      "silhouette_iou": 0.969,
+      "tol_de_p95": 28.0,
+      "independent_checker_r1": "FAIL",
+      "independent_checker_r2": "PASS (low: brim-wing tone and band top at the sides are ambiguous in the blurred source)",
+      "review": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.manager/chk/review.png"
+    },
+    "note": "Checker r1 FAIL (hat structure, face/sideburn gap, shoulders). Rebuilt by hand: hat is legend Yellow plus a measured #FCB122 band/lower brim (dE2000 7.8; kept off-legend on purpose so the two hat tones do not merge, a deviation from the <=10 snap rule). Skin is measured #F9C68B (off-legend); hair is measured #080C08; suspenders are measured #0A4E86 (dE2000 13). Extents are within about 5 px of the source. Independent checker PASS in round 2."
+  },
+  {
+    "id": "people.tapper",
+    "labelTh": "คนกรีดยาง",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.tapper/people.tapper.svg",
+    "checkSummary": {
+      "checkpy_verdict": "FAIL",
+      "silhouette_iou": 0.9588,
+      "tol_de_p95": 38.6,
+      "independent_checker_r1": "FAIL",
+      "independent_checker_r2": "PASS (low: centre hair lobe slightly thin)",
+      "review": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.tapper/chk/review.png"
+    },
+    "note": "Checker r1 FAIL (face too narrow, ears detached, flat hairline, shoulders). Rebuilt by hand. Skin is #F9C68B: the tapper skin measures dE2000 9.4 to Yellow and was deliberately NOT snapped (a policy deviation, flagged). Cap is legend Red, shirt Navy, straps Blue, bib measured #8BCCF9. Independent checker PASS in round 2."
+  },
+  {
+    "id": "people.buyer",
+    "labelTh": "ผู้ซื้อ/ลูกค้า",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.buyer/people.buyer.svg",
+    "checkSummary": {
+      "checkpy_verdict": "FAIL",
+      "silhouette_iou": 0.9269,
+      "tol_de_p95": 27.84,
+      "independent_checker_r1": "FAIL",
+      "independent_checker_r2": "PASS (low: outer shoulders about 5 px squarer)",
+      "review": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.buyer/chk/review.png"
+    },
+    "note": "Checker r1 FAIL (side-body shoulders too square, too wide). Fixed: rounded outer shoulders and corners, 9 px gap. The centre body is measured #007060, flat; the source diagonal shading is dropped. Extents are within about 5 px. Independent checker PASS in round 2."
+  },
+  {
+    "id": "people.transporter",
+    "labelTh": "ผู้ขนส่ง",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.transporter/people.transporter.svg",
+    "checkSummary": {
+      "checkpy_verdict": "FAIL",
+      "silhouette_iou": 0.9572,
+      "tol_de_p95": 26.76,
+      "independent_checker_r1": "FAIL",
+      "independent_checker_r2": "PASS (no open items)",
+      "review": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.transporter/chk/review.png"
+    },
+    "note": "Checker r1 FAIL (box/chassis seam, cab corner, window, chassis end). Fixed: no seam, the arch cuts the box, the cab is a path, the window is a transparent hole. The checker wheel-size item was a registration artefact: in source px r is about 36.5/35 and matches. Box is legend Blue, so it is visibly duller than the source #199BF2 (dE 7.3, per policy). Independent checker PASS in round 2."
+  },
+  {
+    "id": "people.contacts",
+    "labelTh": "รายชื่อผู้ติดต่อ",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.contacts/people.contacts.svg",
+    "checkSummary": {
+      "checkpy_verdict": "FAIL",
+      "silhouette_iou": 0.9742,
+      "tol_de_p95": 20.1,
+      "independent_checker_r1": "PASS",
+      "independent_checker_r2": "PASS (no open items)",
+      "review": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.contacts/chk/review.png"
+    },
+    "note": "Checker r1 PASS (fidelity 8). The ring holes were then resized to about 18x23 per its medium item (confirmed in round 2). The person and ring holes are opaque WHITE artwork (open owner question: white vs transparent)."
+  },
+  {
+    "id": "people.commsLog",
+    "labelTh": "บันทึกการสื่อสาร",
+    "status": "pass",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.commsLog/people.commsLog.svg",
+    "checkSummary": {
+      "checkpy_verdict": "FAIL",
+      "silhouette_iou": 0.9792,
+      "tol_de_p95": 13.11,
+      "independent_checker_r1": "PASS",
+      "independent_checker_r2": "PASS (no open items)",
+      "review": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.commsLog/chk/review.png"
+    },
+    "note": "Checker r1 PASS. The bubble was then rescaled to the source extents and the tail made concave (confirmed in round 2). The dots are opaque white artwork (open question)."
+  },
+  {
+    "id": "people.workerInfo",
+    "labelTh": "ข้อมูลคนงาน",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.workerInfo/people.workerInfo.svg",
+    "checkSummary": {
+      "checkpy_verdict": "FAIL",
+      "silhouette_iou": 0.8515,
+      "tol_de_p95": 46.41,
+      "independent_checker_r1": "PASS",
+      "independent_checker_r2": "PASS (low: right shoulder about 4 px low)",
+      "review": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.workerInfo/chk/review.png"
+    },
+    "note": "Checker r1 PASS. Its low items were measured in source px and are within 2 px; the shoulder path was tightened. Card interior is transparent."
+  },
+  {
+    "id": "people.profitShare",
+    "labelTh": "แบ่งผลประโยชน์",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.profitShare/people.profitShare.svg",
+    "checkSummary": {
+      "checkpy_verdict": "FAIL",
+      "silhouette_iou": 0.7941,
+      "tol_de_p95": 64.94,
+      "independent_checker_r1": "FAIL",
+      "independent_checker_r2": "FAIL: high: yellow lowest fingertip torn/hooked at x305-358 y280-312; medium: wobbly yellow edge along the orange fingers; medium: creases about 2x too wide (13 vs 6 px); low: hook at the sleeve corner (270,80)",
+      "review": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/people.profitShare/chk/review.png",
+      "post_r2_fix": "self-check only (owner-approved last round, no 3rd checker round)"
+    },
+    "note": "Checker FAILed it in rounds 1 and 2. The owner approved one last fix round, checked by me only (no 3rd checker round). Fixed: (1) the lowest yellow fingertip is now one clean round-ended capsule, with no tear, spur or notch; (2) the yellow edge along the orange fingers is one straight diagonal cut, and the yellow upper edge along the orange arm is straightened; (3) the three right fingers are rebuilt as parallel capsules, so the creases are even ~6.5 px gaps (were ~13 px); (4) the sleeve-corner hook is replaced by a straight diagonal. I confirmed by eye on review.png and 5x zooms: it reads cleanly. Remaining: a tiny ledge at the lower-left of the lowest fingertip (about x311,y305); the white gap to the orange arm is about 1-2 px wider than the source; the fingertip shapes are idealised capsules (the source is blurry there). Orange is measured #FEA621 (dE2000 11.6, off-legend). Cuffs are legend Navy/Green; the yellow hand is legend Yellow."
+  },
+  {
+    "id": "system.backup",
+    "labelTh": "สำรองข้อมูล",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.backup/system.backup.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9669,
+        "tol_de_p95": 19.29,
+        "worst_window_de": 13.5,
+        "edge_recall": 0.4162,
+        "edge_precision": 0.7105,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9529,
+        "tol_de_p95": 8.62,
+        "worst_window_de": 4.12,
+        "edge_recall": 0.6774,
+        "edge_precision": 0.8309,
+        "warnings": []
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.backup/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.backup/chk1x/review.png"
+    },
+    "note": "Checker FAIL round 2; owner-approved final fix round (no 3rd checker round): top-left lobe refit (c210/c220/c240 top 105.8/97.5/91.2 vs src 105.5/97.8/91.2), left shaft-exit fillet enlarged (r302 302.5 vs 301.5). Self-verified by source-px edge probes (<=2px) and by eye; NOT re-verified by the independent checker. Colour: Blue #1689C7 (measured #189AF3, dE00 7.3). check.py verdict FAIL on every icon (strict thresholds vs blurry 6x upscale; registration includes source blur halo)."
+  },
+  {
+    "id": "system.sync",
+    "labelTh": "ซิงค์ข้อมูล",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.sync/system.sync.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9688,
+        "tol_de_p95": 15.36,
+        "worst_window_de": 8.86,
+        "edge_recall": 0.5596,
+        "edge_precision": 0.6752,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9502,
+        "tol_de_p95": 7.59,
+        "worst_window_de": 4.99,
+        "edge_recall": 0.7885,
+        "edge_precision": 0.7564,
+        "warnings": []
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.sync/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.sync/chk1x/review.png"
+    },
+    "note": "Checker FAIL round 2; owner-approved final fix round (no 3rd checker round): top lobe is now an ellipse and the left lobe an ellipse, junction fillet 10->5 so valleys match (c195 114.0 vs 113.5, c410 105.8 vs 104.5), bottom-left rounder (r300 183.8 vs 184.0), right lobe top lowered (c420 114.8 vs 115.2). Self-verified by source-px probes and by eye; NOT re-verified by the independent checker. Colour: Green #00AA7D (dE00 2.7). check.py verdict FAIL on every icon (strict thresholds vs blurry 6x upscale; registration includes source blur halo)."
+  },
+  {
+    "id": "system.offline",
+    "labelTh": "ใช้งานออฟไลน์",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.offline/system.offline.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8316,
+        "tol_de_p95": 42.9,
+        "worst_window_de": 17.52,
+        "edge_recall": 0.2452,
+        "edge_precision": 0.4606,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.822,
+        "tol_de_p95": 14.54,
+        "worst_window_de": 6.52,
+        "edge_recall": 0.8255,
+        "edge_precision": 0.8971,
+        "warnings": []
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.offline/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.offline/chk1x/review.png"
+    },
+    "note": "Independent checker PASS round 1 (low optional items only: outer arc ~1.8px thin, dot ~0.9px large) Colour: arcs measured #0A4A9E (Navy dE00 13.0), dot Navy (dE00 3.0). check.py verdict FAIL on every icon (strict thresholds vs blurry 6x upscale; registration includes source blur halo)."
+  },
+  {
+    "id": "system.multiDevice",
+    "labelTh": "ซิงค์หลายเครื่อง",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.multiDevice/system.multiDevice.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.7834,
+        "tol_de_p95": 56.08,
+        "worst_window_de": 29.61,
+        "edge_recall": 0.3269,
+        "edge_precision": 0.5231,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)",
+          "holes_over_content: transparent hole in the vector where the source has artwork"
+        ]
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8125,
+        "tol_de_p95": 27.18,
+        "worst_window_de": 9.89,
+        "edge_recall": 0.8346,
+        "edge_precision": 0.6312,
+        "warnings": [
+          "pinholes: 2 tiny transparent holes where the source has artwork (stack the lower layer under)",
+          "seams: 1 thin transparent gaps inside the silhouette (43 px at 4x)"
+        ]
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.multiDevice/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.multiDevice/chk1x/review.png"
+    },
+    "note": "Independent checker PASS round 2 (low: tablet hump ~2px small, phone bottom bar ~1.7px thick, tablet hole ~1px low). Colour: Navy (dE00 2.4). check.py verdict FAIL on every icon (strict thresholds vs blurry 6x upscale; registration includes source blur halo)."
+  },
+  {
+    "id": "system.security",
+    "labelTh": "ความปลอดภัย",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.security/system.security.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9671,
+        "tol_de_p95": 34.11,
+        "worst_window_de": 19.06,
+        "edge_recall": 0.3491,
+        "edge_precision": 0.5776,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)"
+        ]
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9543,
+        "tol_de_p95": 9.6,
+        "worst_window_de": 5.67,
+        "edge_recall": 0.7143,
+        "edge_precision": 0.8276,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)"
+        ]
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.security/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.security/chk1x/review.png"
+    },
+    "note": "Checker FAIL round 2; owner-approved final fix round (no 3rd checker round): check long arm shortened ~6px (c360 white 129.2-152.0 vs src 129.0-151.0; c368 no white, matching src), lower shield narrowed back (r250/r270/r290/r310 within 0-2px; c200 bottom 236.8 vs 234.2). Self-verified by source-px probes and by eye; NOT re-verified by the independent checker. Colour: Navy (dE00 2.0) + white check artwork. check.py verdict FAIL on every icon (strict thresholds vs blurry 6x upscale; registration includes source blur halo)."
+  },
+  {
+    "id": "system.appSettings",
+    "labelTh": "ตั้งค่าแอป",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.appSettings/system.appSettings.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9449,
+        "tol_de_p95": 20.61,
+        "worst_window_de": 15.93,
+        "edge_recall": 0.2851,
+        "edge_precision": 0.4102,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9432,
+        "tol_de_p95": 6.76,
+        "worst_window_de": 5.75,
+        "edge_recall": 0.8462,
+        "edge_precision": 0.8017,
+        "warnings": []
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.appSettings/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.appSettings/chk1x/review.png"
+    },
+    "note": "Independent checker PASS round 1 (low optional items: right flat ~1.5-3px out) Colour: measured #506B8C (closest Blue dE00 14.5). check.py verdict FAIL on every icon (strict thresholds vs blurry 6x upscale; registration includes source blur halo)."
+  },
+  {
+    "id": "system.about",
+    "labelTh": "เกี่ยวกับแอป",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.about/system.about.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9617,
+        "tol_de_p95": 24.13,
+        "worst_window_de": 13.1,
+        "edge_recall": 0.3737,
+        "edge_precision": 0.6319,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)"
+        ]
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.9364,
+        "tol_de_p95": 8.62,
+        "worst_window_de": 6.77,
+        "edge_recall": 0.7788,
+        "edge_precision": 0.92,
+        "warnings": [
+          "filled_source_bg: background enclosed in the source is opaque in the vector (counter/ring filled? ok only if the brief says it is white artwork)"
+        ]
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.about/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.about/chk1x/review.png"
+    },
+    "note": "Independent checker PASS round 2 (low: i corners are ~2px chamfers vs soft rounds). Colour: measured #014EA8 (Navy dE00 14.7) + white i artwork. check.py verdict FAIL on every icon (strict thresholds vs blurry 6x upscale; registration includes source blur halo)."
+  },
+  {
+    "id": "system.manual",
+    "labelTh": "คู่มือการใช้งาน",
+    "status": "pass-with-warnings",
+    "svgPath": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.manual/system.manual.svg",
+    "checkSummary": {
+      "vs_6x_haloFree": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8022,
+        "tol_de_p95": 52.94,
+        "worst_window_de": 19.35,
+        "edge_recall": 0.291,
+        "edge_precision": 0.4896,
+        "warnings": []
+      },
+      "vs_1x_original": {
+        "verdict": "FAIL",
+        "silhouette_iou": 0.8505,
+        "tol_de_p95": 16.82,
+        "worst_window_de": 10.38,
+        "edge_recall": 0.9683,
+        "edge_precision": 0.7558,
+        "warnings": []
+      },
+      "files": "/private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.manual/review.png, /private/tmp/claude-501/-Users-chalat-work-mon-farm--claude-worktrees-dev-checkout-rebase-847735/3609a1b8-4dca-4a60-a5d6-3b9e58e9622d/scratchpad/createvector-inspect/createvector/out/build/system.manual/chk1x/review.png"
+    },
+    "note": "Independent checker PASS round 2 (low: inner corner radius ~15-16 vs ~20 px). Colour: Navy (dE00 2.6). check.py verdict FAIL on every icon (strict thresholds vs blurry 6x upscale; registration includes source blur halo)."
   }
 ]
