@@ -41,6 +41,55 @@ Status: Ready
 
 ## Dev notes
 
+**2026-10-23 — FarmMate icon pilot (branch `feat/icon-set-farmmate-pilot`).**
+Owner directed a FarmMate (not Feather) icon set here on 2026-10-03; this
+session produced the first slice against that direction, scoped as a pilot
+rather than the full AC:
+
+- 24 of ~70 icons from `references/farmmate-icon-pack.png` (the sheet's first
+  three top-row categories: นำทาง, สวนและแปลง, ผลผลิตและการขาย), hand-authored
+  as `react-native-svg` vectors — `src/ui/farmmate-icons/registry.tsx`. Not
+  pixel-traced from the sheet (it's a composite mockup at ~64px/icon, below
+  reliable trace fidelity); drawn from it as a visual/colour reference.
+- New dependency: `react-native-svg` (owner-approved this session; MIT,
+  Software Mansion, official Expo-supported, no known CVE at install time).
+  This is the icon-package approval this story's AC already asks for, just a
+  renderer rather than a prebuilt icon font.
+- Colour: every fill reads `theme.color.<role>` — no raw hex (enforced by
+  `scripts/no-raw-colour.test.ts`, which passed). The mockup's own 7-swatch
+  legend does not map 1:1 onto this app's signal roles (`accept`/`reject`/
+  `warn` are reserved states); the substitutions used are documented in the
+  registry file's header comment and in the Artifact proposal (PR
+  description).
+- Dev-only catalog page at `/v2/dev/icons` (not linked from any menu /
+  `v2/routes.ts`) so the team can see the real rendered icons —
+  `src/v2/dev/icon-catalog-screen.tsx`.
+- Tests: registry + catalog screen (29 + 3 new tests), full `src/ui` and
+  `src/v2/dev` suites green, `npm run contrast` and `npm run lint` clean,
+  `tsc --noEmit` clean.
+- Verified visually: real render tree dumped from `@testing-library/
+  react-native`'s `toJSON()` (not hand-retyped) into a static SVG gallery and
+  screenshotted — not the running app, because `/v2/dev/icons` sits behind
+  `AccountGate` (real Google sign-in), which this session can't complete, and
+  the Auth-emulator Playwright route is the same one `e2e/auth-emulator.spec.ts`
+  already flags as blocked in this kind of sandbox (apis.google.com
+  unreachable). Two real bugs this verification pass caught and fixed before
+  commit: `nav.settings` only drew 4 of 8 gear teeth (asymmetric), and
+  `farm.treeCondition` read as a paint-brush, not a leaf.
+
+**Open / not done in this slice:**
+- Not Done against this story's own AC — AC item "ไอคอนเส้นชุดเดียวใช้แทน
+  ไอคอนเดิมในจุดนำทาง/แถวฟอร์ม" (replace existing nav/form icons) is NOT done:
+  the pilot batch sits alongside the existing `ui/icons.tsx` line icons,
+  unused by any real screen yet — see the Artifact proposal for where each
+  icon is suggested to go.
+- Remaining ~46 icons (6 more categories on the sheet) not produced.
+- No independent code review yet (process.md gate before Done).
+- CI not yet run on this branch/PR.
+- `accessibilityLabel` per icon (AC item) not added — these are decorative
+  in the catalog page only; real usage sites will need it per the existing
+  convention (hidden `aria-hidden`, label on the surrounding control).
+
 ## Code review
 
 ## QA notes

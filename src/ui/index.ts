@@ -14,6 +14,14 @@ export { Card, CardLabel, cardStyle } from './card';
 export { Chip, type ChipTone } from './chip';
 export { DateText, type DateFormatter } from './date-text';
 export { Drawer, MenuItem, MenuSection } from './drawer';
+export {
+  FarmMateIcon,
+  FARMMATE_ICONS,
+  FARMMATE_ICON_CATEGORY_LABEL_TH,
+  getFarmMateIcon,
+  type FarmMateIconCategory,
+  type FarmMateIconDef,
+} from './farmmate-icons';
 export { FieldError, RadioCard, SegmentedControl } from './form';
 export { FactRow, IconTile, toneColours, type IconRender, type TileTone } from './icon-tile';
 export { MoneyText } from './money-text';
