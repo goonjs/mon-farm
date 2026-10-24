@@ -32,8 +32,9 @@ jest.mock('expo-router', () => {
     __params: params,
   };
 });
-const { __params: mockParams } = jest.requireMock('expo-router') as {
+const { __params: mockParams, router: mockRouter } = jest.requireMock('expo-router') as {
   __params: { current: Record<string, string> };
+  router: { push: jest.Mock; replace: jest.Mock };
 };
 
 async function flush() {
@@ -49,21 +50,30 @@ describe('debt ledger (E06-S03)', () => {
     mockParams.current = DAENG;
   });
 
-  it('manual fertilizer debt: bill × % (default 50) and the owner share becomes an expense', async () => {
+  it('kind fertilizer opens the one fertilizer purchase flow with this tapper (E11-S10 C)', async () => {
     wrap(<AddDebtScreen />);
     await flush();
     fireEvent.press(screen.getByTestId('debt-kind-fertilizer'));
-    fireEvent.changeText(screen.getByTestId('debt-amount'), '4000');
-    expect(screen.getByTestId('debt-worker-share')).toHaveTextContent(/2,000\.00/);
-    fireEvent.press(screen.getByTestId('debt-pct-mode-custom'));
-    fireEvent.changeText(screen.getByTestId('debt-pct'), '33.5');
-    expect(screen.getByTestId('debt-pct-error')).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId('debt-pct'), '50');
-    fireEvent.changeText(screen.getByTestId('debt-date'), '2026-09-20');
-    fireEvent.changeText(screen.getByTestId('debt-note'), 'ปุ๋ยรอบ ก.ย.');
-    await act(async () => fireEvent.press(screen.getByTestId('debt-save')));
-    await flush();
+    // Replaced: after saving the purchase the user lands on the tapper's debts, not this form again.
+    expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { workerId: 'p-daeng', name: 'แดง' } });
+    expect(screen.queryByTestId('debt-pct-mode')).toBeNull();
+  });
 
+  it('an old manual fertilizer debt (bill × %) still reads, with its owner-share expense', async () => {
+    await mockFinance.append({
+      id: 'old-fert-1',
+      groupId: 'group-1',
+      deviceSeq: 1,
+      ts: 1,
+      actor: { userId: 'u', deviceId: 'dev-old' },
+      source: 'app',
+      targetId: 'debt-old-fert',
+      baseEventId: null,
+      payload: {
+        t: 'debt_added',
+        fields: { worker: { id: 'p-daeng', name: 'แดง' }, kind: 'fertilizer', amountSatang: 200000, date: '2026-09-20', note: 'ปุ๋ยรอบ ก.ย.', lender: null, fertilizer: { totalSatang: 400000, workerPct: 50 }, carriedForward: false },
+      },
+    });
     const events = await mockFinance.load();
     expect(projectDebts(events).get('p-daeng')?.summary.owed.fertilizer).toBe(200000);
     const owner = projectFinance(events).expenses.find((x) => x.id.endsWith(':owner'));
@@ -105,6 +115,56 @@ describe('debt ledger (E06-S03)', () => {
     await act(async () => fireEvent.press(screen.getByTestId(`debt-void-${id}`)));
     await flush();
     expect(projectDebts(await mockFinance.load()).get('p-daeng')?.balanceSatang).toBe(200000);
+  });
+});
+
+describe('a debt made from an expense share (E11-S10)', () => {
+  it('cannot be voided here: it opens its expense (the flow for fertilizer)', async () => {
+    mockParams.current = { workerId: 'p-som', name: 'สม' };
+    await mockFinance.append({
+      id: 'share-exp-1',
+      groupId: 'group-1',
+      deviceSeq: 9,
+      ts: 9,
+      actor: { userId: 'u', deviceId: 'dev-old' },
+      source: 'app',
+      targetId: 'exp-share-1',
+      baseEventId: null,
+      payload: {
+        t: 'expense_created',
+        fields: {
+          amountSatang: 100000, date: '2026-10-01', stage: 'actual', categoryId: 'cat-fertilizer', propertyId: null, item: '', note: '', payer: null,
+          share: { billSatang: 100000, discountSatang: 0, totalSacks: 2, lines: [{ worker: { id: 'p-som', name: 'สม' }, sacks: 2, workerPct: 50, settle: 'debt' }] },
+          fertilizer: { type: 'chemical', formula: 'ยูเรีย', brand: '', sackKg: null, reasons: [], zones: [], shop: '', orderedBy: '' },
+        },
+      },
+    });
+    wrap(<DebtAccountScreen />);
+    await flush();
+    const id = 'exp-share-1:share:p-som';
+    expect(screen.getByTestId(`debt-line-${id}`)).toBeTruthy();
+    expect(screen.queryByTestId(`debt-void-${id}`)).toBeNull();
+    fireEvent.press(screen.getByTestId(`debt-open-${id}`));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { id: 'exp-share-1' } });
+  });
+
+  it('once its purchase is deleted, the line opens the expense form, where it can be restored', async () => {
+    mockParams.current = { workerId: 'p-som', name: 'สม' };
+    await mockFinance.append({
+      id: 'share-exp-1-del',
+      groupId: 'group-1',
+      deviceSeq: 10,
+      ts: 10,
+      actor: { userId: 'u', deviceId: 'dev-old' },
+      source: 'app',
+      targetId: 'exp-share-1',
+      baseEventId: 'share-exp-1',
+      payload: { t: 'expense_changed', patch: { deleted: true } },
+    });
+    wrap(<DebtAccountScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('debt-open-exp-share-1:share:p-som'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/expense/[id]', params: { id: 'exp-share-1' } });
   });
 });
 

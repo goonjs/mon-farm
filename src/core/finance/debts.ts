@@ -10,7 +10,8 @@
  * history is never rewritten.
  */
 
-import { fertilizerSplit, foldRecordPublic, headOf } from './ledger';
+import { fertilizerSplit, foldRecordPublic, headOf, projectFinance } from './ledger';
+import { shareDebts } from './share';
 import {
   FARM_FUNDS,
   type DebtFields,
@@ -145,6 +146,10 @@ export function projectDebts(
       if (p?.t === 'debt_plan_set') plans.set(p.worker.id, p.perSaleSatang);
     }
   }
+
+  // Tappers' parts of shared expenses (E11-S10) — projected from the expense, never stored.
+  // Re-projects the finance log for the share debts: accepted at MVP volume (E11-S10 review).
+  debts.push(...shareDebts(projectFinance(events).expenses));
 
   const workers = new Map<string, Payer>();
   for (const d of debts) workers.set(d.worker.id, d.worker);

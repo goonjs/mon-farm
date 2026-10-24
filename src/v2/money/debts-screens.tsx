@@ -157,6 +157,13 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
     if (p) return fin.write(p.id, p.headEventId, { t: 'debt_payment_changed', patch: { deleted } });
   };
 
+  const sourceOf = (h: HistoryLine) => account?.debts.find((d) => d.id === h.id)?.expenseId;
+  const openSource = (expenseId: string) => {
+    const x = fin.state?.expenses.find((e) => e.id === expenseId);
+    // A deleted purchase opens in the expense form: restore lives there, not in the flow.
+    if (!x?.deleted && (x?.fertilizer || x?.share?.totalSacks != null)) router.push({ pathname: '/v2/fertilizer', params: { id: expenseId } });
+    else router.push({ pathname: '/v2/expense/[id]', params: { id: expenseId } });
+  };
   const lines = (account?.history ?? []).filter((h) => filter === 'all' || h.type === filter);
   return (
     <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space[16] * 2 }}>
@@ -255,9 +262,14 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
               {h.type === 'loan' && h.creditor.name ? <FactRow icon={(c) => <PersonIcon color={c} size={14} />}>{msg('debt.history.lender', { name: h.creditor.name })}</FactRow> : null}
               {h.deleted ? <AppText variant="caption">{msg('debt.history.voided')}</AppText> : null}
               <View style={{ alignItems: 'flex-start' }}>
-                <Button testID={`debt-void-${h.id}`} variant={h.deleted ? 'ghost' : 'destructive'} onPress={() => void voidLine(h, !h.deleted)}>
-                  {h.deleted ? msg('debt.history.restore') : msg('debt.history.void')}
-                </Button>
+                {sourceOf(h) ? (
+                  // A share debt is a projection of its expense: void, restore or edit it there (E11-S10).
+                  <Button testID={`debt-open-${h.id}`} variant="ghost" onPress={() => openSource(sourceOf(h)!)}>{msg('debt.history.openExpense')}</Button>
+                ) : (
+                  <Button testID={`debt-void-${h.id}`} variant={h.deleted ? 'ghost' : 'destructive'} onPress={() => void voidLine(h, !h.deleted)}>
+                    {h.deleted ? msg('debt.history.restore') : msg('debt.history.void')}
+                  </Button>
+                )}
               </View>
             </View>
           ))}

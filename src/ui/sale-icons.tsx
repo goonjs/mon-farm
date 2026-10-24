@@ -141,3 +141,14 @@ export function CameraIcon({ color, size = 18 }: IconProps) {
   );
 }
 
+
+/** Search — a lens with a handle, for a list's search in the top bar. */
+export function SearchIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  return (
+    <View aria-hidden style={{ width: size, height: size }}>
+      <View style={{ position: 'absolute', left: 0, top: 0, width: size * 0.7, height: size * 0.7, borderRadius: size, borderWidth: w, borderColor: color }} />
+      <View style={{ position: 'absolute', left: size * 0.6, top: size * 0.72, width: size * 0.38, height: w, borderRadius: w, backgroundColor: color, transform: [{ rotate: '45deg' }] }} />
+    </View>
+  );
+}

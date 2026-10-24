@@ -46,6 +46,7 @@ import {
   DotsIcon,
   HourglassIcon,
   CameraIcon,
+  SearchIcon,
 } from './icons';
 
 /** Every stroke/fill View an icon draws, as flat styles. */
@@ -113,6 +114,7 @@ describe('line icons — Views only, coloured by the caller (E01-S17 X8)', () =>
     ['DotsIcon', <DotsIcon key="s8" color="sentinel" />],
     ['HourglassIcon', <HourglassIcon key="s9" color="sentinel" />],
     ['CameraIcon', <CameraIcon key="s10" color="sentinel" />],
+    ['SearchIcon', <SearchIcon key="s11" color="sentinel" />],
   ])('%s paints only in the colour it is given', (_name, icon) => {
     const s = strokes(icon);
     const colours = s.flatMap((x) =>

@@ -12,6 +12,9 @@ Every story, before moving to `Done`:
       real (not just unit tests passing)
 - [ ] For UI-touching stories: real UI exercised in browser/emulator,
       with screenshots attached as proof, golden path and edge cases
+- [ ] For screens that take input: each step's golden path fits one
+      390×844 screen on the real build, measured and noted in QA notes
+      (`.claude/skills/phone-form-ux`)
 - [ ] Story file updated: status, dev notes, any deviations from plan
       explained — updated live during implementation, not after the fact
 - [ ] If this story revealed a gap in `docs/prd.md` or

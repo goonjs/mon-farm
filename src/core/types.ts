@@ -421,6 +421,14 @@ export type MasterPayload =
   | { readonly t: 'point_added'; readonly pointId: string; readonly propertyId: string; readonly name: string }
   | { readonly t: 'point_renamed'; readonly pointId: string; readonly name: string }
   /**
+   * A zone (โซน) inside a farm (D-43, E03-S04 — the minimal part the
+   * fertilizer flow needs, E11-S10): add with the ISO day it takes effect,
+   * rename (the id stays). Split, merge and history stay in E03-S04. Named
+   * `farm_zone_*` so it never reads as the sale-era `zone_added` (a sys event).
+   */
+  | { readonly t: 'farm_zone_added'; readonly zoneId: string; readonly propertyId: string; readonly name: string; readonly effective: string }
+  | { readonly t: 'farm_zone_renamed'; readonly zoneId: string; readonly name: string }
+  /**
    * A point's tapper from `from` (an ISO day; absent = no start, covering all
    * of the past) until the next change on that point (E03-S05, MD-4, D-63).
    * Whoever had it before ends the day before — derived, never stored.

@@ -32,6 +32,18 @@ describe('TextField — label, required *, helper, inline error', () => {
     expect(screen.getByTestId('f').props.accessibilityLabel).toBe('พื้นที่ (ไร่), ไม่บังคับ');
   });
 
+  it('size="large": the big money field of the simple forms (E11-S10)', () => {
+    wrap(<TextField testID="f" label="จ่ายไปเท่าไหร่" size="large" value="" onChangeText={() => {}} />);
+    expect(flat(screen.getByTestId('f').props.style)).toMatchObject({ fontSize: tokens.font.size.displayXl, minHeight: tokens.target.comfortable });
+  });
+
+  it('unit: sits inside the box, beside the value (prop-01 "บาท")', () => {
+    wrap(<TextField testID="f" label="จ่ายไปเท่าไหร่" unit="บาท" value="" onChangeText={() => {}} />);
+    expect(screen.getByTestId('f-box')).toHaveTextContent('บาท');
+    expect(flat(screen.getByTestId('f-box').props.style)).toMatchObject({ borderWidth: tokens.border.hair, borderColor: c.ruleStrong });
+    expect(flat(screen.getByTestId('f').props.style).borderWidth).toBe(0);
+  });
+
   it('takes something beside the input, e.g. a unit or a "ไม่ทราบ" label', () => {
     const { Text } = jest.requireActual('react-native');
     wrap(<TextField testID="f" label="ส่วนแบ่ง" aside={<Text testID="aside">%</Text>} value="" onChangeText={() => {}} />);

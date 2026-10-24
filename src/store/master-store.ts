@@ -31,6 +31,8 @@ import {
   planStarterPoints,
   pointNameTaken,
   type PointRecord,
+  type FarmZoneRecord,
+  zoneNameTaken,
   validateProperty,
 } from '../core/master';
 import { projectSale } from '../core/project';
@@ -79,6 +81,7 @@ export class InvalidInputError extends Error {}
 export class DuplicatePointNameError extends InvalidInputError {}
 
 export type Point = PointRecord;
+export type FarmZone = FarmZoneRecord;
 
 /** A share may not start on or before the tapper's latest closed sale (D-63, D-74 F17). */
 export class ShareTooEarlyError extends InvalidInputError {
@@ -233,6 +236,29 @@ export class MasterStore implements PeopleStore {
     if (!cur || cur.name === trimmed) return;
     if (pointNameTaken(state, cur.propertyId, trimmed, pointId)) throw new DuplicatePointNameError(trimmed);
     await this.write({ t: 'point_renamed', pointId, name: trimmed });
+  }
+
+  /** A zone inside a farm (D-43), effective from an ISO day. Minimal E03-S04 for E11-S10. */
+  async addZone(propertyId: string, name: string, effective: string): Promise<FarmZone> {
+    const trimmed = name.trim();
+    if (!trimmed) throw new InvalidInputError('A zone needs a name.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(effective)) throw new InvalidInputError('A zone needs the day it takes effect.');
+    const state = await this.state();
+    if (!activeProperty(state, propertyId)) throw new InvalidInputError('A zone needs a farm that exists.');
+    if (zoneNameTaken(state, propertyId, trimmed)) throw new InvalidInputError(`Zone name already used: ${trimmed}`);
+    const zoneId = uuidv7();
+    await this.write({ t: 'farm_zone_added', zoneId, propertyId, name: trimmed, effective });
+    return (await this.state()).zones.find((z) => z.id === zoneId)!;
+  }
+
+  async renameZone(zoneId: string, name: string): Promise<void> {
+    const trimmed = name.trim();
+    if (!trimmed) throw new InvalidInputError('A zone needs a name.');
+    const state = await this.state();
+    const cur = state.zones.find((z) => z.id === zoneId);
+    if (!cur || cur.name === trimmed) return;
+    if (zoneNameTaken(state, cur.propertyId, trimmed, zoneId)) throw new InvalidInputError(`Zone name already used: ${trimmed}`);
+    await this.write({ t: 'farm_zone_renamed', zoneId, name: trimmed });
   }
 
   /**
