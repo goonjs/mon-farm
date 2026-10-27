@@ -806,8 +806,8 @@ function SettlementBody({ bump, openRounding }: { bump: () => void; openRounding
         </View>
       </View>
 
-      {/* Debt repaid in cash today: its own card, not under the owner's share (accountant review). */}
-      {cashIn.length || transferIn.length ? (
+      {/* Debt repaid in cash today: its own card, not under the owner's share (accountant review); only when there is cash (E05-S10). */}
+      {cashIn.length ? (
         <View testID="cash-today" style={{ ...cardStyle(t), backgroundColor: t.color.debtInSunk, padding: t.space.lg, gap: t.space.xxs }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
             <Dir way="in" />
@@ -1179,7 +1179,6 @@ function PaymentBody({ bump }: { bump: () => void }) {
   const choice = accounts.choiceFor(saleId);
   const account = choice?.kind === 'account' ? accounts.accounts.find((a) => a.id === choice.accountId) : undefined;
   const over = money.tappers.some((tp) => overDeducted(tp.debtDeductedSatang + tp.nettedSatang, tp.shareSatang, tp.nettedSatang));
-  const conflicts = salePaymentConflicts(fin.events, saleId);
   const cashRepaid = (id: string) => (money.debts.get(id)?.payments ?? []).filter((x) => x.saleId === saleId && !x.deleted && x.counts && (x.method === 'cash-from-share' || x.method === 'buyer-split'));
   const payees = [
     ...money.tappers.map((tp) => ({ id: tp.id, name: tp.name, satang: tp.cashSatang, tp, repaid: null })),
@@ -1190,6 +1189,9 @@ function PaymentBody({ bump }: { bump: () => void }) {
       return ps.length ? [{ id: `debt-cash-${tp.id}`, name: tp.name, satang: ps.reduce((a, x) => a + x.amountSatang, 0), tp: null, repaid: { tp, methods: [...new Set(ps.map((x) => x.method))] } }] : [];
     }),
   ];
+  // Only rows on the page block: a cash-repayment row goes when its deduction does, and a
+  // conflict left on it must not keep the sale from closing with nothing to settle it on.
+  const conflicts = salePaymentConflicts(fin.events, saleId).filter((id) => payees.some((p) => p.id === id));
   const tick = (payee: string, amount: number, done: boolean, head: string | null) =>
     flight.run(async () => {
       await fin.write(paymentTarget(saleId, payee), head, paymentMarkPayload(saleId, payee, done, amount));

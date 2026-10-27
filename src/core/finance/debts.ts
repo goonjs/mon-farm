@@ -46,15 +46,12 @@ export interface Debt extends DebtFields {
   readonly id: string;
   readonly deleted: boolean;
   readonly headEventId: string;
-  /** When it was first recorded — not its date, which the user picks. */
-  readonly recordedAt: number;
 }
 
 export interface DebtPayment extends DebtPaymentFields {
   readonly id: string;
   readonly deleted: boolean;
   readonly headEventId: string;
-  readonly recordedAt: number;
   /** False when its sale is cancelled or deleted — then it does not count. */
   readonly counts: boolean;
 }
@@ -128,7 +125,7 @@ export function projectDebts(
     const t = first.payload.t;
     if (t === 'debt_added') {
       const f = foldRecordPublic(evs, (c) => ({ ...(c.payload as { fields: DebtFields }).fields, deleted: false }), ['amountSatang', 'fertilizer', 'worker', 'lender']);
-      if (f) debts.push({ ...f.state, id, headEventId: f.head, recordedAt: f.createdAt });
+      if (f) debts.push({ ...f.state, id, headEventId: f.head });
     } else if (t === 'debt_payment_recorded') {
       const f = foldRecordPublic(evs, (c) => ({ ...(c.payload as { fields: DebtPaymentFields }).fields, deleted: false }), ['amountSatang', 'creditor', 'worker']);
       if (f) {
@@ -140,7 +137,7 @@ export function projectDebts(
           const rf = rev && foldRecordPublic(rev, (c) => ({ ...(c.payload as { fields: RepaymentFields }).fields, deleted: false }), ['amountSatang', 'allocations', 'from', 'to']);
           paired = !!rf && !rf.state.deleted;
         }
-        payments.push({ ...f.state, id, headEventId: f.head, recordedAt: f.createdAt, counts: paired && (!f.state.saleId || saleCounts(f.state.saleId)) });
+        payments.push({ ...f.state, id, headEventId: f.head, counts: paired && (!f.state.saleId || saleCounts(f.state.saleId)) });
       }
     } else if (t === 'debt_plan_set') {
       // Plans carry no patch: the current head of the chain is the plan.
@@ -233,21 +230,25 @@ export function projectDebts(
  * Records carry a day, not a time, so the rest of the sale day counts as
  * before it; for the latest sale this is today's balance.
  *
- * A debt dated after the sale still counts when it was recorded before the
- * sale deducted (E05-S10): a sale entered for an earlier day is offered
- * today's balance, so what it left of that debt is still owed.
+ * Below zero, the sales so far took from debts dated after this one — a sale
+ * entered for an earlier day is offered today's balance (E05-S10). Those debts
+ * come back oldest first, as deductions apply (D-67), until nothing is
+ * missing: what is left of them is still owed. By date only — `ts` never
+ * orders anything (architecture §Two clocks).
  */
 export function balanceAfterSale(account: DebtAccount, saleId: string, saleDate: string): number {
   let b = account.balanceSatang;
-  let deductedAt = -Infinity;
   for (const p of account.payments) {
-    if (p.deleted || !p.counts || !toFarm(p.creditor)) continue;
-    if (p.saleId === saleId) deductedAt = Math.max(deductedAt, p.recordedAt);
-    else if (p.date > saleDate) b += p.amountSatang;
+    if (p.deleted || !p.counts || !toFarm(p.creditor) || p.saleId === saleId) continue;
+    if (p.date > saleDate) b += p.amountSatang;
   }
-  for (const d of account.debts) {
-    if (d.deleted || (d.kind === 'loan' && !toFarm(d.lender))) continue;
-    if (d.date > saleDate && d.recordedAt > deductedAt) b -= d.amountSatang;
+  const later = account.debts
+    .filter((d) => !d.deleted && (d.kind !== 'loan' || toFarm(d.lender)) && d.date > saleDate)
+    .sort((x, y) => (x.date !== y.date ? (x.date < y.date ? -1 : 1) : x.id < y.id ? -1 : 1));
+  for (const d of later) b -= d.amountSatang;
+  for (const d of later) {
+    if (b >= 0) break;
+    b += d.amountSatang;
   }
   return b;
 }

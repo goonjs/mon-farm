@@ -226,9 +226,9 @@ describe('debt left after a given sale (review F9)', () => {
     expect(balanceAfterSale(acc, 'sale-3', '2026-10-14')).toBe(acc.balanceSatang);
   });
 
-  // E05-S10: a sale entered for an earlier day deducts from a debt dated after it. The sale saw that
-  // debt (it was recorded before the deduction), so it is left over, not dropped (owner 2026-10-27).
-  it('counts a debt dated after the sale when it was recorded before the sale deducted', () => {
+  // E05-S10: a sale entered for an earlier day deducts from a debt dated after it: what it did not
+  // take of that debt is still owed, not dropped (owner 2026-10-27).
+  it('gives back a later-dated debt the sale took from, less what it took', () => {
     const log = [
       debt('d1', { worker: NAT, kind: 'fertilizer', amountSatang: 735000, date: '2026-10-27', lender: null, fertilizer: { totalSatang: 1470000, workerPct: 50 } }),
       pay('s1', { worker: NAT, amountSatang: 332500, date: '2026-10-13', method: 'buyer-split', saleId: 'sale-13' }),
@@ -248,7 +248,26 @@ describe('debt left after a given sale (review F9)', () => {
     expect(balanceAfterSale(acc, 'sale-13', '2026-10-13')).toBe(402500);
   });
 
-  it('still leaves out a debt dated after the sale and recorded after its deduction (F9)', () => {
+  it('gives back later-dated debts oldest first, only as far as the sale took from them', () => {
+    const log = [
+      debt('d2', { worker: NAT, amountSatang: 200000, date: '2026-10-30' }),
+      debt('d1', { worker: NAT, amountSatang: 100000, date: '2026-10-20' }),
+      pay('s1', { worker: NAT, amountSatang: 150000, date: '2026-10-13', method: 'cash-from-share', saleId: 'sale-13' }),
+    ];
+    const acc = projectDebts(log).get(NAT.id)!;
+    // took all 1,000 of d1 (20 Oct) and 500 of d2 (30 Oct): 1,500 of d2 is left
+    expect(balanceAfterSale(acc, 'sale-13', '2026-10-13')).toBe(150000);
+  });
+
+  it('does not depend on the order things were recorded in (ts is untrusted)', () => {
+    const log = [
+      pay('s1', { worker: NAT, amountSatang: 332500, date: '2026-10-13', method: 'buyer-split', saleId: 'sale-13' }),
+      debt('d1', { worker: NAT, kind: 'fertilizer', amountSatang: 735000, date: '2026-10-27', lender: null, fertilizer: { totalSatang: 1470000, workerPct: 50 } }),
+    ];
+    expect(balanceAfterSale(projectDebts(log).get(NAT.id)!, 'sale-13', '2026-10-13')).toBe(402500);
+  });
+
+  it('still leaves out a debt dated after the sale when the sale did not need it (F9)', () => {
     const log = [
       debt('d1', { worker: NAT, amountSatang: 500000, date: '2026-09-01' }),
       pay('s1', { worker: NAT, amountSatang: 100000, date: '2026-10-13', method: 'cash-from-share', saleId: 'sale-13' }),

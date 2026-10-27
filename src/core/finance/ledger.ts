@@ -191,8 +191,6 @@ export interface Expense extends ExpenseFields {
   readonly heads: readonly EventId[];
   /** Device that created it — for "same payer as last time" (D-62). */
   readonly createdOn: string;
-  /** When it was first recorded (its create event's ts). */
-  readonly createdAt: number;
 }
 
 export interface Repayment extends RepaymentFields {
@@ -283,7 +281,6 @@ export function projectFinance(
       headEventId: latestHead(evs, f.createdBy.id) ?? f.createdBy.id,
       heads: headsOf(evs, id),
       createdOn: f.createdBy.actor.deviceId,
-      createdAt: f.createdBy.ts,
     });
   }
 
@@ -645,9 +642,9 @@ export function foldRecordPublic<S extends object>(
   events: readonly FinanceEvent[],
   initial: (create: FinanceEvent) => S,
   guarded: readonly string[],
-): { state: S; head: EventId; conflicts: readonly FieldConflict[]; createdAt: number } | null {
+): { state: S; head: EventId; conflicts: readonly FieldConflict[] } | null {
   const f = foldRecord(events, initial, guarded);
-  return f ? { state: f.state, head: latestHead(events, f.createdBy.id) ?? f.createdBy.id, conflicts: f.conflicts, createdAt: f.createdBy.ts } : null;
+  return f ? { state: f.state, head: latestHead(events, f.createdBy.id) ?? f.createdBy.id, conflicts: f.conflicts } : null;
 }
 
 /** The newest head of a chain of events on one record (ties by id). */
