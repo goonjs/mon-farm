@@ -29,12 +29,19 @@
  * data values, not two languages.
  */
 
+import * as orderDetailMsgs from './order-detail-messages';
+import * as orderMsgs from './order-messages';
+import * as orderSurfaceMsgs from './order-surface-messages';
+
 export type Locale = 'th' | 'en';
 
 /**
  * Thai — the source. Every id in the app exists here.
  */
 const th = {
+  ...orderMsgs.th,
+  ...orderDetailMsgs.th,
+  ...orderSurfaceMsgs.th,
   // ── Shared vocabulary ────────────────────────────────────────────────────
   'common.cancel': 'ยกเลิก',
   'common.confirm': 'ยืนยัน',
@@ -2015,6 +2022,9 @@ const th = {
  * happens when something is missing that shouldn't be.
  */
 const en: Partial<Record<keyof typeof th, string>> = {
+  ...orderMsgs.en,
+  ...orderDetailMsgs.en,
+  ...orderSurfaceMsgs.en,
   'common.cancel': 'cancel',
   'common.confirm': 'confirm',
   'common.back': 'back',

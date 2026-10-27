@@ -55,6 +55,22 @@ export interface ExpenseFields {
   readonly share?: ExpenseShare | null;
   /** E11-S10: what was bought and why — data for tracking, no money in it. */
   readonly fertilizer?: FertilizerDetails | null;
+  /** E11-S11: items bought on one shop order share an `orderId`; absent/null = a single expense (legacy or one-off). */
+  readonly orderId?: string | null;
+  /** E11-S11: the item's own typed discount plus its allocated share of the order discount; `amountSatang` is the net (gross − this). */
+  readonly discountSatang?: number;
+  /** E11-S11: how many units of what at what price, for any item of an order (fertilizer items also keep sacks in `fertilizer`). */
+  readonly line?: OrderLine | null;
+}
+
+/** One item of a shop order: `grossSatang` is the source of truth (a unit price may not divide it exactly). */
+export interface OrderLine {
+  readonly qty: number;
+  /** "กระสอบ", "ลิตร", "ขวด"… */
+  readonly unit: string;
+  readonly grossSatang: number;
+  /** Typed on the item (E11-S11 FO-15); the allocated share of the bill discount is NOT here. */
+  readonly itemDiscountSatang: number;
 }
 
 /** "ลงหนี้" makes a worker debt once the expense is actual; "จ่ายแล้ว" records that they paid their part. */
