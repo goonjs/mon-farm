@@ -265,16 +265,38 @@ describe('V2Home — shop orders (E11-S11 FO-13, FD-0)', () => {
     await mockFinance.append(e);
   };
 
-  it('asks whether an ordered fertilizer arrived, and which arrived fertilizer has no plot yet; both open the order', async () => {
+  const withToday = async (utc: number, fn: () => Promise<void>) => {
+    jest.useFakeTimers({ doNotFake: ['setTimeout', 'setImmediate', 'nextTick', 'queueMicrotask'] });
+    jest.setSystemTime(utc);
+    try {
+      await fn();
+    } finally {
+      jest.useRealTimers();
+    }
+  };
+
+  it('asks whether an ordered fertilizer arrived (once overdue), and which arrived fertilizer has no plot yet; both open the order', async () => {
     await seedFert('o1-a', 'committed', 'o1', 101);
     await seedFert('o2-a', 'actual', 'o2', 102);
     await seedFert('o2-b', 'actual', 'o2', 103);
-    wrap(<V2Home />);
-    await flush();
-    expect(within(screen.getByTestId('home-order-committed')).getByText(/ของมาแล้วหรือยัง/)).toBeTruthy();
-    expect(within(screen.getByTestId('home-order-zones')).getByText(/2 รายการ/)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('home-order-committed'));
-    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'o1' } });
-    expect(screen.getByTestId('mod-order')).toBeTruthy();
+    await withToday(Date.UTC(2026, 9, 23, 5), async () => {
+      // ordered 20 Oct, today 23 Oct: 3 days, overdue
+      wrap(<V2Home />);
+      await flush();
+      expect(within(screen.getByTestId('home-order-committed')).getByText(/ของมาแล้วหรือยัง/)).toBeTruthy();
+      expect(within(screen.getByTestId('home-order-zones')).getByText(/2 รายการ/)).toBeTruthy();
+      fireEvent.press(screen.getByTestId('home-order-committed'));
+      expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'o1' } });
+      expect(screen.getByTestId('mod-order')).toBeTruthy();
+    });
+  });
+
+  it('does not remind about an order placed 2 days ago or less', async () => {
+    await seedFert('o1-a', 'committed', 'o1', 101);
+    await withToday(Date.UTC(2026, 9, 22, 5), async () => {
+      wrap(<V2Home />);
+      await flush();
+      expect(screen.queryByTestId('home-order-committed')).toBeNull();
+    });
   });
 });

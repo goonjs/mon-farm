@@ -41,6 +41,7 @@ import {
   fertSpec,
   lineOf,
   moneyOfLine,
+  nextLineId,
   pastProducts,
   recentFertValues,
   repeatLines,
@@ -114,13 +115,14 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
   const [shop, setShop] = useState(repeat?.shop ?? '');
   const [orderedBy, setOrderedBy] = useState('');
   const [billDiscount, setBillDiscount] = useState(0);
-  const [lines, setLines] = useState<readonly OrderLineDraft[]>(() => (repeat ? repeatLines(repeat, () => newId('li-'), sackUnit, msg('ordc.unit.piece')) : []));
+  const [lines, setLines] = useState<readonly OrderLineDraft[]>(() => (repeat ? repeatLines(repeat, () => newId(), sackUnit, msg('ordc.unit.piece')) : []));
   const [sheet, setSheet] = useState<Sheet>(null);
   const [typedTotal, setTypedTotal] = useState<number | null>(() => {
     const n = params.amount && !repeat ? parseBahtToSatang(params.amount) : null;
     return n && n > 0 ? n : null;
   });
   const [failed, setFailed] = useState(false);
+  const [partial, setPartial] = useState(false);
   const [saved, setSaved] = useState<Saved | null>(null);
   const [people, setPeople] = useState<readonly Payer[]>([]);
   useState(() => {
@@ -163,7 +165,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
 
   // ── Items ────────────────────────────────────────────────────────────────
   const putLine = (editId: string | null, spec: ProductSpec, m: ItemMoney) => {
-    const line = lineOf(editId ?? newId('li-'), spec, m);
+    const line = lineOf(editId ?? nextLineId(lines.map((l) => l.id), () => newId()), spec, m);
     setLines((ls) => (editId ? ls.map((l) => (l.id === editId ? line : l)) : [...ls, line]));
     setSheet(null);
   };
@@ -220,13 +222,19 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
     run(async () => {
       if (!clean) return;
       setFailed(false);
+      setPartial(false);
+      let written = 0;
       try {
         // A retry after a partial save meets ids already written: those items exist, do not create them twice.
         const have = new Set(fin.state?.expenses.map((x) => x.id));
-        for (const { id, fields } of buildOrderExpenses(draft)) if (!have.has(id)) await fin.write(id, null, { t: 'expense_created', fields });
+        for (const { id, fields } of buildOrderExpenses(draft)) if (!have.has(id)) {
+            await fin.write(id, null, { t: 'expense_created', fields });
+            written += 1;
+          }
         setSaved({ orderId, shop: shop.trim(), date, stage, lineCount: totals.lineCount, sacks: totals.sacks, netSatang: totals.netSatang });
       } catch (err) {
         console.error('Order could not be stored.', err);
+        setPartial(written > 0 || (fin.state?.expenses ?? []).some((x) => x.id.startsWith(`${orderId}-`)));
         setFailed(true);
       }
     });
@@ -283,7 +291,11 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
         accessibilityRole="radio"
         accessibilityState={{ checked: on }}
         aria-checked={on}
-        onPress={() => setStage(value)}
+        onPress={() => {
+          setStage(value);
+          // Goods that have arrived cannot be dated in the future.
+          if (value === 'actual' && date > todayIso()) setDate(todayIso());
+        }}
         style={{ flex: 1, minHeight: t.target.comfortable, borderRadius: t.radius.pill, backgroundColor: on ? t.color.action : 'transparent', alignItems: 'center', justifyContent: 'center', paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}
       >
         <Text style={{ textAlign: 'center', fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, color: on ? t.color.inkInverse : t.color.inkSoft }}>{title}</Text>
@@ -363,7 +375,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
         </View>
       ) : null}
       {problems.order.includes('bill-discount-over') ? <FieldError testID="ordc-err-bill">{msg('ordc.err.billOver')}</FieldError> : null}
-      {failed ? <FieldError testID="ordc-err-save">{msg('ordc.saveFailed')}</FieldError> : null}
+      {failed ? <FieldError testID="ordc-err-save">{msg(partial ? 'ordc.err.partial' : 'ordc.saveFailed')}</FieldError> : null}
     </>
   );
 
@@ -407,7 +419,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
           onClose={close}
         />
       ) : null}
-      {sheet === 'date' ? <DatePickerSheet open onClose={close} value={date} onChange={setDate} title={msg('ordc.dateTitle')} max={todayIso()} testID="ordc-date-sheet" /> : null}
+      {sheet === 'date' ? <DatePickerSheet open onClose={close} value={date} onChange={setDate} title={msg('ordc.dateTitle')} max={stage === 'actual' ? todayIso() : undefined} testID="ordc-date-sheet" /> : null}
       {sheet === 'payer' ? (
         <PayerSheet
           payer={payer}

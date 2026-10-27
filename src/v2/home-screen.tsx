@@ -20,7 +20,7 @@ import { ORDER_NEW, orderHref } from './money/order-routes';
 import { loadHomeSales } from './sale/open-sale';
 import { groupOrders, missingDetails } from '../core/finance/fert-order';
 import { owedByPerson, payableSatang } from '../core/finance/ledger';
-import { formatDate, formatSatang } from '../core/finance/money';
+import { formatDate, formatSatang, todayIso } from '../core/finance/money';
 import type { HomeSales, SaleLine } from '../core/home';
 import { filterPeople, formatThaiDate, formatThaiDay } from '../core/master';
 import { formatKg } from '../core/settle';
@@ -67,6 +67,13 @@ import {
 
 const href = (slug: string) => sectionHref(farmSection(slug));
 
+/** The ISO date `n` days before today (device calendar). */
+const isoDaysAgo = (n: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return todayIso(d);
+};
+
 export function V2Home() {
   const t = useTheme();
   const msg = useT();
@@ -88,10 +95,12 @@ export function V2Home() {
   // Shop orders (E11-S11): ordered and not yet arrived; arrived fertilizer not yet placed on a plot.
   const orders = useMemo(() => {
     const live = (fin.state?.expenses ?? []).filter((x) => !x.deleted);
+    const overdueBefore = isoDaysAgo(2);
     if (!live.some((x) => x.fertilizer)) return { committed: [], zoneItems: [] };
     const views = groupOrders(live);
     return {
-      committed: views.filter((o) => o.stage === 'committed' && o.items.some((x) => x.fertilizer)),
+      // FD-0: remind only when the goods are overdue (ordered more than 2 days ago).
+      committed: views.filter((o) => o.stage === 'committed' && o.date < overdueBefore && o.items.some((x) => x.fertilizer)),
       zoneItems: live.filter((x) => x.stage === 'actual' && x.fertilizer && missingDetails(x).includes('zones')),
     };
   }, [fin.state]);

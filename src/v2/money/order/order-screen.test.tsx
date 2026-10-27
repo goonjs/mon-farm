@@ -276,4 +276,55 @@ describe('order capture screen (E11-S11)', () => {
     const made = await created();
     expect(fieldsOf(made[made.length - 1]).stage).toBe('actual');
   });
+
+  it('a committed order may be dated in the future; "ได้ของแล้ว" clamps the date to today and blocks future days', async () => {
+    mockParams.current = { date: '2099-01-15' };
+    wrap(<OrderScreen />);
+    await flush();
+    await addNewFert('46-0-0', ['5'], ['9', '5', '0']);
+    press('ordc-date');
+    expect(screen.getByTestId('ordc-date-sheet-day-2099-01-15').props.accessibilityState.disabled).toBeFalsy();
+    press('ordc-date-sheet-done');
+    expect(screen.getByTestId('ordc-date')).not.toHaveTextContent(/วันนี้/);
+    press('ordc-stage-actual');
+    expect(screen.getByTestId('ordc-date')).toHaveTextContent(/วันนี้/);
+    press('ordc-date');
+    expect(screen.queryByTestId('ordc-date-sheet-day-2099-01-15')).toBeNull();
+  });
+
+  it('a price typed as a total survives a later quantity change after switching the price mode', async () => {
+    wrap(<OrderScreen />);
+    await flush();
+    await addNewFert('46-0-0', ['2'], ['5', '0', '0']); // 2 x 500 = 1,000
+    press('ordc-row-' + screen.getAllByTestId(/^ordc-row-/)[0].props.testID.slice('ordc-row-'.length));
+    fireEvent.press(screen.getByText(/ยอดรวมรายการนี้/));
+    press('ordc-qty');
+    keys('ordc-qty-pad', '3', 'done');
+    expect(text('ordc-total')).toContain('1,000.00');
+  });
+
+  it('a write that fails midway says the order is partly saved, keeps the draft, and the retry finishes it', async () => {
+    const before = (await created()).length;
+    wrap(<OrderScreen />);
+    await flush();
+    await addNewFert('15-15-15', ['2', '0'], ['1', '1', '5', '0']);
+    await addNewFert('46-0-0', ['1', '0'], ['9', '5', '0']);
+    const real = mockFinance.append.bind(mockFinance);
+    let n = 0;
+    const spy = jest.spyOn(mockFinance, 'append').mockImplementation(async (e) => {
+      if (++n === 2) throw new Error('disk');
+      return real(e);
+    });
+    const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    press('ordc-save');
+    await flush();
+    expect(text('ordc-err-save')).toContain('บางรายการ');
+    expect(screen.getByTestId('ordc-count')).toBeTruthy();
+    spy.mockRestore();
+    log.mockRestore();
+    press('ordc-save');
+    await flush();
+    expect(screen.getByTestId('ordc-saved')).toBeTruthy();
+    expect((await created()).length - before).toBe(2);
+  });
 });

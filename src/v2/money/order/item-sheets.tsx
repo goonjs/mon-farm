@@ -41,6 +41,7 @@ import {
   perUnit,
   productName,
   withGross,
+  withMode,
   withQty,
   withUnitPrice,
   type ItemMoney,
@@ -193,7 +194,7 @@ function MoneyBlock({
       <SegmentedControl
         testID="ordc-price-mode"
         value={m.mode}
-        onChange={(mode) => set({ ...m, mode })}
+        onChange={(mode) => set(withMode(m, mode))}
         options={[
           { value: 'per', label: msg('ordc.perUnit', { unit }) },
           { value: 'total', label: msg('ordc.priceTotal') },

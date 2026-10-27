@@ -32,6 +32,14 @@ export interface ItemMoney {
 
 export const EMPTY_MONEY: ItemMoney = { qty: null, unitPrice: null, gross: null, discount: 0, mode: 'per' };
 
+/** A line id that sorts in entry order (groupOrders sorts items by expense id = orderId-lineId): zero-padded position, then a random tail. */
+export const lineIdAt = (index: number, rand: () => string): string => `li-${String(index).padStart(3, '0')}-${rand()}`;
+/** The next position after the ones already used by `ids` (removals never reuse a position). */
+export function nextLineId(ids: readonly string[], rand: () => string): string {
+  const used = ids.map((i) => Number(/^li-(\d+)-/.exec(i)?.[1] ?? -1));
+  return lineIdAt(Math.max(-1, ...used) + 1, rand);
+}
+
 const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
 
 export const productName = (formula: string, brand: string) => (brand.trim() ? `${formula.trim()} ${brand.trim()}` : formula.trim());
@@ -51,6 +59,13 @@ export const perUnit = (gross: number, qty: number): number => Math.round(gross 
 /** Applies a quantity: when a unit price was typed, gross follows it. */
 export const withQty = (m: ItemMoney, qty: number): ItemMoney => ({ ...m, qty, gross: m.unitPrice !== null ? qty * m.unitPrice : m.gross });
 export const withUnitPrice = (m: ItemMoney, price: number): ItemMoney => ({ ...m, unitPrice: price, gross: m.qty ? m.qty * price : null });
+/** Switching the price mode: total keeps the typed gross and drops the unit price (so a new quantity no longer overwrites it); per-unit derives the price only when gross is an exact multiple. */
+export function withMode(m: ItemMoney, mode: ItemMoney['mode']): ItemMoney {
+  if (mode === 'total') return { ...m, mode, unitPrice: null };
+  const per = m.gross !== null && m.qty ? perUnit(m.gross, m.qty) : null;
+  const exact = per !== null && m.qty !== null && per * m.qty === m.gross;
+  return { ...m, mode, unitPrice: exact ? per : null };
+}
 export const withGross = (m: ItemMoney, gross: number): ItemMoney => ({ ...m, unitPrice: null, gross });
 
 /** The money state an existing line starts the sheet with: per-unit when the gross is an exact multiple, else the total. */
@@ -123,14 +138,14 @@ export function recentFertValues(expenses: readonly Expense[], field: 'shop' | '
 }
 
 /** "สั่งซ้ำ": the same items, quantities and unit prices; item discounts and the bill discount are not carried. */
-export function repeatLines(order: OrderView, newId: () => string, sackUnit: string, pieceUnit: string): OrderLineDraft[] {
-  return order.items.map((e) => {
+export function repeatLines(order: OrderView, rand: () => string, sackUnit: string, pieceUnit: string): OrderLineDraft[] {
+  return order.items.map((e, index) => {
     const f = e.fertilizer;
     // Order items store their own line (qty, unit, gross); older expenses fall back to what they kept.
     const qty = e.line?.qty ?? (f ? (f.sacks ?? e.share?.totalSacks ?? 1) : 1);
     const gross = e.line?.grossSatang ?? (f?.pricePerSackSatang !== undefined && f.sacks ? f.pricePerSackSatang * f.sacks : (e.amountSatang ?? 0) + (e.discountSatang ?? 0));
     return {
-      id: newId(),
+      id: lineIdAt(index, rand),
       categoryId: e.categoryId ?? 'cat-other',
       item: e.item,
       ...(f ? { fertilizer: { type: f.type, formula: f.formula, brand: f.brand, sackKg: f.sackKg } } : {}),

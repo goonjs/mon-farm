@@ -1,6 +1,6 @@
 import type { Expense } from '../../../core/finance/ledger';
-import type { OrderView } from '../../../core/finance/fert-order';
-import { repeatLines, moneyOfLine, moneyOk, moneyProblems, EMPTY_MONEY, perUnit, withGross, withQty, withUnitPrice, lineOf, fertSpec, productName } from './order-model';
+import { buildOrderExpenses, type OrderView } from '../../../core/finance/fert-order';
+import { repeatLines, moneyOfLine, moneyOk, moneyProblems, EMPTY_MONEY, perUnit, withGross, withQty, withUnitPrice, withMode, lineIdAt, nextLineId, lineOf, fertSpec, productName } from './order-model';
 
 describe('order model — item money', () => {
   it('a unit price follows the quantity; a typed total does not', () => {
@@ -38,6 +38,30 @@ describe('order model — item money', () => {
   it('repeat keeps the quantity, unit and price of a non-fertilizer item (its own line)', () => {
     const e = { id: 'o-1', item: 'ไกลโฟเซต', categoryId: 'cat-herbicide', amountSatang: 300_000, discountSatang: 20_000, line: { qty: 10, unit: 'ลิตร', grossSatang: 320_000, itemDiscountSatang: 20_000 } } as unknown as Expense;
     const [l] = repeatLines({ items: [e] } as unknown as OrderView, () => 'n', 'กระสอบ', 'ชิ้น');
-    expect(l).toMatchObject({ id: 'n', categoryId: 'cat-herbicide', item: 'ไกลโฟเซต', qty: 10, unit: 'ลิตร', grossSatang: 320_000, itemDiscountSatang: 0 });
+    expect(l).toMatchObject({ id: 'li-000-n', categoryId: 'cat-herbicide', item: 'ไกลโฟเซต', qty: 10, unit: 'ลิตร', grossSatang: 320_000, itemDiscountSatang: 0 });
+  });
+
+  it('switching to the total keeps the typed total when the quantity changes later', () => {
+    let m = withQty(withUnitPrice(EMPTY_MONEY, 115_000), 20); // gross 2,300,000
+    m = withMode(m, 'total');
+    expect(m).toMatchObject({ mode: 'total', unitPrice: null, gross: 2_300_000 });
+    m = withGross(m, 999_999);
+    expect(withQty(m, 3).gross).toBe(999_999);
+    // back to per-unit: the price is derived only when exact
+    expect(withMode({ ...m, qty: 3, gross: 1_000 }, 'per')).toMatchObject({ mode: 'per', unitPrice: null });
+    expect(withMode({ ...m, qty: 4, gross: 1_000 }, 'per')).toMatchObject({ mode: 'per', unitPrice: 250 });
+  });
+
+  it('line ids minted in entry order build expense ids that sort in the same order', () => {
+    const rand = ['zzz', 'aaa', 'mmm'];
+    const ids: string[] = [];
+    for (const r of rand) ids.push(nextLineId(ids, () => r));
+    ids.push(lineIdAt(10, () => 'a'));
+    const lines = ids.map((id, i) => ({ id, categoryId: 'cat-other', item: `x${i}`, qty: 1, unit: 'ชิ้น', grossSatang: 100, itemDiscountSatang: 0 }));
+    const built = buildOrderExpenses({ orderId: 'ord-1', date: '2026-10-27', stage: 'committed', payer: null, shop: '', orderedBy: '', propertyId: null, billDiscountSatang: 0, lines });
+    const sorted = built.map((b) => b.id).sort();
+    expect(sorted).toEqual(built.map((b) => b.id));
+    // a removed position is never reused
+    expect(nextLineId([ids[0], ids[2]], () => 'q')).toMatch(/^li-003-/);
   });
 });
