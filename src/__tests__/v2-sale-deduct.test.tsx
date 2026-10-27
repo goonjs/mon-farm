@@ -370,5 +370,7 @@ describe('D-61: deducted over the share', () => {
     await inSale(<PaymentScreen />, OVER);
     expect(screen.getAllByTestId('tick-owner').pop()!.props.accessibilityState).toMatchObject({ disabled: true });
     expect(screen.getAllByTestId(`tick-${farm.red}`).pop()!.props.accessibilityState).toMatchObject({ disabled: true });
+    // E05-S10: and the farm's tick for the cash he repaid
+    expect(screen.getAllByTestId(`tick-debt-cash-${farm.red}`).pop()!.props.accessibilityState).toMatchObject({ disabled: true });
   });
 });

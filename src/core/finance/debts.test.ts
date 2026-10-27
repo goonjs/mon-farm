@@ -225,4 +225,36 @@ describe('debt left after a given sale (review F9)', () => {
     // the latest sale: today's balance
     expect(balanceAfterSale(acc, 'sale-3', '2026-10-14')).toBe(acc.balanceSatang);
   });
+
+  // E05-S10: a sale entered for an earlier day deducts from a debt dated after it. The sale saw that
+  // debt (it was recorded before the deduction), so it is left over, not dropped (owner 2026-10-27).
+  it('counts a debt dated after the sale when it was recorded before the sale deducted', () => {
+    const log = [
+      debt('d1', { worker: NAT, kind: 'fertilizer', amountSatang: 735000, date: '2026-10-27', lender: null, fertilizer: { totalSatang: 1470000, workerPct: 50 } }),
+      pay('s1', { worker: NAT, amountSatang: 332500, date: '2026-10-13', method: 'buyer-split', saleId: 'sale-13' }),
+    ];
+    const acc = projectDebts(log).get(NAT.id)!;
+    expect(balanceAfterSale(acc, 'sale-13', '2026-10-13')).toBe(402500);
+  });
+
+  it('counts an expense-share debt the same way', () => {
+    const share = { billSatang: 1470000, discountSatang: 0, totalSacks: null, lines: [{ worker: NAT, sacks: null, workerPct: 50, settle: 'debt' as const }] };
+    const log = [
+      ev('x1', { t: 'expense_created', fields: { amountSatang: 1470000, date: '2026-10-27', stage: 'actual', categoryId: 'cat-fertilizer', propertyId: null, item: '', note: '', payer: FARM, share } }),
+      pay('s1', { worker: NAT, amountSatang: 332500, date: '2026-10-13', method: 'buyer-split', saleId: 'sale-13' }),
+    ];
+    const acc = projectDebts(log).get(NAT.id)!;
+    expect(acc.balanceSatang).toBe(402500);
+    expect(balanceAfterSale(acc, 'sale-13', '2026-10-13')).toBe(402500);
+  });
+
+  it('still leaves out a debt dated after the sale and recorded after its deduction (F9)', () => {
+    const log = [
+      debt('d1', { worker: NAT, amountSatang: 500000, date: '2026-09-01' }),
+      pay('s1', { worker: NAT, amountSatang: 100000, date: '2026-10-13', method: 'cash-from-share', saleId: 'sale-13' }),
+      debt('d2', { worker: NAT, amountSatang: 70000, date: '2026-10-20' }),
+    ];
+    const acc = projectDebts(log).get(NAT.id)!;
+    expect(balanceAfterSale(acc, 'sale-13', '2026-10-13')).toBe(400000);
+  });
 });

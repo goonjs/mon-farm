@@ -113,6 +113,55 @@ test('settlement: netting the money the farm owes back against a debt (E06-S04)'
   await shot(page, '18a-tally', true);
 });
 
+test('a sale for an earlier day takes part of a later-dated debt as separate cash (E05-S10)', async ({ page }) => {
+  const id = on(page);
+  await seedMaster(page, FARM);
+  // The owner's case (2026-10-27): the sale is dated 13 Oct, นัด's fertilizer debt 27 Oct and recorded first.
+  const b = new LogBuilder('sale-13');
+  b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+  b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+  b.sys({ t: 'pile_added', pileId: 'a4', zoneId: 'fa', name: 'a4', tareG: 2_000, stdNetG: 50_000 });
+  b.acceptAt('a4', 1).acceptAt('a4', 2);
+  const day = Date.parse('2026-10-13T08:00:00+07:00');
+  await seedEvents(page, b.build().map((e) => ({ ...e, ts: day })));
+  const NAT = { id: 'nat', name: 'นัด' };
+  const debt: FinanceEvent = {
+    id: 'e2e-s10-1',
+    groupId: FIXTURE_GROUP_ID,
+    deviceSeq: 1,
+    ts: Date.now(),
+    actor: { userId: 'pre-login', deviceId: 'dev-seed' },
+    source: 'app',
+    targetId: 'debt-nat',
+    baseEventId: null,
+    payload: { t: 'debt_added', fields: { worker: NAT, kind: 'fertilizer', amountSatang: 150_000, date: '2026-10-27', note: '', lender: null, fertilizer: { totalSatang: 300_000, workerPct: 50 }, carriedForward: false } },
+  };
+  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [debt]);
+  await page.goto('/v2/sale/sale-13/settlement');
+  await expect(id('settlement')).toBeVisible();
+  await id('deduct-nat').click();
+  await id('deduct-amount').fill('500');
+  await id('method-buyer-split').click();
+  await id('deduct-save').click();
+  // 1,500 − 500: what the sale did not take is still owed, not 0.
+  await expect(id('debt-left-nat')).toContainText('1,000.00');
+  await expect(id('deducted-nat')).toContainText('คนรับซื้อยางแยกเป็นเงินสดอีกก้อนให้สวน');
+  await id('debt-block').scrollIntoViewIfNeeded();
+  await shot(page, '17-debt-left-e05s10');
+  await id('cash-today').scrollIntoViewIfNeeded();
+  await expect(id('cash-today')).toContainText('สวนได้รับเงินสดคืนหนี้วันนี้');
+  await shot(page, '17-cash-today-e05s10');
+
+  // The farm ticks that it got the separate cash.
+  await page.goto('/v2/sale/sale-13/payment');
+  await expect(id('payment')).toBeVisible();
+  await expect(id('tick-debt-cash-nat')).toContainText('สวนได้รับเงินสดคืนหนี้จากนัดแล้ว');
+  await expect(id('tick-amt-debt-cash-nat')).toContainText('500');
+  await id('tick-debt-cash-nat').click();
+  await expect(id('tick-debt-cash-nat')).toHaveAttribute('aria-checked', 'true');
+  await shot(page, '19-payment-debt-cash-e05s10', true);
+});
+
 const on = (page: Page) => (id: string) => page.getByTestId(id).filter({ visible: true });
 const shot = (page: Page, name: string, fullPage = false) => evidence(page, `${SHOTS}/${name}.png`, { fullPage });
 

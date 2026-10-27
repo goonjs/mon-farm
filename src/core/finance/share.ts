@@ -104,6 +104,8 @@ export interface ShareDebt extends DebtFields {
   readonly id: string;
   readonly deleted: boolean;
   readonly headEventId: string;
+  /** The expense's — a line added by a later edit counts from when the expense was made. */
+  readonly recordedAt: number;
 }
 
 const owesNow = (x: { deleted: boolean; stage: string; share?: ExpenseShare | null }) => !x.deleted && x.stage === 'actual' && !!x.share;
@@ -138,6 +140,7 @@ export function shareDebts(expenses: readonly Expense[]): ShareDebt[] {
         expenseId: x.id,
         deleted: !line,
         headEventId: x.headEventId,
+        recordedAt: x.createdAt,
       });
     }
   }
