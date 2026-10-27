@@ -115,6 +115,12 @@ export interface FertilizerDetails {
   readonly zones: readonly FertilizerZoneUse[];
   readonly shop: string;
   readonly orderedBy: string;
+  /** E11-S11: sacks bought on an order item (an item of a legacy purchase has them in `share.totalSacks`). */
+  readonly sacks?: number;
+  /** E11-S11: gross price per sack, rounded to the satang — the "last price" offered when reordering. */
+  readonly pricePerSackSatang?: number;
+  /** E11-S11: the item's own typed discount; the allocated share of the bill discount is not here. */
+  readonly itemDiscountSatang?: number;
 }
 
 /** Saved choices the fertilizer flow offers again (ตั้งค่าปุ๋ย). */

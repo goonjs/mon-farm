@@ -43,7 +43,8 @@ export function fertProducts(expenses: readonly Expense[], options: readonly Fer
       formula: f.formula.trim(),
       brand: f.brand.trim(),
       sackKg: f.sackKg,
-      lastPerSackSatang: x.share && sacks ? Math.floor((2 * x.share.billSatang + sacks) / (2 * sacks)) : null,
+      // An order item keeps its gross price per sack beside the details (E11-S11), even before any share exists.
+      lastPerSackSatang: f.pricePerSackSatang ?? (x.share && sacks ? Math.floor((2 * x.share.billSatang + sacks) / (2 * sacks)) : null),
     });
   }
   const bought = new Set([...out.values()].map((p) => norm(p.formula)));

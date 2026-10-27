@@ -77,6 +77,42 @@ describe('fertProducts — "ซื้อปุ๋ยอะไร" (E11-S10 F1)',
   });
 });
 
+describe('fertProducts — items bought on a shop order (E11-S11)', () => {
+  const orderItem = (date: string, perSack: number, f: Partial<FertilizerDetails> = {}): Expense => {
+    const x = purchase(date, details({ sacks: 10, pricePerSackSatang: perSack, ...f }));
+    const { share: _share, ...rest } = x;
+    void _share;
+    return { ...rest, orderId: 'ord-1' } as Expense; // no `share` key: tappers not told yet
+  };
+
+  it('the last price per sack is read from fertilizer.pricePerSackSatang when there is no share', () => {
+    const list = fertProducts([orderItem('2026-10-27', 123_450)], [opt('formula', '15-15-15')]);
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ formula: '15-15-15', lastPerSackSatang: 123_450 });
+  });
+
+  it('the newest purchase decides, whether it came from an order or from the old flow', () => {
+    const old = purchase('2026-09-01', details(), 800_000, 10); // 80_000 per sack
+    const list = fertProducts([old, orderItem('2026-10-27', 120_000)], [opt('formula', '15-15-15')]);
+    expect(list.map((p) => p.lastPerSackSatang)).toEqual([120_000]);
+    const olderOrder = fertProducts([orderItem('2026-08-01', 120_000), purchase('2026-09-01', details(), 800_000, 10)], [opt('formula', '15-15-15')]);
+    expect(olderOrder.map((p) => p.lastPerSackSatang)).toEqual([80_000]);
+  });
+
+  it('the gross shop price stays the offer even after a share is attached to the item', () => {
+    const x = { ...orderItem('2026-10-27', 100_000), share: { billSatang: 900_000, discountSatang: 0, totalSacks: 10, lines: [] } } as Expense;
+    expect(fertProducts([x], [opt('formula', '15-15-15')])[0].lastPerSackSatang).toBe(100_000);
+  });
+
+  it('an order item that is not fertilizer, or has no price, offers nothing wrong', () => {
+    const noPrice = orderItem('2026-10-27', 0);
+    const { pricePerSackSatang: _p, ...fert } = noPrice.fertilizer!;
+    void _p;
+    const bare = { ...noPrice, fertilizer: fert } as Expense;
+    expect(fertProducts([bare], [opt('formula', '15-15-15')])[0].lastPerSackSatang).toBeNull();
+  });
+});
+
 describe('reasonsByUse — "ใส่ทำไม", most used first (F3)', () => {
   it('orders shown reasons by how many live purchases chose them, then by name', () => {
     const a = opt('reason', 'บำรุงต้น');
