@@ -7,10 +7,11 @@ import type { Expense } from '../../../core/finance/ledger';
 import { formatSatang } from '../../../core/finance/money';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, Card, Check, Chip } from '../../../ui';
+import { AppText, Card, Chip, LeafIcon, PinIcon, TapperIcon } from '../../../ui';
 import { itemSacks } from './tell';
 
 const KEYS: readonly DetailKey[] = ['reasons', 'zones', 'tappers'];
+const ICONS = { reasons: LeafIcon, zones: PinIcon, tappers: TapperIcon } as const;
 
 export function ItemCard({ item, missing, reasonName, onOpen, onEdit, onConflict }: { item: Expense; missing: readonly DetailKey[]; reasonName: (id: string) => string; onOpen: (k: DetailKey) => void; onEdit: () => void; onConflict: () => void }) {
   const t = useTheme();
@@ -44,6 +45,7 @@ export function ItemCard({ item, missing, reasonName, onOpen, onEdit, onConflict
         <View style={{ flexDirection: 'row', gap: t.space.sm }}>
           {KEYS.map((k) => {
             const told = !missing.includes(k);
+            const Icon = ICONS[k];
             return (
               <Pressable
                 key={k}
@@ -67,7 +69,7 @@ export function ItemCard({ item, missing, reasonName, onOpen, onEdit, onConflict
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
-                  {told ? <Check color={t.color.accept} size={12} /> : null}
+                  <View aria-hidden><Icon color={told ? t.color.accept : t.color.inkSoft} size={16} /></View>
                   <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: t.color.inkSoft, flexShrink: 1 }}>{msg(`ordd.btn.${k}`)}</Text>
                 </View>
                 <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: told ? t.color.accept : t.color.ink, flexShrink: 1 }}>

@@ -10,10 +10,11 @@ import { activeZones, zoneNameTaken, type MasterState } from '../../../core/mast
 import { useT } from '../../../i18n';
 import { peopleStore } from '../../../store/people';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, Button, CTA, Check, Plus, QuantityField, TextField } from '../../../ui';
+import { AppText, BottomSheet, Check, Plus, QuantityField, TextField } from '../../../ui';
 import { ChoiceChip, ChoiceRow } from '../pieces';
 import { ItemRow, SheetTitle, SummaryBar } from './parts';
 import { itemSacks, zonesPatch, zoneProblems } from './tell';
+import { SolidButton, SolidCTA } from '../order/solid-cta';
 
 export function ZonesSheet({
   item,
@@ -91,7 +92,7 @@ export function ZonesSheet({
             {adding !== null ? (
               <View style={{ gap: t.space.sm }}>
                 <TextField testID="ordd-zone-name" label={msg('ordd.zones.name')} value={adding} onChangeText={setAdding} error={addErr ? msg('ordd.zones.nameErr') : undefined} />
-                <Button testID="ordd-zone-save" variant="primary" disabled={!adding.trim()} onPress={() => void addZone()}>{msg('ordd.hdr.save')}</Button>
+                <SolidButton testID="ordd-zone-save" variant="primary" disabled={!adding.trim()} onPress={() => void addZone()}>{msg('ordd.hdr.save')}</SolidButton>
               </View>
             ) : (
               <ItemRow testID="ordd-zone-add" dashed icon={<Plus color={t.color.action} />} title={msg('ordd.zones.add')} onPress={() => setAdding('')} />
@@ -99,7 +100,7 @@ export function ZonesSheet({
           </>
         ) : null}
         {failed ? <AppText testID="ordd-zones-failed" style={{ color: t.color.reject }}>{msg('ordd.saveFailed')}</AppText> : null}
-        <CTA testID="ordd-zones-done" disabled={over} icon={(c) => <Check color={c} />} onPress={() => void done()}>{msg('ordd.zones.done')}</CTA>
+        <SolidCTA testID="ordd-zones-done" disabled={over} icon={(c) => <Check color={c} />} onPress={() => void done()}>{msg('ordd.zones.done')}</SolidCTA>
       </View>
     </BottomSheet>
   );

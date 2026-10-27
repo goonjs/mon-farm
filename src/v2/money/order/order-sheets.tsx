@@ -130,7 +130,7 @@ export function BillDiscountSheet({
   return (
     <BottomSheet open onClose={onClose} title={msg('ordc.billTitle')} testID="ordc-bill-sheet">
       <AppText variant="bodySm">{msg('ordc.billSub')}</AppText>
-      <MoneyField testID="ordc-bill" label={msg('ordc.billLabel')} satang={value || null} unit={msg('ordc.baht')} maxSatang={maxSatang} words={false} onChange={onChange} />
+      <MoneyField testID="ordc-bill-amount" label={msg('ordc.billLabel')} satang={value || null} unit={msg('ordc.baht')} maxSatang={maxSatang} words={false} onChange={onChange} />
       {value > maxSatang ? <FieldError testID="ordc-bill-err">{msg('ordc.err.billOver')}</FieldError> : null}
       <CTA testID="ordc-bill-ok" onPress={onClose}>
         {msg('ordc.billDone')}

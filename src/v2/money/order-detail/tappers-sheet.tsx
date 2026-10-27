@@ -14,9 +14,10 @@ import { lastLineSacks } from '../../../core/finance/share';
 import type { ExpensePatch, Payer, ShareSettle } from '../../../core/finance/types';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, Button, Card, CTA, Check, PersonIcon, Plus, QuantityField, RadioCard, SegmentedControl } from '../../../ui';
+import { AppText, BottomSheet, Button, Card, Check, PersonIcon, Plus, QuantityField, RadioCard, SegmentedControl } from '../../../ui';
 import { ItemRow, SheetTitle, SummaryBar } from './parts';
 import { itemSacks, tapperPatch, tapperProblems, tapperSplit, type TapperInput } from './tell';
+import { SolidCTA } from '../order/solid-cta';
 
 type View_ = 'list' | 'pick' | { pct: number };
 
@@ -61,11 +62,11 @@ export function TappersSheet({
     return (
       <BottomSheet open onClose={() => setView('list')} testID="ordd-tap-pct-sheet" title={msg('ordd.tap.pctTitle', { name: l.worker.name })}>
         <View style={{ gap: t.space.md }}>
-          <QuantityField testID="ordd-tap-pct" label={msg('ordd.tap.pctLabel')} unit="%" value={l.pct} min={0} max={100} maxDigits={3} onChange={(n) => setLine(view.pct, { pct: n })} />
+          <QuantityField testID="ordd-tap-pct-value" label={msg('ordd.tap.pctLabel')} unit="%" value={l.pct} min={0} max={100} maxDigits={3} onChange={(n) => setLine(view.pct, { pct: n })} />
           <AppText variant="label">{msg('ordd.tap.how')}</AppText>
           <SegmentedControl testID="ordd-tap-settle" value={l.settle} onChange={(v) => setLine(view.pct, { settle: v })} options={[{ value: 'debt', label: msg('ordd.tap.debt') }, { value: 'paid', label: msg('ordd.tap.paid') }]} />
           {item.stage === 'committed' && l.settle === 'debt' ? <AppText testID="ordd-tap-later" variant="caption">{msg('ordd.tap.later')}</AppText> : null}
-          <CTA testID="ordd-tap-pct-done" icon={(c) => <Check color={c} />} onPress={() => setView('list')}>{msg('ordd.tap.done')}</CTA>
+          <SolidCTA testID="ordd-tap-pct-done" icon={(c) => <Check color={c} />} onPress={() => setView('list')}>{msg('ordd.tap.done')}</SolidCTA>
         </View>
       </BottomSheet>
     );
@@ -131,7 +132,7 @@ export function TappersSheet({
         {item.stage === 'committed' && lines.some((l) => l.settle === 'debt') ? <AppText testID="ordd-tap-hint" variant="caption">{msg('ordd.tap.later')}</AppText> : null}
         <ItemRow testID="ordd-tap-add" dashed icon={<Plus color={t.color.action} />} title={msg('ordd.tap.add')} onPress={() => setView('pick')} />
         {failed ? <AppText testID="ordd-tap-failed" style={{ color: t.color.reject }}>{msg('ordd.saveFailed')}</AppText> : null}
-        <CTA testID="ordd-tap-done" disabled={problems.length > 0} icon={(c) => <Check color={c} />} onPress={() => void save(lines.length ? lines : null)}>{msg('ordd.tap.done')}</CTA>
+        <SolidCTA testID="ordd-tap-done" disabled={problems.length > 0} icon={(c) => <Check color={c} />} onPress={() => void save(lines.length ? lines : null)}>{msg('ordd.tap.done')}</SolidCTA>
         <Button testID="ordd-tap-none" onPress={() => void save(null)}>{msg('ordd.tap.none')}</Button>
       </View>
     </BottomSheet>

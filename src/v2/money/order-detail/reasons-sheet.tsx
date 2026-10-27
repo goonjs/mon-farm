@@ -10,11 +10,12 @@ import type { ExpensePatch } from '../../../core/finance/types';
 import type { UseFinance } from '../../../finance/use-finance';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, CTA, Check, Plus, TextField } from '../../../ui';
+import { AppText, BottomSheet, Check, Plus, TextField } from '../../../ui';
 import { setFertOption } from '../fert-options';
 import { TickCard } from '../pieces';
 import { reasonsPatch } from './tell';
 import { ItemRow, RememberTick, SheetTitle } from './parts';
+import { SolidCTA } from '../order/solid-cta';
 
 export function ReasonsSheet({
   item,
@@ -75,16 +76,16 @@ export function ReasonsSheet({
             <TextField testID="ordd-reason-name" label={msg('ordd.reasons.name')} required value={name} onChangeText={setName} />
             <TextField testID="ordd-reason-desc" label={msg('ordd.reasons.desc')} value={desc} onChangeText={setDesc} />
             <RememberTick testID="ordd-reason-remember" on={remember} onPress={() => setRemember((r) => !r)} hint={msg('ordd.reasons.rememberHint')} />
-            <CTA testID="ordd-reason-add" disabled={!name.trim()} onPress={() => void addTyped()}>{msg('ordd.reasons.add')}</CTA>
+            <SolidCTA testID="ordd-reason-add" disabled={!name.trim()} onPress={() => void addTyped()}>{msg('ordd.reasons.add')}</SolidCTA>
           </View>
         ) : (
           <>
             {rows.map((o) => <TickCard key={o.id} testID={`ordd-reason-${o.id}`} title={o.name} detail={o.detail || undefined} on={chosen.includes(o.id)} onPress={() => toggle(o.id)} />)}
             <ItemRow testID="ordd-reason-new" dashed icon={<Plus color={t.color.action} />} title={msg('ordd.reasons.new')} onPress={() => setAdding(true)} />
             {failed ? <AppText testID="ordd-reasons-failed" style={{ color: t.color.reject }}>{msg('ordd.saveFailed')}</AppText> : null}
-            <CTA testID="ordd-reasons-done" icon={(c) => <Check color={c} />} onPress={() => void done()}>
+            <SolidCTA testID="ordd-reasons-done" icon={(c) => <Check color={c} />} onPress={() => void done()}>
               {chosen.length ? msg('ordd.reasons.doneN', { n: chosen.length }) : msg('ordd.reasons.done')}
-            </CTA>
+            </SolidCTA>
           </>
         )}
       </View>

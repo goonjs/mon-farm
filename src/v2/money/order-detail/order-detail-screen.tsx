@@ -14,7 +14,7 @@ import { FERTILIZER_CATEGORY } from '../../../core/finance/fert-order';
 import { reasonLabel } from '../../../core/finance/fertilizer';
 import type { Expense } from '../../../core/finance/ledger';
 import { formatDate, formatSatang } from '../../../core/finance/money';
-import { FARM_FUNDS, type ExpensePatch, type Payer } from '../../../core/finance/types';
+import type { ExpensePatch, Payer } from '../../../core/finance/types';
 import { filterPeople, type MasterState } from '../../../core/master';
 import { useFinance, type UseFinance } from '../../../finance/use-finance';
 import { useInFlight } from '../../../finance/use-in-flight';
@@ -119,7 +119,6 @@ export function OrderDetailView({
   const saveItem = (e: Expense) => (patch: ExpensePatch) => writeAll([{ id: e.id, baseEventId: e.headEventId, patch }]);
   const saveHeader = (n: HeaderEdit) => writeAll(patchOrderFields(order, { date: n.date, stage: n.stage, payer: n.payer, shop: n.shop }));
 
-  const payerLine = !order.payer ? msg('ordd.payer.none') : order.payer.id === FARM_FUNDS ? msg('ordd.payer.farm') : msg('ordd.payer.person', { name: order.payer.name });
   const subtitle = order.shop ? msg('ordd.subtitle', { shop: order.shop, date: formatDate(order.date) }) : msg('ordd.subtitleNoShop', { date: formatDate(order.date) });
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
@@ -129,15 +128,14 @@ export function OrderDetailView({
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.xl }}>
         {order.items.length === 0 ? <AppText testID="ordd-all-deleted" variant="bodySm">{msg('ordd.allDeleted')}</AppText> : null}
         {order.items.length > 0 ? (
-        <Card testID="ordd-head" style={{ gap: t.space.sm }}>
+        <Card testID="ordd-head" style={{ gap: t.space.xs }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: t.space.sm }}>
             <AppText variant="bodySm" style={{ flexShrink: 1 }}>{sacks > 0 ? msg('ordd.total', { items: order.items.length, sacks }) : msg('ordd.totalNoSacks', { items: order.items.length })}</AppText>
             <Chip testID="ordd-stage" tone={committed ? 'warn' : order.stage === 'planned' ? 'neutral' : 'accept'} label={msg(`ordd.stage.${order.stage}`)} />
           </View>
-          <Text testID="ordd-total" adjustsFontSizeToFit numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayXl, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+          <Text testID="ordd-total" adjustsFontSizeToFit numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayLg, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'], color: t.color.ink }}>
             {formatSatang(order.netSatang)}
           </Text>
-          <AppText testID="ordd-payer" variant="bodySm">{payerLine}</AppText>
           {!order.consistent ? (
             <View testID="ordd-mismatch" style={{ gap: t.space.xs, backgroundColor: t.color.warnSunk, borderRadius: t.radius.lg, padding: t.space.md }}>
               <AppText style={{ color: t.color.warn, fontWeight: t.font.weight.bold }}>{msg('ordd.mismatch')}</AppText>
@@ -152,23 +150,21 @@ export function OrderDetailView({
               <AppText testID="ordd-progress" variant="bodySm">{msg('ordd.progress', { done: progress.done, total: progress.total })}</AppText>
             </>
           ) : null}
-          {committed ? <AppText testID="ordd-committed-note" variant="bodySm">{msg('ordd.committedNote')}</AppText> : null}
           {committed ? (
             <Pressable
               testID="ordd-deliver"
               accessibilityRole="button"
               disabled={inFlight.busy}
               onPress={() => void inFlight.run(async () => void (await writeAll(deliverOrder(order))))}
-              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: t.space.sm, minHeight: 56, borderRadius: t.radius.pill, backgroundColor: t.color.accept, opacity: inFlight.busy ? 0.6 : 1 }}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: t.space.sm, minHeight: t.target.comfortable, borderRadius: t.radius.pill, backgroundColor: t.color.accept, opacity: inFlight.busy ? 0.6 : 1 }}
             >
               <Check color={t.color.inkInverse} />
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, color: t.color.inkInverse }}>{msg('ordd.deliver')}</Text>
             </Pressable>
           ) : null}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.md }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: t.space.xl }}>
             <HeaderLink testID="ordd-repeat" label={msg('ordd.repeat')} onPress={onRepeat} />
             <HeaderLink testID="ordd-edit-header" label={msg('ordd.editHeader')} onPress={() => setSheet('header')} />
-            <HeaderLink testID="ordd-delete-order" label={msg('ordd.deleteOrder')} onPress={() => setSheet('delOrder')} />
           </View>
         </Card>
         ) : null}
@@ -176,6 +172,9 @@ export function OrderDetailView({
         {order.items.map((e) => (
           <ItemCard key={e.id} item={e} missing={missingDetails(e)} reasonName={reasonName} onOpen={(k) => setSheet({ kind: k, id: e.id })} onEdit={() => setSheet({ kind: 'edit', id: e.id })} onConflict={() => router.push({ pathname: '/v2/expense/[id]', params: { id: e.id } })} />
         ))}
+        {order.items.length > 0 ? (
+          <HeaderLink testID="ordd-delete-order" label={msg('ordd.deleteOrder')} onPress={() => setSheet('delOrder')} />
+        ) : null}
         {deleted.length > 0 ? (
           <View testID="ordd-deleted" style={{ gap: t.space.sm }}>
             <AppText variant="label">{msg('ordd.deleted', { n: deleted.length })}</AppText>

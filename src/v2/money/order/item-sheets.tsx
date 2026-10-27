@@ -35,6 +35,7 @@ import {
   type TileTone,
 } from '../../../ui';
 import { ChoiceChip, ChoiceRow, SectionLabel, TickCard } from '../pieces';
+import { SolidButton } from './solid-cta';
 import {
   moneyOk,
   moneyProblems,
@@ -182,7 +183,7 @@ function MoneyBlock({
         : '';
   return (
     <>
-      <View style={{ flexDirection: 'row', gap: t.space.sm, alignItems: 'stretch' }}>
+      <View style={{ flexDirection: 'row', gap: t.space.sm, alignItems: 'stretch', zIndex: beside ? 2 : undefined }}>
         <View style={{ flex: 1 }}>
           <QuantityField testID="ordc-qty" label={qtyLabel} value={m.qty} unit={unit} min={1} onChange={(q) => set(withQty(m, q))} caption={qtyCaption} />
         </View>
@@ -338,7 +339,7 @@ function UnitSelect({ value, onChange, units }: { value: string; onChange: (u: s
   const [name, setName] = useState('');
   const list = units.includes(value) || !value ? units : [...units, value];
   return (
-    <View style={{ gap: t.space.xs }}>
+    <View style={{ flex: 1, zIndex: 3 }}>
       <Pressable
         testID="ordc-unit"
         accessibilityRole="button"
@@ -356,7 +357,7 @@ function UnitSelect({ value, onChange, units }: { value: string; onChange: (u: s
         </View>
       </Pressable>
       {open ? (
-        <View testID="ordc-unit-list" style={[cardStyle(t), { padding: t.space.xs }]}>
+        <View testID="ordc-unit-list" style={[cardStyle(t), { position: 'absolute', top: '100%', right: 0, minWidth: 200, marginTop: t.space.xs, padding: t.space.xs, zIndex: 4, elevation: 8, boxShadow: `0px 6px 16px -4px ${t.shadow.floating.color}` }]}>
           {list.map((u) => (
             <Pressable
               key={u}
@@ -375,7 +376,7 @@ function UnitSelect({ value, onChange, units }: { value: string; onChange: (u: s
           {adding ? (
             <View style={{ padding: t.space.sm, gap: t.space.sm }}>
               <TextField testID="ordc-unit-new-name" label={msg('ordc.unitNewLabel')} value={name} onChangeText={setName} />
-              <Button
+              <SolidButton
                 testID="ordc-unit-new-add"
                 disabled={!name.trim()}
                 onPress={() => {
@@ -386,7 +387,7 @@ function UnitSelect({ value, onChange, units }: { value: string; onChange: (u: s
                 }}
               >
                 {msg('ordc.unitNewAdd')}
-              </Button>
+              </SolidButton>
             </View>
           ) : (
             <Pressable

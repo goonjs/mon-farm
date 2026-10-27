@@ -102,6 +102,8 @@ describe('order capture screen (E11-S11)', () => {
     expect(screen.getByTestId('ordc-empty')).toBeTruthy();
     expect(screen.getByTestId('ordc-save').props.accessibilityState.disabled).toBe(true);
     expect(text('ordc-total')).toContain('0.00');
+    // disabled is a solid fill, never the dashed edge of the add row
+    expect(JSON.stringify(screen.getByTestId('ordc-save').props.style)).not.toContain('dashed');
     expect(screen.queryByTestId('ordc-bill-link')).toBeNull();
     // the stage control only shows with items
     await addNewFert('46-0-0', ['1', '0'], ['9', '5', '0']);
@@ -164,9 +166,9 @@ describe('order capture screen (E11-S11)', () => {
     expect(text('ordc-total')).toContain('32,000.00');
     // bill discount 1,000.00
     press('ordc-bill-link');
-    press('ordc-bill');
-    keys('ordc-bill-pad', '1', '000');
-    press('ordc-bill-done');
+    press('ordc-bill-amount');
+    keys('ordc-bill-amount-pad', '1', '000');
+    press('ordc-bill-amount-done');
     press('ordc-bill-ok');
     expect(text('ordc-total')).toContain('31,000.00');
     expect(text('ordc-bill-shown')).toContain('1,000.00');

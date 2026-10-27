@@ -8,8 +8,9 @@ import { formatDate, todayIso } from '../../../core/finance/money';
 import type { Payer, Stage } from '../../../core/finance/types';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, CalendarIcon, CTA, Check, DatePickerSheet, SegmentedControl, TextField } from '../../../ui';
+import { AppText, BottomSheet, CalendarIcon, Check, DatePickerSheet, SegmentedControl, TextField } from '../../../ui';
 import { PayerPicker } from '../pieces';
+import { SolidCTA } from '../order/solid-cta';
 
 export interface HeaderEdit {
   readonly date: string;
@@ -64,7 +65,7 @@ export function HeaderSheet({ order, onSave, onClose }: { order: OrderView; onSa
           </View>
           <TextField testID="ordd-hdr-shop" label={msg('ordd.hdr.shop')} value={shop} onChangeText={setShop} />
           {failed ? <AppText testID="ordd-hdr-failed" style={{ color: t.color.reject }}>{msg('ordd.saveFailed')}</AppText> : null}
-          <CTA testID="ordd-hdr-save" disabled={future} icon={(c) => <Check color={c} />} onPress={() => void save()}>{msg('ordd.hdr.save')}</CTA>
+          <SolidCTA testID="ordd-hdr-save" disabled={future} icon={(c) => <Check color={c} />} onPress={() => void save()}>{msg('ordd.hdr.save')}</SolidCTA>
         </View>
       </BottomSheet>
       <DatePickerSheet open={picking} onClose={() => setPicking(false)} value={date} onChange={setDate} max={stage === 'actual' ? todayIso() : undefined} testID="ordd-hdr-date-sheet" />

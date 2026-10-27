@@ -10,7 +10,7 @@
 
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import {
   buildOrderExpenses,
@@ -31,8 +31,8 @@ import { newId } from '../../../lib/id';
 import { peopleStore } from '../../../store/people';
 import { useSyncStatus } from '../../../sync/use-sync-status';
 import { useTheme } from '../../../theme';
-import { AppText, BasketIcon, CalendarIcon, cardStyle, ChevronRight, CTA, DatePickerSheet, FieldError, Plus, ScreenHeader, WalletIcon } from '../../../ui';
-import { FarmScreen, useMaster } from '../../farm/pieces';
+import { AppText, BasketIcon, CalendarIcon, cardStyle, ChevronRight, DatePickerSheet, FieldError, IconTile, LeafIcon, PinnedActions, Plus, ScreenHeader, WalletIcon } from '../../../ui';
+import { useMaster } from '../../farm/pieces';
 import { optionNamed, setFertOption } from '../fert-options';
 import { orderHref } from '../order-routes';
 import { ItemIcon, ItemSheet, NewProductSheet, OtherItemSheet, PickProductSheet, TextLink, type NewProduct } from './item-sheets';
@@ -51,6 +51,7 @@ import {
   type ProductSpec,
 } from './order-model';
 import { BillDiscountSheet, PayerSheet, ShopSheet } from './order-sheets';
+import { SolidCTA } from './solid-cta';
 import { SavedView, type Saved } from './saved-view';
 
 type Params = { date?: string; stage?: string; payerId?: string; payerName?: string; amount?: string; repeatOf?: string };
@@ -121,6 +122,10 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
     const n = params.amount && !repeat ? parseBahtToSatang(params.amount) : null;
     return n && n > 0 ? n : null;
   });
+  const [box, setBox] = useState(0);
+  const [content, setContent] = useState(0);
+  const [scrollY, setScrollY] = useState(0);
+  const more = box > 0 && content > box + scrollY + 24;
   const [failed, setFailed] = useState(false);
   const [partial, setPartial] = useState(false);
   const [saved, setSaved] = useState<Saved | null>(null);
@@ -318,6 +323,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
 
       {lines.length === 0 ? (
         <View testID="ordc-empty" style={[cardStyle(t), { padding: t.space.xl, alignItems: 'center', gap: t.space.sm }]}>
+          <IconTile tone="accept" icon={(c) => <LeafIcon color={c} />} />
           <AppText variant="heading" style={{ textAlign: 'center' }}>{msg('ordc.emptyTitle')}</AppText>
           <AppText variant="bodySm" style={{ textAlign: 'center' }}>{msg('ordc.emptyBody')}</AppText>
         </View>
@@ -397,9 +403,9 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
           <TextLink testID="ordc-bill-link" onPress={() => setSheet('bill')}>{msg('ordc.billLink')}</TextLink>
         )
       ) : null}
-      <CTA testID="ordc-save" disabled={!clean || busy} onPress={() => void save()}>
+      <SolidCTA testID="ordc-save" disabled={!clean || busy} onPress={() => void save()}>
         {msg('common.save')}
-      </CTA>
+      </SolidCTA>
     </View>
   );
 
@@ -473,9 +479,24 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
     </>
   );
 
+  // A plain scroll body and a pinned bar that always looks active (no fade); a soft shadow says "more below".
   return (
-    <FarmScreen testID="ordc-scroll" title={msg('ordc.title')} fallback="/v2/expenses" onBack={leave} footer={footer} overlay={overlay}>
-      {body}
-    </FarmScreen>
+    <View style={{ flex: 1, backgroundColor: t.color.surface }}>
+      <ScreenHeader title={msg('ordc.title')} back={{ label: msg('v2.back'), onPress: leave, testID: 'v2-back' }} sync={sync} />
+      <ScrollView
+        testID="ordc-scroll"
+        scrollEventThrottle={32}
+        onLayout={(e) => setBox(e.nativeEvent.layout.height)}
+        onContentSizeChange={(_w, h) => setContent(h)}
+        onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
+        contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.xl }}
+      >
+        {body}
+      </ScrollView>
+      <View testID={more ? 'ordc-scroll-more' : undefined} style={more ? { boxShadow: `0px -8px 12px -6px ${t.shadow.floating.color}`, zIndex: 1 } : undefined}>
+        <PinnedActions>{footer}</PinnedActions>
+      </View>
+      {overlay}
+    </View>
   );
 }

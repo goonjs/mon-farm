@@ -11,11 +11,12 @@ import { formatSatang } from '../../../core/finance/money';
 import type { ExpensePatch } from '../../../core/finance/types';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, CTA, Check, FieldError, MoneyField, QuantityField, SegmentedControl } from '../../../ui';
+import { AppText, BottomSheet, Check, FieldError, MoneyField, QuantityField, SegmentedControl } from '../../../ui';
 import { moneyOfLine, moneyOk, moneyProblems, perUnit, withGross, withQty, withUnitPrice, type ItemMoney } from '../order/order-model';
 import { TextLink } from '../order/item-sheets';
 import { SheetTitle } from './parts';
 import { editItemPatch, editItemProblems, itemGross, itemSacks } from './tell';
+import { SolidCTA } from '../order/solid-cta';
 
 export function EditItemSheet({ item, onSave, onDelete, onClose }: { item: Expense; onSave: (patch: ExpensePatch) => Promise<boolean>; onDelete: () => void; onClose: () => void }) {
   const t = useTheme();
@@ -82,7 +83,7 @@ export function EditItemSheet({ item, onSave, onDelete, onClose }: { item: Expen
         </View>
 
         {failed ? <AppText testID="ordd-edit-failed" style={{ color: t.color.reject }}>{msg('ordd.saveFailed')}</AppText> : null}
-        <CTA testID="ordd-edit-save" disabled={blocked && tried} icon={(c) => <Check color={c} />} onPress={() => void save()}>{msg('ordd.hdr.save')}</CTA>
+        <SolidCTA testID="ordd-edit-save" disabled={blocked && tried} icon={(c) => <Check color={c} />} onPress={() => void save()}>{msg('ordd.hdr.save')}</SolidCTA>
         <View style={{ alignItems: 'center' }}>
           <TextLink testID="ordd-edit-delete" onPress={onDelete}>{msg('ordd.edit.delete')}</TextLink>
         </View>
