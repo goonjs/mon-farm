@@ -9,6 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "tokens": "node scripts/emit-tokens.mjs",
+    "check:mockup": "node scripts/check-mockup-fit.mjs",
     "tokens:check": "node scripts/emit-tokens.mjs --check",
     "contrast": "node scripts/check-contrast.mjs --strict",
     "typecheck": "tsc --noEmit",
