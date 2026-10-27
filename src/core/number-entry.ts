@@ -1,9 +1,6 @@
 /**
  * Number entry engine (E11-S11 UI-2): the pure rules behind NumberPad,
  * QuantityField and MoneyField. No React, no storage — keys in, text out.
- *
- * STUB: the contract is fixed (other files import it); the bodies are being
- * written test-first in `number-entry.test.ts`.
  */
 
 export type EntryKind = 'int' | 'money';
@@ -34,29 +31,61 @@ export interface EntryView {
   readonly empty: boolean;
 }
 
-export const startEntry = (_initial: string): EntryState => {
-  throw new Error('not implemented');
+const group = (digits: string): string => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+export const startEntry = (initial: string): EntryState => ({ raw: initial, fresh: true, rejected: false });
+
+/** Does `raw` fit the limits? int: digits; money: whole digits and ≤ 2 fraction digits. */
+const fits = (raw: string, cfg: EntryConfig): boolean => {
+  const [whole = '', fraction = ''] = raw.split('.');
+  return whole.length <= cfg.maxDigits && fraction.length <= 2;
 };
 
-export const pressKey = (_s: EntryState, _key: EntryKey, _cfg: EntryConfig): EntryState => {
-  throw new Error('not implemented');
+const typed = (raw: string): EntryState => ({ raw, fresh: false, rejected: false });
+
+export const pressKey = (s: EntryState, key: EntryKey, cfg: EntryConfig): EntryState => {
+  if (key === 'clear') return typed('');
+  if (key === 'back') return typed(s.fresh ? '' : s.raw.slice(0, -1));
+  if (key === '.') {
+    if (cfg.kind === 'int' || s.raw.includes('.')) return s; // meaningless, not a rejection
+    return typed(s.fresh || s.raw === '' ? '0.' : `${s.raw}.`);
+  }
+  // Digits. A fresh value is replaced, so build on an empty base.
+  const base = s.fresh ? '' : s.raw;
+  if (base === '' || base === '0') {
+    if (key === '00' || key === '000' || (key === '0' && base === '0')) return s; // leading zeros collapse
+    return typed(key);
+  }
+  const next = `${base}${key}`;
+  return fits(next, cfg) ? typed(next) : { ...s, rejected: true };
 };
 
-export const viewEntry = (_s: EntryState, _cfg: EntryConfig): EntryView => {
-  throw new Error('not implemented');
+export const viewEntry = (s: EntryState, cfg: EntryConfig): EntryView => {
+  const [whole = '', fraction = ''] = s.raw.split('.');
+  const money = cfg.kind === 'money';
+  return {
+    whole: group(whole === '' ? '0' : whole),
+    fraction: money ? fraction.padEnd(2, '0') : '',
+    fractionTyped: money && s.raw.includes('.'),
+    empty: s.raw === '',
+  };
 };
 
 /** "20" → 20; "" → null. */
-export const entryToInt = (_raw: string): number | null => {
-  throw new Error('not implemented');
+export const entryToInt = (raw: string): number | null => {
+  if (!/^\d+$/.test(raw)) return null;
+  const n = Number(raw);
+  return Number.isSafeInteger(n) ? n : null;
 };
 
 /** "1150.5" → 115050; "" → null. Goes through the string, never `Number(x) * 100` (see finance/money.ts). */
-export const entryToSatang = (_raw: string): number | null => {
-  throw new Error('not implemented');
+export const entryToSatang = (raw: string): number | null => {
+  const m = /^(\d+)(?:\.(\d{0,2}))?$/.exec(raw);
+  if (!m) return null;
+  const satang = Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0'));
+  return Number.isSafeInteger(satang) ? satang : null;
 };
 
 /** Type-scale step for the money numeral so a long amount never overflows: ≤ 9 chars of the whole part "figure", ≤ 12 "displayXl", else "displayLg". */
-export const moneyTextStep = (_view: EntryView): 'figure' | 'displayXl' | 'displayLg' => {
-  throw new Error('not implemented');
-};
+export const moneyTextStep = (view: EntryView): 'figure' | 'displayXl' | 'displayLg' =>
+  view.whole.length <= 9 ? 'figure' : view.whole.length <= 12 ? 'displayXl' : 'displayLg';
