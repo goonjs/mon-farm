@@ -3865,7 +3865,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'v2s.owedLeft': 'the farm still owes {name}',
   'v2s.cashFor': 'cash to {name}',
   'v2s.via2.cash-from-share': 'taken from their cash',
-  'v2s.via2.buyer-split': 'handed separately',
+  'v2s.via2.buyer-split': 'handed as a separate pile',
   'v2s.via2.transfer-with-owner': 'with the transfer',
   'v2s.cashToPayOf': 'cash to pay {name}',
   'v2s.notRounded': '(not rounded yet)',

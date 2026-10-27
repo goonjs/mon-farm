@@ -231,24 +231,34 @@ export function projectDebts(
  * before it; for the latest sale this is today's balance.
  *
  * Below zero, the sales so far took from debts dated after this one — a sale
- * entered for an earlier day is offered today's balance (E05-S10). Those debts
- * come back oldest first, as deductions apply (D-67), until nothing is
- * missing: what is left of them is still owed. By date only — `ts` never
- * orders anything (architecture §Two clocks).
+ * entered for an earlier day is offered today's balance (E05-S10). Only what
+ * sales up to this one deducted counts as taken that way (an overpayment made
+ * outside a sale stays an overpayment); those debts come back oldest first,
+ * as deductions apply (D-67), until nothing taken is missing: what is left of
+ * them is still owed. By date only — `ts` never orders anything
+ * (architecture §Two clocks).
  */
 export function balanceAfterSale(account: DebtAccount, saleId: string, saleDate: string): number {
   let b = account.balanceSatang;
+  let bySales = 0;
   for (const p of account.payments) {
-    if (p.deleted || !p.counts || !toFarm(p.creditor) || p.saleId === saleId) continue;
+    if (p.deleted || !p.counts || !toFarm(p.creditor)) continue;
+    if (p.saleId === saleId || (p.saleId && p.date <= saleDate)) bySales += p.amountSatang;
+    if (p.saleId === saleId) continue;
     if (p.date > saleDate) b += p.amountSatang;
   }
   const later = account.debts
     .filter((d) => !d.deleted && (d.kind !== 'loan' || toFarm(d.lender)) && d.date > saleDate)
     .sort((x, y) => (x.date !== y.date ? (x.date < y.date ? -1 : 1) : x.id < y.id ? -1 : 1));
   for (const d of later) b -= d.amountSatang;
+  if (b >= 0) return b;
+  // What is missing beyond what sales took is an overpayment: it stays.
+  const taken = Math.min(-b, bySales);
+  const over = -b - taken;
+  let left = -taken;
   for (const d of later) {
-    if (b >= 0) break;
-    b += d.amountSatang;
+    if (left >= 0) break;
+    left += d.amountSatang;
   }
-  return b;
+  return left - over;
 }

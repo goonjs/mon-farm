@@ -259,6 +259,27 @@ describe('debt left after a given sale (review F9)', () => {
     expect(balanceAfterSale(acc, 'sale-13', '2026-10-13')).toBe(150000);
   });
 
+  it('two sales took from the same later debt: each shows what is left after it', () => {
+    const log = [
+      debt('d1', { worker: NAT, amountSatang: 100000, date: '2026-10-27' }),
+      pay('a', { worker: NAT, amountSatang: 30000, date: '2026-10-13', method: 'cash-from-share', saleId: 'sale-a' }),
+      pay('b', { worker: NAT, amountSatang: 20000, date: '2026-10-15', method: 'cash-from-share', saleId: 'sale-b' }),
+    ];
+    const acc = projectDebts(log).get(NAT.id)!;
+    expect(balanceAfterSale(acc, 'sale-a', '2026-10-13')).toBe(70000);
+    expect(balanceAfterSale(acc, 'sale-b', '2026-10-15')).toBe(50000);
+  });
+
+  it('an overpayment outside a sale does not bring a later debt back (PR 120 review)', () => {
+    const log = [
+      debt('d0', { worker: NAT, amountSatang: 100000, date: '2026-10-05' }),
+      pay('o', { worker: NAT, amountSatang: 120000, date: '2026-10-10', method: 'outside' }),
+      debt('d1', { worker: NAT, amountSatang: 50000, date: '2026-10-27' }),
+    ];
+    // overpaid by 200 on the sale day, and no sale took from d1: nothing left after the 13 Oct sale
+    expect(balanceAfterSale(projectDebts(log).get(NAT.id)!, 'sale-13', '2026-10-13')).toBe(-20000);
+  });
+
   it('does not depend on the order things were recorded in (ts is untrusted)', () => {
     const log = [
       pay('s1', { worker: NAT, amountSatang: 332500, date: '2026-10-13', method: 'buyer-split', saleId: 'sale-13' }),
