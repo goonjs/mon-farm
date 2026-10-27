@@ -29,6 +29,7 @@
  * data values, not two languages.
  */
 
+import * as orderCaptureMsgs from './order-capture-messages';
 import * as orderDetailMsgs from './order-detail-messages';
 import * as orderMsgs from './order-messages';
 import * as orderSurfaceMsgs from './order-surface-messages';
@@ -40,6 +41,7 @@ export type Locale = 'th' | 'en';
  */
 const th = {
   ...orderMsgs.th,
+  ...orderCaptureMsgs.th,
   ...orderDetailMsgs.th,
   ...orderSurfaceMsgs.th,
   // ── Shared vocabulary ────────────────────────────────────────────────────
@@ -2023,6 +2025,7 @@ const th = {
  */
 const en: Partial<Record<keyof typeof th, string>> = {
   ...orderMsgs.en,
+  ...orderCaptureMsgs.en,
   ...orderDetailMsgs.en,
   ...orderSurfaceMsgs.en,
   'common.cancel': 'cancel',
