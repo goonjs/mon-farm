@@ -38,6 +38,7 @@ function purchase(date: string, f: FertilizerDetails, billSatang = 1_000_000, sa
     headEventId: `e-${n}`,
     heads: [`e-${n}`],
     createdOn: 'dev',
+    createdAt: 0,
   };
 }
 

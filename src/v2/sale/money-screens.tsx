@@ -1180,7 +1180,16 @@ function PaymentBody({ bump }: { bump: () => void }) {
   const account = choice?.kind === 'account' ? accounts.accounts.find((a) => a.id === choice.accountId) : undefined;
   const over = money.tappers.some((tp) => overDeducted(tp.debtDeductedSatang + tp.nettedSatang, tp.shareSatang, tp.nettedSatang));
   const conflicts = salePaymentConflicts(fin.events, saleId);
-  const payees = [...money.tappers.map((tp) => ({ id: tp.id, name: tp.name, satang: tp.cashSatang, tp })), { id: OWNER_PAYEE, name: '', satang: money.ownerTransferSatang, tp: null }];
+  const cashRepaid = (id: string) => (money.debts.get(id)?.payments ?? []).filter((x) => x.saleId === saleId && !x.deleted && x.counts && (x.method === 'cash-from-share' || x.method === 'buyer-split'));
+  const payees = [
+    ...money.tappers.map((tp) => ({ id: tp.id, name: tp.name, satang: tp.cashSatang, tp, repaid: null })),
+    { id: OWNER_PAYEE, name: '', satang: money.ownerTransferSatang, tp: null, repaid: null },
+    // The cash a tapper repays the farm is its own pile: the farm ticks that it got it (E05-S10).
+    ...money.tappers.flatMap((tp) => {
+      const ps = cashRepaid(tp.id);
+      return ps.length ? [{ id: `debt-cash-${tp.id}`, name: tp.name, satang: ps.reduce((a, x) => a + x.amountSatang, 0), tp: null, repaid: { tp, methods: [...new Set(ps.map((x) => x.method))] } }] : [];
+    }),
+  ];
   const tick = (payee: string, amount: number, done: boolean, head: string | null) =>
     flight.run(async () => {
       await fin.write(paymentTarget(saleId, payee), head, paymentMarkPayload(saleId, payee, done, amount));
@@ -1235,13 +1244,15 @@ function PaymentBody({ bump }: { bump: () => void }) {
       {payees.map((p) => {
         const st = paymentStatus(fin.events!, saleId, p.id, p.satang);
         const ded = p.tp ? (money.debts.get(p.id)?.payments ?? []).filter((x) => x.saleId === saleId && !x.deleted && x.counts) : [];
+        const gets = !p.tp; // the farm receives: the owner's transfer and the cash repayments
         const lines: { icon?: (c: string) => ReactNode; text: string }[] = [];
         if (st.done && st.at) {
           lines.push({ icon: (c) => <PersonIcon color={c} size={12} />, text: msg('v2s.byDevice') });
           lines.push({ icon: (c) => <ClockIcon color={c} size={12} />, text: new Date(st.at + 7 * 3_600_000).toISOString().slice(11, 16) });
-        } else lines.push({ text: msg(p.tp ? 'v2s.notPaid' : 'v2s.notReceived') });
-        if (!p.tp && account) lines.push({ icon: (c) => <BankIcon color={c} size={12} />, text: `${BANKS.find((b) => b.code === account.bankCode)?.name ?? account.label} ••${account.accountNo.slice(-4)}` });
-        if (!p.tp && money.rounding.transferInSatang) lines.push({ icon: (c) => <Plus color={c} size={10} />, text: msg('v2s.withDebt', { amount: bahtText(money.rounding.transferInSatang) }) });
+        } else lines.push({ text: msg(gets ? 'v2s.notReceived' : 'v2s.notPaid') });
+        if (p.repaid) lines.push({ text: p.repaid.methods.map((m) => msg(`v2s.via2.${m}` as 'v2s.via2.cash-from-share')).join(' · ') });
+        if (p.id === OWNER_PAYEE && account) lines.push({ icon: (c) => <BankIcon color={c} size={12} />, text: `${BANKS.find((b) => b.code === account.bankCode)?.name ?? account.label} ••${account.accountNo.slice(-4)}` });
+        if (p.id === OWNER_PAYEE && money.rounding.transferInSatang) lines.push({ icon: (c) => <Plus color={c} size={10} />, text: msg('v2s.withDebt', { amount: bahtText(money.rounding.transferInSatang) }) });
         if (st.recheck) lines.push({ icon: (c) => <AlertIcon color={c} size={12} />, text: msg('v2s.recheck') });
         return (
           <Pressable
@@ -1249,8 +1260,8 @@ function PaymentBody({ bump }: { bump: () => void }) {
             testID={`tick-${p.id}`}
             accessibilityRole="checkbox"
             aria-checked={st.done}
-            disabled={locked(p.tp)}
-            accessibilityState={{ checked: st.done, disabled: locked(p.tp) }}
+            disabled={locked(p.tp ?? p.repaid?.tp ?? null)}
+            accessibilityState={{ checked: st.done, disabled: locked(p.tp ?? p.repaid?.tp ?? null) }}
             onPress={() => void tick(p.id, p.satang, !st.done, st.head)}
             style={{ ...cardStyle(t), flexDirection: 'row', gap: t.space.md, padding: t.space.md, borderWidth: st.done ? t.border.thick : t.border.hair, borderColor: st.done ? t.color.accept : t.color.ruleStrong, backgroundColor: st.done ? t.color.acceptSunk : t.color.surfaceRaised }}
           >
@@ -1258,7 +1269,7 @@ function PaymentBody({ bump }: { bump: () => void }) {
               {st.done ? <Check color={t.color.inkInverse} size={12} /> : null}
             </View>
             <View style={{ flex: 1, gap: t.space.xxs }}>
-              <AppText style={{ fontWeight: t.font.weight.bold }}>{p.tp ? msg('v2s.gotCash', { name: p.name }) : msg('v2s.gotTransfer')}</AppText>
+              <AppText style={{ fontWeight: t.font.weight.bold }}>{p.tp ? msg('v2s.gotCash', { name: p.name }) : p.repaid ? msg('v2s.gotDebtCash', { name: p.name }) : msg('v2s.gotTransfer')}</AppText>
               {lines.map((l, k) => (
                 <IconLine key={k} icon={l.icon}>
                   {l.text}
