@@ -196,6 +196,37 @@ describe('expense list (F4, F7)', () => {
   });
 });
 
+describe('expense list: shop orders (E11-S11 FO-12)', () => {
+  const fert = (formula: string) => ({ type: 'chemical' as const, formula, brand: '', sackKg: null, reasons: [], zones: [], shop: 'ร้านสมศรี', orderedBy: '', sacks: 2, pricePerSackSatang: 50000, itemDiscountSatang: 0 });
+  it('shows the items of one order as one row, opens the order, and keeps the totals per item', async () => {
+    await seedExpense('ord-9-a', { amountSatang: 100000, date: '2026-10-20', stage: 'committed', categoryId: 'cat-fertilizer', orderId: 'ord-9', fertilizer: fert('ยูเรีย') });
+    await seedExpense('ord-9-b', { amountSatang: 50000, date: '2026-10-20', stage: 'committed', categoryId: 'cat-fertilizer', orderId: 'ord-9', fertilizer: fert('15-15-15') });
+    wrap(<ExpensesScreen />);
+    await flush();
+    expect(screen.queryByTestId('expense-ord-9-a')).toBeNull();
+    const row = screen.getByTestId('order-ord-9');
+    expect(row).toHaveTextContent(/ปุ๋ย 2 รายการ/);
+    expect(row).toHaveTextContent(/ร้านสมศรี/);
+    expect(row).toHaveTextContent(/สั่งไว้/);
+    expect(screen.getByTestId('order-progress-ord-9')).toHaveTextContent(/บอกรายละเอียดแล้ว 0 \/ 2/);
+    expect(screen.getByTestId('order-amount-ord-9')).toHaveTextContent(/1,500\.00/);
+    fireEvent.press(row);
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'ord-9' } });
+    // Picking a payer works per item, not per order.
+    fireEvent.press(screen.getByTestId('filter-payer-missing'));
+    expect(screen.getByTestId('expense-ord-9-a')).toBeTruthy();
+    expect(screen.getByTestId('expense-ord-9-b')).toBeTruthy();
+  });
+
+  it('a legacy fertilizer expense (no orderId) opens as an order of its own id', async () => {
+    await seedExpense('legacy-f', { amountSatang: 80000, date: '2026-09-02', categoryId: 'cat-fertilizer', fertilizer: fert('ยูเรีย') });
+    wrap(<ExpensesScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-legacy-f'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'legacy-f' } });
+  });
+});
+
 describe('repayment (E11-S03)', () => {
   beforeAll(async () => {
     await seedExpense('rp-a', { amountSatang: 80000, date: '2026-09-15', payer: SOMWANG });

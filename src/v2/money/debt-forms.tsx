@@ -28,10 +28,10 @@ import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
 import { AppText, Button, Card, Check, RadioCard, ScreenHeader, SegmentedControl, TextField } from '../../ui';
+import { ORDER_NEW } from './order-routes';
 import { PayerPicker, SectionLabel } from './pieces';
 
 const KINDS: readonly DebtKind[] = ['loan', 'fertilizer', 'other'];
-const FLOW = '/v2/fertilizer' as const;
 
 const back = () => (router.canGoBack() ? router.back() : router.replace('/v2/debts'));
 
@@ -58,9 +58,9 @@ export function AddDebtScreen() {
   const ok = problems.length === 0 && (kind !== 'loan' || !!lender);
 
   const pickKind = (k: DebtKind) => {
-    // Fertilizer is a purchase: the same flow as the expense form, this tapper picked.
+    // Fertilizer is a shop order (E11-S11): the same page as the expense form; who taps is told there.
     // Replaced, so saving the purchase goes back to the tapper's debts, not to this form.
-    if (k === 'fertilizer') router.replace({ pathname: FLOW, params: { workerId, name: worker.name } });
+    if (k === 'fertilizer') router.replace(ORDER_NEW);
     else setKind(k);
   };
 

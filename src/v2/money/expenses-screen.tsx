@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { groupOrders, orderProgress, type OrderView } from '../../core/finance/fert-order';
 import { filterExpenses, stageTotals, type Expense, type ExpenseFilter, type Reimbursement } from '../../core/finance/ledger';
 import { formatDate, formatMonth, formatSatang } from '../../core/finance/money';
 import { FARM_FUNDS, type Payer, type Stage } from '../../core/finance/types';
@@ -29,6 +30,7 @@ import {
   CalendarIcon,
   Card,
   Check,
+  Chip,
   CTA,
   FactRow,
   FarmIcon,
@@ -39,6 +41,7 @@ import {
   ScreenHeader,
 } from '../../ui';
 import { V2_HOME } from '../routes';
+import { orderHref } from './order-routes';
 import { ChoiceChip, ChoiceRow, Day, NotRecordedPill, PayerPicker, stageCard, UnknownPill } from './pieces';
 
 const STAGES: readonly Stage[] = ['actual', 'committed', 'planned'];
@@ -64,6 +67,22 @@ export function ExpensesScreen() {
     [state],
   );
   const reimb = useMemo(() => new Map((state?.reimbursements ?? []).map((r) => [r.expenseId, r])), [state]);
+  // One row per shop order; while picking (payer, repayment) every item stays its own row so the selection is per item.
+  const entries = useMemo(() => {
+    if (selectingPayerOrRepay(filter)) return rows.map((x): ListEntry => ({ x }));
+    const orders = new Map(groupOrders(rows.filter((x) => x.orderId)).map((o) => [o.orderId, o]));
+    const seen = new Set<string>();
+    const out: ListEntry[] = [];
+    for (const x of rows) {
+      const o = x.orderId ? orders.get(x.orderId) : undefined;
+      if (!o) out.push({ x });
+      else if (!seen.has(o.orderId)) {
+        seen.add(o.orderId);
+        out.push({ order: o });
+      }
+    }
+    return out;
+  }, [rows, filter]);
   const catName = (id: string | null) => state?.categories.find((c) => c.id === id)?.name ?? msg('fin.filter.category');
   const unrepaidPayers = useMemo(() => {
     const m = new Map<string, Payer>();
@@ -184,16 +203,18 @@ export function ExpensesScreen() {
         ) : rows.length === 0 ? (
           <AppText variant="bodySm" testID="expenses-empty">{msg('fin.list.empty')}</AppText>
         ) : (
-          rows.map((x) => (
+          entries.map((e) => 'order' in e ? (
+            <OrderRow key={e.order.orderId} order={e.order} category={catName('cat-fertilizer')} />
+          ) : (
             <Row
-              key={x.id}
-              x={x}
-              category={x.categoryId ? catName(x.categoryId) : msg('fin.filter.category')}
-              farm={farms.find((f) => f.id === x.propertyId)?.name ?? null}
-              reimb={reimb.get(x.id)}
+              key={e.x.id}
+              x={e.x}
+              category={e.x.categoryId ? catName(e.x.categoryId) : msg('fin.filter.category')}
+              farm={farms.find((f) => f.id === e.x.propertyId)?.name ?? null}
+              reimb={reimb.get(e.x.id)}
               selectable={selectingPayer || selectingRepay}
-              selected={selected.has(x.id)}
-              onToggle={() => toggle(x.id)}
+              selected={selected.has(e.x.id)}
+              onToggle={() => toggle(e.x.id)}
             />
           ))
         )}
@@ -300,7 +321,11 @@ function Row({
       accessibilityRole={selectable ? 'checkbox' : 'button'}
       accessibilityState={selectable ? { checked: selected } : undefined}
       accessibilityLabel={selectable ? msg('fin.row.select', { name: category }) : undefined}
-      onPress={() => (selectable ? onToggle() : router.push({ pathname: '/v2/expense/[id]', params: { id: x.id } }))}
+      onPress={() => {
+        if (selectable) onToggle();
+        else if (x.fertilizer || x.share?.totalSacks != null) router.push(orderHref(x.orderId ?? x.id));
+        else router.push({ pathname: '/v2/expense/[id]', params: { id: x.id } });
+      }}
       style={{ ...stageCard(x.stage, t), flexDirection: 'row', alignItems: 'center', gap: t.space.md, ...(selected ? { borderWidth: t.border.thick, borderColor: t.color.action } : null) }}
     >
       {selectable ? (
@@ -334,6 +359,40 @@ function Row({
       <View style={{ alignItems: 'flex-end', gap: 2 }}>
         {x.amountSatang === null ? <UnknownPill /> : <Amount satang={x.amountSatang} testID={`expense-amount-${x.id}`} />}
         <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg(`fin.stage.${x.stage}`)}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+type ListEntry = { readonly x: Expense } | { readonly order: OrderView };
+const selectingPayerOrRepay = (f: ExpenseFilter) => !!f.payerMissing || (!!f.unrepaid && !!f.payerId);
+
+/** One shop order as one row (E11-S11 FO-12): what was bought, the shop and day, the net, how much is told. */
+function OrderRow({ order, category }: { order: OrderView; category: string }) {
+  const t = useTheme();
+  const msg = useT();
+  const { done, total } = orderProgress(order);
+  const first = order.items[0];
+  const title = order.items.length === 1 ? first.fertilizer?.formula || first.item || category : msg('ords.rowTitle', { n: order.items.length });
+  const caption = order.shop ? msg('ords.rowCaption', { shop: order.shop, date: formatDate(order.date) }) : formatDate(order.date);
+  return (
+    <Pressable
+      testID={`order-${order.orderId}`}
+      accessibilityRole="button"
+      onPress={() => router.push(orderHref(order.orderId))}
+      style={{ ...stageCard(order.stage, t), flexDirection: 'row', alignItems: 'center', gap: t.space.md, minHeight: t.target.min }}
+    >
+      <View style={{ flex: 1, minWidth: 0, gap: t.space.xs }}>
+        <AppText variant="heading" style={{ fontSize: t.font.size.bodyLg }}>{title}</AppText>
+        <FactRow icon={(c) => <CalendarIcon color={c} size={14} />}>{caption}</FactRow>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.xs }}>
+          {order.stage === 'committed' ? <Chip testID={`order-ordered-${order.orderId}`} tone="neutral" label={msg('ords.ordered')} /> : null}
+          {total > 0 && done < total ? <Chip testID={`order-progress-${order.orderId}`} tone="warn" label={msg('ords.progress', { done, total })} /> : null}
+        </View>
+      </View>
+      <View style={{ alignItems: 'flex-end', gap: 2 }}>
+        <Amount satang={order.netSatang} testID={`order-amount-${order.orderId}`} />
+        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg(`fin.stage.${order.stage}`)}</Text>
       </View>
     </Pressable>
   );

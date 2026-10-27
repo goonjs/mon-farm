@@ -133,7 +133,7 @@ describe('V2Home — empty farm', () => {
     await flush();
     const grid = screen.getByTestId('home-go-to');
     const ids = within(grid).getAllByTestId(/^mod-/).map((n) => n.props.testID);
-    expect(ids).toEqual(['mod-reports', 'mod-weather', 'mod-payables', 'mod-expenses', 'mod-stock', 'mod-workers']);
+    expect(ids).toEqual(['mod-reports', 'mod-weather', 'mod-payables', 'mod-expenses', 'mod-order', 'mod-stock', 'mod-workers']);
     expect(within(screen.getByTestId('mod-reports')).getByText('รายงานการขายย้อนหลัง')).toBeTruthy();
     expect(within(screen.getByTestId('mod-weather')).getByText('เปิดภายนอก')).toBeTruthy();
     expect(within(screen.getByTestId('mod-weather')).getByTestId('external-icon', { includeHiddenElements: true })).toBeTruthy();
@@ -156,6 +156,7 @@ describe('V2Home — empty farm', () => {
       'mod-weather': '/v2/weather',
       'mod-payables': '/v2/payables',
       'mod-expenses': '/v2/expenses',
+      'mod-order': '/v2/order',
       'mod-stock': '/v2/stock',
       'mod-workers': '/v2/people?filter=tapper',
     };
@@ -251,5 +252,29 @@ describe('V2Home — live rows from the local log', () => {
     expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/sale/s-old/payment');
     fireEvent.press(owed);
     expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/owed');
+  });
+});
+
+describe('V2Home — shop orders (E11-S11 FO-13, FD-0)', () => {
+  const fert = { type: 'chemical' as const, formula: 'ยูเรีย', brand: '', sackKg: null, reasons: [], zones: [], shop: 'ร้านสมศรี', orderedBy: '', sacks: 2, pricePerSackSatang: 50000, itemDiscountSatang: 0 };
+  const seedFert = async (id: string, stage: 'actual' | 'committed', orderId: string, n: number) => {
+    const e: FinanceEvent = {
+      id: `ev-${id}`, groupId: 'group-1', deviceSeq: n, ts: n, actor: { userId: 'u', deviceId: 'dev-other' }, source: 'app', targetId: id, baseEventId: null,
+      payload: { t: 'expense_created', fields: { amountSatang: 100000, date: '2026-10-20', stage, categoryId: 'cat-fertilizer', propertyId: null, item: 'ยูเรีย', note: '', payer: null, orderId, fertilizer: fert } },
+    };
+    await mockFinance.append(e);
+  };
+
+  it('asks whether an ordered fertilizer arrived, and which arrived fertilizer has no plot yet; both open the order', async () => {
+    await seedFert('o1-a', 'committed', 'o1', 101);
+    await seedFert('o2-a', 'actual', 'o2', 102);
+    await seedFert('o2-b', 'actual', 'o2', 103);
+    wrap(<V2Home />);
+    await flush();
+    expect(within(screen.getByTestId('home-order-committed')).getByText(/ของมาแล้วหรือยัง/)).toBeTruthy();
+    expect(within(screen.getByTestId('home-order-zones')).getByText(/2 รายการ/)).toBeTruthy();
+    fireEvent.press(screen.getByTestId('home-order-committed'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'o1' } });
+    expect(screen.getByTestId('mod-order')).toBeTruthy();
   });
 });

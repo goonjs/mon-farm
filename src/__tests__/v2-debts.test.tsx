@@ -50,12 +50,12 @@ describe('debt ledger (E06-S03)', () => {
     mockParams.current = DAENG;
   });
 
-  it('kind fertilizer opens the one fertilizer purchase flow with this tapper (E11-S10 C)', async () => {
+  it('kind fertilizer opens the shop order (E11-S11)', async () => {
     wrap(<AddDebtScreen />);
     await flush();
     fireEvent.press(screen.getByTestId('debt-kind-fertilizer'));
     // Replaced: after saving the purchase the user lands on the tapper's debts, not this form again.
-    expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { workerId: 'p-daeng', name: 'แดง' } });
+    expect(mockRouter.replace).toHaveBeenCalledWith('/v2/order');
     expect(screen.queryByTestId('debt-pct-mode')).toBeNull();
   });
 
