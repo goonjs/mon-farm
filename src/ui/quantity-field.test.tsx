@@ -2,6 +2,7 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import { useState } from 'react';
 
 import { QuantityField } from './quantity-field';
+import { tokens } from '../../design/tokens';
 import { wrap } from '../test/render';
 
 const press = (...keys: string[]) => keys.forEach((k) => fireEvent.press(screen.getByTestId(`q-pad-key-${k}`)));
@@ -22,7 +23,20 @@ function Harness({ initial = 20, ...rest }: { initial?: number | null } & Partia
   );
 }
 
+const flat = (style: unknown) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+
 describe('QuantityField', () => {
+  it('closed card is slim (56-72), numeral one step below the open one, tappable', () => {
+    wrap(<Harness />);
+    const st = flat(screen.getByTestId('q').props.style);
+    expect(st.minHeight).toBeGreaterThanOrEqual(56);
+    expect(st.minHeight).toBeLessThanOrEqual(72);
+    expect(st.paddingVertical).toBeLessThanOrEqual(8);
+    expect(flat(screen.getByText('20').props.style).fontSize).toBeLessThan(tokens.font.size.figure);
+    expect(screen.getByText('รวม 1,000 กก.')).toBeTruthy();
+    expect(screen.getByText('กี่กระสอบ')).toBeTruthy();
+  });
+
   it('closed: big number, unit and caption, tappable at ≥ 56', () => {
     wrap(<Harness />);
     expect(screen.getByText('20')).toBeTruthy();

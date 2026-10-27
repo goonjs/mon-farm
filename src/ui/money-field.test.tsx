@@ -25,6 +25,15 @@ describe('MoneyField', () => {
     expect(screen.queryByTestId('m-sheet')).toBeNull();
   });
 
+  it('closed card is slim (56-72) with the numeral below figure and unit on the same row', () => {
+    wrap(<Harness />);
+    const st = flat(screen.getByTestId('m').props.style);
+    expect(st.minHeight).toBeGreaterThanOrEqual(56);
+    expect(st.minHeight).toBeLessThanOrEqual(72);
+    expect(st.paddingVertical).toBeLessThanOrEqual(8);
+    expect(screen.getByText('ราคาต่อกระสอบ')).toBeTruthy();
+  });
+
   it('sheet: first key replaces; words and below line follow the live amount; ตกลง commits', () => {
     wrap(<Harness below={(s) => (s == null ? undefined : `20 × ${s / 100} = ${(s * 20) / 100}`)} />);
     fireEvent.press(screen.getByTestId('m'));

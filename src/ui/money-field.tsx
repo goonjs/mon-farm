@@ -92,8 +92,9 @@ export function MoneyField({
   const press = (k: EntryKey) => setState((s) => pressKey(s, k, CFG));
 
   /** Whole part big, fraction at ~55% (faint until typed). One nowrap run. */
-  const amount = (v: EntryView, testId?: string) => {
-    const size = t.font.size[moneyTextStep(v)];
+  const amount = (v: EntryView, testId?: string, slim = false) => {
+    const step = moneyTextStep(v);
+    const size = t.font.size[slim && step === 'figure' ? 'displayXl' : slim && step === 'displayXl' ? 'displayLg' : step];
     const placeholder = v.empty;
     return (
       <Text
@@ -138,18 +139,20 @@ export function MoneyField({
 
   return (
     <>
-      <Pressable
-        testID={testID}
-        accessibilityRole="button"
-        accessibilityLabel={[label, satang == null ? null : `${formatSatang(satang)} ${unit}`].filter(Boolean).join(', ')}
-        onPress={openSheet}
-        style={[cardStyle(t), { minHeight: t.target.comfortable, padding: t.space.lg, gap: t.space.xs }]}
-      >
+      <View style={{ gap: t.space.xs }}>
         <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: t.color.inkSoft }}>
           {label}
         </Text>
-        {amountRow(amount(closedView))}
-      </Pressable>
+        <Pressable
+          testID={testID}
+          accessibilityRole="button"
+          accessibilityLabel={[label, satang == null ? null : `${formatSatang(satang)} ${unit}`].filter(Boolean).join(', ')}
+          onPress={openSheet}
+          style={[cardStyle(t), { minHeight: t.target.comfortable, paddingHorizontal: t.space.lg, paddingVertical: t.space.sm, justifyContent: 'center' }]}
+        >
+          {amountRow(amount(closedView, undefined, true))}
+        </Pressable>
+      </View>
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title={label} testID={`${testID}-sheet`}>
         <View style={[cardStyle(t), { padding: t.space.lg, gap: t.space.xs, borderWidth: t.border.thick, borderColor: t.color.action }]}>

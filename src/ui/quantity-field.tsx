@@ -1,7 +1,8 @@
 /**
  * QuantityField (E11-S11 UI-2): a whole-number field edited on the on-screen
  * NumberPad in a bottom sheet — no OS keyboard, no +/- steppers. Closed it is
- * a tappable card with the big number and unit. In the sheet the first key
+ * a small label over a slim (≈56–72) tappable card: number, unit and caption on one
+ * line (wrapping, never clipped). In the sheet the first key
  * replaces the old value; ✓ commits, closing the sheet cancels.
  */
 
@@ -68,16 +69,16 @@ export function QuantityField({
   };
   const press = (k: EntryKey) => setState((s) => pressKey(s, k, cfg));
 
-  const figure = (text: string, tone: 'ink' | 'inkFaint', testId?: string) => (
+  const figure = (text: string, tone: 'ink' | 'inkFaint', testId?: string, step: 'figure' | 'displayXl' = 'figure') => (
     <Text
       testID={testId}
       style={{
         fontFamily: t.font.family.sans,
-        fontSize: t.font.size.figure,
+        fontSize: t.font.size[step],
         fontWeight: t.font.weight.bold,
         fontVariant: ['tabular-nums'],
         color: t.color[tone],
-        letterSpacing: t.font.size.figure * t.font.tracking.tight,
+        letterSpacing: t.font.size[step] * t.font.tracking.tight,
       }}
     >
       {text}
@@ -86,31 +87,33 @@ export function QuantityField({
   const unitText = (
     <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, color: t.color.inkSoft }}>{unit}</Text>
   );
-  const captionText = (v: number | null) => {
+  const captionText = (v: number | null, inline = false) => {
     const c = caption?.(v);
     return c ? (
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, color: t.color.inkSoft, textAlign: 'right' }}>{c}</Text>
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, color: t.color.inkSoft, textAlign: inline ? 'left' : 'right' }}>{c}</Text>
     ) : null;
   };
 
   return (
     <>
-      <Pressable
-        testID={testID}
-        accessibilityRole="button"
-        accessibilityLabel={[label, value == null ? null : `${group(value)} ${unit}`].filter(Boolean).join(', ')}
-        onPress={openSheet}
-        style={[cardStyle(t), { minHeight: t.target.comfortable, padding: t.space.lg, gap: t.space.xs }]}
-      >
+      <View style={{ gap: t.space.xs }}>
         <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: t.color.inkSoft }}>
           {label}
         </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-end', gap: t.space.sm, flexWrap: 'wrap' }}>
-          {figure(value == null ? '–' : group(value), value == null ? 'inkFaint' : 'ink')}
-          {unitText}
-        </View>
-        {captionText(value)}
-      </Pressable>
+        <Pressable
+          testID={testID}
+          accessibilityRole="button"
+          accessibilityLabel={[label, value == null ? null : `${group(value)} ${unit}`].filter(Boolean).join(', ')}
+          onPress={openSheet}
+          style={[cardStyle(t), { minHeight: t.target.comfortable, paddingHorizontal: t.space.lg, paddingVertical: t.space.sm, justifyContent: 'center' }]}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-end', columnGap: t.space.sm, flexWrap: 'wrap' }}>
+            {figure(value == null ? '–' : group(value), value == null ? 'inkFaint' : 'ink', undefined, 'displayXl')}
+            {unitText}
+            {captionText(value, true)}
+          </View>
+        </Pressable>
+      </View>
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title={label} testID={`${testID}-sheet`}>
         <View
