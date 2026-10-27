@@ -12,6 +12,7 @@ export { BottomSheet } from './bottom-sheet';
 export { Button, CTA, PinnedActions, type ButtonVariant } from './button';
 export { Card, CardLabel, cardStyle } from './card';
 export { Chip, type ChipTone } from './chip';
+export { DatePickerSheet, type DatePickerSheetProps } from './date-picker-sheet';
 export { DateText, type DateFormatter } from './date-text';
 export { Drawer, MenuItem, MenuSection } from './drawer';
 export {
