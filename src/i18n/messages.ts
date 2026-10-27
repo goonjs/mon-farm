@@ -3973,7 +3973,11 @@ export function isAnnounced(id: MessageId): boolean {
  * from `en` that is not listed here, which is what stops the catalogue rotting
  * quietly as stories add strings.
  */
+/** E11-S11 order screens ship Thai first; English for whatever their files do not carry follows (story QA notes). */
+const orderUntranslated = (Object.keys({ ...orderMsgs.th, ...orderCaptureMsgs.th, ...orderDetailMsgs.th, ...orderSurfaceMsgs.th }) as MessageId[]).filter((id) => en[id] === undefined);
+
 export const untranslated: readonly MessageId[] = [
   ...(Object.keys(th) as MessageId[]).filter(isAnnounced),
   'common.language',
+  ...orderUntranslated,
 ];
