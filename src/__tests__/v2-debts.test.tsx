@@ -145,7 +145,7 @@ describe('a debt made from an expense share (E11-S10)', () => {
     expect(screen.getByTestId(`debt-line-${id}`)).toBeTruthy();
     expect(screen.queryByTestId(`debt-void-${id}`)).toBeNull();
     fireEvent.press(screen.getByTestId(`debt-open-${id}`));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { id: 'exp-share-1' } });
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'exp-share-1' } });
   });
 
   it('once its purchase is deleted, the line opens the expense form, where it can be restored', async () => {
