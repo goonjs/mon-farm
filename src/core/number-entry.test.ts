@@ -113,9 +113,9 @@ describe('pressKey — limits', () => {
     expect(f.raw).toBe('1.50');
     expect(f.rejected).toBe(true);
   });
-  it("money: '00' in the fraction rejects when it passes 2 digits", () => {
-    expect(type(MONEY, ['1', '.', '5', '00']).raw).toBe('1.5');
-    expect(type(MONEY, ['1', '.', '5', '00']).rejected).toBe(true);
+  it("money: '00' in the fraction fills to two digits and never reads as too big", () => {
+    expect(type(MONEY, ['1', '.', '5', '00']).raw).toBe('1.50');
+    expect(type(MONEY, ['1', '.', '5', '00']).rejected).toBe(false);
     expect(type(MONEY, ['1', '.', '00']).raw).toBe('1.00');
   });
   it('typing a digit at the cap after a decimal point still works', () => {
@@ -181,5 +181,17 @@ describe('moneyTextStep', () => {
     expect(step('12345678')).toBe('displayXl');
     expect(step('123456789')).toBe('displayXl');
     expect(step('1234567890123')).toBe('displayLg');
+  });
+});
+
+describe('pressKey — 00/000 after the decimal dot', () => {
+  const money = { kind: 'money', maxDigits: 8 } as const;
+  const type = (keys: string[]) => keys.reduce((s, k) => pressKey(s, k as never, money), startEntry(''));
+  it('fills the fraction to two digits and never says too big', () => {
+    expect(type(['5', '.', '0', '00']).raw).toBe('5.00');
+    expect(type(['5', '.', '000']).raw).toBe('5.00');
+    const full = type(['5', '.', '5', '0', '00']);
+    expect(full.raw).toBe('5.50');
+    expect(full.rejected).toBe(false);
   });
 });

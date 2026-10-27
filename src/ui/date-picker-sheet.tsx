@@ -194,13 +194,13 @@ function Body({ onClose, value, onChange, max, testID: tid }: Omit<DatePickerShe
         {monthGrid(view.y, view.m).map((week, wi) => (
           <View key={wi} style={{ flexDirection: 'row' }}>
             {week.map((d, di) => {
-              if (d === null) return <View key={di} style={{ flex: 1, height: 44 }} />;
+              if (d === null) return <View key={di} style={{ flex: 1, height: 48 }} />;
               const iso = toIso(view.y, view.m, d);
               const sel = iso === draft;
               const off = beyond(iso);
               const isToday = iso === today;
               return (
-                <View key={di} style={{ flex: 1, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+                <View key={di} style={{ flex: 1, height: 48, alignItems: 'center', justifyContent: 'center' }}>
                   <Pressable
                     testID={`${tid}-day-${iso}`}
                     accessibilityRole="button"
@@ -209,8 +209,8 @@ function Body({ onClose, value, onChange, max, testID: tid }: Omit<DatePickerShe
                     disabled={off}
                     onPress={() => pick(iso)}
                     style={{
-                      width: 44,
-                      height: 44,
+                      width: 48,
+                      height: 48,
                       borderRadius: t.radius.pill,
                       alignItems: 'center',
                       justifyContent: 'center',

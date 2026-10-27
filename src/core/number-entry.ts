@@ -56,6 +56,11 @@ export const pressKey = (s: EntryState, key: EntryKey, cfg: EntryConfig): EntryS
     if (key === '00' || key === '000' || (key === '0' && base === '0')) return s; // leading zeros collapse
     return typed(key);
   }
+  // "00"/"000" after the dot only fill the fraction up to two digits (5.0 → 5.00); at two digits they do nothing, no "too big".
+  if ((key === '00' || key === '000') && base.includes('.')) {
+    const room = 2 - (base.split('.')[1] ?? '').length;
+    return room > 0 ? typed(`${base}${'0'.repeat(Math.min(room, key.length))}`) : s;
+  }
   const next = `${base}${key}`;
   return fits(next, cfg) ? typed(next) : { ...s, rejected: true };
 };
