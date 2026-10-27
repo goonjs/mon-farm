@@ -24,10 +24,13 @@ import { useTheme } from '../../../theme';
 import { AppText, Card, Check, Chip, ScreenHeader } from '../../../ui';
 import { useMaster } from '../../farm/pieces';
 import { ORDER_NEW } from '../order-routes';
+import { EditItemSheet } from './edit-item-sheet';
 import { HeaderSheet, type HeaderEdit } from './header-sheet';
 import { ItemCard } from './item-card';
+import { ConfirmSheet } from './parts';
 import { ReasonsSheet } from './reasons-sheet';
 import { TappersSheet } from './tappers-sheet';
+import { unifyOrder } from './tell';
 import { ZonesSheet } from './zones-sheet';
 
 export function OrderDetailScreen() {
@@ -37,7 +40,16 @@ export function OrderDetailScreen() {
   const sync = useSyncStatus();
   const msg = useT();
   const t = useTheme();
-  const order = useMemo(() => (fin.state ? (groupOrders(fin.state.expenses).find((o) => o.orderId === orderId) ?? null) : null), [fin.state, orderId]);
+  const order = useMemo(() => {
+    if (!fin.state) return null;
+    const live = groupOrders(fin.state.expenses).find((o) => o.orderId === orderId);
+    if (live) return live;
+    // Every item deleted: the order still opens, empty, so its items can be restored.
+    const gone = deletedOf(fin.state.expenses, orderId);
+    if (!gone.length) return null;
+    const last = gone[gone.length - 1];
+    return { orderId, legacy: !last.orderId, items: [], date: last.date, stage: last.stage, payer: last.payer, shop: '', netSatang: 0, billDiscountSatang: 0, consistent: true } as OrderView;
+  }, [fin.state, orderId]);
   if (fin.state && order) return <OrderDetailView order={order} fin={fin} master={master.state} onZoneSaved={master.reload} sync={sync} onBack={leave} onRepeat={() => router.push({ pathname: ORDER_NEW, params: { repeatOf: order.orderId } })} />;
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
@@ -47,7 +59,12 @@ export function OrderDetailScreen() {
   );
 }
 
-type Sheet = { kind: DetailKey; id: string } | 'header' | null;
+type Sheet = { kind: DetailKey | 'edit' | 'delItem'; id: string } | 'header' | 'delOrder' | null;
+
+/** The deleted items of one order (a legacy single expense is an order under its own id). */
+function deletedOf(expenses: readonly Expense[], orderId: string): Expense[] {
+  return expenses.filter((e) => e.deleted && (e.orderId ?? e.id) === orderId).sort((a, b) => (a.id < b.id ? -1 : 1));
+}
 
 export function OrderDetailView({
   order,
@@ -80,6 +97,12 @@ export function OrderDetailView({
   const catPct = state.categories.find((c) => c.id === FERTILIZER_CATEGORY)?.workerPct ?? 50;
   const tappers: Payer[] = master ? filterPeople(master.people, 'tapper').map((p) => ({ id: p.id, name: p.name })) : [];
   const open = typeof sheet === 'object' && sheet ? (order.items.find((e) => e.id === sheet.id) ?? null) : null;
+  const deleted = deletedOf(state.expenses, order.orderId);
+  const kind = typeof sheet === 'object' && sheet ? sheet.kind : null;
+  const patchAll = (items: readonly Expense[], patch: ExpensePatch): OrderPatchWrite[] => items.map((e) => ({ id: e.id, baseEventId: e.headEventId, patch }));
+  const remove = async (items: readonly Expense[]) => {
+    if (await writeAll(patchAll(items, { deleted: true }))) setSheet(null);
+  };
 
   /** One write per item; the first failure stops and is shown, the rest can be retried. */
   const writeAll = async (writes: readonly OrderPatchWrite[]): Promise<boolean> => {
@@ -104,10 +127,12 @@ export function OrderDetailView({
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <ScreenHeader title={msg('ordd.title')} subtitle={subtitle} back={{ label: msg('v2.back'), onPress: onBack, testID: 'ordd-back' }} sync={sync} />
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.xl }}>
+        {order.items.length === 0 ? <AppText testID="ordd-all-deleted" variant="bodySm">{msg('ordd.allDeleted')}</AppText> : null}
+        {order.items.length > 0 ? (
         <Card testID="ordd-head" style={{ gap: t.space.sm }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: t.space.sm }}>
             <AppText variant="bodySm" style={{ flexShrink: 1 }}>{sacks > 0 ? msg('ordd.total', { items: order.items.length, sacks }) : msg('ordd.totalNoSacks', { items: order.items.length })}</AppText>
-            <Chip testID="ordd-stage" tone={committed ? 'warn' : 'accept'} label={msg(`ordd.stage.${order.stage}`)} />
+            <Chip testID="ordd-stage" tone={committed ? 'warn' : order.stage === 'planned' ? 'neutral' : 'accept'} label={msg(`ordd.stage.${order.stage}`)} />
           </View>
           <Text testID="ordd-total" adjustsFontSizeToFit numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayXl, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'], color: t.color.ink }}>
             {formatSatang(order.netSatang)}
@@ -116,7 +141,7 @@ export function OrderDetailView({
           {!order.consistent ? (
             <View testID="ordd-mismatch" style={{ gap: t.space.xs, backgroundColor: t.color.warnSunk, borderRadius: t.radius.lg, padding: t.space.md }}>
               <AppText style={{ color: t.color.warn, fontWeight: t.font.weight.bold }}>{msg('ordd.mismatch')}</AppText>
-              <HeaderLink testID="ordd-mismatch-fix" label={msg('ordd.mismatchFix')} onPress={() => void inFlight.run(async () => void (await writeAll(patchOrderFields(order, { date: order.date, stage: order.stage === 'committed' ? 'committed' : 'actual', payer: order.payer }))))} />
+              <HeaderLink testID="ordd-mismatch-fix" label={msg('ordd.mismatchFix')} onPress={() => void inFlight.run(async () => void (await writeAll(unifyOrder(order))))} />
             </View>
           ) : null}
           {progress.total > 0 ? (
@@ -143,15 +168,34 @@ export function OrderDetailView({
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.md }}>
             <HeaderLink testID="ordd-repeat" label={msg('ordd.repeat')} onPress={onRepeat} />
             <HeaderLink testID="ordd-edit-header" label={msg('ordd.editHeader')} onPress={() => setSheet('header')} />
+            <HeaderLink testID="ordd-delete-order" label={msg('ordd.deleteOrder')} onPress={() => setSheet('delOrder')} />
           </View>
         </Card>
+        ) : null}
         {failed ? <AppText testID="ordd-failed" style={{ color: t.color.reject }}>{msg('ordd.saveFailed')}</AppText> : null}
         {order.items.map((e) => (
-          <ItemCard key={e.id} item={e} missing={missingDetails(e)} reasonName={reasonName} onOpen={(kind) => setSheet({ kind, id: e.id })} />
+          <ItemCard key={e.id} item={e} missing={missingDetails(e)} reasonName={reasonName} onOpen={(k) => setSheet({ kind: k, id: e.id })} onEdit={() => setSheet({ kind: 'edit', id: e.id })} onConflict={() => router.push({ pathname: '/v2/expense/[id]', params: { id: e.id } })} />
         ))}
+        {deleted.length > 0 ? (
+          <View testID="ordd-deleted" style={{ gap: t.space.sm }}>
+            <AppText variant="label">{msg('ordd.deleted', { n: deleted.length })}</AppText>
+            {deleted.map((e) => (
+              <Card key={e.id} testID={`ordd-deleted-${e.id}`} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md }}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText style={{ fontWeight: t.font.weight.bold }}>{e.item}</AppText>
+                  <AppText variant="bodySm">{e.amountSatang === null ? '-' : formatSatang(e.amountSatang)}</AppText>
+                </View>
+                <HeaderLink testID={`ordd-restore-${e.id}`} label={msg('ordd.restore')} onPress={() => void inFlight.run(async () => void (await writeAll(patchAll([e], { deleted: false }))))} />
+              </Card>
+            ))}
+          </View>
+        ) : null}
       </ScrollView>
 
       {sheet === 'header' ? <HeaderSheet order={order} onSave={saveHeader} onClose={() => setSheet(null)} /> : null}
+      {open && kind === 'edit' ? <EditItemSheet key={open.id} item={open} onSave={saveItem(open)} onDelete={() => setSheet({ kind: 'delItem', id: open.id })} onClose={() => setSheet(null)} /> : null}
+      {open && kind === 'delItem' ? <ConfirmSheet testID="ordd-delete-item-sheet" title={msg('ordd.deleteItem.title')} body={msg('ordd.deleteItem.body', { item: open.item })} confirmLabel={msg('ordd.deleteItem.yes')} cancelLabel={msg('ordd.deleteNo')} failed={failed ? msg('ordd.saveFailed') : undefined} onConfirm={() => void inFlight.run(() => remove([open]))} onClose={() => setSheet(null)} /> : null}
+      {sheet === 'delOrder' ? <ConfirmSheet testID="ordd-delete-order-sheet" title={msg('ordd.deleteOrder.title')} body={msg('ordd.deleteOrder.body', { n: order.items.length })} confirmLabel={msg('ordd.deleteOrder.yes')} cancelLabel={msg('ordd.deleteNo')} failed={failed ? msg('ordd.saveFailed') : undefined} onConfirm={() => void inFlight.run(() => remove(order.items))} onClose={() => setSheet(null)} /> : null}
       {open && typeof sheet === 'object' && sheet && sheet.kind === 'reasons' ? <ReasonsSheet key={open.id} item={open} state={state} fin={fin} onSave={saveItem(open)} onClose={() => setSheet(null)} /> : null}
       {open && typeof sheet === 'object' && sheet && sheet.kind === 'zones' ? <ZonesSheet key={open.id} item={open} master={master} onZoneSaved={onZoneSaved} onSave={saveItem(open)} onClose={() => setSheet(null)} /> : null}
       {open && typeof sheet === 'object' && sheet && sheet.kind === 'tappers' ? <TappersSheet key={open.id} item={open} tappers={tappers} catPct={catPct} onSave={saveItem(open)} onClose={() => setSheet(null)} /> : null}

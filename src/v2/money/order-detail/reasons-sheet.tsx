@@ -12,10 +12,9 @@ import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, BottomSheet, CTA, Check, Plus, TextField } from '../../../ui';
 import { setFertOption } from '../fert-options';
-import { RememberTick } from '../fertilizer-sheets';
 import { TickCard } from '../pieces';
 import { reasonsPatch } from './tell';
-import { ItemRow, SheetTitle } from './parts';
+import { ItemRow, RememberTick, SheetTitle } from './parts';
 
 export function ReasonsSheet({
   item,

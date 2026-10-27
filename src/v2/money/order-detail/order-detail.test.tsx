@@ -1,6 +1,8 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
-import { groupOrders } from '../../../core/finance/fert-order';
+import { router } from 'expo-router';
+
+import { groupOrders, type OrderView } from '../../../core/finance/fert-order';
 import type { Expense, FertOption } from '../../../core/finance/ledger';
 import type { MasterState } from '../../../core/master';
 import { wrap } from '../../../test/render';
@@ -43,10 +45,11 @@ const master = {
   zones: [{ id: 'z1', name: 'แปลงหน้า', propertyId: 'f1', hidden: false }, { id: 'z2', name: 'แปลงหลัง', propertyId: 'f1', hidden: false }],
 } as unknown as MasterState;
 
-function setup(items: Expense[]) {
+function setup(items: Expense[], deleted: Expense[] = []) {
   const write = jest.fn().mockResolvedValue({});
-  const order = groupOrders(items)[0];
-  wrap(<OrderDetailView order={order} fin={{ events: [], state: state as never, write }} master={master} onZoneSaved={jest.fn()} onBack={jest.fn()} onRepeat={jest.fn()} />);
+  const order = groupOrders(items)[0] ?? ({ orderId: 'o1', legacy: false, items: [], date: '2026-10-27', stage: 'committed', payer: null, shop: '', netSatang: 0, billDiscountSatang: 0, consistent: true } as OrderView);
+  const st = { ...(state as object), expenses: [...items, ...deleted] } as never;
+  wrap(<OrderDetailView order={order} fin={{ events: [], state: st, write }} master={master} onZoneSaved={jest.fn()} onBack={jest.fn()} onRepeat={jest.fn()} />);
   return write;
 }
 const keys = (id: string, ...ks: string[]) => ks.forEach((k) => fireEvent.press(screen.getByTestId(`${id}-pad-key-${k}`)));
@@ -142,5 +145,115 @@ describe('OrderDetailView', () => {
     fireEvent.press(screen.getByTestId('ordd-tap-settle-paid'));
     fireEvent.press(screen.getByTestId('ordd-tap-pct-done'));
     expect(screen.getByText('50% · จ่ายสดแล้ว')).toBeTruthy();
+  });
+
+  it('edit item: a new quantity follows the unit price; one patch with amount, discount, line and fertilizer', async () => {
+    const write = setup([a]);
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-qty'));
+    keys('ordd-edit-qty', '2', '5', 'done');
+    expect(screen.getByTestId('ordd-edit-total').props.children).toBe('28,750.00');
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(write.mock.calls[0][0]).toBe('o1-a');
+    expect(write.mock.calls[0][1]).toBe('ev-o1-a');
+    const patch = write.mock.calls[0][2].patch;
+    expect(patch).toMatchObject({ amountSatang: 2_875_000, discountSatang: 0, line: { qty: 25, unit: 'กระสอบ', grossSatang: 2_875_000, itemDiscountSatang: 0 } });
+    expect(patch.fertilizer).toMatchObject({ sacks: 25, pricePerSackSatang: 115_000 });
+    expect(patch.share).toBeUndefined();
+  });
+
+  it('edit item: an existing share is rebuilt in the same patch', async () => {
+    const lines = [{ worker: { id: 'p1', name: 'แดง' }, sacks: 6, workerPct: 50, settle: 'debt' as const }];
+    const write = setup([exp('o1-a', { share: { billSatang: 2_300_000, discountSatang: 0, totalSacks: 20, lines } })]);
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-qty'));
+    keys('ordd-edit-qty', '2', '5', 'done');
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    const patch = write.mock.calls[0][2].patch;
+    expect(patch.share).toEqual({ billSatang: 2_875_000, discountSatang: 0, totalSacks: 25, lines });
+    expect(patch.amountSatang).toBe(2_875_000);
+  });
+
+  it('edit item: a quantity below the sacks given to tappers is blocked with a message, nothing is written', async () => {
+    const lines = [{ worker: { id: 'p1', name: 'แดง' }, sacks: 12, workerPct: 50, settle: 'debt' as const }];
+    const write = setup([exp('o1-a', { share: { billSatang: 2_300_000, discountSatang: 0, totalSacks: 20, lines } })]);
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-qty'));
+    keys('ordd-edit-qty', '5', 'done');
+    expect(screen.getByTestId('ordd-edit-err-tappers')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it('delete item: confirm first, then deleted: true on that item only', async () => {
+    const write = setup([a, b]);
+    fireEvent.press(screen.getByTestId('ordd-o1-b-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-delete'));
+    expect(write).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId('ordd-delete-item-sheet-yes'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(write).toHaveBeenCalledWith('o1-b', 'ev-o1-b', { t: 'expense_changed', patch: { deleted: true } });
+  });
+
+  it('delete whole order: confirm, then deleted: true on every item', async () => {
+    const write = setup([a, b]);
+    fireEvent.press(screen.getByTestId('ordd-delete-order'));
+    expect(write).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId('ordd-delete-order-sheet-yes'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(2));
+    expect(write).toHaveBeenCalledWith('o1-a', 'ev-o1-a', { t: 'expense_changed', patch: { deleted: true } });
+    expect(write).toHaveBeenCalledWith('o1-b', 'ev-o1-b', { t: 'expense_changed', patch: { deleted: true } });
+  });
+
+  it('deleted items are listed at the bottom with a restore button; an all-deleted order still opens', async () => {
+    const gone = exp('o1-b', { deleted: true, item: 'ขี้ไก่' });
+    const write = setup([], [gone]);
+    expect(screen.getByTestId('ordd-all-deleted')).toBeTruthy();
+    expect(screen.getByText('ที่ลบแล้ว (1)')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('ordd-restore-o1-b'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(write).toHaveBeenCalledWith('o1-b', 'ev-o1-b', { t: 'expense_changed', patch: { deleted: false } });
+  });
+
+  it('an item with a conflict shows "ขัดกัน" that opens the expense form', () => {
+    setup([exp('o1-a', { conflicts: [{ field: 'amountSatang', values: [] }] as never }), b]);
+    expect(screen.queryByTestId('ordd-o1-b-conflict')).toBeNull();
+    fireEvent.press(screen.getByTestId('ordd-o1-a-conflict'));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/v2/expense/[id]', params: { id: 'o1-a' } });
+  });
+
+  it('a planned order: the header shows the real stage, offers three, and saving without changing it never writes a stage', async () => {
+    const write = setup([exp('o1-a', { stage: 'planned' })]);
+    expect(screen.getByText('แค่วางแผน')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('ordd-edit-header'));
+    expect(screen.getByTestId('ordd-hdr-stage-planned')).toBeTruthy();
+    expect(screen.getByTestId('ordd-hdr-stage-planned').props.accessibilityState.checked).toBe(true);
+    fireEvent.press(screen.getByTestId('ordd-hdr-shop'));
+    fireEvent.changeText(screen.getByTestId('ordd-hdr-shop'), 'ร้านใหม่');
+    fireEvent.press(screen.getByTestId('ordd-hdr-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(write.mock.calls[0][2].patch.stage).toBeUndefined();
+    expect(write.mock.calls[0][2].patch.fertilizer.shop).toBe('ร้านใหม่');
+  });
+
+  it('a committed order offers two stages; choosing "ได้ของแล้ว" writes actual', async () => {
+    const write = setup([a]);
+    fireEvent.press(screen.getByTestId('ordd-edit-header'));
+    expect(screen.queryByTestId('ordd-hdr-stage-planned')).toBeNull();
+    fireEvent.press(screen.getByTestId('ordd-hdr-stage-actual'));
+    fireEvent.press(screen.getByTestId('ordd-hdr-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(write.mock.calls[0][2].patch.stage).toBe('actual');
+  });
+
+  it('mismatch fix keeps the order\'s own stage (planned stays planned)', async () => {
+    const write = setup([exp('o1-a', { stage: 'actual', date: '2026-10-20' }), exp('o1-b', { stage: 'planned', date: '2026-10-27' })]);
+    fireEvent.press(screen.getByTestId('ordd-mismatch-fix'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(write.mock.calls[0][0]).toBe('o1-a');
+    expect(write.mock.calls[0][2].patch).toEqual({ date: '2026-10-27', stage: 'planned' });
   });
 });

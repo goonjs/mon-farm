@@ -7,12 +7,12 @@ import type { Expense } from '../../../core/finance/ledger';
 import { formatSatang } from '../../../core/finance/money';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, Card, Check } from '../../../ui';
+import { AppText, Card, Check, Chip } from '../../../ui';
 import { itemSacks } from './tell';
 
 const KEYS: readonly DetailKey[] = ['reasons', 'zones', 'tappers'];
 
-export function ItemCard({ item, missing, reasonName, onOpen }: { item: Expense; missing: readonly DetailKey[]; reasonName: (id: string) => string; onOpen: (k: DetailKey) => void }) {
+export function ItemCard({ item, missing, reasonName, onOpen, onEdit, onConflict }: { item: Expense; missing: readonly DetailKey[]; reasonName: (id: string) => string; onOpen: (k: DetailKey) => void; onEdit: () => void; onConflict: () => void }) {
   const t = useTheme();
   const msg = useT();
   const fert = item.categoryId === FERTILIZER_CATEGORY && item.fertilizer ? item.fertilizer : null;
@@ -78,6 +78,16 @@ export function ItemCard({ item, missing, reasonName, onOpen }: { item: Expense;
           })}
         </View>
       ) : null}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: t.space.sm }}>
+        <Pressable testID={`ordd-${item.id}-edit`} accessibilityRole="button" onPress={onEdit} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
+          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.action }}>{msg('ordd.edit.link')}</Text>
+        </Pressable>
+        {item.conflicts.length > 0 ? (
+          <Pressable testID={`ordd-${item.id}-conflict`} accessibilityRole="button" accessibilityLabel={msg('ordd.conflict')} onPress={onConflict} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
+            <Chip tone="warn" label={msg('ordd.conflict')} />
+          </Pressable>
+        ) : null}
+      </View>
     </Card>
   );
 }
