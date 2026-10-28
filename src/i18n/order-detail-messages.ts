@@ -66,6 +66,7 @@ export const th = {
   'ordd.reasons.title': 'ใส่เพื่ออะไร',
   'ordd.reasons.sub': '{item} · เลือกได้หลายข้อ ไม่เลือกก็ได้',
   'ordd.reasons.new': 'พิมพ์เหตุผลใหม่',
+  'ordd.reasons.manage': 'ตั้งค่าปุ๋ย (จัดการเหตุผล สูตร ยี่ห้อ)',
   'ordd.reasons.newTitle': 'เหตุผลใหม่',
   'ordd.reasons.name': 'เหตุผล',
   'ordd.reasons.desc': 'คำอธิบาย (ไม่บังคับ)',

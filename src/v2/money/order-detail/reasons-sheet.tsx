@@ -1,7 +1,8 @@
 /** "ใส่เพื่ออะไร" (FD-3): multi-tick of saved reasons, most used first; type a new one and remember it. */
 
 import { useState } from 'react';
-import { View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, View } from 'react-native';
 
 import { TYPED_REASON } from '../../../core/finance/fertilizer';
 import { reasonsByUse } from '../../../core/finance/fert-products';
@@ -82,6 +83,9 @@ export function ReasonsSheet({
           <>
             {rows.map((o) => <TickCard key={o.id} testID={`ordd-reason-${o.id}`} title={o.name} detail={o.detail || undefined} on={chosen.includes(o.id)} onPress={() => toggle(o.id)} />)}
             <ItemRow testID="ordd-reason-new" dashed icon={<Plus color={t.color.action} />} title={msg('ordd.reasons.new')} onPress={() => setAdding(true)} />
+            <Pressable testID="ordd-reasons-manage" accessibilityRole="link" onPress={() => router.push('/v2/fertilizer-settings')} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
+              <AppText variant="bodySm" style={{ textDecorationLine: 'underline', textAlign: 'center' }}>{msg('ordd.reasons.manage')}</AppText>
+            </Pressable>
             {failed ? <AppText testID="ordd-reasons-failed" style={{ color: t.color.reject }}>{msg('ordd.saveFailed')}</AppText> : null}
             <SolidCTA testID="ordd-reasons-done" icon={(c) => <Check color={c} />} onPress={() => void done()}>
               {chosen.length ? msg('ordd.reasons.doneN', { n: chosen.length }) : msg('ordd.reasons.done')}
