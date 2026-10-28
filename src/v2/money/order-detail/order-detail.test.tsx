@@ -89,6 +89,14 @@ describe('OrderDetailView', () => {
     expect(write.mock.calls[0][2].patch.fertilizer).toEqual({ ...FERT, reasons: ['fopt-reason-a'] });
   });
 
+  it('reasons: a quiet link leads to ตั้งค่าปุ๋ย, the only way to manage reasons, formulas and brands', () => {
+    setup([a]);
+    fireEvent.press(screen.getByTestId('ordd-o1-a-reasons'));
+    fireEvent.press(screen.getByTestId('ordd-reasons-manage'));
+    const { router } = jest.requireMock('expo-router') as { router: { push: jest.Mock } };
+    expect(router.push).toHaveBeenCalledWith('/v2/fertilizer-settings');
+  });
+
   it('zones: a QuantityField per zone, summary warns when less, over the sacks blocks เสร็จ', async () => {
     const write = setup([a]);
     fireEvent.press(screen.getByTestId('ordd-o1-a-zones'));
