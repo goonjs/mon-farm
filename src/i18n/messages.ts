@@ -29,12 +29,21 @@
  * data values, not two languages.
  */
 
+import * as orderCaptureMsgs from './order-capture-messages';
+import * as orderDetailMsgs from './order-detail-messages';
+import * as orderMsgs from './order-messages';
+import * as orderSurfaceMsgs from './order-surface-messages';
+
 export type Locale = 'th' | 'en';
 
 /**
  * Thai — the source. Every id in the app exists here.
  */
 const th = {
+  ...orderMsgs.th,
+  ...orderCaptureMsgs.th,
+  ...orderDetailMsgs.th,
+  ...orderSurfaceMsgs.th,
   // ── Shared vocabulary ────────────────────────────────────────────────────
   'common.cancel': 'ยกเลิก',
   'common.confirm': 'ยืนยัน',
@@ -293,6 +302,17 @@ const th = {
 
   // ── Form primitives ─────────────────────────────────────────────────────
   'form.required': 'จำเป็น',
+  'numpad.done': 'ตกลง',
+  'numpad.typing': 'กำลังกรอก',
+  'numpad.tooBig': 'ใหญ่เกินไป',
+  'numpad.minMsg': 'ต้องไม่น้อยกว่า {min}',
+  'numpad.maxMsg': 'ต้องไม่เกิน {max}',
+  'numpad.empty': 'ยังไม่ได้กรอก',
+  'numpad.keyBack': 'ลบหนึ่งตัว',
+  'numpad.keyDot': 'จุดทศนิยม',
+  'numpad.key00': 'ศูนย์ศูนย์',
+  'numpad.key000': 'ศูนย์ศูนย์ศูนย์',
+  'numpad.keyDone': 'ตกลง',
 
   // ── v2 shell (D-82) — titles from the v1.1.0 mockups ────────────────────
   'v2.building': 'กำลังสร้าง',
@@ -2004,6 +2024,10 @@ const th = {
  * happens when something is missing that shouldn't be.
  */
 const en: Partial<Record<keyof typeof th, string>> = {
+  ...orderMsgs.en,
+  ...orderCaptureMsgs.en,
+  ...orderDetailMsgs.en,
+  ...orderSurfaceMsgs.en,
   'common.cancel': 'cancel',
   'common.confirm': 'confirm',
   'common.back': 'back',
@@ -2233,6 +2257,17 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'menu.device': 'this device only · not sent elsewhere',
 
   'form.required': 'required',
+  'numpad.done': 'OK',
+  'numpad.typing': 'typing',
+  'numpad.tooBig': 'too big',
+  'numpad.minMsg': 'must be at least {min}',
+  'numpad.maxMsg': 'must be at most {max}',
+  'numpad.empty': 'nothing entered',
+  'numpad.keyBack': 'delete one digit',
+  'numpad.keyDot': 'decimal point',
+  'numpad.key00': 'double zero',
+  'numpad.key000': 'triple zero',
+  'numpad.keyDone': 'OK',
 
   'v2.building': 'under construction',
   'v2.buildingHint': 'this screen is being rebuilt from the v1.1.0 mockups',
@@ -3938,7 +3973,11 @@ export function isAnnounced(id: MessageId): boolean {
  * from `en` that is not listed here, which is what stops the catalogue rotting
  * quietly as stories add strings.
  */
+/** E11-S11 order screens ship Thai first; English for whatever their files do not carry follows (story QA notes). */
+const orderUntranslated = (Object.keys({ ...orderMsgs.th, ...orderCaptureMsgs.th, ...orderDetailMsgs.th, ...orderSurfaceMsgs.th }) as MessageId[]).filter((id) => en[id] === undefined);
+
 export const untranslated: readonly MessageId[] = [
   ...(Object.keys(th) as MessageId[]).filter(isAnnounced),
   'common.language',
+  ...orderUntranslated,
 ];

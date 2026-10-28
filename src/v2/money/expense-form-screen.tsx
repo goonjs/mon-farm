@@ -35,11 +35,11 @@ import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
 import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CoinIcon, CTA, DotsIcon, FactRow, GearIcon, LeafIcon, PersonIcon, PinIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TapperIcon, TextField, UsersIcon, WalletIcon, type HeaderPrimaryAction } from '../../ui';
 import { useFarms } from './expenses-screen';
+import { ORDER_NEW, orderHref } from './order-routes';
 import { ChoiceChip, ChoiceRow, NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
 import { CategoryShareSheet, draftOf, shareOf, ShareSheet, type ShareDraft } from './share-sheet';
 
 const FERTILIZER = 'cat-fertilizer';
-const FLOW = '/v2/fertilizer' as const;
 
 const STAGES: readonly Stage[] = ['actual', 'committed', 'planned'];
 const AID_KINDS: readonly AidKind[] = ['accident', 'general', 'food', 'other'];
@@ -226,10 +226,13 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   };
 
   const pickCategory = (id: string) => {
-    // The fertilizer category is its own flow (E11-S10 C): what was typed goes with it.
+    // The fertilizer category is the shop order (E11-S11): what was typed goes with it.
     // Replaced, not pushed: after saving there the user is not sent back to this half-filled form.
     if (id === FERTILIZER && !existing) {
-      router.replace({ pathname: FLOW, params: { bill: amount, date, stage, payerId: payer?.id ?? 'none', payerName: payer?.name ?? '' } });
+      router.replace({
+        pathname: ORDER_NEW,
+        params: { date, ...(stage === 'committed' || stage === 'actual' ? { stage } : {}), payerId: payer?.id ?? 'none', payerName: payer?.name ?? '', amount },
+      } as never);
       return;
     }
     if (id !== categoryId) setShareDraft((d) => ({ ...d, pct: String(state.categories.find((c) => c.id === id)?.workerPct ?? d.pct) }));
@@ -312,7 +315,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
           <Card testID="fert-locked" style={{ backgroundColor: t.color.surfaceSunk }}>
             <AppText>{existing.fertilizer?.formula || existing.item}</AppText>
             <AppText variant="bodySm">{`${existing.amountSatang === null ? msg('fin.row.unknown') : formatSatang(existing.amountSatang)} · ${formatDate(existing.date)} · ${msg(`fin.stage.${existing.stage}`)}`}</AppText>
-            {!existing.deleted ? <Button testID="expense-open-fert" variant="primary" onPress={() => router.push({ pathname: FLOW, params: { id: existing.id } })}>{msg('fert.openFlow')}</Button> : null}
+            {!existing.deleted ? <Button testID="expense-open-fert" variant="primary" onPress={() => router.push(orderHref(existing.orderId ?? existing.id))}>{msg('fert.openFlow')}</Button> : null}
           </Card>
         ) : derived ? (
           <Card testID="owner-share-locked" style={{ backgroundColor: t.color.surfaceSunk }}>

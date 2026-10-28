@@ -15,6 +15,9 @@ Every story, before moving to `Done`:
 - [ ] For screens that take input: each step's golden path fits one
       390×844 screen on the real build, measured and noted in QA notes
       (`.claude/skills/phone-form-ux`)
+- [ ] Nothing is cut off or off-screen (no sideways overflow, no "…" on
+      content, no clipped boxes) on mockups and on the real build — owner
+      rule; `npm run check:mockup` for mockups
 - [ ] Story file updated: status, dev notes, any deviations from plan
       explained — updated live during implementation, not after the fact
 - [ ] If this story revealed a gap in `docs/prd.md` or

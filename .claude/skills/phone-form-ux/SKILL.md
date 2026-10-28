@@ -91,13 +91,21 @@ Use these when you draw, build or review any screen that takes input.
    per-step edit buttons. On the summary, tapping a line edits it.
 8. **Summary = receipt.** Short lines that add up. Details sit one tap away in
    a sheet.
+9. **Nothing is cut off (owner rule, 2026-10-27).** No control or text may
+   stick out past the screen edge, no content may be truncated with "…", no
+   row may scroll sideways. If it does not fit on one line, wrap it, drop it
+   to the next line or rethink the layout (e.g. a unit chip row that runs off
+   the edge becomes its own row). This was seen on an unchecked mockup
+   (unit chips cut off on the right) and is not accepted in the project.
 
 ## How to check before you show anything
 
 1. **Mockup:** export every phone as its own PNG at device size, 3×. Send the
    owner those, one per screen in order. Never send only the long page.
-2. **Fit check on the mockup:** script it. For each phone, the content must
-   not overflow the screen box.
+2. **Fit check on the mockup:** `npm run check:mockup -- <file.html> <outDir>`
+   (scripts/check-mockup-fit.mjs). It fails on vertical overflow, anything
+   sticking out sideways, "…" truncation and clipped boxes, and writes one PNG
+   per phone. A FAIL blocks showing the mockup.
 3. **Fit check on the build:** run the real web build at 390×844. For each
    screen of the flow, record `document.scrollingElement.scrollHeight /
    innerHeight` (or the ScrollView content height / viewport). The golden path

@@ -43,6 +43,13 @@ async function addExpense(page: Page, o: { amount?: string; date: string; stage?
   }
 }
 
+/** Taps digits on a NumberPad field: opens its sheet, presses the keys (testID `<field>-pad-key-<k>`). */
+async function typeOnPad(page: Page, field: string, digits: string) {
+  await page.getByTestId(field).click();
+  await expect(page.getByTestId(`${field}-pad`)).toBeVisible();
+  for (const k of digits) await page.getByTestId(`${field}-pad-key-${k}`).click();
+}
+
 /** The payer sheet is open after `addExpense` with a payer: its owed preview, then close it. */
 async function closePayer(page: Page) {
   if (await page.getByTestId('expense-payer-done').count()) await page.getByTestId('expense-payer-done').click();
@@ -69,7 +76,7 @@ test('v2 expenses, owed and repay — offline, end to end', async ({ page, conte
   await addExpense(page, { amount: '15000', date: '2026-10-31', stage: 'committed', cat: 'cat-salary', payer: 'farm' });
   await closePayer(page);
   await page.getByTestId('expense-save').click();
-  // ปุ๋ย opens its own purchase flow now (E11-S10); a planned unknown amount is shown with another category.
+  // ปุ๋ย opens the shop order screen now (E11-S11); a planned unknown amount is shown with another category.
   await addExpense(page, { stage: 'planned', unknown: true, date: '2026-11-15', cat: 'cat-labour', payer: 'farm' });
   await closePayer(page);
   await page.getByTestId('expense-save').click();
@@ -106,7 +113,7 @@ test('v2 expenses, owed and repay — offline, end to end', async ({ page, conte
   await expect(page.getByTestId('owed-total')).toContainText('1,540.00');
 });
 
-test('v2 worker debts — fertilizer via the purchase flow, account reconciliation, pay back outside a sale (offline)', async ({ page, context }) => {
+test('v2 worker debts — fertilizer via the shop order, account reconciliation, pay back outside a sale (offline)', async ({ page, context }) => {
   await seedPeople(page, [{ id: 'person-daeng', name: 'แดง' }]);
   await page.goto('/v2/debts');
   await context.setOffline(true);
@@ -114,24 +121,35 @@ test('v2 worker debts — fertilizer via the purchase flow, account reconciliati
   await page.getByTestId('debt-add').click();
 
   await evidence(page, `${SHOTS}/23-debt-add.png`, { fullPage: true });
-  // Kind ปุ๋ย opens the fertilizer purchase flow with แดง picked (E11-S10, simple design).
+  // Kind ปุ๋ย opens the shop order screen (E11-S11); who taps is told later, on the order's detail page.
   await page.getByTestId('debt-kind-fertilizer').click();
-  await page.getByTestId('fert-new').click();
-  await page.getByTestId('fert-formula').fill('ปุ๋ยรอบ ก.ย.');
-  await page.getByTestId('fert-new-done').click();
-  await page.getByTestId('fert-next').click();
-  await page.getByTestId('fert-sacks').fill('2');
-  await page.getByTestId('fert-bill').fill('4000');
-  await page.getByTestId('fert-next').click();
-  await page.getByTestId('fert-next').click();
-  await page.getByTestId('fert-details').click();
-  await page.getByTestId('fert-date').fill('2026-09-20');
-  await page.getByTestId('fert-details-done').click();
-  await page.getByTestId('fert-next').click();
-  await expect(page.getByTestId('fert-line-person-daeng-sacks')).toHaveValue('2');
-  await page.getByTestId('fert-next').click();
-  await expect(page.getByTestId('fert-sum-line-person-daeng')).toContainText('2,000.00');
-  await page.getByTestId('fert-save').click();
+  await expect(page.getByTestId('ordc-empty')).toBeVisible();
+  await page.getByTestId('ordc-add').click();
+  await page.getByTestId('ordc-pick-new').click();
+  await page.getByTestId('ordc-formula').fill('ปุ๋ยรอบ ก.ย.');
+  await page.getByTestId('ordc-new-done').click();
+  // Numbers go in on the on-screen pad: 2 sacks, a typed total of 4,000 for the item.
+  await typeOnPad(page, 'ordc-qty', '2');
+  await page.getByTestId('ordc-qty-pad-key-done').click();
+  await page.getByTestId('ordc-price-mode-total').click();
+  await typeOnPad(page, 'ordc-price', '4000');
+  await page.getByTestId('ordc-price-done').click();
+  await expect(page.getByTestId('ordc-line-total-amount')).toContainText('4,000.00');
+  await page.getByTestId('ordc-item-done').click();
+  await page.getByTestId('ordc-stage-actual').click();
+  await expect(page.getByTestId('ordc-total')).toContainText('4,000.00');
+  await page.getByTestId('ordc-save').click();
+  await expect(page.getByTestId('ordc-saved')).toBeVisible();
+  // Details later: tell แดง takes both sacks (default 50%, deducted when the rubber is sold).
+  await page.getByTestId('ordc-saved-details').click();
+  await page.locator('[data-testid^="ordd-"][data-testid$="-tappers"]').click();
+  await page.getByTestId('ordd-tap-add').click();
+  await page.getByTestId('ordd-pick-person-daeng').click();
+  await expect(page.getByTestId('ordd-tap-person-daeng-part')).toContainText('2,000.00');
+  await page.getByTestId('ordd-tap-done').click();
+  // Back to the tapper's account (the order replaced the add form): the fertilizer debt is there.
+  await page.getByTestId('ordd-back').click();
+  await expect(page.getByTestId('debt-balance')).toContainText('2,000.00');
 
   await page.getByTestId('debt-add').click();
   await page.getByTestId('debt-amount').fill('3000');

@@ -50,12 +50,12 @@ describe('debt ledger (E06-S03)', () => {
     mockParams.current = DAENG;
   });
 
-  it('kind fertilizer opens the one fertilizer purchase flow with this tapper (E11-S10 C)', async () => {
+  it('kind fertilizer opens the shop order (E11-S11)', async () => {
     wrap(<AddDebtScreen />);
     await flush();
     fireEvent.press(screen.getByTestId('debt-kind-fertilizer'));
     // Replaced: after saving the purchase the user lands on the tapper's debts, not this form again.
-    expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { workerId: 'p-daeng', name: 'แดง' } });
+    expect(mockRouter.replace).toHaveBeenCalledWith('/v2/order');
     expect(screen.queryByTestId('debt-pct-mode')).toBeNull();
   });
 
@@ -145,7 +145,7 @@ describe('a debt made from an expense share (E11-S10)', () => {
     expect(screen.getByTestId(`debt-line-${id}`)).toBeTruthy();
     expect(screen.queryByTestId(`debt-void-${id}`)).toBeNull();
     fireEvent.press(screen.getByTestId(`debt-open-${id}`));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { id: 'exp-share-1' } });
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'exp-share-1' } });
   });
 
   it('once its purchase is deleted, the line opens the expense form, where it can be restored', async () => {

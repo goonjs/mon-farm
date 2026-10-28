@@ -1,0 +1,212 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>เทียบวิธีกรอกตัวเลข</title><link rel="stylesheet" href="../tokens.css"><style>
+:root{--pg:#E9EEF3;}
+*{box-sizing:border-box;margin:0}
+body{font-family:"Noto Sans Thai","Sarabun",ui-sans-serif,system-ui,sans-serif;background:var(--pg);color:var(--color-ink);padding:32px 20px 80px;line-height:1.45}
+.page{max-width:1280px;margin:0 auto}
+h1{font-size:28px;margin-bottom:6px}
+.lead{color:var(--color-ink-soft);max-width:860px;margin-bottom:20px}
+section.doc{background:#fff;border-radius:16px;padding:20px 24px;margin:16px 0;box-shadow:0 2px 12px rgba(0,40,88,.06)}
+section.doc h2{font-size:20px;margin-bottom:8px}
+section.doc p,section.doc li{font-size:14px;color:var(--color-ink-soft)}
+section.doc ul{padding-left:20px;display:grid;gap:4px}
+section.doc b{color:var(--color-ink)}
+table.cmp{border-collapse:collapse;width:100%;font-size:14px;margin-top:8px}
+table.cmp td,table.cmp th{border-bottom:1px solid var(--color-rule-faint);padding:8px;text-align:left;vertical-align:top}
+.row-flow{display:flex;flex-wrap:wrap;gap:36px 28px;margin:16px 0}
+figure.fig{width:390px}
+figure.fig figcaption{margin-top:10px;font-size:14px;color:var(--color-ink-soft);max-width:390px}
+figure.fig figcaption .t{display:block;font-weight:700;color:var(--color-ink);font-size:14px;margin-bottom:2px}
+figure.fig figcaption .ids{display:block;margin-top:4px;font-size:12px;color:var(--color-ink-faint)}
+.band{font-weight:700;font-size:18px;margin:28px 0 4px;display:flex;gap:10px;align-items:center}
+.band span{background:var(--color-ink);color:var(--color-ink-inverse);border-radius:999px;padding:2px 12px;font-size:14px}
+
+/* ---- phone ---- */
+.phone{width:390px;height:844px;background:var(--color-surface);position:relative;overflow:hidden;display:flex;flex-direction:column;border-radius:0;outline:1px solid var(--color-rule);font-size:16px}
+.appbar{height:56px;display:flex;align-items:center;gap:6px;padding:0 12px 0 8px;flex:none;background:var(--color-app-bar);color:var(--color-app-bar-ink)}
+.appbar .ib{width:48px;height:48px;display:grid;place-items:center}
+.appbar h3{flex:1;font-size:20px;font-weight:700;line-height:1.2}
+.appbar h3 small{display:block;font-size:13px;font-weight:400;color:var(--color-ink-soft)}
+.sync{display:inline-flex;align-items:center;gap:6px;background:var(--color-accept-sunk);color:var(--color-accept);font-weight:600;font-size:13px;border-radius:999px;padding:5px 12px}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--color-accept)}
+.body{flex:1;padding:8px 16px 12px;display:flex;flex-direction:column;gap:10px;overflow:hidden;min-height:0}
+.foot{flex:none;padding:10px 16px 18px;display:flex;flex-direction:column;gap:10px;background:var(--color-surface)}
+.card{background:var(--color-surface-raised);border:1px solid var(--color-rule-faint);border-radius:16px;box-shadow:0 2px 12px rgba(0,40,88,.06);padding:14px}
+.tile{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;flex:none}
+.tile.sm{width:40px;height:40px;border-radius:12px}
+.t-cream{background:var(--color-brand-cream)}.t-green{background:var(--color-accept-sunk)}.t-blue{background:var(--color-action-sunk)}.t-sunk{background:var(--color-surface-sunk)}.t-warn{background:var(--color-warn-sunk)}
+.fm{display:block;object-fit:contain}
+.cap{font-size:14px;color:var(--color-ink-soft)}
+.val{font-weight:700}
+.money{font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.sec{display:flex;align-items:baseline;justify-content:space-between;font-weight:700;font-size:16px;padding:2px 2px 0}
+.sec small{font-weight:500;font-size:13px;color:var(--color-ink-soft)}
+.btn{height:56px;border-radius:28px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:18px;background:var(--color-action);color:var(--color-ink-inverse)}
+.btn.sec2{background:transparent;color:var(--color-action);border:2px solid var(--color-action);box-shadow:none}
+.btn.dis{background:var(--color-disabled-fill);color:var(--color-disabled-ink);box-shadow:none}
+.btn.ghost{background:transparent;color:var(--color-action);box-shadow:none;height:48px;font-size:16px}
+.btn.green{background:var(--color-accept)}
+.btnrow{display:flex;gap:10px}.btnrow .btn{flex:1}
+.dashed{border:2px dashed var(--color-rule-strong);background:transparent;box-shadow:none;border-radius:16px;min-height:56px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;color:var(--color-action);font-size:16px}
+.fields{display:flex;gap:10px}
+.field{flex:1;display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:56px;min-width:0}
+.field .ico{color:var(--color-ink-soft);flex:none}
+.field .tx{flex:1;min-width:0}.field .tx .val{font-size:16px;line-height:1.3}
+.item{display:flex;align-items:center;gap:12px;padding:8px 12px}
+.item .tx{flex:1;min-width:0}
+.item .tx .val{font-size:16px;line-height:1.3}
+.item .amt{text-align:right}
+.item .amt .money{font-size:18px}
+.paycard{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:64px}
+.paycard .ico{width:40px;height:40px;border-radius:12px;background:var(--color-action-sunk);color:var(--color-action);display:grid;place-items:center;flex:none}
+.totalbar{display:flex;align-items:baseline;justify-content:space-between;padding:0 4px}
+.totalbar .money{font-size:28px}
+/* sheet */
+.scrim{position:absolute;inset:0;background:rgba(0,40,88,.48)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--color-surface);border-radius:24px 24px 0 0;padding:8px 16px 18px;display:flex;flex-direction:column;gap:12px;max-height:94%;overflow:hidden;box-shadow:0 -6px 24px rgba(0,40,88,.14)}
+.grab{width:44px;height:5px;border-radius:3px;background:var(--color-rule);margin:0 auto 4px;flex:none}
+.sheet h4{font-size:20px;line-height:1.25}
+.sheet h4 small{display:block;font-size:14px;font-weight:400;color:var(--color-ink-soft);margin-top:2px}
+.sheethead{display:flex;align-items:flex-start;gap:8px}
+.sheethead h4{flex:1}
+.sheethead .x{width:48px;height:48px;display:grid;place-items:center;color:var(--color-ink-soft);margin:-6px -8px 0 0}
+.pick{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:68px}
+.pick .tx{flex:1;min-width:0}
+.pick.on{border:2px solid var(--color-action);background:var(--color-action-sunk)}
+.radio{width:26px;height:26px;border-radius:50%;border:2px solid var(--color-rule-strong);flex:none;display:grid;place-items:center}
+.radio.on{border-color:var(--color-action);background:var(--color-action);color:var(--color-ink-inverse)}
+.box{width:28px;height:28px;border-radius:8px;border:2px solid var(--color-rule-strong);flex:none;display:grid;place-items:center;background:var(--color-surface-raised)}
+.box.on{background:var(--color-accept);border-color:var(--color-accept);color:var(--color-ink-inverse)}
+.seg{display:flex;background:var(--color-surface-sunk);border-radius:999px;padding:4px;gap:4px}
+.seg span{flex:1;height:48px;text-align:center;line-height:1.25;padding:0 6px;border-radius:999px;display:grid;place-items:center;font-weight:600;font-size:16px;color:var(--color-ink-soft)}
+.seg span.on{background:var(--color-action);color:var(--color-ink-inverse)}
+.stepper{display:flex;align-items:center;justify-content:center;gap:14px}
+.sbtn{width:56px;height:56px;border-radius:50%;border:2px solid var(--color-action);color:var(--color-action);display:grid;place-items:center;flex:none;background:var(--color-surface-raised)}
+.sbtn.sm{width:48px;height:48px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.key{height:60px;border-radius:16px;background:var(--color-surface-raised);border:1px solid var(--color-rule-faint);box-shadow:0 2px 6px rgba(0,40,88,.06);display:grid;place-items:center;font-size:28px;font-weight:700}.key.act{background:var(--color-action);color:var(--color-ink-inverse)}.key.fn{background:var(--color-surface-sunk);font-size:20px;color:var(--color-ink-soft)}
+.hint{font-size:14px;color:var(--color-ink-soft)}
+.numfield{border:2px solid var(--color-action);border-radius:14px;background:var(--color-surface-raised);display:flex;align-items:baseline;justify-content:flex-end;gap:6px;padding:4px 12px;min-height:56px;font-variant-numeric:tabular-nums}.numfield b{font-size:28px;font-weight:800;align-self:center}.numfield span{font-size:14px;font-weight:600;color:var(--color-ink-soft);align-self:center}
+.numbox{height:64px;width:170px;border:2px solid var(--color-action);border-radius:16px;background:var(--color-surface-raised);display:flex;align-items:baseline;justify-content:center;gap:6px;padding:0 14px}
+.numbox b{font-size:32px;font-weight:800;font-variant-numeric:tabular-nums;align-self:center;line-height:1}
+.numbox span{font-size:14px;color:var(--color-ink-soft);font-weight:600;align-self:center}
+.numbox.sm{height:48px;width:64px;border-radius:12px;padding:0 8px}
+.numbox.sm b{font-size:24px}
+.inp{height:56px;border:2px solid var(--color-rule-strong);border-radius:14px;background:var(--color-surface-raised);display:flex;align-items:center;padding:0 14px;gap:8px;font-size:18px}
+.inp .u{margin-left:auto;color:var(--color-ink-soft);font-size:16px}
+.inp.focus{border-color:var(--color-action)}
+.lbl{font-weight:700;font-size:16px;margin-bottom:6px;display:flex;gap:8px;align-items:baseline}
+.lbl small{font-weight:400;color:var(--color-ink-soft);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:48px;padding:0 16px;border-radius:999px;border:1.5px solid var(--color-rule-strong);display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:16px;background:var(--color-surface-raised)}
+.chip.on{background:var(--color-action);color:var(--color-ink-inverse);border-color:var(--color-action)}
+.chip.dash{border-style:dashed;color:var(--color-action)}
+.typegrid{display:flex;gap:10px}
+.typegrid .pick{flex:1;flex-direction:column;justify-content:center;gap:4px;min-height:92px;padding:8px;text-align:center;font-weight:700;font-size:14px}
+.totalcard{display:flex;align-items:center;gap:12px;background:var(--color-accept-sunk);border-radius:16px;padding:12px 16px}
+.totalcard .money{font-size:28px;margin-left:auto;color:var(--color-ink)}
+.tick{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--color-accept-sunk);border:1.5px solid var(--color-accept)}
+.tick.off{background:var(--color-surface-raised);border-color:var(--color-rule)}
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal .wd{font-size:13px;color:var(--color-ink-soft);font-weight:600;height:28px;display:grid;place-items:center}
+.cal .d{height:44px;display:grid;place-items:center;font-weight:600;font-size:16px;border-radius:50%;margin:0 auto;width:44px;font-variant-numeric:tabular-nums}
+.cal .d.today{border:2px solid var(--color-action)}
+.cal .d.sel{background:var(--color-action);color:var(--color-ink-inverse)}
+.cal .d.mute{color:var(--color-ink-faint)}
+.calhead{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:18px}
+.calhead .ib{width:48px;height:48px;display:grid;place-items:center;border-radius:50%;background:var(--color-surface-sunk)}
+/* detail chips */
+.prog{height:10px;border-radius:999px;background:var(--color-surface-sunk);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--color-brand);border-radius:999px}
+.dchips{display:flex;gap:8px;margin-top:12px}
+.dchip{flex:1;min-width:0;min-height:60px;border-radius:14px;padding:8px 8px;display:flex;flex-direction:column;justify-content:center;gap:2px;border:2px dashed var(--color-rule-strong);color:var(--color-ink)}
+.dchip .k{font-size:13px;color:var(--color-ink-soft);font-weight:600;display:flex;align-items:center;gap:4px}
+.dchip .v{font-size:14px;font-weight:700;line-height:1.3;color:var(--color-action)}
+.dchip.done{border:2px solid var(--color-accept);background:var(--color-accept-sunk);border-style:solid}
+.dchip.done .v{color:var(--color-accept)}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700}
+.b-ok{background:var(--color-accept-sunk);color:var(--color-accept)}
+.b-warn{background:var(--color-warn-sunk);color:var(--color-warn)}
+.b-debt{background:var(--color-warn-sunk);color:var(--color-warn)}
+.rowx{display:flex;align-items:center;gap:12px}
+.sumbar{display:flex;align-items:center;gap:10px;border-radius:14px;padding:10px 14px;background:var(--color-surface-sunk)}
+.sumbar.ok{background:var(--color-accept-sunk)}.sumbar.warn{background:var(--color-warn-sunk)}
+.sumbar b{font-weight:800}
+.tcard{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.cover{height:110px;border-radius:16px;background:linear-gradient(180deg,var(--color-action-sunk),var(--color-accept-sunk) 60%,var(--color-brand) 60%);position:relative;overflow:hidden}
+.cover i{position:absolute;bottom:18px;width:22px;height:52px;background:var(--color-brand-strong);border-radius:11px 11px 4px 4px}
+.acts{display:flex;gap:8px}
+.act{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;font-weight:700;font-size:14px;text-align:center}
+.mod{display:flex;align-items:center;gap:10px;padding:10px 12px;flex:1;min-width:0;font-weight:700;font-size:14px}
+.rowline{display:flex;align-items:center;gap:12px;padding:12px 14px}
+
+.ruler{height:92px;border-radius:14px;background:var(--color-surface-sunk);position:relative;overflow:hidden}
+.ruler .ticks{position:absolute;left:12px;right:12px;top:14px;height:32px;background:repeating-linear-gradient(90deg,var(--color-ink-faint) 0 2px,transparent 2px 9px)}
+.ruler .lbls{position:absolute;left:0;right:0;bottom:8px;display:flex;justify-content:space-between;padding:0 12px;font-size:14px;font-weight:600;color:var(--color-ink-soft)}
+.ruler .needle{position:absolute;top:8px;bottom:34px;width:4px;background:var(--color-ink);border-radius:2px;left:33%}
+.os{position:absolute;left:0;right:0;bottom:0;height:300px;background:#D4D7DD;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 10px 18px}
+.os i{background:#fff;border-radius:8px;display:grid;place-items:center;font-style:normal;font-weight:600;font-size:22px;color:#222}
+.os .osl{position:absolute;top:-34px;left:0;right:0;text-align:center;background:var(--color-reject-sunk);color:var(--color-reject);font-weight:700;font-size:14px;padding:6px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.key{height:60px;border-radius:16px;background:var(--color-surface-raised);border:1px solid var(--color-rule-faint);box-shadow:0 2px 6px var(--color-card-shadow, rgba(0,40,88,.06));display:grid;place-items:center;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.key.act{background:var(--color-action);color:var(--color-ink-inverse)}
+.key.fn{background:var(--color-surface-sunk);font-size:20px;color:var(--color-ink-soft)}
+.disp{border:2px solid var(--color-action);border-radius:16px;background:var(--color-surface-raised);padding:6px 16px;display:flex;align-items:baseline;justify-content:flex-end;gap:8px;min-height:72px}
+.disp b{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;align-self:center}
+.disp span{font-size:16px;color:var(--color-ink-soft);font-weight:600;align-self:center}
+.sel{background:var(--color-action);color:var(--color-ink-inverse);padding:0 4px;border-radius:4px}
+.hint{font-size:14px;color:var(--color-ink-soft)}
+.bad{color:var(--color-reject);font-weight:700}
+</style></head><body><div class="page">
+<h1>เทียบวิธีกรอกตัวเลข: กระสอบและจำนวนเงิน</h1>
+<p class="lead">เจ้าของไม่ชอบ "กด + − ทีละ 1" และ "แตะ-เลือก-ลบ-พิมพ์" · เทียบกับวิธีของหน้าเข่งไม่เต็ม (พิมพ์ / หน้าปัด) ที่มีอยู่ในแอป · งานเดียวกันทุกจอ: ใส่ 20 กระสอบ แล้วใส่ราคา 1,150</p>
+<div class="row-flow"><figure class="fig"><div class="shot"><div class="phone" id="n0" aria-label="แบบตอนนี้"><div class="appbar"><span class="ib"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span><h3>ใบซื้อ</h3><span class="sync"><i></i>ซิงก์แล้ว</span></div><div class="body"><div class="card" style="min-height:90px"><div class="val">15-15-15 ตราใบไม้ทอง</div><div class="cap">เคมี · 50 กก. / กระสอบ</div></div><div class="sec">ของที่ซื้อ<small>1 รายการ</small></div></div><div class="scrim"></div><div class="sheet" style="bottom:300px;max-height:60%"><div class="grab"></div><div class="sheethead"><h4>กี่กระสอบ</h4><span class="x"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
+<div class="stepper"><span class="sbtn"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M5 12h14"/></svg></span><div class="numbox"><b><span class="sel" style="font-size:32px;color:var(--color-ink-inverse)">20</span></b></div><span class="sbtn"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>
+<div class="hint" style="text-align:center">เลข 20 ถูกเลือกค้างไว้ ต้องลบก่อนพิมพ์ใหม่ หรือกด + / − ทีละ 1</div></div>
+<div class="os"><div class="osl">แป้นพิมพ์ของเครื่อง · บังครึ่งจอ · แต่ละเครื่องหน้าตาต่างกัน</div><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>,</i><i>0</i><i>⌫</i></div></div></div><figcaption><span class="t">N0 · แบบตอนนี้ (± และพิมพ์ด้วยแป้นเครื่อง)</span>เลข 20 = กด + 19 ครั้ง หรือแตะช่อง → แป้นพิมพ์ของเครื่องเด้งบังจอ → ลบเลขเดิม → พิมพ์ → ปิดแป้น (ประมาณ 6 การกด) แป้นแต่ละเครื่องไม่เหมือนกัน และขยับเลย์เอาต์<span class="ids">ปัญหาที่เจ้าของเจอ</span></figcaption></figure><figure class="fig"><div class="shot"><div class="phone" id="n1" aria-label="แบบช่องใหญ่ + แป้นในแอป"><div class="appbar"><span class="ib"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span><h3>ใบซื้อ</h3><span class="sync"><i></i>ซิงก์แล้ว</span></div><div class="body"><div class="card" style="min-height:90px"><div class="val">15-15-15 ตราใบไม้ทอง</div><div class="cap">เคมี · 50 กก. / กระสอบ</div></div><div class="sec">ของที่ซื้อ<small>1 รายการ</small></div></div><div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sheethead"><h4>กี่กระสอบ</h4><span class="x"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
+<div class="card" style="border:2px solid var(--color-action);padding:14px 16px"><div class="rowx"><span class="tile sm t-blue"><img class="fm " src="../../../design/icons/farmmate/materials.chemFert.svg" width="30" height="30" alt=""></span><div style="flex:1"><div class="val">จำนวนที่ซื้อ</div><div class="cap">กระสอบละ 50 กก.</div></div><span class="badge" style="background:var(--color-action);color:var(--color-ink-inverse)">กำลังกรอก</span></div><div style="text-align:right;margin-top:6px"><span style="font-size:56px;font-weight:800;line-height:1.1">20</span> <span class="hint" style="font-weight:600">กระสอบ</span></div></div>
+<div class="card" style="border:2px dashed var(--color-rule-strong);background:var(--color-surface-sunk);box-shadow:none;padding:12px 16px"><div class="rowx"><div style="flex:1"><div class="val" style="color:var(--color-ink-soft)">น้ำหนักรวม</div><div class="cap">คำนวณให้</div></div><div><span style="font-size:36px;font-weight:800;color:var(--color-ink-soft)">1,000</span> <span class="hint">กก.</span></div></div></div>
+<div class="pad"><div class="key">1</div><div class="key">2</div><div class="key">3</div><div class="key">4</div><div class="key">5</div><div class="key">6</div><div class="key">7</div><div class="key">8</div><div class="key">9</div><div class="key fn">⌫</div><div class="key">0</div><div class="key act"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div></div></div></div></div><figcaption><span class="t">N1 · ท่าพิมพ์ของหน้าเข่งไม่เต็ม ใช้กับกระสอบ</span>เอาโครงจากหน้าเข่งไม่เต็ม (โหมดพิมพ์): ช่องเลขใหญ่ ป้าย "กำลังกรอก" ช่องที่คำนวณให้เป็นเส้นประ แต่เปลี่ยนแป้นพิมพ์เครื่องเป็นแป้นตัวเลขในแอป ไม่ต้องลบเลขเก่า: กดเลขแรกแทนที่ทันที<span class="ids">ตัวเลือก B</span></figcaption></figure><figure class="fig"><div class="shot"><div class="phone" id="n2" aria-label="แบบหน้าปัด"><div class="appbar"><span class="ib"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span><h3>ใบซื้อ</h3><span class="sync"><i></i>ซิงก์แล้ว</span></div><div class="body"><div class="card" style="min-height:90px"><div class="val">15-15-15 ตราใบไม้ทอง</div><div class="cap">เคมี · 50 กก. / กระสอบ</div></div><div class="sec">ของที่ซื้อ<small>1 รายการ</small></div></div><div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sheethead"><h4>กี่กระสอบ</h4><span class="x"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
+<div class="stepper"><span class="sbtn"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M5 12h14"/></svg></span><div class="numbox" style="width:150px"><b>20</b><span>กระสอบ</span></div><span class="sbtn"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>
+<div class="ruler"><div class="ticks"></div><div class="needle"></div><div class="lbls"><span>0</span><span>10</span><span style="color:var(--color-ink);font-weight:800">20</span><span>30</span><span>40</span><span>50</span><span>60</span></div></div>
+<div class="hint" style="text-align:center">ลากซ้าย–ขวา หรือกด − + ทีละ 1 · เลื่อนได้ถึง 60<br><span class="bad">ถ้าซื้อ 120 กระสอบ ไม้บรรทัดไม่พอ ต้องเปิดแป้นพิมพ์อยู่ดี</span></div>
+<div class="btn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>ตกลง</div></div></div></div><figcaption><span class="t">N2 · ท่าหน้าปัดของหน้าเข่งไม่เต็ม ใช้กับกระสอบ</span>ลากไม้บรรทัดได้เลขใกล้ ๆ เร็ว แล้วปรับ ± ละเอียด เหมาะกับน้ำหนักที่ตรงกับหน้าปัดตาชั่งจริงและช่วงแคบ แต่กระสอบมีช่วงกว้าง (1–100+) ลากแล้วได้เลขไม่ตรงต้องปรับต่อ และเลขหลักร้อยไม่พอ<span class="ids">ตัวเลือก C</span></figcaption></figure><figure class="fig"><div class="shot"><div class="phone" id="n3" aria-label="แป้นตัวเลขในแอป + ปุ่มลัด"><div class="appbar"><span class="ib"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span><h3>ใบซื้อ</h3><span class="sync"><i></i>ซิงก์แล้ว</span></div><div class="body"><div class="card" style="min-height:90px"><div class="val">15-15-15 ตราใบไม้ทอง</div><div class="cap">เคมี · 50 กก. / กระสอบ</div></div><div class="sec">ของที่ซื้อ<small>1 รายการ</small></div></div><div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sheethead"><h4>กี่กระสอบ</h4><span class="x"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
+<div class="hint" style="margin-top:-6px">เหมือนครั้งก่อน 20 · แตะปุ่มลัดได้เลย</div>
+<div class="chips"><span class="chip on">20 ครั้งก่อน</span><span class="chip ">10</span><span class="chip ">30</span><span class="chip ">50</span></div>
+<div class="disp"><b>20</b><span>กระสอบ · รวม 1,000 กก.</span></div>
+<div class="pad"><div class="key">1</div><div class="key">2</div><div class="key">3</div><div class="key">4</div><div class="key">5</div><div class="key">6</div><div class="key">7</div><div class="key">8</div><div class="key">9</div><div class="key fn">⌫</div><div class="key">0</div><div class="key act"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div></div></div></div></div><figcaption><span class="t">N3 · แนะนำ: ช่องตัวเลข + แป้นตัวเลขในแอป + ปุ่มลัด</span>แตะช่องเลขใน sheet → แป้นตัวเลขในแอปขึ้น (ไม่ใช้แป้นเครื่อง) เลขเดิมถูกแทนที่เมื่อกดเลขแรก ปุ่มลัดจากครั้งก่อน/ที่ใช้บ่อยแตะแล้วใส่เลยหนึ่งแตะ ปุ่มใหญ่ 60 พิมพ์ได้ทั้งหลักสิบหลักร้อย กดแป้นพิมพ์จริงบนเว็บได้ด้วย<span class="ids">แนะนำ</span></figcaption></figure><figure class="fig"><div class="shot"><div class="phone" id="n4" aria-label="แป้นจำนวนเงิน"><div class="appbar"><span class="ib"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span><h3>ใบซื้อ</h3><span class="sync"><i></i>ซิงก์แล้ว</span></div><div class="body"><div class="card" style="min-height:90px"><div class="val">15-15-15 ตราใบไม้ทอง</div><div class="cap">เคมี · 50 กก. / กระสอบ</div></div><div class="sec">ของที่ซื้อ<small>1 รายการ</small></div></div><div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sheethead"><h4>ราคากระสอบละเท่าไหร่</h4><span class="x"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
+<div class="chips"><span class="chip on">1,150.00 ครั้งก่อน</span><span class="chip ">1,200.00</span><span class="chip ">1,100.00</span></div>
+<div class="disp"><b>1,150.00</b><span>บาท / กระสอบ</span></div>
+<div class="hint" style="text-align:center">20 × 1,150.00 = <b style="color:var(--color-ink)">23,000.00</b></div>
+<div class="pad"><div class="key">1</div><div class="key">2</div><div class="key">3</div><div class="key">4</div><div class="key">5</div><div class="key">6</div><div class="key">7</div><div class="key">8</div><div class="key">9</div><div class="key fn">.</div><div class="key">0</div><div class="key fn">⌫</div></div>
+<div class="btn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>ตกลง</div></div></div></div><figcaption><span class="t">N4 · ช่องจำนวนเงิน (MoneyField)</span>แป้นเดียวกันแต่มีจุดทศนิยม แสดงลูกน้ำพันและทศนิยม 2 ตำแหน่งขณะพิมพ์ (พิมพ์ 1150 เห็น 1,150) ปุ่มลัดเป็นราคาครั้งก่อน/ที่เคยซื้อ ยอดรวมคำนวณให้ใต้ช่อง<span class="ids">จำนวนเงิน</span></figcaption></figure><figure class="fig"><div class="shot"><div class="phone" id="m1" aria-label="ช่องเงิน ปกติ"><div class="appbar"><span class="ib"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span><h3>ใบซื้อ</h3><span class="sync"><i></i>ซิงก์แล้ว</span></div><div class="body"><div class="card" style="min-height:90px"><div class="val">15-15-15 ตราใบไม้ทอง</div><div class="cap">เคมี · 50 กก. / กระสอบ</div></div><div class="sec">ของที่ซื้อ<small>1 รายการ</small></div></div><div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sheethead"><h4>ราคากระสอบละเท่าไหร่</h4><span class="x"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
+<div class="card" style="border:2px solid var(--color-action);padding:12px 16px"><div class="rowx"><div style="flex:1"><div class="val">ราคาต่อกระสอบ</div></div><span class="badge" style="background:var(--color-action);color:var(--color-ink-inverse)">กำลังกรอก</span></div>
+<div style="display:flex;align-items:baseline;justify-content:flex-end;gap:4px;margin-top:4px;white-space:nowrap"><span style="font-size:52px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15">1,150</span><span style="font-size:28px;font-weight:800;color:var(--color-ink-faint)">.00</span><span class="hint" style="font-weight:600;margin-left:6px">บาท</span></div><div class="hint" style="text-align:right;margin-top:4px">หนึ่งพันหนึ่งร้อยห้าสิบบาทถ้วน</div></div>
+<div class="hint" style="text-align:center;margin:-2px 0">20 กระสอบ × 1,150.00 = <b style="color:var(--color-ink)">23,000.00</b></div>
+<div class="pad" style="grid-template-columns:repeat(4,1fr)"><div class="key">1</div><div class="key">2</div><div class="key">3</div><div class="key fn">⌫</div><div class="key">4</div><div class="key">5</div><div class="key">6</div><div class="key fn">.</div><div class="key">7</div><div class="key">8</div><div class="key">9</div><div class="key fn">00</div><div class="key" style="grid-column:span 3">0</div><div class="key fn">000</div></div>
+<div class="btn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>ตกลง</div></div></div></div><figcaption><span class="t">M1 · ช่องจำนวนเงิน (ปกติ)</span>ใช้โครงเดียวกับช่องจำนวน (N1): การ์ดใหญ่ ป้าย "กำลังกรอก" เลขชิดขวา สตางค์ตัวเล็กกว่าและจางจนกว่าจะพิมพ์ เลขล้านใต้กรอบเป็นตัวหนังสือไทยช่วยอ่านเลขใหญ่ แป้นมี "00" และ "000" ลดการกด<span class="ids">MoneyField</span></figcaption></figure><figure class="fig"><div class="shot"><div class="phone" id="m2" aria-label="ช่องเงิน หลักล้าน"><div class="appbar"><span class="ib"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span><h3>ใบซื้อ</h3><span class="sync"><i></i>ซิงก์แล้ว</span></div><div class="body"><div class="card" style="min-height:90px"><div class="val">15-15-15 ตราใบไม้ทอง</div><div class="cap">เคมี · 50 กก. / กระสอบ</div></div><div class="sec">ของที่ซื้อ<small>1 รายการ</small></div></div><div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sheethead"><h4>ราคากระสอบละเท่าไหร่</h4><span class="x"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
+<div class="card" style="border:2px solid var(--color-action);padding:12px 16px"><div class="rowx"><div style="flex:1"><div class="val">ราคาต่อกระสอบ</div></div><span class="badge" style="background:var(--color-action);color:var(--color-ink-inverse)">กำลังกรอก</span></div>
+<div style="display:flex;align-items:baseline;justify-content:flex-end;gap:4px;margin-top:4px;white-space:nowrap"><span style="font-size:44px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15">1,250,000</span><span style="font-size:24px;font-weight:800;color:var(--color-ink)">.50</span><span class="hint" style="font-weight:600;margin-left:6px">บาท</span></div><div class="hint" style="text-align:right;margin-top:4px">หนึ่งล้านสองแสนห้าหมื่นบาทถ้วน</div></div>
+<div class="hint" style="text-align:center;margin:-2px 0">20 กระสอบ × 1,250,000.50 = <b style="color:var(--color-ink)">25,001,000.00</b></div>
+<div class="pad" style="grid-template-columns:repeat(4,1fr)"><div class="key">1</div><div class="key">2</div><div class="key">3</div><div class="key fn">⌫</div><div class="key">4</div><div class="key">5</div><div class="key">6</div><div class="key fn">.</div><div class="key">7</div><div class="key">8</div><div class="key">9</div><div class="key fn">00</div><div class="key" style="grid-column:span 3">0</div><div class="key fn">000</div></div>
+<div class="btn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>ตกลง</div></div></div></div><figcaption><span class="t">M2 · จำนวนเงินเป็นล้าน</span>เลขใหญ่ขึ้นตัวอักษรย่อลงเป็นขั้น (52 → 44 → 36) ไม่ล้นกรอบ ไม่ตัดด้วย "…" ลูกน้ำพันช่วยแบ่งหลัก และบรรทัด "หนึ่งล้านสองแสนห้าหมื่นบาทถ้วน" ให้ตรวจเลขด้วยตา<span class="ids">MoneyField</span></figcaption></figure><figure class="fig"><div class="shot"><div class="phone" id="m3" aria-label="ช่องเงิน หลักร้อยล้าน"><div class="appbar"><span class="ib"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span><h3>ใบซื้อ</h3><span class="sync"><i></i>ซิงก์แล้ว</span></div><div class="body"><div class="card" style="min-height:90px"><div class="val">15-15-15 ตราใบไม้ทอง</div><div class="cap">เคมี · 50 กก. / กระสอบ</div></div><div class="sec">ของที่ซื้อ<small>1 รายการ</small></div></div><div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sheethead"><h4>ยอดรวมทั้งใบ</h4><span class="x"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
+<div class="card" style="border:2px solid var(--color-action);padding:12px 16px"><div class="rowx"><div style="flex:1"><div class="val">ยอดที่ต้องจ่าย</div></div><span class="badge" style="background:var(--color-action);color:var(--color-ink-inverse)">กำลังกรอก</span></div>
+<div style="display:flex;align-items:baseline;justify-content:flex-end;gap:4px;margin-top:4px;white-space:nowrap"><span style="font-size:36px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15">123,456,789</span><span style="font-size:19px;font-weight:800;color:var(--color-ink)">.00</span><span class="hint" style="font-weight:600;margin-left:6px">บาท</span></div><div class="hint" style="text-align:right;margin-top:4px">หนึ่งร้อยยี่สิบสามล้านสี่แสนห้าหมื่นหกพันเจ็ดร้อยแปดสิบเก้าบาทถ้วน</div></div>
+
+<div class="pad" style="grid-template-columns:repeat(4,1fr)"><div class="key">1</div><div class="key">2</div><div class="key">3</div><div class="key fn">⌫</div><div class="key">4</div><div class="key">5</div><div class="key">6</div><div class="key fn">.</div><div class="key">7</div><div class="key">8</div><div class="key">9</div><div class="key fn">00</div><div class="key" style="grid-column:span 3">0</div><div class="key fn">000</div></div>
+<div class="btn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>ตกลง</div></div></div></div><figcaption><span class="t">M3 · ใหญ่สุดที่รองรับ (ร้อยล้าน)</span>ตัวอักษรย่อลงถึงขั้นต่ำสุด 36 (ยังอ่านชัดกลางแดด) เกินร้อยล้านบาทต่อช่อง แป้นหยุดรับเลขและขึ้น "ใหญ่เกินไป" แทนการย่อให้จิ๋วหรือล้นกรอบ<span class="ids">MoneyField</span></figcaption></figure></div>
+<section class="doc"><h2>เทียบจำนวนการกด</h2><table class="cmp"><tr><th>ใส่เลข</th><th>N0 ตอนนี้</th><th>N1 ช่องใหญ่+แป้น</th><th>N2 หน้าปัด</th><th>N3 แป้น+ปุ่มลัด</th></tr>
+<tr><td>20 (เหมือนครั้งก่อน)</td><td>~6 การกด</td><td>4 (แตะช่อง · 2 · 0 · ✓)</td><td>ลาก 1 + ปรับ 0–3</td><td><b>1 แตะปุ่มลัด</b></td></tr>
+<tr><td>35</td><td>~6</td><td>4</td><td>ลาก 1 + ปรับ 0–3</td><td>4</td></tr>
+<tr><td>120</td><td>~7</td><td>5</td><td>ทำไม่ได้ (ไม้บรรทัดสุด 60)</td><td>5</td></tr>
+<tr><td>ผิดพลาดง่ายไหม</td><td>สูง: แป้นบังจอ ลืมลบเลขเก่า</td><td>ต่ำ</td><td>ปานกลาง: ลากแล้วเลขไม่ตรง</td><td>ต่ำ</td></tr>
+<tr><td>ใช้ซ้ำทั้งแอปได้</td><td>ได้</td><td>ได้</td><td>เฉพาะค่าช่วงแคบที่ตรงกับของจริง (น้ำหนักตาชั่ง)</td><td><b>ได้ทั้งจำนวนนับและเงิน</b></td></tr></table></section><section class="doc"><h2>ชื่อเรียกและโครงที่เสนอ (คอมโพเนนต์กลาง)</h2><ul>
+<li><b>คอมโพเนนต์ (component)</b> = ชิ้น UI ที่ใช้ซ้ำ · <b>แพตเทิร์น (pattern)</b> = วิธีทำแบบเดียวกันทั้งแอป · แป้นตัวเลขเรียก <b>numeric keypad / NumPad</b> · ปุ่ม − + เรียก <b>stepper</b> · ไม้บรรทัดลาก เรียก <b>ruler / slider picker</b></li>
+<li><b>NumberPad</b> — แป้นตัวเลขในแอป (sheet) ใช้ร่วมกัน: เลขแรกแทนที่ค่าเดิม · ⌫ · ล้าง · จำกัดหลัก · ปุ่มใหญ่ ≥ 56 · รับแป้นพิมพ์จริงบนเว็บ</li>
+<li><b>QuantityField</b> — จำนวนนับ (กระสอบ ลิตร ขวด ชิ้น): หน่วยอยู่ในกรอบ, min/max, ปุ่มลัด (ครั้งก่อน + ที่ใช้บ่อย), ± เล็กเป็นรอง</li>
+<li><b>MoneyField</b> — จำนวนเงินบาท: ทศนิยม 2 ตำแหน่ง, ลูกน้ำพันขณะพิมพ์, ปุ่มลัดราคาครั้งก่อน, ยอดคำนวณใต้ช่อง; <b>ใช้ทุกที่ที่มีเงิน</b> (ค่าใช้จ่าย ใบซื้อ ส่วนลด ชำระหนี้)</li>
+<li><b>WeightField</b> (ของเดิม หน้าเข่งไม่เต็ม — พิมพ์/หน้าปัด) ยังเก็บไว้ เพราะตรงกับหน้าปัดตาชั่งจริง; โหมดพิมพ์ย้ายไปใช้ NumberPad ภายหลัง</li></ul></section>
+<section class="doc"><h2>ตัดสินใจแล้ว (เจ้าของ 2026-10-27)</h2><ul>
+<li><b>เลือก N1</b> (ช่องตัวเลขใหญ่ + แป้นตัวเลขในแอป) เป็นแพตเทิร์นกลางของจำนวนนับ — <b>ไม่เอา</b> N0 (± + แป้นเครื่อง), N2 (หน้าปัดสำหรับกระสอบ), N3 (ปุ่มลัด) · ช่องกรอกตัวเลขทุกที่ที่เป็นจำนวนมากใช้ <code>QuantityField</code> + <code>NumberPad</code></li>
+<li><b>ช่องจำนวนเงิน</b> ออกแบบใหม่ (M1–M3) ตามโครง N1: การ์ดใหญ่ ป้าย "กำลังกรอก" เลขชิดขวา สตางค์เล็กและจางจนพิมพ์ ตัวหนังสือไทยบอกจำนวนเงินใต้เลข ตัวอักษรย่อเป็นขั้นเมื่อเลขยาว (52 → 44 → 36) ไม่ล้น ไม่ตัดด้วย "…" แป้นมี . / 00 / 000 · <code>MoneyField</code> ใช้ทุกที่ที่มีเงิน</li>
+<li>หน้าเข่งไม่เต็มเดิมเก็บไว้ ไม่แตะ</li></ul></section>
+</div></body></html>

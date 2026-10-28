@@ -229,6 +229,12 @@ question blocks the commit, and the commit is what a push is waiting on.
   are authored collaboratively, not assumed.
 - Docs are live documents: update them in the same session a decision is
   made or scope shifts, not as after-the-fact cleanup.
+- **No clipped content (owner rule, 2026-10-27).** On any mockup, screenshot or
+  build: nothing may be cut off or pushed past the screen edge — no control
+  or text sticking out sideways, no content truncated with "…", no box that
+  hides part of its own content. Wrap, shrink the content or restructure the
+  layout instead. Run `npm run check:mockup -- <file.html>` on every mockup
+  and the same overflow check on the real build; a FAIL means do not show it.
 
 ## Discord
 

@@ -16,9 +16,11 @@ import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { farmSection, SALE_START, saleHref, sectionHref } from './routes';
 import { useMaster, useMounted } from './farm/pieces';
+import { ORDER_NEW, orderHref } from './money/order-routes';
 import { loadHomeSales } from './sale/open-sale';
+import { groupOrders, missingDetails } from '../core/finance/fert-order';
 import { owedByPerson, payableSatang } from '../core/finance/ledger';
-import { formatSatang } from '../core/finance/money';
+import { formatDate, formatSatang, todayIso } from '../core/finance/money';
 import type { HomeSales, SaleLine } from '../core/home';
 import { filterPeople, formatThaiDate, formatThaiDay } from '../core/master';
 import { formatKg } from '../core/settle';
@@ -45,6 +47,7 @@ import {
   FarmIcon,
   GearIcon,
   IconTile,
+  LeafIcon,
   ListIcon,
   MenuItem,
   MenuSection,
@@ -64,6 +67,13 @@ import {
 
 const href = (slug: string) => sectionHref(farmSection(slug));
 
+/** The ISO date `n` days before today (device calendar). */
+const isoDaysAgo = (n: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return todayIso(d);
+};
+
 export function V2Home() {
   const t = useTheme();
   const msg = useT();
@@ -81,6 +91,21 @@ export function V2Home() {
   const owedTotal = owed.reduce((s, o) => s + o.remainingSatang, 0);
   const payable = fin.state ? payableSatang(fin.state) : 0;
   const tappers = master ? filterPeople(master.people, 'tapper').length : 0;
+
+  // Shop orders (E11-S11): ordered and not yet arrived; arrived fertilizer not yet placed on a plot.
+  const orders = useMemo(() => {
+    const live = (fin.state?.expenses ?? []).filter((x) => !x.deleted);
+    const overdueBefore = isoDaysAgo(2);
+    if (!live.some((x) => x.fertilizer)) return { committed: [], zoneItems: [] };
+    const views = groupOrders(live);
+    return {
+      // FD-0: remind only when the goods are overdue (ordered more than 2 days ago).
+      committed: views.filter((o) => o.stage === 'committed' && o.date < overdueBefore && o.items.some((x) => x.fertilizer)),
+      zoneItems: live.filter((x) => x.stage === 'actual' && x.fertilizer && missingDetails(x).includes('zones')),
+    };
+  }, [fin.state]);
+  const committedNewest = orders.committed[0];
+  const zoneNewest = orders.zoneItems.reduce<(typeof orders.zoneItems)[number] | undefined>((a, x) => (!a || x.date > a.date ? x : a), undefined);
 
   const saleLine = (s: SaleLine) =>
     s.ts === null
@@ -129,6 +154,26 @@ export function V2Home() {
           {owed.length === 1 ? owed[0].payer.name : msg('v2m.people', { n: owed.length })}
         </FactRow>
       </KnowRow>
+    ) : null,
+    committedNewest ? (
+      <KnowRow
+        key="order-committed"
+        testID="home-order-committed"
+        tone="action"
+        icon={(c) => <LeafIcon color={c} size={24} />}
+        value={orders.committed.length > 1 ? msg('ords.homeDeliveredMany', { n: orders.committed.length }) : msg('ords.homeDelivered', { date: formatDate(committedNewest.date) })}
+        to={orderHref(committedNewest.orderId)}
+      />
+    ) : null,
+    zoneNewest ? (
+      <KnowRow
+        key="order-zones"
+        testID="home-order-zones"
+        tone="cream"
+        icon={(c) => <LeafIcon color={c} size={24} />}
+        value={msg('ords.homeZones', { n: orders.zoneItems.length })}
+        to={orderHref(zoneNewest.orderId ?? zoneNewest.id)}
+      />
     ) : null,
   ].filter((r) => r !== null);
 
@@ -216,8 +261,9 @@ export function V2Home() {
           />
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>
             <Mod slug="expenses" tone="cream" icon={(c) => <ReceiptIcon color={c} size={20} />} label={msg('v2.expenses')} />
-            <Mod slug="stock" tone="accept" icon={(c) => <BoxIcon color={c} size={20} />} label={msg('v2.stock')} />
+            <Mod slug="order" to={ORDER_NEW as Href} tone="accept" icon={(c) => <LeafIcon color={c} size={20} />} label={msg('ords.homeBuy')} />
           </View>
+          <Mod slug="stock" tone="accept" icon={(c) => <BoxIcon color={c} size={20} />} label={msg('v2.stock')} />
           <Mod
             slug="workers"
             to={'/v2/people?filter=tapper' as Href}

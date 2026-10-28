@@ -143,13 +143,13 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     expect(screen.getByTestId('share-row')).toBeTruthy();
   });
 
-  it('the fertilizer category opens the fertilizer purchase flow with what was typed', async () => {
+  it('the fertilizer category opens the shop order with what was typed', async () => {
     wrap(<ExpenseFormScreen />);
     await flush();
     fireEvent.changeText(screen.getByTestId('expense-amount'), '10000');
     pickCat('cat-fertilizer');
     // Replaced, not pushed: after saving the flow the half-filled form is not waiting underneath.
-    expect(mockRouter.replace).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/v2/fertilizer', params: expect.objectContaining({ bill: '10000', stage: 'actual', payerId: expect.any(String) }) }));
+    expect(mockRouter.replace).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/v2/order', params: expect.objectContaining({ amount: '10000', stage: 'actual', payerId: expect.any(String) }) }));
   });
 
   it('a fertilizer purchase opens in its own flow to be edited', async () => {
@@ -170,7 +170,7 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     expect(screen.queryByTestId('share-row')).toBeNull();
     expect(screen.getByTestId('fert-locked')).toHaveTextContent(/1,000\.00/);
     fireEvent.press(screen.getByTestId('expense-open-fert'));
-    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/fertilizer', params: { id: 'exp-fert-1' } });
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'exp-fert-1' } });
   });
 
   it('an empty % is refused, never saved as 0', async () => {
