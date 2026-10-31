@@ -48,9 +48,11 @@ interface Meta extends DeviceState {
  * localStorage keys E01-S02 used briefly on dev builds. S16's people list
  * (`mon-farm:people`) is no longer read since E03-S01 but is deliberately
  * left in place — clearing it is irreversible and the owner decides when;
- * the farm-profile key stays until E03 moves it.
+ * the farm-profile key stays until E03 moves it. `mon-farm:locale` is NOT
+ * cleared: it is the live language setting (device settings, E01-S19;
+ * owner 2026-10-31).
  */
-const LEGACY_EXACT = ['mon-farm:sales', 'mon-farm:synced', 'mon-farm:locale'];
+const LEGACY_EXACT = ['mon-farm:sales', 'mon-farm:synced'];
 const LEGACY_PREFIXES = ['mon-farm:events:', 'mon-farm-v1:'];
 
 /** Best-effort: a failure is logged and the app carries on without the old data. */
