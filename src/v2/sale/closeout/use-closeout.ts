@@ -22,11 +22,14 @@ import {
   type RecordedLine,
   type RepayRoute,
 } from '../../../core/finance/closeout';
+import { projectDebts } from '../../../core/finance/debts';
 import { overDeducted, type RoundingMode } from '../../../core/finance/deduct';
 import { FARM_FUNDS } from '../../../core/finance/types';
 import { saleDay } from '../../../core/sale-list';
+import { statusCountsAsClosed } from '../../../core/sale-status';
 import { useFinance } from '../../../finance/use-finance';
 import { useInFlight } from '../../../finance/use-in-flight';
+import { useSaleCounts } from '../../../finance/use-live-sales';
 import { lastRepay, lastRounding, localPreferenceStore, rememberCloseout, type PreferenceStore } from '../../../store/closeout-preference';
 import { sessionGroupId } from '../../../store/session';
 import { useSaleMoney } from '../../money/sale/use-sale-money';
@@ -95,13 +98,19 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
   const saleId = money.state.id;
   const draft = useCloseoutDraft(saleId);
   const groupId = groupOr();
+  const counts = useSaleCounts();
+  // This hook's own reader is the one `fin.write` reloads: built from it, a confirm stopped
+  // part-way and pressed again sees the lines it already wrote (useSaleMoney's reader does not reload).
+  const debts = useMemo(() => projectDebts(fin.events ?? [], counts), [fin.events, counts]);
+  /** A completed sale is read-only (review #2): nothing here writes for it. */
+  const closed = money.loaded && statusCountsAsClosed(money.state);
 
   const ready = money.loaded && !!money.settlement && fin.events !== null && fin.state !== null;
 
   const derived = useMemo(() => {
     if (!ready || !money.settlement || !fin.state) return null;
     const s = money.settlement;
-    const lines = (id: string) => (money.debts.get(id)?.payments ?? []).filter((p) => p.saleId === saleId && !p.deleted && p.counts);
+    const lines = (id: string) => (debts.get(id)?.payments ?? []).filter((p) => p.saleId === saleId && !p.deleted && p.counts);
     const repaymentOf = (id?: string) => (id ? fin.state!.repayments.find((r) => r.id === id && !r.deleted) : undefined);
     const owedOf = (id: string) => {
       const netted = lines(id).filter((p) => p.method === 'netting').map((p) => repaymentOf(p.repaymentId)).filter((r) => !!r);
@@ -110,6 +119,7 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
         .map((r) => ({ ...r, remainingSatang: r.remainingSatang + netted.reduce((a, rep) => a + rep.allocations.filter((x) => x.expenseId === r.expenseId).reduce((y, x) => y + x.satang, 0), 0) }));
     };
     const inputs: CloseoutWorkerInput[] = money.tappers.map((tp) => {
+      const account = debts.get(tp.id);
       const here = lines(tp.id);
       const total = here.reduce((a, p) => a + p.amountSatang, 0);
       const net = here.filter((p) => p.method === 'netting').reduce((a, p) => a + p.amountSatang, 0);
@@ -118,8 +128,8 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
         id: tp.id,
         name: tp.name,
         shareSatang: Math.max(0, tp.shareSatang),
-        balanceSatang: Math.max(0, (tp.account?.balanceSatang ?? 0) + total),
-        planPerSaleSatang: tp.account?.planPerSaleSatang ?? null,
+        balanceSatang: Math.max(0, (account?.balanceSatang ?? 0) + total),
+        planPerSaleSatang: account?.planPerSaleSatang ?? null,
         owedBackSatang: owedOf(tp.id).reduce((a, r) => a + Math.max(0, r.remainingSatang), 0),
         recorded: here.length ? { totalSatang: total, nettingSatang: net, route } : null,
       };
@@ -133,7 +143,7 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       defaultRoute: (id) => lastRepay(store, groupId, id),
       rounding,
     });
-    const pieces = new Map(money.tappers.filter((tp) => tp.account).map((tp) => [tp.id, debtPieces(tp.account!, saleId, plan.workers.find((w) => w.id === tp.id)?.totalSatang ?? 0)]));
+    const pieces = new Map(money.tappers.flatMap((tp) => { const account = debts.get(tp.id); return account ? [[tp.id, debtPieces(account, saleId, plan.workers.find((w) => w.id === tp.id)?.totalSatang ?? 0)] as const] : []; }));
     const debtors = inputs.filter((w) => w.balanceSatang > 0).map((w) => ({ id: w.id, name: w.name }));
     const owed = inputs.filter((w) => w.owedBackSatang > 0).map((w) => ({ id: w.id, name: w.name, satang: w.owedBackSatang }));
     const over = money.tappers.some((tp) => overDeducted(tp.debtDeductedSatang + tp.nettedSatang, tp.shareSatang, tp.nettedSatang));
@@ -153,15 +163,15 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       lines(id).map((p) => ({ id: p.id, headEventId: p.headEventId, method: p.method, amountSatang: p.amountSatang, repaymentId: p.repaymentId, repaymentHead: repaymentOf(p.repaymentId)?.headEventId }));
     // Every id ever written for this sale and worker, deleted ones too, so a new line never reuses a voided id.
     const knownIds = (id: string): string[] =>
-      (money.debts.get(id)?.payments ?? []).filter((p) => p.saleId === saleId).flatMap((p) => [p.id, ...(p.repaymentId ? [p.repaymentId] : [])]);
+      (debts.get(id)?.payments ?? []).filter((p) => p.saleId === saleId).flatMap((p) => [p.id, ...(p.repaymentId ? [p.repaymentId] : [])]);
     return { settlement: s, inputs, plan, pieces, debtors, owed, over, gate, recordedLines, owedOf, knownIds };
-  }, [ready, money, fin.state, saleId, draft, store, groupId]);
+  }, [ready, money, fin.state, debts, saleId, draft, store, groupId]);
 
   /** "ยืนยันยอด": write each worker's lines (existing event types), then rounding, then remember the choices. */
   const confirm = async (): Promise<boolean> => {
     let done = false;
     await flight.run(async () => {
-      if (!derived || derived.gate.kind !== 'ready') return;
+      if (!derived || derived.gate.kind !== 'ready' || closed) return;
       const farm = { id: FARM_FUNDS, name: '' };
       for (const w of derived.plan.workers) {
         const res = confirmWrites({
@@ -198,7 +208,7 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
     return done;
   };
 
-  return { ready: !!derived, money, fin, saleId, draft, update: (f: (d: CloseoutDraft) => CloseoutDraft) => updateDraft(saleId, f), confirm, busy: flight.busy, ...(derived ?? {}) } as const;
+  return { ready: !!derived, closed, money, fin, saleId, draft, update: (f: (d: CloseoutDraft) => CloseoutDraft) => updateDraft(saleId, f), confirm, busy: flight.busy, ...(derived ?? {}) } as const;
 }
 
 export type Closeout = ReturnType<typeof useCloseout>;

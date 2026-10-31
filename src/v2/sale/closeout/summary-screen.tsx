@@ -17,7 +17,7 @@ import { buyerCheck, saleFigures } from '../../../core/finance/buyer-check';
 import { useT, type Translate } from '../../../i18n';
 import { Check, CTA } from '../../../ui';
 import { FarmScreen } from '../../farm/pieces';
-import { tapperTone, useSaleView } from '../pieces';
+import { tapperTone, useLeaveIfClosed, useSaleView } from '../pieces';
 import { CashCard, DebtCard, OwedCard, Progress, SaleStrip, TallyBar, WorkerCard } from './summary-cards';
 import { DebtSheet } from './summary-debt-sheet';
 import { DeductSheet } from './summary-deduct-sheet';
@@ -64,6 +64,8 @@ export function CloseoutSummaryScreen() {
   const co = useCloseout();
   const view = useSaleView();
   const [sheet, setSheet] = useState<Sheet>(null);
+  // A write screen: a closed sale goes to its payment, read-only (review #2).
+  useLeaveIfClosed(view);
   const base = `/v2/sale/${co.saleId}`;
   const shell = (children?: React.ReactNode, footer?: React.ReactNode, overlay?: React.ReactNode) => (
     <FarmScreen title={msg('co.title')} subtitle={view.saleTitle} fallback={`${base}/check` as Href} testID="co-summary" footer={footer} overlay={overlay}>
@@ -98,7 +100,7 @@ export function CloseoutSummaryScreen() {
   };
   const addOwed = () => router.push('/v2/expense/new' as Href);
   const confirm = async () => {
-    if (gate.kind !== 'ready') return;
+    if (gate.kind !== 'ready' || co.closed) return;
     if (await co.confirm()) router.push(`${base}/payment` as Href);
   };
 
@@ -172,7 +174,7 @@ export function CloseoutSummaryScreen() {
       <CashCard plan={plan} faded={!handled} onOpen={() => router.push(`${base}/cash` as Href)} />
       <TallyBar tally={plan.tally} onSources={() => setSheet({ kind: 'sources' })} />
     </>,
-    <CTA testID="co-confirm" disabled={gate.kind !== 'ready' || co.busy} icon={gate.kind === 'ready' ? (c) => <Check color={c} /> : undefined} onPress={confirm}>
+    <CTA testID="co-confirm" disabled={gate.kind !== 'ready' || co.busy || co.closed} icon={gate.kind === 'ready' ? (c) => <Check color={c} /> : undefined} onPress={confirm}>
       {gateText(msg, gate)}
     </CTA>,
     overlay,
