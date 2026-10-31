@@ -151,7 +151,10 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
     });
     const recordedLines = (id: string): RecordedLine[] =>
       lines(id).map((p) => ({ id: p.id, headEventId: p.headEventId, method: p.method, amountSatang: p.amountSatang, repaymentId: p.repaymentId, repaymentHead: repaymentOf(p.repaymentId)?.headEventId }));
-    return { settlement: s, inputs, plan, pieces, debtors, owed, over, gate, recordedLines, owedOf };
+    // Every id ever written for this sale and worker, deleted ones too, so a new line never reuses a voided id.
+    const knownIds = (id: string): string[] =>
+      (money.debts.get(id)?.payments ?? []).filter((p) => p.saleId === saleId).flatMap((p) => [p.id, ...(p.repaymentId ? [p.repaymentId] : [])]);
+    return { settlement: s, inputs, plan, pieces, debtors, owed, over, gate, recordedLines, owedOf, knownIds };
   }, [ready, money, fin.state, saleId, draft, store, groupId]);
 
   /** "ยืนยันยอด": write each worker's lines (existing event types), then rounding, then remember the choices. */
@@ -169,6 +172,7 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
           plan: w,
           recorded: derived.recordedLines(w.id),
           owed: derived.owedOf(w.id),
+          knownIds: derived.knownIds(w.id),
         });
         if (!res.ok) return;
         for (const x of res.writes) {

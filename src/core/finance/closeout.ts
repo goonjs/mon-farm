@@ -12,9 +12,13 @@
  */
 
 import type { DebtAccount } from './debts';
-import type { RoundingMode } from './deduct';
-import type { DebtKind, DebtPaymentMethod, FinancePayload, Payer } from './types';
+import { cashNotes, deductSheet, nettingPayloads, pickNotes, pilesCheck, workerCash, type RoundingMode } from './deduct';
+import { roundSettlement } from './rounding';
+import { FARM_FUNDS, type DebtKind, type DebtPaymentMethod, type FinancePayload, type Payer } from './types';
 import type { Reimbursement } from './ledger';
+
+const toFarm = (p: Payer | null | undefined) => !p || p.id === FARM_FUNDS;
+const sumOf = (xs: readonly number[]) => xs.reduce((a, b) => a + b, 0);
 
 // ── Menus (CO-19 order; the first item is the first-time default, CO-23) ────
 
@@ -45,10 +49,29 @@ export interface DebtPiece {
  * itself still comes from `projectDebts`.
  */
 export function debtPieces(account: DebtAccount, saleId: string, deductSatang: number): DebtPiece[] {
-  void account;
-  void saleId;
-  void deductSatang;
-  throw new Error('not implemented');
+  const pieces = account.debts
+    .filter((d) => !d.deleted && (d.kind !== 'loan' || toFarm(d.lender)))
+    .sort((x, y) => (x.date !== y.date ? (x.date < y.date ? -1 : 1) : x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
+  // Oldest first is a sum spread over the pieces, so the payments' own order does not matter.
+  let paid = sumOf(account.payments.filter((p) => !p.deleted && p.counts && toFarm(p.creditor) && p.saleId !== saleId).map((p) => p.amountSatang));
+  let deduct = Math.max(0, deductSatang);
+  const out: DebtPiece[] = [];
+  for (const d of pieces) {
+    const before = d.amountSatang - Math.min(d.amountSatang, Math.max(0, paid));
+    paid -= d.amountSatang - before;
+    if (before <= 0) continue;
+    const take = Math.min(before, deduct);
+    deduct -= take;
+    out.push({
+      id: d.id,
+      kind: d.kind,
+      date: d.date,
+      amountSatang: d.amountSatang,
+      leftBeforeSatang: before,
+      leftAfterSatang: before - take,
+    });
+  }
+  return out;
 }
 
 // ── CO-3 / CO-5 · one worker's draft ────────────────────────────────────────
@@ -106,8 +129,8 @@ export interface CloseoutWorker {
 
 /** CO-5 shortcuts. half = cap / 2 floored to whole baht. */
 export function quickAmounts(capSatang: number): { full: number; half: number; none: number } {
-  void capSatang;
-  throw new Error('not implemented');
+  const full = Math.max(0, capSatang);
+  return { full, half: Math.floor(full / 200) * 100, none: 0 };
 }
 
 // ── CO-1 / CO-9 / CO-19 · the whole sale ────────────────────────────────────
@@ -151,9 +174,115 @@ export interface CloseoutPlan {
   readonly anyInvalid: boolean;
 }
 
+/**
+ * One worker before rounding. Every number comes from `deductSheet` (the
+ * E06-S04 sheet), so the proposal and cap are the old ones exactly.
+ *
+ * Starting point, per field: the draft; else this sale's recorded lines;
+ * else the proposal (total), 0 (netting) and `defaultRoute` (route). A draft
+ * total of `null` is "follow the proposal" even over recorded lines (the
+ * owner reset it). reason: 'plan' = the instalment was proposed; 'all' = the
+ * whole balance fits; 'cut' = cut at the share (+ netting).
+ */
+function workerDraft(w: CloseoutWorkerInput, d: CloseoutWorkerDraft | undefined, defaultRoute: (id: string) => RepayRoute) {
+  const rec = w.recorded;
+  const nettingSatang = d?.nettingSatang ?? rec?.nettingSatang ?? 0;
+  const typed = d && d.totalSatang !== undefined ? d.totalSatang : rec ? rec.totalSatang : null;
+  const sheet = deductSheet({
+    balanceSatang: w.balanceSatang,
+    shareSatang: w.shareSatang,
+    owedBackSatang: w.owedBackSatang,
+    planPerSaleSatang: w.planPerSaleSatang,
+    totalSatang: typed,
+    nettingSatang,
+    editing: rec !== null,
+  });
+  const route = d?.route ?? rec?.route ?? defaultRoute(w.id);
+  const balance = Math.max(0, w.balanceSatang);
+  const reason: ProposalReason = w.planPerSaleSatang !== null && sheet.proposedSatang === w.planPerSaleSatang ? 'plan' : sheet.proposedSatang >= balance ? 'all' : 'cut';
+  const invalid = sheet.problem !== null && sheet.problem !== 'nothing';
+  const recRoute = rec ? rec.totalSatang - rec.nettingSatang : 0;
+  const dirty = rec
+    ? rec.totalSatang !== sheet.totalSatang || rec.nettingSatang !== sheet.nettingSatang || (sheet.routeSatang > 0 && (recRoute !== sheet.routeSatang || rec.route !== route))
+    : sheet.totalSatang > 0;
+  // D-60: cash = share + netting − deduction (route 1 is lifted out of it later, so it is in the deduction too).
+  const cashBeforeSatang = workerCash({
+    shareSatang: Math.max(0, w.shareSatang),
+    deductionSatang: sheet.totalSatang,
+    nettingSatang: sheet.nettingSatang,
+    adjustSatang: 0,
+  });
+  return {
+    sheet,
+    route,
+    reason,
+    invalid,
+    dirty,
+    cashBeforeSatang,
+    hasDebt: balance > 0,
+  };
+}
+
+/**
+ * The whole sale (D-60 order: share → deduct → round → cash). Rounding is
+ * `roundSettlement` over every worker's cash before rounding; the owner
+ * absorbs the opposite. CO-4 `leftChip`: debt left after this sale while the
+ * worker's cash is 0 (the debt was above what the share could take).
+ */
 export function closeoutPlan(input: CloseoutInput): CloseoutPlan {
-  void input;
-  throw new Error('not implemented');
+  const drafted = input.workers.map((w) => ({
+    w,
+    ...workerDraft(w, input.drafts[w.id], input.defaultRoute),
+  }));
+  const rounded = roundSettlement(
+    drafted.map((x) => ({ id: x.w.id, cashBeforeSatang: x.cashBeforeSatang })),
+    input.rounding,
+    input.ownerShareSatang,
+  );
+  const workers: CloseoutWorker[] = drafted.map((x, i) => {
+    const r = rounded.workers[i];
+    return {
+      id: x.w.id,
+      name: x.w.name,
+      shareSatang: x.w.shareSatang,
+      hasDebt: x.hasDebt,
+      proposedSatang: x.sheet.proposedSatang,
+      reason: x.reason,
+      capSatang: x.sheet.capSatang,
+      totalSatang: x.sheet.totalSatang,
+      nettingSatang: x.sheet.nettingSatang,
+      netCapSatang: x.sheet.netCapSatang,
+      routeSatang: x.sheet.routeSatang,
+      route: x.route,
+      cashBeforeSatang: x.cashBeforeSatang,
+      adjustSatang: r.adjustSatang,
+      cashSatang: r.cashSatang,
+      debtLeftSatang: x.sheet.debtLeftSatang,
+      leftChip: x.sheet.debtLeftSatang > 0 && r.cashSatang === 0,
+      invalid: x.invalid,
+      dirty: x.dirty,
+    };
+  });
+  const by = (route: RepayRoute) => sumOf(workers.filter((w) => w.route === route).map((w) => w.routeSatang));
+  const transferRepaySatang = by('transfer-with-owner');
+  const buyerSplitSatang = by('buyer-split');
+  const pickedSatang = by('cash-from-share');
+  const transferSatang = rounded.ownerSatang + transferRepaySatang;
+  const tally = pilesCheck([...workers.map((w) => ({ satang: w.cashSatang })), { satang: transferSatang }, { satang: buyerSplitSatang }, { satang: pickedSatang }], input.saleTotalSatang);
+  const hasFraction = rounded.needsAsking;
+  return {
+    workers,
+    rounding: input.rounding,
+    hasFraction,
+    ownerSatang: rounded.ownerSatang,
+    transferSatang,
+    transferRepaySatang,
+    buyerSplitSatang,
+    pickedSatang,
+    tally,
+    cashStepNeeded: hasFraction || workers.some((w) => w.routeSatang > 0),
+    anyInvalid: workers.some((w) => w.invalid),
+  };
 }
 
 // ── CO-9 · "ดูที่มา" (A8): the three checks of D-85 ──────────────────────────
@@ -169,11 +298,43 @@ export interface SourcesSheet {
   readonly paid: { readonly lines: readonly { readonly id: string; readonly kind: 'cash' | 'transfer' | 'repay-cash'; readonly name: string; readonly satang: number }[]; readonly ok: boolean };
 }
 
+/**
+ * Line ids: shares and cash use the worker id; ② uses `<id>-pay` (worker
+ * pays, −total), `<id>-net` (↗ farm repays by netting, +), `<id>-recv`
+ * (farm receives by the route, +); ③ and owner lines use id 'owner' with
+ * an empty name (the screen names the farm); paid uses the worker id
+ * (cash), `<id>-repay` (repay-cash) and 'transfer'. Each check is computed
+ * from the money as it stands: ② fails when a worker's cash was held at 0
+ * below share − route (over the cap, D-61).
+ */
 export function sourcesSheet(plan: CloseoutPlan, saleTotalSatang: number, ownerShareSatang: number): SourcesSheet {
-  void plan;
-  void saleTotalSatang;
-  void ownerShareSatang;
-  throw new Error('not implemented');
+  const ws = plan.workers;
+  const shareLines = ws.map((w) => ({ id: w.id, name: w.name, satang: w.shareSatang }));
+  const debtLines = ws.flatMap((w) =>
+    w.totalSatang > 0 || w.nettingSatang > 0
+      ? [
+          { id: `${w.id}-pay`, name: w.name, way: 'in' as const, satang: -w.totalSatang },
+          ...(w.nettingSatang > 0 ? [{ id: `${w.id}-net`, name: w.name, way: 'out' as const, satang: w.nettingSatang }] : []),
+          ...(w.routeSatang > 0 ? [{ id: `${w.id}-recv`, name: w.name, way: 'in' as const, satang: w.routeSatang }] : []),
+        ]
+      : [],
+  );
+  const roundLines = [
+    ...ws.filter((w) => w.adjustSatang !== 0).map((w) => ({ id: w.id, name: w.name, satang: w.adjustSatang })),
+    ...(plan.ownerSatang !== ownerShareSatang ? [{ id: 'owner', name: '', satang: plan.ownerSatang - ownerShareSatang }] : []),
+  ];
+  const paidLines = [
+    ...ws.map((w) => ({ id: w.id, kind: 'cash' as const, name: w.name, satang: w.cashSatang })),
+    ...ws.filter((w) => w.routeSatang > 0 && w.route !== 'transfer-with-owner').map((w) => ({ id: `${w.id}-repay`, kind: 'repay-cash' as const, name: w.name, satang: w.routeSatang })),
+    { id: 'transfer', kind: 'transfer' as const, name: '', satang: plan.transferSatang },
+  ];
+  const piles = ws.every((w) => w.cashBeforeSatang === w.shareSatang + w.nettingSatang - w.totalSatang);
+  return {
+    shares: { lines: shareLines, ownerSatang: ownerShareSatang, ok: sumOf(shareLines.map((l) => l.satang)) + ownerShareSatang === saleTotalSatang },
+    debt: { lines: debtLines, ok: piles && sumOf(debtLines.map((l) => l.satang)) === 0 },
+    rounding: { lines: roundLines, ok: sumOf(roundLines.map((l) => l.satang)) === 0 },
+    paid: { lines: paidLines, ok: sumOf(paidLines.map((l) => l.satang)) === saleTotalSatang },
+  };
 }
 
 // ── CO-24 · break a note so route 1 can be lifted out exactly ───────────────
@@ -196,22 +357,130 @@ export interface BreakPlan {
   readonly into: readonly NoteCount[];
 }
 
+const NOTE_STEPS = [100000, 50000, 10000, 5000, 2000, 1000, 500, 200, 100];
+
+/** Exact subset of an explicit note list summing to `take` (largest first), or null. */
+export function liftableNotes(notes: readonly number[], takeSatang: number): number[] | null {
+  if (takeSatang === 0) return [];
+  if (takeSatang < 0) return null;
+  // Reachable totals → (the total before, the note added): a back-pointer, not a copied list per total.
+  const from = new Map<number, readonly [number, number]>([[0, [0, 0]]]);
+  for (const n of [...notes].sort((a, b) => b - a)) {
+    for (const r of [...from.keys()]) if (r + n <= takeSatang && !from.has(r + n)) from.set(r + n, [r, n]);
+    if (from.has(takeSatang)) {
+      const out: number[] = [];
+      for (let r = takeSatang; r > 0; r = from.get(r)![0]) out.push(from.get(r)![1]);
+      return out.sort((a, b) => b - a);
+    }
+  }
+  return null;
+}
+
+/** The largest total ≤ cap a subset of `notes` reaches. */
+function bestBelow(notes: readonly number[], cap: number): number {
+  let reach = new Set<number>([0]);
+  for (const n of notes) for (const r of [...reach]) if (r + n <= cap) reach.add(r + n);
+  return Math.max(...reach);
+}
+
 /**
- * null when no break is needed (pickNotes works) or nothing can be taken
- * (take ≤ 0 or above the pile). Otherwise the smallest single note whose
- * break makes `take` liftable exactly; the mix offered for 1,000 is
- * ฿500 ×1 · ฿100 ×4 · ฿50 ×2 (story CO-24).
+ * The preferred change for one note (story CO-24): one of the next lower
+ * note, then the rest in the note below that except one of it, which goes
+ * into the note below again; any remainder greedily. ฿1,000 → ฿500 ×1 ·
+ * ฿100 ×4 · ฿50 ×2. ฿1 has no smaller note: null.
+ */
+function preferredMix(n: number): number[] | null {
+  const lower = NOTE_STEPS.filter((x) => x < n);
+  if (!lower.length) return null;
+  const [l1, l2] = lower;
+  const out = [l1];
+  let rest = n - l1;
+  if (l2 !== undefined && rest > l2) {
+    const k = Math.floor(rest / l2) - 1;
+    for (let i = 0; i < k; i += 1) out.push(l2);
+    rest -= k * l2;
+    for (const x of lower.filter((y) => y < l2))
+      while (rest >= x) {
+        out.push(x);
+        rest -= x;
+      }
+  }
+  for (const x of lower)
+    while (rest >= x) {
+      out.push(x);
+      rest -= x;
+    }
+  return rest === 0 ? out : null;
+}
+
+/**
+ * null when no break is needed (pickNotes works), nothing can be taken
+ * (take ≤ 0 or above the pile), or no single break can do it (a take whose
+ * satang the pile's coins cannot make). Otherwise the smallest note in the
+ * pile whose break makes `take` liftable exactly. Mix tried first: the
+ * preferred change (`preferredMix`, ฿1,000 → ฿500 ×1 · ฿100 ×4 · ฿50 ×2);
+ * failing that, the note is changed into exactly what is missing (the take
+ * less the most the other notes reach without passing it) plus the rest,
+ * both as cashNotes — always possible for a whole-baht take, since every
+ * note left out of that best total is larger than the gap.
+ * smallSatang = money in notes below the broken one; shortSatang = what the
+ * take needs below the broken note (take − the most the broken-or-larger
+ * notes reach without passing it) minus smallSatang.
  */
 export function breakPlan(pileSatang: number, takeSatang: number): BreakPlan | null {
-  void pileSatang;
-  void takeSatang;
-  throw new Error('not implemented');
+  if (takeSatang <= 0 || takeSatang > pileSatang || pickNotes(pileSatang, takeSatang) !== null) return null;
+  const notes = cashNotes(pileSatang);
+  const breakable = [...new Set(notes)].filter((n) => NOTE_STEPS.includes(n) && n > NOTE_STEPS[NOTE_STEPS.length - 1]).sort((a, b) => a - b);
+  for (const n of breakable) {
+    const rest = [...notes];
+    rest.splice(rest.indexOf(n), 1);
+    const mixes: number[][] = [];
+    const pref = preferredMix(n);
+    if (pref) mixes.push(pref);
+    // Else exactly what is missing: the gap between the take and the most the other notes reach without passing it.
+    // The satang coin (cashNotes' leftover) can only be in it whole: with a satang take, it must be.
+    const coin = rest.find((x) => !NOTE_STEPS.includes(x)) ?? 0;
+    const target = takeSatang % 100 === 0 ? takeSatang : takeSatang - coin;
+    const gap =
+      target -
+      bestBelow(
+        rest.filter((x) => NOTE_STEPS.includes(x)),
+        target,
+      );
+    if (gap > 0 && gap < n && gap % 100 === 0) mixes.push([...cashNotes(gap), ...cashNotes(n - gap)]);
+    for (const mix of mixes) {
+      const after = [...rest, ...mix];
+      const take = liftableNotes(after, takeSatang);
+      if (!take) continue;
+      const smallSatang = sumOf(notes.filter((x) => x < n));
+      const need =
+        takeSatang -
+        bestBelow(
+          notes.filter((x) => x >= n),
+          takeSatang,
+        );
+      return {
+        pile: groupNotes(notes),
+        take: groupNotes(take),
+        smallSatang,
+        shortSatang: Math.max(0, need - smallSatang),
+        broken: n,
+        into: groupNotes(mix),
+      };
+    }
+  }
+  return null;
 }
 
 /** Group a note list (largest first) into chips "฿1,000 ×9". */
 export function groupNotes(notes: readonly number[]): NoteCount[] {
-  void notes;
-  throw new Error('not implemented');
+  const out: { satang: number; count: number }[] = [];
+  for (const n of [...notes].sort((a, b) => b - a)) {
+    const last = out[out.length - 1];
+    if (last && last.satang === n) last.count += 1;
+    else out.push({ satang: n, count: 1 });
+  }
+  return out;
 }
 
 // ── CO-17 / CO-26 · the confirm button's gate ───────────────────────────────
@@ -245,8 +514,23 @@ export function confirmGate(i: {
   /** D-61: some worker is over-deducted already (sale edited after). */
   readonly over: boolean;
 }): ConfirmGate {
-  void i;
-  throw new Error('not implemented');
+  if (i.over) return { kind: 'over' };
+  const unchecked = i.debtors.filter((d) => !i.debtChecked.has(d.id));
+  const debt: 'check' | 'answer' | null = i.debtors.length ? (unchecked.length ? 'check' : null) : i.debtAnswered ? null : 'answer';
+  const owed: 'check' | 'answer' | null = i.owed.length ? (i.owed.some((o) => !i.owedChecked.has(o.id)) ? 'check' : null) : i.owedAnswered ? null : 'answer';
+  // Both cards pending: "ตอบ…ทั้ง 2 ใบ" only when both ask; any card with names to check makes it "ตรวจ…ทั้ง 2 ใบ".
+  if (debt && owed)
+    return {
+      kind: debt === 'answer' && owed === 'answer' ? 'answer-both' : 'check-both',
+    };
+  if (debt === 'check') return { kind: 'check-debt', names: unchecked.map((d) => d.name) };
+  if (debt === 'answer') return { kind: 'answer-debt' };
+  if (owed === 'check') return { kind: 'check-owed' };
+  if (owed === 'answer') return { kind: 'answer-owed' };
+  if (i.plan.anyInvalid) return { kind: 'invalid' };
+  if (!i.plan.tally.ok) return { kind: 'tally' };
+  if (i.cashStepNeeded && !i.cashStepDone) return { kind: 'cash-step' };
+  return { kind: 'ready' };
 }
 
 // ── Confirm: the existing events, one worker at a time ──────────────────────
@@ -273,7 +557,17 @@ export type CloseoutWrite =
  * payment), then netting (debt payment, then repayment), then the route
  * line. New ids are fixed per sale + worker + generation (`gen` = how many
  * lines this sale already had for the worker) so a double run cannot write
- * twice. Returns { ok:false } when the netting cannot be placed.
+ * twice. Returns { ok:false } when the netting cannot be placed, or the plan
+ * is invalid (nothing is written).
+ *
+ * Ids: route line `dpay-<saleId>-<workerId>-<gen>`, netting debt payment
+ * `dpay-<saleId>-<workerId>-<gen>-net`, its repayment
+ * `rep-<saleId>-<workerId>-<gen>`. `gen` starts at `recorded.length` (the
+ * live lines) and moves up past any id already used — pass `knownIds` (every
+ * debt-payment / repayment id ever written for this sale + worker, deleted
+ * ones too), or a re-edit after a void could reuse a voided id.
+ * "Matches" = netting total equal, route total equal, and every route line
+ * on the plan's route (no route lines when routeSatang is 0).
  */
 export function confirmWrites(i: {
   readonly saleId: string;
@@ -283,9 +577,88 @@ export function confirmWrites(i: {
   readonly plan: CloseoutWorker;
   readonly recorded: readonly RecordedLine[];
   readonly owed: readonly Reimbursement[];
+  readonly knownIds?: readonly string[];
 }): { ok: true; writes: CloseoutWrite[] } | { ok: false } {
-  void i;
-  throw new Error('not implemented');
+  const { plan, recorded, saleId, worker } = i;
+  if (plan.invalid) return { ok: false };
+  const netLines = recorded.filter((l) => l.method === 'netting');
+  const routeLines = recorded.filter((l) => l.method !== 'netting');
+  const matches =
+    sumOf(netLines.map((l) => l.amountSatang)) === plan.nettingSatang &&
+    sumOf(routeLines.map((l) => l.amountSatang)) === plan.routeSatang &&
+    (plan.routeSatang === 0 ? routeLines.length === 0 : routeLines.every((l) => l.method === plan.route));
+  if (matches) return { ok: true, writes: [] };
+
+  const used = new Set([...(i.knownIds ?? []), ...recorded.flatMap((l) => [l.id, ...(l.repaymentId ? [l.repaymentId] : [])])]);
+  const ids = (g: number) => ({
+    route: `dpay-${saleId}-${worker.id}-${g}`,
+    net: `dpay-${saleId}-${worker.id}-${g}-net`,
+    rep: `rep-${saleId}-${worker.id}-${g}`,
+  });
+  let gen = recorded.length;
+  while (Object.values(ids(gen)).some((x) => used.has(x))) gen += 1;
+  const id = ids(gen);
+
+  const netting =
+    plan.nettingSatang > 0
+      ? nettingPayloads({
+          worker,
+          farm: i.farm,
+          owed: i.owed,
+          amountSatang: plan.nettingSatang,
+          saleId,
+          date: i.date,
+          repaymentId: id.rep,
+        })
+      : null;
+  if (netting && !netting.ok) return { ok: false };
+
+  const writes: CloseoutWrite[] = [];
+  // The old lines go first, so a stop part-way leaves less deducted, never twice; a repayment before its debt payment.
+  for (const l of recorded) {
+    if (l.method === 'netting' && l.repaymentId && l.repaymentHead)
+      writes.push({
+        op: 'void-repayment',
+        id: l.repaymentId,
+        base: l.repaymentHead,
+      });
+    writes.push({ op: 'void-payment', id: l.id, base: l.headEventId });
+  }
+  if (netting?.ok) {
+    // The debt payment counts only with its repayment: written first, a stop between the two changes nothing.
+    writes.push({
+      op: 'write',
+      id: id.net,
+      base: null,
+      payload: netting.debtPayment,
+    });
+    writes.push({
+      op: 'write',
+      id: id.rep,
+      base: null,
+      payload: netting.repayment,
+    });
+  }
+  if (plan.routeSatang > 0) {
+    writes.push({
+      op: 'write',
+      id: id.route,
+      base: null,
+      payload: {
+        t: 'debt_payment_recorded',
+        fields: {
+          worker,
+          creditor: i.farm,
+          amountSatang: plan.routeSatang,
+          date: i.date,
+          note: '',
+          method: plan.route,
+          saleId,
+        },
+      },
+    });
+  }
+  return { ok: true, writes };
 }
 
 // ── CO-25 · repayments not yet received ─────────────────────────────────────
@@ -302,7 +675,13 @@ export function pendingRepays(
   plan: CloseoutPlan,
   ticked: { readonly owner: boolean; readonly debtCash: (workerId: string) => boolean },
 ): PendingRepay[] {
-  void plan;
-  void ticked;
-  throw new Error('not implemented');
+  return plan.workers
+    .filter((w) => w.routeSatang > 0)
+    .map((w) => ({
+      workerId: w.id,
+      name: w.name,
+      satang: w.routeSatang,
+      how: w.route === 'transfer-with-owner' ? ('transfer' as const) : ('cash' as const),
+    }))
+    .filter((p) => (p.how === 'transfer' ? !ticked.owner : !ticked.debtCash(p.workerId)));
 }
