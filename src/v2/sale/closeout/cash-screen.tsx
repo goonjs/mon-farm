@@ -183,11 +183,11 @@ export function CloseoutCashScreen() {
                 <Text style={{ flexShrink: 1, ...line }}>{msg('cop.cashOf', { name: p.name })}</Text>
                 <Text style={amount}>{baht(p.satang)}</Text>
               </View>
-              {p.pickedSatang ? <Text style={{ ...line, fontSize: t.font.size.bodySm, color: t.color.debtIn }}>{msg('cop.pickedOf', { amount: baht(p.pickedSatang) })}</Text> : null}
+              {p.pickedSatang ? <Text style={{ ...line, fontSize: t.font.size.bodySm, color: t.color.debtIn }}>{msg('cop.pickedOf', { dir: '↘', amount: baht(p.pickedSatang) })}</Text> : null}
             </View>
           ) : (
             <View key={`repay-${p.id}`} testID={`cop-split-${p.id}`} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: t.space.sm }}>
-              <Text style={{ flexShrink: 1, ...line, color: t.color.debtIn }}>{msg('cop.splitOf', { name: p.name })}</Text>
+              <Text style={{ flexShrink: 1, ...line, color: t.color.debtIn }}>{msg('cop.splitOf', { dir: '↘', name: p.name })}</Text>
               <Text style={{ ...amount, color: t.color.debtIn }}>{baht(p.satang)}</Text>
             </View>
           ),
@@ -199,7 +199,7 @@ export function CloseoutCashScreen() {
           </View>
           {plan.transferRepaySatang ? (
             <Text testID="cop-transfer-split" style={{ ...line, fontSize: t.font.size.bodySm }}>
-              {msg('cop.transferSplit', { owner: baht(plan.ownerSatang), name: repayName, repay: baht(plan.transferRepaySatang) })}
+              {msg('cop.transferSplit', { dir: '↘', owner: baht(plan.ownerSatang), name: repayName, repay: baht(plan.transferRepaySatang) })}
             </Text>
           ) : null}
         </View>

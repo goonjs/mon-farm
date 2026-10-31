@@ -116,16 +116,16 @@ export function BuyerViewScreen() {
         {buyerPiles(plan).map((p) =>
           p.kind === 'cash' ? (
             <Pile key={`cash-${p.id}`} testID={`bv-cash-${p.id}`} symbol={msg('cop.symCash')} label={msg('cop.bvCash', { name: p.name })} satang={p.satang}>
-              {p.pickedSatang ? <Text style={{ ...small, color: t.color.debtIn }}>{msg('cop.pickedOf', { amount: baht(p.pickedSatang) })}</Text> : null}
+              {p.pickedSatang ? <Text style={{ ...small, color: t.color.debtIn }}>{msg('cop.pickedOf', { dir: '↘', amount: baht(p.pickedSatang) })}</Text> : null}
             </Pile>
           ) : (
             <Pile key={`repay-${p.id}`} testID={`bv-repay-${p.id}`} symbol={msg('cop.symCash')} label={msg('cop.bvRepayCash', { name: p.name })} satang={p.satang}>
-              <Text style={small}>{msg('cop.bvRepayNote')}</Text>
+              <Text style={small}>{msg('cop.bvRepayNote', { dir: '↘' })}</Text>
             </Pile>
           ),
         )}
-        <Pile testID="bv-transfer" symbol={msg('cop.symTransfer')} label={msg('cop.transfer')} satang={plan.transferSatang}>
-          {plan.transferRepaySatang ? <Text style={small}>{msg('cop.transferSplit', { owner: baht(plan.ownerSatang), name: repayName, repay: baht(plan.transferRepaySatang) })}</Text> : null}
+        <Pile testID="bv-transfer" symbol={'⇄'} label={msg('cop.transfer')} satang={plan.transferSatang}>
+          {plan.transferRepaySatang ? <Text style={small}>{msg('cop.transferSplit', { dir: '↘', owner: baht(plan.ownerSatang), name: repayName, repay: baht(plan.transferRepaySatang) })}</Text> : null}
           {account ? (
             <View testID="bv-account" style={{ gap: t.space.xxs, paddingTop: t.space.xs }}>
               {pp ? (
@@ -145,7 +145,7 @@ export function BuyerViewScreen() {
             </View>
           ) : null}
         </Pile>
-        <Pile testID="bv-total" rule="double" symbol={msg('cop.symTotal')} label={msg('cop.bvTotal')} satang={plan.tally.sumSatang} />
+        <Pile testID="bv-total" rule="double" symbol={'Σ'} label={msg('cop.bvTotal')} satang={plan.tally.sumSatang} />
       </View>
     </FarmScreen>
   );

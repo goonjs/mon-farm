@@ -195,16 +195,16 @@ function PayBody({ bump }: { bump: () => void }) {
     const body: ReactNode[] = [];
     if (row.kind === 'cash') body.push(sub(cashSub(row.tp), `pay-sub-${row.id}`));
     if (row.kind === 'repay') {
-      body.push(sub(row.picked ? msg('cop.viaPicked', { name: row.tp.name }) : msg('cop.viaSplit'), `pay-sub-${row.id}`, t.color.debtIn));
+      body.push(sub(row.picked ? msg('cop.viaPicked', { dir: '↘', name: row.tp.name }) : msg('cop.viaSplit', { dir: '↘' }), `pay-sub-${row.id}`, t.color.debtIn));
       const wait = pendingCash(row.tp.id);
-      if (!ps.done && wait) body.push(chip(msg('cop.waitCash', { amount: short(wait) }), `pay-chip-${row.id}`));
+      if (!ps.done && wait) body.push(chip(msg('cop.waitCash', { dir: '↘', amount: short(wait) }), `pay-chip-${row.id}`));
       if (ps.done && row.picked && status.get(row.tp.id)?.done) body.push(sub(msg('cop.tickedWith', { name: row.tp.name }), `pay-with-${row.id}`));
     }
     if (row.kind === 'owner') {
       if (money.rounding.transferInSatang) {
-        body.push(sub(msg('cop.ownerSplit', { owner: baht(money.rounding.result.ownerSatang), name: repayName, repay: baht(money.rounding.transferInSatang) }), `pay-sub-${row.id}`));
+        body.push(sub(msg('cop.ownerSplit', { dir: '↘', owner: baht(money.rounding.result.ownerSatang), name: repayName, repay: baht(money.rounding.transferInSatang) }), `pay-sub-${row.id}`));
       }
-      if (!ps.done && pendingTransfer) body.push(chip(msg('cop.waitTransfer', { amount: short(pendingTransfer) }), `pay-chip-${row.id}`));
+      if (!ps.done && pendingTransfer) body.push(chip(msg('cop.waitTransfer', { dir: '↘', amount: short(pendingTransfer) }), `pay-chip-${row.id}`));
       if (account) {
         body.push(
           <IconLine key="acct" icon={(c) => <BankIcon color={c} size={12} />}>
@@ -287,9 +287,9 @@ function PayBody({ bump }: { bump: () => void }) {
       }
       overlay={
         <BottomSheet open={sources} onClose={() => setSources(false)} title={msg('cop.srcTitle')} testID="pay-sources">
-          {check(src.shares.ok, msg('cop.srcShares'), 'pay-src-shares')}
-          {check(src.debt.ok, msg('cop.srcDebt'), 'pay-src-debt')}
-          {check(src.rounding.ok, msg('cop.srcRound'), 'pay-src-round')}
+          {check(src.shares.ok, msg('cop.srcShares', { n: '①' }), 'pay-src-shares')}
+          {check(src.debt.ok, msg('cop.srcDebt', { dir: '↘', n: '②' }), 'pay-src-debt')}
+          {check(src.rounding.ok, msg('cop.srcRound', { n: '③' }), 'pay-src-round')}
           {check(src.paid.ok, msg('cop.srcPaid'), 'pay-src-paid')}
           <Button testID="pay-sources-close" onPress={() => setSources(false)}>
             {msg('cop.close')}
