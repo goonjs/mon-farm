@@ -17,7 +17,8 @@ export default defineConfig({
     // port files (people.ts, store.ts — no RN/web-only globals). The one
     // platform adapter tested here is store.web.ts, and only through an
     // injected IDBFactory (fake-indexeddb) and Storage stub — nothing reaches
-    // a real browser global. Native adapters (expo-sqlite) stay out.
+    // a real browser global. Native adapters (expo-sqlite) stay out — except
+    // device-settings.native.ts (E01-S19), tested with expo-sqlite/kv-store faked.
     // `src/i18n/*.test.ts` joins on the same terms: the catalogue and its
     // resolver are plain data and a pure function, with the React binding kept
     // in a separate file precisely so the rules can be proven without a tree.

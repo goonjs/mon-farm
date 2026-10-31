@@ -45,7 +45,15 @@ describe('legacy cleanup (E01-S02/S03 AC: no migration)', () => {
     cleanUpLegacy();
     const keys = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)).sort();
     // People moved to master-data events in E03-S01, but the old key is kept: not read, not cleared.
-    expect(keys).toEqual(['mon-farm:farm-profile', 'mon-farm:people', 'mon-farm:speech-on']);
+    expect(keys).toEqual(['mon-farm:farm-profile', 'mon-farm:locale', 'mon-farm:people', 'mon-farm:speech-on']);
+  });
+
+  it('keeps the language choice: mon-farm:locale is a device setting now (E01-S19, owner 2026-10-31)', () => {
+    localStorage.setItem('mon-farm:locale', 'en');
+    localStorage.setItem('mon-farm:sales', '[]');
+    cleanUpLegacy();
+    expect(localStorage.getItem('mon-farm:locale')).toBe('en');
+    expect(localStorage.getItem('mon-farm:sales')).toBeNull();
   });
 
   it('never throws, even when storage itself does', () => {
