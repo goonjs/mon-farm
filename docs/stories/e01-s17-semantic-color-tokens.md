@@ -1,6 +1,6 @@
 # Story E01-S17: สี 2 ชั้น (palette → semantic token) + เปลี่ยนชุดสีด้วยค่าเดียว
 
-Status: In Progress — AC ตาม D-81 รอเจ้าของตรวจ
+Status: Review (PR #79 merged; AC ตาม D-81 รอเจ้าของตรวจ)
 
 ## Context
 

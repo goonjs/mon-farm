@@ -1,6 +1,6 @@
 # Story E04-S17: ปรับหน้านับเข่ง — เข่งไม่เต็ม เลือกใหม่ได้ · การ์ดนับแล้ว · ปุ่มกดค้าง/แตะ
 
-Status: In Progress
+Status: Done (PR #113 merged; owner ack in Push Ledger 2026-10-18; AC 14/14)
 
 ## Context
 

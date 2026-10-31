@@ -1,6 +1,6 @@
 # Story E11-S01: ค่าใช้จ่ายและวงจร Actual / Committed / Planned
 
-Status: Ready (เจ้าของตกลง AC 2026-10-03)
+Status: Review (built, v2 money screens on `dev`; AC agreed by owner 2026-10-03; AC boxes not yet ticked)
 
 ## Context
 

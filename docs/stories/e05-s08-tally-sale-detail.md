@@ -1,6 +1,6 @@
 # Story E05-S08: หน้าเทียบยอดแสดงรายละเอียดยอดขาย
 
-Status: Review
+Status: Done (PR #96 merged 1639b31; owner ack in Push Ledger 2026-10-11)
 
 ## Context
 

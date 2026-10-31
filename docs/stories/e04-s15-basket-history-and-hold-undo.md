@@ -1,6 +1,6 @@
 # Story E04-S15: ประวัติการบันทึกเข่ง + ย้อนกลับแบบกดค้าง
 
-Status: Review
+Status: Done (PR #98 merged d7050a0; owner ack in Push Ledger 2026-10-11)
 
 ## Context
 
