@@ -103,9 +103,10 @@ precedence over the dynamic one.
 | `/v2/sale/<id>/public?point=` | โหมดสาธารณะ (9). Built |
 | `/v2/sale/<id>/backfill?point=` | บันทึกย้อนหลัง (14). Built |
 | `/v2/sale/<id>/check` | ตรวจยอดกับคนรับซื้อยาง (16). Built |
-| `/v2/sale/<id>/settlement`, `/rounding` | สรุปยอดส่วนแบ่ง, หักหนี้, ปัดเศษ (17, 17a, 18). Built |
-| `/v2/sale/<id>/tally` | เทียบยอด (18a). Built |
-| `/v2/sale/<id>/payment` | การจ่ายเงิน (19). Built |
+| `/v2/sale/<id>/settlement` | สรุปจ่ายเงิน: หนี้, สวนค้างจ่าย, การ์ดคนกรีด, แถบตรวจยอด (E05-S11; replaced 17, 17a, 18a). Built |
+| `/v2/sale/<id>/cash` | จัดเงินสดกับคนรับซื้อยาง: ทางรับเงินคืนหนี้ + ปัดเศษ (E05-S11 CO-19; replaced 18). Built |
+| `/v2/sale/<id>/buyer-view` | ให้คนรับซื้อดู (E05-S11 CO-20). Built |
+| `/v2/sale/<id>/payment` | จ่ายเงิน · ปิดการขาย (E05-S11 CO-10; replaced 19). Built |
 | `/v2/sale/<id>/show-account` | ให้คนรับซื้อยางดูบัญชี (17b, 17c). Built |
 | `/v2/prepare`, `/v2/reports`, `/v2/weather`, `/v2/payables`, `/v2/stock` | Home actions and modules with no screen yet: เตรียมขาย, รายงานการขายย้อนหลัง, พยากรณ์อากาศ, รายการที่ต้องจ่าย, รายการ stock (placeholders) |
 | `/v2/sale/<step>` | old reserved sale-step addresses: redirect to `/v2/sales` |

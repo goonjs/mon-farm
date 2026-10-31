@@ -9,7 +9,8 @@ import { evidence, seedEvents, seedMaster } from './fixtures';
  * The v2 sale flow in the real web build, offline (sale mockup v1.1.0
  * sections 1–4): start a sale, pick a point, check the empty scale, count,
  * a short basket, switch point and fill it up, reload and find it all still
- * there, then check with the buyer, settle shares, round and pay — plus
+ * there, then check with the buyer, the close-out summary (E05-S11), the
+ * cash step and pay — plus
  * บันทึกย้อนหลัง. Everything is read back from the local event log.
  * Screenshots at 412×915 are evidence for the owner beside the mockup
  * (written to docs/ only with UPDATE_SCREENSHOTS=1).
@@ -64,10 +65,38 @@ test('one open sale: เริ่มการขาย goes back to it; the ⋯ 
   await expect(id('sale-start')).toBeVisible();
 });
 
-test('settlement: netting the money the farm owes back against a debt (E06-S04)', async ({ page }) => {
+/** A finance event as the device stores it (localStorage `mon-farm:finance-events`). */
+const finEvent = (n: number, ts: number, targetId: string, payload: FinancePayload): FinanceEvent => ({
+  id: `e2e-fin-${n}`,
+  groupId: FIXTURE_GROUP_ID,
+  deviceSeq: n,
+  ts,
+  actor: { userId: 'pre-login', deviceId: 'dev-seed' },
+  source: 'app',
+  targetId,
+  baseEventId: null,
+  payload,
+});
+const FARM_PAYER = { id: 'farm', name: 'เงินสวน' };
+const RED = { id: 'red', name: 'แดง' };
+const NAT = { id: 'nat', name: 'นัด' };
+const loan = (worker: typeof RED, amountSatang: number, date: string): FinancePayload => ({ t: 'debt_added', fields: { worker, kind: 'loan', amountSatang, date, note: '', lender: FARM_PAYER, fertilizer: null, carriedForward: false } });
+const fert = (worker: typeof RED, amountSatang: number, date: string): FinancePayload => ({
+  t: 'debt_added',
+  fields: { worker, kind: 'fertilizer', amountSatang, date, note: '', lender: null, fertilizer: { totalSatang: amountSatang * 2, workerPct: 50 }, carriedForward: false },
+});
+const owesNat = (amountSatang: number, date: string): FinancePayload => ({ t: 'expense_created', fields: { amountSatang, date, stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าปุ๋ย', note: '', payer: NAT } });
+const seedFinance = (page: Page, events: FinanceEvent[]) => page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), events);
+/** Clear the close-out number pad, then type. */
+async function padType(page: Page, digits: string) {
+  for (let i = 0; i < 10; i++) await on(page)('co-pad-key-back').click();
+  for (const d of digits) await on(page)(`co-pad-key-${d}`).click();
+}
+
+test('close-out: netting the money the farm owes back against a debt (E06-S04)', async ({ page }) => {
   const id = on(page);
   await seedMaster(page, FARM);
-  // นัด: one full basket at จุด 4 (share ฿1,455 at 52.50), owes the farm ฿3,000, and the farm owes นัด ฿640.
+  // นัด: two full baskets at จุด 4 (share ฿2,625 at 52.50), owes the farm ฿3,000, and the farm owes นัด ฿640.
   const b = new LogBuilder('sale-net');
   b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
   b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
@@ -75,42 +104,33 @@ test('settlement: netting the money the farm owes back against a debt (E06-S04)'
   b.acceptAt('a4', 1).acceptAt('a4', 2);
   const now = Date.now();
   await seedEvents(page, b.build().map((e) => ({ ...e, ts: now })));
-  const fin = (n: number, targetId: string, payload: FinancePayload): FinanceEvent => ({
-    id: `e2e-net-${n}`,
-    groupId: FIXTURE_GROUP_ID,
-    deviceSeq: n,
-    ts: now,
-    actor: { userId: 'pre-login', deviceId: 'dev-seed' },
-    source: 'app',
-    targetId,
-    baseEventId: null,
-    payload,
-  });
-  const NAT = { id: 'nat', name: 'นัด' };
-  const events = [
-    fin(1, 'debt-nat', { t: 'debt_added', fields: { worker: NAT, kind: 'loan', amountSatang: 300_000, date: '2026-09-01', note: '', lender: { id: 'farm', name: 'เงินสวน' }, fertilizer: null, carriedForward: false } }),
-    fin(2, 'exp-nat', { t: 'expense_created', fields: { amountSatang: 64_000, date: '2026-09-28', stage: 'actual', categoryId: null, propertyId: null, item: '', note: '', payer: NAT } }),
-  ];
-  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), events);
+  await seedFinance(page, [finEvent(1, now, 'debt-nat', loan(NAT, 300_000, '2026-09-01')), finEvent(2, now, 'exp-nat', owesNat(64_000, '2026-09-28'))]);
   await page.goto('/v2/sale/sale-net/settlement');
-  await expect(id('settlement')).toBeVisible();
-  await id('deduct-nat').click();
-  await expect(id('net-card')).toContainText('640.00');
-  await id('net-amount').fill('400');
-  // หักหนี้ 700 in all: 400 netted, 300 out of the cash (mockup 17a)
-  await id('deduct-amount').fill('700');
+  await expect(id('co-summary')).toBeVisible();
+  // the proposal never nets by itself (D-60)
+  await expect(id('co-deduct-nat')).toContainText('−2,625.00');
+  await expect(id('co-net-nat')).toHaveCount(0);
+  await id('co-deduct-nat').click();
+  await id('co-net-link').click();
+  await expect(id('co-net-on')).toBeVisible();
   await shot(page, '23-netting');
-  await id('deduct-save').click();
-  await expect(id('netted-nat')).toContainText('400.00');
+  await id('co-deduct-ok').click();
+  // ↗ the farm repays นัด by netting; the deduct ✓ counts as checking his debt and the owed card (A22, CO-26)
+  await expect(id('co-net-nat')).toContainText('หักกลบ');
+  await expect(id('co-tally')).toContainText('ตรงถึงสตางค์');
 
-  // ── เทียบยอด (page 18a) with a deduction and a netting: the origin line adds up to the cash ──
-  await page.goto('/v2/sale/sale-net/tally');
-  await expect(id('tally')).toBeVisible();
-  await expect(id('tally-part-nat-debt')).toContainText('−700.00');
-  await expect(id('tally-part-nat-back')).toContainText('+400.00');
-  await expect(id('tally-net-nat')).toContainText('หักกลบ ไม่ใช้เงินสด: หนี้นัดลด 400.00 = สวนคืนนัด 400.00');
-  await expect(id('tally-ok')).toBeVisible();
+  // ── ดูที่มา (was เทียบยอด, page 18a): ② the debt moves add up to 0, with the ↗ netting pair ──
+  await id('co-sources-open').click();
+  await expect(id('co-src-debt')).toContainText('หนี้ลด = สวนได้คืน');
+  await expect(id('co-src-debt')).toContainText('หักกลบ');
+  await expect(id('co-src-paid')).toContainText('5,250.00');
   await shot(page, '18a-tally', true);
+  await id('co-sources-sheet-scrim').click({ position: { x: 10, y: 10 } });
+  await id('co-cash-card').click();
+  await id('cop-ok').click();
+  await id('co-confirm').click();
+  await expect(id('payment')).toBeVisible();
+  await expect(id('pay-tally')).toContainText('ยอดตรงกันแล้ว');
 });
 
 test('a sale for an earlier day takes part of a later-dated debt as separate cash (E05-S10)', async ({ page }) => {
@@ -124,42 +144,107 @@ test('a sale for an earlier day takes part of a later-dated debt as separate cas
   b.acceptAt('a4', 1).acceptAt('a4', 2);
   const day = Date.parse('2026-10-13T08:00:00+07:00');
   await seedEvents(page, b.build().map((e) => ({ ...e, ts: day })));
-  const NAT = { id: 'nat', name: 'นัด' };
-  const debt: FinanceEvent = {
-    id: 'e2e-s10-1',
-    groupId: FIXTURE_GROUP_ID,
-    deviceSeq: 1,
-    ts: Date.now(),
-    actor: { userId: 'pre-login', deviceId: 'dev-seed' },
-    source: 'app',
-    targetId: 'debt-nat',
-    baseEventId: null,
-    payload: { t: 'debt_added', fields: { worker: NAT, kind: 'fertilizer', amountSatang: 150_000, date: '2026-10-27', note: '', lender: null, fertilizer: { totalSatang: 300_000, workerPct: 50 }, carriedForward: false } },
-  };
-  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [debt]);
+  await seedFinance(page, [finEvent(1, Date.now(), 'debt-nat', fert(NAT, 150_000, '2026-10-27'))]);
   await page.goto('/v2/sale/sale-13/settlement');
-  await expect(id('settlement')).toBeVisible();
-  await id('deduct-nat').click();
-  await id('deduct-amount').fill('500');
-  await id('method-buyer-split').click();
-  await id('deduct-save').click();
+  await expect(id('co-summary')).toBeVisible();
+  await id('co-deduct-nat').click();
+  await padType(page, '500');
   // 1,500 − 500: what the sale did not take is still owed, not 0.
-  await expect(id('debt-left-nat')).toContainText('1,000.00');
-  await expect(id('deducted-nat')).toContainText('คนรับซื้อยางแยกเป็นเงินสดอีกก้อนให้สวน');
-  await id('debt-block').scrollIntoViewIfNeeded();
+  await expect(id('co-res-left')).toContainText('1,000.00');
   await shot(page, '17-debt-left-e05s10');
-  await id('cash-today').scrollIntoViewIfNeeded();
-  await expect(id('cash-today')).toContainText('สวนได้รับเงินสดคืนหนี้วันนี้');
+  await id('co-deduct-ok').click();
+  await id('co-owed-none').click();
+  await id('co-cash-card').click();
+  await id('cop-route-nat-buyer-split').click();
+  await expect(id('cop-split-nat')).toContainText('เงินสดคืนหนี้นัด');
+  await expect(id('cop-split-nat')).toContainText('500.00');
   await shot(page, '17-cash-today-e05s10');
+  await id('cop-ok').click();
+  await id('co-confirm').click();
 
   // The farm ticks that it got the separate cash.
-  await page.goto('/v2/sale/sale-13/payment');
   await expect(id('payment')).toBeVisible();
-  await expect(id('tick-debt-cash-nat')).toContainText('สวนได้รับเงินสดคืนหนี้จากนัดแล้ว');
-  await expect(id('tick-amt-debt-cash-nat')).toContainText('500');
+  await expect(id('tick-debt-cash-nat')).toContainText('รับเงินสดคืนหนี้แล้ว · นัด');
+  await expect(id('tick-amt-debt-cash-nat')).toContainText('500.00');
   await id('tick-debt-cash-nat').click();
   await expect(id('tick-debt-cash-nat')).toHaveAttribute('aria-checked', 'true');
   await shot(page, '19-payment-debt-cash-e05s10', true);
+  // Back on the summary: 1,000 still owed.
+  await page.goto('/v2/sale/sale-13/settlement');
+  await id('co-debt-open').click();
+  await expect(id('co-debt-row-nat')).toContainText('คงเหลืออีก 1,000.00');
+});
+
+test.describe('the story example at 390×844 (E05-S11)', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('2 tappers with debt: debt ถูกต้อง → owed ไว้ก่อน ถูกต้อง → cash ตกลง → ยืนยันยอด → pay → close', async ({ page }) => {
+    const id = on(page);
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await seedMaster(page, FARM);
+    // ขาย 28,875.00 at 52.50: แดง 350 kg (share 9,187.50), นัด 200 kg (share 5,250.00).
+    const b = new LogBuilder('sale-story');
+    b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+    b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+    for (const p of ['a1', 'a4']) b.sys({ t: 'pile_added', pileId: p, zoneId: 'fa', name: p, tareG: 2_000, stdNetG: 50_000 });
+    for (let n = 1; n <= 7; n++) b.acceptAt('a1', n);
+    for (let n = 1; n <= 4; n++) b.acceptAt('a4', n);
+    const now = Date.now();
+    await seedEvents(page, b.build().map((e) => ({ ...e, ts: now })));
+    await seedFinance(page, [
+      finEvent(1, now, 'd-red-1', loan(RED, 600_000, '2026-09-01')),
+      finEvent(2, now, 'd-red-2', fert(RED, 579_000, '2026-09-28')),
+      finEvent(3, now, 'd-red-3', fert(RED, 400_000, '2026-10-05')),
+      finEvent(4, now, 'plan-red', { t: 'debt_plan_set', worker: RED, perSaleSatang: 325_000 }),
+      finEvent(5, now, 'd-nat-1', fert(NAT, 735_000, '2026-10-05')),
+      finEvent(6, now, 'd-nat-2', loan(NAT, 100_000, '2026-10-20')),
+      finEvent(7, now, 'exp-nat', owesNat(64_000, '2026-10-25')),
+    ]);
+    await page.goto('/v2/sale/sale-story/settlement');
+    await expect(id('co-summary')).toBeVisible();
+    await expect(id('co-cash-red')).toHaveText('5,938.00');
+    await expect(id('co-cash-nat')).toHaveText('0.00');
+    await expect(id('co-tally')).toContainText('ตรงถึงสตางค์');
+    // How tall the page is against the screen (CO-1: 2 tappers ≤ 1.0 screen), for the report.
+    const height = await page.evaluate(() => Math.max(...[...document.querySelectorAll('div')].filter((d) => getComputedStyle(d).overflowY === 'auto' || getComputedStyle(d).overflowY === 'scroll').map((d) => d.scrollHeight / d.clientHeight)));
+    test.info().annotations.push({ type: 'summary-screens', description: height.toFixed(2) });
+    await shot(page, 'co-01-summary');
+
+    let taps = 0;
+    const tap = async (testId: string) => {
+      await id(testId).click();
+      taps += 1;
+    };
+    await tap('co-debt-open');
+    await tap('co-debt-ok');
+    await tap('co-owed-open');
+    await expect(id('co-owed-hold-nat')).toBeVisible();
+    await tap('co-owed-ok');
+    // ไว้ก่อน is the default (CO-26)
+    await expect(id('co-owed-card')).toContainText('ไว้ก่อน');
+    await expect(id('co-confirm')).toContainText('จัดเงินสดกับคนรับซื้อยางก่อน');
+    await tap('co-cash-card');
+    await expect(id('cop-transfer')).toContainText('22,937.00');
+    await expect(id('cop-total')).toContainText('28,875.00');
+    await tap('cop-ok');
+    await expect(id('co-confirm')).toContainText('ยืนยันยอด · ไปจ่ายเงิน');
+    await tap('co-confirm');
+    await expect(id('payment')).toBeVisible();
+    await expect(id('tick-amt-red')).toContainText('5,938.00');
+    await expect(id('pay-info-nat')).toContainText('นัดไม่มีเงินสดต้องจ่ายวันนี้');
+    await expect(id('tick-amt-owner')).toContainText('22,937.00');
+    await expect(id('pay-tally')).toContainText('ยอดตรงกันแล้ว');
+    await shot(page, 'co-09-payment');
+    await tap('close-sale');
+    await expect(id('sales')).toBeVisible();
+    await expect(id('sale-rows')).toContainText('ปิดแล้ว');
+    test.info().annotations.push({ type: 'taps', description: String(taps) });
+    console.log(`E05-S11 story example: ${taps} taps, summary ${height.toFixed(2)} screens`);
+    // story target ≤ 7 for summary → pay; the close is the 8th
+    expect(taps).toBeLessThanOrEqual(8);
+    expect(errors).toEqual([]);
+  });
 });
 
 const on = (page: Page) => (id: string) => page.getByTestId(id).filter({ visible: true });
@@ -366,33 +451,30 @@ test('start → point → empty scale → count → short → switch and fill �
   await expect(id('check-status')).toContainText('ตรงกัน');
   await id('to-settlement').click();
 
-  // ── สรุปยอดส่วนแบ่ง (page 17), ปัดเศษ (page 18) ──
-  await expect(id('settlement')).toBeVisible();
-  await expect(id('share-amt-red')).toContainText('8,972.50');
-  await expect(id('share-amt-nat')).toContainText('2,425.00');
-  await expect(id('owner-transfer')).toContainText('11,397.50');
+  // ── สรุปจ่ายเงิน (E05-S11): no debt recorded, the farm owes no one — both cards ask ──
+  await expect(id('co-summary')).toBeVisible();
+  await expect(id('co-worker-red')).toContainText('ส่วนแบ่ง 8,972.50');
+  await expect(id('co-worker-nat')).toContainText('ส่วนแบ่ง 2,425.00');
+  await expect(id('co-cash-red')).toHaveText('8,973.00');
+  await expect(id('co-confirm')).toContainText('ตอบการ์ดด้านบนทั้ง 2 ใบก่อน');
+  await id('co-debt-none').click();
+  await id('co-owed-none').click();
+  await expect(id('co-tally')).toContainText('ตรงถึงสตางค์');
   await shot(page, '17-settlement');
-  await id('to-rounding').click();
-  await expect(id('rounding-sheet')).toBeVisible();
-  await id('round-worker').click();
+  // ── จัดเงินสด (CO-19): the fraction is rounded to the tapper, first time ──
+  await id('co-cash-card').click();
+  await expect(id('cop-cash')).toBeVisible();
+  await expect(id('cop-round-worker')).toHaveAttribute('aria-checked', 'true');
+  await expect(id('cop-transfer')).toContainText('11,397.00');
+  await expect(id('cop-total')).toContainText('22,795.00');
   await shot(page, '18-rounding');
-  await id('round-confirm').click();
+  await id('cop-ok').click();
+  await expect(id('co-summary')).toBeVisible();
+  await id('co-confirm').click();
 
-  // ── เทียบยอด (page 18a) ──
-  await expect(id('tally')).toBeVisible();
-  await expect(id('tally-ok')).toBeVisible();
-  await expect(id('tally-weight')).toContainText('470 กก.');
-  await expect(id('tally-total')).toContainText('22,795.00');
-  await expect(id('tally-sum')).toContainText('22,795.00');
-  await expect(id('tally-part-red-sale')).toContainText('8,972.50');
-  await expect(id('tally-part-red-round')).toContainText('+0.50');
-  await expect(id('tally-part-owner-sale')).toContainText('11,397.50');
-  await expect(id('tally-part-owner-round')).toContainText('−0.50');
-  await id('to-payment').click();
-
-  // ── การจ่ายเงิน (page 19): ticks survive a reload; then close ──
+  // ── จ่ายเงิน · ปิดการขาย (CO-10): ticks survive a reload; then close ──
   await expect(id('payment')).toBeVisible();
-  await expect(id('tick-amt-red')).toContainText('8,973');
+  await expect(id('tick-amt-red')).toContainText('8,973.00');
   await id('tick-red').click();
   await expect(id('tick-red')).toHaveAttribute('aria-checked', 'true');
   await id('tick-owner').click();
@@ -400,7 +482,7 @@ test('start → point → empty scale → count → short → switch and fill �
   await page.reload();
   await context.setOffline(true);
   await expect(id('tick-red')).toHaveAttribute('aria-checked', 'true');
-  await expect(id('pay-check')).toContainText('ตรงกัน');
+  await expect(id('pay-tally')).toContainText('ยอดตรงกันแล้ว');
   await shot(page, '19-payment');
   await id('close-sale').click();
 
