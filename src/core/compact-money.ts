@@ -4,7 +4,9 @@
  * Display only and rounded: a screen that settles money shows the exact
  * figure one tap away, and no sum is ever taken from this text.
  *
- * Integer satang in; half-up rounding done on integers. Under 10,000 baht it
+ * Integer satang in (callers pass integers; exact up to ~45 billion baht,
+ * above that rounding may be off). Half-up rounding done on integers. The
+ * 4-digit rule is for farm-sized amounts: above 9,999 m the digits grow. Under 10,000 baht it
  * is whole baht with a comma (under 1,000 it keeps satang while 4 digits
  * allow, trailing zeros dropped). From 10,000 baht the unit carries the
  * scale and the decimals are fixed so a column keeps its width; a value that

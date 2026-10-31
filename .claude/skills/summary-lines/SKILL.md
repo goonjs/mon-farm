@@ -9,7 +9,7 @@ Built from the sale close-out proposal (`docs/ux/sale-closeout-proposal.md`, moc
 
 ## 1. Short money
 
-- A summary line shows at most **4 digits**: `฿ 3,250` · `฿ 12.54k` · `฿ 1.235m`. Whole baht with a comma under 10,000; from 10,000 the unit **k** or **m**.
+- A summary line shows at most **4 digits**: `฿ 3,250` · `฿ 12.54k` · `฿ 1.235m`. Whole baht with a comma from 1,000 to 9,999 (satang dropped); under 1,000 satang show while 4 digits allow (`฿ 640.5`, `฿ 12.34`); from 10,000 the unit **k** or **m**.
 - The unit is **stressed**: bold, action colour (and a light pill in mockups). Use `CompactMoney` (`src/ui/compact-money.tsx`); the text comes from `compactMoney` / `compactMoneyParts` (`src/core/compact-money.ts`). Never format by hand, never add k/m in a screen.
 - It is rounded and display only. The exact amount is one tap away (a detail sheet) and **no sum is ever taken from this text**. Detail sheets, receipts and anything the buyer reads show the full amount.
 - Thai-unit shortening for the counter cards (พัน / หมื่น / แสน, `compactBaht`, D-41) is a different thing and stays where it is.
