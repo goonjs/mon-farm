@@ -138,6 +138,25 @@ doesn't exist yet would be theater, not a gate. Until then, this section is
 the standing requirement: any story that introduces the tech stack must also
 stand up CI in the same story.
 
+## Local checks (git hooks)
+
+Cheap checks run on your machine so a bad commit message or an eslint error
+is caught before CI minutes are spent. `npm ci` / `npm install` runs the
+`prepare` script, which sets `core.hooksPath` to the tracked `.githooks/`
+(no dependency; logic in `scripts/local-checks.mjs`, tested in
+`scripts/local-checks.test.ts`). Git for Windows runs the same `sh` hooks.
+
+| Hook | Runs | Added time (measured) |
+|---|---|---|
+| `commit-msg` | the CI commit rule (Conventional Commits, subject <= 50) on the one message | ~0.05 s |
+| `pre-commit` | `eslint` on staged `.js/.ts(x)` files only; `tokens:check` if the token source is staged. Docs-only commits do nothing | ~2 s |
+| `pre-push` | `release.mjs lint origin/dev..HEAD`, then `npm run typecheck` unless the push is docs-only | ~10 s (0.1 s docs-only) |
+
+Skip once, on purpose: `SKIP_LOCAL_CHECKS=1 git commit ...` (works for any
+hook). Hooks are a convenience, not a gate: CI stays the authority and runs
+everything again. pre-commit checks the working-tree file, so a partly staged
+file is linted as a whole.
+
 ## Git conventions
 
 ### Commit messages — Conventional Commits

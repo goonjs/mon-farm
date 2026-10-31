@@ -198,6 +198,7 @@ Deploy Prod needs the owner's explicit yes per run. Full detail in
 
 **Agent branch and merge rules** (owner decision 2026-10-04, dev-pose standard):
 
+- Local git hooks (commit message, eslint, typecheck) are installed by `npm ci`; see `docs/process.md` "Local checks". Skip only with `SKIP_LOCAL_CHECKS=1`.
 - **Branch from the latest `dev`**: `git fetch origin && git checkout dev && git pull --ff-only origin dev`,
   then `git switch -c <type>/<slug>` with type `feature/`, `fix/`, `chore/` or
   `docs/`. A `hotfix/` branch is the one exception: it starts from `main` and
