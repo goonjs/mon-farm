@@ -1,6 +1,6 @@
 # Story E01-S19: ค่าตั้งของเครื่องจำได้บน Android
 
-Status: Ready (เจ้าของตกลง AC 2026-10-31 "ตกลง เริ่มทำเลย") — ทำก่อน E05-S11 (CO-23 ขึ้นกับสตอรี่นี้)
+Status: Review (2026-10-31; DS-3 ยังไม่ได้ทดสอบบน Android จริง — ถึง Done ไม่ได้จนกว่าจะทดสอบ) — เจ้าของตกลง AC 2026-10-31 "ตกลง เริ่มทำเลย"; ทำก่อน E05-S11 (CO-23 ขึ้นกับสตอรี่นี้)
 
 ## Context
 
@@ -30,13 +30,13 @@ Status: Ready (เจ้าของตกลง AC 2026-10-31 "ตกลง เ
 
 ## Acceptance criteria
 
-- [ ] **DS-1** มีโมดูลเดียว `src/store/device-settings` (`.web` / `.native`) ให้ `get(key)` / `set(key, value)` แบบ synchronous ไฟล์ค่าตั้ง 5 ไฟล์ในตารางเรียกผ่านตัวนี้ ไม่มีไฟล์ใน `src/` (นอกจาก `*.web.ts` ของที่เก็บข้อมูลเว็บและตัวโมดูลเอง) เรียก `localStorage` ตรง — มี test/lint ตรวจ
-- [ ] **DS-2** บนเว็บ: ใช้ `localStorage` key เดิมทุกตัว ค่าที่เคยเก็บไว้อ่านได้เหมือนเดิมหลังอัปเดต (test: ตั้งค่าใน localStorage ก่อนโหลดโมดูล แล้วอ่านได้ค่านั้น)
+- [x] **DS-1** มีโมดูลเดียว `src/store/device-settings` (`.web` / `.native`) ให้ `get(key)` / `set(key, value)` แบบ synchronous ไฟล์ค่าตั้ง 5 ไฟล์ในตารางเรียกผ่านตัวนี้ ไม่มีไฟล์ใน `src/` (นอกจาก `*.web.ts` ของที่เก็บข้อมูลเว็บและตัวโมดูลเอง) เรียก `localStorage` ตรง — มี test/lint ตรวจ
+- [x] **DS-2** บนเว็บ: ใช้ `localStorage` key เดิมทุกตัว ค่าที่เคยเก็บไว้อ่านได้เหมือนเดิมหลังอัปเดต (test: ตั้งค่าใน localStorage ก่อนโหลดโมดูล แล้วอ่านได้ค่านั้น)
 - [ ] **DS-3** บน Android: เปลี่ยนค่า (ขนาดตัวอักษร, เวลากดค้าง, วิธีนับ, โหมดเข่งไม่เต็ม, เสียงอ่าน, ภาษา/ปี) แล้วปิดแอปจริง (force stop) เปิดใหม่ ค่ายังอยู่ — ทดสอบบนเครื่องหรือ emulator จริง พร้อมภาพหน้าจอ
 - [ ] **DS-4** อ่านค่าตอนเปิดแอปไม่ทำให้จอกะพริบเป็นค่าเริ่มต้นก่อน (ขนาดตัวอักษร/ภาษาถูกตั้งแต่ frame แรก)
-- [ ] **DS-5** ที่เก็บพังหรืออ่านไม่ได้ = ใช้ค่าเริ่มต้น แอปไม่ล้ม (เหมือนพฤติกรรมเดิมที่ `try/catch`); ค่าที่ไม่รู้จักถูกเมิน (กติกาเดิมของแต่ละไฟล์)
-- [ ] **DS-6** ไม่เพิ่ม dependency ใหม่ (ใช้ expo-sqlite 57 ที่มีอยู่) — ถ้าพบว่าต้องเพิ่ม ให้หยุดแล้วขออนุญาตตามกฎ AGENTS.md
-- [ ] **DS-7** `docs/architecture.md` มีหัวข้อ "ค่าตั้งของเครื่อง (ไม่ซิงก์)": อะไรเป็นค่าของเครื่อง (ไม่ใช่ event, ไม่ซิงก์, ไม่ตามผู้ใช้ไปเครื่องอื่น), เก็บที่ไหนในแต่ละแพลตฟอร์ม, วิธีเพิ่ม key ใหม่ — E05-S11 CO-23 (ค่าครั้งก่อนของทางรับเงินคืนหนี้และปัดเศษ) ใช้โมดูลนี้
+- [x] **DS-5** ที่เก็บพังหรืออ่านไม่ได้ = ใช้ค่าเริ่มต้น แอปไม่ล้ม (เหมือนพฤติกรรมเดิมที่ `try/catch`); ค่าที่ไม่รู้จักถูกเมิน (กติกาเดิมของแต่ละไฟล์)
+- [x] **DS-6** ไม่เพิ่ม dependency ใหม่ (ใช้ expo-sqlite 57 ที่มีอยู่) — ถ้าพบว่าต้องเพิ่ม ให้หยุดแล้วขออนุญาตตามกฎ AGENTS.md
+- [x] **DS-7** `docs/architecture.md` มีหัวข้อ "ค่าตั้งของเครื่อง (ไม่ซิงก์)": อะไรเป็นค่าของเครื่อง (ไม่ใช่ event, ไม่ซิงก์, ไม่ตามผู้ใช้ไปเครื่องอื่น), เก็บที่ไหนในแต่ละแพลตฟอร์ม, วิธีเพิ่ม key ใหม่ — E05-S11 CO-23 (ค่าครั้งก่อนของทางรับเงินคืนหนี้และปัดเศษ) ใช้โมดูลนี้
 
 ## Offline / sync behavior
 
@@ -46,15 +46,15 @@ Status: Ready (เจ้าของตกลง AC 2026-10-31 "ตกลง เ
 
 _Tests below are written to fail first (TDD), then implemented to green._
 
-- [ ] Unit (เว็บ): get/set, ค่าเดิมจาก localStorage, ที่เก็บ throw → ค่าเริ่มต้น
-- [ ] Unit (native, mock expo-sqlite): get/set, อ่านค่าหลังสร้างโมดูลใหม่ (จำลองเปิดแอปใหม่), ที่เก็บ throw → ค่าเริ่มต้น
-- [ ] Guard test: ไม่มี `localStorage` ตรงในไฟล์ค่าตั้ง (DS-1)
-- [ ] Test เดิมของ 5 ไฟล์ค่าตั้งยังผ่าน
-- [ ] Offline path: ทั้งหมดเป็นในเครื่อง — ไม่มีทาง online/reconnect
+- [x] Unit (เว็บ): get/set, ค่าเดิมจาก localStorage, ที่เก็บ throw → ค่าเริ่มต้น
+- [x] Unit (native, mock expo-sqlite): get/set, อ่านค่าหลังสร้างโมดูลใหม่ (จำลองเปิดแอปใหม่), ที่เก็บ throw → ค่าเริ่มต้น
+- [x] Guard test: ไม่มี `localStorage` ตรงในไฟล์ค่าตั้ง (DS-1)
+- [x] Test เดิมของ 5 ไฟล์ค่าตั้งยังผ่าน
+- [x] Offline path: ทั้งหมดเป็นในเครื่อง — ไม่มีทาง online/reconnect
 
 ## Verification
 
-- [ ] Sandbox run performed: เว็บ build จริง เปลี่ยนค่า → reload → ค่ายังอยู่
+- [x] Sandbox run performed: เว็บ build จริง เปลี่ยนค่า → reload → ค่ายังอยู่
 - [ ] Android: force stop → เปิดใหม่ (DS-3) — ต้องมี dev client (E01-S06) ถ้าทำไม่ได้ในเซสชันนี้ ต้องบอกเจ้าของตรงๆ และสตอรี่ไม่ถึง Done
 - [ ] Screenshots: ไม่มี UI ใหม่ — ภาพก่อน/หลังเปิดแอปใหม่บน Android เป็นหลักฐาน DS-3
 
@@ -65,8 +65,15 @@ _Tests below are written to fail first (TDD), then implemented to green._
 
 ## Code review
 
-- Reviewer (separate agent/session):
-- Findings:
-- Resolution:
+- Reviewer (separate agent/session): agent รีวิวอิสระ (general-purpose) ในเซสชันทีม dev 2026-10-31 อ่าน diff เทียบ AC และ checklist ไม่ได้รับข้อสรุปของผู้ทำ; ร่าง DS-7 รีวิวโดย agent solution-architect
+- Findings: ไม่มี blocker · (1) `readTextSize`/`writeTextSize` ไม่มีผู้เรียกเลย (E03-S08 ยัง Draft) จึงตรวจขนาดตัวอักษรตาม DS-3/DS-4 ไม่ได้ · (2) 4 จอ (`device-screen`, `sale-settings-screen`, `counter-screen`, `hold.tsx`) อ่านค่าใน render ตรง ๆ บนเว็บ — มีมาก่อนสตอรี่นี้ · (3) mock ใน Jest บังคับ `readDuringRender: true` ทำให้ไม่มี test ทางเว็บ (อ่านหลัง mount) · (4) fake kv-store หลวมกว่าของจริง · (5) การตัดคอมเมนต์ของ guard อาจซ่อนโค้ดได้ · (6) อ่าน SQLite ทุกครั้งที่กด (เล็กมาก) · (7) `mon-farm:locale` อยู่ในรายการล้างข้อมูลเก่าบนเว็บ (สถาปนิกพบด้วย)
+- Resolution: (3) เพิ่ม `src/__tests__/device-settings-web-after-mount.test.tsx` (ตรวจแล้วว่าแดงถ้าเอา effect ออก) · (4) fake ล้มตั้งแต่เปิดไฟล์ + test · (5) ตัดเฉพาะบรรทัดคอมเมนต์ทั้งบรรทัด (ตรวจแล้วว่ายังจับ localStorage ตรงได้) · (1)(2)(7) บันทึกใน `docs/architecture.md` และ QA notes เป็นข้อเปิด ส่งลีด/เจ้าของ · (6) ไม่แก้ (YAGNI)
 
 ## QA notes
+
+- ตรวจแล้ว: vitest 1121+ ผ่าน, jest ผ่าน, `tsc`, `eslint` สะอาด; e2e phone-portrait ทั้งชุดบน build เว็บจริง ผ่าน 25 ข้าม 5 (ชุด emulator) ไม่มีล้ม
+- Sandbox เว็บ (`e2e/v2-device-settings.spec.ts`): เปลี่ยนวิธีนับ/โหมดเข่งไม่เต็ม/เสียง/ปี/ภาษา → reload → ค่ายังอยู่ใต้ key เดิม; ค่าเวลากดค้างที่ใส่ไว้ก่อนโหลดแอป (จำลองค่าก่อนอัปเดต) อ่านได้ — ภาพ `docs/ux/screenshots/e01-s19/web-after-reload.png`
+- expo-sqlite 57 มี `expo-sqlite/kv-store` (`SQLiteStorage.getItemSync`/`setItemSync`) ตรวจใน node_modules หลัง `npm ci` — ไม่เพิ่ม dependency (DS-6)
+- **ยังไม่ได้ตรวจ — DS-3**: เซสชันนี้ไม่มีเครื่อง Android/emulator และไม่มี dev client ทดสอบ native ได้แค่ใน Vitest กับ kv-store ปลอม (จำลองปิดเปิดแอปด้วย `vi.resetModules`) ไม่ใช่ force stop จริง ต้องมีคนทดสอบบนเครื่องจริงพร้อมภาพก่อน Done
+- **DS-4 บางส่วน**: ภาษา/ปี/เสียง อ่านใน render แรกบน native (test `device-settings-first-frame`) แต่ขนาดตัวอักษรยังไม่ต่อเข้า UI (E03-S08 Draft) จึงตรวจไม่ได้
+- ข้อเปิดให้เจ้าของ: `mon-farm:locale` อยู่ใน `LEGACY_EXACT` (`src/store/store.web.ts:53`) ตามการตัดสินเรื่องล้างข้อมูลเก่า 2026-10-03 — เบราว์เซอร์ที่ยังไม่เคยล้างจะเสียภาษาที่เลือกไว้หนึ่งครั้ง สตอรี่นี้ไม่แตะ

@@ -416,7 +416,7 @@ readonly readDuringRender: boolean;
 
 | คีย์ | ค่า (ค่าเริ่มต้น) | ไฟล์เจ้าของ |
 |---|---|---|
-| `mon-farm:text-size` | `s`/`m`/`l` (null) | `src/theme/text-size-preference.ts` |
+| `mon-farm:text-size` | `s`/`m`/`l` (null) — เก็บได้แล้ว แต่ยังไม่มีจอไหนอ่าน/เขียน (รอ E03-S08) | `src/theme/text-size-preference.ts` |
 | `mon-farm:hold-ms` | มิลลิวินาที 500–1000 (700) | `src/store/hold-preference.ts` |
 | `mon-farm:count-mode` | `hold`/`tap` (`hold`) | `src/store/hold-preference.ts` |
 | `mon-farm:weigh-mode` | `type`/`dial` (`type`) | `src/store/weigh-mode-preference.ts` |
@@ -435,6 +435,8 @@ readonly readDuringRender: boolean;
 2. ตั้งคีย์ `mon-farm:<ชื่อ>` ที่ไม่ซ้ำกับตารางข้างบนและ "ข้อมูลเก่า" แล้วเพิ่มแถวในตารางนี้
 3. เขียนคู่ `readX()` / `writeX()` เล็ก ๆ ในไฟล์ของฟีเจอร์เจ้าของ เรียกผ่าน `deviceSettings` เท่านั้น `readX`
    ตรวจค่าและคืนค่าเริ่มต้นเมื่อไม่รู้จัก; ถ้าอ่านใน render ของจอที่ static render บนเว็บ ให้เคารพ `readDuringRender`
+   (ช่องโหว่ที่มีอยู่ก่อน E01-S19: `device-screen`, `sale-settings-screen`, `counter-screen`, `hold.tsx` อ่านใน
+   render ตรง ๆ — บนเว็บถ้าจอนั้นถูก static render พร้อมค่าที่ไม่ใช่ค่าเริ่มต้น จะ hydration ไม่ตรง; ยังไม่แก้)
 4. **ห้ามเรียก `localStorage` ตรง** — `src/store/device-settings-guard.test.ts` ตรวจทั้ง `src` (ยกเว้นโมดูลนี้,
    `src/store/*.web.ts` ที่เก็บข้อมูลเว็บ และ test) (DS-1)
 5. test ก่อน (TDD): ค่าเริ่มต้นเมื่อว่าง, เขียนแล้วอ่านกลับ, ค่าที่ไม่รู้จัก → ค่าเริ่มต้น
