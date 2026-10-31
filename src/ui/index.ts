@@ -25,6 +25,7 @@ export {
 } from './farmmate-icons';
 export { FieldError, RadioCard, SegmentedControl } from './form';
 export { FactRow, IconTile, toneColours, type IconRender, type TileTone } from './icon-tile';
+export { CompactMoney } from './compact-money';
 export { MoneyField } from './money-field';
 export { MoneyText } from './money-text';
 export { NumberPad } from './number-pad';
