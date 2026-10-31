@@ -198,7 +198,6 @@ Deploy Prod needs the owner's explicit yes per run. Full detail in
 
 **Agent branch and merge rules** (owner decision 2026-10-04, dev-pose standard):
 
-- Local git hooks (commit message, eslint, typecheck) are installed by `npm ci`; see `docs/process.md` "Local checks". Skip only with `SKIP_LOCAL_CHECKS=1`.
 - **Branch from the latest `dev`**: `git fetch origin && git checkout dev && git pull --ff-only origin dev`,
   then `git switch -c <type>/<slug>` with type `feature/`, `fix/`, `chore/` or
   `docs/`. A `hotfix/` branch is the one exception: it starts from `main` and
@@ -232,8 +231,8 @@ question blocks the commit, and the commit is what a push is waiting on.
   made or scope shifts, not as after-the-fact cleanup.
 - **Summary lines (owner rule, 2026-10-31).** Money on a summary card or line
   is at most 4 digits with k/m, the unit stressed (`CompactMoney`,
-  `src/core/compact-money.ts`); people go 2 per line with the total on its own
-  line led by Σ, or one per line when there is no total; and no "in case you
+  `src/core/compact-money.ts`); with more than 2 people they go 2 per line and the
+  total goes on its own line led by Σ; with no total, one person per line; and no "in case you
   forgot" hint sentences — gate the step instead. See
   `.claude/skills/summary-lines/SKILL.md`.
 - **No clipped content (owner rule, 2026-10-27).** On any mockup, screenshot or

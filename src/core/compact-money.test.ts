@@ -43,7 +43,24 @@ describe('compactMoney — at most 4 digits, k / m for the rest (owner 2026-10-3
   });
 
   it('rounds half up on integers', () => {
-    expect(compactMoney(1_254_500_00 / 100)).toBe('฿ 12.55k'); // 12,545 baht
+    expect(compactMoney(1_254_500)).toBe('฿ 12.55k'); // 12,545.00 baht: …45 rounds up
+    expect(compactMoney(1_254_499)).toBe('฿ 12.54k'); // 12,544.99 baht
+  });
+
+  it('the 4-digit boundaries: 9,999.49 / 9,999.50 and 999,999.49', () => {
+    expect(compactMoney(999_949)).toBe('฿ 9,999');
+    expect(compactMoney(999_950)).toBe('฿ 10.00k');
+    expect(compactMoney(99_999_949)).toBe('฿ 1.000m'); // 999,999.49 baht
+    expect(compactMoney(99_994_999)).toBe('฿ 999.9k');
+  });
+
+  it('satang under 10,000 baht are dropped from 1,000 up', () => {
+    expect(compactMoney(325_040)).toBe('฿ 3,250'); // 3,250.40
+    expect(compactMoney(99_999)).toBe('฿ 1,000'); // 999.99 rounds up past 4 digits
+  });
+
+  it('above 9,999 m the digits grow (the rule is for farm-sized amounts)', () => {
+    expect(compactMoney(99_999_999_900)).toBe('฿ 1000m'); // 999,999,999 baht
   });
 
   it('negative keeps the true minus sign', () => {
