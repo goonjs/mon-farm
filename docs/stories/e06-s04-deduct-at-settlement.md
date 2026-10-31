@@ -2,6 +2,9 @@
 
 Status: Review (เจ้าของตกลง AC 2026-10-03 · ยืนยัน mockup หน้า 17/17a 2026-10-14) — PR #107 merged to `dev`; open by the owner's choice: F1 cancelled sales (E04-S11), F2 two-device duplicate, F5 tally piles
 
+> **แก้โดย E05-S11 (2026-10-31, เจ้าของตอบ Q10/Q12):** วิธีรับเงินคืนหนี้ (D-71) ใช้ค่าครั้งก่อนของคนกรีดนั้น เก็บในเครื่องนี้ ไม่ซิงก์ ครั้งแรก = ตัวแรกของเมนู (โอนรวม · คนซื้อแยกให้ · หยิบเอง); ปุ่ม "หักเงินคืนหนี้" ต่อคนเปลี่ยนเป็นยอดที่แอปเสนอให้ยืนยันครั้งเดียว (Q1) — ดู `e05-s11-closeout-summary.md`
+
+
 ## Context
 
 - Epic: `docs/epics/e06-fertilizer.md`
