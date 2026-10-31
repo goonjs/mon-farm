@@ -1,4 +1,4 @@
-import { SettlementScreen } from '../../../../v2/sale/money-screens';
+import { CloseoutSummaryScreen } from '../../../../v2/sale/closeout/summary-screen';
 
-/** /v2/sale/<id>/settlement — สรุปยอดส่วนแบ่ง. */
-export default SettlementScreen;
+/** /v2/sale/<id>/settlement — สรุปจ่ายเงิน (E05-S11). */
+export default CloseoutSummaryScreen;
