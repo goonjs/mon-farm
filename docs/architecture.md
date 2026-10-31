@@ -381,6 +381,68 @@ optional ที่ไม่มีค่า **ไม่ใส่** (ห้าม�
 (create; `targetId = mediaId`; payload = entity ที่เกี่ยวข้อง, ชนิดไฟล์, ขนาด, เวลาถ่าย, GPS ถ้ามี) ไฟล์ในเครื่อง
 ไม่ถูกลบจนกว่าการอัปโหลดยืนยันแล้ว (E01-S12; lib ไฟล์บน native ถ้าต้องใช้ ผ่าน gate)
 
+### ค่าตั้งของเครื่อง (ไม่ซิงก์)
+
+ค่าตั้งของเครื่อง (E01-S19) คือสิ่งที่ผู้ใช้เลือกให้ **เครื่องนี้** ไม่ใช่ข้อมูลของสวน: ขนาดตัวอักษร เวลากดค้าง
+วิธีนับ โหมดบันทึกเข่งไม่เต็ม/ฐานของหน้าปัด เสียงอ่าน ภาษา และระบบปี — **ไม่ใช่ event, ไม่เข้า outbox, ไม่ซิงก์,
+ไม่มี Conflict และไม่ตามผู้ใช้ไปเครื่องอื่น** (เครื่องใหม่ = เริ่มจากค่าเริ่มต้น) สิ่งใดที่คนอื่นในกลุ่มต้องเห็น
+หรือต้องอยู่รอดเมื่อเปลี่ยนเครื่อง เป็นข้อมูลที่ซิงก์ → ต้องเป็น event ใน `EventStore` ไม่ใช่ค่าตั้งของเครื่อง
+
+**ที่เก็บแยกตามแพลตฟอร์ม** — โมดูลเดียว `src/store/device-settings` Metro เลือกไฟล์ตามแพลตฟอร์ม:
+
+- **เว็บ** (`device-settings.web.ts`): `localStorage` คีย์เดิม `mon-farm:*` ไม่เปลี่ยนชื่อ ค่าที่เครื่องเคยเก็บไว้
+  จึงยังอ่านได้หลังอัปเดต (DS-2)
+- **Android/iOS** (`device-settings.native.ts`): `SQLiteStorage` จาก `expo-sqlite/kv-store` (มากับ expo-sqlite 57
+  **ไม่มี dependency ใหม่**, DS-6) ไฟล์ของตัวเอง `mon-farm-settings.db` แยกจาก `mon-farm.db` / `mon-farm-v1.db`
+  sync engine ไม่อ่านไฟล์นี้ เปิดแบบ lazy ครั้งแรกที่ใช้ — ที่เก็บเสียได้แค่ค่ากลับเป็นค่าเริ่มต้น แอปไม่ล่ม (DS-5)
+- `tsc` / Vitest / Node resolve `./device-settings` (`device-settings.ts`) เป็น adapter เว็บ; Jest (jest-expo =
+  native) mock เป็น adapter เว็บบน localStorage stub แต่คง `readDuringRender: true` (ท้าย `jest.setup.js`);
+  adapter native ทดสอบใน Vitest โดย fake kv-store
+
+**สัญญา** (`DeviceSettings`):
+
+```ts
+get(key: string): string | null;       // sync; ไม่มีค่า/ที่เก็บเสีย → null = ใช้ค่าเริ่มต้น
+set(key: string, value: string): void; // sync; เขียนไม่ได้ → ทิ้งเงียบ ๆ (ค่าแค่ไม่รอดการเปิดใหม่)
+readonly readDuringRender: boolean;
+```
+
+- **ไม่ throw**; ค่าเป็น string เท่านั้น ผู้เรียก **ตรวจค่าที่อ่านเองเสมอ** (ค่าที่ไม่รู้จัก = ค่าเริ่มต้น)
+- `readDuringRender`: เว็บ = `false` — เว็บ static render ค่าที่อ่านระหว่าง render จะไม่ตรงกับ HTML จากเซิร์ฟเวอร์
+  จึงอ่านหลัง mount; native = `true` — อ่านใน render แรก ภาษา/เสียงอ่านที่เลือกไว้ขึ้นตั้งแต่เฟรมแรก
+  ไม่กะพริบค่าเริ่มต้น (DS-4) ดู `src/i18n/index.tsx`, `src/speech/index.tsx`
+
+**คีย์ปัจจุบัน**
+
+| คีย์ | ค่า (ค่าเริ่มต้น) | ไฟล์เจ้าของ |
+|---|---|---|
+| `mon-farm:text-size` | `s`/`m`/`l` (null) — เก็บได้แล้ว แต่ยังไม่มีจอไหนอ่าน/เขียน (รอ E03-S08) | `src/theme/text-size-preference.ts` |
+| `mon-farm:hold-ms` | มิลลิวินาที 500–1000 (700) | `src/store/hold-preference.ts` |
+| `mon-farm:count-mode` | `hold`/`tap` (`hold`) | `src/store/hold-preference.ts` |
+| `mon-farm:weigh-mode` | `type`/`dial` (`type`) | `src/store/weigh-mode-preference.ts` |
+| `mon-farm:weigh-basis` | `scale`/`net` (`scale`) | `src/store/weigh-mode-preference.ts` |
+| `mon-farm:speech-on` | `true`/`false` (null → เปิด) | `src/speech/preference.ts` |
+| `mon-farm:locale` | `th`/`en` (null → ไทย) | `src/i18n/preference.ts` |
+| `mon-farm:era` | `be`/`ce` (null → `be`) | `src/i18n/preference.ts` |
+
+หมายเหตุ: `mon-farm:locale` ยังอยู่ในรายการล้างข้อมูลเก่าครั้งเดียวบนเว็บ (หัวข้อถัดไป ข้อ 2,
+`LEGACY_EXACT` ใน `src/store/store.web.ts`) — เบราว์เซอร์ที่ยังไม่เคยล้างจะเสียภาษาที่เลือกไว้หนึ่งครั้ง
+(ข้อเปิด รอเจ้าของตัดสิน; E01-S19 ไม่แตะ)
+
+**เพิ่มคีย์ใหม่**
+
+1. ถามก่อนว่าเป็นค่าของเครื่องจริงไหม (ย่อหน้าแรกของหัวข้อนี้) ถ้าคนอื่นต้องเห็น → event
+2. ตั้งคีย์ `mon-farm:<ชื่อ>` ที่ไม่ซ้ำกับตารางข้างบนและ "ข้อมูลเก่า" แล้วเพิ่มแถวในตารางนี้
+3. เขียนคู่ `readX()` / `writeX()` เล็ก ๆ ในไฟล์ของฟีเจอร์เจ้าของ เรียกผ่าน `deviceSettings` เท่านั้น `readX`
+   ตรวจค่าและคืนค่าเริ่มต้นเมื่อไม่รู้จัก; ถ้าอ่านใน render ของจอที่ static render บนเว็บ ให้เคารพ `readDuringRender`
+   (ช่องโหว่ที่มีอยู่ก่อน E01-S19: `device-screen`, `sale-settings-screen`, `counter-screen`, `hold.tsx` อ่านใน
+   render ตรง ๆ — บนเว็บถ้าจอนั้นถูก static render พร้อมค่าที่ไม่ใช่ค่าเริ่มต้น จะ hydration ไม่ตรง; ยังไม่แก้)
+4. **ห้ามเรียก `localStorage` ตรง** — `src/store/device-settings-guard.test.ts` ตรวจทั้ง `src` (ยกเว้นโมดูลนี้,
+   `src/store/*.web.ts` ที่เก็บข้อมูลเว็บ และ test) (DS-1)
+5. test ก่อน (TDD): ค่าเริ่มต้นเมื่อว่าง, เขียนแล้วอ่านกลับ, ค่าที่ไม่รู้จัก → ค่าเริ่มต้น
+
+ผู้ใช้ถัดไป: **E05-S11 CO-23** — ค่าครั้งก่อนของทางรับเงินคืนหนี้และการปัดเศษบนหน้าปิดการขาย เก็บผ่านโมดูลนี้
+
 ### ข้อมูลเก่า — ไม่ย้าย (เจ้าของ 2026-10-03)
 
 MVP เริ่มจากศูนย์ ข้อมูล v0.4 (`events (sale_id, seq)`, `farm_zones`/`farm_piles`, `people` และคีย์

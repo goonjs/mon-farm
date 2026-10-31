@@ -22,6 +22,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { type Locale, type MessageId } from './messages';
 import { resolve } from './resolve';
 import type { Era } from '../core/thai-date';
+import { deviceSettings } from '../store/device-settings';
 import { readEra, readLocale, writeEra, writeLocale } from './preference';
 
 export type Translate = (id: MessageId, params?: Record<string, string | number>) => string;
@@ -39,11 +40,15 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children, initial = 'th' }: { children: ReactNode; initial?: Locale }) {
-  const [locale, setLocaleState] = useState<Locale>(initial);
-  const [era, setEra] = useState<Era>('be');
+  // Native reads the stored choice in the first render, so an English user
+  // never sees a Thai frame first (E01-S19 DS-4); the read is synchronous.
+  const [locale, setLocaleState] = useState<Locale>(() =>
+    deviceSettings.readDuringRender ? (readLocale() ?? initial) : initial,
+  );
+  const [era, setEra] = useState<Era>(() => (deviceSettings.readDuringRender ? (readEra() ?? 'be') : 'be'));
 
   /**
-   * Read after mount rather than during render, for the same reason
+   * On web, read after mount rather than during render, for the same reason
    * `use-color-scheme.web.ts` defers: this app static-renders on web, and a
    * value read from device storage during render would differ between the
    * server-rendered HTML and the first client render. Thai is the default on
@@ -51,12 +56,15 @@ export function I18nProvider({ children, initial = 'th' }: { children: ReactNode
    * every launch.
    */
   useEffect(() => {
+    if (deviceSettings.readDuringRender) return;
+    // A microtask, as when this read was async: same web timing as before.
     let cancelled = false;
-    readLocale().then((stored) => {
-      if (!cancelled && stored) setLocaleState(stored);
-    });
-    readEra().then((stored) => {
-      if (!cancelled && stored) setEra(stored);
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      const storedLocale = readLocale();
+      if (storedLocale) setLocaleState(storedLocale);
+      const storedEra = readEra();
+      if (storedEra) setEra(storedEra);
     });
     return () => {
       cancelled = true;
@@ -67,7 +75,7 @@ export function I18nProvider({ children, initial = 'th' }: { children: ReactNode
     setLocaleState(l);
     // Fire and forget: a storage failure must not stop someone switching
     // language, it just means the choice does not survive a restart.
-    void writeLocale(l);
+    writeLocale(l);
   }, []);
 
   const value = useMemo<I18nContextValue>(
@@ -82,7 +90,7 @@ export function I18nProvider({ children, initial = 'th' }: { children: ReactNode
       toggleEra: () =>
         setEra((e) => {
           const next = e === 'be' ? 'ce' : 'be';
-          void writeEra(next);
+          writeEra(next);
           return next;
         }),
     }),

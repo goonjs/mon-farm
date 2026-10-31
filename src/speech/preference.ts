@@ -6,26 +6,21 @@
  * lives beside the language and theme choices rather than in the append-only
  * log. A sale's own log gets a `speech_set` event only when the toggle is
  * flipped from inside that sale (see `counter.tsx`) — this file has nothing
- * to do with that; it only remembers the setting between launches.
+ * to do with that; it only remembers the setting between launches, through
+ * `device-settings` (E01-S19), so it survives a restart on Android too.
  */
+
+import { deviceSettings } from '../store/device-settings';
 
 const KEY = 'mon-farm:speech-on';
 
-export async function readSpeechOn(): Promise<boolean | null> {
-  try {
-    const raw = globalThis.localStorage?.getItem(KEY);
-    if (raw === 'true') return true;
-    if (raw === 'false') return false;
-    return null;
-  } catch {
-    return null;
-  }
+export function readSpeechOn(): boolean | null {
+  const raw = deviceSettings.get(KEY);
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return null;
 }
 
-export async function writeSpeechOn(on: boolean): Promise<void> {
-  try {
-    globalThis.localStorage?.setItem(KEY, on ? 'true' : 'false');
-  } catch {
-    /* a quota or privacy-mode error must not take the app down */
-  }
+export function writeSpeechOn(on: boolean): void {
+  deviceSettings.set(KEY, on ? 'true' : 'false');
 }

@@ -36,6 +36,6 @@ describe('era preference (D-74 F14: remembered on the device)', () => {
     expect(await readEra()).toBeNull();
     vi.stubGlobal('localStorage', { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('denied'); } });
     expect(await readEra()).toBeNull();
-    await expect(writeEra('be')).resolves.toBeUndefined();
+    expect(() => writeEra('be')).not.toThrow();
   });
 });
