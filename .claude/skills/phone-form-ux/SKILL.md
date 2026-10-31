@@ -98,6 +98,10 @@ Use these when you draw, build or review any screen that takes input.
    the edge becomes its own row). This was seen on an unchecked mockup
    (unit chips cut off on the right) and is not accepted in the project.
 
+10. **No "in case you forgot" sentences (owner rule, 2026-10-31).** A step the
+    person must not skip is gated (the button stays off until it is done), not
+    reminded in a sentence. See `.claude/skills/summary-lines/SKILL.md`.
+
 ## How to check before you show anything
 
 1. **Mockup:** export every phone as its own PNG at device size, 3×. Send the
