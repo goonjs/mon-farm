@@ -81,19 +81,22 @@ Ask again, every time.
   `--mirror`, refspecs and `dev`/`main`). In exchange the acknowledgement
   moves from before the push to after it, and is not optional:
 
-  1. **Ledger.** Right after a push, add one document to the Push Ledger
-     artifact (https://claude.ai/artifact/8Z5XJR9ZfvV7Wq17HGiZFr) with
-     `ArtifactData` into collection `pushes`, id `<branch-with-dashes>`:
+  1. **Ledger = the project dashboard.** Right after a push, add one
+     document to the mon-farm Dashboard artifact
+     (https://claude.ai/artifact/3jHpPwSa3uWgMbW16oNdGa) with `db_write`
+     into collection `pushes`, id `<branch-with-dashes>`:
      `repo` ("goonjs/mon-farm"), `branch`, `title`, `session`, `pr_url`
      (empty until a PR exists; update it when opened), `commits` (list of
      subjects), `what`, `why_ready`, `not_covered`, `irreversible`
-     (the same six-point brief as above), `pushed_at` (ISO), `acked: false`.
-     The owner opens the PR from there and presses Acknowledge.
+     (the same six-point brief as above), `pushed_at` (ISO), `acked: false`,
+     `status: "open"` (later `merged`, `closed` or `superseded`). The owner
+     opens the PR from there and presses Acknowledge. The old Push Ledger
+     artifact is retired (owner decision 2026-10-31): do not write to it.
   2. **Say so in the same response**: one short summary of what went up.
   3. **Reminder line.** While this session has a push that is not yet
      acknowledged, end every response with one line:
-     `👉 N PR รอ ack: <short title> — ดูที่นี่ <ledger url>`. Check the
-     ledger (one `query` on `acked == false`) at session start and when the
+     `👉 N PR รอ ack: <short title> — ดูที่นี่ <dashboard url>`. Check the
+     dashboard (one `db_query` on `pushes` with `acked == false`) at session start and when the
      owner says they acknowledged something; do not poll otherwise.
   4. The owner still alone decides: pushes to `dev`/`main`, tags,
      force-pushes, every Deploy Prod run, and merging any PR. The owner can
@@ -106,7 +109,7 @@ Ask again, every time.
 
   **Amendment, 2026-10-10 (PRD D-83) — acknowledge means merge.** Only a
   PR that has been independently reviewed, fixed and is ready to merge is
-  put to the owner for acknowledgement in the Push Ledger. The owner's
+  put to the owner for acknowledgement on the dashboard. The owner's
   acknowledgement of that PR is the owner's explicit instruction to merge
   it; the owner does not review the code. Work runs with one developer team
   at a time (UX and QA inside it); the infra team only maintains CI and
