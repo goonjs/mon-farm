@@ -1,6 +1,6 @@
 # Story E11-S11: ซื้อปุ๋ยแบบใบสั่งซื้อ — จดใบซื้อก่อน บอกรายละเอียดทีหลัง
 
-Status: Review — สร้างครบ 4 ชุด (คอมโพเนนต์ตัวเลข · แกนข้อมูลใบซื้อ · หน้าใบซื้อ · หน้ารายละเอียด/รายการ/หน้าแรก) 2026-10-28; รีวิวอิสระ 1 รอบ แก้แล้ว; ยังไม่ลบ flow ปุ๋ยเดิม (รอเจ้าของอนุญาตลบไฟล์) ; ไอคอน FarmMate สียังไม่เข้า registry (UI-5)
+Status: Done (PR #121 merged 03fc582, old flow removed by PR #122; owner ack in Push Ledger 2026-10-28; open: FarmMate colour icons not in registry (UI-5), English strings, largest text size and real device untested)
 
 ## Context
 

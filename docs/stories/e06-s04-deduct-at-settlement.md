@@ -1,6 +1,6 @@
 # Story E06-S04: หักหนี้ตอนสรุปเงิน ไม่เกินส่วนแบ่ง ยกยอด
 
-Status: Review (เจ้าของตกลง AC 2026-10-03 · ยืนยัน mockup หน้า 17/17a 2026-10-14) — v2 settlement screen on `dev`; fixes on `fix/e06-s04-deduct-v2`; open: F1 cancelled sales (E04-S11), F2 two-device duplicate
+Status: Review (เจ้าของตกลง AC 2026-10-03 · ยืนยัน mockup หน้า 17/17a 2026-10-14) — PR #107 merged to `dev`; open by the owner's choice: F1 cancelled sales (E04-S11), F2 two-device duplicate, F5 tally piles
 
 ## Context
 

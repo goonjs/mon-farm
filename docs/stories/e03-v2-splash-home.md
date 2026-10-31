@@ -1,6 +1,6 @@
 # Story: v2 splash and home as drawn
 
-Status: In Progress
+Status: Review (built, code review findings fixed; not built yet: group name, cover photo, tasks)
 
 ## Context
 

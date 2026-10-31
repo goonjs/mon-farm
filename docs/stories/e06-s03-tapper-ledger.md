@@ -1,6 +1,6 @@
 # Story E06-S03: บัญชีหนี้คนงาน — ยอดค้าง แผนผ่อน ประวัติ
 
-Status: Ready (เจ้าของตกลง AC 2026-10-03)
+Status: Review (built via PRs #107/#108; AC agreed by owner 2026-10-03; AC boxes not yet ticked)
 
 ## Context
 

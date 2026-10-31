@@ -1,6 +1,6 @@
 # Story E01-S08: Firestore — event แก้ไม่ได้ + security rules แยกกลุ่มฟาร์ม
 
-Status: In Progress
+Status: Review (rules and tests built; independent review 2026-10-03; rules released to `(default)` 2026-10-11, D-84)
 
 ## Context
 
