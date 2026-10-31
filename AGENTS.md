@@ -229,6 +229,12 @@ question blocks the commit, and the commit is what a push is waiting on.
   are authored collaboratively, not assumed.
 - Docs are live documents: update them in the same session a decision is
   made or scope shifts, not as after-the-fact cleanup.
+- **Summary lines (owner rule, 2026-10-31).** Money on a summary card or line
+  is at most 4 digits with k/m, the unit stressed (`CompactMoney`,
+  `src/core/compact-money.ts`); people go 2 per line with the total on its own
+  line led by Σ, or one per line when there is no total; and no "in case you
+  forgot" hint sentences — gate the step instead. See
+  `.claude/skills/summary-lines/SKILL.md`.
 - **No clipped content (owner rule, 2026-10-27).** On any mockup, screenshot or
   build: nothing may be cut off or pushed past the screen edge — no control
   or text sticking out sideways, no content truncated with "…", no box that
