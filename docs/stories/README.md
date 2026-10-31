@@ -28,6 +28,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - ~~[E01-S14: preview A/B รูปแบบ card — เงา+เส้น vs แบน+เส้น](e01-s14-card-style-ab-preview.md)~~ ยกเลิก (D-52)
 - [E01-S15: สถานะข้อมูลรายฟิลด์ 6 แบบ + ป้ายใช้ซ้ำ](e01-s15-field-data-states.md)
 - [E01-S16: ลบเขตไม่ได้ถ้าคนกรีดของเขตยังมียอดหัก](e01-s16-zone-delete-guard.md) (Superseded โดย E06-S07)
+- [E01-S19: ค่าตั้งของเครื่องจำได้บน Android](e01-s19-device-settings-native.md) (Ready — ทำก่อน E05-S11)
 
 ### E02 การเข้าใช้ & กลุ่มฟาร์ม — [epic](../epics/e02-access-farm-groups.md)
 
