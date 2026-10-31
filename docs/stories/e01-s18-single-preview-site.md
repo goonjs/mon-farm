@@ -1,6 +1,6 @@
 # Story E01-S18: One shared preview site, deployed by PR number
 
-Status: Ready (owner asked for it, 2026-10-11: "pick by PR number")
+Status: Review (built, PR #84 merged 2026-10-11; owner asked for it: "pick by PR number")
 
 ## Context
 

@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prepare": "node scripts/install-hooks.mjs",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",

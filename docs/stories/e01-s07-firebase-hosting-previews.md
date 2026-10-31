@@ -1,6 +1,6 @@
 # Story E01-S07: Firebase dev/prod (1 โปรเจกต์) + Hosting deploy + preview channel ต่อ PR
 
-Status: In Progress
+Status: Review (built and live on dev; AC boxes not yet ticked; owner deviations D-48/D-84)
 
 ## Context
 

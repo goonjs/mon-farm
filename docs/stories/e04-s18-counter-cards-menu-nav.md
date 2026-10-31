@@ -1,6 +1,6 @@
 # Story E04-S18: หน้าขาย — การ์ดเล็กสูงคงที่ · เมนู ⋮ แบ่งกลุ่ม · ทางลัดหน้าแรก/บัญชีหนี้
 
-Status: Review
+Status: Done (PRs #115 merged; owner ack in Push Ledger 2026-10-18; AC 8/8)
 
 ## Context
 

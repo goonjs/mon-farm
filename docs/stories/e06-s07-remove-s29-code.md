@@ -1,6 +1,6 @@
 # Story E06-S07: ลบโค้ดหักเงิน S29 เดิม (`deduction_added` / `deduction_voided`)
 
-Status: Review (ทำครบ AC บน branch `chore/remove-s29-code`; รอ code review โดย session อื่น + CI; e2e ยังไม่ได้รันใน sandbox — ไม่มี Chromium ที่ตรงเวอร์ชัน)
+Status: Done (PR #93 merged cfd245d; independent review, CI green; owner ack in Push Ledger; follow-ups: two stale doc lines, dead deduction i18n keys)
 
 ## Context
 
