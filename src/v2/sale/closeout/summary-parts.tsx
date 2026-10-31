@@ -8,13 +8,16 @@
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import type { CloseoutWorker } from '../../../core/finance/closeout';
+import { netDraft, type CloseoutWorker } from '../../../core/finance/closeout';
 import { formatSatang } from '../../../core/finance/money';
 import { useTheme } from '../../../theme';
 import { AppText, Check, ChevronRight, FarmMateIcon, toneColours, type TileTone } from '../../../ui';
 import type { CloseoutDraft } from './use-closeout';
 
 export const baht = formatSatang;
+
+/** "5,250" for whole baht, "5,250.50" otherwise — a chip or a link, not a sum. */
+export const shortBaht = (satang: number) => baht(satang).replace(/\.00$/, '');
 
 /**
  * Direction marks, added in code beside the words (as `WayLabel` does): the
@@ -33,6 +36,7 @@ export function RoundButton({
   strong,
   disabled,
   icon,
+  tight,
 }: {
   label: string;
   onPress: () => void;
@@ -41,6 +45,8 @@ export function RoundButton({
   strong?: boolean;
   disabled?: boolean;
   icon?: (colour: string) => ReactNode;
+  /** The 48 target overlaps the row above and below by 4 (a 40-high row keeps a 48 target). */
+  tight?: boolean;
 }) {
   const t = useTheme();
   const fg = strong ? t.color.inkInverse : t.color.action;
@@ -53,7 +59,7 @@ export function RoundButton({
       disabled={disabled}
       onPress={onPress}
       hitSlop={0}
-      style={{ width: t.target.min, height: t.target.min, alignItems: 'center', justifyContent: 'center' }}
+      style={{ width: t.target.min, height: t.target.min, alignItems: 'center', justifyContent: 'center', ...(tight ? { marginVertical: -(t.target.min - 40) / 2 } : {}) }}
     >
       <View style={{ width: ROUND, height: ROUND, borderRadius: t.radius.pill, backgroundColor: strong ? t.color.action : t.color.actionSunk, alignItems: 'center', justifyContent: 'center' }}>
         {icon ? icon(fg) : <ChevronRight color={fg} size={9} />}
@@ -110,19 +116,43 @@ const add = (list: readonly string[], id: string) => (list.includes(id) ? list :
 export const addId = add;
 
 /**
- * Netting pressed by the owner (CO-7, CO-26): use what the farm may net and
- * raise this sale's deduction by it, never past the worker's whole debt.
+ * Netting set by the owner (CO-7, CO-26): the money rule is core's
+ * `netDraft`; here only the draft bookkeeping (and the owed card's choice).
+ * An amount the rule refuses leaves the draft as it is.
  */
-export function netOn(d: CloseoutDraft, w: CloseoutWorker): CloseoutDraft {
-  const net = w.netCapSatang;
-  const balance = w.totalSatang + w.debtLeftSatang;
-  const base = w.totalSatang - w.nettingSatang;
-  const next = withWorker(d, w.id, { nettingSatang: net, totalSatang: Math.min(base + net, balance) });
-  return { ...next, owedChoice: { ...next.owedChoice, [w.id]: 'net' } };
+export function netSet(d: CloseoutDraft, w: CloseoutWorker, nettingSatang: number): CloseoutDraft {
+  const patch = netDraft(w, nettingSatang);
+  if (!patch) return d;
+  const next = patch.nettingSatang === w.nettingSatang && patch.totalSatang === w.totalSatang ? d : withWorker(d, w.id, patch);
+  return { ...next, owedChoice: { ...next.owedChoice, [w.id]: nettingSatang > 0 ? 'net' : 'hold' } };
 }
 
+/** "↗ หักกลบกับหนี้{ชื่อ}": the full amount the farm may net. */
+export const netOn = (d: CloseoutDraft, w: CloseoutWorker): CloseoutDraft => netSet(d, w, w.netCapSatang);
+
 /** Netting taken back ("เอาออก" / "ไว้ก่อน"): the deduction drops by what was netted. */
-export function netOff(d: CloseoutDraft, w: CloseoutWorker): CloseoutDraft {
-  const next = w.nettingSatang > 0 ? withWorker(d, w.id, { nettingSatang: 0, totalSatang: Math.max(0, w.totalSatang - w.nettingSatang) }) : d;
-  return { ...next, owedChoice: { ...next.owedChoice, [w.id]: 'hold' } };
+export const netOff = (d: CloseoutDraft, w: CloseoutWorker): CloseoutDraft => netSet(d, w, 0);
+
+/** ⚠ drawn as a filled triangle with "!" that fits its own box (the line AlertIcon pokes out of a 14 box). */
+export function WarnMark({ color, size = 14, testID }: { color: string; size?: number; testID?: string }) {
+  const t = useTheme();
+  const half = Math.round(size * 0.57);
+  return (
+    <View testID={testID} aria-hidden style={{ width: half * 2, height: size, alignItems: 'center' }}>
+      <View style={{ width: 0, height: 0, borderLeftWidth: half, borderRightWidth: half, borderBottomWidth: size, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: color }} />
+      <Text
+        style={{
+          position: 'absolute',
+          top: Math.round(size * 0.22),
+          fontFamily: t.font.family.sans,
+          fontSize: Math.round(size * 0.62),
+          lineHeight: Math.round(size * 0.72),
+          fontWeight: t.font.weight.black,
+          color: t.color.inkInverse,
+        }}
+      >
+        !
+      </Text>
+    </View>
+  );
 }

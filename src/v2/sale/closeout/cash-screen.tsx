@@ -18,10 +18,12 @@ import type { RoundingMode } from '../../../core/finance/deduct';
 import { formatSatang } from '../../../core/finance/money';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AlertIcon, AppText, BottomSheet, Button, cardStyle, Check, SegmentedControl } from '../../../ui';
+import { AppText, BottomSheet, Button, cardStyle, Check, SegmentedControl } from '../../../ui';
 import { FarmScreen } from '../../farm/pieces';
 import { bahtText } from '../pieces';
+import { AccountRow } from './cash-account';
 import { buyerPiles, NoteRow, transferRepayName } from './cash-pieces';
+import { WarnMark } from './summary-parts';
 import { useCloseout } from './use-closeout';
 
 const baht = formatSatang;
@@ -51,7 +53,6 @@ export function CloseoutCashScreen() {
   const bp = breaking ? breakOf(breaking) : null;
   const toBuyer = () => router.push(`/v2/sale/${saleId}/buyer-view` as Href);
   const ok = () => {
-    co.update((d) => ({ ...d, cashStepDone: true }));
     if (router.canGoBack()) router.back();
     else router.replace(fallback);
   };
@@ -79,7 +80,7 @@ export function CloseoutCashScreen() {
         </View>
       }
       overlay={
-        <BottomSheet open={!!breaking && !!bp} onClose={() => setBreakFor(null)} title={msg('cop.breakTitle')} testID="cop-break-sheet">
+        <BottomSheet open={!!breaking && !!bp} onClose={() => setBreakFor(null)} title={msg('cop.breakTitle')} testID="cop-break-sheet" closeLabel={msg('cop.close')}>
           {breaking && bp ? (
             <>
               <AppText variant="bodySm">{msg('cop.breakSub', { name: breaking.name, amount: bahtText(breaking.routeSatang) })}</AppText>
@@ -92,7 +93,7 @@ export function CloseoutCashScreen() {
                 <NoteRow notes={bp.take} testID="cop-break-take" />
                 {bp.shortSatang > 0 ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
-                    <AlertIcon color={t.color.warn} size={14} />
+                    <WarnMark color={t.color.warn} size={14} />
                     <Text style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.warn }}>
                       {msg('cop.smallShort', { small: baht(bp.smallSatang), short: baht(bp.shortSatang) })}
                     </Text>
@@ -146,7 +147,7 @@ export function CloseoutCashScreen() {
                           style={{ minHeight: t.target.min, justifyContent: 'center' }}
                         >
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs, backgroundColor: t.color.warnSunk, borderRadius: t.radius.pill, paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
-                            <AlertIcon color={t.color.warn} size={14} />
+                            <WarnMark color={t.color.warn} size={14} />
                             <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('cop.needBreak')}</Text>
                           </View>
                         </Pressable>
@@ -199,9 +200,11 @@ export function CloseoutCashScreen() {
           </View>
           {plan.transferRepaySatang ? (
             <Text testID="cop-transfer-split" style={{ ...line, fontSize: t.font.size.bodySm }}>
-              {msg('cop.transferSplit', { dir: '↘', owner: baht(plan.ownerSatang), name: repayName, repay: baht(plan.transferRepaySatang) })}
+              {msg('cop.ownerSplitShare', { owner: baht(plan.ownerSatang) })}{' '}
+              <Text style={{ color: t.color.debtIn }}>{msg('cop.ownerSplitRepay', { dir: '↘', name: repayName, repay: baht(plan.transferRepaySatang) })}</Text>
             </Text>
           ) : null}
+          <AccountRow co={co} />
         </View>
         <View
           testID="cop-total"

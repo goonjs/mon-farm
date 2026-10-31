@@ -39,7 +39,7 @@ export function DebtSheet({
   const msg = useT();
   const pieceName = usePieceName();
   return (
-    <BottomSheet open onClose={onClose} title={msg('co.debt.sheet')} testID="co-debt-sheet">
+    <BottomSheet open onClose={onClose} title={msg('co.debt.sheet')} testID="co-debt-sheet" closeLabel={msg('co.close')}>
       {people.map(({ w, pieces, edited }) => (
         <Pressable
           key={w.id}

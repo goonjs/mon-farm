@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactElement, ReactNode } from 'react';
-import { PixelRatio, Platform, Text } from 'react-native';
+import { PixelRatio, Platform } from 'react-native';
 
 import { LogBuilder } from '../core/fixtures';
 import { FARM_FUNDS } from '../core/finance/types';
@@ -13,7 +13,7 @@ import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { wrap } from '../test/render';
 import { BuyerViewScreen, FitAmount } from '../v2/sale/closeout/buyer-view-screen';
 import { CloseoutCashScreen } from '../v2/sale/closeout/cash-screen';
-import { updateDraft, useCloseoutDraft } from '../v2/sale/closeout/use-closeout';
+import { updateDraft } from '../v2/sale/closeout/use-closeout';
 
 /**
  * E05-S11 · จัดเงินสดกับคนรับซื้อยาง (CO-19, CO-23, CO-24; A6, A11, A13, A17)
@@ -83,11 +83,6 @@ const inSale = async (saleId: string, ui: ReactElement) => {
   await flush();
   return r;
 };
-
-function DraftProbe({ saleId }: { saleId: string }) {
-  const d = useCloseoutDraft(saleId);
-  return d.cashStepDone ? <Text testID="probe-done">done</Text> : null;
-}
 
 const STORY = 'co-cash-story';
 const WHOLE = 'co-cash-whole';
@@ -160,15 +155,13 @@ describe('CO-19 · the cash step (A6): first time = โอนรวม + ให�
     await press('cop-round-worker');
   });
 
-  it('ตกลง marks the step done and goes back; ให้คนรับซื้อดู opens the buyer view', async () => {
+  it('ตกลง goes back (the step is not a gate, A3); ให้คนรับซื้อดู opens the buyer view', async () => {
     router.back.mockClear();
     router.push.mockClear();
-    await inSale(STORY, <><CloseoutCashScreen /><DraftProbe saleId={STORY} /></>);
-    expect(screen.queryByTestId('probe-done')).toBeNull();
+    await inSale(STORY, <CloseoutCashScreen />);
     await press('cop-buyer-view');
     expect(router.push).toHaveBeenCalledWith(`/v2/sale/${STORY}/buyer-view`);
     await press('cop-ok');
-    expect(screen.getByTestId('probe-done')).toBeTruthy();
     expect(router.back).toHaveBeenCalled();
   });
 });
@@ -210,5 +203,87 @@ describe('CO-20 · ให้คนรับซื้อดู', () => {
     expect(style.fontSize * 2 * 0.62 * '2,345,678.00'.length).toBeLessThanOrEqual(358);
     if (Platform.OS !== 'web') expect(text.props).toMatchObject({ numberOfLines: 1, adjustsFontSizeToFit: true });
     scale.mockRestore();
+  });
+});
+
+describe('CO-20 · FitAmount measures what it draws (never wraps inside the number)', () => {
+  it('a drawn width wider than the line shrinks the size until it fits', async () => {
+    wrap(<FitAmount satang={234_567_800} testID="fit" />);
+    await act(async () => fireEvent(screen.getByTestId('fit'), 'layout', { nativeEvent: { layout: { width: 200, height: 60, x: 0, y: 0 } } }));
+    const size = () => ([screen.getByTestId('fit-text').props.style].flat().reduce((a, s) => ({ ...a, ...s }), {}) as { fontSize: number }).fontSize;
+    const first = size();
+    // what the text really drew (e.g. a bigger system font): 300 px for a 200 px line
+    await act(async () => fireEvent(screen.getByTestId('fit-text'), 'layout', { nativeEvent: { layout: { width: 300, height: 40, x: 0, y: 0 } } }));
+    expect(size()).toBeLessThanOrEqual(Math.floor((first * 200) / 300));
+    expect(screen.getByTestId('fit-text')).toHaveTextContent('2,345,678.00');
+    // it fits now: no further change
+    const fitted = size();
+    await act(async () => fireEvent(screen.getByTestId('fit-text'), 'layout', { nativeEvent: { layout: { width: 195, height: 30, x: 0, y: 0 } } }));
+    expect(size()).toBe(fitted);
+  });
+
+  it('one unbreakable run: no wrapping inside the figure (web whiteSpace nowrap, native one line)', () => {
+    wrap(<FitAmount satang={234_567_800} testID="fit" />);
+    const text = screen.getByTestId('fit-text');
+    const style = [text.props.style].flat().reduce((a, s) => ({ ...a, ...s }), {}) as { whiteSpace?: string; alignSelf?: string };
+    if (Platform.OS === 'web') expect(style.whiteSpace).toBe('nowrap');
+    else expect(text.props.numberOfLines).toBe(1);
+    expect(style.alignSelf).toBe('flex-end');
+  });
+});
+
+describe('D-80 · เข้าบัญชีไหน on the cash step (E05-S07, kept from the old settlement page)', () => {
+  const ACCT = 'co-cash-acct';
+  const CLOSED = 'co-cash-closed';
+  const BANK = { label: 'บัญชีหลัก', bankCode: 'KBANK', accountNo: '1234567890', accountName: 'สมชาย', promptPay: null };
+  beforeAll(async () => {
+    await sale(ACCT, true);
+    const b = new LogBuilder(CLOSED);
+    b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+    b.sys({ t: 'price_set', satangPerKg: 5000, indexRef: '' });
+    b.sys({ t: 'pile_added', pileId: farm.a[0], zoneId: farm.farmA, name: farm.a[0], tareG: 2_000, stdNetG: 50_000 });
+    for (let n = 1; n <= 3; n++) b.acceptAt(farm.a[0], n);
+    b.sys({ t: 'sale_status_set', status: 'completed' });
+    await seedSale(store(), b.build().map((e) => ({ ...e, ts: Date.now() })));
+  });
+
+  it('none yet: "ยังไม่ได้เลือก" under โอนเข้าบัญชีสวน, button เลือก', async () => {
+    await inSale(ACCT, <CloseoutCashScreen />);
+    expect(last('cop-account')).toHaveTextContent(/ยังไม่ได้เลือก/);
+    expect(last('cop-account-change')).toHaveTextContent('เลือก');
+  });
+
+  it('the group default is shown and marked; the sheet lists live accounts, cash, a note and the settings link', async () => {
+    await writeFinance('acc-1', null, { t: 'account_added', fields: BANK });
+    await writeFinance('acc-default', null, { t: 'account_default_set', accountId: 'acc-1' });
+    await inSale(ACCT, <CloseoutCashScreen />);
+    expect(last('cop-account')).toHaveTextContent(/กสิกรไทย ••7890/);
+    expect(last('cop-account')).toHaveTextContent(/บัญชีค่าเริ่มต้น/);
+    expect(last('cop-account-change')).toHaveTextContent('เปลี่ยน');
+    await press('cop-account-change');
+    expect(last('acct-acc-1').props.accessibilityState).toMatchObject({ checked: true });
+    expect(last('acct-cash').props.accessibilityState).toMatchObject({ checked: false });
+    expect(last('acct-note')).toBeTruthy();
+    router.push.mockClear();
+    await press('acct-settings');
+    expect(router.push).toHaveBeenCalledWith('/v2/accounts');
+  });
+
+  it('choosing writes sale_account_set for this sale (the existing event); the row follows', async () => {
+    await inSale(ACCT, <CloseoutCashScreen />);
+    await press('cop-account-change');
+    await press('acct-cash');
+    const sets = (await financeStore.load()).filter((e) => e.payload.t === 'sale_account_set');
+    expect(sets).toHaveLength(1);
+    expect(sets[0].targetId).toBe(`sale-account-${ACCT}`);
+    expect(sets[0].payload).toEqual({ t: 'sale_account_set', saleId: ACCT, choice: { kind: 'cash' } });
+    expect(screen.queryByTestId('cop-account-sheet')).toBeNull();
+    expect(last('cop-account')).toHaveTextContent(/รับเงินสด/);
+  });
+
+  it('a closed sale is read-only: the choice shows, no button', async () => {
+    await inSale(CLOSED, <CloseoutCashScreen />);
+    expect(last('cop-account')).toHaveTextContent(/กสิกรไทย ••7890/);
+    expect(screen.queryByTestId('cop-account-change')).toBeNull();
   });
 });

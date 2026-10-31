@@ -98,14 +98,10 @@ const live = async (saleId: string, worker: string) => {
     e.payload.t === 'debt_payment_recorded' && e.payload.fields.saleId === saleId && e.payload.fields.worker.id === worker && !gone.has(e.targetId) ? [[e.payload.fields.method, e.payload.fields.amountSatang, e.payload.fields.date] as const] : [],
   );
 };
-async function gates(saleId: string, { cash = true }: { cash?: boolean } = {}) {
+async function gates(saleId: string) {
   await press('co-debt-open');
   await press('co-debt-ok');
   await press('co-owed-none');
-  if (cash) {
-    await act(async () => updateDraft(saleId, (d) => ({ ...d, cashStepDone: true })));
-    await flush();
-  }
 }
 
 const S1 = 'early-1';
@@ -160,7 +156,7 @@ describe('E05-S10 · a sale for an earlier day, part of a later-dated debt taken
     await press('cop-ok');
     c.unmount();
     const r = await inSale(S1, <CloseoutSummaryScreen />);
-    await gates(S1, { cash: false });
+    await gates(S1);
     await press('co-confirm');
     r.unmount();
     expect(await live(S1, farm.nat)).toEqual([['buyer-split', 100_000, DAY]]);
@@ -193,6 +189,6 @@ describe('E05-S10 · a sale for an earlier day, part of a later-dated debt taken
     expect(await live(S2, farm.nat)).toEqual([['transfer-with-owner', 50_000, DAY]]);
     await inSale(S2, <CloseoutPayScreen />);
     expect(screen.queryByTestId(`tick-debt-cash-${farm.nat}`)).toBeNull();
-    expect(last('pay-sub-owner')).toHaveTextContent(/คืนหนี้/);
+    expect(last('pay-sub-owner-repay')).toHaveTextContent(/คืนหนี้/);
   });
 });

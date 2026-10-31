@@ -8,6 +8,7 @@ import {
   debtPieces,
   groupNotes,
   liftableNotes,
+  netDraft,
   pendingRepays,
   quickAmounts,
   REPAY_ROUTES,
@@ -462,6 +463,53 @@ describe('drafts (CO-3, CO-5)', () => {
   });
 });
 
+describe('netDraft (CO-7, owner Q1: partial netting)', () => {
+  // นัด: share 5,250, debt 8,350, the farm owes him 640 (story A23).
+  const nat = (d: CloseoutInput['drafts'][string] = {}) =>
+    byId(
+      closeoutPlan({
+        saleTotalSatang: 0,
+        ownerShareSatang: 0,
+        workers: [worker({ id: 'w', shareSatang: 525000, balanceSatang: 835000, owedBackSatang: 64000 })],
+        drafts: { w: d },
+        defaultRoute: () => 'transfer-with-owner',
+        rounding: 'none',
+      }),
+      'w',
+    );
+
+  it('full: netting 640 on top of the deduction (5,250 → 5,890)', () => {
+    expect(netDraft(nat(), 64000)).toEqual({ nettingSatang: 64000, totalSatang: 589000 });
+  });
+  it('partial: 300 of the 640', () => {
+    expect(netDraft(nat(), 30000)).toEqual({ nettingSatang: 30000, totalSatang: 555000 });
+  });
+  it('changing it moves only the netting part of the deduction', () => {
+    expect(netDraft(nat({ nettingSatang: 64000, totalSatang: 589000 }), 20000)).toEqual({ nettingSatang: 20000, totalSatang: 545000 });
+  });
+  it('over the ceiling (what the farm owes, capped by the debt) or below 0 is refused', () => {
+    expect(netDraft(nat(), 64001)).toBeNull();
+    expect(netDraft(nat(), -1)).toBeNull();
+  });
+  it('0 removes it: the deduction drops by what was netted', () => {
+    expect(netDraft(nat({ nettingSatang: 64000, totalSatang: 589000 }), 0)).toEqual({ nettingSatang: 0, totalSatang: 525000 });
+  });
+  it('never past the whole debt', () => {
+    const w = byId(
+      closeoutPlan({
+        saleTotalSatang: 0,
+        ownerShareSatang: 0,
+        workers: [worker({ id: 'w', shareSatang: 525000, balanceSatang: 550000, owedBackSatang: 64000 })],
+        drafts: {},
+        defaultRoute: () => 'transfer-with-owner',
+        rounding: 'none',
+      }),
+      'w',
+    );
+    expect(netDraft(w, 64000)).toEqual({ nettingSatang: 64000, totalSatang: 550000 });
+  });
+});
+
 describe('cash step (CO-19)', () => {
   it('not needed with no deduction anywhere and no fraction', () => {
     const p = closeoutPlan({
@@ -533,7 +581,10 @@ describe('sourcesSheet (CO-9, D-85)', () => {
       }),
     );
     const s = sourcesSheet(p, 2887500, 1443750);
-    expect(s.debt.lines.filter((l) => l.way === 'out')).toEqual([expect.objectContaining({ id: `${NAT.id}-net`, satang: 64000 })]);
+    expect(s.debt.lines.filter((l) => l.way === 'out')).toEqual([
+      expect.objectContaining({ id: `${NAT.id}-net`, satang: 64000 }),
+      expect.objectContaining({ id: `farm-net-${NAT.id}`, satang: -64000 }),
+    ]);
     expect(s.debt.lines.reduce((a, l) => a + l.satang, 0)).toBe(0);
     expect(s.debt.ok).toBe(true);
     expect(s.paid.lines).toContainEqual(
@@ -544,6 +595,38 @@ describe('sourcesSheet (CO-9, D-85)', () => {
       }),
     );
     expect(s.paid.ok).toBe(true);
+  });
+
+  it('② as A8: one ↘ row per tapper, then ONE farm row "สวนรับคืนหนี้" with the sum; down = received', () => {
+    const s = sourcesSheet(closeoutPlan(storyInput()), 2887500, 1443750);
+    expect(s.debt.lines).toEqual([
+      { id: `${DAENG.id}-pay`, party: 'worker', name: 'แดง', way: 'in', satang: -325000 },
+      { id: `${NAT.id}-pay`, party: 'worker', name: 'นัด', way: 'in', satang: -525000 },
+      { id: 'farm-recv', party: 'farm', name: '', way: 'in', satang: 850000 },
+    ]);
+    expect(s.debt).toMatchObject({ downSatang: 850000, receivedSatang: 850000, nettedSatang: 0, ok: true });
+  });
+
+  it('② with netting as A25: tapper ↗ +640, farm ↘ receives all (with netting), farm ↗ −640; Σ 0', () => {
+    const p = closeoutPlan(storyInput({ workers: storyInput().workers.map((w) => (w.id === NAT.id ? { ...w, owedBackSatang: 64000 } : w)), drafts: { [NAT.id]: { nettingSatang: 64000, totalSatang: 589000 } } }));
+    const s = sourcesSheet(p, 2887500, 1443750);
+    expect(s.debt.lines).toEqual([
+      { id: `${DAENG.id}-pay`, party: 'worker', name: 'แดง', way: 'in', satang: -325000 },
+      { id: `${NAT.id}-pay`, party: 'worker', name: 'นัด', way: 'in', satang: -589000 },
+      { id: `${NAT.id}-net`, party: 'worker', name: 'นัด', way: 'out', satang: 64000 },
+      { id: 'farm-recv', party: 'farm', name: '', way: 'in', satang: 914000 },
+      { id: `farm-net-${NAT.id}`, party: 'farm', name: 'นัด', way: 'out', satang: -64000 },
+    ]);
+    expect(s.debt).toMatchObject({ downSatang: 914000, receivedSatang: 850000, nettedSatang: 64000, ok: true });
+  });
+
+  it('③ names the farm line as the farm; paid tells the transfer apart: share − rounding + repay (A8)', () => {
+    const s = sourcesSheet(closeoutPlan(storyInput()), 2887500, 1443750);
+    expect(s.rounding.lines).toEqual([
+      { id: DAENG.id, party: 'worker', name: 'แดง', satang: 50 },
+      { id: 'owner', party: 'farm', name: '', satang: -50 },
+    ]);
+    expect(s.paid.transfer).toEqual({ ownerShareSatang: 1443750, roundSatang: -50, repaySatang: 850000 });
   });
 
   it('a pile that does not add up shows ✗', () => {
@@ -666,8 +749,6 @@ describe('confirmGate (CO-17, CO-26, CO-9)', () => {
     owed: [{ id: 'b' }],
     owedChecked: new Set(['b']),
     owedAnswered: false,
-    cashStepNeeded: true,
-    cashStepDone: true,
     plan: okPlan,
     over: false,
   };
@@ -694,16 +775,19 @@ describe('confirmGate (CO-17, CO-26, CO-9)', () => {
     expect(confirmGate({ ...base, debtors: [], owedChecked: new Set() }).kind).toBe('check-both');
     expect(confirmGate({ ...base, debtChecked: new Set(), owed: [] }).kind).toBe('check-both');
   });
-  it('then invalid, then tally, then cash step', () => {
+  it('then invalid, then tally', () => {
     const bad = closeoutPlan(storyInput({ drafts: { [NAT.id]: { totalSatang: 600000 } } }));
-    expect(confirmGate({ ...base, plan: bad, cashStepDone: false }).kind).toBe('invalid');
+    expect(confirmGate({ ...base, plan: bad }).kind).toBe('invalid');
     const off = {
       ...okPlan,
       tally: { ok: false, diffSatang: -1, sumSatang: 2887499 },
     };
-    expect(confirmGate({ ...base, plan: off, cashStepDone: false }).kind).toBe('tally');
-    expect(confirmGate({ ...base, cashStepDone: false }).kind).toBe('cash-step');
-    expect(confirmGate({ ...base, cashStepNeeded: false, cashStepDone: false }).kind).toBe('ready');
+    expect(confirmGate({ ...base, plan: off }).kind).toBe('tally');
+  });
+  it('the cash step is not a gate (A3): both cards checked → ready without opening it', () => {
+    // `plan.cashStepNeeded` is true here (story example: deductions and a fraction) and the step was never opened.
+    expect(okPlan.cashStepNeeded).toBe(true);
+    expect(confirmGate(base).kind).toBe('ready');
   });
 });
 

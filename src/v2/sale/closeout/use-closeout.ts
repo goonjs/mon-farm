@@ -50,11 +50,9 @@ export interface CloseoutDraft {
   readonly owedChecked: readonly string[];
   readonly owedAnswered: boolean;
   readonly owedChoice: Readonly<Record<string, OwedChoice>>;
-  /** CO-19: the cash step was visited and ตกลง pressed. */
-  readonly cashStepDone: boolean;
 }
 
-const EMPTY_DRAFT: CloseoutDraft = { workers: {}, rounding: null, debtChecked: [], debtAnswered: false, owedChecked: [], owedAnswered: false, owedChoice: {}, cashStepDone: false };
+const EMPTY_DRAFT: CloseoutDraft = { workers: {}, rounding: null, debtChecked: [], debtAnswered: false, owedChecked: [], owedAnswered: false, owedChoice: {} };
 
 const drafts = new Map<string, CloseoutDraft>();
 const listeners = new Set<() => void>();
@@ -154,8 +152,6 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       owed,
       owedChecked: new Set(draft.owedChecked),
       owedAnswered: draft.owedAnswered,
-      cashStepNeeded: plan.cashStepNeeded,
-      cashStepDone: draft.cashStepDone,
       plan,
       over,
     });

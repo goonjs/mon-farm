@@ -15,9 +15,9 @@ import { quickAmounts, type CloseoutWorker, type DebtPiece } from '../../../core
 import { moneyTextStep, pressKey, startEntry, viewEntry, entryToSatang, type EntryConfig, type EntryKey, type EntryState } from '../../../core/number-entry';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, Check, CTA, NumberPad } from '../../../ui';
+import { AppText, BottomSheet, Check, CTA, MoneyField, NumberPad } from '../../../ui';
 import type { Closeout } from './use-closeout';
-import { addId, baht, Line, MARK, netOff, netOn, withWorker } from './summary-parts';
+import { addId, baht, Line, MARK, netSet, shortBaht, withWorker } from './summary-parts';
 import { usePieceName } from './summary-debt-sheet';
 
 const CFG: EntryConfig = { kind: 'money', maxDigits: 8 };
@@ -25,8 +25,6 @@ const CFG: EntryConfig = { kind: 'money', maxDigits: 8 };
 /** Raw pad text for an amount: "3000", "5937.5". */
 const rawOf = (satang: number) => (satang % 100 === 0 ? String(satang / 100) : `${Math.floor(satang / 100)}.${String(satang % 100).padStart(2, '0').replace(/0$/, '')}`);
 
-/** "5,250" for whole baht, "5,250.50" otherwise — a chip or a link, not a sum. */
-export const shortBaht = (satang: number) => baht(satang).replace(/\.00$/, '');
 
 export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; w: CloseoutWorker; pieces: readonly DebtPiece[]; /** The farm owes this tapper (CO-7: the link shows only then). */ canNet: boolean; onClose: () => void }) {
   const t = useTheme();
@@ -46,10 +44,11 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
     setEntry(startEntry(rawOf(satang)));
     setTotal(satang);
   };
-  const net = (on: boolean) => {
-    let total = 0;
+  /** Netting set to an amount (0 removes it): core's rule, then the pad shows the new deduction. */
+  const net = (satang: number) => {
+    let total = w.totalSatang;
     co.update((d) => {
-      const next = on ? netOn(d, w) : netOff(d, w);
+      const next = netSet(d, w, satang);
       total = next.workers[w.id]?.totalSatang ?? w.totalSatang;
       return next;
     });
@@ -77,6 +76,7 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
     onClose();
   };
 
+  const netChip = { minHeight: t.target.comfortable, justifyContent: 'center' as const, paddingHorizontal: t.space.md, borderRadius: t.radius.pill, borderWidth: t.border.hair, borderColor: t.color.debtOut, backgroundColor: t.color.surfaceRaised };
   const q = quickAmounts(w.capSatang);
   const view = viewEntry(entry, CFG);
   const size = t.font.size[moneyTextStep(view) === 'figure' ? 'displayXl' : moneyTextStep(view)];
@@ -96,7 +96,9 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
   );
 
   return (
-    <BottomSheet open onClose={cancel} title={msg('co.deduct.title', { name: w.name })} testID="co-deduct-sheet">
+    <BottomSheet open onClose={cancel} title={msg('co.deduct.title', { name: w.name })} testID="co-deduct-sheet" closeLabel={msg('co.close')}>
+      {/* one column a step tighter than the sheet's own gap (the pad and ✓ stay on screen) */}
+      <View style={{ gap: t.space.sm }}>
       <View style={{ backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.lg, padding: t.space.md, gap: t.space.xxs }}>
         <Line label={msg('co.deduct.debt', { name: w.name, n: pieces.length })} value={baht(balance)} />
         <Line label={w.nettingSatang > 0 ? msg('co.deduct.capNet', { amount: shortBaht(w.nettingSatang) }) : msg('co.deduct.cap')} value={baht(w.capSatang)} />
@@ -129,16 +131,32 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
       </View>
 
       {w.nettingSatang > 0 ? (
-        <View testID="co-net-on" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.sm }}>
-          <AppText style={{ color: t.color.debtOut, fontWeight: t.font.weight.bold }}>{MARK.out} {msg('co.net.on', { amount: shortBaht(w.nettingSatang) })}</AppText>
-          <Pressable testID="co-net-remove" accessibilityRole="button" onPress={() => net(false)} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
-            <View style={{ borderWidth: t.border.hair, borderColor: t.color.debtOut, borderRadius: t.radius.pill, paddingHorizontal: t.space.md, paddingVertical: t.space.xxs }}>
+        <View testID="co-net-on" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: t.space.sm }}>
+          <View style={{ flexGrow: 1, flexBasis: 150 }}>
+            <MoneyField
+              testID="co-net-field"
+              label={`${MARK.out} ${msg('co.net.on', { amount: shortBaht(w.nettingSatang) })} · ${msg('co.net.max', { amount: shortBaht(w.netCapSatang) })}`}
+              satang={w.nettingSatang}
+              unit={msg('v2.baht')}
+              minSatang={1}
+              maxSatang={w.netCapSatang}
+              words={false}
+              onChange={net}
+            />
+          </View>
+          <View style={{ flexDirection: 'row', gap: t.space.xs }}>
+            {w.nettingSatang === w.netCapSatang ? null : (
+              <Pressable testID="co-net-full" accessibilityRole="button" onPress={() => net(w.netCapSatang)} style={netChip}>
+                <AppText style={{ color: t.color.debtOut, fontWeight: t.font.weight.bold }}>{msg('co.net.full', { amount: shortBaht(w.netCapSatang) })}</AppText>
+              </Pressable>
+            )}
+            <Pressable testID="co-net-remove" accessibilityRole="button" onPress={() => net(0)} style={netChip}>
               <AppText style={{ color: t.color.debtOut, fontWeight: t.font.weight.bold }}>× {msg('co.net.remove')}</AppText>
-            </View>
-          </Pressable>
+            </Pressable>
+          </View>
         </View>
       ) : canNet && w.netCapSatang > 0 ? (
-        <Pressable testID="co-net-link" accessibilityRole="link" onPress={() => net(true)} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
+        <Pressable testID="co-net-link" accessibilityRole="link" onPress={() => net(w.netCapSatang)} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
           <AppText style={{ color: t.color.debtOut, fontWeight: t.font.weight.bold, textDecorationLine: 'underline' }}>{MARK.out} {msg('co.net.link', { amount: shortBaht(w.netCapSatang), name: w.name })} ›</AppText>
         </Pressable>
       ) : null}
@@ -147,6 +165,7 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
       <CTA testID="co-deduct-ok" disabled={w.invalid} icon={(c) => <Check color={c} />} onPress={ok}>
         {msg('co.deduct.ok')}
       </CTA>
+      </View>
     </BottomSheet>
   );
 }

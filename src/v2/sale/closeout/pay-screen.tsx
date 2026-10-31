@@ -40,10 +40,12 @@ import { canComplete } from '../../../core/sale-status';
 import { useInFlight } from '../../../finance/use-in-flight';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AlertIcon, AppText, BankIcon, BottomSheet, Button, cardStyle, Check, ChevronRight, Chip, ClockIcon, InfoIcon } from '../../../ui';
+import { AlertIcon, AppText, BankIcon, BottomSheet, Button, cardStyle, Check, Chip, ClockIcon, InfoIcon } from '../../../ui';
 import type { TapperMoney } from '../../money/sale/use-sale-money';
 import { FarmScreen } from '../../farm/pieces';
 import { Banner, IconLine, markClosing, useSaleView } from '../pieces';
+import { SourcesPill } from './summary-cards';
+import { WarnMark } from './summary-parts';
 import { useCloseout } from './use-closeout';
 
 const baht = formatSatang;
@@ -193,7 +195,11 @@ function PayBody({ bump }: { bump: () => void }) {
     const titleText =
       row.kind === 'cash' ? msg('cop.paidCash', { name: row.tp.name }) : row.kind === 'repay' ? msg('cop.gotRepayCash', { name: row.tp.name }) : msg('cop.ownerGot');
     const body: ReactNode[] = [];
-    if (row.kind === 'cash') body.push(sub(cashSub(row.tp), `pay-sub-${row.id}`));
+    if (row.kind === 'cash') {
+      body.push(sub(cashSub(row.tp), `pay-sub-${row.id}`));
+      // Owner Q4: netting under the tapper's tick, ↗ orange (CO-15 / D-85).
+      if (row.tp.nettedSatang > 0) body.push(sub(`↗ ${msg('cop.netted', { amount: short(row.tp.nettedSatang) })}`, `pay-net-${row.id}`, t.color.debtOut));
+    }
     if (row.kind === 'repay') {
       body.push(sub(row.picked ? msg('cop.viaPicked', { dir: '↘', name: row.tp.name }) : msg('cop.viaSplit', { dir: '↘' }), `pay-sub-${row.id}`, t.color.debtIn));
       const wait = pendingCash(row.tp.id);
@@ -202,7 +208,9 @@ function PayBody({ bump }: { bump: () => void }) {
     }
     if (row.kind === 'owner') {
       if (money.rounding.transferInSatang) {
-        body.push(sub(msg('cop.ownerSplit', { dir: '↘', owner: baht(money.rounding.result.ownerSatang), name: repayName, repay: baht(money.rounding.transferInSatang) }), `pay-sub-${row.id}`));
+        // A9: the repayment on its own line, blue — never broken inside a word.
+        body.push(sub(msg('cop.ownerSplitShare', { owner: baht(money.rounding.result.ownerSatang) }), `pay-sub-${row.id}`));
+        body.push(sub(msg('cop.ownerSplitRepay', { dir: '↘', name: repayName, repay: baht(money.rounding.transferInSatang) }), `pay-sub-${row.id}-repay`, t.color.debtIn));
       }
       if (!ps.done && pendingTransfer) body.push(chip(msg('cop.waitTransfer', { dir: '↘', amount: short(pendingTransfer) }), `pay-chip-${row.id}`));
       if (account) {
@@ -261,7 +269,7 @@ function PayBody({ bump }: { bump: () => void }) {
 
   const check = (ok: boolean, label: string, testID: string) => (
     <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
-      {ok ? <Check color={t.color.accept} size={12} /> : <AlertIcon color={t.color.warn} size={14} />}
+      {ok ? <Check color={t.color.accept} size={12} /> : <WarnMark color={t.color.warn} size={14} />}
       <AppText style={{ flex: 1 }}>{label}</AppText>
       <AppText variant="bodySm" style={{ color: ok ? t.color.accept : t.color.warn, fontWeight: t.font.weight.bold }}>{msg(ok ? 'cop.srcYes' : 'cop.srcNo')}</AppText>
     </View>
@@ -286,7 +294,7 @@ function PayBody({ bump }: { bump: () => void }) {
         </View>
       }
       overlay={
-        <BottomSheet open={sources} onClose={() => setSources(false)} title={msg('cop.srcTitle')} testID="pay-sources">
+        <BottomSheet open={sources} onClose={() => setSources(false)} title={msg('cop.srcTitle')} testID="pay-sources" closeLabel={msg('cop.close')}>
           {check(src.shares.ok, msg('cop.srcShares', { n: '①' }), 'pay-src-shares')}
           {check(src.debt.ok, msg('cop.srcDebt', { dir: '↘', n: '②' }), 'pay-src-debt')}
           {check(src.rounding.ok, msg('cop.srcRound', { n: '③' }), 'pay-src-round')}
@@ -303,16 +311,13 @@ function PayBody({ bump }: { bump: () => void }) {
       </View>
       <View
         testID="pay-tally"
-        style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, borderRadius: t.radius.lg, paddingLeft: t.space.md, backgroundColor: piles.ok ? t.color.acceptSunk : t.color.warnSunk }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, borderRadius: t.radius.lg, paddingLeft: t.space.md, paddingRight: t.space.xs, backgroundColor: piles.ok ? t.color.acceptSunk : t.color.warnSunk }}
       >
-        {piles.ok ? <Check color={t.color.accept} size={14} /> : <AlertIcon color={t.color.warn} size={14} />}
+        {piles.ok ? <Check color={t.color.accept} size={14} /> : <WarnMark color={t.color.warn} size={14} />}
         <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, color: piles.ok ? t.color.ink : t.color.warn }}>
           {piles.ok ? msg('cop.tallyOk') : msg('cop.tallyOff', { how: msg(piles.diffSatang < 0 ? 'cop.short' : 'cop.over'), amount: baht(Math.abs(piles.diffSatang)) })}
         </AppText>
-        <Pressable testID="pay-sources-open" accessibilityRole="button" onPress={() => setSources(true)} style={{ minHeight: t.target.min, flexDirection: 'row', alignItems: 'center', gap: t.space.xs, paddingHorizontal: t.space.md }}>
-          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.action }}>{msg('cop.sources')}</Text>
-          <ChevronRight color={t.color.action} size={7} />
-        </Pressable>
+        <SourcesPill testID="pay-sources-open" label={msg('cop.sources')} onPress={() => setSources(true)} />
       </View>
       {conflicts.length ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.tickConflict')} lines={[msg('v2s.tickConflictLine')]} testID="pay-conflict" /> : null}
       {over ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.overTitle')} lines={[msg('v2s.overLine')]} testID="pay-over" /> : null}

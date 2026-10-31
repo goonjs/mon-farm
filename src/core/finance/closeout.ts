@@ -133,6 +133,21 @@ export function quickAmounts(capSatang: number): { full: number; half: number; n
   return { full, half: Math.floor(full / 200) * 100, none: 0 };
 }
 
+/**
+ * CO-7 / CO-26 (owner Q1: partial netting): the draft patch that nets
+ * `nettingSatang` of what the farm owes this worker against their debt.
+ * Only the netting part of the deduction moves (what the route collects
+ * stays), never past the worker's whole debt. Ceiling = `netCapSatang`
+ * (what the farm owes, capped by the debt); above it, or below 0 → null
+ * (refused). 0 removes the netting.
+ */
+export function netDraft(w: CloseoutWorker, nettingSatang: number): { nettingSatang: number; totalSatang: number } | null {
+  if (!Number.isInteger(nettingSatang) || nettingSatang < 0 || nettingSatang > w.netCapSatang) return null;
+  const balance = w.totalSatang + w.debtLeftSatang;
+  const routePart = Math.max(0, w.totalSatang - w.nettingSatang);
+  return { nettingSatang, totalSatang: Math.min(routePart + nettingSatang, balance) };
+}
+
 // ── CO-1 / CO-9 / CO-19 · the whole sale ────────────────────────────────────
 
 export interface CloseoutInput {
@@ -287,41 +302,63 @@ export function closeoutPlan(input: CloseoutInput): CloseoutPlan {
 
 // ── CO-9 · "ดูที่มา" (A8): the three checks of D-85 ──────────────────────────
 
+export type SourceParty = 'worker' | 'farm';
+
 export interface SourcesSheet {
   /** ① shares + owner = sale. */
   readonly shares: { readonly lines: readonly { readonly id: string; readonly name: string; readonly satang: number }[]; readonly ownerSatang: number; readonly ok: boolean };
-  /** ② ↘ worker pays debt (−) and ↘ farm receives (+), ↗ netting pairs; sums to 0. */
-  readonly debt: { readonly lines: readonly { readonly id: string; readonly name: string; readonly way: 'in' | 'out'; readonly satang: number }[]; readonly ok: boolean };
+  /**
+   * ② per tapper ↘ "จ่ายหนี้" (−total) and ↗ netting got back (+); then the
+   * farm: ONE ↘ "รับคืนหนี้" (+Σ total, netting included) and ↗ per netted
+   * tapper (−netting). Sums to 0. down = Σ total = received + netted (A8, A25).
+   */
+  readonly debt: {
+    readonly lines: readonly { readonly id: string; readonly party: SourceParty; readonly name: string; readonly way: 'in' | 'out'; readonly satang: number }[];
+    readonly downSatang: number;
+    readonly receivedSatang: number;
+    readonly nettedSatang: number;
+    readonly ok: boolean;
+  };
   /** ③ rounding adjustments, workers vs farm; sums to 0. */
-  readonly rounding: { readonly lines: readonly { readonly id: string; readonly name: string; readonly satang: number }[]; readonly ok: boolean };
-  /** Money really paid by the buyer: cash per worker, cash repayments, transfer = sale. */
-  readonly paid: { readonly lines: readonly { readonly id: string; readonly kind: 'cash' | 'transfer' | 'repay-cash'; readonly name: string; readonly satang: number }[]; readonly ok: boolean };
+  readonly rounding: { readonly lines: readonly { readonly id: string; readonly party: SourceParty; readonly name: string; readonly satang: number }[]; readonly ok: boolean };
+  /** Money really paid by the buyer: cash per worker, cash repayments, transfer = sale; the transfer told apart (A8). */
+  readonly paid: {
+    readonly lines: readonly { readonly id: string; readonly kind: 'cash' | 'transfer' | 'repay-cash'; readonly name: string; readonly satang: number }[];
+    readonly transfer: { readonly ownerShareSatang: number; readonly roundSatang: number; readonly repaySatang: number };
+    readonly ok: boolean;
+  };
 }
 
 /**
  * Line ids: shares and cash use the worker id; ② uses `<id>-pay` (worker
- * pays, −total), `<id>-net` (↗ farm repays by netting, +), `<id>-recv`
- * (farm receives by the route, +); ③ and owner lines use id 'owner' with
- * an empty name (the screen names the farm); paid uses the worker id
- * (cash), `<id>-repay` (repay-cash) and 'transfer'. Each check is computed
- * from the money as it stands: ② fails when a worker's cash was held at 0
- * below share − route (over the cap, D-61).
+ * pays, −total), `<id>-net` (↗ the worker gets netting back, +),
+ * 'farm-recv' (the farm receives every deduction, netting included, +) and
+ * `farm-net-<id>` (↗ the farm repays by netting, −); ③ and owner lines use
+ * id 'owner' with an empty name and party 'farm' (the screen names the
+ * farm); paid uses the worker id (cash), `<id>-repay` (repay-cash) and
+ * 'transfer'. Each check is computed from the money as it stands: ② fails
+ * when a worker's cash was held at 0 below share − route (over the cap, D-61).
  */
 export function sourcesSheet(plan: CloseoutPlan, saleTotalSatang: number, ownerShareSatang: number): SourcesSheet {
   const ws = plan.workers;
   const shareLines = ws.map((w) => ({ id: w.id, name: w.name, satang: w.shareSatang }));
-  const debtLines = ws.flatMap((w) =>
-    w.totalSatang > 0 || w.nettingSatang > 0
-      ? [
-          { id: `${w.id}-pay`, name: w.name, way: 'in' as const, satang: -w.totalSatang },
-          ...(w.nettingSatang > 0 ? [{ id: `${w.id}-net`, name: w.name, way: 'out' as const, satang: w.nettingSatang }] : []),
-          ...(w.routeSatang > 0 ? [{ id: `${w.id}-recv`, name: w.name, way: 'in' as const, satang: w.routeSatang }] : []),
-        ]
-      : [],
-  );
+  const worker = 'worker' as const;
+  const farm = 'farm' as const;
+  const paying = ws.filter((w) => w.totalSatang > 0 || w.nettingSatang > 0);
+  const netted = ws.filter((w) => w.nettingSatang > 0);
+  const downSatang = sumOf(paying.map((w) => w.totalSatang));
+  const nettedSatang = sumOf(netted.map((w) => w.nettingSatang));
+  const debtLines = [
+    ...paying.flatMap((w) => [
+      { id: `${w.id}-pay`, party: worker, name: w.name, way: 'in' as const, satang: -w.totalSatang },
+      ...(w.nettingSatang > 0 ? [{ id: `${w.id}-net`, party: worker, name: w.name, way: 'out' as const, satang: w.nettingSatang }] : []),
+    ]),
+    ...(paying.length ? [{ id: 'farm-recv', party: farm, name: '', way: 'in' as const, satang: downSatang }] : []),
+    ...netted.map((w) => ({ id: `farm-net-${w.id}`, party: farm, name: w.name, way: 'out' as const, satang: -w.nettingSatang })),
+  ];
   const roundLines = [
-    ...ws.filter((w) => w.adjustSatang !== 0).map((w) => ({ id: w.id, name: w.name, satang: w.adjustSatang })),
-    ...(plan.ownerSatang !== ownerShareSatang ? [{ id: 'owner', name: '', satang: plan.ownerSatang - ownerShareSatang }] : []),
+    ...ws.filter((w) => w.adjustSatang !== 0).map((w) => ({ id: w.id, party: worker, name: w.name, satang: w.adjustSatang })),
+    ...(plan.ownerSatang !== ownerShareSatang ? [{ id: 'owner', party: farm, name: '', satang: plan.ownerSatang - ownerShareSatang }] : []),
   ];
   const paidLines = [
     ...ws.map((w) => ({ id: w.id, kind: 'cash' as const, name: w.name, satang: w.cashSatang })),
@@ -329,11 +366,23 @@ export function sourcesSheet(plan: CloseoutPlan, saleTotalSatang: number, ownerS
     { id: 'transfer', kind: 'transfer' as const, name: '', satang: plan.transferSatang },
   ];
   const piles = ws.every((w) => w.cashBeforeSatang === w.shareSatang + w.nettingSatang - w.totalSatang);
+  // Paying lines carry their own netting, so the sheet's ② holds only when every route part and netting is inside the total.
+  const consistent = paying.every((w) => w.routeSatang + w.nettingSatang === w.totalSatang);
   return {
     shares: { lines: shareLines, ownerSatang: ownerShareSatang, ok: sumOf(shareLines.map((l) => l.satang)) + ownerShareSatang === saleTotalSatang },
-    debt: { lines: debtLines, ok: piles && sumOf(debtLines.map((l) => l.satang)) === 0 },
+    debt: {
+      lines: debtLines,
+      downSatang,
+      receivedSatang: sumOf(ws.map((w) => w.routeSatang)),
+      nettedSatang,
+      ok: piles && consistent && sumOf(debtLines.map((l) => l.satang)) === 0,
+    },
     rounding: { lines: roundLines, ok: sumOf(roundLines.map((l) => l.satang)) === 0 },
-    paid: { lines: paidLines, ok: sumOf(paidLines.map((l) => l.satang)) === saleTotalSatang },
+    paid: {
+      lines: paidLines,
+      transfer: { ownerShareSatang, roundSatang: plan.ownerSatang - ownerShareSatang, repaySatang: plan.transferRepaySatang },
+      ok: sumOf(paidLines.map((l) => l.satang)) === saleTotalSatang,
+    },
   };
 }
 
@@ -493,7 +542,6 @@ export type ConfirmGate =
   | { readonly kind: 'answer-debt' }
   | { readonly kind: 'answer-owed' }
   | { readonly kind: 'answer-both' }
-  | { readonly kind: 'cash-step' }
   | { readonly kind: 'tally' }
   | { readonly kind: 'invalid' }
   | { readonly kind: 'over' };
@@ -508,8 +556,6 @@ export function confirmGate(i: {
   readonly owed: readonly { readonly id: string }[];
   readonly owedChecked: ReadonlySet<string>;
   readonly owedAnswered: boolean;
-  readonly cashStepNeeded: boolean;
-  readonly cashStepDone: boolean;
   readonly plan: CloseoutPlan;
   /** D-61: some worker is over-deducted already (sale edited after). */
   readonly over: boolean;
@@ -529,7 +575,7 @@ export function confirmGate(i: {
   if (owed === 'answer') return { kind: 'answer-owed' };
   if (i.plan.anyInvalid) return { kind: 'invalid' };
   if (!i.plan.tally.ok) return { kind: 'tally' };
-  if (i.cashStepNeeded && !i.cashStepDone) return { kind: 'cash-step' };
+  // The cash step is not a gate (owner 2026-10-31, A3): its defaults stand until the owner changes them.
   return { kind: 'ready' };
 }
 

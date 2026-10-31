@@ -4,22 +4,19 @@
  * sum to 0, ③ rounding sums to 0 — and the money the buyer really pays.
  * Every line and every ok comes from core's `sourcesSheet`.
  *
- * Lines whose id is the farm's (`FARM_FUNDS`, or `FARM_FUNDS:<worker>`) are
- * the farm's side; in ② a farm ↗ line carries the tapper's name.
+ * Lines with party 'farm' are the farm's side ("สวน"); in ② a farm ↗ line
+ * carries the tapper's name.
  */
 
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import type { CloseoutPlan, SourcesSheet as Sources } from '../../../core/finance/closeout';
-import { FARM_FUNDS } from '../../../core/finance/types';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AlertIcon, AppText, BottomSheet, cardStyle, Check } from '../../../ui';
+import { AppText, BottomSheet, cardStyle, Check } from '../../../ui';
 import { signed } from '../person-money';
-import { baht, Line, MARK } from './summary-parts';
-
-const isFarm = (id: string) => id === FARM_FUNDS || id.startsWith(`${FARM_FUNDS}:`);
+import { baht, Line, MARK, shortBaht, WarnMark } from './summary-parts';
 
 /** ① ② ③ drawn as a ringed numeral (the catalogue has no circled digits). */
 function No({ n }: { n: number }) {
@@ -40,7 +37,7 @@ function Box({ n, title, ok, okText, children, testID, tint }: { n?: number; tit
         {n ? <No n={n} /> : null}
         <AppText style={{ flexShrink: 1, fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm }}>{title}</AppText>
         <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
-          {ok ? <Check color={t.color.accept} size={11} /> : <AlertIcon color={t.color.warn} size={14} />}
+          {ok ? <Check color={t.color.accept} size={11} /> : <WarnMark color={t.color.warn} size={14} />}
           <AppText variant="bodySm" style={{ fontWeight: t.font.weight.bold, color: ok ? t.color.accept : t.color.warn }}>{ok ? okText : msg('co.src.off')}</AppText>
         </View>
       </View>
@@ -53,15 +50,26 @@ export function SourcesSheet({ src, plan, saleTotalSatang, onClose }: { src: Sou
   const t = useTheme();
   const msg = useT();
   const allOk = src.shares.ok && src.debt.ok && src.rounding.ok && src.paid.ok;
-  const debtLabel = (l: Sources['debt']['lines'][number]) =>
-    isFarm(l.id)
-      ? `${msg('co.src.farm')} ${MARK[l.way]} ${l.way === 'in' ? msg('co.src.farmIn') : msg('co.src.farmOut', { name: l.name })}`
-      : `${l.name} ${MARK[l.way]} ${l.way === 'in' ? msg('co.src.payDebt') : msg('co.src.gotBack')}`;
+  const netted = src.debt.nettedSatang > 0;
+  const debtLabel = (l: Sources['debt']['lines'][number]) => {
+    if (l.party === 'worker') return `${l.name} ${MARK[l.way]} ${l.way === 'in' ? msg('co.src.payDebt') : msg('co.src.gotBack')}`;
+    // A8: one "↘ สวนรับคืนหนี้" row; with netting (A25) the farm is named and its ↗ rows follow.
+    if (l.way === 'in') return netted ? `${msg('co.src.farm')} ${MARK.in} ${msg('co.src.farmInNet')}` : `${MARK.in} ${msg('co.src.farmGot')}`;
+    return `${msg('co.src.farm')} ${MARK.out} ${msg('co.src.farmOut', { name: l.name })}`;
+  };
+  const debtSub = !src.debt.lines.length
+    ? msg('co.src.noDebt')
+    : `${msg('co.src.notSale')} · ${
+        netted
+          ? msg('co.src.downNet', { down: shortBaht(src.debt.downSatang), got: shortBaht(src.debt.receivedSatang), net: shortBaht(src.debt.nettedSatang) })
+          : msg('co.src.down', { down: shortBaht(src.debt.downSatang), got: shortBaht(src.debt.receivedSatang) })
+      }`;
+  const tr = src.paid.transfer;
   const paidLabel = (l: Sources['paid']['lines'][number]) =>
     l.kind === 'transfer' ? `${MARK.swap} ${msg('co.src.transfer')}` : l.kind === 'repay-cash' ? msg('co.src.repayCash', { name: l.name }) : msg('co.src.cash', { name: l.name });
   const tone = (way: 'in' | 'out') => (way === 'in' ? t.color.debtIn : t.color.debtOut);
   return (
-    <BottomSheet open onClose={onClose} title={msg('co.src.title')} testID="co-sources-sheet">
+    <BottomSheet open onClose={onClose} title={msg('co.src.title')} testID="co-sources-sheet" closeLabel={msg('co.close')}>
       <Box testID="co-src-shares" n={1} title={msg('co.src.shares')} ok={src.shares.ok} okText={msg('co.src.sharesOk')}>
         {src.shares.lines.map((l) => (
           <Line key={l.id} label={msg('co.src.shareOf', { name: l.name })} value={baht(l.satang)} />
@@ -71,7 +79,7 @@ export function SourcesSheet({ src, plan, saleTotalSatang, onClose }: { src: Sou
       </Box>
 
       <Box testID="co-src-debt" n={2} title={`${MARK.in} ${msg('co.src.debt')}`} ok={src.debt.ok} okText={msg('co.src.debtOk')}>
-        <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{src.debt.lines.length ? msg('co.src.notSale') : msg('co.src.noDebt')}</AppText>
+        <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{debtSub}</AppText>
         {src.debt.lines.map((l, i) => (
           <Line key={`${l.id}-${l.way}-${i}`} label={debtLabel(l)} value={signed(l.satang)} tone={l.way === 'out' ? tone('out') : undefined} valueTone={tone(l.way)} />
         ))}
@@ -79,7 +87,7 @@ export function SourcesSheet({ src, plan, saleTotalSatang, onClose }: { src: Sou
 
       <Box testID="co-src-rounding" n={3} title={msg('co.src.round', { mode: msg(`co.round.${plan.rounding}` as 'co.round.worker') })} ok={src.rounding.ok} okText={msg('co.src.roundOk')}>
         {src.rounding.lines.length ? (
-          src.rounding.lines.map((l) => <Line key={l.id} label={isFarm(l.id) ? msg('co.src.farm') : l.name} value={signed(l.satang)} />)
+          src.rounding.lines.map((l) => <Line key={l.id} label={l.party === 'farm' ? msg('co.src.farm') : l.name} value={signed(l.satang)} />)
         ) : (
           <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.src.noRound')}</AppText>
         )}
@@ -89,8 +97,14 @@ export function SourcesSheet({ src, plan, saleTotalSatang, onClose }: { src: Sou
         {src.paid.lines.map((l, i) => (
           <View key={`${l.id}-${l.kind}-${i}`}>
             <Line label={paidLabel(l)} value={baht(l.satang)} />
-            {l.kind === 'transfer' && plan.transferRepaySatang > 0 ? (
-              <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{`${msg('co.src.transferOwner', { owner: baht(plan.ownerSatang) })} ${MARK.in} ${msg('co.src.transferRepay', { repay: baht(plan.transferRepaySatang) })}`}</AppText>
+            {l.kind === 'transfer' && (tr.repaySatang > 0 || tr.roundSatang !== 0) ? (
+              <AppText testID="co-src-transfer-split" variant="bodySm" style={{ color: t.color.inkSoft }}>
+                {msg('co.src.transferOwner', { owner: baht(tr.ownerShareSatang) })}
+                {tr.roundSatang ? ` ${tr.roundSatang < 0 ? '−' : '+'} ${msg('co.src.transferRound', { amount: baht(Math.abs(tr.roundSatang)) })}` : ''}
+                {tr.repaySatang ? (
+                  <AppText testID="co-src-transfer-repay" variant="bodySm" style={{ color: t.color.debtIn }}>{` + ${MARK.in} ${msg('co.src.transferRepay', { repay: baht(tr.repaySatang) })}`}</AppText>
+                ) : null}
+              </AppText>
             ) : null}
           </View>
         ))}
@@ -98,7 +112,7 @@ export function SourcesSheet({ src, plan, saleTotalSatang, onClose }: { src: Sou
       </Box>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, backgroundColor: allOk ? t.color.acceptSunk : t.color.warnSunk, borderRadius: t.radius.lg, padding: t.space.md }}>
-        {allOk ? <Check color={t.color.accept} size={12} /> : <AlertIcon color={t.color.warn} size={16} />}
+        {allOk ? <Check color={t.color.accept} size={12} /> : <WarnMark color={t.color.warn} size={16} />}
         <AppText style={{ flex: 1, fontWeight: t.font.weight.bold }}>
           {allOk ? msg('co.src.allOk') : msg(plan.tally.diffSatang < 0 ? 'co.tally.short' : 'co.tally.over', { amount: baht(Math.abs(plan.tally.diffSatang)) })}
         </AppText>

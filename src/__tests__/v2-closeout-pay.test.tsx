@@ -11,6 +11,7 @@ import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { wrap } from '../test/render';
 import { CloseoutPayScreen } from '../v2/sale/closeout/pay-screen';
+import { tokens } from '../../design/tokens';
 
 /**
  * E05-S11 · จ่ายเงิน · ปิดการขาย (CO-10, CO-25; mockup A9, A19, A20). The
@@ -121,7 +122,8 @@ describe('CO-10 · story example (A9): โอนรวม + ให้คนก�
     await inSale(S, <CloseoutPayScreen />);
     expect(last('tick-owner')).toHaveTextContent(/เจ้าของได้รับเงินโอนแล้ว/);
     expect(last('tick-amt-owner')).toHaveTextContent('22,937.00');
-    expect(last('pay-sub-owner')).toHaveTextContent(/ส่วนสวน 14,437\.00 \+ ↘ คืนหนี้ 8,500\.00/);
+    expect(last('pay-sub-owner')).toHaveTextContent(/ส่วนสวน 14,437\.00 \+/);
+    expect(last('pay-sub-owner-repay')).toHaveTextContent('↘ คืนหนี้ 8,500.00');
     expect(last('pay-chip-owner')).toHaveTextContent(/↘ คืนหนี้ .*8,500 รอรับโอน/);
     expect(last('pay-left')).toHaveTextContent('ยังไม่ติ๊ก 2 รายการ');
     await press('tick-owner');
@@ -149,6 +151,55 @@ describe('CO-10 · story example (A9): โอนรวม + ให้คนก�
   });
 });
 
+describe('A9 look: the transfer split breaks before "↘ คืนหนี้" (blue); ดูที่มา on its pill', () => {
+  const S = 'co-pay-look';
+  beforeAll(async () => {
+    await storySale(S);
+    await confirmed(S, { amount: 325_000, method: 'transfer-with-owner' }, { amount: 525_000, method: 'transfer-with-owner' });
+  });
+
+  it('owner sub line: "ส่วนสวน 14,437.00 +" then its own line "↘ คืนหนี้ 8,500.00" in the debt-in colour', async () => {
+    await inSale(S, <CloseoutPayScreen />);
+    expect(last('pay-sub-owner')).toHaveTextContent(/^ส่วนสวน 14,437\.00 \+$/);
+    const repay = last('pay-sub-owner-repay');
+    expect(repay).toHaveTextContent('↘ คืนหนี้ 8,500.00');
+    const style = [repay.props.style].flat(Infinity).filter(Boolean).reduce((a: object, x: object) => ({ ...a, ...x }), {}) as { color?: string };
+    expect(style.color).toBe(tokens.color.light.debtIn);
+  });
+
+  it('ดูที่มา sits on a light pill', async () => {
+    await inSale(S, <CloseoutPayScreen />);
+    expect(screen.getByTestId('pay-sources-open')).toHaveTextContent(/ดูที่มา/);
+    const pill = screen.getByTestId('pay-sources-open').findAll((n) => {
+      const st = [n.props.style].flat(Infinity).filter(Boolean).reduce((a: object, x: object) => ({ ...a, ...x }), {}) as { backgroundColor?: string };
+      return st.backgroundColor === tokens.color.light.actionSunk;
+    });
+    expect(pill.length).toBeGreaterThan(0);
+  });
+});
+
+describe('owner Q4: netting shows under the tapper\'s tick (↗ orange)', () => {
+  const S = 'co-pay-net';
+  beforeAll(async () => {
+    await storySale(S);
+    const RED = { id: farm.red, name: 'แดง' };
+    await writeFinance('exp-red-640', null, { t: 'expense_created', fields: { amountSatang: 64_000, date: '2026-10-25', stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าปุ๋ย', note: '', payer: RED } });
+    await writeFinance(`rep-${S}-red`, null, { t: 'repayment_recorded', fields: { from: FARM, to: RED, amountSatang: 64_000, date: '2026-10-29', note: '', allocations: [{ expenseId: 'exp-red-640', satang: 64_000 }], saleId: S } });
+    await writeFinance(`dp-${S}-red-net`, null, { t: 'debt_payment_recorded', fields: { worker: RED, creditor: FARM, amountSatang: 64_000, date: '2026-10-29', note: '', method: 'netting', saleId: S, repaymentId: `rep-${S}-red` } });
+    await confirmed(S, { amount: 325_000, method: 'transfer-with-owner' }, { amount: 525_000, method: 'transfer-with-owner' });
+  });
+
+  it('"↗ หักกลบ 640" in the debt-out colour under แดง; none under the owner', async () => {
+    await inSale(S, <CloseoutPayScreen />);
+    expect(last(`tick-amt-${farm.red}`)).toHaveTextContent('5,938.00');
+    const net = last(`pay-net-${farm.red}`);
+    expect(net).toHaveTextContent('↗ หักกลบ 640');
+    const style = [net.props.style].flat(Infinity).filter(Boolean).reduce((a: object, x: object) => ({ ...a, ...x }), {}) as { color?: string };
+    expect(style.color).toBe(tokens.color.light.debtOut);
+    expect(screen.queryByTestId('pay-net-owner')).toBeNull();
+  });
+});
+
 describe('CO-25 · buyer-split (A19)', () => {
   const S = 'co-pay-split';
   beforeAll(async () => {
@@ -164,7 +215,8 @@ describe('CO-25 · buyer-split (A19)', () => {
     expect(last(`tick-amt-debt-cash-${farm.red}`)).toHaveTextContent('3,250.00');
     expect(last(`pay-chip-debt-cash-${farm.red}`)).toHaveTextContent(/รอรับเงินสด/);
     expect(last('tick-amt-owner')).toHaveTextContent('19,687.00');
-    expect(last('pay-sub-owner')).toHaveTextContent(/ส่วนสวน 14,437\.00 \+ ↘ คืนหนี้นัด 5,250\.00/);
+    expect(last('pay-sub-owner')).toHaveTextContent(/ส่วนสวน 14,437\.00 \+/);
+    expect(last('pay-sub-owner-repay')).toHaveTextContent('↘ คืนหนี้นัด 5,250.00');
     expect(last('pay-left')).toHaveTextContent('ยังไม่ติ๊ก 3 รายการ');
     await press(id);
     expect(last(id).props.accessibilityState).toMatchObject({ checked: true });

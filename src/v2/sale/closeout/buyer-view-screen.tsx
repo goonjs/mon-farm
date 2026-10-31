@@ -28,10 +28,14 @@ const baht = formatSatang;
 const EM_PER_CHAR = 0.62;
 
 /**
- * An amount on one line across the whole width, shrunk to fit: the size comes
- * from the measured width and the system font scale (web ignores
- * `adjustsFontSizeToFit`), and native also gets `adjustsFontSizeToFit` as a
- * backstop. No `numberOfLines` on web, so nothing is ever cut with "…".
+ * An amount on one line across the whole width, shrunk to fit, never wrapped
+ * inside the figure on any platform (CO-20). One unbreakable run (web
+ * `whiteSpace: nowrap`; native one line + `adjustsFontSizeToFit` as a
+ * backstop), sized to its own content (`alignSelf: flex-end`) so its layout
+ * width is what it really draws. First guess from the line width and the
+ * system font scale; then, if what it drew is wider than the line (a bigger
+ * system font, a wider face), the size drops by that ratio until it fits.
+ * No `numberOfLines` on web, so nothing is ever cut with "…".
  */
 export function FitAmount({ satang, testID, max }: { satang: number; testID?: string; max?: number }) {
   const t = useTheme();
@@ -39,14 +43,29 @@ export function FitAmount({ satang, testID, max }: { satang: number; testID?: st
   const text = baht(satang);
   const base = max ?? t.font.size.displayXl + t.font.size.caption;
   const scale = Math.max(1, PixelRatio.getFontScale());
-  const size = width > 0 ? Math.min(base, Math.floor(width / (text.length * EM_PER_CHAR * scale))) : base;
+  const guess = width > 0 ? Math.min(base, Math.floor(width / (text.length * EM_PER_CHAR * scale))) : base;
+  const key = text;
+  // What this text last drew, at which size (the line and the text lay out in either order).
+  const [drawn, setDrawn] = useState<{ key: string; width: number; size: number } | null>(null);
+  const size = drawn?.key === key && width > 0 ? (drawn.width > width + 0.5 ? Math.max(8, Math.floor((drawn.size * width) / drawn.width)) : drawn.size) : guess;
   const native = Platform.OS !== 'web';
+  const onDrawn = (w: number) => setDrawn({ key, width: w, size });
   return (
     <View testID={testID} onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ alignSelf: 'stretch' }}>
       <Text
         testID={testID ? `${testID}-text` : undefined}
+        onLayout={(e) => onDrawn(e.nativeEvent.layout.width)}
         {...(native ? { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.3 } : {})}
-        style={{ fontFamily: t.font.family.sans, fontSize: size, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral, textAlign: 'right' }}
+        style={{
+          alignSelf: 'flex-end',
+          fontFamily: t.font.family.sans,
+          fontSize: size,
+          fontWeight: t.font.weight.black,
+          fontVariant: ['tabular-nums'],
+          color: t.color.numeral,
+          textAlign: 'right',
+          ...(native ? {} : ({ whiteSpace: 'nowrap' } as object)),
+        }}
       >
         {text}
       </Text>
@@ -125,7 +144,12 @@ export function BuyerViewScreen() {
           ),
         )}
         <Pile testID="bv-transfer" symbol={'⇄'} label={msg('cop.transfer')} satang={plan.transferSatang}>
-          {plan.transferRepaySatang ? <Text style={small}>{msg('cop.transferSplit', { dir: '↘', owner: baht(plan.ownerSatang), name: repayName, repay: baht(plan.transferRepaySatang) })}</Text> : null}
+          {plan.transferRepaySatang ? (
+            <Text style={small}>
+              {msg('cop.ownerSplitShare', { owner: baht(plan.ownerSatang) })}{' '}
+              <Text style={{ color: t.color.debtIn }}>{msg('cop.ownerSplitRepay', { dir: '↘', name: repayName, repay: baht(plan.transferRepaySatang) })}</Text>
+            </Text>
+          ) : null}
           {account ? (
             <View testID="bv-account" style={{ gap: t.space.xxs, paddingTop: t.space.xs }}>
               {pp ? (

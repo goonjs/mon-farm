@@ -85,3 +85,29 @@ describe('BottomSheet action (Save in the title row)', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('BottomSheet · optional ✕ close (E05-S11 A2, A5, A8, A11)', () => {
+  it('no ✕ unless asked', () => {
+    wrap(
+      <BottomSheet open onClose={() => {}} title="t" testID="sheet">
+        <Text>body</Text>
+      </BottomSheet>,
+    );
+    expect(screen.queryByTestId('sheet-close')).toBeNull();
+  });
+
+  it('closeLabel puts a 48 target ✕ top-right of the title, spoken by that label, that closes the sheet', () => {
+    const onClose = jest.fn();
+    wrap(
+      <BottomSheet open onClose={onClose} title="t" testID="sheet" closeLabel="ปิด">
+        <Text>body</Text>
+      </BottomSheet>,
+    );
+    const x = screen.getByTestId('sheet-close');
+    expect(x.props.accessibilityLabel).toBe('ปิด');
+    expect(x.props.accessibilityRole).toBe('button');
+    expect(flat(x.props.style)).toMatchObject({ width: tokens.target.min, height: tokens.target.min });
+    fireEvent.press(x);
+    expect(onClose).toHaveBeenCalled();
+  });
+});

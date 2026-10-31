@@ -9,10 +9,14 @@ import { Fragment, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { CloseoutPlan, CloseoutWorker, RepayRoute, TallyBar as Tally } from '../../../core/finance/closeout';
+import { compactMoneyParts } from '../../../core/compact-money';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AlertIcon, AppText, Button, cardStyle, ChevronRight, CompactMoney, FarmMateIcon, Plus, toneColours, type TileTone } from '../../../ui';
-import { CardIcon, RoundButton, baht, minus } from './summary-parts';
+import { AppText, Button, Check, cardStyle, ChevronRight, CompactMoney, FarmMateIcon, Plus, toneColours, type TileTone } from '../../../ui';
+import { CardIcon, RoundButton, WarnMark, baht, minus } from './summary-parts';
+
+/** Line height for card text: above `snug` for Thai marks, tight enough for one screen (CO-1). */
+const lh = (size: number) => Math.round(size * 1.35);
 
 // ── progress ────────────────────────────────────────────────────────────────
 
@@ -21,7 +25,7 @@ export function Progress() {
   const msg = useT();
   return (
     <View testID="co-progress" style={{ gap: t.space.xs }}>
-      <AppText variant="label">{msg('co.progress')}</AppText>
+      <AppText variant="label" style={{ lineHeight: lh(t.font.size.bodySm) }}>{msg('co.progress')}</AppText>
       <View style={{ height: 8, borderRadius: t.radius.pill, backgroundColor: t.color.surfaceSunk, overflow: 'hidden' }}>
         <View style={{ width: '66%', height: '100%', borderRadius: t.radius.pill, backgroundColor: t.color.accept }} />
       </View>
@@ -37,11 +41,11 @@ export function SaleStrip({ grossSatang, checked, onOpen }: { grossSatang: numbe
   const t = useTheme();
   const msg = useT();
   return (
-    <View testID="co-sale-strip" style={{ ...cardStyle(t), ...row, paddingVertical: t.space.sm, paddingLeft: t.space.md, paddingRight: t.space.xs, gap: t.space.md }}>
-      <CardIcon id="finance.income" tone="accept" />
+    <View testID="co-sale-strip" style={{ ...cardStyle(t), ...row, paddingVertical: t.space.xs, paddingLeft: t.space.md, paddingRight: t.space.xs, gap: t.space.md }}>
+      <CardIcon id="finance.income" tone="accept" small />
       <View style={{ flex: 1 }}>
-        <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg(checked ? 'co.sale.stripChecked' : 'co.sale.strip')}</AppText>
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingXl, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+        <AppText variant="bodySm" style={{ color: t.color.inkSoft, lineHeight: lh(t.font.size.bodySm) }}>{msg(checked ? 'co.sale.stripChecked' : 'co.sale.strip')}</AppText>
+        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingXl, lineHeight: lh(t.font.size.headingXl), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
           {baht(grossSatang)}
           <Text style={{ fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.regular, color: t.color.inkSoft }}> {msg('v2.baht')}</Text>
         </Text>
@@ -58,7 +62,7 @@ function BigCard({ testID, done, tone, children }: { testID: string; done: boole
   const bg = done ? t.color.surfaceRaised : tone === 'debt' ? t.color.debtInSunk : t.color.debtOutSunk;
   const border = done ? t.color.ruleStrong : tone === 'debt' ? t.color.debtIn : t.color.debtOut;
   return (
-    <View testID={testID} style={{ ...cardStyle(t), backgroundColor: bg, borderColor: border, borderWidth: t.border.thick, paddingVertical: t.space.sm, paddingLeft: t.space.md, paddingRight: t.space.xs, gap: t.space.xs }}>
+    <View testID={testID} style={{ ...cardStyle(t), backgroundColor: bg, borderColor: border, borderWidth: t.border.thick, paddingVertical: t.space.xs + t.space.xxs, paddingLeft: t.space.md, paddingRight: t.space.xs, gap: t.space.xxs }}>
       {children}
     </View>
   );
@@ -92,7 +96,7 @@ const Name = ({ children }: { children: string }) => {
 function Sentence({ children, testID }: { children: ReactNode; testID?: string }) {
   const t = useTheme();
   return (
-    <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, color: t.color.ink, flexShrink: 1 }}>
+    <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, lineHeight: lh(t.font.size.bodyLg), color: t.color.ink, flexShrink: 1 }}>
       {children}
     </Text>
   );
@@ -129,9 +133,9 @@ export function DebtCard({
   if (!people.length) {
     return (
       <BigCard testID="co-debt-ask" done={answered} tone="debt">
-        <View style={{ ...row, gap: t.space.md, minHeight: t.target.min }}>
-          <CardIcon id="finance.otherCost" checked={answered} />
-          <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm }}>{msg('co.debt.ask')}</AppText>
+        <View style={{ ...row, gap: t.space.md }}>
+          <CardIcon id="finance.otherCost" checked={answered} small />
+          <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm, lineHeight: lh(t.font.size.headingSm) }}>{msg('co.debt.ask')}</AppText>
         </View>
         <AskButtons none={onNone} add={onAdd} answered={answered} idNone="co-debt-none" idAdd="co-debt-add-first" />
       </BigCard>
@@ -142,15 +146,15 @@ export function DebtCard({
   const took = (p: DebtCardPerson) => (
     <>
       <Text style={{ color: t.color.debtIn }}> ↘ {msg('co.debt.took')} </Text>
-      <CompactMoney satang={p.w.totalSatang} size="bodyLg" />
+      <CompactMoney satang={p.w.totalSatang} size="bodyLg" pill />
     </>
   );
   return (
     <BigCard testID="co-debt-card" done={done} tone="debt">
       <View style={{ ...row, gap: t.space.md }}>
-        <CardIcon id="finance.otherCost" badge={open || undefined} checked={done} testID="co-debt-badge" />
-        <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm }}>{msg(done ? 'co.debt.checked' : 'co.debt.title')}</AppText>
-        <RoundButton testID="co-debt-open" label={msg('co.debt.open')} strong={!done} onPress={onOpen} />
+        <CardIcon id="finance.otherCost" badge={open || undefined} checked={done} testID="co-debt-badge" small />
+        <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm, lineHeight: lh(t.font.size.headingSm) }}>{msg(done ? 'co.debt.checked' : 'co.debt.title')}</AppText>
+        <RoundButton testID="co-debt-open" label={msg('co.debt.open')} strong={!done} onPress={onOpen} tight />
       </View>
       {done
         ? people.map((p) => (
@@ -158,7 +162,7 @@ export function DebtCard({
               <Name>{p.w.name}</Name>
               {took(p)}
               <Text style={{ color: t.color.inkSoft }}> {msg('co.debt.leftAfter')} </Text>
-              <CompactMoney satang={p.w.debtLeftSatang} size="bodyLg" />
+              <CompactMoney satang={p.w.debtLeftSatang} size="bodyLg" pill />
             </Sentence>
           ))
         : (
@@ -179,7 +183,7 @@ export function DebtCard({
             <Sentence testID="co-debt-total">
               <Text style={{ fontWeight: t.font.weight.black }}>Σ </Text>
               <Text style={{ fontWeight: t.font.weight.bold }}>{msg('co.debt.sum')} </Text>
-              <CompactMoney satang={balanceSatang} size="bodyLg" />
+              <CompactMoney satang={balanceSatang} size="bodyLg" pill testID="co-debt-total-money" />
             </Sentence>
           </>
         )}
@@ -217,9 +221,9 @@ export function OwedCard({
   if (!people.length) {
     return (
       <BigCard testID="co-owed-ask" done={answered} tone="owed">
-        <View style={{ ...row, gap: t.space.md, minHeight: t.target.min }}>
+        <View style={{ ...row, gap: t.space.md }}>
           <CardIcon id="finance.workerPay" tone="category5" checked={answered} small />
-          <AppText style={{ flex: 1, fontWeight: t.font.weight.bold }}>{msg('co.owed.ask')}</AppText>
+          <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, lineHeight: lh(t.font.size.bodyLg) }}>{msg('co.owed.ask')}</AppText>
         </View>
         <AskButtons none={onNone} add={onAdd} answered={answered} idNone="co-owed-none" idAdd="co-owed-add-first" />
       </BigCard>
@@ -231,18 +235,18 @@ export function OwedCard({
     <BigCard testID="co-owed-card" done={done} tone="owed">
       <View style={{ ...row, gap: t.space.md }}>
         <CardIcon id="finance.workerPay" tone="category5" badge={open || undefined} checked={done} testID="co-owed-badge" small />
-        <View style={{ flex: 1, gap: t.space.xxs }}>
-          <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('co.owed.title')}</AppText>
+        <View style={{ flex: 1 }}>
+          <AppText style={{ fontWeight: t.font.weight.bold, lineHeight: lh(t.font.size.bodyLg) }}>{msg('co.owed.title')}</AppText>
           {people.map((p) => (
             <Sentence key={p.id} testID={`co-owed-line-${p.id}`}>
               <Name>{p.name}</Name>
               <Text style={{ color: t.color.debtOut }}> ↗ {msg(p.nettedSatang > 0 ? 'co.owed.netted' : 'co.owed.owes')} </Text>
-              <CompactMoney satang={p.nettedSatang > 0 ? p.nettedSatang : p.satang} size="bodyLg" />
+              <CompactMoney satang={p.nettedSatang > 0 ? p.nettedSatang : p.satang} size="bodyLg" pill />
               {checked.has(p.id) && p.nettedSatang === 0 ? <Text style={{ color: t.color.inkSoft }}> · {msg('co.owed.hold')}</Text> : null}
             </Sentence>
           ))}
         </View>
-        <RoundButton testID="co-owed-open" label={msg('co.owed.open')} strong={!done} onPress={onOpen} />
+        <RoundButton testID="co-owed-open" label={msg('co.owed.open')} strong={!done} onPress={onOpen} tight />
       </View>
     </BigCard>
   );
@@ -250,14 +254,17 @@ export function OwedCard({
 
 // ── a tapper's card (CO-2, CO-4, CO-7) ──────────────────────────────────────
 
-/** "⚠ หนี้ยังเหลือ 3,100.00": symbol + words, never colour alone (CO-4). */
+/** "⚠ หนี้ยังเหลือ 3,100": symbol + words, never colour alone (CO-4); the short figure of summary-lines. */
 export function LeftChip({ satang, testID }: { satang: number; testID: string }) {
   const t = useTheme();
   const msg = useT();
+  const p = compactMoneyParts(satang);
   return (
-    <View testID={testID} style={{ ...row, alignSelf: 'flex-start', gap: t.space.xs, backgroundColor: t.color.warnSunk, borderRadius: t.radius.pill, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs }}>
-      <AlertIcon color={t.color.warn} size={14} />
-      <AppText variant="bodySm" style={{ color: t.color.warn, fontWeight: t.font.weight.bold }}>{msg('co.leftChip', { amount: baht(satang) })}</AppText>
+    <View testID={testID} style={{ ...row, alignSelf: 'flex-start', gap: t.space.xs, backgroundColor: t.color.warnSunk, borderRadius: t.radius.pill, paddingHorizontal: t.space.sm }}>
+      <WarnMark color={t.color.warn} size={13} testID={`${testID}-mark`} />
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, lineHeight: lh(t.font.size.bodySm) + 2, color: t.color.warn, fontWeight: t.font.weight.bold }}>
+        {msg('co.leftChip', { amount: `${p.sign}${p.digits}${p.unit}` })}
+      </Text>
     </View>
   );
 }
@@ -268,21 +275,22 @@ export function WorkerCard({ w, roundingNone, tone, onDeduct }: { w: CloseoutWor
   const fraction = w.cashBeforeSatang % 100 !== 0;
   const note = w.adjustSatang ? msg('co.cashRound', { adj: `${w.adjustSatang > 0 ? '+' : '−'}${baht(Math.abs(w.adjustSatang))}` }) : roundingNone && fraction ? msg('co.cashNoRound') : msg('co.cashToPay');
   const bg = toneColours(t, tone).bg;
+  const fs = t.font.size;
   return (
-    <View testID={`co-worker-${w.id}`} style={{ ...cardStyle(t), padding: t.space.md, gap: t.space.sm }}>
+    <View testID={`co-worker-${w.id}`} style={{ ...cardStyle(t), paddingVertical: t.space.sm, paddingHorizontal: t.space.md, gap: t.space.xs + t.space.xxs }}>
       <View style={{ ...row, gap: t.space.md, flexWrap: 'wrap' }}>
-        <View aria-hidden style={{ width: t.target.min, height: t.target.min, borderRadius: t.radius.md, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
-          <FarmMateIcon id="people.tapper" size={32} />
+        <View aria-hidden style={{ width: 40, height: 40, borderRadius: t.radius.md, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+          <FarmMateIcon id="people.tapper" size={28} />
         </View>
         <View style={{ flexShrink: 1 }}>
-          <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{w.name}</AppText>
-          <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.share', { amount: baht(w.shareSatang) })}</AppText>
+          <AppText style={{ fontWeight: t.font.weight.bold, fontSize: fs.headingMd, lineHeight: lh(fs.headingMd) }}>{w.name}</AppText>
+          <AppText variant="bodySm" style={{ color: t.color.inkSoft, lineHeight: lh(fs.bodySm) }}>{msg('co.share', { amount: baht(w.shareSatang) })}</AppText>
         </View>
         <View style={{ marginLeft: 'auto', alignItems: 'flex-end' }}>
-          <Text testID={`co-cash-${w.id}`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayXl, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+          <Text testID={`co-cash-${w.id}`} style={{ fontFamily: t.font.family.sans, fontSize: fs.displayLg, lineHeight: Math.round(fs.displayLg * 1.15), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
             {baht(w.cashSatang)}
           </Text>
-          <AppText testID={`co-cash-note-${w.id}`} variant="bodySm" style={{ color: t.color.inkSoft }}>{note}</AppText>
+          <AppText testID={`co-cash-note-${w.id}`} variant="bodySm" style={{ color: t.color.inkSoft, lineHeight: lh(fs.bodySm) }}>{note}</AppText>
         </View>
       </View>
       {w.hasDebt ? (
@@ -294,17 +302,17 @@ export function WorkerCard({ w, roundingNone, tone, onDeduct }: { w: CloseoutWor
           style={{ ...row, minHeight: t.target.min, gap: t.space.sm, backgroundColor: t.color.debtInSunk, borderRadius: t.radius.md, paddingVertical: t.space.xs, paddingLeft: t.space.md, paddingRight: t.space.sm }}
         >
           <View style={{ flex: 1, gap: t.space.xxs }}>
-            <AppText style={{ fontWeight: t.font.weight.bold }}>↘ {msg('co.deductRow')}</AppText>
+            <AppText style={{ fontWeight: t.font.weight.bold, lineHeight: lh(fs.bodyLg) }}>↘ {msg('co.deductRow')}</AppText>
             {w.leftChip ? <LeftChip satang={w.debtLeftSatang} testID={`co-left-${w.id}`} /> : null}
           </View>
-          <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd, fontVariant: ['tabular-nums'], color: t.color.debtIn }}>{minus(w.totalSatang)}</AppText>
+          <AppText style={{ fontWeight: t.font.weight.bold, fontSize: fs.headingMd, lineHeight: lh(fs.headingMd), fontVariant: ['tabular-nums'], color: t.color.debtIn }}>{minus(w.totalSatang)}</AppText>
           <ChevronRight color={t.color.action} size={9} />
         </Pressable>
       ) : null}
       {w.nettingSatang > 0 ? (
-        <View testID={`co-net-${w.id}`} style={{ ...row, gap: t.space.sm, backgroundColor: t.color.debtOutSunk, borderRadius: t.radius.md, paddingVertical: t.space.xs, paddingHorizontal: t.space.md }}>
-          <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, color: t.color.debtOut }}>↗ {msg('co.netRow', { name: w.name })}</AppText>
-          <AppText style={{ fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'], color: t.color.debtOut }}>+{baht(w.nettingSatang)}</AppText>
+        <View testID={`co-net-${w.id}`} style={{ ...row, gap: t.space.sm, backgroundColor: t.color.debtOutSunk, borderRadius: t.radius.md, paddingVertical: t.space.xxs, paddingHorizontal: t.space.md }}>
+          <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, lineHeight: lh(fs.bodyLg), color: t.color.debtOut }}>↗ {msg('co.netRow', { name: w.name })}</AppText>
+          <AppText style={{ fontWeight: t.font.weight.bold, lineHeight: lh(fs.bodyLg), fontVariant: ['tabular-nums'], color: t.color.debtOut }}>+{baht(w.nettingSatang)}</AppText>
         </View>
       ) : null}
     </View>
@@ -330,17 +338,17 @@ export function CashCard({ plan, faded, onOpen }: { plan: CloseoutPlan; faded: b
       onPress={onOpen}
       style={{ ...cardStyle(t), ...row, opacity: faded ? 0.5 : 1, paddingVertical: t.space.sm, paddingLeft: t.space.md, paddingRight: t.space.xs, gap: t.space.md }}
     >
-      <CardIcon id="people.profitShare" tone="action" />
+      <CardIcon id="people.profitShare" tone="action" small />
       <View style={{ flex: 1 }}>
-        <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm }}>{msg('co.cash.title')}</AppText>
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, color: t.color.inkSoft }}>
+        <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm, lineHeight: lh(t.font.size.headingSm) }}>{msg('co.cash.title')}</AppText>
+        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, lineHeight: lh(t.font.size.bodyLg), color: t.color.inkSoft }}>
           {parts.map((p, i) => (
             <Fragment key={i}>{i ? ' · ' : ''}{p}</Fragment>
           ))}{' '}
-          <CompactMoney satang={plan.transferSatang} size="bodyLg" />
+          <CompactMoney satang={plan.transferSatang} size="bodyLg" pill testID="co-cash-transfer" />
         </Text>
       </View>
-      <View style={{ width: t.target.min, height: t.target.min, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: t.target.min, height: t.target.min, alignItems: 'center', justifyContent: 'center', marginVertical: -t.space.xs }}>
         <View style={{ width: 34, height: 34, borderRadius: t.radius.pill, backgroundColor: t.color.actionSunk, alignItems: 'center', justifyContent: 'center' }}>
           <ChevronRight color={t.color.action} size={9} />
         </View>
@@ -357,13 +365,23 @@ export function TallyBar({ tally, onSources }: { tally: Tally; onSources: () => 
   const fg = tally.ok ? t.color.accept : t.color.warn;
   const text = tally.ok ? msg('co.tally.ok') : msg(tally.diffSatang < 0 ? 'co.tally.short' : 'co.tally.over', { amount: baht(Math.abs(tally.diffSatang)) });
   return (
-    <View testID="co-tally" style={{ ...row, gap: t.space.sm, backgroundColor: tally.ok ? t.color.acceptSunk : t.color.warnSunk, borderRadius: t.radius.lg, paddingLeft: t.space.md, paddingRight: t.space.xs, paddingVertical: t.space.xxs }}>
-      {tally.ok ? <AppText style={{ color: fg, fontWeight: t.font.weight.bold }}>✓</AppText> : <AlertIcon color={fg} size={18} />}
-      <AppText style={{ flex: 1, fontWeight: t.font.weight.bold }}>{text}</AppText>
-      <Pressable testID="co-sources-open" accessibilityRole="button" onPress={onSources} style={{ minHeight: t.target.min, ...row, paddingHorizontal: t.space.sm, gap: t.space.xxs }}>
-        <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.action }}>{msg('co.sources.open')}</AppText>
-        <ChevronRight color={t.color.action} size={7} />
-      </Pressable>
+    <View testID="co-tally" style={{ ...row, gap: t.space.sm, backgroundColor: tally.ok ? t.color.acceptSunk : t.color.warnSunk, borderRadius: t.radius.lg, paddingLeft: t.space.md, paddingRight: t.space.xs }}>
+      {tally.ok ? <Check color={fg} size={12} /> : <WarnMark color={fg} size={16} />}
+      <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, lineHeight: lh(t.font.size.bodyLg) }}>{text}</AppText>
+      <SourcesPill testID="co-sources-open" label={msg('co.sources.open')} onPress={onSources} />
     </View>
+  );
+}
+
+/** "ดูที่มา ›" on a light pill inside a 48 target (summary and pay page, A1, A9). */
+export function SourcesPill({ testID, label, onPress }: { testID: string; label: string; onPress: () => void }) {
+  const t = useTheme();
+  return (
+    <Pressable testID={testID} accessibilityRole="button" onPress={onPress} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
+      <View style={{ ...row, gap: t.space.xxs, backgroundColor: t.color.actionSunk, borderRadius: t.radius.pill, paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
+        <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.action, lineHeight: lh(t.font.size.bodyLg) }}>{label}</AppText>
+        <ChevronRight color={t.color.action} size={7} />
+      </View>
+    </Pressable>
   );
 }

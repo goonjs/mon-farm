@@ -15,8 +15,7 @@ import { useTheme } from '../../../theme';
 import { AppText, BottomSheet, Button, cardStyle, Check, CTA, FarmMateIcon, Plus } from '../../../ui';
 import { useDay } from '../../farm/pieces';
 import type { Closeout, CloseoutDraft } from './use-closeout';
-import { baht, MARK, netOff, netOn } from './summary-parts';
-import { shortBaht } from './summary-deduct-sheet';
+import { baht, MARK, netOff, netOn, shortBaht } from './summary-parts';
 
 export interface OwedPerson {
   readonly id: string;
@@ -43,7 +42,7 @@ export function OwedSheet({ co, people, onAdd, onClose }: { co: Closeout; people
   };
 
   return (
-    <BottomSheet open onClose={cancel} title={msg('co.owed.title')} testID="co-owed-sheet">
+    <BottomSheet open onClose={cancel} title={msg('co.owed.title')} testID="co-owed-sheet" closeLabel={msg('co.close')}>
       <AppText variant="bodySm" style={{ color: t.color.inkSoft, marginTop: -t.space.sm }}>{msg('co.owed.sub')}</AppText>
       {people.map((p) => {
         const w = p.w;
@@ -52,7 +51,9 @@ export function OwedSheet({ co, people, onAdd, onClose }: { co: Closeout; people
         const option = (id: string, label: string, selected: boolean, onPress: () => void) => (
           <Pressable
             testID={id}
+            role="radio"
             accessibilityRole="radio"
+            aria-checked={selected}
             accessibilityState={{ selected, checked: selected }}
             onPress={onPress}
             style={{ flex: 1, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center', paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: selected ? t.color.action : 'transparent' }}

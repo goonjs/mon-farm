@@ -80,7 +80,7 @@ export function SaleSheet({ s, tappers, checked, onClose }: { s: Settlement; tap
   const { master } = useSaleView();
   const farmOf = (personId: string) => s.perZone.filter((z) => z.personId === personId).reduce((a, z) => a + z.ownerSatang, 0);
   return (
-    <BottomSheet open onClose={onClose} title={msg('co.sale.sheet')} testID="co-sale-sheet">
+    <BottomSheet open onClose={onClose} title={msg('co.sale.sheet')} testID="co-sale-sheet" closeLabel={msg('co.close')}>
       <View style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.xxs }}>
         <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{msg('v2s.saleToday')}</AppText>
         <SaleFigures s={s}>{checked ? <IconLine icon={(c) => <Check color={c} size={10} />}>{msg('v2s.checkedWithBuyer')}</IconLine> : null}</SaleFigures>

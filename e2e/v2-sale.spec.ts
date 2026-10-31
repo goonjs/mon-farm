@@ -178,7 +178,7 @@ test('a sale for an earlier day takes part of a later-dated debt as separate cas
 test.describe('the story example at 390×844 (E05-S11)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('2 tappers with debt: debt ถูกต้อง → owed ไว้ก่อน ถูกต้อง → cash ตกลง → ยืนยันยอด → pay → close', async ({ page }) => {
+  test('2 tappers with debt: debt ถูกต้อง → owed ไว้ก่อน ถูกต้อง → ยืนยันยอด → pay → close', async ({ page }) => {
     const id = on(page);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(String(e)));
@@ -223,14 +223,12 @@ test.describe('the story example at 390×844 (E05-S11)', () => {
     await tap('co-owed-ok');
     // ไว้ก่อน is the default (CO-26)
     await expect(id('co-owed-card')).toContainText('ไว้ก่อน');
-    await expect(id('co-confirm')).toContainText('จัดเงินสดกับคนรับซื้อยางก่อน');
-    await tap('co-cash-card');
-    await expect(id('cop-transfer')).toContainText('22,937.00');
-    await expect(id('cop-total')).toContainText('28,875.00');
-    await tap('cop-ok');
+    // The cash step is not a gate (A3): its first-time defaults (โอนรวม + ให้คนกรีด) stand, shown on the cash card.
+    await expect(id('co-cash-card')).toContainText('โอนรวม');
     await expect(id('co-confirm')).toContainText('ยืนยันยอด · ไปจ่ายเงิน');
     await tap('co-confirm');
     await expect(id('payment')).toBeVisible();
+    const toPay = taps;
     await expect(id('tick-amt-red')).toContainText('5,938.00');
     await expect(id('pay-info-nat')).toContainText('นัดไม่มีเงินสดต้องจ่ายวันนี้');
     await expect(id('tick-amt-owner')).toContainText('22,937.00');
@@ -239,10 +237,10 @@ test.describe('the story example at 390×844 (E05-S11)', () => {
     await tap('close-sale');
     await expect(id('sales')).toBeVisible();
     await expect(id('sale-rows')).toContainText('ปิดแล้ว');
-    test.info().annotations.push({ type: 'taps', description: String(taps) });
-    console.log(`E05-S11 story example: ${taps} taps, summary ${height.toFixed(2)} screens`);
-    // story target ≤ 7 for summary → pay; the close is the 8th
-    expect(taps).toBeLessThanOrEqual(8);
+    test.info().annotations.push({ type: 'taps', description: `${toPay} to pay, ${taps} with close` });
+    console.log(`E05-S11 story example: ${toPay} taps to the pay page (${taps} with close), summary ${height.toFixed(2)} screens`);
+    // story target: summary → pay page in ≤ 7 taps
+    expect(toPay).toBeLessThanOrEqual(7);
     expect(errors).toEqual([]);
   });
 });

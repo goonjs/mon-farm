@@ -126,18 +126,14 @@ const liveRepayments = async (saleId: string) => {
 };
 const owedToNat = async () => projectFinance(await all()).reimbursements.filter((r) => r.to.id === farm.nat).reduce((a, r) => a + r.remainingSatang, 0);
 
-/** Pass the summary's gates as the owner would: debt card ถูกต้อง, owed card ถูกต้อง (ไว้ก่อน), the cash step ตกลง. */
-async function gates(saleId: string, { cash = true }: { cash?: boolean } = {}) {
+/** Pass the summary's gates as the owner would: debt card ถูกต้อง, owed card ถูกต้อง (ไว้ก่อน). The cash step is not a gate (A3). */
+async function gates(saleId: string) {
   await press('co-debt-open');
   await press('co-debt-ok');
   if (screen.queryAllByTestId('co-owed-open').length) {
     await press('co-owed-open');
     await press('co-owed-ok');
   } else await press('co-owed-none');
-  if (cash) {
-    await act(async () => updateDraft(saleId, (d) => ({ ...d, cashStepDone: true })));
-    await flush();
-  }
 }
 /** Summary → gates → ยืนยันยอด, in one go. */
 async function confirmAs(saleId: string, before?: () => Promise<void>) {
@@ -297,7 +293,7 @@ describe('E06-S04 · netting on confirm, a route change, and taking the netting 
     await press('cop-ok');
     c.unmount();
     const r = await inSale(S, <CloseoutSummaryScreen />);
-    await gates(S, { cash: false });
+    await gates(S);
     await press('co-confirm');
     r.unmount();
     expect(await live(S, farm.nat)).toEqual([['cash-from-share', 525_000], ['netting', 64_000]]);

@@ -11,10 +11,12 @@
 
 import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
+import { View } from 'react-native';
 
 import { sourcesSheet, type ConfirmGate } from '../../../core/finance/closeout';
 import { buyerCheck, saleFigures } from '../../../core/finance/buyer-check';
 import { useT, type Translate } from '../../../i18n';
+import { useTheme } from '../../../theme';
 import { Check, CTA } from '../../../ui';
 import { FarmScreen } from '../../farm/pieces';
 import { tapperTone, useLeaveIfClosed, useSaleView } from '../pieces';
@@ -47,8 +49,6 @@ export function gateText(msg: Translate, gate: ConfirmGate): string {
       return up(msg('co.gate.answerOwed'));
     case 'answer-both':
       return up(msg('co.gate.answerBoth'));
-    case 'cash-step':
-      return up(msg('co.gate.cashStep'));
     case 'tally':
       return msg('co.gate.tally');
     case 'invalid':
@@ -60,6 +60,7 @@ export function gateText(msg: Translate, gate: ConfirmGate): string {
 
 export function CloseoutSummaryScreen() {
   const msg = useT();
+  const t = useTheme();
   const router = useRouter();
   const co = useCloseout();
   const view = useSaleView();
@@ -149,7 +150,8 @@ export function CloseoutSummaryScreen() {
   })();
 
   return shell(
-    <>
+    // One column with the mockup's tighter rhythm (CO-1: 2 tappers in one screen), inside the screen's own padding.
+    <View style={{ gap: t.space.xs + t.space.xxs, marginTop: -t.space.xs, marginBottom: -t.space.md }}>
       <Progress />
       <SaleStrip grossSatang={s.grossSatang} checked={checkedWithBuyer} onOpen={() => setSheet({ kind: 'sale' })} />
       <DebtCard
@@ -173,7 +175,7 @@ export function CloseoutSummaryScreen() {
       ))}
       <CashCard plan={plan} faded={!handled} onOpen={() => router.push(`${base}/cash` as Href)} />
       <TallyBar tally={plan.tally} onSources={() => setSheet({ kind: 'sources' })} />
-    </>,
+    </View>,
     <CTA testID="co-confirm" disabled={gate.kind !== 'ready' || co.busy || co.closed} icon={gate.kind === 'ready' ? (c) => <Check color={c} /> : undefined} onPress={confirm}>
       {gateText(msg, gate)}
     </CTA>,
