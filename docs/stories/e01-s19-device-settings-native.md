@@ -1,6 +1,6 @@
 # Story E01-S19: ค่าตั้งของเครื่องจำได้บน Android
 
-Status: Review (2026-10-31; DS-3 ยังไม่ได้ทดสอบบน Android จริง — ถึง Done ไม่ได้จนกว่าจะทดสอบ) — เจ้าของตกลง AC 2026-10-31 "ตกลง เริ่มทำเลย"; ทำก่อน E05-S11 (CO-23 ขึ้นกับสตอรี่นี้)
+Status: Review (2026-10-31; DS-3 ยังไม่ได้ทดสอบบน Android จริง — เจ้าของให้ merge ได้ แล้วทดสอบบนเครื่องจริงตอน E01-S06 จึงเป็น Done) — เจ้าของตกลง AC 2026-10-31 "ตกลง เริ่มทำเลย"; ทำก่อน E05-S11 (CO-23 ขึ้นกับสตอรี่นี้)
 
 ## Context
 
@@ -76,4 +76,7 @@ _Tests below are written to fail first (TDD), then implemented to green._
 - expo-sqlite 57 มี `expo-sqlite/kv-store` (`SQLiteStorage.getItemSync`/`setItemSync`) ตรวจใน node_modules หลัง `npm ci` — ไม่เพิ่ม dependency (DS-6)
 - **ยังไม่ได้ตรวจ — DS-3**: เซสชันนี้ไม่มีเครื่อง Android/emulator และไม่มี dev client ทดสอบ native ได้แค่ใน Vitest กับ kv-store ปลอม (จำลองปิดเปิดแอปด้วย `vi.resetModules`) ไม่ใช่ force stop จริง ต้องมีคนทดสอบบนเครื่องจริงพร้อมภาพก่อน Done
 - **DS-4 บางส่วน**: ภาษา/ปี/เสียง อ่านใน render แรกบน native (test `device-settings-first-frame`) แต่ขนาดตัวอักษรยังไม่ต่อเข้า UI (E03-S08 Draft) จึงตรวจไม่ได้
-- ข้อเปิดให้เจ้าของ: `mon-farm:locale` อยู่ใน `LEGACY_EXACT` (`src/store/store.web.ts:53`) ตามการตัดสินเรื่องล้างข้อมูลเก่า 2026-10-03 — เบราว์เซอร์ที่ยังไม่เคยล้างจะเสียภาษาที่เลือกไว้หนึ่งครั้ง สตอรี่นี้ไม่แตะ
+- **คำตัดสินเจ้าของ 2026-10-31** (ผ่านลีด):
+  1. `mon-farm:locale` เอาออกจาก `LEGACY_EXACT` (`src/store/store.web.ts`) ไม่ล้างภาษา — test ก่อนใน `store.web.test.ts` (เห็นแดงก่อนแก้) แล้วแก้; `docs/architecture.md` §ข้อมูลเก่า ปรับตาม
+  2. DS-3: merge ได้ทั้งที่ยังไม่ทดสอบ Android จริง สตอรี่ค้างที่ Review — ทดสอบบนเครื่องจริงตอนทำ E01-S06 แล้วจึงเป็น Done
+  3. ขนาดตัวอักษรยังไม่มีจอใช้ และ 4 จอที่อ่านใน render บนเว็บ: รับทราบ บันทึกไว้พอ ไม่แก้ใน PR นี้

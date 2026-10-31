@@ -425,9 +425,8 @@ readonly readDuringRender: boolean;
 | `mon-farm:locale` | `th`/`en` (null → ไทย) | `src/i18n/preference.ts` |
 | `mon-farm:era` | `be`/`ce` (null → `be`) | `src/i18n/preference.ts` |
 
-หมายเหตุ: `mon-farm:locale` ยังอยู่ในรายการล้างข้อมูลเก่าครั้งเดียวบนเว็บ (หัวข้อถัดไป ข้อ 2,
-`LEGACY_EXACT` ใน `src/store/store.web.ts`) — เบราว์เซอร์ที่ยังไม่เคยล้างจะเสียภาษาที่เลือกไว้หนึ่งครั้ง
-(ข้อเปิด รอเจ้าของตัดสิน; E01-S19 ไม่แตะ)
+หมายเหตุ: `mon-farm:locale` ถูกเอาออกจากรายการล้างข้อมูลเก่าบนเว็บ (`LEGACY_EXACT` ใน
+`src/store/store.web.ts`) — เป็นค่าภาษาที่ใช้งานอยู่ ไม่ล้าง (เจ้าของ 2026-10-31, E01-S19)
 
 **เพิ่มคีย์ใหม่**
 
@@ -447,15 +446,16 @@ readonly readDuringRender: boolean;
 
 MVP เริ่มจากศูนย์ ข้อมูล v0.4 (`events (sale_id, seq)`, `farm_zones`/`farm_piles`, `people` และคีย์
 localStorage `mon-farm:events:*`, `mon-farm:sales`, `mon-farm:synced`, `mon-farm:farm-profile`,
-`mon-farm:people`, `mon-farm:locale`) **ถูกเพิกเฉยแล้วล้าง**:
+`mon-farm:people`) **ถูกเพิกเฉยแล้วล้าง** (`mon-farm:locale` เคยอยู่ในรายการนี้ แต่เป็นค่าภาษาที่ใช้อยู่ —
+เจ้าของ 2026-10-31 ให้เก็บไว้ ดู "ค่าตั้งของเครื่อง (ไม่ซิงก์)"):
 
 1. store ใหม่ใช้ชื่อใหม่ทั้งหมด (`mon-farm-v1.db`, IDB `mon-farm-v1`) โค้ดใหม่จึงไม่อ่าน schema เก่าและไม่ล่ม
    เพราะ schema เก่า
 2. ล้าง **เฉพาะ log การขายของ v0.4** ครั้งเดียว (ธง `legacy_cleanup_v1` ใน `meta` ของ store ใหม่): เว็บลบคีย์
-   `mon-farm:events:*`, `mon-farm:sales`, `mon-farm:synced`, `mon-farm:locale`; native ไม่แตะ `mon-farm.db`
+   `mon-farm:events:*`, `mon-farm:sales`, `mon-farm:synced`; native ไม่แตะ `mon-farm.db`
    เพราะ store farm/people ชั่วคราว (ข้อ 4) ยังใช้ไฟล์นั้นและคีย์ `mon-farm:farm-profile`/`mon-farm:people` อยู่ —
    E03 เป็นผู้ลบ `mon-farm.db` และคีย์ farm/people ครั้งเดียวเมื่อแทนที่ด้วยข้อมูลหลักที่ sync ทุกขั้นครอบ
-   try/catch ล้มเหลว → log แล้วไปต่อ `mon-farm:speech-on` เป็นค่าตั้งของเครื่อง จึงเก็บไว้
+   try/catch ล้มเหลว → log แล้วไปต่อ `mon-farm:speech-on` และ `mon-farm:locale` เป็นค่าตั้งของเครื่อง จึงเก็บไว้
 3. ขั้นนี้ **ย้อนกลับไม่ได้** ในทางปฏิบัติ ของเก่ามีแค่ localStorage บนเบราว์เซอร์ (native ยังไม่เคยรัน)
 4. ระหว่าง E01–E02 store farm/people แบบเครื่องเดียวของ v0.4 (ไม่มี group id) อยู่เป็นโครงชั่วคราวที่ไม่ sync
    จนกว่า E03 จะแทนที่ด้วยข้อมูลหลักที่ sync; การใช้งานในสวนจริงเริ่มหลัง E03/E04
