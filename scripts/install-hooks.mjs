@@ -7,7 +7,14 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
 try {
-  if (existsSync('.githooks')) {
+  // Leave a hooks path someone set on purpose (husky, a global setting) alone.
+  let current = '';
+  try {
+    current = execFileSync('git', ['config', '--get', 'core.hooksPath'], { encoding: 'utf8' }).trim();
+  } catch {
+    // exit 1 = not set
+  }
+  if (existsSync('.githooks') && (current === '' || current === '.githooks')) {
     execFileSync('git', ['config', 'core.hooksPath', '.githooks'], { stdio: 'ignore' });
   }
 } catch {

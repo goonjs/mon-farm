@@ -3,6 +3,7 @@ import {
   commitMessageErrors,
   eslintTargets,
   isDeleteOnlyPush,
+  pushedBranches,
   skipRequested,
   tokenCheckNeeded,
 } from './local-checks.mjs';
@@ -23,11 +24,20 @@ describe('commitMessageErrors', () => {
   it('lets merge commits through, like CI', () => {
     expect(commitMessageErrors("Merge branch 'dev' into chore/x\n")).toEqual([]);
   });
-  it('rejects an empty message', () => {
-    expect(commitMessageErrors('# only a comment\n').length).toBe(1);
+  it('rejects an empty message (only the git template)', () => {
+    expect(commitMessageErrors('\n# Please enter the commit message for your changes.\n').length).toBe(1);
   });
-  it('ignores comment lines before the subject', () => {
-    expect(commitMessageErrors('# note\nfeat: add thing\n')).toEqual([]);
+  it('ignores the editor template and the commit -v diff', () => {
+    expect(commitMessageErrors('feat: add thing\n\n# ------------------------ >8 ------------------------\ndiff --git a b\n')).toEqual([]);
+  });
+  it('keeps a # line that came from -m, like CI does', () => {
+    expect(commitMessageErrors('# x\n\nfeat: a\n').length).toBe(1);
+  });
+  it('joins the first paragraph like git %s, so CI and local agree', () => {
+    expect(commitMessageErrors('feat: ' + 'a'.repeat(30) + '\n' + 'b'.repeat(30) + '\n').join()).toMatch(/max 50/);
+  });
+  it('rejects an uppercase description', () => {
+    expect(commitMessageErrors('feat: Add thing\n').length).toBe(1);
   });
 });
 
@@ -69,5 +79,19 @@ describe('isDeleteOnlyPush', () => {
   it('is false for a normal push or empty input', () => {
     expect(isDeleteOnlyPush(`refs/heads/x ${sha} refs/heads/x ${zero}\n`)).toBe(false);
     expect(isDeleteOnlyPush('')).toBe(false);
+  });
+});
+
+describe('pushedBranches', () => {
+  const sha = 'a'.repeat(40);
+  const zero = '0'.repeat(40);
+  it('returns local sha and target branch of each branch push', () => {
+    expect(pushedBranches(`refs/heads/x ${sha} refs/heads/chore/x ${zero}\n`)).toEqual([
+      { sha, branch: 'chore/x' },
+    ]);
+  });
+  it('ignores deletes and tags', () => {
+    const input = `(delete) ${zero} refs/heads/y ${sha}\nrefs/tags/v1 ${sha} refs/tags/v1 ${zero}\n`;
+    expect(pushedBranches(input)).toEqual([]);
   });
 });

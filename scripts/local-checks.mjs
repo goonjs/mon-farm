@@ -21,11 +21,18 @@ import { needsVerify } from './ci-changes.mjs';
 const LINTABLE = /\.(?:[cm]?[jt]sx?)$/;
 const ZEROS = /^0+$/;
 
+// Same subject as CI's `git log --format=%s`: the first paragraph, lines joined
+// by spaces. Only git's own editor template (and the `commit -v` diff after the
+// scissors line) is cut; a "#" line from `-m` is real text, as it is for CI.
+const TEMPLATE_START = /^# (?:Please enter the commit message|-{10,} >8 -{10,})/m;
+
 export function commitMessageErrors(text) {
-  const lines = text.split('\n').filter((l) => !l.startsWith('#'));
-  const subject = (lines.find((l) => l.trim() !== '') ?? '').trim();
+  const cut = text.search(TEMPLATE_START);
+  const lines = (cut === -1 ? text : text.slice(0, cut)).replace(/\r\n/g, '\n').trim().split('\n');
+  const blank = lines.findIndex((l) => l.trim() === '');
+  const subject = (blank === -1 ? lines : lines.slice(0, blank)).map((l) => l.trim()).join(' ');
   if (!subject) return ['empty commit message'];
-  const body = lines.slice(lines.indexOf(subject) + 1).join('\n').trim();
+  const body = blank === -1 ? '' : lines.slice(blank + 1).join('\n').trim();
   return lintCommit({ subject, body });
 }
 
@@ -43,8 +50,21 @@ export function isDeleteOnlyPush(stdin) {
   return lines.length > 0 && lines.every((l) => ZEROS.test(l.split(' ')[1] ?? ''));
 }
 
+// Branch pushes only (deletes and tags carry nothing to check): the local sha
+// being pushed and the branch it goes to.
+export function pushedBranches(stdin) {
+  return stdin
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => l.split(' '))
+    .filter(([, sha, remote]) => sha && !ZEROS.test(sha) && remote?.startsWith('refs/heads/'))
+    .map(([, sha, remote]) => ({ sha, branch: remote.slice('refs/heads/'.length) }));
+}
+
 const git = (...args) => execFileSync('git', ['-c', 'core.quotePath=false', ...args], { encoding: 'utf8' });
-const run = (cmd, args) => spawnSync(cmd, args, { stdio: 'inherit', shell: process.platform === 'win32' }).status ?? 1;
+// No shell: a path with a space stays one argument. On Windows npm/npx are .cmd shims.
+const bin = (cmd) => (process.platform === 'win32' && (cmd === 'npm' || cmd === 'npx') ? `${cmd}.cmd` : cmd);
+const run = (cmd, args) => spawnSync(bin(cmd), args, { stdio: 'inherit' }).status ?? 1;
 
 const fail = (hook, what) => {
   console.error(`\n${hook}: ${what}\nFix it, or skip once with SKIP_LOCAL_CHECKS=1 (CI still checks).`);
@@ -63,19 +83,37 @@ function preCommit() {
 }
 
 function prePush() {
-  if (isDeleteOnlyPush(readFileSync(0, 'utf8'))) return;
+  let stdin = '';
   try {
-    git('rev-parse', '--verify', '--quiet', 'origin/dev');
+    stdin = readFileSync(0, 'utf8');
   } catch {
-    console.error('pre-push: origin/dev not found, skipping local checks (CI still runs).');
-    return;
+    // unreadable stdin (some Windows pipes): treat as a normal push
   }
-  if (run('node', ['scripts/release.mjs', 'lint', 'origin/dev..HEAD']) !== 0) {
-    fail('pre-push', 'commit messages in origin/dev..HEAD break the rules');
+  if (isDeleteOnlyPush(stdin)) return;
+  const pushed = pushedBranches(stdin);
+  if (stdin && pushed.length === 0) return; // tags only
+  // A hotfix branch is cut from main; everything else from dev (process.md).
+  const heads = pushed.length ? pushed : [{ sha: 'HEAD', branch: '' }];
+  let needsTypecheck = false;
+  for (const { sha, branch } of heads) {
+    const base = branch.startsWith('hotfix/') ? 'origin/main' : 'origin/dev';
+    try {
+      git('rev-parse', '--verify', '--quiet', base);
+    } catch {
+      console.error(`pre-push: ${base} not found, skipping local checks (CI still runs).`);
+      continue;
+    }
+    if (run('node', ['scripts/release.mjs', 'lint', `${base}..${sha}`]) !== 0) {
+      fail('pre-push', `commit messages in ${base}..${branch || sha} break the rules`);
+    }
+    try {
+      const files = git('diff', '--no-renames', '--name-only', `${base}...${sha}`).split('\n').filter(Boolean);
+      needsTypecheck ||= needsVerify(files);
+    } catch {
+      needsTypecheck = true; // no merge base (shallow clone): any doubt means check, like CI
+    }
   }
-  const files = git('diff', '--no-renames', '--name-only', 'origin/dev...HEAD').split('\n').filter(Boolean);
-  if (!needsVerify(files)) return;
-  if (run('npm', ['run', '--silent', 'typecheck']) !== 0) fail('pre-push', 'typecheck failed');
+  if (needsTypecheck && run('npm', ['run', '--silent', 'typecheck']) !== 0) fail('pre-push', 'typecheck failed');
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
