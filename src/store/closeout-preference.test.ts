@@ -49,3 +49,11 @@ describe('closeout preference (CO-23)', () => {
     expect(() => rememberCloseout(broken, 'g1', [{ workerId: 'w1', route: 'buyer-split' }], 'none')).not.toThrow();
   });
 });
+
+describe('the real store is the device-settings module (E01-S19)', () => {
+  it('reads and writes through deviceSettings, never localStorage', async () => {
+    const { deviceSettings } = await import('./device-settings');
+    const { localPreferenceStore } = await import('./closeout-preference');
+    expect(localPreferenceStore).toBe(deviceSettings);
+  });
+});

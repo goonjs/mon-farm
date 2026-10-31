@@ -113,3 +113,16 @@ describe('nothing recorded: the cards ask (CO-17, CO-26, A0)', () => {
     expect(router().push).toHaveBeenCalled();
   });
 });
+
+describe('the last choice is read after the logs load, never in the first render (CO-23, E01-S19)', () => {
+  it('does not touch device settings during the first render', async () => {
+    const { deviceSettings } = jest.requireMock('../store/device-settings') as { deviceSettings: { get: (k: string) => string | null } };
+    const spy = jest.spyOn(deviceSettings, 'get');
+    wrap(<SaleProvider saleId={SALE}><CloseoutSummaryScreen /></SaleProvider>);
+    expect(spy.mock.calls.filter(([k]) => String(k).startsWith('mon-farm:last-'))).toHaveLength(0);
+    await flush();
+    expect(spy.mock.calls.filter(([k]) => String(k).startsWith('mon-farm:last-')).length).toBeGreaterThan(0);
+    spy.mockRestore();
+  });
+});
+

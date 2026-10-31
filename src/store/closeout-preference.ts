@@ -14,6 +14,7 @@
 
 import { REPAY_ROUTES, ROUNDING_MENU, type RepayRoute } from '../core/finance/closeout';
 import type { RoundingMode } from '../core/finance/deduct';
+import { deviceSettings } from './device-settings';
 
 export interface PreferenceStore {
   get(key: string): string | null;
@@ -50,11 +51,8 @@ export function rememberCloseout(store: PreferenceStore, groupId: string, routes
 }
 
 /**
- * Until E01-S19's `src/store/device-settings` lands: this device's
- * localStorage (web). On Android it may be missing — then nothing is
- * remembered and the menu's first item is used (architect note in the story).
+ * This device's settings store (E01-S19): localStorage on web, the SQLite
+ * kv-store on Android — so the last choice is remembered on both. Read only
+ * after the sale and finance logs load (never in the first render).
  */
-export const localPreferenceStore: PreferenceStore = {
-  get: (key) => globalThis.localStorage?.getItem(key) ?? null,
-  set: (key, value) => globalThis.localStorage?.setItem(key, value),
-};
+export const localPreferenceStore: PreferenceStore = deviceSettings;
