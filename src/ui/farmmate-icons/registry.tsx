@@ -4,7 +4,10 @@
  * react-native-svg vectors from `references/farmmate-icon-pack.png` (a
  * composite mockup sheet, not per-icon masters — see the sheet's own small
  * per-icon resolution). Pilot batch: the sheet's first three categories
- * (top row, left/middle/right) — 24 of ~70 icons.
+ * (top row, left/middle/right) — 24 of ~70 icons. E05-S11 (CO-16, UI-5)
+ * added `finance` and `people` (16 more, 40 in all), simplified onto the
+ * 48 grid from the traced masters in design/icons/farmmate/<id>.svg
+ * (labels from its manifest.json).
  *
  * Colour: no raw hex in `src/` (scripts/no-raw-colour.test.ts) — every fill
  * reads a semantic role from `theme.color`. The mockup's own 7-swatch legend
@@ -27,16 +30,27 @@
  *                                              orange `category5` reads closest
  *   Gray (neutral)        → inkSoft / inkFaint
  *
+ * Extra tones in the finance/people masters:
+ *   Amber/orange (bag band, coin edge, hat brim, orange hand) → category5
+ *   Red (expense arrow, profitCost "cost" slice)  → category4 — category5 is
+ *       already the coin edge/orange in those icons; NOT `reject`
+ *   Red (tapper cap)      → category5 (per the table above)
+ *   Dark green (buyer centre body) → category1 — NOT `accept`
+ *   Light blue (tapper bib) → category2Sunk
+ *   Skin                  → brandYellow (no skin role; reads emoji-style)
+ *   Black hair            → ink
+ *   White glyphs (฿, dots, contact) → inkInverse; separation gaps → surfaceRaised
+ *
  * See the Artifact proposal (linked from the PR) for where each icon is
  * recommended to replace or sit beside existing UI.
  */
 
 import type { ReactElement } from 'react';
-import { Circle, G, Path, Rect, Svg } from 'react-native-svg';
+import { Circle, Ellipse, G, Path, Rect, Svg } from 'react-native-svg';
 
 import type { Theme } from '../../theme';
 
-export type FarmMateIconCategory = 'nav' | 'farm' | 'sale';
+export type FarmMateIconCategory = 'nav' | 'farm' | 'sale' | 'finance' | 'people';
 
 export interface FarmMateIconDef {
   id: string;
@@ -462,6 +476,329 @@ const saleSalesReport: FarmMateIconDef = {
   ),
 };
 
+// ── Finance / people helpers ──────────────────────────────────────────────────
+
+/** Thai baht sign: a B with a vertical bar through it, stroked. */
+function BahtGlyph({ cx, cy, h, color }: { cx: number; cy: number; h: number; color: string }) {
+  const top = cy - h / 2;
+  const bottom = cy + h / 2;
+  const x0 = cx - h * 0.28;
+  const r = h / 4;
+  return (
+    <Path
+      d={`M${x0} ${top} V${bottom} M${x0} ${top} H${cx} a${r} ${r} 0 0 1 0 ${h / 2} H${x0} M${x0} ${cy} H${cx + h * 0.04} a${r} ${r} 0 0 1 0 ${h / 2} H${x0} M${cx - h * 0.08} ${top - h * 0.16} V${bottom + h * 0.16}`}
+      stroke={color}
+      strokeWidth={h * 0.17}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
+  );
+}
+
+/** One pie slice; angles in degrees clockwise from 12 o'clock, nudged out along its bisector by `gap`. */
+function PieSlice({ cx, cy, r, from, to, gap, fill }: { cx: number; cy: number; r: number; from: number; to: number; gap: number; fill: string }) {
+  const rad = (deg: number) => ((deg - 90) * Math.PI) / 180;
+  const mid = rad((from + to) / 2);
+  const ox = cx + gap * Math.cos(mid);
+  const oy = cy + gap * Math.sin(mid);
+  const p = (deg: number) => `${(ox + r * Math.cos(rad(deg))).toFixed(2)} ${(oy + r * Math.sin(rad(deg))).toFixed(2)}`;
+  return <Path d={`M${ox.toFixed(2)} ${oy.toFixed(2)} L${p(from)} A${r} ${r} 0 ${to - from > 180 ? 1 : 0} 1 ${p(to)} Z`} fill={fill} />;
+}
+
+/** One coin disc seen from the side: face ellipse over an edge band. */
+function CoinDisc({ cx, cy, rx, ry, edge, face, side }: { cx: number; cy: number; rx: number; ry: number; edge: number; face: string; side: string }) {
+  return (
+    <G>
+      <Path d={`M${cx - rx} ${cy} V${cy + edge} A${rx} ${ry} 0 0 0 ${cx + rx} ${cy + edge} V${cy} Z`} fill={side} />
+      <Ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={face} />
+    </G>
+  );
+}
+
+// ── หมวดการเงิน — finance ────────────────────────────────────────────────────
+
+const financeIncome: FarmMateIconDef = {
+  id: 'finance.income',
+  labelTh: 'รายรับ',
+  category: 'finance',
+  note: 'money bag ฿ — income / money-in rows; close-out pay summary',
+  Render: (t) => (
+    <G>
+      <Circle cx={18.5} cy={8.5} r={3.4} fill={t.color.brandYellow} />
+      <Circle cx={24} cy={7.5} r={3.8} fill={t.color.brandYellow} />
+      <Circle cx={29.5} cy={8.5} r={3.4} fill={t.color.brandYellow} />
+      <Path d="M16 9 H32 L29 17 H19 Z" fill={t.color.brandYellow} />
+      <Circle cx={24} cy={30} r={15} fill={t.color.brandYellow} />
+      <Rect x={17.5} y={13.5} width={13} height={3} rx={1.5} fill={t.color.category5} />
+      <BahtGlyph cx={24} cy={31} h={13} color={t.color.inkInverse} />
+    </G>
+  ),
+};
+
+const financeExpense: FarmMateIconDef = {
+  id: 'finance.expense',
+  labelTh: 'รายจ่าย',
+  category: 'finance',
+  note: 'coin stack with up arrow — expense entry / money-out rows',
+  Render: (t) => (
+    <G>
+      {[33, 28, 23, 18].map((cy) => (
+        <CoinDisc key={cy} cx={14} cy={cy} rx={10} ry={4} edge={3.4} face={t.color.brandYellow} side={t.color.category5} />
+      ))}
+      {[37, 32.5].map((cy) => (
+        <CoinDisc key={cy} cx={35} cy={cy} rx={9} ry={3.6} edge={3.2} face={t.color.brandYellow} side={t.color.category5} />
+      ))}
+      <Path d="M36 24 V7 M29.5 13 L36 6.5 L42.5 13" stroke={t.color.category4} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </G>
+  ),
+};
+
+const financeProfitCost: FarmMateIconDef = {
+  id: 'finance.profitCost',
+  labelTh: 'กำไร/ต้นทุน',
+  category: 'finance',
+  note: 'pie of profit vs cost — profit/cost breakdown',
+  Render: (t) => (
+    <G>
+      <PieSlice cx={24} cy={25} r={16} from={68} to={240} gap={1.2} fill={t.color.category2} />
+      <PieSlice cx={24} cy={25} r={16} from={240} to={358} gap={1.2} fill={t.color.brandStrong} />
+      <PieSlice cx={24} cy={25} r={16} from={4} to={62} gap={2.6} fill={t.color.category4} />
+    </G>
+  ),
+};
+
+const financeSummary: FarmMateIconDef = {
+  id: 'finance.summary',
+  labelTh: 'สรุปการเงิน',
+  category: 'finance',
+  note: 'calculator — money summary / totals',
+  Render: (t) => (
+    <G>
+      <Rect x={10.5} y={5.5} width={27} height={37} rx={5} fill="none" stroke={t.color.action} strokeWidth={3.4} />
+      <Rect x={15.5} y={11} width={17} height={7} rx={1.5} fill={t.color.category2} />
+      {[23, 30].map((y) =>
+        [15.5, 22, 28.5].map((x) => <Rect key={`${x}-${y}`} x={x} y={y} width={4} height={4} rx={1} fill={t.color.category2} />),
+      )}
+    </G>
+  ),
+};
+
+const financeSplit50: FarmMateIconDef = {
+  id: 'finance.split50',
+  labelTh: 'เงินที่ต้องแบ่ง 50%',
+  category: 'finance',
+  note: 'wallet — the 50% share to split (settlement share rows)',
+  Render: (t) => (
+    <G>
+      <Path d="M9 15 L32 8.6 a2 2 0 0 1 2.5 1.4 L36 15" stroke={t.color.action} strokeWidth={2.6} strokeLinejoin="round" fill="none" />
+      <Rect x={6} y={15} width={33} height={26} rx={4} fill={t.color.action} />
+      <Rect x={28} y={23} width={14} height={10} rx={2} fill={t.color.action} stroke={t.color.inkInverse} strokeWidth={1.4} />
+      <Circle cx={32.5} cy={28} r={3} fill={t.color.inkInverse} stroke={t.color.action} strokeWidth={1.2} />
+    </G>
+  ),
+};
+
+const financeWorkerPay: FarmMateIconDef = {
+  id: 'finance.workerPay',
+  labelTh: 'ค่าตอบแทนคนงาน',
+  category: 'finance',
+  note: 'two workers — worker pay / what the farm owes a tapper',
+  Render: (t) => (
+    <G>
+      <Circle cx={34} cy={17} r={5.5} fill={t.color.category2} />
+      <Path d="M29.5 26.6 a10.5 10.5 0 0 1 14.5 9.9 V38 H34 V36.5 a13 13 0 0 0 -4.5 -9.9 Z" fill={t.color.category2} />
+      <Circle cx={18} cy={18.5} r={6.5} fill={t.color.action} />
+      <Path d="M5 40 V37.5 a13 13 0 0 1 26 0 V40 a1.5 1.5 0 0 1 -1.5 1.5 H6.5 A1.5 1.5 0 0 1 5 40 Z" fill={t.color.action} />
+    </G>
+  ),
+};
+
+const financeOtherCost: FarmMateIconDef = {
+  id: 'finance.otherCost',
+  labelTh: 'ค่าใช้จ่ายอื่นๆ',
+  category: 'finance',
+  note: '฿ bill — other costs; close-out "จัดการหนี้" debt card',
+  Render: (t) => (
+    <G>
+      <Path
+        d="M13 6 H30 L37 13 V38 Q37 41 34 41 H29.5 Q27.5 38.6 25.5 41 H22.5 Q20.5 38.6 18.5 41 H14 Q11 41 11 38 V8 Q11 6 13 6 Z"
+        fill="none"
+        stroke={t.color.action}
+        strokeWidth={3.2}
+        strokeLinejoin="round"
+      />
+      <Path d="M29 7 V12 a2 2 0 0 0 2 2 H36 Z" fill={t.color.category2} />
+      <BahtGlyph cx={24} cy={25} h={13} color={t.color.brandStrong} />
+    </G>
+  ),
+};
+
+const financeFinanceReport: FarmMateIconDef = {
+  id: 'finance.financeReport',
+  labelTh: 'รายงานการเงิน',
+  category: 'finance',
+  note: 'bars with rising trend — finance report screen',
+  Render: (t) => (
+    <G>
+      <Rect x={13} y={34} width={5} height={8} rx={2.5} fill={t.color.action} />
+      <Rect x={21.5} y={33} width={5} height={9} rx={2.5} fill={t.color.action} />
+      <Rect x={35} y={24} width={5} height={18} rx={2.5} fill={t.color.action} />
+      <Path d="M6 34 L17 22 L23 28 L39 10" stroke={t.color.brandStrong} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <Path d="M32 9 H40 V17" stroke={t.color.brandStrong} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </G>
+  ),
+};
+
+// ── หมวดผู้เกี่ยวข้อง — people ────────────────────────────────────────────────
+
+const peopleManager: FarmMateIconDef = {
+  id: 'people.manager',
+  labelTh: 'ผู้จัดการสวน',
+  category: 'people',
+  note: 'farm manager / owner avatar',
+  Render: (t) => (
+    <G>
+      <Path d="M9 44 V41 a7 7 0 0 1 7 -7 H32 a7 7 0 0 1 7 7 V44 Z" fill={t.color.brandStrong} />
+      <Rect x={15} y={34.5} width={3} height={9.5} fill={t.color.action} />
+      <Rect x={30} y={34.5} width={3} height={9.5} fill={t.color.action} />
+      <Rect x={20.5} y={28} width={7} height={7} rx={2} fill={t.color.brandYellow} />
+      <Path d="M15 19 V22 a9 9 0 0 0 18 0 V19 Z" fill={t.color.brandYellow} />
+      <Path d="M15 17 H33 V23.5 Q31.5 21.5 30.5 23.5 V20.5 H17.5 V23.5 Q16.5 21.5 15 23.5 Z" fill={t.color.ink} />
+      <Ellipse cx={24} cy={15} rx={20} ry={4.5} fill={t.color.category5} />
+      <Path d="M13 15 a11 10 0 0 1 22 0 Z" fill={t.color.brandYellow} />
+    </G>
+  ),
+};
+
+const peopleTapper: FarmMateIconDef = {
+  id: 'people.tapper',
+  labelTh: 'คนกรีดยาง',
+  category: 'people',
+  note: 'tapper avatar — tapper rows on the close-out pages',
+  Render: (t) => (
+    <G>
+      <Path d="M8 46 V42 a8 8 0 0 1 8 -8 H32 a8 8 0 0 1 8 8 V46 Z" fill={t.color.action} />
+      <Rect x={15} y={35} width={3.4} height={11} fill={t.color.category2} />
+      <Rect x={29.6} y={35} width={3.4} height={11} fill={t.color.category2} />
+      <Rect x={17} y={40} width={14} height={6} rx={1.5} fill={t.color.category2Sunk} />
+      <Rect x={20.5} y={29} width={7} height={6} rx={2} fill={t.color.brandYellow} />
+      <Path d="M14 20 V23 a10 10 0 0 0 20 0 V20 Z" fill={t.color.brandYellow} />
+      <Path d="M13 18.5 H35 V24 Q33.5 22 32.5 24 V21 H15.5 V24 Q14.5 22 13 24 Z" fill={t.color.ink} />
+      <Path d="M12.5 19 a11.5 11.5 0 0 1 23 0 Z" fill={t.color.category5} />
+    </G>
+  ),
+};
+
+const peopleBuyer: FarmMateIconDef = {
+  id: 'people.buyer',
+  labelTh: 'ผู้ซื้อ/ลูกค้า',
+  category: 'people',
+  note: 'group of three — buyer / customer',
+  Render: (t) => (
+    <G>
+      <Circle cx={10.5} cy={18} r={5} fill={t.color.brandStrong} />
+      <Path d="M2.5 37 V32 a7 7 0 0 1 7 -7 H16 V37 a1.5 1.5 0 0 1 -1.5 1.5 H4 A1.5 1.5 0 0 1 2.5 37 Z" fill={t.color.brandStrong} />
+      <Circle cx={37.5} cy={18} r={5} fill={t.color.category2} />
+      <Path d="M32 25 H38.5 a7 7 0 0 1 7 7 V37 a1.5 1.5 0 0 1 -1.5 1.5 H33.5 A1.5 1.5 0 0 1 32 37 Z" fill={t.color.category2} />
+      <Circle cx={24} cy={14.5} r={6.5} fill={t.color.brandStrong} stroke={t.color.surfaceRaised} strokeWidth={1.5} />
+      <Path d="M13.5 39.5 V34 a10.5 10.5 0 0 1 21 0 V39.5 Z" fill={t.color.category1} stroke={t.color.surfaceRaised} strokeWidth={1.5} strokeLinejoin="round" />
+    </G>
+  ),
+};
+
+const peopleTransporter: FarmMateIconDef = {
+  id: 'people.transporter',
+  labelTh: 'ผู้ขนส่ง',
+  category: 'people',
+  note: 'truck — transporter / hauler',
+  Render: (t) => (
+    <G>
+      <Rect x={3} y={10} width={25} height={22} rx={2} fill={t.color.category2} />
+      <Path d="M30 17 H37.5 a1.5 1.5 0 0 1 1.2 0.6 L45 26 V33 H30 Z" fill={t.color.action} />
+      <Path d="M32.5 20 H37 L40 25 H32.5 Z" fill={t.color.inkInverse} />
+      <Rect x={3} y={30} width={42} height={4} rx={1} fill={t.color.action} />
+      <Circle cx={12} cy={36} r={4.5} fill={t.color.action} stroke={t.color.inkInverse} strokeWidth={1.6} />
+      <Circle cx={37} cy={36} r={4.5} fill={t.color.action} stroke={t.color.inkInverse} strokeWidth={1.6} />
+    </G>
+  ),
+};
+
+const peopleContacts: FarmMateIconDef = {
+  id: 'people.contacts',
+  labelTh: 'รายชื่อผู้ติดต่อ',
+  category: 'people',
+  note: 'address book — contacts list',
+  Render: (t) => (
+    <G>
+      <Rect x={10} y={4} width={33} height={40} rx={4} fill={t.color.category2} />
+      {[11, 22, 33].map((y) => (
+        <G key={y}>
+          <Rect x={6.5} y={y} width={5} height={5} rx={1.4} fill={t.color.category2} />
+          <Ellipse cx={13.5} cy={y + 2.5} rx={1} ry={1.4} fill={t.color.inkInverse} />
+        </G>
+      ))}
+      <Circle cx={28} cy={18} r={5.5} fill={t.color.inkInverse} />
+      <Path d="M19 34 a9 9 0 0 1 18 0 Z" fill={t.color.inkInverse} />
+    </G>
+  ),
+};
+
+const peopleCommsLog: FarmMateIconDef = {
+  id: 'people.commsLog',
+  labelTh: 'บันทึกการสื่อสาร',
+  category: 'people',
+  note: 'speech bubble — communication log',
+  Render: (t) => (
+    <G>
+      <Ellipse cx={24.5} cy={20.5} rx={19} ry={15.5} fill={t.color.category2} />
+      <Path d="M9 28 L8.5 42 Q8.5 43 9.5 42.5 L21 35 Z" fill={t.color.category2} />
+      {[17, 24.5, 32].map((cx) => (
+        <Circle key={cx} cx={cx} cy={20.5} r={2.4} fill={t.color.inkInverse} />
+      ))}
+    </G>
+  ),
+};
+
+const peopleWorkerInfo: FarmMateIconDef = {
+  id: 'people.workerInfo',
+  labelTh: 'ข้อมูลคนงาน',
+  category: 'people',
+  note: 'ID card — worker details screen',
+  Render: (t) => (
+    <G>
+      <Rect x={5.5} y={10.5} width={37} height={27} rx={5} fill="none" stroke={t.color.action} strokeWidth={3.2} />
+      <Circle cx={17} cy={20} r={3.6} fill={t.color.action} />
+      <Path d="M11 30.5 a6 5.5 0 0 1 12 0 Z" fill={t.color.action} />
+      <Rect x={26.5} y={18} width={9} height={3} rx={1.5} fill={t.color.action} />
+      <Rect x={26.5} y={25} width={9} height={3} rx={1.5} fill={t.color.action} />
+    </G>
+  ),
+};
+
+const peopleProfitShare: FarmMateIconDef = {
+  id: 'people.profitShare',
+  labelTh: 'แบ่งผลประโยชน์',
+  category: 'people',
+  note: 'handshake — profit share; close-out "จัดเงินสดกับคนรับซื้อยาง" card',
+  Render: (t) => (
+    <G>
+      <Rect x={3} y={13} width={6} height={13} rx={1} fill={t.color.action} transform="rotate(-28 6 19.5)" />
+      <Rect x={39} y={13} width={6} height={13} rx={1} fill={t.color.brandStrong} transform="rotate(28 42 19.5)" />
+      {[
+        [12.5, 30],
+        [16, 33],
+        [20, 35.5],
+        [24.5, 36.5],
+      ].map(([x, y]) => (
+        <Rect key={x} x={x - 1.8} y={y - 3.6} width={3.6} height={7.2} rx={1.8} fill={t.color.brandYellow} transform={`rotate(45 ${x} ${y})`} />
+      ))}
+      <Path d="M10 18 L18 14.5 H25 L34 24.5 Q35.5 27 33 28.5 L28 32 H20 L12 26 Z" fill={t.color.brandYellow} />
+      <Path d="M38 18 L30 14.5 H24.5 L17 21 Q16 23.5 18.5 24 L24 21 L32.5 28.5 L38 24 Z" fill={t.color.category5} />
+    </G>
+  ),
+};
+
 export const FARMMATE_ICONS: FarmMateIconDef[] = [
   navHome,
   navMyFarm,
@@ -487,12 +824,30 @@ export const FARMMATE_ICONS: FarmMateIconDef[] = [
   saleComparePrice,
   saleReceipt,
   saleSalesReport,
+  financeIncome,
+  financeExpense,
+  financeProfitCost,
+  financeSummary,
+  financeSplit50,
+  financeWorkerPay,
+  financeOtherCost,
+  financeFinanceReport,
+  peopleManager,
+  peopleTapper,
+  peopleBuyer,
+  peopleTransporter,
+  peopleContacts,
+  peopleCommsLog,
+  peopleWorkerInfo,
+  peopleProfitShare,
 ];
 
 export const FARMMATE_ICON_CATEGORY_LABEL_TH: Record<FarmMateIconCategory, string> = {
   nav: 'หมวดหลัก / นำทาง',
   farm: 'หมวดสวนและแปลง',
   sale: 'หมวดผลผลิตและการขาย',
+  finance: 'หมวดการเงิน',
+  people: 'หมวดผู้เกี่ยวข้อง',
 };
 
 export function getFarmMateIcon(id: string): FarmMateIconDef | undefined {

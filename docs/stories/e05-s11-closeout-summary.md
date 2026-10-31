@@ -119,6 +119,8 @@ ids อ้างจากแคปชันใน mockup (แบบ A)
 
 - ทำแล้ว (2026-10-31, ตามที่เจ้าของสั่ง): `src/core/compact-money.ts` + test, `src/ui/compact-money.tsx` + test — ยังไม่ได้ใช้ในหน้าจอไหน
 - ใช้ซ้ำ `signed`/`MoneyLines` (`src/v2/sale/person-money.tsx`), `deductSheet`, `balanceAfterSale`; `MoneyField`/`NumberPad` ใน `src/ui`
+- 2026-10-31 (ทีม dev): `src/store/closeout-preference.test.ts` เขียน**หลัง**โค้ด (ไม่ได้เห็นแดงก่อน) — ชดเชยด้วย mutation check (เปลี่ยนค่าแรกของเมนู → 3 test แดง แล้วคืนโค้ด); ไฟล์ต่อจากนี้ TDD เห็นแดงก่อน
+- 2026-10-31: หน้าเดิม (SettlementScreen/TallyScreen/PaymentScreen, route tally/rounding และ test ของมัน) คงไว้จนเจ้าของตอบเรื่องลบ; route settlement/payment ชี้หน้าใหม่แล้ว · หัวข้อ "ค่าตั้งของเครื่อง" ใน architecture.md เป็นของ E01-S19 (DS-7)
 - แตก PR: (1) แกนคิด "ยอดเสนอรวมทั้งการขาย" + แถบตรวจยอด (pure, ไม่เปลี่ยนสูตร) (2) หน้าสรุปจ่าย + แผ่นล่าง (3) หน้าจ่ายเงิน/ปิด + ลบหน้าเทียบยอดและขั้นปัดเศษเดิม (ต้องขอยืนยันก่อนลบไฟล์)
 
 ## Code review
