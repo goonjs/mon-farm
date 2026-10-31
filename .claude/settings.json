@@ -8,7 +8,10 @@
       "Bash(git push -u origin fix/*)",
       "Bash(git push origin fix/*)",
       "Bash(git push -u origin chore/*)",
-      "Bash(git push origin chore/*)"
+      "Bash(git push origin chore/*)",
+      "mcp__claude-artifacts__db_write",
+      "mcp__claude-artifacts__edit_version",
+      "mcp__claude-artifacts__publish_version"
     ],
     "deny": [
       "Bash(git push --force*)",
