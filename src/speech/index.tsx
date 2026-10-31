@@ -15,6 +15,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { deviceSettings } from '../store/device-settings';
 import { readSpeechOn, writeSpeechOn } from './preference';
 
 interface SpeechContextValue {
@@ -25,16 +26,23 @@ interface SpeechContextValue {
 const SpeechContext = createContext<SpeechContextValue | null>(null);
 
 export function SpeechProvider({ children, initial = true }: { children: ReactNode; initial?: boolean }) {
-  const [speechOn, setSpeechOnState] = useState<boolean>(initial);
+  // Native reads the stored choice in the first render (E01-S19 DS-4).
+  const [speechOn, setSpeechOnState] = useState<boolean>(() =>
+    deviceSettings.readDuringRender ? (readSpeechOn() ?? initial) : initial,
+  );
 
-  // Read after mount, not during render — see src/i18n/index.tsx's identical
-  // note: this app static-renders on web, and a value read from device
-  // storage during render would differ between the server-rendered HTML and
-  // the first client render.
+  // On web, read after mount, not during render — see src/i18n/index.tsx's
+  // identical note: this app static-renders on web, and a value read from
+  // device storage during render would differ between the server-rendered
+  // HTML and the first client render.
   useEffect(() => {
+    if (deviceSettings.readDuringRender) return;
+    // A microtask, as when this read was async: same web timing as before.
     let cancelled = false;
-    readSpeechOn().then((stored) => {
-      if (!cancelled && stored !== null) setSpeechOnState(stored);
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      const stored = readSpeechOn();
+      if (stored !== null) setSpeechOnState(stored);
     });
     return () => {
       cancelled = true;
@@ -45,7 +53,7 @@ export function SpeechProvider({ children, initial = true }: { children: ReactNo
     setSpeechOnState(on);
     // Fire and forget: a storage failure must not stop someone toggling
     // speech, it just means the choice does not survive a restart.
-    void writeSpeechOn(on);
+    writeSpeechOn(on);
   }, []);
 
   const value = useMemo<SpeechContextValue>(() => ({ speechOn, setSpeechOn }), [speechOn, setSpeechOn]);
