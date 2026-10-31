@@ -29,7 +29,13 @@ function allowed(rel: string): boolean {
   );
 }
 
-const stripComments = (code: string) => code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+// Only whole comment lines (`//`, `/*`, ` *`) are dropped, so a `/*` or `//`
+// inside a string or after code can never hide the rest of a line.
+const stripComments = (code: string) =>
+  code
+    .split('\n')
+    .filter((line) => !/^\s*(\/\/|\/\*|\*)/.test(line))
+    .join('\n');
 
 describe('no direct localStorage outside the device-settings module (DS-1)', () => {
   it('finds none', () => {

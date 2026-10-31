@@ -12,6 +12,7 @@ vi.mock('expo-sqlite/kv-store', () => ({
   SQLiteStorage: class {
     private readonly rows: Map<string, string>;
     constructor(name: string) {
+      if (broken) throw new Error('unable to open database file');
       if (!files.has(name)) files.set(name, new Map());
       this.rows = files.get(name)!;
     }
@@ -57,6 +58,13 @@ describe('device settings on native (E01-S19)', () => {
     broken = true;
     expect(s.get('mon-farm:hold-ms')).toBeNull();
     expect(() => s.set('mon-farm:hold-ms', '800')).not.toThrow();
+  });
+
+  it('gives null when the settings file cannot even be opened (DS-5)', async () => {
+    broken = true;
+    const s = await openApp();
+    expect(s.get('mon-farm:locale')).toBeNull();
+    expect(() => s.set('mon-farm:locale', 'en')).not.toThrow();
   });
 
   it('can be read during render — native has no static render (DS-4)', async () => {
