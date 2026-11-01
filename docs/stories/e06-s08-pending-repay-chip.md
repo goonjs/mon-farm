@@ -1,6 +1,6 @@
 # Story E06-S08: ป้าย "เงินคืนหนี้ ยังไม่ได้รับ" บนบัญชีหนี้คนงาน
 
-Status: In Progress (เจ้าของตกลง AC 2026-11-01 ผ่านลีด; โค้ดบน feature/e06-s08-pending-repay)
+Status: Review (เจ้าของตกลง AC 2026-11-01 ผ่านลีด; โค้ดบน feature/e06-s08-pending-repay)
 
 ## Context
 
@@ -37,7 +37,7 @@ Status: In Progress (เจ้าของตกลง AC 2026-11-01 ผ่า�
 - [ ] **PR-14** (Q4) หน้าแรก "ควรรู้ / ควรจัดการ" มีแถว "เงินคืนหนี้ ยังไม่เข้าสวน · รอคนซื้อ" รายคนก่อน ("แดง ฿ 3,250 · นัด ฿ 5,250"; เกิน 2 คน บรรทัดละ 2) แล้ว "Σ รวม ฿ 8,500" บรรทัดของตัวเอง (`CompactMoney`, summary-lines) ไอคอน `finance.otherCost` พื้นฟ้า แตะ → `/v2/debts`; ไม่มีรอ = ไม่มีแถว (H1)
 - [ ] **PR-15** (Q5) แผ่นรับเงิน (M5, M5b) มีปุ่มหลัก "✓ ได้ครบ {ยอด}" และปุ่มรอง "ได้น้อยกว่านี้" → แผ่นใส่ "ได้จริง" ด้วย `MoneyField` + `NumberPad` ช่องเริ่มว่าง (0 = ไม่ได้รับเลย) **ใส่เกิน "ควรได้" ไม่ได้** (ปุ่มบันทึกปิด บอกเพดาน; เงินเกินที่เป็นยอดค้างของการขายก่อน ให้บันทึกที่การขายนั้น) แสดงผลก่อนบันทึก: ควรได้ · คนซื้อค้างสวน · หนี้{ชื่อ} ไม่เปลี่ยน {ยอด} (M7, M9) · ทางโอนรวม หัวแผ่นบอก "เงินโอนทั้งก้อน" + ชื่อคนซื้อ + ชื่อทุกคนที่โอนรวม
 - [ ] **PR-16** (Q5, กติกานักบัญชี D-85/D-71) ทางโอนรวม / คนซื้อแยกเงินสด ได้ไม่ครบหรือไม่ได้: **หนี้คนกรีดไม่เปลี่ยน** ส่วนที่ขาด = "คนซื้อค้างสวน" (**คำเดียวทุกจอ**) ผูกกับการขาย (ระดับการขาย ไม่แยกรายคนสำหรับโอนรวม) · กติกาบัญชี: เงินคืนหนี้นับว่าได้ก่อน ส่วนขาดตัดจากส่วนสวน (ไม่ขึ้นจอ; D-87) — ได้น้อยกว่าเงินคืนหนี้ (เช่น 3,000 จาก 19,687.50) = คืนหนี้ได้ 3,000 ส่วนสวนได้ 0 ไม่ติดลบ คนซื้อค้าง 16,687.50 · ป้ายบนบัญชีหนี้ปิด · หน้าแรกมีแถว "คนซื้อค้างสวน · ขาย {วันที่} · {คนซื้อ}" บรรทัดละก้อน ("ส่วนโอน" / "ส่วนเงินสด (แดงจ่ายแล้ว)") + Σ (ปัดจากยอดเต็ม) ไอคอน `finance.otherCost` พื้นอำพัน; หลายการขาย = แถวละการขาย + Σ · แตะ → หน้าจ่ายเงินของการขาย; ได้ส่วนที่เหลือทีหลัง = แก้ยอดที่ได้ บนหน้าจ่ายเงินมีป้าย "คนซื้อค้างสวน ฿ X" + ลิงก์ "ได้น้อยกว่านี้ ›" (P2) (MVP ไม่เก็บวันรับ/ช่องทางของแต่ละงวด) (H2) · ยอดขายไม่เปลี่ยน
-- [ ] **PR-17** (Q5) ทางหยิบจากส่วนแบ่ง{ชื่อ} ไม่ได้หยิบ / หยิบไม่ครบ = เงินอยู่กับคนกรีด หนี้ยังไม่ได้จ่าย → แก้ยอดหักที่**หน้าจ่ายเงินของการขาย** (event แก้การหักเดิม) เจ้าของกดเอง หน้าการขายบอก "หนี้{ชื่อ}จะกลับเป็น ฿ X" ก่อนบันทึก; แผ่นบนบัญชีหนี้มีแค่ "✓ หยิบครบ" + "ไม่ได้หยิบ / ไม่ครบ · แก้ที่การขาย ›" เปิดหน้าการขายตรงแถวหักของคนนั้น (M10, P1) · ติ๊กหยิบไปพร้อมจ่ายแล้วนึกได้ทีหลัง: แตะ "✓ รับเงินแล้ว ›" ในประวัติได้แผ่นเดียวกัน · แก้แล้วประวัติหนี้เห็นทั้ง "↘ หัก 1,000" และ "+ ยกเลิกหัก 1,000 (ไม่ได้หยิบ)" ไม่ลบบรรทัดเดิม · คำ "หยิบจากส่วนแบ่ง{ชื่อ}" (ไม่ใช้ "เงิน{ชื่อ}" ที่อ่านชนกับ "เงินต้น") (Q6 ✓)
+- [ ] **PR-17** (Q5) ทางหยิบจากส่วนแบ่ง{ชื่อ} ไม่ได้หยิบ / หยิบไม่ครบ = เงินอยู่กับคนกรีด หนี้ยังไม่ได้จ่าย → แก้ยอดหักที่**หน้าจ่ายเงินของการขาย** (event แก้การหักเดิม) เจ้าของกดเอง หน้าการขายบอก "หนี้{ชื่อ}จะกลับเป็น ฿ X" ก่อนบันทึก; แผ่นบนบัญชีหนี้มีแค่ "✓ หยิบครบ" + "ไม่ได้หยิบ / ไม่ครบ · แก้ที่การขาย ›" เปิดหน้าการขายตรงแถวหักของคนนั้น (M10, P1) · ติ๊กหยิบไปพร้อมจ่ายแล้วนึกได้ทีหลัง: แตะ "✓ รับเงินแล้ว ›" ในประวัติได้แผ่นเดียวกัน · แก้แล้วประวัติหนี้เห็นทั้งบรรทัดหักเดิม (ขีดฆ่า "ยกเลิกแล้ว") และบรรทัดหักใหม่เท่าที่ถึงสวน ไม่ลบบรรทัดเดิม · คำ "หยิบจากส่วนแบ่ง{ชื่อ}" (ไม่ใช้ "เงิน{ชื่อ}" ที่อ่านชนกับ "เงินต้น") (Q6 ✓)
 - [ ] **PR-19** แผ่นได้น้อยกว่า (ทางคนซื้อแยกเงินสด / โอนรวม) ถาม "เงินอยู่ที่ไหน": "อยู่กับคนซื้อ" (ค่าเริ่ม) → คนซื้อค้างสวน · "คนซื้อให้{ชื่อ}ไปแล้ว" (หรือโอนเข้าบัญชีคนกรีด) → เงินอยู่กับคนกรีด หนี้ยังไม่ได้จ่าย → ปุ่มเป็น "แก้ที่การขาย ›" แบบ PR-17 (M9)
 - [ ] **PR-20** แผ่น "ดูที่มา" ตรวจยอด D-72 ของการขายมีแถว "คนซื้อค้างสวน": เงินที่ได้จริง + คนซื้อค้างสวน = ยอดขาย ถึงสตางค์ (แถบไม่เป็นสีส้ม) (P2)
 - [ ] **PR-18** สองเครื่องบันทึกยอดที่ได้ต่างกัน (เครื่องหนึ่งได้ครบ อีกเครื่องได้ไม่ครบ) = **ขัดกัน** (D-30) ไม่เลือกตัวท้ายเงียบ ๆ — `paymentStatus` เทียบ (done, ได้จริง) ข้ามทุก head
@@ -86,11 +86,23 @@ _เขียน test ก่อน (TDD) แล้วค่อยทำให้
 - ตัวเลขในภาพ: การขาย 29 ต.ค. แบบ A20 ของ E05-S11 — แดง หัก 3,250 ทางคนซื้อแยกเงินสด (15,790 → 12,540) · นัด หัก 5,250 ทางโอนรวม (8,350 → 3,100) · โอนรวม 19,687.50 = ส่วนสวน 14,437.50 + คืนหนี้นัด 5,250 · M4 เพิ่มการขาย 22 ต.ค. ของแดงที่หัก 1,800 ไปก่อนแล้ว (โอน) ยอดค้างยังเป็น 12,540
 - ยกเลิกการหักหลังติ๊กรับแล้ว: ป้ายไม่แสดง (PR-9) — เงินที่รับเกินเป็นเรื่องของหน้าการขาย ต้องมี test ว่าป้ายไม่กลับมา
 - สัญญาข้อมูล (ลีดตัดสิน 2026-11-01): `pendingRepays(plan, ticked)` → `PendingRepay[]` ({workerId, name, satang, how}) ของ E05-S11 คิดทีละการขาย คู่กับ `closeoutPlan` และสถานะติ๊ก (`paymentStatus` payee `owner` / `debt-cash-<workerId>`) · ทีมนี้เขียนตัวรวม**ข้ามการขายต่อคน**เองในไฟล์ใหม่ `src/core/finance/pending-repays.ts` หลัง #130 merge โดยเรียก `closeoutPlan` + `pendingRepays` ต่อการขายที่ปิดแล้ว — ไม่ขอให้ E05-S11 เพิ่มอะไร; ถ้าต้องเปลี่ยน signature ของ E05-S11 ต้องบอกลีดก่อน
+- ตัวรวมข้ามการขายอ่านบรรทัดหัก + ติ๊กจาก log ตรง ๆ (ลีดยอมตามเงื่อนไข 2026-11-01): `pending-repays.equiv.test.ts` สุ่ม 1,500 การขายพิสูจน์ว่าตรงกับ `pendingRepays(closeoutPlan(...))` ของ E05-S11
+- ข้อจำกัด: หน้าแรกคิดคนซื้อค้างสวนส่วนโอนจากยอดตอนติ๊ก (ไม่มีส่วนแบ่ง/ปัดเศษของการขาย) ถ้าแก้การหักหลังติ๊ก หน้าจ่ายเงินคิดจากยอดโอนวันนี้และขึ้น "ต้องตรวจใหม่"
+- ข้อความ `cop.src*` 7 ตัวไม่ถูกใช้แล้ว (pay page ใช้ SourcesSheet ของหน้าสรุป): `cop.srcTitle`, `cop.srcShares`, `cop.srcDebt`, `cop.srcRound`, `cop.srcPaid`, `cop.srcYes`, `cop.srcNo` — ยังไม่ลบ รอลีด
 - ห้ามแก้ไฟล์ของ E05-S11 จนกว่า PR #130 merge — หลัง merge: แถว "คนซื้อค้างสวน" บนหน้าจ่ายเงิน, แก้ยอดหักทางหยิบ (PR-17) และ `payments.ts` เป็นโค้ดที่ E05-S11 เคยแตะ
 - กติกา Q5 = **D-87** ใน `docs/prd.md` (ลีดตัดสินเลข 2026-11-01) · `docs/architecture.md` เพิ่มเรื่อง `receivedSatang?`, ขัดกันเมื่อสองเครื่องบันทึกยอดต่าง, แก้การหักที่หน้าการขายเท่านั้น, ข้อจำกัดแอปรุ่นเก่า (solution-architect, PR #133)
 - นอกขอบเขต (งานถัดไป): ปิดเรื่องคนซื้อไม่จ่าย/หนี้สูญ (Q8) · เก็บวันรับและช่องทางของแต่ละงวด
 
 ## Code review
+
+- Reviewer (separate agent, 2026-11-01): independent review of `feature/e06-s08-pending-repay` (code commits 6bf47a3..8877fb3)
+- Findings (blocking): (1) PR-19 "คนซื้อให้{ชื่อ}ไปแล้ว → แก้ที่การขาย" fixed nothing for buyer-split / transfer · (2) "คนซื้อค้างสวน" read from the tick only — stale after the deduction was voided or cut · (3) the ledger sheet skipped the payment page's locks (ticks in conflict, double/invalid deduction, D-61). Non-blocking: double tap guarded by state not a ref · history after a pick fix lost the old amount · undo could write on a stale head · transfer sheet subtitle without buyer/names · owner row with no or several transfer workers · one worker with buyer-split + pick on one sale shown as two lines · "ยังไม่ได้รับ" before the sale's money loaded · payment page ignored cancelled sales in buyerOwes · lists ordered by generated id (the jest flake, 2 of 6 runs).
+- Resolution (all fixed, tests added; the conflict and double-tap tests were shown failing on the old code):
+  - PR-19 / PR-17: `routeFixWrites` (core) voids the route lines and writes one new line with what reached the farm — any route; the payment page opens the fix sheet from the transfer / cash / pick row, a chooser when several workers ride on the transfer, and from the ledger via `?fix=<worker>&how=<route>`
+  - `buyerOwes` measures against today: repayment cash against the live lines; the owner transfer against today's transfer where known (payment page), else the ticked amount (home — that tick shows "ต้องตรวจใหม่" on the payment page when the transfer changed)
+  - ledger sheet: same locks as the payment page (no write, "มีเรื่องต้องแก้ที่หน้าจ่ายเงินก่อน" + open the sale); `useInFlight`; heads read fresh from the store before writing and undoing
+  - one line per (sale, worker) for the debt-cash tick ("picked" if any pick), as the payment page; people sorted by Thai name
+  - catalogue: marks Σ ↘ › added in code (resolve.test.ts glyph rule)
 
 - Reviewer (separate agent/session):
 - Findings:
