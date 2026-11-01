@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { projectDebts } from './debts';
 import { OWNER_PAYEE, paymentMarkPayload, paymentTarget } from './payments';
-import { buyerOwes, PENDING_REPAY_SINCE, pendingRepayLines } from './pending-repays';
+import { buyerOwes, PENDING_REPAY_SINCE, pendingRepayLines, pickFixPatches } from './pending-repays';
 import { FARM_FUNDS, type DebtPaymentFields, type FinanceEvent, type FinancePayload, type Payer } from './types';
 
 let n = 0;
@@ -109,5 +109,27 @@ describe('the buyer owes the farm (E06-S08 PR-16 · D-87)', () => {
     const a = ev(paymentTarget('s1', OWNER_PAYEE), paymentMarkPayload('s1', OWNER_PAYEE, true, 1968750), null, 'dev-a');
     const b = ev(paymentTarget('s1', OWNER_PAYEE), paymentMarkPayload('s1', OWNER_PAYEE, true, 1968750, 1700000), null, 'dev-b');
     expect(buyerOwes([...sale(), a, b])).toEqual([]);
+  });
+});
+
+describe('a pick that did not happen (E06-S08 PR-17 · D-87)', () => {
+  const line = (id: string, amountSatang: number, head = `h-${id}`) => ({ id, headEventId: head, amountSatang });
+
+  it('nothing picked → every pick line is voided (the debt comes back in full)', () => {
+    expect(pickFixPatches([line('a', 100000)], 0)).toEqual([{ id: 'a', head: 'h-a', patch: { deleted: true } }]);
+  });
+
+  it('part picked → the lines are cut from the newest down to what was picked', () => {
+    expect(pickFixPatches([line('a', 60000), line('b', 40000)], 70000)).toEqual([{ id: 'b', head: 'h-b', patch: { amountSatang: 10000 } }]);
+    expect(pickFixPatches([line('a', 60000), line('b', 40000)], 50000)).toEqual([
+      { id: 'b', head: 'h-b', patch: { deleted: true } },
+      { id: 'a', head: 'h-a', patch: { amountSatang: 50000 } },
+    ]);
+  });
+
+  it('picked in full → nothing to write; more than was deducted or not an integer → refused', () => {
+    expect(pickFixPatches([line('a', 100000)], 100000)).toEqual([]);
+    expect(() => pickFixPatches([line('a', 100000)], 100001)).toThrow();
+    expect(() => pickFixPatches([line('a', 100000)], -1)).toThrow();
   });
 });

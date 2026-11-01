@@ -114,3 +114,37 @@ export function buyerOwes(events: readonly FinanceEvent[], saleCounts: (saleId: 
   }
   return out.sort((x, y) => x.saleId.localeCompare(y.saleId));
 }
+
+export interface PickLine {
+  readonly id: string;
+  readonly headEventId: string;
+  readonly amountSatang: number;
+}
+
+export interface PickPatch {
+  readonly id: string;
+  readonly head: string;
+  readonly patch: { readonly deleted: true } | { readonly amountSatang: number };
+}
+
+/**
+ * PR-17 / D-87: the farm meant to lift the repayment from the worker's own
+ * pile (cash-from-share) but lifted only `pickedSatang`. The money is with the
+ * worker, so the deduction shrinks to what was picked — written as
+ * `debt_payment_changed` on the existing lines (newest cut first; a line cut
+ * to nothing is voided, so the history keeps it, struck through). The owner
+ * does this on the sale's payment page only (architecture §ติ๊กจ่าย).
+ */
+export function pickFixPatches(lines: readonly PickLine[], pickedSatang: number): PickPatch[] {
+  const total = lines.reduce((a, l) => a + l.amountSatang, 0);
+  if (!Number.isSafeInteger(pickedSatang) || pickedSatang < 0 || pickedSatang > total) throw new Error(`picked must be an integer from 0 to ${total}`);
+  let cut = total - pickedSatang;
+  const out: PickPatch[] = [];
+  for (const l of [...lines].reverse()) {
+    if (cut <= 0) break;
+    const take = Math.min(cut, l.amountSatang);
+    cut -= take;
+    out.push({ id: l.id, head: l.headEventId, patch: take === l.amountSatang ? { deleted: true } : { amountSatang: l.amountSatang - take } });
+  }
+  return out;
+}
