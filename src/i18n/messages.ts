@@ -29,6 +29,8 @@
  * data values, not two languages.
  */
 
+import * as closeoutMsgs from './closeout-messages';
+import * as closeoutPayMsgs from './closeout-pay-messages';
 import * as orderCaptureMsgs from './order-capture-messages';
 import * as orderDetailMsgs from './order-detail-messages';
 import * as orderMsgs from './order-messages';
@@ -40,6 +42,8 @@ export type Locale = 'th' | 'en';
  * Thai — the source. Every id in the app exists here.
  */
 const th = {
+  ...closeoutMsgs.th,
+  ...closeoutPayMsgs.th,
   ...orderMsgs.th,
   ...orderCaptureMsgs.th,
   ...orderDetailMsgs.th,
@@ -2024,6 +2028,8 @@ const th = {
  * happens when something is missing that shouldn't be.
  */
 const en: Partial<Record<keyof typeof th, string>> = {
+  ...closeoutMsgs.en,
+  ...closeoutPayMsgs.en,
   ...orderMsgs.en,
   ...orderCaptureMsgs.en,
   ...orderDetailMsgs.en,
@@ -3974,7 +3980,7 @@ export function isAnnounced(id: MessageId): boolean {
  * quietly as stories add strings.
  */
 /** E11-S11 order screens ship Thai first; English for whatever their files do not carry follows (story QA notes). */
-const orderUntranslated = (Object.keys({ ...orderMsgs.th, ...orderCaptureMsgs.th, ...orderDetailMsgs.th, ...orderSurfaceMsgs.th }) as MessageId[]).filter((id) => en[id] === undefined);
+const orderUntranslated = (Object.keys({ ...closeoutMsgs.th, ...closeoutPayMsgs.th, ...orderMsgs.th, ...orderCaptureMsgs.th, ...orderDetailMsgs.th, ...orderSurfaceMsgs.th }) as MessageId[]).filter((id) => en[id] === undefined);
 
 export const untranslated: readonly MessageId[] = [
   ...(Object.keys(th) as MessageId[]).filter(isAnnounced),

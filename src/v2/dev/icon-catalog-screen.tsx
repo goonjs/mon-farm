@@ -1,6 +1,7 @@
 /**
- * /v2/dev/icons — dev-only catalog of the FarmMate icon pilot batch (24 of
- * ~70 icons: nav, farm, sale — see src/ui/farmmate-icons/registry.tsx).
+ * /v2/dev/icons — dev-only catalog of the FarmMate icons in the registry (40
+ * of ~70: nav, farm, sale, finance, people — see
+ * src/ui/farmmate-icons/registry.tsx).
  * Not linked from any menu (not in v2/routes.ts `FARM_SECTIONS`); reached by
  * direct URL on-device or the PR's Cloud Run preview, so devs, designers and
  * the owner can see the real rendered icons before they land in product
@@ -18,7 +19,7 @@ import { AppText, Card, CardLabel, FarmMateIcon, FARMMATE_ICONS, FARMMATE_ICON_C
 import { ScreenHeader } from '../../ui/screen-header';
 import { ScrollCue } from '../../ui/scroll-cue';
 
-const CATEGORY_ORDER: FarmMateIconCategory[] = ['nav', 'farm', 'sale'];
+const CATEGORY_ORDER: FarmMateIconCategory[] = ['nav', 'farm', 'sale', 'finance', 'people'];
 
 export function IconCatalogScreen() {
   const t = useTheme();

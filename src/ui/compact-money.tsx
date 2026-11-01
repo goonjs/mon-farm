@@ -17,11 +17,14 @@ export function CompactMoney({
   size = 'bodyLg',
   color,
   testID,
+  pill,
 }: {
   satang: number;
   size?: 'bodyLg' | 'lead' | 'title' | 'figure';
   color?: string;
   testID?: string;
+  /** Summary-line look (E05-S11): "฿" glued to the digits by a no-break space, the unit on a light pill. Off by default. */
+  pill?: boolean;
 }) {
   const t = useTheme();
   const msg = useT();
@@ -35,9 +38,16 @@ export function CompactMoney({
   };
   return (
     <Text testID={testID} accessibilityLabel={`${formatSatang(satang)} ${msg('v2.baht')}`} style={base}>
-      {`${p.sign}฿ ${p.digits}`}
+      {`${p.sign}฿${pill ? '\u00a0' : ' '}${p.digits}`}
       {p.unit ? (
-        <Text testID={testID ? `${testID}-unit` : undefined} style={{ fontWeight: t.font.weight.black, color: t.color.action }}>
+        <Text
+          testID={testID ? `${testID}-unit` : undefined}
+          style={{
+            fontWeight: t.font.weight.black,
+            color: t.color.action,
+            ...(pill ? { backgroundColor: t.color.actionSunk, borderRadius: t.radius.sm, paddingHorizontal: 3, marginLeft: 2 } : {}),
+          }}
+        >
           {p.unit}
         </Text>
       ) : null}

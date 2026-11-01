@@ -1,4 +1,4 @@
-import { PaymentScreen } from '../../../../v2/sale/money-screens';
+import { CloseoutPayScreen } from '../../../../v2/sale/closeout/pay-screen';
 
-/** /v2/sale/<id>/payment — การจ่ายเงิน. */
-export default PaymentScreen;
+/** /v2/sale/<id>/payment — จ่ายเงิน · ปิดการขาย (E05-S11 CO-10). */
+export default CloseoutPayScreen;

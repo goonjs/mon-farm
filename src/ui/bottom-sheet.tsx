@@ -12,6 +12,7 @@
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ActionButton, type HeaderPrimaryAction } from './action-button';
+import { Plus } from './icons';
 import { useT } from '../i18n';
 import { useTheme } from '../theme';
 
@@ -22,6 +23,7 @@ export function BottomSheet({
   action,
   children,
   testID = 'sheet',
+  closeLabel,
 }: {
   open: boolean;
   onClose: () => void;
@@ -30,6 +32,8 @@ export function BottomSheet({
   action?: HeaderPrimaryAction;
   children: React.ReactNode;
   testID?: string;
+  /** Optional ✕ at the top-right of the title row (a 48 target), spoken by this label. Off by default. */
+  closeLabel?: string;
 }) {
   const t = useTheme();
   const msg = useT();
@@ -113,6 +117,19 @@ export function BottomSheet({
                 {title}
               </Text>
               {action ? <ActionButton action={action} /> : null}
+              {closeLabel ? (
+                <Pressable
+                  testID={`${testID}-close`}
+                  accessibilityRole="button"
+                  accessibilityLabel={closeLabel}
+                  onPress={onClose}
+                  style={{ width: t.target.min, height: t.target.min, marginRight: -t.space.sm, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <View style={{ transform: [{ rotate: '45deg' }] }}>
+                    <Plus color={t.color.inkSoft} size={20} />
+                  </View>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
           <ScrollView

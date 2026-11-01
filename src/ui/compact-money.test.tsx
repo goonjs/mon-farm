@@ -31,3 +31,19 @@ describe('CompactMoney — short figure, the unit stressed', () => {
     expect(screen.getByTestId('m-unit')).toHaveTextContent('m');
   });
 });
+
+describe('CompactMoney pill (E05-S11 summary lines: ฿ never splits, the unit in a light pill)', () => {
+  it('off by default: the plain run as before', () => {
+    wrap(<CompactMoney testID="m" satang={1_254_000} />);
+    expect(flat(screen.getByTestId('m-unit').props.style).backgroundColor).toBeUndefined();
+  });
+
+  it('pill: ฿ and the digits joined by a no-break space, the unit on a light pill', () => {
+    wrap(<CompactMoney testID="m" satang={2_293_700} pill />);
+    const run = [screen.getByTestId('m').props.children].flat().find((x: unknown) => typeof x === 'string') as string;
+    expect(run).toBe('฿ 22.94');
+    const unit = flat(screen.getByTestId('m-unit').props.style);
+    expect(unit.backgroundColor).toBe(c.actionSunk);
+    expect(unit.color).toBe(c.action);
+  });
+});
