@@ -12,7 +12,7 @@
  */
 
 import type { DebtAccount } from './debts';
-import { cashNotes, deductSheet, nettingPayloads, pickNotes, pilesCheck, workerCash, type RoundingMode } from './deduct';
+import { cashNotes, deductSheet, nettingPayloads, pickNotes, pilesCheck, workerCash, type DeductProblem, type RoundingMode } from './deduct';
 import { roundSettlement } from './rounding';
 import { FARM_FUNDS, type DebtKind, type DebtPaymentMethod, type FinancePayload, type Payer } from './types';
 import type { Reimbursement } from './ledger';
@@ -123,6 +123,8 @@ export interface CloseoutWorker {
   readonly leftChip: boolean;
   /** The draft amount is outside 0..cap (or below netting): the sheet's ตกลง stays off. */
   readonly invalid: boolean;
+  /** Why it is invalid, so the sheet says the right thing (null when valid). */
+  readonly problem: Exclude<DeductProblem, 'nothing'> | null;
   /** Draft differs from what is recorded (needs a write on confirm). */
   readonly dirty: boolean;
 }
@@ -173,6 +175,8 @@ export interface CloseoutPlan {
   readonly rounding: RoundingMode;
   /** Any worker's cash before rounding has satang (CO-19: the rounding row shows only then). */
   readonly hasFraction: boolean;
+  /** Owner share before rounding (the sale's split, D-85: shown apart from the rounding). */
+  readonly ownerShareSatang: number;
   /** Owner share after rounding. */
   readonly ownerSatang: number;
   /** Into the farm's account: owner share after rounding + route-3 repayments (D-71, D-85 split below). */
@@ -275,6 +279,7 @@ export function closeoutPlan(input: CloseoutInput): CloseoutPlan {
       debtLeftSatang: x.sheet.debtLeftSatang,
       leftChip: x.sheet.debtLeftSatang > 0 && r.cashSatang === 0,
       invalid: x.invalid,
+      problem: x.sheet.problem === 'nothing' ? null : x.sheet.problem,
       dirty: x.dirty,
     };
   });
@@ -289,6 +294,7 @@ export function closeoutPlan(input: CloseoutInput): CloseoutPlan {
     workers,
     rounding: input.rounding,
     hasFraction,
+    ownerShareSatang: input.ownerShareSatang,
     ownerSatang: rounded.ownerSatang,
     transferSatang,
     transferRepaySatang,
@@ -543,8 +549,7 @@ export type ConfirmGate =
   | { readonly kind: 'answer-owed' }
   | { readonly kind: 'answer-both' }
   | { readonly kind: 'tally' }
-  | { readonly kind: 'invalid' }
-  | { readonly kind: 'over' };
+  | { readonly kind: 'invalid' };
 
 export function confirmGate(i: {
   /** Workers with farm debt (debt card shows them); empty = the card asks "มีหนี้ค้างไหม". */
@@ -556,11 +561,15 @@ export function confirmGate(i: {
   readonly owed: readonly { readonly id: string }[];
   readonly owedChecked: ReadonlySet<string>;
   readonly owedAnswered: boolean;
+  /**
+   * D-61: a recorded deduction above the share (the sale edited down after) is
+   * NOT a gate of its own — the summary is where the owner fixes it. Its draft
+   * starts at the recorded total, above the cap, so the plan is invalid
+   * ('invalid' below) until the owner lowers it; the payment page keeps its
+   * ticks and close locked meanwhile.
+   */
   readonly plan: CloseoutPlan;
-  /** D-61: some worker is over-deducted already (sale edited after). */
-  readonly over: boolean;
 }): ConfirmGate {
-  if (i.over) return { kind: 'over' };
   const unchecked = i.debtors.filter((d) => !i.debtChecked.has(d.id));
   const debt: 'check' | 'answer' | null = i.debtors.length ? (unchecked.length ? 'check' : null) : i.debtAnswered ? null : 'answer';
   const owed: 'check' | 'answer' | null = i.owed.length ? (i.owed.some((o) => !i.owedChecked.has(o.id)) ? 'check' : null) : i.owedAnswered ? null : 'answer';
@@ -599,19 +608,19 @@ export type CloseoutWrite =
 /**
  * The writes for one worker so the recorded lines equal the plan: nothing
  * when they already match (idempotent — re-running after a stop writes only
- * what is missing). Old lines are voided first (repayment before its debt
- * payment), then netting (debt payment, then repayment), then the route
- * line. New ids are fixed per sale + worker + generation (`gen` = how many
- * lines this sale already had for the worker) so a double run cannot write
- * twice. Returns { ok:false } when the netting cannot be placed, or the plan
- * is invalid (nothing is written).
+ * what is missing, and a second tap on the same device finds its own lines).
+ * Old lines are voided first (repayment before its debt payment), then
+ * netting (debt payment, then repayment), then the route line. Returns
+ * { ok:false } when the netting cannot be placed, or the plan is invalid
+ * (nothing is written).
  *
- * Ids: route line `dpay-<saleId>-<workerId>-<gen>`, netting debt payment
- * `dpay-<saleId>-<workerId>-<gen>-net`, its repayment
- * `rep-<saleId>-<workerId>-<gen>`. `gen` starts at `recorded.length` (the
- * live lines) and moves up past any id already used — pass `knownIds` (every
- * debt-payment / repayment id ever written for this sale + worker, deleted
- * ones too), or a re-edit after a void could reuse a voided id.
+ * Ids (owner 2026-11-01): fresh ones from `newId` (the app passes the
+ * UUIDv7 `newId`, as the old page did; tests pass a counter), never built
+ * from the sale or the worker. Two offline devices confirming the same sale
+ * then write separate records that BOTH count — the sum shows as deducted
+ * over the share (D-61) for the owner to fix, instead of one device's lines
+ * silently replacing the other's (or a netting debt payment pairing with
+ * another device's repayment of a different amount).
  * "Matches" = netting total equal, route total equal, and every route line
  * on the plan's route (no route lines when routeSatang is 0).
  */
@@ -623,7 +632,8 @@ export function confirmWrites(i: {
   readonly plan: CloseoutWorker;
   readonly recorded: readonly RecordedLine[];
   readonly owed: readonly Reimbursement[];
-  readonly knownIds?: readonly string[];
+  /** A fresh, globally unique id with this prefix ('dpay-' debt payment, 'rep-' repayment). */
+  readonly newId: (prefix: 'dpay-' | 'rep-') => string;
 }): { ok: true; writes: CloseoutWrite[] } | { ok: false } {
   const { plan, recorded, saleId, worker } = i;
   if (plan.invalid) return { ok: false };
@@ -635,15 +645,11 @@ export function confirmWrites(i: {
     (plan.routeSatang === 0 ? routeLines.length === 0 : routeLines.every((l) => l.method === plan.route));
   if (matches) return { ok: true, writes: [] };
 
-  const used = new Set([...(i.knownIds ?? []), ...recorded.flatMap((l) => [l.id, ...(l.repaymentId ? [l.repaymentId] : [])])]);
-  const ids = (g: number) => ({
-    route: `dpay-${saleId}-${worker.id}-${g}`,
-    net: `dpay-${saleId}-${worker.id}-${g}-net`,
-    rep: `rep-${saleId}-${worker.id}-${g}`,
-  });
-  let gen = recorded.length;
-  while (Object.values(ids(gen)).some((x) => used.has(x))) gen += 1;
-  const id = ids(gen);
+  const id = {
+    net: plan.nettingSatang > 0 ? i.newId('dpay-') : '',
+    rep: plan.nettingSatang > 0 ? i.newId('rep-') : '',
+    route: plan.routeSatang > 0 ? i.newId('dpay-') : '',
+  };
 
   const netting =
     plan.nettingSatang > 0

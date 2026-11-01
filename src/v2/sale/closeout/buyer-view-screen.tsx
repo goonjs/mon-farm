@@ -20,7 +20,7 @@ import { useI18n, useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, Button, cardStyle } from '../../../ui';
 import { FarmScreen } from '../../farm/pieces';
-import { buyerPiles, transferRepayName } from './cash-pieces';
+import { buyerPiles, transferRepayName, useShareSplit } from './cash-pieces';
 import { useCloseout } from './use-closeout';
 
 const baht = formatSatang;
@@ -102,6 +102,7 @@ export function BuyerViewScreen() {
   const { era } = useI18n();
   const router = useRouter();
   const co = useCloseout();
+  const shareSplit = useShareSplit();
   const saleId = co.saleId;
   const fallback = `/v2/sale/${saleId}/cash` as Href;
   const title = msg('cop.bvTitle');
@@ -146,7 +147,7 @@ export function BuyerViewScreen() {
         <Pile testID="bv-transfer" symbol={'⇄'} label={msg('cop.transfer')} satang={plan.transferSatang}>
           {plan.transferRepaySatang ? (
             <Text style={small}>
-              {msg('cop.ownerSplitShare', { owner: baht(plan.ownerSatang) })}{' '}
+              {shareSplit(plan.ownerShareSatang, plan.ownerSatang - plan.ownerShareSatang)} +{' '}
               <Text style={{ color: t.color.debtIn }}>{msg('cop.ownerSplitRepay', { dir: '↘', name: repayName, repay: baht(plan.transferRepaySatang) })}</Text>
             </Text>
           ) : null}

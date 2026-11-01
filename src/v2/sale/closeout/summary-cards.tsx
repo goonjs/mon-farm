@@ -13,7 +13,7 @@ import { compactMoneyParts } from '../../../core/compact-money';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, Button, Check, cardStyle, ChevronRight, CompactMoney, FarmMateIcon, Plus, toneColours, type TileTone } from '../../../ui';
-import { CardIcon, RoundButton, WarnMark, baht, minus } from './summary-parts';
+import { CardIcon, MARK, RoundButton, WarnMark, baht, minus } from './summary-parts';
 
 /** Line height for card text: above `snug` for Thai marks, tight enough for one screen (CO-1). */
 const lh = (size: number) => Math.round(size * 1.35);
@@ -243,6 +243,9 @@ export function OwedCard({
               <Text style={{ color: t.color.debtOut }}> ↗ {msg(p.nettedSatang > 0 ? 'co.owed.netted' : 'co.owed.owes')} </Text>
               <CompactMoney satang={p.nettedSatang > 0 ? p.nettedSatang : p.satang} size="bodyLg" pill />
               {checked.has(p.id) && p.nettedSatang === 0 ? <Text style={{ color: t.color.inkSoft }}> · {msg('co.owed.hold')}</Text> : null}
+              {checked.has(p.id) && p.nettedSatang > 0 ? (
+                <Text style={{ fontSize: t.font.size.bodyMd, color: t.color.inkSoft }}> · {msg('co.net.explainShort', { name: p.name })}</Text>
+              ) : null}
             </Sentence>
           ))}
         </View>
@@ -297,7 +300,12 @@ export function WorkerCard({ w, roundingNone, tone, onDeduct }: { w: CloseoutWor
         <Pressable
           testID={`co-deduct-${w.id}`}
           accessibilityRole="button"
-          accessibilityLabel={msg('co.debt.pieceOpen', { name: w.name })}
+          // The label carries the row's content (review #11): whose, the amount, and the ⚠ chip.
+          accessibilityLabel={[
+            msg('co.debt.pieceOpen', { name: w.name }),
+            `${minus(w.totalSatang)} ${msg('v2.baht')}`,
+            ...(w.leftChip ? [`⚠ ${msg('co.leftChip', { amount: baht(w.debtLeftSatang) })}`] : []),
+          ].join(', ')}
           onPress={onDeduct}
           style={{ ...row, minHeight: t.target.min, gap: t.space.sm, backgroundColor: t.color.debtInSunk, borderRadius: t.radius.md, paddingVertical: t.space.xs, paddingLeft: t.space.md, paddingRight: t.space.sm }}
         >
@@ -310,9 +318,13 @@ export function WorkerCard({ w, roundingNone, tone, onDeduct }: { w: CloseoutWor
         </Pressable>
       ) : null}
       {w.nettingSatang > 0 ? (
-        <View testID={`co-net-${w.id}`} style={{ ...row, gap: t.space.sm, backgroundColor: t.color.debtOutSunk, borderRadius: t.radius.md, paddingVertical: t.space.xxs, paddingHorizontal: t.space.md }}>
-          <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, lineHeight: lh(fs.bodyLg), color: t.color.debtOut }}>↗ {msg('co.netRow', { name: w.name })}</AppText>
-          <AppText style={{ fontWeight: t.font.weight.bold, lineHeight: lh(fs.bodyLg), fontVariant: ['tabular-nums'], color: t.color.debtOut }}>+{baht(w.nettingSatang)}</AppText>
+        <View testID={`co-net-${w.id}`} style={{ backgroundColor: t.color.debtOutSunk, borderRadius: t.radius.md, paddingVertical: t.space.xxs, paddingHorizontal: t.space.md }}>
+          <View style={{ ...row, gap: t.space.sm }}>
+            <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, lineHeight: lh(fs.bodyLg), color: t.color.debtOut }}>↗ {msg('co.netRow', { name: w.name })}</AppText>
+            <AppText style={{ fontWeight: t.font.weight.bold, lineHeight: lh(fs.bodyLg), fontVariant: ['tabular-nums'], color: t.color.debtOut }}>+{baht(w.nettingSatang)}</AppText>
+          </View>
+          {/* CO-15: หักกลบ with its sentence (A24) */}
+          <AppText variant="bodySm" style={{ color: t.color.debtOut, lineHeight: lh(fs.bodySm) }}>{msg('co.net.explainShort', { name: w.name })}</AppText>
         </View>
       ) : null}
     </View>
@@ -327,26 +339,59 @@ export function CashCard({ plan, faded, onOpen }: { plan: CloseoutPlan; faded: b
   const deducting = plan.workers.filter((w) => w.routeSatang > 0);
   const routes = [...new Set(deducting.map((w) => w.route))] as RepayRoute[];
   const routeLabel = routes.length > 1 ? msg('co.route.mixed') : routes.length ? msg(`co.route.${routes[0]}` as 'co.route.transfer-with-owner', { name: deducting[0].name }) : null;
-  const parts = [routeLabel, plan.hasFraction ? msg(`co.round.${plan.rounding}` as 'co.round.worker') : null, msg('co.cash.transfer')].filter(Boolean);
+  const split = plan.transferRepaySatang > 0;
+  // With the split the rounding is its own part ("− ปัด ฿ 0.5"); its menu word only without it (one line less, CO-1).
+  const parts = [routeLabel, plan.hasFraction && !split ? msg(`co.round.${plan.rounding}` as 'co.round.worker') : null].filter(Boolean);
+  const round = plan.ownerSatang - plan.ownerShareSatang;
+  const b = msg('v2.baht');
+  // The label carries the card's content (review #11): the route, the rounding and the transfer in full figures, split as on screen.
+  const spoken = [
+    msg('co.cash.title'),
+    ...parts,
+    plan.transferRepaySatang > 0
+      ? `${msg('co.cash.transfer')} ${baht(plan.ownerShareSatang)} ${b}${round ? ` ${round < 0 ? '−' : '+'} ${msg('co.cash.round')} ${baht(Math.abs(round))} ${b}` : ''} + ${msg('co.cash.repay')} ${baht(plan.transferRepaySatang)} ${b}`
+      : `${msg('co.cash.transfer')} ${baht(plan.transferSatang)} ${b}`,
+  ].join(', ');
+  const small = { fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, lineHeight: lh(t.font.size.bodyLg), color: t.color.inkSoft } as const;
   return (
     <Pressable
       testID="co-cash-card"
       accessibilityRole="button"
-      accessibilityLabel={msg('co.cash.open')}
+      accessibilityLabel={spoken}
+      accessibilityHint={msg('co.cash.open')}
       accessibilityState={{ disabled: faded }}
       disabled={faded}
       onPress={onOpen}
-      style={{ ...cardStyle(t), ...row, opacity: faded ? 0.5 : 1, paddingVertical: t.space.sm, paddingLeft: t.space.md, paddingRight: t.space.xs, gap: t.space.md }}
+      style={{ ...cardStyle(t), ...row, opacity: faded ? 0.5 : 1, paddingVertical: t.space.xs + t.space.xxs, paddingLeft: t.space.md, paddingRight: t.space.xs, gap: t.space.md }}
     >
       <CardIcon id="people.profitShare" tone="action" small />
       <View style={{ flex: 1 }}>
         <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm, lineHeight: lh(t.font.size.headingSm) }}>{msg('co.cash.title')}</AppText>
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, lineHeight: lh(t.font.size.bodyLg), color: t.color.inkSoft }}>
-          {parts.map((p, i) => (
-            <Fragment key={i}>{i ? ' · ' : ''}{p}</Fragment>
-          ))}{' '}
-          <CompactMoney satang={plan.transferSatang} size="bodyLg" pill testID="co-cash-transfer" />
-        </Text>
+        {split ? (
+          // D-85: the farm's share and the debt repaid are never one figure (A6); the share before rounding, the rounding its own part.
+          <Text testID="co-cash-split" style={small}>
+            {parts.map((p, i) => (
+              <Fragment key={i}>{p} · </Fragment>
+            ))}
+            {msg('co.cash.transfer')} <CompactMoney satang={plan.ownerShareSatang} size="bodyLg" pill testID="co-cash-owner" />
+            {round ? (
+              <>
+                {` ${round < 0 ? '−' : '+'} ${msg('co.cash.round')} `}
+                <CompactMoney satang={Math.abs(round)} size="bodyLg" pill testID="co-cash-round" />
+              </>
+            ) : null}
+            {' + '}
+            <Text testID="co-cash-repay-label" style={{ color: t.color.debtIn }}>{`${MARK.in} ${msg('co.cash.repay')}`}</Text>{' '}
+            <CompactMoney satang={plan.transferRepaySatang} size="bodyLg" pill color={t.color.debtIn} testID="co-cash-repay" />
+          </Text>
+        ) : (
+          <Text style={small}>
+            {parts.map((p, i) => (
+              <Fragment key={i}>{p} · </Fragment>
+            ))}
+            {msg('co.cash.transfer')} <CompactMoney satang={plan.transferSatang} size="bodyLg" pill testID="co-cash-transfer" />
+          </Text>
+        )}
       </View>
       <View style={{ width: t.target.min, height: t.target.min, alignItems: 'center', justifyContent: 'center', marginVertical: -t.space.xs }}>
         <View style={{ width: 34, height: 34, borderRadius: t.radius.pill, backgroundColor: t.color.actionSunk, alignItems: 'center', justifyContent: 'center' }}>

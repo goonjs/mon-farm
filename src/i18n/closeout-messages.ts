@@ -6,6 +6,7 @@ export const th = {
   'co.title': 'สรุปจ่ายเงิน',
   'co.progress': 'ขั้น 2 จาก 3 · สรุปจ่าย',
   'co.ok': 'ถูกต้อง',
+  'co.badge': 'ยังไม่ตรวจ {n} คน',
   'co.none': 'ไม่มี',
   'co.and': 'และ',
   'co.close': 'ปิด',
@@ -15,6 +16,7 @@ export const th = {
   'co.sale.stripChecked': 'ขายวันนี้ · ตรงกับคนซื้อแล้ว',
   'co.sale.open': 'ดูรายละเอียดการขาย',
   'co.sale.sheet': 'รายละเอียดการขาย',
+  'co.sale.split': 'แบ่งยอดขาย',
 
   // debt card + sheet (CO-17, CO-21, CO-22, A1–A3, A22)
   'co.debt.title': 'หนี้ค้างของคนกรีด',
@@ -28,7 +30,7 @@ export const th = {
   'co.debt.addFirst': 'มี · จดหนี้',
   'co.debt.sheet': 'จัดการหนี้',
   'co.debt.add': 'จดหนี้เพิ่ม',
-  'co.debt.oldestFirst': 'หักปิดก้อนเก่าที่สุดก่อน',
+  'co.debt.oldestFirst': 'หักก้อนเก่าที่สุดก่อน',
   'co.debt.leftAfterFull': 'คงเหลืออีก {amount}',
   'co.debt.pieceLeft': 'เหลือ {amount}',
   'co.debt.pieceOpen': 'แก้ยอดหักหนี้{name}',
@@ -68,6 +70,8 @@ export const th = {
   // cash card (CO-19 summary only)
   'co.cash.title': 'จัดเงินสดกับคนรับซื้อยาง',
   'co.cash.transfer': 'โอนสวน',
+  'co.cash.round': 'ปัด',
+  'co.cash.repay': 'คืนหนี้',
   'co.cash.open': 'เปิดจัดเงินสดกับคนรับซื้อยาง',
   'co.route.transfer-with-owner': 'โอนรวม',
   'co.route.buyer-split': 'คนซื้อแยกเงินสด',
@@ -92,8 +96,9 @@ export const th = {
   'co.gate.answerOwed': 'ตอบการ์ดสวนค้างจ่ายก่อน',
   'co.gate.answerBoth': 'ตอบการ์ดด้านบนทั้ง 2 ใบก่อน',
   'co.gate.tally': 'ยอดไม่ตรง · ยืนยันไม่ได้',
+  'co.confirmFailed': 'บันทึกไม่สำเร็จ',
+  'co.confirmFailedLine': 'ที่บันทึกแล้วยังอยู่ กดยืนยันยอดอีกครั้งเพื่อบันทึกที่เหลือ',
   'co.gate.invalid': 'ยอดหักเกินที่หักได้ · แก้ก่อน',
-  'co.gate.over': 'หักเกินส่วนแบ่ง · แก้ก่อน',
 
   // deduct sheet (CO-5, CO-7, A5, A23)
   'co.deduct.title': 'หักหนี้{name}กี่บาท',
@@ -108,11 +113,17 @@ export const th = {
   'co.res.oldest': 'ก้อนเก่าสุด ({piece}) เหลือ',
   'co.res.left': 'หนี้ที่ยังเหลือทั้งหมด',
   'co.deduct.overCap': 'หักได้ไม่เกิน {amount} บาท',
+  'co.deduct.belowNet': 'ยอดหักต้องไม่น้อยกว่าหักกลบ {amount}',
   'co.deduct.ok': 'ตกลง',
   'co.net.link': 'หักกลบ: ใช้ {amount} ที่สวนค้างจ่าย{name} หักหนี้',
-  'co.net.on': 'หักกลบ {amount} แล้ว',
   'co.net.remove': 'เอาออก',
-  'co.net.max': 'ไม่เกิน {amount}',
+  'co.net.explain': 'ใช้ {amount} ที่สวนค้างจ่าย{name} ลดหนี้{name} ไม่มีเงินสดเปลี่ยนมือ',
+  'co.net.explainShort': 'ใช้ลดหนี้{name} ไม่มีเงินสดเปลี่ยนมือ',
+  'co.net.overMax': 'หักกลบได้ไม่เกิน {amount}',
+  'co.net.empty': 'ใส่ยอดหักกลบ หรือกดเอาออก',
+  'co.deduct.editing': 'กำลังแก้: {what}',
+  'co.deduct.whatTotal': 'ยอดหัก',
+  'co.deduct.whatNet': 'ยอดหักกลบ',
   'co.net.full': 'เต็ม {amount}',
 
   // sources sheet (CO-9, A8, A25)

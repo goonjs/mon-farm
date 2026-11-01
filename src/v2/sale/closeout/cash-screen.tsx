@@ -13,8 +13,8 @@ import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { breakPlan, REPAY_ROUTES, ROUNDING_MENU, type CloseoutWorker, type RepayRoute } from '../../../core/finance/closeout';
-import type { RoundingMode } from '../../../core/finance/deduct';
+import { breakPlan, groupNotes, REPAY_ROUTES, ROUNDING_MENU, type CloseoutWorker, type RepayRoute } from '../../../core/finance/closeout';
+import { cashNotes, needsChange, type RoundingMode } from '../../../core/finance/deduct';
 import { formatSatang } from '../../../core/finance/money';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
@@ -22,7 +22,8 @@ import { AppText, BottomSheet, Button, cardStyle, Check, SegmentedControl } from
 import { FarmScreen } from '../../farm/pieces';
 import { bahtText } from '../pieces';
 import { AccountRow } from './cash-account';
-import { buyerPiles, NoteRow, transferRepayName } from './cash-pieces';
+import { buyerPiles, NoteRow, transferRepayName, useShareSplit } from './cash-pieces';
+import { MergeWarn } from './summary-deduct-sheet';
 import { WarnMark } from './summary-parts';
 import { useCloseout } from './use-closeout';
 
@@ -34,6 +35,7 @@ export function CloseoutCashScreen() {
   const router = useRouter();
   const co = useCloseout();
   const [breakFor, setBreakFor] = useState<string | null>(null);
+  const shareSplit = useShareSplit();
   const saleId = co.saleId;
   const title = msg('cop.title');
   const subtitle = msg('cop.subtitle');
@@ -45,6 +47,8 @@ export function CloseoutCashScreen() {
   const setRoute = (id: string, route: RepayRoute) => co.update((d) => ({ ...d, workers: { ...d.workers, [id]: { ...d.workers[id], route } } }));
   const setRounding = (rounding: RoundingMode) => co.update((d) => ({ ...d, rounding }));
   const pileOf = (w: CloseoutWorker) => w.cashSatang + w.routeSatang;
+  /** CO-24: the chip follows `needsChange`; the sheet shows a break plan when one note can do it, else a plain line. */
+  const needsBreak = (w: CloseoutWorker) => w.route === 'cash-from-share' && needsChange(pileOf(w), w.routeSatang);
   const breakOf = (w: CloseoutWorker) => (w.route === 'cash-from-share' ? breakPlan(pileOf(w), w.routeSatang) : null);
   const fractions = plan.workers.filter((w) => w.cashBeforeSatang % 100 !== 0).map((w) => msg('cop.hasFraction', { name: w.name, amount: baht(w.cashBeforeSatang % 100) }));
   const piles = buyerPiles(plan);
@@ -80,14 +84,16 @@ export function CloseoutCashScreen() {
         </View>
       }
       overlay={
-        <BottomSheet open={!!breaking && !!bp} onClose={() => setBreakFor(null)} title={msg('cop.breakTitle')} testID="cop-break-sheet" closeLabel={msg('cop.close')}>
-          {breaking && bp ? (
+        <BottomSheet open={!!breaking} onClose={() => setBreakFor(null)} title={msg('cop.breakTitle')} testID="cop-break-sheet" closeLabel={msg('cop.close')}>
+          {breaking ? (
             <>
               <AppText variant="bodySm">{msg('cop.breakSub', { name: breaking.name, amount: bahtText(breaking.routeSatang) })}</AppText>
               <View style={{ backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.lg, padding: t.space.md, gap: t.space.sm }}>
                 <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('cop.moneyOf', { name: breaking.name, amount: baht(pileOf(breaking)) })}</AppText>
-                <NoteRow notes={bp.pile} testID="cop-break-pile" />
+                <NoteRow notes={bp ? bp.pile : groupNotes(cashNotes(pileOf(breaking)))} testID="cop-break-pile" />
               </View>
+              {bp ? (
+                <>
               <View style={{ backgroundColor: t.color.actionSunk, borderRadius: t.radius.lg, padding: t.space.md, gap: t.space.sm }}>
                 <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('cop.farmTakes', { amount: bahtText(breaking.routeSatang) })}</AppText>
                 <NoteRow notes={bp.take} testID="cop-break-take" />
@@ -108,6 +114,13 @@ export function CloseoutCashScreen() {
                   <NoteRow notes={bp.into} fresh testID="cop-break-into" />
                 </View>
               </View>
+                </>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs, backgroundColor: t.color.warnSunk, borderRadius: t.radius.lg, padding: t.space.md }}>
+                  <WarnMark color={t.color.warn} size={14} />
+                  <AppText testID="cop-break-plain" style={{ flex: 1, fontWeight: t.font.weight.bold }}>{msg('cop.breakPlain', { amount: bahtText(breaking.routeSatang) })}</AppText>
+                </View>
+              )}
               <View style={{ flexDirection: 'row', gap: t.space.sm }}>
                 <View style={{ flex: 1 }}>
                   <Button testID="cop-break-close" onPress={() => setBreakFor(null)}>
@@ -131,7 +144,7 @@ export function CloseoutCashScreen() {
             <View testID="cop-routes" style={{ gap: t.space.sm }}>
               <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('cop.routesTitle')}</AppText>
               {deducted.map((w) => {
-                const needs = !!breakOf(w);
+                const needs = needsBreak(w);
                 return (
                   <View key={w.id} style={{ gap: t.space.xs }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, flexWrap: 'wrap' }}>
@@ -153,6 +166,7 @@ export function CloseoutCashScreen() {
                         </Pressable>
                       ) : null}
                     </View>
+                    {co.mixed?.has(w.id) ? <MergeWarn testID={`cop-merge-${w.id}`} /> : null}
                     <SegmentedControl
                       testID={`cop-route-${w.id}`}
                       value={w.route}
@@ -200,7 +214,7 @@ export function CloseoutCashScreen() {
           </View>
           {plan.transferRepaySatang ? (
             <Text testID="cop-transfer-split" style={{ ...line, fontSize: t.font.size.bodySm }}>
-              {msg('cop.ownerSplitShare', { owner: baht(plan.ownerSatang) })}{' '}
+              {shareSplit(plan.ownerShareSatang, plan.ownerSatang - plan.ownerShareSatang)} +{' '}
               <Text style={{ color: t.color.debtIn }}>{msg('cop.ownerSplitRepay', { dir: '↘', name: repayName, repay: baht(plan.transferRepaySatang) })}</Text>
             </Text>
           ) : null}

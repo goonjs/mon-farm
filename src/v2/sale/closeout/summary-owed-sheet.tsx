@@ -43,7 +43,7 @@ export function OwedSheet({ co, people, onAdd, onClose }: { co: Closeout; people
 
   return (
     <BottomSheet open onClose={cancel} title={msg('co.owed.title')} testID="co-owed-sheet" closeLabel={msg('co.close')}>
-      <AppText variant="bodySm" style={{ color: t.color.inkSoft, marginTop: -t.space.sm }}>{msg('co.owed.sub')}</AppText>
+      <AppText testID="co-owed-sub" variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.owed.sub')}</AppText>
       {people.map((p) => {
         const w = p.w;
         const canNet = !!w && w.hasDebt && w.netCapSatang > 0;
@@ -78,7 +78,7 @@ export function OwedSheet({ co, people, onAdd, onClose }: { co: Closeout; people
             </View>
             {canNet && w ? (
               <>
-                <View style={{ flexDirection: 'row', gap: t.space.xs, backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.pill, padding: t.space.xs }}>
+                <View testID={`co-owed-choice-${p.id}`} role="radiogroup" accessibilityRole="radiogroup" accessibilityLabel={p.name} style={{ flexDirection: 'row', gap: t.space.xs, backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.pill, padding: t.space.xs }}>
                   {option(`co-owed-hold-${p.id}`, msg('co.owed.hold'), !netted, () => co.update((d) => netOff(d, w)))}
                   {option(`co-owed-net-${p.id}`, `${MARK.out} ${msg('co.owed.netWith', { name: p.name })}`, netted, () => co.update((d) => netOn(d, w)))}
                 </View>
@@ -86,7 +86,7 @@ export function OwedSheet({ co, people, onAdd, onClose }: { co: Closeout; people
               </>
             ) : (
               <>
-                <View style={{ flexDirection: 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.pill, padding: t.space.xs }}>
+                <View testID={`co-owed-choice-${p.id}`} role="radiogroup" accessibilityRole="radiogroup" accessibilityLabel={p.name} style={{ flexDirection: 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.pill, padding: t.space.xs }}>
                   {option(`co-owed-hold-${p.id}`, msg('co.owed.hold'), true, () => undefined)}
                 </View>
                 <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.owed.noDebt', { name: p.name })}</AppText>

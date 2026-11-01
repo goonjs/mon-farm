@@ -49,7 +49,8 @@ export function DebtSheet({
           onPress={() => onPiece(w.id)}
           style={{ ...cardStyle(t), padding: t.space.md, gap: t.space.xs }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, flexWrap: 'wrap' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.space.md, flexWrap: 'wrap' }}>
             <View aria-hidden style={{ width: t.target.min, height: t.target.min, borderRadius: t.radius.md, backgroundColor: t.color.brandCream, alignItems: 'center', justifyContent: 'center' }}>
               <FarmMateIcon id="people.tapper" size={32} />
             </View>
@@ -62,6 +63,7 @@ export function DebtSheet({
               <AppText style={{ fontWeight: t.font.weight.black, fontSize: t.font.size.headingLg, fontVariant: ['tabular-nums'], color: t.color.debtIn }}>{minus(w.totalSatang)}</AppText>
               <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.debt.leftAfterFull', { amount: baht(w.debtLeftSatang) })}</AppText>
             </View>
+          </View>
             <ChevronRight color={t.color.action} size={9} />
           </View>
           {pieces.map((p) => (
@@ -76,7 +78,7 @@ export function DebtSheet({
       <Button testID="co-debt-add" icon={(c) => <Plus color={c} />} onPress={onAdd}>
         {msg('co.debt.add')}
       </Button>
-      <AppText variant="bodySm" style={{ textAlign: 'center', color: t.color.inkSoft }}>{msg('co.debt.oldestFirst')}</AppText>
+      <AppText testID="co-debt-oldest" variant="bodySm" style={{ textAlign: 'center', color: t.color.inkSoft }}>{msg('co.debt.oldestFirst')}</AppText>
       <CTA testID="co-debt-ok" icon={(c) => <Check color={c} />} onPress={onOk}>
         {msg('co.ok')}
       </CTA>

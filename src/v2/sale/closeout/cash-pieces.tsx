@@ -8,6 +8,7 @@
 import { Text, View } from 'react-native';
 
 import type { CloseoutPlan, NoteCount } from '../../../core/finance/closeout';
+import { formatSatang } from '../../../core/finance/money';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 
@@ -38,6 +39,17 @@ export function buyerPiles(plan: CloseoutPlan): BuyerPile[] {
 export function transferRepayName(plan: CloseoutPlan): string {
   const on = plan.workers.filter((w) => w.route === 'transfer-with-owner' && w.routeSatang > 0);
   return on.length === 1 ? on[0].name : '';
+}
+
+/**
+ * "ส่วนสวน 14,437.50 − ปัด 0.50" (D-85, A6/A7/A9): the farm's share before
+ * rounding, then the rounding as its own part when not 0 — the same numbers
+ * the sources sheet shows. The caller adds "+ ↘ คืนหนี้ …".
+ */
+export function useShareSplit(): (ownerShareSatang: number, roundSatang: number) => string {
+  const msg = useT();
+  return (owner, round) =>
+    `${msg('cop.ownerSplitShare', { owner: formatSatang(owner) })}${round ? ` ${round < 0 ? '−' : '+'} ${msg('cop.splitRound', { amount: formatSatang(Math.abs(round)) })}` : ''}`;
 }
 
 export function useNoteLabel(): (n: NoteCount) => string {

@@ -37,6 +37,7 @@ export const th = {
   'cop.smallShort': 'เงินย่อยมีแค่ ฿{small} ขาด ฿{short}',
   'cop.close': 'ปิด',
   'cop.askBreak': 'ขอให้คนรับซื้อยางแตก',
+  'cop.breakPlain': 'ขอเงินทอนจากคนรับซื้อยาง ให้สวนหยิบ ฿ {amount} ได้พอดี',
   'cop.noteBaht': '฿{n} ×{count}',
   'cop.noteSatang': '{n} สต. ×{count}',
   // CO-20 · buyer view
@@ -63,7 +64,8 @@ export const th = {
   'cop.subNoRound': '· ไม่ปัด',
   'cop.noCash': '{name}ไม่มีเงินสดต้องจ่ายวันนี้ (หักหนี้หมดส่วนแบ่ง)',
   'cop.ownerGot': 'เจ้าของได้รับเงินโอนแล้ว',
-  'cop.ownerSplitShare': 'ส่วนสวน {owner} +',
+  'cop.ownerSplitShare': 'ส่วนสวน {owner}',
+  'cop.splitRound': 'ปัด {amount}',
   'cop.ownerSplitRepay': '{dir} คืนหนี้{name} {repay}',
   'cop.netted': 'หักกลบ {amount}',
   'cop.waitTransfer': '{dir} คืนหนี้ {amount} รอรับโอน',

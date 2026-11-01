@@ -115,7 +115,7 @@ describe('CO-19 · the cash step (A6): first time = โอนรวม + ให�
     expect(screen.getByTestId(`cop-cash-${farm.red}`)).toHaveTextContent(/เงินสดแดง\s*5,938\.00/);
     expect(screen.getByTestId(`cop-cash-${farm.nat}`)).toHaveTextContent(/เงินสดนัด\s*0\.00/);
     expect(screen.getByTestId('cop-transfer')).toHaveTextContent(/โอนเข้าบัญชีสวน\s*22,937\.00/);
-    expect(screen.getByTestId('cop-transfer-split')).toHaveTextContent(/ส่วนสวน 14,437\.00 \+ ↘ คืนหนี้ 8,500\.00/);
+    expect(screen.getByTestId('cop-transfer-split')).toHaveTextContent(/ส่วนสวน 14,437\.50 − ปัด 0\.50 \+ ↘ คืนหนี้ 8,500\.00/);
     expect(screen.getByTestId('cop-total')).toHaveTextContent(/รวม = ขายวันนี้\s*28,875\.00/);
     // nothing is written on this page
     expect((await financeStore.load()).filter((e) => e.payload.t !== 'debt_added')).toHaveLength(0);
@@ -127,7 +127,7 @@ describe('CO-19 · the cash step (A6): first time = โอนรวม + ให�
     expect(last(`cop-route-${farm.red}-buyer-split`).props.accessibilityState).toMatchObject({ checked: true });
     expect(last(`cop-split-${farm.red}`)).toHaveTextContent(/↘ เงินสดคืนหนี้แดง.*3,250\.00/);
     expect(last('cop-transfer')).toHaveTextContent(/19,687\.00/);
-    expect(last('cop-transfer-split')).toHaveTextContent(/ส่วนสวน 14,437\.00 \+ ↘ คืนหนี้นัด 5,250\.00/);
+    expect(last('cop-transfer-split')).toHaveTextContent(/ส่วนสวน 14,437\.50 − ปัด 0\.50 \+ ↘ คืนหนี้นัด 5,250\.00/);
     expect(last('cop-total')).toHaveTextContent(/28,875\.00/);
     // put it back for the next cases
     await press(`cop-route-${farm.red}-transfer-with-owner`);
@@ -186,7 +186,7 @@ describe('CO-20 · ให้คนรับซื้อดู', () => {
     await inSale(STORY, <BuyerViewScreen />);
     expect(screen.getByTestId(`bv-cash-${farm.red}`)).toHaveTextContent(/฿.*เงินสด · แดง.*5,938\.00/);
     expect(screen.getByTestId('bv-transfer')).toHaveTextContent(/⇄.*โอนเข้าบัญชีสวน.*22,937\.00/);
-    expect(screen.getByTestId('bv-transfer')).toHaveTextContent(/ส่วนสวน 14,437\.00 \+ ↘ คืนหนี้ 8,500\.00/);
+    expect(screen.getByTestId('bv-transfer')).toHaveTextContent(/ส่วนสวน 14,437\.50 − ปัด 0\.50 \+ ↘ คืนหนี้ 8,500\.00/);
     expect(screen.getByTestId('bv-total')).toHaveTextContent(/Σ.*รวม.*28,875\.00/);
   });
 

@@ -86,7 +86,7 @@ export function SaleSheet({ s, tappers, checked, onClose }: { s: Settlement; tap
         <SaleFigures s={s}>{checked ? <IconLine icon={(c) => <Check color={c} size={10} />}>{msg('v2s.checkedWithBuyer')}</IconLine> : null}</SaleFigures>
       </View>
 
-      <AppText variant="label">{msg('v2s.secSale')}</AppText>
+      <AppText testID="co-sale-split" variant="label">{msg('co.sale.split')}</AppText>
       <View style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.xxs }}>
         {tappers.map((tp, i) => {
           const z = s.perZone.find((x) => x.personId === tp.id);

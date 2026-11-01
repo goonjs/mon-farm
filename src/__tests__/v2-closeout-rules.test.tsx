@@ -237,6 +237,9 @@ describe('D-18 · the deduction stays within the share (+ netting); cash never g
     await press(`co-deduct-${farm.nat}`);
     await retype('500');
     expect(disabled('co-deduct-ok')).toBe(true);
+    // its own words, not the cap's (review #8)
+    expect(last('co-cap')).toHaveTextContent('ยอดหักต้องไม่น้อยกว่าหักกลบ 640');
+    expect(last('co-cap')).not.toHaveTextContent(/หักได้ไม่เกิน/);
     await retype('640');
     expect(disabled('co-deduct-ok')).toBe(false);
     expect(last('co-res-cash')).toHaveTextContent(/5,250\.00$/);
@@ -363,6 +366,108 @@ describe('an older sale writes the sale day, not today', () => {
   });
 });
 
+describe('CO-24 · "ต้องแตกเงิน" follows needsChange, even when no single break plan exists (review #7)', () => {
+  const S = 'r-break';
+  beforeAll(() => storySale(S));
+
+  it('share 9,187.50, ไม่ปัด, หยิบจากเงินแดง 3,250.25: the chip shows and its sheet says change is needed in a plain line', async () => {
+    await act(async () => updateDraft(S, (d) => ({ ...d, rounding: 'none', workers: { [farm.red]: { totalSatang: 325_025, route: 'cash-from-share' } } })));
+    await inSale(S, <CloseoutCashScreen />);
+    expect(last(`cop-break-${farm.red}`)).toHaveTextContent(/ต้องแตกเงิน/);
+    await press(`cop-break-${farm.red}`);
+    expect(last('cop-break-sheet')).toHaveTextContent(/เงินของแดง ฿ 9,187\.50/);
+    expect(last('cop-break-plain')).toHaveTextContent(/ขอเงินทอนจากคนรับซื้อยาง/);
+    expect(screen.queryByTestId('cop-break-into')).toBeNull();
+    await act(async () => clearDraft(S));
+  });
+});
+
+describe('an older sale whose deduction came by two routes says saving merges them (review #9, old v2s.mergeRoutes)', () => {
+  const S = 'r-mixed';
+  beforeAll(async () => {
+    await storySale(S);
+    const RED = { id: farm.red, name: 'แดง' };
+    await writeFinance('mix-1', null, { t: 'debt_payment_recorded', fields: { worker: RED, creditor: FARM, amountSatang: 100_000, date: '2026-10-14', note: '', method: 'transfer-with-owner', saleId: S } });
+    await writeFinance('mix-2', null, { t: 'debt_payment_recorded', fields: { worker: RED, creditor: FARM, amountSatang: 225_000, date: '2026-10-14', note: '', method: 'buyer-split', saleId: S } });
+  });
+
+  it('the deduct sheet and the cash step warn for that tapper only; confirm then puts it on the one route chosen', async () => {
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.red}`);
+    expect(last('co-merge-warn')).toHaveTextContent(/การหักเดิมรับคืนหลายทาง บันทึกแล้วจะรวมเป็นทางที่เลือกทางเดียว/);
+    await press('co-deduct-sheet-close');
+    await press(`co-deduct-${farm.nat}`);
+    expect(screen.queryByTestId('co-merge-warn')).toBeNull();
+    await press('co-deduct-sheet-close');
+    r.unmount();
+    const c = await inSale(S, <CloseoutCashScreen />);
+    expect(last(`cop-merge-${farm.red}`)).toHaveTextContent(/รวมเป็นทางที่เลือกทางเดียว/);
+    expect(screen.queryByTestId(`cop-merge-${farm.nat}`)).toBeNull();
+    c.unmount();
+    await confirmAs(S);
+    expect(await live(S, farm.red)).toEqual([['transfer-with-owner', 325_000]]);
+  });
+});
+
+describe('a stale check asks again (review #10): a balance or this sale\'s lines changed after the owner checked', () => {
+  const S = 'r-stale';
+  beforeAll(() => storySale(S));
+
+  it('จดหนี้เพิ่ม for แดง drops only แดง\'s debt check; a new bill the farm owes นัด drops the owed check', async () => {
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    await gates(S);
+    expect(last('co-confirm')).toHaveTextContent('ยืนยันยอด · ไปจ่ายเงิน');
+    r.unmount();
+    // another device synced (or the owner went to จดหนี้เพิ่ม and came back)
+    const d = await writeFinance('stale-debt', null, { t: 'debt_added', fields: { worker: { id: farm.red, name: 'แดง' }, kind: 'loan', amountSatang: 50_000, date: '2026-10-20', note: '', lender: FARM, fertilizer: null, carriedForward: false } });
+    const r2 = await inSale(S, <CloseoutSummaryScreen />);
+    expect(last('co-confirm')).toHaveTextContent('↑ ตรวจหนี้ของแดงก่อน');
+    expect(last('co-debt-badge')).toHaveTextContent('1');
+    await press('co-debt-open');
+    await press('co-debt-ok');
+    expect(last('co-confirm')).toHaveTextContent('ยืนยันยอด · ไปจ่ายเงิน');
+    r2.unmount();
+    const x = await writeFinance('stale-exp', null, { t: 'expense_created', fields: { amountSatang: 10_000, date: '2026-10-26', stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าน้ำมัน', note: '', payer: { id: farm.nat, name: 'นัด' } } });
+    await inSale(S, <CloseoutSummaryScreen />);
+    expect(last('co-confirm')).toHaveTextContent('↑ ตรวจการ์ดสวนค้างจ่ายก่อน');
+    await act(async () => clearDraft(S));
+    // the shared fixture as it was, for the tests after this one
+    await writeFinance('stale-debt', d.id, { t: 'debt_changed', patch: { deleted: true } });
+    await writeFinance('stale-exp', x.id, { t: 'expense_changed', patch: { deleted: true } });
+  });
+});
+
+describe('a confirm that fails is said, never silent (review #6)', () => {
+  const S = 'r-fail';
+  beforeAll(() => storySale(S));
+
+  it('a write that throws: an error banner, no payment page, the lines re-read; pressing again finishes without writing twice', async () => {
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    await gates(S);
+    router.push.mockClear();
+    let calls = 0;
+    const real = financeStore.append.bind(financeStore);
+    const spy = jest.spyOn(financeStore, 'append').mockImplementation(async (e) => {
+      // the first write (แดง) lands, the second (นัด) fails
+      calls += 1;
+      if (calls === 2) throw new Error('disk full');
+      return real(e);
+    });
+    await press('co-confirm');
+    spy.mockRestore();
+    expect(last('co-confirm-error')).toHaveTextContent(/บันทึกไม่สำเร็จ/);
+    expect(router.push).not.toHaveBeenCalled();
+    expect(await live(S, farm.red)).toEqual([['transfer-with-owner', 325_000]]);
+    expect(await live(S, farm.nat)).toEqual([]);
+    await press('co-confirm');
+    expect(screen.queryByTestId('co-confirm-error')).toBeNull();
+    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${S}/payment`);
+    expect(await live(S, farm.red)).toEqual([['transfer-with-owner', 325_000]]);
+    expect(await live(S, farm.nat)).toEqual([['transfer-with-owner', 525_000]]);
+    r.unmount();
+  });
+});
+
 describe('offline · a confirm stopped part-way, then pressed again, writes nothing twice', () => {
   const S = 'r-stop';
   beforeAll(() => storySale(S));
@@ -481,7 +586,7 @@ describe('D-71 · all three repay routes give the same money; Σ every pile = th
   });
 });
 
-describe('D-61 · deducted over the share (the sale edited down after): no confirm, no ticks, no close', () => {
+describe('D-61 · deducted over the share (the sale edited down after): ticks and close locked until the summary fixes it', () => {
   const S = 'r-over';
   beforeAll(async () => {
     await storySale(S);
@@ -492,23 +597,40 @@ describe('D-61 · deducted over the share (the sale edited down after): no confi
     await writeFinance(`sale-rounding-${S}`, null, { t: 'sale_rounding_set', saleId: S, mode: 'worker' });
   });
 
-  it('the summary will not confirm and the sources show the debt check off', async () => {
-    await inSale(S, <CloseoutSummaryScreen />);
-    expect(disabled('co-confirm')).toBe(true);
-    expect(last('co-confirm')).toHaveTextContent('หักเกินส่วนแบ่ง · แก้ก่อน');
-    await gates(S);
-    expect(disabled('co-confirm')).toBe(true);
-    await press('co-sources-open');
-    expect(last('co-src-debt')).toHaveTextContent(/ไม่ตรง/);
-  });
-
   it('the payment page locks his tick, the cash repayment tick, the owner\'s tick and the close', async () => {
-    await inSale(S, <CloseoutPayScreen />);
+    const r = await inSale(S, <CloseoutPayScreen />);
     expect(screen.getByTestId('pay-over')).toBeTruthy();
     expect(last('tick-owner').props.accessibilityState).toMatchObject({ disabled: true });
     expect(last(`tick-debt-cash-${farm.red}`).props.accessibilityState).toMatchObject({ disabled: true });
     expect(screen.queryByTestId(`tick-${farm.red}`) ? last(`tick-${farm.red}`).props.accessibilityState : { disabled: true }).toMatchObject({ disabled: true });
     expect(disabled('close-sale')).toBe(true);
+    r.unmount();
+  });
+
+  it('the summary is not a dead end: the draft starts at the recorded 9,500 (above the cap), fixing it in the deduct sheet lets confirm write, and the payment page unlocks', async () => {
+    clearDraft(S);
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    await gates(S);
+    // Above the cap → the sheet's own "invalid" gate, never a lock the summary cannot lift.
+    expect(disabled('co-confirm')).toBe(true);
+    expect(last('co-confirm')).toHaveTextContent('ยอดหักเกินที่หักได้ · แก้ก่อน');
+    await press('co-sources-open');
+    expect(last('co-src-debt')).toHaveTextContent(/ไม่ตรง/);
+    await press('co-sources-sheet-close');
+    await press(`co-deduct-${farm.red}`);
+    expect(disabled('co-deduct-ok')).toBe(true);
+    await retype('3250');
+    expect(disabled('co-deduct-ok')).toBe(false);
+    await press('co-deduct-ok');
+    expect(disabled('co-confirm')).toBe(false);
+    await press('co-confirm');
+    r.unmount();
+    expect(await live(S, farm.red)).toEqual([['cash-from-share', 325_000]]);
+    await inSale(S, <CloseoutPayScreen />);
+    expect(screen.queryByTestId('pay-over')).toBeNull();
+    expect(last('pay-tally')).toHaveTextContent(/ยอดตรงกันแล้ว/);
+    expect(disabled('close-sale')).toBe(false);
+    expect(last(`tick-${farm.red}`).props.accessibilityState).toMatchObject({ disabled: false });
   });
 });
 

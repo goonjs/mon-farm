@@ -46,6 +46,7 @@ import { FarmScreen } from '../../farm/pieces';
 import { Banner, IconLine, markClosing, useSaleView } from '../pieces';
 import { SourcesPill } from './summary-cards';
 import { WarnMark } from './summary-parts';
+import { useShareSplit } from './cash-pieces';
 import { useCloseout } from './use-closeout';
 
 const baht = formatSatang;
@@ -82,6 +83,7 @@ function PayBody({ bump }: { bump: () => void }) {
   // One money write at a time: a double tap must not write twice (review #4).
   const flight = useInFlight();
   const [sources, setSources] = useState(false);
+  const shareSplit = useShareSplit();
   const { saleId, state, master, append, saleTitle } = view;
   const title = msg('cop.payPageTitle');
   const subtitle = state.saleStatus === 'draft' ? msg('v2s.draftOf', { title: saleTitle }) : saleTitle;
@@ -209,8 +211,9 @@ function PayBody({ bump }: { bump: () => void }) {
     if (row.kind === 'owner') {
       if (money.rounding.transferInSatang) {
         // A9: the repayment on its own line, blue — never broken inside a word.
-        body.push(sub(msg('cop.ownerSplitShare', { owner: baht(money.rounding.result.ownerSatang) }), `pay-sub-${row.id}`));
-        body.push(sub(msg('cop.ownerSplitRepay', { dir: '↘', name: repayName, repay: baht(money.rounding.transferInSatang) }), `pay-sub-${row.id}-repay`, t.color.debtIn));
+        // the "+" leads the repay line, so it never hangs alone at the end of the share line
+        body.push(sub(shareSplit(s.ownerSatang, money.rounding.result.ownerSatang - s.ownerSatang), `pay-sub-${row.id}`));
+        body.push(sub(`+ ${msg('cop.ownerSplitRepay', { dir: '↘', name: repayName, repay: baht(money.rounding.transferInSatang) })}`, `pay-sub-${row.id}-repay`, t.color.debtIn));
       }
       if (!ps.done && pendingTransfer) body.push(chip(msg('cop.waitTransfer', { dir: '↘', amount: short(pendingTransfer) }), `pay-chip-${row.id}`));
       if (account) {

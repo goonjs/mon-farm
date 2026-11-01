@@ -9,6 +9,7 @@ import type { MasterStore } from '../store/master-store';
 import { SaleProvider } from '../store/SaleProvider';
 import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
+import { tokens } from '../../design/tokens';
 import { wrap } from '../test/render';
 import { clearDraft } from '../v2/sale/closeout/use-closeout';
 import { CloseoutSummaryScreen } from '../v2/sale/closeout/summary-screen';
@@ -152,8 +153,14 @@ describe('สรุปจ่ายเงิน · the proposal on one page (CO-1
     const pill = (id: string) => [text(id).props.style].flat(Infinity).filter(Boolean).reduce((a: object, x: object) => ({ ...a, ...x }), {}) as { backgroundColor?: string };
     expect(text('co-debt-total-money')).toHaveTextContent('฿ 24.14k');
     expect(pill('co-debt-total-money-unit').backgroundColor).toBeTruthy();
-    expect(text('co-cash-transfer')).toHaveTextContent('฿ 22.94k');
-    expect(pill('co-cash-transfer-unit').backgroundColor).toBeTruthy();
+    // D-85: the farm's share and the debt repaid are never one figure; the share before rounding, the rounding its own part.
+    expect(screen.queryByTestId('co-cash-transfer')).toBeNull();
+    expect(text('co-cash-owner')).toHaveTextContent('฿ 14.44k');
+    expect(pill('co-cash-owner-unit').backgroundColor).toBeTruthy();
+    expect(text('co-cash-round')).toHaveTextContent('฿ 0.5');
+    expect(text('co-cash-repay')).toHaveTextContent('฿ 8,500');
+    expect(text('co-cash-split')).toHaveTextContent(/^โอนรวม · โอนสวน ฿ 14\.44k − ปัด ฿ 0\.5 \+ ↘ คืนหนี้ ฿ 8,500$/);
+    expect(pill('co-cash-repay-label')).toMatchObject({ color: tokens.color.light.debtIn });
   });
 
   it('confirm is off and says which cards are still open (CO-17, CO-26)', async () => {
@@ -267,7 +274,7 @@ describe('the deduct sheet (A5, CO-5, CO-7, A22, A23)', () => {
     await press(`co-deduct-${farm.nat}`);
     expect(text('co-net-link')).toHaveTextContent(/↗ หักกลบ: ใช้ 640 ที่สวนค้างจ่ายนัด หักหนี้/);
     await press('co-net-link');
-    expect(text('co-net-on')).toHaveTextContent(/หักกลบ 640 แล้ว/);
+    expect(text('co-net-on')).toHaveTextContent(/ใช้ 640 ที่สวนค้างจ่ายนัด/);
     expect(text('co-amount')).toHaveTextContent(/5,890/);
     await press('co-deduct-ok');
     expect(text(`co-net-${farm.nat}`)).toHaveTextContent(/หักกลบ · สวนคืนนัด.*\+640\.00/);
@@ -278,52 +285,112 @@ describe('the deduct sheet (A5, CO-5, CO-7, A22, A23)', () => {
   });
 });
 
-describe('partial netting (owner Q1, CO-7): an amount on MoneyField + NumberPad', () => {
-  const padKeys = async (pad: string, digits: string) => {
-    for (const d of digits) await press(`${pad}-key-${d}`);
+describe('partial netting (owner Q1, CO-7): two amount boxes, one pad, one box edited at a time (A23)', () => {
+  const selected = (id: string) => !!text(id).props.accessibilityState?.selected;
+  const back = async (n: number) => {
+    for (let i = 0; i < n; i++) await press('co-pad-key-back');
   };
+  const SENTENCE = /ใช้ (\d+) ที่สวนค้างจ่ายนัด ลดหนี้นัด ไม่มีเงินสดเปลี่ยนมือ/;
 
-  it('the link nets the full 640 and shows the amount; set 300 → the deduction follows; the cap follows share + netting', async () => {
+  it('with netting the deduction box is the one typed into, said in words and outlined; tapping the netting box moves the pad there', async () => {
     await inSale(<CloseoutSummaryScreen />);
     await press(`co-deduct-${farm.nat}`);
+    // one box, no "กำลังแก้" needed
+    expect(screen.queryByTestId('co-editing')).toBeNull();
     await press('co-net-link');
-    expect(text('co-net-field')).toHaveTextContent(/640\.00/);
+    expect(text('co-net-field')).toHaveTextContent(/640/);
     expect(text('co-amount')).toHaveTextContent(/5,890/);
+    expect(selected('co-amount')).toBe(true);
+    expect(selected('co-net-field')).toBe(false);
+    expect(text('co-editing')).toHaveTextContent('กำลังแก้: ยอดหัก');
+    // CO-15: the sentence next to หักกลบ
+    expect(text('co-net-on')).toHaveTextContent(SENTENCE);
+    expect(text('co-net-on')).toHaveTextContent(/ใช้ 640 ที่/);
     await press('co-net-field');
-    await padKeys('co-net-field-pad', '300');
-    await press('co-net-field-done');
-    expect(text('co-net-field')).toHaveTextContent(/300\.00/);
-    expect(text('co-net-on')).toHaveTextContent(/หักกลบ 300 แล้ว/);
+    expect(selected('co-net-field')).toBe(true);
+    expect(selected('co-amount')).toBe(false);
+    expect(text('co-editing')).toHaveTextContent('กำลังแก้: ยอดหักกลบ');
+    // the chips follow the box being edited
+    expect(screen.queryByTestId('co-quick-full')).toBeNull();
+    expect(text('co-net-remove')).toBeTruthy();
+    // the first key replaces the old amount; the deduction follows (route part kept)
+    await keys('300');
+    expect(text('co-net-field')).toHaveTextContent(/300/);
     expect(text('co-amount')).toHaveTextContent(/5,550/);
+    expect(text('co-net-on')).toHaveTextContent(/ใช้ 300 ที่/);
+    await press('co-amount');
+    expect(text('co-editing')).toHaveTextContent('กำลังแก้: ยอดหัก');
     expect(text('co-quick-full')).toHaveTextContent(/หักเต็ม 5,550/);
+    await keys('5000');
+    expect(text('co-amount')).toHaveTextContent(/5,000/);
+    expect(text('co-net-field')).toHaveTextContent(/300/);
     await press('co-deduct-ok');
     expect(text(`co-net-${farm.nat}`)).toHaveTextContent(/\+300\.00/);
-    expect(text(`co-deduct-${farm.nat}`)).toHaveTextContent(/−5,550\.00/);
+    expect(text(`co-deduct-${farm.nat}`)).toHaveTextContent(/−5,000\.00/);
   });
 
-  it('above the ceiling (640) the pad refuses; the chip sets the full amount; เอาออก removes it', async () => {
+  it('above the ceiling (640) the netting box says so and ตกลง is off; the chip sets the full amount; เอาออก removes it', async () => {
     await inSale(<CloseoutSummaryScreen />);
     await press(`co-deduct-${farm.nat}`);
     await press('co-net-link');
     await press('co-net-field');
-    await padKeys('co-net-field-pad', '700');
-    expect(screen.getAllByTestId('co-net-field-done').pop()!.props.accessibilityState).toMatchObject({ disabled: true });
-    await press('co-net-field-sheet-scrim');
-    expect(text('co-net-field')).toHaveTextContent(/640\.00/);
-    // the full-amount chip shows once less than the full amount is used
     expect(screen.queryByTestId('co-net-full')).toBeNull();
-    await press('co-net-field');
-    // the first key replaces the old amount (MoneyField)
-    await padKeys('co-net-field-pad', '62');
-    await press('co-net-field-done');
-    expect(text('co-net-field')).toHaveTextContent(/62\.00/);
+    await keys('700');
+    expect(text('co-net-error')).toHaveTextContent(/หักกลบได้ไม่เกิน 640/);
+    expect(disabled('co-deduct-ok')).toBe(true);
+    // each key applies live while it is within the ceiling (7, 70); 700 is not applied: the draft keeps 70
+    expect(text('co-amount')).toHaveTextContent(/5,320/);
+    await back(3);
+    await keys('62');
+    expect(screen.queryByTestId('co-net-error')).toBeNull();
+    expect(text('co-net-field')).toHaveTextContent(/62/);
     expect(text('co-net-full')).toHaveTextContent(/เต็ม 640/);
     await press('co-net-full');
-    expect(text('co-net-field')).toHaveTextContent(/640\.00/);
+    expect(text('co-net-field')).toHaveTextContent(/640/);
     await press('co-net-remove');
     expect(screen.queryByTestId('co-net-field')).toBeNull();
+    expect(screen.queryByTestId('co-editing')).toBeNull();
     expect(text('co-amount')).toHaveTextContent(/5,250/);
     expect(text('co-net-link')).toBeTruthy();
+  });
+
+  it('the netting row on the summary and the checked owed card carry the short sentence (CO-15, A24)', async () => {
+    await inSale(<CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.nat}`);
+    await press('co-net-link');
+    await press('co-deduct-ok');
+    // the amount and where it comes from are on the same line; the short form says the rest (no cash changes hands)
+    expect(text(`co-net-${farm.nat}`)).toHaveTextContent(/ใช้ลดหนี้นัด ไม่มีเงินสดเปลี่ยนมือ/);
+    expect(text(`co-owed-line-${farm.nat}`)).toHaveTextContent(/หักกลบ.*฿ 640.*ใช้ลดหนี้นัด ไม่มีเงินสดเปลี่ยนมือ/);
+  });
+});
+
+describe('screen readers hear the content, not a label that hides it (review #11)', () => {
+  it('the deduct row says whose, how much and the ⚠ chip; the cash card says the route and both parts of the transfer', async () => {
+    await inSale(<CloseoutSummaryScreen />);
+    const label = (id: string) => String(text(id).props.accessibilityLabel ?? '');
+    expect(label(`co-deduct-${farm.nat}`)).toMatch(/นัด/);
+    expect(label(`co-deduct-${farm.nat}`)).toMatch(/5,250\.00/);
+    expect(label(`co-deduct-${farm.nat}`)).toMatch(/หนี้ยังเหลือ 3,100/);
+    expect(label(`co-deduct-${farm.red}`)).toMatch(/3,250\.00/);
+    expect(label('co-cash-card')).toMatch(/จัดเงินสดกับคนรับซื้อยาง/);
+    expect(label('co-cash-card')).toMatch(/โอนรวม/);
+    expect(label('co-cash-card')).toMatch(/14,437\.50/);
+    expect(label('co-cash-card')).toMatch(/คืนหนี้ 8,500\.00/);
+  });
+
+  it('the red count says what it counts', async () => {
+    await inSale(<CloseoutSummaryScreen />);
+    expect(text('co-debt-badge').props.accessibilityLabel).toBe('ยังไม่ตรวจ 2 คน');
+    expect(text('co-owed-badge').props.accessibilityLabel).toBe('ยังไม่ตรวจ 1 คน');
+  });
+
+  it('the owed sheet\'s two radios sit in a radiogroup', async () => {
+    await inSale(<CloseoutSummaryScreen />);
+    await press('co-owed-open');
+    const group = text(`co-owed-choice-${farm.nat}`);
+    expect(group.props.accessibilityRole).toBe('radiogroup');
+    expect(within(group).getAllByRole('radio')).toHaveLength(2);
   });
 });
 
@@ -407,6 +474,14 @@ describe('sheets that only show (CO-9, CO-18)', () => {
     expect(s).toHaveTextContent(/550 กก\./);
     expect(s).toHaveTextContent(/ส่วนแบ่งแดง 50%.*9,187\.50/);
     expect(s).toHaveTextContent(/รวม = ขายวันนี้.*28,875\.00/);
+    // review #13: no leftover "ก ·" from the old page's section letters
+    expect(text('co-sale-split')).toHaveTextContent(/^แบ่งยอดขาย$/);
+  });
+
+  it('the debt sheet footer says oldest first without "ปิด" (review #13)', async () => {
+    await inSale(<CloseoutSummaryScreen />);
+    await press('co-debt-open');
+    expect(text('co-debt-oldest')).toHaveTextContent(/^หักก้อนเก่าที่สุดก่อน$/);
   });
 });
 

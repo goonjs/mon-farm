@@ -17,9 +17,9 @@ import { sourcesSheet, type ConfirmGate } from '../../../core/finance/closeout';
 import { buyerCheck, saleFigures } from '../../../core/finance/buyer-check';
 import { useT, type Translate } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { Check, CTA } from '../../../ui';
+import { AlertIcon, Check, CTA } from '../../../ui';
 import { FarmScreen } from '../../farm/pieces';
-import { tapperTone, useLeaveIfClosed, useSaleView } from '../pieces';
+import { Banner, tapperTone, useLeaveIfClosed, useSaleView } from '../pieces';
 import { CashCard, DebtCard, OwedCard, Progress, SaleStrip, TallyBar, WorkerCard } from './summary-cards';
 import { DebtSheet } from './summary-debt-sheet';
 import { DeductSheet } from './summary-deduct-sheet';
@@ -53,8 +53,6 @@ export function gateText(msg: Translate, gate: ConfirmGate): string {
       return msg('co.gate.tally');
     case 'invalid':
       return msg('co.gate.invalid');
-    case 'over':
-      return msg('co.gate.over');
   }
 }
 
@@ -175,6 +173,7 @@ export function CloseoutSummaryScreen() {
       ))}
       <CashCard plan={plan} faded={!handled} onOpen={() => router.push(`${base}/cash` as Href)} />
       <TallyBar tally={plan.tally} onSources={() => setSheet({ kind: 'sources' })} />
+      {co.failed ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('co.confirmFailed')} lines={[msg('co.confirmFailedLine')]} testID="co-confirm-error" /> : null}
     </View>,
     <CTA testID="co-confirm" disabled={gate.kind !== 'ready' || co.busy || co.closed} icon={gate.kind === 'ready' ? (c) => <Check color={c} /> : undefined} onPress={confirm}>
       {gateText(msg, gate)}

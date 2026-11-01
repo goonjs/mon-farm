@@ -21,10 +21,12 @@ import {
   type RecordedLine,
 } from './closeout';
 import type { Debt, DebtAccount, DebtPayment } from './debts';
-import { cashNotes, deductSheet, needsChange, nettingPayloads, pickNotes, roundCash, type RoundingMode } from './deduct';
+import { projectDebts } from './debts';
+import { cashNotes, deductSheet, needsChange, nettingPayloads, overDeducted, pickNotes, roundCash, type RoundingMode } from './deduct';
+import { projectFinance } from './ledger';
 import type { Reimbursement } from './ledger';
 import { roundSettlement } from './rounding';
-import { FARM_FUNDS, type DebtKind, type DebtPaymentMethod, type Payer } from './types';
+import { FARM_FUNDS, type DebtKind, type DebtPaymentMethod, type FinanceEvent, type FinancePayload, type Payer } from './types';
 
 const DAENG: Payer = { id: 'p-daeng', name: 'แดง' };
 const NAT: Payer = { id: 'p-nat', name: 'นัด' };
@@ -114,8 +116,23 @@ const storyInput = (over: Partial<CloseoutInput> = {}): CloseoutInput => ({
 });
 
 const byId = (p: CloseoutPlan, id: string) => p.workers.find((w) => w.id === id)!;
+/** A deterministic id factory for tests: `dpay-1`, `rep-2`, … (the app passes `newId`, a UUIDv7). */
+const counter = () => {
+  let k = 0;
+  return (prefix: string) => `${prefix}${++k}`;
+};
 
 // ── CO-22 ───────────────────────────────────────────────────────────────────
+
+describe('the transfer split (D-85): the farm share before rounding, the rounding, the repayment', () => {
+  it('story: 14,437.50 − 0.50 + 8,500.00 = 22,937.00', () => {
+    const p = closeoutPlan(storyInput());
+    expect(p.ownerShareSatang).toBe(1443750);
+    expect(p.ownerSatang - p.ownerShareSatang).toBe(-50);
+    expect(p.transferRepaySatang).toBe(850000);
+    expect(p.ownerShareSatang + (p.ownerSatang - p.ownerShareSatang) + p.transferRepaySatang).toBe(p.transferSatang);
+  });
+});
 
 describe('debtPieces (CO-22, D-67, D-69)', () => {
   it('deduct 3,250 from แดง 6,000 / 5,790 / 4,000 → oldest first, first left 2,750, Σ left 12,540', () => {
@@ -400,6 +417,13 @@ describe('drafts (CO-3, CO-5)', () => {
     });
   });
 
+  it('the problem is named: above the cap → total-range; below the netting → below-netting (review #8)', () => {
+    const p = closeoutPlan(storyInput({ workers: storyInput().workers.map((w) => (w.id === NAT.id ? { ...w, owedBackSatang: 64000 } : w)), drafts: { [NAT.id]: { nettingSatang: 64000, totalSatang: 50000 } } }));
+    expect(byId(p, NAT.id).problem).toBe('below-netting');
+    const q = closeoutPlan(storyInput({ drafts: { [NAT.id]: { totalSatang: 600000 } } }));
+    expect(byId(q, NAT.id).problem).toBe('total-range');
+    expect(byId(closeoutPlan(storyInput()), NAT.id).problem).toBeNull();
+  });
   it('over the cap → invalid; below netting → invalid', () => {
     expect(one({}, { totalSatang: 525001 }).invalid).toBe(true);
     expect(one({}, { totalSatang: -1 }).invalid).toBe(true);
@@ -750,11 +774,21 @@ describe('confirmGate (CO-17, CO-26, CO-9)', () => {
     owedChecked: new Set(['b']),
     owedAnswered: false,
     plan: okPlan,
-    over: false,
   };
 
   it('ready when everything is done', () => expect(confirmGate(base)).toEqual({ kind: 'ready' }));
-  it("'over' comes first", () => expect(confirmGate({ ...base, over: true, debtChecked: new Set() }).kind).toBe('over'));
+  it('D-61: a recorded deduction above the cap is not a lock of its own — the plan is invalid until fixed, then ready', () => {
+    const rec = { totalSatang: 950000, nettingSatang: 0, route: 'cash-from-share' as const };
+    const overIn = storyInput();
+    const workers = overIn.workers.map((w) => (w.id === DAENG.id ? { ...w, recorded: rec } : w));
+    const stuck = closeoutPlan({ ...overIn, workers });
+    expect(byId(stuck, DAENG.id).totalSatang).toBe(950000);
+    expect(confirmGate({ ...base, plan: stuck }).kind).toBe('invalid');
+    // The cards still come first.
+    expect(confirmGate({ ...base, plan: stuck, debtChecked: new Set() }).kind).toBe('check-debt');
+    const fixed = closeoutPlan({ ...overIn, workers, drafts: { [DAENG.id]: { totalSatang: 325000 } } });
+    expect(confirmGate({ ...base, plan: fixed }).kind).toBe('ready');
+  });
   it('check-debt names the unchecked workers', () =>
     expect(confirmGate({ ...base, debtChecked: new Set(['a']) })).toEqual({
       kind: 'check-debt',
@@ -836,7 +870,7 @@ describe('confirmWrites (idempotent, existing event shapes)', () => {
       }),
       NAT.id,
     );
-  const run = (plan: CloseoutWorker, recorded: RecordedLine[] = [], extra: { knownIds?: readonly string[] } = {}) =>
+  const run = (plan: CloseoutWorker, recorded: RecordedLine[] = []) =>
     confirmWrites({
       saleId: SALE,
       date: '2026-10-31',
@@ -845,7 +879,7 @@ describe('confirmWrites (idempotent, existing event shapes)', () => {
       plan,
       recorded,
       owed,
-      ...extra,
+      newId: counter(),
     });
   const line = (id: string, method: DebtPaymentMethod, amountSatang: number, more: Partial<RecordedLine> = {}): RecordedLine => ({
     id,
@@ -855,14 +889,14 @@ describe('confirmWrites (idempotent, existing event shapes)', () => {
     ...more,
   });
 
-  it('first write: one route line with the fixed id and the existing payload shape', () => {
+  it('first write: one route line with a fresh id from the factory (random on device) and the existing payload shape', () => {
     const r = run(planFor({}));
     expect(r).toEqual({
       ok: true,
       writes: [
         {
           op: 'write',
-          id: `dpay-${SALE}-${NAT.id}-0`,
+          id: 'dpay-1',
           base: null,
           payload: {
             t: 'debt_payment_recorded',
@@ -896,7 +930,7 @@ describe('confirmWrites (idempotent, existing event shapes)', () => {
     });
   });
 
-  it('a change voids the old lines first (repayment before its debt payment), then writes gen = lines recorded', () => {
+  it('a change voids the old lines first (repayment before its debt payment), then writes a new line under a fresh id', () => {
     const plan = planFor({ owedBackSatang: 64000 }, { totalSatang: 400000 });
     const r = run(plan, [
       line('net1', 'netting', 64000, {
@@ -911,7 +945,7 @@ describe('confirmWrites (idempotent, existing event shapes)', () => {
       ['void-repayment', 'rep1', 'rep1-h'],
       ['void-payment', 'net1', 'net1-h'],
       ['void-payment', 'r1', 'r1-h'],
-      ['write', `dpay-${SALE}-${NAT.id}-2`, null],
+      ['write', 'dpay-1', null],
     ]);
   });
 
@@ -920,7 +954,7 @@ describe('confirmWrites (idempotent, existing event shapes)', () => {
     const r = run(plan);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    const repId = `rep-${SALE}-${NAT.id}-0`;
+    const repId = 'rep-2';
     const expected = nettingPayloads({
       worker: NAT,
       farm: FARM,
@@ -934,14 +968,14 @@ describe('confirmWrites (idempotent, existing event shapes)', () => {
     expect(r.writes).toEqual([
       {
         op: 'write',
-        id: `dpay-${SALE}-${NAT.id}-0-net`,
+        id: 'dpay-1',
         base: null,
         payload: expected.debtPayment,
       },
       { op: 'write', id: repId, base: null, payload: expected.repayment },
       {
         op: 'write',
-        id: `dpay-${SALE}-${NAT.id}-0`,
+        id: 'dpay-3',
         base: null,
         payload: {
           t: 'debt_payment_recorded',
@@ -978,6 +1012,7 @@ describe('confirmWrites (idempotent, existing event shapes)', () => {
         plan,
         recorded: [],
         owed: [],
+        newId: counter(),
       }),
     ).toEqual({ ok: false });
   });
@@ -986,12 +1021,77 @@ describe('confirmWrites (idempotent, existing event shapes)', () => {
     expect(run(planFor({}, { totalSatang: 999999 }))).toEqual({ ok: false });
   });
 
-  it('never reuses an id this sale already used (deleted lines passed as knownIds)', () => {
-    const plan = planFor({}, { totalSatang: 300000 });
-    const r = run(plan, [], {
-      knownIds: [`dpay-${SALE}-${NAT.id}-0`, `dpay-${SALE}-${NAT.id}-1`],
+  it('every id comes from the factory, none is built from the sale or the worker (two devices never share one)', () => {
+    const plan = planFor({ owedBackSatang: 64000 }, { nettingSatang: 64000 });
+    const r = run(plan);
+    expect(r.ok && r.writes.map((w) => w.id)).toEqual(['dpay-1', 'rep-2', 'dpay-3']);
+    expect(r.ok && r.writes.every((w) => !w.id.includes(SALE) && !w.id.includes(NAT.id))).toBe(true);
+  });
+});
+
+// ── two devices confirm the same sale offline (owner 2026-11-01: random ids, both count) ──
+
+describe('two devices confirm the same sale offline (D-30, D-61): nothing is lost silently', () => {
+  const W: Payer = NAT;
+  const owedTo: Reimbursement[] = [{ expenseId: 'x1', to: W, originalSatang: 64000, repaidSatang: 0, remainingSatang: 64000, date: '2026-10-01', status: 'owed', repayments: [] } as unknown as Reimbursement];
+  let n = 0;
+  const ev = (dev: string, targetId: string, payload: FinancePayload): FinanceEvent => ({
+    id: `${dev}-${String(++n).padStart(4, '0')}`,
+    groupId: 'g',
+    deviceSeq: n,
+    ts: n,
+    actor: { userId: 'u', deviceId: dev },
+    source: 'app',
+    targetId,
+    baseEventId: null,
+    payload,
+  } as FinanceEvent);
+  const seed = (): FinanceEvent[] => [
+    ev('z', 'd1', { t: 'debt_added', fields: { worker: W, kind: 'other', amountSatang: 1000000, date: '2026-10-01', note: '', lender: null, fertilizer: null, carriedForward: false } } as FinancePayload),
+    ev('z', 'x1', { t: 'expense_created', fields: { amountSatang: 64000, date: '2026-10-01', stage: 'actual', categoryId: null, propertyId: null, item: 'ปุ๋ย', note: '', payer: W } } as FinancePayload),
+  ];
+  /** One device's confirm, from nothing recorded (it has not seen the other device's lines). */
+  const confirmOn = (dev: string, draft: { nettingSatang?: number; totalSatang?: number }) => {
+    const p = closeoutPlan({
+      saleTotalSatang: 1000000,
+      ownerShareSatang: 500000,
+      workers: [{ id: W.id, name: W.name, shareSatang: 500000, balanceSatang: 1000000, planPerSaleSatang: null, owedBackSatang: 64000, recorded: null }],
+      drafts: { [W.id]: draft },
+      defaultRoute: () => 'transfer-with-owner',
+      rounding: 'none',
     });
-    expect(r.ok && r.writes.map((w) => w.id)).toEqual([`dpay-${SALE}-${NAT.id}-2`]);
+    let k = 0;
+    const r = confirmWrites({ saleId: 'S', date: '2026-10-31', worker: W, farm: FARM, plan: p.workers[0], recorded: [], owed: owedTo, newId: (prefix) => `${prefix}${dev}${++k}` });
+    if (!r.ok) throw new Error('fixture');
+    return r.writes.flatMap((x) => (x.op === 'write' ? [ev(dev, x.id, x.payload)] : []));
+  };
+  const counted = (events: readonly FinanceEvent[]) => (projectDebts(events).get(W.id)?.payments ?? []).filter((p) => p.saleId === 'S' && !p.deleted && p.counts);
+
+  it('both devices\' deductions count: the sum is over the share, so the D-61 flag is up for the owner to fix', () => {
+    const a = confirmOn('A', { totalSatang: 400000 });
+    const b = confirmOn('B', { totalSatang: 300000 });
+    const lines = counted([...seed(), ...a, ...b]);
+    expect(lines.map((l) => l.amountSatang).sort()).toEqual([300000, 400000]);
+    const net = lines.filter((l) => l.method === 'netting').reduce((x, l) => x + l.amountSatang, 0);
+    const total = lines.reduce((x, l) => x + l.amountSatang, 0);
+    expect(overDeducted(total, 500000, net)).toBe(true);
+  });
+
+  it('netting from two devices, written interleaved: each netting debt payment counts with its OWN repayment of the same amount', () => {
+    const a = confirmOn('A', { nettingSatang: 64000 });
+    const b = confirmOn('B', { nettingSatang: 30000, totalSatang: 200000 });
+    // interleaved as two phones syncing would land them: A net, B net, B rep, A rep, B route, A route
+    const events = [...seed(), a[0], b[0], b[1], a[1], b[2], a[2]];
+    const lines = counted(events);
+    const nets = lines.filter((l) => l.method === 'netting');
+    expect(nets.map((l) => l.amountSatang).sort()).toEqual([30000, 64000]);
+    const reps = projectFinance(events).repayments.filter((r) => !r.deleted);
+    for (const l of nets) {
+      const rep = reps.find((r) => r.id === l.repaymentId);
+      expect(rep?.amountSatang).toBe(l.amountSatang);
+    }
+    // every route line is there too: A's proposal (share + netting 564,000 − 64,000 = 500,000 by route) and B's 200,000 − 30,000
+    expect(lines.filter((l) => l.method !== 'netting').map((l) => l.amountSatang).sort()).toEqual([170000, 500000]);
   });
 });
 

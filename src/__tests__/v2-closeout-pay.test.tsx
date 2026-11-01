@@ -122,8 +122,8 @@ describe('CO-10 · story example (A9): โอนรวม + ให้คนก�
     await inSale(S, <CloseoutPayScreen />);
     expect(last('tick-owner')).toHaveTextContent(/เจ้าของได้รับเงินโอนแล้ว/);
     expect(last('tick-amt-owner')).toHaveTextContent('22,937.00');
-    expect(last('pay-sub-owner')).toHaveTextContent(/ส่วนสวน 14,437\.00 \+/);
-    expect(last('pay-sub-owner-repay')).toHaveTextContent('↘ คืนหนี้ 8,500.00');
+    expect(last('pay-sub-owner')).toHaveTextContent(/ส่วนสวน 14,437\.50 − ปัด 0\.50/);
+    expect(last('pay-sub-owner-repay')).toHaveTextContent(/^\+ ↘ คืนหนี้ 8,500\.00$/);
     expect(last('pay-chip-owner')).toHaveTextContent(/↘ คืนหนี้ .*8,500 รอรับโอน/);
     expect(last('pay-left')).toHaveTextContent('ยังไม่ติ๊ก 2 รายการ');
     await press('tick-owner');
@@ -158,11 +158,11 @@ describe('A9 look: the transfer split breaks before "↘ คืนหนี้" 
     await confirmed(S, { amount: 325_000, method: 'transfer-with-owner' }, { amount: 525_000, method: 'transfer-with-owner' });
   });
 
-  it('owner sub line: "ส่วนสวน 14,437.00 +" then its own line "↘ คืนหนี้ 8,500.00" in the debt-in colour', async () => {
+  it('owner sub line: "ส่วนสวน 14,437.50 − ปัด 0.50" then its own line "+ ↘ คืนหนี้ 8,500.00" in the debt-in colour', async () => {
     await inSale(S, <CloseoutPayScreen />);
-    expect(last('pay-sub-owner')).toHaveTextContent(/^ส่วนสวน 14,437\.00 \+$/);
+    expect(last('pay-sub-owner')).toHaveTextContent(/^ส่วนสวน 14,437\.50 − ปัด 0\.50$/);
     const repay = last('pay-sub-owner-repay');
-    expect(repay).toHaveTextContent('↘ คืนหนี้ 8,500.00');
+    expect(repay).toHaveTextContent('+ ↘ คืนหนี้ 8,500.00');
     const style = [repay.props.style].flat(Infinity).filter(Boolean).reduce((a: object, x: object) => ({ ...a, ...x }), {}) as { color?: string };
     expect(style.color).toBe(tokens.color.light.debtIn);
   });
@@ -215,8 +215,8 @@ describe('CO-25 · buyer-split (A19)', () => {
     expect(last(`tick-amt-debt-cash-${farm.red}`)).toHaveTextContent('3,250.00');
     expect(last(`pay-chip-debt-cash-${farm.red}`)).toHaveTextContent(/รอรับเงินสด/);
     expect(last('tick-amt-owner')).toHaveTextContent('19,687.00');
-    expect(last('pay-sub-owner')).toHaveTextContent(/ส่วนสวน 14,437\.00 \+/);
-    expect(last('pay-sub-owner-repay')).toHaveTextContent('↘ คืนหนี้นัด 5,250.00');
+    expect(last('pay-sub-owner')).toHaveTextContent(/ส่วนสวน 14,437\.50 − ปัด 0\.50/);
+    expect(last('pay-sub-owner-repay')).toHaveTextContent('+ ↘ คืนหนี้นัด 5,250.00');
     expect(last('pay-left')).toHaveTextContent('ยังไม่ติ๊ก 3 รายการ');
     await press(id);
     expect(last(id).props.accessibilityState).toMatchObject({ checked: true });

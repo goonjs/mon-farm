@@ -10,6 +10,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { netDraft, type CloseoutWorker } from '../../../core/finance/closeout';
 import { formatSatang } from '../../../core/finance/money';
+import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, Check, ChevronRight, FarmMateIcon, toneColours, type TileTone } from '../../../ui';
 import type { CloseoutDraft } from './use-closeout';
@@ -71,6 +72,7 @@ export function RoundButton({
 /** One FarmMate icon on a tile; a red count (no blinking) until checked, then a blue ✓ (CO-17). */
 export function CardIcon({ id, tone = 'cream', badge, checked, testID, small }: { id: string; tone?: TileTone; badge?: number; checked?: boolean; testID?: string; small?: boolean }) {
   const t = useTheme();
+  const msg = useT();
   const { bg } = toneColours(t, tone);
   const side = small ? 40 : t.target.min;
   const dot = 20;
@@ -80,7 +82,7 @@ export function CardIcon({ id, tone = 'cream', badge, checked, testID, small }: 
         <FarmMateIcon id={id} size={small ? 28 : 32} />
       </View>
       {badge ? (
-        <View testID={testID} accessibilityLabel={String(badge)} style={{ position: 'absolute', top: -t.space.xs, right: -t.space.xs, minWidth: dot, height: dot, paddingHorizontal: t.space.xxs, borderRadius: t.radius.pill, backgroundColor: t.color.reject, alignItems: 'center', justifyContent: 'center' }}>
+        <View testID={testID} accessibilityLabel={msg('co.badge', { n: badge })} style={{ position: 'absolute', top: -t.space.xs, right: -t.space.xs, minWidth: dot, height: dot, paddingHorizontal: t.space.xxs, borderRadius: t.radius.pill, backgroundColor: t.color.reject, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.inkInverse }}>{badge}</Text>
         </View>
       ) : null}
