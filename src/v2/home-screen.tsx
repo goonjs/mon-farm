@@ -18,6 +18,7 @@ import { farmSection, SALE_START, saleHref, sectionHref } from './routes';
 import { useMaster, useMounted } from './farm/pieces';
 import { ORDER_NEW, orderHref } from './money/order-routes';
 import { loadHomeSales } from './sale/open-sale';
+import { useRepayHome, type OwesRow } from './home-repay';
 import { groupOrders, missingDetails } from '../core/finance/fert-order';
 import { owedByPerson, payableSatang } from '../core/finance/ledger';
 import { formatDate, formatSatang, todayIso } from '../core/finance/money';
@@ -39,12 +40,14 @@ import {
   ChevronRight,
   ClockIcon,
   CoinIcon,
+  CompactMoney,
   DebtIcon,
   DeviceIcon,
   ExternalIcon,
   Drawer,
   FactRow,
   FarmIcon,
+  FarmMateIcon,
   GearIcon,
   IconTile,
   LeafIcon,
@@ -91,6 +94,8 @@ export function V2Home() {
   const owedTotal = owed.reduce((s, o) => s + o.remainingSatang, 0);
   const payable = fin.state ? payableSatang(fin.state) : 0;
   const tappers = master ? filterPeople(master.people, 'tapper').length : 0;
+  // E06-S08 (H1, H2): repayments not in yet, and what a buyer still owes the farm per sale.
+  const repay = useRepayHome(fin.events, era);
 
   // Shop orders (E11-S11): ordered and not yet arrived; arrived fertilizer not yet placed on a plot.
   const orders = useMemo(() => {
@@ -165,6 +170,33 @@ export function V2Home() {
         to={orderHref(committedNewest.orderId)}
       />
     ) : null,
+    repay.waiting.length ? (
+      <KnowRow
+        key="repay-wait"
+        testID="home-repay-wait"
+        tone="action"
+        icon={() => <FarmMateIcon id="finance.otherCost" size={28} />}
+        label={msg('rp.home.waiting')}
+        to={'/v2/debts' as Href}
+      >
+        {pairsOf(repay.waiting).map((two, i) => (
+          <SumLine key={i} testID={`home-repay-wait-line-${i}`}>
+            {two.map((p, k) => (
+              <Text key={p.workerId}>
+                {k ? ' · ' : ''}
+                {`${p.name} `}
+                <CompactMoney satang={p.satang} />
+              </Text>
+            ))}
+          </SumLine>
+        ))}
+        <SumLine testID="home-repay-wait-sum">
+          {`${msg('rp.home.sum')} `}
+          <CompactMoney satang={repay.waitTotal} />
+        </SumLine>
+      </KnowRow>
+    ) : null,
+    ...repay.owes.map((o) => <OwesKnowRow key={`owes-${o.saleId}`} o={o} />),
     zoneNewest ? (
       <KnowRow
         key="order-zones"
@@ -396,7 +428,7 @@ function KnowRow({
   tone: TileTone;
   icon: IconRender;
   label?: string;
-  value: string;
+  value?: string;
   chip?: React.ReactNode;
   children?: React.ReactNode;
   to: Href;
@@ -412,13 +444,62 @@ function KnowRow({
       <IconTile tone={tone} icon={icon} />
       <View style={{ flex: 1, minWidth: 0, gap: t.space.xxs }}>
         {label ? <Text style={{ ...body(t), color: t.color.inkSoft }}>{label}</Text> : null}
-        <Text style={{ ...body(t), fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.semibold, fontVariant: ['tabular-nums'] }}>{value}</Text>
+        {value ? <Text style={{ ...body(t), fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.semibold, fontVariant: ['tabular-nums'] }}>{value}</Text> : null}
         {chip}
         {children}
       </View>
       <ChevronRight color={t.color.inkFaint} />
     </Pressable>
     </Link>
+  );
+}
+
+/** Two per line (summary-lines: more than 2 people go 2 per line). */
+function pairsOf<T>(xs: readonly T[]): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < xs.length; i += 2) out.push(xs.slice(i, i + 2));
+  return out;
+}
+
+/** One bold summary line under a "ควรรู้" row; wraps, never clips. */
+function SumLine({ testID, children }: { testID: string; children: React.ReactNode }) {
+  const t = useTheme();
+  return (
+    <Text testID={testID} style={{ ...body(t), fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>
+      {children}
+    </Text>
+  );
+}
+
+/** H2 · PR-16: one sale the buyer still owes the farm for — its parts, then Σ from the full total. */
+function OwesKnowRow({ o }: { o: OwesRow }) {
+  const msg = useT();
+  const id = `home-owes-${o.saleId}`;
+  return (
+    <KnowRow
+      testID={id}
+      tone="warn"
+      icon={() => <FarmMateIcon id="finance.otherCost" size={28} />}
+      label={o.buyer ? msg('rp.home.owesBuyer', { date: o.dateText, buyer: o.buyer }) : msg('rp.home.owes', { date: o.dateText })}
+      to={`/v2/sale/${o.saleId}/payment` as Href}
+    >
+      {o.transferSatang > 0 ? (
+        <SumLine testID={`${id}-transfer`}>
+          {`${msg('rp.home.transferPart')} `}
+          <CompactMoney satang={o.transferSatang} />
+        </SumLine>
+      ) : null}
+      {o.cash.map((c) => (
+        <SumLine key={c.workerId} testID={`${id}-cash-${c.workerId}`}>
+          {`${msg('rp.home.cashPart', { name: c.name })} `}
+          <CompactMoney satang={c.satang} />
+        </SumLine>
+      ))}
+      <SumLine testID={`${id}-sum`}>
+        {`${msg('rp.home.sum')} `}
+        <CompactMoney satang={o.totalSatang} />
+      </SumLine>
+    </KnowRow>
   );
 }
 
