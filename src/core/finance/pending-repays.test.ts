@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { projectDebts } from './debts';
 import { OWNER_PAYEE, paymentMarkPayload, paymentTarget } from './payments';
-import { buyerOwes, PENDING_REPAY_SINCE, pendingRepayLines, pickFixPatches } from './pending-repays';
+import { buyerOwes, PENDING_REPAY_SINCE, pendingRepayLines, routeFixWrites } from './pending-repays';
 import { FARM_FUNDS, type DebtPaymentFields, type FinanceEvent, type FinancePayload, type Payer } from './types';
 
 let n = 0;
@@ -112,24 +112,63 @@ describe('the buyer owes the farm (E06-S08 PR-16 · D-87)', () => {
   });
 });
 
-describe('a pick that did not happen (E06-S08 PR-17 · D-87)', () => {
-  const line = (id: string, amountSatang: number, head = `h-${id}`) => ({ id, headEventId: head, amountSatang });
+describe('the repayment money stayed with the worker (E06-S08 PR-17, PR-19 · D-87)', () => {
+  const line = (id: string, amountSatang: number, method: DebtPaymentFields['method'] = 'cash-from-share') => ({
+    id,
+    headEventId: `h-${id}`,
+    fields: { worker: DAENG, creditor: FARM, amountSatang, date: '2026-11-05', note: '', method, saleId: 's1' } as DebtPaymentFields,
+  });
+  let k = 0;
+  const ids = () => `dp-new-${++k}`;
 
-  it('nothing picked → every pick line is voided (the debt comes back in full)', () => {
-    expect(pickFixPatches([line('a', 100000)], 0)).toEqual([{ id: 'a', head: 'h-a', patch: { deleted: true } }]);
+  it('none reached the farm → every route line is voided, nothing new (the debt comes back in full)', () => {
+    expect(routeFixWrites([line('a', 100000)], 0, ids)).toEqual([{ id: 'a', base: 'h-a', payload: { t: 'debt_payment_changed', patch: { deleted: true } } }]);
   });
 
-  it('part picked → the lines are cut from the newest down to what was picked', () => {
-    expect(pickFixPatches([line('a', 60000), line('b', 40000)], 70000)).toEqual([{ id: 'b', head: 'h-b', patch: { amountSatang: 10000 } }]);
-    expect(pickFixPatches([line('a', 60000), line('b', 40000)], 50000)).toEqual([
-      { id: 'b', head: 'h-b', patch: { deleted: true } },
-      { id: 'a', head: 'h-a', patch: { amountSatang: 50000 } },
+  it('part reached the farm → the old lines are voided (kept, struck through, in the history) and one new line holds what came', () => {
+    k = 0;
+    const w = routeFixWrites([line('a', 60000), line('b', 40000)], 70000, ids);
+    expect(w.slice(0, 2)).toEqual([
+      { id: 'a', base: 'h-a', payload: { t: 'debt_payment_changed', patch: { deleted: true } } },
+      { id: 'b', base: 'h-b', payload: { t: 'debt_payment_changed', patch: { deleted: true } } },
     ]);
+    expect(w[2]).toEqual({ id: 'dp-new-1', base: null, payload: { t: 'debt_payment_recorded', fields: { ...line('b', 0).fields, amountSatang: 70000 } } });
   });
 
-  it('picked in full → nothing to write; more than was deducted or not an integer → refused', () => {
-    expect(pickFixPatches([line('a', 100000)], 100000)).toEqual([]);
-    expect(() => pickFixPatches([line('a', 100000)], 100001)).toThrow();
-    expect(() => pickFixPatches([line('a', 100000)], -1)).toThrow();
+  it('works for a buyer-split or transfer line too (the buyer handed it to the worker, PR-19)', () => {
+    expect(routeFixWrites([line('t', 525000, 'transfer-with-owner')], 0, ids)).toHaveLength(1);
+    const w = routeFixWrites([line('c', 325000, 'buyer-split')], 100000, ids);
+    expect(w[1]).toMatchObject({ base: null, payload: { t: 'debt_payment_recorded', fields: { method: 'buyer-split', amountSatang: 100000 } } });
+  });
+
+  it('all of it reached the farm → nothing to write; more than was deducted or not an integer → refused', () => {
+    expect(routeFixWrites([line('a', 100000)], 100000, ids)).toEqual([]);
+    expect(() => routeFixWrites([line('a', 100000)], 100001, ids)).toThrow();
+    expect(() => routeFixWrites([line('a', 100000)], -1, ids)).toThrow();
+  });
+});
+
+describe('review fixes (E06-S08 independent review 2026-11-01)', () => {
+  it('one worker with a buyer-split AND a pick on one sale → one line (one tick, as the payment page), shown as picked', () => {
+    const evs = [pay('m1', { amountSatang: 100000, method: 'buyer-split' }), pay('m2', { amountSatang: 50000, method: 'cash-from-share' })];
+    expect(lines(evs)).toEqual([{ saleId: 's1', date: '2026-11-05', workerId: 'p-daeng', name: 'แดง', satang: 150000, how: 'picked' }]);
+  });
+
+  it('a short repayment-cash tick whose deduction was voided owes nothing; an edited deduction owes against the new amount', () => {
+    const d = pay('dv', { amountSatang: 325000 });
+    const t = tick('s1', 'debt-cash-p-daeng', 325000, 0);
+    const voided = ev('dv', { t: 'debt_payment_changed', patch: { deleted: true } }, d.id);
+    expect(buyerOwes([d, t, voided])).toEqual([]);
+    const cut = ev('dv', { t: 'debt_payment_changed', patch: { amountSatang: 100000 } }, d.id);
+    expect(buyerOwes([d, tick('s1', 'debt-cash-p-daeng', 325000, 80000), cut])).toEqual([{ saleId: 's1', transferSatang: 0, cash: [{ workerId: 'p-daeng', satang: 20000 }], totalSatang: 20000 }]);
+    // cut below what came in → the buyer owes nothing more
+    const cut2 = ev('dv', { t: 'debt_payment_changed', patch: { amountSatang: 50000 } }, d.id);
+    expect(buyerOwes([d, tick('s1', 'debt-cash-p-daeng', 325000, 80000), cut2])).toEqual([]);
+  });
+
+  it('the owner transfer owes against today\'s transfer when the caller knows it (the payment page)', () => {
+    const evs = [...sale(), tick('s1', OWNER_PAYEE, 1968750, 1700000)];
+    expect(buyerOwes(evs, () => true, { ownerTransfer: () => 1800000 })[0].transferSatang).toBe(100000);
+    expect(buyerOwes(evs, () => true, { ownerTransfer: () => 1600000 })).toEqual([]);
   });
 });

@@ -17,9 +17,9 @@
  * longer pending: the gap is the buyer owing the farm, never the worker's debt.
  */
 
-import type { DebtAccount } from './debts';
+import { projectDebts, type DebtAccount } from './debts';
 import { OWNER_PAYEE, paymentStatus } from './payments';
-import type { FinanceEvent } from './types';
+import type { DebtPaymentFields, FinanceEvent, FinancePayload } from './types';
 
 /**
  * Owner Q3 (2026-11-01): sales dated before this day are treated as received —
@@ -58,7 +58,8 @@ export function pendingRepayLines(events: readonly FinanceEvent[], accounts: Rea
     for (const p of a.payments) {
       if (p.deleted || !p.counts || !p.saleId || !isRoute(p.method) || p.date < since) continue;
       const how = HOW[p.method];
-      const key = `${p.saleId}|${a.worker.id}|${how}`;
+      // One tick (debt-cash-<id>) covers buyer-split and picks alike: one line, "picked" if any is a pick (as pay-screen.tsx).
+      const key = `${p.saleId}|${a.worker.id}|${how === 'transfer' ? 'transfer' : 'cash'}`;
       const prev = by.get(key);
       by.set(key, {
         saleId: p.saleId,
@@ -66,7 +67,7 @@ export function pendingRepayLines(events: readonly FinanceEvent[], accounts: Rea
         workerId: a.worker.id,
         name: a.worker.name,
         satang: (prev?.satang ?? 0) + p.amountSatang,
-        how,
+        how: prev?.how === 'picked' ? 'picked' : how,
       });
     }
   }
@@ -86,11 +87,20 @@ export interface BuyerOwes {
 }
 
 /**
- * Per sale, what the buyer still owes the farm (D-87): the short part of every
- * tick that recorded less than it should. Ticks in conflict owe nothing until
- * someone picks (D-30); a cancelled sale owes nothing.
+ * Per sale, what the buyer still owes the farm (D-87): what should have come
+ * in today minus what a tick recorded as received (review 2026-11-01: never
+ * the stale gap at tick time — a deduction voided or cut after the tick moves
+ * it). Repayment cash is measured against the worker's live buyer-split and
+ * pick lines on that sale; the owner's transfer against `ownerTransfer` when
+ * the caller knows today's transfer (the payment page), else against the
+ * ticked amount (the tick then shows "ต้องตรวจใหม่" there). Ticks in conflict
+ * owe nothing until someone picks (D-30); a cancelled sale owes nothing.
  */
-export function buyerOwes(events: readonly FinanceEvent[], saleCounts: (saleId: string) => boolean = () => true): BuyerOwes[] {
+export function buyerOwes(
+  events: readonly FinanceEvent[],
+  saleCounts: (saleId: string) => boolean = () => true,
+  opts: { readonly ownerTransfer?: (saleId: string) => number | undefined } = {},
+): BuyerOwes[] {
   const payees = new Map<string, Set<string>>();
   for (const e of events) {
     if (e.payload.t !== 'payment_mark_set') continue;
@@ -98,16 +108,28 @@ export function buyerOwes(events: readonly FinanceEvent[], saleCounts: (saleId: 
     if (payee !== OWNER_PAYEE && !payee.startsWith('debt-cash-')) continue;
     payees.set(saleId, (payees.get(saleId) ?? new Set()).add(payee));
   }
+  if (!payees.size) return [];
+  const accounts = projectDebts(events, saleCounts);
+  const cashNow = (saleId: string, workerId: string) =>
+    (accounts.get(workerId)?.payments ?? [])
+      .filter((p) => p.saleId === saleId && !p.deleted && p.counts && (p.method === 'buyer-split' || p.method === 'cash-from-share'))
+      .reduce((a, p) => a + p.amountSatang, 0);
   const out: BuyerOwes[] = [];
   for (const [saleId, set] of payees) {
     if (!saleCounts(saleId)) continue;
-    // The amount argument only drives "recheck"; the short part is fixed by the tick itself.
-    const short = (payee: string) => paymentStatus(events, saleId, payee, 0).shortSatang;
-    const transferSatang = set.has(OWNER_PAYEE) ? short(OWNER_PAYEE) : 0;
+    const short = (payee: string, now: number | undefined) => {
+      const st = paymentStatus(events, saleId, payee, 0);
+      if (!st.done || st.receivedSatang === null || !st.shortSatang) return 0;
+      return Math.max(0, (now ?? st.amountAtMarkSatang ?? 0) - st.receivedSatang);
+    };
+    const transferSatang = set.has(OWNER_PAYEE) ? short(OWNER_PAYEE, opts.ownerTransfer?.(saleId)) : 0;
     const cash = [...set]
       .filter((p) => p !== OWNER_PAYEE)
       .sort()
-      .map((p) => ({ workerId: p.slice('debt-cash-'.length), satang: short(p) }))
+      .map((p) => {
+        const workerId = p.slice('debt-cash-'.length);
+        return { workerId, satang: short(p, cashNow(saleId, workerId)) };
+      })
       .filter((c) => c.satang > 0);
     const totalSatang = transferSatang + cash.reduce((a, c) => a + c.satang, 0);
     if (totalSatang > 0) out.push({ saleId, transferSatang, cash, totalSatang });
@@ -115,36 +137,32 @@ export function buyerOwes(events: readonly FinanceEvent[], saleCounts: (saleId: 
   return out.sort((x, y) => x.saleId.localeCompare(y.saleId));
 }
 
-export interface PickLine {
+export interface RouteLine {
   readonly id: string;
   readonly headEventId: string;
-  readonly amountSatang: number;
+  readonly fields: DebtPaymentFields;
 }
 
-export interface PickPatch {
+export interface RouteFixWrite {
   readonly id: string;
-  readonly head: string;
-  readonly patch: { readonly deleted: true } | { readonly amountSatang: number };
+  readonly base: string | null;
+  readonly payload: FinancePayload;
 }
 
 /**
- * PR-17 / D-87: the farm meant to lift the repayment from the worker's own
- * pile (cash-from-share) but lifted only `pickedSatang`. The money is with the
- * worker, so the deduction shrinks to what was picked — written as
- * `debt_payment_changed` on the existing lines (newest cut first; a line cut
- * to nothing is voided, so the history keeps it, struck through). The owner
- * does this on the sale's payment page only (architecture §ติ๊กจ่าย).
+ * PR-17 / PR-19 / D-87: the repayment money stayed with the worker — the farm
+ * lifted less from the worker's pile than it deducted, or the buyer handed it
+ * to the worker. Only `keptSatang` reached the farm, so the deduction becomes
+ * that. Written as events on the sale's payment page only (architecture
+ * §ติ๊กจ่าย): every route line is voided (kept in the history, struck through)
+ * and, when something did come, one new line of the same kind holds it — so
+ * the history shows both the old deduction and the change.
  */
-export function pickFixPatches(lines: readonly PickLine[], pickedSatang: number): PickPatch[] {
-  const total = lines.reduce((a, l) => a + l.amountSatang, 0);
-  if (!Number.isSafeInteger(pickedSatang) || pickedSatang < 0 || pickedSatang > total) throw new Error(`picked must be an integer from 0 to ${total}`);
-  let cut = total - pickedSatang;
-  const out: PickPatch[] = [];
-  for (const l of [...lines].reverse()) {
-    if (cut <= 0) break;
-    const take = Math.min(cut, l.amountSatang);
-    cut -= take;
-    out.push({ id: l.id, head: l.headEventId, patch: take === l.amountSatang ? { deleted: true } : { amountSatang: l.amountSatang - take } });
-  }
+export function routeFixWrites(lines: readonly RouteLine[], keptSatang: number, newId: (prefix: string) => string): RouteFixWrite[] {
+  const total = lines.reduce((a, l) => a + l.fields.amountSatang, 0);
+  if (!Number.isSafeInteger(keptSatang) || keptSatang < 0 || keptSatang > total) throw new Error(`kept must be an integer from 0 to ${total}`);
+  if (keptSatang === total || !lines.length) return [];
+  const out: RouteFixWrite[] = lines.map((l) => ({ id: l.id, base: l.headEventId, payload: { t: 'debt_payment_changed', patch: { deleted: true } } }));
+  if (keptSatang > 0) out.push({ id: newId('dpay-'), base: null, payload: { t: 'debt_payment_recorded', fields: { ...lines[lines.length - 1].fields, amountSatang: keptSatang } } });
   return out;
 }
