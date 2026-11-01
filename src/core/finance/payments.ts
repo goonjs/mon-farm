@@ -18,14 +18,32 @@ export const OWNER_PAYEE = 'owner';
 
 export const paymentTarget = (saleId: string, payee: string) => `payment-${saleId}-${payee}`;
 
-export function paymentMarkPayload(saleId: string, payee: string, done: boolean, amountSatang: number): MarkPayload {
-  return { t: 'payment_mark_set', saleId, payee, done, amountSatang };
+/**
+ * A tick. `receivedSatang` (E06-S08, D-87) records money that came in short:
+ * an integer 0 ≤ received < amount; received in full is stored as no field,
+ * so one value has one form and old ticks read as before.
+ */
+export function paymentMarkPayload(saleId: string, payee: string, done: boolean, amountSatang: number, receivedSatang?: number): MarkPayload {
+  if (receivedSatang === undefined || receivedSatang === amountSatang) return { t: 'payment_mark_set', saleId, payee, done, amountSatang };
+  if (!Number.isSafeInteger(receivedSatang) || receivedSatang < 0 || receivedSatang > amountSatang) {
+    throw new Error(`receivedSatang must be an integer from 0 to ${amountSatang}`);
+  }
+  return { t: 'payment_mark_set', saleId, payee, done, amountSatang, receivedSatang };
 }
+
+/** What a tick says came in: the amount it was ticked at, unless it recorded less. */
+const receivedOf = (p: MarkPayload) => p.receivedSatang ?? p.amountSatang;
+/** Two ticks agree on what came in when both say "in full" or both recorded the same short amount (ticks at different amounts still merge, review #2). */
+const receivedKey = (p: MarkPayload) => (p.receivedSatang === undefined ? 'full' : p.receivedSatang);
 
 export interface PaymentStatus {
   readonly done: boolean;
   /** The amount it was ticked at; null when never ticked. */
   readonly amountAtMarkSatang: number | null;
+  /** What came in (E06-S08): the ticked amount, or less when recorded short; null when not ticked. */
+  readonly receivedSatang: number | null;
+  /** Ticked amount − received: what the buyer still owes the farm on this tick (D-87); 0 when not ticked. */
+  readonly shortSatang: number;
   /** Ticked, but the amount has changed since. */
   readonly recheck: boolean;
   /** Ticked on one phone and unticked on another; nothing counts as paid until someone picks. */
@@ -40,18 +58,21 @@ export function paymentStatus(events: readonly FinanceEvent[], saleId: string, p
   const target = paymentTarget(saleId, payee);
   const mine = events.filter((e) => e.targetId === target && e.payload.t === 'payment_mark_set');
   const heads = headsOf(mine, target);
-  if (!heads.length) return { done: false, amountAtMarkSatang: null, recheck: false, conflict: false, head: null, heads, by: null, at: null };
+  if (!heads.length) return { done: false, amountAtMarkSatang: null, receivedSatang: null, shortSatang: 0, recheck: false, conflict: false, head: null, heads, by: null, at: null };
 
   const evs = heads.map((id) => mine.find((e) => e.id === id)!);
   const head = heads[heads.length - 1];
   const last = evs[evs.length - 1];
   const p = last.payload as MarkPayload;
-  if (evs.some((e) => (e.payload as MarkPayload).done !== p.done)) {
-    return { done: false, amountAtMarkSatang: null, recheck: false, conflict: true, head, heads, by: null, at: null };
+  // Ticked on one phone and unticked on another, or a different amount received (E06-S08 PR-18): money is never last-write-wins (D-30).
+  if (evs.some((e) => (e.payload as MarkPayload).done !== p.done || (p.done && receivedKey(e.payload as MarkPayload) !== receivedKey(p)))) {
+    return { done: false, amountAtMarkSatang: null, receivedSatang: null, shortSatang: 0, recheck: false, conflict: true, head, heads, by: null, at: null };
   }
   return {
     done: p.done,
     amountAtMarkSatang: p.done ? p.amountSatang : null,
+    receivedSatang: p.done ? receivedOf(p) : null,
+    shortSatang: p.done ? p.amountSatang - receivedOf(p) : 0,
     // Any tick not at today's amount needs a recheck, whichever head sorts last (review #2).
     recheck: p.done && evs.some((e) => (e.payload as MarkPayload).amountSatang !== amountSatang),
     conflict: false,

@@ -24,29 +24,43 @@
  * tick (Q5); the transfer says "ส่วนสวน + ↘ คืนหนี้" apart (D-85); unticked
  * repayments carry "รอรับโอน" / "รอรับเงินสด"; a cash-from-share repayment
  * ticks together with that worker's cash (and can be unticked alone, A20).
+ *
+ * E06-S08 (P1, P2 · PR-16, PR-17, PR-20 · D-87): under the owner's transfer
+ * and each buyer-split repayment, "ได้น้อยกว่านี้ ›" records what really came
+ * in (the tick keeps the row amount, plus `receivedSatang`); a short tick
+ * carries "คนซื้อค้างสวน ฿ X". A cash-from-share repayment instead gets
+ * "ไม่ได้หยิบ / หยิบไม่ครบ ›", which shrinks the deduction itself
+ * (`debt_payment_changed`), so the worker's ticks ask for a recheck. ดูที่มา
+ * opens the summary's sources sheet with this sale's คนซื้อค้างสวน.
  */
 
-import { useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { projectAccounts } from '../../../core/finance/accounts';
 import { closeoutPlan, payBlocks, pendingRepays, REPAY_ROUTES, sourcesSheet, type CloseoutPlan } from '../../../core/finance/closeout';
+import { buyerOwes, routeFixWrites } from '../../../core/finance/pending-repays';
 import { compactMoneyParts } from '../../../core/compact-money';
 import { overDeducted, pilesCheck } from '../../../core/finance/deduct';
 import { formatSatang } from '../../../core/finance/money';
 import { OWNER_PAYEE, paymentMarkPayload, paymentStatus, paymentTarget, salePaymentConflicts } from '../../../core/finance/payments';
 import { BANKS } from '../../../core/finance/promptpay';
+import { formatThaiDate } from '../../../core/master';
 import type { DebtPaymentMethod } from '../../../core/finance/types';
 import { canComplete } from '../../../core/sale-status';
 import { useInFlight } from '../../../finance/use-in-flight';
-import { useT } from '../../../i18n';
+import { useSaleCounts } from '../../../finance/use-live-sales';
+import { newId } from '../../../lib/id';
+import { useI18n, useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AlertIcon, AppText, BankIcon, BottomSheet, Button, cardStyle, Check, Chip, ClockIcon, InfoIcon } from '../../../ui';
+import { AlertIcon, AppText, BankIcon, BottomSheet, Button, cardStyle, Check, Chip, ClockIcon, CompactMoney, InfoIcon } from '../../../ui';
+import { PickAmountSheet, ReceivedAmountSheet } from '../../money/received-sheet';
 import type { TapperMoney } from '../../money/sale/use-sale-money';
 import { FarmScreen } from '../../farm/pieces';
 import { Banner, IconLine, markClosing, useSaleView } from '../pieces';
 import { SourcesPill } from './summary-cards';
+import { SourcesSheet } from './summary-sources-sheet';
 import { WarnMark } from './summary-parts';
 import { useShareSplit } from './cash-pieces';
 import { useCloseout } from './use-closeout';
@@ -85,6 +99,17 @@ function PayBody({ bump }: { bump: () => void }) {
   // One money write at a time: a double tap must not write twice (review #4).
   const flight = useInFlight();
   const [sources, setSources] = useState(false);
+  const { era } = useI18n();
+  // E06-S08: the "ได้น้อยกว่านี้" sheet (by payee id) and the pick-fix sheet (by worker id).
+  const [lessFor, setLessFor] = useState<string | null>(null);
+  /** PR-17 / PR-19: the repayment stayed with this worker — picked (from the pile) or handed (the buyer gave it). */
+  const [fixFor, setFixFor] = useState<{ workerId: string; mode: 'picked' | 'handed'; methods: readonly DebtPaymentMethod[] } | null>(null);
+  /** The owner's transfer carried several workers' repayments: whom did the buyer hand it to? */
+  const [chooseFix, setChooseFix] = useState(false);
+  const counts = useSaleCounts();
+  // From the ledger (M10 / PR-19): `?fix=<workerId>&how=<transfer|cash|picked>` opens the fix sheet once.
+  const params = useLocalSearchParams<{ fix?: string; how?: string }>();
+  const [paramDone, setParamDone] = useState(false);
   const shareSplit = useShareSplit();
   const { saleId, state, master, append, saleTitle } = view;
   const title = msg('cop.payPageTitle');
@@ -173,6 +198,58 @@ function PayBody({ bump }: { bump: () => void }) {
   const repayName = transferOn.length === 1 ? transferOn[0].name : '';
   const left = payees.filter((p) => !st(p.id).done).length;
   const src = sourcesSheet(plan, s.grossSatang, s.ownerSatang);
+  // Today's transfer is known here, so the buyer owes against it (review 2026-11-01); cancelled sales owe nothing.
+  const owes = buyerOwes(events, counts, { ownerTransfer: (id) => (id === saleId ? money.ownerTransferSatang : undefined) }).find((o) => o.saleId === saleId);
+  const dateText = state.startedTs === null ? '' : formatThaiDate(state.startedTs, era);
+  const balance = (wid: string) => money.debts.get(wid)?.balanceSatang ?? 0;
+  const routeLines = (wid: string, methods: readonly DebtPaymentMethod[]) => lines(wid).filter((x) => methods.includes(x.method));
+  // The owner's transfer carries every transfer-with-owner repayment: one worker is named, several are chosen from.
+  const transferWorker = transferOn.length === 1 ? { id: transferOn[0].id, name: transferOn[0].name } : null;
+  const transferNames = transferOn.map((w) => w.name).join(msg('co.and'));
+  const buyerName = state.parties?.buyer ?? '';
+
+  const saveLess = (row: Exclude<Row, { kind: 'info' }>, received: number) =>
+    flight.run(async () => {
+      await fin.write(paymentTarget(saleId, row.id), st(row.id).head, paymentMarkPayload(saleId, row.id, true, row.satang, received));
+      setLessFor(null);
+      bump();
+    });
+  const saveFix = (wid: string, methods: readonly DebtPaymentMethod[], kept: number) =>
+    flight.run(async () => {
+      const ls = routeLines(wid, methods).map((x) => ({ id: x.id, headEventId: x.headEventId, fields: x }));
+      for (const w of routeFixWrites(ls, kept, newId)) await fin.write(w.id, w.base, w.payload);
+      closeFix();
+      bump();
+    });
+  /** PR-19: the buyer handed the repayment to the worker — shrink that worker's deduction on its route (D-87). */
+  const handedTo = (wid: string, methods: readonly DebtPaymentMethod[]) => {
+    setLessFor(null);
+    setChooseFix(false);
+    if (routeLines(wid, methods).length) setFixFor({ workerId: wid, mode: 'handed', methods });
+  };
+  const fixAtSale = (row: Exclude<Row, { kind: 'info' }>) => {
+    if (row.kind === 'repay') return handedTo(row.tp.id, ['buyer-split', 'cash-from-share']);
+    if (transferWorker) return handedTo(transferWorker.id, ['transfer-with-owner']);
+    setLessFor(null);
+    if (transferOn.length > 1) setChooseFix(true);
+  };
+  const fromParams: typeof fixFor =
+    !params.fix || paramDone
+      ? null
+      : params.how === 'picked'
+        ? { workerId: params.fix, mode: 'picked', methods: ['cash-from-share'] }
+        : params.how === 'transfer'
+          ? { workerId: params.fix, mode: 'handed', methods: ['transfer-with-owner'] }
+          : params.how === 'cash'
+            ? { workerId: params.fix, mode: 'handed', methods: ['buyer-split', 'cash-from-share'] }
+            : null;
+  const activeFix = fixFor ?? fromParams;
+  /** Close the fix sheet; the ledger's params are spent, so a remount (bump) does not open it again. */
+  const closeFix = () => {
+    setFixFor(null);
+    setParamDone(true);
+    if (params.fix) router.setParams?.({ fix: undefined, how: undefined });
+  };
 
   const cashSub = (tp: TapperMoney) => {
     const w = plan.workers.find((x) => x.id === tp.id);
@@ -197,6 +274,28 @@ function PayBody({ bump }: { bump: () => void }) {
     <View testID={testID} style={{ alignSelf: 'flex-start', backgroundColor: t.color.warnSunk, borderRadius: t.radius.pill, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs }}>
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{text}</Text>
     </View>
+  );
+
+  const owesChip = (satang: number, testID: string) => (
+    <View testID={testID} style={{ alignSelf: 'flex-start', backgroundColor: t.color.warnSunk, borderRadius: t.radius.pill, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs }}>
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, color: t.color.warn }}>
+        {`${msg('rp.pay.owes', { amount: '' }).trim()} `}
+        <CompactMoney satang={satang} color={t.color.warn} />
+      </Text>
+    </View>
+  );
+  /** A small text link under a tick card: its own 48-tall target, outside the checkbox. */
+  const linkUnder = (label: string, testID: string, disabled: boolean, onPress: () => void) => (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      disabled={disabled}
+      accessibilityState={{ disabled }}
+      onPress={onPress}
+      style={{ alignSelf: 'flex-start', minHeight: t.target.min, justifyContent: 'center', paddingHorizontal: t.space.md }}
+    >
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: disabled ? t.color.inkFaint : t.color.action }}>{label}</Text>
+    </Pressable>
   );
 
   const card = (row: Exclude<Row, { kind: 'info' }>) => {
@@ -239,10 +338,18 @@ function PayBody({ bump }: { bump: () => void }) {
       );
     }
     if (ps.recheck) body.push(<IconLine key="re" icon={(c) => <AlertIcon color={c} size={12} />}>{msg('v2s.recheck')}</IconLine>);
+    // E06-S08 P2: what the buyer still owes on this tick (never on a cash-from-share repayment).
+    const receivable = row.kind === 'owner' || (row.kind === 'repay' && !row.picked);
+    if (receivable && ps.done && ps.shortSatang > 0) body.push(owesChip(ps.shortSatang, `pay-owes-${row.id}`));
     const off = locked(row);
+    const link = receivable
+      ? linkUnder(`${msg('rp.pay.less')} ›`, `pay-less-${row.id}`, off, () => setLessFor(row.id))
+      : row.kind === 'repay' && row.picked
+        ? linkUnder(`${msg('rp.pay.pickFix')} ›`, `pay-pickfix-${row.id}`, off, () => setFixFor({ workerId: row.tp.id, mode: 'picked', methods: ['cash-from-share'] }))
+        : null;
     return (
+      <View key={row.id} style={{ gap: t.space.xxs }}>
       <Pressable
-        key={row.id}
         testID={`tick-${row.id}`}
         accessibilityRole="checkbox"
         aria-checked={ps.done}
@@ -274,16 +381,10 @@ function PayBody({ bump }: { bump: () => void }) {
           {baht(row.satang)}
         </Text>
       </Pressable>
+      {link}
+      </View>
     );
   };
-
-  const check = (ok: boolean, label: string, testID: string) => (
-    <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
-      {ok ? <Check color={t.color.accept} size={12} /> : <WarnMark color={t.color.warn} size={14} />}
-      <AppText style={{ flex: 1 }}>{label}</AppText>
-      <AppText variant="bodySm" style={{ color: ok ? t.color.accept : t.color.warn, fontWeight: t.font.weight.bold }}>{msg(ok ? 'cop.srcYes' : 'cop.srcNo')}</AppText>
-    </View>
-  );
 
   return (
     <FarmScreen
@@ -303,17 +404,57 @@ function PayBody({ bump }: { bump: () => void }) {
           )}
         </View>
       }
-      overlay={
-        <BottomSheet open={sources} onClose={() => setSources(false)} title={msg('cop.srcTitle')} testID="pay-sources" closeLabel={msg('cop.close')}>
-          {check(src.shares.ok, msg('cop.srcShares', { n: '①' }), 'pay-src-shares')}
-          {check(src.debt.ok, msg('cop.srcDebt', { dir: '↘', n: '②' }), 'pay-src-debt')}
-          {check(src.rounding.ok, msg('cop.srcRound', { n: '③' }), 'pay-src-round')}
-          {check(src.paid.ok, msg('cop.srcPaid'), 'pay-src-paid')}
-          <Button testID="pay-sources-close" onPress={() => setSources(false)}>
-            {msg('cop.close')}
-          </Button>
-        </BottomSheet>
-      }
+      overlay={(() => {
+        if (sources) return <SourcesSheet src={src} plan={plan} saleTotalSatang={s.grossSatang} owes={owes} onClose={() => setSources(false)} />;
+        const lessRow = lessFor ? payees.find((p) => p.id === lessFor) : undefined;
+        if (lessRow && lessRow.kind !== 'cash') {
+          const who = lessRow.kind === 'repay' ? { id: lessRow.tp.id, name: lessRow.tp.name } : transferWorker;
+          // Owner row: nobody's repayment on the transfer → no "gave it to …"; several → named in the chooser.
+          const name = who ? who.name : transferOn.length > 1 ? transferNames : null;
+          return (
+            <ReceivedAmountSheet
+              kind={lessRow.kind === 'owner' ? 'transfer' : 'cash'}
+              name={name}
+              dateText={dateText}
+              expectedSatang={lessRow.satang}
+              debtSatang={who ? balance(who.id) : 0}
+              buyer={lessRow.kind === 'owner' ? buyerName : undefined}
+              names={lessRow.kind === 'owner' ? transferNames : undefined}
+              onSave={(received) => void saveLess(lessRow, received)}
+              onFixAtSale={() => fixAtSale(lessRow)}
+              onClose={() => setLessFor(null)}
+            />
+          );
+        }
+        if (chooseFix) {
+          return (
+            <BottomSheet open onClose={() => setChooseFix(false)} title={msg('rp.fix.choose')} testID="pay-fix-choose" closeLabel={msg('rp.sheet.close')}>
+              <View style={{ gap: t.space.sm }}>
+                {transferOn.map((w) => (
+                  <Button key={w.id} testID={`pay-fix-choose-${w.id}`} size="large" onPress={() => handedTo(w.id, ['transfer-with-owner'])}>
+                    {w.name}
+                  </Button>
+                ))}
+              </View>
+            </BottomSheet>
+          );
+        }
+        const fixTp = activeFix ? money.tappers.find((tp) => tp.id === activeFix.workerId) : undefined;
+        if (activeFix && fixTp && routeLines(fixTp.id, activeFix.methods).length) {
+          return (
+            <PickAmountSheet
+              mode={activeFix.mode}
+              name={fixTp.name}
+              dateText={dateText}
+              deductedSatang={routeLines(fixTp.id, activeFix.methods).reduce((a, x) => a + x.amountSatang, 0)}
+              debtNowSatang={balance(fixTp.id)}
+              onSave={(kept) => void saveFix(fixTp.id, activeFix.methods, kept)}
+              onClose={closeFix}
+            />
+          );
+        }
+        return null;
+      })()}
     >
       <View testID="pay-step" style={{ gap: t.space.xs }}>
         <AppText variant="bodySm" style={{ fontWeight: t.font.weight.bold }}>{msg('cop.step')}</AppText>

@@ -6,12 +6,18 @@
  *
  * Lines with party 'farm' are the farm's side ("สวน"); in ② a farm ↗ line
  * carries the tapper's name.
+ *
+ * E06-S08 (P2 · PR-20, D-87): given `owes` (the payment page passes its
+ * sale's), money that came in short adds "ได้จริง" and "คนซื้อค้างสวน" under
+ * the paid Σ, so ได้จริง + คนซื้อค้างสวน = ยอดขาย to the satang. The summary
+ * (before close) passes nothing and reads as before.
  */
 
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import type { CloseoutPlan, SourcesSheet as Sources } from '../../../core/finance/closeout';
+import type { BuyerOwes } from '../../../core/finance/pending-repays';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, BottomSheet, cardStyle, Check } from '../../../ui';
@@ -46,10 +52,31 @@ function Box({ n, title, ok, okText, children, testID, tint }: { n?: number; tit
   );
 }
 
-export function SourcesSheet({ src, plan, saleTotalSatang, onClose }: { src: Sources; plan: CloseoutPlan; saleTotalSatang: number; onClose: () => void }) {
+export function SourcesSheet({
+  src,
+  plan,
+  saleTotalSatang,
+  owes,
+  onClose,
+}: {
+  src: Sources;
+  plan: CloseoutPlan;
+  saleTotalSatang: number;
+  /** What the buyer still owes the farm on this sale (E06-S08); absent = nothing shown. */
+  owes?: BuyerOwes;
+  onClose: () => void;
+}) {
   const t = useTheme();
   const msg = useT();
   const allOk = src.shares.ok && src.debt.ok && src.rounding.ok && src.paid.ok;
+  const paidSum = src.paid.lines.reduce((a, l) => a + l.satang, 0);
+  const short = owes && owes.totalSatang > 0 ? owes : null;
+  const owesDetail = short
+    ? [
+        ...(short.transferSatang > 0 ? [msg('rp.src.owesTransfer', { amount: baht(short.transferSatang) })] : []),
+        ...short.cash.map((c) => msg('rp.src.owesCash', { name: plan.workers.find((w) => w.id === c.workerId)?.name ?? '', amount: baht(c.satang) })),
+      ].join(' · ')
+    : '';
   const netted = src.debt.nettedSatang > 0;
   const debtLabel = (l: Sources['debt']['lines'][number]) => {
     if (l.party === 'worker') return `${l.name} ${MARK[l.way]} ${l.way === 'in' ? msg('co.src.payDebt') : msg('co.src.gotBack')}`;
@@ -108,13 +135,22 @@ export function SourcesSheet({ src, plan, saleTotalSatang, onClose }: { src: Sou
             ) : null}
           </View>
         ))}
-        <Line strong tone={t.color.ink} label={`${MARK.sum} ${msg('co.src.sum')}`} value={baht(src.paid.lines.reduce((a, l) => a + l.satang, 0))} />
+        <Line strong tone={t.color.ink} label={`${MARK.sum} ${msg('co.src.sum')}`} value={baht(paidSum)} />
+        {short ? (
+          <>
+            <Line testID="co-src-received" label={msg('rp.src.received')} value={baht(paidSum - short.totalSatang)} />
+            <View testID="co-src-owes">
+              <Line strong tone={t.color.warn} valueTone={t.color.warn} label={msg('rp.src.owes')} value={baht(short.totalSatang)} />
+              <AppText testID="co-src-owes-detail" variant="bodySm" style={{ color: t.color.inkSoft }}>{owesDetail}</AppText>
+            </View>
+          </>
+        ) : null}
       </Box>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, backgroundColor: allOk ? t.color.acceptSunk : t.color.warnSunk, borderRadius: t.radius.lg, padding: t.space.md }}>
         {allOk ? <Check color={t.color.accept} size={12} /> : <WarnMark color={t.color.warn} size={16} />}
-        <AppText style={{ flex: 1, fontWeight: t.font.weight.bold }}>
-          {allOk ? msg('co.src.allOk') : msg(plan.tally.diffSatang < 0 ? 'co.tally.short' : 'co.tally.over', { amount: baht(Math.abs(plan.tally.diffSatang)) })}
+        <AppText testID={allOk && short ? 'co-src-equation' : undefined} style={{ flex: 1, fontWeight: t.font.weight.bold }}>
+          {allOk && short ? msg('rp.src.equation') : allOk ? msg('co.src.allOk') : msg(plan.tally.diffSatang < 0 ? 'co.tally.short' : 'co.tally.over', { amount: baht(Math.abs(plan.tally.diffSatang)) })}
         </AppText>
       </View>
       {/* the sale total, for the eye: the paid Σ above must equal it */}
