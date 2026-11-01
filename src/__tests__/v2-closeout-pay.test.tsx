@@ -13,6 +13,10 @@ import { wrap } from '../test/render';
 import { CloseoutPayScreen } from '../v2/sale/closeout/pay-screen';
 import { tokens } from '../../design/tokens';
 
+// Each case renders whole close-out screens and writes to the finance log: 1–2 s here, 3–4× slower on
+// a CI runner, where jest's 5 s default timed out a first case and the shared fixture failed the rest.
+jest.setTimeout(20_000);
+
 /**
  * E05-S11 · จ่ายเงิน · ปิดการขาย (CO-10, CO-25; mockup A9, A19, A20). The
  * deductions are already confirmed (recorded), so these seed the finance log

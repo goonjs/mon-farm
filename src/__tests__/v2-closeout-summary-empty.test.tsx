@@ -11,6 +11,10 @@ import { wrap } from '../test/render';
 import { clearDraft } from '../v2/sale/closeout/use-closeout';
 import { CloseoutSummaryScreen } from '../v2/sale/closeout/summary-screen';
 
+// Each case renders whole close-out screens and writes to the finance log: 1–2 s here, 3–4× slower on
+// a CI runner, where jest's 5 s default timed out a first case and the shared fixture failed the rest.
+jest.setTimeout(20_000);
+
 /**
  * E05-S11 · สรุปจ่ายเงิน with nothing recorded (mockup A0): no debts, the farm
  * owes no one. Both cards ask; no tapper card has a debt row.

@@ -19,6 +19,10 @@ import { CloseoutSummaryScreen } from '../v2/sale/closeout/summary-screen';
 import { clearDraft, updateDraft } from '../v2/sale/closeout/use-closeout';
 import { clearClosing } from '../v2/sale/pieces';
 
+// Each case renders whole close-out screens and writes to the finance log: 1–2 s here, 3–4× slower on
+// a CI runner, where jest's 5 s default timed out a first case and the shared fixture failed the rest.
+jest.setTimeout(20_000);
+
 /**
  * E05-S11 · "ไม่เปลี่ยน (ต้องมี test พิสูจน์)": every money rule the old
  * settlement / tally / payment pages proved (v2-sale-deduct, -money,

@@ -16,6 +16,10 @@ import { CloseoutPayScreen } from '../v2/sale/closeout/pay-screen';
 import { CloseoutSummaryScreen } from '../v2/sale/closeout/summary-screen';
 import { clearDraft, updateDraft } from '../v2/sale/closeout/use-closeout';
 
+// Each case renders whole close-out screens and writes to the finance log: 1–2 s here, 3–4× slower on
+// a CI runner, where jest's 5 s default timed out a first case and the shared fixture failed the rest.
+jest.setTimeout(20_000);
+
 /**
  * E05-S11 re-review 2 (B1, N2, N3, N5) on the real pages. Owner 2026-11-01
  * (A): two phones confirming the same sale offline both count — the

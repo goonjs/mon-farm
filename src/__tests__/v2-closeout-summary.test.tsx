@@ -14,6 +14,10 @@ import { wrap } from '../test/render';
 import { clearDraft } from '../v2/sale/closeout/use-closeout';
 import { CloseoutSummaryScreen } from '../v2/sale/closeout/summary-screen';
 
+// Each case renders whole close-out screens and writes to the finance log: 1–2 s here, 3–4× slower on
+// a CI runner, where jest's 5 s default timed out a first case and the shared fixture failed the rest.
+jest.setTimeout(20_000);
+
 /**
  * E05-S11 · สรุปจ่ายเงิน, the story's example (mockup A1–A5, A8, A22–A26):
  * ขาย 28,875.00 · แดง ส่วนแบ่ง 9,187.50, หนี้ 6,000 / 5,790 / 4,000 ผ่อนงวดละ

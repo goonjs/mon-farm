@@ -15,6 +15,10 @@ import { BuyerViewScreen, FitAmount } from '../v2/sale/closeout/buyer-view-scree
 import { CloseoutCashScreen } from '../v2/sale/closeout/cash-screen';
 import { updateDraft } from '../v2/sale/closeout/use-closeout';
 
+// Each case renders whole close-out screens and writes to the finance log: 1–2 s here, 3–4× slower on
+// a CI runner, where jest's 5 s default timed out a first case and the shared fixture failed the rest.
+jest.setTimeout(20_000);
+
 /**
  * E05-S11 · จัดเงินสดกับคนรับซื้อยาง (CO-19, CO-23, CO-24; A6, A11, A13, A17)
  * and ให้คนรับซื้อดู (CO-20; A7, A12, A18). Nothing is recorded yet: every

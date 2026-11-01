@@ -14,6 +14,10 @@ import { CloseoutPayScreen } from '../v2/sale/closeout/pay-screen';
 import { CloseoutSummaryScreen } from '../v2/sale/closeout/summary-screen';
 import { clearDraft, updateDraft } from '../v2/sale/closeout/use-closeout';
 
+// Each case renders whole close-out screens and writes to the finance log: 1–2 s here, 3–4× slower on
+// a CI runner, where jest's 5 s default timed out a first case and the shared fixture failed the rest.
+jest.setTimeout(20_000);
+
 /**
  * E05-S10 (owner 2026-10-27) on the E05-S11 pages: a sale entered for an
  * earlier day deducts part of a debt dated later — what it leaves is still
