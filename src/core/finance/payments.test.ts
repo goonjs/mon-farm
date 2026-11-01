@@ -21,6 +21,8 @@ describe('separate payment statuses (E05-S05 · SET-6)', () => {
     expect(paymentStatus([a], 's1', 'person-daeng', 3486000)).toEqual({
       done: true,
       amountAtMarkSatang: 3486000,
+      receivedSatang: 3486000,
+      shortSatang: 0,
       recheck: false,
       conflict: false,
       head: a.id,
@@ -72,5 +74,46 @@ describe('separate payment statuses (E05-S05 · SET-6)', () => {
     expect(paymentStatus([a, b], 's1', 'person-daeng', 3486000).conflict).toBe(true);
     const c = ev(T, { ...paymentMarkPayload('s1', 'person-daeng', false, 3486000), alsoBasedOn: [a.id] }, b.id);
     expect(paymentStatus([a, b, c], 's1', 'person-daeng', 3486000)).toMatchObject({ conflict: false, done: false, heads: [c.id] });
+  });
+});
+
+describe('received amount on a tick (E06-S08 PR-15/PR-18 · D-87)', () => {
+  const O = paymentTarget('s1', 'owner');
+
+  it('no receivedSatang = received in full (old ticks read as before)', () => {
+    const a = ev(O, paymentMarkPayload('s1', 'owner', true, 1968750));
+    expect(a.payload).not.toHaveProperty('receivedSatang');
+    expect(paymentStatus([a], 's1', 'owner', 1968750)).toMatchObject({ done: true, receivedSatang: 1968750, shortSatang: 0 });
+  });
+
+  it('received less → the short part is what the buyer still owes the farm', () => {
+    const a = ev(O, paymentMarkPayload('s1', 'owner', true, 1968750, 1700000));
+    expect(paymentStatus([a], 's1', 'owner', 1968750)).toMatchObject({ done: true, receivedSatang: 1700000, shortSatang: 268750 });
+  });
+
+  it('0 = recorded as not received at all', () => {
+    const a = ev(paymentTarget('s1', 'debt-cash-person-daeng'), paymentMarkPayload('s1', 'debt-cash-person-daeng', true, 325000, 0));
+    expect(paymentStatus([a], 's1', 'debt-cash-person-daeng', 325000)).toMatchObject({ done: true, receivedSatang: 0, shortSatang: 325000 });
+  });
+
+  it('received ≥ amount is stored as "full" (no field); negative or fractional is refused', () => {
+    expect(paymentMarkPayload('s1', 'owner', true, 1000, 1000)).not.toHaveProperty('receivedSatang');
+    expect(() => paymentMarkPayload('s1', 'owner', true, 1000, 1200)).toThrow();
+    expect(() => paymentMarkPayload('s1', 'owner', true, 1000, -1)).toThrow();
+    expect(() => paymentMarkPayload('s1', 'owner', true, 1000, 1.5)).toThrow();
+  });
+
+  it('not ticked → nothing received, nothing short', () => {
+    expect(paymentStatus([], 's1', 'owner', 1000)).toMatchObject({ receivedSatang: null, shortSatang: 0 });
+  });
+
+  it('two phones record a different received amount → conflict, never the last head silently (PR-18)', () => {
+    const a = ev(O, paymentMarkPayload('s1', 'owner', true, 1968750), null, 'dev-a');
+    const b = ev(O, paymentMarkPayload('s1', 'owner', true, 1968750, 1700000), null, 'dev-b');
+    expect(paymentStatus([a, b], 's1', 'owner', 1968750)).toMatchObject({ conflict: true, done: false });
+    expect(salePaymentConflicts([a, b], 's1')).toEqual(['owner']);
+    // The same received amount from both merges.
+    const c = ev(O, paymentMarkPayload('s1', 'owner', true, 1968750, 1700000), null, 'dev-c');
+    expect(paymentStatus([b, c], 's1', 'owner', 1968750)).toMatchObject({ conflict: false, done: true, shortSatang: 268750 });
   });
 });
