@@ -115,6 +115,14 @@ export interface CloseoutWorkerDraft {
   readonly totalSatang?: number | null;
   readonly nettingSatang?: number;
   readonly route?: RepayRoute;
+  /**
+   * Owner 2026-11-01, a double only: the owner's own choice in the deduct
+   * sheet — 'one' (✓ on one device's amount, or an amount typed) or 'both'
+   * ("หักทั้งสอง" then ✓). Set ONLY by that sheet's ✓ (review 3, B1): amounts in
+   * the draft alone (the owed sheet's netting, keys typed then closed) never
+   * clear a double.
+   */
+  readonly doubleChoice?: 'one' | 'both';
 }
 
 export type ProposalReason = 'plan' | 'all' | 'cut';
@@ -157,7 +165,7 @@ export interface CloseoutWorker {
   readonly devices: number;
   /** Lines from two or more devices' confirms: a double deduction (owner 2026-11-01 (A)). */
   readonly doubled: boolean;
-  /** Doubled, and the owner has not yet set this worker's amount in the deduct sheet: confirm stays off. */
+  /** Doubled, and the owner has not yet chosen one / both in the deduct sheet (`doubleChoice`): confirm stays off. */
   readonly doubleOpen: boolean;
   /**
    * Owner 2026-11-01, doubled only (else null): the deduct sheet proposes
@@ -165,6 +173,12 @@ export interface CloseoutWorker {
    * differ) — ✓ unchanged deducts that — and "หักทั้งสอง" sets `both` (the sum).
    */
   readonly doublePick: { readonly one: DeductAmounts; readonly both: DeductAmounts } | null;
+  /**
+   * Review 3 (NB1), doubled only: why the sum (`doublePick.both`) cannot be
+   * deducted — over what can be deducted (cap of that set) or netting over what
+   * the farm owes; null when it can (or not doubled). "หักทั้งสอง" is off then.
+   */
+  readonly doubleBothProblem: { readonly problem: Exclude<DeductProblem, 'nothing'>; readonly capSatang: number } | null;
 }
 
 /** CO-5 shortcuts. half = cap / 2 floored to whole baht. */
@@ -268,10 +282,14 @@ function workerDraft(w: CloseoutWorkerInput, d: CloseoutWorkerDraft | undefined,
     nettingSatang: 0,
   });
   const doublePick = doubled && rec ? { one: w.oneDevice ?? fresh(), both: { totalSatang: rec.totalSatang, nettingSatang: rec.nettingSatang } } : null;
-  // The owner "fixed" a double by setting the amount in the deduct sheet (its ✓ sets one device's set even when unchanged).
-  const touched = !!d && (d.totalSatang != null || d.nettingSatang !== undefined);
+  const bothSheet = doublePick
+    ? deductSheet({ balanceSatang: w.balanceSatang, shareSatang: w.shareSatang, owedBackSatang: w.owedBackSatang, planPerSaleSatang: w.planPerSaleSatang, totalSatang: doublePick.both.totalSatang, nettingSatang: doublePick.both.nettingSatang, editing: true })
+    : null;
+  const doubleBothProblem = bothSheet && bothSheet.problem !== null && bothSheet.problem !== 'nothing' ? { problem: bothSheet.problem, capSatang: bothSheet.capSatang } : null;
+  // Review 3 (B1): only the owner's one / both choice in the deduct sheet (its ✓) fixes a double — never amounts alone.
+  const chosen = doubled && !!d?.doubleChoice;
   const dirty = rec
-    ? (doubled && touched) || rec.totalSatang !== sheet.totalSatang || rec.nettingSatang !== sheet.nettingSatang || (sheet.routeSatang > 0 && (recRoute !== sheet.routeSatang || rec.route !== route))
+    ? chosen || rec.totalSatang !== sheet.totalSatang || rec.nettingSatang !== sheet.nettingSatang || (sheet.routeSatang > 0 && (recRoute !== sheet.routeSatang || rec.route !== route))
     : sheet.totalSatang > 0;
   // D-60: cash = share + netting − deduction (route 1 is lifted out of it later, so it is in the deduction too).
   const cashBeforeSatang = workerCash({
@@ -292,8 +310,9 @@ function workerDraft(w: CloseoutWorkerInput, d: CloseoutWorkerDraft | undefined,
     hasDebt: balance > 0 || (rec !== null && rec.totalSatang > 0),
     devices,
     doubled,
-    doubleOpen: doubled && !touched,
+    doubleOpen: doubled && !chosen,
     doublePick,
+    doubleBothProblem,
   };
 }
 
@@ -341,6 +360,7 @@ export function closeoutPlan(input: CloseoutInput): CloseoutPlan {
       doubled: x.doubled,
       doubleOpen: x.doubleOpen,
       doublePick: x.doublePick,
+      doubleBothProblem: x.doubleBothProblem,
     };
   });
   const by = (route: RepayRoute) => sumOf(workers.filter((w) => w.route === route).map((w) => w.routeSatang));

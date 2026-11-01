@@ -9,17 +9,20 @@
  *
  * A double (owner 2026-11-01): the sheet opens on ONE device's amount
  * (`doublePick.one`), so ✓ unchanged deducts that; "หักทั้งสอง" sets the sum.
+ * Opening writes nothing (review 3, NB5): the one set is shown through
+ * `co.preview` until a key commits it; only ✓ records the owner's choice
+ * (`doubleChoice`), the one thing that clears the double (B1).
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { quickAmounts, type CloseoutWorker, type DebtPiece } from '../../../core/finance/closeout';
+import { quickAmounts, type CloseoutWorker, type DeductAmounts, type DebtPiece } from '../../../core/finance/closeout';
 import { moneyTextStep, pressKey, startEntry, viewEntry, entryToSatang, type EntryConfig, type EntryKey, type EntryState } from '../../../core/number-entry';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, BottomSheet, Check, CTA, NumberPad } from '../../../ui';
-import type { Closeout } from './use-closeout';
+import type { Closeout, CloseoutDraft } from './use-closeout';
 import { addId, baht, MARK, netSet, shortBaht, WarnMark, withWorker } from './summary-parts';
 import { usePieceName } from './summary-debt-sheet';
 
@@ -31,28 +34,34 @@ const rawOf = (satang: number) => (satang % 100 === 0 ? String(satang / 100) : `
 
 type Box = 'total' | 'net';
 
-export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; w: CloseoutWorker; pieces: readonly DebtPiece[]; /** The farm owes this tapper (CO-7: the link shows only then). */ canNet: boolean; onClose: () => void }) {
+export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose }: { co: Closeout; w: CloseoutWorker; pieces: readonly DebtPiece[]; /** The farm owes this tapper (CO-7: the link shows only then). */ canNet: boolean; onClose: () => void }) {
   const t = useTheme();
   const msg = useT();
   const pieceName = usePieceName();
   // What to put back when the sheet is closed without ✓.
-  const [before] = useState(() => ({ worker: co.draft.workers[w.id], choice: co.draft.owedChoice[w.id] }));
-  // An open double starts from one device's set, not the sum the two devices wrote.
-  const [start] = useState(() => (w.doubleOpen && w.doublePick ? w.doublePick.one : { totalSatang: w.totalSatang, nettingSatang: w.nettingSatang }));
-  const [entry, setEntry] = useState<EntryState>(() => startEntry(rawOf(start.totalSatang)));
+  const [before] = useState(() => ({ worker: co.draft.workers[given.id], choice: co.draft.owedChoice[given.id] }));
+  // An open double starts from one device's set, not the sum the two devices wrote — shown, not written (NB5).
+  const [pending, setPending] = useState<DeductAmounts | null>(() => (given.doubleOpen && given.doublePick ? given.doublePick.one : null));
+  const seen = pending && co.preview ? co.preview(given.id, pending) : null;
+  /** The worker as the sheet shows it: the plan's, or the one set's preview while nothing is typed yet. */
+  const w = seen?.w ?? given;
+  const pieces = seen?.pieces ?? givenPieces;
+  const [entry, setEntry] = useState<EntryState>(() => startEntry(rawOf(w.totalSatang)));
   // A23: one pad, one box typed into at a time; the netting box takes the pad only when tapped.
   const [active, setActive] = useState<Box>('total');
-  const [netEntry, setNetEntry] = useState<EntryState>(() => startEntry(rawOf(start.nettingSatang)));
-  useEffect(() => {
-    // The draft follows the proposal, so the cash and debt-left lines are the one set's; closing without ✓ puts `before` back.
-    if (w.doubleOpen && w.doublePick) co.update((d) => withWorker(d, w.id, start));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on open
+  const [netEntry, setNetEntry] = useState<EntryState>(() => startEntry(rawOf(w.nettingSatang)));
+  /** The draft with the shown one set under it, so the first key or chip writes on top of what is on screen. */
+  const base = (d: CloseoutDraft) => (pending ? withWorker(d, w.id, pending) : d);
+  const edit = (f: (d: CloseoutDraft) => CloseoutDraft) => {
+    co.update((d) => f(base(d)));
+    setPending(null);
+  };
 
-  const setTotal = (satang: number) => co.update((d) => withWorker(d, w.id, { totalSatang: satang }));
+  const setTotal = (satang: number) => edit((d) => withWorker(d, w.id, { totalSatang: satang }));
   /** Netting set to an amount (0 removes it): core's rule, then the deduction box shows the new deduction. */
   const net = (satang: number) => {
     let total = w.totalSatang;
-    co.update((d) => {
+    edit((d) => {
       const next = netSet(d, w, satang);
       total = next.workers[w.id]?.totalSatang ?? w.totalSatang;
       return next;
@@ -71,7 +80,7 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
       const v = entryToSatang(next.raw);
       if (v != null && v > 0 && v <= w.netCapSatang) {
         let total = w.totalSatang;
-        co.update((d) => {
+        edit((d) => {
           const nd = netSet(d, w, v);
           total = nd.workers[w.id]?.totalSatang ?? w.totalSatang;
           return nd;
@@ -84,11 +93,11 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
     setEntry(next);
     setTotal(entryToSatang(next.raw) ?? 0);
   };
-  /** "หักทั้งสอง": the sum both devices wrote, netting included — chosen on purpose only. */
+  /** "หักทั้งสอง": the sum both devices wrote, netting included — chosen on purpose only (✓ records the choice). */
   const both = () => {
     const b = w.doublePick?.both;
-    if (!b) return;
-    co.update((d) => withWorker(d, w.id, b));
+    if (!b || w.doubleBothProblem) return; // NB1: never the sum when it cannot be deducted
+    edit((d) => withWorker(d, w.id, b));
     setEntry(startEntry(rawOf(b.totalSatang)));
     setNetEntry(startEntry(rawOf(b.nettingSatang)));
     setActive('total');
@@ -118,9 +127,11 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
   const blocked = w.invalid || netProblem !== null;
   const ok = () => {
     if (blocked) return;
+    const pick = w.doublePick;
+    const choice = pick && w.totalSatang === pick.both.totalSatang && w.nettingSatang === pick.both.nettingSatang ? ('both' as const) : ('one' as const);
     co.update((d) => ({
-      // A double (two devices' lines): ✓ sets the amount shown (one device's, unless หักทั้งสอง) — confirm then writes it as one set.
-      ...(w.doubled ? withWorker(d, w.id, { totalSatang: w.totalSatang }) : d),
+      // A double (two devices' lines): ✓ records the owner's choice with the amount shown (one device's, unless หักทั้งสอง) — confirm then writes it as one set.
+      ...(w.doubled ? withWorker(d, w.id, { totalSatang: w.totalSatang, nettingSatang: w.nettingSatang, doubleChoice: choice }) : d),
       debtChecked: addId(d.debtChecked, w.id),
       ...(w.nettingSatang > 0 ? { owedChecked: addId(d.owedChecked, w.id), owedChoice: { ...d.owedChoice, [w.id]: 'net' as const } } : {}),
     }));
@@ -233,16 +244,33 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.sm }}>
           {box('total', 'co-amount', totalView, w.invalid)}
           {netted ? box('net', 'co-net-field', netView, netProblem !== null) : null}
-          {/* owner 2026-11-01: the doubled sum only on purpose, beside the box (the pad and ✓ stay on screen) */}
-          {w.doublePick
-            ? chip(
-                'co-double-both',
-                msg('co.double.both', { amount: shortBaht(w.doublePick.both.totalSatang) }),
-                both,
-                w.totalSatang === w.doublePick.both.totalSatang && w.typedNettingSatang === w.doublePick.both.nettingSatang,
-                t.color.warn,
-              )
-            : null}
+          {/* owner 2026-11-01: a double says so beside the box, with the doubled sum on purpose only (the pad and ✓ stay on screen) */}
+          {w.doublePick ? (
+            <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 130, gap: t.space.xxs, alignItems: 'flex-end' }}>
+              <View testID="co-double-warn" style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs, alignSelf: 'stretch', justifyContent: 'flex-end' }}>
+                <WarnMark color={t.color.warn} size={13} />
+                <AppText variant="bodySm" style={{ flexShrink: 1, color: t.color.warn, fontWeight: t.font.weight.bold }}>{msg('co.double.sheet', { n: w.devices })}</AppText>
+              </View>
+              {w.doubleBothProblem ? (
+                // NB1: the sum cannot be deducted — the reason instead of the button
+                <AppText testID="co-double-both-why" variant="bodySm" style={{ color: t.color.inkSoft, textAlign: 'right' }}>
+                  {msg('co.double.bothNo', {
+                    why: msg(w.doubleBothProblem.problem === 'net-range' ? 'co.double.overNet' : 'co.double.overCap', {
+                      amount: shortBaht(w.doubleBothProblem.problem === 'net-range' ? w.netCapSatang : w.doubleBothProblem.capSatang),
+                    }),
+                  })}
+                </AppText>
+              ) : (
+                chip(
+                  'co-double-both',
+                  msg('co.double.both', { amount: shortBaht(w.doublePick.both.totalSatang) }),
+                  both,
+                  w.totalSatang === w.doublePick.both.totalSatang && w.typedNettingSatang === w.doublePick.both.nettingSatang,
+                  t.color.warn,
+                )
+              )}
+            </View>
+          ) : null}
         </View>
         {w.invalid ? (
           <AppText testID="co-cap" accessibilityLiveRegion="polite" style={{ color: t.color.reject, fontWeight: t.font.weight.bold, textAlign: 'right' }}>
@@ -271,7 +299,6 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
         ) : null}
 
         {co.mixed?.has(w.id) ? <MergeWarn testID="co-merge-warn" /> : null}
-        {w.doubled ? <MergeWarn testID="co-double-warn" text={msg('co.double.sheet', { n: w.devices })} /> : null}
 
         <NumberPad variant="money" testID="co-pad" onKey={press} onDone={ok} doneDisabled={blocked} />
         <CTA testID="co-deduct-ok" disabled={blocked} icon={(c) => <Check color={c} />} onPress={ok}>

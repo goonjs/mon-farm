@@ -4,6 +4,9 @@
  * "ไว้ก่อน" (default) or "↗ หักกลบกับหนี้{ชื่อ}", which raises that tapper's
  * deduction by the amount up to the cap. A tapper without debt only has
  * "ไว้ก่อน". "ถูกต้อง" checks the card; closing without it puts the draft back.
+ * A double deduction still open (review 3, B1): the choice waits for the
+ * deduct sheet's one / both — shown as the recorded lines stand, off, with
+ * "แก้หักซ้ำที่แถวหักหนี้ของ{ชื่อ}ก่อน".
  */
 
 import { useState } from 'react';
@@ -46,19 +49,23 @@ export function OwedSheet({ co, people, onAdd, onClose }: { co: Closeout; people
       <AppText testID="co-owed-sub" variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.owed.sub')}</AppText>
       {people.map((p) => {
         const w = p.w;
-        const canNet = !!w && w.hasDebt && w.netCapSatang > 0;
-        const netted = !!w && w.nettingSatang > 0;
+        // B1: a double still open nets nothing from here; the recorded lines' netting is what shows (S3 nets over what is owed).
+        const waiting = !!w && w.doubleOpen;
+        const canNet = !!w && w.hasDebt && (w.netCapSatang > 0 || waiting);
+        const netted = !!w && (waiting ? w.typedNettingSatang > 0 : w.nettingSatang > 0);
         const option = (id: string, label: string, selected: boolean, onPress: () => void) => (
           <Pressable
             testID={id}
             role="radio"
             accessibilityRole="radio"
             aria-checked={selected}
-            accessibilityState={{ selected, checked: selected }}
-            onPress={onPress}
-            style={{ flex: 1, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center', paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: selected ? t.color.action : 'transparent' }}
+            aria-disabled={waiting}
+            accessibilityState={{ selected, checked: selected, disabled: waiting }}
+            disabled={waiting}
+            onPress={waiting ? undefined : onPress}
+            style={{ flex: 1, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center', paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: selected ? (waiting ? t.color.inkSoft : t.color.action) : 'transparent' }}
           >
-            <AppText style={{ textAlign: 'center', fontWeight: t.font.weight.bold, color: selected ? t.color.inkInverse : t.color.ink }}>{label}</AppText>
+            <AppText style={{ textAlign: 'center', fontWeight: t.font.weight.bold, color: selected ? t.color.inkInverse : waiting ? t.color.inkFaint : t.color.ink }}>{label}</AppText>
           </Pressable>
         );
         return (
@@ -82,7 +89,13 @@ export function OwedSheet({ co, people, onAdd, onClose }: { co: Closeout; people
                   {option(`co-owed-hold-${p.id}`, msg('co.owed.hold'), !netted, () => co.update((d) => netOff(d, w)))}
                   {option(`co-owed-net-${p.id}`, `${MARK.out} ${msg('co.owed.netWith', { name: p.name })}`, netted, () => co.update((d) => netOn(d, w)))}
                 </View>
-                <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.owed.explain', { amount: shortBaht(w.netCapSatang), name: p.name })}</AppText>
+                {waiting ? (
+                  <AppText testID={`co-owed-double-${p.id}`} variant="bodySm" style={{ color: t.color.warn, fontWeight: t.font.weight.bold }}>
+                    {msg('co.owed.doubleFirst', { name: p.name })}
+                  </AppText>
+                ) : (
+                  <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.owed.explain', { amount: shortBaht(w.netCapSatang), name: p.name })}</AppText>
+                )}
               </>
             ) : (
               <>

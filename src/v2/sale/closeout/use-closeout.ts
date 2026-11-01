@@ -19,7 +19,10 @@ import {
   confirmWrites,
   debtPieces,
   staleChecks,
+  type CloseoutInput,
+  type CloseoutWorker,
   type CloseoutWorkerDraft,
+  type DebtPiece,
 } from '../../../core/finance/closeout';
 import { projectDebts } from '../../../core/finance/debts';
 import type { RoundingMode } from '../../../core/finance/deduct';
@@ -127,14 +130,26 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       ownDeviceId: fin.deviceId,
     });
     const rounding = draft.rounding ?? (money.rounding.choice.asked ? money.rounding.choice.mode : lastRounding(store, groupId));
-    const plan = closeoutPlan({
-      saleTotalSatang: s.grossSatang,
-      ownerShareSatang: s.ownerSatang,
-      workers: inputs,
-      drafts: draft.workers,
-      defaultRoute: (id) => lastRepay(store, groupId, id),
-      rounding,
-    });
+    const planOf = (workers: CloseoutInput['drafts']) =>
+      closeoutPlan({
+        saleTotalSatang: s.grossSatang,
+        ownerShareSatang: s.ownerSatang,
+        workers: inputs,
+        drafts: workers,
+        defaultRoute: (id) => lastRepay(store, groupId, id),
+        rounding,
+      });
+    const plan = planOf(draft.workers);
+    /**
+     * Review 3 (NB5): one worker's figures as if `patch` were in the draft, without writing it —
+     * the deduct sheet opened on a double shows one device's set this way until a key or ✓ commits it.
+     */
+    const preview = (id: string, patch: CloseoutWorkerDraft): { w: CloseoutWorker; pieces: DebtPiece[] } | null => {
+      const w = planOf({ ...draft.workers, [id]: { ...(draft.workers[id] ?? {}), ...patch } }).workers.find((x) => x.id === id);
+      if (!w) return null;
+      const account = debts.get(id);
+      return { w, pieces: account ? debtPieces(account, saleId, w.totalSatang) : [] };
+    };
     const pieces = new Map(money.tappers.flatMap((tp) => { const account = debts.get(tp.id); return account ? [[tp.id, debtPieces(account, saleId, plan.workers.find((w) => w.id === tp.id)?.totalSatang ?? 0)] as const] : []; }));
     const debtors = inputs.filter((w) => w.balanceSatang > 0).map((w) => ({ id: w.id, name: w.name }));
     const owed = inputs.filter((w) => w.owedBackSatang > 0).map((w) => ({ id: w.id, name: w.name, satang: w.owedBackSatang }));
@@ -147,7 +162,7 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       owedAnswered: draft.owedAnswered,
       plan,
     });
-    return { settlement: s, inputs, plan, pieces, debtors, owed, gate, recordedLines, owedOf, mixed, sigs };
+    return { settlement: s, inputs, plan, preview, pieces, debtors, owed, gate, recordedLines, owedOf, mixed, sigs };
   }, [ready, money, fin.state, fin.events, fin.deviceId, debts, saleId, draft, store, groupId]);
 
   // Review #10: each check remembers the figures it was made on; when they move (another device synced, a new

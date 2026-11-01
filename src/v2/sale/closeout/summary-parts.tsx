@@ -110,7 +110,7 @@ export function Line({ label, value, testID, strong, tone, valueTone }: { label:
 export const minus = (satang: number) => (satang > 0 ? `−${baht(satang)}` : baht(0));
 
 /** Set one worker's draft, leaving the rest. */
-export function withWorker(d: CloseoutDraft, id: string, patch: { totalSatang?: number | null; nettingSatang?: number }): CloseoutDraft {
+export function withWorker(d: CloseoutDraft, id: string, patch: { totalSatang?: number | null; nettingSatang?: number; doubleChoice?: 'one' | 'both' }): CloseoutDraft {
   return { ...d, workers: { ...d.workers, [id]: { ...(d.workers[id] ?? {}), ...patch } } };
 }
 

@@ -66,9 +66,15 @@ export const th = {
   'co.deductRow': 'หักหนี้ · เก่าก่อน',
   'co.leftChip': 'หนี้ยังเหลือ {amount}',
   'co.doubleChip': 'หักซ้ำจาก {n} เครื่อง · แตะเพื่อแก้',
-  'co.double.sheet': 'หักซ้ำจาก {n} เครื่อง · ใส่ยอดที่ถูกแล้วกดตกลง',
+  'co.double.sheet': 'หักซ้ำจาก {n} เครื่อง',
   // owner 2026-11-01: the sheet proposes one device's amount; the sum is this button, on purpose only
   'co.double.both': 'หักทั้งสอง ({amount})',
+  // review 3 (NB1): the sum is over what can be deducted, or its netting over what the farm owes
+  'co.double.bothNo': 'หักทั้งสองไม่ได้ · {why}',
+  'co.double.overCap': 'หักได้ไม่เกิน {amount}',
+  'co.double.overNet': 'หักกลบได้ไม่เกิน {amount}',
+  // review 3 (B1): the owed sheet waits for the deduct sheet's one / both choice on a double
+  'co.owed.doubleFirst': 'แก้หักซ้ำที่แถวหักหนี้ของ{name}ก่อน',
   'co.netRow': 'หักกลบ · สวนคืน{name}',
 
   // cash card (CO-19 summary only)

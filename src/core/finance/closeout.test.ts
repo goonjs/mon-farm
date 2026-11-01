@@ -1186,14 +1186,14 @@ describe('a double deduction from two devices is flagged, locks the payment, and
     expect(d.input.oneDevice).toEqual({ totalSatang: 100000, nettingSatang: 0 });
     expect(d.w.doublePick).toEqual({ one: { totalSatang: 100000, nettingSatang: 0 }, both: { totalSatang: 200000, nettingSatang: 0 } });
     // the sheet's ✓ on the one amount: the double is fixed, one 1,000 line by one device
-    const one = { [W.id]: d.w.doublePick!.one };
+    const one = { [W.id]: { ...d.w.doublePick!.one, doubleChoice: 'one' as const } };
     expect(derive(both(seed(1000000, 0, 100000), 500000), 500000, one).gate.kind).toBe('ready');
     const all = both(seed(1000000, 0, 100000), 500000);
     const after = derive([...all, ...confirmOn('A', all, 500000, one)], 500000);
     expect(after.ins.recordedLines(W.id).map((l) => [l.amountSatang, l.deviceId])).toEqual([[100000, 'A']]);
     expect([after.w.doubled, after.w.doublePick, after.blocks]).toEqual([false, null, []]);
     // "หักทั้งสอง": the sum, still one set from one device
-    const twice = derive([...all, ...confirmOn('B', all, 500000, { [W.id]: d.w.doublePick!.both })], 500000);
+    const twice = derive([...all, ...confirmOn('B', all, 500000, { [W.id]: { ...d.w.doublePick!.both, doubleChoice: 'both' } })], 500000);
     expect(twice.ins.recordedLines(W.id).map((l) => [l.amountSatang, l.deviceId])).toEqual([[200000, 'B']]);
     expect(twice.w.doubled).toBe(false);
   });
@@ -1211,7 +1211,7 @@ describe('a double deduction from two devices is flagged, locks the payment, and
     const all = both(seed(1000000, 64000), 500000, { [W.id]: { nettingSatang: 64000, totalSatang: 64000 } });
     const d = derive(all, 500000);
     expect(d.w.doublePick).toEqual({ one: { totalSatang: 64000, nettingSatang: 64000 }, both: { totalSatang: 128000, nettingSatang: 128000 } });
-    const fixed = derive(all, 500000, { [W.id]: d.w.doublePick!.one });
+    const fixed = derive(all, 500000, { [W.id]: { ...d.w.doublePick!.one, doubleChoice: 'one' } });
     expect([fixed.w.nettingSatang, fixed.w.invalid, fixed.w.doubleOpen, fixed.gate.kind]).toEqual([64000, false, false, 'ready']);
   });
 
@@ -1242,7 +1242,7 @@ describe('a double deduction from two devices is flagged, locks the payment, and
     const all = both(seed(1000000, 0, 100000), 500000);
     // untouched, confirm stays off (the double is open)
     expect(derive(all, 500000, {}).gate.kind).toBe('double');
-    const fix = { [W.id]: { totalSatang: 100000 } };
+    const fix = { [W.id]: { totalSatang: 100000, doubleChoice: 'one' as const } };
     expect(derive(all, 500000, fix).gate.kind).toBe('ready');
     const out = confirmOn('A', all, 500000, fix);
     expect(out.filter((e) => e.payload.t === 'debt_payment_changed')).toHaveLength(2);
@@ -1258,7 +1258,7 @@ describe('a double deduction from two devices is flagged, locks the payment, and
 
   it('the fix keeps the doubled sum if the owner says so: still rewritten as one device\'s lines (confirmWrites does not "match" lines from two devices)', () => {
     const all = both(seed(1000000, 0, 100000), 500000);
-    const out = confirmOn('B', all, 500000, { [W.id]: { totalSatang: 200000 } });
+    const out = confirmOn('B', all, 500000, { [W.id]: { totalSatang: 200000, doubleChoice: 'both' } });
     expect(out.length).toBeGreaterThan(0);
     const after = derive([...all, ...out], 500000);
     expect(after.ins.recordedLines(W.id).map((l) => [l.amountSatang, l.deviceId])).toEqual([[200000, 'B']]);
@@ -1267,10 +1267,10 @@ describe('a double deduction from two devices is flagged, locks the payment, and
 
   it('S2 and S3 fixed the same way', () => {
     const s2 = both(seed(200000), 500000);
-    const s2after = derive([...s2, ...confirmOn('A', s2, 500000, { [W.id]: { totalSatang: 200000 } })], 500000);
+    const s2after = derive([...s2, ...confirmOn('A', s2, 500000, { [W.id]: { totalSatang: 200000, doubleChoice: 'one' } })], 500000);
     expect([s2after.w.totalSatang, s2after.w.invalid, s2after.blocks]).toEqual([200000, false, []]);
     const s3 = both(seed(1000000, 64000), 500000, { [W.id]: { nettingSatang: 64000, totalSatang: 64000 } });
-    const s3out = [...s3, ...confirmOn('A', s3, 500000, { [W.id]: { nettingSatang: 64000, totalSatang: 64000 } })];
+    const s3out = [...s3, ...confirmOn('A', s3, 500000, { [W.id]: { nettingSatang: 64000, totalSatang: 64000, doubleChoice: 'one' } })];
     const s3after = derive(s3out, 500000);
     expect([s3after.w.nettingSatang, s3after.w.invalid, s3after.blocks]).toEqual([64000, false, []]);
     expect(projectFinance(s3out).reimbursements[0].remainingSatang).toBe(0);
@@ -1343,5 +1343,48 @@ describe('a double deduction from two devices is flagged, locks the payment, and
     expect(staleChecks({ ...i, busy: false })).toEqual(['debt:a']);
     // a check never tracked (seen missing) is never dropped
     expect(staleChecks({ ...i, seen: {}, busy: false })).toEqual([]);
+  });
+
+  // ── review 3 (B1, NB1): only the owner's one/both choice in the deduct sheet clears a double ──
+
+  it('review 3 · B1 Scenario A: S1 + the farm owes 640; the owed sheet\'s "↗ หักกลบ" (netDraft) writes netting into the draft — the gate stays on double', () => {
+    const all = both(seed(1000000, 64000, 100000), 500000);
+    const d = derive(all, 500000);
+    expect([d.w.doubled, d.w.doubleOpen, d.w.netCapSatang]).toEqual([true, true, 64000]);
+    const netted = { [W.id]: netDraft(d.w, d.w.netCapSatang)! };
+    const after = derive(all, 500000, netted);
+    expect(after.w.doubleOpen).toBe(true);
+    expect(after.gate.kind).toBe('double');
+  });
+
+  it('review 3 · B1 Scenario B: S3 (both net 640); the owed sheet\'s "ไว้ก่อน" (netDraft 0) sets total 0 — the gate stays on double', () => {
+    const all = both(seed(1000000, 64000), 500000, { [W.id]: { nettingSatang: 64000, totalSatang: 64000 } });
+    const d = derive(all, 500000);
+    const held = { [W.id]: netDraft(d.w, 0)! };
+    expect(held[W.id]).toEqual({ nettingSatang: 0, totalSatang: 0 });
+    const after = derive(all, 500000, held);
+    expect(after.w.doubleOpen).toBe(true);
+    expect(after.gate.kind).toBe('double');
+  });
+
+  it('review 3 · B1: amounts in the draft alone (the sheet opened, keys typed, never ✓) keep the double; doubleChoice one / both clears it', () => {
+    const all = both(seed(1000000, 0, 100000), 500000);
+    const d = derive(all, 500000);
+    expect(derive(all, 500000, { [W.id]: d.w.doublePick!.one }).gate.kind).toBe('double');
+    expect(derive(all, 500000, { [W.id]: { totalSatang: 150000 } }).w.doubleOpen).toBe(true);
+    const one = derive(all, 500000, { [W.id]: { ...d.w.doublePick!.one, doubleChoice: 'one' } });
+    expect([one.w.doubleOpen, one.w.dirty, one.gate.kind]).toEqual([false, true, 'ready']);
+    const sum = derive(all, 500000, { [W.id]: { ...d.w.doublePick!.both, doubleChoice: 'both' } });
+    expect([sum.w.doubleOpen, sum.w.dirty, sum.w.totalSatang, sum.gate.kind]).toEqual([false, true, 200000, 'ready']);
+  });
+
+  it('review 3 · NB1: "หักทั้งสอง" says why the sum cannot be deducted (S2 over the debt, S3 netting over what is owed); S1 is fine', () => {
+    expect(derive(both(seed(1000000, 0, 100000), 500000), 500000).w.doubleBothProblem).toBeNull();
+    expect(derive(both(seed(200000), 500000), 500000).w.doubleBothProblem).toEqual({ problem: 'total-range', capSatang: 200000 });
+    const s3 = both(seed(1000000, 64000), 500000, { [W.id]: { nettingSatang: 64000, totalSatang: 64000 } });
+    expect(derive(s3, 500000).w.doubleBothProblem).toMatchObject({ problem: 'net-range' });
+    // not doubled → nothing to say
+    const base = seed(1000000, 0, 100000);
+    expect(derive([...base, ...confirmOn('A', base, 500000)], 500000).w.doubleBothProblem).toBeNull();
   });
 });

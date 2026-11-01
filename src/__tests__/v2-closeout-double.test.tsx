@@ -258,7 +258,7 @@ describe('B1 · S1: both phones deduct แดง\'s instalment 3,250 — 6,500 i
     expect(last('co-confirm')).toHaveTextContent('↑ แก้หักหนี้ซ้ำของแดงก่อน');
     expect(disabled('co-confirm')).toBe(true);
     await press(`co-deduct-${farm.red}`);
-    expect(last('co-double-warn')).toHaveTextContent(/หักซ้ำจาก 2 เครื่อง · ใส่ยอดที่ถูกแล้วกดตกลง/);
+    expect(last('co-double-warn')).toHaveTextContent(/หักซ้ำจาก 2 เครื่อง/);
     // owner 2026-11-01: the sheet proposes ONE phone's amount; the sum is a button of its own
     expect(last('co-amount')).toHaveTextContent(/3,250/);
     expect(last('co-amount')).not.toHaveTextContent(/6,500/);
@@ -352,6 +352,9 @@ describe('B1 · S3: both phones net นัด\'s 640 — netting 1,280 over what
     expect(last('co-amount')).toHaveTextContent(/5,250/);
     expect(screen.queryByTestId('co-net-on')).toBeNull();
     expect(screen.queryByTestId('co-cap')).toBeNull();
+    // review 3 · NB1: both phones' netting 1,280 is over what the farm owes — no หักทั้งสอง, the reason instead
+    expect(screen.queryByTestId('co-double-both')).toBeNull();
+    expect(last('co-double-both-why')).toHaveTextContent('หักทั้งสองไม่ได้ · หักกลบได้ไม่เกิน 640');
     await press('co-net-link');
     await press('co-deduct-ok');
     await gates(S);
@@ -390,7 +393,9 @@ describe('owner 2026-11-01 · S3 analog: both phones write the same set for น�
     expect(last('co-net-field')).toHaveTextContent(/640/);
     expect(last('co-amount')).toHaveTextContent(/5,890/);
     expect(screen.queryByTestId('co-cap')).toBeNull();
-    expect(last('co-double-both')).toHaveTextContent('หักทั้งสอง (11,780)');
+    // review 3 · NB1: the sum nets 1,280, over the 640 the farm owes — the reason instead of หักทั้งสอง (11,780)
+    expect(screen.queryByTestId('co-double-both')).toBeNull();
+    expect(last('co-double-both-why')).toHaveTextContent('หักทั้งสองไม่ได้ · หักกลบได้ไม่เกิน 640');
     await press('co-deduct-ok');
     expect(screen.queryByTestId(`co-double-${farm.nat}`)).toBeNull();
     await gates(S);
@@ -430,5 +435,148 @@ describe('N3 · after a failed confirm the checks stay tracked: the other phone\
     await inSale(S, <CloseoutSummaryScreen />);
     expect(last('co-confirm')).toHaveTextContent('↑ ตรวจหนี้ของแดงก่อน');
     await act(async () => clearDraft(S));
+  });
+});
+
+// ── review 3 (B1, NB1, NB5): only the deduct sheet's one/both choice clears a double ──
+
+const selected = (id: string) => !!last(id).props.accessibilityState?.selected;
+
+describe('review 3 · B1 Scenario A: a double for นัด while the farm owes him 640 — the owed sheet waits for the deduct sheet\'s choice', () => {
+  const S = 'd-r3a';
+  beforeAll(async () => {
+    // the S3 tests above repaid exp-nat and exp-nat-2: the farm owes นัด a fresh 640 here
+    await writeFinance('exp-nat-3', null, { t: 'expense_created', fields: { amountSatang: 64_000, date: '2026-10-27', stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าปุ๋ย', note: '', payer: NAT() } });
+    await storySale(S);
+    await confirmAs(S);
+    const lines = await live(S, farm.nat);
+    expect(lines).toHaveLength(1);
+    await phoneBDeducts(S, NAT(), lines[0][1]);
+    clearDraft(S);
+  });
+
+  it('the owed sheet\'s choices for นัด are off with "แก้หักซ้ำที่แถวหักหนี้ของนัดก่อน"; tapping ↗ หักกลบ changes nothing; confirm stays on the double', async () => {
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    expect(last(`co-double-${farm.nat}`)).toBeTruthy();
+    const card = last(`co-deduct-${farm.nat}`).props.children;
+    await press('co-owed-open');
+    expect(last(`co-owed-double-${farm.nat}`)).toHaveTextContent('แก้หักซ้ำที่แถวหักหนี้ของนัดก่อน');
+    expect(disabled(`co-owed-net-${farm.nat}`)).toBe(true);
+    expect(disabled(`co-owed-hold-${farm.nat}`)).toBe(true);
+    await press(`co-owed-net-${farm.nat}`);
+    expect(selected(`co-owed-net-${farm.nat}`)).toBe(false);
+    await press('co-owed-ok');
+    await press('co-debt-open');
+    await press('co-debt-ok');
+    expect(last(`co-double-${farm.nat}`)).toBeTruthy();
+    expect(last(`co-deduct-${farm.nat}`).props.children).toEqual(card);
+    expect(last('co-confirm')).toHaveTextContent('↑ แก้หักหนี้ซ้ำของนัดก่อน');
+    expect(disabled('co-confirm')).toBe(true);
+    r.unmount();
+    clearDraft(S);
+  });
+});
+
+describe('review 3 · B1 Scenario B: both phones net นัด\'s 640 — the owed sheet never shows "ไว้ก่อน" as chosen, and tapping it voids nothing', () => {
+  const S = 'd-r3b';
+  beforeAll(async () => {
+    await storySale(S);
+    await confirmAs(S, async () => {
+      await act(async () => updateDraft(S, (d) => ({ ...d, workers: { [farm.nat]: { nettingSatang: 64_000, totalSatang: 64_000 } } })));
+      await flush();
+    });
+    const rep = `rep-B-${uuidv7()}`;
+    await phoneBDeducts(S, NAT(), 64_000, 'netting', rep);
+    await fromPhoneB(rep, { t: 'repayment_recorded', fields: { from: FARM, to: NAT(), amountSatang: 64_000, date: '2026-10-31', note: '', allocations: [{ expenseId: 'exp-nat-3', satang: 64_000 }], saleId: S } });
+    clearDraft(S);
+  });
+
+  it('the recorded lines net: ↗ หักกลบ shows chosen (off), ไว้ก่อน not; tapping ไว้ก่อน keeps the gate on the double', async () => {
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    expect(last(`co-double-${farm.nat}`)).toBeTruthy();
+    await press('co-owed-open');
+    expect(selected(`co-owed-hold-${farm.nat}`)).toBe(false);
+    expect(selected(`co-owed-net-${farm.nat}`)).toBe(true);
+    expect(disabled(`co-owed-hold-${farm.nat}`)).toBe(true);
+    expect(last(`co-owed-double-${farm.nat}`)).toHaveTextContent('แก้หักซ้ำที่แถวหักหนี้ของนัดก่อน');
+    await press(`co-owed-hold-${farm.nat}`);
+    expect(selected(`co-owed-hold-${farm.nat}`)).toBe(false);
+    await press('co-owed-ok');
+    await press('co-debt-open');
+    await press('co-debt-ok');
+    expect(last(`co-double-${farm.nat}`)).toBeTruthy();
+    expect(last('co-confirm')).toHaveTextContent('↑ แก้หักหนี้ซ้ำของนัดก่อน');
+    expect(disabled('co-confirm')).toBe(true);
+    r.unmount();
+    expect((await live(S, farm.nat)).filter(([m]) => m === 'netting')).toEqual([['netting', 64_000], ['netting', 64_000]]);
+    clearDraft(S);
+  });
+});
+
+describe('review 3 · NB5: opening the deduct sheet on a double proposes one phone\'s amount without writing it; only ✓ does', () => {
+  const S = 'd-r3c';
+  beforeAll(async () => {
+    await storySale(S);
+    await confirmAs(S);
+    await phoneBDeducts(S, RED(), 325_000);
+    clearDraft(S);
+  });
+
+  it('open: the sheet shows 3,250 and its cash, the card still the doubled 6,500; unmount without closing → still double', async () => {
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.red}`);
+    expect(last('co-amount')).toHaveTextContent(/3,250/);
+    // the one set's figures (share 9,187.50 − 3,250), not the doubled 6,500's
+    expect(last('co-res-cash')).toHaveTextContent(/5,93\d/);
+    expect(last(`co-deduct-${farm.red}`)).toHaveTextContent(/−6,500\.00/);
+    r.unmount();
+    const r2 = await inSale(S, <CloseoutSummaryScreen />);
+    expect(last(`co-double-${farm.red}`)).toBeTruthy();
+    expect(last(`co-deduct-${farm.red}`)).toHaveTextContent(/−6,500\.00/);
+    await gates(S);
+    expect(last('co-confirm')).toHaveTextContent('↑ แก้หักหนี้ซ้ำของแดงก่อน');
+    r2.unmount();
+  });
+
+  it('a key typed, then unmounted without ✓ → still double; close without ✓ → still double; ✓ → cleared', async () => {
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.red}`);
+    await press('co-quick-half');
+    r.unmount();
+    const r2 = await inSale(S, <CloseoutSummaryScreen />);
+    expect(last(`co-double-${farm.red}`)).toBeTruthy();
+    await press(`co-deduct-${farm.red}`);
+    await press('co-deduct-sheet-close');
+    expect(last(`co-double-${farm.red}`)).toBeTruthy();
+    await press(`co-deduct-${farm.red}`);
+    expect(last('co-amount')).toHaveTextContent(/3,250/);
+    await press('co-deduct-ok');
+    expect(screen.queryByTestId(`co-double-${farm.red}`)).toBeNull();
+    await gates(S);
+    expect(last('co-confirm')).toHaveTextContent('ยืนยันยอด · ไปจ่ายเงิน');
+    r2.unmount();
+    clearDraft(S);
+  });
+});
+
+describe('review 3 · NB1: "หักทั้งสอง" gives way to the reason when the sum cannot be deducted', () => {
+  const S = 'd-r3d';
+  beforeAll(async () => {
+    await storySale(S);
+    await confirmAs(S);
+    // 3,250 + 7,000 = 10,250 over แดง's share 9,187.50 (the S2 shape: the sum over what can be deducted)
+    await phoneBDeducts(S, RED(), 700_000);
+    clearDraft(S);
+  });
+
+  it('not offered, says why; the one amount stays', async () => {
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.red}`);
+    expect(screen.queryByTestId('co-double-both')).toBeNull();
+    expect(last('co-double-both-why')).toHaveTextContent('หักทั้งสองไม่ได้ · หักได้ไม่เกิน 9,187.50');
+    expect(last('co-amount')).toHaveTextContent(/3,250/);
+    expect(last('co-amount')).not.toHaveTextContent(/10,250/);
+    r.unmount();
+    clearDraft(S);
   });
 });
