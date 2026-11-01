@@ -168,7 +168,8 @@ test('a browser holding a v0.4 log opens normally and drops the old sale keys on
   expect(keys.filter((k) => k.startsWith('mon-farm:events:'))).toEqual([]);
   expect(keys).not.toContain('mon-farm:sales');
   expect(keys).not.toContain('mon-farm:synced');
-  expect(keys).not.toContain('mon-farm:locale');
+  // The chosen language is a device setting (E01-S19): kept, not cleared as legacy.
+  expect(keys).toContain('mon-farm:locale');
   // Unread since E03-S01 but kept: clearing them cannot be undone.
   expect(keys).toContain('mon-farm:people');
   expect(keys).toContain('mon-farm:farm-profile');
