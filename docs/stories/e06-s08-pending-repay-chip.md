@@ -77,9 +77,9 @@ _เขียน test ก่อน (TDD) แล้วค่อยทำให้
 
 ## Verification
 
-- [ ] Sandbox run performed:
-- [ ] Screenshots — golden path:
-- [ ] Screenshots — edge cases:
+- [x] Sandbox run performed: web build (`expo export`) + Playwright 390×844 `e2e/v2-pending-repay.spec.ts` — ขายตัวอย่าง E05-S11 ปิดโดยไม่ติ๊กโอน → หน้าแรก H1 ฿ 8,500 → รายชื่อ M1 → บัญชีนัด M3 → แผ่น M5 (โอนรวม 22,937.00) → ได้จริง 20,000.00 แบบออฟไลน์ (M7) → แถบเลิกทำ → หน้าแรก H2 คนซื้อค้างสวน ฿ 2,937 → หน้าจ่ายเงิน P2 + ดูที่มา (ได้จริง 25,938.00 + ค้าง 2,937.00 = 28,875.00) · ตัวอักษรใหญ่สุด: การ์ด M2 + แผ่น M9 · ไม่มี error ในหน้า
+- [x] Screenshots — golden path: `docs/ux/screenshots/debt-pending-repay/build/` (h1-home, m1-list, m3-account, m5-sheet, m7-less, p3-undo, h2-home, p2-payment, p2-sources)
+- [x] Screenshots — edge cases: ตัวอักษรใหญ่สุด `build/l-m2-account.png`, `build/l-m9-less.png`
 
 ## Dev notes
 
@@ -97,6 +97,10 @@ _เขียน test ก่อน (TDD) แล้วค่อยทำให้
 - Resolution:
 
 ## QA notes
+
+### วัดบน build จริง 390×844 (2026-11-01)
+
+ความสูง ÷ จอ: H1 หน้าแรก 1.30 · H2 1.33 (หน้าแรกเลื่อนได้อยู่แล้ว แถวใหม่อยู่ในจอแรก) · M1 รายชื่อ 1.00 · M3 บัญชีหนี้ 2.03 (หน้ารายการ/ประวัติ เลื่อนได้ตาม phone-form-ux ข้อ 1; ก่อนสตอรี่นี้ 1.66 — การ์ดรอรับอยู่ใต้ยอดค้างในจอแรก) · แผ่น M5, M7 และ M9 ที่ตัวอักษรใหญ่สุดอยู่ในจอ ไม่ต้องเลื่อน · P2 หน้าจ่ายเงิน 1.00 · ไม่มีข้อความล้นจอด้านข้างทุกจอ (ภาพปกหน้าแรกล้นโดยตั้งใจ ไม่มีข้อความ)
 
 ### รีวิวอิสระ PR #133 (เอกสาร, 2026-11-01, agent แยก)
 
