@@ -15,23 +15,29 @@
  */
 
 import { router, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { DebtAccount } from '../../core/finance/debts';
 import { formatSatang } from '../../core/finance/money';
-import { OWNER_PAYEE, paymentMarkPayload, paymentStatus, paymentTarget, type PaymentStatus } from '../../core/finance/payments';
+import { closeoutPlan, payBlocks, REPAY_ROUTES } from '../../core/finance/closeout';
+import { overDeducted } from '../../core/finance/deduct';
+import { OWNER_PAYEE, paymentMarkPayload, paymentStatus, paymentTarget, salePaymentConflicts, type PaymentStatus } from '../../core/finance/payments';
 import { debtCashPayee, type PendingHow, type PendingRepayLine } from '../../core/finance/pending-repays';
 import type { FinanceEvent, FinancePayload } from '../../core/finance/types';
+import { useInFlight } from '../../finance/use-in-flight';
 import { useT } from '../../i18n';
+import { financeStore } from '../../store/finance';
 import { SaleProvider } from '../../store/SaleProvider';
 import { useTheme } from '../../theme';
 import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CompactMoney, CTA } from '../../ui';
 import { useDay } from '../farm/pieces';
-import { CardIcon } from '../sale/closeout/summary-parts';
-import { useSaleMoney } from './sale/use-sale-money';
+import { CardIcon, MARK } from '../sale/closeout/summary-parts';
+import { useCloseout } from '../sale/closeout/use-closeout';
 import { ReceivedAmountSheet } from './received-sheet';
 
+/** The "more" mark after a link's words (kept out of the catalogue, like MARK). */
+export const MORE = '›';
 const baht = formatSatang;
 type Write = (targetId: string, base: string | null, payload: FinancePayload) => Promise<unknown>;
 
@@ -79,7 +85,7 @@ export function ListSummary({ lines }: { lines: readonly PendingRepayLine[] }) {
         </View>
       ))}
       <View testID="rp-list-sum-total" style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.sm }}>
-        <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('rp.list.sumTotal')}</AppText>
+        <AppText style={{ fontWeight: t.font.weight.bold }}>{`${MARK.sum} ${msg('rp.list.sumTotal')}`}</AppText>
         <CompactMoney satang={total} pill />
       </View>
     </Card>
@@ -129,7 +135,7 @@ export function PendingCard({ lines, onOpen }: { lines: readonly PendingRepayLin
         >
           <View style={{ flex: 1, gap: t.space.xxs }}>
             <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('rp.card.sale', { date: day(l.date) })}</AppText>
-            <AppText style={{ color: t.color.debtIn }}>{msg('rp.card.repay', { amount: baht(l.satang) })}</AppText>
+            <AppText style={{ color: t.color.debtIn }}>{`${MARK.in} ${msg('rp.card.repay', { amount: baht(l.satang) })}`}</AppText>
             <WaitChip>{howText(msg, l.how, l.name)}</WaitChip>
           </View>
           <ChevronRight color={t.color.inkSoft} />
@@ -137,7 +143,7 @@ export function PendingCard({ lines, onOpen }: { lines: readonly PendingRepayLin
       ))}
       {lines.length > 1 ? (
         <View testID="rp-card-total" style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.sm, borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, paddingTop: t.space.sm }}>
-          <AppText style={{ flex: 1, fontWeight: t.font.weight.bold }}>{msg('rp.card.total')}</AppText>
+          <AppText style={{ flex: 1, fontWeight: t.font.weight.bold }}>{`${MARK.sum} ${msg('rp.card.total')}`}</AppText>
           <CompactMoney satang={total} pill />
         </View>
       ) : null}
@@ -173,9 +179,12 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
   const t = useTheme();
   const msg = useT();
   const day = useDay();
-  const money = useSaleMoney();
+  const co = useCloseout();
+  const money = co.money;
   const [less, setLess] = useState(false);
-  const [busy, setBusy] = useState(false);
+  // One write at a time: a ref, not state, stops two taps in one tick (review 2026-11-01).
+  const flight = useInFlight();
+  const busy = flight.busy;
   const { line, ticked } = open;
   const { saleId, name } = line;
   const payee = payeeOf(line.how, line.workerId);
@@ -183,26 +192,48 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
   // The payment page's amounts (pay-screen.tsx): the owner's whole transfer, or that worker's repayment cash.
   const cashSatang = linesOf(line.workerId).filter((p) => p.method === 'buyer-split' || p.method === 'cash-from-share').reduce((a, p) => a + p.amountSatang, 0);
   const amount = line.how === 'transfer' ? money.ownerTransferSatang : cashSatang;
-  const ready = money.loaded && money.settlement !== null;
+  const ready = money.loaded && money.settlement !== null && co.inputs !== null;
+  // The payment page's locks (pay-screen.tsx `locked`): ticks in conflict (D-29/D-30), a double or invalid
+  // deduction (payBlocks), a worker deducted over the share (D-61). Here: no write, send the owner there.
+  const roundingMode = money.rounding.choice.asked ? money.rounding.choice.mode : 'none';
+  const recordedPlan = useMemo(
+    () =>
+      money.settlement && co.inputs
+        ? closeoutPlan({ saleTotalSatang: money.settlement.grossSatang, ownerShareSatang: money.settlement.ownerSatang, workers: co.inputs, drafts: {}, defaultRoute: () => REPAY_ROUTES[0], rounding: roundingMode })
+        : null,
+    [money.settlement, co.inputs, roundingMode],
+  );
   const transferOn = money.tappers.map((tp) => ({ tp, satang: linesOf(tp.id).filter((p) => p.method === 'transfer-with-owner').reduce((a, p) => a + p.amountSatang, 0) })).filter((x) => x.satang > 0);
   const repayOnTransfer = transferOn.reduce((a, x) => a + x.satang, 0);
   const st: PaymentStatus = paymentStatus(events, saleId, payee, amount);
+  const isOver = (tp: (typeof money.tappers)[number]) => overDeducted(tp.debtDeductedSatang + tp.nettedSatang, tp.shareSatang, tp.nettedSatang);
+  const locked =
+    st.conflict ||
+    salePaymentConflicts(events, saleId).length > 0 ||
+    (recordedPlan ? payBlocks(recordedPlan).length > 0 : false) ||
+    (line.how === 'transfer' ? money.tappers.some(isOver) : money.tappers.some((tp) => tp.id === line.workerId && isOver(tp)));
   const before = st.head ? { done: st.done, amount: st.amountAtMarkSatang ?? amount, ...(st.done && st.shortSatang ? { received: st.receivedSatang ?? undefined } : {}) } : null;
 
-  const mark = async (done: boolean, received: number | undefined, label: string) => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await write(paymentTarget(saleId, payee), st.head, paymentMarkPayload(saleId, payee, done, amount, received));
+  const mark = (done: boolean, received: number | undefined, label: string) =>
+    flight.run(async () => {
+      if (locked) return;
+      // Fresh heads from the store: a sync or the other sheet may have written since this screen read.
+      const head = paymentStatus(await financeStore.load(), saleId, payee, amount);
+      if (head.conflict) return;
+      await write(paymentTarget(saleId, payee), head.head, paymentMarkPayload(saleId, payee, done, amount, received));
       onDone({ saleId, payee, label, before });
-    } finally {
-      setBusy(false);
-    }
-  };
+    });
   const openSale = () => {
     onClose();
     router.push(`/v2/sale/${saleId}/payment` as Href);
   };
+  /** PR-17 / PR-19: the money is with the worker — fix the deduction on the sale's payment page, its sheet opened. */
+  const fixAtSale = () => {
+    onClose();
+    router.push(`/v2/sale/${saleId}/payment?fix=${encodeURIComponent(line.workerId)}&how=${line.how}` as Href);
+  };
+  const buyer = (money.state as { parties?: { buyer?: string } }).parties?.buyer ?? '';
+  const transferNames = transferOn.map((x) => x.tp.name).join(msg('co.and'));
 
   if (less) {
     return (
@@ -212,10 +243,12 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
         dateText={day(line.date)}
         expectedSatang={amount}
         debtSatang={account?.balanceSatang ?? 0}
+        buyer={line.how === 'transfer' ? buyer : undefined}
+        names={line.how === 'transfer' ? transferNames : undefined}
         onSave={(received) =>
           void mark(true, received, received === 0 ? msg('rp.undo.none') : received >= amount ? msg('rp.undo.full', { amount: baht(amount) }) : msg('rp.undo.less', { amount: baht(received) }))
         }
-        onFixAtSale={openSale}
+        onFixAtSale={fixAtSale}
         onClose={onClose}
       />
     );
@@ -236,7 +269,7 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
       <View style={{ gap: t.space.sm }}>
         <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('rp.sheet.sub', { name, date: day(line.date) })}</AppText>
         <View style={box}>
-          {kv(msg('rp.sheet.repay', { name }), baht(line.satang), t.color.debtIn)}
+          {kv(`${MARK.in} ${msg('rp.sheet.repay', { name })}`, baht(line.satang), t.color.debtIn)}
           {kv(msg('rp.sheet.route'), route)}
         </View>
         {line.how === 'transfer' && ready ? (
@@ -244,7 +277,7 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
             <AppText variant="bodySm" style={{ fontWeight: t.font.weight.bold, color: t.color.inkSoft }}>{msg('rp.sheet.bundle')}</AppText>
             {kv(msg('rp.sheet.ownerPart'), baht(amount - repayOnTransfer))}
             {transferOn.map((x) => (
-              <View key={x.tp.id}>{kv(msg('rp.sheet.repay', { name: x.tp.name }), baht(x.satang), t.color.debtIn)}</View>
+              <View key={x.tp.id}>{kv(`${MARK.in} ${msg('rp.sheet.repay', { name: x.tp.name })}`, baht(x.satang), t.color.debtIn)}</View>
             ))}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', gap: t.space.sm, borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, paddingTop: t.space.xxs }}>
               <AppText style={{ flex: 1, color: t.color.inkSoft }}>{msg('rp.sheet.transferTotal')}</AppText>
@@ -252,8 +285,13 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
             </View>
           </View>
         ) : null}
-        {ticked ? (
-          <CTA testID="rp-sheet-undo-tick" disabled={busy} onPress={() => void mark(false, undefined, msg('rp.undo.reopened'))}>
+        {locked ? (
+          <>
+            <AppText testID="rp-sheet-locked" style={{ fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rp.sheet.locked')}</AppText>
+            <CTA testID="rp-sheet-open" onPress={openSale}>{`${msg('rp.sheet.openSale')} ${MORE}`}</CTA>
+          </>
+        ) : ticked ? (
+          <CTA testID="rp-sheet-undo-tick" disabled={busy || !ready} onPress={() => void mark(false, undefined, msg('rp.undo.reopened'))}>
             {msg('rp.sheet.undoTick')}
           </CTA>
         ) : picked ? (
@@ -261,7 +299,7 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
             <CTA testID="rp-sheet-picked-full" disabled={!ready || busy} icon={(c) => <Check color={c} />} onPress={() => void mark(true, undefined, msg('rp.undo.full', { amount: baht(amount) }))}>
               {msg('rp.sheet.pickedFull', { amount: baht(amount) })}
             </CTA>
-            <Button testID="rp-sheet-picked-fix" size="large" onPress={openSale}>{msg('rp.sheet.pickedFix')}</Button>
+            <Button testID="rp-sheet-picked-fix" size="large" onPress={fixAtSale}>{`${msg('rp.sheet.pickedFix')} ${MORE}`}</Button>
           </>
         ) : (
           <>
@@ -272,7 +310,7 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
               <View style={{ flexGrow: 1, flexBasis: 160 }}>
                 <Button testID="rp-sheet-less" size="large" disabled={!ready || amount <= 0} onPress={() => setLess(true)}>{msg('rp.sheet.less')}</Button>
               </View>
-              <Button testID="rp-sheet-open" variant="ghost" onPress={openSale}>{msg('rp.sheet.openSale')}</Button>
+              <Button testID="rp-sheet-open" variant="ghost" onPress={openSale}>{`${msg('rp.sheet.openSale')} ${MORE}`}</Button>
             </View>
           </>
         )}
@@ -285,28 +323,25 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
 export function UndoBar({ undo, events, write, onGone }: { undo: UndoInfo; events: readonly FinanceEvent[]; write: Write; onGone: () => void }) {
   const t = useTheme();
   const msg = useT();
-  const [busy, setBusy] = useState(false);
+  const flight = useInFlight();
   useEffect(() => {
     const id = setTimeout(onGone, 8000);
     return () => clearTimeout(id);
   }, [undo, onGone]);
-  const back = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const st = paymentStatus(events, undo.saleId, undo.payee, 0);
+  const back = () =>
+    flight.run(async () => {
+      // The head from the store, not the screen's copy: the write being undone may not have reloaded yet (review 2026-11-01).
+      const st = paymentStatus(await financeStore.load(), undo.saleId, undo.payee, 0);
+      if (st.conflict) return onGone();
       const b = undo.before;
       await write(paymentTarget(undo.saleId, undo.payee), st.head, paymentMarkPayload(undo.saleId, undo.payee, b?.done ?? false, b?.amount ?? st.amountAtMarkSatang ?? 0, b?.received));
       onGone();
-    } finally {
-      setBusy(false);
-    }
-  };
+    });
   return (
     <View testID="rp-undo" accessibilityLiveRegion="polite" style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, backgroundColor: t.color.ink, borderRadius: t.radius.lg, paddingLeft: t.space.md, paddingRight: t.space.xs, marginHorizontal: t.layout.screenPaddingX, marginBottom: t.space.sm }}>
       <Check color={t.color.inkInverse} size={11} />
       <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.semibold, color: t.color.inkInverse }}>{undo.label}</Text>
-      <Pressable testID="rp-undo-action" accessibilityRole="button" disabled={busy} onPress={() => void back()} style={{ minHeight: t.target.min, minWidth: t.target.min, justifyContent: 'center', paddingHorizontal: t.space.md }}>
+      <Pressable testID="rp-undo-action" accessibilityRole="button" disabled={flight.busy} onPress={() => void back()} style={{ minHeight: t.target.min, minWidth: t.target.min, justifyContent: 'center', paddingHorizontal: t.space.md }}>
         <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.black, color: t.color.actionSunk }}>{msg('rp.undo.action')}</Text>
       </Pressable>
     </View>

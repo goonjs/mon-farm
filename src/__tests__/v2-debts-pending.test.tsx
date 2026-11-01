@@ -209,7 +209,7 @@ describe('a worker\'s account (M2, M3, M5–M7, M9, P3 · PR-1, PR-2, PR-5–PR-
     await press('rp-amt-with-worker');
     expect(text('rp-amt-worker-holds')).toHaveTextContent('เงินอยู่กับแดง หนี้ยังไม่ได้จ่าย');
     await press('rp-amt-fix');
-    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${SALE}/payment`);
+    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${SALE}/payment?fix=${farm.red}&how=cash`);
     expect((await cashTick(farm.red)).done).toBe(false);
   });
 
@@ -253,9 +253,46 @@ describe('two sales and the picked route (M4, M10 · PR-3, PR-17)', () => {
     await press(`rp-row-${SALE}-picked`);
     expect(text('rp-sheet')).toHaveTextContent(/หยิบเงินคืนหนี้จากส่วนแบ่งแดงแล้วหรือยัง/);
     await press('rp-sheet-picked-fix');
-    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${SALE}/payment`);
+    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${SALE}/payment?fix=${farm.red}&how=picked`);
     await press(`rp-row-${SALE}-picked`);
     await press('rp-sheet-picked-full');
     expect((await cashTick(farm.red)).done).toBe(true);
+  });
+});
+
+describe('review fixes (E06-S08 independent review 2026-11-01)', () => {
+  it('ticks in conflict on the sale → the sheet writes nothing and sends the owner to the payment page (D-30, PR-18)', async () => {
+    const payee = `debt-cash-${farm.red}`;
+    const target = paymentTarget(SALE, payee);
+    // two phones: one says in full, one says 1,000 came (no base → two heads)
+    const { financeStore: fs } = jest.requireMock('../store/finance') as { financeStore: { append: (e: unknown) => Promise<void> } };
+    const mk = (id: string, device: string, received?: number) => ({ id, groupId: 'group-1', deviceSeq: 1, ts: 1, actor: { userId: 'u', deviceId: device }, source: 'app', targetId: target, baseEventId: null, payload: paymentMarkPayload(SALE, payee, true, 325_000, received) });
+    await fs.append(mk(`c-a-${n}`, 'dev-a'));
+    await fs.append(mk(`c-b-${n}`, 'dev-b', 100_000));
+    params.current = { workerId: farm.red, name: 'แดง' };
+    wrap(<DebtAccountScreen />);
+    await flush();
+    await press(`rp-row-${SALE}-cash`);
+    expect(text('rp-sheet-locked')).toHaveTextContent('มีเรื่องต้องแก้ที่หน้าจ่ายเงินก่อน');
+    expect(screen.queryByTestId('rp-sheet-full')).toBeNull();
+    const before = (await financeStore.load()).length;
+    await press('rp-sheet-open');
+    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${SALE}/payment`);
+    expect((await financeStore.load()).length).toBe(before);
+  });
+
+  it('two quick taps on ได้ครบ write one tick (a ref guard, not state)', async () => {
+    params.current = { workerId: farm.red, name: 'แดง' };
+    wrap(<DebtAccountScreen />);
+    await flush();
+    await press(`rp-row-${SALE}-cash`);
+    const btn = screen.getByTestId('rp-sheet-full');
+    await act(async () => {
+      fireEvent.press(btn);
+      fireEvent.press(btn);
+    });
+    await flush();
+    const ticks = (await financeStore.load()).filter((e) => e.payload.t === 'payment_mark_set');
+    expect(ticks).toHaveLength(1);
   });
 });

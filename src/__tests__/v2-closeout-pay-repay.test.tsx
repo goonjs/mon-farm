@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from 'react';
 
 import { LogBuilder } from '../core/fixtures';
 import { FARM_FUNDS, type DebtPaymentMethod } from '../core/finance/types';
+import { paymentMarkPayload, paymentTarget } from '../core/finance/payments';
 import { financeStore } from '../store/finance';
 import { writeFinance } from '../store/finance-write';
 import type { MasterStore } from '../store/master-store';
@@ -141,15 +142,6 @@ describe('P2 · PR-16 the owner transfer came in short', () => {
     expect(last(`pay-owes-${id}`)).toHaveTextContent('คนซื้อค้างสวน ฿ 3,250');
   });
 
-  it('PR-19 "คนซื้อให้นัดไปแล้ว" → แก้ที่การขาย: no cash-from-share here, so the sheet just closes', async () => {
-    await inSale(S, <CloseoutPayScreen />);
-    await press('pay-less-owner');
-    await press('rp-amt-with-worker');
-    await press('rp-amt-fix');
-    expect(screen.queryByTestId('rp-amount-sheet')).toBeNull();
-    expect(screen.queryByTestId('rp-pick-sheet')).toBeNull();
-  });
-
   it('PR-20: ดูที่มา shows ได้จริง + คนซื้อค้างสวน = ยอดขาย', async () => {
     await inSale(S, <CloseoutPayScreen />);
     await press('pay-sources-open');
@@ -159,6 +151,35 @@ describe('P2 · PR-16 the owner transfer came in short', () => {
     expect(within(sheet).getByTestId('co-src-owes-detail')).toHaveTextContent(/ขาดโอน 2,687\.50 · เงินสดคืนหนี้แดง 3,250\.00/);
     expect(within(sheet).getByTestId('co-src-equation')).toHaveTextContent('ได้จริง + คนซื้อค้างสวน = ยอดขาย');
   });
+});
+
+describe('PR-19 · the buyer handed the transfer repayment to the worker', () => {
+  const S = 'rp-pay-handed';
+  beforeAll(async () => {
+    await storySale(S);
+    // นัด's debt is shared with the sales above: 4,000 here keeps it within what he owes (else D-61 locks the page).
+    await confirmed(S, { amount: 325_000, method: 'buyer-split' }, { amount: 400_000, method: 'transfer-with-owner' });
+    await writeFinance(paymentTarget(S, 'owner'), null, paymentMarkPayload(S, 'owner', true, 1_843_750));
+  });
+
+  it('PR-19 "คนซื้อให้นัดไปแล้ว" → แก้ที่การขาย: the fix sheet for นัด\'s transfer line; nothing reached the farm → the line is voided, kept in the history', async () => {
+    await inSale(S, <CloseoutPayScreen />);
+    await press('pay-less-owner');
+    // the transfer sheet names the buyer and whose repayment rides on it (PR-15 / owner Q2)
+    expect(last('rp-amount-sheet')).toHaveTextContent(/ลานยางสมบูรณ์ · รวมคืนหนี้นัด/);
+    await press('rp-amt-with-worker');
+    await press('rp-amt-fix');
+    expect(screen.queryByTestId('rp-amount-sheet')).toBeNull();
+    expect(last('rp-pick-sheet')).toHaveTextContent(/เงินคืนหนี้นัด ถึงสวนเท่าไหร่/);
+    await press('rp-pick-save');
+    const evs = await financeStore.load();
+    const nat = evs.filter((e) => e.targetId === `dp-${S}-nat`);
+    expect(nat.map((e) => e.payload.t)).toEqual(['debt_payment_recorded', 'debt_payment_changed']);
+    expect(nat[1].payload).toMatchObject({ patch: { deleted: true } });
+    // the owner's tick no longer matches the (smaller) transfer: it asks for a recheck
+    expect(last('tick-owner')).toHaveTextContent(/ต้องตรวจใหม่/);
+  });
+
 });
 
 describe('P1 · PR-17 cash-from-share not (fully) lifted', () => {
@@ -178,14 +199,19 @@ describe('P1 · PR-17 cash-from-share not (fully) lifted', () => {
     await press(`pay-pickfix-${id}`);
     const sheet = last('rp-pick-sheet');
     expect(sheet).toHaveTextContent(/หักไว้ 1,000\.00/);
-    // debt now 10,000 − 3,250 (the sale above) − 1,000 = 5,750; picked 400 → back to 6,350
+    // debt now 10,000 − 3,250 − 3,250 (the two sales above) − 1,000 = 2,500; picked 400 → back to 3,100
     await type('rp-pick-pad', '400');
-    expect(within(sheet).getByTestId('rp-pick-debt')).toHaveTextContent(/6,350\.00/);
+    expect(within(sheet).getByTestId('rp-pick-debt')).toHaveTextContent(/3,100\.00/);
     await press('rp-pick-save');
     expect(screen.queryByTestId('rp-pick-sheet')).toBeNull();
-    const ch = (await financeStore.load()).filter((e) => e.payload.t === 'debt_payment_changed' && e.targetId === `dp-${S}-red`);
+    // the old line is voided (struck through in the history), a new pick line holds what was lifted (PR-17)
+    const evs = await financeStore.load();
+    const ch = evs.filter((e) => e.payload.t === 'debt_payment_changed' && e.targetId === `dp-${S}-red`);
     expect(ch).toHaveLength(1);
-    expect(ch[0].payload).toMatchObject({ patch: { amountSatang: 40_000 } });
+    expect(ch[0].payload).toMatchObject({ patch: { deleted: true } });
+    const fresh = evs.filter((e) => e.payload.t === 'debt_payment_recorded' && e.targetId !== `dp-${S}-red` && (e.payload.fields as { saleId?: string }).saleId === S && (e.payload.fields as { worker: { id: string } }).worker.id === farm.red);
+    expect(fresh).toHaveLength(1);
+    expect(fresh[0].payload).toMatchObject({ fields: { method: 'cash-from-share', amountSatang: 40_000 } });
     expect(last(`tick-amt-${id}`)).toHaveTextContent('400.00');
     expect(last(`tick-${farm.red}`)).toHaveTextContent(/ต้องตรวจใหม่/);
   });

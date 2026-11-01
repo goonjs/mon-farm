@@ -191,7 +191,7 @@ export function V2Home() {
           </SumLine>
         ))}
         <SumLine testID="home-repay-wait-sum">
-          {`${msg('rp.home.sum')} `}
+          {`Σ ${msg('rp.home.sum')} `}
           <CompactMoney satang={repay.waitTotal} />
         </SumLine>
       </KnowRow>
@@ -496,7 +496,7 @@ function OwesKnowRow({ o }: { o: OwesRow }) {
         </SumLine>
       ))}
       <SumLine testID={`${id}-sum`}>
-        {`${msg('rp.home.sum')} `}
+        {`Σ ${msg('rp.home.sum')} `}
         <CompactMoney satang={o.totalSatang} />
       </SumLine>
     </KnowRow>

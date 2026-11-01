@@ -77,14 +77,19 @@ export function ReceivedAmountSheet({
   dateText,
   expectedSatang,
   debtSatang,
+  buyer,
+  names,
   onSave,
   onFixAtSale,
   onClose,
 }: {
   /** transfer: the owner's whole transfer of the sale · cash: one worker's repayment cash. */
   kind: 'transfer' | 'cash';
-  /** The worker whose debt is shown (for a transfer: the one whose ledger opened it). */
-  name: string;
+  /** The worker whose debt is shown (for a transfer: the one whose ledger opened it); null = nobody's repayment rides on it (no "gave it to …"). */
+  name: string | null;
+  /** Transfer: the buyer and everyone whose repayment rides on the transfer (owner Q2). */
+  buyer?: string;
+  names?: string;
   dateText: string;
   expectedSatang: number;
   /** The worker's debt now — it does not change (D-87). */
@@ -114,16 +119,20 @@ export function ReceivedAmountSheet({
     <BottomSheet open onClose={onClose} title={msg(kind === 'transfer' ? 'rp.amt.titleTransfer' : 'rp.amt.titleCash')} testID="rp-amount-sheet" closeLabel={msg('rp.sheet.close')}>
       <View style={{ gap: t.space.sm }}>
         <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>
-          {msg(kind === 'transfer' ? 'rp.amt.subTransfer' : 'rp.amt.subCash', { name, date: dateText, amount: baht(expectedSatang) })}
+          {kind === 'transfer' && buyer && names
+            ? msg('rp.amt.subTransferFull', { date: dateText, buyer, names, amount: baht(expectedSatang) })
+            : msg(kind === 'transfer' ? 'rp.amt.subTransfer' : 'rp.amt.subCash', { name: name ?? '', date: dateText, amount: baht(expectedSatang) })}
         </AppText>
-        <View style={{ flexDirection: 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.pill, padding: t.space.xxs, gap: t.space.xxs }}>
-          {seg(!withWorker, msg('rp.amt.withBuyer'), 'rp-amt-with-buyer', () => setWithWorker(false))}
-          {seg(withWorker, msg('rp.amt.withWorker', { name }), 'rp-amt-with-worker', () => setWithWorker(true))}
-        </View>
-        {withWorker ? (
+        {name !== null ? (
+          <View style={{ flexDirection: 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.pill, padding: t.space.xxs, gap: t.space.xxs }}>
+            {seg(!withWorker, msg('rp.amt.withBuyer'), 'rp-amt-with-buyer', () => setWithWorker(false))}
+            {seg(withWorker, msg('rp.amt.withWorker', { name }), 'rp-amt-with-worker', () => setWithWorker(true))}
+          </View>
+        ) : null}
+        {withWorker && name !== null ? (
           <>
             <AppText testID="rp-amt-worker-holds" style={{ fontWeight: t.font.weight.bold }}>{msg('rp.amt.workerHolds', { name })}</AppText>
-            <CTA testID="rp-amt-fix" onPress={onFixAtSale}>{msg('rp.amt.fixAtSale')}</CTA>
+            <CTA testID="rp-amt-fix" onPress={onFixAtSale}>{`${msg('rp.amt.fixAtSale')} ›`}</CTA>
           </>
         ) : (
           <>
@@ -135,7 +144,7 @@ export function ReceivedAmountSheet({
               ) : (
                 <Kv testID="rp-amt-owes" label={msg('rp.amt.owes')} value={baht(short)} tone={t.color.warn} />
               )}
-              <Kv testID="rp-amt-debt" label={msg('rp.amt.debtSame', { name })} value={baht(debtSatang)} />
+              {name !== null ? <Kv testID="rp-amt-debt" label={msg('rp.amt.debtSame', { name })} value={baht(debtSatang)} /> : null}
             </View>
             <NumberPad variant="money" onKey={pad.press} onDone={() => (pad.over ? undefined : onSave(pad.typed))} doneDisabled={pad.over} testID="rp-amt-pad" />
             <CTA testID="rp-amt-save" disabled={pad.over} icon={(c) => <Check color={c} />} onPress={() => onSave(pad.typed)}>
@@ -149,6 +158,7 @@ export function ReceivedAmountSheet({
 }
 
 export function PickAmountSheet({
+  mode = 'picked',
   name,
   dateText,
   deductedSatang,
@@ -156,6 +166,8 @@ export function PickAmountSheet({
   onSave,
   onClose,
 }: {
+  /** picked: lifted from the worker's own pile (PR-17) · handed: the buyer gave the repayment to the worker (PR-19). */
+  mode?: 'picked' | 'handed';
   name: string;
   dateText: string;
   /** What was deducted and meant to be lifted from the worker's pile. */
@@ -170,10 +182,10 @@ export function PickAmountSheet({
   const pad = usePad(deductedSatang);
   const back = Math.max(0, deductedSatang - pad.typed);
   return (
-    <BottomSheet open onClose={onClose} title={msg('rp.pick.title', { name })} testID="rp-pick-sheet" closeLabel={msg('rp.sheet.close')}>
+    <BottomSheet open onClose={onClose} title={msg(mode === 'picked' ? 'rp.pick.title' : 'rp.fix.titleHanded', { name })} testID="rp-pick-sheet" closeLabel={msg('rp.sheet.close')}>
       <View style={{ gap: t.space.sm }}>
         <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{`${msg('rp.pick.sub', { name, amount: baht(deductedSatang) })} · ${dateText}`}</AppText>
-        <AmountBox label={msg('rp.pick.got')} raw={pad.raw} bad={pad.over} testID="rp-pick-value" />
+        <AmountBox label={msg(mode === 'picked' ? 'rp.pick.got' : 'rp.fix.gotHanded')} raw={pad.raw} bad={pad.over} testID="rp-pick-value" />
         <View style={card(t)}>
           {pad.over ? (
             <Kv testID="rp-pick-over" label={msg('rp.amt.over', { amount: baht(deductedSatang) })} value="" tone={t.color.reject} />
@@ -186,7 +198,13 @@ export function PickAmountSheet({
         </View>
         <NumberPad variant="money" onKey={pad.press} onDone={() => (pad.over ? undefined : onSave(pad.typed))} doneDisabled={pad.over} testID="rp-pick-pad" />
         <CTA testID="rp-pick-save" disabled={pad.over || back === 0} icon={(c) => <Check color={c} />} onPress={() => onSave(pad.typed)}>
-          {pad.typed === 0 ? msg('rp.pick.saveNone') : msg('rp.pick.save', { amount: baht(pad.typed) })}
+          {mode === 'picked'
+            ? pad.typed === 0
+              ? msg('rp.pick.saveNone')
+              : msg('rp.pick.save', { amount: baht(pad.typed) })
+            : pad.typed === 0
+              ? msg('rp.fix.saveNone')
+              : msg('rp.fix.save', { amount: baht(pad.typed) })}
         </CTA>
       </View>
     </BottomSheet>

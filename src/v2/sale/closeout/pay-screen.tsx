@@ -34,13 +34,13 @@
  * opens the summary's sources sheet with this sale's คนซื้อค้างสวน.
  */
 
-import { useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { projectAccounts } from '../../../core/finance/accounts';
 import { closeoutPlan, payBlocks, pendingRepays, REPAY_ROUTES, sourcesSheet, type CloseoutPlan } from '../../../core/finance/closeout';
-import { buyerOwes, pickFixPatches } from '../../../core/finance/pending-repays';
+import { buyerOwes, routeFixWrites } from '../../../core/finance/pending-repays';
 import { compactMoneyParts } from '../../../core/compact-money';
 import { overDeducted, pilesCheck } from '../../../core/finance/deduct';
 import { formatSatang } from '../../../core/finance/money';
@@ -50,9 +50,11 @@ import { formatThaiDate } from '../../../core/master';
 import type { DebtPaymentMethod } from '../../../core/finance/types';
 import { canComplete } from '../../../core/sale-status';
 import { useInFlight } from '../../../finance/use-in-flight';
+import { useSaleCounts } from '../../../finance/use-live-sales';
+import { newId } from '../../../lib/id';
 import { useI18n, useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AlertIcon, AppText, BankIcon, Button, cardStyle, Check, Chip, ClockIcon, CompactMoney, InfoIcon } from '../../../ui';
+import { AlertIcon, AppText, BankIcon, BottomSheet, Button, cardStyle, Check, Chip, ClockIcon, CompactMoney, InfoIcon } from '../../../ui';
 import { PickAmountSheet, ReceivedAmountSheet } from '../../money/received-sheet';
 import type { TapperMoney } from '../../money/sale/use-sale-money';
 import { FarmScreen } from '../../farm/pieces';
@@ -100,7 +102,14 @@ function PayBody({ bump }: { bump: () => void }) {
   const { era } = useI18n();
   // E06-S08: the "ได้น้อยกว่านี้" sheet (by payee id) and the pick-fix sheet (by worker id).
   const [lessFor, setLessFor] = useState<string | null>(null);
-  const [pickFor, setPickFor] = useState<string | null>(null);
+  /** PR-17 / PR-19: the repayment stayed with this worker — picked (from the pile) or handed (the buyer gave it). */
+  const [fixFor, setFixFor] = useState<{ workerId: string; mode: 'picked' | 'handed'; methods: readonly DebtPaymentMethod[] } | null>(null);
+  /** The owner's transfer carried several workers' repayments: whom did the buyer hand it to? */
+  const [chooseFix, setChooseFix] = useState(false);
+  const counts = useSaleCounts();
+  // From the ledger (M10 / PR-19): `?fix=<workerId>&how=<transfer|cash|picked>` opens the fix sheet once.
+  const params = useLocalSearchParams<{ fix?: string; how?: string }>();
+  const [paramDone, setParamDone] = useState(false);
   const shareSplit = useShareSplit();
   const { saleId, state, master, append, saleTitle } = view;
   const title = msg('cop.payPageTitle');
@@ -189,12 +198,15 @@ function PayBody({ bump }: { bump: () => void }) {
   const repayName = transferOn.length === 1 ? transferOn[0].name : '';
   const left = payees.filter((p) => !st(p.id).done).length;
   const src = sourcesSheet(plan, s.grossSatang, s.ownerSatang);
-  const owes = buyerOwes(events).find((o) => o.saleId === saleId);
+  // Today's transfer is known here, so the buyer owes against it (review 2026-11-01); cancelled sales owe nothing.
+  const owes = buyerOwes(events, counts, { ownerTransfer: (id) => (id === saleId ? money.ownerTransferSatang : undefined) }).find((o) => o.saleId === saleId);
   const dateText = state.startedTs === null ? '' : formatThaiDate(state.startedTs, era);
   const balance = (wid: string) => money.debts.get(wid)?.balanceSatang ?? 0;
-  const picks = (wid: string) => lines(wid).filter((x) => x.method === 'cash-from-share');
-  // The owner's transfer carries every transfer-with-owner repayment; the sheet names the one worker, else the first.
-  const transferWorker = transferOn[0] ? { id: transferOn[0].id, name: transferOn[0].name } : null;
+  const routeLines = (wid: string, methods: readonly DebtPaymentMethod[]) => lines(wid).filter((x) => methods.includes(x.method));
+  // The owner's transfer carries every transfer-with-owner repayment: one worker is named, several are chosen from.
+  const transferWorker = transferOn.length === 1 ? { id: transferOn[0].id, name: transferOn[0].name } : null;
+  const transferNames = transferOn.map((w) => w.name).join(msg('co.and'));
+  const buyerName = state.parties?.buyer ?? '';
 
   const saveLess = (row: Exclude<Row, { kind: 'info' }>, received: number) =>
     flight.run(async () => {
@@ -202,18 +214,41 @@ function PayBody({ bump }: { bump: () => void }) {
       setLessFor(null);
       bump();
     });
-  const savePick = (wid: string, picked: number) =>
+  const saveFix = (wid: string, methods: readonly DebtPaymentMethod[], kept: number) =>
     flight.run(async () => {
-      const ls = picks(wid).map((x) => ({ id: x.id, headEventId: x.headEventId, amountSatang: x.amountSatang }));
-      for (const p of pickFixPatches(ls, picked)) await fin.write(p.id, p.head, { t: 'debt_payment_changed', patch: p.patch });
-      setPickFor(null);
+      const ls = routeLines(wid, methods).map((x) => ({ id: x.id, headEventId: x.headEventId, fields: x }));
+      for (const w of routeFixWrites(ls, kept, newId)) await fin.write(w.id, w.base, w.payload);
+      closeFix();
       bump();
     });
-  // PR-19 from this page: the money is with the worker. Only a cash-from-share deduction can be
-  // fixed here (P1); anything else just closes — the summary is read-only once the sale is closed.
-  const fixAtSale = (wid: string | undefined) => {
+  /** PR-19: the buyer handed the repayment to the worker — shrink that worker's deduction on its route (D-87). */
+  const handedTo = (wid: string, methods: readonly DebtPaymentMethod[]) => {
     setLessFor(null);
-    if (wid && picks(wid).length) setPickFor(wid);
+    setChooseFix(false);
+    if (routeLines(wid, methods).length) setFixFor({ workerId: wid, mode: 'handed', methods });
+  };
+  const fixAtSale = (row: Exclude<Row, { kind: 'info' }>) => {
+    if (row.kind === 'repay') return handedTo(row.tp.id, ['buyer-split', 'cash-from-share']);
+    if (transferWorker) return handedTo(transferWorker.id, ['transfer-with-owner']);
+    setLessFor(null);
+    if (transferOn.length > 1) setChooseFix(true);
+  };
+  const fromParams: typeof fixFor =
+    !params.fix || paramDone
+      ? null
+      : params.how === 'picked'
+        ? { workerId: params.fix, mode: 'picked', methods: ['cash-from-share'] }
+        : params.how === 'transfer'
+          ? { workerId: params.fix, mode: 'handed', methods: ['transfer-with-owner'] }
+          : params.how === 'cash'
+            ? { workerId: params.fix, mode: 'handed', methods: ['buyer-split', 'cash-from-share'] }
+            : null;
+  const activeFix = fixFor ?? fromParams;
+  /** Close the fix sheet; the ledger's params are spent, so a remount (bump) does not open it again. */
+  const closeFix = () => {
+    setFixFor(null);
+    setParamDone(true);
+    if (params.fix) router.setParams?.({ fix: undefined, how: undefined });
   };
 
   const cashSub = (tp: TapperMoney) => {
@@ -308,9 +343,9 @@ function PayBody({ bump }: { bump: () => void }) {
     if (receivable && ps.done && ps.shortSatang > 0) body.push(owesChip(ps.shortSatang, `pay-owes-${row.id}`));
     const off = locked(row);
     const link = receivable
-      ? linkUnder(msg('rp.pay.less'), `pay-less-${row.id}`, off, () => setLessFor(row.id))
+      ? linkUnder(`${msg('rp.pay.less')} ›`, `pay-less-${row.id}`, off, () => setLessFor(row.id))
       : row.kind === 'repay' && row.picked
-        ? linkUnder(msg('rp.pay.pickFix'), `pay-pickfix-${row.id}`, off, () => setPickFor(row.tp.id))
+        ? linkUnder(`${msg('rp.pay.pickFix')} ›`, `pay-pickfix-${row.id}`, off, () => setFixFor({ workerId: row.tp.id, mode: 'picked', methods: ['cash-from-share'] }))
         : null;
     return (
       <View key={row.id} style={{ gap: t.space.xxs }}>
@@ -374,29 +409,47 @@ function PayBody({ bump }: { bump: () => void }) {
         const lessRow = lessFor ? payees.find((p) => p.id === lessFor) : undefined;
         if (lessRow && lessRow.kind !== 'cash') {
           const who = lessRow.kind === 'repay' ? { id: lessRow.tp.id, name: lessRow.tp.name } : transferWorker;
+          // Owner row: nobody's repayment on the transfer → no "gave it to …"; several → named in the chooser.
+          const name = who ? who.name : transferOn.length > 1 ? transferNames : null;
           return (
             <ReceivedAmountSheet
               kind={lessRow.kind === 'owner' ? 'transfer' : 'cash'}
-              name={who?.name ?? ''}
+              name={name}
               dateText={dateText}
               expectedSatang={lessRow.satang}
               debtSatang={who ? balance(who.id) : 0}
+              buyer={lessRow.kind === 'owner' ? buyerName : undefined}
+              names={lessRow.kind === 'owner' ? transferNames : undefined}
               onSave={(received) => void saveLess(lessRow, received)}
-              onFixAtSale={() => fixAtSale(who?.id)}
+              onFixAtSale={() => fixAtSale(lessRow)}
               onClose={() => setLessFor(null)}
             />
           );
         }
-        const pickTp = pickFor ? money.tappers.find((tp) => tp.id === pickFor) : undefined;
-        if (pickTp) {
+        if (chooseFix) {
+          return (
+            <BottomSheet open onClose={() => setChooseFix(false)} title={msg('rp.fix.choose')} testID="pay-fix-choose" closeLabel={msg('rp.sheet.close')}>
+              <View style={{ gap: t.space.sm }}>
+                {transferOn.map((w) => (
+                  <Button key={w.id} testID={`pay-fix-choose-${w.id}`} size="large" onPress={() => handedTo(w.id, ['transfer-with-owner'])}>
+                    {w.name}
+                  </Button>
+                ))}
+              </View>
+            </BottomSheet>
+          );
+        }
+        const fixTp = activeFix ? money.tappers.find((tp) => tp.id === activeFix.workerId) : undefined;
+        if (activeFix && fixTp && routeLines(fixTp.id, activeFix.methods).length) {
           return (
             <PickAmountSheet
-              name={pickTp.name}
+              mode={activeFix.mode}
+              name={fixTp.name}
               dateText={dateText}
-              deductedSatang={picks(pickTp.id).reduce((a, x) => a + x.amountSatang, 0)}
-              debtNowSatang={balance(pickTp.id)}
-              onSave={(picked) => void savePick(pickTp.id, picked)}
-              onClose={() => setPickFor(null)}
+              deductedSatang={routeLines(fixTp.id, activeFix.methods).reduce((a, x) => a + x.amountSatang, 0)}
+              debtNowSatang={balance(fixTp.id)}
+              onSave={(kept) => void saveFix(fixTp.id, activeFix.methods, kept)}
+              onClose={closeFix}
             />
           );
         }

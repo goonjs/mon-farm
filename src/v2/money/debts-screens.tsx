@@ -301,7 +301,7 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xxs, borderRadius: t.radius.pill, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs, backgroundColor: r.short ? t.color.warnSunk : t.color.acceptSunk }}>
                       {r.short ? null : <Check color={t.color.accept} size={10} />}
                       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: r.short ? t.color.warn : t.color.accept }}>
-                        {r.short ? msg('rp.hist.short', { amount: formatSatang(r.short) }) : msg('rp.hist.received')}
+                        {`${r.short ? msg('rp.hist.short', { amount: formatSatang(r.short) }) : msg('rp.hist.received')} ›`}
                       </Text>
                     </View>
                   </Pressable>
