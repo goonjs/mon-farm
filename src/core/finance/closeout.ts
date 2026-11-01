@@ -101,6 +101,13 @@ export interface CloseoutWorkerInput {
    * differ (the deduct sheet then proposes the plan's normal amount).
    */
   readonly oneDevice?: DeductAmounts | null;
+  /**
+   * Review 4 (B1′): what this sale's recorded lines for the worker are right
+   * now, as far as another device can move them — every event another device
+   * wrote on them (their lines, voids, repayments). A one / both choice counts
+   * only while this is what it was made on. Absent = '' (hand-built inputs).
+   */
+  readonly linesSig?: string;
 }
 
 /** A deduction and its netting part (satang). */
@@ -123,6 +130,14 @@ export interface CloseoutWorkerDraft {
    * clear a double.
    */
   readonly doubleChoice?: 'one' | 'both';
+  /**
+   * Review 4 (B1′): the recorded lines (`CloseoutWorkerInput.linesSig`) the
+   * deduct sheet's amounts and choice were made on. When the lines move under
+   * it (another device synced), the amounts and choice here are stale and
+   * ignored: the double is open again and the sheet proposes from the lines
+   * now recorded. A choice with no signature never clears a double.
+   */
+  readonly linesSig?: string;
 }
 
 export type ProposalReason = 'plan' | 'all' | 'cut';
@@ -179,6 +194,8 @@ export interface CloseoutWorker {
    * the farm owes; null when it can (or not doubled). "หักทั้งสอง" is off then.
    */
   readonly doubleBothProblem: { readonly problem: Exclude<DeductProblem, 'nothing'>; readonly capSatang: number } | null;
+  /** The recorded lines' signature now (`CloseoutWorkerInput.linesSig`); the deduct sheet stores it with what it sets. */
+  readonly linesSig: string;
 }
 
 /** CO-5 shortcuts. half = cap / 2 floored to whole baht. */
@@ -256,8 +273,11 @@ export interface CloseoutPlan {
  * owner reset it). reason: 'plan' = the instalment was proposed; 'all' = the
  * whole balance fits; 'cut' = cut at the share (+ netting).
  */
-function workerDraft(w: CloseoutWorkerInput, d: CloseoutWorkerDraft | undefined, defaultRoute: (id: string) => RepayRoute) {
+function workerDraft(w: CloseoutWorkerInput, given: CloseoutWorkerDraft | undefined, defaultRoute: (id: string) => RepayRoute) {
   const rec = w.recorded;
+  const linesSig = w.linesSig ?? '';
+  // Review 4 (B1′): amounts and a choice made on lines that have since moved are dropped (the route stays).
+  const d = given?.linesSig !== undefined && given.linesSig !== linesSig ? (given.route ? { route: given.route } : undefined) : given;
   const nettingSatang = d?.nettingSatang ?? rec?.nettingSatang ?? 0;
   const typed = d && d.totalSatang !== undefined ? d.totalSatang : rec ? rec.totalSatang : null;
   const sheet = deductSheet({
@@ -287,7 +307,8 @@ function workerDraft(w: CloseoutWorkerInput, d: CloseoutWorkerDraft | undefined,
     : null;
   const doubleBothProblem = bothSheet && bothSheet.problem !== null && bothSheet.problem !== 'nothing' ? { problem: bothSheet.problem, capSatang: bothSheet.capSatang } : null;
   // Review 3 (B1): only the owner's one / both choice in the deduct sheet (its ✓) fixes a double — never amounts alone.
-  const chosen = doubled && !!d?.doubleChoice;
+  // Review 4 (B1′): and only on the lines recorded now (its signature still matches).
+  const chosen = doubled && !!d?.doubleChoice && d.linesSig === linesSig;
   const dirty = rec
     ? chosen || rec.totalSatang !== sheet.totalSatang || rec.nettingSatang !== sheet.nettingSatang || (sheet.routeSatang > 0 && (recRoute !== sheet.routeSatang || rec.route !== route))
     : sheet.totalSatang > 0;
@@ -313,6 +334,7 @@ function workerDraft(w: CloseoutWorkerInput, d: CloseoutWorkerDraft | undefined,
     doubleOpen: doubled && !chosen,
     doublePick,
     doubleBothProblem,
+    linesSig,
   };
 }
 
@@ -361,6 +383,7 @@ export function closeoutPlan(input: CloseoutInput): CloseoutPlan {
       doubleOpen: x.doubleOpen,
       doublePick: x.doublePick,
       doubleBothProblem: x.doubleBothProblem,
+      linesSig: x.linesSig,
     };
   });
   const by = (route: RepayRoute) => sumOf(workers.filter((w) => w.route === route).map((w) => w.routeSatang));
@@ -860,7 +883,9 @@ export function pendingRepays(
  *   wrote on this sale's lines for the worker. This device's own writes (its
  *   confirm, one stopped part-way included) never move them: the as-if
  *   figures add the lines back, and its own events are left out. With no
- *   `ownDeviceId`, sigs is empty (nothing is tracked).
+ *   `ownDeviceId`, sigs is empty (nothing is tracked);
+ * - linesSig (review 4, B1′): the same set of other devices' events alone (all
+ *   events with no `ownDeviceId`), the lines a one / both choice is tied to.
  */
 export function closeoutInputs(i: {
   readonly saleId: string;
@@ -898,6 +923,16 @@ export function closeoutInputs(i: {
     return sets.length > 1 && sets.every((x) => x.totalSatang === sets[0].totalSatang && x.nettingSatang === sets[0].nettingSatang) ? sets[0] : null;
   };
 
+  /** Every event another device (any device, with no ownDeviceId) wrote on this sale's lines for the worker and their repayments. */
+  const linesSigOf = (id: string) => {
+    const targets = new Set(all(id).flatMap((p) => [p.id, ...(p.repaymentId ? [p.repaymentId] : [])]));
+    return i.events
+      .filter((e) => targets.has(e.targetId) && (!i.ownDeviceId || e.actor?.deviceId !== i.ownDeviceId))
+      .map((e) => e.id)
+      .sort()
+      .join('+');
+  };
+
   const inputs: CloseoutWorkerInput[] = i.tappers.map((tp) => {
     const account = i.accounts.get(tp.id);
     const here = lines(tp.id);
@@ -914,6 +949,7 @@ export function closeoutInputs(i: {
       recorded: here.length ? { totalSatang: total, nettingSatang: net, route } : null,
       devices: devicesOf(tp.id),
       oneDevice: oneDeviceOf(tp.id),
+      linesSig: linesSigOf(tp.id),
     };
   });
   const recordedLines = (id: string): RecordedLine[] =>
@@ -932,12 +968,7 @@ export function closeoutInputs(i: {
   const sigs = new Map<string, string>();
   if (i.ownDeviceId) {
     for (const w of inputs) {
-      const targets = new Set(all(w.id).flatMap((p) => [p.id, ...(p.repaymentId ? [p.repaymentId] : [])]));
-      const others = i.events
-        .filter((e) => targets.has(e.targetId) && e.actor?.deviceId !== i.ownDeviceId)
-        .map((e) => e.id)
-        .sort()
-        .join('+');
+      const others = w.linesSig;
       sigs.set(`debt:${w.id}`, `${w.balanceSatang}|${others}`);
       sigs.set(`owed:${w.id}`, `${w.owedBackSatang}|${others}`);
     }

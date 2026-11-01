@@ -179,6 +179,24 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       seen: Object.fromEntries(Object.entries(d.seen ?? {}).filter(([k]) => !gone.has(k))),
     }));
   }, [stale, saleId]);
+  // Review 4 (B1′): amounts / a one-both choice set on lines that have since moved (another device synced) are dropped
+  // from the draft (core already ignores them), so nothing reads them as typed; the route stays.
+  const linesNow = useMemo(() => new Map((derived?.inputs ?? []).map((x) => [x.id, x.linesSig ?? ''] as const)), [derived]);
+  const staleLines = Object.entries(draft.workers)
+    .filter(([id, x]) => x.linesSig !== undefined && linesNow.has(id) && x.linesSig !== linesNow.get(id))
+    .map(([id]) => id)
+    .join(',');
+  useEffect(() => {
+    if (!staleLines || flight.busy) return;
+    updateDraft(saleId, (d) => ({
+      ...d,
+      workers: Object.fromEntries(
+        Object.entries(d.workers).flatMap(([id, x]) =>
+          x.linesSig === undefined || !linesNow.has(id) || x.linesSig === linesNow.get(id) ? [[id, x]] : x.route ? [[id, { route: x.route }]] : [],
+        ),
+      ),
+    }));
+  }, [staleLines, linesNow, saleId, flight.busy]);
   /** Every draft change; a check just made remembers the figures it was made on. */
   const update = (f: (d: CloseoutDraft) => CloseoutDraft) =>
     updateDraft(saleId, (d) => {

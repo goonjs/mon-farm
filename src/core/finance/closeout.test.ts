@@ -380,7 +380,8 @@ describe('ไม่เปลี่ยน: same numbers as deductSheet / roundCas
                   expect(p.transferSatang).toBe(p.ownerSatang + p.transferRepaySatang);
                 }
     expect(cases).toBeGreaterThan(1000);
-  });
+    // NB-a (review 4): ~3 s of cases; once over vitest's 5 s default under load. Same cases, more time.
+  }, 20_000);
 
   it('the sources sheet adds up for every route', () => {
     for (const route of REPAY_ROUTES) {
@@ -742,7 +743,7 @@ describe('breakPlan (CO-24)', () => {
       [12345, 345],
     ] as const)
       expect(liftableNotes(cashNotes(pile), take) === null).toBe(pickNotes(pile, take) === null);
-  });
+  }, 20_000);
 });
 
 describe('groupNotes', () => {
@@ -1151,7 +1152,12 @@ describe('a double deduction from two devices is flagged, locks the payment, and
   const derive = (events: FinanceEvent[], share: number, drafts: CloseoutInput['drafts'] = {}, own: string | null = null) => {
     const ins = closeoutInputs({ saleId: S, tappers: [{ id: W.id, name: W.name, shareSatang: share }], accounts: projectDebts(events), finance: projectFinance(events), events, ownDeviceId: own });
     const input = ins.inputs[0];
-    const plan = planOf(ins.inputs, share, drafts);
+    // Review 4 (B1′): a choice counts only on the lines it was made on. A choice written here with no
+    // `linesSig` stands for "chosen on the lines of THIS log" (the sheet's ✓ on them); tests of a stale choice pass one.
+    const made = Object.fromEntries(
+      Object.entries(drafts).map(([id, x]) => [id, x.doubleChoice && x.linesSig === undefined ? { ...x, linesSig: ins.inputs.find((i) => i.id === id)?.linesSig } : x]),
+    );
+    const plan = planOf(ins.inputs, share, made);
     const gate = confirmGate({ debtors: input.balanceSatang > 0 ? [W] : [], debtChecked: new Set([W.id]), debtAnswered: true, owed: input.owedBackSatang > 0 ? [W] : [], owedChecked: new Set([W.id]), owedAnswered: true, plan });
     return { ins, input, plan, w: plan.workers[0], gate, blocks: payBlocks(planOf(ins.inputs, share, {})) };
   };
@@ -1386,5 +1392,57 @@ describe('a double deduction from two devices is flagged, locks the payment, and
     // not doubled → nothing to say
     const base = seed(1000000, 0, 100000);
     expect(derive([...base, ...confirmOn('A', base, 500000)], 500000).w.doubleBothProblem).toBeNull();
+  });
+
+  // ── review 4 · B1′: a one / both choice is tied to the lines it was made on ──
+
+  /** A third device's confirm on the log it saw before the double (its own plan's amount). */
+  const thirdLine = (base: FinanceEvent[], share: number) => confirmOn('C', base, share);
+
+  it('review 4 · B1′ R4-1: ✓ one on A + B, then device C\'s line lands → the double is open again (gate, payment page), the 1,000 typed is dropped', () => {
+    const base = seed(1000000, 0, 100000);
+    const ab = [...base, ...confirmOn('A', base, 500000), ...confirmOn('B', base, 500000)];
+    const d = derive(ab, 500000);
+    const choice = { [W.id]: { ...d.w.doublePick!.one, doubleChoice: 'one' as const, linesSig: d.w.linesSig } };
+    expect(derive(ab, 500000, choice).gate.kind).toBe('ready');
+    const abc = [...ab, ...thirdLine(base, 500000)];
+    const after = derive(abc, 500000, choice);
+    expect(after.input.devices).toBe(3);
+    expect(after.w.linesSig).not.toBe(d.w.linesSig);
+    expect([after.w.doubled, after.w.doubleOpen, after.gate.kind]).toEqual([true, true, 'double']);
+    // the amount chosen on two devices' lines is not kept: the card shows what is recorded (3 × 1,000), the sheet proposes one
+    expect(after.w.totalSatang).toBe(300000);
+    expect(after.w.doublePick).toEqual({ one: { totalSatang: 100000, nettingSatang: 0 }, both: { totalSatang: 300000, nettingSatang: 0 } });
+    // ✓ again on the lines now recorded clears it
+    expect(derive(abc, 500000, { [W.id]: { ...after.w.doublePick!.one, doubleChoice: 'one', linesSig: after.w.linesSig } }).gate.kind).toBe('ready');
+  });
+
+  it('review 4 · B1′ R4-2: หักทั้งสอง (2,000) ✓, then device B voids its line and writes 500 → open again; the 2,000 nobody records is dropped', () => {
+    const base = seed(1000000, 0, 100000);
+    const a = confirmOn('A', base, 500000);
+    const b = confirmOn('B', base, 500000);
+    const ab = [...base, ...a, ...b];
+    const d = derive(ab, 500000);
+    const choice = { [W.id]: { ...d.w.doublePick!.both, doubleChoice: 'both' as const, linesSig: d.w.linesSig } };
+    expect(derive(ab, 500000, choice).w.totalSatang).toBe(200000);
+    // B re-confirms on its own log (A's line not yet synced there): voids its 1,000, writes 500
+    const bRedo = confirmOn('B', [...base, ...b], 500000, { [W.id]: { totalSatang: 50000 } });
+    const after = derive([...ab, ...bRedo], 500000, choice);
+    expect(after.input.recorded?.totalSatang).toBe(150000);
+    expect([after.w.doubleOpen, after.gate.kind, after.w.totalSatang]).toEqual([true, 'double', 150000]);
+  });
+
+  it('review 4 · B1′: a choice with no lines signature never clears a double; the signature ignores this device\'s own writes (a confirm stopped part-way keeps the choice)', () => {
+    const base = seed(1000000, 0, 100000);
+    const ab = [...base, ...confirmOn('A', base, 500000), ...confirmOn('B', base, 500000)];
+    const ins = (events: FinanceEvent[], own: string | null) =>
+      closeoutInputs({ saleId: S, tappers: [{ id: W.id, name: W.name, shareSatang: 500000 }], accounts: projectDebts(events), finance: projectFinance(events), events, ownDeviceId: own }).inputs[0];
+    const bare = planOf([ins(ab, 'A')], 500000, { [W.id]: { totalSatang: 100000, doubleChoice: 'one' } }).workers[0];
+    expect(bare.doubleOpen).toBe(true);
+    // A's own further writes (its confirm voiding a line) leave A's signature as it was; B's do not
+    const sigA = ins(ab, 'A').linesSig;
+    const own = confirmOn('A', ab, 500000, { [W.id]: { totalSatang: 100000, doubleChoice: 'one' } }).slice(0, 1);
+    expect(ins([...ab, ...own], 'A').linesSig).toBe(sigA);
+    expect(ins([...ab, ...confirmOn('B', ab, 500000, { [W.id]: { totalSatang: 100000, doubleChoice: 'one' } }).slice(0, 1)], 'A').linesSig).not.toBe(sigA);
   });
 });

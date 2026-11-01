@@ -12,6 +12,11 @@
  * Opening writes nothing (review 3, NB5): the one set is shown through
  * `co.preview` until a key commits it; only ✓ records the owner's choice
  * (`doubleChoice`), the one thing that clears the double (B1).
+ *
+ * Review 4 (B1′): what the sheet sets carries the recorded lines it was set
+ * on (`linesSig`); core drops it once they move. If they move while the sheet
+ * is open (a sync lands), the sheet starts again from the lines now recorded
+ * — the proposal and the boxes are refreshed, so ✓ is always on those.
  */
 
 import { useState } from 'react';
@@ -41,8 +46,10 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
   // What to put back when the sheet is closed without ✓.
   const [before] = useState(() => ({ worker: co.draft.workers[given.id], choice: co.draft.owedChoice[given.id] }));
   // An open double starts from one device's set, not the sum the two devices wrote — shown, not written (NB5).
-  const [pending, setPending] = useState<DeductAmounts | null>(() => (given.doubleOpen && given.doublePick ? given.doublePick.one : null));
-  const seen = pending && co.preview ? co.preview(given.id, pending) : null;
+  const opening = (x: CloseoutWorker) => (x.doubleOpen && x.doublePick ? x.doublePick.one : null);
+  const [pending, setPending] = useState<DeductAmounts | null>(() => opening(given));
+  const shownWith = (p: DeductAmounts | null) => (p && co.preview ? co.preview(given.id, { ...p, linesSig: given.linesSig }) : null);
+  const seen = shownWith(pending);
   /** The worker as the sheet shows it: the plan's, or the one set's preview while nothing is typed yet. */
   const w = seen?.w ?? given;
   const pieces = seen?.pieces ?? givenPieces;
@@ -50,10 +57,25 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
   // A23: one pad, one box typed into at a time; the netting box takes the pad only when tapped.
   const [active, setActive] = useState<Box>('total');
   const [netEntry, setNetEntry] = useState<EntryState>(() => startEntry(rawOf(w.nettingSatang)));
+  // B1′: the lines moved while open (a sync) → start again from them; what was typed on the old lines is dropped by core.
+  const [madeOn, setMadeOn] = useState(given.linesSig);
+  if (madeOn !== given.linesSig) {
+    setMadeOn(given.linesSig);
+    const p = opening(given);
+    const now = shownWith(p)?.w ?? given;
+    setPending(p);
+    setEntry(startEntry(rawOf(now.totalSatang)));
+    setNetEntry(startEntry(rawOf(now.nettingSatang)));
+    setActive('total');
+  }
   /** The draft with the shown one set under it, so the first key or chip writes on top of what is on screen. */
   const base = (d: CloseoutDraft) => (pending ? withWorker(d, w.id, pending) : d);
+  /** Every change here is tied to the lines it was made on (B1′). */
   const edit = (f: (d: CloseoutDraft) => CloseoutDraft) => {
-    co.update((d) => f(base(d)));
+    co.update((d) => {
+      const n = f(base(d));
+      return n.workers[w.id] ? withWorker(n, w.id, { linesSig: w.linesSig }) : n;
+    });
     setPending(null);
   };
 
@@ -131,7 +153,7 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
     const choice = pick && w.totalSatang === pick.both.totalSatang && w.nettingSatang === pick.both.nettingSatang ? ('both' as const) : ('one' as const);
     co.update((d) => ({
       // A double (two devices' lines): ✓ records the owner's choice with the amount shown (one device's, unless หักทั้งสอง) — confirm then writes it as one set.
-      ...(w.doubled ? withWorker(d, w.id, { totalSatang: w.totalSatang, nettingSatang: w.nettingSatang, doubleChoice: choice }) : d),
+      ...(w.doubled ? withWorker(d, w.id, { totalSatang: w.totalSatang, nettingSatang: w.nettingSatang, doubleChoice: choice, linesSig: w.linesSig }) : d),
       debtChecked: addId(d.debtChecked, w.id),
       ...(w.nettingSatang > 0 ? { owedChecked: addId(d.owedChecked, w.id), owedChoice: { ...d.owedChoice, [w.id]: 'net' as const } } : {}),
     }));

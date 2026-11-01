@@ -41,11 +41,13 @@ jest.mock('../store/people', () => {
   const { store } = jest.requireMock('../store/store');
   return { peopleStore: new MasterStore(store, createDeviceClock(store)) };
 });
+const mockFocused = new Set<() => void>();
 jest.mock('expo-router', () => {
   const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: jest.fn(() => true), canDismiss: jest.fn(() => true), dismissAll: jest.fn(), dismissTo: jest.fn() };
   return {
     Link: ({ children }: { children: ReactNode }) => children,
-    useFocusEffect: () => undefined,
+    // Review 4: kept so a test can land a sync while a page stays open (its finance reader reloads on focus).
+    useFocusEffect: (cb: () => void) => void mockFocused.add(cb),
     useLocalSearchParams: () => ({}),
     useRouter: () => router,
     router,
@@ -578,5 +580,156 @@ describe('review 3 · NB1: "หักทั้งสอง" gives way to the rea
     expect(last('co-amount')).not.toHaveTextContent(/10,250/);
     r.unmount();
     clearDraft(S);
+  });
+});
+
+// ── review 4 · B1′: a one / both choice counts only on the lines it was made on ──
+
+/** A line a THIRD phone wrote (device phone-C), landing by sync. */
+async function fromPhoneC(saleId: string, worker: { id: string; name: string }, amountSatang: number): Promise<FinanceEvent> {
+  const any = (await all())[0];
+  const e: FinanceEvent = {
+    id: uuidv7(),
+    groupId: any.groupId,
+    deviceSeq: 1 + (await all()).filter((x) => x.actor.deviceId === 'phone-C').length,
+    ts: Date.now(),
+    actor: { userId: any.actor.userId, deviceId: 'phone-C' },
+    source: 'app',
+    targetId: `dpay-C-${uuidv7()}`,
+    baseEventId: null,
+    payload: { t: 'debt_payment_recorded', fields: { worker, creditor: FARM, amountSatang, date: '2026-10-31', note: '', method: 'transfer-with-owner', saleId } },
+  };
+  await financeStore.append(e);
+  return e;
+}
+/** The open page's finance reader reloads (what a sync landing does while the page stays open). */
+const synced = async () => {
+  await act(async () => mockFocused.forEach((f) => f()));
+  await flush();
+};
+
+describe('review 4 · B1′ R4-1: ✓ one on phones A + B, then phone C\'s 3,250 lands — the 3-phone double opens again', () => {
+  const S = 'd-r4a';
+  beforeAll(async () => {
+    await storySale(S);
+    await confirmAs(S);
+    await phoneBDeducts(S, RED(), 325_000);
+    clearDraft(S);
+  });
+
+  it('chip and gate come back; ✓ again on the three phones\' lines writes one 3,250', async () => {
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.red}`);
+    await press('co-deduct-ok');
+    expect(screen.queryByTestId(`co-double-${farm.red}`)).toBeNull();
+    r.unmount();
+    await fromPhoneC(S, RED(), 325_000);
+    const r2 = await inSale(S, <CloseoutSummaryScreen />);
+    expect(last(`co-double-${farm.red}`)).toBeTruthy();
+    // the card shows what is recorded (9,750), not the 3,250 chosen on two phones' lines
+    expect(last(`co-deduct-${farm.red}`)).toHaveTextContent(/−9,750\.00/);
+    await gates(S);
+    expect(last('co-confirm')).toHaveTextContent('↑ แก้หักหนี้ซ้ำของแดงก่อน');
+    await press(`co-deduct-${farm.red}`);
+    expect(last('co-double-warn')).toHaveTextContent(/หักซ้ำจาก 3 เครื่อง/);
+    expect(last('co-amount')).toHaveTextContent(/3,250/);
+    await press('co-deduct-ok');
+    expect(screen.queryByTestId(`co-double-${farm.red}`)).toBeNull();
+    await gates(S);
+    expect(last('co-confirm')).toHaveTextContent('ยืนยันยอด · ไปจ่ายเงิน');
+    await press('co-confirm');
+    r2.unmount();
+    expect(await live(S, farm.red)).toEqual([['transfer-with-owner', 325_000]]);
+    clearDraft(S);
+  });
+});
+
+describe('review 4 · B1′ R4-2: หักทั้งสอง 6,500 ✓, then phone B voids its line and writes 2,000 — no 6,500 nobody records', () => {
+  const S = 'd-r4b';
+  let bEvt: FinanceEvent;
+  beforeAll(async () => {
+    await storySale(S);
+    await confirmAs(S);
+    bEvt = await phoneBDeducts(S, RED(), 325_000);
+    clearDraft(S);
+  });
+
+  it('chip and gate come back on 5,250 recorded; the sheet proposes from those lines; ✓ writes one 3,250', async () => {
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.red}`);
+    await press('co-double-both');
+    await press('co-deduct-ok');
+    expect(screen.queryByTestId(`co-double-${farm.red}`)).toBeNull();
+    r.unmount();
+    await fromPhoneB(bEvt.targetId, { t: 'debt_payment_changed', patch: { deleted: true } } as FinancePayload, bEvt.id);
+    await phoneBDeducts(S, RED(), 200_000);
+    const r2 = await inSale(S, <CloseoutSummaryScreen />);
+    expect(last(`co-double-${farm.red}`)).toBeTruthy();
+    expect(last(`co-deduct-${farm.red}`)).toHaveTextContent(/−5,250\.00/);
+    await gates(S);
+    expect(last('co-confirm')).toHaveTextContent('↑ แก้หักหนี้ซ้ำของแดงก่อน');
+    await press(`co-deduct-${farm.red}`);
+    expect(last('co-amount')).toHaveTextContent(/3,250/);
+    expect(selected('co-double-both')).toBe(false);
+    expect(last('co-double-both')).toHaveTextContent(/5,250/);
+    await press('co-deduct-ok');
+    await gates(S);
+    await press('co-confirm');
+    r2.unmount();
+    expect(await live(S, farm.red)).toEqual([['transfer-with-owner', 325_000]]);
+    clearDraft(S);
+  });
+});
+
+describe('review 4 · B1′ variant: a sync lands while the deduct sheet is open — the sheet proposes again from the lines now recorded', () => {
+  const S = 'd-r4c';
+  beforeAll(async () => {
+    await storySale(S);
+    await confirmAs(S);
+    await phoneBDeducts(S, RED(), 325_000);
+    clearDraft(S);
+  });
+
+  it('หักทั้งสอง (6,500) pressed, phone C lands: the 6,500 is dropped, the sheet shows 3,250 and 3 phones; ✓ writes one 3,250', async () => {
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.red}`);
+    await press('co-double-both');
+    expect(last('co-amount')).toHaveTextContent(/6,500/);
+    await fromPhoneC(S, RED(), 325_000);
+    await synced();
+    expect(last('co-double-warn')).toHaveTextContent(/หักซ้ำจาก 3 เครื่อง/);
+    expect(last('co-amount')).toHaveTextContent(/3,250/);
+    expect(last('co-amount')).not.toHaveTextContent(/6,500/);
+    // the three phones' 9,750 is over his share 9,187.50: the reason shows instead of หักทั้งสอง (NB1)
+    expect(screen.queryByTestId('co-double-both')).toBeNull();
+    expect(last('co-double-both-why')).toBeTruthy();
+    await press('co-deduct-ok');
+    expect(screen.queryByTestId(`co-double-${farm.red}`)).toBeNull();
+    await gates(S);
+    expect(last('co-confirm')).toHaveTextContent('ยืนยันยอด · ไปจ่ายเงิน');
+    await press('co-confirm');
+    r.unmount();
+    expect(await live(S, farm.red)).toEqual([['transfer-with-owner', 325_000]]);
+    clearDraft(S);
+  });
+
+  it('a sync while the sheet is open on an unchanged proposal still leaves ✓ on the lines now recorded (no stale choice)', async () => {
+    const S2 = 'd-r4d';
+    await storySale(S2);
+    await confirmAs(S2);
+    await phoneBDeducts(S2, RED(), 325_000);
+    clearDraft(S2);
+    const r = await inSale(S2, <CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.red}`);
+    await fromPhoneC(S2, RED(), 325_000);
+    await synced();
+    await press('co-deduct-ok');
+    r.unmount();
+    // a fourth phone after the ✓: open again
+    await fromPhoneC(S2, RED(), 100_000);
+    const r2 = await inSale(S2, <CloseoutSummaryScreen />);
+    expect(last(`co-double-${farm.red}`)).toBeTruthy();
+    r2.unmount();
+    clearDraft(S2);
   });
 });
