@@ -6,9 +6,12 @@
  * piece and the debt left below are the plan's own figures (core), never
  * worked out here. ✓ keeps the draft and counts as checking this tapper's
  * debt; closing without ✓ puts the draft back as it was.
+ *
+ * A double (owner 2026-11-01): the sheet opens on ONE device's amount
+ * (`doublePick.one`), so ✓ unchanged deducts that; "หักทั้งสอง" sets the sum.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { quickAmounts, type CloseoutWorker, type DebtPiece } from '../../../core/finance/closeout';
@@ -34,10 +37,16 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
   const pieceName = usePieceName();
   // What to put back when the sheet is closed without ✓.
   const [before] = useState(() => ({ worker: co.draft.workers[w.id], choice: co.draft.owedChoice[w.id] }));
-  const [entry, setEntry] = useState<EntryState>(() => startEntry(rawOf(w.totalSatang)));
+  // An open double starts from one device's set, not the sum the two devices wrote.
+  const [start] = useState(() => (w.doubleOpen && w.doublePick ? w.doublePick.one : { totalSatang: w.totalSatang, nettingSatang: w.nettingSatang }));
+  const [entry, setEntry] = useState<EntryState>(() => startEntry(rawOf(start.totalSatang)));
   // A23: one pad, one box typed into at a time; the netting box takes the pad only when tapped.
   const [active, setActive] = useState<Box>('total');
-  const [netEntry, setNetEntry] = useState<EntryState>(() => startEntry(rawOf(w.nettingSatang)));
+  const [netEntry, setNetEntry] = useState<EntryState>(() => startEntry(rawOf(start.nettingSatang)));
+  useEffect(() => {
+    // The draft follows the proposal, so the cash and debt-left lines are the one set's; closing without ✓ puts `before` back.
+    if (w.doubleOpen && w.doublePick) co.update((d) => withWorker(d, w.id, start));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- once, on open
 
   const setTotal = (satang: number) => co.update((d) => withWorker(d, w.id, { totalSatang: satang }));
   /** Netting set to an amount (0 removes it): core's rule, then the deduction box shows the new deduction. */
@@ -75,6 +84,15 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
     setEntry(next);
     setTotal(entryToSatang(next.raw) ?? 0);
   };
+  /** "หักทั้งสอง": the sum both devices wrote, netting included — chosen on purpose only. */
+  const both = () => {
+    const b = w.doublePick?.both;
+    if (!b) return;
+    co.update((d) => withWorker(d, w.id, b));
+    setEntry(startEntry(rawOf(b.totalSatang)));
+    setNetEntry(startEntry(rawOf(b.nettingSatang)));
+    setActive('total');
+  };
   const jump = (satang: number) => {
     setEntry(startEntry(rawOf(satang)));
     setTotal(satang);
@@ -101,7 +119,8 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
   const ok = () => {
     if (blocked) return;
     co.update((d) => ({
-      ...d,
+      // A double (two devices' lines): ✓ sets the amount shown (one device's, unless หักทั้งสอง) — confirm then writes it as one set.
+      ...(w.doubled ? withWorker(d, w.id, { totalSatang: w.totalSatang }) : d),
       debtChecked: addId(d.debtChecked, w.id),
       ...(w.nettingSatang > 0 ? { owedChecked: addId(d.owedChecked, w.id), owedChoice: { ...d.owedChoice, [w.id]: 'net' as const } } : {}),
     }));
@@ -211,13 +230,27 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
               ]}
         </View>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.sm }}>
           {box('total', 'co-amount', totalView, w.invalid)}
           {netted ? box('net', 'co-net-field', netView, netProblem !== null) : null}
+          {/* owner 2026-11-01: the doubled sum only on purpose, beside the box (the pad and ✓ stay on screen) */}
+          {w.doublePick
+            ? chip(
+                'co-double-both',
+                msg('co.double.both', { amount: shortBaht(w.doublePick.both.totalSatang) }),
+                both,
+                w.totalSatang === w.doublePick.both.totalSatang && w.typedNettingSatang === w.doublePick.both.nettingSatang,
+                t.color.warn,
+              )
+            : null}
         </View>
         {w.invalid ? (
           <AppText testID="co-cap" accessibilityLiveRegion="polite" style={{ color: t.color.reject, fontWeight: t.font.weight.bold, textAlign: 'right' }}>
-            {w.problem === 'below-netting' ? msg('co.deduct.belowNet', { amount: shortBaht(w.nettingSatang) }) : msg('co.deduct.overCap', { amount: baht(w.capSatang) })}
+            {w.problem === 'below-netting'
+              ? msg('co.deduct.belowNet', { amount: shortBaht(w.nettingSatang) })
+              : w.problem === 'net-range'
+                ? msg('co.net.overMax', { amount: shortBaht(w.netCapSatang) })
+                : msg('co.deduct.overCap', { amount: baht(w.capSatang) })}
           </AppText>
         ) : null}
         {netProblem ? (
@@ -238,6 +271,7 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
         ) : null}
 
         {co.mixed?.has(w.id) ? <MergeWarn testID="co-merge-warn" /> : null}
+        {w.doubled ? <MergeWarn testID="co-double-warn" text={msg('co.double.sheet', { n: w.devices })} /> : null}
 
         <NumberPad variant="money" testID="co-pad" onKey={press} onDone={ok} doneDisabled={blocked} />
         <CTA testID="co-deduct-ok" disabled={blocked} icon={(c) => <Check color={c} />} onPress={ok}>
@@ -249,13 +283,13 @@ export function DeductSheet({ co, w, pieces, canNet, onClose }: { co: Closeout; 
 }
 
 /** "การหักเดิมรับคืนหลายทาง…": an older sale's deduction on two routes is saved on the one chosen (review #9). */
-export function MergeWarn({ testID }: { testID: string }) {
+export function MergeWarn({ testID, text }: { testID: string; text?: string }) {
   const t = useTheme();
   const msg = useT();
   return (
     <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs, backgroundColor: t.color.warnSunk, borderRadius: t.radius.md, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs }}>
       <WarnMark color={t.color.warn} size={13} />
-      <AppText variant="bodySm" style={{ flex: 1, color: t.color.warn, fontWeight: t.font.weight.bold }}>{msg('v2s.mergeRoutes')}</AppText>
+      <AppText variant="bodySm" style={{ flex: 1, color: t.color.warn, fontWeight: t.font.weight.bold }}>{text ?? msg('v2s.mergeRoutes')}</AppText>
     </View>
   );
 }

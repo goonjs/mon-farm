@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
   breakPlan,
+  closeoutInputs,
   closeoutPlan,
   confirmGate,
   confirmWrites,
@@ -9,11 +10,13 @@ import {
   groupNotes,
   liftableNotes,
   netDraft,
+  payBlocks,
   pendingRepays,
   quickAmounts,
   REPAY_ROUTES,
   ROUNDING_MENU,
   sourcesSheet,
+  staleChecks,
   type CloseoutInput,
   type CloseoutPlan,
   type CloseoutWorker,
@@ -1120,5 +1123,225 @@ describe('pendingRepays (CO-25)', () => {
       }),
     );
     expect(pendingRepays(p, { owner: false, debtCash: () => false })).toEqual([{ workerId: DAENG.id, name: 'แดง', satang: 325000, how: 'cash' }]);
+  });
+});
+
+// ── B1 / N2 / N3 / N5 (re-review 2, owner 2026-11-01 (A)) ───────────────────
+
+/**
+ * Two phones confirm the same sale offline: both sets of lines count (random
+ * ids, owner (A)), and the doubled deduction must never be silent — even when
+ * the sum stays inside the share (S1). Built from the log the way the app is
+ * (`closeoutInputs`, the same function use-closeout calls), with the payment
+ * page's plan (drafts {}) checked through `payBlocks`.
+ */
+describe('a double deduction from two devices is flagged, locks the payment, and the summary fixes it (B1, D-30, D-61)', () => {
+  const W: Payer = NAT;
+  const S = 'S';
+  let n = 0;
+  const ev = (dev: string, targetId: string, base: string | null, payload: FinancePayload): FinanceEvent =>
+    ({ id: `${String(++n).padStart(5, '0')}-${dev}`, groupId: 'g', deviceSeq: n, ts: n, actor: { userId: 'u', deviceId: dev }, source: 'app', targetId, baseEventId: base, payload }) as FinanceEvent;
+  const seed = (debt: number, owed = 0, plan: number | null = null): FinanceEvent[] => [
+    ev('z', 'd1', null, { t: 'debt_added', fields: { worker: W, kind: 'other', amountSatang: debt, date: '2026-10-01', note: 'x', lender: null, fertilizer: null, carriedForward: false } } as FinancePayload),
+    ...(owed ? [ev('z', 'x1', null, { t: 'expense_created', fields: { amountSatang: owed, date: '2026-10-01', stage: 'actual', categoryId: null, propertyId: null, item: 'ปุ๋ย', note: '', payer: W } } as FinancePayload)] : []),
+    ...(plan !== null ? [ev('z', 'pl', null, { t: 'debt_plan_set', worker: W, perSaleSatang: plan } as unknown as FinancePayload)] : []),
+  ];
+  const planOf = (inputs: readonly CloseoutWorkerInput[], share: number, drafts: CloseoutInput['drafts']) =>
+    closeoutPlan({ saleTotalSatang: share + 500000, ownerShareSatang: 500000, workers: inputs, drafts, defaultRoute: () => 'transfer-with-owner', rounding: 'none' });
+  const derive = (events: FinanceEvent[], share: number, drafts: CloseoutInput['drafts'] = {}, own: string | null = null) => {
+    const ins = closeoutInputs({ saleId: S, tappers: [{ id: W.id, name: W.name, shareSatang: share }], accounts: projectDebts(events), finance: projectFinance(events), events, ownDeviceId: own });
+    const input = ins.inputs[0];
+    const plan = planOf(ins.inputs, share, drafts);
+    const gate = confirmGate({ debtors: input.balanceSatang > 0 ? [W] : [], debtChecked: new Set([W.id]), debtAnswered: true, owed: input.owedBackSatang > 0 ? [W] : [], owedChecked: new Set([W.id]), owedAnswered: true, plan });
+    return { ins, input, plan, w: plan.workers[0], gate, blocks: payBlocks(planOf(ins.inputs, share, {})) };
+  };
+  let k = 0;
+  /** One device's ยืนยันยอด on the log it has seen; returns the events it writes. */
+  const confirmOn = (dev: string, events: FinanceEvent[], share: number, drafts: CloseoutInput['drafts'] = {}): FinanceEvent[] => {
+    const d = derive(events, share, drafts);
+    if (d.gate.kind !== 'ready') throw new Error(`gate ${d.gate.kind}`);
+    const r = confirmWrites({ saleId: S, date: '2026-10-31', worker: W, farm: FARM, plan: d.w, recorded: d.ins.recordedLines(W.id), owed: d.ins.owedOf(W.id), newId: (p) => `${p}${dev}${++k}` });
+    if (!r.ok) throw new Error('refused');
+    return r.writes.map((x) =>
+      x.op === 'write'
+        ? ev(dev, x.id, null, x.payload)
+        : ev(dev, x.id, x.base, (x.op === 'void-repayment' ? { t: 'repayment_changed', patch: { deleted: true } } : { t: 'debt_payment_changed', patch: { deleted: true } }) as FinancePayload),
+    );
+  };
+  const both = (base: FinanceEvent[], share: number, drafts: CloseoutInput['drafts'] = {}) => [...base, ...confirmOn('A', base, share, drafts), ...confirmOn('B', base, share, drafts)];
+
+  it('S1 · plan 1,000 a sale, share 5,000: both devices deduct 1,000 → 2,000 inside the share, still flagged; summary gate and payment page locked', () => {
+    const d = derive(both(seed(1000000, 0, 100000), 500000), 500000);
+    expect(d.input.devices).toBe(2);
+    expect(d.w.totalSatang).toBe(200000);
+    expect(d.w.invalid).toBe(false);
+    expect(d.w.doubled).toBe(true);
+    expect(d.w.doubleOpen).toBe(true);
+    expect(d.gate).toEqual({ kind: 'double', names: ['นัด'] });
+    expect(d.blocks).toEqual([{ id: W.id, name: 'นัด', why: 'double', devices: 2 }]);
+  });
+
+  it('owner 2026-11-01 · a double offers ONE device\'s amount (the sheet\'s proposal, ✓ unchanged) and the sum apart ("หักทั้งสอง")', () => {
+    const d = derive(both(seed(1000000, 0, 100000), 500000), 500000);
+    expect(d.input.oneDevice).toEqual({ totalSatang: 100000, nettingSatang: 0 });
+    expect(d.w.doublePick).toEqual({ one: { totalSatang: 100000, nettingSatang: 0 }, both: { totalSatang: 200000, nettingSatang: 0 } });
+    // the sheet's ✓ on the one amount: the double is fixed, one 1,000 line by one device
+    const one = { [W.id]: d.w.doublePick!.one };
+    expect(derive(both(seed(1000000, 0, 100000), 500000), 500000, one).gate.kind).toBe('ready');
+    const all = both(seed(1000000, 0, 100000), 500000);
+    const after = derive([...all, ...confirmOn('A', all, 500000, one)], 500000);
+    expect(after.ins.recordedLines(W.id).map((l) => [l.amountSatang, l.deviceId])).toEqual([[100000, 'A']]);
+    expect([after.w.doubled, after.w.doublePick, after.blocks]).toEqual([false, null, []]);
+    // "หักทั้งสอง": the sum, still one set from one device
+    const twice = derive([...all, ...confirmOn('B', all, 500000, { [W.id]: d.w.doublePick!.both })], 500000);
+    expect(twice.ins.recordedLines(W.id).map((l) => [l.amountSatang, l.deviceId])).toEqual([[200000, 'B']]);
+    expect(twice.w.doubled).toBe(false);
+  });
+
+  it('owner 2026-11-01 · the two devices recorded different amounts: the one amount is the plan\'s normal proposal', () => {
+    const base = seed(1000000, 0, 100000);
+    const all = [...base, ...confirmOn('A', base, 500000), ...confirmOn('B', base, 500000, { [W.id]: { totalSatang: 300000 } })];
+    const d = derive(all, 500000);
+    expect(d.w.doubled).toBe(true);
+    expect(d.input.oneDevice).toBeNull();
+    expect(d.w.doublePick).toEqual({ one: { totalSatang: 100000, nettingSatang: 0 }, both: { totalSatang: 400000, nettingSatang: 0 } });
+  });
+
+  it('owner 2026-11-01 · S3 analog: both net 640 → the one amount nets 640 (valid), the sum nets 1,280', () => {
+    const all = both(seed(1000000, 64000), 500000, { [W.id]: { nettingSatang: 64000, totalSatang: 64000 } });
+    const d = derive(all, 500000);
+    expect(d.w.doublePick).toEqual({ one: { totalSatang: 64000, nettingSatang: 64000 }, both: { totalSatang: 128000, nettingSatang: 128000 } });
+    const fixed = derive(all, 500000, { [W.id]: d.w.doublePick!.one });
+    expect([fixed.w.nettingSatang, fixed.w.invalid, fixed.w.doubleOpen, fixed.gate.kind]).toEqual([64000, false, false, 'ready']);
+  });
+
+  it('not doubled → no pick', () => {
+    const base = seed(1000000, 0, 100000);
+    expect(derive([...base, ...confirmOn('A', base, 500000)], 500000).w.doublePick).toBeNull();
+    expect(derive(base, 500000).w.doublePick).toBeNull();
+  });
+
+  it('S2 · debt 2,000, both deduct it all: 4,000 > the debt; the double flag (not only "invalid") locks the payment page', () => {
+    const d = derive(both(seed(200000), 500000), 500000);
+    expect(d.w.totalSatang).toBe(400000);
+    expect(d.w.problem).toBe('total-range');
+    expect(d.gate.kind).toBe('double');
+    expect(d.blocks.map((b) => b.why)).toEqual(['double']);
+  });
+
+  it('S3 · both net 640 (the farm owes 640): netting 1,280 > owed; flagged double, payment page locked', () => {
+    const all = both(seed(1000000, 64000), 500000, { [W.id]: { nettingSatang: 64000, totalSatang: 64000 } });
+    expect(projectFinance(all).reimbursements[0].remainingSatang).toBe(-64000);
+    const d = derive(all, 500000);
+    expect(d.w.problem).toBe('net-range');
+    expect(d.gate.kind).toBe('double');
+    expect(d.blocks.map((b) => b.why)).toEqual(['double']);
+  });
+
+  it('the fix: the owner sets the amount in the deduct sheet and confirms → all old lines void, one set written by one device; nothing locked after', () => {
+    const all = both(seed(1000000, 0, 100000), 500000);
+    // untouched, confirm stays off (the double is open)
+    expect(derive(all, 500000, {}).gate.kind).toBe('double');
+    const fix = { [W.id]: { totalSatang: 100000 } };
+    expect(derive(all, 500000, fix).gate.kind).toBe('ready');
+    const out = confirmOn('A', all, 500000, fix);
+    expect(out.filter((e) => e.payload.t === 'debt_payment_changed')).toHaveLength(2);
+    const after = derive([...all, ...out], 500000);
+    expect(after.input.devices).toBe(1);
+    expect(after.w.doubled).toBe(false);
+    expect(after.w.totalSatang).toBe(100000);
+    expect(after.blocks).toEqual([]);
+    expect(after.gate.kind).toBe('ready');
+    // and confirming again writes nothing
+    expect(confirmOn('A', [...all, ...out], 500000, {})).toEqual([]);
+  });
+
+  it('the fix keeps the doubled sum if the owner says so: still rewritten as one device\'s lines (confirmWrites does not "match" lines from two devices)', () => {
+    const all = both(seed(1000000, 0, 100000), 500000);
+    const out = confirmOn('B', all, 500000, { [W.id]: { totalSatang: 200000 } });
+    expect(out.length).toBeGreaterThan(0);
+    const after = derive([...all, ...out], 500000);
+    expect(after.ins.recordedLines(W.id).map((l) => [l.amountSatang, l.deviceId])).toEqual([[200000, 'B']]);
+    expect(after.w.doubled).toBe(false);
+  });
+
+  it('S2 and S3 fixed the same way', () => {
+    const s2 = both(seed(200000), 500000);
+    const s2after = derive([...s2, ...confirmOn('A', s2, 500000, { [W.id]: { totalSatang: 200000 } })], 500000);
+    expect([s2after.w.totalSatang, s2after.w.invalid, s2after.blocks]).toEqual([200000, false, []]);
+    const s3 = both(seed(1000000, 64000), 500000, { [W.id]: { nettingSatang: 64000, totalSatang: 64000 } });
+    const s3out = [...s3, ...confirmOn('A', s3, 500000, { [W.id]: { nettingSatang: 64000, totalSatang: 64000 } })];
+    const s3after = derive(s3out, 500000);
+    expect([s3after.w.nettingSatang, s3after.w.invalid, s3after.blocks]).toEqual([64000, false, []]);
+    expect(projectFinance(s3out).reimbursements[0].remainingSatang).toBe(0);
+  });
+
+  it('S3 · the sheet\'s หักกลบ link fixes the doubled netting: the route part stays, the netting becomes what the farm owes (netDraft from the netting asked for)', () => {
+    const all = both(seed(1000000, 64000), 500000, { [W.id]: { nettingSatang: 64000, totalSatang: 64000 } });
+    const d = derive(all, 500000);
+    expect([d.w.nettingSatang, d.w.typedNettingSatang, d.w.netCapSatang]).toEqual([0, 128000, 64000]);
+    expect(netDraft(d.w, 64000)).toEqual({ nettingSatang: 64000, totalSatang: 64000 });
+  });
+
+  it('one device confirming, then re-editing, is never a double; a second device editing over synced lines is not either', () => {
+    const base = seed(1000000, 0, 100000);
+    const a1 = [...base, ...confirmOn('A', base, 500000)];
+    const a2 = [...a1, ...confirmOn('A', a1, 500000, { [W.id]: { totalSatang: 300000 } })];
+    expect(derive(a2, 500000).w.doubled).toBe(false);
+    const b = [...a2, ...confirmOn('B', a2, 500000, { [W.id]: { totalSatang: 250000 } })];
+    expect(derive(b, 500000).w.doubled).toBe(false);
+    expect(derive(b, 500000).w.totalSatang).toBe(250000);
+  });
+
+  it('D-61 over the share (sale edited down) is a payment-page block of its own kind', () => {
+    const base = seed(1000000);
+    const done = [...base, ...confirmOn('A', base, 500000)];
+    expect(derive(done, 300000).blocks).toEqual([{ id: W.id, name: 'นัด', why: 'over', devices: 1 }]);
+  });
+
+  it('N2 · the debt deleted after the deduction: the ↘ row stays (hasDebt), the payment page is locked, and setting 0 fixes it', () => {
+    const base = seed(100000);
+    const done = [...base, ...confirmOn('A', base, 500000)];
+    const del = [...done, ev('z', 'd1', base[0].id, { t: 'debt_changed', patch: { deleted: true } } as FinancePayload)];
+    const d = derive(del, 500000);
+    expect(d.w.hasDebt).toBe(true);
+    expect(d.w.invalid).toBe(true);
+    expect(d.gate).toMatchObject({ kind: 'invalid', problem: 'total-range' });
+    expect(d.blocks).toEqual([{ id: W.id, name: 'นัด', why: 'invalid', devices: 1 }]);
+    const fixed = [...del, ...confirmOn('A', del, 500000, { [W.id]: { totalSatang: 0 } })];
+    const after = derive(fixed, 500000);
+    expect(after.input.recorded).toBeNull();
+    expect(after.w.hasDebt).toBe(false);
+    expect(after.blocks).toEqual([]);
+  });
+
+  it('N5 · the invalid gate says which problem (and the figure the sheet says)', () => {
+    const p = (drafts: CloseoutInput['drafts']) => closeoutPlan(storyInput({ drafts, workers: storyInput().workers.map((w) => (w.id === NAT.id ? { ...w, owedBackSatang: 64000 } : w)) }));
+    const g = (plan: CloseoutPlan) => confirmGate({ debtors: [], debtChecked: new Set(), debtAnswered: true, owed: [], owedChecked: new Set(), owedAnswered: true, plan });
+    expect(g(p({ [NAT.id]: { totalSatang: 600000 } }))).toEqual({ kind: 'invalid', name: 'นัด', problem: 'total-range', capSatang: 525000, netCapSatang: 64000, nettingSatang: 0 });
+    expect(g(p({ [NAT.id]: { nettingSatang: 70000 } }))).toMatchObject({ kind: 'invalid', problem: 'net-range', netCapSatang: 64000 });
+    expect(g(p({ [NAT.id]: { nettingSatang: 64000, totalSatang: 30000 } }))).toMatchObject({ kind: 'invalid', problem: 'below-netting', nettingSatang: 64000 });
+  });
+
+  it('N3 · a check\'s signature moves on another device\'s lines or a new debt, never on this device\'s own confirm (even one stopped part-way)', () => {
+    const base = seed(1000000, 64000);
+    const sig = (events: FinanceEvent[]) => derive(events, 500000, {}, 'A').ins.sigs;
+    const s0 = sig(base);
+    const a = confirmOn('A', base, 500000, { [W.id]: { nettingSatang: 64000 } });
+    for (let i = 1; i <= a.length; i++) expect(sig([...base, ...a.slice(0, i)])).toEqual(s0);
+    const b = confirmOn('B', base, 500000);
+    expect(sig([...base, ...a, ...b]).get(`debt:${W.id}`)).not.toBe(s0.get(`debt:${W.id}`));
+    const more = [...base, ev('A', 'd2', null, { t: 'debt_added', fields: { worker: W, kind: 'other', amountSatang: 5000, date: '2026-10-02', note: '', lender: null, fertilizer: null, carriedForward: false } } as FinancePayload)];
+    expect(sig(more).get(`debt:${W.id}`)).not.toBe(s0.get(`debt:${W.id}`));
+  });
+
+  it('N3 · staleChecks: none dropped while a confirm runs; after it, a moved figure drops only that check', () => {
+    const sigs = new Map([[`debt:a`, '2'], [`owed:a`, '1'], [`debt:b`, '1']]);
+    const seen = { 'debt:a': '1', 'owed:a': '1', 'debt:b': '1' };
+    const i = { sigs, seen, debtChecked: ['a', 'b'], owedChecked: ['a'] };
+    expect(staleChecks({ ...i, busy: true })).toEqual([]);
+    expect(staleChecks({ ...i, busy: false })).toEqual(['debt:a']);
+    // a check never tracked (seen missing) is never dropped
+    expect(staleChecks({ ...i, seen: {}, busy: false })).toEqual([]);
   });
 });

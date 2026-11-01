@@ -65,6 +65,10 @@ export const th = {
   'co.cashToPay': 'เงินสดที่ต้องจ่าย',
   'co.deductRow': 'หักหนี้ · เก่าก่อน',
   'co.leftChip': 'หนี้ยังเหลือ {amount}',
+  'co.doubleChip': 'หักซ้ำจาก {n} เครื่อง · แตะเพื่อแก้',
+  'co.double.sheet': 'หักซ้ำจาก {n} เครื่อง · ใส่ยอดที่ถูกแล้วกดตกลง',
+  // owner 2026-11-01: the sheet proposes one device's amount; the sum is this button, on purpose only
+  'co.double.both': 'หักทั้งสอง ({amount})',
   'co.netRow': 'หักกลบ · สวนคืน{name}',
 
   // cash card (CO-19 summary only)
@@ -99,6 +103,8 @@ export const th = {
   'co.confirmFailed': 'บันทึกไม่สำเร็จ',
   'co.confirmFailedLine': 'ที่บันทึกแล้วยังอยู่ กดยืนยันยอดอีกครั้งเพื่อบันทึกที่เหลือ',
   'co.gate.invalid': 'ยอดหักเกินที่หักได้ · แก้ก่อน',
+  'co.gate.fix': 'แก้ก่อน',
+  'co.gate.double': 'แก้หักหนี้ซ้ำของ{names}ก่อน',
 
   // deduct sheet (CO-5, CO-7, A5, A23)
   'co.deduct.title': 'หักหนี้{name}กี่บาท',

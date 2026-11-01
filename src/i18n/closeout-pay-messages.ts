@@ -4,6 +4,9 @@
  */
 export const th = {
   'cop.title': 'จัดเงินสด',
+  // D-61 / owner 2026-11-01 (A): a worker's recorded lines the summary must fix first
+  'cop.doubleTitle': 'หักหนี้{name}ซ้ำจาก {n} เครื่อง · แก้ที่หน้าสรุปก่อน',
+  'cop.invalidTitle': 'ยอดหักหนี้{name}ไม่ตรงกับหนี้ · แก้ที่หน้าสรุปก่อน',
   'cop.subtitle': 'กับคนรับซื้อยาง',
   // CO-19 · route + rounding card
   'cop.routesTitle': 'รับเงินคืนหนี้ทางไหน',

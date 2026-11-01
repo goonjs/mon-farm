@@ -12,7 +12,9 @@
  * - "ต้องตรวจใหม่" when the amount changed since the tick;
  * - ticks in conflict lock every tick and the close (D-29), counting only
  *   rows on the page; a worker deducted over the share locks their tick, the
- *   owner's and the close (D-61);
+ *   owner's and the close (D-61) — and so does a double deduction from two
+ *   devices, or recorded lines the plan calls invalid (the debt deleted
+ *   after; owner 2026-11-01 (A), `payBlocks`): the summary fixes each;
  * - close only when the piles add up and the rounding was answered; closing
  *   with unticked rows is allowed (SET-6); ticks stay open after close;
  * - closing marks the sale closing, sets it completed and dismisses to the
@@ -29,7 +31,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { projectAccounts } from '../../../core/finance/accounts';
-import { closeoutPlan, pendingRepays, REPAY_ROUTES, sourcesSheet, type CloseoutPlan } from '../../../core/finance/closeout';
+import { closeoutPlan, payBlocks, pendingRepays, REPAY_ROUTES, sourcesSheet, type CloseoutPlan } from '../../../core/finance/closeout';
 import { compactMoneyParts } from '../../../core/compact-money';
 import { overDeducted, pilesCheck } from '../../../core/finance/deduct';
 import { formatSatang } from '../../../core/finance/money';
@@ -107,7 +109,12 @@ function PayBody({ bump }: { bump: () => void }) {
   const choice = accounts.choiceFor(saleId);
   const account = choice?.kind === 'account' ? accounts.accounts.find((a) => a.id === choice.accountId) : undefined;
   const isOver = (tp: TapperMoney) => overDeducted(tp.debtDeductedSatang + tp.nettedSatang, tp.shareSatang, tp.nettedSatang);
-  const over = money.tappers.some(isOver);
+  // Owner 2026-11-01 (A): a double deduction (two devices) or recorded lines the plan calls invalid lock like D-61.
+  const blocks = payBlocks(plan);
+  const bad = (tp: TapperMoney) => isOver(tp) || blocks.some((b) => b.id === tp.id);
+  const over = money.tappers.some(bad);
+  // The D-61 banner for an over-deduction that is not a double (a double says so in its own banner).
+  const overBanner = money.tappers.some((tp) => isOver(tp) && !blocks.some((b) => b.id === tp.id && b.why === 'double'));
   const lines = (id: string) => (money.debts.get(id)?.payments ?? []).filter((x) => x.saleId === saleId && !x.deleted && x.counts);
   const cashRepaid = (id: string) => lines(id).filter((x) => x.method === 'cash-from-share' || x.method === 'buyer-split');
 
@@ -157,7 +164,7 @@ function PayBody({ bump }: { bump: () => void }) {
   // Ticks stay open after close (owner 2026-10-10); none while ticks conflict (D-29) or for a
   // tapper deducted over the share (D-61). The owner's tick waits on any over-deducted tapper:
   // route-3 repayments ride on his transfer (review F6).
-  const locked = (row: Exclude<Row, { kind: 'info' }>) => conflicts.length > 0 || flight.busy || (row.kind === 'owner' ? over : isOver(row.tp));
+  const locked = (row: Exclude<Row, { kind: 'info' }>) => conflicts.length > 0 || flight.busy || (row.kind === 'owner' ? over : bad(row.tp));
 
   const pending = pendingRepays(plan, { owner: st(OWNER_PAYEE).done, debtCash: (wid) => status.get(`debt-cash-${wid}`)?.done ?? false });
   const pendingTransfer = pending.filter((p) => p.how === 'transfer').reduce((a, p) => a + p.satang, 0);
@@ -323,7 +330,19 @@ function PayBody({ bump }: { bump: () => void }) {
         <SourcesPill testID="pay-sources-open" label={msg('cop.sources')} onPress={() => setSources(true)} />
       </View>
       {conflicts.length ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.tickConflict')} lines={[msg('v2s.tickConflictLine')]} testID="pay-conflict" /> : null}
-      {over ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.overTitle')} lines={[msg('v2s.overLine')]} testID="pay-over" /> : null}
+      {overBanner ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.overTitle')} lines={[msg('v2s.overLine')]} testID="pay-over" /> : null}
+      {blocks
+        .filter((b) => b.why !== 'over')
+        .map((b) => (
+          <Banner
+            key={b.id}
+            tone="bad"
+            icon={(c) => <AlertIcon color={c} size={14} />}
+            title={b.why === 'double' ? msg('cop.doubleTitle', { name: b.name, n: b.devices }) : msg('cop.invalidTitle', { name: b.name })}
+            lines={[msg('v2s.overLine')]}
+            testID={`pay-${b.why}-${b.id}`}
+          />
+        ))}
       {rows.map((row) =>
         row.kind === 'info' ? (
           <View key={row.id} testID={`pay-info-${row.id}`} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingHorizontal: t.space.xs }}>

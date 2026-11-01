@@ -13,14 +13,13 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 import {
+  closeoutInputs,
   closeoutPlan,
   confirmGate,
   confirmWrites,
   debtPieces,
+  staleChecks,
   type CloseoutWorkerDraft,
-  type CloseoutWorkerInput,
-  type RecordedLine,
-  type RepayRoute,
 } from '../../../core/finance/closeout';
 import { projectDebts } from '../../../core/finance/debts';
 import type { RoundingMode } from '../../../core/finance/deduct';
@@ -118,29 +117,14 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
   const derived = useMemo(() => {
     if (!ready || !money.settlement || !fin.state) return null;
     const s = money.settlement;
-    const lines = (id: string) => (debts.get(id)?.payments ?? []).filter((p) => p.saleId === saleId && !p.deleted && p.counts);
-    const repaymentOf = (id?: string) => (id ? fin.state!.repayments.find((r) => r.id === id && !r.deleted) : undefined);
-    const owedOf = (id: string) => {
-      const netted = lines(id).filter((p) => p.method === 'netting').map((p) => repaymentOf(p.repaymentId)).filter((r) => !!r);
-      return fin.state!.reimbursements
-        .filter((r) => r.to.id === id)
-        .map((r) => ({ ...r, remainingSatang: r.remainingSatang + netted.reduce((a, rep) => a + rep.allocations.filter((x) => x.expenseId === r.expenseId).reduce((y, x) => y + x.satang, 0), 0) }));
-    };
-    const inputs: CloseoutWorkerInput[] = money.tappers.map((tp) => {
-      const account = debts.get(tp.id);
-      const here = lines(tp.id);
-      const total = here.reduce((a, p) => a + p.amountSatang, 0);
-      const net = here.filter((p) => p.method === 'netting').reduce((a, p) => a + p.amountSatang, 0);
-      const route = (here.find((p) => p.method !== 'netting' && p.method !== 'outside')?.method ?? null) as RepayRoute | null;
-      return {
-        id: tp.id,
-        name: tp.name,
-        shareSatang: Math.max(0, tp.shareSatang),
-        balanceSatang: Math.max(0, (account?.balanceSatang ?? 0) + total),
-        planPerSaleSatang: account?.planPerSaleSatang ?? null,
-        owedBackSatang: owedOf(tp.id).reduce((a, r) => a + Math.max(0, r.remainingSatang), 0),
-        recorded: here.length ? { totalSatang: total, nettingSatang: net, route } : null,
-      };
+    // The one derivation (core): balances as if, owed back, recorded lines, the devices that wrote them, the checks' figures.
+    const { inputs, recordedLines, owedOf, mixed, sigs } = closeoutInputs({
+      saleId,
+      tappers: money.tappers,
+      accounts: debts,
+      finance: fin.state,
+      events: fin.events ?? [],
+      ownDeviceId: fin.deviceId,
     });
     const rounding = draft.rounding ?? (money.rounding.choice.asked ? money.rounding.choice.mode : lastRounding(store, groupId));
     const plan = closeoutPlan({
@@ -163,28 +147,13 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       owedAnswered: draft.owedAnswered,
       plan,
     });
-    const recordedLines = (id: string): RecordedLine[] =>
-      lines(id).map((p) => ({ id: p.id, headEventId: p.headEventId, method: p.method, amountSatang: p.amountSatang, repaymentId: p.repaymentId, repaymentHead: repaymentOf(p.repaymentId)?.headEventId }));
-    // An older sale may hold one tapper's deduction on two routes; saving puts it on the one chosen (review #9).
-    const mixed = new Set(money.tappers.filter((tp) => new Set(lines(tp.id).filter((p) => p.method !== 'netting' && p.method !== 'outside').map((p) => p.method)).size > 1).map((tp) => tp.id));
-    return { settlement: s, inputs, plan, pieces, debtors, owed, gate, recordedLines, owedOf, mixed };
-  }, [ready, money, fin.state, debts, saleId, draft, store, groupId]);
+    return { settlement: s, inputs, plan, pieces, debtors, owed, gate, recordedLines, owedOf, mixed, sigs };
+  }, [ready, money, fin.state, fin.events, fin.deviceId, debts, saleId, draft, store, groupId]);
 
-  // Review #10: each check remembers the figures it was made on; when they move, the card asks again.
-  const sigs = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const w of derived?.inputs ?? []) {
-      const rec = w.recorded ? `${w.recorded.totalSatang}/${w.recorded.nettingSatang}/${w.recorded.route}` : '-';
-      m.set(`debt:${w.id}`, `${w.balanceSatang}|${rec}`);
-      m.set(`owed:${w.id}`, `${w.owedBackSatang}|${rec}`);
-    }
-    return m;
-  }, [derived]);
-  const moved = (kind: 'debt' | 'owed', ids: readonly string[], seen: Readonly<Record<string, string>>) =>
-    ids.filter((id) => seen[`${kind}:${id}`] !== undefined && sigs.has(`${kind}:${id}`) && seen[`${kind}:${id}`] !== sigs.get(`${kind}:${id}`));
-  const staleDebt = moved('debt', draft.debtChecked, draft.seen ?? {});
-  const staleOwed = moved('owed', draft.owedChecked, draft.seen ?? {});
-  const stale = [...staleDebt.map((id) => `debt:${id}`), ...staleOwed.map((id) => `owed:${id}`)].join(',');
+  // Review #10: each check remembers the figures it was made on; when they move (another device synced, a new
+  // debt or bill), the card asks again. N3: never while a confirm runs; this device's own writes never move them.
+  const sigs = useMemo(() => derived?.sigs ?? new Map<string, string>(), [derived]);
+  const stale = staleChecks({ sigs, seen: draft.seen ?? {}, debtChecked: draft.debtChecked, owedChecked: draft.owedChecked, busy: flight.busy }).join(',');
   useEffect(() => {
     if (!stale) return;
     const gone = new Set(stale.split(','));
@@ -218,8 +187,7 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       }
       if (!done) {
         // What did land stays (confirmWrites is idempotent); read the log again so the next press writes only the rest.
-        // Those lines are this device's own: the figures move, but the owner's checks stand (what they were made on is forgotten).
-        updateDraft(saleId, (d) => ({ ...d, seen: {} }));
+        // Those lines are this device's own, so the checks' figures do not move (N3): the checks stand and stay tracked.
         setFailed(true);
         fin.reload();
       }

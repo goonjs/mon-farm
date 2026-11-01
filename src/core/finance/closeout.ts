@@ -11,11 +11,11 @@
  * above share + netting (D-18); netting only when the owner presses it.
  */
 
-import type { DebtAccount } from './debts';
+import type { DebtAccount, DebtPayment } from './debts';
 import { cashNotes, deductSheet, nettingPayloads, pickNotes, pilesCheck, workerCash, type DeductProblem, type RoundingMode } from './deduct';
 import { roundSettlement } from './rounding';
-import { FARM_FUNDS, type DebtKind, type DebtPaymentMethod, type FinancePayload, type Payer } from './types';
-import type { Reimbursement } from './ledger';
+import { FARM_FUNDS, type DebtKind, type DebtPaymentMethod, type FinanceEvent, type FinancePayload, type Payer } from './types';
+import type { Reimbursement, Repayment } from './ledger';
 
 const toFarm = (p: Payer | null | undefined) => !p || p.id === FARM_FUNDS;
 const sumOf = (xs: readonly number[]) => xs.reduce((a, b) => a + b, 0);
@@ -87,6 +87,26 @@ export interface CloseoutWorkerInput {
   readonly owedBackSatang: number;
   /** This sale's recorded lines (already confirmed once), or null when none. */
   readonly recorded: { readonly totalSatang: number; readonly nettingSatang: number; readonly route: RepayRoute | null } | null;
+  /**
+   * Owner 2026-11-01 (A): how many devices wrote this sale's live lines for
+   * the worker (each confirm writes from one device, voiding what it saw).
+   * 2 or more = two phones confirmed offline and both count: a double
+   * deduction (D-30: nothing lost silently; D-61: flagged for the owner).
+   * Absent = 0/1.
+   */
+  readonly devices?: number;
+  /**
+   * Owner 2026-11-01: with lines from 2+ devices, the set ONE device wrote
+   * (deduction, netting) when every device wrote the same; null when they
+   * differ (the deduct sheet then proposes the plan's normal amount).
+   */
+  readonly oneDevice?: DeductAmounts | null;
+}
+
+/** A deduction and its netting part (satang). */
+export interface DeductAmounts {
+  readonly totalSatang: number;
+  readonly nettingSatang: number;
 }
 
 /** What the owner changed on screen; anything absent follows the proposal / recorded lines / preference. */
@@ -110,6 +130,12 @@ export interface CloseoutWorker {
   readonly capSatang: number;
   readonly totalSatang: number;
   readonly nettingSatang: number;
+  /**
+   * The netting the draft / recorded lines ask for, before the sheet's check:
+   * equal to nettingSatang unless it is over what the farm owes (net-range,
+   * e.g. two devices both netted, owner 2026-11-01 (A)) — then nettingSatang is 0.
+   */
+  readonly typedNettingSatang: number;
   readonly netCapSatang: number;
   /** Collected by the chosen route (total − netting). */
   readonly routeSatang: number;
@@ -127,6 +153,18 @@ export interface CloseoutWorker {
   readonly problem: Exclude<DeductProblem, 'nothing'> | null;
   /** Draft differs from what is recorded (needs a write on confirm). */
   readonly dirty: boolean;
+  /** Devices that wrote this sale's live lines for the worker (0 = none recorded). */
+  readonly devices: number;
+  /** Lines from two or more devices' confirms: a double deduction (owner 2026-11-01 (A)). */
+  readonly doubled: boolean;
+  /** Doubled, and the owner has not yet set this worker's amount in the deduct sheet: confirm stays off. */
+  readonly doubleOpen: boolean;
+  /**
+   * Owner 2026-11-01, doubled only (else null): the deduct sheet proposes
+   * `one` (one device's set, or the plan's normal proposal when the devices
+   * differ) — ✓ unchanged deducts that — and "หักทั้งสอง" sets `both` (the sum).
+   */
+  readonly doublePick: { readonly one: DeductAmounts; readonly both: DeductAmounts } | null;
 }
 
 /** CO-5 shortcuts. half = cap / 2 floored to whole baht. */
@@ -146,7 +184,8 @@ export function quickAmounts(capSatang: number): { full: number; half: number; n
 export function netDraft(w: CloseoutWorker, nettingSatang: number): { nettingSatang: number; totalSatang: number } | null {
   if (!Number.isInteger(nettingSatang) || nettingSatang < 0 || nettingSatang > w.netCapSatang) return null;
   const balance = w.totalSatang + w.debtLeftSatang;
-  const routePart = Math.max(0, w.totalSatang - w.nettingSatang);
+  // From the netting asked for (not the sheet's 0 when it is over what is owed), so the route part really stays.
+  const routePart = Math.max(0, w.totalSatang - w.typedNettingSatang);
   return { nettingSatang, totalSatang: Math.min(routePart + nettingSatang, balance) };
 }
 
@@ -221,8 +260,18 @@ function workerDraft(w: CloseoutWorkerInput, d: CloseoutWorkerDraft | undefined,
   const reason: ProposalReason = w.planPerSaleSatang !== null && sheet.proposedSatang === w.planPerSaleSatang ? 'plan' : sheet.proposedSatang >= balance ? 'all' : 'cut';
   const invalid = sheet.problem !== null && sheet.problem !== 'nothing';
   const recRoute = rec ? rec.totalSatang - rec.nettingSatang : 0;
+  const devices = rec ? Math.max(1, w.devices ?? 1) : 0;
+  const doubled = devices > 1;
+  // Owner 2026-11-01: one device's set is the sheet's proposal; when the devices differ, the plan's normal one.
+  const fresh = () => ({
+    totalSatang: deductSheet({ balanceSatang: w.balanceSatang, shareSatang: w.shareSatang, owedBackSatang: w.owedBackSatang, planPerSaleSatang: w.planPerSaleSatang, totalSatang: null, nettingSatang: 0 }).proposedSatang,
+    nettingSatang: 0,
+  });
+  const doublePick = doubled && rec ? { one: w.oneDevice ?? fresh(), both: { totalSatang: rec.totalSatang, nettingSatang: rec.nettingSatang } } : null;
+  // The owner "fixed" a double by setting the amount in the deduct sheet (its ✓ sets one device's set even when unchanged).
+  const touched = !!d && (d.totalSatang != null || d.nettingSatang !== undefined);
   const dirty = rec
-    ? rec.totalSatang !== sheet.totalSatang || rec.nettingSatang !== sheet.nettingSatang || (sheet.routeSatang > 0 && (recRoute !== sheet.routeSatang || rec.route !== route))
+    ? (doubled && touched) || rec.totalSatang !== sheet.totalSatang || rec.nettingSatang !== sheet.nettingSatang || (sheet.routeSatang > 0 && (recRoute !== sheet.routeSatang || rec.route !== route))
     : sheet.totalSatang > 0;
   // D-60: cash = share + netting − deduction (route 1 is lifted out of it later, so it is in the deduction too).
   const cashBeforeSatang = workerCash({
@@ -233,12 +282,18 @@ function workerDraft(w: CloseoutWorkerInput, d: CloseoutWorkerDraft | undefined,
   });
   return {
     sheet,
+    typedNettingSatang: nettingSatang,
     route,
     reason,
     invalid,
     dirty,
     cashBeforeSatang,
-    hasDebt: balance > 0,
+    // N2: a worker with recorded lines keeps the ↘ row even if the debt went (deleted after), so the owner can set 0.
+    hasDebt: balance > 0 || (rec !== null && rec.totalSatang > 0),
+    devices,
+    doubled,
+    doubleOpen: doubled && !touched,
+    doublePick,
   };
 }
 
@@ -270,6 +325,7 @@ export function closeoutPlan(input: CloseoutInput): CloseoutPlan {
       capSatang: x.sheet.capSatang,
       totalSatang: x.sheet.totalSatang,
       nettingSatang: x.sheet.nettingSatang,
+      typedNettingSatang: x.typedNettingSatang,
       netCapSatang: x.sheet.netCapSatang,
       routeSatang: x.sheet.routeSatang,
       route: x.route,
@@ -281,6 +337,10 @@ export function closeoutPlan(input: CloseoutInput): CloseoutPlan {
       invalid: x.invalid,
       problem: x.sheet.problem === 'nothing' ? null : x.sheet.problem,
       dirty: x.dirty,
+      devices: x.devices,
+      doubled: x.doubled,
+      doubleOpen: x.doubleOpen,
+      doublePick: x.doublePick,
     };
   });
   const by = (route: RepayRoute) => sumOf(workers.filter((w) => w.route === route).map((w) => w.routeSatang));
@@ -549,7 +609,17 @@ export type ConfirmGate =
   | { readonly kind: 'answer-owed' }
   | { readonly kind: 'answer-both' }
   | { readonly kind: 'tally' }
-  | { readonly kind: 'invalid' };
+  /** Owner 2026-11-01 (A): lines from two devices' confirms; fixed by setting the amount in the deduct sheet. */
+  | { readonly kind: 'double'; readonly names: readonly string[] }
+  /** N5: the first invalid worker, the problem and the figures the deduct sheet says it with. */
+  | {
+      readonly kind: 'invalid';
+      readonly name: string;
+      readonly problem: Exclude<DeductProblem, 'nothing'>;
+      readonly capSatang: number;
+      readonly netCapSatang: number;
+      readonly nettingSatang: number;
+    };
 
 export function confirmGate(i: {
   /** Workers with farm debt (debt card shows them); empty = the card asks "มีหนี้ค้างไหม". */
@@ -582,7 +652,18 @@ export function confirmGate(i: {
   if (debt === 'answer') return { kind: 'answer-debt' };
   if (owed === 'check') return { kind: 'check-owed' };
   if (owed === 'answer') return { kind: 'answer-owed' };
-  if (i.plan.anyInvalid) return { kind: 'invalid' };
+  const doubles = i.plan.workers.filter((w) => w.doubleOpen);
+  if (doubles.length) return { kind: 'double', names: doubles.map((w) => w.name) };
+  const bad = i.plan.workers.find((w) => w.invalid);
+  if (bad)
+    return {
+      kind: 'invalid',
+      name: bad.name,
+      problem: bad.problem ?? 'total-range',
+      capSatang: bad.capSatang,
+      netCapSatang: bad.netCapSatang,
+      nettingSatang: bad.nettingSatang,
+    };
   if (!i.plan.tally.ok) return { kind: 'tally' };
   // The cash step is not a gate (owner 2026-10-31, A3): its defaults stand until the owner changes them.
   return { kind: 'ready' };
@@ -598,6 +679,8 @@ export interface RecordedLine {
   readonly repaymentId?: string;
   /** The live repayment a netting line rides on (its head), when any. */
   readonly repaymentHead?: string;
+  /** The device that wrote the line (its creating event's actor). Lines from two devices never "match" a plan. */
+  readonly deviceId?: string;
 }
 
 export type CloseoutWrite =
@@ -639,7 +722,10 @@ export function confirmWrites(i: {
   if (plan.invalid) return { ok: false };
   const netLines = recorded.filter((l) => l.method === 'netting');
   const routeLines = recorded.filter((l) => l.method !== 'netting');
+  // Owner 2026-11-01 (A): lines from two devices' confirms are a double deduction; confirming rewrites them as one set.
+  const oneDevice = new Set(recorded.flatMap((l) => (l.deviceId ? [l.deviceId] : []))).size <= 1;
   const matches =
+    oneDevice &&
     sumOf(netLines.map((l) => l.amountSatang)) === plan.nettingSatang &&
     sumOf(routeLines.map((l) => l.amountSatang)) === plan.routeSatang &&
     (plan.routeSatang === 0 ? routeLines.length === 0 : routeLines.every((l) => l.method === plan.route));
@@ -736,4 +822,147 @@ export function pendingRepays(
       how: w.route === 'transfer-with-owner' ? ('transfer' as const) : ('cash' as const),
     }))
     .filter((p) => (p.how === 'transfer' ? !ticked.owner : !ticked.debtCash(p.workerId)));
+}
+
+// ── the plan's inputs from the log (use-closeout and the tests share this) ──
+
+/**
+ * Every worker's `CloseoutWorkerInput` for the sale, from the projected log —
+ * the one derivation the summary, the cash step and the payment page read
+ * (use-closeout), kept pure so tests run the app's own code.
+ *
+ * - lines: this sale's live, counting debt payments for the worker;
+ * - balance "as if" nothing were deducted here (account balance + those lines);
+ * - owed back: what the farm owes, with this sale's netting added back;
+ * - devices: the devices that wrote those lines (the creating event's actor);
+ * - sigs (review #10, N3): per check `debt:<id>` / `owed:<id>`, the figures it
+ *   rests on — the as-if balance or owed-back, plus every event ANOTHER device
+ *   wrote on this sale's lines for the worker. This device's own writes (its
+ *   confirm, one stopped part-way included) never move them: the as-if
+ *   figures add the lines back, and its own events are left out. With no
+ *   `ownDeviceId`, sigs is empty (nothing is tracked).
+ */
+export function closeoutInputs(i: {
+  readonly saleId: string;
+  readonly tappers: readonly { readonly id: string; readonly name: string; readonly shareSatang: number }[];
+  readonly accounts: ReadonlyMap<string, DebtAccount>;
+  readonly finance: { readonly repayments: readonly Repayment[]; readonly reimbursements: readonly Reimbursement[] };
+  readonly events: readonly FinanceEvent[];
+  readonly ownDeviceId?: string | null;
+}) {
+  const { saleId } = i;
+  const all = (id: string) => (i.accounts.get(id)?.payments ?? []).filter((p) => p.saleId === saleId);
+  const lines = (id: string): DebtPayment[] => all(id).filter((p) => !p.deleted && p.counts);
+  const repaymentOf = (id?: string) => (id ? i.finance.repayments.find((r) => r.id === id && !r.deleted) : undefined);
+  const owedOf = (id: string): Reimbursement[] => {
+    const netted = lines(id)
+      .filter((p) => p.method === 'netting')
+      .map((p) => repaymentOf(p.repaymentId))
+      .filter((r): r is Repayment => !!r);
+    return i.finance.reimbursements
+      .filter((r) => r.to.id === id)
+      .map((r) => ({ ...r, remainingSatang: r.remainingSatang + sumOf(netted.map((rep) => sumOf(rep.allocations.filter((x) => x.expenseId === r.expenseId).map((x) => x.satang)))) }));
+  };
+  const creator = new Map<string, string | undefined>();
+  for (const e of i.events) if (e.baseEventId === null && !creator.has(e.targetId)) creator.set(e.targetId, e.actor?.deviceId);
+  const devicesOf = (id: string) => new Set(lines(id).flatMap((p) => (creator.get(p.id) ? [creator.get(p.id)!] : []))).size;
+  /** The set one device wrote, when every device wrote the same one (owner 2026-11-01); null otherwise. */
+  const oneDeviceOf = (id: string): DeductAmounts | null => {
+    const by = new Map<string, { totalSatang: number; nettingSatang: number }>();
+    for (const p of lines(id)) {
+      const dev = creator.get(p.id) ?? '';
+      const s = by.get(dev) ?? { totalSatang: 0, nettingSatang: 0 };
+      by.set(dev, { totalSatang: s.totalSatang + p.amountSatang, nettingSatang: s.nettingSatang + (p.method === 'netting' ? p.amountSatang : 0) });
+    }
+    const sets = [...by.values()];
+    return sets.length > 1 && sets.every((x) => x.totalSatang === sets[0].totalSatang && x.nettingSatang === sets[0].nettingSatang) ? sets[0] : null;
+  };
+
+  const inputs: CloseoutWorkerInput[] = i.tappers.map((tp) => {
+    const account = i.accounts.get(tp.id);
+    const here = lines(tp.id);
+    const total = sumOf(here.map((p) => p.amountSatang));
+    const net = sumOf(here.filter((p) => p.method === 'netting').map((p) => p.amountSatang));
+    const route = (here.find((p) => p.method !== 'netting' && p.method !== 'outside')?.method ?? null) as RepayRoute | null;
+    return {
+      id: tp.id,
+      name: tp.name,
+      shareSatang: Math.max(0, tp.shareSatang),
+      balanceSatang: Math.max(0, (account?.balanceSatang ?? 0) + total),
+      planPerSaleSatang: account?.planPerSaleSatang ?? null,
+      owedBackSatang: sumOf(owedOf(tp.id).map((r) => Math.max(0, r.remainingSatang))),
+      recorded: here.length ? { totalSatang: total, nettingSatang: net, route } : null,
+      devices: devicesOf(tp.id),
+      oneDevice: oneDeviceOf(tp.id),
+    };
+  });
+  const recordedLines = (id: string): RecordedLine[] =>
+    lines(id).map((p) => ({
+      id: p.id,
+      headEventId: p.headEventId,
+      method: p.method,
+      amountSatang: p.amountSatang,
+      repaymentId: p.repaymentId,
+      repaymentHead: repaymentOf(p.repaymentId)?.headEventId,
+      deviceId: creator.get(p.id),
+    }));
+  // An older sale may hold one tapper's deduction on two routes; saving puts it on the one chosen (review #9).
+  const mixed = new Set(i.tappers.filter((tp) => new Set(lines(tp.id).filter((p) => p.method !== 'netting' && p.method !== 'outside').map((p) => p.method)).size > 1).map((tp) => tp.id));
+
+  const sigs = new Map<string, string>();
+  if (i.ownDeviceId) {
+    for (const w of inputs) {
+      const targets = new Set(all(w.id).flatMap((p) => [p.id, ...(p.repaymentId ? [p.repaymentId] : [])]));
+      const others = i.events
+        .filter((e) => targets.has(e.targetId) && e.actor?.deviceId !== i.ownDeviceId)
+        .map((e) => e.id)
+        .sort()
+        .join('+');
+      sigs.set(`debt:${w.id}`, `${w.balanceSatang}|${others}`);
+      sigs.set(`owed:${w.id}`, `${w.owedBackSatang}|${others}`);
+    }
+  }
+  return { inputs, lines, recordedLines, owedOf, mixed, sigs };
+}
+
+/**
+ * Review #10 / N3: the checks (`debt:<id>` / `owed:<id>`) whose figures moved
+ * since the owner made them, so the cards ask again. Nothing while a confirm
+ * runs (`busy`); a check with no remembered figures is never dropped.
+ */
+export function staleChecks(i: {
+  readonly sigs: ReadonlyMap<string, string>;
+  readonly seen: Readonly<Record<string, string>>;
+  readonly debtChecked: readonly string[];
+  readonly owedChecked: readonly string[];
+  readonly busy: boolean;
+}): string[] {
+  if (i.busy) return [];
+  const moved = (kind: 'debt' | 'owed', ids: readonly string[]) =>
+    ids.map((id) => `${kind}:${id}`).filter((key) => i.seen[key] !== undefined && i.sigs.has(key) && i.seen[key] !== i.sigs.get(key));
+  return [...moved('debt', i.debtChecked), ...moved('owed', i.owedChecked)];
+}
+
+// ── the payment page's locks (D-61, owner 2026-11-01 (A)) ───────────────────
+
+export interface PayBlock {
+  readonly id: string;
+  readonly name: string;
+  /** double: lines from two devices · over: deducted over share + netting · invalid: the recorded lines break the plan otherwise (the debt went, netting over what is owed). */
+  readonly why: 'double' | 'over' | 'invalid';
+  readonly devices: number;
+}
+
+/**
+ * Workers whose tick, the owner's transfer tick and the close stay locked on
+ * the payment page until the summary fixes them — from the plan built on the
+ * RECORDED lines (drafts {}): a double deduction, or recorded lines the plan
+ * calls invalid (over the share, over the debt, netting over what is owed).
+ */
+export function payBlocks(recordedPlan: CloseoutPlan): PayBlock[] {
+  return recordedPlan.workers.flatMap((w): PayBlock[] => {
+    if (!w.doubled && !w.invalid) return [];
+    const why = w.doubled ? 'double' : w.totalSatang > w.shareSatang + w.nettingSatang ? 'over' : 'invalid';
+    return [{ id: w.id, name: w.name, why, devices: w.devices }];
+  });
 }

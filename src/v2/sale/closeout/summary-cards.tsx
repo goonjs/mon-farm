@@ -259,14 +259,19 @@ export function OwedCard({
 
 /** "⚠ หนี้ยังเหลือ 3,100": symbol + words, never colour alone (CO-4); the short figure of summary-lines. */
 export function LeftChip({ satang, testID }: { satang: number; testID: string }) {
-  const t = useTheme();
   const msg = useT();
   const p = compactMoneyParts(satang);
+  return <WarnChip text={msg('co.leftChip', { amount: `${p.sign}${p.digits}${p.unit}` })} testID={testID} />;
+}
+
+/** The yellow ⚠ chip of the ↘ row (CO-4's look): the left-over debt, or a double deduction (owner 2026-11-01 (A)). */
+export function WarnChip({ text, testID }: { text: string; testID: string }) {
+  const t = useTheme();
   return (
     <View testID={testID} style={{ ...row, alignSelf: 'flex-start', gap: t.space.xs, backgroundColor: t.color.warnSunk, borderRadius: t.radius.pill, paddingHorizontal: t.space.sm }}>
       <WarnMark color={t.color.warn} size={13} testID={`${testID}-mark`} />
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, lineHeight: lh(t.font.size.bodySm) + 2, color: t.color.warn, fontWeight: t.font.weight.bold }}>
-        {msg('co.leftChip', { amount: `${p.sign}${p.digits}${p.unit}` })}
+      <Text style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, lineHeight: lh(t.font.size.bodySm) + 2, color: t.color.warn, fontWeight: t.font.weight.bold }}>
+        {text}
       </Text>
     </View>
   );
@@ -305,6 +310,7 @@ export function WorkerCard({ w, roundingNone, tone, onDeduct }: { w: CloseoutWor
             msg('co.debt.pieceOpen', { name: w.name }),
             `${minus(w.totalSatang)} ${msg('v2.baht')}`,
             ...(w.leftChip ? [`⚠ ${msg('co.leftChip', { amount: baht(w.debtLeftSatang) })}`] : []),
+            ...(w.doubleOpen ? [`⚠ ${msg('co.doubleChip', { n: w.devices })}`] : []),
           ].join(', ')}
           onPress={onDeduct}
           style={{ ...row, minHeight: t.target.min, gap: t.space.sm, backgroundColor: t.color.debtInSunk, borderRadius: t.radius.md, paddingVertical: t.space.xs, paddingLeft: t.space.md, paddingRight: t.space.sm }}
@@ -312,6 +318,7 @@ export function WorkerCard({ w, roundingNone, tone, onDeduct }: { w: CloseoutWor
           <View style={{ flex: 1, gap: t.space.xxs }}>
             <AppText style={{ fontWeight: t.font.weight.bold, lineHeight: lh(fs.bodyLg) }}>↘ {msg('co.deductRow')}</AppText>
             {w.leftChip ? <LeftChip satang={w.debtLeftSatang} testID={`co-left-${w.id}`} /> : null}
+            {w.doubleOpen ? <WarnChip text={msg('co.doubleChip', { n: w.devices })} testID={`co-double-${w.id}`} /> : null}
           </View>
           <AppText style={{ fontWeight: t.font.weight.bold, fontSize: fs.headingMd, lineHeight: lh(fs.headingMd), fontVariant: ['tabular-nums'], color: t.color.debtIn }}>{minus(w.totalSatang)}</AppText>
           <ChevronRight color={t.color.action} size={9} />

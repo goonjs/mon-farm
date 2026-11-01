@@ -250,7 +250,8 @@ describe('D-18 · the deduction stays within the share (+ netting); cash never g
     await inSale(S, <CloseoutSummaryScreen />);
     await gates(S);
     expect(disabled('co-confirm')).toBe(true);
-    expect(last('co-confirm')).toHaveTextContent('ยอดหักเกินที่หักได้ · แก้ก่อน');
+    // N5 (re-review 2): the netting problem in the sheet's own words, not the cap's
+    expect(last('co-confirm')).toHaveTextContent('หักกลบได้ไม่เกิน 640 · แก้ก่อน');
   });
 });
 
