@@ -89,9 +89,9 @@ describe('H1 · PR-14 เงินคืนหนี้ ยังไม่เข
     await flush();
     const row = screen.getByTestId('home-repay-wait');
     expect(row).toHaveTextContent(/เงินคืนหนี้ ยังไม่เข้าสวน · รอคนซื้อ/);
-    // core's order (pendingRepayLines: by sale, then worker id)
-    expect(screen.getByTestId('home-repay-wait-line-0')).toHaveTextContent('เอก ฿ 1,000 · นัด ฿ 5,250');
-    expect(screen.getByTestId('home-repay-wait-line-1')).toHaveTextContent('แดง ฿ 3,250');
+    // by name, Thai order — never by generated ids
+    expect(screen.getByTestId('home-repay-wait-line-0')).toHaveTextContent('แดง ฿ 3,250 · นัด ฿ 5,250');
+    expect(screen.getByTestId('home-repay-wait-line-1')).toHaveTextContent('เอก ฿ 1,000');
     expect(screen.getByTestId('home-repay-wait-sum')).toHaveTextContent('Σ รวม ฿ 9,500');
     await act(async () => fireEvent.press(row));
     expect(mockRouter.push).toHaveBeenCalledWith('/v2/debts');

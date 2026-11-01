@@ -53,7 +53,8 @@ export function useRepayHome(events: readonly FinanceEvent[] | null, era: 'be' |
       const prev = per.get(l.workerId);
       per.set(l.workerId, { workerId: l.workerId, name: l.name, satang: (prev?.satang ?? 0) + l.satang });
     }
-    const waiting = [...per.values()];
+    // By name, so the order on screen never depends on generated ids.
+    const waiting = [...per.values()].sort((x, y) => x.name.localeCompare(y.name, 'th') || x.workerId.localeCompare(y.workerId));
     const names = new Map<string, string>();
     // The sale's day: its earliest deduction line, when it has one.
     const dates = new Map<string, string>();

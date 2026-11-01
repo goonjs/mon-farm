@@ -48,11 +48,11 @@ export function WaitChip({ children, testID }: { children: React.ReactNode; test
   );
 }
 
-/** Sum per worker, in the order the lines come (oldest sale first). */
+/** Sum per worker, by name (the order on screen never depends on generated ids). */
 export function perWorker(lines: readonly PendingRepayLine[]): { id: string; name: string; satang: number }[] {
   const by = new Map<string, { id: string; name: string; satang: number }>();
   for (const l of lines) by.set(l.workerId, { id: l.workerId, name: l.name, satang: (by.get(l.workerId)?.satang ?? 0) + l.satang });
-  return [...by.values()];
+  return [...by.values()].sort((x, y) => x.name.localeCompare(y.name, 'th') || x.id.localeCompare(y.id));
 }
 
 /** M1 · PR-12: who waits for how much, 2 per line, then Σ on its own line. */
