@@ -7,7 +7,7 @@ Status: Draft
 - Epic: `docs/epics/e06-fertilizer.md` (บัญชีหนี้คนงาน E06-S03 เป็นของ epic นี้)
 - PRD: FERT-5, SET-6 · D-60, D-71, D-72, D-85
 - แยกออกจาก: **E05-S11** CO-25 (เจ้าของตัดสิน 2026-11-01 ให้เป็นสตอรี่และ PR ใหม่) — ส่วนหน้าจ่ายเงิน (ช่องติ๊ก + ชิปบนหน้าจ่ายเงิน) ยังเป็นของ E05-S11
-- ขึ้นกับ: E05-S11 (PR #130) merge เข้า `dev` ก่อนเริ่มโค้ด — ใช้ข้อมูลรอรับจาก core ของ E05-S11 (`pendingRepays` / `PendingRepay` ใน `src/core/finance/closeout.ts`, ชื่อสุดท้ายรอลีดยืนยัน)
+- ขึ้นกับ: E05-S11 (PR #130) merge เข้า `dev` ก่อนเริ่มโค้ด — ใช้ข้อมูลรอรับจาก core ของ E05-S11 (`pendingRepays` / `PendingRepay` / `closeoutPlan` ใน `src/core/finance/closeout.ts` — ดู Dev notes)
 - หน้าที่แตะ: `/v2/debts` และ `/v2/debt/[workerId]` (`src/v2/money/debts-screens.tsx`)
 - Mockup: `docs/ux/mockups/debt-pending-repay.html` · ภาพ `docs/ux/screenshots/debt-pending-repay/`
 
@@ -71,7 +71,7 @@ _เขียน test ก่อน (TDD) แล้วค่อยทำให้
 
 - ตัวเลขในภาพ: การขาย 29 ต.ค. แบบ A20 ของ E05-S11 — แดง หัก 3,250 ทางคนซื้อแยกเงินสด (15,790 → 12,540) · นัด หัก 5,250 ทางโอนรวม (8,350 → 3,100) · โอนรวม 19,687.50 = ส่วนสวน 14,437.50 + คืนหนี้นัด 5,250 · M4 เพิ่มการขาย 22 ต.ค. ของแดงที่หัก 1,800 ไปก่อนแล้ว (โอน) ยอดค้างยังเป็น 12,540
 - ยกเลิกการหักหลังติ๊กรับแล้ว: ป้ายไม่แสดง (PR-9) — เงินที่รับเกินเป็นเรื่องของหน้าการขาย ต้องมี test ว่าป้ายไม่กลับมา
-- `pendingRepays` ของ E05-S11 คิดต่อการขายเดียว (จาก `CloseoutPlan`) — หน้าบัญชีหนี้ต้องการรอรับ **ข้ามการขายต่อคน**: ต้องตกลงกับทีม E05-S11 ผ่านลีดว่าจะใช้ฟังก์ชันไหน (ขอให้ core export ตัวที่อ่านจาก event ของการขายที่ปิดแล้วได้)
+- สัญญาข้อมูล (ลีดตัดสิน 2026-11-01): `pendingRepays(plan, ticked)` → `PendingRepay[]` ({workerId, name, satang, how}) ของ E05-S11 คิดทีละการขาย คู่กับ `closeoutPlan` และสถานะติ๊ก (`paymentStatus` payee `owner` / `debt-cash-<workerId>`) · ทีมนี้เขียนตัวรวม**ข้ามการขายต่อคน**เองในไฟล์ใหม่ `src/core/finance/pending-repays.ts` หลัง #130 merge โดยเรียก `closeoutPlan` + `pendingRepays` ต่อการขายที่ปิดแล้ว — ไม่ขอให้ E05-S11 เพิ่มอะไร; ถ้าต้องเปลี่ยน signature ของ E05-S11 ต้องบอกลีดก่อน
 - ห้ามแก้ไฟล์ของ E05-S11 จนกว่า PR #130 merge
 
 ## Code review
