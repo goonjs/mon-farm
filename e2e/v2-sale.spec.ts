@@ -279,6 +279,8 @@ async function hold(page: Page, id = 'hold') {
 }
 
 test('start → point → empty scale → count → short → switch and fill → reload keeps it, offline', async ({ page, context }) => {
+  // The whole sale, close-out included (E05-S11), runs ~30 s on a loaded machine: the default limit made it flaky.
+  test.setTimeout(60_000);
   const id = on(page);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
