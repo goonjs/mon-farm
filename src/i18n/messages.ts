@@ -39,6 +39,7 @@ import * as orderCaptureMsgs from './order-capture-messages';
 import * as orderDetailMsgs from './order-detail-messages';
 import * as orderMsgs from './order-messages';
 import * as orderSurfaceMsgs from './order-surface-messages';
+import * as repayMsgs from './repay-messages';
 
 export type Locale = 'th' | 'en';
 
@@ -56,6 +57,7 @@ const th = {
   ...orderCaptureMsgs.th,
   ...orderDetailMsgs.th,
   ...orderSurfaceMsgs.th,
+  ...repayMsgs.th,
   // ── Shared vocabulary ────────────────────────────────────────────────────
   'common.cancel': 'ยกเลิก',
   'common.confirm': 'ยืนยัน',
@@ -2041,6 +2043,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   ...numpadMoneyMsgs.en,
   ...numpadFarmMsgs.en,
   ...numpadSaleMsgs.en,
+  ...repayMsgs.en,
   ...closeoutPayMsgs.en,
   ...orderMsgs.en,
   ...orderCaptureMsgs.en,
@@ -3992,7 +3995,7 @@ export function isAnnounced(id: MessageId): boolean {
  * quietly as stories add strings.
  */
 /** E11-S11 order screens ship Thai first; English for whatever their files do not carry follows (story QA notes). */
-const orderUntranslated = (Object.keys({ ...closeoutMsgs.th, ...closeoutPayMsgs.th, ...orderMsgs.th, ...orderCaptureMsgs.th, ...orderDetailMsgs.th, ...orderSurfaceMsgs.th }) as MessageId[]).filter((id) => en[id] === undefined);
+const orderUntranslated = (Object.keys({ ...closeoutMsgs.th, ...closeoutPayMsgs.th, ...orderMsgs.th, ...orderCaptureMsgs.th, ...orderDetailMsgs.th, ...orderSurfaceMsgs.th, ...repayMsgs.th }) as MessageId[]).filter((id) => en[id] === undefined);
 
 export const untranslated: readonly MessageId[] = [
   ...(Object.keys(th) as MessageId[]).filter(isAnnounced),
