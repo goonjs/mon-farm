@@ -137,7 +137,7 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
           </View>
         ) : null}
 
-        <TextField testID="repay-date" label={msg('fin.form.date')} required value={date} onChangeText={setDate} helper={msg('v2m.dateShown', { shown: formatDate(date) })} />
+        <TextField testID="repay-date" label={msg('fin.form.date').replace(' *', '')} required value={date} onChangeText={setDate} helper={msg('v2m.dateShown', { shown: formatDate(date) })} />
 
         <Card>
           <CardLabel>{manual ? msg('fin.repay.manual') : msg('fin.repay.oldestFirst')}</CardLabel>

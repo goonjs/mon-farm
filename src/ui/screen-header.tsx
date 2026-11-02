@@ -92,7 +92,6 @@ export function ScreenHeader({
         <Text
           testID="screen-title"
           accessibilityRole="header"
-          numberOfLines={1}
           style={{
             fontFamily: t.font.family.sans,
             fontSize: t.font.size.headingLg,
@@ -105,7 +104,6 @@ export function ScreenHeader({
         </Text>
         {subtitle ? (
           <Text
-            numberOfLines={1}
             style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.inkSoft }}
           >
             {subtitle}
