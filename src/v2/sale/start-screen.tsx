@@ -7,14 +7,17 @@
  *
  * "ถัดไป" writes `sale_started` (+ `numbering_set`, `price_set`) to the new
  * sale's log — offline, on this device — and opens the point picker.
+ *
+ * The price row opens the app number pad straight away (E01-S20 row 17, NP-12):
+ * no sheet on a sheet; up to 999.99 ฿/kg (NP-14); "เว้นว่าง" leaves it for later.
  */
 
 import { useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { formatSatang } from '../../core/finance/money';
 import { defaultBuyer, filterPeople, formatThaiDate } from '../../core/master';
-import { parsePrice } from '../../core/sale-points';
 import type { NumberingMode } from '../../core/types';
 import { useI18n, useT } from '../../i18n';
 import { newId } from '../../lib/id';
@@ -31,6 +34,7 @@ import {
   CoinIcon,
   CTA,
   LeafIcon,
+  MoneyField,
   PersonIcon,
   Plus,
   RadioCard,
@@ -41,6 +45,7 @@ import {
 import { FarmScreen } from '../farm/pieces';
 import { loadHomeSales } from './open-sale';
 import { EmptyPill, FieldRow, IconLine, SegOptions, useSaleView } from './pieces';
+import { PRICE_MAX_SATANG } from './sale-options';
 import { saleHref } from '../routes';
 
 type Sheet = 'none' | 'buyer' | 'price' | 'pair' | 'note';
@@ -106,7 +111,7 @@ export function StartSaleScreen() {
   const [buyerId, setBuyerId] = useState<string | null>(null);
   const [numbering, setNumbering] = useState<NumberingMode | null>(null);
   const [pairId, setPairId] = useState<string | null>(null);
-  const [price, setPrice] = useState('');
+  const [price, setPrice] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [sheet, setSheet] = useState<Sheet>('none');
 
@@ -123,14 +128,9 @@ export function StartSaleScreen() {
   const manager = filterPeople(master.people, 'manager').find((p) => !p.deleted) ?? null;
   const mode = numbering ?? settings.numbering;
   const pair = settings.pairs.find((p) => p.pairId === pairId) ?? settings.pairs.find((p) => p.isDefault)!;
-  const priceParsed = parsePrice(price);
   const weekday = msg('v2s.weekdays').split(',')[new Date(now + 7 * 3_600_000).getUTCDay()];
 
   const next = () => {
-    if (!priceParsed.ok) {
-      setSheet('price');
-      return;
-    }
     append({
       kind: 'sys',
       payload: {
@@ -148,7 +148,7 @@ export function StartSaleScreen() {
     append({ kind: 'sys', payload: { t: 'numbering_set', numbering: mode } });
     // Kept in the log, so a reload before the first point still weighs with it (review #10).
     append({ kind: 'sys', payload: { t: 'pair_set', netG: pair.netG, basketG: pair.basketG } });
-    if (priceParsed.satang !== null) append({ kind: 'sys', payload: { t: 'price_set', satangPerKg: priceParsed.satang, indexRef: '' } });
+    if (price !== null) append({ kind: 'sys', payload: { t: 'price_set', satangPerKg: price, indexRef: '' } });
     router.replace(`/v2/sale/${saleId}/point` as Href);
   };
 
@@ -187,18 +187,21 @@ export function StartSaleScreen() {
             ))}
             {buyers.length === 0 ? <AppText variant="bodySm">{msg('start.noBuyer')}</AppText> : null}
           </BottomSheet>
-          <BottomSheet open={sheet === 'price'} onClose={() => setSheet('none')} title={msg('v2s.price')} testID="price-sheet">
-            <TextField
-              testID="start-price"
-              label={msg('v2s.price')}
-              hint={msg('v2s.priceLater')}
-              value={price}
-              onChangeText={setPrice}
-              keyboardType="decimal-pad"
-              error={!priceParsed.ok ? msg('start.badPrice') : undefined}
-            />
-            {sheetDone}
-          </BottomSheet>
+          <MoneyField
+            testID="start-price"
+            label={msg('v2s.price')}
+            satang={price}
+            onChange={setPrice}
+            unit={msg('npsale.perKg')}
+            minSatang={1}
+            maxSatang={PRICE_MAX_SATANG}
+            words={false}
+            emptyText={msg('numpad.later')}
+            clear={{ label: msg('numpad.clearLater'), onClear: () => setPrice(null) }}
+            card={false}
+            open={sheet === 'price'}
+            onOpenChange={(o) => setSheet(o ? 'price' : 'none')}
+          />
           <BottomSheet open={sheet === 'pair'} onClose={() => setSheet('none')} title={msg('start.pair')} testID="pair-sheet">
             {settings.pairs.map((p) => (
               <RadioCard
@@ -261,7 +264,7 @@ export function StartSaleScreen() {
           testID="start-price-row"
           icon={(c) => <CoinIcon color={c} size={20} />}
           label={msg('v2s.price')}
-          value={priceParsed.ok && priceParsed.satang !== null ? msg('v2s.perKg', { price: price.trim() }) : <EmptyPill label={msg('v2s.notRecorded')} />}
+          value={price !== null ? msg('v2s.perKg', { price: formatSatang(price) }) : <EmptyPill label={msg('numpad.later')} />}
           lines={[msg('v2s.priceLater'), msg('v2s.priceNow')]}
           onPress={() => setSheet('price')}
         />

@@ -5,11 +5,16 @@
  * optional short one in kg of net rubber. Numbers run on from the sequence's
  * last basket by the sale's numbering mode (D-46, D-79); every basket is
  * labelled "บันทึกย้อนหลัง" and counts like any other. No empty-scale check.
+ *
+ * Both numbers are typed on the app number pad (E01-S20 row 20): whole full
+ * baskets (≤ 999), and the short basket in kg of net rubber to 3 decimals
+ * (grams, ≤ 9,999.999), optional with "เว้นว่าง". ✓ on the full baskets opens
+ * the short-basket pad right away (NP-15).
  */
 
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { backfillEvents, backfillPlan } from '../../core/backfill';
 import { tapperOn } from '../../core/master';
@@ -17,7 +22,7 @@ import { pairForNewPoint } from '../../core/sale-move';
 import { parseKgG, pointSetupPayloads } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AppText, BasketIcon, Button, CameraIcon, cardStyle, CTA, FieldError, IconTile, LeafIcon, Plus, ScaleIcon } from '../../ui';
+import { AppText, BasketIcon, Button, CameraIcon, cardStyle, CTA, IconTile, LeafIcon, Plus, QuantityField, ScaleIcon } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { Crumbs, IconLine, Kv, kgText, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 
@@ -30,8 +35,10 @@ export function BackfillScreen() {
   // A closed sale takes no more weighing (review #2).
   useLeaveIfClosed(view);
   const { saleId, events, state, master, day, mode, settings, append, nameOf, saleTitle } = view;
-  const [full, setFull] = useState('');
-  const [short, setShort] = useState('');
+  const [full, setFull] = useState<number | null>(null);
+  /** Grams of net rubber; null = no short basket. */
+  const [short, setShort] = useState<number | null>(null);
+  const [shortOpen, setShortOpen] = useState(false);
   const base = `/v2/sale/${saleId}`;
 
   const point = master?.points.find((p) => p.id === pointId);
@@ -44,11 +51,8 @@ export function BackfillScreen() {
     const p = pairForNewPoint(events, settings, null);
     return { stdNetG: p.netG, tareG: p.basketG };
   })();
-  const fullN = full.trim() === '' ? 0 : /^\d+$/.test(full.trim()) ? Number(full.trim()) : NaN;
-  const shortG = short.trim() === '' ? null : parseKgG(short);
-  const badFull = Number.isNaN(fullN);
-  const badShort = short.trim() !== '' && shortG === null;
-  const plan = badFull || badShort ? null : backfillPlan(events, master, day, pointId, mode, pair, fullN, shortG);
+  const fullN = full ?? 0;
+  const plan = backfillPlan(events, master, day, pointId, mode, pair, fullN, short);
   const kg = (g: number) => msg('v2f.kg', { n: kgText(g) });
 
   const save = () => {
@@ -59,20 +63,6 @@ export function BackfillScreen() {
     else router.replace(`${base}/counter?point=${pointId}` as Href);
   };
 
-  const input = (value: string, onChange: (s: string) => void, testID: string, label: string, unit?: string) => (
-    <View style={{ width: 104, flexDirection: 'row', alignItems: 'center', minHeight: t.target.min, borderRadius: t.radius.md, borderWidth: t.border.thick, borderColor: t.color.action, backgroundColor: t.color.surfaceRaised, paddingHorizontal: t.space.sm }}>
-      <TextInput
-        testID={testID}
-        accessibilityLabel={label}
-        value={value}
-        onChangeText={onChange}
-        keyboardType="decimal-pad"
-        style={{ flex: 1, minWidth: 0, fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink, textAlign: 'right' }}
-      />
-      {unit ? <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.inkSoft, marginLeft: t.space.xs }}>{unit}</Text> : null}
-    </View>
-  );
-  const rule = <View style={{ height: t.border.hair, backgroundColor: t.color.ruleFaint }} />;
   const after = tapper && mode === 'per-tapper' ? msg('backfill.after', { name: nameOf(tapper), n: plan?.lastNo ?? 0 }) : msg('backfill.afterPoint', { n: plan?.lastNo ?? 0 });
 
   return (
@@ -95,25 +85,36 @@ export function BackfillScreen() {
         tapperToneName={tapperTone(master, tapper)}
         onSwitch={() => router.replace(`${base}/point?mode=backfill&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}` as Href)}
       />
-      <View style={{ ...cardStyle(t), paddingHorizontal: t.space.lg }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, paddingVertical: t.space.md }}>
-          <View style={{ flex: 1 }}>
-            <AppText style={{ fontWeight: t.font.weight.semibold }}>{msg('backfill.full')}</AppText>
-            <IconLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('backfill.fullHint', { kg: kgText(pair.stdNetG) })}</IconLine>
-          </View>
-          {input(full, setFull, 'backfill-full', msg('backfill.full'))}
-        </View>
-        {rule}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, paddingVertical: t.space.md }}>
-          <View style={{ flex: 1 }}>
-            <AppText style={{ fontWeight: t.font.weight.semibold }}>{msg('backfill.short')}</AppText>
-            <AppText variant="bodySm">{msg('backfill.optional')}</AppText>
-          </View>
-          {input(short, setShort, 'backfill-short', msg('backfill.short'), msg('common.kg'))}
-        </View>
+      <View style={{ gap: t.space.xs }}>
+        <QuantityField
+          testID="backfill-full"
+          label={msg('backfill.full')}
+          value={full}
+          onChange={(n) => {
+            setFull(n);
+            setShortOpen(true);
+          }}
+          unit={msg('npsale.basket')}
+          maxDigits={3}
+        />
+        <IconLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('backfill.fullHint', { kg: kgText(pair.stdNetG) })}</IconLine>
       </View>
-      {badFull ? <FieldError testID="backfill-bad-count">{msg('backfill.badCount')}</FieldError> : null}
-      {badShort ? <FieldError testID="backfill-bad-kg">{msg('backfill.badKg')}</FieldError> : null}
+      <QuantityField
+        testID="backfill-short"
+        label={msg('backfill.short')}
+        hint={msg('backfill.optional')}
+        value={short}
+        onChange={setShort}
+        unit={msg('common.kg')}
+        decimals={3}
+        maxDigits={4}
+        emptyText={msg('backfill.optional')}
+        clear={{ label: msg('numpad.clearNoShort'), onClear: () => setShort(null) }}
+        // The old parser still decides: more than 0 kg (parseKgG).
+        validate={(g) => (parseKgG(String(g / 1000)) === g ? undefined : msg('backfill.badKg'))}
+        open={shortOpen}
+        onOpenChange={setShortOpen}
+      />
 
       {plan ? (
         <View testID="backfill-plan" style={{ ...cardStyle(t), padding: t.space.md, gap: t.space.xs }}>

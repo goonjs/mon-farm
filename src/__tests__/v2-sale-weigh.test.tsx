@@ -74,6 +74,10 @@ const holdTool = async (id: string, ms: number) => {
   fireEvent(screen.getByTestId(id), 'pressOut', { nativeEvent: {} });
   await flush();
 };
+/** Keys on the app number pad of a field (E01-S20): `<field>-pad-key-<k>`. */
+const padKeys = async (field: string, keys: string) => {
+  for (const k of keys) await press(`${field}-pad-key-${k}`);
+};
 const sys = (events: readonly SaleEvent[], t: SysPayload['t']) => events.filter((e) => e.kind === 'sys' && e.payload.t === t).map((e) => (e as { payload: SysPayload }).payload);
 
 let farm: MockFarm;
@@ -141,8 +145,8 @@ describe('v2 start a sale (page 5)', () => {
   it('a typed price is written with the header', async () => {
     await inSale(<StartSaleScreen />);
     await press('start-price-row');
-    await act(async () => fireEvent.changeText(screen.getByTestId('start-price'), '48.50'));
-    await press('sheet-done');
+    await padKeys('start-price', '48.50');
+    await press('start-price-done');
     await press('start-next');
     expect(sys(await store().load(saleId), 'price_set')[0]).toMatchObject({ satangPerKg: 4850 });
   });
@@ -404,8 +408,12 @@ describe('v2 backfill (page 14, E04-S10)', () => {
     await hold();
     c.unmount();
     await inSale(<BackfillScreen />, { point: farm.a[2] });
-    await act(async () => fireEvent.changeText(screen.getByTestId('backfill-full'), '3'));
-    await act(async () => fireEvent.changeText(screen.getByTestId('backfill-short'), '20'));
+    await press('backfill-full');
+    await padKeys('backfill-full', '3');
+    await press('backfill-full-pad-key-done');
+    // ✓ opens the short basket's pad at once (NP-15).
+    await padKeys('backfill-short', '20');
+    await press('backfill-short-done');
     expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/จะได้ 4 เข่ง/);
     expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/เข่งที่ 3–5/);
     expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/เข่งที่ 6/);
@@ -418,11 +426,11 @@ describe('v2 backfill (page 14, E04-S10)', () => {
     expect(router.dismiss).toHaveBeenCalledWith(2);
   });
 
-  it('a count that is not a whole number is refused', async () => {
+  it('a count that is not a whole number cannot be typed: the full-basket pad has no dot', async () => {
     await started();
     await inSale(<BackfillScreen />, { point: farm.a[2] });
-    await act(async () => fireEvent.changeText(screen.getByTestId('backfill-full'), '2.5'));
-    expect(screen.getByTestId('backfill-bad-count')).toBeTruthy();
+    await press('backfill-full');
+    expect(screen.queryByTestId('backfill-full-pad-key-.')).toBeNull();
     expect(screen.getByTestId('backfill-save').props.accessibilityState).toMatchObject({ disabled: true });
   });
 });
@@ -799,7 +807,9 @@ describe('v2 basket history (page 8d, E04-S15)', () => {
   it('a backfilled basket is labelled', async () => {
     await started();
     await inSale(<BackfillScreen />, { point: farm.a[0] });
-    await act(async () => fireEvent.changeText(screen.getByTestId('backfill-full'), '2'));
+    await press('backfill-full');
+    await padKeys('backfill-full', '2');
+    await press('backfill-full-pad-key-done');
     await press('backfill-save');
     await inSale(<HistoryScreen />, { point: farm.a[0] });
     expect(screen.getAllByText('บันทึกย้อนหลัง').length).toBeGreaterThan(0);

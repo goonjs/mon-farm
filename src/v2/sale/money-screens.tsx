@@ -23,7 +23,7 @@ import { formatSatang } from '../../core/finance/money';
 import { BANKS } from '../../core/finance/promptpay';
 import { tapperOn } from '../../core/master';
 import { unassignedPoints } from '../../core/point-settle';
-import { basketList, parsePrice, saleRollup } from '../../core/sale-points';
+import { basketList, saleRollup } from '../../core/sale-points';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
 import { useT } from '../../i18n';
@@ -41,6 +41,7 @@ import {
   Chip,
   CTA,
   IconTile,
+  MoneyField,
   PinIcon,
   TapperIcon,
   TextField,
@@ -49,6 +50,7 @@ import {
 import { useSaleMoney } from '../money/sale/use-sale-money';
 import { FarmScreen } from '../farm/pieces';
 import { Banner, IconLine, Kv, kgText, tapperTone, useSaleView } from './pieces';
+import { PRICE_MAX_SATANG } from './sale-options';
 
 const baht = formatSatang;
 
@@ -149,7 +151,7 @@ function CheckBody({ bump }: { bump: () => void }) {
   // One money write at a time: a double tap must not write twice (review #4).
   const flight = useInFlight();
   const { saleId, events, state, master, day, append, nameOf, saleTitle } = view;
-  const [price, setPrice] = useState('');
+  const [price, setPrice] = useState<number | null>(null);
   const [diffOpen, setDiffOpen] = useState(false);
   const [reason, setReason] = useState('');
   const base = `/v2/sale/${saleId}`;
@@ -162,16 +164,25 @@ function CheckBody({ bump }: { bump: () => void }) {
 
   const missing = unassignedPoints(events, master, day);
   if (!state.price && !view.closed) {
-    const p = parsePrice(price);
+    // E01-S20 row 19: the app number pad, up to 999.99 ฿/kg (NP-14).
     return shell(
       <View style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.sm }}>
         <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{msg('v2s.priceFirst')}</AppText>
-        <TextField testID="check-price" label={msg('v2s.price')} value={price} onChangeText={setPrice} keyboardType="decimal-pad" error={!p.ok ? msg('start.badPrice') : undefined} />
+        <MoneyField
+          testID="check-price"
+          label={msg('v2s.price')}
+          satang={price}
+          onChange={setPrice}
+          unit={msg('npsale.perKg')}
+          minSatang={1}
+          maxSatang={PRICE_MAX_SATANG}
+          words={false}
+        />
         <CTA
           testID="check-price-save"
-          disabled={!p.ok || p.satang === null}
+          disabled={price === null}
           onPress={() => {
-            if (p.ok && p.satang !== null) append({ kind: 'sys', payload: { t: 'price_set', satangPerKg: p.satang, indexRef: '' } });
+            if (price !== null) append({ kind: 'sys', payload: { t: 'price_set', satangPerKg: price, indexRef: '' } });
           }}
         >
           {msg('common.save')}
