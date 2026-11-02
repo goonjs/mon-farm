@@ -81,13 +81,5 @@ export const th = {
   'cop.allTicked': 'ติ๊กครบแล้ว',
   'cop.closeSale': 'ปิดการขาย',
   'cop.tickedAt': 'เครื่องนี้ · {time}',
-  // ดูที่มา (small version on the pay page)
-  'cop.srcTitle': 'ที่มาของเงินแต่ละก้อน',
-  'cop.srcShares': '{n} ส่วนจากยอดขาย = ยอดขาย',
-  'cop.srcDebt': '{n} ส่วนที่ย้ายเพราะหนี้ {dir} รวม 0',
-  'cop.srcRound': '{n} ปัดเศษ รวม 0',
-  'cop.srcPaid': 'เงินที่จ่ายจริง (เงินสด + โอน) = ยอดขาย',
-  'cop.srcYes': 'ตรง',
-  'cop.srcNo': 'ไม่ตรง',
 } as const;
 export const en: Record<string, string> = {};
