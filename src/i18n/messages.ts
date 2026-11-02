@@ -31,7 +31,10 @@
 
 import * as closeoutMsgs from './closeout-messages';
 import * as closeoutPayMsgs from './closeout-pay-messages';
+import * as numpadFarmMsgs from './numpad-farm-messages';
 import * as numpadMsgs from './numpad-messages';
+import * as numpadMoneyMsgs from './numpad-money-messages';
+import * as numpadSaleMsgs from './numpad-sale-messages';
 import * as orderCaptureMsgs from './order-capture-messages';
 import * as orderDetailMsgs from './order-detail-messages';
 import * as orderMsgs from './order-messages';
@@ -45,6 +48,9 @@ export type Locale = 'th' | 'en';
 const th = {
   ...closeoutMsgs.th,
   ...numpadMsgs.th,
+  ...numpadMoneyMsgs.th,
+  ...numpadFarmMsgs.th,
+  ...numpadSaleMsgs.th,
   ...closeoutPayMsgs.th,
   ...orderMsgs.th,
   ...orderCaptureMsgs.th,
@@ -2032,6 +2038,9 @@ const th = {
 const en: Partial<Record<keyof typeof th, string>> = {
   ...closeoutMsgs.en,
   ...numpadMsgs.en,
+  ...numpadMoneyMsgs.en,
+  ...numpadFarmMsgs.en,
+  ...numpadSaleMsgs.en,
   ...closeoutPayMsgs.en,
   ...orderMsgs.en,
   ...orderCaptureMsgs.en,
