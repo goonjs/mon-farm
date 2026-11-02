@@ -16,6 +16,7 @@ import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { farmSection, SALE_START, saleHref, sectionHref } from './routes';
 import { useMaster, useMounted } from './farm/pieces';
+import { HomeCover } from './home-cover';
 import { ORDER_NEW, orderHref } from './money/order-routes';
 import { loadHomeSales } from './sale/open-sale';
 import { useRepayHome, type OwesRow } from './home-repay';
@@ -86,6 +87,8 @@ export function V2Home() {
   const mounted = useMounted();
   const now = useNow();
   const [menuOpen, setMenuOpen] = useState(false);
+  // E03-S09 CS-3: while a finger drags the cover sideways, the page must not take the touch.
+  const [coverDrag, setCoverDrag] = useState(false);
 
   const sales = useHomeSales();
   const { state: master } = useMaster();
@@ -219,6 +222,7 @@ export function V2Home() {
       />
       <ScrollView
         testID="v2-home"
+        scrollEnabled={!coverDrag}
         contentContainerStyle={{
           paddingHorizontal: t.layout.screenPaddingX,
           paddingTop: t.space.md,
@@ -226,7 +230,7 @@ export function V2Home() {
           gap: t.space.md,
         }}
       >
-        <Cover />
+        <HomeCover onDragChange={setCoverDrag} />
 
         <View style={{ flexDirection: 'row', gap: t.space.sm }}>
           <ActionTile
@@ -566,71 +570,5 @@ function Mod({
       ) : null}
     </Pressable>
     </Link>
-  );
-}
-
-/**
- * The cover (flow-v1 `.cover`): a rubber farm in the morning — sun and rays,
- * a cloud, two hills and two rows of trees — drawn with Views on the
- * mockup's 316×148 grid, scaled to cover the width. Still: the mockup's slow
- * motion is left out.
- */
-function Cover() {
-  const t = useTheme();
-  const msg = useT();
-  const [w, setW] = useState(0);
-  const H = 148;
-  const s = Math.max(w / 316, 1);
-  const dy = (H * s - H) / 2;
-  /** A shape on the grid, `x`/`y` its top-left in mockup units. */
-  const box = (x: number, y: number, bw: number, bh: number) => ({
-    position: 'absolute' as const,
-    left: x * s,
-    top: y * s - dy,
-    width: bw * s,
-    height: bh * s,
-  });
-  const oval = (cx: number, cy: number, rx: number, ry: number, colour: string) => (
-    <View key={`${cx},${cy}`} style={{ ...box(cx - rx, cy - ry, rx * 2, ry * 2), borderRadius: rx * s, backgroundColor: colour }} />
-  );
-  const tree = (cx: number, top: number, trunkW: number, trunkH: number, rx: number, ry: number, crown: string) => (
-    <View key={cx}>
-      <View style={{ ...box(cx - trunkW / 2, top, trunkW, trunkH), borderRadius: s * 2, backgroundColor: t.color.inkSoft }} />
-      {oval(cx, top - 4, rx, ry, crown)}
-    </View>
-  );
-  const ray = (deg: number) => (
-    <View
-      key={deg}
-      style={{
-        ...box(62 - 1.25, 40 - 3.5, 2.5, 7),
-        borderRadius: s,
-        backgroundColor: t.color.brandYellow,
-        transform: [{ rotate: `${deg}deg` }, { translateY: -27.5 * s }],
-      }}
-    />
-  );
-  return (
-    <View
-      testID="home-cover"
-      role="img"
-      accessibilityLabel={msg('home.cover')}
-      onLayout={(e) => setW(e.nativeEvent.layout.width)}
-      style={{ height: H, borderRadius: t.radius.lg, overflow: 'hidden', backgroundColor: t.color.actionSunk }}
-    >
-      {w > 0 ? (
-        <View aria-hidden style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-          {[0, 45, 90, 135, 180, 225, 270, 315].map(ray)}
-          {oval(62, 40, 14, 14, t.color.brandYellow)}
-          {oval(200, 34, 22, 9, t.color.surfaceRaised)}
-          {oval(216, 28, 14, 10, t.color.surfaceRaised)}
-          {oval(186, 30, 11, 8, t.color.surfaceRaised)}
-          <View style={{ ...box(-60, 88, 436, 140), borderTopLeftRadius: 220 * s, borderTopRightRadius: 220 * s, backgroundColor: t.color.brandLight }} />
-          {[122, 162, 202, 242, 282].map((x, i) => tree(x, [66, 62, 64, 60, 62][i], 4, 44, 15, 13, t.color.brand))}
-          <View style={{ ...box(-80, 110, 476, 140), borderTopLeftRadius: 240 * s, borderTopRightRadius: 240 * s, backgroundColor: t.color.brand }} />
-          {[99, 153, 207, 261].map((x, i) => tree(x, [70, 74, 72, 70][i], 6, 70, 22, 18, t.color.brandStrong))}
-        </View>
-      ) : null}
-    </View>
   );
 }

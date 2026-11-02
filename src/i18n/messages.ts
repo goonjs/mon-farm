@@ -367,6 +367,9 @@ const th = {
   'v2.stock': 'รายการ stock',
   // ── v2 home (e03-v2-splash-home; flow-v1 screen 3, farm v1.1.0 screens 1, 25)
   'home.cover': 'ภาพปก: สวนยางยามเช้า',
+  // E03-S09: the drawn scene that follows the clock
+  'home.scene': 'ภาพปก: สวนยางริมลำธาร',
+  'home.sceneHint': 'แตะเพื่อเล่นภาพทั้งวัน',
   'home.openSale': 'การขายที่ยังไม่ปิด',
   'home.latestSale': 'การขายล่าสุด',
   'home.saleLine': '{date} · {kg} กก.',
@@ -2327,6 +2330,8 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'v2.payables': 'to pay',
   'v2.stock': 'stock',
   'home.cover': 'cover: a rubber farm in the morning',
+  'home.scene': 'cover: a rubber farm by a stream',
+  'home.sceneHint': 'tap to play the whole day',
   'home.openSale': 'sale not closed yet',
   'home.latestSale': 'latest sale',
   'home.saleLine': '{date} · {kg} kg',
