@@ -706,6 +706,9 @@ const th = {
   'settings.favicon': 'ไอคอนบนแท็บเบราว์เซอร์',
   'settings.faviconDefault': 'เดิม',
   'settings.faviconNote': 'เฉพาะเบราว์เซอร์ในเครื่องนี้ · บุ๊กมาร์กอาจใช้ไอคอนนี้ด้วย แล้วแต่เบราว์เซอร์',
+  'v2.devIconsSection': 'ดูอย่างเดียว',
+  'v2.devIcons': 'ไอคอนทั้งหมดในแอป',
+  'v2.devIconsDetail': '{n} ไอคอน · เปิดดูเฉย ๆ ไม่เปลี่ยนการตั้งค่า',
 
   // ── Start a sale (E04-S02) ──────────────────────────────────────────────
   'start.title': 'เริ่มการขาย',
@@ -2651,6 +2654,9 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'settings.favicon': 'Browser tab icon',
   'settings.faviconDefault': 'Original',
   'settings.faviconNote': 'This browser on this device only · bookmarks may use it too, depending on the browser',
+  'v2.devIconsSection': 'View only',
+  'v2.devIcons': 'All icons in the app',
+  'v2.devIconsDetail': '{n} icons · just to look at, changes no setting',
   'start.title': 'Start a sale',
   'start.date': 'Date',
   'start.buyer': 'Rubber buyer',

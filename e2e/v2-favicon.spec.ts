@@ -150,3 +150,37 @@ async function tabStrip(page: Page, icon: string, touch: string) {
   await strip.screenshot({ path: 'docs/ux/screenshots/e03-s10/tab-strip.png' });
   await strip.close();
 }
+
+/**
+ * Owner 2026-11-02, same PR: the last item on เครื่องนี้ opens the icon
+ * catalogue; it sits apart from the settings and nothing on it is cut off.
+ */
+for (const width of [360, 390]) {
+  for (const size of ['s', 'm', 'l'] as const) {
+    test(`the view-only icon link fits at ${width} px, text size ${size}, and opens the catalogue`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.addInitScript((size) => localStorage.setItem('mon-farm:text-size', size), size);
+      await page.goto('/v2/device');
+      const row = page.getByTestId('device-dev-icons');
+      await row.scrollIntoViewIfNeeded();
+      await expect(page.getByText('ดูอย่างเดียว', { exact: true })).toBeVisible();
+      expect(await textFit(page)).toEqual([]);
+      expect(await smallTargets(page)).toEqual([]);
+      const box = (await row.boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      // The last thing on the page: nothing below the row but padding.
+      const below = await page.evaluate(() => {
+        const r = document.querySelector('[data-testid="device-dev-icons"]')!.getBoundingClientRect();
+        return [...document.querySelectorAll('[data-testid^="device-"]')].filter((e) => e.getBoundingClientRect().top > r.bottom).length;
+      });
+      expect(below).toBe(0);
+      if (process.env.UPDATE_SCREENSHOTS) await page.screenshot({ path: `docs/ux/screenshots/e03-s10/dev-icons-link-${width}-${size}.png` });
+
+      await row.click();
+      await expect(page).toHaveURL(/\/v2\/dev\/icons$/);
+      await expect(page.getByTestId('dev-icon-nav.home')).toBeVisible();
+      expect(await textFit(page)).toEqual([]);
+      if (process.env.UPDATE_SCREENSHOTS && width === 360 && size === 'l') await evidence(page, 'docs/ux/screenshots/e03-s10/dev-icons-page-360-l.png');
+    });
+  }
+}
