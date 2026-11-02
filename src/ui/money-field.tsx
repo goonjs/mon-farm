@@ -21,6 +21,7 @@ import { Pressable, Text, View } from 'react-native';
 import { BottomSheet } from './bottom-sheet';
 import { CTA } from './button';
 import { cardStyle } from './card';
+import { FieldHead } from './form';
 import { NumberPad } from './number-pad';
 import { ClearLink } from './quantity-field';
 import { bahtWords } from '../core/baht-words';
@@ -60,6 +61,8 @@ export function MoneyField({
   open: openProp,
   onOpenChange,
   card = true,
+  required,
+  hint,
   testID,
 }: {
   label: string;
@@ -84,6 +87,10 @@ export function MoneyField({
   onOpenChange?: (open: boolean) => void;
   /** false: no card — the screen's own row opens the sheet. */
   card?: boolean;
+  /** Red * after the label, like TextField. */
+  required?: boolean;
+  /** A soft note beside the label, e.g. "ไม่บังคับ". */
+  hint?: string;
   testID: string;
 }) {
   const t = useTheme();
@@ -180,13 +187,11 @@ export function MoneyField({
     <>
       {card ? (
         <View style={{ gap: t.space.xs }}>
-          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: t.color.inkSoft }}>
-            {label}
-          </Text>
+          <FieldHead label={label} required={required} hint={hint} />
           <Pressable
             testID={testID}
             accessibilityRole="button"
-            accessibilityLabel={[label, satang == null ? (emptyText ?? null) : `${formatSatang(satang)} ${unit}`].filter(Boolean).join(', ')}
+            accessibilityLabel={[label, required ? msg('form.required') : null, hint ?? null, satang == null ? (emptyText ?? null) : `${formatSatang(satang)} ${unit}`].filter(Boolean).join(', ')}
             onPress={openSheet}
             style={[cardStyle(t), { minHeight: t.target.comfortable, paddingHorizontal: t.space.lg, paddingVertical: t.space.sm, justifyContent: 'center' }]}
           >

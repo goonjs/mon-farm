@@ -170,3 +170,14 @@ describe('QuantityField — E01-S20 additions', () => {
     expect(shown()).toBe('2560');
   });
 });
+
+describe('label line like TextField (E01-S20)', () => {
+  it('shows the red required mark and a soft hint beside the label; both reach the card name', () => {
+    wrap(<QuantityField testID="q" label="พื้นที่ (ไร่)" unit="ไร่" value={null} required hint="ไม่บังคับ" onChange={() => {}} />);
+    expect(screen.getByTestId('required-mark')).toBeTruthy();
+    expect(screen.getByText('ไม่บังคับ')).toBeTruthy();
+    expect(screen.getByTestId('q').props.accessibilityLabel).toContain('จำเป็น');
+    expect(screen.getByTestId('q').props.accessibilityLabel).toContain('ไม่บังคับ');
+  });
+});
+

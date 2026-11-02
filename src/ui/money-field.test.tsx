@@ -149,3 +149,13 @@ describe('MoneyField — E01-S20 additions', () => {
   });
 });
 
+describe('label line like TextField (E01-S20)', () => {
+  it('shows the red required mark and a soft hint beside the label; both reach the card name', () => {
+    wrap(<MoneyField testID="m" label="จำนวน" unit="บาท" satang={null} required hint="ไม่บังคับ" onChange={() => {}} />);
+    expect(screen.getByTestId('required-mark')).toBeTruthy();
+    expect(screen.getByText('ไม่บังคับ')).toBeTruthy();
+    expect(screen.getByTestId('m').props.accessibilityLabel).toContain('จำเป็น');
+    expect(screen.getByTestId('m').props.accessibilityLabel).toContain('ไม่บังคับ');
+  });
+});
+
