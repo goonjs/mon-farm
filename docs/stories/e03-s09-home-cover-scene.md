@@ -1,6 +1,6 @@
 # Story E03-S09: ภาพปกหน้าแรก สวนยางตามเวลาจริง
 
-Status: In Progress (เจ้าของเลือกทิศทางผ่านลีด 2026-11-02, AC ส่งลีดแล้ว)
+Status: Review (เจ้าของเลือกทิศทางผ่านลีด 2026-11-02, ลีดรับ AC แล้ว)
 
 ## Context
 
@@ -27,7 +27,7 @@ Status: In Progress (เจ้าของเลือกทิศทางผ�
 - [ ] **CS-2** เปิดหน้าแรกแล้วภาพแสดงตามเวลาเครื่องตอนนี้ และเปลี่ยนตามนาฬิกาทุก 1 นาที: ดวงอาทิตย์ขึ้น 06:00
   ตก 18:30 เดินเป็นวงโค้งซ้ายไปขวา สีฟ้า น้ำ ใบไม้ เงา เปลี่ยนตามเวลา เช้า/สาย/เที่ยง/บ่าย/เย็น ต่างกันชัด
   ค่ำ (ราว 19:30–05:00) เป็นพระจันทร์กับดาว
-- [ ] **CS-3** ปัดซ้าย/ขวาบนภาพ: เวลาเลื่อนตามนิ้ว ดวงอาทิตย์อยู่ใต้นิ้ว (ขอบซ้าย = 00:00, ขอบขวา = 24:00)
+- [ ] **CS-3** ปัดซ้าย/ขวาบนภาพ: เวลาเลื่อนตามนิ้ว ดวงอาทิตย์เลื่อนไปพร้อมนิ้ว (ปัดสุดภาพ ≈ หนึ่งวัน, ตัดที่ 00:00 และ 24:00) ระหว่างปัด หน้าไม่เลื่อนขึ้นลง
   ปัดขึ้นลงยังเลื่อนหน้าได้เหมือนเดิม ปล่อยนิ้วแล้วภาพค้างเวลาที่เลือกไว้ จนกว่าจะออกแล้วกลับเข้าหน้าแรก (กลับเป็นเวลาตอนนี้)
 - [ ] **CS-4** แตะภาพ = เริ่มเล่นทั้งวันใน 30 วินาที (วนซ้ำ) จากเวลาที่แสดงอยู่ แตะอีกครั้ง = หยุดและกลับเป็นเวลาตอนนี้
 - [ ] **CS-5** ประหยัดแบต: ขยับแค่น้ำกับเมฆ ประมาณ 10 ครั้ง/วินาที หยุดเมื่อออกจากหน้าแรกหรือพับแอป
@@ -76,8 +76,16 @@ N/A — ไม่มีข้อมูลหรือเครือข่าย
 
 ## Code review
 
-- Reviewer (separate agent/session):
-- Findings:
-- Resolution:
+- Reviewer (separate agent/session): independent review agent, 2026-11-02, on 3951e9a (diff vs dev)
+- Findings: no blockers. Should-fix: (1) on Android one <Svg> repaints all ~680 shapes every frame;
+  (2) a slightly diagonal sideways drag can be taken by the native ScrollView; (3) drag delta in view pixels drifts
+  when `slice` crops; (4) focus/blur not under test; (5) act() warnings in the home suite.
+  Nits: fixed gradient id, per-frame `setMode` outside play, clouds rebuilt per frame, minute timer not aligned,
+  `hhmm` duplicated, web pan-y cast; no keyboard play on web.
+- Resolution: (1) picture split into six stacked <Svg> layers, static ones memoised on the hour — a frame repaints
+  only clouds and water; (2) `onDragChange` → home `ScrollView scrollEnabled={false}` while dragging (tested);
+  (3) drag converted to scene units with the `slice` scale (tested at 716 wide); CS-3 stays relative: the sun moves
+  with the finger, no jump on touch; (4) focus/blur test with a driven `useFocusEffect`; (5) home suite stubs the
+  cover. Nits fixed except keyboard play on web (accepted: Android first, the picture is decoration).
 
 ## QA notes

@@ -3,21 +3,23 @@
  * the device clock (docs/stories/e03-s09-home-cover-scene.md).
  *
  * Shapes come from `core/cover-scene` (pure, built once); colours, sun and moon
- * from `core/cover-sky`. Static layers are element arrays built once and wrapped
- * in groups that only change their fill, so a colour change does not walk
- * hundreds of shapes. Only the water lanes and the clouds move, about ten times a
- * second, and only while the home is on screen, the app is in front and the
- * device does not ask for reduced motion (CS-5).
+ * from `core/cover-sky`. The picture is a stack of separate <Svg> layers (sky,
+ * clouds, land, water, trees, tint): on Android each <Svg> is one bitmap, so a
+ * frame only repaints the two small moving layers, never the ~680 tree shapes.
+ * Static layers are memoised on the hour and wrap element arrays built once.
+ * Only the water lanes and the clouds move, about ten times a second, and only
+ * while the home is focused, the app is in front and the device does not ask
+ * for reduced motion (CS-5).
  */
 
 import { useFocusEffect } from 'expo-router';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, AppState, View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, AppState, Platform, StyleSheet, View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { COVER_FIXED } from '../../../design/cover-scene';
 import { buildScene, CLOUD_FROM, CLOUD_TRAVEL, FLOW_CYCLE, type Oval, type Scene, type Sprig } from '../../core/cover-scene';
-import { fractionOfHour, hourAtFraction, hourOfDay, moonAt, paletteAt, playHour, SCENE_W, sunAt, type Palette } from '../../core/cover-sky';
+import { fractionOfHour, hhmm, hourAtFraction, hourOfDay, moonAt, paletteAt, playHour, SCENE_W, sunAt } from '../../core/cover-sky';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
 
@@ -28,8 +30,6 @@ const CLOCK_MS = 60_000;
 const SLOP = 10;
 
 type Mode = { kind: 'clock' } | { kind: 'manual'; hour: number } | { kind: 'play'; from: number; elapsed: number };
-
-const hhmm = (h: number) => `${String(Math.floor(h) % 24).padStart(2, '0')}:${String(Math.floor((h % 1) * 60 + 1e-6)).padStart(2, '0')}`;
 
 /** Whether the device asks for reduced motion (and when that changes). */
 function useReduceMotion(): boolean {
@@ -94,98 +94,173 @@ function useShapes(scene: Scene) {
       sprigs: sprigs(t.crown.sprigs, `cs${i}`),
     }));
     const stars = scene.stars.map((s, i) => <Circle key={`s${i}`} cx={s.x} cy={s.y} r={s.r} />);
+    const clouds = scene.clouds.map((c, i) => ovals(c.puffs, `c${i}`));
     const glints = ovals(scene.stream.glints, 'g');
     const stones = scene.stream.stones.map((o, i) => <Ellipse key={`st${i}`} cx={o.cx} cy={o.cy} rx={o.rx} ry={o.ry} fill={i % 2 ? COVER_FIXED.stoneLight : COVER_FIXED.stone} />);
-    return { rows, trees, stars, glints, stones };
+    return { rows, trees, stars, clouds, glints, stones };
   }, [scene]);
 }
 
 type Shapes = ReturnType<typeof useShapes>;
 
-/** Hills, plantation rows, meadow and the stream bed: everything behind the moving water. */
-const Back = memo(function Back({ scene, shapes, p, id }: { scene: Scene; shapes: Shapes; p: Palette; id: string }) {
+/** One layer of the picture: its own <Svg>, the same viewBox, stacked over the others. */
+function Layer({ children }: { children: ReactNode }) {
   return (
-    <G>
-      <Path d={scene.hills} fill={p.hill} />
-      {shapes.rows.map((r, i) => (
-        <G key={i}>
-          {i === 1 ? <Path d={scene.ground} fill={`url(#${id}ground)`} /> : null}
-          <G fill={p.trunk} opacity={0.75}>{r.trunks}</G>
-          <G fill={p.farD}>{r.dark}</G>
-          <G fill={p.farL} opacity={0.9}>{r.light}</G>
+    <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox={`0 0 ${SCENE_W} ${COVER_HEIGHT}`} preserveAspectRatio="xMidYMid slice">
+      {children}
+    </Svg>
+  );
+}
+
+/** Sky, stars and moon, sun and halo. */
+const Sky = memo(function Sky({ hour, shapes, gid }: { hour: number; shapes: Shapes; gid: string }) {
+  const p = paletteAt(hour);
+  const sun = sunAt(hour, COVER_HEIGHT);
+  const moon = moonAt(hour, COVER_HEIGHT);
+  return (
+    <Layer>
+      <Defs>
+        <LinearGradient id={`${gid}sky`} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={p.skyTop} />
+          <Stop offset="1" stopColor={p.skyBot} />
+        </LinearGradient>
+        <RadialGradient id={`${gid}glow`} cx="50%" cy="50%" r="50%">
+          <Stop offset="0" stopColor={p.sun} stopOpacity={0.9} />
+          <Stop offset="0.35" stopColor={p.sun} stopOpacity={0.35} />
+          <Stop offset="1" stopColor={p.sun} stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Rect width={SCENE_W} height={COVER_HEIGHT} fill={`url(#${gid}sky)`} />
+      {p.star > 0.01 ? (
+        <G opacity={p.star}>
+          <G fill={COVER_FIXED.star}>{shapes.stars}</G>
+          {moon.up ? (
+            <Path
+              d={`M${moon.x},${moon.y - 7.5} A7.5,7.5 0 1,0 ${moon.x},${moon.y + 7.5} A3.5,7.5 0 1,1 ${moon.x},${moon.y - 7.5}Z`}
+              fill={COVER_FIXED.moon}
+            />
+          ) : null}
         </G>
-      ))}
-      <Path d={scene.stream.bank} fill={p.bank} />
-      <Path d={scene.stream.water} fill={`url(#${id}water)`} />
-    </G>
+      ) : null}
+      {sun.up || p.glow > 0.01 ? (
+        <G>
+          <Circle testID="cover-sun" cx={sun.x} cy={sun.y} r={42} fill={`url(#${gid}glow)`} opacity={p.glow} />
+          <Circle cx={sun.x} cy={sun.y} r={10.5} fill={p.sun} />
+        </G>
+      ) : null}
+    </Layer>
   );
 });
 
-/** Glints, stones, trees and grass: everything in front of the water. */
-const Front = memo(function Front({ scene, shapes, p, shadowShift }: { scene: Scene; shapes: Shapes; p: Palette; shadowShift: number }) {
+/** Thin clouds drifting left to right, a few minutes each (moving layer). */
+function Clouds({ hour, scene, shapes, seconds }: { hour: number; scene: Scene; shapes: Shapes; seconds: number }) {
+  const p = paletteAt(hour);
   return (
-    <G>
-      <G fill={p.flow} opacity={0.6}>{shapes.glints}</G>
-      {shapes.stones}
-      {scene.trees.map((t, i) => {
-        const s = shapes.trees[i];
-        return (
-          <G key={i}>
-            <Ellipse cx={t.shadow.cx + shadowShift} cy={t.shadow.cy} rx={t.shadow.rx} ry={t.shadow.ry} fill={COVER_FIXED.shadow} opacity={p.shadow} />
-            <G fill={p.trunk}>{s.trunk}</G>
-            <G stroke={p.trunkHi}>{s.highlight}</G>
-            {s.tap}
-            <G stroke={p.trunk}>{s.branches}</G>
-            <G fill={p.leafD}>{s.dark}</G>
-            <G fill={p.leafM}>{s.mid}</G>
-            <G fill={p.leafL}>{s.light}</G>
-            <G fill={p.leafM}>{s.sprigs}</G>
+    <Layer>
+      <G fill={p.cloud} opacity={p.cloudOp}>
+        {scene.clouds.map((c, i) => (
+          <G key={i} transform={`translate(${CLOUD_FROM + ((seconds / c.duration + c.phase) % 1) * CLOUD_TRAVEL},0)`}>
+            {shapes.clouds[i]}
           </G>
-        );
-      })}
-      <Path d={scene.grass} stroke={p.leafM} strokeWidth={1} strokeLinecap="round" fill="none" />
-    </G>
+        ))}
+      </G>
+    </Layer>
+  );
+}
+
+/** Hills, plantation rows, meadow and the stream bed: everything behind the moving water. */
+const Land = memo(function Land({ hour, scene, shapes, gid }: { hour: number; scene: Scene; shapes: Shapes; gid: string }) {
+  const p = paletteAt(hour);
+  return (
+    <Layer>
+      <Defs>
+        <LinearGradient id={`${gid}water`} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={p.water1} />
+          <Stop offset="1" stopColor={p.water2} />
+        </LinearGradient>
+        <LinearGradient id={`${gid}ground`} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={p.g1} />
+          <Stop offset="1" stopColor={p.g2} />
+        </LinearGradient>
+      </Defs>
+      <G transform={`translate(0,${scene.groundShift})`}>
+        <Path d={scene.hills} fill={p.hill} />
+        {shapes.rows.map((r, i) => (
+          <G key={i}>
+            {i === 1 ? <Path d={scene.ground} fill={`url(#${gid}ground)`} /> : null}
+            <G fill={p.trunk} opacity={0.75}>{r.trunks}</G>
+            <G fill={p.farD}>{r.dark}</G>
+            <G fill={p.farL} opacity={0.9}>{r.light}</G>
+          </G>
+        ))}
+        <Path d={scene.stream.bank} fill={p.bank} />
+        <Path d={scene.stream.water} fill={`url(#${gid}water)`} />
+      </G>
+    </Layer>
   );
 });
 
-/** The moving water: dashes travel down each lane toward the viewer. */
-function Flow({ scene, colour, seconds }: { scene: Scene; colour: string; seconds: number }) {
+/** The moving water: dashes travel down each lane toward the viewer (moving layer). */
+function Flow({ hour, scene, seconds }: { hour: number; scene: Scene; seconds: number }) {
+  const p = paletteAt(hour);
   return (
-    <G stroke={colour} fill="none" strokeLinecap="round">
-      {scene.stream.lanes.map((l, i) => (
-        <Path
-          key={i}
-          testID={`cover-flow-${i}`}
-          d={l.d}
-          strokeWidth={l.width}
-          strokeDasharray={l.dash}
-          strokeDashoffset={-((seconds / l.period + l.phase) % 1) * FLOW_CYCLE}
-          opacity={l.opacity}
-        />
-      ))}
-    </G>
+    <Layer>
+      <G transform={`translate(0,${scene.groundShift})`} stroke={p.flow} fill="none" strokeLinecap="round">
+        {scene.stream.lanes.map((l, i) => (
+          <Path
+            key={i}
+            testID={`cover-flow-${i}`}
+            d={l.d}
+            strokeWidth={l.width}
+            strokeDasharray={l.dash}
+            strokeDashoffset={-((seconds / l.period + l.phase) % 1) * FLOW_CYCLE}
+            opacity={l.opacity}
+          />
+        ))}
+      </G>
+    </Layer>
   );
 }
 
-/** Thin clouds drifting left to right, a few minutes each. */
-function Clouds({ scene, colour, opacity, seconds }: { scene: Scene; colour: string; opacity: number; seconds: number }) {
+/** Glints, stones, trees, grass and the light of the hour over everything. */
+const Trees = memo(function Trees({ hour, scene, shapes }: { hour: number; scene: Scene; shapes: Shapes }) {
+  const p = paletteAt(hour);
+  const shadowShift = Math.max(-1, Math.min(1, (180 - sunAt(hour, COVER_HEIGHT).x) / 120)) * 14;
   return (
-    <G fill={colour} opacity={opacity}>
-      {scene.clouds.map((c, i) => (
-        <G key={i} transform={`translate(${CLOUD_FROM + ((seconds / c.duration + c.phase) % 1) * CLOUD_TRAVEL},0)`}>
-          {ovals(c.puffs, `c${i}`)}
-        </G>
-      ))}
-    </G>
+    <Layer>
+      <G transform={`translate(0,${scene.groundShift})`}>
+        <G fill={p.flow} opacity={0.6}>{shapes.glints}</G>
+        {shapes.stones}
+        {scene.trees.map((t, i) => {
+          const s = shapes.trees[i];
+          return (
+            <G key={i}>
+              <Ellipse cx={t.shadow.cx + shadowShift} cy={t.shadow.cy} rx={t.shadow.rx} ry={t.shadow.ry} fill={COVER_FIXED.shadow} opacity={p.shadow} />
+              <G fill={p.trunk}>{s.trunk}</G>
+              <G stroke={p.trunkHi}>{s.highlight}</G>
+              {s.tap}
+              <G stroke={p.trunk}>{s.branches}</G>
+              <G fill={p.leafD}>{s.dark}</G>
+              <G fill={p.leafM}>{s.mid}</G>
+              <G fill={p.leafL}>{s.light}</G>
+              <G fill={p.leafM}>{s.sprigs}</G>
+            </G>
+          );
+        })}
+        <Path d={scene.grass} stroke={p.leafM} strokeWidth={1} strokeLinecap="round" fill="none" />
+      </G>
+      <Rect width={SCENE_W} height={COVER_HEIGHT} fill={p.tint} opacity={p.tintOp} />
+    </Layer>
   );
-}
+});
 
-export function CoverScene() {
+export function CoverScene({ onDragChange }: { onDragChange?: (dragging: boolean) => void }) {
   const t = useTheme();
   const msg = useT();
   const scene = useMemo(() => buildScene(COVER_HEIGHT), []);
   const shapes = useShapes(scene);
-  const id = 'homecover';
+  // Gradient ids are document-global on the web: one per mounted cover.
+  const gid = `cover${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
 
   const [mode, setMode] = useState<Mode>({ kind: 'clock' });
   const [now, setNow] = useState(() => hourOfDay(new Date()));
@@ -193,7 +268,7 @@ export function CoverScene() {
   const [focused, setFocused] = useState(true);
   const active = useAppActive();
   const reduce = useReduceMotion();
-  const width = useRef(SCENE_W);
+  const size = useRef({ width: SCENE_W, height: COVER_HEIGHT });
   const touch = useRef<{ x: number; y: number; hour: number; dragging: boolean } | null>(null);
 
   // CS-3: coming back to the home shows the time now again.
@@ -210,13 +285,14 @@ export function CoverScene() {
   useEffect(() => {
     if (!focused || !active) return;
     // Read the clock again on coming back to the app, then every minute.
-    const read = () => setNow(hourOfDay(new Date()));
-    const first = setTimeout(read, 0);
-    const timer = setInterval(read, CLOCK_MS);
-    return () => {
-      clearTimeout(first);
-      clearInterval(timer);
+    // Read the clock now, then on each minute boundary.
+    let timer: ReturnType<typeof setTimeout>;
+    const read = () => {
+      setNow(hourOfDay(new Date()));
+      timer = setTimeout(read, CLOCK_MS - (Date.now() % CLOCK_MS));
     };
+    timer = setTimeout(read, 0);
+    return () => clearTimeout(timer);
   }, [focused, active]);
 
   // CS-5: water and clouds (and a playing day) move only while someone can see them.
@@ -226,17 +302,14 @@ export function CoverScene() {
     if (!moving) return;
     const timer = setInterval(() => {
       setSeconds((s) => s + FRAME_MS / 1000);
-      setMode((m) => (m.kind === 'play' ? { ...m, elapsed: m.elapsed + FRAME_MS } : m));
+      if (playing) setMode((m) => (m.kind === 'play' ? { ...m, elapsed: m.elapsed + FRAME_MS } : m));
     }, FRAME_MS);
     return () => clearInterval(timer);
-  }, [moving]);
+  }, [moving, playing]);
 
   const hour = mode.kind === 'manual' ? mode.hour : mode.kind === 'play' ? playHour(mode.from, mode.elapsed) : now;
   const shownSeconds = reduce ? 0 : seconds;
-  const p = useMemo(() => paletteAt(hour), [hour]);
-  const sun = sunAt(hour, COVER_HEIGHT);
-  const moon = moonAt(hour, COVER_HEIGHT);
-  const shadowShift = Math.max(-1, Math.min(1, (180 - sun.x) / 120)) * 14;
+  const sky = paletteAt(hour).skyBot;
 
   // CS-4: a tap plays the whole day; another tap goes back to now.
   const toggle = () => {
@@ -247,7 +320,8 @@ export function CoverScene() {
   };
 
   const onLayout = (e: LayoutChangeEvent) => {
-    if (e.nativeEvent.layout.width > 0) width.current = e.nativeEvent.layout.width;
+    const { width, height } = e.nativeEvent.layout;
+    if (width > 0 && height > 0) size.current = { width, height };
   };
   const onGrant = (e: GestureResponderEvent) => {
     touch.current = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY, hour, dragging: false };
@@ -256,12 +330,19 @@ export function CoverScene() {
     const s = touch.current;
     if (!s) return;
     const dx = e.nativeEvent.pageX - s.x, dy = e.nativeEvent.pageY - s.y;
-    if (!s.dragging && Math.abs(dx) > SLOP && Math.abs(dx) > Math.abs(dy)) s.dragging = true;
-    if (s.dragging) setMode({ kind: 'manual', hour: hourAtFraction(fractionOfHour(s.hour) + dx / width.current) });
+    if (!s.dragging && Math.abs(dx) > SLOP && Math.abs(dx) > Math.abs(dy)) {
+      s.dragging = true;
+      onDragChange?.(true);
+    }
+    if (!s.dragging) return;
+    // `slice` scales the scene by the larger of the two ratios: turn view pixels into scene units.
+    const scale = Math.max(size.current.width / SCENE_W, size.current.height / COVER_HEIGHT);
+    setMode({ kind: 'manual', hour: hourAtFraction(fractionOfHour(s.hour) + dx / scale / SCENE_W) });
   };
   const onRelease = (e: GestureResponderEvent) => {
     const s = touch.current;
     touch.current = null;
+    if (s?.dragging) onDragChange?.(false);
     if (!s || s.dragging) return;
     if (Math.abs(e.nativeEvent.pageX - s.x) <= SLOP && Math.abs(e.nativeEvent.pageY - s.y) <= SLOP) toggle();
   };
@@ -283,59 +364,21 @@ export function CoverScene() {
       onResponderGrant={onGrant}
       onResponderMove={onMove}
       onResponderRelease={onRelease}
-      onResponderTerminate={() => (touch.current = null)}
-      style={[{ height: COVER_HEIGHT, borderRadius: t.radius.lg, overflow: 'hidden', backgroundColor: p.skyBot }, WEB_PAN_Y]}
+      onResponderTerminate={() => {
+        if (touch.current?.dragging) onDragChange?.(false);
+        touch.current = null;
+      }}
+      style={[{ height: COVER_HEIGHT, borderRadius: t.radius.lg, overflow: 'hidden', backgroundColor: sky }, WEB_PAN_Y]}
     >
-      <Svg width="100%" height="100%" viewBox={`0 0 ${SCENE_W} ${COVER_HEIGHT}`} preserveAspectRatio="xMidYMid slice">
-        <Defs>
-          <LinearGradient id={`${id}sky`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={p.skyTop} />
-            <Stop offset="1" stopColor={p.skyBot} />
-          </LinearGradient>
-          <RadialGradient id={`${id}glow`} cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor={p.sun} stopOpacity={0.9} />
-            <Stop offset="0.35" stopColor={p.sun} stopOpacity={0.35} />
-            <Stop offset="1" stopColor={p.sun} stopOpacity={0} />
-          </RadialGradient>
-          <LinearGradient id={`${id}water`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={p.water1} />
-            <Stop offset="1" stopColor={p.water2} />
-          </LinearGradient>
-          <LinearGradient id={`${id}ground`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={p.g1} />
-            <Stop offset="1" stopColor={p.g2} />
-          </LinearGradient>
-        </Defs>
-        <Rect width={SCENE_W} height={COVER_HEIGHT} fill={`url(#${id}sky)`} />
-        {p.star > 0.01 ? (
-          <G opacity={p.star}>
-            <G fill={COVER_FIXED.star}>{shapes.stars}</G>
-            {moon.up ? (
-              <Path
-                d={`M${moon.x},${moon.y - 7.5} A7.5,7.5 0 1,0 ${moon.x},${moon.y + 7.5} A3.5,7.5 0 1,1 ${moon.x},${moon.y - 7.5}Z`}
-                fill={COVER_FIXED.moon}
-              />
-            ) : null}
-          </G>
-        ) : null}
-        {sun.up || p.glow > 0.01 ? (
-          <G>
-            <Circle testID="cover-sun" cx={sun.x} cy={sun.y} r={42} fill={`url(#${id}glow)`} opacity={p.glow} />
-            <Circle cx={sun.x} cy={sun.y} r={10.5} fill={p.sun} />
-          </G>
-        ) : null}
-        <Clouds scene={scene} colour={p.cloud} opacity={p.cloudOp} seconds={shownSeconds} />
-        <G transform={`translate(0,${scene.groundShift})`}>
-          <Back scene={scene} shapes={shapes} p={p} id={id} />
-          <Flow scene={scene} colour={p.flow} seconds={shownSeconds} />
-          <Front scene={scene} shapes={shapes} p={p} shadowShift={shadowShift} />
-        </G>
-        <Rect width={SCENE_W} height={COVER_HEIGHT} fill={p.tint} opacity={p.tintOp} />
-      </Svg>
+      <Sky hour={hour} shapes={shapes} gid={gid} />
+      <Clouds hour={hour} scene={scene} shapes={shapes} seconds={shownSeconds} />
+      <Land hour={hour} scene={scene} shapes={shapes} gid={gid} />
+      <Flow hour={hour} scene={scene} seconds={shownSeconds} />
+      <Trees hour={hour} scene={scene} shapes={shapes} />
     </View>
   );
 }
 
-/** On the web, leave up-down swipes to the page scroll (CS-3). */
-const WEB_PAN_Y = { touchAction: 'pan-y' } as unknown as Record<string, never>;
+/** On the web, leave up-down swipes to the page scroll (CS-3). `touchAction` is a web-only style. */
+const WEB_PAN_Y = Platform.OS === 'web' ? ({ touchAction: 'pan-y' } as object) : null;
 

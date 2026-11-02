@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  hhmm,
   hourAtFraction,
   hourOfDay,
   fractionOfHour,
@@ -113,5 +114,13 @@ describe('playHour (CS-4)', () => {
 describe('hourOfDay', () => {
   it('reads the device clock as fractional hours', () => {
     expect(hourOfDay(new Date(2026, 10, 2, 17, 45))).toBe(17.75);
+  });
+});
+
+describe('hhmm', () => {
+  it('writes an hour as HH:MM, wrapping 24 to 00', () => {
+    expect(hhmm(7.5)).toBe('07:30');
+    expect(hhmm(17.75)).toBe('17:45');
+    expect(hhmm(24)).toBe('00:00');
   });
 });

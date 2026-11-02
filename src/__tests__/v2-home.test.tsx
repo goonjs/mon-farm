@@ -37,6 +37,15 @@ jest.mock('expo-router', () => {
     router,
   };
 });
+// The cover scene has its own suite (src/v2/home-cover); here it stands in still, so its timers stay out of these tests.
+jest.mock('../v2/home-cover', () => {
+  const { View } = jest.requireActual('react-native');
+  return {
+    HomeCover: ({ onDragChange }: { onDragChange?: (d: boolean) => void }) => (
+      <View testID="home-cover" accessibilityLabel="ภาพปก: สวนยางริมลำธาร" onTouchStart={() => onDragChange?.(true)} onTouchEnd={() => onDragChange?.(false)} />
+    ),
+  };
+});
 const { router: mockRouter } = jest.requireMock('expo-router') as { router: { push: jest.Mock } };
 
 async function flush() {
@@ -78,6 +87,17 @@ beforeEach(() => mockRouter.push.mockClear());
  * screens 1 and 25 on top. Runs first on empty stores, then seeds them.
  */
 describe('V2Home — empty farm', () => {
+  it('stops the page scrolling while the cover is dragged sideways (E03-S09 CS-3)', async () => {
+    wrap(<V2Home />);
+    await flush();
+    const page = () => screen.getByTestId('v2-home');
+    expect(page().props.scrollEnabled).toBe(true);
+    fireEvent(screen.getByTestId('home-cover'), 'touchStart');
+    expect(page().props.scrollEnabled).toBe(false);
+    fireEvent(screen.getByTestId('home-cover'), 'touchEnd');
+    expect(page().props.scrollEnabled).toBe(true);
+  });
+
   it('reads top to bottom as drawn: header with date, cover, three actions, ควรรู้, ไปที่', async () => {
     wrap(<V2Home />);
     await flush();

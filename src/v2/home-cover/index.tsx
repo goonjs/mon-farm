@@ -24,10 +24,10 @@ class CoverBoundary extends Component<{ fallback: ReactNode; children: ReactNode
   }
 }
 
-export function HomeCover() {
+export function HomeCover({ onDragChange }: { onDragChange?: (dragging: boolean) => void }) {
   return (
     <CoverBoundary fallback={<ClassicCover />}>
-      <CoverScene />
+      <CoverScene onDragChange={onDragChange} />
     </CoverBoundary>
   );
 }

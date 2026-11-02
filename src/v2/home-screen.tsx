@@ -87,6 +87,8 @@ export function V2Home() {
   const mounted = useMounted();
   const now = useNow();
   const [menuOpen, setMenuOpen] = useState(false);
+  // E03-S09 CS-3: while a finger drags the cover sideways, the page must not take the touch.
+  const [coverDrag, setCoverDrag] = useState(false);
 
   const sales = useHomeSales();
   const { state: master } = useMaster();
@@ -220,6 +222,7 @@ export function V2Home() {
       />
       <ScrollView
         testID="v2-home"
+        scrollEnabled={!coverDrag}
         contentContainerStyle={{
           paddingHorizontal: t.layout.screenPaddingX,
           paddingTop: t.space.md,
@@ -227,7 +230,7 @@ export function V2Home() {
           gap: t.space.md,
         }}
       >
-        <HomeCover />
+        <HomeCover onDragChange={setCoverDrag} />
 
         <View style={{ flexDirection: 'row', gap: t.space.sm }}>
           <ActionTile
