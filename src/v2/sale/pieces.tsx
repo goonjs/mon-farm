@@ -178,7 +178,16 @@ export function Banner({
   const fg = tone === 'warn' ? t.color.warn : tone === 'bad' ? t.color.reject : t.color.inkSoft;
   return (
     <View testID={testID} style={{ flexDirection: 'row', gap: t.space.sm, backgroundColor: bg, borderRadius: t.radius.md, padding: t.space.md }}>
-      <View aria-hidden style={{ width: 16, alignItems: 'center', paddingTop: 2 }}>
+      {/* Above M the column grows to its icon (no fixed width) and centres it on the first
+          line of text (E03-S08 TS-7); M keeps the original 16 px box, pixel for pixel. */}
+      <View
+        aria-hidden
+        style={
+          t.textScale > 1
+            ? { minWidth: 16, minHeight: Math.round((title ? t.font.size.body : t.font.size.bodySm) * t.font.lineHeight.body), alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' }
+            : { width: 16, alignItems: 'center', paddingTop: 2 }
+        }
+      >
         {icon ? icon(fg) : <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: fg }}>?</Text>}
       </View>
       <View style={{ flex: 1, gap: t.space.xxs }}>

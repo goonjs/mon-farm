@@ -217,6 +217,9 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
     </Text>
   );
   // The small cards' figure: the number (the unit is in the label above), stepped down by length; one line, so a card never grows.
+  // Card labels: one line at M and below, exactly as before (owner 2026-11-02: no change at the
+  // default); above M they wrap instead of being cut with "…" (E03-S08 TS-8).
+  const oneLine = t.textScale > 1 ? undefined : 1;
   const cardFigure = (value: string, testID: string) => (
     <Text testID={testID} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figSize(value, t.font.size.headingXl), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
       {value}
@@ -298,7 +301,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
                   <RoundButton testID="reading-less" label={msg('v2s.less1')} onPress={() => dialTo(dialValue - 1)}>
                     <Minus color={t.color.ink} size={20} />
                   </RoundButton>
-                  <Text testID="reading" style={{ minWidth: 110, textAlign: 'center', fontFamily: t.font.family.sans, fontSize: 52, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: onNet ? t.color.accept : t.color.ink }}>
+                  <Text testID="reading" style={{ minWidth: 110, textAlign: 'center', fontFamily: t.font.family.sans, fontSize: Math.round(52 * t.textScale), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: onNet ? t.color.accept : t.color.ink }}>
                     {fieldKg(dialValue)}
                     <Text style={{ fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.regular }}> {msg('common.kg')}</Text>
                   </Text>
@@ -514,7 +517,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       ) : null}
       <View testID="current" accessibilityLabel={`${msg('rec.counted')} ${figs.done}, ${msg('rec.nextNo', { n: figs.currentNo })}`} style={{ ...cardStyle(t), alignItems: 'center', paddingVertical: t.space.md }}>
         <AppText variant="bodySm">{msg('rec.counted')}</AppText>
-        <Text testID="current-done" style={{ fontFamily: t.font.family.sans, fontSize: 80, lineHeight: 88, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
+        <Text testID="current-done" style={{ fontFamily: t.font.family.sans, fontSize: Math.round(80 * t.textScale), lineHeight: Math.round(88 * t.textScale), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
           {figs.done}
         </Text>
         {waiting && open ? (
@@ -528,11 +531,11 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       <IconLine icon={(c) => <TapperIcon color={c} size={13} />}>{scopeTitle}</IconLine>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
         {price !== null
-          ? card(<><AppText variant="bodySm" numberOfLines={1}>{msg('rec.money')} (฿)</AppText>{cardFigure(compactBaht(figs.satang ?? 0), 'fig-money')}</>, 'first', false, true)
-          : card(<><AppText variant="bodySm" numberOfLines={1}>{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
+          ? card(<><AppText variant="bodySm" numberOfLines={oneLine}>{msg('rec.money')} (฿)</AppText>{cardFigure(compactBaht(figs.satang ?? 0), 'fig-money')}</>, 'first', false, true)
+          : card(<><AppText variant="bodySm" numberOfLines={oneLine}>{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
         {card(
           <>
-            <IconLine oneLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')} ({msg('common.kg')})</IconLine>
+            <IconLine oneLine={!!oneLine} icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')} ({msg('common.kg')})</IconLine>
             {cardFigure(kgText(figs.netG), 'fig-kg')}
           </>,
           'kg',
@@ -542,8 +545,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
         {open
           ? card(
               <>
-                <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.shortOf', { n: open.basketNo })}</Text>
-                <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.missing')} ({msg('common.kg')})</Text>
+                <Text numberOfLines={oneLine} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.shortOf', { n: open.basketNo })}</Text>
+                <Text numberOfLines={oneLine} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.missing')} ({msg('common.kg')})</Text>
                 {cardFigure(kgText(open.missingG), 'fig-missing')}
               </>,
               'short',
@@ -596,7 +599,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
                 {msg(fill === 'full' ? 'v2s.fillStage' : 'v2s.fillStagePart', { n: open.basketNo })}
               </Text>
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.semibold, color: t.color.ink }}>
-                {msg('v2s.fillMore')} <Text style={{ fontSize: 36, fontWeight: t.font.weight.black }}>{kgText(open.missingG)}</Text> {msg('common.kg')}
+                {msg('v2s.fillMore')} <Text style={{ fontSize: Math.round(36 * t.textScale), fontWeight: t.font.weight.black }}>{kgText(open.missingG)}</Text> {msg('common.kg')}
               </Text>
               {fill === 'full' && skew ? [smallLine(msg('v2s.fullLine', { n: kgText(std) })), smallLine(msg('v2s.lineBasket', { n: kgText(open.tareG) })), smallLine(msg('v2s.lineSkew', { n: signed(kgText(skew)) }), 'warn')] : null}
               {shouldRead(fill === 'full' ? std + open.tareG + skew : open.missingG + tare + skew)}

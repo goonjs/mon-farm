@@ -150,7 +150,7 @@ export function TypedReading({ startKg, offsetKg, onChange }: { startKg: number;
           <Text
             testID={`reading-${side}-value`}
             accessibilityLiveRegion="polite"
-            style={{ fontFamily: t.font.family.sans, fontSize: typing ? 40 : 28, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: faint ? t.color.inkSoft : ink }}
+            style={{ fontFamily: t.font.family.sans, fontSize: Math.round((typing ? 40 : 28) * t.textScale), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: faint ? t.color.inkSoft : ink }}
           >
             {value === '' ? '–' : value}
           </Text>

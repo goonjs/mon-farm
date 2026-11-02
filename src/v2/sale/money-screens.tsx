@@ -63,7 +63,7 @@ function Fresh({ children }: { children: (bump: () => void) => ReactNode }) {
 function Big({ value, unit, testID, size = 24, tone }: { value: string; unit?: string; testID?: string; size?: number; tone?: string }) {
   const t = useTheme();
   return (
-    <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: size, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: tone ?? t.color.ink }}>
+    <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: Math.round(size * t.textScale), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: tone ?? t.color.ink }}>
       {value}
       {unit ? <Text style={{ fontSize: t.font.size.bodySm, fontWeight: t.font.weight.regular, color: t.color.inkSoft }}> {unit}</Text> : null}
     </Text>
@@ -316,7 +316,7 @@ export function ShowAccountScreen() {
   const field = (k: string, v: string, size = 24, testID?: string) => (
     <View style={{ alignItems: 'center', gap: t.space.xxs }}>
       <AppText variant="bodySm">{k}</AppText>
-      <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: size, fontWeight: t.font.weight.black, color: t.color.ink, textAlign: 'center' }}>
+      <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: Math.round(size * t.textScale), fontWeight: t.font.weight.black, color: t.color.ink, textAlign: 'center' }}>
         {v}
       </Text>
     </View>
@@ -335,7 +335,7 @@ export function ShowAccountScreen() {
       {account && money.loaded ? (
         <View style={{ flex: 1, alignItems: 'center', gap: t.space.lg, paddingHorizontal: t.layout.screenPaddingX }}>
           <AppText variant="bodySm">{msg('v2s.transferToOwner')}</AppText>
-          <Text testID="show-amount" style={{ fontFamily: t.font.family.sans, fontSize: 44, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
+          <Text testID="show-amount" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.figure, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
             {baht(money.ownerTransferSatang)}
             <Text style={{ fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.regular }}> {msg('v2s.bahtUnit')}</Text>
           </Text>

@@ -45,6 +45,9 @@ export function ChoiceChip({
       onPress={onPress}
       style={{
         minHeight: t.target.min,
+        // Above M a short name ("นัด") must still be a 48 wide target (design-system §12.10 #6);
+        // M is left exactly as it was (owner, 2026-11-02).
+        ...(t.textScale > 1 ? { minWidth: t.target.min, alignItems: 'center' as const } : null),
         justifyContent: 'center',
         paddingHorizontal: t.space.md,
         borderRadius: t.radius.pill,

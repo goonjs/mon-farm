@@ -247,7 +247,7 @@ export function ZeroTareScreen() {
             <Kv tone="warn" label={msg('v2s.skewWord')} value={`${signed(kgText(skew))} ${msg('common.kg')}`} testID="expect-skew" />
             <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, paddingTop: t.space.sm }}>
               <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.eqShould')}</AppText>
-              <Text testID="expect-kg" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayXl + 8, fontWeight: t.font.weight.bold, color: t.color.action }}>
+              <Text testID="expect-kg" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayXl + Math.round(8 * t.textScale), fontWeight: t.font.weight.bold, color: t.color.action }}>
                 {kgText(pair.netG + pair.basketG + skew)}
                 <Text style={{ fontSize: t.font.size.bodyLg, color: t.color.inkSoft }}> {msg('common.kg')}</Text>
               </Text>
@@ -319,7 +319,7 @@ export function ZeroTareScreen() {
               </View>
               <View testID="expect" style={{ ...card, alignItems: 'center' }}>
                 <IconLine icon={(c) => <ScaleIcon color={c} size={14} />}>{msg('rec.shouldRead')}</IconLine>
-                <Text testID="expect-kg" style={{ fontFamily: t.font.family.sans, fontSize: 56, fontWeight: t.font.weight.black, color: t.color.ink, fontVariant: ['tabular-nums'] }}>
+                <Text testID="expect-kg" style={{ fontFamily: t.font.family.sans, fontSize: Math.round(56 * t.textScale), fontWeight: t.font.weight.black, color: t.color.ink, fontVariant: ['tabular-nums'] }}>
                   {kgText(pair.netG + pair.basketG)}
                   <Text style={{ fontSize: t.font.size.headingLg, fontWeight: t.font.weight.semibold }}> {msg('common.kg')}</Text>
                 </Text>
