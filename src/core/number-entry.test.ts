@@ -215,10 +215,11 @@ describe('decimal kind — E01-S20 NP-7 (ไร่ 2, กก. 3 or 1)', () => {
     expect(s.raw).toBe('123');
     expect(s.rejected).toBe(true);
   });
-  it('first key on a fresh value: a digit replaces it, "." gives "0.", back deletes one char of it', () => {
+  it('first key on a fresh value: a digit replaces it, "." gives "0." even when the old value had a dot, back empties it', () => {
     expect(type(KG1, ['4'], '35').raw).toBe('4');
     expect(type(KG1, ['.'], '35').raw).toBe('0.');
-    expect(type(KG1, ['back'], '35.5').raw).toBe('35.');
+    expect(type(KG1, ['.'], '35.5').raw).toBe('0.');
+    expect(type(KG1, ['back'], '35.5').raw).toBe('');
   });
   it('clear empties', () => {
     expect(type(KG1, ['clear'], '35').raw).toBe('');
@@ -244,8 +245,12 @@ describe('decimal kind — E01-S20 NP-7 (ไร่ 2, กก. 3 or 1)', () => {
   });
 });
 
-describe('back on a fresh value — NP-8 (⌫ first deletes one char of the guess)', () => {
-  it('int and money keep their old rule: fresh back empties', () => {
-    expect(type(INT, ['back'], '20').raw).toBe('');
+describe('"." first on a fresh value that has a dot (review M2)', () => {
+  it('money starts over at "0." too, like a digit replaces', () => {
+    expect(type(MONEY, ['.'], '1150.5').raw).toBe('0.');
+    expect(type(MONEY, ['.', '5'], '1150.5').raw).toBe('0.5');
+  });
+  it('a second "." after typing is still ignored', () => {
+    expect(type(MONEY, ['1', '.', '5', '.'], '').raw).toBe('1.5');
   });
 });

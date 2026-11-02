@@ -51,11 +51,12 @@ const typed = (raw: string): EntryState => ({ raw, fresh: false, rejected: false
 
 export const pressKey = (s: EntryState, key: EntryKey, cfg: EntryConfig): EntryState => {
   if (key === 'clear') return typed('');
-  // A decimal guess (หน้านับ) is edited from its end: ⌫ first removes one character (NP-8).
-  if (key === 'back') return typed(s.fresh && cfg.kind !== 'decimal' ? '' : s.raw.slice(0, -1));
+  if (key === 'back') return typed(s.fresh ? '' : s.raw.slice(0, -1));
   if (key === '.') {
-    if (fractionMax(cfg) === 0 || s.raw.includes('.')) return s; // meaningless, not a rejection
-    return typed(s.fresh || s.raw === '' ? '0.' : `${s.raw}.`);
+    if (fractionMax(cfg) === 0) return s; // meaningless, not a rejection
+    // Like a digit, a first "." starts over, even when the old value had a dot.
+    if (s.fresh || s.raw === '') return typed('0.');
+    return s.raw.includes('.') ? s : typed(`${s.raw}.`);
   }
   // Digits. A fresh value is replaced, so build on an empty base.
   const base = s.fresh ? '' : s.raw;
