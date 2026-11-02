@@ -36,7 +36,12 @@ export function FaviconOnStart() {
   return null;
 }
 
+/** The card on เครื่องนี้; nothing at all on Android / iOS (FV-5). */
 export function FaviconCard() {
+  return isWeb() ? <FaviconPicker /> : null;
+}
+
+function FaviconPicker() {
   const t = useTheme();
   const msg = useT();
   const [chosen, setChosen] = useState(() => (deviceSettings.readDuringRender ? readFavicon() : FAVICON_DEFAULT));
@@ -50,7 +55,6 @@ export function FaviconCard() {
       cancelled = true;
     };
   }, []);
-  if (!isWeb()) return null;
 
   const choose = (id: string) => {
     writeFavicon(id);
@@ -91,7 +95,7 @@ export function FaviconCard() {
     <Card testID="device-favicon">
       <CardLabel>{msg('settings.favicon')}</CardLabel>
       <View style={{ gap: t.space.sm }}>
-        <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+        <View accessibilityRole="radiogroup" accessibilityLabel={msg('settings.favicon')} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
           {option(
             FAVICON_DEFAULT,
             msg('settings.faviconDefault'),

@@ -60,7 +60,10 @@ function restore(): void {
       continue;
     }
     if (!link.hasAttribute(SHIPPED_HREF)) continue;
-    link.setAttribute('href', link.getAttribute(SHIPPED_HREF)!);
+    const href = link.getAttribute(SHIPPED_HREF)!;
+    // An empty saved href means the shipped link had none.
+    if (href === '') link.removeAttribute('href');
+    else link.setAttribute('href', href);
     const type = link.getAttribute(SHIPPED_TYPE);
     if (type === null) link.removeAttribute('type');
     else link.setAttribute('type', type);

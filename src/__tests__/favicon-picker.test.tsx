@@ -56,6 +56,7 @@ describe('on the web', () => {
     expect(def.props.accessibilityLabel).toBe('เดิม');
     for (const id of FAVICON_CHOICES) expect(screen.getByTestId(`device-favicon-${id}`)).toBeTruthy();
     expect(screen.getByTestId('device-favicon-sale.weigh').props.accessibilityLabel).toBe('ชั่งน้ำหนัก');
+    expect(screen.getByLabelText('ไอคอนบนแท็บเบราว์เซอร์').props.accessibilityRole).toBe('radiogroup');
     expect(applyFavicon).not.toHaveBeenCalled();
   });
 

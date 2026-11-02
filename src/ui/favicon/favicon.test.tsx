@@ -7,7 +7,7 @@ import { Fragment } from 'react';
 import { Circle, Ellipse, G, Path, Rect, Svg } from 'react-native-svg';
 
 import { getFarmMateIcon } from '../farmmate-icons/registry';
-import { FAVICON_CHOICES, FAVICON_DEFAULT, faviconSvg } from './choices';
+import { FAVICON_BOUNDS, FAVICON_CHOICES, FAVICON_DEFAULT, faviconSvg } from './choices';
 import { readFavicon, writeFavicon } from './preference';
 import { toSvgMarkup } from './svg-markup';
 
@@ -114,6 +114,19 @@ describe('favicon choices (FV-1)', () => {
     const [, , vw, vh] = inner![5].split(' ').map(Number);
     expect(vw).toBe(vh);
     expect(vw).toBeLessThan(48); // tighter than the 48 grid: bigger at 16 px
+  });
+
+  // Review E03-S10 #1: getBBox() leaves out stroke width, so a crop that hugs
+  // the measured bounds cut the calculator's frame and the basket handle.
+  it.each(FAVICON_CHOICES)('%s: the crop leaves room for the widest stroke in the icon', (id) => {
+    const svg = faviconSvg(id, 64)!;
+    const half = Math.max(0, ...[...svg.matchAll(/stroke-width="([\d.]+)"/g)].map((m) => Number(m[1]) / 2));
+    const [vx, vy, vs] = /viewBox="([-\d. ]+)">(?!<rect)/.exec(svg.slice(svg.indexOf('<svg', 1)))![1].split(' ').map(Number);
+    const [x0, y0, x1, y1] = FAVICON_BOUNDS[id];
+    expect(vx).toBeLessThanOrEqual(x0 - half);
+    expect(vy).toBeLessThanOrEqual(y0 - half);
+    expect(vx + vs).toBeGreaterThanOrEqual(x1 + half);
+    expect(vy + vs).toBeGreaterThanOrEqual(y1 + half);
   });
 
   it('has nothing to draw for เดิม or an unknown id', () => {

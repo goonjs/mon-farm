@@ -77,3 +77,10 @@ it('ignores an id it does not know, like เดิม', async () => {
   await applyFavicon('nope.nope', fake);
   expect(document.head.innerHTML).toBe(SHIPPED);
 });
+
+it('puts back a shipped icon link that had no href without inventing an empty one', async () => {
+  document.head.innerHTML = '<link rel="icon" type="image/x-icon">';
+  await applyFavicon('nav.home', fake);
+  await applyFavicon('default', fake);
+  expect(document.head.innerHTML).toBe('<link rel="icon" type="image/x-icon">');
+});

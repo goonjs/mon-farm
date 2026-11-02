@@ -22,10 +22,11 @@ export const FAVICON_DEFAULT = 'default';
 
 /**
  * id → the drawing's bounds on the 48 grid [x0, y0, x1, y1], measured with
- * the browser's getBBox() on 2026-11-02. If an icon is redrawn, re-measure;
- * the test only checks the crop stays square and inside the tile.
+ * the browser's getBBox() on 2026-11-02 — fill geometry only: getBBox() leaves
+ * out stroke width, which `AIR` adds back. If an icon is redrawn, re-measure;
+ * the tests check the crop covers these bounds plus the icon's widest stroke.
  */
-const BOUNDS: Record<string, readonly [number, number, number, number]> = {
+export const FAVICON_BOUNDS: Readonly<Record<string, readonly [number, number, number, number]>> = {
   'nav.home': [8, 10, 40, 40],
   'nav.myFarm': [12.4, 12.7, 35.6, 41.3],
   'nav.settings': [5, 5, 43, 43],
@@ -48,7 +49,7 @@ const BOUNDS: Record<string, readonly [number, number, number, number]> = {
   'people.commsLog': [5.5, 5, 43.5, 42.7],
 };
 
-export const FAVICON_CHOICES: readonly string[] = Object.keys(BOUNDS);
+export const FAVICON_CHOICES: readonly string[] = Object.keys(FAVICON_BOUNDS);
 
 // Registry icons read only `t.color`; the rest of a Theme is never touched.
 const LIGHT = { color: tokens.color.light } as unknown as Theme;
@@ -56,12 +57,15 @@ const VB = FARMMATE_ICON_VIEWBOX;
 /** Room left between the tile edge and the icon, on the 48 grid. */
 const TAB_INSET = 3;
 const HOME_INSET = 7;
-/** Stroke half-widths stick out of getBBox(); keep a little air round the drawing. */
-const AIR = 1;
+/**
+ * Air round the measured drawing: covers half the widest stroke in the
+ * registry (4 → 2) plus a little, so no outline is cut (review E03-S10 #1).
+ */
+const AIR = 2.5;
 
 /** A square viewBox around the drawing, centred on it. */
 function cropBox(id: string): string {
-  const [x0, y0, x1, y1] = BOUNDS[id];
+  const [x0, y0, x1, y1] = FAVICON_BOUNDS[id];
   const side = Math.max(x1 - x0, y1 - y0) + AIR * 2;
   const r = (n: number) => Math.round(n * 100) / 100;
   return `${r((x0 + x1 - side) / 2)} ${r((y0 + y1 - side) / 2)} ${r(side)} ${r(side)}`;
@@ -73,7 +77,7 @@ function cropBox(id: string): string {
  * margin — iOS rounds the corners itself and fills transparency black.
  */
 export function faviconSvg(id: string, size: number, { shape = 'tab' }: { shape?: 'tab' | 'home' } = {}): string | null {
-  const def = Object.hasOwn(BOUNDS, id) ? getFarmMateIcon(id) : undefined;
+  const def = Object.hasOwn(FAVICON_BOUNDS, id) ? getFarmMateIcon(id) : undefined;
   if (!def) return null;
   const inset = shape === 'home' ? HOME_INSET : TAB_INSET;
   const inner = VB - inset * 2;

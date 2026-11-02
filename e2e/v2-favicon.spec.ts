@@ -21,6 +21,32 @@ const head = (page: Page) =>
     touch: document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href') ?? null,
   }));
 
+/**
+ * How many distinct colours the image has, drawn by the browser: a blank
+ * canvas (drawn before the SVG decoded) or a bare tile has 1–2 (review #5).
+ */
+const colourCount = (page: Page, src: string) =>
+  page.evaluate(
+    (src) =>
+      new Promise<number>((ok) => {
+        const img = new Image();
+        img.onload = () => {
+          const c = document.createElement('canvas');
+          c.width = img.naturalWidth;
+          c.height = img.naturalHeight;
+          const ctx = c.getContext('2d')!;
+          ctx.drawImage(img, 0, 0);
+          const d = ctx.getImageData(0, 0, c.width, c.height).data;
+          const seen = new Set<number>();
+          for (let i = 0; i < d.length; i += 4) seen.add((d[i] << 24) | (d[i + 1] << 16) | (d[i + 2] << 8) | d[i + 3]);
+          ok(seen.size);
+        };
+        img.onerror = () => ok(0);
+        img.src = src;
+      }),
+    src,
+  );
+
 /** Width × height of an image data URL, decoded by the browser. */
 const pixelSize = (page: Page, src: string) =>
   page.evaluate(
@@ -50,6 +76,8 @@ test('choosing an icon changes the tab icon at once, survives a reload, and เ�
   expect(await pixelSize(page, chosen.icons[0].href)).toBe('64x64');
   expect(chosen.touch).toMatch(/^data:image\/png;base64,/);
   expect(await pixelSize(page, chosen.touch!)).toBe('180x180');
+  expect(await colourCount(page, chosen.icons[0].href)).toBeGreaterThan(3);
+  expect(await colourCount(page, chosen.touch!)).toBeGreaterThan(3);
   expect(await page.evaluate(() => localStorage.getItem('mon-farm:favicon'))).toBe('sale.weigh');
   await evidence(page, 'docs/ux/screenshots/e03-s10/device-picker-chosen.png');
   await tabStrip(page, chosen.icons[0].href, chosen.touch!);
@@ -82,7 +110,7 @@ for (const width of [360, 390]) {
       await card.scrollIntoViewIfNeeded();
       await expect(page.getByTestId('device-favicon-people.commsLog')).toBeVisible();
       // The size really applied (not just the default M): the card's note is bodySm × textScale.
-      const note = card.getByText(/^เฉพาะเครื่องนี้ · บุ๊กมาร์ก/);
+      const note = card.getByText(/^เฉพาะเบราว์เซอร์ในเครื่องนี้ · บุ๊กมาร์ก/);
       await expect(note).toHaveCSS('font-size', `${scaleSizes(tokens.font.size, size).bodySm}px`);
       expect(await textFit(page)).toEqual([]);
       expect(await smallTargets(page)).toEqual([]);
