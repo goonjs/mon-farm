@@ -33,7 +33,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CoinIcon, CTA, DotsIcon, FactRow, GearIcon, LeafIcon, PersonIcon, PinIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TapperIcon, TextField, UsersIcon, WalletIcon, type HeaderPrimaryAction } from '../../ui';
+import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CoinIcon, CTA, DotsIcon, FactRow, GearIcon, LeafIcon, MoneyField, PersonIcon, PinIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TapperIcon, TextField, UsersIcon, WalletIcon, type HeaderPrimaryAction } from '../../ui';
 import { useFarms } from './expenses-screen';
 import { ORDER_NEW, orderHref } from './order-routes';
 import { ChoiceChip, ChoiceRow, NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
@@ -274,6 +274,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   // A share conflict carries its amount: one card, resolved together.
   const conflicts = (existing?.conflicts ?? []).filter((c) => !(c.field === 'amountSatang' && existing?.conflicts.some((o) => o.field === 'share')));
   const err = (key: 'amount-required' | 'amount-invalid' | 'date-required') => (showErrors && (problems as string[]).includes(key) ? msg(`fin.form.err.${key}`) : undefined);
+  const amountErr = err('amount-required') ?? err('amount-invalid');
 
   // Five tiles, most used first (the chosen one always among them); the rest one tap away.
   const topTiles = useMemo(() => {
@@ -330,22 +331,11 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
                 <AppText testID="amount-unknown">{msg('fin.row.unknown')}</AppText>
               </View>
             ) : (
-              <TextField
-                testID="expense-amount"
-                label={msg('fin.form.amountQ')}
-                size="large"
-                keyboardType="decimal-pad"
-                value={amount}
-                onChangeText={setAmount}
-                onBlur={() => {
-                  // Read back as money once typed (prop-01 "3,500.00"); the parser takes the commas.
-                  const v = parseBahtToSatang(amount);
-                  if (v !== null) setAmount(formatSatang(v));
-                }}
-                placeholder="0.00"
-                unit={msg('v2m.baht')}
-                error={err('amount-required') ?? err('amount-invalid')}
-              />
+              <View style={{ gap: t.space.xs }}>
+                {/* E01-S20 row 1: typed on the app's pad; kept as money text ("3,500.00", what leaving the old box wrote), so the parser and the order param read it as before. */}
+                <MoneyField testID="expense-amount" label={msg('fin.form.amountQ')} unit={msg('v2m.baht')} satang={moneyOf(amount)} onChange={(v) => setAmount(formatSatang(v))} />
+                {amountErr ? <AppText testID="expense-amount-error" variant="bodySm" style={{ color: t.color.reject }}>{amountErr}</AppText> : null}
+              </View>
             )}
             {stage === 'planned' ? (
               <ChoiceRow>
@@ -421,7 +411,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
                 <TextField testID="trip-farms" label={msg('trip.farms')} value={farms} onChangeText={setFarms} />
                 <SectionLabel>{msg('trip.lines')}</SectionLabel>
                 {TRIP_KINDS.map((k) => (
-                  <TextField key={k} testID={`trip-line-${k}`} label={msg(`trip.kind.${k}`)} keyboardType="decimal-pad" value={lines[k]} onChangeText={(v) => setLines((l) => ({ ...l, [k]: v }))} />
+                  <MoneyField key={k} testID={`trip-line-${k}`} label={msg(`trip.kind.${k}`)} unit={msg('v2m.baht')} words={false} satang={moneyOf(lines[k])} onChange={(v) => setLines((l) => ({ ...l, [k]: satangToInput(v) }))} />
                 ))}
                 {fromLines ? <AppText testID="trip-total">{msg('trip.total', { amount: formatSatang(amountSatang ?? 0) })}</AppText> : null}
                 {tripFarms.length ? (
@@ -432,7 +422,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
                 ) : null}
                 {split
                   ? tripFarms.map((f) => (
-                      <TextField key={f.id} testID={`trip-split-${f.name}`} label={f.name} keyboardType="decimal-pad" value={split[f.id] ?? ''} onChangeText={(v) => setSplit((x) => ({ ...(x ?? {}), [f.id]: v }))} />
+                      <MoneyField key={f.id} testID={`trip-split-${f.name}`} label={f.name} unit={msg('v2m.baht')} words={false} satang={moneyOf(split[f.id] ?? '')} onChange={(v) => setSplit((x) => ({ ...(x ?? {}), [f.id]: satangToInput(v) }))} />
                     ))
                   : null}
                 {showErrors && tripProblems.includes('split-total') ? <AppText testID="trip-err-split" style={{ color: t.color.reject }}>{msg('trip.err.split-total')}</AppText> : null}
@@ -565,6 +555,9 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
 }
 
 const TILES = 5;
+
+/** The amount a money text holds, null while empty (the pad card shows 0.00 faint). */
+const moneyOf = (text: string) => (text.trim() ? parseBahtToSatang(text) : null);
 
 /** A big category tile: icon over the name; chosen = action edge and tint. */
 function CategoryTile({ label, on, onPress, icon: Icon, testID }: { label: string; on?: boolean; onPress: () => void; icon: IconComponent; testID: string }) {

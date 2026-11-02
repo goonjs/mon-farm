@@ -43,6 +43,12 @@ async function seed(targetId: string, payload: FinanceEvent['payload'], base: st
 
 const press = (id: string) => fireEvent.press(screen.getByTestId(id));
 const type = (id: string, v: string) => fireEvent.changeText(screen.getByTestId(id), v);
+/** Types a whole number on a field's app number pad (E01-S20): open its card, the keys, then ✓. */
+const typeOnPad = (id: string, v: string) => {
+  press(id);
+  for (const k of v) press(`${id}-pad-key-${k}`);
+  press(`${id}-pad-key-done`);
+};
 
 const YELLOW = fertOptionId('reason', 'ใบเหลือง');
 
@@ -97,10 +103,10 @@ describe('fertilizer settings (21h)', () => {
   it('the % for fertilizer is set here, naming the head it saw', async () => {
     wrap(<FertilizerSettingsScreen />);
     await flush();
-    type('fert-set-pct', '40');
+    typeOnPad('fert-set-pct', '40');
     await act(async () => press('fert-set-pct-save'));
     await flush();
-    type('fert-set-pct', '45');
+    typeOnPad('fert-set-pct', '45');
     await act(async () => press('fert-set-pct-save'));
     await flush();
     const evs = (await mockFinance.load()).filter((e) => e.targetId === 'cat-fertilizer' && e.payload.t === 'category_share_set');

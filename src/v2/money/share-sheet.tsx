@@ -1,10 +1,14 @@
 /**
  * แชร์กับคนกรีดยาง — simple design E2 (owner 2026-10-23; E11-S10 B). A
  * general category's expense shared with one tapper, on one screen:
- * discount first (a switch, off until wanted), then the tapper, their % as
- * a small button (the category's, tap to change), whether their part is a
- * debt or already paid, and the result big; ตกลง at the bottom. The split itself is
+ * discount first (a switch, off until wanted), then the tapper, their % (the
+ * category's, a pad card to change), whether their part is a debt or already
+ * paid, and the result on one line; ตกลง at the bottom. The split itself is
  * `splitShare` — this sheet only collects and previews.
+ *
+ * E01-S20 rows 4–6: discount (optional) and % are typed on the app's number
+ * pad; the draft keeps the text the old fields held (`satangToInput`, the
+ * whole %), so `shareOf` and the saved share are unchanged.
  */
 
 import { useState } from 'react';
@@ -16,7 +20,7 @@ import type { ExpenseShare, Payer, ShareSettle, Stage } from '../../core/finance
 import { filterPeople } from '../../core/master';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Card, CTA, SegmentedControl, TextField } from '../../ui';
+import { AppText, BottomSheet, CTA, MoneyField, QuantityField, SegmentedControl } from '../../ui';
 import { useMaster } from '../farm/pieces';
 import { ChoiceChip, ChoiceRow, SectionLabel, SwitchRow } from './pieces';
 
@@ -71,7 +75,6 @@ export function ShareSheet({
   const { state } = useMaster();
   const tappers = state ? filterPeople(state.people, 'tapper').map((p) => ({ id: p.id, name: p.name })) : [];
   const [discountOn, setDiscountOn] = useState(draft.discount.trim() !== '');
-  const [pctOpen, setPctOpen] = useState(false);
   const set = (p: Partial<ShareDraft>) => onChange({ ...draft, ...p });
   const share = shareOf(draft, billSatang);
   const problems = share ? checkShare(share) : [];
@@ -79,7 +82,11 @@ export function ShareSheet({
   const net = Math.max(0, billSatang - (discountOn && draft.discount.trim() ? (parseBahtToSatang(draft.discount) ?? 0) : 0));
   const pctBad = problems.includes('pct-invalid');
 
-  // Simple design (owner 2026-10-23): discount on top, who, a small % button, debt/paid, the result big, ตกลง at the thumb.
+  // Discount and % are pad cards; the split result is one line, so ตกลง stays on a 390×844 screen (E01-S20 D7).
+  const discountSatang = draft.discount.trim() ? parseBahtToSatang(draft.discount) : null;
+  const discountOver = problems.includes('discount-over') || (discountSatang !== null && discountSatang > billSatang);
+  const pctValue = /^\d+$/.test(draft.pct.trim()) ? Number(draft.pct.trim()) : null;
+  const bold = { fontWeight: t.font.weight.bold, color: t.color.ink, fontVariant: ['tabular-nums' as const] };
   return (
     <BottomSheet open={open} onClose={onClose} title={msg('xshare.title')} testID="share-sheet">
       <View style={{ gap: t.space.md }}>
@@ -88,7 +95,7 @@ export function ShareSheet({
         <SwitchRow
           testID="share-discount-switch"
           title={msg('fert.discountTitle')}
-          hint={msg('xshare.discountHint')}
+          hint={discountOn ? undefined : msg('xshare.discountHint')}
           on={discountOn}
           onToggle={() => {
             if (discountOn) set({ discount: '' });
@@ -96,14 +103,26 @@ export function ShareSheet({
           }}
         />
         {discountOn ? (
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: t.space.md }}>
-            <View style={{ flex: 1 }}>
-              <TextField testID="share-discount" label={msg('xshare.discount')} keyboardType="decimal-pad" value={draft.discount} onChangeText={(v) => set({ discount: v })} placeholder="0.00" aside={<AppText variant="bodySm">{msg('v2m.baht')}</AppText>} error={problems.includes('discount-over') ? msg('xshare.err.discount') : undefined} />
+          <View style={{ gap: t.space.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: t.space.md }}>
+              <View style={{ flex: 1 }}>
+                <MoneyField
+                  testID="share-discount"
+                  label={msg('xshare.discount')}
+                  unit={msg('v2m.baht')}
+                  satang={discountSatang}
+                  words={false}
+                  validate={(s) => (s > billSatang ? msg('xshare.err.discount') : undefined)}
+                  clear={{ label: msg('numpad.clearNone'), onClear: () => set({ discount: '' }) }}
+                  onChange={(s) => set({ discount: satangToInput(s) })}
+                />
+              </View>
+              <View testID="share-net" style={{ paddingBottom: t.space.sm, alignItems: 'flex-end' }}>
+                <AppText variant="caption">{msg('fert.netTitle')}</AppText>
+                <AppText style={bold}>{formatSatang(net)}</AppText>
+              </View>
             </View>
-            <View testID="share-net" style={{ paddingTop: t.space.lg }}>
-              <AppText variant="caption">{msg('fert.netTitle')}</AppText>
-              <AppText style={{ fontWeight: t.font.weight.bold }}>{formatSatang(net)}</AppText>
-            </View>
+            {discountOver ? <AppText testID="share-discount-error" variant="bodySm" style={{ color: t.color.reject }}>{msg('xshare.err.discount')}</AppText> : null}
           </View>
         ) : null}
 
@@ -119,28 +138,19 @@ export function ShareSheet({
 
         {draft.worker ? (
           <>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
-              <AppText variant="bodySm" style={{ flex: 1 }}>{msg('xshare.takes', { name: draft.worker.name })}</AppText>
-              <ChoiceChip testID="share-pct-button" label={msg('fert.pctValue', { pct: draft.pct || '-' })} on={pctOpen} onPress={() => setPctOpen((o) => !o)} />
+            <View style={{ gap: t.space.xs }}>
+              <QuantityField testID="share-pct" label={msg('xshare.pct')} unit="%" value={pctValue} min={0} max={100} maxDigits={3} onChange={(n) => set({ pct: String(n) })} />
+              <AppText variant="caption">{msg('xshare.pctHelper')}</AppText>
+              {pctBad ? <AppText testID="share-pct-error" variant="bodySm" style={{ color: t.color.reject }}>{msg('xshare.err.pct')}</AppText> : null}
             </View>
-            {pctOpen || pctBad ? (
-              <TextField testID="share-pct" label={msg('xshare.pct')} keyboardType="number-pad" value={draft.pct} onChangeText={(v) => set({ pct: v })} helper={msg('xshare.pctHelper')} error={pctBad ? msg('xshare.err.pct') : undefined} />
-            ) : null}
             <SegmentedControl testID="share-settle" value={draft.settle} onChange={(v) => set({ settle: v })} options={[{ value: 'debt', label: msg('xshare.settle.debt') }, { value: 'paid', label: msg('xshare.settle.paid') }]} />
             {split ? (
-              <View testID="share-preview" style={{ gap: t.space.sm }}>
-                <Card style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: t.color.acceptSunk }}>
-                  <View style={{ flex: 1 }}>
-                    <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.accept }}>{draft.worker.name}</AppText>
-                    <AppText variant="caption">{msg(draft.settle === 'paid' ? 'xshare.paidShort' : stage === 'actual' ? 'xshare.debtShort' : 'xshare.debtLaterShort')}</AppText>
-                  </View>
-                  <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayXl, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'], color: t.color.ink }}>{formatSatang(split.lines[0].workerSatang)}</Text>
-                </Card>
-                <View style={{ flexDirection: 'row' }}>
-                  <AppText variant="bodySm" style={{ flex: 1 }}>{msg('xshare.ownerPays')}</AppText>
-                  <AppText style={{ fontWeight: t.font.weight.bold }}>{formatSatang(split.lines[0].ownerSatang)}</AppText>
-                </View>
-              </View>
+              <AppText testID="share-preview" variant="bodySm">
+                {`${draft.worker.name} ${msg(draft.settle === 'paid' ? 'xshare.paidShort' : stage === 'actual' ? 'xshare.debtShort' : 'xshare.debtLaterShort')} `}
+                <Text style={bold}>{formatSatang(split.lines[0].workerSatang)}</Text>
+                {` · ${msg('xshare.ownerPays')} `}
+                <Text style={bold}>{formatSatang(split.lines[0].ownerSatang)}</Text>
+              </AppText>
             ) : null}
           </>
         ) : null}
@@ -166,7 +176,7 @@ export function CategoryShareSheet({ open, onClose, name, pct, onSave }: { open:
         </ChoiceRow>
         {on ? (
           <>
-            <TextField testID="cat-share-pct" label={msg('xshare.pct')} keyboardType="number-pad" value={value} onChangeText={setValue} error={valid ? undefined : msg('xshare.err.pct')} />
+            <QuantityField testID="cat-share-pct" label={msg('xshare.pct')} unit="%" value={valid ? n : null} min={0} max={100} maxDigits={3} onChange={(v) => setValue(String(v))} />
             {valid ? <AppText variant="bodySm">{msg('xshare.catSplit', { worker: String(n), owner: String(100 - n) })}</AppText> : null}
           </>
         ) : null}

@@ -18,7 +18,7 @@ import { useInFlight } from '../../finance/use-in-flight';
 import { useT } from '../../i18n';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, Button, Card, ScreenHeader, SegmentedControl, TextField } from '../../ui';
+import { AppText, Button, Card, QuantityField, ScreenHeader, SegmentedControl, TextField } from '../../ui';
 import { setFertOption } from './fert-options';
 import { ChoiceChip, ChoiceRow } from './pieces';
 
@@ -84,7 +84,10 @@ export function FertilizerSettingsScreen() {
       <ScreenHeader title={msg('fert.set.title')} back={{ label: msg('v2.back'), onPress: back, testID: 'fert-set-back' }} sync={sync} />
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
         <Card style={{ gap: t.space.sm }}>
-          <TextField testID="fert-set-pct" label={msg('fert.set.pct')} keyboardType="number-pad" value={pctText} onChangeText={setPct} helper={msg('fert.set.pctHint')} error={pctOk ? undefined : msg('xshare.err.pct')} />
+          {/* E01-S20 row 12: the pad gives a whole 0–100; kept as the text the old field held, so `pctOk` still judges it. */}
+          <QuantityField testID="fert-set-pct" label={msg('fert.set.pct')} unit="%" value={pctOk ? Number(pctText) : null} min={0} max={100} maxDigits={3} onChange={(n) => setPct(String(n))} />
+          <AppText variant="caption">{msg('fert.set.pctHint')}</AppText>
+          {pctOk ? null : <AppText testID="fert-set-pct-error" variant="bodySm" style={{ color: t.color.reject }}>{msg('xshare.err.pct')}</AppText>}
           <Button testID="fert-set-pct-save" disabled={!pctOk || pct === null || inFlight.busy} onPress={() => void inFlight.run(savePct)}>{msg('fert.set.pctSave')}</Button>
         </Card>
         <SegmentedControl

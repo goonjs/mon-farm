@@ -17,7 +17,11 @@ test.skip(({ viewport }) => !viewport || viewport.width > viewport.height, 'mone
 async function addExpense(page: Page, o: { amount?: string; date: string; stage?: 'committed' | 'planned'; unknown?: boolean; cat: string; payer?: string; newPayer?: string }) {
   await page.getByTestId('expense-new').click();
   await expect(page.getByTestId('expense-save')).toBeVisible();
-  if (o.amount) await page.getByTestId('expense-amount').fill(o.amount);
+  // The amount is typed on the app's number pad (E01-S20), then ตกลง.
+  if (o.amount) {
+    await typeOnPad(page, 'expense-amount', o.amount);
+    await page.getByTestId('expense-amount-done').click();
+  }
   // Simple design (owner 2026-10-23): five category tiles, the rest under "อื่น ๆ".
   const tile = page.getByTestId(`expense-cat-${o.cat}`);
   if (await tile.count()) await tile.click();
@@ -106,7 +110,8 @@ test('v2 expenses, owed and repay — offline, end to end', async ({ page, conte
   await evidence(page, `${SHOTS}/20-owed.png`, { fullPage: true });
   await page.locator('[data-testid^="owed-open-"]').filter({ hasText: 'อาจารย์สมหวัง' }).click();
   await page.locator('[data-testid^="owed-repay-"]').click();
-  await page.getByTestId('repay-amount').fill('300');
+  await typeOnPad(page, 'repay-amount', '300');
+  await page.getByTestId('repay-amount-done').click();
   await expect(page.getByTestId('repay-save')).toContainText('300.00');
   await evidence(page, `${SHOTS}/21-repay.png`, { fullPage: true });
   await page.getByTestId('repay-save').click();
