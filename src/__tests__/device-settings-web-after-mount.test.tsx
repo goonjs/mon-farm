@@ -9,6 +9,7 @@ import { Text } from 'react-native';
 
 import { I18nProvider, useI18n } from '../i18n';
 import { SpeechProvider, useSpeech } from '../speech';
+import { ThemeProvider, useTheme } from '../theme';
 
 jest.mock('../store/device-settings', () => ({
   deviceSettings: { ...jest.requireActual('../store/device-settings.web').deviceSettings, readDuringRender: false },
@@ -45,4 +46,21 @@ it('renders the defaults first, then the stored language, era and speech after m
   );
   expect(seen[0]).toBe('th/be/true');
   await waitFor(() => expect(seen[seen.length - 1]).toBe('en/ce/false'));
+});
+
+it('E03-S08: renders text size M first, then the stored L after mount', async () => {
+  stored.set('mon-farm:text-size', 'l');
+  const seen: number[] = [];
+  function Probe() {
+    const size = useTheme().font.size.body;
+    seen.push(size);
+    return <Text>{size}</Text>;
+  }
+  render(
+    <ThemeProvider>
+      <Probe />
+    </ThemeProvider>,
+  );
+  expect(seen[0]).toBe(16);
+  await waitFor(() => expect(seen[seen.length - 1]).toBe(18));
 });
