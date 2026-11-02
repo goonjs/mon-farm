@@ -28,7 +28,7 @@ import { useT } from '../../i18n';
 import { ShareTooEarlyError } from '../../store/master-store';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
-import { AppText, CalendarIcon, Card, Check, FactRow, FarmIcon, FieldError, IconTile, MenuItem, PercentIcon, PersonIcon, SegmentedControl, TextField } from '../../ui';
+import { AppText, CalendarIcon, Card, Check, FactRow, FarmIcon, FieldError, IconTile, MenuItem, PercentIcon, PersonIcon, QuantityField, SegmentedControl, TextField } from '../../ui';
 import { NotFound } from './people-screens';
 import { FarmScreen, RowCard, useDay, useMaster, useMounted, useWrite } from './pieces';
 
@@ -169,21 +169,24 @@ function TapperShare({ tapperId }: { tapperId: string }) {
         />
       </View>
       {mode === 'custom' ? (
-        <TextField
-          testID="share-pct"
-          label={msg('v2f.pctLabel')}
-          required
-          hint={msg('v2f.pctHint')}
-          keyboardType="number-pad"
-          value={pct}
-          onChangeText={setPct}
-          aside={
-            <AppText testID="share-owner" variant="bodySm" style={{ flexShrink: 0 }}>
-              {parsed.ok ? msg('share.ownerGets', { n: 100 - parsed.tapperPct }) : ''}
-            </AppText>
-          }
-          error={tried && !parsed.ok ? msg(parsed.reason === 'range' ? 'share.range' : 'share.whole') : undefined}
-        />
+        <View style={{ gap: t.space.xs }}>
+          <QuantityField
+            testID="share-pct"
+            label={msg('v2f.pctLabel')}
+            required
+            hint={msg('v2f.pctHint')}
+            unit={msg('npfarm.unitPct')}
+            min={0}
+            max={100}
+            maxDigits={3}
+            value={pct.trim() && parsed.ok ? parsed.tapperPct : null}
+            onChange={(n) => setPct(String(n))}
+            caption={(n) => (n !== null && n <= 100 ? msg('share.ownerGets', { n: 100 - n }) : undefined)}
+          />
+          {tried && !parsed.ok ? (
+            <FieldError testID="share-pct-error">{msg(parsed.reason === 'range' ? 'share.range' : 'share.whole')}</FieldError>
+          ) : null}
+        </View>
       ) : null}
       <TextField
         testID="share-from"

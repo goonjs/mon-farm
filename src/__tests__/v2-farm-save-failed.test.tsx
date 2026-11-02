@@ -69,6 +69,10 @@ const press = async (id: string) => {
 const failOnce = <K extends keyof MasterStore>(name: K) =>
   jest.spyOn(master(), name as never).mockRejectedValueOnce(new Error('QuotaExceededError') as never);
 const FAILED = 'บันทึกไม่สำเร็จ ลองอีกครั้ง';
+/** Keys on a field's app pad (E01-S20): `<testID>-pad-key-<k>`. */
+const keys = (field: string, text: string) => {
+  for (const k of text) fireEvent.press(screen.getByTestId(`${field}-pad-key-${k}`));
+};
 
 const TODAY = todayIso(Date.now());
 function ahead(days: number) {
@@ -108,7 +112,9 @@ describe('a failed save says so and keeps the form', () => {
     await flush();
     fireEvent.changeText(screen.getByTestId('property-name'), 'สวนบน');
     fireEvent.press(screen.getByTestId('property-crop-rubber'));
-    fireEvent.changeText(screen.getByTestId('property-area'), '125');
+    fireEvent.press(screen.getByTestId('property-area'));
+    keys('property-area', '125');
+    fireEvent.press(screen.getByTestId('property-area-done'));
     failOnce('recordArea');
     await press('property-save');
     expect(screen.getByTestId('save-failed')).toBeTruthy();
@@ -127,11 +133,11 @@ describe('a failed save says so and keeps the form', () => {
     wrap(<PropertyScreen />);
     await flush();
     fireEvent.press(screen.getByTestId('change-area'));
-    fireEvent.changeText(screen.getByTestId('area-new'), '130');
+    keys('area-new', '130');
     failOnce('recordArea');
     await press('area-save');
     expect(within(screen.getByTestId('area-sheet')).getByTestId('save-failed')).toBeTruthy();
-    expect(screen.getByTestId('area-new').props.value).toBe('130');
+    expect(screen.getByTestId('area-new-display').props.children).toBe('130');
   });
 
   it('point: a failed add is reported, not thrown', async () => {
@@ -220,11 +226,13 @@ describe('a failed save says so and keeps the form', () => {
     wrap(<ShareScreen />);
     await flush();
     fireEvent.press(screen.getByTestId('share-mode-custom'));
-    fireEvent.changeText(screen.getByTestId('share-pct'), '55');
+    fireEvent.press(screen.getByTestId('share-pct'));
+    keys('share-pct', '55');
+    fireEvent.press(screen.getByTestId('share-pct-pad-key-done'));
     failOnce('setShare');
     await press('share-save');
     expect(screen.getByTestId('save-failed')).toBeTruthy();
-    expect(screen.getByTestId('share-pct').props.value).toBe('55');
+    expect(within(screen.getByTestId('share-pct')).getByText('55')).toBeTruthy();
   });
 
   it('sale settings: a setting that did not save says so', async () => {

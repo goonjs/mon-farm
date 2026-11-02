@@ -100,14 +100,18 @@ describe('ส่วนแบ่ง (farm mockup 17)', () => {
     expect(within(screen.getByTestId('share-history')).getByText('ยังไม่เคยเปลี่ยน')).toBeTruthy();
 
     fireEvent.press(screen.getByTestId('share-mode-custom'));
-    fireEvent.changeText(screen.getByTestId('share-pct'), '55.5');
     await press('share-save');
     expect(within(screen.getByTestId('share-pct-error')).getByText('ใส่เป็นจำนวนเต็ม เช่น 55')).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId('share-pct'), '120');
-    await press('share-save');
-    expect(within(screen.getByTestId('share-pct-error')).getByText('ใส่ได้ตั้งแต่ 0 ถึง 100')).toBeTruthy();
+    // On the app pad (E01-S20) a fraction cannot be typed, and over 100 never leaves the pad.
+    fireEvent.press(screen.getByTestId('share-pct'));
+    expect(screen.queryByTestId('share-pct-pad-key-.')).toBeNull();
+    for (const k of '120') fireEvent.press(screen.getByTestId(`share-pct-pad-key-${k}`));
+    expect(screen.getByText('ต้องไม่เกิน 100')).toBeTruthy();
+    expect(screen.getByTestId('share-pct-pad-key-done').props.accessibilityState).toMatchObject({ disabled: true });
 
-    fireEvent.changeText(screen.getByTestId('share-pct'), '55');
+    fireEvent(screen.getByTestId('share-pct-pad-key-back'), 'longPress');
+    for (const k of '55') fireEvent.press(screen.getByTestId(`share-pct-pad-key-${k}`));
+    fireEvent.press(screen.getByTestId('share-pct-pad-key-done'));
     expect(screen.getByText('→ เจ้าของสวน 45%')).toBeTruthy();
     expect(screen.getByTestId('share-from').props.value).toBe(thaiDayInput(TODAY));
     await press('share-save');
