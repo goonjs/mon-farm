@@ -18,14 +18,14 @@ Status: In Progress (เจ้าของสั่งงานผ่านล�
 
 ## Acceptance criteria
 
-- [x] **FV-1** หน้า "เครื่องนี้" บนเว็บมีการ์ด "ไอคอนบนแท็บเบราว์เซอร์" เป็นตาราง ช่อง "เดิม" + ไอคอน FarmMate 20 แบบ
+- [x] **FV-1** หน้า "เครื่องนี้" บนเว็บมีการ์ด "ไอคอนบนแท็บเบราว์เซอร์" เป็นตาราง ไอคอน FarmMate ต้นแบบ 20 แบบ (ไม่มีไอคอน Expo)
   แตะเลือกได้ ช่องที่เลือกมีกรอบเด่นและบอก screen reader ว่าเลือกอยู่ (ชื่อไทยของไอคอนเป็นชื่อปุ่ม); ที่แตะ ≥ 48
 - [x] **FV-2** แตะแล้วไอคอนบนแท็บเปลี่ยนทันที ไม่ต้อง reload; ตั้ง `<link rel="icon">` (PNG 64 px) และ
-  `<link rel="apple-touch-icon">` (PNG 180 px พื้นทึบ) ที่วาดจากไอคอนในเครื่อง — ไม่โหลดอะไรจากเน็ต
+  `<link rel="apple-touch-icon">` (PNG 180 px พื้นทึบ) จากไฟล์ที่มากับ build — ไม่โหลดจากที่อื่น
 - [x] **FV-3** จำในเครื่องผ่าน `deviceSettings` key `mon-farm:favicon` (ไม่ใช้ localStorage ตรง); reload / เปิดหน้าอื่นก่อน
-  ก็ยังเป็นไอคอนที่เลือก; ค่าที่ไม่รู้จัก → เดิม
-- [x] **FV-4** ค่าเริ่มต้น = เดิม: ถ้าไม่เคยเลือก แอปไม่แตะ `<head>` เลย; เลือก "เดิม" กลับ → คืนลิงก์ favicon เดิมและเอา
-  apple-touch-icon ที่แอปใส่ออก
+  ก็ยังเป็นไอคอนที่เลือก; ค่าที่ไม่รู้จัก → ค่าเริ่มต้น
+- [x] **FV-4** (แก้ตามเจ้าของ 2026-11-02: ลบไอคอน Expo) ค่าเริ่มต้น = "กรีดยาง" (`farmwork.tapping`): build ส่ง
+  `/favicon.ico` เป็นกรีดยาง (`app.json` web.favicon) จึงเห็นตั้งแต่ก่อน JS โหลด; หลังเปิดแอปตั้ง PNG + apple-touch-icon ให้
 - [x] **FV-5** บน Android/iOS (native) ไม่แสดงการ์ดนี้ และไม่มีโค้ดแตะ DOM
 - [x] **FV-6** ไม่มีอะไรถูกตัด / "…" / ล้นข้างจอ ที่จอ 360 และ 390 ทุกขนาดตัวอักษร เล็ก/กลาง/ใหญ่ (build จริง)
 - [x] **FV-7** ข้อจำกัด bookmark ของแต่ละเบราว์เซอร์เขียนไว้ใน Dev notes ตรง ๆ
@@ -33,16 +33,17 @@ Status: In Progress (เจ้าของสั่งงานผ่านล�
 
 ## Offline / sync behavior
 
-ค่าของเครื่อง เก็บผ่าน `deviceSettings` ไม่อยู่ใน event log ไม่ sync (เหมือนธีม/ขนาดตัวอักษร) ไอคอนวาดจากโค้ดใน bundle
-(SVG → canvas → PNG data URL) ไม่ขอเน็ต ใช้ได้ออฟไลน์เต็มที่
+ค่าของเครื่อง เก็บผ่าน `deviceSettings` ไม่อยู่ใน event log ไม่ sync (เหมือนธีม/ขนาดตัวอักษร) ไอคอนเป็น PNG ที่มากับ build
+(`assets/favicons`, เสิร์ฟจากโดเมนเดียวกับแอป) ไม่โหลดจากที่อื่น — เหมือนไฟล์อื่นของเว็บ (แอปเว็บยังไม่มี service worker)
 
 ## Test plan
 
 _เขียน test ก่อน (TDD)_
 
-- [x] jest `src/ui/favicon/favicon.test.tsx`: แปลง element เป็น SVG ข้อความ, 20 ไอคอนมีใน registry ไม่ซ้ำ, ทุกตัวเป็น SVG ครบ สีตรง,
-  แผ่นพื้นแท็บ/หน้าจอโฮม, crop ครอบภาพ + เส้น, อ่าน/เขียน `mon-farm:favicon` ค่าแปลก → เดิม
-- [x] jest (jsdom) `src/ui/favicon/apply.web.test.tsx`: ตั้ง/คืน `<link>`, ไม่แตะเมื่อเดิม, ตัวเลือกล่าสุดชนะ, fallback SVG, href ว่าง
+- [x] jest `src/ui/favicon/favicon.test.tsx`: 20 ไอคอนไม่ซ้ำ เป็นต้นแบบใน design/ ชื่อไทยตรง manifest, PNG 64/180/128 มีครบ
+  ขนาดถูก, script render รายการเดียวกับแอป, ค่าเริ่มต้นกรีดยาง = `app.json` favicon, อ่าน/เขียน `mon-farm:favicon` ค่าแปลก → ค่าเริ่มต้น
+- [x] jest (jsdom) `src/ui/favicon/apply.web.test.tsx`: ตั้ง `<link>` icon + apple-touch, เลือกใหม่แทนที่ไม่เพิ่มลิงก์,
+  id แปลก → กรีดยาง, หน้าไม่มีลิงก์ → เพิ่ม
 - [x] jest `src/__tests__/favicon-picker.test.tsx`: การ์ดบนเว็บ, แตะแล้วเขียนค่า + เปลี่ยน, start-up, native ไม่มีการ์ด;
   `src/__tests__/device-dev-icons.test.tsx`: แถวดูไอคอนท้ายหน้า
 - [x] Playwright `e2e/v2-favicon.spec.ts` บน build จริง (14): `<head>` เปลี่ยน/คืน/ไม่แตะ, PNG ขนาดถูกและมีภาพ,
@@ -51,27 +52,36 @@ _เขียน test ก่อน (TDD)_
 ## Verification
 
 - [x] Sandbox run performed: `npm run build:web` (expo export) + Playwright บน Chromium ของเครื่อง (`/opt/pw-browsers/chromium`)
-  — `e2e/v2-favicon.spec.ts` 14 ผ่าน (หลังแก้รีวิว + แถวดูไอคอน); e2e portrait ทั้งชุด 40 ผ่าน 5 ข้าม (emulator) · jest ทั้งหมดผ่าน · vitest ผ่าน · tsc / eslint สะอาด
-  - FV-2: เลือก "ชั่งน้ำหนัก" → `link[rel=icon]` เป็น PNG data URL 64×64, `apple-touch-icon` PNG 180×180 (ถอดรหัสในเบราว์เซอร์จริง)
+  — หลังเปลี่ยนเป็น PNG ต้นแบบ + ค่าเริ่มต้นกรีดยาง: `e2e/v2-favicon.spec.ts` 14 ผ่าน; e2e portrait ทั้งชุด 46 ผ่าน 5 ข้าม (emulator)
+  · jest 967 · vitest 1271 · tsc / eslint / tokens สะอาด
+  - FV-2: เลือก "ชั่งน้ำหนัก" → `link[rel=icon]` = `/assets/assets/favicons/sale.weigh-64.<hash>.png` 64×64, `apple-touch-icon` 180×180,
+    ถอดรหัสในเบราว์เซอร์จริงและมีภาพ (> 3 สี)
   - FV-3: เปิด `/v2` ใหม่ → ไอคอนเดียวกันกลับมา; หน้าเครื่องนี้ยังเลือกช่องเดิม
-  - FV-4: ไม่เคยเลือก → `<head>` มีแค่ `/favicon.ico` ไม่มี apple-touch-icon; เลือก "เดิม" → กลับเป็นแบบนั้นทุกตัว
+  - FV-4: ไม่เคยเลือก → HTML มี `/favicon.ico` = กรีดยาง (ดูภาพที่ build ทำจริง 16+32 px), หลังเปิดแอป → PNG กรีดยาง + apple-touch;
+    ไม่มีช่อง "เดิม" 
   - FV-6: 360 และ 390 × เล็ก/กลาง/ใหญ่ (ยืนยันขนาดตัวอักษรใช้จริงจาก font-size ของบรรทัดหมายเหตุ) ไม่มีตัด/…/ล้นข้าง ที่แตะ < 48 = 0
-- [x] Screenshots — golden path: `docs/ux/screenshots/e03-s10/device-picker-chosen.png`, `tab-strip.png`
+- [x] Screenshots — golden path: `docs/ux/screenshots/e03-s10/device-picker-chosen.png`, `tab-strip.png`,
+  เทียบไอคอนแอป vs ต้นแบบ `compare-registry-vs-masters.png`
   (แถบแท็บสว่าง/มืด **วาดจำลอง** ด้วยไอคอนที่แอปตั้งจริง — Chromium แบบ headless ไม่มีแถบแท็บให้ถ่าย)
 - [x] Screenshots — edge cases: `docs/ux/screenshots/e03-s10/card-{360,390}-{s,m,l}.png`,
   แถวดูไอคอน `dev-icons-link-{360,390}-{s,m,l}.png`, หน้าไอคอน `dev-icons-page-360-l.png`
 
 ## Dev notes
 
-- ทำอย่างไร: ไอคอนใน registry เป็น element ของ react-native-svg → `toSvgMarkup` (`src/ui/favicon/svg-markup.ts`) เขียนเป็น
-  SVG ข้อความเอง (ไม่ลง package) → บนเว็บวาดลง `<canvas>` เป็น PNG data URL (64 px แท็บ, 180 px หน้าจอโฮม). ถ้าวาด PNG ไม่ได้
-  ใช้ SVG data URL แทน (Chrome/Firefox/Edge แสดงได้). ใช้สีชุดสว่างเสมอ (อยู่บนแถบแท็บ ไม่ใช่ในแอป)
-- เลือก 20 จาก 40 โดยดูทั้ง 40 ที่ 16/32 px บนแถบสว่างและมืด: ตัดเส้นบาง/ชิ้นเล็ก (`sale.yieldStats`, `farm.treeCondition`,
-  `nav.more`, `nav.profile` ฯลฯ) และตัวที่ซ้ำรูปทรง. ไอคอนเดิมมีขอบว่างใน grid 48 มาก → crop ตามขอบภาพจริง (วัดด้วย getBBox
-  เก็บใน `BOUNDS`) และวางบนแผ่นสีอ่อนมุมมน เพราะไอคอนสีกรมท่าหายไปบนแถบแท็บสีเข้ม
+- **เปลี่ยนแนวทางตามเจ้าของ 2026-11-02**: รอบแรกใช้ไอคอน registry (`src/ui/farmmate-icons`, ฉบับวาดใหม่แบบย่อ) → แปลงเป็น SVG
+  แล้ววาดลง canvas ตอนรัน. เจ้าของเห็นว่าไม่สวย; เทียบกับต้นแบบ trace ใน `design/icons/farmmate/*.svg` แล้วต้นแบบสวยกว่ามาก
+  (`docs/ux/screenshots/e03-s10/compare-registry-vs-masters.png`) → เจ้าของเลือก "render เป็น PNG ล่วงหน้า":
+  `npm run favicons` (`scripts/render-favicons.mjs`, ใช้ Playwright/Chromium ที่มีอยู่ ไม่ลง package) ทำ 3 ขนาดต่อไอคอนลง
+  `assets/favicons` — 64 (แท็บ, แผ่นขาวมุมมน ให้เห็นบนแถบเข้ม), 180 (หน้าจอโฮม, แผ่นขาวเต็ม), 128 (ในตารางของการ์ด). crop ตามพิกเซลจริง
+  (รวมเส้น) จึงไม่มีขอบถูกตัด. `src/ui/favicon/svg-markup.ts` ไม่ได้ใช้แล้ว → ลบ (เจ้าของอนุญาต 2026-11-02)
+- เลือก 20 จาก 72 ต้นแบบ โดยดูทุกตัวที่ 16/32 px บนแถบสว่าง/มืด: รูปทรงชัด งานสวนยางก่อน (กรีดยาง, คนกรีด, ตะกร้า, ตาชั่ง,
+  ราคายาง, ปุ๋ย, ตัดหญ้า, ฉีดยา ฯลฯ)
+- **เจ้าของ 2026-11-02: ลบไอคอน Expo, ให้กรีดยางเป็นค่าเริ่มต้น** → `app.json` web.favicon = `assets/favicons/farmwork.tapping-64.png`
+  (build ทำ `/favicon.ico` 16+32 จากไฟล์นี้), ไม่มีตัวเลือก "เดิม"; ค่าเก่า `default` ที่เครื่องเคยเก็บ อ่านเป็นกรีดยาง.
+  ยังไม่ได้เปลี่ยน: ไอคอนแอป Android/iOS และ splash (`assets/images/icon.png`, adaptive icon) ยังเป็นของ Expo — นอกขอบเขต favicon
 - native: การ์ดคืน `null` และ `apply.ts` (native) ไม่ทำอะไร — เลือก "ซ่อน" ไม่ใช่ "แสดงแต่ปิด" เพราะบนแอปไม่มีแท็บให้เห็นผล
-- start-up: `FaviconOnStart` ใน `src/app/_layout.tsx` อ่านค่าหลัง mount แล้วตั้งให้ ถ้าเป็น "เดิม" ไม่แตะ `<head>`;
-  ก่อน JS โหลด (เสี้ยววินาทีแรก) แท็บยังเป็นไอคอนเดิม เพราะ HTML เป็นไฟล์ static เดียวกันทุกเครื่อง
+- start-up: `FaviconOnStart` ใน `src/app/_layout.tsx` อ่านค่าหลัง mount แล้วตั้งให้ทุกครั้ง (รวมค่าเริ่มต้น เพื่อให้มี apple-touch-icon);
+  ก่อน JS โหลด (เสี้ยววินาทีแรก) แท็บเป็นกรีดยางจาก HTML static — เครื่องที่เลือกไอคอนอื่นจะเห็นกรีดยางแวบหนึ่งก่อนเปลี่ยน
 - **ข้อจำกัด bookmark / หน้าจอโฮม (FV-7)** — จากเอกสารและพฤติกรรมที่รู้ของเบราว์เซอร์ **ยังไม่ได้ลองบนเครื่องจริง**:
   - Chrome / Edge / Firefox (คอม): แท็บเปลี่ยนทันที (ยืนยันแล้วว่า `<link>` เปลี่ยนบน build จริง); บุ๊กมาร์กเก็บไอคอนที่เห็นตอนกดบุ๊กมาร์ก
     และอัปเดตเมื่อเปิดหน้านั้นอีก — ถ้าเลือกไอคอนก่อนกดบุ๊กมาร์กจะได้ไอคอนที่เลือก
