@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { closeoutPlan, confirmWrites, type RecordedLine } from './closeout';
 import { projectDebts } from './debts';
 import { OWNER_PAYEE, paymentMarkPayload, paymentTarget } from './payments';
 import { buyerOwes, PENDING_REPAY_SINCE, pendingRepayLines, routeFixWrites } from './pending-repays';
@@ -166,5 +167,32 @@ describe('review fixes (E06-S08 independent review 2026-11-01)', () => {
     const evs = [...sale(), tick('s1', OWNER_PAYEE, 1968750, 1700000)];
     expect(buyerOwes(evs, () => true, { ownerTransfer: () => 1800000 })[0].transferSatang).toBe(100000);
     expect(buyerOwes(evs, () => true, { ownerTransfer: () => 1600000 })).toEqual([]);
+  });
+});
+
+describe('re-review 3: confirming again after a fix cut a line to 0 (B2)', () => {
+  const w = (route: number, netting = 0) =>
+    closeoutPlan({
+      saleTotalSatang: 1_000_000,
+      ownerShareSatang: 800_000,
+      workers: [{ id: 'p-daeng', name: 'แดง', shareSatang: 200_000, balanceSatang: 1_000_000, planPerSaleSatang: null, owedBackSatang: netting, recorded: { totalSatang: route + netting, nettingSatang: netting, route: 'cash-from-share' } }],
+      drafts: {},
+      defaultRoute: () => 'transfer-with-owner',
+      rounding: 'none',
+    }).workers[0];
+  const zero = { id: 'l0', headEventId: 'h0', method: 'cash-from-share' as const, amountSatang: 0, deviceId: 'dev-a' };
+  const args = (plan: ReturnType<typeof w>, recorded: RecordedLine[]) => ({ saleId: 's1', date: '2026-11-05', worker: DAENG, farm: FARM, plan, recorded, owed: [], newId: (p: string) => `${p}x` });
+
+  it('the 0 line (what reached the farm) matches a plan of 0: nothing to write, nothing voided', () => {
+    const plan = w(0);
+    expect(plan.routeSatang).toBe(0);
+    expect(confirmWrites(args(plan, [zero]))).toEqual({ ok: true, writes: [] });
+  });
+
+  it('a different plan still rewrites; the 0 line is only kept while the plan has no route money', () => {
+    const plan = w(0);
+    const more = { ...plan, routeSatang: 50_000, totalSatang: 50_000, route: 'cash-from-share' as const };
+    const r = confirmWrites(args(more, [zero]));
+    expect(r.ok && r.writes.map((x) => x.op)).toEqual(['void-payment', 'write']);
   });
 });

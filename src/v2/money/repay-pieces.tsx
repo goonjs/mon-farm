@@ -230,7 +230,8 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
   /** PR-17 / PR-19: the money is with the worker — fix the deduction on the sale's payment page, its sheet opened. */
   const fixAtSale = () => {
     onClose();
-    router.push(`/v2/sale/${saleId}/payment?fix=${encodeURIComponent(line.workerId)}&how=${line.how}` as Href);
+    // `at` makes each tap a new request: the payment page acts on a link once (its sheet may be closed, then asked for again).
+    router.push(`/v2/sale/${saleId}/payment?fix=${encodeURIComponent(line.workerId)}&how=${line.how}&at=${Date.now()}` as Href);
   };
   const buyer = (money.state as { parties?: { buyer?: string } }).parties?.buyer ?? '';
   const transferNames = transferOn.map((x) => x.tp.name).join(msg('co.and'));

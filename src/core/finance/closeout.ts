@@ -764,7 +764,10 @@ export function confirmWrites(i: {
   const { plan, recorded, saleId, worker } = i;
   if (plan.invalid) return { ok: false };
   const netLines = recorded.filter((l) => l.method === 'netting');
-  const routeLines = recorded.filter((l) => l.method !== 'netting');
+  // E06-S08 (D-87, re-review B2): a route line cut to 0 by a fix on the payment page means "nothing reached
+  // the farm" and keeps the sale confirmed; it is not a deduction, so it neither breaks a match nor is voided
+  // while the plan has no route money (voiding it would leave the sale unconfirmed and propose the debt again).
+  const routeLines = recorded.filter((l) => l.method !== 'netting' && l.amountSatang > 0);
   // Owner 2026-11-01 (A): lines from two devices' confirms are a double deduction; confirming rewrites them as one set.
   const oneDevice = new Set(recorded.flatMap((l) => (l.deviceId ? [l.deviceId] : []))).size <= 1;
   const matches =
@@ -797,6 +800,7 @@ export function confirmWrites(i: {
   const writes: CloseoutWrite[] = [];
   // The old lines go first, so a stop part-way leaves less deducted, never twice; a repayment before its debt payment.
   for (const l of recorded) {
+    if (l.method !== 'netting' && l.amountSatang === 0 && plan.routeSatang === 0) continue;
     if (l.method === 'netting' && l.repaymentId && l.repaymentHead)
       writes.push({
         op: 'void-repayment',

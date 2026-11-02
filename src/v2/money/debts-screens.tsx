@@ -16,7 +16,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { projectDebts, type DebtAccount, type HistoryLine } from '../../core/finance/debts';
 import { paymentStatus } from '../../core/finance/payments';
-import { PENDING_REPAY_SINCE, pendingRepayLines, type PendingHow } from '../../core/finance/pending-repays';
+import { buyerOwes, PENDING_REPAY_SINCE, pendingRepayLines, type PendingHow } from '../../core/finance/pending-repays';
 import { formatSatang, parseBahtToSatang, satangToInput } from '../../core/finance/money';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
@@ -154,14 +154,20 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
   const clearUndo = useCallback(() => setUndo(null), []);
   const events = useMemo(() => fin.events ?? [], [fin.events]);
   const pending = useMemo(() => (account ? pendingRepayLines(events, new Map([[worker.id, account]])) : []), [events, account, worker.id]);
+  const owesBySale = useMemo(() => new Map(buyerOwes(events).map((o) => [o.saleId, o])), [events]);
   /** PR-6: a route deduction of a sale since the feature began — its tick, for the history line. */
   const HOW = { 'transfer-with-owner': 'transfer', 'buyer-split': 'cash', 'cash-from-share': 'picked' } as const;
   const routeOf = (h: HistoryLine) => {
     const p = account?.payments.find((x) => x.id === h.id);
-    if (!p || p.deleted || !p.counts || !p.saleId || p.date < PENDING_REPAY_SINCE || !(p.method in HOW)) return null;
+    // A line cut to 0 by a fix (nothing reached the farm) carries no tick to show.
+    if (!p || p.deleted || !p.counts || !p.saleId || p.amountSatang <= 0 || p.date < PENDING_REPAY_SINCE || !(p.method in HOW)) return null;
     const how: PendingHow = HOW[p.method as keyof typeof HOW];
     const st = paymentStatus(events, p.saleId, payeeOf(how, worker.id), 0);
-    return st.done ? { line: { saleId: p.saleId, date: p.date, workerId: worker.id, name: worker.name, satang: p.amountSatang, how }, short: st.shortSatang } : null;
+    if (!st.done) return null;
+    // What the buyer owes TODAY, the same figure as the payment page and the home (re-review 3) — never the gap at tick time.
+    const o = owesBySale.get(p.saleId);
+    const short = how === 'transfer' ? (o?.transferSatang ?? 0) : (o?.cash.find((c) => c.workerId === worker.id)?.satang ?? 0);
+    return { line: { saleId: p.saleId, date: p.date, workerId: worker.id, name: worker.name, satang: p.amountSatang, how }, short };
   };
   const planEvents = (fin.events ?? []).filter((e) => e.targetId === `plan-${worker.id}`);
   const balance = account?.balanceSatang ?? 0;

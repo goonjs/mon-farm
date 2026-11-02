@@ -209,7 +209,7 @@ describe('a worker\'s account (M2, M3, M5–M7, M9, P3 · PR-1, PR-2, PR-5–PR-
     await press('rp-amt-with-worker');
     expect(text('rp-amt-worker-holds')).toHaveTextContent('เงินอยู่กับแดง หนี้ยังไม่ได้จ่าย');
     await press('rp-amt-fix');
-    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${SALE}/payment?fix=${farm.red}&how=cash`);
+    expect(router.push).toHaveBeenCalledWith(expect.stringMatching(new RegExp(`^/v2/sale/${SALE}/payment\\?fix=${farm.red}&how=cash&at=\\d+$`)));
     expect((await cashTick(farm.red)).done).toBe(false);
   });
 
@@ -253,7 +253,7 @@ describe('two sales and the picked route (M4, M10 · PR-3, PR-17)', () => {
     await press(`rp-row-${SALE}-picked`);
     expect(text('rp-sheet')).toHaveTextContent(/หยิบเงินคืนหนี้จากส่วนแบ่งแดงแล้วหรือยัง/);
     await press('rp-sheet-picked-fix');
-    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${SALE}/payment?fix=${farm.red}&how=picked`);
+    expect(router.push).toHaveBeenCalledWith(expect.stringMatching(new RegExp(`^/v2/sale/${SALE}/payment\\?fix=${farm.red}&how=picked&at=\\d+$`)));
     await press(`rp-row-${SALE}-picked`);
     await press('rp-sheet-picked-full');
     expect((await cashTick(farm.red)).done).toBe(true);
@@ -294,5 +294,18 @@ describe('review fixes (E06-S08 independent review 2026-11-01)', () => {
     await flush();
     const ticks = (await financeStore.load()).filter((e) => e.payload.t === 'payment_mark_set');
     expect(ticks).toHaveLength(1);
+  });
+});
+
+describe('re-review 3: the history chip owes what the buyer owes today', () => {
+  it('a short tick, then the deduction cut: the chip follows today (200), not the gap at tick time (2,450)', async () => {
+    await writeFinance(paymentTarget(SALE, `debt-cash-${farm.red}`), null, paymentMarkPayload(SALE, `debt-cash-${farm.red}`, true, 325_000, 80_000));
+    const line = (await financeStore.load()).find((e) => e.targetId === `dp-red-${n}`)!;
+    await writeFinance(`dp-red-${n}`, line.id, { t: 'debt_payment_changed', patch: { amountSatang: 100_000 } });
+    params.current = { workerId: farm.red, name: 'แดง' };
+    wrap(<DebtAccountScreen />);
+    await flush();
+    expect(screen.getByText('คนซื้อค้างสวน 200.00 ›')).toBeTruthy();
+    expect(screen.queryByText(/2,450\.00/)).toBeNull();
   });
 });

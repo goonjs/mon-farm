@@ -105,6 +105,8 @@ _เขียน test ก่อน (TDD) แล้วค่อยทำให้
   - catalogue: marks Σ ↘ › added in code (resolve.test.ts glyph rule)
 - Re-review (separate agent, 2026-11-01) of those fixes — blocking: (B1) the fix wrote a NEW line on this phone, which `closeoutInputs` reads as a second device → false "หักซ้ำ" lock · (B2) cutting to 0 by voiding left no recorded line, so the sale re-proposed the deduction ("รอรับโอน" again, a re-confirm would deduct twice) · (B3) the payment page's owes chip still used the gap at tick time.
 - Resolution: `routeFixWrites` edits the EXISTING lines only (others voided, the last cut to what came, down to 0 and kept); heads read fresh before writing; the chip reads `buyerOwes` (today); the `?fix=` link is spent outside the remounting page; the fix sheet obeys the page's locks. Tests: core (no new line, 0 kept, plan reads nothing pending) + pay page (chip gone after the fix — failed on the previous code). History: the deduction line shows the new amount (the old one is in the event log), not a separate struck line — trade-off for B1.
+- Re-review 3 (separate agent): B1 and B3 confirmed fixed on the pay page. Blocking: a second "ยืนยันยอด" (before close) voided the 0 line → the debt proposed again. Medium: the ledger history chip still used the gap at tick time. Low: a `?fix=` link used once per app run.
+- Resolution: `confirmWrites` (closeout.ts) ignores route lines of 0 when matching and keeps them while the plan has no route money — the one change in E05-S11's core, behaviour only, no signature change; the history chip reads `buyerOwes`; a 0 line shows no received chip; ledger links carry `&at=` so each tap is a new request. Tests failed on the old code first.
 
 - Reviewer (separate agent/session):
 - Findings:

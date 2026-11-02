@@ -112,8 +112,8 @@ function PayBody({ bump }: { bump: () => void }) {
   const [chooseFix, setChooseFix] = useState(false);
   const counts = useSaleCounts();
   // From the ledger (M10 / PR-19): `?fix=<workerId>&how=<transfer|cash|picked>` opens the fix sheet once.
-  const params = useLocalSearchParams<{ fix?: string; how?: string }>();
-  const paramKey = params.fix ? `${view.saleId}|${params.fix}|${params.how ?? ''}` : '';
+  const params = useLocalSearchParams<{ fix?: string; how?: string; at?: string }>();
+  const paramKey = params.fix ? `${view.saleId}|${params.fix}|${params.how ?? ''}|${params.at ?? ''}` : '';
   const paramDone = !paramKey || spentFix.has(paramKey);
   const shareSplit = useShareSplit();
   const { saleId, state, master, append, saleTitle } = view;
