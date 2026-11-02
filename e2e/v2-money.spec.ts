@@ -157,7 +157,8 @@ test('v2 worker debts — fertilizer via the shop order, account reconciliation,
   await expect(page.getByTestId('debt-balance')).toContainText('2,000.00');
 
   await page.getByTestId('debt-add').click();
-  await page.getByTestId('debt-amount').fill('3000');
+  await typeOnPad(page, 'debt-amount', '3000');
+  await page.getByTestId('debt-amount-done').click();
   await page.getByTestId('debt-date').fill('2026-09-10');
   await page.getByTestId('debt-save').click();
 
@@ -166,7 +167,8 @@ test('v2 worker debts — fertilizer via the shop order, account reconciliation,
   await evidence(page, `${SHOTS}/22-debt-account.png`, { fullPage: true });
 
   await page.getByTestId('debt-pay').click();
-  await page.getByTestId('debt-pay-amount').fill('500');
+  await typeOnPad(page, 'debt-pay-amount', '500');
+  await page.getByTestId('debt-pay-amount-done').click();
   await expect(page.getByTestId('debt-pay-after')).toContainText('4,500.00');
   await evidence(page, `${SHOTS}/24-debt-pay.png`, { fullPage: true });
   await page.getByTestId('debt-pay-save').click();
