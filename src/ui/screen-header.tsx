@@ -50,6 +50,7 @@ export function ScreenHeader({
 }) {
   const t = useTheme();
   const msg = useT();
+  const large = t.textScale > 1;
   const square = { minWidth: t.target.min, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center' } as const;
 
   return (
@@ -95,11 +96,12 @@ export function ScreenHeader({
           style={{
             fontFamily: t.font.family.sans,
             fontSize: t.font.size.headingLg,
-            // Body leading, not snug: Thai stacks a vowel and a tone mark above
-            // the letter (เครื่อง, ตั้ง), and Android cuts any glyph that rises
-            // above a tight line box — at large text sizes the title lost its
-            // marks (E05-S11 → E03-S08 TS-6).
-            lineHeight: Math.round(t.font.size.headingLg * t.font.lineHeight.body),
+            // Above M, body leading instead of snug: Thai stacks a vowel and a
+            // tone mark above the letter (เครื่อง, ตั้ง), and Android cuts any
+            // glyph that rises above a tight line box — at large text sizes the
+            // title lost its marks (E05-S11 → E03-S08 TS-6). M stays exactly
+            // as it was (owner, 2026-11-02: no pixel change at the default).
+            lineHeight: large ? Math.round(t.font.size.headingLg * t.font.lineHeight.body) : t.font.size.headingLg * t.font.lineHeight.snug,
             fontWeight: t.font.weight.bold,
             color: t.color.appBarInk,
           }}
@@ -108,7 +110,7 @@ export function ScreenHeader({
         </Text>
         {subtitle ? (
           <Text
-            style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, lineHeight: Math.round(t.font.size.bodySm * t.font.lineHeight.body), color: t.color.inkSoft }}
+            style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, ...(large ? { lineHeight: Math.round(t.font.size.bodySm * t.font.lineHeight.body) } : null), color: t.color.inkSoft }}
           >
             {subtitle}
           </Text>

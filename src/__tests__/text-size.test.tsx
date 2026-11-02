@@ -56,6 +56,21 @@ describe('theme font sizes follow the text size', () => {
     expect(probe()).toMatch(/^m\/16\/44\/1\//);
   });
 
+  it('M is the token set exactly — every font token, no multiplier (owner 2026-11-02: no pixel change at the default)', () => {
+    const seen: unknown[] = [];
+    function Fonts() {
+      const t = useTheme();
+      seen.push({ font: t.font, textScale: t.textScale });
+      return null;
+    }
+    render(
+      <ThemeProvider>
+        <Fonts />
+      </ThemeProvider>,
+    );
+    expect(seen[0]).toEqual({ font: tokens.font, textScale: 1 });
+  });
+
   it('reads a stored L from the first frame (native) and scales every size by 1.125', () => {
     stored.set('mon-farm:text-size', 'l');
     render(

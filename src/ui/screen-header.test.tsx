@@ -11,6 +11,13 @@ jest.mock('expo-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+const stored = new Map<string, string>();
+Object.defineProperty(globalThis, 'localStorage', {
+  configurable: true,
+  value: { getItem: (k: string) => stored.get(k) ?? null, setItem: (k: string, v: string) => void stored.set(k, v) },
+});
+beforeEach(() => stored.clear());
+
 const flat = (style: unknown) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
 const c = tokens.color.light;
 
@@ -116,13 +123,22 @@ describe('ScreenHeader action keeps its width while saving', () => {
     expect(screen.getByText('สวนครอบครัว').props.numberOfLines).toBeUndefined();
   });
 
-  it('E03-S08 TS-6: the title wraps instead of cutting, with room for stacked Thai marks at every text size', () => {
-    wrap(<ScreenHeader title="สรุปจ่ายเงินและหักหนี้คนกรีดยางทั้งสวน" subtitle="การขาย 1 พ.ย. 2569" back={{ label: '← กลับ', onPress: () => {} }} />);
+  it('E03-S08 TS-6: at L the title and subtitle get body leading (room for stacked Thai marks); M is unchanged', () => {
+    const props = { title: 'สรุปจ่ายเงินและหักหนี้คนกรีดยางทั้งสวน', subtitle: 'การขาย 1 พ.ย. 2569', back: { label: '← กลับ', onPress: () => {} } };
+    // M: exactly as before the story (owner 2026-11-02: no pixel change at the default).
+    const m = wrap(<ScreenHeader {...props} />);
+    expect(flat(screen.getByTestId('screen-title').props.style).lineHeight).toBe(tokens.font.size.headingLg * tokens.font.lineHeight.snug);
+    expect(flat(screen.getByText(props.subtitle).props.style).lineHeight).toBeUndefined();
+    m.unmount();
+
+    stored.set('mon-farm:text-size', 'l');
+    wrap(<ScreenHeader {...props} />);
     const title = screen.getByTestId('screen-title');
     const st = flat(title.props.style);
+    expect(st.fontSize).toBe(23);
     expect(title.props.numberOfLines).toBeUndefined();
     expect(st.lineHeight).toBeGreaterThanOrEqual(st.fontSize * tokens.font.lineHeight.body);
-    const sub = flat(screen.getByText('การขาย 1 พ.ย. 2569').props.style);
+    const sub = flat(screen.getByText(props.subtitle).props.style);
     expect(sub.lineHeight).toBeGreaterThanOrEqual(sub.fontSize * tokens.font.lineHeight.body);
   });
 });

@@ -21,15 +21,30 @@ const columnOf = (el: ReactTestInstance) => {
   return flat(p?.props.style);
 };
 
-it('the icon column has no fixed width: an 18 px icon fits inside it', () => {
-  wrap(<Banner tone="bad" icon={() => <View testID="banner-icon" style={{ width: 18, height: 18 }} />} title="หักหนี้ซ้ำจาก 2 เครื่อง" lines={['ตรวจก่อน']} testID="b" />);
+const stored = new Map<string, string>();
+Object.defineProperty(globalThis, 'localStorage', {
+  configurable: true,
+  value: { getItem: (k: string) => stored.get(k) ?? null, setItem: (k: string, v: string) => void stored.set(k, v) },
+});
+beforeEach(() => stored.clear());
+
+const iconBanner = () => <Banner tone="bad" icon={() => <View testID="banner-icon" style={{ width: 18, height: 18 }} />} title="หักหนี้ซ้ำจาก 2 เครื่อง" lines={['ตรวจก่อน']} testID="b" />;
+
+it('at L the icon column has no fixed width: an 18 px icon fits inside it', () => {
+  stored.set('mon-farm:text-size', 'l');
+  wrap(iconBanner());
   const column = columnOf(screen.getByTestId('banner-icon', { includeHiddenElements: true }));
   expect(column.width).toBeUndefined();
   expect(column.minWidth).toBeGreaterThanOrEqual(16);
 });
 
-it('the "?" of an info band sits in the same growing column', () => {
+it('at L the "?" of an info band sits in the same growing column', () => {
+  stored.set('mon-farm:text-size', 'l');
   wrap(<Banner lines={['รายการขายทั้งหมด']} testID="b" />);
-  const column = columnOf(screen.getByText('?', { includeHiddenElements: true }));
-  expect(column.width).toBeUndefined();
+  expect(columnOf(screen.getByText('?', { includeHiddenElements: true })).width).toBeUndefined();
+});
+
+it('at M the column is the original 16 px box, pixel for pixel (owner 2026-11-02)', () => {
+  wrap(iconBanner());
+  expect(columnOf(screen.getByTestId('banner-icon', { includeHiddenElements: true }))).toEqual({ width: 16, alignItems: 'center', paddingTop: 2 });
 });
