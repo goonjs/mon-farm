@@ -45,3 +45,17 @@ it('adds an icon link when the page has none', () => {
   applyFavicon('sale.weigh', urlOf);
   expect(icons().map((l) => l.getAttribute('href'))).toEqual([png('sale.weigh', 64)]);
 });
+
+// Review round 2 #5: on the web build `require(png)` is `{ uri, width, height }`
+// (seen in the exported bundle); the default URL reader takes `uri`.
+it('reads { uri } assets by default', () => {
+  jest.isolateModules(() => {
+    jest.doMock('./pngs.web', () => ({
+      FAVICON_PNGS: { 'farmwork.tapping': { tab: { uri: '/a/t-64.png' }, home: { uri: '/a/t-180.png' }, grid: { uri: '/a/t-128.png' } } },
+    }));
+    const { applyFavicon: apply } = jest.requireActual<typeof import('./apply.web')>('./apply.web');
+    apply('farmwork.tapping');
+  });
+  expect(icons().map((l) => l.getAttribute('href'))).toEqual(['/a/t-64.png']);
+  expect(touches().map((l) => l.getAttribute('href'))).toEqual(['/a/t-180.png']);
+});

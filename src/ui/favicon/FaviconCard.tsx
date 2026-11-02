@@ -17,7 +17,8 @@ import { useTheme } from '../../theme';
 import { AppText } from '../type';
 import { Card, CardLabel } from '../card';
 import { applyFavicon } from './apply';
-import { FAVICON_CHOICES, FAVICON_DEFAULT, FAVICONS, faviconLabel } from './choices';
+import { FAVICON_CHOICES, FAVICON_DEFAULT, faviconLabel } from './choices';
+import { FAVICON_PNGS } from './pngs';
 import { readFavicon, writeFavicon } from './preference';
 
 const isWeb = () => Platform.OS === 'web';
@@ -93,12 +94,12 @@ function FaviconPicker() {
     <Card testID="device-favicon">
       <CardLabel>{msg('settings.favicon')}</CardLabel>
       <View style={{ gap: t.space.sm }}>
-        <View accessibilityRole="radiogroup" accessibilityLabel={msg('settings.favicon')} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+        <View accessibilityRole="radiogroup" accessibilityLabel={msg('settings.favicon')} style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: t.space.sm }}>
           {FAVICON_CHOICES.map((id) =>
             option(
               id,
               faviconLabel(id) ?? id,
-              <Image source={FAVICONS[id].grid} style={{ width: glyph, height: glyph }} accessibilityIgnoresInvertColors />,
+              <Image source={FAVICON_PNGS[id]?.grid} style={{ width: glyph, height: glyph }} accessibilityIgnoresInvertColors />,
             ),
           )}
         </View>

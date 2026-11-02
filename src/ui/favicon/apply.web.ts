@@ -11,7 +11,9 @@
  *   app has none). The static HTML has none, so start-up always sets it.
  */
 
-import { FAVICON_DEFAULT, FAVICONS, type PngAsset } from './choices';
+import { FAVICON_DEFAULT } from './choices';
+import type { PngAsset } from './pngs';
+import { FAVICON_PNGS } from './pngs.web';
 
 /** A required PNG → its URL. On the web build `require()` gives `{ uri }`. */
 export type UrlOf = (asset: PngAsset) => string;
@@ -48,7 +50,7 @@ function setTouchIcon(href: string): void {
 
 /** An id that is not a choice (e.g. the old "default") means the default. */
 export function applyFavicon(id: string, urlOf: UrlOf = webUrl): void {
-  const icon = FAVICONS[Object.hasOwn(FAVICONS, id) ? id : FAVICON_DEFAULT];
+  const icon = FAVICON_PNGS[Object.hasOwn(FAVICON_PNGS, id) ? id : FAVICON_DEFAULT];
   setIcon(urlOf(icon.tab));
   setTouchIcon(urlOf(icon.home));
 }

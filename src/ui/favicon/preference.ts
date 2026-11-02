@@ -2,7 +2,8 @@
  * Where this device's tab icon is remembered (E03-S10). A device preference
  * like theme and text size — not in the event log, never synced. Kept through
  * `device-settings`, never localStorage directly (guard test). An id that is
- * not a current choice (an icon later removed) reads as เดิม.
+ * not a current choice (an icon later removed, or the old "default" = เดิม)
+ * reads as the default, กรีดยาง.
  */
 
 import { deviceSettings } from '../../store/device-settings';

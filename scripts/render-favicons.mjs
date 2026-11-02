@@ -14,7 +14,7 @@
  * fetched at run time.
  *
  * Usage:
- *   node scripts/render-favicons.mjs                 every id src/ui/favicon/choices.tsx lists
+ *   node scripts/render-favicons.mjs                 every id src/ui/favicon/pngs.web.ts lists
  *   node scripts/render-favicons.mjs --preview <png> contact sheet of all 72 at 16/32 px
  * Chromium: CHROMIUM_PATH=/opt/pw-browsers/chromium if Playwright's own is not installed.
  */
@@ -29,11 +29,11 @@ import { chromium } from 'playwright';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'design/icons/farmmate');
 const OUT = join(ROOT, 'assets/favicons');
-const CHOICES = join(ROOT, 'src/ui/favicon/choices.tsx');
+const CHOICES = join(ROOT, 'src/ui/favicon/pngs.web.ts');
 /** design/tokens.ts color.light.surfaceRaised — the tile. */
 const TILE = '#ffffff';
 
-/** The ids choices.tsx requires PNGs for (its `require('…/<id>-64.png')` lines). */
+/** The ids pngs.web.ts requires PNGs for (its `require('…/<id>-64.png')` lines). */
 export function listedIds(source) {
   return [...source.matchAll(/assets\/favicons\/([\w.]+)-64\.png/g)].map((m) => m[1]);
 }
@@ -65,6 +65,10 @@ function renderInPage({ url, tile }) {
             if (y < y0) y0 = y;
             if (y > y1) y1 = y;
           }
+      if (x1 < 0) {
+        reject(new Error('nothing painted'));
+        return;
+      }
       const cw = x1 - x0 + 1;
       const ch = y1 - y0 + 1;
       const out = (size, inset, background, radius) => {
@@ -116,7 +120,7 @@ async function main() {
     await page.screenshot({ path: args[1], fullPage: true });
   } else {
     const ids = listedIds(readFileSync(CHOICES, 'utf8'));
-    if (ids.length === 0) throw new Error('no ids found in src/ui/favicon/choices.tsx');
+    if (ids.length === 0) throw new Error('no ids found in src/ui/favicon/pngs.web.ts');
     mkdirSync(OUT, { recursive: true });
     for (const id of ids) {
       const r = await page.evaluate(renderInPage, { url: svgUrl(id), tile: TILE });

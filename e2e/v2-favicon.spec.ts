@@ -50,6 +50,32 @@ const colourCount = (page: Page, src: string) =>
     src,
   );
 
+/** Mean absolute RGBA difference (0–255) of two images, both drawn at 32 × 32. */
+const meanDiff = (page: Page, a: string, b: string) =>
+  page.evaluate(
+    async ([a, b]) => {
+      const pixels = (src: string) =>
+        new Promise<Uint8ClampedArray>((ok, fail) => {
+          const img = new Image();
+          img.onload = () => {
+            const c = document.createElement('canvas');
+            c.width = 32;
+            c.height = 32;
+            const ctx = c.getContext('2d')!;
+            ctx.drawImage(img, 0, 0, 32, 32);
+            ok(ctx.getImageData(0, 0, 32, 32).data);
+          };
+          img.onerror = () => fail(new Error(`cannot load ${src}`));
+          img.src = src;
+        });
+      const [p, q] = await Promise.all([pixels(a), pixels(b)]);
+      let sum = 0;
+      for (let i = 0; i < p.length; i++) sum += Math.abs(p[i] - q[i]);
+      return sum / p.length;
+    },
+    [a, b] as const,
+  );
+
 /** Width × height of an image URL, decoded by the browser. */
 const pixelSize = (page: Page, src: string) =>
   page.evaluate(
@@ -102,6 +128,9 @@ test('a device that never chose shows กรีดยาง: in the shipped page
   expect(await colourCount(page, '/favicon.ico')).toBeGreaterThan(3);
   await expect.poll(async () => (await head(page)).icons[0]?.href ?? '').toMatch(png('farmwork.tapping', 64));
   const h = await head(page);
+  // …and the shipped /favicon.ico is กรีดยาง, not Expo's icon: the same picture as
+  // the tapping PNG when both are drawn at 32 px (review round 2 #4).
+  expect(await meanDiff(page, '/favicon.ico', h.icons[0].href)).toBeLessThan(25);
   expect(h.touch).toMatch(png('farmwork.tapping', 180));
   expect(await colourCount(page, h.icons[0].href)).toBeGreaterThan(3);
   await tabStrip(page, new URL(h.icons[0].href, page.url()).href, new URL(h.touch!, page.url()).href);

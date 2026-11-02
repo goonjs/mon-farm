@@ -1,12 +1,13 @@
 /**
  * E03-S10 favicon picker: the 20 choices and their pre-rendered PNGs in the
- * bundle (FV-1, FV-2) and the device setting (FV-3: `mon-farm:favicon`,
- * unknown → เดิม).
+ * web bundle (FV-1, FV-2) and the device setting (FV-3: `mon-farm:favicon`,
+ * unknown → the default, กรีดยาง).
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { FAVICON_CHOICES, FAVICON_DEFAULT, FAVICONS, faviconLabel } from './choices';
+import { FAVICON_CHOICES, FAVICON_DEFAULT, faviconLabel } from './choices';
+import { FAVICON_PNGS } from './pngs.web';
 import { readFavicon, writeFavicon } from './preference';
 
 const stored = new Map<string, string>();
@@ -43,20 +44,33 @@ describe('favicon choices (FV-1)', () => {
     expect(pngSize(`${id}-64.png`)).toBe('64x64');
     expect(pngSize(`${id}-180.png`)).toBe('180x180');
     expect(pngSize(`${id}-128.png`)).toBe('128x128');
-    expect(FAVICONS[id].tab).toEqual({ testUri: `../../../assets/favicons/${id}-64.png` });
-    expect(FAVICONS[id].home).toEqual({ testUri: `../../../assets/favicons/${id}-180.png` });
-    expect(FAVICONS[id].grid).toEqual({ testUri: `../../../assets/favicons/${id}-128.png` });
+    expect(FAVICON_PNGS[id].tab).toEqual({ testUri: `../../../assets/favicons/${id}-64.png` });
+    expect(FAVICON_PNGS[id].home).toEqual({ testUri: `../../../assets/favicons/${id}-180.png` });
+    expect(FAVICON_PNGS[id].grid).toEqual({ testUri: `../../../assets/favicons/${id}-128.png` });
   });
 
   it('the render script finds exactly the ids the app lists (it reads the -64 require lines)', () => {
     const script = readFileSync(join(ROOT, 'scripts/render-favicons.mjs'), 'utf8');
     expect(script).toContain('assets\\/favicons\\/([\\w.]+)-64\\.png');
-    const listed = [...readFileSync(join(ROOT, 'src/ui/favicon/choices.tsx'), 'utf8').matchAll(/assets\/favicons\/([\w.]+)-64\.png/g)].map((m) => m[1]);
+    const listed = [...readFileSync(join(ROOT, 'src/ui/favicon/pngs.web.ts'), 'utf8').matchAll(/assets\/favicons\/([\w.]+)-64\.png/g)].map((m) => m[1]);
     expect(listed).toEqual([...FAVICON_CHOICES]);
   });
 
   it('has nothing for an unknown id', () => {
-    expect(Object.hasOwn(FAVICONS, 'nope.nope')).toBe(false);
+    expect(Object.hasOwn(FAVICON_PNGS, 'nope.nope')).toBe(false);
+    expect(faviconLabel('nope.nope')).toBeUndefined();
+  });
+
+  // Review round 2 #1: the Android / iOS build must not carry the 60 PNGs
+  // (~450 KB) for a card it never shows. Only `*.web.*` files may require them.
+  it('only web files require the favicon PNGs; native gets an empty table', () => {
+    expect(readFileSync(join(ROOT, 'src/ui/favicon/pngs.ts'), 'utf8')).toContain('FAVICON_PNGS: Readonly<Record<string, FaviconPngs>> = {};');
+    const files = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(join(dir, e.name)) : [join(dir, e.name)]));
+    const offenders = files(join(ROOT, 'src'))
+      .filter((f) => /\.(ts|tsx)$/.test(f) && !/\.web\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f))
+      .filter((f) => /assets\/favicons\//.test(readFileSync(f, 'utf8')));
+    expect(offenders).toEqual([]);
   });
 
   // Owner 2026-11-02: no Expo icon; กรีดยาง is the default, and the build ships it
