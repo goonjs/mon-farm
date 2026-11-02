@@ -1,0 +1,424 @@
+<title>ภาพปกหน้าแรก สวนยาง</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap">
+<style>
+/* Layout: one live phone with its time controls beside it, then every time of day side by side, then build notes and the questions. */
+:root{
+  /* mon-farm tokens (docs/ux/tokens.css, light: the app's home is light) */
+  --color-surface:#F7FAFC;--color-surface-raised:#FFFFFF;--color-surface-sunk:#F1F3F5;
+  --color-ink:#002858;--color-ink-soft:#52657A;--color-ink-faint:#7A8998;--color-ink-inverse:#FFFFFF;
+  --color-rule:#CBD4DC;--color-rule-faint:#E4E9EE;--color-action:#002858;--color-action-sunk:#EAF5FC;
+  --color-accept:#006F52;--color-accept-sunk:#E8F8F2;--color-warn:#815908;--color-brand-cream:#FFF8E8;
+  --color-brand:#00AA7D;--color-brand-yellow:#FECB56;
+  --pg:#E9EEF3;
+  --font:"Noto Sans Thai","Sarabun",ui-sans-serif,system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box;margin:0}
+body{font-family:var(--font);background:var(--pg);color:var(--color-ink);line-height:1.45;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+h1{font-size:26px;text-wrap:balance}
+.lead{color:var(--color-ink-soft);max-width:760px;font-size:15px}
+section.doc{background:var(--color-surface-raised);border-radius:16px;padding:20px 22px;box-shadow:0 2px 12px rgba(0,40,88,.06);display:flex;flex-direction:column;gap:10px}
+section.doc h2{font-size:19px;text-wrap:balance}
+section.doc p,section.doc li{font-size:14px;color:var(--color-ink-soft);max-width:72ch}
+section.doc ul,section.doc ol{padding-left:20px;display:grid;gap:5px}
+section.doc b{color:var(--color-ink)}
+.live{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.live>*{min-width:0}
+
+/* ---- control panel ---- */
+.panel{flex:1 1 320px;max-width:520px;background:var(--color-surface-raised);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 2px 12px rgba(0,40,88,.06)}
+.panel h2{font-size:18px}
+.clock{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.clock small{font-size:16px;font-weight:600;color:var(--color-ink-soft);margin-left:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button,.btn{font:inherit;font-size:15px;font-weight:600;min-height:44px;padding:8px 14px;border-radius:999px;border:1px solid var(--color-rule);background:var(--color-surface-raised);color:var(--color-ink);cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--color-action);color:var(--color-ink-inverse);border-color:var(--color-action)}
+.chips button:focus-visible,.btn:focus-visible,input:focus-visible{outline:3px solid var(--color-brand);outline-offset:2px}
+.slider{display:flex;flex-direction:column;gap:4px}
+.slider input{width:100%;accent-color:var(--color-action);height:32px}
+.ticks{display:flex;justify-content:space-between;font-size:12px;color:var(--color-ink-faint);font-variant-numeric:tabular-nums}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toggle{display:flex;gap:8px;align-items:center;font-size:15px;min-height:44px}
+.toggle input{width:20px;height:20px;accent-color:var(--color-action)}
+.note{font-size:13px;color:var(--color-ink-soft)}
+
+/* ---- every time of day ---- */
+.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+.strip figure{display:flex;flex-direction:column;gap:6px;min-width:0}
+.strip figcaption{font-size:14px;color:var(--color-ink-soft)}
+.strip figcaption b{color:var(--color-ink);font-size:15px;margin-right:6px}
+.strip .cover{width:100%}
+
+/* ---- phone (same as the other mon-farm mockups) ---- */
+.phone{width:390px;max-width:100%;height:844px;background:var(--color-surface);position:relative;overflow:hidden;display:flex;flex-direction:column;outline:1px solid var(--color-rule);font-size:16px;flex:none}
+.appbar{height:64px;display:flex;align-items:center;gap:6px;padding:0 12px 0 8px;flex:none;border-bottom:1px solid var(--color-rule-faint)}
+.appbar .ib{width:48px;height:48px;display:grid;place-items:center}
+.appbar h3{flex:1;font-size:22px;font-weight:700;line-height:1.2}
+.appbar h3 small{display:block;font-size:14px;font-weight:400;color:var(--color-ink-soft)}
+.sync{display:inline-flex;align-items:center;gap:6px;background:var(--color-accept-sunk);color:var(--color-accept);font-weight:600;font-size:14px;border-radius:999px;padding:6px 12px}
+.sync i{width:9px;height:9px;border-radius:50%;background:var(--color-accept)}
+.body{flex:1;padding:12px 16px;display:flex;flex-direction:column;gap:12px;overflow:hidden;min-height:0}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.at{background:var(--color-surface-raised);border:1px solid var(--color-rule-faint);border-radius:16px;padding:12px 4px;display:flex;flex-direction:column;align-items:center;gap:8px;font-weight:700;font-size:14px;text-align:center}
+.at.main{border:2px solid var(--color-action)}
+.at .ic{width:48px;height:48px;border-radius:12px;display:grid;place-items:center}
+.t-cream{background:var(--color-brand-cream)}.t-blue{background:var(--color-action-sunk)}.t-green{background:var(--color-accept-sunk)}.t-sunk{background:var(--color-surface-sunk)}
+.sec{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;font-size:18px}
+.sec small{font-size:13px;font-weight:400;color:var(--color-ink-soft)}
+.card{background:var(--color-surface-raised);border:1px solid var(--color-rule-faint);border-radius:16px;padding:14px;font-size:15px;color:var(--color-ink-soft)}
+.more{align-self:flex-end;font-weight:700;font-size:15px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mi{background:var(--color-surface-raised);border:1px solid var(--color-rule-faint);border-radius:16px;padding:10px;display:flex;gap:10px;align-items:center;font-weight:700;font-size:14px;line-height:1.3;min-width:0}
+.mi .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
+
+/* ---- the cover scene ---- */
+.cover{position:relative;height:var(--cover-h,148px);border-radius:16px;overflow:hidden;flex:none;background:#BFE4F8}
+.cover svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.cover .drift{animation:drift linear infinite}
+.cover .flow{animation:flow linear infinite}
+.cover .glint{animation:glint 3.2s ease-in-out infinite}
+@keyframes drift{from{transform:translateX(-120px)}to{transform:translateX(480px)}}
+@keyframes flow{to{stroke-dashoffset:-40}}
+@keyframes glint{0%,100%{opacity:.15}50%{opacity:.85}}
+.cover.still *,.cover.paused *{animation-play-state:paused!important}
+@media (prefers-reduced-motion:reduce){.cover *{animation-play-state:paused!important}}
+</style>
+
+<div class="page">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>ภาพปกหน้าแรก: สวนยาง ลำธาร เมฆ และดวงอาทิตย์ตามเวลาจริง</h1>
+    <p class="lead">ตัวอย่างก่อนทำจริง (ยังไม่ใช่โค้ดแอป) วางในตำแหน่งจริงของหน้าแรก ขนาดจอ 390×844 น้ำในลำธารไหล เมฆบาง ๆ ลอยช้า ๆ ท้องฟ้า แสง และดวงอาทิตย์เปลี่ยนตามนาฬิกาเครื่อง ลองกดช่วงเวลา หรือเลื่อนแถบเวลา ด้านล่างมีครบทุกช่วงเวลาให้ดูพร้อมกัน</p>
+  </header>
+
+  <div class="live">
+    <div class="phone" id="phone-live">
+      <div class="appbar">
+        <div class="ib" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></div>
+        <h3>หน้าแรก<small>จ. 2 พ.ย. 2569</small></h3>
+        <span class="sync"><i></i>ซิงก์แล้ว</span>
+      </div>
+      <div class="body">
+        <div class="cover" id="cover-live" role="img" aria-label="ภาพปก: สวนยางริมลำธาร"></div>
+        <div class="tiles">
+          <div class="at"><span class="ic t-cream"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#815908" stroke-width="2.2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg></span>เตรียมขาย</div>
+          <div class="at main"><span class="ic t-blue"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#002858" stroke-width="2.2" stroke-linejoin="round"><path d="M4 10h16l-1.5 10h-13zM8 10V7a4 4 0 0 1 8 0v3M10 14v3M14 14v3"/></svg></span>เริ่มการขาย</div>
+          <div class="at"><span class="ic t-green"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#006F52" stroke-width="2.2" stroke-linejoin="round"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/></svg></span>บันทึกค่าใช้จ่าย</div>
+        </div>
+        <div class="sec">ควรรู้ / ควรจัดการ<small>สำคัญก่อน</small></div>
+        <div class="card">ยังไม่มีเรื่องที่ต้องรู้หรือจัดการ</div>
+        <div class="more">ดูการขายทั้งหมด ›</div>
+        <div class="sec">ไปที่</div>
+        <div class="grid2">
+          <div class="mi"><span class="ic t-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#002858" stroke-width="2.2"><path d="M5 20V10M10 20V5M15 20v-8M20 20H3"/></svg></span>รายงานการขายย้อนหลัง</div>
+          <div class="mi"><span class="ic t-blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#002858" stroke-width="2.2"><circle cx="8" cy="8" r="3"/><path d="M7 19h10a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.6 1.4A3 3 0 0 0 7 19z"/></svg></span>พยากรณ์อากาศ</div>
+          <div class="mi"><span class="ic t-cream"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#815908" stroke-width="2.2"><path d="M6 3h12v18H6zM9 8h6M9 12h6"/></svg></span>ค่าใช้จ่ายทั้งหมด</div>
+          <div class="mi"><span class="ic t-green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#006F52" stroke-width="2.2"><path d="M5 19C5 10 11 5 19 5c0 8-5 14-14 14zM5 19l7-7"/></svg></span>ซื้อของร้าน</div>
+          <div class="mi"><span class="ic t-sunk"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#52657A" stroke-width="2.2"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 19a5 5 0 0 1 10 0M11 19a5 5 0 0 1 10 0"/></svg></span>ข้อมูลคนงาน</div>
+          <div class="mi"><span class="ic t-sunk"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#52657A" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></span>ตั้งค่า</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>เลือกเวลาให้ภาพ</h2>
+      <div class="clock" id="clock">--:--<small id="period"></small></div>
+      <div class="chips" id="chips" role="group" aria-label="ช่วงเวลา"></div>
+      <div class="slider">
+        <label for="hour" class="note">เลื่อนดูทั้งวัน 00:00–24:00</label>
+        <input type="range" id="hour" min="0" max="24" step="0.25" value="7">
+        <div class="ticks"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+      </div>
+      <div class="row">
+        <button class="btn" id="play" type="button">▶ เล่นทั้งวันใน 30 วินาที</button>
+      </div>
+      <label class="toggle"><input type="checkbox" id="still"> ลดการเคลื่อนไหว (ภาพนิ่ง เหมือนตั้งค่าในเครื่องไว้)</label>
+      <label class="toggle"><input type="checkbox" id="tall" checked> ภาพสูง 180 (เจ้าของเลือก) — เอาติ๊กออกเพื่อเทียบกับ 148 เดิม</label>
+      <p class="note">ในแอปจริงจะไม่มีแผงนี้ ภาพจะใช้เวลาจากนาฬิกาเครื่องเอง และเปลี่ยนทีละนิดทุก 5 นาที</p>
+    </div>
+  </div>
+
+  <section class="doc">
+    <h2>ครบทุกช่วงเวลา</h2>
+    <div class="strip" id="strip"></div>
+  </section>
+
+  <section class="doc">
+    <h2>ในภาพมีอะไร</h2>
+    <ul>
+      <li><b>ต้นยาง</b> ลำต้นตรงสีเทาอ่อน มีรอยกรีดเฉียงและถ้วยรับน้ำยาง ใบเป็นกลุ่มสามใบ ข้างหลังเป็นแถวต้นยางที่ปลูกเป็นแนว</li>
+      <li><b>ลำธาร</b> คดเคี้ยวจากเนินไกลลงมาด้านหน้า มีเส้นน้ำไหลเข้าหาคนดู (ไม่มีน้ำตก)</li>
+      <li><b>เมฆ</b> บาง ๆ สามก้อน ลอยข้ามภาพช้า ๆ ก้อนละ 2–4 นาที</li>
+      <li><b>ดวงอาทิตย์</b> ขึ้น 06:00 ตกราว 18:30 เดินเป็นวงโค้งตามนาฬิกาเครื่อง เช้าสีส้มอ่อนอยู่ต่ำทางซ้าย เที่ยงขาวนวลอยู่สูงกลางภาพ เย็นสีส้มเข้มอยู่ต่ำทางขวา ท้องฟ้า น้ำ ใบไม้ และเงาต้นไม้เปลี่ยนตาม หลังพลบค่ำเป็นพระจันทร์กับดาว</li>
+    </ul>
+  </section>
+
+  <section class="doc">
+    <h2>ตอนทำจริงในแอป</h2>
+    <ul>
+      <li>วาดด้วย react-native-svg และขยับด้วย react-native-reanimated ซึ่งมีในแอปอยู่แล้ว <b>ไม่ต้องลง library ใหม่</b> และไม่ใช้รูปจากเน็ต ใช้ได้ตอนออฟไลน์</li>
+      <li>ประหยัดแบต: ขยับแค่เส้นน้ำกับเมฆ หยุดเมื่อออกจากหน้าแรกหรือพับแอป สีท้องฟ้าคำนวณใหม่ทุก 5 นาที ไม่ใช่ทุกเฟรม</li>
+      <li>ถ้าเครื่องตั้ง "ลดการเคลื่อนไหว" ไว้ ภาพจะนิ่ง แต่ยังเปลี่ยนสีตามเวลา</li>
+      <li>ภาพไม่มีตัวอักษรทับ ปุ่มและข้อความหน้าแรกอยู่บนพื้นเดิม จึงอ่านได้ทุกช่วงเวลา</li>
+    </ul>
+  </section>
+
+  <section class="doc">
+    <h2>เจ้าของเลือกแล้ว (2 พ.ย. 2569)</h2>
+    <ol>
+      <li><b>ภาพโดยรวม</b> เอาแบบนี้ ปรับพุ่มต้นยางให้ฟูขึ้น (ทำแล้วในรุ่นนี้)</li>
+      <li><b>กลางคืน</b> พระจันทร์กับดาว</li>
+      <li><b>ความสูงภาพ</b> 180</li>
+      <li><b>ในแอป</b> เปิดมาแสดงตามเวลาตอนนี้ ปัดซ้ายขวาบนภาพเพื่อเลื่อนเวลา แตะภาพเพื่อเล่นทั้งวันใน 30 วินาที แตะอีกครั้งกลับมาเวลาตอนนี้ ถ้าภาพมีปัญหาให้กลับไปแสดงภาพเดิม</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+(() => {
+  const W = 358, BASE_H = 148;
+  const SUNRISE = 6, SUNSET = 18.5;
+  const PERIODS = [
+    { name: 'เช้า', h: 7 }, { name: 'สาย', h: 10 }, { name: 'เที่ยง', h: 12 },
+    { name: 'บ่าย', h: 15 }, { name: 'เย็น', h: 17.5 }, { name: 'ค่ำ', h: 20 },
+  ];
+  const periodOf = (h) => h >= 5 && h < 9 ? 'เช้า' : h < 11 ? 'สาย' : h < 13 ? 'เที่ยง' : h < 16.5 ? 'บ่าย' : h < 19 ? 'เย็น' : 'ค่ำ';
+
+  // Colour keyframes by hour; everything between is blended.
+  const KEYS = ['skyTop','skyBot','sun','cloud','hill','farD','farL','g1','g2','bank','water1','water2','flow','leafD','leafM','leafL','trunk','trunkHi','tint'];
+  const NIGHT = { skyTop:'#0B1633',skyBot:'#23365E',sun:'#FFE9B0',cloud:'#5E6C8C',hill:'#1D3B4A',farD:'#11302B',farL:'#1A3F36',g1:'#1C4A3A',g2:'#12352A',bank:'#0E2A20',water1:'#34507C',water2:'#1C3558',flow:'#A9C0E6',leafD:'#0C2A21',leafM:'#13392D',leafL:'#1F4B3A',trunk:'#4A4F57',trunkHi:'#6E747E',tint:'#0A1430', glow:0, cloudOp:.35, tintOp:.22, star:1, shadow:0 };
+  const FRAMES = [
+    [0, NIGHT],
+    [4.75, NIGHT],
+    [5.75, { skyTop:'#2E4277',skyBot:'#C4889A',sun:'#FF9A5C',cloud:'#B68DA0',hill:'#4C6070',farD:'#1E4A3E',farL:'#2E5E4A',g1:'#36664E',g2:'#22503C',bank:'#1C4632',water1:'#9A88AE',water2:'#3E5486',flow:'#F0D8E4',leafD:'#163E30',leafM:'#21533C',leafL:'#456B48',trunk:'#625D62',trunkHi:'#9A8A90',tint:'#5A3A7A', glow:.4, cloudOp:.6, tintOp:.18, star:.3, shadow:0 }],
+    [6.75, { skyTop:'#7FB6E0',skyBot:'#FFD3A0',sun:'#FFB45C',cloud:'#FFE4CF',hill:'#86A9A2',farD:'#2C7659',farL:'#4C9870',g1:'#6CB678',g2:'#3E9661',bank:'#2E7650',water1:'#B6D7EE',water2:'#5FA0CC',flow:'#FFFFFF',leafD:'#1C684A',leafM:'#2C875A',leafL:'#76B66C',trunk:'#8C8578',trunkHi:'#D9C6AA',tint:'#FFA860', glow:.95, cloudOp:.8, tintOp:.13, star:0, shadow:.22 }],
+    [10, { skyTop:'#4FA6E2',skyBot:'#C9E8F8',sun:'#FFE27A',cloud:'#FFFFFF',hill:'#8DC3B8',farD:'#2E8461',farL:'#52A878',g1:'#79C885',g2:'#45A666',bank:'#348457',water1:'#A6DAF4',water2:'#4B9ED4',flow:'#FFFFFF',leafD:'#1B6E4D',leafM:'#2B9160',leafL:'#7CC57A',trunk:'#8E8A82',trunkHi:'#D8D2C6',tint:'#FFF3C8', glow:.7, cloudOp:.85, tintOp:.04, star:0, shadow:.26 }],
+    [12, { skyTop:'#3D9BE0',skyBot:'#BDE3F9',sun:'#FFF6CF',cloud:'#FFFFFF',hill:'#94C8BC',farD:'#2F8963',farL:'#5AAF7E',g1:'#82CE8A',g2:'#4BAC6B',bank:'#3A8B5C',water1:'#ACE0F7',water2:'#4AA3DA',flow:'#FFFFFF',leafD:'#1C7150',leafM:'#2E9664',leafL:'#88CD80',trunk:'#908D86',trunkHi:'#E0DBD0',tint:'#FFFFFF', glow:.65, cloudOp:.9, tintOp:.02, star:0, shadow:.3 }],
+    [15, { skyTop:'#4A9DDA',skyBot:'#D6EAF0',sun:'#FFD764',cloud:'#FFF7EA',hill:'#8BBDB0',farD:'#2D7F5C',farL:'#57A576',g1:'#7BC37F',g2:'#449F62',bank:'#337F52',water1:'#A6D5EC',water2:'#4C98CC',flow:'#FFFFFF',leafD:'#1C6A4A',leafM:'#2D8C5C',leafL:'#8EC476',trunk:'#8F897E',trunkHi:'#DCCDB4',tint:'#FFD58A', glow:.75, cloudOp:.85, tintOp:.07, star:0, shadow:.28 }],
+    [17.6, { skyTop:'#5E78BE',skyBot:'#FFAA70',sun:'#FF7E3A',cloud:'#FFC4A4',hill:'#7E8F98',farD:'#2B5E4C',farL:'#4E7F5E',g1:'#5E9A62',g2:'#3A7550',bank:'#2B5E40',water1:'#F4B890',water2:'#6E7EB0',flow:'#FFE6D2',leafD:'#1D4E3B',leafM:'#2E6A48',leafL:'#9AA85A',trunk:'#7D6E62',trunkHi:'#E6A878',tint:'#FF7A3A', glow:1, cloudOp:.85, tintOp:.15, star:0, shadow:.2 }],
+    [19, { skyTop:'#283A74',skyBot:'#B06A84',sun:'#FF6A3A',cloud:'#B98494',hill:'#3D4D66',farD:'#1B3A36',farL:'#2A4E42',g1:'#2E5A48',g2:'#1F4436',bank:'#183A2C',water1:'#8C80A8',water2:'#3A4C7A',flow:'#E2CADC',leafD:'#13322A',leafM:'#1C4434',leafL:'#3A5A40',trunk:'#5A5558',trunkHi:'#8A7A80',tint:'#3A2A6A', glow:.25, cloudOp:.55, tintOp:.2, star:.45, shadow:0 }],
+    [20.25, NIGHT],
+    [24, NIGHT],
+  ];
+  const hex = (c) => [1,3,5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  const mixHex = (a, b, t) => '#' + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * t).toString(16).padStart(2, '0')).join('');
+  function paletteAt(h) {
+    let i = 0; while (FRAMES[i + 1][0] < h) i++;
+    const [h0, a] = FRAMES[i], [h1, b] = FRAMES[i + 1];
+    const t = h1 === h0 ? 0 : (h - h0) / (h1 - h0);
+    const p = {};
+    for (const k of KEYS) p[k] = mixHex(a[k], b[k], t);
+    for (const k of ['glow','cloudOp','tintOp','star','shadow']) p[k] = a[k] + (b[k] - a[k]) * t;
+    return p;
+  }
+
+  // Deterministic randomness so every copy of the scene looks the same.
+  const rng = (seed) => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const f = (n) => n.toFixed(1);
+
+  // Smooth path through points (Catmull-Rom as cubic Béziers).
+  function smooth(pts, move = true) {
+    let d = move ? `M${f(pts[0][0])},${f(pts[0][1])}` : `L${f(pts[0][0])},${f(pts[0][1])}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      d += `C${f(p1[0] + (p2[0] - p0[0]) / 6)},${f(p1[1] + (p2[1] - p0[1]) / 6)} ${f(p2[0] - (p3[0] - p1[0]) / 6)},${f(p2[1] - (p3[1] - p1[1]) / 6)} ${f(p2[0])},${f(p2[1])}`;
+    }
+    return d;
+  }
+
+  /** Rubber-tree crown: a bumpy dark rim, rounder mid puffs, lit puffs on top, a few leaf sprigs. */
+  function crown(cx, cy, rx, ry, seed) {
+    const r = rng(seed);
+    const k = Math.max(8, Math.round(rx / 3.2));
+    let d = `<ellipse cx="${f(cx)}" cy="${f(cy + ry * .05)}" rx="${f(rx * .8)}" ry="${f(ry * .74)}"/>`, m = '', l = '', t = '';
+    for (let i = 0; i < k; i++) {
+      const a = (i / k) * Math.PI * 2 + r() * .3;
+      d += `<circle cx="${f(cx + Math.cos(a) * rx * .7)}" cy="${f(cy + Math.sin(a) * ry * .62)}" r="${f(rx * (.3 + r() * .1))}"/>`;
+    }
+    for (let i = 0; i < Math.round(k * .8); i++) {
+      const a = r() * Math.PI * 2, q = Math.sqrt(r()) * .6;
+      m += `<circle cx="${f(cx + Math.cos(a) * rx * q - rx * .05)}" cy="${f(cy + Math.sin(a) * ry * q - ry * .14)}" r="${f(rx * (.22 + r() * .1))}"/>`;
+    }
+    for (let i = 0; i < Math.round(k * .9); i++) {
+      const a = -Math.PI / 2 - 1.1 + r() * 1.9, q = .3 + r() * .45;
+      l += `<circle cx="${f(cx + Math.cos(a) * rx * q)}" cy="${f(cy + Math.sin(a) * ry * q)}" r="${f(rx * (.1 + r() * .06))}"/>`;
+    }
+    for (let i = 0; i < Math.round(rx * .5); i++) {
+      const a = -Math.PI / 2 - 1.3 + r() * 2.6, q = .8 + r() * .2;
+      const L = 2.6 + r() * 1.6, rot = (a + Math.PI / 2) * 57.3 + (r() - .5) * 40;
+      t += `<g transform="translate(${f(cx + Math.cos(a) * rx * q)},${f(cy + Math.sin(a) * ry * q)}) rotate(${f(rot)})">`
+        + `<ellipse cy="${f(-L)}" rx="${f(L * .42)}" ry="${f(L)}"/><ellipse cy="${f(-L)}" rx="${f(L * .4)}" ry="${f(L * .9)}" transform="rotate(-48)"/><ellipse cy="${f(-L)}" rx="${f(L * .4)}" ry="${f(L * .9)}" transform="rotate(48)"/></g>`;
+    }
+    return `<g style="fill:var(--leafD)">${d}</g><g style="fill:var(--leafM)">${m}</g><g style="fill:var(--leafL)">${l}</g><g style="fill:var(--leafM)">${t}</g>`;
+  }
+
+  /** A foreground rubber tree: slim pale trunk, tapping cut with a cup, loose crown. */
+  function tree(x, base, height, lean, w, rx, ry, seed) {
+    const top = base - height, tx = x + lean, cy = top + ry * .28;
+    const trunk = `M${f(x - w / 2)},${base} C${f(x - w / 2)},${f(base - height * .4)} ${f(tx - w * .32)},${f(top + height * .3)} ${f(tx - w * .28)},${f(top + 6)} L${f(tx + w * .28)},${f(top + 6)} C${f(tx + w * .32)},${f(top + height * .3)} ${f(x + w / 2)},${f(base - height * .4)} ${f(x + w / 2)},${base}Z`;
+    const branches = [[-1, .78], [1, .74], [-.3, .9]].map(([dx, k]) => {
+      const sx = x + lean * k, sy = base - height * k;
+      return `<path d="M${f(sx)},${f(sy)} Q${f(sx + dx * rx * .25)},${f(sy - ry * .3)} ${f(sx + dx * rx * .5)},${f(cy - ry * .1)}" style="stroke:var(--trunk)" stroke-width="${f(w * .32)}" fill="none" stroke-linecap="round"/>`;
+    }).join('');
+    const cutY = base - Math.min(30, height * .28);
+    const tap = `<path d="M${f(x - w / 2)},${f(cutY)} L${f(x + w / 2)},${f(cutY - w * .9)}" stroke="#4E4339" stroke-width="1.1" opacity=".8"/>`
+      + `<path d="M${f(x - w / 2)},${f(cutY + 3)} L${f(x + w / 2)},${f(cutY - w * .9 + 3)}" stroke="#F4EEDF" stroke-width=".8" opacity=".7"/>`
+      + `<path d="M${f(x - w / 2 - .2)},${f(cutY + 1)} l-1.6,2" stroke="#4E4339" stroke-width=".7"/>`
+      + `<path d="M${f(x - w / 2 - 4.4)},${f(cutY + 3.4)} h4.6 a2.3,2.4 0 0 1 -4.6,0z" fill="#E9E2D3" stroke="#6B5E50" stroke-width=".5"/>`;
+    return `<ellipse class="shade" data-x="${x}" cx="${x}" cy="${base - 1}" rx="${f(rx * .8)}" ry="3.2" style="fill:#0B2A1C;opacity:var(--shadow)"/>`
+      + `<path d="${trunk}" style="fill:var(--trunk)"/>`
+      + `<path d="M${f(x - w * .2)},${base} C${f(x - w * .2)},${f(base - height * .4)} ${f(tx - w * .12)},${f(top + height * .3)} ${f(tx - w * .1)},${f(top + 8)}" style="stroke:var(--trunkHi)" stroke-width="${f(w * .22)}" fill="none" opacity=".75"/>`
+      + tap + branches + crown(tx, cy, rx, ry, seed);
+  }
+
+  /** A far plantation row: small trees in a straight line, the way rubber is planted. */
+  function row(y, x0, x1, step, h, r, skip, seed) {
+    const g = rng(seed);
+    let trunks = '', dark = '', light = '';
+    for (let x = x0; x <= x1; x += step * (.8 + g() * .4)) {
+      if (skip && skip(x)) continue;
+      const rr = r * (.8 + g() * .45), hh = h * (.85 + g() * .3);
+      trunks += `<rect x="${f(x - .6)}" y="${f(y - hh)}" width="1.3" height="${f(hh)}" style="fill:var(--trunk)" opacity=".75"/>`;
+      dark += `<ellipse cx="${f(x)}" cy="${f(y - hh)}" rx="${f(rr * 1.25)}" ry="${f(rr * .95)}"/><ellipse cx="${f(x + rr * .6)}" cy="${f(y - hh + rr * .2)}" rx="${f(rr * .8)}" ry="${f(rr * .6)}"/>`;
+      light += `<ellipse cx="${f(x - rr * .35)}" cy="${f(y - hh - rr * .35)}" rx="${f(rr * .7)}" ry="${f(rr * .45)}"/>`;
+    }
+    return trunks + `<g style="fill:var(--farD)">${dark}</g><g style="fill:var(--farL)" opacity=".9">${light}</g>`;
+  }
+
+  // Stream centre line (x, y, width): from the far bank toward the viewer.
+  const STREAM = [[192, 85, 3], [183, 93, 7], [199, 102, 13], [178, 114, 22], [205, 128, 36], [168, 142, 58], [186, 160, 92]];
+  const bank = (k) => STREAM.map(([x, y, w]) => [x + k * w / 2, y]);
+  const lane = (k, from, to) => STREAM.slice(from, to).map(([x, y, w]) => [x + k * w / 2, y]);
+
+  function cloud(cx, cy, len, seed) {
+    const r = rng(seed);
+    let s = '';
+    for (let i = 0; i < 4; i++) s += `<ellipse cx="${f(cx + (r() - .5) * len * .6)}" cy="${f(cy + (r() - .5) * 2)}" rx="${f(len * (.25 + r() * .2))}" ry="${f(2 + r() * 2.2)}"/>`;
+    return s;
+  }
+
+  let uid = 0;
+  function buildScene(el, H) {
+    const id = 'sc' + (uid++);
+    const dy = H - BASE_H;
+    const stars = (() => { const g = rng(7); let s = ''; for (let i = 0; i < 26; i++) s += `<circle cx="${f(g() * W)}" cy="${f(g() * (60 + dy))}" r="${f(.4 + g() * .7)}" fill="#FFFFFF"/>`; return s; })();
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="${id}sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--skyTop)"/><stop offset="1" style="stop-color:var(--skyBot)"/></linearGradient>
+        <radialGradient id="${id}glow"><stop offset="0" style="stop-color:var(--sun);stop-opacity:.9"/><stop offset=".35" style="stop-color:var(--sun);stop-opacity:.35"/><stop offset="1" style="stop-color:var(--sun);stop-opacity:0"/></radialGradient>
+        <linearGradient id="${id}water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--water1)"/><stop offset="1" style="stop-color:var(--water2)"/></linearGradient>
+        <linearGradient id="${id}ground" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--g1)"/><stop offset="1" style="stop-color:var(--g2)"/></linearGradient>
+        <mask id="${id}moon"><rect width="${W}" height="${H}" fill="#fff"/><circle data-moon-cut r="7" fill="#000"/></mask>
+      </defs>
+      <rect width="${W}" height="${H}" fill="url(#${id}sky)"/>
+      <g style="opacity:var(--star)">${stars}<circle data-moon r="7.5" fill="#F4EFD8" mask="url(#${id}moon)"/></g>
+      <circle data-glow r="42" fill="url(#${id}glow)" style="opacity:var(--glow)"/>
+      <circle data-sun r="10.5" style="fill:var(--sun)"/>
+      <g style="fill:var(--cloud);opacity:var(--cloudOp)">
+        <g class="drift" style="animation-duration:210s;animation-delay:-40s">${cloud(40, 26 + dy * .4, 70, 3)}</g>
+        <g class="drift" style="animation-duration:260s;animation-delay:-150s">${cloud(20, 44 + dy * .6, 52, 11)}</g>
+        <g class="drift" style="animation-duration:180s;animation-delay:-120s">${cloud(60, 15 + dy * .3, 44, 23)}</g>
+      </g>
+      <g transform="translate(0,${dy})">
+        <path d="M0,84 C40,74 80,72 120,78 C160,84 200,70 250,72 C300,74 330,80 ${W},78 L${W},${BASE_H} L0,${BASE_H}Z" style="fill:var(--hill)"/>
+        ${row(85, 92, 306, 8, 8, 4.4, (x) => Math.abs(x - 192) < 5, 5)}
+        <path d="M0,92 C60,86 120,84 180,86 C240,88 300,84 ${W},88 L${W},${BASE_H + 10} L0,${BASE_H + 10}Z" fill="url(#${id}ground)"/>
+        ${row(98, 100, 290, 14, 14, 7.5, (x) => Math.abs(x - 186) < 13, 9)}
+        <path d="${smooth(bank(-1.35))}${smooth(bank(1.35).reverse(), false)}Z" style="fill:var(--bank)"/>
+        <path d="${smooth(bank(-1))}${smooth(bank(1).reverse(), false)}Z" fill="url(#${id}water)"/>
+        <g style="stroke:var(--flow)" fill="none" stroke-linecap="round">
+          <path class="flow" d="${smooth(lane(0, 0, 4))}" stroke-width=".7" stroke-dasharray="2 6" opacity=".7" style="animation-duration:4.2s"/>
+          <path class="flow" d="${smooth(lane(-.35, 2, 7))}" stroke-width="1" stroke-dasharray="5 15" opacity=".75" style="animation-duration:3.4s"/>
+          <path class="flow" d="${smooth(lane(.1, 2, 7))}" stroke-width="1.3" stroke-dasharray="8 12" opacity=".85" style="animation-duration:2.8s;animation-delay:-1.1s"/>
+          <path class="flow" d="${smooth(lane(.5, 3, 7))}" stroke-width="1.1" stroke-dasharray="6 14" opacity=".7" style="animation-duration:3.1s;animation-delay:-.6s"/>
+        </g>
+        <g style="fill:var(--flow)">
+          <ellipse class="glint" cx="196" cy="121" rx="3" ry=".7"/>
+          <ellipse class="glint" cx="182" cy="136" rx="4" ry=".9" style="animation-delay:-1.4s"/>
+          <ellipse class="glint" cx="200" cy="146" rx="5" ry="1" style="animation-delay:-2.3s"/>
+        </g>
+        <g fill="#7D8287"><ellipse cx="160" cy="141" rx="4" ry="2.2"/><ellipse cx="166" cy="143" rx="2.6" ry="1.6" fill="#9AA0A6"/><ellipse cx="222" cy="147" rx="5" ry="2.4"/><ellipse cx="214" cy="125" rx="2.4" ry="1.3" fill="#9AA0A6"/></g>
+        ${tree(150, 120, 46, 2, 3, 15, 13, 51)}
+        ${tree(230, 122, 50, -2, 3.4, 16, 14, 57)}
+        ${tree(84, 141, 84, 3, 5, 24, 21, 41)}
+        ${tree(30, 152, 112, -4, 7, 34, 30, 17)}
+        ${tree(346, 143, 92, -2, 5.5, 26, 22, 63)}
+        ${tree(300, 154, 118, 5, 8, 38, 32, 29)}
+        <g style="stroke:var(--leafM)" stroke-width="1" stroke-linecap="round" fill="none">
+          ${(() => { const g = rng(77); let s = ''; for (let i = 0; i < 34; i++) { const x = g() * W, y = 120 + g() * 30; if (Math.abs(x - 188) < 52) continue; s += `<path d="M${f(x)},${f(y)} l-1.2,-3.5 M${f(x)},${f(y)} l.2,-4.4 M${f(x)},${f(y)} l1.5,-3.2"/>`; } return s; })()}
+        </g>
+      </g>
+      <rect width="${W}" height="${H}" style="fill:var(--tint);opacity:var(--tintOp)"/>
+    </svg>`;
+    el.style.setProperty('--cover-h', H + 'px');
+    el.dataset.h = H;
+  }
+
+  function applyTime(el, h) {
+    const p = paletteAt(h);
+    for (const [k, v] of Object.entries(p)) el.style.setProperty('--' + k, typeof v === 'number' ? v.toFixed(3) : v);
+    const H = +el.dataset.h, dy = H - BASE_H, horizon = 88 + dy;
+    const t = (h - SUNRISE) / (SUNSET - SUNRISE);
+    const sx = 110 + t * 152, sy = horizon - Math.sin(Math.PI * Math.min(Math.max(t, 0), 1)) * (66 + dy * .6) + (t < 0 || t > 1 ? 30 : 0);
+    for (const n of el.querySelectorAll('[data-sun],[data-glow]')) { n.setAttribute('cx', sx); n.setAttribute('cy', sy); }
+    const nt = (((h - 19.5) % 24) + 24) % 24 / 10; // 19:30 → 05:30
+    const mx = 140 + nt * 150, my = horizon - 30 - Math.sin(Math.PI * Math.min(nt, 1)) * (36 + dy * .5);
+    for (const n of el.querySelectorAll('[data-moon]')) { n.setAttribute('cx', mx); n.setAttribute('cy', my); }
+    for (const n of el.querySelectorAll('[data-moon-cut]')) { n.setAttribute('cx', mx + 3.2); n.setAttribute('cy', my - 2); }
+    // Shadows fall away from the sun, shorter at noon.
+    const lean = Math.max(-1, Math.min(1, (180 - sx) / 120));
+    for (const n of el.querySelectorAll('.shade')) n.setAttribute('cx', +n.dataset.x + lean * 14);
+    el.style.background = p.skyBot;
+  }
+
+  // Pause the motion when the picture is off screen or the tab is hidden (what the app will do).
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('paused', !e.isIntersecting))) : null;
+  document.addEventListener('visibilitychange', () => document.querySelectorAll('.cover').forEach((c) => c.classList.toggle('paused', document.hidden)));
+
+  // Every time of day.
+  const strip = document.getElementById('strip');
+  const stripCovers = PERIODS.map((p) => {
+    const fig = document.createElement('figure');
+    const hh = Math.floor(p.h), mm = Math.round((p.h - hh) * 60);
+    fig.innerHTML = `<div class="cover" role="img" aria-label="ภาพปกตอน${p.name}"></div><figcaption><b>${p.name}</b>${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}</figcaption>`;
+    strip.appendChild(fig);
+    const c = fig.firstElementChild;
+    buildScene(c, 180); applyTime(c, p.h); io && io.observe(c);
+    return [c, p.h];
+  });
+
+  // The live phone and its controls.
+  const live = document.getElementById('cover-live');
+  const slider = document.getElementById('hour'), clock = document.getElementById('clock'), period = document.getElementById('period');
+  const chips = document.getElementById('chips');
+  const now = () => { const d = new Date(); return d.getHours() + d.getMinutes() / 60; };
+  let hour = now(), playing = null;
+  const mk = (label, h) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.dataset.h = h; b.addEventListener('click', () => { stop(); set(h === 'now' ? now() : +h); mark(b); }); chips.appendChild(b); return b; };
+  const nowBtn = mk('ตอนนี้', 'now');
+  PERIODS.forEach((p) => mk(p.name, p.h));
+  const mark = (b) => chips.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  function set(h) {
+    hour = h; slider.value = h; applyTime(live, h);
+    const hh = Math.floor(h) % 24, mm = Math.floor((h - Math.floor(h)) * 60);
+    clock.firstChild.textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    period.textContent = periodOf(h % 24);
+  }
+  slider.addEventListener('input', () => { stop(); mark(null); set(+slider.value); });
+  const playBtn = document.getElementById('play');
+  function stop() { if (playing) { cancelAnimationFrame(playing); playing = null; playBtn.textContent = '▶ เล่นทั้งวันใน 30 วินาที'; } }
+  playBtn.addEventListener('click', () => {
+    if (playing) return stop();
+    mark(null); playBtn.textContent = '■ หยุด';
+    let last = performance.now();
+    const step = (t) => { set((hour + (t - last) / 1000 * 0.8) % 24); last = t; playing = requestAnimationFrame(step); };
+    playing = requestAnimationFrame(step);
+  });
+  document.getElementById('still').addEventListener('change', (e) => document.querySelectorAll('.cover').forEach((c) => c.classList.toggle('still', e.target.checked)));
+  document.getElementById('tall').addEventListener('change', (e) => { buildScene(live, e.target.checked ? 180 : BASE_H); set(hour); });
+  buildScene(live, 180); io && io.observe(live);
+  set(hour); mark(nowBtn);
+  // Like the app: follow the clock while the viewer has not picked a time.
+  setInterval(() => { if (nowBtn.getAttribute('aria-pressed') === 'true') set(now()); }, 60000);
+})();
+</script>
