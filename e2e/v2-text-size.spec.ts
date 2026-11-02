@@ -175,6 +175,12 @@ test('the largest text size: nothing cut, "…" or past the screen on the open s
   await open('/v2/device', 'device', 'device');
   // E04-S15: the counter and the basket history.
   await open('/v2/sale/sale-ts/counter?point=a1', 'counter', 'counter');
+  // E01-S20 NP-8: the short-basket sheet with its pad, typed figure scaled; save and cancel stay on screen.
+  await id('tool-short').click();
+  await expect(id('reading-pad')).toBeVisible();
+  expect(await fontPx(page, 'reading-scale-value')).toBe(45);
+  await expect(id('short-save')).toBeInViewport();
+  await check('short-sheet');
   await open('/v2/sale/sale-ts/history?point=a1', 'history', 'history');
   // E05-S11: the close-out summary (A1) and its sheets, the payment, the buyer's page at 2,345,678.00 (CO-16, CO-20).
   // A size passed as a number prop (the sale totals) follows the setting too: 26 × 1.125.
