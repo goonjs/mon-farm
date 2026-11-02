@@ -3,7 +3,8 @@
  * settings of THIS device only, never synced and never in the event log —
  * screen theme, the text size (E03-S08), the hold time to count a basket (D-79), how a short basket is
  * recorded (E04-S16), the spoken count,
- * the date era (D-74 F14) and the language. Each is remembered on the device
+ * the date era (D-74 F14), the language and, on the web, the browser tab
+ * icon (E03-S10). Each is remembered on the device
  * by its own provider or preference store.
  */
 
@@ -19,6 +20,7 @@ import { readCountMode, readHoldMs, writeCountMode, writeHoldMs, type CountMode 
 import { readWeighMode, writeWeighMode, type WeighMode } from '../store/weigh-mode-preference';
 import { useThemeControls, useTheme, type TextSize } from '../theme';
 import { AppText, Card, CardLabel, SegmentedControl } from '../ui';
+import { FaviconCard } from '../ui/favicon/FaviconCard';
 import { FarmScreen, Stepper } from './farm/pieces';
 import { V2_HOME } from './routes';
 
@@ -158,6 +160,7 @@ export function V2Device() {
         />,
         msg('settings.languageNote'),
       )}
+      <FaviconCard />
     </FarmScreen>
   );
 }

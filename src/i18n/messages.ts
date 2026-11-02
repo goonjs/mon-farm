@@ -702,6 +702,11 @@ const th = {
   'settings.textSize': 'ขนาดตัวอักษร',
   'settings.textSizeNote': 'เฉพาะเครื่องนี้ · ตัวเลขนับบนจอสาธารณะไม่เปลี่ยน',
 
+  // ── Browser tab icon (E03-S10, web only) ────────────────────────────────
+  'settings.favicon': 'ไอคอนบนแท็บเบราว์เซอร์',
+  'settings.faviconDefault': 'เดิม',
+  'settings.faviconNote': 'เฉพาะเครื่องนี้ · บุ๊กมาร์กและไอคอนหน้าจอโฮมที่เพิ่มหลังเลือกจะใช้ไอคอนนี้',
+
   // ── Start a sale (E04-S02) ──────────────────────────────────────────────
   'start.title': 'เริ่มการขาย',
   'start.date': 'วันที่',
@@ -2643,6 +2648,9 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'saleSettings.more': 'more',
   'settings.textSize': 'Text size',
   'settings.textSizeNote': 'This device only · the public count does not change',
+  'settings.favicon': 'Browser tab icon',
+  'settings.faviconDefault': 'Original',
+  'settings.faviconNote': 'This device only · bookmarks and home-screen icons added after choosing use this icon',
   'start.title': 'Start a sale',
   'start.date': 'Date',
   'start.buyer': 'Rubber buyer',
