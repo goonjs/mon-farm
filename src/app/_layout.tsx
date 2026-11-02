@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { I18nProvider } from '../i18n';
 import { SpeechProvider } from '../speech';
 import { ThemeProvider } from '../theme';
+import { FaviconOnStart } from '../ui/favicon/FaviconCard';
 import { AccountGate } from '../v2/account/account-gate';
 import { StorageWarning } from '../v2/storage-warning';
 
@@ -26,6 +27,7 @@ export default function RootLayout() {
       <I18nProvider initial="th">
         <SpeechProvider initial>
           <View style={{ flex: 1 }}>
+            <FaviconOnStart />
             <StorageWarning />
             <AccountGate>
               <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
