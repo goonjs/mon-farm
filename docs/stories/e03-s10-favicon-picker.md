@@ -18,18 +18,18 @@ Status: In Progress (เจ้าของสั่งงานผ่านล�
 
 ## Acceptance criteria
 
-- [ ] **FV-1** หน้า "เครื่องนี้" บนเว็บมีการ์ด "ไอคอนบนแท็บเบราว์เซอร์" เป็นตาราง ช่อง "เดิม" + ไอคอน FarmMate 20 แบบ
+- [x] **FV-1** หน้า "เครื่องนี้" บนเว็บมีการ์ด "ไอคอนบนแท็บเบราว์เซอร์" เป็นตาราง ช่อง "เดิม" + ไอคอน FarmMate 20 แบบ
   แตะเลือกได้ ช่องที่เลือกมีกรอบเด่นและบอก screen reader ว่าเลือกอยู่ (ชื่อไทยของไอคอนเป็นชื่อปุ่ม); ที่แตะ ≥ 48
-- [ ] **FV-2** แตะแล้วไอคอนบนแท็บเปลี่ยนทันที ไม่ต้อง reload; ตั้ง `<link rel="icon">` (PNG 64 px) และ
+- [x] **FV-2** แตะแล้วไอคอนบนแท็บเปลี่ยนทันที ไม่ต้อง reload; ตั้ง `<link rel="icon">` (PNG 64 px) และ
   `<link rel="apple-touch-icon">` (PNG 180 px พื้นทึบ) ที่วาดจากไอคอนในเครื่อง — ไม่โหลดอะไรจากเน็ต
-- [ ] **FV-3** จำในเครื่องผ่าน `deviceSettings` key `mon-farm:favicon` (ไม่ใช้ localStorage ตรง); reload / เปิดหน้าอื่นก่อน
+- [x] **FV-3** จำในเครื่องผ่าน `deviceSettings` key `mon-farm:favicon` (ไม่ใช้ localStorage ตรง); reload / เปิดหน้าอื่นก่อน
   ก็ยังเป็นไอคอนที่เลือก; ค่าที่ไม่รู้จัก → เดิม
-- [ ] **FV-4** ค่าเริ่มต้น = เดิม: ถ้าไม่เคยเลือก แอปไม่แตะ `<head>` เลย; เลือก "เดิม" กลับ → คืนลิงก์ favicon เดิมและเอา
+- [x] **FV-4** ค่าเริ่มต้น = เดิม: ถ้าไม่เคยเลือก แอปไม่แตะ `<head>` เลย; เลือก "เดิม" กลับ → คืนลิงก์ favicon เดิมและเอา
   apple-touch-icon ที่แอปใส่ออก
-- [ ] **FV-5** บน Android/iOS (native) ไม่แสดงการ์ดนี้ และไม่มีโค้ดแตะ DOM
-- [ ] **FV-6** ไม่มีอะไรถูกตัด / "…" / ล้นข้างจอ ที่จอ 360 และ 390 ทุกขนาดตัวอักษร เล็ก/กลาง/ใหญ่ (build จริง)
-- [ ] **FV-7** ข้อจำกัด bookmark ของแต่ละเบราว์เซอร์เขียนไว้ใน Dev notes ตรง ๆ
-- [ ] **FV-8** ภาพประกอบ/รูปอื่นในระบบ: ตรวจว่าใช้เป็น favicon ได้กี่รูป ถ้าที่อ่านออกที่ 16/32 px ไม่ถึง 10 รูป ไม่เอามา (บันทึกผลใน Dev notes)
+- [x] **FV-5** บน Android/iOS (native) ไม่แสดงการ์ดนี้ และไม่มีโค้ดแตะ DOM
+- [x] **FV-6** ไม่มีอะไรถูกตัด / "…" / ล้นข้างจอ ที่จอ 360 และ 390 ทุกขนาดตัวอักษร เล็ก/กลาง/ใหญ่ (build จริง)
+- [x] **FV-7** ข้อจำกัด bookmark ของแต่ละเบราว์เซอร์เขียนไว้ใน Dev notes ตรง ๆ
+- [x] **FV-8** ภาพประกอบ/รูปอื่นในระบบ: ตรวจว่าใช้เป็น favicon ได้กี่รูป ถ้าที่อ่านออกที่ 16/32 px ไม่ถึง 10 รูป ไม่เอามา (บันทึกผลใน Dev notes)
 
 ## Offline / sync behavior
 
@@ -40,23 +40,26 @@ Status: In Progress (เจ้าของสั่งงานผ่านล�
 
 _เขียน test ก่อน (TDD)_
 
-- [ ] Vitest: แปลง element ไอคอนเป็น SVG ข้อความ (`src/core/svg-markup.test.ts`), รายการ 20 ไอคอนมีอยู่จริงใน registry ไม่ซ้ำ,
-  อ่าน/เขียนค่า `mon-farm:favicon` ค่าแปลก → เดิม
-- [ ] jest: การ์ดในหน้าเครื่องนี้ แตะแล้วเขียนค่า + เรียกเปลี่ยน favicon; native ไม่มีการ์ด; ตั้ง `<link>` ใน DOM (jsdom)
-- [ ] Playwright 390×844 บน build จริง: เลือก → `link[rel=icon]` เป็น data:image/png, reload ยังอยู่, เลือกเดิม → `/favicon.ico`;
-  ไม่ถูกตัดที่ 360/390 × S/M/L
+- [x] jest `src/ui/favicon/favicon.test.tsx`: แปลง element เป็น SVG ข้อความ, 20 ไอคอนมีใน registry ไม่ซ้ำ, ทุกตัวเป็น SVG ครบ สีตรง,
+  แผ่นพื้นแท็บ/หน้าจอโฮม, crop ครอบภาพ + เส้น, อ่าน/เขียน `mon-farm:favicon` ค่าแปลก → เดิม
+- [x] jest (jsdom) `src/ui/favicon/apply.web.test.tsx`: ตั้ง/คืน `<link>`, ไม่แตะเมื่อเดิม, ตัวเลือกล่าสุดชนะ, fallback SVG, href ว่าง
+- [x] jest `src/__tests__/favicon-picker.test.tsx`: การ์ดบนเว็บ, แตะแล้วเขียนค่า + เปลี่ยน, start-up, native ไม่มีการ์ด;
+  `src/__tests__/device-dev-icons.test.tsx`: แถวดูไอคอนท้ายหน้า
+- [x] Playwright `e2e/v2-favicon.spec.ts` บน build จริง (14): `<head>` เปลี่ยน/คืน/ไม่แตะ, PNG ขนาดถูกและมีภาพ,
+  การ์ดและแถวดูไอคอนไม่ถูกตัดที่ 360/390 × S/M/L, แตะแถวเปิด `/v2/dev/icons`
 
 ## Verification
 
 - [x] Sandbox run performed: `npm run build:web` (expo export) + Playwright บน Chromium ของเครื่อง (`/opt/pw-browsers/chromium`)
-  — `e2e/v2-favicon.spec.ts` 8 ผ่าน; e2e portrait ทั้งชุด 40 ผ่าน 5 ข้าม (emulator) · jest ทั้งหมดผ่าน · vitest ผ่าน · tsc / eslint สะอาด
+  — `e2e/v2-favicon.spec.ts` 14 ผ่าน (หลังแก้รีวิว + แถวดูไอคอน); e2e portrait ทั้งชุด 40 ผ่าน 5 ข้าม (emulator) · jest ทั้งหมดผ่าน · vitest ผ่าน · tsc / eslint สะอาด
   - FV-2: เลือก "ชั่งน้ำหนัก" → `link[rel=icon]` เป็น PNG data URL 64×64, `apple-touch-icon` PNG 180×180 (ถอดรหัสในเบราว์เซอร์จริง)
   - FV-3: เปิด `/v2` ใหม่ → ไอคอนเดียวกันกลับมา; หน้าเครื่องนี้ยังเลือกช่องเดิม
   - FV-4: ไม่เคยเลือก → `<head>` มีแค่ `/favicon.ico` ไม่มี apple-touch-icon; เลือก "เดิม" → กลับเป็นแบบนั้นทุกตัว
   - FV-6: 360 และ 390 × เล็ก/กลาง/ใหญ่ (ยืนยันขนาดตัวอักษรใช้จริงจาก font-size ของบรรทัดหมายเหตุ) ไม่มีตัด/…/ล้นข้าง ที่แตะ < 48 = 0
 - [x] Screenshots — golden path: `docs/ux/screenshots/e03-s10/device-picker-chosen.png`, `tab-strip.png`
   (แถบแท็บสว่าง/มืด **วาดจำลอง** ด้วยไอคอนที่แอปตั้งจริง — Chromium แบบ headless ไม่มีแถบแท็บให้ถ่าย)
-- [x] Screenshots — edge cases: `docs/ux/screenshots/e03-s10/card-{360,390}-{s,m,l}.png`
+- [x] Screenshots — edge cases: `docs/ux/screenshots/e03-s10/card-{360,390}-{s,m,l}.png`,
+  แถวดูไอคอน `dev-icons-link-{360,390}-{s,m,l}.png`, หน้าไอคอน `dev-icons-page-360-l.png`
 
 ## Dev notes
 
@@ -80,13 +83,29 @@ _เขียน test ก่อน (TDD)_
   - ถ้าวันหน้าเพิ่ม PWA manifest: ไอคอนใน manifest เป็นไฟล์คงที่ เลือกต่อเครื่องไม่ได้ และจะใช้แทน `apple-touch-icon` บน Android —
     ไอคอนแอปที่ติดตั้งจะไม่ตามตัวเลือกนี้
 - **รูปอื่นในระบบ (FV-8)**: `assets/images` มีไอคอนแอป Expo (favicon/icon/splash/android-icon = รูปเดียวกัน = ตัวเลือก "เดิม"),
-  โลโก้ React/Expo, `tutorial-web.png`, ไอคอนแท็บเก่า 2 รูป (home/explore เส้นบาง); ภาพประกอบอื่นของแอปคือฉากหน้าแรก
-  (`design/cover-scene.ts`) เป็นฉากวาดทั้งจอ ไม่ใช่รูปไอคอน; `design/icons/farmmate/*.svg` เป็นต้นแบบของชุดไอคอนเดียวกัน
-  → ที่อ่านออกที่ 16/32 px และเหมาะกับแอปนี้ไม่ถึง 10 รูป จึงไม่เอามา
-
+  โลโก้ React/Expo, `tutorial-web.png`, ไอคอนแท็บเก่า 2 รูป (home/explore เส้นบาง); ภาพประกอบของแอปคือฉากหน้าแรก
+  (`design/cover-scene.ts`) เป็นฉากวาดทั้งจอ ไม่ใช่รูปไอคอน → ภาพประกอบ/รูปที่ใช้ได้ไม่ถึง 10 จึงไม่เอามา.
+  แก้หลังรีวิว: `design/icons/farmmate/` มี SVG ต้นแบบ 72 ไฟล์ ในนั้น 32 ไฟล์ **ยังไม่อยู่ใน registry**
+  (`analysis.*`, `farmwork.*`, `materials.*`, `system.*` หมวดละ 8). ดูที่ 16/32 px แล้ว ~12 อ่านออกดี (เช่น `farmwork.tapping`,
+  `farmwork.fertilize`, `farmwork.mow`, `farmwork.spray`, `materials.fuel`, `materials.stock`, `system.sync`, `system.backup`).
+  ไม่ได้เอามาในสตอรี่นี้ เพราะไม่อยู่ใน bundle: เป็นไฟล์ trace 20–40 KB ใช้สี hex ตรง ต้องแปลงเข้า registry ก่อน (สีจาก theme)
+  — เสนอลีดเป็นงานต่อ
+- **เพิ่มตามเจ้าของ 2026-11-02 (ใน PR นี้, commit แยก)**: ท้ายหน้าเครื่องนี้มีแถว "ไอคอนทั้งหมดในแอป" ไป `/v2/dev/icons`
+  (`src/v2/device-dev-icons.tsx`). แยกจากการตั้งค่าด้วยหัวเล็ก "ดูอย่างเดียว" + เส้นคั่น และเป็นแถวแบนบนพื้นหน้า (ไม่ใช่การ์ดขาวยก)
+  พร้อมกล่องตัวอย่างไอคอน 2×2; ไม่ใช้ขอบเส้นประ เพราะในระบบนี้เส้นประ = ปิดใช้. แสดงทุกแพลตฟอร์ม (หน้าไอคอนใช้ได้บน native)
 ## Code review
 
-- Reviewer (separate agent/session):
+- Reviewer (separate agent/session): agent รีวิวอิสระ รอบ 1 (2026-11-02) — กลาง 2 ข้อ ที่เหลือต่ำ
 - Findings / Resolution:
+  1. (กลาง) ไอคอนถูกตัดขอบใน favicon: getBBox ไม่นับความหนาเส้น (เครื่องคิดเลข, ตะกร้า, รถเข็น, รูปภาพ) → `AIR` 1 → 2.5
+     (ครึ่งเส้นหนาสุด 4 = 2 + เผื่อ) + test ว่า crop ครอบขอบ + ครึ่งเส้นหนาสุดของแต่ละไอคอน (ล้ม 7 ตัวที่ค่าเดิม) ✔
+  2. (กลาง) FV-8 เขียนผิดว่า SVG ใน design เป็นชุดเดียวกัน → แก้ Dev notes ด้านบน ✔
+  3. หมายเหตุบนจออ้างเกินที่ตรวจ → "เฉพาะเบราว์เซอร์ในเครื่องนี้ · บุ๊กมาร์กอาจใช้ไอคอนนี้ด้วย แล้วแต่เบราว์เซอร์" ✔
+  4. radiogroup ไม่มีชื่อ → `accessibilityLabel` = หัวการ์ด + test ✔ (ปุ่มลูกศรเลื่อนระหว่างตัวเลือก: ไม่ทำ แอปเน้นมือถือ)
+  5. e2e ไม่ตรวจว่า PNG มีภาพจริง → นับสีใน PNG 64 และ 180 ต้อง > 3 ✔
+  6. Test plan ไม่ตรงของจริง → แก้แล้ว ✔
+  7. การ์ดยาว (6 แถวที่ 360 ใหญ่) → คงไว้: หน้าตั้งค่าเลื่อนได้ ไม่มีอะไรถูกตัด (rule 1 ของ phone-form-ux)
+  8. native ยังอ่านค่า/ตั้ง state → แยก `FaviconPicker` ให้การ์ดคืน null ก่อน hook ✔ (require รูป favicon ยังอยู่ใน bundle native ~1 KB, ยอมรับ)
+  9. คืนลิงก์ที่เดิมไม่มี href จะได้ `href=""` → คืนเป็นไม่มี href + test ✔
 
 ## QA notes
