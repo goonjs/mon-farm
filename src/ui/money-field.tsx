@@ -9,6 +9,10 @@
  * Nothing is cut off (AGENTS.md): the numeral size comes from the engine's
  * `moneyTextStep` table (figure → displayXl → displayLg), never from
  * shrink-to-fit, and the unit wraps to its own line instead of overflowing.
+ *
+ * E01-S20: `emptyText` / `clear` for optional amounts, `validate` for a screen's
+ * own rule, `open` / `onOpenChange` and `card={false}` so a row elsewhere can
+ * open the pad sheet directly (no sheet on a sheet, NP-12).
  */
 
 import { useState } from 'react';
@@ -18,6 +22,7 @@ import { BottomSheet } from './bottom-sheet';
 import { CTA } from './button';
 import { cardStyle } from './card';
 import { NumberPad } from './number-pad';
+import { ClearLink } from './quantity-field';
 import { bahtWords } from '../core/baht-words';
 import { formatSatang } from '../core/finance/money';
 import {
@@ -49,6 +54,12 @@ export function MoneyField({
   maxSatang = MAX_SATANG,
   words = true,
   below,
+  emptyText,
+  clear,
+  validate,
+  open: openProp,
+  onOpenChange,
+  card = true,
   testID,
 }: {
   label: string;
@@ -62,12 +73,34 @@ export function MoneyField({
   words?: boolean;
   /** A line under the card with the live amount, e.g. "20 × 1,150.00 = 23,000.00". */
   below?: (satang: number | null) => string | undefined;
+  /** Closed card text while the amount is null, e.g. "ใส่ทีหลัง". */
+  emptyText?: string;
+  /** Optional amount: a "เว้นว่าง (…)" link in the sheet that commits "no amount". */
+  clear?: { label: string; onClear: () => void };
+  /** A screen's own rule: a short reason closes ตกลง, undefined passes. */
+  validate?: (satang: number) => string | undefined;
+  /** Controlled sheet; leave out to let the card open it. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** false: no card — the screen's own row opens the sheet. */
+  card?: boolean;
   testID: string;
 }) {
   const t = useTheme();
   const msg = useT();
-  const [open, setOpen] = useState(false);
+  const [openSelf, setOpenSelf] = useState(false);
+  const open = openProp ?? openSelf;
+  const setOpen = (o: boolean) => {
+    if (openProp === undefined) setOpenSelf(o);
+    onOpenChange?.(o);
+  };
   const [state, setState] = useState<EntryState>(() => startEntry(rawOf(satang)));
+  // A parent-opened sheet starts from the current amount too.
+  const [lastOpen, setLastOpen] = useState(open);
+  if (open !== lastOpen) {
+    setLastOpen(open);
+    if (open) setState(startEntry(rawOf(satang)));
+  }
 
   const live = entryToSatang(state.raw);
   const view = viewEntry(state, CFG);
@@ -77,7 +110,9 @@ export function MoneyField({
       ? msg('numpad.minMsg', { min: formatSatang(minSatang) })
       : live != null && live > maxSatang
         ? msg('numpad.maxMsg', { max: formatSatang(maxSatang) })
-        : undefined;
+        : live != null
+          ? validate?.(live)
+          : undefined;
   const valid = live != null && problem === undefined;
 
   const openSheet = () => {
@@ -90,6 +125,10 @@ export function MoneyField({
     setOpen(false);
   };
   const press = (k: EntryKey) => setState((s) => pressKey(s, k, CFG));
+  const clearIt = () => {
+    clear?.onClear();
+    setOpen(false);
+  };
 
   /** Whole part big, fraction at ~55% (faint until typed). One nowrap run. */
   const amount = (v: EntryView, testId?: string, slim = false) => {
@@ -139,20 +178,28 @@ export function MoneyField({
 
   return (
     <>
-      <View style={{ gap: t.space.xs }}>
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: t.color.inkSoft }}>
-          {label}
-        </Text>
-        <Pressable
-          testID={testID}
-          accessibilityRole="button"
-          accessibilityLabel={[label, satang == null ? null : `${formatSatang(satang)} ${unit}`].filter(Boolean).join(', ')}
-          onPress={openSheet}
-          style={[cardStyle(t), { minHeight: t.target.comfortable, paddingHorizontal: t.space.lg, paddingVertical: t.space.sm, justifyContent: 'center' }]}
-        >
-          {amountRow(amount(closedView, undefined, true))}
-        </Pressable>
-      </View>
+      {card ? (
+        <View style={{ gap: t.space.xs }}>
+          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: t.color.inkSoft }}>
+            {label}
+          </Text>
+          <Pressable
+            testID={testID}
+            accessibilityRole="button"
+            accessibilityLabel={[label, satang == null ? (emptyText ?? null) : `${formatSatang(satang)} ${unit}`].filter(Boolean).join(', ')}
+            onPress={openSheet}
+            style={[cardStyle(t), { minHeight: t.target.comfortable, paddingHorizontal: t.space.lg, paddingVertical: t.space.sm, justifyContent: 'center' }]}
+          >
+            {satang == null && emptyText ? (
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.inkFaint, textAlign: 'right' }}>
+                {emptyText}
+              </Text>
+            ) : (
+              amountRow(amount(closedView, undefined, true))
+            )}
+          </Pressable>
+        </View>
+      ) : null}
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title={label} testID={`${testID}-sheet`}>
         <View style={[cardStyle(t), { padding: t.space.lg, gap: t.space.xs, borderWidth: t.border.thick, borderColor: t.color.action }]}>
@@ -187,6 +234,7 @@ export function MoneyField({
         <CTA testID={`${testID}-done`} disabled={!valid} onPress={commit}>
           {msg('numpad.done')}
         </CTA>
+        {clear ? <ClearLink label={clear.label} onPress={clearIt} testID={`${testID}-clear`} /> : null}
       </BottomSheet>
     </>
   );

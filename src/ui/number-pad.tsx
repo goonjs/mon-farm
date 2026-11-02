@@ -14,7 +14,7 @@ import type { EntryKey } from '../core/number-entry';
 import { useT, type MessageId } from '../i18n';
 import { useTheme } from '../theme';
 
-export type PadVariant = 'int' | 'money';
+export type PadVariant = 'int' | 'money' | 'decimal';
 
 type Cell = { id: EntryKey | 'done'; glyph: string; span?: number; quiet?: boolean };
 
@@ -32,6 +32,14 @@ const MONEY_ROWS: Cell[][] = [
   [d(4), d(5), d(6), { id: '.', glyph: '.', quiet: true }],
   [d(7), d(8), d(9), { id: '00', glyph: '00', quiet: true }],
   [{ ...d(0), span: 3 }, { id: '000', glyph: '000', quiet: true }],
+];
+
+/** E01-S20 (ไร่ / กก.): no 00 / 000; ⌫ bottom-left like `int` so two pads on one form never swap ⌫ and ✓. */
+const DECIMAL_ROWS: Cell[][] = [
+  [d(1), d(2), d(3)],
+  [d(4), d(5), d(6)],
+  [d(7), d(8), d(9)],
+  [{ id: 'back', glyph: '⌫', quiet: true }, d(0), { id: '.', glyph: '.' }],
 ];
 
 const LABEL: Partial<Record<Cell['id'], MessageId>> = {
@@ -67,7 +75,7 @@ export function NumberPad({
 }) {
   const t = useTheme();
   const msg = useT();
-  const rows = variant === 'int' ? INT_ROWS : MONEY_ROWS;
+  const rows = variant === 'int' ? INT_ROWS : variant === 'decimal' ? DECIMAL_ROWS : MONEY_ROWS;
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -107,9 +115,12 @@ export function NumberPad({
                 testID={`${testID}-key-${c.id}`}
                 accessibilityRole="button"
                 accessibilityLabel={labelId ? msg(labelId) : c.glyph}
+                accessibilityHint={c.id === 'back' ? msg('numpad.keyBackHint') : undefined}
                 accessibilityState={{ disabled }}
                 disabled={disabled}
                 onPress={() => (isDone ? onDone() : onKey(c.id as EntryKey))}
+                // NP-16: hold ⌫ to clear the whole field.
+                onLongPress={c.id === 'back' ? () => onKey('clear') : undefined}
                 style={{
                   flex: c.span ?? 1,
                   minHeight: t.target.comfortable,

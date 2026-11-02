@@ -98,3 +98,54 @@ describe('MoneyField', () => {
     expect(screen.getByText('ใหญ่เกินไป')).toBeTruthy();
   });
 });
+
+describe('MoneyField — E01-S20 additions', () => {
+  it('empty: `emptyText` on the card; clear link commits null (NP-6)', () => {
+    const onClear = jest.fn();
+    wrap(<MoneyField testID="m" label="ราคา" unit="บาท / กก." satang={null} emptyText="ใส่ทีหลัง" clear={{ label: 'เว้นว่าง (ใส่ทีหลัง)', onClear }} onChange={() => {}} />);
+    expect(screen.getByText('ใส่ทีหลัง')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('m'));
+    fireEvent.press(screen.getByTestId('m-clear'));
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('m-sheet')).toBeNull();
+  });
+
+  it('price cap 999.99 and min 0.01 (NP-14): 52 then 000 cannot be committed', () => {
+    const onChange = jest.fn();
+    wrap(<MoneyField testID="m" label="ราคา" unit="บาท / กก." satang={null} minSatang={1} maxSatang={99_999} words={false} onChange={onChange} />);
+    fireEvent.press(screen.getByTestId('m'));
+    press('5', '2', '000');
+    expect(screen.getByText('ต้องไม่เกิน 999.99')).toBeTruthy();
+    done();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('m-words')).toBeNull();
+  });
+
+  it('validate: a screen rule closes ตกลง and says why (NP-5)', () => {
+    const onChange = jest.fn();
+    wrap(<Harness initial={null} validate={(s) => (s > 50_000 ? 'เกินยอดค้าง 500.00' : undefined)} onChange={onChange} />);
+    fireEvent.press(screen.getByTestId('m'));
+    press('6', '0', '0');
+    expect(screen.getByText('เกินยอดค้าง 500.00')).toBeTruthy();
+    done();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('long-press ⌫ clears (NP-16)', () => {
+    wrap(<Harness />);
+    fireEvent.press(screen.getByTestId('m'));
+    press('4', '5');
+    fireEvent(screen.getByTestId('m-pad-key-back'), 'longPress');
+    expect(text('m-display')).toBe('0.00');
+  });
+
+  it('card={false}: no card, the parent opens the sheet from its own row (NP-12)', () => {
+    const onOpenChange = jest.fn();
+    wrap(<MoneyField testID="m" label="ราคา" unit="บาท / กก." satang={5250} card={false} open onOpenChange={onOpenChange} onChange={() => {}} />);
+    expect(screen.getByTestId('m-sheet')).toBeTruthy();
+    expect(text('m-display')).toBe('52.50');
+    fireEvent.press(screen.getByTestId('m-sheet-scrim'));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
