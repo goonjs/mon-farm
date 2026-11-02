@@ -217,6 +217,9 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
     </Text>
   );
   // The small cards' figure: the number (the unit is in the label above), stepped down by length; one line, so a card never grows.
+  // Card labels: one line at M and below, exactly as before (owner 2026-11-02: no change at the
+  // default); above M they wrap instead of being cut with "…" (E03-S08 TS-8).
+  const oneLine = t.textScale > 1 ? undefined : 1;
   const cardFigure = (value: string, testID: string) => (
     <Text testID={testID} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figSize(value, t.font.size.headingXl), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
       {value}
@@ -528,11 +531,11 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       <IconLine icon={(c) => <TapperIcon color={c} size={13} />}>{scopeTitle}</IconLine>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
         {price !== null
-          ? card(<><AppText variant="bodySm">{msg('rec.money')} (฿)</AppText>{cardFigure(compactBaht(figs.satang ?? 0), 'fig-money')}</>, 'first', false, true)
-          : card(<><AppText variant="bodySm">{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
+          ? card(<><AppText variant="bodySm" numberOfLines={oneLine}>{msg('rec.money')} (฿)</AppText>{cardFigure(compactBaht(figs.satang ?? 0), 'fig-money')}</>, 'first', false, true)
+          : card(<><AppText variant="bodySm" numberOfLines={oneLine}>{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
         {card(
           <>
-            <IconLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')} ({msg('common.kg')})</IconLine>
+            <IconLine oneLine={!!oneLine} icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')} ({msg('common.kg')})</IconLine>
             {cardFigure(kgText(figs.netG), 'fig-kg')}
           </>,
           'kg',
@@ -542,8 +545,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
         {open
           ? card(
               <>
-                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.shortOf', { n: open.basketNo })}</Text>
-                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.missing')} ({msg('common.kg')})</Text>
+                <Text numberOfLines={oneLine} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.shortOf', { n: open.basketNo })}</Text>
+                <Text numberOfLines={oneLine} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.missing')} ({msg('common.kg')})</Text>
                 {cardFigure(kgText(open.missingG), 'fig-missing')}
               </>,
               'short',
