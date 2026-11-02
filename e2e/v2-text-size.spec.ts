@@ -78,9 +78,13 @@ test('the public counting numeral is the same size at L as at M (TS-4)', async (
     await expect(no).toHaveText('13');
     return no.evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
   };
+  const exit = () => page.getByTestId('public-exit').filter({ visible: true }).evaluate((e) => parseFloat(getComputedStyle(e.querySelector('div[dir]') ?? e).fontSize));
   const m = await numeral();
+  const exitM = await exit();
   await page.evaluate(() => localStorage.setItem('mon-farm:text-size', 'l'));
   const l = await numeral();
+  // L is really on: the exit button's words grew while the count did not.
+  expect(await exit()).toBeGreaterThan(exitM);
   expect(m).toBeGreaterThan(100);
   expect(l).toBe(m);
 });
@@ -112,6 +116,7 @@ const finEvent = (n: number, ts: number, targetId: string, payload: FinancePaylo
   baseEventId: null,
   payload,
 });
+const owesNat = (amountSatang: number): FinancePayload => ({ t: 'expense_created', fields: { amountSatang, date: '2026-10-25', stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าปุ๋ย', note: '', payer: NAT } });
 const loan = (worker: typeof RED, amountSatang: number): FinancePayload => ({ t: 'debt_added', fields: { worker, kind: 'loan', amountSatang, date: '2026-10-01', note: '', lender: FARM_PAYER, fertilizer: null, carriedForward: false } });
 
 /** E05-S11 example: 28,875.00 at 52.50 (แดง 350 kg, นัด 200 kg); and one 2,345,678.00 sale (CO-20). */
@@ -131,7 +136,12 @@ async function seed(page: Page) {
   big.sys({ t: 'pile_added', pileId: 'a1', zoneId: 'fa', name: 'a1', tareG: 2_000, stdNetG: 50_000 });
   big.acceptAt('a1', 1);
   await seedEvents(page, [...b.build(), ...big.build()].map((e) => ({ ...e, ts: now })));
-  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [finEvent(1, now, 'd-red', loan(RED, 1_579_000)), finEvent(2, now, 'd-nat', loan(NAT, 835_000))]);
+  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [
+    finEvent(1, now, 'd-red', loan(RED, 1_579_000)),
+    finEvent(2, now, 'd-nat', loan(NAT, 835_000)),
+    finEvent(3, now, 'exp-nat', owesNat(64_000)),
+    finEvent(4, now, 'plan-red', { t: 'debt_plan_set', worker: RED, perSaleSatang: 325_000 }),
+  ]);
   await page.evaluate(() => localStorage.setItem('mon-farm:text-size', 'l'));
 }
 
@@ -145,6 +155,8 @@ test('the largest text size: nothing cut, "…" or past the screen on the open s
   const targets: Record<string, string[]> = {};
   const check = async (name: string) => {
     await page.waitForTimeout(300);
+    // L must really be on (the earlier large-text checks passed at M): the header title is 20 × 1.125.
+    expect(await fontPx(page, 'screen-title'), `${name}: at L`).toBe(23);
     problems[name] = await textFit(page);
     targets[name] = await smallTargets(page);
     await shot(page, `l-${name}`);
@@ -165,10 +177,33 @@ test('the largest text size: nothing cut, "…" or past the screen on the open s
   await open('/v2/sale/sale-ts/counter?point=a1', 'counter', 'counter');
   await open('/v2/sale/sale-ts/history?point=a1', 'history', 'history');
   // E05-S11: the close-out summary (A1) and its sheets, the payment, the buyer's page at 2,345,678.00 (CO-16, CO-20).
+  // A size passed as a number prop (the sale totals) follows the setting too: 26 × 1.125.
+  await open('/v2/sale/sale-ts/check', 'check-card', 'sale-check');
+  expect(await fontPx(page, 'check-total')).toBe(29);
   await open('/v2/sale/sale-ts/settlement', 'co-summary', 'a1-summary');
+  await id('co-sale-open').click();
+  await check('a4-sale-sheet');
+  await page.keyboard.press('Escape');
+  await page.goto('/v2/sale/sale-ts/settlement');
   await id('co-debt-open').click();
   await check('a2-debt-sheet');
   await id('co-debt-ok').click();
+  await id('co-owed-open').click();
+  await check('a26-owed-sheet');
+  await id('co-owed-ok').click();
+  await check('a3-summary-ready');
+  await id('co-confirm').click();
+  await expect(id('payment')).toBeVisible();
+  await check('a6-payment');
+  await id('close-sale').click();
+  await expect(id('sales')).toBeVisible();
+  // E06-S08: นัด's account with the transfer waiting, the sheet (M5) and "got less" on the pad (M7).
+  await page.goto('/v2/debt/nat?name=%E0%B8%99%E0%B8%B1%E0%B8%94');
+  await expect(id('rp-row-sale-ts-transfer')).toBeVisible();
+  await id('rp-row-sale-ts-transfer').click();
+  await check('m5-sheet');
+  await id('rp-sheet-less').click();
+  await check('m7-less');
   await open('/v2/sale/sale-big/buyer-view', 'buyer-view', 'a7-buyer-view-big');
   await open('/v2/sale/sale-big/settlement', 'co-summary', 'a1-summary-big');
   // E06-S08: the debt list and an account (PR-11).
@@ -206,6 +241,7 @@ test('×1.3 on top of L: the header title and the Banner still fit (TS-6, TS-7)'
     await page.goto(path);
     await expect(id(ready)).toBeVisible();
     await page.waitForTimeout(300);
+    expect(await fontPx(page, 'screen-title'), `${name}: at L`).toBe(23);
     await multiplyFonts(page, 1.3 / 1.125);
     expect(await textFit(page), name).toEqual([]);
     await shot(page, name);
