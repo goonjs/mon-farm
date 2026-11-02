@@ -83,7 +83,7 @@ describe('V2Home — empty farm', () => {
     await flush();
     expect(screen.getByTestId('screen-title').props.children).toBe('หน้าแรก');
     expect(screen.getByText(/^(อา|จ|อ|พ|พฤ|ศ|ส)\. \d{1,2} \S+ \d{4}$/)).toBeTruthy();
-    expect(screen.getByLabelText('ภาพปก: สวนยางยามเช้า')).toBeTruthy();
+    expect(screen.getByLabelText('ภาพปก: สวนยางริมลำธาร')).toBeTruthy();
 
     const home = screen.getByTestId('v2-home');
     const order = ['home-cover', 'home-prepare', 'home-sale-start', 'home-record-expense', 'home-to-know', 'home-sales', 'home-go-to'];
