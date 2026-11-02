@@ -113,38 +113,34 @@ describe('the buyer owes the farm (E06-S08 PR-16 · D-87)', () => {
 });
 
 describe('the repayment money stayed with the worker (E06-S08 PR-17, PR-19 · D-87)', () => {
-  const line = (id: string, amountSatang: number, method: DebtPaymentFields['method'] = 'cash-from-share') => ({
-    id,
-    headEventId: `h-${id}`,
-    fields: { worker: DAENG, creditor: FARM, amountSatang, date: '2026-11-05', note: '', method, saleId: 's1' } as DebtPaymentFields,
-  });
-  let k = 0;
-  const ids = () => `dp-new-${++k}`;
+  const line = (id: string, amountSatang: number) => ({ id, headEventId: `h-${id}`, amountSatang });
 
-  it('none reached the farm → every route line is voided, nothing new (the debt comes back in full)', () => {
-    expect(routeFixWrites([line('a', 100000)], 0, ids)).toEqual([{ id: 'a', base: 'h-a', payload: { t: 'debt_payment_changed', patch: { deleted: true } } }]);
-  });
-
-  it('part reached the farm → the old lines are voided (kept, struck through, in the history) and one new line holds what came', () => {
-    k = 0;
-    const w = routeFixWrites([line('a', 60000), line('b', 40000)], 70000, ids);
-    expect(w.slice(0, 2)).toEqual([
+  it('none reached the farm → the last route line is cut to 0 (kept, so the sale still reads as confirmed — re-review B2), the others voided', () => {
+    expect(routeFixWrites([line('a', 100000)], 0)).toEqual([{ id: 'a', base: 'h-a', payload: { t: 'debt_payment_changed', patch: { amountSatang: 0 } } }]);
+    expect(routeFixWrites([line('a', 60000), line('b', 40000)], 0)).toEqual([
       { id: 'a', base: 'h-a', payload: { t: 'debt_payment_changed', patch: { deleted: true } } },
-      { id: 'b', base: 'h-b', payload: { t: 'debt_payment_changed', patch: { deleted: true } } },
+      { id: 'b', base: 'h-b', payload: { t: 'debt_payment_changed', patch: { amountSatang: 0 } } },
     ]);
-    expect(w[2]).toEqual({ id: 'dp-new-1', base: null, payload: { t: 'debt_payment_recorded', fields: { ...line('b', 0).fields, amountSatang: 70000 } } });
   });
 
-  it('works for a buyer-split or transfer line too (the buyer handed it to the worker, PR-19)', () => {
-    expect(routeFixWrites([line('t', 525000, 'transfer-with-owner')], 0, ids)).toHaveLength(1);
-    const w = routeFixWrites([line('c', 325000, 'buyer-split')], 100000, ids);
-    expect(w[1]).toMatchObject({ base: null, payload: { t: 'debt_payment_recorded', fields: { method: 'buyer-split', amountSatang: 100000 } } });
+  it('part reached the farm → edits on the existing lines only, never a new line from this phone (re-review B1: a new line reads as a second device)', () => {
+    expect(routeFixWrites([line('a', 60000), line('b', 40000)], 70000)).toEqual([
+      { id: 'a', base: 'h-a', payload: { t: 'debt_payment_changed', patch: { deleted: true } } },
+      { id: 'b', base: 'h-b', payload: { t: 'debt_payment_changed', patch: { amountSatang: 70000 } } },
+    ]);
   });
 
   it('all of it reached the farm → nothing to write; more than was deducted or not an integer → refused', () => {
-    expect(routeFixWrites([line('a', 100000)], 100000, ids)).toEqual([]);
-    expect(() => routeFixWrites([line('a', 100000)], 100001, ids)).toThrow();
-    expect(() => routeFixWrites([line('a', 100000)], -1, ids)).toThrow();
+    expect(routeFixWrites([line('a', 100000)], 100000)).toEqual([]);
+    expect(() => routeFixWrites([line('a', 100000)], 100001)).toThrow();
+    expect(() => routeFixWrites([line('a', 100000)], -1)).toThrow();
+  });
+
+  it('after the fix the sale plan still reads the lines as recorded: nothing pending, nothing re-proposed', () => {
+    const p = pay('fx', { amountSatang: 300000, method: 'transfer-with-owner' });
+    const cut = ev('fx', { t: 'debt_payment_changed', patch: { amountSatang: 0 } }, p.id);
+    expect(lines([p, cut])).toEqual([]);
+    expect(buyerOwes([p, cut, tick('s1', OWNER_PAYEE, 1968750, 1668750)], () => true, { ownerTransfer: () => 1668750 })).toEqual([]);
   });
 });
 

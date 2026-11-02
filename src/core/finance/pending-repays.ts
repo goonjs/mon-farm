@@ -19,7 +19,7 @@
 
 import { projectDebts, type DebtAccount } from './debts';
 import { OWNER_PAYEE, paymentStatus } from './payments';
-import type { DebtPaymentFields, FinanceEvent, FinancePayload } from './types';
+import type { FinanceEvent, FinancePayload } from './types';
 
 /**
  * Owner Q3 (2026-11-01): sales dated before this day are treated as received —
@@ -140,12 +140,12 @@ export function buyerOwes(
 export interface RouteLine {
   readonly id: string;
   readonly headEventId: string;
-  readonly fields: DebtPaymentFields;
+  readonly amountSatang: number;
 }
 
 export interface RouteFixWrite {
   readonly id: string;
-  readonly base: string | null;
+  readonly base: string;
   readonly payload: FinancePayload;
 }
 
@@ -153,16 +153,20 @@ export interface RouteFixWrite {
  * PR-17 / PR-19 / D-87: the repayment money stayed with the worker — the farm
  * lifted less from the worker's pile than it deducted, or the buyer handed it
  * to the worker. Only `keptSatang` reached the farm, so the deduction becomes
- * that. Written as events on the sale's payment page only (architecture
- * §ติ๊กจ่าย): every route line is voided (kept in the history, struck through)
- * and, when something did come, one new line of the same kind holds it — so
- * the history shows both the old deduction and the change.
+ * that. Done on the sale's payment page only (architecture §ติ๊กจ่าย), as
+ * `debt_payment_changed` on the EXISTING lines: every line but the last is
+ * voided and the last is cut to what came — down to 0, kept, so the sale still
+ * reads as confirmed and nothing is proposed again. Never a new line: a line
+ * written on this phone would read as a second device's deduction (re-review
+ * B1, `closeoutInputs` devices → payBlocks 'double').
  */
-export function routeFixWrites(lines: readonly RouteLine[], keptSatang: number, newId: (prefix: string) => string): RouteFixWrite[] {
-  const total = lines.reduce((a, l) => a + l.fields.amountSatang, 0);
+export function routeFixWrites(lines: readonly RouteLine[], keptSatang: number): RouteFixWrite[] {
+  const total = lines.reduce((a, l) => a + l.amountSatang, 0);
   if (!Number.isSafeInteger(keptSatang) || keptSatang < 0 || keptSatang > total) throw new Error(`kept must be an integer from 0 to ${total}`);
   if (keptSatang === total || !lines.length) return [];
-  const out: RouteFixWrite[] = lines.map((l) => ({ id: l.id, base: l.headEventId, payload: { t: 'debt_payment_changed', patch: { deleted: true } } }));
-  if (keptSatang > 0) out.push({ id: newId('dpay-'), base: null, payload: { t: 'debt_payment_recorded', fields: { ...lines[lines.length - 1].fields, amountSatang: keptSatang } } });
-  return out;
+  const last = lines[lines.length - 1];
+  return [
+    ...lines.slice(0, -1).map((l) => ({ id: l.id, base: l.headEventId, payload: { t: 'debt_payment_changed', patch: { deleted: true } } as FinancePayload })),
+    { id: last.id, base: last.headEventId, payload: { t: 'debt_payment_changed', patch: { amountSatang: keptSatang } } },
+  ];
 }

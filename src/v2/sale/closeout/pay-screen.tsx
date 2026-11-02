@@ -40,7 +40,9 @@ import { Pressable, Text, View } from 'react-native';
 
 import { projectAccounts } from '../../../core/finance/accounts';
 import { closeoutPlan, payBlocks, pendingRepays, REPAY_ROUTES, sourcesSheet, type CloseoutPlan } from '../../../core/finance/closeout';
+import { projectDebts } from '../../../core/finance/debts';
 import { buyerOwes, routeFixWrites } from '../../../core/finance/pending-repays';
+import { financeStore } from '../../../store/finance';
 import { compactMoneyParts } from '../../../core/compact-money';
 import { overDeducted, pilesCheck } from '../../../core/finance/deduct';
 import { formatSatang } from '../../../core/finance/money';
@@ -51,7 +53,6 @@ import type { DebtPaymentMethod } from '../../../core/finance/types';
 import { canComplete } from '../../../core/sale-status';
 import { useInFlight } from '../../../finance/use-in-flight';
 import { useSaleCounts } from '../../../finance/use-live-sales';
-import { newId } from '../../../lib/id';
 import { useI18n, useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AlertIcon, AppText, BankIcon, BottomSheet, Button, cardStyle, Check, Chip, ClockIcon, CompactMoney, InfoIcon } from '../../../ui';
@@ -89,6 +90,9 @@ type Row =
   | { readonly kind: 'repay'; readonly id: string; readonly tp: TapperMoney; readonly satang: number; readonly picked: boolean }
   | { readonly kind: 'owner'; readonly id: string; readonly satang: number };
 
+/** Ledger links (`?fix=`) already acted on: the page remounts after each write (Fresh), so this lives outside it. */
+const spentFix = new Set<string>();
+
 function PayBody({ bump }: { bump: () => void }) {
   const t = useTheme();
   const msg = useT();
@@ -109,7 +113,8 @@ function PayBody({ bump }: { bump: () => void }) {
   const counts = useSaleCounts();
   // From the ledger (M10 / PR-19): `?fix=<workerId>&how=<transfer|cash|picked>` opens the fix sheet once.
   const params = useLocalSearchParams<{ fix?: string; how?: string }>();
-  const [paramDone, setParamDone] = useState(false);
+  const paramKey = params.fix ? `${view.saleId}|${params.fix}|${params.how ?? ''}` : '';
+  const paramDone = !paramKey || spentFix.has(paramKey);
   const shareSplit = useShareSplit();
   const { saleId, state, master, append, saleTitle } = view;
   const title = msg('cop.payPageTitle');
@@ -216,8 +221,12 @@ function PayBody({ bump }: { bump: () => void }) {
     });
   const saveFix = (wid: string, methods: readonly DebtPaymentMethod[], kept: number) =>
     flight.run(async () => {
-      const ls = routeLines(wid, methods).map((x) => ({ id: x.id, headEventId: x.headEventId, fields: x }));
-      for (const w of routeFixWrites(ls, kept, newId)) await fin.write(w.id, w.base, w.payload);
+      // Heads read fresh from the store: a sync may have moved the lines since this page read them.
+      const fresh = projectDebts(await financeStore.load(), counts).get(wid);
+      const ls = (fresh?.payments ?? [])
+        .filter((x) => x.saleId === saleId && !x.deleted && x.counts && methods.includes(x.method))
+        .map((x) => ({ id: x.id, headEventId: x.headEventId, amountSatang: x.amountSatang }));
+      for (const w of routeFixWrites(ls, kept)) await fin.write(w.id, w.base, w.payload);
       closeFix();
       bump();
     });
@@ -247,8 +256,7 @@ function PayBody({ bump }: { bump: () => void }) {
   /** Close the fix sheet; the ledger's params are spent, so a remount (bump) does not open it again. */
   const closeFix = () => {
     setFixFor(null);
-    setParamDone(true);
-    if (params.fix) router.setParams?.({ fix: undefined, how: undefined });
+    if (paramKey) spentFix.add(paramKey);
   };
 
   const cashSub = (tp: TapperMoney) => {
@@ -340,7 +348,9 @@ function PayBody({ bump }: { bump: () => void }) {
     if (ps.recheck) body.push(<IconLine key="re" icon={(c) => <AlertIcon color={c} size={12} />}>{msg('v2s.recheck')}</IconLine>);
     // E06-S08 P2: what the buyer still owes on this tick (never on a cash-from-share repayment).
     const receivable = row.kind === 'owner' || (row.kind === 'repay' && !row.picked);
-    if (receivable && ps.done && ps.shortSatang > 0) body.push(owesChip(ps.shortSatang, `pay-owes-${row.id}`));
+    // What the buyer owes TODAY on this row (buyerOwes, re-review B3) — never the stale gap at tick time.
+    const owesHere = row.kind === 'owner' ? (owes?.transferSatang ?? 0) : row.kind === 'repay' ? (owes?.cash.find((c) => c.workerId === row.tp.id)?.satang ?? 0) : 0;
+    if (receivable && ps.done && owesHere > 0) body.push(owesChip(owesHere, `pay-owes-${row.id}`));
     const off = locked(row);
     const link = receivable
       ? linkUnder(`${msg('rp.pay.less')} ›`, `pay-less-${row.id}`, off, () => setLessFor(row.id))
@@ -440,7 +450,8 @@ function PayBody({ bump }: { bump: () => void }) {
           );
         }
         const fixTp = activeFix ? money.tappers.find((tp) => tp.id === activeFix.workerId) : undefined;
-        if (activeFix && fixTp && routeLines(fixTp.id, activeFix.methods).length) {
+        // The page's locks hold for the fix too (conflicting ticks D-29, double / over-deducted D-61): fix those first.
+        if (activeFix && fixTp && routeLines(fixTp.id, activeFix.methods).length && conflicts.length === 0 && !bad(fixTp)) {
           return (
             <PickAmountSheet
               mode={activeFix.mode}

@@ -174,10 +174,14 @@ describe('PR-19 · the buyer handed the transfer repayment to the worker', () =>
     await press('rp-pick-save');
     const evs = await financeStore.load();
     const nat = evs.filter((e) => e.targetId === `dp-${S}-nat`);
+    // edited in place, cut to 0 — kept, so the sale still reads as confirmed (re-review B2); no new line (B1)
     expect(nat.map((e) => e.payload.t)).toEqual(['debt_payment_recorded', 'debt_payment_changed']);
-    expect(nat[1].payload).toMatchObject({ patch: { deleted: true } });
-    // the owner's tick no longer matches the (smaller) transfer: it asks for a recheck
+    expect(nat[1].payload).toMatchObject({ patch: { amountSatang: 0 } });
+    expect(evs.filter((e) => e.payload.t === 'debt_payment_recorded' && (e.payload.fields as { saleId?: string }).saleId === S)).toHaveLength(2);
+    // the owner's tick no longer matches the (smaller) transfer: it asks for a recheck; no "หักซ้ำ" lock, no repayment left waiting
     expect(last('tick-owner')).toHaveTextContent(/ต้องตรวจใหม่/);
+    expect(screen.queryByText(/ซ้ำ/)).toBeNull();
+    expect(screen.queryByText(/รอรับโอน/)).toBeNull();
   });
 
 });
@@ -204,14 +208,12 @@ describe('P1 · PR-17 cash-from-share not (fully) lifted', () => {
     expect(within(sheet).getByTestId('rp-pick-debt')).toHaveTextContent(/3,100\.00/);
     await press('rp-pick-save');
     expect(screen.queryByTestId('rp-pick-sheet')).toBeNull();
-    // the old line is voided (struck through in the history), a new pick line holds what was lifted (PR-17)
+    // the pick line is edited in place to what was lifted (PR-17); no new line (re-review B1)
     const evs = await financeStore.load();
     const ch = evs.filter((e) => e.payload.t === 'debt_payment_changed' && e.targetId === `dp-${S}-red`);
     expect(ch).toHaveLength(1);
-    expect(ch[0].payload).toMatchObject({ patch: { deleted: true } });
-    const fresh = evs.filter((e) => e.payload.t === 'debt_payment_recorded' && e.targetId !== `dp-${S}-red` && (e.payload.fields as { saleId?: string }).saleId === S && (e.payload.fields as { worker: { id: string } }).worker.id === farm.red);
-    expect(fresh).toHaveLength(1);
-    expect(fresh[0].payload).toMatchObject({ fields: { method: 'cash-from-share', amountSatang: 40_000 } });
+    expect(ch[0].payload).toMatchObject({ patch: { amountSatang: 40_000 } });
+    expect(evs.filter((e) => e.payload.t === 'debt_payment_recorded' && (e.payload.fields as { saleId?: string }).saleId === S)).toHaveLength(2);
     expect(last(`tick-amt-${id}`)).toHaveTextContent('400.00');
     expect(last(`tick-${farm.red}`)).toHaveTextContent(/ต้องตรวจใหม่/);
   });
@@ -230,5 +232,29 @@ describe('PR-20: nothing came in short → the sources sheet reads as before', (
     const sheet = last('co-sources-sheet');
     expect(within(sheet).queryByTestId('co-src-received')).toBeNull();
     expect(within(sheet).queryByTestId('co-src-equation')).toBeNull();
+  });
+});
+
+describe('re-review B3: the owes chip after "the buyer gave it to the worker"', () => {
+  const S = 'rp-pay-rereview';
+  beforeAll(async () => {
+    await storySale(S);
+    // fresh debt for this sale (the debts above are shared and nearly used up)
+    await writeFinance(`debt-red-${S}`, null, { t: 'debt_added', fields: { worker: { id: farm.red, name: 'แดง' }, kind: 'loan', amountSatang: 3_000_000, date: '2026-09-01', note: '', lender: FARM, fertilizer: null, carriedForward: false } });
+    await writeFinance(`debt-nat-${S}`, null, { t: 'debt_added', fields: { worker: { id: farm.nat, name: 'นัด' }, kind: 'loan', amountSatang: 3_000_000, date: '2026-09-01', note: '', lender: FARM, fertilizer: null, carriedForward: false } });
+    await confirmed(S, { amount: 0, method: 'buyer-split' }, { amount: 100_000, method: 'transfer-with-owner' });
+    // owner share 14,437.50 + นัด 1,000 = 15,437.50; the bank shows 14,437.50 → owes 1,000
+    await writeFinance(paymentTarget(S, 'owner'), null, paymentMarkPayload(S, 'owner', true, 1_543_750, 1_443_750));
+  });
+
+  it('the chip says what is owed today: after the buyer gave นัด\'s 1,000 to นัด (0 reached the farm) the chip is gone', async () => {
+    await inSale(S, <CloseoutPayScreen />);
+    expect(last('pay-owes-owner')).toHaveTextContent(/฿ 1,000/);
+    await press('pay-less-owner');
+    await press('rp-amt-with-worker');
+    await press('rp-amt-fix');
+    await press('rp-pick-save');
+    expect(screen.queryByTestId('pay-owes-owner')).toBeNull();
+    expect(screen.queryByText(/ซ้ำ/)).toBeNull();
   });
 });
