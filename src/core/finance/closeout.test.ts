@@ -1217,7 +1217,8 @@ describe('a double deduction from two devices is flagged, locks the payment, and
     expect(d.input.devices).toBe(1);
     expect([d.w.doubled, d.gate.kind, d.blocks]).toEqual([false, 'ready', []]);
     expect(d.ins.recordedLines(W.id).map((l) => [l.method, l.amountSatang]).sort()).toEqual([['netting', 30000], ['transfer-with-owner', 0]]);
-    // the same from A's side, and confirming again writes nothing
+    // confirming again writes nothing, on either phone
+    expect(confirmOn('A', b, 500000)).toEqual([]);
     expect(confirmOn('B', b, 500000)).toEqual([]);
   });
 
