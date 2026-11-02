@@ -12,9 +12,9 @@ const NUMERIC = /keyboardType=\{?\s*["'`]?(?:numeric|number-pad|decimal-pad|phon
 
 /**
  * Not switched yet, each with its reason (remove the line when it is):
- * - the counter's short-basket typing: its own last PR (story row 21, Q1).
+ * None left: every row of the story's table is on the app pad. Add a file here only with its reason.
  */
-const PENDING = new Set(['src/v2/sale/short-reading.tsx']);
+const PENDING = new Set<string>();
 
 const files = (dir: string): string[] =>
   readdirSync(dir).flatMap((name) => {
