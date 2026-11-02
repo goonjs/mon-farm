@@ -769,7 +769,8 @@ export function confirmWrites(i: {
   // while the plan has no route money (voiding it would leave the sale unconfirmed and propose the debt again).
   const routeLines = recorded.filter((l) => l.method !== 'netting' && l.amountSatang > 0);
   // Owner 2026-11-01 (A): lines from two devices' confirms are a double deduction; confirming rewrites them as one set.
-  const oneDevice = new Set(recorded.flatMap((l) => (l.deviceId ? [l.deviceId] : []))).size <= 1;
+  // A route line cut to 0 is not a deduction (B2 above), so it never counts as a device's set (E06-S08 review 4).
+  const oneDevice = new Set([...netLines, ...routeLines].flatMap((l) => (l.deviceId ? [l.deviceId] : []))).size <= 1;
   const matches =
     oneDevice &&
     sumOf(netLines.map((l) => l.amountSatang)) === plan.nettingSatang &&
@@ -914,11 +915,13 @@ export function closeoutInputs(i: {
   };
   const creator = new Map<string, string | undefined>();
   for (const e of i.events) if (e.baseEventId === null && !creator.has(e.targetId)) creator.set(e.targetId, e.actor?.deviceId);
-  const devicesOf = (id: string) => new Set(lines(id).flatMap((p) => (creator.get(p.id) ? [creator.get(p.id)!] : []))).size;
+  // E06-S08 review 4: a route line cut to 0 by a fix on the payment page is not a deduction — it never makes a second device.
+  const deducting = (id: string) => lines(id).filter((p) => p.method === 'netting' || p.amountSatang > 0);
+  const devicesOf = (id: string) => new Set(deducting(id).flatMap((p) => (creator.get(p.id) ? [creator.get(p.id)!] : []))).size;
   /** The set one device wrote, when every device wrote the same one (owner 2026-11-01); null otherwise. */
   const oneDeviceOf = (id: string): DeductAmounts | null => {
     const by = new Map<string, { totalSatang: number; nettingSatang: number }>();
-    for (const p of lines(id)) {
+    for (const p of deducting(id)) {
       const dev = creator.get(p.id) ?? '';
       const s = by.get(dev) ?? { totalSatang: 0, nettingSatang: 0 };
       by.set(dev, { totalSatang: s.totalSatang + p.amountSatang, nettingSatang: s.nettingSatang + (p.method === 'netting' ? p.amountSatang : 0) });
