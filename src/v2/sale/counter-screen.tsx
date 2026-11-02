@@ -509,11 +509,11 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       <IconLine icon={(c) => <TapperIcon color={c} size={13} />}>{scopeTitle}</IconLine>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
         {price !== null
-          ? card(<><AppText variant="bodySm" numberOfLines={1}>{msg('rec.money')} (฿)</AppText>{cardFigure(compactBaht(figs.satang ?? 0), 'fig-money')}</>, 'first', false, true)
-          : card(<><AppText variant="bodySm" numberOfLines={1}>{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
+          ? card(<><AppText variant="bodySm">{msg('rec.money')} (฿)</AppText>{cardFigure(compactBaht(figs.satang ?? 0), 'fig-money')}</>, 'first', false, true)
+          : card(<><AppText variant="bodySm">{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
         {card(
           <>
-            <IconLine oneLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')} ({msg('common.kg')})</IconLine>
+            <IconLine icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')} ({msg('common.kg')})</IconLine>
             {cardFigure(kgText(figs.netG), 'fig-kg')}
           </>,
           'kg',
@@ -523,8 +523,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
         {open
           ? card(
               <>
-                <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.shortOf', { n: open.basketNo })}</Text>
-                <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.missing')} ({msg('common.kg')})</Text>
+                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.shortOf', { n: open.basketNo })}</Text>
+                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('rec.missing')} ({msg('common.kg')})</Text>
                 {cardFigure(kgText(open.missingG), 'fig-missing')}
               </>,
               'short',
