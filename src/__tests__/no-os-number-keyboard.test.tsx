@@ -8,7 +8,7 @@ import { join, relative } from 'node:path';
 
 const ROOT = join(__dirname, '..', '..');
 const DIRS = ['src/v2', 'src/app/v2'];
-const NUMERIC = /keyboardType=["'{](?:numeric|number-pad|decimal-pad|phone-pad)|inputMode=["'{](?:numeric|decimal|tel)/;
+const NUMERIC = /keyboardType=\{?\s*["'`]?(?:numeric|number-pad|decimal-pad|phone-pad)|inputMode=\{?\s*["'`]?(?:numeric|decimal|tel)/;
 
 /**
  * Not switched yet, each with its reason (remove the line when it is):
@@ -25,6 +25,13 @@ const files = (dir: string): string[] =>
 
 describe('no OS number keyboard (E01-S20 NP-2)', () => {
   const all = DIRS.flatMap((d) => files(join(ROOT, d))).map((p) => relative(ROOT, p));
+
+  it('the pattern catches every way of writing it (review N5)', () => {
+    for (const src of ['keyboardType="decimal-pad"', "keyboardType='numeric'", "keyboardType={'number-pad'}", 'keyboardType={"phone-pad"}', 'inputMode="decimal"', 'inputMode={"numeric"}', "inputMode={ 'tel' }"]) {
+      expect(NUMERIC.test(src)).toBe(true);
+    }
+    for (const src of ['keyboardType="default"', 'inputMode="text"', 'keyboardType="email-address"']) expect(NUMERIC.test(src)).toBe(false);
+  });
 
   it('finds the app screens', () => {
     expect(all.length).toBeGreaterThan(50);
