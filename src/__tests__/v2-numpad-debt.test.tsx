@@ -56,9 +56,11 @@ const save = async (id: string) => {
   await flush();
 };
 
-beforeEach(async () => {
-  mockParams.current = DAENG;
-  (mockFinance as unknown as { events?: unknown[] }).events?.splice(0);
+// The memory store is shared by the file: each test gets its own worker, so one test's debts never decide another's.
+let n = 0;
+beforeEach(() => {
+  n += 1;
+  mockParams.current = { workerId: `p-np-${n}`, name: DAENG.name };
 });
 
 describe('row 9 debt-amount: the amount of a new debt (NP-4)', () => {
@@ -78,10 +80,11 @@ describe('row 9 debt-amount: the amount of a new debt (NP-4)', () => {
     expect(added[0].fields.kind).toBe('loan');
   });
 
-  it('blank is never saved and says the amount is needed', async () => {
+  it.each([['blank', ''], ['0', '0']])('%s is never saved and says the amount is needed', async (_, text) => {
     const before = (await payloads('debt_added')).length;
     wrap(<AddDebtScreen />);
     await flush();
+    if (text) await enter('debt-amount', text);
     await save('debt-save');
     expect(screen.getAllByText('ใส่จำนวนเงิน').length).toBeGreaterThan(0);
     expect((await payloads('debt_added')).length).toBe(before);
@@ -92,15 +95,36 @@ describe('row 10 debt-pay-amount: a payment (NP-4)', () => {
   it.each([
     ['500', 50_000],
     ['12.5', 1_250],
-  ])('%s → %i satang', async (text, satang) => {
+    ['99999999.99', 9_999_999_999],
+  ])('%s → %i satang (no debt yet: the over-pay warning, then save anyway)', async (text, satang) => {
     const before = (await payloads('debt_payment_recorded')).length;
     wrap(<PayDebtScreen />);
     await flush();
     await enter('debt-pay-amount', text);
     await save('debt-pay-save');
-    if (screen.queryByTestId('debt-pay-anyway')) await save('debt-pay-anyway');
+    expect(screen.getByTestId('debt-pay-over')).toBeTruthy();
+    await save('debt-pay-anyway');
     const paid = (await payloads('debt_payment_recorded')).slice(before);
     expect(paid.map((p) => p.fields.amountSatang)).toEqual([satang]);
+  });
+
+  it('within the balance: no warning, saved at once; a new amount clears an old warning', async () => {
+    wrap(<AddDebtScreen />);
+    await flush();
+    await enter('debt-amount', '1000');
+    await save('debt-save');
+    const before = (await payloads('debt_payment_recorded')).length;
+    wrap(<PayDebtScreen />);
+    await flush();
+    await enter('debt-pay-amount', '2000');
+    await save('debt-pay-save');
+    expect(screen.getByTestId('debt-pay-over')).toBeTruthy();
+    await enter('debt-pay-amount', '400');
+    expect(screen.queryByTestId('debt-pay-over')).toBeNull();
+    expect(screen.getByTestId('debt-pay-save').props.accessibilityState).toMatchObject({ disabled: false });
+    await save('debt-pay-save');
+    expect(screen.queryByTestId('debt-pay-over')).toBeNull();
+    expect((await payloads('debt_payment_recorded')).slice(before).map((p) => p.fields.amountSatang)).toEqual([40_000]);
   });
 
   it('blank or 0 cannot be saved', async () => {
@@ -118,6 +142,7 @@ describe('row 11 debt-plan-amount: instalment per sale (NP-4)', () => {
   it.each([
     ['1500', 150_000],
     ['250.5', 25_050],
+    ['99999999.99', 9_999_999_999],
   ])('%s → %i satang', async (text, satang) => {
     const before = (await payloads('debt_plan_set')).length;
     wrap(<DebtAccountScreen />);
@@ -133,7 +158,27 @@ describe('row 11 debt-plan-amount: instalment per sale (NP-4)', () => {
     wrap(<DebtAccountScreen />);
     await flush();
     await save('debt-plan-edit');
+    expect(screen.getByTestId('debt-plan-save').props.accessibilityState).toMatchObject({ disabled: true });
     await enter('debt-plan-amount', '0');
     expect(screen.getByTestId('debt-plan-save').props.accessibilityState).toMatchObject({ disabled: true });
+  });
+
+  it('editing a plan without changing it saves the same amount (prefill round-trip)', async () => {
+    // A plan belongs to an account, and an account starts with a debt.
+    wrap(<AddDebtScreen />);
+    await flush();
+    await enter('debt-amount', '3000');
+    await save('debt-save');
+    wrap(<DebtAccountScreen />);
+    await flush();
+    await save('debt-plan-edit');
+    await enter('debt-plan-amount', '250.05');
+    await save('debt-plan-save');
+    const before = (await payloads('debt_plan_set')).length;
+    await save('debt-plan-edit');
+    await act(async () => fireEvent.press(screen.getByTestId('debt-plan-amount')));
+    await act(async () => fireEvent.press(screen.getByTestId('debt-plan-amount-done')));
+    await save('debt-plan-save');
+    expect((await payloads('debt_plan_set')).slice(before).map((p) => p.perSaleSatang)).toEqual([25_005]);
   });
 });
