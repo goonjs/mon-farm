@@ -37,13 +37,13 @@ import {
   DebtIcon,
   FactRow,
   IconTile,
+  MoneyField,
   MoneyOutIcon,
   PersonIcon,
   PinnedActions,
   Plus,
   ReceiptIcon,
   ScreenHeader,
-  TextField,
 } from '../../ui';
 import { V2_HOME } from '../routes';
 import { orderHref } from './order-routes';
@@ -222,7 +222,7 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
           </View>
         ) : (
           <View style={{ gap: t.space.sm, marginTop: t.space.sm }}>
-            <TextField testID="debt-plan-amount" label={msg('debt.plan')} keyboardType="decimal-pad" value={planDraft} onChangeText={setPlanDraft} helper={msg('v2m.perSale')} />
+            <MoneyField testID="debt-plan-amount" label={msg('debt.plan')} unit={msg('v2m.perSale')} satang={parseBahtToSatang(planDraft)} onChange={(v) => setPlanDraft(satangToInput(v))} />
             <View style={{ flexDirection: 'row', gap: t.space.sm }}>
               {account?.planPerSaleSatang != null ? <Button testID="debt-plan-cancel" variant="destructive" onPress={() => void savePlan(null)}>{msg('debt.planCancel')}</Button> : null}
               <Button testID="debt-plan-save" disabled={!parseBahtToSatang(planDraft) || inFlight.busy} onPress={() => void savePlan(parseBahtToSatang(planDraft))}>{msg('common.save')}</Button>

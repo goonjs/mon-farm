@@ -84,7 +84,9 @@ describe('debt ledger (E06-S03)', () => {
     wrap(<AddDebtScreen />);
     await flush();
     fireEvent.press(screen.getByTestId('debt-kind-other'));
-    fireEvent.changeText(screen.getByTestId('debt-amount'), '100');
+    fireEvent.press(screen.getByTestId('debt-amount'));
+    for (const k of '100') fireEvent.press(screen.getByTestId(`debt-amount-pad-key-${k}`));
+    fireEvent.press(screen.getByTestId('debt-amount-done'));
     await act(async () => fireEvent.press(screen.getByTestId('debt-save')));
     expect(screen.getByTestId('debt-note-error')).toBeTruthy();
   });
@@ -92,7 +94,9 @@ describe('debt ledger (E06-S03)', () => {
   it('paying more than owed warns, then "save anyway" records it and flags the account', async () => {
     wrap(<DebtPaymentScreen />);
     await flush();
-    fireEvent.changeText(screen.getByTestId('debt-pay-amount'), '2500');
+    fireEvent.press(screen.getByTestId('debt-pay-amount'));
+    for (const k of '2500') fireEvent.press(screen.getByTestId(`debt-pay-amount-pad-key-${k}`));
+    fireEvent.press(screen.getByTestId('debt-pay-amount-done'));
     await act(async () => fireEvent.press(screen.getByTestId('debt-pay-save')));
     expect(screen.getByTestId('debt-pay-over')).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId('debt-pay-anyway')));
