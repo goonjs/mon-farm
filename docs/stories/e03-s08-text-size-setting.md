@@ -52,21 +52,42 @@ Status: In Progress (เจ้าของตกลง AC TS-1..TS-9 ผ่า�
 
 _เขียน test ก่อน (TDD)_
 
-- [ ] Vitest: `scaleSizes` (มีแล้ว) + ค่าที่อ่านไม่ได้/ไม่รู้จัก → กลาง
-- [ ] jest-expo: theme ที่ `l` ให้ `font.size.body` = 18, `s` = 14; ตัวเลขสาธารณะไม่เปลี่ยน;
-  หน้าเครื่องนี้ กด "ใหญ่" → เขียน `deviceSettings` และข้อความขยาย; remount อ่านค่าเดิม
-- [ ] Playwright 390×844: ตั้งใหญ่ผ่านหน้าเครื่องนี้ (ไม่ใช่ตั้ง storage ตรง) แล้วไล่หน้าใน TS-8 วัดล้น/ตัด + ภาพ
-- [ ] e2e เดิม `v2-sale-history`, `v2-pending-repay` ต้องยังผ่านเมื่อตัวอักษรขยายจริง
+- [x] Vitest: `scaleSizes` (มีอยู่แล้ว `src/core/text-scale.test.ts`); ค่าที่ไม่รู้จัก → กลาง ทดสอบใน jest (`text-size.test.tsx`)
+- [x] jest-expo `src/__tests__/text-size.test.tsx`: กลาง = token, ใหญ่ body 18 / figure 50, เล็ก 14 / 39, ค่าแปลก → กลาง,
+  `publicNumeral` เท่ากันทุกขนาด, หน้าเครื่องนี้กด "ใหญ่" → เขียน `deviceSettings` และ theme ขยายทันที
+- [x] jest เว็บ: เฟรมแรกเป็นกลาง แล้วเป็นใหญ่หลัง mount (`device-settings-web-after-mount.test.tsx`) — **เขียนหลังโค้ด** ไม่ใช่ก่อน
+- [x] guard `fixed-font-size-guard.test.tsx`: ห้าม `fontSize: <ตัวเลข>` ใน src ยกเว้นจอสาธารณะ และ `short-reading.tsx` (รอ #139)
+- [x] `screen-header.test.tsx` (TS-6), `banner-fit.test.tsx` (TS-7) — ล้มเมื่อไม่มีการแก้ ผ่านเมื่อแก้
+- [x] Playwright 390×844 `e2e/v2-text-size.spec.ts` (4 tests) + ตัวตรวจ `e2e/text-fit.ts` (ตัด/…/ล้นข้าง/กล่องบังข้อความ แบบ `check:mockup`, ที่แตะ < 48)
+- [x] e2e เดิม `v2-sale-history`, `v2-pending-repay` ผ่านเมื่อตัวอักษรขยายจริง
 
 ## Verification
 
-- [ ] Sandbox run performed:
-- [ ] Screenshots — golden path: หน้าเครื่องนี้ เล็ก/กลาง/ใหญ่
-- [ ] Screenshots — edge cases: ทุกหน้าใน TS-8 ที่ใหญ่, หัว FarmScreen + Banner ที่ ×1.3
+- [x] Sandbox run performed: `expo export --platform web` + Playwright (Chromium ของเครื่อง `/opt/pw-browsers/chromium`)
+  — e2e portrait ทั้งชุด 32 ผ่าน 3 ข้าม (emulator) · jest 893 · vitest 1251 · tsc / eslint สะอาด
+  - TS-1–3: เครื่องนี้ กลาง → เล็ก → ใหญ่ หัวจอ 20 → 18 → 23 px ทันที; reload ยังใหญ่ (`mon-farm:text-size = l`); หน้าแรกตามทันที
+  - TS-4: ตัวเลขนับจอสาธารณะ px เท่ากันที่กลางและใหญ่
+  - TS-8 ที่ใหญ่ (ตั้งผ่าน storage ก่อนเปิดหน้า): หน้าแรก + เมนู, เครื่องนี้, หน้านับ, ประวัติเข่ง, ปิดการขาย A1 + แผ่นหนี้ A2,
+    ใบให้คนรับซื้อดู 2,345,678.00 + A1 ยอดนั้น, รายการหนี้ M1, บัญชีหนี้ M3, ช่องตัวเลข + แผ่นแป้นเงิน, ใบซื้อปุ๋ย + แผ่นปุ๋ยใหม่
+    (ปุ่มหลักอยู่ในจอ) — ไม่มีตัด/…/ล้นข้าง ไม่มีที่แตะ < 48 (หลังแก้ 2 จุดด้านล่าง)
+  - TS-6/7 ที่ ×1.3 (ใหญ่ × 1.156 จำลองตัวอักษรระบบ): ปิดการขาย A1, รายการขาย (Banner), ตั้งค่าปุ๋ย — ผ่าน
+- [x] Screenshots — golden path: `docs/ux/screenshots/e03-s08/device-{s,m,l}.png`
+- [x] Screenshots — edge cases: `docs/ux/screenshots/e03-s08/l-*.png`, `x130-*.png`; เดิมที่ตอนนี้ขยายจริง:
+  `ui-v2/sale/8k`, `8l`, `debt-pending-repay/build/l-m2-account`, `l-m9-less`
 
 ## Dev notes
 
 - เจ้าของ 2026-11-02: ตกลง AC; ข้าม mockup (การ์ดเดียว ใช้ `SegmentedControl` เดิม) ส่งภาพจาก build จริงตอน review แทน
+- ลีด 2026-11-02 (Q3): `short-reading.tsx` (44 → ใน #139 เป็น 40/28) ห้ามแตะจน #139 merge — ยังค้าง ดู "ยังไม่ได้ตรวจ"
+- ก่อนสตอรี่นี้ theme ไม่เคยอ่าน `mon-farm:text-size` — e2e "ตัวอักษรใหญ่สุด" ของ E04-S15 / E06-S08 ไม่ได้ขยายอะไร
+- theme: `font.size` = `scaleSizes(token, size)`; `t.textScale` สำหรับขนาดที่ไม่ใช่ token (หน้านับ 52/80/36, ตาชั่งศูนย์ 56);
+  ยอดโอนให้ดูใช้ token `figure`. อ่านค่า: native ในเฟรมแรก, เว็บหลัง mount (เหมือน ภาษา/เสียง E01-S19)
+- TS-6 หัวจอ: บนเว็บทำซ้ำอาการ "ถูกตัด" ไม่ได้ (Chrome ไม่ตัดสระบนที่เกินบรรทัด). แก้แบบป้องกัน: line height หัว/ใต้หัว 1.25 → 1.5
+  เพราะ Android ตัดตัวอักษรที่สูงเกินกล่องบรรทัด (สระ+วรรณยุกต์ซ้อน เช่น "เครื่อง", "ตั้ง") — **ยังไม่ได้ยืนยันบน Android**
+- TS-7 Banner: ช่องไอคอนกว้างตายตัว 16 → `minWidth` 16 + สูงเท่าบรรทัดแรก จัดกลาง. บนเว็บไอคอนทุกตัวตอนนี้ 14 px จึงไม่เห็นล้นก่อนแก้
+- เจอจาก TS-8: หน้านับ การ์ด 3 ใบตัด "น้ำหนัก (กก.)" ด้วย "…" ที่ใหญ่ → ให้ขึ้นบรรทัดใหม่ (ลบ `numberOfLines` / `oneLine`);
+  ชิปชื่อสั้น "นัด" กว้าง 44/47 → `minWidth` 48 (`ChoiceChip`, ชิปประวัติเข่ง)
+- ไฟล์ทีม E01-S20 ไม่ได้แตะ (TS-9); ไม่เจอจุดล้นในไฟล์เหล่านั้นที่ใหญ่ (ช่องตัวเลข + แป้นเงินผ่าน)
 
 ## Code review
 
@@ -75,3 +96,8 @@ _เขียน test ก่อน (TDD)_
 - Resolution:
 
 ## QA notes
+
+- ยังไม่ได้ตรวจ: เครื่อง Android จริง (หัวจอ TS-6 และตัวอักษรระบบ ×1.3 จริง), iOS, โหมดมืดที่ใหญ่, `short-reading` (รอ #139),
+  แผ่นแป้นจำนวน / แผ่นอื่นของปิดการขาย (A4–A9) ทีละแผ่น, หน้านับเข่งไม่เต็ม, หนี้ #141 หลัง merge
+- `v2-sale-history` ข้อ "keyboard undo" ล้มเมื่อรันขนาน 4 workers ที่ขั้นกดค้าง (ก่อนส่วนตัวอักษรใหญ่) ทั้งก่อนและหลังแก้รอบท้าย;
+  รันเดี่ยวผ่าน — เป็นเรื่องจังหวะเวลา ยังไม่ได้ลองบน dev
