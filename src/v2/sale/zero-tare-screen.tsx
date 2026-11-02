@@ -319,7 +319,7 @@ export function ZeroTareScreen() {
               </View>
               <View testID="expect" style={{ ...card, alignItems: 'center' }}>
                 <IconLine icon={(c) => <ScaleIcon color={c} size={14} />}>{msg('rec.shouldRead')}</IconLine>
-                <Text testID="expect-kg" style={{ fontFamily: t.font.family.sans, fontSize: 56, fontWeight: t.font.weight.black, color: t.color.ink, fontVariant: ['tabular-nums'] }}>
+                <Text testID="expect-kg" style={{ fontFamily: t.font.family.sans, fontSize: Math.round(56 * t.textScale), fontWeight: t.font.weight.black, color: t.color.ink, fontVariant: ['tabular-nums'] }}>
                   {kgText(pair.netG + pair.basketG)}
                   <Text style={{ fontSize: t.font.size.headingLg, fontWeight: t.font.weight.semibold }}> {msg('common.kg')}</Text>
                 </Text>

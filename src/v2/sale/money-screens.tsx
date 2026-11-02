@@ -335,7 +335,7 @@ export function ShowAccountScreen() {
       {account && money.loaded ? (
         <View style={{ flex: 1, alignItems: 'center', gap: t.space.lg, paddingHorizontal: t.layout.screenPaddingX }}>
           <AppText variant="bodySm">{msg('v2s.transferToOwner')}</AppText>
-          <Text testID="show-amount" style={{ fontFamily: t.font.family.sans, fontSize: 44, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
+          <Text testID="show-amount" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.figure, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
             {baht(money.ownerTransferSatang)}
             <Text style={{ fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.regular }}> {msg('v2s.bahtUnit')}</Text>
           </Text>

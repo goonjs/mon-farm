@@ -298,7 +298,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
                   <RoundButton testID="reading-less" label={msg('v2s.less1')} onPress={() => dialTo(dialValue - 1)}>
                     <Minus color={t.color.ink} size={20} />
                   </RoundButton>
-                  <Text testID="reading" style={{ minWidth: 110, textAlign: 'center', fontFamily: t.font.family.sans, fontSize: 52, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: onNet ? t.color.accept : t.color.ink }}>
+                  <Text testID="reading" style={{ minWidth: 110, textAlign: 'center', fontFamily: t.font.family.sans, fontSize: Math.round(52 * t.textScale), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: onNet ? t.color.accept : t.color.ink }}>
                     {fieldKg(dialValue)}
                     <Text style={{ fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.regular }}> {msg('common.kg')}</Text>
                   </Text>
@@ -495,7 +495,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       ) : null}
       <View testID="current" accessibilityLabel={`${msg('rec.counted')} ${figs.done}, ${msg('rec.nextNo', { n: figs.currentNo })}`} style={{ ...cardStyle(t), alignItems: 'center', paddingVertical: t.space.md }}>
         <AppText variant="bodySm">{msg('rec.counted')}</AppText>
-        <Text testID="current-done" style={{ fontFamily: t.font.family.sans, fontSize: 80, lineHeight: 88, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
+        <Text testID="current-done" style={{ fontFamily: t.font.family.sans, fontSize: Math.round(80 * t.textScale), lineHeight: Math.round(88 * t.textScale), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.numeral }}>
           {figs.done}
         </Text>
         {waiting && open ? (
@@ -577,7 +577,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
                 {msg(fill === 'full' ? 'v2s.fillStage' : 'v2s.fillStagePart', { n: open.basketNo })}
               </Text>
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.semibold, color: t.color.ink }}>
-                {msg('v2s.fillMore')} <Text style={{ fontSize: 36, fontWeight: t.font.weight.black }}>{kgText(open.missingG)}</Text> {msg('common.kg')}
+                {msg('v2s.fillMore')} <Text style={{ fontSize: Math.round(36 * t.textScale), fontWeight: t.font.weight.black }}>{kgText(open.missingG)}</Text> {msg('common.kg')}
               </Text>
               {fill === 'full' && skew ? [smallLine(msg('v2s.fullLine', { n: kgText(std) })), smallLine(msg('v2s.lineBasket', { n: kgText(open.tareG) })), smallLine(msg('v2s.lineSkew', { n: signed(kgText(skew)) }), 'warn')] : null}
               {shouldRead(fill === 'full' ? std + open.tareG + skew : open.missingG + tare + skew)}
