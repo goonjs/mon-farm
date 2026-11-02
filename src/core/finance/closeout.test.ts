@@ -28,7 +28,7 @@ import { projectDebts } from './debts';
 import { cashNotes, deductSheet, needsChange, nettingPayloads, overDeducted, pickNotes, roundCash, type RoundingMode } from './deduct';
 import { projectFinance } from './ledger';
 import type { Reimbursement } from './ledger';
-import { routeFixWrites } from './pending-repays';
+import { pendingRepayLines, routeFixWrites } from './pending-repays';
 import { roundSettlement } from './rounding';
 import { FARM_FUNDS, type DebtKind, type DebtPaymentMethod, type FinanceEvent, type FinancePayload, type Payer } from './types';
 
@@ -1220,6 +1220,21 @@ describe('a double deduction from two devices is flagged, locks the payment, and
     // confirming again writes nothing, on either phone
     expect(confirmOn('A', b, 500000)).toEqual([]);
     expect(confirmOn('B', b, 500000)).toEqual([]);
+  });
+
+  it('owner 2026-11-02 · both phones deduct offline, one cuts its own line to 0 first: one deduction, the other phone\'s money still waits (no conflict mark)', () => {
+    const base = seed(1000000, 0, 100000);
+    const a = confirmOn('A', base, 500000);
+    const bOwn = [...base, ...confirmOn('B', base, 500000)];
+    const bRoute = derive(bOwn, 500000).ins.recordedLines(W.id);
+    const bCut = routeFixWrites(bRoute.map((l) => ({ id: l.id, headEventId: l.headEventId, amountSatang: l.amountSatang })), 0).map((x) => ev('B', x.id, x.base, x.payload));
+    const synced = [...bOwn, ...bCut, ...a];
+    const d = derive(synced, 500000);
+    expect([d.input.devices, d.w.doubled, d.gate.kind, d.blocks]).toEqual([1, false, 'ready', []]);
+    expect(d.ins.recordedLines(W.id).map((l) => [l.amountSatang, l.deviceId]).sort()).toEqual([[0, 'B'], [100000, 'A']]);
+    // A's 1,000 is still waiting to come in, so the owner can cut it again on the payment page
+    // (the harness confirms on 2026-10-31, before the feature's start date, so pass an earlier one)
+    expect(pendingRepayLines(synced, projectDebts(synced), '2026-10-01').map((l) => l.satang)).toEqual([100000]);
   });
 
   it('owner 2026-11-01 · the two devices recorded different amounts: the one amount is the plan\'s normal proposal', () => {

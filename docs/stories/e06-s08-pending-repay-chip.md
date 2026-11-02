@@ -62,6 +62,7 @@ Status: Review (เจ้าของตกลง AC 2026-11-01 ผ่านล�
 - ติ๊ก "รับแล้ว" จากหน้าบัญชีหนี้เขียน **event ชนิดเดิม** `payment_mark_set` ที่หน้าจ่ายเงินใช้ (E05-S11) — ไม่มีชนิด event ใหม่ ไม่มี migration
 - **ข้อมูลใหม่ (Q5):** ฟิลด์ optional `receivedSatang?` ใน `payment_mark_set` (architect 2026-11-01): ไม่มีฟิลด์ = ได้ครบ (ข้อมูลเก่าใช้ได้) · จำนวนเต็ม 0 ≤ received < amountSatang · `amountSatang` คงความหมายเดิม (ยอดตอนติ๊ก ใช้ตรวจ recheck) · `PaymentStatus` เพิ่ม `receivedSatang` และ `shortSatang` · `firestore.rules` ไม่ตรวจข้างใน payload จึงไม่ต้องแก้ · **ข้อจำกัด (เจ้าของ 2026-11-01):** เครื่องที่ยังเป็นแอปรุ่นเก่าจะเห็นติ๊กได้ไม่ครบเป็น "ได้ครบ" — ไม่มีกลไกกัน ต้องอัปเดตทุกเครื่องก่อนใช้ฟีเจอร์นี้
 - สองเครื่องติ๊ก/ยกเลิกติ๊ก หรือบันทึกยอดที่ได้ต่างกัน → ขัดกัน (D-30, PR-18) — โค้ดเดิมเทียบแค่ `done` ต้องแก้
+- **ข้อจำกัดที่รู้แล้ว (เจ้าของ 2026-11-02 "รับได้ตามนี้"):** ถ้าสองเครื่องหักเส้นทางเงินของการขายเดียวกันตอนออฟไลน์ และเครื่องหนึ่งตัดบรรทัดของตัวเองเหลือ 0 ก่อนซิงก์ หลังซิงก์แอปจะเห็นเป็นหักครั้งเดียวจากอีกเครื่อง ไม่ขึ้นหักซ้ำและไม่ขึ้นป้ายขัดกัน ส่วนที่ตัดของเครื่องแรกหายไป เงินไม่ถูกหักซ้ำ และยอดของอีกเครื่องยังขึ้นรอรับที่หน้าจ่ายเงิน เจ้าของจึงตัดซ้ำได้ (test: `closeout.test.ts` "owner 2026-11-02 · both phones deduct offline…")
 - ตรวจ `docs/checklists/offline-sync-checklist.md` ก่อน Done
 
 ## Test plan
@@ -108,9 +109,9 @@ _เขียน test ก่อน (TDD) แล้วค่อยทำให้
 - Re-review 3 (separate agent): B1 and B3 confirmed fixed on the pay page. Blocking: a second "ยืนยันยอด" (before close) voided the 0 line → the debt proposed again. Medium: the ledger history chip still used the gap at tick time. Low: a `?fix=` link used once per app run.
 - Resolution: `confirmWrites` (closeout.ts) ignores route lines of 0 when matching and keeps them while the plan has no route money — the one change in E05-S11's core, behaviour only, no signature change; the history chip reads `buyerOwes`; a 0 line shows no received chip; ledger links carry `&at=` so each tap is a new request. Tests failed on the old code first.
 
-- Reviewer (separate agent/session):
-- Findings:
-- Resolution:
+- Review 4 (separate agent) of c0d4eb0 — blocking: the kept 0 line still counted as its creator's device, so a second phone changing the netting read as a double deduction (payment locked; "หักครั้งเดียว" re-proposed the route money).
+- Resolution (9d4d436): a non-netting line of 0 is not a deduction — it counts as no device in `confirmWrites`, `devicesOf` and `oneDeviceOf`. Test failed on the old code first.
+- Review 5 (separate agent) of 9d4d436: no blockers; a real two-device double is still caught, "one"/"both" choices hold. Noted for the owner: both phones deduct offline and one cuts its own line to 0 → read as one deduction, no conflict mark — owner 2026-11-02 accepts it (known limitation in Offline / sync; test added). Unused `cop.src*` strings removed (lead approved 2026-11-02).
 
 ## QA notes
 
