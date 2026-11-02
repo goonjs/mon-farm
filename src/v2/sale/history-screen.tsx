@@ -72,7 +72,7 @@ export function HistoryScreen() {
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
       onPress={onPress}
-      style={{ minHeight: t.target.min, paddingHorizontal: t.space.md, justifyContent: 'center', borderRadius: t.radius.pill, backgroundColor: on ? t.color.action : t.color.surfaceSunk }}
+      style={{ minHeight: t.target.min, minWidth: t.target.min, alignItems: 'center', paddingHorizontal: t.space.md, justifyContent: 'center', borderRadius: t.radius.pill, backgroundColor: on ? t.color.action : t.color.surfaceSunk }}
     >
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: on ? t.color.inkInverse : t.color.inkSoft }}>{label}</Text>
     </Pressable>
