@@ -16,22 +16,20 @@ import { deviceSettings } from '../../store/device-settings';
 import { useTheme } from '../../theme';
 import { AppText } from '../type';
 import { Card, CardLabel } from '../card';
-import { FarmMateIcon } from '../farmmate-icons';
-import { getFarmMateIcon } from '../farmmate-icons/registry';
 import { applyFavicon } from './apply';
-import { FAVICON_CHOICES, FAVICON_DEFAULT } from './choices';
+import { FAVICON_CHOICES, FAVICON_DEFAULT, FAVICONS, faviconLabel } from './choices';
 import { readFavicon, writeFavicon } from './preference';
-
-const SHIPPED_FAVICON = require('../../../assets/images/favicon.png');
 
 const isWeb = () => Platform.OS === 'web';
 
-/** Mount once near the root: re-applies this device's tab icon on start (FV-3). */
+/**
+ * Mount once near the root: puts this device's tab icon on (FV-3). Also when
+ * nothing was chosen — the static page already shows the default on its tab,
+ * but has no home-screen (apple-touch) icon until this runs.
+ */
 export function FaviconOnStart() {
   useEffect(() => {
-    if (!isWeb()) return;
-    const id = readFavicon();
-    if (id !== FAVICON_DEFAULT) void applyFavicon(id);
+    if (isWeb()) applyFavicon(readFavicon());
   }, []);
   return null;
 }
@@ -59,7 +57,7 @@ function FaviconPicker() {
   const choose = (id: string) => {
     writeFavicon(id);
     setChosen(id);
-    void applyFavicon(id);
+    applyFavicon(id);
   };
   const box = t.target.comfortable;
   const glyph = Math.round(box * 0.6);
@@ -96,12 +94,13 @@ function FaviconPicker() {
       <CardLabel>{msg('settings.favicon')}</CardLabel>
       <View style={{ gap: t.space.sm }}>
         <View accessibilityRole="radiogroup" accessibilityLabel={msg('settings.favicon')} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
-          {option(
-            FAVICON_DEFAULT,
-            msg('settings.faviconDefault'),
-            <Image source={SHIPPED_FAVICON} style={{ width: glyph, height: glyph }} accessibilityIgnoresInvertColors />,
+          {FAVICON_CHOICES.map((id) =>
+            option(
+              id,
+              faviconLabel(id) ?? id,
+              <Image source={FAVICONS[id].grid} style={{ width: glyph, height: glyph }} accessibilityIgnoresInvertColors />,
+            ),
           )}
-          {FAVICON_CHOICES.map((id) => option(id, getFarmMateIcon(id)?.labelTh ?? id, <FarmMateIcon id={id} size={glyph} />))}
         </View>
         <AppText variant="bodySm">{msg('settings.faviconNote')}</AppText>
       </View>

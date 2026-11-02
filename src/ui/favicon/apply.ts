@@ -3,4 +3,4 @@
  * (E03-S10 FV-5). Metro picks `apply.web.ts` on the web.
  */
 
-export async function applyFavicon(_id: string): Promise<void> {}
+export function applyFavicon(_id: string): void {}

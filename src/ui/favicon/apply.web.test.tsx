@@ -1,86 +1,47 @@
 /**
  * @jest-environment jsdom
  *
- * E03-S10 FV-2 / FV-4: the browser's <head> links. A chosen icon becomes
- * `<link rel="icon">` (PNG 64) and `<link rel="apple-touch-icon">` (PNG 180 on
- * a tile); เดิม puts back exactly what the build shipped. jsdom has no canvas,
- * so the SVG → PNG step is injected.
+ * E03-S10 FV-2: the browser's <head> links. The chosen icon becomes
+ * `<link rel="icon">` (its 64 px PNG) and `<link rel="apple-touch-icon">` (its
+ * 180 px PNG). Owner 2026-11-02: there is no Expo icon any more — the build
+ * ships กรีดยาง as /favicon.ico, and an unknown id means กรีดยาง. Under jest a
+ * required PNG is `{ testUri }`; on the web build it is `{ uri }`.
  */
-import { applyFavicon, type Rasterize } from './apply.web';
+import { applyFavicon } from './apply.web';
 
-const fake: Rasterize = async (svg, size) => {
-  expect(svg).toContain(`width="${size}"`);
-  return `data:image/png;base64,FAKE${size}`;
-};
+const urlOf = (asset: unknown) => (asset as { testUri: string }).testUri;
+const png = (id: string, size: number) => `../../../assets/favicons/${id}-${size}.png`;
 
 const SHIPPED = '<title>mon-farm</title><link rel="icon" href="/favicon.ico">';
-const icon = () => document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
-const touch = () => document.head.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+const icons = () => [...document.head.querySelectorAll<HTMLLinkElement>('link[rel="icon"]')];
+const touches = () => [...document.head.querySelectorAll<HTMLLinkElement>('link[rel="apple-touch-icon"]')];
 
 beforeEach(() => {
   document.head.innerHTML = SHIPPED;
 });
 
-it('leaves <head> alone when the choice is เดิม and nothing was changed (FV-4)', async () => {
-  await applyFavicon('default', fake);
-  expect(document.head.innerHTML).toBe(SHIPPED);
+it('points the tab icon and the home-screen icon at the chosen PNGs (FV-2)', () => {
+  applyFavicon('sale.weigh', urlOf);
+  expect(icons().map((l) => [l.getAttribute('href'), l.getAttribute('type')])).toEqual([[png('sale.weigh', 64), 'image/png']]);
+  expect(touches().map((l) => l.getAttribute('href'))).toEqual([png('sale.weigh', 180)]);
 });
 
-it('sets the tab icon and the home-screen icon from the chosen icon (FV-2)', async () => {
-  await applyFavicon('sale.weigh', fake);
-  expect(icon()!.getAttribute('href')).toBe('data:image/png;base64,FAKE64');
-  expect(icon()!.getAttribute('type')).toBe('image/png');
-  expect(document.head.querySelectorAll('link[rel="icon"]')).toHaveLength(1);
-  expect(touch()!.getAttribute('href')).toBe('data:image/png;base64,FAKE180');
+it('a second choice replaces the first, without adding links', () => {
+  applyFavicon('sale.weigh', urlOf);
+  applyFavicon('nav.home', urlOf);
+  expect(icons().map((l) => l.getAttribute('href'))).toEqual([png('nav.home', 64)]);
+  expect(touches().map((l) => l.getAttribute('href'))).toEqual([png('nav.home', 180)]);
+  expect(document.head.querySelectorAll('link')).toHaveLength(2);
 });
 
-it('puts back the shipped favicon and removes the home-screen icon on เดิม (FV-4)', async () => {
-  await applyFavicon('sale.weigh', fake);
-  await applyFavicon('nav.home', fake);
-  await applyFavicon('default', fake);
-  expect(document.head.innerHTML).toBe(SHIPPED);
+it('an unknown id (e.g. the old "default") means the default, กรีดยาง', () => {
+  applyFavicon('default', urlOf);
+  expect(icons().map((l) => l.getAttribute('href'))).toEqual([png('farmwork.tapping', 64)]);
+  expect(touches().map((l) => l.getAttribute('href'))).toEqual([png('farmwork.tapping', 180)]);
 });
 
-it('the last choice wins even when an earlier one finishes drawing later', async () => {
-  const waiting: (() => void)[] = [];
-  const slow: Rasterize = (svg, size) =>
-    new Promise((ok) => {
-      waiting.push(() => ok(`data:image/png;base64,SLOW${size}`));
-    });
-  const release = () => waiting.forEach((go) => go());
-  const first = applyFavicon('sale.weigh', slow);
-  await applyFavicon('nav.home', fake);
-  release();
-  await first;
-  expect(icon()!.getAttribute('href')).toBe('data:image/png;base64,FAKE64');
-});
-
-it('falls back to the SVG itself when the browser cannot draw a PNG', async () => {
-  await applyFavicon('sale.weigh', async () => {
-    throw new Error('no canvas');
-  });
-  expect(icon()!.getAttribute('href')).toMatch(/^data:image\/svg\+xml,%3Csvg/);
-  expect(icon()!.getAttribute('type')).toBe('image/svg+xml');
-  expect(touch()).toBeNull();
-});
-
-it('adds its own icon link when the page has none, and removes it again on เดิม', async () => {
+it('adds an icon link when the page has none', () => {
   document.head.innerHTML = '<title>mon-farm</title>';
-  await applyFavicon('nav.home', fake);
-  expect(icon()!.getAttribute('href')).toBe('data:image/png;base64,FAKE64');
-  await applyFavicon('default', fake);
-  expect(document.head.innerHTML).toBe('<title>mon-farm</title>');
-});
-
-it('ignores an id it does not know, like เดิม', async () => {
-  await applyFavicon('sale.weigh', fake);
-  await applyFavicon('nope.nope', fake);
-  expect(document.head.innerHTML).toBe(SHIPPED);
-});
-
-it('puts back a shipped icon link that had no href without inventing an empty one', async () => {
-  document.head.innerHTML = '<link rel="icon" type="image/x-icon">';
-  await applyFavicon('nav.home', fake);
-  await applyFavicon('default', fake);
-  expect(document.head.innerHTML).toBe('<link rel="icon" type="image/x-icon">');
+  applyFavicon('sale.weigh', urlOf);
+  expect(icons().map((l) => l.getAttribute('href'))).toEqual([png('sale.weigh', 64)]);
 });

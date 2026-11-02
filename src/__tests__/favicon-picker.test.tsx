@@ -48,14 +48,17 @@ afterEach(() => Object.defineProperty(Platform, 'OS', { configurable: true, get:
 describe('on the web', () => {
   beforeEach(onWeb);
 
-  it('shows เดิม + 20 icons, เดิม chosen, each named in Thai (FV-1)', async () => {
+  // Owner 2026-11-02: no Expo icon; กรีดยาง is the default.
+  it('shows the 20 icons with กรีดยาง chosen by default, each named in Thai (FV-1)', async () => {
     wrap(<FaviconCard />);
     expect(await screen.findByText('ไอคอนบนแท็บเบราว์เซอร์')).toBeTruthy();
-    const def = screen.getByTestId('device-favicon-default');
-    expect(def.props.accessibilityState).toMatchObject({ checked: true });
-    expect(def.props.accessibilityLabel).toBe('เดิม');
+    expect(screen.queryByTestId('device-favicon-default')).toBeNull();
+    expect(screen.queryByLabelText('เดิม')).toBeNull();
+    const tapping = screen.getByTestId('device-favicon-farmwork.tapping');
+    expect(tapping.props.accessibilityState).toMatchObject({ checked: true });
+    expect(tapping.props.accessibilityLabel).toBe('กรีดยาง');
     for (const id of FAVICON_CHOICES) expect(screen.getByTestId(`device-favicon-${id}`)).toBeTruthy();
-    expect(screen.getByTestId('device-favicon-sale.weigh').props.accessibilityLabel).toBe('ชั่งน้ำหนัก');
+    expect(screen.getAllByRole('radio')).toHaveLength(20);
     expect(screen.getByLabelText('ไอคอนบนแท็บเบราว์เซอร์').props.accessibilityRole).toBe('radiogroup');
     expect(applyFavicon).not.toHaveBeenCalled();
   });
@@ -66,11 +69,11 @@ describe('on the web', () => {
     expect(applyFavicon).toHaveBeenLastCalledWith('sale.weigh');
     expect(stored.get('mon-farm:favicon')).toBe('sale.weigh');
     expect(screen.getByTestId('device-favicon-sale.weigh').props.accessibilityState).toMatchObject({ checked: true });
-    expect(screen.getByTestId('device-favicon-default').props.accessibilityState).toMatchObject({ checked: false });
+    expect(screen.getByTestId('device-favicon-farmwork.tapping').props.accessibilityState).toMatchObject({ checked: false });
 
-    await act(async () => fireEvent.press(screen.getByTestId('device-favicon-default')));
-    expect(applyFavicon).toHaveBeenLastCalledWith('default');
-    expect(stored.get('mon-farm:favicon')).toBe('default');
+    await act(async () => fireEvent.press(screen.getByTestId('device-favicon-farmwork.tapping')));
+    expect(applyFavicon).toHaveBeenLastCalledWith('farmwork.tapping');
+    expect(stored.get('mon-farm:favicon')).toBe('farmwork.tapping');
   });
 
   it('shows the stored choice when the screen opens', async () => {
@@ -89,13 +92,13 @@ describe('on the web', () => {
     expect(applyFavicon).toHaveBeenCalledWith('nav.home');
   });
 
-  it('touches nothing on start when nothing was chosen (FV-4)', async () => {
+  it('sets the default กรีดยาง on start when nothing was chosen, so the home-screen icon is there too (FV-4)', async () => {
     render(
       <View>
         <FaviconOnStart />
       </View>,
     );
-    expect(applyFavicon).not.toHaveBeenCalled();
+    expect(applyFavicon).toHaveBeenCalledWith('farmwork.tapping');
   });
 
   it('sits on the เครื่องนี้ screen', async () => {
@@ -117,7 +120,7 @@ describe('on Android / iOS (FV-5)', () => {
       </SpeechProvider>,
     );
     expect(screen.queryByText('ไอคอนบนแท็บเบราว์เซอร์')).toBeNull();
-    expect(screen.queryByTestId('device-favicon-default')).toBeNull();
+    expect(screen.queryByTestId('device-favicon-farmwork.tapping')).toBeNull();
     render(
       <View>
         <FaviconOnStart />

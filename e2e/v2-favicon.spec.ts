@@ -7,13 +7,16 @@ import { smallTargets, textFit } from './text-fit';
 
 /**
  * E03-S10 on the real web build: the tab icon picker on เครื่องนี้ changes
- * the browser's <link rel="icon"> / apple-touch-icon at once, from PNGs drawn
- * on the device (FV-2), keeps the choice across a reload on any page (FV-3),
- * leaves the shipped favicon alone until something is chosen and puts it back
- * on เดิม (FV-4), and nothing on the card is cut off (FV-6).
+ * the browser's <link rel="icon"> / apple-touch-icon at once, to PNGs that ship
+ * with the build (FV-2), keeps the choice across a reload on any page (FV-3),
+ * shows กรีดยาง when nothing was chosen (FV-4, owner 2026-11-02: no Expo icon),
+ * and nothing on the card is cut off (FV-6).
  */
 
 test.beforeEach(() => test.skip(test.info().project.name !== 'phone-portrait', 'portrait-first'));
+
+/** The PNGs ship with the build, served from the app's own /assets (FV-2). */
+const png = (id: string, size: number) => new RegExp(`^/assets/assets/favicons/${id.replace('.', '\\.')}-${size}\\.[0-9a-f]+\\.png$`);
 
 const head = (page: Page) =>
   page.evaluate(() => ({
@@ -47,7 +50,7 @@ const colourCount = (page: Page, src: string) =>
     src,
   );
 
-/** Width × height of an image data URL, decoded by the browser. */
+/** Width × height of an image URL, decoded by the browser. */
 const pixelSize = (page: Page, src: string) =>
   page.evaluate(
     (src) =>
@@ -60,44 +63,53 @@ const pixelSize = (page: Page, src: string) =>
     src,
   );
 
-test('choosing an icon changes the tab icon at once, survives a reload, and เดิม puts the shipped one back', async ({ page }) => {
+test('choosing an icon changes the tab icon at once and survives a reload on another page (FV-2, FV-3)', async ({ page }) => {
   await page.goto('/v2/device');
   const card = page.getByTestId('device-favicon');
   await card.scrollIntoViewIfNeeded();
-  await expect(page.getByTestId('device-favicon-default')).toHaveAttribute('aria-checked', 'true');
-  expect(await head(page)).toEqual({ icons: [{ href: '/favicon.ico', type: null }], touch: null });
+  await expect(page.getByTestId('device-favicon-farmwork.tapping')).toHaveAttribute('aria-checked', 'true');
 
   await page.getByTestId('device-favicon-sale.weigh').click();
   await expect(page.getByTestId('device-favicon-sale.weigh')).toHaveAttribute('aria-checked', 'true');
-  await expect.poll(async () => (await head(page)).icons[0]?.href ?? '').toMatch(/^data:image\/png;base64,/);
+  await expect.poll(async () => (await head(page)).icons[0]?.href ?? '').toMatch(png('sale.weigh', 64));
   const chosen = await head(page);
   expect(chosen.icons).toHaveLength(1);
   expect(chosen.icons[0].type).toBe('image/png');
   expect(await pixelSize(page, chosen.icons[0].href)).toBe('64x64');
-  expect(chosen.touch).toMatch(/^data:image\/png;base64,/);
+  expect(chosen.touch).toMatch(png('sale.weigh', 180));
   expect(await pixelSize(page, chosen.touch!)).toBe('180x180');
   expect(await colourCount(page, chosen.icons[0].href)).toBeGreaterThan(3);
   expect(await colourCount(page, chosen.touch!)).toBeGreaterThan(3);
   expect(await page.evaluate(() => localStorage.getItem('mon-farm:favicon'))).toBe('sale.weigh');
-  await evidence(page, 'docs/ux/screenshots/e03-s10/device-picker-chosen.png');
-  await tabStrip(page, chosen.icons[0].href, chosen.touch!);
 
   // Another page, fresh load: the app puts the choice back on start.
   await page.goto('/v2');
-  await expect.poll(async () => (await head(page)).icons[0]?.href ?? '').toMatch(/^data:image\/png;base64,/);
-  expect((await head(page)).icons[0].href).toBe(chosen.icons[0].href);
+  await expect.poll(async () => (await head(page)).icons[0]?.href ?? '').toMatch(png('sale.weigh', 64));
 
   await page.goto('/v2/device');
   await expect(page.getByTestId('device-favicon-sale.weigh')).toHaveAttribute('aria-checked', 'true');
-  await page.getByTestId('device-favicon-default').click();
-  await expect.poll(() => head(page)).toEqual({ icons: [{ href: '/favicon.ico', type: null }], touch: null });
-  expect(await page.evaluate(() => localStorage.getItem('mon-farm:favicon'))).toBe('default');
+  await page.getByTestId('device-favicon-farmwork.tapping').click();
+  await expect.poll(async () => (await head(page)).icons[0]?.href ?? '').toMatch(png('farmwork.tapping', 64));
+  expect(await page.evaluate(() => localStorage.getItem('mon-farm:favicon'))).toBe('farmwork.tapping');
 });
 
-test('a device that never chose keeps the shipped favicon untouched (FV-4)', async ({ page }) => {
+// Owner 2026-11-02: no Expo icon; กรีดยาง is the default.
+test('a device that never chose shows กรีดยาง: in the shipped page, then as PNGs with a home-screen icon (FV-4)', async ({ page, request }) => {
+  // The static HTML's /favicon.ico is built from the กรีดยาง PNG (app.json), not Expo's.
+  const shipped = await (await request.get('/v2')).text();
+  expect(shipped).toContain('<link rel="icon" href="/favicon.ico"');
   await page.goto('/v2');
-  await page.waitForTimeout(500);
-  expect(await head(page)).toEqual({ icons: [{ href: '/favicon.ico', type: null }], touch: null });
+  expect(await colourCount(page, '/favicon.ico')).toBeGreaterThan(3);
+  await expect.poll(async () => (await head(page)).icons[0]?.href ?? '').toMatch(png('farmwork.tapping', 64));
+  const h = await head(page);
+  expect(h.touch).toMatch(png('farmwork.tapping', 180));
+  expect(await colourCount(page, h.icons[0].href)).toBeGreaterThan(3);
+  await tabStrip(page, new URL(h.icons[0].href, page.url()).href, new URL(h.touch!, page.url()).href);
+  await page.goto('/v2/device');
+  await page.getByTestId('device-favicon').scrollIntoViewIfNeeded();
+  await expect(page.getByTestId('device-favicon-farmwork.tapping')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByTestId('device-favicon-default')).toHaveCount(0);
+  await evidence(page, 'docs/ux/screenshots/e03-s10/device-picker-chosen.png');
 });
 
 for (const width of [360, 390]) {
@@ -108,7 +120,7 @@ for (const width of [360, 390]) {
       await page.goto('/v2/device');
       const card = page.getByTestId('device-favicon');
       await card.scrollIntoViewIfNeeded();
-      await expect(page.getByTestId('device-favicon-people.commsLog')).toBeVisible();
+      await expect(page.getByTestId('device-favicon-system.sync')).toBeVisible();
       // The size really applied (not just the default M): the card's note is bodySm × textScale.
       const note = card.getByText(/^เฉพาะเบราว์เซอร์ในเครื่องนี้ · บุ๊กมาร์ก/);
       await expect(note).toHaveCSS('font-size', `${scaleSizes(tokens.font.size, size).bodySm}px`);
@@ -117,7 +129,7 @@ for (const width of [360, 390]) {
       const box = (await card.boundingBox())!;
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(width);
-      for (const id of ['default', 'nav.home', 'people.commsLog']) {
+      for (const id of ['farmwork.tapping', 'nav.home', 'system.sync']) {
         const b = (await page.getByTestId(`device-favicon-${id}`).boundingBox())!;
         expect(b.x + b.width).toBeLessThanOrEqual(box.x + box.width);
       }

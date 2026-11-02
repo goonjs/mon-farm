@@ -22,7 +22,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/favicons/farmwork.tapping-64.png"
     },
     "plugins": [
       "expo-router",
