@@ -93,7 +93,9 @@ export function TypedReading({ startKg, offsetKg, onChange }: { startKg: number;
   const pick = (side: Side) => {
     if (side === src) return;
     setSrc(side);
-    setEntry(startEntry(shown(side)));
+    // A worked-out weight of 0 or less (a too-low reading) is not something to edit: start that side empty.
+    const v = shown(side);
+    setEntry(startEntry(Number(v) > 0 ? v : ''));
     setGuess(false);
   };
 
@@ -103,12 +105,13 @@ export function TypedReading({ startKg, offsetKg, onChange }: { startKg: number;
     const ink = leaf ? t.color.accept : t.color.ink;
     const value = shown(side);
     const faint = !typing || (guess && typing);
+    const tag = msg(typing ? (guess ? 'numpad.guess' : 'v2s.typing') : 'v2s.calcForYou');
     return (
       <Pressable
         testID={`reading-${side}`}
         accessibilityRole="button"
         accessibilityState={{ selected: typing }}
-        accessibilityLabel={`${msg(leaf ? 'v2s.fieldNet' : 'v2s.fieldScale')} ${value || '–'} ${msg('common.kg')}`}
+        accessibilityLabel={`${msg(leaf ? 'v2s.fieldNet' : 'v2s.fieldScale')} ${value || '–'} ${msg('common.kg')}, ${tag}`}
         onPress={() => pick(side)}
         style={{
           gap: t.space.xxs,
@@ -140,12 +143,13 @@ export function TypedReading({ startKg, offsetKg, onChange }: { startKg: number;
               overflow: 'hidden',
             }}
           >
-            {msg(typing ? (guess ? 'numpad.guess' : 'v2s.typing') : 'v2s.calcForYou')}
+            {tag}
           </Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-end', gap: t.space.xs }}>
           <Text
             testID={`reading-${side}-value`}
+            accessibilityLiveRegion="polite"
             style={{ fontFamily: t.font.family.sans, fontSize: typing ? 40 : 28, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: faint ? t.color.inkSoft : ink }}
           >
             {value === '' ? '–' : value}
