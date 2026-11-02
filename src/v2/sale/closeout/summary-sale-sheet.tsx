@@ -25,7 +25,7 @@ const baht = formatSatang;
 function Big({ value, testID, size }: { value: string; testID?: string; size: number }) {
   const t = useTheme();
   return (
-    <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: size, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+    <Text testID={testID} style={{ fontFamily: t.font.family.sans, fontSize: Math.round(size * t.textScale), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
       {value}
     </Text>
   );
