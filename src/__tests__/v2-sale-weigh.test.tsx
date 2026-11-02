@@ -823,14 +823,23 @@ describe('short basket: how it is recorded (E04-S16)', () => {
     await counterAt(farm.a[0]);
     await press('tool-short');
   };
-  const typeIn = (id: string, text: string) => act(async () => fireEvent.changeText(screen.getByTestId(id), text));
+  /** E01-S20 row 21: tap a side's card, then press keys on the in-sheet pad. "" = hold ⌫ (clear). */
+  const typeIn = async (side: 'scale' | 'net', text: string) => {
+    await press(`reading-${side}`);
+    if (text === '') {
+      await act(async () => fireEvent(screen.getByTestId('reading-pad-key-back'), 'longPress'));
+      return;
+    }
+    for (const k of text) await press(`reading-pad-key-${k}`);
+  };
+  const shown = (side: 'scale' | 'net') => screen.getByTestId(`reading-${side}-value`);
   const lastShort = async () => (await store().load(saleId)).filter((e) => e.kind === 'short').pop();
 
   it('starts in typing mode with both weights shown: scale 37, net 35', async () => {
     await openSheet();
-    expect(screen.getByTestId('reading-scale-input').props.value).toBe('37');
-    expect(screen.getByTestId('reading-net-input').props.value).toBe('35');
-    expect(screen.getByTestId('reading-scale-tag')).toHaveTextContent('กำลังกรอก');
+    expect(shown('scale')).toHaveTextContent('37');
+    expect(shown('net')).toHaveTextContent('35');
+    expect(screen.getByTestId('reading-scale-tag')).toHaveTextContent('ค่าเดา · พิมพ์ทับ');
     expect(screen.getByTestId('reading-net-tag')).toHaveTextContent('คำนวณให้');
     expect(screen.queryByTestId('reading')).toBeNull();
     await press('short-save');
@@ -839,8 +848,9 @@ describe('short basket: how it is recorded (E04-S16)', () => {
 
   it('typing the scale reading works the net out, and records that reading', async () => {
     await openSheet();
-    await typeIn('reading-scale-input', '40');
-    expect(screen.getByTestId('reading-net-input').props.value).toBe('38');
+    await typeIn('scale', '40');
+    expect(shown('net')).toHaveTextContent('38');
+    expect(screen.getByTestId('reading-scale-tag')).toHaveTextContent('กำลังกรอก');
     expect(screen.getByTestId('reading-net-tag')).toHaveTextContent('คำนวณให้');
     await press('short-save');
     expect(await lastShort()).toMatchObject({ readingG: 40_000, tareG: 2_000 });
@@ -848,45 +858,67 @@ describe('short basket: how it is recorded (E04-S16)', () => {
 
   it('typing the net rubber works the scale out, and the tags swap', async () => {
     await openSheet();
-    await typeIn('reading-net-input', '30');
-    expect(screen.getByTestId('reading-scale-input').props.value).toBe('32');
+    await typeIn('net', '30');
+    expect(shown('scale')).toHaveTextContent('32');
     expect(screen.getByTestId('reading-net-tag')).toHaveTextContent('กำลังกรอก');
     expect(screen.getByTestId('reading-scale-tag')).toHaveTextContent('คำนวณให้');
     await press('short-save');
     expect(await lastShort()).toMatchObject({ readingG: 32_000, tareG: 2_000 });
   });
 
-  it('keeps one decimal and drops letters', async () => {
+  it('keeps one decimal and at most 3 whole digits (the old box: 999.9)', async () => {
     await openSheet();
-    await typeIn('reading-net-input', '30.5');
-    expect(screen.getByTestId('reading-scale-input').props.value).toBe('32.5');
-    await typeIn('reading-net-input', '3x');
-    expect(screen.getByTestId('reading-net-input').props.value).toBe('3');
+    await typeIn('net', '30.55');
+    expect(shown('net')).toHaveTextContent('30.5');
+    expect(shown('scale')).toHaveTextContent('32.5');
+    await typeIn('scale', '1234');
+    expect(shown('scale')).toHaveTextContent('123');
   });
 
   it('nothing typed, or a net of zero or less, cannot be saved and says why', async () => {
     await openSheet();
-    await typeIn('reading-scale-input', '');
+    await typeIn('scale', '');
     expect(screen.getByTestId('short-save').props.accessibilityState).toMatchObject({ disabled: true });
-    expect(screen.getByTestId('reading-net-input').props.value).toBe('');
-    await typeIn('reading-scale-input', '2');
+    expect(shown('net')).toHaveTextContent('–');
+    await typeIn('scale', '2');
     expect(screen.getByTestId('short-too-low')).toBeTruthy();
     expect(screen.getByTestId('short-save').props.accessibilityState).toMatchObject({ disabled: true });
-    await typeIn('reading-scale-input', '3');
+    await press('reading-pad-key-back');
+    await press('reading-pad-key-3');
     expect(screen.queryByTestId('short-too-low')).toBeNull();
   });
 
   it('over a full basket warns but still saves', async () => {
     await openSheet();
-    await typeIn('reading-scale-input', '55');
+    await typeIn('scale', '55');
     expect(screen.getByTestId('short-over')).toBeTruthy();
     await press('short-save');
     expect(await lastShort()).toMatchObject({ readingG: 55_000 });
   });
 
-  it('shows how much is still lacking in typing mode', async () => {
+  it('shows how much is still lacking in typing mode, on one line', async () => {
     await openSheet();
     expect(screen.getByTestId('card-lack')).toHaveTextContent(/ยังขาด\s*15/);
+  });
+
+  it('NP-8: the guess is edited from its end — "." first starts at "0.", ⌫ first removes one digit of the guess', async () => {
+    await openSheet();
+    await press('reading-pad-key-back');
+    expect(shown('scale')).toHaveTextContent(/^3$/);
+    await press('reading-pad-key-6');
+    expect(shown('scale')).toHaveTextContent('36');
+    await press('short-cancel');
+    await press('tool-short');
+    await press('reading-pad-key-.');
+    expect(shown('scale')).toHaveTextContent('0.');
+  });
+
+  it('NP-8: the pad is in the sheet (no OS keyboard, no second sheet); hold ⌫ clears', async () => {
+    await openSheet();
+    expect(screen.getByTestId('reading-pad')).toBeTruthy();
+    expect(screen.queryByTestId('reading-scale-input')).toBeNull();
+    await typeIn('scale', '');
+    expect(shown('scale')).toHaveTextContent('–');
   });
 
   it('dial on the net rubber: the big number is the net, ± moves the net, the record is the reading', async () => {

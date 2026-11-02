@@ -325,7 +325,26 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
                 }}
               />
             )}
-            {skew || heldG ? (
+            {weighMode === 'type' ? (
+              // E01-S20 row 21 (D6, D6b): the pad sits in this sheet, so the sums shrink to wrapping lines.
+              <View style={{ gap: t.space.xxs }}>
+                {skew || heldG ? (
+                  <View testID="short-sums" style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: t.space.md }}>
+                    <AppText variant="caption">{`${msg('v2s.minusBasket')} ${kg(tare)}`}</AppText>
+                    {heldG ? <AppText variant="caption">{`${msg('v2s.minusHave')} ${kg(heldG)}`}</AppText> : null}
+                    {skew ? <AppText variant="caption" style={{ color: t.color.warn, fontWeight: t.font.weight.bold }}>{`${msg('v2s.skewWord')} ${signed(kgText(-skew))} ${msg('common.kg')}`}</AppText> : null}
+                    <AppText variant="caption" testID="short-net" style={{ fontWeight: t.font.weight.bold }}>{`${msg('v2s.eqNet')} ${kg(netG)}`}</AppText>
+                  </View>
+                ) : null}
+                {typedEmpty ? null : (
+                  <AppText testID="card-lack" variant="bodySm">
+                    {`${msg('v2s.lacking')} `}
+                    <Text style={{ fontWeight: t.font.weight.bold }}>{kg(Math.max(0, lackG))}</Text>
+                    {` ${msg('v2s.untilFull', { n: kgText(filling && open ? open.missingG : std) })}`}
+                  </AppText>
+                )}
+              </View>
+            ) : skew || heldG ? (
               <View style={{ ...cardStyle(t), padding: t.space.md }}>
                 <Kv label={msg('v2s.scaleReads')} value={kg(readingG)} />
                 <Kv label={msg('v2s.minusBasket')} value={kg(tare)} />
