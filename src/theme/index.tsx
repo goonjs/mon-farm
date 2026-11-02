@@ -11,9 +11,14 @@
  * counter screen exists for.
  */
 
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { tokens, type ColorName, type ColorScheme } from '../../design/tokens';
+import { TEXT_SCALE, scaleSizes, type TextSize } from '../core/text-scale';
+import { deviceSettings } from '../store/device-settings';
+import { readTextSize, writeTextSize } from './text-size-preference';
+
+export type { TextSize };
 
 /**
  * `Record<ColorName, string>`, not `typeof tokens.color.light`.
@@ -24,13 +29,23 @@ import { tokens, type ColorName, type ColorScheme } from '../../design/tokens';
  */
 export type Palette = Record<ColorName, string>;
 
+/** Font tokens with the sizes already multiplied by the device text size (E03-S08). */
+export type FontTokens = Omit<typeof tokens.font, 'size'> & {
+  readonly size: Readonly<Record<keyof typeof tokens.font.size, number>>;
+};
+
 export interface Theme {
   readonly scheme: ColorScheme;
   readonly color: Palette;
   readonly space: typeof tokens.space;
   readonly radius: typeof tokens.radius;
   readonly border: typeof tokens.border;
-  readonly font: typeof tokens.font;
+  readonly font: FontTokens;
+  /**
+   * The text size multiplier (0.875 / 1 / 1.125). Only for a size that is not
+   * a font token; never for the public numeral, which is sized from the screen.
+   */
+  readonly textScale: number;
   readonly duration: typeof tokens.duration;
   readonly target: typeof tokens.target;
   readonly publicNumeral: typeof tokens.publicNumeral;
@@ -40,14 +55,15 @@ export interface Theme {
   readonly layout: typeof tokens.layout;
 }
 
-function themeFor(scheme: ColorScheme): Theme {
+function themeFor(scheme: ColorScheme, textSize: TextSize): Theme {
   return {
     scheme,
     color: tokens.color[scheme],
     space: tokens.space,
     radius: tokens.radius,
     border: tokens.border,
-    font: tokens.font,
+    font: { ...tokens.font, size: scaleSizes(tokens.font.size, textSize) },
+    textScale: TEXT_SCALE[textSize],
     duration: tokens.duration,
     target: tokens.target,
     publicNumeral: tokens.publicNumeral,
@@ -63,6 +79,9 @@ interface ThemeContextValue {
   scheme: ColorScheme;
   setScheme: (s: ColorScheme) => void;
   toggle: () => void;
+  /** This device's text size (E03-S08); setting it is remembered on the device. */
+  textSize: TextSize;
+  setTextSize: (size: TextSize) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -75,15 +94,39 @@ export function ThemeProvider({
   initial?: ColorScheme;
 }) {
   const [scheme, setScheme] = useState<ColorScheme>(initial);
+  // Native reads the stored size in the first render; web reads it after
+  // mount, as the language and speech providers do (E01-S19 DS-4: the web
+  // build static-renders, so the first client render must match the HTML).
+  const [textSize, setTextSizeState] = useState<TextSize>(() =>
+    deviceSettings.readDuringRender ? (readTextSize() ?? 'm') : 'm',
+  );
+  useEffect(() => {
+    if (deviceSettings.readDuringRender) return;
+    let cancelled = false;
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      const stored = readTextSize();
+      if (stored !== null) setTextSizeState(stored);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const setTextSize = useCallback((size: TextSize) => {
+    setTextSizeState(size);
+    writeTextSize(size);
+  }, []);
 
   const value = useMemo<ThemeContextValue>(
     () => ({
-      theme: themeFor(scheme),
+      theme: themeFor(scheme, textSize),
       scheme,
       setScheme,
       toggle: () => setScheme((s) => (s === 'light' ? 'dark' : 'light')),
+      textSize,
+      setTextSize,
     }),
-    [scheme],
+    [scheme, textSize, setTextSize],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

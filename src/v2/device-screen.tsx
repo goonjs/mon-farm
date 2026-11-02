@@ -1,7 +1,7 @@
 /**
  * /v2/device — เครื่องนี้ (farm mockup 1, the drawer's device group):
  * settings of THIS device only, never synced and never in the event log —
- * screen theme, the hold time to count a basket (D-79), how a short basket is
+ * screen theme, the text size (E03-S08), the hold time to count a basket (D-79), how a short basket is
  * recorded (E04-S16), the spoken count,
  * the date era (D-74 F14) and the language. Each is remembered on the device
  * by its own provider or preference store.
@@ -17,7 +17,7 @@ import { useI18n, useT, type Locale } from '../i18n';
 import { useSpeech } from '../speech';
 import { readCountMode, readHoldMs, writeCountMode, writeHoldMs, type CountMode } from '../store/hold-preference';
 import { readWeighMode, writeWeighMode, type WeighMode } from '../store/weigh-mode-preference';
-import { useThemeControls, useTheme } from '../theme';
+import { useThemeControls, useTheme, type TextSize } from '../theme';
 import { AppText, Card, CardLabel, SegmentedControl } from '../ui';
 import { FarmScreen, Stepper } from './farm/pieces';
 import { V2_HOME } from './routes';
@@ -25,7 +25,7 @@ import { V2_HOME } from './routes';
 export function V2Device() {
   const t = useTheme();
   const msg = useT();
-  const { scheme, setScheme } = useThemeControls();
+  const { scheme, setScheme, textSize, setTextSize } = useThemeControls();
   const { locale, setLocale, era, toggleEra } = useI18n();
   const { speechOn, setSpeechOn } = useSpeech();
   const [holdMs, setHoldMs] = useState(readHoldMs);
@@ -61,6 +61,20 @@ export function V2Device() {
           ]}
         />,
         msg('settings.themeNote'),
+      )}
+      {section(
+        msg('settings.textSize'),
+        <SegmentedControl<TextSize>
+          testID="device-text-size"
+          value={textSize}
+          onChange={setTextSize}
+          options={[
+            { value: 's', label: msg('v2f.textSizeS') },
+            { value: 'm', label: msg('v2f.textSizeM') },
+            { value: 'l', label: msg('v2f.textSizeL') },
+          ]}
+        />,
+        msg('settings.textSizeNote'),
       )}
       {section(
         msg('saleSettings.countMode'),
