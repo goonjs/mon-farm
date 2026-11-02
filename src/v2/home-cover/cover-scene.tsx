@@ -21,7 +21,7 @@ import { fractionOfHour, hourAtFraction, hourOfDay, moonAt, paletteAt, playHour,
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
 
-export const COVER_HEIGHT = 180;
+export const COVER_HEIGHT = 148;
 const FRAME_MS = 100;
 const CLOCK_MS = 60_000;
 /** Finger travel before a touch counts as a drag rather than a tap. */

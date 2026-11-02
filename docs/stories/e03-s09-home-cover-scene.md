@@ -8,7 +8,7 @@ Status: In Progress (เจ้าของเลือกทิศทางผ�
 - คำขอเจ้าของ 2026-11-02: "ภาพต้นไม้หน้าแรกดูแปลก" อยากได้ต้นยางสวย ลำธารน้ำไหล (ไม่เอาน้ำตก)
   เมฆบางลอยช้า ดวงอาทิตย์ตามเวลาจริง เช้า/สาย/เที่ยง/บ่าย/เย็น ดูต่างกัน
 - Mockup: `docs/ux/mockups/home-cover-scene.html` (artifact https://claude.ai/artifact/Vxiv7KoTKZSPvF5Y3BWsKH)
-- คำตอบเจ้าของ (ผ่านลีด): ภาพโดยรวมเอาแบบนี้ พุ่มฟูขึ้น · หลัง 19:00 พระจันทร์กับดาว · สูง 180 ·
+- คำตอบเจ้าของ (ผ่านลีด): ภาพโดยรวมเอาแบบนี้ พุ่มฟูขึ้น · หลัง 19:00 พระจันทร์กับดาว · สูง 148 เท่าเดิม (เจ้าของตอบ 180 ก่อนแล้วเปลี่ยนเป็น 148) ·
   เปิดแอปแสดงเวลาตอนนี้ ปัดซ้าย/ขวาเลื่อนเวลาตามตำแหน่ง แตะ = เล่นทั้งวันใน 30 วินาที ·
   JS error ให้กลับไปแสดงภาพเก่า · review ไม่มี error แล้ว merge ได้
 - โค้ดเดิม: `Cover` ใน `src/v2/home-screen.tsx` (วาดด้วย View, สูง 148)
@@ -23,7 +23,7 @@ Status: In Progress (เจ้าของเลือกทิศทางผ�
 ## Acceptance criteria
 
 - [ ] **CS-1** ฉากตาม mockup: ต้นยางพุ่มฟู ลำต้นเทาอ่อนมีรอยกรีดกับถ้วยรับน้ำยาง แถวต้นยางข้างหลัง
-  ลำธารคดเคี้ยวไหลเข้าหาคนดู (ไม่มีน้ำตก) เมฆบาง 3 ก้อน ดวงอาทิตย์/พระจันทร์กับดาว สูง 180 เต็มความกว้าง
+  ลำธารคดเคี้ยวไหลเข้าหาคนดู (ไม่มีน้ำตก) เมฆบาง 3 ก้อน ดวงอาทิตย์/พระจันทร์กับดาว สูง 148 เท่าเดิม เต็มความกว้าง
 - [ ] **CS-2** เปิดหน้าแรกแล้วภาพแสดงตามเวลาเครื่องตอนนี้ และเปลี่ยนตามนาฬิกาทุก 1 นาที: ดวงอาทิตย์ขึ้น 06:00
   ตก 18:30 เดินเป็นวงโค้งซ้ายไปขวา สีฟ้า น้ำ ใบไม้ เงา เปลี่ยนตามเวลา เช้า/สาย/เที่ยง/บ่าย/เย็น ต่างกันชัด
   ค่ำ (ราว 19:30–05:00) เป็นพระจันทร์กับดาว
@@ -55,7 +55,7 @@ N/A — ไม่มีข้อมูลหรือเครือข่าย
 ## Verification
 
 - [x] Sandbox run performed: web build (`expo export`) served with `scripts/serve-dist.mjs`, Playwright 390×844 dpr 2,
-  clock fixed per run: 07:00 / 10:00 / 12:00 / 15:00 / 17:30 / 20:00 — cover 180 tall, inside the screen, no page error,
+  clock fixed per run: 07:00 / 10:00 / 12:00 / 15:00 / 17:30 / 20:00 — cover 148 tall, inside the screen, no page error,
   classic cover not shown. Drag left 120 px at 12:00 → night colours; click → play, 7.5 s later evening; water dashoffset
   0 → −8.2 after 0.7 s; `touch-action: pan-y` on the cover. Text size S and L: no sideways overflow.
   Existing e2e `v2-home`, `v2-text-size`, `v2-pending-repay`: 7 passed.

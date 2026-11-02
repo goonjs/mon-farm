@@ -134,7 +134,7 @@ section.doc b{color:var(--color-ink)}
         <button class="btn" id="play" type="button">▶ เล่นทั้งวันใน 30 วินาที</button>
       </div>
       <label class="toggle"><input type="checkbox" id="still"> ลดการเคลื่อนไหว (ภาพนิ่ง เหมือนตั้งค่าในเครื่องไว้)</label>
-      <label class="toggle"><input type="checkbox" id="tall" checked> ภาพสูง 180 (เจ้าของเลือก) — เอาติ๊กออกเพื่อเทียบกับ 148 เดิม</label>
+      <label class="toggle"><input type="checkbox" id="tall"> ลองภาพสูง 180 (เจ้าของเลือก 148 เท่าเดิม)</label>
       <p class="note">ในแอปจริงจะไม่มีแผงนี้ ภาพจะใช้เวลาจากนาฬิกาเครื่องเอง และเปลี่ยนทีละนิดทุก 5 นาที</p>
     </div>
   </div>
@@ -169,7 +169,7 @@ section.doc b{color:var(--color-ink)}
     <ol>
       <li><b>ภาพโดยรวม</b> เอาแบบนี้ ปรับพุ่มต้นยางให้ฟูขึ้น (ทำแล้วในรุ่นนี้)</li>
       <li><b>กลางคืน</b> พระจันทร์กับดาว</li>
-      <li><b>ความสูงภาพ</b> 180</li>
+      <li><b>ความสูงภาพ</b> 148 เท่าเดิม</li>
       <li><b>ในแอป</b> เปิดมาแสดงตามเวลาตอนนี้ ปัดซ้ายขวาบนภาพเพื่อเลื่อนเวลา แตะภาพเพื่อเล่นทั้งวันใน 30 วินาที แตะอีกครั้งกลับมาเวลาตอนนี้ ถ้าภาพมีปัญหาให้กลับไปแสดงภาพเดิม</li>
     </ol>
   </section>
@@ -384,7 +384,7 @@ section.doc b{color:var(--color-ink)}
     fig.innerHTML = `<div class="cover" role="img" aria-label="ภาพปกตอน${p.name}"></div><figcaption><b>${p.name}</b>${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}</figcaption>`;
     strip.appendChild(fig);
     const c = fig.firstElementChild;
-    buildScene(c, 180); applyTime(c, p.h); io && io.observe(c);
+    buildScene(c, BASE_H); applyTime(c, p.h); io && io.observe(c);
     return [c, p.h];
   });
 
@@ -416,7 +416,7 @@ section.doc b{color:var(--color-ink)}
   });
   document.getElementById('still').addEventListener('change', (e) => document.querySelectorAll('.cover').forEach((c) => c.classList.toggle('still', e.target.checked)));
   document.getElementById('tall').addEventListener('change', (e) => { buildScene(live, e.target.checked ? 180 : BASE_H); set(hour); });
-  buildScene(live, 180); io && io.observe(live);
+  buildScene(live, BASE_H); io && io.observe(live);
   set(hour); mark(nowBtn);
   // Like the app: follow the clock while the viewer has not picked a time.
   setInterval(() => { if (nowBtn.getAttribute('aria-pressed') === 'true') set(now()); }, 60000);

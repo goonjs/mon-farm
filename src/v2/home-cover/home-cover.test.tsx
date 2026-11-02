@@ -20,7 +20,7 @@ async function mount(reduceMotion = false) {
   await act(async () => {
     await Promise.resolve();
   });
-  fireEvent(cover(), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 358, height: 180 } } });
+  fireEvent(cover(), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 358, height: 148 } } });
 }
 
 const tick = (ms: number) => act(() => jest.advanceTimersByTime(ms));
@@ -41,9 +41,9 @@ describe('HomeCover', () => {
     expect(shown()).toBe('12:01');
   });
 
-  it('is 180 tall and named for screen readers (CS-1, CS-9)', async () => {
+  it('is 148 tall (as before) and named for screen readers (CS-1, CS-9)', async () => {
     await mount();
-    expect(cover()).toHaveStyle({ height: 180 });
+    expect(cover()).toHaveStyle({ height: 148 });
     expect(cover().props.accessibilityLabel).toBe('ภาพปก: สวนยางริมลำธาร');
     expect(cover().props.accessibilityHint).toBe('แตะเพื่อเล่นภาพทั้งวัน');
   });
