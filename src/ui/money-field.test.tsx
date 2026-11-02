@@ -159,3 +159,16 @@ describe('label line like TextField (E01-S20)', () => {
   });
 });
 
+describe('compact (E01-S20 NP-10): a list of amounts stays as tall as the old boxes', () => {
+  it('the card is 48 (target.min) with less padding; the sheet is unchanged', () => {
+    wrap(<Harness compact />);
+    const st = flat(screen.getByTestId('m').props.style);
+    expect(st.minHeight).toBe(48);
+    expect(st.paddingVertical).toBeLessThanOrEqual(4);
+    const numeral = screen.getByText(/^1,150\.00$/);
+    expect(flat(numeral.props.style).fontSize).toBeLessThanOrEqual(tokens.font.size.displayLg);
+    fireEvent.press(screen.getByTestId('m'));
+    expect(screen.getByTestId('m-pad')).toBeTruthy();
+  });
+});
+

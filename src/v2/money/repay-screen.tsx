@@ -169,6 +169,7 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
                       label={`${categoryOf(d.expenseId)} ${formatDate(d.date)}`}
                       unit={msg('v2m.baht')}
                       words={false}
+                      compact
                       satang={moneyOf(manual[d.expenseId] ?? '')}
                       validate={(v) => (v > d.remainingSatang ? msg('fin.repay.overItem') : undefined)}
                       onChange={(v) => setManual((m) => ({ ...(m ?? {}), [d.expenseId]: satangToInput(v) }))}

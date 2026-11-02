@@ -61,6 +61,7 @@ export function MoneyField({
   open: openProp,
   onOpenChange,
   card = true,
+  compact = false,
   required,
   hint,
   testID,
@@ -87,6 +88,8 @@ export function MoneyField({
   onOpenChange?: (open: boolean) => void;
   /** false: no card — the screen's own row opens the sheet. */
   card?: boolean;
+  /** A list of amounts (trip lines, per-item repay): the card is 48 tall like a text box (NP-10). */
+  compact?: boolean;
   /** Red * after the label, like TextField. */
   required?: boolean;
   /** A soft note beside the label, e.g. "ไม่บังคับ". */
@@ -140,7 +143,8 @@ export function MoneyField({
   /** Whole part big, fraction at ~55% (faint until typed). One nowrap run. */
   const amount = (v: EntryView, testId?: string, slim = false) => {
     const step = moneyTextStep(v);
-    const size = t.font.size[slim && step === 'figure' ? 'displayXl' : slim && step === 'displayXl' ? 'displayLg' : step];
+    // A compact card keeps one size, one step below the slim card's largest, so a list row stays ~48 tall.
+    const size = t.font.size[slim && compact ? (step === 'figure' ? 'displayLg' : 'headingLg') : slim && step === 'figure' ? 'displayXl' : slim && step === 'displayXl' ? 'displayLg' : step];
     const placeholder = v.empty;
     return (
       <Text
@@ -193,7 +197,7 @@ export function MoneyField({
             accessibilityRole="button"
             accessibilityLabel={[label, required ? msg('form.required') : null, hint ?? null, satang == null ? (emptyText ?? null) : `${formatSatang(satang)} ${unit}`].filter(Boolean).join(', ')}
             onPress={openSheet}
-            style={[cardStyle(t), { minHeight: t.target.comfortable, paddingHorizontal: t.space.lg, paddingVertical: t.space.sm, justifyContent: 'center' }]}
+            style={[cardStyle(t), { minHeight: compact ? t.target.min : t.target.comfortable, paddingHorizontal: t.space.lg, paddingVertical: compact ? t.space.xxs : t.space.sm, justifyContent: 'center' }]}
           >
             {satang == null && emptyText ? (
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.inkFaint, textAlign: 'right' }}>

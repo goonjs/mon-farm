@@ -411,7 +411,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
                 <TextField testID="trip-farms" label={msg('trip.farms')} value={farms} onChangeText={setFarms} />
                 <SectionLabel>{msg('trip.lines')}</SectionLabel>
                 {TRIP_KINDS.map((k) => (
-                  <MoneyField key={k} testID={`trip-line-${k}`} label={msg(`trip.kind.${k}`)} unit={msg('v2m.baht')} words={false} satang={moneyOf(lines[k])} onChange={(v) => setLines((l) => ({ ...l, [k]: satangToInput(v) }))} />
+                  <MoneyField key={k} testID={`trip-line-${k}`} label={msg(`trip.kind.${k}`)} unit={msg('v2m.baht')} words={false} compact satang={moneyOf(lines[k])} onChange={(v) => setLines((l) => ({ ...l, [k]: satangToInput(v) }))} />
                 ))}
                 {fromLines ? <AppText testID="trip-total">{msg('trip.total', { amount: formatSatang(amountSatang ?? 0) })}</AppText> : null}
                 {tripFarms.length ? (
@@ -422,7 +422,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
                 ) : null}
                 {split
                   ? tripFarms.map((f) => (
-                      <MoneyField key={f.id} testID={`trip-split-${f.name}`} label={f.name} unit={msg('v2m.baht')} words={false} satang={moneyOf(split[f.id] ?? '')} onChange={(v) => setSplit((x) => ({ ...(x ?? {}), [f.id]: satangToInput(v) }))} />
+                      <MoneyField key={f.id} testID={`trip-split-${f.name}`} label={f.name} unit={msg('v2m.baht')} words={false} compact satang={moneyOf(split[f.id] ?? '')} onChange={(v) => setSplit((x) => ({ ...(x ?? {}), [f.id]: satangToInput(v) }))} />
                     ))
                   : null}
                 {showErrors && tripProblems.includes('split-total') ? <AppText testID="trip-err-split" style={{ color: t.color.reject }}>{msg('trip.err.split-total')}</AppText> : null}
