@@ -118,6 +118,18 @@ describe('OrderDetailView', () => {
     expect(patch.propertyId).toBe('f1');
   });
 
+  it('NP-16: holding ⌫ clears a zone field; a short press still deletes one', async () => {
+    const write = setup([a]);
+    fireEvent.press(screen.getByTestId('ordd-o1-a-zones'));
+    fireEvent.press(screen.getByTestId('ordd-zone-z1'));
+    keys('ordd-zone-z1', '1', '9');
+    fireEvent(screen.getByTestId('ordd-zone-z1-pad-key-back'), 'longPress');
+    keys('ordd-zone-z1', '1', '2', '3', 'back', 'done');
+    fireEvent.press(screen.getByTestId('ordd-zones-done'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(write.mock.calls[0][2].patch.fertilizer.zones.map((z: { zoneId: string; sacks: number }) => [z.zoneId, z.sacks])).toEqual([['z1', 12]]);
+  });
+
   it('tappers: add one (gets all sacks), engine split shown, committed hint, share + net amount written together', async () => {
     const write = setup([a]);
     fireEvent.press(screen.getByTestId('ordd-o1-a-tappers'));

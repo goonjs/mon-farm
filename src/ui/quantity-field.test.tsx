@@ -98,3 +98,86 @@ describe('QuantityField', () => {
     expect(screen.getByText('ใหญ่เกินไป')).toBeTruthy();
   });
 });
+
+describe('QuantityField — E01-S20 additions', () => {
+  it('decimals: decimal pad (no ✓ key), value in the smallest unit, ตกลง commits (NP-7)', () => {
+    const onChange = jest.fn();
+    wrap(<QuantityField testID="q" label="พื้นที่" unit="ไร่" value={1250} decimals={2} maxDigits={5} onChange={onChange} />);
+    expect(screen.getByText('12.5')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('q'));
+    expect(screen.queryByTestId('q-pad-key-done')).toBeNull();
+    expect(screen.queryByTestId('q-pad-key-00')).toBeNull();
+    press('3', '.', '2', '5', '9');
+    expect(shown()).toBe('3.25');
+    expect(screen.getByText('ใหญ่เกินไป')).toBeTruthy();
+    press('back', '5');
+    fireEvent.press(screen.getByTestId('q-done'));
+    expect(onChange).toHaveBeenCalledWith(325);
+  });
+
+  it('decimals: a whole number keeps no dot; 0.01 ไร่ round-trips', () => {
+    const onChange = jest.fn();
+    wrap(<QuantityField testID="q" label="พื้นที่" unit="ไร่" value={1} decimals={2} onChange={onChange} />);
+    expect(screen.getByText('0.01')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('q'));
+    press('7');
+    fireEvent.press(screen.getByTestId('q-done'));
+    expect(onChange).toHaveBeenCalledWith(700);
+  });
+
+  it('empty: shows `emptyText`; the clear link commits null and closes (NP-6)', () => {
+    const onClear = jest.fn();
+    wrap(<QuantityField testID="q" label="ปีที่ปลูก" unit="พ.ศ." value={null} emptyText="ไม่ทราบ" clear={{ label: 'เว้นว่าง (ไม่ทราบ)', onClear }} onChange={() => {}} />);
+    expect(screen.getByText('ไม่ทราบ')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('q'));
+    fireEvent.press(screen.getByTestId('q-clear'));
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('q-sheet')).toBeNull();
+  });
+
+  it('validate: the old parser rule closes ✓ and says why (NP-5)', () => {
+    const onChange = jest.fn();
+    wrap(<QuantityField testID="q" label="ปีที่ปลูก" unit="พ.ศ." value={null} maxDigits={4} validate={(n) => (String(n).length !== 4 ? 'ปีไม่ถูกต้อง' : undefined)} onChange={onChange} />);
+    fireEvent.press(screen.getByTestId('q'));
+    press('9', '9', '9');
+    expect(screen.getByText('ปีไม่ถูกต้อง')).toBeTruthy();
+    expect(screen.getByTestId('q-pad-key-done').props.accessibilityState.disabled).toBe(true);
+    press('9', 'done');
+    expect(onChange).toHaveBeenCalledWith(9999);
+  });
+
+  it('long-press ⌫ clears the field (NP-16)', () => {
+    wrap(<Harness />);
+    fireEvent.press(screen.getByTestId('q'));
+    press('4', '5');
+    fireEvent(screen.getByTestId('q-pad-key-back'), 'longPress');
+    expect(shown()).toBe('–');
+  });
+
+  it('controlled open: the parent opens it (NP-15) and hears it close', () => {
+    const onOpenChange = jest.fn();
+    wrap(<QuantityField testID="q" label="เข่งไม่เต็ม" unit="กก." value={null} decimals={3} open onOpenChange={onOpenChange} onChange={() => {}} />);
+    expect(screen.getByTestId('q-sheet')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('q-sheet-scrim'));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('grouping={false}: a year reads 2554, not 2,554', () => {
+    wrap(<QuantityField testID="q" label="ปีที่ปลูก" unit="พ.ศ." value={2554} grouping={false} onChange={() => {}} />);
+    expect(screen.getByText('2554')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('q'));
+    press('2', '5', '6', '0');
+    expect(shown()).toBe('2560');
+  });
+});
+
+describe('label line like TextField (E01-S20)', () => {
+  it('shows the red required mark and a soft hint beside the label; both reach the card name', () => {
+    wrap(<QuantityField testID="q" label="พื้นที่ (ไร่)" unit="ไร่" value={null} required hint="ไม่บังคับ" onChange={() => {}} />);
+    expect(screen.getByTestId('required-mark')).toBeTruthy();
+    expect(screen.getByText('ไม่บังคับ')).toBeTruthy();
+    expect(screen.getByTestId('q').props.accessibilityLabel).toContain('จำเป็น');
+    expect(screen.getByTestId('q').props.accessibilityLabel).toContain('ไม่บังคับ');
+  });
+});
+

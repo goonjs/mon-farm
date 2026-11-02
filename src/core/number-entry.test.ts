@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   entryToInt,
   entryToSatang,
+  entryToScaled,
+  scaledToEntry,
   moneyTextStep,
   pressKey,
   startEntry,
@@ -193,5 +195,62 @@ describe('pressKey — 00/000 after the decimal dot', () => {
     const full = type(['5', '.', '5', '0', '00']);
     expect(full.raw).toBe('5.50');
     expect(full.rejected).toBe(false);
+  });
+});
+
+describe('decimal kind — E01-S20 NP-7 (ไร่ 2, กก. 3 or 1)', () => {
+  const RAI: EntryConfig = { kind: 'decimal', maxDigits: 5, decimals: 2 };
+  const KG1: EntryConfig = { kind: 'decimal', maxDigits: 3, decimals: 1 };
+  it('takes one dot and at most `decimals` digits after it', () => {
+    expect(type(RAI, ['1', '2', '.', '5']).raw).toBe('12.5');
+    expect(type(RAI, ['1', '2', '.', '5', '0']).raw).toBe('12.50');
+    const over = type(RAI, ['1', '.', '2', '5', '7']);
+    expect(over.raw).toBe('1.25');
+    expect(over.rejected).toBe(true);
+    expect(type(KG1, ['3', '7', '.', '5', '5']).raw).toBe('37.5');
+    expect(type(RAI, ['1', '.', '.', '2']).raw).toBe('1.2');
+  });
+  it('caps the whole digits (หน้านับ ≤ 999.9)', () => {
+    const s = type(KG1, ['1', '2', '3', '4']);
+    expect(s.raw).toBe('123');
+    expect(s.rejected).toBe(true);
+  });
+  it('first key on a fresh value: a digit replaces it, "." gives "0." even when the old value had a dot, back empties it', () => {
+    expect(type(KG1, ['4'], '35').raw).toBe('4');
+    expect(type(KG1, ['.'], '35').raw).toBe('0.');
+    expect(type(KG1, ['.'], '35.5').raw).toBe('0.');
+    expect(type(KG1, ['back'], '35.5').raw).toBe('');
+  });
+  it('clear empties', () => {
+    expect(type(KG1, ['clear'], '35').raw).toBe('');
+  });
+  it('view: grouped whole, fraction as typed, no 00 placeholder', () => {
+    expect(viewEntry(type(RAI, ['1', '2', '3', '4', '.', '5']), RAI)).toEqual({ whole: '1,234', fraction: '5', fractionTyped: true, empty: false });
+    expect(viewEntry(type(RAI, ['7']), RAI)).toEqual({ whole: '7', fraction: '', fractionTyped: false, empty: false });
+  });
+  it('entryToScaled goes through the string: "12.5" → 1250 (2), "23.5" → 23500 (3)', () => {
+    expect(entryToScaled('12.5', 2)).toBe(1250);
+    expect(entryToScaled('0.01', 2)).toBe(1);
+    expect(entryToScaled('23.5', 3)).toBe(23_500);
+    expect(entryToScaled('23.', 3)).toBe(23_000);
+    expect(entryToScaled('', 2)).toBeNull();
+    expect(entryToScaled('1.234', 2)).toBeNull();
+  });
+  it('scaledToEntry is the inverse without trailing zeros', () => {
+    expect(scaledToEntry(1250, 2)).toBe('12.5');
+    expect(scaledToEntry(1200, 2)).toBe('12');
+    expect(scaledToEntry(1, 2)).toBe('0.01');
+    expect(scaledToEntry(23_500, 3)).toBe('23.5');
+    expect(scaledToEntry(null, 3)).toBe('');
+  });
+});
+
+describe('"." first on a fresh value that has a dot (review M2)', () => {
+  it('money starts over at "0." too, like a digit replaces', () => {
+    expect(type(MONEY, ['.'], '1150.5').raw).toBe('0.');
+    expect(type(MONEY, ['.', '5'], '1150.5').raw).toBe('0.5');
+  });
+  it('a second "." after typing is still ignored', () => {
+    expect(type(MONEY, ['1', '.', '5', '.'], '').raw).toBe('1.5');
   });
 });

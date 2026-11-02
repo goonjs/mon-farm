@@ -49,6 +49,13 @@ async function state() {
   return projectFinance(await mockFinance.load());
 }
 
+/** Types on a field's app number pad (E01-S20): open its card, press the keys, then ตกลง / ✓. */
+function typeOnPad(id: string, text: string) {
+  fireEvent.press(screen.getByTestId(id));
+  for (const k of text) fireEvent.press(screen.getByTestId(`${id}-pad-key-${k}`));
+  fireEvent.press(screen.getByTestId(screen.queryByTestId(`${id}-done`) ? `${id}-done` : `${id}-pad-key-done`));
+}
+
 let seq = 0;
 async function seedExpense(id: string, over: Partial<ExpenseFields>) {
   seq += 1;
@@ -93,11 +100,9 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
       expect(screen.getByTestId(`expense-catall-cat-${id}`)).toBeTruthy();
     }
     fireEvent.press(screen.getByTestId('expense-cat-sheet-scrim'));
-    fireEvent.changeText(screen.getByTestId('expense-amount'), '640');
-    // Formatted on leaving the box; "บาท" sits inside it.
-    fireEvent(screen.getByTestId('expense-amount'), 'blur');
-    expect(screen.getByTestId('expense-amount').props.value).toBe('640.00');
-    expect(screen.getByTestId('expense-amount-box')).toHaveTextContent('บาท');
+    // Typed on the app's pad (E01-S20); the card reads it back as money with "บาท" inside.
+    typeOnPad('expense-amount', '640');
+    expect(screen.getByTestId('expense-amount')).toHaveTextContent(/640\.00\s*บาท/);
     fireEvent.press(screen.getByTestId('expense-details'));
     fireEvent.changeText(screen.getByTestId('expense-date'), '2026-09-28');
     fireEvent.press(screen.getByTestId('expense-details-done'));
@@ -133,7 +138,7 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
   it('a payer other than farm funds previews what the farm will owe back', async () => {
     wrap(<ExpenseScreen />);
     await flush();
-    fireEvent.changeText(screen.getByTestId('expense-amount'), '400');
+    typeOnPad('expense-amount', '400');
     // "ใครจ่ายไปก่อน" is one row; the choice opens in a sheet.
     expect(screen.getByTestId('expense-payer-row')).toHaveTextContent(/ใครจ่ายไปก่อน/);
     fireEvent.press(screen.getByTestId('expense-payer-row'));
@@ -237,15 +242,18 @@ describe('repayment (E11-S03)', () => {
     mockParams.current = { payerId: SOMWANG.id };
     wrap(<RepayScreen />);
     await flush();
-    fireEvent.changeText(screen.getByTestId('repay-amount'), '1300');
-    expect(screen.getByTestId('repay-amount-error')).toBeTruthy();
+    // On the pad (E01-S20 NP-5) ตกลง stays off with the reason; the page keeps its own gate too.
+    fireEvent.press(screen.getByTestId('repay-amount'));
+    for (const k of '1300') fireEvent.press(screen.getByTestId(`repay-amount-pad-key-${k}`));
+    expect(screen.getByTestId('repay-amount-done').props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByTestId('repay-amount-sheet')).toHaveTextContent(/คืนเกินยอด คืนได้ไม่เกิน 1,200\.00/);
   });
 
   it('one amount over two debts, oldest first, from farm funds by default', async () => {
     mockParams.current = { payerId: SOMWANG.id };
     wrap(<RepayScreen />);
     await flush();
-    fireEvent.changeText(screen.getByTestId('repay-amount'), '1000');
+    typeOnPad('repay-amount', '1000');
     await act(async () => fireEvent.press(screen.getByTestId('repay-save')));
     await flush();
 
@@ -277,7 +285,7 @@ describe('Save sits in the header (keyboard never covers it)', () => {
     mockParams.current = { payerId: SOMWANG.id };
     wrap(<RepayScreen />);
     await flush();
-    fireEvent.changeText(screen.getByTestId('repay-amount'), '100');
+    typeOnPad('repay-amount', '100');
     const btn = within(screen.getByTestId('screen-header')).getByTestId('repay-save');
     expect(btn.props.accessibilityLabel).toContain('100.00');
   });

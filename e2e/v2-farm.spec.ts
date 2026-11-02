@@ -20,6 +20,10 @@ test.use({ viewport: { width: 412, height: 915 } });
 /** The visible one: screens under the top of the stack stay in the DOM. */
 const on = (page: Page) => (id: string) => page.getByTestId(id).filter({ visible: true });
 const shot = (page: Page, name: string) => evidence(page, `${SHOTS}/${name}.png`, { fullPage: true });
+/** Keys on a field's app pad (E01-S20): `<testID>-pad-key-<k>`; no OS keyboard. */
+async function keys(page: Page, field: string, text: string) {
+  for (const k of text) await on(page)(`${field}-pad-key-${k}`).click();
+}
 
 async function addPerson(page: Page, name: string, roles: string[], snap?: string) {
   const id = on(page);
@@ -92,13 +96,19 @@ test('/ → splash → home → farm settings: add and edit everything offline, 
   await id('add-farm').click();
   await id('property-name').fill('สวนจันทเขลม');
   await id('property-crop-rubber').click();
-  // Typed key by key, as on a phone: the "ไม่ทราบ" beside each field goes on
-  // the first key, and the input must keep its focus through that.
-  await id('property-area').pressSequentially('125');
-  await expect(id('property-area')).toHaveValue('125');
-  await expect(id('property-area')).toBeFocused();
-  await id('property-planted').pressSequentially('2554');
-  await expect(id('property-planted')).toHaveValue('2554');
+  // Area and planted year on the app pad (E01-S20): the card shows "ไม่ทราบ" until set.
+  await expect(id('property-area')).toContainText('ไม่ทราบ');
+  await id('property-area').click();
+  await keys(page, 'property-area', '125');
+  await id('property-area-done').click();
+  await expect(id('property-area')).toContainText('125');
+  // Typed in ค.ศ. on a พ.ศ. device: the card shows it in พ.ศ. (NP-13).
+  await id('property-planted').click();
+  await keys(page, 'property-planted', '2011');
+  await id('property-planted-pad-key-done').click();
+  await expect(id('property-planted')).toContainText('2554');
+  await expect(id('property-planted')).toContainText('พ.ศ.');
+  // GPS stays a text field (wrapping, full width — Q6), typed key by key.
   await id('property-gps').pressSequentially('13.5, 100.2');
   await expect(id('property-gps')).toHaveValue('13.5, 100.2');
   await id('property-gps').fill('');
@@ -150,7 +160,9 @@ test('/ → splash → home → farm settings: add and edit everything offline, 
   await id('farms-list').getByText('สวนจันทเขลม').click();
   await expect(id('property-detail')).toBeVisible();
   await id('change-area').click();
-  await id('area-new').fill('130');
+  // The decimal pad sits in the change-area sheet itself (NP-12).
+  await keys(page, 'area-new', '130');
+  await expect(id('area-new-display')).toHaveText('130');
   await id('area-save').click();
   await expect(id('area-history')).toContainText('130 ไร่');
   await expect(id('area-history')).toContainText('125 ไร่');
@@ -188,8 +200,10 @@ test('/ → splash → home → farm settings: add and edit everything offline, 
   await context.setOffline(true);
   await id('shares').getByText('แดง').click();
   await id('share-mode-custom').click();
-  await id('share-pct').fill('55');
-  await expect(id('share-owner')).toHaveText('→ เจ้าของสวน 45%');
+  await id('share-pct').click();
+  await keys(page, 'share-pct', '55');
+  await id('share-pct-pad-key-done').click();
+  await expect(id('share-pct')).toContainText('→ เจ้าของสวน 45%');
   await shot(page, '18-share');
   await id('share-save').click();
   await expect(id('share-now')).toContainText('คนกรีดยาง 55%');

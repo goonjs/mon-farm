@@ -35,9 +35,10 @@ test('one open sale: เริ่มการขาย goes back to it; the ⋯ 
   await id('pick-menu').click();
   await expect(id('menu-price')).toContainText('ใส่ราคาที่ตกลง');
   await id('menu-price').click();
-  await id('option-price').fill('52.50');
+  await fieldPad(page, 'option-price', '52.50');
+  await expect(id('option-price-display')).toContainText('52.50');
   await shot(page, '20-option-price');
-  await id('option-price-save').click();
+  await id('option-price-done').click();
   await id('pick-menu').click();
   await expect(id('menu-price')).toContainText('52.50');
   await id('menu-info').click();
@@ -87,6 +88,11 @@ const fert = (worker: typeof RED, amountSatang: number, date: string): FinancePa
 });
 const owesNat = (amountSatang: number, date: string): FinancePayload => ({ t: 'expense_created', fields: { amountSatang, date, stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าปุ๋ย', note: '', payer: NAT } });
 const seedFinance = (page: Page, events: FinanceEvent[]) => page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), events);
+/** Keys on a field's app number pad (E01-S20): `<field>-pad-key-<k>`; the first key replaces the value. */
+async function fieldPad(page: Page, field: string, keys: string) {
+  for (const k of keys) await on(page)(`${field}-pad-key-${k}`).click();
+}
+
 /** Clear the close-out number pad, then type. */
 async function padType(page: Page, digits: string) {
   for (let i = 0; i < 10; i++) await on(page)('co-pad-key-back').click();
@@ -417,8 +423,12 @@ test('start → point → empty scale → count → short → switch and fill �
   await expect(id('pick')).toBeVisible();
   await id('pick-point-a3').click();
   await expect(id('backfill')).toBeVisible();
-  await id('backfill-full').fill('3');
-  await id('backfill-short').fill('20');
+  await id('backfill-full').click();
+  await fieldPad(page, 'backfill-full', '3');
+  await id('backfill-full-pad-key-done').click();
+  // ✓ opens the short basket's pad at once (NP-15).
+  await fieldPad(page, 'backfill-short', '20');
+  await id('backfill-short-done').click();
   await expect(id('backfill-plan')).toContainText('จะได้ 4 เข่ง');
   await expect(id('backfill-plan')).toContainText('เข่งที่ 5–7');
   await expect(id('backfill-total')).toContainText('170 กก.');
@@ -442,7 +452,9 @@ test('start → point → empty scale → count → short → switch and fill �
   await shot(page, '08m-menu');
   await id('menu-finish').click();
   await expect(id('check')).toBeVisible();
-  await id('check-price').fill('48.50');
+  await id('check-price').click();
+  await fieldPad(page, 'check-price', '48.50');
+  await id('check-price-done').click();
   await id('check-price-save').click();
   await expect(id('check-total')).toContainText('22,795.00');
   await expect(id('check-weight')).toContainText('470 กก.');

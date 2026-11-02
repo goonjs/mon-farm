@@ -63,6 +63,10 @@ const press = async (id: string) => {
 };
 
 const TODAY = todayIso(Date.now());
+/** Keys on a field's app pad (E01-S20): `<testID>-pad-key-<k>`. */
+const keys = (field: string, text: string) => {
+  for (const k of text) fireEvent.press(screen.getByTestId(`${field}-pad-key-${k}`));
+};
 /** A day a month ahead, as typed (d/m/yyyy พ.ศ.). */
 function ahead(days: number) {
   let d = TODAY;
@@ -138,7 +142,7 @@ describe('สวน — form (farm mockup 10)', () => {
 
     fireEvent.changeText(screen.getByTestId('property-name'), 'ทุเรียน ตะเคียนทอง');
     fireEvent.press(screen.getByTestId('property-crop-durian'));
-    expect(screen.getAllByText('ไม่ทราบ').length).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByText('ไม่ทราบ').length).toBeGreaterThanOrEqual(2);
     await press('property-save');
 
     const [p] = (await master().state()).properties;
@@ -146,21 +150,24 @@ describe('สวน — form (farm mockup 10)', () => {
     expect(mockRouter.back).toHaveBeenCalled();
   });
 
-  it('a typed area takes effect today; bad values are refused with the reason, keeping the input', async () => {
+  it('a typed area takes effect today; bad values are refused on the pad with the reason', async () => {
     mockParams.current = { id: 'new' };
     wrap(<PropertyScreen />);
     await flush();
     fireEvent.changeText(screen.getByTestId('property-name'), 'สวนจันทเขลม');
     fireEvent.press(screen.getByTestId('property-crop-rubber'));
-    fireEvent.changeText(screen.getByTestId('property-area'), '0');
-    fireEvent.changeText(screen.getByTestId('property-planted'), '25');
-    await press('property-save');
-    expect(screen.getByTestId('property-area-error')).toBeTruthy();
-    expect(screen.getByTestId('property-planted-error')).toBeTruthy();
-    expect(screen.getByTestId('property-area').props.value).toBe('0');
-
-    fireEvent.changeText(screen.getByTestId('property-area'), '125');
-    fireEvent.changeText(screen.getByTestId('property-planted'), '2554');
+    fireEvent.press(screen.getByTestId('property-area'));
+    keys('property-area', '0');
+    expect(screen.getByText('ต้องมากกว่า 0')).toBeTruthy();
+    expect(screen.getByTestId('property-area-done').props.accessibilityState).toMatchObject({ disabled: true });
+    keys('property-area', '125');
+    fireEvent.press(screen.getByTestId('property-area-done'));
+    fireEvent.press(screen.getByTestId('property-planted'));
+    keys('property-planted', '25');
+    expect(screen.getByText('ปีไม่ถูกต้อง')).toBeTruthy();
+    expect(screen.getByTestId('property-planted-pad-key-done').props.accessibilityState).toMatchObject({ disabled: true });
+    keys('property-planted', '54');
+    fireEvent.press(screen.getByTestId('property-planted-pad-key-done'));
     fireEvent.changeText(screen.getByTestId('property-gps'), '12.6113, 102.1035');
     await press('property-save');
     const [p] = (await master().state()).properties;
@@ -195,7 +202,7 @@ describe('สวน — detail, area history, delete (farm mockup 11, 12)', () =
     expect(within(screen.getByTestId('property-gps')).getByText('ไม่ทราบ')).toBeTruthy();
 
     fireEvent.press(screen.getByTestId('change-area'));
-    fireEvent.changeText(screen.getByTestId('area-new'), '125');
+    keys('area-new', '125');
     fireEvent.changeText(screen.getByTestId('area-new-date'), thaiDayInput(TODAY));
     await press('area-save');
 

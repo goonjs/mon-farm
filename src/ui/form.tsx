@@ -181,6 +181,17 @@ export function FieldLabel({ children, required }: { children: React.ReactNode; 
   );
 }
 
+/** The label line of a field: label, red * when required, a soft note beside it ("ไม่บังคับ"). Wraps, never clips. */
+export function FieldHead({ label, required, hint }: { label: string; required?: boolean; hint?: string }) {
+  const t = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.xs, flexWrap: 'wrap' }}>
+      <FieldLabel required={required}>{label}</FieldLabel>
+      {hint ? <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, color: t.color.inkSoft }}>{hint}</Text> : null}
+    </View>
+  );
+}
+
 /** Inline error under a field: red text after a red diamond, announced politely. */
 export function FieldError({ children, testID }: { children: React.ReactNode; testID?: string }) {
   const t = useTheme();

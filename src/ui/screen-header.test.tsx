@@ -109,4 +109,11 @@ describe('ScreenHeader action keeps its width while saving', () => {
     expect(screen.getByText('กำลังบันทึก · 300')).toBeTruthy();
     expect(flat(screen.getByTestId('hdr-save').props.style).flexShrink).toBe(0);
   });
+
+  it('a long title and subtitle wrap instead of being cut with "…" (AGENTS.md: no clipped content)', () => {
+    wrap(<ScreenHeader title="บันทึกการคืน" subtitle="สวนครอบครัว" action={{ label: 'บันทึก · 1,234,967.89', onPress: () => {}, testID: 'hdr-save' }} />);
+    expect(screen.getByTestId('screen-title').props.numberOfLines).toBeUndefined();
+    expect(screen.getByText('สวนครอบครัว').props.numberOfLines).toBeUndefined();
+  });
 });
+

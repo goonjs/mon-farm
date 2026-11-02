@@ -4,22 +4,28 @@
  * info as it was started, and deleting a sale that should not exist (one open
  * sale at a time, so a stray one has to be removable). Every write is an event
  * in the sale's log — offline, on this device.
+ *
+ * The price opens the app number pad straight from the menu (E01-S20 row 18,
+ * NP-12). A set price cannot be cleared (there is no event for that), so there
+ * is no "เว้นว่าง" here.
  */
 
 import { useRouter, type Href } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { formatSatang } from '../../core/finance/money';
 import { formatThaiDate } from '../../core/master';
-import { parsePrice } from '../../core/sale-points';
 import { saleTotals } from '../../core/totals';
 import { useI18n, useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, CTA, TextField, TrashIcon } from '../../ui';
+import { AppText, BottomSheet, Button, CTA, MoneyField, TrashIcon } from '../../ui';
 import { Kv, kgText, type useSaleView } from './pieces';
 
 export type OptionSheet = 'none' | 'price' | 'info' | 'delete';
+
+/** A price per kg is at most 999.99 ฿ (E01-S20 NP-14): stops a slipped 00 / 000 (52 → 5,200 / 52,000) without cutting a real price. */
+export const PRICE_MAX_SATANG = 99_999;
 
 type View_ = ReturnType<typeof useSaleView>;
 
@@ -31,18 +37,12 @@ export function SaleOptionSheets({ view, open, onClose }: { view: View_; open: O
   const { era } = useI18n();
   const { saleId, state, events, append, closed } = view;
   const current = state.price?.satangPerKg ?? null;
-  const [text, setText] = useState('');
-  const [typed, setTyped] = useState(false);
-  const shown = typed ? text : current === null ? '' : (current / 100).toString();
-  const parsed = parsePrice(shown);
-  const canSave = parsed.ok && parsed.satang !== null && parsed.satang !== current && !closed;
   const totals = saleTotals(events);
 
-  const savePrice = () => {
-    if (!canSave || !parsed.ok || parsed.satang === null) return;
-    append({ kind: 'sys', payload: { t: 'price_set', satangPerKg: parsed.satang, indexRef: '' } });
-    setTyped(false);
-    onClose();
+  // Only a price that differs from the current one is written; ตกลง then closes the pad.
+  const savePrice = (satang: number) => {
+    if (satang === current || closed) return;
+    append({ kind: 'sys', payload: { t: 'price_set', satangPerKg: satang, indexRef: '' } });
   };
   const remove = () => {
     if (closed) return;
@@ -56,23 +56,24 @@ export function SaleOptionSheets({ view, open, onClose }: { view: View_; open: O
 
   return (
     <>
-      <BottomSheet open={open === 'price'} onClose={onClose} title={msg('opt.priceTitle')} testID="price-option-sheet">
-        <TextField
-          testID="option-price"
-          label={msg('v2s.price')}
-          hint={msg('opt.priceHint')}
-          value={shown}
-          onChangeText={(v) => {
-            setTyped(true);
-            setText(v);
-          }}
-          keyboardType="decimal-pad"
-          error={!parsed.ok ? msg('start.badPrice') : undefined}
-        />
-        <CTA testID="option-price-save" disabled={!canSave} onPress={savePrice}>
-          {msg('common.save')}
-        </CTA>
-      </BottomSheet>
+      <MoneyField
+        testID="option-price"
+        label={msg('opt.priceTitle')}
+        satang={current}
+        onChange={savePrice}
+        unit={msg('npsale.perKg')}
+        minSatang={1}
+        maxSatang={PRICE_MAX_SATANG}
+        words={false}
+        // A closed sale keeps its price: say so on the pad rather than close it as if saved (review N2).
+        validate={() => (closed ? msg('npsale.closedPrice') : undefined)}
+        below={() => msg('opt.priceHint')}
+        card={false}
+        open={open === 'price'}
+        onOpenChange={(o) => {
+          if (!o) onClose();
+        }}
+      />
 
       <BottomSheet open={open === 'info'} onClose={onClose} title={msg('opt.infoTitle')} testID="info-sheet">
         <View style={{ gap: t.space.xs }}>

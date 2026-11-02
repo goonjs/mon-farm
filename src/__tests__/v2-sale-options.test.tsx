@@ -50,6 +50,11 @@ const press = async (id: string) => {
   await act(async () => fireEvent.press(screen.getByTestId(id)));
   await flush();
 };
+/** The price is typed on the app number pad (E01-S20 row 18); ตกลง commits it. */
+const typePrice = async (keys: string) => {
+  for (const k of keys) await press(`option-price-pad-key-${k}`);
+  await press('option-price-done');
+};
 const mount = async (ui: ReactElement) => {
   const r = wrap(ui);
   await flush();
@@ -86,8 +91,7 @@ describe('sale options in the ⋯ menu (agreed price, info, delete)', () => {
     await press('pick-menu');
     expect(screen.getByTestId('menu-price')).toHaveTextContent(/ใส่ราคาที่ตกลง/);
     await press('menu-price');
-    await act(async () => fireEvent.changeText(screen.getByTestId('option-price'), '52.50'));
-    await press('option-price-save');
+    await typePrice('52.50');
     const prices = (await log(SALE)).filter((e) => e.kind === 'sys' && e.payload.t === 'price_set');
     expect(prices).toHaveLength(1);
     expect(prices[0].kind === 'sys' && prices[0].payload.t === 'price_set' && prices[0].payload.satangPerKg).toBe(5250);
@@ -95,12 +99,11 @@ describe('sale options in the ⋯ menu (agreed price, info, delete)', () => {
     expect(screen.getByTestId('menu-price')).toHaveTextContent(/52\.50/);
   });
 
-  it('a bad price is not saved', async () => {
+  it('a bad price is not saved (0 cannot be committed on the pad)', async () => {
     await inSale();
     await press('pick-menu');
     await press('menu-price');
-    await act(async () => fireEvent.changeText(screen.getByTestId('option-price'), '12abc'));
-    await press('option-price-save');
+    await typePrice('0');
     expect((await log(SALE)).filter((e) => e.kind === 'sys' && e.payload.t === 'price_set')).toHaveLength(1);
   });
 

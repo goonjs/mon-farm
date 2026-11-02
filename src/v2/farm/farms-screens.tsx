@@ -15,7 +15,7 @@
 
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   activePoints,
@@ -34,8 +34,9 @@ import {
   type MasterState,
   type PropertyRecord,
 } from '../../core/master';
+import { pressKey, scaledToEntry, startEntry, viewEntry, type EntryConfig, type EntryKey, type EntryState } from '../../core/number-entry';
 import type { Crop } from '../../core/types';
-import { useT } from '../../i18n';
+import { useI18n, useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
 import {
@@ -49,13 +50,17 @@ import {
   FieldError,
   IconTile,
   MenuItem,
+  NumberPad,
   PersonIcon,
   PinIcon,
   Plus,
+  QuantityField,
   SegmentedControl,
   TextField,
   TrashIcon
 } from '../../ui';
+import { cardStyle } from '../../ui/card';
+import { FieldLabel } from '../../ui/form';
 import { UnknownPill } from '../money/pieces';
 import { NotFound } from './people-screens';
 import {
@@ -77,6 +82,24 @@ import {
 
 const FARMS = '/v2/farms' as Href;
 const CROPS: readonly Crop[] = ['rubber', 'durian'];
+
+/** ไร่ on the app pad (E01-S20 NP-4): 5 whole digits, 2 decimals, stored as 0.01 ไร่. */
+const RAI_DIGITS = 5;
+const RAI_DECIMALS = 2;
+const RAI_ENTRY: EntryConfig = { kind: 'decimal', maxDigits: RAI_DIGITS, decimals: RAI_DECIMALS };
+
+/** parseRai stays the judge (NP-5): a pad value it refuses gets a short reason. */
+export function raiProblem(centiRai: number, reason: string): string | undefined {
+  const r = parseRai(scaledToEntry(centiRai, RAI_DECIMALS));
+  return r.ok && r.centiRai !== null ? undefined : reason;
+}
+
+/** parsePlantedYear stays the judge: not 4 digits, or a year still to come. */
+export function plantedProblem(typed: number, nowTs: number, reasons: { bad: string; future: string }): string | undefined {
+  const text = String(typed);
+  if (parsePlantedYear(text, nowTs).ok) return undefined;
+  return /^\d{4}$/.test(text) ? reasons.future : reasons.bad;
+}
 
 export function FarmsScreen() {
   const msg = useT();
@@ -177,6 +200,7 @@ type Problem = 'name' | 'crop' | 'area' | 'year' | 'gps';
 function PropertyForm({ propertyId }: { propertyId: string | null }) {
   const t = useTheme();
   const msg = useT();
+  const { era } = useI18n();
   const back = useBack(FARMS);
   const { state } = useMaster();
   const [loaded, setLoaded] = useState<string | null>(null);
@@ -231,7 +255,8 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
   };
 
   if (propertyId && state && !existing) return <NotFound fallback={FARMS} />;
-  const unknown = (blank: boolean) => (blank ? <UnknownPill /> : undefined);
+  // NP-13: the year in the device's era; what is kept (plantedYearBe) stays พ.ศ.
+  const shownYear = year.ok && year.yearBe !== null ? (era === 'ce' ? year.yearBe - 543 : year.yearBe) : null;
 
   return (
     <FarmScreen
@@ -258,37 +283,45 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
         {show('crop') ? <FieldError testID="property-crop-error">{msg('propertyForm.needCrop')}</FieldError> : null}
       </View>
       {existing ? null : (
-        <TextField
+        <QuantityField
           testID="property-area"
           label={msg('v2f.areaRai')}
           hint={msg('v2f.optional')}
-          placeholder={msg('propertyForm.areaPlaceholder')}
-          keyboardType="decimal-pad"
-          value={area}
-          onChangeText={setArea}
-          aside={unknown(!area.trim())}
-          error={show('area') ? msg('propertyForm.badArea') : undefined}
+          unit={msg('npfarm.unitRai')}
+          decimals={RAI_DECIMALS}
+          maxDigits={RAI_DIGITS}
+          emptyText={msg('numpad.unknown')}
+          clear={{ label: msg('numpad.clearUnknown'), onClear: () => setArea('') }}
+          validate={(n) => raiProblem(n, msg('npfarm.areaAboveZero'))}
+          value={rai.ok ? rai.centiRai : null}
+          onChange={(n) => setArea(scaledToEntry(n, RAI_DECIMALS))}
         />
       )}
-      <TextField
+      {!existing && show('area') ? <FieldError testID="property-area-error">{msg('propertyForm.badArea')}</FieldError> : null}
+      <QuantityField
         testID="property-planted"
         label={msg('v2f.planted')}
         hint={msg('v2f.plantedHint')}
-        placeholder={msg('propertyForm.plantedPlaceholder')}
-        keyboardType="number-pad"
-        value={planted}
-        onChangeText={setPlanted}
-        aside={unknown(!planted.trim())}
-        error={show('year') ? msg('propertyForm.badYear') : undefined}
+        unit={msg(era === 'ce' ? 'numpad.unitCe' : 'numpad.unitBe')}
+        maxDigits={4}
+        grouping={false}
+        emptyText={msg('numpad.unknown')}
+        clear={{ label: msg('numpad.clearUnknown'), onClear: () => setPlanted('') }}
+        validate={(n) => plantedProblem(n, now, { bad: msg('numpad.badYear'), future: msg('numpad.futureYear') })}
+        value={shownYear}
+        onChange={(n) => setPlanted(String(n))}
       />
+      {show('year') ? <FieldError testID="property-planted-error">{msg('propertyForm.badYear')}</FieldError> : null}
       <TextField
         testID="property-gps"
         label={msg('v2f.gps')}
         hint={msg('v2f.gpsHint')}
         placeholder={msg('propertyForm.gpsPlaceholder')}
+        // Q6 (d0): full width, no pill beside it, and the placeholder wraps instead of being cut off; Enter still ends the field.
+        multiline
+        submitBehavior="blurAndSubmit"
         value={gps}
-        onChangeText={setGps}
-        aside={unknown(!gps.trim())}
+        onChangeText={(text) => setGps(text.replace(/\n/g, ' '))}
         error={show('gps') ? msg('propertyForm.badGps') : undefined}
       />
     </FarmScreen>
@@ -304,7 +337,10 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
   const { state, reload } = useMaster();
   const [now] = useState(() => Date.now());
   const [sheet, setSheet] = useState<'none' | 'area' | 'delete'>('none');
-  const [area, setArea] = useState('');
+  /** The new area on the app pad, inside this same sheet (NP-12: no sheet on a sheet). */
+  const [areaEntry, setAreaEntry] = useState<EntryState>(() => startEntry(''));
+  /** While the date is being typed the pad is off: its web key listener would take the date's digits too. */
+  const [typingDate, setTypingDate] = useState(false);
   const [areaDate, setAreaDate] = useState(() => thaiDayInput(todayIso(now)));
   const [tried, setTried] = useState(false);
   const write = useWrite();
@@ -318,6 +354,8 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
   const areaNow = areaOn(property, today);
   const inUse = property.areaHistory.find((a) => a.effective <= today)?.entryId;
   const age = ageInYears(property.plantedYearBe, now);
+  // "12." on the pad is 12: the dot alone is not a refusal.
+  const area = areaEntry.raw.replace(/\.$/, '');
   const rai = parseRai(area);
   const effective = parseThaiDay(areaDate);
   const nameOf = (id: string | null) => state.people.find((p) => p.id === id && !p.deleted)?.name ?? null;
@@ -329,7 +367,7 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
     const centiRai = rai.centiRai;
     if (!(await write.run(() => peopleStore.recordArea(property.id, centiRai, effective)))) return;
     setSheet('none');
-    setArea('');
+    setAreaEntry(startEntry(''));
     setTried(false);
     reload();
   };
@@ -355,13 +393,11 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
       overlay={
         <>
           <BottomSheet open={sheet === 'area'} onClose={() => setSheet('none')} title={msg('propertyDetail.changeArea')} testID="area-sheet" action={{ label: msg('propertyDetail.areaSave'), testID: 'area-save', onPress: () => void saveArea(), saving: write.saving }}>
-            <TextField
-              testID="area-new"
-              label={msg('v2f.newArea')}
-              required
-              keyboardType="decimal-pad"
-              value={area}
-              onChangeText={setArea}
+            <AreaPad
+              entry={areaEntry}
+              onKey={(k) => setAreaEntry((e) => pressKey(e, k, RAI_ENTRY))}
+              onDone={() => void saveArea()}
+              pad={!typingDate}
               error={tried && (!rai.ok || rai.centiRai === null) ? msg('propertyForm.badArea') : undefined}
             />
             <TextField
@@ -371,6 +407,8 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
               hint={msg('v2f.dateHint')}
               value={areaDate}
               onChangeText={setAreaDate}
+              onFocus={() => setTypingDate(true)}
+              onBlur={() => setTypingDate(false)}
               error={tried && !effective ? msg('propertyForm.badDate') : undefined}
             />
             <AppText variant="bodySm">{msg('v2f.areaNewLine')}</AppText>
@@ -476,5 +514,62 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
         </View>
       )}
     </FarmScreen>
+  );
+}
+
+/** Row 15 (E01-S20): the new area's live value and the decimal pad, laid in the change-area sheet. */
+function AreaPad({
+  entry,
+  onKey,
+  onDone,
+  pad,
+  error,
+}: {
+  entry: EntryState;
+  onKey: (k: EntryKey) => void;
+  onDone: () => void;
+  pad: boolean;
+  error?: string;
+}) {
+  const t = useTheme();
+  const msg = useT();
+  const view = viewEntry(entry, RAI_ENTRY);
+  const text = view.empty ? '–' : view.fractionTyped ? `${view.whole}.${view.fraction}` : view.whole;
+  const unit = msg('npfarm.unitRai');
+  return (
+    <View style={{ gap: t.space.xs }}>
+      <FieldLabel required>{msg('v2f.newArea')}</FieldLabel>
+      <View
+        testID="area-new"
+        accessibilityLabel={view.empty ? msg('numpad.empty') : `${text} ${unit}`}
+        style={[
+          cardStyle(t),
+          { paddingHorizontal: t.space.lg, paddingVertical: t.space.sm, borderWidth: error ? t.border.thick : t.border.hair, borderColor: error ? t.color.reject : t.color.action },
+        ]}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-end', columnGap: t.space.sm, flexWrap: 'wrap' }}>
+          <Text
+            testID="area-new-display"
+            style={{
+              fontFamily: t.font.family.sans,
+              fontSize: t.font.size.displayXl,
+              fontWeight: t.font.weight.bold,
+              fontVariant: ['tabular-nums'],
+              color: view.empty ? t.color.inkFaint : t.color.ink,
+            }}
+          >
+            {text}
+          </Text>
+          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, color: t.color.inkSoft }}>{unit}</Text>
+        </View>
+        {entry.rejected ? (
+          <Text accessibilityLiveRegion="polite" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.semibold, color: t.color.reject, textAlign: 'right' }}>
+            {msg('numpad.tooBig')}
+          </Text>
+        ) : null}
+      </View>
+      {error ? <FieldError testID="area-new-error">{error}</FieldError> : null}
+      {pad ? <NumberPad variant="decimal" onKey={onKey} onDone={onDone} testID="area-new-pad" /> : null}
+    </View>
   );
 }

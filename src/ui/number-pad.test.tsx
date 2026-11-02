@@ -97,3 +97,31 @@ describe('NumberPad hardware keyboard (web)', () => {
     expect(add).not.toHaveBeenCalled();
   });
 });
+
+describe('NumberPad decimal — E01-S20 NP-7', () => {
+  it('1-9, then ⌫ 0 . on the bottom row (⌫ left like int); no 00/000, no done key', () => {
+    const onKey = jest.fn();
+    wrap(<NumberPad variant="decimal" onKey={onKey} onDone={() => {}} />);
+    expect(screen.queryByTestId('numpad-key-done')).toBeNull();
+    expect(screen.queryByTestId('numpad-key-00')).toBeNull();
+    expect(screen.queryByTestId('numpad-key-000')).toBeNull();
+    for (const k of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'back', '.']) {
+      expect(flat(screen.getByTestId(`numpad-key-${k}`).props.style).minHeight).toBeGreaterThanOrEqual(56);
+    }
+    fireEvent.press(screen.getByTestId('numpad-key-.'));
+    expect(onKey.mock.calls).toEqual([['.']]);
+    // The dot is a real key (ink on raised), not a faint quiet one.
+    expect(flat(screen.getByTestId('numpad-key-.').props.style).backgroundColor).toBe(tokens.color.light.surfaceRaised);
+  });
+});
+
+describe('long-press ⌫ clears — E01-S20 NP-16', () => {
+  it.each(['int', 'money', 'decimal'] as const)('%s: short press = back, long press = clear', (variant) => {
+    const onKey = jest.fn();
+    wrap(<NumberPad variant={variant} onKey={onKey} onDone={() => {}} />);
+    fireEvent.press(screen.getByTestId('numpad-key-back'));
+    fireEvent(screen.getByTestId('numpad-key-back'), 'longPress');
+    expect(onKey.mock.calls).toEqual([['back'], ['clear']]);
+    expect(screen.getByTestId('numpad-key-back').props.accessibilityHint).toBe('กดค้างเพื่อล้างทั้งช่อง');
+  });
+});

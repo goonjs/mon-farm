@@ -242,6 +242,18 @@ describe('the deduct sheet (A5, CO-5, CO-7, A22, A23)', () => {
     expect((await all()).length).toBe(before);
   });
 
+  it('NP-16: holding ⌫ on the deduction pad clears the amount; typing again starts from nothing', async () => {
+    await inSale(<CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.nat}`);
+    await keys('3000');
+    expect(text('co-amount')).toHaveTextContent(/3,000/);
+    await act(async () => fireEvent(screen.getByTestId('co-pad-key-back'), 'longPress'));
+    await flush();
+    await keys('12');
+    expect(text('co-amount')).toHaveTextContent(/12/);
+    expect(text('co-amount')).not.toHaveTextContent(/3,0/);
+  });
+
   it('above the cap ✓ is off and the cap is said', async () => {
     await inSale(<CloseoutSummaryScreen />);
     await press(`co-deduct-${farm.nat}`);

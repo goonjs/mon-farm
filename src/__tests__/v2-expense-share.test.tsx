@@ -3,8 +3,10 @@ import type { ReactNode } from 'react';
 
 import { projectDebts } from '../core/finance/debts';
 import { projectFinance } from '../core/finance/ledger';
+import { checkShare } from '../core/finance/share';
 import type { FinanceEvent } from '../core/finance/types';
 import { ExpenseFormScreen } from '../v2/money/expense-form-screen';
+import { shareOf } from '../v2/money/share-sheet';
 import { financeStore as mockFinance } from '../store/finance';
 import { peopleStore as mockPeople } from '../store/people';
 import { wrap } from '../test/render';
@@ -36,6 +38,13 @@ const { __params: mockParams, router: mockRouter } = jest.requireMock('expo-rout
   __params: { current: Record<string, string> };
   router: { push: jest.Mock; replace: jest.Mock };
 };
+
+/** Types on a field's app number pad (E01-S20): open its card, press the keys, then ตกลง / ✓. */
+function typeOnPad(id: string, text: string) {
+  fireEvent.press(screen.getByTestId(id));
+  for (const k of text) fireEvent.press(screen.getByTestId(`${id}-pad-key-${k}`));
+  fireEvent.press(screen.getByTestId(screen.queryByTestId(`${id}-done`) ? `${id}-done` : `${id}-pad-key-done`));
+}
 
 async function flush() {
   await act(async () => {
@@ -89,17 +98,17 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
   it('discount first, then the tapper: the debt is half the net bill, odd satang to the tapper', async () => {
     wrap(<ExpenseFormScreen />);
     await flush();
-    fireEvent.changeText(screen.getByTestId('expense-amount'), '1250.25');
+    typeOnPad('expense-amount', '1250.25');
     pickCat('cat-repair');
     fireEvent.press(screen.getByTestId('share-row'));
     await flush();
     // The discount switch is off by default and sits above the tapper choice.
     expect(screen.queryByTestId('share-discount')).toBeNull();
     fireEvent.press(screen.getByTestId('share-discount-switch'));
-    fireEvent.changeText(screen.getByTestId('share-discount'), '100');
+    typeOnPad('share-discount', '100');
     fireEvent.press(screen.getByTestId(`share-worker-${daengId}`));
-    // The % is a small button with the category's value; tapping it opens the field.
-    expect(screen.getByTestId('share-pct-button')).toHaveTextContent('50%');
+    // The % is a pad card with the category's value (E01-S20 D7).
+    expect(screen.getByTestId('share-pct')).toHaveTextContent(/50\s*%/);
     expect(screen.getByTestId('share-preview')).toHaveTextContent(/575\.13.*575\.12/);
     fireEvent.press(screen.getByTestId('share-done'));
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
@@ -114,7 +123,7 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
   it('“จ่ายแล้ว” records the share with no debt', async () => {
     wrap(<ExpenseFormScreen />);
     await flush();
-    fireEvent.changeText(screen.getByTestId('expense-amount'), '200');
+    typeOnPad('expense-amount', '200');
     pickCat('cat-repair');
     fireEvent.press(screen.getByTestId('share-row'));
     await flush();
@@ -136,7 +145,7 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     fireEvent.press(screen.getByTestId('expense-cat-more'));
     fireEvent.press(screen.getByTestId('expense-cat-share'));
     fireEvent.press(screen.getByTestId('cat-share-switch'));
-    fireEvent.changeText(screen.getByTestId('cat-share-pct'), '30');
+    typeOnPad('cat-share-pct', '30');
     await act(async () => fireEvent.press(screen.getByTestId('cat-share-save')));
     await flush();
     expect(projectFinance(await mockFinance.load()).categories.find((c) => c.id === 'cat-herbicide')?.workerPct).toBe(30);
@@ -146,10 +155,11 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
   it('the fertilizer category opens the shop order with what was typed', async () => {
     wrap(<ExpenseFormScreen />);
     await flush();
-    fireEvent.changeText(screen.getByTestId('expense-amount'), '10000');
+    typeOnPad('expense-amount', '10000');
     pickCat('cat-fertilizer');
     // Replaced, not pushed: after saving the flow the half-filled form is not waiting underneath.
-    expect(mockRouter.replace).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/v2/order', params: expect.objectContaining({ amount: '10000', stage: 'actual', payerId: expect.any(String) }) }));
+    // The amount goes as money text, as leaving the old box wrote it; the order reads it with parseBahtToSatang.
+    expect(mockRouter.replace).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/v2/order', params: expect.objectContaining({ amount: '10,000.00', stage: 'actual', payerId: expect.any(String) }) }));
   });
 
   it('a fertilizer purchase opens in its own flow to be edited', async () => {
@@ -174,27 +184,31 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
   });
 
   it('an empty % is refused, never saved as 0', async () => {
+    // The draft rule stays: an empty % fails the share check.
+    expect(checkShare(shareOf({ discount: '', worker: { id: daengId, name: 'แดง' }, pct: '', settle: 'debt' }, 10_000)!)).toContain('pct-invalid');
     wrap(<ExpenseFormScreen />);
     await flush();
-    fireEvent.changeText(screen.getByTestId('expense-amount'), '100');
+    typeOnPad('expense-amount', '100');
     pickCat('cat-repair');
     fireEvent.press(screen.getByTestId('share-row'));
     await flush();
     fireEvent.press(screen.getByTestId(`share-worker-${daengId}`));
-    fireEvent.press(screen.getByTestId('share-pct-button'));
-    fireEvent.changeText(screen.getByTestId('share-pct'), '');
-    expect(screen.getByTestId('share-pct-error')).toBeTruthy();
+    // On the pad an emptied % cannot be committed (E01-S20).
+    fireEvent.press(screen.getByTestId('share-pct'));
+    fireEvent.press(screen.getByTestId('share-pct-pad-key-back'));
+    fireEvent.press(screen.getByTestId('share-pct-pad-key-back'));
+    expect(screen.getByTestId('share-pct-pad-key-done').props.accessibilityState.disabled).toBe(true);
   });
 
   it('the discount sits on top and the net is shown beside it as "จ่ายจริง"', async () => {
     wrap(<ExpenseFormScreen />);
     await flush();
-    fireEvent.changeText(screen.getByTestId('expense-amount'), '1000');
+    typeOnPad('expense-amount', '1000');
     pickCat('cat-repair');
     fireEvent.press(screen.getByTestId('share-row'));
     await flush();
     fireEvent.press(screen.getByTestId('share-discount-switch'));
-    fireEvent.changeText(screen.getByTestId('share-discount'), '100');
+    typeOnPad('share-discount', '100');
     expect(screen.getByTestId('share-net')).toHaveTextContent(/จ่ายจริง\s*900\.00/);
   });
 
@@ -240,8 +254,9 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     fireEvent.press(screen.getByTestId('share-row'));
     await flush();
     fireEvent.press(screen.getByTestId('share-worker-none'));
-    fireEvent.changeText(screen.getByTestId('share-discount'), '2000');
     fireEvent.press(screen.getByTestId('share-done'));
+    // The pad refuses a discount over the bill (E01-S20), so the bill is lowered under the kept 100.00 instead.
+    typeOnPad('expense-amount', '50');
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
     await flush();
     expect(screen.getByTestId('share-err')).toBeTruthy();
@@ -255,8 +270,7 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     await flush();
     fireEvent.press(screen.getByTestId('share-row'));
     await flush();
-    fireEvent.press(screen.getByTestId('share-pct-button'));
-    fireEvent.changeText(screen.getByTestId('share-pct'), '30');
+    typeOnPad('share-pct', '30');
     fireEvent.press(screen.getByTestId('share-done'));
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
     await flush();
@@ -291,7 +305,7 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
       fireEvent.press(screen.getByTestId('expense-cat-more'));
     fireEvent.press(screen.getByTestId('expense-cat-share'));
       if (pct === '20') fireEvent.press(screen.getByTestId('cat-share-switch'));
-      fireEvent.changeText(screen.getByTestId('cat-share-pct'), pct);
+      typeOnPad('cat-share-pct', pct);
       await act(async () => fireEvent.press(screen.getByTestId('cat-share-save')));
       await flush();
     }

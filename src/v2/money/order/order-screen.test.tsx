@@ -137,6 +137,29 @@ describe('order capture screen (E11-S11)', () => {
     expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: a.orderId } });
   });
 
+  it('NP-16: holding ⌫ clears the quantity and the price pads; the item adds up from what was typed after', async () => {
+    wrap(<OrderScreen />);
+    await flush();
+    press('ordc-add');
+    press('ordc-pick-new');
+    fireEvent.changeText(screen.getByTestId('ordc-formula'), '15-15-15');
+    press('ordc-remember');
+    press('ordc-new-done');
+    await flush();
+    press('ordc-qty');
+    keys('ordc-qty-pad', '9', '9');
+    fireEvent(screen.getByTestId('ordc-qty-pad-key-back'), 'longPress');
+    keys('ordc-qty-pad', '2', '0', 'done');
+    press('ordc-price');
+    keys('ordc-price-pad', '7', '7', '7');
+    fireEvent(screen.getByTestId('ordc-price-pad-key-back'), 'longPress');
+    keys('ordc-price-pad', '1', '1', '5', '0');
+    press('ordc-price-done');
+    press('ordc-item-done');
+    await flush();
+    expect(text('ordc-total')).toContain('23,000.00');
+  });
+
   it('"เสร็จ ไว้ทีหลัง" leaves the screen', async () => {
     wrap(<OrderScreen />);
     await flush();

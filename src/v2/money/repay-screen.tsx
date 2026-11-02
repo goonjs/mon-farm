@@ -20,7 +20,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, CalendarIcon, Card, CardLabel, Check, FactRow, ReceiptIcon, ScreenHeader, TextField, type HeaderPrimaryAction } from '../../ui';
+import { AppText, BottomSheet, CalendarIcon, Card, CardLabel, Check, FactRow, MoneyField, ReceiptIcon, ScreenHeader, TextField, type HeaderPrimaryAction } from '../../ui';
 import { HalfDot } from './expenses-screen';
 import { Day, PayerPicker, SectionLabel } from './pieces';
 
@@ -118,19 +118,26 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
         </View>
 
         {!manual ? (
-          <TextField
-            testID="repay-amount"
-            label={msg('fin.repay.amount').replace(' *', '')}
-            required
-            keyboardType="decimal-pad"
-            value={amount}
-            onChangeText={setAmount}
-            helper={msg('v2m.baht')}
-            error={!auto.ok && auto.reason === 'over' ? msg('fin.repay.over', { max: formatSatang(auto.maxSatang) }) : undefined}
-          />
+          <View style={{ gap: t.space.xs }}>
+            <MoneyField
+              testID="repay-amount"
+              label={msg('fin.repay.amount').replace(' *', '')}
+              required
+              unit={msg('v2m.baht')}
+              satang={moneyOf(amount)}
+              // The old judge on the pad too: more than is owed cannot be committed (NP-5). 0 still can, and
+              // the page's save stays off for it, as it did when 0 was typed into the old box.
+              validate={(v) => {
+                const plan = allocateOldestFirst(debts, v);
+                return !plan.ok && plan.reason === 'over' ? msg('fin.repay.over', { max: formatSatang(plan.maxSatang) }) : undefined;
+              }}
+              onChange={(v) => setAmount(satangToInput(v))}
+            />
+            {!auto.ok && auto.reason === 'over' ? <AppText testID="repay-amount-error" variant="bodySm" style={{ color: t.color.reject }}>{msg('fin.repay.over', { max: formatSatang(auto.maxSatang) })}</AppText> : null}
+          </View>
         ) : null}
 
-        <TextField testID="repay-date" label={msg('fin.form.date')} required value={date} onChangeText={setDate} helper={msg('v2m.dateShown', { shown: formatDate(date) })} />
+        <TextField testID="repay-date" label={msg('fin.form.date').replace(' *', '')} required value={date} onChangeText={setDate} helper={msg('v2m.dateShown', { shown: formatDate(date) })} />
 
         <Card>
           <CardLabel>{manual ? msg('fin.repay.manual') : msg('fin.repay.oldestFirst')}</CardLabel>
@@ -155,14 +162,22 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
                 </View>
                 {take > 0 && left > 0 ? <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>{msg('v2m.left', { amount: formatSatang(left) })}</FactRow> : null}
                 {manual ? (
-                  <TextField
-                    testID={`repay-manual-${d.expenseId}`}
-                    label={`${categoryOf(d.expenseId)} ${formatDate(d.date)}`}
-                    keyboardType="decimal-pad"
-                    value={manual[d.expenseId] ?? ''}
-                    onChangeText={(v) => setManual((m) => ({ ...(m ?? {}), [d.expenseId]: v }))}
-                    error={(parseBahtToSatang(manual[d.expenseId] ?? '') ?? 0) > d.remainingSatang ? msg('fin.repay.overItem') : undefined}
-                  />
+                  <View style={{ gap: t.space.xs }}>
+                    {/* A part of one item, so no Thai words (Q5); capped at what that item still owes (Q4). */}
+                    <MoneyField
+                      testID={`repay-manual-${d.expenseId}`}
+                      label={`${categoryOf(d.expenseId)} ${formatDate(d.date)}`}
+                      unit={msg('v2m.baht')}
+                      words={false}
+                      compact
+                      satang={moneyOf(manual[d.expenseId] ?? '')}
+                      validate={(v) => (v > d.remainingSatang ? msg('fin.repay.overItem') : undefined)}
+                      onChange={(v) => setManual((m) => ({ ...(m ?? {}), [d.expenseId]: satangToInput(v) }))}
+                    />
+                    {(parseBahtToSatang(manual[d.expenseId] ?? '') ?? 0) > d.remainingSatang ? (
+                      <AppText testID={`repay-manual-${d.expenseId}-error`} variant="bodySm" style={{ color: t.color.reject }}>{msg('fin.repay.overItem')}</AppText>
+                    ) : null}
+                  </View>
                 ) : null}
               </View>
             );
@@ -215,6 +230,9 @@ function Party({ label, value, testID, onPress }: { label: string; value: Payer 
     </Pressable>
   );
 }
+
+/** The amount a money text holds, null while empty. */
+const moneyOf = (text: string) => (text.trim() ? parseBahtToSatang(text) : null);
 
 /** Back to where the user came from — replacing would stack a second copy of that screen. */
 function leave() {
