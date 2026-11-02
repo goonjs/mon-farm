@@ -5,9 +5,11 @@
 export const th = {
   'npsale.perKg': 'บาท / กก.',
   'npsale.basket': 'เข่ง',
+  'npsale.closedPrice': 'การขายปิดแล้ว แก้ราคาไม่ได้',
 } as const;
 
 export const en: Record<keyof typeof th, string> = {
   'npsale.perKg': 'baht / kg',
   'npsale.basket': 'baskets',
+  'npsale.closedPrice': 'the sale is closed; the price cannot change',
 };

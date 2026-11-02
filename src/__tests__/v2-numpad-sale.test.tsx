@@ -198,6 +198,20 @@ describe('row 18 option-price: saves only a set price that differs from the curr
     await enter.optionPrice('0');
     expect(await prices(saleId)).toEqual([]);
   });
+
+  it('a closed sale: ตกลง stays off and says why, nothing is written (review N2)', async () => {
+    await seed((b) => {
+      b.sys({ t: 'price_set', satangPerKg: 4850, indexRef: '' });
+      b.sys({ t: 'sale_closed' });
+    });
+    await inPoint();
+    await press('pick-menu');
+    await press('menu-price');
+    await typeKeys('option-price', '52');
+    expect(screen.getByText('การขายปิดแล้ว แก้ราคาไม่ได้')).toBeTruthy();
+    expect(screen.getByTestId('option-price-done').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(await prices(saleId)).toEqual([4850]);
+  });
 });
 
 describe('row 19 check-price: price_set before settling (NP-4)', () => {

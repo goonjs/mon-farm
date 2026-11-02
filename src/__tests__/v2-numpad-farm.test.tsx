@@ -169,6 +169,18 @@ describe('NP-4 row 14 — property-planted saves plantedYearBe through parsePlan
     await press('property-save');
     expect((await master().state()).properties[0].plantedYearBe).toBe(2550);
   });
+
+  it('a stored year the form no longer accepts (e.g. a future year from a fast clock) says why on save, not silently (review N1)', async () => {
+    const future = new Date().getFullYear() + 543 + 2;
+    const farm = await master().addProperty({ name: 'สวน', crop: 'rubber', plantedYearBe: future });
+    mockParams.current = { id: farm.id, edit: '1' };
+    wrap(<PropertyScreen />);
+    await flush();
+    expect(screen.queryByTestId('property-planted-error')).toBeNull();
+    await press('property-save');
+    expect(screen.getByTestId('property-planted-error')).toBeTruthy();
+    expect((await master().state()).properties[0].plantedYearBe).toBe(future);
+  });
 });
 
 describe('NP-4 row 15 — area-new in the change-area sheet: a new dated line', () => {

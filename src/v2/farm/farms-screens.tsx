@@ -297,6 +297,7 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
           onChange={(n) => setArea(scaledToEntry(n, RAI_DECIMALS))}
         />
       )}
+      {!existing && show('area') ? <FieldError testID="property-area-error">{msg('propertyForm.badArea')}</FieldError> : null}
       <QuantityField
         testID="property-planted"
         label={msg('v2f.planted')}
@@ -310,6 +311,7 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
         value={shownYear}
         onChange={(n) => setPlanted(String(n))}
       />
+      {show('year') ? <FieldError testID="property-planted-error">{msg('propertyForm.badYear')}</FieldError> : null}
       <TextField
         testID="property-gps"
         label={msg('v2f.gps')}

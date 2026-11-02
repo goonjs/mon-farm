@@ -65,6 +65,8 @@ export function SaleOptionSheets({ view, open, onClose }: { view: View_; open: O
         minSatang={1}
         maxSatang={PRICE_MAX_SATANG}
         words={false}
+        // A closed sale keeps its price: say so on the pad rather than close it as if saved (review N2).
+        validate={() => (closed ? msg('npsale.closedPrice') : undefined)}
         below={() => msg('opt.priceHint')}
         card={false}
         open={open === 'price'}
