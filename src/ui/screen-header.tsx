@@ -95,7 +95,11 @@ export function ScreenHeader({
           style={{
             fontFamily: t.font.family.sans,
             fontSize: t.font.size.headingLg,
-            lineHeight: t.font.size.headingLg * t.font.lineHeight.snug,
+            // Body leading, not snug: Thai stacks a vowel and a tone mark above
+            // the letter (เครื่อง, ตั้ง), and Android cuts any glyph that rises
+            // above a tight line box — at large text sizes the title lost its
+            // marks (E05-S11 → E03-S08 TS-6).
+            lineHeight: Math.round(t.font.size.headingLg * t.font.lineHeight.body),
             fontWeight: t.font.weight.bold,
             color: t.color.appBarInk,
           }}
@@ -104,7 +108,7 @@ export function ScreenHeader({
         </Text>
         {subtitle ? (
           <Text
-            style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.inkSoft }}
+            style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, lineHeight: Math.round(t.font.size.bodySm * t.font.lineHeight.body), color: t.color.inkSoft }}
           >
             {subtitle}
           </Text>

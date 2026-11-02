@@ -115,5 +115,14 @@ describe('ScreenHeader action keeps its width while saving', () => {
     expect(screen.getByTestId('screen-title').props.numberOfLines).toBeUndefined();
     expect(screen.getByText('สวนครอบครัว').props.numberOfLines).toBeUndefined();
   });
-});
 
+  it('E03-S08 TS-6: the title wraps instead of cutting, with room for stacked Thai marks at every text size', () => {
+    wrap(<ScreenHeader title="สรุปจ่ายเงินและหักหนี้คนกรีดยางทั้งสวน" subtitle="การขาย 1 พ.ย. 2569" back={{ label: '← กลับ', onPress: () => {} }} />);
+    const title = screen.getByTestId('screen-title');
+    const st = flat(title.props.style);
+    expect(title.props.numberOfLines).toBeUndefined();
+    expect(st.lineHeight).toBeGreaterThanOrEqual(st.fontSize * tokens.font.lineHeight.body);
+    const sub = flat(screen.getByText('การขาย 1 พ.ย. 2569').props.style);
+    expect(sub.lineHeight).toBeGreaterThanOrEqual(sub.fontSize * tokens.font.lineHeight.body);
+  });
+});

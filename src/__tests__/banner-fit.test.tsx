@@ -1,0 +1,35 @@
+/**
+ * E03-S08 TS-7: the icon column of a Banner never makes its icon stick out.
+ * It was a fixed 16 px box: any icon wider than that (or the "?" at a large
+ * text size) spilled past it (E05-S11 measured 2 px). The column now grows
+ * to its icon and to the first line of the title.
+ */
+import { screen } from '@testing-library/react-native';
+import type { ReactTestInstance } from 'react-test-renderer';
+import { View } from 'react-native';
+
+import { Banner } from '../v2/sale/pieces';
+import { wrap } from '../test/render';
+
+jest.mock('expo-router', () => ({ Link: ({ children }: { children: React.ReactNode }) => children, useRouter: () => ({}) }));
+
+const flat = (style: unknown) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+/** The banner's hidden icon column: the nearest aria-hidden ancestor. */
+const columnOf = (el: ReactTestInstance) => {
+  let p = el.parent;
+  while (p && p.props['aria-hidden'] !== true) p = p.parent;
+  return flat(p?.props.style);
+};
+
+it('the icon column has no fixed width: an 18 px icon fits inside it', () => {
+  wrap(<Banner tone="bad" icon={() => <View testID="banner-icon" style={{ width: 18, height: 18 }} />} title="หักหนี้ซ้ำจาก 2 เครื่อง" lines={['ตรวจก่อน']} testID="b" />);
+  const column = columnOf(screen.getByTestId('banner-icon', { includeHiddenElements: true }));
+  expect(column.width).toBeUndefined();
+  expect(column.minWidth).toBeGreaterThanOrEqual(16);
+});
+
+it('the "?" of an info band sits in the same growing column', () => {
+  wrap(<Banner lines={['รายการขายทั้งหมด']} testID="b" />);
+  const column = columnOf(screen.getByText('?', { includeHiddenElements: true }));
+  expect(column.width).toBeUndefined();
+});
