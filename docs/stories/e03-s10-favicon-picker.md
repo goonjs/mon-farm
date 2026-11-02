@@ -48,9 +48,15 @@ _เขียน test ก่อน (TDD)_
 
 ## Verification
 
-- [ ] Sandbox run performed:
-- [ ] Screenshots — golden path:
-- [ ] Screenshots — edge cases:
+- [x] Sandbox run performed: `npm run build:web` (expo export) + Playwright บน Chromium ของเครื่อง (`/opt/pw-browsers/chromium`)
+  — `e2e/v2-favicon.spec.ts` 8 ผ่าน; e2e portrait ทั้งชุด 40 ผ่าน 5 ข้าม (emulator) · jest ทั้งหมดผ่าน · vitest ผ่าน · tsc / eslint สะอาด
+  - FV-2: เลือก "ชั่งน้ำหนัก" → `link[rel=icon]` เป็น PNG data URL 64×64, `apple-touch-icon` PNG 180×180 (ถอดรหัสในเบราว์เซอร์จริง)
+  - FV-3: เปิด `/v2` ใหม่ → ไอคอนเดียวกันกลับมา; หน้าเครื่องนี้ยังเลือกช่องเดิม
+  - FV-4: ไม่เคยเลือก → `<head>` มีแค่ `/favicon.ico` ไม่มี apple-touch-icon; เลือก "เดิม" → กลับเป็นแบบนั้นทุกตัว
+  - FV-6: 360 และ 390 × เล็ก/กลาง/ใหญ่ (ยืนยันขนาดตัวอักษรใช้จริงจาก font-size ของบรรทัดหมายเหตุ) ไม่มีตัด/…/ล้นข้าง ที่แตะ < 48 = 0
+- [x] Screenshots — golden path: `docs/ux/screenshots/e03-s10/device-picker-chosen.png`, `tab-strip.png`
+  (แถบแท็บสว่าง/มืด **วาดจำลอง** ด้วยไอคอนที่แอปตั้งจริง — Chromium แบบ headless ไม่มีแถบแท็บให้ถ่าย)
+- [x] Screenshots — edge cases: `docs/ux/screenshots/e03-s10/card-{360,390}-{s,m,l}.png`
 
 ## Dev notes
 
