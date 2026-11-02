@@ -18,7 +18,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { checkDebt, projectDebts } from '../../core/finance/debts';
-import { formatDate, formatSatang, parseBahtToSatang, todayIso } from '../../core/finance/money';
+import { formatDate, formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../core/finance/money';
 import { FARM_FUNDS, type DebtKind, type Payer } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
@@ -27,7 +27,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, Button, Card, Check, RadioCard, ScreenHeader, SegmentedControl, TextField } from '../../ui';
+import { AppText, Button, Card, Check, FieldError, MoneyField, RadioCard, ScreenHeader, SegmentedControl, TextField } from '../../ui';
 import { ORDER_NEW } from './order-routes';
 import { PayerPicker, SectionLabel } from './pieces';
 
@@ -99,17 +99,17 @@ export function AddDebtScreen() {
           <SegmentedControl testID="debt-kind" value={kind} onChange={pickKind} options={KINDS.map((k) => ({ value: k, label: msg(`debt.kind.${k}`) }))} />
         </View>
 
-        <TextField
-          testID="debt-amount"
-          label={msg('debt.form.amount').replace(' *', '')}
-          required
-          keyboardType="decimal-pad"
-          value={amount}
-          onChangeText={setAmount}
-          placeholder="0.00"
-          helper={msg('v2m.baht')}
-          error={tried && problems.includes('amount-required') ? msg('debt.form.err.amount-required') : undefined}
-        />
+        <View style={{ gap: t.space.xs }}>
+          <MoneyField
+            testID="debt-amount"
+            label={msg('debt.form.amount').replace(' *', '')}
+            required
+            unit={msg('v2m.baht')}
+            satang={parseBahtToSatang(amount)}
+            onChange={(v) => setAmount(satangToInput(v))}
+          />
+          {tried && problems.includes('amount-required') ? <FieldError testID="debt-amount-error">{msg('debt.form.err.amount-required')}</FieldError> : null}
+        </View>
 
         {kind === 'loan' ? (
           <View style={{ gap: t.space.sm }}>
@@ -226,17 +226,16 @@ export function PayDebtScreen() {
               />
             ))}
           </View>
-          <TextField
+          <MoneyField
             testID="debt-pay-amount"
             label={msg('debt.form.amount').replace(' *', '')}
             required
-            keyboardType="decimal-pad"
-            value={amount}
-            onChangeText={(v) => {
-              setAmount(v);
+            unit={msg('v2m.baht')}
+            satang={parseBahtToSatang(amount)}
+            onChange={(v) => {
+              setAmount(satangToInput(v));
               setConfirmOver(false);
             }}
-            helper={msg('v2m.baht')}
           />
           <TextField testID="debt-pay-date" label={msg('debt.form.date').replace(' *', '')} required value={date} onChangeText={setDate} helper={msg('v2m.dateShown', { shown: formatDate(date) })} />
           <TextField testID="debt-pay-note" label={msg('debt.form.note')} multiline value={note} onChangeText={setNote} placeholder={msg('fin.form.notePlaceholder')} />
