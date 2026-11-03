@@ -124,7 +124,11 @@ const readArt = (page: Page) =>
     return out;
   });
 
-const SCREENS: { name: string; min: number; open: (page: Page) => Promise<void> }[] = [
+type Screen = { name: string; min: number; open: (page: Page) => Promise<void> };
+
+// FM-11 (lead 2026-11-03): one test per area, so each stays near a minute when the whole suite runs on a slow machine
+// (one test over all ~22 screens timed out at 4 minutes).
+const HOME_MONEY: Screen[] = [
   { name: 'home', min: 5, open: async (page) => { await page.goto('/v2'); await page.getByTestId('home-open-sale').waitFor(); } },
   {
     name: 'home-modules',
@@ -138,7 +142,11 @@ const SCREENS: { name: string; min: number; open: (page: Page) => Promise<void> 
   { name: 'expense-form', min: 7, open: async (page) => { await page.goto('/v2/expense/new'); await page.getByTestId('expense-payer-row').waitFor(); } },
   { name: 'owed', min: 3, open: async (page) => { await page.goto('/v2/owed'); await page.getByTestId('owed-open-red').waitFor(); } },
   { name: 'debts', min: 1, open: async (page) => { await page.goto('/v2/debts'); await page.getByTestId('debt-account-red').waitFor(); } },
-  // E03-S11 FM-7: the farm screens.
+  { name: 'debt-account', min: 1, open: async (page) => { await page.goto('/v2/debt/red?name=%E0%B9%81%E0%B8%94%E0%B8%87'); await page.getByTestId('debt-plan-row').waitFor(); } },
+];
+
+// E03-S11 FM-7: the farm screens.
+const FARM_SCREENS: Screen[] = [
   { name: 'farm-hub', min: 4, open: async (page) => { await page.goto('/v2/farm'); await page.getByTestId('hub-farms').waitFor(); } },
   { name: 'farms', min: 1, open: async (page) => { await page.goto('/v2/farms'); await page.getByTestId('farm-fa').waitFor(); } },
   { name: 'property', min: 2, open: async (page) => { await page.goto('/v2/property/fa'); await page.getByTestId('property-summary').waitFor(); } },
@@ -148,8 +156,11 @@ const SCREENS: { name: string; min: number; open: (page: Page) => Promise<void> 
   { name: 'person', min: 2, open: async (page) => { await page.goto('/v2/person/red'); await page.getByTestId('person-profile').waitFor(); } },
   { name: 'buyers', min: 1, open: async (page) => { await page.goto('/v2/buyers'); await page.getByTestId('buyer-buyer-a').waitFor(); } },
   { name: 'shares', min: 1, open: async (page) => { await page.goto('/v2/shares'); await page.getByTestId('share-red').waitFor(); } },
-  // E03-S11 FM-8: the sale and fertilizer screens. Not opened here: the close-out summary and its sheets
-  // (their text fit is v2-text-size.spec.ts; their ids are asserted in jest), the check screen, the order-detail sheets.
+];
+
+// E03-S11 FM-8: the sale and fertilizer screens. Not opened here: the close-out summary and its sheets
+// (their text fit is v2-text-size.spec.ts; their ids are asserted in jest), the check screen, the order-detail sheets.
+const SALE_FERT: Screen[] = [
   { name: 'sales', min: 1, open: async (page) => { await page.goto('/v2/sales'); await page.getByTestId('sale-row-sale-art').waitFor(); } },
   { name: 'sale-point', min: 1, open: async (page) => { await page.goto('/v2/sale/sale-art/point'); await page.getByTestId('pick-point-a1').waitFor(); } },
   { name: 'zero-tare', min: 2, open: async (page) => { await page.goto('/v2/sale/sale-art/zero-tare?point=a1&net=50000&basket=2000'); await page.getByTestId('expect-kg').waitFor(); } },
@@ -157,36 +168,45 @@ const SCREENS: { name: string; min: number; open: (page: Page) => Promise<void> 
   { name: 'counter-menu', min: 7, open: async (page) => { await page.goto('/v2/sale/sale-art/counter?point=a1'); await page.getByTestId('counter-menu').click(); await page.getByTestId('menu-sales').waitFor(); } },
   { name: 'backfill', min: 1, open: async (page) => { await page.goto('/v2/sale/sale-art/backfill?point=a1'); await page.getByTestId('backfill-proof').scrollIntoViewIfNeeded(); } },
   { name: 'order', min: 3, open: async (page) => { await page.goto('/v2/order'); await page.getByTestId('ordc-empty').waitFor(); } },
-  { name: 'debt-account', min: 1, open: async (page) => { await page.goto('/v2/debt/red?name=%E0%B9%81%E0%B8%94%E0%B8%87'); await page.getByTestId('debt-plan-row').waitFor(); } },
 ];
 
-for (const width of [360, 390]) {
-  for (const size of ['s', 'm', 'l'] as const) {
-    test(`home, money, farm, sale and fertilizer draw the originals, nothing cut off, at ${width} px text ${size}`, async ({ page }) => {
-      test.setTimeout(240_000);
-      await page.setViewportSize({ width, height: 844 });
-      await page.addInitScript((size) => localStorage.setItem('mon-farm:text-size', size), size);
-      await seed(page);
-      const low: string[] = [];
-      const readings: (ArtReading & { screen: string })[] = [];
-      for (const s of SCREENS) {
-        await s.open(page);
-        await page.waitForTimeout(150);
-        expect(await textFit(page), `${s.name}: nothing cut off or past the edge`).toEqual([]);
-        const art = await readArt(page);
-        expect(art.length, `${s.name}: originals drawn`).toBeGreaterThanOrEqual(s.min);
-        expect(art.filter((a) => !a.inside).map((a) => a.where), `${s.name}: every original inside its tile`).toEqual([]);
-        for (const a of art) if (a.visible < 0.5) low.push(`${s.name} ${a.where} ${a.visible} on ${a.tile}`);
-        readings.push(...art.map((a) => ({ screen: s.name, ...a })));
-        if (process.env.UPDATE_SCREENSHOTS && ((width === 390 && size === 'm') || (width === 360 && size === 'l'))) {
-          await page.screenshot({ path: `${SHOTS}/${s.name}-${width}-${size}.png` });
-        }
+const AREAS: [string, Screen[]][] = [
+  ['home and money', HOME_MONEY],
+  ['farm', FARM_SCREENS],
+  ['sale and fertilizer', SALE_FERT],
+];
+
+for (const [area, screens] of AREAS) {
+  test.describe(area, () => {
+    for (const width of [360, 390]) {
+      for (const size of ['s', 'm', 'l'] as const) {
+        test(`${area} draw the originals, nothing cut off, at ${width} px text ${size}`, async ({ page }) => {
+          test.setTimeout(90_000);
+          await page.setViewportSize({ width, height: 844 });
+          await page.addInitScript((size) => localStorage.setItem('mon-farm:text-size', size), size);
+          await seed(page);
+          const low: string[] = [];
+          const readings: (ArtReading & { screen: string })[] = [];
+          for (const s of screens) {
+            await s.open(page);
+            await page.waitForTimeout(150);
+            expect(await textFit(page), `${s.name}: nothing cut off or past the edge`).toEqual([]);
+            const art = await readArt(page);
+            expect(art.length, `${s.name}: originals drawn`).toBeGreaterThanOrEqual(s.min);
+            expect(art.filter((a) => !a.inside).map((a) => a.where), `${s.name}: every original inside its tile`).toEqual([]);
+            for (const a of art) if (a.visible < 0.5) low.push(`${s.name} ${a.where} ${a.visible} on ${a.tile}`);
+            readings.push(...art.map((a) => ({ screen: s.name, ...a })));
+            if (process.env.UPDATE_SCREENSHOTS && ((width === 390 && size === 'm') || (width === 360 && size === 'l'))) {
+              await page.screenshot({ path: `${SHOTS}/${s.name}-${width}-${size}.png` });
+            }
+          }
+          await test.info().attach('art-contrast.json', { body: JSON.stringify(readings, null, 1), contentType: 'application/json' });
+          // Owner rule 2: an original that blends into its tile is reported, not hidden — none do today.
+          expect(low, 'originals that blend into their tile').toEqual([]);
+        });
       }
-      await test.info().attach('art-contrast.json', { body: JSON.stringify(readings, null, 1), contentType: 'application/json' });
-      // Owner rule 2: an original that blends into its tile is reported, not hidden — none do today.
-      expect(low, 'originals that blend into their tile').toEqual([]);
-    });
-  }
+    }
+  });
 }
 
 for (const width of [360, 390]) {
