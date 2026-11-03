@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 
 import { router } from 'expo-router';
 
@@ -7,6 +7,10 @@ import type { Expense, FertOption } from '../../../core/finance/ledger';
 import type { MasterState } from '../../../core/master';
 import { wrap } from '../../../test/render';
 import { OrderDetailView } from './order-detail-screen';
+import { FarmMateArt } from '../../../ui';
+
+/** The traced originals drawn inside the element with this testID (E03-S11). */
+const art = (testID: string): string[] => within(screen.getByTestId(testID)).UNSAFE_queryAllByType(FarmMateArt).map((a) => a.props.id as string);
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true, replace: jest.fn() }, useLocalSearchParams: () => ({}), Link: ({ children }: { children: unknown }) => children }));
 jest.mock('../../../store/people', () => ({ peopleStore: { list: () => Promise.resolve([]), addZone: jest.fn(), create: jest.fn() } }));
@@ -137,6 +141,8 @@ describe('OrderDetailView', () => {
     fireEvent.press(screen.getByTestId('ordd-pick-p1'));
     expect(screen.getByText('แบ่งแล้ว 20 / 20')).toBeTruthy();
     expect(screen.getByTestId('ordd-tap-p1-part').props.children).toBe('แดงรับส่วนนี้ 11,500.00');
+    // E03-S11: each tapper's card leads with the tapper original.
+    expect(art('ordd-tap-p1')).toEqual(['people.tapper']);
     expect(screen.getByTestId('ordd-tap-hint')).toBeTruthy();
     fireEvent.press(screen.getByTestId('ordd-tap-p1-sacks'));
     keys('ordd-tap-p1-sacks', '6', 'done');
@@ -250,6 +256,8 @@ describe('OrderDetailView', () => {
     expect(screen.getByText('แค่วางแผน')).toBeTruthy();
     fireEvent.press(screen.getByTestId('ordd-edit-header'));
     expect(screen.getByTestId('ordd-hdr-stage-planned')).toBeTruthy();
+    // E03-S11: the date row leads with the calendar original.
+    expect(art('ordd-hdr-date')).toEqual(['farmwork.calendar']);
     expect(screen.getByTestId('ordd-hdr-stage-planned').props.accessibilityState.checked).toBe(true);
     fireEvent.press(screen.getByTestId('ordd-hdr-shop'));
     fireEvent.changeText(screen.getByTestId('ordd-hdr-shop'), 'ร้านใหม่');
