@@ -34,8 +34,8 @@ const round = (n) => {
 const roundNumbers = (value) =>
   value.replace(/-?\d*\.\d+/g, (n, at, all) => {
     const r = round(n);
-    // "1.96.5" is 1.96 then .5: a whole result needs its dot back, or "2" and ".5" read as one number.
-    return all[at + n.length] === '.' && !r.includes('.') ? `${r}.0` : r;
+    // In "1.5.96" the dot of ".96" is its only separator; once rounded ("1"), a space has to take its place.
+    return /[\d.]/.test(all[at - 1] ?? '') && /^\d/.test(r) ? ` ${r}` : r;
   });
 
 const ALLOWED = new Set(['svg', 'g', 'path']);
