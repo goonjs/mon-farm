@@ -32,8 +32,10 @@ describe('minifySvg', () => {
     expect(out).toContain('fill-rule="evenodd"');
   });
 
-  it('rounds coordinates to one decimal and keeps their signs', () => {
-    expect(out).toContain('d="M969.8 1050L110.6 1050C110.4 1050 -0.3 1049.9 110.1 1049.8Z"');
+  // PR 5 (owner 2026-11-03): path data to whole units (~60 KB gzip less). Every path is absolute (M L C Z), so the error
+  // does not add up: at most half a unit of a ~1100 viewBox, 0.02 px at 48 px. The viewBox keeps one decimal.
+  it('rounds path data to whole units and keeps their signs', () => {
+    expect(out).toContain('d="M970 1050L111 1050C110 1050 -0 1050 110 1050Z"');
   });
 
   it('has no whitespace between tags', () => {
@@ -42,7 +44,7 @@ describe('minifySvg', () => {
 
   // Review of PR 145: compact path data from other tracers.
   it('keeps the minus that separates two numbers when one rounds to zero', () => {
-    expect(minifySvg('<svg viewBox="0 0 10 10"><path d="M5.5-0.04L10-0.03"/></svg>')).toContain('d="M5.5-0L10-0"');
+    expect(minifySvg('<svg viewBox="0 0 10 10"><path d="M5.5-0.04L10-0.03"/></svg>')).toContain('d="M6-0L10-0"');
   });
 
   it('rounds only path data and the viewBox, nothing else', () => {
@@ -50,17 +52,17 @@ describe('minifySvg', () => {
     const min = minifySvg(svg);
     expect(min).toContain('viewBox="0 0 10.3 10"');
     expect(min).toContain('fill-opacity="0.25"');
-    expect(min).toContain('d="M0.3 0.8L1.3 2"');
+    expect(min).toContain('d="M0 1L1 2"');
   });
 
   // Review round 2: a number rounding to a whole value must keep the dot that ends it when the next number starts with one.
   it('keeps two numbers apart when the first rounds to a whole value and the next starts with a dot', () => {
-    expect(minifySvg('<svg viewBox="0 0 10 10"><path d="M1.96.5L.04.5L-0.04.5"/></svg>')).toContain('d="M2 0.5L0 0.5L-0 0.5"');
+    expect(minifySvg('<svg viewBox="0 0 10 10"><path d="M1.96.5L.04.5L-0.04.5"/></svg>')).toContain('d="M2 1L0 1L-0 1"');
   });
 
   // Review round 3: the next number's own leading dot was its only separator.
   it('keeps a number that starts with a dot apart from the one before it', () => {
-    expect(minifySvg('<svg viewBox="0 0 10 10"><path d="M1.5.96L1.5.04L1.96.96.5"/></svg>')).toContain('d="M1.5 1L1.5 0L2 1 0.5"');
+    expect(minifySvg('<svg viewBox="0 0 10 10"><path d="M1.5.96L1.5.04L1.96.96.5"/></svg>')).toContain('d="M2 1L2 0L2 1 1"');
   });
 
   it('drops comments', () => {

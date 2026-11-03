@@ -7,9 +7,11 @@
  *   node scripts/emit-farmmate.mjs --check   # exit 1 if the file on disk is stale
  *
  * Each SVG is minified (no xml declaration, title, ids or fixed pixel size;
- * coordinates rounded to one decimal — the viewBox is ~1100 units, so the
- * rounding moves an edge by under 0.01 px at the largest size the app draws)
- * and stored as a string the app draws with react-native-svg's SvgXml.
+ * path data rounded to whole units, the viewBox to one decimal) and stored as
+ * a string the app parses once and draws with react-native-svg. Every path is
+ * absolute (M L C Z), so rounding does not add up along a path: an edge moves
+ * at most half a unit of a ~1100-unit viewBox, 0.02 px at 48 px (PR 5, owner
+ * 2026-11-03: ~60 KB gzip less than one decimal).
  *
  * The module lives in design/, not src/: its colours are the originals' own
  * fills, and design/ is where raw colour is allowed (scripts/no-raw-colour.test.ts
@@ -24,16 +26,17 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const MASTERS_DIR = join(ROOT, 'design/icons/farmmate');
 export const OUT = join(ROOT, 'design/icons/farmmate-masters.ts');
 
-/** One number to one decimal, keeping a minus even when it rounds to zero (in compact path data it separates two numbers). */
-const round = (n) => {
-  const r = Math.round(Number(n) * 10) / 10;
+/** One number to `decimals` places, keeping a minus even when it rounds to zero (in compact path data it separates two numbers). */
+const round = (n, decimals) => {
+  const k = 10 ** decimals;
+  const r = Math.round(Number(n) * k) / k;
   return r === 0 && n.startsWith('-') ? '-0' : String(Object.is(r, -0) ? 0 : r);
 };
 
 /** Only path data and the viewBox are coordinates; every other number stays as written. */
-const roundNumbers = (value) =>
+const roundNumbers = (value, decimals) =>
   value.replace(/-?\d*\.\d+/g, (n, at, all) => {
-    const r = round(n);
+    const r = round(n, decimals);
     // In "1.5.96" the dot of ".96" is its only separator; once rounded ("1"), a space has to take its place.
     return /[\d.]/.test(all[at - 1] ?? '') && /^\d/.test(r) ? ` ${r}` : r;
   });
@@ -55,7 +58,7 @@ export function minifySvg(svg) {
   return body
     .replace(/<svg\b[^>]*>/, (tag) => tag.replace(/\s(?:width|height)="[^"]*"/g, ''))
     .replace(/\sid="[^"]*"/g, '')
-    .replace(/\s(d|viewBox)="([^"]*)"/g, (_, name, value) => ` ${name}="${roundNumbers(value)}"`)
+    .replace(/\s(d|viewBox)="([^"]*)"/g, (_, name, value) => ` ${name}="${roundNumbers(value, name === 'd' ? 0 : 1)}"`)
     .replace(/>\s+</g, '><')
     .trim();
 }
