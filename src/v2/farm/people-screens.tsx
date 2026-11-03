@@ -41,14 +41,12 @@ import {
   CalendarIcon,
   Card,
   Check,
-  DebtIcon,
   FactRow,
   FarmIcon,
   FieldError,
   IconTile,
   MenuItem,
   MoneyInIcon,
-  PercentIcon,
   PersonIcon,
   PinIcon,
   Plus,
@@ -56,7 +54,9 @@ import {
   TagIcon,
   TextField,
   TrashIcon,
-  type TileTone
+  type TileTone,
+  FarmMateArt,
+  personArt,
 } from '../../ui';
 import {
   AddCTA,
@@ -173,7 +173,7 @@ function PeopleRows({ state, filter, today, tappers }: { state: MasterState; fil
             testID={`buyer-${b.id}`}
             label={b.name}
             onPress={() => router.push('/v2/buyers' as Href)}
-            leading={<IconTile tone="cream" icon={(c) => <MoneyInIcon color={c} size={22} />} />}
+            leading={<IconTile tone="cream" icon={() => <FarmMateArt id="people.buyer" />} />}
           >
             <FactRow icon={(c) => <TagIcon color={c} size={12} />}>{msg('peopleList.buyers')}</FactRow>
           </MenuItem>
@@ -193,7 +193,7 @@ function PeopleRows({ state, filter, today, tappers }: { state: MasterState; fil
             testID={`person-${p.id}`}
             label={p.name}
             onPress={() => router.push(`/v2/person/${p.id}` as Href)}
-            leading={<IconTile tone={personTone(p, tappers)} icon={(c) => <PersonIcon color={c} size={22} />} />}
+            leading={<IconTile tone={personTone(p, tappers)} icon={() => <FarmMateArt id={personArt(p.roles)} />} />}
           >
             {roleNames(p, msg).map((r) => (
               <FactRow key={r} icon={(c) => <TagIcon color={c} size={12} />}>
@@ -387,7 +387,7 @@ function PersonDetail({ personId }: { personId: string }) {
     >
       <RowCard testID="person-profile">
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
-          <IconTile tone={tone} icon={(c) => <PersonIcon color={c} size={22} />} />
+          <IconTile tone={tone} icon={() => <FarmMateArt id={personArt(person.roles)} />} />
           <View style={{ flex: 1, gap: t.space.xxs }}>
             <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm }}>{person.name}</AppText>
             {roleNames(person, msg).map((r) => (
@@ -407,7 +407,7 @@ function PersonDetail({ personId }: { personId: string }) {
               testID={`person-point-${p.pointId}`}
               label={p.name}
               onPress={() => router.push(`/v2/point/${p.pointId}` as Href)}
-              leading={<IconTile tone="category1" icon={(c) => <PinIcon color={c} size={20} />} />}
+              leading={<IconTile tone="category1" icon={() => <FarmMateArt id="farm.weighPoint" />} />}
             >
               <FactRow icon={(c) => <FarmIcon color={c} size={12} />}>{p.farmName}</FactRow>
               <FactRow icon={(c) => <CalendarIcon color={c} size={12} />}>
@@ -426,7 +426,7 @@ function PersonDetail({ personId }: { personId: string }) {
               testID="share-summary"
               label={msg('share.title')}
               onPress={() => router.push(`/v2/share/${person.id}` as Href)}
-              leading={<IconTile tone="action" icon={(c) => <PercentIcon color={c} size={20} />} />}
+              leading={<IconTile tone="action" icon={() => <FarmMateArt id="people.profitShare" />} />}
             >
               <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{msg('share.tapper', { n: share.tapperPct })}</FactRow>
               <FactRow icon={(c) => <FarmIcon color={c} size={12} />}>{msg('share.owner', { n: share.ownerPct })}</FactRow>
@@ -438,7 +438,7 @@ function PersonDetail({ personId }: { personId: string }) {
               testID="debt-summary"
               label={msg('v2.debts')}
               onPress={() => router.push(`/v2/debt/${person.id}` as Href)}
-              leading={<IconTile tone="cream" icon={(c) => <DebtIcon color={c} size={20} />} />}
+              leading={<IconTile tone="cream" icon={() => <FarmMateArt id="finance.otherCost" />} />}
             >
               <FactRow icon={(c) => <MoneyInIcon color={c} size={12} />}>{msg('v2f.debtFarm', { amount: formatSatang(Math.max(0, debt.balanceSatang)) })}</FactRow>
               {debt.planPerSaleSatang ? (

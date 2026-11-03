@@ -63,6 +63,7 @@ import {
   TextField,
   TrashIcon,
   Undo,
+  FarmMateArt,
 } from '../../ui';
 import { NotFound } from './people-screens';
 import {
@@ -146,7 +147,7 @@ export function PointsScreen() {
                         testID={`point-${p.id}`}
                         label={p.name}
                         onPress={() => router.push(`/v2/point/${p.id}` as Href)}
-                        leading={<IconTile tone={categoryTone(i)} icon={(c) => <PinIcon color={c} size={20} />} />}
+                        leading={<IconTile tone={categoryTone(i)} icon={() => <FarmMateArt id="farm.weighPoint" />} />}
                         trailing={p.duplicateName ? <Chip tone="warn" label={msg('points.duplicate')} /> : undefined}
                       >
                         <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{nameOf(tapperOn(state, p.id, today)) ?? msg('assign.none')}</FactRow>
@@ -378,7 +379,7 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
     >
       <RowCard testID="point-summary">
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
-          <IconTile tone={categoryTone(Math.max(0, farmIndex))} icon={(c) => <PinIcon color={c} size={22} />} />
+          <IconTile tone={categoryTone(Math.max(0, farmIndex))} icon={() => <FarmMateArt id="farm.weighPoint" />} />
           <View style={{ flex: 1, gap: t.space.xxs }}>
             <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm }}>{point.name}</AppText>
             <FactRow icon={(c) => <FarmIcon color={c} size={12} />}>{farm?.name ?? ''}</FactRow>
@@ -397,9 +398,9 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
           const planned = seg.from !== null && seg.from > today;
           const isNow = (seg.from === null || seg.from <= today) && (seg.to === null || seg.to >= today);
           return (
-            <View key={seg.assignmentId}>
+            <View key={seg.assignmentId} testID={`assignment-${seg.assignmentId}`}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
-                <IconTile tone={toneOf(seg.tapperId)} icon={(c) => <PersonIcon color={c} size={20} />} />
+                <IconTile tone={toneOf(seg.tapperId)} icon={() => <FarmMateArt id="people.tapper" />} />
                 <View style={{ flex: 1, gap: t.space.xxs }}>
                   <AppText style={{ fontWeight: t.font.weight.bold }}>{nameOf(seg.tapperId)}</AppText>
                   <FactRow icon={(c) => <CalendarIcon color={c} size={12} />}>{seg.from ? msg('v2f.startOn', { date: day(seg.from) }) : msg('v2f.startUnset')}</FactRow>
