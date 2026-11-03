@@ -9,9 +9,9 @@
  * Each SVG is minified (no xml declaration, title, ids or fixed pixel size;
  * path data rounded to whole units, the viewBox to one decimal) and stored as
  * a string the app parses once and draws with react-native-svg. Every path is
- * absolute (M L C Z), so rounding does not add up along a path: an edge moves
- * at most half a unit of a ~1100-unit viewBox, 0.02 px at 48 px (PR 5, owner
- * 2026-11-03: ~60 KB gzip less than one decimal).
+ * absolute (M L C Z; anything else throws), so rounding does not add up along a
+ * path: each coordinate moves at most half a unit of a ~1100-unit viewBox,
+ * 0.02 px at 48 px (PR 5, owner 2026-11-03: ~60 KB gzip less than one decimal).
  *
  * The module lives in design/, not src/: its colours are the originals' own
  * fills, and design/ is where raw colour is allowed (scripts/no-raw-colour.test.ts
@@ -54,6 +54,12 @@ export function minifySvg(svg) {
   }
   if (/[\d.][eE][-+]?\d/.test(body.match(/\s(?:d|viewBox)="[^"]*"/g)?.join(' ') ?? '')) {
     throw new Error('exponent in path data or viewBox: not supported');
+  }
+  // Whole units are exact enough only because every point is absolute: a relative command would add the error up
+  // along the path, and an arc's compact flags ("0 01.5") would read as one number.
+  for (const [, d] of body.matchAll(/\sd="([^"]*)"/g)) {
+    const bad = d.match(/[^MLCZ\d\s,.+-]/);
+    if (bad) throw new Error(`path command "${bad[0]}": the minifier only rounds absolute M, L, C and Z`);
   }
   return body
     .replace(/<svg\b[^>]*>/, (tag) => tag.replace(/\s(?:width|height)="[^"]*"/g, ''))

@@ -33,7 +33,7 @@ describe('minifySvg', () => {
   });
 
   // PR 5 (owner 2026-11-03): path data to whole units (~60 KB gzip less). Every path is absolute (M L C Z), so the error
-  // does not add up: at most half a unit of a ~1100 viewBox, 0.02 px at 48 px. The viewBox keeps one decimal.
+  // does not add up: each coordinate moves at most half a unit of a ~1100 viewBox, 0.02 px at 48 px. The viewBox keeps one decimal.
   it('rounds path data to whole units and keeps their signs', () => {
     expect(out).toContain('d="M970 1050L111 1050C110 1050 -0 1050 110 1050Z"');
   });
@@ -79,6 +79,15 @@ describe('minifySvg', () => {
     expect(() => minifySvg('<svg viewBox="0 0 10 10"><path d="M1e2 0"/></svg>')).toThrow(/exponent/);
     expect(() => minifySvg('<svg viewBox="0 0 10 10"><path d="M1.e5 0"/></svg>')).toThrow(/exponent/);
     expect(() => minifySvg('<svg viewBox="0 0 10 10"><rect width="3" height="3"/></svg>')).toThrow(/<rect>/);
+  });
+
+  // Review of PR 5: whole units are exact enough only because every point is absolute. A relative command would add the
+  // error up along the path, and an arc's compact flags ("0 01.5") would read as one number and be rounded into another.
+  it('refuses path commands other than absolute M, L, C and Z', () => {
+    expect(() => minifySvg('<svg viewBox="0 0 10 10"><path d="M0 0l1.5 1.5"/></svg>')).toThrow(/path command "l"/);
+    expect(() => minifySvg('<svg viewBox="0 0 10 10"><path d="M0 0A1 1 0 01.5 2"/></svg>')).toThrow(/path command "A"/);
+    expect(() => minifySvg('<svg viewBox="0 0 10 10"><path d="M0 0H5"/></svg>')).toThrow(/path command "H"/);
+    expect(minifySvg('<svg viewBox="0 0 10 10"><path d="M0 0L1.4 2C1 2 3 4 5 6Z"/></svg>')).toContain('d="M0 0L1 2C1 2 3 4 5 6Z"');
   });
 });
 

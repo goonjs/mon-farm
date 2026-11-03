@@ -180,7 +180,7 @@ for (const [area, screens] of AREAS) {
   test.describe(area, () => {
     for (const width of [360, 390]) {
       for (const size of ['s', 'm', 'l'] as const) {
-        test(`${area} draw the originals, nothing cut off, at ${width} px text ${size}`, async ({ page }) => {
+        test(`${area}: originals drawn, nothing cut off, at ${width} px text ${size}`, async ({ page }) => {
           test.setTimeout(90_000);
           await page.setViewportSize({ width, height: 844 });
           await page.addInitScript((size) => localStorage.setItem('mon-farm:text-size', size), size);
