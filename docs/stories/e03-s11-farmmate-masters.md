@@ -107,7 +107,8 @@ _เขียน test ก่อน (TDD)_
   order-screen, order-detail) · e2e `v2-farmmate-art.spec.ts` 12 ข้อ (8 จอขาย/ปุ๋ย + เริ่มการขาย) 360/390 × S/M/L ผ่าน ·
   e2e portrait ทั้งชุด 57 ผ่าน 5 ข้าม 1 ล้ม = `v2-sale-history` "keyboard undo" ซึ่งไม่เสถียรอยู่แล้วใน dev (ล้ม 1 ใน 5 รอบบน build dev:
   เทสต์ถ่ายภาพระหว่างกดค้าง ถ้าเครื่องช้าการกดค้างครบเวลาจึงย้อนเข่งไป) — แจ้ง lead
-- ภาพ `docs/ux/screenshots/e03-s11/{sale-start,sale-point,zero-tare,counter,counter-menu,sales,backfill,order}-{390-m,360-l}.png`, `summary-390-m.png`
+- ภาพ `docs/ux/screenshots/e03-s11/{sale-start,sale-point,zero-tare,counter,counter-menu,sales,backfill,order}-{390-m,360-l}.png`, `summary-390-m.png`; หลังแก้ตาม review: `fill-sheet-{390-m,360-l}.png` (แผ่นเติมเข่ง), `zero-not0-{390-m,360-l}.png` (ตาชั่งเปล่าไม่เป็น 0)
+- review อิสระ: ปุ่มเติมเต็มเข่งไอคอนขนาด tile (32), "ชั่งแยก"/"รับเข็มเบี้ยว" ใช้ sale.weigh, ปุ่มเครื่องมือที่กดไม่ได้ไอคอนจาง; ป้าย "กก." มี accessibilityLabel "น้ำหนัก (กิโลกรัม)" (lead 2026-11-03)
 
 ## Dev notes
 
