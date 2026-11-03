@@ -1090,6 +1090,28 @@ describe('FarmMate originals on the sale screens (E03-S11 FM-8)', () => {
     await inSale(<ZeroTareScreen />, { point: farm.a[0], net: '50000', basket: '2000' });
     expect(art('zero-tare')).toEqual(expect.arrayContaining(['sale.recordYield', 'sale.weigh']));
     expect(art('zero-tare').every((id) => ['sale.recordYield', 'sale.weigh'].includes(id))).toBe(true);
+    // The two choices: "scale is off" weighs, so it is the scale original; waiting keeps its hourglass.
+    await press('zero-not0');
+    await press('empty-reading-more');
+    expect(art('choose-skew')).toEqual(['sale.weigh']);
+    expect(art('choose-wait')).toEqual([]);
+  });
+
+  it('fill sheet: fill full and weigh the rest draw originals at tile size, the next basket keeps its plus', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    await press('tool-short');
+    await press('short-save');
+    c.unmount();
+    await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red });
+    await press(`pick-point-${farm.a[1]}`);
+    expect(art('fill-full')).toEqual(['sale.recordYield']);
+    expect(art('fill-part')).toEqual(['sale.weigh']);
+    expect(art('fill-next')).toEqual([]);
+    // A 48 tile carries a 32 original, as every other tile does.
+    expect(within(screen.getByTestId('fill-full')).UNSAFE_getByType(FarmMateArt).props.size).toBeUndefined();
   });
 
   it('counter: history and short-basket tools draw originals, undo keeps its arrow; menu rows draw originals, delete keeps its bin', async () => {

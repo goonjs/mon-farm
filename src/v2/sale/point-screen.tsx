@@ -29,9 +29,6 @@ import { SaleMenu } from './sale-menu';
 import { SaleOptionSheets, type OptionSheet } from './sale-options';
 import { Choice, Crumbs, IconLine, kgText, NumChip, SegOptions, SkewTag, farmTone, useLeaveIfClosed, useSaleView } from './pieces';
 
-
-/** A FarmMate original on a large button (fill the point full), E03-S11. */
-const BUTTON_ART = 24;
 export function PointScreen() {
   const t = useTheme();
   const msg = useT();
@@ -194,7 +191,7 @@ export function PointScreen() {
         <Choice
           primary
           testID="fill-full"
-          icon={() => <FarmMateArt id="sale.recordYield" size={BUTTON_ART} />}
+          icon={() => <FarmMateArt id="sale.recordYield" />}
           title={msg('v2s.fillFull')}
           onPress={() => onFill('full')}
           lines={[
@@ -209,7 +206,7 @@ export function PointScreen() {
         />
         <Choice
           testID="fill-part"
-          icon={(c) => <Scale color={c} size={20} />}
+          icon={() => <FarmMateArt id="sale.weigh" />}
           title={msg('v2s.fillPart')}
           onPress={() => onFill('part')}
           lines={[

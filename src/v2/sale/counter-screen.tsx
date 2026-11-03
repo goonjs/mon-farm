@@ -76,6 +76,7 @@ interface Notice {
 
 /** A FarmMate original on a tool button (history, short basket), E03-S11. */
 const TOOL_ART = 24;
+
 export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet }) {
   const t = useTheme();
   const msg = useT();
@@ -248,7 +249,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       onPress={onPress}
       style={{ flex: 1, minHeight: 56, alignItems: 'center', justifyContent: 'center', gap: t.space.xs, borderRadius: t.radius.md, borderWidth: t.border.hair, borderColor: t.color.ruleStrong, backgroundColor: t.color.surfaceRaised, borderStyle: disabled ? 'dashed' : 'solid' }}
     >
-      {icon(disabled ? t.color.disabledInk : t.color.ink)}
+      {/* A FarmMate original ignores the ink colour, so a disabled tool also fades its icon. */}
+      <View style={{ opacity: disabled ? t.opacity.disabled : 1 }}>{icon(disabled ? t.color.disabledInk : t.color.ink)}</View>
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, fontWeight: t.font.weight.semibold, color: disabled ? t.color.disabledInk : t.color.ink }}>{label}</Text>
     </Pressable>
   );

@@ -34,7 +34,6 @@ import {
   IconTile,
   LeafIcon,
   Plus,
-  Scale,
   ScaleIcon,
   FarmMateArt,
 } from '../../ui';
@@ -196,7 +195,7 @@ export function ZeroTareScreen() {
             <Choice testID="choose-wait" icon={(c) => <HourglassIcon color={c} size={20} />} title={msg('v2s.wait1')} lines={[msg('v2s.waitL1'), msg('v2s.waitL2')]} onPress={wait} />
             <Choice
               testID="choose-skew"
-              icon={(c) => <Scale color={c} size={20} />}
+              icon={() => <FarmMateArt id="sale.weigh" />}
               title={msg('v2s.skew2')}
               lines={[
                 <Text key="a">

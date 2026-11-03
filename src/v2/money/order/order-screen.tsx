@@ -67,9 +67,9 @@ type Sheet =
   | { k: 'item'; editId: string | null; spec: ProductSpec; money: ItemMoney }
   | { k: 'other'; editId: string | null; spec: ProductSpec | null; money: ItemMoney };
 
-
 /** A FarmMate original leading a field card or the payer row (E03-S11). */
 const ROW_ART = 28;
+
 export function leave() {
   if (router.canGoBack()) router.back();
   else router.replace('/v2/expenses');

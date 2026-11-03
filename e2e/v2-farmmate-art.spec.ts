@@ -148,7 +148,8 @@ const SCREENS: { name: string; min: number; open: (page: Page) => Promise<void> 
   { name: 'person', min: 2, open: async (page) => { await page.goto('/v2/person/red'); await page.getByTestId('person-profile').waitFor(); } },
   { name: 'buyers', min: 1, open: async (page) => { await page.goto('/v2/buyers'); await page.getByTestId('buyer-buyer-a').waitFor(); } },
   { name: 'shares', min: 1, open: async (page) => { await page.goto('/v2/shares'); await page.getByTestId('share-red').waitFor(); } },
-  // E03-S11 FM-8: the sale and fertilizer screens (the summary is covered by v2-sale.spec.ts).
+  // E03-S11 FM-8: the sale and fertilizer screens. Not opened here: the close-out summary and its sheets
+  // (their text fit is v2-text-size.spec.ts; their ids are asserted in jest), the check screen, the order-detail sheets.
   { name: 'sales', min: 1, open: async (page) => { await page.goto('/v2/sales'); await page.getByTestId('sale-row-sale-art').waitFor(); } },
   { name: 'sale-point', min: 1, open: async (page) => { await page.goto('/v2/sale/sale-art/point'); await page.getByTestId('pick-point-a1').waitFor(); } },
   { name: 'zero-tare', min: 2, open: async (page) => { await page.goto('/v2/sale/sale-art/zero-tare?point=a1&net=50000&basket=2000'); await page.getByTestId('expect-kg').waitFor(); } },
