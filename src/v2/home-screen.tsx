@@ -33,37 +33,25 @@ import { useTheme, type Theme } from '../theme';
 import {
   ActionTile,
   BankIcon,
-  BasketIcon,
-  BoxIcon,
   cardStyle,
-  ChartIcon,
   Chip,
   ChevronRight,
   ClockIcon,
   CoinIcon,
   CompactMoney,
-  DebtIcon,
-  DeviceIcon,
   ExternalIcon,
   Drawer,
   FactRow,
   FarmIcon,
-  FarmMateIcon,
+  FarmMateArt,
   GearIcon,
   IconTile,
-  LeafIcon,
-  ListIcon,
   MenuItem,
   MenuSection,
-  PercentIcon,
   PersonIcon,
-  PinIcon,
-  ReceiptIcon,
   ScreenHeader,
   SpeakerIcon,
-  SwapIcon,
   UsersIcon,
-  WalletIcon,
   WeatherIcon,
   type IconRender,
   type TileTone,
@@ -126,7 +114,7 @@ export function V2Home() {
         key="open"
         testID="home-open-sale"
         tone="action"
-        icon={(c) => <BasketIcon color={c} size={24} />}
+        icon={() => <FarmMateArt id="sale.sale" />}
         label={msg('home.openSale')}
         value={saleLine(sales.open)}
         chip={<Chip tone="warn" label={msg(sales.open.weighing ? 'sales.weighing' : 'status.open')} />}
@@ -138,7 +126,7 @@ export function V2Home() {
         key="latest"
         testID="home-latest-sale"
         tone="accept"
-        icon={(c) => <BasketIcon color={c} size={24} />}
+        icon={() => <FarmMateArt id="sale.sale" />}
         label={msg('home.latestSale')}
         value={saleLine(sales.latest)}
         chip={<Chip tone="accept" label={msg('status.closed')} />}
@@ -150,7 +138,7 @@ export function V2Home() {
         key="owed"
         testID="home-owed"
         tone="cream"
-        icon={(c) => <DebtIcon color={c} size={24} />}
+        icon={() => <FarmMateArt id="finance.workerPay" />}
         value={msg('v2.owed')}
         to={'/v2/owed' as Href}
       >
@@ -168,7 +156,7 @@ export function V2Home() {
         key="order-committed"
         testID="home-order-committed"
         tone="action"
-        icon={(c) => <LeafIcon color={c} size={24} />}
+        icon={() => <FarmMateArt id="farmwork.fertilize" />}
         value={orders.committed.length > 1 ? msg('ords.homeDeliveredMany', { n: orders.committed.length }) : msg('ords.homeDelivered', { date: formatDate(committedNewest.date) })}
         to={orderHref(committedNewest.orderId)}
       />
@@ -178,7 +166,7 @@ export function V2Home() {
         key="repay-wait"
         testID="home-repay-wait"
         tone="action"
-        icon={() => <FarmMateIcon id="finance.otherCost" size={28} />}
+        icon={() => <FarmMateArt id="finance.otherCost" />}
         label={msg('rp.home.waiting')}
         to={'/v2/debts' as Href}
       >
@@ -205,7 +193,7 @@ export function V2Home() {
         key="order-zones"
         testID="home-order-zones"
         tone="cream"
-        icon={(c) => <LeafIcon color={c} size={24} />}
+        icon={() => <FarmMateArt id="farm.plotZone" />}
         value={msg('ords.homeZones', { n: orders.zoneItems.length })}
         to={orderHref(zoneNewest.orderId ?? zoneNewest.id)}
       />
@@ -237,7 +225,7 @@ export function V2Home() {
             testID="home-prepare"
             label={msg('v2.prepare')}
             tone="cream"
-            icon={(c) => <ListIcon color={c} size={26} />}
+            icon={() => <FarmMateArt id="farmwork.today" />}
             href={href('prepare')}
           />
           <ActionTile
@@ -245,14 +233,14 @@ export function V2Home() {
             label={msg('v2.saleStart')}
             tone="action"
             main
-            icon={(c) => <BasketIcon color={c} size={26} />}
+            icon={() => <FarmMateArt id="sale.sale" />}
             href={SALE_START}
           />
           <ActionTile
             testID="home-record-expense"
             label={msg('v2.recordExpense')}
             tone="accept"
-            icon={(c) => <ReceiptIcon color={c} size={26} />}
+            icon={() => <FarmMateArt id="sale.receipt" />}
             href={'/v2/expense/new' as Href}
           />
         </View>
@@ -285,26 +273,26 @@ export function V2Home() {
         <Heading>{msg('home.goTo')}</Heading>
         <View testID="home-go-to" style={{ gap: t.space.sm }}>
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-            <Mod slug="reports" tone="action" icon={(c) => <ChartIcon color={c} size={18} />} label={msg('v2.reports')} />
+            <Mod slug="reports" tone="action" icon={() => <FarmMateArt id="sale.salesReport" size={MOD_ART} />} label={msg('v2.reports')} />
             <Mod slug="weather" tone="action" icon={(c) => <WeatherIcon color={c} size={20} />} label={msg('v2.weather')} small={msg('home.external')} external />
           </View>
           <Mod
             slug="payables"
             tone="cream"
-            icon={(c) => <WalletIcon color={c} size={20} />}
+            icon={() => <FarmMateArt id="finance.expense" size={MOD_ART} />}
             label={msg('v2.payables')}
             badge={{ value: formatSatang(payable), word: msg('v2m.baht') }}
           />
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-            <Mod slug="expenses" tone="cream" icon={(c) => <ReceiptIcon color={c} size={20} />} label={msg('v2.expenses')} />
-            <Mod slug="order" to={ORDER_NEW as Href} tone="accept" icon={(c) => <LeafIcon color={c} size={20} />} label={msg('ords.homeBuy')} />
+            <Mod slug="expenses" tone="cream" icon={() => <FarmMateArt id="sale.receipt" size={MOD_ART} />} label={msg('v2.expenses')} />
+            <Mod slug="order" to={ORDER_NEW as Href} tone="accept" icon={() => <FarmMateArt id="materials.orderMaterials" size={MOD_ART} />} label={msg('ords.homeBuy')} />
           </View>
-          <Mod slug="stock" tone="accept" icon={(c) => <BoxIcon color={c} size={20} />} label={msg('v2.stock')} />
+          <Mod slug="stock" tone="accept" icon={() => <FarmMateArt id="materials.stock" size={MOD_ART} />} label={msg('v2.stock')} />
           <Mod
             slug="workers"
             to={'/v2/people?filter=tapper' as Href}
             tone="neutral"
-            icon={(c) => <UsersIcon color={c} size={20} />}
+            icon={() => <FarmMateArt id="people.workerInfo" size={MOD_ART} />}
             label={msg('v2.workers')}
             badge={{ value: String(tappers), word: msg('role.tapper') }}
           />
@@ -317,6 +305,9 @@ export function V2Home() {
 }
 
 type FactIcon = (p: { color: string; size?: number }) => React.ReactNode;
+
+/** A FarmMate original on a module's small (36) tile; 32 on the regular 48 tile is FarmMateArt's default. */
+const MOD_ART = 26;
 
 /** The ☰ menu (v1.1.0 screen 1), then the built lists the mockup reaches elsewhere. */
 function HomeMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -340,25 +331,25 @@ function HomeMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Drawer open={open} onClose={onClose}>
       <MenuSection title={msg('menu.shared')}>
-        {item('farm', 'accept', (c) => <FarmIcon color={c} size={22} />, [
+        {item('farm', 'accept', () => <FarmMateArt id="farm.info" />, [
           [FarmIcon, msg('v2.farms')],
           [UsersIcon, msg('menu.factPeople')],
           [BankIcon, msg('v2.accounts')],
           [GearIcon, msg('saleSettings.title')],
         ])}
-        {item('expenses', 'cream', (c) => <ReceiptIcon color={c} size={22} />)}
-        {item('points', 'action', (c) => <PinIcon color={c} size={22} />)}
-        {item('shares', 'action', (c) => <PercentIcon color={c} size={22} />)}
-        {item('debts', 'cream', (c) => <DebtIcon color={c} size={22} />)}
-        {item('sales', 'accept', (c) => <BasketIcon color={c} size={22} />)}
+        {item('expenses', 'cream', () => <FarmMateArt id="sale.receipt" />)}
+        {item('points', 'action', () => <FarmMateArt id="farm.weighPoint" />)}
+        {item('shares', 'action', () => <FarmMateArt id="people.profitShare" />)}
+        {item('debts', 'cream', () => <FarmMateArt id="finance.otherCost" />)}
+        {item('sales', 'accept', () => <FarmMateArt id="analysis.saleHistory" />)}
       </MenuSection>
       <MenuSection title={msg('menu.device')}>
-        {item('device', 'neutral', (c) => <DeviceIcon color={c} size={22} />, [
+        {item('device', 'neutral', () => <FarmMateArt id="system.multiDevice" />, [
           [GearIcon, msg('settings.textSize')],
           [ClockIcon, msg('menu.factHold')],
           [SpeakerIcon, msg('menu.factSound')],
         ])}
-        {item('sync', 'neutral', (c) => <SwapIcon color={c} size={22} />)}
+        {item('sync', 'neutral', () => <FarmMateArt id="system.sync" />)}
       </MenuSection>
     </Drawer>
   );
@@ -483,7 +474,7 @@ function OwesKnowRow({ o }: { o: OwesRow }) {
     <KnowRow
       testID={id}
       tone="warn"
-      icon={() => <FarmMateIcon id="finance.otherCost" size={28} />}
+      icon={() => <FarmMateArt id="finance.otherCost" />}
       label={o.buyer ? msg('rp.home.owesBuyer', { date: o.dateText, buyer: o.buyer }) : msg('rp.home.owes', { date: o.dateText })}
       to={`/v2/sale/${o.saleId}/payment` as Href}
     >

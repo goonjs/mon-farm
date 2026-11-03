@@ -9,6 +9,7 @@ import { financeStore as mockFinance } from '../store/finance';
 import { peopleStore as mockPeople } from '../store/people';
 import { store as mockStore } from '../store/store';
 import { wrap } from '../test/render';
+import { FarmMateArt } from '../ui';
 import { V2Home } from '../v2/home-screen';
 import { FARM_SECTIONS, sectionHref } from '../v2/routes';
 
@@ -47,6 +48,11 @@ jest.mock('../v2/home-cover', () => {
   };
 });
 const { router: mockRouter } = jest.requireMock('expo-router') as { router: { push: jest.Mock } };
+
+/** The traced FarmMate originals drawn inside the element with this testID (E03-S11). */
+function art(testID: string): string[] {
+  return within(screen.getByTestId(testID)).UNSAFE_queryAllByType(FarmMateArt).map((a) => a.props.id as string);
+}
 
 async function flush() {
   await act(async () => {
@@ -188,6 +194,37 @@ describe('V2Home — empty farm', () => {
   });
 });
 
+describe('V2Home — FarmMate originals (E03-S11 FM-6)', () => {
+  it('the three actions and the module grid draw the originals; weather keeps its line icon', async () => {
+    wrap(<V2Home />);
+    await flush();
+    expect(art('home-prepare')).toEqual(['farmwork.today']);
+    expect(art('home-sale-start')).toEqual(['sale.sale']);
+    expect(art('home-record-expense')).toEqual(['sale.receipt']);
+    expect(art('mod-reports')).toEqual(['sale.salesReport']);
+    expect(art('mod-weather')).toEqual([]);
+    expect(art('mod-payables')).toEqual(['finance.expense']);
+    expect(art('mod-expenses')).toEqual(['sale.receipt']);
+    expect(art('mod-order')).toEqual(['materials.orderMaterials']);
+    expect(art('mod-stock')).toEqual(['materials.stock']);
+    expect(art('mod-workers')).toEqual(['people.workerInfo']);
+  });
+
+  it('the ☰ menu items draw the originals', async () => {
+    wrap(<V2Home />);
+    await flush();
+    fireEvent.press(screen.getByTestId('open-menu'));
+    expect(art('nav-farm')).toEqual(['farm.info']);
+    expect(art('nav-expenses')).toEqual(['sale.receipt']);
+    expect(art('nav-points')).toEqual(['farm.weighPoint']);
+    expect(art('nav-shares')).toEqual(['people.profitShare']);
+    expect(art('nav-debts')).toEqual(['finance.otherCost']);
+    expect(art('nav-sales')).toEqual(['analysis.saleHistory']);
+    expect(art('nav-device')).toEqual(['system.multiDevice']);
+    expect(art('nav-sync')).toEqual(['system.sync']);
+  });
+});
+
 describe('V2Home — ☰ menu (v1.1.0 screen 1)', () => {
   it('shows the shared group (ข้อมูลฟาร์ม with its facts, ค่าใช้จ่ายทั้งหมด) and this device', async () => {
     wrap(<V2Home />);
@@ -256,6 +293,10 @@ describe('V2Home — live rows from the local log', () => {
     expect(within(latest).getByText(/· 100 กก\.$/)).toBeTruthy();
     expect(within(latest).getByText('ปิดแล้ว')).toBeTruthy();
 
+    // E03-S11 FM-6: the rows draw the FarmMate originals.
+    expect(art('home-open-sale')).toEqual(['sale.sale']);
+    expect(art('home-latest-sale')).toEqual(['sale.sale']);
+    expect(art('home-owed')).toEqual(['finance.workerPay']);
     const owed = screen.getByTestId('home-owed');
     expect(within(owed).getByText('เงินที่สวนต้องคืน')).toBeTruthy();
     expect(within(owed).getByText('1,200.00')).toBeTruthy();
@@ -305,6 +346,8 @@ describe('V2Home — shop orders (E11-S11 FO-13, FD-0)', () => {
       await flush();
       expect(within(screen.getByTestId('home-order-committed')).getByText(/ของมาแล้วหรือยัง/)).toBeTruthy();
       expect(within(screen.getByTestId('home-order-zones')).getByText(/2 รายการ/)).toBeTruthy();
+      expect(art('home-order-committed')).toEqual(['farmwork.fertilize']);
+      expect(art('home-order-zones')).toEqual(['farm.plotZone']);
       fireEvent.press(screen.getByTestId('home-order-committed'));
       expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'o1' } });
       expect(screen.getByTestId('mod-order')).toBeTruthy();
