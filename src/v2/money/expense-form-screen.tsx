@@ -578,7 +578,8 @@ function CategoryTile({ label, on, onPress, glyph, testID }: { label: string; on
     >
       {tick}
       <View aria-hidden>{glyph}</View>
-      <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: t.color.ink, textAlign: 'center' }}>{label}</Text>
+      {/* Wraps rather than cutting with … (no clipped content): น้ำมันตัดหญ้า at 360 px, text L. */}
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: t.color.ink, textAlign: 'center' }}>{label}</Text>
     </Pressable>
   );
 }
