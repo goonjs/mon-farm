@@ -17,6 +17,7 @@ export { DateText, type DateFormatter } from './date-text';
 export { Drawer, MenuItem, MenuSection } from './drawer';
 export {
   FarmMateArt,
+  type FarmMateArtId,
   personArt,
   FARMMATE_ART_CATEGORIES,
   FarmMateIcon,

@@ -33,7 +33,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, MoneyField, PersonIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TextField, type HeaderPrimaryAction } from '../../ui';
+import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, MoneyField, PersonIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TextField, type HeaderPrimaryAction } from '../../ui';
 import { useFarms } from './expenses-screen';
 import { ORDER_NEW, orderHref } from './order-routes';
 import { ChoiceChip, ChoiceRow, NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
@@ -584,7 +584,7 @@ function CategoryTile({ label, on, onPress, glyph, testID }: { label: string; on
 }
 
 /** The traced FarmMate original for each built-in category (E03-S11); a category without one keeps the tag line icon. */
-const CATEGORY_ART: Record<string, string> = {
+const CATEGORY_ART: Record<string, FarmMateArtId> = {
   'cat-fertilizer': 'farmwork.fertilize',
   'cat-labour': 'finance.workerPay',
   'cat-fuel': 'materials.fuel',

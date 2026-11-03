@@ -19,7 +19,7 @@ import { useFinance } from '../../finance/use-finance';
 import { useT } from '../../i18n';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, Button, CalendarIcon, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, IconTile, PersonIcon, PinnedActions, personArt, ReceiptIcon, ScreenHeader } from '../../ui';
+import { AppText, Button, CalendarIcon, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, IconTile, PersonIcon, PinnedActions, personArt, ReceiptIcon, ScreenHeader } from '../../ui';
 import { useMaster } from '../farm/pieces';
 import { V2_HOME } from '../routes';
 import { HalfDot } from './expenses-screen';
@@ -114,7 +114,7 @@ function Person({
 }: {
   o: OwedTo;
   /** The original on the person's tile, by role (E03-S11). */
-  art: string;
+  art: FarmMateArtId;
   first: boolean;
   categoryName: (expenseId: string) => string;
   onDelete: (r: Repayment, deleted: boolean) => Promise<void>;

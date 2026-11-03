@@ -24,18 +24,32 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const MASTERS_DIR = join(ROOT, 'design/icons/farmmate');
 export const OUT = join(ROOT, 'design/icons/farmmate-masters.ts');
 
+/** One number to one decimal, keeping a minus even when it rounds to zero (in compact path data it separates two numbers). */
 const round = (n) => {
   const r = Math.round(Number(n) * 10) / 10;
-  return String(Object.is(r, -0) ? 0 : r);
+  return r === 0 && n.startsWith('-') ? '-0' : String(Object.is(r, -0) ? 0 : r);
 };
 
-/** One original → the string the app ships. */
+/** Only path data and the viewBox are coordinates; every other number stays as written. */
+const roundNumbers = (value) => value.replace(/-?\d*\.\d+/g, round);
+
+const ALLOWED = new Set(['svg', 'g', 'path']);
+
+/** One original → the string the app ships. Throws on anything it cannot keep exact. */
 export function minifySvg(svg) {
-  return svg
+  const body = svg
     .replace(/<\?xml[^>]*\?>/g, '')
-    .replace(/<title>[\s\S]*?<\/title>/g, '')
-    .replace(/\s(?:id|width|height)="[^"]*"/g, '')
-    .replace(/-?\d+\.\d+/g, round)
+    .replace(/<title>[\s\S]*?<\/title>/g, '');
+  for (const [, tag] of body.matchAll(/<([a-zA-Z][\w:-]*)/g)) {
+    if (!ALLOWED.has(tag)) throw new Error(`unexpected <${tag}>: the minifier only knows svg, g and path`);
+  }
+  if (/\d[eE][-+]?\d/.test(body.match(/\s(?:d|viewBox)="[^"]*"/g)?.join(' ') ?? '')) {
+    throw new Error('exponent in path data or viewBox: not supported');
+  }
+  return body
+    .replace(/<svg\b[^>]*>/, (tag) => tag.replace(/\s(?:width|height)="[^"]*"/g, ''))
+    .replace(/\sid="[^"]*"/g, '')
+    .replace(/\s(d|viewBox)="([^"]*)"/g, (_, name, value) => ` ${name}="${roundNumbers(value)}"`)
     .replace(/>\s+</g, '><')
     .trim();
 }
@@ -48,14 +62,14 @@ export function emitModule() {
     .sort();
   const rows = ids.map((id) => {
     const svg = minifySvg(readFileSync(join(MASTERS_DIR, `${id}.svg`), 'utf8'));
-    if (svg.includes("'") || svg.includes('\\')) throw new Error(`${id}: unexpected quote or backslash`);
+    if (/['\\\n]/.test(svg)) throw new Error(`${id}: unexpected quote, backslash or newline`);
     return `  '${id}': '${svg}',`;
   });
   const manifest = JSON.parse(readFileSync(join(MASTERS_DIR, 'manifest.json'), 'utf8'));
   const labels = manifest
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
     .map((m) => {
-      if (m.labelTh.includes("'")) throw new Error(`${m.id}: quote in label`);
+      if (/['\\\n]/.test(m.labelTh)) throw new Error(`${m.id}: quote, backslash or newline in label`);
       return `  '${m.id}': '${m.labelTh}',`;
     });
   return [
@@ -63,12 +77,15 @@ export function emitModule() {
     '// Run `npm run icons` after changing an original.',
     '',
     '/** The traced FarmMate originals, minified, by icon id (e.g. `sale.weigh`). */',
-    'export const FARMMATE_MASTERS: Readonly<Record<string, string>> = {',
+    'export const FARMMATE_MASTERS = {',
     ...rows,
-    '};',
+    '} as const;',
+    '',
+    '/** An icon id that has an original; a misspelt id does not compile. */',
+    'export type FarmMateArtId = keyof typeof FARMMATE_MASTERS;',
     '',
     '/** Thai label of each icon, from design/icons/farmmate/manifest.json. */',
-    'export const FARMMATE_MASTER_LABEL_TH: Readonly<Record<string, string>> = {',
+    'export const FARMMATE_MASTER_LABEL_TH: Readonly<Record<FarmMateArtId, string>> = {',
     ...labels,
     '};',
     '',

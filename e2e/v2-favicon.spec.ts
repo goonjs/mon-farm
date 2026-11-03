@@ -233,7 +233,9 @@ for (const width of [360, 390]) {
           if (!svg || svg.querySelectorAll('path').length === 0) out.problems.push(`${id}: not drawn`);
           else {
             const r = svg.getBoundingClientRect();
-            if (Math.round(r.width) !== 48 || r.left < c.left || r.right > c.right) out.problems.push(`${id}: icon ${r.width}px or outside its card`);
+            if (Math.round(r.width) !== 48 || Math.round(r.height) !== 48 || r.left < c.left || r.right > c.right) out.problems.push(`${id}: icon ${r.width}×${r.height}px or outside its card`);
+            // Review of PR 145: the icon's source must not ride along as a DOM attribute.
+            if (svg.hasAttribute('xml')) out.problems.push(`${id}: svg carries its source as an attribute`);
           }
           if (c.right > width + 1) out.problems.push(`${id}: past the screen edge`);
         }

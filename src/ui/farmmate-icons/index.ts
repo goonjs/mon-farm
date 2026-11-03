@@ -8,3 +8,4 @@ export {
   type FarmMateIconCategory,
   type FarmMateIconDef,
 } from './registry';
+export type { FarmMateArtId } from '../../../design/icons/farmmate-masters';
