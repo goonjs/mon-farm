@@ -537,7 +537,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
           : card(<><AppText variant="bodySm" numberOfLines={oneLine}>{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
         {card(
           <>
-            <IconLine oneLine={!!oneLine} icon={(c) => <LeafIcon color={c} size={12} />}>{msg('rec.kg')} ({msg('common.kg')})</IconLine>
+            {/* Owner 2026-11-03: just "กก." — "น้ำหนัก (กก.)" was cut at 360 px. */}
+            <IconLine oneLine={!!oneLine} icon={(c) => <LeafIcon color={c} size={12} />}>{msg('common.kg')}</IconLine>
             {cardFigure(kgText(figs.netG), 'fig-kg')}
           </>,
           'kg',

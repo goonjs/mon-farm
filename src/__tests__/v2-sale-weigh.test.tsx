@@ -966,7 +966,8 @@ describe('v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)', (
     expect(typeof h).toBe('number');
     expect(heightOf('card-first')).toBe(h);
     expect(heightOf('card-short')).toBe(h);
-    expect(screen.getByTestId('card-kg')).toHaveTextContent(/น้ำหนัก \(กก\.\)/);
+    // Owner 2026-11-03 (E03-S11): the unit alone; "น้ำหนัก (กก.)" was cut at 360 px.
+    expect(screen.getByTestId('card-kg')).toHaveTextContent(/^กก\./);
     expect(screen.getByTestId('fig-kg')).toHaveTextContent(/^[\d,.]+$/);
     expect(screen.getByTestId('fig-kg').props.numberOfLines).toBe(1);
   });
@@ -1098,6 +1099,9 @@ describe('FarmMate originals on the sale screens (E03-S11 FM-8)', () => {
     expect(art('tool-history')).toEqual(['farmwork.history']);
     expect(art('tool-short')).toEqual(['sale.weigh']);
     expect(art('tool-undo')).toEqual([]);
+    // Owner 2026-11-03: the weight card says just "กก." so it fits one line at 360 px (it was cut to "น้ำหนัก (…").
+    expect(screen.queryByText('น้ำหนัก (กก.)')).toBeNull();
+    expect(screen.getAllByText('กก.').length).toBeGreaterThan(0);
     await press('counter-menu');
     expect(art('menu-finish')).toEqual([]);
     expect(art('menu-backfill')).toEqual(['farmwork.history']);
