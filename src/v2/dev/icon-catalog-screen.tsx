@@ -12,12 +12,12 @@ import { View } from 'react-native';
 
 import { V2_HOME } from '../routes';
 import { useTheme } from '../../theme';
-import { FARMMATE_MASTER_LABEL_TH } from '../../../design/icons/farmmate-masters';
+import { FARMMATE_MASTER_LABEL_TH, type FarmMateArtId } from '../../../design/icons/farmmate-masters';
 import { AppText, Card, CardLabel, FarmMateArt, FARMMATE_ART_CATEGORIES } from '../../ui';
 import { ScreenHeader } from '../../ui/screen-header';
 import { ScrollCue } from '../../ui/scroll-cue';
 
-const IDS = Object.keys(FARMMATE_MASTER_LABEL_TH).sort();
+const IDS = (Object.keys(FARMMATE_MASTER_LABEL_TH) as FarmMateArtId[]).sort();
 
 export function IconCatalogScreen() {
   const t = useTheme();
@@ -32,7 +32,7 @@ export function IconCatalogScreen() {
       />
       <ScrollCue contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space.xl }}>
         {FARMMATE_ART_CATEGORIES.map((category) => (
-          <View key={category.key} style={{ gap: t.space.sm }}>
+          <View key={category.key} testID={`dev-icons-group-${category.key}`} style={{ gap: t.space.sm }}>
             <AppText variant="title">{category.labelTh}</AppText>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
               {IDS.filter((id) => id.startsWith(`${category.key}.`)).map((id) => (

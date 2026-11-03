@@ -9,12 +9,26 @@
  * the control around it carries the accessible name.
  */
 
-import { SvgXml } from 'react-native-svg';
+import { parse, SvgAst, type JsxAST } from 'react-native-svg';
 
-import { FARMMATE_MASTERS } from '../../../design/icons/farmmate-masters';
+import { FARMMATE_MASTERS, type FarmMateArtId } from '../../../design/icons/farmmate-masters';
 
-export function FarmMateArt({ id, size = 32 }: { id: string; size?: number }) {
-  const xml = FARMMATE_MASTERS[id];
-  if (!xml) return null;
-  return <SvgXml aria-hidden xml={xml} width={size} height={size} />;
+/**
+ * Each original parsed once for the life of the app. Not SvgXml: it parses on
+ * every mount and passes its `xml` prop through to the <svg>, which on the web
+ * put each icon's whole source into the DOM as an attribute (review of PR 145).
+ */
+const parsed = new Map<string, JsxAST | null>();
+function astOf(id: string): JsxAST | null {
+  if (!parsed.has(id)) {
+    const xml = (FARMMATE_MASTERS as Readonly<Record<string, string>>)[id];
+    parsed.set(id, xml ? parse(xml) : null);
+  }
+  return parsed.get(id) ?? null;
+}
+
+export function FarmMateArt({ id, size = 32 }: { id: FarmMateArtId; size?: number }) {
+  const ast = astOf(id);
+  if (!ast) return null;
+  return <SvgAst ast={ast} override={{ 'aria-hidden': true, width: size, height: size }} />;
 }

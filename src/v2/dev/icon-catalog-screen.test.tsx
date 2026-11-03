@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, within } from '@testing-library/react-native';
 
 import { IconCatalogScreen } from './icon-catalog-screen';
 import { FARMMATE_MASTER_LABEL_TH } from '../../../design/icons/farmmate-masters';
@@ -21,12 +21,15 @@ describe('IconCatalogScreen', () => {
     expect(UNSAFE_getAllByType(FarmMateArt).map((a) => a.props.id).sort()).toEqual(ids.sort());
   });
 
-  it('groups them under the nine Thai category headings, eight icons each', () => {
+  it('groups them under the nine Thai category headings, eight icons each, each in its own group', () => {
     wrap(<IconCatalogScreen />);
     expect(FARMMATE_ART_CATEGORIES).toHaveLength(9);
     for (const c of FARMMATE_ART_CATEGORIES) {
-      expect(screen.getByText(c.labelTh)).toBeTruthy();
-      expect(Object.keys(FARMMATE_MASTER_LABEL_TH).filter((id) => id.startsWith(`${c.key}.`))).toHaveLength(8);
+      const group = screen.getByTestId(`dev-icons-group-${c.key}`);
+      expect(within(group).getByText(c.labelTh)).toBeTruthy();
+      const cards = within(group).getAllByTestId(/^dev-icon-/).map((n) => String(n.props.testID));
+      expect(cards).toHaveLength(8);
+      for (const id of cards) expect(id.startsWith(`dev-icon-${c.key}.`)).toBe(true);
     }
   });
 
