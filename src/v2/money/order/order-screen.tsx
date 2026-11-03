@@ -326,7 +326,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
 
       {lines.length === 0 ? (
         <View testID="ordc-empty" style={[cardStyle(t), { padding: t.space.xl, alignItems: 'center', gap: t.space.sm }]}>
-          <IconTile tone="accept" icon={() => <FarmMateArt id="farmwork.fertilize" />} />
+          <IconTile tone="accept" icon={() => <FarmMateArt id="materials.chemFert" />} />
           <AppText variant="heading" style={{ textAlign: 'center' }}>{msg('ordc.emptyTitle')}</AppText>
           <AppText variant="bodySm" style={{ textAlign: 'center' }}>{msg('ordc.emptyBody')}</AppText>
         </View>

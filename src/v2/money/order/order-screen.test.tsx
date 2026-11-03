@@ -109,7 +109,8 @@ describe('order capture screen (E11-S11)', () => {
     // E03-S11 FM-8: the shop, the date, the empty order and who paid lead with the originals.
     expect(art('ordc-shop')).toEqual(['materials.orderMaterials']);
     expect(art('ordc-date')).toEqual(['farmwork.calendar']);
-    expect(art('ordc-empty')).toEqual(['farmwork.fertilize']);
+    // Owner 2026-11-03: the sack, not the seedling, which blended into the light green tile.
+    expect(art('ordc-empty')).toEqual(['materials.chemFert']);
     expect(screen.getByTestId('ordc-save').props.accessibilityState.disabled).toBe(true);
     expect(text('ordc-total')).toContain('0.00');
     // disabled is a solid fill, never the dashed edge of the add row
