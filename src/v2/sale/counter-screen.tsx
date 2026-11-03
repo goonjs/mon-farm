@@ -540,7 +540,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
         {card(
           <>
             {/* Owner 2026-11-03: just "กก." — "น้ำหนัก (กก.)" was cut at 360 px. */}
-            <IconLine oneLine={!!oneLine} icon={(c) => <LeafIcon color={c} size={12} />}>{msg('common.kg')}</IconLine>
+            <IconLine oneLine={!!oneLine} label={msg('rec.kgA11y')} icon={(c) => <LeafIcon color={c} size={12} />}>{msg('common.kg')}</IconLine>
             {cardFigure(kgText(figs.netG), 'fig-kg')}
           </>,
           'kg',

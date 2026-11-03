@@ -1124,6 +1124,8 @@ describe('FarmMate originals on the sale screens (E03-S11 FM-8)', () => {
     // Owner 2026-11-03: the weight card says just "กก." so it fits one line at 360 px (it was cut to "น้ำหนัก (…").
     expect(screen.queryByText('น้ำหนัก (กก.)')).toBeNull();
     expect(screen.getAllByText('กก.').length).toBeGreaterThan(0);
+    // ...and a screen reader still hears what it counts (lead 2026-11-03).
+    expect(within(screen.getByTestId('card-kg')).getByLabelText('น้ำหนัก (กิโลกรัม)')).toHaveTextContent(/^กก\.$/);
     await press('counter-menu');
     expect(art('menu-finish')).toEqual([]);
     expect(art('menu-backfill')).toEqual(['farmwork.history']);
