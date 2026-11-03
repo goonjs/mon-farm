@@ -39,6 +39,31 @@ describe('minifySvg', () => {
   it('has no whitespace between tags', () => {
     expect(out).not.toMatch(/>\s+</);
   });
+
+  // Review of PR 145: compact path data from other tracers.
+  it('keeps the minus that separates two numbers when one rounds to zero', () => {
+    expect(minifySvg('<svg viewBox="0 0 10 10"><path d="M5.5-0.04L10-0.03"/></svg>')).toContain('d="M5.5-0L10-0"');
+  });
+
+  it('rounds only path data and the viewBox, nothing else', () => {
+    const svg = '<svg viewBox="0 0 10.25 10"><g fill="#00AA7D" fill-opacity="0.25"><path d="M.25.75L1.26 2"/></g></svg>';
+    const min = minifySvg(svg);
+    expect(min).toContain('viewBox="0 0 10.3 10"');
+    expect(min).toContain('fill-opacity="0.25"');
+    // ".25.75" is two numbers; "0.30.8" still reads as 0.30 then .8.
+    expect(min).toContain('d="M0.30.8L1.3 2"');
+  });
+
+  it('drops the pixel size from the root svg only', () => {
+    const min = minifySvg('<svg viewBox="0 0 10 10" width="10" height="10"><g width="3" height="4"><path d="M0 0"/></g></svg>');
+    expect(min).toContain('<svg viewBox="0 0 10 10">');
+    expect(min).toContain('<g width="3" height="4">');
+  });
+
+  it('refuses what it cannot keep exact: exponents, and elements other than svg, g and path', () => {
+    expect(() => minifySvg('<svg viewBox="0 0 10 10"><path d="M1e2 0"/></svg>')).toThrow(/exponent/);
+    expect(() => minifySvg('<svg viewBox="0 0 10 10"><rect width="3" height="3"/></svg>')).toThrow(/<rect>/);
+  });
 });
 
 describe('design/icons/farmmate-masters.ts', () => {
@@ -62,5 +87,9 @@ describe('design/icons/farmmate-masters.ts', () => {
     const manifest = JSON.parse(readFileSync(join(MASTERS_DIR, 'manifest.json'), 'utf8')) as { id: string; labelTh: string }[];
     const generated = emitModule();
     for (const m of manifest) expect(generated).toContain(`'${m.id}': '${m.labelTh}',`);
+  });
+
+  it('types the ids, so a misspelt icon id does not compile', () => {
+    expect(emitModule()).toContain('export type FarmMateArtId = keyof typeof FARMMATE_MASTERS;');
   });
 });
