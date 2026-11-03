@@ -54,6 +54,15 @@ describe('minifySvg', () => {
     expect(min).toContain('d="M0.30.8L1.3 2"');
   });
 
+  // Review round 2: a number rounding to a whole value must keep the dot that ends it when the next number starts with one.
+  it('keeps two numbers apart when the first rounds to a whole value and the next starts with a dot', () => {
+    expect(minifySvg('<svg viewBox="0 0 10 10"><path d="M1.96.5L.04.5L-0.04.5"/></svg>')).toContain('d="M2.00.5L0.00.5L-0.00.5"'); // 2.00 then .5, 0.00 then .5, -0.00 then .5
+  });
+
+  it('drops comments', () => {
+    expect(minifySvg('<svg viewBox="0 0 10 10"><!-- traced --><path d="M0 0"/></svg>')).not.toContain('<!--');
+  });
+
   it('drops the pixel size from the root svg only', () => {
     const min = minifySvg('<svg viewBox="0 0 10 10" width="10" height="10"><g width="3" height="4"><path d="M0 0"/></g></svg>');
     expect(min).toContain('<svg viewBox="0 0 10 10">');
@@ -62,6 +71,7 @@ describe('minifySvg', () => {
 
   it('refuses what it cannot keep exact: exponents, and elements other than svg, g and path', () => {
     expect(() => minifySvg('<svg viewBox="0 0 10 10"><path d="M1e2 0"/></svg>')).toThrow(/exponent/);
+    expect(() => minifySvg('<svg viewBox="0 0 10 10"><path d="M1.e5 0"/></svg>')).toThrow(/exponent/);
     expect(() => minifySvg('<svg viewBox="0 0 10 10"><rect width="3" height="3"/></svg>')).toThrow(/<rect>/);
   });
 });

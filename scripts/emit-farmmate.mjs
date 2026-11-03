@@ -31,7 +31,12 @@ const round = (n) => {
 };
 
 /** Only path data and the viewBox are coordinates; every other number stays as written. */
-const roundNumbers = (value) => value.replace(/-?\d*\.\d+/g, round);
+const roundNumbers = (value) =>
+  value.replace(/-?\d*\.\d+/g, (n, at, all) => {
+    const r = round(n);
+    // "1.96.5" is 1.96 then .5: a whole result needs its dot back, or "2" and ".5" read as one number.
+    return all[at + n.length] === '.' && !r.includes('.') ? `${r}.0` : r;
+  });
 
 const ALLOWED = new Set(['svg', 'g', 'path']);
 
@@ -39,11 +44,12 @@ const ALLOWED = new Set(['svg', 'g', 'path']);
 export function minifySvg(svg) {
   const body = svg
     .replace(/<\?xml[^>]*\?>/g, '')
-    .replace(/<title>[\s\S]*?<\/title>/g, '');
+    .replace(/<title>[\s\S]*?<\/title>/g, '')
+    .replace(/<!--[\s\S]*?-->/g, '');
   for (const [, tag] of body.matchAll(/<([a-zA-Z][\w:-]*)/g)) {
     if (!ALLOWED.has(tag)) throw new Error(`unexpected <${tag}>: the minifier only knows svg, g and path`);
   }
-  if (/\d[eE][-+]?\d/.test(body.match(/\s(?:d|viewBox)="[^"]*"/g)?.join(' ') ?? '')) {
+  if (/[\d.][eE][-+]?\d/.test(body.match(/\s(?:d|viewBox)="[^"]*"/g)?.join(' ') ?? '')) {
     throw new Error('exponent in path data or viewBox: not supported');
   }
   return body

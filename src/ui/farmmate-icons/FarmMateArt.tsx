@@ -9,6 +9,7 @@
  * the control around it carries the accessible name.
  */
 
+import { View } from 'react-native';
 import { parse, SvgAst, type JsxAST } from 'react-native-svg';
 
 import { FARMMATE_MASTERS, type FarmMateArtId } from '../../../design/icons/farmmate-masters';
@@ -22,7 +23,14 @@ const parsed = new Map<string, JsxAST | null>();
 function astOf(id: string): JsxAST | null {
   if (!parsed.has(id)) {
     const xml = (FARMMATE_MASTERS as Readonly<Record<string, string>>)[id];
-    parsed.set(id, xml ? parse(xml) : null);
+    let ast: JsxAST | null = null;
+    try {
+      ast = xml ? parse(xml) : null;
+    } catch (err) {
+      // Every original is tested to parse; a broken one draws nothing rather than taking the screen down.
+      console.error(`FarmMateArt: ${id} did not parse`, err);
+    }
+    parsed.set(id, ast);
   }
   return parsed.get(id) ?? null;
 }
@@ -30,7 +38,12 @@ function astOf(id: string): JsxAST | null {
 export function FarmMateArt({ id, size = 32 }: { id: FarmMateArtId; size?: number }) {
   const ast = astOf(id);
   if (!ast) return null;
-  return <SvgAst ast={ast} override={{ 'aria-hidden': true, width: size, height: size }} />;
+  // The View carries aria-hidden on Android/iOS too (RN maps it there, not on the native svg host).
+  return (
+    <View aria-hidden style={{ width: size, height: size }}>
+      <SvgAst ast={ast} override={{ 'aria-hidden': true, width: size, height: size }} />
+    </View>
+  );
 }
 
 /**
