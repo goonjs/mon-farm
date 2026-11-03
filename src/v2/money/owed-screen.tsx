@@ -19,7 +19,8 @@ import { useFinance } from '../../finance/use-finance';
 import { useT } from '../../i18n';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, Button, CalendarIcon, Card, Check, ChevronRight, CTA, FactRow, IconTile, PersonIcon, PinnedActions, ReceiptIcon, ScreenHeader } from '../../ui';
+import { AppText, Button, CalendarIcon, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, IconTile, PersonIcon, PinnedActions, personArt, ReceiptIcon, ScreenHeader } from '../../ui';
+import { useMaster } from '../farm/pieces';
 import { V2_HOME } from '../routes';
 import { HalfDot } from './expenses-screen';
 import { Day } from './pieces';
@@ -29,6 +30,7 @@ export function OwedScreen() {
   const msg = useT();
   const sync = useSyncStatus();
   const fin = useFinance();
+  const master = useMaster().state;
   const owed = fin.state ? owedByPerson(fin.state) : null;
   const total = (owed ?? []).reduce((s, o) => s + Math.max(0, o.remainingSatang), 0);
   const people = (owed ?? []).filter((o) => o.remainingSatang > 0).length;
@@ -65,6 +67,7 @@ export function OwedScreen() {
               <Person
                 key={o.payer.id}
                 o={o}
+                art={personArt(master?.people.find((p) => p.id === o.payer.id)?.roles)}
                 first={i === 0}
                 categoryName={(expenseId) => {
                   const x = fin.state?.expenses.find((e) => e.id === expenseId);
@@ -104,11 +107,14 @@ export function OwedScreen() {
 
 function Person({
   o,
+  art,
   first,
   categoryName,
   onDelete,
 }: {
   o: OwedTo;
+  /** The original on the person's tile, by role (E03-S11). */
+  art: string;
   first: boolean;
   categoryName: (expenseId: string) => string;
   onDelete: (r: Repayment, deleted: boolean) => Promise<void>;
@@ -123,7 +129,7 @@ function Person({
   return (
     <View testID={`owed-${o.payer.id}`} style={{ borderTopWidth: first ? 0 : t.border.hair, borderTopColor: t.color.ruleFaint, paddingVertical: t.space.sm, gap: t.space.sm }}>
       <Pressable testID={`owed-open-${o.payer.id}`} accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen((v) => !v)} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md }}>
-        <IconTile tone="category1" icon={(c) => <PersonIcon color={c} />} />
+        <IconTile tone="category1" icon={() => <FarmMateArt id={art} />} />
         <View style={{ flex: 1, gap: 2 }}>
           <AppText variant="heading" style={{ fontSize: t.font.size.bodyLg }}>{o.payer.name}</AppText>
           {o.remainingSatang > 0 ? (

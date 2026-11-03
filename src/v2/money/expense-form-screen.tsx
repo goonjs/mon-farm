@@ -33,7 +33,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CoinIcon, CTA, DotsIcon, FactRow, GearIcon, LeafIcon, MoneyField, PersonIcon, PinIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TapperIcon, TextField, UsersIcon, WalletIcon, type HeaderPrimaryAction } from '../../ui';
+import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, MoneyField, PersonIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TextField, type HeaderPrimaryAction } from '../../ui';
 import { useFarms } from './expenses-screen';
 import { ORDER_NEW, orderHref } from './order-routes';
 import { ChoiceChip, ChoiceRow, NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
@@ -350,14 +350,14 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
             <View style={{ gap: t.space.sm }}>
               <SectionLabel>{msg('fin.form.categoryQ')}</SectionLabel>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
-                {tiles.map((c) => <CategoryTile key={c.id} testID={`expense-cat-${c.id}`} label={c.name} on={categoryId === c.id} icon={CATEGORY_ICONS[c.id] ?? TagIcon} onPress={() => pickCategory(c.id)} />)}
-                <CategoryTile testID="expense-cat-more" label={msg('fin.form.moreCategories', { n: state.categories.length - tiles.length })} icon={DotsIcon} onPress={() => setCatSheet(true)} />
+                {tiles.map((c) => <CategoryTile key={c.id} testID={`expense-cat-${c.id}`} label={c.name} on={categoryId === c.id} glyph={categoryGlyph(c.id, t.color.ink)} onPress={() => pickCategory(c.id)} />)}
+                <CategoryTile testID="expense-cat-more" label={msg('fin.form.moreCategories', { n: state.categories.length - tiles.length })} glyph={<FarmMateArt id="nav.more" size={CATEGORY_ART_SIZE} />} onPress={() => setCatSheet(true)} />
               </View>
             </View>
 
             <Card style={{ gap: 0, paddingVertical: t.space.xs }}>
               <Pressable testID="expense-payer-row" accessibilityRole="button" onPress={() => setPayerSheet(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, minHeight: t.target.comfortable }}>
-                <WalletIcon color={t.color.inkSoft} />
+                <FarmMateArt id="finance.expense" size={ROW_ART} />
                 <View style={{ flex: 1 }}>
                   <AppText variant="caption">{msg('fin.form.payerQ')}</AppText>
                   <AppText style={{ fontWeight: t.font.weight.bold }}>{payer?.name ?? msg('fin.form.payerLater')}</AppText>
@@ -367,7 +367,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
               </Pressable>
               {sharable ? (
                 <Pressable testID="share-row" accessibilityRole="button" onPress={() => setShareOpen(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, minHeight: t.target.comfortable, borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint }}>
-                  <TapperIcon color={t.color.inkSoft} />
+                  <FarmMateArt id="people.tapper" size={ROW_ART} />
                   <View style={{ flex: 1 }}>
                     <AppText variant="caption">{msg('xshare.row')}</AppText>
                     <AppText style={{ fontWeight: t.font.weight.bold }}>
@@ -560,7 +560,7 @@ const TILES = 5;
 const moneyOf = (text: string) => (text.trim() ? parseBahtToSatang(text) : null);
 
 /** A big category tile: icon over the name; chosen = action edge and tint. */
-function CategoryTile({ label, on, onPress, icon: Icon, testID }: { label: string; on?: boolean; onPress: () => void; icon: IconComponent; testID: string }) {
+function CategoryTile({ label, on, onPress, glyph, testID }: { label: string; on?: boolean; onPress: () => void; glyph: ReactNode; testID: string }) {
   const t = useTheme();
   // Chosen = ✓ in the corner as well as the edge and tint (never colour alone).
   const tick = on ? (
@@ -577,25 +577,33 @@ function CategoryTile({ label, on, onPress, icon: Icon, testID }: { label: strin
       style={{ flexBasis: '31%', flexGrow: 1, minHeight: 72, alignItems: 'center', justifyContent: 'center', gap: t.space.xs, padding: t.space.sm, borderRadius: t.radius.lg, borderWidth: on ? t.border.thick : t.border.hair, borderColor: on ? t.color.action : t.color.ruleStrong, backgroundColor: on ? t.color.actionSunk : t.color.surfaceRaised }}
     >
       {tick}
-      <View aria-hidden>
-        <Icon color={t.color.ink} />
-      </View>
+      <View aria-hidden>{glyph}</View>
       <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: t.color.ink, textAlign: 'center' }}>{label}</Text>
     </Pressable>
   );
 }
 
-type IconComponent = (p: { color: string; size?: number }) => ReactNode;
-
-const CATEGORY_ICONS: Record<string, IconComponent> = {
-  'cat-fertilizer': LeafIcon,
-  'cat-labour': UsersIcon,
-  'cat-fuel': CoinIcon,
-  'cat-repair': GearIcon,
-  'cat-salary': WalletIcon,
-  'cat-worker-aid': PersonIcon,
-  'cat-travel': PinIcon,
+/** The traced FarmMate original for each built-in category (E03-S11); a category without one keeps the tag line icon. */
+const CATEGORY_ART: Record<string, string> = {
+  'cat-fertilizer': 'farmwork.fertilize',
+  'cat-labour': 'finance.workerPay',
+  'cat-fuel': 'materials.fuel',
+  'cat-herbicide': 'materials.pesticide',
+  'cat-travel': 'people.transporter',
+  'cat-salary': 'people.manager',
+  'cat-worker-aid': 'people.workerInfo',
+  'cat-repair': 'farmwork.maintenance',
 };
+
+/** A category tile's picture: the original when the category has one. */
+function categoryGlyph(id: string, ink: string): ReactNode {
+  const art = CATEGORY_ART[id];
+  return art ? <FarmMateArt id={art} size={CATEGORY_ART_SIZE} /> : <TagIcon color={ink} />;
+}
+
+const CATEGORY_ART_SIZE = 28;
+/** An original leading a card row (who paid, the share). */
+const ROW_ART = 28;
 
 /** Back to where the user came from — replacing would stack a second copy of that screen. */
 function leave() {
