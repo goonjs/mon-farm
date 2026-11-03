@@ -18,21 +18,20 @@ import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import {
   AppText,
-  BasketIcon,
   BottomSheet,
-  BoxIcon,
   Button,
   cardStyle,
   ChevronRight,
   CTA,
   FieldError,
   IconTile,
-  LeafIcon,
   MoneyField,
   QuantityField,
   SegmentedControl,
   TextField,
   type TileTone,
+  FarmMateArt,
+  type FarmMateArtId,
 } from '../../../ui';
 import { ChoiceChip, ChoiceRow, SectionLabel, TickCard } from '../pieces';
 import { SolidButton } from './solid-cta';
@@ -50,13 +49,13 @@ import {
 } from './order-model';
 
 const FERT_TONE: Record<FertilizerType, TileTone> = { chemical: 'accept', manure: 'cream', other: 'neutral' };
-const FertIcon = ({ type, colour }: { type: FertilizerType; colour: string }) =>
-  type === 'manure' ? <BasketIcon color={colour} /> : type === 'other' ? <BoxIcon color={colour} /> : <LeafIcon color={colour} />;
+/** The traced FarmMate original for each kind of fertilizer (E03-S11). */
+const FERT_ART: Record<FertilizerType, FarmMateArtId> = { chemical: 'materials.chemFert', manure: 'materials.manureFert', other: 'materials.stock' };
 
 /** The small round-cornered icon tile an item carries in lists and headers. */
 export function ItemIcon({ spec }: { spec: ProductSpec }) {
   const type = spec.fertilizer?.type;
-  return <IconTile tone={type ? FERT_TONE[type] : 'warn'} icon={(c) => (type ? <FertIcon type={type} colour={c} /> : <BoxIcon color={c} />)} />;
+  return <IconTile tone={type ? FERT_TONE[type] : 'warn'} icon={() => <FarmMateArt id={type ? FERT_ART[type] : 'materials.stock'} />} />;
 }
 
 /** A small underlined secondary link (never a button): one line, ≥ 48pt tall to tap. */
@@ -542,7 +541,7 @@ export function NewProductSheet({
                 backgroundColor: on ? t.color.actionSunk : t.color.surfaceRaised,
               }}
             >
-              <IconTile tone={FERT_TONE[k]} icon={(c) => <FertIcon type={k} colour={c} />} />
+              <IconTile tone={FERT_TONE[k]} icon={() => <FarmMateArt id={FERT_ART[k]} />} />
               <Text style={{ textAlign: 'center', fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg(`ordc.type.${k}` as 'ordc.type.chemical')}</Text>
             </Pressable>
           );

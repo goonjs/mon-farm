@@ -31,7 +31,7 @@ import { newId } from '../../../lib/id';
 import { peopleStore } from '../../../store/people';
 import { useSyncStatus } from '../../../sync/use-sync-status';
 import { useTheme } from '../../../theme';
-import { AppText, BasketIcon, CalendarIcon, cardStyle, ChevronRight, DatePickerSheet, FieldError, IconTile, LeafIcon, PinnedActions, Plus, ScreenHeader, WalletIcon } from '../../../ui';
+import { AppText, cardStyle, ChevronRight, DatePickerSheet, FieldError, IconTile, PinnedActions, Plus, ScreenHeader, FarmMateArt } from '../../../ui';
 import { useMaster } from '../../farm/pieces';
 import { optionNamed, setFertOption } from '../fert-options';
 import { orderHref } from '../order-routes';
@@ -66,6 +66,9 @@ type Sheet =
   | { k: 'new'; editId: string | null; carry: ItemMoney | null }
   | { k: 'item'; editId: string | null; spec: ProductSpec; money: ItemMoney }
   | { k: 'other'; editId: string | null; spec: ProductSpec | null; money: ItemMoney };
+
+/** A FarmMate original leading a field card or the payer row (E03-S11). */
+const ROW_ART = 28;
 
 export function leave() {
   if (router.canGoBack()) router.back();
@@ -312,8 +315,8 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
   const body = (
     <>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-        {fieldCard('ordc-shop', <BasketIcon color={t.color.inkSoft} />, msg('ordc.shop'), shop.trim() || msg('ordc.shopNone'), () => setSheet('shop'))}
-        {fieldCard('ordc-date', <CalendarIcon color={t.color.inkSoft} />, msg('ordc.date'), dateText, () => setSheet('date'))}
+        {fieldCard('ordc-shop', <FarmMateArt id="materials.orderMaterials" size={ROW_ART} />, msg('ordc.shop'), shop.trim() || msg('ordc.shopNone'), () => setSheet('shop'))}
+        {fieldCard('ordc-date', <FarmMateArt id="farmwork.calendar" size={ROW_ART} />, msg('ordc.date'), dateText, () => setSheet('date'))}
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: t.space.sm }}>
@@ -323,7 +326,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
 
       {lines.length === 0 ? (
         <View testID="ordc-empty" style={[cardStyle(t), { padding: t.space.xl, alignItems: 'center', gap: t.space.sm }]}>
-          <IconTile tone="accept" icon={(c) => <LeafIcon color={c} />} />
+          <IconTile tone="accept" icon={() => <FarmMateArt id="materials.chemFert" />} />
           <AppText variant="heading" style={{ textAlign: 'center' }}>{msg('ordc.emptyTitle')}</AppText>
           <AppText variant="bodySm" style={{ textAlign: 'center' }}>{msg('ordc.emptyBody')}</AppText>
         </View>
@@ -371,7 +374,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
             onPress={() => setSheet('payer')}
             style={{ minHeight: t.target.comfortable, flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.sm }}
           >
-            <WalletIcon color={t.color.ink} />
+            <FarmMateArt id="finance.expense" size={ROW_ART} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <AppText testID="ordc-payer-title" style={{ fontWeight: t.font.weight.bold }}>{payerTitle}</AppText>
               <AppText variant="bodySm">{msg('ordc.payerHint')}</AppText>

@@ -22,7 +22,7 @@ import { planMove } from '../../core/sale-move';
 import { pointChoices, saleRollup } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AlertIcon, AppText, BasketIcon, BottomSheet, DotsIcon, cardStyle, ChevronRight, CTA, IconTile, PinIcon, Plus, Scale, TapperIcon, type TileTone } from '../../ui';
+import { AlertIcon, AppText, BottomSheet, DotsIcon, cardStyle, ChevronRight, CTA, IconTile, PinIcon, Plus, Scale, TapperIcon, type TileTone, FarmMateArt } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { signed, useGoToPoint, type Fill } from './move';
 import { SaleMenu } from './sale-menu';
@@ -76,7 +76,7 @@ export function PointScreen() {
 
   const row = (pointId: string, name: string, lines: React.ReactNode, tileTone: TileTone) => (
     <Pressable key={pointId} testID={`pick-point-${pointId}`} accessibilityRole="button" onPress={() => pick(pointId)} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, paddingVertical: t.space.sm, minHeight: t.target.min }}>
-      <IconTile tone={tileTone} icon={(c) => <PinIcon color={c} size={22} />} />
+      <IconTile tone={tileTone} icon={() => <FarmMateArt id="farm.weighPoint" />} />
       <View style={{ flex: 1, gap: t.space.xxs }}>
         <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>{name}</Text>
         {lines}
@@ -191,7 +191,7 @@ export function PointScreen() {
         <Choice
           primary
           testID="fill-full"
-          icon={(c) => <BasketIcon color={c} size={20} />}
+          icon={() => <FarmMateArt id="sale.recordYield" />}
           title={msg('v2s.fillFull')}
           onPress={() => onFill('full')}
           lines={[
@@ -206,7 +206,7 @@ export function PointScreen() {
         />
         <Choice
           testID="fill-part"
-          icon={(c) => <Scale color={c} size={20} />}
+          icon={() => <FarmMateArt id="sale.weigh" />}
           title={msg('v2s.fillPart')}
           onPress={() => onFill('part')}
           lines={[

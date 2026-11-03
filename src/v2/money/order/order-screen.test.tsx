@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import { fertOptionId } from '../../../core/finance/ledger';
@@ -6,6 +6,10 @@ import type { ExpenseFields, FinanceEvent } from '../../../core/finance/types';
 import { financeStore as mockFinance } from '../../../store/finance';
 import { wrap } from '../../../test/render';
 import { OrderScreen } from './order-screen';
+import { FarmMateArt } from '../../../ui';
+
+/** The traced originals drawn inside the element with this testID (E03-S11). */
+const art = (testID: string): string[] => within(screen.getByTestId(testID)).UNSAFE_queryAllByType(FarmMateArt).map((a) => a.props.id as string);
 
 jest.mock('../../../store/finance', () => {
   const { MemoryFinanceStore } = jest.requireActual('../../../store/finance-memory');
@@ -62,6 +66,8 @@ const text = (id: string): string => {
 async function addNewFert(formula: string, qty: string[], price: string[]) {
   press('ordc-add');
   press('ordc-pick-new');
+  // E03-S11: the three kinds of fertilizer are the chemical sack, the manure sack and a box.
+  expect([art('ordc-type-chemical'), art('ordc-type-manure'), art('ordc-type-other')]).toEqual([['materials.chemFert'], ['materials.manureFert'], ['materials.stock']]);
   fireEvent.changeText(screen.getByTestId('ordc-formula'), formula);
   press('ordc-remember');
   press('ordc-new-done');
@@ -100,6 +106,11 @@ describe('order capture screen (E11-S11)', () => {
     wrap(<OrderScreen />);
     await flush();
     expect(screen.getByTestId('ordc-empty')).toBeTruthy();
+    // E03-S11 FM-8: the shop, the date, the empty order and who paid lead with the originals.
+    expect(art('ordc-shop')).toEqual(['materials.orderMaterials']);
+    expect(art('ordc-date')).toEqual(['farmwork.calendar']);
+    // Owner 2026-11-03: the sack, not the seedling, which blended into the light green tile.
+    expect(art('ordc-empty')).toEqual(['materials.chemFert']);
     expect(screen.getByTestId('ordc-save').props.accessibilityState.disabled).toBe(true);
     expect(text('ordc-total')).toContain('0.00');
     // disabled is a solid fill, never the dashed edge of the add row
@@ -119,6 +130,9 @@ describe('order capture screen (E11-S11)', () => {
     await addNewFert('46-0-0', ['1', '0'], ['9', '5', '0']);
     expect(text('ordc-count')).toContain('2');
     expect(text('ordc-total')).toContain('32,500.00');
+    // E03-S11: a chemical fertilizer row is the chemical sack; who paid is the money going out.
+    expect(screen.getAllByTestId(/^ordc-row-/).map((r) => art(String(r.props.testID)))).toEqual([['materials.chemFert'], ['materials.chemFert']]);
+    expect(art('ordc-payer')).toEqual(['finance.expense']);
     press('ordc-save');
     await flush();
     expect(screen.getByTestId('ordc-saved')).toBeTruthy();

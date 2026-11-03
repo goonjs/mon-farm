@@ -12,7 +12,7 @@ import type { CloseoutPlan, CloseoutWorker, RepayRoute, TallyBar as Tally } from
 import { compactMoneyParts } from '../../../core/compact-money';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, Button, Check, cardStyle, ChevronRight, CompactMoney, FarmMateIcon, Plus, toneColours, type TileTone } from '../../../ui';
+import { AppText, Button, Check, cardStyle, ChevronRight, CompactMoney, FarmMateArt, Plus, toneColours, type TileTone } from '../../../ui';
 import { CardIcon, MARK, RoundButton, WarnMark, baht, minus } from './summary-parts';
 
 /** Line height for card text: above `snug` for Thai marks, tight enough for one screen (CO-1). */
@@ -288,7 +288,7 @@ export function WorkerCard({ w, roundingNone, tone, onDeduct }: { w: CloseoutWor
     <View testID={`co-worker-${w.id}`} style={{ ...cardStyle(t), paddingVertical: t.space.sm, paddingHorizontal: t.space.md, gap: t.space.xs + t.space.xxs }}>
       <View style={{ ...row, gap: t.space.md, flexWrap: 'wrap' }}>
         <View aria-hidden style={{ width: 40, height: 40, borderRadius: t.radius.md, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
-          <FarmMateIcon id="people.tapper" size={28} />
+          <FarmMateArt id="people.tapper" size={28} />
         </View>
         <View style={{ flexShrink: 1 }}>
           <AppText style={{ fontWeight: t.font.weight.bold, fontSize: fs.headingMd, lineHeight: lh(fs.headingMd) }}>{w.name}</AppText>

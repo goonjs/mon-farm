@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import { LogBuilder } from '../core/fixtures';
@@ -6,7 +6,11 @@ import type { MasterStore } from '../store/master-store';
 import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale } from '../test/sale-fixture';
 import { wrap } from '../test/render';
+import { FarmMateArt } from '../ui';
 import { SalesScreen } from '../v2/sale/sales-screen';
+
+/** The traced originals drawn inside the element with this testID (E03-S11). */
+const art = (testID: string): string[] => within(screen.getByTestId(testID)).UNSAFE_queryAllByType(FarmMateArt).map((a) => a.props.id as string);
 
 jest.mock('../store/people', () => {
   const { MemoryPeopleStore } = jest.requireActual('../store/people-memory');
@@ -65,6 +69,8 @@ describe('v2 sales list (sale mockup page 4)', () => {
     expect(screen.getByTestId(`sale-tapper-sale-new-${f.red}`)).toHaveTextContent('แดง100 กก.');
     expect(screen.getByTestId(`sale-tapper-sale-new-${f.nat}`)).toHaveTextContent('นัด50 กก.');
 
+    // E03-S11: each sale's tile is the sale original.
+    expect(art('sale-row-sale-new')).toEqual(['sale.sale']);
     fireEvent.press(screen.getByTestId('sale-row-sale-new'));
     expect(router().push).toHaveBeenLastCalledWith(`/v2/sale/sale-new/counter?point=${f.a[3]}`);
     fireEvent.press(screen.getByTestId('sale-row-sale-old'));

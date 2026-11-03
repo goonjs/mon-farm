@@ -148,13 +148,22 @@ const SCREENS: { name: string; min: number; open: (page: Page) => Promise<void> 
   { name: 'person', min: 2, open: async (page) => { await page.goto('/v2/person/red'); await page.getByTestId('person-profile').waitFor(); } },
   { name: 'buyers', min: 1, open: async (page) => { await page.goto('/v2/buyers'); await page.getByTestId('buyer-buyer-a').waitFor(); } },
   { name: 'shares', min: 1, open: async (page) => { await page.goto('/v2/shares'); await page.getByTestId('share-red').waitFor(); } },
+  // E03-S11 FM-8: the sale and fertilizer screens. Not opened here: the close-out summary and its sheets
+  // (their text fit is v2-text-size.spec.ts; their ids are asserted in jest), the check screen, the order-detail sheets.
+  { name: 'sales', min: 1, open: async (page) => { await page.goto('/v2/sales'); await page.getByTestId('sale-row-sale-art').waitFor(); } },
+  { name: 'sale-point', min: 1, open: async (page) => { await page.goto('/v2/sale/sale-art/point'); await page.getByTestId('pick-point-a1').waitFor(); } },
+  { name: 'zero-tare', min: 2, open: async (page) => { await page.goto('/v2/sale/sale-art/zero-tare?point=a1&net=50000&basket=2000'); await page.getByTestId('expect-kg').waitFor(); } },
+  { name: 'counter', min: 2, open: async (page) => { await page.goto('/v2/sale/sale-art/counter?point=a1'); await page.getByTestId('tool-history').waitFor(); } },
+  { name: 'counter-menu', min: 7, open: async (page) => { await page.goto('/v2/sale/sale-art/counter?point=a1'); await page.getByTestId('counter-menu').click(); await page.getByTestId('menu-sales').waitFor(); } },
+  { name: 'backfill', min: 1, open: async (page) => { await page.goto('/v2/sale/sale-art/backfill?point=a1'); await page.getByTestId('backfill-proof').scrollIntoViewIfNeeded(); } },
+  { name: 'order', min: 3, open: async (page) => { await page.goto('/v2/order'); await page.getByTestId('ordc-empty').waitFor(); } },
   { name: 'debt-account', min: 1, open: async (page) => { await page.goto('/v2/debt/red?name=%E0%B9%81%E0%B8%94%E0%B8%87'); await page.getByTestId('debt-plan-row').waitFor(); } },
 ];
 
 for (const width of [360, 390]) {
   for (const size of ['s', 'm', 'l'] as const) {
-    test(`home, money and farm draw the originals, nothing cut off, at ${width} px text ${size}`, async ({ page }) => {
-      test.setTimeout(180_000);
+    test(`home, money, farm, sale and fertilizer draw the originals, nothing cut off, at ${width} px text ${size}`, async ({ page }) => {
+      test.setTimeout(240_000);
       await page.setViewportSize({ width, height: 844 });
       await page.addInitScript((size) => localStorage.setItem('mon-farm:text-size', size), size);
       await seed(page);
@@ -176,6 +185,26 @@ for (const width of [360, 390]) {
       await test.info().attach('art-contrast.json', { body: JSON.stringify(readings, null, 1), contentType: 'application/json' });
       // Owner rule 2: an original that blends into its tile is reported, not hidden — none do today.
       expect(low, 'originals that blend into their tile').toEqual([]);
+    });
+  }
+}
+
+for (const width of [360, 390]) {
+  for (const size of ['s', 'm', 'l'] as const) {
+    test(`start a sale draws the originals, nothing cut off, at ${width} px text ${size}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.addInitScript((size) => localStorage.setItem('mon-farm:text-size', size), size);
+      await seedMaster(page, FARM);
+      await page.goto('/v2/sale/start');
+      await page.getByTestId('start-date').waitFor();
+      expect(await textFit(page)).toEqual([]);
+      const art = await readArt(page);
+      expect(art.length, 'start: originals drawn').toBeGreaterThanOrEqual(5);
+      expect(art.filter((a) => !a.inside).map((a) => a.where)).toEqual([]);
+      expect(art.filter((a) => a.visible < 0.5).map((a) => `${a.where} ${a.visible}`)).toEqual([]);
+      if (process.env.UPDATE_SCREENSHOTS && ((width === 390 && size === 'm') || (width === 360 && size === 'l'))) {
+        await page.screenshot({ path: `${SHOTS}/sale-start-${width}-${size}.png` });
+      }
     });
   }
 }

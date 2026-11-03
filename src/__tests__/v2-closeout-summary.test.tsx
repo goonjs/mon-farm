@@ -11,8 +11,12 @@ import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { tokens } from '../../design/tokens';
 import { wrap } from '../test/render';
+import { FarmMateArt } from '../ui';
 import { clearDraft } from '../v2/sale/closeout/use-closeout';
 import { CloseoutSummaryScreen } from '../v2/sale/closeout/summary-screen';
+
+/** The traced originals drawn inside the element with this testID (E03-S11). */
+const art = (testID: string): string[] => within(screen.getByTestId(testID)).UNSAFE_queryAllByType(FarmMateArt).map((a) => a.props.id as string);
 
 // Each case renders whole close-out screens and writes to the finance log: 1–2 s here, 3–4× slower on
 // a CI runner, where jest's 5 s default timed out a first case and the shared fixture failed the rest.
@@ -124,6 +128,12 @@ describe('สรุปจ่ายเงิน · the proposal on one page (CO-1
     expect(text(`co-worker-${farm.red}`)).toHaveTextContent(/แดง.*ส่วนแบ่ง 9,187\.50/);
     expect(text(`co-worker-${farm.nat}`)).toHaveTextContent(/นัด.*ส่วนแบ่ง 5,250\.00/);
     expect(text('co-cash-card')).toHaveTextContent(/จัดเงินสดกับคนรับซื้อยาง/);
+    // E03-S11: the cards draw the traced originals, not the simplified redraw.
+    expect(art('co-sale-strip')).toEqual(['finance.income']);
+    expect(art('co-debt-card')).toEqual(['finance.otherCost']);
+    expect(art('co-owed-card')).toEqual(['finance.workerPay']);
+    expect(art(`co-worker-${farm.red}`)).toEqual(['people.tapper']);
+    expect(art('co-cash-card')).toEqual(['people.profitShare']);
     expect(text('co-tally')).toHaveTextContent(/ตรงถึงสตางค์/);
   });
 

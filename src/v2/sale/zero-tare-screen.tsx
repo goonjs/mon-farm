@@ -24,7 +24,6 @@ import { useTheme } from '../../theme';
 import {
   AlertIcon,
   AppText,
-  BasketIcon,
   BottomSheet,
   cardStyle,
   Check,
@@ -35,8 +34,8 @@ import {
   IconTile,
   LeafIcon,
   Plus,
-  Scale,
   ScaleIcon,
+  FarmMateArt,
 } from '../../ui';
 import { FarmScreen, Stepper } from '../farm/pieces';
 import { Banner, Choice, IconLine, Kv, kgText, NumChip, SegOptions, SkewTag, useLeaveIfClosed, useSaleView } from './pieces';
@@ -152,7 +151,7 @@ export function ZeroTareScreen() {
 
   const basketRow = (
     <View style={{ ...cardStyle(t), paddingHorizontal: t.space.lg, paddingVertical: t.space.md, flexDirection: 'row', alignItems: 'center', gap: t.space.md }}>
-      <IconTile tone="action" icon={(c) => <BasketIcon color={c} size={20} />} />
+      <IconTile tone="action" icon={() => <FarmMateArt id="sale.recordYield" />} />
       <View style={{ flex: 1 }}>
         <AppText style={{ fontWeight: t.font.weight.semibold }}>{msg('v2s.basketWeight')}</AppText>
         <AppText variant="bodySm">{msg('v2s.fromSettings')}</AppText>
@@ -196,7 +195,7 @@ export function ZeroTareScreen() {
             <Choice testID="choose-wait" icon={(c) => <HourglassIcon color={c} size={20} />} title={msg('v2s.wait1')} lines={[msg('v2s.waitL1'), msg('v2s.waitL2')]} onPress={wait} />
             <Choice
               testID="choose-skew"
-              icon={(c) => <Scale color={c} size={20} />}
+              icon={() => <FarmMateArt id="sale.weigh" />}
               title={msg('v2s.skew2')}
               lines={[
                 <Text key="a">
@@ -233,7 +232,7 @@ export function ZeroTareScreen() {
         <>
           <View style={card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md }}>
-              <IconTile tone="cream" icon={(c) => <ScaleIcon color={c} size={20} />} />
+              <IconTile tone="cream" icon={() => <FarmMateArt id="sale.weigh" />} />
               <View style={{ flex: 1, gap: t.space.xxs }}>
                 <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.emptyReadsKg', { skew: signed(kgText(skew)) })}</AppText>
                 <SkewTag label={msg('v2s.skewAccepted')} />
@@ -272,7 +271,7 @@ export function ZeroTareScreen() {
           ) : null}
           <View style={card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md }}>
-              <IconTile tone="action" icon={(c) => <ScaleIcon color={c} size={20} />} />
+              <IconTile tone="action" icon={() => <FarmMateArt id="sale.weigh" />} />
               <View style={{ flex: 1 }}>
                 <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{msg(moveWithSkew ? 'v2s.zeroQMove' : 'v2s.zeroQ')}</AppText>
                 <AppText variant="bodySm">{msg('v2s.nothingOn')}</AppText>

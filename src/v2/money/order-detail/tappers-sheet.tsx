@@ -14,7 +14,7 @@ import { lastLineSacks } from '../../../core/finance/share';
 import type { ExpensePatch, Payer, ShareSettle } from '../../../core/finance/types';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, Button, Card, Check, PersonIcon, Plus, QuantityField, RadioCard, SegmentedControl } from '../../../ui';
+import { AppText, BottomSheet, Button, Card, Check, Plus, QuantityField, RadioCard, SegmentedControl, FarmMateArt } from '../../../ui';
 import { ItemRow, SheetTitle, SummaryBar } from './parts';
 import { itemSacks, tapperPatch, tapperProblems, tapperSplit, type TapperInput } from './tell';
 import { SolidCTA } from '../order/solid-cta';
@@ -105,7 +105,7 @@ export function TappersSheet({
         {lines.map((l, i) => (
           <Card key={l.worker.id} testID={`ordd-tap-${l.worker.id}`} style={{ gap: t.space.sm }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
-              <PersonIcon color={t.color.ink} />
+              <FarmMateArt id="people.tapper" size={28} />
               <AppText style={{ flex: 1, fontWeight: t.font.weight.bold }}>{l.worker.name}</AppText>
               <Pressable testID={`ordd-tap-${l.worker.id}-remove`} accessibilityRole="button" accessibilityLabel={`${msg('ordd.tap.remove')} ${l.worker.name}`} onPress={() => setLines((ls) => ls.filter((_, j) => j !== i))} style={{ minHeight: t.target.min, justifyContent: 'center', paddingHorizontal: t.space.sm }}>
                 <AppText variant="bodySm" style={{ textDecorationLine: 'underline' }}>{msg('ordd.tap.remove')}</AppText>

@@ -13,14 +13,10 @@ import { formatSatang as formatPrice } from "../../core/finance/money";
 import { useT } from "../../i18n";
 import { useTheme } from "../../theme";
 import {
-  DebtIcon,
-  HomeIcon,
   IconTile,
-  InfoIcon,
-  ListIcon,
-  CoinIcon,
   TrashIcon,
   type TileTone,
+  FarmMateArt,
 } from "../../ui";
 import type { OptionSheet } from "./sale-options";
 import { type useSaleView } from "./pieces";
@@ -56,6 +52,9 @@ export function MenuGroup({
     </View>
   );
 }
+
+/** A FarmMate original on a menu row's small (36) tile (E03-S11). */
+export const MENU_ART = 26;
 
 export function MenuRow({
   testID,
@@ -134,7 +133,7 @@ export function SaleMenu({
         <MenuRow
           testID="menu-price"
           tone="warn"
-          icon={(c) => <CoinIcon color={c} size={16} />}
+          icon={() => <FarmMateArt id="sale.rubberPrice" size={MENU_ART} />}
           onPress={() => pick("price")}
         >
           {price === null
@@ -144,7 +143,7 @@ export function SaleMenu({
         <MenuRow
           testID="menu-info"
           tone="warn"
-          icon={(c) => <InfoIcon color={c} size={16} />}
+          icon={() => <FarmMateArt id="system.about" size={MENU_ART} />}
           onPress={() => pick("info")}
         >
           {msg("opt.info")}
@@ -154,7 +153,7 @@ export function SaleMenu({
         <MenuRow
           testID="menu-home"
           tone="neutral"
-          icon={(c) => <HomeIcon color={c} size={16} />}
+          icon={() => <FarmMateArt id="nav.home" size={MENU_ART} />}
           onPress={go("/v2")}
         >
           {msg("v2.home")}
@@ -162,7 +161,7 @@ export function SaleMenu({
         <MenuRow
           testID="menu-debts"
           tone="neutral"
-          icon={(c) => <DebtIcon color={c} size={16} />}
+          icon={() => <FarmMateArt id="finance.otherCost" size={MENU_ART} />}
           onPress={go("/v2/debts")}
         >
           {msg("v2.debts")}
@@ -170,7 +169,7 @@ export function SaleMenu({
         <MenuRow
           testID="menu-sales"
           tone="neutral"
-          icon={(c) => <ListIcon color={c} size={16} />}
+          icon={() => <FarmMateArt id="analysis.saleHistory" size={MENU_ART} />}
           onPress={go("/v2/sales")}
         >
           {msg("v2.sales")}

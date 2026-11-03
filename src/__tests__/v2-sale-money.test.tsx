@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactElement, ReactNode } from 'react';
 
 import { LogBuilder } from '../core/fixtures';
@@ -10,10 +10,14 @@ import { SaleProvider } from '../store/SaleProvider';
 import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { wrap } from '../test/render';
+import { FarmMateArt } from '../ui';
 import { CheckScreen } from '../v2/sale/money-screens';
 import { markClosing } from '../v2/sale/pieces';
 import { MoneyLines, signed } from '../v2/sale/person-money';
 import { PointScreen } from '../v2/sale/point-screen';
+
+/** The traced originals drawn inside the element with this testID (E03-S11). */
+const art = (testID: string): string[] => within(screen.getByTestId(testID)).UNSAFE_queryAllByType(FarmMateArt).map((a) => a.props.id as string);
 
 jest.mock('../store/finance', () => {
   const { MemoryFinanceStore } = jest.requireActual('../store/finance-memory');
@@ -100,6 +104,8 @@ describe('v2 sale money (page 16; 17–19 are the close-out, v2-closeout-*)', ()
     expect(screen.getByTestId('check-baskets')).toHaveTextContent(/5 เข่ง/);
     expect(screen.getByTestId('check-total')).toHaveTextContent(/11,397\.50/);
     expect(screen.getByTestId(`check-tapper-${farm.red}`)).toHaveTextContent(/150 กก\./);
+    // E03-S11: each tapper's tile is the tapper original.
+    expect(art(`check-tapper-${farm.red}`)).toEqual(['people.tapper']);
     // E05-S09: unit in the label line, dots + short count per tapper, whose short basket it is.
     expect(screen.getByTestId('check-total')).not.toHaveTextContent('บาท');
     // per tapper: how many full baskets + the short kg, at which point

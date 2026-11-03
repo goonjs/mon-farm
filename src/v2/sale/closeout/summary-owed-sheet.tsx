@@ -15,7 +15,7 @@ import { Pressable, View } from 'react-native';
 import type { CloseoutWorker } from '../../../core/finance/closeout';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, Button, cardStyle, Check, CTA, FarmMateIcon, Plus } from '../../../ui';
+import { AppText, BottomSheet, Button, cardStyle, Check, CTA, FarmMateArt, Plus } from '../../../ui';
 import { useDay } from '../../farm/pieces';
 import type { Closeout, CloseoutDraft } from './use-closeout';
 import { baht, MARK, netOff, netOn, shortBaht } from './summary-parts';
@@ -72,7 +72,7 @@ export function OwedSheet({ co, people, onAdd, onClose }: { co: Closeout; people
           <View key={p.id} testID={`co-owed-row-${p.id}`} style={{ ...cardStyle(t), padding: t.space.md, gap: t.space.sm }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, flexWrap: 'wrap' }}>
               <View aria-hidden style={{ width: t.target.min, height: t.target.min, borderRadius: t.radius.md, backgroundColor: t.color.brandCream, alignItems: 'center', justifyContent: 'center' }}>
-                <FarmMateIcon id="people.tapper" size={32} />
+                <FarmMateArt id="people.tapper" size={32} />
               </View>
               <View style={{ flexShrink: 1 }}>
                 <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{p.name}</AppText>

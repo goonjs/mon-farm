@@ -22,7 +22,7 @@ import { pairForNewPoint } from '../../core/sale-move';
 import { parseKgG, pointSetupPayloads } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AppText, BasketIcon, Button, CameraIcon, cardStyle, CTA, IconTile, LeafIcon, Plus, QuantityField, ScaleIcon } from '../../ui';
+import { AppText, BasketIcon, Button, cardStyle, CTA, IconTile, LeafIcon, Plus, QuantityField, ScaleIcon, FarmMateArt } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { Crumbs, IconLine, Kv, kgText, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 
@@ -130,8 +130,8 @@ export function BackfillScreen() {
         </View>
       ) : null}
 
-      <View style={{ ...cardStyle(t), padding: t.space.md, flexDirection: 'row', alignItems: 'center', gap: t.space.md }}>
-        <IconTile tone="action" icon={(c) => <CameraIcon color={c} size={20} />} />
+      <View testID="backfill-proof" style={{ ...cardStyle(t), padding: t.space.md, flexDirection: 'row', alignItems: 'center', gap: t.space.md }}>
+        <IconTile tone="action" icon={() => <FarmMateArt id="farm.photos" />} />
         <View style={{ flex: 1 }}>
           <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.evidence')}</AppText>
           <AppText variant="bodySm">{msg('backfill.optional')}</AppText>

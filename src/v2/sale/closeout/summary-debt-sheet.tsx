@@ -11,7 +11,7 @@ import { Pressable, View } from 'react-native';
 import type { CloseoutWorker, DebtPiece } from '../../../core/finance/closeout';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, Button, cardStyle, Check, ChevronRight, CTA, FarmMateIcon, Plus } from '../../../ui';
+import { AppText, BottomSheet, Button, cardStyle, Check, ChevronRight, CTA, FarmMateArt, Plus } from '../../../ui';
 import { useDay } from '../../farm/pieces';
 import { baht, minus } from './summary-parts';
 
@@ -52,7 +52,7 @@ export function DebtSheet({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: t.space.md, flexWrap: 'wrap' }}>
             <View aria-hidden style={{ width: t.target.min, height: t.target.min, borderRadius: t.radius.md, backgroundColor: t.color.brandCream, alignItems: 'center', justifyContent: 'center' }}>
-              <FarmMateIcon id="people.tapper" size={32} />
+              <FarmMateArt id="people.tapper" size={32} />
             </View>
             <View style={{ flexShrink: 1 }}>
               <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{w.name}</AppText>
