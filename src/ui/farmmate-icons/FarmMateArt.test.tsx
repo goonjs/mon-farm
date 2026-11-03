@@ -1,6 +1,6 @@
 import { SvgXml } from 'react-native-svg';
 
-import { FarmMateArt } from './FarmMateArt';
+import { FarmMateArt, personArt } from './FarmMateArt';
 import { FARMMATE_MASTERS } from '../../../design/icons/farmmate-masters';
 import { wrap } from '../../test/render';
 
@@ -26,5 +26,19 @@ describe('FarmMateArt — the traced FarmMate original ("ตัวสวย")', 
   it('draws nothing for an id that has no original', () => {
     const { toJSON } = wrap(<FarmMateArt id="nav.nope" />);
     expect(toJSON()).toBeNull();
+  });
+});
+
+describe('personArt — a person tile drawn by role (owner 2026-11-03)', () => {
+  it.each([
+    [['tapper'], 'people.tapper'],
+    [['manager'], 'people.manager'],
+    [['tapper', 'manager'], 'people.tapper'],
+    [['owner'], 'nav.profile'],
+    [['buyer'], 'nav.profile'],
+    [[], 'nav.profile'],
+    [undefined, 'nav.profile'],
+  ] as const)('%j → %s', (roles, id) => {
+    expect(personArt(roles)).toBe(id);
   });
 });
