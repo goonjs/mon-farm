@@ -34,6 +34,8 @@ describe('FarmMateArt — the traced FarmMate original ("ตัวสวย")', 
     const { UNSAFE_getAllByType } = wrap(<FarmMateArt id="nav.home" size={26} />);
     const box = UNSAFE_getAllByType(View).find((v) => v.props['aria-hidden'])!;
     expect(box.props.style).toEqual({ width: 26, height: 26 });
+    // A marker the e2e finds originals by (line icons are svgs too).
+    expect(box.props.testID).toBe('farmmate-art');
   });
 
   it('defaults to 32, the size it takes on a 48 tile', () => {

@@ -63,6 +63,9 @@ beforeAll(async () => {
   ids.daeng = (await mockPeople.create('แดง', ['tapper'])).id;
   ids.somwang = (await mockPeople.create('อาจารย์สมหวัง', ['manager'])).id;
   ids.owner = (await mockPeople.create('เจ้าของสวน', ['owner'])).id;
+  // A tapper who left (soft-deleted) but still owes: still drawn as a tapper.
+  ids.gone = (await mockPeople.create('เอก', ['tapper'])).id;
+  await mockPeople.remove(ids.gone);
   for (const [key, name] of [['daeng', 'แดง'], ['somwang', 'อาจารย์สมหวัง'], ['owner', 'เจ้าของสวน']] as const) {
     await append(`x-${key}`, {
       t: 'expense_created',
@@ -72,6 +75,10 @@ beforeAll(async () => {
   await append('debt-1', {
     t: 'debt_added',
     fields: { worker: { id: ids.daeng, name: 'แดง' }, kind: 'loan', amountSatang: 300000, date: '2026-09-20', note: '', lender: null, fertilizer: null, carriedForward: false },
+  });
+  await append('debt-2', {
+    t: 'debt_added',
+    fields: { worker: { id: ids.gone, name: 'เอก' }, kind: 'loan', amountSatang: 100000, date: '2026-09-21', note: '', lender: null, fertilizer: null, carriedForward: false },
   });
   await append('cat-repair', { t: 'category_share_set', workerPct: 50 });
 });
@@ -100,6 +107,19 @@ describe('บันทึกค่าใช้จ่าย', () => {
     fireEvent.press(screen.getByTestId('expense-catall-cat-repair'));
     expect(art('share-row')).toEqual(['people.tapper']);
   });
+
+  // Review of PR 2: the categories outside the first five, picked from "อื่น ๆ".
+  it.each([
+    ['cat-repair', 'farmwork.maintenance'],
+    ['cat-salary', 'people.manager'],
+    ['cat-worker-aid', 'people.workerInfo'],
+  ])('%s, once picked, shows its tile with %s', async (cat, id) => {
+    wrap(<ExpenseFormScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    fireEvent.press(screen.getByTestId(`expense-catall-${cat}`));
+    expect(art(`expense-cat-${cat}`)).toEqual([id]);
+  });
 });
 
 it('ค้างใคร: each person tile is drawn by role', async () => {
@@ -114,6 +134,7 @@ it('บัญชีหนี้: the list tile is the tapper; the account\'s pla
   wrap(<DebtsScreen />);
   await flush();
   expect(art(`debt-account-${ids.daeng}`)).toEqual(['people.tapper']);
+  expect(art(`debt-account-${ids.gone}`)).toEqual(['people.tapper']);
   screen.unmount();
   mockParams.current = { workerId: ids.daeng, name: 'แดง' };
   wrap(<DebtAccountScreen />);

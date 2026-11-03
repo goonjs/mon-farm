@@ -40,7 +40,7 @@ export function FarmMateArt({ id, size = 32 }: { id: FarmMateArtId; size?: numbe
   if (!ast) return null;
   // The View carries aria-hidden on Android/iOS too (RN maps it there, not on the native svg host).
   return (
-    <View aria-hidden style={{ width: size, height: size }}>
+    <View testID="farmmate-art" aria-hidden style={{ width: size, height: size }}>
       <SvgAst ast={ast} override={{ 'aria-hidden': true, width: size, height: size }} />
     </View>
   );
