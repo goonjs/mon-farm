@@ -1,3 +1,4 @@
+import { View } from 'react-native';
 import { parse, SvgAst, SvgXml } from 'react-native-svg';
 
 import { FarmMateArt } from './FarmMateArt';
@@ -8,7 +9,10 @@ describe('FarmMateArt — the traced FarmMate original ("ตัวสวย")', 
   it('draws the parsed original of the id at the given size, hidden from screen readers', () => {
     const { UNSAFE_getByType } = wrap(<FarmMateArt id="sale.weigh" size={40} />);
     const svg = UNSAFE_getByType(SvgAst);
-    expect(svg.props.ast).toEqual(parse(FARMMATE_MASTERS['sale.weigh']));
+    // Compare what was parsed, not the element objects: React stamps rendered elements with internal fields.
+    const want = parse(FARMMATE_MASTERS['sale.weigh'])!;
+    expect(svg.props.ast.props.viewBox).toBe(want.props.viewBox);
+    expect(svg.props.ast.children).toHaveLength(want.children.length);
     expect(svg.props.override).toEqual({ 'aria-hidden': true, width: 40, height: 40 });
   });
 
@@ -23,6 +27,13 @@ describe('FarmMateArt — the traced FarmMate original ("ตัวสวย")', 
     const a = wrap(<FarmMateArt id="people.tapper" />).UNSAFE_getByType(SvgAst).props.ast;
     const b = wrap(<FarmMateArt id="people.tapper" />).UNSAFE_getByType(SvgAst).props.ast;
     expect(a).toBe(b);
+  });
+
+  // Review round 2: on Android/iOS aria-hidden is mapped by RN's View, not by the native svg host.
+  it('sits in a View of its own size that is hidden from screen readers on every platform', () => {
+    const { UNSAFE_getAllByType } = wrap(<FarmMateArt id="nav.home" size={26} />);
+    const box = UNSAFE_getAllByType(View).find((v) => v.props['aria-hidden'])!;
+    expect(box.props.style).toEqual({ width: 26, height: 26 });
   });
 
   it('defaults to 32, the size it takes on a 48 tile', () => {
