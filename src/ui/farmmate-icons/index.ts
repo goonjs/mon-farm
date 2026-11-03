@@ -1,3 +1,5 @@
+export { FarmMateArt } from './FarmMateArt';
+export { FARMMATE_ART_CATEGORIES } from './art-categories';
 export { FarmMateIcon } from './FarmMateIcon';
 export {
   FARMMATE_ICONS,

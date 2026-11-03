@@ -16,6 +16,8 @@ export { DatePickerSheet, type DatePickerSheetProps } from './date-picker-sheet'
 export { DateText, type DateFormatter } from './date-text';
 export { Drawer, MenuItem, MenuSection } from './drawer';
 export {
+  FarmMateArt,
+  FARMMATE_ART_CATEGORIES,
   FarmMateIcon,
   FARMMATE_ICONS,
   FARMMATE_ICON_CATEGORY_LABEL_TH,

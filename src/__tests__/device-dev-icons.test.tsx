@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 
 import { SpeechProvider } from '../speech';
 import { wrap } from '../test/render';
-import { FARMMATE_ICONS } from '../ui';
+import { FarmMateArt } from '../ui';
 import { V2Device } from '../v2/device-screen';
 
 const links: string[] = [];
@@ -40,7 +40,9 @@ it('ends with a view-only link to every icon in the app, under its own heading',
   const row = screen.getByTestId('device-dev-icons');
   expect(screen.getByText('ดูอย่างเดียว')).toBeTruthy();
   expect(screen.getByText('ไอคอนทั้งหมดในแอป')).toBeTruthy();
-  expect(screen.getByText(`${FARMMATE_ICONS.length} ไอคอน · เปิดดูเฉย ๆ ไม่เปลี่ยนการตั้งค่า`)).toBeTruthy();
+  expect(screen.getByText('72 ไอคอน · เปิดดูเฉย ๆ ไม่เปลี่ยนการตั้งค่า')).toBeTruthy();
+  // E03-S11: the sample on the link is drawn from the traced originals too.
+  expect(screen.UNSAFE_getAllByType(FarmMateArt).map((a) => a.props.id)).toEqual(['nav.myFarm', 'sale.weigh', 'finance.income', 'people.tapper']);
   expect(row.props.accessibilityRole).toBe('button');
   expect(links).toContain('/v2/dev/icons');
 });

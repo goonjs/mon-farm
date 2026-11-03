@@ -12,7 +12,8 @@ import { View } from 'react-native';
 
 import { useT } from '../i18n';
 import { useTheme } from '../theme';
-import { AppText, FarmMateIcon, FARMMATE_ICONS, MenuItem } from '../ui';
+import { FARMMATE_MASTERS } from '../../design/icons/farmmate-masters';
+import { AppText, FarmMateArt, MenuItem } from '../ui';
 
 const ICON_CATALOG = '/v2/dev/icons' as Href;
 const SAMPLE = ['nav.myFarm', 'sale.weigh', 'finance.income', 'people.tapper'] as const;
@@ -43,7 +44,7 @@ export function DevIconsLink() {
           testID="device-dev-icons"
           href={ICON_CATALOG}
           label={msg('v2.devIcons')}
-          detail={msg('v2.devIconsDetail', { n: FARMMATE_ICONS.length })}
+          detail={msg('v2.devIconsDetail', { n: Object.keys(FARMMATE_MASTERS).length })}
           leading={
             <View
               style={{
@@ -59,7 +60,7 @@ export function DevIconsLink() {
               }}
             >
               {SAMPLE.map((id) => (
-                <FarmMateIcon key={id} id={id} size={mini} />
+                <FarmMateArt key={id} id={id} size={mini} />
               ))}
             </View>
           }
