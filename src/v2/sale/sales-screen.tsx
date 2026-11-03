@@ -16,7 +16,7 @@ import { useI18n, useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { store } from '../../store/store';
 import { useTheme } from '../../theme';
-import { AppText, BasketIcon, Chip, CTA, IconTile, LeafIcon, TapperIcon, toneColours, UsersIcon } from '../../ui';
+import { AppText, BasketIcon, Chip, CTA, IconTile, LeafIcon, TapperIcon, toneColours, UsersIcon, FarmMateArt } from '../../ui';
 import { FarmScreen, RowCard } from '../farm/pieces';
 import { saleHref } from '../routes';
 import { Banner, clearClosing, IconLine, kgText, tapperTone } from './pieces';
@@ -73,7 +73,7 @@ export function SalesScreen() {
           {data.rows.map((r) => (
             <Pressable key={r.id} testID={`sale-row-${r.id}`} accessibilityRole="button" onPress={() => open(r)} style={{ paddingVertical: t.space.md, gap: t.space.sm }}>
               <View style={{ flexDirection: 'row', gap: t.space.md }}>
-                <IconTile tone="accept" icon={(c) => <BasketIcon color={c} size={22} />} />
+                <IconTile tone="accept" icon={() => <FarmMateArt id="sale.sale" />} />
                 <View style={{ flex: 1, gap: t.space.xxs }}>
                   <Pressable accessibilityRole="button" testID={`sale-date-${r.id}`} onPress={toggleEra} hitSlop={8}>
                     <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>

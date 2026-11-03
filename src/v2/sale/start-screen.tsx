@@ -27,20 +27,15 @@ import { useTheme } from '../../theme';
 import {
   AppText,
   BottomSheet,
-  CalendarIcon,
   cardStyle,
   ChevronRight,
-  ClockIcon,
-  CoinIcon,
   CTA,
-  LeafIcon,
   MoneyField,
-  PersonIcon,
   Plus,
   RadioCard,
-  ReceiptIcon,
   TextField,
   UsersIcon,
+  FarmMateArt,
 } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { loadHomeSales } from './open-sale';
@@ -227,7 +222,7 @@ export function StartSaleScreen() {
       <View style={{ ...cardStyle(t), paddingHorizontal: t.space.lg }}>
         <FieldRow
           testID="start-date"
-          icon={(c) => <CalendarIcon color={c} size={20} />}
+          icon={() => <FarmMateArt id="farmwork.calendar" />}
           label={msg('start.date')}
           value={`${weekday} ${formatThaiDate(now, era)}`}
           lines={[msg('v2s.eraHint')]}
@@ -236,7 +231,7 @@ export function StartSaleScreen() {
         <Rule />
         <FieldRow
           testID="start-buyer"
-          icon={(c) => <UsersIcon color={c} size={20} />}
+          icon={() => <FarmMateArt id="people.buyer" />}
           label={msg('start.buyer')}
           value={buyer?.name ?? msg('start.noBuyer')}
           lines={buyer && buyer.id === latest?.id ? [msg('start.buyerLatest')] : []}
@@ -246,7 +241,7 @@ export function StartSaleScreen() {
         <Rule />
         <FieldRow
           testID="start-manager"
-          icon={(c) => <PersonIcon color={c} size={20} />}
+          icon={() => <FarmMateArt id="people.manager" />}
           label={msg('start.manager')}
           value={manager?.name ?? msg('start.noBuyer')}
           lines={manager ? [msg('start.managerAuto')] : []}
@@ -254,7 +249,7 @@ export function StartSaleScreen() {
         <Rule />
         <FieldRow
           testID="start-time"
-          icon={(c) => <ClockIcon color={c} size={20} />}
+          icon={() => <FarmMateArt id="farmwork.history" />}
           label={msg('v2s.startTime')}
           value={<EmptyPill label={msg('v2s.notRecorded')} />}
           lines={[msg('backfill.optional')]}
@@ -262,7 +257,7 @@ export function StartSaleScreen() {
         <Rule />
         <FieldRow
           testID="start-price-row"
-          icon={(c) => <CoinIcon color={c} size={20} />}
+          icon={() => <FarmMateArt id="sale.rubberPrice" />}
           label={msg('v2s.price')}
           value={price !== null ? msg('v2s.perKg', { price: formatSatang(price) }) : <EmptyPill label={msg('numpad.later')} />}
           lines={[msg('v2s.priceLater'), msg('v2s.priceNow')]}
@@ -271,7 +266,7 @@ export function StartSaleScreen() {
         <Rule />
         <FieldRow
           testID="start-pair"
-          icon={(c) => <LeafIcon color={c} size={20} />}
+          icon={() => <FarmMateArt id="farmwork.tapping" />}
           label={msg('start.pair')}
           value={msg('v2f.kg', { n: pair.netG / 1000 })}
           lines={[pair.isDefault ? msg('v2s.pairDefault') : msg('v2s.basketKg', { n: pair.basketG / 1000 })]}
@@ -280,7 +275,7 @@ export function StartSaleScreen() {
         <Rule />
         <FieldRow
           testID="start-note-row"
-          icon={(c) => <ReceiptIcon color={c} size={20} />}
+          icon={() => <FarmMateArt id="farm.photos" />}
           label={note.trim() ? msg('v2s.noteRow') : ''}
           value={note.trim() || msg('v2s.noteRow')}
           trailing={<Plus color={t.color.inkSoft} size={14} />}

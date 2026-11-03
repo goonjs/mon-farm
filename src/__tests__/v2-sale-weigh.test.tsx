@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { useEffect } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
@@ -9,6 +9,7 @@ import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { LogBuilder } from '../core/fixtures';
 import { wrap } from '../test/render';
+import { FarmMateArt } from '../ui';
 import { writeCountMode } from '../store/hold-preference';
 import { readWeighBasis, writeWeighBasis, writeWeighMode } from '../store/weigh-mode-preference';
 import { BackfillScreen } from '../v2/sale/backfill-screen';
@@ -1056,5 +1057,62 @@ describe('v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)', (
       'menu-sales',
       'menu-delete',
     ]);
+  });
+});
+
+/** The traced originals drawn inside the element with this testID (E03-S11). */
+function art(testID: string): string[] {
+  return within(screen.getByTestId(testID)).UNSAFE_queryAllByType(FarmMateArt).map((a) => a.props.id as string);
+}
+
+describe('FarmMate originals on the sale screens (E03-S11 FM-8)', () => {
+  it('start: each field leads with its original', async () => {
+    await inSale(<StartSaleScreen />);
+    expect(art('start-date')).toEqual(['farmwork.calendar']);
+    expect(art('start-buyer')).toEqual(['people.buyer']);
+    expect(art('start-manager')).toEqual(['people.manager']);
+    expect(art('start-time')).toEqual(['farmwork.history']);
+    expect(art('start-price-row')).toEqual(['sale.rubberPrice']);
+    expect(art('start-pair')).toEqual(['farmwork.tapping']);
+    expect(art('start-note-row')).toEqual(['farm.photos']);
+  });
+
+  it('point picker: each point tile is the weighing point', async () => {
+    await started();
+    await inSale(<PointScreen />, { pair: 'builtin-50' });
+    await press('pick-farm-' + farm.farmA);
+    expect(art(`pick-point-${farm.a[0]}`)).toEqual(['farm.weighPoint']);
+  });
+
+  it('empty-scale check: the scale and the basket; the warning keeps its line icon', async () => {
+    await started();
+    await inSale(<ZeroTareScreen />, { point: farm.a[0], net: '50000', basket: '2000' });
+    expect(art('zero-tare')).toEqual(expect.arrayContaining(['sale.recordYield', 'sale.weigh']));
+    expect(art('zero-tare').every((id) => ['sale.recordYield', 'sale.weigh'].includes(id))).toBe(true);
+  });
+
+  it('counter: history and short-basket tools draw originals, undo keeps its arrow; menu rows draw originals, delete keeps its bin', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    expect(art('tool-history')).toEqual(['farmwork.history']);
+    expect(art('tool-short')).toEqual(['sale.weigh']);
+    expect(art('tool-undo')).toEqual([]);
+    await press('counter-menu');
+    expect(art('menu-finish')).toEqual([]);
+    expect(art('menu-backfill')).toEqual(['farmwork.history']);
+    expect(art('menu-public')).toEqual(['system.multiDevice']);
+    expect(art('menu-price')).toEqual(['sale.rubberPrice']);
+    expect(art('menu-info')).toEqual(['system.about']);
+    expect(art('menu-home')).toEqual(['nav.home']);
+    expect(art('menu-debts')).toEqual(['finance.otherCost']);
+    expect(art('menu-sales')).toEqual(['analysis.saleHistory']);
+    expect(art('menu-delete')).toEqual([]);
+  });
+
+  it('backfill: the proof photo tile', async () => {
+    await started();
+    await inSale(<BackfillScreen />, { point: farm.a[2] });
+    expect(art('backfill-proof')).toEqual(['farm.photos']);
   });
 });

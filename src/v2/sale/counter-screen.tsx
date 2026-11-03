@@ -36,10 +36,8 @@ import {
   cardStyle,
   Check,
   ChartIcon,
-  DeviceIcon,
   HomeIcon,
   ChevronRight,
-  ClockIcon,
   CTA,
   DotsIcon,
   IconTile,
@@ -51,6 +49,7 @@ import {
   TapperIcon,
   TextField,
   Undo,
+  FarmMateArt,
 } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { V2_HOME } from '../routes';
@@ -60,7 +59,7 @@ import { signed, useGoToPoint } from './move';
 import { Banner, figSize, IconLine, Kv, kgText, NumChip, PointBar, farmTone, tapperTone, useLeaveIfClosed, useSaleView } from './pieces';
 import { Ruler } from './ruler';
 import { BasisToggle, TypedReading } from './short-reading';
-import { MenuGroup, MenuRow, SaleMenu } from './sale-menu';
+import { MenuGroup, MENU_ART, MenuRow, SaleMenu } from './sale-menu';
 import { SaleOptionSheets, type OptionSheet } from './sale-options';
 
 type Sheet = 'none' | 'partial' | 'menu' | 'new-point' | 'undo-confirm' | OptionSheet;
@@ -74,6 +73,9 @@ interface Notice {
   readonly kg?: string;
 }
 
+
+/** A FarmMate original on a tool button (history, short basket), E03-S11. */
+const TOOL_ART = 24;
 export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet }) {
   const t = useTheme();
   const msg = useT();
@@ -278,8 +280,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       footer={
         <View style={{ flexDirection: 'row', gap: t.space.sm }}>
           <HoldButton testID="tool-undo" label={msg('rec.undo')} a11yLabel={lastNo !== null ? msg('rec.undoA11y', { n: lastNo }) : undefined} hint={lastNo !== null ? msg('rec.undoHint', { n: lastNo }) : msg('rec.undoHold')} icon={(c) => <Undo color={c} size={16} />} onHold={(input) => (input === 'hold-kbd' ? setSheet('undo-confirm') : undo())} disabled={!figs.lastId || !ready} />
-          {tool(msg('rec.history'), (c) => <ClockIcon color={c} size={20} />, () => router.push(`${base}/history?point=${pointId}` as Href), 'tool-history')}
-          {tool(filling ? msg('fill.short') : msg('rec.short'), (c) => <ScaleIcon color={c} size={20} />, () => {
+          {tool(msg('rec.history'), () => <FarmMateArt id="farmwork.history" size={TOOL_ART} />, () => router.push(`${base}/history?point=${pointId}` as Href), 'tool-history')}
+          {tool(filling ? msg('fill.short') : msg('rec.short'), () => <FarmMateArt id="sale.weigh" size={TOOL_ART} />, () => {
     setTypedEmpty(false);
     setReadingKg(null); // a cancelled sheet leaves nothing typed behind
     setWeighMode(readWeighMode()); // the device setting may have changed since this screen opened
@@ -421,10 +423,10 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
                     {msg('rec.finish')}
                   </MenuRow>
                   <MenuGroup title={msg('menu.grpRecord')}>
-                    <MenuRow testID="menu-backfill" tone="action" icon={(c) => <ClockIcon color={c} size={16} />} onPress={() => { setSheet('none'); router.push(`${base}/point?mode=backfill&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}` as Href); }}>
+                    <MenuRow testID="menu-backfill" tone="action" icon={() => <FarmMateArt id="farmwork.history" size={MENU_ART} />} onPress={() => { setSheet('none'); router.push(`${base}/point?mode=backfill&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}` as Href); }}>
                       {msg('backfill.title')}
                     </MenuRow>
-                    <MenuRow testID="menu-public" tone="action" icon={(c) => <DeviceIcon color={c} size={16} />} onPress={() => { setSheet('none'); router.push(`${base}/public?point=${pointId}${params.fill ? `&fill=${params.fill}` : ''}` as Href); }}>
+                    <MenuRow testID="menu-public" tone="action" icon={() => <FarmMateArt id="system.multiDevice" size={MENU_ART} />} onPress={() => { setSheet('none'); router.push(`${base}/public?point=${pointId}${params.fill ? `&fill=${params.fill}` : ''}` as Href); }}>
                       {msg('rec.public')}
                     </MenuRow>
                   </MenuGroup>
@@ -470,7 +472,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
             <View style={{ ...cardStyle(t), paddingHorizontal: t.space.md }}>
               {others.map((p) => (
                 <Pressable key={p.id} testID={`gone-pick-${p.id}`} accessibilityRole="button" onPress={() => goTo(p.id, { replace: true })} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, paddingVertical: t.space.sm }}>
-                  <IconTile tone={farmTone(master, p.propertyId)} icon={(c) => <PinIcon color={c} size={20} />} />
+                  <IconTile tone={farmTone(master, p.propertyId)} icon={() => <FarmMateArt id="farm.weighPoint" />} />
                   <View style={{ flex: 1 }}>
                     <AppText style={{ fontWeight: t.font.weight.bold }}>{p.name}</AppText>
                     <AppText variant="bodySm">{msg('v2s.tapperIs', { name: tapperName })}</AppText>

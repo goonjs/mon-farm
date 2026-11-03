@@ -43,9 +43,9 @@ import {
   IconTile,
   MoneyField,
   PinIcon,
-  TapperIcon,
   TextField,
   UsersIcon,
+  FarmMateArt,
 } from '../../ui';
 import { useSaleMoney } from '../money/sale/use-sale-money';
 import { FarmScreen } from '../farm/pieces';
@@ -251,7 +251,7 @@ function CheckBody({ bump }: { bump: () => void }) {
           return (
             <View key={z.zoneId} testID={`check-tapper-${z.personId}`} style={{ paddingVertical: t.space.sm, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md }}>
-                <IconTile tone={tapperTone(master, z.personId)} icon={(c) => <TapperIcon color={c} size={20} />} />
+                <IconTile tone={tapperTone(master, z.personId)} icon={() => <FarmMateArt id="people.tapper" />} />
                 <View style={{ flex: 1 }}>
                   <AppText style={{ fontWeight: t.font.weight.bold }}>{nameOf(z.personId)}</AppText>
                   <IconLine icon={(c) => <PinIcon color={c} size={12} />}>{msg('pick.points', { n: points.length })}</IconLine>
