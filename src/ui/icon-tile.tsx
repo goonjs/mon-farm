@@ -95,7 +95,6 @@ export function FactRow({ icon, children, testID }: { icon?: IconRender; childre
         </View>
       ) : null}
       <Text
-        numberOfLines={1}
         style={{
           flexShrink: 1,
           fontFamily: t.font.family.sans,

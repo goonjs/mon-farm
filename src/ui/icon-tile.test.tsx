@@ -43,7 +43,8 @@ describe('IconTile and FactRow (E01-S17 X4, D-70)', () => {
       fontSize: tokens.font.size.bodySm,
       fontFamily: tokens.font.family.sans,
     });
-    expect(screen.getByText('4 จุดชั่ง').props.numberOfLines).toBe(1);
+    // Wraps rather than cutting with … (owner rule 2026-10-27, no clipped content; E03-S11 e2e found "เก่าสุด 28 ต.ค. 2569" cut at 360 px, text L).
+    expect(screen.getByText('4 จุดชั่ง').props.numberOfLines).toBeUndefined();
     expect(flat(screen.getByTestId('fact-icon', { includeHiddenElements: true }).props.style).backgroundColor).toBe(c.inkSoft);
   });
 });
