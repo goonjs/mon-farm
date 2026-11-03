@@ -16,7 +16,7 @@ import { basketList } from '../../../core/sale-points';
 import type { Settlement } from '../../../core/settle';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, cardStyle, Check, IconTile, TapperIcon } from '../../../ui';
+import { AppText, BottomSheet, cardStyle, Check, IconTile, FarmMateArt } from '../../../ui';
 import type { TapperMoney } from '../../money/sale/use-sale-money';
 import { IconLine, Kv, kgText, tapperTone, useSaleView } from '../pieces';
 
@@ -93,7 +93,7 @@ export function SaleSheet({ s, tappers, checked, onClose }: { s: Settlement; tap
           return (
             <View key={tp.id} style={{ gap: t.space.xxs, marginTop: i ? t.space.sm : 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, flexWrap: 'wrap' }}>
-                {master ? <IconTile tone={tapperTone(master, tp.id)} icon={(c) => <TapperIcon color={c} size={16} />} /> : null}
+                {master ? <IconTile tone={tapperTone(master, tp.id)} icon={() => <FarmMateArt id="people.tapper" />} /> : null}
                 <AppText style={{ fontWeight: t.font.weight.bold }}>{tp.name}</AppText>
                 <AppText variant="caption">{msg('v2s.soldBy', { kg: kgText(tp.netG), amount: baht(tp.grossSatang) })}</AppText>
               </View>
