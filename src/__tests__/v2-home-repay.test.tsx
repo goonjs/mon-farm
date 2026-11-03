@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
 
 import { LogBuilder } from '../core/fixtures';
@@ -9,6 +9,7 @@ import type { SaleEvent } from '../core/types';
 import { writeFinance } from '../store/finance-write';
 import { store as mockStore } from '../store/store';
 import { wrap } from '../test/render';
+import { FarmMateArt } from '../ui';
 import { V2Home } from '../v2/home-screen';
 
 /**
@@ -88,6 +89,8 @@ describe('H1 · PR-14 เงินคืนหนี้ ยังไม่เข
     wrap(<V2Home />);
     await flush();
     const row = screen.getByTestId('home-repay-wait');
+    // E03-S11: the traced original, not the simplified redraw.
+    expect(within(row).UNSAFE_getByType(FarmMateArt).props.id).toBe('finance.otherCost');
     expect(row).toHaveTextContent(/เงินคืนหนี้ ยังไม่เข้าสวน · รอคนซื้อ/);
     // by name, Thai order — never by generated ids
     expect(screen.getByTestId('home-repay-wait-line-0')).toHaveTextContent('แดง ฿ 3,250 · นัด ฿ 5,250');
@@ -124,6 +127,7 @@ describe('H2 · PR-16 คนซื้อค้างสวน (one row per sale)
     wrap(<V2Home />);
     await flush();
     const row = screen.getByTestId('home-owes-s-owe');
+    expect(within(row).UNSAFE_getByType(FarmMateArt).props.id).toBe('finance.otherCost');
     expect(row).toHaveTextContent(/คนซื้อค้างสวน · ขาย 29 ต\.ค\. 2569 · ลานยางสมบูรณ์/);
     expect(screen.getByTestId('home-owes-s-owe-transfer')).toHaveTextContent('ส่วนโอน ฿ 2,688');
     expect(screen.getByTestId(`home-owes-s-owe-cash-${RED.id}`)).toHaveTextContent('ส่วนเงินสด (แดงจ่ายแล้ว) ฿ 3,251');

@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 import { parse, SvgAst, SvgXml } from 'react-native-svg';
 
-import { FarmMateArt } from './FarmMateArt';
+import { FarmMateArt, personArt } from './FarmMateArt';
 import { FARMMATE_MASTERS, type FarmMateArtId } from '../../../design/icons/farmmate-masters';
 import { wrap } from '../../test/render';
 
@@ -34,6 +34,8 @@ describe('FarmMateArt — the traced FarmMate original ("ตัวสวย")', 
     const { UNSAFE_getAllByType } = wrap(<FarmMateArt id="nav.home" size={26} />);
     const box = UNSAFE_getAllByType(View).find((v) => v.props['aria-hidden'])!;
     expect(box.props.style).toEqual({ width: 26, height: 26 });
+    // A marker the e2e finds originals by (line icons are svgs too).
+    expect(box.props.testID).toBe('farmmate-art');
   });
 
   it('defaults to 32, the size it takes on a 48 tile', () => {
@@ -50,5 +52,19 @@ describe('FarmMateArt — the traced FarmMate original ("ตัวสวย")', 
     const ids = Object.keys(FARMMATE_MASTERS) as FarmMateArtId[];
     expect(ids).toHaveLength(72);
     for (const id of ids) expect(parse(FARMMATE_MASTERS[id])?.tag).toBe('svg');
+  });
+});
+
+describe('personArt — a person tile drawn by role (owner 2026-11-03)', () => {
+  it.each([
+    [['tapper'], 'people.tapper'],
+    [['manager'], 'people.manager'],
+    [['tapper', 'manager'], 'people.tapper'],
+    [['owner'], 'nav.profile'],
+    [['buyer'], 'nav.profile'],
+    [[], 'nav.profile'],
+    [undefined, 'nav.profile'],
+  ] as const)('%j → %s', (roles, id) => {
+    expect(personArt(roles)).toBe(id);
   });
 });

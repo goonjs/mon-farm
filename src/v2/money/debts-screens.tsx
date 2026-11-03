@@ -23,6 +23,7 @@ import { useInFlight } from '../../finance/use-in-flight';
 import { useSaleCounts } from '../../finance/use-live-sales';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
+import { useMaster } from '../farm/pieces';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
 import {
@@ -36,10 +37,12 @@ import {
   CTA,
   DebtIcon,
   FactRow,
+  FarmMateArt,
   IconTile,
   MoneyField,
   MoneyOutIcon,
   PersonIcon,
+  personArt,
   PinnedActions,
   Plus,
   ReceiptIcon,
@@ -61,6 +64,8 @@ export function DebtsScreen() {
   const fin = useFinance();
   const counts = useSaleCounts();
   const [people, setPeople] = useState<{ id: string; name: string }[]>([]);
+  // Roles for the tiles come from the whole master, deleted people included (a tapper who left can still owe).
+  const master = useMaster().state;
   useEffect(() => {
     peopleStore.list().then((l) => setPeople(l.map((p) => ({ id: p.id, name: p.name }))), () => setPeople([]));
   }, []);
@@ -86,7 +91,7 @@ export function DebtsScreen() {
                 onPress={() => open(a.worker.id, a.worker.name)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, paddingVertical: t.space.sm, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint }}
               >
-                <IconTile tone="category2" icon={(c) => <PersonIcon color={c} />} />
+                <IconTile tone="category2" icon={() => <FarmMateArt id={personArt(master?.people.find((p) => p.id === a.worker.id)?.roles)} />} />
                 <View style={{ flex: 1, gap: 2 }}>
                   <AppText variant="heading" style={{ fontSize: t.font.size.bodyLg }}>{a.worker.name}</AppText>
                   <FactRow icon={(c) => <DebtIcon color={c} size={14} />}>
@@ -210,8 +215,8 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
           {account?.overpaid ? <Text testID="debt-flag" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.reject }}>{msg('debt.flag')}</Text> : null}
         </View>
         {planDraft === null ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, marginTop: t.space.sm }}>
-            <IconTile tone="category1" icon={(c) => <CalendarIcon color={c} />} />
+          <View testID="debt-plan-row" style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, marginTop: t.space.sm }}>
+            <IconTile tone="category1" icon={() => <FarmMateArt id="farmwork.calendar" />} />
             <View style={{ flex: 1 }}>
               <AppText variant="bodySm">{msg('debt.plan')}</AppText>
               <AppText testID="debt-plan" style={{ fontWeight: t.font.weight.bold }}>

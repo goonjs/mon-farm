@@ -40,8 +40,18 @@ export function FarmMateArt({ id, size = 32 }: { id: FarmMateArtId; size?: numbe
   if (!ast) return null;
   // The View carries aria-hidden on Android/iOS too (RN maps it there, not on the native svg host).
   return (
-    <View aria-hidden style={{ width: size, height: size }}>
+    <View testID="farmmate-art" aria-hidden style={{ width: size, height: size }}>
       <SvgAst ast={ast} override={{ 'aria-hidden': true, width: size, height: size }} />
     </View>
   );
+}
+
+/**
+ * Which original a person's tile shows, by role (owner 2026-11-03): a tapper
+ * the tapper, a manager the manager, anyone else the plain profile figure.
+ */
+export function personArt(roles?: readonly string[]): FarmMateArtId {
+  if (roles?.includes('tapper')) return 'people.tapper';
+  if (roles?.includes('manager')) return 'people.manager';
+  return 'nav.profile';
 }

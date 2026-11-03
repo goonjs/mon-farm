@@ -1,4 +1,4 @@
-export { FarmMateArt } from './FarmMateArt';
+export { FarmMateArt, personArt } from './FarmMateArt';
 export { FARMMATE_ART_CATEGORIES } from './art-categories';
 export { FarmMateIcon } from './FarmMateIcon';
 export {
@@ -8,3 +8,4 @@ export {
   type FarmMateIconCategory,
   type FarmMateIconDef,
 } from './registry';
+export type { FarmMateArtId } from '../../../design/icons/farmmate-masters';

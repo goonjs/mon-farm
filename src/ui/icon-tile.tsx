@@ -5,7 +5,8 @@
  * matching ink: `{tone}Sunk` + `{tone}` (all contrast-checked pairs).
  * Decorative: whatever sits beside it names the thing.
  *
- * FactRow — a small icon and one short fact in secondary text, one line.
+ * FactRow — a small icon and one short fact in secondary text; it wraps
+ * rather than cutting off (owner rule 2026-10-27, no clipped content).
  * Stack several for a card's details instead of joining them with "·".
  */
 
@@ -95,7 +96,6 @@ export function FactRow({ icon, children, testID }: { icon?: IconRender; childre
         </View>
       ) : null}
       <Text
-        numberOfLines={1}
         style={{
           flexShrink: 1,
           fontFamily: t.font.family.sans,
