@@ -12,7 +12,7 @@ import { activePoints, filterPeople } from '../../core/master';
 import { projectAccounts } from '../../core/finance/accounts';
 import { useT } from '../../i18n';
 import { financeStore } from '../../store/finance';
-import { BankIcon, FactRow, FarmIcon, GearIcon, IconTile, MenuItem, MoneyInIcon, PersonIcon, PinIcon, ScaleIcon, Check, ReceiptIcon } from '../../ui';
+import { BankIcon, FactRow, FarmIcon, IconTile, MenuItem, PersonIcon, PinIcon, ScaleIcon, Check, ReceiptIcon, FarmMateArt } from '../../ui';
 import { V2_HOME } from '../routes';
 import { FarmScreen, HelpNote, RowCard, useMaster } from './pieces';
 
@@ -31,20 +31,20 @@ export function FarmHubScreen() {
   return (
     <FarmScreen title={msg('farmData.title')} fallback={V2_HOME} testID="farm-hub">
       <RowCard>
-        <MenuItem testID="hub-farms" label={msg('properties.title')} onPress={go('/v2/farms')} leading={<IconTile tone="accept" icon={(c) => <FarmIcon color={c} size={22} />} />}>
+        <MenuItem testID="hub-farms" label={msg('properties.title')} onPress={go('/v2/farms')} leading={<IconTile tone="accept" icon={() => <FarmMateArt id="farm.allFarms" />} />}>
           <FactRow icon={(c) => <FarmIcon color={c} size={12} />}>{msg('farmData.propertiesCount', { n: farms })}</FactRow>
           <FactRow icon={(c) => <PinIcon color={c} size={12} />}>{msg('v2f.pointsCount', { n: points })}</FactRow>
         </MenuItem>
-        <MenuItem testID="hub-people" label={msg('farmData.people')} onPress={go('/v2/people')} leading={<IconTile tone="action" icon={(c) => <PersonIcon color={c} size={22} />} />}>
+        <MenuItem testID="hub-people" label={msg('farmData.people')} onPress={go('/v2/people')} leading={<IconTile tone="action" icon={() => <FarmMateArt id="people.contacts" />} />}>
           <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{msg('farmData.peopleCount', { n: people })}</FactRow>
         </MenuItem>
-        <MenuItem testID="hub-buyers" label={msg('farmData.buyers')} onPress={go('/v2/buyers')} leading={<IconTile tone="cream" icon={(c) => <MoneyInIcon color={c} size={22} />} />}>
+        <MenuItem testID="hub-buyers" label={msg('farmData.buyers')} onPress={go('/v2/buyers')} leading={<IconTile tone="cream" icon={() => <FarmMateArt id="people.buyer" />} />}>
           <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{msg('farmData.buyersCount', { n: buyers })}</FactRow>
         </MenuItem>
         <MenuItem testID="hub-accounts" label={msg('v2.accounts')} onPress={go('/v2/accounts')} leading={<IconTile tone="action" icon={(c) => <BankIcon color={c} size={22} />} />}>
           <FactRow icon={(c) => <BankIcon color={c} size={12} />}>{msg('v2f.accountsCount', { n: accounts })}</FactRow>
         </MenuItem>
-        <MenuItem testID="hub-sale-settings" label={msg('farmData.saleSettings')} onPress={go('/v2/sale-settings')} leading={<IconTile tone="neutral" icon={(c) => <GearIcon color={c} size={22} />} />}>
+        <MenuItem testID="hub-sale-settings" label={msg('farmData.saleSettings')} onPress={go('/v2/sale-settings')} leading={<IconTile tone="neutral" icon={() => <FarmMateArt id="system.appSettings" />} />}>
           <FactRow icon={(c) => <ReceiptIcon color={c} size={12} />}>{msg('saleSettings.net')}</FactRow>
           <FactRow icon={(c) => <ReceiptIcon color={c} size={12} />}>{msg('saleSettings.basket')}</FactRow>
           <FactRow icon={(c) => <ScaleIcon color={c} size={12} />}>{msg('v2f.scale')}</FactRow>

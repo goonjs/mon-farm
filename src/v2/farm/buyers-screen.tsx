@@ -13,7 +13,7 @@ import { defaultBuyer, type BuyerRecord } from '../../core/master';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Chip, IconTile, MenuItem, MoneyInIcon, TextField, TrashIcon } from '../../ui';
+import { AppText, BottomSheet, Button, Chip, IconTile, MenuItem, TextField, TrashIcon, FarmMateArt } from '../../ui';
 import { AddCTA, ConfirmSheet, DeletedLink, DeletedList, FarmScreen, HelpNote, RowCard, SaveFailed, useMaster, useWrite } from './pieces';
 
 type Sheet = { kind: 'none' } | { kind: 'form'; buyer: BuyerRecord | null } | { kind: 'delete'; buyer: BuyerRecord };
@@ -116,7 +116,7 @@ export function BuyersScreen() {
                   testID={`buyer-${b.id}`}
                   label={b.name}
                   onPress={() => open(b)}
-                  leading={<IconTile tone="cream" icon={(c) => <MoneyInIcon color={c} size={22} />} />}
+                  leading={<IconTile tone="cream" icon={() => <FarmMateArt id="people.buyer" />} />}
                   trailing={latest?.id === b.id ? <Chip testID="buyer-latest" tone="accept" label={msg('buyers.latest')} /> : undefined}
                 />
               ))}

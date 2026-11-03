@@ -57,7 +57,8 @@ import {
   QuantityField,
   SegmentedControl,
   TextField,
-  TrashIcon
+  TrashIcon,
+  FarmMateArt,
 } from '../../ui';
 import { cardStyle } from '../../ui/card';
 import { FieldLabel } from '../../ui/form';
@@ -169,7 +170,7 @@ function FarmRow({ state, farm, index, today }: { state: MasterState; farm: Prop
       testID={`farm-${farm.id}`}
       label={farm.name}
       onPress={() => router.push(`/v2/property/${farm.id}` as Href)}
-      leading={<IconTile tone={categoryTone(index)} icon={(c) => <FarmIcon color={c} size={22} />} />}
+      leading={<IconTile tone={categoryTone(index)} icon={() => <FarmMateArt id="nav.myFarm" />} />}
     >
       <FactRow icon={(c) => <FarmIcon color={c} size={12} />}>{msg(`crop.${farm.crop}`)}</FactRow>
       {area === null ? (
@@ -429,7 +430,7 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
     >
       <RowCard testID="property-summary">
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
-          <IconTile tone={categoryTone(Math.max(0, index))} icon={(c) => <FarmIcon color={c} size={22} />} />
+          <IconTile tone={categoryTone(Math.max(0, index))} icon={() => <FarmMateArt id="nav.myFarm" />} />
           <View style={{ flex: 1, gap: t.space.xxs }}>
             <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm }}>{property.name}</AppText>
             <FactRow icon={(c) => <FarmIcon color={c} size={12} />}>{msg(`crop.${property.crop}`)}</FactRow>
@@ -491,7 +492,7 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
               testID={`point-${p.id}`}
               label={p.name}
               onPress={() => router.push(`/v2/point/${p.id}` as Href)}
-              leading={<IconTile tone={categoryTone(Math.max(0, index))} icon={(c) => <PinIcon color={c} size={20} />} />}
+              leading={<IconTile tone={categoryTone(Math.max(0, index))} icon={() => <FarmMateArt id="farm.weighPoint" />} />}
             >
               <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{tapper ?? msg('assign.none')}</FactRow>
             </MenuItem>

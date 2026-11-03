@@ -28,7 +28,7 @@ import { useT } from '../../i18n';
 import { ShareTooEarlyError } from '../../store/master-store';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
-import { AppText, CalendarIcon, Card, Check, FactRow, FarmIcon, FieldError, IconTile, MenuItem, PercentIcon, PersonIcon, QuantityField, SegmentedControl, TextField } from '../../ui';
+import { AppText, CalendarIcon, Card, Check, FactRow, FarmIcon, FieldError, IconTile, MenuItem, PersonIcon, QuantityField, SegmentedControl, TextField, FarmMateArt } from '../../ui';
 import { NotFound } from './people-screens';
 import { FarmScreen, RowCard, useDay, useMaster, useMounted, useWrite } from './pieces';
 
@@ -53,7 +53,7 @@ export function SharesScreen() {
                 testID={`share-${p.id}`}
                 label={p.name}
                 onPress={() => router.push(`/v2/share/${p.id}` as Href)}
-                leading={<IconTile tone="action" icon={(c) => <PercentIcon color={c} size={20} />} />}
+                leading={<IconTile tone="action" icon={() => <FarmMateArt id="people.profitShare" />} />}
               >
                 <FactRow icon={(c) => <PersonIcon color={c} size={12} />}>{msg('share.tapper', { n: share.tapperPct })}</FactRow>
                 <FactRow icon={(c) => <FarmIcon color={c} size={12} />}>{msg('share.owner', { n: share.ownerPct })}</FactRow>

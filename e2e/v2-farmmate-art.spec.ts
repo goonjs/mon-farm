@@ -32,6 +32,7 @@ const FARM: MasterPayload[] = [
   { t: 'property_added', propertyId: 'fa', name: 'จันทเขลม', crop: 'rubber' },
   { t: 'point_added', pointId: 'a1', propertyId: 'fa', name: 'จุด 1' },
   { t: 'tapper_assigned', assignmentId: 's1', pointId: 'a1', tapperId: 'red' },
+  { t: 'buyer_added', buyerId: 'buyer-a', name: 'คนรับซื้อยาง ก' },
 ];
 
 const finEvent = (n: number, targetId: string, payload: FinancePayload): FinanceEvent => ({
@@ -137,13 +138,23 @@ const SCREENS: { name: string; min: number; open: (page: Page) => Promise<void> 
   { name: 'expense-form', min: 7, open: async (page) => { await page.goto('/v2/expense/new'); await page.getByTestId('expense-payer-row').waitFor(); } },
   { name: 'owed', min: 3, open: async (page) => { await page.goto('/v2/owed'); await page.getByTestId('owed-open-red').waitFor(); } },
   { name: 'debts', min: 1, open: async (page) => { await page.goto('/v2/debts'); await page.getByTestId('debt-account-red').waitFor(); } },
+  // E03-S11 FM-7: the farm screens.
+  { name: 'farm-hub', min: 4, open: async (page) => { await page.goto('/v2/farm'); await page.getByTestId('hub-farms').waitFor(); } },
+  { name: 'farms', min: 1, open: async (page) => { await page.goto('/v2/farms'); await page.getByTestId('farm-fa').waitFor(); } },
+  { name: 'property', min: 2, open: async (page) => { await page.goto('/v2/property/fa'); await page.getByTestId('property-summary').waitFor(); } },
+  { name: 'points', min: 1, open: async (page) => { await page.goto('/v2/points'); await page.getByTestId('point-a1').waitFor(); } },
+  { name: 'point', min: 2, open: async (page) => { await page.goto('/v2/point/a1'); await page.getByTestId('point-summary').waitFor(); } },
+  { name: 'people', min: 3, open: async (page) => { await page.goto('/v2/people'); await page.getByTestId('person-red').waitFor(); } },
+  { name: 'person', min: 2, open: async (page) => { await page.goto('/v2/person/red'); await page.getByTestId('person-profile').waitFor(); } },
+  { name: 'buyers', min: 1, open: async (page) => { await page.goto('/v2/buyers'); await page.getByTestId('buyer-buyer-a').waitFor(); } },
+  { name: 'shares', min: 1, open: async (page) => { await page.goto('/v2/shares'); await page.getByTestId('share-red').waitFor(); } },
   { name: 'debt-account', min: 1, open: async (page) => { await page.goto('/v2/debt/red?name=%E0%B9%81%E0%B8%94%E0%B8%87'); await page.getByTestId('debt-plan-row').waitFor(); } },
 ];
 
 for (const width of [360, 390]) {
   for (const size of ['s', 'm', 'l'] as const) {
-    test(`home and money draw the originals, nothing cut off, at ${width} px text ${size}`, async ({ page }) => {
-      test.setTimeout(90_000);
+    test(`home, money and farm draw the originals, nothing cut off, at ${width} px text ${size}`, async ({ page }) => {
+      test.setTimeout(180_000);
       await page.setViewportSize({ width, height: 844 });
       await page.addInitScript((size) => localStorage.setItem('mon-farm:text-size', size), size);
       await seed(page);
