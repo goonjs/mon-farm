@@ -216,12 +216,32 @@ for (const width of [360, 390]) {
       });
       expect(below).toBe(0);
       if (process.env.UPDATE_SCREENSHOTS) await page.screenshot({ path: `docs/ux/screenshots/e03-s10/dev-icons-link-${width}-${size}.png` });
+      if (process.env.UPDATE_SCREENSHOTS) await row.screenshot({ path: `docs/ux/screenshots/e03-s11/dev-icons-link-${width}-${size}.png` });
 
       await row.click();
       await expect(page).toHaveURL(/\/v2\/dev\/icons$/);
       await expect(page.getByTestId('dev-icon-nav.home')).toBeVisible();
       expect(await textFit(page)).toEqual([]);
+      // E03-S11 FM-3/FM-5: all 72 traced originals, each drawn (painted paths, its full size) inside its card, none past the screen edge.
+      const cards = await page.evaluate((width) => {
+        const out = { count: 0, problems: [] as string[] };
+        for (const card of document.querySelectorAll('[data-testid^="dev-icon-"]')) {
+          out.count++;
+          const id = card.getAttribute('data-testid');
+          const svg = card.querySelector('svg');
+          const c = card.getBoundingClientRect();
+          if (!svg || svg.querySelectorAll('path').length === 0) out.problems.push(`${id}: not drawn`);
+          else {
+            const r = svg.getBoundingClientRect();
+            if (Math.round(r.width) !== 48 || r.left < c.left || r.right > c.right) out.problems.push(`${id}: icon ${r.width}px or outside its card`);
+          }
+          if (c.right > width + 1) out.problems.push(`${id}: past the screen edge`);
+        }
+        return out;
+      }, width);
+      expect(cards).toEqual({ count: 72, problems: [] });
       if (process.env.UPDATE_SCREENSHOTS && width === 360 && size === 'l') await evidence(page, 'docs/ux/screenshots/e03-s10/dev-icons-page-360-l.png');
+      if (process.env.UPDATE_SCREENSHOTS) await page.screenshot({ path: `docs/ux/screenshots/e03-s11/dev-icons-page-${width}-${size}.png` });
     });
   }
 }
