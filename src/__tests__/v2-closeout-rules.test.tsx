@@ -358,6 +358,31 @@ describe('editing what was confirmed replaces it; an unchanged confirm writes no
   });
 });
 
+describe('back from the payment page: what was chosen and checked stays (owner 2026-11-04)', () => {
+  const S = 'r-back';
+  beforeAll(() => storySale(S));
+  beforeEach(() => clearDraft(S));
+
+  it('ไม่หัก (nothing recorded) stays 0, the cards stay checked and ยืนยันยอด stays open; confirming again writes nothing', async () => {
+    await confirmAs(S, async () => {
+      await press(`co-deduct-${farm.nat}`);
+      await press('co-quick-none');
+      await press('co-deduct-ok');
+    });
+    expect(await live(S, farm.nat)).toEqual([]);
+    const n = (await all()).length;
+    // ← back: the summary mounts again in the same app session.
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    expect(last(`co-deduct-${farm.nat}`)).toHaveTextContent(/0\.00/);
+    expect(last(`co-deduct-${farm.nat}`)).not.toHaveTextContent(/−/);
+    expect(last(`co-deduct-${farm.red}`)).toHaveTextContent(/−3,250\.00/);
+    expect(last('co-confirm')).toHaveTextContent('ยืนยันยอด · ไปจ่ายเงิน');
+    await press('co-confirm');
+    r.unmount();
+    expect((await all()).length).toBe(n);
+  });
+});
+
 describe('an older sale writes the sale day, not today', () => {
   const S = 'r-old';
   const DAY = '2026-10-03';

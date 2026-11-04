@@ -1,8 +1,9 @@
 /**
  * The close-out pages' one way in (E05-S11): the draft the owner is
- * changing (held in memory per sale, across the summary → cash step → back
- * pages, never written), the plan core computes from it, and the one
- * "ยืนยันยอด" write. Every screen of the flow reads this hook so they agree.
+ * changing (held in memory per sale, across the summary → cash step → payment
+ * → back pages, kept after confirm, never written), the plan core computes
+ * from it, and the one "ยืนยันยอด" write. Every screen of the flow reads this
+ * hook so they agree.
  *
  * The draft is not an event (CO-3: nothing is saved until confirm). If the
  * app is closed before confirm the draft is gone and the proposal shows
@@ -258,7 +259,9 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       d.plan.workers.filter((w) => w.routeSatang > 0).map((w) => ({ workerId: w.id, route: w.route })),
       d.plan.hasFraction ? r : null,
     );
-    clearDraft(saleId);
+    // The draft stays (owner 2026-11-04): ← back from the payment page shows what was chosen and checked.
+    // "ไม่หัก" writes no line, so only the draft remembers it; the checks' figures do not move on this
+    // device's own writes (N3), and lines another device moves drop the draft's amounts as before (B1′).
     fin.reload();
     return true;
   };
