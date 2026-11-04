@@ -74,6 +74,17 @@ export function updateDraft(saleId: string, change: (d: CloseoutDraft) => Closeo
   notify();
 }
 
+/**
+ * The draft after a confirm that wrote everything: the checks and answers stay; of the workers, only
+ * those confirmed at 0 ("ไม่หัก", no line written) keep `totalSatang: 0` with the lines' signature it was
+ * set on (so another device's lines still drop it, B1′). Everything else follows the recorded lines.
+ */
+export function afterConfirm(d: CloseoutDraft, zero: ReadonlySet<string>): CloseoutDraft {
+  const workers: Record<string, CloseoutWorkerDraft> = {};
+  for (const id of zero) workers[id] = { totalSatang: 0, ...(d.workers[id]?.linesSig !== undefined ? { linesSig: d.workers[id].linesSig } : {}) };
+  return { ...d, workers, rounding: null };
+}
+
 export function clearDraft(saleId: string): void {
   drafts.delete(saleId);
   notify();
@@ -259,9 +270,11 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       d.plan.workers.filter((w) => w.routeSatang > 0).map((w) => ({ workerId: w.id, route: w.route })),
       d.plan.hasFraction ? r : null,
     );
-    // The draft stays (owner 2026-11-04): ← back from the payment page shows what was chosen and checked.
-    // "ไม่หัก" writes no line, so only the draft remembers it; the checks' figures do not move on this
-    // device's own writes (N3), and lines another device moves drop the draft's amounts as before (B1′).
+    // Owner 2026-11-04: ← back from the payment page keeps what was chosen and checked. Only what the
+    // recorded lines cannot hold stays (review 1–2): the checks (their figures do not move on this device's
+    // own writes, N3) and "ไม่หัก" (0 writes no line). Amounts, routes and rounding follow the recorded lines
+    // again, so a later payment-page fix or another device's change is what step 2 shows.
+    updateDraft(saleId, (cur) => afterConfirm(cur, new Set(d.plan.workers.filter((w) => w.totalSatang === 0).map((w) => w.id))));
     fin.reload();
     return true;
   };

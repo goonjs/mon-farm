@@ -381,6 +381,28 @@ describe('back from the payment page: what was chosen and checked stays (owner 2
     r.unmount();
     expect((await all()).length).toBe(n);
   });
+
+  it('a payment-page fix after confirm wins over the amount typed before it (review 1): back shows the fixed line; confirm writes nothing', async () => {
+    await confirmAs(S, async () => {
+      await press(`co-deduct-${farm.red}`);
+      await keys('1500');
+      await press('co-deduct-ok');
+    });
+    expect(await live(S, farm.red)).toEqual([['transfer-with-owner', 150_000]]);
+    // "ได้น้อยกว่านี้" on the payment page: this device edits the existing line (routeFixWrites).
+    const es = await all();
+    const line = es.find((e) => e.payload.t === 'debt_payment_recorded' && e.payload.fields.saleId === S && e.payload.fields.worker.id === farm.red && !es.some((x) => x.targetId === e.targetId && x.payload.t === 'debt_payment_changed'))!;
+    await act(async () => {
+      await writeFinance(line.targetId, line.id, { t: 'debt_payment_changed', patch: { amountSatang: 100_000 } });
+    });
+    const n = (await all()).length;
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    expect(last(`co-deduct-${farm.red}`)).toHaveTextContent(/−1,000\.00/);
+    await press('co-confirm');
+    r.unmount();
+    // Nothing written: the fixed 1,000 stands (live() reads recorded amounts, not patches, so it is not used here).
+    expect((await all()).length).toBe(n);
+  });
 });
 
 describe('an older sale writes the sale day, not today', () => {
