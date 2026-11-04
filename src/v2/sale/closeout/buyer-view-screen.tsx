@@ -8,7 +8,7 @@
  * transfer is what ShowAccountScreen shows (E05-S07).
  */
 
-import { useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { PixelRatio, Platform, Text, View } from 'react-native';
 
@@ -102,6 +102,8 @@ export function BuyerViewScreen() {
   const { era } = useI18n();
   const router = useRouter();
   const co = useCloseout();
+  /** Opened from the payment page: the same figures as that page (recorded lines only), not the draft. */
+  const fromPay = useLocalSearchParams<{ recorded?: string }>().recorded === '1';
   const shareSplit = useShareSplit();
   const saleId = co.saleId;
   const fallback = `/v2/sale/${saleId}/cash` as Href;
@@ -113,9 +115,10 @@ export function BuyerViewScreen() {
       {msg('cop.bvBack')}
     </Button>
   );
-  if (!co.ready || !co.plan) return <FarmScreen title={title} subtitle={subtitle} fallback={fallback} footer={footer} />;
+  const source = fromPay ? co.recordedPlan : co.plan;
+  if (!co.ready || !source) return <FarmScreen title={title} subtitle={subtitle} fallback={fallback} footer={footer} />;
 
-  const plan = co.plan;
+  const plan = source;
   const repayName = transferRepayName(plan);
   const accounts = co.fin.events ? projectAccounts(co.fin.events) : null;
   const choice = accounts?.choiceFor(saleId);

@@ -1,8 +1,9 @@
 /**
  * The close-out pages' one way in (E05-S11): the draft the owner is
- * changing (held in memory per sale, across the summary → cash step → back
- * pages, never written), the plan core computes from it, and the one
- * "ยืนยันยอด" write. Every screen of the flow reads this hook so they agree.
+ * changing (held in memory per sale, across the summary → cash step → payment
+ * → back pages, kept after confirm, never written), the plan core computes
+ * from it, and the one "ยืนยันยอด" write. Every screen of the flow reads this
+ * hook so they agree.
  *
  * The draft is not an event (CO-3: nothing is saved until confirm). If the
  * app is closed before confirm the draft is gone and the proposal shows
@@ -18,6 +19,8 @@ import {
   confirmGate,
   confirmWrites,
   debtPieces,
+  recordedDrafts,
+  REPAY_ROUTES,
   staleChecks,
   type CloseoutInput,
   type CloseoutWorker,
@@ -71,6 +74,19 @@ const notify = () => listeners.forEach((l) => l());
 export function updateDraft(saleId: string, change: (d: CloseoutDraft) => CloseoutDraft): void {
   drafts.set(saleId, change(drafts.get(saleId) ?? EMPTY_DRAFT));
   notify();
+}
+
+/**
+ * The draft after a confirm that wrote everything: the checks and answers stay; of the workers, only
+ * those the owner set to 0 in the deduct sheet ("ไม่หัก": no line is written, and the sheet stores the
+ * lines' signature with it) keep `totalSatang: 0` with that signature, so another device's lines still
+ * drop it (B1′). A 0 that was only the proposal (no debt, no share) is not kept. Everything else follows
+ * the recorded lines.
+ */
+export function afterConfirm(d: CloseoutDraft): CloseoutDraft {
+  const workers: Record<string, CloseoutWorkerDraft> = {};
+  for (const [id, w] of Object.entries(d.workers)) if (w.totalSatang === 0 && w.linesSig !== undefined) workers[id] = { totalSatang: 0, linesSig: w.linesSig };
+  return { ...d, workers, rounding: null };
 }
 
 export function clearDraft(saleId: string): void {
@@ -140,6 +156,15 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
         rounding,
       });
     const plan = planOf(draft.workers);
+    /** The recorded lines only (the payment page, and its buyer sheet): nothing recorded = 0, the recorded rounding or none. */
+    const recordedPlan = closeoutPlan({
+      saleTotalSatang: s.grossSatang,
+      ownerShareSatang: s.ownerSatang,
+      workers: inputs,
+      drafts: recordedDrafts(inputs),
+      defaultRoute: () => REPAY_ROUTES[0],
+      rounding: money.rounding.choice.asked ? money.rounding.choice.mode : 'none',
+    });
     /**
      * Review 3 (NB5): one worker's figures as if `patch` were in the draft, without writing it —
      * the deduct sheet opened on a double shows one device's set this way until a key or ✓ commits it.
@@ -162,7 +187,7 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       owedAnswered: draft.owedAnswered,
       plan,
     });
-    return { settlement: s, inputs, plan, preview, pieces, debtors, owed, gate, recordedLines, owedOf, mixed, sigs };
+    return { settlement: s, inputs, plan, recordedPlan, preview, pieces, debtors, owed, gate, recordedLines, owedOf, mixed, sigs };
   }, [ready, money, fin.state, fin.events, fin.deviceId, debts, saleId, draft, store, groupId]);
 
   // Review #10: each check remembers the figures it was made on; when they move (another device synced, a new
@@ -258,7 +283,11 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       d.plan.workers.filter((w) => w.routeSatang > 0).map((w) => ({ workerId: w.id, route: w.route })),
       d.plan.hasFraction ? r : null,
     );
-    clearDraft(saleId);
+    // Owner 2026-11-04: ← back from the payment page keeps what was chosen and checked. Only what the
+    // recorded lines cannot hold stays (review 1–2): the checks (their figures do not move on this device's
+    // own writes, N3) and "ไม่หัก" (0 writes no line). Amounts, routes and rounding follow the recorded lines
+    // again, so a later payment-page fix or another device's change is what step 2 shows.
+    updateDraft(saleId, afterConfirm);
     fin.reload();
     return true;
   };

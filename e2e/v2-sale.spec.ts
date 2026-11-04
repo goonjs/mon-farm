@@ -139,6 +139,57 @@ test('close-out: netting the money the farm owes back against a debt (E06-S04)',
   await expect(id('pay-tally')).toContainText('ยอดตรงกันแล้ว');
 });
 
+test('back from the payment page keeps what was chosen on the summary: ไม่หัก and the checked cards (owner 2026-11-04)', async ({ page }) => {
+  const id = on(page);
+  await seedMaster(page, FARM);
+  // แดง and นัด both owe; the farm owes นัด 640, so both cards must be checked before ยืนยันยอด.
+  const b = new LogBuilder('sale-back');
+  b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+  b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+  for (const p of ['a1', 'a4']) b.sys({ t: 'pile_added', pileId: p, zoneId: 'fa', name: p, tareG: 2_000, stdNetG: 50_000 });
+  for (let n = 1; n <= 3; n++) b.acceptAt('a1', n);
+  for (let n = 1; n <= 2; n++) b.acceptAt('a4', n);
+  const now = Date.now();
+  await seedEvents(page, b.build().map((e) => ({ ...e, ts: now })));
+  await seedFinance(page, [finEvent(1, now, 'debt-red', loan(RED, 200_000, '2026-09-01')), finEvent(2, now, 'debt-nat', loan(NAT, 300_000, '2026-09-01')), finEvent(3, now, 'exp-nat', owesNat(64_000, '2026-09-28'))]);
+  await page.goto('/v2/sale/sale-back/settlement');
+  await expect(id('co-summary')).toBeVisible();
+  // นัด: ไม่หัก (0) — nothing is recorded for him at confirm.
+  await id('co-deduct-nat').click();
+  await id('co-quick-none').click();
+  await id('co-deduct-ok').click();
+  await expect(id('co-deduct-nat')).toContainText('0.00');
+  await id('co-debt-open').click();
+  await id('co-debt-ok').click();
+  await id('co-owed-open').click();
+  await id('co-owed-ok').click();
+  await expect(id('co-confirm')).toBeEnabled();
+  await id('co-confirm').click();
+  await expect(id('payment')).toBeVisible();
+
+  // ← back to step 2: นัด is still 0, both cards still checked, ยืนยันยอด still open.
+  await page.getByTestId('screen-header').filter({ visible: true }).getByRole('button').first().click();
+  await expect(id('co-summary')).toBeVisible();
+  await expect(id('co-deduct-nat')).toContainText('0.00');
+  await expect(id('co-deduct-nat')).not.toContainText('−');
+  await expect(id('co-debt-badge')).toHaveCount(0);
+  await expect(id('co-confirm')).toBeEnabled();
+
+  // Step 3 opens the buyer sheet too (owner 2026-11-04); after a reload (the draft is gone) it still shows
+  // what was recorded: นัด's whole share in cash, no repayment for him.
+  await id('co-confirm').click();
+  await expect(id('payment')).toBeVisible();
+  await page.reload();
+  await expect(id('payment')).toBeVisible();
+  await id('pay-buyer-view').click();
+  await expect(id('buyer-view')).toBeVisible();
+  await expect(id('bv-cash-nat')).toContainText('2,625.00');
+  await expect(id('bv-repay-nat')).toHaveCount(0);
+  await shot(page, 'pay-buyer-view');
+  await id('bv-back').click();
+  await expect(id('payment')).toBeVisible();
+});
+
 test('a sale for an earlier day takes part of a later-dated debt as separate cash (E05-S10)', async ({ page }) => {
   const id = on(page);
   await seedMaster(page, FARM);
