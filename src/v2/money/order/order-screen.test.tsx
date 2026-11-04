@@ -366,4 +366,17 @@ describe('order capture screen (E11-S11)', () => {
     expect(screen.getByTestId('ordc-saved')).toBeTruthy();
     expect((await created()).length - before).toBe(2);
   });
+
+  it('a saved formula never bought: picking it opens "ปุ๋ยใหม่" with the name filled in; one tap adds it to the order', async () => {
+    await seed(fertOptionId('formula', 'ดีเกลือ'), { t: 'fert_option_set', kind: 'formula', name: 'ดีเกลือ', description: '', hidden: false });
+    wrap(<OrderScreen />);
+    await flush();
+    press('ordc-add');
+    press(`ordc-pick-option|${fertOptionId('formula', 'ดีเกลือ')}`);
+    expect(screen.getByTestId('ordc-new-sheet')).toBeTruthy();
+    expect(screen.getByTestId('ordc-formula').props.value).toBe('ดีเกลือ');
+    press('ordc-new-done');
+    await flush();
+    expect(text('ordc-item-name')).toBe('ดีเกลือ');
+  });
 });

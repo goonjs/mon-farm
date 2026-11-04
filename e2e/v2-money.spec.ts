@@ -174,3 +174,24 @@ test('v2 worker debts — fertilizer via the shop order, account reconciliation,
   await page.getByTestId('debt-pay-save').click();
   await expect(page.getByTestId('debt-balance')).toContainText('4,500.00');
 });
+
+test('a saved fertilizer never bought: picking it fills its name, one tap puts it on the order (offline)', async ({ page, context }) => {
+  await page.goto('/v2/order');
+  await context.setOffline(true);
+  // Remember "ดีเกลือ" from "ปุ๋ยใหม่" (ticked by default), then close the item sheet without adding it: saved, never bought.
+  await page.getByTestId('ordc-add').click();
+  await page.getByTestId('ordc-pick-new').click();
+  await page.getByTestId('ordc-formula').fill('ดีเกลือ');
+  await page.getByTestId('ordc-new-done').click();
+  await expect(page.getByTestId('ordc-item-sheet')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('ordc-item-sheet')).toHaveCount(0);
+
+  await page.getByTestId('ordc-add').click();
+  await expect(page.getByTestId('ordc-pick-sheet')).toContainText('ยังไม่เคยซื้อ');
+  await page.locator('[data-testid^="ordc-pick-option|"]').filter({ hasText: 'ดีเกลือ' }).click();
+  await expect(page.getByTestId('ordc-formula')).toHaveValue('ดีเกลือ');
+  await evidence(page, `${SHOTS}/31-pick-saved-never-bought.png`);
+  await page.getByTestId('ordc-new-done').click();
+  await expect(page.getByTestId('ordc-item-name')).toHaveText('ดีเกลือ');
+});
