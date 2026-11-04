@@ -481,6 +481,10 @@ function PayBody({ bump }: { bump: () => void }) {
         </AppText>
         <SourcesPill testID="pay-sources-open" label={msg('cop.sources')} onPress={() => setSources(true)} />
       </View>
+      {/* Owner 2026-11-04: the buyer sheet (CO-20) opens from this page too; its กลับ comes back here, ticks are events. */}
+      <View style={{ alignItems: 'flex-end' }}>
+        <SourcesPill testID="pay-buyer-view" label={msg('cop.showBuyer')} onPress={() => router.push(`/v2/sale/${saleId}/buyer-view` as Href)} />
+      </View>
       {conflicts.length ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.tickConflict')} lines={[msg('v2s.tickConflictLine')]} testID="pay-conflict" /> : null}
       {overBanner ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.overTitle')} lines={[msg('v2s.overLine')]} testID="pay-over" /> : null}
       {blocks

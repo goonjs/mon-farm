@@ -180,6 +180,15 @@ describe('A9 look: the transfer split breaks before "↘ คืนหนี้" 
     });
     expect(pill.length).toBeGreaterThan(0);
   });
+
+  it('ให้คนรับซื้อดู opens the buyer sheet from this page too, on the same light pill (owner 2026-11-04)', async () => {
+    router.push.mockClear();
+    await inSale(S, <CloseoutPayScreen />);
+    const open = last('pay-buyer-view');
+    expect(open).toHaveTextContent(/ให้คนรับซื้อดู/);
+    fireEvent.press(open);
+    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${S}/buyer-view`);
+  });
 });
 
 describe('owner Q4: netting shows under the tapper\'s tick (↗ orange)', () => {
