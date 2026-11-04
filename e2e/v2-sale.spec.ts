@@ -174,6 +174,20 @@ test('back from the payment page keeps what was chosen on the summary: ไม่
   await expect(id('co-deduct-nat')).not.toContainText('−');
   await expect(id('co-debt-badge')).toHaveCount(0);
   await expect(id('co-confirm')).toBeEnabled();
+
+  // Step 3 opens the buyer sheet too (owner 2026-11-04); after a reload (the draft is gone) it still shows
+  // what was recorded: นัด's whole share in cash, no repayment for him.
+  await id('co-confirm').click();
+  await expect(id('payment')).toBeVisible();
+  await page.reload();
+  await expect(id('payment')).toBeVisible();
+  await id('pay-buyer-view').click();
+  await expect(id('buyer-view')).toBeVisible();
+  await expect(id('bv-cash-nat')).toContainText('2,625.00');
+  await expect(id('bv-repay-nat')).toHaveCount(0);
+  await shot(page, 'pay-buyer-view');
+  await id('bv-back').click();
+  await expect(id('payment')).toBeVisible();
 });
 
 test('a sale for an earlier day takes part of a later-dated debt as separate cash (E05-S10)', async ({ page }) => {

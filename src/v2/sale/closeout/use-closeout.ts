@@ -19,6 +19,8 @@ import {
   confirmGate,
   confirmWrites,
   debtPieces,
+  recordedDrafts,
+  REPAY_ROUTES,
   staleChecks,
   type CloseoutInput,
   type CloseoutWorker,
@@ -76,12 +78,14 @@ export function updateDraft(saleId: string, change: (d: CloseoutDraft) => Closeo
 
 /**
  * The draft after a confirm that wrote everything: the checks and answers stay; of the workers, only
- * those confirmed at 0 ("ไม่หัก", no line written) keep `totalSatang: 0` with the lines' signature it was
- * set on (so another device's lines still drop it, B1′). Everything else follows the recorded lines.
+ * those the owner set to 0 in the deduct sheet ("ไม่หัก": no line is written, and the sheet stores the
+ * lines' signature with it) keep `totalSatang: 0` with that signature, so another device's lines still
+ * drop it (B1′). A 0 that was only the proposal (no debt, no share) is not kept. Everything else follows
+ * the recorded lines.
  */
-export function afterConfirm(d: CloseoutDraft, zero: ReadonlySet<string>): CloseoutDraft {
+export function afterConfirm(d: CloseoutDraft): CloseoutDraft {
   const workers: Record<string, CloseoutWorkerDraft> = {};
-  for (const id of zero) workers[id] = { totalSatang: 0, ...(d.workers[id]?.linesSig !== undefined ? { linesSig: d.workers[id].linesSig } : {}) };
+  for (const [id, w] of Object.entries(d.workers)) if (w.totalSatang === 0 && w.linesSig !== undefined) workers[id] = { totalSatang: 0, linesSig: w.linesSig };
   return { ...d, workers, rounding: null };
 }
 
@@ -152,6 +156,15 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
         rounding,
       });
     const plan = planOf(draft.workers);
+    /** The recorded lines only (the payment page, and its buyer sheet): nothing recorded = 0, the recorded rounding or none. */
+    const recordedPlan = closeoutPlan({
+      saleTotalSatang: s.grossSatang,
+      ownerShareSatang: s.ownerSatang,
+      workers: inputs,
+      drafts: recordedDrafts(inputs),
+      defaultRoute: () => REPAY_ROUTES[0],
+      rounding: money.rounding.choice.asked ? money.rounding.choice.mode : 'none',
+    });
     /**
      * Review 3 (NB5): one worker's figures as if `patch` were in the draft, without writing it —
      * the deduct sheet opened on a double shows one device's set this way until a key or ✓ commits it.
@@ -174,7 +187,7 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       owedAnswered: draft.owedAnswered,
       plan,
     });
-    return { settlement: s, inputs, plan, preview, pieces, debtors, owed, gate, recordedLines, owedOf, mixed, sigs };
+    return { settlement: s, inputs, plan, recordedPlan, preview, pieces, debtors, owed, gate, recordedLines, owedOf, mixed, sigs };
   }, [ready, money, fin.state, fin.events, fin.deviceId, debts, saleId, draft, store, groupId]);
 
   // Review #10: each check remembers the figures it was made on; when they move (another device synced, a new
@@ -274,7 +287,7 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
     // recorded lines cannot hold stays (review 1–2): the checks (their figures do not move on this device's
     // own writes, N3) and "ไม่หัก" (0 writes no line). Amounts, routes and rounding follow the recorded lines
     // again, so a later payment-page fix or another device's change is what step 2 shows.
-    updateDraft(saleId, (cur) => afterConfirm(cur, new Set(d.plan.workers.filter((w) => w.totalSatang === 0).map((w) => w.id))));
+    updateDraft(saleId, afterConfirm);
     fin.reload();
     return true;
   };

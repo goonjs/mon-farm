@@ -187,7 +187,28 @@ describe('A9 look: the transfer split breaks before "↘ คืนหนี้" 
     const open = last('pay-buyer-view');
     expect(open).toHaveTextContent(/ให้คนรับซื้อดู/);
     fireEvent.press(open);
-    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${S}/buyer-view`);
+    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${S}/buyer-view?recorded=1`);
+  });
+});
+
+describe('ไม่หัก writes no line: this page reads it as 0, never the proposal (review 2026-11-04)', () => {
+  const S = 'co-pay-none';
+  beforeAll(async () => {
+    await storySale(S);
+    // only แดง's line is recorded; นัด was confirmed at "ไม่หัก"
+    await writeFinance(`dp-${S}-red`, null, { t: 'debt_payment_recorded', fields: { worker: { id: farm.red, name: 'แดง' }, creditor: FARM, amountSatang: 325_000, date: '2026-10-29', note: '', method: 'transfer-with-owner', saleId: S } });
+    await writeFinance(`sale-rounding-${S}`, null, { t: 'sale_rounding_set', saleId: S, mode: 'worker' });
+  });
+
+  it('the transfer carries แดง\'s 3,250.00 only, no repayment for นัด', async () => {
+    await inSale(S, <CloseoutPayScreen />);
+    expect(last('pay-sub-owner-repay')).toHaveTextContent('+ ↘ คืนหนี้แดง 3,250.00');
+    // ดูที่มา: นัด has no ↘ line and gets his whole share in cash; the repayment is แดง's alone.
+    fireEvent.press(last('pay-sources-open'));
+    await flush();
+    expect(last('co-src-debt')).not.toHaveTextContent(/5,250\.00/);
+    expect(last('co-src-paid')).toHaveTextContent(/คืนหนี้ 3,250\.00/);
+    expect(last('co-src-paid')).toHaveTextContent(/เงินสดนัด5,250\.00/);
   });
 });
 

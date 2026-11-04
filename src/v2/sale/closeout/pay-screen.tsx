@@ -35,11 +35,11 @@
  */
 
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { projectAccounts } from '../../../core/finance/accounts';
-import { closeoutPlan, payBlocks, pendingRepays, REPAY_ROUTES, sourcesSheet, type CloseoutPlan } from '../../../core/finance/closeout';
+import { payBlocks, pendingRepays, sourcesSheet, type CloseoutPlan } from '../../../core/finance/closeout';
 import { projectDebts } from '../../../core/finance/debts';
 import { buyerOwes, routeFixWrites } from '../../../core/finance/pending-repays';
 import { financeStore } from '../../../store/finance';
@@ -120,16 +120,9 @@ function PayBody({ bump }: { bump: () => void }) {
   const title = msg('cop.payPageTitle');
   const subtitle = state.saleStatus === 'draft' ? msg('v2s.draftOf', { title: saleTitle }) : saleTitle;
   const settlement = money.settlement;
-  const inputs = co.inputs;
   const roundingMode = money.rounding.choice.asked ? money.rounding.choice.mode : 'none';
-  // The truth on this page: the plan from the recorded lines only (no draft).
-  const plan: CloseoutPlan | null = useMemo(
-    () =>
-      settlement && inputs
-        ? closeoutPlan({ saleTotalSatang: settlement.grossSatang, ownerShareSatang: settlement.ownerSatang, workers: inputs, drafts: {}, defaultRoute: () => REPAY_ROUTES[0], rounding: roundingMode })
-        : null,
-    [settlement, inputs, roundingMode],
-  );
+  // The truth on this page: the plan from the recorded lines only (no draft; nothing recorded = 0).
+  const plan: CloseoutPlan | null = co.recordedPlan ?? null;
   const ready = view.ready && master && money.loaded && settlement && fin.events !== null && plan;
   if (!ready || !settlement || fin.events === null || !plan) return <FarmScreen title={title} subtitle={subtitle} fallback={'/v2/sales' as Href} />;
   const events = fin.events;
@@ -483,7 +476,7 @@ function PayBody({ bump }: { bump: () => void }) {
       </View>
       {/* Owner 2026-11-04: the buyer sheet (CO-20) opens from this page too; its กลับ comes back here, ticks are events. */}
       <View style={{ alignItems: 'flex-end' }}>
-        <SourcesPill testID="pay-buyer-view" label={msg('cop.showBuyer')} onPress={() => router.push(`/v2/sale/${saleId}/buyer-view` as Href)} />
+        <SourcesPill testID="pay-buyer-view" label={msg('cop.showBuyer')} onPress={() => router.push(`/v2/sale/${saleId}/buyer-view?recorded=1` as Href)} />
       </View>
       {conflicts.length ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.tickConflict')} lines={[msg('v2s.tickConflictLine')]} testID="pay-conflict" /> : null}
       {overBanner ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.overTitle')} lines={[msg('v2s.overLine')]} testID="pay-over" /> : null}

@@ -344,6 +344,15 @@ function workerDraft(w: CloseoutWorkerInput, given: CloseoutWorkerDraft | undefi
  * absorbs the opposite. CO-4 `leftChip`: debt left after this sale while the
  * worker's cash is 0 (the debt was above what the share could take).
  */
+/**
+ * The drafts that make `closeoutPlan` read the recorded lines only (the payment page and its buyer
+ * sheet, review 2026-11-04): a worker with nothing recorded is 0 — "ไม่หัก" writes no line — never
+ * the proposal. Workers with lines follow them (no draft).
+ */
+export function recordedDrafts(workers: readonly CloseoutWorkerInput[]): Record<string, CloseoutWorkerDraft> {
+  return Object.fromEntries(workers.filter((w) => w.recorded === null).map((w) => [w.id, { totalSatang: 0 }]));
+}
+
 export function closeoutPlan(input: CloseoutInput): CloseoutPlan {
   const drafted = input.workers.map((w) => ({
     w,
