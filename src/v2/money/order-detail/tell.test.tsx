@@ -153,8 +153,23 @@ describe('editItemPatch', () => {
     expect(after.amountSatang).toBe(before.amountSatang);
   });
 
+  it('a money-only edit never renames: a legacy item named by its formula alone keeps item, formula and brand as stored (review #3)', () => {
+    const legacy = item({ item: 'ยูเรีย', fertilizer: { ...item().fertilizer!, formula: 'ยูเรีย ', brand: 'ตราม้า' } });
+    const p = editItemPatch(legacy, money(), 'กระสอบ');
+    expect(p.item).toBeUndefined();
+    expect(p.fertilizer).toMatchObject({ formula: 'ยูเรีย ', brand: 'ตราม้า' });
+    // also when the sheet hands back the name it opened with
+    expect(editItemPatch(legacy, money(), 'กระสอบ', { name: 'ยูเรีย ', brand: 'ตราม้า' }).item).toBeUndefined();
+  });
+
+  it('an old item with no name can still be saved when the name is left alone (review #4)', () => {
+    const nameless = item({ item: '', fertilizer: null, categoryId: 'cat-fertilizer' });
+    expect(editItemProblems(nameless, money()).name).toBeUndefined();
+    expect(editItemProblems(nameless, money(), { name: '', brand: '' }).name).toBeUndefined();
+  });
+
   it('an empty name is a problem', () => {
-    expect(editItemProblems(item(), money(), { name: '  ', brand: 'x' })).toMatchObject({ name: true });
+    expect(editItemProblems(item(), money(), { name: '  ', brand: '' })).toMatchObject({ name: true });
     expect(editItemProblems(item(), money(), { name: 'ก', brand: '' }).name).toBeUndefined();
   });
 
@@ -199,8 +214,26 @@ describe('optionRenames (E11-S13 Q4: fix the saved list too)', () => {
   it('when the new name is already another saved option: hide the misspelt one and show that one, no duplicate', () => {
     const w = optionRenames([opt('formula', 'ดีกลือ'), opt('formula', 'ดีเกลือ', { hidden: true })], { name: 'ดีกลือ', brand: '' }, { name: 'ดีเกลือ', brand: '' });
     expect(w).toEqual([
-      { id: 'fopt-formula-ดีกลือ', kind: 'formula', name: 'ดีกลือ', description: 'd', hidden: true },
       { id: 'fopt-formula-ดีเกลือ', kind: 'formula', name: 'ดีเกลือ', description: 'd', hidden: false },
+      { id: 'fopt-formula-ดีกลือ', kind: 'formula', name: 'ดีกลือ', description: 'd', hidden: true },
     ]);
+  });
+
+  it('an option another live purchase still uses is not renamed: the new name is added (or shown) beside it (review #1)', () => {
+    const other15 = item({ id: 'o2-a', fertilizer: { ...item().fertilizer!, formula: '15-15-15', brand: 'ตราม้า' } });
+    const w = optionRenames([opt('formula', '15-15-15'), opt('brand', 'ตราม้า')], { name: '15-15-15', brand: 'ตราม้า' }, { name: '16-16-8', brand: 'ตราวัว' }, [other15]);
+    expect(w).toEqual([
+      { kind: 'formula', name: '16-16-8', description: '', hidden: false },
+      { kind: 'brand', name: 'ตราวัว', description: '', hidden: false },
+    ]);
+    // already saved and shown: nothing to write
+    expect(optionRenames([opt('formula', '15-15-15'), opt('formula', '16-16-8')], { name: '15-15-15', brand: '' }, { name: '16-16-8', brand: '' }, [other15])).toEqual([]);
+    // a deleted purchase does not count
+    expect(optionRenames([opt('formula', '15-15-15')], { name: '15-15-15', brand: '' }, { name: '16-16-8', brand: '' }, [{ ...other15, deleted: true }])[0]).toMatchObject({ id: 'fopt-formula-15-15-15', name: '16-16-8' });
+  });
+
+  it('show the existing name before hiding the misspelt one, so a write failing in between leaves both, never neither (review #2)', () => {
+    const w = optionRenames([opt('formula', 'ดีกลือ'), opt('formula', 'ดีเกลือ', { hidden: true })], { name: 'ดีกลือ', brand: '' }, { name: 'ดีเกลือ', brand: '' });
+    expect(w.map((x) => [x.id, x.hidden])).toEqual([['fopt-formula-ดีเกลือ', false], ['fopt-formula-ดีกลือ', true]]);
   });
 });

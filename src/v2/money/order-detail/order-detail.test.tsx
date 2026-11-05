@@ -257,6 +257,31 @@ describe('OrderDetailView', () => {
     expect(write.mock.calls[3][2]).toMatchObject({ t: 'fert_option_set', name: 'ดีเกลือ' });
   });
 
+  it('edit item (review #2): show-then-hide fails on the second write; saving again retries the planned writes, nothing is dropped', async () => {
+    const opts = [{ id: 'fopt-formula-ดีกลือ', kind: 'formula' as const, name: 'ดีกลือ', description: '', hidden: false }, { id: 'fopt-formula-ดีเกลือ', kind: 'formula' as const, name: 'ดีเกลือ', description: '', hidden: true }];
+    const write = setup([exp('o1-a', { item: 'ดีกลือ', fertilizer: { ...FERT, formula: 'ดีกลือ' } as never })], [], opts);
+    write.mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('disk'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-rename'));
+    fireEvent.changeText(screen.getByTestId('ordd-edit-name'), 'ดีเกลือ');
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(screen.getByTestId('ordd-edit-failed')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(6));
+    expect(write.mock.calls.slice(3).map((c) => c[0])).toEqual(['o1-a', 'fopt-formula-ดีเกลือ', 'fopt-formula-ดีกลือ']);
+  });
+
+  it('edit item (review #5): a double tap on บันทึก writes once', async () => {
+    const write = setup([a]);
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(write).toHaveBeenCalledTimes(1);
+  });
+
   it('edit item (E11-S13 Q4): untick = only this item is written', async () => {
     const write = setup([exp('o1-a', { item: 'ดีกลือ', fertilizer: { ...FERT, formula: 'ดีกลือ' } as never })], [], [{ id: 'fopt-formula-ดีกลือ', kind: 'formula', name: 'ดีกลือ', description: '', hidden: false }]);
     fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));

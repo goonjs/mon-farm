@@ -3,7 +3,7 @@
  * item of an existing order. Saving is one patch (`editItemPatch`); a quantity below what is already told is blocked.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { Expense, FertOption } from '../../../core/finance/ledger';
@@ -21,6 +21,7 @@ import { SolidCTA } from '../order/solid-cta';
 export function EditItemSheet({
   item,
   options = [],
+  others = [],
   onSave,
   onFixOptions,
   onDelete,
@@ -29,6 +30,8 @@ export function EditItemSheet({
   item: Expense;
   /** Saved fertilizer choices, for "แก้ในรายการปุ๋ยด้วย" (E11-S13 Q4). */
   options?: readonly FertOption[];
+  /** The other expenses: a saved name still used by another purchase is added to, not renamed (review #1). */
+  others?: readonly Expense[];
   onSave: (patch: ExpensePatch) => Promise<boolean>;
   /** Written after the item saved; false = failed (the sheet stays open, saving again is harmless). */
   onFixOptions?: (writes: readonly OptionWrite[]) => Promise<boolean>;
@@ -48,7 +51,7 @@ export function EditItemSheet({
   // The name is fixed rarely (a misspelling): it stays one line until "แก้ชื่อ" opens the fields, so the usual edit fits one screen.
   const [renaming, setRenaming] = useState(false);
   const [fixList, setFixList] = useState(true);
-  const renames = fert ? optionRenames(options, startName, name) : [];
+  const renames = fert ? optionRenames(options, startName, name, others) : [];
   const [discountOpen, setDiscountOpen] = useState(m.discount > 0);
   const [tried, setTried] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -59,12 +62,27 @@ export function EditItemSheet({
   const per = m.unitPrice ?? (m.gross !== null && m.qty ? perUnit(m.gross, m.qty) : null);
   const net = m.gross === null ? null : Math.max(0, m.gross - m.discount);
 
+  // The list writes planned at the first save: a retry after a partial failure repeats exactly these, even though
+  // the live options have moved on (review #2). One save at a time (review #5).
+  const plan = useRef<readonly OptionWrite[] | null>(null);
+  const busy = useRef(false);
+  const [planned, setPlanned] = useState(false);
   const save = async () => {
     setTried(true);
-    if (blocked) return;
-    const ok = (await onSave(editItemPatch(item, m, unit, name))) && (!fixList || !renames.length || !onFixOptions || (await onFixOptions(renames)));
-    if (ok) onClose();
-    else setFailed(true);
+    if (blocked || busy.current) return;
+    busy.current = true;
+    try {
+      if (plan.current === null) {
+        plan.current = fixList ? renames : [];
+        setPlanned(true);
+      }
+      const writes = plan.current;
+      const ok = (await onSave(editItemPatch(item, m, unit, name))) && (!writes.length || !onFixOptions || (await onFixOptions(writes)));
+      if (ok) onClose();
+      else setFailed(true);
+    } finally {
+      busy.current = false;
+    }
   };
 
   return (
@@ -97,7 +115,7 @@ export function EditItemSheet({
             </Pressable>
           </View>
         )}
-        {renames.length ? <TickCard testID="ordd-edit-fix-list" title={msg('ordd.edit.fixList')} on={fixList} onPress={() => setFixList((v) => !v)} /> : null}
+        {renames.length && !planned ? <TickCard testID="ordd-edit-fix-list" title={msg('ordd.edit.fixList')} on={fixList} onPress={() => setFixList((v) => !v)} /> : null}
         <QuantityField testID="ordd-edit-qty" label={msg('ordc.qty')} value={m.qty} unit={unit} min={1} onChange={(q) => setM(withQty(m, q))} />
         {tried && mp.qty ? <FieldError testID="ordd-edit-err-qty">{msg('ordc.err.qty')}</FieldError> : null}
         {ep.tappers !== undefined ? <FieldError testID="ordd-edit-err-tappers">{msg('ordd.edit.errTappers', { n: ep.tappers })}</FieldError> : null}

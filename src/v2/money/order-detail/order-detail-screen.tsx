@@ -202,7 +202,7 @@ export function OrderDetailView({
       </ScrollView>
 
       {sheet === 'header' ? <HeaderSheet order={order} onSave={saveHeader} onClose={() => setSheet(null)} /> : null}
-      {open && kind === 'edit' ? <EditItemSheet key={open.id} item={open} options={state.fertOptions} onSave={saveItem(open)} onFixOptions={fixOptions} onDelete={() => setSheet({ kind: 'delItem', id: open.id })} onClose={() => setSheet(null)} /> : null}
+      {open && kind === 'edit' ? <EditItemSheet key={open.id} item={open} options={state.fertOptions} others={state.expenses.filter((x) => x.id !== open.id)} onSave={saveItem(open)} onFixOptions={fixOptions} onDelete={() => setSheet({ kind: 'delItem', id: open.id })} onClose={() => setSheet(null)} /> : null}
       {open && kind === 'delItem' ? <ConfirmSheet testID="ordd-delete-item-sheet" title={msg('ordd.deleteItem.title')} body={msg('ordd.deleteItem.body', { item: open.item })} confirmLabel={msg('ordd.deleteItem.yes')} cancelLabel={msg('ordd.deleteNo')} failed={failed ? msg('ordd.saveFailed') : undefined} onConfirm={() => void inFlight.run(() => remove([open]))} onClose={() => setSheet(null)} /> : null}
       {sheet === 'delOrder' ? <ConfirmSheet testID="ordd-delete-order-sheet" title={msg('ordd.deleteOrder.title')} body={msg('ordd.deleteOrder.body', { n: order.items.length })} confirmLabel={msg('ordd.deleteOrder.yes')} cancelLabel={msg('ordd.deleteNo')} failed={failed ? msg('ordd.saveFailed') : undefined} onConfirm={() => void inFlight.run(() => remove(order.items))} onClose={() => setSheet(null)} /> : null}
       {open && typeof sheet === 'object' && sheet && sheet.kind === 'reasons' ? <ReasonsSheet key={open.id} item={open} state={state} fin={fin} onSave={saveItem(open)} onClose={() => setSheet(null)} /> : null}

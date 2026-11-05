@@ -119,10 +119,16 @@ export const nameOf = (e: Expense): ItemNameDraft => (e.fertilizer ? { name: e.f
 
 const tidy = (s: string) => s.trim().replace(/\s+/g, ' ');
 
+/** The user typed a different name than the item opened with (spacing alone is not a change). */
+const renamed = (e: Expense, n: ItemNameDraft): boolean => {
+  const was = nameOf(e);
+  return tidy(n.name) !== tidy(was.name) || tidy(n.brand) !== tidy(was.brand);
+};
+
 export function editItemProblems(e: Expense, m: ItemMoney, n: ItemNameDraft = nameOf(e)): EditProblems {
   const qty = m.qty ?? 0;
   const out: { -readonly [K in keyof EditProblems]: EditProblems[K] } = {};
-  if (!tidy(n.name)) out.name = true;
+  if (renamed(e, n) && !tidy(n.name)) out.name = true;
   if (e.fertilizer || e.share) {
     const given = (e.share?.lines ?? []).reduce((s, l) => s + (l.sacks ?? 0), 0);
     const placed = (e.fertilizer?.zones ?? []).reduce((s, z) => s + z.sacks, 0);
@@ -135,7 +141,8 @@ export function editItemProblems(e: Expense, m: ItemMoney, n: ItemNameDraft = na
 }
 
 export interface OptionWrite {
-  readonly id: string;
+  /** Absent = add by name (`setFertOption` finds or makes the option). */
+  readonly id?: string;
   readonly kind: FertOptionKind;
   readonly name: string;
   readonly description: string;
@@ -146,10 +153,12 @@ const same = (a: string, b: string) => tidy(a).toLowerCase() === tidy(b).toLower
 
 /**
  * E11-S13 Q4 "แก้ในรายการปุ๋ยด้วย": a misspelt formula or brand that is a shown saved option is renamed in place
- * (same id, so the pick list follows). If the fixed name is already another saved option, the misspelt one is
- * hidden and that one shown instead, so the list never holds the name twice. Empty = nothing to offer.
+ * (same id, so the pick list follows). If the fixed name is already another saved option, that one is shown first
+ * and then the misspelt one hidden, so a failure in between leaves both, never neither. If another live purchase
+ * still uses the old name, it is not a misspelling to fix there: the new name is added beside it (review #1).
+ * Empty = nothing to offer.
  */
-export function optionRenames(options: readonly FertOption[], before: ItemNameDraft, after: ItemNameDraft): OptionWrite[] {
+export function optionRenames(options: readonly FertOption[], before: ItemNameDraft, after: ItemNameDraft, others: readonly Expense[] = []): OptionWrite[] {
   const out: OptionWrite[] = [];
   const pairs: [FertOptionKind, string, string][] = [['formula', before.name, after.name], ['brand', before.brand, after.brand]];
   for (const [kind, from, to] of pairs) {
@@ -159,7 +168,11 @@ export function optionRenames(options: readonly FertOption[], before: ItemNameDr
     if (!old) continue;
     const other = options.find((o) => o.kind === kind && o.id !== old.id && same(o.name, name));
     const w = (o: FertOption, patch: Partial<OptionWrite>): OptionWrite => ({ id: o.id, kind, name: o.name, description: o.description, hidden: o.hidden, ...patch });
-    if (other) out.push(w(old, { hidden: true }), w(other, { hidden: false }));
+    const inUse = others.some((x) => !x.deleted && x.fertilizer && same(kind === 'formula' ? x.fertilizer.formula : x.fertilizer.brand, from));
+    if (inUse) {
+      if (!other) out.push({ kind, name, description: '', hidden: false });
+      else if (other.hidden) out.push(w(other, { hidden: false }));
+    } else if (other) out.push(w(other, { hidden: false }), w(old, { hidden: true }));
     else out.push(w(old, { name }));
   }
   return out;
@@ -171,11 +184,13 @@ export function editItemPatch(e: Expense, m: ItemMoney, unit: string, n: ItemNam
   const gross = m.gross ?? 0;
   const discountSatang = m.discount + (itemDiscountTotal(e) - ownDiscount(e));
   const f = e.fertilizer;
-  const formula = tidy(n.name);
-  const brand = f ? tidy(n.brand) : '';
+  // Only a typed change touches the name: a money edit leaves item, formula and brand exactly as stored (review #3).
+  const change = renamed(e, n);
+  const formula = change ? tidy(n.name) : (f?.formula ?? e.item);
+  const brand = change && f ? tidy(n.brand) : (f?.brand ?? '');
   const item = f ? productName(formula, brand) : formula;
   return {
-    ...(item !== e.item ? { item } : {}),
+    ...(change && item !== e.item ? { item } : {}),
     amountSatang: gross - discountSatang,
     discountSatang,
     line: { qty, unit, grossSatang: gross, itemDiscountSatang: m.discount },
