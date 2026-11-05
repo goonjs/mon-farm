@@ -62,24 +62,31 @@ export function EditItemSheet({
   const per = m.unitPrice ?? (m.gross !== null && m.qty ? perUnit(m.gross, m.qty) : null);
   const net = m.gross === null ? null : Math.max(0, m.gross - m.discount);
 
-  // The list writes planned at the first save: a retry after a partial failure repeats exactly these, even though
-  // the live options have moved on (review #2). One save at a time (review #5).
+  // The list writes are fixed once the item has saved: a retry after the list write failed repeats exactly these,
+  // even though the live options have moved on (review #2), and the name is then shown read-only so it cannot drift
+  // from them (review round 2). An item write that fails fixes nothing. One save at a time (review #5).
   const plan = useRef<readonly OptionWrite[] | null>(null);
   const busy = useRef(false);
-  const [planned, setPlanned] = useState(false);
+  const [itemSaved, setItemSaved] = useState(false);
   const save = async () => {
     setTried(true);
     if (blocked || busy.current) return;
     busy.current = true;
     try {
-      if (plan.current === null) {
-        plan.current = fixList ? renames : [];
-        setPlanned(true);
+      const writes = plan.current ?? (fixList ? renames : []);
+      if (!(await onSave(editItemPatch(item, m, unit, name)))) {
+        setFailed(true);
+        return;
       }
-      const writes = plan.current;
-      const ok = (await onSave(editItemPatch(item, m, unit, name))) && (!writes.length || !onFixOptions || (await onFixOptions(writes)));
-      if (ok) onClose();
-      else setFailed(true);
+      if (plan.current === null) {
+        plan.current = writes;
+        setItemSaved(true);
+      }
+      if (writes.length && onFixOptions && !(await onFixOptions(writes))) {
+        setFailed(true);
+        return;
+      }
+      onClose();
     } finally {
       busy.current = false;
     }
@@ -88,7 +95,7 @@ export function EditItemSheet({
   return (
     <BottomSheet open onClose={onClose} testID="ordd-edit-sheet" title={msg('ordd.edit.title')}>
       <View style={{ gap: t.space.md }}>
-        {renaming ? (
+        {renaming && !itemSaved ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
             <View style={{ flexGrow: 2, flexBasis: 160, minWidth: 0 }}>
               <TextField
@@ -110,12 +117,14 @@ export function EditItemSheet({
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: t.space.md }}>
             <AppText testID="ordd-edit-item-name" style={{ flexShrink: 1, minWidth: 0, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>{item.item}</AppText>
             {/* Quiet on purpose (owner 2026-11-04): the name leads, fixing it is the rare case. */}
-            <Pressable testID="ordd-edit-rename" accessibilityRole="button" onPress={() => setRenaming(true)} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
-              <AppText variant="bodySm" style={{ color: t.color.inkSoft, textDecorationLine: 'underline' }}>{msg('ordd.edit.rename')}</AppText>
-            </Pressable>
+            {itemSaved ? null : (
+              <Pressable testID="ordd-edit-rename" accessibilityRole="button" onPress={() => setRenaming(true)} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
+                <AppText variant="bodySm" style={{ color: t.color.inkSoft, textDecorationLine: 'underline' }}>{msg('ordd.edit.rename')}</AppText>
+              </Pressable>
+            )}
           </View>
         )}
-        {renames.length && !planned ? <TickCard testID="ordd-edit-fix-list" title={msg('ordd.edit.fixList')} on={fixList} onPress={() => setFixList((v) => !v)} /> : null}
+        {renames.length && !itemSaved ? <TickCard testID="ordd-edit-fix-list" title={msg('ordd.edit.fixList')} on={fixList} onPress={() => setFixList((v) => !v)} /> : null}
         <QuantityField testID="ordd-edit-qty" label={msg('ordc.qty')} value={m.qty} unit={unit} min={1} onChange={(q) => setM(withQty(m, q))} />
         {tried && mp.qty ? <FieldError testID="ordd-edit-err-qty">{msg('ordc.err.qty')}</FieldError> : null}
         {ep.tappers !== undefined ? <FieldError testID="ordd-edit-err-tappers">{msg('ordd.edit.errTappers', { n: ep.tappers })}</FieldError> : null}

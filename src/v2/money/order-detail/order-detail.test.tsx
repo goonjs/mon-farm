@@ -272,6 +272,24 @@ describe('OrderDetailView', () => {
     expect(write.mock.calls.slice(3).map((c) => c[0])).toEqual(['o1-a', 'fopt-formula-ดีเกลือ', 'fopt-formula-ดีกลือ']);
   });
 
+  it('edit item (review round 2): the item write fails, the name is corrected, saving again fixes the list with the corrected name', async () => {
+    const write = setup([exp('o1-a', { item: 'ดีกลือ', fertilizer: { ...FERT, formula: 'ดีกลือ' } as never })], [], [{ id: 'fopt-formula-ดีกลือ', kind: 'formula', name: 'ดีกลือ', description: '', hidden: false }]);
+    write.mockRejectedValueOnce(new Error('disk'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-rename'));
+    fireEvent.changeText(screen.getByTestId('ordd-edit-name'), 'ดีเกลอ');
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(screen.getByTestId('ordd-edit-failed')).toBeTruthy());
+    // nothing was fixed yet: the tick is still there and the name still editable
+    expect(screen.getByTestId('ordd-edit-fix-list')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('ordd-edit-name'), 'ดีเกลือ');
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(3));
+    expect(write.mock.calls[1][2].patch).toMatchObject({ item: 'ดีเกลือ' });
+    expect(write.mock.calls[2][2]).toMatchObject({ t: 'fert_option_set', name: 'ดีเกลือ' });
+  });
+
   it('edit item (review #5): a double tap on บันทึก writes once', async () => {
     const write = setup([a]);
     fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
