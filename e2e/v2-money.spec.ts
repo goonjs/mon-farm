@@ -235,3 +235,23 @@ test('E11-S13 a misspelt fertilizer name is fixed on a saved order, in the saved
   await expect(page.getByTestId('ordc-pick-sheet')).toContainText('ดีเกลือ');
   await expect(page.getByTestId('ordc-pick-sheet')).not.toContainText('ดีกลือ');
 });
+
+test('a sack of 2.5 กก. can be typed with a decimal point and is kept as 2.5 (offline)', async ({ page, context }) => {
+  await page.goto('/v2/order');
+  await context.setOffline(true);
+  await page.getByTestId('ordc-add').click();
+  await page.getByTestId('ordc-pick-new').click();
+  await page.getByTestId('ordc-formula').fill('ปุ๋ยเกล็ด');
+  await page.getByTestId('ordc-kg-other').click();
+  await typeOnPad(page, 'ordc-kg-value', '2.5');
+  await expect(page.getByTestId('ordc-kg-value-display')).toContainText('2.5');
+  await evidence(page, `${SHOTS}/32-sack-kg-decimal-pad.png`);
+  await page.getByTestId('ordc-kg-value-done').click();
+  await expect(page.getByTestId('ordc-kg-value')).toContainText('2.5');
+  await page.getByTestId('ordc-new-done').click();
+  await expect(page.getByTestId('ordc-item-sheet')).toContainText('2.5 กก.');
+  await typeOnPad(page, 'ordc-qty', '4');
+  await page.getByTestId('ordc-qty-pad-key-done').click();
+  await expect(page.getByTestId('ordc-item-sheet')).toContainText('รวม 10 กก.');
+  await evidence(page, `${SHOTS}/33-sack-kg-decimal-item.png`);
+});

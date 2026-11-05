@@ -367,6 +367,37 @@ describe('order capture screen (E11-S11)', () => {
     expect((await created()).length - before).toBe(2);
   });
 
+  it('a sack size with decimals (2.5 กก.) can be typed on "+ ขนาดอื่น" and is kept as 2.5', async () => {
+    wrap(<OrderScreen />);
+    await flush();
+    press('ordc-add');
+    press('ordc-pick-new');
+    fireEvent.changeText(screen.getByTestId('ordc-formula'), 'ปุ๋ยเกล็ด');
+    press('ordc-kg-other');
+    press('ordc-kg-value');
+    keys('ordc-kg-value-pad', '2', '.', '5');
+    press('ordc-kg-value-done');
+    expect(text('ordc-kg-value')).toContain('2.5');
+    press('ordc-new-done');
+    await flush();
+    expect(screen.getByText(/2\.5 กก\. \/ กระสอบ/)).toBeTruthy();
+    press('ordc-qty');
+    keys('ordc-qty-pad', '3', 'done');
+    expect(screen.getByText(/รวม 7\.5 กก\./)).toBeTruthy();
+    press('ordc-price');
+    keys('ordc-price-pad', '1', '0', '0');
+    press('ordc-price-done');
+    press('ordc-item-done');
+    const before = (await created()).length;
+    press('ordc-save');
+    await flush();
+    const [f] = (await created()).slice(before).map(fieldsOf);
+    expect(f.fertilizer).toMatchObject({ formula: 'ปุ๋ยเกล็ด', sackKg: 2.5, sacks: 3 });
+    // remembered as a size, offered as a chip next time
+    const opts = (await mockFinance.load()).filter((e) => e.payload.t === 'fert_option_set' && (e.payload as { kind: string }).kind === 'sackKg');
+    expect(opts.map((e) => (e.payload as { name: string }).name)).toContain('2.5');
+  });
+
   it('a saved formula never bought: picking it opens "ปุ๋ยใหม่" with the name filled in; one tap adds it to the order', async () => {
     await seed(fertOptionId('formula', 'ดีเกลือ'), { t: 'fert_option_set', kind: 'formula', name: 'ดีเกลือ', description: '', hidden: false });
     wrap(<OrderScreen />);

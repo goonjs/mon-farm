@@ -592,7 +592,8 @@ export function NewProductSheet({
             }}
           />
         </ChoiceRow>
-        {otherKg ? <QuantityField testID="ordc-kg-value" label={msg('ordc.kgOtherLabel')} value={v.sackKg} unit={msg('ordc.unit.kg')} min={1} maxDigits={3} onChange={(n) => setV({ ...v, sackKg: n })} /> : null}
+        {/* Up to 2 decimals (2.5 กก., owner 2026-11-04); the pad works in 0.01 กก. steps, the stored size stays plain kg. */}
+        {otherKg ? <QuantityField testID="ordc-kg-value" label={msg('ordc.kgOtherLabel')} value={v.sackKg === null ? null : Math.round(v.sackKg * 100)} unit={msg('ordc.unit.kg')} min={1} maxDigits={3} decimals={2} onChange={(n) => setV({ ...v, sackKg: n / 100 })} /> : null}
       </View>
       <TickCard testID="ordc-remember" title={msg('ordc.remember')} on={remember} onPress={() => setRemember((r) => !r)} />
       <CTA testID="ordc-new-done" onPress={submit}>
