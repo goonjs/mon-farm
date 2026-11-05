@@ -195,3 +195,43 @@ test('a saved fertilizer never bought: picking it fills its name, one tap puts i
   await page.getByTestId('ordc-new-done').click();
   await expect(page.getByTestId('ordc-item-name')).toHaveText('ดีเกลือ');
 });
+
+test('E11-S13 a misspelt fertilizer name is fixed on a saved order, in the saved list too (offline)', async ({ page, context }) => {
+  await page.goto('/v2/order');
+  await context.setOffline(true);
+  await page.getByTestId('ordc-add').click();
+  await page.getByTestId('ordc-pick-new').click();
+  await page.getByTestId('ordc-formula').fill('ดีกลือ');
+  await page.getByTestId('ordc-new-done').click();
+  await typeOnPad(page, 'ordc-qty', '38');
+  await page.getByTestId('ordc-qty-pad-key-done').click();
+  await typeOnPad(page, 'ordc-price', '270');
+  await page.getByTestId('ordc-price-done').click();
+  await page.getByTestId('ordc-item-done').click();
+  await page.getByTestId('ordc-save').click();
+  await page.getByTestId('ordc-saved-details').click();
+
+  await page.locator('[data-testid^="ordd-"][data-testid$="-edit"]').first().click();
+  await page.getByTestId('ordd-edit-rename').click();
+  await expect(page.getByTestId('ordd-edit-name')).toHaveValue('ดีกลือ');
+  await expect(page.getByTestId('ordd-edit-fix-list')).toHaveCount(0);
+  await page.getByTestId('ordd-edit-name').fill('ดีเกลือ');
+  await expect(page.getByTestId('ordd-edit-fix-list')).toBeVisible();
+  await evidence(page, `${SHOTS}/30-order-item-rename.png`);
+  await page.getByTestId('ordd-edit-save').click();
+  await expect(page.getByTestId('ordd-edit-sheet')).toHaveCount(0);
+  await expect(page.getByText('ดีเกลือ', { exact: true }).first()).toBeVisible();
+  await expect(page.getByTestId('ordd-total')).toContainText('10,260.00');
+
+  // Kept across a reload (the local event log; the page itself is fetched, then offline again), and the saved list now offers the fixed name only.
+  await context.setOffline(false);
+  await page.reload();
+  await context.setOffline(true);
+  await expect(page.getByText('ดีเกลือ', { exact: true }).first()).toBeVisible();
+  await context.setOffline(false);
+  await page.goto('/v2/order');
+  await context.setOffline(true);
+  await page.getByTestId('ordc-add').click();
+  await expect(page.getByTestId('ordc-pick-sheet')).toContainText('ดีเกลือ');
+  await expect(page.getByTestId('ordc-pick-sheet')).not.toContainText('ดีกลือ');
+});

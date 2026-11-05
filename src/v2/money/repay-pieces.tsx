@@ -15,12 +15,12 @@
  */
 
 import { router, type Href } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { DebtAccount } from '../../core/finance/debts';
 import { formatSatang } from '../../core/finance/money';
-import { closeoutPlan, payBlocks, REPAY_ROUTES } from '../../core/finance/closeout';
+import { payBlocks } from '../../core/finance/closeout';
 import { overDeducted } from '../../core/finance/deduct';
 import { OWNER_PAYEE, paymentMarkPayload, paymentStatus, paymentTarget, salePaymentConflicts, type PaymentStatus } from '../../core/finance/payments';
 import { debtCashPayee, type PendingHow, type PendingRepayLine } from '../../core/finance/pending-repays';
@@ -195,14 +195,8 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
   const ready = money.loaded && money.settlement !== null && co.inputs !== null;
   // The payment page's locks (pay-screen.tsx `locked`): ticks in conflict (D-29/D-30), a double or invalid
   // deduction (payBlocks), a worker deducted over the share (D-61). Here: no write, send the owner there.
-  const roundingMode = money.rounding.choice.asked ? money.rounding.choice.mode : 'none';
-  const recordedPlan = useMemo(
-    () =>
-      money.settlement && co.inputs
-        ? closeoutPlan({ saleTotalSatang: money.settlement.grossSatang, ownerShareSatang: money.settlement.ownerSatang, workers: co.inputs, drafts: {}, defaultRoute: () => REPAY_ROUTES[0], rounding: roundingMode })
-        : null,
-    [money.settlement, co.inputs, roundingMode],
-  );
+  // The payment page's own plan (recorded lines only; nothing recorded = 0), one derivation for both.
+  const recordedPlan = co.recordedPlan ?? null;
   const transferOn = money.tappers.map((tp) => ({ tp, satang: linesOf(tp.id).filter((p) => p.method === 'transfer-with-owner').reduce((a, p) => a + p.amountSatang, 0) })).filter((x) => x.satang > 0);
   const repayOnTransfer = transferOn.reduce((a, x) => a + x.satang, 0);
   const st: PaymentStatus = paymentStatus(events, saleId, payee, amount);

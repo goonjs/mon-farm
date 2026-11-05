@@ -13,6 +13,7 @@ import {
   payBlocks,
   pendingRepays,
   quickAmounts,
+  recordedDrafts,
   REPAY_ROUTES,
   ROUNDING_MENU,
   sourcesSheet,
@@ -1477,5 +1478,18 @@ describe('a double deduction from two devices is flagged, locks the payment, and
     const own = confirmOn('A', ab, 500000, { [W.id]: { totalSatang: 100000, doubleChoice: 'one' } }).slice(0, 1);
     expect(ins([...ab, ...own], 'A').linesSig).toBe(sigA);
     expect(ins([...ab, ...confirmOn('B', ab, 500000, { [W.id]: { totalSatang: 100000, doubleChoice: 'one' } }).slice(0, 1)], 'A').linesSig).not.toBe(sigA);
+  });
+});
+
+describe('recordedDrafts: the payment page and its buyer sheet read the recorded lines only (review 2026-11-04)', () => {
+  it('a worker with nothing recorded is 0, never the proposal ("ไม่หัก" writes no line); recorded workers follow their lines', () => {
+    const red = worker({ id: 'red', balanceSatang: 1_000_000, shareSatang: 918_750, recorded: { totalSatang: 325_000, nettingSatang: 0, route: 'transfer-with-owner' } });
+    const nat = worker({ id: 'nat', balanceSatang: 300_000, shareSatang: 262_500, recorded: null });
+    const drafts = recordedDrafts([red, nat]);
+    expect(drafts).toEqual({ nat: { totalSatang: 0 } });
+    const plan = closeoutPlan({ saleTotalSatang: 2_887_500, ownerShareSatang: 1_706_250, workers: [red, nat], drafts, defaultRoute: () => REPAY_ROUTES[0], rounding: 'none' });
+    expect(plan.workers.find((w) => w.id === 'nat')!.totalSatang).toBe(0);
+    expect(plan.workers.find((w) => w.id === 'nat')!.cashBeforeSatang).toBe(262_500);
+    expect(plan.workers.find((w) => w.id === 'red')!.totalSatang).toBe(325_000);
   });
 });

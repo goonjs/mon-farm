@@ -16,7 +16,7 @@ import { wrap } from '../test/render';
 import { CloseoutCashScreen } from '../v2/sale/closeout/cash-screen';
 import { CloseoutPayScreen } from '../v2/sale/closeout/pay-screen';
 import { CloseoutSummaryScreen } from '../v2/sale/closeout/summary-screen';
-import { clearDraft, updateDraft } from '../v2/sale/closeout/use-closeout';
+import { afterConfirm, clearDraft, updateDraft, type CloseoutDraft } from '../v2/sale/closeout/use-closeout';
 import { clearClosing } from '../v2/sale/pieces';
 
 // Each case renders whole close-out screens and writes to the finance log: 1–2 s here, 3–4× slower on
@@ -355,6 +355,69 @@ describe('editing what was confirmed replaces it; an unchanged confirm writes no
     });
     expect(await live(S, farm.red)).toEqual([['transfer-with-owner', 150_000]]);
     expect(await live(S, farm.nat)).toEqual([['transfer-with-owner', 525_000]]);
+  });
+});
+
+describe('back from the payment page: what was chosen and checked stays (owner 2026-11-04)', () => {
+  const S = 'r-back';
+  beforeAll(() => storySale(S));
+  beforeEach(() => clearDraft(S));
+
+  it('ไม่หัก (nothing recorded) stays 0, the cards stay checked and ยืนยันยอด stays open; confirming again writes nothing', async () => {
+    await confirmAs(S, async () => {
+      await press(`co-deduct-${farm.nat}`);
+      await press('co-quick-none');
+      await press('co-deduct-ok');
+    });
+    expect(await live(S, farm.nat)).toEqual([]);
+    const n = (await all()).length;
+    // ← back: the summary mounts again in the same app session.
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    expect(last(`co-deduct-${farm.nat}`)).toHaveTextContent(/0\.00/);
+    expect(last(`co-deduct-${farm.nat}`)).not.toHaveTextContent(/−/);
+    expect(last(`co-deduct-${farm.red}`)).toHaveTextContent(/−3,250\.00/);
+    expect(last('co-confirm')).toHaveTextContent('ยืนยันยอด · ไปจ่ายเงิน');
+    await press('co-confirm');
+    r.unmount();
+    expect((await all()).length).toBe(n);
+  });
+
+  it('a payment-page fix after confirm wins over the amount typed before it (review 1): back shows the fixed line; confirm writes nothing', async () => {
+    await confirmAs(S, async () => {
+      await press(`co-deduct-${farm.red}`);
+      await keys('1500');
+      await press('co-deduct-ok');
+    });
+    expect(await live(S, farm.red)).toEqual([['transfer-with-owner', 150_000]]);
+    // "ได้น้อยกว่านี้" on the payment page: this device edits the existing line (routeFixWrites).
+    const es = await all();
+    const line = es.find((e) => e.payload.t === 'debt_payment_recorded' && e.payload.fields.saleId === S && e.payload.fields.worker.id === farm.red && !es.some((x) => x.targetId === e.targetId && x.payload.t === 'debt_payment_changed'))!;
+    await act(async () => {
+      await writeFinance(line.targetId, line.id, { t: 'debt_payment_changed', patch: { amountSatang: 100_000 } });
+    });
+    const n = (await all()).length;
+    const r = await inSale(S, <CloseoutSummaryScreen />);
+    expect(last(`co-deduct-${farm.red}`)).toHaveTextContent(/−1,000\.00/);
+    await press('co-confirm');
+    r.unmount();
+    // Nothing written: the fixed 1,000 stands (live() reads recorded amounts, not patches, so it is not used here).
+    expect((await all()).length).toBe(n);
+  });
+});
+
+describe('afterConfirm keeps only a 0 the owner set in the deduct sheet (re-review 2)', () => {
+  it('drops amounts, routes and rounding; keeps checks; keeps 0 only with the lines\' signature it was set on', () => {
+    const d: CloseoutDraft = {
+      workers: { a: { totalSatang: 0, linesSig: 'x' }, b: { totalSatang: 0 }, c: { totalSatang: 150_000, linesSig: 'y', route: 'buyer-split' }, e: { route: 'cash-from-share' } },
+      rounding: 'owner',
+      debtChecked: ['a', 'c'],
+      debtAnswered: false,
+      owedChecked: ['a'],
+      owedAnswered: true,
+      owedChoice: { a: 'hold' },
+      seen: { 'debt:a': '1' },
+    };
+    expect(afterConfirm(d)).toEqual({ ...d, workers: { a: { totalSatang: 0, linesSig: 'x' } }, rounding: null });
   });
 });
 
