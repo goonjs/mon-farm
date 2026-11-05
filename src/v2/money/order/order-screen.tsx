@@ -63,7 +63,8 @@ type Sheet =
   | 'payer'
   | 'bill'
   | { k: 'pick'; editId: string | null; carry: ItemMoney | null }
-  | { k: 'new'; editId: string | null; carry: ItemMoney | null }
+  /** `formula`: a saved formula never bought, picked from the list — the sheet starts with its name. */
+  | { k: 'new'; editId: string | null; carry: ItemMoney | null; formula?: string }
   | { k: 'item'; editId: string | null; spec: ProductSpec; money: ItemMoney }
   | { k: 'other'; editId: string | null; spec: ProductSpec | null; money: ItemMoney };
 
@@ -192,8 +193,8 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
   const pickProduct = (p: FertProduct, editId: string | null, carry: ItemMoney | null) => {
     const spec = fertSpec({ type: p.type ?? 'chemical', formula: p.formula, brand: p.brand, sackKg: p.sackKg }, sackUnit);
     if (p.type === null) {
-      // A saved formula never bought has no type or size yet: the new-product sheet asks.
-      setSheet({ k: 'new', editId, carry });
+      // A saved formula never bought has no type or size yet: the new-product sheet asks, its name already in.
+      setSheet({ k: 'new', editId, carry, formula: p.formula });
       return;
     }
     const base = carry ?? { ...EMPTY_MONEY, ...(p.lastPerSackSatang !== null ? { unitPrice: p.lastPerSackSatang } : {}) };
@@ -452,7 +453,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
       {sheet && typeof sheet === 'object' && sheet.k === 'new' ? (
         <NewProductSheet
           options={state.fertOptions}
-          initial={{ type: 'chemical', formula: '', brand: '', sackKg: 50 }}
+          initial={{ type: 'chemical', formula: sheet.formula ?? '', brand: '', sackKg: 50 }}
           onClose={close}
           onDone={(p, r) => void newProductDone(p, r, sheet.editId, sheet.carry)}
         />
