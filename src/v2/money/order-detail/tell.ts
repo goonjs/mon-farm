@@ -6,10 +6,10 @@
 
 import type { OrderPatchWrite, OrderView } from '../../../core/finance/fert-order';
 import { checkFertilizer } from '../../../core/finance/fertilizer';
-import type { Expense } from '../../../core/finance/ledger';
+import type { Expense, FertOption } from '../../../core/finance/ledger';
 import { checkShare, splitShare, type ShareProblem, type SplitResult } from '../../../core/finance/share';
-import type { ExpensePatch, ExpenseShare, FertilizerDetails, FertilizerZoneUse, Payer, ShareSettle } from '../../../core/finance/types';
-import type { ItemMoney } from '../order/order-model';
+import type { ExpensePatch, ExpenseShare, FertilizerDetails, FertOptionKind, FertilizerZoneUse, Payer, ShareSettle } from '../../../core/finance/types';
+import { productName, type ItemMoney } from '../order/order-model';
 
 /** Sacks of an item: the order item's own, else the legacy share's total. */
 export function itemSacks(e: Expense): number {
@@ -104,11 +104,31 @@ export interface EditProblems {
   readonly zones?: number;
   /** Item discount plus the bill share exceeds the new price. */
   readonly discount?: true;
+  /** The typed name (fertilizer: its formula) is empty. */
+  readonly name?: true;
 }
 
-export function editItemProblems(e: Expense, m: ItemMoney): EditProblems {
+/** The name typed on "แก้รายการ" (E11-S13): fertilizer = formula + brand; any other item = `name` only. */
+export interface ItemNameDraft {
+  readonly name: string;
+  readonly brand: string;
+}
+
+/** The name the sheet starts with. */
+export const nameOf = (e: Expense): ItemNameDraft => (e.fertilizer ? { name: e.fertilizer.formula, brand: e.fertilizer.brand } : { name: e.item, brand: '' });
+
+const tidy = (s: string) => s.trim().replace(/\s+/g, ' ');
+
+/** The user typed a different name than the item opened with (spacing alone is not a change). */
+const renamed = (e: Expense, n: ItemNameDraft): boolean => {
+  const was = nameOf(e);
+  return tidy(n.name) !== tidy(was.name) || tidy(n.brand) !== tidy(was.brand);
+};
+
+export function editItemProblems(e: Expense, m: ItemMoney, n: ItemNameDraft = nameOf(e)): EditProblems {
   const qty = m.qty ?? 0;
   const out: { -readonly [K in keyof EditProblems]: EditProblems[K] } = {};
+  if (renamed(e, n) && !tidy(n.name)) out.name = true;
   if (e.fertilizer || e.share) {
     const given = (e.share?.lines ?? []).reduce((s, l) => s + (l.sacks ?? 0), 0);
     const placed = (e.fertilizer?.zones ?? []).reduce((s, z) => s + z.sacks, 0);
@@ -120,17 +140,61 @@ export function editItemProblems(e: Expense, m: ItemMoney): EditProblems {
   return out;
 }
 
-/** One patch: amount, discount, line, fertilizer sacks/price and an existing share, so they conflict together or not at all. */
-export function editItemPatch(e: Expense, m: ItemMoney, unit: string): ExpensePatch {
+export interface OptionWrite {
+  /** Absent = add by name (`setFertOption` finds or makes the option). */
+  readonly id?: string;
+  readonly kind: FertOptionKind;
+  readonly name: string;
+  readonly description: string;
+  readonly hidden: boolean;
+}
+
+const same = (a: string, b: string) => tidy(a).toLowerCase() === tidy(b).toLowerCase();
+
+/**
+ * E11-S13 Q4 "แก้ในรายการปุ๋ยด้วย": a misspelt formula or brand that is a shown saved option is renamed in place
+ * (same id, so the pick list follows). If the fixed name is already another saved option, that one is shown first
+ * and then the misspelt one hidden, so a failure in between leaves both, never neither. If another live purchase
+ * still uses the old name, it is not a misspelling to fix there: the new name is added beside it (review #1).
+ * Empty = nothing to offer.
+ */
+export function optionRenames(options: readonly FertOption[], before: ItemNameDraft, after: ItemNameDraft, others: readonly Expense[] = []): OptionWrite[] {
+  const out: OptionWrite[] = [];
+  const pairs: [FertOptionKind, string, string][] = [['formula', before.name, after.name], ['brand', before.brand, after.brand]];
+  for (const [kind, from, to] of pairs) {
+    const name = tidy(to);
+    if (!name || tidy(from) === name) continue;
+    const old = options.find((o) => o.kind === kind && !o.hidden && same(o.name, from));
+    if (!old) continue;
+    const other = options.find((o) => o.kind === kind && o.id !== old.id && same(o.name, name));
+    const w = (o: FertOption, patch: Partial<OptionWrite>): OptionWrite => ({ id: o.id, kind, name: o.name, description: o.description, hidden: o.hidden, ...patch });
+    const inUse = others.some((x) => !x.deleted && x.fertilizer && same(kind === 'formula' ? x.fertilizer.formula : x.fertilizer.brand, from));
+    if (inUse) {
+      if (!other) out.push({ kind, name, description: '', hidden: false });
+      else if (other.hidden) out.push(w(other, { hidden: false }));
+    } else if (other) out.push(w(other, { hidden: false }), w(old, { hidden: true }));
+    else out.push(w(old, { name }));
+  }
+  return out;
+}
+
+/** One patch: name (E11-S13), amount, discount, line, fertilizer sacks/price and an existing share, so they conflict together or not at all. */
+export function editItemPatch(e: Expense, m: ItemMoney, unit: string, n: ItemNameDraft = nameOf(e)): ExpensePatch {
   const qty = m.qty ?? 0;
   const gross = m.gross ?? 0;
   const discountSatang = m.discount + (itemDiscountTotal(e) - ownDiscount(e));
   const f = e.fertilizer;
+  // Only a typed change touches the name: a money edit leaves item, formula and brand exactly as stored (review #3).
+  const change = renamed(e, n);
+  const formula = change ? tidy(n.name) : (f?.formula ?? e.item);
+  const brand = change && f ? tidy(n.brand) : (f?.brand ?? '');
+  const item = f ? productName(formula, brand) : formula;
   return {
+    ...(change && item !== e.item ? { item } : {}),
     amountSatang: gross - discountSatang,
     discountSatang,
     line: { qty, unit, grossSatang: gross, itemDiscountSatang: m.discount },
-    ...(f ? { fertilizer: { ...f, sacks: qty, pricePerSackSatang: roundedPer(gross, qty), itemDiscountSatang: m.discount } } : {}),
+    ...(f ? { fertilizer: { ...f, formula, brand, sacks: qty, pricePerSackSatang: roundedPer(gross, qty), itemDiscountSatang: m.discount } } : {}),
     ...(e.share ? { share: { ...e.share, billSatang: gross, discountSatang, totalSacks: qty } } : {}),
   };
 }

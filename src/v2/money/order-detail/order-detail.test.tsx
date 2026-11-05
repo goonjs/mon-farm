@@ -49,10 +49,10 @@ const master = {
   zones: [{ id: 'z1', name: 'แปลงหน้า', propertyId: 'f1', hidden: false }, { id: 'z2', name: 'แปลงหลัง', propertyId: 'f1', hidden: false }],
 } as unknown as MasterState;
 
-function setup(items: Expense[], deleted: Expense[] = []) {
+function setup(items: Expense[], deleted: Expense[] = [], fertOptions: FertOption[] = [reasonOpt]) {
   const write = jest.fn().mockResolvedValue({});
   const order = groupOrders(items)[0] ?? ({ orderId: 'o1', legacy: false, items: [], date: '2026-10-27', stage: 'committed', payer: null, shop: '', netSatang: 0, billDiscountSatang: 0, consistent: true } as OrderView);
-  const st = { ...(state as object), expenses: [...items, ...deleted] } as never;
+  const st = { ...(state as object), fertOptions, expenses: [...items, ...deleted] } as never;
   wrap(<OrderDetailView order={order} fin={{ events: [], state: st, write }} master={master} onZoneSaved={jest.fn()} onBack={jest.fn()} onRepeat={jest.fn()} />);
   return write;
 }
@@ -210,6 +210,126 @@ describe('OrderDetailView', () => {
     keys('ordd-edit-qty', '5', 'done');
     expect(screen.getByTestId('ordd-edit-err-tappers')).toBeTruthy();
     fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it('edit item (E11-S13): a fertilizer name is fixed by typing formula and brand; one patch, money unchanged', async () => {
+    const write = setup([exp('o1-a', { item: 'ดีกลือ', fertilizer: { ...FERT, formula: 'ดีกลือ' } as never })]);
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    expect(screen.queryByTestId('ordd-edit-name')).toBeNull();
+    fireEvent.press(screen.getByTestId('ordd-edit-rename'));
+    expect(screen.getByTestId('ordd-edit-name').props.value).toBe('ดีกลือ');
+    fireEvent.changeText(screen.getByTestId('ordd-edit-name'), 'ดีเกลือ');
+    fireEvent.changeText(screen.getByTestId('ordd-edit-brand'), 'ตราม้า');
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(write.mock.calls[0][1]).toBe('ev-o1-a');
+    const patch = write.mock.calls[0][2].patch;
+    expect(patch).toMatchObject({ item: 'ดีเกลือ ตราม้า', amountSatang: 2_300_000, fertilizer: { formula: 'ดีเกลือ', brand: 'ตราม้า', sacks: 20 } });
+  });
+
+  it('edit item (E11-S13 Q4): a saved misspelt formula offers "แก้ในรายการปุ๋ยด้วย", ticked; the saved option is renamed after the item', async () => {
+    const write = setup([exp('o1-a', { item: 'ดีกลือ', fertilizer: { ...FERT, formula: 'ดีกลือ' } as never })], [], [{ id: 'fopt-formula-ดีกลือ', kind: 'formula', name: 'ดีกลือ', description: '', hidden: false }]);
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-rename'));
+    expect(screen.queryByTestId('ordd-edit-fix-list')).toBeNull();
+    fireEvent.changeText(screen.getByTestId('ordd-edit-name'), 'ดีเกลือ');
+    expect(screen.getByTestId('ordd-edit-fix-list')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(2));
+    expect(write.mock.calls[0][0]).toBe('o1-a');
+    expect(write.mock.calls[1][0]).toBe('fopt-formula-ดีกลือ');
+    expect(write.mock.calls[1][2]).toEqual({ t: 'fert_option_set', kind: 'formula', name: 'ดีเกลือ', description: '', hidden: false });
+  });
+
+  it('edit item (E11-S13 Q4): the list fix failing shows the error and keeps the sheet; saving again retries the fix', async () => {
+    const write = setup([exp('o1-a', { item: 'ดีกลือ', fertilizer: { ...FERT, formula: 'ดีกลือ' } as never })], [], [{ id: 'fopt-formula-ดีกลือ', kind: 'formula', name: 'ดีกลือ', description: '', hidden: false }]);
+    write.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('disk'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-rename'));
+    fireEvent.changeText(screen.getByTestId('ordd-edit-name'), 'ดีเกลือ');
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(screen.getByTestId('ordd-edit-failed')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(4));
+    expect(write.mock.calls[3][2]).toMatchObject({ t: 'fert_option_set', name: 'ดีเกลือ' });
+  });
+
+  it('edit item (review #2): show-then-hide fails on the second write; saving again retries the planned writes, nothing is dropped', async () => {
+    const opts = [{ id: 'fopt-formula-ดีกลือ', kind: 'formula' as const, name: 'ดีกลือ', description: '', hidden: false }, { id: 'fopt-formula-ดีเกลือ', kind: 'formula' as const, name: 'ดีเกลือ', description: '', hidden: true }];
+    const write = setup([exp('o1-a', { item: 'ดีกลือ', fertilizer: { ...FERT, formula: 'ดีกลือ' } as never })], [], opts);
+    write.mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('disk'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-rename'));
+    fireEvent.changeText(screen.getByTestId('ordd-edit-name'), 'ดีเกลือ');
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(screen.getByTestId('ordd-edit-failed')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(6));
+    expect(write.mock.calls.slice(3).map((c) => c[0])).toEqual(['o1-a', 'fopt-formula-ดีเกลือ', 'fopt-formula-ดีกลือ']);
+  });
+
+  it('edit item (review round 2): the item write fails, the name is corrected, saving again fixes the list with the corrected name', async () => {
+    const write = setup([exp('o1-a', { item: 'ดีกลือ', fertilizer: { ...FERT, formula: 'ดีกลือ' } as never })], [], [{ id: 'fopt-formula-ดีกลือ', kind: 'formula', name: 'ดีกลือ', description: '', hidden: false }]);
+    write.mockRejectedValueOnce(new Error('disk'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-rename'));
+    fireEvent.changeText(screen.getByTestId('ordd-edit-name'), 'ดีเกลอ');
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(screen.getByTestId('ordd-edit-failed')).toBeTruthy());
+    // nothing was fixed yet: the tick is still there and the name still editable
+    expect(screen.getByTestId('ordd-edit-fix-list')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('ordd-edit-name'), 'ดีเกลือ');
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(3));
+    expect(write.mock.calls[1][2].patch).toMatchObject({ item: 'ดีเกลือ' });
+    expect(write.mock.calls[2][2]).toMatchObject({ t: 'fert_option_set', name: 'ดีเกลือ' });
+  });
+
+  it('edit item (review #5): a double tap on บันทึก writes once', async () => {
+    const write = setup([a]);
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(write).toHaveBeenCalledTimes(1);
+  });
+
+  it('edit item (E11-S13 Q4): untick = only this item is written', async () => {
+    const write = setup([exp('o1-a', { item: 'ดีกลือ', fertilizer: { ...FERT, formula: 'ดีกลือ' } as never })], [], [{ id: 'fopt-formula-ดีกลือ', kind: 'formula', name: 'ดีกลือ', description: '', hidden: false }]);
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-rename'));
+    fireEvent.changeText(screen.getByTestId('ordd-edit-name'), 'ดีเกลือ');
+    fireEvent.press(screen.getByTestId('ordd-edit-fix-list'));
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(write).toHaveBeenCalledTimes(1);
+  });
+
+  it('edit item (E11-S13): another item has one name field and no brand', async () => {
+    const write = setup([a, b]);
+    fireEvent.press(screen.getByTestId('ordd-o1-b-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-rename'));
+    expect(screen.queryByTestId('ordd-edit-brand')).toBeNull();
+    fireEvent.changeText(screen.getByTestId('ordd-edit-name'), 'ขี้ไก่แกลบ');
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(write.mock.calls[0][2].patch).toMatchObject({ item: 'ขี้ไก่แกลบ', amountSatang: 1_950_000 });
+  });
+
+  it('edit item (E11-S13): an empty name is blocked with a message, nothing is written', async () => {
+    const write = setup([a]);
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-rename'));
+    fireEvent.changeText(screen.getByTestId('ordd-edit-name'), '  ');
+    fireEvent.press(screen.getByTestId('ordd-edit-save'));
+    expect(screen.getByTestId('ordd-edit-name-error')).toBeTruthy();
     await new Promise((r) => setTimeout(r, 0));
     expect(write).not.toHaveBeenCalled();
   });
