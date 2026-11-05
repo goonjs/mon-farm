@@ -397,4 +397,38 @@ describe('order capture screen (E11-S11)', () => {
     const opts = (await mockFinance.load()).filter((e) => e.payload.t === 'fert_option_set' && (e.payload as { kind: string }).kind === 'sackKg');
     expect(opts.map((e) => (e.payload as { name: string }).name)).toContain('2.5');
   });
+
+  it('a saved formula never bought: picking it opens "ปุ๋ยใหม่" with the name filled in; one tap adds it to the order', async () => {
+    await seed(fertOptionId('formula', 'ดีเกลือ'), { t: 'fert_option_set', kind: 'formula', name: 'ดีเกลือ', description: '', hidden: false });
+    wrap(<OrderScreen />);
+    await flush();
+    press('ordc-add');
+    press(`ordc-pick-option|${fertOptionId('formula', 'ดีเกลือ')}`);
+    expect(screen.getByTestId('ordc-new-sheet')).toBeTruthy();
+    expect(screen.getByTestId('ordc-formula').props.value).toBe('ดีเกลือ');
+    const named = async () => (await mockFinance.load()).filter((e) => e.payload.t === 'fert_option_set' && (e.payload as { name: string }).name === 'ดีเกลือ').length;
+    const before = await named();
+    press('ordc-new-done');
+    await flush();
+    expect(text('ordc-item-name')).toBe('ดีเกลือ');
+    // already saved and shown: the remember tick writes nothing new
+    expect(await named()).toBe(before);
+  });
+
+  it('"เปลี่ยน" on an existing line to a saved formula never bought keeps the one line and its price', async () => {
+    wrap(<OrderScreen />);
+    await flush();
+    await addNewFert('ปุ๋ยผิด', ['2'], ['5', '0', '0']);
+    expect(screen.getAllByTestId(/^ordc-row-/)).toHaveLength(1);
+    fireEvent.press(screen.getAllByTestId(/^ordc-row-/)[0]);
+    press('ordc-change');
+    press(`ordc-pick-option|${fertOptionId('formula', 'ดีเกลือ')}`);
+    expect(screen.getByTestId('ordc-formula').props.value).toBe('ดีเกลือ');
+    press('ordc-new-done');
+    await flush();
+    expect(text('ordc-item-name')).toBe('ดีเกลือ');
+    expect(text('ordc-line-total-amount')).toBe('1,000.00');
+    press('ordc-item-done');
+    expect(screen.getAllByTestId(/^ordc-row-/)).toHaveLength(1);
+  });
 });
