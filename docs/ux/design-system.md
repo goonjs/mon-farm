@@ -549,6 +549,10 @@ card edge drawn only by shadow disappears exactly where the app is used.
   the rest.
 - **Buttons**: primary = navy filled pill, full width; secondary = navy
   outline pill (outline must use `action`, ≥3:1).
+  **Never** a short word in an outlined circle or near-circle pill at the end
+  of a row or card (e.g. "แก้"): the row or card itself is the tap target with
+  a `›`, or a secondary action is an underlined text link (owner rule
+  2026-11-06; picture in `.claude/skills/phone-form-ux/SKILL.md` rule 11).
 - No icon set is chosen yet — Q11.
 
 ### 12.8 Weighing — how public mode keeps its extreme-contrast rules

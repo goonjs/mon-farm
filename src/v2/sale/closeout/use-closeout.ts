@@ -18,6 +18,7 @@ import {
   closeoutPlan,
   confirmGate,
   confirmWrites,
+  planWrite,
   debtPieces,
   recordedDrafts,
   REPAY_ROUTES,
@@ -28,6 +29,9 @@ import {
   type DebtPiece,
 } from '../../../core/finance/closeout';
 import { projectDebts } from '../../../core/finance/debts';
+import { seenSnapshot } from '../../../core/finance/installments';
+import { headOf } from '../../../core/finance/ledger';
+import { maxInstallments } from '../../../core/master';
 import type { RoundingMode } from '../../../core/finance/deduct';
 import { FARM_FUNDS } from '../../../core/finance/types';
 import { newId } from '../../../lib/id';
@@ -39,6 +43,7 @@ import { useSaleCounts } from '../../../finance/use-live-sales';
 import { lastRepay, lastRounding, localPreferenceStore, rememberCloseout, type PreferenceStore } from '../../../store/closeout-preference';
 import { sessionGroupId } from '../../../store/session';
 import { useSaleMoney } from '../../money/sale/use-sale-money';
+import { useMaster } from '../../farm/pieces';
 
 // ── the draft, in memory, per sale ──────────────────────────────────────────
 
@@ -125,6 +130,9 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
   const draft = useCloseoutDraft(saleId);
   const groupId = groupOr();
   const counts = useSaleCounts();
+  // E06-S09: the farm's most instalments (master settings); the default until the master data is read.
+  const master = useMaster().state;
+  const maxInst = master ? maxInstallments(master) : undefined;
   // This hook's own reader is the one `fin.write` reloads: built from it, a confirm stopped
   // part-way and pressed again sees the lines it already wrote (useSaleMoney's reader does not reload).
   const debts = useMemo(() => projectDebts(fin.events ?? [], counts), [fin.events, counts]);
@@ -144,6 +152,7 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       finance: fin.state,
       events: fin.events ?? [],
       ownDeviceId: fin.deviceId,
+      maxInstallments: maxInst,
     });
     const rounding = draft.rounding ?? (money.rounding.choice.asked ? money.rounding.choice.mode : lastRounding(store, groupId));
     const planOf = (workers: CloseoutInput['drafts']) =>
@@ -188,7 +197,7 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
       plan,
     });
     return { settlement: s, inputs, plan, recordedPlan, preview, pieces, debtors, owed, gate, recordedLines, owedOf, mixed, sigs };
-  }, [ready, money, fin.state, fin.events, fin.deviceId, debts, saleId, draft, store, groupId]);
+  }, [ready, money, fin.state, fin.events, fin.deviceId, debts, saleId, draft, store, groupId, maxInst]);
 
   // Review #10: each check remembers the figures it was made on; when they move (another device synced, a new
   // debt or bill), the card asks again. N3: never while a confirm runs; this device's own writes never move them.
@@ -255,6 +264,9 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
   /** Every worker's writes, then the rounding and the remembered choices; false when a worker's lines cannot be placed. */
   const writeAll = async (d: NonNullable<typeof derived>): Promise<boolean> => {
     const farm = { id: FARM_FUNDS, name: '' };
+    // E06-S09: what a plan written with this confirm has seen — the log before any of this confirm's writes.
+    const events = fin.events ?? [];
+    const seen = seenSnapshot(events);
     for (const w of d.plan.workers) {
       const res = confirmWrites({
         saleId,
@@ -267,6 +279,16 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
         newId,
       });
       if (!res.ok) return false;
+      // E06-S09: a count picked, or a new-debt choice, writes the plan with the same confirm — BEFORE the lines
+      // (lead, PR-c): the draft lives in memory, so an app killed between the two must never leave lines without
+      // their plan. Plan first, the worst case is a plan whose sale has no line yet: not counted, and pressing
+      // confirm again proposes the same instalment from it (planWrite skips a plan already landed).
+      const input = d.inputs.find((x) => x.id === w.id);
+      const plan = input && planWrite({ worker: { id: w.id, name: w.name }, input, draft: draft.workers[w.id], saleId, seen });
+      if (plan) {
+        const target = `plan-${w.id}`;
+        await fin.write(target, headOf(events.filter((e) => e.targetId === target)), plan);
+      }
       for (const x of res.writes) {
         if (x.op === 'write') await fin.write(x.id, null, x.payload);
         else if (x.op === 'void-repayment') await fin.write(x.id, x.base, { t: 'repayment_changed', patch: { deleted: true } });

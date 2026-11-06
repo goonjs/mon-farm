@@ -8,15 +8,17 @@
 
 import type { Href } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
-import { saleSettings, validDupWindow, validHoldMs } from '../../core/master';
+import { maxInstallments, saleSettings, validDupWindow, validHoldMs } from '../../core/master';
+import { MAX_INSTALLMENTS_LIMIT, MIN_INSTALLMENTS } from '../../core/finance/installments';
 import type { NumberingMode, ZeroCheckMode } from '../../core/types';
 import { useT } from '../../i18n';
 import { readCountMode, readHoldMs, writeCountMode, writeHoldMs, type CountMode } from '../../store/hold-preference';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Card, CardLabel, Chip, FactRow, PersonIcon, Plus, RadioCard, SegmentedControl } from '../../ui';
+import { AppText, BottomSheet, Button, Card, CardLabel, ChevronRight, Chip, FactRow, PersonIcon, Plus, RadioCard, SegmentedControl } from '../../ui';
+import { Choice } from '../sale/closeout/summary-installments';
 import { FarmScreen, HelpNote, SaveFailed, Stepper, useMaster, useWrite } from './pieces';
 
 const ZERO: readonly ZeroCheckMode[] = ['every', 'first-per-farm', 'skip'];
@@ -30,6 +32,8 @@ export function SaleSettingsScreen() {
   const [adding, setAdding] = useState(false);
   const [netKg, setNetKg] = useState(50);
   const [basketKg, setBasketKg] = useState(2);
+  /** E06-S09 IP-21: the "ผ่อนหนี้ได้สูงสุด" sheet's pick (null = closed); no default inside — the current value is shown picked. */
+  const [maxPick, setMaxPick] = useState<number | null>(null);
 
   const s = state ? saleSettings(state) : null;
   const write = useWrite();
@@ -74,9 +78,10 @@ export function SaleSettingsScreen() {
       title={msg('saleSettings.title')}
       subtitle={msg('saleSettings.subtitle')}
       fallback={'/v2/farm' as Href}
-      failed={write.failed && !adding}
+      failed={write.failed && !adding && maxPick === null}
       testID="sale-settings"
       overlay={
+        <>
         <BottomSheet open={adding} onClose={() => setAdding(false)} title={msg('v2f.addPair')} testID="pair-sheet" action={{ label: msg('common.save'), testID: 'save-pair', saving: write.saving, onPress: () => void save(async () => { await peopleStore.addPair(netKg, basketKg); setAdding(false); }) }}>
           <AppText variant="bodySm">{msg('v2f.addPairHint')}</AppText>
           <AppText variant="label">{msg('saleSettings.net')}</AppText>
@@ -86,6 +91,20 @@ export function SaleSettingsScreen() {
           <AppText style={{ fontWeight: t.font.weight.semibold }}>{msg('saleSettings.scaleShould', { n: netKg + basketKg })}</AppText>
           <SaveFailed show={write.failed} />
         </BottomSheet>
+        {maxPick !== null ? (
+          <BottomSheet open onClose={() => setMaxPick(null)} title={msg('saleSettings.maxInstAsk')} testID="max-inst-sheet" action={{ label: msg('common.save'), testID: 'save-max-inst', saving: write.saving, onPress: () => void save(async () => { await peopleStore.updateSettings({ maxInstallments: maxPick }); setMaxPick(null); }) }}>
+            <AppText variant="bodySm">{msg('saleSettings.maxInstHelp')}</AppText>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+              {Array.from({ length: MAX_INSTALLMENTS_LIMIT - MIN_INSTALLMENTS + 1 }, (_, k) => k + MIN_INSTALLMENTS).map((n) => (
+                <Choice key={n} basis={56} grow={false} testID={`max-inst-${n}`} selected={maxPick === n} onPress={() => setMaxPick(n)}>
+                  <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.ink }}>{String(n)}</AppText>
+                </Choice>
+              ))}
+            </View>
+            <SaveFailed show={write.failed} />
+          </BottomSheet>
+        ) : null}
+        </>
       }
     >
       {s ? (
@@ -174,6 +193,15 @@ export function SaleSettingsScreen() {
               ]}
             />
             {countMode === 'hold' ? <Stepper testID="hold" label={msg('saleSettings.hold')} value={(holdMs / 1000).toFixed(1)} unit={msg('v2f.secondsUnit')} onLess={() => changeHold(holdMs - 100)} onMore={() => changeHold(holdMs + 100)} /> : null}
+          </Card>
+
+          {/* E06-S09 IP-21: synced to every device (master settings_set); the whole row opens the choice (rule 11) */}
+          <Card>
+            <Pressable testID="max-inst-row" accessibilityRole="button" onPress={() => state && setMaxPick(maxInstallments(state))} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.min }}>
+              <AppText style={{ flex: 1, fontWeight: t.font.weight.bold }}>{msg('saleSettings.maxInst')}</AppText>
+              <AppText testID="max-inst-value" style={{ fontWeight: t.font.weight.bold, color: t.color.inkSoft }}>{state ? msg('saleSettings.maxInstValue', { n: maxInstallments(state) }) : ''}</AppText>
+              <ChevronRight color={t.color.inkSoft} size={12} />
+            </Pressable>
           </Card>
 
           <Card>

@@ -17,7 +17,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { projectDebts, type DebtAccount, type HistoryLine } from '../../core/finance/debts';
 import { paymentStatus } from '../../core/finance/payments';
 import { buyerOwes, PENDING_REPAY_SINCE, pendingRepayLines, type PendingHow } from '../../core/finance/pending-repays';
-import { formatSatang, parseBahtToSatang, satangToInput } from '../../core/finance/money';
+import { formatSatang } from '../../core/finance/money';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
 import { useSaleCounts } from '../../finance/use-live-sales';
@@ -39,7 +39,6 @@ import {
   FactRow,
   FarmMateArt,
   IconTile,
-  MoneyField,
   MoneyOutIcon,
   PersonIcon,
   personArt,
@@ -51,6 +50,10 @@ import {
 import { V2_HOME } from '../routes';
 import { orderHref } from './order-routes';
 import { ChoiceChip, ChoiceRow, Day } from './pieces';
+import { PlanBadge, PlanCard, PlanSheet } from './debt-plan';
+import { maxInstallments } from '../../core/master';
+import { accountPlan, DEFAULT_MAX_INSTALLMENTS } from '../../core/finance/installments';
+import { FARM_FUNDS, type FinancePayload } from '../../core/finance/types';
 import { ListChip, ListSummary, PendingCard, payeeOf, RepaySheet, UndoBar, type OpenRepay, type UndoInfo } from './repay-pieces';
 
 type Filter = 'all' | HistoryLine['type'];
@@ -97,7 +100,8 @@ export function DebtsScreen() {
                   <FactRow icon={(c) => <DebtIcon color={c} size={14} />}>
                     {a.balanceSatang < 0 ? `${msg('debt.farmOwes', { name: a.worker.name })} ${formatSatang(-a.balanceSatang)}` : msg('debt.list.owes', { amount: formatSatang(a.balanceSatang) })}
                   </FactRow>
-                  {a.planPerSaleSatang != null ? <FactRow icon={(c) => <CalendarIcon color={c} size={14} />}>{msg('debt.planValue', { amount: formatSatang(a.planPerSaleSatang) })}</FactRow> : null}
+                  {/* E06-S09 IP-17 */}
+                  <PlanBadge account={a} events={fin.events ?? []} testID={`debt-plan-badge-${a.worker.id}`} />
                   {a.others.map((o) => (
                     <FactRow key={o.lender.id} icon={(c) => <PersonIcon color={c} size={14} />}>{msg('v2m.otherLender', { name: o.lender.name, amount: formatSatang(o.balanceSatang) })}</FactRow>
                   ))}
@@ -152,7 +156,10 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
   const msg = useT();
   const inFlight = useInFlight();
   const [filter, setFilter] = useState<Filter>('all');
-  const [planDraft, setPlanDraft] = useState<string | null>(null);
+  /** E06-S09 IP-19: the plan sheet (replaces the older inline per-sale editor). */
+  const [planOpen, setPlanOpen] = useState(false);
+  const master = useMaster().state;
+  const maxInst = master ? maxInstallments(master) : DEFAULT_MAX_INSTALLMENTS;
   // E06-S08: the repayment sheet and the undo bar (PR-5, PR-13).
   const [repay, setRepay] = useState<OpenRepay | null>(null);
   const [undo, setUndo] = useState<UndoInfo | null>(null);
@@ -178,12 +185,28 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
   const balance = account?.balanceSatang ?? 0;
   const s = account?.summary;
 
-  const savePlan = (perSaleSatang: number | null) =>
+  const savePlan = (payload: FinancePayload) =>
     inFlight.run(async () => {
       const heads = planEvents.filter((e) => !planEvents.some((o) => o.baseEventId === e.id)).map((e) => e.id).sort();
-      await fin.write(`plan-${worker.id}`, heads.length ? heads[heads.length - 1] : null, { t: 'debt_plan_set', worker, perSaleSatang });
-      setPlanDraft(null);
+      await fin.write(`plan-${worker.id}`, heads.length ? heads[heads.length - 1] : null, payload);
+      setPlanOpen(false);
     });
+  /** IP-18: "หักงวด N/M" on a deduction that paid an instalment. */
+  const plan = useMemo(() => (account ? accountPlan({ account, events }) : null), [account, events]);
+  // Review PR-c 3: one line per sale carries the number — its first live farm deduction line (as planStatus counts),
+  // never a line to another lender, a voided one, or a second line of the same sale.
+  const instLine = useMemo(() => {
+    const out = new Map<string, number>();
+    if (plan?.kind !== 'installments') return out;
+    const seenSale = new Set<string>();
+    for (const h of [...(account?.history ?? [])].reverse()) {
+      if (h.type !== 'deduction' || h.deleted || !h.saleId || (h.creditor.id && h.creditor.id !== FARM_FUNDS) || seenSale.has(h.saleId) || !plan.numbers[h.saleId]) continue;
+      seenSale.add(h.saleId);
+      out.set(h.id, plan.numbers[h.saleId]);
+    }
+    return out;
+  }, [plan, account]);
+  const instOf = (h: HistoryLine) => instLine.get(h.id) ?? null;
 
   const voidLine = async (line: HistoryLine, deleted: boolean) => {
     const d = account?.debts.find((x) => x.id === line.id);
@@ -214,26 +237,8 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
           </View>
           {account?.overpaid ? <Text testID="debt-flag" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.reject }}>{msg('debt.flag')}</Text> : null}
         </View>
-        {planDraft === null ? (
-          <View testID="debt-plan-row" style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, marginTop: t.space.sm }}>
-            <IconTile tone="category1" icon={() => <FarmMateArt id="farmwork.calendar" />} />
-            <View style={{ flex: 1 }}>
-              <AppText variant="bodySm">{msg('debt.plan')}</AppText>
-              <AppText testID="debt-plan" style={{ fontWeight: t.font.weight.bold }}>
-                {account?.planPerSaleSatang != null ? msg('debt.planValue', { amount: formatSatang(account.planPerSaleSatang) }) : msg('debt.planNone')}
-              </AppText>
-            </View>
-            <Button testID="debt-plan-edit" variant="ghost" onPress={() => setPlanDraft(account?.planPerSaleSatang != null ? satangToInput(account.planPerSaleSatang) : '')}>{msg('debt.planEdit')}</Button>
-          </View>
-        ) : (
-          <View style={{ gap: t.space.sm, marginTop: t.space.sm }}>
-            <MoneyField testID="debt-plan-amount" label={msg('debt.plan')} unit={msg('v2m.perSale')} satang={parseBahtToSatang(planDraft)} onChange={(v) => setPlanDraft(satangToInput(v))} />
-            <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-              {account?.planPerSaleSatang != null ? <Button testID="debt-plan-cancel" variant="destructive" onPress={() => void savePlan(null)}>{msg('debt.planCancel')}</Button> : null}
-              <Button testID="debt-plan-save" disabled={!parseBahtToSatang(planDraft) || inFlight.busy} onPress={() => void savePlan(parseBahtToSatang(planDraft))}>{msg('common.save')}</Button>
-            </View>
-          </View>
-        )}
+        {/* E06-S09 IP-18 / IP-20: the whole card opens the plan sheet (no round "แก้", rule 11) */}
+        <PlanCard account={account} events={events} onOpen={() => setPlanOpen(true)} />
       </Card>
 
       <PendingCard lines={pending} onOpen={(line) => setRepay({ line, ticked: false })} />
@@ -290,7 +295,9 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
           {lines.map((h, i) => (
             <View key={h.id} testID={`debt-line-${h.id}`} style={{ gap: 2, paddingVertical: t.space.sm, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint, opacity: h.deleted ? t.opacity.muted : 1 }}>
               <View style={{ flexDirection: 'row' }}>
-                <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, textDecorationLine: h.deleted ? 'line-through' : 'none' }}>{msg(`debt.kind.${h.type}`)}</AppText>
+                <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, textDecorationLine: h.deleted ? 'line-through' : 'none' }}>
+                  {instOf(h) && plan?.kind === 'installments' ? msg('debt.inst.hist', { n: instOf(h)!, m: plan.count }) : msg(`debt.kind.${h.type}`)}
+                </AppText>
                 <AppText style={{ fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{`${h.signedSatang >= 0 ? '+' : MINUS}${formatSatang(Math.abs(h.signedSatang))}`}</AppText>
               </View>
               <FactRow icon={(c) => <CalendarIcon color={c} size={14} />}>
@@ -334,6 +341,7 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
       ) : null}
     </ScrollView>
     {undo ? <UndoBar undo={undo} events={events} write={fin.write} onGone={clearUndo} /> : null}
+    {planOpen ? <PlanSheet account={account ?? emptyAccount(worker)} events={events} max={maxInst} busy={inFlight.busy} onSave={(p) => void savePlan(p)} onClose={() => setPlanOpen(false)} /> : null}
     {repay ? (
       <RepaySheet
         open={repay}
@@ -349,6 +357,22 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
     ) : null}
     </>
   );
+}
+
+/** A worker with nothing recorded yet can still be given a plan (as the older editor allowed). */
+function emptyAccount(worker: { id: string; name: string }): DebtAccount {
+  return {
+    worker,
+    balanceSatang: 0,
+    overpaid: false,
+    summary: { owed: { loan: 0, fertilizer: 0, other: 0 }, deducted: { 'cash-from-share': 0, 'buyer-split': 0, 'transfer-with-owner': 0, netting: 0 }, outside: 0, balanceSatang: 0 },
+    others: [],
+    planPerSaleSatang: null,
+    installmentPlan: null,
+    history: [],
+    debts: [],
+    payments: [],
+  };
 }
 
 function SumLine({ label, value, sign }: { label: string; value: number; sign: '+' | '−' }) {

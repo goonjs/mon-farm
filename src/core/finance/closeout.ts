@@ -14,6 +14,7 @@
 import type { DebtAccount, DebtPayment } from './debts';
 import { cashNotes, deductSheet, nettingPayloads, pickNotes, pilesCheck, workerCash, type DeductProblem, type RoundingMode } from './deduct';
 import { roundSettlement } from './rounding';
+import { DEFAULT_MAX_INSTALLMENTS, installmentAmount, installmentChoices, installmentProposal, installmentSplit, planPayload, type NewDebtChoice, type PaidInstallment, type PlanStatus, planStatus } from './installments';
 import { FARM_FUNDS, type DebtKind, type DebtPaymentMethod, type FinanceEvent, type FinancePayload, type Payer } from './types';
 import type { Reimbursement, Repayment } from './ledger';
 
@@ -108,6 +109,12 @@ export interface CloseoutWorkerInput {
    * only while this is what it was made on. Absent = '' (hand-built inputs).
    */
   readonly linesSig?: string;
+  /**
+   * E06-S09: the worker's instalment plan, as of this sale (`planStatus` with this sale left out), the
+   * farm's most instalments, and the farm debt owed now (for the plan written at confirm). Absent or a
+   * null status = no instalment plan (a per-sale plan, if any, is `planPerSaleSatang`).
+   */
+  readonly installment?: { readonly status: PlanStatus | null; readonly max: number; readonly owedSatang: number } | null;
 }
 
 /** A deduction and its netting part (satang). */
@@ -138,9 +145,31 @@ export interface CloseoutWorkerDraft {
    * now recorded. A choice with no signature never clears a double.
    */
   readonly linesSig?: string;
+  /** E06-S09: a number of instalments picked in the deduct sheet — a new plan, or a re-split of the running one (from this sale). */
+  readonly installments?: number;
+  /** E06-S09 (Q3): debt added since the plan — folded into the instalments left, or taken in full today. No default. */
+  readonly newDebt?: NewDebtChoice;
 }
 
 export type ProposalReason = 'plan' | 'all' | 'cut';
+
+/** E06-S09 · what the deduct sheet shows of an instalment plan at this sale. */
+export interface InstallmentView {
+  /** new = a count picked for a worker with no plan; running = the plan's instalment; resplit = the running plan split again from here. */
+  readonly mode: 'new' | 'running' | 'resplit';
+  /** This sale's instalment number, and the plan's total (paid + left, or paid + the new count). */
+  readonly number: number;
+  readonly count: number;
+  readonly paidSales: readonly PaidInstallment[];
+  /** The instalments after this one, as the plan would propose them from the debt left after this sale. */
+  readonly nextSatang: readonly number[];
+  /** This sale's instalment as the plan has it, before the share caps it (the short-share alert, IP-12); while new debt is undecided, the instalment without it. */
+  readonly dueSatang: number;
+  /** Debt added since the plan and no fold / in-full / typed amount yet: confirm is gated (IP-13). */
+  readonly needsChoice: boolean;
+  readonly extraSatang: number;
+  readonly newDebt: NewDebtChoice | null;
+}
 
 export interface CloseoutWorker {
   readonly id: string;
@@ -196,6 +225,10 @@ export interface CloseoutWorker {
   readonly doubleBothProblem: { readonly problem: Exclude<DeductProblem, 'nothing'>; readonly capSatang: number } | null;
   /** The recorded lines' signature now (`CloseoutWorkerInput.linesSig`); the deduct sheet stores it with what it sets. */
   readonly linesSig: string;
+  /** E06-S09: the instalment plan at this sale (running, picked, or re-split), or null (no plan / the plan is over). */
+  readonly installment: InstallmentView | null;
+  /** E06-S09 (IP-7): the counts the sheet offers — for a re-split of the running plan, or a new plan. */
+  readonly installmentChoices: readonly number[];
 }
 
 /** CO-5 shortcuts. half = cap / 2 floored to whole baht. */
@@ -280,30 +313,51 @@ function workerDraft(w: CloseoutWorkerInput, given: CloseoutWorkerDraft | undefi
   const d = given?.linesSig !== undefined && given.linesSig !== linesSig ? (given.route ? { route: given.route } : undefined) : given;
   const nettingSatang = d?.nettingSatang ?? rec?.nettingSatang ?? 0;
   const typed = d && d.totalSatang !== undefined ? d.totalSatang : rec ? rec.totalSatang : null;
+  // E06-S09: the instalment this sale proposes. A running instalment plan ignores the per-sale fallback it carries.
+  const inst = w.installment ?? null;
+  const live = inst?.status && !inst.status.done ? inst.status : null;
+  const picked = d?.installments ?? null;
+  const balanceAsIf = Math.max(0, w.balanceSatang);
+  const answered = (d?.totalSatang !== undefined && d?.totalSatang !== null) || !!d?.newDebt || picked !== null;
+  let planPer: number | null = w.planPerSaleSatang;
+  let needsChoice = false;
+  let mode: InstallmentView['mode'] | null = null;
+  if (picked !== null) {
+    planPer = installmentAmount(balanceAsIf, picked);
+    mode = live ? 'resplit' : 'new';
+  } else if (live) {
+    const prop = installmentProposal({ balanceSatang: balanceAsIf, status: live, newDebt: d?.newDebt });
+    needsChoice = prop.needsChoice && !answered;
+    // Answered by a typed amount (code review 4): the proposal under it is the folded instalment, never 0.
+    planPer = prop.needsChoice ? (answered ? installmentAmount(balanceAsIf, live.left) : 0) : prop.satang;
+    mode = 'running';
+  } else if (inst?.status) {
+    planPer = null; // the plan is over: what is left is ordinary debt (Q5)
+  }
   const sheet = deductSheet({
     balanceSatang: w.balanceSatang,
     shareSatang: w.shareSatang,
     owedBackSatang: w.owedBackSatang,
-    planPerSaleSatang: w.planPerSaleSatang,
+    planPerSaleSatang: planPer,
     totalSatang: typed,
     nettingSatang,
     editing: rec !== null,
   });
   const route = d?.route ?? rec?.route ?? defaultRoute(w.id);
   const balance = Math.max(0, w.balanceSatang);
-  const reason: ProposalReason = w.planPerSaleSatang !== null && sheet.proposedSatang === w.planPerSaleSatang ? 'plan' : sheet.proposedSatang >= balance ? 'all' : 'cut';
+  const reason: ProposalReason = planPer !== null && planPer > 0 && sheet.proposedSatang === planPer ? 'plan' : sheet.proposedSatang >= balance ? 'all' : 'cut';
   const invalid = sheet.problem !== null && sheet.problem !== 'nothing';
   const recRoute = rec ? rec.totalSatang - rec.nettingSatang : 0;
   const devices = rec ? Math.max(1, w.devices ?? 1) : 0;
   const doubled = devices > 1;
   // Owner 2026-11-01: one device's set is the sheet's proposal; when the devices differ, the plan's normal one.
   const fresh = () => ({
-    totalSatang: deductSheet({ balanceSatang: w.balanceSatang, shareSatang: w.shareSatang, owedBackSatang: w.owedBackSatang, planPerSaleSatang: w.planPerSaleSatang, totalSatang: null, nettingSatang: 0 }).proposedSatang,
+    totalSatang: deductSheet({ balanceSatang: w.balanceSatang, shareSatang: w.shareSatang, owedBackSatang: w.owedBackSatang, planPerSaleSatang: planPer, totalSatang: null, nettingSatang: 0 }).proposedSatang,
     nettingSatang: 0,
   });
   const doublePick = doubled && rec ? { one: w.oneDevice ?? fresh(), both: { totalSatang: rec.totalSatang, nettingSatang: rec.nettingSatang } } : null;
   const bothSheet = doublePick
-    ? deductSheet({ balanceSatang: w.balanceSatang, shareSatang: w.shareSatang, owedBackSatang: w.owedBackSatang, planPerSaleSatang: w.planPerSaleSatang, totalSatang: doublePick.both.totalSatang, nettingSatang: doublePick.both.nettingSatang, editing: true })
+    ? deductSheet({ balanceSatang: w.balanceSatang, shareSatang: w.shareSatang, owedBackSatang: w.owedBackSatang, planPerSaleSatang: planPer, totalSatang: doublePick.both.totalSatang, nettingSatang: doublePick.both.nettingSatang, editing: true })
     : null;
   const doubleBothProblem = bothSheet && bothSheet.problem !== null && bothSheet.problem !== 'nothing' ? { problem: bothSheet.problem, capSatang: bothSheet.capSatang } : null;
   // Review 3 (B1): only the owner's one / both choice in the deduct sheet (its ✓) fixes a double — never amounts alone.
@@ -319,7 +373,32 @@ function workerDraft(w: CloseoutWorkerInput, given: CloseoutWorkerDraft | undefi
     nettingSatang: sheet.nettingSatang,
     adjustSatang: 0,
   });
+  // E06-S09: the plan as the sheet shows it, from the debt left after this sale's deduction.
+  let installment: InstallmentView | null = null;
+  if (mode) {
+    const paidSales = live?.paidSales ?? [];
+    const paid = live?.paid ?? 0;
+    const count = mode === 'running' ? paid + (live?.left ?? 0) : paid + (picked ?? 0);
+    const after = count - paid - 1;
+    // New debt and no choice yet: the boxes show the plan as it was, without the new debt (mockup D2).
+    const oldDebt = Math.max(0, balanceAsIf - Math.max(0, live?.extraSatang ?? 0));
+    const oldDue = needsChoice ? (installmentAmount(oldDebt, live?.left ?? 0) ?? 0) : null;
+    installment = {
+      mode,
+      number: paid + 1,
+      count,
+      paidSales,
+      nextSatang: after > 0 ? installmentSplit(oldDue !== null ? oldDebt - oldDue : sheet.debtLeftSatang, after) : [],
+      dueSatang: oldDue ?? planPer ?? 0,
+      needsChoice,
+      extraSatang: live?.extraSatang ?? 0,
+      newDebt: d?.newDebt ?? null,
+    };
+  }
+  const installmentChoicesFor = installmentChoices(live ? live.left : null, inst?.max ?? DEFAULT_MAX_INSTALLMENTS);
   return {
+    installment,
+    installmentChoices: installmentChoicesFor,
     sheet,
     typedNettingSatang: nettingSatang,
     route,
@@ -393,6 +472,8 @@ export function closeoutPlan(input: CloseoutInput): CloseoutPlan {
       doublePick: x.doublePick,
       doubleBothProblem: x.doubleBothProblem,
       linesSig: x.linesSig,
+      installment: x.installment,
+      installmentChoices: x.installmentChoices,
     };
   });
   const by = (route: RepayRoute) => sumOf(workers.filter((w) => w.route === route).map((w) => w.routeSatang));
@@ -663,6 +744,8 @@ export type ConfirmGate =
   | { readonly kind: 'tally' }
   /** Owner 2026-11-01 (A): lines from two devices' confirms; fixed by setting the amount in the deduct sheet. */
   | { readonly kind: 'double'; readonly names: readonly string[] }
+  /** E06-S09 (Q3, IP-13): debt added since an instalment plan and no fold / in-full choice yet. */
+  | { readonly kind: 'new-debt'; readonly names: readonly string[] }
   /** N5: the first invalid worker, the problem and the figures the deduct sheet says it with. */
   | {
       readonly kind: 'invalid';
@@ -706,6 +789,8 @@ export function confirmGate(i: {
   if (owed === 'answer') return { kind: 'answer-owed' };
   const doubles = i.plan.workers.filter((w) => w.doubleOpen);
   if (doubles.length) return { kind: 'double', names: doubles.map((w) => w.name) };
+  const undecided = i.plan.workers.filter((w) => w.installment?.needsChoice);
+  if (undecided.length) return { kind: 'new-debt', names: undecided.map((w) => w.name) };
   const bad = i.plan.workers.find((w) => w.invalid);
   if (bad)
     return {
@@ -908,6 +993,8 @@ export function closeoutInputs(i: {
   readonly finance: { readonly repayments: readonly Repayment[]; readonly reimbursements: readonly Reimbursement[] };
   readonly events: readonly FinanceEvent[];
   readonly ownDeviceId?: string | null;
+  /** E06-S09: the farm setting "ผ่อนหนี้ได้สูงสุด" (master); absent = the default. */
+  readonly maxInstallments?: number;
 }) {
   const { saleId } = i;
   const all = (id: string) => (i.accounts.get(id)?.payments ?? []).filter((p) => p.saleId === saleId);
@@ -966,6 +1053,11 @@ export function closeoutInputs(i: {
       devices: devicesOf(tp.id),
       oneDevice: oneDeviceOf(tp.id),
       linesSig: linesSigOf(tp.id),
+      installment: {
+        status: account ? planStatus({ account, events: i.events, excludeSaleId: saleId }) : null,
+        max: i.maxInstallments ?? DEFAULT_MAX_INSTALLMENTS,
+        owedSatang: account ? account.summary.owed.loan + account.summary.owed.fertilizer + account.summary.owed.other : 0,
+      },
     };
   });
   const recordedLines = (id: string): RecordedLine[] =>
@@ -1032,4 +1124,40 @@ export function payBlocks(recordedPlan: CloseoutPlan): PayBlock[] {
     const why = w.doubled ? 'double' : w.totalSatang > w.shareSatang + w.nettingSatang ? 'over' : 'invalid';
     return [{ id: w.id, name: w.name, why, devices: w.devices }];
   });
+}
+
+/**
+ * E06-S09 · the plan event written with this sale's confirm (architect: the same confirm as the lines,
+ * so a confirm stopped part-way is finished by pressing it again). A count picked in the sheet → a plan
+ * of that many from this sale; a new-debt choice on the running plan → the plan re-based (the same
+ * instalments, the debt owed now), so the next sale does not ask again. Else nothing.
+ */
+export function planWrite(i: {
+  readonly worker: Payer;
+  readonly input: CloseoutWorkerInput;
+  readonly draft: CloseoutWorkerDraft | undefined;
+  readonly saleId: string;
+  readonly seen: Readonly<Record<string, number>>;
+}): FinancePayload | null {
+  const inst = i.input.installment;
+  if (!inst) return null;
+  // Architect review 2: a pick made on lines that have since moved is dropped, as `workerDraft` drops it.
+  const draft = i.draft?.linesSig !== undefined && i.draft.linesSig !== (i.input.linesSig ?? '') ? undefined : i.draft;
+  const base = { worker: i.worker, fromSaleId: i.saleId, seen: i.seen, owedSatang: inst.owedSatang, balanceSatang: Math.max(0, i.input.balanceSatang) };
+  const live = inst.status && !inst.status.done ? inst.status : null;
+  // A re-split / re-base keeps the instalments already paid, so the plan's numbering does not restart.
+  const earlier = live?.paidSales ?? [];
+  // A confirm pressed again after the plan landed (one stopped part-way): the plan is already this one. Not compared
+  // on owed (architect review 3): a debt synced in between would be folded in silently; it raises Q3 next instead.
+  const same = (count: number) => !!live && live.plan.fromSaleId === i.saleId && live.plan.count === count;
+  if (draft?.installments) {
+    const count = earlier.length + draft.installments;
+    return same(count) ? null : planPayload({ ...base, earlier, count });
+  }
+  // A re-base that landed needs no guard: the new debt is then in the plan's owed, so there is no extra left.
+  // New debt answered — fold / in full, or a typed amount (ใส่ยอดเอง, ปิดหนี้ทั้งหมด, ยังไม่หัก; code review 1) — re-bases the
+  // plan on the debt owed now, so re-opening this sale or the next one does not ask again for the same debt.
+  const typed = draft?.totalSatang !== undefined && draft?.totalSatang !== null;
+  if ((draft?.newDebt || typed) && live && live.extraSatang > 0) return planPayload({ ...base, earlier, count: live.paid + live.left });
+  return null;
 }

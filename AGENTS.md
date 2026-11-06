@@ -244,6 +244,11 @@ question blocks the commit, and the commit is what a push is waiting on.
   hides part of its own content. Wrap, shrink the content or restructure the
   layout instead. Run `npm run check:mockup -- <file.html>` on every mockup
   and the same overflow check on the real build; a FAIL means do not show it.
+- **No round outlined word buttons (owner rule, 2026-11-06).** Never put a
+  short word ("แก้" …) in an outlined circle or near-circle pill at the end of
+  a row or card. Make the row or card the tap target with `›`, or use an
+  underlined text link. Picture and detail: `.claude/skills/phone-form-ux/SKILL.md`
+  rule 11.
 
 ## Discord
 
