@@ -111,6 +111,7 @@ export const th = {
   'co.gate.invalid': 'ยอดหักเกินที่หักได้ · แก้ก่อน',
   'co.gate.fix': 'แก้ก่อน',
   'co.gate.double': 'แก้หักหนี้ซ้ำของ{names}ก่อน',
+  'co.gate.newDebt': 'เลือกวิธีจัดการหนี้ใหม่ของ{names}ก่อน',
 
   // deduct sheet (CO-5, CO-7, A5, A23)
   'co.deduct.title': 'หักหนี้{name}กี่บาท',
