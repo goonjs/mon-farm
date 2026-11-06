@@ -133,6 +133,11 @@ describe('IP-8 / IP-13 · new debt since the plan: nothing proposed and confirm 
     expect(full.installment!.nextSatang).toEqual([426_600]);
   });
 
+  it('code review 4: answered by a typed amount, the proposal under it is the folded instalment, not 0', () => {
+    const w = one(withNew(), { totalSatang: 300_000 });
+    expect(w.installment!.dueSatang).toBe(526_700);
+  });
+
   it('closing the whole debt, or "ยังไม่หัก", also answers it (a typed amount): no gate', () => {
     expect(one(withNew(), { totalSatang: 1_053_300 }).installment!.needsChoice).toBe(false);
     expect(one(withNew(), { totalSatang: 0 }).installment!.needsChoice).toBe(false);
@@ -167,6 +172,29 @@ describe('the plan event written with the confirm (architect: same confirm as th
     const landed: PlanStatus = { plan: { count: 5, earlier: [{ saleId: 's1', date: '2026-11-04', satang: 426_700 }], fromSaleId: 's2', seen, owedSatang: 1_280_000 }, paidSales: [{ saleId: 's1', date: '2026-11-04', satang: 426_700 }], paid: 1, left: 4, extraSatang: 0, done: false };
     expect(planWrite({ worker: NAT, input: nat({ installment: { status: landed, max: 6, owedSatang: 1_280_000 } }), draft: { installments: 4 }, saleId: 's2', seen })).toBeNull();
     expect(planWrite({ worker: NAT, input: nat({ installment: { status: landed, max: 6, owedSatang: 1_280_000 } }), draft: { installments: 3 }, saleId: 's2', seen })).not.toBeNull();
+  });
+
+  it('architect review 2: a pick made on lines that have since moved is not written', () => {
+    const w = nat({ linesSig: 'now', balanceSatang: 1_280_000, planPerSaleSatang: null, installment: { status: null, max: 4, owedSatang: 1_280_000 } });
+    expect(planWrite({ worker: NAT, input: w, draft: { installments: 3, linesSig: 'before' }, saleId: 's9', seen })).toBeNull();
+    expect(planWrite({ worker: NAT, input: w, draft: { installments: 3, linesSig: 'now' }, saleId: 's9', seen })).not.toBeNull();
+  });
+
+  it('architect review 3: a re-press after new debt synced does not re-write the landed plan (no silent fold)', () => {
+    const landed: PlanStatus = { plan: { count: 3, fromSaleId: 's9', seen, owedSatang: 1_280_000 }, paidSales: [], paid: 0, left: 3, extraSatang: 200_000, done: false };
+    expect(planWrite({ worker: NAT, input: nat({ installment: { status: landed, max: 4, owedSatang: 1_480_000 } }), draft: { installments: 3 }, saleId: 's9', seen })).toBeNull();
+  });
+
+  it('a re-base that landed is not re-written: the new debt is part of the plan, so there is no extra (review note)', () => {
+    const rebased: PlanStatus = { plan: { count: 3, earlier: [{ saleId: 's1', date: '2026-11-04', satang: 426_700 }], fromSaleId: 's2', seen, owedSatang: 1_480_000 }, paidSales: [{ saleId: 's1', date: '2026-11-04', satang: 426_700 }], paid: 1, left: 2, extraSatang: 0, done: false };
+    expect(planWrite({ worker: NAT, input: nat({ installment: { status: rebased, max: 4, owedSatang: 1_480_000 } }), draft: { newDebt: 'fold' }, saleId: 's2', seen })).toBeNull();
+  });
+
+  it('code review 1: new debt answered by a typed amount (or ปิดหนี้ / ยังไม่หัก) re-bases too, so re-opening the sale is not gated again', () => {
+    const w = nat({ balanceSatang: 1_053_300, installment: { status: running({ extraSatang: 200_000 }), max: 4, owedSatang: 1_480_000 } });
+    for (const totalSatang of [300_000, 1_053_300, 0]) {
+      expect(planWrite({ worker: NAT, input: w, draft: { totalSatang }, saleId: 's2', seen })).toMatchObject({ installments: { count: 3, owedSatang: 1_480_000, earlier: [{ saleId: 's1' }] } });
+    }
   });
 
   it('nothing picked → nothing written; a plan that is over is not re-written', () => {

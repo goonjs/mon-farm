@@ -151,8 +151,12 @@ export function planStatus(i: { readonly account: DebtAccount; readonly events: 
     counted.push({ saleId, date, satang });
   }
   counted.sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : a.saleId < b.saleId ? -1 : 1));
-  // A re-split / re-base carries what was paid before it, as written (the sale being closed never among them).
-  const paidSales = [...(plan.earlier ?? []).filter((x) => x.saleId !== i.excludeSaleId), ...counted];
+  // A re-split / re-base carries what was paid before it (the sale being closed never among them) — each only
+  // while its sale still deducts (architect review PR-b: a cancelled or re-confirmed-at-0 sale would otherwise
+  // shrink `left` and make every instalment bigger), at what it deducts now.
+  const liveSum = (saleId: string) => (bySale.get(saleId) ?? []).filter(counting).reduce((a, p) => a + p.amountSatang, 0);
+  const kept2 = (plan.earlier ?? []).flatMap((x) => (liveSum(x.saleId) > 0 ? [{ ...x, satang: liveSum(x.saleId) }] : []));
+  const paidSales = [...kept2, ...counted];
   const owed = i.account.summary.owed;
   const owedNow = owed.loan + owed.fertilizer + owed.other;
   const left = plan.count - paidSales.length;

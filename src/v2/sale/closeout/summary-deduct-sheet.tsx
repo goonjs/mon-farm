@@ -148,7 +148,8 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
   };
   /** IP-9 / IP-10: a count picked for a worker with no plan — the box shows the first instalment at once. */
   const pickCount = (n: number) => {
-    const first = Math.min(installmentAmount(w.totalSatang + w.debtLeftSatang, n) ?? 0, w.capSatang);
+    // As core proposes it (code review 5): never below the netting, never above the cap.
+    const first = Math.max(w.nettingSatang, Math.min(installmentAmount(w.totalSatang + w.debtLeftSatang, n) ?? 0, w.capSatang));
     setEntry(startEntry(rawOf(first)));
     setActive('total');
     edit((d) => withWorker(d, w.id, { installments: n, totalSatang: null }));
@@ -197,7 +198,7 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
     const choice = pick && w.totalSatang === pick.both.totalSatang && w.nettingSatang === pick.both.nettingSatang ? ('both' as const) : ('one' as const);
     co.update((d) => ({
       // A double (two devices' lines): ✓ records the owner's choice with the amount shown (one device's, unless หักทั้งสอง) — confirm then writes it as one set.
-      ...(w.doubled ? withWorker(d, w.id, { totalSatang: w.totalSatang, nettingSatang: w.nettingSatang, doubleChoice: choice, linesSig: w.linesSig }) : d),
+      ...(w.doubled ? withWorker(d, w.id, { totalSatang: w.totalSatang, nettingSatang: w.nettingSatang, doubleChoice: choice, linesSig: w.linesSig, installments: undefined }) : d),
       debtChecked: addId(d.debtChecked, w.id),
       ...(w.nettingSatang > 0 ? { owedChecked: addId(d.owedChecked, w.id), owedChoice: { ...d.owedChoice, [w.id]: 'net' as const } } : {}),
     }));

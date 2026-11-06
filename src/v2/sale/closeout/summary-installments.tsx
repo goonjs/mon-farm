@@ -271,7 +271,10 @@ export function InstallmentPane({
           caption={msg(short ? 'co.inst.canToday' : 'co.inst.byPlan', { number: v.number, count: v.count })}
           satang={w.totalSatang}
           foot={
-            short && lastAmount !== undefined
+            // Code review 6: the shortfall is spread over every instalment left, so name them all when more than one is left.
+            short && v.nextSatang.length > 1
+              ? msg('co.inst.afterRest', { name: w.name, cash: baht(w.cashSatang), list: v.nextSatang.map(shortBaht).join(' · ') })
+              : short && lastAmount !== undefined
               ? msg('co.inst.afterLast', { name: w.name, cash: baht(w.cashSatang), n: lastN, amount: baht(lastAmount) })
               : msg('co.inst.after', { name: w.name, cash: baht(w.cashSatang), left: baht(w.debtLeftSatang) })
           }

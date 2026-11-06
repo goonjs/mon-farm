@@ -328,7 +328,8 @@ function workerDraft(w: CloseoutWorkerInput, given: CloseoutWorkerDraft | undefi
   } else if (live) {
     const prop = installmentProposal({ balanceSatang: balanceAsIf, status: live, newDebt: d?.newDebt });
     needsChoice = prop.needsChoice && !answered;
-    planPer = prop.needsChoice ? 0 : prop.satang;
+    // Answered by a typed amount (code review 4): the proposal under it is the folded instalment, never 0.
+    planPer = prop.needsChoice ? (answered ? installmentAmount(balanceAsIf, live.left) : 0) : prop.satang;
     mode = 'running';
   } else if (inst?.status) {
     planPer = null; // the plan is over: what is left is ordinary debt (Q5)
@@ -1140,16 +1141,23 @@ export function planWrite(i: {
 }): FinancePayload | null {
   const inst = i.input.installment;
   if (!inst) return null;
+  // Architect review 2: a pick made on lines that have since moved is dropped, as `workerDraft` drops it.
+  const draft = i.draft?.linesSig !== undefined && i.draft.linesSig !== (i.input.linesSig ?? '') ? undefined : i.draft;
   const base = { worker: i.worker, fromSaleId: i.saleId, seen: i.seen, owedSatang: inst.owedSatang, balanceSatang: Math.max(0, i.input.balanceSatang) };
   const live = inst.status && !inst.status.done ? inst.status : null;
   // A re-split / re-base keeps the instalments already paid, so the plan's numbering does not restart.
   const earlier = live?.paidSales ?? [];
-  // A confirm pressed again after the plan landed (one stopped part-way): the plan is already this one.
-  const same = (count: number) => !!live && live.plan.fromSaleId === i.saleId && live.plan.count === count && live.plan.owedSatang === inst.owedSatang;
-  if (i.draft?.installments) {
-    const count = earlier.length + i.draft.installments;
+  // A confirm pressed again after the plan landed (one stopped part-way): the plan is already this one. Not compared
+  // on owed (architect review 3): a debt synced in between would be folded in silently; it raises Q3 next instead.
+  const same = (count: number) => !!live && live.plan.fromSaleId === i.saleId && live.plan.count === count;
+  if (draft?.installments) {
+    const count = earlier.length + draft.installments;
     return same(count) ? null : planPayload({ ...base, earlier, count });
   }
-  if (i.draft?.newDebt && live && live.extraSatang > 0) return planPayload({ ...base, earlier, count: live.paid + live.left });
+  // A re-base that landed needs no guard: the new debt is then in the plan's owed, so there is no extra left.
+  // New debt answered — fold / in full, or a typed amount (ใส่ยอดเอง, ปิดหนี้ทั้งหมด, ยังไม่หัก; code review 1) — re-bases the
+  // plan on the debt owed now, so re-opening this sale or the next one does not ask again for the same debt.
+  const typed = draft?.totalSatang !== undefined && draft?.totalSatang !== null;
+  if ((draft?.newDebt || typed) && live && live.extraSatang > 0) return planPayload({ ...base, earlier, count: live.paid + live.left });
   return null;
 }

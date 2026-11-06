@@ -403,3 +403,23 @@ describe('a re-split / re-base keeps the instalments already paid (the number do
     expect(p.t === 'debt_plan_set' && p.installments).toEqual({ count: 3, fromSaleId: 's1', seen: {}, owedSatang: 1 });
   });
 });
+
+describe('architect review PR-b · an earlier instalment counts only while its sale still deducted', () => {
+  it('re-split with s1 earlier, then s1 cancelled → s1 no longer paid; the amounts follow', () => {
+    const base = [...planned(), pay('l1', 's1', 426_700)];
+    const earlier = planStatus({ account: account(base), events: base, excludeSaleId: 's2' })!.paidSales;
+    const plan2 = ev('plan-p-nat', planPayload({ worker: NAT, count: 5, earlier, fromSaleId: 's2', seen: seenSnapshot(base), owedSatang: 1_280_000, balanceSatang: 853_300 }), { base: base[base.length - 2].id });
+    const es = [...base, plan2];
+    const st = planStatus({ account: account(es, (id) => id !== 's1'), events: es, excludeSaleId: 's2' })!;
+    expect(st.paidSales).toEqual([]);
+    expect(st.left).toBe(5);
+  });
+
+  it('an earlier sale re-confirmed at 0 drops out too', () => {
+    const base = [...planned(), pay('l1', 's1', 426_700)];
+    const earlier = planStatus({ account: account(base), events: base, excludeSaleId: 's2' })!.paidSales;
+    const plan2 = ev('plan-p-nat', planPayload({ worker: NAT, count: 5, earlier, fromSaleId: 's2', seen: seenSnapshot(base), owedSatang: 1_280_000, balanceSatang: 853_300 }), { base: base[base.length - 2].id });
+    const es = [...base, plan2, voidPay('l1', base[base.length - 1].id)];
+    expect(planStatus({ account: account(es), events: es, excludeSaleId: 's2' })!.paid).toBe(0);
+  });
+});

@@ -57,7 +57,7 @@ export function DebtSheet({
             <View style={{ flexShrink: 1 }}>
               <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{w.name}</AppText>
               <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.debt.pieces', { n: pieces.length })}</AppText>
-              <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{installmentLabel(msg, w) ?? msg(edited ? 'co.reason.edited' : `co.reason.${w.reason}` as 'co.reason.plan')}</AppText>
+              <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{edited ? msg('co.reason.edited') : (installmentLabel(msg, w) ?? msg(`co.reason.${w.reason}` as 'co.reason.plan'))}</AppText>
             </View>
             <View style={{ marginLeft: 'auto', alignItems: 'flex-end' }}>
               <AppText style={{ fontWeight: t.font.weight.black, fontSize: t.font.size.headingLg, fontVariant: ['tabular-nums'], color: t.color.debtIn }}>{minus(w.totalSatang)}</AppText>

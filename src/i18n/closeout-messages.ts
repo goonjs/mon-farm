@@ -138,6 +138,7 @@ export const th = {
   'co.inst.allTitle': 'ปิดหนี้ทั้งหมด · แผนจบวันนี้',
   'co.inst.after': '{name}รับเงินสด {cash} · หนี้เหลือ {left}',
   'co.inst.afterLast': '{name}รับเงินสด {cash} · งวด {n} กลายเป็น {amount}',
+  'co.inst.afterRest': '{name}รับเงินสด {cash} · งวดที่เหลือ {list}',
   'co.inst.cashOnly': '{name}รับเงินสด {cash}',
   'co.inst.ok': 'หักงวด {number} · {amount}',
   'co.inst.okAll': 'ปิดหนี้ · {amount}',
