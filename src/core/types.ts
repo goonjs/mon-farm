@@ -467,6 +467,8 @@ export type MasterPayload =
       readonly numbering?: NumberingMode;
       readonly zeroCheck?: ZeroCheckMode;
       readonly dupWindowS?: number;
+      /** E06-S09 · the farm's most instalments per split ("ผ่อนหนี้ได้สูงสุด"), 2–12; default 4. */
+      readonly maxInstallments?: number;
     }
   /** A standard net + basket weight pair, integer grams (MD-7). Removed with `delete`. */
   | { readonly t: 'basket_pair_added'; readonly pairId: string; readonly netG: number; readonly basketG: number }

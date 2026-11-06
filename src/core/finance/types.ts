@@ -294,6 +294,21 @@ export interface IncomeFields {
 
 export type IncomePatch = Partial<IncomeFields> & { readonly deleted?: boolean };
 
+/**
+ * E06-S09 · an instalment plan (architect review 2026-11-06). Instalments paid are never stored:
+ * they are counted from the log (see `installments.ts`). `seen` = the highest deviceSeq per device
+ * known when the plan was written — sales whose first deduction line is above it count (no clocks).
+ */
+export interface InstallmentPlanSpec {
+  /** Instalments from the anchor on, 2–12. */
+  readonly count: number;
+  /** The sale it was set at (instalment 1), or null when set from the debt account (counts from the next sale). */
+  readonly fromSaleId: string | null;
+  readonly seen: Readonly<Record<string, number>>;
+  /** The farm debt owed in total (loan + fertilizer + other) when written: more than this later is new debt (Q3). */
+  readonly owedSatang: number;
+}
+
 export type FinancePayload =
   | { readonly t: 'expense_created'; readonly fields: ExpenseFields }
   | { readonly t: 'expense_changed'; readonly patch: ExpensePatch; readonly alsoBasedOn?: readonly EventId[] }
@@ -309,8 +324,12 @@ export type FinancePayload =
   | { readonly t: 'debt_changed'; readonly patch: DebtPatch; readonly alsoBasedOn?: readonly EventId[] }
   | { readonly t: 'debt_payment_recorded'; readonly fields: DebtPaymentFields }
   | { readonly t: 'debt_payment_changed'; readonly patch: DebtPaymentPatch; readonly alsoBasedOn?: readonly EventId[] }
-  /** One plan per worker (targetId `plan-<workerId>`); null cancels it. Instalment = per sale (D-59). */
-  | { readonly t: 'debt_plan_set'; readonly worker: Payer; readonly perSaleSatang: number | null }
+  /**
+   * One plan per worker (targetId `plan-<workerId>`); null cancels it. Instalment = per sale (D-59).
+   * With `installments` (E06-S09, D-88) the plan is a number of instalments and `perSaleSatang` is
+   * only a fallback for app versions that predate it (they propose it); new code ignores it.
+   */
+  | { readonly t: 'debt_plan_set'; readonly worker: Payer; readonly perSaleSatang: number | null; readonly installments?: InstallmentPlanSpec }
   | { readonly t: 'account_added'; readonly fields: AccountFields }
   | { readonly t: 'account_changed'; readonly patch: AccountPatch; readonly alsoBasedOn?: readonly EventId[] }
   /** targetId `default-account`; null = no default. */

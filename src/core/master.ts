@@ -119,6 +119,8 @@ interface SettingsFold {
   readonly numbering: NumberingMode;
   readonly zeroCheck: ZeroCheckMode;
   readonly dupWindowS: number;
+  /** E06-S09 · the farm's most instalments per split; default 4. */
+  readonly maxInstallments: number;
   /** Added pairs, in fold order, deleted ones included (filtered in `saleSettings`). */
   readonly added: readonly (BasketPair & { deleted: boolean })[];
   readonly defaultPairId: string | null;
@@ -148,7 +150,7 @@ export function projectMaster(events: readonly SaleEvent[]): MasterState {
   const zones = new Map<string, Omit<FarmZoneRecord, 'deleted' | 'hidden'>>();
   const changes: Omit<AssignmentChange, 'deleted'>[] = [];
   const shares: ShareEntry[] = [];
-  let settings: Omit<SettingsFold, 'added'> = { scaleType: 'whole', numbering: 'per-tapper', zeroCheck: 'every', dupWindowS: 8, defaultPairId: null };
+  let settings: Omit<SettingsFold, 'added'> = { scaleType: 'whole', numbering: 'per-tapper', zeroCheck: 'every', dupWindowS: 8, maxInstallments: 4, defaultPairId: null };
   const pairs: BasketPair[] = [];
   const ordered = events.filter((e) => e.kind === 'master').sort(compareEvents);
 
@@ -636,7 +638,7 @@ export interface SaleSettings {
  * already recorded.
  */
 export function saleSettings(state: MasterState): SaleSettings {
-  const { added, defaultPairId, ...rest } = state.settings;
+  const { added, defaultPairId, maxInstallments: _m, ...rest } = state.settings;
   const live = [...BUILTIN_PAIRS, ...added.filter((p) => !p.deleted).map(({ deleted: _d, ...p }) => p)];
   const def = live.find((p) => p.pairId === defaultPairId) ?? live[0];
   return { ...rest, pairs: live.map((p) => ({ ...p, isDefault: p.pairId === def?.pairId })) };
@@ -705,4 +707,15 @@ export function parsePlantedYear(text: string, nowTs: number): { ok: true; yearB
   const yearBe = n < 2400 ? n + 543 : n;
   const thisYearBe = new Date(nowTs + BANGKOK_OFFSET_MS).getUTCFullYear() + 543;
   return yearBe <= thisYearBe ? { ok: true, yearBe } : { ok: false };
+}
+
+/** E06-S09 · whole numbers 2–12: the farm setting "ผ่อนหนี้ได้สูงสุด". */
+export function validMaxInstallments(n: number): boolean {
+  return Number.isInteger(n) && n >= 2 && n <= 12;
+}
+
+/** E06-S09 · the farm's most instalments per split (IP-21), clamped to 2–12; 4 when never set. */
+export function maxInstallments(state: MasterState): number {
+  const n = Math.floor(state.settings.maxInstallments ?? 4);
+  return Number.isFinite(n) ? Math.min(12, Math.max(2, n)) : 4;
 }
