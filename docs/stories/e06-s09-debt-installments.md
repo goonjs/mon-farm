@@ -79,7 +79,18 @@ _เขียนก่อนโค้ด (TDD) ให้ล้มก่อน �
 
 ## Dev notes
 
-- รอผล solution-architect (2026-11-06): รูป event แผนงวด, จุดเริ่มนับงวด, ที่เก็บตั้งค่าสวน, จุดเสียบใน `deduct.ts` / `closeout.ts`
+Solution-architect review 2026-11-06 (separate agent), adopted:
+
+- **Event**: extend `debt_plan_set` (same target `plan-<workerId>`), no new event type. Older apps fold an unknown `t` on that chain as "no plan" and ignore extra fields; Firestore rules only check `payload` is a map. Shape:
+  `{ t: 'debt_plan_set', worker, perSaleSatang: number | null, installments?: { count, fromSaleId: string | null, seen: Record<deviceId, deviceSeq>, owedSatang } }`.
+  With `installments`, `perSaleSatang` holds the instalment at write time — a fallback **for old apps only** (they propose it; new code ignores it). Cancel = `perSaleSatang: null` with no `installments`.
+- **Paid instalments** (not stored): distinct sales S ≠ the sale being closed, where S's live farm deduction lines (`counts`, not deleted, method ≠ `outside`, netting included) **sum** > 0, and S = `fromSaleId` **or** the first `debt_payment_recorded` ever written for (worker, S) — voided ones included — has a `deviceSeq` above `seen[deviceId]`. `seen` = the highest deviceSeq per device known when the plan was written: no clock, no date. "First ever, voided included" keeps a re-confirmed pre-plan sale (confirm voids and rewrites lines) from counting. A cancelled/deleted anchor sale drops out (`counts` false) and returns if restored; the plan stays.
+- **New debt since the plan** (IP-8): `extra = farm debt owed now (loan + fertilizer + other) − installments.owedSatang`. `extra > 0` → the sheet asks; either answer writes a new plan event at confirm with the new `owedSatang` ("fold in": count = instalments left, `fromSaleId` = this sale; "in full": instalment + extra today, count unchanged). `extra < 0` (a debt deleted) just recomputes. No dates (debts can be backdated; share debts follow edited expenses).
+- **Farm setting**: `maxInstallments?: number` on master `settings_set` (validated 2–12 in `updateSettings`, default 4 in the fold). Not `closeout-preference.ts` (device-local). Lowering it does not touch a running plan.
+- **Where it plugs in**: pure `installmentAmount(balanceAsIf, left)` (null when nothing is left or balance 0; exact balance when 1 left; else rounded up to whole baht); the per-sale figure is computed in `closeoutInputs` from the as-if balance, counting paid instalments **excluding this sale**, so re-confirming is stable. `proposeDeduction` / `deductSheet` stay as they are; reason `'plan'` still applies.
+- **Known risks**: (1) `plan-<workerId>` heads are last-write-wins (`headOf` picks the highest id): two devices re-baselining at confirm lose one fold/new-debt choice (the sale still counts via `seen`) — surface as a conflict (D-30) in a follow-up; (2) old apps propose the stale fallback and do not count instalments — safe, not exact; (3) re-confirm double counting if `confirmWrites` ever stops void-and-rewrite — pinned by a test; (4) rounding up ends a plan early at balance 0 — fuzz the exact remainder; (5) count per sale with sum > 0, never per line (netting-only, a line cut to 0).
+- **Offline checklist**: the plan written at confirm is written with that sale's lines in the same confirm, so a stop part-way is retried by pressing confirm again (confirmWrites is idempotent).
+- Open for the owner (via lead): an old "ยังไม่หัก" sale re-confirmed after the plan with a deduction would count as an instalment.
 
 ## Code review
 

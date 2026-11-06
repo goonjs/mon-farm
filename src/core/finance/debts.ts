@@ -19,6 +19,7 @@ import {
   type DebtPaymentFields,
   type DebtPaymentMethod,
   type FinanceEvent,
+  type InstallmentPlanSpec,
   type Payer,
   type RepaymentFields,
 } from './types';
@@ -91,6 +92,8 @@ export interface DebtAccount {
   readonly summary: DebtSummary;
   readonly others: readonly OtherLender[];
   readonly planPerSaleSatang: number | null;
+  /** E06-S09: an instalment plan (then `planPerSaleSatang` is null), or null. */
+  readonly installmentPlan: InstallmentPlanSpec | null;
   /** Newest first. */
   readonly history: readonly HistoryLine[];
   readonly debts: readonly Debt[];
@@ -110,7 +113,7 @@ export function projectDebts(
 ): Map<string, DebtAccount> {
   const debts: Debt[] = [];
   const payments: DebtPayment[] = [];
-  const plans = new Map<string, number | null>();
+  const plans = new Map<string, { perSaleSatang: number | null; installments: InstallmentPlanSpec | null }>();
 
   const byTarget = new Map<string, FinanceEvent[]>();
   for (const e of events) {
@@ -143,7 +146,8 @@ export function projectDebts(
       // Plans carry no patch: the current head of the chain is the plan.
       const head = headOf(evs);
       const p = evs.find((e) => e.id === head)?.payload;
-      if (p?.t === 'debt_plan_set') plans.set(p.worker.id, p.perSaleSatang);
+      // E06-S09: an instalment plan's perSaleSatang is a fallback for older apps only.
+      if (p?.t === 'debt_plan_set') plans.set(p.worker.id, p.installments ? { perSaleSatang: null, installments: p.installments } : { perSaleSatang: p.perSaleSatang, installments: null });
     }
   }
 
@@ -215,7 +219,8 @@ export function projectDebts(
       overpaid: balance < 0,
       summary: { owed, deducted, outside, balanceSatang: balance },
       others,
-      planPerSaleSatang: plans.get(wid) ?? null,
+      planPerSaleSatang: plans.get(wid)?.perSaleSatang ?? null,
+      installmentPlan: plans.get(wid)?.installments ?? null,
       history,
       debts: ds,
       payments: ps,
