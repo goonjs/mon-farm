@@ -80,8 +80,8 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 
 ### E06 บัญชีปุ๋ย (+ หนี้คนงานทุกประเภท, D-54) — [epic](../epics/e06-fertilizer.md)
 
-- [E06-S01: บันทึกการซื้อปุ๋ย](e06-s01-fertilizer-purchase.md) ❓
-- [E06-S02: แบ่งกระสอบให้คนกรีด + ภาระ 50/50](e06-s02-allocation-and-burden.md) ❓
+- [E06-S01: บันทึกการซื้อปุ๋ย](e06-s01-fertilizer-purchase.md) — ถูกแทนที่ (D-89)
+- [E06-S02: แบ่งกระสอบให้คนกรีด + ภาระ 50/50](e06-s02-allocation-and-burden.md) — ถูกแทนที่ → E16-S03 (D-89)
 - [E06-S03: บัญชีหนี้คนงาน — ยอดค้าง แผนผ่อน ประวัติ](e06-s03-tapper-ledger.md)
 - [E06-S04: หักหนี้ตอนสรุปเงิน ไม่เกินส่วนแบ่ง ยกยอด](e06-s04-deduct-at-settlement.md)
 - ~~[E06-S05: ย้ายข้อมูลหัก S29 เดิม เข้าบัญชีคนกรีด](e06-s05-migrate-s29-deductions.md)~~ ยกเลิก (D-65 — ลบโค้ดเก่าใน E06-S04)
@@ -119,6 +119,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E10-S01: รายการสต็อกและเกณฑ์ใกล้หมด](e10-s01-stock-items.md) ❓
 - [E10-S02: รับเข้า ใช้ออก และตรวจนับ](e10-s02-stock-transactions.md) ❓
 - [E10-S03: ธงสต็อกใกล้หมดบนหน้าแรก](e10-s03-low-stock-flag.md)
+- [E10-S04: ปุ๋ยที่เหลือเข้าสต็อก](e10-s04-fertilizer-leftover-stock.md) — ถูกแทนที่ → E16-S04 (D-89)
 
 ### E11 การเงินสวน — [epic](../epics/e11-finance.md)
 
@@ -132,6 +133,8 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E11-S08: กระแสเงินสดรายเดือนและเงินสำรอง](e11-s08-cashflow-and-reserve.md)
 - [E11-S11: ใบซื้อ — จดใบสั่งของร้านก่อน บอกรายละเอียดปุ๋ยทีหลัง](e11-s11-fertilizer-order.md) — Done (PR #121, #122)
 - [E11-S12: พูดเพื่อบันทึกใบซื้อ](e11-s12-voice-entry-idea.md) — ไอเดีย ยังไม่เริ่ม
+- [E11-S16: จ่ายเงินร้าน — มัดจำ บางส่วน เต็ม แยกจากรับของ](e11-s16-shop-payments.md) — Draft (D-90)
+- [E11-S17: ถอดการแบ่งคนกรีด โซน เหตุผล ออกจากใบซื้อปุ๋ย](e11-s17-remove-split-from-order.md) — Draft (D-89) ออกพร้อม E16-S02/S03
 
 ### E12 สภาพอากาศ — [epic](../epics/e12-weather.md)
 
@@ -158,6 +161,20 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E14-S04: แชตถามเรื่องสวนเป็นภาษาไทย](e14-s04-chat-with-context.md) ❓
 - [E14-S05: AI เตรียมคำสั่ง แสดงสิ่งที่จะเปลี่ยน รอยืนยัน](e14-s05-prepared-actions.md)
 - [E14-S06: AI จัดประเภทการตรวจสวน](e14-s06-inspection-classification.md) ❓
+
+### E15 เตรียมขาย — [epic](../epics/e15-sale-preparation.md)
+
+- [E15-S01: เตรียมขาย — เช็คลิสต์ 4 ข้อ](e15-s01-sale-prep-checklist.md) — Draft, AC ร่าง (D-91)
+- [E15-S02: เริ่มขายจากที่เตรียมไว้](e15-s02-start-sale-from-prep.md) — Draft, AC ร่าง (D-91)
+- [E15-S03: ข้อความนัดคนรับซื้อ + โทร/LINE](e15-s03-buyer-message.md) ❓
+- [E15-S04: เตือนวันขาย](e15-s04-sale-day-reminder.md) ❓
+
+### E16 การดูแลสวน — [epic](../epics/e16-garden-care.md)
+
+- [E16-S01: หน้าการดูแลสวน](e16-s01-garden-care-list.md) — Draft
+- [E16-S02: บันทึกการใส่ปุ๋ย](e16-s02-record-fertilizing.md) — Draft, AC ร่าง (D-89)
+- [E16-S03: แบ่งปุ๋ยให้คนกรีด → หนี้ 1 ก้อนต่อการใส่ 1 ครั้ง](e16-s03-split-to-tappers.md) — Draft, AC ร่าง (D-89)
+- [E16-S04: ปุ๋ยคงเหลือ (สต็อกปุ๋ย) และใส่เกิน](e16-s04-fertilizer-left.md) — Draft (แทน E10-S04)
 
 ## ประวัติ (PRD v0.4, ถูกแทนแล้ว)
 
