@@ -102,6 +102,23 @@ Use these when you draw, build or review any screen that takes input.
     person must not skip is gated (the button stays off until it is done), not
     reminded in a sentence. See `.claude/skills/summary-lines/SKILL.md`.
 
+11. **No round outlined button with a word in it (owner rule, 2026-11-06).**
+    A short word ("แก้", "ดู", "เปิด" …) inside an outlined circle or near-circle
+    pill sitting at the end of a row or card is banned: the owner finds it
+    ugly and has asked for it to go before. Make the whole row or card the
+    tap target with a `›` on the right (as list rows already do), or use an
+    underlined text link for a secondary action. Full-width primary and
+    secondary buttons (§ Buttons in `docs/ux/design-system.md`) are not
+    affected.
+
+    Banned (do not draw or build this):
+
+    ![banned: round outlined "แก้" button](../../../docs/ux/rules/no-round-outline-button.png)
+
+    Instead (whole card taps, `›` on the right):
+
+    ![instead: the card itself is the button](../../../docs/ux/rules/no-round-outline-button-instead.png)
+
 ## How to check before you show anything
 
 1. **Mockup:** export every phone as its own PNG at device size, 3×. Send the
