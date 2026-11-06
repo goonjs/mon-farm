@@ -52,8 +52,8 @@ import { orderHref } from './order-routes';
 import { ChoiceChip, ChoiceRow, Day } from './pieces';
 import { PlanBadge, PlanCard, PlanSheet } from './debt-plan';
 import { maxInstallments } from '../../core/master';
-import { accountPlan } from '../../core/finance/installments';
-import type { FinancePayload } from '../../core/finance/types';
+import { accountPlan, DEFAULT_MAX_INSTALLMENTS } from '../../core/finance/installments';
+import { FARM_FUNDS, type FinancePayload } from '../../core/finance/types';
 import { ListChip, ListSummary, PendingCard, payeeOf, RepaySheet, UndoBar, type OpenRepay, type UndoInfo } from './repay-pieces';
 
 type Filter = 'all' | HistoryLine['type'];
@@ -159,7 +159,7 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
   /** E06-S09 IP-19: the plan sheet (replaces the older inline per-sale editor). */
   const [planOpen, setPlanOpen] = useState(false);
   const master = useMaster().state;
-  const maxInst = master ? maxInstallments(master) : 4;
+  const maxInst = master ? maxInstallments(master) : DEFAULT_MAX_INSTALLMENTS;
   // E06-S08: the repayment sheet and the undo bar (PR-5, PR-13).
   const [repay, setRepay] = useState<OpenRepay | null>(null);
   const [undo, setUndo] = useState<UndoInfo | null>(null);
@@ -193,7 +193,20 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
     });
   /** IP-18: "หักงวด N/M" on a deduction that paid an instalment. */
   const plan = useMemo(() => (account ? accountPlan({ account, events }) : null), [account, events]);
-  const instOf = (h: HistoryLine) => (plan?.kind === 'installments' && h.type === 'deduction' && h.saleId && plan.numbers[h.saleId] ? plan.numbers[h.saleId] : null);
+  // Review PR-c 3: one line per sale carries the number — its first live farm deduction line (as planStatus counts),
+  // never a line to another lender, a voided one, or a second line of the same sale.
+  const instLine = useMemo(() => {
+    const out = new Map<string, number>();
+    if (plan?.kind !== 'installments') return out;
+    const seenSale = new Set<string>();
+    for (const h of [...(account?.history ?? [])].reverse()) {
+      if (h.type !== 'deduction' || h.deleted || !h.saleId || (h.creditor.id && h.creditor.id !== FARM_FUNDS) || seenSale.has(h.saleId) || !plan.numbers[h.saleId]) continue;
+      seenSale.add(h.saleId);
+      out.set(h.id, plan.numbers[h.saleId]);
+    }
+    return out;
+  }, [plan, account]);
+  const instOf = (h: HistoryLine) => instLine.get(h.id) ?? null;
 
   const voidLine = async (line: HistoryLine, deleted: boolean) => {
     const d = account?.debts.find((x) => x.id === line.id);

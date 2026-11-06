@@ -59,7 +59,8 @@ const save = async (id: string) => {
 /** E06-S09 PR-c: the plan opens as a sheet from the whole plan card; the per-sale plan is "บาท / การขาย". */
 const openPlan = async () => {
   await save('debt-plan-row');
-  await save('debt-plan-mode-amount');
+  // Nothing owed: the sheet is already "บาท / การขาย" and offers no count (review PR-c 1).
+  if (screen.queryByTestId('debt-plan-mode-amount')) await save('debt-plan-mode-amount');
 };
 
 // The memory store is shared by the file: each test gets its own worker, so one test's debts never decide another's.

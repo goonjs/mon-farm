@@ -441,6 +441,11 @@ describe('IP-17 / IP-18 / IP-20 · accountPlan', () => {
     expect(accountPlan({ account: account(es), events: es })).toMatchObject({ kind: 'installments', done: true, leftoverSatang: 153_300, count: 3, paid: 3 });
   });
 
+  it('review PR-c 2: the plan\'s debt paid off early, then new debt → ordinary debt, no "ผ่อนครบ" (instalments not used up)', () => {
+    const es = [...planned(), pay('l1', 's1', 426_700), pay('out', null, 853_300, { method: 'outside' }), debt('d2', 200_000, { date: '2026-11-10' })];
+    expect(accountPlan({ account: account(es), events: es })).toBeNull();
+  });
+
   it('paid off → no plan to show', () => {
     const es = [...planned(), pay('l1', 's1', 1_280_000)];
     expect(accountPlan({ account: account(es), events: es })).toBeNull();

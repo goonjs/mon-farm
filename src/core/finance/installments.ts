@@ -222,6 +222,9 @@ export function accountPlan(i: { readonly account: DebtAccount; readonly events:
   if (!st) return null;
   const balance = Math.max(0, account.balanceSatang);
   if (st.done && balance <= 0) return null;
+  // Review PR-c 2 (Q5): the plan's own debt paid off before its instalments ran out — what is owed now is new,
+  // ordinary debt; "ผ่อนครบ M งวด" would be untrue.
+  if (st.done && st.left > 0) return null;
   const split = st.done ? [] : installmentSplit(balance, st.left);
   const numbers: Record<string, number> = {};
   st.paidSales.forEach((p, k) => (numbers[p.saleId] = k + 1));

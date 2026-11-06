@@ -40,7 +40,16 @@ export function PlanBadge({ account, events, testID }: { account: DebtAccount; e
   if (account.balanceSatang <= 0) return null;
   const icon = (c: string) => <CalendarIcon color={c} size={14} />;
   if (!plan) return <FactRow testID={testID} icon={icon}>{msg('debt.inst.none')}</FactRow>;
-  if (plan.kind === 'perSale') return <FactRow testID={testID} icon={icon}>{msg('debt.planValue', { amount: formatSatang(plan.perSaleSatang) })}</FactRow>;
+  if (plan.kind === 'perSale') {
+    // Review PR-c 5: a summary line's money is compact (summary-lines rule).
+    return (
+      <View testID={testID} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.xs }}>
+        <CalendarIcon color={t.color.inkSoft} size={14} />
+        <CompactMoney satang={plan.perSaleSatang} size="bodyLg" pill />
+        <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{`/ ${msg('debt.history.sale')}`}</AppText>
+      </View>
+    );
+  }
   return (
     <View testID={testID} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.xs }}>
       <CalendarIcon color={plan.done ? t.color.warn : t.color.inkSoft} size={14} />
@@ -115,7 +124,7 @@ export function PlanCard({ account, events, onOpen }: { account: DebtAccount | u
 
 type Mode = 'count' | 'amount';
 
-/** IP-19 · the plan sheet. `write` gets the plan payload (or a cancel); the caller writes it on the plan chain. */
+/** IP-19 · the plan sheet. `onSave` gets the plan payload (or a cancel); the caller writes it on the plan chain. */
 export function PlanSheet({
   account,
   events,
@@ -137,7 +146,9 @@ export function PlanSheet({
   const running = plan?.kind === 'installments' && !plan.done ? plan : null;
   const left = running ? running.count - running.paid : null;
   const balance = Math.max(0, account.balanceSatang);
-  const [mode, setMode] = useState<Mode>(plan?.kind === 'perSale' ? 'amount' : 'count');
+  // Review PR-c 1: a count of instalments of nothing would be over at once (the next debt reads as new debt).
+  const countOk = balance > 0;
+  const [mode, setMode] = useState<Mode>(plan?.kind === 'perSale' || !countOk ? 'amount' : 'count');
   const [count, setCount] = useState<number | null>(null);
   const [per, setPer] = useState<number | null>(plan?.kind === 'perSale' ? plan.perSaleSatang : null);
   const choices = installmentChoices(left, max);
@@ -152,15 +163,17 @@ export function PlanSheet({
   return (
     <BottomSheet open onClose={onClose} title={msg('debt.plan')} testID="debt-plan-sheet" closeLabel={msg('co.close')} action={{ label: msg('common.save'), testID: 'debt-plan-save', saving: busy, disabled: !canSave, onPress: save }}>
       <AppText variant="bodySm">{msg('debt.inst.sheetSub', { amount: formatSatang(balance) })}</AppText>
-      <SegmentedControl<Mode>
-        testID="debt-plan-mode"
-        value={mode}
-        onChange={setMode}
-        options={[
-          { value: 'count', label: msg('debt.inst.byCount') },
-          { value: 'amount', label: msg('debt.inst.byAmount') },
-        ]}
-      />
+      {countOk ? (
+        <SegmentedControl<Mode>
+          testID="debt-plan-mode"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: 'count', label: msg('debt.inst.byCount') },
+            { value: 'amount', label: msg('debt.inst.byAmount') },
+          ]}
+        />
+      ) : null}
       {mode === 'count' ? (
         <View style={{ gap: t.space.sm }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>

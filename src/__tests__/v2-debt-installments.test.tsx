@@ -91,6 +91,13 @@ describe('IP-18 · the account plan card, the whole card tappable; the history n
     expect(text('debt-plan-next')).toHaveTextContent(/งวดต่อไป.*4,267.*งวดสุดท้าย.*4,266/);
     expect(screen.queryByTestId('debt-plan-edit')).toBeNull();
     expect(text(`debt-line-pay-${w.id}-0`)).toHaveTextContent(/หักงวด 1\/3/);
+    // review PR-c 3: a second farm line of the same sale is not labelled again, and a line to another lender never
+    await writeFinance(`pay-${w.id}-x`, null, { t: 'debt_payment_recorded', fields: { worker: w, creditor: FARM, amountSatang: 1_000, date: '2026-11-04', note: '', method: 'cash-from-share', saleId: `s1-${w.id}` } });
+    await writeFinance(`pay-${w.id}-y`, null, { t: 'debt_payment_recorded', fields: { worker: w, creditor: { id: 'p-other', name: 'ป้า' }, amountSatang: 2_000, date: '2026-11-04', note: '', method: 'transfer-with-owner', saleId: `s1-${w.id}` } });
+    wrap(<DebtAccountScreen />);
+    await flush();
+    expect(screen.getAllByText(/หักงวด 1\/3/)).toHaveLength(1);
+    expect(text(`debt-line-pay-${w.id}-y`)).not.toHaveTextContent(/หักงวด/);
     expect(text('debt-plan-row').props.accessibilityRole).toBe('button');
   });
 });
@@ -112,6 +119,17 @@ describe('IP-19 · the plan sheet', () => {
     expect(p).toHaveLength(1);
     expect(p[0]).toMatchObject({ worker: w, perSaleSatang: 284_500, installments: { count: 4, fromSaleId: null, earlier: [{ saleId: `s1-${w.id}` }] } });
     expect(text('debt-plan')).toHaveTextContent('ผ่อน 4 งวด · จ่ายแล้ว 1 งวด');
+  });
+
+  it('review PR-c 1: nothing owed → only "บาท / การขาย" (a count of instalments of nothing would be over at once)', async () => {
+    n += 1;
+    mockParams.current = { workerId: `w${n}`, name: `ว่าง${n}` };
+    wrap(<DebtAccountScreen />);
+    await flush();
+    await press('debt-plan-row');
+    expect(screen.queryByTestId('debt-plan-mode')).toBeNull();
+    expect(screen.queryByTestId('debt-plan-count-2')).toBeNull();
+    expect(text('debt-plan-amount')).toBeTruthy();
   });
 
   it('ยกเลิกแผน → no plan (back to the full share)', async () => {
