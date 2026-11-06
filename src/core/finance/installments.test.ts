@@ -286,6 +286,7 @@ describe('IP-8 · new debt since the plan needs a choice; no default', () => {
     const a = account(edited);
     const st = planStatus({ account: a, events: edited, excludeSaleId: 's2' })!;
     expect(st.extraSatang).toBeLessThan(0);
+    expect(st.done).toBe(false);
     expect(installmentProposal({ balanceSatang: a.balanceSatang, status: st }).needsChoice).toBe(false);
   });
 });
@@ -325,6 +326,17 @@ describe('review 4 · counting is per device and per sale', () => {
     const es = [...planned([early]), pay('l1', 's1', 426_700)];
     expect(planStatus({ account: account(es), events: es })!.paidSales.map((x) => x.saleId)).toEqual(['s1']);
   });
+  it('per device, not the highest seq: dev-b writes after the plan with a seq below dev-a\'s `seen` → it counts', () => {
+    const bEarly = ev('b-x', { t: 'debt_plan_set', worker: { id: 'other', name: 'x' }, perSaleSatang: null }, { device: 'dev-b', seq: 1 });
+    const base = planned([bEarly]); // seen = { dev-a: high, dev-b: 1 }
+    const late = ev('b2', { t: 'debt_payment_recorded', fields: { worker: NAT, creditor: FARM, amountSatang: 100_000, date: '2026-11-12', note: '', method: 'transfer-with-owner', saleId: 's2' } }, { device: 'dev-b', seq: 2 });
+    const es = [...base, pay('l1', 's1', 426_700), late];
+    const plan = account(es).installmentPlan!;
+    expect(plan.seen['dev-b']).toBe(1);
+    expect(late.deviceSeq).toBeLessThan(plan.seen['dev-a']);
+    expect(planStatus({ account: account(es), events: es })!.paidSales.map((x) => x.saleId)).toEqual(['s1', 's2']);
+  });
+
   it('a device the plan never saw counts as after it (story Known risks)', () => {
     const es = [...planned(), pay('l1', 's1', 426_700), pay('c2', 's2', 100_000, { device: 'dev-new' })];
     expect(planStatus({ account: account(es), events: es })!.paid).toBe(2);
