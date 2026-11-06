@@ -25,6 +25,7 @@ import {
   type PropertyRecord,
   shareFromAllowed,
   validDupWindow,
+  validMaxInstallments,
   validPairKg,
   type StarterRow,
   todayIso,
@@ -316,9 +317,13 @@ export class MasterStore implements PeopleStore {
     numbering?: NumberingMode;
     zeroCheck?: ZeroCheckMode;
     dupWindowS?: number;
+    maxInstallments?: number;
   }): Promise<void> {
     if (patch.dupWindowS !== undefined && !validDupWindow(patch.dupWindowS)) {
       throw new InvalidInputError('The duplicate window is 7 to 10 seconds.');
+    }
+    if (patch.maxInstallments !== undefined && !validMaxInstallments(patch.maxInstallments)) {
+      throw new InvalidInputError('The most instalments is 2 to 12.');
     }
     await this.write({ t: 'settings_set', ...patch });
   }

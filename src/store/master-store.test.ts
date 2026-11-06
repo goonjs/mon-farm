@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { MASTER_SCOPE, saleSettings, shareOn, tapperOn } from '../core/master';
+import { MASTER_SCOPE, maxInstallments, saleSettings, shareOn, tapperOn } from '../core/master';
 import { createDeviceClock } from './device-clock';
 import { NotSignedInError, setSessionGroup, setSessionUser } from './session';
 import { NoGroupError } from '../core/scope';
@@ -216,6 +216,13 @@ describe('MasterStore — people and buyers as events (E03-S01)', () => {
     const s = saleSettings(await master.state());
     expect(s).toMatchObject({ zeroCheck: 'skip', dupWindowS: 9 });
     expect(s.pairs.find((p) => p.isDefault)).toMatchObject({ netG: 55_000, basketG: 3_000 });
+  });
+
+  it('the farm\'s most instalments: 2–12, refused outside (E06-S09 IP-21)', async () => {
+    await master.updateSettings({ maxInstallments: 6 });
+    await expect(master.updateSettings({ maxInstallments: 13 })).rejects.toThrow();
+    await expect(master.updateSettings({ maxInstallments: 1 })).rejects.toThrow();
+    expect(maxInstallments(await master.state())).toBe(6);
   });
 
   it('refuses a blank start once the point has an assignment (review fix)', async () => {

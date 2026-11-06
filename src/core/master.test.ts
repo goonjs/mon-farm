@@ -8,6 +8,8 @@ import {
   plannedVacancies,
   saleSettings,
   validDupWindow,
+  maxInstallments,
+  validMaxInstallments,
   validHoldMs,
   validPairKg,
   earliestShareDay,
@@ -542,6 +544,21 @@ describe('tapper share — E03-S06 (MD-8, D-63)', () => {
     expect(shareFromAllowed('2026-09-18', '2026-09-18')).toBe(false);
     expect(shareFromAllowed('2026-09-19', '2026-09-18')).toBe(true);
     expect(shareFromAllowed('2020-01-01', null)).toBe(true);
+  });
+});
+
+describe('farm setting "ผ่อนหนี้ได้สูงสุด" — E06-S09 (IP-21, D-88)', () => {
+  it('defaults to 4 instalments', () => {
+    expect(maxInstallments(projectMaster([]))).toBe(4);
+  });
+  it('a settings patch sets it and leaves the sale settings alone; a value out of 2–12 reads clamped', () => {
+    const st = projectMaster(log().master({ t: 'settings_set', dupWindowS: 9 }).master({ t: 'settings_set', maxInstallments: 6 }).build());
+    expect(maxInstallments(st)).toBe(6);
+    expect(saleSettings(st)).toMatchObject({ dupWindowS: 9 });
+    expect(maxInstallments(projectMaster(log().master({ t: 'settings_set', maxInstallments: 40 }).build()))).toBe(12);
+  });
+  it('validMaxInstallments: whole numbers 2–12 only', () => {
+    expect([1, 2, 12, 13, 4.5].map(validMaxInstallments)).toEqual([false, true, true, false, false]);
   });
 });
 
