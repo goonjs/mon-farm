@@ -128,10 +128,10 @@ describe('the plan event (architect 2026-11-06): debt_plan_set with installments
     expect(seenSnapshot(es)).toEqual({ a: 9, b: 2 });
   });
 
-  it('projectDebts reads it: an instalment plan, and no per-sale plan (the fallback is for old apps only)', () => {
+  it('projectDebts reads it: the instalment plan, and the fallback per-sale amount until the close-out reads the plan (review 5)', () => {
     const es = [debt('d1', 1_280_000), ev('plan-p-nat', planPayload({ worker: NAT, count: 3, fromSaleId: null, seen: {}, owedSatang: 1_280_000, balanceSatang: 1_280_000 }))];
     const a = account(es);
-    expect(a.planPerSaleSatang).toBeNull();
+    expect(a.planPerSaleSatang).toBe(426_700);
     expect(a.installmentPlan).toEqual({ count: 3, fromSaleId: null, seen: {}, owedSatang: 1_280_000 });
   });
 
@@ -287,5 +287,63 @@ describe('IP-8 · new debt since the plan needs a choice; no default', () => {
     const st = planStatus({ account: a, events: edited, excludeSaleId: 's2' })!;
     expect(st.extraSatang).toBeLessThan(0);
     expect(installmentProposal({ balanceSatang: a.balanceSatang, status: st }).needsChoice).toBe(false);
+  });
+});
+
+// ── review round 1 (2026-11-06) ──────────────────────────────────────────────
+
+describe('review 1 · re-confirming the last instalment still proposes it (the balance is as if this sale had not deducted)', () => {
+  it('s3 paid the rest to 0; re-opening s3 → 1 left, not over, proposes the same 4,266', () => {
+    const es = [...planned(), pay('l1', 's1', 426_700), pay('l2', 's2', 426_700), pay('l3', 's3', 426_600)];
+    const a = account(es);
+    expect(a.balanceSatang).toBe(0);
+    const st = planStatus({ account: a, events: es, excludeSaleId: 's3' })!;
+    expect(st.done).toBe(false);
+    expect(st.left).toBe(1);
+    expect(installmentProposal({ balanceSatang: 426_600, status: st }).satang).toBe(426_600);
+  });
+});
+
+describe('review 2 · a plan whose debt is paid stays over, even when new debt arrives (Q5: new debt is ordinary debt)', () => {
+  it('paid off at s1, then a 2,000 fertilizer debt → over, no fold/full question', () => {
+    const es = [...planned(), pay('l1', 's1', 1_280_000), debt('d2', 200_000, { kind: 'fertilizer' })];
+    const a = account(es);
+    const st = planStatus({ account: a, events: es, excludeSaleId: 's2' })!;
+    expect(st.done).toBe(true);
+    expect(installmentProposal({ balanceSatang: a.balanceSatang, status: st })).toEqual({ satang: null, needsChoice: false });
+  });
+  it('paid off outside a sale, then new debt → over too', () => {
+    const es = [...planned(), pay('l1', 's1', 426_700), pay('o1', null, 853_300, { method: 'outside' }), debt('d2', 200_000)];
+    const a = account(es);
+    expect(planStatus({ account: a, events: es, excludeSaleId: 's2' })!.done).toBe(true);
+  });
+});
+
+describe('review 4 · counting is per device and per sale', () => {
+  it('another device\'s line written before the plan (inside `seen`) does not make its sale count', () => {
+    const early = pay('b0', 's0', 100_000, { device: 'dev-b' });
+    const es = [...planned([early]), pay('l1', 's1', 426_700)];
+    expect(planStatus({ account: account(es), events: es })!.paidSales.map((x) => x.saleId)).toEqual(['s1']);
+  });
+  it('a device the plan never saw counts as after it (story Known risks)', () => {
+    const es = [...planned(), pay('l1', 's1', 426_700), pay('c2', 's2', 100_000, { device: 'dev-new' })];
+    expect(planStatus({ account: account(es), events: es })!.paid).toBe(2);
+  });
+  it('one sale with lines from two devices is one instalment', () => {
+    const es = [...planned(), pay('l1', 's1', 426_700), pay('a2', 's2', 200_000), pay('b2', 's2', 100_000, { device: 'dev-b' })];
+    const st = planStatus({ account: account(es), events: es })!;
+    expect(st.paid).toBe(2);
+    expect(st.paidSales[1]).toMatchObject({ saleId: 's2', satang: 300_000 });
+  });
+  it('a payment at a sale to another lender is not an instalment; a netting-only sale is', () => {
+    const OTHER: Payer = { id: 'p-other', name: 'ลุง' };
+    const es = [...planned(), pay('l1', 's1', 426_700), pay('x2', 's2', 50_000, { creditor: OTHER }), pay('n3', 's3', 64_000, { method: 'netting' })];
+    expect(planStatus({ account: account(es), events: es })!.paidSales.map((x) => x.saleId)).toEqual(['s1', 's3']);
+  });
+  it('the anchor sale cancelled: instalment 1 drops out, the plan stays', () => {
+    const es = [...planned(), pay('l1', 's1', 426_700)];
+    const st = planStatus({ account: account(es, (x) => x !== 's1'), events: es })!;
+    expect(st.paid).toBe(0);
+    expect(st.left).toBe(3);
   });
 });

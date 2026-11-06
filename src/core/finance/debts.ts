@@ -92,7 +92,7 @@ export interface DebtAccount {
   readonly summary: DebtSummary;
   readonly others: readonly OtherLender[];
   readonly planPerSaleSatang: number | null;
-  /** E06-S09: an instalment plan (then `planPerSaleSatang` is null), or null. */
+  /** E06-S09: an instalment plan, or null. With one, `planPerSaleSatang` is its fallback for older readers. */
   readonly installmentPlan: InstallmentPlanSpec | null;
   /** Newest first. */
   readonly history: readonly HistoryLine[];
@@ -146,8 +146,9 @@ export function projectDebts(
       // Plans carry no patch: the current head of the chain is the plan.
       const head = headOf(evs);
       const p = evs.find((e) => e.id === head)?.payload;
-      // E06-S09: an instalment plan's perSaleSatang is a fallback for older apps only.
-      if (p?.t === 'debt_plan_set') plans.set(p.worker.id, p.installments ? { perSaleSatang: null, installments: p.installments } : { perSaleSatang: p.perSaleSatang, installments: null });
+      // E06-S09: an instalment plan keeps its fallback per-sale amount here until the close-out reads the plan
+      // itself (review 5: never propose worse than an older app would); `installmentPlan` is the plan.
+      if (p?.t === 'debt_plan_set') plans.set(p.worker.id, { perSaleSatang: p.perSaleSatang, installments: p.installments ?? null });
     }
   }
 

@@ -47,11 +47,12 @@ export function installmentSplit(balanceSatang: number, count: number): number[]
 }
 
 /**
- * IP-7 · the counts offered: 2 … max (clamped to 2–12), never 1 (that is paying it all), never the
- * count already in place, at most three — the nearest to the current count (more instalments first on a tie:
+ * IP-7 · the counts offered: 2 … max (clamped to 2–12), never 1 (that is paying it all), never
+ * `currentLeft` — the instalments the running plan has left, this sale included (null: no plan) — at most three — the nearest to the current count (more instalments first on a tie:
  * a re-split usually stretches the plan; owner's example 3 → 2, 4, 5).
  */
-export function installmentChoices(current: number | null, max: number): number[] {
+export function installmentChoices(currentLeft: number | null, max: number): number[] {
+  const current = currentLeft;
   const all: number[] = [];
   for (let k = MIN_INSTALLMENTS; k <= clampMax(max); k++) if (k !== current) all.push(k);
   if (current === null) return all.slice(0, 3);
@@ -105,7 +106,7 @@ export interface PlanStatus {
   readonly left: number;
   /** The farm debt owed now above what it was when the plan was written; > 0 = new debt (Q3). */
   readonly extraSatang: number;
-  /** The plan is over: instalments ran out, or nothing is owed. */
+  /** The plan is over: instalments ran out, or the debt it covered is paid (the sale being closed counted as not deducted). */
   readonly done: boolean;
 }
 
@@ -149,13 +150,19 @@ export function planStatus(i: { readonly account: DebtAccount; readonly events: 
   const owed = i.account.summary.owed;
   const owedNow = owed.loan + owed.fertilizer + owed.other;
   const left = plan.count - paidSales.length;
+  const extraSatang = owedNow - plan.owedSatang;
+  // Review 1: as if the sale being closed had deducted nothing, so re-confirming its last instalment is not "over".
+  const here = i.excludeSaleId ? i.account.payments.filter((p) => p.saleId === i.excludeSaleId && counting(p)).reduce((a, p) => a + p.amountSatang, 0) : 0;
+  const balanceAsIf = i.account.balanceSatang + here;
+  // Review 2 (Q5): over once the debt the plan covered is paid — new debt after that is ordinary debt, not a revived plan.
+  const planDebtLeft = balanceAsIf - Math.max(0, extraSatang);
   return {
     plan,
     paidSales,
     paid: paidSales.length,
     left,
-    extraSatang: owedNow - plan.owedSatang,
-    done: left <= 0 || i.account.balanceSatang <= 0,
+    extraSatang,
+    done: left <= 0 || planDebtLeft <= 0,
   };
 }
 
