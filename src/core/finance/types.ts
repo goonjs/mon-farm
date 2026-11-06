@@ -300,8 +300,13 @@ export type IncomePatch = Partial<IncomeFields> & { readonly deleted?: boolean }
  * known when the plan was written — sales whose first deduction line is above it count (no clocks).
  */
 export interface InstallmentPlanSpec {
-  /** Instalments from the anchor on, 2–12. */
+  /** The plan's instalments in all, `earlier` included (a new plan: 2–12 from the anchor on). */
   readonly count: number;
+  /**
+   * Instalments paid before a re-split or a new-debt re-base (the new `seen` no longer counts them), so the
+   * plan keeps its numbering ("งวด 2 จาก 5"). Absent on a new plan. Shown as written; amounts never read it.
+   */
+  readonly earlier?: readonly { readonly saleId: string; readonly date: string; readonly satang: number }[];
   /** The sale it was set at (instalment 1), or null when set from the debt account (counts from the next sale). */
   readonly fromSaleId: string | null;
   readonly seen: Readonly<Record<string, number>>;

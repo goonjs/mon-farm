@@ -10,7 +10,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { netDraft, type CloseoutWorker } from '../../../core/finance/closeout';
 import { formatSatang } from '../../../core/finance/money';
-import { useT } from '../../../i18n';
+import { useT, type Translate } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, Check, ChevronRight, FarmMateArt, toneColours, type FarmMateArtId, type TileTone } from '../../../ui';
 import type { CloseoutDraft } from './use-closeout';
@@ -19,6 +19,13 @@ export const baht = formatSatang;
 
 /** "5,250" for whole baht, "5,250.50" otherwise — a chip or a link, not a sum. */
 export const shortBaht = (satang: number) => baht(satang).replace(/\.00$/, '');
+
+/** E06-S09 (IP-15): "ผ่อนงวด 2/3", "งวดสุดท้าย 3/3" — or null without a plan or with nothing deducted. */
+export function installmentLabel(msg: Translate, w: CloseoutWorker): string | null {
+  const v = w.installment;
+  if (!v || w.totalSatang <= 0) return null;
+  return msg(v.number >= v.count ? 'co.reason.instLast' : 'co.reason.inst', { number: v.number, count: v.count });
+}
 
 /**
  * Direction marks, added in code beside the words (as `WayLabel` does): the
@@ -110,7 +117,7 @@ export function Line({ label, value, testID, strong, tone, valueTone }: { label:
 export const minus = (satang: number) => (satang > 0 ? `−${baht(satang)}` : baht(0));
 
 /** Set one worker's draft, leaving the rest. */
-export function withWorker(d: CloseoutDraft, id: string, patch: { totalSatang?: number | null; nettingSatang?: number; doubleChoice?: 'one' | 'both'; linesSig?: string }): CloseoutDraft {
+export function withWorker(d: CloseoutDraft, id: string, patch: { totalSatang?: number | null; nettingSatang?: number; doubleChoice?: 'one' | 'both'; linesSig?: string; installments?: number; newDebt?: 'fold' | 'full' }): CloseoutDraft {
   return { ...d, workers: { ...d.workers, [id]: { ...(d.workers[id] ?? {}), ...patch } } };
 }
 

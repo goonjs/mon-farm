@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { closeoutInputs, closeoutPlan, REPAY_ROUTES } from './closeout';
 import { projectDebts } from './debts';
+import { projectFinance } from './ledger';
 import {
   installmentAmount,
   installmentChoices,
@@ -357,5 +359,67 @@ describe('review 4 · counting is per device and per sale', () => {
     const st = planStatus({ account: account(es, (x) => x !== 's1'), events: es })!;
     expect(st.paid).toBe(0);
     expect(st.left).toBe(3);
+  });
+});
+
+// ── PR-b · the close-out reads the plan from the log ──────────────────────────
+
+describe('closeoutInputs carries the plan (as of this sale) into the close-out', () => {
+  const inputsFor = (es: FinanceEvent[], saleId: string, maxInstallments?: number) =>
+    closeoutInputs({ saleId, tappers: [{ id: NAT.id, name: NAT.name, shareSatang: 3_850_000 }], accounts: projectDebts(es), finance: projectFinance(es), events: es, maxInstallments }).inputs[0];
+
+  it('re-confirming instalment 2: status as if s2 deducted nothing, the farm max, owed now', () => {
+    const es = [...planned(), pay('l1', 's1', 426_700), pay('l2', 's2', 426_700)];
+    const w = inputsFor(es, 's2', 6);
+    expect(w.balanceSatang).toBe(853_300);
+    expect(w.installment).toMatchObject({ max: 6, owedSatang: 1_280_000, status: { paid: 1, left: 2, done: false } });
+    const plan = closeoutPlan({ saleTotalSatang: 10_000_000, ownerShareSatang: 6_150_000, workers: [w], drafts: {}, defaultRoute: () => REPAY_ROUTES[0], rounding: 'none' });
+    expect(plan.workers[0].proposedSatang).toBe(426_700);
+  });
+
+  it('no plan → a null status; no max given → the default 4', () => {
+    const es = [debt('d1', 500_000)];
+    expect(inputsFor(es, 's1').installment).toEqual({ status: null, max: 4, owedSatang: 500_000 });
+  });
+});
+
+describe('a re-split / re-base keeps the instalments already paid (the number does not restart after confirm)', () => {
+  it('re-split to 4 more at s2 (1 paid at s1): written as 5 with s1 earlier → s2 re-confirmed is "2 of 5"', () => {
+    const base = [...planned(), pay('l1', 's1', 426_700)];
+    const earlier = planStatus({ account: account(base), events: base, excludeSaleId: 's2' })!.paidSales;
+    const plan2 = ev('plan-p-nat', planPayload({ worker: NAT, count: 5, earlier, fromSaleId: 's2', seen: seenSnapshot(base), owedSatang: 1_280_000, balanceSatang: 853_300 }), { base: base[base.length - 2].id });
+    const es = [...base, plan2, pay('l2', 's2', 213_400)];
+    const st = planStatus({ account: account(es), events: es, excludeSaleId: 's2' })!;
+    expect(st.paidSales.map((s) => s.saleId)).toEqual(['s1']);
+    expect(st.paid).toBe(1);
+    expect(st.left).toBe(4);
+    const after = planStatus({ account: account(es), events: es })!;
+    expect(after.paid).toBe(2);
+    expect(after.left).toBe(3);
+  });
+
+  it('a plan with no earlier instalments writes none (the event stays as before)', () => {
+    const p = planPayload({ worker: NAT, count: 3, earlier: [], fromSaleId: 's1', seen: {}, owedSatang: 1, balanceSatang: 1 });
+    expect(p.t === 'debt_plan_set' && p.installments).toEqual({ count: 3, fromSaleId: 's1', seen: {}, owedSatang: 1 });
+  });
+});
+
+describe('architect review PR-b · an earlier instalment counts only while its sale still deducted', () => {
+  it('re-split with s1 earlier, then s1 cancelled → s1 no longer paid; the amounts follow', () => {
+    const base = [...planned(), pay('l1', 's1', 426_700)];
+    const earlier = planStatus({ account: account(base), events: base, excludeSaleId: 's2' })!.paidSales;
+    const plan2 = ev('plan-p-nat', planPayload({ worker: NAT, count: 5, earlier, fromSaleId: 's2', seen: seenSnapshot(base), owedSatang: 1_280_000, balanceSatang: 853_300 }), { base: base[base.length - 2].id });
+    const es = [...base, plan2];
+    const st = planStatus({ account: account(es, (id) => id !== 's1'), events: es, excludeSaleId: 's2' })!;
+    expect(st.paidSales).toEqual([]);
+    expect(st.left).toBe(5);
+  });
+
+  it('an earlier sale re-confirmed at 0 drops out too', () => {
+    const base = [...planned(), pay('l1', 's1', 426_700)];
+    const earlier = planStatus({ account: account(base), events: base, excludeSaleId: 's2' })!.paidSales;
+    const plan2 = ev('plan-p-nat', planPayload({ worker: NAT, count: 5, earlier, fromSaleId: 's2', seen: seenSnapshot(base), owedSatang: 1_280_000, balanceSatang: 853_300 }), { base: base[base.length - 2].id });
+    const es = [...base, plan2, voidPay('l1', base[base.length - 1].id)];
+    expect(planStatus({ account: account(es), events: es, excludeSaleId: 's2' })!.paid).toBe(0);
   });
 });

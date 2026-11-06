@@ -76,6 +76,8 @@ export function seenSnapshot(events: readonly FinanceEvent[]): Record<string, nu
 export function planPayload(i: {
   readonly worker: Payer;
   readonly count: number;
+  /** Instalments paid before this re-split / re-base (`count` includes them). */
+  readonly earlier?: readonly PaidInstallment[];
   readonly fromSaleId: string | null;
   readonly seen: Readonly<Record<string, number>>;
   readonly owedSatang: number;
@@ -85,8 +87,8 @@ export function planPayload(i: {
   return {
     t: 'debt_plan_set',
     worker: i.worker,
-    perSaleSatang: installmentAmount(i.balanceSatang, i.count),
-    installments: { count: i.count, fromSaleId: i.fromSaleId, seen: i.seen, owedSatang: i.owedSatang },
+    perSaleSatang: installmentAmount(i.balanceSatang, i.count - (i.earlier?.length ?? 0)),
+    installments: { count: i.count, ...(i.earlier?.length ? { earlier: i.earlier } : {}), fromSaleId: i.fromSaleId, seen: i.seen, owedSatang: i.owedSatang },
   };
 }
 
@@ -137,16 +139,24 @@ export function planStatus(i: { readonly account: DebtAccount; readonly events: 
     list.push(p);
     bySale.set(p.saleId, list);
   }
-  const paidSales: PaidInstallment[] = [];
+  const kept = new Set((plan.earlier ?? []).map((x) => x.saleId));
+  const counted: PaidInstallment[] = [];
   for (const [saleId, all] of bySale) {
+    if (kept.has(saleId)) continue;
     const live = all.filter(counting);
     const satang = live.reduce((a, p) => a + p.amountSatang, 0);
     if (satang <= 0) continue;
     if (saleId !== plan.fromSaleId && all.some((p) => before(p.id))) continue;
     const date = live.map((p) => p.date).sort()[0];
-    paidSales.push({ saleId, date, satang });
+    counted.push({ saleId, date, satang });
   }
-  paidSales.sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : a.saleId < b.saleId ? -1 : 1));
+  counted.sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : a.saleId < b.saleId ? -1 : 1));
+  // A re-split / re-base carries what was paid before it (the sale being closed never among them) — each only
+  // while its sale still deducts (architect review PR-b: a cancelled or re-confirmed-at-0 sale would otherwise
+  // shrink `left` and make every instalment bigger), at what it deducts now.
+  const liveSum = (saleId: string) => (bySale.get(saleId) ?? []).filter(counting).reduce((a, p) => a + p.amountSatang, 0);
+  const kept2 = (plan.earlier ?? []).flatMap((x) => (liveSum(x.saleId) > 0 ? [{ ...x, satang: liveSum(x.saleId) }] : []));
+  const paidSales = [...kept2, ...counted];
   const owed = i.account.summary.owed;
   const owedNow = owed.loan + owed.fertilizer + owed.other;
   const left = plan.count - paidSales.length;

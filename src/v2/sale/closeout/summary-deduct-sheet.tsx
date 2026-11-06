@@ -30,6 +30,8 @@ import { AppText, BottomSheet, Check, CTA, NumberPad } from '../../../ui';
 import type { Closeout, CloseoutDraft } from './use-closeout';
 import { addId, baht, MARK, netSet, shortBaht, WarnMark, withWorker } from './summary-parts';
 import { usePieceName } from './summary-debt-sheet';
+import { BackToPlan, Choice, CountChoice, InstallmentBoxes, InstallmentPane, type InstView } from './summary-installments';
+import { installmentAmount } from '../../../core/finance/installments';
 
 const CFG: EntryConfig = { kind: 'money', maxDigits: 8 };
 
@@ -38,6 +40,8 @@ const rawOf = (satang: number) => (satang % 100 === 0 ? String(satang / 100) : `
 
 
 type Box = 'total' | 'net';
+/** E06-S09: a running plan opens on its own view (IP-11); 'pad' is the amount typed on the pad. */
+type SheetView = InstView | 'pad';
 
 export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose }: { co: Closeout; w: CloseoutWorker; pieces: readonly DebtPiece[]; /** The farm owes this tapper (CO-7: the link shows only then). */ canNet: boolean; onClose: () => void }) {
   const t = useTheme();
@@ -57,6 +61,15 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
   // A23: one pad, one box typed into at a time; the netting box takes the pad only when tapped.
   const [active, setActive] = useState<Box>('total');
   const [netEntry, setNetEntry] = useState<EntryState>(() => startEntry(rawOf(w.nettingSatang)));
+  /** A running (or re-split) instalment plan: the sheet opens on the plan, the pad is "ใส่ยอดเอง". */
+  const running = !!w.installment && w.installment.mode !== 'new';
+  const [view, setView] = useState<SheetView>(() => {
+    if (!running) return 'pad';
+    const d = co.draft.workers[given.id];
+    if (d?.installments) return 'resplit';
+    if (d?.totalSatang !== undefined && d.totalSatang !== null) return d.totalSatang === w.capSatang && w.debtLeftSatang === 0 ? 'all' : 'pad';
+    return 'plan';
+  });
   // B1′: the lines moved while open (a sync) → start again from them; what was typed on the old lines is dropped by core.
   const [madeOn, setMadeOn] = useState(given.linesSig);
   if (madeOn !== given.linesSig) {
@@ -128,6 +141,38 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
     setEntry(startEntry(rawOf(satang)));
     setTotal(satang);
   };
+  /** หักเต็ม / ยังไม่หัก on the pad: an amount, not an instalment count picked a moment ago. */
+  const jumpOut = (satang: number) => {
+    setEntry(startEntry(rawOf(satang)));
+    edit((d) => withWorker(d, w.id, { totalSatang: satang, installments: undefined }));
+  };
+  /** IP-9 / IP-10: a count picked for a worker with no plan — the box shows the first instalment at once. */
+  const pickCount = (n: number) => {
+    // As core proposes it (code review 5): never below the netting, never above the cap.
+    const first = Math.max(w.nettingSatang, Math.min(installmentAmount(w.totalSatang + w.debtLeftSatang, n) ?? 0, w.capSatang));
+    setEntry(startEntry(rawOf(first)));
+    setActive('total');
+    edit((d) => withWorker(d, w.id, { installments: n, totalSatang: null }));
+  };
+  const toView = (v: SheetView) => {
+    if (v === 'plan') edit((d) => withWorker(d, w.id, { totalSatang: null, installments: undefined }));
+    if (v === 'all') edit((d) => withWorker(d, w.id, { totalSatang: q.full, installments: undefined }));
+    if (v === 'pad') setEntry(startEntry(rawOf(w.totalSatang)));
+    setView(v);
+  };
+  const split = (n: number) => edit((d) => withWorker(d, w.id, { installments: n, totalSatang: null }));
+  // The choice is the amount (Q3): it replaces what the recorded lines or a key set.
+  const newDebt = (c: 'fold' | 'full') => edit((d) => withWorker(d, w.id, { newDebt: c, totalSatang: null }));
+  /** "ยังไม่หัก · ขอติดไว้ก่อน" from the plan: 0 and checked at once; with netting, on the pad (netting needs its own fix). */
+  const none = () => {
+    if (w.nettingSatang > 0) {
+      jump(0);
+      setView('pad');
+      return;
+    }
+    co.update((d) => ({ ...withWorker(d, w.id, { totalSatang: 0, installments: undefined, linesSig: w.linesSig }), debtChecked: addId(d.debtChecked, w.id) }));
+    onClose();
+  };
   const pick = (box: Box) => {
     if (box === active) return;
     if (box === 'net') setNetEntry(startEntry(rawOf(w.nettingSatang)));
@@ -153,7 +198,7 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
     const choice = pick && w.totalSatang === pick.both.totalSatang && w.nettingSatang === pick.both.nettingSatang ? ('both' as const) : ('one' as const);
     co.update((d) => ({
       // A double (two devices' lines): ✓ records the owner's choice with the amount shown (one device's, unless หักทั้งสอง) — confirm then writes it as one set.
-      ...(w.doubled ? withWorker(d, w.id, { totalSatang: w.totalSatang, nettingSatang: w.nettingSatang, doubleChoice: choice, linesSig: w.linesSig }) : d),
+      ...(w.doubled ? withWorker(d, w.id, { totalSatang: w.totalSatang, nettingSatang: w.nettingSatang, doubleChoice: choice, linesSig: w.linesSig, installments: undefined }) : d),
       debtChecked: addId(d.debtChecked, w.id),
       ...(w.nettingSatang > 0 ? { owedChecked: addId(d.owedChecked, w.id), owedChoice: { ...d.owedChoice, [w.id]: 'net' as const } } : {}),
     }));
@@ -239,17 +284,30 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
 
   return (
     <BottomSheet open onClose={cancel} title={msg('co.deduct.title', { name: w.name })} testID="co-deduct-sheet" closeLabel={msg('co.close')}>
-      {/* one column a step tighter than the sheet's own gap: the pad and ✓ stay on screen with netting too (A23) */}
+      {running && view !== 'pad' ? (
+        <InstallmentPane w={w} view={view} onView={toView} onNewDebt={newDebt} onSplit={split} onTyped={() => toView('pad')} onNone={none} onOk={ok} blocked={blocked} />
+      ) : (
+      // one column a step tighter than the sheet's own gap: the pad and ✓ stay on screen with netting too (A23)
       <View style={{ gap: t.space.sm, marginBottom: -t.space.sm }}>
+        {running && w.installment ? (
+          <>
+            <AppText testID="co-inst-sub" variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.inst.typedSub', { count: w.installment.count, number: w.installment.number })}</AppText>
+            <InstallmentBoxes w={w} />
+          </>
+        ) : null}
+        {running ? null : (
         <View style={{ backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.lg, paddingHorizontal: t.space.md, paddingVertical: t.space.sm }}>
           <SmallLine label={msg('co.deduct.debt', { name: w.name, n: pieces.length })} value={baht(balance)} />
           <SmallLine label={netted ? msg('co.deduct.capNet', { amount: shortBaht(w.nettingSatang) }) : msg('co.deduct.cap')} value={baht(w.capSatang)} />
           <View style={{ borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, marginVertical: t.space.xxs }} />
           <SmallLine testID="co-res-cash" label={msg('co.res.cash', { name: w.name })} value={baht(w.cashSatang)} />
-          {oldest ? <SmallLine testID="co-res-oldest" label={msg('co.res.oldest', { piece: pieceName(oldest) })} value={baht(oldest.leftAfterSatang)} /> : null}
+          {/* mockup A1: with a count picked the plan says what goes when, so the oldest-piece line steps aside (IP-16) */}
+          {oldest && w.installment?.mode !== 'new' ? <SmallLine testID="co-res-oldest" label={msg('co.res.oldest', { piece: pieceName(oldest) })} value={baht(oldest.leftAfterSatang)} /> : null}
           <SmallLine testID="co-res-left" label={msg('co.res.left')} value={baht(w.debtLeftSatang)} tone={t.color.debtIn} />
         </View>
+        )}
 
+        {running ? null : (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
           {active === 'net'
             ? [
@@ -257,14 +315,39 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
                 chip('co-net-remove', `× ${msg('co.net.remove')}`, () => net(0), false, t.color.debtOut),
               ]
             : [
-                chip('co-quick-full', msg('co.quick.full', { amount: shortBaht(q.full) }), () => jump(q.full), w.totalSatang === q.full),
-                chip('co-quick-half', msg('co.quick.half', { amount: shortBaht(q.half) }), () => jump(q.half), w.totalSatang === q.half),
-                chip('co-quick-none', msg('co.quick.none'), () => jump(q.none), w.totalSatang === q.none),
+                // E06-S09 (D-88): no "ครึ่งหนึ่ง"; "ไม่หัก" is "ยังไม่หัก · ขอติดไว้ก่อน"
+                chip('co-quick-full', msg('co.quick.full', { amount: shortBaht(q.full) }), () => jumpOut(q.full), w.totalSatang === q.full && w.installment?.mode !== 'new'),
+                chip('co-quick-none', msg('co.quick.none'), () => jumpOut(q.none), w.totalSatang === q.none),
               ]}
         </View>
+        )}
+        {/* IP-9 / IP-10: no plan yet → "ผ่อนกี่งวด", each count with its instalment; the plan is written at "ยืนยันยอด" only */}
+        {!running && active === 'total' && w.installmentChoices.length && w.totalSatang + w.debtLeftSatang > 0 && w.capSatang > 0 ? (
+          <View style={{ gap: t.space.xs }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.sm }}>
+              <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('co.inst.pick')}</AppText>
+              {w.installmentChoices.map((n) => (
+                <Choice key={n} basis={64} testID={`co-inst-pick-${n}`} selected={w.installment?.mode === 'new' && w.installment.count === n} onPress={() => pickCount(n)}>
+                  <CountChoice n={n} perSatang={installmentAmount(w.totalSatang + w.debtLeftSatang, n)} />
+                </Choice>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.sm }}>
           {box('total', 'co-amount', totalView, w.invalid)}
+          {/* IP-10: beside the box, not a row of its own (the pad and ✓ stay on one screen, IP-16) */}
+          {!running && w.installment?.mode === 'new' ? (
+            <AppText testID="co-inst-first" variant="bodySm" style={{ flexGrow: 1, flexShrink: 1, flexBasis: 120, color: t.color.action, fontWeight: t.font.weight.bold }}>
+              {msg('co.inst.first', { count: w.installment.count, amount: shortBaht(w.installment.nextSatang[0] ?? 0) })}
+            </AppText>
+          ) : null}
+          {running ? (
+            <AppText testID="co-inst-typed-after" variant="bodySm" style={{ flexGrow: 1, flexShrink: 1, flexBasis: 120, color: t.color.inkSoft }}>
+              {msg('co.inst.after', { name: w.name, cash: baht(w.cashSatang), left: baht(w.debtLeftSatang) })}
+            </AppText>
+          ) : null}
           {netted ? box('net', 'co-net-field', netView, netProblem !== null) : null}
           {/* owner 2026-11-01: a double says so beside the box, with the doubled sum on purpose only (the pad and ✓ stay on screen) */}
           {w.doublePick ? (
@@ -324,9 +407,11 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
 
         <NumberPad variant="money" testID="co-pad" onKey={press} onDone={ok} doneDisabled={blocked} />
         <CTA testID="co-deduct-ok" disabled={blocked} icon={(c) => <Check color={c} />} onPress={ok}>
-          {msg('co.deduct.ok')}
+          {running ? msg('co.inst.okTyped', { amount: shortBaht(w.totalSatang) }) : msg('co.deduct.ok')}
         </CTA>
+        {running ? <BackToPlan onPress={() => toView('plan')} /> : null}
       </View>
+      )}
     </BottomSheet>
   );
 }

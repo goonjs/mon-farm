@@ -547,7 +547,7 @@ describe('review 3 · NB5: opening the deduct sheet on a double proposes one pho
   it('a key typed, then unmounted without ✓ → still double; close without ✓ → still double; ✓ → cleared', async () => {
     const r = await inSale(S, <CloseoutSummaryScreen />);
     await press(`co-deduct-${farm.red}`);
-    await press('co-quick-half');
+    await press('co-quick-none');
     r.unmount();
     const r2 = await inSale(S, <CloseoutSummaryScreen />);
     expect(last(`co-double-${farm.red}`)).toBeTruthy();

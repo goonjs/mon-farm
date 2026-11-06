@@ -53,6 +53,8 @@ export function gateText(msg: Translate, gate: ConfirmGate): string {
       return msg('co.gate.tally');
     case 'double':
       return up(msg('co.gate.double', { names: gate.names.join(msg('co.and')) }));
+    case 'new-debt':
+      return up(msg('co.gate.newDebt', { names: gate.names.join(msg('co.and')) }));
     case 'invalid':
       // N5: each problem in the deduct sheet's own words.
       if (gate.problem === 'net-range') return `${msg('co.net.overMax', { amount: shortBaht(gate.netCapSatang) })} · ${msg('co.gate.fix')}`;
