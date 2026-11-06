@@ -163,6 +163,8 @@ export interface InstallmentView {
   readonly paidSales: readonly PaidInstallment[];
   /** The instalments after this one, as the plan would propose them from the debt left after this sale. */
   readonly nextSatang: readonly number[];
+  /** This sale's instalment as the plan has it, before the share caps it (the short-share alert, IP-12); while new debt is undecided, the instalment without it. */
+  readonly dueSatang: number;
   /** Debt added since the plan and no fold / in-full / typed amount yet: confirm is gated (IP-13). */
   readonly needsChoice: boolean;
   readonly extraSatang: number;
@@ -377,12 +379,16 @@ function workerDraft(w: CloseoutWorkerInput, given: CloseoutWorkerDraft | undefi
     const paid = live?.paid ?? 0;
     const count = mode === 'running' ? paid + (live?.left ?? 0) : paid + (picked ?? 0);
     const after = count - paid - 1;
+    // New debt and no choice yet: the boxes show the plan as it was, without the new debt (mockup D2).
+    const oldDebt = Math.max(0, balanceAsIf - Math.max(0, live?.extraSatang ?? 0));
+    const oldDue = needsChoice ? (installmentAmount(oldDebt, live?.left ?? 0) ?? 0) : null;
     installment = {
       mode,
       number: paid + 1,
       count,
       paidSales,
-      nextSatang: after > 0 ? installmentSplit(sheet.debtLeftSatang, after) : [],
+      nextSatang: after > 0 ? installmentSplit(oldDue !== null ? oldDebt - oldDue : sheet.debtLeftSatang, after) : [],
+      dueSatang: oldDue ?? planPer ?? 0,
       needsChoice,
       extraSatang: live?.extraSatang ?? 0,
       newDebt: d?.newDebt ?? null,

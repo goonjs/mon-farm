@@ -69,6 +69,7 @@ describe('IP-12 · the share is short of the instalment: what it can take, and t
     const w = one(nat({ shareSatang: 300_000 }));
     expect(w.totalSatang).toBe(300_000);
     expect(w.installment!.nextSatang).toEqual([553_300]);
+    expect(w.installment!.dueSatang).toBe(426_700);
   });
 });
 
@@ -119,6 +120,8 @@ describe('IP-8 / IP-13 · new debt since the plan: nothing proposed and confirm 
     const plan = closeoutPlan(input(withNew()));
     expect(plan.workers[0].totalSatang).toBe(0);
     expect(plan.workers[0].installment!.needsChoice).toBe(true);
+    // until a choice is made the boxes show the plan without the new debt (mockup D2): 4,267 now, 4,266 last
+    expect(plan.workers[0].installment).toMatchObject({ dueSatang: 426_700, nextSatang: [426_600] });
     const gate = confirmGate({ debtors: [{ id: NAT.id, name: 'นัด' }], debtChecked: new Set([NAT.id]), debtAnswered: false, owed: [], owedChecked: new Set(), owedAnswered: true, plan });
     expect(gate).toEqual({ kind: 'new-debt', names: ['นัด'] });
   });

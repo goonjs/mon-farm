@@ -13,7 +13,7 @@ import { compactMoneyParts } from '../../../core/compact-money';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, Button, Check, cardStyle, ChevronRight, CompactMoney, FarmMateArt, Plus, toneColours, type TileTone } from '../../../ui';
-import { CardIcon, MARK, RoundButton, WarnMark, baht, minus } from './summary-parts';
+import { CardIcon, MARK, RoundButton, WarnMark, baht, minus, installmentLabel } from './summary-parts';
 
 /** Line height for card text: above `snug` for Thai marks, tight enough for one screen (CO-1). */
 const lh = (size: number) => Math.round(size * 1.35);
@@ -160,6 +160,7 @@ export function DebtCard({
         ? people.map((p) => (
             <Sentence key={p.w.id} testID={`co-debt-line-${p.w.id}`}>
               <Name>{p.w.name}</Name>
+              {installmentLabel(msg, p.w) ? <Text testID={`co-debt-inst-${p.w.id}`} style={{ color: t.color.inkSoft }}> {installmentLabel(msg, p.w)}</Text> : null}
               {took(p)}
               <Text style={{ color: t.color.inkSoft }}> {msg('co.debt.leftAfter')} </Text>
               <CompactMoney satang={p.w.debtLeftSatang} size="bodyLg" pill />
@@ -316,7 +317,7 @@ export function WorkerCard({ w, roundingNone, tone, onDeduct }: { w: CloseoutWor
           style={{ ...row, minHeight: t.target.min, gap: t.space.sm, backgroundColor: t.color.debtInSunk, borderRadius: t.radius.md, paddingVertical: t.space.xs, paddingLeft: t.space.md, paddingRight: t.space.sm }}
         >
           <View style={{ flex: 1, gap: t.space.xxs }}>
-            <AppText style={{ fontWeight: t.font.weight.bold, lineHeight: lh(fs.bodyLg) }}>↘ {msg('co.deductRow')}</AppText>
+            <AppText style={{ fontWeight: t.font.weight.bold, lineHeight: lh(fs.bodyLg) }}>↘ {installmentLabel(msg, w) ? msg('co.deductRowInst', { label: installmentLabel(msg, w)! }) : msg('co.deductRow')}</AppText>
             {w.leftChip ? <LeftChip satang={w.debtLeftSatang} testID={`co-left-${w.id}`} /> : null}
             {w.doubleOpen ? <WarnChip text={msg('co.doubleChip', { n: w.devices })} testID={`co-double-${w.id}`} /> : null}
           </View>

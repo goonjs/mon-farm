@@ -241,7 +241,9 @@ describe('the deduct sheet (A5, CO-5, CO-7, A22, A23)', () => {
     await press(`co-deduct-${farm.nat}`);
     expect(text('co-deduct-sheet')).toHaveTextContent(/หักหนี้นัดกี่บาท/);
     expect(text('co-quick-full')).toHaveTextContent(/หักเต็ม 5,250/);
-    expect(text('co-quick-half')).toHaveTextContent(/ครึ่งหนึ่ง 2,625/);
+    // E06-S09 (D-88): no "ครึ่งหนึ่ง"; "ไม่หัก" is "ยังไม่หัก · ขอติดไว้ก่อน"
+    expect(screen.queryByTestId('co-quick-half')).toBeNull();
+    expect(text('co-quick-none')).toHaveTextContent('ยังไม่หัก · ขอติดไว้ก่อน');
     await keys('3000');
     expect(text('co-amount')).toHaveTextContent(/3,000/);
     expect(text('co-res-cash')).toHaveTextContent(/2,250\.00/);

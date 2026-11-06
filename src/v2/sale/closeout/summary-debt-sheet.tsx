@@ -13,7 +13,7 @@ import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, BottomSheet, Button, cardStyle, Check, ChevronRight, CTA, FarmMateArt, Plus } from '../../../ui';
 import { useDay } from '../../farm/pieces';
-import { baht, minus } from './summary-parts';
+import { baht, minus, installmentLabel } from './summary-parts';
 
 /** "เงินยืม 1 ก.ย." — kind and day without the year, as the mockup (A2, A5). */
 export function usePieceName(): (p: DebtPiece) => string {
@@ -57,7 +57,7 @@ export function DebtSheet({
             <View style={{ flexShrink: 1 }}>
               <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingMd }}>{w.name}</AppText>
               <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.debt.pieces', { n: pieces.length })}</AppText>
-              <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg(edited ? 'co.reason.edited' : `co.reason.${w.reason}` as 'co.reason.plan')}</AppText>
+              <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{installmentLabel(msg, w) ?? msg(edited ? 'co.reason.edited' : `co.reason.${w.reason}` as 'co.reason.plan')}</AppText>
             </View>
             <View style={{ marginLeft: 'auto', alignItems: 'flex-end' }}>
               <AppText style={{ fontWeight: t.font.weight.black, fontSize: t.font.size.headingLg, fontVariant: ['tabular-nums'], color: t.color.debtIn }}>{minus(w.totalSatang)}</AppText>
