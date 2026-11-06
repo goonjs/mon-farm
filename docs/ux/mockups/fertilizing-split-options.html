@@ -1,0 +1,207 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>แบ่งปุ๋ยให้คนกรีด</title><link rel="stylesheet" href="../tokens.css"><style>
+:root{--pg:#E9EEF3;}
+*{box-sizing:border-box;margin:0}
+body{font-family:"Noto Sans Thai","Sarabun",ui-sans-serif,system-ui,sans-serif;background:var(--pg);color:var(--color-ink);padding:32px 20px 80px;line-height:1.45}
+.page{max-width:1280px;margin:0 auto}
+h1{font-size:28px;margin-bottom:6px}
+.lead{color:var(--color-ink-soft);max-width:860px;margin-bottom:20px}
+section.doc{background:#fff;border-radius:16px;padding:20px 24px;margin:16px 0;box-shadow:0 2px 12px rgba(0,40,88,.06)}
+section.doc h2{font-size:20px;margin-bottom:8px}
+section.doc p,section.doc li{font-size:14px;color:var(--color-ink-soft)}
+section.doc ul{padding-left:20px;display:grid;gap:4px}
+section.doc b{color:var(--color-ink)}
+table.cmp{border-collapse:collapse;width:100%;font-size:14px;margin-top:8px}
+table.cmp td,table.cmp th{border-bottom:1px solid var(--color-rule-faint);padding:8px;text-align:left;vertical-align:top}
+.row-flow{display:flex;flex-wrap:wrap;gap:36px 28px;margin:16px 0}
+figure.fig{width:390px}
+figure.fig figcaption{margin-top:10px;font-size:14px;color:var(--color-ink-soft);max-width:390px}
+figure.fig figcaption .t{display:block;font-weight:700;color:var(--color-ink);font-size:14px;margin-bottom:2px}
+figure.fig figcaption .ids{display:block;margin-top:4px;font-size:12px;color:var(--color-ink-faint)}
+.band{font-weight:700;font-size:18px;margin:28px 0 4px;display:flex;gap:10px;align-items:center}
+.band span{background:var(--color-ink);color:var(--color-ink-inverse);border-radius:999px;padding:2px 12px;font-size:14px}
+
+/* ---- phone ---- */
+.phone{width:390px;height:844px;background:var(--color-surface);position:relative;overflow:hidden;display:flex;flex-direction:column;border-radius:0;outline:1px solid var(--color-rule);font-size:16px}
+.appbar{height:56px;display:flex;align-items:center;gap:6px;padding:0 12px 0 8px;flex:none;background:var(--color-app-bar);color:var(--color-app-bar-ink)}
+.appbar .ib{width:48px;height:48px;display:grid;place-items:center}
+.appbar h3{flex:1;font-size:20px;font-weight:700;line-height:1.2}
+.appbar h3 small{display:block;font-size:13px;font-weight:400;color:var(--color-ink-soft)}
+.sync{display:inline-flex;align-items:center;gap:6px;background:var(--color-accept-sunk);color:var(--color-accept);font-weight:600;font-size:13px;border-radius:999px;padding:5px 12px}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--color-accept)}
+.body{flex:1;padding:8px 16px 12px;display:flex;flex-direction:column;gap:10px;overflow:hidden;min-height:0}
+.foot{flex:none;padding:10px 16px 18px;display:flex;flex-direction:column;gap:10px;background:var(--color-surface)}
+.card{background:var(--color-surface-raised);border:1px solid var(--color-rule-faint);border-radius:16px;box-shadow:0 2px 12px rgba(0,40,88,.06);padding:14px}
+.tile{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;flex:none}
+.tile.sm{width:40px;height:40px;border-radius:12px}
+.t-cream{background:var(--color-brand-cream)}.t-green{background:var(--color-accept-sunk)}.t-blue{background:var(--color-action-sunk)}.t-sunk{background:var(--color-surface-sunk)}.t-warn{background:var(--color-warn-sunk)}
+.fm{display:block;object-fit:contain}
+.cap{font-size:14px;color:var(--color-ink-soft)}
+.val{font-weight:700}
+.money{font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.sec{display:flex;align-items:baseline;justify-content:space-between;font-weight:700;font-size:16px;padding:2px 2px 0}
+.sec small{font-weight:500;font-size:13px;color:var(--color-ink-soft)}
+.btn{height:56px;border-radius:28px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:18px;background:var(--color-action);color:var(--color-ink-inverse)}
+.btn.sec2{background:transparent;color:var(--color-action);border:2px solid var(--color-action);box-shadow:none}
+.btn.dis{background:var(--color-disabled-fill);color:var(--color-disabled-ink);box-shadow:none}
+.btn.ghost{background:transparent;color:var(--color-action);box-shadow:none;height:48px;font-size:16px}
+.btn.green{background:var(--color-accept)}
+.btnrow{display:flex;gap:10px}.btnrow .btn{flex:1}
+.dashed{border:2px dashed var(--color-rule-strong);background:transparent;box-shadow:none;border-radius:16px;min-height:56px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;color:var(--color-action);font-size:16px}
+.fields{display:flex;gap:10px}
+.field{flex:1;display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:56px;min-width:0}
+.field .ico{color:var(--color-ink-soft);flex:none}
+.field .tx{flex:1;min-width:0}.field .tx .val{font-size:16px;line-height:1.3}
+.item{display:flex;align-items:center;gap:12px;padding:8px 12px}
+.item .tx{flex:1;min-width:0}
+.item .tx .val{font-size:16px;line-height:1.3}
+.item .amt{text-align:right}
+.item .amt .money{font-size:18px}
+.paycard{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:64px}
+.paycard .ico{width:40px;height:40px;border-radius:12px;background:var(--color-action-sunk);color:var(--color-action);display:grid;place-items:center;flex:none}
+.totalbar{display:flex;align-items:baseline;justify-content:space-between;padding:0 4px}
+.totalbar .money{font-size:28px}
+/* sheet */
+.scrim{position:absolute;inset:0;background:rgba(0,40,88,.48)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--color-surface);border-radius:24px 24px 0 0;padding:8px 16px 18px;display:flex;flex-direction:column;gap:12px;max-height:94%;overflow:hidden;box-shadow:0 -6px 24px rgba(0,40,88,.14)}
+.grab{width:44px;height:5px;border-radius:3px;background:var(--color-rule);margin:0 auto 4px;flex:none}
+.sheet h4{font-size:20px;line-height:1.25}
+.sheet h4 small{display:block;font-size:14px;font-weight:400;color:var(--color-ink-soft);margin-top:2px}
+.sheethead{display:flex;align-items:flex-start;gap:8px}
+.sheethead h4{flex:1}
+.sheethead .x{width:48px;height:48px;display:grid;place-items:center;color:var(--color-ink-soft);margin:-6px -8px 0 0}
+.pick{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:68px}
+.pick .tx{flex:1;min-width:0}
+.pick.on{border:2px solid var(--color-action);background:var(--color-action-sunk)}
+.radio{width:26px;height:26px;border-radius:50%;border:2px solid var(--color-rule-strong);flex:none;display:grid;place-items:center}
+.radio.on{border-color:var(--color-action);background:var(--color-action);color:var(--color-ink-inverse)}
+.box{width:28px;height:28px;border-radius:8px;border:2px solid var(--color-rule-strong);flex:none;display:grid;place-items:center;background:var(--color-surface-raised)}
+.box.on{background:var(--color-accept);border-color:var(--color-accept);color:var(--color-ink-inverse)}
+.seg{display:flex;background:var(--color-surface-sunk);border-radius:999px;padding:4px;gap:4px}
+.seg span{flex:1;height:48px;text-align:center;line-height:1.25;padding:0 6px;border-radius:999px;display:grid;place-items:center;font-weight:600;font-size:16px;color:var(--color-ink-soft)}
+.seg span.on{background:var(--color-action);color:var(--color-ink-inverse)}
+.stepper{display:flex;align-items:center;justify-content:center;gap:14px}
+.sbtn{width:56px;height:56px;border-radius:50%;border:2px solid var(--color-action);color:var(--color-action);display:grid;place-items:center;flex:none;background:var(--color-surface-raised)}
+.sbtn.sm{width:48px;height:48px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.key{height:60px;border-radius:16px;background:var(--color-surface-raised);border:1px solid var(--color-rule-faint);box-shadow:0 2px 6px rgba(0,40,88,.06);display:grid;place-items:center;font-size:28px;font-weight:700}.key.act{background:var(--color-action);color:var(--color-ink-inverse)}.key.fn{background:var(--color-surface-sunk);font-size:20px;color:var(--color-ink-soft)}
+.hint{font-size:14px;color:var(--color-ink-soft)}
+.numfield{border:2px solid var(--color-action);border-radius:14px;background:var(--color-surface-raised);display:flex;align-items:baseline;justify-content:flex-end;gap:6px;padding:4px 12px;min-height:56px;font-variant-numeric:tabular-nums}.numfield b{font-size:28px;font-weight:800;align-self:center}.numfield span{font-size:14px;font-weight:600;color:var(--color-ink-soft);align-self:center}
+.numbox{height:64px;width:170px;border:2px solid var(--color-action);border-radius:16px;background:var(--color-surface-raised);display:flex;align-items:baseline;justify-content:center;gap:6px;padding:0 14px}
+.numbox b{font-size:32px;font-weight:800;font-variant-numeric:tabular-nums;align-self:center;line-height:1}
+.numbox span{font-size:14px;color:var(--color-ink-soft);font-weight:600;align-self:center}
+.numbox.sm{height:48px;width:64px;border-radius:12px;padding:0 8px}
+.numbox.sm b{font-size:24px}
+.inp{height:56px;border:2px solid var(--color-rule-strong);border-radius:14px;background:var(--color-surface-raised);display:flex;align-items:center;padding:0 14px;gap:8px;font-size:18px}
+.inp .u{margin-left:auto;color:var(--color-ink-soft);font-size:16px}
+.inp.focus{border-color:var(--color-action)}
+.lbl{font-weight:700;font-size:16px;margin-bottom:6px;display:flex;gap:8px;align-items:baseline}
+.lbl small{font-weight:400;color:var(--color-ink-soft);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:48px;padding:0 16px;border-radius:999px;border:1.5px solid var(--color-rule-strong);display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:16px;background:var(--color-surface-raised)}
+.chip.on{background:var(--color-action);color:var(--color-ink-inverse);border-color:var(--color-action)}
+.chip.dash{border-style:dashed;color:var(--color-action)}
+.typegrid{display:flex;gap:10px}
+.typegrid .pick{flex:1;flex-direction:column;justify-content:center;gap:4px;min-height:92px;padding:8px;text-align:center;font-weight:700;font-size:14px}
+.totalcard{display:flex;align-items:center;gap:12px;background:var(--color-accept-sunk);border-radius:16px;padding:12px 16px}
+.totalcard .money{font-size:28px;margin-left:auto;color:var(--color-ink)}
+.tick{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--color-accept-sunk);border:1.5px solid var(--color-accept)}
+.tick.off{background:var(--color-surface-raised);border-color:var(--color-rule)}
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal .wd{font-size:13px;color:var(--color-ink-soft);font-weight:600;height:28px;display:grid;place-items:center}
+.cal .d{height:44px;display:grid;place-items:center;font-weight:600;font-size:16px;border-radius:50%;margin:0 auto;width:44px;font-variant-numeric:tabular-nums}
+.cal .d.today{border:2px solid var(--color-action)}
+.cal .d.sel{background:var(--color-action);color:var(--color-ink-inverse)}
+.cal .d.mute{color:var(--color-ink-faint)}
+.calhead{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:18px}
+.calhead .ib{width:48px;height:48px;display:grid;place-items:center;border-radius:50%;background:var(--color-surface-sunk)}
+/* detail chips */
+.prog{height:10px;border-radius:999px;background:var(--color-surface-sunk);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--color-brand);border-radius:999px}
+.dchips{display:flex;gap:8px;margin-top:12px}
+.dchip{flex:1;min-width:0;min-height:60px;border-radius:14px;padding:8px 8px;display:flex;flex-direction:column;justify-content:center;gap:2px;border:2px dashed var(--color-rule-strong);color:var(--color-ink)}
+.dchip .k{font-size:13px;color:var(--color-ink-soft);font-weight:600;display:flex;align-items:center;gap:4px}
+.dchip .v{font-size:14px;font-weight:700;line-height:1.3;color:var(--color-action)}
+.dchip.done{border:2px solid var(--color-accept);background:var(--color-accept-sunk);border-style:solid}
+.dchip.done .v{color:var(--color-accept)}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700}
+.b-ok{background:var(--color-accept-sunk);color:var(--color-accept)}
+.b-warn{background:var(--color-warn-sunk);color:var(--color-warn)}
+.b-debt{background:var(--color-warn-sunk);color:var(--color-warn)}
+.rowx{display:flex;align-items:center;gap:12px}
+.sumbar{display:flex;align-items:center;gap:10px;border-radius:14px;padding:10px 14px;background:var(--color-surface-sunk)}
+.sumbar.ok{background:var(--color-accept-sunk)}.sumbar.warn{background:var(--color-warn-sunk)}
+.sumbar b{font-weight:800}
+.tcard{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.cover{height:110px;border-radius:16px;background:linear-gradient(180deg,var(--color-action-sunk),var(--color-accept-sunk) 60%,var(--color-brand) 60%);position:relative;overflow:hidden}
+.cover i{position:absolute;bottom:18px;width:22px;height:52px;background:var(--color-brand-strong);border-radius:11px 11px 4px 4px}
+.acts{display:flex;gap:8px}
+.act{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;font-weight:700;font-size:14px;text-align:center}
+.mod{display:flex;align-items:center;gap:10px;padding:10px 12px;flex:1;min-width:0;font-weight:700;font-size:14px}
+.rowline{display:flex;align-items:center;gap:12px;padding:12px 14px}
+
+.ruler{height:92px;border-radius:14px;background:var(--color-surface-sunk);position:relative;overflow:hidden}
+.ruler .ticks{position:absolute;left:12px;right:12px;top:14px;height:32px;background:repeating-linear-gradient(90deg,var(--color-ink-faint) 0 2px,transparent 2px 9px)}
+.ruler .lbls{position:absolute;left:0;right:0;bottom:8px;display:flex;justify-content:space-between;padding:0 12px;font-size:14px;font-weight:600;color:var(--color-ink-soft)}
+.ruler .needle{position:absolute;top:8px;bottom:34px;width:4px;background:var(--color-ink);border-radius:2px;left:33%}
+.os{position:absolute;left:0;right:0;bottom:0;height:300px;background:#D4D7DD;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 10px 18px}
+.os i{background:#fff;border-radius:8px;display:grid;place-items:center;font-style:normal;font-weight:600;font-size:22px;color:#222}
+.os .osl{position:absolute;top:-34px;left:0;right:0;text-align:center;background:var(--color-reject-sunk);color:var(--color-reject);font-weight:700;font-size:14px;padding:6px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.key{height:60px;border-radius:16px;background:var(--color-surface-raised);border:1px solid var(--color-rule-faint);box-shadow:0 2px 6px var(--color-card-shadow, rgba(0,40,88,.06));display:grid;place-items:center;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.key.act{background:var(--color-action);color:var(--color-ink-inverse)}
+.key.fn{background:var(--color-surface-sunk);font-size:20px;color:var(--color-ink-soft)}
+.disp{border:2px solid var(--color-action);border-radius:16px;background:var(--color-surface-raised);padding:6px 16px;display:flex;align-items:baseline;justify-content:flex-end;gap:8px;min-height:72px}
+.disp b{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;align-self:center}
+.disp span{font-size:16px;color:var(--color-ink-soft);font-weight:600;align-self:center}
+.sel{background:var(--color-action);color:var(--color-ink-inverse);padding:0 4px;border-radius:4px}
+.hint{font-size:14px;color:var(--color-ink-soft)}
+.bad{color:var(--color-reject);font-weight:700}
+
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:18px;flex:none;background:var(--color-brand-cream);color:var(--color-ink)}
+.trow{display:flex;align-items:center;gap:12px;padding:8px 12px;min-height:64px}
+.trow .tx{flex:1;min-width:0}
+.trow .tx .val{font-size:17px;line-height:1.25}
+.trow.zero .val{color:var(--color-ink-soft)}
+.nb{min-width:96px;height:52px;border:2px solid var(--color-rule-strong);border-radius:14px;background:var(--color-surface-raised);display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:0 12px;font-variant-numeric:tabular-nums;flex:none}
+.nb b{font-size:24px;font-weight:800}
+.nb span{font-size:14px;font-weight:600;color:var(--color-ink-soft)}
+.nb.zero b{color:var(--color-ink-faint)}
+.nb.on{border-color:var(--color-action);background:var(--color-action-sunk)}
+.ptabs{display:flex;gap:8px;flex-wrap:wrap}
+.ptab{min-height:48px;padding:4px 14px 4px 8px;border-radius:14px;border:1.5px solid var(--color-rule-strong);display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;line-height:1.25;background:var(--color-surface-raised)}
+.ptab div{display:flex;flex-direction:column}.ptab small{font-weight:500;font-size:13px;color:var(--color-ink-soft)}
+.ptab.on{border:2px solid var(--color-action);background:var(--color-action-sunk)}
+.ptab.ok small{color:var(--color-accept)}
+.sl{display:flex;flex-direction:column;gap:2px;padding:8px 12px}
+.sl .top{display:flex;align-items:center;gap:12px}
+.sl .top .val{flex:1;font-size:17px}
+.sl .num{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;min-width:72px;text-align:right;border-bottom:2px dashed var(--color-rule-strong);padding:0 2px}
+.sl .num small{font-size:14px;font-weight:600;color:var(--color-ink-soft)}
+.sl.zero .num{color:var(--color-ink-faint)}
+.track{position:relative;height:40px;margin:0 14px}
+.track .rail{position:absolute;left:0;right:0;top:16px;height:8px;border-radius:4px;background:var(--color-surface-sunk)}
+.track .fill{position:absolute;left:0;top:16px;height:8px;border-radius:4px;background:var(--color-action)}
+.track .room{position:absolute;top:16px;height:8px;border-radius:4px;background:var(--color-action-sunk)}
+.track .thumb{position:absolute;top:2px;width:36px;height:36px;margin-left:-18px;border-radius:50%;background:var(--color-surface-raised);border:3px solid var(--color-action);box-shadow:0 2px 6px rgba(0,40,88,.18)}
+.track .thumb.drag{width:44px;height:44px;top:-2px;margin-left:-22px;background:var(--color-action)}
+.bubble{position:absolute;top:-34px;margin-left:-28px;width:56px;text-align:center;background:var(--color-ink);color:var(--color-ink-inverse);border-radius:10px;font-weight:800;font-size:16px;padding:2px 0}
+.chipq{min-height:48px;padding:0 14px;border-radius:999px;border:1.5px solid var(--color-action);color:var(--color-action);display:inline-flex;align-items:center;font-weight:700;font-size:15px;background:var(--color-surface-raised)}
+.list{display:flex;flex-direction:column;gap:8px}
+.optrow{display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:56px}
+.optrow .tx{flex:1;min-width:0}
+.link{color:var(--color-action);font-weight:600;text-decoration:underline;font-size:15px}
+</style></head><body><div class="page">
+<h1>แบ่งปุ๋ยให้คนกรีด (แบบพิมพ์ตัวเลข)</h1>
+<p class="lead">ร่าง 6 พ.ย. 2569 สำหรับ E16-S03 (การดูแลสวน) จากคำขอเจ้าของ: ขึ้นคนกรีดทุกคนมาให้เลยตั้งแต่แรก ทุกคนเริ่มที่ 0 คนที่ไม่รับก็ไม่ต้องกรอก แทนแบบเดิมที่ต้องกด "เพิ่มคนกรีด" ทีละคนและคนแรกได้เลขเต็มไปก่อน เทียบ 2 แบบให้เจ้าของสวนตัวจริงเลือก ตัวอย่าง: ดีเกลือ 100 ถุง แบ่งให้แดง 40 ดำ 35 สมชาย 25</p>
+<section class="doc"><h2>เจ้าของเลือกแบบ A · พิมพ์ตัวเลข (6 พ.ย. 2569)</h2><p>แบบสไลเดอร์ (B) ไม่ใช้แล้ว เก็บตารางเทียบไว้เป็นประวัติ ไอคอนใช้ชุด FarmMate ของแอป</p></section><section class="doc"><h2>เทียบสั้น ๆ (ประวัติ)</h2><table class="cmp"><tr><th></th><th>A · พิมพ์ (แป้นในแอป)</th><th>B · สไลเดอร์</th></tr>
+<tr><td>ลงเลขตรง</td><td>ตรงทุกครั้ง</td><td>ยาก ต้องลากหลายรอบหรือแตะเลขไปพิมพ์</td></tr>
+<tr><td>จำนวนกด (ตัวอย่างนี้)</td><td>ราว 12 ครั้ง</td><td>ลาก 3 ครั้ง + แก้ให้ตรงอีก 0–6 ครั้ง</td></tr>
+<tr><td>เห็นสัดส่วน</td><td>เป็นตัวเลข</td><td>เห็นแถบยาวสั้น</td></tr>
+<tr><td>ที่บนจอ</td><td>คนละ 1 แถว · 7 คนพอดีจอ</td><td>คนละ 2 แถว · 5 คนเต็มจอ</td></tr>
+<tr><td>ใช้กลางแดด มือเดียว</td><td>ปุ่มใหญ่ เหมือนหน้าอื่นในแอป</td><td>ต้องลากแม่น นิ้วบังเลข</td></tr></table>
+<p style="margin-top:8px"><b>ทีมแนะนำ A</b> เพราะแอปใช้แป้นตัวเลขแบบเดียวกันทุกหน้าอยู่แล้ว และจำนวนถุงต้องตรง แต่ B เหมาะถ้าคนใช้ชอบกะด้วยตาแล้วค่อยแก้</p></section>
+<div class="band"><span>บริบท</span>บันทึกการใส่ปุ๋ย</div><div class="row-flow"><figure class="fig"><div class="shot"><div class="phone" id="r0" aria-label="บันทึกใส่ปุ๋ย"><div class="appbar"><span class="ib"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span><h3>ใส่ปุ๋ย<small>การดูแลสวน</small></h3><span class="sync"><i></i>ซิงก์แล้ว</span></div><div class="body"><div class="card field" style="flex:none"><span class="tile sm t-blue"><img class="fm" src="../../../design/icons/farmmate/farmwork.calendar.svg" width="28" height="28" alt=""></span><div class="tx"><div class="cap">วันที่ใส่</div><div class="val">วันนี้ 6 พ.ย.</div></div></div><div class="sec">ใส่ปุ๋ยอะไร<small>จากปุ๋ยที่ได้ของแล้ว</small></div><div class="card item"><span class="tile sm t-green"><img class="fm" src="../../../design/icons/farmmate/materials.chemFert.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">ดีเกลือ</div><div class="cap">ร้าน ก. 60 · ร้าน ข. 40</div></div><div class="amt"><span class="money">100</span> <span class="cap">ถุง</span></div></div><div class="card item"><span class="tile sm t-green"><img class="fm" src="../../../design/icons/farmmate/materials.chemFert.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">15-15-15</div><div class="cap">ร้าน ก.</div></div><div class="amt"><span class="money">20</span> <span class="cap">ถุง</span></div></div><div class="dashed">+ เพิ่มปุ๋ย</div><div class="card optrow"><span class="tile sm t-cream"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="28" height="28" alt=""></span><div class="tx"><div class="val">แบ่งให้คนกรีด</div><div class="cap">ยังไม่แบ่ง · ทำตอนเตรียมขายก็ได้</div></div><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div><div class="card optrow"><span class="tile sm t-sunk"><img class="fm" src="../../../design/icons/farmmate/farm.plotZone.svg" width="28" height="28" alt=""></span><div class="tx"><div class="val">ใส่โซนไหน เพราะอะไร</div><div class="cap">ไม่บังคับ</div></div><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div></div><div class="foot"><div class="btn">บันทึก</div></div></div></div><figcaption><span class="t">R0 · บันทึกใส่ปุ๋ย 1 ครั้ง (บริบท)</span>วันที่ + ปุ๋ยที่ใส่ ดึงจากปุ๋ยที่ได้ของแล้ว ดีเกลือ 100 ถุงมาจาก 2 ใบ 2 ร้าน แต่เป็นแถวเดียว การแบ่งคนกรีดกับโซน/เหตุผลเป็นแถวไม่บังคับ แบ่งตอนนี้หรือตอนเตรียมขายก็ได้<span class="ids">E16-S02 · คำตอบเจ้าของ 6 พ.ย.</span></figcaption></figure></div>
+<div class="band"><span>A</span>พิมพ์ด้วยแป้นตัวเลขในแอป</div><div class="row-flow"><figure class="fig"><div class="shot"><div class="phone" id="a1" aria-label="แบบพิมพ์ เริ่มต้น"><div class="appbar"><span class="ib"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span><h3>แบ่งให้คนกรีด<small>ใส่ปุ๋ย 6 พ.ย.</small></h3><span class="sync"><i></i>ซิงก์แล้ว</span></div><div class="body"><div class="ptabs"><div class="ptab on"><img class="fm" src="../../../design/icons/farmmate/materials.chemFert.svg" width="26" height="26" alt=""><div>ดีเกลือ<small>100 ถุง</small></div></div><div class="ptab"><img class="fm" src="../../../design/icons/farmmate/materials.chemFert.svg" width="26" height="26" alt=""><div>15-15-15<small>20 ถุง · ยังไม่แบ่ง</small></div></div></div><div class="sumbar"><b>แบ่งแล้ว 0 / 100 ถุง</b><span class="hint" style="margin-left:auto">เหลือ 100 ถุง</span></div><div class="list"><div class="card trow zero"><span class="av t-warn"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">แดง</div></div><div class="nb zero"><b>0</b><span>ถุง</span></div></div><div class="card trow zero"><span class="av t-sunk"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">ดำ</div></div><div class="nb zero"><b>0</b><span>ถุง</span></div></div><div class="card trow zero"><span class="av t-blue"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">สมชาย</div></div><div class="nb zero"><b>0</b><span>ถุง</span></div></div><div class="card trow zero"><span class="av t-green"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">น้อย</div></div><div class="nb zero"><b>0</b><span>ถุง</span></div></div><div class="card trow zero"><span class="av t-cream"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">ป้าแก้ว</div></div><div class="nb zero"><b>0</b><span>ถุง</span></div></div></div></div><div class="foot"><div class="hint" style="text-align:center">แตะเลขของคนที่รับ คนที่ไม่รับปล่อย 0 ไว้</div><div class="btn">เสร็จ</div></div></div></div><figcaption><span class="t">A1 · แบบพิมพ์: ขึ้นคนกรีดทุกคน เริ่มที่ 0</span>ไม่ต้องกด "เพิ่มคนกรีด" ทีละคน และไม่มีใครได้เลขเต็มไปก่อน แตะช่องเลขของคนที่รับ คนที่ไม่รับปล่อย 0 ไว้ แต่ละปุ๋ยแบ่งแยกกัน (แถบบน)<span class="ids">ตัวเลือก A</span></figcaption></figure><figure class="fig"><div class="shot"><div class="phone" id="a2" aria-label="แบบพิมพ์ กำลังกรอก"><div class="appbar"><span class="ib"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span><h3>แบ่งให้คนกรีด<small>ใส่ปุ๋ย 6 พ.ย.</small></h3><span class="sync"><i></i>ซิงก์แล้ว</span></div><div class="body"><div class="ptabs"><div class="ptab on"><img class="fm" src="../../../design/icons/farmmate/materials.chemFert.svg" width="26" height="26" alt=""><div>ดีเกลือ<small>100 ถุง</small></div></div><div class="ptab"><img class="fm" src="../../../design/icons/farmmate/materials.chemFert.svg" width="26" height="26" alt=""><div>15-15-15<small>20 ถุง · ยังไม่แบ่ง</small></div></div></div><div class="sumbar"><b>แบ่งแล้ว 40 / 100 ถุง</b><span class="hint" style="margin-left:auto">เหลือ 60 ถุง</span></div><div class="list"><div class="card trow"><span class="av t-warn"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">แดง</div></div><div class="nb"><b>40</b><span>ถุง</span></div></div><div class="card trow zero"><span class="av t-sunk"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">ดำ</div></div><div class="nb on"><b>0</b><span>ถุง</span></div></div><div class="card trow zero"><span class="av t-blue"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">สมชาย</div></div><div class="nb zero"><b>0</b><span>ถุง</span></div></div><div class="card trow zero"><span class="av t-green"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">น้อย</div></div><div class="nb zero"><b>0</b><span>ถุง</span></div></div><div class="card trow zero"><span class="av t-cream"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">ป้าแก้ว</div></div><div class="nb zero"><b>0</b><span>ถุง</span></div></div></div></div><div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="sheethead"><h4>ดำ รับกี่ถุง<small>ดีเกลือ · เหลือให้แบ่ง 60 ถุง</small></h4><span class="x"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div><div class="numfield"><b>35</b><span>ถุง</span></div><div class="chips"><span class="chipq">ที่เหลือทั้งหมด 60</span><span class="chipq">0 ไม่รับ</span></div><div class="pad"><div class="key">1</div><div class="key">2</div><div class="key">3</div><div class="key">4</div><div class="key">5</div><div class="key">6</div><div class="key">7</div><div class="key">8</div><div class="key">9</div><div class="key fn">⌫</div><div class="key">0</div><div class="key act"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div></div></div></div></div><figcaption><span class="t">A2 · แตะช่องของดำ → แป้นตัวเลขในแอป</span>บอกว่าเหลือให้แบ่งกี่ถุง มีปุ่มลัด "ที่เหลือทั้งหมด" สำหรับคนสุดท้าย กดเลขใหม่แทนที่เลขเดิมทันที ไม่ใช้คีย์บอร์ดของเครื่อง<span class="ids">ตัวเลือก A</span></figcaption></figure><figure class="fig"><div class="shot"><div class="phone" id="a3" aria-label="แบบพิมพ์ ครบ"><div class="appbar"><span class="ib"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span><h3>แบ่งให้คนกรีด<small>ใส่ปุ๋ย 6 พ.ย.</small></h3><span class="sync"><i></i>ซิงก์แล้ว</span></div><div class="body"><div class="ptabs"><div class="ptab on"><img class="fm" src="../../../design/icons/farmmate/materials.chemFert.svg" width="26" height="26" alt=""><div>ดีเกลือ<small>100 ถุง</small></div></div><div class="ptab"><img class="fm" src="../../../design/icons/farmmate/materials.chemFert.svg" width="26" height="26" alt=""><div>15-15-15<small>20 ถุง · ยังไม่แบ่ง</small></div></div></div><div class="sumbar ok"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><b>แบ่งครบ 100 / 100 ถุง</b></div><div class="list"><div class="card trow"><span class="av t-warn"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">แดง</div></div><div class="nb"><b>40</b><span>ถุง</span></div></div><div class="card trow"><span class="av t-sunk"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">ดำ</div></div><div class="nb"><b>35</b><span>ถุง</span></div></div><div class="card trow"><span class="av t-blue"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">สมชาย</div></div><div class="nb"><b>25</b><span>ถุง</span></div></div><div class="card trow zero"><span class="av t-green"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">น้อย</div></div><div class="nb zero"><b>0</b><span>ถุง</span></div></div><div class="card trow zero"><span class="av t-cream"><img class="fm" src="../../../design/icons/farmmate/people.tapper.svg" width="30" height="30" alt=""></span><div class="tx"><div class="val">ป้าแก้ว</div></div><div class="nb zero"><b>0</b><span>ถุง</span></div></div></div></div><div class="foot"><div class="btn">เสร็จ</div></div></div></div><figcaption><span class="t">A3 · ครบ 100 / 100</span>แดง 40 · ดำ 35 · สมชาย 25 น้อยกับป้าแก้วไม่รับ (0) แถบเปลี่ยนเป็นสีเขียวเมื่อครบ ถ้าเกินจะขึ้นสีเหลืองว่าเกินกี่ถุง<span class="ids">ตัวเลือก A · ถ้าครบต้องกด: 3 คน × (แตะช่อง + 2 ตัวเลข + ตกลง)</span></figcaption></figure></div>
+
+</div></body></html>
