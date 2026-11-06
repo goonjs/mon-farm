@@ -118,7 +118,7 @@ export function BackToPlan({ onPress }: { onPress: () => void }) {
 }
 
 /** A choice card ("3 งวด / งวดละ 4,267" or "รวมในงวดที่เหลือ"): a whole tap target, selected = outlined and tinted. */
-export function Choice({ testID, selected, onPress, children, basis = 90 }: { testID: string; selected: boolean; onPress: () => void; children: ReactNode; basis?: number }) {
+export function Choice({ testID, selected, onPress, children, basis = 90, grow = true }: { testID: string; selected: boolean; onPress: () => void; children: ReactNode; basis?: number; /** false: a fixed size, so a short last row is not stretched. */ grow?: boolean }) {
   const t = useTheme();
   return (
     <Pressable
@@ -127,7 +127,7 @@ export function Choice({ testID, selected, onPress, children, basis = 90 }: { te
       accessibilityState={{ selected }}
       onPress={onPress}
       style={{
-        flexGrow: 1,
+        flexGrow: grow ? 1 : 0,
         flexBasis: basis,
         minHeight: t.target.min,
         justifyContent: 'center',

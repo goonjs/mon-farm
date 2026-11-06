@@ -56,6 +56,13 @@ const save = async (id: string) => {
   await flush();
 };
 
+/** E06-S09 PR-c: the plan opens as a sheet from the whole plan card; the per-sale plan is "บาท / การขาย". */
+const openPlan = async () => {
+  await save('debt-plan-row');
+  // Nothing owed: the sheet is already "บาท / การขาย" and offers no count (review PR-c 1).
+  if (screen.queryByTestId('debt-plan-mode-amount')) await save('debt-plan-mode-amount');
+};
+
 // The memory store is shared by the file: each test gets its own worker, so one test's debts never decide another's.
 let n = 0;
 beforeEach(() => {
@@ -147,7 +154,7 @@ describe('row 11 debt-plan-amount: instalment per sale (NP-4)', () => {
     const before = (await payloads('debt_plan_set')).length;
     wrap(<DebtAccountScreen />);
     await flush();
-    await save('debt-plan-edit');
+    await openPlan();
     await enter('debt-plan-amount', text);
     await save('debt-plan-save');
     const set = (await payloads('debt_plan_set')).slice(before);
@@ -157,7 +164,7 @@ describe('row 11 debt-plan-amount: instalment per sale (NP-4)', () => {
   it('0 or blank cannot be saved as a plan', async () => {
     wrap(<DebtAccountScreen />);
     await flush();
-    await save('debt-plan-edit');
+    await openPlan();
     expect(screen.getByTestId('debt-plan-save').props.accessibilityState).toMatchObject({ disabled: true });
     await enter('debt-plan-amount', '0');
     expect(screen.getByTestId('debt-plan-save').props.accessibilityState).toMatchObject({ disabled: true });
@@ -171,11 +178,11 @@ describe('row 11 debt-plan-amount: instalment per sale (NP-4)', () => {
     await save('debt-save');
     wrap(<DebtAccountScreen />);
     await flush();
-    await save('debt-plan-edit');
+    await openPlan();
     await enter('debt-plan-amount', '250.05');
     await save('debt-plan-save');
     const before = (await payloads('debt_plan_set')).length;
-    await save('debt-plan-edit');
+    await openPlan();
     await act(async () => fireEvent.press(screen.getByTestId('debt-plan-amount')));
     await act(async () => fireEvent.press(screen.getByTestId('debt-plan-amount-done')));
     await save('debt-plan-save');

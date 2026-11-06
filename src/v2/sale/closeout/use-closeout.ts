@@ -279,18 +279,20 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
         newId,
       });
       if (!res.ok) return false;
-      for (const x of res.writes) {
-        if (x.op === 'write') await fin.write(x.id, null, x.payload);
-        else if (x.op === 'void-repayment') await fin.write(x.id, x.base, { t: 'repayment_changed', patch: { deleted: true } });
-        else await fin.write(x.id, x.base, { t: 'debt_payment_changed', patch: { deleted: true } });
-      }
-      // E06-S09: a count picked, or a new-debt choice, writes the plan with the same confirm (after the lines,
-      // so a confirm stopped part-way is finished by pressing it again; planWrite skips a plan already landed).
+      // E06-S09: a count picked, or a new-debt choice, writes the plan with the same confirm — BEFORE the lines
+      // (lead, PR-c): the draft lives in memory, so an app killed between the two must never leave lines without
+      // their plan. Plan first, the worst case is a plan whose sale has no line yet: not counted, and pressing
+      // confirm again proposes the same instalment from it (planWrite skips a plan already landed).
       const input = d.inputs.find((x) => x.id === w.id);
       const plan = input && planWrite({ worker: { id: w.id, name: w.name }, input, draft: draft.workers[w.id], saleId, seen });
       if (plan) {
         const target = `plan-${w.id}`;
         await fin.write(target, headOf(events.filter((e) => e.targetId === target)), plan);
+      }
+      for (const x of res.writes) {
+        if (x.op === 'write') await fin.write(x.id, null, x.payload);
+        else if (x.op === 'void-repayment') await fin.write(x.id, x.base, { t: 'repayment_changed', patch: { deleted: true } });
+        else await fin.write(x.id, x.base, { t: 'debt_payment_changed', patch: { deleted: true } });
       }
     }
     const r = d.plan.rounding;

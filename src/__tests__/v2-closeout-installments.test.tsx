@@ -154,6 +154,10 @@ describe('IP-9 / IP-10 · no plan yet: "ผ่อนกี่งวด" on the p
     expect(written[0].payload).toMatchObject({ perSaleSatang: 278_400, installments: { count: 3, fromSaleId: SALE, owedSatang: 835_000 } });
     const lines = (await all()).filter((e) => e.payload.t === 'debt_payment_recorded' && (e.payload as { fields: { worker: { id: string } } }).fields.worker.id === farm.nat);
     expect(lines.map((e) => (e.payload as { fields: { amountSatang: number } }).fields.amountSatang)).toEqual([278_400]);
+    // Lead (PR-c): the plan lands BEFORE the lines — an app killed in between leaves a plan whose sale has no
+    // line yet (not counted; pressing confirm again proposes the same instalment), never lines without their plan.
+    const log = await all();
+    expect(log.indexOf(written[0])).toBeLessThan(log.indexOf(lines[0]));
   });
 });
 

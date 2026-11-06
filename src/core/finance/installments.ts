@@ -195,3 +195,68 @@ export function installmentProposal(i: { readonly balanceSatang: number; readonl
   }
   return { satang: installmentAmount(i.balanceSatang, status.left), needsChoice: false };
 }
+
+/** E06-S09 PR-c · a worker's plan as the debt list and account page show it (not tied to a sale). */
+export type AccountPlan =
+  | { readonly kind: 'perSale'; readonly perSaleSatang: number }
+  | {
+      readonly kind: 'installments';
+      readonly count: number;
+      readonly paid: number;
+      readonly paidSales: readonly PaidInstallment[];
+      /** The next sale's instalment number, and what it proposes (then the last one), from the debt left now. */
+      readonly number: number;
+      readonly nextSatang: number | null;
+      readonly lastSatang: number | null;
+      /** Instalments ran out with debt left (IP-20, Q5): the rest is ordinary debt. */
+      readonly done: boolean;
+      readonly leftoverSatang: number;
+      /** Sale id → its instalment number (the history says "หักงวด N/M"). */
+      readonly numbers: Readonly<Record<string, number>>;
+    };
+
+export function accountPlan(i: { readonly account: DebtAccount; readonly events: readonly FinanceEvent[] }): AccountPlan | null {
+  const { account } = i;
+  if (!account.installmentPlan) return account.planPerSaleSatang != null ? { kind: 'perSale', perSaleSatang: account.planPerSaleSatang } : null;
+  const st = planStatus({ account, events: i.events });
+  if (!st) return null;
+  const balance = Math.max(0, account.balanceSatang);
+  if (st.done && balance <= 0) return null;
+  // Review PR-c 2 (Q5): the plan's own debt paid off before its instalments ran out — what is owed now is new,
+  // ordinary debt; "ผ่อนครบ M งวด" would be untrue.
+  if (st.done && st.left > 0) return null;
+  const split = st.done ? [] : installmentSplit(balance, st.left);
+  const numbers: Record<string, number> = {};
+  st.paidSales.forEach((p, k) => (numbers[p.saleId] = k + 1));
+  return {
+    kind: 'installments',
+    count: st.paid + Math.max(0, st.left),
+    paid: st.paid,
+    paidSales: st.paidSales,
+    number: st.paid + 1,
+    nextSatang: split.length ? split[0] : null,
+    lastSatang: split.length ? split[split.length - 1] : null,
+    done: st.done,
+    leftoverSatang: st.done ? balance : 0,
+    numbers,
+  };
+}
+
+/**
+ * IP-19 · a count of instalments set from the debt account: counted from the next sale (no anchor sale),
+ * the instalments already paid kept (`earlier`), `count` more to come, the debt owed now.
+ */
+export function accountPlanPayload(i: { readonly account: DebtAccount; readonly events: readonly FinanceEvent[]; readonly count: number }): FinancePayload {
+  const st = i.account.installmentPlan ? planStatus({ account: i.account, events: i.events }) : null;
+  const earlier = st && !st.done ? st.paidSales : [];
+  const owed = i.account.summary.owed;
+  return planPayload({
+    worker: i.account.worker,
+    count: earlier.length + i.count,
+    earlier,
+    fromSaleId: null,
+    seen: seenSnapshot(i.events),
+    owedSatang: owed.loan + owed.fertilizer + owed.other,
+    balanceSatang: Math.max(0, i.account.balanceSatang),
+  });
+}
