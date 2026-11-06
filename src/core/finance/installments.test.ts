@@ -4,6 +4,8 @@ import { closeoutInputs, closeoutPlan, REPAY_ROUTES } from './closeout';
 import { projectDebts } from './debts';
 import { projectFinance } from './ledger';
 import {
+  accountPlan,
+  accountPlanPayload,
   installmentAmount,
   installmentChoices,
   installmentProposal,
@@ -421,5 +423,49 @@ describe('architect review PR-b · an earlier instalment counts only while its s
     const plan2 = ev('plan-p-nat', planPayload({ worker: NAT, count: 5, earlier, fromSaleId: 's2', seen: seenSnapshot(base), owedSatang: 1_280_000, balanceSatang: 853_300 }), { base: base[base.length - 2].id });
     const es = [...base, plan2, voidPay('l1', base[base.length - 1].id)];
     expect(planStatus({ account: account(es), events: es, excludeSaleId: 's2' })!.paid).toBe(0);
+  });
+});
+
+// ── PR-c · the plan as the debt list and account page show it ────────────────
+
+describe('IP-17 / IP-18 / IP-20 · accountPlan', () => {
+  it('a running plan: next is instalment 2 of 3, 4,267 then the last 4,266; sale s1 is instalment 1', () => {
+    const es = [...planned(), pay('l1', 's1', 426_700)];
+    const p = accountPlan({ account: account(es), events: es })!;
+    expect(p).toMatchObject({ kind: 'installments', count: 3, paid: 1, number: 2, nextSatang: 426_700, lastSatang: 426_600, done: false, leftoverSatang: 0 });
+    expect(p.kind === 'installments' && p.numbers).toEqual({ s1: 1 });
+  });
+
+  it('instalments ran out with debt left → done, the leftover (D4)', () => {
+    const es = [...planned(), pay('l1', 's1', 426_700), pay('l2', 's2', 300_000), pay('l3', 's3', 400_000)];
+    expect(accountPlan({ account: account(es), events: es })).toMatchObject({ kind: 'installments', done: true, leftoverSatang: 153_300, count: 3, paid: 3 });
+  });
+
+  it('paid off → no plan to show', () => {
+    const es = [...planned(), pay('l1', 's1', 1_280_000)];
+    expect(accountPlan({ account: account(es), events: es })).toBeNull();
+  });
+
+  it('an old per-sale plan stays as it was (IP-22); none → null', () => {
+    const es = [debt('d1', 500_000), ev('plan-p-nat', { t: 'debt_plan_set', worker: NAT, perSaleSatang: 300_000 })];
+    expect(accountPlan({ account: account(es), events: es })).toEqual({ kind: 'perSale', perSaleSatang: 300_000 });
+    const none = [debt('d1', 500_000)];
+    expect(accountPlan({ account: account(none), events: none })).toBeNull();
+  });
+});
+
+describe('IP-19 · a plan set from the debt account counts from the next sale and keeps what was paid', () => {
+  it('re-split to 3 more with instalment 1 paid → count 4, earlier [s1], from no sale; the next sale is instalment 2 of 4', () => {
+    const es = [...planned(), pay('l1', 's1', 426_700)];
+    const a = account(es);
+    const p = accountPlanPayload({ account: a, events: es, count: 3 });
+    expect(p).toMatchObject({ t: 'debt_plan_set', perSaleSatang: 284_500, installments: { count: 4, fromSaleId: null, owedSatang: 1_280_000, earlier: [{ saleId: 's1' }] } });
+    const es2 = [...es, ev('plan-p-nat', p, { base: es[1].id }), pay('l2', 's2', 284_500)];
+    expect(accountPlan({ account: account(es2), events: es2 })).toMatchObject({ paid: 2, count: 4, number: 3 });
+  });
+
+  it('no plan yet → a plan of 3 from the next sale', () => {
+    const es = [debt('d1', 900_000)];
+    expect(accountPlanPayload({ account: account(es), events: es, count: 3 })).toMatchObject({ perSaleSatang: 300_000, installments: { count: 3, fromSaleId: null, owedSatang: 900_000 } });
   });
 });
