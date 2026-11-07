@@ -17,9 +17,9 @@ import { useT } from '../../i18n';
 import { readCountMode, readHoldMs, writeCountMode, writeHoldMs, type CountMode } from '../../store/hold-preference';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Card, CardLabel, ChevronRight, Chip, FactRow, PersonIcon, Plus, RadioCard, SegmentedControl } from '../../ui';
+import { AppText, BottomSheet, Card, CardLabel, ChevronRight, Chip, FactRow, PersonIcon, RadioCard, SegmentedControl, TextLink } from '../../ui';
 import { Choice } from '../sale/closeout/summary-installments';
-import { FarmScreen, HelpNote, SaveFailed, Stepper, useMaster, useWrite } from './pieces';
+import { AddRow, FarmScreen, HelpNote, SaveFailed, Stepper, useMaster, useWrite } from './pieces';
 
 const ZERO: readonly ZeroCheckMode[] = ['every', 'first-per-farm', 'skip'];
 
@@ -85,9 +85,9 @@ export function SaleSettingsScreen() {
         <BottomSheet open={adding} onClose={() => setAdding(false)} title={msg('v2f.addPair')} testID="pair-sheet" action={{ label: msg('common.save'), testID: 'save-pair', saving: write.saving, onPress: () => void save(async () => { await peopleStore.addPair(netKg, basketKg); setAdding(false); }) }}>
           <AppText variant="bodySm">{msg('v2f.addPairHint')}</AppText>
           <AppText variant="label">{msg('saleSettings.net')}</AppText>
-          <Stepper testID="new-net" label={msg('saleSettings.net')} value={String(netKg)} unit={msg('common.kg')} onLess={() => setNetKg((n) => Math.max(1, n - 1))} onMore={() => setNetKg((n) => n + 1)} />
+          <Stepper look="square" testID="new-net" label={msg('saleSettings.net')} value={String(netKg)} unit={msg('common.kg')} onLess={() => setNetKg((n) => Math.max(1, n - 1))} onMore={() => setNetKg((n) => n + 1)} />
           <AppText variant="label">{msg('v2f.basketEmpty')}</AppText>
-          <Stepper testID="new-basket" label={msg('saleSettings.basket')} value={String(basketKg)} unit={msg('common.kg')} onLess={() => setBasketKg((n) => Math.max(0, n - 1))} onMore={() => setBasketKg((n) => n + 1)} />
+          <Stepper look="square" testID="new-basket" label={msg('saleSettings.basket')} value={String(basketKg)} unit={msg('common.kg')} onLess={() => setBasketKg((n) => Math.max(0, n - 1))} onMore={() => setBasketKg((n) => n + 1)} />
           <AppText style={{ fontWeight: t.font.weight.semibold }}>{msg('saleSettings.scaleShould', { n: netKg + basketKg })}</AppText>
           <SaveFailed show={write.failed} />
         </BottomSheet>
@@ -152,17 +152,14 @@ export function SaleSettingsScreen() {
                 {p.isDefault ? (
                   <Chip tone="accept" label={msg('saleSettings.default')} />
                 ) : (
-                  <Button testID={`make-default-${p.pairId}`} onPress={() => void save(() => peopleStore.setDefaultPair(p.pairId))}>
+                  // Owner 2026-11-07 (style B): the word only, underlined, no arrow.
+                  <TextLink testID={`make-default-${p.pairId}`} onPress={() => void save(() => peopleStore.setDefaultPair(p.pairId))}>
                     {msg('saleSettings.makeDefault')}
-                  </Button>
+                  </TextLink>
                 )}
               </View>
             ))}
-            <View style={{ alignSelf: 'flex-start' }}>
-              <Button testID="add-pair" icon={(c) => <Plus color={c} size={14} />} onPress={() => setAdding(true)}>
-                {msg('v2f.addPair')}
-              </Button>
-            </View>
+            <AddRow testID="add-pair" label={msg('v2f.addPair')} onPress={() => setAdding(true)} />
           </Card>
 
           <Card>
@@ -192,7 +189,7 @@ export function SaleSettingsScreen() {
                 { value: 'tap', label: msg('saleSettings.countTap') },
               ]}
             />
-            {countMode === 'hold' ? <Stepper testID="hold" label={msg('saleSettings.hold')} value={(holdMs / 1000).toFixed(1)} unit={msg('v2f.secondsUnit')} onLess={() => changeHold(holdMs - 100)} onMore={() => changeHold(holdMs + 100)} /> : null}
+            {countMode === 'hold' ? <Stepper look="square" testID="hold" label={msg('saleSettings.hold')} value={(holdMs / 1000).toFixed(1)} unit={msg('v2f.secondsUnit')} onLess={() => changeHold(holdMs - 100)} onMore={() => changeHold(holdMs + 100)} /> : null}
           </Card>
 
           {/* E06-S09 IP-21: synced to every device (master settings_set); the whole row opens the choice (rule 11) */}
@@ -207,7 +204,7 @@ export function SaleSettingsScreen() {
           <Card>
             <CardLabel>{msg('saleSettings.dup')}</CardLabel>
             <HelpNote lines={[msg('saleSettings.dupHelp')]} />
-            <Stepper testID="dup" label={msg('saleSettings.dup')} value={String(s.dupWindowS)} unit={msg('v2f.secondsUnit')} onLess={() => changeDup(s.dupWindowS - 1)} onMore={() => changeDup(s.dupWindowS + 1)} />
+            <Stepper look="square" testID="dup" label={msg('saleSettings.dup')} value={String(s.dupWindowS)} unit={msg('v2f.secondsUnit')} onLess={() => changeDup(s.dupWindowS - 1)} onMore={() => changeDup(s.dupWindowS + 1)} />
           </Card>
         </>
       ) : null}
