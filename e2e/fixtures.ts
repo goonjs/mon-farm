@@ -17,11 +17,22 @@ import type { MasterPayload, SaleEvent } from '../src/core/types';
  * mirrors `EventRecord` in store.web.ts; keep the two in step.
  */
 export async function seedEvents(page: Page, events: readonly SaleEvent[]): Promise<void> {
+  const logs: string[] = [];
+  const log = (m: { type(): string; text(): string }) => logs.push(`${m.type()}: ${m.text()}`);
+  page.on('console', log);
   await page.goto('/v2');
   // The header's sync pill renders only after `pending()` resolved, i.e. after
   // the app created the database with its own schema — so the seed never
   // creates it.
-  await page.getByTestId('sync-pill').first().waitFor();
+  try {
+    await page.getByTestId('sync-pill').first().waitFor({ timeout: 20_000 });
+  } catch (err) {
+    // A rare run opens on the sign-in screen instead (2026-11-07, cause not yet found): say what the page
+    // logged and what the account database held, so the next one explains itself.
+    throw new Error(`seedEvents: the app did not open. ${await openFailure(page, logs)}\n${String(err)}`);
+  } finally {
+    page.off('console', log);
+  }
   await page.evaluate(
     (events) =>
       new Promise<void>((resolve, reject) => {
@@ -108,4 +119,33 @@ export async function seedMaster(page: Page, payloads: readonly MasterPayload[])
 export function evidence(page: Page, docsPath: string, options: { fullPage?: boolean } = {}) {
   const path = process.env.UPDATE_SCREENSHOTS === '1' ? docsPath : test.info().outputPath(basename(docsPath));
   return page.screenshot({ path, ...options });
+}
+
+/** What the page showed, logged and held in the account stores when it did not open (seedEvents). */
+async function openFailure(page: Page, logs: string[]): Promise<string> {
+  const screen = (await page.getByTestId('signin').count()) > 0 ? 'sign-in screen' : 'neither app nor sign-in';
+  const stored = await page
+    .evaluate(
+      () =>
+        new Promise<string>((resolve) => {
+          const open = indexedDB.open('mon-farm-v1');
+          open.onupgradeneeded = () => {
+            open.transaction?.abort();
+            resolve('no mon-farm-v1 database');
+          };
+          open.onerror = () => resolve(`open failed: ${String(open.error)}`);
+          open.onsuccess = () => {
+            const db = open.result;
+            const tx = db.transaction(['meta', 'memberships'], 'readonly');
+            const session = tx.objectStore('meta').get('session');
+            const groups = tx.objectStore('memberships').count();
+            tx.oncomplete = () => {
+              db.close();
+              resolve(`session ${session.result ? 'present' : 'MISSING'}, memberships ${groups.result}`);
+            };
+          };
+        }),
+    )
+    .catch((e) => `database not readable: ${String(e)}`);
+  return `Screen: ${screen}. Database: ${stored}. Console: ${JSON.stringify(logs.slice(-20))}`;
 }
