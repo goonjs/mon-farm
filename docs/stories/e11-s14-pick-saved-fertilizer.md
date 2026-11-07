@@ -1,6 +1,6 @@
 # Story: E11-S14 แตะปุ๋ยที่จำไว้แต่ยังไม่เคยซื้อ แล้วได้ชื่อนั้นเลย
 
-Status: Review
+Status: Done (2026-11-07 — merge #151; ตรวจ AC ครบกับ dev `cd9c615` ดูหัวข้อ "ตรวจปิดสตอรี่")
 
 ## Context
 
@@ -31,3 +31,12 @@ Status: Review
 ## Verification
 
 - [x] Sandbox run 2026-11-04: web build + Playwright Chromium; ภาพ `docs/ux/screenshots/v2/money/31-pick-saved-never-bought.png` (390×844)
+
+## ตรวจปิดสตอรี่ (2026-11-07, dev `cd9c615`)
+
+ผู้ตรวจ: agent แยก อ่านโค้ด + รันเทสต์ที่เกี่ยว; ทีม dev รัน e2e ทั้งชุดบน build จริงเอง ไม่เดา
+
+- รันแล้ว: jest `src/v2/money/order-detail/tell.test.tsx`, `order-detail.test.tsx`, `src/v2/money/order/order-screen.test.tsx` 72 ผ่าน · vitest `number-entry.test.ts` 38 ผ่าน · e2e `v2-money.spec.ts` ผ่านในรอบทั้งชุดบน build จริง (73 ผ่าน 5 ข้าม 1 ล้มที่ `v2-farm` ไม่เกี่ยวกับสตอรี่นี้)
+- PS-1 (`order-screen.tsx` เปิด `{k:'new', formula}` พร้อม `initial` ชนิดเคมี 50 กก.), PS-2, PS-3 ตรวจแล้วในโค้ดและเทสต์ผ่าน; ภาพ `31-pick-saved-never-bought.png` มีอยู่
+- รีวิวอิสระ: สตอรี่นี้ไม่มีหัวข้อ Code review และ PR #151 ไม่มีผลรีวิว — หลักฐานเดียวคือ ledger บน dashboard "รีวิวอิสระผ่าน" (ไม่มีรายละเอียดข้อที่พบ)
+- CI: `verify` เขียวบน `a73d228`; job e2e ถูกข้ามตาม path filter (e2e ข้างบนคือหลักฐาน)
