@@ -54,6 +54,10 @@ describe('saleLineOf — one sale as a home row, for the repay sheet card (owner
     expect(saleLineOf('s1', events)).toEqual({ line: homeSales([{ id: 's1', events }]).open, closed: false });
   });
 
+  it('says closed for a completed sale', () => {
+    expect(saleLineOf('s1', sale('s1', 2).sys({ t: 'sale_status_set', status: 'completed' }).build())).toMatchObject({ line: { id: 's1', netG: 100_000, baskets: 2 }, closed: true });
+  });
+
   it('is null for a cancelled sale', () => {
     expect(saleLineOf('s2', sale('s2', 2).sys({ t: 'sale_status_set', status: 'cancelled' }).build())).toBeNull();
   });

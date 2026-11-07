@@ -7,10 +7,21 @@
 import { Link, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
+import type { SaleLine } from '../core/home';
+import { formatThaiDate } from '../core/master';
+import { formatKg } from '../core/settle';
+import { useI18n, useT } from '../i18n';
 import { useTheme, type Theme } from '../theme';
 import { ChevronRight, IconTile, type IconRender, type TileTone } from '../ui';
 
 const body = (t: Theme) => ({ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, color: t.color.ink });
+
+/** A sale's value line as the home rows show it: "7 พ.ย. 2569 · 350 กก." (or only the kg before it started). */
+export function useSaleLineText(): (s: SaleLine) => string {
+  const msg = useT();
+  const { era } = useI18n();
+  return (s) => (s.ts === null ? msg('home.saleKg', { kg: formatKg(s.netG) }) : msg('home.saleLine', { date: formatThaiDate(s.ts, era), kg: formatKg(s.netG) }));
+}
 
 export function KnowRow({
   testID,
