@@ -2,6 +2,7 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { ScreenHeader } from './screen-header';
+import { SaveBar } from './action-button';
 import { wrap } from '../test/render';
 import { tokens } from '../../design/tokens';
 
@@ -71,54 +72,47 @@ describe('ScreenHeader — one header for every screen (v1.1.0)', () => {
     expect(screen.getByTestId('deleted-back').props.accessibilityLabel).toBe('รายการ');
   });
 
-  describe('action slot (Save in the top-right corner)', () => {
-    it('renders right of the sync pill, named, and fires onPress', () => {
-      const onPress = jest.fn();
-      wrap(<ScreenHeader title="x" sync={{ state: 'pending', count: 1 }} action={{ label: 'บันทึก', onPress, testID: 'hdr-save' }} />);
-      const btn = screen.getByTestId('hdr-save');
-      expect(btn.props.accessibilityRole).toBe('button');
-      expect(btn.props.accessibilityLabel).toBe('บันทึก');
-      expect(flat(btn.props.style).minHeight).toBeGreaterThanOrEqual(tokens.target.min);
-      const row = screen.getByTestId('screen-header');
-      const kids = [row.props.children].flat(Infinity).filter(Boolean);
-      const pillIdx = kids.findIndex((k: any) => k?.props?.status !== undefined);
-      const actionIdx = kids.findIndex((k: any) => k?.props?.action?.testID === 'hdr-save');
-      expect(pillIdx).toBeGreaterThan(-1);
-      expect(actionIdx).toBeGreaterThan(pillIdx);
-      fireEvent.press(btn);
-      expect(onPress).toHaveBeenCalledTimes(1);
-    });
-
-    it('disabled does not fire and says so', () => {
-      const onPress = jest.fn();
-      wrap(<ScreenHeader title="x" action={{ label: 'บันทึก', onPress, testID: 'hdr-save', disabled: true }} />);
-      const btn = screen.getByTestId('hdr-save');
-      expect(btn.props.accessibilityState).toMatchObject({ disabled: true });
-      fireEvent.press(btn);
-      expect(onPress).not.toHaveBeenCalled();
-    });
-
-    it('saving shows the saving word, is busy and does not fire', () => {
-      const onPress = jest.fn();
-      wrap(<ScreenHeader title="x" action={{ label: 'บันทึก', onPress, testID: 'hdr-save', saving: true }} />);
-      const btn = screen.getByTestId('hdr-save');
-      expect(btn.props.accessibilityState).toMatchObject({ disabled: true, busy: true });
-      expect(screen.getByText('กำลังบันทึก')).toBeTruthy();
-      fireEvent.press(btn);
-      expect(onPress).not.toHaveBeenCalled();
-    });
+  it('has no Save slot: a form\'s Save is the SaveBar at the foot (owner 2026-11-07, style I)', () => {
+    wrap(<ScreenHeader title="x" sync={{ state: 'pending', count: 1 }} />);
+    expect(screen.queryByText('บันทึก')).toBeNull();
   });
 });
 
-describe('ScreenHeader action keeps its width while saving', () => {
-  it('shows savingLabel instead of the bare saving word when given, and never shrinks', () => {
-    wrap(<ScreenHeader title="x" action={{ label: 'บันทึก · 300', savingLabel: 'กำลังบันทึก · 300', saving: true, testID: 'hdr-save' }} />);
-    expect(screen.getByText('กำลังบันทึก · 300')).toBeTruthy();
-    expect(flat(screen.getByTestId('hdr-save').props.style).flexShrink).toBe(0);
+describe('SaveBar — the full-width pinned Save (owner 2026-11-07, style I)', () => {
+  it('is full width, a 56 target, named, and fires onPress', () => {
+    const onPress = jest.fn();
+    wrap(<SaveBar action={{ label: 'บันทึก', onPress, testID: 'bar-save' }} />);
+    const btn = screen.getByTestId('bar-save');
+    expect(btn.props.accessibilityRole).toBe('button');
+    expect(btn.props.accessibilityLabel).toBe('บันทึก');
+    expect(flat(btn.props.style)).toMatchObject({ alignSelf: 'stretch', minHeight: tokens.target.comfortable });
+    fireEvent.press(btn);
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  it('disabled does not fire and says so', () => {
+    const onPress = jest.fn();
+    wrap(<SaveBar action={{ label: 'บันทึก', onPress, testID: 'bar-save', disabled: true }} />);
+    const btn = screen.getByTestId('bar-save');
+    expect(btn.props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.press(btn);
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('saving shows the saving word (or savingLabel), is busy and does not fire', () => {
+    const onPress = jest.fn();
+    wrap(<SaveBar action={{ label: 'บันทึก · 300', savingLabel: 'กำลังบันทึก · 300', onPress, testID: 'bar-save', saving: true }} />);
+    const btn = screen.getByTestId('bar-save');
+    expect(btn.props.accessibilityState).toMatchObject({ disabled: true, busy: true });
+    expect(screen.getByText('กำลังบันทึก · 300')).toBeTruthy();
+    fireEvent.press(btn);
+    expect(onPress).not.toHaveBeenCalled();
+  });
+});
+
+describe('ScreenHeader text', () => {
   it('a long title and subtitle wrap instead of being cut with "…" (AGENTS.md: no clipped content)', () => {
-    wrap(<ScreenHeader title="บันทึกการคืน" subtitle="สวนครอบครัว" action={{ label: 'บันทึก · 1,234,967.89', onPress: () => {}, testID: 'hdr-save' }} />);
+    wrap(<ScreenHeader title="บันทึกการคืน" subtitle="สวนครอบครัว" />);
     expect(screen.getByTestId('screen-title').props.numberOfLines).toBeUndefined();
     expect(screen.getByText('สวนครอบครัว').props.numberOfLines).toBeUndefined();
   });

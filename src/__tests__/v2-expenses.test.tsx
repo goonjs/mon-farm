@@ -330,7 +330,7 @@ describe('"ลบการคืน" links: one per repayment, named when there 
   });
 });
 
-describe('Save sits in the header (keyboard never covers it)', () => {
+describe('Save placement', () => {
   it('expense-save is pinned at the bottom in the simple design (owner 2026-10-23), not in the header', async () => {
     mockParams.current = { id: 'new' };
     wrap(<ExpenseScreen />);
@@ -339,12 +339,13 @@ describe('Save sits in the header (keyboard never covers it)', () => {
     expect(within(screen.getByTestId('expense-actions')).getByTestId('expense-save')).toBeTruthy();
   });
 
-  it('repay-save renders inside screen-header and keeps its total while saving', async () => {
+  it('repay-save sits in the bottom save bar (owner 2026-11-07, style I) and keeps its total while saving', async () => {
     mockParams.current = { payerId: SOMWANG.id };
     wrap(<RepayScreen />);
     await flush();
     typeOnPad('repay-amount', '100');
-    const btn = within(screen.getByTestId('screen-header')).getByTestId('repay-save');
+    expect(within(screen.getByTestId('screen-header')).queryByTestId('repay-save')).toBeNull();
+    const btn = within(screen.getByTestId('save-bar')).getByTestId('repay-save');
     expect(btn.props.accessibilityLabel).toContain('100.00');
   });
 });

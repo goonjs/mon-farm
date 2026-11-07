@@ -20,7 +20,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, CalendarIcon, Card, CardLabel, Check, FactRow, MoneyField, ReceiptIcon, ScreenHeader, TextField, type HeaderPrimaryAction } from '../../ui';
+import { AppText, BottomSheet, CalendarIcon, Card, CardLabel, Check, FactRow, MoneyField, ReceiptIcon, SaveBar, ScreenHeader, TextField } from '../../ui';
 import { HalfDot } from './expenses-screen';
 import { Day, PayerPicker, SectionLabel } from './pieces';
 
@@ -36,8 +36,8 @@ export function RepayScreen() {
     return (fin.state?.reimbursements ?? []).filter((r) => r.to.id === payerId && r.remainingSatang > 0 && (!only || only.has(r.expenseId)));
   }, [fin.state, payerId, ids]);
 
-  const header = (action?: HeaderPrimaryAction) => (
-    <ScreenHeader title={msg('fin.repay.title')} back={{ label: msg('v2.back'), onPress: leave, testID: 'repay-back' }} sync={sync} action={action} />
+  const header = () => (
+    <ScreenHeader title={msg('fin.repay.title')} back={{ label: msg('v2.back'), onPress: leave, testID: 'repay-back' }} sync={sync} />
   );
 
   return (
@@ -67,7 +67,7 @@ export function RepayScreen() {
   );
 }
 
-function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursement[]; fin: ReturnType<typeof useFinance>; categoryOf: (expenseId: string) => string; header: (action?: HeaderPrimaryAction) => ReactNode }) {
+function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursement[]; fin: ReturnType<typeof useFinance>; categoryOf: (expenseId: string) => string; header: () => ReactNode }) {
   const t = useTheme();
   const msg = useT();
   const max = debts.reduce((s, d) => s + d.remainingSatang, 0);
@@ -105,8 +105,8 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
 
   return (
     <>
-      {header({ label: `${msg('fin.form.save')} · ${formatSatang(total)}`, savingLabel: `${msg('common.saving')} · ${formatSatang(total)}`, testID: 'repay-save', disabled: !canSave, saving: inFlight.busy, onPress: () => void inFlight.run(save) })}
-      <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
+      {header()}
+      <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space.xl }}>
         <View style={{ gap: t.space.sm }}>
           <SectionLabel>{msg('fin.repay.who')}</SectionLabel>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
@@ -212,6 +212,7 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
           extra={[payee]}
         />
       </BottomSheet>
+      <SaveBar action={{ label: `${msg('fin.form.save')} · ${formatSatang(total)}`, savingLabel: `${msg('common.saving')} · ${formatSatang(total)}`, testID: 'repay-save', disabled: !canSave, saving: inFlight.busy, onPress: () => void inFlight.run(save) }} />
     </>
   );
 }
