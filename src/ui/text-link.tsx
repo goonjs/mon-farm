@@ -35,7 +35,7 @@ export function TextLink({
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={{ minHeight: t.target.min, justifyContent: 'center', alignSelf: 'flex-start' }}
+      style={{ minHeight: t.target.min, minWidth: t.target.min, justifyContent: 'center', alignSelf: 'flex-start' }}
     >
       <Text
         style={{

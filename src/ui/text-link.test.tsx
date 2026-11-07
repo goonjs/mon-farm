@@ -23,7 +23,7 @@ describe('TextLink — the underlined word that replaces a round outlined button
     const onPress = jest.fn();
     wrap(<TextLink testID="l" tone="action" onPress={onPress}>กู้คืน</TextLink>);
     const l = screen.getByTestId('l');
-    expect(flat(l.props.style)).toMatchObject({ minHeight: tokens.target.min, alignSelf: 'flex-start' });
+    expect(flat(l.props.style)).toMatchObject({ minHeight: tokens.target.min, minWidth: tokens.target.min, alignSelf: 'flex-start' });
     expect(l.props.accessibilityRole).toBe('button');
     fireEvent.press(l);
     expect(onPress).toHaveBeenCalledTimes(1);
