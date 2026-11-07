@@ -256,6 +256,12 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
   };
 
   if (propertyId && state && !existing) return <NotFound fallback={FARMS} />;
+  // An edit opens before the record has loaded: no field until it has, or what is typed meanwhile is overwritten by the stored value.
+  if (propertyId && !existing) return (
+      <FarmScreen title={msg('propertyForm.editTitle')} fallback={FARMS} testID="property-form-loading">
+        <AppText variant="bodySm">{msg('counter.loading')}</AppText>
+      </FarmScreen>
+    );
   // NP-13: the year in the device's era; what is kept (plantedYearBe) stays พ.ศ.
   const shownYear = year.ok && year.yearBe !== null ? (era === 'ce' ? year.yearBe - 543 : year.yearBe) : null;
 

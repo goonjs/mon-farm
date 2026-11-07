@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { evidence } from './fixtures';
+import { evidence, splashEvidence, watchSplash } from './fixtures';
 
 /**
  * D-83: one working sandbox app on v2, in the real web build. `/` shows the
@@ -39,14 +39,16 @@ async function addPerson(page: Page, name: string, roles: string[], snap?: strin
 }
 
 test('/ → splash → home → farm settings: add and edit everything offline, still there after a reload', async ({ page, context }) => {
+  // One flow through five screens and a reload: 11 s alone, over the 30 s default when 8 workers share 4 cores.
+  test.setTimeout(90_000);
   const id = on(page);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
 
+  const splash = await watchSplash(page);
   await page.goto('/');
-  await expect(page.getByTestId('splash')).toBeVisible();
-  await expect(page.getByTestId('splash')).toContainText('FarmMate');
-  await shot(page, '00-splash');
+  expect(await splash()).toContain('FarmMate');
+  await splashEvidence(page, `${SHOTS}/00-splash.png`);
   await expect(page).toHaveURL(/\/v2\/?$/);
   await expect(id('v2-home')).toBeVisible();
   await expect(id('sync-pill')).toBeVisible();
