@@ -41,7 +41,8 @@ export function IconCatalogScreen() {
                   <AppText variant="bodySm" style={{ textAlign: 'center' }}>
                     {FARMMATE_MASTER_LABEL_TH[id]}
                   </AppText>
-                  <CardLabel>{id}</CardLabel>
+                  {/* The id may wrap after its dot: one unbroken "materials.materialCost" stuck out of the card at L on CI's font. */}
+                  <CardLabel>{id.replace('.', '.\u200B')}</CardLabel>
                 </Card>
               ))}
             </View>
