@@ -19,7 +19,6 @@ import { useTheme } from '../../../theme';
 import {
   AppText,
   BottomSheet,
-  Button,
   cardStyle,
   ChevronRight,
   CTA,
@@ -285,18 +284,23 @@ export function ItemSheet({
   };
   return (
     <BottomSheet open onClose={onClose} title={msg('ordc.itemTitle')} testID="ordc-item-sheet">
-      <View style={[cardStyle(t), { flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md }]}>
+      {/* Owner rule 2026-11-06: no round "เปลี่ยน" button at the card's end — the product card itself changes the product, › on the right. */}
+      <Pressable
+        testID="ordc-change"
+        accessibilityRole="button"
+        accessibilityLabel={`${msg('ordc.change')} ${spec.item}`}
+        onPress={() => onChangeProduct(m)}
+        style={[cardStyle(t), { minHeight: t.target.comfortable, flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md }]}
+      >
         <ItemIcon spec={spec} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <AppText testID="ordc-item-name" style={{ fontWeight: t.font.weight.bold }}>{spec.item}</AppText>
           {sub ? <AppText variant="bodySm">{sub}</AppText> : null}
         </View>
-        <View>
-          <Button testID="ordc-change" onPress={() => onChangeProduct(m)}>
-            {msg('ordc.change')}
-          </Button>
+        <View testID="ordc-change-chevron" aria-hidden>
+          <ChevronRight color={t.color.action} />
         </View>
-      </View>
+      </Pressable>
       <MoneyBlock
         m={m}
         set={setM}
