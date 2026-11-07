@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 import { tokens } from './design/tokens';
-import { BASE_URL, signedIn } from './e2e/session';
+import { BASE_URL } from './e2e/session';
 
 /**
  * Playwright runs against the EXPORTED web build, never the dev server.
@@ -34,9 +34,8 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     // E02-S01: the app opens on the sign-in screen until someone has signed
-    // in; the suites start from a device that already has, in a group
-    // (e2e/session.ts).
-    storageState: signedIn,
+    // in; the suites start from a device that already has, in a group — the
+    // `account` fixture of e2e/test.ts (specs import `test` from there).
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },

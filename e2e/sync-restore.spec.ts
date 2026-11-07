@@ -1,8 +1,8 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 
 import { admin, documents, emulatorSession, persistedUser, signInToEmulator, writeFirebaseSession } from './firebase-emulator';
 import { evidence } from './fixtures';
-import { BASE_URL, E2E_USER, readStore, signedInNoGroupAs } from './session';
+import { BASE_URL, E2E_USER, preloadAccount, readStore, signedInNoGroupAs } from './session';
 
 /**
  * E02-S05 in a real browser against the Firebase emulators: the owner made a
@@ -28,7 +28,7 @@ const OWNER = { ...E2E_USER, userId: 'restore-owner', displayName: 'เจ้า
 const signedInNoGroup = signedInNoGroupAs(OWNER);
 
 test.skip(!process.env.E2E_SYNC_EMULATOR, 'needs the emulators: npm run test:e2e:sync');
-test.use({ storageState: signedInNoGroup, viewport: { width: 390, height: 844 } });
+test.use({ account: signedInNoGroup, viewport: { width: 390, height: 844 } });
 
 const SHOTS = 'docs/ux/screenshots/ui-v2/account';
 const on = (page: Page) => (id: string) => page.getByTestId(id).filter({ visible: true });
@@ -66,7 +66,8 @@ test('a second device of the same account finds the existing farm group and its 
     .toBe(0);
 
   // ── Window two: a new device, nothing local but the signed-in user. ──
-  const context = await browser.newContext({ storageState: signedInNoGroup, baseURL: BASE_URL, viewport: { width: 390, height: 844 } });
+  const context = await browser.newContext({ baseURL: BASE_URL, viewport: { width: 390, height: 844 } });
+  await preloadAccount(context, signedInNoGroup);
   try {
     const second = await context.newPage();
     const id = on(second);
