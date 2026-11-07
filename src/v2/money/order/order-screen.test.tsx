@@ -416,6 +416,8 @@ describe('order capture screen (E11-S11)', () => {
   });
 
   it('"เปลี่ยน" on an existing line to a saved formula never bought keeps the one line and its price', async () => {
+    // Its own saved formula: run alone (-t) it must not lean on the test above having seeded it.
+    await seed(fertOptionId('formula', 'ดีเกลือ'), { t: 'fert_option_set', kind: 'formula', name: 'ดีเกลือ', description: '', hidden: false });
     wrap(<OrderScreen />);
     await flush();
     await addNewFert('ปุ๋ยผิด', ['2'], ['5', '0', '0']);
