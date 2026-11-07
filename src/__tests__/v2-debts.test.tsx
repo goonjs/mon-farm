@@ -183,14 +183,15 @@ describe('a debt made from an expense share (E11-S10)', () => {
   });
 });
 
-describe('Save sits in the header (keyboard never covers it)', () => {
-  it('debt-save and debt-pay-save render inside screen-header', async () => {
+describe('Save is pinned at the bottom, full width (owner 2026-11-07, style I)', () => {
+  it('debt-save and debt-pay-save sit in the bottom save bar, not the header', async () => {
     wrap(<AddDebtScreen />);
     await flush();
-    expect(within(screen.getByTestId('screen-header')).getByTestId('debt-save')).toBeTruthy();
+    expect(within(screen.getByTestId('screen-header')).queryByTestId('debt-save')).toBeNull();
+    expect(within(screen.getByTestId('save-bar')).getByTestId('debt-save')).toBeTruthy();
     screen.unmount();
     wrap(<DebtPaymentScreen />);
     await flush();
-    expect(within(screen.getByTestId('screen-header')).getByTestId('debt-pay-save')).toBeTruthy();
+    expect(within(screen.getByTestId('save-bar')).getByTestId('debt-pay-save')).toBeTruthy();
   });
 });

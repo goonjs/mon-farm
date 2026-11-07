@@ -27,7 +27,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, Button, Card, Check, FieldError, MoneyField, RadioCard, ScreenHeader, SegmentedControl, TextField } from '../../ui';
+import { AppText, Button, Card, Check, FieldError, MoneyField, RadioCard, SaveBar, ScreenHeader, SegmentedControl, TextField } from '../../ui';
 import { ORDER_NEW } from './order-routes';
 import { PayerPicker, SectionLabel } from './pieces';
 
@@ -92,7 +92,7 @@ export function AddDebtScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <ScreenHeader title={msg('debt.add')} subtitle={worker.name} back={{ label: msg('v2.back'), onPress: back, testID: 'debt-add-back' }} sync={sync} action={{ label: msg('fin.form.save'), testID: 'debt-save', disabled: inFlight.busy, saving: inFlight.busy, onPress: () => void inFlight.run(save) }} />
+      <ScreenHeader title={msg('debt.add')} subtitle={worker.name} back={{ label: msg('v2.back'), onPress: back, testID: 'debt-add-back' }} sync={sync} />
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
         <View style={{ gap: t.space.sm }}>
           <SectionLabel required>{msg('debt.form.kind').replace(' *', '')}</SectionLabel>
@@ -160,6 +160,7 @@ export function AddDebtScreen() {
         </Pressable>
         {failed ? <AppText style={{ color: t.color.reject }}>{msg('fin.form.saveFailed')}</AppText> : null}
       </ScrollView>
+      <SaveBar action={{ label: msg('fin.form.save'), testID: 'debt-save', disabled: inFlight.busy, saving: inFlight.busy, onPress: () => void inFlight.run(save) }} />
     </View>
   );
 }
@@ -210,7 +211,7 @@ export function PayDebtScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <ScreenHeader title={msg('debt.pay')} subtitle={worker.name} back={{ label: msg('v2.back'), onPress: back, testID: 'debt-pay-back' }} sync={sync} action={confirmOver ? undefined : { label: msg('fin.form.save'), testID: 'debt-pay-save', disabled: satang <= 0, saving: inFlight.busy, onPress: () => void inFlight.run(() => save(false)) }} />
+      <ScreenHeader title={msg('debt.pay')} subtitle={worker.name} back={{ label: msg('v2.back'), onPress: back, testID: 'debt-pay-back' }} sync={sync} />
       {fin.events === null ? null : (
         <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
           <View style={{ gap: t.space.sm }}>
@@ -264,6 +265,7 @@ export function PayDebtScreen() {
           {failed ? <AppText style={{ color: t.color.reject }}>{msg('fin.form.saveFailed')}</AppText> : null}
         </ScrollView>
       )}
+      {(() => { const a = confirmOver ? undefined : { label: msg('fin.form.save'), testID: 'debt-pay-save', disabled: satang <= 0, saving: inFlight.busy, onPress: () => void inFlight.run(() => save(false)) }; return a ? <SaveBar action={a} /> : null; })()}
     </View>
   );
 }

@@ -122,12 +122,12 @@ describe('สวนและจุดชั่ง — list (farm mockup 9)', () 
 });
 
 describe('สวน — form (farm mockup 10)', () => {
-  it('Save sits in the header, with no pinned bar at the bottom', async () => {
+  it('Save is a full-width button pinned at the bottom, not in the header (owner 2026-11-07, style I)', async () => {
     mockParams.current = { id: 'new' };
     wrap(<PropertyScreen />);
     await flush();
-    const header = screen.getByTestId('screen-header');
-    expect(within(header).getByTestId('property-save')).toBeTruthy();
+    expect(within(screen.getByTestId('screen-header')).queryByTestId('property-save')).toBeNull();
+    expect(within(screen.getByTestId('save-bar')).getByTestId('property-save')).toBeTruthy();
     expect(screen.getAllByTestId(/-save$/)).toHaveLength(1);
   });
 

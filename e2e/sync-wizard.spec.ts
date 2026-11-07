@@ -51,13 +51,13 @@ test('the points wizard waits for the first pull, then says sync is not availabl
 
   // Online, still trying: waits, and create is not yet offered.
   await expect(id('wizard-wait-pull')).toBeVisible();
-  await expect(id('screen-header').getByTestId('wizard-create')).toBeDisabled();
+  await expect(id('save-bar').getByTestId('wizard-create')).toBeDisabled();
   await shot(page, 'wizard-waiting');
 
   // The grace period ends without a first pull: says so, and create works.
   await expect(id('wizard-no-sync')).toBeVisible({ timeout: 40_000 });
   await expect(id('wizard-wait-pull')).toHaveCount(0);
-  await expect(id('screen-header').getByTestId('wizard-create')).toBeEnabled();
+  await expect(id('save-bar').getByTestId('wizard-create')).toBeEnabled();
   await shot(page, 'wizard-cannot-sync');
 
   // Offline has its own words.

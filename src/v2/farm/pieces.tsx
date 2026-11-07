@@ -38,6 +38,7 @@ import {
   Minus,
   ScrollCue,
   Plus,
+  SaveBar,
   ScreenHeader,
   TrashIcon,
   type HeaderPrimaryAction,
@@ -137,7 +138,7 @@ export function FarmScreen({
   /** Back stays inside the screen (a wizard's earlier page) instead of popping. */
   onBack?: () => void;
   right?: ReactNode;
-  /** Save (forms): top-right, right of the sync pill, so the keyboard never covers it. */
+  /** Save (forms): a full-width button pinned at the foot (owner 2026-11-07, style I). */
   action?: HeaderPrimaryAction;
   children?: ReactNode;
   /** Pinned call to action(s) under the scroll body. */
@@ -155,7 +156,7 @@ export function FarmScreen({
   const body = { padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.xl };
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <ScreenHeader title={title} subtitle={subtitle} back={{ label: msg('v2.back'), onPress: onBack ?? back, testID: 'v2-back' }} sync={sync} right={right} action={action} />
+      <ScreenHeader title={title} subtitle={subtitle} back={{ label: msg('v2.back'), onPress: onBack ?? back, testID: 'v2-back' }} sync={sync} right={right} />
       {failed ? (
         <View style={{ paddingHorizontal: t.layout.screenPaddingX, paddingTop: t.space.sm }}>
           <SaveFailed show />
@@ -170,6 +171,7 @@ export function FarmScreen({
           {children}
         </ScrollView>
       )}
+      {action ? <SaveBar action={action} /> : null}
       {overlay}
     </View>
   );
