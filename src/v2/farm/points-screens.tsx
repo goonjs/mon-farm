@@ -751,6 +751,8 @@ export function PointsWizardScreen() {
                         onChangeText={(x) => setName(id, i, x)}
                         style={{
                           flex: 1,
+                          // A web input keeps its default width (~20 characters) unless it may shrink: at 360 / L it ran 38 px past the card.
+                          minWidth: 0,
                           minHeight: t.target.min,
                           paddingHorizontal: t.space.md,
                           borderRadius: t.radius.md,
