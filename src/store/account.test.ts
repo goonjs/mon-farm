@@ -240,3 +240,56 @@ describe('IndexedDB v1 → v2 (E02-S02: adds stores only)', () => {
     expect(kept).toMatchObject({ id: 'old-1', saleId: 's1' });
   });
 });
+
+describe('WebAccountStore — a read that fails once is tried again (harden the gate, 2026-11-07)', () => {
+  // A transient IndexedDB error on start-up must not read as "signed out": offline at the farm that would
+  // ask for internet. user() already tried twice; memberships() did not, and the gate reads both together.
+  async function failingOnce(times: number) {
+    const { factory, open } = profile();
+    const setup = open();
+    await setup.saveUser(somchai);
+    const { membership, op } = newGroup('g-1', 'สวนบ้านนา', somchai, 1);
+    await setup.createGroup(membership, op);
+    const store = open();
+    const db = await openDb(factory);
+    const proto = Object.getPrototypeOf(db) as IDBDatabase;
+    db.close();
+    const real = proto.transaction;
+    let left = times;
+    const spy = vi.spyOn(proto, 'transaction').mockImplementation(function (this: IDBDatabase, ...args: Parameters<IDBDatabase['transaction']>) {
+      if (left-- > 0) throw new DOMException('The database connection is closing.', 'InvalidStateError');
+      return real.apply(this, args);
+    });
+    return { store, membership, spy };
+  }
+
+  it('memberships() reads the groups even when the first read throws', async () => {
+    const { store, membership, spy } = await failingOnce(1);
+    try {
+      expect(await store.memberships()).toEqual([membership]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('two failures in a row still throw, and say it was the memberships', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { store, spy } = await failingOnce(2);
+    try {
+      await expect(store.memberships()).rejects.toThrow();
+      expect(warn.mock.calls.some((c) => /memberships/i.test(String(c[0])))).toBe(true);
+    } finally {
+      spy.mockRestore();
+      warn.mockRestore();
+    }
+  });
+
+  it('user() still reads the session when the first read throws (as before)', async () => {
+    const { store, spy } = await failingOnce(1);
+    try {
+      expect(await store.user()).toEqual(somchai);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});

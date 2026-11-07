@@ -91,9 +91,21 @@ export class WebAccountStore implements AccountStore {
   }
 
   async memberships(): Promise<Membership[]> {
-    const db = await this.pick();
-    if (db instanceof MemoryAccountStore) return db.memberships();
-    return (await request(db.transaction('memberships', 'readonly').objectStore('memberships').getAll())) as Membership[];
+    // Read at start-up together with user(): a transient failure here also sent a signed-in device to the
+    // sign-in screen. Try once more, as user() does; a second failure is reported, named, and thrown — an
+    // empty list would offer to create a group the device already has.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const db = await this.pick();
+        if (db instanceof MemoryAccountStore) return db.memberships();
+        return (await request(db.transaction('memberships', 'readonly').objectStore('memberships').getAll())) as Membership[];
+      } catch (err) {
+        if (attempt === 1) {
+          console.warn('Stored memberships could not be read.', err);
+          throw err;
+        }
+      }
+    }
   }
 
   async createGroup(membership: Membership, op: CreateGroupOp): Promise<void> {
