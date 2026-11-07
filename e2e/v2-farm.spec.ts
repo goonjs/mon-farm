@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { evidence, watchSplash } from './fixtures';
+import { evidence, splashEvidence, watchSplash } from './fixtures';
 
 /**
  * D-83: one working sandbox app on v2, in the real web build. `/` shows the
@@ -48,7 +48,7 @@ test('/ → splash → home → farm settings: add and edit everything offline, 
   const splash = await watchSplash(page);
   await page.goto('/');
   expect(await splash()).toContain('FarmMate');
-  await shot(page, '00-splash');
+  await splashEvidence(page, `${SHOTS}/00-splash.png`);
   await expect(page).toHaveURL(/\/v2\/?$/);
   await expect(id('v2-home')).toBeVisible();
   await expect(id('sync-pill')).toBeVisible();

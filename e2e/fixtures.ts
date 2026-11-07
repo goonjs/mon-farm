@@ -105,6 +105,11 @@ export async function seedMaster(page: Page, payloads: readonly MasterPayload[])
  * each machine; otherwise it lands in the test's own output folder
  * (e2e/.results, ignored). See docs/ui-v2.md.
  */
+/** Evidence of the splash only while it is still up: on a busy machine it may already have handed over to home. */
+export async function splashEvidence(page: Page, docsPath: string) {
+  if (await page.getByTestId('splash').isVisible()) await evidence(page, docsPath);
+}
+
 export function evidence(page: Page, docsPath: string, options: { fullPage?: boolean } = {}) {
   const path = process.env.UPDATE_SCREENSHOTS === '1' ? docsPath : test.info().outputPath(basename(docsPath));
   return page.screenshot({ path, ...options });
@@ -117,8 +122,8 @@ export function evidence(page: Page, docsPath: string, options: { fullPage?: boo
  * polls up to a second apart — so asking for it afterwards misses it now and
  * then. Record it from the page's first script instead: call this before the
  * navigation (or the tap) that shows the splash, then await the returned
- * function for the splash's text. A later screenshot of the splash is evidence
- * only and may already show the next screen.
+ * function for the splash's text. Reading it clears it, so a second splash in
+ * the same document needs its own read.
  */
 export async function watchSplash(page: Page): Promise<() => Promise<string>> {
   await page.addInitScript(() => {
@@ -130,6 +135,8 @@ export async function watchSplash(page: Page): Promise<() => Promise<string>> {
   });
   return async () => {
     const handle = await page.waitForFunction(() => (window as unknown as { __splashText?: string }).__splashText);
-    return String(await handle.jsonValue());
+    const text = String(await handle.jsonValue());
+    await page.evaluate(() => delete (window as unknown as { __splashText?: string }).__splashText);
+    return text;
   };
 }

@@ -266,7 +266,11 @@ function PersonForm({ personId, startRole }: { personId: string | null; startRol
 
   if (personId && state && !existing) return <NotFound />;
   // An edit opens before the record has loaded: no field until it has, or what is typed meanwhile is overwritten by the stored value.
-  if (personId && !existing) return <FarmScreen title={msg('personForm.editTitle')} fallback={PEOPLE} testID="person-form" />;
+  if (personId && !existing) return (
+      <FarmScreen title={msg('personForm.editTitle')} fallback={PEOPLE} testID="person-form-loading">
+        <AppText variant="bodySm">{msg('counter.loading')}</AppText>
+      </FarmScreen>
+    );
 
   return (
     <FarmScreen

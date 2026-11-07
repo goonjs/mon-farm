@@ -82,7 +82,7 @@ test('a keyboard undo asks first; the undo button shows the hold in progress; th
   const box = (await id('tool-undo').boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   // Paused a little ahead: the clock keeps running until the call lands, and nothing is held yet to jump over.
-  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 5_000));
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1_000));
   await page.mouse.down();
   await page.clock.runFor(350);
   await shot(page, '8i-undo-holding');
