@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 import { admin, documents, emulatorSession, persistedUser, writeFirebaseSession } from './firebase-emulator';
 import { E2E_USER, readStore, signedInNoGroup } from './session';
@@ -18,7 +18,7 @@ import { E2E_USER, readStore, signedInNoGroup } from './session';
  */
 
 test.skip(!process.env.E2E_SYNC_EMULATOR, 'needs the emulators: npm run test:e2e:sync');
-test.use({ storageState: signedInNoGroup, viewport: { width: 390, height: 844 } });
+test.use({ account: signedInNoGroup, viewport: { width: 390, height: 844 } });
 
 interface EventRow {
   pending: 0 | 1;

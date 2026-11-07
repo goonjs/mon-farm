@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 import { evidence, watchSplash } from './fixtures';
 import { BASE_URL, readStore, signedIn, signedInNoGroup, signedOut } from './session';
@@ -21,7 +21,7 @@ test.beforeEach(() => test.skip(test.info().project.name !== 'phone-portrait', '
 test.use({ viewport: { width: 390, height: 844 } });
 
 test.describe('not signed in', () => {
-  test.use({ storageState: signedOut });
+  test.use({ account: signedOut });
 
   test('only the sign-in screen, on every route; offline it says the first sign-in needs internet', async ({ page, context }) => {
     await page.goto('/');
@@ -45,7 +45,7 @@ test.describe('not signed in', () => {
 });
 
 test.describe('signed in before', () => {
-  test.use({ storageState: signedIn });
+  test.use({ account: signedIn });
 
   test('reopens straight into the app with no auth backend reachable', async ({ page, context }) => {
     // Everything off this origin fails, as in airplane mode. (A reload under
@@ -63,7 +63,7 @@ test.describe('signed in before', () => {
 });
 
 test.describe('signed in, no farm group', () => {
-  test.use({ storageState: signedInNoGroup });
+  test.use({ account: signedInNoGroup });
 
   test('only create (and a disabled join); create offline, then reopen offline straight into the group', async ({ page, context }) => {
     const splash = await watchSplash(page);
