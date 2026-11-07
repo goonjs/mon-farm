@@ -53,10 +53,10 @@ import {
   SwapIcon,
   TagIcon,
   TextField,
-  TrashIcon,
   type TileTone,
   FarmMateArt,
   personArt,
+  TextLink,
 } from '../../ui';
 import {
   AddCTA,
@@ -66,7 +66,7 @@ import {
   DeletedLink,
   DeletedList,
   FarmScreen,
-  HeaderButton,
+  TapRow,
   HelpNote,
   RowCard,
   ToggleChip,
@@ -373,7 +373,6 @@ function PersonDetail({ personId }: { personId: string }) {
       fallback={PEOPLE}
       failed={write.failed && !confirming}
       testID="person-detail"
-      right={<HeaderButton testID="person-edit" label={msg('personDetail.edit')} onPress={() => router.push(`/v2/person/${person.id}?edit=1` as Href)} />}
       overlay={
         <ConfirmSheet
           open={confirming}
@@ -392,9 +391,10 @@ function PersonDetail({ personId }: { personId: string }) {
       }
     >
       <RowCard testID="person-profile">
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
+        {/* Owner 2026-11-07 (style A): the person card edits — no round "แก้" in the header. */}
+        <TapRow testID="person-edit" label={`${msg('personDetail.edit')} ${person.name}`} onPress={() => router.push(`/v2/person/${person.id}?edit=1` as Href)}>
           <IconTile tone={tone} icon={() => <FarmMateArt id={personArt(person.roles)} />} />
-          <View style={{ flex: 1, gap: t.space.xxs }}>
+          <View style={{ flex: 1, minWidth: 0, gap: t.space.xxs }}>
             <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm }}>{person.name}</AppText>
             {roleNames(person, msg).map((r) => (
               <FactRow key={r} icon={(c) => <TagIcon color={c} size={12} />}>
@@ -402,7 +402,7 @@ function PersonDetail({ personId }: { personId: string }) {
               </FactRow>
             ))}
           </View>
-        </View>
+        </TapRow>
       </RowCard>
 
       {points.length > 0 ? (
@@ -458,11 +458,9 @@ function PersonDetail({ personId }: { personId: string }) {
       {person.deleted ? (
         <DeletedList rows={[{ id: person.id, name: person.name }]} onRestore={() => void restore()} />
       ) : (
-        <View style={{ alignSelf: 'flex-start' }}>
-          <Button testID="person-delete" variant="destructive" icon={(c) => <TrashIcon color={c} size={16} />} onPress={() => setConfirming(true)}>
-            {msg('personForm.delete')}
-          </Button>
-        </View>
+        <TextLink testID="person-delete" tone="reject" onPress={() => setConfirming(true)}>
+          {msg('personForm.delete')}
+        </TextLink>
       )}
     </FarmScreen>
   );

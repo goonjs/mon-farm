@@ -98,6 +98,7 @@ export function V2Device() {
       {countMode === 'hold' ? section(
         msg('saleSettings.hold'),
         <Stepper
+          look="square"
           testID="device-hold"
           label={msg('saleSettings.hold')}
           value={(holdMs / 1000).toFixed(1)}

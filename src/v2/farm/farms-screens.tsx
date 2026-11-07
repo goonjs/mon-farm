@@ -53,12 +53,11 @@ import {
   NumberPad,
   PersonIcon,
   PinIcon,
-  Plus,
   QuantityField,
   SegmentedControl,
   TextField,
-  TrashIcon,
   FarmMateArt,
+  TextLink,
 } from '../../ui';
 import { cardStyle } from '../../ui/card';
 import { FieldLabel } from '../../ui/form';
@@ -71,7 +70,8 @@ import {
   DeletedLink,
   DeletedList,
   FarmScreen,
-  HeaderButton,
+  AddRow,
+  TapRow,
   RowCard,
   useBack,
   useDay,
@@ -403,7 +403,6 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
       fallback={FARMS}
       failed={write.failed && sheet === 'none'}
       testID="property-detail"
-      right={<HeaderButton testID="property-edit" label={msg('personDetail.edit')} onPress={() => router.push(`/v2/property/${property.id}?edit=1` as Href)} />}
       overlay={
         <>
           <BottomSheet open={sheet === 'area'} onClose={() => setSheet('none')} title={msg('propertyDetail.changeArea')} testID="area-sheet" action={{ label: msg('propertyDetail.areaSave'), testID: 'area-save', onPress: () => void saveArea(), saving: write.saving }}>
@@ -442,22 +441,20 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
       }
     >
       <RowCard testID="property-summary">
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
+        {/* Owner 2026-11-07 (style A): the name row edits the farm, the area row changes the area — no round "แก้" / "เปลี่ยนพื้นที่". */}
+        <TapRow testID="property-edit" label={`${msg('personDetail.edit')} ${property.name}`} onPress={() => router.push(`/v2/property/${property.id}?edit=1` as Href)}>
           <IconTile tone={categoryTone(Math.max(0, index))} icon={() => <FarmMateArt id="nav.myFarm" />} />
-          <View style={{ flex: 1, gap: t.space.xxs }}>
+          <View style={{ flex: 1, minWidth: 0, gap: t.space.xxs }}>
             <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm }}>{property.name}</AppText>
             <FactRow icon={(c) => <FarmIcon color={c} size={12} />}>{msg(`crop.${property.crop}`)}</FactRow>
           </View>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
+        </TapRow>
+        <TapRow testID="change-area" label={`${msg('propertyDetail.changeArea')}, ${msg('propertyDetail.areaNow')} ${areaNow === null ? msg('common.unknown') : msg('properties.area', { rai: formatRai(areaNow) })}`} onPress={() => setSheet('area')}>
           <View testID="property-area-now" style={{ flex: 1, gap: t.space.xxs }}>
             <AppText variant="bodySm">{msg('propertyDetail.areaNow')}</AppText>
             {areaNow === null ? <UnknownPill /> : value(msg('properties.area', { rai: formatRai(areaNow) }))}
           </View>
-          <Button testID="change-area" onPress={() => setSheet('area')}>
-            {msg('propertyDetail.changeArea')}
-          </Button>
-        </View>
+        </TapRow>
         <View style={{ flexDirection: 'row', gap: t.space.sm, paddingVertical: t.space.sm }}>
           <View testID="property-planted" style={{ flex: 1, gap: t.space.xxs }}>
             <AppText variant="bodySm">{msg('propertyDetail.planted')}</AppText>
@@ -511,21 +508,17 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
             </MenuItem>
           );
         })}
-        <View style={{ paddingVertical: t.space.sm, alignSelf: 'flex-start' }}>
-          <Button testID="add-point" icon={(c) => <Plus color={c} size={14} />} onPress={() => router.push(`/v2/point/new?property=${property.id}` as Href)}>
-            {msg('v2f.addPoint')}
-          </Button>
+        <View style={{ paddingVertical: t.space.sm }}>
+          <AddRow testID="add-point" label={msg('v2f.addPoint')} onPress={() => router.push(`/v2/point/new?property=${property.id}` as Href)} />
         </View>
       </RowCard>
 
       {property.deleted ? (
         <DeletedList rows={[{ id: property.id, name: property.name }]} onRestore={() => void restore()} />
       ) : (
-        <View style={{ alignSelf: 'flex-start' }}>
-          <Button testID="property-delete" variant="destructive" icon={(c) => <TrashIcon color={c} size={16} />} onPress={() => setSheet('delete')}>
-            {msg('propertyForm.delete')}
-          </Button>
-        </View>
+        <TextLink testID="property-delete" tone="reject" onPress={() => setSheet('delete')}>
+          {msg('propertyForm.delete')}
+        </TextLink>
       )}
     </FarmScreen>
   );

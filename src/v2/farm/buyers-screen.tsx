@@ -13,7 +13,7 @@ import { defaultBuyer, type BuyerRecord } from '../../core/master';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Chip, IconTile, MenuItem, TextField, TrashIcon, FarmMateArt } from '../../ui';
+import { AppText, BottomSheet, Button, Chip, IconTile, MenuItem, TextField, TextLink, FarmMateArt } from '../../ui';
 import { AddCTA, ConfirmSheet, DeletedLink, DeletedList, FarmScreen, HelpNote, RowCard, SaveFailed, useMaster, useWrite } from './pieces';
 
 type Sheet = { kind: 'none' } | { kind: 'form'; buyer: BuyerRecord | null } | { kind: 'delete'; buyer: BuyerRecord };
@@ -73,16 +73,10 @@ export function BuyersScreen() {
             />
             <SaveFailed show={write.failed} />
             {sheet.kind === 'form' && sheet.buyer ? (
-              <View style={{ alignSelf: 'flex-start' }}>
-                <Button
-                  testID="buyer-delete"
-                  variant="destructive"
-                  icon={(c) => <TrashIcon color={c} size={16} />}
-                  onPress={() => sheet.buyer && setSheet({ kind: 'delete', buyer: sheet.buyer })}
-                >
-                  {msg('buyers.delete')}
-                </Button>
-              </View>
+              // Owner 2026-11-07 (style F): delete is a red underlined link, not a round outlined button.
+              <TextLink testID="buyer-delete" tone="reject" onPress={() => sheet.buyer && setSheet({ kind: 'delete', buyer: sheet.buyer })}>
+                {msg('buyers.delete')}
+              </TextLink>
             ) : null}
           </BottomSheet>
           <ConfirmSheet

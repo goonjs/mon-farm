@@ -12,7 +12,8 @@
  * - HelpNote: the grey "?" note under a list.
  * - ToggleChip: a pill that toggles; selected = thick edge plus a check.
  * - ConfirmSheet: the delete confirmation (mockup 7, 12).
- * - HeaderButton: the round outlined "แก้" at the top right.
+ * - TapRow: a row that is the button, › on the right (no round "แก้", rule 11).
+ * - AddRow: a dashed full-width "+ …" row.
  * - Stepper: [−] value [+] (mockup 3, 13).
  * - useWrite / SaveFailed: one write at a time, and a failed one is said
  *   out loud while the form keeps what was typed.
@@ -33,6 +34,7 @@ import {
   Button,
   cardStyle,
   Check,
+  ChevronRight,
   CTA,
   FieldError,
   Minus,
@@ -343,12 +345,37 @@ export function ChipWrap({ children, testID }: { children: ReactNode; testID?: s
   );
 }
 
-/** The round outlined action at the header's right ("แก้", "แก้ชื่อ"). */
-export function HeaderButton({ label, onPress, testID }: { label: string; onPress: () => void; testID: string }) {
+/**
+ * A row that is itself the button, a chevron on the right (style A of the
+ * round-button review, owner 2026-11-07): replaces a round outlined word
+ * ("แก้", "เปลี่ยนพื้นที่") at a row's or the header's end. Screen readers
+ * read what the row shows (its children); `label` names the action as a hint.
+ */
+export function TapRow({ testID, label, onPress, children }: { testID: string; label: string; onPress: () => void; children: ReactNode }) {
+  const t = useTheme();
   return (
-    <Button testID={testID} onPress={onPress}>
-      {label}
-    </Button>
+    <Pressable testID={testID} accessibilityRole="button" accessibilityHint={label} onPress={onPress} style={{ minHeight: t.target.min, flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
+      <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>{children}</View>
+      <View testID={`${testID}-chevron`} aria-hidden>
+        <ChevronRight color={t.color.inkFaint} />
+      </View>
+    </Pressable>
+  );
+}
+
+/** "+ label" as a dashed full-width row at a list's end (style D): an add that is not done often. */
+export function AddRow({ testID, label, onPress }: { testID: string; label: string; onPress: () => void }) {
+  const t = useTheme();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={{ minHeight: t.target.comfortable, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: t.space.sm, borderWidth: t.border.thick, borderStyle: 'dashed', borderColor: t.color.ruleStrong, borderRadius: t.radius.lg, paddingHorizontal: t.space.md }}
+    >
+      <Plus color={t.color.action} size={14} />
+      <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.action }}>{label}</AppText>
+    </Pressable>
   );
 }
 
@@ -427,6 +454,7 @@ export function Stepper({
   onMore,
   testID,
   label,
+  look = 'round',
 }: {
   value: string;
   unit?: string;
@@ -435,23 +463,33 @@ export function Stepper({
   testID: string;
   /** Names the two buttons for screen readers. */
   label: string;
+  /**
+   * Owner 2026-11-07, per screen: `square` (style G) — rounded squares like the value box beside them;
+   * `soft` (style J) — light action-sunk circles, no outline, action-coloured sign;
+   * `round` — the outlined circles kept where the owner chose no change (the empty-scale check).
+   */
+  look?: 'round' | 'square' | 'soft';
 }) {
   const t = useTheme();
   const msg = useT();
-  const round = {
-    width: t.target.min,
-    height: t.target.min,
-    borderRadius: t.radius.pill,
-    borderWidth: t.border.hair,
-    borderColor: t.color.ruleStrong,
-    backgroundColor: t.color.surfaceRaised,
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as const;
+  const soft = look === 'soft';
+  const box = soft
+    ? ({ width: t.target.min, height: t.target.min, borderRadius: t.radius.pill, backgroundColor: t.color.actionSunk, alignItems: 'center', justifyContent: 'center' } as const)
+    : ({
+        width: t.target.min,
+        height: t.target.min,
+        borderRadius: look === 'square' ? t.radius.md : t.radius.pill,
+        borderWidth: t.border.hair,
+        borderColor: t.color.ruleStrong,
+        backgroundColor: t.color.surfaceRaised,
+        alignItems: 'center',
+        justifyContent: 'center',
+      } as const);
+  const sign = soft ? t.color.action : t.color.ink;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
-      <Pressable testID={`${testID}-less`} accessibilityRole="button" accessibilityLabel={`${msg('saleSettings.less')} ${label}`} onPress={onLess} style={round}>
-        <Minus color={t.color.ink} size={16} />
+      <Pressable testID={`${testID}-less`} accessibilityRole="button" accessibilityLabel={`${msg('saleSettings.less')} ${label}`} onPress={onLess} style={box}>
+        <Minus color={sign} size={16} />
       </Pressable>
       <View
         style={{
@@ -473,8 +511,8 @@ export function Stepper({
         </Text>
         {unit ? <AppText variant="bodySm">{unit}</AppText> : null}
       </View>
-      <Pressable testID={`${testID}-more`} accessibilityRole="button" accessibilityLabel={`${msg('saleSettings.more')} ${label}`} onPress={onMore} style={round}>
-        <Plus color={t.color.ink} size={16} />
+      <Pressable testID={`${testID}-more`} accessibilityRole="button" accessibilityLabel={`${msg('saleSettings.more')} ${label}`} onPress={onMore} style={box}>
+        <Plus color={sign} size={16} />
       </Pressable>
     </View>
   );
