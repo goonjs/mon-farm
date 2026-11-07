@@ -23,6 +23,7 @@ export function Button({
   disabled,
   testID,
   accessibilityLabel,
+  accessibilityHint,
 }: {
   children: React.ReactNode;
   onPress?: () => void;
@@ -36,11 +37,14 @@ export function Button({
   testID?: string;
   /** When the visible text alone does not say what the button acts on. */
   accessibilityLabel?: string;
+  /** Read after the label, e.g. why a shut button is shut. */
+  accessibilityHint?: string;
 }) {
   const t = useTheme();
   const a11y = {
     testID,
     accessibilityLabel,
+    accessibilityHint,
     accessibilityRole: 'button' as const,
     accessibilityState: { disabled: !!disabled },
     onPress,

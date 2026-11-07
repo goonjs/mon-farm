@@ -65,12 +65,15 @@ export function NumberPad({
   onKey,
   onDone,
   doneDisabled,
+  doneHint,
   testID = 'numpad',
 }: {
   variant: PadVariant;
   onKey: (k: EntryKey) => void;
   onDone: () => void;
   doneDisabled?: boolean;
+  /** Why ✓ is shut, read by a screen reader on the key. */
+  doneHint?: string;
   testID?: string;
 }) {
   const t = useTheme();
@@ -115,7 +118,7 @@ export function NumberPad({
                 testID={`${testID}-key-${c.id}`}
                 accessibilityRole="button"
                 accessibilityLabel={labelId ? msg(labelId) : c.glyph}
-                accessibilityHint={c.id === 'back' ? msg('numpad.keyBackHint') : undefined}
+                accessibilityHint={c.id === 'back' ? msg('numpad.keyBackHint') : disabled ? doneHint : undefined}
                 accessibilityState={{ disabled }}
                 disabled={disabled}
                 onPress={() => (isDone ? onDone() : onKey(c.id as EntryKey))}

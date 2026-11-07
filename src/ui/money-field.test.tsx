@@ -170,5 +170,28 @@ describe('compact (E01-S20 NP-10): a list of amounts stays as tall as the old bo
     fireEvent.press(screen.getByTestId('m'));
     expect(screen.getByTestId('m-pad')).toBeTruthy();
   });
+
+  describe('a screen reader hears why ตกลง is shut (2026-11-07)', () => {
+    // A live region inserted together with its text is often not announced; it must be there first.
+    it('the reason sits in a polite live region that is there before any reason', () => {
+      wrap(<Harness minSatang={10000} />);
+      fireEvent.press(screen.getByTestId('m'));
+      const region = screen.getByTestId('m-problem');
+      expect(region.props.accessibilityLiveRegion).toBe('polite');
+      expect(text('m-problem')).toBe('');
+      press('5');
+      expect(text('m-problem')).toBe('ต้องไม่น้อยกว่า 100.00');
+    });
+
+    it('the shut ตกลง carries the reason as its hint; an open one has none', () => {
+      wrap(<Harness minSatang={10000} />);
+      fireEvent.press(screen.getByTestId('m'));
+      press('5');
+      expect(screen.getByTestId('m-done').props.accessibilityHint).toBe('ต้องไม่น้อยกว่า 100.00');
+      press('0', '0');
+      expect(screen.getByTestId('m-done').props.accessibilityState.disabled).toBe(false);
+      expect(screen.getByTestId('m-done').props.accessibilityHint).toBeUndefined();
+    });
+  });
 });
 
