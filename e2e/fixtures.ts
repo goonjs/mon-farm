@@ -109,3 +109,27 @@ export function evidence(page: Page, docsPath: string, options: { fullPage?: boo
   const path = process.env.UPDATE_SCREENSHOTS === '1' ? docsPath : test.info().outputPath(basename(docsPath));
   return page.screenshot({ path, ...options });
 }
+
+/**
+ * The splash at `/` shows for SPLASH_MS (900 ms) and appears a few hundred ms
+ * after navigation starts. `page.goto` waits for `load`, which on a busy
+ * machine comes after the splash has already gone, and `expect(…).toBeVisible()`
+ * polls up to a second apart — so asking for it afterwards misses it now and
+ * then. Record it from the page's first script instead: call this before the
+ * navigation (or the tap) that shows the splash, then await the returned
+ * function for the splash's text. A later screenshot of the splash is evidence
+ * only and may already show the next screen.
+ */
+export async function watchSplash(page: Page): Promise<() => Promise<string>> {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __splashText?: string };
+    new MutationObserver(() => {
+      const text = document.querySelector('[data-testid="splash"]')?.textContent?.trim();
+      if (text) w.__splashText = text;
+    }).observe(document, { childList: true, subtree: true, characterData: true });
+  });
+  return async () => {
+    const handle = await page.waitForFunction(() => (window as unknown as { __splashText?: string }).__splashText);
+    return String(await handle.jsonValue());
+  };
+}
