@@ -59,6 +59,7 @@ export function FitAmount({ satang, testID, max }: { satang: number; testID?: st
         style={{
           alignSelf: 'flex-end',
           fontFamily: t.font.family.sans,
+          // text-size: fixed — `size` starts from the theme and only shrinks to fit the width, with an 8 px floor.
           fontSize: size,
           fontWeight: t.font.weight.black,
           fontVariant: ['tabular-nums'],
