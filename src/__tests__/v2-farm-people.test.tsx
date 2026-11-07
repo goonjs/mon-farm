@@ -373,3 +373,15 @@ describe('คนรับซื้อยาง (farm mockup 8)', () => {
     expect(within(screen.getByTestId(`buyer-${b.id}`)).getByText('ใช้ล่าสุด')).toBeTruthy();
   });
 });
+
+describe('the person edit form waits for the record (e2e v2-farm flake, 2026-11-07)', () => {
+  // A name typed before the record arrived was overwritten by the stored one, and Save kept the old name.
+  it('shows no name field until the person has loaded, then the stored name', async () => {
+    const p = await people().create('คุณพนม ครองแก้ว', ['tenant']);
+    mockParams.current = { id: p.id, edit: '1' };
+    wrap(<PersonScreen />);
+    expect(screen.queryByTestId('person-name')).toBeNull();
+    await flush();
+    expect(screen.getByTestId('person-name').props.value).toBe('คุณพนม ครองแก้ว');
+  });
+});

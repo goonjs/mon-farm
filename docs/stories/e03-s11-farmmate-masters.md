@@ -1,11 +1,11 @@
 # Story E03-S11: ไอคอน FarmMate ตัวสวย (ต้นฉบับ trace) ทั้งแอป
 
-Status: Review (PR 1–4 merged; PR 5 ปัดพิกัดเป็นจำนวนเต็ม ใน review)
+Status: Done (2026-11-07 — PR 1–5 merge ครบ: #145, #146, #147, #148, #149 `befcd7c`; ตรวจ AC ครบกับ dev `cd9c615` ดูหัวข้อ "ตรวจปิดสตอรี่" และ follow-up)
 
 ## Context
 
 - Epic: `docs/epics/e03-master-data.md` (ชุดไอคอน, หน้า "เครื่องนี้")
-- ไอคอนตอนนี้มี 3 ชุด:
+- ไอคอนตอนเขียนสตอรี่มี 3 ชุด (2026-11-07: จอจริงใช้ตัวสวยแล้ว ชุดวาดง่ายไม่มีจอใช้):
   - ตัวสวย: ต้นฉบับ trace `design/icons/farmmate/*.svg` 72 อัน สีฝังในไฟล์ (เจ้าของเห็นใน #119 และใช้เป็น favicon ใน E03-S10) — แอปยังไม่ใช้
   - แบบวาดง่าย `src/ui/farmmate-icons/registry.tsx` 40 อัน (หน้าแรก, หน้าสรุปปิดการขาย, หน้า /v2/dev/icons)
   - ไอคอนเส้น `src/ui/icons.tsx`, `src/ui/sale-icons.tsx` ใน `IconTile` และแถวเมนู ทั่วแอป
@@ -161,3 +161,27 @@ _เขียน test ก่อน (TDD)_
   (`M5.5-0.04` ไม่กลายเป็น `M5.50`), ตัด width/height เฉพาะที่ `<svg>`, และ throw เมื่อเจอ exponent หรือ element อื่นนอกจาก
   svg/g/path. id มี type `FarmMateArtId` (พิมพ์ผิด compile ไม่ผ่าน). มี `npm run icons:check`
 - react-native-svg มีอยู่แล้ว (15.15.4) ไม่ลง package ใหม่
+
+## ตรวจปิดสตอรี่ (2026-11-07, dev `cd9c615`)
+
+ผู้ตรวจ (ตรวจปิดสตอรี่ ไม่ใช่รีวิวโค้ดอิสระของ DoD): agent แยก อ่านโค้ด + รันเทสต์ที่เกี่ยว; ทีม dev รัน e2e ทั้งชุดบน build จริงเอง ไม่เดา
+
+- รันแล้ว: jest `FarmMateArt`, `icon-catalog-screen`, `device-dev-icons`, `v2-farm-icons`, `v2-money-icons` 33 ผ่าน · jest จอ PR 2–4 9 ชุด 236 ผ่าน ·
+  vitest `scripts/emit-farmmate.test.ts` 16 ผ่าน · `npm run icons:check` "up to date" · e2e `v2-farmmate-art.spec.ts` (3 พื้นที่ × 360/390 × S/M/L) และ
+  `v2-favicon.spec.ts` ผ่านทั้งหมดในรอบทั้งชุดบน build จริง (73 ผ่าน 5 ข้าม 1 ล้มที่ `v2-farm` ไม่เกี่ยวกับสตอรี่นี้)
+- AC FM-1 ถึง FM-11 ตรวจแล้วครบ (FM-4 ตัวเลขเวลาเป็นที่บันทึกไว้ ไม่ได้วัดซ้ำ; FM-10: 219 path ไม่มีทศนิยมใน `d`, module gzip 206,773 → 145,297 B)
+- รีวิวอิสระ: บันทึกในสตอรี่สำหรับ #145, PR 3, PR 4, PR 5; PR 2 (#146) ตอน merge ไม่ได้บันทึกผล (มีแค่ ledger) → รีวิวใหม่หลัง merge
+  2026-11-07 (agent แยก อ่าน `5698739` เทียบโค้ดปัจจุบัน, jest 47 ผ่าน): **ไม่มีข้อต้องแก้**; ไอคอนตรงตารางแมปทุกตัวที่อยู่ในตาราง, ซ่อนจาก screen reader ครบ
+  ข้อที่พบ: (ควรแก้) คู่ที่ไม่อยู่ในตารางแมปที่เจ้าของเห็น — ค่าซ่อม `farmwork.maintenance`, เงินเดือน `people.manager`, ช่วยคนงาน `people.workerInfo`,
+  การ์ดใบซื้อหน้าแรก `farmwork.fertilize` / `farm.plotZone`, แถวแบ่งค่าใช้จ่าย `people.tapper` → ส่งให้เจ้าของดู (follow-up);
+  (เล็ก) `FactRow` ไอคอนอยู่กลางเมื่อข้อความสองบรรทัด, รูปคนเปลี่ยนจาก `nav.profile` ตอนโหลด, คำเตือน act() ในเทสต์
+- CI: `verify` เขียวบน head ของ #145–#149; job e2e ถูกข้ามตาม path filter (e2e ข้างบนคือหลักฐาน)
+- ข้อความที่เก่าแล้วใน Context หมายเหตุไว้ในที่เดิมแล้ว
+
+### Follow-up (ไม่อยู่ใน AC)
+
+- วัดความเร็วบน Android จริง (FM-4 ใช้ CPU ช้าลง 6× แทน)
+- ธีมมืด (เจ้าของให้ทำหลังธีมสว่าง)
+- ลบชุดวาดง่าย: `src/ui/farmmate-icons/registry.tsx`, `registry.test.tsx`, `FarmMateIcon.tsx` และ export ใน `farmmate-icons/index.ts`, `src/ui/index.ts` (ไม่มีจอใช้แล้ว) — ต้องขออนุญาตลบไฟล์
+- ให้เจ้าของดูคู่ไอคอนที่ไม่อยู่ในตารางแมป (รีวิว PR 2 ด้านบน) — เงินเดือน → ผู้จัดการ เห็นชัดน้อยสุด
+- ไอคอนที่ไม่มีพิกเซลถึง 3:1 กับพื้นกรอบ (ซิงก์, ปุ๋ย, ยาฆ่าหญ้า, จุดชั่ง, ส่วนแบ่ง) — แจ้งลีดแล้ว รอเจ้าของตัดสิน

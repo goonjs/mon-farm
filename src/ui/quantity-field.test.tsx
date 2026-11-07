@@ -23,6 +23,8 @@ function Harness({ initial = 20, ...rest }: { initial?: number | null } & Partia
   );
 }
 
+const flatText = (n: unknown): string =>
+  Array.isArray(n) ? n.map(flatText).join('') : n && typeof n === 'object' ? flatText((n as { props: { children?: unknown } }).props.children) : String(n ?? '');
 const flat = (style: unknown) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
 
 describe('QuantityField', () => {
@@ -181,3 +183,17 @@ describe('label line like TextField (E01-S20)', () => {
   });
 });
 
+
+describe('QuantityField — a screen reader hears why ✓ is shut (2026-11-07)', () => {
+  it('the reason sits in a polite live region that is there first, and on the shut ✓ as its hint', () => {
+    wrap(<Harness max={100} />);
+    fireEvent.press(screen.getByTestId('q'));
+    expect(screen.getByTestId('q-problem').props.accessibilityLiveRegion).toBe('polite');
+    expect(flatText(screen.getByTestId('q-problem').props.children)).toBe('');
+    press('5', '0', '0');
+    const reason = flatText(screen.getByTestId('q-problem').props.children);
+    expect(reason).not.toBe('');
+    expect(screen.getByTestId('q-pad-key-done').props.accessibilityHint).toBe(reason);
+    expect(screen.getByTestId('q-pad-key-done').props['aria-describedby']).toBe('q-problem-text');
+  });
+});

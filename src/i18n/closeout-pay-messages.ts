@@ -77,8 +77,6 @@ export const th = {
   'cop.viaPicked': '{dir} หยิบจากเงิน{name}',
   'cop.waitCash': '{dir} คืนหนี้ {amount} รอรับเงินสด',
   'cop.tickedWith': 'ติ๊กพร้อมกับจ่าย{name} (แก้ได้)',
-  'cop.untickedN': 'ยังไม่ติ๊ก {n} รายการ',
-  'cop.allTicked': 'ติ๊กครบแล้ว',
   'cop.closeSale': 'ปิดการขาย',
   'cop.tickedAt': 'เครื่องนี้ · {time}',
 } as const;
