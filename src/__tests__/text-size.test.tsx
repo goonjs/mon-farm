@@ -145,10 +145,10 @@ describe('เครื่องนี้ → ขนาดตัวอักษ�
 describe('the splash name follows the text size (2026-11-07: it was a fixed 38 the guard did not see)', () => {
   const nameSize = () => {
     const name = screen.getByText('FarmMate');
-    const style = Object.assign({}, ...[name.props.style].flat(3).filter(Boolean)) as { fontSize: number };
-    return style.fontSize;
+    const style = Object.assign({}, ...[name.props.style].flat(3).filter(Boolean)) as { fontSize: number; lineHeight: number };
+    return `${style.fontSize}/${style.lineHeight}`;
   };
-  it('M keeps the drawn 38; L is 38 × 1.125', () => {
+  it('M keeps the drawn 38 (line 42); L is 38 × 1.125 (line 47)', () => {
     const { unmount } = render(
       <ThemeProvider>
         <I18nProvider>
@@ -156,7 +156,7 @@ describe('the splash name follows the text size (2026-11-07: it was a fixed 38 t
         </I18nProvider>
       </ThemeProvider>,
     );
-    expect(nameSize()).toBe(38);
+    expect(nameSize()).toBe('38/42');
     unmount();
     stored.set('mon-farm:text-size', 'l');
     render(
@@ -166,6 +166,6 @@ describe('the splash name follows the text size (2026-11-07: it was a fixed 38 t
         </I18nProvider>
       </ThemeProvider>,
     );
-    expect(nameSize()).toBe(43);
+    expect(nameSize()).toBe('43/47');
   });
 });

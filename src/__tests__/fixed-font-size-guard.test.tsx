@@ -32,55 +32,73 @@ function files(dir: string): string[] {
   });
 }
 
-/** The fixed numbers in a size expression ([] = follows the text size). */
-export function fixedNumbers(expr: ts.Expression, consts: Map<string, ts.Expression>, key = 'fontSize', seen = new Set<string>()): string[] {
-  const walk = (e: ts.Expression): string[] => fixedNumbers(e, consts, key, seen);
-  if (ts.isParenthesizedExpression(expr) || ts.isAsExpression(expr) || ts.isNonNullExpression(expr)) return walk((expr as ts.ParenthesizedExpression).expression);
-  if (ts.isNumericLiteral(expr)) return Number(expr.text) >= PIXELS ? [expr.text] : [];
-  if (ts.isIdentifier(expr)) {
-    const init = consts.get(expr.text);
-    if (!init || seen.has(expr.text)) return [];
-    seen.add(expr.text);
-    return fixedNumbers(init, consts, key, seen).map((n) => `${expr.text}=${n}`);
-  }
-  if (ts.isConditionalExpression(expr)) return [...walk(expr.whenTrue), ...walk(expr.whenFalse)];
-  if (ts.isCallExpression(expr)) return expr.arguments.flatMap((a) => walk(a));
-  if (ts.isBinaryExpression(expr)) {
-    const op = expr.operatorToken.kind;
-    if (op === ts.SyntaxKind.AsteriskToken) {
-      if (/\btextScale\b/.test(expr.left.getText()) || /\btextScale\b/.test(expr.right.getText())) return [];
+/** A number that is meant to stay fixed says so on its own line or the line above, with a reason. */
+const ESCAPE = /text-size: fixed — \S/;
+/** Every escape in src, so a new one shows up in review (file → how many). */
+const ALLOWED_ESCAPES: Record<string, number> = {
+  // FitAmount only shrinks a theme size to fit the width; 8 px is its floor.
+  'v2/sale/closeout/buyer-view-screen.tsx': 1,
+  // WarnMark is a drawn ⚠ whose "!" is sized from the triangle, like an icon.
+  'v2/sale/closeout/summary-parts.tsx': 1,
+};
+
+export function findFixed(text: string, name = 'x.tsx'): { found: string[]; escapes: number } {
+  const sf = ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const lines = text.split('\n');
+  const lineOf = (n: ts.Node) => sf.getLineAndCharacterOfPosition(n.getStart()).line;
+  const escaped = new Set<number>();
+  const isEscaped = (n: ts.Node) => {
+    const l = lineOf(n);
+    const at = [l, l - 1].find((i) => i >= 0 && ESCAPE.test(lines[i]));
+    if (at === undefined) return false;
+    escaped.add(at);
+    return true;
+  };
+  // Names a size can stand for in this file: consts, and default values of parameters and destructured props.
+  const known = new Map<string, ts.Expression>();
+  const collect = (n: ts.Node) => {
+    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.initializer && ts.isVariableDeclarationList(n.parent) && n.parent.flags & ts.NodeFlags.Const) known.set(n.name.text, n.initializer);
+    if ((ts.isParameter(n) || ts.isBindingElement(n)) && ts.isIdentifier(n.name) && n.initializer) known.set(n.name.text, n.initializer);
+    ts.forEachChild(n, collect);
+  };
+  collect(sf);
+
+  const pixels = (raw: string, at: ts.Node) => (Number(raw) >= PIXELS && !isEscaped(at) ? [raw] : []);
+  const fixedNumbers = (expr: ts.Expression, key: string, seen: Set<string>): string[] => {
+    const walk = (e: ts.Expression) => fixedNumbers(e, key, seen);
+    if (ts.isParenthesizedExpression(expr) || ts.isAsExpression(expr) || ts.isNonNullExpression(expr)) return walk(expr.expression);
+    if (ts.isNumericLiteral(expr)) return pixels(expr.text, expr);
+    // On web a size can be a string ("12", "36px") or a template; any pixel number in it counts.
+    if (ts.isStringLiteral(expr) || ts.isNoSubstitutionTemplateLiteral(expr)) return (expr.text.match(/\d+(\.\d+)?/g) ?? []).flatMap((d) => pixels(d, expr));
+    if (ts.isTemplateExpression(expr)) return [...(expr.head.text + expr.templateSpans.map((x) => x.literal.text).join(' ')).match(/\d+(\.\d+)?/g) ?? []].flatMap((d) => pixels(d, expr)).concat(expr.templateSpans.flatMap((x) => walk(x.expression)));
+    if (ts.isIdentifier(expr)) {
+      const init = known.get(expr.text);
+      if (!init || seen.has(expr.text)) return [];
+      seen.add(expr.text);
+      return walk(init).map((n) => `${expr.text}=${n}`);
+    }
+    if (ts.isConditionalExpression(expr)) return [...walk(expr.whenTrue), ...walk(expr.whenFalse)];
+    if (ts.isCallExpression(expr)) return expr.arguments.flatMap((a) => walk(a));
+    if (ts.isBinaryExpression(expr)) {
+      const op = expr.operatorToken.kind;
+      if (op === ts.SyntaxKind.AsteriskToken) {
+        if (/\btextScale\b/.test(expr.left.getText()) || /\btextScale\b/.test(expr.right.getText())) return [];
+        return [...walk(expr.left), ...walk(expr.right)];
+      }
+      if (op === ts.SyntaxKind.PlusToken || op === ts.SyntaxKind.MinusToken) {
+        // A number added to a font size does not scale: any number counts; a line height may add a little leading.
+        const lit = (x: ts.Expression) => (ts.isNumericLiteral(x) ? (key === 'fontSize' ? (isEscaped(x) ? [] : [x.text]) : pixels(x.text, x)) : walk(x));
+        return [...lit(expr.left), ...lit(expr.right)];
+      }
       return [...walk(expr.left), ...walk(expr.right)];
     }
-    if (op === ts.SyntaxKind.PlusToken || op === ts.SyntaxKind.MinusToken) {
-      // A number added to a font size does not scale: any number counts; a line height may add a little leading.
-      const lit = (x: ts.Expression) => (ts.isNumericLiteral(x) ? (key === 'fontSize' || Number(x.text) >= PIXELS ? [x.text] : []) : walk(x));
-      return [...lit(expr.left), ...lit(expr.right)];
-    }
-    return [...walk(expr.left), ...walk(expr.right)];
-  }
-  return [];
-}
-
-function consts(sf: ts.SourceFile): Map<string, ts.Expression> {
-  const out = new Map<string, ts.Expression>();
-  const visit = (n: ts.Node) => {
-    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.initializer && ts.isVariableDeclarationList(n.parent) && n.parent.flags & ts.NodeFlags.Const) out.set(n.name.text, n.initializer);
-    ts.forEachChild(n, visit);
+    return [];
   };
-  visit(sf);
-  return out;
-}
 
-export function findFixed(text: string, name = 'x.tsx'): string[] {
-  const sf = ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const known = consts(sf);
-  const out: string[] = [];
-  const lines = text.split('\n');
+  const found: string[] = [];
   const report = (key: string, value: ts.Expression, at: ts.Node) => {
-    const line = sf.getLineAndCharacterOfPosition(at.getStart()).line;
-    if ([lines[line], lines[line - 1] ?? ''].some((l) => /text-size: fixed/.test(l))) return;
-    const nums = fixedNumbers(value, known, key);
-    if (nums.length) out.push(`${name}:${sf.getLineAndCharacterOfPosition(at.getStart()).line + 1} ${key} ${nums.join(',')}`);
+    const nums = fixedNumbers(value, key, new Set());
+    if (nums.length) found.push(`${name}:${lineOf(at) + 1} ${key} ${nums.join(',')}`);
   };
   const visit = (n: ts.Node) => {
     if (ts.isPropertyAssignment(n) && (ts.isIdentifier(n.name) || ts.isStringLiteral(n.name)) && KEYS.has(n.name.text)) report(n.name.text, n.initializer, n);
@@ -92,7 +110,7 @@ export function findFixed(text: string, name = 'x.tsx'): string[] {
     ts.forEachChild(n, visit);
   };
   visit(sf);
-  return out;
+  return { found, escapes: escaped.size };
 }
 
 describe('the guard itself', () => {
@@ -114,17 +132,30 @@ describe('the guard itself', () => {
     ['<Text fontSize={12} />', 1],
     ['lineHeight: lh(t.font.size.bodySm) + 2', 0],
     ['// text-size: fixed — a floor\nconst s = { fontSize: Math.max(8, x) };', 0],
+    ['const s = { fontSize: Math.max(\n  // text-size: fixed — a floor\n  8, x) };', 0],
     ['const s = { fontSize: Math.max(8, x) };', 1],
+    ['function A({ size = 36 }) { return { fontSize: size }; }', 1],
+    ['function A({ size = 14 }) { return { fontSize: Math.round(size * 0.62) }; }', 1],
+    ['<Text fontSize="12" />', 1],
+    ["fontSize: '36px'", 1],
+    ["label: 'text-size: fixed', fontSize: 36", 1],
+    ['// text-size: fixed\nconst s = { fontSize: 36 };', 1],
   ])('%s → %i finding(s)', (code, n) => {
-    expect(findFixed(code.includes('<') || code.includes('const') ? code : `const s = { ${code} };`)).toHaveLength(n as number);
+    const src = code.includes('<') || code.includes('const') || code.includes('function') ? code : `const s = { ${code} };`;
+    expect(findFixed(src).found).toHaveLength(n as number);
   });
 });
 
-it('no fixed fontSize or lineHeight outside the public numeral', () => {
-  const found = files(SRC).flatMap((p) => {
+it('no fixed fontSize or lineHeight outside the public numeral, and only the listed escapes', () => {
+  const found: string[] = [];
+  const escapes: Record<string, number> = {};
+  for (const p of files(SRC)) {
     const rel = relative(SRC, p).split('\\').join('/');
-    if (rel.startsWith('__tests__/') || EXEMPT.has(rel)) return [];
-    return findFixed(readFileSync(p, 'utf8'), rel);
-  });
+    if (rel.startsWith('__tests__/') || EXEMPT.has(rel)) continue;
+    const r = findFixed(readFileSync(p, 'utf8'), rel);
+    found.push(...r.found);
+    if (r.escapes) escapes[rel] = r.escapes;
+  }
   expect(found).toEqual([]);
+  expect(escapes).toEqual(ALLOWED_ESCAPES);
 });
