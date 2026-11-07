@@ -8,16 +8,20 @@
  */
 
 import { useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { Text, View, type TextStyle } from 'react-native';
 
 import { V2_HOME } from '../routes';
 import { useTheme } from '../../theme';
 import { FARMMATE_MASTER_LABEL_TH, type FarmMateArtId } from '../../../design/icons/farmmate-masters';
-import { AppText, Card, CardLabel, FarmMateArt, FARMMATE_ART_CATEGORIES } from '../../ui';
+import { AppText, Card, FarmMateArt, FARMMATE_ART_CATEGORIES } from '../../ui';
+import { cardLabelStyle } from '../../ui/card';
 import { ScreenHeader } from '../../ui/screen-header';
 import { ScrollCue } from '../../ui/scroll-cue';
 
 const IDS = (Object.keys(FARMMATE_MASTER_LABEL_TH) as FarmMateArtId[]).sort();
+
+/** Web: break a long id anywhere rather than run past the card (native wraps a long word by itself). */
+const WRAP_ANYWHERE = { overflowWrap: 'anywhere' } as unknown as TextStyle;
 
 export function IconCatalogScreen() {
   const t = useTheme();
@@ -41,8 +45,8 @@ export function IconCatalogScreen() {
                   <AppText variant="bodySm" style={{ textAlign: 'center' }}>
                     {FARMMATE_MASTER_LABEL_TH[id]}
                   </AppText>
-                  {/* The id may wrap after its dot: one unbroken "materials.materialCost" stuck out of the card at L on CI's font. */}
-                  <CardLabel>{id.replace('.', '.\u200B')}</CardLabel>
+                  {/* A long id may wrap inside its card: one unbroken "materials.materialCost" stuck out at L on CI's font. */}
+                  <Text style={[cardLabelStyle(t), WRAP_ANYWHERE]}>{id}</Text>
                 </Card>
               ))}
             </View>

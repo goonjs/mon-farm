@@ -16,8 +16,7 @@ describe('IconCatalogScreen', () => {
     expect(ids).toHaveLength(72);
     for (const id of ids) {
       expect(screen.getByTestId(`dev-icon-${id}`)).toBeTruthy();
-      // The id shows with a break point after its dot, so a long one wraps inside its card (CI's font, size L).
-      expect(screen.getByText(id.replace('.', '.\u200B'))).toBeTruthy();
+      expect(screen.getByText(id)).toBeTruthy();
     }
     expect(UNSAFE_getAllByType(FarmMateArt).map((a) => a.props.id).sort()).toEqual(ids.sort());
   });
