@@ -12,7 +12,7 @@ import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, BottomSheet, CTA, FieldError, MoneyField, RadioCard, TextField } from '../../../ui';
 import { ChoiceChip, ChoiceRow, PayerPicker, SectionLabel } from '../pieces';
-import { TextLink } from './item-sheets';
+import { SoftLink } from './item-sheets';
 
 export function ShopSheet({
   shop,
@@ -137,7 +137,7 @@ export function BillDiscountSheet({
       </CTA>
       {value > 0 ? (
         <View style={{ alignItems: 'center' }}>
-          <TextLink
+          <SoftLink
             testID="ordc-bill-remove"
             onPress={() => {
               onChange(0);
@@ -145,7 +145,7 @@ export function BillDiscountSheet({
             }}
           >
             {msg('ordc.billRemove')}
-          </TextLink>
+          </SoftLink>
         </View>
       ) : null}
     </BottomSheet>

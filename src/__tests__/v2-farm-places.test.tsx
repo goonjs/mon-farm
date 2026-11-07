@@ -198,7 +198,7 @@ describe('สวน — detail, area history, delete (farm mockup 11, 12)', () =
     wrap(<PropertyScreen />);
     await flush();
     expect(within(screen.getByTestId('property-area-now')).getByText('120 ไร่')).toBeTruthy();
-    expect(within(screen.getByTestId('property-planted')).getByText('2554')).toBeTruthy();
+    expect(within(screen.getByTestId('property-planted')).getByText('2554 พ.ศ.')).toBeTruthy();
     expect(within(screen.getByTestId('property-gps')).getByText('ไม่ทราบ')).toBeTruthy();
 
     fireEvent.press(screen.getByTestId('change-area'));
@@ -654,5 +654,30 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     expect(state.points.map((p) => p.name).sort()).toEqual(['จุด 1', 'จุด 2']);
     expect(state.assignments.filter((a) => a.tapperId === nat.id)).toHaveLength(1);
     expect(mockRouter.back).toHaveBeenCalled();
+  });
+});
+
+describe('edit forms wait for the record (e2e v2-farm flake, 2026-11-07)', () => {
+  // The record arrives a tick after the form mounts. A field shown before that is empty, and the first
+  // render with the record writes the stored value over anything typed meanwhile — so no field until then.
+  const placesStore = () => (jest.requireMock('../store/people') as { peopleStore: import('../store/master-store').MasterStore }).peopleStore;
+
+  it('the farm form shows no name field until the farm has loaded, then the stored name', async () => {
+    const farm = await placesStore().addProperty({ name: 'สวนจันทเขลม', crop: 'rubber' });
+    mockParams.current = { id: farm.id, edit: '1' };
+    wrap(<PropertyScreen />);
+    expect(screen.queryByTestId('property-name')).toBeNull();
+    await flush();
+    expect(screen.getByTestId('property-name').props.value).toBe('สวนจันทเขลม');
+  });
+
+  it('the point form shows no name field until the point has loaded, then the stored name', async () => {
+    const farm = await placesStore().addProperty({ name: 'สวนจันทเขลม', crop: 'rubber' });
+    const pt = await placesStore().addPoint(farm.id, 'จุด 1');
+    mockParams.current = { id: pt.id, edit: '1' };
+    wrap(<PointScreen />);
+    expect(screen.queryByTestId('point-name')).toBeNull();
+    await flush();
+    expect(screen.getByTestId('point-name').props.value).toBe('จุด 1');
   });
 });

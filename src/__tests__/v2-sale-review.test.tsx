@@ -6,7 +6,7 @@
  * pair is in the log, and a negative skew keeps its sign.
  */
 
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactElement, ReactNode } from 'react';
 
 import type { SaleEvent, SysPayload } from '../core/types';
@@ -185,6 +185,9 @@ describe('#11 the counter needs a passed check (canCount)', () => {
     await inSale(<CounterScreen />, { point: farm.a[0] });
     expect(screen.queryByTestId('hold')).toBeNull();
     expect(screen.getByTestId('not-ready')).toBeTruthy();
+    // Owner rule 2026-11-06: "เริ่มชั่ง" is a full-width button, not a round one in the middle of the card.
+    expect(screen.getByTestId('to-check-row').props.style).toMatchObject({ alignSelf: 'stretch' });
+    expect(within(screen.getByTestId('to-check-row')).getByTestId('to-check')).toBeTruthy();
   });
 });
 

@@ -70,6 +70,9 @@ test('empty sale, a filter that finds nothing, and numbers that repeat or skip',
 
 test('a keyboard undo asks first; the undo button shows the hold in progress; the largest text still fits', async ({ page }) => {
   const id = on(page);
+  // The hold is timed by the page clock (700 ms). Held "part way" with the real clock, a slow screenshot in the
+  // middle of the hold let it run out and undo (about 1 in 5 on a busy machine) — so the hold runs on a paused clock.
+  await page.clock.install();
   await sale(page, 'h-undo', (b) => b.acceptAt('a1', 1).acceptAt('a1', 2));
   await page.goto('/v2/sale/h-undo/counter?point=a1');
   await expect(id('current-no')).toHaveText(/เข่งถัดไป 3$/);
@@ -78,10 +81,13 @@ test('a keyboard undo asks first; the undo button shows the hold in progress; th
   // Held part way: the line runs along the button, nothing is undone yet.
   const box = (await id('tool-undo').boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  // Paused a little ahead: the clock keeps running until the call lands, and nothing is held yet to jump over.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1_000));
   await page.mouse.down();
-  await page.waitForTimeout(350);
+  await page.clock.runFor(350);
   await shot(page, '8i-undo-holding');
   await page.mouse.up();
+  await page.clock.resume();
   await expect(id('current-no')).toHaveText(/เข่งถัดไป 3$/);
 
   // Enter on the focused button has no hold behind it: it asks first.
