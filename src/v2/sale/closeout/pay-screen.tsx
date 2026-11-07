@@ -397,8 +397,9 @@ function PayBody({ bump }: { bump: () => void }) {
       footer={
         <View testID="pay-footer" style={{ gap: t.space.sm }}>
           {/* Owner 2026-11-04: the buyer sheet (CO-20) opens from this page too; its กลับ comes back here, ticks are events.
-              Owner 2026-11-07: a full-width button just above ปิดการขาย (style C), no "ยังไม่ติ๊ก N รายการ" line — the close button is gated. */}
-          <Button testID="pay-buyer-view" onPress={() => router.push(`/v2/sale/${saleId}/buyer-view?recorded=1` as Href)}>
+              Owner 2026-11-07: a full-width button just above ปิดการขาย (style C), the same large size as on the cash page;
+              no "ยังไม่ติ๊ก N รายการ" line (ticks were never required to close: canClose is the tally, rounding and locks). */}
+          <Button testID="pay-buyer-view" size="large" onPress={() => router.push(`/v2/sale/${saleId}/buyer-view?recorded=1` as Href)}>
             {msg('cop.showBuyer')}
           </Button>
           {closed ? null : (

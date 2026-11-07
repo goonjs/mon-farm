@@ -430,7 +430,7 @@ export function TallyBar({ tally, onSources }: { tally: Tally; onSources: () => 
 export function SourcesPill({ testID, label, onPress }: { testID: string; label: string; onPress: () => void }) {
   const t = useTheme();
   return (
-    <Pressable testID={testID} accessibilityRole="link" accessibilityLabel={label} onPress={onPress} style={{ minHeight: t.target.min, justifyContent: 'center', paddingHorizontal: t.space.sm }}>
+    <Pressable testID={testID} accessibilityRole="link" onPress={onPress} style={{ minHeight: t.target.min, justifyContent: 'center', paddingHorizontal: t.space.sm }}>
       <View style={{ ...row, gap: t.space.xxs }}>
         <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.action, textDecorationLine: 'underline', lineHeight: lh(t.font.size.bodyLg) }}>{label}</AppText>
         <ChevronRight color={t.color.action} size={7} />

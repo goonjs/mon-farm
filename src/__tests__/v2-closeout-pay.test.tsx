@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactElement, ReactNode } from 'react';
 
 import { LogBuilder } from '../core/fixtures';
@@ -150,6 +150,8 @@ describe('CO-10 · story example (A9): โอนรวม + ให้คนก�
   it('ticks stay open after close; the close button is gone', async () => {
     await inSale(S, <CloseoutPayScreen />);
     expect(screen.queryByTestId('close-sale')).toBeNull();
+    // the buyer view stays, alone in the footer
+    expect(within(last('pay-footer')).getByTestId('pay-buyer-view')).toBeTruthy();
     expect(last(`tick-${farm.red}`).props.accessibilityState).toMatchObject({ disabled: false });
     await press(`tick-${farm.red}`);
     expect(last(`tick-${farm.red}`).props.accessibilityState).toMatchObject({ checked: true });
@@ -179,6 +181,7 @@ describe('A9 look: the transfer split breaks before "↘ คืนหนี้" 
     const flat = (n: { props: { style?: unknown } }) => ([n.props.style].flat(Infinity).filter(Boolean) as object[]).reduce((a: object, x: object) => ({ ...a, ...x }), {}) as { backgroundColor?: string; textDecorationLine?: string };
     expect(link.findAll((n) => flat(n).backgroundColor === tokens.color.light.actionSunk)).toHaveLength(0);
     expect(link.findAll((n) => flat(n).textDecorationLine === 'underline').length).toBeGreaterThan(0);
+    expect(link.props.accessibilityRole).toBe('link');
   });
 
   it('ให้คนรับซื้อดู opens the buyer sheet from this page too: a full-width button just above ปิดการขาย (owner 2026-11-04, 2026-11-07)', async () => {

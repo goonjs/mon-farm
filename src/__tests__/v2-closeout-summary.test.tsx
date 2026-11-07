@@ -216,6 +216,7 @@ describe('ดูที่มา on the summary is an underlined link, not a pill
     const flat = (n: { props: { style?: unknown } }) => ([n.props.style].flat(Infinity).filter(Boolean) as object[]).reduce((a: object, x: object) => ({ ...a, ...x }), {}) as { backgroundColor?: string; textDecorationLine?: string };
     expect(link.findAll((n) => flat(n).backgroundColor === tokens.color.light.actionSunk)).toHaveLength(0);
     expect(link.findAll((n) => flat(n).textDecorationLine === 'underline').length).toBeGreaterThan(0);
+    expect(link.props.accessibilityRole).toBe('link');
   });
 });
 
