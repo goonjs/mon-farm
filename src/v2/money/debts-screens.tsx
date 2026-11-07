@@ -17,7 +17,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { projectDebts, type DebtAccount, type HistoryLine } from '../../core/finance/debts';
 import { paymentStatus } from '../../core/finance/payments';
 import { buyerOwes, PENDING_REPAY_SINCE, pendingRepayLines, type PendingHow } from '../../core/finance/pending-repays';
-import { formatSatang } from '../../core/finance/money';
+import { formatDate, formatSatang } from '../../core/finance/money';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
 import { useSaleCounts } from '../../finance/use-live-sales';
@@ -46,6 +46,7 @@ import {
   Plus,
   ReceiptIcon,
   ScreenHeader,
+  TextLink,
 } from '../../ui';
 import { V2_HOME } from '../routes';
 import { orderHref } from './order-routes';
@@ -294,47 +295,61 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
         <Card style={{ gap: 0, paddingVertical: t.space.xs }}>
           {lines.map((h, i) => (
             <View key={h.id} testID={`debt-line-${h.id}`} style={{ gap: 2, paddingVertical: t.space.sm, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint, opacity: h.deleted ? t.opacity.muted : 1 }}>
-              <View style={{ flexDirection: 'row' }}>
-                <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, textDecorationLine: h.deleted ? 'line-through' : 'none' }}>
-                  {instOf(h) && plan?.kind === 'installments' ? msg('debt.inst.hist', { n: instOf(h)!, m: plan.count }) : msg(`debt.kind.${h.type}`)}
-                </AppText>
-                <AppText style={{ fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{`${h.signedSatang >= 0 ? '+' : MINUS}${formatSatang(Math.abs(h.signedSatang))}`}</AppText>
-              </View>
-              <FactRow icon={(c) => <CalendarIcon color={c} size={14} />}>
-                <Day iso={h.date} />
-              </FactRow>
-              {h.saleId ? <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>{`${msg('debt.history.sale')} ${h.saleId}`}</FactRow> : null}
-              {h.type === 'loan' && h.creditor.name ? <FactRow icon={(c) => <PersonIcon color={c} size={14} />}>{msg('debt.history.lender', { name: h.creditor.name })}</FactRow> : null}
-              {h.deleted ? <AppText variant="caption">{msg('debt.history.voided')}</AppText> : null}
               {(() => {
-                const r = routeOf(h);
-                if (!r) return null;
-                return (
-                  <Pressable
-                    testID={`rp-hist-${h.id}`}
-                    accessibilityRole="button"
-                    onPress={() => setRepay({ line: r.line, ticked: true })}
-                    style={{ alignSelf: 'flex-start', minHeight: t.target.min, justifyContent: 'center' }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xxs, borderRadius: t.radius.pill, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs, backgroundColor: r.short ? t.color.warnSunk : t.color.acceptSunk }}>
-                      {r.short ? null : <Check color={t.color.accept} size={10} />}
-                      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: r.short ? t.color.warn : t.color.accept }}>
-                        {`${r.short ? msg('rp.hist.short', { amount: formatSatang(r.short) }) : msg('rp.hist.received')} ›`}
-                      </Text>
+                const src = sourceOf(h);
+                const facts = (
+                  <>
+                    <View style={{ flexDirection: 'row' }}>
+                      <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, textDecorationLine: h.deleted ? 'line-through' : 'none' }}>
+                        {instOf(h) && plan?.kind === 'installments' ? msg('debt.inst.hist', { n: instOf(h)!, m: plan.count }) : msg(`debt.kind.${h.type}`)}
+                      </AppText>
+                      <AppText style={{ fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{`${h.signedSatang >= 0 ? '+' : MINUS}${formatSatang(Math.abs(h.signedSatang))}`}</AppText>
+                    </View>
+                    <FactRow icon={(c) => <CalendarIcon color={c} size={14} />}>
+                      <Day iso={h.date} />
+                    </FactRow>
+                    {h.saleId ? <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>{`${msg('debt.history.sale')} ${h.saleId}`}</FactRow> : null}
+                    {h.type === 'loan' && h.creditor.name ? <FactRow icon={(c) => <PersonIcon color={c} size={14} />}>{msg('debt.history.lender', { name: h.creditor.name })}</FactRow> : null}
+                    {h.deleted ? <AppText variant="caption">{msg('debt.history.voided')}</AppText> : null}
+                    {(() => {
+                      const r = routeOf(h);
+                      if (!r) return null;
+                      return (
+                        <Pressable
+                          testID={`rp-hist-${h.id}`}
+                          accessibilityRole="button"
+                          onPress={() => setRepay({ line: r.line, ticked: true })}
+                          style={{ alignSelf: 'flex-start', minHeight: t.target.min, justifyContent: 'center' }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xxs, borderRadius: t.radius.pill, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs, backgroundColor: r.short ? t.color.warnSunk : t.color.acceptSunk }}>
+                            {r.short ? null : <Check color={t.color.accept} size={10} />}
+                            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: r.short ? t.color.warn : t.color.accept }}>
+                              {`${r.short ? msg('rp.hist.short', { amount: formatSatang(r.short) }) : msg('rp.hist.received')} ›`}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })()}
+                  </>
+                );
+                // Owner 2026-11-07 (style A): a share debt's line itself opens its expense — void, restore or edit it there (E11-S10).
+                return src ? (
+                  <Pressable testID={`debt-open-${h.id}`} accessibilityRole="button" accessibilityLabel={[msg('debt.history.openExpense'), msg(`debt.kind.${h.type}`), `${h.signedSatang >= 0 ? '+' : MINUS}${formatSatang(Math.abs(h.signedSatang))}`, formatDate(h.date), h.deleted ? msg('debt.history.voided') : ''].filter(Boolean).join(', ')} onPress={() => openSource(src)} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.min }}>
+                    <View style={{ flex: 1, minWidth: 0, gap: 2 }}>{facts}</View>
+                    <View testID={`debt-open-${h.id}-chevron`} aria-hidden>
+                      <ChevronRight color={t.color.inkFaint} />
                     </View>
                   </Pressable>
+                ) : (
+                  <>
+                    {facts}
+                    {/* Owner 2026-11-07: void is a red underlined link (style F), restore a blue one (style B). */}
+                    <TextLink testID={`debt-void-${h.id}`} tone={h.deleted ? 'action' : 'reject'} onPress={() => void voidLine(h, !h.deleted)}>
+                      {h.deleted ? msg('debt.history.restore') : msg('debt.history.void')}
+                    </TextLink>
+                  </>
                 );
               })()}
-              <View style={{ alignItems: 'flex-start' }}>
-                {sourceOf(h) ? (
-                  // A share debt is a projection of its expense: void, restore or edit it there (E11-S10).
-                  <Button testID={`debt-open-${h.id}`} variant="ghost" onPress={() => openSource(sourceOf(h)!)}>{msg('debt.history.openExpense')}</Button>
-                ) : (
-                  <Button testID={`debt-void-${h.id}`} variant={h.deleted ? 'ghost' : 'destructive'} onPress={() => void voidLine(h, !h.deleted)}>
-                    {h.deleted ? msg('debt.history.restore') : msg('debt.history.void')}
-                  </Button>
-                )}
-              </View>
             </View>
           ))}
         </Card>

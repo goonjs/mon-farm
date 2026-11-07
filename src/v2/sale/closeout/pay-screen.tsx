@@ -194,7 +194,6 @@ function PayBody({ bump }: { bump: () => void }) {
   const pendingCash = (wid: string) => pending.filter((p) => p.how === 'cash' && p.workerId === wid).reduce((a, p) => a + p.satang, 0);
   const transferOn = plan.workers.filter((w) => w.route === 'transfer-with-owner' && w.routeSatang > 0);
   const repayName = transferOn.length === 1 ? transferOn[0].name : '';
-  const left = payees.filter((p) => !st(p.id).done).length;
   const src = sourcesSheet(plan, s.grossSatang, s.ownerSatang);
   // Today's transfer is known here, so the buyer owes against it (review 2026-11-01); cancelled sales owe nothing.
   const owes = buyerOwes(events, counts, { ownerTransfer: (id) => (id === saleId ? money.ownerTransferSatang : undefined) }).find((o) => o.saleId === saleId);
@@ -396,10 +395,13 @@ function PayBody({ bump }: { bump: () => void }) {
       fallback={'/v2/sales' as Href}
       testID="payment"
       footer={
-        <View style={{ gap: t.space.sm }}>
-          <AppText testID="pay-left" variant="bodySm" style={{ textAlign: 'center' }}>
-            {left ? msg('cop.untickedN', { n: left }) : msg('cop.allTicked')}
-          </AppText>
+        <View testID="pay-footer" style={{ gap: t.space.sm }}>
+          {/* Owner 2026-11-04: the buyer sheet (CO-20) opens from this page too; its กลับ comes back here, ticks are events.
+              Owner 2026-11-07: a full-width button just above ปิดการขาย (style C), the same large size as on the cash page;
+              no "ยังไม่ติ๊ก N รายการ" line (ticks were never required to close: canClose is the tally, rounding and locks). */}
+          <Button testID="pay-buyer-view" size="large" onPress={() => router.push(`/v2/sale/${saleId}/buyer-view?recorded=1` as Href)}>
+            {msg('cop.showBuyer')}
+          </Button>
           {closed ? null : (
             <Button testID="close-sale" size="large" variant="primary" disabled={!canClose} icon={(c) => <Check color={c} size={14} />} onPress={closeSale}>
               {msg('cop.closeSale')}
@@ -473,10 +475,6 @@ function PayBody({ bump }: { bump: () => void }) {
           {piles.ok ? msg('cop.tallyOk') : msg('cop.tallyOff', { how: msg(piles.diffSatang < 0 ? 'cop.short' : 'cop.over'), amount: baht(Math.abs(piles.diffSatang)) })}
         </AppText>
         <SourcesPill testID="pay-sources-open" label={msg('cop.sources')} onPress={() => setSources(true)} />
-      </View>
-      {/* Owner 2026-11-04: the buyer sheet (CO-20) opens from this page too; its กลับ comes back here, ticks are events. */}
-      <View style={{ alignItems: 'flex-end' }}>
-        <SourcesPill testID="pay-buyer-view" label={msg('cop.showBuyer')} onPress={() => router.push(`/v2/sale/${saleId}/buyer-view?recorded=1` as Href)} />
       </View>
       {conflicts.length ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.tickConflict')} lines={[msg('v2s.tickConflictLine')]} testID="pay-conflict" /> : null}
       {overBanner ? <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} title={msg('v2s.overTitle')} lines={[msg('v2s.overLine')]} testID="pay-over" /> : null}

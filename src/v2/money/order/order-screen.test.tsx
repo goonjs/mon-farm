@@ -433,4 +433,18 @@ describe('order capture screen (E11-S11)', () => {
     press('ordc-item-done');
     expect(screen.getAllByTestId(/^ordc-row-/)).toHaveLength(1);
   });
+
+  it('the product card itself changes the product: whole card, a chevron, no round "เปลี่ยน" button (owner rule 2026-11-06)', async () => {
+    wrap(<OrderScreen />);
+    await flush();
+    await addNewFert('ปุ๋ยผิด', ['2'], ['5', '0', '0']);
+    fireEvent.press(screen.getAllByTestId(/^ordc-row-/)[0]);
+    const card = screen.getByTestId('ordc-change');
+    expect(within(card).getByTestId('ordc-item-name')).toBeTruthy();
+    expect(within(card).getByTestId('ordc-change-chevron', { includeHiddenElements: true })).toBeTruthy();
+    expect(within(card).queryByText('เปลี่ยน')).toBeNull();
+    expect(card.props.accessibilityLabel).toMatch(/^เปลี่ยน ปุ๋ยผิด, /); // the second line (type, kg per sack) is read too
+    press('ordc-change');
+    expect(screen.getByTestId(`ordc-pick-option|${fertOptionId('formula', 'ดีเกลือ')}`)).toBeTruthy();
+  });
 });
