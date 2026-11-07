@@ -17,15 +17,15 @@ import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
 import { farmSection, SALE_START, saleHref, sectionHref } from './routes';
 import { useMaster, useMounted } from './farm/pieces';
 import { HomeCover } from './home-cover';
+import { KnowRow, useSaleLineText } from './know-row';
 import { ORDER_NEW, orderHref } from './money/order-routes';
 import { loadHomeSales } from './sale/open-sale';
 import { useRepayHome, type OwesRow } from './home-repay';
 import { groupOrders, missingDetails } from '../core/finance/fert-order';
 import { owedByPerson, payableSatang } from '../core/finance/ledger';
 import { formatDate, formatSatang, todayIso } from '../core/finance/money';
-import type { HomeSales, SaleLine } from '../core/home';
-import { filterPeople, formatThaiDate, formatThaiDay } from '../core/master';
-import { formatKg } from '../core/settle';
+import type { HomeSales } from '../core/home';
+import { filterPeople, formatThaiDay } from '../core/master';
 import { useFinance } from '../finance/use-finance';
 import { useI18n, useT } from '../i18n';
 import { useSyncStatus } from '../sync/use-sync-status';
@@ -103,10 +103,7 @@ export function V2Home() {
   const committedNewest = orders.committed[0];
   const zoneNewest = orders.zoneItems.reduce<(typeof orders.zoneItems)[number] | undefined>((a, x) => (!a || x.date > a.date ? x : a), undefined);
 
-  const saleLine = (s: SaleLine) =>
-    s.ts === null
-      ? msg('home.saleKg', { kg: formatKg(s.netG) })
-      : msg('home.saleLine', { date: formatThaiDate(s.ts, era), kg: formatKg(s.netG) });
+  const saleLine = useSaleLineText();
 
   const knowRows = [
     sales?.open ? (
@@ -406,47 +403,6 @@ function useNow(): number {
     return () => sub?.remove();
   }, []);
   return now;
-}
-
-/** One "ควรรู้ / ควรจัดการ" row (mockup `.row`): tile, small label, value, facts or a chip, chevron. */
-function KnowRow({
-  testID,
-  tone,
-  icon,
-  label,
-  value,
-  chip,
-  children,
-  to,
-}: {
-  testID: string;
-  tone: TileTone;
-  icon: IconRender;
-  label?: string;
-  value?: string;
-  chip?: React.ReactNode;
-  children?: React.ReactNode;
-  to: Href;
-}) {
-  const t = useTheme();
-  return (
-    <Link href={to} asChild>
-    <Pressable
-      testID={testID}
-      accessibilityRole="link"
-      style={{ minHeight: t.target.min, paddingVertical: t.space.sm, flexDirection: 'row', alignItems: 'center', gap: t.space.md }}
-    >
-      <IconTile tone={tone} icon={icon} />
-      <View style={{ flex: 1, minWidth: 0, gap: t.space.xxs }}>
-        {label ? <Text style={{ ...body(t), color: t.color.inkSoft }}>{label}</Text> : null}
-        {value ? <Text style={{ ...body(t), fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.semibold, fontVariant: ['tabular-nums'] }}>{value}</Text> : null}
-        {chip}
-        {children}
-      </View>
-      <ChevronRight color={t.color.inkFaint} />
-    </Pressable>
-    </Link>
-  );
 }
 
 /** Two per line (summary-lines: more than 2 people go 2 per line). */
