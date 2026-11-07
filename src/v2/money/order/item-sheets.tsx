@@ -288,7 +288,7 @@ export function ItemSheet({
       <Pressable
         testID="ordc-change"
         accessibilityRole="button"
-        accessibilityLabel={`${msg('ordc.change')} ${spec.item}`}
+        accessibilityLabel={`${msg('ordc.change')} ${spec.item}${sub ? `, ${sub}` : ''}`}
         onPress={() => onChangeProduct(m)}
         style={[cardStyle(t), { minHeight: t.target.comfortable, flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md }]}
       >
@@ -298,7 +298,7 @@ export function ItemSheet({
           {sub ? <AppText variant="bodySm">{sub}</AppText> : null}
         </View>
         <View testID="ordc-change-chevron" aria-hidden>
-          <ChevronRight color={t.color.action} />
+          <ChevronRight color={t.color.inkFaint} />
         </View>
       </Pressable>
       <MoneyBlock

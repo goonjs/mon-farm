@@ -441,7 +441,7 @@ describe('order capture screen (E11-S11)', () => {
     expect(within(card).getByTestId('ordc-item-name')).toBeTruthy();
     expect(within(card).getByTestId('ordc-change-chevron', { includeHiddenElements: true })).toBeTruthy();
     expect(within(card).queryByText('เปลี่ยน')).toBeNull();
-    expect(card.props.accessibilityLabel).toBe('เปลี่ยน ปุ๋ยผิด');
+    expect(card.props.accessibilityLabel).toMatch(/^เปลี่ยน ปุ๋ยผิด, /); // the second line (type, kg per sack) is read too
     press('ordc-change');
     expect(screen.getByTestId(`ordc-pick-option|${fertOptionId('formula', 'ดีเกลือ')}`)).toBeTruthy();
   });
