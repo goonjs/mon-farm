@@ -348,13 +348,13 @@ export function ChipWrap({ children, testID }: { children: ReactNode; testID?: s
 /**
  * A row that is itself the button, a chevron on the right (style A of the
  * round-button review, owner 2026-11-07): replaces a round outlined word
- * ("แก้", "เปลี่ยนพื้นที่") at a row's or the header's end. Its label names
- * the action for screen readers; the children say what the row shows.
+ * ("แก้", "เปลี่ยนพื้นที่") at a row's or the header's end. Screen readers
+ * read what the row shows (its children); `label` names the action as a hint.
  */
 export function TapRow({ testID, label, onPress, children }: { testID: string; label: string; onPress: () => void; children: ReactNode }) {
   const t = useTheme();
   return (
-    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={{ minHeight: t.target.min, flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
+    <Pressable testID={testID} accessibilityRole="button" accessibilityHint={label} onPress={onPress} style={{ minHeight: t.target.min, flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
       <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>{children}</View>
       <View testID={`${testID}-chevron`} aria-hidden>
         <ChevronRight color={t.color.inkFaint} />
@@ -473,7 +473,7 @@ export function Stepper({
   const t = useTheme();
   const msg = useT();
   const soft = look === 'soft';
-  const round = soft
+  const box = soft
     ? ({ width: t.target.min, height: t.target.min, borderRadius: t.radius.pill, backgroundColor: t.color.actionSunk, alignItems: 'center', justifyContent: 'center' } as const)
     : ({
         width: t.target.min,
@@ -488,7 +488,7 @@ export function Stepper({
   const sign = soft ? t.color.action : t.color.ink;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
-      <Pressable testID={`${testID}-less`} accessibilityRole="button" accessibilityLabel={`${msg('saleSettings.less')} ${label}`} onPress={onLess} style={round}>
+      <Pressable testID={`${testID}-less`} accessibilityRole="button" accessibilityLabel={`${msg('saleSettings.less')} ${label}`} onPress={onLess} style={box}>
         <Minus color={sign} size={16} />
       </Pressable>
       <View
@@ -511,7 +511,7 @@ export function Stepper({
         </Text>
         {unit ? <AppText variant="bodySm">{unit}</AppText> : null}
       </View>
-      <Pressable testID={`${testID}-more`} accessibilityRole="button" accessibilityLabel={`${msg('saleSettings.more')} ${label}`} onPress={onMore} style={round}>
+      <Pressable testID={`${testID}-more`} accessibilityRole="button" accessibilityLabel={`${msg('saleSettings.more')} ${label}`} onPress={onMore} style={box}>
         <Plus color={sign} size={16} />
       </Pressable>
     </View>

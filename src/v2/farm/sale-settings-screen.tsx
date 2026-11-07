@@ -153,9 +153,15 @@ export function SaleSettingsScreen() {
                   <Chip tone="accept" label={msg('saleSettings.default')} />
                 ) : (
                   // Owner 2026-11-07 (style B): the word only, underlined, no arrow.
-                  <TextLink testID={`make-default-${p.pairId}`} onPress={() => void save(() => peopleStore.setDefaultPair(p.pairId))}>
-                    {msg('saleSettings.makeDefault')}
-                  </TextLink>
+                  <View style={{ justifyContent: 'center' }}>
+                    <TextLink
+                      testID={`make-default-${p.pairId}`}
+                      accessibilityLabel={`${msg('saleSettings.makeDefault')} ${msg('saleSettings.net')} ${p.netG / 1000} ${msg('common.kg')}, ${msg('v2f.basketEmpty')} ${p.basketG / 1000} ${msg('common.kg')}`}
+                      onPress={() => void save(() => peopleStore.setDefaultPair(p.pairId))}
+                    >
+                      {msg('saleSettings.makeDefault')}
+                    </TextLink>
+                  </View>
                 )}
               </View>
             ))}

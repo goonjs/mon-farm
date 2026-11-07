@@ -103,7 +103,9 @@ describe('farm screens: no round outlined word buttons (owner per-button answers
 
     expect(within(screen.getByTestId('change-area')).getByText('พื้นที่ตอนนี้')).toBeTruthy();
     expect(chevronIn('change-area')).toBeTruthy();
-    expect(screen.getByTestId('change-area').props.accessibilityLabel).toMatch(/^เปลี่ยนพื้นที่/);
+    expect(screen.getByTestId('change-area').props.accessibilityHint).toMatch(/^เปลี่ยนพื้นที่/);
+    // the card's content is read, not replaced by a label
+    expect(screen.getByTestId('property-edit').props.accessibilityLabel).toBeUndefined();
 
     dashedRow('add-point');
     underlined('property-delete', c.reject);
@@ -150,6 +152,7 @@ describe('farm screens: no round outlined word buttons (owner per-button answers
     await flush();
     underlined('make-default-builtin-60', c.action);
     expect(screen.getByTestId('make-default-builtin-60')).not.toHaveTextContent(/›/);
+    expect(screen.getByTestId('make-default-builtin-60').props.accessibilityLabel).toMatch(/^ใช้เป็นค่าเริ่มต้น .*60/);
     dashedRow('add-pair');
     const less = flat(screen.getByTestId('dup-less').props.style);
     expect(less.borderRadius).toBe(tokens.radius.md);
