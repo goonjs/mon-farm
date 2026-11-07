@@ -47,6 +47,7 @@ export function FitAmount({ satang, testID, max }: { satang: number; testID?: st
   const key = text;
   // What this text last drew, at which size (the line and the text lay out in either order).
   const [drawn, setDrawn] = useState<{ key: string; width: number; size: number } | null>(null);
+  // text-size: fixed — the size starts from the theme and only shrinks to fit the width; 8 px is the floor.
   const size = drawn?.key === key && width > 0 ? (drawn.width > width + 0.5 ? Math.max(8, Math.floor((drawn.size * width) / drawn.width)) : drawn.size) : guess;
   const native = Platform.OS !== 'web';
   const onDrawn = (w: number) => setDrawn({ key, width: w, size });
