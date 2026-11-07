@@ -457,7 +457,7 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
             <AppText variant="bodySm">{msg('propertyDetail.planted')}</AppText>
             {property.plantedYearBe ? value(plantedText(property.plantedYearBe, era, msg)) : <UnknownPill />}
           </View>
-          <View style={{ flex: 1, gap: t.space.xxs }}>
+          <View testID="property-age" style={{ flex: 1, gap: t.space.xxs }}>
             <AppText variant="bodySm">{msg('propertyDetail.age')}</AppText>
             {age !== null ? value(msg('propertyDetail.years', { n: age })) : <UnknownPill />}
           </View>

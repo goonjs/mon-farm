@@ -393,6 +393,32 @@ describe('the farm detail shows the planted year in the device era, like the for
     expect(planted().getByText('2011 ค.ศ.')).toBeTruthy();
     expect(planted().queryByText(/2554/)).toBeNull();
   });
+
+  it('switching the era moves the detail with it; the age stays the same', async () => {
+    const farm = await master().addProperty({ name: 'สวน', crop: 'rubber', plantedYearBe: 2554 });
+    mockParams.current = { id: farm.id };
+    wrap(
+      <>
+        <EraSwitch />
+        <PropertyScreen />
+      </>,
+    );
+    await flush();
+    const age = () => within(screen.getByTestId('property-age')).getByText(/ปี$/).props.children;
+    expect(planted().getByText('2554 พ.ศ.')).toBeTruthy();
+    const before = age();
+    fireEvent.press(screen.getByTestId('era-switch'));
+    expect(planted().getByText('2011 ค.ศ.')).toBeTruthy();
+    expect(age()).toBe(before);
+  });
+
+  it('English: 2554 BE', async () => {
+    const farm = await master().addProperty({ name: 'Farm', crop: 'rubber', plantedYearBe: 2554 });
+    mockParams.current = { id: farm.id };
+    wrap(<PropertyScreen />, { locale: 'en' });
+    await flush();
+    expect(planted().getByText('2554 BE')).toBeTruthy();
+  });
 });
 
 describe('row 15: the decimal pad is in the change-area sheet itself (NP-12)', () => {
