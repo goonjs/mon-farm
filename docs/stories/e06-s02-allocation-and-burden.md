@@ -1,6 +1,6 @@
 # Story E06-S02: แบ่งกระสอบให้คนกรีด + ภาระ 50/50
 
-Status: Draft
+Status: Superseded (D-89, 2026-11-06) — การซื้อ → E11-S11/S16 · การแบ่ง → E16-S03
 
 ## Context
 
