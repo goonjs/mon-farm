@@ -39,4 +39,5 @@ export { ScrollCue } from './scroll-cue';
 export { ScreenHeader, type BackAction, type HeaderAction } from './screen-header';
 export { SyncPill } from './sync-pill';
 export { TextField } from './text-field';
+export { TextLink } from './text-link';
 export { AppText, typeStyle, TYPE_VARIANTS, type TypeVariant } from './type';

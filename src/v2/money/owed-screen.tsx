@@ -19,7 +19,7 @@ import { useFinance } from '../../finance/use-finance';
 import { useT } from '../../i18n';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, Button, CalendarIcon, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, IconTile, PersonIcon, PinnedActions, personArt, ReceiptIcon, ScreenHeader } from '../../ui';
+import { AppText, Button, CalendarIcon, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, IconTile, PersonIcon, PinnedActions, personArt, ReceiptIcon, ScreenHeader, TextLink } from '../../ui';
 import { useMaster } from '../farm/pieces';
 import { V2_HOME } from '../routes';
 import { HalfDot } from './expenses-screen';
@@ -125,6 +125,8 @@ function Person({
   const flagged = o.items.some((i) => i.status === 'overpaid');
   const openItems = o.items.filter((i) => i.remainingSatang > 0).length;
   const atSale = o.items.flatMap((i) => i.repayments).find((r) => r.saleId);
+  // One repayment can cover several items: list each once.
+  const repayments = [...new Map(o.items.flatMap((i) => i.repayments).map((r) => [r.id, r])).values()];
 
   return (
     <View testID={`owed-${o.payer.id}`} style={{ borderTopWidth: first ? 0 : t.border.hair, borderTopColor: t.color.ruleFaint, paddingVertical: t.space.sm, gap: t.space.sm }}>
@@ -169,8 +171,7 @@ function Person({
                 </Text>
               </View>
               {r.repayments.map((p) => (
-                <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
-                  <AppText variant="bodySm" style={{ flex: 1 }}>
+                  <AppText key={p.id} variant="bodySm">
                     {msg('fin.owed.repayment', {
                       amount: formatSatang(p.allocations.filter((a) => a.expenseId === r.expenseId).reduce((s, a) => s + a.satang, 0)),
                       date: formatDate(p.date),
@@ -178,8 +179,6 @@ function Person({
                       to: p.to.name,
                     })}
                   </AppText>
-                  <Button testID={`repayment-void-${p.id}`} variant="destructive" onPress={() => void onDelete(p, true)}>{msg('fin.owed.repaymentDelete')}</Button>
-                </View>
               ))}
             </View>
           ))}
@@ -188,6 +187,12 @@ function Person({
               {msg('fin.repay.title')}
             </Button>
           ) : null}
+          {/* Owner 2026-11-07: "ลบการคืน" is a red underlined link under บันทึกการคืน, left-aligned (style F) — one per repayment, named when there are several. */}
+          {repayments.map((p, _, all) => (
+            <TextLink key={p.id} testID={`repayment-void-${p.id}`} tone="reject" onPress={() => void onDelete(p, true)}>
+              {all.length > 1 ? `${msg('fin.owed.repaymentDelete')} ${formatSatang(p.amountSatang)} · ${formatDate(p.date)}` : msg('fin.owed.repaymentDelete')}
+            </TextLink>
+          ))}
         </View>
       ) : null}
     </View>

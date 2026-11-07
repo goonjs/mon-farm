@@ -13,7 +13,7 @@ import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, BottomSheet, Check, FieldError, MoneyField, QuantityField, SegmentedControl, TextField } from '../../../ui';
 import { moneyOfLine, moneyOk, moneyProblems, perUnit, withGross, withQty, withUnitPrice, type ItemMoney } from '../order/order-model';
-import { TextLink } from '../order/item-sheets';
+import { SoftLink } from '../order/item-sheets';
 import { editItemPatch, editItemProblems, itemGross, itemSacks, nameOf, optionRenames, type ItemNameDraft, type OptionWrite } from './tell';
 import { TickCard } from '../pieces';
 import { SolidCTA } from '../order/solid-cta';
@@ -149,10 +149,10 @@ export function EditItemSheet({
         {discountOpen ? (
           <View style={{ gap: t.space.xs }}>
             <MoneyField testID="ordd-edit-discount" label={`${msg('ordc.discountLabel')} (${msg('ordc.optional')})`} satang={m.discount} unit={msg('ordc.baht')} maxSatang={m.gross ?? undefined} words={false} onChange={(v) => setM({ ...m, discount: v })} />
-            <TextLink testID="ordd-edit-discount-remove" onPress={() => { setM({ ...m, discount: 0 }); setDiscountOpen(false); }}>{msg('ordc.discountRemove')}</TextLink>
+            <SoftLink testID="ordd-edit-discount-remove" onPress={() => { setM({ ...m, discount: 0 }); setDiscountOpen(false); }}>{msg('ordc.discountRemove')}</SoftLink>
           </View>
         ) : (
-          <TextLink testID="ordd-edit-discount-link" onPress={() => setDiscountOpen(true)}>{msg('ordc.discountLink')}</TextLink>
+          <SoftLink testID="ordd-edit-discount-link" onPress={() => setDiscountOpen(true)}>{msg('ordc.discountLink')}</SoftLink>
         )}
         {mp.discount || ep.discount ? <FieldError testID="ordd-edit-err-discount">{msg('ordc.err.itemDiscount')}</FieldError> : null}
 
@@ -164,7 +164,7 @@ export function EditItemSheet({
         {failed ? <AppText testID="ordd-edit-failed" style={{ color: t.color.reject }}>{msg('ordd.saveFailed')}</AppText> : null}
         <SolidCTA testID="ordd-edit-save" disabled={blocked && tried} icon={(c) => <Check color={c} />} onPress={() => void save()}>{msg('ordd.hdr.save')}</SolidCTA>
         <View style={{ alignItems: 'center' }}>
-          <TextLink testID="ordd-edit-delete" onPress={onDelete}>{msg('ordd.edit.delete')}</TextLink>
+          <SoftLink testID="ordd-edit-delete" onPress={onDelete}>{msg('ordd.edit.delete')}</SoftLink>
         </View>
       </View>
     </BottomSheet>
