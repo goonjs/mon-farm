@@ -17,6 +17,7 @@ import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
 import { farmSection, SALE_START, saleHref, sectionHref } from './routes';
 import { useMaster, useMounted } from './farm/pieces';
 import { HomeCover } from './home-cover';
+import { KnowRow } from './know-row';
 import { ORDER_NEW, orderHref } from './money/order-routes';
 import { loadHomeSales } from './sale/open-sale';
 import { useRepayHome, type OwesRow } from './home-repay';
@@ -408,46 +409,6 @@ function useNow(): number {
   return now;
 }
 
-/** One "ควรรู้ / ควรจัดการ" row (mockup `.row`): tile, small label, value, facts or a chip, chevron. */
-function KnowRow({
-  testID,
-  tone,
-  icon,
-  label,
-  value,
-  chip,
-  children,
-  to,
-}: {
-  testID: string;
-  tone: TileTone;
-  icon: IconRender;
-  label?: string;
-  value?: string;
-  chip?: React.ReactNode;
-  children?: React.ReactNode;
-  to: Href;
-}) {
-  const t = useTheme();
-  return (
-    <Link href={to} asChild>
-    <Pressable
-      testID={testID}
-      accessibilityRole="link"
-      style={{ minHeight: t.target.min, paddingVertical: t.space.sm, flexDirection: 'row', alignItems: 'center', gap: t.space.md }}
-    >
-      <IconTile tone={tone} icon={icon} />
-      <View style={{ flex: 1, minWidth: 0, gap: t.space.xxs }}>
-        {label ? <Text style={{ ...body(t), color: t.color.inkSoft }}>{label}</Text> : null}
-        {value ? <Text style={{ ...body(t), fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.semibold, fontVariant: ['tabular-nums'] }}>{value}</Text> : null}
-        {chip}
-        {children}
-      </View>
-      <ChevronRight color={t.color.inkFaint} />
-    </Pressable>
-    </Link>
-  );
-}
 
 /** Two per line (summary-lines: more than 2 people go 2 per line). */
 function pairsOf<T>(xs: readonly T[]): T[][] {

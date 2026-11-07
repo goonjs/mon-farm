@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { LogBuilder, readyPile, setUpSale } from './fixtures';
-import { homeSales } from './home';
+import { homeSales, saleLineOf } from './home';
 
 /** A sale with `n` standard baskets in กอง 1 (50 kg net each), started `later` seconds on. */
 function sale(id: string, n: number, later = 0) {
@@ -45,5 +45,16 @@ describe('homeSales — the home rows for sales (flow-v1 screen 3)', () => {
     const gone = sale('s1', 2).remove('s1').build();
     const cancelled = sale('s2', 2).sys({ t: 'sale_status_set', status: 'cancelled' }).build();
     expect(homeSales([{ id: 's1', events: gone }, { id: 's2', events: cancelled }])).toEqual({ open: null, latest: null });
+  });
+});
+
+describe('saleLineOf — one sale as a home row, for the repay sheet card (owner 2026-11-07)', () => {
+  it('is the same line homeSales shows, with whether it counts as closed', () => {
+    const events = sale('s1', 2).build();
+    expect(saleLineOf('s1', events)).toEqual({ line: homeSales([{ id: 's1', events }]).open, closed: false });
+  });
+
+  it('is null for a cancelled sale', () => {
+    expect(saleLineOf('s2', sale('s2', 2).sys({ t: 'sale_status_set', status: 'cancelled' }).build())).toBeNull();
   });
 });
