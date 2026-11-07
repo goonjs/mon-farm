@@ -25,11 +25,13 @@ export async function seedEvents(page: Page, events: readonly SaleEvent[]): Prom
   // the app created the database with its own schema — so the seed never
   // creates it.
   try {
-    await page.getByTestId('sync-pill').first().waitFor({ timeout: 20_000 });
-  } catch (err) {
-    // A rare run opens on the sign-in screen instead (2026-11-07, cause not yet found): say what the page
-    // logged and what the account database held, so the next one explains itself.
-    throw new Error(`seedEvents: the app did not open. ${await openFailure(page, logs)}\n${String(err)}`);
+    // Waits as long as before for the app; the sign-in screen, which never turns into the app on its own, ends
+    // the wait at once. A rare run opens there (2026-11-07, cause not yet found): say what the page logged and
+    // what the account database held, so the next one explains itself.
+    const signIn = page.getByTestId('signin').first().waitFor().then(() => 'sign-in' as const);
+    signIn.catch(() => undefined);
+    const shown = await Promise.race([page.getByTestId('sync-pill').first().waitFor().then(() => 'app' as const), signIn]);
+    if (shown === 'sign-in') throw new Error(`seedEvents: the app opened on the sign-in screen. ${await openFailure(page, logs)}`);
   } finally {
     page.off('console', log);
   }
@@ -121,13 +123,13 @@ export function evidence(page: Page, docsPath: string, options: { fullPage?: boo
   return page.screenshot({ path, ...options });
 }
 
-/** What the page showed, logged and held in the account stores when it did not open (seedEvents). */
+/** What the account stores held and the page logged when it opened on sign-in (seedEvents). Never hangs or throws. */
 async function openFailure(page: Page, logs: string[]): Promise<string> {
-  const screen = (await page.getByTestId('signin').count()) > 0 ? 'sign-in screen' : 'neither app nor sign-in';
   const stored = await page
     .evaluate(
       () =>
         new Promise<string>((resolve) => {
+          setTimeout(() => resolve('database read timed out'), 2_000);
           const open = indexedDB.open('mon-farm-v1');
           open.onupgradeneeded = () => {
             open.transaction?.abort();
@@ -136,16 +138,20 @@ async function openFailure(page: Page, logs: string[]): Promise<string> {
           open.onerror = () => resolve(`open failed: ${String(open.error)}`);
           open.onsuccess = () => {
             const db = open.result;
-            const tx = db.transaction(['meta', 'memberships'], 'readonly');
-            const session = tx.objectStore('meta').get('session');
-            const groups = tx.objectStore('memberships').count();
-            tx.oncomplete = () => {
+            try {
+              const tx = db.transaction(['meta', 'memberships'], 'readonly');
+              const session = tx.objectStore('meta').get('session');
+              const groups = tx.objectStore('memberships').count();
+              tx.oncomplete = () => resolve(`session ${session.result ? 'present' : 'MISSING'}, memberships ${groups.result}`);
+              tx.onerror = tx.onabort = () => resolve(`read failed: ${String(tx.error)}`);
+            } catch (e) {
+              resolve(`read failed: ${String(e)}`);
+            } finally {
               db.close();
-              resolve(`session ${session.result ? 'present' : 'MISSING'}, memberships ${groups.result}`);
-            };
+            }
           };
         }),
     )
     .catch((e) => `database not readable: ${String(e)}`);
-  return `Screen: ${screen}. Database: ${stored}. Console: ${JSON.stringify(logs.slice(-20))}`;
+  return `Database: ${stored}. Console: ${JSON.stringify(logs.slice(-20))}`;
 }
