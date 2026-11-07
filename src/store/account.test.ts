@@ -257,13 +257,17 @@ describe('WebAccountStore — a read that fails once is tried again (harden the 
     const real = proto.transaction;
     let left = times;
     const spy = vi.spyOn(proto, 'transaction').mockImplementation(function (this: IDBDatabase, ...args: Parameters<IDBDatabase['transaction']>) {
-      if (left-- > 0) throw new DOMException('The database connection is closing.', 'InvalidStateError');
+      // The connection really goes away (as when the browser drops it): later calls on this handle fail too.
+      if (left-- > 0) {
+        this.close();
+        throw new DOMException('The database connection is closing.', 'InvalidStateError');
+      }
       return real.apply(this, args);
     });
     return { store, membership, spy };
   }
 
-  it('memberships() reads the groups even when the first read throws', async () => {
+  it('memberships() reads the groups even when the connection was closed under it', async () => {
     const { store, membership, spy } = await failingOnce(1);
     try {
       expect(await store.memberships()).toEqual([membership]);
@@ -284,7 +288,7 @@ describe('WebAccountStore — a read that fails once is tried again (harden the 
     }
   });
 
-  it('user() still reads the session when the first read throws (as before)', async () => {
+  it('user() reads the session even when the connection was closed under it', async () => {
     const { store, spy } = await failingOnce(1);
     try {
       expect(await store.user()).toEqual(somchai);
