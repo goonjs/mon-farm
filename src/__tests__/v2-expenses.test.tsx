@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { ExpenseFormScreen as ExpenseScreen } from '../v2/money/expense-form-screen';
 import { ExpensesScreen } from '../v2/money/expenses-screen';
 import { OwedScreen } from '../v2/money/owed-screen';
+import { tokens } from '../../design/tokens';
 import { RepayScreen } from '../v2/money/repay-screen';
 import { projectFinance } from '../core/finance/ledger';
 import type { ExpenseFields, FinanceEvent } from '../core/finance/types';
@@ -269,6 +270,23 @@ describe('repayment (E11-S03)', () => {
     wrap(<OwedScreen />);
     await flush();
     expect(screen.getByTestId(`owed-amount-${SOMWANG.id}`).props.children).toBe('200.00');
+  });
+
+  it('"ลบการคืน" is a red underlined link under บันทึกการคืน, left-aligned, not a round button at the line end (owner 2026-11-07)', async () => {
+    wrap(<OwedScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId(`owed-open-${SOMWANG.id}`));
+    const card = screen.getByTestId(`owed-${SOMWANG.id}`);
+    const order = card.findAll((n) => typeof n.props.testID === 'string' && n.props.accessibilityRole === 'button' && /^(owed-repay-|repayment-void-)/.test(n.props.testID)).map((n) => n.props.testID as string);
+    const ids = [...new Set(order)];
+    expect(ids[0]).toBe(`owed-repay-${SOMWANG.id}`);
+    expect(ids.slice(1).every((x) => x.startsWith('repayment-void-'))).toBe(true);
+    expect(ids.length).toBeGreaterThan(1);
+    const link = screen.getAllByTestId(/^repayment-void-/)[0];
+    const flat = (st: unknown) => Object.assign({}, ...[st].flat(Infinity).filter(Boolean));
+    expect(flat(link.props.style)).toMatchObject({ alignSelf: 'flex-start' });
+    expect(flat(link.props.style).borderWidth ?? 0).toBe(0);
+    expect(flat(within(link).getByText(/ลบการคืน/).props.style)).toMatchObject({ textDecorationLine: 'underline', color: tokens.color.light.reject });
   });
 });
 

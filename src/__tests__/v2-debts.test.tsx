@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { tokens } from '../../design/tokens';
 import type { ReactNode } from 'react';
 
 import { AddDebtScreen, PayDebtScreen as DebtPaymentScreen } from '../v2/money/debt-forms';
@@ -116,9 +117,14 @@ describe('debt ledger (E06-S03)', () => {
     const payment = screen.getAllByTestId(/^debt-line-/);
     expect(payment).toHaveLength(1);
     const id = payment[0].props.testID.replace('debt-line-', '');
+    // Owner 2026-11-07: void is a red underlined link (style F); restore a blue one (style B) — no round buttons.
+    const flat = (st: unknown) => Object.assign({}, ...[st].flat(Infinity).filter(Boolean));
+    expect(flat(within(screen.getByTestId(`debt-void-${id}`)).getByText('ยกเลิก').props.style)).toMatchObject({ textDecorationLine: 'underline', color: tokens.color.light.reject });
+    expect(flat(screen.getByTestId(`debt-void-${id}`).props.style).borderWidth ?? 0).toBe(0);
     await act(async () => fireEvent.press(screen.getByTestId(`debt-void-${id}`)));
     await flush();
     expect(projectDebts(await mockFinance.load()).get('p-daeng')?.balanceSatang).toBe(200000);
+    expect(flat(within(screen.getByTestId(`debt-void-${id}`)).getByText('กู้คืน').props.style)).toMatchObject({ textDecorationLine: 'underline', color: tokens.color.light.action });
   });
 });
 
@@ -148,7 +154,12 @@ describe('a debt made from an expense share (E11-S10)', () => {
     const id = 'exp-share-1:share:p-som';
     expect(screen.getByTestId(`debt-line-${id}`)).toBeTruthy();
     expect(screen.queryByTestId(`debt-void-${id}`)).toBeNull();
-    fireEvent.press(screen.getByTestId(`debt-open-${id}`));
+    // Owner 2026-11-07 (style A): the line itself opens the expense, a chevron on the right, no round button.
+    const open = screen.getByTestId(`debt-open-${id}`);
+    expect(within(open).getByTestId(`debt-open-${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
+    expect(within(open).queryByText('เปิดรายการค่าใช้จ่าย')).toBeNull();
+    expect(open.props.accessibilityLabel).toMatch(/^เปิดรายการค่าใช้จ่าย/);
+    fireEvent.press(open);
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'exp-share-1' } });
   });
 
