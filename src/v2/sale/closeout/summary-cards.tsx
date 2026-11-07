@@ -426,13 +426,13 @@ export function TallyBar({ tally, onSources }: { tally: Tally; onSources: () => 
   );
 }
 
-/** "ดูที่มา ›" on a light pill inside a 48 target (summary and pay page, A1, A9). */
+/** "ดูที่มา ›" as an underlined link inside a 48 target (summary and pay page, A1, A9). Owner rule 2026-11-06: no pill (style B). */
 export function SourcesPill({ testID, label, onPress }: { testID: string; label: string; onPress: () => void }) {
   const t = useTheme();
   return (
-    <Pressable testID={testID} accessibilityRole="button" onPress={onPress} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
-      <View style={{ ...row, gap: t.space.xxs, backgroundColor: t.color.actionSunk, borderRadius: t.radius.pill, paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
-        <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.action, lineHeight: lh(t.font.size.bodyLg) }}>{label}</AppText>
+    <Pressable testID={testID} accessibilityRole="link" accessibilityLabel={label} onPress={onPress} style={{ minHeight: t.target.min, justifyContent: 'center', paddingHorizontal: t.space.sm }}>
+      <View style={{ ...row, gap: t.space.xxs }}>
+        <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.action, textDecorationLine: 'underline', lineHeight: lh(t.font.size.bodyLg) }}>{label}</AppText>
         <ChevronRight color={t.color.action} size={7} />
       </View>
     </Pressable>
