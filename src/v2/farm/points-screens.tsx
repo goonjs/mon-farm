@@ -220,6 +220,8 @@ function PointForm({ pointId, propertyId }: { pointId: string | null; propertyId
   };
 
   if (pointId && state && !existing) return <NotFound fallback={POINTS} />;
+  // An edit opens before the record has loaded: no field until it has, or what is typed meanwhile is overwritten by the stored value.
+  if (pointId && !existing) return <FarmScreen title={msg('v2f.renamePoint')} fallback={POINTS} testID="point-form" />;
   // `?property=` naming a farm that is missing or deleted: say so, never an orphan point.
   if (!pointId && propertyId && state && !activeProperty(state, propertyId)) return <NotFound fallback={POINTS} />;
 
