@@ -100,6 +100,8 @@ describe('debt ledger (E06-S03)', () => {
     fireEvent.press(screen.getByTestId('debt-pay-amount-done'));
     await act(async () => fireEvent.press(screen.getByTestId('debt-pay-save')));
     expect(screen.getByTestId('debt-pay-over')).toBeTruthy();
+    // while the over-pay question is open, its own two buttons decide: no Save bar
+    expect(screen.queryByTestId('save-bar')).toBeNull();
     await act(async () => fireEvent.press(screen.getByTestId('debt-pay-anyway')));
     await flush();
     const a = projectDebts(await mockFinance.load()).get('p-daeng');

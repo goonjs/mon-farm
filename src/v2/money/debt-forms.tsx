@@ -93,7 +93,7 @@ export function AddDebtScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <ScreenHeader title={msg('debt.add')} subtitle={worker.name} back={{ label: msg('v2.back'), onPress: back, testID: 'debt-add-back' }} sync={sync} />
-      <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
+      <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space.xl }}>
         <View style={{ gap: t.space.sm }}>
           <SectionLabel required>{msg('debt.form.kind').replace(' *', '')}</SectionLabel>
           <SegmentedControl testID="debt-kind" value={kind} onChange={pickKind} options={KINDS.map((k) => ({ value: k, label: msg(`debt.kind.${k}`) }))} />
@@ -213,7 +213,7 @@ export function PayDebtScreen() {
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <ScreenHeader title={msg('debt.pay')} subtitle={worker.name} back={{ label: msg('v2.back'), onPress: back, testID: 'debt-pay-back' }} sync={sync} />
       {fin.events === null ? null : (
-        <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
+        <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space.xl }}>
           <View style={{ gap: t.space.sm }}>
             <SectionLabel>{msg('debt.pay.which')}</SectionLabel>
             {options.map((o) => (
@@ -265,7 +265,7 @@ export function PayDebtScreen() {
           {failed ? <AppText style={{ color: t.color.reject }}>{msg('fin.form.saveFailed')}</AppText> : null}
         </ScrollView>
       )}
-      {(() => { const a = confirmOver ? undefined : { label: msg('fin.form.save'), testID: 'debt-pay-save', disabled: satang <= 0, saving: inFlight.busy, onPress: () => void inFlight.run(() => save(false)) }; return a ? <SaveBar action={a} /> : null; })()}
+      {confirmOver ? null : <SaveBar action={{ label: msg('fin.form.save'), testID: 'debt-pay-save', disabled: satang <= 0, saving: inFlight.busy, onPress: () => void inFlight.run(() => save(false)) }} />}
     </View>
   );
 }

@@ -1,10 +1,11 @@
 /**
- * ActionButton — the one filled pill for Save, in a screen header (right of
- * the sync pill) or a sheet's title row. Its own file so BottomSheet does not
+ * ActionButton — the one filled Save: full width in a form's SaveBar at the
+ * foot of the screen (owner 2026-11-07), or a pill in a sheet's title row. Its own file so BottomSheet does not
  * pull in the header's router import. Disabled and saving are their own
  * states (dashed edge, "กำลังบันทึก"), never a faded copy. Tokens only.
  */
 
+import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { useT } from '../i18n';
@@ -68,11 +69,15 @@ export function ActionButton({ action, wide }: { action: HeaderPrimaryAction; wi
  * SaveBar — a form's Save, pinned full width at the foot of the screen
  * (owner 2026-11-07, style I: no "บันทึก" pill at the header's right).
  */
-export function SaveBar({ action }: { action: HeaderPrimaryAction }) {
+export function SaveBar({ action, secondary }: { action: HeaderPrimaryAction; secondary?: ReactNode }) {
   const t = useTheme();
   return (
-    <View testID="save-bar" style={{ paddingHorizontal: t.layout.screenPaddingX, paddingVertical: t.space.md, backgroundColor: t.color.surface, borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint }}>
-      <ActionButton action={action} wide />
+    <View testID="save-bar" style={{ flexDirection: 'row', alignItems: 'stretch', gap: t.space.sm, paddingHorizontal: t.layout.screenPaddingX, paddingVertical: t.space.md, backgroundColor: t.color.surface, borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint }}>
+      {/* A secondary step (a wizard's back) shares the one bar, left of Save, instead of a second bar above it. */}
+      {secondary ? <View style={{ justifyContent: 'center' }}>{secondary}</View> : null}
+      <View style={{ flex: 1 }}>
+        <ActionButton action={action} wide />
+      </View>
     </View>
   );
 }

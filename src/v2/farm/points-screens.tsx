@@ -665,11 +665,9 @@ export function PointsWizardScreen() {
             {msg('wizard.next')}
           </CTA>
         ) : (
-          <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-            <Button testID="wizard-prev" onPress={() => setPage(1)}>
-              {msg('wizard.prev')}
-            </Button>
-          </View>
+          <Button testID="wizard-prev" size="large" onPress={() => setPage(1)}>
+            {msg('wizard.prev')}
+          </Button>
         )
       }
     >

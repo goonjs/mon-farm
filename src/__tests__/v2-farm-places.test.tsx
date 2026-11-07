@@ -447,8 +447,12 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     fireEvent.press(screen.getByTestId('wizard-next'));
     fireEvent.changeText(screen.getByTestId(`wizard-name-${daeng.id}-0`), 'จุดริมคลอง');
 
+    // page 2: one bar at the foot — ย้อนกลับ left of สร้าง; page 1 has no Save bar
+    expect(within(screen.getByTestId('save-bar')).getByTestId('wizard-prev')).toBeTruthy();
+    expect(within(screen.getByTestId('save-bar')).getByTestId('wizard-create')).toBeTruthy();
     fireEvent.press(screen.getByTestId('wizard-prev'));
     expect(screen.getByTestId('wizard-next')).toBeTruthy();
+    expect(screen.queryByTestId('save-bar')).toBeNull();
     expect(screen.getByTestId(`wizard-count-${daeng.id}-value`).props.children).toBe('1');
     fireEvent.press(screen.getByTestId('wizard-next'));
     expect(screen.getByTestId(`wizard-name-${daeng.id}-0`).props.value).toBe('จุดริมคลอง');

@@ -35,7 +35,8 @@ counter bar), `Num` in `type.tsx`, and `FieldLabel`/`FieldError` in `form.tsx`.
 
 | Component | File | Props (main) |
 |---|---|---|
-| `ScreenHeader` | `src/ui/screen-header.tsx` | `title`, `subtitle?`, `back?: {label, href? \| onPress?, testID?}`, `menu?: {onPress}`, `sync?: SyncStatus \| null`, `right?`, `action?: {label, onPress?, testID?, disabled?, saving?, savingLabel?}` (the Save pill, right of the sync pill) |
+| `ScreenHeader` | `src/ui/screen-header.tsx` | `title`, `subtitle?`, `back?: {label, href? \| onPress?, testID?}`, `menu?: {onPress}`, `sync?: SyncStatus \| null`, `right?` (no Save slot: a form's Save is `SaveBar`) |
+| `SaveBar` | `src/ui/action-button.tsx` | `action: {label, onPress?, testID?, disabled?, saving?, savingLabel?}`, `secondary?` (a back step sharing the bar, left of Save). A form's Save, full width, pinned at the foot (owner 2026-11-07) |
 | `SyncPill` | `src/ui/sync-pill.tsx` | `status: SyncStatus` (shape + word + colour) |
 | `Drawer`, `MenuSection`, `MenuItem` | `src/ui/drawer.tsx` | Drawer `open`, `onClose`; MenuSection `title`; MenuItem `label`, `leading?` (an `IconTile`), `trailing?` (a badge before the chevron), `detail?` or children (one `FactRow` per fact, D-70), `href?`, `onPress?`, `testID?` |
 | `ActionTile` | `src/ui/action-tile.tsx` | `label`, `icon`, `tone?`, `main?` (thick action edge), `href?` \| `onPress?`, `testID?`. The home's three action cards; lay them in a row |
@@ -186,13 +187,19 @@ Tests: `src/__tests__/v2-farm-*.test.tsx`; e2e `e2e/v2-farm.spec.ts` (offline
 add/edit of every kind, reload) and `e2e/v2-store.spec.ts` (IndexedDB, no
 storage warning, two tabs, v0.4 keys).
 
-**Save is in the header (owner 2026-10-10).** The on-screen keyboard covered
-a bottom Save, so every form puts it top right, with the sync pill on its
-left, through `ScreenHeader`'s `action` (disabled, and "กำลังบันทึก" while a
-write is in flight). This covers the farm forms (person, farm, point, share),
-the wizard's "สร้าง", the money forms (expense, repay, debt add and pay) and,
-through `BottomSheet`'s `action`, the sheets that are forms (buyer, new area,
-tapper plan, scale pair). Delete and other secondary actions, and the "add"
+**Save is at the foot, full width (owner 2026-11-07, replacing 2026-10-10).**
+The owner chose (round-button review, style I) to take the filled "บันทึก"
+pill out of the header: every form's Save is `SaveBar`, a full-width button
+pinned under the scroll body (disabled, and "กำลังบันทึก" while a write is in
+flight). This covers the farm forms (person, farm, point, share, tapper plan),
+the wizard's "สร้าง" (its "ย้อนกลับ" shares the bar), and the money forms
+(expense, repay, debt add and pay). The 2026-10-10 reason — the on-screen
+keyboard covered a bottom Save — is met on the web by the viewport's
+`interactive-widget=resizes-content` (the keyboard shrinks the page, the bar
+rides above it); native Android resizes by default. `ScreenHeader` has no Save
+slot any more. Sheets that are forms (buyer, new area, scale pair) keep their
+Save in the sheet's title row through `BottomSheet`'s `action`; they were not
+in the owner's list. Delete and other secondary actions, and the "add"
 buttons on lists, stay pinned at the bottom. The sale screens are not changed
 here.
 

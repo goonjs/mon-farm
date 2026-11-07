@@ -106,7 +106,7 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
   return (
     <>
       {header()}
-      <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
+      <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space.xl }}>
         <View style={{ gap: t.space.sm }}>
           <SectionLabel>{msg('fin.repay.who')}</SectionLabel>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
