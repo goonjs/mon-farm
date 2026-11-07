@@ -290,6 +290,46 @@ describe('repayment (E11-S03)', () => {
   });
 });
 
+describe('"ลบการคืน" links: one per repayment, named when there are several (owner 2026-11-07)', () => {
+  const NOK = { id: 'p-nok', name: 'นก' };
+  const repay = async (amount: string) => {
+    mockParams.current = { payerId: NOK.id };
+    wrap(<RepayScreen />);
+    await flush();
+    typeOnPad('repay-amount', amount);
+    await act(async () => fireEvent.press(screen.getByTestId('repay-save')));
+    await flush();
+    screen.unmount();
+  };
+  beforeAll(async () => {
+    await seedExpense('nk-a', { amountSatang: 30000, date: '2026-09-15', payer: NOK });
+    await seedExpense('nk-b', { amountSatang: 20000, date: '2026-09-22', payer: NOK });
+  });
+
+  it('a repayment over two items is one link; two repayments are named by amount', async () => {
+    await repay('400'); // 300 to nk-a, 100 to nk-b
+    await repay('50');
+    wrap(<OwedScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId(`owed-open-${NOK.id}`));
+    const links = screen.getAllByTestId(/^repayment-void-/);
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveTextContent(/^ลบการคืน 400\.00 · /);
+    expect(links[1]).toHaveTextContent(/^ลบการคืน 50\.00 · /);
+    expect(screen.getByTestId(`owed-repay-${NOK.id}`)).toBeTruthy();
+    screen.unmount();
+  });
+
+  it('fully repaid: no บันทึกการคืน, the links stay so a repayment can still be deleted', async () => {
+    await repay('50');
+    wrap(<OwedScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId(`owed-open-${NOK.id}`));
+    expect(screen.queryByTestId(`owed-repay-${NOK.id}`)).toBeNull();
+    expect(screen.getAllByTestId(/^repayment-void-/)).toHaveLength(3);
+  });
+});
+
 describe('Save sits in the header (keyboard never covers it)', () => {
   it('expense-save is pinned at the bottom in the simple design (owner 2026-10-23), not in the header', async () => {
     mockParams.current = { id: 'new' };

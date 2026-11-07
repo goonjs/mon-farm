@@ -158,7 +158,7 @@ describe('a debt made from an expense share (E11-S10)', () => {
     const open = screen.getByTestId(`debt-open-${id}`);
     expect(within(open).getByTestId(`debt-open-${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
     expect(within(open).queryByText('เปิดรายการค่าใช้จ่าย')).toBeNull();
-    expect(open.props.accessibilityLabel).toMatch(/^เปิดรายการค่าใช้จ่าย/);
+    expect(open.props.accessibilityLabel).toMatch(/^เปิดรายการค่าใช้จ่าย, .*, \+500\.00, /); // what the line says is read too
     fireEvent.press(open);
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'exp-share-1' } });
   });

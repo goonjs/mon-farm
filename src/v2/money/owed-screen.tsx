@@ -171,8 +171,7 @@ function Person({
                 </Text>
               </View>
               {r.repayments.map((p) => (
-                <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
-                  <AppText variant="bodySm" style={{ flex: 1 }}>
+                  <AppText key={p.id} variant="bodySm">
                     {msg('fin.owed.repayment', {
                       amount: formatSatang(p.allocations.filter((a) => a.expenseId === r.expenseId).reduce((s, a) => s + a.satang, 0)),
                       date: formatDate(p.date),
@@ -180,7 +179,6 @@ function Person({
                       to: p.to.name,
                     })}
                   </AppText>
-                </View>
               ))}
             </View>
           ))}

@@ -17,7 +17,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { projectDebts, type DebtAccount, type HistoryLine } from '../../core/finance/debts';
 import { paymentStatus } from '../../core/finance/payments';
 import { buyerOwes, PENDING_REPAY_SINCE, pendingRepayLines, type PendingHow } from '../../core/finance/pending-repays';
-import { formatSatang } from '../../core/finance/money';
+import { formatDate, formatSatang } from '../../core/finance/money';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
 import { useSaleCounts } from '../../finance/use-live-sales';
@@ -333,15 +333,8 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
                   </>
                 );
                 // Owner 2026-11-07 (style A): a share debt's line itself opens its expense — void, restore or edit it there (E11-S10).
-                // A line that also carries a received-repayment pill keeps that pill tappable: no nested buttons.
-                if (src && routeOf(h)) return (
-                  <>
-                    {facts}
-                    <TextLink testID={`debt-open-${h.id}`} onPress={() => openSource(src)}>{msg('debt.history.openExpense')}</TextLink>
-                  </>
-                );
                 return src ? (
-                  <Pressable testID={`debt-open-${h.id}`} accessibilityRole="button" accessibilityLabel={`${msg('debt.history.openExpense')} ${msg(`debt.kind.${h.type}`)}`} onPress={() => openSource(src)} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.min }}>
+                  <Pressable testID={`debt-open-${h.id}`} accessibilityRole="button" accessibilityLabel={[msg('debt.history.openExpense'), msg(`debt.kind.${h.type}`), `${h.signedSatang >= 0 ? '+' : MINUS}${formatSatang(Math.abs(h.signedSatang))}`, formatDate(h.date), h.deleted ? msg('debt.history.voided') : ''].filter(Boolean).join(', ')} onPress={() => openSource(src)} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.min }}>
                     <View style={{ flex: 1, minWidth: 0, gap: 2 }}>{facts}</View>
                     <View testID={`debt-open-${h.id}-chevron`} aria-hidden>
                       <ChevronRight color={t.color.inkFaint} />

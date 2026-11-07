@@ -59,7 +59,7 @@ export function ItemIcon({ spec }: { spec: ProductSpec }) {
 }
 
 /** A small underlined secondary link (never a button): one line, ≥ 48pt tall to tap. */
-export function TextLink({ children, onPress, testID, tone = 'soft' }: { children: ReactNode; onPress: () => void; testID: string; tone?: 'soft' | 'ok' }) {
+export function SoftLink({ children, onPress, testID, tone = 'soft' }: { children: ReactNode; onPress: () => void; testID: string; tone?: 'soft' | 'ok' }) {
   const t = useTheme();
   return (
     <Pressable
@@ -139,9 +139,9 @@ export function PickProductSheet({
         <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('ordc.newProduct')}</AppText>
       </Pressable>
       <View style={{ alignItems: 'center' }}>
-        <TextLink testID="ordc-pick-other" onPress={onOther}>
+        <SoftLink testID="ordc-pick-other" onPress={onOther}>
           {msg('ordc.otherLink')}
-        </TextLink>
+        </SoftLink>
       </View>
     </BottomSheet>
   );
@@ -218,7 +218,7 @@ function MoneyBlock({
             words={false}
             onChange={(v) => set({ ...m, discount: v })}
           />
-          <TextLink
+          <SoftLink
             testID="ordc-discount-remove"
             onPress={() => {
               set({ ...m, discount: 0 });
@@ -226,7 +226,7 @@ function MoneyBlock({
             }}
           >
             {msg('ordc.discountRemove')}
-          </TextLink>
+          </SoftLink>
           {problems.discount ? <FieldError testID="ordc-err-discount">{msg('ordc.err.itemDiscount')}</FieldError> : null}
         </View>
       ) : null}
@@ -245,9 +245,9 @@ function MoneyBlock({
       </View>
 
       {!discountOpen ? (
-        <TextLink testID="ordc-discount-link" onPress={() => setDiscountOpen(true)}>
+        <SoftLink testID="ordc-discount-link" onPress={() => setDiscountOpen(true)}>
           {msg('ordc.discountLink')}
-        </TextLink>
+        </SoftLink>
       ) : null}
     </>
   );
@@ -310,9 +310,9 @@ export function ItemSheet({
       </CTA>
       {editing ? (
         <View style={{ alignItems: 'center' }}>
-          <TextLink testID="ordc-item-remove" onPress={onRemove}>
+          <SoftLink testID="ordc-item-remove" onPress={onRemove}>
             {msg('ordc.itemRemove')}
-          </TextLink>
+          </SoftLink>
         </View>
       ) : null}
     </BottomSheet>
@@ -471,9 +471,9 @@ export function OtherItemSheet({
       </CTA>
       {editing ? (
         <View style={{ alignItems: 'center' }}>
-          <TextLink testID="ordc-item-remove" onPress={onRemove}>
+          <SoftLink testID="ordc-item-remove" onPress={onRemove}>
             {msg('ordc.itemRemove')}
-          </TextLink>
+          </SoftLink>
         </View>
       ) : null}
     </BottomSheet>

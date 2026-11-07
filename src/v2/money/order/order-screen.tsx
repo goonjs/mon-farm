@@ -35,7 +35,7 @@ import { AppText, cardStyle, ChevronRight, DatePickerSheet, FieldError, IconTile
 import { useMaster } from '../../farm/pieces';
 import { optionNamed, setFertOption } from '../fert-options';
 import { orderHref } from '../order-routes';
-import { ItemIcon, ItemSheet, NewProductSheet, OtherItemSheet, PickProductSheet, TextLink, type NewProduct } from './item-sheets';
+import { ItemIcon, ItemSheet, NewProductSheet, OtherItemSheet, PickProductSheet, SoftLink, type NewProduct } from './item-sheets';
 import {
   EMPTY_MONEY,
   fertSpec,
@@ -404,7 +404,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
             <ChevronRight color={t.color.accept} />
           </Pressable>
         ) : (
-          <TextLink testID="ordc-bill-link" onPress={() => setSheet('bill')}>{msg('ordc.billLink')}</TextLink>
+          <SoftLink testID="ordc-bill-link" onPress={() => setSheet('bill')}>{msg('ordc.billLink')}</SoftLink>
         )
       ) : null}
       <SolidCTA testID="ordc-save" disabled={!clean || busy} onPress={() => void save()}>
