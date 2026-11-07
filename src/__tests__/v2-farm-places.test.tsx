@@ -198,7 +198,7 @@ describe('สวน — detail, area history, delete (farm mockup 11, 12)', () =
     wrap(<PropertyScreen />);
     await flush();
     expect(within(screen.getByTestId('property-area-now')).getByText('120 ไร่')).toBeTruthy();
-    expect(within(screen.getByTestId('property-planted')).getByText('2554')).toBeTruthy();
+    expect(within(screen.getByTestId('property-planted')).getByText('2554 พ.ศ.')).toBeTruthy();
     expect(within(screen.getByTestId('property-gps')).getByText('ไม่ทราบ')).toBeTruthy();
 
     fireEvent.press(screen.getByTestId('change-area'));
