@@ -198,6 +198,12 @@ export function PropertyScreen() {
 
 type Problem = 'name' | 'crop' | 'area' | 'year' | 'gps';
 
+/** A planted year kept in พ.ศ., in the device's era (NP-13). */
+const yearInEra = (yearBe: number, era: 'be' | 'ce') => (era === 'ce' ? yearBe - 543 : yearBe);
+/** "2554 พ.ศ." / "2011 ค.ศ." — the detail says the era, as the form's card does. */
+const plantedText = (yearBe: number, era: 'be' | 'ce', msg: ReturnType<typeof useT>) =>
+  `${yearInEra(yearBe, era)} ${msg(era === 'ce' ? 'numpad.unitCe' : 'numpad.unitBe')}`;
+
 function PropertyForm({ propertyId }: { propertyId: string | null }) {
   const t = useTheme();
   const msg = useT();
@@ -256,8 +262,14 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
   };
 
   if (propertyId && state && !existing) return <NotFound fallback={FARMS} />;
+  // An edit opens before the record has loaded: no field until it has, or what is typed meanwhile is overwritten by the stored value.
+  if (propertyId && !existing) return (
+      <FarmScreen title={msg('propertyForm.editTitle')} fallback={FARMS} testID="property-form-loading">
+        <AppText variant="bodySm">{msg('counter.loading')}</AppText>
+      </FarmScreen>
+    );
   // NP-13: the year in the device's era; what is kept (plantedYearBe) stays พ.ศ.
-  const shownYear = year.ok && year.yearBe !== null ? (era === 'ce' ? year.yearBe - 543 : year.yearBe) : null;
+  const shownYear = year.ok && year.yearBe !== null ? yearInEra(year.yearBe, era) : null;
 
   return (
     <FarmScreen
@@ -332,6 +344,7 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
 function PropertyDetail({ propertyId }: { propertyId: string }) {
   const t = useTheme();
   const msg = useT();
+  const { era } = useI18n();
   const router = useRouter();
   const back = useBack(FARMS);
   const day = useDay();
@@ -448,9 +461,9 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
         <View style={{ flexDirection: 'row', gap: t.space.sm, paddingVertical: t.space.sm }}>
           <View testID="property-planted" style={{ flex: 1, gap: t.space.xxs }}>
             <AppText variant="bodySm">{msg('propertyDetail.planted')}</AppText>
-            {property.plantedYearBe ? value(String(property.plantedYearBe)) : <UnknownPill />}
+            {property.plantedYearBe ? value(plantedText(property.plantedYearBe, era, msg)) : <UnknownPill />}
           </View>
-          <View style={{ flex: 1, gap: t.space.xxs }}>
+          <View testID="property-age" style={{ flex: 1, gap: t.space.xxs }}>
             <AppText variant="bodySm">{msg('propertyDetail.age')}</AppText>
             {age !== null ? value(msg('propertyDetail.years', { n: age })) : <UnknownPill />}
           </View>

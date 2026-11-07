@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { FIXTURE_GROUP_ID, LogBuilder, readyPile, setUpSale } from '../src/core/fixtures';
 import type { FinanceEvent } from '../src/core/finance/types';
 import type { BuiltinRole, MasterPayload } from '../src/core/types';
-import { evidence, seedEvents, seedMaster } from './fixtures';
+import { evidence, seedEvents, seedMaster, splashEvidence, watchSplash } from './fixtures';
 
 /**
  * The splash and the v2 home as drawn (e03-v2-splash-home): flow-v1 screens
@@ -60,9 +60,10 @@ test('/ → splash → home: as drawn, empty, then live rows from the local log,
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
 
+  const splash = await watchSplash(page);
   await page.goto('/');
-  await expect(page.getByTestId('splash')).toBeVisible();
-  await shot(page, '00-splash');
+  expect(await splash()).toContain('FarmMate');
+  await splashEvidence(page, `${SHOTS}/00-splash.png`);
   await expect(page).toHaveURL(/\/v2\/?$/);
   const home = page.getByTestId('v2-home');
   await expect(home).toBeVisible();
