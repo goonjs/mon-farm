@@ -66,14 +66,17 @@ export function NumberPad({
   onDone,
   doneDisabled,
   doneHint,
+  doneDescribedBy,
   testID = 'numpad',
 }: {
   variant: PadVariant;
   onKey: (k: EntryKey) => void;
   onDone: () => void;
   doneDisabled?: boolean;
-  /** Why ✓ is shut, read by a screen reader on the key. */
+  /** Why ✓ is shut, read by a screen reader on the key (native). */
   doneHint?: string;
+  /** The nativeID of the text that says why, for the web (`aria-describedby`). */
+  doneDescribedBy?: string;
   testID?: string;
 }) {
   const t = useTheme();
@@ -120,6 +123,7 @@ export function NumberPad({
                 accessibilityLabel={labelId ? msg(labelId) : c.glyph}
                 accessibilityHint={c.id === 'back' ? msg('numpad.keyBackHint') : disabled ? doneHint : undefined}
                 accessibilityState={{ disabled }}
+                aria-describedby={disabled ? doneDescribedBy : undefined}
                 disabled={disabled}
                 onPress={() => (isDone ? onDone() : onKey(c.id as EntryKey))}
                 // NP-16: hold ⌫ to clear the whole field.

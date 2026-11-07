@@ -194,5 +194,6 @@ describe('QuantityField — a screen reader hears why ✓ is shut (2026-11-07)',
     const reason = flatText(screen.getByTestId('q-problem').props.children);
     expect(reason).not.toBe('');
     expect(screen.getByTestId('q-pad-key-done').props.accessibilityHint).toBe(reason);
+    expect(screen.getByTestId('q-pad-key-done').props['aria-describedby']).toBe('q-problem-text');
   });
 });

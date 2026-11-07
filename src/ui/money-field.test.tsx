@@ -179,8 +179,11 @@ describe('compact (E01-S20 NP-10): a list of amounts stays as tall as the old bo
       const region = screen.getByTestId('m-problem');
       expect(region.props.accessibilityLiveRegion).toBe('polite');
       expect(text('m-problem')).toBe('');
+      // Empty: in the tree, out of the layout (no gap, no size); with a reason: in the flow like before.
+      expect(flat(region.props.style)).toMatchObject({ position: 'absolute', opacity: 0 });
       press('5');
       expect(text('m-problem')).toBe('ต้องไม่น้อยกว่า 100.00');
+      expect(flat(screen.getByTestId('m-problem').props.style).position).toBeUndefined();
     });
 
     it('the shut ตกลง carries the reason as its hint; an open one has none', () => {
@@ -188,9 +191,13 @@ describe('compact (E01-S20 NP-10): a list of amounts stays as tall as the old bo
       fireEvent.press(screen.getByTestId('m'));
       press('5');
       expect(screen.getByTestId('m-done').props.accessibilityHint).toBe('ต้องไม่น้อยกว่า 100.00');
+      // Web drops the hint: the button points at the reason's text instead.
+      expect(screen.getByTestId('m-done').props['aria-describedby']).toBe('m-problem-text');
+      expect(screen.getByText('ต้องไม่น้อยกว่า 100.00').props.nativeID).toBe('m-problem-text');
       press('0', '0');
       expect(screen.getByTestId('m-done').props.accessibilityState.disabled).toBe(false);
       expect(screen.getByTestId('m-done').props.accessibilityHint).toBeUndefined();
+      expect(screen.getByTestId('m-done').props['aria-describedby']).toBeUndefined();
     });
   });
 });

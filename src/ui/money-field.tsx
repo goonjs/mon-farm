@@ -230,7 +230,7 @@ export function MoneyField({
           ) : null}
           {/* Always there, so a screen reader announces the reason when it appears; out of the flow while empty (no gap). */}
           <View testID={`${testID}-problem`} accessibilityLiveRegion="polite" aria-live="polite" style={problem ? undefined : QUIET_REGION}>
-            {problem ? <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.semibold, color: t.color.reject, textAlign: 'right' }}>{problem}</Text> : null}
+            {problem ? <Text nativeID={`${testID}-problem-text`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.semibold, color: t.color.reject, textAlign: 'right' }}>{problem}</Text> : null}
           </View>
         </View>
         {belowText ? (
@@ -239,7 +239,7 @@ export function MoneyField({
           </Text>
         ) : null}
         <NumberPad variant="money" onKey={press} onDone={commit} testID={`${testID}-pad`} />
-        <CTA testID={`${testID}-done`} disabled={!valid} accessibilityHint={valid ? undefined : problem} onPress={commit}>
+        <CTA testID={`${testID}-done`} disabled={!valid} accessibilityHint={valid ? undefined : problem} describedBy={valid || !problem ? undefined : `${testID}-problem-text`} onPress={commit}>
           {msg('numpad.done')}
         </CTA>
         {clear ? <ClearLink label={clear.label} onPress={clearIt} testID={`${testID}-clear`} /> : null}
