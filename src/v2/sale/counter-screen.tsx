@@ -584,9 +584,12 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       {!ready ? (
         <View testID="not-ready" style={{ ...cardStyle(t), borderWidth: t.border.thick, borderColor: t.color.ruleStrong, alignItems: 'center', padding: t.space.lg, gap: t.space.sm }}>
           <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('v2s.notReady')}</AppText>
-          <Button testID="to-check" icon={(c) => <ScaleIcon color={c} size={14} />} onPress={() => router.replace(`${base}/zero-tare?point=${pointId}&net=${std}&basket=${tare}` as Href)}>
-            {msg('v2s.startWeigh')}
-          </Button>
+          {/* Owner rule 2026-11-06: full width, not a round button in the middle of the card. */}
+          <View testID="to-check-row" style={{ alignSelf: 'stretch' }}>
+            <Button testID="to-check" icon={(c) => <ScaleIcon color={c} size={14} />} onPress={() => router.replace(`${base}/zero-tare?point=${pointId}&net=${std}&basket=${tare}` as Href)}>
+              {msg('v2s.startWeigh')}
+            </Button>
+          </View>
         </View>
       ) : waiting && open ? (
         <View testID="stage-wait" style={{ alignSelf: 'stretch' }}>
