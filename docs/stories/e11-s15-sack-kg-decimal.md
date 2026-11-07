@@ -43,7 +43,7 @@ Status: Done (2026-11-07 — merge #153; ตรวจ AC ครบกับ dev 
 
 ## ตรวจปิดสตอรี่ (2026-11-07, dev `cd9c615`)
 
-ผู้ตรวจ: agent แยก อ่านโค้ด + รันเทสต์ที่เกี่ยว; ทีม dev รัน e2e ทั้งชุดบน build จริงเอง ไม่เดา
+ผู้ตรวจ (ตรวจปิดสตอรี่ ไม่ใช่รีวิวโค้ดอิสระของ DoD): agent แยก อ่านโค้ด + รันเทสต์ที่เกี่ยว; ทีม dev รัน e2e ทั้งชุดบน build จริงเอง ไม่เดา
 
 - รันแล้ว: jest `src/v2/money/order-detail/tell.test.tsx`, `order-detail.test.tsx`, `src/v2/money/order/order-screen.test.tsx` 72 ผ่าน · vitest `number-entry.test.ts` 38 ผ่าน · e2e `v2-money.spec.ts` ผ่านในรอบทั้งชุดบน build จริง (73 ผ่าน 5 ข้าม 1 ล้มที่ `v2-farm` ไม่เกี่ยวกับสตอรี่นี้)
 - KG-1 (`item-sheets.tsx` `decimals={2} maxDigits={3}` = 0.01–999.99), KG-2 (`sackKg: 2.5` ไม่เปลี่ยน schema), KG-3 ("2.5 กก. / กระสอบ", "รวม … กก.", จำขนาด "2.5") ตรวจแล้ว

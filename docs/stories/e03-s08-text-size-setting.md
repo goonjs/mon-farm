@@ -8,7 +8,7 @@ Status: Review (เจ้าของตกลง AC TS-1..TS-9 ผ่านล�
 - PRD: NFR-4 · `docs/ux/design-system.md` §12.10 ข้อ 5–6
 - โค้ดเดิม: หน้า "เครื่องนี้" `src/v2/device-screen.tsx` (`/v2/device`), `src/theme/index.tsx`,
   `src/core/text-scale.ts` (`scaleSizes`, มีแล้ว), `src/theme/text-size-preference.ts`
-  (`readTextSize`/`writeTextSize` ผ่าน `deviceSettings` key `mon-farm:text-size`, มีแล้วแต่ไม่มีใครเรียก),
+  (`readTextSize`/`writeTextSize` ผ่าน `deviceSettings` key `mon-farm:text-size`, มีแล้วแต่ไม่มีใครเรียก — ตอนเขียนสตอรี่; ตอนนี้ theme เรียกแล้ว),
   token `textScale` ใน `design/tokens.ts` (0.875 / 1 / 1.125, มีแล้ว)
 - งานค้างที่ส่งมาที่สตอรี่นี้: E05-S11 (หัว `FarmScreen` ถูกตัดที่ ×1.3, ไอคอน `Banner` ล้น 2px),
   ตรวจตัวอักษรใหญ่สุดที่ค้างจาก E05-S11 CO-16/CO-20, E01-S20 NP-9, E06-S08 PR-11, E11-S11 UI-4
@@ -30,7 +30,7 @@ Status: Review (เจ้าของตกลง AC TS-1..TS-9 ผ่านล�
   (0.875 / 1 / 1.125) ปัดเป็นจำนวนเต็ม
 - [x] **TS-3** ค่าจำในเครื่องผ่าน `deviceSettings` key `mon-farm:text-size` (ไม่ใช้ localStorage ตรง) — ปิดแอปเปิดใหม่ยังเป็นค่าเดิม
 - [x] **TS-4** ตัวเลขนับบนจอสาธารณะไม่ขยายตาม (ขนาดคิดจากจอ `publicNumeral` เหมือนเดิม)
-- [x] **TS-5** ตัวเลขขนาดตายตัวที่ยังไม่ผ่าน theme (`counter-screen` 36, `short-reading` 44) ขยายตามด้วย
+- [x] **TS-5** ตัวเลขขนาดตายตัวที่ยังไม่ผ่าน theme (`counter-screen` 36, `short-reading` 44 — หลัง #139 เป็น 40/28) ขยายตามด้วย
   ยกเว้นจอสาธารณะ — ลีดตัดสิน 2026-11-02: หน้านับ (36) ทำได้เลย; `short-reading` (44) ทำเป็นขั้นสุดท้าย
   หลัง #139 merge และ merge dev เข้า branch ก่อนแก้ ถ้า #139 ยังไม่ merge ตอนงานอื่นเสร็จ แจ้งลีดตัดสินอีกที
 - [x] **TS-6** (เว็บผ่าน; Android ยังไม่ยืนยัน — ดู Dev notes) หัวเรื่อง `FarmScreen` ไม่ถูกตัด/ไม่มี "…" ที่ใหญ่ และที่จำลอง ×1.3 (ขึ้นบรรทัดใหม่ได้) —
@@ -127,7 +127,7 @@ _เขียน test ก่อน (TDD)_
 
 ## ตรวจปิดสตอรี่ (2026-11-07, dev `cd9c615`)
 
-ผู้ตรวจ: agent แยก อ่านโค้ด + รันเทสต์ที่เกี่ยว; ทีม dev รัน e2e ทั้งชุดบน build จริงเอง ไม่เดา
+ผู้ตรวจ (ตรวจปิดสตอรี่ ไม่ใช่รีวิวโค้ดอิสระของ DoD): agent แยก อ่านโค้ด + รันเทสต์ที่เกี่ยว; ทีม dev รัน e2e ทั้งชุดบน build จริงเอง ไม่เดา
 
 - รันแล้ว: jest `text-size`, `device-settings-web-after-mount`, `screen-header`, `banner-fit`, `fixed-font-size-guard` 24 ผ่าน · vitest `text-scale` 3 ผ่าน ·
   e2e `v2-text-size.spec.ts` 4 ข้อผ่าน (ในรอบทั้งชุด 73 ผ่าน 5 ข้าม 1 ล้มที่ `v2-farm` ไม่เกี่ยวกับสตอรี่นี้); ที่ใหญ่ ทุก 23 จุดตรวจไม่มีที่แตะ < 48
@@ -142,5 +142,5 @@ _เขียน test ก่อน (TDD)_
      ที่หลุดจริงใน src: `src/v2/splash-screen.tsx` (`WORD = 38`, ไม่ขยายตามขนาด) และ `WarnMark` (`summary-parts.tsx`, "!" ขนาดจาก prop 13/14/16 — เป็นไอคอน) → งานแยก (ลีดสั่ง 2026-11-07 ข้อ 2d)
   3. ชิปชื่อสั้นที่ขนาดกลาง/เล็กยังกว้าง < 48 (`ChoiceChip` `src/v2/money/pieces.tsx`, ชิปคนกรีดในประวัติเข่ง `history-screen.tsx`) → งานแยก (ข้อ 2a)
   4. Android จริง: TS-3 (ปิดเปิดแอป), TS-6 (สระ/วรรณยุกต์ซ้อนในหัวจอ), ตัวอักษรระบบ ×1.3 จริง
-- ข้อความที่เก่าแล้ว: Context "`readTextSize`/`writeTextSize` ... ไม่มีใครเรียก" (เรียกแล้ว); TS-5 "`short-reading` 44" (โค้ดเป็น 40/28)
+- ข้อความที่เก่าแล้ว (หมายเหตุไว้ในที่เดิมแล้ว): Context "ไม่มีใครเรียก"; TS-5 "`short-reading` 44" (โค้ดเป็น 40/28)
 - CI: `verify` เขียวบน `85e49df`; job e2e ถูกข้ามตาม path filter
