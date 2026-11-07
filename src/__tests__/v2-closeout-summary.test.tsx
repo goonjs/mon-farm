@@ -209,6 +209,17 @@ describe('the debt sheet (A2, CO-22)', () => {
   });
 });
 
+describe('ดูที่มา on the summary is an underlined link, not a pill (owner rule 2026-11-06, style B)', () => {
+  it('no light pill behind it, the text is underlined', async () => {
+    await inSale(<CloseoutSummaryScreen />);
+    const link = text('co-sources-open');
+    const flat = (n: { props: { style?: unknown } }) => ([n.props.style].flat(Infinity).filter(Boolean) as object[]).reduce((a: object, x: object) => ({ ...a, ...x }), {}) as { backgroundColor?: string; textDecorationLine?: string };
+    expect(link.findAll((n) => flat(n).backgroundColor === tokens.color.light.actionSunk)).toHaveLength(0);
+    expect(link.findAll((n) => flat(n).textDecorationLine === 'underline').length).toBeGreaterThan(0);
+    expect(link.props.accessibilityRole).toBe('link');
+  });
+});
+
 describe('every sheet has a ✕ "ปิด" (A2, A5, A8)', () => {
   it.each([
     ['co-debt-open', 'co-debt-sheet'],
