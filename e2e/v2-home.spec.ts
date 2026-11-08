@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 
 import { FIXTURE_GROUP_ID, LogBuilder, readyPile, setUpSale } from '../src/core/fixtures';
 import type { FinanceEvent } from '../src/core/finance/types';

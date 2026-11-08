@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 
 import { evidence } from './fixtures';
 import { signedIn } from './session';
@@ -16,7 +16,7 @@ import { signedIn } from './session';
  */
 
 test.skip(!process.env.E2E_SYNC_EMULATOR, 'needs the emulators: npm run test:e2e:sync');
-test.use({ storageState: signedIn, viewport: { width: 412, height: 915 } });
+test.use({ account: signedIn, viewport: { width: 412, height: 915 } });
 
 const SHOTS = 'docs/ux/screenshots/ui-v2/sync';
 const on = (page: Page) => (id: string) => page.getByTestId(id).filter({ visible: true });
