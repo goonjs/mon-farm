@@ -32,26 +32,35 @@ export interface HomeSales {
   readonly latest: SaleLine | null;
 }
 
-export function homeSales(sales: readonly { id: string; events: readonly SaleEvent[] }[]): HomeSales {
-  let open: SaleLine | null = null;
-  let latest: SaleLine | null = null;
-  const newer = (a: SaleLine, b: SaleLine | null) => !b || (a.ts ?? 0) > (b.ts ?? 0);
-  for (const { id, events } of sales) {
-    const state = projectSale(events, id);
-    if (state.deleted || state.saleStatus === 'cancelled') continue;
-    const totals = saleTotals(events);
-    const line: SaleLine = {
+/** One sale as a home row, and whether it counts as closed; null when it is deleted or cancelled. */
+export function saleLineOf(id: string, events: readonly SaleEvent[]): { line: SaleLine; closed: boolean } | null {
+  const state = projectSale(events, id);
+  if (state.deleted || state.saleStatus === 'cancelled') return null;
+  const totals = saleTotals(events);
+  return {
+    line: {
       id,
       ts: state.startedTs ?? events[0]?.ts ?? null,
       netG: totals.netG,
       baskets: totals.baskets,
       weighing: state.piles.some((p) => p.status === 'counting'),
       point: currentPoint(events),
-    };
-    if (statusCountsAsClosed(state)) {
-      if (newer(line, latest)) latest = line;
-    } else if (newer(line, open)) {
-      open = line;
+    },
+    closed: statusCountsAsClosed(state),
+  };
+}
+
+export function homeSales(sales: readonly { id: string; events: readonly SaleEvent[] }[]): HomeSales {
+  let open: SaleLine | null = null;
+  let latest: SaleLine | null = null;
+  const newer = (a: SaleLine, b: SaleLine | null) => !b || (a.ts ?? 0) > (b.ts ?? 0);
+  for (const { id, events } of sales) {
+    const one = saleLineOf(id, events);
+    if (!one) continue;
+    if (one.closed) {
+      if (newer(one.line, latest)) latest = one.line;
+    } else if (newer(one.line, open)) {
+      open = one.line;
     }
   }
   return { open, latest };
