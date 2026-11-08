@@ -78,8 +78,9 @@ Ask again, every time.
   its own named `feature/`, `fix/`, `docs/` or `chore/` without asking
   first. This is enforced and bounded by `.claude/settings.json` (allow for
   those four prefixes; deny for force-push, delete, tags, `--all`,
-  `--mirror`, refspecs and `dev`/`main`). In exchange the acknowledgement
-  moves from before the push to after it, and is not optional:
+  `--mirror`, refspecs and `dev`/`main`). In exchange every push is
+  recorded on the dashboard right after it, and that record is not optional
+  (since 2026-11-08 there is no separate acknowledgement step):
 
   1. **Ledger = the project dashboard.** Right after a push, add one
      document to the mon-farm Dashboard artifact
@@ -88,36 +89,95 @@ Ask again, every time.
      `repo` ("goonjs/mon-farm"), `branch`, `title`, `session`, `pr_url`
      (empty until a PR exists; update it when opened), `commits` (list of
      subjects), `what`, `why_ready`, `not_covered`, `irreversible`
-     (the same six-point brief as above), `pushed_at` (ISO), `acked: false`,
-     `status: "open"` (later `merged`, `closed` or `superseded`). The owner
-     opens the PR from there and presses Acknowledge. The old Push Ledger
-     artifact is retired (owner decision 2026-10-31): do not write to it.
+     (the same six-point brief as above), `pushed_at` (ISO),
+     `status: "open"` (later `merged`, `closed` or `superseded`),
+     `stage` (`working`, `review`, `ready`, `merged` or `blocked`; keep it
+     current), `ci` (`ผ่าน`, `แดง` or `รอ`) and, for a merge, `agreement`,
+     `reviewer` and `merged_at` (see the merge rule below). The dashboard is a view only:
+     there is no Acknowledge button and no `acked` field any more (owner
+     decision 2026-11-08). The old Push Ledger artifact is retired (owner
+     decision 2026-10-31): do not write to it.
   2. **Say so in the same response**: one short summary of what went up.
-  3. **Reminder line.** While this session has a push that is not yet
-     acknowledged, end every response with one line:
-     `👉 N PR รอ ack: <short title> — ดูที่นี่ <dashboard url>`. Check the
-     dashboard (one `db_query` on `pushes` with `acked == false`) at session start and when the
-     owner says they acknowledged something; do not poll otherwise.
+  3. **No reminder line.** Nothing waits on an acknowledgement, so no
+     "waiting for ack" line is added to responses.
   4. The owner still alone decides: pushes to `dev`/`main`, tags,
-     force-pushes, every Deploy Prod run, and merging any PR. The owner can
-     withdraw this allowance at any time in chat.
+     force-pushes, every Deploy Prod run, and merging a PR the merge rule
+     below calls critical. The owner can withdraw this allowance at any time
+     in chat.
 
   The reasoning in the "Reconsidered" note below still describes what the
   gate is for. This amendment is the owner's own informed decision to keep
-  that awareness through the ledger and the reminder line instead of a
-  per-push word; it is not an agent's proposal to relax the gate.
+  that awareness through the dashboard record instead of a per-push word;
+  it is not an agent's proposal to relax the gate.
 
-  **Amendment, 2026-10-10 (PRD D-83) — acknowledge means merge.** Only a
-  PR that has been independently reviewed, fixed and is ready to merge is
-  put to the owner for acknowledgement on the dashboard. The owner's
-  acknowledgement of that PR is the owner's explicit instruction to merge
-  it; the owner does not review the code. Work runs with one developer team
-  at a time (UX and QA inside it); the infra team only maintains CI and
-  helps in emergencies. A team being disbanded hands over first, then
-  raises 🙋🏻‍♂️✅ to the owner, who deletes the session.
+  **Amendment, 2026-11-08 — merge without acknowledgement (replaces the
+  2026-10-10 "acknowledge means merge" rule, PRD D-83).** The owner no longer
+  presses Acknowledge. An agent may merge a PR when its base is `dev`, its
+  head is a work branch (`feature/`, `fix/`, `docs/` or `chore/`; never a
+  hotfix or back-merge PR, which stay with the owner per `docs/process.md`),
+  and **all** of these hold. A merge through a PR is not an agent push to
+  `dev`.
+
+  1. **The owner agreed this work, in words that can be checked.** Either
+     the owner's own chat message says yes to this work, or the story's
+     `Status:` line quotes the owner's yes word for word with its date
+     (for example `Ready (owner agreed AC 2026-10-31 "<quote>")`). Record
+     the verbatim quote and date in the dashboard `pushes` document
+     (`agreement`) **before** merging. The reviewer checks that the quote is
+     there and is about this work. This check rests on trust: nothing here
+     proves what the chat said, so `agreement` is the owner's audit trail. An
+     agent or a lead session saying "the owner agreed" does not count; a general "go ahead" does not
+     cover work it did not name; a provisional yes (for example an
+     acceptance criteria marked "waiting for the owner's check") does not
+     count. The PR must stay inside the agreed work, and a PR that changes a
+     story's acceptance criteria is not covered by that story's agreement.
+  2. **An independent review passed on this head commit.** The reviewer is a
+     separate session or agent that wrote no commit in the PR, was not
+     started by its author, and is not the lead session that directed the
+     author's work. The review is a comment or GitHub review on the PR that
+     names the reviewer's session and the head commit it reviewed; any new commit needs a new review.
+     No blocking finding is open (they are fixed). Record the reviewer and
+     that commit in `pushes` (`reviewer`) before merging, and check just
+     before merging that the PR head is still that commit.
+  3. **CI is green on that same head commit**, the PR is not a draft and is
+     mergeable (no conflict).
+  4. **The PR is not critical.** Critical is decided by paths first: any
+     change to one of these is critical whatever anyone judges. "Security
+     gates" or this merge rule, or any other part of `AGENTS.md` or
+     `CLAUDE.md`; `docs/process.md` or `docs/checklists/`; `.claude/`
+     (permissions, hooks, skills), `.githooks/` or `.dev-pose.json`;
+     `.github/` (CI, deploy, secrets) or `scripts/`; Firebase config or
+     rules (`firebase.json`, `.firebaserc`, `firestore.rules`,
+     `firestore.indexes.json`, `storage.rules`); `eas.json` or `app.json`;
+     `package.json`, `.npmrc` or any lockfile (a new dependency also needs
+     the dependency permission above); app code that changes the event-log or
+     sync schema; deleting or renaming tracked files (the file-deletion gate
+     below still applies to merges); anything that changes what CI checks
+     (lint, test, TypeScript, babel or metro config, `e2e/` config, removing
+     or weakening a test); env files and `app.config.*`; and a data
+     migration, data change or deletion on any environment other than
+     local, dev or sandbox. The reviewer then writes
+     on the PR whether it is critical, with the paths it checked, and may
+     add to this list but never remove from it; the author cannot waive it.
+     For a critical PR the owner must say merge, in chat, for that PR; "the
+     lead or an agent said the owner said merge" does not count.
+
+  Still the owner's alone: pushes to `dev`/`main` (agents never push them),
+  Deploy Prod (each run), tags, force-pushes, and deleting branches (merge
+  without deleting the head branch). Merge with the head-commit guard when
+  the tool offers one. A merge to `dev` deploys the dev site by workflow;
+  that is accepted. After merging, the agent records `merged_at` in `pushes` in the same response
+  and posts the `✅ DONE` line (Discord section). The owner can withdraw
+  this rule at any time in chat.
+
+  Work runs with one developer team at a time (UX and QA inside it); the
+  infra team only maintains CI and helps in emergencies. A team being
+  disbanded hands over first, then raises 🙋🏻‍♂️✅ to the owner, who deletes
+  the session.
 
   **Reconsidered and deliberately kept, 2026-08-11. Do not propose
-  relaxing this again.** It was argued that the gate had become redundant
+  relaxing this again.** (Here and in the 2026-09-01 amendment,
+  "acknowledgement" means the owner's yes to a push, not the merge step.) It was argued that the gate had become redundant
   once "never commit ahead of an unanswered question" was added below —
   if nothing is committed without the owner's answer, a push cannot carry
   anything unapproved, so the check appears to be catching a second time
@@ -210,9 +270,10 @@ Deploy Prod needs the owner's explicit yes per run. Full detail in
   Deploy Prod and Back-merge workflows (see `docs/process.md`). Run
   `git branch --show-current` before every commit; if it prints `dev` or
   `main`, stop and create a working branch first.
-- **Never merge a pull request** unless the owner explicitly tells you to merge
-  that PR. The push delegation to the lead session above does not extend to
-  merging.
+- **Never merge a pull request** unless the merge rule in Security gates
+  (Amendment 2026-11-08) is fully met, or the owner explicitly tells you to
+  merge that PR. The push delegation to the lead session above does not extend
+  to merging.
 - Once a PR is open, or anyone else has pushed to the branch, bring in `dev` by
   **merge**, never rebase or force-push it.
 - When a session has nothing left to run (work merged or handed off, no
@@ -265,7 +326,8 @@ goes there. This adds a notification route only; it does not relax any gate.
 
 **When to post** (agents post to the two `ai-` channels only):
 
-- PR reviewed, CI green, waiting for the owner's acknowledgement →
+- A critical PR (see the merge rule) reviewed, CI green, waiting for the
+  owner to say merge →
   `#farm-ai-alerts`, `🔎 REVIEW`: PR link, one-line summary, what to check.
 - PR merged, or a deployment finished (preview or Deploy Prod) →
   `#farm-ai-updates`, `✅ DONE`: what shipped, link, result.
