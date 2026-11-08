@@ -41,3 +41,4 @@ export { SyncPill } from './sync-pill';
 export { TextField } from './text-field';
 export { TextLink } from './text-link';
 export { AppText, typeStyle, TYPE_VARIANTS, type TypeVariant } from './type';
+export { CHIP_MIN_WIDTH } from './chip-width';

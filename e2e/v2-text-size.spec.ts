@@ -120,7 +120,7 @@ const owesNat = (amountSatang: number): FinancePayload => ({ t: 'expense_created
 const loan = (worker: typeof RED, amountSatang: number): FinancePayload => ({ t: 'debt_added', fields: { worker, kind: 'loan', amountSatang, date: '2026-10-01', note: '', lender: FARM_PAYER, fertilizer: null, carriedForward: false } });
 
 /** E05-S11 example: 28,875.00 at 52.50 (แดง 350 kg, นัด 200 kg); and one 2,345,678.00 sale (CO-20). */
-async function seed(page: Page) {
+async function seed(page: Page, size: 's' | 'm' | 'l') {
   await seedMaster(page, FARM);
   const now = Date.now();
   const b = new LogBuilder('sale-ts');
@@ -142,24 +142,31 @@ async function seed(page: Page) {
     finEvent(3, now, 'exp-nat', owesNat(64_000)),
     finEvent(4, now, 'plan-red', { t: 'debt_plan_set', worker: RED, perSaleSatang: 325_000 }),
   ]);
-  await page.evaluate(() => localStorage.setItem('mon-farm:text-size', 'l'));
+  await page.evaluate((size) => localStorage.setItem('mon-farm:text-size', size), size);
 }
 
-test('the largest text size: nothing cut, "…" or past the screen on the open screens (TS-8)', async ({ page }) => {
-  test.setTimeout(180_000);
+/** Pixel sizes on the tour at each text size: the header title (20), the typed short reading (40) and the check total (26), × textScale. */
+const AT = { s: { title: 18, reading: 35, total: 23 }, m: { title: 20, reading: 40, total: 26 }, l: { title: 23, reading: 45, total: 29 } } as const;
+
+/**
+ * The open screens of TS-8, at one text size. At L: nothing cut, "…" or past the screen, and every target ≥ 48.
+ * At S and M only the targets are asserted (2026-11-07: short name chips were 39–47 wide below L); the fit
+ * findings at S/M are logged, not asserted — those sizes were not part of TS-8.
+ */
+async function tour(page: Page, size: keyof typeof AT) {
   const id = on(page);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
-  await seed(page);
+  await seed(page, size);
   const problems: Record<string, string[]> = {};
   const targets: Record<string, string[]> = {};
   const check = async (name: string) => {
     await page.waitForTimeout(300);
     // L must really be on (the earlier large-text checks passed at M): the header title is 20 × 1.125.
-    expect(await fontPx(page, 'screen-title'), `${name}: at L`).toBe(23);
+    expect(await fontPx(page, 'screen-title'), `${name}: at ${size}`).toBe(AT[size].title);
     problems[name] = await textFit(page);
     targets[name] = await smallTargets(page);
-    await shot(page, `l-${name}`);
+    if (size === 'l') await shot(page, `l-${name}`);
   };
   const open = async (path: string, ready: string, name: string) => {
     await page.goto(path);
@@ -178,14 +185,14 @@ test('the largest text size: nothing cut, "…" or past the screen on the open s
   // E01-S20 NP-8: the short-basket sheet with its pad, typed figure scaled; save and cancel stay on screen.
   await id('tool-short').click();
   await expect(id('reading-pad')).toBeVisible();
-  expect(await fontPx(page, 'reading-scale-value')).toBe(45);
+  expect(await fontPx(page, 'reading-scale-value')).toBe(AT[size].reading);
   await expect(id('short-save')).toBeInViewport();
   await check('short-sheet');
   await open('/v2/sale/sale-ts/history?point=a1', 'history', 'history');
   // E05-S11: the close-out summary (A1) and its sheets, the payment, the buyer's page at 2,345,678.00 (CO-16, CO-20).
   // A size passed as a number prop (the sale totals) follows the setting too: 26 × 1.125.
   await open('/v2/sale/sale-ts/check', 'check-card', 'sale-check');
-  expect(await fontPx(page, 'check-total')).toBe(29);
+  expect(await fontPx(page, 'check-total')).toBe(AT[size].total);
   await open('/v2/sale/sale-ts/settlement', 'co-summary', 'a1-summary');
   await id('co-sale-open').click();
   await check('a4-sale-sheet');
@@ -228,17 +235,30 @@ test('the largest text size: nothing cut, "…" or past the screen on the open s
   await id('ordc-pick-new').click();
   await check('fert-new-item');
 
-  console.log(`E03-S08 touch targets under 48 at L: ${JSON.stringify(targets)}`);
+  console.log(`E03-S08 touch targets under 48 at ${size}: ${JSON.stringify(targets)}`);
   test.info().annotations.push({ type: 'targets', description: JSON.stringify(targets) });
   const none = (r: Record<string, string[]>) => Object.fromEntries(Object.keys(r).map((k) => [k, []]));
-  expect(problems).toEqual(none(problems));
-  expect(targets, 'touch targets ≥ 48 (§12.10 #6)').toEqual(none(targets));
+  if (size === 'l') expect(problems).toEqual(none(problems));
+  else console.log(`text fit at ${size}: ${JSON.stringify(problems)}`);
+  expect(targets, `touch targets ≥ 48 at ${size} (§12.10 #6)`).toEqual(none(targets));
   expect(errors).toEqual([]);
+}
+
+test('the largest text size: nothing cut, "…" or past the screen on the open screens (TS-8)', async ({ page }) => {
+  test.setTimeout(180_000);
+  await tour(page, 'l');
 });
+
+for (const size of ['m', 's'] as const) {
+  test(`text size ${size}: every touch target on the open screens is at least 48 wide and tall`, async ({ page }) => {
+    test.setTimeout(180_000);
+    await tour(page, size);
+  });
+}
 
 test('×1.3 on top of L: the header title and the Banner still fit (TS-6, TS-7)', async ({ page }) => {
   const id = on(page);
-  await seed(page);
+  await seed(page, 'l');
   for (const [path, ready, name] of [
     ['/v2/sale/sale-ts/settlement', 'co-summary', 'x130-a1-summary'],
     ['/v2/sales', 'sales', 'x130-sales-banner'],

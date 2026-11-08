@@ -20,7 +20,7 @@ import { basketList, type BasketRow } from '../../core/sale-points';
 import { clockSeconds } from '../../core/thai-date';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AlertIcon, AppText, BasketIcon, cardStyle, Check, Chip, ScaleIcon } from '../../ui';
+import { AlertIcon, AppText, BasketIcon, cardStyle, Check, Chip, CHIP_MIN_WIDTH, ScaleIcon } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { Banner, IconLine, kgText, useSaleView } from './pieces';
 
@@ -72,7 +72,7 @@ export function HistoryScreen() {
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
       onPress={onPress}
-      style={{ minHeight: t.target.min, ...(t.textScale > 1 ? { minWidth: t.target.min, alignItems: 'center' as const } : null), paddingHorizontal: t.space.md, justifyContent: 'center', borderRadius: t.radius.pill, backgroundColor: on ? t.color.action : t.color.surfaceSunk }}
+      style={{ minHeight: t.target.min, minWidth: CHIP_MIN_WIDTH, alignItems: 'center', paddingHorizontal: t.space.md, justifyContent: 'center', borderRadius: t.radius.pill, backgroundColor: on ? t.color.action : t.color.surfaceSunk }}
     >
       <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: on ? t.color.inkInverse : t.color.inkSoft }}>{label}</Text>
     </Pressable>

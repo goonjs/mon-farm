@@ -33,6 +33,7 @@ import {
   Button,
   cardStyle,
   Check,
+  CHIP_MIN_WIDTH,
   CTA,
   FieldError,
   Minus,
@@ -315,8 +316,11 @@ export function ToggleChip({
       onPress={onPress}
       style={{
         minHeight: t.target.min,
+        // A short role of the farm's own ("ยาม"): a ≥ 48 target (§12.10 #6), 64 wide so it is not a circle (q1 = ค).
+        minWidth: CHIP_MIN_WIDTH,
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: t.space.xs,
         paddingHorizontal: t.space.md,
         borderRadius: t.radius.pill,
