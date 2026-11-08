@@ -114,8 +114,8 @@ export function DebtsScreen() {
             ))}
           </Card>
         ) : null}
-        <CardLabel>{msg('debt.list.pick')}</CardLabel>
         {/* Owner q1 = ค (2026-11-08): each person is a full-width row with ›, not a short-name chip. */}
+        {people.length ? <CardLabel>{msg('debt.list.pick')}</CardLabel> : null}
         {people.length ? (
           <Card testID="debt-pick-list" style={{ gap: 0, paddingVertical: t.space.xs }}>
             {people.map((p, i) => (

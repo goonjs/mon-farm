@@ -1,5 +1,8 @@
 import { fireEvent, screen } from '@testing-library/react-native';
 
+import { StyleSheet } from 'react-native';
+
+import { CHIP_MIN_WIDTH } from './chip-width';
 import { DatePickerSheet, addDays, daysInMonth, monthGrid, shiftMonth, weekdayOf } from './date-picker-sheet';
 import { wrap } from '../test/render';
 import { tokens } from '../../design/tokens';
@@ -87,6 +90,13 @@ describe('DatePickerSheet', () => {
     fireEvent.press(screen.getByTestId(`${ID}-scrim`));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('quick picks are word chips at least CHIP_MIN_WIDTH wide (owner q1 = ค)', () => {
+    setup();
+    for (const q of ['today', 'yesterday', 'twodays']) {
+      expect(StyleSheet.flatten(screen.getByTestId(`${ID}-${q}`).props.style).minWidth).toBe(CHIP_MIN_WIDTH);
+    }
   });
 
   it('quick picks set the draft and jump the calendar to that month', () => {
