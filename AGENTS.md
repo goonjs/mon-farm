@@ -111,31 +111,46 @@ Ask again, every time.
 
   **Amendment, 2026-11-08 — merge without acknowledgement (replaces the
   2026-10-10 "acknowledge means merge" rule, PRD D-83).** The owner no longer
-  presses Acknowledge. An agent may merge a PR into `dev` when **all** of
-  these hold:
+  presses Acknowledge. An agent may merge a PR into `dev` (a merge through a
+  PR is not an agent push to `dev`) when **all** of these hold:
 
-  1. The owner has agreed the work: the story is `Ready` with acceptance
-     criteria the owner agreed, or the owner said yes to it in chat. Write
-     what was agreed in the dashboard `pushes` document (`merged_on`).
-  2. An independent review by a separate agent or session passed, with no
-     open blocking finding (its findings are fixed).
-  3. CI is green on the current head, the PR is not a draft and is
+  1. **The owner agreed this work, in words that can be checked.** Either
+     the story is `Ready` (or later) because of a commit already on `dev`
+     that records the owner's yes, or the owner's own chat message says yes
+     to this work. Quote that message and its date in the dashboard
+     `pushes` document (`agreement`) **before** merging. An agent or a lead
+     session saying "the owner agreed" does not count, and a general
+     "go ahead" does not cover work it did not name. A PR that changes a
+     story's acceptance criteria is not covered by that story's agreement.
+  2. **An independent review passed.** The reviewer is a session or agent
+     that wrote no commit in the PR and was not started by its author. It
+     reviews the current head commit; any new commit needs a new review. No
+     blocking finding is open (they are fixed). Record the reviewer and the
+     head commit in `pushes` (`reviewer`) before merging.
+  3. **CI is green on that same head commit**, the PR is not a draft and is
      mergeable (no conflict).
-  4. The PR is not **critical**. Critical means: any change to this
-     "Security gates" section or to this merge rule; to the permissions or
-     hooks in `.claude/settings.json`; to CI or deploy workflows, secrets or
-     Deploy Prod; a data migration or deletion; a new dependency (needs the
-     permission above); or anything the reviewer marked critical. For a
-     critical PR the owner must say merge, in chat, for that PR.
+  4. **The PR is not critical.** The reviewer decides this, never the
+     author, and the author cannot waive it. Critical means any change to:
+     "Security gates" or this merge rule, or any other part of `AGENTS.md`
+     or `CLAUDE.md`; `.claude/` (permissions, hooks, skills) or
+     `.dev-pose.json`; `.github/` (CI, deploy, secrets); `scripts/`; Firebase
+     config or rules (`firebase.json`, `firestore.rules`, storage rules);
+     a new dependency or any lockfile change (and the dependency permission
+     above still applies); a data migration, data change or deletion on any
+     environment other than local, dev or sandbox; or anything the reviewer
+     marked critical. For a critical PR the owner must say merge, in chat,
+     for that PR.
 
   Still the owner's alone: pushes to `dev`/`main` (agents never push them),
-  Deploy Prod (each run), tags, force-pushes, and deleting branches. When an
-  agent merges, it records `merged_at`, `merged_on` and the reviewer in the
-  dashboard `pushes` document in the same response. The owner can withdraw
-  this rule at any time in chat. Work runs with one developer team
-  at a time (UX and QA inside it); the infra team only maintains CI and
-  helps in emergencies. A team being disbanded hands over first, then
-  raises 🙋🏻‍♂️✅ to the owner, who deletes the session.
+  Deploy Prod (each run), tags, force-pushes, and deleting branches. After
+  merging, the agent records `merged_at` in `pushes` in the same response
+  and posts the `✅ DONE` line (Discord section). The owner can withdraw
+  this rule at any time in chat.
+
+  Work runs with one developer team at a time (UX and QA inside it); the
+  infra team only maintains CI and helps in emergencies. A team being
+  disbanded hands over first, then raises 🙋🏻‍♂️✅ to the owner, who deletes
+  the session.
 
   **Reconsidered and deliberately kept, 2026-08-11. Do not propose
   relaxing this again.** It was argued that the gate had become redundant
@@ -162,6 +177,9 @@ Ask again, every time.
     commit-time rule depends on the agent correctly judging that a
     question was answered. This gate does not depend on that judgement
     being right.
+
+  (Here "acknowledgement" means the owner's yes to a push, not the merge
+  step; the 2026-11-08 merge rule does not change this note.)
 
   So: still ask, every time, however obvious the answer seems and however
   many times in a row it has been yes. Asking is not a failure to read the
