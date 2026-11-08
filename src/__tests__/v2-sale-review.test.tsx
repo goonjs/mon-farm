@@ -7,6 +7,7 @@
  */
 
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { tokens } from '../../design/tokens';
 import type { ReactElement, ReactNode } from 'react';
 
 import type { SaleEvent, SysPayload } from '../core/types';
@@ -172,6 +173,17 @@ describe('#3 เปลี่ยนจุด leaves no old counter on the stack',
     await press(`pick-point-${farm.a[1]}`);
     expect(router.dismiss).toHaveBeenCalledWith(1);
     expect(router.replace).toHaveBeenLastCalledWith(expect.stringContaining(`point=${farm.a[1]}`));
+  });
+});
+
+describe('the empty-scale check keeps its round − / + (owner chose no change, 2026-11-07)', () => {
+  it('outlined circles, unlike the settings steppers', async () => {
+    await started();
+    await inSale(<ZeroTareScreen />, { point: farm.a[0], net: '50000', basket: '2000' });
+    await press('zero-not0');
+    const s = Object.assign({}, ...[screen.getByTestId('empty-reading-less').props.style].flat(Infinity).filter(Boolean));
+    expect(s.borderRadius).toBe(tokens.radius.pill);
+    expect(s.borderWidth).toBeGreaterThan(0);
   });
 });
 
