@@ -78,8 +78,9 @@ Ask again, every time.
   its own named `feature/`, `fix/`, `docs/` or `chore/` without asking
   first. This is enforced and bounded by `.claude/settings.json` (allow for
   those four prefixes; deny for force-push, delete, tags, `--all`,
-  `--mirror`, refspecs and `dev`/`main`). In exchange the acknowledgement
-  moves from before the push to after it, and is not optional:
+  `--mirror`, refspecs and `dev`/`main`). In exchange every push is
+  recorded on the dashboard right after it, and that record is not optional
+  (since 2026-11-08 there is no separate acknowledgement step):
 
   1. **Ledger = the project dashboard.** Right after a push, add one
      document to the mon-farm Dashboard artifact
@@ -88,30 +89,50 @@ Ask again, every time.
      `repo` ("goonjs/mon-farm"), `branch`, `title`, `session`, `pr_url`
      (empty until a PR exists; update it when opened), `commits` (list of
      subjects), `what`, `why_ready`, `not_covered`, `irreversible`
-     (the same six-point brief as above), `pushed_at` (ISO), `acked: false`,
-     `status: "open"` (later `merged`, `closed` or `superseded`). The owner
-     opens the PR from there and presses Acknowledge. The old Push Ledger
-     artifact is retired (owner decision 2026-10-31): do not write to it.
+     (the same six-point brief as above), `pushed_at` (ISO),
+     `status: "open"` (later `merged`, `closed` or `superseded`),
+     `stage` (`working`, `review`, `ready`, `merged` or `blocked`; keep it
+     current) and `ci` (`ผ่าน`, `แดง` or `รอ`). The dashboard is a view only:
+     there is no Acknowledge button and no `acked` field any more (owner
+     decision 2026-11-08). The old Push Ledger artifact is retired (owner
+     decision 2026-10-31): do not write to it.
   2. **Say so in the same response**: one short summary of what went up.
-  3. **Reminder line.** While this session has a push that is not yet
-     acknowledged, end every response with one line:
-     `👉 N PR รอ ack: <short title> — ดูที่นี่ <dashboard url>`. Check the
-     dashboard (one `db_query` on `pushes` with `acked == false`) at session start and when the
-     owner says they acknowledged something; do not poll otherwise.
+  3. **No reminder line.** Nothing waits on an acknowledgement, so no
+     "waiting for ack" line is added to responses.
   4. The owner still alone decides: pushes to `dev`/`main`, tags,
-     force-pushes, every Deploy Prod run, and merging any PR. The owner can
-     withdraw this allowance at any time in chat.
+     force-pushes, every Deploy Prod run, and merging a PR the merge rule
+     below calls critical. The owner can withdraw this allowance at any time
+     in chat.
 
   The reasoning in the "Reconsidered" note below still describes what the
   gate is for. This amendment is the owner's own informed decision to keep
-  that awareness through the ledger and the reminder line instead of a
-  per-push word; it is not an agent's proposal to relax the gate.
+  that awareness through the dashboard record instead of a per-push word;
+  it is not an agent's proposal to relax the gate.
 
-  **Amendment, 2026-10-10 (PRD D-83) — acknowledge means merge.** Only a
-  PR that has been independently reviewed, fixed and is ready to merge is
-  put to the owner for acknowledgement on the dashboard. The owner's
-  acknowledgement of that PR is the owner's explicit instruction to merge
-  it; the owner does not review the code. Work runs with one developer team
+  **Amendment, 2026-11-08 — merge without acknowledgement (replaces the
+  2026-10-10 "acknowledge means merge" rule, PRD D-83).** The owner no longer
+  presses Acknowledge. An agent may merge a PR into `dev` when **all** of
+  these hold:
+
+  1. The owner has agreed the work: the story is `Ready` with acceptance
+     criteria the owner agreed, or the owner said yes to it in chat. Write
+     what was agreed in the dashboard `pushes` document (`merged_on`).
+  2. An independent review by a separate agent or session passed, with no
+     open blocking finding (its findings are fixed).
+  3. CI is green on the current head, the PR is not a draft and is
+     mergeable (no conflict).
+  4. The PR is not **critical**. Critical means: any change to this
+     "Security gates" section or to this merge rule; to the permissions or
+     hooks in `.claude/settings.json`; to CI or deploy workflows, secrets or
+     Deploy Prod; a data migration or deletion; a new dependency (needs the
+     permission above); or anything the reviewer marked critical. For a
+     critical PR the owner must say merge, in chat, for that PR.
+
+  Still the owner's alone: pushes to `dev`/`main` (agents never push them),
+  Deploy Prod (each run), tags, force-pushes, and deleting branches. When an
+  agent merges, it records `merged_at`, `merged_on` and the reviewer in the
+  dashboard `pushes` document in the same response. The owner can withdraw
+  this rule at any time in chat. Work runs with one developer team
   at a time (UX and QA inside it); the infra team only maintains CI and
   helps in emergencies. A team being disbanded hands over first, then
   raises 🙋🏻‍♂️✅ to the owner, who deletes the session.
@@ -210,9 +231,10 @@ Deploy Prod needs the owner's explicit yes per run. Full detail in
   Deploy Prod and Back-merge workflows (see `docs/process.md`). Run
   `git branch --show-current` before every commit; if it prints `dev` or
   `main`, stop and create a working branch first.
-- **Never merge a pull request** unless the owner explicitly tells you to merge
-  that PR. The push delegation to the lead session above does not extend to
-  merging.
+- **Never merge a pull request** unless the merge rule in Security gates
+  (Amendment 2026-11-08) is fully met, or the owner explicitly tells you to
+  merge that PR. The push delegation to the lead session above does not extend
+  to merging.
 - Once a PR is open, or anyone else has pushed to the branch, bring in `dev` by
   **merge**, never rebase or force-push it.
 - When a session has nothing left to run (work merged or handed off, no
@@ -265,7 +287,8 @@ goes there. This adds a notification route only; it does not relax any gate.
 
 **When to post** (agents post to the two `ai-` channels only):
 
-- PR reviewed, CI green, waiting for the owner's acknowledgement →
+- A critical PR (see the merge rule) reviewed, CI green, waiting for the
+  owner to say merge →
   `#farm-ai-alerts`, `🔎 REVIEW`: PR link, one-line summary, what to check.
 - PR merged, or a deployment finished (preview or Deploy Prod) →
   `#farm-ai-updates`, `✅ DONE`: what shipped, link, result.
