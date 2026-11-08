@@ -31,7 +31,8 @@ PRD: FERT-3, FERT-5, INV, OPS · D-89 (อีพิกใหม่ เจ้า�
 ต่อด้วย E11-S16 (จ่ายร้าน) และ E15-S01/S02 (เตรียมขาย)
 
 ## Mockup
-- `docs/ux/mockups/fertilizing-split-options.html` (เจ้าของเลือกแบบพิมพ์ตัวเลข 2026-11-06)
+- **`docs/ux/mockups/fertilizing-v3.html`** — แบบ B+ ที่เจ้าของเลือก (D-94, 2026-11-08)
+- ของเก่าเพื่อเปรียบเทียบ: `fertilizing-split-options.html` (พิมพ์ตัวเลข 2026-11-06), `fertilizing-flow-options.html` (A/B/C)
 - แผนภาพโฟลว์และ story map: https://claude.ai/artifact/3VvuLZ6ULZqUbAyEPA85Xx
 
 ## ประเด็นค้าง
