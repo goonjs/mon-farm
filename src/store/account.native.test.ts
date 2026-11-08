@@ -61,6 +61,14 @@ describe('SqliteAccountStore — start-up reads', () => {
     expect(await store.user()).toEqual(somchai);
   });
 
+  it('a stored session that is not a user reads as signed out, as on web — not "cannot read" for ever', async () => {
+    const { openDatabaseAsync } = await import('expo-sqlite');
+    for (const value of ['{not json', '{"name":"x"}']) {
+      vi.mocked(openDatabaseAsync).mockImplementationOnce(async () => ({ execAsync: async () => undefined, getFirstAsync: async () => ({ value }) }) as never);
+      expect(await new SqliteAccountStore().user()).toBeNull();
+    }
+  });
+
   it('no stored session is still "never signed in"', async () => {
     const { openDatabaseAsync } = await import('expo-sqlite');
     vi.mocked(openDatabaseAsync).mockImplementationOnce(async () => ({ execAsync: async () => undefined, getFirstAsync: async () => null }) as never);

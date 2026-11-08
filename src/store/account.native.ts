@@ -60,10 +60,15 @@ export class SqliteAccountStore implements AccountStore {
   }
 
   async user(): Promise<User | null> {
-    return this.readTwice('session', async (db) => {
-      const row = await db.getFirstAsync<{ value: string }>(`SELECT value FROM meta WHERE key = 'session'`);
-      return row ? (JSON.parse(row.value) as User) : null;
-    });
+    const row = await this.readTwice('session', (db) => db.getFirstAsync<{ value: string }>(`SELECT value FROM meta WHERE key = 'session'`));
+    if (!row) return null;
+    // A row that is not a user reads as signed out, as on web: "cannot read" would lock the person out for good.
+    try {
+      const stored: unknown = JSON.parse(row.value);
+      if (typeof stored === 'object' && stored !== null && typeof (stored as User).userId === 'string') return stored as User;
+    } catch {}
+    console.warn('Stored session is not a user; treating as signed out.', row.value);
+    return null;
   }
 
   async saveUser(user: User): Promise<void> {
