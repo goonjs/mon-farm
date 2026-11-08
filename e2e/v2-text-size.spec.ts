@@ -253,3 +253,37 @@ test('×1.3 on top of L: the header title and the Banner still fit (TS-6, TS-7)'
     await shot(page, name);
   }
 });
+
+test.describe('360 wide at L', () => {
+  test.use({ viewport: { width: 360, height: 800 } });
+
+  // An input has no text node, so textFit does not see one stick out: measure the box itself.
+  test('the points helper, page 2: each point-name box stays inside its card', async ({ page }) => {
+    const id = on(page);
+    await seed(page);
+    await page.goto('/v2/points-wizard');
+    await id('points-wizard').locator('[data-testid^="wizard-farm-"]').filter({ hasText: 'จันทเขลม' }).click();
+    await id('points-wizard').locator('[data-testid^="wizard-tapper-"]').filter({ hasText: 'แดง' }).click();
+    await id('wizard-next').click();
+    await expect(id('wizard-group-red')).toBeVisible();
+    await page.waitForTimeout(300);
+    expect(await fontPx(page, 'screen-title')).toBe(23);
+    // Visible boxes only (expo-router keeps earlier screens mounted, hidden), measured against the card's inner edge.
+    const { boxes, out } = await page.evaluate(() => {
+      const shown = [...document.querySelectorAll<HTMLElement>('[data-testid^="wizard-name-"]')].filter((e) => e.getBoundingClientRect().width > 0);
+      return {
+        boxes: shown.length,
+        out: shown.flatMap((e) => {
+          const r = e.getBoundingClientRect();
+          const card = e.closest('[data-testid^="wizard-group-"]')!;
+          const inner = card.getBoundingClientRect().right - parseFloat(getComputedStyle(card).paddingRight);
+          return r.right > inner + 0.5 || r.right > innerWidth ? [`${e.getAttribute('data-testid')} ends at ${Math.round(r.right)}, card content at ${Math.round(inner)}`] : [];
+        }),
+      };
+    });
+    await shot(page, 'l-360-points-wizard-names');
+    expect(boxes).toBeGreaterThan(0);
+    expect(out).toEqual([]);
+    expect(await textFit(page)).toEqual([]);
+  });
+});
