@@ -101,6 +101,36 @@ test('an IndexedDB that refuses to open falls back, with the warning on every sc
   await expect(page.getByTestId('storage-warning')).toBeVisible();
 });
 
+// Owner q3 = ก (2026-11-08): a signed-in device whose account cannot be read (twice) is told so, with a
+// retry — never the sign-in screen, which offline at the farm is a dead end. Retry reads again, no reload.
+for (const size of ['m', 's'] as const) {
+  test(`a signed-in device that cannot read its account: "อ่านข้อมูลในเครื่องไม่ได้", retry opens the app (${size})`, async ({ page }) => {
+    await page.addInitScript((size) => {
+      localStorage.setItem('mon-farm:text-size', size);
+      const w = window as unknown as { __breakAccount?: boolean };
+      w.__breakAccount = true;
+      const real = IDBDatabase.prototype.transaction;
+      IDBDatabase.prototype.transaction = function (this: IDBDatabase, ...args: Parameters<IDBDatabase['transaction']>) {
+        const names = ([] as string[]).concat(args[0] as string | string[]);
+        if (w.__breakAccount && (names.includes('meta') || names.includes('memberships'))) throw new DOMException('disk I/O error', 'UnknownError');
+        return real.apply(this, args);
+      };
+    }, size);
+    await page.goto('/v2');
+    await expect(page.getByTestId('account-unreadable')).toBeVisible();
+    await expect(page.getByText('อ่านข้อมูลในเครื่องไม่ได้')).toBeVisible();
+    await expect(page.getByTestId('signin')).toHaveCount(0);
+    // The same broken reads leave the event store unable to say it is durable, which raises "ไม่ได้บันทึกถาวร
+    // … ข้อมูลจะหาย": a real combination. Over this screen it would contradict "ไม่หาย", and nothing can be
+    // entered here, so it waits for the app (lead review, 2026-11-08).
+    await expect(page.getByTestId('storage-warning')).toHaveCount(0);
+    await evidence(page, `docs/ux/screenshots/e02-account-unreadable/unreadable-${size}.png`);
+    await page.evaluate(() => ((window as unknown as { __breakAccount?: boolean }).__breakAccount = false));
+    await page.getByTestId('account-unreadable-retry').click();
+    await expect(page.getByTestId('sync-pill').first()).toBeVisible();
+  });
+}
+
 test('without IndexedDB the app warns in Thai that nothing is kept, from the first screen', async ({ page }) => {
   await page.setViewportSize({ width: 412, height: 915 });
   await page.addInitScript(() => {

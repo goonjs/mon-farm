@@ -1583,6 +1583,10 @@ const th = {
   'acct.check.why': 'เพื่อไม่ให้สร้างกลุ่มซ้ำ แอปต้องรู้ก่อนว่าคุณมีกลุ่มฟาร์มอยู่แล้วหรือไม่',
   'acct.check.retry': 'ลองอีกครั้ง',
   'acct.check.signIn': 'เข้าสู่ระบบด้วย Google อีกครั้ง',
+  'acct.unreadable.title': 'อ่านข้อมูลในเครื่องไม่ได้',
+  'acct.unreadable.kept': 'ข้อมูลยังอยู่ในเครื่อง ไม่หาย',
+  'acct.unreadable.retry': 'ลองอีกครั้ง',
+  'acct.unreadable.restart': 'ถ้ายังไม่ได้ ปิดแอปแล้วเปิดใหม่',
 
   // ── v2 farm settings (D-83) ──
   'v2f.pointsCount': '{n} จุดชั่ง',
@@ -3539,6 +3543,10 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'acct.check.why': 'to avoid making a duplicate group, the app must first know whether you already have a farm group',
   'acct.check.retry': 'try again',
   'acct.check.signIn': 'sign in with Google again',
+  'acct.unreadable.title': "the data on this device could not be read",
+  'acct.unreadable.kept': 'your data is still on this device, nothing is lost',
+  'acct.unreadable.retry': 'try again',
+  'acct.unreadable.restart': 'if it still fails, close the app and open it again',
   'v2f.pointsCount': '{n} weighing points',
   'v2f.accountsCount': '{n} accounts',
   'v2f.scale': 'scale',
