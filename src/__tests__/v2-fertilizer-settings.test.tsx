@@ -1,6 +1,7 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
+import { tokens } from '../../design/tokens';
 import { fertOptionId, projectFinance } from '../core/finance/ledger';
 import type { FinanceEvent } from '../core/finance/types';
 import { FertilizerSettingsScreen } from '../v2/money/fertilizer-settings';
@@ -68,7 +69,7 @@ describe('fertilizer settings (21h)', () => {
     const id = fertOptionId('reason', 'เร่งน้ำยาง');
     expect(screen.getByTestId(`fert-set-row-${id}`)).toHaveTextContent(/ช่วงก่อนเปิดกรีด/);
 
-    press(`fert-set-edit-${id}`);
+    press(`fert-set-open-${id}`);
     type('fert-set-name', 'เร่งน้ำยางก่อนเปิดกรีด');
     await act(async () => press('fert-set-save'));
     await flush();
@@ -85,6 +86,42 @@ describe('fertilizer settings (21h)', () => {
     press(`fert-set-hide-${id}`);
     await flush();
     expect(projectFinance(await mockFinance.load()).fertOptions.find((o) => o.id === id)?.hidden).toBe(false);
+  });
+
+  it('a row is the edit target with ›; hide and show are underlined words, not round chips (owner 2026-11-08)', async () => {
+    const c = tokens.color.light;
+    type Node = { props: Record<string, unknown>; findAll: (f: (n: Node) => boolean) => Node[] };
+    const flat = (st: unknown) => Object.assign({}, ...[st].flat(Infinity).filter(Boolean)) as Record<string, unknown>;
+    const roundOutlined = (n: Node) => n.findAll((x) => { const st = flat(x.props.style); return Number(st.borderWidth ?? 0) > 0 && Number(st.borderRadius ?? 0) >= 24; }).length > 0;
+    const linkInk = (id: string) => {
+      const link = screen.getByTestId(id) as unknown as Node;
+      expect(roundOutlined(link)).toBe(false);
+      const txt = link.findAll((n) => flat(n.props.style).textDecorationLine === 'underline');
+      expect(txt.length).toBeGreaterThan(0);
+      return flat(txt[0].props.style).color;
+    };
+    wrap(<FertilizerSettingsScreen />);
+    await flush();
+    const row = screen.getByTestId(`fert-set-row-${YELLOW}`) as unknown as Node;
+    expect(roundOutlined(row)).toBe(false);
+    expect(screen.queryByTestId(`fert-set-edit-${YELLOW}`)).toBeNull();
+    expect(within(screen.getByTestId(`fert-set-open-${YELLOW}`)).getByTestId(`fert-set-open-${YELLOW}-chevron`, { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByTestId(`fert-set-open-${YELLOW}`)).toHaveTextContent(/ใบเหลืองทั้งแปลง/);
+    expect(linkInk(`fert-set-hide-${YELLOW}`)).toBe(c.reject);
+    expect(screen.getByTestId(`fert-set-hide-${YELLOW}`).props.accessibilityLabel).toMatch(/ซ่อน.*ใบเหลือง/);
+
+    press(`fert-set-open-${YELLOW}`);
+    expect(screen.getByTestId('fert-set-name').props.value).toBe('ใบเหลือง');
+    press('fert-set-cancel');
+
+    press(`fert-set-hide-${YELLOW}`);
+    await flush();
+    expect(screen.queryByTestId(`fert-set-open-${YELLOW}`)).toBeNull();
+    expect(screen.getByTestId(`fert-set-row-${YELLOW}`)).toHaveTextContent(/ซ่อนอยู่/);
+    expect(linkInk(`fert-set-hide-${YELLOW}`)).toBe(c.action);
+    expect(screen.getByTestId(`fert-set-hide-${YELLOW}`)).toHaveTextContent('แสดง');
+    press(`fert-set-hide-${YELLOW}`);
+    await flush();
   });
 
   it('tabs list each kind; search narrows', async () => {
