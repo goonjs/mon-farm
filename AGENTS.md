@@ -92,7 +92,8 @@ Ask again, every time.
      (the same six-point brief as above), `pushed_at` (ISO),
      `status: "open"` (later `merged`, `closed` or `superseded`),
      `stage` (`working`, `review`, `ready`, `merged` or `blocked`; keep it
-     current) and `ci` (`ผ่าน`, `แดง` or `รอ`). The dashboard is a view only:
+     current), `ci` (`ผ่าน`, `แดง` or `รอ`) and, for a merge, `agreement`,
+     `reviewer` and `merged_at` (see the merge rule below). The dashboard is a view only:
      there is no Acknowledge button and no `acked` field any more (owner
      decision 2026-11-08). The old Push Ledger artifact is retired (owner
      decision 2026-10-31): do not write to it.
@@ -111,35 +112,49 @@ Ask again, every time.
 
   **Amendment, 2026-11-08 — merge without acknowledgement (replaces the
   2026-10-10 "acknowledge means merge" rule, PRD D-83).** The owner no longer
-  presses Acknowledge. An agent may merge a PR into `dev` (a merge through a
-  PR is not an agent push to `dev`) when **all** of these hold:
+  presses Acknowledge. An agent may merge a PR when its base is `dev`, its
+  head is a work branch (`feature/`, `fix/`, `docs/` or `chore/`; never a
+  hotfix or back-merge PR, which stay with the owner per `docs/process.md`),
+  and **all** of these hold. A merge through a PR is not an agent push to
+  `dev`.
 
   1. **The owner agreed this work, in words that can be checked.** Either
-     the story is `Ready` (or later) because of a commit already on `dev`
-     that records the owner's yes, or the owner's own chat message says yes
-     to this work. Quote that message and its date in the dashboard
-     `pushes` document (`agreement`) **before** merging. An agent or a lead
-     session saying "the owner agreed" does not count, and a general
-     "go ahead" does not cover work it did not name. A PR that changes a
+     the owner's own chat message says yes to this work, or the story is
+     `Ready` (or later) because of a commit on `dev` that quotes the
+     owner's yes with its date. Record the quote and date in the dashboard
+     `pushes` document (`agreement`) **before** merging, and the reviewer
+     confirms it against the chat or that commit. An agent or a lead session
+     saying "the owner agreed" does not count; a general "go ahead" does not
+     cover work it did not name; a provisional yes (for example an
+     acceptance criteria marked "waiting for the owner's check") does not
+     count. The PR must stay inside the agreed work, and a PR that changes a
      story's acceptance criteria is not covered by that story's agreement.
-  2. **An independent review passed.** The reviewer is a session or agent
-     that wrote no commit in the PR and was not started by its author. It
-     reviews the current head commit; any new commit needs a new review. No
-     blocking finding is open (they are fixed). Record the reviewer and the
-     head commit in `pushes` (`reviewer`) before merging.
+  2. **An independent review passed on this head commit.** The reviewer is a
+     separate session or agent that wrote no commit in the PR, was not
+     started by its author, and is not the lead session that directed the
+     author's work. The review is a comment or GitHub review on the PR that
+     names the head commit it reviewed; any new commit needs a new review.
+     No blocking finding is open (they are fixed). Record the reviewer and
+     that commit in `pushes` (`reviewer`) before merging, and check just
+     before merging that the PR head is still that commit.
   3. **CI is green on that same head commit**, the PR is not a draft and is
      mergeable (no conflict).
-  4. **The PR is not critical.** The reviewer decides this, never the
-     author, and the author cannot waive it. Critical means any change to:
-     "Security gates" or this merge rule, or any other part of `AGENTS.md`
-     or `CLAUDE.md`; `.claude/` (permissions, hooks, skills) or
-     `.dev-pose.json`; `.github/` (CI, deploy, secrets); `scripts/`; Firebase
-     config or rules (`firebase.json`, `firestore.rules`, storage rules);
-     a new dependency or any lockfile change (and the dependency permission
-     above still applies); a data migration, data change or deletion on any
-     environment other than local, dev or sandbox; or anything the reviewer
-     marked critical. For a critical PR the owner must say merge, in chat,
-     for that PR.
+  4. **The PR is not critical.** Critical is decided by paths first: any
+     change to one of these is critical whatever anyone judges. "Security
+     gates" or this merge rule, or any other part of `AGENTS.md` or
+     `CLAUDE.md`; `docs/process.md` or `docs/checklists/`; `.claude/`
+     (permissions, hooks, skills), `.githooks/` or `.dev-pose.json`;
+     `.github/` (CI, deploy, secrets) or `scripts/`; Firebase config or
+     rules (`firebase.json`, `.firebaserc`, `firestore.rules`,
+     `firestore.indexes.json`, `storage.rules`); `eas.json` or `app.json`;
+     `package.json`, `.npmrc` or any lockfile (a new dependency also needs
+     the dependency permission above); app code that changes the event-log or
+     sync schema; and a data migration, data change or deletion on any
+     environment other than local, dev or sandbox. The reviewer then writes
+     on the PR whether it is critical, with the paths it checked, and may
+     add to this list but never remove from it; the author cannot waive it.
+     For a critical PR the owner must say merge, in chat, for that PR; "the
+     lead or an agent said the owner said merge" does not count.
 
   Still the owner's alone: pushes to `dev`/`main` (agents never push them),
   Deploy Prod (each run), tags, force-pushes, and deleting branches. After
@@ -153,7 +168,8 @@ Ask again, every time.
   the session.
 
   **Reconsidered and deliberately kept, 2026-08-11. Do not propose
-  relaxing this again.** It was argued that the gate had become redundant
+  relaxing this again.** (In this note and the 2026-09-01 amendment,
+  "acknowledgement" means the owner's yes to a push, not the merge step.) It was argued that the gate had become redundant
   once "never commit ahead of an unanswered question" was added below —
   if nothing is committed without the owner's answer, a push cannot carry
   anything unapproved, so the check appears to be catching a second time
@@ -177,9 +193,6 @@ Ask again, every time.
     commit-time rule depends on the agent correctly judging that a
     question was answered. This gate does not depend on that judgement
     being right.
-
-  (Here "acknowledgement" means the owner's yes to a push, not the merge
-  step; the 2026-11-08 merge rule does not change this note.)
 
   So: still ask, every time, however obvious the answer seems and however
   many times in a row it has been yes. Asking is not a failure to read the
