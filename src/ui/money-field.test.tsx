@@ -121,6 +121,16 @@ describe('MoneyField — E01-S20 additions', () => {
     expect(screen.queryByTestId('m-words')).toBeNull();
   });
 
+  it('min 0.01 (a screen that never saves 0): 0 shuts ตกลง and says "ต้องมากกว่า 0" (owner q2 = ก)', () => {
+    const onChange = jest.fn();
+    wrap(<MoneyField testID="m" label="ราคา" unit="บาท" satang={null} minSatang={1} onChange={onChange} />);
+    fireEvent.press(screen.getByTestId('m'));
+    press('0');
+    expect(screen.getByText('ต้องมากกว่า 0')).toBeTruthy();
+    done();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('validate: a screen rule closes ตกลง and says why (NP-5)', () => {
     const onChange = jest.fn();
     wrap(<Harness initial={null} validate={(s) => (s > 50_000 ? 'เกินยอดค้าง 500.00' : undefined)} onChange={onChange} />);

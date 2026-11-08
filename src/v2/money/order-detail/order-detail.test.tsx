@@ -189,6 +189,16 @@ describe('OrderDetailView', () => {
     expect(patch.share).toBeUndefined();
   });
 
+  it('edit item: price 0 on the pad shuts ตกลง and says ต้องมากกว่า 0 (owner q2 = ก)', () => {
+    setup([a]);
+    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
+    fireEvent.press(screen.getByTestId('ordd-edit-price'));
+    fireEvent(screen.getByTestId('ordd-edit-price-pad-key-back'), 'longPress');
+    keys('ordd-edit-price', '0');
+    expect(screen.getByTestId('ordd-edit-price-done').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId('ordd-edit-price-problem')).toHaveTextContent('ต้องมากกว่า 0');
+  });
+
   it('edit item: an existing share is rebuilt in the same patch', async () => {
     const lines = [{ worker: { id: 'p1', name: 'แดง' }, sacks: 6, workerPct: 50, settle: 'debt' as const }];
     const write = setup([exp('o1-a', { share: { billSatang: 2_300_000, discountSatang: 0, totalSacks: 20, lines } })]);

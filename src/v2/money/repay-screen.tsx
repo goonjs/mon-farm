@@ -125,8 +125,9 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
               required
               unit={msg('v2m.baht')}
               satang={moneyOf(amount)}
-              // The old judge on the pad too: more than is owed cannot be committed (NP-5). 0 still can, and
-              // the page's save stays off for it, as it did when 0 was typed into the old box.
+              // The old judge on the pad too: more than is owed cannot be committed (NP-5). Nor 0: the page
+              // never saves it, so the pad says so at once (owner q2 = ก, 2026-11-08).
+              minSatang={1}
               validate={(v) => {
                 const plan = allocateOldestFirst(debts, v);
                 return !plan.ok && plan.reason === 'over' ? msg('fin.repay.over', { max: formatSatang(plan.maxSatang) }) : undefined;

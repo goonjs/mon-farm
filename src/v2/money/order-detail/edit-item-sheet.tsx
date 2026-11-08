@@ -140,9 +140,9 @@ export function EditItemSheet({
           ]}
         />
         {m.mode === 'per' ? (
-          <MoneyField testID="ordd-edit-price" label={msg('ordc.perUnit', { unit })} satang={per} unit={msg('ordc.bahtPer', { unit })} onChange={(v) => setM(withUnitPrice(m, v))} />
+          <MoneyField testID="ordd-edit-price" minSatang={1} label={msg('ordc.perUnit', { unit })} satang={per} unit={msg('ordc.bahtPer', { unit })} onChange={(v) => setM(withUnitPrice(m, v))} />
         ) : (
-          <MoneyField testID="ordd-edit-price" label={msg('ordc.priceTotal')} satang={m.gross} unit={msg('ordc.baht')} onChange={(v) => setM(withGross(m, v))} />
+          <MoneyField testID="ordd-edit-price" minSatang={1} label={msg('ordc.priceTotal')} satang={m.gross} unit={msg('ordc.baht')} onChange={(v) => setM(withGross(m, v))} />
         )}
         {tried && mp.price ? <FieldError testID="ordd-edit-err-price">{msg('ordc.err.price')}</FieldError> : null}
 

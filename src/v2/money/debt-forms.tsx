@@ -104,6 +104,8 @@ export function AddDebtScreen() {
             testID="debt-amount"
             label={msg('debt.form.amount').replace(' *', '')}
             required
+            // This screen never saves 0: the pad says so at 0 (owner q2 = ก, 2026-11-08).
+            minSatang={1}
             unit={msg('v2m.baht')}
             satang={parseBahtToSatang(amount)}
             onChange={(v) => setAmount(satangToInput(v))}
@@ -230,6 +232,8 @@ export function PayDebtScreen() {
             testID="debt-pay-amount"
             label={msg('debt.form.amount').replace(' *', '')}
             required
+            // This screen never saves 0: the pad says so at 0 (owner q2 = ก, 2026-11-08).
+            minSatang={1}
             unit={msg('v2m.baht')}
             satang={parseBahtToSatang(amount)}
             onChange={(v) => {
