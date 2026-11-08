@@ -164,11 +164,14 @@ Ask again, every time.
 
   Still the owner's alone: pushes to `dev`/`main` (agents never push them),
   Deploy Prod (each run), tags, force-pushes, and deleting branches (merge
-  without deleting the head branch). Merge with the head-commit guard when
-  the tool offers one. A merge to `dev` deploys the dev site by workflow;
-  that is accepted. After merging, the agent records `merged_at` in `pushes` in the same response
-  and posts the `✅ DONE` line (Discord section). The owner can withdraw
-  this rule at any time in chat.
+  without deleting the head branch). Merge with the head-commit guard set
+  to the reviewed commit (`expectedHeadSha`, or `--match-head-commit`), and
+  never enable auto-merge: it would fire on a head or CI state nobody
+  checked. A merge to `dev` deploys the dev site by workflow; that is
+  accepted. After merging, the agent sets `status: "merged"`,
+  `stage: "merged"` and `merged_at` in `pushes` in the same response and
+  posts the `✅ DONE` line (Discord section). The owner can withdraw this
+  rule at any time in chat.
 
   Work runs with one developer team at a time (UX and QA inside it); the
   infra team only maintains CI and helps in emergencies. A team being
