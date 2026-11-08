@@ -255,6 +255,30 @@ describe('order capture screen (E11-S11)', () => {
     expect(screen.queryByTestId('ordc-empty')).toBeTruthy();
   });
 
+  it('price 0 on the pad, per unit or total: ตกลง is shut and says ต้องมากกว่า 0 (owner q2 = ก)', async () => {
+    wrap(<OrderScreen />);
+    await flush();
+    press('ordc-add');
+    press('ordc-pick-new');
+    fireEvent.changeText(screen.getByTestId('ordc-formula'), '8-24-24');
+    press('ordc-new-done');
+    await flush();
+    const zeroShut = () => {
+      expect(screen.getByTestId('ordc-price-done').props.accessibilityState).toMatchObject({ disabled: true });
+      expect(screen.getByTestId('ordc-price-problem')).toHaveTextContent('ต้องมากกว่า 0');
+    };
+    press('ordc-price');
+    keys('ordc-price-pad', '0');
+    zeroShut();
+    keys('ordc-price-pad', '5');
+    press('ordc-price-done');
+    press('ordc-price-mode-total');
+    press('ordc-price');
+    fireEvent(screen.getByTestId('ordc-price-pad-key-back'), 'longPress');
+    keys('ordc-price-pad', '0');
+    zeroShut();
+  });
+
   it('a new fertilizer needs a formula, said at the field', async () => {
     wrap(<OrderScreen />);
     await flush();

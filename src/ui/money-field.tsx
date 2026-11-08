@@ -117,7 +117,10 @@ export function MoneyField({
   const problem = state.rejected
     ? msg('numpad.tooBig')
     : live != null && minSatang != null && live < minSatang
-      ? msg('numpad.minMsg', { min: formatSatang(minSatang) })
+      ? // A floor of 0.01 means "not 0" to the person typing (owner q2 = ก, 2026-11-08).
+        minSatang === 1
+        ? msg('numpad.positive')
+        : msg('numpad.minMsg', { min: formatSatang(minSatang) })
       : live != null && live > maxSatang
         ? msg('numpad.maxMsg', { max: formatSatang(maxSatang) })
         : live != null

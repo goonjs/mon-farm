@@ -50,6 +50,15 @@ const enter = async (field: 'debt-amount' | 'debt-pay-amount' | 'debt-plan-amoun
   for (const k of text) await act(async () => fireEvent.press(screen.getByTestId(`${field}-pad-key-${k}`)));
   await act(async () => fireEvent.press(screen.getByTestId(`${field}-done`)));
 };
+/** Owner q2 = ก (2026-11-08): a field whose screen never saves 0 shuts ตกลง at 0 and says so at the pad. */
+const shutAtZero = (field: string) => {
+  expect(screen.getByTestId(`${field}-done`).props.accessibilityState).toMatchObject({ disabled: true });
+  expect(screen.getByTestId(`${field}-problem`)).toHaveTextContent('ต้องมากกว่า 0');
+};
+const openZero = async (field: string) => {
+  await act(async () => fireEvent.press(screen.getByTestId(field)));
+  await act(async () => fireEvent.press(screen.getByTestId(`${field}-pad-key-0`)));
+};
 const payloads = async (t: string) => (await mockFinance.load()).map((e) => e.payload).filter((p) => p.t === t) as unknown as Record<string, any>[];
 const save = async (id: string) => {
   await act(async () => fireEvent.press(screen.getByTestId(id)));
@@ -95,6 +104,30 @@ describe('row 9 debt-amount: the amount of a new debt (NP-4)', () => {
     await save('debt-save');
     expect(screen.getAllByText('ใส่จำนวนเงิน').length).toBeGreaterThan(0);
     expect((await payloads('debt_added')).length).toBe(before);
+  });
+});
+
+describe('0 on the pad (owner q2 = ก)', () => {
+  it('debt-amount: ตกลง is shut at 0 and says ต้องมากกว่า 0', async () => {
+    wrap(<AddDebtScreen />);
+    await flush();
+    await openZero('debt-amount');
+    shutAtZero('debt-amount');
+  });
+
+  it('debt-pay-amount: ตกลง is shut at 0', async () => {
+    wrap(<PayDebtScreen />);
+    await flush();
+    await openZero('debt-pay-amount');
+    shutAtZero('debt-pay-amount');
+  });
+
+  it('debt-plan-amount: ตกลง is shut at 0', async () => {
+    wrap(<DebtAccountScreen />);
+    await flush();
+    await openPlan();
+    await openZero('debt-plan-amount');
+    shutAtZero('debt-plan-amount');
   });
 });
 

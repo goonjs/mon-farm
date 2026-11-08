@@ -200,9 +200,9 @@ function MoneyBlock({
         ]}
       />
       {m.mode === 'per' ? (
-        <MoneyField testID="ordc-price" label={msg('ordc.perUnit', { unit })} satang={per} unit={msg('ordc.bahtPer', { unit })} onChange={(v) => set(withUnitPrice(m, v))} />
+        <MoneyField testID="ordc-price" minSatang={1} label={msg('ordc.perUnit', { unit })} satang={per} unit={msg('ordc.bahtPer', { unit })} onChange={(v) => set(withUnitPrice(m, v))} />
       ) : (
-        <MoneyField testID="ordc-price" label={msg('ordc.priceTotal')} satang={m.gross} unit={msg('ordc.baht')} onChange={(v) => set(withGross(m, v))} />
+        <MoneyField testID="ordc-price" minSatang={1} label={msg('ordc.priceTotal')} satang={m.gross} unit={msg('ordc.baht')} onChange={(v) => set(withGross(m, v))} />
       )}
       {tried && problems.price ? <FieldError testID="ordc-err-price">{msg('ordc.err.price')}</FieldError> : null}
 
