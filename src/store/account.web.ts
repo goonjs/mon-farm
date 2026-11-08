@@ -58,7 +58,9 @@ export class WebAccountStore implements AccountStore {
 
   async user(): Promise<User | null> {
     // A dropped connection (Safari, a transient error) must not read as "never
-    // signed in" — that would ask for internet at the farm. Try once more first.
+    // signed in" — that would ask for internet at the farm. Try once more first;
+    // if that fails too, throw: the gate says the device could not be read and
+    // offers a retry (owner q3 = ก, 2026-11-08), never the sign-in screen.
     try {
       return await this.readTwice('session', async (db) => {
         const stored = await request(db.transaction('meta', 'readonly').objectStore('meta').get(SESSION));
@@ -67,8 +69,10 @@ export class WebAccountStore implements AccountStore {
         console.warn('Stored session is not a user; treating as signed out.', stored);
         return this.unsaved;
       }, (memory) => memory.user());
-    } catch {
-      return this.unsaved;
+    } catch (err) {
+      // This tab signed in but could not store it: that sign-in still counts until reload.
+      if (this.unsaved) return this.unsaved;
+      throw err;
     }
   }
 

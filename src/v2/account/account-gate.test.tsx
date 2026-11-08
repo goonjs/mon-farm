@@ -200,14 +200,55 @@ describe('a device that already signed in (ACC-6: offline works)', () => {
     expect(screen.getByTestId('group-start')).toBeTruthy();
   });
 
-  it('a stored account that cannot be read falls back to the sign-in screen', async () => {
+  // Owner q3 = ก (2026-11-08): "cannot read" is not "never signed in". The sign-in screen would ask a
+  // signed-in person at the farm for internet; this screen says the data is still there and offers a retry.
+  it('a stored account that cannot be read says so, with a retry and no sign-in', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
     const accounts = new MemoryAccountStore();
     accounts.user = async () => {
       throw new Error('unreadable');
     };
     await open(accounts);
-    expect(screen.getByTestId('signin')).toBeTruthy();
+    expect(screen.getByTestId('account-unreadable')).toBeTruthy();
+    expect(screen.getByText('อ่านข้อมูลในเครื่องไม่ได้')).toBeTruthy();
+    expect(screen.getByText('ข้อมูลยังอยู่ในเครื่อง ไม่หาย')).toBeTruthy();
+    expect(screen.getByText('ถ้ายังไม่ได้ ปิดแอปแล้วเปิดใหม่')).toBeTruthy();
+    expect(screen.getByTestId('account-unreadable-retry')).toBeTruthy();
+    expect(screen.queryByTestId('signin')).toBeNull();
+    expect(screen.queryByTestId('app-inside')).toBeNull();
+  });
+
+  it('memberships that cannot be read: the same screen, not create-group', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const accounts = new MemoryAccountStore();
+    await accounts.saveUser(somchai);
+    accounts.memberships = async () => {
+      throw new Error('unreadable');
+    };
+    await open(accounts);
+    expect(screen.getByTestId('account-unreadable')).toBeTruthy();
+    expect(screen.queryByTestId('group-start')).toBeNull();
+  });
+
+  it('retry reads the device again, without a reload: once it reads, the app opens', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const accounts = new MemoryAccountStore();
+    await accounts.saveUser(somchai);
+    await accounts.createGroup(
+      { groupId: 'g-1', userId: somchai.userId, name: 'สวนบ้านนา', role: 'owner' },
+      { op: 'create_group', groupId: 'g-1', name: 'สวนบ้านนา', createdBy: somchai.userId, displayName: null, createdAt: 1 },
+    );
+    const real = accounts.user.bind(accounts);
+    let fail = true;
+    accounts.user = async () => {
+      if (fail) throw new Error('unreadable');
+      return real();
+    };
+    await open(accounts);
+    expect(screen.getByTestId('account-unreadable')).toBeTruthy();
+    fail = false;
+    await press('account-unreadable-retry');
+    expect(screen.getByTestId('app-inside')).toBeTruthy();
   });
 });
 

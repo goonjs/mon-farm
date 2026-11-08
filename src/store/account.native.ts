@@ -6,6 +6,11 @@
  * a group is created.
  *
  * Written but not yet exercised on a device — native has never run (E01-S06).
+ *
+ * Start-up reads (`user`, `memberships`) are tried twice and then throw, and an
+ * open that failed is forgotten so the next call opens again (owner q3 = ก,
+ * 2026-11-08): the gate shows "cannot read the device" with a retry, never the
+ * sign-in screen, for a person who signed in before.
  */
 
 import * as SQLite from 'expo-sqlite';
@@ -28,18 +33,37 @@ export class SqliteAccountStore implements AccountStore {
   private db: Promise<SQLite.SQLiteDatabase> | null = null;
 
   private open(): Promise<SQLite.SQLiteDatabase> {
-    this.db ??= (async () => {
+    const opening = (this.db ??= (async () => {
       const db = await SQLite.openDatabaseAsync(DB_NAME);
       await db.execAsync(SCHEMA);
       return db;
-    })();
-    return this.db;
+    })());
+    // A failed open is not kept: the next call (a retry) opens again.
+    opening.catch(() => {
+      if (this.db === opening) this.db = null;
+    });
+    return opening;
+  }
+
+  /** A start-up read, tried twice; the second failure is warned with its name and thrown. */
+  private async readTwice<T>(name: string, read: (db: SQLite.SQLiteDatabase) => Promise<T>): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await read(await this.open());
+      } catch (err) {
+        if (attempt === 1) {
+          console.warn(`Stored ${name} could not be read.`, err);
+          throw err;
+        }
+      }
+    }
   }
 
   async user(): Promise<User | null> {
-    const db = await this.open();
-    const row = await db.getFirstAsync<{ value: string }>(`SELECT value FROM meta WHERE key = 'session'`);
-    return row ? (JSON.parse(row.value) as User) : null;
+    return this.readTwice('session', async (db) => {
+      const row = await db.getFirstAsync<{ value: string }>(`SELECT value FROM meta WHERE key = 'session'`);
+      return row ? (JSON.parse(row.value) as User) : null;
+    });
   }
 
   async saveUser(user: User): Promise<void> {
@@ -48,11 +72,12 @@ export class SqliteAccountStore implements AccountStore {
   }
 
   async memberships(): Promise<Membership[]> {
-    const db = await this.open();
-    const rows = await db.getAllAsync<{ group_id: string; user_id: string; name: string; role: Role }>(
-      `SELECT group_id, user_id, name, role FROM memberships WHERE state = 'active' ORDER BY rowid`,
-    );
-    return rows.map((r) => ({ groupId: r.group_id, userId: r.user_id, name: r.name, role: r.role }));
+    return this.readTwice('memberships', async (db) => {
+      const rows = await db.getAllAsync<{ group_id: string; user_id: string; name: string; role: Role }>(
+        `SELECT group_id, user_id, name, role FROM memberships WHERE state = 'active' ORDER BY rowid`,
+      );
+      return rows.map((r) => ({ groupId: r.group_id, userId: r.user_id, name: r.name, role: r.role }));
+    });
   }
 
   async createGroup(membership: Membership, op: CreateGroupOp): Promise<void> {
