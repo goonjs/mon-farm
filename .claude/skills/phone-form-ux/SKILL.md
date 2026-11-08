@@ -119,6 +119,15 @@ Use these when you draw, build or review any screen that takes input.
 
     ![instead: the card itself is the button](../../../docs/ux/rules/no-round-outline-button-instead.png)
 
+12. **A list that grows with data is a full page, not a sheet (owner rule,
+    2026-11-07).** A bottom sheet is only for short, fixed content: a number
+    pad, a confirm, a handful of fixed choices. Any pick list whose length
+    depends on the farm's data (fertilizer in stock, zones, buyers, tappers,
+    saved products, unsplit fertilizings) opens as its own page: the list
+    scrolls, the header and the bottom bar stay put. With many rows a sheet
+    runs out of height, hides rows under the fold and fights the scroll.
+    Example: `docs/ux/mockups/fertilizing-split-options.html` C1 and C4.
+
 ## How to check before you show anything
 
 1. **Mockup:** export every phone as its own PNG at device size, 3×. Send the
