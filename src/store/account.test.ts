@@ -288,6 +288,18 @@ describe('WebAccountStore — a read that fails once is tried again (harden the 
     }
   });
 
+  it('user(): two failures in a row throw — "cannot read" is not "never signed in" (owner q3 = ก)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { store, spy } = await failingOnce(2);
+    try {
+      await expect(store.user()).rejects.toThrow();
+      expect(warn.mock.calls.some((c) => /session/i.test(String(c[0])))).toBe(true);
+    } finally {
+      spy.mockRestore();
+      warn.mockRestore();
+    }
+  });
+
   it('user() reads the session even when the connection was closed under it', async () => {
     const { store, spy } = await failingOnce(1);
     try {

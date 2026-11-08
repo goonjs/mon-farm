@@ -18,10 +18,12 @@ export default function Root({ children }: PropsWithChildren) {
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         {/* Landscape phone, and a count that must not be rescaled by the browser
-            or pinched by accident mid-sale. */}
+            or pinched by accident mid-sale. interactive-widget: the on-screen
+            keyboard shrinks the page, so a form's Save pinned at the foot
+            (owner 2026-11-07) rides above it instead of under it. */}
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
         />
         <title>mon-farm</title>
 

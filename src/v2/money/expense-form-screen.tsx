@@ -33,7 +33,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, MoneyField, PersonIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TextField, type HeaderPrimaryAction } from '../../ui';
+import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, MoneyField, PersonIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TextField } from '../../ui';
 import { useFarms } from './expenses-screen';
 import { ORDER_NEW, orderHref } from './order-routes';
 import { ChoiceChip, ChoiceRow, NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
@@ -56,12 +56,11 @@ export function ExpenseFormScreen() {
   const existing = id && id !== 'new' ? fin.state?.expenses.find((x) => x.id === id) ?? null : null;
   const ready = fin.state !== null && (id === 'new' || existing !== null) && fin.deviceId !== null;
 
-  const header = (action?: HeaderPrimaryAction) => (
+  const header = () => (
     <ScreenHeader
       title={msg(existing ? 'fin.form.titleEdit' : 'fin.form.titleNew')}
       back={{ label: msg('v2.back'), onPress: leave, testID: 'expense-back' }}
       sync={sync}
-      action={action}
     />
   );
 
@@ -77,7 +76,7 @@ export function ExpenseFormScreen() {
   );
 }
 
-function Form({ existing, fin, header }: { existing: Expense | null; fin: ReturnType<typeof useFinance>; header: (action?: HeaderPrimaryAction) => ReactNode }) {
+function Form({ existing, fin, header }: { existing: Expense | null; fin: ReturnType<typeof useFinance>; header: () => ReactNode }) {
   const t = useTheme();
   const msg = useT();
   const state = fin.state!;

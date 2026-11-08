@@ -172,6 +172,21 @@ describe('a worker\'s account (M2, M3, M5–M7, M9, P3 · PR-1, PR-2, PR-5–PR-
     expect(text('rp-card')).toBeTruthy();
   });
 
+  it('the sheet shows the sale as a home-style card "ดูข้อมูลการขาย" that opens it; no round "เปิดการขาย ›" (owner 2026-11-07)', async () => {
+    params.current = { workerId: farm.red, name: 'แดง' };
+    router.push.mockClear();
+    wrap(<DebtAccountScreen />);
+    await flush();
+    await press(`rp-row-${SALE}-cash`);
+    await flush();
+    const card = text('rp-sheet-sale');
+    expect(card).toHaveTextContent(/^ดูข้อมูลการขาย.* กก\./);
+    expect(card.props.accessibilityRole).toBe('link');
+    expect(screen.queryByText(/^เปิดการขาย/)).toBeNull();
+    await press('rp-sheet-sale');
+    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${SALE}/payment`);
+  });
+
   it('transfer: the sheet shows the whole transfer to compare with the bank; ได้ครบ ticks the owner\'s transfer', async () => {
     params.current = { workerId: farm.nat, name: 'นัด' };
     wrap(<DebtAccountScreen />);
