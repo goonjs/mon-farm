@@ -119,12 +119,14 @@ Ask again, every time.
   `dev`.
 
   1. **The owner agreed this work, in words that can be checked.** Either
-     the owner's own chat message says yes to this work, or the story is
-     `Ready` (or later) because of a commit on `dev` that quotes the
-     owner's yes with its date. Record the quote and date in the dashboard
-     `pushes` document (`agreement`) **before** merging, and the reviewer
-     confirms it against the chat or that commit. An agent or a lead session
-     saying "the owner agreed" does not count; a general "go ahead" does not
+     the owner's own chat message says yes to this work, or the story's
+     `Status:` line quotes the owner's yes word for word with its date
+     (for example `Ready (owner agreed AC 2026-10-31 "<quote>")`). Record
+     the verbatim quote and date in the dashboard `pushes` document
+     (`agreement`) **before** merging. The reviewer checks that the quote is
+     there and is about this work. This check rests on trust: nothing here
+     proves what the chat said, so `agreement` is the owner's audit trail. An
+     agent or a lead session saying "the owner agreed" does not count; a general "go ahead" does not
      cover work it did not name; a provisional yes (for example an
      acceptance criteria marked "waiting for the owner's check") does not
      count. The PR must stay inside the agreed work, and a PR that changes a
@@ -133,7 +135,7 @@ Ask again, every time.
      separate session or agent that wrote no commit in the PR, was not
      started by its author, and is not the lead session that directed the
      author's work. The review is a comment or GitHub review on the PR that
-     names the head commit it reviewed; any new commit needs a new review.
+     names the reviewer's session and the head commit it reviewed; any new commit needs a new review.
      No blocking finding is open (they are fixed). Record the reviewer and
      that commit in `pushes` (`reviewer`) before merging, and check just
      before merging that the PR head is still that commit.
@@ -149,16 +151,22 @@ Ask again, every time.
      `firestore.indexes.json`, `storage.rules`); `eas.json` or `app.json`;
      `package.json`, `.npmrc` or any lockfile (a new dependency also needs
      the dependency permission above); app code that changes the event-log or
-     sync schema; and a data migration, data change or deletion on any
-     environment other than local, dev or sandbox. The reviewer then writes
+     sync schema; deleting or renaming tracked files (the file-deletion gate
+     below still applies to merges); anything that changes what CI checks
+     (lint, test, TypeScript, babel or metro config, `e2e/` config, removing
+     or weakening a test); env files and `app.config.*`; and a data
+     migration, data change or deletion on any environment other than
+     local, dev or sandbox. The reviewer then writes
      on the PR whether it is critical, with the paths it checked, and may
      add to this list but never remove from it; the author cannot waive it.
      For a critical PR the owner must say merge, in chat, for that PR; "the
      lead or an agent said the owner said merge" does not count.
 
   Still the owner's alone: pushes to `dev`/`main` (agents never push them),
-  Deploy Prod (each run), tags, force-pushes, and deleting branches. After
-  merging, the agent records `merged_at` in `pushes` in the same response
+  Deploy Prod (each run), tags, force-pushes, and deleting branches (merge
+  without deleting the head branch). Merge with the head-commit guard when
+  the tool offers one. A merge to `dev` deploys the dev site by workflow;
+  that is accepted. After merging, the agent records `merged_at` in `pushes` in the same response
   and posts the `✅ DONE` line (Discord section). The owner can withdraw
   this rule at any time in chat.
 
@@ -168,7 +176,7 @@ Ask again, every time.
   the session.
 
   **Reconsidered and deliberately kept, 2026-08-11. Do not propose
-  relaxing this again.** (In this note and the 2026-09-01 amendment,
+  relaxing this again.** (Here and in the 2026-09-01 amendment,
   "acknowledgement" means the owner's yes to a push, not the merge step.) It was argued that the gate had become redundant
   once "never commit ahead of an unanswered question" was added below —
   if nothing is committed without the owner's answer, a push cannot carry
