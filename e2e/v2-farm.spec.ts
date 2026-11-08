@@ -31,9 +31,19 @@ async function addPerson(page: Page, name: string, roles: string[], snap?: strin
   await id('person-name').fill(name);
   for (const r of roles) await id(`role-${r}`).click();
   if (snap) await shot(page, snap);
-  // Save lives in the header (top right), so an open keyboard never covers it.
-  await expect(id('screen-header').getByTestId('person-save')).toBeVisible();
-  expect((await id('person-save').boundingBox())!.y).toBeLessThan(100);
+  // Owner 2026-11-07 (style I): Save is the full-width button pinned at the foot, not in the header.
+  await expect(id('save-bar').getByTestId('person-save')).toBeVisible();
+  await expect(id('screen-header').getByTestId('person-save')).toHaveCount(0);
+  // pinned at the foot: its bottom sits near the viewport's, and stays there when the form scrolls
+  const vh = page.viewportSize()!.height;
+  const atFoot = async () => {
+    const b = (await id('person-save').boundingBox())!;
+    expect(b.y + b.height).toBeGreaterThan(vh - 40);
+    expect(b.y + b.height).toBeLessThanOrEqual(vh + 1);
+  };
+  await atFoot();
+  await page.mouse.wheel(0, 400);
+  await atFoot();
   await id('person-save').click();
   await expect(id('people-list')).toContainText(name);
 }
@@ -151,7 +161,7 @@ test('/ → splash → home → farm settings: add and edit everything offline, 
   await id('points-wizard').locator('[data-testid^="wizard-tapper-"]').filter({ hasText: 'แดง' }).click();
   await id('wizard-next').click();
   await id('points-wizard').locator('[data-testid^="wizard-name-"]').first().fill('จุด 1');
-  await expect(id('screen-header').getByTestId('wizard-create')).toBeVisible();
+  await expect(id('save-bar').getByTestId('wizard-create')).toBeVisible();
   await id('wizard-create').click();
   await expect(id('wizard-duplicates')).toBeVisible();
   await id('points-wizard').locator('[data-testid^="wizard-name-"]').first().fill('จุด 5');

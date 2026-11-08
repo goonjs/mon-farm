@@ -122,12 +122,12 @@ describe('สวนและจุดชั่ง — list (farm mockup 9)', () 
 });
 
 describe('สวน — form (farm mockup 10)', () => {
-  it('Save sits in the header, with no pinned bar at the bottom', async () => {
+  it('Save is a full-width button pinned at the bottom, not in the header (owner 2026-11-07, style I)', async () => {
     mockParams.current = { id: 'new' };
     wrap(<PropertyScreen />);
     await flush();
-    const header = screen.getByTestId('screen-header');
-    expect(within(header).getByTestId('property-save')).toBeTruthy();
+    expect(within(screen.getByTestId('screen-header')).queryByTestId('property-save')).toBeNull();
+    expect(within(screen.getByTestId('save-bar')).getByTestId('property-save')).toBeTruthy();
     expect(screen.getAllByTestId(/-save$/)).toHaveLength(1);
   });
 
@@ -447,8 +447,12 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     fireEvent.press(screen.getByTestId('wizard-next'));
     fireEvent.changeText(screen.getByTestId(`wizard-name-${daeng.id}-0`), 'จุดริมคลอง');
 
+    // page 2: one bar at the foot — ย้อนกลับ left of สร้าง; page 1 has no Save bar
+    expect(within(screen.getByTestId('save-bar')).getByTestId('wizard-prev')).toBeTruthy();
+    expect(within(screen.getByTestId('save-bar')).getByTestId('wizard-create')).toBeTruthy();
     fireEvent.press(screen.getByTestId('wizard-prev'));
     expect(screen.getByTestId('wizard-next')).toBeTruthy();
+    expect(screen.queryByTestId('save-bar')).toBeNull();
     expect(screen.getByTestId(`wizard-count-${daeng.id}-value`).props.children).toBe('1');
     fireEvent.press(screen.getByTestId('wizard-next'));
     expect(screen.getByTestId(`wizard-name-${daeng.id}-0`).props.value).toBe('จุดริมคลอง');

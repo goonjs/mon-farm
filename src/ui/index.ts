@@ -34,7 +34,7 @@ export { MoneyField } from './money-field';
 export { MoneyText } from './money-text';
 export { NumberPad } from './number-pad';
 export { QuantityField } from './quantity-field';
-export type { HeaderPrimaryAction } from './action-button';
+export { SaveBar, type HeaderPrimaryAction } from './action-button';
 export { ScrollCue } from './scroll-cue';
 export { ScreenHeader, type BackAction, type HeaderAction } from './screen-header';
 export { SyncPill } from './sync-pill';

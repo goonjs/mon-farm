@@ -4,7 +4,7 @@
  *
  * - useMaster: the folded farm master data, reloaded when a screen regains
  *   focus so a list shows what a form just saved.
- * - FarmScreen: ScreenHeader (back + sync pill + optional Save `action`) over
+ * - FarmScreen: ScreenHeader (back + sync pill); a form's Save `action` is the SaveBar at the foot over
  *   a scroll body, with an optional pinned call to action and a sheet on top.
  * - RowCard: one card of rows split by hairlines (mockup `.card.tight`).
  * - DeletedLink / DeletedList: "ที่ลบแล้ว (n)" as a small link, each row a
@@ -38,6 +38,7 @@ import {
   Minus,
   ScrollCue,
   Plus,
+  SaveBar,
   ScreenHeader,
   TrashIcon,
   type HeaderPrimaryAction,
@@ -137,10 +138,10 @@ export function FarmScreen({
   /** Back stays inside the screen (a wizard's earlier page) instead of popping. */
   onBack?: () => void;
   right?: ReactNode;
-  /** Save (forms): top-right, right of the sync pill, so the keyboard never covers it. */
+  /** Save (forms): a full-width button pinned at the foot (owner 2026-11-07, style I). */
   action?: HeaderPrimaryAction;
   children?: ReactNode;
-  /** Pinned call to action(s) under the scroll body. */
+  /** Pinned call to action(s) under the scroll body; with `action`, it shares the SaveBar, left of Save. */
   footer?: ReactNode;
   /** A sheet over the screen. */
   overlay?: ReactNode;
@@ -155,13 +156,13 @@ export function FarmScreen({
   const body = { padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.xl };
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <ScreenHeader title={title} subtitle={subtitle} back={{ label: msg('v2.back'), onPress: onBack ?? back, testID: 'v2-back' }} sync={sync} right={right} action={action} />
+      <ScreenHeader title={title} subtitle={subtitle} back={{ label: msg('v2.back'), onPress: onBack ?? back, testID: 'v2-back' }} sync={sync} right={right} />
       {failed ? (
         <View style={{ paddingHorizontal: t.layout.screenPaddingX, paddingTop: t.space.sm }}>
           <SaveFailed show />
         </View>
       ) : null}
-      {footer ? (
+      {footer && !action ? (
         <ScrollCue testID={testID} footer={footer} contentContainerStyle={body}>
           {children}
         </ScrollCue>
@@ -170,6 +171,7 @@ export function FarmScreen({
           {children}
         </ScrollView>
       )}
+      {action ? <SaveBar action={action} secondary={footer} /> : null}
       {overlay}
     </View>
   );
