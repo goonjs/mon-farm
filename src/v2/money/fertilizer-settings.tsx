@@ -18,9 +18,9 @@ import { useInFlight } from '../../finance/use-in-flight';
 import { useT } from '../../i18n';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, Button, Card, QuantityField, ScreenHeader, SegmentedControl, TextField } from '../../ui';
+import { AppText, Button, Card, QuantityField, ScreenHeader, SegmentedControl, TextField, TextLink } from '../../ui';
+import { TapRow } from '../farm/pieces';
 import { setFertOption } from './fert-options';
-import { ChoiceChip, ChoiceRow } from './pieces';
 
 const KINDS: readonly FertOptionKind[] = ['reason', 'formula', 'brand', 'sackKg'];
 const FERTILIZER = 'cat-fertilizer';
@@ -79,6 +79,15 @@ export function FertilizerSettingsScreen() {
     </Card>
   );
 
+  const label = (o: FertOption) => (kind === 'sackKg' ? msg('fert.kg', { kg: o.name }) : o.name);
+  const about = (o: FertOption) => (
+    <>
+      <AppText style={{ fontWeight: t.font.weight.bold, color: o.hidden ? t.color.inkSoft : t.color.ink }}>{label(o)}</AppText>
+      {kind === 'reason' ? <AppText variant="bodySm">{o.description || msg('fert.set.noDesc')}</AppText> : null}
+      {o.hidden ? <AppText variant="caption" testID={`fert-set-hidden-${o.id}`}>{msg('fert.set.hidden')}</AppText> : null}
+    </>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <ScreenHeader title={msg('fert.set.title')} back={{ label: msg('v2.back'), onPress: back, testID: 'fert-set-back' }} sync={sync} />
@@ -114,14 +123,22 @@ export function FertilizerSettingsScreen() {
             editing?.option?.id === o.id ? (
               <View key={o.id}>{editor}</View>
             ) : (
-              <View key={o.id} testID={`fert-set-row-${o.id}`} style={{ gap: t.space.xs, borderBottomWidth: t.border.hair, borderBottomColor: t.color.ruleFaint, paddingBottom: t.space.sm }}>
-                <AppText style={{ fontWeight: t.font.weight.bold, color: o.hidden ? t.color.inkSoft : t.color.ink }}>{kind === 'sackKg' ? msg('fert.kg', { kg: o.name }) : o.name}</AppText>
-                {kind === 'reason' ? <AppText variant="bodySm">{o.description || msg('fert.set.noDesc')}</AppText> : null}
-                {o.hidden ? <AppText variant="caption" testID={`fert-set-hidden-${o.id}`}>{msg('fert.set.hidden')}</AppText> : null}
-                <ChoiceRow>
-                  {!o.hidden ? <ChoiceChip testID={`fert-set-edit-${o.id}`} label={msg('fert.set.edit')} onPress={() => setEditing({ option: o, name: o.name, description: o.description })} /> : null}
-                  <ChoiceChip testID={`fert-set-hide-${o.id}`} dashed={o.hidden} label={msg(o.hidden ? 'fert.set.show' : 'fert.set.hide')} onPress={() => void inFlight.run(async () => { await toggleHidden(o); })} />
-                </ChoiceRow>
+              <View key={o.id} testID={`fert-set-row-${o.id}`} style={{ borderBottomWidth: t.border.hair, borderBottomColor: t.color.ruleFaint, paddingBottom: t.space.xs }}>
+                {o.hidden ? (
+                  <View style={{ gap: t.space.xs, paddingVertical: t.space.sm }}>{about(o)}</View>
+                ) : (
+                  <TapRow testID={`fert-set-open-${o.id}`} label={msg('fert.set.edit')} onPress={() => setEditing({ option: o, name: o.name, description: o.description })}>
+                    <View style={{ flex: 1, minWidth: 0, gap: t.space.xs }}>{about(o)}</View>
+                  </TapRow>
+                )}
+                <TextLink
+                  testID={`fert-set-hide-${o.id}`}
+                  tone={o.hidden ? 'action' : 'reject'}
+                  accessibilityLabel={`${msg(o.hidden ? 'fert.set.show' : 'fert.set.hide')} ${label(o)}`}
+                  onPress={() => void inFlight.run(async () => { await toggleHidden(o); })}
+                >
+                  {msg(o.hidden ? 'fert.set.show' : 'fert.set.hide')}
+                </TextLink>
               </View>
             ),
           )}
