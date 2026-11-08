@@ -77,12 +77,19 @@ function groupToOpen(memberships: readonly Membership[], userId: UserId): GroupI
 
 export function AccountGate({
   children,
+  banner,
   accounts = accountStore,
   google = defaultGoogle,
   connect = connectRemote,
   lookup = connectMemberships,
 }: {
   children: ReactNode;
+  /**
+   * Shown above every screen (the storage warning, E01-S03) except "cannot read the device": nothing can be
+   * entered there, and "ไม่ได้บันทึกถาวร … ข้อมูลจะหาย" over "ข้อมูลยังอยู่ในเครื่อง ไม่หาย" would contradict it
+   * (lead review, 2026-11-08). The same broken reads can raise both.
+   */
+  banner?: ReactNode;
   /** Injected by tests; the app uses the platform adapters. */
   accounts?: AccountStore;
   google?: GoogleSignIn;
@@ -191,7 +198,13 @@ export function AccountGate({
     enter(user, [membership]);
   };
 
-  if (phase.kind === 'loading') return <Opening />;
+  const withBanner = (screen: ReactNode) => (
+    <>
+      {banner}
+      {screen}
+    </>
+  );
+
   if (phase.kind === 'unreadable') {
     return (
       <AccountUnreadableScreen
@@ -203,10 +216,11 @@ export function AccountGate({
       />
     );
   }
-  if (phase.kind === 'signed-out') return <SignInScreen onSignIn={signIn} />;
+  if (phase.kind === 'loading') return withBanner(<Opening />);
+  if (phase.kind === 'signed-out') return withBanner(<SignInScreen onSignIn={signIn} />);
   if (phase.kind === 'checking') {
     const { user } = phase;
-    return (
+    return withBanner(
       <GroupCheckScreen
         failed={phase.failed}
         onRetry={() => void checkServer(user)}
@@ -217,9 +231,9 @@ export function AccountGate({
   }
   if (phase.kind === 'no-group') {
     const { user } = phase;
-    return <GroupStartScreen displayName={user.displayName} onCreate={(name) => createGroup(user, name)} />;
+    return withBanner(<GroupStartScreen displayName={user.displayName} onCreate={(name) => createGroup(user, name)} />);
   }
-  return (
+  return withBanner(
     <>
       <SyncRunner userId={phase.user.userId} groupId={phase.groupId} accounts={accounts} connect={connect} />
       {children}

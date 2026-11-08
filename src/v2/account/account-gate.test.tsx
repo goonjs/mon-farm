@@ -218,6 +218,51 @@ describe('a device that already signed in (ACC-6: offline works)', () => {
     expect(screen.queryByTestId('app-inside')).toBeNull();
   });
 
+  it('the storage banner ("ไม่ได้บันทึกถาวร … ข้อมูลจะหาย") is not shown over this screen: nothing can be entered here, and it would contradict "ไม่หาย"', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const accounts = new MemoryAccountStore();
+    accounts.user = async () => {
+      throw new Error('unreadable');
+    };
+    wrap(
+      <AccountGate accounts={accounts} banner={<Text testID="banner">banner</Text>}>
+        {home}
+      </AccountGate>,
+    );
+    await flush();
+    await flush();
+    expect(screen.getByTestId('account-unreadable')).toBeTruthy();
+    expect(screen.queryByTestId('banner')).toBeNull();
+  });
+
+  it('the storage banner still shows on every other screen of the gate and in the app', async () => {
+    const accounts = new MemoryAccountStore();
+    const view = wrap(
+      <AccountGate accounts={accounts} banner={<Text testID="banner">banner</Text>}>
+        {home}
+      </AccountGate>,
+    );
+    await flush();
+    await flush();
+    expect(screen.getByTestId('signin')).toBeTruthy();
+    expect(screen.getByTestId('banner')).toBeTruthy();
+    view.unmount();
+    await accounts.saveUser(somchai);
+    await accounts.createGroup(
+      { groupId: 'g-1', userId: somchai.userId, name: 'สวนบ้านนา', role: 'owner' },
+      { op: 'create_group', groupId: 'g-1', name: 'สวนบ้านนา', createdBy: somchai.userId, displayName: null, createdAt: 1 },
+    );
+    wrap(
+      <AccountGate accounts={accounts} banner={<Text testID="banner">banner</Text>}>
+        {home}
+      </AccountGate>,
+    );
+    await flush();
+    await flush();
+    expect(screen.getByTestId('app-inside')).toBeTruthy();
+    expect(screen.getByTestId('banner')).toBeTruthy();
+  });
+
   it('memberships that cannot be read: the same screen, not create-group', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
     const accounts = new MemoryAccountStore();

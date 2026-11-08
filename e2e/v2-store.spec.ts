@@ -120,6 +120,10 @@ for (const size of ['m', 's'] as const) {
     await expect(page.getByTestId('account-unreadable')).toBeVisible();
     await expect(page.getByText('อ่านข้อมูลในเครื่องไม่ได้')).toBeVisible();
     await expect(page.getByTestId('signin')).toHaveCount(0);
+    // The same broken reads leave the event store unable to say it is durable, which raises "ไม่ได้บันทึกถาวร
+    // … ข้อมูลจะหาย": a real combination. Over this screen it would contradict "ไม่หาย", and nothing can be
+    // entered here, so it waits for the app (lead review, 2026-11-08).
+    await expect(page.getByTestId('storage-warning')).toHaveCount(0);
     await evidence(page, `docs/ux/screenshots/e02-account-unreadable/unreadable-${size}.png`);
     await page.evaluate(() => ((window as unknown as { __breakAccount?: boolean }).__breakAccount = false));
     await page.getByTestId('account-unreadable-retry').click();
