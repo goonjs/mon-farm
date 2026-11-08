@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { BottomSheet } from './bottom-sheet';
+import { CHIP_MIN_WIDTH } from './chip-width';
 import { CTA } from './button';
 import { Check, ChevronLeft, ChevronRight } from './icons';
 import { useI18n, type MessageId } from '../i18n';
@@ -137,6 +138,7 @@ function Body({ onClose, value, onChange, max, testID: tid }: Omit<DatePickerShe
               onPress={() => pick(q.iso)}
               style={{
                 minHeight: t.target.min,
+                minWidth: CHIP_MIN_WIDTH,
                 paddingHorizontal: t.space.md,
                 borderRadius: t.radius.pill,
                 borderWidth: t.border.thick,

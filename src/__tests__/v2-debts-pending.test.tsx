@@ -119,6 +119,21 @@ describe('the debt list (M1 · PR-4, PR-12)', () => {
     expect(text(`debt-account-${farm.red}`)).toHaveTextContent(/12,540\.00/);
   });
 
+  it('เพิ่มหนี้ให้: each person is a full-width row with ›, not a chip (owner q1 = ค, 2026-11-08)', async () => {
+    wrap(<DebtsScreen />);
+    await flush();
+    const list = screen.getByTestId('debt-pick-list');
+    const row = within(list).getByTestId(`debt-person-${farm.red}`);
+    expect(row).toHaveTextContent(/แดง/);
+    expect(within(row).getByTestId(`debt-person-${farm.red}-go`)).toBeTruthy();
+    // a row, not a pill: it stretches across the card and has no round outline
+    const style = (row.props.style ?? {}) as { borderRadius?: number; borderWidth?: number; minHeight?: number };
+    expect(style.borderWidth ?? 0).toBe(0);
+    expect(style.minHeight).toBeGreaterThanOrEqual(48);
+    fireEvent.press(row);
+    expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ params: expect.objectContaining({ workerId: farm.red }) }));
+  });
+
   it('nothing waiting → no card, no chips', async () => {
     await writeFinance(paymentTarget(SALE, OWNER_PAYEE), null, paymentMarkPayload(SALE, OWNER_PAYEE, true, 1_968_750));
     await writeFinance(paymentTarget(SALE, `debt-cash-${farm.red}`), null, paymentMarkPayload(SALE, `debt-cash-${farm.red}`, true, 325_000));

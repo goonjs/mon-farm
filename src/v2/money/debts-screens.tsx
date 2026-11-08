@@ -114,10 +114,27 @@ export function DebtsScreen() {
             ))}
           </Card>
         ) : null}
-        <CardLabel>{msg('debt.list.pick')}</CardLabel>
-        <ChoiceRow>
-          {people.map((p) => <ChoiceChip key={p.id} testID={`debt-person-${p.id}`} label={p.name} onPress={() => open(p.id, p.name)} />)}
-        </ChoiceRow>
+        {/* Owner q1 = ค (2026-11-08): each person is a full-width row with ›, not a short-name chip. */}
+        {people.length ? <CardLabel>{msg('debt.list.pick')}</CardLabel> : null}
+        {people.length ? (
+          <Card testID="debt-pick-list" style={{ gap: 0, paddingVertical: t.space.xs }}>
+            {people.map((p, i) => (
+              <Pressable
+                key={p.id}
+                testID={`debt-person-${p.id}`}
+                accessibilityRole="button"
+                accessibilityLabel={`${msg('debt.list.pick')} ${p.name}`}
+                onPress={() => open(p.id, p.name)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, minHeight: t.target.min, paddingVertical: t.space.xs, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint }}
+              >
+                <AppText style={{ flex: 1, fontWeight: t.font.weight.bold }}>{p.name}</AppText>
+                <View testID={`debt-person-${p.id}-go`}>
+                  <ChevronRight color={t.color.inkSoft} />
+                </View>
+              </Pressable>
+            ))}
+          </Card>
+        ) : null}
       </ScrollView>
     </View>
   );

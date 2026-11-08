@@ -21,7 +21,7 @@ import type { BuiltinRole } from '../../core/types';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { useTheme, type Theme } from '../../theme';
-import { AppText, Button, Check, DateText, TextField } from '../../ui';
+import { AppText, Button, CHIP_MIN_WIDTH, Check, DateText, TextField } from '../../ui';
 
 export function ChoiceChip({
   label,
@@ -45,9 +45,9 @@ export function ChoiceChip({
       onPress={onPress}
       style={{
         minHeight: t.target.min,
-        // Above M a short name ("นัด") must still be a 48 wide target (design-system §12.10 #6);
-        // M is left exactly as it was (owner, 2026-11-02).
-        ...(t.textScale > 1 ? { minWidth: t.target.min, alignItems: 'center' as const } : null),
+        // A short name ("นัด") is a ≥ 48 target at every text size (§12.10 #6), and 64 wide so it is not a circle (q1 = ค).
+        minWidth: CHIP_MIN_WIDTH,
+        alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: t.space.md,
         borderRadius: t.radius.pill,
