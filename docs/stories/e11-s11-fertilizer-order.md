@@ -2,6 +2,8 @@
 
 Status: Done (PR #121 merged 03fc582, old flow removed by PR #122; owner ack in Push Ledger 2026-10-28; open: FarmMate colour icons not in registry (UI-5), English strings, largest text size and real device untested)
 
+> **เปลี่ยน 2026-11-06 (D-89, D-90):** FD-1…FD-6 (เหตุผล · ใส่ที่ไหน · แบ่งคนกรีด บนรายการในใบซื้อ) ถูกแทนที่ → ถอดออกใน [E11-S17](e11-s17-remove-split-from-order.md) และย้ายไป [E16 การดูแลสวน](../epics/e16-garden-care.md) · คำถาม Q2/Q4 (จ่ายร้านทีหลัง, ติดร้าน) → [E11-S16](e11-s16-shop-payments.md)
+
 ## Context
 
 - Epic: `docs/epics/e11-finance.md`
