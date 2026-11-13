@@ -8,6 +8,7 @@ import {
   fertilizerCards,
   fertilizingDebts,
   projectFertilizing,
+  splitBadge,
   STOCK_CUTOFF,
 } from './fertilizing';
 import { projectFinance } from './ledger';
@@ -435,5 +436,21 @@ describe('checkFertilizing', () => {
     expect(checkFertilizing({ ...ok, pct: {} }, '2026-11-13')).toContain('pct-missing');
     // A tapper touched at 0 takes nothing: no % needed.
     expect(checkFertilizing({ ...ok, lines: [line(['a'], 10, [{ worker: DAENG, sacks: 0, auto: false }])], pct: {} }, '2026-11-13')).toEqual([]);
+  });
+});
+
+describe('splitBadge — the garden care list says when a fertilizing is not split yet (GC-2)', () => {
+  const take = (sacks: number) => [{ worker: DAENG, sacks, auto: false }];
+  const one = (lines: FertilizingLine[]) => project([item('a', { sacks: 60, netSatang: 1_800_000 }), item('k', { sacks: 20, netSatang: 1_560_000, formula: '46-0-0' }), fz('fz-1', { lines, pct: { [DAENG.id]: 50 } })]).records[0];
+
+  it('nothing to say when every card is split, or the rest is the farm\'s', () => {
+    expect(splitBadge(one([line(['a'], 10, take(10))]))).toBeNull();
+    expect(splitBadge(one([line(['a'], 10, take(4), 'farm')]))).toBeNull();
+  });
+
+  it('"ยังไม่แบ่ง" when a card has nobody, "แบ่งไม่ครบ" when one was left for later; not split wins', () => {
+    expect(splitBadge(one([line(['a'], 10, [])]))).toBe('none');
+    expect(splitBadge(one([line(['a'], 10, take(4), 'later')]))).toBe('partial');
+    expect(splitBadge(one([line(['a'], 10, take(4), 'later'), line(['k'], 5, [])]))).toBe('none');
   });
 });
