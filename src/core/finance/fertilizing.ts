@@ -385,3 +385,15 @@ export function checkFertilizing(f: FertilizingFields, today: string): Fertilizi
   for (const l of f.lines) for (const t of l.takes) if (t.sacks > 0 && f.pct[t.worker.id] === undefined) out.add('pct-missing');
   return [...out];
 }
+
+/**
+ * E16-S01 GC-2: what the garden care list says about the split. 'none' = a card nobody took anything from
+ * ("ยังไม่แบ่ง"), 'partial' = a card left to split later ("แบ่งไม่ครบ", SP-6b); 'none' wins. null = nothing to
+ * say (every card split, or the rest is the farm's). Counted like the sale prep's item 4 (E15-S01 PREP-6).
+ */
+export function splitBadge(r: Pick<Fertilizing, 'lines'>): 'none' | 'partial' | null {
+  const given = (l: FertilizingLine) => l.takes.reduce((s, t) => s + t.sacks, 0);
+  if (r.lines.some((l) => given(l) === 0 && l.rest !== 'farm')) return 'none';
+  if (r.lines.some((l) => given(l) < l.sacks && l.rest !== 'farm')) return 'partial';
+  return null;
+}
