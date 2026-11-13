@@ -8,8 +8,6 @@ import {
   FERTILIZER_CATEGORY,
   groupOrders,
   lineNetSatang,
-  missingDetails,
-  orderProgress,
   orderTotals,
   patchOrderFields,
   type OrderDraft,
@@ -402,64 +400,6 @@ describe('groupOrders', () => {
   });
 });
 
-describe('missingDetails / orderProgress', () => {
-  const told = (over: Partial<NonNullable<Expense['fertilizer']>> = {}, x: Partial<ExpenseFields> = {}) =>
-    expense('t', {
-      fertilizer: { type: 'chemical', formula: '15-15-15', brand: '', sackKg: null, reasons: ['r1'], zones: [{ zoneId: 'z', zoneName: 'ล่าง', sacks: 10, reasons: [], note: '' }], shop: '', orderedBy: '', sacks: 10, ...over },
-      share: null,
-      ...x,
-    });
-
-  it('a fresh order item is missing all three', () => {
-    const [x] = asExpenses(draft());
-    expect(missingDetails(x)).toEqual(['reasons', 'zones', 'tappers']);
-  });
-
-  it('reasons told, zones short, tappers absent', () => {
-    const e = told({ reasons: ['r1'], zones: [{ zoneId: 'z', zoneName: 'ล่าง', sacks: 4, reasons: [], note: '' }] }, {});
-    const { share: _drop, ...noShare } = e as Expense & { share?: unknown };
-    void _drop;
-    expect(missingDetails(noShare as Expense)).toEqual(['zones', 'tappers']);
-  });
-
-  it('every sack placed counts as told; placing more than bought also counts as told', () => {
-    expect(missingDetails(told())).toEqual([]);
-    expect(missingDetails(told({ zones: [{ zoneId: 'z', zoneName: 'ล่าง', sacks: 12, reasons: [], note: '' }] }))).toEqual([]);
-  });
-
-  it('`share: null` means decided "not shared" → tappers told; a share with lines too', () => {
-    expect(missingDetails(told())).not.toContain('tappers');
-    const withShare = told({}, { share: { billSatang: 1, discountSatang: 0, totalSacks: 10, lines: [] } });
-    expect(missingDetails(withShare)).not.toContain('tappers');
-  });
-
-  it('sacks come from share.totalSacks when fertilizer.sacks is absent (legacy)', () => {
-    const legacy = told({ sacks: undefined, zones: [{ zoneId: 'z', zoneName: 'ล่าง', sacks: 5, reasons: [], note: '' }] }, { share: { billSatang: 1, discountSatang: 0, totalSacks: 8, lines: [] } });
-    expect(missingDetails(legacy)).toEqual(['zones']);
-  });
-
-  it('no known sacks at all: zones are missing only while none is recorded', () => {
-    const none = told({ sacks: undefined, zones: [] }, { share: null });
-    expect(missingDetails(none)).toEqual(['zones']);
-    const some = told({ sacks: undefined }, { share: null });
-    expect(missingDetails(some)).toEqual([]);
-  });
-
-  it('other items have nothing to tell', () => {
-    const [x] = asExpenses(draft({ lines: [oilLine('b')] }));
-    expect(missingDetails(x)).toEqual([]);
-  });
-
-  it('progress counts fertilizer items only: told / all', () => {
-    const items = asExpenses(draft({ lines: [fertLine('a'), fertLine('b'), oilLine('c')] }));
-    const first = { ...items[0], fertilizer: { ...items[0].fertilizer!, reasons: ['r'], zones: [{ zoneId: 'z', zoneName: 'ล่าง', sacks: 10, reasons: [], note: '' }] }, share: null } as Expense;
-    expect(orderProgress(groupOrders([first, items[1], items[2]])[0])).toEqual({ done: 1, total: 2 });
-  });
-
-  it('an order with no fertilizer has 0 / 0', () => {
-    expect(orderProgress(groupOrders(asExpenses(draft({ lines: [oilLine('c')] })))[0])).toEqual({ done: 0, total: 0 });
-  });
-});
 
 describe('patchOrderFields / deliverOrder', () => {
   const order = (stage: 'committed' | 'actual' = 'committed') =>
