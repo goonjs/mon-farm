@@ -272,3 +272,20 @@ export function balanceAfterSale(account: DebtAccount, saleId: string, saleDate:
   }
   return left - over;
 }
+
+/**
+ * E16-S03 SP-9 (D-92): what is left of each farm debt lump once everything deducted or paid back to the
+ * farm is taken from the oldest lumps first (date, then id). Display only — "หักหมดแล้ว" / "เหลือ ฿x" in
+ * the history; the balance and instalment plans still use the total per person (D-59).
+ */
+export function lumpLeft(account: DebtAccount): Map<string, number> {
+  const owedToFarm = account.debts.filter((d) => !d.deleted && (d.kind !== 'loan' || toFarm(d.lender))).sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : a.id < b.id ? -1 : 1));
+  let paid = account.payments.filter((p) => !p.deleted && p.counts && toFarm(p.creditor)).reduce((s, p) => s + p.amountSatang, 0);
+  const out = new Map<string, number>();
+  for (const d of owedToFarm) {
+    const take = Math.min(Math.max(0, paid), d.amountSatang);
+    out.set(d.id, d.amountSatang - take);
+    paid -= take;
+  }
+  return out;
+}
