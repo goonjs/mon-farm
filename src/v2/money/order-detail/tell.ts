@@ -4,7 +4,7 @@
  * Money is never recomputed here — `splitShare` / `checkShare` / `lastLineSacks` are the engine's.
  */
 
-import type { OrderPatchWrite, OrderView } from '../../../core/finance/fert-order';
+import { FERTILIZER_CATEGORY, type OrderPatchWrite, type OrderView } from '../../../core/finance/fert-order';
 import { checkFertilizer } from '../../../core/finance/fertilizer';
 import type { Expense, FertOption } from '../../../core/finance/ledger';
 import { checkShare, splitShare, type ShareProblem, type SplitResult } from '../../../core/finance/share';
@@ -92,6 +92,8 @@ export function zoneProblems(e: Expense, inputs: readonly ZoneInput[]) {
 // ─── Edit an item (quantity, price, item discount) ─────────────────────────────
 
 /** Satang per unit, half up, in integers (same rule as the order builder). */
+const isFertilizerItem = (e: Expense) => e.categoryId === FERTILIZER_CATEGORY;
+
 const roundedPer = (gross: number, qty: number) => Math.floor((2 * gross + qty) / (2 * qty));
 
 /** The item's own discount (not the bill share): from its line, else a legacy item's whole discount. */
@@ -100,8 +102,6 @@ const ownDiscount = (e: Expense): number => (e.line ? e.line.itemDiscountSatang 
 export interface EditProblems {
   /** Sacks already given to tappers (> new qty). */
   readonly tappers?: number;
-  /** Sacks already placed in zones (> new qty). */
-  readonly zones?: number;
   /** Item discount plus the bill share exceeds the new price. */
   readonly discount?: true;
   /** The typed name (fertilizer: its formula) is empty. */
@@ -129,11 +129,10 @@ export function editItemProblems(e: Expense, m: ItemMoney, n: ItemNameDraft = na
   const qty = m.qty ?? 0;
   const out: { -readonly [K in keyof EditProblems]: EditProblems[K] } = {};
   if (renamed(e, n) && !tidy(n.name)) out.name = true;
-  if (e.fertilizer || e.share) {
-    const given = (e.share?.lines ?? []).reduce((s, l) => s + (l.sacks ?? 0), 0);
-    const placed = (e.fertilizer?.zones ?? []).reduce((s, z) => s + z.sacks, 0);
+  // E11-S17 RM-3: a fertilizer item's old split and zones are no longer read (splitting moved to E16).
+  if (e.share && !isFertilizerItem(e)) {
+    const given = e.share.lines.reduce((s, l) => s + (l.sacks ?? 0), 0);
     if (qty < given) out.tappers = given;
-    if (qty < placed) out.zones = placed;
   }
   const billShare = itemDiscountTotal(e) - ownDiscount(e);
   if ((m.gross ?? 0) < m.discount + billShare) out.discount = true;
@@ -195,7 +194,7 @@ export function editItemPatch(e: Expense, m: ItemMoney, unit: string, n: ItemNam
     discountSatang,
     line: { qty, unit, grossSatang: gross, itemDiscountSatang: m.discount },
     ...(f ? { fertilizer: { ...f, formula, brand, sacks: qty, pricePerSackSatang: roundedPer(gross, qty), itemDiscountSatang: m.discount } } : {}),
-    ...(e.share ? { share: { ...e.share, billSatang: gross, discountSatang, totalSacks: qty } } : {}),
+    ...(e.share && !isFertilizerItem(e) ? { share: { ...e.share, billSatang: gross, discountSatang, totalSacks: qty } } : {}),
   };
 }
 

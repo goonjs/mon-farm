@@ -5,6 +5,7 @@
  */
 export const th = {
   'ordd.title': 'ใบซื้อปุ๋ย',
+  'ordd.fertilize': 'ใส่ปุ๋ยจากใบนี้',
   'ordd.edit.link': 'แก้รายการ',
   'ordd.edit.title': 'แก้รายการ',
   'ordd.edit.errTappers': 'ให้คนกรีดไปแล้ว {n} กระสอบ จำนวนต้องไม่น้อยกว่านี้ (ลดที่ "คนกรีด" ก่อน)',

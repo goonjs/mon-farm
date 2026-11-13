@@ -21,7 +21,7 @@ import { KnowRow, useSaleLineText } from './know-row';
 import { ORDER_NEW, orderHref } from './money/order-routes';
 import { loadHomeSales } from './sale/open-sale';
 import { useRepayHome, type OwesRow } from './home-repay';
-import { groupOrders, missingDetails } from '../core/finance/fert-order';
+import { groupOrders } from '../core/finance/fert-order';
 import { owedByPerson, payableSatang } from '../core/finance/ledger';
 import { formatDate, formatSatang, todayIso } from '../core/finance/money';
 import type { HomeSales } from '../core/home';
@@ -88,20 +88,18 @@ export function V2Home() {
   // E06-S08 (H1, H2): repayments not in yet, and what a buyer still owes the farm per sale.
   const repay = useRepayHome(fin.events, era);
 
-  // Shop orders (E11-S11): ordered and not yet arrived; arrived fertilizer not yet placed on a plot.
+  // Shop orders (E11-S11): ordered and not yet arrived. (Zones moved to fertilizing, E11-S17.)
   const orders = useMemo(() => {
     const live = (fin.state?.expenses ?? []).filter((x) => !x.deleted);
     const overdueBefore = isoDaysAgo(2);
-    if (!live.some((x) => x.fertilizer)) return { committed: [], zoneItems: [] };
+    if (!live.some((x) => x.fertilizer)) return { committed: [] };
     const views = groupOrders(live);
     return {
       // FD-0: remind only when the goods are overdue (ordered more than 2 days ago).
       committed: views.filter((o) => o.stage === 'committed' && o.date < overdueBefore && o.items.some((x) => x.fertilizer)),
-      zoneItems: live.filter((x) => x.stage === 'actual' && x.fertilizer && missingDetails(x).includes('zones')),
     };
   }, [fin.state]);
   const committedNewest = orders.committed[0];
-  const zoneNewest = orders.zoneItems.reduce<(typeof orders.zoneItems)[number] | undefined>((a, x) => (!a || x.date > a.date ? x : a), undefined);
 
   const saleLine = useSaleLineText();
 
@@ -185,16 +183,6 @@ export function V2Home() {
       </KnowRow>
     ) : null,
     ...repay.owes.map((o) => <OwesKnowRow key={`owes-${o.saleId}`} o={o} />),
-    zoneNewest ? (
-      <KnowRow
-        key="order-zones"
-        testID="home-order-zones"
-        tone="cream"
-        icon={() => <FarmMateArt id="farm.plotZone" />}
-        value={msg('ords.homeZones', { n: orders.zoneItems.length })}
-        to={orderHref(zoneNewest.orderId ?? zoneNewest.id)}
-      />
-    ) : null,
   ].filter((r) => r !== null);
 
   return (

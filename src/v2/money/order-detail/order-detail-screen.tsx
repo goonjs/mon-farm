@@ -1,6 +1,7 @@
 /**
- * ใบซื้อปุ๋ย (E11-S11 FD-0…FD-5): the order's header (total, stage, payer, progress, repeat, "ของมาแล้ว"),
- * one card per item, and the three "tell later" sheets of a fertilizer item.
+ * ใบซื้อปุ๋ย (E11-S11 FD-0…FD-2): the order's header (total, stage, payer, repeat, "ของมาแล้ว"), one card
+ * per item. E11-S17: no reasons / zones / tappers here any more — they moved to fertilizing (E16); a
+ * received order with fertilizer links there with its fertilizer picked ("ใส่ปุ๋ยจากใบนี้ ›", RM-1).
  * Route /v2/order/[orderId]; a legacy single expense reads as a one-item order under its own id.
  * Every write is `expense_changed` naming the item's head; a failed write is said out loud.
  */
@@ -9,30 +10,27 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { deliverOrder, groupOrders, missingDetails, orderProgress, patchOrderFields, type DetailKey, type OrderPatchWrite, type OrderView } from '../../../core/finance/fert-order';
+import { deliverOrder, groupOrders, patchOrderFields, type OrderPatchWrite, type OrderView } from '../../../core/finance/fert-order';
 import { FERTILIZER_CATEGORY } from '../../../core/finance/fert-order';
-import { reasonLabel } from '../../../core/finance/fertilizer';
 import type { Expense } from '../../../core/finance/ledger';
 import { formatDate, formatSatang } from '../../../core/finance/money';
-import type { ExpensePatch, Payer } from '../../../core/finance/types';
-import { filterPeople, type MasterState } from '../../../core/master';
+import type { ExpensePatch } from '../../../core/finance/types';
+import type { MasterState } from '../../../core/master';
 import { useFinance, type UseFinance } from '../../../finance/use-finance';
 import { useInFlight } from '../../../finance/use-in-flight';
 import { useT } from '../../../i18n';
 import { useSyncStatus } from '../../../sync/use-sync-status';
 import { useTheme } from '../../../theme';
-import { AppText, Card, Check, Chip, ScreenHeader } from '../../../ui';
+import { AppText, Card, Check, ChevronRight, Chip, ScreenHeader } from '../../../ui';
 import { useMaster } from '../../farm/pieces';
 import { ORDER_NEW } from '../order-routes';
+import { fertilizingNewFrom } from '../../care/fertilizing/routes';
 import { EditItemSheet } from './edit-item-sheet';
 import { HeaderSheet, type HeaderEdit } from './header-sheet';
 import { ItemCard } from './item-card';
 import { ConfirmSheet } from './parts';
-import { ReasonsSheet } from './reasons-sheet';
-import { TappersSheet } from './tappers-sheet';
 import { unifyOrder, type OptionWrite } from './tell';
 import { setFertOption } from '../fert-options';
-import { ZonesSheet } from './zones-sheet';
 
 export function OrderDetailScreen() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
@@ -60,7 +58,7 @@ export function OrderDetailScreen() {
   );
 }
 
-type Sheet = { kind: DetailKey | 'edit' | 'delItem'; id: string } | 'header' | 'delOrder' | null;
+type Sheet = { kind: 'edit' | 'delItem'; id: string } | 'header' | 'delOrder' | null;
 
 /** The deleted items of one order (a legacy single expense is an order under its own id). */
 function deletedOf(expenses: readonly Expense[], orderId: string): Expense[] {
@@ -91,12 +89,9 @@ export function OrderDetailView({
   const [sheet, setSheet] = useState<Sheet>(null);
   const [failed, setFailed] = useState(false);
 
-  const progress = orderProgress(order);
   const sacks = order.items.reduce((s, e) => s + (e.categoryId === FERTILIZER_CATEGORY ? (e.fertilizer?.sacks ?? e.share?.totalSacks ?? 0) : 0), 0);
   const committed = order.stage === 'committed';
-  const reasonName = (id: string) => reasonLabel(id, state.fertOptions);
-  const catPct = state.categories.find((c) => c.id === FERTILIZER_CATEGORY)?.workerPct ?? 50;
-  const tappers: Payer[] = master ? filterPeople(master.people, 'tapper').map((p) => ({ id: p.id, name: p.name })) : [];
+  const canFertilize = order.stage === 'actual' && order.items.some((e) => e.categoryId === FERTILIZER_CATEGORY && e.fertilizer);
   const open = typeof sheet === 'object' && sheet ? (order.items.find((e) => e.id === sheet.id) ?? null) : null;
   const deleted = deletedOf(state.expenses, order.orderId);
   const kind = typeof sheet === 'object' && sheet ? sheet.kind : null;
@@ -130,7 +125,6 @@ export function OrderDetailView({
   const saveHeader = (n: HeaderEdit) => writeAll(patchOrderFields(order, { date: n.date, stage: n.stage, payer: n.payer, shop: n.shop }));
 
   const subtitle = order.shop ? msg('ordd.subtitle', { shop: order.shop, date: formatDate(order.date) }) : msg('ordd.subtitleNoShop', { date: formatDate(order.date) });
-  const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
@@ -152,14 +146,6 @@ export function OrderDetailView({
               <HeaderLink testID="ordd-mismatch-fix" label={msg('ordd.mismatchFix')} onPress={() => void inFlight.run(async () => void (await writeAll(unifyOrder(order))))} />
             </View>
           ) : null}
-          {progress.total > 0 ? (
-            <>
-              <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: progress.total, now: progress.done }} style={{ height: 8, borderRadius: t.radius.pill, backgroundColor: t.color.surfaceSunk, overflow: 'hidden' }}>
-                <View style={{ width: `${pct}%`, height: 8, backgroundColor: t.color.accept }} />
-              </View>
-              <AppText testID="ordd-progress" variant="bodySm">{msg('ordd.progress', { done: progress.done, total: progress.total })}</AppText>
-            </>
-          ) : null}
           {committed ? (
             <Pressable
               testID="ordd-deliver"
@@ -176,11 +162,17 @@ export function OrderDetailView({
             <HeaderLink testID="ordd-repeat" label={msg('ordd.repeat')} onPress={onRepeat} />
             <HeaderLink testID="ordd-edit-header" label={msg('ordd.editHeader')} onPress={() => setSheet('header')} />
           </View>
+          {canFertilize ? (
+            <Pressable testID="ordd-fertilize" accessibilityRole="link" onPress={() => router.push(fertilizingNewFrom(order.orderId))} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs, minHeight: t.target.min, alignSelf: 'flex-start' }}>
+              <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.action }}>{msg('ordd.fertilize')}</Text>
+              <ChevronRight color={t.color.action} />
+            </Pressable>
+          ) : null}
         </Card>
         ) : null}
         {failed ? <AppText testID="ordd-failed" style={{ color: t.color.reject }}>{msg('ordd.saveFailed')}</AppText> : null}
         {order.items.map((e) => (
-          <ItemCard key={e.id} item={e} missing={missingDetails(e)} reasonName={reasonName} onOpen={(k) => setSheet({ kind: k, id: e.id })} onEdit={() => setSheet({ kind: 'edit', id: e.id })} onConflict={() => router.push({ pathname: '/v2/expense/[id]', params: { id: e.id } })} />
+          <ItemCard key={e.id} item={e} onEdit={() => setSheet({ kind: 'edit', id: e.id })} onConflict={() => router.push({ pathname: '/v2/expense/[id]', params: { id: e.id } })} />
         ))}
         {order.items.length > 0 ? (
           <HeaderLink testID="ordd-delete-order" label={msg('ordd.deleteOrder')} onPress={() => setSheet('delOrder')} />
@@ -205,9 +197,6 @@ export function OrderDetailView({
       {open && kind === 'edit' ? <EditItemSheet key={open.id} item={open} options={state.fertOptions} others={state.expenses.filter((x) => x.id !== open.id)} onSave={saveItem(open)} onFixOptions={fixOptions} onDelete={() => setSheet({ kind: 'delItem', id: open.id })} onClose={() => setSheet(null)} /> : null}
       {open && kind === 'delItem' ? <ConfirmSheet testID="ordd-delete-item-sheet" title={msg('ordd.deleteItem.title')} body={msg('ordd.deleteItem.body', { item: open.item })} confirmLabel={msg('ordd.deleteItem.yes')} cancelLabel={msg('ordd.deleteNo')} failed={failed ? msg('ordd.saveFailed') : undefined} onConfirm={() => void inFlight.run(() => remove([open]))} onClose={() => setSheet(null)} /> : null}
       {sheet === 'delOrder' ? <ConfirmSheet testID="ordd-delete-order-sheet" title={msg('ordd.deleteOrder.title')} body={msg('ordd.deleteOrder.body', { n: order.items.length })} confirmLabel={msg('ordd.deleteOrder.yes')} cancelLabel={msg('ordd.deleteNo')} failed={failed ? msg('ordd.saveFailed') : undefined} onConfirm={() => void inFlight.run(() => remove(order.items))} onClose={() => setSheet(null)} /> : null}
-      {open && typeof sheet === 'object' && sheet && sheet.kind === 'reasons' ? <ReasonsSheet key={open.id} item={open} state={state} fin={fin} onSave={saveItem(open)} onClose={() => setSheet(null)} /> : null}
-      {open && typeof sheet === 'object' && sheet && sheet.kind === 'zones' ? <ZonesSheet key={open.id} item={open} master={master} onZoneSaved={onZoneSaved} onSave={saveItem(open)} onClose={() => setSheet(null)} /> : null}
-      {open && typeof sheet === 'object' && sheet && sheet.kind === 'tappers' ? <TappersSheet key={open.id} item={open} tappers={tappers} catPct={catPct} onSave={saveItem(open)} onClose={() => setSheet(null)} /> : null}
     </View>
   );
 }
