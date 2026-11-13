@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { balanceAfterSale, checkDebt, fertilizerSplit, projectDebts } from './debts';
+import { balanceAfterSale, checkDebt, fertilizerSplit, lumpLeft, projectDebts } from './debts';
 import { projectFinance } from './ledger';
 import { FARM_FUNDS, type DebtFields, type DebtPaymentFields, type FinanceEvent, type FinancePayload, type Payer } from './types';
 
@@ -240,7 +240,7 @@ describe('debt left after a given sale (review F9)', () => {
   it('counts an expense-share debt the same way', () => {
     const share = { billSatang: 1470000, discountSatang: 0, totalSacks: null, lines: [{ worker: NAT, sacks: null, workerPct: 50, settle: 'debt' as const }] };
     const log = [
-      ev('x1', { t: 'expense_created', fields: { amountSatang: 1470000, date: '2026-10-27', stage: 'actual', categoryId: 'cat-fertilizer', propertyId: null, item: '', note: '', payer: FARM, share } }),
+      ev('x1', { t: 'expense_created', fields: { amountSatang: 1470000, date: '2026-10-27', stage: 'actual', categoryId: 'cat-other', propertyId: null, item: '', note: '', payer: FARM, share } }),
       pay('s1', { worker: NAT, amountSatang: 332500, date: '2026-10-13', method: 'buyer-split', saleId: 'sale-13' }),
     ];
     const acc = projectDebts(log).get(NAT.id)!;
@@ -296,5 +296,28 @@ describe('debt left after a given sale (review F9)', () => {
     ];
     const acc = projectDebts(log).get(NAT.id)!;
     expect(balanceAfterSale(acc, 'sale-13', '2026-10-13')).toBe(400000);
+  });
+});
+
+describe('lumpLeft — which debt lumps are paid off, oldest first (E16-S03 SP-9, display only)', () => {
+  it('takes what was deducted from the oldest lumps first', () => {
+    const log = [
+      debt('d1', { worker: NAT, kind: 'fertilizer', amountSatang: 100000, date: '2026-10-01' }),
+      debt('d2', { worker: NAT, kind: 'fertilizer', amountSatang: 200000, date: '2026-10-05' }),
+      debt('d3', { worker: NAT, kind: 'other', note: 'x', amountSatang: 50000, date: '2026-10-09' }),
+      pay('s1', { worker: NAT, amountSatang: 150000, date: '2026-10-20', method: 'buyer-split', saleId: 'sale-1' }),
+    ];
+    const left = lumpLeft(projectDebts(log).get(NAT.id)!);
+    expect(left.get('d1')).toBe(0);
+    expect(left.get('d2')).toBe(150000);
+    expect(left.get('d3')).toBe(50000);
+  });
+
+  it('ignores voided debts and payments to someone else', () => {
+    const log = [
+      debt('d1', { worker: NAT, kind: 'fertilizer', amountSatang: 100000, date: '2026-10-01' }),
+      pay('s1', { worker: NAT, amountSatang: 100000, date: '2026-10-20', method: 'outside', creditor: SOMWANG }),
+    ];
+    expect(lumpLeft(projectDebts(log).get(NAT.id)!).get('d1')).toBe(100000);
   });
 });
