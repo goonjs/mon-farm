@@ -159,7 +159,9 @@ describe('V2Home — empty farm', () => {
     await flush();
     const grid = screen.getByTestId('home-go-to');
     const ids = within(grid).getAllByTestId(/^mod-/).map((n) => n.props.testID);
-    expect(ids).toEqual(['mod-reports', 'mod-weather', 'mod-payables', 'mod-expenses', 'mod-order', 'mod-stock', 'mod-workers']);
+    expect(ids).toEqual(['mod-reports', 'mod-weather', 'mod-payables', 'mod-expenses', 'mod-order', 'mod-stock', 'mod-care', 'mod-workers']);
+    // E16-S01 GC-1: garden care beside the stock, the two sides of the fertilizer.
+    expect(within(screen.getByTestId('mod-care')).getByText('การดูแลสวน')).toBeTruthy();
     expect(within(screen.getByTestId('mod-reports')).getByText('รายงานการขายย้อนหลัง')).toBeTruthy();
     expect(within(screen.getByTestId('mod-weather')).getByText('เปิดภายนอก')).toBeTruthy();
     expect(within(screen.getByTestId('mod-weather')).getByTestId('external-icon', { includeHiddenElements: true })).toBeTruthy();
@@ -184,6 +186,7 @@ describe('V2Home — empty farm', () => {
       'mod-expenses': '/v2/expenses',
       'mod-order': '/v2/order',
       'mod-stock': '/v2/stock',
+      'mod-care': '/v2/care',
       'mod-workers': '/v2/people?filter=tapper',
     };
     for (const [id, href] of Object.entries(routes)) {
@@ -207,6 +210,7 @@ describe('V2Home — FarmMate originals (E03-S11 FM-6)', () => {
     expect(art('mod-expenses')).toEqual(['sale.receipt']);
     expect(art('mod-order')).toEqual(['materials.orderMaterials']);
     expect(art('mod-stock')).toEqual(['materials.stock']);
+    expect(art('mod-care')).toEqual(['farmwork.maintenance']);
     expect(art('mod-workers')).toEqual(['people.workerInfo']);
   });
 

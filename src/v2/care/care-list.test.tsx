@@ -43,7 +43,7 @@ describe('CareListView (E16-S01)', () => {
       fz('fz-new', { date: '2026-11-05', lines: [{ sources: ['a'], sacks: 10, takes: [], rest: null }, { sources: ['k'], sacks: 5, takes: [], rest: null }] }),
       fz('fz-mid', { date: '2026-11-01', lines: [{ sources: ['k'], sacks: 8, takes: [{ worker: DAENG, sacks: 3, auto: false }], rest: 'later' }] }),
     ]);
-    expect(screen.getAllByTestId(/^care-row-/).map((r) => r.props.testID)).toEqual(['care-row-fz-new', 'care-row-fz-mid', 'care-row-fz-old']);
+    expect(screen.getAllByTestId(/^care-row-fz-[a-z]+$/).map((r) => r.props.testID)).toEqual(['care-row-fz-new', 'care-row-fz-mid', 'care-row-fz-old']);
     const fresh = screen.getByTestId('care-row-fz-new');
     expect(fresh).toHaveTextContent(/5 พ\.ย\./);
     expect(fresh).toHaveTextContent(/ดีเกลือ 10 · 46-0-0 5 ถุง/);
