@@ -159,3 +159,26 @@ test('E16 empty stock says when fertilizer shows up and links to orders not yet 
   expect(await textFit(page)).toEqual([]);
   await evidence(page, `${SHOTS}/m-7-empty.png`);
 });
+
+for (const size of ['m', 'l'] as const) {
+  test(`E16-S01 garden care list at text size ${size.toUpperCase()}: from home, newest first, badge, opens the fertilizing (offline)`, async ({ page, context }) => {
+    await seed(page, size);
+    await page.evaluate((ev) => {
+      const all = JSON.parse(localStorage.getItem('mon-farm:finance-events') ?? '[]');
+      localStorage.setItem('mon-farm:finance-events', JSON.stringify([...all, ...ev]));
+    }, [
+      finEvent(10, 'fz-e2e-1', { t: 'fertilizing_recorded', fields: { date: '2026-10-20', lines: [{ sources: ['ord-a-1'], sacks: 20, takes: [{ worker: TAPPERS[0], sacks: 20, auto: false }], rest: null }], pct: { t1: 50 }, settle: {}, zones: [], reasons: [], note: '' } }),
+      finEvent(11, 'fz-e2e-2', { t: 'fertilizing_recorded', fields: { date: '2026-11-05', lines: [{ sources: ['ord-c-1'], sacks: 10, takes: [], rest: null }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } }),
+    ]);
+    await page.goto('/v2');
+    await context.setOffline(true);
+    expect(await textFit(page)).toEqual([]);
+    await page.getByTestId('mod-care').click();
+    await expect(page.locator('[data-testid^="care-row-fz-"]:not([data-testid$="-badge"])')).toHaveCount(2);
+    await expect(page.getByTestId('care-row-fz-e2e-2-badge')).toHaveText('ยังไม่แบ่ง');
+    expect(await textFit(page)).toEqual([]);
+    await evidence(page, `${SHOTS}/${size}-care-list.png`);
+    await page.getByTestId('care-row-fz-e2e-2').click();
+    await expect(page.getByTestId('fz-ferts')).toContainText('46-0-0 780฿ · 10 ถุง · ยังไม่แบ่ง');
+  });
+}
