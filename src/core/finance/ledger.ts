@@ -642,9 +642,9 @@ export function foldRecordPublic<S extends object>(
   events: readonly FinanceEvent[],
   initial: (create: FinanceEvent) => S,
   guarded: readonly string[],
-): { state: S; head: EventId; conflicts: readonly FieldConflict[] } | null {
+): { state: S; head: EventId; conflicts: readonly FieldConflict[]; history: readonly S[] } | null {
   const f = foldRecord(events, initial, guarded);
-  return f ? { state: f.state, head: latestHead(events, f.createdBy.id) ?? f.createdBy.id, conflicts: f.conflicts } : null;
+  return f ? { state: f.state, head: latestHead(events, f.createdBy.id) ?? f.createdBy.id, conflicts: f.conflicts, history: f.history } : null;
 }
 
 /** The newest head of a chain of events on one record (ties by id). */
