@@ -248,6 +248,37 @@ describe('FertilizingView — edit, delete (FZ-7, FZ-9)', () => {
     }),
   ];
 
+  it('a zone-only edit writes the zones only, never the lines — even after a new delivery joined the card (review #188 N1)', async () => {
+    const events = [...saved(), item('a2', { sacks: 10, netSatang: 300_000, date: '2026-11-03' })];
+    const { write } = setup(events, { recordId: 'fz-1' });
+    fireEvent.press(screen.getByTestId('fz-where'));
+    fireEvent.press(screen.getByTestId('fz-zone-z1'));
+    fireEvent.press(screen.getByTestId('fz-where-done'));
+    fireEvent.press(screen.getByTestId('fz-save'));
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(Object.keys(write.mock.calls[0][2].patch)).toEqual(['zones']);
+  });
+
+  it('✕ on the fertilizer page of a saved one closes without asking when nothing changed (review #188 N2)', () => {
+    setup(saved(), { recordId: 'fz-1' });
+    fireEvent.press(screen.getByTestId('fz-ferts'));
+    fireEvent.press(screen.getByTestId('fz-cards-close'));
+    expect(screen.queryByTestId('fz-discard-sheet')).toBeNull();
+    expect(screen.getByTestId('fz-ferts')).toBeTruthy();
+  });
+
+  it('a deleted one opens read-only, says so, and offers restore (review #188 S1, FZ-7)', async () => {
+    const events = saved();
+    const del = ev('fz-1', { t: 'fertilizing_changed', patch: { deleted: true } }, events[events.length - 1].id);
+    const { write } = setup([...events, del], { recordId: 'fz-1' });
+    expect(screen.getByTestId('fz-deleted')).toHaveTextContent(/ลบแล้ว/);
+    expect(screen.queryByTestId('fz-save')).toBeNull();
+    expect(screen.queryByTestId('fz-delete')).toBeNull();
+    expect(screen.getByTestId('fz-ferts').props.accessibilityState?.disabled).toBe(true);
+    fireEvent.press(screen.getByTestId('fz-restore'));
+    await waitFor(() => expect(write).toHaveBeenCalledWith('fz-1', del.id, { t: 'fertilizing_changed', patch: { deleted: false } }));
+  });
+
   it('reopens with its numbers; stock leaves its own sacks out; saving patches the lines', async () => {
     const events = saved();
     const { write } = setup(events, { recordId: 'fz-1' });

@@ -339,6 +339,23 @@ describe('fertilizingDebts — one lump per worker per fertilizing (SP-8, SP-10)
     expect(fertilizingDebts(project(edited))[0].amountSatang).toBe(100_000);
   });
 
+  it('a voided lump keeps the amount it last owed, so the history says what was voided (review #188 S3)', () => {
+    const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])], pct: { [DAENG.id]: 50 } });
+    const events = [item('a', { sacks: 10, netSatang: 300_000 }), c, ev('fz-1', { t: 'fertilizing_changed', patch: { deleted: true } }, { base: c.id })];
+    expect(fertilizingDebts(project(events)).map((d) => [d.amountSatang, d.deleted])).toEqual([[60_000, true]]);
+  });
+
+  it('"edited" only when what the debt is made of changed — not for zones, reasons or a delete (review #188 S4)', () => {
+    const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])], pct: { [DAENG.id]: 50 } });
+    const base = [item('a', { sacks: 10, netSatang: 300_000 }), c];
+    const zones = ev('fz-1', { t: 'fertilizing_changed', patch: { zones: [{ zoneId: 'z', zoneName: 'แปลง' }], reasons: ['text:x'] } }, { base: c.id });
+    expect(fertilizingDebts(project([...base, zones]))[0].edited).toBe(false);
+    const del = ev('fz-1', { t: 'fertilizing_changed', patch: { deleted: true } }, { base: c.id });
+    expect(fertilizingDebts(project([...base, del]))[0].edited).toBe(false);
+    const pct = ev('fz-1', { t: 'fertilizing_changed', patch: { pct: { [DAENG.id]: 40 } } }, { base: c.id });
+    expect(fertilizingDebts(project([...base, pct]))[0].edited).toBe(true);
+  });
+
   it('marks a lump whose fertilizing was edited after it was written (SP-10)', () => {
     const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])] });
     const base = [item('a', { sacks: 10, netSatang: 300_000 }), c];
