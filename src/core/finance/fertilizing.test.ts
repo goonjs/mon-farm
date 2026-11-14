@@ -345,6 +345,15 @@ describe('fertilizingDebts — one lump per worker per fertilizing (SP-8, SP-10)
     expect(fertilizingDebts(project(events)).map((d) => [d.amountSatang, d.deleted])).toEqual([[60_000, true]]);
   });
 
+  it('a lump voided by "จ่ายสดแล้ว" or by taking the tapper off keeps what it last owed (review of PR 188 N7)', () => {
+    const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }, { worker: DAM, sacks: 2, auto: false }])], pct: { [DAENG.id]: 50, [DAM.id]: 50 } });
+    const base = [item('a', { sacks: 10, netSatang: 300_000 }), c];
+    const paid = ev('fz-1', { t: 'fertilizing_changed', patch: { settle: { [DAENG.id]: 'paid' } } }, { base: c.id });
+    expect(fertilizingDebts(project([...base, paid])).find((d) => d.worker.id === DAENG.id)!).toMatchObject({ amountSatang: 60_000, deleted: true });
+    const off = ev('fz-1', { t: 'fertilizing_changed', patch: { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])] } }, { base: c.id });
+    expect(fertilizingDebts(project([...base, off])).find((d) => d.worker.id === DAM.id)!).toMatchObject({ amountSatang: 30_000, deleted: true });
+  });
+
   it('"edited" only when what the debt is made of changed — not for zones, reasons or a delete (review of PR 188 S4)', () => {
     const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])], pct: { [DAENG.id]: 50 } });
     const base = [item('a', { sacks: 10, netSatang: 300_000 }), c];
