@@ -432,7 +432,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
               <Plus color={t.color.inkSoft} />
               <View style={{ flex: 1 }}>
                 <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('fert.details')}</AppText>
-                <AppText variant="caption" numberOfLines={1}>
+                <AppText testID="expense-details-line" variant="caption">
                   {farmName ? msg('fin.form.detailsFarm', { date: formatDate(date), stage: msg(`fin.stage.${stage}`), farm: farmName }) : msg('fin.form.detailsNoFarm', { date: formatDate(date), stage: msg(`fin.stage.${stage}`) })}
                 </AppText>
                 <AppText variant="caption">{msg('fin.form.detailsWhat')}</AppText>
