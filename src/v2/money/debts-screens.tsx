@@ -14,7 +14,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { projectDebts, type DebtAccount, type HistoryLine } from '../../core/finance/debts';
+import { lumpLeft, projectDebts, type DebtAccount, type HistoryLine } from '../../core/finance/debts';
 import { paymentStatus } from '../../core/finance/payments';
 import { buyerOwes, PENDING_REPAY_SINCE, pendingRepayLines, type PendingHow } from '../../core/finance/pending-repays';
 import { formatDate, formatSatang } from '../../core/finance/money';
@@ -34,6 +34,7 @@ import {
   CardLabel,
   Check,
   ChevronRight,
+  CompactMoney,
   CTA,
   DebtIcon,
   FactRow,
@@ -50,6 +51,7 @@ import {
 } from '../../ui';
 import { V2_HOME } from '../routes';
 import { orderHref } from './order-routes';
+import { fertilizingHref } from '../care/fertilizing/routes';
 import { ChoiceChip, ChoiceRow, Day } from './pieces';
 import { PlanBadge, PlanCard, PlanSheet } from './debt-plan';
 import { maxInstallments } from '../../core/master';
@@ -233,8 +235,15 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
     if (p) return fin.write(p.id, p.headEventId, { t: 'debt_payment_changed', patch: { deleted } });
   };
 
-  const sourceOf = (h: HistoryLine) => account?.debts.find((d) => d.id === h.id)?.expenseId;
+  // E16-S03: a fertilizing lump opens its fertilizing; a shared expense's debt opens that expense (E11-S10).
+  const debtOf = (h: HistoryLine) => account?.debts.find((d) => d.id === h.id);
+  const sourceOf = (h: HistoryLine) => debtOf(h)?.fertilizingId ?? debtOf(h)?.expenseId;
+  const left = useMemo(() => (account ? lumpLeft(account) : new Map<string, number>()), [account]);
   const openSource = (expenseId: string) => {
+    if (expenseId.startsWith('fz-')) {
+      router.push(fertilizingHref(expenseId));
+      return;
+    }
     const x = fin.state?.expenses.find((e) => e.id === expenseId);
     // A deleted purchase opens in the expense form: restore lives there, not in the order page.
     if (!x?.deleted && (x?.fertilizer || x?.share?.totalSacks != null)) router.push(orderHref(x.orderId ?? expenseId));
@@ -314,17 +323,29 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
             <View key={h.id} testID={`debt-line-${h.id}`} style={{ gap: 2, paddingVertical: t.space.sm, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint, opacity: h.deleted ? t.opacity.muted : 1 }}>
               {(() => {
                 const src = sourceOf(h);
+                const fz = debtOf(h)?.fertilizingId ? debtOf(h) : undefined;
+                const rest = fz && !h.deleted ? left.get(h.id) : undefined;
                 const facts = (
                   <>
                     <View style={{ flexDirection: 'row' }}>
                       <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, textDecorationLine: h.deleted ? 'line-through' : 'none' }}>
-                        {instOf(h) && plan?.kind === 'installments' ? msg('debt.inst.hist', { n: instOf(h)!, m: plan.count }) : msg(`debt.kind.${h.type}`)}
+                        {instOf(h) && plan?.kind === 'installments' ? msg('debt.inst.hist', { n: instOf(h)!, m: plan.count }) : fz ? msg('fz.debt.title', { date: formatDate(h.date).split(' ').slice(0, 2).join(' ') }) : msg(`debt.kind.${h.type}`)}
                       </AppText>
                       <AppText style={{ fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{`${h.signedSatang >= 0 ? '+' : MINUS}${formatSatang(Math.abs(h.signedSatang))}`}</AppText>
                     </View>
                     <FactRow icon={(c) => <CalendarIcon color={c} size={14} />}>
                       <Day iso={h.date} />
                     </FactRow>
+                    {fz?.note ? <AppText variant="bodySm">{fz.note}</AppText> : null}
+                    {fz && 'edited' in fz && fz.edited ? <AppText testID={`debt-edited-${h.id}`} variant="caption">{msg('fz.debt.edited')}</AppText> : null}
+                    {fz && 'repriced' in fz && fz.repriced ? <AppText testID={`debt-repriced-${h.id}`} variant="caption">{msg('fz.debt.repriced')}</AppText> : null}
+                    {rest !== undefined ? (
+                      <View testID={`debt-left-${h.id}`} style={{ alignSelf: 'flex-start', paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: rest === 0 ? t.color.acceptSunk : t.color.surfaceSunk }}>
+                        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: rest === 0 ? t.color.accept : t.color.ink }}>
+                          {rest === 0 ? msg('fz.debt.paidOff') : rest < h.signedSatang ? <>{msg('fz.debt.left')} <CompactMoney satang={rest} size="bodyLg" /></> : null}
+                        </Text>
+                      </View>
+                    ) : null}
                     {h.saleId ? <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>{`${msg('debt.history.sale')} ${h.saleId}`}</FactRow> : null}
                     {h.type === 'loan' && h.creditor.name ? <FactRow icon={(c) => <PersonIcon color={c} size={14} />}>{msg('debt.history.lender', { name: h.creditor.name })}</FactRow> : null}
                     {h.deleted ? <AppText variant="caption">{msg('debt.history.voided')}</AppText> : null}

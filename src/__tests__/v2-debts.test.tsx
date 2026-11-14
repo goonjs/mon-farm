@@ -131,7 +131,7 @@ describe('debt ledger (E06-S03)', () => {
 });
 
 describe('a debt made from an expense share (E11-S10)', () => {
-  it('cannot be voided here: it opens its expense (the flow for fertilizer)', async () => {
+  it('cannot be voided here: it opens its expense (a shared expense of another category, E11-S10 B)', async () => {
     mockParams.current = { workerId: 'p-som', name: 'สม' };
     await mockFinance.append({
       id: 'share-exp-1',
@@ -145,9 +145,8 @@ describe('a debt made from an expense share (E11-S10)', () => {
       payload: {
         t: 'expense_created',
         fields: {
-          amountSatang: 100000, date: '2026-10-01', stage: 'actual', categoryId: 'cat-fertilizer', propertyId: null, item: '', note: '', payer: null,
+          amountSatang: 100000, date: '2026-10-01', stage: 'actual', categoryId: 'cat-other', propertyId: null, item: 'ยาฆ่าหญ้า', note: '', payer: null,
           share: { billSatang: 100000, discountSatang: 0, totalSacks: 2, lines: [{ worker: { id: 'p-som', name: 'สม' }, sacks: 2, workerPct: 50, settle: 'debt' }] },
-          fertilizer: { type: 'chemical', formula: 'ยูเรีย', brand: '', sackKg: null, reasons: [], zones: [], shop: '', orderedBy: '' },
         },
       },
     });
@@ -182,6 +181,55 @@ describe('a debt made from an expense share (E11-S10)', () => {
     await flush();
     fireEvent.press(screen.getByTestId('debt-open-exp-share-1:share:p-som'));
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/expense/[id]', params: { id: 'exp-share-1' } });
+  });
+});
+
+describe('a fertilizing lump in the history (E16-S03 SP-8, SP-9; E11-S17 RM-6)', () => {
+  const ev = (id: string, seq: number, targetId: string, payload: Parameters<typeof mockFinance.append>[0]['payload']) =>
+    mockFinance.append({ id, groupId: 'group-1', deviceSeq: seq, ts: seq, actor: { userId: 'u', deviceId: 'dev-fz' }, source: 'app', targetId, baseEventId: null, payload });
+
+  it('reads "ใส่ปุ๋ย {date}" with what was taken, says how much is left, and opens the fertilizing', async () => {
+    mockParams.current = { workerId: 'p-kaew', name: 'แก้ว' };
+    const kaew = { id: 'p-kaew', name: 'แก้ว' };
+    await ev('fz-item', 1, 'ord-z-a', {
+      t: 'expense_created',
+      fields: {
+        amountSatang: 300000, date: '2026-10-05', stage: 'actual', categoryId: 'cat-fertilizer', propertyId: null, item: 'ดีเกลือ', note: '', payer: null, orderId: 'ord-z',
+        line: { qty: 10, unit: 'กระสอบ', grossSatang: 300000, itemDiscountSatang: 0 },
+        fertilizer: { type: 'chemical', formula: 'ดีเกลือ', brand: '', sackKg: 50, reasons: [], zones: [], shop: '', orderedBy: '', sacks: 10 },
+      },
+    });
+    await ev('fz-rec', 2, 'fz-k1', {
+      t: 'fertilizing_recorded',
+      fields: { date: '2026-10-20', lines: [{ sources: ['ord-z-a'], sacks: 10, takes: [{ worker: kaew, sacks: 4, auto: false }], rest: 'farm' }], pct: { 'p-kaew': 50 }, settle: {}, zones: [], reasons: [], note: '' },
+    });
+    await ev('fz-pay', 3, 'pay-k1', { t: 'debt_payment_recorded', fields: { worker: kaew, creditor: { id: 'farm', name: '' }, amountSatang: 20000, date: '2026-10-25', note: '', method: 'buyer-split', saleId: 'sale-9' } });
+    wrap(<DebtAccountScreen />);
+    await flush();
+    const id = 'fz-k1:p-kaew';
+    const line = screen.getByTestId(`debt-line-${id}`);
+    expect(line).toHaveTextContent(/ใส่ปุ๋ย 20 ต\.ค\./);
+    expect(line).toHaveTextContent(/ดีเกลือ 4 ถุง/);
+    // 4 × 300 = 1,200 at 50% = 600; 200 deducted → 400 left
+    expect(screen.getByTestId(`debt-left-${id}`)).toHaveTextContent(/เหลือ ฿\s?400/);
+    fireEvent.press(screen.getByTestId(`debt-open-${id}`));
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/fertilizing', params: { id: 'fz-k1' } });
+  });
+
+  it('a source order whose price changed after the fertilizing says the lump was worked out again (SP-10)', async () => {
+    mockParams.current = { workerId: 'p-kaew', name: 'แก้ว' };
+    await mockFinance.append({ id: 'fz-price', groupId: 'group-1', deviceSeq: 5, ts: 5, actor: { userId: 'u', deviceId: 'dev-fz' }, source: 'app', targetId: 'ord-z-a', baseEventId: 'fz-item', payload: { t: 'expense_changed', patch: { amountSatang: 250000 } } });
+    wrap(<DebtAccountScreen />);
+    await flush();
+    expect(screen.getByTestId('debt-repriced-fz-k1:p-kaew')).toHaveTextContent('ราคาใบซื้อเปลี่ยน ยอดคิดใหม่');
+  });
+
+  it('a lump deducted in full says "หักหมดแล้ว"', async () => {
+    mockParams.current = { workerId: 'p-kaew', name: 'แก้ว' };
+    await ev('fz-pay2', 4, 'pay-k2', { t: 'debt_payment_recorded', fields: { worker: { id: 'p-kaew', name: 'แก้ว' }, creditor: { id: 'farm', name: '' }, amountSatang: 40000, date: '2026-10-26', note: '', method: 'buyer-split', saleId: 'sale-10' } });
+    wrap(<DebtAccountScreen />);
+    await flush();
+    expect(screen.getByTestId('debt-left-fz-k1:p-kaew')).toHaveTextContent('หักหมดแล้ว');
   });
 });
 

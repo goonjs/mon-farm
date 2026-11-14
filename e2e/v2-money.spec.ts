@@ -145,16 +145,31 @@ test('v2 worker debts — fertilizer via the shop order, account reconciliation,
   await expect(page.getByTestId('ordc-total')).toContainText('4,000.00');
   await page.getByTestId('ordc-save').click();
   await expect(page.getByTestId('ordc-saved')).toBeVisible();
-  // Details later: tell แดง takes both sacks (default 50%, deducted when the rubber is sold).
+  // E11-S17 / E16: the split is on the fertilizing, not the order. From the received order, "ใส่ปุ๋ยจากใบนี้"
+  // opens fertilizing with this order's fertilizer picked; แดง takes both sacks (default 50%, deducted at the sale).
   await page.getByTestId('ordc-saved-details').click();
-  await page.locator('[data-testid^="ordd-"][data-testid$="-tappers"]').click();
-  await page.getByTestId('ordd-tap-add').click();
-  await page.getByTestId('ordd-pick-person-daeng').click();
-  await expect(page.getByTestId('ordd-tap-person-daeng-part')).toContainText('2,000.00');
-  await page.getByTestId('ordd-tap-done').click();
-  // Back to the tapper's account (the order replaced the add form): the fertilizer debt is there.
+  await expect(page.locator('[data-testid^="ordd-"][data-testid$="-tappers"]')).toHaveCount(0);
+  await page.getByTestId('ordd-fertilize').click();
+  await expect(page.getByTestId('fz-ferts')).toContainText('ยังไม่แบ่ง');
+  await page.getByTestId('fz-ferts').click();
+  await page.getByTestId('fz-card-0-expand').click();
+  await typeOnPad(page, 'fz-card-0-take-person-daeng', '2');
+  await page.getByTestId('fz-card-0-take-person-daeng-pad-key-done').click();
+  await expect(page.getByTestId('fz-card-0-debt-person-daeng')).toContainText('2,000');
+  await page.getByTestId('fz-apply').click();
+  await expect(page.getByTestId('fz-ferts')).toContainText('แบ่งครบ');
+  await page.getByTestId('fz-save').click();
+  // Back to the order, then the tapper's account (the order replaced the add form): one fertilizing lump is there.
+  await expect(page.getByTestId('ordd-back')).toBeVisible();
   await page.getByTestId('ordd-back').click();
   await expect(page.getByTestId('debt-balance')).toContainText('2,000.00');
+  // Reloaded (the web build has no offline page cache, so the network is back for the page load only),
+  // the lump is still there: it was written offline to the local log (E16-S03 e2e).
+  await context.setOffline(false);
+  await page.reload();
+  await context.setOffline(true);
+  await expect(page.getByTestId('debt-balance')).toContainText('2,000.00');
+  await expect(page.locator('[data-testid^="debt-line-fz-"]')).toContainText('ใส่ปุ๋ย');
 
   await page.getByTestId('debt-add').click();
   await typeOnPad(page, 'debt-amount', '3000');

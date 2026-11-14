@@ -1,6 +1,6 @@
 /**
  * The shop order (E11-S11): one order = several items bought together, saved
- * first; reasons, zones and tapper share are told per item later.
+ * first. Reasons, zones and the tapper split live on fertilizing since E11-S17 / E16.
  *
  * Model (solution-architect, ADR in the story): ONE EXPENSE PER ITEM, grouped
  * by `ExpenseFields.orderId`. The existing split/debt/owed engine therefore
@@ -245,32 +245,8 @@ export const groupOrders = (expenses: readonly Expense[]): OrderView[] => {
   return views.sort((a, b) => (a.date !== b.date ? (a.date < b.date ? 1 : -1) : a.orderId < b.orderId ? -1 : a.orderId > b.orderId ? 1 : 0));
 };
 
-export type DetailKey = 'reasons' | 'zones' | 'tappers';
-
-/**
- * What is still untold on a FERTILIZER item (other items → []):
- * reasons — none chosen; zones — placed sacks < sacks; tappers — `share` key absent
- * (`share: null` = decided "not shared", a share with lines = told).
- * Sacks come from `fertilizer.sacks`, else `share.totalSacks`.
- */
-export const missingDetails = (e: Expense): DetailKey[] => {
-  const f = e.fertilizer;
-  if (!f) return [];
-  const out: DetailKey[] = [];
-  if (f.reasons.length === 0) out.push('reasons');
-  const sacks = f.sacks ?? e.share?.totalSacks ?? null;
-  const placed = f.zones.reduce((s, z) => s + z.sacks, 0);
-  // Without a known sack count there is nothing to compare to: any recorded zone counts as told.
-  if (sacks === null ? f.zones.length === 0 : placed < sacks) out.push('zones');
-  if (e.share === undefined) out.push('tappers');
-  return out;
-};
-
-/** Fertilizer items fully told / all fertilizer items of the order. */
-export const orderProgress = (o: OrderView): { readonly done: number; readonly total: number } => {
-  const fert = o.items.filter((x) => x.fertilizer);
-  return { done: fert.filter((x) => missingDetails(x).length === 0).length, total: fert.length };
-};
+// E11-S17 (RM-1, RM-3): reasons, zones and tappers are no longer told on an order — they moved to
+// fertilizing (E16) — so there is no "told x of n" any more (`missingDetails` / `orderProgress` removed).
 
 /** One write per item: `expense_changed` on each item's head. */
 export interface OrderPatchWrite {
