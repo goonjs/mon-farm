@@ -315,6 +315,23 @@ export interface FertilizingDebt extends DebtFields {
 const owes = (s: FzState, workerId: string) =>
   !s.deleted && (s.settle[workerId] ?? 'debt') === 'debt' && s.lines.some((l) => l.takes.some((t) => t.worker.id === workerId && t.sacks > 0));
 
+/**
+ * What a voided lump last owed: the newest state of the record in which the worker owed, priced at each line's
+ * current per-sack cost (a deleted record's lines are priced as if live). Display only — a voided lump never counts.
+ */
+function lastOwed(r: Fertilizing, wid: string): number {
+  const state = [...r.history].reverse().find((s) => owes({ ...s, deleted: false }, wid));
+  if (!state) return 0;
+  let cost = 0;
+  for (const l of state.lines) {
+    const sacks = l.takes.filter((t) => t.worker.id === wid).reduce((a, t) => a + t.sacks, 0);
+    const now = r.lines.find((p) => p.sources.some((x) => l.sources.includes(x)));
+    if (!sacks || !now || now.sacks < 1 || now.orphaned) continue;
+    cost += Math.floor((2 * now.costSatang * sacks + now.sacks) / (2 * now.sacks));
+  }
+  return fertilizerSplit(cost, state.pct[wid] ?? DEFAULT_TAPPER_PCT).workerSatang;
+}
+
 /** What a lump is made of — date, lines, % and how to pay back — changed after it was written (SP-10, review of PR 188 S4). */
 const debtChanged = (history: readonly FzState[]): boolean => {
   const key = (s: FzState) => JSON.stringify([s.date, s.lines, s.pct, s.settle]);
@@ -356,14 +373,13 @@ export function fertilizingDebts(p: FertilizingProjection): FertilizingDebt[] {
       // A take on an orphaned line (its source gone, or dated before the cutoff) owes nothing: no live 0.00 row (review N4).
       const onLive = r.lines.some((l) => !l.orphaned && l.takes.some((x) => x.worker.id === wid && x.sacks > 0));
       const live = owes(r, wid) && onLive;
-      // A deleted fertilizing's lump keeps what it owed, so the history says what was voided (review of PR 188 S3).
-      const shown = live || (r.deleted && owes({ ...r, deleted: false }, wid) && onLive);
+      // A voided lump keeps what it last owed, so the history says what was voided (review of PR 188 S3, N7).
       const take = r.lines.flatMap((l) => l.takes).find((t) => t.worker.id === wid);
       out.push({
         id: `${r.id}${FERTILIZING_DEBT_INFIX}${wid}`,
         worker: take?.worker ?? worker,
         kind: 'fertilizer',
-        amountSatang: shown ? fertilizerSplit(costs.get(wid) ?? 0, r.pct[wid] ?? DEFAULT_TAPPER_PCT).workerSatang : 0,
+        amountSatang: live ? fertilizerSplit(costs.get(wid) ?? 0, r.pct[wid] ?? DEFAULT_TAPPER_PCT).workerSatang : lastOwed(r, wid),
         date: r.date,
         note: (notes.get(wid) ?? []).join(' · '),
         lender: null,
