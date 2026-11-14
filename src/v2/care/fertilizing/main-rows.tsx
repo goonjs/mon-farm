@@ -4,7 +4,8 @@
  * its price per sack in full (D-95 (3), D-96 (2)).
  */
 
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
 
 import type { Fertilizing } from '../../../core/finance/fertilizing';
 import { cardStatus, fullPrice, type EditorCard } from '../../../core/finance/fertilizing-editor';
@@ -55,7 +56,17 @@ export function MainRows({
         disabled={readOnly}
         onPress={onFerts}
         title={used.length ? msg('fz.fertsChosen') : msg('fz.ferts')}
-        lines={used.length ? used.map((c) => msg('fz.line', { name: c.card.formula, price: fullPrice(c.card.perSackSatang), sacks: c.sacks, status: msg(`fz.status.${statusKey(c)}`) })) : [msg('fz.notChosen')]}
+        lines={
+          used.length
+            ? used.map((c) => (
+                <>
+                  {msg('fz.line', { name: c.card.formula, price: fullPrice(c.card.perSackSatang), sacks: c.sacks, status: '' })}
+                  {/* The split word is one run: it never breaks inside at a large text size (review of PR 188 N3). */}
+                  <Text style={NO_WRAP}>{msg(`fz.status.${statusKey(c)}`)}</Text>
+                </>
+              ))
+            : [msg('fz.notChosen')]
+        }
       />
       {record && record.over > 0 ? (
         <AppText testID="fz-over" style={{ color: t.color.warn, fontWeight: t.font.weight.bold }}>{msg('fz.over', { n: record.over })}</AppText>
@@ -71,7 +82,10 @@ export function statusKey(c: EditorCard): 'none' | 'partial' | 'full' | 'over' {
   return s === 'unused' ? 'none' : s;
 }
 
-function RowCard({ testID, art, label, title, lines, onPress, disabled }: { testID: string; art: FarmMateArtId; label?: string; title: string; lines?: readonly string[]; onPress: () => void; disabled?: boolean }) {
+/** Web keeps the run on one line; native Text has no such style and wraps at word ends anyway. */
+const NO_WRAP = (Platform.OS === 'web' ? { whiteSpace: 'nowrap' } : {}) as object;
+
+function RowCard({ testID, art, label, title, lines, onPress, disabled }: { testID: string; art: FarmMateArtId; label?: string; title: string; lines?: readonly ReactNode[]; onPress: () => void; disabled?: boolean }) {
   const t = useTheme();
   return (
     <Pressable
