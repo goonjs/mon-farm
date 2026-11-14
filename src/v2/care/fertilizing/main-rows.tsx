@@ -25,6 +25,7 @@ export function MainRows({
   onFerts,
   onWhere,
   reasonName,
+  readOnly,
 }: {
   date: string;
   today: string;
@@ -35,6 +36,8 @@ export function MainRows({
   onFerts: () => void;
   onWhere: () => void;
   reasonName: (id: string) => string;
+  /** A deleted fertilizing: shown, not editable (review #188 S1). */
+  readOnly?: boolean;
 }) {
   const msg = useT();
   const t = useTheme();
@@ -45,10 +48,11 @@ export function MainRows({
   ].filter((x): x is string => !!x);
   return (
     <>
-      <RowCard testID="fz-date" art="farmwork.calendar" onPress={onDate} label={msg('fz.date')} title={date === today ? msg('fz.dateToday', { date: shortDate }) : formatDate(date)} />
+      <RowCard testID="fz-date" art="farmwork.calendar" disabled={readOnly} onPress={onDate} label={msg('fz.date')} title={date === today ? msg('fz.dateToday', { date: shortDate }) : formatDate(date)} />
       <RowCard
         testID="fz-ferts"
         art="materials.chemFert"
+        disabled={readOnly}
         onPress={onFerts}
         title={used.length ? msg('fz.fertsChosen') : msg('fz.ferts')}
         lines={used.length ? used.map((c) => msg('fz.line', { name: c.card.formula, price: fullPrice(c.card.perSackSatang), sacks: c.sacks, status: msg(`fz.status.${statusKey(c)}`) })) : [msg('fz.notChosen')]}
@@ -56,7 +60,7 @@ export function MainRows({
       {record && record.over > 0 ? (
         <AppText testID="fz-over" style={{ color: t.color.warn, fontWeight: t.font.weight.bold }}>{msg('fz.over', { n: record.over })}</AppText>
       ) : null}
-      <RowCard testID="fz-where" art="farm.plotZone" onPress={onWhere} title={msg('fz.where')} lines={whereLines.length ? whereLines : [msg('fz.whereHint')]} />
+      <RowCard testID="fz-where" art="farm.plotZone" disabled={readOnly} onPress={onWhere} title={msg('fz.where')} lines={whereLines.length ? whereLines : [msg('fz.whereHint')]} />
     </>
   );
 }
@@ -67,12 +71,14 @@ export function statusKey(c: EditorCard): 'none' | 'partial' | 'full' | 'over' {
   return s === 'unused' ? 'none' : s;
 }
 
-function RowCard({ testID, art, label, title, lines, onPress }: { testID: string; art: FarmMateArtId; label?: string; title: string; lines?: readonly string[]; onPress: () => void }) {
+function RowCard({ testID, art, label, title, lines, onPress, disabled }: { testID: string; art: FarmMateArtId; label?: string; title: string; lines?: readonly string[]; onPress: () => void; disabled?: boolean }) {
   const t = useTheme();
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md, minHeight: t.target.comfortable, borderRadius: t.radius.xl, backgroundColor: t.color.surfaceRaised, borderWidth: t.border.hair, borderColor: t.color.rule }}
     >
@@ -86,7 +92,7 @@ function RowCard({ testID, art, label, title, lines, onPress }: { testID: string
           <AppText key={i} variant="bodySm">{l}</AppText>
         ))}
       </View>
-      <ChevronRight color={t.color.ink} />
+      {disabled ? null : <ChevronRight color={t.color.ink} />}
     </Pressable>
   );
 }

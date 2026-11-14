@@ -86,6 +86,8 @@ export const th = {
   'fz.notFound': 'ไม่พบการใส่ปุ๋ยนี้',
   'fz.fromOrder': 'ใส่ปุ๋ยจากใบนี้',
   'fz.debt.title': 'ใส่ปุ๋ย {date}',
+  'fz.restore': 'กู้คืน',
+  'fz.deletedNote': 'การใส่ปุ๋ยครั้งนี้ลบแล้ว ไม่นับสต็อกและหนี้ กู้คืนได้',
   'fz.debt.paidOff': 'หักหมดแล้ว',
   'fz.debt.left': 'เหลือ',
   'fz.debt.edited': 'แก้การใส่ปุ๋ยแล้ว ยอดคิดใหม่',

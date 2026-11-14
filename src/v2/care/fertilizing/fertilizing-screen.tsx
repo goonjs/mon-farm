@@ -119,6 +119,10 @@ export function FertilizingView({
   const [picking, setPicking] = useState(false);
   const [sheet, setSheet] = useState<'delete' | null>(null);
   const [failed, setFailed] = useState(false);
+  // The lines are written only when the fertilizer page was applied: rebuilding them from the cards as they are now
+  // (a new delivery on the card, a renamed tapper) must not rewrite them on a zone-only save (review #188 N1).
+  const [linesTouched, setLinesTouched] = useState(false);
+  const gone = !!record?.deleted;
 
   const used = chosen.cards.filter((c) => c.sacks > 0);
   const fields = (): FertilizingFields => {
@@ -153,6 +157,7 @@ export function FertilizingView({
     }
     const patch: Record<string, unknown> = {};
     for (const k of ['date', 'lines', 'pct', 'settle', 'zones', 'reasons'] as const) {
+      if ((k === 'lines' || k === 'pct' || k === 'settle') && !linesTouched) continue;
       const before = k === 'lines' ? record.lines.map((l) => ({ sources: l.sources, sacks: l.sacks, takes: l.takes, rest: l.rest })) : record[k];
       if (JSON.stringify(before) !== JSON.stringify(f[k])) patch[k] = f[k];
     }
@@ -172,6 +177,7 @@ export function FertilizingView({
         sync={sync}
         onApply={(s) => {
           setChosen(s);
+          setLinesTouched(true);
           setPage('main');
         }}
         onClose={() => setPage('main')}
@@ -209,17 +215,30 @@ export function FertilizingView({
           onFerts={() => setPage('cards')}
           onWhere={() => setPage('where')}
           reasonName={(r) => reasonLabel(r, state.fertOptions)}
+          readOnly={gone}
         />
+        {gone ? (
+          <View testID="fz-deleted" style={{ gap: t.space.sm, padding: t.space.md, borderRadius: t.radius.lg, backgroundColor: t.color.warnSunk }}>
+            <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('fz.deletedNote')}</AppText>
+            <View style={{ flexDirection: 'row' }}>
+              <TextLink testID="fz-restore" onPress={() => void inFlight.run(async () => void ((await run(record!.id, record!.headEventId, { t: 'fertilizing_changed', patch: { deleted: false } })) && onDone()))}>
+                {msg('fz.restore')}
+              </TextLink>
+            </View>
+          </View>
+        ) : null}
         {failed ? <AppText testID="fz-failed" style={{ color: t.color.reject }}>{msg('fz.saveFailed')}</AppText> : null}
-        {record ? (
+        {record && !gone ? (
           <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
             <TextLink testID="fz-delete" onPress={() => setSheet('delete')}>{msg('fz.delete')}</TextLink>
           </View>
         ) : null}
       </ScrollView>
-      <PinnedActions>
-        <CTA testID="fz-save" disabled={used.length === 0 || inFlight.busy} onPress={() => void inFlight.run(save)}>{msg('fz.save')}</CTA>
-      </PinnedActions>
+      {gone ? null : (
+        <PinnedActions>
+          <CTA testID="fz-save" disabled={used.length === 0 || inFlight.busy} onPress={() => void inFlight.run(save)}>{msg('fz.save')}</CTA>
+        </PinnedActions>
+      )}
       <DatePickerSheet open={picking} onClose={() => setPicking(false)} value={date} max={today} title={msg('fz.date')} testID="fz-date-sheet" onChange={(d) => setDate(d)} />
       {sheet === 'delete' && record ? (
         <ConfirmSheet
