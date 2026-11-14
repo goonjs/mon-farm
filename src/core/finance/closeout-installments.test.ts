@@ -153,7 +153,7 @@ describe('the plan event written with the confirm (architect: same confirm as th
       t: 'debt_plan_set',
       worker: NAT,
       perSaleSatang: 426_700,
-      installments: { count: 3, fromSaleId: 's9', seen, owedSatang: 1_280_000 },
+      installments: { count: 3, fromSaleId: 's9', seen, owedSatang: 1_280_000, basis: 'e16' },
     });
   });
 

@@ -13,7 +13,7 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { groupOrders, orderProgress, type OrderView } from '../../core/finance/fert-order';
+import { groupOrders, type OrderView } from '../../core/finance/fert-order';
 import { filterExpenses, stageTotals, type Expense, type ExpenseFilter, type Reimbursement } from '../../core/finance/ledger';
 import { formatDate, formatMonth, formatSatang } from '../../core/finance/money';
 import { FARM_FUNDS, type Payer, type Stage } from '../../core/finance/types';
@@ -367,11 +367,10 @@ function Row({
 type ListEntry = { readonly x: Expense } | { readonly order: OrderView };
 const selectingPayerOrRepay = (f: ExpenseFilter) => !!f.payerMissing || (!!f.unrepaid && !!f.payerId);
 
-/** One shop order as one row (E11-S11 FO-12): what was bought, the shop and day, the net, how much is told. */
+/** One shop order as one row (E11-S11 FO-12): what was bought, the shop and day, the net. */
 function OrderRow({ order, category }: { order: OrderView; category: string }) {
   const t = useTheme();
   const msg = useT();
-  const { done, total } = orderProgress(order);
   const first = order.items[0];
   const title = order.items.length === 1 ? first.fertilizer?.formula || first.item || category : msg('ords.rowTitle', { n: order.items.length });
   const caption = order.shop ? msg('ords.rowCaption', { shop: order.shop, date: formatDate(order.date) }) : formatDate(order.date);
@@ -387,7 +386,6 @@ function OrderRow({ order, category }: { order: OrderView; category: string }) {
         <FactRow icon={(c) => <CalendarIcon color={c} size={14} />}>{caption}</FactRow>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.xs }}>
           {order.stage === 'committed' ? <Chip testID={`order-ordered-${order.orderId}`} tone="neutral" label={msg('ords.ordered')} /> : null}
-          {total > 0 && done < total ? <Chip testID={`order-progress-${order.orderId}`} tone="warn" label={msg('ords.progress', { done, total })} /> : null}
         </View>
       </View>
       <View style={{ alignItems: 'flex-end', gap: 2 }}>

@@ -25,7 +25,7 @@ import type { DebtFields, FertilizingFields, FertilizingLine, FertilizerType, Fi
 
 /** Items dated before this day count as used up, never as stock (D-96 (1), FL-4). */
 export const STOCK_CUTOFF = '2026-10-01';
-/** The tapper's share when the fertilizing names none (FERT-4). */
+/** Only for a record that somehow lacks a %: the writer always stores one per taker from the category (review S2, `pct-missing`). */
 export const DEFAULT_TAPPER_PCT = 50;
 /** A fertilizing debt's id is `<fzId>:<workerId>` (one lump per worker per fertilizing, SP-8). */
 export const FERTILIZING_DEBT_INFIX = ':';
@@ -284,13 +284,15 @@ export interface FertilizingDebt extends DebtFields {
   readonly id: string;
   readonly deleted: boolean;
   readonly headEventId: string;
+  /** Its fertilizing was changed after it was first written: the amount is worked out again (SP-10). */
+  readonly edited: boolean;
 }
 
 const owes = (s: FzState, workerId: string) =>
   !s.deleted && (s.settle[workerId] ?? 'debt') === 'debt' && s.lines.some((l) => l.takes.some((t) => t.worker.id === workerId && t.sacks > 0));
 
 /** A line's cost split over its takes by sacks, with cumulative rounding so the parts add up. */
-function takeCosts(l: ProjectedLine): Map<string, number> {
+export function takeCosts(l: ProjectedLine): Map<string, number> {
   const out = new Map<string, number>();
   if (l.sacks < 1) return out;
   let cum = 0;
@@ -321,7 +323,8 @@ export function fertilizingDebts(p: FertilizingProjection): FertilizingDebt[] {
       for (const t of l.takes) if (t.sacks > 0) notes.set(t.worker.id, [...(notes.get(t.worker.id) ?? []), `${l.label} ${t.sacks} ถุง`]);
     }
     for (const [wid, worker] of ever) {
-      const live = owes(r, wid);
+      // A take on an orphaned line (its source gone, or dated before the cutoff) owes nothing: no live 0.00 row (review N4).
+      const live = owes(r, wid) && r.lines.some((l) => !l.orphaned && l.takes.some((x) => x.worker.id === wid && x.sacks > 0));
       const take = r.lines.flatMap((l) => l.takes).find((t) => t.worker.id === wid);
       out.push({
         id: `${r.id}${FERTILIZING_DEBT_INFIX}${wid}`,
@@ -336,6 +339,7 @@ export function fertilizingDebts(p: FertilizingProjection): FertilizingDebt[] {
         fertilizingId: r.id,
         deleted: !live,
         headEventId: r.headEventId,
+        edited: r.history.length > 1,
       });
     }
   }
@@ -354,7 +358,8 @@ export type FertilizingProblem =
   | 'take-sacks' // a take not a whole number ≥ 0
   | 'takes-over' // takes add up to more than the line
   | 'worker-twice' // one worker twice on a line
-  | 'pct-invalid';
+  | 'pct-invalid'
+  | 'pct-missing'; // a tapper takes sacks but has no stored % (review S2: the projection never guesses)
 
 const whole = (n: number, min: number) => Number.isSafeInteger(n) && n >= min;
 
@@ -377,5 +382,18 @@ export function checkFertilizing(f: FertilizingFields, today: string): Fertilizi
     if (new Set(l.takes.map((t) => t.worker.id)).size < l.takes.length) out.add('worker-twice');
   }
   for (const p of Object.values(f.pct)) if (!Number.isInteger(p) || p < 0 || p > 100) out.add('pct-invalid');
+  for (const l of f.lines) for (const t of l.takes) if (t.sacks > 0 && f.pct[t.worker.id] === undefined) out.add('pct-missing');
   return [...out];
+}
+
+/**
+ * E16-S01 GC-2: what the garden care list says about the split. 'none' = a card nobody took anything from
+ * ("ยังไม่แบ่ง"), 'partial' = a card left to split later ("แบ่งไม่ครบ", SP-6b); 'none' wins. null = nothing to
+ * say (every card split, or the rest is the farm's). Counted like the sale prep's item 4 (E15-S01 PREP-6).
+ */
+export function splitBadge(r: Pick<Fertilizing, 'lines'>): 'none' | 'partial' | null {
+  const given = (l: FertilizingLine) => l.takes.reduce((s, t) => s + t.sacks, 0);
+  if (r.lines.some((l) => given(l) === 0 && l.rest !== 'farm')) return 'none';
+  if (r.lines.some((l) => given(l) < l.sacks && l.rest !== 'farm')) return 'partial';
+  return null;
 }

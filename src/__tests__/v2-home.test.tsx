@@ -159,7 +159,9 @@ describe('V2Home — empty farm', () => {
     await flush();
     const grid = screen.getByTestId('home-go-to');
     const ids = within(grid).getAllByTestId(/^mod-/).map((n) => n.props.testID);
-    expect(ids).toEqual(['mod-reports', 'mod-weather', 'mod-payables', 'mod-expenses', 'mod-order', 'mod-stock', 'mod-workers']);
+    expect(ids).toEqual(['mod-reports', 'mod-weather', 'mod-payables', 'mod-expenses', 'mod-order', 'mod-stock', 'mod-care', 'mod-workers']);
+    // E16-S01 GC-1: garden care beside the stock, the two sides of the fertilizer.
+    expect(within(screen.getByTestId('mod-care')).getByText('การดูแลสวน')).toBeTruthy();
     expect(within(screen.getByTestId('mod-reports')).getByText('รายงานการขายย้อนหลัง')).toBeTruthy();
     expect(within(screen.getByTestId('mod-weather')).getByText('เปิดภายนอก')).toBeTruthy();
     expect(within(screen.getByTestId('mod-weather')).getByTestId('external-icon', { includeHiddenElements: true })).toBeTruthy();
@@ -184,6 +186,7 @@ describe('V2Home — empty farm', () => {
       'mod-expenses': '/v2/expenses',
       'mod-order': '/v2/order',
       'mod-stock': '/v2/stock',
+      'mod-care': '/v2/care',
       'mod-workers': '/v2/people?filter=tapper',
     };
     for (const [id, href] of Object.entries(routes)) {
@@ -207,6 +210,7 @@ describe('V2Home — FarmMate originals (E03-S11 FM-6)', () => {
     expect(art('mod-expenses')).toEqual(['sale.receipt']);
     expect(art('mod-order')).toEqual(['materials.orderMaterials']);
     expect(art('mod-stock')).toEqual(['materials.stock']);
+    expect(art('mod-care')).toEqual(['farmwork.maintenance']);
     expect(art('mod-workers')).toEqual(['people.workerInfo']);
   });
 
@@ -336,7 +340,7 @@ describe('V2Home — shop orders (E11-S11 FO-13, FD-0)', () => {
     }
   };
 
-  it('asks whether an ordered fertilizer arrived (once overdue), and which arrived fertilizer has no plot yet; both open the order', async () => {
+  it('asks whether an ordered fertilizer arrived (once overdue) and opens the order; no "no plot yet" reminder any more (E11-S17)', async () => {
     await seedFert('o1-a', 'committed', 'o1', 101);
     await seedFert('o2-a', 'actual', 'o2', 102);
     await seedFert('o2-b', 'actual', 'o2', 103);
@@ -345,9 +349,8 @@ describe('V2Home — shop orders (E11-S11 FO-13, FD-0)', () => {
       wrap(<V2Home />);
       await flush();
       expect(within(screen.getByTestId('home-order-committed')).getByText(/ของมาแล้วหรือยัง/)).toBeTruthy();
-      expect(within(screen.getByTestId('home-order-zones')).getByText(/2 รายการ/)).toBeTruthy();
+      expect(screen.queryByTestId('home-order-zones')).toBeNull();
       expect(art('home-order-committed')).toEqual(['farmwork.fertilize']);
-      expect(art('home-order-zones')).toEqual(['farm.plotZone']);
       fireEvent.press(screen.getByTestId('home-order-committed'));
       expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'o1' } });
       expect(screen.getByTestId('mod-order')).toBeTruthy();

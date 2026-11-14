@@ -214,7 +214,8 @@ describe('expense list: shop orders (E11-S11 FO-12)', () => {
     expect(row).toHaveTextContent(/ปุ๋ย 2 รายการ/);
     expect(row).toHaveTextContent(/ร้านสมศรี/);
     expect(row).toHaveTextContent(/สั่งไว้/);
-    expect(screen.getByTestId('order-progress-ord-9')).toHaveTextContent(/บอกรายละเอียดแล้ว 0 \/ 2/);
+    // E11-S17: nothing is "told" on an order any more, so no progress chip.
+    expect(screen.queryByTestId('order-progress-ord-9')).toBeNull();
     expect(screen.getByTestId('order-amount-ord-9')).toHaveTextContent(/1,500\.00/);
     fireEvent.press(row);
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'ord-9' } });

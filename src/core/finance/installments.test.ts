@@ -123,7 +123,7 @@ describe('the plan event (architect 2026-11-06): debt_plan_set with installments
       t: 'debt_plan_set',
       worker: NAT,
       perSaleSatang: 426_700,
-      installments: { count: 3, fromSaleId: 's1', seen: { 'dev-a': 4 }, owedSatang: 1_280_000 },
+      installments: { count: 3, fromSaleId: 's1', seen: { 'dev-a': 4 }, owedSatang: 1_280_000, basis: 'e16' },
     });
   });
 
@@ -136,7 +136,7 @@ describe('the plan event (architect 2026-11-06): debt_plan_set with installments
     const es = [debt('d1', 1_280_000), ev('plan-p-nat', planPayload({ worker: NAT, count: 3, fromSaleId: null, seen: {}, owedSatang: 1_280_000, balanceSatang: 1_280_000 }))];
     const a = account(es);
     expect(a.planPerSaleSatang).toBe(426_700);
-    expect(a.installmentPlan).toEqual({ count: 3, fromSaleId: null, seen: {}, owedSatang: 1_280_000 });
+    expect(a.installmentPlan).toEqual({ count: 3, fromSaleId: null, seen: {}, owedSatang: 1_280_000, basis: 'e16' });
   });
 
   it('IP-22 · a baht-per-sale plan reads as before', () => {
@@ -402,7 +402,7 @@ describe('a re-split / re-base keeps the instalments already paid (the number do
 
   it('a plan with no earlier instalments writes none (the event stays as before)', () => {
     const p = planPayload({ worker: NAT, count: 3, earlier: [], fromSaleId: 's1', seen: {}, owedSatang: 1, balanceSatang: 1 });
-    expect(p.t === 'debt_plan_set' && p.installments).toEqual({ count: 3, fromSaleId: 's1', seen: {}, owedSatang: 1 });
+    expect(p.t === 'debt_plan_set' && p.installments).toEqual({ count: 3, fromSaleId: 's1', seen: {}, owedSatang: 1, basis: 'e16' });
   });
 });
 
@@ -472,5 +472,75 @@ describe('IP-19 · a plan set from the debt account counts from the next sale an
   it('no plan yet → a plan of 3 from the next sale', () => {
     const es = [debt('d1', 900_000)];
     expect(accountPlanPayload({ account: account(es), events: es, count: 3 })).toMatchObject({ perSaleSatang: 300_000, installments: { count: 3, fromSaleId: null, owedSatang: 900_000 } });
+  });
+});
+
+// ── E11-S17 RM-7 · plans written before old fertilizer splits stopped counting ──────────────────
+
+describe('RM-7 · a plan written while an old fertilizer split still counted sees no false "new debt"', () => {
+  const split = (id: string, workerSatang: number) =>
+    ev(id, {
+      t: 'expense_created',
+      fields: {
+        amountSatang: workerSatang * 2,
+        date: '2026-10-05',
+        stage: 'actual',
+        categoryId: 'cat-fertilizer',
+        propertyId: null,
+        item: 'ดีเกลือ',
+        note: '',
+        payer: FARM,
+        share: { billSatang: workerSatang * 2, discountSatang: 0, totalSacks: 2, lines: [{ worker: NAT, sacks: 2, workerPct: 50, settle: 'debt' }] },
+      },
+    });
+  /** A plan as the app before E11-S17 wrote it (no marker): its owed total counted the old split. */
+  const oldPlan = (pre: FinanceEvent[], owedSatang: number) =>
+    ev('plan-p-nat', { t: 'debt_plan_set', worker: NAT, perSaleSatang: 100_000, installments: { count: 3, fromSaleId: null, seen: seenSnapshot(pre), owedSatang } });
+
+  it('the old split it counted is taken out of its owed total: no new debt, and the plan carries on', () => {
+    const pre = [debt('d1', 200_000), split('x1', 100_000)];
+    const es = [...pre, oldPlan(pre, 300_000)];
+    const st = planStatus({ account: account(es), events: es })!;
+    expect(st.extraSatang).toBe(0);
+    expect(st.done).toBe(false);
+    expect(installmentProposal({ balanceSatang: account(es).balanceSatang, status: st }).needsChoice).toBe(false);
+  });
+
+  it('a split added after the plan was never in its total, so nothing is taken out for it', () => {
+    const pre = [debt('d1', 200_000)];
+    const plan = oldPlan(pre, 200_000);
+    const es = [...pre, plan, split('x2', 50_000)];
+    expect(planStatus({ account: account(es), events: es })!.extraSatang).toBe(0);
+  });
+
+  it('a fertilizing recorded after the plan is real new debt', () => {
+    const item = ev('o-a', {
+      t: 'expense_created',
+      fields: {
+        amountSatang: 300_000, date: '2026-10-05', stage: 'actual', categoryId: 'cat-fertilizer', propertyId: null, item: 'ดีเกลือ', note: '', payer: FARM, orderId: 'o',
+        line: { qty: 10, unit: 'กระสอบ', grossSatang: 300_000, itemDiscountSatang: 0 },
+        fertilizer: { type: 'chemical', formula: 'ดีเกลือ', brand: '', sackKg: 50, reasons: [], zones: [], shop: '', orderedBy: '', sacks: 10 },
+      },
+    });
+    const pre = [debt('d1', 200_000), split('x1', 100_000), item];
+    const fz = ev('fz-1', { t: 'fertilizing_recorded', fields: { date: '2026-11-01', lines: [{ sources: ['o-a'], sacks: 10, takes: [{ worker: NAT, sacks: 4, auto: false }], rest: 'farm' }], pct: { [NAT.id]: 50 }, settle: {}, zones: [], reasons: [], note: '' } });
+    const es = [...pre, oldPlan(pre, 300_000), fz];
+    expect(planStatus({ account: account(es), events: es })!.extraSatang).toBe(60_000);
+  });
+
+  it('a plan written from now on carries the marker and is read as is', () => {
+    const pre = [debt('d1', 200_000), split('x1', 100_000)];
+    const p = planPayload({ worker: NAT, count: 3, fromSaleId: null, seen: seenSnapshot(pre), owedSatang: 200_000, balanceSatang: 200_000 });
+    expect(p.t === 'debt_plan_set' && p.installments?.basis).toBe('e16');
+    const es = [...pre, ev('plan-p-nat', p)];
+    expect(planStatus({ account: account(es), events: es })!.extraSatang).toBe(0);
+  });
+
+  it('a plan whose debt was only the old split ends by itself once that is gone', () => {
+    const pre = [split('x1', 100_000)];
+    const es = [...pre, oldPlan(pre, 100_000), pay('l1', 's1', 50_000)];
+    const acc = projectDebts(es).get(NAT.id)!;
+    expect(acc.balanceSatang).toBe(-50_000);
+    expect(planStatus({ account: acc, events: es })!.done).toBe(true);
   });
 });
