@@ -325,7 +325,7 @@ describe('fertilizingDebts — one lump per worker per fertilizing (SP-8, SP-10)
     expect(fertilizingDebts(project(events))).toEqual([]);
   });
 
-  it('a lump once owed and no longer (deleted, or switched to paid) stays as a voided row, at what it owed (review #188 S3)', () => {
+  it('a lump once owed and no longer (deleted, or switched to paid) stays as a voided row, at what it owed (review of PR 188 S3)', () => {
     const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])] });
     const events = [item('a', { sacks: 10, netSatang: 300_000 }), c, ev('fz-1', { t: 'fertilizing_changed', patch: { deleted: true } }, { base: c.id })];
     expect(fertilizingDebts(project(events)).map((d) => [d.amountSatang, d.deleted])).toEqual([[60_000, true]]);
@@ -339,13 +339,13 @@ describe('fertilizingDebts — one lump per worker per fertilizing (SP-8, SP-10)
     expect(fertilizingDebts(project(edited))[0].amountSatang).toBe(100_000);
   });
 
-  it('a voided lump keeps the amount it last owed, so the history says what was voided (review #188 S3)', () => {
+  it('a voided lump keeps the amount it last owed, so the history says what was voided (review of PR 188 S3)', () => {
     const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])], pct: { [DAENG.id]: 50 } });
     const events = [item('a', { sacks: 10, netSatang: 300_000 }), c, ev('fz-1', { t: 'fertilizing_changed', patch: { deleted: true } }, { base: c.id })];
     expect(fertilizingDebts(project(events)).map((d) => [d.amountSatang, d.deleted])).toEqual([[60_000, true]]);
   });
 
-  it('"edited" only when what the debt is made of changed — not for zones, reasons or a delete (review #188 S4)', () => {
+  it('"edited" only when what the debt is made of changed — not for zones, reasons or a delete (review of PR 188 S4)', () => {
     const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])], pct: { [DAENG.id]: 50 } });
     const base = [item('a', { sacks: 10, netSatang: 300_000 }), c];
     const zones = ev('fz-1', { t: 'fertilizing_changed', patch: { zones: [{ zoneId: 'z', zoneName: 'แปลง' }], reasons: ['text:x'] } }, { base: c.id });

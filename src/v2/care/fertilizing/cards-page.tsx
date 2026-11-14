@@ -114,7 +114,7 @@ export function CardsPage({
     }
   };
   const asked = asking ? partialCards(asking)[0] : null;
-  // Ask only when something was changed here (review #188 N2): a saved one reopened and closed asks nothing.
+  // Ask only when something was changed here (review of PR 188 N2): a saved one reopened and closed asks nothing.
   const close = () => (JSON.stringify(s.cards) !== JSON.stringify(initial.cards) || JSON.stringify(s.pct) !== JSON.stringify(initial.pct) || JSON.stringify(s.settle) !== JSON.stringify(initial.settle) ? setDiscard(true) : onClose());
   const shortDate = formatDate(date).split(' ').slice(0, 2).join(' ');
   const pctWorker = pctOf ? s.people[pctOf] : null;

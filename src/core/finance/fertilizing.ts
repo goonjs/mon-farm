@@ -263,7 +263,7 @@ export function projectFertilizing(
       continue;
     }
     if (f.state.deleted) {
-      // Priced as if live on a copy of the stock drawn so far, so a voided lump can say what it owed (review #188 S3);
+      // Priced as if live on a copy of the stock drawn so far, so a voided lump can say what it owed (review of PR 188 S3);
       // it draws nothing from the real stock.
       projected.set(f.id, { ...asIs(f), lines: drawLines(f, new Map(used), new Map()) });
       continue;
@@ -300,7 +300,7 @@ export interface FertilizingDebt extends DebtFields {
 const owes = (s: FzState, workerId: string) =>
   !s.deleted && (s.settle[workerId] ?? 'debt') === 'debt' && s.lines.some((l) => l.takes.some((t) => t.worker.id === workerId && t.sacks > 0));
 
-/** What a lump is made of — date, lines, % and how to pay back — changed after it was written (SP-10, review #188 S4). */
+/** What a lump is made of — date, lines, % and how to pay back — changed after it was written (SP-10, review of PR 188 S4). */
 const debtChanged = (history: readonly FzState[]): boolean => {
   const key = (s: FzState) => JSON.stringify([s.date, s.lines, s.pct, s.settle]);
   return history.some((s) => key(s) !== key(history[0]));
@@ -341,7 +341,7 @@ export function fertilizingDebts(p: FertilizingProjection): FertilizingDebt[] {
       // A take on an orphaned line (its source gone, or dated before the cutoff) owes nothing: no live 0.00 row (review N4).
       const onLive = r.lines.some((l) => !l.orphaned && l.takes.some((x) => x.worker.id === wid && x.sacks > 0));
       const live = owes(r, wid) && onLive;
-      // A deleted fertilizing's lump keeps what it owed, so the history says what was voided (review #188 S3).
+      // A deleted fertilizing's lump keeps what it owed, so the history says what was voided (review of PR 188 S3).
       const shown = live || (r.deleted && owes({ ...r, deleted: false }, wid) && onLive);
       const take = r.lines.flatMap((l) => l.takes).find((t) => t.worker.id === wid);
       out.push({

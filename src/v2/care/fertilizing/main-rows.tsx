@@ -36,7 +36,7 @@ export function MainRows({
   onFerts: () => void;
   onWhere: () => void;
   reasonName: (id: string) => string;
-  /** A deleted fertilizing: shown, not editable (review #188 S1). */
+  /** A deleted fertilizing: shown, not editable (review of PR 188 S1). */
   readOnly?: boolean;
 }) {
   const msg = useT();

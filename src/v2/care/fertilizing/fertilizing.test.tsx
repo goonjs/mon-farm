@@ -248,7 +248,7 @@ describe('FertilizingView — edit, delete (FZ-7, FZ-9)', () => {
     }),
   ];
 
-  it('a zone-only edit writes the zones only, never the lines — even after a new delivery joined the card (review #188 N1)', async () => {
+  it('a zone-only edit writes the zones only, never the lines — even after a new delivery joined the card (review of PR 188 N1)', async () => {
     const events = [...saved(), item('a2', { sacks: 10, netSatang: 300_000, date: '2026-11-03' })];
     const { write } = setup(events, { recordId: 'fz-1' });
     fireEvent.press(screen.getByTestId('fz-where'));
@@ -259,7 +259,7 @@ describe('FertilizingView — edit, delete (FZ-7, FZ-9)', () => {
     expect(Object.keys(write.mock.calls[0][2].patch)).toEqual(['zones']);
   });
 
-  it('✕ on the fertilizer page of a saved one closes without asking when nothing changed (review #188 N2)', () => {
+  it('✕ on the fertilizer page of a saved one closes without asking when nothing changed (review of PR 188 N2)', () => {
     setup(saved(), { recordId: 'fz-1' });
     fireEvent.press(screen.getByTestId('fz-ferts'));
     fireEvent.press(screen.getByTestId('fz-cards-close'));
@@ -267,7 +267,7 @@ describe('FertilizingView — edit, delete (FZ-7, FZ-9)', () => {
     expect(screen.getByTestId('fz-ferts')).toBeTruthy();
   });
 
-  it('a deleted one opens read-only, says so, and offers restore (review #188 S1, FZ-7)', async () => {
+  it('a deleted one opens read-only, says so, and offers restore (review of PR 188 S1, FZ-7)', async () => {
     const events = saved();
     const del = ev('fz-1', { t: 'fertilizing_changed', patch: { deleted: true } }, events[events.length - 1].id);
     const { write } = setup([...events, del], { recordId: 'fz-1' });

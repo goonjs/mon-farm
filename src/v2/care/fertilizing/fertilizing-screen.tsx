@@ -120,7 +120,7 @@ export function FertilizingView({
   const [sheet, setSheet] = useState<'delete' | null>(null);
   const [failed, setFailed] = useState(false);
   // The lines are written only when the fertilizer page was applied: rebuilding them from the cards as they are now
-  // (a new delivery on the card, a renamed tapper) must not rewrite them on a zone-only save (review #188 N1).
+  // (a new delivery on the card, a renamed tapper) must not rewrite them on a zone-only save (review of PR 188 N1).
   const [linesTouched, setLinesTouched] = useState(false);
   const gone = !!record?.deleted;
 
