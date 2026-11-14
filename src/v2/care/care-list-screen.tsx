@@ -122,6 +122,11 @@ function Row({ r, onPress }: { r: Fertilizing; onPress: () => void }) {
         <AppText variant="bodySm">{`${formatDate(r.date).split(' ').slice(0, 2).join(' ')} · ${msg('fz.title')}`}</AppText>
         <AppText style={{ fontWeight: t.font.weight.bold }}>{summary(r, msg('fz.unit'))}</AppText>
         {r.zones.length ? <AppText variant="bodySm">{r.zones.map((z) => z.zoneName).join(' · ')}</AppText> : null}
+        {r.over > 0 ? (
+          <View testID={`care-row-${r.id}-over`} style={{ alignSelf: 'flex-start', paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: t.color.warnSunk }}>
+            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('fz.over', { n: r.over })}</Text>
+          </View>
+        ) : null}
         {badge ? (
           <View testID={`care-row-${r.id}-badge`} style={{ alignSelf: 'flex-start', paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: t.color.warnSunk }}>
             <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg(`fz.status.${badge}`)}</Text>

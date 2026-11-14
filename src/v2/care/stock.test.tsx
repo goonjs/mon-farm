@@ -77,6 +77,6 @@ describe('StockView — ปุ๋ยคงเหลือ (E16-S04)', () => {
 
   it('nothing in stock says so', () => {
     setup([]);
-    expect(screen.getByTestId('stock-empty')).toHaveTextContent('ไม่มีปุ๋ยในสต็อก');
+    expect(screen.getByTestId('stock-empty')).toHaveTextContent(/ไม่มีปุ๋ยในสต็อก/);
   });
 });

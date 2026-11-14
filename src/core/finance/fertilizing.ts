@@ -397,3 +397,14 @@ export function splitBadge(r: Pick<Fertilizing, 'lines'>): 'none' | 'partial' | 
   if (r.lines.some((l) => given(l) < l.sacks && l.rest !== 'farm')) return 'partial';
   return null;
 }
+
+/** Fertilizer ordered and not received yet ("สั่งไว้ ยังไม่ได้ของ", FZ-4, FL-2): sacks per name, most first. */
+export function orderedSacks(expenses: readonly Expense[]): { readonly formula: string; readonly sacks: number }[] {
+  const by = new Map<string, number>();
+  for (const x of expenses) {
+    if (!isFertilizerItem(x) || x.stage === 'actual') continue;
+    const name = x.fertilizer!.formula;
+    by.set(name, (by.get(name) ?? 0) + (sacksOf(x) ?? 0));
+  }
+  return [...by].map(([formula, sacks]) => ({ formula, sacks })).sort((a, b) => b.sacks - a.sacks);
+}
