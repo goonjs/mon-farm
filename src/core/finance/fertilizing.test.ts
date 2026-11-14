@@ -8,6 +8,8 @@ import {
   fertilizerCards,
   fertilizingDebts,
   projectFertilizing,
+  orderedSacks,
+  splitBadge,
   STOCK_CUTOFF,
 } from './fertilizing';
 import { projectFinance } from './ledger';
@@ -339,6 +341,60 @@ describe('fertilizingDebts — one lump per worker per fertilizing (SP-8, SP-10)
     expect(fertilizingDebts(project(edited))[0].amountSatang).toBe(100_000);
   });
 
+  it('marks a lump whose fertilizing was edited after it was written (SP-10)', () => {
+    const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])] });
+    const base = [item('a', { sacks: 10, netSatang: 300_000 }), c];
+    expect(fertilizingDebts(project(base))[0].edited).toBe(false);
+    const edit = ev('fz-1', { t: 'fertilizing_changed', patch: { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 6, auto: false }])] } }, { base: c.id });
+    const d = fertilizingDebts(project([...base, edit]))[0];
+    expect(d.edited).toBe(true);
+    expect(d.amountSatang).toBe(90_000);
+  });
+
+  it('a lump whose every take sits on an orphaned line is voided, not a live 0.00 row (review N4)', () => {
+    const events = [item('old', { sacks: 10, netSatang: 300_000, date: '2026-09-01' }), fz('fz-1', { lines: [line(['old'], 4, [{ worker: DAENG, sacks: 4, auto: false }])], pct: { [DAENG.id]: 50 } })];
+    expect(fertilizingDebts(project(events)).map((d) => [d.amountSatang, d.deleted])).toEqual([[0, true]]);
+  });
+
+  it('sacks waiting for a source back at "สั่งไว้" are left out of the debt until it arrives (review N5)', () => {
+    const a = item('a', { sacks: 10, netSatang: 300_000 });
+    const back = ev('a', { t: 'expense_changed', patch: { stage: 'committed' } }, { base: a.id });
+    const rec = fz('fz-1', { lines: [line(['a'], 4, [{ worker: DAENG, sacks: 4, auto: false }])], pct: { [DAENG.id]: 50 } });
+    const r = project([a, back, rec]);
+    expect(r.records[0].waiting).toBe(4);
+    expect(fertilizingDebts(r)[0].amountSatang).toBe(0);
+    const again = ev('a', { t: 'expense_changed', patch: { stage: 'actual' } }, { base: back.id });
+    expect(fertilizingDebts(project([a, back, rec, again]))[0].amountSatang).toBe(60_000);
+  });
+
+  it('voided, then restored, owes again (review N5)', () => {
+    const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])], pct: { [DAENG.id]: 50 } });
+    const del = ev('fz-1', { t: 'fertilizing_changed', patch: { deleted: true } }, { base: c.id });
+    const back = ev('fz-1', { t: 'fertilizing_changed', patch: { deleted: false } }, { base: del.id });
+    const d = fertilizingDebts(project([item('a', { sacks: 10, netSatang: 300_000 }), c, del, back]))[0];
+    expect([d.amountSatang, d.deleted]).toEqual([60_000, false]);
+  });
+
+  it('two devices offline using the same card past its stock: both kept, the later one flagged (review N5, FL-3)', () => {
+    const a = item('a', { sacks: 10, netSatang: 300_000 });
+    const one = { ...fz('fz-a', { date: '2026-10-10', lines: [line(['a'], 7)] }), actor: { userId: 'u', deviceId: 'dev-a' } };
+    const two = { ...fz('fz-b', { date: '2026-10-11', lines: [line(['a'], 6)] }), actor: { userId: 'u', deviceId: 'dev-b' } };
+    const p = project([a, one, two]);
+    expect(p.records.map((r) => [r.id, r.over])).toEqual([
+      ['fz-b', 3],
+      ['fz-a', 0],
+    ]);
+    expect(p.cards[0].leftSacks).toBe(-3);
+  });
+
+  it('pins today\'s delete-vs-edit behaviour: the delete wins silently (known gap, separate story)', () => {
+    const c = fz('fz-1', { lines: [line(['a'], 4, [{ worker: DAENG, sacks: 4, auto: false }])], pct: { [DAENG.id]: 50 } });
+    const del = ev('fz-1', { t: 'fertilizing_changed', patch: { deleted: true } }, { base: c.id, device: 'dev-a' });
+    const edit = ev('fz-1', { t: 'fertilizing_changed', patch: { lines: [line(['a'], 6, [{ worker: DAENG, sacks: 6, auto: false }])] } }, { base: c.id, device: 'dev-b' });
+    const r = project([item('a', { sacks: 10, netSatang: 300_000 }), c, del, edit]).records[0];
+    expect([r.deleted, r.conflicts]).toEqual([true, []]);
+  });
+
   it('counts in the worker debt account (projectDebts)', () => {
     const events = [item('a', { sacks: 10, netSatang: 300_000 }), fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 10, auto: false }])] })];
     const acc = projectDebts(events).get(DAENG.id)!;
@@ -374,5 +430,46 @@ describe('checkFertilizing', () => {
     expect(checkFertilizing({ ...ok, lines: [line(['a'], 1), line(['a'], 1)] }, '2026-11-13')).toContain('source-twice');
     expect(checkFertilizing({ ...ok, lines: [line([], 1)] }, '2026-11-13')).toContain('line-sources');
     expect(checkFertilizing({ ...ok, pct: { [DAENG.id]: 101 } }, '2026-11-13')).toContain('pct-invalid');
+    expect(checkFertilizing({ ...ok, lines: [line(['a'], 10, [{ worker: DAENG, sacks: 2, auto: false }, { worker: DAENG, sacks: 1, auto: false }])] }, '2026-11-13')).toContain('worker-twice');
+  });
+
+  it('every tapper who takes sacks has their % stored, so the projection never guesses (review S2)', () => {
+    expect(checkFertilizing({ ...ok, pct: {} }, '2026-11-13')).toContain('pct-missing');
+    // A tapper touched at 0 takes nothing: no % needed.
+    expect(checkFertilizing({ ...ok, lines: [line(['a'], 10, [{ worker: DAENG, sacks: 0, auto: false }])], pct: {} }, '2026-11-13')).toEqual([]);
+  });
+});
+
+describe('splitBadge — the garden care list says when a fertilizing is not split yet (GC-2)', () => {
+  const take = (sacks: number) => [{ worker: DAENG, sacks, auto: false }];
+  const one = (lines: FertilizingLine[]) => project([item('a', { sacks: 60, netSatang: 1_800_000 }), item('k', { sacks: 20, netSatang: 1_560_000, formula: '46-0-0' }), fz('fz-1', { lines, pct: { [DAENG.id]: 50 } })]).records[0];
+
+  it('nothing to say when every card is split, or the rest is the farm\'s', () => {
+    expect(splitBadge(one([line(['a'], 10, take(10))]))).toBeNull();
+    expect(splitBadge(one([line(['a'], 10, take(4), 'farm')]))).toBeNull();
+  });
+
+  it('"ยังไม่แบ่ง" when a card has nobody, "แบ่งไม่ครบ" when one was left for later; not split wins', () => {
+    expect(splitBadge(one([line(['a'], 10, [])]))).toBe('none');
+    expect(splitBadge(one([line(['a'], 10, take(4), 'later')]))).toBe('partial');
+    expect(splitBadge(one([line(['a'], 10, take(4), 'later'), line(['k'], 5, [])]))).toBe('none');
+  });
+});
+
+describe('orderedSacks — fertilizer ordered, not received yet (FL-2, FZ-4)', () => {
+  it('sums sacks per fertilizer over live orders still "สั่งไว้"; received and deleted ones are not counted', () => {
+    const gone = item('g', { sacks: 4, netSatang: 100_000, stage: 'committed', formula: 'ขี้ไก่' });
+    const events = [
+      item('c1', { sacks: 50, netSatang: 1_000_000, stage: 'committed', formula: 'ขี้ไก่' }),
+      item('c2', { sacks: 10, netSatang: 200_000, stage: 'committed', formula: 'ขี้ไก่' }),
+      item('c3', { sacks: 5, netSatang: 300_000, stage: 'committed', formula: '46-0-0' }),
+      item('r1', { sacks: 7, netSatang: 300_000 }),
+      gone,
+      ev('g', { t: 'expense_changed', patch: { deleted: true } }, { base: gone.id }),
+    ];
+    expect(orderedSacks(projectFinance(events).expenses)).toEqual([
+      { formula: 'ขี้ไก่', sacks: 60 },
+      { formula: '46-0-0', sacks: 5 },
+    ]);
   });
 });

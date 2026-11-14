@@ -1,6 +1,6 @@
 import type { Expense, FertOption } from '../../../core/finance/ledger';
 import { checkShare, shareDebts, splitShare } from '../../../core/finance/share';
-import { buildShare, editItemPatch, editItemProblems, optionRenames, itemGross, itemSacks, reasonsPatch, tapperPatch, tapperProblems, tapperSplit, unifyOrder, zonesPatch } from './tell';
+import { editItemPatch, editItemProblems, optionRenames, itemGross, itemSacks, unifyOrder } from './tell';
 
 const item = (over: Partial<Expense> = {}): Expense =>
   ({
@@ -28,7 +28,6 @@ const item = (over: Partial<Expense> = {}): Expense =>
   }) as Expense;
 
 const A = { id: 'p1', name: 'แดง' };
-const B = { id: 'p2', name: 'นัด' };
 
 describe('order-detail tell helpers', () => {
   it('sacks and gross come from the order item, else the legacy share', () => {
@@ -37,52 +36,6 @@ describe('order-detail tell helpers', () => {
     const legacy = item({ line: undefined, fertilizer: { ...item().fertilizer!, sacks: undefined }, share: { billSatang: 500, discountSatang: 0, totalSacks: 7, lines: [] } });
     expect(itemSacks(legacy)).toBe(7);
     expect(itemGross(legacy)).toBe(500);
-  });
-
-  it('share = gross bill + item discount + sacks, amountSatang stays the net and travels with it', () => {
-    const p = tapperPatch(item(), [{ worker: A, sacks: 6, pct: 50, settle: 'debt' }]);
-    expect(p.amountSatang).toBe(2_200_000);
-    expect(p.share).toEqual({ billSatang: 2_300_000, discountSatang: 100_000, totalSacks: 20, lines: [{ worker: A, sacks: 6, workerPct: 50, settle: 'debt' }] });
-    expect(Object.keys(p).sort()).toEqual(['amountSatang', 'share']);
-  });
-
-  it('"ไม่แบ่ง" writes share: null', () => {
-    expect(tapperPatch(item(), null).share).toBeNull();
-  });
-
-  it('tappers over the sacks are a problem; the split is the engine\'s', () => {
-    const over = [{ worker: A, sacks: 15, pct: 50, settle: 'debt' as const }, { worker: B, sacks: 6, pct: 50, settle: 'paid' as const }];
-    expect(tapperProblems(item(), over)).toContain('sacks-over');
-    expect(tapperSplit(item(), over)).toBeNull();
-    const ok = tapperSplit(item(), [{ worker: A, sacks: 10, pct: 50, settle: 'debt' }]);
-    expect(ok?.leftoverSacks).toBe(10);
-    expect(ok?.lines[0].costSatang).toBe(1_100_000);
-    expect(buildShare(item(), []).lines).toEqual([]);
-  });
-
-  it('reasons patch replaces the fertilizer object whole and drops zone reasons no longer chosen', () => {
-    const p = reasonsPatch(item(), ['r2']);
-    expect(p.fertilizer?.reasons).toEqual(['r2']);
-    expect(p.fertilizer?.zones[0].reasons).toEqual(['r2']);
-    expect(p.fertilizer?.formula).toBe('15-15-15');
-  });
-
-  it('zones patch keeps per-zone note, drops zero zones, sets the farm on an item without one', () => {
-    const p = zonesPatch(item(), [{ zoneId: 'z1', zoneName: 'หน้า', sacks: 8 }, { zoneId: 'z2', zoneName: 'หลัง', sacks: 0 }], 'f1');
-    expect(p.fertilizer?.zones).toEqual([{ zoneId: 'z1', zoneName: 'หน้า', sacks: 8, reasons: ['r1', 'r2'], note: 'x' }]);
-    expect(p.propertyId).toBe('f1');
-    // zones saved for another farm move the item to that farm; the same farm or no zones leave it alone
-    expect(zonesPatch(item({ propertyId: 'f0' }), [{ zoneId: 'z1', zoneName: 'หน้า', sacks: 1 }], 'f1').propertyId).toBe('f1');
-    expect(zonesPatch(item({ propertyId: 'f1' }), [{ zoneId: 'z1', zoneName: 'หน้า', sacks: 1 }], 'f1').propertyId).toBeUndefined();
-    expect(zonesPatch(item({ propertyId: 'f0' }), [], 'f1').propertyId).toBeUndefined();
-    expect(zonesPatch(item(), [], 'f1').propertyId).toBeUndefined();
-  });
-
-  it('a legacy share (no top-level discount) keeps bill − discount = amount after a tapper edit', () => {
-    const legacy = item({ line: undefined, discountSatang: undefined, amountSatang: 2_200_000, share: { billSatang: 2_300_000, discountSatang: 100_000, totalSacks: 20, lines: [] } });
-    const p = tapperPatch(legacy, [{ worker: A, sacks: 5, pct: 50, settle: 'debt' }]);
-    expect(p.share!.billSatang - p.share!.discountSatang).toBe(p.amountSatang);
-    expect(p.share!.discountSatang).toBe(100_000);
   });
 });
 
@@ -100,9 +53,9 @@ describe('editItemPatch', () => {
     expect(p.share).toBeUndefined();
   });
 
-  it('rebuilds an existing share in the same patch, lines kept', () => {
+  it('rebuilds an existing share of a non-fertilizer item in the same patch, lines kept (RM-5)', () => {
     const lines = [{ worker: A, sacks: 6, workerPct: 50, settle: 'debt' as const }];
-    const e = item({ share: { billSatang: 2_300_000, discountSatang: 100_000, totalSacks: 20, lines } });
+    const e = item({ categoryId: 'cat-other', fertilizer: null, share: { billSatang: 2_300_000, discountSatang: 100_000, totalSacks: 20, lines } });
     const p = editItemPatch(e, money({ discount: 0 }), 'กระสอบ');
     expect(p.share).toEqual({ billSatang: 3_000_000, discountSatang: 0, totalSacks: 30, lines });
     expect(p.share!.billSatang - p.share!.discountSatang).toBe(p.amountSatang);
@@ -114,21 +67,27 @@ describe('editItemPatch', () => {
     expect(editItemPatch(item({ share: null }), money(), 'กระสอบ').share).toBeUndefined();
   });
 
-  it('blocks a quantity below the sacks given to tappers or placed in zones', () => {
-    const e = item({ share: { billSatang: 2_300_000, discountSatang: 100_000, totalSacks: 20, lines: [{ worker: A, sacks: 12, workerPct: 50, settle: 'debt' }] } });
+  it('blocks a quantity below the sacks given to tappers on a non-fertilizer item', () => {
+    const e = item({ categoryId: 'cat-other', fertilizer: null, share: { billSatang: 2_300_000, discountSatang: 100_000, totalSacks: 20, lines: [{ worker: A, sacks: 12, workerPct: 50, settle: 'debt' }] } });
     expect(editItemProblems(e, money({ qty: 11 }))).toMatchObject({ tappers: 12 });
     expect(editItemProblems(e, money({ qty: 12 }))).toEqual({});
-    // item() has 3 sacks placed in zone z1
-    expect(editItemProblems(item(), money({ qty: 2 }))).toMatchObject({ zones: 3 });
   });
 
-  it('a fixed name goes in the same patch: fertilizer = formula + brand, zones, reasons and share kept', () => {
+  it('E11-S17 RM-3: a fertilizer item\'s old split and zones are not read — no block, no share rebuilt', () => {
+    const lines = [{ worker: A, sacks: 12, workerPct: 50, settle: 'debt' as const }];
+    // item() also has 3 sacks placed in zone z1
+    const e = item({ share: { billSatang: 2_300_000, discountSatang: 100_000, totalSacks: 20, lines } });
+    expect(editItemProblems(e, money({ qty: 2 }))).toEqual({});
+    expect(editItemPatch(e, money(), 'กระสอบ').share).toBeUndefined();
+  });
+
+  it('a fixed name goes in the same patch: fertilizer = formula + brand, zones and reasons kept', () => {
     const lines = [{ worker: A, sacks: 6, workerPct: 50, settle: 'debt' as const }];
     const e = item({ item: 'ดีกลือ', fertilizer: { ...item().fertilizer!, formula: 'ดีกลือ', brand: 'ม้า' }, share: { billSatang: 2_300_000, discountSatang: 100_000, totalSacks: 20, lines } });
     const p = editItemPatch(e, money(), 'กระสอบ', { name: '  ดีเกลือ ', brand: ' ' });
     expect(p.item).toBe('ดีเกลือ');
     expect(p.fertilizer).toMatchObject({ formula: 'ดีเกลือ', brand: '', type: 'chemical', sackKg: 50, reasons: ['r1', 'r2'], zones: e.fertilizer!.zones });
-    expect(p.share!.lines).toEqual(lines);
+    expect(p.share).toBeUndefined();
     expect(editItemPatch(e, money(), 'กระสอบ', { name: 'ดีเกลือ', brand: 'ม้า' }).item).toBe('ดีเกลือ ม้า');
   });
 
@@ -142,9 +101,9 @@ describe('editItemPatch', () => {
     expect(same.fertilizer?.formula).toBe('15-15-15');
   });
 
-  it('after a rename the tapper debt reads the new name and keeps its amount (derived, no debt event)', () => {
+  it('after a rename the tapper debt of a shared non-fertilizer item reads the new name and keeps its amount', () => {
     const lines = [{ worker: A, sacks: 6, workerPct: 50, settle: 'debt' as const }];
-    const e = item({ item: 'ดีกลือ', fertilizer: { ...item().fertilizer!, formula: 'ดีกลือ' }, share: { billSatang: 2_300_000, discountSatang: 100_000, totalSacks: 20, lines } });
+    const e = item({ categoryId: 'cat-other', item: 'ดีกลือ', fertilizer: null, share: { billSatang: 2_300_000, discountSatang: 100_000, totalSacks: 20, lines } });
     const before = shareDebts([e])[0];
     const p = editItemPatch(e, money({ qty: 20, gross: 2_300_000, discount: 100_000 }), 'กระสอบ', { name: 'ดีเกลือ', brand: '' });
     const after = shareDebts([{ ...e, ...p } as Expense])[0];
