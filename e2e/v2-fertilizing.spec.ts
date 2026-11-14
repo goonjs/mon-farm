@@ -119,6 +119,8 @@ for (const size of ['m', 'l'] as const) {
 
     await expect(page.getByTestId('fz-ferts')).toContainText('ดีเกลือ 300฿ · 60 ถุง · แบ่งครบ');
     await expect(page.getByTestId('fz-ferts')).toContainText('46-0-0 780฿ · 20 ถุง · แบ่งครบ');
+    // The split word never breaks inside at any text size (review of PR 188 N3).
+    expect(await page.getByTestId('fz-ferts').getByText('แบ่งครบ', { exact: true }).first().evaluate((el) => getComputedStyle(el).whiteSpace)).toBe('nowrap');
     expect(await ratio(page)).toBeLessThanOrEqual(1);
     fits.chosen = await textFit(page);
     await evidence(page, `${SHOTS}/${size}-6-chosen.png`);

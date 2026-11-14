@@ -356,6 +356,17 @@ describe('fertilizingDebts — one lump per worker per fertilizing (SP-8, SP-10)
     expect(fertilizingDebts(project([...base, pct]))[0].edited).toBe(true);
   });
 
+  it('says when a source order\'s price changed after the fertilizing, which moved the lump (SP-10, review of PR 188 S4)', () => {
+    const a = item('a', { sacks: 10, netSatang: 300_000 });
+    const rec = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 10, auto: false }])], pct: { [DAENG.id]: 50 } });
+    expect(fertilizingDebts(project([a, rec]))[0].repriced).toBe(false);
+    const price = ev('a', { t: 'expense_changed', patch: { amountSatang: 200_000 } }, { base: a.id });
+    const d = fertilizingDebts(project([a, rec, price]))[0];
+    expect([d.repriced, d.amountSatang]).toEqual([true, 100_000]);
+    // A price edited before the fertilizing was recorded is just the price it was bought at.
+    expect(fertilizingDebts(project([a, price, rec]))[0].repriced).toBe(false);
+  });
+
   it('marks a lump whose fertilizing was edited after it was written (SP-10)', () => {
     const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])] });
     const base = [item('a', { sacks: 10, netSatang: 300_000 }), c];

@@ -216,6 +216,14 @@ describe('a fertilizing lump in the history (E16-S03 SP-8, SP-9; E11-S17 RM-6)',
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/fertilizing', params: { id: 'fz-k1' } });
   });
 
+  it('a source order whose price changed after the fertilizing says the lump was worked out again (SP-10)', async () => {
+    mockParams.current = { workerId: 'p-kaew', name: 'แก้ว' };
+    await mockFinance.append({ id: 'fz-price', groupId: 'group-1', deviceSeq: 5, ts: 5, actor: { userId: 'u', deviceId: 'dev-fz' }, source: 'app', targetId: 'ord-z-a', baseEventId: 'fz-item', payload: { t: 'expense_changed', patch: { amountSatang: 250000 } } });
+    wrap(<DebtAccountScreen />);
+    await flush();
+    expect(screen.getByTestId('debt-repriced-fz-k1:p-kaew')).toHaveTextContent('ราคาใบซื้อเปลี่ยน ยอดคิดใหม่');
+  });
+
   it('a lump deducted in full says "หักหมดแล้ว"', async () => {
     mockParams.current = { workerId: 'p-kaew', name: 'แก้ว' };
     await ev('fz-pay2', 4, 'pay-k2', { t: 'debt_payment_recorded', fields: { worker: { id: 'p-kaew', name: 'แก้ว' }, creditor: { id: 'farm', name: '' }, amountSatang: 40000, date: '2026-10-26', note: '', method: 'buyer-split', saleId: 'sale-10' } });
