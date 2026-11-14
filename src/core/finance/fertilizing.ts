@@ -209,13 +209,8 @@ export function projectFertilizing(
     headEventId: f.head,
   });
 
-  for (const f of [...folded].sort(byDateThenId)) {
-    if (f.state.deleted || f.id === opts.exclude) {
-      projected.set(f.id, asIs(f));
-      continue;
-    }
-    const cardUse = new Map<string, number>();
-    const lines = f.state.lines.map((l): ProjectedLine => {
+  const drawLines = (f: (typeof folded)[number], used: Map<string, number>, cardUse: Map<string, number>) =>
+    f.state.lines.map((l): ProjectedLine => {
       const pool = [...new Set(l.sources.map((s) => cardOf.get(s)).filter((c): c is FertilizerCard => !!c))];
       for (const c of pool) cardUse.set(c.key, (cardUse.get(c.key) ?? 0) + 1);
       const items = pool.flatMap((c) => c.items).sort(oldestFirst);
@@ -261,6 +256,20 @@ export function projectFertilizing(
         cardKeys: pool.map((c) => c.key),
       };
     });
+
+  for (const f of [...folded].sort(byDateThenId)) {
+    if (f.id === opts.exclude) {
+      projected.set(f.id, asIs(f));
+      continue;
+    }
+    if (f.state.deleted) {
+      // Priced as if live on a copy of the stock drawn so far, so a voided lump can say what it owed (review #188 S3);
+      // it draws nothing from the real stock.
+      projected.set(f.id, { ...asIs(f), lines: drawLines(f, new Map(used), new Map()) });
+      continue;
+    }
+    const cardUse = new Map<string, number>();
+    const lines = drawLines(f, used, cardUse);
     projected.set(f.id, {
       ...asIs(f),
       lines,
@@ -290,6 +299,12 @@ export interface FertilizingDebt extends DebtFields {
 
 const owes = (s: FzState, workerId: string) =>
   !s.deleted && (s.settle[workerId] ?? 'debt') === 'debt' && s.lines.some((l) => l.takes.some((t) => t.worker.id === workerId && t.sacks > 0));
+
+/** What a lump is made of — date, lines, % and how to pay back — changed after it was written (SP-10, review #188 S4). */
+const debtChanged = (history: readonly FzState[]): boolean => {
+  const key = (s: FzState) => JSON.stringify([s.date, s.lines, s.pct, s.settle]);
+  return history.some((s) => key(s) !== key(history[0]));
+};
 
 /** A line's cost split over its takes by sacks, with cumulative rounding so the parts add up. */
 export function takeCosts(l: ProjectedLine): Map<string, number> {
@@ -324,13 +339,16 @@ export function fertilizingDebts(p: FertilizingProjection): FertilizingDebt[] {
     }
     for (const [wid, worker] of ever) {
       // A take on an orphaned line (its source gone, or dated before the cutoff) owes nothing: no live 0.00 row (review N4).
-      const live = owes(r, wid) && r.lines.some((l) => !l.orphaned && l.takes.some((x) => x.worker.id === wid && x.sacks > 0));
+      const onLive = r.lines.some((l) => !l.orphaned && l.takes.some((x) => x.worker.id === wid && x.sacks > 0));
+      const live = owes(r, wid) && onLive;
+      // A deleted fertilizing's lump keeps what it owed, so the history says what was voided (review #188 S3).
+      const shown = live || (r.deleted && owes({ ...r, deleted: false }, wid) && onLive);
       const take = r.lines.flatMap((l) => l.takes).find((t) => t.worker.id === wid);
       out.push({
         id: `${r.id}${FERTILIZING_DEBT_INFIX}${wid}`,
         worker: take?.worker ?? worker,
         kind: 'fertilizer',
-        amountSatang: live ? fertilizerSplit(costs.get(wid) ?? 0, r.pct[wid] ?? DEFAULT_TAPPER_PCT).workerSatang : 0,
+        amountSatang: shown ? fertilizerSplit(costs.get(wid) ?? 0, r.pct[wid] ?? DEFAULT_TAPPER_PCT).workerSatang : 0,
         date: r.date,
         note: (notes.get(wid) ?? []).join(' · '),
         lender: null,
@@ -339,7 +357,7 @@ export function fertilizingDebts(p: FertilizingProjection): FertilizingDebt[] {
         fertilizingId: r.id,
         deleted: !live,
         headEventId: r.headEventId,
-        edited: r.history.length > 1,
+        edited: debtChanged(r.history),
       });
     }
   }
