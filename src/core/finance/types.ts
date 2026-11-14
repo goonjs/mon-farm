@@ -314,6 +314,11 @@ export interface InstallmentPlanSpec {
   readonly seen: Readonly<Record<string, number>>;
   /** The farm debt owed in total (loan + fertilizer + other) when written: more than this later is new debt (Q3). */
   readonly owedSatang: number;
+  /**
+   * E11-S17 RM-7: 'e16' = written after old fertilizer order splits stopped counting, so `owedSatang` never
+   * included them. Absent (an older plan): the old split debt it had seen is taken out of `owedSatang` on read.
+   */
+  readonly basis?: 'e16';
 }
 
 /**
