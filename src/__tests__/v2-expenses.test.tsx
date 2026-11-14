@@ -255,6 +255,14 @@ describe('repayment (E11-S03)', () => {
     await seedExpense('rp-b', { amountSatang: 40000, date: '2026-09-22', payer: SOMWANG });
   });
 
+  it('who repays whom has no "แตะเพื่อเปลี่ยน" hint: the two boxes already look tappable (owner 2026-11-14)', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    expect(screen.getByTestId('repay-from')).toBeTruthy();
+    expect(screen.queryByText(/แตะเพื่อเปลี่ยน/)).toBeNull();
+  });
+
   it('refuses more than is owed', async () => {
     mockParams.current = { payerId: SOMWANG.id };
     wrap(<RepayScreen />);
