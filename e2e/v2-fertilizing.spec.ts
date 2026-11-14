@@ -182,3 +182,29 @@ for (const size of ['m', 'l'] as const) {
     await expect(page.getByTestId('fz-ferts')).toContainText('46-0-0 780฿ · 10 ถุง · ยังไม่แบ่ง');
   });
 }
+
+for (const size of ['m', 'l'] as const) {
+  test(`E16-S04 fertilizer left at text size ${size.toUpperCase()}: from home, what is left, over-use flag opens the fertilizing (offline)`, async ({ page, context }) => {
+    await seed(page, size);
+    await page.evaluate((ev) => {
+      const all = JSON.parse(localStorage.getItem('mon-farm:finance-events') ?? '[]');
+      localStorage.setItem('mon-farm:finance-events', JSON.stringify([...all, ...ev]));
+    }, [
+      finEvent(20, 'fz-s04-1', { t: 'fertilizing_recorded', fields: { date: '2026-10-20', lines: [{ sources: ['ord-a-1'], sacks: 45, takes: [], rest: 'farm' }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } }),
+      // Two devices offline used the same 20 sacks of 46-0-0: 15 + 10 = 25, five more than received.
+      finEvent(21, 'fz-s04-2', { t: 'fertilizing_recorded', fields: { date: '2026-10-21', lines: [{ sources: ['ord-c-1'], sacks: 15, takes: [], rest: 'farm' }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } }),
+      finEvent(22, 'fz-s04-3', { t: 'fertilizing_recorded', fields: { date: '2026-10-22', lines: [{ sources: ['ord-c-1'], sacks: 10, takes: [], rest: 'farm' }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } }),
+    ]);
+    await page.goto('/v2');
+    await context.setOffline(true);
+    await page.getByTestId('mod-stock').click();
+    await expect(page.getByTestId('stock-card-0-left')).toHaveText('15');
+    await expect(page.getByTestId('stock-ordered')).toContainText('ขี้ไก่ 50 ถุง');
+    const over = page.locator('[data-testid$="-over"]').first();
+    await expect(over).toHaveText('ใส่เกินที่ได้ของ 5 ถุง');
+    expect(await textFit(page)).toEqual([]);
+    await evidence(page, `${SHOTS}/${size}-stock.png`);
+    await over.click();
+    await expect(page.getByTestId('fz-over')).toHaveText('ใส่เกินที่ได้ของ 5 ถุง');
+  });
+}
