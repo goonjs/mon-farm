@@ -116,6 +116,22 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     expect(mockRouter.replace).toHaveBeenCalledWith('/v2/expenses');
   });
 
+  it('the date · stage line under เพิ่มรายละเอียด wraps, never cut with "…" (owner rule 2026-10-27)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    const line = screen.getByTestId('expense-details-line');
+    expect(line).toHaveTextContent(/เกิดจริง/);
+    expect(line.props.numberOfLines).toBeUndefined();
+  });
+
+  it('the date · stage line has no "แตะเพื่อเปลี่ยน": the row already looks tappable (owner 2026-11-14)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    const line = screen.getByTestId('expense-details-line');
+    expect(line).toHaveTextContent(/^\d{1,2} \S+ \d{4} · เกิดจริง$/);
+    expect(line).not.toHaveTextContent(/แตะเพื่อเปลี่ยน|—/);
+  });
+
   it('refuses committed without an amount; planned may be "unknown"', async () => {
     wrap(<ExpenseScreen />);
     await flush();
