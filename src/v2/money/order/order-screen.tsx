@@ -378,7 +378,6 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
             <FarmMateArt id="finance.expense" size={ROW_ART} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <AppText testID="ordc-payer-title" style={{ fontWeight: t.font.weight.bold }}>{payerTitle}</AppText>
-              <AppText variant="bodySm">{msg('ordc.payerHint')}</AppText>
             </View>
             <ChevronRight color={t.color.inkFaint} />
           </Pressable>

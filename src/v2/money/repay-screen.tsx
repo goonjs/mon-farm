@@ -114,7 +114,6 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
             <Text aria-hidden style={{ fontSize: t.font.size.headingLg, color: t.color.ink }}>→</Text>
             <Party label={msg('fin.repay.to')} value={to} testID="repay-to" onPress={() => setPicking('to')} />
           </View>
-          <AppText variant="caption">{msg('v2m.tapToChange')}</AppText>
         </View>
 
         {!manual ? (
