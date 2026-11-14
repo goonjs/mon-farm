@@ -338,6 +338,7 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
                     </FactRow>
                     {fz?.note ? <AppText variant="bodySm">{fz.note}</AppText> : null}
                     {fz && 'edited' in fz && fz.edited ? <AppText testID={`debt-edited-${h.id}`} variant="caption">{msg('fz.debt.edited')}</AppText> : null}
+                    {fz && 'repriced' in fz && fz.repriced ? <AppText testID={`debt-repriced-${h.id}`} variant="caption">{msg('fz.debt.repriced')}</AppText> : null}
                     {rest !== undefined ? (
                       <View testID={`debt-left-${h.id}`} style={{ alignSelf: 'flex-start', paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: rest === 0 ? t.color.acceptSunk : t.color.surfaceSunk }}>
                         <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: rest === 0 ? t.color.accept : t.color.ink }}>

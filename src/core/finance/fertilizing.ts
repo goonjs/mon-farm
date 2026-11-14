@@ -145,6 +145,8 @@ export interface Fertilizing extends Omit<FertilizingFields, 'lines'> {
   readonly waiting: number;
   /** A line now draws from 2+ cards, or 2 lines share a card (a source price was edited elsewhere). */
   readonly regrouped: boolean;
+  /** A source order's price was changed after this fertilizing was recorded, so its cost was worked out again (SP-10). */
+  readonly repriced: boolean;
   readonly conflicts: readonly FieldConflict[];
   /** Every state the record has been in, oldest first — for "ever owed" voided debts. */
   readonly history: readonly (FertilizingFields & { readonly deleted: boolean })[];
@@ -197,6 +199,16 @@ export function projectFertilizing(
   const projected = new Map<string, Fertilizing>();
   const label = (sources: readonly string[]) => sources.map((s) => expenseById.get(s)?.fertilizer?.formula).find(Boolean) ?? '';
 
+  // The local log is in the order it was written (finance does not sync yet), so "after" is a later position.
+  const at = new Map(events.map((e, i) => [e.id, i]));
+  const createdAt = (id: string) => Math.min(...events.filter((e) => e.targetId === id).map((e) => at.get(e.id) ?? 0));
+  const priced = (e: FinanceEvent) => e.payload.t === 'expense_changed' && ['amountSatang', 'discountSatang', 'line'].some((k) => k in (e.payload as { patch: object }).patch);
+  const repricedAfter = (f: (typeof folded)[number]) => {
+    const from = createdAt(f.id);
+    const sources = new Set(f.state.lines.flatMap((l) => l.sources));
+    return events.some((e) => sources.has(e.targetId) && priced(e) && (at.get(e.id) ?? 0) > from);
+  };
+
   const asIs = (f: (typeof folded)[number]): Fertilizing => ({
     ...f.state,
     id: f.id,
@@ -204,6 +216,7 @@ export function projectFertilizing(
     over: 0,
     waiting: 0,
     regrouped: false,
+    repriced: repricedAfter(f),
     conflicts: f.conflicts,
     history: f.history,
     headEventId: f.head,
@@ -295,6 +308,8 @@ export interface FertilizingDebt extends DebtFields {
   readonly headEventId: string;
   /** Its fertilizing was changed after it was first written: the amount is worked out again (SP-10). */
   readonly edited: boolean;
+  /** A source order's price changed after the fertilizing: the amount is worked out again (SP-10). */
+  readonly repriced: boolean;
 }
 
 const owes = (s: FzState, workerId: string) =>
@@ -358,6 +373,7 @@ export function fertilizingDebts(p: FertilizingProjection): FertilizingDebt[] {
         deleted: !live,
         headEventId: r.headEventId,
         edited: debtChanged(r.history),
+        repriced: r.repriced,
       });
     }
   }

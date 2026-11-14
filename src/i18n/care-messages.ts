@@ -91,6 +91,7 @@ export const th = {
   'fz.debt.paidOff': 'หักหมดแล้ว',
   'fz.debt.left': 'เหลือ',
   'fz.debt.edited': 'แก้การใส่ปุ๋ยแล้ว ยอดคิดใหม่',
+  'fz.debt.repriced': 'ราคาใบซื้อเปลี่ยน ยอดคิดใหม่',
 };
 
 export const en: Partial<Record<keyof typeof th, string>> = {
