@@ -8,6 +8,7 @@ import {
   fertilizerCards,
   fertilizingDebts,
   projectFertilizing,
+  orderedSacks,
   splitBadge,
   STOCK_CUTOFF,
 } from './fertilizing';
@@ -452,5 +453,23 @@ describe('splitBadge — the garden care list says when a fertilizing is not spl
     expect(splitBadge(one([line(['a'], 10, [])]))).toBe('none');
     expect(splitBadge(one([line(['a'], 10, take(4), 'later')]))).toBe('partial');
     expect(splitBadge(one([line(['a'], 10, take(4), 'later'), line(['k'], 5, [])]))).toBe('none');
+  });
+});
+
+describe('orderedSacks — fertilizer ordered, not received yet (FL-2, FZ-4)', () => {
+  it('sums sacks per fertilizer over live orders still "สั่งไว้"; received and deleted ones are not counted', () => {
+    const gone = item('g', { sacks: 4, netSatang: 100_000, stage: 'committed', formula: 'ขี้ไก่' });
+    const events = [
+      item('c1', { sacks: 50, netSatang: 1_000_000, stage: 'committed', formula: 'ขี้ไก่' }),
+      item('c2', { sacks: 10, netSatang: 200_000, stage: 'committed', formula: 'ขี้ไก่' }),
+      item('c3', { sacks: 5, netSatang: 300_000, stage: 'committed', formula: '46-0-0' }),
+      item('r1', { sacks: 7, netSatang: 300_000 }),
+      gone,
+      ev('g', { t: 'expense_changed', patch: { deleted: true } }, { base: gone.id }),
+    ];
+    expect(orderedSacks(projectFinance(events).expenses)).toEqual([
+      { formula: 'ขี้ไก่', sacks: 60 },
+      { formula: '46-0-0', sacks: 5 },
+    ]);
   });
 });

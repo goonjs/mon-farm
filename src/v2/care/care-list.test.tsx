@@ -54,6 +54,16 @@ describe('CareListView (E16-S01)', () => {
     expect(within(fresh).UNSAFE_queryAllByType(FarmMateArt).map((a) => a.props.id)).toEqual(['farmwork.fertilize']);
   });
 
+  it('a fertilizing that used more than was received carries the worded over-use flag (E16-S04 FL-3)', () => {
+    setup([
+      ...STOCK,
+      fz('fz-a', { date: '2026-10-20', lines: [{ sources: ['k'], sacks: 15, takes: [], rest: 'farm' }] }),
+      fz('fz-b', { date: '2026-10-21', lines: [{ sources: ['k'], sacks: 8, takes: [], rest: 'farm' }] }),
+    ]);
+    expect(screen.getByTestId('care-row-fz-b-over')).toHaveTextContent('ใส่เกินที่ได้ของ 3 ถุง');
+    expect(screen.queryByTestId('care-row-fz-a-over')).toBeNull();
+  });
+
   it('a row opens that fertilizing; the main button records a new one directly (GC-3)', () => {
     const { onOpen, onNew } = setup([...STOCK, fz('fz-1', { lines: [{ sources: ['a'], sacks: 10, takes: [], rest: null }] })]);
     fireEvent.press(screen.getByTestId('care-row-fz-1'));
