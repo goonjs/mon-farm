@@ -169,7 +169,7 @@ for (const size of ['m', 'l'] as const) {
       const all = JSON.parse(localStorage.getItem('mon-farm:finance-events') ?? '[]');
       localStorage.setItem('mon-farm:finance-events', JSON.stringify([...all, ...ev]));
     }, [
-      finEvent(10, 'fz-e2e-1', { t: 'fertilizing_recorded', fields: { date: '2026-10-20', lines: [{ sources: ['ord-a-1'], sacks: 20, takes: [{ worker: TAPPERS[0], sacks: 20, auto: false }], rest: null }], pct: { t1: 50 }, settle: {}, zones: [], reasons: [], note: '' } }),
+      finEvent(10, 'fz-e2e-1', { t: 'fertilizing_recorded', fields: { date: '2026-10-20', lines: [{ sources: ['ord-a-1'], sacks: 20, takes: [{ worker: TAPPERS[0], sacks: 20, auto: false }], rest: null }, { sources: ['ord-c-1'], sacks: 5, takes: [{ worker: TAPPERS[0], sacks: 5, auto: false }], rest: null }], pct: { t1: 50 }, settle: {}, zones: [], reasons: [], note: '' } }),
       finEvent(11, 'fz-e2e-2', { t: 'fertilizing_recorded', fields: { date: '2026-11-05', lines: [{ sources: ['ord-c-1'], sacks: 10, takes: [], rest: null }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } }),
     ]);
     await page.goto('/v2');
@@ -178,6 +178,8 @@ for (const size of ['m', 'l'] as const) {
     await page.getByTestId('mod-care').click();
     await expect(page.locator('[data-testid^="care-row-fz-"]:not([data-testid$="-badge"])')).toHaveCount(2);
     await expect(page.getByTestId('care-row-fz-e2e-2-badge')).toHaveText('ยังไม่แบ่ง');
+    // Each item has its unit; the "·" stays on the line of the item before it (PR 189 review N2).
+    await expect(page.getByTestId('care-what-fz-e2e-1')).toHaveText('ดีเกลือ 20 ถุง\u00a0· 46-0-0 5 ถุง');
     expect(await textFit(page)).toEqual([]);
     await evidence(page, `${SHOTS}/${size}-care-list.png`);
     await page.getByTestId('care-row-fz-e2e-2').click();
