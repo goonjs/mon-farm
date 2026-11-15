@@ -373,17 +373,20 @@ export function SegOptions<T extends string>({
   value,
   onChange,
   vertical,
+  wrap,
   testID,
 }: {
   options: readonly { value: T; label: string; detail?: string; disabled?: boolean; icon?: IconRender }[];
   value: T | null;
   onChange: (v: T) => void;
   vertical?: boolean;
+  /** Many names (farms, tappers): two to a line, a lone last one takes the line, instead of squeezing all into one row. */
+  wrap?: boolean;
   testID: string;
 }) {
   const t = useTheme();
   return (
-    <View testID={testID} accessibilityRole="radiogroup" style={{ flexDirection: vertical ? 'column' : 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.lg, padding: t.space.xs, gap: t.space.xs }}>
+    <View testID={testID} accessibilityRole="radiogroup" style={{ flexDirection: vertical ? 'column' : 'row', flexWrap: wrap ? 'wrap' : undefined, backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.lg, padding: t.space.xs, gap: t.space.xs }}>
       {options.map((o) => {
         const on = o.value === value;
         const fg = o.disabled ? t.color.disabledInk : on ? t.color.inkInverse : t.color.inkSoft;
@@ -398,7 +401,7 @@ export function SegOptions<T extends string>({
             disabled={o.disabled}
             onPress={() => onChange(o.value)}
             style={{
-              flex: vertical ? undefined : 1,
+              ...(vertical ? {} : wrap ? { flexGrow: 1, flexBasis: '40%' as const } : { flex: 1 }),
               minHeight: t.target.min,
               borderRadius: t.radius.md,
               backgroundColor: on ? t.color.action : 'transparent',

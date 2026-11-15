@@ -528,7 +528,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
           <View style={{ gap: t.space.md }}>
             {!derived ? (
               <>
-                <DateField testID="expense-date" label={msg('fin.form.date').replace(' *', '')} required value={date} onChange={setDate} error={err('date-required')} />
+                <DateField testID="expense-date" label={msg('fin.form.date').replace(' *', '')} required value={date} onChange={setDate} error={err('date-required')} max={stage === 'actual' ? todayIso() : undefined} />
                 <View style={{ gap: t.space.xs }}>
                   <SectionLabel>{msg('fin.form.stage')}</SectionLabel>
                   <SegmentedControl testID="expense-stage" value={stage} onChange={setStage} options={STAGES.map((x) => ({ value: x, label: msg(`fin.stage.${x}`) }))} />

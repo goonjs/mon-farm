@@ -96,7 +96,7 @@ export function AddDebtScreen() {
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space.xl }}>
         <View style={{ gap: t.space.sm }}>
           <SectionLabel required>{msg('debt.form.kind').replace(' *', '')}</SectionLabel>
-          <SegmentedControl testID="debt-kind" value={kind} onChange={pickKind} options={KINDS.map((k) => ({ value: k, label: msg(`debt.kind.${k}`) }))} />
+          <SegmentedControl testID="debt-kind" value={kind} onChange={pickKind} options={KINDS.map((k) => ({ value: k, label: k === 'fertilizer' ? `${msg(`debt.kind.${k}`)} ›` : msg(`debt.kind.${k}`) }))} />
         </View>
 
         <View style={{ gap: t.space.xs }}>
@@ -241,7 +241,7 @@ export function PayDebtScreen() {
               setConfirmOver(false);
             }}
           />
-          <DateField testID="debt-pay-date" label={msg('debt.form.date').replace(' *', '')} required value={date} onChange={setDate} />
+          <DateField testID="debt-pay-date" label={msg('debt.form.date').replace(' *', '')} required value={date} onChange={setDate} max={todayIso()} />
           <TextField testID="debt-pay-note" label={msg('debt.form.note')} multiline value={note} onChangeText={setNote} placeholder={msg('fin.form.notePlaceholder')} />
           {satang > 0 ? (
             <Card>
