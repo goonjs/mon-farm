@@ -225,7 +225,6 @@ export function StartSaleScreen() {
           icon={() => <FarmMateArt id="farmwork.calendar" />}
           label={msg('start.date')}
           value={`${weekday} ${formatThaiDate(now, era)}`}
-          lines={[msg('v2s.eraHint')]}
           onPress={toggleEra}
         />
         <Rule />
