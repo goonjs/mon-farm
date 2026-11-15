@@ -98,8 +98,8 @@ test('/ → splash → home: as drawn, empty, then live rows from the local log,
   await expect(page.getByTestId('home-latest-sale')).toContainText('ปิดแล้ว');
   await expect(page.getByTestId('home-owed')).toContainText('1,200.00');
   await expect(page.getByTestId('home-owed')).toContainText('อาจารย์สมหวัง');
-  // E16-S05 HM-3: what is still to pay is a ควรรู้ row now; the tile is a way in only.
-  await expect(page.getByTestId('home-payables')).toContainText('1,200');
+  // E16-S05 HM-3: money owed back is its own row; the payables row counts the shop only.
+  await expect(page.getByTestId('home-payables')).toHaveCount(0);
   await expect(page.getByTestId('mod-workers')).toContainText('2');
   // E16-S05 HM-4: every "ไปที่" tile is half the row, the lone last one too (its padding once made it wider).
   const width = async (id: string) => (await page.getByTestId(id).boundingBox())!.width;

@@ -343,10 +343,13 @@ describe('V2Home — live rows from the local log', () => {
     expect(within(owed).getByText('อาจารย์สมหวัง')).toBeTruthy();
     expect(screen.queryByText('ยังไม่มีเรื่องที่ต้องรู้หรือจัดการ')).toBeNull();
 
-    // E16-S05 HM-3: what is still to pay is a ควรรู้ row, short money, and opens the list.
-    expect(screen.getByTestId('home-payables')).toHaveTextContent(/รายการที่ต้องจ่าย/);
-    expect(screen.getByTestId('home-payables')).toHaveTextContent(/฿\s*1,200/);
+    // E16-S05 HM-3: money owed back is its own row; the payables row counts the shop only, so it does not repeat it.
+    expect(screen.queryByTestId('home-payables')).toBeNull();
     expect(within(screen.getByTestId('mod-payables')).queryByText('1,200.00')).toBeNull();
+    // E16-S05 HM-6: every ควรรู้ row says why it is there and what to do.
+    expect(screen.getByTestId('home-open-sale-why')).toHaveTextContent('ชั่งอยู่ · ชั่งเสร็จแล้วจ่ายเงินและกดปิดการขาย');
+    expect(screen.getByTestId('home-latest-sale-why')).toHaveTextContent('ดูยอดขายและเงินที่จ่ายแล้ว');
+    expect(screen.getByTestId('home-owed-why')).toHaveTextContent('มีคนออกเงินให้สวนไปก่อน · คืนเงินเขา');
     expect(within(screen.getByTestId('mod-workers')).getByText('2')).toBeTruthy();
 
     // The open sale resumes at its counter, the latest one opens its payment (v2 sale flow).
@@ -390,6 +393,10 @@ describe('V2Home — shop orders (E11-S11 FO-13, FD-0)', () => {
       expect(within(screen.getByTestId('home-order-committed')).getByText(/ของมาแล้วหรือยัง/)).toBeTruthy();
       expect(screen.queryByTestId('home-order-zones')).toBeNull();
       expect(art('home-order-committed')).toEqual(['farmwork.fertilize']);
+      expect(screen.getByTestId('home-order-committed-why')).toHaveTextContent('สั่งเกิน 2 วันแล้ว · ของมาแล้วให้เปลี่ยนเป็น ได้ของแล้ว');
+      // E16-S05 HM-3: the shop is still owed for the committed order: one row, short money, with why.
+      expect(screen.getByTestId('home-payables')).toHaveTextContent(/฿\s*1,000/);
+      expect(screen.getByTestId('home-payables-why')).toHaveTextContent('ซื้อแล้ว ยังไม่ได้จ่ายร้าน');
       fireEvent.press(screen.getByTestId('home-order-committed'));
       expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'o1' } });
       expect(screen.getByTestId('mod-order')).toBeTruthy();
@@ -403,5 +410,20 @@ describe('V2Home — shop orders (E11-S11 FO-13, FD-0)', () => {
       await flush();
       expect(screen.queryByTestId('home-order-committed')).toBeNull();
     });
+  });
+});
+
+describe('V2Home — a sale left open after weighing (E16-S05 HM-6)', () => {
+  // Last in the file: the store is shared, and this open sale must not become the newest one for the tests above.
+  it('says the sale is not closed yet and what closes it', async () => {
+    // Weighed and the pile closed, but nobody pressed ปิดการขาย (owner's 3 Nov sale): the row says so.
+    const b = setUpSale(new LogBuilder('s-left'));
+    readyPile(b, 'p1');
+    b.accept('p1').accept('p1').sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+    // Later than every sale the tests above left in the shared store, so it is the open one shown.
+    for (const e of b.build() as SaleEvent[]) await mockStore.append({ ...e, ts: e.ts + 1_000_000_000 });
+    wrap(<V2Home />);
+    await flush();
+    expect(screen.getByTestId('home-open-sale-why')).toHaveTextContent('ยังไม่ได้กดปิดการขาย · จ่ายเงินให้ครบแล้วกดปิด');
   });
 });

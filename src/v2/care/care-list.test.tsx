@@ -45,7 +45,7 @@ describe('CareListView (E16-S01)', () => {
     expect(screen.getAllByTestId(/^care-row-fz-[a-z]+$/).map((r) => r.props.testID)).toEqual(['care-row-fz-new', 'care-row-fz-mid', 'care-row-fz-old']);
     const fresh = screen.getByTestId('care-row-fz-new');
     expect(fresh).toHaveTextContent(/5 พ\.ย\./);
-    expect(fresh).toHaveTextContent(/ดีเกลือ 10 ถุง · 46-0-0 5 ถุง/);
+    expect(fresh).toHaveTextContent(/ดีเกลือ 10 ถุง · 46\u2060-\u20600\u2060-\u20600 5 ถุง/);
     expect(within(fresh).getByTestId('care-row-fz-new-badge')).toHaveTextContent('ยังไม่แบ่ง');
     expect(within(screen.getByTestId('care-row-fz-mid')).getByTestId('care-row-fz-mid-badge')).toHaveTextContent('แบ่งไม่ครบ');
     expect(screen.queryByTestId('care-row-fz-old-badge')).toBeNull();
@@ -66,7 +66,8 @@ describe('CareListView (E16-S01)', () => {
   it('each item carries its unit and a line never starts with "·" (PR 189 review N2)', () => {
     setup([...STOCK, fz('fz-2', { lines: [{ sources: ['a'], sacks: 10, takes: [], rest: null }, { sources: ['k'], sacks: 5, takes: [], rest: null }] })]);
     const raw = String(screen.getByTestId('care-what-fz-2').props.children);
-    expect(raw).toBe('ดีเกลือ 10 ถุง\u00a0· 46-0-0 5 ถุง');
+    // A formula never breaks at its dashes ("15-15-" / "15", owner 2026-11-16): word joiners hold it together.
+    expect(raw).toBe('ดีเกลือ 10 ถุง\u00a0· 46\u2060-\u20600\u2060-\u20600 5 ถุง');
   });
 
   it('a fertilizing that used more than was received carries the worded over-use flag (E16-S04 FL-3)', () => {
@@ -100,6 +101,9 @@ describe('CareListView (E16-S01)', () => {
     const { write } = setup([...STOCK, c, del]);
     expect(screen.queryByTestId('care-row-fz-gone')).toBeNull();
     expect(screen.getByTestId('care-deleted')).toHaveTextContent(/ที่ลบแล้ว \(1\)/);
+    // Laid out like a live row (date line, then what and how much), muted, with กู้คืน on its own (owner 2026-11-16).
+    expect(screen.getByTestId('care-gone-date-fz-gone')).toHaveTextContent(/^1 พ\.ย\. · ใส่ปุ๋ย$/);
+    expect(screen.getByTestId('care-gone-what-fz-gone')).toHaveTextContent('ดีเกลือ 10 ถุง');
     fireEvent.press(screen.getByTestId('care-restore-fz-gone'));
     await waitFor(() => expect(write).toHaveBeenCalledWith('fz-gone', del.id, { t: 'fertilizing_changed', patch: { deleted: false } }));
     expect(screen.queryByTestId('care-restore-error')).toBeNull();
