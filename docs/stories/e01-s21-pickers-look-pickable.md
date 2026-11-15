@@ -37,11 +37,14 @@ _เขียนเทสต์ก่อน (ล้มก่อน) แล้ว
 
 ## Verification
 
-- [ ] Sandbox run performed:
-- [ ] Screenshots — golden path:
-- [ ] Screenshots — edge cases (ชื่อยาว 320 L):
+- [x] Sandbox run performed: 2026-11-15 build:web + Playwright phone-portrait 83 ผ่าน · สคริปต์ชั่วคราวที่ 320/360 M/L: textFit ว่าง, แถวผู้คืน/ผู้รับสูง ≥ 48
+- [x] Screenshots — golden path: `docs/ux/screenshots/v2/pickers/order-*.png` (การ์ดร้าน/วันที่มี › · ที่ 360 M อยู่คู่กัน ที่ 320 และ 360 L เรียงบนลงล่าง)
+- [x] Screenshots — edge cases: `docs/ux/screenshots/v2/pickers/repay-*.png` ชื่อคนยาวมากขึ้นบรรทัดใหม่ ไม่ถูกตัด
 
 ## Dev notes
+
+- PK-1: กล่อง `Party` เปลี่ยนจากกรอบครึ่งจอคู่กัน (มี →) เป็นแถวการ์ดเต็มจอเรียงบนลงล่าง ป้ายมองเห็น ไม่มี numberOfLines
+- PK-2: ใส่ › แล้วการ์ดครึ่งจอแคบไป ที่ 320 L วันที่แตกเป็น "วันนี้ / 15 / พ.ย." → การ์ดคู่ใช้ flex-wrap + ความกว้างขั้นต่ำ (ปรับตามขนาดตัวอักษร) อยู่คู่กันเมื่อมีที่ ไม่งั้นแยกบรรทัด
 
 ## Code review
 

@@ -20,7 +20,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, CalendarIcon, Card, CardLabel, Check, FactRow, MoneyField, ReceiptIcon, SaveBar, ScreenHeader, TextField } from '../../ui';
+import { AppText, BottomSheet, CalendarIcon, Card, CardLabel, cardStyle, Check, ChevronRight, FactRow, MoneyField, ReceiptIcon, SaveBar, ScreenHeader, TextField } from '../../ui';
 import { HalfDot } from './expenses-screen';
 import { Day, PayerPicker, SectionLabel } from './pieces';
 
@@ -109,11 +109,8 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space.xl }}>
         <View style={{ gap: t.space.sm }}>
           <SectionLabel>{msg('fin.repay.who')}</SectionLabel>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
-            <Party label={msg('fin.repay.from')} value={from} testID="repay-from" onPress={() => setPicking('from')} />
-            <Text aria-hidden style={{ fontSize: t.font.size.headingLg, color: t.color.ink }}>→</Text>
-            <Party label={msg('fin.repay.to')} value={to} testID="repay-to" onPress={() => setPicking('to')} />
-          </View>
+          <Party label={msg('fin.repay.from')} value={from} testID="repay-from" onPress={() => setPicking('from')} />
+          <Party label={msg('fin.repay.to')} value={to} testID="repay-to" onPress={() => setPicking('to')} />
         </View>
 
         {!manual ? (
@@ -217,6 +214,10 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
   );
 }
 
+/**
+ * One side of "who repays whom" (E01-S21 PK-1): a full-width picker row with its label shown, the name in bold
+ * (wrapping, never cut) and › — the row a person taps to choose, unlike the typed fields below it.
+ */
 function Party({ label, value, testID, onPress }: { label: string; value: Payer | null; testID: string; onPress: () => void }) {
   const t = useTheme();
   return (
@@ -225,9 +226,15 @@ function Party({ label, value, testID, onPress }: { label: string; value: Payer 
       accessibilityRole="button"
       accessibilityLabel={`${label} ${value?.name ?? ''}`}
       onPress={onPress}
-      style={{ flex: 1, minHeight: t.target.min, justifyContent: 'center', paddingHorizontal: t.space.md, borderRadius: t.radius.md, borderWidth: t.border.hair, borderColor: t.color.ruleStrong, backgroundColor: t.color.surfaceRaised }}
+      style={[cardStyle(t), { minHeight: t.target.comfortable, flexDirection: 'row', alignItems: 'center', gap: t.space.md, paddingHorizontal: t.space.md, paddingVertical: t.space.sm }]}
     >
-      <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.semibold, color: t.color.ink }}>{value?.name ?? '—'}</Text>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <AppText variant="caption">{label}</AppText>
+        <Text testID={`${testID}-name`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, color: t.color.ink }}>{value?.name ?? '—'}</Text>
+      </View>
+      <View testID={`${testID}-chevron`} aria-hidden>
+        <ChevronRight color={t.color.inkFaint} />
+      </View>
     </Pressable>
   );
 }
