@@ -259,18 +259,8 @@ function PointForm({ pointId, propertyId }: { pointId: string | null; propertyId
       <View style={{ gap: t.space.xs }}>
         <AppText variant="label">{msg('pointForm.farm')}</AppText>
         {existing || propertyId ? (
-          <View
-            testID="point-farm"
-            style={{
-              minHeight: t.target.min,
-              justifyContent: 'center',
-              paddingHorizontal: t.space.md,
-              borderRadius: t.radius.md,
-              borderWidth: t.border.hair,
-              borderColor: t.color.ruleStrong,
-              backgroundColor: t.color.surfaceRaised,
-            }}
-          >
+          // E01-S21 PK-4: fixed here, so plain text — not a box that looks like it can be typed in or tapped.
+          <View testID="point-farm" style={{ minHeight: t.target.min, justifyContent: 'center' }}>
             <AppText style={{ fontWeight: t.font.weight.semibold }}>{farm?.name ?? ''}</AppText>
           </View>
         ) : (

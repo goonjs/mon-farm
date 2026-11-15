@@ -553,6 +553,14 @@ card edge drawn only by shadow disappears exactly where the app is used.
   of a row or card (e.g. "แก้"): the row or card itself is the tap target with
   a `›`, or a secondary action is an underlined text link (owner rule
   2026-11-06; picture in `.claude/skills/phone-form-ux/SKILL.md` rule 11).
+- **Pickers** (owner 2026-11-15: anything a person picks must look pickable;
+  E01-S21). A picker row is a card the whole width of the content: a small
+  label (caption) over the value in bold, and `›` at the end. The value wraps;
+  it is never cut with "…". It must not look like a typed field (no input
+  frame, no placeholder). A list that drops open under the field uses `▾`
+  (the order screen's unit, `UnitSelect`). Chips and segmented controls are
+  pickers already and need no mark. A value that cannot be changed is plain
+  text, with no frame.
 - **Dates** (owner 2026-11-15: a typed date becomes a date picker that looks
   like one; E01-S22). Every date uses `DateField`: the label above, then a
   card row with a calendar mark, the date in bold in the user's era (พ.ศ. or
