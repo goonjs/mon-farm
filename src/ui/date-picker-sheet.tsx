@@ -11,6 +11,7 @@ import { BottomSheet } from './bottom-sheet';
 import { CHIP_MIN_WIDTH } from './chip-width';
 import { CTA } from './button';
 import { Check, ChevronLeft, ChevronRight } from './icons';
+import { TextLink } from './text-link';
 import { useI18n, type MessageId } from '../i18n';
 import { isIsoDate, todayIso } from '../core/finance/money';
 import { useTheme } from '../theme';
@@ -24,6 +25,10 @@ export interface DatePickerSheetProps {
   readonly title?: string;
   /** Days after this ISO date are disabled (e.g. today, for a bought order). Absent = no limit. */
   readonly max?: string;
+  /** Days before this ISO date are disabled. Absent = no limit (E01-S22: free unless the owner confirms one). */
+  readonly min?: string;
+  /** Offers a "no date" choice with this label, which commits "" (E01-S22 DP-2). Absent = a day is required. */
+  readonly emptyLabel?: string;
   readonly testID?: string;
 }
 
@@ -66,7 +71,7 @@ const MONTH_KEYS = Array.from({ length: 12 }, (_, i) => `datepick.monthName${i +
 const SHORT_MONTH_KEYS = Array.from({ length: 12 }, (_, i) => `date.month${i + 1}` as MessageId);
 const WEEKDAY_KEYS = ['datepick.wd0', 'datepick.wd1', 'datepick.wd2', 'datepick.wd3', 'datepick.wd4', 'datepick.wd5', 'datepick.wd6'] as const;
 
-function Body({ onClose, value, onChange, max, testID: tid }: Omit<DatePickerSheetProps, 'open' | 'title' | 'testID'> & { testID: string }) {
+function Body({ onClose, value, onChange, max, min, emptyLabel, testID: tid }: Omit<DatePickerSheetProps, 'open' | 'title' | 'testID'> & { testID: string }) {
   const t = useTheme();
   const { t: msg, era } = useI18n();
   const today = todayIso();
@@ -77,7 +82,7 @@ function Body({ onClose, value, onChange, max, testID: tid }: Omit<DatePickerShe
     return { y, m };
   });
   const yearOf = (y: number) => (era === 'be' ? y + 543 : y);
-  const beyond = (iso: string) => max !== undefined && iso > max;
+  const beyond = (iso: string) => (max !== undefined && iso > max) || (min !== undefined && iso < min);
 
   const pick = (iso: string) => {
     if (beyond(iso)) return;
@@ -101,11 +106,11 @@ function Body({ onClose, value, onChange, max, testID: tid }: Omit<DatePickerShe
     { id: 'twodays', iso: addDays(today, -2), label: msg('datepick.twoDaysAgo') },
   ];
 
-  const nav = (id: 'prev' | 'next', delta: number) => (
+  const nav = (id: 'prev' | 'next' | 'prevYear' | 'nextYear', delta: number) => (
     <Pressable
       testID={`${tid}-${id}`}
       accessibilityRole="button"
-      accessibilityLabel={msg(id === 'prev' ? 'datepick.prev' : 'datepick.next')}
+      accessibilityLabel={msg(`datepick.${id}`)}
       onPress={() => setView((v) => shiftMonth(v.y, v.m, delta))}
       style={{
         width: t.target.min,
@@ -116,7 +121,17 @@ function Body({ onClose, value, onChange, max, testID: tid }: Omit<DatePickerShe
         justifyContent: 'center',
       }}
     >
-      {id === 'prev' ? <ChevronLeft color={t.color.ink} size={16} /> : <ChevronRight color={t.color.ink} size={16} />}
+      {id === 'prev' ? (
+        <ChevronLeft color={t.color.ink} size={16} />
+      ) : id === 'next' ? (
+        <ChevronRight color={t.color.ink} size={16} />
+      ) : (
+        // A year step is a double chevron, so it reads apart from the month step beside it (E01-S22 DP-3).
+        <View style={{ flexDirection: 'row' }}>
+          {id === 'prevYear' ? <ChevronLeft color={t.color.ink} size={16} /> : <ChevronRight color={t.color.ink} size={16} />}
+          {id === 'prevYear' ? <ChevronLeft color={t.color.ink} size={16} /> : <ChevronRight color={t.color.ink} size={16} />}
+        </View>
+      )}
     </Pressable>
   );
 
@@ -172,16 +187,23 @@ function Body({ onClose, value, onChange, max, testID: tid }: Omit<DatePickerShe
           padding: t.space.sm,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          {nav('prev', -1)}
-          <Text
-            testID={`${tid}-month`}
-            accessibilityRole="header"
-            style={{ ...text, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}
-          >
-            {msg(MONTH_KEYS[view.m - 1])} {yearOf(view.y)}
-          </Text>
-          {nav('next', 1)}
+        {/* Month on its own line, the year and month steps under it: four 48 targets fit at 320 px, large text (E01-S22). */}
+        <Text
+          testID={`${tid}-month`}
+          accessibilityRole="header"
+          style={{ ...text, textAlign: 'center', fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}
+        >
+          {msg(MONTH_KEYS[view.m - 1])} {yearOf(view.y)}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: t.space.xs }}>
+          <View style={{ flexDirection: 'row', gap: t.space.xs }}>
+            {nav('prevYear', -12)}
+            {nav('prev', -1)}
+          </View>
+          <View style={{ flexDirection: 'row', gap: t.space.xs }}>
+            {nav('next', 1)}
+            {nav('nextYear', 12)}
+          </View>
         </View>
         <View style={{ flexDirection: 'row', marginTop: t.space.xs }} aria-hidden>
           {WEEKDAY_KEYS.map((k) => (
@@ -239,6 +261,17 @@ function Body({ onClose, value, onChange, max, testID: tid }: Omit<DatePickerShe
         ))}
       </View>
 
+      {emptyLabel ? (
+        <TextLink
+          testID={`${tid}-empty`}
+          onPress={() => {
+            onChange('');
+            onClose();
+          }}
+        >
+          {emptyLabel}
+        </TextLink>
+      ) : null}
       <CTA
         testID={`${tid}-done`}
         icon={(c) => <Check color={c} />}
@@ -253,11 +286,11 @@ function Body({ onClose, value, onChange, max, testID: tid }: Omit<DatePickerShe
   );
 }
 
-export function DatePickerSheet({ open, onClose, value, onChange, title, max, testID = 'date-picker' }: DatePickerSheetProps) {
+export function DatePickerSheet({ open, onClose, value, onChange, title, max, min, emptyLabel, testID = 'date-picker' }: DatePickerSheetProps) {
   const { t: msg } = useI18n();
   return (
     <BottomSheet open={open} onClose={onClose} title={title ?? msg('datepick.title')} testID={testID}>
-      <Body testID={testID} onClose={onClose} value={value} onChange={onChange} max={max} />
+      <Body testID={testID} onClose={onClose} value={value} onChange={onChange} max={max} min={min} emptyLabel={emptyLabel} />
     </BottomSheet>
   );
 }

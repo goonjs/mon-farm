@@ -553,6 +553,11 @@ card edge drawn only by shadow disappears exactly where the app is used.
   of a row or card (e.g. "แก้"): the row or card itself is the tap target with
   a `›`, or a secondary action is an underlined text link (owner rule
   2026-11-06; picture in `.claude/skills/phone-form-ux/SKILL.md` rule 11).
+- **Dates** (owner 2026-11-15: a typed date becomes a date picker that looks
+  like one; E01-S22). Every date uses `DateField`: the label above, then a
+  card row with a calendar mark, the date in bold in the user's era (พ.ศ. or
+  ค.ศ.) and `›`. Tapping opens `DatePickerSheet`. A date is never typed.
+  Ranges are free unless the owner confirms a limit for that spot.
 - No icon set is chosen yet — Q11.
 
 ### 12.8 Weighing — how public mode keeps its extreme-contrast rules

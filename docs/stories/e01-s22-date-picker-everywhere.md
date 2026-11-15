@@ -45,11 +45,18 @@ _เขียนเทสต์ก่อน (ล้มก่อน) แล้ว
 
 ## Verification
 
-- [ ] Sandbox run performed:
-- [ ] Screenshots — golden path:
-- [ ] Screenshots — edge cases:
+- [x] Sandbox run performed: 2026-11-15 build:web + Playwright phone-portrait 83 ผ่าน (รวม v2-money ที่เลือกวันที่ในชีตเพิ่มรายละเอียด และเพิ่มหนี้) · สคริปต์ชั่วคราว 320/360 M/L: textFit ว่าง แถววันที่สูง ≥ 48 ปุ่มเลื่อนปี/เดือนกว้าง ≥ 48 ปุ่มตกลงอยู่ในจอ
+- [x] Screenshots — golden path: `docs/ux/screenshots/v2/date-picker/repay-*.png` (แถววันที่หน้าคืนเงิน) · `expense-sheet-*.png` (แถววันที่ในชีตเพิ่มรายละเอียด)
+- [x] Screenshots — edge cases: `docs/ux/screenshots/v2/date-picker/picker-*.png` ตัวเลือกวันเปิดซ้อนบนชีต ที่ 320 ตัวใหญ่ (ชื่อเดือนอยู่บรรทัดบน ปุ่ม «‹ ›» อยู่บรรทัดล่าง)
 
 ## Dev notes
+
+- `DateField` (src/ui/date-field.tsx) เป็นแถวเลือกวัน + `DatePickerSheet` ในตัว · เปิดซ้อนบนชีตได้ (React Native Web Modal ซ้อนกัน) ไม่ต้องซ่อนชีตแม่ · ทดสอบใน e2e v2-money
+- ช่อง พ.ศ. 4 จุด เก็บค่าเป็นข้อความ ว/ด/ปปปป เหมือนเดิม (parseThaiDay/thaiDayInput) การตรวจและข้อมูลที่บันทึกไม่เปลี่ยน
+- ชีตเปลี่ยนพื้นที่: เดิมซ่อนแป้นตัวเลขตอนพิมพ์วันที่ (`typingDate`) ตอนนี้ไม่มีการพิมพ์ แป้นแสดงตลอด
+- ข้อความผิดพลาด "ใส่วันที่เป็น ปปปป-ดด-วว" เปลี่ยนเป็น "เลือกวันที่" · ป้ายวันเริ่ม/วันสุดท้ายเลิกบอกรูปแบบการพิมพ์ · ลบ `v2f.dateHint`
+- ตัวเลือกวัน: ชื่อเดือนอยู่บรรทัดบน ปุ่ม «‹ ›» บรรทัดล่าง (เดิมที่ 320 ตัวใหญ่ล้นจอเมื่อมี 4 ปุ่ม)
+- `min` และ `emptyLabel` เป็นความสามารถใหม่ของตัวเลือกวัน · `min` ยังไม่ได้ใส่ที่จุดไหน (รอ Q4, Q5)
 
 ## Code review
 

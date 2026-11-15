@@ -8,7 +8,7 @@ import { formatDate, todayIso } from '../../../core/finance/money';
 import type { Payer, Stage } from '../../../core/finance/types';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, Check, DatePickerSheet, SegmentedControl, TextField, FarmMateArt } from '../../../ui';
+import { AppText, BottomSheet, Check, ChevronRight, DatePickerSheet, SegmentedControl, TextField, FarmMateArt } from '../../../ui';
 import { PayerPicker } from '../pieces';
 import { SolidCTA } from '../order/solid-cta';
 
@@ -51,7 +51,10 @@ export function HeaderSheet({ order, onSave, onClose }: { order: OrderView; onSa
             <AppText variant="label">{msg('ordd.hdr.date')}</AppText>
             <Pressable testID="ordd-hdr-date" accessibilityRole="button" onPress={() => setPicking(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.comfortable, paddingHorizontal: t.space.md, borderRadius: t.radius.lg, borderWidth: t.border.hair, borderColor: t.color.ruleStrong, backgroundColor: t.color.surfaceRaised }}>
               <FarmMateArt id="farmwork.calendar" size={28} />
-              <AppText style={{ fontWeight: t.font.weight.bold }}>{formatDate(date)}</AppText>
+              <AppText style={{ flex: 1, fontWeight: t.font.weight.bold }}>{formatDate(date)}</AppText>
+              <View testID="ordd-hdr-date-chevron" aria-hidden>
+                <ChevronRight color={t.color.inkFaint} />
+              </View>
             </Pressable>
             {future ? <AppText testID="ordd-hdr-future" style={{ color: t.color.reject }}>{msg('ordd.hdr.dateFuture')}</AppText> : null}
           </View>

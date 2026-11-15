@@ -28,7 +28,7 @@ import { useT } from '../../i18n';
 import { ShareTooEarlyError } from '../../store/master-store';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
-import { AppText, CalendarIcon, Card, Check, FactRow, FarmIcon, FieldError, IconTile, MenuItem, PersonIcon, QuantityField, SegmentedControl, TextField, FarmMateArt } from '../../ui';
+import { AppText, CalendarIcon, DateField, Card, Check, FactRow, FarmIcon, FieldError, IconTile, MenuItem, PersonIcon, QuantityField, SegmentedControl, FarmMateArt } from '../../ui';
 import { NotFound } from './people-screens';
 import { FarmScreen, RowCard, useDay, useMaster, useMounted, useWrite } from './pieces';
 
@@ -188,13 +188,12 @@ function TapperShare({ tapperId }: { tapperId: string }) {
           ) : null}
         </View>
       ) : null}
-      <TextField
+      <DateField
         testID="share-from"
         label={msg('v2f.effective')}
         required
-        hint={msg('v2f.dateHint')}
-        value={from}
-        onChangeText={setFrom}
+        value={fromDay ?? ''}
+        onChange={(iso) => setFrom(iso ? thaiDayInput(iso) : '')}
         error={tried && !fromDay ? msg('share.badDate') : undefined}
       />
       {tried && tooEarly && lastClosed && earliest ? (

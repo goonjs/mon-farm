@@ -10,6 +10,8 @@ export const th = {
   'datepick.twoDaysAgo': '2 วันก่อน',
   'datepick.prev': 'เดือนก่อน',
   'datepick.next': 'เดือนถัดไป',
+  'datepick.prevYear': 'ปีก่อน',
+  'datepick.nextYear': 'ปีถัดไป',
   'datepick.done': 'ตกลง · {weekday} {day} {month} {year}',
   'datepick.dayA11y': '{weekday} {day} {month} {year}',
   'datepick.wd0': 'อา',
@@ -39,5 +41,7 @@ export const en: Record<string, string> = {
   'datepick.twoDaysAgo': '2 days ago',
   'datepick.prev': 'Previous month',
   'datepick.next': 'Next month',
+  'datepick.prevYear': 'Previous year',
+  'datepick.nextYear': 'Next year',
   'datepick.done': 'OK · {weekday} {day} {month} {year}',
 };

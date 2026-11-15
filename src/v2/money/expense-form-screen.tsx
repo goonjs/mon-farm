@@ -33,7 +33,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, MoneyField, PersonIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TextField } from '../../ui';
+import { AppText, DateField, BottomSheet, Button, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, MoneyField, PersonIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TextField } from '../../ui';
 import { useFarms } from './expenses-screen';
 import { ORDER_NEW, orderHref } from './order-routes';
 import { ChoiceChip, ChoiceRow, NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
@@ -528,7 +528,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
           <View style={{ gap: t.space.md }}>
             {!derived ? (
               <>
-                <TextField testID="expense-date" label={msg('fin.form.date')} value={date} onChangeText={setDate} placeholder="2026-09-28" helper={msg('v2m.dateShown', { shown: formatDate(date) })} error={err('date-required')} />
+                <DateField testID="expense-date" label={msg('fin.form.date').replace(' *', '')} required value={date} onChange={setDate} error={err('date-required')} />
                 <View style={{ gap: t.space.xs }}>
                   <SectionLabel>{msg('fin.form.stage')}</SectionLabel>
                   <SegmentedControl testID="expense-stage" value={stage} onChange={setStage} options={STAGES.map((x) => ({ value: x, label: msg(`fin.stage.${x}`) }))} />
