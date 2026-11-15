@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 /**
  * public/sw.js (E01-S23) run against fake caches and fetch, for what the local e2e server cannot show:
@@ -41,7 +41,8 @@ function load(net: (url: string) => Promise<Response>) {
     let answer: Promise<Response> | undefined;
     handlers[type]({ ...extra, waitUntil: (p: Promise<unknown>) => waits.push(p), respondWith: (p: Promise<Response>) => (answer = p) });
     await Promise.all(waits);
-    return answer;
+    // Wrapped: an async function returning a promise would wait for the answer itself.
+    return { answer };
   };
   return { store, run };
 }
@@ -72,7 +73,7 @@ describe('service worker (E01-S23)', () => {
     const { run } = load(async (u) => (online ? res(`page ${u}`) : offline()));
     await run('install', {});
     online = false;
-    const answer = await run('fetch', { request: req('/v2/stock', 'navigate') });
+    const { answer } = await run('fetch', { request: req('/v2/stock', 'navigate') });
     expect(await (await answer!).text()).toBe(`page ${abs('/v2/')}`);
   });
 
@@ -85,8 +86,42 @@ describe('service worker (E01-S23)', () => {
     expect(store.has('https://elsewhere.test/x.js')).toBe(false);
   });
 
+  it('on a weak signal, a page it kept opens from the cache after 3.5 s instead of waiting on (N3)', async () => {
+    let hang = false;
+    const { run } = load((u) => (hang ? new Promise<Response>(() => undefined) : Promise.resolve(res(`page ${u}`))));
+    await run('install', {});
+    hang = true;
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const answer = (await run('fetch', { request: req('/v2/', 'navigate') })).answer!;
+      let done = false;
+      void answer.then(() => (done = true));
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(done).toBe(false);
+      await vi.advanceTimersByTimeAsync(600);
+      expect(await (await answer).text()).toBe(`page ${abs('/v2/')}`);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a slow page it never kept still waits for the network (nothing better to show)', async () => {
+    let finish: (r: Response) => void = () => undefined;
+    const { run } = load((u) => (u === abs('/v2/new-page') ? new Promise<Response>((r) => (finish = r)) : Promise.resolve(res(`page ${u}`))));
+    await run('install', {});
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const answer = (await run('fetch', { request: req('/v2/new-page', 'navigate') })).answer!;
+      await vi.advanceTimersByTimeAsync(5_000);
+      finish(res('fresh'));
+      expect(await (await answer).text()).toBe('fresh');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('leaves Firebase\'s reserved /__/ paths alone (N2)', async () => {
     const { run } = load(async (u) => res(`page ${u}`));
-    expect(await run('fetch', { request: req('/__/auth/handler?code=x', 'navigate') })).toBeUndefined();
+    expect((await run('fetch', { request: req('/__/auth/handler?code=x', 'navigate') })).answer).toBeUndefined();
   });
 });
