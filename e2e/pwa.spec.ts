@@ -19,6 +19,10 @@ test('the web app is installable and opens again offline (E01-S23 PW-1, PW-2)', 
     await navigator.serviceWorker.ready;
     if (!navigator.serviceWorker.controller) await new Promise((r) => navigator.serviceWorker.addEventListener('controllerchange', r, { once: true }));
   });
+  // ... and has kept the app's bundle from this first visit (the page hands its loaded files over).
+  await expect
+    .poll(() => page.evaluate(async () => (await Promise.all((await caches.keys()).map(async (k) => (await (await caches.open(k)).keys()).map((r) => r.url)))).flat().some((u) => u.includes('/_expo/static/'))))
+    .toBe(true);
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByTestId('v2-home')).toBeVisible();
