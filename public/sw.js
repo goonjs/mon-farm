@@ -33,32 +33,14 @@ self.addEventListener('activate', (event) => {
 });
 
 // The first visit loads the bundle and fonts before this worker controls the page, so the page sends
-// the list of what it loaded and the worker keeps the same-origin ones (PW-2). Then bundles nobody
-// needs any more are dropped, so the cache does not grow with every deploy (N1): a bundle stays while
-// this page loaded it or any kept page still names it — a kept home from an older build must still
-// open offline after a newer build was seen on another page (review of PR 195 B2).
+// the list of what it loaded and the worker keeps the same-origin ones (PW-2). Build files are never
+// deleted: a kept page from an older build may still need its bundle, and reading pages to find out
+// fails open (review of PR 195 B2, F1). The cache grows by about one bundle per deploy (lead: KISS).
 self.addEventListener('message', (event) => {
   const urls = event.data && Array.isArray(event.data.keep) ? event.data.keep : [];
   const mine = urls.map(sameOrigin).filter((u) => u !== null);
   event.waitUntil(
-    caches.open(CACHE).then(async (c) => {
-      await Promise.all(mine.map((u) => c.match(u.href).then((hit) => hit || fetchAndKeep(u.href, true).catch(() => undefined))));
-      const reqs = await c.keys();
-      const needed = new Set(mine.map((u) => u.href));
-      const pages = reqs.filter((r) => isPage(r.url));
-      await Promise.all(
-        pages.map((r) =>
-          c
-            .match(r)
-            .then((hit) => (hit ? hit.text() : ''))
-            .then((html) => {
-              for (const m of html.matchAll(/\/_expo\/static\/[^"'\s<>)]+/g)) needed.add(new URL(m[0], self.location.href).href);
-            })
-            .catch(() => undefined),
-        ),
-      );
-      await Promise.all(reqs.filter((r) => isStatic(r.url) && !needed.has(r.url)).map((r) => c.delete(r)));
-    }),
+    caches.open(CACHE).then((c) => Promise.all(mine.map((u) => c.match(u.href).then((hit) => hit || fetchAndKeep(u.href, true).catch(() => undefined))))),
   );
 });
 
@@ -116,12 +98,6 @@ function isStatic(url) {
   return new URL(url).pathname.startsWith(STATIC);
 }
 
-/** A kept page (HTML), read for the bundles it names: not a build file, not an image, font or manifest. */
-function isPage(url) {
-  const path = new URL(url).pathname;
-  return !path.startsWith(STATIC) && !/\.(png|jpe?g|gif|webp|svg|ico|ttf|otf|woff2?|json|webmanifest|js|css)$/i.test(path);
-}
-
 /** A URL of this site, or null for another site or something that is not a URL (N4). */
 function sameOrigin(u) {
   try {
@@ -138,7 +114,11 @@ function fetchAndKeep(req, wait) {
     if (!res.ok || res.type !== 'basic') return res;
     const clean = res.redirected ? new Response(res.body, { status: res.status, statusText: res.statusText, headers: res.headers }) : res;
     const copy = clean.clone();
-    const stored = caches.open(CACHE).then((c) => c.put(req, copy));
+    // A write the phone refuses (full storage) never costs the network answer (review of PR 195 F2).
+    const stored = caches
+      .open(CACHE)
+      .then((c) => c.put(req, copy))
+      .catch(() => undefined);
     return wait ? stored.then(() => clean) : clean;
   });
 }
