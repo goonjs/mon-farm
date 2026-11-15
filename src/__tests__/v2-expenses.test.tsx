@@ -135,15 +135,34 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     expect(line).not.toHaveTextContent(/แตะเพื่อเปลี่ยน|—/);
   });
 
-  it('an actual expense cannot be dated after today; a planned one can (E01-S22 Q3 ก)', async () => {
+  it('an actual or committed expense cannot be dated after today; a planned one can (E01-S22 Q3, owner "1 ก 2 ก")', async () => {
     const tomorrow = dayAfter(todayIso());
     wrap(<ExpenseScreen />);
     await flush();
     fireEvent.press(screen.getByTestId('expense-details'));
     expect(dayCell('expense-date', tomorrow).props.accessibilityState.disabled).toBe(true);
     fireEvent.press(screen.getByTestId('expense-date-picker-done'));
+    fireEvent.press(screen.getByTestId('expense-stage-committed'));
+    expect(dayCell('expense-date', tomorrow).props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(screen.getByTestId('expense-date-picker-done'));
     fireEvent.press(screen.getByTestId('expense-stage-planned'));
     expect(dayCell('expense-date', tomorrow).props.accessibilityState.disabled).toBeFalsy();
+  });
+
+  it('a future date picked while planned, then switched to actual, asks for a new date on save and saves nothing', async () => {
+    const before = (await state()).expenses.length;
+    wrap(<ExpenseScreen />);
+    await flush();
+    typeOnPad('expense-amount', '50');
+    fireEvent.press(screen.getByTestId('expense-details'));
+    fireEvent.press(screen.getByTestId('expense-stage-planned'));
+    pickDate('expense-date', dayAfter(todayIso()));
+    fireEvent.press(screen.getByTestId('expense-stage-actual'));
+    fireEvent.press(screen.getByTestId('expense-details-done'));
+    await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
+    await flush();
+    expect(screen.getByTestId('expense-date-row-error')).toHaveTextContent('วันที่ยังไม่ถึง เลือกวันใหม่');
+    expect((await state()).expenses.length).toBe(before);
   });
 
   it('refuses committed without an amount; planned may be "unknown"', async () => {
