@@ -161,7 +161,8 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   // A discount that cannot apply is refused, not silently dropped.
   const badDiscount = sharable && !share && shareDraft.discount.trim() !== '' && amountSatang !== null && unsharedNet === null;
   const amountTyped = !unknown && amount.trim() !== '';
-  const problems = checkExpense({ amountSatang, date, stage }, todayIso()).map((p) => (p === 'amount-required' && amountTyped ? 'amount-invalid' : p));
+  // A derived row (salary, owner share) has no date field: a future date is not the user's to fix (review of PR 194 B1).
+  const problems = checkExpense({ amountSatang, date, stage }, derived ? undefined : todayIso()).map((p) => (p === 'amount-required' && amountTyped ? 'amount-invalid' : p));
 
   const knownPayers = useMemo(() => {
     const seen = new Map<string, Payer>();
