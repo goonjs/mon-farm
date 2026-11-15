@@ -98,6 +98,7 @@ export const th = {
   'care.empty.body': 'การใส่ปุ๋ยที่บันทึกแล้วจะขึ้นที่นี่ เรียงจากล่าสุด',
   'care.deleted': 'ที่ลบแล้ว ({n})',
   'care.restore': 'กู้คืน',
+  'care.restoreFailed': 'กู้คืนไม่สำเร็จ ลองอีกครั้ง',
   'fz.debt.paidOff': 'หักหมดแล้ว',
   'fz.debt.left': 'เหลือ',
   'fz.debt.edited': 'แก้การใส่ปุ๋ยแล้ว ยอดคิดใหม่',
