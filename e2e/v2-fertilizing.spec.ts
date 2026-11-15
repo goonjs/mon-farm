@@ -179,7 +179,7 @@ for (const size of ['m', 'l'] as const) {
     await expect(page.locator('[data-testid^="care-row-fz-"]:not([data-testid$="-badge"])')).toHaveCount(2);
     await expect(page.getByTestId('care-row-fz-e2e-2-badge')).toHaveText('ยังไม่แบ่ง');
     // Each item has its unit; the "·" stays on the line of the item before it (PR 189 review N2).
-    await expect(page.getByTestId('care-what-fz-e2e-1')).toHaveText('ดีเกลือ 20 ถุง\u00a0· 46-0-0 5 ถุง');
+    await expect(page.getByTestId('care-what-fz-e2e-1')).toHaveText('ดีเกลือ 20 ถุง\u00a0· 46\u2060-\u20600\u2060-\u20600 5 ถุง');
     expect(await textFit(page)).toEqual([]);
     await evidence(page, `${SHOTS}/${size}-care-list.png`);
     await page.getByTestId('care-row-fz-e2e-2').click();
