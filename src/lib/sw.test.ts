@@ -40,9 +40,10 @@ function load(net: (url: string) => Promise<Response>) {
     const waits: Promise<unknown>[] = [];
     let answer: Promise<Response> | undefined;
     handlers[type]({ ...extra, waitUntil: (p: Promise<unknown>) => waits.push(p), respondWith: (p: Promise<Response>) => (answer = p) });
-    await Promise.all(waits);
+    // A navigation's waitUntil can hold a network answer that never comes; only install and message are awaited.
+    if (type !== 'fetch') await Promise.all(waits);
     // Wrapped: an async function returning a promise would wait for the answer itself.
-    return { answer };
+    return { answer, waits };
   };
   return { store, run };
 }
@@ -118,6 +119,49 @@ describe('service worker (E01-S23)', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('after a new build, never drops a bundle that a kept page from the old build still needs (review of PR 195 B2)', async () => {
+    const page = (build: string) => `<script src="/_expo/static/js/web/entry-${build}.js" defer></script>`;
+    let build = 'A';
+    let online = true;
+    const { store, run } = load(async (u) => {
+      if (!online) return offline();
+      if (u.includes('/_expo/static/')) return res(`bundle ${u}`);
+      return res(page(build));
+    });
+    // Build A: the home is opened online and hands over its bundle.
+    await run('install', {});
+    await run('message', { data: { keep: [abs('/v2/'), abs('/_expo/static/js/web/entry-A.js')] } });
+    // Build B is deployed; a deep page is opened online and hands over the new bundle.
+    build = 'B';
+    await run('fetch', { request: req('/v2/care', 'navigate') });
+    await settle();
+    await run('message', { data: { keep: [abs('/v2/care'), abs('/_expo/static/js/web/entry-B.js')] } });
+    // Offline, the icon opens the kept home from build A: the bundle it names must still be there.
+    online = false;
+    const { answer } = await run('fetch', { request: req('/v2/', 'navigate') });
+    const html = await (await answer!).text();
+    expect(html).toContain('entry-A.js');
+    expect(store.has(abs('/_expo/static/js/web/entry-A.js'))).toBe(true);
+    expect(store.has(abs('/_expo/static/js/web/entry-B.js'))).toBe(true);
+  });
+
+  it('a bundle no kept page names any more is dropped (N1 still holds)', async () => {
+    const { store, run } = load(async (u) => res(u.includes('/_expo/static/') ? 'bundle' : '<script src="/_expo/static/js/web/entry-B.js"></script>'));
+    await run('install', {});
+    store.set(abs('/_expo/static/js/web/entry-old.js'), res('old'));
+    await run('message', { data: { keep: [abs('/_expo/static/js/web/entry-B.js')] } });
+    expect(store.has(abs('/_expo/static/js/web/entry-old.js'))).toBe(false);
+    expect(store.has(abs('/_expo/static/js/web/entry-B.js'))).toBe(true);
+  });
+
+  it('a navigation keeps the worker alive until its network answer is stored (review of PR 195 N3-a)', async () => {
+    const { run } = load(async (u) => res(`page ${u}`));
+    await run('install', {});
+    const { waits } = await run('fetch', { request: req('/v2/', 'navigate') });
+    expect(waits.length).toBe(1);
+    await waits[0];
   });
 
   it('leaves Firebase\'s reserved /__/ paths alone (N2)', async () => {
