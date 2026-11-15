@@ -3,7 +3,8 @@
  * The data already lives on the device; this keeps the app's own files there too.
  *
  * - Pages and other files: the network first, so a phone online always gets the newest build (PW-3);
- *   the last copy from the cache when the network is gone (PW-2).
+ *   the last copy from the cache when the network is gone (PW-2), or when a page waits on a weak
+ *   signal for more than 3.5 s and a copy of it is kept (N3).
  * - /_expo/static/: file names carry a content hash and never change, so the cache first.
  * - Only same-origin GETs, never Firebase's reserved /__/ paths; everything else goes to the network.
  * - The home is /v2/ with the slash: Firebase Hosting redirects /v2 there, and a redirected response
@@ -15,6 +16,8 @@ const CACHE = 'mon-farm-v1';
 const HOME = '/v2/';
 const SHELL = ['/', HOME];
 const STATIC = '/_expo/static/';
+/** How long a page may wait on the network before its kept copy opens instead (N3). */
+const SLOW_MS = 3500;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(Promise.all(SHELL.map((path) => fetchAndKeep(path, true))).then(() => self.skipWaiting()));
@@ -56,13 +59,39 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(caches.match(req).then((hit) => hit || fetchAndKeep(req)));
     return;
   }
+  const offline = () =>
+    caches
+      .match(req)
+      .then((hit) => hit || (req.mode === 'navigate' ? caches.match(HOME).then((home) => home || caches.match('/')) : undefined))
+      .then((r) => r || Response.error());
+  if (req.mode !== 'navigate') {
+    event.respondWith(fetchAndKeep(req).catch(offline));
+    return;
+  }
+  // A weak signal can hang a page for a long time: after SLOW_MS the kept copy of this very page opens
+  // instead (review of PR 195 N3). The network answer still lands in the cache for next time. A page
+  // never kept has nothing better to show, so it keeps waiting.
   event.respondWith(
-    fetchAndKeep(req).catch(() =>
-      caches
-        .match(req)
-        .then((hit) => hit || (req.mode === 'navigate' ? caches.match(HOME).then((home) => home || caches.match('/')) : undefined))
-        .then((r) => r || Response.error()),
-    ),
+    new Promise((resolve) => {
+      let answered = false;
+      const answer = (r) => {
+        if (!answered && r) {
+          answered = true;
+          resolve(r);
+        }
+      };
+      const timer = setTimeout(() => caches.match(req).then(answer), SLOW_MS);
+      fetchAndKeep(req).then(
+        (r) => {
+          clearTimeout(timer);
+          answer(r);
+        },
+        () => {
+          clearTimeout(timer);
+          offline().then(answer);
+        },
+      );
+    }),
   );
 });
 
