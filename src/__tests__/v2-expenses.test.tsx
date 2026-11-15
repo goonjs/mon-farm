@@ -116,6 +116,22 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     expect(mockRouter.replace).toHaveBeenCalledWith('/v2/expenses');
   });
 
+  it('the date · stage line under เพิ่มรายละเอียด wraps, never cut with "…" (owner rule 2026-10-27)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    const line = screen.getByTestId('expense-details-line');
+    expect(line).toHaveTextContent(/เกิดจริง/);
+    expect(line.props.numberOfLines).toBeUndefined();
+  });
+
+  it('the date · stage line has no "แตะเพื่อเปลี่ยน": the row already looks tappable (owner 2026-11-14)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    const line = screen.getByTestId('expense-details-line');
+    expect(line).toHaveTextContent(/^\d{1,2} \S+ \d{4} · เกิดจริง$/);
+    expect(line).not.toHaveTextContent(/แตะเพื่อเปลี่ยน|—/);
+  });
+
   it('refuses committed without an amount; planned may be "unknown"', async () => {
     wrap(<ExpenseScreen />);
     await flush();
@@ -238,6 +254,26 @@ describe('repayment (E11-S03)', () => {
   beforeAll(async () => {
     await seedExpense('rp-a', { amountSatang: 80000, date: '2026-09-15', payer: SOMWANG });
     await seedExpense('rp-b', { amountSatang: 40000, date: '2026-09-22', payer: SOMWANG });
+  });
+
+  it('who repays whom: two full-width picker rows with their labels shown, ›, and names that wrap (E01-S21 PK-1)', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    for (const [id, label] of [['repay-from', 'ผู้คืน'], ['repay-to', 'ผู้รับ']] as const) {
+      const row = screen.getByTestId(id);
+      expect(within(row).getByText(label)).toBeTruthy();
+      expect(within(row).getByTestId(`${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
+      expect(within(row).getByTestId(`${id}-name`).props.numberOfLines).toBeUndefined();
+    }
+  });
+
+  it('who repays whom has no "แตะเพื่อเปลี่ยน" hint: the two boxes already look tappable (owner 2026-11-14)', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    expect(screen.getByTestId('repay-from')).toBeTruthy();
+    expect(screen.queryByText(/แตะเพื่อเปลี่ยน/)).toBeNull();
   });
 
   it('refuses more than is owed', async () => {

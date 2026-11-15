@@ -331,6 +331,10 @@ describe('order capture screen (E11-S11)', () => {
     press('ordc-stage-actual');
     expect(screen.getByTestId('ordc-stage-actual').props.accessibilityState.checked).toBe(true);
     expect(text('ordc-payer-title')).toContain('เงินสวน');
+    // E01-S21 PK-2: the shop and date cards show › too.
+    for (const id of ['ordc-shop', 'ordc-date']) expect(within(screen.getByTestId(id)).getByTestId(`${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
+    // Owner 2026-11-14: the row's › already says it can be tapped; no "แตะเพื่อเปลี่ยน" hint.
+    expect(screen.getByTestId('ordc-payer')).not.toHaveTextContent(/แตะเพื่อเปลี่ยน/);
     press('ordc-payer');
     expect(screen.getByTestId('ordc-payer-sheet')).toBeTruthy();
     press('ordc-payer-done');

@@ -271,12 +271,15 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${value}`}
       onPress={onPress}
-      style={[cardStyle(t), { flex: 1, minHeight: t.target.comfortable, padding: t.space.md, flexDirection: 'row', alignItems: 'center', gap: t.space.sm }]}
+      style={[cardStyle(t), { flexGrow: 1, flexBasis: 150 * Math.max(1, t.font.size.body / 16), minHeight: t.target.comfortable, padding: t.space.md, flexDirection: 'row', alignItems: 'center', gap: t.space.sm }]}
     >
       <View aria-hidden>{icon}</View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <AppText variant="bodySm">{label}</AppText>
         <AppText style={{ fontWeight: t.font.weight.bold }}>{value}</AppText>
+      </View>
+      <View testID={`${testID}-chevron`} aria-hidden>
+        <ChevronRight color={t.color.inkFaint} />
       </View>
     </Pressable>
   );
@@ -315,7 +318,8 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
 
   const body = (
     <>
-      <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+      {/* Side by side when there is room; each on its own line when a card would be too narrow for its › (E01-S21). */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
         {fieldCard('ordc-shop', <FarmMateArt id="materials.orderMaterials" size={ROW_ART} />, msg('ordc.shop'), shop.trim() || msg('ordc.shopNone'), () => setSheet('shop'))}
         {fieldCard('ordc-date', <FarmMateArt id="farmwork.calendar" size={ROW_ART} />, msg('ordc.date'), dateText, () => setSheet('date'))}
       </View>
@@ -378,7 +382,6 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
             <FarmMateArt id="finance.expense" size={ROW_ART} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <AppText testID="ordc-payer-title" style={{ fontWeight: t.font.weight.bold }}>{payerTitle}</AppText>
-              <AppText variant="bodySm">{msg('ordc.payerHint')}</AppText>
             </View>
             <ChevronRight color={t.color.inkFaint} />
           </Pressable>

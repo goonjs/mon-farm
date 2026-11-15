@@ -86,6 +86,8 @@ export const th = {
   'fz.notFound': 'ไม่พบการใส่ปุ๋ยนี้',
   'fz.fromOrder': 'ใส่ปุ๋ยจากใบนี้',
   'fz.debt.title': 'ใส่ปุ๋ย {date}',
+  'fz.restore': 'กู้คืน',
+  'fz.deletedNote': 'การใส่ปุ๋ยครั้งนี้ลบแล้ว ไม่นับสต็อกและหนี้ กู้คืนได้',
   'care.title': 'การดูแลสวน',
   'stock.title': 'ปุ๋ยคงเหลือ',
   'stock.left': 'คงเหลือ',
@@ -99,6 +101,7 @@ export const th = {
   'fz.debt.paidOff': 'หักหมดแล้ว',
   'fz.debt.left': 'เหลือ',
   'fz.debt.edited': 'แก้การใส่ปุ๋ยแล้ว ยอดคิดใหม่',
+  'fz.debt.repriced': 'ราคาใบซื้อเปลี่ยน ยอดคิดใหม่',
 };
 
 export const en: Partial<Record<keyof typeof th, string>> = {
