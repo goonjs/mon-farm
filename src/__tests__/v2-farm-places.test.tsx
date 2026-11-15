@@ -350,7 +350,12 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     wrap(<PointScreen />);
     await flush();
     fireEvent.press(screen.getByTestId('plan-change'));
+    // Review of PR 194 N1: a required start that is empty does not offer "no start date" as if it were a choice.
+    expect(screen.getByTestId('plan-from-value')).not.toHaveTextContent(/ไม่ระบุวันเริ่ม/);
     fireEvent.press(screen.getByTestId('plan-leave'));
+    // Review of PR 194 N2: no last day yet → "เลือกวันที่", not a typing format.
+    await press('plan-save');
+    expect(within(screen.getByTestId('plan-to-error')).getByText('เลือกวันที่')).toBeTruthy();
     pickDate('plan-to', dayBefore(dayBefore(tenAgo)));
     await press('plan-save');
     expect(within(screen.getByTestId('plan-to-error')).getByText('ก่อนวันที่คนกรีดตอนนี้เริ่ม')).toBeTruthy();

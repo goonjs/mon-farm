@@ -156,6 +156,12 @@ describe('DatePickerSheet', () => {
     expect(onChange).toHaveBeenCalledWith('2026-10-27');
   });
 
+  it('with no date yet, the calendar starts inside min and max, so ตกลง cannot commit a day out of range (review of PR 194 N4)', () => {
+    const early = setup({ value: '', min: '2026-11-03' });
+    fireEvent.press(screen.getByTestId(`${ID}-done`));
+    expect(early.onChange).toHaveBeenCalledWith('2026-11-03');
+  });
+
   it('an optional date offers "no date", which commits an empty value and closes (E01-S22 DP-2)', () => {
     const { onChange, onClose } = setup({ emptyLabel: 'ไม่ระบุวันเริ่ม' });
     fireEvent.press(screen.getByTestId(`${ID}-empty`));
