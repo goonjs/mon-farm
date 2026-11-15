@@ -272,7 +272,11 @@ export function V2Home() {
             <Mod slug="expenses" tone="cream" icon={() => <FarmMateArt id="sale.receipt" size={MOD_ART} />} label={msg('v2.expenses')} />
             <Mod slug="order" to={ORDER_NEW as Href} tone="accept" icon={() => <FarmMateArt id="materials.orderMaterials" size={MOD_ART} />} label={msg('ords.homeBuy')} />
           </View>
-          <Mod slug="stock" tone="accept" icon={() => <FarmMateArt id="materials.stock" size={MOD_ART} />} label={msg('v2.stock')} />
+          <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+            <Mod slug="stock" tone="accept" icon={() => <FarmMateArt id="materials.stock" size={MOD_ART} />} label={msg('v2.stock')} />
+            {/* E16-S01 GC-1: what was done in the garden, fertilizing first; beside the stock it draws from. */}
+            <Mod slug="care" to={'/v2/care' as Href} tone="accept" icon={() => <FarmMateArt id="farmwork.maintenance" size={MOD_ART} />} label={msg('care.title')} />
+          </View>
           <Mod
             slug="workers"
             to={'/v2/people?filter=tapper' as Href}

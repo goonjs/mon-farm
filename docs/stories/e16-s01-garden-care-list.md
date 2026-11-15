@@ -1,6 +1,6 @@
 # Story E16-S01: หน้าการดูแลสวน
 
-Status: Ready (เจ้าของตกลง AC 2026-11-13 ในแชตกับลีด — ตอบคำถาม "…วันนี้จะทำอันไหน" ด้วยตัวเลือก "ตกลง AC E16 ตามที่เสนอ (แนะนำ)" ซึ่งระบุ "ตกลงทั้ง E16 และ E11-S17 · FL-4 ใช้ข้อความใหม่ · วันที่ ก (ไม่ถามวันที่ตอนกด "ได้ของแล้ว") จากนั้นผมจะเปลี่ยนสตอรี่เป็น Ready และเปิดทีม dev"; หน้าสรุป AC https://claude.ai/artifact/WsRv4aEziv4g5ygMT4HqyD)
+Status: In Progress (เจ้าของตกลง AC 2026-11-13 ในแชตกับลีด — ตอบคำถาม "…วันนี้จะทำอันไหน" ด้วยตัวเลือก "ตกลง AC E16 ตามที่เสนอ (แนะนำ)" ซึ่งระบุ "ตกลงทั้ง E16 และ E11-S17 · FL-4 ใช้ข้อความใหม่ · วันที่ ก (ไม่ถามวันที่ตอนกด "ได้ของแล้ว") จากนั้นผมจะเปลี่ยนสตอรี่เป็น Ready และเปิดทีม dev"; หน้าสรุป AC https://claude.ai/artifact/WsRv4aEziv4g5ygMT4HqyD)
 
 ## Context
 
@@ -31,8 +31,8 @@ Status: Ready (เจ้าของตกลง AC 2026-11-13 ในแชต�
 
 ## Verification
 
-- [ ] Sandbox run performed:
-- [ ] Screenshots:
+- [x] Sandbox run performed: build เว็บจริง + Playwright ออฟไลน์ `e2e/v2-fertilizing.spec.ts` (เปิดจากหน้าแรก → รายการ → เปิดการใส่ปุ๋ย) 2026-11-13
+- [x] Screenshots: `docs/ux/screenshots/v2/care/fertilizing/m-care-list.png`, `l-care-list.png` (ตัวอักษรปกติและใหญ่สุด)
 
 ## Code review
 
@@ -41,3 +41,6 @@ Status: Ready (เจ้าของตกลง AC 2026-11-13 ในแชต�
 - Resolution:
 
 ## QA notes
+
+- GC-1 ไทล์ "การดูแลสวน" อยู่ใน "ไปที่" คู่กับสต็อก (ปุ๋ยเข้า-ออก) · overflow check หน้าแรกและรายการไม่มีอะไรถูกตัด M และ L
+- ธงใส่เกิน (FL-3) บนรายการนี้อยู่ใน E16-S04
