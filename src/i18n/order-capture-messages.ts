@@ -29,7 +29,6 @@ export const th = {
   'ordc.payerFarm': 'เงินสวนจ่ายก่อน',
   'ordc.payerName': '{name}จ่ายก่อน',
   'ordc.payerNone': 'ยังไม่บันทึกคนจ่าย',
-  'ordc.payerHint': 'แตะเพื่อเปลี่ยนคนจ่าย',
   // total
   'ordc.total': 'ยอดรวมทั้งใบ',
   'ordc.billLink': '+ ร้านลดให้ทั้งใบ',
@@ -163,7 +162,6 @@ export const en: Record<string, string> = {
   'ordc.payerFarm': 'Farm funds pay first',
   'ordc.payerName': '{name} pays first',
   'ordc.payerNone': 'Payer not recorded',
-  'ordc.payerHint': 'Tap to change who paid',
   'ordc.total': 'Order total',
   'ordc.billLink': '+ Shop discount on the whole order',
   'ordc.billShown': 'Shop discount −{amount}',

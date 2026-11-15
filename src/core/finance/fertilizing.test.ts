@@ -326,10 +326,10 @@ describe('fertilizingDebts — one lump per worker per fertilizing (SP-8, SP-10)
     expect(fertilizingDebts(project(events))).toEqual([]);
   });
 
-  it('a lump once owed and no longer (deleted, or switched to paid) stays as a voided row for the history', () => {
+  it('a lump once owed and no longer (deleted, or switched to paid) stays as a voided row, at what it owed (review of PR 188 S3)', () => {
     const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])] });
     const events = [item('a', { sacks: 10, netSatang: 300_000 }), c, ev('fz-1', { t: 'fertilizing_changed', patch: { deleted: true } }, { base: c.id })];
-    expect(fertilizingDebts(project(events)).map((d) => [d.amountSatang, d.deleted])).toEqual([[0, true]]);
+    expect(fertilizingDebts(project(events)).map((d) => [d.amountSatang, d.deleted])).toEqual([[60_000, true]]);
   });
 
   it('follows a price edit at the source (SP-10)', () => {
@@ -338,6 +338,43 @@ describe('fertilizingDebts — one lump per worker per fertilizing (SP-8, SP-10)
     expect(fertilizingDebts(project(events))[0].amountSatang).toBe(150_000);
     const edited = [...events, ev('a', { t: 'expense_changed', patch: { amountSatang: 200_000 } }, { base: a.id })];
     expect(fertilizingDebts(project(edited))[0].amountSatang).toBe(100_000);
+  });
+
+  it('a voided lump keeps the amount it last owed, so the history says what was voided (review of PR 188 S3)', () => {
+    const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])], pct: { [DAENG.id]: 50 } });
+    const events = [item('a', { sacks: 10, netSatang: 300_000 }), c, ev('fz-1', { t: 'fertilizing_changed', patch: { deleted: true } }, { base: c.id })];
+    expect(fertilizingDebts(project(events)).map((d) => [d.amountSatang, d.deleted])).toEqual([[60_000, true]]);
+  });
+
+  it('a lump voided by "จ่ายสดแล้ว" or by taking the tapper off keeps what it last owed (review of PR 188 N7)', () => {
+    const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }, { worker: DAM, sacks: 2, auto: false }])], pct: { [DAENG.id]: 50, [DAM.id]: 50 } });
+    const base = [item('a', { sacks: 10, netSatang: 300_000 }), c];
+    const paid = ev('fz-1', { t: 'fertilizing_changed', patch: { settle: { [DAENG.id]: 'paid' } } }, { base: c.id });
+    expect(fertilizingDebts(project([...base, paid])).find((d) => d.worker.id === DAENG.id)!).toMatchObject({ amountSatang: 60_000, deleted: true });
+    const off = ev('fz-1', { t: 'fertilizing_changed', patch: { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])] } }, { base: c.id });
+    expect(fertilizingDebts(project([...base, off])).find((d) => d.worker.id === DAM.id)!).toMatchObject({ amountSatang: 30_000, deleted: true });
+  });
+
+  it('"edited" only when what the debt is made of changed — not for zones, reasons or a delete (review of PR 188 S4)', () => {
+    const c = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 4, auto: false }])], pct: { [DAENG.id]: 50 } });
+    const base = [item('a', { sacks: 10, netSatang: 300_000 }), c];
+    const zones = ev('fz-1', { t: 'fertilizing_changed', patch: { zones: [{ zoneId: 'z', zoneName: 'แปลง' }], reasons: ['text:x'] } }, { base: c.id });
+    expect(fertilizingDebts(project([...base, zones]))[0].edited).toBe(false);
+    const del = ev('fz-1', { t: 'fertilizing_changed', patch: { deleted: true } }, { base: c.id });
+    expect(fertilizingDebts(project([...base, del]))[0].edited).toBe(false);
+    const pct = ev('fz-1', { t: 'fertilizing_changed', patch: { pct: { [DAENG.id]: 40 } } }, { base: c.id });
+    expect(fertilizingDebts(project([...base, pct]))[0].edited).toBe(true);
+  });
+
+  it('says when a source order\'s price changed after the fertilizing, which moved the lump (SP-10, review of PR 188 S4)', () => {
+    const a = item('a', { sacks: 10, netSatang: 300_000 });
+    const rec = fz('fz-1', { lines: [line(['a'], 10, [{ worker: DAENG, sacks: 10, auto: false }])], pct: { [DAENG.id]: 50 } });
+    expect(fertilizingDebts(project([a, rec]))[0].repriced).toBe(false);
+    const price = ev('a', { t: 'expense_changed', patch: { amountSatang: 200_000 } }, { base: a.id });
+    const d = fertilizingDebts(project([a, rec, price]))[0];
+    expect([d.repriced, d.amountSatang]).toEqual([true, 100_000]);
+    // A price edited before the fertilizing was recorded is just the price it was bought at.
+    expect(fertilizingDebts(project([a, price, rec]))[0].repriced).toBe(false);
   });
 
   it('marks a lump whose fertilizing was edited after it was written (SP-10)', () => {
