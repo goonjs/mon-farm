@@ -22,13 +22,17 @@ function res(body: string, redirected = false): Response {
   return r;
 }
 
-function load(net: (url: string) => Promise<Response>) {
+function load(net: (url: string) => Promise<Response>, opts: { putFails?: boolean } = {}) {
   const handlers: Record<string, (e: unknown) => void> = {};
   const store = new Map<string, Response>();
   const key = (r: string | Req) => (typeof r === 'string' ? abs(r) : r.url);
   const cache = {
     match: async (r: string | Req) => store.get(key(r))?.clone(),
-    put: async (r: string | Req, v: Response) => void store.set(key(r), v),
+    put: async (r: string | Req, v: Response) => {
+      // A phone with full storage refuses the write (QuotaExceededError).
+      if (opts.putFails) throw new DOMException('quota', 'QuotaExceededError');
+      store.set(key(r), v);
+    },
     keys: async () => [...store.keys()].map((url) => ({ url })),
     delete: async (r: string | Req) => store.delete(key(r)),
   };
@@ -78,12 +82,10 @@ describe('service worker (E01-S23)', () => {
     expect(await (await answer!).text()).toBe(`page ${abs('/v2/')}`);
   });
 
-  it('keeps what the page hands over, drops bundles of older builds, and survives a bad URL (N1, N4)', async () => {
+  it('keeps what the page hands over and survives a bad URL (N4)', async () => {
     const { store, run } = load(async (u) => res(`file ${u}`));
-    store.set(abs('/_expo/static/js/web/old-111.js'), res('old'));
     await run('message', { data: { keep: [abs('/_expo/static/js/web/new-222.js'), 'not a url', 'https://elsewhere.test/x.js'] } });
     expect(store.has(abs('/_expo/static/js/web/new-222.js'))).toBe(true);
-    expect(store.has(abs('/_expo/static/js/web/old-111.js'))).toBe(false);
     expect(store.has('https://elsewhere.test/x.js')).toBe(false);
   });
 
@@ -147,13 +149,22 @@ describe('service worker (E01-S23)', () => {
     expect(store.has(abs('/_expo/static/js/web/entry-B.js'))).toBe(true);
   });
 
-  it('a bundle no kept page names any more is dropped (N1 still holds)', async () => {
+  it('never deletes a build file: some kept page may still need it (lead: no pruning, KISS · review of PR 195 F1)', async () => {
     const { store, run } = load(async (u) => res(u.includes('/_expo/static/') ? 'bundle' : '<script src="/_expo/static/js/web/entry-B.js"></script>'));
     await run('install', {});
     store.set(abs('/_expo/static/js/web/entry-old.js'), res('old'));
     await run('message', { data: { keep: [abs('/_expo/static/js/web/entry-B.js')] } });
-    expect(store.has(abs('/_expo/static/js/web/entry-old.js'))).toBe(false);
+    expect(store.has(abs('/_expo/static/js/web/entry-old.js'))).toBe(true);
     expect(store.has(abs('/_expo/static/js/web/entry-B.js'))).toBe(true);
+  });
+
+  it('a full phone that cannot store the copy still gets the page from the network (review of PR 195 F2)', async () => {
+    const { run } = load(async (u) => res(`page ${u}`), { putFails: true });
+    await run('install', {});
+    const { answer } = await run('fetch', { request: req('/v2/x', 'navigate') });
+    const r = await answer!;
+    expect(r.status).toBe(200);
+    expect(await r.text()).toBe(`page ${abs('/v2/x')}`);
   });
 
   it('a navigation keeps the worker alive until its network answer is stored (review of PR 195 N3-a)', async () => {
