@@ -34,3 +34,8 @@ it('ToggleChip is at least 64 wide for a one-letter role', () => {
   expect(box('t').minWidth).toBe(CHIP_MIN_WIDTH);
   expect(box('t').minHeight).toBeGreaterThanOrEqual(min);
 });
+
+it('ChoiceChip never runs past its row: a 40-letter name wraps inside the chip (review of PR 194, lender at 320/360 L)', () => {
+  wrap(<ChoiceChip testID="c" label="สมหวังผู้ช่วยกรีดยางแปลงหลังบ้านริมคลองใหญ่" onPress={() => undefined} />);
+  expect(StyleSheet.flatten(screen.getByTestId('c').props.style)).toMatchObject({ maxWidth: '100%' });
+});
