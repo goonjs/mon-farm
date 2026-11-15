@@ -75,7 +75,9 @@ function Body({ onClose, value, onChange, max, min, emptyLabel, testID: tid }: O
   const t = useTheme();
   const { t: msg, era } = useI18n();
   const today = todayIso();
-  const start = isIsoDate(value) ? value : today;
+  // No date yet: start on today, moved inside min/max so ตกลง cannot commit a day out of range (review of PR 194 N4).
+  const clamp = (iso: string) => (min !== undefined && iso < min ? min : max !== undefined && iso > max ? max : iso);
+  const start = isIsoDate(value) ? value : clamp(today);
   const [draft, setDraft] = useState(start);
   const [view, setView] = useState(() => {
     const [y, m] = start.split('-').map(Number);

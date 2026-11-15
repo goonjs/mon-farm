@@ -354,7 +354,7 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
   const [sheet, setSheet] = useState<'none' | 'area' | 'delete'>('none');
   /** The new area on the app pad, inside this same sheet (NP-12: no sheet on a sheet). */
   const [areaEntry, setAreaEntry] = useState<EntryState>(() => startEntry(''));
-  /** While the date is being typed the pad is off: its web key listener would take the date's digits too. */
+  /** The effective day, kept as "d/m/yyyy" (พ.ศ.) and picked in a DateField (E01-S22). */
   const [areaDate, setAreaDate] = useState(() => thaiDayInput(todayIso(now)));
   const [tried, setTried] = useState(false);
   const write = useWrite();

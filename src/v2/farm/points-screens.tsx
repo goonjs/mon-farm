@@ -518,7 +518,7 @@ function PlanForm({ state, pointId, pointName, replacing, onClose, onSaved }: { 
               required={!blankOk}
               value={fromDay ?? ''}
               onChange={(iso) => setFrom(iso ? thaiDayInput(iso) : '')}
-              emptyText={msg('assign.noStart')}
+              emptyText={blankOk ? msg('assign.noStart') : undefined}
               emptyLabel={blankOk ? msg('assign.noStart') : undefined}
               error={tried && fromBad ? msg(from.trim() ? 'assign.badDate' : 'assign.needFrom') : undefined}
             />
