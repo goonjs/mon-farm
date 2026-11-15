@@ -175,7 +175,7 @@ for (const size of ['m', 'l'] as const) {
     await page.goto('/v2');
     await context.setOffline(true);
     expect(await textFit(page)).toEqual([]);
-    await page.getByTestId('mod-care').click();
+    await page.getByTestId('home-care').click();
     await expect(page.locator('[data-testid^="care-row-fz-"]:not([data-testid$="-badge"])')).toHaveCount(2);
     await expect(page.getByTestId('care-row-fz-e2e-2-badge')).toHaveText('ยังไม่แบ่ง');
     // Each item has its unit; the "·" stays on the line of the item before it (PR 189 review N2).

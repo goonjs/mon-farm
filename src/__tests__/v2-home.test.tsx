@@ -85,6 +85,17 @@ async function seedOwed(name: string, satang: number) {
   };
   await mockFinance.append(e);
 }
+/** A fertilizing nobody has been given a share of yet (E16-S03: "ยังไม่แบ่ง"); `deleted` adds the delete. */
+async function seedUnsplitFertilizing(id: string, deleted = false) {
+  const base = { groupId: 'group-1', deviceSeq: 1, ts: 1, actor: { userId: 'u', deviceId: 'dev-other' }, source: 'app' as const, baseEventId: null };
+  await mockFinance.append({
+    ...base,
+    id: `${id}-c`,
+    targetId: id,
+    payload: { t: 'fertilizing_recorded', fields: { date: '2026-11-01', lines: [{ sources: ['ord-x'], sacks: 10, takes: [], rest: null }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } },
+  });
+  if (deleted) await mockFinance.append({ ...base, id: `${id}-d`, targetId: id, baseEventId: `${id}-c`, payload: { t: 'fertilizing_changed', patch: { deleted: true } } });
+}
 
 beforeEach(() => mockRouter.push.mockClear());
 
@@ -104,7 +115,7 @@ describe('V2Home — empty farm', () => {
     expect(page().props.scrollEnabled).toBe(true);
   });
 
-  it('reads top to bottom as drawn: header with date, cover, three actions, ควรรู้, ไปที่', async () => {
+  it('reads top to bottom as drawn: header with date, cover, four actions 2×2, ควรรู้, ไปที่ (E16-S05 HM-1)', async () => {
     wrap(<V2Home />);
     await flush();
     expect(screen.getByTestId('screen-title').props.children).toBe('หน้าแรก');
@@ -112,13 +123,19 @@ describe('V2Home — empty farm', () => {
     expect(screen.getByLabelText('ภาพปก: สวนยางริมลำธาร')).toBeTruthy();
 
     const home = screen.getByTestId('v2-home');
-    const order = ['home-cover', 'home-prepare', 'home-sale-start', 'home-record-expense', 'home-to-know', 'home-sales', 'home-go-to'];
+    const order = ['home-cover', 'home-prepare', 'home-sale-start', 'home-record-expense', 'home-care', 'home-to-know', 'home-sales', 'home-go-to'];
     const all = within(home).getAllByTestId(new RegExp(`^(${order.join('|')})$`));
     expect(all.map((n) => n.props.testID)).toEqual(order);
 
     expect(within(screen.getByTestId('home-prepare')).getByText('เตรียมขาย')).toBeTruthy();
     expect(within(screen.getByTestId('home-sale-start')).getByText('เริ่มการขาย')).toBeTruthy();
     expect(within(screen.getByTestId('home-record-expense')).getByText('บันทึกค่าใช้จ่าย')).toBeTruthy();
+    expect(within(screen.getByTestId('home-care')).getByText('การดูแลสวน')).toBeTruthy();
+    // Two rows of two: เตรียมขาย · เริ่มการขาย, then บันทึกค่าใช้จ่าย · การดูแลสวน.
+    const row = (n: number) => within(screen.getByTestId(`home-actions-${n}`)).getAllByTestId(/^home-(prepare|sale-start|record-expense|care)$/).map((x) => x.props.testID);
+    expect(row(1)).toEqual(['home-prepare', 'home-sale-start']);
+    expect(row(2)).toEqual(['home-record-expense', 'home-care']);
+    expect(screen.queryByTestId('home-care-badge')).toBeNull();
     expect(screen.getByText('ควรรู้ / ควรจัดการ')).toBeTruthy();
     expect(screen.getByText('สำคัญก่อน')).toBeTruthy();
     expect(screen.getByText('ไปที่')).toBeTruthy();
@@ -152,20 +169,26 @@ describe('V2Home — empty farm', () => {
     expect(screen.queryByTestId('home-open-sale')).toBeNull();
     expect(screen.queryByTestId('home-latest-sale')).toBeNull();
     expect(screen.queryByTestId('home-owed')).toBeNull();
+    expect(screen.queryByTestId('home-payables')).toBeNull();
   });
 
-  it('the module grid follows v1.1.0 screen 25, with zero totals', async () => {
+  it('the module grid is half tiles only, two to a row, in the order of importance (E16-S05 HM-4)', async () => {
     wrap(<V2Home />);
     await flush();
     const grid = screen.getByTestId('home-go-to');
     const ids = within(grid).getAllByTestId(/^mod-/).map((n) => n.props.testID);
-    expect(ids).toEqual(['mod-reports', 'mod-weather', 'mod-payables', 'mod-expenses', 'mod-order', 'mod-stock', 'mod-care', 'mod-workers']);
-    // E16-S01 GC-1: garden care beside the stock, the two sides of the fertilizer.
-    expect(within(screen.getByTestId('mod-care')).getByText('การดูแลสวน')).toBeTruthy();
+    expect(ids).toEqual(['mod-stock', 'mod-expenses', 'mod-order', 'mod-payables', 'mod-workers', 'mod-reports', 'mod-weather']);
+    const rows = within(grid).getAllByTestId(/^home-go-to-row-\d$/);
+    expect(rows.map((r) => within(r).getAllByTestId(/^mod-/).length)).toEqual([2, 2, 2, 1]);
+    // The odd one out keeps half the width: an empty half beside it.
+    expect(within(rows[3]).getByTestId('home-go-to-spacer')).toBeTruthy();
+    // Garden care moved up to the big buttons (HM-1): not twice.
+    expect(screen.queryByTestId('mod-care')).toBeNull();
+    // The amount to pay moved to ควรรู้ (HM-3): the tile is a way in only.
+    expect(within(screen.getByTestId('mod-payables')).queryByText('0.00')).toBeNull();
     expect(within(screen.getByTestId('mod-reports')).getByText('รายงานการขายย้อนหลัง')).toBeTruthy();
     expect(within(screen.getByTestId('mod-weather')).getByText('เปิดภายนอก')).toBeTruthy();
     expect(within(screen.getByTestId('mod-weather')).getByTestId('external-icon', { includeHiddenElements: true })).toBeTruthy();
-    expect(within(screen.getByTestId('mod-payables')).getByText('0.00')).toBeTruthy();
     expect(within(screen.getByTestId('mod-expenses')).getByText('ค่าใช้จ่ายทั้งหมด')).toBeTruthy();
     expect(within(screen.getByTestId('mod-stock')).getByText('รายการ stock')).toBeTruthy();
     expect(within(screen.getByTestId('mod-workers')).getByText('0')).toBeTruthy();
@@ -179,6 +202,7 @@ describe('V2Home — empty farm', () => {
       'home-prepare': '/v2/prepare',
       'home-sale-start': '/v2/sale/start',
       'home-record-expense': '/v2/expense/new',
+      'home-care': '/v2/care',
       'home-sales': '/v2/sales',
       'mod-reports': '/v2/reports',
       'mod-weather': '/v2/weather',
@@ -186,7 +210,6 @@ describe('V2Home — empty farm', () => {
       'mod-expenses': '/v2/expenses',
       'mod-order': '/v2/order',
       'mod-stock': '/v2/stock',
-      'mod-care': '/v2/care',
       'mod-workers': '/v2/people?filter=tapper',
     };
     for (const [id, href] of Object.entries(routes)) {
@@ -198,19 +221,19 @@ describe('V2Home — empty farm', () => {
 });
 
 describe('V2Home — FarmMate originals (E03-S11 FM-6)', () => {
-  it('the three actions and the module grid draw the originals; weather keeps its line icon', async () => {
+  it('the four actions and the module grid draw the originals; weather keeps its line icon', async () => {
     wrap(<V2Home />);
     await flush();
     expect(art('home-prepare')).toEqual(['farmwork.today']);
     expect(art('home-sale-start')).toEqual(['sale.sale']);
     expect(art('home-record-expense')).toEqual(['sale.receipt']);
+    expect(art('home-care')).toEqual(['farmwork.maintenance']);
     expect(art('mod-reports')).toEqual(['sale.salesReport']);
     expect(art('mod-weather')).toEqual([]);
     expect(art('mod-payables')).toEqual(['finance.expense']);
     expect(art('mod-expenses')).toEqual(['sale.receipt']);
     expect(art('mod-order')).toEqual(['materials.orderMaterials']);
     expect(art('mod-stock')).toEqual(['materials.stock']);
-    expect(art('mod-care')).toEqual(['farmwork.maintenance']);
     expect(art('mod-workers')).toEqual(['people.workerInfo']);
   });
 
@@ -276,6 +299,19 @@ describe('V2Home — ☰ menu (v1.1.0 screen 1)', () => {
   });
 });
 
+describe('V2Home — garden care on the big buttons (E16-S05 HM-2)', () => {
+  it('the garden care button says how many fertilizings are not split yet; deleted ones do not count', async () => {
+    await seedUnsplitFertilizing('fz-a');
+    await seedUnsplitFertilizing('fz-b');
+    await seedUnsplitFertilizing('fz-gone', true);
+    wrap(<V2Home />);
+    await flush();
+    expect(screen.getByTestId('home-care-badge')).toHaveTextContent('ยังไม่แบ่ง 2 ครั้ง');
+    fireEvent.press(screen.getByTestId('home-care'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/care');
+  });
+});
+
 describe('V2Home — live rows from the local log', () => {
   it('shows the open sale, the latest finished sale, money owed back and the totals', async () => {
     await seedSale('s-old', 2, (b) => b.sys({ t: 'sale_closed' }));
@@ -307,7 +343,10 @@ describe('V2Home — live rows from the local log', () => {
     expect(within(owed).getByText('อาจารย์สมหวัง')).toBeTruthy();
     expect(screen.queryByText('ยังไม่มีเรื่องที่ต้องรู้หรือจัดการ')).toBeNull();
 
-    expect(within(screen.getByTestId('mod-payables')).getByText('1,200.00')).toBeTruthy();
+    // E16-S05 HM-3: what is still to pay is a ควรรู้ row, short money, and opens the list.
+    expect(screen.getByTestId('home-payables')).toHaveTextContent(/รายการที่ต้องจ่าย/);
+    expect(screen.getByTestId('home-payables')).toHaveTextContent(/฿\s*1,200/);
+    expect(within(screen.getByTestId('mod-payables')).queryByText('1,200.00')).toBeNull();
     expect(within(screen.getByTestId('mod-workers')).getByText('2')).toBeTruthy();
 
     // The open sale resumes at its counter, the latest one opens its payment (v2 sale flow).

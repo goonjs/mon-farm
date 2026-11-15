@@ -27,6 +27,7 @@ PRD: FERT-3, FERT-5, INV, OPS · D-89 (อีพิกใหม่ เจ้า�
 1. [`e16-s02-record-fertilizing.md`](../stories/e16-s02-record-fertilizing.md) + [`e16-s03-split-to-tappers.md`](../stories/e16-s03-split-to-tappers.md) + [`e11-s17-remove-split-from-order.md`](../stories/e11-s17-remove-split-from-order.md) — ออกพร้อมกัน
 2. [`e16-s01-garden-care-list.md`](../stories/e16-s01-garden-care-list.md)
 3. [`e16-s04-fertilizer-left.md`](../stories/e16-s04-fertilizer-left.md)
+4. [`e16-s05-home-garden-care.md`](../stories/e16-s05-home-garden-care.md) — การดูแลสวนบนหน้าแรก (เจ้าของ 2026-11-16)
 
 ต่อด้วย E11-S16 (จ่ายร้าน) และ E15-S01/S02 (เตรียมขาย)
 

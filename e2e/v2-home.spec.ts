@@ -98,7 +98,8 @@ test('/ → splash → home: as drawn, empty, then live rows from the local log,
   await expect(page.getByTestId('home-latest-sale')).toContainText('ปิดแล้ว');
   await expect(page.getByTestId('home-owed')).toContainText('1,200.00');
   await expect(page.getByTestId('home-owed')).toContainText('อาจารย์สมหวัง');
-  await expect(page.getByTestId('mod-payables')).toContainText('1,200.00');
+  // E16-S05 HM-3: what is still to pay is a ควรรู้ row now; the tile is a way in only.
+  await expect(page.getByTestId('home-payables')).toContainText('1,200');
   await expect(page.getByTestId('mod-workers')).toContainText('2');
   await shot(page, '03-home-live', true);
 
