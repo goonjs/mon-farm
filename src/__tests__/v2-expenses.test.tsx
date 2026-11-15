@@ -8,6 +8,7 @@ import { tokens } from '../../design/tokens';
 import { RepayScreen } from '../v2/money/repay-screen';
 import { projectFinance } from '../core/finance/ledger';
 import type { ExpenseFields, FinanceEvent } from '../core/finance/types';
+import { FARM_FUNDS } from '../core/finance/types';
 import { financeStore as mockFinance } from '../store/finance';
 import { todayIso } from '../core/finance/money';
 import { dayAfter } from '../core/master';
@@ -163,6 +164,26 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     await flush();
     expect(screen.getByTestId('expense-date-row-error')).toHaveTextContent('วันที่ยังไม่ถึง เลือกวันใหม่');
     expect((await state()).expenses.length).toBe(before);
+  });
+
+  it('a salary row dated ahead (next month, its date not the user\'s to pick) still saves (review of PR 194 B1)', async () => {
+    const month = todayIso().slice(0, 7);
+    const [y, m] = month.split('-').map(Number);
+    const next = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+    seq += 1;
+    await mockFinance.append({
+      id: `seed-${seq}`, groupId: 'group-1', deviceSeq: seq, ts: seq, actor: { userId: 'u', deviceId: 'dev-other' }, source: 'app', targetId: 'salary-b1', baseEventId: null,
+      payload: { t: 'salary_set', rule: { recipient: SOMWANG, payer: { id: FARM_FUNDS, name: '' }, amountSatang: 500000, startMonth: month, dueDay: 28 } },
+    });
+    mockParams.current = { id: `salary-b1:${next}` };
+    mockRouter.replace.mockClear();
+    wrap(<ExpenseScreen />);
+    await flush();
+    expect(screen.queryByTestId('expense-date')).toBeNull();
+    await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
+    await flush();
+    expect(screen.queryByTestId('expense-date-row-error')).toBeNull();
+    expect(mockRouter.replace).toHaveBeenCalled();
   });
 
   it('refuses committed without an amount; planned may be "unknown"', async () => {
