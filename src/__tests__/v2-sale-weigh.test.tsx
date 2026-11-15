@@ -133,6 +133,8 @@ describe('v2 start a sale (page 5)', () => {
     expect(screen.getByTestId('start-buyer')).toHaveTextContent(/คนรับซื้อยาง ก/);
     expect(screen.getByTestId('start-manager')).toHaveTextContent(/อ\.สมหวัง/);
     expect(screen.getByTestId('start-pair')).toHaveTextContent(/50 กก\./);
+    // E01-S21 PK-3: rows that open a sheet show › like the buyer row.
+    for (const id of ['start-pair', 'start-price-row']) expect(within(screen.getByTestId(id)).getByTestId(`${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByTestId('start-scale-decimal1').props.accessibilityState).toMatchObject({ disabled: true });
     await press('start-numbering-per-point');
     await press('start-next');

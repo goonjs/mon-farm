@@ -261,6 +261,7 @@ export function StartSaleScreen() {
           label={msg('v2s.price')}
           value={price !== null ? msg('v2s.perKg', { price: formatSatang(price) }) : <EmptyPill label={msg('numpad.later')} />}
           lines={[msg('v2s.priceLater'), msg('v2s.priceNow')]}
+          trailing={<View testID="start-price-row-chevron" aria-hidden><ChevronRight color={t.color.inkFaint} /></View>}
           onPress={() => setSheet('price')}
         />
         <Rule />
@@ -270,6 +271,7 @@ export function StartSaleScreen() {
           label={msg('start.pair')}
           value={msg('v2f.kg', { n: pair.netG / 1000 })}
           lines={[pair.isDefault ? msg('v2s.pairDefault') : msg('v2s.basketKg', { n: pair.basketG / 1000 })]}
+          trailing={<View testID="start-pair-chevron" aria-hidden><ChevronRight color={t.color.inkFaint} /></View>}
           onPress={() => setSheet('pair')}
         />
         <Rule />
