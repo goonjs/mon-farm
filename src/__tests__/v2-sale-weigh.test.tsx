@@ -133,6 +133,8 @@ describe('v2 start a sale (page 5)', () => {
     expect(screen.getByTestId('start-buyer')).toHaveTextContent(/คนรับซื้อยาง ก/);
     expect(screen.getByTestId('start-manager')).toHaveTextContent(/อ\.สมหวัง/);
     expect(screen.getByTestId('start-pair')).toHaveTextContent(/50 กก\./);
+    // Review of PR 193: no "แตะสลับ พ.ศ./ค.ศ." hint; tapping a date switches the era everywhere in the app.
+    expect(screen.getByTestId('start-date')).not.toHaveTextContent(/แตะสลับ/);
     // E01-S21 PK-3: rows that open a sheet show › like the buyer row.
     for (const id of ['start-pair', 'start-price-row']) expect(within(screen.getByTestId(id)).getByTestId(`${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByTestId('start-scale-decimal1').props.accessibilityState).toMatchObject({ disabled: true });

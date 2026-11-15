@@ -1,6 +1,7 @@
 import { expect, test, type Page } from './test';
 
 import { evidence, seedPeople } from './fixtures';
+import { textFit } from './text-fit';
 import { pickDate } from './pick-date';
 
 /**
@@ -271,3 +272,27 @@ test('a sack of 2.5 กก. can be typed with a decimal point and is kept as 2.5
   await expect(page.getByTestId('ordc-item-sheet')).toContainText('รวม 10 กก.');
   await evidence(page, `${SHOTS}/33-sack-kg-decimal-item.png`);
 });
+
+/** E01-S21 PK-5 and E01-S22 DP-6 kept as a guard (review of PR 193 N4): pickers and dates fit at 320/360, text M and L. */
+for (const width of [320, 360]) {
+  for (const size of ['m', 'l'] as const) {
+    test(`pickers and dates: nothing cut, targets ≥ 48, at ${width} px text ${size.toUpperCase()}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.addInitScript((s) => localStorage.setItem('mon-farm:text-size', s), size);
+      await seedPeople(page, [{ id: 'p-long', name: 'สมหวังผู้ช่วยกรีดยางแปลงหลังบ้านริมคลองใหญ่' }]);
+      await page.goto('/v2/expense/new');
+      await page.getByTestId('expense-details').click();
+      await page.getByTestId('expense-date').click();
+      for (const id of ['prevYear', 'prev', 'next', 'nextYear']) expect((await page.getByTestId(`expense-date-picker-${id}`).boundingBox())!.width).toBeGreaterThanOrEqual(48);
+      expect(await textFit(page)).toEqual([]);
+      await page.getByTestId('expense-date-picker-done').click();
+      expect((await page.getByTestId('expense-date').boundingBox())!.height).toBeGreaterThanOrEqual(48);
+      expect(await textFit(page)).toEqual([]);
+      await page.goto('/v2/order');
+      const [shop, date] = await Promise.all(['ordc-shop', 'ordc-date'].map((id) => page.getByTestId(id).boundingBox()));
+      expect(date!.y).toBeGreaterThan(shop!.y);
+      expect(await textFit(page)).toEqual([]);
+    });
+  }
+}
+
