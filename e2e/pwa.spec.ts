@@ -7,12 +7,12 @@ import { expect, test } from './test';
 test('the web app is installable and opens again offline (E01-S23 PW-1, PW-2)', async ({ page, context }) => {
   // The v2 home is portrait-first; this spec runs in the landscape projects, so it turns the phone itself.
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/v2');
+  await page.goto('/v2/');
   await expect(page.getByTestId('v2-home')).toBeVisible();
   const href = await page.locator('link[rel="manifest"]').getAttribute('href');
   expect(href).toBe('/manifest.webmanifest');
   const manifest = await page.evaluate(async (u) => (await fetch(u)).json(), href!);
-  expect(manifest.start_url).toBe('/v2');
+  expect(manifest.start_url).toBe('/v2/');
 
   // The worker takes the page; then the network goes and the app still opens.
   await page.evaluate(async () => {

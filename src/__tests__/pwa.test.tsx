@@ -14,7 +14,7 @@ describe('web app manifest (E01-S23 PW-1)', () => {
   const m = JSON.parse(read('public/manifest.webmanifest').toString('utf8'));
 
   it('opens the home as a standalone app, portrait', () => {
-    expect(m).toMatchObject({ name: 'mon-farm', short_name: 'mon-farm', start_url: '/v2', scope: '/', display: 'standalone', orientation: 'portrait' });
+    expect(m).toMatchObject({ name: 'mon-farm', short_name: 'mon-farm', start_url: '/v2/', scope: '/', display: 'standalone', orientation: 'portrait' });
     expect(m.background_color).toMatch(/^#[0-9a-f]{6}$/i);
     expect(m.theme_color).toMatch(/^#[0-9a-f]{6}$/i);
   });
