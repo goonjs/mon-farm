@@ -101,6 +101,9 @@ test('/ → splash → home: as drawn, empty, then live rows from the local log,
   // E16-S05 HM-3: what is still to pay is a ควรรู้ row now; the tile is a way in only.
   await expect(page.getByTestId('home-payables')).toContainText('1,200');
   await expect(page.getByTestId('mod-workers')).toContainText('2');
+  // E16-S05 HM-4: every "ไปที่" tile is half the row, the lone last one too (its padding once made it wider).
+  const width = async (id: string) => (await page.getByTestId(id).boundingBox())!.width;
+  expect(Math.abs((await width('mod-weather')) - (await width('mod-stock')))).toBeLessThan(2);
   await shot(page, '03-home-live', true);
 
   // The sale rows open the sale itself: the open one where it was weighing,
