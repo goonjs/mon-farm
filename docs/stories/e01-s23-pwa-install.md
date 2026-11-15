@@ -28,6 +28,7 @@ Status: Ready (เจ้าของ 2026-11-16 ผ่านลีด คำต�
 _เขียนเทสต์ก่อน (ล้มก่อน) แล้วค่อยแก้_
 
 - [x] UI (jest): manifest มีค่าตาม PW-1 · ไฟล์ไอคอนมีจริงและขนาดถูก
+- [x] unit (vitest `src/lib/sw.test.ts`): worker กับ cache/fetch ปลอม — เปิดที่ `/v2/` · ไม่เก็บ response ที่ถูก redirect · ออฟไลน์หน้าใหม่ได้หน้าแรก · ลบ bundle เก่า · URL เสียไม่ทำพัง · ไม่แตะ `/__/`
 - [x] e2e: หน้ามี `link[rel=manifest]` · service worker ควบคุมหน้า · ตัดเน็ตแล้วโหลดใหม่ หน้าแรกยังขึ้น
 
 ## Verification
@@ -37,9 +38,9 @@ _เขียนเทสต์ก่อน (ล้มก่อน) แล้ว
 
 ## Code review
 
-- Reviewer:
-- Findings:
-- Resolution:
+- Reviewer: session_01LA7pk9zEojEBdFmaCbh2qw (PR #195 review 5912332923 บน 4111155)
+- Findings: B1 Firebase Hosting พา `/v2` ไป `/v2/` แต่ worker เก็บ `/v2` ที่ถูก redirect ไว้ → เปิดจากไอคอนตอนออฟไลน์ไม่ขึ้น · N1 bundle เก่าสะสมในแคช · N2 ควรไม่แตะ `/__/` · N3 ไม่มีเวลารอเน็ตสูงสุด · N4 URL เสียทำให้ทั้งรายการหลุด · N5 architecture ยังไม่เขียน · N6 ช่องในสตอรี่ และคำเจ้าของที่ยกต้องเป็นของเจ้าของเอง
+- Resolution: B1 แก้ (`/v2/` ทุกที่ + ไม่เก็บ/ไม่ตอบด้วย response ที่ถูก redirect) · N1, N2, N4 แก้ · N5 เพิ่มหัวข้อใน `docs/architecture.md` · N3 ไม่ทำ (ให้เจ้าของเลือก) · N6 ช่องนี้ · คำเจ้าของของงานนี้ ลีดเป็นคนบันทึก agreement
 
 ## Dev notes
 

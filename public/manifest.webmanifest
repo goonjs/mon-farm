@@ -3,7 +3,7 @@
   "short_name": "mon-farm",
   "description": "บันทึกการขายยาง ค่าใช้จ่าย และการดูแลสวน ใช้ได้แม้ไม่มีเน็ต",
   "lang": "th",
-  "start_url": "/v2",
+  "start_url": "/v2/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

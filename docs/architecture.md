@@ -442,6 +442,15 @@ readonly readDuringRender: boolean;
 
 ผู้ใช้ถัดไป: **E05-S11 CO-23** — ค่าครั้งก่อนของทางรับเงินคืนหนี้และการปัดเศษบนหน้าปิดการขาย เก็บผ่านโมดูลนี้
 
+### เว็บ: service worker (E01-S23, PR #195)
+
+- ไฟล์ `public/sw.js` เขียนเอง ไม่มี package · ลงทะเบียนใน `src/app/+html.tsx` (เว็บเท่านั้น native ไม่ใช้) · manifest `public/manifest.webmanifest` เปิดที่ `/v2/`
+- **แตะแค่ Cache Storage** — ข้อมูล (localStorage/IndexedDB), event log และ sync ไม่เกี่ยว
+- กลยุทธ์: หน้าเว็บและไฟล์อื่นโหลดจากเน็ตก่อน ไม่ได้ค่อยใช้แคช (ออนไลน์ได้ build ล่าสุดเสมอ) · `/_expo/static/` (ชื่อมี hash) ใช้แคชก่อน · เฉพาะ GET โดเมนเดียวกัน ไม่แตะ `/__/` ของ Firebase · ไม่เก็บ response ที่ถูก redirect (Firebase Hosting พา `/v2` ไป `/v2/` และ Chrome ไม่ยอมใช้ redirect ตอบ navigation — รีวิว #195 B1)
+- ครั้งแรกที่เปิด หน้าส่งรายการไฟล์ที่โหลดแล้วให้ worker เก็บ และ worker ลบ bundle ของ build เก่าที่หน้าไม่ใช้แล้ว
+- ยังไม่ทำ: จำกัดเวลารอเน็ตตอนสัญญาณอ่อน (รีวิว #195 N3) — แลกกับ "ได้ของใหม่เสมอ" ให้เจ้าของเลือก
+- **ปลดออก:** deploy `sw.js` ที่แค่ลบ cache ของตัวเองแล้ว `self.registration.unregister()` (เบราว์เซอร์เช็ก `sw.js` ใหม่โดยไม่ผ่าน HTTP cache จึงถึงทุกเครื่องในการเปิดครั้งถัดไปที่มีเน็ต)
+
 ### ข้อมูลเก่า — ไม่ย้าย (เจ้าของ 2026-10-03)
 
 MVP เริ่มจากศูนย์ ข้อมูล v0.4 (`events (sale_id, seq)`, `farm_zones`/`farm_piles`, `people` และคีย์
