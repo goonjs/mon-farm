@@ -27,11 +27,10 @@ const fz = (id: string, f: Partial<FertilizingFields>) =>
 
 const STOCK = [item('a', 'ดีเกลือ', 60, 1_800_000), item('k', '46-0-0', 20, 1_560_000)];
 
-function setup(events: FinanceEvent[]) {
-  const write = jest.fn().mockResolvedValue({});
+function setup(events: FinanceEvent[], write = jest.fn().mockResolvedValue({})) {
   const onOpen = jest.fn();
   const onNew = jest.fn();
-  wrap(<CareListView events={events} write={write} onOpen={onOpen} onNew={onNew} onBack={jest.fn()} />);
+  wrap(<CareListView events={events} write={write} today="2026-11-15" onOpen={onOpen} onNew={onNew} onBack={jest.fn()} />);
   return { write, onOpen, onNew };
 }
 
@@ -46,12 +45,28 @@ describe('CareListView (E16-S01)', () => {
     expect(screen.getAllByTestId(/^care-row-fz-[a-z]+$/).map((r) => r.props.testID)).toEqual(['care-row-fz-new', 'care-row-fz-mid', 'care-row-fz-old']);
     const fresh = screen.getByTestId('care-row-fz-new');
     expect(fresh).toHaveTextContent(/5 พ\.ย\./);
-    expect(fresh).toHaveTextContent(/ดีเกลือ 10 · 46-0-0 5 ถุง/);
+    expect(fresh).toHaveTextContent(/ดีเกลือ 10 ถุง · 46-0-0 5 ถุง/);
     expect(within(fresh).getByTestId('care-row-fz-new-badge')).toHaveTextContent('ยังไม่แบ่ง');
     expect(within(screen.getByTestId('care-row-fz-mid')).getByTestId('care-row-fz-mid-badge')).toHaveTextContent('แบ่งไม่ครบ');
     expect(screen.queryByTestId('care-row-fz-old-badge')).toBeNull();
     expect(screen.getByTestId('care-row-fz-old')).toHaveTextContent(/แปลงหน้า/);
     expect(within(fresh).UNSAFE_queryAllByType(FarmMateArt).map((a) => a.props.id)).toEqual(['farmwork.fertilize']);
+  });
+
+  it('a row date carries the year only when it is not this year (PR 189 review N1)', () => {
+    setup([
+      ...STOCK,
+      fz('fz-now', { date: '2026-11-05', lines: [{ sources: ['a'], sacks: 10, takes: [], rest: null }] }),
+      fz('fz-last', { date: '2025-11-05', lines: [{ sources: ['a'], sacks: 10, takes: [], rest: null }] }),
+    ]);
+    expect(screen.getByTestId('care-date-fz-now')).toHaveTextContent(/^5 พ\.ย\. · ใส่ปุ๋ย$/);
+    expect(screen.getByTestId('care-date-fz-last')).toHaveTextContent(/^5 พ\.ย\. 2568 · ใส่ปุ๋ย$/);
+  });
+
+  it('each item carries its unit and a line never starts with "·" (PR 189 review N2)', () => {
+    setup([...STOCK, fz('fz-2', { lines: [{ sources: ['a'], sacks: 10, takes: [], rest: null }, { sources: ['k'], sacks: 5, takes: [], rest: null }] })]);
+    const raw = String(screen.getByTestId('care-what-fz-2').props.children);
+    expect(raw).toBe('ดีเกลือ 10 ถุง\u00a0· 46-0-0 5 ถุง');
   });
 
   it('a fertilizing that used more than was received carries the worded over-use flag (E16-S04 FL-3)', () => {
@@ -87,5 +102,16 @@ describe('CareListView (E16-S01)', () => {
     expect(screen.getByTestId('care-deleted')).toHaveTextContent(/ที่ลบแล้ว \(1\)/);
     fireEvent.press(screen.getByTestId('care-restore-fz-gone'));
     await waitFor(() => expect(write).toHaveBeenCalledWith('fz-gone', del.id, { t: 'fertilizing_changed', patch: { deleted: false } }));
+    expect(screen.queryByTestId('care-restore-error')).toBeNull();
+  });
+
+  it('a restore that fails says so on screen, and the row stays to try again (PR 189 review N3)', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const c = fz('fz-gone', { lines: [{ sources: ['a'], sacks: 10, takes: [], rest: null }] });
+    const del = ev('fz-gone', { t: 'fertilizing_changed', patch: { deleted: true } }, c.id);
+    setup([...STOCK, c, del], jest.fn().mockRejectedValue(new Error('disk full')));
+    fireEvent.press(screen.getByTestId('care-restore-fz-gone'));
+    expect(await screen.findByTestId('care-restore-error')).toHaveTextContent('กู้คืนไม่สำเร็จ ลองอีกครั้ง');
+    expect(screen.getByTestId('care-restore-fz-gone')).toBeTruthy();
   });
 });
