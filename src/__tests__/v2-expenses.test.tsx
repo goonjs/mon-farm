@@ -256,6 +256,18 @@ describe('repayment (E11-S03)', () => {
     await seedExpense('rp-b', { amountSatang: 40000, date: '2026-09-22', payer: SOMWANG });
   });
 
+  it('who repays whom: two full-width picker rows with their labels shown, ›, and names that wrap (E01-S21 PK-1)', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    for (const [id, label] of [['repay-from', 'ผู้คืน'], ['repay-to', 'ผู้รับ']] as const) {
+      const row = screen.getByTestId(id);
+      expect(within(row).getByText(label)).toBeTruthy();
+      expect(within(row).getByTestId(`${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
+      expect(within(row).getByTestId(`${id}-name`).props.numberOfLines).toBeUndefined();
+    }
+  });
+
   it('who repays whom has no "แตะเพื่อเปลี่ยน" hint: the two boxes already look tappable (owner 2026-11-14)', async () => {
     mockParams.current = { payerId: SOMWANG.id };
     wrap(<RepayScreen />);

@@ -1,5 +1,6 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
+import { StyleSheet } from 'react-native';
 
 import { dayAfter, dayBefore, thaiDayInput, todayIso } from '../core/master';
 import { FarmsScreen, PropertyScreen } from '../v2/farm/farms-screens';
@@ -249,6 +250,8 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     wrap(<PointScreen />);
     await flush();
     expect(screen.getByText('สวนจันทเขลม')).toBeTruthy();
+    // E01-S21 PK-4: a farm that cannot be changed is plain text, not an input-style box.
+    expect(StyleSheet.flatten(screen.getByTestId('point-farm').props.style)?.borderWidth ?? 0).toBe(0);
     fireEvent.changeText(screen.getByTestId('point-name'), 'จุด 1');
     await press('point-save');
     expect(within(screen.getByTestId('point-name-error')).getByText('มีจุดชื่อ "จุด 1" ในสวนนี้แล้ว')).toBeTruthy();
