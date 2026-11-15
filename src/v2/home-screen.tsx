@@ -2,9 +2,10 @@
  * The v2 home (e03-v2-splash-home): flow-v1 mockup screen 3 ("หน้าแรก วันนี้")
  * with the farm v1.1.0 screens 1 (top and the ☰ menu) and 25 (the lower
  * half) on top, v1.1.0 winning where they differ. Top to bottom: header
- * with today's date, the drawn cover, three actions (เริ่มการขาย the main
- * one), "ควรรู้ / ควรจัดการ" with only the rows that apply, the way to the
- * sale list, and the "ไปที่" module grid.
+ * with today's date, the drawn cover, four actions 2×2 (เริ่มการขาย the main
+ * one, การดูแลสวน beside บันทึกค่าใช้จ่าย, E16-S05), "ควรรู้ / ควรจัดการ" with
+ * only the rows that apply, the way to the sale list, and the "ไปที่" module
+ * grid of half tiles.
  *
  * Everything shown is read from the local log (sales, farm data, finance),
  * so it is the same offline. Modules with no screen yet open a placeholder.
@@ -22,6 +23,7 @@ import { ORDER_NEW, orderHref } from './money/order-routes';
 import { loadHomeSales } from './sale/open-sale';
 import { useRepayHome, type OwesRow } from './home-repay';
 import { groupOrders } from '../core/finance/fert-order';
+import { projectFertilizing, splitBadge } from '../core/finance/fertilizing';
 import { owedByPerson, payableSatang } from '../core/finance/ledger';
 import { formatDate, formatSatang, todayIso } from '../core/finance/money';
 import type { HomeSales } from '../core/home';
@@ -100,6 +102,11 @@ export function V2Home() {
     };
   }, [fin.state]);
   const committedNewest = orders.committed[0];
+  // E16-S05 HM-2: fertilizings not split to the tappers yet, counted like the care list's badge (GC-2).
+  const unsplit = useMemo(
+    () => (fin.events && fin.state ? projectFertilizing(fin.events, fin.state.expenses).records.filter((r) => !r.deleted && splitBadge(r) !== null).length : 0),
+    [fin.events, fin.state],
+  );
 
   const saleLine = useSaleLineText();
 
@@ -144,6 +151,14 @@ export function V2Home() {
         <FactRow icon={(c) => <PersonIcon color={c} size={13} />}>
           {owed.length === 1 ? owed[0].payer.name : msg('v2m.people', { n: owed.length })}
         </FactRow>
+      </KnowRow>
+    ) : null,
+    payable > 0 ? (
+      // E16-S05 HM-3: what is still to pay, short money; the "ไปที่" tile is a way in only.
+      <KnowRow key="payables" testID="home-payables" tone="cream" icon={() => <FarmMateArt id="finance.expense" />} label={msg('v2.payables')} to={href('payables')}>
+        <SumLine testID="home-payables-sum">
+          <CompactMoney satang={payable} />
+        </SumLine>
       </KnowRow>
     ) : null,
     committedNewest ? (
@@ -205,7 +220,7 @@ export function V2Home() {
       >
         <HomeCover onDragChange={setCoverDrag} />
 
-        <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+        <View testID="home-actions-1" style={{ flexDirection: 'row', gap: t.space.sm }}>
           <ActionTile
             testID="home-prepare"
             label={msg('v2.prepare')}
@@ -221,12 +236,22 @@ export function V2Home() {
             icon={() => <FarmMateArt id="sale.sale" />}
             href={SALE_START}
           />
+        </View>
+        <View testID="home-actions-2" style={{ flexDirection: 'row', gap: t.space.sm, marginTop: -t.space.xs }}>
           <ActionTile
             testID="home-record-expense"
             label={msg('v2.recordExpense')}
             tone="accept"
             icon={() => <FarmMateArt id="sale.receipt" />}
             href={'/v2/expense/new' as Href}
+          />
+          <ActionTile
+            testID="home-care"
+            label={msg('care.title')}
+            tone="accept"
+            icon={() => <FarmMateArt id="farmwork.maintenance" />}
+            href={'/v2/care' as Href}
+            badge={unsplit > 0 ? msg('home.careUnsplit', { n: unsplit }) : undefined}
           />
         </View>
 
@@ -256,35 +281,34 @@ export function V2Home() {
         </Link>
 
         <Heading>{msg('home.goTo')}</Heading>
+        {/* E16-S05 HM-4: half tiles only, in the order of importance; the odd one keeps half the width. */}
         <View testID="home-go-to" style={{ gap: t.space.sm }}>
-          <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-            <Mod slug="reports" tone="action" icon={() => <FarmMateArt id="sale.salesReport" size={MOD_ART} />} label={msg('v2.reports')} />
-            <Mod slug="weather" tone="action" icon={(c) => <WeatherIcon color={c} size={20} />} label={msg('v2.weather')} small={msg('home.external')} external />
-          </View>
-          <Mod
-            slug="payables"
-            tone="cream"
-            icon={() => <FarmMateArt id="finance.expense" size={MOD_ART} />}
-            label={msg('v2.payables')}
-            badge={{ value: formatSatang(payable), word: msg('v2m.baht') }}
-          />
-          <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-            <Mod slug="expenses" tone="cream" icon={() => <FarmMateArt id="sale.receipt" size={MOD_ART} />} label={msg('v2.expenses')} />
-            <Mod slug="order" to={ORDER_NEW as Href} tone="accept" icon={() => <FarmMateArt id="materials.orderMaterials" size={MOD_ART} />} label={msg('ords.homeBuy')} />
-          </View>
-          <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+          <View testID="home-go-to-row-1" style={{ flexDirection: 'row', gap: t.space.sm }}>
             <Mod slug="stock" tone="accept" icon={() => <FarmMateArt id="materials.stock" size={MOD_ART} />} label={msg('v2.stock')} />
-            {/* E16-S01 GC-1: what was done in the garden, fertilizing first; beside the stock it draws from. */}
-            <Mod slug="care" to={'/v2/care' as Href} tone="accept" icon={() => <FarmMateArt id="farmwork.maintenance" size={MOD_ART} />} label={msg('care.title')} />
+            <Mod slug="expenses" tone="cream" icon={() => <FarmMateArt id="sale.receipt" size={MOD_ART} />} label={msg('v2.expenses')} />
           </View>
-          <Mod
-            slug="workers"
-            to={'/v2/people?filter=tapper' as Href}
-            tone="neutral"
-            icon={() => <FarmMateArt id="people.workerInfo" size={MOD_ART} />}
-            label={msg('v2.workers')}
-            badge={{ value: String(tappers), word: msg('role.tapper') }}
-          />
+          <View testID="home-go-to-row-2" style={{ flexDirection: 'row', gap: t.space.sm }}>
+            <Mod slug="order" to={ORDER_NEW as Href} tone="accept" icon={() => <FarmMateArt id="materials.orderMaterials" size={MOD_ART} />} label={msg('ords.homeBuy')} />
+            <Mod slug="payables" tone="cream" icon={() => <FarmMateArt id="finance.expense" size={MOD_ART} />} label={msg('v2.payables')} />
+          </View>
+          <View testID="home-go-to-row-3" style={{ flexDirection: 'row', gap: t.space.sm }}>
+            <Mod
+              slug="workers"
+              to={'/v2/people?filter=tapper' as Href}
+              tone="neutral"
+              icon={() => <FarmMateArt id="people.workerInfo" size={MOD_ART} />}
+              label={msg('v2.workers')}
+              badge={{ value: String(tappers), word: msg('role.tapper') }}
+            />
+            <Mod slug="reports" tone="action" icon={() => <FarmMateArt id="sale.salesReport" size={MOD_ART} />} label={msg('v2.reports')} />
+          </View>
+          <View testID="home-go-to-row-4" style={{ flexDirection: 'row', gap: t.space.sm }}>
+            {/* Plain halves on both sides: the tile's own padding would otherwise make it wider than half. */}
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Mod slug="weather" tone="action" icon={(c) => <WeatherIcon color={c} size={20} />} label={msg('v2.weather')} small={msg('home.external')} external />
+            </View>
+            <View testID="home-go-to-spacer" style={{ flex: 1 }} />
+          </View>
         </View>
       </ScrollView>
 
@@ -446,7 +470,7 @@ function OwesKnowRow({ o }: { o: OwesRow }) {
   );
 }
 
-/** One "ไปที่" module tile (mockup `.mod`); without a row around it, it spans the width (`.mod.wide`). */
+/** One "ไปที่" module tile (mockup `.mod`), half the width in a row of two (E16-S05 HM-4). */
 function Mod({
   slug,
   to,
@@ -476,6 +500,8 @@ function Mod({
       style={{
         ...cardStyle(t),
         flex: 1,
+        // Half the row whatever the content; the label wraps instead (E16-S05 HM-4).
+        minWidth: 0,
         minHeight: t.layout.fabSize,
         borderRadius: t.radius.md,
         paddingVertical: t.space.sm,
@@ -500,13 +526,14 @@ function Mod({
             ) : null}
           </View>
         ) : null}
+        {/* Under the label, not beside it: a half tile has no room for both on one line (E16-S05 HM-4). */}
+        {badge ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: t.space.xs }}>
+            <Text style={{ ...body(t), fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{badge.value}</Text>
+            <Text style={{ ...body(t), fontSize: t.font.size.micro, fontWeight: t.font.weight.semibold, color: t.color.inkSoft }}>{badge.word}</Text>
+          </View>
+        ) : null}
       </View>
-      {badge ? (
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={{ ...body(t), fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{badge.value}</Text>
-          <Text style={{ ...body(t), fontSize: t.font.size.micro, fontWeight: t.font.weight.semibold, color: t.color.inkSoft }}>{badge.word}</Text>
-        </View>
-      ) : null}
     </Pressable>
     </Link>
   );
