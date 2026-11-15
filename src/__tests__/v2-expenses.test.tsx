@@ -9,7 +9,9 @@ import { RepayScreen } from '../v2/money/repay-screen';
 import { projectFinance } from '../core/finance/ledger';
 import type { ExpenseFields, FinanceEvent } from '../core/finance/types';
 import { financeStore as mockFinance } from '../store/finance';
-import { pickDate } from '../test/pick-date';
+import { todayIso } from '../core/finance/money';
+import { dayAfter } from '../core/master';
+import { dayCell, pickDate } from '../test/pick-date';
 import { wrap } from '../test/render';
 
 jest.mock('../store/finance', () => {
@@ -131,6 +133,17 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     const line = screen.getByTestId('expense-details-line');
     expect(line).toHaveTextContent(/^\d{1,2} \S+ \d{4} · เกิดจริง$/);
     expect(line).not.toHaveTextContent(/แตะเพื่อเปลี่ยน|—/);
+  });
+
+  it('an actual expense cannot be dated after today; a planned one can (E01-S22 Q3 ก)', async () => {
+    const tomorrow = dayAfter(todayIso());
+    wrap(<ExpenseScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-details'));
+    expect(dayCell('expense-date', tomorrow).props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(screen.getByTestId('expense-date-picker-done'));
+    fireEvent.press(screen.getByTestId('expense-stage-planned'));
+    expect(dayCell('expense-date', tomorrow).props.accessibilityState.disabled).toBeFalsy();
   });
 
   it('refuses committed without an amount; planned may be "unknown"', async () => {
@@ -264,6 +277,13 @@ describe('repayment (E11-S03)', () => {
     expect(screen.getByTestId('repay-date').props.accessibilityRole).toBe('button');
     pickDate('repay-date', '2026-09-28');
     expect(screen.getByTestId('repay-date-value')).toHaveTextContent('28 ก.ย. 2569');
+  });
+
+  it('a repayment cannot be dated after today (E01-S22 Q1 ก)', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    expect(dayCell('repay-date', dayAfter(todayIso())).props.accessibilityState.disabled).toBe(true);
   });
 
   it('who repays whom: two full-width picker rows with their labels shown, ›, and names that wrap (E01-S21 PK-1)', async () => {

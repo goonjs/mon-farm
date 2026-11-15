@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { useEffect } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
@@ -164,6 +165,11 @@ describe('v2 pick a point and check the empty scale (pages 6, 7, 7a–7c)', () =
     await press('pick-farm-' + farm.farmA);
     expect(screen.getByTestId('pick-farm-' + farm.farmA).props.accessibilityState).toMatchObject({ checked: true });
     expect(screen.getByTestId('pick-tapper-' + farm.red)).toHaveTextContent(/แดง3 จุด/);
+    // Many farms or tappers wrap two to a line instead of squeezing into one row (E01-S21 sel-q6 ก).
+    for (const id of ['pick-farm', 'pick-tapper']) {
+      expect(StyleSheet.flatten(screen.getByTestId(id).props.style)).toMatchObject({ flexDirection: 'row', flexWrap: 'wrap' });
+    }
+    expect(StyleSheet.flatten(screen.getByTestId('pick-farm-' + farm.farmA).props.style)).toMatchObject({ flexGrow: 1, flexBasis: '40%' });
     expect(screen.getByTestId('pick-unassigned')).toHaveTextContent(/จุดใหม่/);
     await press(`pick-point-${farm.a[0]}`);
     expect(router.push).toHaveBeenCalledWith(`/v2/sale/${saleId}/zero-tare?point=${farm.a[0]}&net=50000&basket=2000`);

@@ -7,7 +7,9 @@ import { DebtAccountScreen } from '../v2/money/debts-screens';
 import { projectDebts } from '../core/finance/debts';
 import { projectFinance } from '../core/finance/ledger';
 import { financeStore as mockFinance } from '../store/finance';
-import { pickDate } from '../test/pick-date';
+import { todayIso } from '../core/finance/money';
+import { dayAfter } from '../core/master';
+import { dayCell, pickDate } from '../test/pick-date';
 import { wrap } from '../test/render';
 
 jest.mock('../store/finance', () => {
@@ -257,5 +259,25 @@ describe('Save is pinned at the bottom, full width (owner 2026-11-07, style I)',
     await flush();
     expect(screen.getByTestId('debt-pay-date').props.accessibilityRole).toBe('button');
     expect(screen.getByTestId('debt-pay-date-value')).toBeTruthy();
+  });
+
+  it('pay-back cannot be dated after today; a new debt can (E01-S22 Q1 ก, Q2 ข)', async () => {
+    const tomorrow = dayAfter(todayIso());
+    wrap(<AddDebtScreen />);
+    await flush();
+    expect(dayCell('debt-date', tomorrow).props.accessibilityState.disabled).toBeFalsy();
+    fireEvent.press(screen.getByTestId('debt-date-picker-done'));
+    screen.unmount();
+    wrap(<DebtPaymentScreen />);
+    await flush();
+    expect(dayCell('debt-pay-date', tomorrow).props.accessibilityState.disabled).toBe(true);
+  });
+
+  it('the fertilizer kind carries › because it opens another screen (E01-S21 sel-q5 ก)', async () => {
+    wrap(<AddDebtScreen />);
+    await flush();
+    expect(screen.getByTestId('debt-kind-fertilizer')).toHaveTextContent(/ปุ๋ย\s*›/);
+    expect(screen.getByTestId('debt-kind-loan')).not.toHaveTextContent(/›/);
+    expect(screen.getByTestId('debt-kind-other')).not.toHaveTextContent(/›/);
   });
 });
