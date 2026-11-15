@@ -94,9 +94,13 @@ export function CareListView({
             {restoreFailed ? (
               <AppText testID="care-restore-error" style={{ color: t.color.reject }}>{msg('care.restoreFailed')}</AppText>
             ) : null}
+            {/* Laid out like a live row, muted, with กู้คืน on its own (owner 2026-11-16, E16-S05 HM-7). */}
             {gone.map((r) => (
-              <View key={r.id} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.md, padding: t.space.md, borderRadius: t.radius.xl, backgroundColor: t.color.surfaceSunk }}>
-                <AppText style={{ flex: 1, minWidth: 0 }}>{`${formatDate(r.date)} · ${summary(r, msg('fz.unit'))}`}</AppText>
+              <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md, borderRadius: t.radius.xl, backgroundColor: t.color.surfaceSunk }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <AppText testID={`care-gone-date-${r.id}`} variant="bodySm">{`${rowDate(r.date, today.slice(0, 4))} · ${msg('fz.title')}`}</AppText>
+                  <AppText testID={`care-gone-what-${r.id}`} style={{ color: t.color.inkSoft, fontWeight: t.font.weight.bold }}>{summary(r, msg('fz.unit'))}</AppText>
+                </View>
                 <TextLink testID={`care-restore-${r.id}`} onPress={() => void restore(r)}>{msg('care.restore')}</TextLink>
               </View>
             ))}
@@ -111,7 +115,10 @@ export function CareListView({
 }
 
 /** "ดีเกลือ 10 ถุง · 46-0-0 5 ถุง": what and how much. The "·" is glued to the item before it, so a wrapped line never starts with it. */
-const summary = (r: Fertilizing, unit: string) => r.lines.map((l) => `${l.label} ${l.sacks} ${unit}`).join('\u00a0· ');
+const summary = (r: Fertilizing, unit: string) => r.lines.map((l) => `${keepFormula(l.label)} ${l.sacks} ${unit}`).join('\u00a0· ');
+
+/** "15-15-15" never breaks at a dash (owner 2026-11-16): a word joiner on each side of every dash. */
+const keepFormula = (name: string) => name.replace(/-/g, '\u2060-\u2060');
 
 /** "5 พ.ย." this year, "5 พ.ย. 2568" another year. */
 const rowDate = (iso: string, year: string) => (iso.startsWith(year) ? formatDate(iso).split(' ').slice(0, 2).join(' ') : formatDate(iso));

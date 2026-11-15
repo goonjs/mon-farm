@@ -24,7 +24,7 @@ import { loadHomeSales } from './sale/open-sale';
 import { useRepayHome, type OwesRow } from './home-repay';
 import { groupOrders } from '../core/finance/fert-order';
 import { projectFertilizing, splitBadge } from '../core/finance/fertilizing';
-import { owedByPerson, payableSatang } from '../core/finance/ledger';
+import { owedByPerson } from '../core/finance/ledger';
 import { formatDate, formatSatang, todayIso } from '../core/finance/money';
 import type { HomeSales } from '../core/home';
 import { filterPeople, formatThaiDay } from '../core/master';
@@ -85,7 +85,8 @@ export function V2Home() {
   const fin = useFinance();
   const owed = useMemo(() => (fin.state ? owedByPerson(fin.state).filter((o) => o.remainingSatang > 0) : []), [fin.state]);
   const owedTotal = owed.reduce((s, o) => s + o.remainingSatang, 0);
-  const payable = fin.state ? payableSatang(fin.state) : 0;
+  // E16-S05 HM-3: the shop only (bought, not paid yet); money owed back to people has its own row.
+  const shopOwed = (fin.state?.expenses ?? []).filter((x) => !x.deleted && x.stage === 'committed').reduce((s, x) => s + (x.amountSatang ?? 0), 0);
   const tappers = master ? filterPeople(master.people, 'tapper').length : 0;
   // E06-S08 (H1, H2): repayments not in yet, and what a buyer still owes the farm per sale.
   const repay = useRepayHome(fin.events, era);
@@ -120,6 +121,7 @@ export function V2Home() {
         label={msg('home.openSale')}
         value={saleLine(sales.open)}
         chip={<Chip tone="warn" label={msg(sales.open.weighing ? 'sales.weighing' : 'status.open')} />}
+        why={msg(sales.open.weighing ? 'home.why.weighing' : 'home.why.notClosed')}
         to={saleHref(sales.open.id, { closed: false, point: sales.open.point })}
       />
     ) : null,
@@ -132,6 +134,7 @@ export function V2Home() {
         label={msg('home.latestSale')}
         value={saleLine(sales.latest)}
         chip={<Chip tone="accept" label={msg('status.closed')} />}
+        why={msg('home.why.latest')}
         to={saleHref(sales.latest.id, { closed: true, point: sales.latest.point })}
       />
     ) : null,
@@ -142,6 +145,7 @@ export function V2Home() {
         tone="cream"
         icon={() => <FarmMateArt id="finance.workerPay" />}
         value={msg('v2.owed')}
+        why={msg('home.why.owed')}
         to={'/v2/owed' as Href}
       >
         <FactRow icon={(c) => <CoinIcon color={c} size={13} />}>
@@ -153,11 +157,11 @@ export function V2Home() {
         </FactRow>
       </KnowRow>
     ) : null,
-    payable > 0 ? (
+    shopOwed > 0 ? (
       // E16-S05 HM-3: what is still to pay, short money; the "ไปที่" tile is a way in only.
-      <KnowRow key="payables" testID="home-payables" tone="cream" icon={() => <FarmMateArt id="finance.expense" />} label={msg('v2.payables')} to={href('payables')}>
+      <KnowRow key="payables" testID="home-payables" tone="cream" icon={() => <FarmMateArt id="finance.expense" />} label={msg('v2.payables')} why={msg('home.why.payables')} to={href('payables')}>
         <SumLine testID="home-payables-sum">
-          <CompactMoney satang={payable} />
+          <CompactMoney satang={shopOwed} />
         </SumLine>
       </KnowRow>
     ) : null,
@@ -168,6 +172,7 @@ export function V2Home() {
         tone="action"
         icon={() => <FarmMateArt id="farmwork.fertilize" />}
         value={orders.committed.length > 1 ? msg('ords.homeDeliveredMany', { n: orders.committed.length }) : msg('ords.homeDelivered', { date: formatDate(committedNewest.date) })}
+        why={msg('home.why.order')}
         to={orderHref(committedNewest.orderId)}
       />
     ) : null,
@@ -178,6 +183,7 @@ export function V2Home() {
         tone="action"
         icon={() => <FarmMateArt id="finance.otherCost" />}
         label={msg('rp.home.waiting')}
+        why={msg('home.why.repayWait')}
         to={'/v2/debts' as Href}
       >
         {pairsOf(repay.waiting).map((two, i) => (
@@ -448,6 +454,7 @@ function OwesKnowRow({ o }: { o: OwesRow }) {
       tone="warn"
       icon={() => <FarmMateArt id="finance.otherCost" />}
       label={o.buyer ? msg('rp.home.owesBuyer', { date: o.dateText, buyer: o.buyer }) : msg('rp.home.owes', { date: o.dateText })}
+      why={msg('home.why.owes')}
       to={`/v2/sale/${o.saleId}/payment` as Href}
     >
       {o.transferSatang > 0 ? (
