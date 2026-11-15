@@ -9,6 +9,7 @@ import { RepayScreen } from '../v2/money/repay-screen';
 import { projectFinance } from '../core/finance/ledger';
 import type { ExpenseFields, FinanceEvent } from '../core/finance/types';
 import { financeStore as mockFinance } from '../store/finance';
+import { pickDate } from '../test/pick-date';
 import { wrap } from '../test/render';
 
 jest.mock('../store/finance', () => {
@@ -105,7 +106,7 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     typeOnPad('expense-amount', '640');
     expect(screen.getByTestId('expense-amount')).toHaveTextContent(/640\.00\s*บาท/);
     fireEvent.press(screen.getByTestId('expense-details'));
-    fireEvent.changeText(screen.getByTestId('expense-date'), '2026-09-28');
+    pickDate('expense-date', '2026-09-28');
     fireEvent.press(screen.getByTestId('expense-details-done'));
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
     await flush();
@@ -143,7 +144,7 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
 
     fireEvent.press(screen.getByTestId('expense-details'));
     fireEvent.press(screen.getByTestId('expense-stage-planned'));
-    fireEvent.changeText(screen.getByTestId('expense-date'), '2026-11-15');
+    pickDate('expense-date', '2026-11-15');
     fireEvent.press(screen.getByTestId('expense-details-done'));
     fireEvent.press(screen.getByTestId('expense-unknown'));
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
@@ -254,6 +255,15 @@ describe('repayment (E11-S03)', () => {
   beforeAll(async () => {
     await seedExpense('rp-a', { amountSatang: 80000, date: '2026-09-15', payer: SOMWANG });
     await seedExpense('rp-b', { amountSatang: 40000, date: '2026-09-22', payer: SOMWANG });
+  });
+
+  it('the repayment date is picked from a calendar, not typed (E01-S22 DP-1)', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    expect(screen.getByTestId('repay-date').props.accessibilityRole).toBe('button');
+    pickDate('repay-date', '2026-09-28');
+    expect(screen.getByTestId('repay-date-value')).toHaveTextContent('28 ก.ย. 2569');
   });
 
   it('who repays whom has no "แตะเพื่อเปลี่ยน" hint: the two boxes already look tappable (owner 2026-11-14)', async () => {

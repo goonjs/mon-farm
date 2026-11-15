@@ -7,6 +7,7 @@ import { DebtAccountScreen } from '../v2/money/debts-screens';
 import { projectDebts } from '../core/finance/debts';
 import { projectFinance } from '../core/finance/ledger';
 import { financeStore as mockFinance } from '../store/finance';
+import { pickDate } from '../test/pick-date';
 import { wrap } from '../test/render';
 
 jest.mock('../store/finance', () => {
@@ -243,5 +244,18 @@ describe('Save is pinned at the bottom, full width (owner 2026-11-07, style I)',
     wrap(<DebtPaymentScreen />);
     await flush();
     expect(within(screen.getByTestId('save-bar')).getByTestId('debt-pay-save')).toBeTruthy();
+  });
+
+  it('the date on add-debt and pay-back is picked from a calendar, not typed (E01-S22 DP-1)', async () => {
+    wrap(<AddDebtScreen />);
+    await flush();
+    expect(screen.getByTestId('debt-date').props.accessibilityRole).toBe('button');
+    pickDate('debt-date', '2026-09-10');
+    expect(screen.getByTestId('debt-date-value')).toHaveTextContent('10 ก.ย. 2569');
+    screen.unmount();
+    wrap(<DebtPaymentScreen />);
+    await flush();
+    expect(screen.getByTestId('debt-pay-date').props.accessibilityRole).toBe('button');
+    expect(screen.getByTestId('debt-pay-date-value')).toBeTruthy();
   });
 });

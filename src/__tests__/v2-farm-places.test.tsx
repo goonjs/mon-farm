@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
-import { dayAfter, dayBefore, thaiDayInput, todayIso } from '../core/master';
+import { dayAfter, dayBefore, todayIso } from '../core/master';
 import { FarmsScreen, PropertyScreen } from '../v2/farm/farms-screens';
 import { PointScreen, PointsScreen, PointsWizardScreen } from '../v2/farm/points-screens';
 import type { MasterStore } from '../store/master-store';
@@ -10,6 +10,7 @@ import { emitSyncChanged, setEngineStatus, setSyncMode } from '../sync/changed';
 import { newGroup } from '../core/group';
 import { userFromSignIn } from '../core/user';
 import { accountStore as mockAccounts } from '../store/account';
+import { pickDate } from '../test/pick-date';
 import { wrap } from '../test/render';
 
 jest.mock('../store/people', () => {
@@ -203,7 +204,7 @@ describe('สวน — detail, area history, delete (farm mockup 11, 12)', () =
 
     fireEvent.press(screen.getByTestId('change-area'));
     keys('area-new', '125');
-    fireEvent.changeText(screen.getByTestId('area-new-date'), thaiDayInput(TODAY));
+    pickDate('area-new-date', TODAY);
     await press('area-save');
 
     const history = (await m.state()).properties[0].areaHistory;
@@ -279,7 +280,7 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
 
     fireEvent.press(screen.getByTestId('plan-change'));
     fireEvent.press(screen.getByTestId(`plan-tapper-${nat.id}`));
-    fireEvent.changeText(screen.getByTestId('plan-from'), thaiDayInput(ahead(30)));
+    pickDate('plan-from', ahead(30));
     expect(screen.getByTestId('plan-preview')).toBeTruthy();
     await press('plan-save');
 
@@ -337,7 +338,7 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     await flush();
     fireEvent.press(screen.getByTestId('plan-change'));
     fireEvent.press(screen.getByTestId('plan-leave'));
-    fireEvent.changeText(screen.getByTestId('plan-to'), thaiDayInput(ahead(5)));
+    pickDate('plan-to', ahead(5));
     await press('plan-save');
     expect(within(screen.getByTestId('plan-to-error')).getByText('วันนั้นจุดนี้ไม่มีคนกรีด')).toBeTruthy();
     unmount();
@@ -347,12 +348,12 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     await flush();
     fireEvent.press(screen.getByTestId('plan-change'));
     fireEvent.press(screen.getByTestId('plan-leave'));
-    fireEvent.changeText(screen.getByTestId('plan-to'), thaiDayInput(dayBefore(dayBefore(tenAgo))));
+    pickDate('plan-to', dayBefore(dayBefore(tenAgo)));
     await press('plan-save');
     expect(within(screen.getByTestId('plan-to-error')).getByText('ก่อนวันที่คนกรีดตอนนี้เริ่ม')).toBeTruthy();
     expect((await m.state()).assignments).toHaveLength(before);
 
-    fireEvent.changeText(screen.getByTestId('plan-to'), thaiDayInput(ahead(5)));
+    pickDate('plan-to', ahead(5));
     await press('plan-save');
     expect((await m.state()).assignments).toHaveLength(before + 1);
   });

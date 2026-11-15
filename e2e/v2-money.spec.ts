@@ -1,6 +1,7 @@
 import { expect, test, type Page } from './test';
 
 import { evidence, seedPeople } from './fixtures';
+import { pickDate } from './pick-date';
 
 /**
  * v2 money screens (D-82) in the real web build, portrait, offline: the
@@ -32,7 +33,7 @@ async function addExpense(page: Page, o: { amount?: string; date: string; stage?
   // Date and stage sit behind "เพิ่มรายละเอียด".
   await page.getByTestId('expense-details').click();
   if (o.stage) await page.getByTestId(`expense-stage-${o.stage}`).click();
-  await page.getByTestId('expense-date').fill(o.date);
+  await pickDate(page, 'expense-date', o.date);
   await page.getByTestId('expense-details-done').click();
   if (o.unknown) await page.getByTestId('expense-unknown').click();
   if (o.newPayer || o.payer) {
@@ -174,7 +175,7 @@ test('v2 worker debts — fertilizer via the shop order, account reconciliation,
   await page.getByTestId('debt-add').click();
   await typeOnPad(page, 'debt-amount', '3000');
   await page.getByTestId('debt-amount-done').click();
-  await page.getByTestId('debt-date').fill('2026-09-10');
+  await pickDate(page, 'debt-date', '2026-09-10');
   await page.getByTestId('debt-save').click();
 
   await expect(page.getByTestId('debt-balance')).toContainText('5,000.00');

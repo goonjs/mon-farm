@@ -133,6 +133,41 @@ describe('DatePickerSheet', () => {
     expect(onChange).toHaveBeenCalledWith('2026-10-27');
   });
 
+  it('steps a year at a time, for old debts and far dates (E01-S22 DP-3)', () => {
+    setup({ value: '2026-10-27' });
+    fireEvent.press(screen.getByTestId(`${ID}-prevYear`));
+    expect(screen.getByTestId(`${ID}-month`).props.children.join('')).toBe('ตุลาคม 2568');
+    fireEvent.press(screen.getByTestId(`${ID}-nextYear`));
+    fireEvent.press(screen.getByTestId(`${ID}-nextYear`));
+    expect(screen.getByTestId(`${ID}-month`).props.children.join('')).toBe('ตุลาคม 2570');
+    for (const id of ['prevYear', 'nextYear']) {
+      const s = flat(screen.getByTestId(`${ID}-${id}`).props.style);
+      expect(s.width).toBeGreaterThanOrEqual(tokens.target.min);
+    }
+  });
+
+  it('min disables earlier days and quick picks before it (E01-S22, for rules that already exist)', () => {
+    const { onChange } = setup({ min: '2026-10-26', value: '2026-10-27' });
+    expect(screen.getByTestId(`${ID}-day-2026-10-25`).props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByTestId(`${ID}-twodays`).props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByTestId(`${ID}-yesterday`).props.accessibilityState.disabled).toBe(false);
+    fireEvent.press(screen.getByTestId(`${ID}-day-2026-10-25`));
+    fireEvent.press(screen.getByTestId(`${ID}-done`));
+    expect(onChange).toHaveBeenCalledWith('2026-10-27');
+  });
+
+  it('an optional date offers "no date", which commits an empty value and closes (E01-S22 DP-2)', () => {
+    const { onChange, onClose } = setup({ emptyLabel: 'ไม่ระบุวันเริ่ม' });
+    fireEvent.press(screen.getByTestId(`${ID}-empty`));
+    expect(onChange).toHaveBeenCalledWith('');
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('no "no date" choice unless asked for', () => {
+    setup();
+    expect(screen.queryByTestId(`${ID}-empty`)).toBeNull();
+  });
+
   it('max before yesterday disables that quick pick', () => {
     setup({ max: '2026-10-20' });
     expect(screen.getByTestId(`${ID}-today`).props.accessibilityState.disabled).toBe(true);
