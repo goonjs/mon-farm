@@ -25,7 +25,7 @@ import type { DebtFields, FertilizingFields, FertilizingLine, FertilizerType, Fi
 
 /** Items dated before this day count as used up, never as stock (D-96 (1), FL-4). */
 export const STOCK_CUTOFF = '2026-10-01';
-/** The tapper's share when the fertilizing names none (FERT-4). */
+/** Only for a record that somehow lacks a %: the writer always stores one per taker from the category (review S2, `pct-missing`). */
 export const DEFAULT_TAPPER_PCT = 50;
 /** A fertilizing debt's id is `<fzId>:<workerId>` (one lump per worker per fertilizing, SP-8). */
 export const FERTILIZING_DEBT_INFIX = ':';
@@ -145,6 +145,8 @@ export interface Fertilizing extends Omit<FertilizingFields, 'lines'> {
   readonly waiting: number;
   /** A line now draws from 2+ cards, or 2 lines share a card (a source price was edited elsewhere). */
   readonly regrouped: boolean;
+  /** A source order's price was changed after this fertilizing was recorded, so its cost was worked out again (SP-10). */
+  readonly repriced: boolean;
   readonly conflicts: readonly FieldConflict[];
   /** Every state the record has been in, oldest first — for "ever owed" voided debts. */
   readonly history: readonly (FertilizingFields & { readonly deleted: boolean })[];
@@ -197,6 +199,16 @@ export function projectFertilizing(
   const projected = new Map<string, Fertilizing>();
   const label = (sources: readonly string[]) => sources.map((s) => expenseById.get(s)?.fertilizer?.formula).find(Boolean) ?? '';
 
+  // The local log is in the order it was written (finance does not sync yet), so "after" is a later position.
+  const at = new Map(events.map((e, i) => [e.id, i]));
+  const createdAt = (id: string) => Math.min(...events.filter((e) => e.targetId === id).map((e) => at.get(e.id) ?? 0));
+  const priced = (e: FinanceEvent) => e.payload.t === 'expense_changed' && ['amountSatang', 'discountSatang', 'line'].some((k) => k in (e.payload as { patch: object }).patch);
+  const repricedAfter = (f: (typeof folded)[number]) => {
+    const from = createdAt(f.id);
+    const sources = new Set(f.state.lines.flatMap((l) => l.sources));
+    return events.some((e) => sources.has(e.targetId) && priced(e) && (at.get(e.id) ?? 0) > from);
+  };
+
   const asIs = (f: (typeof folded)[number]): Fertilizing => ({
     ...f.state,
     id: f.id,
@@ -204,18 +216,14 @@ export function projectFertilizing(
     over: 0,
     waiting: 0,
     regrouped: false,
+    repriced: repricedAfter(f),
     conflicts: f.conflicts,
     history: f.history,
     headEventId: f.head,
   });
 
-  for (const f of [...folded].sort(byDateThenId)) {
-    if (f.state.deleted || f.id === opts.exclude) {
-      projected.set(f.id, asIs(f));
-      continue;
-    }
-    const cardUse = new Map<string, number>();
-    const lines = f.state.lines.map((l): ProjectedLine => {
+  const drawLines = (f: (typeof folded)[number], used: Map<string, number>, cardUse: Map<string, number>) =>
+    f.state.lines.map((l): ProjectedLine => {
       const pool = [...new Set(l.sources.map((s) => cardOf.get(s)).filter((c): c is FertilizerCard => !!c))];
       for (const c of pool) cardUse.set(c.key, (cardUse.get(c.key) ?? 0) + 1);
       const items = pool.flatMap((c) => c.items).sort(oldestFirst);
@@ -261,6 +269,20 @@ export function projectFertilizing(
         cardKeys: pool.map((c) => c.key),
       };
     });
+
+  for (const f of [...folded].sort(byDateThenId)) {
+    if (f.id === opts.exclude) {
+      projected.set(f.id, asIs(f));
+      continue;
+    }
+    if (f.state.deleted) {
+      // Priced as if live on a copy of the stock drawn so far, so a voided lump can say what it owed (review of PR 188 S3);
+      // it draws nothing from the real stock.
+      projected.set(f.id, { ...asIs(f), lines: drawLines(f, new Map(used), new Map()) });
+      continue;
+    }
+    const cardUse = new Map<string, number>();
+    const lines = drawLines(f, used, cardUse);
     projected.set(f.id, {
       ...asIs(f),
       lines,
@@ -284,13 +306,40 @@ export interface FertilizingDebt extends DebtFields {
   readonly id: string;
   readonly deleted: boolean;
   readonly headEventId: string;
+  /** Its fertilizing was changed after it was first written: the amount is worked out again (SP-10). */
+  readonly edited: boolean;
+  /** A source order's price changed after the fertilizing: the amount is worked out again (SP-10). */
+  readonly repriced: boolean;
 }
 
 const owes = (s: FzState, workerId: string) =>
   !s.deleted && (s.settle[workerId] ?? 'debt') === 'debt' && s.lines.some((l) => l.takes.some((t) => t.worker.id === workerId && t.sacks > 0));
 
+/**
+ * What a voided lump last owed: the newest state of the record in which the worker owed, priced at each line's
+ * current per-sack cost (a deleted record's lines are priced as if live). Display only — a voided lump never counts.
+ */
+function lastOwed(r: Fertilizing, wid: string): number {
+  const state = [...r.history].reverse().find((s) => owes({ ...s, deleted: false }, wid));
+  if (!state) return 0;
+  let cost = 0;
+  for (const l of state.lines) {
+    const sacks = l.takes.filter((t) => t.worker.id === wid).reduce((a, t) => a + t.sacks, 0);
+    const now = r.lines.find((p) => p.sources.some((x) => l.sources.includes(x)));
+    if (!sacks || !now || now.sacks < 1 || now.orphaned) continue;
+    cost += Math.floor((2 * now.costSatang * sacks + now.sacks) / (2 * now.sacks));
+  }
+  return fertilizerSplit(cost, state.pct[wid] ?? DEFAULT_TAPPER_PCT).workerSatang;
+}
+
+/** What a lump is made of — date, lines, % and how to pay back — changed after it was written (SP-10, review of PR 188 S4). */
+const debtChanged = (history: readonly FzState[]): boolean => {
+  const key = (s: FzState) => JSON.stringify([s.date, s.lines, s.pct, s.settle]);
+  return history.some((s) => key(s) !== key(history[0]));
+};
+
 /** A line's cost split over its takes by sacks, with cumulative rounding so the parts add up. */
-function takeCosts(l: ProjectedLine): Map<string, number> {
+export function takeCosts(l: ProjectedLine): Map<string, number> {
   const out = new Map<string, number>();
   if (l.sacks < 1) return out;
   let cum = 0;
@@ -321,13 +370,16 @@ export function fertilizingDebts(p: FertilizingProjection): FertilizingDebt[] {
       for (const t of l.takes) if (t.sacks > 0) notes.set(t.worker.id, [...(notes.get(t.worker.id) ?? []), `${l.label} ${t.sacks} ถุง`]);
     }
     for (const [wid, worker] of ever) {
-      const live = owes(r, wid);
+      // A take on an orphaned line (its source gone, or dated before the cutoff) owes nothing: no live 0.00 row (review N4).
+      const onLive = r.lines.some((l) => !l.orphaned && l.takes.some((x) => x.worker.id === wid && x.sacks > 0));
+      const live = owes(r, wid) && onLive;
+      // A voided lump keeps what it last owed, so the history says what was voided (review of PR 188 S3, N7).
       const take = r.lines.flatMap((l) => l.takes).find((t) => t.worker.id === wid);
       out.push({
         id: `${r.id}${FERTILIZING_DEBT_INFIX}${wid}`,
         worker: take?.worker ?? worker,
         kind: 'fertilizer',
-        amountSatang: live ? fertilizerSplit(costs.get(wid) ?? 0, r.pct[wid] ?? DEFAULT_TAPPER_PCT).workerSatang : 0,
+        amountSatang: live ? fertilizerSplit(costs.get(wid) ?? 0, r.pct[wid] ?? DEFAULT_TAPPER_PCT).workerSatang : lastOwed(r, wid),
         date: r.date,
         note: (notes.get(wid) ?? []).join(' · '),
         lender: null,
@@ -336,6 +388,8 @@ export function fertilizingDebts(p: FertilizingProjection): FertilizingDebt[] {
         fertilizingId: r.id,
         deleted: !live,
         headEventId: r.headEventId,
+        edited: debtChanged(r.history),
+        repriced: r.repriced,
       });
     }
   }
@@ -354,7 +408,8 @@ export type FertilizingProblem =
   | 'take-sacks' // a take not a whole number ≥ 0
   | 'takes-over' // takes add up to more than the line
   | 'worker-twice' // one worker twice on a line
-  | 'pct-invalid';
+  | 'pct-invalid'
+  | 'pct-missing'; // a tapper takes sacks but has no stored % (review S2: the projection never guesses)
 
 const whole = (n: number, min: number) => Number.isSafeInteger(n) && n >= min;
 
@@ -377,5 +432,6 @@ export function checkFertilizing(f: FertilizingFields, today: string): Fertilizi
     if (new Set(l.takes.map((t) => t.worker.id)).size < l.takes.length) out.add('worker-twice');
   }
   for (const p of Object.values(f.pct)) if (!Number.isInteger(p) || p < 0 || p > 100) out.add('pct-invalid');
+  for (const l of f.lines) for (const t of l.takes) if (t.sacks > 0 && f.pct[t.worker.id] === undefined) out.add('pct-missing');
   return [...out];
 }

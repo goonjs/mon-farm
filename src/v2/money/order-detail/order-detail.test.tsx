@@ -62,13 +62,23 @@ describe('OrderDetailView', () => {
   const a = exp('o1-a');
   const b = exp('o1-b', { item: 'ขี้ไก่', categoryId: 'cat-manure', fertilizer: null, line: { qty: 30, unit: 'กระสอบ', grossSatang: 1_950_000, itemDiscountSatang: 0 }, amountSatang: 1_950_000 });
 
-  it('header shows the total, stage and progress; a non-fertilizer item has no tell buttons', () => {
+  it('header shows the total and stage; no tell-later buttons or progress any more (E11-S17 RM-1)', () => {
     setup([a, b]);
     expect(screen.getByTestId('ordd-total').props.children).toBe('42,500.00');
     expect(screen.getByText('สั่งไว้')).toBeTruthy();
-    expect(screen.getByTestId('ordd-progress').props.children).toContain('บอกแล้ว 0 จาก 1');
-    expect(screen.getByTestId('ordd-o1-a-reasons').props.accessibilityState.selected).toBe(false);
-    expect(screen.queryByTestId('ordd-o1-b-reasons')).toBeNull();
+    expect(screen.queryByTestId('ordd-progress')).toBeNull();
+    for (const k of ['reasons', 'zones', 'tappers']) expect(screen.queryByTestId(`ordd-o1-a-${k}`)).toBeNull();
+  });
+
+  it('a received order with fertilizer links to fertilizing with this order picked (RM-1)', () => {
+    setup([exp('o1-a', { stage: 'actual' }), { ...b, stage: 'actual' } as Expense]);
+    fireEvent.press(screen.getByTestId('ordd-fertilize'));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/v2/fertilizing', params: { fromOrder: 'o1' } });
+  });
+
+  it('no fertilizing link while the order is not received, or without fertilizer', () => {
+    setup([a]);
+    expect(screen.queryByTestId('ordd-fertilize')).toBeNull();
   });
 
   it('"ของมาแล้ว" writes actual on every item, one write each, naming each head', async () => {
@@ -81,96 +91,6 @@ describe('OrderDetailView', () => {
   it('an order already received shows no "ของมาแล้ว"', () => {
     setup([exp('o1-a', { stage: 'actual' })]);
     expect(screen.queryByTestId('ordd-deliver')).toBeNull();
-  });
-
-  it('reasons: tick, then เสร็จ patches the fertilizer object whole', async () => {
-    const write = setup([a]);
-    fireEvent.press(screen.getByTestId('ordd-o1-a-reasons'));
-    fireEvent.press(screen.getByTestId('ordd-reason-fopt-reason-a'));
-    expect(screen.getByText('เสร็จ · เลือก 1 ข้อ')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('ordd-reasons-done'));
-    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
-    expect(write.mock.calls[0][2].patch.fertilizer).toEqual({ ...FERT, reasons: ['fopt-reason-a'] });
-  });
-
-  it('reasons: a quiet link leads to ตั้งค่าปุ๋ย, the only way to manage reasons, formulas and brands', () => {
-    setup([a]);
-    fireEvent.press(screen.getByTestId('ordd-o1-a-reasons'));
-    fireEvent.press(screen.getByTestId('ordd-reasons-manage'));
-    const { router } = jest.requireMock('expo-router') as { router: { push: jest.Mock } };
-    expect(router.push).toHaveBeenCalledWith('/v2/fertilizer-settings');
-  });
-
-  it('zones: a QuantityField per zone, summary warns when less, over the sacks blocks เสร็จ', async () => {
-    const write = setup([a]);
-    fireEvent.press(screen.getByTestId('ordd-o1-a-zones'));
-    expect(screen.getByTestId('ordd-zones-sum')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('ordd-zone-z1'));
-    keys('ordd-zone-z1', '1', '2', 'done');
-    expect(screen.getByText('ใส่แล้ว 12 / 20 กระสอบ')).toBeTruthy();
-    expect(screen.getByText('เหลือ 8 ยังไม่ใส่')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('ordd-zone-z2'));
-    keys('ordd-zone-z2', '1', '0', 'done');
-    expect(screen.getByText('ใส่เกิน 20 กระสอบที่ซื้อ')).toBeTruthy();
-    expect(screen.getByTestId('ordd-zones-done').props.accessibilityState.disabled).toBe(true);
-    fireEvent.press(screen.getByTestId('ordd-zone-z2'));
-    keys('ordd-zone-z2', '8', 'done');
-    fireEvent.press(screen.getByTestId('ordd-zones-done'));
-    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
-    const patch = write.mock.calls[0][2].patch;
-    expect(patch.fertilizer.zones.map((z: { zoneId: string; sacks: number }) => [z.zoneId, z.sacks])).toEqual([['z1', 12], ['z2', 8]]);
-    expect(patch.propertyId).toBe('f1');
-  });
-
-  it('NP-16: holding ⌫ clears a zone field; a short press still deletes one', async () => {
-    const write = setup([a]);
-    fireEvent.press(screen.getByTestId('ordd-o1-a-zones'));
-    fireEvent.press(screen.getByTestId('ordd-zone-z1'));
-    keys('ordd-zone-z1', '1', '9');
-    fireEvent(screen.getByTestId('ordd-zone-z1-pad-key-back'), 'longPress');
-    keys('ordd-zone-z1', '1', '2', '3', 'back', 'done');
-    fireEvent.press(screen.getByTestId('ordd-zones-done'));
-    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
-    expect(write.mock.calls[0][2].patch.fertilizer.zones.map((z: { zoneId: string; sacks: number }) => [z.zoneId, z.sacks])).toEqual([['z1', 12]]);
-  });
-
-  it('tappers: add one (gets all sacks), engine split shown, committed hint, share + net amount written together', async () => {
-    const write = setup([a]);
-    fireEvent.press(screen.getByTestId('ordd-o1-a-tappers'));
-    fireEvent.press(screen.getByTestId('ordd-tap-add'));
-    fireEvent.press(screen.getByTestId('ordd-pick-p1'));
-    expect(screen.getByText('แบ่งแล้ว 20 / 20')).toBeTruthy();
-    expect(screen.getByTestId('ordd-tap-p1-part').props.children).toBe('แดงรับส่วนนี้ 11,500.00');
-    // E03-S11: each tapper's card leads with the tapper original.
-    expect(art('ordd-tap-p1')).toEqual(['people.tapper']);
-    expect(screen.getByTestId('ordd-tap-hint')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('ordd-tap-p1-sacks'));
-    keys('ordd-tap-p1-sacks', '6', 'done');
-    expect(screen.getByText('เหลือ 14 ใช้เอง')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('ordd-tap-done'));
-    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
-    expect(write.mock.calls[0][2].patch).toEqual({
-      share: { billSatang: 2_300_000, discountSatang: 0, totalSacks: 20, lines: [{ worker: { id: 'p1', name: 'แดง' }, sacks: 6, workerPct: 50, settle: 'debt' }] },
-      amountSatang: 2_300_000,
-    });
-  });
-
-  it('tappers: "ไม่แบ่ง" writes share null, and the button then reads as told', async () => {
-    const write = setup([a]);
-    fireEvent.press(screen.getByTestId('ordd-o1-a-tappers'));
-    fireEvent.press(screen.getByTestId('ordd-tap-none'));
-    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
-    expect(write.mock.calls[0][2].patch.share).toBeNull();
-  });
-
-  it('a tapper line opens the % / settle choice', () => {
-    setup([exp('o1-a', { share: { billSatang: 2_300_000, discountSatang: 0, totalSacks: 20, lines: [{ worker: { id: 'p1', name: 'แดง' }, sacks: 6, workerPct: 50, settle: 'debt' }] } })]);
-    fireEvent.press(screen.getByTestId('ordd-o1-a-tappers'));
-    expect(screen.getByText('50% · หักตอนขายยาง')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('ordd-tap-p1-chip'));
-    fireEvent.press(screen.getByTestId('ordd-tap-settle-paid'));
-    fireEvent.press(screen.getByTestId('ordd-tap-pct-done'));
-    expect(screen.getByText('50% · จ่ายสดแล้ว')).toBeTruthy();
   });
 
   it('edit item: a new quantity follows the unit price; one patch with amount, discount, line and fertilizer', async () => {
@@ -199,29 +119,16 @@ describe('OrderDetailView', () => {
     expect(screen.getByTestId('ordd-edit-price-problem')).toHaveTextContent('ต้องมากกว่า 0');
   });
 
-  it('edit item: an existing share is rebuilt in the same patch', async () => {
-    const lines = [{ worker: { id: 'p1', name: 'แดง' }, sacks: 6, workerPct: 50, settle: 'debt' as const }];
-    const write = setup([exp('o1-a', { share: { billSatang: 2_300_000, discountSatang: 0, totalSacks: 20, lines } })]);
-    fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
-    fireEvent.press(screen.getByTestId('ordd-edit-qty'));
-    keys('ordd-edit-qty', '2', '5', 'done');
-    fireEvent.press(screen.getByTestId('ordd-edit-save'));
-    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
-    const patch = write.mock.calls[0][2].patch;
-    expect(patch.share).toEqual({ billSatang: 2_875_000, discountSatang: 0, totalSacks: 25, lines });
-    expect(patch.amountSatang).toBe(2_875_000);
-  });
-
-  it('edit item: a quantity below the sacks given to tappers is blocked with a message, nothing is written', async () => {
+  it('edit item (E11-S17 RM-3): a fertilizer item\'s old split is neither rebuilt nor a reason to block a lower quantity', async () => {
     const lines = [{ worker: { id: 'p1', name: 'แดง' }, sacks: 12, workerPct: 50, settle: 'debt' as const }];
     const write = setup([exp('o1-a', { share: { billSatang: 2_300_000, discountSatang: 0, totalSacks: 20, lines } })]);
     fireEvent.press(screen.getByTestId('ordd-o1-a-edit'));
     fireEvent.press(screen.getByTestId('ordd-edit-qty'));
     keys('ordd-edit-qty', '5', 'done');
-    expect(screen.getByTestId('ordd-edit-err-tappers')).toBeTruthy();
+    expect(screen.queryByTestId('ordd-edit-err-tappers')).toBeNull();
     fireEvent.press(screen.getByTestId('ordd-edit-save'));
-    await new Promise((r) => setTimeout(r, 0));
-    expect(write).not.toHaveBeenCalled();
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(write.mock.calls[0][2].patch.share).toBeUndefined();
   });
 
   it('edit item (E11-S13): a fertilizer name is fixed by typing formula and brand; one patch, money unchanged', async () => {

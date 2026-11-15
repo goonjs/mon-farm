@@ -336,7 +336,7 @@ describe('V2Home — shop orders (E11-S11 FO-13, FD-0)', () => {
     }
   };
 
-  it('asks whether an ordered fertilizer arrived (once overdue), and which arrived fertilizer has no plot yet; both open the order', async () => {
+  it('asks whether an ordered fertilizer arrived (once overdue) and opens the order; no "no plot yet" reminder any more (E11-S17)', async () => {
     await seedFert('o1-a', 'committed', 'o1', 101);
     await seedFert('o2-a', 'actual', 'o2', 102);
     await seedFert('o2-b', 'actual', 'o2', 103);
@@ -345,9 +345,8 @@ describe('V2Home — shop orders (E11-S11 FO-13, FD-0)', () => {
       wrap(<V2Home />);
       await flush();
       expect(within(screen.getByTestId('home-order-committed')).getByText(/ของมาแล้วหรือยัง/)).toBeTruthy();
-      expect(within(screen.getByTestId('home-order-zones')).getByText(/2 รายการ/)).toBeTruthy();
+      expect(screen.queryByTestId('home-order-zones')).toBeNull();
       expect(art('home-order-committed')).toEqual(['farmwork.fertilize']);
-      expect(art('home-order-zones')).toEqual(['farm.plotZone']);
       fireEvent.press(screen.getByTestId('home-order-committed'));
       expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'o1' } });
       expect(screen.getByTestId('mod-order')).toBeTruthy();

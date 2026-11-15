@@ -58,7 +58,7 @@ export function EditItemSheet({
 
   const mp = moneyProblems(m);
   const ep = editItemProblems(item, m, name);
-  const blocked = !moneyOk(mp) || ep.tappers !== undefined || ep.zones !== undefined || ep.discount === true || ep.name === true;
+  const blocked = !moneyOk(mp) || ep.tappers !== undefined || ep.discount === true || ep.name === true;
   const per = m.unitPrice ?? (m.gross !== null && m.qty ? perUnit(m.gross, m.qty) : null);
   const net = m.gross === null ? null : Math.max(0, m.gross - m.discount);
 
@@ -128,7 +128,6 @@ export function EditItemSheet({
         <QuantityField testID="ordd-edit-qty" label={msg('ordc.qty')} value={m.qty} unit={unit} min={1} onChange={(q) => setM(withQty(m, q))} />
         {tried && mp.qty ? <FieldError testID="ordd-edit-err-qty">{msg('ordc.err.qty')}</FieldError> : null}
         {ep.tappers !== undefined ? <FieldError testID="ordd-edit-err-tappers">{msg('ordd.edit.errTappers', { n: ep.tappers })}</FieldError> : null}
-        {ep.zones !== undefined ? <FieldError testID="ordd-edit-err-zones">{msg('ordd.edit.errZones', { n: ep.zones })}</FieldError> : null}
 
         <SegmentedControl
           testID="ordd-edit-mode"

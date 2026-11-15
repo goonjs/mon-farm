@@ -108,12 +108,30 @@ export interface ShareDebt extends DebtFields {
 
 const owesNow = (x: { deleted: boolean; stage: string; share?: ExpenseShare | null }) => !x.deleted && x.stage === 'actual' && !!x.share;
 
+const isFertilizer = (x: Expense) => x.categoryId === 'cat-fertilizer';
+
 /**
  * One debt per "ลงหนี้" line of an actual expense. A tapper whose line was
  * once owed and no longer is (voided, moved back from actual, switched to
  * "จ่ายแล้ว", removed) keeps a voided debt, so their history shows it.
+ *
+ * E11-S17 (RM-3/RM-4, D-89, D-92): a split on a FERTILIZER item is no longer
+ * read — splitting fertilizer moved to the fertilizing (E16-S03). Its events
+ * stay in the log untouched; only this projection stops reading them.
  */
 export function shareDebts(expenses: readonly Expense[]): ShareDebt[] {
+  return debtsOf(expenses.filter((x) => !isFertilizer(x)));
+}
+
+/**
+ * The debts the old split on fertilizer order items made before E11-S17 — what disappears.
+ * Read only by the RM-4b report and the instalment plans written before the change (RM-7).
+ */
+export function legacyFertilizerSplitDebts(expenses: readonly Expense[]): ShareDebt[] {
+  return debtsOf(expenses.filter(isFertilizer));
+}
+
+function debtsOf(expenses: readonly Expense[]): ShareDebt[] {
   const out: ShareDebt[] = [];
   for (const x of expenses) {
     const ever = new Map<string, Payer>();

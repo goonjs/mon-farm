@@ -54,6 +54,9 @@ export function QuantityField({
   grouping = true,
   required,
   hint,
+  hideLabel,
+  sheetNote,
+  shortcuts,
   testID,
 }: {
   label: string;
@@ -83,6 +86,12 @@ export function QuantityField({
   required?: boolean;
   /** A soft note beside the label, e.g. "ไม่บังคับ". */
   hint?: string;
+  /** The screen draws its own heading (e.g. a person's name with their picture); the label still titles the sheet and names the field. */
+  hideLabel?: boolean;
+  /** A fact under the sheet's figure, e.g. "เหลือให้แบ่ง 15 ถุง" (E16-S03 SP-3). */
+  sheetNote?: string;
+  /** One-tap values above the pad that commit at once, e.g. "ที่เหลือทั้งหมด 15", "0 ไม่รับ" (SP-3). */
+  shortcuts?: readonly { readonly label: string; readonly value: number; readonly testID: string }[];
   testID: string;
 }) {
   const t = useTheme();
@@ -161,7 +170,7 @@ export function QuantityField({
   return (
     <>
       <View style={{ gap: t.space.xs }}>
-        <FieldHead label={label} required={required} hint={hint} />
+        {hideLabel ? null : <FieldHead label={label} required={required} hint={hint} />}
         <Pressable
           testID={testID}
           accessibilityRole="button"
@@ -202,11 +211,30 @@ export function QuantityField({
             {unitText}
           </View>
           {captionText(live)}
+          {sheetNote ? <Text testID={`${testID}-note`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, color: t.color.inkSoft, textAlign: 'right' }}>{sheetNote}</Text> : null}
           {/* Always there, so a screen reader announces the reason when it appears; out of the flow while empty (no gap). */}
           <View testID={`${testID}-problem`} accessibilityLiveRegion="polite" aria-live="polite" style={problem ? undefined : QUIET_REGION}>
             {problem ? <Text nativeID={`${testID}-problem-text`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.semibold, color: t.color.reject, textAlign: 'right' }}>{problem}</Text> : null}
           </View>
         </View>
+        {shortcuts?.length ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+            {shortcuts.map((sc) => (
+              <Pressable
+                key={sc.testID}
+                testID={sc.testID}
+                accessibilityRole="button"
+                onPress={() => {
+                  onChange(sc.value);
+                  setOpen(false);
+                }}
+                style={{ flexGrow: 1, minHeight: t.target.comfortable, paddingHorizontal: t.space.md, alignItems: 'center', justifyContent: 'center', borderRadius: t.radius.lg, backgroundColor: t.color.actionSunk }}
+              >
+                <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, color: t.color.action, textAlign: 'center' }}>{sc.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
         {decimals > 0 ? (
           <>
             <NumberPad variant="decimal" onKey={press} onDone={commit} testID={`${testID}-pad`} />
