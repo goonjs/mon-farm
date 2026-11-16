@@ -33,11 +33,15 @@ const TIMES = ['06:00', '07:00', '08:00', '09:00', '10:00', '13:00'] as const;
 export function prepDayText(iso: string, era: 'be' | 'ce', short = false): string {
   const [y, m, d] = iso.split('-').map(Number);
   const text = formatThaiDay(Date.UTC(y, m - 1, d, 5), era);
-  return short ? text.replace(/ \d{4}$/, '') : text;
+  // The short form stays on one line: its spaces do not break ("ส. 21 พ.ย." splits badly).
+  return short ? text.replace(/ \d{4}$/, '').replace(/ /g, '\u00a0') : text;
 }
 
-/** "฿/กก." never breaks after the slash (a word joiner, added here: the catalogue keeps to printable symbols). */
-export const keepPerKg = (text: string) => text.replace(/฿\/(?=\S)/g, '฿/\u2060');
+/**
+ * "52.50 ฿/กก." stays whole: no break before ฿ nor after the slash (a no-break space and a word joiner, added
+ * here because the catalogue keeps to printable symbols).
+ */
+export const keepPerKg = (text: string) => text.replace(/ ฿\/(?=\S)/g, '\u00a0฿/\u2060');
 
 /** The prep in force: a sale started after its last write has used it (PREP-8). */
 export function livePrep(events: readonly FinanceEvent[], lastSaleTs: number | null): SalePrep | null {
