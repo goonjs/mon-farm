@@ -169,18 +169,48 @@ for (const size of ['m', 'l'] as const) {
       const all = JSON.parse(localStorage.getItem('mon-farm:finance-events') ?? '[]');
       localStorage.setItem('mon-farm:finance-events', JSON.stringify([...all, ...ev]));
     }, [
-      finEvent(10, 'fz-e2e-1', { t: 'fertilizing_recorded', fields: { date: '2026-10-20', lines: [{ sources: ['ord-a-1'], sacks: 20, takes: [{ worker: TAPPERS[0], sacks: 20, auto: false }], rest: null }], pct: { t1: 50 }, settle: {}, zones: [], reasons: [], note: '' } }),
+      finEvent(10, 'fz-e2e-1', { t: 'fertilizing_recorded', fields: { date: '2026-10-20', lines: [{ sources: ['ord-a-1'], sacks: 20, takes: [{ worker: TAPPERS[0], sacks: 20, auto: false }], rest: null }, { sources: ['ord-c-1'], sacks: 5, takes: [{ worker: TAPPERS[0], sacks: 5, auto: false }], rest: null }], pct: { t1: 50 }, settle: {}, zones: [], reasons: [], note: '' } }),
       finEvent(11, 'fz-e2e-2', { t: 'fertilizing_recorded', fields: { date: '2026-11-05', lines: [{ sources: ['ord-c-1'], sacks: 10, takes: [], rest: null }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } }),
     ]);
     await page.goto('/v2');
     await context.setOffline(true);
     expect(await textFit(page)).toEqual([]);
+    // E16-S05 HM-3 (review of PR 190 item 2): the committed ขี้ไก่ order (50 × ฿100) shows as a ควรรู้ row.
+    await expect(page.getByTestId('home-payables')).toContainText('5,000');
     await page.getByTestId('mod-care').click();
     await expect(page.locator('[data-testid^="care-row-fz-"]:not([data-testid$="-badge"])')).toHaveCount(2);
     await expect(page.getByTestId('care-row-fz-e2e-2-badge')).toHaveText('ยังไม่แบ่ง');
+    // Each item has its unit; the "·" stays on the line of the item before it (PR 189 review N2).
+    await expect(page.getByTestId('care-what-fz-e2e-1')).toHaveText('ดีเกลือ\u00a020 ถุง\u00a0· 46\u2060-\u20600\u2060-\u20600\u00a05 ถุง');
     expect(await textFit(page)).toEqual([]);
     await evidence(page, `${SHOTS}/${size}-care-list.png`);
     await page.getByTestId('care-row-fz-e2e-2').click();
     await expect(page.getByTestId('fz-ferts')).toContainText('46-0-0 780฿ · 10 ถุง · ยังไม่แบ่ง');
+  });
+}
+
+for (const size of ['m', 'l'] as const) {
+  test(`E16-S04 fertilizer left at text size ${size.toUpperCase()}: from home, what is left, over-use flag opens the fertilizing (offline)`, async ({ page, context }) => {
+    await seed(page, size);
+    await page.evaluate((ev) => {
+      const all = JSON.parse(localStorage.getItem('mon-farm:finance-events') ?? '[]');
+      localStorage.setItem('mon-farm:finance-events', JSON.stringify([...all, ...ev]));
+    }, [
+      finEvent(20, 'fz-s04-1', { t: 'fertilizing_recorded', fields: { date: '2026-10-20', lines: [{ sources: ['ord-a-1'], sacks: 45, takes: [], rest: 'farm' }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } }),
+      // Two devices offline used the same 20 sacks of 46-0-0: 15 + 10 = 25, five more than received.
+      finEvent(21, 'fz-s04-2', { t: 'fertilizing_recorded', fields: { date: '2026-10-21', lines: [{ sources: ['ord-c-1'], sacks: 15, takes: [], rest: 'farm' }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } }),
+      finEvent(22, 'fz-s04-3', { t: 'fertilizing_recorded', fields: { date: '2026-10-22', lines: [{ sources: ['ord-c-1'], sacks: 10, takes: [], rest: 'farm' }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } }),
+    ]);
+    await page.goto('/v2');
+    await context.setOffline(true);
+    await page.getByTestId('mod-stock').click();
+    await expect(page.getByTestId('stock-card-0-left')).toHaveText('15');
+    await expect(page.getByTestId('stock-ordered')).toContainText('ขี้ไก่ 50 ถุง');
+    const over = page.locator('[data-testid$="-over"]').first();
+    await expect(over).toHaveText('ใส่เกินที่ได้ของ 5 ถุง');
+    expect(await textFit(page)).toEqual([]);
+    await evidence(page, `${SHOTS}/${size}-stock.png`);
+    await over.click();
+    await expect(page.getByTestId('fz-over')).toHaveText('ใส่เกินที่ได้ของ 5 ถุง');
   });
 }

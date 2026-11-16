@@ -31,6 +31,7 @@ export function KnowRow({
   value,
   chip,
   children,
+  why,
   to,
   onPress,
 }: {
@@ -41,6 +42,8 @@ export function KnowRow({
   value?: string;
   chip?: React.ReactNode;
   children?: React.ReactNode;
+  /** Why the row is here and what to do, one short line (E16-S05 HM-6, owner 2026-11-16): `${testID}-why`. */
+  why?: string;
   /** Where it goes; or `onPress` when the tap must do more first (a sheet closes, then navigates). */
   to?: Href;
   onPress?: () => void;
@@ -59,6 +62,7 @@ export function KnowRow({
         {value ? <Text style={{ ...body(t), fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.semibold, fontVariant: ['tabular-nums'] }}>{value}</Text> : null}
         {chip}
         {children}
+        {why ? <Text testID={`${testID}-why`} style={{ ...body(t), fontSize: t.font.size.bodySm, color: t.color.inkSoft }}>{why}</Text> : null}
       </View>
       <ChevronRight color={t.color.inkFaint} />
     </Pressable>

@@ -55,7 +55,7 @@ export function saleHref(id: string, at: { closed: boolean; point: string | null
 }
 
 /** Sections with their own route file; the rest render the placeholder. */
-export const BUILT_SECTIONS: ReadonlySet<string> = new Set(['farm', 'people', 'buyers', 'farms', 'points', 'shares', 'sale-settings', 'expenses', 'debts', 'device', 'sales']);
+export const BUILT_SECTIONS: ReadonlySet<string> = new Set(['farm', 'people', 'buyers', 'farms', 'points', 'shares', 'sale-settings', 'expenses', 'debts', 'device', 'sales', 'stock']);
 
 export const V2_HOME = '/v2' as Href;
 

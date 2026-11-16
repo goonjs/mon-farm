@@ -8,6 +8,7 @@ import {
   filterExpenses,
   owedByPerson,
   payableSatang,
+  shopPayableSatang,
   projectFinance,
   stageTotals,
 } from './ledger';
@@ -324,6 +325,8 @@ describe('E11-S02 payer and money owed back', () => {
       created('x4', { payer: FARM, amountSatang: 5000 }),
     ]);
     expect(payableSatang(s)).toBe(1580000);
+    // The home ควรรู้ row counts only committed buying not paid yet; money owed back to people has its own row (review of PR 190 item 1).
+    expect(shopPayableSatang(s)).toBe(1500000);
   });
 });
 

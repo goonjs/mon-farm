@@ -6,12 +6,12 @@
  */
 
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { projectFertilizing, splitBadge, type Fertilizing } from '../../core/finance/fertilizing';
 import { projectFinance } from '../../core/finance/ledger';
-import { formatDate } from '../../core/finance/money';
+import { todayIso } from '../../core/finance/money';
 import type { FinanceEvent, FinancePayload } from '../../core/finance/types';
 import type { EventId } from '../../core/types';
 import { useFinance } from '../../finance/use-finance';
@@ -19,6 +19,7 @@ import { useInFlight } from '../../finance/use-in-flight';
 import { useT } from '../../i18n';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
+import { keepFormula, rowDate } from './text';
 import { AppText, ChevronRight, CTA, FarmMateArt, PinnedActions, Plus, ScreenHeader, TextLink } from '../../ui';
 import { FERTILIZING_NEW, fertilizingHref } from './fertilizing/routes';
 
@@ -42,6 +43,7 @@ export function CareListView({
   events,
   write,
   sync,
+  today = todayIso(),
   onOpen,
   onNew,
   onBack,
@@ -49,6 +51,8 @@ export function CareListView({
   events: readonly FinanceEvent[];
   write: (targetId: string, base: EventId | null, payload: FinancePayload) => Promise<unknown>;
   sync?: ReturnType<typeof useSyncStatus>;
+  /** ISO day; the row date drops the year only for this year. */
+  today?: string;
   onOpen: (id: string) => void;
   onNew: () => void;
   onBack: () => void;
@@ -59,12 +63,15 @@ export function CareListView({
   const records = useMemo(() => projectFertilizing(events, projectFinance(events).expenses).records, [events]);
   const live = records.filter((r) => !r.deleted);
   const gone = records.filter((r) => r.deleted);
+  const [restoreFailed, setRestoreFailed] = useState(false);
   const restore = (r: Fertilizing) =>
     inFlight.run(async () => {
+      setRestoreFailed(false);
       try {
         await write(r.id, r.headEventId, { t: 'fertilizing_changed', patch: { deleted: false } });
       } catch (err) {
         console.error('Fertilizing could not be restored.', err);
+        setRestoreFailed(true);
       }
     });
 
@@ -80,14 +87,21 @@ export function CareListView({
           </View>
         ) : null}
         {live.map((r) => (
-          <Row key={r.id} r={r} onPress={() => onOpen(r.id)} />
+          <Row key={r.id} r={r} year={today.slice(0, 4)} onPress={() => onOpen(r.id)} />
         ))}
         {gone.length ? (
           <View testID="care-deleted" style={{ gap: t.space.sm }}>
             <AppText variant="label">{msg('care.deleted', { n: gone.length })}</AppText>
+            {restoreFailed ? (
+              <AppText testID="care-restore-error" style={{ color: t.color.reject }}>{msg('care.restoreFailed')}</AppText>
+            ) : null}
+            {/* Laid out like a live row, muted, with กู้คืน on its own (owner 2026-11-16, E16-S05 HM-7). */}
             {gone.map((r) => (
-              <View key={r.id} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.md, padding: t.space.md, borderRadius: t.radius.xl, backgroundColor: t.color.surfaceSunk }}>
-                <AppText style={{ flex: 1, minWidth: 0 }}>{`${formatDate(r.date)} · ${summary(r, msg('fz.unit'))}`}</AppText>
+              <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md, borderRadius: t.radius.xl, backgroundColor: t.color.surfaceSunk }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <AppText testID={`care-gone-date-${r.id}`} variant="bodySm">{`${rowDate(r.date, today.slice(0, 4))} · ${msg('fz.title')}`}</AppText>
+                  <AppText testID={`care-gone-what-${r.id}`} style={{ color: t.color.inkSoft, fontWeight: t.font.weight.bold }}>{summary(r, msg('fz.unit'))}</AppText>
+                </View>
                 <TextLink testID={`care-restore-${r.id}`} onPress={() => void restore(r)}>{msg('care.restore')}</TextLink>
               </View>
             ))}
@@ -101,10 +115,10 @@ export function CareListView({
   );
 }
 
-/** "ดีเกลือ 10 · 46-0-0 5 ถุง": what and how much, short. */
-const summary = (r: Fertilizing, unit: string) => `${r.lines.map((l) => `${l.label} ${l.sacks}`).join(' · ')} ${unit}`;
+/** "ดีเกลือ 10 ถุง · 46-0-0 5 ถุง": what and how much. The "·" is glued to the item before it, and a formula to its count (review of PR 190 item 4), so a wrapped line never starts with "·" or strands a count. */
+const summary = (r: Fertilizing, unit: string) => r.lines.map((l) => `${keepFormula(l.label)}\u00a0${l.sacks} ${unit}`).join('\u00a0· ');
 
-function Row({ r, onPress }: { r: Fertilizing; onPress: () => void }) {
+function Row({ r, year, onPress }: { r: Fertilizing; year: string; onPress: () => void }) {
   const t = useTheme();
   const msg = useT();
   const badge = splitBadge(r);
@@ -119,9 +133,14 @@ function Row({ r, onPress }: { r: Fertilizing; onPress: () => void }) {
         <FarmMateArt id="farmwork.fertilize" size={40} />
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-        <AppText variant="bodySm">{`${formatDate(r.date).split(' ').slice(0, 2).join(' ')} · ${msg('fz.title')}`}</AppText>
-        <AppText style={{ fontWeight: t.font.weight.bold }}>{summary(r, msg('fz.unit'))}</AppText>
+        <AppText testID={`care-date-${r.id}`} variant="bodySm">{`${rowDate(r.date, year)} · ${msg('fz.title')}`}</AppText>
+        <AppText testID={`care-what-${r.id}`} style={{ fontWeight: t.font.weight.bold }}>{summary(r, msg('fz.unit'))}</AppText>
         {r.zones.length ? <AppText variant="bodySm">{r.zones.map((z) => z.zoneName).join(' · ')}</AppText> : null}
+        {r.over > 0 ? (
+          <View testID={`care-row-${r.id}-over`} style={{ alignSelf: 'flex-start', paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: t.color.warnSunk }}>
+            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('fz.over', { n: r.over })}</Text>
+          </View>
+        ) : null}
         {badge ? (
           <View testID={`care-row-${r.id}-badge`} style={{ alignSelf: 'flex-start', paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: t.color.warnSunk }}>
             <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg(`fz.status.${badge}`)}</Text>

@@ -85,6 +85,17 @@ async function seedOwed(name: string, satang: number) {
   };
   await mockFinance.append(e);
 }
+/** A fertilizing nobody has been given a share of yet (E16-S03: "ยังไม่แบ่ง"); `deleted` adds the delete. */
+async function seedUnsplitFertilizing(id: string, deleted = false) {
+  const base = { groupId: 'group-1', deviceSeq: 1, ts: 1, actor: { userId: 'u', deviceId: 'dev-other' }, source: 'app' as const, baseEventId: null };
+  await mockFinance.append({
+    ...base,
+    id: `${id}-c`,
+    targetId: id,
+    payload: { t: 'fertilizing_recorded', fields: { date: '2026-11-01', lines: [{ sources: ['ord-x'], sacks: 10, takes: [], rest: null }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } },
+  });
+  if (deleted) await mockFinance.append({ ...base, id: `${id}-d`, targetId: id, baseEventId: `${id}-c`, payload: { t: 'fertilizing_changed', patch: { deleted: true } } });
+}
 
 beforeEach(() => mockRouter.push.mockClear());
 
@@ -104,7 +115,7 @@ describe('V2Home — empty farm', () => {
     expect(page().props.scrollEnabled).toBe(true);
   });
 
-  it('reads top to bottom as drawn: header with date, cover, three actions, ควรรู้, ไปที่', async () => {
+  it('reads top to bottom as drawn: header with date, cover, three actions, ควรรู้, ไปที่ (owner 2026-11-16: no 2×2)', async () => {
     wrap(<V2Home />);
     await flush();
     expect(screen.getByTestId('screen-title').props.children).toBe('หน้าแรก');
@@ -119,6 +130,9 @@ describe('V2Home — empty farm', () => {
     expect(within(screen.getByTestId('home-prepare')).getByText('เตรียมขาย')).toBeTruthy();
     expect(within(screen.getByTestId('home-sale-start')).getByText('เริ่มการขาย')).toBeTruthy();
     expect(within(screen.getByTestId('home-record-expense')).getByText('บันทึกค่าใช้จ่าย')).toBeTruthy();
+    // Garden care is not a big button any more (owner 2026-11-16): it sits with the ไปที่ tiles.
+    expect(screen.queryByTestId('home-care')).toBeNull();
+    expect(screen.queryByTestId('mod-care-flag')).toBeNull();
     expect(screen.getByText('ควรรู้ / ควรจัดการ')).toBeTruthy();
     expect(screen.getByText('สำคัญก่อน')).toBeTruthy();
     expect(screen.getByText('ไปที่')).toBeTruthy();
@@ -152,20 +166,27 @@ describe('V2Home — empty farm', () => {
     expect(screen.queryByTestId('home-open-sale')).toBeNull();
     expect(screen.queryByTestId('home-latest-sale')).toBeNull();
     expect(screen.queryByTestId('home-owed')).toBeNull();
+    expect(screen.queryByTestId('home-payables')).toBeNull();
   });
 
-  it('the module grid follows v1.1.0 screen 25, with zero totals', async () => {
+  it('the module grid keeps its old order; garden care is a short tile beside รายการที่ต้องจ่าย; stock and tappers share a row (owner 2026-11-16, E16-S05 HM-4)', async () => {
     wrap(<V2Home />);
     await flush();
     const grid = screen.getByTestId('home-go-to');
     const ids = within(grid).getAllByTestId(/^mod-/).map((n) => n.props.testID);
-    expect(ids).toEqual(['mod-reports', 'mod-weather', 'mod-payables', 'mod-expenses', 'mod-order', 'mod-stock', 'mod-care', 'mod-workers']);
-    // E16-S01 GC-1: garden care beside the stock, the two sides of the fertilizer.
+    expect(ids).toEqual(['mod-reports', 'mod-weather', 'mod-payables', 'mod-care', 'mod-expenses', 'mod-order', 'mod-stock', 'mod-workers']);
+    // The long รายการที่ต้องจ่าย row is now two short tiles: it and การดูแลสวน.
+    const pair = within(screen.getByTestId('home-go-to-care-row')).getAllByTestId(/^mod-/).map((n) => n.props.testID);
+    expect(pair).toEqual(['mod-payables', 'mod-care']);
+    // Stock and tappers share one row as two short tiles (owner 2026-11-16, HM-4).
+    const people = within(screen.getByTestId('home-go-to-stock-row')).getAllByTestId(/^mod-/).map((n) => n.props.testID);
+    expect(people).toEqual(['mod-stock', 'mod-workers']);
     expect(within(screen.getByTestId('mod-care')).getByText('การดูแลสวน')).toBeTruthy();
+    // The amount to pay moved to ควรรู้ (HM-3): the tile is a way in only.
+    expect(within(screen.getByTestId('mod-payables')).queryByText('0.00')).toBeNull();
     expect(within(screen.getByTestId('mod-reports')).getByText('รายงานการขายย้อนหลัง')).toBeTruthy();
     expect(within(screen.getByTestId('mod-weather')).getByText('เปิดภายนอก')).toBeTruthy();
     expect(within(screen.getByTestId('mod-weather')).getByTestId('external-icon', { includeHiddenElements: true })).toBeTruthy();
-    expect(within(screen.getByTestId('mod-payables')).getByText('0.00')).toBeTruthy();
     expect(within(screen.getByTestId('mod-expenses')).getByText('ค่าใช้จ่ายทั้งหมด')).toBeTruthy();
     expect(within(screen.getByTestId('mod-stock')).getByText('รายการ stock')).toBeTruthy();
     expect(within(screen.getByTestId('mod-workers')).getByText('0')).toBeTruthy();
@@ -179,6 +200,7 @@ describe('V2Home — empty farm', () => {
       'home-prepare': '/v2/prepare',
       'home-sale-start': '/v2/sale/start',
       'home-record-expense': '/v2/expense/new',
+      'mod-care': '/v2/care',
       'home-sales': '/v2/sales',
       'mod-reports': '/v2/reports',
       'mod-weather': '/v2/weather',
@@ -186,7 +208,6 @@ describe('V2Home — empty farm', () => {
       'mod-expenses': '/v2/expenses',
       'mod-order': '/v2/order',
       'mod-stock': '/v2/stock',
-      'mod-care': '/v2/care',
       'mod-workers': '/v2/people?filter=tapper',
     };
     for (const [id, href] of Object.entries(routes)) {
@@ -204,13 +225,14 @@ describe('V2Home — FarmMate originals (E03-S11 FM-6)', () => {
     expect(art('home-prepare')).toEqual(['farmwork.today']);
     expect(art('home-sale-start')).toEqual(['sale.sale']);
     expect(art('home-record-expense')).toEqual(['sale.receipt']);
+    // A sprout for looking after the garden (owner 2026-11-16 asked for a better-fitting icon than the tools).
+    expect(art('mod-care')).toEqual(['farm.treeCondition']);
     expect(art('mod-reports')).toEqual(['sale.salesReport']);
     expect(art('mod-weather')).toEqual([]);
     expect(art('mod-payables')).toEqual(['finance.expense']);
     expect(art('mod-expenses')).toEqual(['sale.receipt']);
     expect(art('mod-order')).toEqual(['materials.orderMaterials']);
     expect(art('mod-stock')).toEqual(['materials.stock']);
-    expect(art('mod-care')).toEqual(['farmwork.maintenance']);
     expect(art('mod-workers')).toEqual(['people.workerInfo']);
   });
 
@@ -276,6 +298,19 @@ describe('V2Home — ☰ menu (v1.1.0 screen 1)', () => {
   });
 });
 
+describe('V2Home — garden care tile (E16-S05 HM-2)', () => {
+  it('the garden care button says how many fertilizings are not split yet; deleted ones do not count', async () => {
+    await seedUnsplitFertilizing('fz-a');
+    await seedUnsplitFertilizing('fz-b');
+    await seedUnsplitFertilizing('fz-gone', true);
+    wrap(<V2Home />);
+    await flush();
+    expect(screen.getByTestId('mod-care-flag')).toHaveTextContent('ยังไม่แบ่ง 2 ครั้ง');
+    fireEvent.press(screen.getByTestId('mod-care'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/care');
+  });
+});
+
 describe('V2Home — live rows from the local log', () => {
   it('shows the open sale, the latest finished sale, money owed back and the totals', async () => {
     await seedSale('s-old', 2, (b) => b.sys({ t: 'sale_closed' }));
@@ -307,7 +342,13 @@ describe('V2Home — live rows from the local log', () => {
     expect(within(owed).getByText('อาจารย์สมหวัง')).toBeTruthy();
     expect(screen.queryByText('ยังไม่มีเรื่องที่ต้องรู้หรือจัดการ')).toBeNull();
 
-    expect(within(screen.getByTestId('mod-payables')).getByText('1,200.00')).toBeTruthy();
+    // E16-S05 HM-3: money owed back is its own row; the payables row counts the shop only, so it does not repeat it.
+    expect(screen.queryByTestId('home-payables')).toBeNull();
+    expect(within(screen.getByTestId('mod-payables')).queryByText('1,200.00')).toBeNull();
+    // E16-S05 HM-6: every ควรรู้ row says why it is there and what to do.
+    expect(screen.getByTestId('home-open-sale-why')).toHaveTextContent('ชั่งอยู่ · ชั่งเสร็จแล้วจ่ายเงินและกดปิดการขาย');
+    expect(screen.getByTestId('home-latest-sale-why')).toHaveTextContent('ดูยอดขายและเงินที่จ่ายแล้ว');
+    expect(screen.getByTestId('home-owed-why')).toHaveTextContent('มีคนออกเงินให้สวนไปก่อน · คืนเงินเขา');
     expect(within(screen.getByTestId('mod-workers')).getByText('2')).toBeTruthy();
 
     // The open sale resumes at its counter, the latest one opens its payment (v2 sale flow).
@@ -351,6 +392,11 @@ describe('V2Home — shop orders (E11-S11 FO-13, FD-0)', () => {
       expect(within(screen.getByTestId('home-order-committed')).getByText(/ของมาแล้วหรือยัง/)).toBeTruthy();
       expect(screen.queryByTestId('home-order-zones')).toBeNull();
       expect(art('home-order-committed')).toEqual(['farmwork.fertilize']);
+      expect(screen.getByTestId('home-order-committed-why')).toHaveTextContent('สั่งเกิน 2 วันแล้ว · ของมาแล้วให้เปลี่ยนเป็น ได้ของแล้ว');
+      // E16-S05 HM-3: the shop is still owed for the committed order: one row, short money, with why.
+      expect(screen.getByTestId('home-payables')).toHaveTextContent(/฿\s*1,000/);
+      // What it sums is committed buying not paid yet, so the reason says that (review of PR 190 item 1).
+      expect(screen.getByTestId('home-payables-why')).toHaveTextContent('สั่งหรือตกลงไว้แล้ว ยังไม่ได้จ่าย');
       fireEvent.press(screen.getByTestId('home-order-committed'));
       expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'o1' } });
       expect(screen.getByTestId('mod-order')).toBeTruthy();
@@ -364,5 +410,20 @@ describe('V2Home — shop orders (E11-S11 FO-13, FD-0)', () => {
       await flush();
       expect(screen.queryByTestId('home-order-committed')).toBeNull();
     });
+  });
+});
+
+describe('V2Home — a sale left open after weighing (E16-S05 HM-6)', () => {
+  // Last in the file: the store is shared, and this open sale must not become the newest one for the tests above.
+  it('says the sale is not closed yet and what closes it', async () => {
+    // Weighed and the pile closed, but nobody pressed ปิดการขาย (owner's 3 Nov sale): the row says so.
+    const b = setUpSale(new LogBuilder('s-left'));
+    readyPile(b, 'p1');
+    b.accept('p1').accept('p1').sys({ t: 'pile_closed', pileId: 'p1', forced: false });
+    // Later than every sale the tests above left in the shared store, so it is the open one shown.
+    for (const e of b.build() as SaleEvent[]) await mockStore.append({ ...e, ts: e.ts + 1_000_000_000 });
+    wrap(<V2Home />);
+    await flush();
+    expect(screen.getByTestId('home-open-sale-why')).toHaveTextContent('ยังไม่ได้กดปิดการขาย · จ่ายเงินให้ครบแล้วกดปิด');
   });
 });

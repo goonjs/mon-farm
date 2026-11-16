@@ -10,7 +10,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { fertilizerSplit } from '../../../core/finance/ledger';
-import { projectFertilizing, takeCosts, type FertilizingProjection } from '../../../core/finance/fertilizing';
+import { orderedSacks, projectFertilizing, takeCosts, type FertilizingProjection } from '../../../core/finance/fertilizing';
 import {
   applyAll,
   cardStatus,
@@ -88,15 +88,7 @@ export function CardsPage({
     return out;
   }, [s, events, expenses, recordId, date, used]);
 
-  const ordered = useMemo(() => {
-    const by = new Map<string, number>();
-    for (const x of expenses) {
-      if (x.deleted || x.categoryId !== 'cat-fertilizer' || x.stage === 'actual' || !x.fertilizer) continue;
-      const name = x.fertilizer.formula;
-      by.set(name, (by.get(name) ?? 0) + (x.fertilizer.sacks ?? x.line?.qty ?? 0));
-    }
-    return [...by].map(([name, sacks]) => `${name} ${sacks} ${msg('fz.unit')}`);
-  }, [expenses, msg]);
+  const ordered = useMemo(() => orderedSacks(expenses).map((o) => `${o.formula} ${o.sacks} ${msg('fz.unit')}`), [expenses, msg]);
 
   const apply = () => {
     const ask = partialCards(s);
