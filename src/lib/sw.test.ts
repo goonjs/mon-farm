@@ -89,7 +89,7 @@ describe('service worker (E01-S23)', () => {
     expect(store.has('https://elsewhere.test/x.js')).toBe(false);
   });
 
-  it('on a weak signal, a page it kept opens from the cache after 3.5 s instead of waiting on (N3)', async () => {
+  it('on a weak signal, a page it kept opens from the cache after 30 s instead of waiting on (N3; owner 2026-11-16 "ซัก 30 วินาที")', async () => {
     let hang = false;
     const { run } = load((u) => (hang ? new Promise<Response>(() => undefined) : Promise.resolve(res(`page ${u}`))));
     await run('install', {});
@@ -99,9 +99,9 @@ describe('service worker (E01-S23)', () => {
       const answer = (await run('fetch', { request: req('/v2/', 'navigate') })).answer!;
       let done = false;
       void answer.then(() => (done = true));
-      await vi.advanceTimersByTimeAsync(3_000);
+      await vi.advanceTimersByTimeAsync(29_000);
       expect(done).toBe(false);
-      await vi.advanceTimersByTimeAsync(600);
+      await vi.advanceTimersByTimeAsync(1_100);
       expect(await (await answer).text()).toBe(`page ${abs('/v2/')}`);
     } finally {
       vi.useRealTimers();
