@@ -363,6 +363,17 @@ export interface FertilizingFields {
 
 export type FertilizingPatch = Partial<FertilizingFields> & { readonly deleted?: boolean };
 
+export interface SalePrepPatch {
+  readonly buyerId?: string | null;
+  readonly buyerName?: string;
+  /** "YYYY-MM-DD". */
+  readonly date?: string | null;
+  /** "HH:MM", optional (owner 2026-11-17). */
+  readonly time?: string | null;
+  readonly priceSatangPerKg?: number | null;
+  readonly cancelled?: true;
+}
+
 export type FinancePayload =
   | { readonly t: 'expense_created'; readonly fields: ExpenseFields }
   | { readonly t: 'expense_changed'; readonly patch: ExpensePatch; readonly alsoBasedOn?: readonly EventId[] }
@@ -384,6 +395,11 @@ export type FinancePayload =
    * only a fallback for app versions that predate it (they propose it); new code ignores it.
    */
   | { readonly t: 'debt_plan_set'; readonly worker: Payer; readonly perSaleSatang: number | null; readonly installments?: InstallmentPlanSpec }
+  /**
+   * E15-S01 · the sale prep (targetId `sale-prep`, one at a time, PREP-8). Each write carries only the fields it
+   * sets, so two phones setting different rows both keep theirs; null clears a field. `cancelled` ends the prep.
+   */
+  | { readonly t: 'sale_prep_set'; readonly patch: SalePrepPatch }
   | { readonly t: 'account_added'; readonly fields: AccountFields }
   | { readonly t: 'account_changed'; readonly patch: AccountPatch; readonly alsoBasedOn?: readonly EventId[] }
   /** targetId `default-account`; null = no default. */
