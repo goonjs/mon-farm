@@ -24,7 +24,7 @@ import { pairForNewPoint } from '../../core/sale-move';
 import { pointSetupPayloads } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AlertIcon, AppText, Button, cardStyle, Check, CTA, QuantityField, TextLink } from '../../ui';
+import { AlertIcon, AppText, Button, cardStyle, Check, CTA, FarmMateArt, QuantityField, TextLink } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { Banner, kgText, useLeaveIfClosed, useSaleView } from './pieces';
 
@@ -118,8 +118,10 @@ export function BackfillScreen() {
   const startOf = (i: number) => (perPoint ? 1 : (planOf(i)?.lastNo ?? 0) + 1);
 
   const sumBar = (
-    <View testID="cu-sum-bar" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: t.space.sm, paddingVertical: t.space.sm, paddingHorizontal: t.space.md, borderRadius: t.radius.lg, backgroundColor: t.color.acceptSunk }}>
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.black, color: t.color.ink, fontVariant: ['tabular-nums'] }}>{msg('cu.sum', { kg: kg(sofar?.totalG ?? 0) })}</Text>
+    <View testID="cu-sum-bar" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: t.space.sm, paddingVertical: t.space.sm, paddingHorizontal: t.space.md, borderRadius: t.radius.lg, backgroundColor: t.color.acceptSunk }}>
+      {/* The Σ is code: the text catalogue keeps to Thai and Latin (summary-lines: the total is led by Σ). */}
+      <FarmMateArt id="sale.weigh" size={32} />
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingLg, fontWeight: t.font.weight.black, color: t.color.ink, fontVariant: ['tabular-nums'] }}>{`Σ ${msg('cu.sum', { kg: kg(sofar?.totalG ?? 0) })}`}</Text>
       <AppText variant="bodySm">{sofar ? msg('cu.sumBaskets', { n: sofar.baskets }) : msg('cu.none')}</AppText>
     </View>
   );
@@ -316,7 +318,7 @@ export function BackfillScreen() {
           </View>
         ))}
         <View testID="cu-total" style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: t.space.sm, borderTopWidth: t.border.thick, borderColor: t.color.rule, paddingTop: t.space.xs }}>
-          <AppText style={{ fontWeight: t.font.weight.black }}>{msg('cu.total', { n: plan?.baskets ?? 0 })}</AppText>
+          <AppText style={{ fontWeight: t.font.weight.black }}>{`Σ ${msg('cu.total', { n: plan?.baskets ?? 0 })}`}</AppText>
           <AppText style={{ fontWeight: t.font.weight.black }}>{msg('cu.totalKg', { kg: kg(plan?.totalG ?? 0) })}</AppText>
         </View>
       </View>
