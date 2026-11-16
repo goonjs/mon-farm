@@ -126,7 +126,7 @@ describe('V2Home — เตรียมการขาย row (E15-S01 PREP-1)',
     wrap(<V2Home />);
     await flush();
     expect(screen.getByTestId('home-prep')).toHaveTextContent(/✓ พร้อมขาย · ส\. 21 พ\.ย\./);
-    expect(screen.getByTestId('home-prep')).toHaveTextContent(/คนรับซื้อยาง ก · 52\.50 ฿\/กก\./);
+    expect(screen.getByTestId('home-prep')).toHaveTextContent(/คนรับซื้อยาง ก · 52\.50 ฿\/\u2060กก\./);
   });
 });
 

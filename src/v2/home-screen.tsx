@@ -18,11 +18,14 @@ import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
 import { farmSection, SALE_START, saleHref, sectionHref } from './routes';
 import { useMaster, useMounted } from './farm/pieces';
 import { HomeCover } from './home-cover';
+import { keepPerKg, livePrep, prepDayText, PREP_HREF, unsplitCount } from './prepare/prepare-screen';
 import { KnowRow, useSaleLineText } from './know-row';
 import { ORDER_NEW, orderHref } from './money/order-routes';
 import { loadHomeSales } from './sale/open-sale';
 import { useRepayHome, type OwesRow } from './home-repay';
 import { groupOrders } from '../core/finance/fert-order';
+import { prepLeft } from '../core/finance/sale-prep';
+import type { FinanceEvent } from '../core/finance/types';
 import { projectFertilizing, splitBadge } from '../core/finance/fertilizing';
 import { owedByPerson, shopPayableSatang } from '../core/finance/ledger';
 import { formatDate, formatSatang, todayIso } from '../core/finance/money';
@@ -251,6 +254,8 @@ export function V2Home() {
           />
         </View>
 
+        <PrepRow events={fin.events} sales={sales} />
+
         <Heading hint={msg('home.importantFirst')}>{msg('v2.toKnow')}</Heading>
         <View testID="home-to-know" style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
           {knowRows.length === 0 ? (
@@ -371,6 +376,34 @@ function HomeMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
 }
 
 /** Sales for the home rows: every sale's log, read again whenever home is shown. */
+/**
+ * E15-S01 PREP-1: the sale prep in one row above the to-know list. Nothing prepared invites the next sale;
+ * preparing shows the day, the buyer and the rows left; all done says ✓ พร้อมขาย. No reminder sentences.
+ */
+function PrepRow({ events, sales }: { events: readonly FinanceEvent[] | null; sales: HomeSales | null }) {
+  const t = useTheme();
+  const { t: msg, era } = useI18n();
+  const info = useMemo(() => {
+    if (!events) return null;
+    const lastTs = Math.max(sales?.open?.ts ?? 0, sales?.latest?.ts ?? 0) || null;
+    const prep = livePrep(events, lastTs);
+    return { prep, left: prepLeft(prep, unsplitCount(events)) };
+  }, [events, sales]);
+  if (!info) return null;
+  const { prep, left } = info;
+  const day = prep?.date ? prepDayText(prep.date, era, true) : msg('prep.dateNone');
+  const [value, why] = !prep
+    ? [msg('prep.homeNone'), msg('prep.homeNoneBody')]
+    : left === 0
+      ? [msg('prep.homeReady', { date: day }), keepPerKg(msg('prep.homeReadyBody', { buyer: prep.buyerName, price: formatSatang(prep.priceSatangPerKg ?? 0) }))]
+      : [msg('prep.homeSome', { date: day }), prep.buyerId ? msg('prep.homeLeft', { buyer: prep.buyerName, n: left }) : msg('prep.homeLeftNoBuyer', { n: left })];
+  return (
+    <View style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
+      <KnowRow testID="home-prep" tone={prep && left === 0 ? 'accept' : 'cream'} icon={() => <FarmMateArt id="farmwork.today" />} value={value} why={why} to={PREP_HREF} />
+    </View>
+  );
+}
+
 function useHomeSales(): HomeSales | null {
   const [sales, setSales] = useState<HomeSales | null>(null);
   const reload = useCallback(() => {

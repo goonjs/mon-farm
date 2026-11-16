@@ -42,7 +42,7 @@ function setup(events: FinanceEvent[], o: { lastSaleDay?: string | null; lastSal
   const onWrite = jest.fn(async (_p: SalePrepPatch) => undefined);
   const onBuyer = jest.fn();
   const onFert = jest.fn();
-  wrap(<PrepView events={events} today="2026-11-17" lastSaleDay={o.lastSaleDay ?? null} lastSaleTs={o.lastSaleTs ?? null} onWrite={onWrite} onBuyer={onBuyer} onFert={onFert} onBack={jest.fn()} />);
+  wrap(<PrepView events={events} lastSaleDay={o.lastSaleDay ?? null} lastSaleTs={o.lastSaleTs ?? null} onWrite={onWrite} onBuyer={onBuyer} onFert={onFert} onBack={jest.fn()} />);
   return { onWrite, onBuyer, onFert };
 }
 const press = async (id: string) => {
