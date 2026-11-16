@@ -169,7 +169,7 @@ describe('V2Home — empty farm', () => {
     expect(screen.queryByTestId('home-payables')).toBeNull();
   });
 
-  it('the module grid keeps its old order; garden care is a short tile beside รายการที่ต้องจ่าย (owner 2026-11-16, E16-S05 HM-4)', async () => {
+  it('the module grid keeps its old order; garden care is a short tile beside รายการที่ต้องจ่าย; stock and tappers share a row (owner 2026-11-16, E16-S05 HM-4)', async () => {
     wrap(<V2Home />);
     await flush();
     const grid = screen.getByTestId('home-go-to');
@@ -178,6 +178,9 @@ describe('V2Home — empty farm', () => {
     // The long รายการที่ต้องจ่าย row is now two short tiles: it and การดูแลสวน.
     const pair = within(screen.getByTestId('home-go-to-care-row')).getAllByTestId(/^mod-/).map((n) => n.props.testID);
     expect(pair).toEqual(['mod-payables', 'mod-care']);
+    // Stock and tappers share one row as two short tiles (owner 2026-11-16, HM-4).
+    const people = within(screen.getByTestId('home-go-to-stock-row')).getAllByTestId(/^mod-/).map((n) => n.props.testID);
+    expect(people).toEqual(['mod-stock', 'mod-workers']);
     expect(within(screen.getByTestId('mod-care')).getByText('การดูแลสวน')).toBeTruthy();
     // The amount to pay moved to ควรรู้ (HM-3): the tile is a way in only.
     expect(within(screen.getByTestId('mod-payables')).queryByText('0.00')).toBeNull();

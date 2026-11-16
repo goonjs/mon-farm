@@ -6,6 +6,7 @@ import { FIXTURE_GROUP_ID, LogBuilder, readyPile, setUpSale } from '../src/core/
 import type { FinanceEvent } from '../src/core/finance/types';
 import type { BuiltinRole, MasterPayload } from '../src/core/types';
 import { evidence, seedEvents, seedMaster, splashEvidence, watchSplash } from './fixtures';
+import { textFit } from './text-fit';
 
 /**
  * The splash and the v2 home as drawn (e03-v2-splash-home): flow-v1 screens
@@ -104,6 +105,10 @@ test('/ → splash → home: as drawn, empty, then live rows from the local log,
   // E16-S05 HM-4 (owner 2026-11-16): garden care is a short tile beside รายการที่ต้องจ่าย, each half the row.
   const width = async (id: string) => (await page.getByTestId(id).boundingBox())!.width;
   expect(Math.abs((await width('mod-care')) - (await width('mod-payables')))).toBeLessThan(2);
+  // HM-4 (owner 2026-11-16): stock and tappers are two short tiles on one row.
+  expect(Math.abs((await width('mod-stock')) - (await width('mod-workers')))).toBeLessThan(2);
+  const top = async (id: string) => (await page.getByTestId(id).boundingBox())!.y;
+  expect(Math.abs((await top('mod-stock')) - (await top('mod-workers')))).toBeLessThan(2);
   await shot(page, '03-home-live', true);
 
   // The sale rows open the sale itself: the open one where it was weighing,
@@ -188,3 +193,31 @@ test('mockup vs build, side by side', async ({ page, browser }) => {
   await pair('cmp-menu-v110', await mockShot('flow-farm-v1.1.0.html', '#s1 .screen', 915), await app());
   await mock.close();
 });
+
+/** E16-S05 HM-4/HM-5 (owner 2026-11-16): the "ไปที่" grid, short tiles in pairs, fits at 320/360 with text M and L. */
+for (const width of [320, 360]) {
+  for (const size of ['m', 'l'] as const) {
+    test(`ไปที่ grid: pairs on one row, nothing cut, targets ≥ 48, at ${width} px text ${size.toUpperCase()}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.addInitScript((s) => localStorage.setItem('mon-farm:text-size', s), size);
+      await page.goto('/v2');
+      await seedMaster(page, [person('p-daeng', 'แดง', ['tapper']), person('p-nat', 'นัด', ['tapper'])]);
+      await page.reload();
+      await expect(page.getByTestId('mod-workers')).toContainText('2');
+      await page.getByTestId('home-go-to').scrollIntoViewIfNeeded();
+      const box = async (id: string) => (await page.getByTestId(id).boundingBox())!;
+      for (const [a, b] of [['mod-payables', 'mod-care'], ['mod-stock', 'mod-workers']]) {
+        const [ba, bb] = [await box(a), await box(b)];
+        expect(Math.abs(ba.y - bb.y)).toBeLessThan(2);
+        expect(Math.abs(ba.width - bb.width)).toBeLessThan(2);
+      }
+      for (const id of ['mod-reports', 'mod-weather', 'mod-payables', 'mod-care', 'mod-expenses', 'mod-order', 'mod-stock', 'mod-workers']) {
+        expect((await box(id)).height).toBeGreaterThanOrEqual(48);
+      }
+      await expect(page.getByTestId('mod-stock')).toContainText('รายการ stock');
+      await expect(page.getByTestId('mod-workers')).toContainText('คนกรีดยาง');
+      expect(await textFit(page)).toEqual([]);
+      await evidence(page, `docs/ux/screenshots/v2/home-care/owner-${width}-${size}-goto.png`);
+    });
+  }
+}
