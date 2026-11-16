@@ -11,7 +11,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { projectFertilizing, splitBadge, type Fertilizing } from '../../core/finance/fertilizing';
 import { projectFinance } from '../../core/finance/ledger';
-import { formatDate, todayIso } from '../../core/finance/money';
+import { todayIso } from '../../core/finance/money';
 import type { FinanceEvent, FinancePayload } from '../../core/finance/types';
 import type { EventId } from '../../core/types';
 import { useFinance } from '../../finance/use-finance';
@@ -19,6 +19,7 @@ import { useInFlight } from '../../finance/use-in-flight';
 import { useT } from '../../i18n';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
+import { keepFormula, rowDate } from './text';
 import { AppText, ChevronRight, CTA, FarmMateArt, PinnedActions, Plus, ScreenHeader, TextLink } from '../../ui';
 import { FERTILIZING_NEW, fertilizingHref } from './fertilizing/routes';
 
@@ -114,14 +115,8 @@ export function CareListView({
   );
 }
 
-/** "ดีเกลือ 10 ถุง · 46-0-0 5 ถุง": what and how much. The "·" is glued to the item before it, so a wrapped line never starts with it. */
-const summary = (r: Fertilizing, unit: string) => r.lines.map((l) => `${keepFormula(l.label)} ${l.sacks} ${unit}`).join('\u00a0· ');
-
-/** "15-15-15" never breaks at a dash (owner 2026-11-16): a word joiner on each side of every dash. */
-const keepFormula = (name: string) => name.replace(/-/g, '\u2060-\u2060');
-
-/** "5 พ.ย." this year, "5 พ.ย. 2568" another year. */
-const rowDate = (iso: string, year: string) => (iso.startsWith(year) ? formatDate(iso).split(' ').slice(0, 2).join(' ') : formatDate(iso));
+/** "ดีเกลือ 10 ถุง · 46-0-0 5 ถุง": what and how much. The "·" is glued to the item before it, and a formula to its count (review of PR 190 item 4), so a wrapped line never starts with "·" or strands a count. */
+const summary = (r: Fertilizing, unit: string) => r.lines.map((l) => `${keepFormula(l.label)}\u00a0${l.sacks} ${unit}`).join('\u00a0· ');
 
 function Row({ r, year, onPress }: { r: Fertilizing; year: string; onPress: () => void }) {
   const t = useTheme();

@@ -7,7 +7,7 @@
  */
 
 import { Link, type Href } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text } from 'react-native';
 
 import { IconTile, type IconRender, type TileTone } from './icon-tile';
 import { useTheme } from '../theme';
@@ -23,7 +23,6 @@ export function ActionTile({
   href,
   onPress,
   testID,
-  badge,
 }: {
   label: string;
   icon: IconRender;
@@ -33,10 +32,8 @@ export function ActionTile({
   href?: Href;
   onPress?: () => void;
   testID?: string;
-  /** A short amber word under the label, e.g. "ยังไม่แบ่ง 2 ครั้ง" (`${testID}-badge`). */
-  badge?: string;
 }) {
-  const tile = <Tile label={label} icon={icon} tone={tone} main={main} testID={testID} badge={badge} onTilePress={onPress} />;
+  const tile = <Tile label={label} icon={icon} tone={tone} main={main} testID={testID} onTilePress={onPress} />;
   return href ? (
     <Link href={href} asChild>
       {tile}
@@ -52,7 +49,6 @@ function Tile({
   tone,
   main,
   testID,
-  badge,
   onTilePress,
   onPress,
   ...rest
@@ -62,7 +58,6 @@ function Tile({
   tone: TileTone;
   main?: boolean;
   testID?: string;
-  badge?: string;
   onTilePress?: () => void;
   /** Supplied by `<Link asChild>`. */
   onPress?: (e: unknown) => void;
@@ -106,11 +101,6 @@ function Tile({
       >
         {label}
       </Text>
-      {badge ? (
-        <View testID={testID ? `${testID}-badge` : undefined} style={{ paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: t.color.warnSunk }}>
-          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn, textAlign: 'center' }}>{badge}</Text>
-        </View>
-      ) : null}
     </Pressable>
   );
 }

@@ -13,7 +13,8 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { orderedSacks, projectFertilizing, type FertilizerCard, type Fertilizing } from '../../core/finance/fertilizing';
 import { fullPrice } from '../../core/finance/fertilizing-editor';
 import { projectFinance } from '../../core/finance/ledger';
-import { formatDate } from '../../core/finance/money';
+import { todayIso } from '../../core/finance/money';
+import { keepFormula, rowDate } from './text';
 import type { FinanceEvent } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
 import { useT } from '../../i18n';
@@ -41,12 +42,15 @@ export function StockScreen() {
 export function StockView({
   events,
   sync,
+  today = todayIso(),
   onOpen,
   onOrders,
   onBack,
 }: {
   events: readonly FinanceEvent[];
   sync?: ReturnType<typeof useSyncStatus>;
+  /** ISO day; a "from" date drops the year only for this year. */
+  today?: string;
   onOpen: (fertilizingId: string) => void;
   onOrders: () => void;
   onBack: () => void;
@@ -83,7 +87,7 @@ export function StockView({
                   <FarmMateArt id="materials.stock" size={40} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <AppText style={{ fontWeight: t.font.weight.bold }}>{c.formula}{c.brand ? ` ${c.brand}` : ''}</AppText>
+                  <AppText testID={`stock-card-${i}-name`} style={{ fontWeight: t.font.weight.bold }}>{`${keepFormula(c.formula)}${c.brand ? ` ${c.brand}` : ''}`}</AppText>
                   <AppText variant="bodySm">
                     <Text style={{ fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('fz.perSack', { price: fullPrice(c.perSackSatang) })}</Text>
                     {c.sackKg ? ` · ${msg('fz.kg', { kg: c.sackKg })}` : ''}
@@ -94,7 +98,7 @@ export function StockView({
                   <AppText variant="bodySm">{msg('stock.left')}</AppText>
                 </View>
               </View>
-              <AppText variant="bodySm">{c.items.map((x) => `${x.shop || msg('stock.noShop')} ${formatDate(x.date).split(' ').slice(0, 2).join(' ')}`).join(' · ')}</AppText>
+              <AppText testID={`stock-card-${i}-from`} variant="bodySm">{c.items.map((x) => `${x.shop || msg('stock.noShop')} ${rowDate(x.date, today.slice(0, 4))}`).join(' · ')}</AppText>
               {c.leftSacks < 0 ? (
                 <Pressable
                   testID={`stock-card-${i}-over`}
@@ -114,7 +118,7 @@ export function StockView({
           <Pressable testID="stock-ordered" accessibilityRole="button" onPress={onOrders} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md, minHeight: t.target.comfortable, borderRadius: t.radius.xl, backgroundColor: t.color.surfaceRaised, borderWidth: t.border.hair, borderColor: t.color.rule }}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('stock.ordered')}</AppText>
-              <AppText variant="bodySm">{ordered.map((o) => `${o.formula} ${o.sacks} ${msg('fz.unit')}`).join(' · ')}</AppText>
+              <AppText testID="stock-ordered-what" variant="bodySm">{ordered.map((o) => `${keepFormula(o.formula)}\u00a0${o.sacks} ${msg('fz.unit')}`).join('\u00a0· ')}</AppText>
             </View>
             <ChevronRight color={t.color.ink} />
           </Pressable>

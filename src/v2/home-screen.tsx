@@ -24,7 +24,7 @@ import { loadHomeSales } from './sale/open-sale';
 import { useRepayHome, type OwesRow } from './home-repay';
 import { groupOrders } from '../core/finance/fert-order';
 import { projectFertilizing, splitBadge } from '../core/finance/fertilizing';
-import { owedByPerson } from '../core/finance/ledger';
+import { owedByPerson, shopPayableSatang } from '../core/finance/ledger';
 import { formatDate, formatSatang, todayIso } from '../core/finance/money';
 import type { HomeSales } from '../core/home';
 import { filterPeople, formatThaiDay } from '../core/master';
@@ -85,8 +85,8 @@ export function V2Home() {
   const fin = useFinance();
   const owed = useMemo(() => (fin.state ? owedByPerson(fin.state).filter((o) => o.remainingSatang > 0) : []), [fin.state]);
   const owedTotal = owed.reduce((s, o) => s + o.remainingSatang, 0);
-  // E16-S05 HM-3: the shop only (bought, not paid yet); money owed back to people has its own row.
-  const shopOwed = (fin.state?.expenses ?? []).filter((x) => !x.deleted && x.stage === 'committed').reduce((s, x) => s + (x.amountSatang ?? 0), 0);
+  // E16-S05 HM-3: committed buying not paid yet; money owed back to people has its own row.
+  const shopOwed = fin.state ? shopPayableSatang(fin.state) : 0;
   const tappers = master ? filterPeople(master.people, 'tapper').length : 0;
   // E06-S08 (H1, H2): repayments not in yet, and what a buyer still owes the farm per sale.
   const repay = useRepayHome(fin.events, era);
@@ -226,7 +226,7 @@ export function V2Home() {
       >
         <HomeCover onDragChange={setCoverDrag} />
 
-        <View testID="home-actions-1" style={{ flexDirection: 'row', gap: t.space.sm }}>
+        <View style={{ flexDirection: 'row', gap: t.space.sm }}>
           <ActionTile
             testID="home-prepare"
             label={msg('v2.prepare')}
@@ -242,22 +242,12 @@ export function V2Home() {
             icon={() => <FarmMateArt id="sale.sale" />}
             href={SALE_START}
           />
-        </View>
-        <View testID="home-actions-2" style={{ flexDirection: 'row', gap: t.space.sm, marginTop: -t.space.xs }}>
           <ActionTile
             testID="home-record-expense"
             label={msg('v2.recordExpense')}
             tone="accept"
             icon={() => <FarmMateArt id="sale.receipt" />}
             href={'/v2/expense/new' as Href}
-          />
-          <ActionTile
-            testID="home-care"
-            label={msg('care.title')}
-            tone="accept"
-            icon={() => <FarmMateArt id="farmwork.maintenance" />}
-            href={'/v2/care' as Href}
-            badge={unsplit > 0 ? msg('home.careUnsplit', { n: unsplit }) : undefined}
           />
         </View>
 
@@ -287,34 +277,37 @@ export function V2Home() {
         </Link>
 
         <Heading>{msg('home.goTo')}</Heading>
-        {/* E16-S05 HM-4: half tiles only, in the order of importance; the odd one keeps half the width. */}
+        {/* The old order (owner 2026-11-16); the long รายการที่ต้องจ่าย row is now two short tiles with การดูแลสวน (E16-S05 HM-4). */}
         <View testID="home-go-to" style={{ gap: t.space.sm }}>
-          <View testID="home-go-to-row-1" style={{ flexDirection: 'row', gap: t.space.sm }}>
-            <Mod slug="stock" tone="accept" icon={() => <FarmMateArt id="materials.stock" size={MOD_ART} />} label={msg('v2.stock')} />
-            <Mod slug="expenses" tone="cream" icon={() => <FarmMateArt id="sale.receipt" size={MOD_ART} />} label={msg('v2.expenses')} />
-          </View>
-          <View testID="home-go-to-row-2" style={{ flexDirection: 'row', gap: t.space.sm }}>
-            <Mod slug="order" to={ORDER_NEW as Href} tone="accept" icon={() => <FarmMateArt id="materials.orderMaterials" size={MOD_ART} />} label={msg('ords.homeBuy')} />
-            <Mod slug="payables" tone="cream" icon={() => <FarmMateArt id="finance.expense" size={MOD_ART} />} label={msg('v2.payables')} />
-          </View>
-          <View testID="home-go-to-row-3" style={{ flexDirection: 'row', gap: t.space.sm }}>
-            <Mod
-              slug="workers"
-              to={'/v2/people?filter=tapper' as Href}
-              tone="neutral"
-              icon={() => <FarmMateArt id="people.workerInfo" size={MOD_ART} />}
-              label={msg('v2.workers')}
-              badge={{ value: String(tappers), word: msg('role.tapper') }}
-            />
+          <View style={{ flexDirection: 'row', gap: t.space.sm }}>
             <Mod slug="reports" tone="action" icon={() => <FarmMateArt id="sale.salesReport" size={MOD_ART} />} label={msg('v2.reports')} />
+            <Mod slug="weather" tone="action" icon={(c) => <WeatherIcon color={c} size={20} />} label={msg('v2.weather')} small={msg('home.external')} external />
           </View>
-          <View testID="home-go-to-row-4" style={{ flexDirection: 'row', gap: t.space.sm }}>
-            {/* Plain halves on both sides: the tile's own padding would otherwise make it wider than half. */}
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Mod slug="weather" tone="action" icon={(c) => <WeatherIcon color={c} size={20} />} label={msg('v2.weather')} small={msg('home.external')} external />
-            </View>
-            <View testID="home-go-to-spacer" style={{ flex: 1 }} />
+          <View testID="home-go-to-care-row" style={{ flexDirection: 'row', gap: t.space.sm }}>
+            <Mod slug="payables" tone="cream" icon={() => <FarmMateArt id="finance.expense" size={MOD_ART} />} label={msg('v2.payables')} />
+            {/* A sprout for looking after the garden (owner asked for a better fit than the tools). HM-2: fertilizings not split yet. */}
+            <Mod
+              slug="care"
+              to={'/v2/care' as Href}
+              tone="accept"
+              icon={() => <FarmMateArt id="farm.treeCondition" size={MOD_ART} />}
+              label={msg('care.title')}
+              flag={unsplit > 0 ? msg('home.careUnsplit', { n: unsplit }) : undefined}
+            />
           </View>
+          <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+            <Mod slug="expenses" tone="cream" icon={() => <FarmMateArt id="sale.receipt" size={MOD_ART} />} label={msg('v2.expenses')} />
+            <Mod slug="order" to={ORDER_NEW as Href} tone="accept" icon={() => <FarmMateArt id="materials.orderMaterials" size={MOD_ART} />} label={msg('ords.homeBuy')} />
+          </View>
+          <Mod slug="stock" tone="accept" icon={() => <FarmMateArt id="materials.stock" size={MOD_ART} />} label={msg('v2.stock')} />
+          <Mod
+            slug="workers"
+            to={'/v2/people?filter=tapper' as Href}
+            tone="neutral"
+            icon={() => <FarmMateArt id="people.workerInfo" size={MOD_ART} />}
+            label={msg('v2.workers')}
+            badge={{ value: String(tappers), word: msg('role.tapper') }}
+          />
         </View>
       </ScrollView>
 
@@ -487,6 +480,7 @@ function Mod({
   small,
   external,
   badge,
+  flag,
 }: {
   slug: string;
   to?: Href;
@@ -497,6 +491,8 @@ function Mod({
   /** Opens outside the app: a small arrow-out after `small` (mockup `#i-ext`). */
   external?: boolean;
   badge?: { value: string; word: string };
+  /** A short amber line under the label, e.g. "ยังไม่แบ่ง 2 ครั้ง" (`mod-<slug>-flag`). */
+  flag?: string;
 }) {
   const t = useTheme();
   return (
@@ -539,6 +535,12 @@ function Mod({
             <Text style={{ ...body(t), fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{badge.value}</Text>
             <Text style={{ ...body(t), fontSize: t.font.size.micro, fontWeight: t.font.weight.semibold, color: t.color.inkSoft }}>{badge.word}</Text>
           </View>
+        ) : null}
+        {flag ? (
+          <Text testID={`mod-${slug}-flag`} style={{ ...body(t), fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>
+            {/* The last word stays with the one before it: "1" alone at a line end reads wrong ("ยังไม่แบ่ง 1 / ครั้ง"). */}
+            {flag.replace(/ (\S+)$/, '\u00a0$1')}
+          </Text>
         ) : null}
       </View>
     </Pressable>

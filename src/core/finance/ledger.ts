@@ -610,10 +610,15 @@ export function owedByPerson(state: FinanceState): OwedTo[] {
 /** Home card "รายการที่ต้องจ่าย": owed back + committed expenses (D-65). */
 export function payableSatang(state: FinanceState): number {
   const owed = state.reimbursements.reduce((s, r) => s + Math.max(0, r.remainingSatang), 0);
-  const committed = state.expenses
-    .filter((x) => !x.deleted && x.stage === 'committed')
-    .reduce((s, x) => s + (x.amountSatang ?? 0), 0);
-  return owed + committed;
+  return owed + shopPayableSatang(state);
+}
+
+/**
+ * Committed buying not paid yet ("สั่งหรือตกลงไว้แล้ว ยังไม่ได้จ่าย"): the home ควรรู้ payables row (E16-S05
+ * HM-3). Money owed back to people is left out — it has its own row.
+ */
+export function shopPayableSatang(state: FinanceState): number {
+  return state.expenses.filter((x) => !x.deleted && x.stage === 'committed').reduce((s, x) => s + (x.amountSatang ?? 0), 0);
 }
 
 export type AllocationPlan =
