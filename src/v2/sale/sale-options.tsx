@@ -15,7 +15,7 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { formatSatang } from '../../core/finance/money';
-import { formatThaiDate } from '../../core/master';
+import { formatSaleDate } from '../../core/master';
 import { saleTotals } from '../../core/totals';
 import { useI18n, useT } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -77,7 +77,7 @@ export function SaleOptionSheets({ view, open, onClose }: { view: View_; open: O
 
       <BottomSheet open={open === 'info'} onClose={onClose} title={msg('opt.infoTitle')} testID="info-sheet">
         <View style={{ gap: t.space.xs }}>
-          {row(msg('start.date'), state.startedTs ? formatThaiDate(state.startedTs, era) : msg('v2s.notRecorded'), 'info-date')}
+          {row(msg('start.date'), state.startedTs ? formatSaleDate(state.startedTs, state.day, era) : msg('v2s.notRecorded'), 'info-date')}
           {row(msg('start.buyer'), state.parties?.buyer || msg('opt.noValue'), 'info-buyer')}
           {row(msg('start.manager'), state.parties?.manager || msg('opt.noValue'), 'info-manager')}
           {row(msg('opt.infoPrice'), current === null ? msg('opt.infoNotSet') : msg('v2s.perKg', { price: formatSatang(current) }), 'info-price')}

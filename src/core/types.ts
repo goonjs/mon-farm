@@ -158,6 +158,12 @@ export interface ShortEvent extends EventBase {
   readonly partOf?: EventId;
   /** Entered afterwards as a point total (E04-S10, SALE-18): labelled "บันทึกย้อนหลัง", never open. */
   readonly backfill?: true;
+  /**
+   * Entered afterwards from the paper (E04-S19): labelled "บันทึกย้อนหลัง" like
+   * `backfill`, but it behaves like a live short basket — open until topped up
+   * or closed — so counting can carry on. Older apps see a plain short basket.
+   */
+  readonly afterwards?: true;
 }
 
 /**
@@ -209,6 +215,12 @@ export type SysPayload =
       readonly manager: string;
       readonly workerLead: string;
       readonly where: 'farm' | 'buyer';
+      /**
+       * The day of the sale, YYYY-MM-DD, picked at the start (E04-S19 BF-9):
+       * today by default, never later. Tappers and shares are read on this day.
+       * Absent on older sales: the Bangkok day of the start event.
+       */
+      readonly day?: string;
     }
   | { readonly t: 'price_set'; readonly satangPerKg: number; readonly indexRef: string }
   /** The sale's basket-numbering mode, chosen at start; the group setting is the default (D-53). */
@@ -550,6 +562,8 @@ export interface SaleState {
   /** Business status (E04-S11). Cancelled keeps its baskets but counts in no cross-sale total. */
   readonly saleStatus: SaleStatus;
   readonly startedTs: number | null;
+  /** The sale day picked at the start (E04-S19), YYYY-MM-DD; null on older sales — use `saleDay`. */
+  readonly day: string | null;
   readonly parties: {
     readonly farmName: string;
     readonly buyer: string;

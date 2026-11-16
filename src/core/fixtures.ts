@@ -183,6 +183,13 @@ export class LogBuilder {
   }
 
   /** The id the next pushed event will get — for targeting a void. */
+  /** Any basket or sys event body, as the app's `append` takes it; returns its id (E04-S19 catch-up). */
+  push(body: Record<string, unknown>): string {
+    const e = { ...this.base(), ...body } as unknown as SaleEvent;
+    this.events.push(e);
+    return e.id;
+  }
+
   nextId(): string {
     return this.idFor((this.deviceSeqs.get(this.deviceId) ?? 0) + 1);
   }

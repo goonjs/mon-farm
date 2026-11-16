@@ -94,21 +94,22 @@ export function projectPlan(events: readonly FinanceEvent[]): { leases: Lease[];
 
 /** Rubber income = the owner's share of each closed, not-deleted sale, linked to it (FIN-8). */
 export function rubberIncome(
-  rows: readonly { saleId: string; startedTs: number | null; status: 'open' | 'closed'; ownerSatang: number | null; deleted: boolean }[],
+  rows: readonly { saleId: string; startedTs: number | null; day?: string | null; status: 'open' | 'closed'; ownerSatang: number | null; deleted: boolean }[],
 ): { saleId: string; date: string; satang: number }[] {
   return rows
     .filter((r) => r.status === 'closed' && !r.deleted && r.ownerSatang !== null && r.startedTs !== null)
     // The local calendar day, like every other date in the app (review #2).
-    .map((r) => ({ saleId: r.saleId, date: todayIso(new Date(r.startedTs!)), satang: r.ownerSatang! }));
+    // The picked sale day first (E04-S19): a sale entered on 1 Nov for 31 Oct is October's income.
+    .map((r) => ({ saleId: r.saleId, date: r.day ?? todayIso(new Date(r.startedTs!)), satang: r.ownerSatang! }));
 }
 
 /** Days of closed sales whose amount is not known yet (no price) — their months are incomplete. */
 export function rubberUnknownDates(
-  rows: readonly { startedTs: number | null; status: 'open' | 'closed'; ownerSatang: number | null; deleted: boolean }[],
+  rows: readonly { startedTs: number | null; day?: string | null; status: 'open' | 'closed'; ownerSatang: number | null; deleted: boolean }[],
 ): string[] {
   return rows
     .filter((r) => r.status === 'closed' && !r.deleted && r.ownerSatang === null && r.startedTs !== null)
-    .map((r) => todayIso(new Date(r.startedTs!)));
+    .map((r) => r.day ?? todayIso(new Date(r.startedTs!)));
 }
 
 function monthsBetween(from: string, to: string): string[] {

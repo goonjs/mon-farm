@@ -102,4 +102,16 @@ describe('saleDay', () => {
     expect(saleDay(Date.UTC(2026, 9, 2, 18), 0)).toBe('2026-10-03');
     expect(saleDay(null, Date.UTC(2026, 9, 5, 1))).toBe('2026-10-05');
   });
+
+  it('is the day picked at the start when there is one (E04-S19 BF-9); old sales keep their start day', () => {
+    expect(saleDay(Date.UTC(2026, 10, 16, 3), 0, '2026-11-13')).toBe('2026-11-13');
+    expect(saleDay(Date.UTC(2026, 10, 16, 3), 0, null)).toBe('2026-11-16');
+  });
+
+  it('a sale list row carries the picked day', () => {
+    const b = new LogBuilder('s-day');
+    b.sys({ t: 'sale_started', farmName: '', buyer: 'ล้ง', manager: '', workerLead: '', where: 'farm', day: '2026-11-13' });
+    const [row] = saleListRows([{ id: 's-day', events: at(b.build(), Date.UTC(2026, 10, 16, 3)) }], master());
+    expect(row.day).toBe('2026-11-13');
+  });
 });

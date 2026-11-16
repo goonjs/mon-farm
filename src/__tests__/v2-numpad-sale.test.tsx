@@ -92,7 +92,7 @@ async function seed(build: (b: LogBuilder) => void) {
  *   startPrice: press start-price-row, changeText start-price, press sheet-done
  *   optionPrice: press menu-price, changeText option-price, press option-price-save
  *   checkPrice: changeText check-price (the save is pressed by the test)
- *   backfillFull / backfillShort: changeText backfill-full / backfill-short
+ *   catchUpEnd / catchUpShort (E04-S19; was backfillFull / backfillShort): changeText backfill-full / backfill-short
  */
 const typeKeys = async (field: string, keys: string | string[]) => {
   // The first key replaces the value already there.
@@ -115,15 +115,17 @@ const enter = {
     await typeKeys('check-price', text);
     await press('check-price-done');
   },
-  backfillFull: async (text: string) => {
-    await press('backfill-full');
-    await typeKeys('backfill-full', text);
-    await press('backfill-full-pad-key-done');
+  /** E04-S19: the point page — "จบที่เข่ง" and, for a short last basket, its kg. */
+  catchUpEnd: async (text: string) => {
+    await press('cu-end');
+    await typeKeys('cu-end', text);
+    await press('cu-end-pad-key-done');
   },
-  backfillShort: async (text: string) => {
-    if (!screen.queryByTestId('backfill-short-pad')) await press('backfill-short');
-    await typeKeys('backfill-short', text);
-    await press('backfill-short-done');
+  catchUpShort: async (text: string) => {
+    await press('cu-short');
+    if (!screen.queryByTestId('cu-short-kg-pad')) await press('cu-short-kg');
+    await typeKeys('cu-short-kg', text);
+    await press('cu-short-kg-done');
   },
 };
 
@@ -234,7 +236,7 @@ describe('row 19 check-price: price_set before settling (NP-4)', () => {
   });
 });
 
-describe('row 20 backfill: full count (/^\\d+$/) and short kg net (parseKgG, grams) → events (NP-4)', () => {
+describe('row 20 backfill (E04-S19 point page): end number (/^\\d+$/) and short kg net (parseKgG, grams) → events (NP-4)', () => {
   const backfilled = async () => {
     const ev = await store().load(saleId);
     return {
@@ -243,21 +245,24 @@ describe('row 20 backfill: full count (/^\\d+$/) and short kg net (parseKgG, gra
         return [a.basketNo, a.netG, a.tareG];
       }),
       short: ev.filter((e) => e.kind === 'short').map((e) => {
-        const s = e as { basketNo: number; readingG: number; tareG: number; backfill?: boolean };
-        return [s.basketNo, s.readingG, s.tareG, s.backfill];
+        const s = e as { basketNo: number; readingG: number; tareG: number; afterwards?: boolean };
+        return [s.basketNo, s.readingG, s.tareG, s.afterwards];
       }),
     };
   };
-  const at = () => inSale(<BackfillScreen />, { point: farm.a[2] });
+  const at = () => inSale(<BackfillScreen />, { point: farm.a[4] });
+  const save = async () => {
+    await press('cu-next');
+    await press('cu-save');
+  };
 
-  it('3 full + 23.5 kg net: baskets 1–3 at 50 kg, the short one read as 23.5 + 2 kg basket', async () => {
+  it('ends at 4, the last one 23.5 kg net: baskets 1–3 at 50 kg, the short one read as 23.5 + 2 kg basket', async () => {
     await seed(() => undefined);
     await at();
-    await enter.backfillFull('3');
-    await enter.backfillShort('23.5');
-    expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/จะได้ 4 เข่ง/);
-    expect(screen.getByTestId('backfill-total')).toHaveTextContent(/173\.5 กก\./);
-    await press('backfill-save');
+    await enter.catchUpEnd('4');
+    await enter.catchUpShort('23.5');
+    expect(screen.getByTestId('cu-sum-bar')).toHaveTextContent(/173\.5 กก\./);
+    await save();
     expect(await backfilled()).toEqual({
       full: [[1, 50_000, 2_000], [2, 50_000, 2_000], [3, 50_000, 2_000]],
       short: [[4, 25_500, 2_000, true]],
@@ -267,41 +272,48 @@ describe('row 20 backfill: full count (/^\\d+$/) and short kg net (parseKgG, gra
   it('three decimals of a kg are kept as grams: 0.125 kg → 125 g net', async () => {
     await seed(() => undefined);
     await at();
-    await enter.backfillShort('0.125');
-    expect(screen.getByTestId('backfill-total')).toHaveTextContent(/0\.125 กก\./);
-    await press('backfill-save');
+    await enter.catchUpEnd('1');
+    await enter.catchUpShort('0.125');
+    expect(screen.getByTestId('cu-sum-bar')).toHaveTextContent(/0\.125 กก\./);
+    await save();
     expect(await backfilled()).toEqual({ full: [], short: [[1, 2_125, 2_000, true]] });
   });
 
-  it('full only, the short kg left blank: no short basket', async () => {
+  it('the last basket full: no short basket', async () => {
     await seed(() => undefined);
     await at();
-    await enter.backfillFull('2');
-    await press('backfill-save');
+    await enter.catchUpEnd('2');
+    await press('cu-full');
+    await save();
     expect(await backfilled()).toEqual({ full: [[1, 50_000, 2_000], [2, 50_000, 2_000]], short: [] });
   });
 
-  it('the largest count, 999 full baskets, is taken', async () => {
+  it('the largest end, basket 999, is taken', async () => {
     await seed(() => undefined);
     await at();
-    await enter.backfillFull('999');
-    expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/จะได้ 999 เข่ง/);
-    expect(screen.getByTestId('backfill-total')).toHaveTextContent(/49,950 กก\./);
+    await enter.catchUpEnd('999');
+    await press('cu-full');
+    expect(screen.getByTestId('cu-count')).toHaveTextContent(/= 999 เข่ง/);
+    expect(screen.getByTestId('cu-sum-bar')).toHaveTextContent(/49,950 กก\./);
   });
 
-  it('nothing typed: nothing to save', async () => {
+  it('nothing typed: nothing to go on with', async () => {
     await seed(() => undefined);
     await at();
-    expect(screen.queryByTestId('backfill-plan')).toBeNull();
-    expect(screen.getByTestId('backfill-save').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId('cu-next').props.accessibilityState).toMatchObject({ disabled: true });
   });
 
-  it('a short basket of 0 kg is never recorded', async () => {
+  it('a short basket of 0 kg, or of a full one or more, cannot go on', async () => {
     await seed(() => undefined);
     await at();
-    await enter.backfillShort('0');
-    await press('backfill-save');
-    expect((await backfilled()).short).toEqual([]);
+    await enter.catchUpEnd('3');
+    await press('cu-short');
+    await press('cu-short-kg');
+    await typeKeys('cu-short-kg', '0');
+    expect(screen.getByTestId('cu-short-kg-done').props.accessibilityState).toMatchObject({ disabled: true });
+    await typeKeys('cu-short-kg', ['back', '5', '0']);
+    expect(screen.getByTestId('cu-short-kg-done').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId('cu-short-kg-problem')).toHaveTextContent(/น้อยกว่า 50 กก\./);
   });
 });
 
@@ -412,36 +424,29 @@ describe('E01-S20 sale number fields on the pad (NP-12, NP-14, NP-15, NP-6)', ()
     expect(await prices(saleId)).toEqual([4850]);
   });
 
-  it('NP-15: ✓ on the full baskets opens the short-basket pad at once; it can be closed or left blank', async () => {
+  it('NP-15 (E04-S19): ไม่เต็ม opens the kg pad at once; ✓ closes it with the kg on the card', async () => {
     await seed(() => undefined);
-    await inSale(<BackfillScreen />, { point: farm.a[2] });
-    expect(screen.getByTestId('backfill-short')).toHaveTextContent(/ไม่บังคับ/);
-    await press('backfill-full');
-    await typeKeys('backfill-full', '12');
-    await press('backfill-full-pad-key-done');
-    expect(screen.queryByTestId('backfill-full-pad')).toBeNull();
-    expect(screen.getByTestId('backfill-short-pad')).toBeTruthy();
-    expect(screen.getByTestId('backfill-short-clear')).toHaveTextContent('เว้นว่าง (ไม่มีเข่งไม่เต็ม)');
-    await press('backfill-short-clear');
-    expect(screen.queryByTestId('backfill-short-pad')).toBeNull();
-    expect(screen.getByTestId('backfill-full')).toHaveTextContent(/12\s*เข่ง/);
-    expect(screen.getByTestId('backfill-save')).toHaveTextContent('บันทึก 12 เข่ง');
+    await inSale(<BackfillScreen />, { point: farm.a[4] });
+    await press('cu-end');
+    await typeKeys('cu-end', '12');
+    await press('cu-end-pad-key-done');
+    expect(screen.queryByTestId('cu-end-pad')).toBeNull();
+    await press('cu-short');
+    expect(screen.getByTestId('cu-short-kg-pad')).toBeTruthy();
+    await typeKeys('cu-short-kg', '18.5');
+    await press('cu-short-kg-done');
+    expect(screen.queryByTestId('cu-short-kg-pad')).toBeNull();
+    expect(screen.getByTestId('cu-short-kg')).toHaveTextContent(/18\.5\s*กก\./);
   });
 
-  it('backfill short kg: a fifth whole digit and a fourth decimal do not go in (12345.6789 → 1,234.678); a short one can be cleared again', async () => {
+  it('short kg: a third whole digit and a fourth decimal do not go in (123.4567 → 12.456)', async () => {
     await seed(() => undefined);
-    await inSale(<BackfillScreen />, { point: farm.a[2] });
-    await press('backfill-short');
-    await typeKeys('backfill-short', '12345.6789');
-    expect(screen.getByTestId('backfill-short-display')).toHaveTextContent('1,234.678');
-    // The refused key says so and holds ตกลง until a key is taken again.
-    expect(screen.getByTestId('backfill-short-done').props.accessibilityState).toMatchObject({ disabled: true });
-    await typeKeys('backfill-short', ['back', '8']);
-    expect(screen.getByTestId('backfill-short-display')).toHaveTextContent('1,234.678');
-    await press('backfill-short-done');
-    expect(screen.getByTestId('backfill-total')).toHaveTextContent(/1,234\.678 กก\./);
-    await press('backfill-short');
-    await press('backfill-short-clear');
-    expect(screen.queryByTestId('backfill-plan')).toBeNull();
+    await inSale(<BackfillScreen />, { point: farm.a[4] });
+    await press('cu-end');
+    await typeKeys('cu-end', '3');
+    await press('cu-end-pad-key-done');
+    await press('cu-short');
+    await typeKeys('cu-short-kg', '123.4567');
+    expect(screen.getByTestId('cu-short-kg-display')).toHaveTextContent('12.456');
   });
 });

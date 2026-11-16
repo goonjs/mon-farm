@@ -32,6 +32,8 @@ const FARM: MasterPayload[] = [
   { t: 'property_added', propertyId: 'fa', name: 'จันทเขลม', crop: 'rubber' },
   { t: 'point_added', pointId: 'a1', propertyId: 'fa', name: 'จุด 1' },
   { t: 'tapper_assigned', assignmentId: 's1', pointId: 'a1', tapperId: 'red' },
+  // No baskets and no tapper: the catch-up page opens on it (E04-S19 only before live counting).
+  { t: 'point_added', pointId: 'a2', propertyId: 'fa', name: 'จุด 2' },
   { t: 'buyer_added', buyerId: 'buyer-a', name: 'คนรับซื้อยาง ก' },
 ];
 
@@ -166,7 +168,7 @@ const SALE_FERT: Screen[] = [
   { name: 'zero-tare', min: 2, open: async (page) => { await page.goto('/v2/sale/sale-art/zero-tare?point=a1&net=50000&basket=2000'); await page.getByTestId('expect-kg').waitFor(); } },
   { name: 'counter', min: 2, open: async (page) => { await page.goto('/v2/sale/sale-art/counter?point=a1'); await page.getByTestId('tool-history').waitFor(); } },
   { name: 'counter-menu', min: 7, open: async (page) => { await page.goto('/v2/sale/sale-art/counter?point=a1'); await page.getByTestId('counter-menu').click(); await page.getByTestId('menu-sales').waitFor(); } },
-  { name: 'backfill', min: 1, open: async (page) => { await page.goto('/v2/sale/sale-art/backfill?point=a1'); await page.getByTestId('backfill-proof').scrollIntoViewIfNeeded(); } },
+  { name: 'backfill', min: 1, open: async (page) => { await page.goto('/v2/sale/sale-art/backfill?point=a2'); await page.getByTestId('cu-sum-bar').waitFor(); } },
   { name: 'order', min: 3, open: async (page) => { await page.goto('/v2/order'); await page.getByTestId('ordc-empty').waitFor(); } },
 ];
 
