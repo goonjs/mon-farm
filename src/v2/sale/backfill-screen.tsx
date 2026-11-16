@@ -44,12 +44,13 @@ export function BackfillScreen() {
   const t = useTheme();
   const msg = useT();
   const router = useRouter();
-  const { point: pointId = '' } = useLocalSearchParams<{ point?: string }>();
+  // Opened for a point (`?point=`) or, from the picker and the counter's menu, for a tapper (`?tapper=`, owner 2026-11-16).
+  const { point: pointParam = '', tapper: tapperParam = '' } = useLocalSearchParams<{ point?: string; tapper?: string }>();
   const view = useSaleView();
   // A closed sale takes no more weighing (review #2).
   useLeaveIfClosed(view);
   const { saleId, events, state, master, day, mode, settings, append, nameOf, saleTitle } = view;
-  const [order, setOrder] = useState<string[]>(pointId ? [pointId] : []);
+  const [picked, setPicked] = useState<string[]>(pointParam ? [pointParam] : []);
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const [step, setStep] = useState<Step | null>(null);
   const [paperG, setPaperG] = useState<number | null>(null);
@@ -60,12 +61,20 @@ export function BackfillScreen() {
   const [done, setDone] = useState(false);
   const base = `/v2/sale/${saleId}`;
 
-  const point = master?.points.find((p) => p.id === pointId);
-  if (!view.ready || !master || !settings || !point) return <FarmScreen title={msg('cu.title')} subtitle={saleTitle} fallback={`${base}/point` as Href} />;
+  const loading = <FarmScreen title={msg('cu.title')} subtitle={saleTitle} fallback={`${base}/point` as Href} />;
+  if (!view.ready || !master || !settings) return loading;
 
   const perPoint = mode === 'per-point';
-  const tapper = tapperOn(master, pointId, day);
-  const tapperPoints = !perPoint && tapper ? pointsOf(master, tapper, day) : [];
+  const tapper = tapperParam || (pointParam ? tapperOn(master, pointParam, day) : null);
+  const tapperPoints = tapper ? pointsOf(master, tapper, day) : [];
+  const pointId = pointParam || tapperPoints[0]?.id || '';
+  if (!master.points.some((p) => p.id === pointId)) return loading;
+  // The order page: the tapper's points in paper order. Per point, only when opened for the tapper.
+  const choosing = tapperPoints.length > 1 && (!perPoint || !pointParam);
+  const order = choosing ? picked : [pointId];
+  /** Per point, a point weighed live already cannot be caught up (BF-8); numbered on, the tapper's whole sequence. */
+  const allowed = (id: string) => catchUpAllowed(events, master, day, id, mode);
+  const back = (pointParam ? `${base}/counter?point=${pointParam}` : `${base}/point`) as Href;
   /** Each point's basket pair: its pile's when it was set up already, else the one a new point gets (review B1). */
   const pairOf = (id: string) => {
     const pile = state.piles.find((p) => p.id === id);
@@ -80,9 +89,9 @@ export function BackfillScreen() {
   const who = tapper && !perPoint ? nameOf(tapper) : msg('cu.blockedPoint');
 
   // BF-8: catching up comes before counting live.
-  if (!done && !catchUpAllowed(events, master, day, pointId, mode)) {
+  if (!done && (choosing && perPoint ? !tapperPoints.some((p) => allowed(p.id)) : !allowed(pointId))) {
     return (
-      <FarmScreen title={msg('cu.title')} subtitle={saleTitle} fallback={`${base}/counter?point=${pointId}` as Href} testID="catch-up">
+      <FarmScreen title={msg('cu.title')} subtitle={saleTitle} fallback={back} testID="catch-up">
         <View testID="cu-blocked">
           <Banner tone="warn" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg('cu.blocked', { who })]} />
         </View>
@@ -90,7 +99,7 @@ export function BackfillScreen() {
     );
   }
 
-  const first: Step = !perPoint && tapperPoints.length > 1 ? { kind: 'order' } : { kind: 'point', i: 0 };
+  const first: Step = choosing ? { kind: 'order' } : { kind: 'point', i: 0 };
   const now = step ?? first;
   const entry = (id: string) => entries[id] ?? EMPTY;
   const patch = (id: string, p: Partial<Entry>) => setEntries((e) => ({ ...e, [id]: { ...(e[id] ?? EMPTY), ...p } }));
@@ -181,7 +190,7 @@ export function BackfillScreen() {
   );
 
   const screen = (subtitle: string, body: React.ReactNode, foot: React.ReactNode) => (
-    <FarmScreen title={msg('cu.title')} subtitle={subtitle} fallback={`${base}/counter?point=${pointId}` as Href} onBack={prev ? () => go(prev) : undefined} testID="catch-up" footer={foot}>
+    <FarmScreen title={msg('cu.title')} subtitle={subtitle} fallback={back} onBack={prev ? () => go(prev) : undefined} testID="catch-up" footer={foot}>
       {sumBar}
       {body}
     </FarmScreen>
@@ -189,15 +198,17 @@ export function BackfillScreen() {
 
   // ── BF-1: the order of the tapper's points ──
   if (now.kind === 'order') {
-    const toggle = (id: string) => setOrder((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]));
+    const toggle = (id: string) => setPicked((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]));
     return screen(
       tapper ? nameOf(tapper) : '',
       <View testID="cu-order" style={{ gap: t.space.sm }}>
         <Label text={msg('cu.order')} hint={msg('cu.orderHint')} />
         {tapperPoints.map((p) => {
           const at = order.indexOf(p.id);
+          // Per point, a point already counted live is not offered (BF-8).
+          const off = perPoint && !allowed(p.id);
           return (
-            <Pressable key={p.id} testID={`cu-order-${p.id}`} accessibilityRole="button" accessibilityState={{ selected: at >= 0 }} onPress={() => toggle(p.id)} style={{ ...cardStyle(t), flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md, minHeight: t.target.comfortable }}>
+            <Pressable key={p.id} testID={`cu-order-${p.id}`} accessibilityRole="button" accessibilityState={{ selected: at >= 0, disabled: off }} disabled={off} onPress={() => toggle(p.id)} style={{ ...cardStyle(t), opacity: off ? 0.5 : 1, flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md, minHeight: t.target.comfortable }}>
               <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: at >= 0 ? t.color.action : t.color.surfaceSunk }}>
                 <Text style={{ fontFamily: t.font.family.sans, fontWeight: t.font.weight.black, fontSize: t.font.size.bodyLg, color: at >= 0 ? t.color.inkInverse : t.color.inkSoft }}>{at >= 0 ? String(at + 1) : ''}</Text>
               </View>

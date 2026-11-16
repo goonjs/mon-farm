@@ -425,7 +425,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
                     {msg('rec.finish')}
                   </MenuRow>
                   <MenuGroup title={msg('menu.grpRecord')}>
-                    <MenuRow testID="menu-backfill" tone="action" icon={() => <FarmMateArt id="farmwork.history" size={MENU_ART} />} onPress={() => { setSheet('none'); router.push(`${base}/point?mode=backfill&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}` as Href); }}>
+                    <MenuRow testID="menu-backfill" tone="action" icon={() => <FarmMateArt id="farmwork.history" size={MENU_ART} />} onPress={() => { setSheet('none'); router.push((tapper ? `${base}/backfill?tapper=${tapper}` : `${base}/backfill?point=${pointId}`) as Href); }}>
                       {msg('backfill.title')}
                     </MenuRow>
                     <MenuRow testID="menu-public" tone="action" icon={() => <FarmMateArt id="system.multiDevice" size={MENU_ART} />} onPress={() => { setSheet('none'); router.push(`${base}/public?point=${pointId}${params.fill ? `&fill=${params.fill}` : ''}` as Href); }}>
