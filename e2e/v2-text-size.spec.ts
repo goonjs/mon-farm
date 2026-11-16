@@ -204,6 +204,15 @@ async function tour(page: Page, size: keyof typeof AT) {
   await id('co-owed-open').click();
   await check('a26-owed-sheet');
   await id('co-owed-ok').click();
+  // TS-8 follow-up (2026-11-17): the deduct sheet (A5) and where the money comes from (A8).
+  await id('co-deduct-red').click();
+  await check('a5-deduct-sheet');
+  await id('co-deduct-ok').click();
+  await id('co-sources-open').click();
+  await expect(id('co-sources-sheet')).toBeVisible();
+  await check('a8-sources-sheet');
+  await page.keyboard.press('Escape');
+  await expect(id('co-sources-sheet')).toBeHidden();
   await check('a3-summary-ready');
   await id('co-confirm').click();
   await expect(id('payment')).toBeVisible();
@@ -228,6 +237,12 @@ async function tour(page: Page, size: keyof typeof AT) {
   await open('/v2/dev/number-fields', 'qty', 'np-fields');
   await id('price').click();
   await check('np-money-pad');
+  await page.keyboard.press('Escape');
+  // TS-8 follow-up: the quantity pad sheet.
+  await id('qty').click();
+  await expect(id('qty-pad')).toBeVisible();
+  await check('np-qty-pad');
+  await page.keyboard.press('Escape');
   // E11-S11: the fertilizer order (UI-4: the main button stays on screen).
   await open('/v2/order', 'ordc-empty', 'fert-order');
   await expect(id('ordc-add')).toBeInViewport();

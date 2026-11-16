@@ -234,7 +234,7 @@ export function StartSaleScreen() {
           trailing={<View testID="start-date-chevron" aria-hidden><ChevronRight color={t.color.inkFaint} /></View>}
           onPress={() => setDayOpen(true)}
         />
-        <DatePickerSheet open={dayOpen} onClose={() => setDayOpen(false)} value={day} onChange={setDay} max={todayIso(now)} title={msg('start.date')} testID="start-date-picker" />
+        <DatePickerSheet open={dayOpen} onClose={() => setDayOpen(false)} value={day} onChange={setDay} max={todayIso(now)} today={todayIso(now)} title={msg('start.date')} testID="start-date-picker" />
         <Rule />
         <FieldRow
           testID="start-buyer"
