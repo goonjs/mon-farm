@@ -534,6 +534,49 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     expect(at3.map((e) => [(e as { netG: number }).netG, (e as { tareG: number }).tareG])).toEqual([[40_000, 3_000], [40_000, 3_000]]);
   });
 
+  it('owner 2026-11-16: บันทึกย้อนหลัง on the point picker opens the chosen tapper\'s flow at once (link and ⋯ menu)', async () => {
+    await started();
+    await inSale(<PointScreen />, { farm: farm.farmA, tapper: farm.red });
+    expect(screen.getByTestId('pick-backfill')).toHaveTextContent(/บันทึกย้อนหลัง/);
+    await press('pick-backfill');
+    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${saleId}/backfill?tapper=${farm.red}`);
+    router.push.mockClear();
+    await press('pick-menu');
+    await press('menu-backfill');
+    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${saleId}/backfill?tapper=${farm.red}`);
+  });
+
+  it('owner 2026-11-16: the counter\'s ⋯ บันทึกย้อนหลัง goes straight to its tapper\'s flow, no point picker', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    await press('counter-menu');
+    await press('menu-backfill');
+    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${saleId}/backfill?tapper=${farm.red}`);
+  });
+
+  it('opened for a tapper: nothing is in the order yet; the points are tapped in paper order', async () => {
+    await started();
+    await inSale(<BackfillScreen />, { tapper: farm.red });
+    expect(screen.getByTestId('cu-order')).toBeTruthy();
+    expect(enabled('cu-next')).toBe(false);
+    await press(`cu-order-${farm.a[1]}`);
+    await press(`cu-order-${farm.a[0]}`);
+    expect(screen.getByTestId(`cu-order-${farm.a[1]}`)).toHaveTextContent(/1/);
+    await press('cu-next');
+    expect(screen.getByText(/จุด 2 ·/)).toBeTruthy();
+    await typeInt('cu-end', '2');
+    await press('cu-full');
+    await press('cu-next');
+    expect(screen.getByTestId('cu-start')).toHaveTextContent(/3/);
+    await typeInt('cu-end', '4');
+    await press('cu-full');
+    await press('cu-next');
+    expect(screen.getByTestId('cu-total')).toHaveTextContent(/200 กก\./);
+    await press('cu-save');
+    expect(router.replace).toHaveBeenCalledWith(`/v2/sale/${saleId}/counter?point=${farm.a[0]}`);
+  });
+
   it('not topped up: basket 12 closes at 30 kg', async () => {
     await started();
     await inSale(<BackfillScreen />, { point: farm.a[0] });

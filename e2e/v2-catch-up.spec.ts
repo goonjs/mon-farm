@@ -82,16 +82,13 @@ for (const width of [320, 360]) {
       await id('start-date-picker-done').click();
       await id('start-next').click();
 
-      // From the counter's ⋯ menu, as today: บันทึกย้อนหลัง, then the point.
+      // Owner 2026-11-16: from the point picker, straight into แดง's flow — no point, no empty-scale check first.
       await id('pick-farm-fa').click();
-      await id('pick-point-a1').click();
-      await id('start-weigh').click();
-      await id('counter-menu').click();
-      await id('menu-backfill').click();
-      await id('pick-point-a1').click();
+      await id('pick-backfill').click();
 
-      // BF-1: the order of แดง's points.
+      // BF-1: the order of แดง's points, in paper order.
       await expect(id('cu-order')).toBeVisible();
+      await id('cu-order-a1').click();
       await id('cu-order-a3').click();
       await fits(page);
       await shot('1-order');
