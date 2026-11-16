@@ -55,6 +55,7 @@ type NewEvent =
       editOf?: string;
       partOf?: string;
       backfill?: true;
+      afterwards?: true;
     }
   | {
       kind: 'reject';
@@ -72,7 +73,8 @@ interface SaleContextValue {
   events: readonly SaleEvent[];
   state: SaleState;
   ready: boolean;
-  append: (e: NewEvent) => void;
+  /** Writes one event; returns its id (a top-up names its basket by it, E04-S19). */
+  append: (e: NewEvent) => string;
   reset: () => void;
   /**
    * Re-reads the log from the store and merges it in by event id. For when
@@ -135,13 +137,15 @@ export function SaleProvider({ saleId, children }: { saleId: string; children: R
         payload: { t: 'clock_anomaly', ...anomaly },
       });
     }
-    out.push({ ...stamp(nextSeq(out)), ...incoming } as SaleEvent);
+    const written = { ...stamp(nextSeq(out)), ...incoming } as SaleEvent;
+    out.push(written);
 
     eventsRef.current = out;
     setEvents(out);
     // Fire-and-forget: a storage failure must never block counting. The
     // stores run appends in call order (see store.native.ts).
     for (const e of out.slice(prev.length)) void store.append(e).catch(logAppendFailure);
+    return written.id;
   }, [saleId]);
 
   const refresh = useCallback(async () => {

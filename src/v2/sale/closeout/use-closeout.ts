@@ -270,7 +270,7 @@ export function useCloseout(store: PreferenceStore = localPreferenceStore) {
     for (const w of d.plan.workers) {
       const res = confirmWrites({
         saleId,
-        date: saleDay(money.state.startedTs, Date.now()),
+        date: saleDay(money.state.startedTs, Date.now(), money.state.day),
         worker: { id: w.id, name: w.name },
         farm,
         plan: w,

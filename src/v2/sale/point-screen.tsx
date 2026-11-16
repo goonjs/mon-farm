@@ -22,7 +22,7 @@ import { planMove } from '../../core/sale-move';
 import { pointChoices, saleRollup } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AlertIcon, AppText, BottomSheet, DotsIcon, cardStyle, ChevronRight, CTA, IconTile, PinIcon, Plus, Scale, TapperIcon, type TileTone, FarmMateArt } from '../../ui';
+import { AlertIcon, AppText, BottomSheet, DotsIcon, cardStyle, ChevronRight, CTA, IconTile, PinIcon, Plus, Scale, TapperIcon, TextLink, type TileTone, FarmMateArt } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { signed, useGoToPoint, type Fill } from './move';
 import { SaleMenu } from './sale-menu';
@@ -111,7 +111,7 @@ export function PointScreen() {
         <>
           {ask ? fillSheet(ask) : null}
           <BottomSheet open={menu === 'menu'} onClose={() => setMenu('none')} title={msg('rec.menu')} testID="pick-menu-sheet">
-            <SaleMenu view={view} pick={setMenu} close={() => setMenu('none')} />
+            <SaleMenu view={view} pick={setMenu} close={() => setMenu('none')} backfill={group && !switching ? `/v2/sale/${saleId}/backfill?tapper=${group.tapperId}` : undefined} />
           </BottomSheet>
           <SaleOptionSheets view={view} open={menu === 'price' || menu === 'info' || menu === 'delete' ? menu : 'none'} onClose={() => setMenu('none')} />
         </>
@@ -153,6 +153,12 @@ export function PointScreen() {
         <View testID="pick-points" style={{ ...cardStyle(t), paddingHorizontal: t.space.lg, paddingVertical: t.space.xs }}>
           {group.points.flatMap((p, i) => [rule(i), row(p.id, p.name, <AppText variant="bodySm">{status(p.id)}</AppText>, tone)])}
         </View>
+      ) : null}
+      {/* Arrived late (E04-S19, owner 2026-11-16): straight into this tapper's catch-up, no point or empty-scale check first. */}
+      {group && !backfill && !switching ? (
+        <TextLink testID="pick-backfill" onPress={() => router.push(`/v2/sale/${saleId}/backfill?tapper=${group.tapperId}` as Href)}>
+          {msg('pick.backfill', { name: nameOf(group.tapperId) })}
+        </TextLink>
       ) : null}
       {choices.unassigned.length ? (
         <View testID="pick-unassigned" style={{ ...cardStyle(t), paddingHorizontal: t.space.lg, paddingVertical: t.space.sm }}>

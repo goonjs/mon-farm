@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { Pressable, Text, View } from 'react-native';
 
 import { formatSatang } from '../../core/finance/money';
-import { filterPeople, formatThaiDate, saleSettings, type MasterState } from '../../core/master';
+import { filterPeople, formatSaleDate, saleSettings, type MasterState } from '../../core/master';
 import { saleDay } from '../../core/sale-list';
 import { saleNumbering } from '../../core/sale-points';
 import { statusCountsAsClosed } from '../../core/sale-status';
@@ -67,7 +67,7 @@ export function useSaleView() {
   const { era } = useI18n();
   const msg = useT();
   const [now] = useState(() => Date.now());
-  const day = saleDay(sale.state.startedTs, now);
+  const day = saleDay(sale.state.startedTs, now, sale.state.day);
   const settings = master ? saleSettings(master) : null;
   const mode = useMemo(() => saleNumbering(sale.events, settings?.numbering ?? 'per-tapper'), [sale.events, settings?.numbering]);
   const nameOf = useCallback((id: string | null) => (id ? (master?.people.find((p) => p.id === id)?.name ?? '') : ''), [master]);
@@ -83,7 +83,7 @@ export function useSaleView() {
     settings,
     nameOf,
     // Empty until the log is read, so a static page's first render matches its export (React 418).
-    saleTitle: sale.ready ? msg('rec.saleOf', { date: formatThaiDate(sale.state.startedTs ?? now, era) }) : '',
+    saleTitle: sale.ready ? msg('rec.saleOf', { date: formatSaleDate(sale.state.startedTs ?? now, sale.state.day, era) }) : '',
   };
 }
 

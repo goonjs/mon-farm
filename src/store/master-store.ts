@@ -295,7 +295,7 @@ export class MasterStore implements PeopleStore {
       // Completed or closed counts; a Cancelled sale never does (E04-S11).
       if (sale.deleted || !statusCountsAsClosed(sale) || sale.startedTs === null) continue;
       if (!sale.zones.some((z) => z.contract?.personId === tapperId)) continue;
-      const day = todayIso(sale.startedTs);
+      const day = sale.day ?? todayIso(sale.startedTs);
       if (!latest || day > latest) latest = day;
     }
     return latest;

@@ -48,7 +48,7 @@ import { overDeducted, pilesCheck } from '../../../core/finance/deduct';
 import { formatSatang } from '../../../core/finance/money';
 import { OWNER_PAYEE, paymentMarkPayload, paymentStatus, paymentTarget, salePaymentConflicts } from '../../../core/finance/payments';
 import { BANKS } from '../../../core/finance/promptpay';
-import { formatThaiDate } from '../../../core/master';
+import { formatSaleDate } from '../../../core/master';
 import type { DebtPaymentMethod } from '../../../core/finance/types';
 import { canComplete } from '../../../core/sale-status';
 import { useInFlight } from '../../../finance/use-in-flight';
@@ -197,7 +197,7 @@ function PayBody({ bump }: { bump: () => void }) {
   const src = sourcesSheet(plan, s.grossSatang, s.ownerSatang);
   // Today's transfer is known here, so the buyer owes against it (review 2026-11-01); cancelled sales owe nothing.
   const owes = buyerOwes(events, counts, { ownerTransfer: (id) => (id === saleId ? money.ownerTransferSatang : undefined) }).find((o) => o.saleId === saleId);
-  const dateText = state.startedTs === null ? '' : formatThaiDate(state.startedTs, era);
+  const dateText = state.startedTs === null ? '' : formatSaleDate(state.startedTs, state.day, era);
   const balance = (wid: string) => money.debts.get(wid)?.balanceSatang ?? 0;
   const routeLines = (wid: string, methods: readonly DebtPaymentMethod[]) => lines(wid).filter((x) => methods.includes(x.method));
   // The owner's transfer carries every transfer-with-owner repayment: one worker is named, several are chosen from.
