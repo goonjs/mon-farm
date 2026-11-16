@@ -16,6 +16,8 @@ export interface SaleRow {
   readonly saleId: string;
   /** Wall-clock start, for display only — the list order uses it, no money does. */
   readonly startedTs: number | null;
+  /** The picked sale day (E04-S19); null on older sales. */
+  readonly day: string | null;
   readonly buyer: string;
   readonly farmName: string;
   readonly netG: number;
@@ -41,6 +43,7 @@ export function summarizeSale(events: readonly SaleEvent[], state: SaleState): S
   return {
     saleId: state.id,
     startedTs: state.startedTs,
+    day: state.day,
     buyer: state.parties?.buyer ?? '',
     farmName: state.parties?.farmName ?? '',
     netG: totals.netG,

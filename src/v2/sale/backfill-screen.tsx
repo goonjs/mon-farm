@@ -66,12 +66,14 @@ export function BackfillScreen() {
   const perPoint = mode === 'per-point';
   const tapper = tapperOn(master, pointId, day);
   const tapperPoints = !perPoint && tapper ? pointsOf(master, tapper, day) : [];
-  const pair = (() => {
-    const pile = state.piles.find((p) => p.id === pointId);
+  /** Each point's basket pair: its pile's when it was set up already, else the one a new point gets (review B1). */
+  const pairOf = (id: string) => {
+    const pile = state.piles.find((p) => p.id === id);
     if (pile) return { stdNetG: pile.stdNetG, tareG: pile.tareG };
     const p = pairForNewPoint(events, settings, null);
     return { stdNetG: p.netG, tareG: p.basketG };
-  })();
+  };
+  const pair = pairOf(pointId);
   const opts = { mode, firstNo: 1, stdNetG: pair.stdNetG, tareG: pair.tareG };
   const pointName = (id: string) => master.points.find((p) => p.id === id)?.name ?? '';
   const kg = (g: number) => kgText(g);
@@ -97,7 +99,7 @@ export function BackfillScreen() {
   const inputs = (n: number): CatchUpPoint[] =>
     order.slice(0, n).map((id) => {
       const e = entry(id);
-      return { pointId: id, endNo: e.end ?? -1, lastShortG: e.full === false ? e.shortG : null, topUpG: e.fill === null ? null : e.fill ? e.fillG : 0 };
+      return { pointId: id, endNo: e.end ?? -1, lastShortG: e.full === false ? e.shortG : null, topUpG: e.fill === null ? null : e.fill ? e.fillG : 0, pair: pairOf(id) };
     });
   const planOf = (n: number): CatchUpPlan | null => (n > 0 ? catchUpPlan(inputs(n), opts) : null);
   /** The Σ so far: every point answered up to here. */
@@ -152,7 +154,8 @@ export function BackfillScreen() {
     saving.current = true;
     setDone(true);
     for (const id of order) {
-      for (const payload of pointSetupPayloads(state, master, id, { pairId: '', netG: pair.stdNetG, basketG: pair.tareG })) append({ kind: 'sys', payload });
+      const own = pairOf(id);
+      for (const payload of pointSetupPayloads(state, master, id, { pairId: '', netG: own.stdNetG, basketG: own.tareG })) append({ kind: 'sys', payload });
     }
     writeCatchUp(plan.drafts, (body) => append(body as Parameters<typeof append>[0]));
     const last = order[order.length - 1];
@@ -216,8 +219,10 @@ export function BackfillScreen() {
     const id = order[now.i];
     const carried = carriedBefore(now.i)!;
     const e = entry(id);
-    const missing = Math.max(0, pair.stdNetG - carried.netG);
-    const maxFill = Math.floor(pair.stdNetG * 1.5) - carried.netG;
+    // The basket is judged by the pair of the point it started at.
+    const root = pairOf(carried.pointId);
+    const missing = Math.max(0, root.stdNetG - carried.netG);
+    const maxFill = Math.floor(root.stdNetG * 1.5) - carried.netG;
     const fillOk = e.fill === false || (e.fill === true && e.fillG !== null && e.fillG > 0 && e.fillG <= maxFill);
     return screen(
       `${pointName(id)} · ${tapper ? msg('cu.ofPoints', { name: nameOf(tapper), i: now.i + 1, n: order.length }) : ''}`,
@@ -233,7 +238,7 @@ export function BackfillScreen() {
             unit={msg('common.kg')}
             decimals={3}
             maxDigits={2}
-            validate={(g) => (g > 0 && g <= maxFill ? undefined : msg('cu.fillBad', { kg: kg(Math.floor(pair.stdNetG * 1.5)) }))}
+            validate={(g) => (g > 0 && g <= maxFill ? undefined : msg('cu.fillBad', { kg: kg(Math.floor(root.stdNetG * 1.5)) }))}
           />
         ) : null}
         <Choice testID="cu-nofill" on={e.fill === false} title={msg('cu.noFill')} body={msg('cu.noFillBody', { n: carried.basketNo, kg: kg(carried.netG), next: carried.basketNo + 1 })} onPress={() => patch(id, { fill: false })} />
@@ -246,10 +251,11 @@ export function BackfillScreen() {
   if (now.kind === 'point') {
     const id = order[now.i];
     const e = entry(id);
+    const own = pairOf(id);
     const start = startOf(now.i);
     const topOnly = !perPoint && e.end === start - 1 && !!carriedBefore(now.i);
     const count = e.end !== null && e.end >= start ? e.end - start + 1 : 0;
-    const shortOk = e.shortG !== null && e.shortG > 0 && e.shortG < pair.stdNetG;
+    const shortOk = e.shortG !== null && e.shortG > 0 && e.shortG < own.stdNetG;
     const answered = topOnly || (count > 0 && (e.full === true || (e.full === false && shortOk)));
     const ok = answered && planOf(now.i + 1) !== null;
     const sub = tapper && !perPoint ? msg('cu.ofPoints', { name: nameOf(tapper), i: now.i + 1, n: order.length }) : pointName(id);
@@ -276,7 +282,7 @@ export function BackfillScreen() {
           <>
             <Label text={msg('cu.fullAsk', { n: e.end! })} />
             <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-              <Choice testID="cu-full" on={e.full === true} title={msg('cu.full')} body={msg('cu.fullKg', { kg: kg(pair.stdNetG) })} onPress={() => patch(id, { full: true })} center />
+              <Choice testID="cu-full" on={e.full === true} title={msg('cu.full')} body={msg('cu.fullKg', { kg: kg(own.stdNetG) })} onPress={() => patch(id, { full: true })} center />
               <Choice testID="cu-short" on={e.full === false} title={msg('cu.short')} body={msg('cu.shortAsk')} onPress={() => {
                   patch(id, { full: false });
                   if (e.shortG === null) setKgOpen(true);
@@ -293,7 +299,7 @@ export function BackfillScreen() {
                 maxDigits={2}
                 open={kgOpen}
                 onOpenChange={setKgOpen}
-                validate={(g) => (g > 0 && g < pair.stdNetG ? undefined : msg('cu.shortBad', { kg: kg(pair.stdNetG) }))}
+                validate={(g) => (g > 0 && g < own.stdNetG ? undefined : msg('cu.shortBad', { kg: kg(own.stdNetG) }))}
               />
             ) : null}
           </>
@@ -314,7 +320,7 @@ export function BackfillScreen() {
           <View key={i} style={{ gap: 2 }}>
             {/* Grouped by point, like the paper (mockup v4 B5). */}
             {i === 0 || plan.rows[i - 1].pointId !== r.pointId ? <AppText variant="bodySm" style={{ fontWeight: t.font.weight.bold }}>{pointName(r.pointId)}</AppText> : null}
-            <SummaryRow r={r} i={i} std={pair.stdNetG} pointName={pointName} />
+            <SummaryRow r={r} i={i} pointName={pointName} />
           </View>
         ))}
         <View testID="cu-total" style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: t.space.sm, borderTopWidth: t.border.thick, borderColor: t.color.rule, paddingTop: t.space.xs }}>
@@ -385,13 +391,13 @@ function Choice({ testID, on, title, body, onPress, center }: { testID: string; 
   );
 }
 
-function SummaryRow({ r, i, std, pointName }: { r: CatchUpRow; i: number; std: number; pointName: (id: string) => string }) {
+function SummaryRow({ r, i, pointName }: { r: CatchUpRow; i: number; pointName: (id: string) => string }) {
   const t = useTheme();
   const msg = useT();
   let text: string;
   if (r.kind === 'full') {
     // "11 × 50" stays on one line (the catalogue keeps no NBSP, so it is tied here).
-    text = r.count > 1 ? msg('cu.rowFull', { from: r.from, to: r.to, n: r.count, kg: kgText(std) }).replace(/ × /g, '\u00a0×\u00a0') : msg('cu.rowOne', { n: r.from });
+    text = r.count > 1 ? msg('cu.rowFull', { from: r.from, to: r.to, n: r.count, kg: kgText(r.netG / r.count) }).replace(/ × /g, '\u00a0×\u00a0') : msg('cu.rowOne', { n: r.from });
   } else if (r.status === 'open' && !r.topUps.length) {
     text = msg('cu.rowOpen', { n: r.basketNo });
   } else {

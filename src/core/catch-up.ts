@@ -17,6 +17,8 @@ export interface CatchUpPoint {
   readonly lastShortG: number | null;
   /** Grams added here to the basket the previous point left short; 0 = not topped up; null = not answered. */
   readonly topUpG: number | null;
+  /** This point's basket pair, when it differs from the options' (review B1): its pile's, as the fold reads it. */
+  readonly pair?: { readonly stdNetG: number; readonly tareG: number };
 }
 
 export type CatchUpDraft =
@@ -74,7 +76,8 @@ export function catchUpPlan(points: readonly CatchUpPoint[], o: CatchUpOptions):
   const drafts: CatchUpDraft[] = [];
   const rows: CatchUpRow[] = [];
   let next = perPoint ? 1 : o.firstNo;
-  type Carried = { draft: number; row: number; haveG: number };
+  // A carried basket keeps its first point's standard and tare: the fold judges it by its root pile (bridge.ts).
+  type Carried = { draft: number; row: number; haveG: number; stdNetG: number; tareG: number };
   let carried: Carried | null = null;
   let baskets = 0;
   let lastNo = next - 1;
@@ -84,6 +87,8 @@ export function catchUpPlan(points: readonly CatchUpPoint[], o: CatchUpOptions):
 
   for (const p of points) {
     if (perPoint) next = 1;
+    const std = p.pair?.stdNetG ?? o.stdNetG;
+    const tare = p.pair?.tareG ?? o.tareG;
     const start = next;
     const topUpOnly = !perPoint && p.endNo === start - 1;
     if (p.endNo < start && !topUpOnly) return null;
@@ -98,10 +103,11 @@ export function catchUpPlan(points: readonly CatchUpPoint[], o: CatchUpOptions):
         carried = null;
       } else {
         const haveG: number = carried.haveG + p.topUpG;
-        if (haveG > o.stdNetG * MAX_FILL) return null;
-        drafts.push({ kind: 'accept', pointId: p.pointId, basketNo: row.basketNo, netG: p.topUpG, tareG: o.tareG, partOf: carried.draft });
-        setRow(carried.row, { topUps: [...row.topUps, { pointId: p.pointId, g: p.topUpG }], netG: haveG, status: haveG >= o.stdNetG ? 'full' : 'open' });
-        carried = haveG >= o.stdNetG ? null : { draft: carried.draft, row: carried.row, haveG };
+        if (haveG > carried.stdNetG * MAX_FILL) return null;
+        drafts.push({ kind: 'accept', pointId: p.pointId, basketNo: row.basketNo, netG: p.topUpG, tareG: carried.tareG, partOf: carried.draft });
+        const full: boolean = haveG >= carried.stdNetG;
+        setRow(carried.row, { topUps: [...row.topUps, { pointId: p.pointId, g: p.topUpG }], netG: haveG, status: full ? 'full' : 'open' });
+        carried = full ? null : { draft: carried.draft, row: carried.row, haveG, stdNetG: carried.stdNetG, tareG: carried.tareG };
       }
     }
     if (topUpOnly) continue;
@@ -113,15 +119,15 @@ export function catchUpPlan(points: readonly CatchUpPoint[], o: CatchUpOptions):
     }
 
     const short = p.lastShortG;
-    if (short !== null && (!(short > 0) || short >= o.stdNetG)) return null;
+    if (short !== null && (!(short > 0) || short >= std)) return null;
     const fullTo = short === null ? p.endNo : p.endNo - 1;
-    for (let n = start; n <= fullTo; n++) drafts.push({ kind: 'accept', pointId: p.pointId, basketNo: n, netG: o.stdNetG, tareG: o.tareG });
-    if (fullTo >= start) rows.push({ kind: 'full', pointId: p.pointId, from: start, to: fullTo, count: fullTo - start + 1, netG: (fullTo - start + 1) * o.stdNetG });
+    for (let n = start; n <= fullTo; n++) drafts.push({ kind: 'accept', pointId: p.pointId, basketNo: n, netG: std, tareG: tare });
+    if (fullTo >= start) rows.push({ kind: 'full', pointId: p.pointId, from: start, to: fullTo, count: fullTo - start + 1, netG: (fullTo - start + 1) * std });
     if (short !== null) {
-      drafts.push({ kind: 'short', pointId: p.pointId, basketNo: p.endNo, netG: short, tareG: o.tareG });
+      drafts.push({ kind: 'short', pointId: p.pointId, basketNo: p.endNo, netG: short, tareG: tare });
       rows.push({ kind: 'short', pointId: p.pointId, basketNo: p.endNo, firstG: short, topUps: [], netG: short, status: 'open' });
       // Per point, a short basket stays at its own point: nothing carries to the next.
-      if (!perPoint) carried = { draft: drafts.length - 1, row: rows.length - 1, haveG: short };
+      if (!perPoint) carried = { draft: drafts.length - 1, row: rows.length - 1, haveG: short, stdNetG: std, tareG: tare };
     }
     baskets += p.endNo - start + 1;
     lastNo = Math.max(lastNo, p.endNo);
