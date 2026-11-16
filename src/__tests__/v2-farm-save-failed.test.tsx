@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
-import { dayAfter, saleSettings, thaiDayInput, todayIso } from '../core/master';
+import { dayAfter, saleSettings, todayIso } from '../core/master';
 import { BuyersScreen } from '../v2/farm/buyers-screen';
 import { PropertyScreen } from '../v2/farm/farms-screens';
 import { PersonScreen } from '../v2/farm/people-screens';
@@ -9,6 +9,7 @@ import { PointScreen, PointsWizardScreen } from '../v2/farm/points-screens';
 import { SaleSettingsScreen } from '../v2/farm/sale-settings-screen';
 import { ShareScreen } from '../v2/farm/shares-screens';
 import type { MasterStore } from '../store/master-store';
+import { pickDate } from '../test/pick-date';
 import { wrap } from '../test/render';
 
 /**
@@ -168,7 +169,7 @@ describe('a failed save says so and keeps the form', () => {
     await flush();
 
     await press(`edit-plan-${old}`);
-    fireEvent.changeText(screen.getByTestId('plan-from'), thaiDayInput(ahead(40)));
+    pickDate('plan-from', ahead(40));
     fireEvent.press(screen.getByTestId(`plan-tapper-${nat.id}`));
     failOnce('assignTapper');
     await press('plan-save');

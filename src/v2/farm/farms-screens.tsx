@@ -58,6 +58,7 @@ import {
   TextField,
   FarmMateArt,
   TextLink,
+  DateField,
 } from '../../ui';
 import { cardStyle } from '../../ui/card';
 import { FieldLabel } from '../../ui/form';
@@ -353,8 +354,7 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
   const [sheet, setSheet] = useState<'none' | 'area' | 'delete'>('none');
   /** The new area on the app pad, inside this same sheet (NP-12: no sheet on a sheet). */
   const [areaEntry, setAreaEntry] = useState<EntryState>(() => startEntry(''));
-  /** While the date is being typed the pad is off: its web key listener would take the date's digits too. */
-  const [typingDate, setTypingDate] = useState(false);
+  /** The effective day, kept as "d/m/yyyy" (พ.ศ.) and picked in a DateField (E01-S22). */
   const [areaDate, setAreaDate] = useState(() => thaiDayInput(todayIso(now)));
   const [tried, setTried] = useState(false);
   const write = useWrite();
@@ -410,18 +410,15 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
               entry={areaEntry}
               onKey={(k) => setAreaEntry((e) => pressKey(e, k, RAI_ENTRY))}
               onDone={() => void saveArea()}
-              pad={!typingDate}
+              pad
               error={tried && (!rai.ok || rai.centiRai === null) ? msg('propertyForm.badArea') : undefined}
             />
-            <TextField
+            <DateField
               testID="area-new-date"
               label={msg('v2f.effective')}
               required
-              hint={msg('v2f.dateHint')}
-              value={areaDate}
-              onChangeText={setAreaDate}
-              onFocus={() => setTypingDate(true)}
-              onBlur={() => setTypingDate(false)}
+              value={effective ?? ''}
+              onChange={(iso) => setAreaDate(iso ? thaiDayInput(iso) : '')}
               error={tried && !effective ? msg('propertyForm.badDate') : undefined}
             />
             <AppText variant="bodySm">{msg('v2f.areaNewLine')}</AppText>

@@ -497,10 +497,11 @@ function oldestFirst(a: { date: string; expenseId: string }, b: { date: string; 
 
 // ── Validation ──────────────────────────────────────────────────────────────
 
-export type ExpenseProblem = 'amount-required' | 'amount-invalid' | 'date-required';
+export type ExpenseProblem = 'amount-required' | 'amount-invalid' | 'date-required' | 'date-future';
 
 /** Only amount + date are required (D-62); a planned expense may leave the amount unknown. */
-export function checkExpense(f: Pick<ExpenseFields, 'amountSatang' | 'date' | 'stage'>): ExpenseProblem[] {
+/** With `today` (ISO), an actual or committed expense dated after it is a problem; planned may be ahead (E01-S22 Q3). */
+export function checkExpense(f: Pick<ExpenseFields, 'amountSatang' | 'date' | 'stage'>, today?: string): ExpenseProblem[] {
   const out: ExpenseProblem[] = [];
   if (f.amountSatang === null) {
     if (f.stage !== 'planned') out.push('amount-required');
@@ -508,6 +509,7 @@ export function checkExpense(f: Pick<ExpenseFields, 'amountSatang' | 'date' | 's
     out.push('amount-invalid');
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) out.push('date-required');
+  else if (today !== undefined && f.stage !== 'planned' && f.date > today) out.push('date-future');
   return out;
 }
 

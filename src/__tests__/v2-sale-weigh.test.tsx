@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { useEffect } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
@@ -133,6 +134,8 @@ describe('v2 start a sale (page 5)', () => {
     expect(screen.getByTestId('start-buyer')).toHaveTextContent(/คนรับซื้อยาง ก/);
     expect(screen.getByTestId('start-manager')).toHaveTextContent(/อ\.สมหวัง/);
     expect(screen.getByTestId('start-pair')).toHaveTextContent(/50 กก\./);
+    // Review of PR 193: no "แตะสลับ พ.ศ./ค.ศ." hint; tapping a date switches the era everywhere in the app.
+    expect(screen.getByTestId('start-date')).not.toHaveTextContent(/แตะสลับ/);
     // E01-S21 PK-3: rows that open a sheet show › like the buyer row.
     for (const id of ['start-pair', 'start-price-row']) expect(within(screen.getByTestId(id)).getByTestId(`${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByTestId('start-scale-decimal1').props.accessibilityState).toMatchObject({ disabled: true });
@@ -162,6 +165,11 @@ describe('v2 pick a point and check the empty scale (pages 6, 7, 7a–7c)', () =
     await press('pick-farm-' + farm.farmA);
     expect(screen.getByTestId('pick-farm-' + farm.farmA).props.accessibilityState).toMatchObject({ checked: true });
     expect(screen.getByTestId('pick-tapper-' + farm.red)).toHaveTextContent(/แดง3 จุด/);
+    // Many farms or tappers wrap two to a line instead of squeezing into one row (E01-S21 sel-q6 ก).
+    for (const id of ['pick-farm', 'pick-tapper']) {
+      expect(StyleSheet.flatten(screen.getByTestId(id).props.style)).toMatchObject({ flexDirection: 'row', flexWrap: 'wrap' });
+    }
+    expect(StyleSheet.flatten(screen.getByTestId('pick-farm-' + farm.farmA).props.style)).toMatchObject({ flexGrow: 1, flexBasis: '40%' });
     expect(screen.getByTestId('pick-unassigned')).toHaveTextContent(/จุดใหม่/);
     await press(`pick-point-${farm.a[0]}`);
     expect(router.push).toHaveBeenCalledWith(`/v2/sale/${saleId}/zero-tare?point=${farm.a[0]}&net=50000&basket=2000`);

@@ -30,6 +30,7 @@ import {
   filterPeople,
   leaveDayProblem,
   parseThaiDay,
+  thaiDayInput,
   planStarterPoints,
   plannedVacancies,
   pointTimeline,
@@ -64,6 +65,7 @@ import {
   Undo,
   FarmMateArt,
   TextLink,
+  DateField,
 } from '../../ui';
 import { NotFound } from './people-screens';
 import {
@@ -510,11 +512,14 @@ function PlanForm({ state, pointId, pointName, replacing, onClose, onSaved }: { 
               ))}
             </ChipWrap>
             {tried && !tapperId ? <FieldError>{msg('assign.pickTapper')}</FieldError> : null}
-            <TextField
+            <DateField
               testID="plan-from"
               label={msg(blankOk ? 'assign.fromLabel' : 'assign.fromRequired')}
-              value={from}
-              onChangeText={setFrom}
+              required={!blankOk}
+              value={fromDay ?? ''}
+              onChange={(iso) => setFrom(iso ? thaiDayInput(iso) : '')}
+              emptyText={blankOk ? msg('assign.noStart') : undefined}
+              emptyLabel={blankOk ? msg('assign.noStart') : undefined}
               error={tried && fromBad ? msg(from.trim() ? 'assign.badDate' : 'assign.needFrom') : undefined}
             />
             {outgoing && fromDay && outgoing.id !== tapperId ? (
@@ -528,11 +533,12 @@ function PlanForm({ state, pointId, pointName, replacing, onClose, onSaved }: { 
         <RadioCard testID="plan-leave" selected={mode === 'leave'} title={msg('assign.leave')} detail={msg('assign.leaveHint')} onPress={() => setMode('leave')} />
         {mode === 'leave' ? (
           <View style={{ paddingLeft: t.space.xl }}>
-            <TextField
+            <DateField
               testID="plan-to"
               label={msg('assign.toLabel')}
-              value={to}
-              onChangeText={setTo}
+              required
+              value={toDay ?? ''}
+              onChange={(iso) => setTo(iso ? thaiDayInput(iso) : '')}
               error={
                 tried && leaveProblem
                   ? msg(leaveProblem === 'date' ? 'assign.badDate' : leaveProblem === 'noTapper' ? 'assign.leaveNoTapper' : 'assign.leaveBeforeStart')

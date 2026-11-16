@@ -47,6 +47,8 @@ export function ChoiceChip({
         minHeight: t.target.min,
         // A short name ("นัด") is a ≥ 48 target at every text size (§12.10 #6), and 64 wide so it is not a circle (q1 = ค).
         minWidth: CHIP_MIN_WIDTH,
+        // A long name wraps inside the chip instead of running past the row (review of PR 194).
+        maxWidth: '100%',
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: t.space.md,
@@ -57,7 +59,7 @@ export function ChoiceChip({
         backgroundColor: on ? t.color.actionSunk : t.color.surfaceRaised,
       }}
     >
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.semibold, color: t.color.ink }}>
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.semibold, color: t.color.ink, textAlign: 'center' }}>
         {label}
       </Text>
     </Pressable>

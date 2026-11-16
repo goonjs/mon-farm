@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import type { ReactNode } from 'react';
 
 import { fertOptionId } from '../../../core/finance/ledger';
@@ -333,6 +334,8 @@ describe('order capture screen (E11-S11)', () => {
     expect(text('ordc-payer-title')).toContain('เงินสวน');
     // E01-S21 PK-2: the shop and date cards show › too.
     for (const id of ['ordc-shop', 'ordc-date']) expect(within(screen.getByTestId(id)).getByTestId(`${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
+    // Review of PR 193 N1: one card per line at every width, so the date never breaks word by word.
+    expect(StyleSheet.flatten(screen.getByTestId('ordc-head').props.style).flexDirection ?? 'column').toBe('column');
     // Owner 2026-11-14: the row's › already says it can be tapped; no "แตะเพื่อเปลี่ยน" hint.
     expect(screen.getByTestId('ordc-payer')).not.toHaveTextContent(/แตะเพื่อเปลี่ยน/);
     press('ordc-payer');

@@ -66,6 +66,15 @@ describe('E11-S01 expenses and lifecycle', () => {
     expect(checkExpense({ amountSatang: 100, date: '', stage: 'actual' })).toEqual(['date-required']);
   });
 
+  it('with today given, actual and committed cannot be after it; planned can (E01-S22 Q3, owner "1 ก 2 ก" 2026-11-16)', () => {
+    const today = '2026-11-15';
+    expect(checkExpense({ amountSatang: 100, date: '2026-11-16', stage: 'actual' }, today)).toEqual(['date-future']);
+    expect(checkExpense({ amountSatang: 100, date: '2026-11-16', stage: 'committed' }, today)).toEqual(['date-future']);
+    expect(checkExpense({ amountSatang: 100, date: '2026-11-16', stage: 'planned' }, today)).toEqual([]);
+    expect(checkExpense({ amountSatang: 100, date: '2026-11-15', stage: 'actual' }, today)).toEqual([]);
+    expect(checkExpense({ amountSatang: 100, date: '2026-11-16', stage: 'actual' })).toEqual([]);
+  });
+
   it('planned may have an unknown amount; committed/actual may not', () => {
     expect(checkExpense({ amountSatang: null, date: '2026-11-15', stage: 'planned' })).toEqual([]);
     expect(checkExpense({ amountSatang: null, date: '2026-11-15', stage: 'committed' })).toEqual(['amount-required']);

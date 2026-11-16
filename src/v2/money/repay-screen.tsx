@@ -20,7 +20,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, CalendarIcon, Card, CardLabel, cardStyle, Check, ChevronRight, FactRow, MoneyField, ReceiptIcon, SaveBar, ScreenHeader, TextField } from '../../ui';
+import { AppText, BottomSheet, CalendarIcon, Card, CardLabel, cardStyle, Check, ChevronRight, DateField, FactRow, MoneyField, ReceiptIcon, SaveBar, ScreenHeader, TextField } from '../../ui';
 import { HalfDot } from './expenses-screen';
 import { Day, PayerPicker, SectionLabel } from './pieces';
 
@@ -134,7 +134,7 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
           </View>
         ) : null}
 
-        <TextField testID="repay-date" label={msg('fin.form.date').replace(' *', '')} required value={date} onChangeText={setDate} helper={msg('v2m.dateShown', { shown: formatDate(date) })} />
+        <DateField testID="repay-date" label={msg('fin.form.date').replace(' *', '')} required value={date} onChange={setDate} max={todayIso()} />
 
         <Card>
           <CardLabel>{manual ? msg('fin.repay.manual') : msg('fin.repay.oldestFirst')}</CardLabel>
