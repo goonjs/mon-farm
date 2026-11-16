@@ -77,6 +77,16 @@ describe('PrepView — เตรียมการขาย (E15-S01)', () => {
     expect(onWrite).toHaveBeenLastCalledWith({ date: '2026-11-21', time: '08:00' });
   });
 
+  it('"today" on the calendar is the farm\'s day (Bangkok), not the device\'s', async () => {
+    const onWrite = jest.fn(async (_p: SalePrepPatch) => undefined);
+    wrap(<PrepView events={[]} today="2026-11-30" lastSaleDay={null} lastSaleTs={null} onWrite={onWrite} onBuyer={jest.fn()} onFert={jest.fn()} onBack={jest.fn()} />);
+    await press('prep-date');
+    await press('prep-date-picker-today');
+    await press('prep-date-picker-done');
+    await press('prep-time-none');
+    expect(onWrite).toHaveBeenLastCalledWith({ date: '2026-11-30', time: null });
+  });
+
   it('the time can be left out', async () => {
     const { onWrite } = setup([]);
     await press('prep-date');
