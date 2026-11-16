@@ -68,12 +68,19 @@ const hold = async () => {
   await act(async () => fireEvent(screen.getByTestId('hold'), 'accessibilityAction', { nativeEvent: { actionName: 'activate' } }));
   await flush();
 };
-const wait = (ms: number) => act(async () => new Promise((r) => setTimeout(r, ms)));
-/** Press and hold a tool button: down, wait, up — the undo button counts like the count stage (E04-S15). */
+/**
+ * Press and hold a tool button: down, wait, up — the undo button counts like the count stage (E04-S15).
+ * The hold runs on a fake clock so a busy machine cannot stretch a short press past the hold time.
+ */
 const holdTool = async (id: string, ms: number) => {
-  fireEvent(screen.getByTestId(id), 'pressIn', { nativeEvent: {} });
-  await wait(ms);
-  fireEvent(screen.getByTestId(id), 'pressOut', { nativeEvent: {} });
+  jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
+  try {
+    fireEvent(screen.getByTestId(id), 'pressIn', { nativeEvent: {} });
+    act(() => jest.advanceTimersByTime(ms));
+    fireEvent(screen.getByTestId(id), 'pressOut', { nativeEvent: {} });
+  } finally {
+    jest.useRealTimers();
+  }
   await flush();
 };
 /** Keys on the app number pad of a field (E01-S20): `<field>-pad-key-<k>`. */
@@ -162,6 +169,25 @@ describe('v2 start a sale (page 5)', () => {
     expect(yesterday < today).toBe(true);
     await press('start-next');
     expect(sys(await store().load(saleId), 'sale_started')[0]).toMatchObject({ day: yesterday });
+  });
+
+  it('E04-S19 BF-9: just after midnight in Bangkok (still yesterday in UTC), the picker\'s today is the sale\'s today', async () => {
+    // 03:00 on 17 Nov in Bangkok is 20:00 on 16 Nov in UTC; only the clock is faked.
+    jest.useFakeTimers({
+      now: new Date('2026-11-16T20:00:00Z'),
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback', 'performance', 'hrtime'],
+    });
+    try {
+      await inSale(<StartSaleScreen />);
+      await press('start-date');
+      expect(screen.getByTestId('start-date-picker-today').props.accessibilityState).toMatchObject({ selected: true });
+      expect(screen.getByTestId('start-date-picker-day-2026-11-17').props.accessibilityState).not.toMatchObject({ disabled: true });
+      await press('start-date-picker-done');
+      await press('start-next');
+      expect(sys(await store().load(saleId), 'sale_started')[0]).toMatchObject({ day: '2026-11-17' });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('a sale started today writes today as its day', async () => {
