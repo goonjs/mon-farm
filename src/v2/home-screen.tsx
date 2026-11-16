@@ -277,7 +277,7 @@ export function V2Home() {
         </Link>
 
         <Heading>{msg('home.goTo')}</Heading>
-        {/* The old order (owner 2026-11-16); the long รายการที่ต้องจ่าย row is now two short tiles with การดูแลสวน (E16-S05 HM-4). */}
+        {/* The old order (owner 2026-11-16); the long รายการที่ต้องจ่าย row is now two short tiles with การดูแลสวน (E16-S05 HM-4), and stock and tappers share a row (HM-4). */}
         <View testID="home-go-to" style={{ gap: t.space.sm }}>
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>
             <Mod slug="reports" tone="action" icon={() => <FarmMateArt id="sale.salesReport" size={MOD_ART} />} label={msg('v2.reports')} />
@@ -299,15 +299,18 @@ export function V2Home() {
             <Mod slug="expenses" tone="cream" icon={() => <FarmMateArt id="sale.receipt" size={MOD_ART} />} label={msg('v2.expenses')} />
             <Mod slug="order" to={ORDER_NEW as Href} tone="accept" icon={() => <FarmMateArt id="materials.orderMaterials" size={MOD_ART} />} label={msg('ords.homeBuy')} />
           </View>
-          <Mod slug="stock" tone="accept" icon={() => <FarmMateArt id="materials.stock" size={MOD_ART} />} label={msg('v2.stock')} />
-          <Mod
-            slug="workers"
-            to={'/v2/people?filter=tapper' as Href}
-            tone="neutral"
-            icon={() => <FarmMateArt id="people.workerInfo" size={MOD_ART} />}
-            label={msg('v2.workers')}
-            badge={{ value: String(tappers), word: msg('role.tapper') }}
-          />
+          {/* Two short tiles on one row (owner 2026-11-16, E16-S05 HM-4). */}
+          <View testID="home-go-to-stock-row" style={{ flexDirection: 'row', gap: t.space.sm }}>
+            <Mod slug="stock" tone="accept" icon={() => <FarmMateArt id="materials.stock" size={MOD_ART} />} label={msg('v2.stock')} />
+            <Mod
+              slug="workers"
+              to={'/v2/people?filter=tapper' as Href}
+              tone="neutral"
+              icon={() => <FarmMateArt id="people.workerInfo" size={MOD_ART} />}
+              label={msg('v2.workers')}
+              badge={{ value: String(tappers), word: msg('role.tapper') }}
+            />
+          </View>
         </View>
       </ScrollView>
 
