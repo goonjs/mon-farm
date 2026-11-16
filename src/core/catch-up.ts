@@ -1,10 +1,12 @@
 /**
  * Catching up from the paper (E04-S19): someone arrives late and enters the
  * baskets already weighed, point by point in weighing order, then counts
- * live. Contract only; the build follows the tests.
+ * live. Every basket is an ordinary event, so totals, history and the
+ * open-basket rules apply as if it had been counted live.
  */
 
-import type { MasterState } from './master';
+import { tapperOn, type MasterState } from './master';
+import { nextBasketNo } from './sale-points';
 import type { NumberingMode, SaleEvent } from './types';
 
 export interface CatchUpPoint {
@@ -49,14 +51,110 @@ export interface CatchUpOptions {
   readonly tareG: number;
 }
 
-export function catchUpPlan(_points: readonly CatchUpPoint[], _o: CatchUpOptions): CatchUpPlan | null {
-  throw new Error('not built yet');
+/** A basket can take at most one and a half full ones, as the live short sheet allows. */
+const MAX_FILL = 1.5;
+
+/**
+ * The baskets to write for the points entered, in weighing order, or null
+ * when something cannot be right (an end before the start, a short basket
+ * not between 0 and full, a basket left short not answered at the next
+ * point, a top-up past 1.5 full baskets).
+ *
+ * Continuous per tapper: numbers run on from `firstNo`. A basket a point ends
+ * short on is asked about at the next point: topped up there (a part with
+ * `partOf`, as live counting writes it), or closed. A top-up that still does
+ * not reach full carries on to the next point only when this point starts no
+ * basket of its own (`endNo` = its start − 1); otherwise it closes short.
+ * The last point's short basket stays open, to fill when counting live.
+ * Per point: each point starts at 1 and keeps its own open short basket.
+ */
+export function catchUpPlan(points: readonly CatchUpPoint[], o: CatchUpOptions): CatchUpPlan | null {
+  if (!points.length) return null;
+  const perPoint = o.mode === 'per-point';
+  const drafts: CatchUpDraft[] = [];
+  const rows: CatchUpRow[] = [];
+  let next = perPoint ? 1 : o.firstNo;
+  type Carried = { draft: number; row: number; haveG: number };
+  let carried: Carried | null = null;
+  let baskets = 0;
+  let lastNo = next - 1;
+  const setRow = (i: number, patch: Partial<Extract<CatchUpRow, { kind: 'short' }>>) => {
+    rows[i] = { ...(rows[i] as Extract<CatchUpRow, { kind: 'short' }>), ...patch };
+  };
+
+  for (const p of points) {
+    if (perPoint) next = 1;
+    const start = next;
+    const topUpOnly = !perPoint && p.endNo === start - 1;
+    if (p.endNo < start && !topUpOnly) return null;
+    if (topUpOnly && !carried) return null;
+
+    if (carried) {
+      if (p.topUpG === null || p.topUpG < 0) return null;
+      const row = rows[carried.row] as Extract<CatchUpRow, { kind: 'short' }>;
+      if (p.topUpG === 0) {
+        drafts.push({ kind: 'close', root: carried.draft });
+        setRow(carried.row, { status: 'closed' });
+        carried = null;
+      } else {
+        const haveG: number = carried.haveG + p.topUpG;
+        if (haveG > o.stdNetG * MAX_FILL) return null;
+        drafts.push({ kind: 'accept', pointId: p.pointId, basketNo: row.basketNo, netG: p.topUpG, tareG: o.tareG, partOf: carried.draft });
+        setRow(carried.row, { topUps: [...row.topUps, { pointId: p.pointId, g: p.topUpG }], netG: haveG, status: haveG >= o.stdNetG ? 'full' : 'open' });
+        carried = haveG >= o.stdNetG ? null : { draft: carried.draft, row: carried.row, haveG };
+      }
+    }
+    if (topUpOnly) continue;
+    // Still short after a top-up, and this point goes on with new baskets: it closed short here.
+    if (carried) {
+      drafts.push({ kind: 'close', root: carried.draft });
+      setRow(carried.row, { status: 'closed' });
+      carried = null;
+    }
+
+    const short = p.lastShortG;
+    if (short !== null && (!(short > 0) || short >= o.stdNetG)) return null;
+    const fullTo = short === null ? p.endNo : p.endNo - 1;
+    for (let n = start; n <= fullTo; n++) drafts.push({ kind: 'accept', pointId: p.pointId, basketNo: n, netG: o.stdNetG, tareG: o.tareG });
+    if (fullTo >= start) rows.push({ kind: 'full', pointId: p.pointId, from: start, to: fullTo, count: fullTo - start + 1, netG: (fullTo - start + 1) * o.stdNetG });
+    if (short !== null) {
+      drafts.push({ kind: 'short', pointId: p.pointId, basketNo: p.endNo, netG: short, tareG: o.tareG });
+      rows.push({ kind: 'short', pointId: p.pointId, basketNo: p.endNo, firstG: short, topUps: [], netG: short, status: 'open' });
+      // Per point, a short basket stays at its own point: nothing carries to the next.
+      if (!perPoint) carried = { draft: drafts.length - 1, row: rows.length - 1, haveG: short };
+    }
+    baskets += p.endNo - start + 1;
+    lastNo = Math.max(lastNo, p.endNo);
+    next = p.endNo + 1;
+  }
+
+  const totalG = rows.reduce((sum, r) => sum + r.netG, 0);
+  return { drafts, rows, totalG, baskets, lastNo };
 }
 
-export function writeCatchUp(_drafts: readonly CatchUpDraft[], _append: (body: Record<string, unknown>) => string): void {
-  throw new Error('not built yet');
+/**
+ * Appends a plan's baskets in order through the app's one write path. A
+ * top-up and a close name their basket by the id `append` gave it.
+ */
+export function writeCatchUp(drafts: readonly CatchUpDraft[], append: (body: Record<string, unknown>) => string): void {
+  const ids: string[] = [];
+  for (const d of drafts) {
+    if (d.kind === 'close') {
+      ids.push(append({ kind: 'sys', payload: { t: 'basket_closed', basketId: ids[d.root], reason: 'next' } }));
+    } else if (d.kind === 'short') {
+      // Stored as a reading like any short basket (reading − basket = net).
+      ids.push(append({ kind: 'short', pileId: d.pointId, pointId: d.pointId, basketNo: d.basketNo, readingG: d.netG + d.tareG, tareG: d.tareG, afterwards: true }));
+    } else {
+      ids.push(append({ kind: 'accept', pileId: d.pointId, pointId: d.pointId, basketNo: d.basketNo, input: 'backfill', netG: d.netG, tareG: d.tareG, ...(d.partOf !== undefined ? { partOf: ids[d.partOf] } : {}) }));
+    }
+  }
 }
 
-export function catchUpAllowed(_events: readonly SaleEvent[], _master: MasterState, _day: string, _pointId: string, _mode: NumberingMode): boolean {
-  throw new Error('not built yet');
+/**
+ * Catching up comes before counting live (owner 2026-11-16): allowed while
+ * the point's number sequence — its tapper's, or the point's own — has no
+ * basket yet.
+ */
+export function catchUpAllowed(events: readonly SaleEvent[], master: MasterState, day: string, pointId: string, mode: NumberingMode): boolean {
+  return nextBasketNo(events, pointId, mode, (id) => tapperOn(master, id, day)) === 1;
 }

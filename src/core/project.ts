@@ -34,6 +34,7 @@ export function emptySale(id: string): SaleState {
     status: 'open',
     saleStatus: 'draft',
     startedTs: null,
+    day: null,
     parties: null,
     price: null,
     split: null,
@@ -82,6 +83,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
 
   let status: OpenClosed = base.status;
   let startedTs: number | null = null;
+  let day: string | null = null;
   let parties = base.parties;
   let price = base.price;
   let saleStatus = base.saleStatus;
@@ -106,6 +108,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
     switch (payload.t) {
       case 'sale_started':
         startedTs = e.ts;
+        day = payload.day ?? null;
         parties = {
           farmName: payload.farmName,
           buyer: payload.buyer,
@@ -263,6 +266,7 @@ export function projectSale(events: readonly SaleEvent[], saleId?: string): Sale
     status,
     saleStatus,
     startedTs,
+    day,
     parties,
     price,
     split,

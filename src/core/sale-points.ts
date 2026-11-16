@@ -285,7 +285,7 @@ export function basketList(events: readonly SaleEvent[], opts: { withUndone?: bo
       netG: bridged ? bridged.netG : basketNetG(e),
       short: bridged ? bridged.status !== 'full' : e.kind === 'short',
       ...(bridged ? { partsG: bridged.partsG } : {}),
-      ...((e.kind === 'accept' && e.input === 'backfill') || (e.kind === 'short' && e.backfill) ? { backfill: true } : {}),
+      ...((e.kind === 'accept' && e.input === 'backfill') || (e.kind === 'short' && (e.backfill || e.afterwards)) ? { backfill: true } : {}),
       ...(e.kind === 'short' && !bridged ? { reading: { readingG: e.readingG, tareG: e.tareG } } : {}),
       status: wasUndone ? 'undone' : live.has(e.id) ? 'live' : 'voided',
       ...(wasUndone ? { undoneTs: undoneAt.get(e.id) } : {}),

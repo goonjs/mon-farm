@@ -11,14 +11,17 @@ import { statusCountsAsClosed } from './sale-status';
 import type { SaleEvent, SaleState } from './types';
 
 /** The sale's own day: the Bangkok day it started, else today (`now`). */
-export function saleDay(startedTs: number | null, now: number): string {
-  return todayIso(startedTs ?? now);
+/** The sale's day: the one picked at the start (E04-S19 BF-9), else the Bangkok day it started. */
+export function saleDay(startedTs: number | null, now: number, day?: string | null): string {
+  return day ?? todayIso(startedTs ?? now);
 }
 
 export interface SaleListRow {
   readonly id: string;
   readonly state: SaleState;
   readonly startedTs: number | null;
+  /** The sale day, YYYY-MM-DD (E04-S19): what the list shows and sorts on. */
+  readonly day: string;
   readonly buyer: string;
   readonly baskets: number;
   readonly netG: number;
@@ -36,11 +39,13 @@ export function saleListRows(sales: readonly { id: string; events: readonly Sale
   for (const { id, events } of sales) {
     const state = projectSale(events, id);
     if (state.deleted || !state.parties) continue;
-    const rollup = saleRollup(events, master, saleDay(state.startedTs, 0));
+    const day = saleDay(state.startedTs, 0, state.day);
+    const rollup = saleRollup(events, master, day);
     rows.push({
       id,
       state,
       startedTs: state.startedTs,
+      day,
       buyer: state.parties.buyer,
       baskets: rollup.sale.baskets,
       netG: rollup.sale.netG,
@@ -49,7 +54,7 @@ export function saleListRows(sales: readonly { id: string; events: readonly Sale
       unassignedG: rollup.unassigned.netG,
     });
   }
-  return rows.sort((a, b) => (b.startedTs ?? 0) - (a.startedTs ?? 0));
+  return rows.sort((a, b) => (a.day === b.day ? (b.startedTs ?? 0) - (a.startedTs ?? 0) : a.day < b.day ? 1 : -1));
 }
 
 const POINT_STEPS = new Set(['pile_added', 'ready', 'zero_check', 'tare_confirmed', 'skew_accepted', 'scale_wait', 'gate_skipped']);

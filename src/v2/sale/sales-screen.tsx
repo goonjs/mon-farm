@@ -10,7 +10,7 @@ import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { formatThaiDate, type MasterState } from '../../core/master';
+import { formatSaleDate, type MasterState } from '../../core/master';
 import { currentPoint, saleListRows, type SaleListRow } from '../../core/sale-list';
 import { useI18n, useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
@@ -77,7 +77,7 @@ export function SalesScreen() {
                 <View style={{ flex: 1, gap: t.space.xxs }}>
                   <Pressable accessibilityRole="button" testID={`sale-date-${r.id}`} onPress={toggleEra} hitSlop={8}>
                     <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
-                      {r.startedTs ? formatThaiDate(r.startedTs, era) : ''}
+                      {r.startedTs ? formatSaleDate(r.startedTs, r.state.day, era) : ''}
                     </Text>
                   </Pressable>
                   {r.buyer ? <IconLine icon={(c) => <UsersIcon color={c} size={13} />}>{r.buyer}</IconLine> : null}

@@ -344,6 +344,13 @@ export function formatThaiDate(ts: number, era: 'be' | 'ce'): string {
   return `${d.getUTCDate()} ${THAI_MONTHS[d.getUTCMonth()]} ${year}`;
 }
 
+/** A sale's date: the day picked at the start (E04-S19), else the Bangkok day it started. */
+export function formatSaleDate(startedTs: number, day: string | null, era: 'be' | 'ce'): string {
+  const [y, m, d] = (day ?? '').split('-').map(Number);
+  if (!y || !m || !d) return formatThaiDate(startedTs, era);
+  return `${d} ${THAI_MONTHS[m - 1]} ${y + (era === 'be' ? 543 : 0)}`;
+}
+
 const THAI_WEEKDAYS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
 
 /** "ส. 3 ต.ค. 2569": the short weekday, then `formatThaiDate` (home header, flow-v1 screen 3). */

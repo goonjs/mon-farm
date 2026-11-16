@@ -15,7 +15,7 @@ import { PixelRatio, Platform, Text, View } from 'react-native';
 import { projectAccounts } from '../../../core/finance/accounts';
 import { formatSatang } from '../../../core/finance/money';
 import { BANKS } from '../../../core/finance/promptpay';
-import { formatThaiDate } from '../../../core/master';
+import { formatSaleDate } from '../../../core/master';
 import { useI18n, useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, Button, cardStyle } from '../../../ui';
@@ -135,7 +135,7 @@ export function BuyerViewScreen() {
       <View style={{ ...cardStyle(t), padding: t.space.md, gap: t.space.sm }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', gap: t.space.sm }}>
           <AppText variant="title" style={{ fontWeight: t.font.weight.bold }}>{msg('cop.bvSheet')}</AppText>
-          {co.money.state.startedTs != null ? <AppText variant="bodySm">{formatThaiDate(co.money.state.startedTs, era)}</AppText> : null}
+          {co.money.state.startedTs != null ? <AppText variant="bodySm">{formatSaleDate(co.money.state.startedTs, co.money.state.day, era)}</AppText> : null}
         </View>
         {buyerPiles(plan).map((p) =>
           p.kind === 'cash' ? (
