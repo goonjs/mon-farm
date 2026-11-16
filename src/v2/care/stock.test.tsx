@@ -26,10 +26,10 @@ const item = (id: string, o: { formula: string; sacks: number; perSack: number; 
 const used = (id: string, date: string, sources: string[], sacks: number) =>
   ev(id, { t: 'fertilizing_recorded', fields: { date, lines: [{ sources, sacks, takes: [{ worker: DAENG, sacks, auto: false }], rest: null }], pct: { [DAENG.id]: 50 }, settle: {}, zones: [], reasons: [], note: '' } });
 
-function setup(events: FinanceEvent[]) {
+function setup(events: FinanceEvent[], today = '2026-11-16') {
   const onOpen = jest.fn();
   const onOrders = jest.fn();
-  wrap(<StockView events={events} onOpen={onOpen} onOrders={onOrders} onBack={jest.fn()} />);
+  wrap(<StockView events={events} today={today} onOpen={onOpen} onOrders={onOrders} onBack={jest.fn()} />);
   return { onOpen, onOrders };
 }
 
@@ -78,5 +78,19 @@ describe('StockView — ปุ๋ยคงเหลือ (E16-S04)', () => {
   it('nothing in stock says so', () => {
     setup([]);
     expect(screen.getByTestId('stock-empty')).toHaveTextContent(/ไม่มีปุ๋ยในสต็อก/);
+  });
+
+  it('an order from another year shows its year; a formula never breaks at its dashes (review of PR 190 item 3)', () => {
+    // Viewed in January: December's order is last year. (Orders before the cutoff never make a card, D-96.)
+    setup(
+      [
+        item('old', { formula: '15-15-15', sacks: 10, perSack: 800, shop: 'ร้าน ก.', date: '2026-12-20' }),
+        item('due', { formula: '21-0-0', sacks: 5, perSack: 600, shop: 'ร้าน ข.', date: '2027-01-05', stage: 'committed' }),
+      ],
+      '2027-01-10',
+    );
+    expect(screen.getByTestId('stock-card-0-from')).toHaveTextContent('ร้าน ก. 20 ธ.ค. 2569');
+    expect(String(screen.getByTestId('stock-card-0-name').props.children)).toBe('15\u2060-\u206015\u2060-\u206015');
+    expect(String(screen.getByTestId('stock-ordered-what').props.children)).toBe('21\u2060-\u20600\u2060-\u20600\u00a05 ถุง');
   });
 });

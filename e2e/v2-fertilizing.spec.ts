@@ -175,11 +175,13 @@ for (const size of ['m', 'l'] as const) {
     await page.goto('/v2');
     await context.setOffline(true);
     expect(await textFit(page)).toEqual([]);
-    await page.getByTestId('home-care').click();
+    // E16-S05 HM-3 (review of PR 190 item 2): the committed ขี้ไก่ order (50 × ฿100) shows as a ควรรู้ row.
+    await expect(page.getByTestId('home-payables')).toContainText('5,000');
+    await page.getByTestId('mod-care').click();
     await expect(page.locator('[data-testid^="care-row-fz-"]:not([data-testid$="-badge"])')).toHaveCount(2);
     await expect(page.getByTestId('care-row-fz-e2e-2-badge')).toHaveText('ยังไม่แบ่ง');
     // Each item has its unit; the "·" stays on the line of the item before it (PR 189 review N2).
-    await expect(page.getByTestId('care-what-fz-e2e-1')).toHaveText('ดีเกลือ 20 ถุง\u00a0· 46\u2060-\u20600\u2060-\u20600 5 ถุง');
+    await expect(page.getByTestId('care-what-fz-e2e-1')).toHaveText('ดีเกลือ\u00a020 ถุง\u00a0· 46\u2060-\u20600\u2060-\u20600\u00a05 ถุง');
     expect(await textFit(page)).toEqual([]);
     await evidence(page, `${SHOTS}/${size}-care-list.png`);
     await page.getByTestId('care-row-fz-e2e-2').click();

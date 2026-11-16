@@ -67,7 +67,8 @@ describe('CareListView (E16-S01)', () => {
     setup([...STOCK, fz('fz-2', { lines: [{ sources: ['a'], sacks: 10, takes: [], rest: null }, { sources: ['k'], sacks: 5, takes: [], rest: null }] })]);
     const raw = String(screen.getByTestId('care-what-fz-2').props.children);
     // A formula never breaks at its dashes ("15-15-" / "15", owner 2026-11-16): word joiners hold it together.
-    expect(raw).toBe('ดีเกลือ 10 ถุง\u00a0· 46\u2060-\u20600\u2060-\u20600 5 ถุง');
+    // ...and a formula stays on the line of its count (review of PR 190 item 4).
+    expect(raw).toBe('ดีเกลือ\u00a010 ถุง\u00a0· 46\u2060-\u20600\u2060-\u20600\u00a05 ถุง');
   });
 
   it('a fertilizing that used more than was received carries the worded over-use flag (E16-S04 FL-3)', () => {

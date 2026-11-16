@@ -115,7 +115,7 @@ describe('V2Home — empty farm', () => {
     expect(page().props.scrollEnabled).toBe(true);
   });
 
-  it('reads top to bottom as drawn: header with date, cover, four actions 2×2, ควรรู้, ไปที่ (E16-S05 HM-1)', async () => {
+  it('reads top to bottom as drawn: header with date, cover, three actions, ควรรู้, ไปที่ (owner 2026-11-16: no 2×2)', async () => {
     wrap(<V2Home />);
     await flush();
     expect(screen.getByTestId('screen-title').props.children).toBe('หน้าแรก');
@@ -123,19 +123,16 @@ describe('V2Home — empty farm', () => {
     expect(screen.getByLabelText('ภาพปก: สวนยางริมลำธาร')).toBeTruthy();
 
     const home = screen.getByTestId('v2-home');
-    const order = ['home-cover', 'home-prepare', 'home-sale-start', 'home-record-expense', 'home-care', 'home-to-know', 'home-sales', 'home-go-to'];
+    const order = ['home-cover', 'home-prepare', 'home-sale-start', 'home-record-expense', 'home-to-know', 'home-sales', 'home-go-to'];
     const all = within(home).getAllByTestId(new RegExp(`^(${order.join('|')})$`));
     expect(all.map((n) => n.props.testID)).toEqual(order);
 
     expect(within(screen.getByTestId('home-prepare')).getByText('เตรียมขาย')).toBeTruthy();
     expect(within(screen.getByTestId('home-sale-start')).getByText('เริ่มการขาย')).toBeTruthy();
     expect(within(screen.getByTestId('home-record-expense')).getByText('บันทึกค่าใช้จ่าย')).toBeTruthy();
-    expect(within(screen.getByTestId('home-care')).getByText('การดูแลสวน')).toBeTruthy();
-    // Two rows of two: เตรียมขาย · เริ่มการขาย, then บันทึกค่าใช้จ่าย · การดูแลสวน.
-    const row = (n: number) => within(screen.getByTestId(`home-actions-${n}`)).getAllByTestId(/^home-(prepare|sale-start|record-expense|care)$/).map((x) => x.props.testID);
-    expect(row(1)).toEqual(['home-prepare', 'home-sale-start']);
-    expect(row(2)).toEqual(['home-record-expense', 'home-care']);
-    expect(screen.queryByTestId('home-care-badge')).toBeNull();
+    // Garden care is not a big button any more (owner 2026-11-16): it sits with the ไปที่ tiles.
+    expect(screen.queryByTestId('home-care')).toBeNull();
+    expect(screen.queryByTestId('mod-care-flag')).toBeNull();
     expect(screen.getByText('ควรรู้ / ควรจัดการ')).toBeTruthy();
     expect(screen.getByText('สำคัญก่อน')).toBeTruthy();
     expect(screen.getByText('ไปที่')).toBeTruthy();
@@ -172,18 +169,16 @@ describe('V2Home — empty farm', () => {
     expect(screen.queryByTestId('home-payables')).toBeNull();
   });
 
-  it('the module grid is half tiles only, two to a row, in the order of importance (E16-S05 HM-4)', async () => {
+  it('the module grid keeps its old order; garden care is a short tile beside รายการที่ต้องจ่าย (owner 2026-11-16, E16-S05 HM-4)', async () => {
     wrap(<V2Home />);
     await flush();
     const grid = screen.getByTestId('home-go-to');
     const ids = within(grid).getAllByTestId(/^mod-/).map((n) => n.props.testID);
-    expect(ids).toEqual(['mod-stock', 'mod-expenses', 'mod-order', 'mod-payables', 'mod-workers', 'mod-reports', 'mod-weather']);
-    const rows = within(grid).getAllByTestId(/^home-go-to-row-\d$/);
-    expect(rows.map((r) => within(r).getAllByTestId(/^mod-/).length)).toEqual([2, 2, 2, 1]);
-    // The odd one out keeps half the width: an empty half beside it.
-    expect(within(rows[3]).getByTestId('home-go-to-spacer')).toBeTruthy();
-    // Garden care moved up to the big buttons (HM-1): not twice.
-    expect(screen.queryByTestId('mod-care')).toBeNull();
+    expect(ids).toEqual(['mod-reports', 'mod-weather', 'mod-payables', 'mod-care', 'mod-expenses', 'mod-order', 'mod-stock', 'mod-workers']);
+    // The long รายการที่ต้องจ่าย row is now two short tiles: it and การดูแลสวน.
+    const pair = within(screen.getByTestId('home-go-to-care-row')).getAllByTestId(/^mod-/).map((n) => n.props.testID);
+    expect(pair).toEqual(['mod-payables', 'mod-care']);
+    expect(within(screen.getByTestId('mod-care')).getByText('การดูแลสวน')).toBeTruthy();
     // The amount to pay moved to ควรรู้ (HM-3): the tile is a way in only.
     expect(within(screen.getByTestId('mod-payables')).queryByText('0.00')).toBeNull();
     expect(within(screen.getByTestId('mod-reports')).getByText('รายงานการขายย้อนหลัง')).toBeTruthy();
@@ -202,7 +197,7 @@ describe('V2Home — empty farm', () => {
       'home-prepare': '/v2/prepare',
       'home-sale-start': '/v2/sale/start',
       'home-record-expense': '/v2/expense/new',
-      'home-care': '/v2/care',
+      'mod-care': '/v2/care',
       'home-sales': '/v2/sales',
       'mod-reports': '/v2/reports',
       'mod-weather': '/v2/weather',
@@ -221,13 +216,14 @@ describe('V2Home — empty farm', () => {
 });
 
 describe('V2Home — FarmMate originals (E03-S11 FM-6)', () => {
-  it('the four actions and the module grid draw the originals; weather keeps its line icon', async () => {
+  it('the three actions and the module grid draw the originals; weather keeps its line icon', async () => {
     wrap(<V2Home />);
     await flush();
     expect(art('home-prepare')).toEqual(['farmwork.today']);
     expect(art('home-sale-start')).toEqual(['sale.sale']);
     expect(art('home-record-expense')).toEqual(['sale.receipt']);
-    expect(art('home-care')).toEqual(['farmwork.maintenance']);
+    // A sprout for looking after the garden (owner 2026-11-16 asked for a better-fitting icon than the tools).
+    expect(art('mod-care')).toEqual(['farm.treeCondition']);
     expect(art('mod-reports')).toEqual(['sale.salesReport']);
     expect(art('mod-weather')).toEqual([]);
     expect(art('mod-payables')).toEqual(['finance.expense']);
@@ -299,15 +295,15 @@ describe('V2Home — ☰ menu (v1.1.0 screen 1)', () => {
   });
 });
 
-describe('V2Home — garden care on the big buttons (E16-S05 HM-2)', () => {
+describe('V2Home — garden care tile (E16-S05 HM-2)', () => {
   it('the garden care button says how many fertilizings are not split yet; deleted ones do not count', async () => {
     await seedUnsplitFertilizing('fz-a');
     await seedUnsplitFertilizing('fz-b');
     await seedUnsplitFertilizing('fz-gone', true);
     wrap(<V2Home />);
     await flush();
-    expect(screen.getByTestId('home-care-badge')).toHaveTextContent('ยังไม่แบ่ง 2 ครั้ง');
-    fireEvent.press(screen.getByTestId('home-care'));
+    expect(screen.getByTestId('mod-care-flag')).toHaveTextContent('ยังไม่แบ่ง 2 ครั้ง');
+    fireEvent.press(screen.getByTestId('mod-care'));
     expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/care');
   });
 });
@@ -396,7 +392,8 @@ describe('V2Home — shop orders (E11-S11 FO-13, FD-0)', () => {
       expect(screen.getByTestId('home-order-committed-why')).toHaveTextContent('สั่งเกิน 2 วันแล้ว · ของมาแล้วให้เปลี่ยนเป็น ได้ของแล้ว');
       // E16-S05 HM-3: the shop is still owed for the committed order: one row, short money, with why.
       expect(screen.getByTestId('home-payables')).toHaveTextContent(/฿\s*1,000/);
-      expect(screen.getByTestId('home-payables-why')).toHaveTextContent('ซื้อแล้ว ยังไม่ได้จ่ายร้าน');
+      // What it sums is committed buying not paid yet, so the reason says that (review of PR 190 item 1).
+      expect(screen.getByTestId('home-payables-why')).toHaveTextContent('สั่งหรือตกลงไว้แล้ว ยังไม่ได้จ่าย');
       fireEvent.press(screen.getByTestId('home-order-committed'));
       expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'o1' } });
       expect(screen.getByTestId('mod-order')).toBeTruthy();

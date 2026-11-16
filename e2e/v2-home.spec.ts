@@ -101,9 +101,9 @@ test('/ → splash → home: as drawn, empty, then live rows from the local log,
   // E16-S05 HM-3: money owed back is its own row; the payables row counts the shop only.
   await expect(page.getByTestId('home-payables')).toHaveCount(0);
   await expect(page.getByTestId('mod-workers')).toContainText('2');
-  // E16-S05 HM-4: every "ไปที่" tile is half the row, the lone last one too (its padding once made it wider).
+  // E16-S05 HM-4 (owner 2026-11-16): garden care is a short tile beside รายการที่ต้องจ่าย, each half the row.
   const width = async (id: string) => (await page.getByTestId(id).boundingBox())!.width;
-  expect(Math.abs((await width('mod-weather')) - (await width('mod-stock')))).toBeLessThan(2);
+  expect(Math.abs((await width('mod-care')) - (await width('mod-payables')))).toBeLessThan(2);
   await shot(page, '03-home-live', true);
 
   // The sale rows open the sale itself: the open one where it was weighing,
