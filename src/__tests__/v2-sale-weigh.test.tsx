@@ -148,6 +148,29 @@ describe('v2 start a sale (page 5)', () => {
     expect(router.replace).toHaveBeenCalledWith(`/v2/sale/${saleId}/point`);
   });
 
+  it('E04-S19 BF-9: the sale day is today by default and can be an earlier day, never a later one', async () => {
+    await inSale(<StartSaleScreen />);
+    await press('start-date');
+    const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
+    const tomorrow = new Date(Date.now() + 31 * 3_600_000).toISOString().slice(0, 10);
+    expect(screen.getByTestId('start-date-picker-today').props.accessibilityState).toMatchObject({ selected: true });
+    const later = screen.queryByTestId(`start-date-picker-day-${tomorrow}`);
+    if (later) expect(later.props.accessibilityState).toMatchObject({ disabled: true });
+    await press('start-date-picker-yesterday');
+    await press('start-date-picker-done');
+    const yesterday = new Date(Date.now() - 17 * 3_600_000).toISOString().slice(0, 10);
+    expect(yesterday < today).toBe(true);
+    await press('start-next');
+    expect(sys(await store().load(saleId), 'sale_started')[0]).toMatchObject({ day: yesterday });
+  });
+
+  it('a sale started today writes today as its day', async () => {
+    await inSale(<StartSaleScreen />);
+    await press('start-next');
+    const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
+    expect(sys(await store().load(saleId), 'sale_started')[0]).toMatchObject({ day: today });
+  });
+
   it('a typed price is written with the header', async () => {
     await inSale(<StartSaleScreen />);
     await press('start-price-row');
@@ -410,39 +433,132 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
   });
 });
 
-describe('v2 backfill (page 14, E04-S10)', () => {
-  it('numbers run on from the tapper last basket; the baskets count and are labelled', async () => {
+describe('catch up from the paper (E04-S19, mockup v4)', () => {
+  /** Types `keys` on a whole-number field's pad and closes it. */
+  const typeInt = async (field: string, keys: string) => {
+    await press(field);
+    await padKeys(field, keys);
+    await press(`${field}-pad-key-done`);
+  };
+  /** Types kg on a decimal field's pad and closes it. */
+  const typeKg = async (field: string, keys: string) => {
+    if (!screen.queryByTestId(`${field}-pad`)) await press(field);
+    await padKeys(field, keys);
+    await press(`${field}-done`);
+  };
+  const enabled = (id: string) => !screen.getByTestId(id).props.accessibilityState?.disabled;
+  const kinds = async () => {
+    const ev = await store().load(saleId);
+    return ev.filter((e) => e.kind === 'accept' || e.kind === 'short' || (e.kind === 'sys' && e.payload.t === 'basket_closed'));
+  };
+
+  it('the paper sample, continuous: จุด 1 then จุด 3 → Σ 1,022 kg in 21 baskets; basket 21 stays open for live counting', async () => {
+    await started();
+    await inSale(<BackfillScreen />, { point: farm.a[0] });
+    // BF-1: แดง's points, in paper order; the picked one is already first.
+    expect(screen.getByTestId('cu-order')).toBeTruthy();
+    expect(screen.getByTestId(`cu-order-${farm.a[0]}`)).toHaveTextContent(/1/);
+    await press(`cu-order-${farm.a[2]}`);
+    expect(screen.getByTestId(`cu-order-${farm.a[2]}`)).toHaveTextContent(/2/);
+    await press('cu-next');
+    // BF-2/3: one page per point; the start is filled in; nothing is chosen for "full?".
+    expect(screen.getByTestId('cu-start')).toHaveTextContent(/1/);
+    await typeInt('cu-end', '12');
+    expect(screen.getByTestId('cu-count')).toHaveTextContent(/= 12 เข่ง/);
+    expect(enabled('cu-next')).toBe(false);
+    await press('cu-short');
+    expect(enabled('cu-next')).toBe(false);
+    await typeKg('cu-short-kg', '30');
+    // BF-10: Σ goes up as it is entered.
+    expect(screen.getByTestId('cu-sum-bar')).toHaveTextContent(/580 กก\./);
+    expect(screen.getByTestId('cu-sum-bar')).toHaveTextContent(/12 เข่ง/);
+    await press('cu-next');
+    // BF-4: what happened to basket 12 at จุด 3; nothing chosen, the gap offered.
+    expect(screen.getByTestId('cu-topup')).toHaveTextContent(/เข่ง 12 \(30 กก\.\) เติมที่จุดนี้ไหม/);
+    expect(enabled('cu-next')).toBe(false);
+    await press('cu-fill');
+    expect(screen.getByTestId('cu-fill-kg')).toHaveTextContent(/20/);
+    await press('cu-next');
+    expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
+    await typeInt('cu-end', '21');
+    expect(screen.getByTestId('cu-count')).toHaveTextContent(/= 9 เข่ง/);
+    await press('cu-short');
+    await typeKg('cu-short-kg', '22');
+    await press('cu-next');
+    // BF-6: the summary reads like the paper.
+    expect(screen.getByTestId('cu-summary')).toHaveTextContent(/เข่ง 1–11 เต็ม/);
+    expect(screen.getByTestId('cu-summary')).toHaveTextContent(/เข่ง 12 ไม่เต็ม 30 \+ เติมที่จุด 3 อีก 20/);
+    expect(screen.getByTestId('cu-summary')).toHaveTextContent(/เข่ง 13–20 เต็ม/);
+    expect(screen.getByTestId('cu-summary')).toHaveTextContent(/เข่ง 21 ยังเปิดอยู่/);
+    expect(screen.getByTestId('cu-total')).toHaveTextContent(/1,022 กก\./);
+    expect(screen.getByTestId('cu-total')).toHaveTextContent(/21 เข่ง/);
+    // BF-7: the paper's total, checked.
+    await typeKg('cu-paper', '1000');
+    expect(screen.getByTestId('cu-paper-check')).toHaveTextContent(/ต่างกัน 22 กก\./);
+    // Opened again, the first key replaces what was there.
+    await typeKg('cu-paper', '1022');
+    expect(screen.getByTestId('cu-paper-check')).toHaveTextContent(/ตรง/);
+    // BF-6: one save, even pressed twice.
+    fireEvent.press(screen.getByTestId('cu-save'));
+    fireEvent.press(screen.getByTestId('cu-save'));
+    await flush();
+    const ev = await kinds();
+    expect(ev.filter((e) => e.kind === 'accept' && !e.partOf).map((e) => (e as { basketNo: number }).basketNo)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20]);
+    expect(ev.filter((e) => e.kind === 'short').map((e) => [(e as { basketNo: number }).basketNo, (e as { readingG: number }).readingG])).toEqual([[12, 32_000], [21, 24_000]]);
+    expect(ev.find((e) => e.kind === 'accept' && e.partOf)).toMatchObject({ basketNo: 12, netG: 20_000, pointId: farm.a[2] });
+    expect(router.replace).toHaveBeenCalledWith(`/v2/sale/${saleId}/counter?point=${farm.a[2]}`);
+  });
+
+  it('not topped up: basket 12 closes at 30 kg', async () => {
+    await started();
+    await inSale(<BackfillScreen />, { point: farm.a[0] });
+    await press(`cu-order-${farm.a[1]}`);
+    await press('cu-next');
+    await typeInt('cu-end', '12');
+    await press('cu-short');
+    await typeKg('cu-short-kg', '30');
+    await press('cu-next');
+    await press('cu-nofill');
+    await press('cu-next');
+    expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
+    await typeInt('cu-end', '14');
+    await press('cu-full');
+    await press('cu-next');
+    expect(screen.getByTestId('cu-summary')).toHaveTextContent(/เข่ง 12 ไม่เต็ม 30 · ปิดเข่ง/);
+    expect(screen.getByTestId('cu-total')).toHaveTextContent(/680 กก\./);
+    await press('cu-save');
+    expect((await kinds()).filter((e) => e.kind === 'sys')).toHaveLength(1);
+  });
+
+  it('per point: the point starts at 1 and there is no order page or top-up question', async () => {
+    await inSale(<StartSaleScreen />);
+    await press('start-numbering-per-point');
+    await press('start-next');
+    await inSale(<BackfillScreen />, { point: farm.a[2] });
+    expect(screen.queryByTestId('cu-order')).toBeNull();
+    expect(screen.getByTestId('cu-start')).toHaveTextContent(/1/);
+    await typeInt('cu-end', '7');
+    await press('cu-full');
+    await press('cu-next');
+    expect(screen.getByTestId('cu-total')).toHaveTextContent(/350 กก\./);
+  });
+
+  it('BF-8: only before counting live — a tapper with a basket already cannot catch up', async () => {
     await started();
     await readyAt(farm.a[0]);
     const c = await counterAt(farm.a[0]);
     await hold();
-    await hold();
     c.unmount();
     await inSale(<BackfillScreen />, { point: farm.a[2] });
-    await press('backfill-full');
-    await padKeys('backfill-full', '3');
-    await press('backfill-full-pad-key-done');
-    // ✓ opens the short basket's pad at once (NP-15).
-    await padKeys('backfill-short', '20');
-    await press('backfill-short-done');
-    expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/จะได้ 4 เข่ง/);
-    expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/เข่งที่ 3–5/);
-    expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/เข่งที่ 6/);
-    expect(screen.getByTestId('backfill-total')).toHaveTextContent(/170 กก\./);
-    expect(screen.getByTestId('backfill-plan')).toHaveTextContent(/ต่อจากเข่งล่าสุดของแดง \(2\)/);
-    await press('backfill-save');
-    const ev = await store().load(saleId);
-    expect(ev.filter((e) => e.kind === 'accept' && e.input === 'backfill').map((e) => (e as { basketNo: number }).basketNo)).toEqual([3, 4, 5]);
-    expect(ev.find((e) => e.kind === 'short')).toMatchObject({ basketNo: 6, backfill: true, readingG: 22_000 });
-    expect(router.dismiss).toHaveBeenCalledWith(2);
+    expect(screen.getByTestId('cu-blocked')).toHaveTextContent(/นับเองไปแล้ว/);
+    expect(screen.queryByTestId('cu-next')).toBeNull();
   });
 
-  it('a count that is not a whole number cannot be typed: the full-basket pad has no dot', async () => {
+  it('the end number pad takes whole numbers only', async () => {
     await started();
-    await inSale(<BackfillScreen />, { point: farm.a[2] });
-    await press('backfill-full');
-    expect(screen.queryByTestId('backfill-full-pad-key-.')).toBeNull();
-    expect(screen.getByTestId('backfill-save').props.accessibilityState).toMatchObject({ disabled: true });
+    await inSale(<BackfillScreen />, { point: farm.a[4] });
+    await press('cu-end');
+    expect(screen.queryByTestId('cu-end-pad-key-.')).toBeNull();
   });
 });
 
@@ -817,12 +933,14 @@ describe('v2 basket history (page 8d, E04-S15)', () => {
 
   it('a backfilled basket is labelled', async () => {
     await started();
-    await inSale(<BackfillScreen />, { point: farm.a[0] });
-    await press('backfill-full');
-    await padKeys('backfill-full', '2');
-    await press('backfill-full-pad-key-done');
-    await press('backfill-save');
-    await inSale(<HistoryScreen />, { point: farm.a[0] });
+    await inSale(<BackfillScreen />, { point: farm.a[4] });
+    await press('cu-end');
+    await padKeys('cu-end', '2');
+    await press('cu-end-pad-key-done');
+    await press('cu-full');
+    await press('cu-next');
+    await press('cu-save');
+    await inSale(<HistoryScreen />, { point: farm.a[4] });
     expect(screen.getAllByText('บันทึกย้อนหลัง').length).toBeGreaterThan(0);
   });
 });
@@ -1148,9 +1266,8 @@ describe('FarmMate originals on the sale screens (E03-S11 FM-8)', () => {
     expect(art('menu-delete')).toEqual([]);
   });
 
-  it('backfill: the proof photo tile', async () => {
-    await started();
-    await inSale(<BackfillScreen />, { point: farm.a[2] });
-    expect(art('backfill-proof')).toEqual(['farm.photos']);
+  it('catch-up: the calendar art on the start row stays', async () => {
+    await inSale(<StartSaleScreen />);
+    expect(art('start-date')).toEqual(['farmwork.calendar']);
   });
 });
