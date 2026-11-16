@@ -73,8 +73,10 @@ describe('PrepView — เตรียมการขาย (E15-S01)', () => {
     await press('prep-date');
     await press('prep-date-picker-day-2026-11-21');
     await press('prep-date-picker-done');
+    // The day is written when picked, so closing the time sheet keeps it (review N1).
+    expect(onWrite).toHaveBeenLastCalledWith({ date: '2026-11-21' });
     await press('prep-time-08:00');
-    expect(onWrite).toHaveBeenLastCalledWith({ date: '2026-11-21', time: '08:00' });
+    expect(onWrite).toHaveBeenLastCalledWith({ time: '08:00' });
   });
 
   it('"today" on the calendar is the farm\'s day (Bangkok), not the device\'s', async () => {
@@ -83,8 +85,7 @@ describe('PrepView — เตรียมการขาย (E15-S01)', () => {
     await press('prep-date');
     await press('prep-date-picker-today');
     await press('prep-date-picker-done');
-    await press('prep-time-none');
-    expect(onWrite).toHaveBeenLastCalledWith({ date: '2026-11-30', time: null });
+    expect(onWrite).toHaveBeenLastCalledWith({ date: '2026-11-30' });
   });
 
   it('the time can be left out', async () => {
@@ -93,7 +94,7 @@ describe('PrepView — เตรียมการขาย (E15-S01)', () => {
     await press('prep-date-picker-day-2026-11-21');
     await press('prep-date-picker-done');
     await press('prep-time-none');
-    expect(onWrite).toHaveBeenLastCalledWith({ date: '2026-11-21', time: null });
+    expect(onWrite).toHaveBeenLastCalledWith({ time: null });
   });
 
   it('the price row takes the agreed ฿/กก. on the app pad (PREP-5)', async () => {
@@ -126,6 +127,12 @@ describe('PrepView — เตรียมการขาย (E15-S01)', () => {
     // 4 × 300 = 1,200 → 50% = 600 for แดง; 2 × 300 = 600 → 300 for นัด.
     expect(screen.getByTestId('prep-fert-debts')).toHaveTextContent(/แดง.*600.*นัด.*300/);
     expect(screen.getByTestId('prep-fert-total')).toHaveTextContent(/Σ.*900/);
+  });
+
+  it('one tapper with new fertilizer debt: their line only, no Σ (summary-lines, review N2)', () => {
+    setup([item('a', 10, 300), fertilizing('fz-1', '2026-11-12', [{ worker: DAENG, sacks: 4 }], 4)], { lastSaleDay: '2026-11-05' });
+    expect(screen.getByTestId('prep-fert-debts')).toHaveTextContent(/แดง.*600/);
+    expect(screen.queryByTestId('prep-fert-total')).toBeNull();
   });
 
   it('cancelling the prep writes cancelled; it can be prepared again (PREP-8)', async () => {

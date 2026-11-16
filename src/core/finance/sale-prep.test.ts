@@ -51,6 +51,27 @@ describe('salePrep — the one prep, field by field (PREP-2..5, PREP-8)', () => 
     expect(salePrep([...events, set({ priceSatangPerKg: 4800 })])).toMatchObject({ buyerId: null, date: null, priceSatangPerKg: 4800 });
   });
 
+  it('folds the same in any log order: two phones with the same events show the same prep (review B1)', () => {
+    const a = set({ priceSatangPerKg: 5000 }, { device: 'a', ts: 10 });
+    const b = set({ priceSatangPerKg: 5500 }, { device: 'b', ts: 11 });
+    expect(salePrep([a, b])).toEqual(salePrep([b, a]));
+    expect(salePrep([b, a])?.priceSatangPerKg).toBe(5500);
+    const cancel = set({ cancelled: true }, { device: 'a', ts: 20 });
+    const later = set({ date: '2026-11-21' }, { device: 'b', ts: 21 });
+    expect(salePrep([later, cancel])).toEqual(salePrep([cancel, later]));
+    expect(salePrep([later, cancel])).toMatchObject({ date: '2026-11-21', buyerId: null });
+  });
+
+  it('a sale started after the prep uses it up: the next write starts from nothing (review B2)', () => {
+    const old = [set({ buyerId: 'b1', buyerName: 'ก', date: '2026-11-10', priceSatangPerKg: 5000 }, { ts: 100 })];
+    // A sale started at ts 200: the old prep is gone.
+    expect(salePrep(old, 200)).toBeNull();
+    const next = salePrep([...old, set({ date: '2026-11-20' }, { ts: 300 })], 200);
+    expect(next).toEqual({ buyerId: null, buyerName: '', date: '2026-11-20', time: null, priceSatangPerKg: null, updatedTs: 300 });
+    // With no later sale the prep goes on as before.
+    expect(salePrep([...old, set({ date: '2026-11-20' }, { ts: 300 })], 50)).toMatchObject({ buyerId: 'b1', priceSatangPerKg: 5000 });
+  });
+
   it('ignores other events', () => {
     expect(salePrep([ev({ t: 'category_added', name: 'x' })])).toBeNull();
   });
