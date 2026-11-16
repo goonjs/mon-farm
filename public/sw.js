@@ -4,7 +4,7 @@
  *
  * - Pages and other files: the network first, so a phone online always gets the newest build (PW-3);
  *   the last copy from the cache when the network is gone (PW-2), or when a page waits on a weak
- *   signal for more than 3.5 s and a copy of it is kept (N3).
+ *   signal for more than 30 s and a copy of it is kept (N3).
  * - /_expo/static/: file names carry a content hash and never change, so the cache first.
  * - Only same-origin GETs, never Firebase's reserved /__/ paths; everything else goes to the network.
  * - The home is /v2/ with the slash: Firebase Hosting redirects /v2 there, and a redirected response
@@ -16,8 +16,8 @@ const CACHE = 'mon-farm-v1';
 const HOME = '/v2/';
 const SHELL = ['/', HOME];
 const STATIC = '/_expo/static/';
-/** How long a page may wait on the network before its kept copy opens instead (N3). */
-const SLOW_MS = 3500;
+/** How long a page may wait on the network before its kept copy opens instead (N3; owner 2026-11-16: 30 s). */
+const SLOW_MS = 30000;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(Promise.all(SHELL.map((path) => fetchAndKeep(path, true))).then(() => self.skipWaiting()));
