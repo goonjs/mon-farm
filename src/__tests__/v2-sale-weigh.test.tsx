@@ -1266,8 +1266,9 @@ describe('FarmMate originals on the sale screens (E03-S11 FM-8)', () => {
     expect(art('menu-delete')).toEqual([]);
   });
 
-  it('catch-up: the calendar art on the start row stays', async () => {
-    await inSale(<StartSaleScreen />);
-    expect(art('start-date')).toEqual(['farmwork.calendar']);
+  it('catch-up: the Σ bar carries the weighing original (was the proof tile)', async () => {
+    await started();
+    await inSale(<BackfillScreen />, { point: farm.a[4] });
+    expect(art('cu-sum-bar')).toEqual(['sale.weigh']);
   });
 });
