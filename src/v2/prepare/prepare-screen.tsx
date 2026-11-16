@@ -52,6 +52,8 @@ export function unsplitCount(events: readonly FinanceEvent[]): number {
 
 export interface PrepViewProps {
   readonly events: readonly FinanceEvent[];
+  /** The farm's day (Bangkok) for the calendar's "today"; absent = the device's. */
+  readonly today?: string;
   /** The latest sale's day, for "new" fertilizer debt (PREP-7); null before any sale. */
   readonly lastSaleDay: string | null;
   /** When the latest sale started (wall clock): a prep written before it is used up. */
@@ -65,7 +67,7 @@ export interface PrepViewProps {
 
 type Sheet = 'none' | 'date' | 'time' | 'price';
 
-export function PrepView({ events, lastSaleDay, lastSaleTs, onWrite, onBuyer, onFert, onBack, sync }: PrepViewProps) {
+export function PrepView({ events, today, lastSaleDay, lastSaleTs, onWrite, onBuyer, onFert, onBack, sync }: PrepViewProps) {
   const t = useTheme();
   const { t: msg, era } = useI18n();
   const [sheet, setSheet] = useState<Sheet>('none');
@@ -131,6 +133,7 @@ export function PrepView({ events, lastSaleDay, lastSaleTs, onWrite, onBuyer, on
           setSheet('time');
         }}
         title={msg('prep.date')}
+        today={today}
         testID="prep-date-picker"
       />
       <BottomSheet open={sheet === 'time'} onClose={() => setSheet('none')} title={msg('prep.time')} testID="prep-time">
@@ -321,10 +324,12 @@ export function PrepareScreen() {
   const sync = useSyncStatus();
   const last = useLastSale();
   const write = usePrepWrite(fin);
+  const [today] = useState(() => todayIso(Date.now()));
   if (!fin.events) return null;
   return (
     <PrepView
       events={fin.events}
+      today={today}
       lastSaleDay={last.day}
       lastSaleTs={last.ts}
       onWrite={write}
