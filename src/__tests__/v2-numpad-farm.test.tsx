@@ -2,13 +2,14 @@ import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 import { Pressable } from 'react-native';
 
-import { dayBefore, parsePlantedYear, parseRai, parseTapperPct, thaiDayInput, todayIso } from '../core/master';
+import { dayBefore, parsePlantedYear, parseRai, parseTapperPct, todayIso } from '../core/master';
 import { scaledToEntry } from '../core/number-entry';
 import { useI18n } from '../i18n';
 import { writeEra } from '../i18n/preference';
 import { plantedProblem, PropertyScreen, raiProblem } from '../v2/farm/farms-screens';
 import { ShareScreen } from '../v2/farm/shares-screens';
 import type { MasterStore } from '../store/master-store';
+import { pickDate } from '../test/pick-date';
 import { wrap } from '../test/render';
 
 /**
@@ -212,7 +213,7 @@ describe('NP-4 row 15 — area-new in the change-area sheet: a new dated line', 
     const day = dayBefore(TODAY);
     const history = await changeArea(() => {
       typeAreaNew('130');
-      fireEvent.changeText(screen.getByTestId('area-new-date'), thaiDayInput(day));
+      pickDate('area-new-date', day);
     });
     expect(history[0]).toMatchObject({ centiRai: 13000, effective: day });
   });
@@ -434,9 +435,9 @@ describe('row 15: the decimal pad is in the change-area sheet itself (NP-12)', (
     expect(screen.queryByTestId('area-new-sheet')).toBeNull();
     keys('area-new', '12.345');
     expect(screen.getByTestId('area-new-display').props.children).toBe('12.34');
-    fireEvent(screen.getByTestId('area-new-date'), 'focus');
-    expect(screen.queryByTestId('area-new-pad')).toBeNull();
-    fireEvent(screen.getByTestId('area-new-date'), 'blur');
+    // E01-S22: the date is picked, never typed, so the pad no longer has to step aside for a keyboard.
+    expect(screen.getByTestId('area-new-date').props.accessibilityRole).toBe('button');
+    expect(screen.getByTestId('area-new-pad')).toBeTruthy();
     keys('area-new', '.');
     // "12." is twelve, not a refusal.
     fireEvent.press(screen.getByTestId('area-new-pad-key-back'));

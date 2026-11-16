@@ -18,7 +18,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { checkDebt, projectDebts } from '../../core/finance/debts';
-import { formatDate, formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../core/finance/money';
+import { formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../core/finance/money';
 import { FARM_FUNDS, type DebtKind, type Payer } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
@@ -27,7 +27,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, Button, Card, Check, FieldError, MoneyField, RadioCard, SaveBar, ScreenHeader, SegmentedControl, TextField } from '../../ui';
+import { AppText, DateField, Button, Card, Check, FieldError, MoneyField, RadioCard, SaveBar, ScreenHeader, SegmentedControl, TextField } from '../../ui';
 import { ORDER_NEW } from './order-routes';
 import { PayerPicker, SectionLabel } from './pieces';
 
@@ -96,7 +96,7 @@ export function AddDebtScreen() {
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space.xl }}>
         <View style={{ gap: t.space.sm }}>
           <SectionLabel required>{msg('debt.form.kind').replace(' *', '')}</SectionLabel>
-          <SegmentedControl testID="debt-kind" value={kind} onChange={pickKind} options={KINDS.map((k) => ({ value: k, label: msg(`debt.kind.${k}`) }))} />
+          <SegmentedControl testID="debt-kind" value={kind} onChange={pickKind} options={KINDS.map((k) => ({ value: k, label: k === 'fertilizer' ? `${msg(`debt.kind.${k}`)} ›` : msg(`debt.kind.${k}`) }))} />
         </View>
 
         <View style={{ gap: t.space.xs }}>
@@ -125,13 +125,12 @@ export function AddDebtScreen() {
           </View>
         ) : null}
 
-        <TextField
+        <DateField
           testID="debt-date"
           label={msg('debt.form.date').replace(' *', '')}
           required
           value={date}
-          onChangeText={setDate}
-          helper={msg('v2m.dateShown', { shown: formatDate(date) })}
+          onChange={setDate}
           error={tried && problems.includes('date-required') ? msg('debt.form.err.date-required') : undefined}
         />
         <TextField
@@ -242,7 +241,7 @@ export function PayDebtScreen() {
               setConfirmOver(false);
             }}
           />
-          <TextField testID="debt-pay-date" label={msg('debt.form.date').replace(' *', '')} required value={date} onChangeText={setDate} helper={msg('v2m.dateShown', { shown: formatDate(date) })} />
+          <DateField testID="debt-pay-date" label={msg('debt.form.date').replace(' *', '')} required value={date} onChange={setDate} max={todayIso()} />
           <TextField testID="debt-pay-note" label={msg('debt.form.note')} multiline value={note} onChangeText={setNote} placeholder={msg('fin.form.notePlaceholder')} />
           {satang > 0 ? (
             <Card>

@@ -33,7 +33,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, MoneyField, PersonIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TextField } from '../../ui';
+import { AppText, DateField, BottomSheet, Button, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, MoneyField, PersonIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TextField } from '../../ui';
 import { useFarms } from './expenses-screen';
 import { ORDER_NEW, orderHref } from './order-routes';
 import { ChoiceChip, ChoiceRow, NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
@@ -161,7 +161,8 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   // A discount that cannot apply is refused, not silently dropped.
   const badDiscount = sharable && !share && shareDraft.discount.trim() !== '' && amountSatang !== null && unsharedNet === null;
   const amountTyped = !unknown && amount.trim() !== '';
-  const problems = checkExpense({ amountSatang, date, stage }).map((p) => (p === 'amount-required' && amountTyped ? 'amount-invalid' : p));
+  // A derived row (salary, owner share) has no date field: a future date is not the user's to fix (review of PR 194 B1).
+  const problems = checkExpense({ amountSatang, date, stage }, derived ? undefined : todayIso()).map((p) => (p === 'amount-required' && amountTyped ? 'amount-invalid' : p));
 
   const knownPayers = useMemo(() => {
     const seen = new Map<string, Payer>();
@@ -272,7 +273,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
       : f === 'stage' ? msg(`fin.stage.${v as Stage}`) : f === 'share' ? shareLabel(v as ExpenseShare | null) : ((v as Payer | null)?.name ?? msg('fin.form.payerLater'));
   // A share conflict carries its amount: one card, resolved together.
   const conflicts = (existing?.conflicts ?? []).filter((c) => !(c.field === 'amountSatang' && existing?.conflicts.some((o) => o.field === 'share')));
-  const err = (key: 'amount-required' | 'amount-invalid' | 'date-required') => (showErrors && (problems as string[]).includes(key) ? msg(`fin.form.err.${key}`) : undefined);
+  const err = (key: 'amount-required' | 'amount-invalid' | 'date-required' | 'date-future') => (showErrors && (problems as string[]).includes(key) ? msg(`fin.form.err.${key}`) : undefined);
   const amountErr = err('amount-required') ?? err('amount-invalid');
 
   // Five tiles, most used first (the chosen one always among them); the rest one tap away.
@@ -436,7 +437,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
                   {farmName ? msg('fin.form.detailsFarm', { date: formatDate(date), stage: msg(`fin.stage.${stage}`), farm: farmName }) : msg('fin.form.detailsNoFarm', { date: formatDate(date), stage: msg(`fin.stage.${stage}`) })}
                 </AppText>
                 <AppText variant="caption">{msg('fin.form.detailsWhat')}</AppText>
-                {err('date-required') ? <AppText testID="expense-date-row-error" style={{ color: t.color.reject }}>{err('date-required')}</AppText> : null}
+                {err('date-required') ?? err('date-future') ? <AppText testID="expense-date-row-error" style={{ color: t.color.reject }}>{err('date-required') ?? err('date-future')}</AppText> : null}
               </View>
               <ChevronRight color={t.color.inkFaint} />
             </Pressable>
@@ -528,7 +529,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
           <View style={{ gap: t.space.md }}>
             {!derived ? (
               <>
-                <TextField testID="expense-date" label={msg('fin.form.date')} value={date} onChangeText={setDate} placeholder="2026-09-28" helper={msg('v2m.dateShown', { shown: formatDate(date) })} error={err('date-required')} />
+                <DateField testID="expense-date" label={msg('fin.form.date').replace(' *', '')} required value={date} onChange={setDate} error={err('date-required') ?? err('date-future')} max={stage === 'planned' ? undefined : todayIso()} />
                 <View style={{ gap: t.space.xs }}>
                   <SectionLabel>{msg('fin.form.stage')}</SectionLabel>
                   <SegmentedControl testID="expense-stage" value={stage} onChange={setStage} options={STAGES.map((x) => ({ value: x, label: msg(`fin.stage.${x}`) }))} />

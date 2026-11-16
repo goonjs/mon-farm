@@ -1,7 +1,8 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
-import { formatThaiDate, saleSettings, thaiDayInput, todayIso } from '../core/master';
+import { formatThaiDate, saleSettings, todayIso } from '../core/master';
+import { formatDate } from '../core/finance/money';
 import { readCountMode, readHoldMs } from '../store/hold-preference';
 import { SaleSettingsScreen } from '../v2/farm/sale-settings-screen';
 import { ShareScreen, SharesScreen } from '../v2/farm/shares-screens';
@@ -113,7 +114,7 @@ describe('ส่วนแบ่ง (farm mockup 17)', () => {
     for (const k of '55') fireEvent.press(screen.getByTestId(`share-pct-pad-key-${k}`));
     fireEvent.press(screen.getByTestId('share-pct-pad-key-done'));
     expect(screen.getByText('→ เจ้าของสวน 45%')).toBeTruthy();
-    expect(screen.getByTestId('share-from').props.value).toBe(thaiDayInput(TODAY));
+    expect(screen.getByTestId('share-from-value')).toHaveTextContent(formatDate(TODAY));
     await press('share-save');
 
     const state = await master().state();

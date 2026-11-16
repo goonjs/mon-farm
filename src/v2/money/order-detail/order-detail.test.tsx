@@ -295,6 +295,8 @@ describe('OrderDetailView', () => {
     expect(screen.getByTestId('ordd-hdr-stage-planned')).toBeTruthy();
     // E03-S11: the date row leads with the calendar original.
     expect(art('ordd-hdr-date')).toEqual(['farmwork.calendar']);
+    // E01-S22 DP-5: the date row reads as a picker like every other date row.
+    expect(within(screen.getByTestId('ordd-hdr-date')).getByTestId('ordd-hdr-date-chevron', { includeHiddenElements: true })).toBeTruthy();
     expect(screen.getByTestId('ordd-hdr-stage-planned').props.accessibilityState.checked).toBe(true);
     fireEvent.press(screen.getByTestId('ordd-hdr-shop'));
     fireEvent.changeText(screen.getByTestId('ordd-hdr-shop'), 'ร้านใหม่');

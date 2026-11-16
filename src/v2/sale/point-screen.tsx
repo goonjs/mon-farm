@@ -124,6 +124,7 @@ export function PointScreen() {
           <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('pick.farm')}</AppText>
           <SegOptions
             testID="pick-farm"
+            wrap
             value={farm?.id ?? null}
             onChange={(id) => {
               setFarmId(id);
@@ -141,6 +142,7 @@ export function PointScreen() {
           <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('pick.tapper')}</AppText>
           <SegOptions
             testID="pick-tapper"
+            wrap
             value={group?.tapperId ?? null}
             onChange={setTapperId}
             options={choices.byTapper.map((g) => ({ value: g.tapperId, label: nameOf(g.tapperId), detail: msg('pick.points', { n: g.points.length }) }))}

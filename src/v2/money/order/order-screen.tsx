@@ -271,7 +271,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${value}`}
       onPress={onPress}
-      style={[cardStyle(t), { flexGrow: 1, flexBasis: 150 * Math.max(1, t.font.size.body / 16), minHeight: t.target.comfortable, padding: t.space.md, flexDirection: 'row', alignItems: 'center', gap: t.space.sm }]}
+      style={[cardStyle(t), { minHeight: t.target.comfortable, padding: t.space.md, flexDirection: 'row', alignItems: 'center', gap: t.space.sm }]}
     >
       <View aria-hidden>{icon}</View>
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -318,8 +318,8 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
 
   const body = (
     <>
-      {/* Side by side when there is room; each on its own line when a card would be too narrow for its › (E01-S21). */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+      {/* One card per line at every width (review of PR 193 N1): the value never breaks word by word beside a ›. */}
+      <View testID="ordc-head" style={{ gap: t.space.sm }}>
         {fieldCard('ordc-shop', <FarmMateArt id="materials.orderMaterials" size={ROW_ART} />, msg('ordc.shop'), shop.trim() || msg('ordc.shopNone'), () => setSheet('shop'))}
         {fieldCard('ordc-date', <FarmMateArt id="farmwork.calendar" size={ROW_ART} />, msg('ordc.date'), dateText, () => setSheet('date'))}
       </View>
