@@ -321,7 +321,7 @@ Screenshots, 412×915 (`docs/ux/screenshots/ui-v2/sale/`), written only with
 | โหมดสาธารณะ | ![](ux/screenshots/ui-v2/sale/09-public.png) |
 | เข่งไม่เต็ม | ![](ux/screenshots/ui-v2/sale/10-short.png) ![](ux/screenshots/ui-v2/sale/11-open-short.png) |
 | เปลี่ยนจุด, เติมเข่ง | ![](ux/screenshots/ui-v2/sale/12-switch-same-tapper.png) ![](ux/screenshots/ui-v2/sale/13-fill.png) |
-| บันทึกย้อนหลัง | ![](ux/screenshots/ui-v2/sale/14-backfill.png) |
+| บันทึกย้อนหลัง | ![](ux/screenshots/v2/catch-up/360-m-2-point.png) |
 | ตรวจยอด | ![](ux/screenshots/ui-v2/sale/16-check.png) |
 | สรุปยอดส่วนแบ่ง, ปัดเศษ | ![](ux/screenshots/ui-v2/sale/17-settlement.png) ![](ux/screenshots/ui-v2/sale/18-rounding.png) |
 | เทียบยอด | ![](ux/screenshots/ui-v2/sale/18a-tally.png) |
