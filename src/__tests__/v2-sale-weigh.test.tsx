@@ -564,7 +564,7 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     await press(`cu-order-${farm.a[0]}`);
     expect(screen.getByTestId(`cu-order-${farm.a[1]}`)).toHaveTextContent(/1/);
     await press('cu-next');
-    expect(screen.getByText(/จุด 2 ·/)).toBeTruthy();
+    expect(screen.getByTestId('cu-point-name')).toHaveTextContent(/จุด 2/);
     await typeInt('cu-end', '2');
     await press('cu-full');
     await press('cu-next');
@@ -575,6 +575,23 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     expect(screen.getByTestId('cu-total')).toHaveTextContent(/200 กก\./);
     await press('cu-save');
     expect(router.replace).toHaveBeenCalledWith(`/v2/sale/${saleId}/counter?point=${farm.a[0]}`);
+  });
+
+  it('the point being entered stands out: its name and "1 of 2" in a heading, on the point and the top-up page (owner 2026-11-16)', async () => {
+    await started();
+    await inSale(<BackfillScreen />, { tapper: farm.red });
+    await press(`cu-order-${farm.a[1]}`);
+    await press(`cu-order-${farm.a[0]}`);
+    await press('cu-next');
+    expect(screen.getByTestId('cu-point-name')).toHaveTextContent(/จุด 2/);
+    expect(screen.getByTestId('cu-point-name')).toHaveTextContent(/1 จาก 2/);
+    await typeInt('cu-end', '2');
+    await press('cu-short');
+    await typeKg('cu-short-kg', '30');
+    await press('cu-next');
+    expect(screen.getByTestId('cu-topup')).toBeTruthy();
+    expect(screen.getByTestId('cu-point-name')).toHaveTextContent(/จุด 1/);
+    expect(screen.getByTestId('cu-point-name')).toHaveTextContent(/2 จาก 2/);
   });
 
   it('not topped up: basket 12 closes at 30 kg', async () => {
@@ -620,6 +637,41 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     await inSale(<BackfillScreen />, { point: farm.a[2] });
     expect(screen.getByTestId('cu-blocked')).toHaveTextContent(/นับเองไปแล้ว/);
     expect(screen.queryByTestId('cu-next')).toBeNull();
+  });
+
+  it('opened for a tapper, a point in the link is ignored: BF-8 still reads that tapper (review N1)', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    c.unmount();
+    await inSale(<BackfillScreen />, { tapper: farm.red, point: farm.a[4] });
+    expect(screen.getByTestId('cu-blocked')).toHaveTextContent(/นับเองไปแล้ว/);
+    expect(screen.queryByTestId('cu-next')).toBeNull();
+  });
+
+  it('a tapper with no points that day says so, with no way to save (review N2)', async () => {
+    await started();
+    await inSale(<BackfillScreen />, { tapper: 'nobody' });
+    expect(screen.getByTestId('cu-no-points')).toHaveTextContent(/ไม่มีจุด/);
+    expect(screen.queryByTestId('cu-next')).toBeNull();
+    expect(screen.queryByTestId('cu-save')).toBeNull();
+  });
+
+  it('per point, opened for a tapper: a point already counted live cannot be picked (BF-8)', async () => {
+    await inSale(<StartSaleScreen />);
+    await press('start-numbering-per-point');
+    await press('start-next');
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    c.unmount();
+    await inSale(<BackfillScreen />, { tapper: farm.red });
+    expect(screen.getByTestId(`cu-order-${farm.a[0]}`).props.accessibilityState).toMatchObject({ disabled: true });
+    await press(`cu-order-${farm.a[0]}`);
+    expect(enabled('cu-next')).toBe(false);
+    await press(`cu-order-${farm.a[1]}`);
+    expect(enabled('cu-next')).toBe(true);
   });
 
   it('the end number pad takes whole numbers only', async () => {
