@@ -45,6 +45,9 @@ Status: Ready
 - ทางสร้าง APK: `docs/adr/0003-android-build-path.md` (Accepted 2026-10-03) — ทาง B: GitHub Actions + `expo prebuild` + Gradle `assembleRelease`
   APK แบบ release มี JS bundle ในตัว จึงทดสอบโหมดเครื่องบินได้ตรง ๆ
 - package name `com.goonjs.monfarm` (`app.json`); keystore อยู่ใน GitHub Secrets แล้ว (2026-10-03)
+- workflow `.github/workflows/android-apk.yml` (PR #195, 2026-11-16): สั่งรันเองเท่านั้น (Actions → Android APK → Run workflow) หลัง merge เข้า dev · `npm ci` → `expo prebuild --platform android` → Gradle `assembleRelease` เซ็นด้วย `-Pandroid.injected.signing.*` → ตรวจด้วย `apksigner` ว่าไม่ใช่ debug key → APK เป็น artifact เก็บ 7 วัน
+- ชื่อ secret ที่ workflow ใช้ (ลีด 2026-11-16 ให้ใช้ชื่อนี้ เพราะยังไม่รู้ชื่อที่เจ้าของตั้งไว้ — ถ้าต่างกัน เจ้าของเพิ่ม/เปลี่ยนชื่อให้ตรง): `ANDROID_KEYSTORE_BASE64` (ไฟล์ keystore แบบ base64) · `ANDROID_KEYSTORE_PASSWORD` · `ANDROID_KEY_ALIAS` · `ANDROID_KEY_PASSWORD`
+- ทดสอบในเครื่อง sandbox ได้แค่ `expo prebuild` (ผ่าน, ได้ `applicationId 'com.goonjs.monfarm'`) — ไม่มี Android SDK จึง build Gradle ไม่ได้ · build จริงครั้งแรกคือรันบน GitHub
 
 ### Checklist เจ้าของ (บนโทรศัพท์ Android จริง)
 
