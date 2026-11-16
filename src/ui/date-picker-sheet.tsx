@@ -29,6 +29,8 @@ export interface DatePickerSheetProps {
   readonly min?: string;
   /** Offers a "no date" choice with this label, which commits "" (E01-S22 DP-2). Absent = a day is required. */
   readonly emptyLabel?: string;
+  /** The day "today" means here, when it is not the device's date (a sale's day is Bangkok's: E04-S19 BF-9). */
+  readonly today?: string;
   readonly testID?: string;
 }
 
@@ -71,10 +73,10 @@ const MONTH_KEYS = Array.from({ length: 12 }, (_, i) => `datepick.monthName${i +
 const SHORT_MONTH_KEYS = Array.from({ length: 12 }, (_, i) => `date.month${i + 1}` as MessageId);
 const WEEKDAY_KEYS = ['datepick.wd0', 'datepick.wd1', 'datepick.wd2', 'datepick.wd3', 'datepick.wd4', 'datepick.wd5', 'datepick.wd6'] as const;
 
-function Body({ onClose, value, onChange, max, min, emptyLabel, testID: tid }: Omit<DatePickerSheetProps, 'open' | 'title' | 'testID'> & { testID: string }) {
+function Body({ onClose, value, onChange, max, min, emptyLabel, today: todayProp, testID: tid }: Omit<DatePickerSheetProps, 'open' | 'title' | 'testID'> & { testID: string }) {
   const t = useTheme();
   const { t: msg, era } = useI18n();
-  const today = todayIso();
+  const today = todayProp ?? todayIso();
   // No date yet: start on today, moved inside min/max so ตกลง cannot commit a day out of range (review of PR 194 N4).
   const clamp = (iso: string) => (min !== undefined && iso < min ? min : max !== undefined && iso > max ? max : iso);
   const start = isIsoDate(value) ? value : clamp(today);
@@ -288,11 +290,11 @@ function Body({ onClose, value, onChange, max, min, emptyLabel, testID: tid }: O
   );
 }
 
-export function DatePickerSheet({ open, onClose, value, onChange, title, max, min, emptyLabel, testID = 'date-picker' }: DatePickerSheetProps) {
+export function DatePickerSheet({ open, onClose, value, onChange, title, max, min, emptyLabel, today, testID = 'date-picker' }: DatePickerSheetProps) {
   const { t: msg } = useI18n();
   return (
     <BottomSheet open={open} onClose={onClose} title={title ?? msg('datepick.title')} testID={testID}>
-      <Body testID={testID} onClose={onClose} value={value} onChange={onChange} max={max} min={min} emptyLabel={emptyLabel} />
+      <Body testID={testID} onClose={onClose} value={value} onChange={onChange} max={max} min={min} emptyLabel={emptyLabel} today={today} />
     </BottomSheet>
   );
 }
