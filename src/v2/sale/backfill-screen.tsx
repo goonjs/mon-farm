@@ -45,7 +45,10 @@ export function BackfillScreen() {
   const msg = useT();
   const router = useRouter();
   // Opened for a point (`?point=`) or, from the picker and the counter's menu, for a tapper (`?tapper=`, owner 2026-11-16).
-  const { point: pointParam = '', tapper: tapperParam = '' } = useLocalSearchParams<{ point?: string; tapper?: string }>();
+  const params = useLocalSearchParams<{ point?: string; tapper?: string }>();
+  const tapperParam = params.tapper ?? '';
+  // Opened for a tapper, the tapper decides: a point in the same link is ignored (review N1).
+  const pointParam = tapperParam ? '' : (params.point ?? '');
   const view = useSaleView();
   // A closed sale takes no more weighing (review #2).
   useLeaveIfClosed(view);
@@ -68,7 +71,17 @@ export function BackfillScreen() {
   const tapper = tapperParam || (pointParam ? tapperOn(master, pointParam, day) : null);
   const tapperPoints = tapper ? pointsOf(master, tapper, day) : [];
   const pointId = pointParam || tapperPoints[0]?.id || '';
-  if (!master.points.some((p) => p.id === pointId)) return loading;
+  if (!master.points.some((p) => p.id === pointId)) {
+    if (!tapperParam) return loading;
+    // A tapper with no points on the sale day: say so (review N2).
+    return (
+      <FarmScreen title={msg('cu.title')} subtitle={saleTitle} fallback={`${base}/point` as Href} testID="catch-up">
+        <View testID="cu-no-points">
+          <Banner tone="warn" lines={[msg('cu.noPoints', { name: nameOf(tapperParam) }), msg('cu.noPointsBody')]} />
+        </View>
+      </FarmScreen>
+    );
+  }
   // The order page: the tapper's points in paper order. Per point, only when opened for the tapper.
   const choosing = tapperPoints.length > 1 && (!perPoint || !pointParam);
   const order = choosing ? picked : [pointId];
@@ -236,8 +249,9 @@ export function BackfillScreen() {
     const maxFill = Math.floor(root.stdNetG * 1.5) - carried.netG;
     const fillOk = e.fill === false || (e.fill === true && e.fillG !== null && e.fillG > 0 && e.fillG <= maxFill);
     return screen(
-      `${pointName(id)} · ${tapper ? msg('cu.ofPoints', { name: nameOf(tapper), i: now.i + 1, n: order.length }) : ''}`,
+      tapper ? nameOf(tapper) : saleTitle,
       <View testID="cu-topup" style={{ gap: t.space.sm }}>
+        <PointHead name={pointName(id)} at={msg('cu.pointOf', { i: now.i + 1, n: order.length })} />
         <Label text={msg('cu.topup', { n: carried.basketNo, kg: kg(carried.netG) })} />
         <Choice testID="cu-fill" on={e.fill === true} title={msg('cu.fill')} body={msg('cu.fillBody', { kg: kg(missing) })} onPress={() => patch(id, { fill: true, fillG: e.fillG ?? missing })} />
         {e.fill === true ? (
@@ -269,10 +283,10 @@ export function BackfillScreen() {
     const shortOk = e.shortG !== null && e.shortG > 0 && e.shortG < own.stdNetG;
     const answered = topOnly || (count > 0 && (e.full === true || (e.full === false && shortOk)));
     const ok = answered && planOf(now.i + 1) !== null;
-    const sub = tapper && !perPoint ? msg('cu.ofPoints', { name: nameOf(tapper), i: now.i + 1, n: order.length }) : pointName(id);
     return screen(
-      `${pointName(id)} · ${sub}`,
+      tapper ? nameOf(tapper) : saleTitle,
       <View testID="cu-point" style={{ gap: t.space.sm }}>
+        <PointHead name={pointName(id)} at={order.length > 1 ? msg('cu.pointOf', { i: now.i + 1, n: order.length }) : ''} />
         {perPoint ? <Banner tone="warn" lines={[msg('cu.newPoint'), msg('cu.newPointBody')]} /> : null}
         <Label text={msg('cu.end')} hint={msg('cu.endHint')} />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm, alignItems: 'stretch' }}>
@@ -370,6 +384,17 @@ function Label({ text, hint }: { text: string; hint?: string }) {
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: t.space.sm }}>
       <AppText style={{ fontWeight: t.font.weight.bold }}>{text}</AppText>
       {hint ? <AppText variant="bodySm">{hint}</AppText> : null}
+    </View>
+  );
+}
+
+/** The point being entered, so it is found at a glance (owner 2026-11-16): its name big, then "1 จาก 2 จุด". */
+function PointHead({ name, at }: { name: string; at: string }) {
+  const t = useTheme();
+  return (
+    <View testID="cu-point-name" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: t.space.sm, rowGap: 4, borderLeftWidth: 6, borderLeftColor: t.color.action, backgroundColor: t.color.actionSunk, borderRadius: t.radius.md, paddingVertical: t.space.sm, paddingHorizontal: t.space.md }}>
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingXl, fontWeight: t.font.weight.black, color: t.color.ink, flexShrink: 1 }}>{name}</Text>
+      {at ? <AppText variant="bodySm" style={{ fontWeight: t.font.weight.bold }}>{at}</AppText> : null}
     </View>
   );
 }
