@@ -134,6 +134,32 @@ describe('E04-S19 — catch up from the paper, point by point (continuous per ta
     expect(catchUpPlan([pt('p1', 5, 30 * KG), pt('p2', 8, null, 45 * KG)], O)).not.toBeNull();
   });
 
+  it('review B1: each point weighs with its own basket pair; a carried basket is judged by its first point\'s', () => {
+    // p1 is a 50 kg / 2 kg pile, p2 a 40 kg / 3 kg one.
+    const b = new LogBuilder('sale-mixed');
+    b.sys({ t: 'pile_added', pileId: 'p1', zoneId: 'fA', name: 'p1', tareG: 2 * KG, stdNetG: 50 * KG });
+    b.sys({ t: 'pile_added', pileId: 'p2', zoneId: 'fA', name: 'p2', tareG: 3 * KG, stdNetG: 40 * KG });
+    const p40 = { stdNetG: 40 * KG, tareG: 3 * KG };
+    // p1: 1–2 full, 3 short 30 (of 50) · p2: 3 topped up by 20 → 50 = full by p1's standard; 4–5 full at 40; 6 short 35.
+    const points: CatchUpPoint[] = [pt('p1', 3, 30 * KG), { ...pt('p2', 6, 35 * KG, 20 * KG), pair: p40 }];
+    const { plan, events } = written(points, O, b);
+    expect(plan.rows).toEqual([
+      { kind: 'full', pointId: 'p1', from: 1, to: 2, count: 2, netG: 100 * KG },
+      { kind: 'short', pointId: 'p1', basketNo: 3, firstG: 30 * KG, topUps: [{ pointId: 'p2', g: 20 * KG }], netG: 50 * KG, status: 'full' },
+      { kind: 'full', pointId: 'p2', from: 4, to: 5, count: 2, netG: 80 * KG },
+      { kind: 'short', pointId: 'p2', basketNo: 6, firstG: 35 * KG, topUps: [], netG: 35 * KG, status: 'open' },
+    ]);
+    // The plan agrees with the app's own fold, which reads each pile's standard.
+    expect(saleTotals(events).netG).toBe(plan.totalG);
+    expect(plan.totalG).toBe(265 * KG);
+    const groups = [...basketGroups(events, stdNetOfLog(events)).values()];
+    expect(groups.map((g) => [g.basketNo, g.status])).toEqual([[3, 'full'], [6, 'open']]);
+    // p2's own baskets carry p2's tare.
+    expect(events.filter((e) => e.kind === 'accept' && e.pointId === 'p2' && !e.partOf).map((e) => (e as { tareG: number }).tareG)).toEqual([3 * KG, 3 * KG]);
+    // A short basket at p2 is judged against 40 kg: 45 is not short there.
+    expect(catchUpPlan([pt('p1', 3, null), { ...pt('p2', 6, 45 * KG), pair: p40 }], O)).toBeNull();
+  });
+
   it('numbers carry on from firstNo in the tapper\'s sequence', () => {
     expect(catchUpPlan([pt('p1', 14, null)], { ...O, firstNo: 4 })?.rows).toEqual([{ kind: 'full', pointId: 'p1', from: 4, to: 14, count: 11, netG: 550 * KG }]);
   });

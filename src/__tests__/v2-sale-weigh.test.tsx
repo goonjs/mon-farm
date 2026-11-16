@@ -509,6 +509,31 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     expect(router.replace).toHaveBeenCalledWith(`/v2/sale/${saleId}/counter?point=${farm.a[2]}`);
   });
 
+  it('review B1: each point weighs with its own pair (จุด 1 at 50 kg / 2 kg, จุด 3 at 40 kg / 3 kg)', async () => {
+    await started();
+    // Both points set up before anything is weighed: no basket yet, so catching up is allowed.
+    await readyAt(farm.a[0]);
+    const z = await inSale(<ZeroTareScreen />, { point: farm.a[2], net: '40000', basket: '3000' });
+    await press('start-weigh');
+    z.unmount();
+    await inSale(<BackfillScreen />, { point: farm.a[0] });
+    await press(`cu-order-${farm.a[2]}`);
+    await press('cu-next');
+    await typeInt('cu-end', '2');
+    expect(screen.getByTestId('cu-full')).toHaveTextContent(/50 กก\./);
+    await press('cu-full');
+    await press('cu-next');
+    await typeInt('cu-end', '4');
+    expect(screen.getByTestId('cu-full')).toHaveTextContent(/40 กก\./);
+    await press('cu-full');
+    await press('cu-next');
+    expect(screen.getByTestId('cu-total')).toHaveTextContent(/180 กก\./);
+    expect(screen.getByTestId('cu-summary')).toHaveTextContent(/เข่ง 3–4 เต็ม · 2 × 40/);
+    await press('cu-save');
+    const at3 = (await kinds()).filter((e) => e.kind === 'accept' && e.pointId === farm.a[2]);
+    expect(at3.map((e) => [(e as { netG: number }).netG, (e as { tareG: number }).tareG])).toEqual([[40_000, 3_000], [40_000, 3_000]]);
+  });
+
   it('not topped up: basket 12 closes at 30 kg', async () => {
     await started();
     await inSale(<BackfillScreen />, { point: farm.a[0] });
