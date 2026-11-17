@@ -716,3 +716,109 @@ test('E04-S21 weigh apart: 35 stays in the basket at จุด 1, 15 is weighed 
   await expect(id('hold')).toBeInViewport({ ratio: 1 });
   await shot(page, '13a-fill-part');
 });
+
+// ── E04-S24 ──
+/**
+ * E04-S24 เปลี่ยนวิธีเติมเข่งก่อนกดค้าง, on the real web build (owner 2026-11-17 e04-s24-ac
+ * "ก · โอเคทั้ง 3 ข้อ ทำตาม mockup (แนะนำ)"). แดง's basket 2 is short (35 kg) at จุด 1 and the
+ * counter at จุด 2 is filling it up (`?fill=full`), nothing held yet.
+ * FX-1..FX-3: the row under the hold opens the same 3-way sheet with the way in use marked, and
+ * choosing another goes straight back to the counter with it. FX-7: nothing cut at 320/360/390 × M/L.
+ * Screenshots are evidence (docs/ only with UPDATE_SCREENSHOTS=1).
+ */
+
+const FX_SHOTS = 'docs/ux/screenshots/e04-s24/after';
+
+const FX_FARM: MasterPayload[] = [
+  { t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] },
+  { t: 'buyer_added', buyerId: 'buyer-a', name: 'คนรับซื้อยาง ก (ตัวอย่าง)' },
+  { t: 'property_added', propertyId: 'fa', name: 'จันทเขลม', crop: 'rubber' },
+  { t: 'area_recorded', propertyId: 'fa', entryId: 'ar1', centiRai: 12_500, effective: '2020-01-01' },
+  { t: 'point_added', pointId: 'a1', propertyId: 'fa', name: 'จุด 1' },
+  { t: 'point_added', pointId: 'a2', propertyId: 'fa', name: 'จุด 2' },
+  { t: 'tapper_assigned', assignmentId: 's1', pointId: 'a1', tapperId: 'red' },
+  { t: 'tapper_assigned', assignmentId: 's2', pointId: 'a2', tapperId: 'red' },
+];
+
+const fxReady = (b: LogBuilder, p: string) => {
+  b.sys({ t: 'pile_added', pileId: p, zoneId: 'fa', name: p, tareG: 2_000, stdNetG: 50_000 });
+  b.sys({ t: 'zero_check', pileId: p, ok: true, readingG: 0 });
+  b.sys({ t: 'tare_confirmed', pileId: p, tareG: 2_000 });
+  b.sys({ t: 'ready', pileId: p });
+};
+
+async function fxSeed(page: Page, size: 'm' | 'l') {
+  await seedMaster(page, FX_FARM);
+  const now = Date.now();
+  const b = new LogBuilder('sale-fx');
+  b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+  b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+  b.sys({ t: 'zone_added', zoneId: 'fa', name: 'จันทเขลม' });
+  fxReady(b, 'a1');
+  b.acceptAt('a1', 1);
+  b.shortAt('a1', 2, 37_000);
+  fxReady(b, 'a2');
+  await seedEvents(page, b.build().map((e) => ({ ...e, ts: now })));
+  await page.evaluate((s) => localStorage.setItem('mon-farm:text-size', s), size);
+}
+
+const counterUrl = (fill: string) => `/v2/sale/sale-fx/counter?point=a2&fill=${fill}`;
+
+test('FX-1..FX-3, FX-8: change the way from the row under the hold, straight back to the counter, and back again; then the hold counts it (offline)', async ({ page, context }) => {
+  const id = (t: string) => page.getByTestId(t).filter({ visible: true });
+  await fxSeed(page, 'm');
+  await page.evaluate(() => localStorage.setItem('mon-farm:hold-ms', '500'));
+  await page.goto(counterUrl('full'));
+  await context.setOffline(true);
+  await expect(id('fill-title')).toHaveText(/^วิธีที่ 1 · เติมให้เต็มเข่ง 2/);
+  await expect(id('fill-change')).toContainText('เปลี่ยนวิธีเติม');
+  await id('fill-change').click();
+  await expect(id('fill-sheet')).toContainText('เข่ง 2 ยังไม่เต็ม — เลือก 1 ใน 3 วิธี');
+  await expect(id('fill-full')).toContainText('✓ ใช้อยู่ตอนนี้');
+  await expect(id('fill-go')).toContainText('ใช้วิธีที่ 1');
+  await id('fill-part').click();
+  await expect(id('fill-go')).toContainText('ใช้วิธีที่ 2');
+  await id('fill-go').click();
+  await expect(page).toHaveURL(/counter\?point=a2&fill=part/);
+  await expect(id('fill-title')).toHaveText(/^วิธีที่ 2 · ชั่งแยกส่วนที่เติม · เข่ง 2/);
+  await expect(id('should-read')).toContainText('17');
+  // Back goes to where the counter came from, not to the sheet (the picker was dismissed).
+  await id('fill-change').click();
+  await expect(id('fill-part')).toContainText('✓ ใช้อยู่ตอนนี้');
+  await id('fill-full').click();
+  await id('fill-go').click();
+  await expect(id('fill-title')).toHaveText(/^วิธีที่ 1 · เติมให้เต็มเข่ง 2/);
+  await expect(id('should-read')).toContainText('52');
+  // FX-4: the hold counts basket 2 the way chosen last, and the row goes.
+  await hold(page);
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 3$/);
+  await expect(id('fill-change')).toHaveCount(0);
+});
+
+for (const width of [320, 360, 390]) {
+  for (const size of ['m', 'l'] as const) {
+    test.describe(`${width} wide at ${size.toUpperCase()}`, () => {
+      test.use({ viewport: { width, height: 844 } });
+      test('FX-7: the row under the hold, and the sheet: nothing cut, every target ≥ 48', async ({ page }) => {
+        const id = (t: string) => page.getByTestId(t).filter({ visible: true });
+        await fxSeed(page, size);
+        await page.goto(counterUrl('full'));
+        await expect(id('fill-change')).toBeVisible();
+        // Owner fill-change-row 2026-11-17 "ก · ก · ย้ายแถวไปใต้ปุ่มกดค้าง (แนะนำ)": the row is under the hold, and
+        // the hold stays fully in view at every width and size (E04-S21).
+        await expect(id('hold')).toBeInViewport({ ratio: 1 });
+        const row = await id('fill-change').boundingBox();
+        const holdBox = await id('hold').boundingBox();
+        expect(row!.height).toBeGreaterThanOrEqual(48);
+        expect(row!.y).toBeGreaterThanOrEqual(holdBox!.y + holdBox!.height);
+        expect(await textFit(page)).toEqual([]);
+        if (width === 360) await evidence(page, `${FX_SHOTS}/${size}-360-counter.png`);
+        await id('fill-change').click();
+        await expect(id('fill-sheet')).toBeVisible();
+        expect(await textFit(page)).toEqual([]);
+        expect(await smallTargets(page)).toEqual([]);
+        if (width === 360) await evidence(page, `${FX_SHOTS}/${size}-360-sheet.png`);
+      });
+    });
+  }
+}
