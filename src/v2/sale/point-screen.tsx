@@ -22,12 +22,12 @@ import { planMove } from '../../core/sale-move';
 import { pointChoices, saleRollup } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AlertIcon, AppText, BottomSheet, DotsIcon, cardStyle, ChevronRight, CTA, IconTile, PinIcon, Plus, Scale, TapperIcon, TextLink, type TileTone, FarmMateArt } from '../../ui';
+import { AlertIcon, AppText, BottomSheet, DotsIcon, cardStyle, ChevronRight, CTA, IconTile, TapperIcon, TextLink, type TileTone, FarmMateArt } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { signed, useGoToPoint, type Fill } from './move';
 import { SaleMenu } from './sale-menu';
 import { SaleOptionSheets, type OptionSheet } from './sale-options';
-import { Choice, Crumbs, IconLine, kgText, NumChip, SegOptions, SkewTag, farmTone, useLeaveIfClosed, useSaleView } from './pieces';
+import { BasketBar, Crumbs, IconLine, kgText, RubberKg, ScaleNum, SegOptions, SkewTag, WrapLine, Words, farmTone, useLeaveIfClosed, useSaleView } from './pieces';
 
 export function PointScreen() {
   const t = useTheme();
@@ -42,6 +42,8 @@ export function PointScreen() {
   const [farmId, setFarmId] = useState<string | null>(params.farm ?? null);
   const [tapperId, setTapperId] = useState<string | null>(params.tapper ?? null);
   const [ask, setAsk] = useState<{ pointId: string; open: OpenBasket } | null>(null);
+  // E04-S21: the way chosen on the fill-up sheet; fill up first.
+  const [choice, setChoice] = useState<Fill>('full');
   const [menu, setMenu] = useState<'none' | 'menu' | OptionSheet>('none');
   const switching = params.mode === 'switch';
   const backfill = params.mode === 'backfill';
@@ -69,7 +71,10 @@ export function PointScreen() {
   const pick = (pointId: string) => {
     if (!backfill) {
       const plan = planMove(events, state, master, day, pointId, mode, settings.zeroCheck);
-      if (plan.ask) return setAsk({ pointId, open: plan.ask });
+      if (plan.ask) {
+        setChoice('full');
+        return setAsk({ pointId, open: plan.ask });
+      }
     }
     go(pointId);
   };
@@ -173,76 +178,147 @@ export function PointScreen() {
     </FarmScreen>
   );
 
+  /**
+   * E04-S21 (owner 2026-10-11, AC agreed 2026-11-17): choose, then confirm. Every way shows what the scale
+   * must read on its right; the chosen one lists its steps; the button says what will be done. The logic is
+   * E04-S06/S17's: way 3 only goes on (the basket closes when the next full one is counted).
+   */
   function fillSheet(a: { pointId: string; open: OpenBasket }) {
     const o = a.open;
     const onClose = () => setAsk(null);
-    const onFill = (f: Fill) => go(a.pointId, f);
-    // Not closed here: the basket closes when the next full one is counted, so this stays a choice (E04-S17).
-    const onNext = () => go(a.pointId, 'next');
     const skew = saleSkewG(events);
     const from = master!.points.find((p) => p.id === o.pointId);
     const fromFarm = master!.properties.find((f) => f.id === from?.propertyId);
+    const to = master!.points.find((p) => p.id === a.pointId);
+    const toFarm = master!.properties.find((f) => f.id === to?.propertyId);
     const tapper = nameOf(group?.tapperId ?? null) || nameOf(choices.byTapper.find((g) => g.points.some((p) => p.id === a.pointId))?.tapperId ?? null);
     const std = o.haveG + o.missingG;
-    const kg = (g: number) => msg('v2f.kg', { n: kgText(g) });
-    const skewKg = signed(kgText(skew));
+    const fullKg = (std + o.tareG + skew) / 1000;
+    const partKg = (o.missingG + o.tareG + skew) / 1000;
+    const skewPart = skew ? ` + ${msg('v2s.eqSkew', { n: kgText(skew) })}` : '';
+    const where = (farmName?: string, pointName?: string) => `${farmName ?? ''} ${pointName ?? ''}`.trim();
+    const confirm = () => go(a.pointId, choice);
+    const ctaText = { fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, color: t.color.inkInverse } as const;
+    const step = (n: number, body: React.ReactNode, em?: boolean) => (
+      <View key={n} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: t.space.xs, paddingVertical: t.space.xxs, paddingHorizontal: t.space.xs, borderRadius: t.radius.sm, backgroundColor: em ? t.color.warnSunk : undefined }}>
+        <Words strong={em}>{`${n}.`}</Words>
+        <View style={{ flex: 1, minWidth: 0 }}>{body}</View>
+      </View>
+    );
+    const readStep = (kg: number, eq: string) => (
+      <WrapLine>
+        <Words>{msg('v2s.mustRead')}</Words>
+        <ScaleNum kg={kg} />
+        <Words soft>{eq}</Words>
+      </WrapLine>
+    );
+    const way = (id: Fill, title: string, sub: React.ReactNode, scaleKg: number | null, steps?: React.ReactNode) => {
+      const on = choice === id;
+      return (
+        <Pressable
+          key={id}
+          testID={`fill-${id}`}
+          accessibilityRole="radio"
+          accessibilityState={{ selected: on, checked: on }}
+          onPress={() => setChoice(id)}
+          style={{ gap: t.space.sm, padding: t.space.md, minHeight: t.target.comfortable, borderRadius: t.radius.lg, borderWidth: on ? t.border.thick : t.border.hair, borderColor: on ? t.color.action : t.color.ruleStrong, backgroundColor: on ? t.color.actionSunk : t.color.surfaceRaised }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+            <View aria-hidden style={{ width: 22, height: 22, borderRadius: 11, borderWidth: t.border.thick, borderColor: on ? t.color.action : t.color.inkSoft, alignItems: 'center', justifyContent: 'center' }}>
+              {on ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.color.action }} /> : null}
+            </View>
+            <View style={{ flex: 1, minWidth: 0, gap: t.space.xxs }}>
+              <AppText style={{ fontWeight: t.font.weight.bold }}>{title}</AppText>
+              {sub}
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <AppText variant="caption">{msg('v2s.optScale')}</AppText>
+              {scaleKg === null ? <AppText testID={`fill-${id}-scale`} style={{ fontWeight: t.font.weight.bold, color: t.color.inkSoft }}>—</AppText> : <ScaleNum testID={`fill-${id}-scale`} kg={scaleKg} size="lg" />}
+            </View>
+          </View>
+          {on ? steps : null}
+        </Pressable>
+      );
+    };
     return (
-      <BottomSheet open onClose={onClose} title={msg('v2s.fillTitle', { n: o.basketNo })} testID="fill-sheet">
-        <View style={{ gap: t.space.xs }}>
-          <IconLine icon={(c) => <Scale color={c} size={14} />}>
-            {msg('v2s.fillHave')} <Text style={{ fontWeight: t.font.weight.bold, color: t.color.ink }}>{kg(o.haveG)}</Text>
-          </IconLine>
-          <IconLine icon={(c) => <PinIcon color={c} size={14} />}>{msg('v2s.fillFrom', { place: `${fromFarm?.name ?? ''} ${from?.name ?? ''}` })}</IconLine>
-          <IconLine icon={(c) => <TapperIcon color={c} size={14} />}>{msg('v2s.fillSame', { name: tapper })}</IconLine>
-          {skew ? <SkewTag label={msg('v2s.skewTag', { skew: signed(skewKg) })} /> : null}
+      <BottomSheet open onClose={onClose} title={msg('v2s.fillChoose', { n: o.basketNo })} testID="fill-sheet">
+        <View testID="fill-route" style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.md, padding: t.space.sm }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <AppText variant="caption">{msg('v2s.routeFrom')}</AppText>
+            <AppText style={{ fontWeight: t.font.weight.bold }}>{where(fromFarm?.name, from?.name)}</AppText>
+          </View>
+          <ChevronRight color={t.color.ink} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <AppText variant="caption">{msg('v2s.routeTo')}</AppText>
+            <AppText style={{ fontWeight: t.font.weight.bold }}>{where(toFarm?.name, to?.name)}</AppText>
+          </View>
         </View>
-        <Choice
-          primary
-          testID="fill-full"
-          icon={() => <FarmMateArt id="sale.recordYield" />}
-          title={msg('v2s.fillFull')}
-          onPress={() => onFill('full')}
-          lines={[
-            <Text key="a">
-              <Text style={{ color: t.color.warn, fontWeight: t.font.weight.bold }}>{msg('v2s.fillMore')}</Text> <NumChip tone="warn">{kg(o.missingG)}</NumChip> {msg('v2s.asBasket', { n: o.basketNo })}
-            </Text>,
-            <Text key="b">
-              {msg(skew ? 'rec.shouldRead' : 'v2s.scaleReads')} <NumChip tone="scale">{kg(std + o.tareG + skew)}</NumChip> {msg('v2s.wholeBasket')}
-            </Text>,
-            ...(skew ? [msg('v2s.fullSumSkew', { std: kgText(std), tare: kgText(o.tareG), skew: skewKg })] : []),
-          ]}
-        />
-        <Choice
-          testID="fill-part"
-          icon={() => <FarmMateArt id="sale.weigh" />}
-          title={msg('v2s.fillPart')}
-          onPress={() => onFill('part')}
-          lines={[
-            <Text key="a">
-              {msg('v2s.weighAdded')} <NumChip>{kg(o.missingG)}</NumChip> {msg('v2s.countAs', { n: o.basketNo })}
-            </Text>,
-            <Text key="b">
-              {msg(skew ? 'rec.shouldRead' : 'v2s.scaleReads')} <NumChip tone="scale">{kg(o.missingG + o.tareG + skew)}</NumChip>{' '}
-              {skew ? '' : msg('v2s.partSum', { part: kgText(o.missingG), tare: kgText(o.tareG) })}
-            </Text>,
-            ...(skew ? [msg('v2s.partSumSkew', { part: kgText(o.missingG), tare: kgText(o.tareG), skew: skewKg })] : []),
-          ]}
-        />
-        <Choice
-          testID="fill-next"
-          icon={(c) => <Plus color={c} size={16} />}
-          title={msg('v2s.fillNext')}
-          onPress={onNext}
-          lines={[
-            <Text key="a">
-              {msg('v2s.shortOf', { n: o.basketNo })} <NumChip>{kg(o.haveG)}</NumChip>
-            </Text>,
-            <Text key="b">
-              {msg('v2s.nextFull')} <NumChip>{msg('v2s.basketN', { n: o.basketNo + 1 })}</NumChip>
-            </Text>,
-          ]}
-        />
-        <AppText variant="caption">{msg('v2s.fillNote', { n: o.basketNo })}</AppText>
+        <IconLine icon={(c) => <TapperIcon color={c} size={14} />}>{msg('v2s.fillSame', { name: tapper })}</IconLine>
+        {skew ? <SkewTag label={msg('v2s.skewTag', { skew: signed(kgText(skew)) })} /> : null}
+        <BasketBar haveG={o.haveG} addG={o.missingG} addLabel={msg('v2s.barAdd')} />
+        {way(
+          'full',
+          msg('v2s.optFull'),
+          <WrapLine>
+            <Words soft>{msg('v2s.optFullRes', { n: o.basketNo })}</Words>
+            <RubberKg g={std} />
+          </WrapLine>,
+          fullKg,
+          <View testID="fill-steps" style={{ gap: t.space.xxs }}>
+            {step(1, (
+              <WrapLine>
+                <Words strong>{msg('v2s.stepPour')}</Words>
+                <RubberKg g={o.missingG} />
+                <Words strong>{msg('v2s.stepIntoOld', { n: o.basketNo })}</Words>
+              </WrapLine>
+            ), true)}
+            {step(2, readStep(fullKg, `(${kgText(std)} + ${msg('v2s.eqBasket', { n: kgText(o.tareG) })}${skewPart})`))}
+          </View>,
+        )}
+        {way(
+          'part',
+          msg('v2s.optPart'),
+          <WrapLine>
+            <Words soft>{msg('v2s.optPartSub')}</Words>
+            <RubberKg g={o.missingG} />
+          </WrapLine>,
+          partKg,
+          <View testID="fill-steps" style={{ gap: t.space.xxs }}>
+            {step(1, (
+              <WrapLine>
+                <Words strong>{msg('v2s.stepWeighIn')}</Words>
+                <RubberKg g={o.missingG} />
+                <Words strong>{msg('v2s.stepEmptyNew')}</Words>
+              </WrapLine>
+            ), true)}
+            {step(2, readStep(partKg, `(${kgText(o.missingG)} + ${msg('v2s.eqBasket', { n: kgText(o.tareG) })}${skewPart})`))}
+          </View>,
+        )}
+        {way(
+          'next',
+          msg('v2s.optNext'),
+          <WrapLine>
+            <Words soft>{msg('v2s.optNextSub', { n: o.basketNo })}</Words>
+            <RubberKg g={o.haveG} />
+            <Words soft>{msg('v2s.optNextThen', { n: o.basketNo + 1 })}</Words>
+          </WrapLine>,
+          null,
+        )}
+        <Pressable
+          testID="fill-go"
+          accessibilityRole="button"
+          onPress={confirm}
+          style={{ minHeight: t.target.comfortable, borderRadius: t.radius.lg, backgroundColor: t.color.action, paddingHorizontal: t.space.md, paddingVertical: t.space.sm, alignItems: 'center', justifyContent: 'center' }}
+        >
+          {choice === 'next' ? (
+            <Text style={ctaText}>{msg('v2s.fillGoNext', { n: o.basketNo + 1 })}</Text>
+          ) : (
+            <WrapLine>
+              <Text style={ctaText}>{choice === 'full' ? msg('v2s.fillGoFull', { n: o.basketNo }) : msg('v2s.fillGoPart')}</Text>
+              <ScaleNum kg={choice === 'full' ? fullKg : partKg} color={t.color.inkInverse} size="lg" />
+            </WrapLine>
+          )}
+        </Pressable>
       </BottomSheet>
     );
   }
