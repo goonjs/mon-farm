@@ -119,6 +119,16 @@ Use these when you draw, build or review any screen that takes input.
 
     ![instead: the card itself is the button](../../../docs/ux/rules/no-round-outline-button-instead.png)
 
+    **Widened 2026-11-18 (owner, lead chat about 03:01: "ภาพม็อกอัพกับภาพที่ทำออกมาจริงไม่ตรงกันมากเกินไป UX ผิดไปเยอะรวมถึงละเมิดกฎที่เราจะไม่ใช้ปุ่มที่เกือบกลมๆให้เลือกด้วย … ที่ให้เลือกว่าปอนกี่งอนเนี่ยดันอยู่กับปุ่มที่ให้เลือกซึ่งมันทำให้หน้าจอมันดูไม่สวยไม่บาลานซ์"):** choices are not
+    near-round outlined pills either, wherever they sit. "หักเต็ม · ยังไม่หัก"
+    and "2 / 3 / 4 งวด" on the E06-S09 deduct sheet are the example: build them
+    as equal rounded-rectangle tiles (radius about 12px, one or two lines),
+    the picked one filled dark, as the mockup drew them.
+
+    Mockup (left) and the build that broke this (right):
+
+    ![deduct sheet: mockup vs build](../../../docs/ux/rules/choice-pills-and-label-row-2026-11-18.jpg)
+
 12. **A list that grows with data is a full page, not a sheet (owner rule,
     2026-11-07).** A bottom sheet is only for short, fixed content: a number
     pad, a confirm, a handful of fixed choices. Any pick list whose length
@@ -127,6 +137,12 @@ Use these when you draw, build or review any screen that takes input.
     scrolls, the header and the bottom bar stay put. With many rows a sheet
     runs out of height, hides rows under the fold and fights the scroll.
     Example: `docs/ux/mockups/fertilizing-split-options.html` C1 and C4.
+
+13. **A label sits on its own line above its choices (owner, 2026-11-18,
+    same message).** Never squeeze a label ("ผ่อนกี่งวด") into the same row as
+    the buttons it labels: the row looks unbalanced and the buttons shrink.
+    Label line first (a short hint may sit right-aligned on that line), the
+    choice tiles on the next line at full width. Same picture as rule 11.
 
 ## How to check before you show anything
 

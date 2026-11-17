@@ -129,6 +129,7 @@ The owner's words, in the lead chat at about 00:35 Bangkok on 2026-11-18 (sent w
    - the owner's recent decisions, as verbatim quotes with dates;
    - known limits and follow-ups.
    - the dashboard link (https://claude.ai/artifact/3jHpPwSa3uWgMbW16oNdGa) and the owner rule that every lead shows it in every reply (§1, owner 2026-11-18).
+   - point the dashboard's answer routing at the new lead: `board/routing` `session` and `label` (Lead 3 found it still on Lead 2, 2026-11-18).
 2. Create the new lead with `create_session`:
    - title `(mon-farm) Lead N`;
    - the note and this skill's path in its prompt.
