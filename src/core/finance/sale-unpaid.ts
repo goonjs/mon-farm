@@ -17,6 +17,12 @@ import { OWNER_PAYEE, paymentStatus } from './payments';
 import { roundingFor, roundSettlement } from './rounding';
 import type { FinanceEvent } from './types';
 
+/**
+ * Sales before this day are not counted as owing money: payments were not ticked on the payment page before it, so
+ * their piles would read "not paid" for ever (the same cut-off as the repayments on the home, `pendingRepayLines`).
+ */
+export const UNPAID_COUNTED_FROM = '2026-11-01';
+
 export interface UnpaidInput {
   readonly events: readonly SaleEvent[];
   readonly state: SaleState;
