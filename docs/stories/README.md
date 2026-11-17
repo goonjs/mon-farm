@@ -30,6 +30,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E01-S16: ลบเขตไม่ได้ถ้าคนกรีดของเขตยังมียอดหัก](e01-s16-zone-delete-guard.md) (Superseded โดย E06-S07)
 - [E01-S19: ค่าตั้งของเครื่องจำได้บน Android](e01-s19-device-settings-native.md) (Ready — ทำก่อน E05-S11)
 - [E01-S20: แป้นตัวเลขของแอปทุกช่องที่กรอกตัวเลข](e01-s20-app-number-pad.md) (Review — merge ครบ; ตรวจ 2026-11-07 ยังขาด NP-3/NP-4/NP-9/NP-10)
+- [E01-S24: ไม่มีปุ่ม − + ใน 5 หน้า](e01-s24-no-steppers.md) (Draft — รอเจ้าของดู mockup, ต่อจาก E01-S20 NP-3)
 
 ### E02 การเข้าใช้ & กลุ่มฟาร์ม — [epic](../epics/e02-access-farm-groups.md)
 
