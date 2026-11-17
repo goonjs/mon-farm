@@ -11,7 +11,7 @@
  * the per-instalment amount on a re-split choice (`installmentAmount`, the same core rule).
  */
 
-import { createContext, useContext, type ReactNode } from 'react';
+import { Children, cloneElement, createContext, isValidElement, useContext, type ReactElement, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { CloseoutWorker } from '../../../core/finance/closeout';
@@ -131,6 +131,15 @@ export function ChoiceText({ children, small }: { children: ReactNode; small?: b
   );
 }
 
+/**
+ * The picked Choice is dark, so a caller's own words (a plain text with a set colour) must turn to the inverse ink
+ * here, in Choice, not in each caller: a text child's colour is replaced; a component child (CountChoice,
+ * ChoiceText) follows the context instead and ignores the extra style.
+ */
+function inverse(child: ReactElement<{ style?: unknown }>, color: string): ReactElement {
+  return cloneElement(child, { style: [child.props.style, { color }] });
+}
+
 /** A choice card ("3 งวด / งวดละ 4,267" or "รวมในงวดที่เหลือ"): a whole tap target, selected = dark with white words. */
 export function Choice({ testID, selected, onPress, children, basis = 90, grow = true }: { testID: string; selected: boolean; onPress: () => void; children: ReactNode; basis?: number; /** false: a fixed size, so a short last row is not stretched. */ grow?: boolean }) {
   const t = useTheme();
@@ -154,7 +163,7 @@ export function Choice({ testID, selected, onPress, children, basis = 90, grow =
         backgroundColor: selected ? t.color.action : t.color.surfaceRaised,
       }}
     >
-      <ChoicePicked.Provider value={selected}>{children}</ChoicePicked.Provider>
+      <ChoicePicked.Provider value={selected}>{selected ? Children.map(children, (c) => (isValidElement(c) ? inverse(c as ReactElement<{ style?: unknown }>, t.color.inkInverse) : c)) : children}</ChoicePicked.Provider>
     </Pressable>
   );
 }
