@@ -764,10 +764,12 @@ async function fxSeed(page: Page, size: 'm' | 'l') {
 
 const counterUrl = (fill: string) => `/v2/sale/sale-fx/counter?point=a2&fill=${fill}`;
 
-test('FX-1..FX-3: change the way from the guide card, straight back to the counter, and back again', async ({ page }) => {
+test('FX-1..FX-3, FX-8: change the way from the row under the hold, straight back to the counter, and back again; then the hold counts it (offline)', async ({ page, context }) => {
   const id = (t: string) => page.getByTestId(t).filter({ visible: true });
   await fxSeed(page, 'm');
+  await page.evaluate(() => localStorage.setItem('mon-farm:hold-ms', '500'));
   await page.goto(counterUrl('full'));
+  await context.setOffline(true);
   await expect(id('fill-title')).toHaveText(/^วิธีที่ 1 · เติมให้เต็มเข่ง 2/);
   await expect(id('fill-change')).toContainText('เปลี่ยนวิธีเติม');
   await id('fill-change').click();
@@ -787,13 +789,17 @@ test('FX-1..FX-3: change the way from the guide card, straight back to the count
   await id('fill-go').click();
   await expect(id('fill-title')).toHaveText(/^วิธีที่ 1 · เติมให้เต็มเข่ง 2/);
   await expect(id('should-read')).toContainText('52');
+  // FX-4: the hold counts basket 2 the way chosen last, and the row goes.
+  await hold(page);
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 3$/);
+  await expect(id('fill-change')).toHaveCount(0);
 });
 
 for (const width of [320, 360, 390]) {
   for (const size of ['m', 'l'] as const) {
     test.describe(`${width} wide at ${size.toUpperCase()}`, () => {
       test.use({ viewport: { width, height: 844 } });
-      test('FX-7: the guide card with its row, and the sheet: nothing cut, every target ≥ 48', async ({ page }) => {
+      test('FX-7: the row under the hold, and the sheet: nothing cut, every target ≥ 48', async ({ page }) => {
         const id = (t: string) => page.getByTestId(t).filter({ visible: true });
         await fxSeed(page, size);
         await page.goto(counterUrl('full'));

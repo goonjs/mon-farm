@@ -646,7 +646,7 @@ describe('E04-S24 change the fill way before the hold (owner 2026-11-17 e04-s24-
     expect(tree.indexOf('"testID":"fill-change"')).toBeGreaterThan(tree.indexOf('"testID":"hold"'));
   });
 
-  it('the counter cards\' figures stay hidden until their box is measured, then show at their size (no first-paint jump, #209 review)', async () => {
+  it('the counter cards\' figures stay hidden until their box is measured, then show at their size (no first-paint jump, PR 209 review)', async () => {
     await started();
     await readyAt(farm.a[0]);
     await counterAt(farm.a[0]);
