@@ -123,7 +123,8 @@ Use these when you draw, build or review any screen that takes input.
     near-round outlined pills either, wherever they sit. "หักเต็ม · ยังไม่หัก"
     and "2 / 3 / 4 งวด" on the E06-S09 deduct sheet are the example: build them
     as equal rounded-rectangle tiles (radius about 12px, one or two lines),
-    the picked one filled dark, as the mockup drew them.
+    the picked one filled dark, as the mockup drew them (these details are the
+    lead's reading of the mockup, not the owner's words).
 
     Mockup (left) and the build that broke this (right):
 
@@ -141,8 +142,9 @@ Use these when you draw, build or review any screen that takes input.
 13. **A label sits on its own line above its choices (owner, 2026-11-18,
     same message).** Never squeeze a label ("ผ่อนกี่งวด") into the same row as
     the buttons it labels: the row looks unbalanced and the buttons shrink.
-    Label line first (a short hint may sit right-aligned on that line), the
-    choice tiles on the next line at full width. Same picture as rule 11.
+    Label line first, the choice tiles on the next line. (Lead's reading of
+    the mockup: a short hint may sit right-aligned on the label line, and the
+    tiles run full width.) Same picture as rule 11.
 
 ## How to check before you show anything
 
