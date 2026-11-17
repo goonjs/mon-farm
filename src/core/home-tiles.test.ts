@@ -119,6 +119,11 @@ describe('homeTiles — the เริ่มการขาย tile (S0 … S5)',
     expect(homeTiles({ ...base, prep: prep(), sales: [todaySale({ phase: 'closed', unpaid: 0 })] }).start).toEqual({ state: 'S5' });
   });
 
+  it('names the sale today\'s tile is about, for the tap on S4 (the clearing page)', () => {
+    expect(homeTiles({ ...base, sales: [todaySale({ id: 'a', phase: 'closed', unpaid: 2 })] }).startSaleId).toBe('a');
+    expect(homeTiles(base).startSaleId).toBeNull();
+  });
+
   it('selling without a prep: the prep tile stays plain, the sale tile follows the sale (S2)', () => {
     const t = homeTiles({ ...base, sales: [todaySale()] });
     expect(t.prep).toEqual({ state: 'P0' });
