@@ -348,6 +348,14 @@ for (const width of [320, 360, 390]) {
         expect(oneLine).toBe(true);
         if (width === 320) await shot(page, `${size}-320-counter`);
         expect(await textFit(page)).toEqual([]);
+        // The figure under it keeps room to spare: CI's fonts render about 7% wider than a dev machine's, and the
+        // 320 L figure ("1.84 หมื่น") was cut there while it fitted here (CI run on 99c06b9).
+        const spare = await id('fig-money').evaluate((e) => {
+          const r = document.createRange();
+          r.selectNodeContents(e);
+          return r.getBoundingClientRect().width / e.clientWidth;
+        });
+        expect(spare).toBeLessThanOrEqual(0.9);
       });
     });
   }
