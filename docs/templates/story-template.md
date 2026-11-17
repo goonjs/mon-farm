@@ -1,6 +1,7 @@
 # Story: <title>
 
 Status: Draft | Ready | In Progress | Review | Done
+เงื่อนไขไปขั้นถัดไป: <what must happen before the next status> · ใคร: <who does it> · รอ: <who it waits on now>
 
 ## Context
 

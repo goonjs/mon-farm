@@ -93,10 +93,25 @@ Ask again, every time.
      `status: "open"` (later `merged`, `closed` or `superseded`),
      `stage` (`working`, `review`, `ready`, `merged` or `blocked`; keep it
      current), `ci` (`ผ่าน`, `แดง` or `รอ`) and, for a merge, `agreement`,
-     `reviewer` and `merged_at` (see the merge rule below). The dashboard is a view only:
+     `reviewer` and `merged_at` (see the merge rule below). Since
+     2026-11-17 (owner rule, quoted below; effective at once and for every
+     card already open) every push and every pending card also carries:
+     `story` (the story id), `kind` (`ui`, `logic`, `both` or `docs`), `evidence` and `next_step`, and `what` is short
+     Thai that names the story. `evidence` for UI: `mockup`, `before` (the
+     real page on `dev` before the change) and `after` (the real page at
+     the head), each `{url, caption}` with the picture uploaded to the
+     dashboard's asset store; for logic: `flow_before` and `flow_after`
+     (mermaid text or a picture); a slot with nothing to show is
+     `{"none": "<reason>"}`. `next_step` is `{condition, who,
+     waiting_on}`: what must happen before the next stage, who does it,
+     and who it waits on now. The dashboard is a view only:
      there is no Acknowledge button and no `acked` field any more (owner
      decision 2026-11-08). The old Push Ledger artifact is retired (owner
      decision 2026-10-31): do not write to it.
+
+     The owner's words, in the lead's chat on 2026-11-17 at about 14:00
+     Bangkok time: "ช่วยบอกเซสชันของแดชบอร์ดหน่อยให้มีการปรับแดชบอร์ดอันไหนที่มีการทำงานขอให้มีสิ่งเหล่านี้ให้ผมดู 1. หน้า Mockup 2. หน้าจริงก่อนทำ 3. หน้าจริงหลังทำแล้วก็เขียนด้วยว่าทำอะไรเรื่องไหนถ้าเป็นเรื่องของ UI ส่วนถ้าเป็นเรื่องของ Logic ทำคล้ายๆกันคือ Flowchart หรือ Diagram ก่อนทำและ Flowchart หรือ Diagram หลังทำ
+     ให้ effective ทันทีรวมถึงสิ่งที่ค้าอยู่ในแดชบอร์ดทั้งหมดให้เขียนไว้เป็นกฎในงานนี้ของเราแล้วก็ทำไมมี PR ที่ยังไม่ได้ merge อยู่ช่วยบอกเหตุผลด้วย PR ไหนที่พร้อม merge แล้วแต่ยังไม่ merge รออะไรช่วยบอกเหตุผลด้วยอะไรที่ติดขั้นถัดไปอย่างเช่นผมเห็นมีสตอรี่อยู่ที่คาอยู่ในแดชบอร์ดมีการบอกสเตตัสว่าถึงไหนอันนี้โอเคแต่ผมไม่รู้ว่าเงื่อนไขอะไรที่จะทำให้ไปสเต็ปถัดไปให้มีบอกในแดชบอร์ดด้วยให้เป็นกฎ effective ทันทีแล้วก็ moving forward สำหรับทุกใบ"
   2. **Say so in the same response**: one short summary of what went up.
   3. **No reminder line.** Nothing waits on an acknowledgement, so no
      "waiting for ack" line is added to responses.
