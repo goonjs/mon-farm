@@ -1,7 +1,7 @@
-# Story E04-S23: เปลี่ยนวิธีเติมเข่งก่อนกดค้าง
+# Story E04-S24: เปลี่ยนวิธีเติมเข่งก่อนกดค้าง
 
 Status: Draft (รอเจ้าของดู mockup และตอบ Q1–Q3)
-เงื่อนไขไปขั้นถัดไป: เจ้าของดู mockup `docs/ux/mockups/e04-s23-fill-change.html` และตอบ Q1–Q3 → AC ตกลง (Ready) · ใคร: เจ้าของ · รอ: เจ้าของ
+เงื่อนไขไปขั้นถัดไป: เจ้าของดู mockup `docs/ux/mockups/e04-s24-fill-change.html` และตอบ Q1–Q3 → AC ตกลง (Ready) · ใคร: เจ้าของ · รอ: เจ้าของ
 
 ## Context
 
@@ -10,7 +10,7 @@ Status: Draft (รอเจ้าของดู mockup และตอบ Q1–
 - เจ้าของถาม 2026-11-17: "หน้าเติมเข่งใหม่ แล้วถ้าเลือกไปแล้วจะเปลี่ยนใจจะทำยังไง". ตรวจบน dev แล้ว (dashboard visuals `q-fill-change`):
   เปลี่ยนใจได้ทุกกรณี แต่ต้องรู้ว่ากด "เปลี่ยนจุด" แล้วเลือกจุดเดิม และ "ย้อนกลับ" ต้องกดค้าง
 - เจ้าของตอบ fill-change 2026-11-17: "ก · เพิ่มลิงก์ เปลี่ยนวิธีเติม > บนการ์ดคำแนะนำหน้านับ (ก่อนกดค้าง) — ทำ mockup ให้ดูก่อน (แนะนำ)"
-- Mockup: `docs/ux/mockups/e04-s23-fill-change.html` (ผ่าน `npm run check:mockup` 4 จอ) · ภาพหน้าจริงตอนนี้: `docs/ux/screenshots/e04-s23/before/`
+- Mockup: `docs/ux/mockups/e04-s24-fill-change.html` (ผ่าน `npm run check:mockup` 4 จอ) · ภาพหน้าจริงตอนนี้: `docs/ux/screenshots/e04-s24/before/`
 
 ## คำอธิบาย
 
@@ -49,4 +49,4 @@ Status: Draft (รอเจ้าของดู mockup และตอบ Q1–
 
 ## QA notes
 
-- ภาพหน้าจริงตอนนี้ (dev `26ce562`, 360×844, ตัวอักษรกลาง): `docs/ux/screenshots/e04-s23/before/`
+- ภาพหน้าจริงตอนนี้ (dev `26ce562`, 360×844, ตัวอักษรกลาง): `docs/ux/screenshots/e04-s24/before/`

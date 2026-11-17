@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>เปลี่ยนวิธีเติม E04-S23</title>
+<title>เปลี่ยนวิธีเติม E04-S24</title>
 <style>
 :root{--bg:#f4f6f8;--fg:#14202e;--mute:#566577;--line:#d3dae1;--accent:#0b4a8f}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0d141c;--fg:#e6ecf2;--mute:#9aa8b8;--line:#2a3846;--accent:#7db7ff;color-scheme:dark}}
@@ -92,15 +92,15 @@ section{display:flex;flex-direction:column;gap:10px}
 <body>
 <main>
 <header>
-<h1>E04-S23 · เปลี่ยนวิธีเติมเข่งก่อนกดค้าง</h1>
+<h1>E04-S24 · เปลี่ยนวิธีเติมเข่งก่อนกดค้าง</h1>
 <p class="why">เจ้าของ 2026-11-17 (dashboard fill-change): "ก · เพิ่มลิงก์ เปลี่ยนวิธีเติม &gt; บนการ์ดคำแนะนำหน้านับ (ก่อนกดค้าง) — ทำ mockup ให้ดูก่อน (แนะนำ)". ตอนนี้เปลี่ยนใจได้แต่ต้องรู้ว่ากด "เปลี่ยนจุด" แล้วเลือกจุดเดิม. ที่เสนอ: 4 จอตามลำดับ ตั้งแต่แผ่น 3 วิธี → หน้านับ → แตะลิงก์ → แผ่นเดิม → หน้านับวิธีใหม่. ซ้าย = หน้าจริงตอนนี้ (dev), ขวา = ที่เสนอ. จอ 360×844.</p>
 </header>
-<section><h2>1 · เปลี่ยนจุดไปจุด 2: แผ่นเลือก 3 วิธี</h2><div class="pair"><div class="col"><span class="tag">ตอนนี้</span><img class="before" src="../screenshots/e04-s23/before/1-fill-sheet.png" alt="ตอนนี้"></div><div class="col"><span class="tag after">เสนอ</span><div class="phone" id="f1-sheet"><div class="ab"><span class="back">‹</span><div class="t"><b>เปลี่ยนจุด</b><small>การขาย 17 พ.ย. 2569</small></div><span class="sync">ซิงก์แล้ว</span></div><div class="shade"></div><div class="sheet"><div class="grab"></div>
+<section><h2>1 · เปลี่ยนจุดไปจุด 2: แผ่นเลือก 3 วิธี</h2><div class="pair"><div class="col"><span class="tag">ตอนนี้</span><img class="before" src="../screenshots/e04-s24/before/1-fill-sheet.png" alt="ตอนนี้"></div><div class="col"><span class="tag after">เสนอ</span><div class="phone" id="f1-sheet"><div class="ab"><span class="back">‹</span><div class="t"><b>เปลี่ยนจุด</b><small>การขาย 17 พ.ย. 2569</small></div><span class="sync">ซิงก์แล้ว</span></div><div class="shade"></div><div class="sheet"><div class="grab"></div>
 <h4>เข่ง 2 ยังไม่เต็ม — เลือก 1 ใน 3 วิธี</h4>
 <span class="hint">จาก จันทเขลม จุด 1 › ไป จันทเขลม จุด 2 · คนกรีดยาง: แดง</span>
 <div><div class="track"><i class="have" style="width:70%"></i><i class="add" style="width:30%"></i></div><div class="bl"><span>35 กก. มีแล้ว</span><span>15 กก. เติม</span><span>เต็ม 50 กก.</span></div></div>
 <div class="way on"><span class="num">1</span><div class="w"><b>เติมให้เต็มเข่ง</b><small>ผล: เข่ง 2 เต็ม 50 กก. · เทยางเพิ่ม 15 กก. ลงเข่ง 2 ใบเดิม</small></div><div class="sc">ตาชั่ง<b>52</b></div></div><div class="way"><span class="num">2</span><div class="w"><b>ชั่งแยกส่วนที่เติม</b><small>เข่งเปล่าใบใหม่ เติมยาง 15 กก. · เข่ง 2 ใบเดิมไม่ต้องยก</small></div><div class="sc">ตาชั่ง<b>17</b></div></div><div class="way"><span class="num">3</span><div class="w"><b>ปล่อยเข่งไม่เต็มไว้</b><small>เข่ง 2 ไม่เต็ม 35 กก. · ต่อไปเข่ง 3</small></div><div class="sc">ตาชั่ง<b>—</b></div></div><div class="btn">เติมเข่ง 2 · ตาชั่งต้องอ่าน 52</div></div></div><p class="note">หัวแผ่นบอก "เลือก 1 ใน 3 วิธี" และแต่ละวิธีมีเลข 1 2 3</p></div></div></section>
-<section><h2>2 · หน้านับ: การ์ดบอกวิธีที่เลือก + "เปลี่ยนวิธีเติม ›"</h2><div class="pair"><div class="col"><span class="tag">ตอนนี้</span><img class="before" src="../screenshots/e04-s23/before/2-counter-fill.png" alt="ตอนนี้"></div><div class="col"><span class="tag after">เสนอ</span><div class="phone" id="f2-counter-full"><div class="ab"><span class="back">‹</span><div class="t"><b>นับเข่ง</b><small>การขาย 17 พ.ย. 2569</small></div><span class="sync">ซิงก์แล้ว</span></div><div class="body">
+<section><h2>2 · หน้านับ: การ์ดบอกวิธีที่เลือก + "เปลี่ยนวิธีเติม ›"</h2><div class="pair"><div class="col"><span class="tag">ตอนนี้</span><img class="before" src="../screenshots/e04-s24/before/2-counter-fill.png" alt="ตอนนี้"></div><div class="col"><span class="tag after">เสนอ</span><div class="phone" id="f2-counter-full"><div class="ab"><span class="back">‹</span><div class="t"><b>นับเข่ง</b><small>การขาย 17 พ.ย. 2569</small></div><span class="sync">ซิงก์แล้ว</span></div><div class="body">
 <div class="pointbar"><b>จันทเขลม · จุด 2</b><span class="sw">⇄ เปลี่ยนจุด</span></div>
 <div class="guide"><h5>วิธีที่ 1 · เติมให้เต็มเข่ง 2</h5>
 <div><div class="track"><i class="have" style="width:70%"></i><i class="add" style="width:30%"></i></div><div class="bl"><span>35 มีแล้ว</span><span>15 เติม</span><span>เต็ม 50</span></div></div>
