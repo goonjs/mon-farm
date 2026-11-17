@@ -329,17 +329,26 @@ test.describe('360 wide at L', () => {
   });
 });
 
-test.describe('320 wide at M', () => {
-  test.use({ viewport: { width: 320, height: 640 } });
-
-  // Review of #207: "ราคารวม (฿)" on the counter's first card was cut with "…" at the smallest width.
-  test('the counter with a price: nothing cut, "…" or past the screen', async ({ page }) => {
-    const id = on(page);
-    await seed(page, 'm');
-    await page.goto('/v2/sale/sale-ts/counter?point=a1');
-    await expect(id('fig-money')).toBeVisible();
-    await page.waitForTimeout(300);
-    await shot(page, 'm-320-counter');
-    expect(await textFit(page)).toEqual([]);
-  });
-});
+// merge-209 (owner 2026-11-17 "ข · อยากได้ 1 บรรทัด — ย่อคำแทน (เช่น รวม ฿)"): the counter's money card label is one
+// line at every width and text size, never wrapped and never cut with "…".
+for (const width of [320, 360, 390]) {
+  for (const size of ['m', 'l'] as const) {
+    test.describe(`${width} wide at ${size.toUpperCase()}`, () => {
+      test.use({ viewport: { width, height: 844 } });
+      test('the counter money card label: one line, nothing cut', async ({ page }) => {
+        const id = on(page);
+        await seed(page, size);
+        await page.goto('/v2/sale/sale-ts/counter?point=a1');
+        await expect(id('fig-money')).toBeVisible();
+        await page.waitForTimeout(300);
+        const label = id('card-money-label');
+        await expect(label).toHaveText('รวม (฿)');
+        // One line: the box is less than two font sizes tall (a wrapped label is about three).
+        const oneLine = await label.evaluate((e) => e.getBoundingClientRect().height < parseFloat(getComputedStyle(e).fontSize) * 1.9);
+        expect(oneLine).toBe(true);
+        if (width === 320) await shot(page, `${size}-320-counter`);
+        expect(await textFit(page)).toEqual([]);
+      });
+    });
+  }
+}
