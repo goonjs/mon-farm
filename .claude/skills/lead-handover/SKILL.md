@@ -36,6 +36,7 @@ AGENTS.md and docs/process.md stay binding; this skill covers what they do not.
   - short, plain Thai;
   - say what you checked and what you didn't;
   - end every message with a Discord status line;
+  - **show the dashboard link in every reply to the owner**: https://claude.ai/artifact/3jHpPwSa3uWgMbW16oNdGa (owner rule, lead chat 2026-11-18 about 01:45 Bangkok: "เพิ่มกดอีกนิดนึงสำหรับ Lead อย่าลืม Handover ไปด้วยนะในทุกๆ Lead ผมต้องเห็น Link Artifact ด้วย"). Every lead keeps this rule and passes it on in each handover;
   - come back only for heavy decisions;
   - happy path first; rare cases go into a later story;
   - few PRs.
@@ -127,6 +128,7 @@ The owner's words, in the lead chat at about 00:35 Bangkok on 2026-11-18 (sent w
    - the current flow and the next 2–3 stories;
    - the owner's recent decisions, as verbatim quotes with dates;
    - known limits and follow-ups.
+   - the dashboard link (https://claude.ai/artifact/3jHpPwSa3uWgMbW16oNdGa) and the owner rule that every lead shows it in every reply (§1, owner 2026-11-18).
 2. Create the new lead with `create_session`:
    - title `(mon-farm) Lead N`;
    - the note and this skill's path in its prompt.
