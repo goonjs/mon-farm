@@ -45,8 +45,7 @@ export const keepPerKg = (text: string) => text.replace(/ ฿\/(?=\S)/g, '\u00a0
 
 /** The prep in force: a sale started after its last write has used it (PREP-8). */
 export function livePrep(events: readonly FinanceEvent[], lastSaleTs: number | null): SalePrep | null {
-  const p = salePrep(events);
-  return p && lastSaleTs !== null && lastSaleTs > p.updatedTs ? null : p;
+  return salePrep(events, lastSaleTs);
 }
 
 /** Fertilizings not split yet (E16 "ยังไม่แบ่ง" / "แบ่งไม่ครบ" left for later), as the care list counts them. */
@@ -133,7 +132,9 @@ export function PrepView({ events, today, lastSaleDay, lastSaleTs, onWrite, onBu
         onClose={() => setSheet((s) => (s === 'date' ? 'none' : s))}
         value={day ?? prep?.date ?? ''}
         onChange={(iso) => {
+          // Written at once: closing the time sheet keeps the day (review of PR 201 N1).
           setDay(iso);
+          void onWrite({ date: iso });
           setSheet('time');
         }}
         title={msg('prep.date')}
@@ -150,7 +151,7 @@ export function PrepView({ events, today, lastSaleDay, lastSaleTs, onWrite, onBu
               accessibilityRole="button"
               onPress={() => {
                 setSheet('none');
-                if (day) void onWrite({ date: day, time });
+                if (day) void onWrite({ time });
               }}
               style={{ minHeight: t.target.comfortable, minWidth: CHIP_MIN_WIDTH, paddingHorizontal: t.space.md, borderRadius: t.radius.pill, borderWidth: t.border.hair, borderColor: t.color.rule, backgroundColor: t.color.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}
             >
@@ -211,7 +212,7 @@ function PrepRow({ testID, done, title, onPress, children }: { testID: string; d
   );
 }
 
-/** New fertilizer debt per tapper (summary-lines rule: 2 per line past 2 people, then Σ on its own line). */
+/** New fertilizer debt per tapper (summary-lines rule: 2 per line past 2 people, then Σ on its own line; one person, their line only). */
 function DebtLines({ debts }: { debts: readonly { worker: Payer; satang: number }[] }) {
   const t = useTheme();
   const { t: msg } = useI18n();
@@ -236,10 +237,12 @@ function DebtLines({ debts }: { debts: readonly { worker: Payer; satang: number 
           </View>
         ))}
       </View>
-      <View testID="prep-fert-total" style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
-        <Text style={{ ...text, fontWeight: t.font.weight.black, color: t.color.ink }}>{'Σ'}</Text>
-        <CompactMoney satang={total} />
-      </View>
+      {debts.length > 1 ? (
+        <View testID="prep-fert-total" style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+          <Text style={{ ...text, fontWeight: t.font.weight.black, color: t.color.ink }}>{'Σ'}</Text>
+          <CompactMoney satang={total} />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -315,7 +318,8 @@ function useLastSale(): { ts: number | null; day: string | null } {
 /** Writes one patch onto the prep record, based on its head. */
 function usePrepWrite(fin: ReturnType<typeof useFinance>) {
   return (patch: SalePrepPatch) => {
-    const head = [...(fin.events ?? [])].reverse().find((e) => e.targetId === SALE_PREP_TARGET)?.id ?? null;
+    // The newest write by the fold's own order (review of PR 201 B1), not the log's array order.
+    const head = (fin.events ?? []).filter((e) => e.targetId === SALE_PREP_TARGET).reduce<FinanceEvent | null>((h, e) => (!h || e.ts > h.ts || (e.ts === h.ts && e.id > h.id) ? e : h), null)?.id ?? null;
     return fin.write(SALE_PREP_TARGET, head, { t: 'sale_prep_set', patch });
   };
 }

@@ -375,7 +375,6 @@ function HomeMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
-/** Sales for the home rows: every sale's log, read again whenever home is shown. */
 /**
  * E15-S01 PREP-1: the sale prep in one row above the to-know list. Nothing prepared invites the next sale;
  * preparing shows the day, the buyer and the rows left; all done says ✓ พร้อมขาย. No reminder sentences.
@@ -404,6 +403,7 @@ function PrepRow({ events, sales }: { events: readonly FinanceEvent[] | null; sa
   );
 }
 
+/** Sales for the home rows: every sale's log, read again whenever home is shown. */
 function useHomeSales(): HomeSales | null {
   const [sales, setSales] = useState<HomeSales | null>(null);
   const reload = useCallback(() => {

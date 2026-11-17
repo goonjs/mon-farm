@@ -21,15 +21,23 @@ export interface SalePrep {
 
 const EMPTY: Omit<SalePrep, 'updatedTs'> = { buyerId: null, buyerName: '', date: null, time: null, priceSatangPerKg: null };
 
+/** One order every phone agrees on, whatever order the log arrived in (review of PR 201 B1): time, then who, then id. */
+const byWrite = (a: FinanceEvent, b: FinanceEvent) =>
+  a.ts - b.ts || (a.actor.deviceId < b.actor.deviceId ? -1 : a.actor.deviceId > b.actor.deviceId ? 1 : 0) || a.deviceSeq - b.deviceSeq || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
 /**
- * The current prep, or null when there is none (never set, or cancelled). Patches apply in log order, each
- * replacing only the fields it carries, so writes of different rows from two phones both stay.
+ * The current prep, or null when there is none (never set, cancelled, or used by a sale). Patches apply in
+ * write order, each replacing only the fields it carries, so writes of different rows from two phones both
+ * stay. A sale started at `lastSaleTs` uses up the prep written before it: the next write starts from nothing
+ * (review of PR 201 B2), so the last sale's buyer and price are never ticked for the next one.
  */
-export function salePrep(events: readonly FinanceEvent[]): SalePrep | null {
+export function salePrep(events: readonly FinanceEvent[], lastSaleTs: number | null = null): SalePrep | null {
   let cur: SalePrep | null = null;
-  for (const e of events) {
+  const used = (p: SalePrep | null) => p !== null && lastSaleTs !== null && lastSaleTs > p.updatedTs;
+  for (const e of events.filter((x) => x.payload.t === 'sale_prep_set').sort(byWrite)) {
     if (e.payload.t !== 'sale_prep_set') continue;
     const patch: SalePrepPatch = e.payload.patch;
+    if (used(cur) && e.ts > lastSaleTs!) cur = null;
     if (patch.cancelled) {
       cur = null;
       continue;
@@ -44,7 +52,7 @@ export function salePrep(events: readonly FinanceEvent[]): SalePrep | null {
       updatedTs: Math.max(base.updatedTs, e.ts),
     };
   }
-  return cur;
+  return used(cur) ? null : cur;
 }
 
 /** How many of the 4 rows are still open: buyer, date, price, and fertilizer left to split. The time never counts. */
