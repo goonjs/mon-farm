@@ -23,6 +23,10 @@ import { PointScreen } from '../v2/sale/point-screen';
 import { StartSaleScreen } from '../v2/sale/start-screen';
 import { ZeroTareScreen } from '../v2/sale/zero-tare-screen';
 
+jest.mock('../store/finance', () => {
+  const { MemoryFinanceStore } = jest.requireActual('../store/finance-memory');
+  return { financeStore: new MemoryFinanceStore() };
+});
 jest.mock('../store/store', () => {
   const { MemoryStore } = jest.requireActual('../store/memory-store');
   return { store: new MemoryStore() };
