@@ -42,7 +42,7 @@ AGENTS.md and docs/process.md stay binding; this skill covers what they do not.
 
 ## 2. Session names (owner rule, 2026-11-18)
 
-The owner's words, on the dashboard on 2026-11-18 at 00:32: "prefix ของเซสชันให้ขึ้นต้นด้วยมนฟาร์มวงเล็บ … งานที่ต้องการให้ผม take action ให้ prefix เพิ่ม emoticon raise hand ถ้าตอบแล้วไม่มีอะไรก็เอาลง … เซสชั่นลูกทำงานเสร็จแล้วไม่มีงานค้างแล้วไม่รอฮุกอะไรแล้วให้ prefix ด้วย emoticon 2 อันคือ raise hand และเครื่องหมายติ๊กถูก … ไม่เปิดเซสชันมากเกินไป"
+The owner's words, in the lead chat at about 00:35 Bangkok on 2026-11-18 (sent with the 00:32 dashboard answers, not one of them): "prefix ของเซสชันให้ขึ้นต้นด้วยมนฟาร์มวงเล็บนะใช้มนขีดฟาร์มในวงเล็บแล้วก็สำหรับงานที่ต้องการให้ผม take action ให้ prefix เพิ่ม emoticon raise hand ถ้าตอบแล้วไม่มีอะไรก็เอาลงด้วยอย่าลืม … ถ้าเซสชั่นลูกทำงานเสร็จแล้วไม่มีงานค้างแล้วไม่รอฮุกอะไรแล้วให้ prefix ด้วย emoticon 2 อันคือ raise hand และเครื่องหมายติ๊กถูก". In the same message the owner gave "ไม่เปิดเซสชันมากเกินไป" as an example of an earlier rule to recap.
 
 - Every session you control starts with `(mon-farm)`.
 - Add 🙋🏻‍♂️ in front while the owner must act. Remove it once answered.
