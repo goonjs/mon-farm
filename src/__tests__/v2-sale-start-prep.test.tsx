@@ -6,6 +6,7 @@
  */
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { ReactElement, ReactNode } from 'react';
+import { StyleSheet } from 'react-native';
 
 import { LogBuilder } from '../core/fixtures';
 import { SALE_PREP_TARGET } from '../core/finance/sale-prep';
@@ -157,6 +158,8 @@ describe('B · a prep for a later day asks first (PS-3)', () => {
     expect(screen.getByTestId('start-prep-ask')).toHaveTextContent(/52\.50/);
     expect(screen.getByTestId('start-buyer')).not.toHaveTextContent(/ที่นัดไว้/);
     expect(screen.getByTestId('start-price-row')).not.toHaveTextContent(/52\.50/);
+    // mockup B: the "ไม่ใช้ ตั้งเอง" link sits in the middle under the full-width button
+    expect(StyleSheet.flatten(screen.getByTestId('start-prep-skip-row').props.style)).toMatchObject({ alignItems: 'center' });
   });
 
   it('ใช้ที่เตรียมไว้ → filled like A, the card gone', async () => {
