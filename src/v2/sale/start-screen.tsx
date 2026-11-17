@@ -47,7 +47,7 @@ import {
   FarmMateArt,
 } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
-import { keepPerKg, prepDayText } from '../prepare/prepare-screen';
+import { keepPerKg, prepDayText } from '../prepare/prep-format';
 import { loadHomeSales } from './open-sale';
 import { EmptyPill, FieldRow, IconLine, SegOptions, useSaleView } from './pieces';
 import { PRICE_MAX_SATANG } from './sale-options';
@@ -275,7 +275,7 @@ export function StartSaleScreen() {
           <CTA testID="start-prep-use" onPress={() => setPrepChoice('use')}>
             {msg('start.prepUse')}
           </CTA>
-          <TextLink testID="start-prep-skip" onPress={() => setPrepChoice('skip')}>
+          <TextLink testID="start-prep-skip" align="center" onPress={() => setPrepChoice('skip')}>
             {msg('start.prepSkip')}
           </TextLink>
         </View>
