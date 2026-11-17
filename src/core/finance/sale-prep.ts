@@ -60,6 +60,27 @@ export function prepLeft(prep: SalePrep | null, unsplit: number): number {
   return [!prep?.buyerId, !prep?.date, prep?.priceSatangPerKg == null, unsplit > 0].filter(Boolean).length;
 }
 
+/** What the start-sale page takes from the prep: the buyer, the price, and whether to ask first. */
+export interface PrepFill {
+  readonly buyerId: string | null;
+  readonly priceSatangPerKg: number | null;
+  /** The prep is for a day after today: ask "ใช้ที่เตรียมไว้ไหม" instead of filling quietly (E15-S02 PS-3). */
+  readonly ask: boolean;
+}
+
+/**
+ * E15-S02 · what the start-sale page fills from `prep` (as `salePrep` returns it: null once a sale used it).
+ * The buyer only while that buyer is still live; the price only when one was agreed (PS-6). Read-only: nothing
+ * is written and the sale keeps no link to the prep (q2) — it is "used" by time (PREP-8). Null = nothing to give.
+ */
+export function prepFill(prep: SalePrep | null, today: string, liveBuyerIds: readonly string[]): PrepFill | null {
+  if (!prep) return null;
+  const buyerId = prep.buyerId !== null && liveBuyerIds.includes(prep.buyerId) ? prep.buyerId : null;
+  const priceSatangPerKg = prep.priceSatangPerKg !== null && prep.priceSatangPerKg > 0 ? prep.priceSatangPerKg : null;
+  if (buyerId === null && priceSatangPerKg === null) return null;
+  return { buyerId, priceSatangPerKg, ask: prep.date !== null && prep.date > today };
+}
+
 export interface PrepDebtInput {
   readonly worker: Payer;
   readonly amountSatang: number;
