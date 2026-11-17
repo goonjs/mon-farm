@@ -139,7 +139,7 @@ function HistoryRow({ row, top, latest, place, tapper, cumG }: { row: BasketRow;
   const undone = row.status === 'undone';
   const dead = voided || undone;
   const bridged = !!row.partsG && row.partsG.length > 1;
-  const kindLabel = row.part ? msg('hist.part') : row.short ? msg('hist.short') : msg('hist.full');
+  const kindLabel = row.part ? msg('hist.part') : row.short ? msg('hist.short') : bridged ? msg('hist.fullBridged') : msg('hist.full');
   const struck = dead ? ({ textDecorationLine: 'line-through', color: t.color.inkFaint } as const) : null;
   const detail = bridged
     ? msg('hist.parts', { parts: row.partsG!.map(kgText).join(' + ') })
@@ -149,7 +149,14 @@ function HistoryRow({ row, top, latest, place, tapper, cumG }: { row: BasketRow;
   return (
     <View testID={`hist-row-${row.id}`} style={{ flexDirection: 'row', gap: t.space.sm, paddingVertical: t.space.sm, borderTopWidth: top ? 0 : t.border.hair, borderTopColor: t.color.ruleFaint }}>
       <View style={{ minWidth: 48, flexShrink: 0, alignItems: 'center' }}>
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink, ...struck }}>{row.basketNo}</Text>
+        {/* A joined basket: its number in a red circle (owner 2026-11-17, E04-S23 JB-1); not when undone or voided. */}
+        {bridged && !dead ? (
+          <View testID={`hist-joined-no-${row.id}`} style={{ minWidth: 40, height: 40, paddingHorizontal: t.space.xs, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: t.color.reject }}>
+            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.inkInverse }}>{row.basketNo}</Text>
+          </View>
+        ) : (
+          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink, ...struck }}>{row.basketNo}</Text>
+        )}
         {latest ? <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.caption, color: t.color.inkSoft }}>{msg('hist.newest')}</Text> : null}
       </View>
       <View style={{ flex: 1, gap: 2 }}>
@@ -167,7 +174,7 @@ function HistoryRow({ row, top, latest, place, tapper, cumG }: { row: BasketRow;
         ) : null}
         {row.backfill || dead || bridged ? (
           <View style={{ flexDirection: 'row', gap: t.space.xs, flexWrap: 'wrap' }}>
-            {bridged ? <Chip label={msg('hist.bridged')} /> : null}
+            {bridged ? <Chip testID={`hist-joined-tag-${row.id}`} tone="warn" label={msg('hist.bridged')} /> : null}
             {row.backfill ? <Chip label={msg('rec.backfillTag')} /> : null}
             {voided ? <Chip tone="reject" label={msg('rec.voided')} /> : null}
             {undone ? <Chip tone="reject" label={msg('hist.undone', { time: clockSeconds(row.undoneTs ?? row.by.ts) })} /> : null}
