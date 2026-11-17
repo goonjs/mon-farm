@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เปลี่ยนวิธีเติม E04-S24</title>
+<style>
+:root{--bg:#f4f6f8;--fg:#14202e;--mute:#566577;--line:#d3dae1;--accent:#0b4a8f}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0d141c;--fg:#e6ecf2;--mute:#9aa8b8;--line:#2a3846;--accent:#7db7ff;color-scheme:dark}}
+:root[data-theme=dark]{--bg:#0d141c;--fg:#e6ecf2;--mute:#9aa8b8;--line:#2a3846;--accent:#7db7ff;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:'Noto Sans Thai',system-ui,sans-serif;padding:24px 16px;line-height:1.5}
+main{max-width:1300px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+h1{font-size:1.5rem;margin:0}h2{font-size:1.1rem;margin:0}
+.why{color:var(--mute);font-size:.92rem;margin:4px 0 0;max-width:80ch}
+section{display:flex;flex-direction:column;gap:10px}
+.pair{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.col{display:flex;flex-direction:column;gap:6px;width:360px;max-width:100%}
+.tag{font-size:.8rem;font-weight:800;letter-spacing:.04em;color:var(--mute)}.tag.after{color:var(--accent)}
+.before{width:360px;max-width:100%;border:2px dashed var(--line);border-radius:18px;display:block}
+.note{font-size:.85rem;color:var(--mute);margin:0}.note b{color:var(--fg)}
+/* ===== phone (fixed app palette) ===== */
+.phone{--n:#002858;--ns:#52657a;--s:#f7fafc;--r:#fff;--sunk:#eef1f4;--ru:#cbd4dc;--w:#815908;--ws:#fff5d8;--ok:#0d7a4f;
+ width:360px;height:844px;background:var(--s);border-radius:22px;border:1px solid #1c2733;overflow:hidden;color:var(--n);font-size:15px;line-height:1.4;position:relative;display:flex;flex-direction:column}
+.phone *{box-sizing:border-box}
+.ab{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--r);border-bottom:1px solid var(--ru);min-height:64px}
+.ab .back{font-size:22px}.ab .t{flex:1;display:flex;flex-direction:column}.ab b{font-size:19px}.ab small{font-size:12px;color:var(--ns)}
+.ab .sync{font-size:12px;font-weight:700;color:var(--ok);background:#e3f4ec;border-radius:99px;padding:3px 10px}
+.body{flex:1;overflow:hidden;padding:12px 16px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--r);border:1px solid var(--ru);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.lbl{font-size:13px;font-weight:700;color:var(--ns)}
+.hint{font-size:12.5px;color:var(--ns)}
+.seg{display:flex;background:var(--sunk);border-radius:14px;padding:4px;gap:4px}
+.seg span{flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:11px;font-weight:700;font-size:15px}
+.seg span.on{background:var(--n);color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips span{min-width:52px;min-height:48px;padding:0 12px;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid var(--ru);background:var(--r);font-weight:700;font-variant-numeric:tabular-nums}
+.chips span.on{background:var(--n);border-color:var(--n);color:#fff}
+.chips.even{gap:6px;flex-wrap:nowrap}.chips.even span{flex:1;min-width:48px;padding:0}
+.chips em{font-style:normal;font-size:13px;color:var(--ns);align-self:center}
+.field{display:flex;align-items:center;gap:10px;min-height:56px;border:1px solid var(--ru);border-radius:14px;padding:8px 14px;background:var(--r)}
+.field .k{flex:1;display:flex;flex-direction:column}.field .k small{font-size:12px;color:var(--ns)}
+.field .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}.field .u{font-size:13px;color:var(--ns)}
+.field .chev{font-size:22px;color:var(--ns)}
+.field.on{border:2px solid var(--n)}
+.field .badge{font-size:11.5px;font-weight:700;background:var(--n);color:#fff;border-radius:99px;padding:2px 9px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pad span{min-height:52px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--r);border:1px solid var(--ru);font-size:22px;font-weight:700}
+.pad span.fn{background:var(--sunk)}
+.pad span.ok{background:var(--n);color:#fff;font-size:17px}
+.btn{min-height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;background:var(--n);color:#fff}
+.btn.ghost{background:var(--r);color:var(--n);border:2px solid var(--n)}
+.btns{display:flex;gap:10px}.btns .btn{flex:1}
+.shade{position:absolute;inset:64px 0 0 0;background:#0b152066}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--r);border-radius:22px 22px 0 0;padding:8px 16px 16px;display:flex;flex-direction:column;gap:10px;max-height:760px;overflow:hidden}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--ru);margin:2px auto 4px}
+.sheet h4{margin:0;font-size:18px}
+.row{display:flex;align-items:center;gap:10px;min-height:56px;border-top:1px solid var(--ru);padding-top:8px}
+.row .who{flex:1;display:flex;flex-direction:column}.row .who small{font-size:12px;color:var(--ns)}
+.row .val{font-weight:800;font-size:18px}.row .chev{font-size:22px;color:var(--ns)}
+.steps{display:flex;gap:6px;flex-wrap:wrap}.steps span{font-size:12px;font-weight:700;border-radius:99px;padding:4px 10px;background:#e3f4ec;color:var(--ok)}.steps span.cur{background:var(--n);color:#fff}.steps span.next{background:var(--sunk);color:var(--ns)}
+.choice{display:flex;gap:10px;border:1px solid var(--ru);border-radius:14px;padding:10px 12px}
+.choice b{display:block}.choice small{font-size:12.5px;color:var(--ns)}
+.big{display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid var(--n);border-radius:16px;padding:10px}
+.big .v{font-size:44px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1}.big .v small{font-size:16px;font-weight:600}
+.big .tap{font-size:12.5px;font-weight:700;color:var(--n);text-decoration:underline}
+.ruler{height:64px;border-radius:12px;background:repeating-linear-gradient(90deg,#9aa8b8 0 1px,transparent 1px 8px),var(--ws);position:relative}
+.ruler i{position:absolute;left:50%;top:0;bottom:0;width:3px;background:var(--n)}
+.tiles{display:flex;gap:8px}.tiles div{flex:1;border:1px solid var(--ru);border-radius:12px;padding:8px}.tiles small{display:block;font-size:12px;color:var(--ns)}.tiles b{font-size:20px}
+.warn{font-size:13px;background:var(--ws);color:var(--w);border-radius:12px;padding:8px 10px}
+
+.guide{border:2px solid #f2b233;background:var(--ws);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.guide h5{margin:0;font-size:18px}
+.track{height:14px;border-radius:7px;background:var(--sunk);border:1px solid var(--ru);display:flex;overflow:hidden}.track i{display:block;height:100%}.track .have{background:var(--n)}.track .add{background:repeating-linear-gradient(45deg,#f2b233 0 6px,#ffd97a 6px 12px)}
+.bl{display:flex;justify-content:space-between;font-size:12px;color:var(--ns)}
+.st{display:flex;align-items:center;gap:8px;background:var(--r);border-radius:10px;padding:6px 8px;font-size:13.5px}.st i{font-style:normal;width:24px;height:24px;border-radius:12px;background:var(--n);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex:none}
+.change{display:flex;align-items:center;gap:8px;min-height:48px;border-top:1px solid #e7cf8f;padding-top:6px;color:var(--n);font-weight:800}
+.change span{flex:1;text-decoration:underline}
+.should{display:flex;flex-direction:column;align-items:center;border:2px solid var(--ru);border-radius:16px;padding:10px;background:var(--r)}
+.should small{font-size:13px;color:var(--ns)}.should b{font-size:40px;line-height:1.1}.should em{font-style:normal;font-weight:700}
+.tools{display:flex;gap:8px}.tools div{flex:1;min-height:56px;border:1px solid var(--ru);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;text-align:center;background:var(--r)}
+.way{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--ru);border-radius:14px;padding:10px 12px;background:var(--r)}
+.way.on{border:2px solid var(--n);background:#eef5fb}
+.way .num{flex:none;width:28px;height:28px;border-radius:14px;border:2px solid var(--n);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px}
+.way.on .num{background:var(--n);color:#fff}
+.way .w{flex:1;display:flex;flex-direction:column}.way .w small{font-size:12.5px;color:var(--ns)}
+.way .sc{flex:none;text-align:right;font-size:11px;color:var(--ns)}.way .sc b{display:block;font-size:20px;color:var(--n)}
+.cur{font-size:11.5px;font-weight:800;color:#0d7a4f}
+.pointbar{display:flex;align-items:center;gap:8px;background:var(--r);border:1px solid var(--ru);border-radius:14px;padding:8px 12px}.pointbar b{flex:1}
+.pointbar .sw{font-weight:800;border:2px solid var(--n);border-radius:99px;padding:8px 14px;min-height:48px;display:flex;align-items:center}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>E04-S24 · เปลี่ยนวิธีเติมเข่งก่อนกดค้าง</h1>
+<p class="why">เจ้าของ 2026-11-17 (dashboard fill-change): "ก · เพิ่มลิงก์ เปลี่ยนวิธีเติม &gt; บนการ์ดคำแนะนำหน้านับ (ก่อนกดค้าง) — ทำ mockup ให้ดูก่อน (แนะนำ)". ตอนนี้เปลี่ยนใจได้แต่ต้องรู้ว่ากด "เปลี่ยนจุด" แล้วเลือกจุดเดิม. ที่เสนอ: 4 จอตามลำดับ ตั้งแต่แผ่น 3 วิธี → หน้านับ → แตะลิงก์ → แผ่นเดิม → หน้านับวิธีใหม่. ซ้าย = หน้าจริงตอนนี้ (dev), ขวา = ที่เสนอ. จอ 360×844.</p>
+</header>
+<section><h2>1 · เปลี่ยนจุดไปจุด 2: แผ่นเลือก 3 วิธี</h2><div class="pair"><div class="col"><span class="tag">ตอนนี้</span><img class="before" src="../screenshots/e04-s24/before/1-fill-sheet.png" alt="ตอนนี้"></div><div class="col"><span class="tag after">เสนอ</span><div class="phone" id="f1-sheet"><div class="ab"><span class="back">‹</span><div class="t"><b>เปลี่ยนจุด</b><small>การขาย 17 พ.ย. 2569</small></div><span class="sync">ซิงก์แล้ว</span></div><div class="shade"></div><div class="sheet"><div class="grab"></div>
+<h4>เข่ง 2 ยังไม่เต็ม — เลือก 1 ใน 3 วิธี</h4>
+<span class="hint">จาก จันทเขลม จุด 1 › ไป จันทเขลม จุด 2 · คนกรีดยาง: แดง</span>
+<div><div class="track"><i class="have" style="width:70%"></i><i class="add" style="width:30%"></i></div><div class="bl"><span>35 กก. มีแล้ว</span><span>15 กก. เติม</span><span>เต็ม 50 กก.</span></div></div>
+<div class="way on"><span class="num">1</span><div class="w"><b>เติมให้เต็มเข่ง</b><small>ผล: เข่ง 2 เต็ม 50 กก. · เทยางเพิ่ม 15 กก. ลงเข่ง 2 ใบเดิม</small></div><div class="sc">ตาชั่ง<b>52</b></div></div><div class="way"><span class="num">2</span><div class="w"><b>ชั่งแยกส่วนที่เติม</b><small>เข่งเปล่าใบใหม่ เติมยาง 15 กก. · เข่ง 2 ใบเดิมไม่ต้องยก</small></div><div class="sc">ตาชั่ง<b>17</b></div></div><div class="way"><span class="num">3</span><div class="w"><b>ปล่อยเข่งไม่เต็มไว้</b><small>เข่ง 2 ไม่เต็ม 35 กก. · ต่อไปเข่ง 3</small></div><div class="sc">ตาชั่ง<b>—</b></div></div><div class="btn">เติมเข่ง 2 · ตาชั่งต้องอ่าน 52</div></div></div><p class="note">หัวแผ่นบอก "เลือก 1 ใน 3 วิธี" และแต่ละวิธีมีเลข 1 2 3</p></div></div></section>
+<section><h2>2 · หน้านับ: การ์ดบอกวิธีที่เลือก + "เปลี่ยนวิธีเติม ›"</h2><div class="pair"><div class="col"><span class="tag">ตอนนี้</span><img class="before" src="../screenshots/e04-s24/before/2-counter-fill.png" alt="ตอนนี้"></div><div class="col"><span class="tag after">เสนอ</span><div class="phone" id="f2-counter-full"><div class="ab"><span class="back">‹</span><div class="t"><b>นับเข่ง</b><small>การขาย 17 พ.ย. 2569</small></div><span class="sync">ซิงก์แล้ว</span></div><div class="body">
+<div class="pointbar"><b>จันทเขลม · จุด 2</b><span class="sw">⇄ เปลี่ยนจุด</span></div>
+<div class="guide"><h5>วิธีที่ 1 · เติมให้เต็มเข่ง 2</h5>
+<div><div class="track"><i class="have" style="width:70%"></i><i class="add" style="width:30%"></i></div><div class="bl"><span>35 มีแล้ว</span><span>15 เติม</span><span>เต็ม 50</span></div></div>
+<div class="st"><i>1</i><span>เทยางเพิ่ม 15 กก. ลงเข่ง 2 ใบเดิม</span></div><div class="st"><i>2</i><span>ตาชั่งต้องอ่าน 52</span></div><div class="st"><i>3</i><span>กดค้างด้านล่าง</span></div>
+<div class="change"><span>เปลี่ยนวิธีเติม</span><b>›</b></div>
+</div>
+<div class="should"><small>ตาชั่งต้องอ่าน</small><b>52 <small>กก.</small></b><em>แล้วกดค้างเพื่อนับ</em></div>
+
+<div style="flex:1"></div>
+<div class="tools"><div>ย้อนกลับ<br>กดค้าง · เข่ง 1</div><div>ประวัติ</div><div>เติมไม่ถึง</div></div>
+</div></div><p class="note">หัวการ์ดบอกว่าใช้วิธีไหน (วิธีที่ 1) · แถว "เปลี่ยนวิธีเติม ›" ทั้งแถวแตะได้ ไม่ใช่ปุ่มกลม · มีจนกว่าจะกดค้างครั้งแรก</p></div></div></section>
+<section><h2>3 · แตะ "เปลี่ยนวิธีเติม": แผ่นเดิมกลับมา</h2><div class="pair"><div class="col"><span class="tag after">เสนอ</span><div class="phone" id="f3-sheet-again"><div class="ab"><span class="back">‹</span><div class="t"><b>นับเข่ง</b><small>การขาย 17 พ.ย. 2569</small></div><span class="sync">ซิงก์แล้ว</span></div><div class="shade"></div><div class="sheet"><div class="grab"></div>
+<h4>เข่ง 2 ยังไม่เต็ม — เลือก 1 ใน 3 วิธี</h4>
+<span class="hint">จาก จันทเขลม จุด 1 › ไป จันทเขลม จุด 2 · คนกรีดยาง: แดง</span>
+<div><div class="track"><i class="have" style="width:70%"></i><i class="add" style="width:30%"></i></div><div class="bl"><span>35 กก. มีแล้ว</span><span>15 กก. เติม</span><span>เต็ม 50 กก.</span></div></div>
+<div class="way"><span class="num">1</span><div class="w"><b>เติมให้เต็มเข่ง</b><small>ผล: เข่ง 2 เต็ม 50 กก. · เทยางเพิ่ม 15 กก. ลงเข่ง 2 ใบเดิม</small><span class="cur">✓ ใช้อยู่ตอนนี้</span></div><div class="sc">ตาชั่ง<b>52</b></div></div><div class="way on"><span class="num">2</span><div class="w"><b>ชั่งแยกส่วนที่เติม</b><small>เข่งเปล่าใบใหม่ เติมยาง 15 กก. · เข่ง 2 ใบเดิมไม่ต้องยก</small></div><div class="sc">ตาชั่ง<b>17</b></div></div><div class="way"><span class="num">3</span><div class="w"><b>ปล่อยเข่งไม่เต็มไว้</b><small>เข่ง 2 ไม่เต็ม 35 กก. · ต่อไปเข่ง 3</small></div><div class="sc">ตาชั่ง<b>—</b></div></div><div class="btn">ใช้วิธีที่ 2 · ตาชั่งต้องอ่าน 17</div></div></div><p class="note">วิธีที่ใช้อยู่มี ✓ ใช้อยู่ตอนนี้ · เลือกวิธีอื่นแล้วกดปุ่มล่าง · ยังไม่มีอะไรบันทึกจนกว่าจะกดค้าง</p></div></div></section>
+<section><h2>4 · กลับหน้านับด้วยวิธีใหม่</h2><div class="pair"><div class="col"><span class="tag after">เสนอ</span><div class="phone" id="f4-counter-part"><div class="ab"><span class="back">‹</span><div class="t"><b>นับเข่ง</b><small>การขาย 17 พ.ย. 2569</small></div><span class="sync">ซิงก์แล้ว</span></div><div class="body">
+<div class="pointbar"><b>จันทเขลม · จุด 2</b><span class="sw">⇄ เปลี่ยนจุด</span></div>
+<div class="guide"><h5>วิธีที่ 2 · ชั่งแยกส่วนที่เติม</h5>
+<div><div class="track"><i class="have" style="width:70%"></i><i class="add" style="width:30%"></i></div><div class="bl"><span>35 มีแล้ว</span><span>15 เติม</span><span>เต็ม 50</span></div></div>
+<div class="st"><i>1</i><span>เข่งเปล่าใบใหม่ เติมยาง 15 กก.</span></div><div class="st"><i>2</i><span>ตาชั่งต้องอ่าน 17</span></div><div class="st"><i>3</i><span>กดค้างด้านล่าง</span></div>
+<div class="change"><span>เปลี่ยนวิธีเติม</span><b>›</b></div>
+</div>
+<div class="should"><small>ตาชั่งต้องอ่าน</small><b>17 <small>กก.</small></b><em>แล้วกดค้างเพื่อนับ</em></div>
+
+<div style="flex:1"></div>
+<div class="tools"><div>ย้อนกลับ<br>กดค้าง · เข่ง 1</div><div>ประวัติ</div><div>เติมไม่ถึง</div></div>
+</div></div><p class="note">การ์ดเปลี่ยนเป็นวิธีที่ 2 ตาชั่งต้องอ่าน 17 · ยังเปลี่ยนได้อีกจนกว่าจะกดค้าง</p></div></div></section>
+
+<section><h2>หลังกดค้างครั้งแรก</h2><p class="why">ลิงก์หายไป (การเติมถูกบันทึกแล้ว). ถ้าเปลี่ยนใจ: กดค้าง "ย้อนกลับ" ยกเลิกส่วนที่เติม แล้วการ์ดและลิงก์กลับมา (ทำได้แล้วตอนนี้ ไม่เปลี่ยน).</p></section>
+<section><h2>คำถามถึงเจ้าของ</h2><p class="why"><b>Q1</b> ลิงก์ "เปลี่ยนวิธีเติม ›" ท้ายการ์ด (แนะนำ) โอเคไหม? · <b>Q2</b> หัวแผ่น "เลือก 1 ใน 3 วิธี" และเลข 1 2 3 หน้าวิธี ช่วยให้เห็นว่ามี 3 ทางไหม? · <b>Q3</b> หัวการ์ดหน้านับบอก "วิธีที่ 1 · …" (แนะนำ) หรือคงหัวเดิม "เติมให้เต็มเข่ง 2"?</p></section>
+</main>
+</body>
+</html>
