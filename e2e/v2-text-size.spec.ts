@@ -190,7 +190,7 @@ async function tour(page: Page, size: keyof typeof AT) {
   await check('short-sheet');
   // NP-9 (re-check 2026-11-17): a reading over a full basket adds a warning; ยกเลิก / บันทึก stay wholly on screen.
   for (const k of '999.9') await id(`reading-pad-key-${k}`).click();
-  await expect(id('short-over')).toBeVisible();
+  await expect(id('short-over')).toBeInViewport({ ratio: 1 });
   await expect(id('short-save')).toBeInViewport({ ratio: 1 });
   await expect(id('short-cancel')).toBeInViewport({ ratio: 1 });
   await check('short-sheet-over');
