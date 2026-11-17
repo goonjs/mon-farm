@@ -257,7 +257,7 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
       borderColor: bad ? t.color.reject : on ? t.color.action : t.color.ruleStrong,
       borderRadius: t.radius.lg,
       paddingHorizontal: two ? t.space.md : t.space.lg,
-      paddingVertical: two ? t.space.xs : t.space.sm,
+      paddingVertical: t.space.xs,
       backgroundColor: on && two ? t.color.actionSunk : t.color.surfaceRaised,
     };
     if (!two) {
@@ -302,7 +302,7 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
         <InstallmentPane w={w} view={view} onView={toView} onNewDebt={newDebt} onSplit={split} onTyped={() => toView('pad')} onNone={none} onOk={ok} blocked={blocked} />
       ) : (
       // one column a step tighter than the sheet's own gap: the pad and ✓ stay on screen with netting too (A23)
-      <View style={{ gap: t.space.sm, marginBottom: -t.space.sm }}>
+      <View style={{ gap: t.space.xs, marginBottom: -t.space.sm }}>
         {running && w.installment ? (
           <>
             <AppText testID="co-inst-sub" variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.inst.typedSub', { count: w.installment.count, number: w.installment.number })}</AppText>
@@ -310,7 +310,7 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
           </>
         ) : null}
         {running ? null : (
-        <View style={{ backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.lg, paddingHorizontal: t.space.md, paddingVertical: t.space.sm }}>
+        <View style={{ backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.lg, paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
           <SmallLine label={msg('co.deduct.debt', { name: w.name, n: pieces.length })} value={baht(balance)} />
           <SmallLine label={netted ? msg('co.deduct.capNet', { amount: shortBaht(w.nettingSatang) }) : msg('co.deduct.cap')} value={baht(w.capSatang)} />
           <View style={{ borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, marginVertical: t.space.xxs }} />
@@ -338,7 +338,7 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
         )}
         {/* E06-S10 DS-2: what the plan says, a green strip with ✓ under the two boxes (mockup `.after`) */}
         {!running && w.installment?.mode === 'new' ? (
-          <View testID="co-inst-strip" style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs, backgroundColor: t.color.acceptSunk, borderRadius: t.radius.md, paddingHorizontal: t.space.sm, paddingVertical: t.space.xs }}>
+          <View testID="co-inst-strip" style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs, backgroundColor: t.color.acceptSunk, borderRadius: t.radius.md, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs }}>
             <Check color={t.color.accept} size={16} />
             <AppText testID="co-inst-first" variant="bodySm" style={{ flexShrink: 1, color: t.color.accept, fontWeight: t.font.weight.bold }}>
               {msg('co.inst.first', { count: w.installment.count, amount: shortBaht(w.installment.nextSatang[0] ?? 0) })}
@@ -426,7 +426,7 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
 
         {co.mixed?.has(w.id) ? <MergeWarn testID="co-merge-warn" /> : null}
 
-        <NumberPad variant="money" testID="co-pad" onKey={press} onDone={ok} doneDisabled={blocked} />
+        <NumberPad variant="money" compact testID="co-pad" onKey={press} onDone={ok} doneDisabled={blocked} />
         <CTA testID="co-deduct-ok" disabled={blocked} icon={(c) => <Check color={c} />} onPress={ok}>
           {running ? msg('co.inst.okTyped', { amount: shortBaht(w.totalSatang) }) : msg('co.deduct.ok')}
         </CTA>
@@ -452,7 +452,7 @@ export function MergeWarn({ testID, text }: { testID: string; text?: string }) {
 /** A label / figure row of the sheet's one info box, a step smaller than `Line` (A23 fits one screen). */
 function SmallLine({ label, value, testID, tone }: { label: string; value: string; testID?: string; tone?: string }) {
   const t = useTheme();
-  const st = { fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, lineHeight: Math.round(t.font.size.bodyMd * 1.5) } as const;
+  const st = { fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, lineHeight: Math.round(t.font.size.bodyMd * 1.35) } as const;
   return (
     <View testID={testID} style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: t.space.sm, flexWrap: 'wrap' }}>
       <Text style={{ ...st, flexShrink: 1, color: t.color.inkSoft }}>{label}</Text>
