@@ -17,6 +17,8 @@
  */
 
 import type { DebtAccount, DebtPayment } from './debts';
+import { projectFinance } from './ledger';
+import { legacyFertilizerSplitDebts } from './share';
 import { FARM_FUNDS, type FinanceEvent, type FinancePayload, type InstallmentPlanSpec, type Payer } from './types';
 
 export const MIN_INSTALLMENTS = 2;
@@ -88,7 +90,7 @@ export function planPayload(i: {
     t: 'debt_plan_set',
     worker: i.worker,
     perSaleSatang: installmentAmount(i.balanceSatang, i.count - (i.earlier?.length ?? 0)),
-    installments: { count: i.count, ...(i.earlier?.length ? { earlier: i.earlier } : {}), fromSaleId: i.fromSaleId, seen: i.seen, owedSatang: i.owedSatang },
+    installments: { count: i.count, ...(i.earlier?.length ? { earlier: i.earlier } : {}), fromSaleId: i.fromSaleId, seen: i.seen, owedSatang: i.owedSatang, basis: 'e16' },
   };
 }
 
@@ -160,7 +162,7 @@ export function planStatus(i: { readonly account: DebtAccount; readonly events: 
   const owed = i.account.summary.owed;
   const owedNow = owed.loan + owed.fertilizer + owed.other;
   const left = plan.count - paidSales.length;
-  const extraSatang = owedNow - plan.owedSatang;
+  const extraSatang = owedNow - planBaseline(plan, i.account.worker.id, i.events);
   // Review 1: as if the sale being closed had deducted nothing, so re-confirming its last instalment is not "over".
   const here = i.excludeSaleId ? i.account.payments.filter((p) => p.saleId === i.excludeSaleId && counting(p)).reduce((a, p) => a + p.amountSatang, 0) : 0;
   const balanceAsIf = i.account.balanceSatang + here;
@@ -174,6 +176,21 @@ export function planStatus(i: { readonly account: DebtAccount; readonly events: 
     extraSatang,
     done: left <= 0 || planDebtLeft <= 0,
   };
+}
+
+/**
+ * E11-S17 RM-7 (approach A, no data written): a plan from before old fertilizer order splits stopped counting
+ * included them in `owedSatang`. Take out the old split debt the plan had seen (events within its `seen`), so
+ * no false "new debt" appears and a real one is not hidden. A split added after the plan was never in it.
+ */
+function planBaseline(plan: InstallmentPlanSpec, workerId: string, events: readonly FinanceEvent[]): number {
+  if (plan.basis === 'e16') return plan.owedSatang;
+  const seen = events.filter((e) => {
+    const s = plan.seen[e.actor?.deviceId ?? ''];
+    return s !== undefined && e.deviceSeq <= s;
+  });
+  const old = legacyFertilizerSplitDebts(projectFinance(seen).expenses).filter((d) => !d.deleted && d.worker.id === workerId);
+  return plan.owedSatang - old.reduce((s, d) => s + d.amountSatang, 0);
 }
 
 export type NewDebtChoice = 'fold' | 'full';

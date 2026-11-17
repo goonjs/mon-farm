@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { tokens } from '../../design/tokens';
 import type { ReactNode } from 'react';
 
 import { AddDebtScreen, PayDebtScreen as DebtPaymentScreen } from '../v2/money/debt-forms';
@@ -6,6 +7,9 @@ import { DebtAccountScreen } from '../v2/money/debts-screens';
 import { projectDebts } from '../core/finance/debts';
 import { projectFinance } from '../core/finance/ledger';
 import { financeStore as mockFinance } from '../store/finance';
+import { todayIso } from '../core/finance/money';
+import { dayAfter } from '../core/master';
+import { dayCell, pickDate } from '../test/pick-date';
 import { wrap } from '../test/render';
 
 jest.mock('../store/finance', () => {
@@ -99,6 +103,8 @@ describe('debt ledger (E06-S03)', () => {
     fireEvent.press(screen.getByTestId('debt-pay-amount-done'));
     await act(async () => fireEvent.press(screen.getByTestId('debt-pay-save')));
     expect(screen.getByTestId('debt-pay-over')).toBeTruthy();
+    // while the over-pay question is open, its own two buttons decide: no Save bar
+    expect(screen.queryByTestId('save-bar')).toBeNull();
     await act(async () => fireEvent.press(screen.getByTestId('debt-pay-anyway')));
     await flush();
     const a = projectDebts(await mockFinance.load()).get('p-daeng');
@@ -116,14 +122,19 @@ describe('debt ledger (E06-S03)', () => {
     const payment = screen.getAllByTestId(/^debt-line-/);
     expect(payment).toHaveLength(1);
     const id = payment[0].props.testID.replace('debt-line-', '');
+    // Owner 2026-11-07: void is a red underlined link (style F); restore a blue one (style B) — no round buttons.
+    const flat = (st: unknown) => Object.assign({}, ...[st].flat(Infinity).filter(Boolean));
+    expect(flat(within(screen.getByTestId(`debt-void-${id}`)).getByText('ยกเลิก').props.style)).toMatchObject({ textDecorationLine: 'underline', color: tokens.color.light.reject });
+    expect(flat(screen.getByTestId(`debt-void-${id}`).props.style).borderWidth ?? 0).toBe(0);
     await act(async () => fireEvent.press(screen.getByTestId(`debt-void-${id}`)));
     await flush();
     expect(projectDebts(await mockFinance.load()).get('p-daeng')?.balanceSatang).toBe(200000);
+    expect(flat(within(screen.getByTestId(`debt-void-${id}`)).getByText('กู้คืน').props.style)).toMatchObject({ textDecorationLine: 'underline', color: tokens.color.light.action });
   });
 });
 
 describe('a debt made from an expense share (E11-S10)', () => {
-  it('cannot be voided here: it opens its expense (the flow for fertilizer)', async () => {
+  it('cannot be voided here: it opens its expense (a shared expense of another category, E11-S10 B)', async () => {
     mockParams.current = { workerId: 'p-som', name: 'สม' };
     await mockFinance.append({
       id: 'share-exp-1',
@@ -137,9 +148,8 @@ describe('a debt made from an expense share (E11-S10)', () => {
       payload: {
         t: 'expense_created',
         fields: {
-          amountSatang: 100000, date: '2026-10-01', stage: 'actual', categoryId: 'cat-fertilizer', propertyId: null, item: '', note: '', payer: null,
+          amountSatang: 100000, date: '2026-10-01', stage: 'actual', categoryId: 'cat-other', propertyId: null, item: 'ยาฆ่าหญ้า', note: '', payer: null,
           share: { billSatang: 100000, discountSatang: 0, totalSacks: 2, lines: [{ worker: { id: 'p-som', name: 'สม' }, sacks: 2, workerPct: 50, settle: 'debt' }] },
-          fertilizer: { type: 'chemical', formula: 'ยูเรีย', brand: '', sackKg: null, reasons: [], zones: [], shop: '', orderedBy: '' },
         },
       },
     });
@@ -148,7 +158,12 @@ describe('a debt made from an expense share (E11-S10)', () => {
     const id = 'exp-share-1:share:p-som';
     expect(screen.getByTestId(`debt-line-${id}`)).toBeTruthy();
     expect(screen.queryByTestId(`debt-void-${id}`)).toBeNull();
-    fireEvent.press(screen.getByTestId(`debt-open-${id}`));
+    // Owner 2026-11-07 (style A): the line itself opens the expense, a chevron on the right, no round button.
+    const open = screen.getByTestId(`debt-open-${id}`);
+    expect(within(open).getByTestId(`debt-open-${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
+    expect(within(open).queryByText('เปิดรายการค่าใช้จ่าย')).toBeNull();
+    expect(open.props.accessibilityLabel).toMatch(/^เปิดรายการค่าใช้จ่าย, .*, \+500\.00, /); // what the line says is read too
+    fireEvent.press(open);
     expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'exp-share-1' } });
   });
 
@@ -172,14 +187,97 @@ describe('a debt made from an expense share (E11-S10)', () => {
   });
 });
 
-describe('Save sits in the header (keyboard never covers it)', () => {
-  it('debt-save and debt-pay-save render inside screen-header', async () => {
+describe('a fertilizing lump in the history (E16-S03 SP-8, SP-9; E11-S17 RM-6)', () => {
+  const ev = (id: string, seq: number, targetId: string, payload: Parameters<typeof mockFinance.append>[0]['payload']) =>
+    mockFinance.append({ id, groupId: 'group-1', deviceSeq: seq, ts: seq, actor: { userId: 'u', deviceId: 'dev-fz' }, source: 'app', targetId, baseEventId: null, payload });
+
+  it('reads "ใส่ปุ๋ย {date}" with what was taken, says how much is left, and opens the fertilizing', async () => {
+    mockParams.current = { workerId: 'p-kaew', name: 'แก้ว' };
+    const kaew = { id: 'p-kaew', name: 'แก้ว' };
+    await ev('fz-item', 1, 'ord-z-a', {
+      t: 'expense_created',
+      fields: {
+        amountSatang: 300000, date: '2026-10-05', stage: 'actual', categoryId: 'cat-fertilizer', propertyId: null, item: 'ดีเกลือ', note: '', payer: null, orderId: 'ord-z',
+        line: { qty: 10, unit: 'กระสอบ', grossSatang: 300000, itemDiscountSatang: 0 },
+        fertilizer: { type: 'chemical', formula: 'ดีเกลือ', brand: '', sackKg: 50, reasons: [], zones: [], shop: '', orderedBy: '', sacks: 10 },
+      },
+    });
+    await ev('fz-rec', 2, 'fz-k1', {
+      t: 'fertilizing_recorded',
+      fields: { date: '2026-10-20', lines: [{ sources: ['ord-z-a'], sacks: 10, takes: [{ worker: kaew, sacks: 4, auto: false }], rest: 'farm' }], pct: { 'p-kaew': 50 }, settle: {}, zones: [], reasons: [], note: '' },
+    });
+    await ev('fz-pay', 3, 'pay-k1', { t: 'debt_payment_recorded', fields: { worker: kaew, creditor: { id: 'farm', name: '' }, amountSatang: 20000, date: '2026-10-25', note: '', method: 'buyer-split', saleId: 'sale-9' } });
+    wrap(<DebtAccountScreen />);
+    await flush();
+    const id = 'fz-k1:p-kaew';
+    const line = screen.getByTestId(`debt-line-${id}`);
+    expect(line).toHaveTextContent(/ใส่ปุ๋ย 20 ต\.ค\./);
+    expect(line).toHaveTextContent(/ดีเกลือ 4 ถุง/);
+    // 4 × 300 = 1,200 at 50% = 600; 200 deducted → 400 left
+    expect(screen.getByTestId(`debt-left-${id}`)).toHaveTextContent(/เหลือ ฿\s?400/);
+    fireEvent.press(screen.getByTestId(`debt-open-${id}`));
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/fertilizing', params: { id: 'fz-k1' } });
+  });
+
+  it('a source order whose price changed after the fertilizing says the lump was worked out again (SP-10)', async () => {
+    mockParams.current = { workerId: 'p-kaew', name: 'แก้ว' };
+    await mockFinance.append({ id: 'fz-price', groupId: 'group-1', deviceSeq: 5, ts: 5, actor: { userId: 'u', deviceId: 'dev-fz' }, source: 'app', targetId: 'ord-z-a', baseEventId: 'fz-item', payload: { t: 'expense_changed', patch: { amountSatang: 250000 } } });
+    wrap(<DebtAccountScreen />);
+    await flush();
+    expect(screen.getByTestId('debt-repriced-fz-k1:p-kaew')).toHaveTextContent('ราคาใบซื้อเปลี่ยน ยอดคิดใหม่');
+  });
+
+  it('a lump deducted in full says "หักหมดแล้ว"', async () => {
+    mockParams.current = { workerId: 'p-kaew', name: 'แก้ว' };
+    await ev('fz-pay2', 4, 'pay-k2', { t: 'debt_payment_recorded', fields: { worker: { id: 'p-kaew', name: 'แก้ว' }, creditor: { id: 'farm', name: '' }, amountSatang: 40000, date: '2026-10-26', note: '', method: 'buyer-split', saleId: 'sale-10' } });
+    wrap(<DebtAccountScreen />);
+    await flush();
+    expect(screen.getByTestId('debt-left-fz-k1:p-kaew')).toHaveTextContent('หักหมดแล้ว');
+  });
+});
+
+describe('Save is pinned at the bottom, full width (owner 2026-11-07, style I)', () => {
+  it('debt-save and debt-pay-save sit in the bottom save bar, not the header', async () => {
     wrap(<AddDebtScreen />);
     await flush();
-    expect(within(screen.getByTestId('screen-header')).getByTestId('debt-save')).toBeTruthy();
+    expect(within(screen.getByTestId('screen-header')).queryByTestId('debt-save')).toBeNull();
+    expect(within(screen.getByTestId('save-bar')).getByTestId('debt-save')).toBeTruthy();
     screen.unmount();
     wrap(<DebtPaymentScreen />);
     await flush();
-    expect(within(screen.getByTestId('screen-header')).getByTestId('debt-pay-save')).toBeTruthy();
+    expect(within(screen.getByTestId('save-bar')).getByTestId('debt-pay-save')).toBeTruthy();
+  });
+
+  it('the date on add-debt and pay-back is picked from a calendar, not typed (E01-S22 DP-1)', async () => {
+    wrap(<AddDebtScreen />);
+    await flush();
+    expect(screen.getByTestId('debt-date').props.accessibilityRole).toBe('button');
+    pickDate('debt-date', '2026-09-10');
+    expect(screen.getByTestId('debt-date-value')).toHaveTextContent('10 ก.ย. 2569');
+    screen.unmount();
+    wrap(<DebtPaymentScreen />);
+    await flush();
+    expect(screen.getByTestId('debt-pay-date').props.accessibilityRole).toBe('button');
+    expect(screen.getByTestId('debt-pay-date-value')).toBeTruthy();
+  });
+
+  it('pay-back cannot be dated after today; a new debt can (E01-S22 Q1 ก, Q2 ข)', async () => {
+    const tomorrow = dayAfter(todayIso());
+    wrap(<AddDebtScreen />);
+    await flush();
+    expect(dayCell('debt-date', tomorrow).props.accessibilityState.disabled).toBeFalsy();
+    fireEvent.press(screen.getByTestId('debt-date-picker-done'));
+    screen.unmount();
+    wrap(<DebtPaymentScreen />);
+    await flush();
+    expect(dayCell('debt-pay-date', tomorrow).props.accessibilityState.disabled).toBe(true);
+  });
+
+  it('the fertilizer kind carries › because it opens another screen (E01-S21 sel-q5 ก)', async () => {
+    wrap(<AddDebtScreen />);
+    await flush();
+    expect(screen.getByTestId('debt-kind-fertilizer')).toHaveTextContent(/ปุ๋ย\s*›/);
+    expect(screen.getByTestId('debt-kind-loan')).not.toHaveTextContent(/›/);
+    expect(screen.getByTestId('debt-kind-other')).not.toHaveTextContent(/›/);
   });
 });

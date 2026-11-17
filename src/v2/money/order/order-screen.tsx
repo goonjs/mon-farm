@@ -35,7 +35,7 @@ import { AppText, cardStyle, ChevronRight, DatePickerSheet, FieldError, IconTile
 import { useMaster } from '../../farm/pieces';
 import { optionNamed, setFertOption } from '../fert-options';
 import { orderHref } from '../order-routes';
-import { ItemIcon, ItemSheet, NewProductSheet, OtherItemSheet, PickProductSheet, TextLink, type NewProduct } from './item-sheets';
+import { ItemIcon, ItemSheet, NewProductSheet, OtherItemSheet, PickProductSheet, SoftLink, type NewProduct } from './item-sheets';
 import {
   EMPTY_MONEY,
   fertSpec,
@@ -271,12 +271,15 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${value}`}
       onPress={onPress}
-      style={[cardStyle(t), { flex: 1, minHeight: t.target.comfortable, padding: t.space.md, flexDirection: 'row', alignItems: 'center', gap: t.space.sm }]}
+      style={[cardStyle(t), { minHeight: t.target.comfortable, padding: t.space.md, flexDirection: 'row', alignItems: 'center', gap: t.space.sm }]}
     >
       <View aria-hidden>{icon}</View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <AppText variant="bodySm">{label}</AppText>
         <AppText style={{ fontWeight: t.font.weight.bold }}>{value}</AppText>
+      </View>
+      <View testID={`${testID}-chevron`} aria-hidden>
+        <ChevronRight color={t.color.inkFaint} />
       </View>
     </Pressable>
   );
@@ -315,7 +318,8 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
 
   const body = (
     <>
-      <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+      {/* One card per line at every width (review of PR 193 N1): the value never breaks word by word beside a ›. */}
+      <View testID="ordc-head" style={{ gap: t.space.sm }}>
         {fieldCard('ordc-shop', <FarmMateArt id="materials.orderMaterials" size={ROW_ART} />, msg('ordc.shop'), shop.trim() || msg('ordc.shopNone'), () => setSheet('shop'))}
         {fieldCard('ordc-date', <FarmMateArt id="farmwork.calendar" size={ROW_ART} />, msg('ordc.date'), dateText, () => setSheet('date'))}
       </View>
@@ -378,7 +382,6 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
             <FarmMateArt id="finance.expense" size={ROW_ART} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <AppText testID="ordc-payer-title" style={{ fontWeight: t.font.weight.bold }}>{payerTitle}</AppText>
-              <AppText variant="bodySm">{msg('ordc.payerHint')}</AppText>
             </View>
             <ChevronRight color={t.color.inkFaint} />
           </Pressable>
@@ -404,7 +407,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
             <ChevronRight color={t.color.accept} />
           </Pressable>
         ) : (
-          <TextLink testID="ordc-bill-link" onPress={() => setSheet('bill')}>{msg('ordc.billLink')}</TextLink>
+          <SoftLink testID="ordc-bill-link" onPress={() => setSheet('bill')}>{msg('ordc.billLink')}</SoftLink>
         )
       ) : null}
       <SolidCTA testID="ordc-save" disabled={!clean || busy} onPress={() => void save()}>

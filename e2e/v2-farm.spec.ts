@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 
-import { evidence } from './fixtures';
+import { evidence, splashEvidence, watchSplash } from './fixtures';
 
 /**
  * D-83: one working sandbox app on v2, in the real web build. `/` shows the
@@ -31,22 +31,34 @@ async function addPerson(page: Page, name: string, roles: string[], snap?: strin
   await id('person-name').fill(name);
   for (const r of roles) await id(`role-${r}`).click();
   if (snap) await shot(page, snap);
-  // Save lives in the header (top right), so an open keyboard never covers it.
-  await expect(id('screen-header').getByTestId('person-save')).toBeVisible();
-  expect((await id('person-save').boundingBox())!.y).toBeLessThan(100);
+  // Owner 2026-11-07 (style I): Save is the full-width button pinned at the foot, not in the header.
+  await expect(id('save-bar').getByTestId('person-save')).toBeVisible();
+  await expect(id('screen-header').getByTestId('person-save')).toHaveCount(0);
+  // pinned at the foot: its bottom sits near the viewport's, and stays there when the form scrolls
+  const vh = page.viewportSize()!.height;
+  const atFoot = async () => {
+    const b = (await id('person-save').boundingBox())!;
+    expect(b.y + b.height).toBeGreaterThan(vh - 40);
+    expect(b.y + b.height).toBeLessThanOrEqual(vh + 1);
+  };
+  await atFoot();
+  await page.mouse.wheel(0, 400);
+  await atFoot();
   await id('person-save').click();
   await expect(id('people-list')).toContainText(name);
 }
 
 test('/ → splash → home → farm settings: add and edit everything offline, still there after a reload', async ({ page, context }) => {
+  // One flow through five screens and a reload: 11 s alone, over the 30 s default when 8 workers share 4 cores.
+  test.setTimeout(90_000);
   const id = on(page);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
 
+  const splash = await watchSplash(page);
   await page.goto('/');
-  await expect(page.getByTestId('splash')).toBeVisible();
-  await expect(page.getByTestId('splash')).toContainText('FarmMate');
-  await shot(page, '00-splash');
+  expect(await splash()).toContain('FarmMate');
+  await splashEvidence(page, `${SHOTS}/00-splash.png`);
   await expect(page).toHaveURL(/\/v2\/?$/);
   await expect(id('v2-home')).toBeVisible();
   await expect(id('sync-pill')).toBeVisible();
@@ -149,7 +161,7 @@ test('/ → splash → home → farm settings: add and edit everything offline, 
   await id('points-wizard').locator('[data-testid^="wizard-tapper-"]').filter({ hasText: 'แดง' }).click();
   await id('wizard-next').click();
   await id('points-wizard').locator('[data-testid^="wizard-name-"]').first().fill('จุด 1');
-  await expect(id('screen-header').getByTestId('wizard-create')).toBeVisible();
+  await expect(id('save-bar').getByTestId('wizard-create')).toBeVisible();
   await id('wizard-create').click();
   await expect(id('wizard-duplicates')).toBeVisible();
   await id('points-wizard').locator('[data-testid^="wizard-name-"]').first().fill('จุด 5');

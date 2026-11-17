@@ -1,7 +1,8 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
+import { StyleSheet } from 'react-native';
 
-import { dayAfter, dayBefore, thaiDayInput, todayIso } from '../core/master';
+import { dayAfter, dayBefore, todayIso } from '../core/master';
 import { FarmsScreen, PropertyScreen } from '../v2/farm/farms-screens';
 import { PointScreen, PointsScreen, PointsWizardScreen } from '../v2/farm/points-screens';
 import type { MasterStore } from '../store/master-store';
@@ -10,6 +11,7 @@ import { emitSyncChanged, setEngineStatus, setSyncMode } from '../sync/changed';
 import { newGroup } from '../core/group';
 import { userFromSignIn } from '../core/user';
 import { accountStore as mockAccounts } from '../store/account';
+import { pickDate } from '../test/pick-date';
 import { wrap } from '../test/render';
 
 jest.mock('../store/people', () => {
@@ -122,12 +124,12 @@ describe('สวนและจุดชั่ง — list (farm mockup 9)', () 
 });
 
 describe('สวน — form (farm mockup 10)', () => {
-  it('Save sits in the header, with no pinned bar at the bottom', async () => {
+  it('Save is a full-width button pinned at the bottom, not in the header (owner 2026-11-07, style I)', async () => {
     mockParams.current = { id: 'new' };
     wrap(<PropertyScreen />);
     await flush();
-    const header = screen.getByTestId('screen-header');
-    expect(within(header).getByTestId('property-save')).toBeTruthy();
+    expect(within(screen.getByTestId('screen-header')).queryByTestId('property-save')).toBeNull();
+    expect(within(screen.getByTestId('save-bar')).getByTestId('property-save')).toBeTruthy();
     expect(screen.getAllByTestId(/-save$/)).toHaveLength(1);
   });
 
@@ -198,12 +200,12 @@ describe('สวน — detail, area history, delete (farm mockup 11, 12)', () =
     wrap(<PropertyScreen />);
     await flush();
     expect(within(screen.getByTestId('property-area-now')).getByText('120 ไร่')).toBeTruthy();
-    expect(within(screen.getByTestId('property-planted')).getByText('2554')).toBeTruthy();
+    expect(within(screen.getByTestId('property-planted')).getByText('2554 พ.ศ.')).toBeTruthy();
     expect(within(screen.getByTestId('property-gps')).getByText('ไม่ทราบ')).toBeTruthy();
 
     fireEvent.press(screen.getByTestId('change-area'));
     keys('area-new', '125');
-    fireEvent.changeText(screen.getByTestId('area-new-date'), thaiDayInput(TODAY));
+    pickDate('area-new-date', TODAY);
     await press('area-save');
 
     const history = (await m.state()).properties[0].areaHistory;
@@ -249,6 +251,8 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     wrap(<PointScreen />);
     await flush();
     expect(screen.getByText('สวนจันทเขลม')).toBeTruthy();
+    // E01-S21 PK-4: a farm that cannot be changed is plain text, not an input-style box.
+    expect(StyleSheet.flatten(screen.getByTestId('point-farm').props.style)?.borderWidth ?? 0).toBe(0);
     fireEvent.changeText(screen.getByTestId('point-name'), 'จุด 1');
     await press('point-save');
     expect(within(screen.getByTestId('point-name-error')).getByText('มีจุดชื่อ "จุด 1" ในสวนนี้แล้ว')).toBeTruthy();
@@ -279,7 +283,7 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
 
     fireEvent.press(screen.getByTestId('plan-change'));
     fireEvent.press(screen.getByTestId(`plan-tapper-${nat.id}`));
-    fireEvent.changeText(screen.getByTestId('plan-from'), thaiDayInput(ahead(30)));
+    pickDate('plan-from', ahead(30));
     expect(screen.getByTestId('plan-preview')).toBeTruthy();
     await press('plan-save');
 
@@ -337,7 +341,7 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     await flush();
     fireEvent.press(screen.getByTestId('plan-change'));
     fireEvent.press(screen.getByTestId('plan-leave'));
-    fireEvent.changeText(screen.getByTestId('plan-to'), thaiDayInput(ahead(5)));
+    pickDate('plan-to', ahead(5));
     await press('plan-save');
     expect(within(screen.getByTestId('plan-to-error')).getByText('วันนั้นจุดนี้ไม่มีคนกรีด')).toBeTruthy();
     unmount();
@@ -346,13 +350,18 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     wrap(<PointScreen />);
     await flush();
     fireEvent.press(screen.getByTestId('plan-change'));
+    // Review of PR 194 N1: a required start that is empty does not offer "no start date" as if it were a choice.
+    expect(screen.getByTestId('plan-from-value')).not.toHaveTextContent(/ไม่ระบุวันเริ่ม/);
     fireEvent.press(screen.getByTestId('plan-leave'));
-    fireEvent.changeText(screen.getByTestId('plan-to'), thaiDayInput(dayBefore(dayBefore(tenAgo))));
+    // Review of PR 194 N2: no last day yet → "เลือกวันที่", not a typing format.
+    await press('plan-save');
+    expect(within(screen.getByTestId('plan-to-error')).getByText('เลือกวันที่')).toBeTruthy();
+    pickDate('plan-to', dayBefore(dayBefore(tenAgo)));
     await press('plan-save');
     expect(within(screen.getByTestId('plan-to-error')).getByText('ก่อนวันที่คนกรีดตอนนี้เริ่ม')).toBeTruthy();
     expect((await m.state()).assignments).toHaveLength(before);
 
-    fireEvent.changeText(screen.getByTestId('plan-to'), thaiDayInput(ahead(5)));
+    pickDate('plan-to', ahead(5));
     await press('plan-save');
     expect((await m.state()).assignments).toHaveLength(before + 1);
   });
@@ -447,8 +456,12 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     fireEvent.press(screen.getByTestId('wizard-next'));
     fireEvent.changeText(screen.getByTestId(`wizard-name-${daeng.id}-0`), 'จุดริมคลอง');
 
+    // page 2: one bar at the foot — ย้อนกลับ left of สร้าง; page 1 has no Save bar
+    expect(within(screen.getByTestId('save-bar')).getByTestId('wizard-prev')).toBeTruthy();
+    expect(within(screen.getByTestId('save-bar')).getByTestId('wizard-create')).toBeTruthy();
     fireEvent.press(screen.getByTestId('wizard-prev'));
     expect(screen.getByTestId('wizard-next')).toBeTruthy();
+    expect(screen.queryByTestId('save-bar')).toBeNull();
     expect(screen.getByTestId(`wizard-count-${daeng.id}-value`).props.children).toBe('1');
     fireEvent.press(screen.getByTestId('wizard-next'));
     expect(screen.getByTestId(`wizard-name-${daeng.id}-0`).props.value).toBe('จุดริมคลอง');
@@ -654,5 +667,30 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     expect(state.points.map((p) => p.name).sort()).toEqual(['จุด 1', 'จุด 2']);
     expect(state.assignments.filter((a) => a.tapperId === nat.id)).toHaveLength(1);
     expect(mockRouter.back).toHaveBeenCalled();
+  });
+});
+
+describe('edit forms wait for the record (e2e v2-farm flake, 2026-11-07)', () => {
+  // The record arrives a tick after the form mounts. A field shown before that is empty, and the first
+  // render with the record writes the stored value over anything typed meanwhile — so no field until then.
+  const placesStore = () => (jest.requireMock('../store/people') as { peopleStore: import('../store/master-store').MasterStore }).peopleStore;
+
+  it('the farm form shows no name field until the farm has loaded, then the stored name', async () => {
+    const farm = await placesStore().addProperty({ name: 'สวนจันทเขลม', crop: 'rubber' });
+    mockParams.current = { id: farm.id, edit: '1' };
+    wrap(<PropertyScreen />);
+    expect(screen.queryByTestId('property-name')).toBeNull();
+    await flush();
+    expect(screen.getByTestId('property-name').props.value).toBe('สวนจันทเขลม');
+  });
+
+  it('the point form shows no name field until the point has loaded, then the stored name', async () => {
+    const farm = await placesStore().addProperty({ name: 'สวนจันทเขลม', crop: 'rubber' });
+    const pt = await placesStore().addPoint(farm.id, 'จุด 1');
+    mockParams.current = { id: pt.id, edit: '1' };
+    wrap(<PointScreen />);
+    expect(screen.queryByTestId('point-name')).toBeNull();
+    await flush();
+    expect(screen.getByTestId('point-name').props.value).toBe('จุด 1');
   });
 });

@@ -6,7 +6,9 @@ name: PR extras
 #   label `e2e`      run the Playwright suite against this PR's build
 #   label `preview`  deploy a Firebase preview channel (expires in 7 days)
 #
-# Both labels together share one install and one build (job `build`). The run starts when a
+# Both labels together share one install (job `build`), which makes two builds:
+# e2e's with no backend, as ci.yml builds it, and the preview's with the
+# project's Firebase config. The run starts when a
 # label is added and again on every new push while the label is still on, so a
 # labelled PR stays covered. A label that is not one of the two does nothing.
 # After merge, e2e always runs from ci.yml, so an unlabelled PR is still
@@ -82,8 +84,27 @@ jobs:
         if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
         run: npm ci
 
-      - name: Build web
-        if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+      # e2e runs against a build with no backend, exactly as ci.yml builds it after
+      # merge: the suites start from a device already signed in (e2e/session.ts),
+      # with no Firebase login. Built with the project's config, a signed-in user
+      # with no group is asked about on the server first (E02-S05), the call fails,
+      # and the no-group specs see "could not fetch" instead of create-group (PR #173).
+      - name: Build web for e2e (no backend)
+        if: steps.want.outputs.e2e == 'true'
+        run: npm run build:web
+
+      - name: Upload e2e build
+        if: steps.want.outputs.e2e == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-e2e
+          path: dist/
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
+
+      - name: Build web for the preview
+        if: steps.want.outputs.preview == 'true'
         env:
           # Public web config for project mon-farmmate (not secrets; E02-S01).
           EXPO_PUBLIC_FIREBASE_PROJECT_ID: mon-farmmate
@@ -91,8 +112,8 @@ jobs:
           EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: mon-farmmate.firebaseapp.com
         run: npm run build:web
 
-      - name: Upload web build
-        if: steps.want.outputs.e2e == 'true' || steps.want.outputs.preview == 'true'
+      - name: Upload preview build
+        if: steps.want.outputs.preview == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: dist
@@ -123,7 +144,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: dist
+          name: dist-e2e
           path: dist/
 
       - name: Playwright version

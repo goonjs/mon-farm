@@ -137,31 +137,47 @@ describe('lastLineSacks', () => {
   });
 });
 
+describe('E11-S17 RM-3: a split on a fertilizer order item is no longer read', () => {
+  it('makes no debt, now or after edits', () => {
+    const create = ev('x1', { t: 'expense_created', fields: expense(FERT) });
+    expect(projectDebts([create]).size).toBe(0);
+    const edit = ev('x1', { t: 'expense_changed', patch: { share: { ...FERT, lines: [{ ...FERT.lines[0], workerPct: 100 }] } } }, create.id);
+    expect(projectDebts([create, edit]).size).toBe(0);
+  });
+
+  it('a split on any other category still makes its debt (RM-5)', () => {
+    const accounts = projectDebts([ev('x1', { t: 'expense_created', fields: expense(FERT, { categoryId: 'cat-other' }) })]);
+    expect(accounts.get(DAENG.id)?.balanceSatang).toBe(285_000);
+  });
+});
+
+// The share engine itself, on a category that still shares (E11-S10 part B; fertilizer moved to E16).
 describe('expense with a share → worker debts', () => {
   const debtId = `x1${SHARE_DEBT_INFIX}${DAENG.id}`;
+  const otherExpense = (share: ExpenseShare | null, over: Partial<ExpenseFields> = {}) => expense(share, { categoryId: 'cat-other', ...over });
 
   it('an actual expense makes a debt for each “ลงหนี้” line, linked to the expense', () => {
-    const accounts = projectDebts([ev('x1', { t: 'expense_created', fields: expense(FERT) })]);
+    const accounts = projectDebts([ev('x1', { t: 'expense_created', fields: otherExpense(FERT) })]);
     expect(accounts.get(DAENG.id)?.balanceSatang).toBe(285_000);
-    expect(accounts.get(DAENG.id)?.debts[0]).toMatchObject({ id: debtId, kind: 'fertilizer', expenseId: 'x1', amountSatang: 285_000 });
+    expect(accounts.get(DAENG.id)?.debts[0]).toMatchObject({ id: debtId, kind: 'other', expenseId: 'x1', amountSatang: 285_000 });
     expect(accounts.get(NAT.id)).toBeUndefined();
   });
 
   it('planned or committed makes no debt; moving to actual does', () => {
-    const create = ev('x1', { t: 'expense_created', fields: expense(FERT, { stage: 'planned' }) });
+    const create = ev('x1', { t: 'expense_created', fields: otherExpense(FERT, { stage: 'planned' }) });
     expect(projectDebts([create]).size).toBe(0);
     const actual = ev('x1', { t: 'expense_changed', patch: { stage: 'actual' } }, create.id);
     expect(projectDebts([create, actual]).get(DAENG.id)?.balanceSatang).toBe(285_000);
   });
 
   it('counts the expense once: actual total is the net bill, no extra owner-share expense', () => {
-    const state = projectFinance([ev('x1', { t: 'expense_created', fields: expense(FERT) })]);
+    const state = projectFinance([ev('x1', { t: 'expense_created', fields: otherExpense(FERT) })]);
     expect(state.expenses).toHaveLength(1);
     expect(stageTotals(state.expenses).actual).toBe(950_000);
   });
 
   it('editing the share moves the debt; delete voids it; restore brings it back', () => {
-    const create = ev('x1', { t: 'expense_created', fields: expense(FERT) });
+    const create = ev('x1', { t: 'expense_created', fields: otherExpense(FERT) });
     const edit = ev('x1', { t: 'expense_changed', patch: { share: { ...FERT, lines: [{ ...FERT.lines[0], workerPct: 100 }, FERT.lines[1]] } } }, create.id);
     expect(projectDebts([create, edit]).get(DAENG.id)?.balanceSatang).toBe(570_000);
     const del = ev('x1', { t: 'expense_changed', patch: { deleted: true } }, edit.id);
@@ -173,7 +189,7 @@ describe('expense with a share → worker debts', () => {
   });
 
   it('a debt already deducted that the edit lowers shows as overpaid, not silently changed', () => {
-    const create = ev('x1', { t: 'expense_created', fields: expense(FERT) });
+    const create = ev('x1', { t: 'expense_created', fields: otherExpense(FERT) });
     const paid = ev('pay1', {
       t: 'debt_payment_recorded',
       fields: { worker: DAENG, creditor: FARM, amountSatang: 285_000, date: '2026-10-20', note: '', method: 'cash-from-share', saleId: 'sale-1' },
@@ -185,7 +201,7 @@ describe('expense with a share → worker debts', () => {
   });
 
   it('a share edited on two devices at once is a conflict', () => {
-    const create = ev('x1', { t: 'expense_created', fields: expense(FERT) });
+    const create = ev('x1', { t: 'expense_created', fields: otherExpense(FERT) });
     const a = ev('x1', { t: 'expense_changed', patch: { share: { ...FERT, lines: [{ ...FERT.lines[0], workerPct: 40 }, FERT.lines[1]] } } }, create.id);
     const b = ev('x1', { t: 'expense_changed', patch: { share: { ...FERT, lines: [{ ...FERT.lines[0], workerPct: 60 }, FERT.lines[1]] } } }, create.id);
     const x = projectFinance([create, a, b]).expenses[0];
@@ -195,14 +211,14 @@ describe('expense with a share → worker debts', () => {
   });
 
   it('syncing the same events twice makes one debt', () => {
-    const create = ev('x1', { t: 'expense_created', fields: expense(FERT) });
+    const create = ev('x1', { t: 'expense_created', fields: otherExpense(FERT) });
     expect(projectDebts([create, create]).get(DAENG.id)?.debts).toHaveLength(1);
   });
 });
 
 describe('who paid first', () => {
   it('a tapper who paid the whole bill is owed it back, apart from their own debt', () => {
-    const evs = [ev('x1', { t: 'expense_created', fields: expense(FERT, { payer: DAENG }) })];
+    const evs = [ev('x1', { t: 'expense_created', fields: expense(FERT, { payer: DAENG, categoryId: 'cat-other' }) })];
     expect(projectFinance(evs).reimbursements[0]).toMatchObject({ to: DAENG, originalSatang: 950_000 });
     expect(projectDebts(evs).get(DAENG.id)?.balanceSatang).toBe(285_000);
   });

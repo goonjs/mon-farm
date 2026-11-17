@@ -6,7 +6,8 @@
  * pair is in the log, and a negative skew keeps its sign.
  */
 
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { tokens } from '../../design/tokens';
 import type { ReactElement, ReactNode } from 'react';
 
 import type { SaleEvent, SysPayload } from '../core/types';
@@ -175,6 +176,17 @@ describe('#3 เปลี่ยนจุด leaves no old counter on the stack',
   });
 });
 
+describe('the empty-scale check keeps its round − / + (owner chose no change, 2026-11-07)', () => {
+  it('outlined circles, unlike the settings steppers', async () => {
+    await started();
+    await inSale(<ZeroTareScreen />, { point: farm.a[0], net: '50000', basket: '2000' });
+    await press('zero-not0');
+    const s = Object.assign({}, ...[screen.getByTestId('empty-reading-less').props.style].flat(Infinity).filter(Boolean));
+    expect(s.borderRadius).toBe(tokens.radius.pill);
+    expect(s.borderWidth).toBeGreaterThan(0);
+  });
+});
+
 describe('#11 the counter needs a passed check (canCount)', () => {
   it('a point whose check failed cannot be counted from a deep link', async () => {
     await started();
@@ -185,6 +197,9 @@ describe('#11 the counter needs a passed check (canCount)', () => {
     await inSale(<CounterScreen />, { point: farm.a[0] });
     expect(screen.queryByTestId('hold')).toBeNull();
     expect(screen.getByTestId('not-ready')).toBeTruthy();
+    // Owner rule 2026-11-06: "เริ่มชั่ง" is a full-width button, not a round one in the middle of the card.
+    expect(screen.getByTestId('to-check-row').props.style).toMatchObject({ alignSelf: 'stretch' });
+    expect(within(screen.getByTestId('to-check-row')).getByTestId('to-check')).toBeTruthy();
   });
 });
 

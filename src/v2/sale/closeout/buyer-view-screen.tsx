@@ -15,7 +15,7 @@ import { PixelRatio, Platform, Text, View } from 'react-native';
 import { projectAccounts } from '../../../core/finance/accounts';
 import { formatSatang } from '../../../core/finance/money';
 import { BANKS } from '../../../core/finance/promptpay';
-import { formatThaiDate } from '../../../core/master';
+import { formatSaleDate } from '../../../core/master';
 import { useI18n, useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, Button, cardStyle } from '../../../ui';
@@ -47,6 +47,7 @@ export function FitAmount({ satang, testID, max }: { satang: number; testID?: st
   const key = text;
   // What this text last drew, at which size (the line and the text lay out in either order).
   const [drawn, setDrawn] = useState<{ key: string; width: number; size: number } | null>(null);
+  // text-size: fixed — the size starts from the theme and only shrinks to fit the width; 8 px is the floor.
   const size = drawn?.key === key && width > 0 ? (drawn.width > width + 0.5 ? Math.max(8, Math.floor((drawn.size * width) / drawn.width)) : drawn.size) : guess;
   const native = Platform.OS !== 'web';
   const onDrawn = (w: number) => setDrawn({ key, width: w, size });
@@ -134,7 +135,7 @@ export function BuyerViewScreen() {
       <View style={{ ...cardStyle(t), padding: t.space.md, gap: t.space.sm }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', gap: t.space.sm }}>
           <AppText variant="title" style={{ fontWeight: t.font.weight.bold }}>{msg('cop.bvSheet')}</AppText>
-          {co.money.state.startedTs != null ? <AppText variant="bodySm">{formatThaiDate(co.money.state.startedTs, era)}</AppText> : null}
+          {co.money.state.startedTs != null ? <AppText variant="bodySm">{formatSaleDate(co.money.state.startedTs, co.money.state.day, era)}</AppText> : null}
         </View>
         {buyerPiles(plan).map((p) =>
           p.kind === 'cash' ? (

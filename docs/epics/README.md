@@ -21,7 +21,8 @@ Epic เก็บที่นี่ ไฟล์ละ 1 epic แตกมาจ
 | [E12 สภาพอากาศ](e12-weather.md) | WX |
 | [E13 หน้าแรก & การวิเคราะห์](e13-dashboard-analytics.md) | ANA |
 | [E14 AI ช่วยวิเคราะห์](e14-ai-assistance.md) | AI |
-| [E15 เตรียมขาย](e15-sale-preparation.md) | — (D-50, ร่างแรก) |
+| [E15 เตรียมขาย](e15-sale-preparation.md) | — (D-50, D-91) |
+| [E16 การดูแลสวน](e16-garden-care.md) | FERT, INV, OPS (D-89) |
 
 ## ประวัติ (PRD v0.4, ถูกแทนแล้ว)
 

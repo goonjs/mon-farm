@@ -26,7 +26,7 @@ import { quickAmounts, type CloseoutWorker, type DeductAmounts, type DebtPiece }
 import { moneyTextStep, pressKey, startEntry, viewEntry, entryToSatang, type EntryConfig, type EntryKey, type EntryState } from '../../../core/number-entry';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, Check, CTA, NumberPad } from '../../../ui';
+import { AppText, BottomSheet, Check, CHIP_MIN_WIDTH, CTA, NumberPad } from '../../../ui';
 import type { Closeout, CloseoutDraft } from './use-closeout';
 import { addId, baht, MARK, netSet, shortBaht, WarnMark, withWorker } from './summary-parts';
 import { usePieceName } from './summary-debt-sheet';
@@ -216,7 +216,7 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={{ minHeight: t.target.min, justifyContent: 'center', paddingHorizontal: t.space.md, borderRadius: t.radius.pill, borderWidth: t.border.hair, borderColor: tone ?? t.color.ruleStrong, backgroundColor: selected ? t.color.actionSunk : t.color.surfaceRaised }}
+      style={{ minHeight: t.target.min, minWidth: CHIP_MIN_WIDTH, alignItems: 'center', justifyContent: 'center', paddingHorizontal: t.space.md, borderRadius: t.radius.pill, borderWidth: t.border.hair, borderColor: tone ?? t.color.ruleStrong, backgroundColor: selected ? t.color.actionSunk : t.color.surfaceRaised }}
     >
       <AppText style={{ fontWeight: t.font.weight.bold, color: tone ?? t.color.ink }}>{label}</AppText>
     </Pressable>

@@ -13,7 +13,7 @@ import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
 import { AppText, BottomSheet, Check, FieldError, MoneyField, QuantityField, SegmentedControl, TextField } from '../../../ui';
 import { moneyOfLine, moneyOk, moneyProblems, perUnit, withGross, withQty, withUnitPrice, type ItemMoney } from '../order/order-model';
-import { TextLink } from '../order/item-sheets';
+import { SoftLink } from '../order/item-sheets';
 import { editItemPatch, editItemProblems, itemGross, itemSacks, nameOf, optionRenames, type ItemNameDraft, type OptionWrite } from './tell';
 import { TickCard } from '../pieces';
 import { SolidCTA } from '../order/solid-cta';
@@ -58,7 +58,7 @@ export function EditItemSheet({
 
   const mp = moneyProblems(m);
   const ep = editItemProblems(item, m, name);
-  const blocked = !moneyOk(mp) || ep.tappers !== undefined || ep.zones !== undefined || ep.discount === true || ep.name === true;
+  const blocked = !moneyOk(mp) || ep.tappers !== undefined || ep.discount === true || ep.name === true;
   const per = m.unitPrice ?? (m.gross !== null && m.qty ? perUnit(m.gross, m.qty) : null);
   const net = m.gross === null ? null : Math.max(0, m.gross - m.discount);
 
@@ -128,7 +128,6 @@ export function EditItemSheet({
         <QuantityField testID="ordd-edit-qty" label={msg('ordc.qty')} value={m.qty} unit={unit} min={1} onChange={(q) => setM(withQty(m, q))} />
         {tried && mp.qty ? <FieldError testID="ordd-edit-err-qty">{msg('ordc.err.qty')}</FieldError> : null}
         {ep.tappers !== undefined ? <FieldError testID="ordd-edit-err-tappers">{msg('ordd.edit.errTappers', { n: ep.tappers })}</FieldError> : null}
-        {ep.zones !== undefined ? <FieldError testID="ordd-edit-err-zones">{msg('ordd.edit.errZones', { n: ep.zones })}</FieldError> : null}
 
         <SegmentedControl
           testID="ordd-edit-mode"
@@ -140,19 +139,19 @@ export function EditItemSheet({
           ]}
         />
         {m.mode === 'per' ? (
-          <MoneyField testID="ordd-edit-price" label={msg('ordc.perUnit', { unit })} satang={per} unit={msg('ordc.bahtPer', { unit })} onChange={(v) => setM(withUnitPrice(m, v))} />
+          <MoneyField testID="ordd-edit-price" minSatang={1} label={msg('ordc.perUnit', { unit })} satang={per} unit={msg('ordc.bahtPer', { unit })} onChange={(v) => setM(withUnitPrice(m, v))} />
         ) : (
-          <MoneyField testID="ordd-edit-price" label={msg('ordc.priceTotal')} satang={m.gross} unit={msg('ordc.baht')} onChange={(v) => setM(withGross(m, v))} />
+          <MoneyField testID="ordd-edit-price" minSatang={1} label={msg('ordc.priceTotal')} satang={m.gross} unit={msg('ordc.baht')} onChange={(v) => setM(withGross(m, v))} />
         )}
         {tried && mp.price ? <FieldError testID="ordd-edit-err-price">{msg('ordc.err.price')}</FieldError> : null}
 
         {discountOpen ? (
           <View style={{ gap: t.space.xs }}>
             <MoneyField testID="ordd-edit-discount" label={`${msg('ordc.discountLabel')} (${msg('ordc.optional')})`} satang={m.discount} unit={msg('ordc.baht')} maxSatang={m.gross ?? undefined} words={false} onChange={(v) => setM({ ...m, discount: v })} />
-            <TextLink testID="ordd-edit-discount-remove" onPress={() => { setM({ ...m, discount: 0 }); setDiscountOpen(false); }}>{msg('ordc.discountRemove')}</TextLink>
+            <SoftLink testID="ordd-edit-discount-remove" onPress={() => { setM({ ...m, discount: 0 }); setDiscountOpen(false); }}>{msg('ordc.discountRemove')}</SoftLink>
           </View>
         ) : (
-          <TextLink testID="ordd-edit-discount-link" onPress={() => setDiscountOpen(true)}>{msg('ordc.discountLink')}</TextLink>
+          <SoftLink testID="ordd-edit-discount-link" onPress={() => setDiscountOpen(true)}>{msg('ordc.discountLink')}</SoftLink>
         )}
         {mp.discount || ep.discount ? <FieldError testID="ordd-edit-err-discount">{msg('ordc.err.itemDiscount')}</FieldError> : null}
 
@@ -164,7 +163,7 @@ export function EditItemSheet({
         {failed ? <AppText testID="ordd-edit-failed" style={{ color: t.color.reject }}>{msg('ordd.saveFailed')}</AppText> : null}
         <SolidCTA testID="ordd-edit-save" disabled={blocked && tried} icon={(c) => <Check color={c} />} onPress={() => void save()}>{msg('ordd.hdr.save')}</SolidCTA>
         <View style={{ alignItems: 'center' }}>
-          <TextLink testID="ordd-edit-delete" onPress={onDelete}>{msg('ordd.edit.delete')}</TextLink>
+          <SoftLink testID="ordd-edit-delete" onPress={onDelete}>{msg('ordd.edit.delete')}</SoftLink>
         </View>
       </View>
     </BottomSheet>

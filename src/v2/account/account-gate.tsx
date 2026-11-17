@@ -9,7 +9,8 @@
  * only the mark.
  *
  * There is no sign-out (D-23): once a user is stored, this never shows the
- * sign-in screen again.
+ * sign-in screen again. A store that cannot be read (tried twice) is not "no
+ * user": it shows "cannot read the device" with a retry (owner q3 = ก).
  *
  * Which group opens is decided from the signed-in user's memberships kept on
  * the device (`decideEntry`): one → straight in, with no network (ACC-6). Two or
@@ -44,12 +45,15 @@ import type { RemoteMemberships } from '../../sync/remote';
 import { useSync } from '../../sync/use-sync';
 import { useTheme } from '../../theme';
 import { BrandMark } from '../brand-mark';
+import { AccountUnreadableScreen } from './account-unreadable-screen';
 import { GroupCheckScreen } from './group-check-screen';
 import { GroupStartScreen } from './group-start-screen';
 import { SignInScreen } from './sign-in-screen';
 
 type Phase =
   | { kind: 'loading' }
+  /** The device's account could not be read (tried twice in the store): a retry, never the sign-in screen (owner q3 = ก). */
+  | { kind: 'unreadable'; busy: boolean }
   | { kind: 'signed-out' }
   /** Asking the server which groups this user has (E02-S05); `failed` once it could not be asked. */
   | { kind: 'checking'; user: User; failed: boolean }
@@ -73,12 +77,19 @@ function groupToOpen(memberships: readonly Membership[], userId: UserId): GroupI
 
 export function AccountGate({
   children,
+  banner,
   accounts = accountStore,
   google = defaultGoogle,
   connect = connectRemote,
   lookup = connectMemberships,
 }: {
   children: ReactNode;
+  /**
+   * Shown above every screen (the storage warning, E01-S03) except "cannot read the device": nothing can be
+   * entered there, and "ไม่ได้บันทึกถาวร … ข้อมูลจะหาย" over "ข้อมูลยังอยู่ในเครื่อง ไม่หาย" would contradict it
+   * (lead review, 2026-11-08). The same broken reads can raise both.
+   */
+  banner?: ReactNode;
   /** Injected by tests; the app uses the platform adapters. */
   accounts?: AccountStore;
   google?: GoogleSignIn;
@@ -155,18 +166,22 @@ export function AccountGate({
     resolve(user, await accounts.memberships());
   };
 
-  useEffect(() => {
-    let live = true;
+  /** Reads who is signed in from the device; `alive` drops an answer that came after the gate went away. */
+  const readStored = (alive: () => boolean) =>
     Promise.all([accounts.user(), accounts.memberships()])
       .then(([user, memberships]) => {
-        if (!live) return;
+        if (!alive()) return;
         if (user) resolve(user, memberships);
         else setPhase({ kind: 'signed-out' });
       })
       .catch((err) => {
         console.error('Stored account could not be read.', err);
-        if (live) setPhase({ kind: 'signed-out' });
+        if (alive()) setPhase({ kind: 'unreadable', busy: false });
       });
+
+  useEffect(() => {
+    let live = true;
+    void readStored(() => live);
     return () => {
       live = false;
     };
@@ -183,11 +198,29 @@ export function AccountGate({
     enter(user, [membership]);
   };
 
-  if (phase.kind === 'loading') return <Opening />;
-  if (phase.kind === 'signed-out') return <SignInScreen onSignIn={signIn} />;
+  const withBanner = (screen: ReactNode) => (
+    <>
+      {banner}
+      {screen}
+    </>
+  );
+
+  if (phase.kind === 'unreadable') {
+    return (
+      <AccountUnreadableScreen
+        busy={phase.busy}
+        onRetry={() => {
+          setPhase({ kind: 'unreadable', busy: true });
+          void readStored(() => latestCheck.current !== -1);
+        }}
+      />
+    );
+  }
+  if (phase.kind === 'loading') return withBanner(<Opening />);
+  if (phase.kind === 'signed-out') return withBanner(<SignInScreen onSignIn={signIn} />);
   if (phase.kind === 'checking') {
     const { user } = phase;
-    return (
+    return withBanner(
       <GroupCheckScreen
         failed={phase.failed}
         onRetry={() => void checkServer(user)}
@@ -198,9 +231,9 @@ export function AccountGate({
   }
   if (phase.kind === 'no-group') {
     const { user } = phase;
-    return <GroupStartScreen displayName={user.displayName} onCreate={(name) => createGroup(user, name)} />;
+    return withBanner(<GroupStartScreen displayName={user.displayName} onCreate={(name) => createGroup(user, name)} />);
   }
-  return (
+  return withBanner(
     <>
       <SyncRunner userId={phase.user.userId} groupId={phase.groupId} accounts={accounts} connect={connect} />
       {children}

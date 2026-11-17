@@ -23,7 +23,7 @@ import { CTA } from './button';
 import { cardStyle } from './card';
 import { FieldHead } from './form';
 import { NumberPad } from './number-pad';
-import { ClearLink } from './quantity-field';
+import { ClearLink, QUIET_REGION } from './quantity-field';
 import { bahtWords } from '../core/baht-words';
 import { formatSatang } from '../core/finance/money';
 import {
@@ -117,7 +117,10 @@ export function MoneyField({
   const problem = state.rejected
     ? msg('numpad.tooBig')
     : live != null && minSatang != null && live < minSatang
-      ? msg('numpad.minMsg', { min: formatSatang(minSatang) })
+      ? // A floor of 0.01 means "not 0" to the person typing (owner q2 = ก, 2026-11-08).
+        minSatang === 1
+        ? msg('numpad.positive')
+        : msg('numpad.minMsg', { min: formatSatang(minSatang) })
       : live != null && live > maxSatang
         ? msg('numpad.maxMsg', { max: formatSatang(maxSatang) })
         : live != null
@@ -228,11 +231,10 @@ export function MoneyField({
               {bahtWords(live)}
             </Text>
           ) : null}
-          {problem ? (
-            <Text accessibilityLiveRegion="polite" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.semibold, color: t.color.reject, textAlign: 'right' }}>
-              {problem}
-            </Text>
-          ) : null}
+          {/* Always there, so a screen reader announces the reason when it appears; out of the flow while empty (no gap). */}
+          <View testID={`${testID}-problem`} accessibilityLiveRegion="polite" aria-live="polite" style={problem ? undefined : QUIET_REGION}>
+            {problem ? <Text nativeID={`${testID}-problem-text`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.semibold, color: t.color.reject, textAlign: 'right' }}>{problem}</Text> : null}
+          </View>
         </View>
         {belowText ? (
           <Text testID={`${testID}-below`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, color: t.color.inkSoft, textAlign: 'center', fontVariant: ['tabular-nums'] }}>
@@ -240,7 +242,7 @@ export function MoneyField({
           </Text>
         ) : null}
         <NumberPad variant="money" onKey={press} onDone={commit} testID={`${testID}-pad`} />
-        <CTA testID={`${testID}-done`} disabled={!valid} onPress={commit}>
+        <CTA testID={`${testID}-done`} disabled={!valid} accessibilityHint={valid ? undefined : problem} describedBy={valid || !problem ? undefined : `${testID}-problem-text`} onPress={commit}>
           {msg('numpad.done')}
         </CTA>
         {clear ? <ClearLink label={clear.label} onPress={clearIt} testID={`${testID}-clear`} /> : null}

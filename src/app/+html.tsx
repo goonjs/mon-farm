@@ -1,6 +1,8 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 
+import { tokens } from '../../design/tokens';
+
 /**
  * The web HTML shell. Static-rendered at export time, so this runs in Node and
  * never in the browser.
@@ -18,12 +20,19 @@ export default function Root({ children }: PropsWithChildren) {
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         {/* Landscape phone, and a count that must not be rescaled by the browser
-            or pinched by accident mid-sale. */}
+            or pinched by accident mid-sale. interactive-widget: the on-screen
+            keyboard shrinks the page, so a form's Save pinned at the foot
+            (owner 2026-11-07) rides above it instead of under it. */}
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
         />
         <title>mon-farm</title>
+
+        {/* E01-S23: installable on a phone, and the app's files kept on the device so it opens offline. */}
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="theme-color" content={tokens.color.light.action} />
+        <script dangerouslySetInnerHTML={{ __html: SW_REGISTER }} />
 
         {/* Resets react-native-web's ScrollView so it scrolls the container
             rather than the document body. */}
@@ -35,6 +44,18 @@ export default function Root({ children }: PropsWithChildren) {
     </html>
   );
 }
+
+/**
+ * Registers `public/sw.js` once the page has loaded, then hands it what this page already loaded (bundle, fonts)
+ * so a first visit is enough to open offline. A browser without service workers just skips it.
+ */
+const SW_REGISTER = `if ('serviceWorker' in navigator) window.addEventListener('load', function () {
+  navigator.serviceWorker.register('/sw.js').catch(function () {});
+  navigator.serviceWorker.ready.then(function (reg) {
+    var keep = [location.href].concat(performance.getEntriesByType('resource').map(function (e) { return e.name; }));
+    if (reg.active) reg.active.postMessage({ keep: keep });
+  });
+});`;
 
 const BODY_CSS = `
 html, body, #root {

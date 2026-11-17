@@ -11,6 +11,7 @@
  */
 
 import { fertilizerSplit, foldRecordPublic, headOf, projectFinance } from './ledger';
+import { fertilizingDebts, projectFertilizing } from './fertilizing';
 import { shareDebts } from './share';
 import {
   FARM_FUNDS,
@@ -154,7 +155,10 @@ export function projectDebts(
 
   // Tappers' parts of shared expenses (E11-S10) — projected from the expense, never stored.
   // Re-projects the finance log for the share debts: accepted at MVP volume (E11-S10 review).
-  debts.push(...shareDebts(projectFinance(events).expenses));
+  const finance = projectFinance(events);
+  debts.push(...shareDebts(finance.expenses));
+  // E16-S03: one lump per worker per fertilizing — projected from the fertilizing, never stored.
+  debts.push(...fertilizingDebts(projectFertilizing(events, finance.expenses)));
 
   const workers = new Map<string, Payer>();
   for (const d of debts) workers.set(d.worker.id, d.worker);
@@ -267,4 +271,21 @@ export function balanceAfterSale(account: DebtAccount, saleId: string, saleDate:
     left += d.amountSatang;
   }
   return left - over;
+}
+
+/**
+ * E16-S03 SP-9 (D-92): what is left of each farm debt lump once everything deducted or paid back to the
+ * farm is taken from the oldest lumps first (date, then id). Display only — "หักหมดแล้ว" / "เหลือ ฿x" in
+ * the history; the balance and instalment plans still use the total per person (D-59).
+ */
+export function lumpLeft(account: DebtAccount): Map<string, number> {
+  const owedToFarm = account.debts.filter((d) => !d.deleted && (d.kind !== 'loan' || toFarm(d.lender))).sort((a, b) => (a.date !== b.date ? (a.date < b.date ? -1 : 1) : a.id < b.id ? -1 : 1));
+  let paid = account.payments.filter((p) => !p.deleted && p.counts && toFarm(p.creditor)).reduce((s, p) => s + p.amountSatang, 0);
+  const out = new Map<string, number>();
+  for (const d of owedToFarm) {
+    const take = Math.min(Math.max(0, paid), d.amountSatang);
+    out.set(d.id, d.amountSatang - take);
+    paid -= take;
+  }
+  return out;
 }

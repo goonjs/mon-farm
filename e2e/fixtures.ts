@@ -17,11 +17,24 @@ import type { MasterPayload, SaleEvent } from '../src/core/types';
  * mirrors `EventRecord` in store.web.ts; keep the two in step.
  */
 export async function seedEvents(page: Page, events: readonly SaleEvent[]): Promise<void> {
+  const logs: string[] = [];
+  const log = (m: { type(): string; text(): string }) => logs.push(`${m.type()}: ${m.text()}`);
+  page.on('console', log);
   await page.goto('/v2');
   // The header's sync pill renders only after `pending()` resolved, i.e. after
   // the app created the database with its own schema — so the seed never
   // creates it.
-  await page.getByTestId('sync-pill').first().waitFor();
+  try {
+    // Waits as long as before for the app; the sign-in screen, which never turns into the app on its own, ends
+    // the wait at once. A rare run opens there (2026-11-07, cause not yet found): say what the page logged and
+    // what the account database held, so the next one explains itself.
+    const signIn = page.getByTestId('signin').first().waitFor().then(() => 'sign-in' as const);
+    signIn.catch(() => undefined);
+    const shown = await Promise.race([page.getByTestId('sync-pill').first().waitFor().then(() => 'app' as const), signIn]);
+    if (shown === 'sign-in') throw new Error(`seedEvents: the app opened on the sign-in screen. ${await openFailure(page, logs)}`);
+  } finally {
+    page.off('console', log);
+  }
   await page.evaluate(
     (events) =>
       new Promise<void>((resolve, reject) => {
@@ -105,7 +118,71 @@ export async function seedMaster(page: Page, payloads: readonly MasterPayload[])
  * each machine; otherwise it lands in the test's own output folder
  * (e2e/.results, ignored). See docs/ui-v2.md.
  */
+/** Evidence of the splash only while it is still up: on a busy machine it may already have handed over to home. */
+export async function splashEvidence(page: Page, docsPath: string) {
+  if (await page.getByTestId('splash').isVisible()) await evidence(page, docsPath);
+}
+
 export function evidence(page: Page, docsPath: string, options: { fullPage?: boolean } = {}) {
   const path = process.env.UPDATE_SCREENSHOTS === '1' ? docsPath : test.info().outputPath(basename(docsPath));
   return page.screenshot({ path, ...options });
+}
+
+/** What the account stores held and the page logged when it opened on sign-in (seedEvents). Never hangs or throws. */
+async function openFailure(page: Page, logs: string[]): Promise<string> {
+  const stored = await page
+    .evaluate(
+      () =>
+        new Promise<string>((resolve) => {
+          setTimeout(() => resolve('database read timed out'), 2_000);
+          const open = indexedDB.open('mon-farm-v1');
+          open.onupgradeneeded = () => {
+            open.transaction?.abort();
+            resolve('no mon-farm-v1 database');
+          };
+          open.onerror = () => resolve(`open failed: ${String(open.error)}`);
+          open.onsuccess = () => {
+            const db = open.result;
+            try {
+              const tx = db.transaction(['meta', 'memberships'], 'readonly');
+              const session = tx.objectStore('meta').get('session');
+              const groups = tx.objectStore('memberships').count();
+              tx.oncomplete = () => resolve(`session ${session.result ? 'present' : 'MISSING'}, memberships ${groups.result}`);
+              tx.onerror = tx.onabort = () => resolve(`read failed: ${String(tx.error)}`);
+            } catch (e) {
+              resolve(`read failed: ${String(e)}`);
+            } finally {
+              db.close();
+            }
+          };
+        }),
+    )
+    .catch((e) => `database not readable: ${String(e)}`);
+  return `Database: ${stored}. Console: ${JSON.stringify(logs.slice(-20))}`;
+}
+
+/**
+ * The splash at `/` shows for SPLASH_MS (900 ms) and appears a few hundred ms
+ * after navigation starts. `page.goto` waits for `load`, which on a busy
+ * machine comes after the splash has already gone, and `expect(…).toBeVisible()`
+ * polls up to a second apart — so asking for it afterwards misses it now and
+ * then. Record it from the page's first script instead: call this before the
+ * navigation (or the tap) that shows the splash, then await the returned
+ * function for the splash's text. Reading it clears it, so a second splash in
+ * the same document needs its own read.
+ */
+export async function watchSplash(page: Page): Promise<() => Promise<string>> {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __splashText?: string };
+    new MutationObserver(() => {
+      const text = document.querySelector('[data-testid="splash"]')?.textContent?.trim();
+      if (text) w.__splashText = text;
+    }).observe(document, { childList: true, subtree: true, characterData: true });
+  });
+  return async () => {
+    const handle = await page.waitForFunction(() => (window as unknown as { __splashText?: string }).__splashText);
+    const text = String(await handle.jsonValue());
+    await page.evaluate(() => delete (window as unknown as { __splashText?: string }).__splashText);
+    return text;
+  };
 }

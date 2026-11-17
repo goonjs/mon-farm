@@ -1,9 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 
 import type { MasterPayload } from '../src/core/types';
 import { FIXTURE_GROUP_ID, LogBuilder } from '../src/core/fixtures';
 import type { FinanceEvent, FinancePayload } from '../src/core/finance/types';
 import { evidence, seedEvents, seedMaster } from './fixtures';
+import { smallTargets, textFit } from './text-fit';
 
 /**
  * The v2 sale flow in the real web build, offline (sale mockup v1.1.0
@@ -11,7 +12,7 @@ import { evidence, seedEvents, seedMaster } from './fixtures';
  * a short basket, switch point and fill it up, reload and find it all still
  * there, then check with the buyer, the close-out summary (E05-S11), the
  * cash step and pay — plus
- * บันทึกย้อนหลัง. Everything is read back from the local event log.
+ * the catch-up guard (E04-S19; its own flow is in v2-catch-up.spec.ts). Everything is read back from the local event log.
  * Screenshots at 412×915 are evidence for the owner beside the mockup
  * (written to docs/ only with UPDATE_SCREENSHOTS=1).
  */
@@ -405,13 +406,18 @@ test('start → point → empty scale → count → short → switch and fill �
   await id('switch-point').click();
   await id('pick-point-a2').click();
   await expect(id('fill-sheet')).toContainText('เข่ง 4 ยังไม่เต็ม');
+  // E04-S21: choose, then confirm — fill up is chosen first.
+  await expect(id('fill-full').getByTestId('fill-steps')).toBeVisible();
+  await expect(id('fill-go')).toContainText('เติมเข่ง 4');
   await shot(page, '12-switch-same-tapper');
-  await id('fill-full').click();
+  await id('fill-go').click();
   await expect(id('zero-tare')).toBeVisible();
   await id('start-weigh').click();
 
-  // ── เติมให้เต็มเข่งที่จุดใหม่ (page 13) ──
-  await expect(id('hold')).toContainText('เติมเข่ง 4');
+  // ── เติมให้เต็มเข่งที่จุดใหม่ (page 13): the guide, the reading in the hold, what comes after ──
+  await expect(id('fill-title')).toContainText('เติมให้เต็มเข่ง 4');
+  await expect(id('should-read')).toContainText('52');
+  await expect(id('fill-after')).toContainText('ต่อไปเข่ง 5');
   await shot(page, '13-fill');
   await hold(page);
   await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
@@ -445,7 +451,9 @@ test('start → point → empty scale → count → short → switch and fill �
   await id('tool-undo').click();
   await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
   await hold(page, 'tool-undo');
-  await expect(id('current-no')).toHaveText(/เข่งถัดไป 4$/);
+  // The fill is pending again, so the guide stands in for the count card (E04-S21 FS-7).
+  await expect(id('fill-title')).toContainText('เติมให้เต็มเข่ง 4');
+  await expect(id('current-no')).toHaveCount(0);
   await expect(id('undo-notice')).toContainText('ยกเลิกส่วนที่เติมของเข่ง 4 แล้ว');
   await hold(page);
   await expect(id('current-no')).toHaveText(/เข่งถัดไป 5$/);
@@ -468,24 +476,21 @@ test('start → point → empty scale → count → short → switch and fill �
   await id('public-exit').click();
   await expect(id('counter')).toBeVisible();
 
-  // ── บันทึกย้อนหลัง (page 14): จุด 3 of แดง, on paper ──
+  // ── บันทึกย้อนหลัง: only before counting live (E04-S19 BF-8). แดง has baskets, so the flow says why and offers nothing. ──
   await id('counter-menu').click();
   await id('menu-backfill').click();
-  await expect(id('pick')).toBeVisible();
-  await id('pick-point-a3').click();
-  await expect(id('backfill')).toBeVisible();
-  await id('backfill-full').click();
-  await fieldPad(page, 'backfill-full', '3');
-  await id('backfill-full-pad-key-done').click();
-  // ✓ opens the short basket's pad at once (NP-15).
-  await fieldPad(page, 'backfill-short', '20');
-  await id('backfill-short-done').click();
-  await expect(id('backfill-plan')).toContainText('จะได้ 4 เข่ง');
-  await expect(id('backfill-plan')).toContainText('เข่งที่ 5–7');
-  await expect(id('backfill-total')).toContainText('170 กก.');
-  await shot(page, '14-backfill');
-  await id('backfill-save').click();
+  await expect(id('cu-blocked')).toContainText('นับเองไปแล้ว');
+  await expect(id('cu-next')).toHaveCount(0);
+  await page.goBack();
   await expect(id('counter')).toBeVisible();
+  // So แดง counts จุด 3 live instead: three full baskets.
+  await id('switch-point').click();
+  await id('pick-point-a3').click();
+  await id('start-weigh').click();
+  await expect(id('point-place')).toContainText('จันทเขลม · จุด 3');
+  await hold(page);
+  await hold(page);
+  await hold(page);
 
   // ── นัด at จันทเขลม จุด 4: another tapper, nothing asked ──
   await id('switch-point').click();
@@ -507,8 +512,8 @@ test('start → point → empty scale → count → short → switch and fill �
   await fieldPad(page, 'check-price', '48.50');
   await id('check-price-done').click();
   await id('check-price-save').click();
-  await expect(id('check-total')).toContainText('22,795.00');
-  await expect(id('check-weight')).toContainText('470 กก.');
+  await expect(id('check-total')).toContainText('21,825.00');
+  await expect(id('check-weight')).toContainText('450 กก.');
   await shot(page, '16-check');
   await id('check-match').click();
   await expect(id('check-status')).toContainText('ตรงกัน');
@@ -516,9 +521,9 @@ test('start → point → empty scale → count → short → switch and fill �
 
   // ── สรุปจ่ายเงิน (E05-S11): no debt recorded, the farm owes no one — both cards ask ──
   await expect(id('co-summary')).toBeVisible();
-  await expect(id('co-worker-red')).toContainText('ส่วนแบ่ง 8,972.50');
+  await expect(id('co-worker-red')).toContainText('ส่วนแบ่ง 8,487.50');
   await expect(id('co-worker-nat')).toContainText('ส่วนแบ่ง 2,425.00');
-  await expect(id('co-cash-red')).toHaveText('8,973.00');
+  await expect(id('co-cash-red')).toHaveText('8,488.00');
   await expect(id('co-confirm')).toContainText('ตอบการ์ดด้านบนทั้ง 2 ใบก่อน');
   await id('co-debt-none').click();
   await id('co-owed-none').click();
@@ -528,8 +533,8 @@ test('start → point → empty scale → count → short → switch and fill �
   await id('co-cash-card').click();
   await expect(id('cop-cash')).toBeVisible();
   await expect(id('cop-round-worker')).toHaveAttribute('aria-checked', 'true');
-  await expect(id('cop-transfer')).toContainText('11,397.00');
-  await expect(id('cop-total')).toContainText('22,795.00');
+  await expect(id('cop-transfer')).toContainText('10,912.00');
+  await expect(id('cop-total')).toContainText('21,825.00');
   await shot(page, '18-rounding');
   await id('cop-ok').click();
   await expect(id('co-summary')).toBeVisible();
@@ -537,7 +542,7 @@ test('start → point → empty scale → count → short → switch and fill �
 
   // ── จ่ายเงิน · ปิดการขาย (CO-10): ticks survive a reload; then close ──
   await expect(id('payment')).toBeVisible();
-  await expect(id('tick-amt-red')).toContainText('8,973.00');
+  await expect(id('tick-amt-red')).toContainText('8,488.00');
   await id('tick-red').click();
   await expect(id('tick-red')).toHaveAttribute('aria-checked', 'true');
   await id('tick-owner').click();
@@ -551,7 +556,7 @@ test('start → point → empty scale → count → short → switch and fill �
 
   // ── การขายทั้งหมด (page 4) ──
   await expect(id('sales')).toBeVisible();
-  await expect(id('sale-rows')).toContainText('470 กก.');
+  await expect(id('sale-rows')).toContainText('450 กก.');
   await expect(id('sale-rows')).toContainText('ปิดแล้ว');
   // ── back after closing finds no live counter (review #2) ──
   // However far back the browser goes, every page of the closed sale is read-only.
@@ -630,4 +635,84 @@ test('last point: one full-width review button, no next-point tile (E04-S18)', a
   const wide = await id('to-summary').boundingBox();
   expect(wide!.width).toBeGreaterThan(300);
   await shot(page, '11b-last-point');
+});
+
+/**
+ * E04-S21 (owner 2026-11-17 "ก · ก · โอเค ทำตามนี้"): the fill-up sheet and the counter's guide at phone widths and
+ * text sizes. Nothing cut, every target at least 48, and the counter in fill state keeps the hold in view.
+ */
+for (const width of [320, 360]) {
+  for (const size of ['m', 'l'] as const) {
+    test(`E04-S21 fill sheet and guide fit at ${width} px text ${size.toUpperCase()} (offline)`, async ({ page, context }) => {
+      test.setTimeout(60_000);
+      const id = on(page);
+      const errors: string[] = [];
+      page.on('pageerror', (e) => errors.push(String(e)));
+      await page.setViewportSize({ width, height: 844 });
+      await page.addInitScript((s) => localStorage.setItem('mon-farm:text-size', s), size);
+      await seedMaster(page, FARM);
+      await page.evaluate(() => localStorage.setItem('mon-farm:hold-ms', '500'));
+      await page.goto('/v2');
+      await context.setOffline(true);
+      await id('home-sale-start').click();
+      await id('start-next').click();
+      await id('pick-farm-fa').click();
+      await id('pick-point-a1').click();
+      await id('start-weigh').click();
+      await hold(page);
+      await id('tool-short').click();
+      await id('short-save').click();
+      await id('switch-point').click();
+      await id('pick-point-a2').click();
+
+      // The sheet: each way, then the chosen one's steps; the confirm button reachable.
+      await expect(id('fill-sheet')).toBeVisible();
+      expect(await textFit(page)).toEqual([]);
+      expect(await smallTargets(page)).toEqual([]);
+      await id('fill-part').click();
+      expect(await textFit(page)).toEqual([]);
+      await id('fill-full').click();
+      await id('fill-go').click();
+      await id('start-weigh').click();
+
+      // The counter in fill state: the guide and the hold on one screen.
+      await expect(id('fill-guide')).toBeVisible();
+      expect(await textFit(page)).toEqual([]);
+      expect(await smallTargets(page)).toEqual([]);
+      await expect(id('hold')).toBeInViewport({ ratio: 1 });
+      if (width === 320 && size === 'l') await shot(page, '13-fill-320-l');
+      await hold(page);
+      await expect(id('current-no')).toHaveText(/เข่งถัดไป 3$/);
+      expect(errors).toEqual([]);
+    });
+  }
+}
+
+test('E04-S21 weigh apart: 35 stays in the basket at จุด 1, 15 is weighed now, the scale must read 17 (offline)', async ({ page, context }) => {
+  const id = on(page);
+  await page.setViewportSize({ width: 360, height: 844 });
+  await seedMaster(page, FARM);
+  await page.evaluate(() => localStorage.setItem('mon-farm:hold-ms', '500'));
+  await page.goto('/v2');
+  await context.setOffline(true);
+  await id('home-sale-start').click();
+  await id('start-next').click();
+  await id('pick-farm-fa').click();
+  await id('pick-point-a1').click();
+  await id('start-weigh').click();
+  await hold(page);
+  await id('tool-short').click();
+  await id('short-save').click();
+  await id('switch-point').click();
+  await id('pick-point-a2').click();
+  await id('fill-part').click();
+  await expect(id('fill-go')).toContainText('ชั่งส่วนที่เติม');
+  await id('fill-go').click();
+  await id('start-weigh').click();
+  await expect(id('fill-title')).toContainText('ชั่งแยกส่วนที่เติม · เข่ง 2');
+  await expect(id('basket-bar')).toContainText('อยู่ในเข่งที่ จันทเขลม · จุด 1');
+  await expect(id('should-read')).toContainText('17');
+  expect(await textFit(page)).toEqual([]);
+  await expect(id('hold')).toBeInViewport({ ratio: 1 });
+  await shot(page, '13a-fill-part');
 });

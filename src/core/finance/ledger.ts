@@ -497,10 +497,11 @@ function oldestFirst(a: { date: string; expenseId: string }, b: { date: string; 
 
 // ── Validation ──────────────────────────────────────────────────────────────
 
-export type ExpenseProblem = 'amount-required' | 'amount-invalid' | 'date-required';
+export type ExpenseProblem = 'amount-required' | 'amount-invalid' | 'date-required' | 'date-future';
 
 /** Only amount + date are required (D-62); a planned expense may leave the amount unknown. */
-export function checkExpense(f: Pick<ExpenseFields, 'amountSatang' | 'date' | 'stage'>): ExpenseProblem[] {
+/** With `today` (ISO), an actual or committed expense dated after it is a problem; planned may be ahead (E01-S22 Q3). */
+export function checkExpense(f: Pick<ExpenseFields, 'amountSatang' | 'date' | 'stage'>, today?: string): ExpenseProblem[] {
   const out: ExpenseProblem[] = [];
   if (f.amountSatang === null) {
     if (f.stage !== 'planned') out.push('amount-required');
@@ -508,6 +509,7 @@ export function checkExpense(f: Pick<ExpenseFields, 'amountSatang' | 'date' | 's
     out.push('amount-invalid');
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) out.push('date-required');
+  else if (today !== undefined && f.stage !== 'planned' && f.date > today) out.push('date-future');
   return out;
 }
 
@@ -608,10 +610,15 @@ export function owedByPerson(state: FinanceState): OwedTo[] {
 /** Home card "รายการที่ต้องจ่าย": owed back + committed expenses (D-65). */
 export function payableSatang(state: FinanceState): number {
   const owed = state.reimbursements.reduce((s, r) => s + Math.max(0, r.remainingSatang), 0);
-  const committed = state.expenses
-    .filter((x) => !x.deleted && x.stage === 'committed')
-    .reduce((s, x) => s + (x.amountSatang ?? 0), 0);
-  return owed + committed;
+  return owed + shopPayableSatang(state);
+}
+
+/**
+ * Committed buying not paid yet ("สั่งหรือตกลงไว้แล้ว ยังไม่ได้จ่าย"): the home ควรรู้ payables row (E16-S05
+ * HM-3). Money owed back to people is left out — it has its own row.
+ */
+export function shopPayableSatang(state: FinanceState): number {
+  return state.expenses.filter((x) => !x.deleted && x.stage === 'committed').reduce((s, x) => s + (x.amountSatang ?? 0), 0);
 }
 
 export type AllocationPlan =
@@ -642,9 +649,9 @@ export function foldRecordPublic<S extends object>(
   events: readonly FinanceEvent[],
   initial: (create: FinanceEvent) => S,
   guarded: readonly string[],
-): { state: S; head: EventId; conflicts: readonly FieldConflict[] } | null {
+): { state: S; head: EventId; conflicts: readonly FieldConflict[]; history: readonly S[] } | null {
   const f = foldRecord(events, initial, guarded);
-  return f ? { state: f.state, head: latestHead(events, f.createdBy.id) ?? f.createdBy.id, conflicts: f.conflicts } : null;
+  return f ? { state: f.state, head: latestHead(events, f.createdBy.id) ?? f.createdBy.id, conflicts: f.conflicts, history: f.history } : null;
 }
 
 /** The newest head of a chain of events on one record (ties by id). */

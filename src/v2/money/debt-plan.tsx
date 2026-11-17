@@ -194,7 +194,7 @@ export function PlanSheet({
         </View>
       ) : (
         <View style={{ gap: t.space.sm }}>
-          <MoneyField testID="debt-plan-amount" label={msg('debt.plan')} unit={msg('v2m.perSale')} satang={per} onChange={(v) => setPer(v)} />
+          <MoneyField testID="debt-plan-amount" label={msg('debt.plan')} unit={msg('v2m.perSale')} minSatang={1} satang={per} onChange={(v) => setPer(v)} />
           {perOk && balance > 0 ? (
             <AppText testID="debt-plan-sales" variant="bodySm">
               {msg('debt.inst.perSaleLeft', { debt: formatSatang(balance), per: formatSatang(per!), n: sales, last: formatSatang(lastPer) })}

@@ -23,6 +23,8 @@ export function Button({
   disabled,
   testID,
   accessibilityLabel,
+  accessibilityHint,
+  describedBy,
 }: {
   children: React.ReactNode;
   onPress?: () => void;
@@ -36,11 +38,17 @@ export function Button({
   testID?: string;
   /** When the visible text alone does not say what the button acts on. */
   accessibilityLabel?: string;
+  /** Read after the label, e.g. why a shut button is shut (native; react-native-web drops it). */
+  accessibilityHint?: string;
+  /** The nativeID of the text that says the same on web (`aria-describedby`). */
+  describedBy?: string;
 }) {
   const t = useTheme();
   const a11y = {
     testID,
     accessibilityLabel,
+    accessibilityHint,
+    'aria-describedby': describedBy,
     accessibilityRole: 'button' as const,
     accessibilityState: { disabled: !!disabled },
     onPress,

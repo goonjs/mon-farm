@@ -34,6 +34,7 @@ export const th = {
   'rp.sheet.full': 'ได้ครบ {amount}',
   'rp.sheet.less': 'ได้น้อยกว่านี้',
   'rp.sheet.openSale': 'เปิดการขาย',
+  'rp.sheet.saleInfo': 'ดูข้อมูลการขาย',
   'rp.sheet.pickedFull': 'หยิบครบ {amount}',
   'rp.sheet.pickedFix': 'ไม่ได้หยิบ / ไม่ครบ · แก้ที่การขาย',
   'rp.sheet.undoTick': 'ยังไม่ได้รับ',

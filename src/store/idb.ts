@@ -79,9 +79,9 @@ export function openDb(factory: IDBFactory): Promise<IDBDatabase> {
 export function connection(
   factory: () => IDBFactory | undefined,
   init?: (db: IDBDatabase) => Promise<void>,
-): () => Promise<IDBDatabase> {
+): (() => Promise<IDBDatabase>) & { reset: () => void } {
   let db: Promise<IDBDatabase> | null = null;
-  return () => {
+  const get = () => {
     db ??= (async () => {
       const f = factory();
       if (!f) throw new Error('IndexedDB is not available.');
@@ -106,4 +106,6 @@ export function connection(
     });
     return db;
   };
+  // A handle found dead (InvalidStateError) before its close event: the next call opens a new one.
+  return Object.assign(get, { reset: () => void (db = null) });
 }

@@ -14,10 +14,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { projectDebts, type DebtAccount, type HistoryLine } from '../../core/finance/debts';
+import { lumpLeft, projectDebts, type DebtAccount, type HistoryLine } from '../../core/finance/debts';
 import { paymentStatus } from '../../core/finance/payments';
 import { buyerOwes, PENDING_REPAY_SINCE, pendingRepayLines, type PendingHow } from '../../core/finance/pending-repays';
-import { formatSatang } from '../../core/finance/money';
+import { formatDate, formatSatang } from '../../core/finance/money';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
 import { useSaleCounts } from '../../finance/use-live-sales';
@@ -34,6 +34,7 @@ import {
   CardLabel,
   Check,
   ChevronRight,
+  CompactMoney,
   CTA,
   DebtIcon,
   FactRow,
@@ -46,9 +47,11 @@ import {
   Plus,
   ReceiptIcon,
   ScreenHeader,
+  TextLink,
 } from '../../ui';
 import { V2_HOME } from '../routes';
 import { orderHref } from './order-routes';
+import { fertilizingHref } from '../care/fertilizing/routes';
 import { ChoiceChip, ChoiceRow, Day } from './pieces';
 import { PlanBadge, PlanCard, PlanSheet } from './debt-plan';
 import { maxInstallments } from '../../core/master';
@@ -113,10 +116,27 @@ export function DebtsScreen() {
             ))}
           </Card>
         ) : null}
-        <CardLabel>{msg('debt.list.pick')}</CardLabel>
-        <ChoiceRow>
-          {people.map((p) => <ChoiceChip key={p.id} testID={`debt-person-${p.id}`} label={p.name} onPress={() => open(p.id, p.name)} />)}
-        </ChoiceRow>
+        {/* Owner q1 = ค (2026-11-08): each person is a full-width row with ›, not a short-name chip. */}
+        {people.length ? <CardLabel>{msg('debt.list.pick')}</CardLabel> : null}
+        {people.length ? (
+          <Card testID="debt-pick-list" style={{ gap: 0, paddingVertical: t.space.xs }}>
+            {people.map((p, i) => (
+              <Pressable
+                key={p.id}
+                testID={`debt-person-${p.id}`}
+                accessibilityRole="button"
+                accessibilityLabel={`${msg('debt.list.pick')} ${p.name}`}
+                onPress={() => open(p.id, p.name)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md, minHeight: t.target.min, paddingVertical: t.space.xs, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint }}
+              >
+                <AppText style={{ flex: 1, fontWeight: t.font.weight.bold }}>{p.name}</AppText>
+                <View testID={`debt-person-${p.id}-go`}>
+                  <ChevronRight color={t.color.inkSoft} />
+                </View>
+              </Pressable>
+            ))}
+          </Card>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -215,8 +235,15 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
     if (p) return fin.write(p.id, p.headEventId, { t: 'debt_payment_changed', patch: { deleted } });
   };
 
-  const sourceOf = (h: HistoryLine) => account?.debts.find((d) => d.id === h.id)?.expenseId;
+  // E16-S03: a fertilizing lump opens its fertilizing; a shared expense's debt opens that expense (E11-S10).
+  const debtOf = (h: HistoryLine) => account?.debts.find((d) => d.id === h.id);
+  const sourceOf = (h: HistoryLine) => debtOf(h)?.fertilizingId ?? debtOf(h)?.expenseId;
+  const left = useMemo(() => (account ? lumpLeft(account) : new Map<string, number>()), [account]);
   const openSource = (expenseId: string) => {
+    if (expenseId.startsWith('fz-')) {
+      router.push(fertilizingHref(expenseId));
+      return;
+    }
     const x = fin.state?.expenses.find((e) => e.id === expenseId);
     // A deleted purchase opens in the expense form: restore lives there, not in the order page.
     if (!x?.deleted && (x?.fertilizer || x?.share?.totalSacks != null)) router.push(orderHref(x.orderId ?? expenseId));
@@ -294,47 +321,73 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
         <Card style={{ gap: 0, paddingVertical: t.space.xs }}>
           {lines.map((h, i) => (
             <View key={h.id} testID={`debt-line-${h.id}`} style={{ gap: 2, paddingVertical: t.space.sm, borderTopWidth: i ? t.border.hair : 0, borderTopColor: t.color.ruleFaint, opacity: h.deleted ? t.opacity.muted : 1 }}>
-              <View style={{ flexDirection: 'row' }}>
-                <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, textDecorationLine: h.deleted ? 'line-through' : 'none' }}>
-                  {instOf(h) && plan?.kind === 'installments' ? msg('debt.inst.hist', { n: instOf(h)!, m: plan.count }) : msg(`debt.kind.${h.type}`)}
-                </AppText>
-                <AppText style={{ fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{`${h.signedSatang >= 0 ? '+' : MINUS}${formatSatang(Math.abs(h.signedSatang))}`}</AppText>
-              </View>
-              <FactRow icon={(c) => <CalendarIcon color={c} size={14} />}>
-                <Day iso={h.date} />
-              </FactRow>
-              {h.saleId ? <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>{`${msg('debt.history.sale')} ${h.saleId}`}</FactRow> : null}
-              {h.type === 'loan' && h.creditor.name ? <FactRow icon={(c) => <PersonIcon color={c} size={14} />}>{msg('debt.history.lender', { name: h.creditor.name })}</FactRow> : null}
-              {h.deleted ? <AppText variant="caption">{msg('debt.history.voided')}</AppText> : null}
               {(() => {
-                const r = routeOf(h);
-                if (!r) return null;
-                return (
-                  <Pressable
-                    testID={`rp-hist-${h.id}`}
-                    accessibilityRole="button"
-                    onPress={() => setRepay({ line: r.line, ticked: true })}
-                    style={{ alignSelf: 'flex-start', minHeight: t.target.min, justifyContent: 'center' }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xxs, borderRadius: t.radius.pill, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs, backgroundColor: r.short ? t.color.warnSunk : t.color.acceptSunk }}>
-                      {r.short ? null : <Check color={t.color.accept} size={10} />}
-                      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: r.short ? t.color.warn : t.color.accept }}>
-                        {`${r.short ? msg('rp.hist.short', { amount: formatSatang(r.short) }) : msg('rp.hist.received')} ›`}
-                      </Text>
+                const src = sourceOf(h);
+                const fz = debtOf(h)?.fertilizingId ? debtOf(h) : undefined;
+                const rest = fz && !h.deleted ? left.get(h.id) : undefined;
+                const facts = (
+                  <>
+                    <View style={{ flexDirection: 'row' }}>
+                      <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, textDecorationLine: h.deleted ? 'line-through' : 'none' }}>
+                        {instOf(h) && plan?.kind === 'installments' ? msg('debt.inst.hist', { n: instOf(h)!, m: plan.count }) : fz ? msg('fz.debt.title', { date: formatDate(h.date).split(' ').slice(0, 2).join(' ') }) : msg(`debt.kind.${h.type}`)}
+                      </AppText>
+                      <AppText style={{ fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{`${h.signedSatang >= 0 ? '+' : MINUS}${formatSatang(Math.abs(h.signedSatang))}`}</AppText>
+                    </View>
+                    <FactRow icon={(c) => <CalendarIcon color={c} size={14} />}>
+                      <Day iso={h.date} />
+                    </FactRow>
+                    {fz?.note ? <AppText variant="bodySm">{fz.note}</AppText> : null}
+                    {fz && 'edited' in fz && fz.edited ? <AppText testID={`debt-edited-${h.id}`} variant="caption">{msg('fz.debt.edited')}</AppText> : null}
+                    {fz && 'repriced' in fz && fz.repriced ? <AppText testID={`debt-repriced-${h.id}`} variant="caption">{msg('fz.debt.repriced')}</AppText> : null}
+                    {rest !== undefined ? (
+                      <View testID={`debt-left-${h.id}`} style={{ alignSelf: 'flex-start', paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: rest === 0 ? t.color.acceptSunk : t.color.surfaceSunk }}>
+                        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: rest === 0 ? t.color.accept : t.color.ink }}>
+                          {rest === 0 ? msg('fz.debt.paidOff') : rest < h.signedSatang ? <>{msg('fz.debt.left')} <CompactMoney satang={rest} size="bodyLg" /></> : null}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {h.saleId ? <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>{`${msg('debt.history.sale')} ${h.saleId}`}</FactRow> : null}
+                    {h.type === 'loan' && h.creditor.name ? <FactRow icon={(c) => <PersonIcon color={c} size={14} />}>{msg('debt.history.lender', { name: h.creditor.name })}</FactRow> : null}
+                    {h.deleted ? <AppText variant="caption">{msg('debt.history.voided')}</AppText> : null}
+                    {(() => {
+                      const r = routeOf(h);
+                      if (!r) return null;
+                      return (
+                        <Pressable
+                          testID={`rp-hist-${h.id}`}
+                          accessibilityRole="button"
+                          onPress={() => setRepay({ line: r.line, ticked: true })}
+                          style={{ alignSelf: 'flex-start', minHeight: t.target.min, justifyContent: 'center' }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xxs, borderRadius: t.radius.pill, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs, backgroundColor: r.short ? t.color.warnSunk : t.color.acceptSunk }}>
+                            {r.short ? null : <Check color={t.color.accept} size={10} />}
+                            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: r.short ? t.color.warn : t.color.accept }}>
+                              {`${r.short ? msg('rp.hist.short', { amount: formatSatang(r.short) }) : msg('rp.hist.received')} ›`}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })()}
+                  </>
+                );
+                // Owner 2026-11-07 (style A): a share debt's line itself opens its expense — void, restore or edit it there (E11-S10).
+                return src ? (
+                  <Pressable testID={`debt-open-${h.id}`} accessibilityRole="button" accessibilityLabel={[msg('debt.history.openExpense'), msg(`debt.kind.${h.type}`), `${h.signedSatang >= 0 ? '+' : MINUS}${formatSatang(Math.abs(h.signedSatang))}`, formatDate(h.date), h.deleted ? msg('debt.history.voided') : ''].filter(Boolean).join(', ')} onPress={() => openSource(src)} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.min }}>
+                    <View style={{ flex: 1, minWidth: 0, gap: 2 }}>{facts}</View>
+                    <View testID={`debt-open-${h.id}-chevron`} aria-hidden>
+                      <ChevronRight color={t.color.inkFaint} />
                     </View>
                   </Pressable>
+                ) : (
+                  <>
+                    {facts}
+                    {/* Owner 2026-11-07: void is a red underlined link (style F), restore a blue one (style B). */}
+                    <TextLink testID={`debt-void-${h.id}`} tone={h.deleted ? 'action' : 'reject'} onPress={() => void voidLine(h, !h.deleted)}>
+                      {h.deleted ? msg('debt.history.restore') : msg('debt.history.void')}
+                    </TextLink>
+                  </>
                 );
               })()}
-              <View style={{ alignItems: 'flex-start' }}>
-                {sourceOf(h) ? (
-                  // A share debt is a projection of its expense: void, restore or edit it there (E11-S10).
-                  <Button testID={`debt-open-${h.id}`} variant="ghost" onPress={() => openSource(sourceOf(h)!)}>{msg('debt.history.openExpense')}</Button>
-                ) : (
-                  <Button testID={`debt-void-${h.id}`} variant={h.deleted ? 'ghost' : 'destructive'} onPress={() => void voidLine(h, !h.deleted)}>
-                    {h.deleted ? msg('debt.history.restore') : msg('debt.history.void')}
-                  </Button>
-                )}
-              </View>
             </View>
           ))}
         </Card>

@@ -4,10 +4,15 @@ import type { ReactNode } from 'react';
 import { ExpenseFormScreen as ExpenseScreen } from '../v2/money/expense-form-screen';
 import { ExpensesScreen } from '../v2/money/expenses-screen';
 import { OwedScreen } from '../v2/money/owed-screen';
+import { tokens } from '../../design/tokens';
 import { RepayScreen } from '../v2/money/repay-screen';
 import { projectFinance } from '../core/finance/ledger';
 import type { ExpenseFields, FinanceEvent } from '../core/finance/types';
+import { FARM_FUNDS } from '../core/finance/types';
 import { financeStore as mockFinance } from '../store/finance';
+import { todayIso } from '../core/finance/money';
+import { dayAfter } from '../core/master';
+import { dayCell, pickDate } from '../test/pick-date';
 import { wrap } from '../test/render';
 
 jest.mock('../store/finance', () => {
@@ -104,7 +109,7 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     typeOnPad('expense-amount', '640');
     expect(screen.getByTestId('expense-amount')).toHaveTextContent(/640\.00\s*บาท/);
     fireEvent.press(screen.getByTestId('expense-details'));
-    fireEvent.changeText(screen.getByTestId('expense-date'), '2026-09-28');
+    pickDate('expense-date', '2026-09-28');
     fireEvent.press(screen.getByTestId('expense-details-done'));
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
     await flush();
@@ -113,6 +118,72 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     const x = s.expenses.find((e) => e.amountSatang === 64000);
     expect(x).toMatchObject({ amountSatang: 64000, date: '2026-09-28', stage: 'actual' });
     expect(mockRouter.replace).toHaveBeenCalledWith('/v2/expenses');
+  });
+
+  it('the date · stage line under เพิ่มรายละเอียด wraps, never cut with "…" (owner rule 2026-10-27)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    const line = screen.getByTestId('expense-details-line');
+    expect(line).toHaveTextContent(/เกิดจริง/);
+    expect(line.props.numberOfLines).toBeUndefined();
+  });
+
+  it('the date · stage line has no "แตะเพื่อเปลี่ยน": the row already looks tappable (owner 2026-11-14)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    const line = screen.getByTestId('expense-details-line');
+    expect(line).toHaveTextContent(/^\d{1,2} \S+ \d{4} · เกิดจริง$/);
+    expect(line).not.toHaveTextContent(/แตะเพื่อเปลี่ยน|—/);
+  });
+
+  it('an actual or committed expense cannot be dated after today; a planned one can (E01-S22 Q3, owner "1 ก 2 ก")', async () => {
+    const tomorrow = dayAfter(todayIso());
+    wrap(<ExpenseScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-details'));
+    expect(dayCell('expense-date', tomorrow).props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(screen.getByTestId('expense-date-picker-done'));
+    fireEvent.press(screen.getByTestId('expense-stage-committed'));
+    expect(dayCell('expense-date', tomorrow).props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(screen.getByTestId('expense-date-picker-done'));
+    fireEvent.press(screen.getByTestId('expense-stage-planned'));
+    expect(dayCell('expense-date', tomorrow).props.accessibilityState.disabled).toBeFalsy();
+  });
+
+  it('a future date picked while planned, then switched to actual, asks for a new date on save and saves nothing', async () => {
+    const before = (await state()).expenses.length;
+    wrap(<ExpenseScreen />);
+    await flush();
+    typeOnPad('expense-amount', '50');
+    fireEvent.press(screen.getByTestId('expense-details'));
+    fireEvent.press(screen.getByTestId('expense-stage-planned'));
+    pickDate('expense-date', dayAfter(todayIso()));
+    fireEvent.press(screen.getByTestId('expense-stage-actual'));
+    fireEvent.press(screen.getByTestId('expense-details-done'));
+    await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
+    await flush();
+    expect(screen.getByTestId('expense-date-row-error')).toHaveTextContent('วันที่ยังไม่ถึง เลือกวันใหม่');
+    expect((await state()).expenses.length).toBe(before);
+  });
+
+  it('a salary row dated ahead (next month, its date not the user\'s to pick) still saves (review of PR 194 B1)', async () => {
+    const month = todayIso().slice(0, 7);
+    const [y, m] = month.split('-').map(Number);
+    const next = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+    seq += 1;
+    await mockFinance.append({
+      id: `seed-${seq}`, groupId: 'group-1', deviceSeq: seq, ts: seq, actor: { userId: 'u', deviceId: 'dev-other' }, source: 'app', targetId: 'salary-b1', baseEventId: null,
+      payload: { t: 'salary_set', rule: { recipient: SOMWANG, payer: { id: FARM_FUNDS, name: '' }, amountSatang: 500000, startMonth: month, dueDay: 28 } },
+    });
+    mockParams.current = { id: `salary-b1:${next}` };
+    mockRouter.replace.mockClear();
+    wrap(<ExpenseScreen />);
+    await flush();
+    expect(screen.queryByTestId('expense-date')).toBeNull();
+    await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
+    await flush();
+    expect(screen.queryByTestId('expense-date-row-error')).toBeNull();
+    expect(mockRouter.replace).toHaveBeenCalled();
   });
 
   it('refuses committed without an amount; planned may be "unknown"', async () => {
@@ -126,7 +197,7 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
 
     fireEvent.press(screen.getByTestId('expense-details'));
     fireEvent.press(screen.getByTestId('expense-stage-planned'));
-    fireEvent.changeText(screen.getByTestId('expense-date'), '2026-11-15');
+    pickDate('expense-date', '2026-11-15');
     fireEvent.press(screen.getByTestId('expense-details-done'));
     fireEvent.press(screen.getByTestId('expense-unknown'));
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
@@ -213,7 +284,8 @@ describe('expense list: shop orders (E11-S11 FO-12)', () => {
     expect(row).toHaveTextContent(/ปุ๋ย 2 รายการ/);
     expect(row).toHaveTextContent(/ร้านสมศรี/);
     expect(row).toHaveTextContent(/สั่งไว้/);
-    expect(screen.getByTestId('order-progress-ord-9')).toHaveTextContent(/บอกรายละเอียดแล้ว 0 \/ 2/);
+    // E11-S17: nothing is "told" on an order any more, so no progress chip.
+    expect(screen.queryByTestId('order-progress-ord-9')).toBeNull();
     expect(screen.getByTestId('order-amount-ord-9')).toHaveTextContent(/1,500\.00/);
     fireEvent.press(row);
     expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/v2/order/[orderId]', params: { orderId: 'ord-9' } });
@@ -236,6 +308,42 @@ describe('repayment (E11-S03)', () => {
   beforeAll(async () => {
     await seedExpense('rp-a', { amountSatang: 80000, date: '2026-09-15', payer: SOMWANG });
     await seedExpense('rp-b', { amountSatang: 40000, date: '2026-09-22', payer: SOMWANG });
+  });
+
+  it('the repayment date is picked from a calendar, not typed (E01-S22 DP-1)', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    expect(screen.getByTestId('repay-date').props.accessibilityRole).toBe('button');
+    pickDate('repay-date', '2026-09-28');
+    expect(screen.getByTestId('repay-date-value')).toHaveTextContent('28 ก.ย. 2569');
+  });
+
+  it('a repayment cannot be dated after today (E01-S22 Q1 ก)', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    expect(dayCell('repay-date', dayAfter(todayIso())).props.accessibilityState.disabled).toBe(true);
+  });
+
+  it('who repays whom: two full-width picker rows with their labels shown, ›, and names that wrap (E01-S21 PK-1)', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    for (const [id, label] of [['repay-from', 'ผู้คืน'], ['repay-to', 'ผู้รับ']] as const) {
+      const row = screen.getByTestId(id);
+      expect(within(row).getByText(label)).toBeTruthy();
+      expect(within(row).getByTestId(`${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
+      expect(within(row).getByTestId(`${id}-name`).props.numberOfLines).toBeUndefined();
+    }
+  });
+
+  it('who repays whom has no "แตะเพื่อเปลี่ยน" hint: the two boxes already look tappable (owner 2026-11-14)', async () => {
+    mockParams.current = { payerId: SOMWANG.id };
+    wrap(<RepayScreen />);
+    await flush();
+    expect(screen.getByTestId('repay-from')).toBeTruthy();
+    expect(screen.queryByText(/แตะเพื่อเปลี่ยน/)).toBeNull();
   });
 
   it('refuses more than is owed', async () => {
@@ -270,9 +378,66 @@ describe('repayment (E11-S03)', () => {
     await flush();
     expect(screen.getByTestId(`owed-amount-${SOMWANG.id}`).props.children).toBe('200.00');
   });
+
+  it('"ลบการคืน" is a red underlined link under บันทึกการคืน, left-aligned, not a round button at the line end (owner 2026-11-07)', async () => {
+    wrap(<OwedScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId(`owed-open-${SOMWANG.id}`));
+    const card = screen.getByTestId(`owed-${SOMWANG.id}`);
+    const order = card.findAll((n) => typeof n.props.testID === 'string' && n.props.accessibilityRole === 'button' && /^(owed-repay-|repayment-void-)/.test(n.props.testID)).map((n) => n.props.testID as string);
+    const ids = [...new Set(order)];
+    expect(ids[0]).toBe(`owed-repay-${SOMWANG.id}`);
+    expect(ids.slice(1).every((x) => x.startsWith('repayment-void-'))).toBe(true);
+    expect(ids.length).toBeGreaterThan(1);
+    const link = screen.getAllByTestId(/^repayment-void-/)[0];
+    const flat = (st: unknown) => Object.assign({}, ...[st].flat(Infinity).filter(Boolean));
+    expect(flat(link.props.style)).toMatchObject({ alignSelf: 'flex-start' });
+    expect(flat(link.props.style).borderWidth ?? 0).toBe(0);
+    expect(flat(within(link).getByText(/ลบการคืน/).props.style)).toMatchObject({ textDecorationLine: 'underline', color: tokens.color.light.reject });
+  });
 });
 
-describe('Save sits in the header (keyboard never covers it)', () => {
+describe('"ลบการคืน" links: one per repayment, named when there are several (owner 2026-11-07)', () => {
+  const NOK = { id: 'p-nok', name: 'นก' };
+  const repay = async (amount: string) => {
+    mockParams.current = { payerId: NOK.id };
+    wrap(<RepayScreen />);
+    await flush();
+    typeOnPad('repay-amount', amount);
+    await act(async () => fireEvent.press(screen.getByTestId('repay-save')));
+    await flush();
+    screen.unmount();
+  };
+  beforeAll(async () => {
+    await seedExpense('nk-a', { amountSatang: 30000, date: '2026-09-15', payer: NOK });
+    await seedExpense('nk-b', { amountSatang: 20000, date: '2026-09-22', payer: NOK });
+  });
+
+  it('a repayment over two items is one link; two repayments are named by amount', async () => {
+    await repay('400'); // 300 to nk-a, 100 to nk-b
+    await repay('50');
+    wrap(<OwedScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId(`owed-open-${NOK.id}`));
+    const links = screen.getAllByTestId(/^repayment-void-/);
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveTextContent(/^ลบการคืน 400\.00 · /);
+    expect(links[1]).toHaveTextContent(/^ลบการคืน 50\.00 · /);
+    expect(screen.getByTestId(`owed-repay-${NOK.id}`)).toBeTruthy();
+    screen.unmount();
+  });
+
+  it('fully repaid: no บันทึกการคืน, the links stay so a repayment can still be deleted', async () => {
+    await repay('50');
+    wrap(<OwedScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId(`owed-open-${NOK.id}`));
+    expect(screen.queryByTestId(`owed-repay-${NOK.id}`)).toBeNull();
+    expect(screen.getAllByTestId(/^repayment-void-/)).toHaveLength(3);
+  });
+});
+
+describe('Save placement', () => {
   it('expense-save is pinned at the bottom in the simple design (owner 2026-10-23), not in the header', async () => {
     mockParams.current = { id: 'new' };
     wrap(<ExpenseScreen />);
@@ -281,12 +446,13 @@ describe('Save sits in the header (keyboard never covers it)', () => {
     expect(within(screen.getByTestId('expense-actions')).getByTestId('expense-save')).toBeTruthy();
   });
 
-  it('repay-save renders inside screen-header and keeps its total while saving', async () => {
+  it('repay-save sits in the bottom save bar (owner 2026-11-07, style I) and keeps its total while saving', async () => {
     mockParams.current = { payerId: SOMWANG.id };
     wrap(<RepayScreen />);
     await flush();
     typeOnPad('repay-amount', '100');
-    const btn = within(screen.getByTestId('screen-header')).getByTestId('repay-save');
+    expect(within(screen.getByTestId('screen-header')).queryByTestId('repay-save')).toBeNull();
+    const btn = within(screen.getByTestId('save-bar')).getByTestId('repay-save');
     expect(btn.props.accessibilityLabel).toContain('100.00');
   });
 });

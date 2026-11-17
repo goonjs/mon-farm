@@ -1,6 +1,7 @@
 /**
  * /v2/sale/start — เริ่มการขาย (sale mockup v1.1.0 page 5, E04-S02): the sale
- * header filled from farm data so "ถัดไป" is one tap — today, the latest buyer,
+ * header filled from farm data so "ถัดไป" is one tap — the sale day (today, or
+ * an earlier day picked on the in-app calendar, E04-S19 BF-9), the latest buyer,
  * the farm manager, the group's default net weight, numbering mode and scale
  * type. Price, note and start time may wait (SALE-3, D-11). Numbering and scale
  * type are chosen here, before the first basket (D-53, D-66, D-70 S3).
@@ -17,7 +18,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { formatSatang } from '../../core/finance/money';
-import { defaultBuyer, filterPeople, formatThaiDate } from '../../core/master';
+import { defaultBuyer, filterPeople, formatSaleDate, todayIso } from '../../core/master';
 import type { NumberingMode } from '../../core/types';
 import { useI18n, useT } from '../../i18n';
 import { newId } from '../../lib/id';
@@ -30,6 +31,7 @@ import {
   cardStyle,
   ChevronRight,
   CTA,
+  DatePickerSheet,
   MoneyField,
   Plus,
   RadioCard,
@@ -99,7 +101,7 @@ export function StartSaleScreen() {
   const t = useTheme();
   const msg = useT();
   const router = useRouter();
-  const { era, toggleEra } = useI18n();
+  const { era } = useI18n();
   const { saleId, append, ready, master, settings } = useSaleView();
   const [now] = useState(() => Date.now());
   const [latestId, setLatestId] = useState<string | null | undefined>(undefined);
@@ -108,6 +110,9 @@ export function StartSaleScreen() {
   const [pairId, setPairId] = useState<string | null>(null);
   const [price, setPrice] = useState<number | null>(null);
   const [note, setNote] = useState('');
+  // The sale day (E04-S19 BF-9): today unless an earlier day is picked; never later.
+  const [day, setDay] = useState(() => todayIso(now));
+  const [dayOpen, setDayOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet>('none');
 
   useEffect(() => {
@@ -123,7 +128,7 @@ export function StartSaleScreen() {
   const manager = filterPeople(master.people, 'manager').find((p) => !p.deleted) ?? null;
   const mode = numbering ?? settings.numbering;
   const pair = settings.pairs.find((p) => p.pairId === pairId) ?? settings.pairs.find((p) => p.isDefault)!;
-  const weekday = msg('v2s.weekdays').split(',')[new Date(now + 7 * 3_600_000).getUTCDay()];
+  const weekday = msg('v2s.weekdays').split(',')[new Date(`${day}T00:00:00Z`).getUTCDay()];
 
   const next = () => {
     append({
@@ -138,6 +143,7 @@ export function StartSaleScreen() {
         ...(note.trim() ? { note: note.trim() } : {}),
         workerLead: '',
         where: 'farm',
+        day,
       },
     });
     append({ kind: 'sys', payload: { t: 'numbering_set', numbering: mode } });
@@ -224,10 +230,11 @@ export function StartSaleScreen() {
           testID="start-date"
           icon={() => <FarmMateArt id="farmwork.calendar" />}
           label={msg('start.date')}
-          value={`${weekday} ${formatThaiDate(now, era)}`}
-          lines={[msg('v2s.eraHint')]}
-          onPress={toggleEra}
+          value={`${weekday} ${formatSaleDate(now, day, era)}`}
+          trailing={<View testID="start-date-chevron" aria-hidden><ChevronRight color={t.color.inkFaint} /></View>}
+          onPress={() => setDayOpen(true)}
         />
+        <DatePickerSheet open={dayOpen} onClose={() => setDayOpen(false)} value={day} onChange={setDay} max={todayIso(now)} today={todayIso(now)} title={msg('start.date')} testID="start-date-picker" />
         <Rule />
         <FieldRow
           testID="start-buyer"
@@ -261,6 +268,7 @@ export function StartSaleScreen() {
           label={msg('v2s.price')}
           value={price !== null ? msg('v2s.perKg', { price: formatSatang(price) }) : <EmptyPill label={msg('numpad.later')} />}
           lines={[msg('v2s.priceLater'), msg('v2s.priceNow')]}
+          trailing={<View testID="start-price-row-chevron" aria-hidden><ChevronRight color={t.color.inkFaint} /></View>}
           onPress={() => setSheet('price')}
         />
         <Rule />
@@ -270,6 +278,7 @@ export function StartSaleScreen() {
           label={msg('start.pair')}
           value={msg('v2f.kg', { n: pair.netG / 1000 })}
           lines={[pair.isDefault ? msg('v2s.pairDefault') : msg('v2s.basketKg', { n: pair.basketG / 1000 })]}
+          trailing={<View testID="start-pair-chevron" aria-hidden><ChevronRight color={t.color.inkFaint} /></View>}
           onPress={() => setSheet('pair')}
         />
         <Rule />

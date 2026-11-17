@@ -17,7 +17,7 @@ import { projectDebts } from '../core/finance/debts';
 import { formatDate } from '../core/finance/money';
 import { buyerOwes, pendingRepayLines } from '../core/finance/pending-repays';
 import type { FinanceEvent } from '../core/finance/types';
-import { formatThaiDate } from '../core/master';
+import { formatSaleDate } from '../core/master';
 import { projectSale } from '../core/project';
 import { useSaleCounts } from '../finance/use-live-sales';
 import { store } from '../store/store';
@@ -41,6 +41,8 @@ export interface OwesRow {
 interface SaleInfo {
   readonly buyer: string;
   readonly startedTs: number | null;
+  /** The picked sale day (E04-S19). */
+  readonly day: string | null;
 }
 
 export function useRepayHome(events: readonly FinanceEvent[] | null, era: 'be' | 'ce') {
@@ -78,7 +80,7 @@ export function useRepayHome(events: readonly FinanceEvent[] | null, era: 'be' |
       const out = new Map<string, SaleInfo>();
       for (const id of saleIds.split('|')) {
         const s = projectSale(await store.load(id), id);
-        out.set(id, { buyer: s.parties?.buyer.trim() ?? '', startedTs: s.startedTs });
+        out.set(id, { buyer: s.parties?.buyer.trim() ?? '', startedTs: s.startedTs, day: s.day });
       }
       if (live) setInfo(out);
     })().catch((err) => console.error('Sales could not be read.', err));
@@ -90,7 +92,7 @@ export function useRepayHome(events: readonly FinanceEvent[] | null, era: 'be' |
   const owes: OwesRow[] = base.owes.map((o) => {
     const i = info.get(o.saleId);
     const iso = base.dates.get(o.saleId);
-    const dateText = iso ? formatDate(iso, era) : i?.startedTs ? formatThaiDate(i.startedTs, era) : '';
+    const dateText = iso ? formatDate(iso, era) : i?.startedTs ? formatSaleDate(i.startedTs, i.day, era) : '';
     return {
       saleId: o.saleId,
       dateText,

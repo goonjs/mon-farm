@@ -18,7 +18,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { checkDebt, projectDebts } from '../../core/finance/debts';
-import { formatDate, formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../core/finance/money';
+import { formatSatang, parseBahtToSatang, satangToInput, todayIso } from '../../core/finance/money';
 import { FARM_FUNDS, type DebtKind, type Payer } from '../../core/finance/types';
 import { useFinance } from '../../finance/use-finance';
 import { useInFlight } from '../../finance/use-in-flight';
@@ -27,7 +27,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, Button, Card, Check, FieldError, MoneyField, RadioCard, ScreenHeader, SegmentedControl, TextField } from '../../ui';
+import { AppText, DateField, Button, Card, Check, FieldError, MoneyField, RadioCard, SaveBar, ScreenHeader, SegmentedControl, TextField } from '../../ui';
 import { ORDER_NEW } from './order-routes';
 import { PayerPicker, SectionLabel } from './pieces';
 
@@ -92,11 +92,11 @@ export function AddDebtScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <ScreenHeader title={msg('debt.add')} subtitle={worker.name} back={{ label: msg('v2.back'), onPress: back, testID: 'debt-add-back' }} sync={sync} action={{ label: msg('fin.form.save'), testID: 'debt-save', disabled: inFlight.busy, saving: inFlight.busy, onPress: () => void inFlight.run(save) }} />
-      <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
+      <ScreenHeader title={msg('debt.add')} subtitle={worker.name} back={{ label: msg('v2.back'), onPress: back, testID: 'debt-add-back' }} sync={sync} />
+      <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space.xl }}>
         <View style={{ gap: t.space.sm }}>
           <SectionLabel required>{msg('debt.form.kind').replace(' *', '')}</SectionLabel>
-          <SegmentedControl testID="debt-kind" value={kind} onChange={pickKind} options={KINDS.map((k) => ({ value: k, label: msg(`debt.kind.${k}`) }))} />
+          <SegmentedControl testID="debt-kind" value={kind} onChange={pickKind} options={KINDS.map((k) => ({ value: k, label: k === 'fertilizer' ? `${msg(`debt.kind.${k}`)} ›` : msg(`debt.kind.${k}`) }))} />
         </View>
 
         <View style={{ gap: t.space.xs }}>
@@ -104,6 +104,8 @@ export function AddDebtScreen() {
             testID="debt-amount"
             label={msg('debt.form.amount').replace(' *', '')}
             required
+            // This screen never saves 0: the pad says so at 0 (owner q2 = ก, 2026-11-08).
+            minSatang={1}
             unit={msg('v2m.baht')}
             satang={parseBahtToSatang(amount)}
             onChange={(v) => setAmount(satangToInput(v))}
@@ -123,13 +125,12 @@ export function AddDebtScreen() {
           </View>
         ) : null}
 
-        <TextField
+        <DateField
           testID="debt-date"
           label={msg('debt.form.date').replace(' *', '')}
           required
           value={date}
-          onChangeText={setDate}
-          helper={msg('v2m.dateShown', { shown: formatDate(date) })}
+          onChange={setDate}
           error={tried && problems.includes('date-required') ? msg('debt.form.err.date-required') : undefined}
         />
         <TextField
@@ -160,6 +161,7 @@ export function AddDebtScreen() {
         </Pressable>
         {failed ? <AppText style={{ color: t.color.reject }}>{msg('fin.form.saveFailed')}</AppText> : null}
       </ScrollView>
+      <SaveBar action={{ label: msg('fin.form.save'), testID: 'debt-save', disabled: inFlight.busy, saving: inFlight.busy, onPress: () => void inFlight.run(save) }} />
     </View>
   );
 }
@@ -210,9 +212,9 @@ export function PayDebtScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
-      <ScreenHeader title={msg('debt.pay')} subtitle={worker.name} back={{ label: msg('v2.back'), onPress: back, testID: 'debt-pay-back' }} sync={sync} action={confirmOver ? undefined : { label: msg('fin.form.save'), testID: 'debt-pay-save', disabled: satang <= 0, saving: inFlight.busy, onPress: () => void inFlight.run(() => save(false)) }} />
+      <ScreenHeader title={msg('debt.pay')} subtitle={worker.name} back={{ label: msg('v2.back'), onPress: back, testID: 'debt-pay-back' }} sync={sync} />
       {fin.events === null ? null : (
-        <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
+        <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space.xl }}>
           <View style={{ gap: t.space.sm }}>
             <SectionLabel>{msg('debt.pay.which')}</SectionLabel>
             {options.map((o) => (
@@ -230,6 +232,8 @@ export function PayDebtScreen() {
             testID="debt-pay-amount"
             label={msg('debt.form.amount').replace(' *', '')}
             required
+            // This screen never saves 0: the pad says so at 0 (owner q2 = ก, 2026-11-08).
+            minSatang={1}
             unit={msg('v2m.baht')}
             satang={parseBahtToSatang(amount)}
             onChange={(v) => {
@@ -237,7 +241,7 @@ export function PayDebtScreen() {
               setConfirmOver(false);
             }}
           />
-          <TextField testID="debt-pay-date" label={msg('debt.form.date').replace(' *', '')} required value={date} onChangeText={setDate} helper={msg('v2m.dateShown', { shown: formatDate(date) })} />
+          <DateField testID="debt-pay-date" label={msg('debt.form.date').replace(' *', '')} required value={date} onChange={setDate} max={todayIso()} />
           <TextField testID="debt-pay-note" label={msg('debt.form.note')} multiline value={note} onChangeText={setNote} placeholder={msg('fin.form.notePlaceholder')} />
           {satang > 0 ? (
             <Card>
@@ -264,6 +268,7 @@ export function PayDebtScreen() {
           {failed ? <AppText style={{ color: t.color.reject }}>{msg('fin.form.saveFailed')}</AppText> : null}
         </ScrollView>
       )}
+      {confirmOver ? null : <SaveBar action={{ label: msg('fin.form.save'), testID: 'debt-pay-save', disabled: satang <= 0, saving: inFlight.busy, onPress: () => void inFlight.run(() => save(false)) }} />}
     </View>
   );
 }

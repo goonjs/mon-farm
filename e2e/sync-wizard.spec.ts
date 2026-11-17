@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 
 import { evidence } from './fixtures';
 import { signedIn } from './session';
@@ -16,7 +16,7 @@ import { signedIn } from './session';
  */
 
 test.skip(!process.env.E2E_SYNC_EMULATOR, 'needs the emulators: npm run test:e2e:sync');
-test.use({ storageState: signedIn, viewport: { width: 412, height: 915 } });
+test.use({ account: signedIn, viewport: { width: 412, height: 915 } });
 
 const SHOTS = 'docs/ux/screenshots/ui-v2/sync';
 const on = (page: Page) => (id: string) => page.getByTestId(id).filter({ visible: true });
@@ -51,13 +51,13 @@ test('the points wizard waits for the first pull, then says sync is not availabl
 
   // Online, still trying: waits, and create is not yet offered.
   await expect(id('wizard-wait-pull')).toBeVisible();
-  await expect(id('screen-header').getByTestId('wizard-create')).toBeDisabled();
+  await expect(id('save-bar').getByTestId('wizard-create')).toBeDisabled();
   await shot(page, 'wizard-waiting');
 
   // The grace period ends without a first pull: says so, and create works.
   await expect(id('wizard-no-sync')).toBeVisible({ timeout: 40_000 });
   await expect(id('wizard-wait-pull')).toHaveCount(0);
-  await expect(id('screen-header').getByTestId('wizard-create')).toBeEnabled();
+  await expect(id('save-bar').getByTestId('wizard-create')).toBeEnabled();
   await shot(page, 'wizard-cannot-sync');
 
   // Offline has its own words.

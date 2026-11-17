@@ -11,7 +11,6 @@ import { Link, type Href } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { ChevronLeft, MenuIcon } from './icons';
-import { ActionButton, type HeaderPrimaryAction } from './action-button';
 import { SyncPill } from './sync-pill';
 import { useT } from '../i18n';
 import type { SyncStatus } from '../sync/status';
@@ -36,7 +35,6 @@ export function ScreenHeader({
   menu,
   sync,
   right,
-  action,
 }: {
   title: string;
   subtitle?: string;
@@ -45,8 +43,6 @@ export function ScreenHeader({
   /** Omit for no pill; `null` while loading (no pill yet). */
   sync?: SyncStatus | null;
   right?: React.ReactNode;
-  /** Optional primary button in the top-right corner, right of the sync pill. */
-  action?: HeaderPrimaryAction;
 }) {
   const t = useTheme();
   const msg = useT();
@@ -62,7 +58,7 @@ export function ScreenHeader({
         gap: t.space.xs,
         minHeight: t.layout.topBarHeight,
         paddingLeft: back || menu ? t.space.xs : t.space.lg,
-        paddingRight: action ? t.space.sm : t.space.md,
+        paddingRight: t.space.md,
         paddingVertical: t.space.xs,
         backgroundColor: t.color.appBar,
         borderBottomWidth: t.border.hair,
@@ -119,7 +115,6 @@ export function ScreenHeader({
 
       {right}
       {sync ? <SyncPill status={sync} /> : null}
-      {action ? <ActionButton action={action} /> : null}
     </View>
   );
 }

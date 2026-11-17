@@ -48,7 +48,7 @@ export function useSaleMoney() {
   const pointSale = isPointSale(events);
   const settlement = useMemo<Settlement | null>(() => {
     try {
-      if (pointSale) return master ? settlePoints(events, state, master, saleDay(state.startedTs, now)) : null;
+      if (pointSale) return master ? settlePoints(events, state, master, saleDay(state.startedTs, now, state.day)) : null;
       return settle(events, state);
     } catch (err) {
       if (err instanceof SettlementUnavailable) return null;

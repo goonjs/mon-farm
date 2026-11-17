@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactElement, ReactNode } from 'react';
 
 import { LogBuilder } from '../core/fixtures';
@@ -129,11 +129,12 @@ describe('CO-10 · story example (A9): โอนรวม + ให้คนก�
     expect(last('pay-sub-owner')).toHaveTextContent(/ส่วนสวน 14,437\.50 − ปัด 0\.50/);
     expect(last('pay-sub-owner-repay')).toHaveTextContent(/^\+ ↘ คืนหนี้ 8,500\.00$/);
     expect(last('pay-chip-owner')).toHaveTextContent(/↘ คืนหนี้ .*8,500 รอรับโอน/);
-    expect(last('pay-left')).toHaveTextContent('ยังไม่ติ๊ก 2 รายการ');
+    // Owner 2026-11-07: no "ยังไม่ติ๊ก N รายการ" line; the close button is gated instead.
+    expect(screen.queryByTestId('pay-left')).toBeNull();
+    expect(screen.queryByText(/ยังไม่ติ๊ก/)).toBeNull();
     await press('tick-owner');
     expect(last('tick-owner').props.accessibilityState).toMatchObject({ checked: true });
     expect(screen.queryByTestId('pay-chip-owner')).toBeNull();
-    expect(last('pay-left')).toHaveTextContent('ยังไม่ติ๊ก 1 รายการ');
     const marks = (await financeStore.load()).filter((e) => e.payload.t === 'payment_mark_set' && e.payload.saleId === S);
     expect(marks.map((e) => e.targetId)).toEqual([`payment-${S}-owner`]);
   });
@@ -149,6 +150,8 @@ describe('CO-10 · story example (A9): โอนรวม + ให้คนก�
   it('ticks stay open after close; the close button is gone', async () => {
     await inSale(S, <CloseoutPayScreen />);
     expect(screen.queryByTestId('close-sale')).toBeNull();
+    // the buyer view stays, alone in the footer
+    expect(within(last('pay-footer')).getByTestId('pay-buyer-view')).toBeTruthy();
     expect(last(`tick-${farm.red}`).props.accessibilityState).toMatchObject({ disabled: false });
     await press(`tick-${farm.red}`);
     expect(last(`tick-${farm.red}`).props.accessibilityState).toMatchObject({ checked: true });
@@ -171,21 +174,24 @@ describe('A9 look: the transfer split breaks before "↘ คืนหนี้" 
     expect(style.color).toBe(tokens.color.light.debtIn);
   });
 
-  it('ดูที่มา sits on a light pill', async () => {
+  it('ดูที่มา is an underlined link, not a pill (owner rule 2026-11-06, style B)', async () => {
     await inSale(S, <CloseoutPayScreen />);
-    expect(screen.getByTestId('pay-sources-open')).toHaveTextContent(/ดูที่มา/);
-    const pill = screen.getByTestId('pay-sources-open').findAll((n) => {
-      const st = [n.props.style].flat(Infinity).filter(Boolean).reduce((a: object, x: object) => ({ ...a, ...x }), {}) as { backgroundColor?: string };
-      return st.backgroundColor === tokens.color.light.actionSunk;
-    });
-    expect(pill.length).toBeGreaterThan(0);
+    const link = screen.getByTestId('pay-sources-open');
+    expect(link).toHaveTextContent(/ดูที่มา/);
+    const flat = (n: { props: { style?: unknown } }) => ([n.props.style].flat(Infinity).filter(Boolean) as object[]).reduce((a: object, x: object) => ({ ...a, ...x }), {}) as { backgroundColor?: string; textDecorationLine?: string };
+    expect(link.findAll((n) => flat(n).backgroundColor === tokens.color.light.actionSunk)).toHaveLength(0);
+    expect(link.findAll((n) => flat(n).textDecorationLine === 'underline').length).toBeGreaterThan(0);
+    expect(link.props.accessibilityRole).toBe('link');
   });
 
-  it('ให้คนรับซื้อดู opens the buyer sheet from this page too, on the same light pill (owner 2026-11-04)', async () => {
+  it('ให้คนรับซื้อดู opens the buyer sheet from this page too: a full-width button just above ปิดการขาย (owner 2026-11-04, 2026-11-07)', async () => {
     router.push.mockClear();
     await inSale(S, <CloseoutPayScreen />);
     const open = last('pay-buyer-view');
     expect(open).toHaveTextContent(/ให้คนรับซื้อดู/);
+    const footer = last('pay-footer');
+    const ids = footer.findAll((n) => typeof n.props.testID === 'string' && ['pay-buyer-view', 'close-sale'].includes(n.props.testID) && n.props.accessibilityRole === 'button').map((n) => n.props.testID);
+    expect([...new Set(ids)]).toEqual(['pay-buyer-view', 'close-sale']);
     fireEvent.press(open);
     expect(router.push).toHaveBeenCalledWith(`/v2/sale/${S}/buyer-view?recorded=1`);
   });
@@ -251,7 +257,6 @@ describe('CO-25 · buyer-split (A19)', () => {
     expect(last('tick-amt-owner')).toHaveTextContent('19,687.00');
     expect(last('pay-sub-owner')).toHaveTextContent(/ส่วนสวน 14,437\.50 − ปัด 0\.50/);
     expect(last('pay-sub-owner-repay')).toHaveTextContent('+ ↘ คืนหนี้นัด 5,250.00');
-    expect(last('pay-left')).toHaveTextContent('ยังไม่ติ๊ก 3 รายการ');
     await press(id);
     expect(last(id).props.accessibilityState).toMatchObject({ checked: true });
     expect(screen.queryByTestId(`pay-chip-debt-cash-${farm.red}`)).toBeNull();

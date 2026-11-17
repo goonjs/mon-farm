@@ -112,11 +112,14 @@ export function SaleMenu({
   pick,
   close,
   lead,
+  backfill,
 }: {
   view: View_;
   pick: (s: OptionSheet) => void;
   close: () => void;
   lead?: ReactNode;
+  /** Where บันทึกย้อนหลัง opens (E04-S19, owner 2026-11-16): the chosen tapper's catch-up. */
+  backfill?: string;
 }) {
   const msg = useT();
   const router = useRouter();
@@ -149,6 +152,18 @@ export function SaleMenu({
           {msg("opt.info")}
         </MenuRow>
       </MenuGroup>
+      {backfill ? (
+        <MenuGroup title={msg("menu.grpRecord")}>
+          <MenuRow
+            testID="menu-backfill"
+            tone="action"
+            icon={() => <FarmMateArt id="farmwork.history" size={MENU_ART} />}
+            onPress={go(backfill)}
+          >
+            {msg("backfill.title")}
+          </MenuRow>
+        </MenuGroup>
+      ) : null}
       <MenuGroup title={msg("menu.grpGo")}>
         <MenuRow
           testID="menu-home"

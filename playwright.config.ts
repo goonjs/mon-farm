@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 import { tokens } from './design/tokens';
-import { BASE_URL, signedIn } from './e2e/session';
+import { BASE_URL } from './e2e/session';
 
 /**
  * Playwright runs against the EXPORTED web build, never the dev server.
@@ -34,9 +34,8 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     // E02-S01: the app opens on the sign-in screen until someone has signed
-    // in; the suites start from a device that already has, in a group
-    // (e2e/session.ts).
-    storageState: signedIn,
+    // in; the suites start from a device that already has, in a group — the
+    // `account` fixture of e2e/test.ts (specs import `test` from there).
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
@@ -68,7 +67,7 @@ export default defineConfig({
     {
       // Same phone, portrait — the binding case for the rotate hint.
       name: 'phone-portrait',
-      testMatch: /(orientation|v2-money|v2-farm|v2-store|v2-home|v2-sale|v2-sale-history|v2-pending-repay|v2-account|v2-device-settings|v2-text-size|v2-favicon|v2-farmmate-art|auth-emulator|sync-emulator|sync-restore|sync-wizard)\.spec\.ts/,
+      testMatch: /(orientation|v2-money|v2-fertilizing|v2-farm|v2-store|v2-home|v2-sale|v2-sale-history|v2-catch-up|v2-prepare|v2-pending-repay|v2-account|v2-device-settings|v2-text-size|v2-favicon|v2-farmmate-art|auth-emulator|sync-emulator|sync-restore|sync-wizard)\.spec\.ts/,
       use: { ...devices['Pixel 7'], viewport: tokens.viewport.portrait, isMobile: true, hasTouch: true },
     },
     {

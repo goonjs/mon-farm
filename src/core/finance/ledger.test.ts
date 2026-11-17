@@ -8,6 +8,7 @@ import {
   filterExpenses,
   owedByPerson,
   payableSatang,
+  shopPayableSatang,
   projectFinance,
   stageTotals,
 } from './ledger';
@@ -64,6 +65,15 @@ describe('E11-S01 expenses and lifecycle', () => {
     expect(checkExpense({ amountSatang: 64000, date: '2026-09-28', stage: 'actual' })).toEqual([]);
     expect(checkExpense({ amountSatang: null, date: '2026-09-28', stage: 'actual' })).toEqual(['amount-required']);
     expect(checkExpense({ amountSatang: 100, date: '', stage: 'actual' })).toEqual(['date-required']);
+  });
+
+  it('with today given, actual and committed cannot be after it; planned can (E01-S22 Q3, owner "1 ก 2 ก" 2026-11-16)', () => {
+    const today = '2026-11-15';
+    expect(checkExpense({ amountSatang: 100, date: '2026-11-16', stage: 'actual' }, today)).toEqual(['date-future']);
+    expect(checkExpense({ amountSatang: 100, date: '2026-11-16', stage: 'committed' }, today)).toEqual(['date-future']);
+    expect(checkExpense({ amountSatang: 100, date: '2026-11-16', stage: 'planned' }, today)).toEqual([]);
+    expect(checkExpense({ amountSatang: 100, date: '2026-11-15', stage: 'actual' }, today)).toEqual([]);
+    expect(checkExpense({ amountSatang: 100, date: '2026-11-16', stage: 'actual' })).toEqual([]);
   });
 
   it('planned may have an unknown amount; committed/actual may not', () => {
@@ -315,6 +325,8 @@ describe('E11-S02 payer and money owed back', () => {
       created('x4', { payer: FARM, amountSatang: 5000 }),
     ]);
     expect(payableSatang(s)).toBe(1580000);
+    // The home ควรรู้ row counts only committed buying not paid yet; money owed back to people has its own row (review of PR 190 item 1).
+    expect(shopPayableSatang(s)).toBe(1500000);
   });
 });
 

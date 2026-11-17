@@ -1,6 +1,6 @@
 # Story: E11-S15 ขนาดกระสอบใส่ทศนิยมได้ (2.5 กก.)
 
-Status: Review
+Status: Done (2026-11-07 — merge #153; ตรวจ AC ครบกับ dev `cd9c615` ดูหัวข้อ "ตรวจปิดสตอรี่")
 
 ## Context
 
@@ -40,3 +40,18 @@ Status: Review
 ## Verification
 
 - [x] Sandbox run 2026-11-05: web build + Playwright Chromium; ภาพ `docs/ux/screenshots/v2/money/32-sack-kg-decimal-pad.png`, `33-sack-kg-decimal-item.png` (390×844)
+
+## ตรวจปิดสตอรี่ (2026-11-07, dev `cd9c615`)
+
+ผู้ตรวจ (ตรวจปิดสตอรี่ ไม่ใช่รีวิวโค้ดอิสระของ DoD): agent แยก อ่านโค้ด + รันเทสต์ที่เกี่ยว; ทีม dev รัน e2e ทั้งชุดบน build จริงเอง ไม่เดา
+
+- รันแล้ว: jest `src/v2/money/order-detail/tell.test.tsx`, `order-detail.test.tsx`, `src/v2/money/order/order-screen.test.tsx` 72 ผ่าน · vitest `number-entry.test.ts` 38 ผ่าน · e2e `v2-money.spec.ts` ผ่านในรอบทั้งชุดบน build จริง (73 ผ่าน 5 ข้าม 1 ล้มที่ `v2-farm` ไม่เกี่ยวกับสตอรี่นี้)
+- KG-1 (`item-sheets.tsx` `decimals={2} maxDigits={3}` = 0.01–999.99), KG-2 (`sackKg: 2.5` ไม่เปลี่ยน schema), KG-3 ("2.5 กก. / กระสอบ", "รวม … กก.", จำขนาด "2.5") ตรวจแล้ว
+- CI: `verify` เขียวบน `fa03c19`; job e2e ถูกข้ามตาม path filter (e2e ข้างบนคือหลักฐาน)
+
+### Follow-up
+
+- ภาพ `33-sack-kg-decimal-item.png`: การ์ดกี่กระสอบแสดง "4 กระสอบ กระสอบ · รวม 10 กก." — คำ "กระสอบ" ซ้ำ เพราะข้อความ `ordc.sackKgTotal` ขึ้นต้นด้วย "กระสอบ ·" ทั้งที่ช่องแสดงหน่วยแล้ว (มาจาก E11-S11 ไม่ใช่สตอรี่นี้)
+- ภาพเดียวกัน: ปุ่ม "เปลี่ยน" เป็นปุ่มกลมมีเส้นขอบ ขัดกฎเจ้าของ 2026-11-06 (phone-form-ux ข้อ 11) — มาจาก E11-S11
+- ไม่มีเทสต์ขอบ 0.01 / 999.99 ของช่องนี้ และไม่มีเทสต์ที่ render ชิป "2.5 กก."
+- ตั้งค่าปุ๋ย › ขนาด ยังเป็นช่องข้อความ (ข้อเล็กจากรีวิว ส่งลีดแล้ว)

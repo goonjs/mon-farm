@@ -53,12 +53,12 @@ import {
   NumberPad,
   PersonIcon,
   PinIcon,
-  Plus,
   QuantityField,
   SegmentedControl,
   TextField,
-  TrashIcon,
   FarmMateArt,
+  TextLink,
+  DateField,
 } from '../../ui';
 import { cardStyle } from '../../ui/card';
 import { FieldLabel } from '../../ui/form';
@@ -71,7 +71,8 @@ import {
   DeletedLink,
   DeletedList,
   FarmScreen,
-  HeaderButton,
+  AddRow,
+  TapRow,
   RowCard,
   useBack,
   useDay,
@@ -198,6 +199,12 @@ export function PropertyScreen() {
 
 type Problem = 'name' | 'crop' | 'area' | 'year' | 'gps';
 
+/** A planted year kept in พ.ศ., in the device's era (NP-13). */
+const yearInEra = (yearBe: number, era: 'be' | 'ce') => (era === 'ce' ? yearBe - 543 : yearBe);
+/** "2554 พ.ศ." / "2011 ค.ศ." — the detail says the era, as the form's card does. */
+const plantedText = (yearBe: number, era: 'be' | 'ce', msg: ReturnType<typeof useT>) =>
+  `${yearInEra(yearBe, era)} ${msg(era === 'ce' ? 'numpad.unitCe' : 'numpad.unitBe')}`;
+
 function PropertyForm({ propertyId }: { propertyId: string | null }) {
   const t = useTheme();
   const msg = useT();
@@ -256,8 +263,14 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
   };
 
   if (propertyId && state && !existing) return <NotFound fallback={FARMS} />;
+  // An edit opens before the record has loaded: no field until it has, or what is typed meanwhile is overwritten by the stored value.
+  if (propertyId && !existing) return (
+      <FarmScreen title={msg('propertyForm.editTitle')} fallback={FARMS} testID="property-form-loading">
+        <AppText variant="bodySm">{msg('counter.loading')}</AppText>
+      </FarmScreen>
+    );
   // NP-13: the year in the device's era; what is kept (plantedYearBe) stays พ.ศ.
-  const shownYear = year.ok && year.yearBe !== null ? (era === 'ce' ? year.yearBe - 543 : year.yearBe) : null;
+  const shownYear = year.ok && year.yearBe !== null ? yearInEra(year.yearBe, era) : null;
 
   return (
     <FarmScreen
@@ -332,6 +345,7 @@ function PropertyForm({ propertyId }: { propertyId: string | null }) {
 function PropertyDetail({ propertyId }: { propertyId: string }) {
   const t = useTheme();
   const msg = useT();
+  const { era } = useI18n();
   const router = useRouter();
   const back = useBack(FARMS);
   const day = useDay();
@@ -340,8 +354,7 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
   const [sheet, setSheet] = useState<'none' | 'area' | 'delete'>('none');
   /** The new area on the app pad, inside this same sheet (NP-12: no sheet on a sheet). */
   const [areaEntry, setAreaEntry] = useState<EntryState>(() => startEntry(''));
-  /** While the date is being typed the pad is off: its web key listener would take the date's digits too. */
-  const [typingDate, setTypingDate] = useState(false);
+  /** The effective day, kept as "d/m/yyyy" (พ.ศ.) and picked in a DateField (E01-S22). */
   const [areaDate, setAreaDate] = useState(() => thaiDayInput(todayIso(now)));
   const [tried, setTried] = useState(false);
   const write = useWrite();
@@ -390,7 +403,6 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
       fallback={FARMS}
       failed={write.failed && sheet === 'none'}
       testID="property-detail"
-      right={<HeaderButton testID="property-edit" label={msg('personDetail.edit')} onPress={() => router.push(`/v2/property/${property.id}?edit=1` as Href)} />}
       overlay={
         <>
           <BottomSheet open={sheet === 'area'} onClose={() => setSheet('none')} title={msg('propertyDetail.changeArea')} testID="area-sheet" action={{ label: msg('propertyDetail.areaSave'), testID: 'area-save', onPress: () => void saveArea(), saving: write.saving }}>
@@ -398,18 +410,15 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
               entry={areaEntry}
               onKey={(k) => setAreaEntry((e) => pressKey(e, k, RAI_ENTRY))}
               onDone={() => void saveArea()}
-              pad={!typingDate}
+              pad
               error={tried && (!rai.ok || rai.centiRai === null) ? msg('propertyForm.badArea') : undefined}
             />
-            <TextField
+            <DateField
               testID="area-new-date"
               label={msg('v2f.effective')}
               required
-              hint={msg('v2f.dateHint')}
-              value={areaDate}
-              onChangeText={setAreaDate}
-              onFocus={() => setTypingDate(true)}
-              onBlur={() => setTypingDate(false)}
+              value={effective ?? ''}
+              onChange={(iso) => setAreaDate(iso ? thaiDayInput(iso) : '')}
               error={tried && !effective ? msg('propertyForm.badDate') : undefined}
             />
             <AppText variant="bodySm">{msg('v2f.areaNewLine')}</AppText>
@@ -429,28 +438,26 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
       }
     >
       <RowCard testID="property-summary">
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
+        {/* Owner 2026-11-07 (style A): the name row edits the farm, the area row changes the area — no round "แก้" / "เปลี่ยนพื้นที่". */}
+        <TapRow testID="property-edit" label={`${msg('personDetail.edit')} ${property.name}`} onPress={() => router.push(`/v2/property/${property.id}?edit=1` as Href)}>
           <IconTile tone={categoryTone(Math.max(0, index))} icon={() => <FarmMateArt id="nav.myFarm" />} />
-          <View style={{ flex: 1, gap: t.space.xxs }}>
+          <View style={{ flex: 1, minWidth: 0, gap: t.space.xxs }}>
             <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm }}>{property.name}</AppText>
             <FactRow icon={(c) => <FarmIcon color={c} size={12} />}>{msg(`crop.${property.crop}`)}</FactRow>
           </View>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
+        </TapRow>
+        <TapRow testID="change-area" label={`${msg('propertyDetail.changeArea')}, ${msg('propertyDetail.areaNow')} ${areaNow === null ? msg('common.unknown') : msg('properties.area', { rai: formatRai(areaNow) })}`} onPress={() => setSheet('area')}>
           <View testID="property-area-now" style={{ flex: 1, gap: t.space.xxs }}>
             <AppText variant="bodySm">{msg('propertyDetail.areaNow')}</AppText>
             {areaNow === null ? <UnknownPill /> : value(msg('properties.area', { rai: formatRai(areaNow) }))}
           </View>
-          <Button testID="change-area" onPress={() => setSheet('area')}>
-            {msg('propertyDetail.changeArea')}
-          </Button>
-        </View>
+        </TapRow>
         <View style={{ flexDirection: 'row', gap: t.space.sm, paddingVertical: t.space.sm }}>
           <View testID="property-planted" style={{ flex: 1, gap: t.space.xxs }}>
             <AppText variant="bodySm">{msg('propertyDetail.planted')}</AppText>
-            {property.plantedYearBe ? value(String(property.plantedYearBe)) : <UnknownPill />}
+            {property.plantedYearBe ? value(plantedText(property.plantedYearBe, era, msg)) : <UnknownPill />}
           </View>
-          <View style={{ flex: 1, gap: t.space.xxs }}>
+          <View testID="property-age" style={{ flex: 1, gap: t.space.xxs }}>
             <AppText variant="bodySm">{msg('propertyDetail.age')}</AppText>
             {age !== null ? value(msg('propertyDetail.years', { n: age })) : <UnknownPill />}
           </View>
@@ -498,21 +505,17 @@ function PropertyDetail({ propertyId }: { propertyId: string }) {
             </MenuItem>
           );
         })}
-        <View style={{ paddingVertical: t.space.sm, alignSelf: 'flex-start' }}>
-          <Button testID="add-point" icon={(c) => <Plus color={c} size={14} />} onPress={() => router.push(`/v2/point/new?property=${property.id}` as Href)}>
-            {msg('v2f.addPoint')}
-          </Button>
+        <View style={{ paddingVertical: t.space.sm }}>
+          <AddRow testID="add-point" label={msg('v2f.addPoint')} onPress={() => router.push(`/v2/point/new?property=${property.id}` as Href)} />
         </View>
       </RowCard>
 
       {property.deleted ? (
         <DeletedList rows={[{ id: property.id, name: property.name }]} onRestore={() => void restore()} />
       ) : (
-        <View style={{ alignSelf: 'flex-start' }}>
-          <Button testID="property-delete" variant="destructive" icon={(c) => <TrashIcon color={c} size={16} />} onPress={() => setSheet('delete')}>
-            {msg('propertyForm.delete')}
-          </Button>
-        </View>
+        <TextLink testID="property-delete" tone="reject" onPress={() => setSheet('delete')}>
+          {msg('propertyForm.delete')}
+        </TextLink>
       )}
     </FarmScreen>
   );

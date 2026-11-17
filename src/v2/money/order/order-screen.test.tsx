@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import type { ReactNode } from 'react';
 
 import { fertOptionId } from '../../../core/finance/ledger';
@@ -255,6 +256,30 @@ describe('order capture screen (E11-S11)', () => {
     expect(screen.queryByTestId('ordc-empty')).toBeTruthy();
   });
 
+  it('price 0 on the pad, per unit or total: ตกลง is shut and says ต้องมากกว่า 0 (owner q2 = ก)', async () => {
+    wrap(<OrderScreen />);
+    await flush();
+    press('ordc-add');
+    press('ordc-pick-new');
+    fireEvent.changeText(screen.getByTestId('ordc-formula'), '8-24-24');
+    press('ordc-new-done');
+    await flush();
+    const zeroShut = () => {
+      expect(screen.getByTestId('ordc-price-done').props.accessibilityState).toMatchObject({ disabled: true });
+      expect(screen.getByTestId('ordc-price-problem')).toHaveTextContent('ต้องมากกว่า 0');
+    };
+    press('ordc-price');
+    keys('ordc-price-pad', '0');
+    zeroShut();
+    keys('ordc-price-pad', '5');
+    press('ordc-price-done');
+    press('ordc-price-mode-total');
+    press('ordc-price');
+    fireEvent(screen.getByTestId('ordc-price-pad-key-back'), 'longPress');
+    keys('ordc-price-pad', '0');
+    zeroShut();
+  });
+
   it('a new fertilizer needs a formula, said at the field', async () => {
     wrap(<OrderScreen />);
     await flush();
@@ -307,6 +332,12 @@ describe('order capture screen (E11-S11)', () => {
     press('ordc-stage-actual');
     expect(screen.getByTestId('ordc-stage-actual').props.accessibilityState.checked).toBe(true);
     expect(text('ordc-payer-title')).toContain('เงินสวน');
+    // E01-S21 PK-2: the shop and date cards show › too.
+    for (const id of ['ordc-shop', 'ordc-date']) expect(within(screen.getByTestId(id)).getByTestId(`${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
+    // Review of PR 193 N1: one card per line at every width, so the date never breaks word by word.
+    expect(StyleSheet.flatten(screen.getByTestId('ordc-head').props.style).flexDirection ?? 'column').toBe('column');
+    // Owner 2026-11-14: the row's › already says it can be tapped; no "แตะเพื่อเปลี่ยน" hint.
+    expect(screen.getByTestId('ordc-payer')).not.toHaveTextContent(/แตะเพื่อเปลี่ยน/);
     press('ordc-payer');
     expect(screen.getByTestId('ordc-payer-sheet')).toBeTruthy();
     press('ordc-payer-done');
@@ -416,6 +447,8 @@ describe('order capture screen (E11-S11)', () => {
   });
 
   it('"เปลี่ยน" on an existing line to a saved formula never bought keeps the one line and its price', async () => {
+    // Its own saved formula: run alone (-t) it must not lean on the test above having seeded it.
+    await seed(fertOptionId('formula', 'ดีเกลือ'), { t: 'fert_option_set', kind: 'formula', name: 'ดีเกลือ', description: '', hidden: false });
     wrap(<OrderScreen />);
     await flush();
     await addNewFert('ปุ๋ยผิด', ['2'], ['5', '0', '0']);
@@ -430,5 +463,19 @@ describe('order capture screen (E11-S11)', () => {
     expect(text('ordc-line-total-amount')).toBe('1,000.00');
     press('ordc-item-done');
     expect(screen.getAllByTestId(/^ordc-row-/)).toHaveLength(1);
+  });
+
+  it('the product card itself changes the product: whole card, a chevron, no round "เปลี่ยน" button (owner rule 2026-11-06)', async () => {
+    wrap(<OrderScreen />);
+    await flush();
+    await addNewFert('ปุ๋ยผิด', ['2'], ['5', '0', '0']);
+    fireEvent.press(screen.getAllByTestId(/^ordc-row-/)[0]);
+    const card = screen.getByTestId('ordc-change');
+    expect(within(card).getByTestId('ordc-item-name')).toBeTruthy();
+    expect(within(card).getByTestId('ordc-change-chevron', { includeHiddenElements: true })).toBeTruthy();
+    expect(within(card).queryByText('เปลี่ยน')).toBeNull();
+    expect(card.props.accessibilityLabel).toMatch(/^เปลี่ยน ปุ๋ยผิด, /); // the second line (type, kg per sack) is read too
+    press('ordc-change');
+    expect(screen.getByTestId(`ordc-pick-option|${fertOptionId('formula', 'ดีเกลือ')}`)).toBeTruthy();
   });
 });

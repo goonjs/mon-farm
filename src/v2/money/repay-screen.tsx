@@ -20,7 +20,7 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, CalendarIcon, Card, CardLabel, Check, FactRow, MoneyField, ReceiptIcon, ScreenHeader, TextField, type HeaderPrimaryAction } from '../../ui';
+import { AppText, BottomSheet, CalendarIcon, Card, CardLabel, cardStyle, Check, ChevronRight, DateField, FactRow, MoneyField, ReceiptIcon, SaveBar, ScreenHeader, TextField } from '../../ui';
 import { HalfDot } from './expenses-screen';
 import { Day, PayerPicker, SectionLabel } from './pieces';
 
@@ -36,8 +36,8 @@ export function RepayScreen() {
     return (fin.state?.reimbursements ?? []).filter((r) => r.to.id === payerId && r.remainingSatang > 0 && (!only || only.has(r.expenseId)));
   }, [fin.state, payerId, ids]);
 
-  const header = (action?: HeaderPrimaryAction) => (
-    <ScreenHeader title={msg('fin.repay.title')} back={{ label: msg('v2.back'), onPress: leave, testID: 'repay-back' }} sync={sync} action={action} />
+  const header = () => (
+    <ScreenHeader title={msg('fin.repay.title')} back={{ label: msg('v2.back'), onPress: leave, testID: 'repay-back' }} sync={sync} />
   );
 
   return (
@@ -67,7 +67,7 @@ export function RepayScreen() {
   );
 }
 
-function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursement[]; fin: ReturnType<typeof useFinance>; categoryOf: (expenseId: string) => string; header: (action?: HeaderPrimaryAction) => ReactNode }) {
+function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursement[]; fin: ReturnType<typeof useFinance>; categoryOf: (expenseId: string) => string; header: () => ReactNode }) {
   const t = useTheme();
   const msg = useT();
   const max = debts.reduce((s, d) => s + d.remainingSatang, 0);
@@ -105,16 +105,12 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
 
   return (
     <>
-      {header({ label: `${msg('fin.form.save')} · ${formatSatang(total)}`, savingLabel: `${msg('common.saving')} · ${formatSatang(total)}`, testID: 'repay-save', disabled: !canSave, saving: inFlight.busy, onPress: () => void inFlight.run(save) })}
-      <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space[16] * 2 }}>
+      {header()}
+      <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.lg, paddingBottom: t.space.xl }}>
         <View style={{ gap: t.space.sm }}>
           <SectionLabel>{msg('fin.repay.who')}</SectionLabel>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
-            <Party label={msg('fin.repay.from')} value={from} testID="repay-from" onPress={() => setPicking('from')} />
-            <Text aria-hidden style={{ fontSize: t.font.size.headingLg, color: t.color.ink }}>→</Text>
-            <Party label={msg('fin.repay.to')} value={to} testID="repay-to" onPress={() => setPicking('to')} />
-          </View>
-          <AppText variant="caption">{msg('v2m.tapToChange')}</AppText>
+          <Party label={msg('fin.repay.from')} value={from} testID="repay-from" onPress={() => setPicking('from')} />
+          <Party label={msg('fin.repay.to')} value={to} testID="repay-to" onPress={() => setPicking('to')} />
         </View>
 
         {!manual ? (
@@ -125,8 +121,9 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
               required
               unit={msg('v2m.baht')}
               satang={moneyOf(amount)}
-              // The old judge on the pad too: more than is owed cannot be committed (NP-5). 0 still can, and
-              // the page's save stays off for it, as it did when 0 was typed into the old box.
+              // The old judge on the pad too: more than is owed cannot be committed (NP-5). Nor 0: the page
+              // never saves it, so the pad says so at once (owner q2 = ก, 2026-11-08).
+              minSatang={1}
               validate={(v) => {
                 const plan = allocateOldestFirst(debts, v);
                 return !plan.ok && plan.reason === 'over' ? msg('fin.repay.over', { max: formatSatang(plan.maxSatang) }) : undefined;
@@ -137,7 +134,7 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
           </View>
         ) : null}
 
-        <TextField testID="repay-date" label={msg('fin.form.date').replace(' *', '')} required value={date} onChangeText={setDate} helper={msg('v2m.dateShown', { shown: formatDate(date) })} />
+        <DateField testID="repay-date" label={msg('fin.form.date').replace(' *', '')} required value={date} onChange={setDate} max={todayIso()} />
 
         <Card>
           <CardLabel>{manual ? msg('fin.repay.manual') : msg('fin.repay.oldestFirst')}</CardLabel>
@@ -212,10 +209,15 @@ function Form({ debts, fin, categoryOf, header }: { debts: readonly Reimbursemen
           extra={[payee]}
         />
       </BottomSheet>
+      <SaveBar action={{ label: `${msg('fin.form.save')} · ${formatSatang(total)}`, savingLabel: `${msg('common.saving')} · ${formatSatang(total)}`, testID: 'repay-save', disabled: !canSave, saving: inFlight.busy, onPress: () => void inFlight.run(save) }} />
     </>
   );
 }
 
+/**
+ * One side of "who repays whom" (E01-S21 PK-1): a full-width picker row with its label shown, the name in bold
+ * (wrapping, never cut) and › — the row a person taps to choose, unlike the typed fields below it.
+ */
 function Party({ label, value, testID, onPress }: { label: string; value: Payer | null; testID: string; onPress: () => void }) {
   const t = useTheme();
   return (
@@ -224,9 +226,15 @@ function Party({ label, value, testID, onPress }: { label: string; value: Payer 
       accessibilityRole="button"
       accessibilityLabel={`${label} ${value?.name ?? ''}`}
       onPress={onPress}
-      style={{ flex: 1, minHeight: t.target.min, justifyContent: 'center', paddingHorizontal: t.space.md, borderRadius: t.radius.md, borderWidth: t.border.hair, borderColor: t.color.ruleStrong, backgroundColor: t.color.surfaceRaised }}
+      style={[cardStyle(t), { minHeight: t.target.comfortable, flexDirection: 'row', alignItems: 'center', gap: t.space.md, paddingHorizontal: t.space.md, paddingVertical: t.space.sm }]}
     >
-      <Text numberOfLines={1} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.semibold, color: t.color.ink }}>{value?.name ?? '—'}</Text>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <AppText variant="caption">{label}</AppText>
+        <Text testID={`${testID}-name`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, color: t.color.ink }}>{value?.name ?? '—'}</Text>
+      </View>
+      <View testID={`${testID}-chevron`} aria-hidden>
+        <ChevronRight color={t.color.inkFaint} />
+      </View>
     </Pressable>
   );
 }

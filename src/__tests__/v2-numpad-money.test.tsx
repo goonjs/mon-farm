@@ -51,6 +51,11 @@ async function flush() {
 
 const press = (id: string) => fireEvent.press(screen.getByTestId(id));
 
+/** Owner q2 = ก (2026-11-08): a field whose screen never saves 0 shuts ตกลง at 0 and says so at the pad. */
+const shutAtZero = (field: string) => {
+  expect(screen.getByTestId(`${field}-done`).props.accessibilityState).toMatchObject({ disabled: true });
+  expect(screen.getByTestId(`${field}-problem`)).toHaveTextContent('ต้องมากกว่า 0');
+};
 /**
  * How a number is typed into a field — the only part that changed when the fields moved to the pad
  * (it was `fireEvent.changeText`). Open the card, press the keys, then ตกลง (money) or ✓ (whole
@@ -315,11 +320,18 @@ describe('rows 7–8 · repay amount and the split by hand', () => {
     expect(r.allocations.map((a) => a.satang)).toEqual(split);
   });
 
-  it('0 is not saved', async () => {
+  it('0 on the pad: ตกลง is shut and says ต้องมากกว่า 0 (owner q2 = ก)', async () => {
+    await owed();
+    press('repay-amount');
+    press('repay-amount-pad-key-0');
+    shutAtZero('repay-amount');
+  });
+
+  it('0 is never saved: the pad refuses it, so the amount stays the full balance (owner q2 = ก)', async () => {
     const { payer } = await owed();
     enter('repay-amount', '0');
     await save();
-    expect(await repaymentsTo(payer.id)).toEqual([]);
+    expect((await repaymentsTo(payer.id)).map((r) => r.amountSatang)).toEqual([120_000]);
   });
 
   it('more than is owed is never saved', async () => {

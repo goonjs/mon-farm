@@ -30,6 +30,7 @@ import {
   filterPeople,
   leaveDayProblem,
   parseThaiDay,
+  thaiDayInput,
   planStarterPoints,
   plannedVacancies,
   pointTimeline,
@@ -61,9 +62,10 @@ import {
   RadioCard,
   SwapIcon,
   TextField,
-  TrashIcon,
   Undo,
   FarmMateArt,
+  TextLink,
+  DateField,
 } from '../../ui';
 import { NotFound } from './people-screens';
 import {
@@ -74,7 +76,7 @@ import {
   DeletedLink,
   DeletedList,
   FarmScreen,
-  HeaderButton,
+  TapRow,
   HelpNote,
   RowCard,
   Stepper,
@@ -220,6 +222,12 @@ function PointForm({ pointId, propertyId }: { pointId: string | null; propertyId
   };
 
   if (pointId && state && !existing) return <NotFound fallback={POINTS} />;
+  // An edit opens before the record has loaded: no field until it has, or what is typed meanwhile is overwritten by the stored value.
+  if (pointId && !existing) return (
+      <FarmScreen title={msg('v2f.renamePoint')} fallback={POINTS} testID="point-form-loading">
+        <AppText variant="bodySm">{msg('counter.loading')}</AppText>
+      </FarmScreen>
+    );
   // `?property=` naming a farm that is missing or deleted: say so, never an orphan point.
   if (!pointId && propertyId && state && !activeProperty(state, propertyId)) return <NotFound fallback={POINTS} />;
 
@@ -251,18 +259,8 @@ function PointForm({ pointId, propertyId }: { pointId: string | null; propertyId
       <View style={{ gap: t.space.xs }}>
         <AppText variant="label">{msg('pointForm.farm')}</AppText>
         {existing || propertyId ? (
-          <View
-            testID="point-farm"
-            style={{
-              minHeight: t.target.min,
-              justifyContent: 'center',
-              paddingHorizontal: t.space.md,
-              borderRadius: t.radius.md,
-              borderWidth: t.border.hair,
-              borderColor: t.color.ruleStrong,
-              backgroundColor: t.color.surfaceRaised,
-            }}
-          >
+          // E01-S21 PK-4: fixed here, so plain text — not a box that looks like it can be typed in or tapped.
+          <View testID="point-farm" style={{ minHeight: t.target.min, justifyContent: 'center' }}>
             <AppText style={{ fontWeight: t.font.weight.semibold }}>{farm?.name ?? ''}</AppText>
           </View>
         ) : (
@@ -349,7 +347,6 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
       fallback={farm ? (`/v2/property/${farm.id}` as Href) : POINTS}
       failed={write.failed && sheet.kind === 'none'}
       testID="point-detail"
-      right={<HeaderButton testID="point-rename" label={msg('pointDetail.rename')} onPress={() => router.push(`/v2/point/${point.id}?edit=1` as Href)} />}
       overlay={
         <>
           {sheet.kind === 'plan' ? (
@@ -378,14 +375,15 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
       }
     >
       <RowCard testID="point-summary">
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
+        {/* Owner 2026-11-07 (style A): the point card renames it — no round "แก้ชื่อ" in the header. */}
+        <TapRow testID="point-rename" label={`${msg('pointDetail.rename')} ${point.name}`} onPress={() => router.push(`/v2/point/${point.id}?edit=1` as Href)}>
           <IconTile tone={categoryTone(Math.max(0, farmIndex))} icon={() => <FarmMateArt id="farm.weighPoint" />} />
-          <View style={{ flex: 1, gap: t.space.xxs }}>
+          <View style={{ flex: 1, minWidth: 0, gap: t.space.xxs }}>
             <AppText style={{ fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm }}>{point.name}</AppText>
             <FactRow icon={(c) => <FarmIcon color={c} size={12} />}>{farm?.name ?? ''}</FactRow>
           </View>
           {point.duplicateName ? <Chip tone="warn" label={msg('points.duplicate')} /> : null}
-        </View>
+        </TapRow>
       </RowCard>
 
       <RowCard testID="timeline" title={msg('assign.title')}>
@@ -442,11 +440,9 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
       {point.deleted ? (
         <DeletedList rows={[{ id: point.id, name: point.name }]} onRestore={() => void restore()} />
       ) : (
-        <View style={{ alignSelf: 'flex-start' }}>
-          <Button testID="point-delete" variant="destructive" icon={(c) => <TrashIcon color={c} size={16} />} onPress={() => setSheet({ kind: 'delete' })}>
-            {msg('pointForm.delete')}
-          </Button>
-        </View>
+        <TextLink testID="point-delete" tone="reject" onPress={() => setSheet({ kind: 'delete' })}>
+          {msg('pointForm.delete')}
+        </TextLink>
       )}
     </FarmScreen>
   );
@@ -516,11 +512,14 @@ function PlanForm({ state, pointId, pointName, replacing, onClose, onSaved }: { 
               ))}
             </ChipWrap>
             {tried && !tapperId ? <FieldError>{msg('assign.pickTapper')}</FieldError> : null}
-            <TextField
+            <DateField
               testID="plan-from"
               label={msg(blankOk ? 'assign.fromLabel' : 'assign.fromRequired')}
-              value={from}
-              onChangeText={setFrom}
+              required={!blankOk}
+              value={fromDay ?? ''}
+              onChange={(iso) => setFrom(iso ? thaiDayInput(iso) : '')}
+              emptyText={blankOk ? msg('assign.noStart') : undefined}
+              emptyLabel={blankOk ? msg('assign.noStart') : undefined}
               error={tried && fromBad ? msg(from.trim() ? 'assign.badDate' : 'assign.needFrom') : undefined}
             />
             {outgoing && fromDay && outgoing.id !== tapperId ? (
@@ -534,11 +533,12 @@ function PlanForm({ state, pointId, pointName, replacing, onClose, onSaved }: { 
         <RadioCard testID="plan-leave" selected={mode === 'leave'} title={msg('assign.leave')} detail={msg('assign.leaveHint')} onPress={() => setMode('leave')} />
         {mode === 'leave' ? (
           <View style={{ paddingLeft: t.space.xl }}>
-            <TextField
+            <DateField
               testID="plan-to"
               label={msg('assign.toLabel')}
-              value={to}
-              onChangeText={setTo}
+              required
+              value={toDay ?? ''}
+              onChange={(iso) => setTo(iso ? thaiDayInput(iso) : '')}
               error={
                 tried && leaveProblem
                   ? msg(leaveProblem === 'date' ? 'assign.badDate' : leaveProblem === 'noTapper' ? 'assign.leaveNoTapper' : 'assign.leaveBeforeStart')
@@ -659,11 +659,9 @@ export function PointsWizardScreen() {
             {msg('wizard.next')}
           </CTA>
         ) : (
-          <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-            <Button testID="wizard-prev" onPress={() => setPage(1)}>
-              {msg('wizard.prev')}
-            </Button>
-          </View>
+          <Button testID="wizard-prev" size="large" onPress={() => setPage(1)}>
+            {msg('wizard.prev')}
+          </Button>
         )
       }
     >
@@ -710,7 +708,7 @@ export function PointsWizardScreen() {
                         <AppText variant="caption">{msg('role.tapper')}</AppText>
                       </View>
                       <View style={{ width: 168 }}>
-                        <Stepper testID={`wizard-count-${id}`} label={nameOf(id)} value={String(n)} onLess={() => setCount(id, n - 1)} onMore={() => setCount(id, n + 1)} />
+                        <Stepper look="soft" testID={`wizard-count-${id}`} label={nameOf(id)} value={String(n)} onLess={() => setCount(id, n - 1)} onMore={() => setCount(id, n + 1)} />
                       </View>
                     </View>
                   );
@@ -745,6 +743,8 @@ export function PointsWizardScreen() {
                         onChangeText={(x) => setName(id, i, x)}
                         style={{
                           flex: 1,
+                          // A web input keeps its default width (~20 characters) unless it may shrink: at 360 / L it ran 38 px past the card.
+                          minWidth: 0,
                           minHeight: t.target.min,
                           paddingHorizontal: t.space.md,
                           borderRadius: t.radius.md,

@@ -26,6 +26,8 @@ const WORD = 38;
 
 export function SplashScreen() {
   const t = useTheme();
+  // The name follows the text size like every other text (E03-S08); the mark is a drawing and stays.
+  const word = Math.round(WORD * t.textScale);
   const msg = useT();
   const router = useRouter();
 
@@ -50,10 +52,10 @@ export function SplashScreen() {
       <AppText
         accessibilityRole="header"
         style={{
-          fontSize: WORD,
-          lineHeight: Math.round(WORD * 1.1),
+          fontSize: word,
+          lineHeight: Math.round(word * 1.1),
           fontWeight: t.font.weight.black,
-          letterSpacing: WORD * -0.02,
+          letterSpacing: word * -0.02,
           color: t.color.ink,
         }}
       >

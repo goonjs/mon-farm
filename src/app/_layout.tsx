@@ -14,7 +14,7 @@ import { StorageWarning } from '../v2/storage-warning';
  * gate (E02) asks for a Google sign-in and a farm group; only then does the app
  * open on the splash at `/`, which hands over to the v2 home (`/v2`). The
  * storage warning (E01-S03) sits above whatever screen is showing, the gate
- * included.
+ * included, except the gate's "cannot read the device" screen.
  */
 export default function RootLayout() {
   return (
@@ -28,8 +28,8 @@ export default function RootLayout() {
         <SpeechProvider initial>
           <View style={{ flex: 1 }}>
             <FaviconOnStart />
-            <StorageWarning />
-            <AccountGate>
+            {/* Inside the gate: it is held back over "cannot read the device" (lead review, 2026-11-08). */}
+            <AccountGate banner={<StorageWarning />}>
               <Stack screenOptions={{ headerShown: false, animation: 'none' }} />
             </AccountGate>
           </View>

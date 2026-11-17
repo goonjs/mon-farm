@@ -12,6 +12,8 @@ import { ThemeProvider, useTheme, useThemeControls } from '../theme';
 import { readTextSize } from '../theme/text-size-preference';
 import { SpeechProvider } from '../speech';
 import { V2Device } from '../v2/device-screen';
+import { SplashScreen } from '../v2/splash-screen';
+import { I18nProvider } from '../i18n';
 import { wrap } from '../test/render';
 
 jest.mock('expo-router', () => {
@@ -137,5 +139,33 @@ describe('เครื่องนี้ → ขนาดตัวอักษ�
     expect(readTextSize()).toBe('l');
     expect(probe()).toMatch(/^l\/18\//);
     expect(stored.get('mon-farm:text-size')).toBe('l');
+  });
+});
+
+describe('the splash name follows the text size (2026-11-07: it was a fixed 38 the guard did not see)', () => {
+  const nameSize = () => {
+    const name = screen.getByText('FarmMate');
+    const style = Object.assign({}, ...[name.props.style].flat(3).filter(Boolean)) as { fontSize: number; lineHeight: number };
+    return `${style.fontSize}/${style.lineHeight}`;
+  };
+  it('M keeps the drawn 38 (line 42); L is 38 × 1.125 (line 47)', () => {
+    const { unmount } = render(
+      <ThemeProvider>
+        <I18nProvider>
+          <SplashScreen />
+        </I18nProvider>
+      </ThemeProvider>,
+    );
+    expect(nameSize()).toBe('38/42');
+    unmount();
+    stored.set('mon-farm:text-size', 'l');
+    render(
+      <ThemeProvider>
+        <I18nProvider>
+          <SplashScreen />
+        </I18nProvider>
+      </ThemeProvider>,
+    );
+    expect(nameSize()).toBe('43/47');
   });
 });

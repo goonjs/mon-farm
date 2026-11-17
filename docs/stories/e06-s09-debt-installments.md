@@ -1,6 +1,6 @@
 # Story E06-S09: ผ่อนหนี้คนกรีดเป็นงวด ("ผ่อนกี่งวด")
 
-Status: In Progress (เจ้าของตอบครบ 2026-11-06 ผ่านลีด · เริ่มโค้ดตามลีด 2026-11-06)
+Status: Done — merged #157 (core), #158 (แผ่นหักหนี้), #159 (บัญชีหนี้ + ตั้งค่า) 2026-11-06; follow-ups open: IP-16 at text size L, a committed Playwright flow, the two-device concurrent plan (see Handover)
 
 ## Context
 
@@ -24,14 +24,14 @@ Status: In Progress (เจ้าของตอบครบ 2026-11-06 ผ่�
 
 ### คำนวณ (core)
 
-- [ ] **IP-1** ยอดงวดของการขายนี้ = หนี้ที่เหลือ (ก่อนหักการขายนี้) ÷ งวดที่เหลือ **ปัดขึ้นเป็นบาทเต็ม**; งวดสุดท้าย = ที่เหลือจริงถึงสตางค์. รวมทุกงวด = หนี้ตอนตั้งแผนพอดี (ไม่มีสตางค์หายหรือเกิน) — ทดสอบสุ่ม
-- [ ] **IP-2** ยอดที่เสนอยังอยู่ใต้กติกาเดิม: ไม่เกินส่วนแบ่ง (+ หักกลบ), ปิดก้อนเก่าสุดก่อน, เงินสดไม่ติดลบ (D-18, D-60)
-- [ ] **IP-3** งวดที่จ่ายแล้วไม่เก็บ แต่นับจาก log: การขายที่ยังมีผลซึ่งมีการหักหนี้ของคนนั้น > 0 นับจากจุดเริ่มแผน = 1 งวดต่อการขาย. "ยังไม่หัก" (0) ไม่นับ (งวดเลื่อน). ยกเลิก/ลบการขาย → งวดนั้นหายไปเอง
-- [ ] **IP-4** หักไม่ตรงงวด (ส่วนแบ่งไม่พอ หรือพิมพ์ยอดเอง มากหรือน้อยกว่า): ยังนับ 1 งวด ส่วนที่ขาด/เกินไปหารในงวดที่เหลือ (Q4)
-- [ ] **IP-5** ครบงวดแล้วยังมีหนี้ หรือหนี้เป็น 0: แผนจบ ที่ค้างเป็นหนี้ธรรมดา (Q5) — การขายหน้าเสนอแบบไม่มีแผน
-- [ ] **IP-6** แบ่งใหม่: จำนวนงวดใหม่นับจากวันนี้ (การขายนี้เป็นงวดแรกของแผนใหม่) ไม่นับงวดที่จ่ายแล้ว แบ่งใหม่ได้ไม่จำกัด
-- [ ] **IP-7** ตัวเลือกจำนวนงวด = 2 … ค่าสูงสุด ไม่รวมจำนวนที่ใช้อยู่ ไม่มี 1 งวด แสดงไม่เกิน 3 ตัว (เรียงใกล้ค่าปัจจุบัน)
-- [ ] **IP-8** หนี้ใหม่ระหว่างผ่อน (หนี้ที่เกิดหลังจุดเริ่มแผน): แอปรู้ว่ามี และให้ 2 ทาง — "รวมในงวดที่เหลือ" (ยอดงวดคิดจากหนี้ทั้งหมด) หรือ "หักเต็มวันนี้" (งวด + หนี้ใหม่ทั้งก้อน, งวดที่เหลือคิดจากหนี้เดิม) — **ไม่มีค่าเริ่มต้น** (Q3)
+- [x] **IP-1** ยอดงวดของการขายนี้ = หนี้ที่เหลือ (ก่อนหักการขายนี้) ÷ งวดที่เหลือ **ปัดขึ้นเป็นบาทเต็ม**; งวดสุดท้าย = ที่เหลือจริงถึงสตางค์. รวมทุกงวด = หนี้ตอนตั้งแผนพอดี (ไม่มีสตางค์หายหรือเกิน) — ทดสอบสุ่ม
+- [x] **IP-2** ยอดที่เสนอยังอยู่ใต้กติกาเดิม: ไม่เกินส่วนแบ่ง (+ หักกลบ), ปิดก้อนเก่าสุดก่อน, เงินสดไม่ติดลบ (D-18, D-60)
+- [x] **IP-3** งวดที่จ่ายแล้วไม่เก็บ แต่นับจาก log: การขายที่ยังมีผลซึ่งมีการหักหนี้ของคนนั้น > 0 นับจากจุดเริ่มแผน = 1 งวดต่อการขาย. "ยังไม่หัก" (0) ไม่นับ (งวดเลื่อน). ยกเลิก/ลบการขาย → งวดนั้นหายไปเอง
+- [x] **IP-4** หักไม่ตรงงวด (ส่วนแบ่งไม่พอ หรือพิมพ์ยอดเอง มากหรือน้อยกว่า): ยังนับ 1 งวด ส่วนที่ขาด/เกินไปหารในงวดที่เหลือ (Q4)
+- [x] **IP-5** ครบงวดแล้วยังมีหนี้ หรือหนี้เป็น 0: แผนจบ ที่ค้างเป็นหนี้ธรรมดา (Q5) — การขายหน้าเสนอแบบไม่มีแผน
+- [x] **IP-6** แบ่งใหม่: จำนวนงวดใหม่นับจากวันนี้ (การขายนี้เป็นงวดแรกของแผนใหม่) ไม่นับงวดที่จ่ายแล้ว แบ่งใหม่ได้ไม่จำกัด
+- [x] **IP-7** ตัวเลือกจำนวนงวด = 2 … ค่าสูงสุด ไม่รวมจำนวนที่ใช้อยู่ ไม่มี 1 งวด แสดงไม่เกิน 3 ตัว (เรียงใกล้ค่าปัจจุบัน)
+- [x] **IP-8** หนี้ใหม่ระหว่างผ่อน (หนี้ที่เกิดหลังจุดเริ่มแผน): แอปรู้ว่ามี และให้ 2 ทาง — "รวมในงวดที่เหลือ" (ยอดงวดคิดจากหนี้ทั้งหมด) หรือ "หักเต็มวันนี้" (งวด + หนี้ใหม่ทั้งก้อน, งวดที่เหลือคิดจากหนี้เดิม) — **ไม่มีค่าเริ่มต้น** (Q3)
 
 ### แผ่นหักหนี้ตอนปิดการขาย (แบบ A)
 
@@ -42,7 +42,7 @@ Status: In Progress (เจ้าของตอบครบ 2026-11-06 ผ่�
 - [x] **IP-13** หนี้ใหม่: แถบอำพันบอกหนี้ใหม่ + 2 ทาง ปุ่มหักเทา "เลือกวิธีจัดการหนี้ใหม่ก่อน" จนกว่าจะเลือก (mockup D2/A2)
 - [x] **IP-14** ปิดหนี้ทั้งหมด / แบ่งงวดที่เหลือใหม่ / ใส่ยอดเอง เปิดเป็นมุมมองของแผ่นเดิม มีลิงก์ "‹ กลับไปหักตามงวด" (mockup A3/A4/D3)
 - [x] **IP-15** การ์ดหนี้บนหน้าสรุปจ่ายและแผ่น "จัดการหนี้" บอก "ผ่อนงวด N/M" แทน "หักตามงวดผ่อน" · งวดสุดท้าย "ผ่อนครบ" (mockup A2-เดิม, B1, B3)
-- [ ] **IP-16** แผ่นทั้งหมดพอดีหนึ่งจอที่ 390×844 และไม่มีอะไรถูกตัดที่ 360/390 × S/M/L
+- [ ] **IP-16** แผ่นทั้งหมดพอดีหนึ่งจอที่ 390×844 และไม่มีอะไรถูกตัดที่ 360/390 × S/M/L — *บางส่วน*: ไม่มีอะไรถูกตัดทุกขนาด, พอดีจอที่ S/M ทุกมุมมอง; ขนาด L หน้าแป้นตัวเลข (เลือกผ่อนกี่งวด, ใส่ยอดเอง) ✓ ต่ำกว่าจอ 14 px (390) ถึง 100 px (360) ต้องเลื่อน
 
 ### บัญชีหนี้ + ตั้งค่า
 
@@ -66,16 +66,16 @@ Status: In Progress (เจ้าของตอบครบ 2026-11-06 ผ่�
 
 _เขียนก่อนโค้ด (TDD) ให้ล้มก่อน แล้วจึงทำให้ผ่าน_
 
-- [ ] vitest core: IP-1 (สุ่ม 2,000 ชุด รวม = หนี้), IP-2, IP-3 (ยกเลิกการขาย, 0 ไม่นับ), IP-4, IP-5, IP-6, IP-7, IP-8 ทั้งสองทาง, แผนบาท/การขายเดิมไม่เปลี่ยน (IP-22)
-- [ ] jest: แผ่นหักหนี้ IP-9…IP-15, บัญชีหนี้ IP-17…IP-21
-- [ ] Playwright บน build จริง ออฟไลน์: ตั้งแผน 3 งวดตอนปิดการขาย → การขายถัดไปเสนองวด 2 → reload ยังอยู่ · วัดความสูงจอ (≤ 1.0) และ 360/390 × S/M/L
-- [ ] สองเครื่อง (log สองชุดรวมกัน): ตั้งแผนพร้อมกัน, การหักจากอีกเครื่องนับเป็นงวด
+- [x] vitest core: IP-1 (สุ่ม 2,000 ชุด รวม = หนี้), IP-2, IP-3 (ยกเลิกการขาย, 0 ไม่นับ), IP-4, IP-5, IP-6, IP-7, IP-8 ทั้งสองทาง, แผนบาท/การขายเดิมไม่เปลี่ยน (IP-22)
+- [x] jest: แผ่นหักหนี้ IP-9…IP-15, บัญชีหนี้ IP-17…IP-21
+- [ ] *(ยังไม่ commit — ทำเป็นสคริปต์ภาพจอชั่วคราว 96 ภาพบน build จริงแทน; e2e ชุดเดิม 62 ผ่าน)* Playwright บน build จริง ออฟไลน์: ตั้งแผน 3 งวดตอนปิดการขาย → การขายถัดไปเสนองวด 2 → reload ยังอยู่ · วัดความสูงจอ (≤ 1.0) และ 360/390 × S/M/L
+- [ ] *(บางส่วน: vitest นับต่อเครื่อง/สองเครื่องที่การขายเดียว ผ่าน; ตั้งแผนพร้อมกันยังไม่มีเทสต์ — last-write-wins, ความเสี่ยง 1)* สองเครื่อง (log สองชุดรวมกัน): ตั้งแผนพร้อมกัน, การหักจากอีกเครื่องนับเป็นงวด
 
 ## Verification
 
-- [ ] Sandbox run performed:
-- [ ] Screenshots — golden path:
-- [ ] Screenshots — edge cases:
+- [x] Sandbox run performed: web build จริง (expo export) ทุก PR · e2e ชุดเต็ม 62 ผ่านที่ #159
+- [x] Screenshots — golden path: `docs/ux/screenshots/debt-installments/build/` (แผ่นหักหนี้), `build-account/` (บัญชีหนี้ + ตั้งค่า)
+- [x] Screenshots — edge cases: ส่วนแบ่งไม่พอ (d1), หนี้ใหม่ (d2), ใส่ยอดเอง (d3), ครบงวดยังค้าง (d4), แบ่งใหม่ (a4), ปิดหนี้ (a3) · 360/390 × S/M/L
 
 ## Dev notes
 
@@ -101,8 +101,19 @@ Solution-architect review 2026-11-06 (separate agent), adopted:
 
 ## Code review
 
-- Reviewer (separate agent/session):
-- Findings:
-- Resolution:
+- Reviewer (separate agent/session): solution-architect (design, PR-a, PR-b) and separate code-review agents for each PR (PR-a 2 rounds, PR-b, PR-c).
+- Findings: see Dev notes "Review round 1/2", "Architect review PR-b", "Code review PR-b", "PR-c code review".
+- Resolution: every should-fix finding fixed with a failing-first test before its PR was pushed; display-only items and accepted risks listed in Dev notes and Handover.
 
 ## QA notes
+
+## Handover (2026-11-06)
+
+For the next team touching debts or the close-out:
+
+- **Open follow-ups**: (1) IP-16 at text size L — the deduct sheet's pad views scroll; (2) a committed Playwright flow (set 3 at close-out → next sale proposes instalment 2 → reload) — today only throwaway screenshot specs in `.expo/` cover the real build; (3) two devices setting a plan at once is last-write-wins on `plan-<workerId>` with no conflict UI (D-30).
+- **Accepted risks** (Dev notes): a sale closed offline on a device the plan-setter had not seen counts as the next instalment; an edit-down + new debt cancel in `extra`; re-opening an older sale whose instalment sits in a later plan's `earlier` shows its number off by one.
+- **Not as in the mockup**: the "ผ่อนหนี้ได้สูงสุด" row is in ตั้งค่าวันขาย; no "ตั้งแผน M งวด" history row; no "‹" on "กลับไปหักตามงวด"; the new-debt band shows the amount without the piece name.
+- **E11-S17 (farm-care team)** will lower `summary.owed`: running plans must be re-baselined, copying `installments` whole (incl. `earlier`) and changing only `owedSatang` / `seen` (their RM-7 / RM-4b, PR #156).
+- **Event shape**: `debt_plan_set.installments` `{ count (plan total incl. earlier), earlier?, fromSaleId (null = from the next sale), seen, owedSatang }`; `perSaleSatang` is the fallback for older apps. The close-out writes the plan before its lines.
+

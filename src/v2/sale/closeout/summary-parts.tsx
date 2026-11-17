@@ -143,6 +143,7 @@ export const netOn = (d: CloseoutDraft, w: CloseoutWorker): CloseoutDraft => net
 export const netOff = (d: CloseoutDraft, w: CloseoutWorker): CloseoutDraft => netSet(d, w, 0);
 
 /** ⚠ drawn as a filled triangle with "!" that fits its own box (the line AlertIcon pokes out of a 14 box). */
+// text-size: fixed — a drawn mark like an icon: the "!" is sized from the triangle, not from the text size.
 export function WarnMark({ color, size = 14, testID }: { color: string; size?: number; testID?: string }) {
   const t = useTheme();
   const half = Math.round(size * 0.57);

@@ -190,6 +190,8 @@ export interface DebtFields {
   readonly carriedForward: boolean;
   /** Set on a debt made from an expense's share (E11-S10) — edited at the expense, not here. */
   readonly expenseId?: string;
+  /** Set on a debt projected from a fertilizing (E16-S03) — edited at the fertilizing, not here. */
+  readonly fertilizingId?: string;
 }
 
 export type DebtPatch = Partial<DebtFields> & { readonly deleted?: boolean };
@@ -312,6 +314,64 @@ export interface InstallmentPlanSpec {
   readonly seen: Readonly<Record<string, number>>;
   /** The farm debt owed in total (loan + fertilizer + other) when written: more than this later is new debt (Q3). */
   readonly owedSatang: number;
+  /**
+   * E11-S17 RM-7: 'e16' = written after old fertilizer order splits stopped counting, so `owedSatang` never
+   * included them. Absent (an older plan): the old split debt it had seen is taken out of `owedSatang` on read.
+   */
+  readonly basis?: 'e16';
+}
+
+/**
+ * E16-S02/S03 · one fertilizing (ใส่ปุ๋ย 1 ครั้ง), targetId `fz-<id>`. A line is one card on the
+ * screen (type + net price per sack); `sources` are the order-item expense ids on that card when
+ * saved (oldest first) — the stable link (architect 2026-11-13), never type + price. Which items the
+ * sacks are drawn from, and so the cost, is worked out at projection (`fertilizing.ts`).
+ */
+export interface FertilizingTake {
+  readonly worker: Payer;
+  /** Whole sacks this tapper takes from the line; 0 = touched, takes none. */
+  readonly sacks: number;
+  /** Filled in for the last untouched tapper ("เติมให้", SP-4). */
+  readonly auto: boolean;
+}
+
+export interface FertilizingLine {
+  readonly sources: readonly string[];
+  readonly sacks: number;
+  readonly takes: readonly FertilizingTake[];
+  /** Sacks no tapper takes: null = not split yet / fully split, 'farm' = สวนใส่เอง, 'later' = แบ่งที่เหลือทีหลัง (SP-6b). */
+  readonly rest: null | 'farm' | 'later';
+}
+
+export interface FertilizingZone {
+  readonly zoneId: string;
+  readonly zoneName: string;
+}
+
+export interface FertilizingFields {
+  readonly date: string;
+  readonly lines: readonly FertilizingLine[];
+  /** The tapper's share in % per worker id (whole 0–100); absent = 50 (FERT-4). */
+  readonly pct: Readonly<Record<string, number>>;
+  /** How each worker pays back; absent = 'debt' (หักตอนขายยาง). */
+  readonly settle: Readonly<Record<string, ShareSettle>>;
+  readonly zones: readonly FertilizingZone[];
+  /** Saved reason ids, or typed ones prefixed `text:` (as on expenses). */
+  readonly reasons: readonly string[];
+  readonly note: string;
+}
+
+export type FertilizingPatch = Partial<FertilizingFields> & { readonly deleted?: boolean };
+
+export interface SalePrepPatch {
+  readonly buyerId?: string | null;
+  readonly buyerName?: string;
+  /** "YYYY-MM-DD". */
+  readonly date?: string | null;
+  /** "HH:MM", optional (owner 2026-11-17). */
+  readonly time?: string | null;
+  readonly priceSatangPerKg?: number | null;
+  readonly cancelled?: true;
 }
 
 export type FinancePayload =
@@ -335,6 +395,11 @@ export type FinancePayload =
    * only a fallback for app versions that predate it (they propose it); new code ignores it.
    */
   | { readonly t: 'debt_plan_set'; readonly worker: Payer; readonly perSaleSatang: number | null; readonly installments?: InstallmentPlanSpec }
+  /**
+   * E15-S01 · the sale prep (targetId `sale-prep`, one at a time, PREP-8). Each write carries only the fields it
+   * sets, so two phones setting different rows both keep theirs; null clears a field. `cancelled` ends the prep.
+   */
+  | { readonly t: 'sale_prep_set'; readonly patch: SalePrepPatch }
   | { readonly t: 'account_added'; readonly fields: AccountFields }
   | { readonly t: 'account_changed'; readonly patch: AccountPatch; readonly alsoBasedOn?: readonly EventId[] }
   /** targetId `default-account`; null = no default. */
@@ -385,7 +450,10 @@ export type FinancePayload =
   | { readonly t: 'income_recorded'; readonly fields: IncomeFields }
   | { readonly t: 'income_changed'; readonly patch: IncomePatch; readonly alsoBasedOn?: readonly EventId[] }
   /** targetId `reserve`: the owner's figure — the app never computes it (FIN-9). */
-  | { readonly t: 'reserve_set'; readonly amountSatang: number; readonly assumption: string; readonly source: string };
+  | { readonly t: 'reserve_set'; readonly amountSatang: number; readonly assumption: string; readonly source: string }
+  /** E16-S02: targetId `fz-<id>`. Older app versions skip it (they filter by `t`). */
+  | { readonly t: 'fertilizing_recorded'; readonly fields: FertilizingFields }
+  | { readonly t: 'fertilizing_changed'; readonly patch: FertilizingPatch; readonly alsoBasedOn?: readonly EventId[] };
 
 export interface FinanceEvent {
   readonly id: EventId;

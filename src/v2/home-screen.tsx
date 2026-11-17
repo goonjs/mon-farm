@@ -2,9 +2,10 @@
  * The v2 home (e03-v2-splash-home): flow-v1 mockup screen 3 ("หน้าแรก วันนี้")
  * with the farm v1.1.0 screens 1 (top and the ☰ menu) and 25 (the lower
  * half) on top, v1.1.0 winning where they differ. Top to bottom: header
- * with today's date, the drawn cover, three actions (เริ่มการขาย the main
- * one), "ควรรู้ / ควรจัดการ" with only the rows that apply, the way to the
- * sale list, and the "ไปที่" module grid.
+ * with today's date, the drawn cover, four actions 2×2 (เริ่มการขาย the main
+ * one, การดูแลสวน beside บันทึกค่าใช้จ่าย, E16-S05), "ควรรู้ / ควรจัดการ" with
+ * only the rows that apply, the way to the sale list, and the "ไปที่" module
+ * grid of half tiles.
  *
  * Everything shown is read from the local log (sales, farm data, finance),
  * so it is the same offline. Modules with no screen yet open a placeholder.
@@ -17,15 +18,19 @@ import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
 import { farmSection, SALE_START, saleHref, sectionHref } from './routes';
 import { useMaster, useMounted } from './farm/pieces';
 import { HomeCover } from './home-cover';
+import { keepPerKg, livePrep, prepDayText, PREP_HREF, unsplitCount } from './prepare/prepare-screen';
+import { KnowRow, useSaleLineText } from './know-row';
 import { ORDER_NEW, orderHref } from './money/order-routes';
 import { loadHomeSales } from './sale/open-sale';
 import { useRepayHome, type OwesRow } from './home-repay';
-import { groupOrders, missingDetails } from '../core/finance/fert-order';
-import { owedByPerson, payableSatang } from '../core/finance/ledger';
+import { groupOrders } from '../core/finance/fert-order';
+import { prepLeft } from '../core/finance/sale-prep';
+import type { FinanceEvent } from '../core/finance/types';
+import { projectFertilizing, splitBadge } from '../core/finance/fertilizing';
+import { owedByPerson, shopPayableSatang } from '../core/finance/ledger';
 import { formatDate, formatSatang, todayIso } from '../core/finance/money';
-import type { HomeSales, SaleLine } from '../core/home';
-import { filterPeople, formatThaiDate, formatThaiDay } from '../core/master';
-import { formatKg } from '../core/settle';
+import type { HomeSales } from '../core/home';
+import { filterPeople, formatThaiDay } from '../core/master';
 import { useFinance } from '../finance/use-finance';
 import { useI18n, useT } from '../i18n';
 import { useSyncStatus } from '../sync/use-sync-status';
@@ -83,30 +88,31 @@ export function V2Home() {
   const fin = useFinance();
   const owed = useMemo(() => (fin.state ? owedByPerson(fin.state).filter((o) => o.remainingSatang > 0) : []), [fin.state]);
   const owedTotal = owed.reduce((s, o) => s + o.remainingSatang, 0);
-  const payable = fin.state ? payableSatang(fin.state) : 0;
+  // E16-S05 HM-3: committed buying not paid yet; money owed back to people has its own row.
+  const shopOwed = fin.state ? shopPayableSatang(fin.state) : 0;
   const tappers = master ? filterPeople(master.people, 'tapper').length : 0;
   // E06-S08 (H1, H2): repayments not in yet, and what a buyer still owes the farm per sale.
   const repay = useRepayHome(fin.events, era);
 
-  // Shop orders (E11-S11): ordered and not yet arrived; arrived fertilizer not yet placed on a plot.
+  // Shop orders (E11-S11): ordered and not yet arrived. (Zones moved to fertilizing, E11-S17.)
   const orders = useMemo(() => {
     const live = (fin.state?.expenses ?? []).filter((x) => !x.deleted);
     const overdueBefore = isoDaysAgo(2);
-    if (!live.some((x) => x.fertilizer)) return { committed: [], zoneItems: [] };
+    if (!live.some((x) => x.fertilizer)) return { committed: [] };
     const views = groupOrders(live);
     return {
       // FD-0: remind only when the goods are overdue (ordered more than 2 days ago).
       committed: views.filter((o) => o.stage === 'committed' && o.date < overdueBefore && o.items.some((x) => x.fertilizer)),
-      zoneItems: live.filter((x) => x.stage === 'actual' && x.fertilizer && missingDetails(x).includes('zones')),
     };
   }, [fin.state]);
   const committedNewest = orders.committed[0];
-  const zoneNewest = orders.zoneItems.reduce<(typeof orders.zoneItems)[number] | undefined>((a, x) => (!a || x.date > a.date ? x : a), undefined);
+  // E16-S05 HM-2: fertilizings not split to the tappers yet, counted like the care list's badge (GC-2).
+  const unsplit = useMemo(
+    () => (fin.events && fin.state ? projectFertilizing(fin.events, fin.state.expenses).records.filter((r) => !r.deleted && splitBadge(r) !== null).length : 0),
+    [fin.events, fin.state],
+  );
 
-  const saleLine = (s: SaleLine) =>
-    s.ts === null
-      ? msg('home.saleKg', { kg: formatKg(s.netG) })
-      : msg('home.saleLine', { date: formatThaiDate(s.ts, era), kg: formatKg(s.netG) });
+  const saleLine = useSaleLineText();
 
   const knowRows = [
     sales?.open ? (
@@ -118,6 +124,7 @@ export function V2Home() {
         label={msg('home.openSale')}
         value={saleLine(sales.open)}
         chip={<Chip tone="warn" label={msg(sales.open.weighing ? 'sales.weighing' : 'status.open')} />}
+        why={msg(sales.open.weighing ? 'home.why.weighing' : 'home.why.notClosed')}
         to={saleHref(sales.open.id, { closed: false, point: sales.open.point })}
       />
     ) : null,
@@ -130,6 +137,7 @@ export function V2Home() {
         label={msg('home.latestSale')}
         value={saleLine(sales.latest)}
         chip={<Chip tone="accept" label={msg('status.closed')} />}
+        why={msg('home.why.latest')}
         to={saleHref(sales.latest.id, { closed: true, point: sales.latest.point })}
       />
     ) : null,
@@ -140,6 +148,7 @@ export function V2Home() {
         tone="cream"
         icon={() => <FarmMateArt id="finance.workerPay" />}
         value={msg('v2.owed')}
+        why={msg('home.why.owed')}
         to={'/v2/owed' as Href}
       >
         <FactRow icon={(c) => <CoinIcon color={c} size={13} />}>
@@ -151,6 +160,14 @@ export function V2Home() {
         </FactRow>
       </KnowRow>
     ) : null,
+    shopOwed > 0 ? (
+      // E16-S05 HM-3: what is still to pay, short money; the "ไปที่" tile is a way in only.
+      <KnowRow key="payables" testID="home-payables" tone="cream" icon={() => <FarmMateArt id="finance.expense" />} label={msg('v2.payables')} why={msg('home.why.payables')} to={href('payables')}>
+        <SumLine testID="home-payables-sum">
+          <CompactMoney satang={shopOwed} />
+        </SumLine>
+      </KnowRow>
+    ) : null,
     committedNewest ? (
       <KnowRow
         key="order-committed"
@@ -158,6 +175,7 @@ export function V2Home() {
         tone="action"
         icon={() => <FarmMateArt id="farmwork.fertilize" />}
         value={orders.committed.length > 1 ? msg('ords.homeDeliveredMany', { n: orders.committed.length }) : msg('ords.homeDelivered', { date: formatDate(committedNewest.date) })}
+        why={msg('home.why.order')}
         to={orderHref(committedNewest.orderId)}
       />
     ) : null,
@@ -168,6 +186,7 @@ export function V2Home() {
         tone="action"
         icon={() => <FarmMateArt id="finance.otherCost" />}
         label={msg('rp.home.waiting')}
+        why={msg('home.why.repayWait')}
         to={'/v2/debts' as Href}
       >
         {pairsOf(repay.waiting).map((two, i) => (
@@ -188,16 +207,6 @@ export function V2Home() {
       </KnowRow>
     ) : null,
     ...repay.owes.map((o) => <OwesKnowRow key={`owes-${o.saleId}`} o={o} />),
-    zoneNewest ? (
-      <KnowRow
-        key="order-zones"
-        testID="home-order-zones"
-        tone="cream"
-        icon={() => <FarmMateArt id="farm.plotZone" />}
-        value={msg('ords.homeZones', { n: orders.zoneItems.length })}
-        to={orderHref(zoneNewest.orderId ?? zoneNewest.id)}
-      />
-    ) : null,
   ].filter((r) => r !== null);
 
   return (
@@ -245,6 +254,8 @@ export function V2Home() {
           />
         </View>
 
+        <PrepRow events={fin.events} sales={sales} />
+
         <Heading hint={msg('home.importantFirst')}>{msg('v2.toKnow')}</Heading>
         <View testID="home-to-know" style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
           {knowRows.length === 0 ? (
@@ -271,31 +282,40 @@ export function V2Home() {
         </Link>
 
         <Heading>{msg('home.goTo')}</Heading>
+        {/* The old order (owner 2026-11-16); the long รายการที่ต้องจ่าย row is now two short tiles with การดูแลสวน (E16-S05 HM-4), and stock and tappers share a row (HM-4). */}
         <View testID="home-go-to" style={{ gap: t.space.sm }}>
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>
             <Mod slug="reports" tone="action" icon={() => <FarmMateArt id="sale.salesReport" size={MOD_ART} />} label={msg('v2.reports')} />
             <Mod slug="weather" tone="action" icon={(c) => <WeatherIcon color={c} size={20} />} label={msg('v2.weather')} small={msg('home.external')} external />
           </View>
-          <Mod
-            slug="payables"
-            tone="cream"
-            icon={() => <FarmMateArt id="finance.expense" size={MOD_ART} />}
-            label={msg('v2.payables')}
-            badge={{ value: formatSatang(payable), word: msg('v2m.baht') }}
-          />
+          <View testID="home-go-to-care-row" style={{ flexDirection: 'row', gap: t.space.sm }}>
+            <Mod slug="payables" tone="cream" icon={() => <FarmMateArt id="finance.expense" size={MOD_ART} />} label={msg('v2.payables')} />
+            {/* A sprout for looking after the garden (owner asked for a better fit than the tools). HM-2: fertilizings not split yet. */}
+            <Mod
+              slug="care"
+              to={'/v2/care' as Href}
+              tone="accept"
+              icon={() => <FarmMateArt id="farm.treeCondition" size={MOD_ART} />}
+              label={msg('care.title')}
+              flag={unsplit > 0 ? msg('home.careUnsplit', { n: unsplit }) : undefined}
+            />
+          </View>
           <View style={{ flexDirection: 'row', gap: t.space.sm }}>
             <Mod slug="expenses" tone="cream" icon={() => <FarmMateArt id="sale.receipt" size={MOD_ART} />} label={msg('v2.expenses')} />
             <Mod slug="order" to={ORDER_NEW as Href} tone="accept" icon={() => <FarmMateArt id="materials.orderMaterials" size={MOD_ART} />} label={msg('ords.homeBuy')} />
           </View>
-          <Mod slug="stock" tone="accept" icon={() => <FarmMateArt id="materials.stock" size={MOD_ART} />} label={msg('v2.stock')} />
-          <Mod
-            slug="workers"
-            to={'/v2/people?filter=tapper' as Href}
-            tone="neutral"
-            icon={() => <FarmMateArt id="people.workerInfo" size={MOD_ART} />}
-            label={msg('v2.workers')}
-            badge={{ value: String(tappers), word: msg('role.tapper') }}
-          />
+          {/* Two short tiles on one row (owner 2026-11-16, E16-S05 HM-4). */}
+          <View testID="home-go-to-stock-row" style={{ flexDirection: 'row', gap: t.space.sm }}>
+            <Mod slug="stock" tone="accept" icon={() => <FarmMateArt id="materials.stock" size={MOD_ART} />} label={msg('v2.stock')} />
+            <Mod
+              slug="workers"
+              to={'/v2/people?filter=tapper' as Href}
+              tone="neutral"
+              icon={() => <FarmMateArt id="people.workerInfo" size={MOD_ART} />}
+              label={msg('v2.workers')}
+              badge={{ value: String(tappers), word: msg('role.tapper') }}
+            />
+          </View>
         </View>
       </ScrollView>
 
@@ -355,6 +375,34 @@ function HomeMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
+/**
+ * E15-S01 PREP-1: the sale prep in one row above the to-know list. Nothing prepared invites the next sale;
+ * preparing shows the day, the buyer and the rows left; all done says ✓ พร้อมขาย. No reminder sentences.
+ */
+function PrepRow({ events, sales }: { events: readonly FinanceEvent[] | null; sales: HomeSales | null }) {
+  const t = useTheme();
+  const { t: msg, era } = useI18n();
+  const info = useMemo(() => {
+    if (!events) return null;
+    const lastTs = Math.max(sales?.open?.ts ?? 0, sales?.latest?.ts ?? 0) || null;
+    const prep = livePrep(events, lastTs);
+    return { prep, left: prepLeft(prep, unsplitCount(events)) };
+  }, [events, sales]);
+  if (!info) return null;
+  const { prep, left } = info;
+  const day = prep?.date ? prepDayText(prep.date, era, true) : msg('prep.dateNone');
+  const [value, why] = !prep
+    ? [msg('prep.homeNone'), msg('prep.homeNoneBody')]
+    : left === 0
+      ? [msg('prep.homeReady', { date: day }), keepPerKg(msg('prep.homeReadyBody', { buyer: prep.buyerName, price: formatSatang(prep.priceSatangPerKg ?? 0) }))]
+      : [msg('prep.homeSome', { date: day }), prep.buyerId ? msg('prep.homeLeft', { buyer: prep.buyerName, n: left }) : msg('prep.homeLeftNoBuyer', { n: left })];
+  return (
+    <View style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
+      <KnowRow testID="home-prep" tone={prep && left === 0 ? 'accept' : 'cream'} icon={() => <FarmMateArt id="farmwork.today" />} value={value} why={why} to={PREP_HREF} />
+    </View>
+  );
+}
+
 /** Sales for the home rows: every sale's log, read again whenever home is shown. */
 function useHomeSales(): HomeSales | null {
   const [sales, setSales] = useState<HomeSales | null>(null);
@@ -408,47 +456,6 @@ function useNow(): number {
   return now;
 }
 
-/** One "ควรรู้ / ควรจัดการ" row (mockup `.row`): tile, small label, value, facts or a chip, chevron. */
-function KnowRow({
-  testID,
-  tone,
-  icon,
-  label,
-  value,
-  chip,
-  children,
-  to,
-}: {
-  testID: string;
-  tone: TileTone;
-  icon: IconRender;
-  label?: string;
-  value?: string;
-  chip?: React.ReactNode;
-  children?: React.ReactNode;
-  to: Href;
-}) {
-  const t = useTheme();
-  return (
-    <Link href={to} asChild>
-    <Pressable
-      testID={testID}
-      accessibilityRole="link"
-      style={{ minHeight: t.target.min, paddingVertical: t.space.sm, flexDirection: 'row', alignItems: 'center', gap: t.space.md }}
-    >
-      <IconTile tone={tone} icon={icon} />
-      <View style={{ flex: 1, minWidth: 0, gap: t.space.xxs }}>
-        {label ? <Text style={{ ...body(t), color: t.color.inkSoft }}>{label}</Text> : null}
-        {value ? <Text style={{ ...body(t), fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.semibold, fontVariant: ['tabular-nums'] }}>{value}</Text> : null}
-        {chip}
-        {children}
-      </View>
-      <ChevronRight color={t.color.inkFaint} />
-    </Pressable>
-    </Link>
-  );
-}
-
 /** Two per line (summary-lines: more than 2 people go 2 per line). */
 function pairsOf<T>(xs: readonly T[]): T[][] {
   const out: T[][] = [];
@@ -476,6 +483,7 @@ function OwesKnowRow({ o }: { o: OwesRow }) {
       tone="warn"
       icon={() => <FarmMateArt id="finance.otherCost" />}
       label={o.buyer ? msg('rp.home.owesBuyer', { date: o.dateText, buyer: o.buyer }) : msg('rp.home.owes', { date: o.dateText })}
+      why={msg('home.why.owes')}
       to={`/v2/sale/${o.saleId}/payment` as Href}
     >
       {o.transferSatang > 0 ? (
@@ -498,7 +506,7 @@ function OwesKnowRow({ o }: { o: OwesRow }) {
   );
 }
 
-/** One "ไปที่" module tile (mockup `.mod`); without a row around it, it spans the width (`.mod.wide`). */
+/** One "ไปที่" module tile (mockup `.mod`), half the width in a row of two (E16-S05 HM-4). */
 function Mod({
   slug,
   to,
@@ -508,6 +516,7 @@ function Mod({
   small,
   external,
   badge,
+  flag,
 }: {
   slug: string;
   to?: Href;
@@ -518,6 +527,8 @@ function Mod({
   /** Opens outside the app: a small arrow-out after `small` (mockup `#i-ext`). */
   external?: boolean;
   badge?: { value: string; word: string };
+  /** A short amber line under the label, e.g. "ยังไม่แบ่ง 2 ครั้ง" (`mod-<slug>-flag`). */
+  flag?: string;
 }) {
   const t = useTheme();
   return (
@@ -528,6 +539,8 @@ function Mod({
       style={{
         ...cardStyle(t),
         flex: 1,
+        // Half the row whatever the content; the label wraps instead (E16-S05 HM-4).
+        minWidth: 0,
         minHeight: t.layout.fabSize,
         borderRadius: t.radius.md,
         paddingVertical: t.space.sm,
@@ -552,13 +565,20 @@ function Mod({
             ) : null}
           </View>
         ) : null}
+        {/* Under the label, not beside it: a half tile has no room for both on one line (E16-S05 HM-4). */}
+        {badge ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: t.space.xs }}>
+            <Text style={{ ...body(t), fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{badge.value}</Text>
+            <Text style={{ ...body(t), fontSize: t.font.size.micro, fontWeight: t.font.weight.semibold, color: t.color.inkSoft }}>{badge.word}</Text>
+          </View>
+        ) : null}
+        {flag ? (
+          <Text testID={`mod-${slug}-flag`} style={{ ...body(t), fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, color: t.color.warn }}>
+            {/* The last word stays with the one before it: "1" alone at a line end reads wrong ("ยังไม่แบ่ง 1 / ครั้ง"). */}
+            {flag.replace(/ (\S+)$/, '\u00a0$1')}
+          </Text>
+        ) : null}
       </View>
-      {badge ? (
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={{ ...body(t), fontSize: t.font.size.bodySm, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{badge.value}</Text>
-          <Text style={{ ...body(t), fontSize: t.font.size.micro, fontWeight: t.font.weight.semibold, color: t.color.inkSoft }}>{badge.word}</Text>
-        </View>
-      ) : null}
     </Pressable>
     </Link>
   );

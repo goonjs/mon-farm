@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 
 import type { MasterPayload } from '../src/core/types';
 import { FIXTURE_GROUP_ID, LogBuilder } from '../src/core/fixtures';

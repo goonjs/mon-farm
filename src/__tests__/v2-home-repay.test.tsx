@@ -96,6 +96,8 @@ describe('H1 · PR-14 เงินคืนหนี้ ยังไม่เข
     expect(screen.getByTestId('home-repay-wait-line-0')).toHaveTextContent('แดง ฿ 3,250 · นัด ฿ 5,250');
     expect(screen.getByTestId('home-repay-wait-line-1')).toHaveTextContent('เอก ฿ 1,000');
     expect(screen.getByTestId('home-repay-wait-sum')).toHaveTextContent('Σ รวม ฿ 9,500');
+    // E16-S05 HM-6 (review of PR 190 item 2): the reason and what to do.
+    expect(screen.getByTestId('home-repay-wait-why')).toHaveTextContent('คนซื้อยังไม่ส่งเงินคืนหนี้ให้สวน · ได้รับแล้วบันทึก');
     await act(async () => fireEvent.press(row));
     expect(mockRouter.push).toHaveBeenCalledWith('/v2/debts');
   });
@@ -130,6 +132,7 @@ describe('H2 · PR-16 คนซื้อค้างสวน (one row per sale)
     expect(within(row).UNSAFE_getByType(FarmMateArt).props.id).toBe('finance.otherCost');
     expect(row).toHaveTextContent(/คนซื้อค้างสวน · ขาย 29 ต\.ค\. 2569 · ลานยางสมบูรณ์/);
     expect(screen.getByTestId('home-owes-s-owe-transfer')).toHaveTextContent('ส่วนโอน ฿ 2,688');
+    expect(screen.getByTestId('home-owes-s-owe-why')).toHaveTextContent('คนซื้อยังจ่ายไม่ครบ · ได้รับแล้วบันทึก');
     expect(screen.getByTestId(`home-owes-s-owe-cash-${RED.id}`)).toHaveTextContent('ส่วนเงินสด (แดงจ่ายแล้ว) ฿ 3,251');
     expect(screen.getByTestId('home-owes-s-owe-sum')).toHaveTextContent('Σ รวม ฿ 5,938');
     await act(async () => fireEvent.press(row));

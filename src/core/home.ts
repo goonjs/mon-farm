@@ -17,6 +17,8 @@ export interface SaleLine {
   readonly id: string;
   /** When the sale started; the first event's time for a log without a start. */
   readonly ts: number | null;
+  /** The sale day picked at the start (E04-S19); null when none was picked. */
+  readonly day: string | null;
   readonly netG: number;
   readonly baskets: number;
   /** A pile is being counted right now ("กำลังชั่ง"), not just open. */
@@ -32,26 +34,36 @@ export interface HomeSales {
   readonly latest: SaleLine | null;
 }
 
+/** One sale as a home row, and whether it counts as closed; null when it is deleted or cancelled. */
+export function saleLineOf(id: string, events: readonly SaleEvent[]): { line: SaleLine; closed: boolean } | null {
+  const state = projectSale(events, id);
+  if (state.deleted || state.saleStatus === 'cancelled') return null;
+  const totals = saleTotals(events);
+  return {
+    line: {
+      id,
+      ts: state.startedTs ?? events[0]?.ts ?? null,
+      day: state.day,
+      netG: totals.netG,
+      baskets: totals.baskets,
+      weighing: state.piles.some((p) => p.status === 'counting'),
+      point: currentPoint(events),
+    },
+    closed: statusCountsAsClosed(state),
+  };
+}
+
 export function homeSales(sales: readonly { id: string; events: readonly SaleEvent[] }[]): HomeSales {
   let open: SaleLine | null = null;
   let latest: SaleLine | null = null;
   const newer = (a: SaleLine, b: SaleLine | null) => !b || (a.ts ?? 0) > (b.ts ?? 0);
   for (const { id, events } of sales) {
-    const state = projectSale(events, id);
-    if (state.deleted || state.saleStatus === 'cancelled') continue;
-    const totals = saleTotals(events);
-    const line: SaleLine = {
-      id,
-      ts: state.startedTs ?? events[0]?.ts ?? null,
-      netG: totals.netG,
-      baskets: totals.baskets,
-      weighing: state.piles.some((p) => p.status === 'counting'),
-      point: currentPoint(events),
-    };
-    if (statusCountsAsClosed(state)) {
-      if (newer(line, latest)) latest = line;
-    } else if (newer(line, open)) {
-      open = line;
+    const one = saleLineOf(id, events);
+    if (!one) continue;
+    if (one.closed) {
+      if (newer(one.line, latest)) latest = one.line;
+    } else if (newer(one.line, open)) {
+      open = one.line;
     }
   }
   return { open, latest };

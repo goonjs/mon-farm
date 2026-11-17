@@ -15,12 +15,13 @@
  */
 
 import { router, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { DebtAccount } from '../../core/finance/debts';
 import { formatSatang } from '../../core/finance/money';
 import { payBlocks } from '../../core/finance/closeout';
+import { saleLineOf } from '../../core/home';
 import { overDeducted } from '../../core/finance/deduct';
 import { OWNER_PAYEE, paymentMarkPayload, paymentStatus, paymentTarget, salePaymentConflicts, type PaymentStatus } from '../../core/finance/payments';
 import { debtCashPayee, type PendingHow, type PendingRepayLine } from '../../core/finance/pending-repays';
@@ -28,9 +29,10 @@ import type { FinanceEvent, FinancePayload } from '../../core/finance/types';
 import { useInFlight } from '../../finance/use-in-flight';
 import { useT } from '../../i18n';
 import { financeStore } from '../../store/finance';
-import { SaleProvider } from '../../store/SaleProvider';
+import { SaleProvider, useSale } from '../../store/SaleProvider';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, Button, Card, Check, ChevronRight, CompactMoney, CTA } from '../../ui';
+import { AppText, BottomSheet, Button, Card, Check, ChevronRight, Chip, CompactMoney, CTA, FarmMateArt } from '../../ui';
+import { KnowRow, useSaleLineText } from '../know-row';
 import { useDay } from '../farm/pieces';
 import { CardIcon, MARK } from '../sale/closeout/summary-parts';
 import { useCloseout } from '../sale/closeout/use-closeout';
@@ -217,6 +219,9 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
       await write(paymentTarget(saleId, payee), head.head, paymentMarkPayload(saleId, payee, done, amount, received));
       onDone({ saleId, payee, label, before });
     });
+  const saleCtx = useSale();
+  const sale = useMemo(() => (saleCtx.events.length ? saleLineOf(saleId, saleCtx.events) : null), [saleId, saleCtx.events]);
+  const saleText = useSaleLineText();
   const openSale = () => {
     onClose();
     router.push(`/v2/sale/${saleId}/payment` as Href);
@@ -263,6 +268,17 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
     <BottomSheet open onClose={onClose} title={picked ? msg('rp.sheet.titlePicked', { name }) : msg('rp.sheet.title')} testID="rp-sheet" closeLabel={msg('rp.sheet.close')}>
       <View style={{ gap: t.space.sm }}>
         <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('rp.sheet.sub', { name, date: day(line.date) })}</AppText>
+        {/* Owner 2026-11-07: the sale as the home page's card (style A), "ดูข้อมูลการขาย" — not a round "เปิดการขาย ›". */}
+        {/* Always there (also while the sale loads, or if it was deleted): the way to the sale, and nothing jumps in above the buttons. */}
+        <KnowRow
+          testID="rp-sheet-sale"
+          tone={sale?.closed ? 'accept' : 'action'}
+          icon={() => <FarmMateArt id="sale.sale" />}
+          label={msg('rp.sheet.saleInfo')}
+          value={sale ? saleText(sale.line) : undefined}
+          chip={sale ? <Chip tone={sale.closed ? 'accept' : 'warn'} label={msg(sale.closed ? 'status.closed' : sale.line.weighing ? 'sales.weighing' : 'status.open')} /> : undefined}
+          onPress={openSale}
+        />
         <View style={box}>
           {kv(`${MARK.in} ${msg('rp.sheet.repay', { name })}`, baht(line.satang), t.color.debtIn)}
           {kv(msg('rp.sheet.route'), route)}
@@ -305,7 +321,6 @@ function RepaySheetBody({ open, events, account, write, onDone, onClose }: { ope
               <View style={{ flexGrow: 1, flexBasis: 160 }}>
                 <Button testID="rp-sheet-less" size="large" disabled={!ready || amount <= 0} onPress={() => setLess(true)}>{msg('rp.sheet.less')}</Button>
               </View>
-              <Button testID="rp-sheet-open" variant="ghost" onPress={openSale}>{`${msg('rp.sheet.openSale')} ${MORE}`}</Button>
             </View>
           </>
         )}

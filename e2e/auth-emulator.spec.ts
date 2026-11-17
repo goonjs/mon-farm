@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 
 import { signedOut } from './session';
 
@@ -19,7 +19,7 @@ import { signedOut } from './session';
  */
 
 test.skip(!process.env.E2E_AUTH_EMULATOR, 'needs the Auth emulator: npm run test:e2e:auth');
-test.use({ storageState: signedOut, viewport: { width: 390, height: 844 } });
+test.use({ account: signedOut, viewport: { width: 390, height: 844 } });
 
 /** Drives the emulator's stand-in for Google's account chooser. */
 async function chooseNewGoogleAccount(popup: Page) {

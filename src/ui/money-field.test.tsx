@@ -121,6 +121,16 @@ describe('MoneyField — E01-S20 additions', () => {
     expect(screen.queryByTestId('m-words')).toBeNull();
   });
 
+  it('min 0.01 (a screen that never saves 0): 0 shuts ตกลง and says "ต้องมากกว่า 0" (owner q2 = ก)', () => {
+    const onChange = jest.fn();
+    wrap(<MoneyField testID="m" label="ราคา" unit="บาท" satang={null} minSatang={1} onChange={onChange} />);
+    fireEvent.press(screen.getByTestId('m'));
+    press('0');
+    expect(screen.getByText('ต้องมากกว่า 0')).toBeTruthy();
+    done();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('validate: a screen rule closes ตกลง and says why (NP-5)', () => {
     const onChange = jest.fn();
     wrap(<Harness initial={null} validate={(s) => (s > 50_000 ? 'เกินยอดค้าง 500.00' : undefined)} onChange={onChange} />);
@@ -169,6 +179,36 @@ describe('compact (E01-S20 NP-10): a list of amounts stays as tall as the old bo
     expect(flat(numeral.props.style).fontSize).toBeLessThanOrEqual(tokens.font.size.displayLg);
     fireEvent.press(screen.getByTestId('m'));
     expect(screen.getByTestId('m-pad')).toBeTruthy();
+  });
+
+  describe('a screen reader hears why ตกลง is shut (2026-11-07)', () => {
+    // A live region inserted together with its text is often not announced; it must be there first.
+    it('the reason sits in a polite live region that is there before any reason', () => {
+      wrap(<Harness minSatang={10000} />);
+      fireEvent.press(screen.getByTestId('m'));
+      const region = screen.getByTestId('m-problem');
+      expect(region.props.accessibilityLiveRegion).toBe('polite');
+      expect(text('m-problem')).toBe('');
+      // Empty: in the tree, out of the layout (no gap, no size); with a reason: in the flow like before.
+      expect(flat(region.props.style)).toMatchObject({ position: 'absolute', opacity: 0 });
+      press('5');
+      expect(text('m-problem')).toBe('ต้องไม่น้อยกว่า 100.00');
+      expect(flat(screen.getByTestId('m-problem').props.style).position).toBeUndefined();
+    });
+
+    it('the shut ตกลง carries the reason as its hint; an open one has none', () => {
+      wrap(<Harness minSatang={10000} />);
+      fireEvent.press(screen.getByTestId('m'));
+      press('5');
+      expect(screen.getByTestId('m-done').props.accessibilityHint).toBe('ต้องไม่น้อยกว่า 100.00');
+      // Web drops the hint: the button points at the reason's text instead.
+      expect(screen.getByTestId('m-done').props['aria-describedby']).toBe('m-problem-text');
+      expect(screen.getByText('ต้องไม่น้อยกว่า 100.00').props.nativeID).toBe('m-problem-text');
+      press('0', '0');
+      expect(screen.getByTestId('m-done').props.accessibilityState.disabled).toBe(false);
+      expect(screen.getByTestId('m-done').props.accessibilityHint).toBeUndefined();
+      expect(screen.getByTestId('m-done').props['aria-describedby']).toBeUndefined();
+    });
   });
 });
 

@@ -1,0 +1,102 @@
+# Android APK (E01-S06, ADR 0003 path B): expo prebuild + Gradle assembleRelease on a GitHub runner.
+#
+# Started by hand only (Actions → Android APK → Run workflow): a build takes 20–40 minutes of the
+# shared free minutes, so it never runs on every PR.
+#
+# Signed with the owner's keystore on every build. The first APK must already carry the real key:
+# prebuild's default signs release with the template's public debug key, and a phone will not update an
+# app over a different key, so switching later means uninstalling and losing unsynced data (NFR-2).
+# android/ is generated each run and never committed, so the signing values go in as Gradle properties.
+#
+# Secrets (the owner creates the keystore and adds these; the agent never sees them):
+#   ANDROID_KEYSTORE_BASE64   the .jks/.keystore file, base64
+#   ANDROID_KEYSTORE_PASSWORD the store password
+#   ANDROID_KEY_ALIAS         the key alias
+#   ANDROID_KEY_PASSWORD      the key password
+name: Android APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Generate the Android project
+        run: npx expo prebuild --platform android --no-install
+
+      # After prebuild, so the Gradle files the cache is keyed on exist.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+          cache-dependency-path: |
+            android/*.gradle*
+            android/**/gradle-wrapper.properties
+
+      - name: Keystore from secret
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Secret ANDROID_KEYSTORE_BASE64 is missing. Add the four ANDROID_* secrets (see the top of this file)."
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+
+      - name: Build signed release APK
+        working-directory: android
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: >-
+          ./gradlew assembleRelease --no-daemon
+          -Pandroid.injected.signing.store.file="$RUNNER_TEMP/release.keystore"
+          -Pandroid.injected.signing.store.password="$STORE_PASSWORD"
+          -Pandroid.injected.signing.key.alias="$KEY_ALIAS"
+          -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+
+      # The generated release block names the template's debug key; the injected properties above
+      # override it. Check the result anyway: a debug-signed APK must never reach the owner's phone.
+      - name: The APK carries the owner's key, not the debug key
+        run: |
+          APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          for apk in android/app/build/outputs/apk/release/*.apk; do
+            certs="$("$APKSIGNER" verify --print-certs "$apk")"
+            if printf '%s' "$certs" | grep -q 'Android Debug'; then
+              echo "::error::$apk is signed with the Android debug key."
+              exit 1
+            fi
+          done
+
+      - name: Remove the keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.keystore"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mon-farm-${{ github.sha }}-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 7
+          if-no-files-found: error
+          include-hidden-files: true

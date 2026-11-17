@@ -63,6 +63,18 @@ module.exports = [
     },
   },
   {
+    // e2e: every spec takes `test` from e2e/test.ts, whose `account` fixture
+    // puts the signed-in account on the device before the app opens. Playwright's
+    // own `test` would start the app on the sign-in screen.
+    files: ['e2e/**/*.spec.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { paths: [{ name: '@playwright/test', importNames: ['test'], message: "Import `test` from './test' (the account preload)." }] },
+      ],
+    },
+  },
+  {
     rules: {
       // `require()` of a missing file fails lint like an import does. Since
       // the v1 UI was removed (D-83) this is also what keeps v2 from reaching

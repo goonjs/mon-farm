@@ -18,13 +18,17 @@ import type { CreateGroupOp, Membership } from '../core/group';
 import type { User } from '../core/user';
 
 export interface AccountStore {
-  /** The signed-in user, or null before the first sign-in on this device. */
+  /**
+   * The signed-in user, or null before the first sign-in on this device.
+   * Rejects when the device's store cannot be read (tried twice): "cannot
+   * read" must never look like "never signed in" (owner q3 = ก, 2026-11-08).
+   */
   user(): Promise<User | null>;
   saveUser(user: User): Promise<void>;
   /**
    * The groups kept on this device, each tagged with the `userId` it belongs
    * to — the gate opens only the signed-in user's (`decideEntry`), offline
-   * included (ACC-3, ACC-6).
+   * included (ACC-3, ACC-6). Rejects when they cannot be read, like `user()`.
    */
   memberships(): Promise<Membership[]>;
   /**

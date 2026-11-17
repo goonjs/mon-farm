@@ -8,6 +8,7 @@ import {
   leaseIncome,
   projectPlan,
   rubberIncome,
+  rubberUnknownDates,
 } from './plan';
 import { isIsoDate, isMonth } from './money';
 import { FARM_FUNDS, type ExpenseFields, type FinanceEvent, type FinancePayload, type Payer } from './types';
@@ -99,6 +100,12 @@ describe('review fixes', () => {
   it('#2 rubber income is dated by the local calendar day', () => {
     const ts = new Date(2026, 9, 1, 0, 30).getTime(); // 1 Oct 00:30 local
     expect(rubberIncome([{ saleId: 's', startedTs: ts, status: 'closed', ownerSatang: 1, deleted: false }])[0].date).toBe('2026-10-01');
+  });
+
+  it('E04-S19 review S1: a sale entered later counts on its picked sale day', () => {
+    const ts = new Date(2026, 10, 1, 9, 0).getTime(); // entered 1 Nov
+    expect(rubberIncome([{ saleId: 's', startedTs: ts, day: '2026-10-31', status: 'closed', ownerSatang: 1, deleted: false }])[0].date).toBe('2026-10-31');
+    expect(rubberUnknownDates([{ startedTs: ts, day: '2026-10-31', status: 'closed', ownerSatang: null, deleted: false }])).toEqual(['2026-10-31']);
   });
 
   it('#3 rent received against a lease replaces that month’s expected rent', () => {
