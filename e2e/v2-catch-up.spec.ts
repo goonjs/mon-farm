@@ -19,12 +19,15 @@ test.beforeEach(() => test.skip(test.info().project.name !== 'phone-portrait', '
 
 const FARM: MasterPayload[] = [
   { t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] },
+  { t: 'person_added', personId: 'nat', name: 'นัด', roles: ['tapper'], otherRoles: [] },
   { t: 'person_added', personId: 'mgr', name: 'อ.สมหวัง', roles: ['manager'], otherRoles: [] },
   { t: 'buyer_added', buyerId: 'buyer-a', name: 'คนรับซื้อยาง ก (ตัวอย่าง)' },
   { t: 'property_added', propertyId: 'fa', name: 'จันทเขลม', crop: 'rubber' },
   { t: 'point_added', pointId: 'a1', propertyId: 'fa', name: 'จุด 1' },
   { t: 'point_added', pointId: 'a2', propertyId: 'fa', name: 'จุด 2' },
   { t: 'point_added', pointId: 'a3', propertyId: 'fa', name: 'จุด 3' },
+  { t: 'point_added', pointId: 'b1', propertyId: 'fa', name: 'จุด 4' },
+  { t: 'tapper_assigned', assignmentId: 's4', pointId: 'b1', tapperId: 'nat' },
   { t: 'tapper_assigned', assignmentId: 's1', pointId: 'a1', tapperId: 'red' },
   { t: 'tapper_assigned', assignmentId: 's2', pointId: 'a2', tapperId: 'red' },
   { t: 'tapper_assigned', assignmentId: 's3', pointId: 'a3', tapperId: 'red' },
@@ -134,4 +137,47 @@ for (const width of [320, 360]) {
       expect(errors).toEqual([]);
     });
   }
+}
+
+// E04-S23: a second tapper arrives late after the first was caught up; counting on needs no scale check.
+for (const width of [320, 360]) {
+  test(`E04-S23 second tapper at ${width} px: catch up, count on, change point, catch up again (offline)`, async ({ page, context }) => {
+    const id = on(page);
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.setViewportSize({ width, height: 844 });
+    await seedMaster(page, FARM);
+    await page.goto('/v2');
+    await context.setOffline(true);
+    await id('home-sale-start').click();
+    await id('start-next').click();
+    await id('pick-farm-fa').click();
+    await id('pick-tapper-red').click();
+    await id('pick-backfill').click();
+    await id('cu-order-a1').click();
+    await id('cu-next').click();
+    await intField(page, 'cu-end', '4');
+    await id('cu-full').click();
+    await id('cu-next').click();
+    await id('cu-save').click();
+    // JB-3: counting on at once, no "check the scale" card.
+    await expect(id('counter')).toBeVisible();
+    await expect(id('not-ready')).toHaveCount(0);
+    // JB-2: change point, pick the other tapper: the late link is still there.
+    await id('switch-point').click();
+    await id('pick-tapper-nat').click();
+    await expect(id('pick-backfill')).toBeVisible();
+    await fits(page);
+    await evidence(page, `${SHOTS}/${width}-m-7-switch-link.png`);
+    await id('pick-backfill').click();
+    // นัด has one point: straight to its page (BF-13).
+    await intField(page, 'cu-end', '2');
+    await id('cu-full').click();
+    await id('cu-next').click();
+    await expect(id('cu-total')).toContainText('100');
+    await id('cu-save').click();
+    await expect(id('counter')).toBeVisible();
+    await expect(id('not-ready')).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
 }
