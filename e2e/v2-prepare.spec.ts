@@ -152,8 +152,12 @@ test('E15-S02 A: start the sale from a prep with no day — buyer and price fill
   await id('start-next').click();
   await expect(page).toHaveURL(/\/point/);
 
-  // The prep was used by the sale: home shows no prep any more.
-  await page.goto('/v2');
+  // Back to home at once, inside the app: the writes of the start may still be on their way to the store, and home
+  // must show what lands after them — the prep was used by the sale, so no prep any more (CI run 44168856960).
+  await page.goBack();
+  await expect(id('home-prepare-badge')).toHaveCount(0);
+  // And it is what was stored: still so after a reload.
+  await page.reload();
   await expect(id('home-prepare-badge')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
