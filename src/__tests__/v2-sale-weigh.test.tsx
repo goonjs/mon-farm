@@ -10,6 +10,7 @@ import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { LogBuilder } from '../core/fixtures';
 import { wrap } from '../test/render';
+import { messages } from '../i18n/messages';
 import { FarmMateArt } from '../ui';
 import { writeCountMode } from '../store/hold-preference';
 import { readWeighBasis, writeWeighBasis, writeWeighMode } from '../store/weigh-mode-preference';
@@ -479,6 +480,22 @@ describe('the fill-up sheet and guide (E04-S21, owner 2026-11-17 "ก · ก · 
     await press(`pick-point-${farm.a[1]}`);
   }
   const selected = (id: string) => screen.getByTestId(id).props.accessibilityState?.selected;
+
+  it('E04-S22 FC-2: the three ways are one radio group with a name, each still a radio', async () => {
+    await toSheet();
+    const group = screen.getByTestId('fill-ways');
+    expect(group.props.accessibilityRole).toBe('radiogroup');
+    expect(group.props.accessibilityLabel).toMatch(/เลือกวิธีเติมเข่ง 2/);
+    for (const id of ['fill-full', 'fill-part', 'fill-next']) {
+      expect(within(group).getByTestId(id).props.accessibilityRole).toBe('radio');
+    }
+  });
+
+  it('E04-S22 FC-1: the old fill-sheet strings are gone from the catalogue', () => {
+    const gone = ['fillTitle', 'fillHave', 'fillFrom', 'fillFull', 'fillPart', 'fillNext', 'fillMore', 'asBasket', 'wholeBasket', 'fullSumSkew', 'weighAdded', 'countAs', 'partSum', 'partSumSkew', 'nextFull', 'basketN', 'fillNote', 'fillStagePart', 'fullLine', 'fillSum'];
+    const ids = new Set([...Object.keys(messages.th), ...Object.keys(messages.en)]);
+    expect(gone.filter((k) => ids.has(`v2s.${k}`))).toEqual([]);
+  });
 
   it('FS-2: from → to, the same tapper, and the basket bar 35 in + 15 to add = 50 full', async () => {
     await toSheet();
