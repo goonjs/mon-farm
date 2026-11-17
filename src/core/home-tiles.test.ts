@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'vitest';
+
 import { homeTiles, salePhase, type TileSale } from './home-tiles';
 import type { SalePrep } from './finance/sale-prep';
 import type { SaleState } from './types';
