@@ -328,3 +328,40 @@ test.describe('360 wide at L', () => {
     expect(await textFit(page)).toEqual([]);
   });
 });
+
+// merge-209 (owner 2026-11-17 "ข · อยากได้ 1 บรรทัด — ย่อคำแทน (เช่น รวม ฿)"): the counter's money card label is one
+// line at every width and text size, never wrapped and never cut with "…".
+for (const width of [320, 360, 390]) {
+  for (const size of ['m', 'l'] as const) {
+    test.describe(`${width} wide at ${size.toUpperCase()}`, () => {
+      test.use({ viewport: { width, height: 844 } });
+      test('the counter money card label: one line, nothing cut', async ({ page }) => {
+        const id = on(page);
+        await seed(page, size);
+        await page.goto('/v2/sale/sale-ts/counter?point=a1');
+        await expect(id('fig-money')).toBeVisible();
+        await page.waitForTimeout(300);
+        const label = id('card-money-label');
+        await expect(label).toHaveText('รวม (฿)');
+        // One line: the box is less than two font sizes tall (a wrapped label is about three).
+        const oneLine = await label.evaluate((e) => e.getBoundingClientRect().height < parseFloat(getComputedStyle(e).fontSize) * 1.9);
+        expect(oneLine).toBe(true);
+        if (width === 320) await shot(page, `${size}-320-counter`);
+        expect(await textFit(page)).toEqual([]);
+        // The figure under it keeps room to spare: CI's fonts render about 7% wider than a dev machine's, and the
+        // 320 L figure ("1.84 หมื่น") was cut there while it fitted here (CI run on 99c06b9).
+        const spare = await id('fig-money').evaluate((e) => {
+          const r = document.createRange();
+          r.selectNodeContents(e);
+          return r.getBoundingClientRect().width / e.clientWidth;
+        });
+        expect(spare).toBeLessThanOrEqual(0.9);
+        // The sale total is never smaller than its own label (lead, 2026-11-17), except at 320 L: a 73 px box cannot
+        // hold "1.84 หมื่น" at the 15 px L label size with that room, so there it keeps the M label size (13).
+        const labelPx = await fontPx(page, 'card-money-label');
+        const figPx = await fontPx(page, 'fig-money');
+        expect(figPx).toBeGreaterThanOrEqual(width === 320 && size === 'l' ? 13 : labelPx);
+      });
+    });
+  }
+}

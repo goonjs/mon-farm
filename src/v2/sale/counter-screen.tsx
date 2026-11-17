@@ -89,6 +89,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const pointId = params.point ?? '';
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
   const [readingKg, setReadingKg] = useState<number | null>(null);
+  // The counter cards' figure box width, for the narrow-card step in figFont.
+  const [figBoxW, setFigBoxW] = useState<number | undefined>(undefined);
   // How the short sheet is filled is the device's choice (E04-S16): typed, or the dial following scale or net.
   const [weighMode, setWeighMode] = useState<WeighMode>(readWeighMode);
   const [basis, setBasisState] = useState<WeighBasis>(readWeighBasis);
@@ -226,10 +228,19 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   );
   // The small cards' figure: the number (the unit is in the label above), stepped down by length; one line, so a card never grows.
   // Card labels: one line at M and below, exactly as before (owner 2026-11-02: no change at the
-  // default); above M they wrap instead of being cut with "…" (E03-S08 TS-8).
+  // default); above M they wrap instead of being cut with "…" (E03-S08 TS-8). The money card's label is one line at
+  // every size, kept short ("รวม (฿)") so it fits at 320 px L (owner merge-209, 2026-11-17).
   const oneLine = t.textScale > 1 ? undefined : 1;
+  // A long figure ("1.84 หมื่น") filled 98% of a 320 px phone's card at L and 92% at M on CI's wider fonts (PR 209). It
+  // is sized to use at most about 80% of its box (a glyph is about 0.45 em wide), so it keeps room on CI's fonts and
+  // stays as big as it can: 13 px at 320, 14/15 px at 360 M/L, full size from 390. Until the box is measured it
+  // starts at the narrowest phone's size (73 px), so a narrow card does not paint full size and then shrink.
+  const figFont = (value: string) => {
+    const full = figSize(value, t.font.size.headingXl);
+    return value.length > 9 ? Math.min(full, Math.round((0.8 * (figBoxW ?? 73)) / (0.45 * value.length))) : full;
+  };
   const cardFigure = (value: string, testID: string) => (
-    <Text testID={testID} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figSize(value, t.font.size.headingXl), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+    <Text testID={testID} onLayout={(e) => setFigBoxW(e.nativeEvent.layout.width)} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figFont(value), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
       {value}
     </Text>
   );
@@ -610,7 +621,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       <IconLine icon={(c) => <TapperIcon color={c} size={13} />}>{scopeTitle}</IconLine>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
         {price !== null
-          ? card(<><AppText variant="bodySm" numberOfLines={oneLine}>{msg('rec.money')} (฿)</AppText>{cardFigure(compactBaht(figs.satang ?? 0), 'fig-money')}</>, 'first', false, true)
+          ? card(<><AppText testID="card-money-label" variant="bodySm" numberOfLines={1}>{msg('rec.money')} (฿)</AppText>{cardFigure(compactBaht(figs.satang ?? 0), 'fig-money')}</>, 'first', false, true)
           : card(<><AppText variant="bodySm" numberOfLines={oneLine}>{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
         {card(
           <>
