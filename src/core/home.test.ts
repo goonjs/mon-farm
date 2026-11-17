@@ -26,6 +26,13 @@ describe('homeSales — the home rows for sales (flow-v1 screen 3)', () => {
     expect(out.open?.ts).toBe(events.find((e) => e.kind === 'sys' && e.payload.t === 'sale_started')?.ts);
   });
 
+  it('carries the sale day picked at the start (E04-S19), or null when none was picked (E15-S01 review N3)', () => {
+    const picked = new LogBuilder('s1');
+    picked.sys({ t: 'sale_started', farmName: '', buyer: '', manager: '', workerLead: '', where: 'farm', day: '2026-10-31' });
+    expect(homeSales([{ id: 's1', events: picked.build() }]).open?.day).toBe('2026-10-31');
+    expect(homeSales([{ id: 's2', events: sale('s2', 1).build() }]).open?.day).toBeNull();
+  });
+
   it('says weighing only while a pile is being counted', () => {
     const counting = sale('s1', 1).build();
     expect(homeSales([{ id: 's1', events: counting }]).open?.weighing).toBe(true);

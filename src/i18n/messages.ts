@@ -40,6 +40,7 @@ import * as orderCaptureMsgs from './order-capture-messages';
 import * as orderDetailMsgs from './order-detail-messages';
 import * as orderMsgs from './order-messages';
 import * as orderSurfaceMsgs from './order-surface-messages';
+import * as prepMsgs from './prep-messages';
 import * as repayMsgs from './repay-messages';
 
 export type Locale = 'th' | 'en';
@@ -60,6 +61,7 @@ const th = {
   ...orderDetailMsgs.th,
   ...orderSurfaceMsgs.th,
   ...repayMsgs.th,
+  ...prepMsgs.th,
   // ── Shared vocabulary ────────────────────────────────────────────────────
   'common.cancel': 'ยกเลิก',
   'common.confirm': 'ยืนยัน',
@@ -2132,6 +2134,7 @@ const en: Partial<Record<keyof typeof th, string>> = {
   ...numpadFarmMsgs.en,
   ...numpadSaleMsgs.en,
   ...repayMsgs.en,
+  ...prepMsgs.en,
   ...closeoutPayMsgs.en,
   ...orderMsgs.en,
   ...orderCaptureMsgs.en,

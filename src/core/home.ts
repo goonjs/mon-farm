@@ -17,6 +17,8 @@ export interface SaleLine {
   readonly id: string;
   /** When the sale started; the first event's time for a log without a start. */
   readonly ts: number | null;
+  /** The sale day picked at the start (E04-S19); null when none was picked. */
+  readonly day: string | null;
   readonly netG: number;
   readonly baskets: number;
   /** A pile is being counted right now ("กำลังชั่ง"), not just open. */
@@ -41,6 +43,7 @@ export function saleLineOf(id: string, events: readonly SaleEvent[]): { line: Sa
     line: {
       id,
       ts: state.startedTs ?? events[0]?.ts ?? null,
+      day: state.day,
       netG: totals.netG,
       baskets: totals.baskets,
       weighing: state.piles.some((p) => p.status === 'counting'),

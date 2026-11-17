@@ -99,6 +99,37 @@ async function seedUnsplitFertilizing(id: string, deleted = false) {
 
 beforeEach(() => mockRouter.push.mockClear());
 
+// First in the file: the finance store is shared, and later blocks leave fertilizings not split.
+describe('V2Home — เตรียมการขาย row (E15-S01 PREP-1)', () => {
+  const prep = async (id: string, patch: Record<string, unknown>) =>
+    mockFinance.append({ id, groupId: 'group-1', deviceSeq: 1, ts: Date.now(), actor: { userId: 'u', deviceId: 'dev-other' }, source: 'app', targetId: 'sale-prep', baseEventId: null, payload: { t: 'sale_prep_set', patch } });
+
+  it('nothing prepared: "เตรียมการขายครั้งถัดไป" opens the prep page; the to-know list still says there is nothing to handle', async () => {
+    wrap(<V2Home />);
+    await flush();
+    expect(screen.getByTestId('home-prep')).toHaveTextContent(/เตรียมการขายครั้งถัดไป/);
+    expect(within(screen.getByTestId('home-to-know')).getByText('ยังไม่มีเรื่องที่ต้องรู้หรือจัดการ')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('home-prep'));
+    expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/prepare');
+  });
+
+  it('preparing: the day, the buyer and how many rows are left', async () => {
+    await prep('pp-1', { buyerId: 'b1', buyerName: 'คนรับซื้อยาง ก', date: '2026-11-21' });
+    wrap(<V2Home />);
+    await flush();
+    expect(screen.getByTestId('home-prep')).toHaveTextContent(/เตรียมขาย · ส\. 21 พ\.ย\./);
+    expect(screen.getByTestId('home-prep')).toHaveTextContent(/คนรับซื้อยาง ก · เหลือ 1 ข้อ/);
+  });
+
+  it('all four done: ✓ พร้อมขาย with the buyer and the price', async () => {
+    await prep('pp-2', { buyerId: 'b1', buyerName: 'คนรับซื้อยาง ก', date: '2026-11-21', priceSatangPerKg: 5250 });
+    wrap(<V2Home />);
+    await flush();
+    expect(screen.getByTestId('home-prep')).toHaveTextContent(/✓ พร้อมขาย · ส\. 21 พ\.ย\./);
+    expect(screen.getByTestId('home-prep')).toHaveTextContent(/คนรับซื้อยาง ก · 52\.50 ฿\/\u2060กก\./);
+  });
+});
+
 /**
  * The v2 home (e03-v2-splash-home): flow-v1 screen 3 with the v1.1.0
  * screens 1 and 25 on top. Runs first on empty stores, then seeds them.
