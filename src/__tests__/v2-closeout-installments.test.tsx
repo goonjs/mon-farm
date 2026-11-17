@@ -243,7 +243,12 @@ describe('IP-11 / IP-14 · a running plan opens on the plan view', () => {
     expect(disabled('co-deduct-ok')).toBe(true);
     expect(screen.queryByTestId('co-inst-split-3')).toBeNull();
     expect(text('co-inst-split-2')).toHaveTextContent(/2 งวด.*งวดละ 4,175/);
+    // E06-S10: a picked count is dark with white words (mockup .opt.on), the others plain — same as the pick row
+    expect(flat('co-inst-split-4').backgroundColor).toBe(C.surfaceRaised);
     await press('co-inst-split-4');
+    expect(flat('co-inst-split-4').backgroundColor).toBe(C.action);
+    expect(flat('co-inst-split-2').backgroundColor).toBe(C.surfaceRaised);
+    expect(Object.assign({}, ...[within(text('co-inst-split-4')).getByText('4 งวด').props.style].flat(Infinity).filter(Boolean)).color).toBe(C.inkInverse);
     expect(text('co-deduct-ok')).toHaveTextContent('แบ่ง 4 งวด · หัก 2,088');
     expect(text('co-inst-big')).toHaveTextContent(/หักวันนี้ · งวด 1 จาก 4/);
     await press('co-inst-back');
@@ -281,6 +286,8 @@ describe('IP-13 · new debt since the plan: no default, confirm gated until fold
     expect(disabled('co-deduct-ok')).toBe(true);
     expect(text('co-deduct-ok')).toHaveTextContent('เลือกวิธีจัดการหนี้ใหม่ก่อน');
     await press('co-inst-fold');
+    expect(flat('co-inst-fold').backgroundColor).toBe(C.action);
+    expect(flat('co-inst-full').backgroundColor).toBe(C.surfaceRaised);
     expect(text('co-deduct-ok')).toHaveTextContent('หักงวด 1 · 3,117');
     await press('co-inst-full');
     expect(text('co-deduct-ok')).toHaveTextContent('หักงวด 1 · 3,784');
