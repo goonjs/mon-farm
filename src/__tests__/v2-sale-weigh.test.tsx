@@ -586,7 +586,7 @@ describe('the fill-up sheet and guide (E04-S21, owner 2026-11-17 "ก · ก · 
     await chooseFill('full');
     await readyAt(farm.a[1]);
     await counterAt(farm.a[1], { fill: 'full' });
-    expect(screen.getByTestId('fill-title')).toHaveTextContent('เติมให้เต็มเข่ง 2');
+    expect(screen.getByTestId('fill-title')).toHaveTextContent('วิธีที่ 1 · เติมให้เต็มเข่ง 2');
     expect(within(screen.getByTestId('fill-guide')).getByTestId('basket-bar')).toHaveTextContent(/35 กก\..*15 กก\..*50 กก\./);
     const steps = screen.getByTestId('fill-steps');
     expect(steps).toHaveTextContent(/เทยางเพิ่ม.*15 กก\..*ลงเข่ง 2 ใบเดิม/);
@@ -606,7 +606,7 @@ describe('the fill-up sheet and guide (E04-S21, owner 2026-11-17 "ก · ก · 
     await chooseFill('part');
     await readyAt(farm.a[1]);
     await counterAt(farm.a[1], { fill: 'part' });
-    expect(screen.getByTestId('fill-title')).toHaveTextContent('ชั่งแยกส่วนที่เติม · เข่ง 2');
+    expect(screen.getByTestId('fill-title')).toHaveTextContent('วิธีที่ 2 · ชั่งแยกส่วนที่เติม · เข่ง 2');
     const bar = screen.getByTestId('basket-bar');
     expect(bar).toHaveTextContent(/35 กก\..*อยู่ในเข่งที่ จันทเขลม · จุด 1/);
     expect(bar).toHaveTextContent(/15 กก\..*ชั่งตอนนี้/);
@@ -635,11 +635,25 @@ describe('E04-S24 change the fill way before the hold (owner 2026-11-17 e04-s24-
   }
   const selected = (id: string) => screen.getByTestId(id).props.accessibilityState?.selected;
 
-  it('FX-1: before the first hold the guide card has a whole-row "เปลี่ยนวิธีเติม ›"', async () => {
+  it('FX-1: before the first hold a whole-row "เปลี่ยนวิธีเติม ›" sits under the hold (owner fill-change-row 2026-11-17 "ก · ก · ย้ายแถวไปใต้ปุ่มกดค้าง (แนะนำ)")', async () => {
     await toFillCounter();
-    const row = within(screen.getByTestId('fill-guide')).getByTestId('fill-change');
+    const row = screen.getByTestId('fill-change');
     expect(row.props.accessibilityRole).toBe('button');
     expect(row).toHaveTextContent(/เปลี่ยนวิธีเติม/);
+    expect(within(screen.getByTestId('fill-guide')).queryByTestId('fill-change')).toBeNull();
+    const tree = JSON.stringify(screen.toJSON());
+    expect(tree.indexOf('"testID":"hold"')).toBeGreaterThan(-1);
+    expect(tree.indexOf('"testID":"fill-change"')).toBeGreaterThan(tree.indexOf('"testID":"hold"'));
+  });
+
+  it('the counter cards\' figures stay hidden until their box is measured, then show at their size (no first-paint jump, #209 review)', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    await counterAt(farm.a[0]);
+    const fig = () => StyleSheet.flatten(screen.getByTestId('fig-kg').props.style);
+    expect(fig().opacity).toBe(0);
+    await act(async () => fireEvent(screen.getByTestId('fig-kg'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 96, height: 30 } } }));
+    expect(fig().opacity).toBe(1);
   });
 
   it('FX-4: after the first hold the row is gone', async () => {
