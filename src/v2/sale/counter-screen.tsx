@@ -240,7 +240,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
     return value.length > 9 ? Math.min(full, Math.round((0.8 * (figBoxW ?? 73)) / (0.45 * value.length))) : full;
   };
   const cardFigure = (value: string, testID: string) => (
-    <Text testID={testID} onLayout={(e) => setFigBoxW(e.nativeEvent.layout.width)} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figFont(value), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+    <Text testID={testID} onLayout={(e) => setFigBoxW(e.nativeEvent.layout.width)} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ opacity: figBoxW === undefined ? 0 : 1, fontFamily: t.font.family.sans, fontSize: figFont(value), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
       {value}
     </Text>
   );
@@ -281,7 +281,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       <View testID="fill-guide" style={{ gap: t.space.xs }}>
         <View style={{ ...cardStyle(t), backgroundColor: t.color.warnSunk, borderWidth: t.border.hair, borderColor: t.color.warn, paddingVertical: t.space.sm, paddingHorizontal: t.space.md, gap: t.space.xs }}>
           <Text testID="fill-title" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.headingMd, fontWeight: t.font.weight.bold, color: t.color.ink }}>
-            {fill === 'full' ? msg('v2s.stageFull', { n: o.basketNo }) : msg('v2s.stageSplit', { n: o.basketNo })}
+            {msg('v2s.wayTitle', { n: fill === 'full' ? 1 : 2, title: fill === 'full' ? msg('v2s.stageFull', { n: o.basketNo }) : msg('v2s.stageSplit', { n: o.basketNo }) })}
           </Text>
           <BasketBar haveG={o.haveG} addG={o.missingG} held={fill === 'part' ? msg('v2s.barHeld', { place: heldPlace }) : undefined} addLabel={fill === 'part' ? msg('v2s.barNow') : msg('v2s.barAdd')} />
         </View>
@@ -298,6 +298,19 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       </View>
     );
   };
+  // E04-S24 FX-1/2: change the way before the first hold — the same 3-way sheet, opened on this point. Under the hold
+  // (owner fill-change-row 2026-11-17 "ก · ก · ย้ายแถวไปใต้ปุ่มกดค้าง (แนะนำ)"), so the hold stays in view (FX-7).
+  const fillChange = () => (
+    <Pressable
+      testID="fill-change"
+      accessibilityRole="button"
+      onPress={() => router.push(`${base}/point?mode=switch&farm=${farm.id}${tapper ? `&tapper=${tapper}` : ''}&ask=${pointId}&fill=${fill}` as Href)}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.min, paddingHorizontal: t.space.md }}
+    >
+      <Text style={{ flex: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, color: t.color.action, textDecorationLine: 'underline' }}>{msg('v2s.fillChange')}</Text>
+      <ChevronRight color={t.color.action} />
+    </Pressable>
+  );
   const fillAfter = (o: NonNullable<typeof open>) => (
     <View testID="fill-after" style={{ alignItems: 'center' }}>
       <WrapLine>
@@ -712,6 +725,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
             </>
           )}
         </HoldStage>
+        {filling && open ? fillChange() : null}
         {filling && open ? fillAfter(open) : null}
         </>
       )}
