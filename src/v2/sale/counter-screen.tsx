@@ -226,7 +226,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   );
   // The small cards' figure: the number (the unit is in the label above), stepped down by length; one line, so a card never grows.
   // Card labels: one line at M and below, exactly as before (owner 2026-11-02: no change at the
-  // default); above M they wrap instead of being cut with "…" (E03-S08 TS-8).
+  // default); above M they wrap instead of being cut with "…" (E03-S08 TS-8). The first card's label (ราคารวม /
+  // เสร็จแล้ว) may wrap at any size: at 320 px it is a few px wider than its card (review of PR 207).
   const oneLine = t.textScale > 1 ? undefined : 1;
   const cardFigure = (value: string, testID: string) => (
     <Text testID={testID} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figSize(value, t.font.size.headingXl), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
@@ -610,8 +611,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       <IconLine icon={(c) => <TapperIcon color={c} size={13} />}>{scopeTitle}</IconLine>
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
         {price !== null
-          ? card(<><AppText variant="bodySm" numberOfLines={oneLine}>{msg('rec.money')} (฿)</AppText>{cardFigure(compactBaht(figs.satang ?? 0), 'fig-money')}</>, 'first', false, true)
-          : card(<><AppText variant="bodySm" numberOfLines={oneLine}>{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
+          ? card(<><AppText variant="bodySm">{msg('rec.money')} (฿)</AppText>{cardFigure(compactBaht(figs.satang ?? 0), 'fig-money')}</>, 'first', false, true)
+          : card(<><AppText variant="bodySm">{msg('rec.done')} ({msg('rec.baskets')})</AppText>{cardFigure(String(figs.done), 'fig-done')}</>, 'first', false, true)}
         {card(
           <>
             {/* Owner 2026-11-03: just "กก." — "น้ำหนัก (กก.)" was cut at 360 px. */}
