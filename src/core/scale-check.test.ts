@@ -128,6 +128,11 @@ describe('pointGateNeeded — the check on moving to a point (v2 picker, SALE-6,
     expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a2', 'A', 'first-per-farm')).toBe(true);
   });
 
+  it('first-per-farm: caught up then counted on live with no check (JB-3a) still does not spare the farm\'s other points', () => {
+    const ev = sale().backfillAt('a1', 1).sys({ t: 'ready', pileId: 'a1' }).acceptAt('a1', 2).build();
+    expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a2', 'A', 'first-per-farm')).toBe(true);
+  });
+
   it('first-per-farm: a point caught up and then weighed live after a check still counts as checked', () => {
     const ev = pass(sale().backfillAt('a1', 1), 'a1').acceptAt('a1', 2).build();
     expect(pointGateNeeded(projectSale(ev, 's'), ev, 'a2', 'A', 'first-per-farm')).toBe(false);
