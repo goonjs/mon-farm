@@ -140,7 +140,11 @@ function inverse(child: ReactElement<{ style?: unknown }>, color: string): React
   return cloneElement(child, { style: [child.props.style, { color }] });
 }
 
-/** A choice card ("3 งวด / งวดละ 4,267" or "รวมในงวดที่เหลือ"): a whole tap target, selected = dark with white words. */
+/**
+ * A choice card ("3 งวด / งวดละ 4,267" or "รวมในงวดที่เหลือ"): a whole tap target, selected = dark with white words.
+ * Its children must be a Text (AppText), ChoiceText or CountChoice: the picked state turns a text child's colour to the
+ * inverse ink, and ChoiceText/CountChoice follow the picked context; any other child keeps its own colours.
+ */
 export function Choice({ testID, selected, onPress, children, basis = 90, grow = true }: { testID: string; selected: boolean; onPress: () => void; children: ReactNode; basis?: number; /** false: a fixed size, so a short last row is not stretched. */ grow?: boolean }) {
   const t = useTheme();
   return (
