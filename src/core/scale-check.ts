@@ -60,5 +60,10 @@ export function pointGateNeeded(state: SaleState, events: readonly SaleEvent[], 
   if (pile && pile.status !== 'not-started') return false;
   if (mode === 'every') return true;
   if (mode === 'skip') return false;
-  return !state.piles.some((p) => p.id !== pointId && p.zoneId === farmId && p.status !== 'not-started');
+  // A point only caught up from the paper was never checked on the scale (E04-S23 JB-3c).
+  const caughtUp = (id: PileId) => {
+    const baskets = liveBaskets(events, id);
+    return baskets.length > 0 && baskets.every((b) => (b.kind === 'accept' ? b.input === 'backfill' : b.afterwards === true));
+  };
+  return !state.piles.some((p) => p.id !== pointId && p.zoneId === farmId && p.status !== 'not-started' && !(caughtUp(p.id) && !p.zeroChecked));
 }

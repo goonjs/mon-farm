@@ -1528,7 +1528,7 @@ describe('v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)', (
     expect(router.push).toHaveBeenLastCalledWith('/v2');
   });
 
-  it('the point picker menu has the same go-to rows, without the finish and record groups', async () => {
+  it('the point picker menu has the same go-to rows plus บันทึกย้อนหลัง for the chosen tapper (E04-S23 JB-2b), without the finish group', async () => {
     await started();
     await readyAt(farm.a[0]);
     await inSale(<PointScreen />, {
@@ -1544,6 +1544,7 @@ describe('v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)', (
     ).toEqual([
       'menu-price',
       'menu-info',
+      'menu-backfill',
       'menu-home',
       'menu-debts',
       'menu-sales',

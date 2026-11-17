@@ -178,6 +178,8 @@ export function BackfillScreen() {
     for (const id of order) {
       const own = pairOf(id);
       for (const payload of pointSetupPayloads(state, master, id, { pairId: '', netG: own.stdNetG, basketG: own.tareG })) append({ kind: 'sys', payload });
+      // Counting goes on here at once, no scale check first (E04-S23 JB-3a); the check setting still applies to the next point.
+      append({ kind: 'sys', payload: { t: 'ready', pileId: id } });
     }
     writeCatchUp(plan.drafts, (body) => append(body as Parameters<typeof append>[0]));
     const last = order[order.length - 1];
