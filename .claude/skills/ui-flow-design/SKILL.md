@@ -38,7 +38,7 @@ Fold the results into the mockup and the story. Reviews catch real things (defau
 ## 5. Owner decisions → story → build
 
 - Write/refresh the story (`docs/stories/…`) in the same session: AC with ids that the mockup captions cite, open questions with a stated default, test plan, offline/sync section. Status Ready only after the owner says go.
-- Capture owner rules immediately where they live (AGENTS.md / this skill / DoD) — e.g. "nothing cut off", "no OS keyboard for numbers" (E01-S20). Quote the owner's words with their date; an agent's summary is not an owner rule (the "no +/- steppers" line came from an agent summary of E11-S11 UI-2, fertilizer order fields only — corrected 2026-11-17, see `docs/stories/e01-s20-app-number-pad.md`).
+- Capture owner rules immediately where they live (AGENTS.md / this skill / DoD) — e.g. "nothing cut off"; and record project decisions as such, e.g. "no OS keyboard for numbers" is a project decision (E11-S11, 2026-10-27, agent wording), not an owner rule. Quote the owner's words with their date; an agent's summary is not an owner rule (the "no +/- steppers" line came from an agent summary of E11-S11 UI-2, fertilizer order fields only — corrected 2026-11-17, see `docs/stories/e01-s20-app-number-pad.md`).
 - Reuse before building: shared components in `src/ui` (NumberPad, QuantityField, MoneyField, BottomSheet, Card, IconTile, CTA…). A pattern the owner approved becomes THE component; do not re-invent per screen.
 - Split the build into disjoint file sets and run workers in parallel: fix the contract (types + stubs) in a committed file first; one worker owns the pure logic (vitest), one the UI (jest); nobody commits except you; you run the full checks (tsc, eslint, jest, vitest, token/colour rules) and commit.
 
