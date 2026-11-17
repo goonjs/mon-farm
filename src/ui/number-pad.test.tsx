@@ -33,6 +33,17 @@ describe('NumberPad int', () => {
   });
 });
 
+describe('NumberPad compact (E06-S10)', () => {
+  it('default keys stay 56 tall; compact keys are the 48 floor, never below it', () => {
+    wrap(<NumberPad variant="money" onKey={jest.fn()} onDone={jest.fn()} testID="a" />);
+    wrap(<NumberPad variant="money" onKey={jest.fn()} onDone={jest.fn()} testID="b" compact />);
+    for (const k of ['1', '5', '9', 'back', '0', '000']) {
+      expect(flat(screen.getByTestId(`a-key-${k}`).props.style).minHeight).toBe(56);
+      expect(flat(screen.getByTestId(`b-key-${k}`).props.style).minHeight).toBe(48);
+    }
+  });
+});
+
 describe('NumberPad money', () => {
   it('has . 00 000 and no done key; 0 spans three columns', () => {
     const onKey = jest.fn();

@@ -251,11 +251,13 @@ describe('the deduct sheet (A5, CO-5, CO-7, A22, A23)', () => {
     await inSale(<CloseoutSummaryScreen />);
     await press(`co-deduct-${farm.nat}`);
     expect(text('co-deduct-sheet')).toHaveTextContent(/หักหนี้นัดกี่บาท/);
-    // E06-S10 DS-1: the word over the figure in one box (text content joins the two lines)
-    expect(text('co-quick-full')).toHaveTextContent(/หักเต็ม.*5,250/);
+    // E06-S10 DS-1: the word on one line and the figure on the next, in one box
+    expect(within(text('co-quick-full')).getByText('หักเต็ม')).toBeTruthy();
+    expect(within(text('co-quick-full')).getByText('5,250')).toBeTruthy();
     // E06-S09 (D-88): no "ครึ่งหนึ่ง"; "ไม่หัก" is "ยังไม่หัก · ขอติดไว้ก่อน"
     expect(screen.queryByTestId('co-quick-half')).toBeNull();
-    expect(text('co-quick-none')).toHaveTextContent(/ยังไม่หัก.*ขอติดไว้ก่อน/);
+    expect(within(text('co-quick-none')).getByText('ยังไม่หัก')).toBeTruthy();
+    expect(within(text('co-quick-none')).getByText('ขอติดไว้ก่อน')).toBeTruthy();
     await keys('3000');
     expect(text('co-amount')).toHaveTextContent(/3,000/);
     expect(text('co-res-cash')).toHaveTextContent(/2,250\.00/);
@@ -360,7 +362,8 @@ describe('partial netting (owner Q1, CO-7): two amount boxes, one pad, one box e
     expect(text('co-net-on')).toHaveTextContent(/ใช้ 300 ที่/);
     await press('co-amount');
     expect(text('co-editing')).toHaveTextContent('กำลังแก้: ยอดหัก');
-    expect(text('co-quick-full')).toHaveTextContent(/หักเต็ม.*5,550/);
+    expect(within(text('co-quick-full')).getByText('หักเต็ม')).toBeTruthy();
+    expect(within(text('co-quick-full')).getByText('5,550')).toBeTruthy();
     await keys('5000');
     expect(text('co-amount')).toHaveTextContent(/5,000/);
     expect(text('co-net-field')).toHaveTextContent(/300/);
