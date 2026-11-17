@@ -31,12 +31,12 @@ AGENTS.md and docs/process.md stay binding; this skill covers what they do not.
   - deletes;
   - Deploy Prod;
   - dependencies, except where AGENTS.md lets the lead approve one (reputable maintainer, audit adds no new high or critical finding, evidence shown first).
+- **Dashboard link** (owner rule, lead chat 2026-11-18 about 01:45 Bangkok: "เพิ่มกดอีกนิดนึงสำหรับ Lead อย่าลืม Handover ไปด้วยนะในทุกๆ Lead ผมต้องเห็น Link Artifact ด้วย"): every lead shows the dashboard link https://claude.ai/artifact/3jHpPwSa3uWgMbW16oNdGa in every reply to the owner and passes this rule on in each handover. "In every reply" and "the dashboard" are the lead's reading of the owner's words.
 - **Lead practice (agent wording, not owner rules):** the points below are habits from this round, not quoted owner rules.
 - **Talking to the owner:**
   - short, plain Thai;
   - say what you checked and what you didn't;
   - end every message with a Discord status line;
-  - **show the dashboard link in every reply to the owner**: https://claude.ai/artifact/3jHpPwSa3uWgMbW16oNdGa (owner rule, lead chat 2026-11-18 about 01:45 Bangkok: "เพิ่มกดอีกนิดนึงสำหรับ Lead อย่าลืม Handover ไปด้วยนะในทุกๆ Lead ผมต้องเห็น Link Artifact ด้วย"). Every lead keeps this rule and passes it on in each handover;
   - come back only for heavy decisions;
   - happy path first; rare cases go into a later story;
   - few PRs.
