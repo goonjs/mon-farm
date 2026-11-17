@@ -99,3 +99,89 @@ for (const width of [320, 360]) {
     });
   }
 }
+
+/**
+ * E15-S02: the start-sale page takes the buyer and the price from the prep (owner 2026-11-18 03:01 "ก · ก · ตกลง AC ตาม
+ * mockup A–D เริ่มเขียนโค้ดได้ (แนะนำ)"), offline, in the real build. A: a prep with no day fills at once, the price is
+ * still editable, ถัดไป goes on to the point page and home no longer shows the prep. B: a prep for a later day asks first.
+ */
+const START_SHOTS = 'docs/ux/screenshots/v2/prepare/start';
+
+async function prepareBuyerAndPrice(page: Page, withDay: boolean) {
+  const id = on(page);
+  await id('home-prepare').click();
+  await id('prep-buyer').click();
+  await id('prep-buyer-buyer-b').click();
+  if (withDay) {
+    await id('prep-date').click();
+    await id('prep-date-picker-tomorrow').click();
+    await id('prep-date-picker-done').click();
+    await id('prep-time-08:00').click();
+  }
+  await id('prep-price').click();
+  for (const k of '52.50') await id(`prep-price-input-pad-key-${k}`).click();
+  await id('prep-price-input-done').click();
+  await expect(id('prep-price')).toContainText('52.50');
+  await id('prep-done').click();
+}
+
+test('E15-S02 A: start the sale from a prep with no day — buyer and price filled, price editable (offline)', async ({ page, context }) => {
+  const id = on(page);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seedMaster(page, FARM);
+  await page.goto('/v2');
+  await context.setOffline(true);
+  await prepareBuyerAndPrice(page, false);
+
+  await id('home-sale-start').click();
+  await expect(id('sale-start')).toBeVisible();
+  await expect(id('start-prep-ask')).toHaveCount(0);
+  await expect(id('start-buyer')).toContainText('สหกรณ์บ้านนา');
+  await expect(id('start-buyer')).toContainText('ที่นัดไว้ · แก้ได้');
+  await expect(id('start-price-row')).toContainText('52.50');
+  await expect(id('start-price-row')).toContainText('ราคาที่ตกลงไว้ · แก้ได้');
+  await fits(page);
+  await evidence(page, `${START_SHOTS}/a-filled.png`);
+
+  // Every field can still be changed: the price on the app pad.
+  await id('start-price-row').click();
+  for (const k of '48') await id(`start-price-pad-key-${k}`).click();
+  await id('start-price-done').click();
+  await expect(id('start-price-row')).toContainText('48');
+  await id('start-next').click();
+  await expect(page).toHaveURL(/\/point/);
+
+  // Back to home at once, inside the app: the start tile says the sale is being counted (E15-S06: the เตรียมขาย tile
+  // keeps its state for the rest of the day, so it is the sale tile that moves on). Still so after a reload.
+  await page.goBack();
+  await expect(id('home-sale-start-badge')).toHaveAttribute('aria-label', 'กำลังนับ');
+  await page.reload();
+  await expect(id('home-sale-start-badge')).toHaveAttribute('aria-label', 'กำลังนับ');
+  expect(errors).toEqual([]);
+});
+
+test('E15-S02 B: a prep for a later day asks first; ใช้ที่เตรียมไว้ fills it (offline)', async ({ page, context }) => {
+  const id = on(page);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seedMaster(page, FARM);
+  await page.goto('/v2');
+  await context.setOffline(true);
+  await prepareBuyerAndPrice(page, true);
+
+  await id('home-sale-start').click();
+  await expect(id('start-prep-ask')).toBeVisible();
+  await expect(id('start-prep-ask')).toContainText('ใช้ที่เตรียมไว้ไหม');
+  await expect(id('start-buyer')).not.toContainText('ที่นัดไว้');
+  await expect(id('start-price-row')).not.toContainText('52.50');
+  await fits(page);
+  await evidence(page, `${START_SHOTS}/b-ask.png`);
+
+  await id('start-prep-use').click();
+  await expect(id('start-prep-ask')).toHaveCount(0);
+  await expect(id('start-buyer')).toContainText('สหกรณ์บ้านนา');
+  await expect(id('start-price-row')).toContainText('52.50');
+  await evidence(page, `${START_SHOTS}/b-used.png`);
+  expect(errors).toEqual([]);
+});

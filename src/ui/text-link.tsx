@@ -17,6 +17,7 @@ export function TextLink({
   tone = 'action',
   disabled,
   accessibilityLabel,
+  align = 'start',
 }: {
   children: ReactNode;
   onPress: () => void;
@@ -25,6 +26,8 @@ export function TextLink({
   disabled?: boolean;
   /** When the word alone does not say what it acts on. */
   accessibilityLabel?: string;
+  /** Where it sits in a column: left (default), or centred under a full-width button. */
+  align?: 'start' | 'center';
 }) {
   const t = useTheme();
   return (
@@ -35,7 +38,7 @@ export function TextLink({
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={{ minHeight: t.target.min, minWidth: t.target.min, justifyContent: 'center', alignSelf: 'flex-start' }}
+      style={{ minHeight: t.target.min, minWidth: t.target.min, justifyContent: 'center', alignSelf: align === 'center' ? 'center' : 'flex-start' }}
     >
       <Text
         style={{
