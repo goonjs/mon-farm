@@ -229,8 +229,11 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   // default); above M they wrap instead of being cut with "…" (E03-S08 TS-8). The money card's label is one line at
   // every size, kept short ("รวม (฿)") so it fits at 320 px L (owner merge-209, 2026-11-17).
   const oneLine = t.textScale > 1 ? undefined : 1;
+  // Above M a long figure ("1.84 หมื่น") filled 98% of the 320 px card and was cut on CI's wider fonts (PR 209), so it
+  // steps down a further 20% there; short figures and M are unchanged.
+  const figFont = (value: string) => Math.round(figSize(value, t.font.size.headingXl) * (t.textScale > 1 && value.length > 9 ? 0.8 : 1));
   const cardFigure = (value: string, testID: string) => (
-    <Text testID={testID} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figSize(value, t.font.size.headingXl), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+    <Text testID={testID} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figFont(value), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
       {value}
     </Text>
   );
