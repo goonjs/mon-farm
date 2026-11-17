@@ -304,8 +304,10 @@ function useLastSale(): { ts: number | null; day: string | null } {
     let live = true;
     loadHomeSales()
       .then((s) => {
-        const ts = Math.max(s.open?.ts ?? 0, s.latest?.ts ?? 0) || null;
-        if (live) setLast({ ts, day: ts === null ? null : todayIso(ts) });
+        const newest = (s.open?.ts ?? 0) >= (s.latest?.ts ?? 0) ? (s.open ?? s.latest) : s.latest;
+        const ts = newest?.ts ?? null;
+        // New debt counts from the sale day picked at the start (E04-S19, review of PR 201 N3).
+        if (live) setLast({ ts, day: newest?.day ?? (ts === null ? null : todayIso(ts)) });
       })
       .catch((err) => console.error('Sales could not be read.', err));
     return () => {
