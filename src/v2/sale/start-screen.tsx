@@ -9,6 +9,10 @@
  * "ถัดไป" writes `sale_started` (+ `numbering_set`, `price_set`) to the new
  * sale's log — offline, on this device — and opens the point picker.
  *
+ * E15-S02: when a prep (เตรียมการขาย) is waiting, the buyer and the price start from it ("ที่นัดไว้ ·
+ * แก้ได้", "ราคาที่ตกลงไว้ · แก้ได้"); a prep for a later day is asked about first. Read-only: the sale
+ * still writes `sale_started.buyerId` and `price_set`, and keeps no link to the prep.
+ *
  * The price row opens the app number pad straight away (E01-S20 row 17, NP-12):
  * no sheet on a sheet; up to 999.99 ฿/kg (NP-14); "เว้นว่าง" leaves it for later.
  */
@@ -18,10 +22,12 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { formatSatang } from '../../core/finance/money';
+import { prepFill, salePrep, type SalePrep } from '../../core/finance/sale-prep';
 import { defaultBuyer, filterPeople, formatSaleDate, todayIso } from '../../core/master';
 import type { NumberingMode } from '../../core/types';
 import { useI18n, useT } from '../../i18n';
 import { newId } from '../../lib/id';
+import { financeStore } from '../../store/finance';
 import { peopleStore } from '../../store/people';
 import { SaleProvider } from '../../store/SaleProvider';
 import { useTheme } from '../../theme';
@@ -36,10 +42,12 @@ import {
   Plus,
   RadioCard,
   TextField,
+  TextLink,
   UsersIcon,
   FarmMateArt,
 } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
+import { keepPerKg, prepDayText } from '../prepare/prepare-screen';
 import { loadHomeSales } from './open-sale';
 import { EmptyPill, FieldRow, IconLine, SegOptions, useSaleView } from './pieces';
 import { PRICE_MAX_SATANG } from './sale-options';
@@ -108,7 +116,11 @@ export function StartSaleScreen() {
   const [buyerId, setBuyerId] = useState<string | null>(null);
   const [numbering, setNumbering] = useState<NumberingMode | null>(null);
   const [pairId, setPairId] = useState<string | null>(null);
-  const [price, setPrice] = useState<number | null>(null);
+  // undefined = not touched: the prep's price (if any) shows; a typed price or "ใส่ทีหลัง" is the user's own.
+  const [price, setPrice] = useState<number | null | undefined>(undefined);
+  // The prep waiting for this sale (E15-S02): undefined while it is read, null when there is none.
+  const [prep, setPrep] = useState<SalePrep | null | undefined>(undefined);
+  const [prepChoice, setPrepChoice] = useState<'ask' | 'use' | 'skip'>('ask');
   const [note, setNote] = useState('');
   // The sale day (E04-S19 BF-9): today unless an earlier day is picked; never later.
   const [day, setDay] = useState(() => todayIso(now));
@@ -119,12 +131,36 @@ export function StartSaleScreen() {
     peopleStore.latestBuyerId().then(setLatestId, () => setLatestId(null));
   }, []);
 
-  const loading = !ready || !master || !settings || latestId === undefined;
+  useEffect(() => {
+    let live = true;
+    // A sale started after the prep was last written has used it, so the newest sale's time decides (PREP-8).
+    Promise.all([financeStore.load(), loadHomeSales()]).then(
+      ([events, sales]) => {
+        const newest = (sales.open?.ts ?? 0) >= (sales.latest?.ts ?? 0) ? (sales.open ?? sales.latest) : sales.latest;
+        if (live) setPrep(salePrep(events, newest?.ts ?? null));
+      },
+      // Not knowing the prep only means the page starts empty, as it always could.
+      (err) => {
+        console.error('The sale prep could not be read.', err);
+        if (live) setPrep(null);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const loading = !ready || !master || !settings || latestId === undefined || prep === undefined;
   if (loading) return <FarmScreen title={msg('start.title')} fallback={'/v2' as Href} />;
 
   const latest = defaultBuyer(master, latestId);
   const buyers = master.buyers.filter((b) => !b.deleted);
-  const buyer = buyers.find((b) => b.id === (buyerId ?? latest?.id)) ?? null;
+  const fill = prepFill(prep, todayIso(now), buyers.map((b) => b.id));
+  /** What the prep gives this page: at once, or after "ใช้ที่เตรียมไว้" when it is for a later day. */
+  const given = fill && (!fill.ask || prepChoice === 'use') ? fill : null;
+  const buyer = buyers.find((b) => b.id === (buyerId ?? given?.buyerId ?? latest?.id)) ?? null;
+  const shownPrice = price !== undefined ? price : (given?.priceSatangPerKg ?? null);
+  const fromPrep = buyerId === null && given?.buyerId != null && buyer?.id === given.buyerId;
   const manager = filterPeople(master.people, 'manager').find((p) => !p.deleted) ?? null;
   const mode = numbering ?? settings.numbering;
   const pair = settings.pairs.find((p) => p.pairId === pairId) ?? settings.pairs.find((p) => p.isDefault)!;
@@ -149,7 +185,7 @@ export function StartSaleScreen() {
     append({ kind: 'sys', payload: { t: 'numbering_set', numbering: mode } });
     // Kept in the log, so a reload before the first point still weighs with it (review #10).
     append({ kind: 'sys', payload: { t: 'pair_set', netG: pair.netG, basketG: pair.basketG } });
-    if (price !== null) append({ kind: 'sys', payload: { t: 'price_set', satangPerKg: price, indexRef: '' } });
+    if (shownPrice !== null) append({ kind: 'sys', payload: { t: 'price_set', satangPerKg: shownPrice, indexRef: '' } });
     router.replace(`/v2/sale/${saleId}/point` as Href);
   };
 
@@ -191,7 +227,7 @@ export function StartSaleScreen() {
           <MoneyField
             testID="start-price"
             label={msg('v2s.price')}
-            satang={price}
+            satang={shownPrice}
             onChange={setPrice}
             unit={msg('npsale.perKg')}
             minSatang={1}
@@ -225,6 +261,26 @@ export function StartSaleScreen() {
         </>
       }
     >
+      {fill?.ask && prepChoice === 'ask' ? (
+        <View testID="start-prep-ask" style={{ ...cardStyle(t), padding: t.space.lg, gap: t.space.sm }}>
+          <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('start.prepAsk')}</AppText>
+          {fill.buyerId !== null ? (
+            <AppText variant="bodySm">
+              {prep?.date
+                ? msg('start.prepAskBuyer', { name: buyers.find((b) => b.id === fill.buyerId)?.name ?? '', day: prepDayText(prep.date, era, true) })
+                : msg('start.prepAskBuyerNoDay', { name: buyers.find((b) => b.id === fill.buyerId)?.name ?? '' })}
+            </AppText>
+          ) : null}
+          {fill.priceSatangPerKg !== null ? <AppText variant="bodySm">{keepPerKg(msg('start.prepAskPrice', { price: formatSatang(fill.priceSatangPerKg) }))}</AppText> : null}
+          <CTA testID="start-prep-use" onPress={() => setPrepChoice('use')}>
+            {msg('start.prepUse')}
+          </CTA>
+          <TextLink testID="start-prep-skip" onPress={() => setPrepChoice('skip')}>
+            {msg('start.prepSkip')}
+          </TextLink>
+        </View>
+      ) : null}
+
       <View style={{ ...cardStyle(t), paddingHorizontal: t.space.lg }}>
         <FieldRow
           testID="start-date"
@@ -241,7 +297,7 @@ export function StartSaleScreen() {
           icon={() => <FarmMateArt id="people.buyer" />}
           label={msg('start.buyer')}
           value={buyer?.name ?? msg('start.noBuyer')}
-          lines={buyer && buyer.id === latest?.id ? [msg('start.buyerLatest')] : []}
+          lines={fromPrep ? [msg('start.buyerPrep')] : buyer && buyer.id === latest?.id ? [msg('start.buyerLatest')] : []}
           trailing={<ChevronRight color={t.color.inkFaint} />}
           onPress={() => setSheet('buyer')}
         />
@@ -266,8 +322,8 @@ export function StartSaleScreen() {
           testID="start-price-row"
           icon={() => <FarmMateArt id="sale.rubberPrice" />}
           label={msg('v2s.price')}
-          value={price !== null ? msg('v2s.perKg', { price: formatSatang(price) }) : <EmptyPill label={msg('numpad.later')} />}
-          lines={[msg('v2s.priceLater'), msg('v2s.priceNow')]}
+          value={shownPrice !== null ? msg('v2s.perKg', { price: formatSatang(shownPrice) }) : <EmptyPill label={msg('numpad.later')} />}
+          lines={price === undefined && given?.priceSatangPerKg != null ? [msg('start.pricePrep')] : [msg('v2s.priceLater'), msg('v2s.priceNow')]}
           trailing={<View testID="start-price-row-chevron" aria-hidden><ChevronRight color={t.color.inkFaint} /></View>}
           onPress={() => setSheet('price')}
         />
