@@ -47,7 +47,7 @@ Status: Review (owner agreed AC 2026-11-18 · แดชบอร์ด answers/e
 ## Verification
 
 - [x] Sandbox run performed: 2026-11-17 เว็บบิลด์จริง 390×844 M: ปุ่ม ตกลง อยู่ y=828 (ไม่มีแผน) / 832 (เลือก 3 งวด) ภายใน 844 · L เลื่อนได้ (ตกลง y=858–867 ที่ 390, 909–920 ที่ 360) ไม่มีอะไรถูกตัด ปุ่มทุกอัน ≥ 48 · jest 1239 · vitest 1523 · e2e v2-sale/v2-pending-repay/v2-text-size 43 ผ่าน · DS-7 ใช้ NumberPad แบบ compact (ปุ่ม 48) ใช้เฉพาะแผ่นนี้
-- [x] Screenshots: `docs/ux/screenshots/e06-s10/` 390-m-0-open (ไม่มีแผน) · 390-m-1-picked (เลือก 3 งวด) · 390-m-2-full · 390-m-3-none · ยังไม่ได้ถ่ายใหม่: มีแผนอยู่ / ส่วนแบ่งไม่พอ / หนี้ใหม่ (หน้าแผนในไฟล์ summary-installments.tsx ไม่ได้แก้)
+- [x] Screenshots: `docs/ux/screenshots/e06-s10/` 390-m-0-open (ไม่มีแผน) · 390-m-1-picked (เลือก 3 งวด) · 390-m-2-full · 390-m-3-none · 390-m-4-running (มีแผนอยู่) · 390-m-5-resplit (แบ่งงวดที่เหลือใหม่ เลือก 4 งวด = สีเข้ม) · ยังไม่ได้ถ่ายใหม่: ส่วนแบ่งไม่พอ / หนี้ใหม่ (ปุ่มเลือกเปลี่ยนเป็นสีเข้มเหมือนกัน ตรวจด้วย jest)
 
 ## Code review
 
