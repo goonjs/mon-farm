@@ -293,6 +293,21 @@ describe('v2 counter (pages 8, 10, 11, 12, 13)', () => {
     expect(screen.getByTestId('current-no')).toHaveTextContent(/เข่งถัดไป 2$/);
   });
 
+  it('E01-S20 NP-9: ยกเลิก / บันทึก sit in the sheet footer, outside the scrolling body', async () => {
+    useDial();
+    await started();
+    await readyAt(farm.a[3]);
+    await counterAt(farm.a[3]);
+    await hold();
+    await press('tool-short');
+    const footer = screen.getByTestId('short-sheet-footer');
+    for (const id of ['short-cancel', 'short-save']) {
+      let inFooter = false;
+      for (let n = screen.getByTestId(id).parent; n; n = n.parent) if (n === footer) inFooter = true;
+      expect(inFooter).toBe(true);
+    }
+  });
+
   it('a short basket: reading − basket = net; it stays open and waits, or closes as is', async () => {
     useDial();
     await started();

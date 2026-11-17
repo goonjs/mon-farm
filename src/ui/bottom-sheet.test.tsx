@@ -111,3 +111,31 @@ describe('BottomSheet · optional ✕ close (E05-S11 A2, A5, A8, A11)', () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+describe('BottomSheet footer (E01-S20 NP-9: the buttons stay on screen)', () => {
+  it('a footer sits below the scrolling body, pinned, so a tall body never pushes it off the screen', () => {
+    const { ScrollView } = jest.requireActual('react-native');
+    wrap(
+      <BottomSheet open onClose={() => {}} title="เข่งไม่เต็ม" testID="sheet" footer={<Text testID="foot">บันทึก</Text>}>
+        <Text>body</Text>
+      </BottomSheet>,
+    );
+    const scroller = screen.UNSAFE_getByType(ScrollView);
+    const inScroller = (id: string) => {
+      for (let n = screen.getByTestId(id).parent; n; n = n.parent) if (n === scroller) return true;
+      return false;
+    };
+    expect(screen.getByText('body')).toBeTruthy();
+    expect(inScroller('foot')).toBe(false);
+    expect(screen.getByTestId('sheet-footer')).toBeTruthy();
+  });
+
+  it('no footer: nothing extra is drawn', () => {
+    wrap(
+      <BottomSheet open onClose={() => {}} title="เปลี่ยนจุด" testID="sheet">
+        <Text>body</Text>
+      </BottomSheet>,
+    );
+    expect(screen.queryByTestId('sheet-footer')).toBeNull();
+  });
+});
