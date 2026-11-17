@@ -328,3 +328,18 @@ test.describe('360 wide at L', () => {
     expect(await textFit(page)).toEqual([]);
   });
 });
+
+test.describe('320 wide at M', () => {
+  test.use({ viewport: { width: 320, height: 640 } });
+
+  // Review of #207: "ราคารวม (฿)" on the counter's first card was cut with "…" at the smallest width.
+  test('the counter with a price: nothing cut, "…" or past the screen', async ({ page }) => {
+    const id = on(page);
+    await seed(page, 'm');
+    await page.goto('/v2/sale/sale-ts/counter?point=a1');
+    await expect(id('fig-money')).toBeVisible();
+    await page.waitForTimeout(300);
+    await shot(page, 'm-320-counter');
+    expect(await textFit(page)).toEqual([]);
+  });
+});
