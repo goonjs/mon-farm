@@ -13,12 +13,13 @@ AGENTS.md and docs/process.md stay binding; this skill covers what they do not.
 - **Keep the project moving every day without being told** (owner, 2026-11-18: "lead ควรจะทำให้โปรเจกต์ move ทุกๆวันด้วยตัวเอง").
   - Pull the next story of the agreed **flow** and finish it.
   - A flow is a user scenario that can span several epics. Close work by flow, not by epic.
-- **Flow meeting every 2 days at 16:00 Bangkok, when no order is agreed.**
+- **Flow meeting every 2 days at 16:00 Bangkok** (owner, same chat: "มาคุยกันทุกๆช่วงตอนสัก 4 โมงเย็นทุก2 วัน … ผมขอใช้คำว่าโฟลว์"). The steps below are the lead's proposal, which the owner accepted with "ข้อ2โอเค" and asked for a raised hand in the lead session too. The wording is the agent's.
+  - Hold it when no flow order is agreed yet (lead practice).
   - At 15:00, put flow choices on the dashboard as ก/ข with (แนะนำ).
   - At 16:00, post `❓ NEED DECISION` to #farm-ai-alerts with the owner mention.
   - Retitle your own session with 🙋🏻‍♂️.
-- **Current flow** (owner agreed 2026-11-18): "วันขายครบวงจร", i.e. prep → start → count → summary → clear money → home tile ✓.
-- **What the lead may do alone:**
+- **Current flow:** "วันขายครบวงจร", i.e. prep → start → count → summary → clear money → home tile ✓. The lead proposed it as ข้อ1; the owner replied in chat on 2026-11-18: "ข้อ1โอเค".
+- **What the lead may do alone** (owner on 2026-11-18, "ข้อ3โอเค", to the lead's proposal that the lead drafts on its own and code waits for the AC yes):
   - draft stories and mockups;
   - put AC questions on the dashboard;
   - dispatch teams;
@@ -29,7 +30,8 @@ AGENTS.md and docs/process.md stay binding; this skill covers what they do not.
   - critical merges;
   - deletes;
   - Deploy Prod;
-  - dependencies.
+  - dependencies, except where AGENTS.md lets the lead approve one (reputable maintainer, audit adds no new high or critical finding, evidence shown first).
+- **Lead practice (agent wording, not owner rules):** the points below are habits from this round, not quoted owner rules.
 - **Talking to the owner:**
   - short, plain Thai;
   - say what you checked and what you didn't;
@@ -40,13 +42,15 @@ AGENTS.md and docs/process.md stay binding; this skill covers what they do not.
 
 ## 2. Session names (owner rule, 2026-11-18)
 
+The owner's words, on the dashboard on 2026-11-18 at 00:32: "prefix ของเซสชันให้ขึ้นต้นด้วยมนฟาร์มวงเล็บ … งานที่ต้องการให้ผม take action ให้ prefix เพิ่ม emoticon raise hand ถ้าตอบแล้วไม่มีอะไรก็เอาลง … เซสชั่นลูกทำงานเสร็จแล้วไม่มีงานค้างแล้วไม่รอฮุกอะไรแล้วให้ prefix ด้วย emoticon 2 อันคือ raise hand และเครื่องหมายติ๊กถูก … ไม่เปิดเซสชันมากเกินไป"
+
 - Every session you control starts with `(mon-farm)`.
 - Add 🙋🏻‍♂️ in front while the owner must act. Remove it once answered.
 - `🙋🏻‍♂️✅` means the session is done: no work, no hooks, no subscriptions left. The owner can delete it.
 - Do not open more sessions than needed:
   - one independent reviewer, reused for many PRs;
   - a team only for a concrete stream of work.
-- AGENTS.md says one dev team at a time. More teams only when the owner asks.
+- AGENTS.md says one developer team at a time.
 
 ## 3. Dashboard (https://claude.ai/artifact/3jHpPwSa3uWgMbW16oNdGa)
 
@@ -69,7 +73,7 @@ AGENTS.md and docs/process.md stay binding; this skill covers what they do not.
   2. Check that the head SHA equals the reviewed SHA and that `mergeable_state` is `clean`.
   3. Squash with `expectedHeadSha`.
 - After merging: set the card to `merged`, then post `✅ DONE` to #farm-ai-updates.
-- **Add the `e2e` label** (`gh api -X POST repos/goonjs/mon-farm/issues/N/labels -f labels[]=e2e`) on every UI PR. Without it, PR extras skip Playwright and a red result hides.
+- **Add the `e2e` label** on every UI PR with the GitHub MCP tool `issue_write` (method `update`, `labels` including `e2e`). In cloud sessions `gh` is for search only. Without it, PR extras skip Playwright and a red result hides.
   - #207 and #209 only ran e2e after the lead labelled them.
 - **CI fonts differ from local fonts.** A layout that fits locally at 98% failed in CI.
   - Ask for headroom (≤ 90%) in fit tests. See #209's three rounds: https://github.com/goonjs/mon-farm/pull/209/files
@@ -92,14 +96,14 @@ AGENTS.md and docs/process.md stay binding; this skill covers what they do not.
    - Fix: team 1 renamed to E04-S24 in #211, later superseded by https://github.com/goonjs/mon-farm/pull/216.
    - Rule: the lead hands out story numbers. Check `docs/stories/` and cancelled IDs (E15-S05).
 4. **New teams didn't know the rules.** Sonnet teams asked the owner directly in chat and drew mockups before reading the skills.
-   - Rule: every new team's first message carries the 16-rule brief in §7 below.
+   - Rule: every new team's first message carries the 16-rule brief in §8 below.
 5. **Messages crossed.** Teams acted before reading the lead's reply.
    - Examples: #208 opened before the NP-3 answer; the #212 brief arrived after the merge.
    - Rule: tell teams "if my message arrives after you acted, stop and say what you did". Re-read the PR state before acting on a brief.
 6. **Pushing during review.** On #196 a push landed mid-merge and the merge returned 409.
    - Rule: no push to a PR under review unless the lead asks.
 7. **A team session can't open PRs.** Its system prompt forbids it.
-   - The lead opens the PR, e.g. https://github.com/goonjs/mon-farm/pull/214 and #218, then adds the label and queues the review.
+   - The lead opens the PR, e.g. https://github.com/goonjs/mon-farm/pull/214 and #218 (→ #220), then adds the label and queues the review.
 8. **A mockup was not from the project file.** The owner rejected redrawn tiles.
    - Rule: start every mockup from `docs/ux/mockups/flow-farm-v1.1.0.html` (same CSS, icons, markup).
 9. **Shared files between parallel teams.** Keep a claim list (which team owns which file), and sequence the PRs.
@@ -129,6 +133,8 @@ AGENTS.md and docs/process.md stay binding; this skill covers what they do not.
 3. Tell every live team and the reviewer the new lead's session id, and say that briefs go there now.
 4. Retitle the old lead `🙋🏻‍♂️✅ (mon-farm) Lead N-1 · ส่งต่อแล้ว`, and tell the owner in Thai who the new lead is.
 ## 8. Brief for every new team (send in its first message)
+
+Lead practice (agent wording). It restates AGENTS.md and the skills; where it is stricter, that is on purpose.
 
 **Talking to the owner**
 1. Reply in short, plain Thai. Say what you checked and what you did not.
