@@ -356,6 +356,11 @@ for (const width of [320, 360, 390]) {
           return r.getBoundingClientRect().width / e.clientWidth;
         });
         expect(spare).toBeLessThanOrEqual(0.9);
+        // The sale total is never smaller than its own label (lead, 2026-11-17), except at 320 L: a 73 px box cannot
+        // hold "1.84 หมื่น" at the 15 px L label size with that room, so there it keeps the M label size (13).
+        const labelPx = await fontPx(page, 'card-money-label');
+        const figPx = await fontPx(page, 'fig-money');
+        expect(figPx).toBeGreaterThanOrEqual(width === 320 && size === 'l' ? 13 : labelPx);
       });
     });
   }
