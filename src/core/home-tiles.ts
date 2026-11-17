@@ -8,6 +8,7 @@
  */
 
 import { prepLeft, type SalePrep } from './finance/sale-prep';
+import { todayIso as farmToday } from './master';
 import { statusCountsAsClosed } from './sale-status';
 import type { FinanceEvent } from './finance/types';
 import type { SaleState } from './types';
@@ -75,7 +76,9 @@ export function homeTiles({ prep, unsplit, today, sales }: HomeTilesInput): Home
   // A prep is live while nothing used it and its day has not passed; a sale today that started after it keeps it shown.
   const after = prep ? sales.filter((s) => s.ts > prep.updatedTs) : [];
   const usedToday = after.some((s) => s.day >= today);
-  const stale = prep !== null && !usedToday && (after.length > 0 || (prep.date !== null && prep.date < today));
+  // An undated prep belongs to the Bangkok day it was last written (HT-5); a dated one to its sale day.
+  const prepDay = prep ? (prep.date ?? farmToday(prep.updatedTs)) : null;
+  const stale = prep !== null && !usedToday && (after.length > 0 || (prepDay !== null && prepDay < today));
   const live = prep !== null && !stale ? prep : null;
   const left = prepLeft(live, unsplit);
   const prepTile: PrepTile = !live ? { state: 'P0' } : left === 0 ? { state: 'P2' } : { state: 'P1', left };
