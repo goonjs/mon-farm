@@ -103,6 +103,21 @@ its own sake.
    proposal always carries a brief: branch and target, commit subjects,
    what changed, why it's ready (CI state / what was run), what it does
    not cover, and anything irreversible or outward-facing.
+
+   Right after the push, the dashboard `pushes` card (see `AGENTS.md`)
+   carries the evidence and the next step:
+   - **UI change:** the mockup, the real page on `dev` before the change
+     and the real page at the head after it, each with a caption. Take
+     before and after with the same viewport, text size and data.
+   - **Logic change:** a flow before and a flow after (mermaid or a
+     picture).
+   - **Docs only:** `kind: docs`; a slot with nothing to show says why.
+   - **Next step at each stage:** `next_step` names the condition for the
+     next stage, who does it and who it waits on now — for example
+     working → review ("CI green and brief sent · dev team · CI"), review →
+     ready ("independent review passes on the head · reviewer"), ready →
+     merged ("owner's yes / owner says merge · owner"). Keep it current as
+     the stage moves; the story's `เงื่อนไขไปขั้นถัดไป` line says the same.
 8. **Independent code review**: a separate agent/session from the one that
    implemented the story reviews the diff — correctness, test coverage,
    YAGNI/KISS/SOLID adherence, and whether the offline/sync gate was
