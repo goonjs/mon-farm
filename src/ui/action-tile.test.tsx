@@ -47,8 +47,12 @@ describe('ActionTile — the home action cards (farm mockup screen 1/9, review S
   });
 
   it('a tint paints the frame and ground in that colour without making the tile bigger; a badge floats at the top right (E15-S06 HT-1..3)', () => {
-    wrap(<ActionTile testID="plain" label="เตรียมขาย" icon={glyph} tone="cream" />);
-    wrap(<ActionTile testID="tinted" label="เตรียมขาย" icon={glyph} tone="cream" tint="warn" badge={{ text: '2', tone: 'warn', label: 'เหลือ 2 ข้อ' }} />);
+    wrap(
+      <>
+        <ActionTile testID="plain" label="เตรียมขาย" icon={glyph} tone="cream" />
+        <ActionTile testID="tinted" label="เตรียมขาย" icon={glyph} tone="cream" tint="warn" badge={{ text: '2', tone: 'warn', label: 'เหลือ 2 ข้อ' }} />
+      </>,
+    );
     const plain = flat(screen.getByTestId('plain').props.style);
     const tinted = flat(screen.getByTestId('tinted').props.style);
     expect(tinted).toMatchObject({ borderColor: c.warn, backgroundColor: c.warnSunk, borderWidth: tokens.border.thick });
@@ -65,8 +69,12 @@ describe('ActionTile — the home action cards (farm mockup screen 1/9, review S
   });
 
   it('a badge can carry an icon instead of a word; the colours follow the meaning (blue, green, red)', () => {
-    wrap(<ActionTile testID="icon" label="เริ่มการขาย" icon={glyph} tone="action" tint="action" badge={{ icon: () => <View testID="badge-glyph" />, tone: 'action', label: 'รอเริ่มขาย' }} />);
-    wrap(<ActionTile testID="red" label="เริ่มการขาย" icon={glyph} tone="action" tint="accept" badge={{ text: '3', tone: 'reject', label: 'เงินค้าง 3 กอง' }} />);
+    wrap(
+      <>
+        <ActionTile testID="icon" label="เริ่มการขาย" icon={glyph} tone="action" tint="action" badge={{ icon: () => <View testID="badge-glyph" />, tone: 'action', label: 'รอเริ่มขาย' }} />
+        <ActionTile testID="red" label="เริ่มการขาย" icon={glyph} tone="action" tint="accept" badge={{ text: '3', tone: 'reject', label: 'เงินค้าง 3 กอง' }} />
+      </>,
+    );
     expect(flat(screen.getByTestId('icon-badge').props.style).backgroundColor).toBe(c.action);
     expect(screen.getByTestId('badge-glyph')).toBeTruthy();
     expect(flat(screen.getByTestId('red').props.style)).toMatchObject({ borderColor: c.accept, backgroundColor: c.acceptSunk });

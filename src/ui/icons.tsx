@@ -594,6 +594,27 @@ export function ClockIcon({ color, size = 18 }: IconProps) {
   );
 }
 
+/** A calculator — a body with a display bar and a grid of keys (the clearing-money step, E15-S06). */
+export function CalculatorIcon({ color, size = 18 }: IconProps) {
+  const w = stroke(size);
+  const key = { width: size * 0.12, height: size * 0.12, borderRadius: size, backgroundColor: color };
+  return (
+    <View aria-hidden style={{ width: size * 0.74, height: size, borderRadius: size * 0.16, borderWidth: w, borderColor: color, alignItems: 'center', paddingTop: size * 0.12, gap: size * 0.1 }}>
+      <View style={{ width: size * 0.46, height: w, backgroundColor: color }} />
+      <View style={{ flexDirection: 'row', gap: size * 0.1 }}>
+        <View style={key} />
+        <View style={key} />
+        <View style={key} />
+      </View>
+      <View style={{ flexDirection: 'row', gap: size * 0.1 }}>
+        <View style={key} />
+        <View style={key} />
+        <View style={key} />
+      </View>
+    </View>
+  );
+}
+
 /** This device — a phone with its home bar. */
 export function DeviceIcon({ color, size = 18 }: IconProps) {
   const w = stroke(size);
