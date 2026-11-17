@@ -695,6 +695,16 @@ describe('E04-S24 change the fill way before the hold (owner 2026-11-17 e04-s24-
     expect((await store().load(saleId)).length).toBe(before);
   });
 
+  it('FX-3, way 3: choosing "ปล่อยเข่งไม่เต็มไว้" from the change sheet goes back with fill=next, and nothing is written before the hold', async () => {
+    await toFillCounter('part');
+    const before = (await store().load(saleId)).length;
+    await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red, ask: farm.a[1], fill: 'part' });
+    router.replace.mockClear();
+    await chooseFill('next');
+    expect(router.replace).toHaveBeenLastCalledWith(expect.stringMatching(new RegExp(`counter\\?point=${farm.a[1]}.*fill=next|fill=next.*point=${farm.a[1]}`)));
+    expect((await store().load(saleId)).length).toBe(before);
+  });
+
   it('FX-5: the sheet says "เลือก 1 ใน 3 วิธี" and numbers the ways 1 2 3', async () => {
     await toFillCounter('full');
     await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red, ask: farm.a[1], fill: 'full' });
