@@ -60,12 +60,15 @@ for (const width of [320, 360]) {
       await expect(id('prep-buyers')).toBeVisible();
       await fits(page);
       await shot('2-buyer');
+      await expect(id('prep-buyer-buyer-b')).toHaveAttribute('role', 'checkbox');
       await id('prep-buyer-buyer-b').click();
       await expect(id('prep-buyer')).toContainText('สหกรณ์บ้านนา');
 
       // PREP-4: a day on the in-app calendar, then a time.
       await id('prep-date').click();
-      await id('prep-date-picker-today').click();
+      await expect(id('prep-date-picker-yesterday')).toHaveCount(0);
+      await shot('2b-date');
+      await id('prep-date-picker-tomorrow').click();
       await id('prep-date-picker-done').click();
       await expect(id('prep-time')).toBeVisible();
       await fits(page);
@@ -83,8 +86,8 @@ for (const width of [320, 360]) {
       await fits(page, 'prep');
       await shot('3-ready');
 
-      // Home says so; it stays after a reload.
-      await page.goto('/v2');
+      // เสร็จ goes back home; the tile says so and it stays after a reload.
+      await id('prep-done').click();
       await expect(id('home-prep')).toContainText('พร้อมขาย');
       await page.reload();
       await expect(id('home-prep')).toContainText('สหกรณ์บ้านนา');

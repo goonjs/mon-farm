@@ -31,6 +31,8 @@ export interface DatePickerSheetProps {
   readonly emptyLabel?: string;
   /** The day "today" means here, when it is not the device's date (a sale's day is Bangkok's: E04-S19 BF-9). */
   readonly today?: string;
+  /** Quick picks: 'past' (default) = วันนี้ / เมื่อวาน / 2 วันก่อน; 'ahead' = วันนี้ / พรุ่งนี้ / มะรืน (a day still to come: E15-S01). The calendar is the same. */
+  readonly quick?: 'past' | 'ahead';
   readonly testID?: string;
 }
 
@@ -73,7 +75,7 @@ const MONTH_KEYS = Array.from({ length: 12 }, (_, i) => `datepick.monthName${i +
 const SHORT_MONTH_KEYS = Array.from({ length: 12 }, (_, i) => `date.month${i + 1}` as MessageId);
 const WEEKDAY_KEYS = ['datepick.wd0', 'datepick.wd1', 'datepick.wd2', 'datepick.wd3', 'datepick.wd4', 'datepick.wd5', 'datepick.wd6'] as const;
 
-function Body({ onClose, value, onChange, max, min, emptyLabel, today: todayProp, testID: tid }: Omit<DatePickerSheetProps, 'open' | 'title' | 'testID'> & { testID: string }) {
+function Body({ onClose, value, onChange, max, min, emptyLabel, today: todayProp, quick: quickKind = 'past', testID: tid }: Omit<DatePickerSheetProps, 'open' | 'title' | 'testID'> & { testID: string }) {
   const t = useTheme();
   const { t: msg, era } = useI18n();
   const today = todayProp ?? todayIso();
@@ -104,11 +106,18 @@ function Body({ onClose, value, onChange, max, min, emptyLabel, today: todayProp
   });
   const done = dayLabel(dy, dm, dd);
 
-  const quick = [
-    { id: 'today', iso: today, label: msg('datepick.today') },
-    { id: 'yesterday', iso: addDays(today, -1), label: msg('datepick.yesterday') },
-    { id: 'twodays', iso: addDays(today, -2), label: msg('datepick.twoDaysAgo') },
-  ];
+  const quick =
+    quickKind === 'ahead'
+      ? [
+          { id: 'today', iso: today, label: msg('datepick.today') },
+          { id: 'tomorrow', iso: addDays(today, 1), label: msg('datepick.tomorrow') },
+          { id: 'dayafter', iso: addDays(today, 2), label: msg('datepick.dayAfter') },
+        ]
+      : [
+          { id: 'today', iso: today, label: msg('datepick.today') },
+          { id: 'yesterday', iso: addDays(today, -1), label: msg('datepick.yesterday') },
+          { id: 'twodays', iso: addDays(today, -2), label: msg('datepick.twoDaysAgo') },
+        ];
 
   const nav = (id: 'prev' | 'next' | 'prevYear' | 'nextYear', delta: number) => (
     <Pressable
@@ -150,7 +159,7 @@ function Body({ onClose, value, onChange, max, min, emptyLabel, today: todayProp
           return (
             <Pressable
               key={q.id}
-              testID={`${tid}-${q.id === 'twodays' ? 'twodays' : q.id}`}
+              testID={`${tid}-${q.id}`}
               accessibilityRole="button"
               accessibilityState={{ selected: sel, disabled: off }}
               disabled={off}
@@ -290,11 +299,11 @@ function Body({ onClose, value, onChange, max, min, emptyLabel, today: todayProp
   );
 }
 
-export function DatePickerSheet({ open, onClose, value, onChange, title, max, min, emptyLabel, today, testID = 'date-picker' }: DatePickerSheetProps) {
+export function DatePickerSheet({ open, onClose, value, onChange, title, max, min, emptyLabel, today, quick, testID = 'date-picker' }: DatePickerSheetProps) {
   const { t: msg } = useI18n();
   return (
     <BottomSheet open={open} onClose={onClose} title={title ?? msg('datepick.title')} testID={testID}>
-      <Body testID={testID} onClose={onClose} value={value} onChange={onChange} max={max} min={min} emptyLabel={emptyLabel} today={today} />
+      <Body testID={testID} onClose={onClose} value={value} onChange={onChange} max={max} min={min} emptyLabel={emptyLabel} today={today} quick={quick} />
     </BottomSheet>
   );
 }

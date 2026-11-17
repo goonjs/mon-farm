@@ -32,6 +32,7 @@ export const th = {
   'prep.homeLeftNoBuyer': 'เหลือ {n} ข้อ',
   'prep.homeReady': '✓ พร้อมขาย · {date}',
   'prep.homeReadyBody': '{buyer} · {price} ฿/กก.',
+  'prep.done': 'เสร็จ',
 };
 
 export const en: Partial<Record<keyof typeof th, string>> = {
@@ -64,4 +65,5 @@ export const en: Partial<Record<keyof typeof th, string>> = {
   'prep.homeLeftNoBuyer': '{n} left',
   'prep.homeReady': '✓ Ready · {date}',
   'prep.homeReadyBody': '{buyer} · {price} ฿/kg',
+  'prep.done': 'Done',
 };

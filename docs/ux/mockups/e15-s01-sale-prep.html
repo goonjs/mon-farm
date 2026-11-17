@@ -670,6 +670,25 @@ body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px
 .rcpt .tot{border-top:2px solid var(--color-rule);padding-top:6px;font-size:18px;font-weight:800}
 .chkline{font-size:14px;color:var(--color-ink-soft);text-align:right}
 .link{color:var(--color-action);text-decoration:underline;font-size:15px;min-height:48px;display:flex;align-items:center}
+.tiles{display:flex;gap:8px}
+.tile{flex:1;min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:8px}
+.tile .q{font-weight:800;font-size:15px}
+.tile.cream{background:var(--color-surface-sunk)}
+.tile.prep{background:var(--color-warn-sunk);border:2px solid var(--color-warn)}
+.tile.done{background:var(--color-accept-sunk);border:2px solid var(--color-accept)}
+.tile .pill{font-size:12px;font-weight:700}
+.dq{display:flex;gap:8px;flex-wrap:wrap}
+.dq span{border:1.5px solid var(--color-rule-strong);border-radius:999px;min-height:48px;padding:0 16px;display:grid;place-items:center;font-weight:700}
+.dq span.on{background:var(--color-action);color:var(--color-ink-inverse)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-weight:700;font-size:15px}
+.cal i{font-style:normal;padding:8px 0}.cal i.off{color:var(--color-ink-faint);opacity:.4}.cal i.sel{background:var(--color-action);color:var(--color-ink-inverse);border-radius:999px}
+.tickrow{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:60px;border:1px solid var(--color-rule-strong);border-radius:16px;background:var(--color-surface-raised)}
+.tickrow.on{border:2px solid var(--color-accept);background:var(--color-accept-sunk)}
+.tickrow .bx{width:26px;height:26px;border-radius:8px;border:2px solid var(--color-rule-strong);flex:none;display:grid;place-items:center;font-weight:900}
+.tickrow.on .bx{background:var(--color-accept);border-color:var(--color-accept);color:var(--color-ink-inverse)}
+.tickrow .tx{flex:1;min-width:0}.tickrow small{display:block;color:var(--color-ink-soft);font-size:13px}
+.donebtn{display:grid;place-items:center;min-height:48px;border-radius:999px;background:var(--color-action);color:var(--color-ink-inverse);font-weight:800;margin-top:8px}
+.savednote{font-size:13px;color:var(--color-ink-soft);text-align:center;margin-top:4px}
 </style><div class="page">
 <style>
 .prow{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:64px}
@@ -688,26 +707,32 @@ body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px
 .ghostlink{display:block;text-align:center;text-decoration:underline;padding:12px;min-height:48px;color:var(--color-ink-soft)}
 </style>
 <p class="lead">E15-S01 เตรียมการขาย · ตาม AC ที่เจ้าของตกลง 2026-11-17 "ก · ก · โอเค ทำตามนี้" · หน้าเดียว 4 ข้อ แตะทั้งแถว · ช่วยเตรียม ไม่ใช่ประตูกั้น ข้อไม่ครบก็เริ่มขายได้ · ทำได้ออฟไลน์</p>
-<div class="band"><span>1</span> หน้าแรก (ปุ่ม "เตรียมการขาย" ที่มีอยู่แล้ว)</div>
+<div class="band"><span>1</span> หน้าแรก (ใช้ปุ่ม "เตรียมขาย" เดิม ไม่มีการ์ดใหญ่เพิ่ม)</div>
 <div class="row-flow">
 <figure class="fig"><div class="phone" id="h-none">
  <div class="appbar"><h3>มอนฟาร์ม</h3></div>
- <div class="body">
-  <div class="card hcard"><div class="tx"><div class="q">เตรียมการขายครั้งถัดไป</div><div class="a">นัดคนรับซื้อ วันที่ ราคา แบ่งปุ๋ย</div></div><span class="chev">›</span></div>
- </div>
-</div><figcaption><span class="t">H1 · ยังไม่ได้เตรียม</span>แถวในกลุ่ม "ต้องรู้" ของหน้าแรก · แตะ = หน้าเตรียมการขาย (ปุ่ม "เตรียมการขาย" บนก็ไปหน้าเดียวกัน)<span class="ids">PREP-1</span></figcaption></figure>
+ <div class="body"><div class="tiles">
+  <div class="card tile cream"><div class="q">เตรียมขาย</div></div>
+  <div class="card tile main"><div class="q">เริ่มการขาย</div></div>
+  <div class="card tile ok2"><div class="q">บันทึกค่าใช้จ่าย</div></div>
+ </div></div>
+</div><figcaption><span class="t">H1 · ยังไม่ได้เตรียม</span>ปุ่มสีเดิม ไม่มีข้อความเพิ่ม<span class="ids">PREP-1</span></figcaption></figure>
 <figure class="fig"><div class="phone" id="h-some">
  <div class="appbar"><h3>มอนฟาร์ม</h3></div>
- <div class="body">
-  <div class="card hcard"><div class="tx"><div class="q">เตรียมขาย · ส. 21 พ.ย.</div><div class="a">คนรับซื้อยาง ก · เหลือ 2 ข้อ</div></div><span class="chev">›</span></div>
- </div>
-</div><figcaption><span class="t">H2 · เตรียมอยู่</span>วันที่ + คนรับซื้อ + "เหลือ N ข้อ"<span class="ids">PREP-1</span></figcaption></figure>
+ <div class="body"><div class="tiles">
+  <div class="card tile prep"><div class="q">เตรียมขาย</div><div class="pill">เตรียมแล้ว 2/4</div></div>
+  <div class="card tile main"><div class="q">เริ่มการขาย</div></div>
+  <div class="card tile ok2"><div class="q">บันทึกค่าใช้จ่าย</div></div>
+ </div></div>
+</div><figcaption><span class="t">H2 · เตรียมอยู่</span>ปุ่มเปลี่ยนสี + "เตรียมแล้ว N/4" · วันที่/คนรับซื้ออยู่ในหน้าเตรียม ไม่แสดงที่หน้าแรก<span class="ids">PREP-1</span></figcaption></figure>
 <figure class="fig"><div class="phone" id="h-ready">
  <div class="appbar"><h3>มอนฟาร์ม</h3></div>
- <div class="body">
-  <div class="card hcard"><div class="tx"><div class="q">✓ พร้อมขาย · ส. 21 พ.ย.</div><div class="a">คนรับซื้อยาง ก · 52.50 ฿/กก.</div></div><span class="chev">›</span></div>
- </div>
-</div><figcaption><span class="t">H3 · ครบ 4 ข้อ</span>ไม่มีข้อความกันลืม<span class="ids">PREP-1 · PREP-9</span></figcaption></figure>
+ <div class="body"><div class="tiles">
+  <div class="card tile done"><div class="q">เตรียมขาย</div><div class="pill">✓ พร้อมขาย 4/4</div></div>
+  <div class="card tile main"><div class="q">เริ่มการขาย</div></div>
+  <div class="card tile ok2"><div class="q">บันทึกค่าใช้จ่าย</div></div>
+ </div></div>
+</div><figcaption><span class="t">H3 · ครบ 4 ข้อ</span>ปุ่มเป็นสีเขียว · ไม่มีข้อความกันลืม<span class="ids">PREP-1 · PREP-9</span></figcaption></figure>
 </div>
 <div class="band"><span>2</span> หน้าเตรียมการขาย (หน้าเดียว ไม่เลื่อน)</div>
 <div class="row-flow">
@@ -719,8 +744,9 @@ body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px
   <div class="card prow"><div class="bx"></div><div class="tx"><div class="q">ราคาที่ตกลง</div><div class="a">ยังไม่ได้ใส่ ฿/กก.</div></div><span class="chev">›</span></div>
   <div class="card prow"><div class="bx"></div><div class="tx"><div class="q">แบ่งปุ๋ยให้คนกรีด</div><div class="a todo">ใส่ปุ๋ยยังไม่แบ่ง 2 ครั้ง</div></div><span class="chev">›</span></div>
  </div>
+ <div class="donebtn">เสร็จ</div>
  <a class="ghostlink">ยกเลิกการเตรียม</a></div>
-</div><figcaption><span class="t">P1 · เตรียมอยู่ (เหลือ 2 ข้อ)</span>แต่ละแถวแตะได้ทั้งแถว › · คนรับซื้อ = หน้ารายชื่อเต็มหน้า · วันที่ = ปฏิทินในแอป (+ เวลาไม่บังคับ) · ราคา = แป้นตัวเลขของแอป · ปุ๋ย = หน้ารายการใส่ปุ๋ยที่ยังไม่แบ่ง (E16)· เริ่มการขายจากหน้านี้ (ใส่คนรับซื้อ/ราคาให้) เป็น E15-S02 ยังไม่อยู่ในสตอรี่นี้<span class="ids">PREP-2..6 · PREP-8</span></figcaption></figure>
+</div><figcaption><span class="t">P1 · เตรียมอยู่ (เหลือ 2 ข้อ)</span>ปุ่ม "เสร็จ" = กลับหน้าแรกพร้อม "บันทึกแล้ว" (ร่าง ร่างนี้เลือกปุ่ม เสร็จ รอเจ้าของ) · แต่ละแถวแตะได้ทั้งแถว › · คนรับซื้อ = หน้ารายชื่อเต็มหน้า · วันที่ = ปฏิทินในแอป (+ เวลาไม่บังคับ) · ราคา = แป้นตัวเลขของแอป · ปุ๋ย = หน้ารายการใส่ปุ๋ยที่ยังไม่แบ่ง (E16)· เริ่มการขายจากหน้านี้ (ใส่คนรับซื้อ/ราคาให้) เป็น E15-S02 ยังไม่อยู่ในสตอรี่นี้<span class="ids">PREP-2..6 · PREP-8</span></figcaption></figure>
 <figure class="fig"><div class="phone" id="p-ready">
  <div class="appbar"><div class="ib">‹</div><h3>เตรียมการขาย<small>การขายครั้งถัดไป</small></h3></div>
  <div class="body"><div class="plist">
@@ -730,15 +756,24 @@ body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px
   <div class="card prow"><div class="bx ok">✓</div><div class="tx"><div class="q">ราคาที่ตกลง</div><div class="a">52.50 ฿/กก.</div></div><span class="chev">›</span></div>
   <div class="card prow"><div class="bx ok">✓</div><div class="tx"><div class="q">แบ่งปุ๋ยให้คนกรีด</div><div class="a">แบ่งครบแล้ว · หนี้ปุ๋ยใหม่</div><div class="a">แดง 3.2k · นัด 1.6k</div><div class="a">Σ 4.8k ฿</div></div><span class="chev">›</span></div>
  </div>
+ <div class="donebtn">เสร็จ</div>
  <a class="ghostlink">ยกเลิกการเตรียม</a></div>
 </div><figcaption><span class="t">P2 · ครบ</span>ข้อ 4 บอกหนี้ปุ๋ยใหม่ตามกฎบรรทัดสรุป (2 คนต่อบรรทัด, Σ บรรทัดของตัวเอง, ย่อ k) — แค่ให้รู้ ไม่ตั้งยอดหัก ไม่ตั้งงวด<span class="ids">PREP-6 · PREP-7</span></figcaption></figure>
 <figure class="fig"><div class="phone" id="p-buyer">
  <div class="appbar"><div class="ib">‹</div><h3>นัดคนรับซื้อ</h3></div>
- <div class="body"><div class="card blist">
-  <div class="r"><div class="tx">คนรับซื้อยาง ก<small>ขายล่าสุด 13 พ.ย.</small></div><span class="chev">›</span></div>
-  <div class="r"><div class="tx">สหกรณ์บ้านนา</div><span class="chev">›</span></div>
+ <div class="body"><div class="plist">
+  <div class="tickrow on"><div class="bx">✓</div><div class="tx">คนรับซื้อยาง ก<small>ขายล่าสุด 13 พ.ย.</small></div></div>
+  <div class="tickrow"><div class="bx"></div><div class="tx">สหกรณ์บ้านนา</div></div>
  </div>
  <a class="ghostlink">+ เพิ่มคนรับซื้อใหม่</a></div>
+</div><figcaption><span class="t">P3 · เลือกคนรับซื้อ (เต็มหน้า)</span>ติ๊กหน้าชื่อ ไม่มีลูกศร › (เหมือนหน้าเลือกปุ๋ย) · แตะ = ติ๊กแล้วกลับหน้าเตรียม · ล่าสุดอยู่บน · เพิ่มใหม่ใช้ฟอร์มเดิม<span class="ids">PREP-3</span></figcaption></figure>
+<figure class="fig"><div class="phone" id="p-date">
+ <div class="appbar"><div class="ib">‹</div><h3>วันที่</h3></div>
+ <div class="body"><div class="dq"><span class="on">วันนี้</span><span>พรุ่งนี้</span><span>มะรืน</span></div>
+  <div class="card" style="padding:10px;margin-top:8px"><div class="label2">พฤศจิกายน 2569</div>
+  <div class="cal"><i>15</i><i>16</i><i class="sel">17</i><i>18</i><i>19</i><i>20</i><i>21</i></div></div>
+  <div class="donebtn">✓ ตกลง · อ. 17 พ.ย. 2569</div></div>
+</div><figcaption><span class="t">P4 · เลือกวันที่</span>ปฏิทินเลือกได้ทุกวันไม่จำกัด (ตัวเลือกวันที่ของแอปตามเดิม) · เฉพาะปุ่มลัดเปลี่ยนเป็น วันนี้ / พรุ่งนี้ / มะรืน ไม่มีย้อนหลัง<span class="ids">PREP-4</span></figcaption></figure>
 </div><figcaption><span class="t">P3 · เลือกคนรับซื้อ (เต็มหน้า)</span>ล่าสุดอยู่บน · แตะ = เลือกแล้วกลับหน้าเตรียม · เพิ่มใหม่ใช้ฟอร์มคนรับซื้อเดิม<span class="ids">PREP-3</span></figcaption></figure>
 </div>
 </div>

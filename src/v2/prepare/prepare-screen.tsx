@@ -20,9 +20,10 @@ import { peopleStore } from '../../store/people';
 import { useI18n } from '../../i18n';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, cardStyle, Check, ChevronRight, CompactMoney, DatePickerSheet, MoneyField, ScreenHeader, TextLink } from '../../ui';
+import { AppText, BottomSheet, cardStyle, Check, ChevronRight, CompactMoney, CTA, DatePickerSheet, MoneyField, ScreenHeader, TextLink } from '../../ui';
 import { CHIP_MIN_WIDTH } from '../../ui/chip-width';
 import { useMaster } from '../farm/pieces';
+import { TickCard } from '../money/pieces';
 import { loadHomeSales } from '../sale/open-sale';
 import { PRICE_MAX_SATANG } from '../sale/sale-options';
 
@@ -125,6 +126,9 @@ export function PrepView({ events, today, lastSaleDay, lastSaleTs, onWrite, onBu
           </View>
         ) : null}
       </ScrollView>
+      <View style={{ padding: t.layout.screenPaddingX }}>
+        <CTA testID="prep-done" onPress={onBack}>{msg('prep.done')}</CTA>
+      </View>
 
       <DatePickerSheet
         open={sheet === 'date'}
@@ -138,6 +142,7 @@ export function PrepView({ events, today, lastSaleDay, lastSaleTs, onWrite, onBu
           setSheet('time');
         }}
         title={msg('prep.date')}
+        quick="ahead"
         today={today}
         testID="prep-date-picker"
       />
@@ -251,6 +256,7 @@ function DebtLines({ debts }: { debts: readonly { worker: Payer; satang: number 
 export function PrepBuyerView({
   buyers,
   latestId,
+  selectedId = null,
   onPick,
   onAdd,
   onBack,
@@ -258,6 +264,8 @@ export function PrepBuyerView({
 }: {
   buyers: readonly { id: string; name: string }[];
   latestId: string | null;
+  /** The buyer chosen now, ticked (owner 2026-11-17: a tick to choose, not a › to go on). */
+  selectedId?: string | null;
   onPick: (b: { id: string; name: string }) => void;
   onAdd: () => void;
   onBack: () => void;
@@ -272,19 +280,14 @@ export function PrepBuyerView({
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.sm, paddingBottom: t.space.xl }}>
         {sorted.length === 0 ? <AppText variant="bodySm">{msg('prep.buyerEmpty')}</AppText> : null}
         {sorted.map((b) => (
-          <Pressable
+          <TickCard
             key={b.id}
             testID={`prep-buyer-${b.id}`}
-            accessibilityRole="button"
+            title={b.name}
+            detail={b.id === latestId ? msg('prep.buyerLatest') : undefined}
+            on={b.id === selectedId}
             onPress={() => onPick({ id: b.id, name: b.name })}
-            style={{ ...cardStyle(t), flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md, minHeight: t.target.comfortable }}
-          >
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <AppText style={{ fontWeight: t.font.weight.bold }}>{b.name}</AppText>
-              {b.id === latestId ? <AppText variant="bodySm">{msg('prep.buyerLatest')}</AppText> : null}
-            </View>
-            <ChevronRight color={t.color.inkFaint} />
-          </Pressable>
+          />
         ))}
         <View style={{ alignItems: 'center', paddingTop: t.space.sm }}>
           <TextLink testID="prep-buyer-add" onPress={onAdd}>{msg('prep.buyerAdd')}</TextLink>
@@ -356,16 +359,19 @@ export function PrepareBuyerScreen() {
   const fin = useFinance();
   const sync = useSyncStatus();
   const { state: master } = useMaster();
+  const last = useLastSale();
   const [latestId, setLatestId] = useState<string | null>(null);
   useEffect(() => {
     peopleStore.latestBuyerId().then(setLatestId, () => setLatestId(null));
   }, []);
   const write = usePrepWrite(fin);
   if (!master || !fin.events) return null;
+  const selectedId = salePrep(fin.events, last.ts)?.buyerId ?? null;
   return (
     <PrepBuyerView
       buyers={master.buyers.filter((b) => !b.deleted)}
       latestId={latestId}
+      selectedId={selectedId}
       onPick={(b) => {
         void write({ buyerId: b.id, buyerName: b.name }).then(leave);
       }}

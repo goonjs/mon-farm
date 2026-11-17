@@ -109,6 +109,30 @@ describe('DatePickerSheet', () => {
     expect(onChange).toHaveBeenCalledWith('2026-10-26');
   });
 
+  it('quick="ahead" offers วันนี้ / พรุ่งนี้ / มะรืน and no past picks; the calendar stays free (E15-S01 PREP-10)', () => {
+    const { onChange } = setup({ quick: 'ahead' });
+    expect(screen.getByTestId(`${ID}-today`)).toBeTruthy();
+    expect(screen.getByTestId(`${ID}-tomorrow`)).toBeTruthy();
+    expect(screen.getByTestId(`${ID}-dayafter`)).toBeTruthy();
+    expect(screen.queryByTestId(`${ID}-yesterday`)).toBeNull();
+    expect(screen.queryByTestId(`${ID}-twodays`)).toBeNull();
+    fireEvent.press(screen.getByTestId(`${ID}-dayafter`));
+    fireEvent.press(screen.getByTestId(`${ID}-done`));
+    expect(onChange).toHaveBeenCalledWith('2026-10-29');
+    // A past day on the calendar is still pickable.
+    fireEvent.press(screen.getByTestId(`${ID}-prev`));
+    fireEvent.press(screen.getByTestId(`${ID}-day-2026-09-10`));
+    fireEvent.press(screen.getByTestId(`${ID}-done`));
+    expect(onChange).toHaveBeenLastCalledWith('2026-09-10');
+  });
+
+  it('without quick the picks stay วันนี้ / เมื่อวาน / 2 วันก่อน (other screens unchanged)', () => {
+    setup();
+    expect(screen.getByTestId(`${ID}-yesterday`)).toBeTruthy();
+    expect(screen.getByTestId(`${ID}-twodays`)).toBeTruthy();
+    expect(screen.queryByTestId(`${ID}-tomorrow`)).toBeNull();
+  });
+
   it('prev/next month, year rollover Dec→Jan, leap Feb 2028', () => {
     setup({ value: '2026-12-10' });
     fireEvent.press(screen.getByTestId(`${ID}-next`));

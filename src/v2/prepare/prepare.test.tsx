@@ -79,6 +79,30 @@ describe('PrepView — เตรียมการขาย (E15-S01)', () => {
     expect(onWrite).toHaveBeenLastCalledWith({ time: '08:00' });
   });
 
+  it('the date row opens the app\'s own DatePickerSheet: quick picks วันนี้ / พรุ่งนี้ / มะรืน, no past picks, the calendar free (owner 2026-11-17, PREP-10)', async () => {
+    const onWrite = jest.fn(async (_p: SalePrepPatch) => undefined);
+    wrap(<PrepView events={[]} today="2026-11-17" lastSaleDay={null} lastSaleTs={null} onWrite={onWrite} onBuyer={jest.fn()} onFert={jest.fn()} onBack={jest.fn()} />);
+    await press('prep-date');
+    expect(screen.getByTestId('prep-date-picker')).toBeTruthy();
+    expect(screen.getByTestId('prep-date-picker-today')).toBeTruthy();
+    expect(screen.getByTestId('prep-date-picker-tomorrow')).toBeTruthy();
+    expect(screen.getByTestId('prep-date-picker-dayafter')).toBeTruthy();
+    expect(screen.queryByTestId('prep-date-picker-yesterday')).toBeNull();
+    expect(screen.queryByTestId('prep-date-picker-twodays')).toBeNull();
+    await press('prep-date-picker-day-2026-11-10');
+    await press('prep-date-picker-done');
+    expect(onWrite).toHaveBeenLastCalledWith({ date: '2026-11-10' });
+  });
+
+  it('เสร็จ goes back; every choice was already written, so nothing else is saved here (owner 2026-11-17, PREP-13)', async () => {
+    const onWrite = jest.fn(async (_p: SalePrepPatch) => undefined);
+    const onBack = jest.fn();
+    wrap(<PrepView events={[]} lastSaleDay={null} lastSaleTs={null} onWrite={onWrite} onBuyer={jest.fn()} onFert={jest.fn()} onBack={onBack} />);
+    await press('prep-done');
+    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onWrite).not.toHaveBeenCalled();
+  });
+
   it('"today" on the calendar is the farm\'s day (Bangkok), not the device\'s', async () => {
     const onWrite = jest.fn(async (_p: SalePrepPatch) => undefined);
     wrap(<PrepView events={[]} today="2026-11-30" lastSaleDay={null} lastSaleTs={null} onWrite={onWrite} onBuyer={jest.fn()} onFert={jest.fn()} onBack={jest.fn()} />);
@@ -147,7 +171,7 @@ describe('PrepView — เตรียมการขาย (E15-S01)', () => {
   });
 });
 
-describe('PrepBuyerView — นัดคนรับซื้อ, a full page (PREP-3)', () => {
+describe('PrepBuyerView — นัดคนรับซื้อ, a full page (PREP-3, PREP-11)', () => {
   it('lists the buyers, the latest first; a tap picks one', async () => {
     const onPick = jest.fn();
     const onAdd = jest.fn();
@@ -157,5 +181,12 @@ describe('PrepBuyerView — นัดคนรับซื้อ, a full page (P
     expect(onPick).toHaveBeenCalledWith({ id: 'b1', name: 'คนรับซื้อยาง ก' });
     await press('prep-buyer-add');
     expect(onAdd).toHaveBeenCalled();
+  });
+
+  it('a row is a tick to choose from, not a › to go on; the chosen buyer is ticked (owner 2026-11-17, PREP-11)', () => {
+    wrap(<PrepBuyerView buyers={BUYERS} latestId="b2" selectedId="b1" onPick={jest.fn()} onAdd={jest.fn()} onBack={jest.fn()} />);
+    expect(screen.getByTestId('prep-buyer-b1').props.accessibilityRole).toBe('checkbox');
+    expect(screen.getByTestId('prep-buyer-b1').props.accessibilityState.checked).toBe(true);
+    expect(screen.getByTestId('prep-buyer-b2').props.accessibilityState.checked).toBe(false);
   });
 });
