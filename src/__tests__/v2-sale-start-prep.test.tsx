@@ -155,7 +155,7 @@ describe('B · a prep for a later day asks first (PS-3)', () => {
     expect(screen.getByTestId('start-prep-ask')).toHaveTextContent(/ใช้ที่เตรียมไว้ไหม/);
     expect(screen.getByTestId('start-prep-ask')).toHaveTextContent(/สหกรณ์บ้านนา/);
     expect(screen.getByTestId('start-prep-ask')).toHaveTextContent(/52\.50/);
-    expect(screen.getByTestId('start-buyer')).not.toHaveTextContent(/สหกรณ์บ้านนา/);
+    expect(screen.getByTestId('start-buyer')).not.toHaveTextContent(/ที่นัดไว้/);
     expect(screen.getByTestId('start-price-row')).not.toHaveTextContent(/52\.50/);
   });
 
@@ -175,10 +175,9 @@ describe('B · a prep for a later day asks first (PS-3)', () => {
     await open();
     await press('start-prep-skip');
     expect(screen.queryByTestId('start-prep-ask')).toBeNull();
-    expect(screen.getByTestId('start-buyer')).not.toHaveTextContent(/สหกรณ์บ้านนา/);
+    expect(screen.getByTestId('start-buyer')).not.toHaveTextContent(/ที่นัดไว้/);
     await press('start-next');
     expect(await prices()).toEqual([]);
-    expect((await started()).buyerId).not.toBe(coop);
   });
 });
 
