@@ -813,6 +813,38 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     expect(router.push).toHaveBeenCalledWith(`/v2/sale/${saleId}/backfill?tapper=${farm.red}`);
   });
 
+  it('E04-S23 JB-2: the change-point page (switch) shows the late link and the ⋯ บันทึกย้อนหลัง for the chosen tapper, again and again', async () => {
+    await started();
+    await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red });
+    expect(screen.getByTestId('pick-backfill')).toHaveTextContent(/บันทึกย้อนหลัง/);
+    await press('pick-backfill');
+    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${saleId}/backfill?tapper=${farm.red}`);
+    router.push.mockClear();
+    await press('pick-menu');
+    await press('menu-backfill');
+    expect(router.push).toHaveBeenCalledWith(`/v2/sale/${saleId}/backfill?tapper=${farm.red}`);
+  });
+
+  it('E04-S23 JB-3a: after a catch-up every point entered is ready, so the counter opens without the scale check', async () => {
+    await started();
+    await inSale(<BackfillScreen />, { tapper: farm.red });
+    await press(`cu-order-${farm.a[1]}`);
+    await press(`cu-order-${farm.a[0]}`);
+    await press('cu-next');
+    await typeInt('cu-end', '2');
+    await press('cu-full');
+    await press('cu-next');
+    await typeInt('cu-end', '4');
+    await press('cu-full');
+    await press('cu-next');
+    await press('cu-save');
+    const ev = await store().load(saleId);
+    const ready = ev.filter((e) => e.kind === 'sys' && e.payload.t === 'ready').map((e) => (e as { payload: { pileId: string } }).payload.pileId);
+    expect(ready.sort()).toEqual([farm.a[0], farm.a[1]].sort());
+    await counterAt(farm.a[0]);
+    expect(screen.queryByTestId('not-ready')).toBeNull();
+  });
+
   it('opened for a tapper: nothing is in the order yet; the points are tapped in paper order', async () => {
     await started();
     await inSale(<BackfillScreen />, { tapper: farm.red });
@@ -1218,6 +1250,34 @@ describe('v2 basket history (page 8d, E04-S15)', () => {
     expect(screen.getByTestId('hist-filter-empty')).toBeTruthy();
   });
 
+  it('E04-S23 JB-1: a joined basket reads "เต็ม (เข่งเชื่อม)", its number sits in a red circle and its tag is the warn tone; a plain basket has none', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    await press('tool-short');
+    await press('short-save');
+    c.unmount();
+    await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red });
+    await press(`pick-point-${farm.a[1]}`);
+    await chooseFill('full');
+    await readyAt(farm.a[1]);
+    await counterAt(farm.a[1], { fill: 'full' });
+    await hold();
+    await inSale(<HistoryScreen />, { point: farm.a[1] });
+    const rows = rowsOf();
+    const joined = rows[0].replace('hist-row-', '');
+    expect(screen.getByTestId(rows[0])).toHaveTextContent(/เต็ม \(เข่งเชื่อม\)/);
+    expect(screen.getByTestId(`hist-joined-no-${joined}`)).toBeTruthy();
+    expect(screen.getByTestId(`hist-joined-tag-${joined}`)).toBeTruthy();
+    // A plain full basket (the one counted after the joined one) is untouched.
+    const plain = rows.slice(1).map((r) => r.replace('hist-row-', ''));
+    for (const id of plain) {
+      expect(screen.queryByTestId(`hist-joined-no-${id}`)).toBeNull();
+      expect(screen.getByTestId(`hist-row-${id}`)).not.toHaveTextContent(/เข่งเชื่อม/);
+    }
+  });
+
   it('baskets at a point with no tapper are reachable under everyone', async () => {
     await started();
     await readyAt(farm.a[0]);
@@ -1543,7 +1603,7 @@ describe('v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)', (
     expect(router.push).toHaveBeenLastCalledWith('/v2');
   });
 
-  it('the point picker menu has the same go-to rows, without the finish and record groups', async () => {
+  it('the point picker menu has the same go-to rows plus บันทึกย้อนหลัง for the chosen tapper (E04-S23 JB-2b), without the finish group', async () => {
     await started();
     await readyAt(farm.a[0]);
     await inSale(<PointScreen />, {
@@ -1559,6 +1619,7 @@ describe('v2 counter cards, grouped menu, home and debts shortcuts (E04-S18)', (
     ).toEqual([
       'menu-price',
       'menu-info',
+      'menu-backfill',
       'menu-home',
       'menu-debts',
       'menu-sales',
