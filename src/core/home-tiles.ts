@@ -9,20 +9,29 @@
 
 import { prepLeft, type SalePrep } from './finance/sale-prep';
 import { statusCountsAsClosed } from './sale-status';
+import type { FinanceEvent } from './finance/types';
 import type { SaleState } from './types';
 
 /** Where one sale is: counting baskets, every pile counted and at the clearing step, or closed. */
 export type SalePhase = 'counting' | 'clearing' | 'closed';
 
 /**
- * A sale's phase, from its state alone; null for a deleted or cancelled one. The clearing step has no event of
- * its own: it is "every pile counted, the sale not completed yet", so reopening a pile takes it back to counting.
+ * A sale's phase; null for a deleted or cancelled one. The clearing step has no event of its own (it is a page),
+ * so it is read from what that step writes: once the sale's debt deductions or payment ticks are recorded
+ * (`clearingStarted`) and no pile is being counted, the sale is at clearing; counting again takes it back (HT-4).
  */
-export function salePhase(state: SaleState): SalePhase | null {
+export function salePhase(state: SaleState, clearing: boolean): SalePhase | null {
   if (state.deleted || state.saleStatus === 'cancelled') return null;
   if (statusCountsAsClosed(state)) return 'closed';
-  const counted = state.piles.length > 0 && state.piles.every((p) => p.status === 'closed');
-  return counted ? 'clearing' : 'counting';
+  return clearing && !state.piles.some((p) => p.status === 'counting') ? 'clearing' : 'counting';
+}
+
+/** Whether the clearing step has written anything for this sale: a debt payment line or a payment tick. */
+export function clearingStarted(fin: readonly FinanceEvent[], saleId: string): boolean {
+  return fin.some((e) => {
+    const p = e.payload;
+    return p.t === 'payment_mark_set' ? p.saleId === saleId : p.t === 'debt_payment_recorded' ? p.fields.saleId === saleId : false;
+  });
 }
 
 /** One sale as the tiles see it. `unpaid` = piles of money still to pay, only meaningful when closed. */

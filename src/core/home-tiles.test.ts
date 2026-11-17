@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { homeTiles, salePhase, type TileSale } from './home-tiles';
+import { clearingStarted, homeTiles, salePhase, type TileSale } from './home-tiles';
 import type { SalePrep } from './finance/sale-prep';
+import type { FinanceEvent, FinancePayload } from './finance/types';
 import type { SaleState } from './types';
 
 /**
@@ -16,26 +17,43 @@ const pile = (status: 'not-started' | 'counting' | 'closed') => ({ id: `p-${stat
 
 describe('salePhase — where one sale is', () => {
   it('deleted and cancelled sales are no phase', () => {
-    expect(salePhase(sale({ deleted: true }))).toBeNull();
-    expect(salePhase(sale({ saleStatus: 'cancelled' }))).toBeNull();
+    expect(salePhase(sale({ deleted: true }), false)).toBeNull();
+    expect(salePhase(sale({ saleStatus: 'cancelled' }), false)).toBeNull();
   });
 
-  it('not completed and a pile still being counted, or no pile yet: counting', () => {
-    expect(salePhase(sale({ piles: [pile('closed'), pile('counting')] }))).toBe('counting');
-    expect(salePhase(sale({ piles: [] }))).toBe('counting');
+  it('not completed and nothing recorded for clearing money yet: counting (whether or not a pile is open)', () => {
+    expect(salePhase(sale({ piles: [pile('closed'), pile('counting')] }), false)).toBe('counting');
+    expect(salePhase(sale({ piles: [] }), false)).toBe('counting');
+    expect(salePhase(sale({ piles: [pile('closed')] }), false)).toBe('counting');
   });
 
-  it('every pile counted and the sale not completed: at the clearing step', () => {
-    expect(salePhase(sale({ piles: [pile('closed'), pile('closed')] }))).toBe('clearing');
+  it('not completed and the clearing step has written its records: clearing', () => {
+    expect(salePhase(sale({ piles: [pile('closed')] }), true)).toBe('clearing');
   });
 
-  it('reopening a pile takes the sale back to counting (HT-4)', () => {
-    expect(salePhase(sale({ piles: [pile('closed'), pile('counting')] }))).toBe('counting');
+  it('a pile counted again takes the sale back to counting even after records exist (HT-4)', () => {
+    expect(salePhase(sale({ piles: [pile('closed'), pile('counting')] }), true)).toBe('counting');
   });
 
   it('completed, or the older sale_closed: closed', () => {
-    expect(salePhase(sale({ saleStatus: 'completed', piles: [pile('closed')] }))).toBe('closed');
-    expect(salePhase(sale({ status: 'closed', piles: [pile('closed')] }))).toBe('closed');
+    expect(salePhase(sale({ saleStatus: 'completed', piles: [pile('closed')] }), false)).toBe('closed');
+    expect(salePhase(sale({ status: 'closed', piles: [pile('closed')] }), true)).toBe('closed');
+  });
+});
+
+describe('clearingStarted — the records the clearing step writes for one sale', () => {
+  let k = 0;
+  const f = (payload: FinancePayload): FinanceEvent => {
+    k += 1;
+    return { id: `f${k}`, groupId: 'g', deviceSeq: k, ts: k, actor: { userId: 'u', deviceId: 'd' }, source: 'app', targetId: `t${k}`, baseEventId: null, payload };
+  };
+  it('a payment tick or a recorded debt payment of that sale; nothing for another sale', () => {
+    expect(clearingStarted([], 'a')).toBe(false);
+    expect(clearingStarted([f({ t: 'payment_mark_set', saleId: 'a', payee: 'owner', done: true, amountSatang: 100 })], 'a')).toBe(true);
+    expect(clearingStarted([f({ t: 'payment_mark_set', saleId: 'b', payee: 'owner', done: true, amountSatang: 100 })], 'a')).toBe(false);
+    const debt = f({ t: 'debt_payment_recorded', fields: { saleId: 'a', workerId: 'w', amountSatang: 50 } as never });
+    expect(clearingStarted([debt], 'a')).toBe(true);
+    expect(clearingStarted([debt], 'b')).toBe(false);
   });
 });
 
