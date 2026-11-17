@@ -100,34 +100,33 @@ async function seedUnsplitFertilizing(id: string, deleted = false) {
 beforeEach(() => mockRouter.push.mockClear());
 
 // First in the file: the finance store is shared, and later blocks leave fertilizings not split.
-describe('V2Home — เตรียมขาย tile (E15-S01 PREP-1, PREP-12)', () => {
+describe('V2Home — เตรียมการขาย row (E15-S01 PREP-1)', () => {
   const prep = async (id: string, patch: Record<string, unknown>) =>
     mockFinance.append({ id, groupId: 'group-1', deviceSeq: 1, ts: Date.now(), actor: { userId: 'u', deviceId: 'dev-other' }, source: 'app', targetId: 'sale-prep', baseEventId: null, payload: { t: 'sale_prep_set', patch } });
 
-  it('nothing prepared: the tile alone opens the prep page, no big prep card, the to-know list says there is nothing to handle', async () => {
+  it('nothing prepared: "เตรียมการขายครั้งถัดไป" opens the prep page; the to-know list still says there is nothing to handle', async () => {
     wrap(<V2Home />);
     await flush();
-    expect(screen.queryByTestId('home-prep')).toBeNull();
-    expect(within(screen.getByTestId('home-prepare')).queryByText(/เตรียมแล้ว/)).toBeNull();
+    expect(screen.getByTestId('home-prep')).toHaveTextContent(/เตรียมการขายครั้งถัดไป/);
     expect(within(screen.getByTestId('home-to-know')).getByText('ยังไม่มีเรื่องที่ต้องรู้หรือจัดการ')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('home-prepare'));
+    fireEvent.press(screen.getByTestId('home-prep'));
     expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/prepare');
   });
 
-  it('preparing: the tile says how many of the 4 are done, not the day or buyer', async () => {
+  it('preparing: the day, the buyer and how many rows are left', async () => {
     await prep('pp-1', { buyerId: 'b1', buyerName: 'คนรับซื้อยาง ก', date: '2026-11-21' });
     wrap(<V2Home />);
     await flush();
-    expect(screen.queryByTestId('home-prep')).toBeNull();
-    expect(screen.getByTestId('home-prepare')).toHaveTextContent(/เตรียมแล้ว 3\/4/);
-    expect(screen.getByTestId('home-prepare')).not.toHaveTextContent(/คนรับซื้อยาง ก/);
+    expect(screen.getByTestId('home-prep')).toHaveTextContent(/เตรียมขาย · ส\. 21 พ\.ย\./);
+    expect(screen.getByTestId('home-prep')).toHaveTextContent(/คนรับซื้อยาง ก · เหลือ 1 ข้อ/);
   });
 
-  it('all four done: ✓ พร้อมขาย 4/4', async () => {
+  it('all four done: ✓ พร้อมขาย with the buyer and the price', async () => {
     await prep('pp-2', { buyerId: 'b1', buyerName: 'คนรับซื้อยาง ก', date: '2026-11-21', priceSatangPerKg: 5250 });
     wrap(<V2Home />);
     await flush();
-    expect(screen.getByTestId('home-prepare')).toHaveTextContent(/✓ พร้อมขาย 4\/4/);
+    expect(screen.getByTestId('home-prep')).toHaveTextContent(/✓ พร้อมขาย · ส\. 21 พ\.ย\./);
+    expect(screen.getByTestId('home-prep')).toHaveTextContent(/คนรับซื้อยาง ก · 52\.50 ฿\/\u2060กก\./);
   });
 });
 

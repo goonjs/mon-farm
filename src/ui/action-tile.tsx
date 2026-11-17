@@ -17,7 +17,6 @@ const MIN_HEIGHT = 104;
 
 export function ActionTile({
   label,
-  sub,
   icon,
   tone = 'action',
   main,
@@ -26,8 +25,6 @@ export function ActionTile({
   testID,
 }: {
   label: string;
-  /** A short second line under the label (e.g. progress "2/4"); absent = the tile is as before. */
-  sub?: string;
   icon: IconRender;
   tone?: TileTone;
   /** The screen's primary action (thick action-coloured edge). */
@@ -36,7 +33,7 @@ export function ActionTile({
   onPress?: () => void;
   testID?: string;
 }) {
-  const tile = <Tile label={label} sub={sub} icon={icon} tone={tone} main={main} testID={testID} onTilePress={onPress} />;
+  const tile = <Tile label={label} icon={icon} tone={tone} main={main} testID={testID} onTilePress={onPress} />;
   return href ? (
     <Link href={href} asChild>
       {tile}
@@ -48,7 +45,6 @@ export function ActionTile({
 
 function Tile({
   label,
-  sub,
   icon,
   tone,
   main,
@@ -58,7 +54,6 @@ function Tile({
   ...rest
 }: {
   label: string;
-  sub?: string;
   icon: IconRender;
   tone: TileTone;
   main?: boolean;
@@ -74,7 +69,7 @@ function Tile({
       {...rest}
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel={sub ? `${label} ${sub}` : label}
+      accessibilityLabel={label}
       onPress={(e) => {
         onTilePress?.();
         onPress?.(e);
@@ -106,9 +101,6 @@ function Tile({
       >
         {label}
       </Text>
-      {sub ? (
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.inkSoft, textAlign: 'center' }}>{sub}</Text>
-      ) : null}
     </Pressable>
   );
 }
