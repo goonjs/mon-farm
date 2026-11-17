@@ -12,33 +12,38 @@
  */
 
 import { Link, useFocusEffect, type Href } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { farmSection, SALE_START, saleHref, sectionHref } from './routes';
 import { useMaster, useMounted } from './farm/pieces';
 import { HomeCover } from './home-cover';
-import { keepPerKg, livePrep, prepDayText, PREP_HREF, unsplitCount } from './prepare/prepare-screen';
 import { KnowRow, useSaleLineText } from './know-row';
 import { ORDER_NEW, orderHref } from './money/order-routes';
-import { loadHomeSales } from './sale/open-sale';
+import { loadHomeSaleLogs, type SaleLog } from './sale/open-sale';
 import { useRepayHome, type OwesRow } from './home-repay';
 import { groupOrders } from '../core/finance/fert-order';
-import { prepLeft } from '../core/finance/sale-prep';
-import type { FinanceEvent } from '../core/finance/types';
+import { salePrep } from '../core/finance/sale-prep';
+import { UNPAID_COUNTED_FROM, unpaidPiles } from '../core/finance/sale-unpaid';
 import { projectFertilizing, splitBadge } from '../core/finance/fertilizing';
 import { owedByPerson, shopPayableSatang } from '../core/finance/ledger';
 import { formatDate, formatSatang, todayIso } from '../core/finance/money';
 import type { HomeSales } from '../core/home';
-import { filterPeople, formatThaiDay } from '../core/master';
+import { clearingStarted, homeTiles, salePhase, type HomeTiles, type TileSale } from '../core/home-tiles';
+import { projectSale } from '../core/project';
+import { saleDay } from '../core/sale-list';
+import { filterPeople, formatThaiDay, todayIso as farmToday } from '../core/master';
 import { useFinance } from '../finance/use-finance';
 import { useI18n, useT } from '../i18n';
+import type { MessageId } from '../i18n';
 import { useSyncStatus } from '../sync/use-sync-status';
 import { useTheme, type Theme } from '../theme';
 import {
   ActionTile,
   BankIcon,
+  CalculatorIcon,
   cardStyle,
+  Check,
   Chip,
   ChevronRight,
   ClockIcon,
@@ -54,11 +59,14 @@ import {
   MenuItem,
   MenuSection,
   PersonIcon,
+  Scale,
   ScreenHeader,
   SpeakerIcon,
   UsersIcon,
   WeatherIcon,
   type IconRender,
+  type TileBadge,
+  type TileState,
   type TileTone,
 } from '../ui';
 
@@ -83,7 +91,8 @@ export function V2Home() {
   // E03-S09 CS-3: while a finger drags the cover sideways, the page must not take the touch.
   const [coverDrag, setCoverDrag] = useState(false);
 
-  const sales = useHomeSales();
+  const homeData = useHomeSales();
+  const sales = homeData?.sales ?? null;
   const { state: master } = useMaster();
   const fin = useFinance();
   const owed = useMemo(() => (fin.state ? owedByPerson(fin.state).filter((o) => o.remainingSatang > 0) : []), [fin.state]);
@@ -112,6 +121,27 @@ export function V2Home() {
     [fin.events, fin.state],
   );
 
+  // E15-S06: where the prep and the sale are, from the data each time (nothing is stored).
+  const tiles = useMemo<HomeTiles | null>(() => {
+    if (!fin.events || !homeData) return null;
+    const nowTs = now;
+    const gone = new Set(homeData.logs.filter((l) => projectSale(l.events, l.id).deleted).map((l) => l.id));
+    const counts = (id: string) => !gone.has(id);
+    const list: TileSale[] = [];
+    for (const { id, events } of homeData.logs) {
+      const state = projectSale(events, id);
+      const phase = salePhase(state, clearingStarted(fin.events, id));
+      if (!phase) continue;
+      const day = saleDay(state.startedTs, nowTs, state.day);
+      const unpaid = phase === 'closed' && day >= UNPAID_COUNTED_FROM ? unpaidPiles({ events, state, fin: fin.events, master: master ?? null, deviceId: fin.deviceId ?? '', counts, now: nowTs }) : 0;
+      list.push({ id, ts: state.startedTs ?? events[0]?.ts ?? 0, day, phase, unpaid });
+    }
+    return homeTiles({ prep: salePrep(fin.events, null), unsplit, today: farmToday(nowTs), sales: list });
+  }, [fin.events, fin.deviceId, homeData, master, unsplit, now]);
+  const prepTile = tiles ? prepTileProps(tiles.prep, msg) : {};
+  const startTile = tiles ? startTileProps(tiles.start, msg) : {};
+  const carriedLatest = tiles?.carried.find((c) => c.id === sales?.latest?.id) ?? null;
+
   const saleLine = useSaleLineText();
 
   const knowRows = [
@@ -132,12 +162,12 @@ export function V2Home() {
       <KnowRow
         key="latest"
         testID="home-latest-sale"
-        tone="accept"
+        tone={carriedLatest ? 'action' : 'accept'}
         icon={() => <FarmMateArt id="sale.sale" />}
-        label={msg('home.latestSale')}
+        label={msg(carriedLatest ? 'home.openSale' : 'home.latestSale')}
         value={saleLine(sales.latest)}
-        chip={<Chip tone="accept" label={msg('status.closed')} />}
-        why={msg('home.why.latest')}
+        chip={carriedLatest ? <Chip tone="reject" label={msg('prep.tileUnpaid', { n: carriedLatest.unpaid })} /> : <Chip tone="accept" label={msg('status.closed')} />}
+        why={msg(carriedLatest ? 'home.why.notClosed' : 'home.why.latest')}
         to={saleHref(sales.latest.id, { closed: true, point: sales.latest.point })}
       />
     ) : null,
@@ -233,6 +263,7 @@ export function V2Home() {
           <ActionTile
             testID="home-prepare"
             label={msg('v2.prepare')}
+            {...prepTile}
             tone="cream"
             icon={() => <FarmMateArt id="farmwork.today" />}
             href={href('prepare')}
@@ -241,9 +272,9 @@ export function V2Home() {
             testID="home-sale-start"
             label={msg('v2.saleStart')}
             tone="action"
-            main
+            {...startTile}
             icon={() => <FarmMateArt id="sale.sale" />}
-            href={SALE_START}
+            href={tiles?.start.state === 'S4' && tiles.startSaleId ? saleHref(tiles.startSaleId, { closed: true, point: null }) : SALE_START}
           />
           <ActionTile
             testID="home-record-expense"
@@ -253,8 +284,6 @@ export function V2Home() {
             href={'/v2/expense/new' as Href}
           />
         </View>
-
-        <PrepRow events={fin.events} sales={sales} />
 
         <Heading hint={msg('home.importantFirst')}>{msg('v2.toKnow')}</Heading>
         <View testID="home-to-know" style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
@@ -375,42 +404,14 @@ function HomeMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
-/**
- * E15-S01 PREP-1: the sale prep in one row above the to-know list. Nothing prepared invites the next sale;
- * preparing shows the day, the buyer and the rows left; all done says ✓ พร้อมขาย. No reminder sentences.
- */
-function PrepRow({ events, sales }: { events: readonly FinanceEvent[] | null; sales: HomeSales | null }) {
-  const t = useTheme();
-  const { t: msg, era } = useI18n();
-  const info = useMemo(() => {
-    if (!events) return null;
-    const lastTs = Math.max(sales?.open?.ts ?? 0, sales?.latest?.ts ?? 0) || null;
-    const prep = livePrep(events, lastTs);
-    return { prep, left: prepLeft(prep, unsplitCount(events)) };
-  }, [events, sales]);
-  if (!info) return null;
-  const { prep, left } = info;
-  const day = prep?.date ? prepDayText(prep.date, era, true) : msg('prep.dateNone');
-  const [value, why] = !prep
-    ? [msg('prep.homeNone'), msg('prep.homeNoneBody')]
-    : left === 0
-      ? [msg('prep.homeReady', { date: day }), keepPerKg(msg('prep.homeReadyBody', { buyer: prep.buyerName, price: formatSatang(prep.priceSatangPerKg ?? 0) }))]
-      : [msg('prep.homeSome', { date: day }), prep.buyerId ? msg('prep.homeLeft', { buyer: prep.buyerName, n: left }) : msg('prep.homeLeftNoBuyer', { n: left })];
-  return (
-    <View style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
-      <KnowRow testID="home-prep" tone={prep && left === 0 ? 'accept' : 'cream'} icon={() => <FarmMateArt id="farmwork.today" />} value={value} why={why} to={PREP_HREF} />
-    </View>
-  );
-}
-
-/** Sales for the home rows: every sale's log, read again whenever home is shown. */
-function useHomeSales(): HomeSales | null {
-  const [sales, setSales] = useState<HomeSales | null>(null);
+/** Sales for the home rows and tiles: every sale's log, read again whenever home is shown. */
+function useHomeSales(): { sales: HomeSales; logs: readonly SaleLog[] } | null {
+  const [data, setData] = useState<{ sales: HomeSales; logs: readonly SaleLog[] } | null>(null);
   const reload = useCallback(() => {
     let live = true;
     (async () => {
-      const loaded = await loadHomeSales();
-      if (live) setSales(loaded);
+      const loaded = await loadHomeSaleLogs();
+      if (live) setData(loaded);
     })().catch((err) => console.error('Sales could not be read.', err));
     return () => {
       live = false;
@@ -418,7 +419,36 @@ function useHomeSales(): HomeSales | null {
   }, []);
   useEffect(reload, [reload]);
   useFocusEffect(reload);
-  return sales;
+  return data;
+}
+
+type TileProps = { tint?: TileState; badge?: TileBadge };
+type Say = (id: MessageId, vars?: Record<string, string | number>) => string;
+
+/** The เตรียมขาย tile's colour and badge for its state (E15-S06): yellow with the rows left, green with a tick. */
+function prepTileProps(p: HomeTiles['prep'], msg: Say): Pick<TileProps, 'tint' | 'badge'> {
+  if (p.state === 'P1') return { tint: 'warn', badge: { text: String(p.left), tone: 'warn', label: msg('prep.tileLeft', { n: p.left }) } };
+  if (p.state === 'P2') return { tint: 'accept', badge: { icon: (c) => <Check color={c} size={14} />, tone: 'accept', label: msg('prep.tileDone') } };
+  return {};
+}
+
+/** The เริ่มการขาย tile: plain until a prep is complete, then blue with the clock, scale, calculator; green when closed (E15-S06). */
+function startTileProps(s: HomeTiles['start'], msg: Say): Pick<TileProps, 'tint' | 'badge'> {
+  const badge = (tone: 'action' | 'accept', label: string, icon: (c: string) => ReactNode) => ({ badge: { icon, tone, label } });
+  switch (s.state) {
+    case 'S1':
+      return { tint: 'action', ...badge('action', msg('prep.tileSoon'), (c) => <ClockIcon color={c} size={14} />) };
+    case 'S2':
+      return { tint: 'action', ...badge('action', msg('prep.tileCounting'), (c) => <Scale color={c} size={14} />) };
+    case 'S3':
+      return { tint: 'action', ...badge('action', msg('prep.tileClearing'), (c) => <CalculatorIcon color={c} size={14} />) };
+    case 'S4':
+      return { tint: 'accept', badge: { text: String(s.unpaid), tone: 'reject', label: msg('prep.tileUnpaid', { n: s.unpaid }) } };
+    case 'S5':
+      return { tint: 'accept', ...badge('accept', msg('prep.tileCleared'), (c) => <Check color={c} size={14} />) };
+    default:
+      return {};
+  }
 }
 
 const body = (t: Theme) => ({ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, color: t.color.ink });

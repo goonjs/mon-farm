@@ -32,6 +32,13 @@ export const th = {
   'prep.homeLeftNoBuyer': 'เหลือ {n} ข้อ',
   'prep.homeReady': '✓ พร้อมขาย · {date}',
   'prep.homeReadyBody': '{buyer} · {price} ฿/กก.',
+  'prep.tileLeft': 'เหลือ {n} ข้อ',
+  'prep.tileDone': 'ครบแล้ว',
+  'prep.tileSoon': 'รอเริ่มขาย',
+  'prep.tileCounting': 'กำลังนับ',
+  'prep.tileClearing': 'รอเคลียร์เงิน',
+  'prep.tileUnpaid': 'เงินค้าง {n} กอง',
+  'prep.tileCleared': 'เคลียร์เงินครบแล้ว',
   'prep.done': 'เสร็จ',
 };
 
@@ -65,5 +72,12 @@ export const en: Partial<Record<keyof typeof th, string>> = {
   'prep.homeLeftNoBuyer': '{n} left',
   'prep.homeReady': '✓ Ready · {date}',
   'prep.homeReadyBody': '{buyer} · {price} ฿/kg',
+  'prep.tileLeft': '{n} left',
+  'prep.tileDone': 'Done',
+  'prep.tileSoon': 'Ready to start',
+  'prep.tileCounting': 'Counting',
+  'prep.tileClearing': 'Clearing the money',
+  'prep.tileUnpaid': '{n} money piles left',
+  'prep.tileCleared': 'All money cleared',
   'prep.done': 'Done',
 };
