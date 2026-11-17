@@ -18,7 +18,7 @@ import { AppState, Pressable, ScrollView, Text, View } from 'react-native';
 import { farmSection, SALE_START, saleHref, sectionHref } from './routes';
 import { useMaster, useMounted } from './farm/pieces';
 import { HomeCover } from './home-cover';
-import { keepPerKg, livePrep, prepDayText, PREP_HREF, unsplitCount } from './prepare/prepare-screen';
+import { livePrep, unsplitCount } from './prepare/prepare-screen';
 import { KnowRow, useSaleLineText } from './know-row';
 import { ORDER_NEW, orderHref } from './money/order-routes';
 import { loadHomeSales } from './sale/open-sale';
@@ -86,6 +86,7 @@ export function V2Home() {
   const sales = useHomeSales();
   const { state: master } = useMaster();
   const fin = useFinance();
+  const prepTile = usePrepTile(fin.events, sales);
   const owed = useMemo(() => (fin.state ? owedByPerson(fin.state).filter((o) => o.remainingSatang > 0) : []), [fin.state]);
   const owedTotal = owed.reduce((s, o) => s + o.remainingSatang, 0);
   // E16-S05 HM-3: committed buying not paid yet; money owed back to people has its own row.
@@ -233,7 +234,8 @@ export function V2Home() {
           <ActionTile
             testID="home-prepare"
             label={msg('v2.prepare')}
-            tone="cream"
+            sub={prepTile.sub}
+            tone={prepTile.tone}
             icon={() => <FarmMateArt id="farmwork.today" />}
             href={href('prepare')}
           />
@@ -253,8 +255,6 @@ export function V2Home() {
             href={'/v2/expense/new' as Href}
           />
         </View>
-
-        <PrepRow events={fin.events} sales={sales} />
 
         <Heading hint={msg('home.importantFirst')}>{msg('v2.toKnow')}</Heading>
         <View testID="home-to-know" style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
@@ -376,31 +376,19 @@ function HomeMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
 }
 
 /**
- * E15-S01 PREP-1: the sale prep in one row above the to-know list. Nothing prepared invites the next sale;
- * preparing shows the day, the buyer and the rows left; all done says ✓ พร้อมขาย. No reminder sentences.
+ * E15-S01 PREP-1/PREP-12: the sale prep lives on the "เตรียมขาย" tile alone (owner 2026-11-17). Nothing prepared
+ * leaves the tile as it was; preparing tints it and says "เตรียมแล้ว N/4"; all four done tints it green, "✓ พร้อมขาย 4/4".
  */
-function PrepRow({ events, sales }: { events: readonly FinanceEvent[] | null; sales: HomeSales | null }) {
-  const t = useTheme();
-  const { t: msg, era } = useI18n();
-  const info = useMemo(() => {
-    if (!events) return null;
+function usePrepTile(events: readonly FinanceEvent[] | null, sales: HomeSales | null): { sub?: string; tone: TileTone } {
+  const { t: msg } = useI18n();
+  return useMemo(() => {
+    if (!events) return { tone: 'cream' };
     const lastTs = Math.max(sales?.open?.ts ?? 0, sales?.latest?.ts ?? 0) || null;
     const prep = livePrep(events, lastTs);
-    return { prep, left: prepLeft(prep, unsplitCount(events)) };
-  }, [events, sales]);
-  if (!info) return null;
-  const { prep, left } = info;
-  const day = prep?.date ? prepDayText(prep.date, era, true) : msg('prep.dateNone');
-  const [value, why] = !prep
-    ? [msg('prep.homeNone'), msg('prep.homeNoneBody')]
-    : left === 0
-      ? [msg('prep.homeReady', { date: day }), keepPerKg(msg('prep.homeReadyBody', { buyer: prep.buyerName, price: formatSatang(prep.priceSatangPerKg ?? 0) }))]
-      : [msg('prep.homeSome', { date: day }), prep.buyerId ? msg('prep.homeLeft', { buyer: prep.buyerName, n: left }) : msg('prep.homeLeftNoBuyer', { n: left })];
-  return (
-    <View style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
-      <KnowRow testID="home-prep" tone={prep && left === 0 ? 'accept' : 'cream'} icon={() => <FarmMateArt id="farmwork.today" />} value={value} why={why} to={PREP_HREF} />
-    </View>
-  );
+    if (!prep) return { tone: 'cream' };
+    const left = prepLeft(prep, unsplitCount(events));
+    return left === 0 ? { sub: msg('prep.tileReady'), tone: 'accept' } : { sub: msg('prep.tileSome', { n: 4 - left }), tone: 'action' };
+  }, [events, sales, msg]);
 }
 
 /** Sales for the home rows: every sale's log, read again whenever home is shown. */

@@ -47,7 +47,7 @@ describe('ActionTile — the home action cards (farm mockup screen 1/9, review S
   });
 
   it('an optional sub line sits under the label; without it the tile is as before (E15-S01 PREP-12)', () => {
-    wrap(<ActionTile testID="act-sub" label="เตรียมขาย" sub="เตรียมแล้ว 2/4" icon={glyph} tone="warn" />);
+    wrap(<ActionTile testID="act-sub" label="เตรียมขาย" sub="เตรียมแล้ว 2/4" icon={glyph} tone="action" />);
     expect(screen.getByText('เตรียมแล้ว 2/4')).toBeTruthy();
     expect(screen.getByTestId('act-sub').props.accessibilityLabel).toBe('เตรียมขาย เตรียมแล้ว 2/4');
   });
