@@ -365,3 +365,44 @@ for (const width of [320, 360, 390]) {
     });
   }
 }
+
+// E06-S10 DS-7: the deduct sheet (mockup debt-installments A1) — no plan, 3 งวด picked, หักเต็ม, ยังไม่หัก: nothing cut,
+// every target ≥ 48 at 360/390 × S/M/L; at M the ✓ ตกลง is on the first screen (390×844 and 360×844). L may scroll.
+for (const width of [360, 390]) {
+  for (const size of ['s', 'm', 'l'] as const) {
+    test(`E06-S10 deduct sheet at ${width} px text ${size.toUpperCase()}`, async ({ page }) => {
+      const id = on(page);
+      await page.setViewportSize({ width, height: 844 });
+      await seed(page, size);
+      const open = async () => {
+        await page.goto('/v2/sale/sale-ts/settlement');
+        await expect(id('co-summary')).toBeVisible();
+        for (const [o, k] of [['co-debt-open', 'co-debt-ok'], ['co-owed-open', 'co-owed-ok']]) {
+          await id(o).click();
+          await id(k).click();
+        }
+        await id('co-deduct-nat').click();
+        await expect(id('co-deduct-sheet')).toBeVisible();
+        await page.waitForTimeout(300);
+      };
+      const check = async (name: string) => {
+        expect(await textFit(page), name).toEqual([]);
+        expect(await smallTargets(page), name).toEqual([]);
+        if (size === 'm') {
+          const bottom = await page.evaluate(() => (document.querySelector('[data-testid="co-deduct-ok"]') as HTMLElement).getBoundingClientRect().bottom);
+          expect(bottom, `${name}: ตกลง on the first screen`).toBeLessThanOrEqual(844);
+        }
+      };
+      await open();
+      await check('open');
+      await id('co-inst-pick-3').click();
+      await check('3 งวด');
+      await open();
+      await id('co-quick-full').click();
+      await check('หักเต็ม');
+      await open();
+      await id('co-quick-none').click();
+      await check('ยังไม่หัก');
+    });
+  }
+}

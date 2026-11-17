@@ -68,6 +68,7 @@ export function NumberPad({
   doneHint,
   doneDescribedBy,
   testID = 'numpad',
+  compact,
 }: {
   variant: PadVariant;
   onKey: (k: EntryKey) => void;
@@ -78,6 +79,8 @@ export function NumberPad({
   /** The nativeID of the text that says why, for the web (`aria-describedby`). */
   doneDescribedBy?: string;
   testID?: string;
+  /** Keys at the 48 floor instead of 56, for a sheet that must fit one screen (E06-S10). Default off. */
+  compact?: boolean;
 }) {
   const t = useTheme();
   const msg = useT();
@@ -100,7 +103,7 @@ export function NumberPad({
   }, [variant, onKey, onDone, doneDisabled]);
 
   return (
-    <View testID={testID} style={{ gap: t.space.sm }}>
+    <View testID={testID} style={{ gap: compact ? t.space.xs : t.space.sm }}>
       {rows.map((row, r) => (
         <View key={r} style={{ flexDirection: 'row', gap: t.space.sm }}>
           {row.map((c) => {
@@ -130,7 +133,7 @@ export function NumberPad({
                 onLongPress={c.id === 'back' ? () => onKey('clear') : undefined}
                 style={{
                   flex: c.span ?? 1,
-                  minHeight: t.target.comfortable,
+                  minHeight: compact ? t.target.min : t.target.comfortable,
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderRadius: t.radius.lg,

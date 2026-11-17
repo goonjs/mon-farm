@@ -30,7 +30,7 @@ import { AppText, BottomSheet, Check, CHIP_MIN_WIDTH, CTA, NumberPad } from '../
 import type { Closeout, CloseoutDraft } from './use-closeout';
 import { addId, baht, MARK, netSet, shortBaht, WarnMark, withWorker } from './summary-parts';
 import { usePieceName } from './summary-debt-sheet';
-import { BackToPlan, Choice, CountChoice, InstallmentBoxes, InstallmentPane, type InstView } from './summary-installments';
+import { BackToPlan, InstallmentBoxes, InstallmentPane, type InstView } from './summary-installments';
 import { installmentAmount } from '../../../core/finance/installments';
 
 const CFG: EntryConfig = { kind: 'money', maxDigits: 8 };
@@ -216,9 +216,23 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={{ minHeight: t.target.min, minWidth: CHIP_MIN_WIDTH, alignItems: 'center', justifyContent: 'center', paddingHorizontal: t.space.md, borderRadius: t.radius.pill, borderWidth: t.border.hair, borderColor: tone ?? t.color.ruleStrong, backgroundColor: selected ? t.color.actionSunk : t.color.surfaceRaised }}
+      style={{ minHeight: t.target.min, minWidth: CHIP_MIN_WIDTH, alignItems: 'center', justifyContent: 'center', paddingHorizontal: t.space.md, borderRadius: t.radius.md, borderWidth: t.border.hair, borderColor: tone ?? t.color.ruleStrong, backgroundColor: selected ? t.color.actionSunk : t.color.surfaceRaised }}
     >
       <AppText style={{ fontWeight: t.font.weight.bold, color: tone ?? t.color.ink }}>{label}</AppText>
+    </Pressable>
+  );
+  /** E06-S10: an equal-width box with the word over a small line (mockup `.opt`); the chosen one is dark. Not a pill. */
+  const box2 = (id: string, top: string, sub: string, onPress: () => void, selected: boolean, role: 'button' | 'radio' = 'button') => (
+    <Pressable
+      key={id}
+      testID={id}
+      accessibilityRole={role}
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={{ flexGrow: 1, flexShrink: 1, flexBasis: 88, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center', paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs, borderRadius: t.radius.md, borderWidth: t.border.hair, borderColor: selected ? t.color.action : t.color.ruleStrong, backgroundColor: selected ? t.color.action : t.color.surfaceRaised }}
+    >
+      <AppText style={{ fontWeight: t.font.weight.bold, color: selected ? t.color.inkInverse : t.color.ink, textAlign: 'center' }}>{top}</AppText>
+      <AppText variant="bodySm" style={{ color: selected ? t.color.inkInverse : t.color.inkSoft, textAlign: 'center' }}>{sub}</AppText>
     </Pressable>
   );
   const fit = (v: ReturnType<typeof viewEntry>, two: boolean) => {
@@ -243,12 +257,12 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
       borderColor: bad ? t.color.reject : on ? t.color.action : t.color.ruleStrong,
       borderRadius: t.radius.lg,
       paddingHorizontal: two ? t.space.md : t.space.lg,
-      paddingVertical: two ? t.space.xs : t.space.sm,
+      paddingVertical: t.space.xs,
       backgroundColor: on && two ? t.color.actionSunk : t.color.surfaceRaised,
     };
     if (!two) {
       return (
-        <View testID={testID} style={{ ...frame, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'flex-end', gap: t.space.sm }}>
+        <View testID={testID} style={{ ...frame, flexBasis: '100%', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'flex-end', gap: t.space.sm }}>
           <AppText style={{ color: t.color.inkSoft }}>{msg('co.deduct.unit')}</AppText>
           {figure}
           {unit}
@@ -288,7 +302,7 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
         <InstallmentPane w={w} view={view} onView={toView} onNewDebt={newDebt} onSplit={split} onTyped={() => toView('pad')} onNone={none} onOk={ok} blocked={blocked} />
       ) : (
       // one column a step tighter than the sheet's own gap: the pad and ✓ stay on screen with netting too (A23)
-      <View style={{ gap: t.space.sm, marginBottom: -t.space.sm }}>
+      <View style={{ gap: t.space.xs, marginBottom: -t.space.sm }}>
         {running && w.installment ? (
           <>
             <AppText testID="co-inst-sub" variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.inst.typedSub', { count: w.installment.count, number: w.installment.number })}</AppText>
@@ -296,7 +310,7 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
           </>
         ) : null}
         {running ? null : (
-        <View style={{ backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.lg, paddingHorizontal: t.space.md, paddingVertical: t.space.sm }}>
+        <View style={{ backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.lg, paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
           <SmallLine label={msg('co.deduct.debt', { name: w.name, n: pieces.length })} value={baht(balance)} />
           <SmallLine label={netted ? msg('co.deduct.capNet', { amount: shortBaht(w.nettingSatang) }) : msg('co.deduct.cap')} value={baht(w.capSatang)} />
           <View style={{ borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint, marginVertical: t.space.xxs }} />
@@ -316,33 +330,40 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
               ]
             : [
                 // E06-S09 (D-88): no "ครึ่งหนึ่ง"; "ไม่หัก" is "ยังไม่หัก · ขอติดไว้ก่อน"
-                chip('co-quick-full', msg('co.quick.full', { amount: shortBaht(q.full) }), () => jumpOut(q.full), w.totalSatang === q.full && w.installment?.mode !== 'new'),
-                chip('co-quick-none', msg('co.quick.none'), () => jumpOut(q.none), w.totalSatang === q.none),
+                // E06-S10 DS-1: two equal boxes, the word over the figure (mockup A1), never a pill
+                box2('co-quick-full', msg('co.quick.fullTop'), shortBaht(q.full), () => jumpOut(q.full), w.totalSatang === q.full && w.installment?.mode !== 'new'),
+                box2('co-quick-none', msg('co.quick.noneTop'), msg('co.quick.noneSub'), () => jumpOut(q.none), w.totalSatang === q.none),
               ]}
         </View>
         )}
+        {/* E06-S10 DS-2: what the plan says, a green strip with ✓ under the two boxes (mockup `.after`) */}
+        {!running && w.installment?.mode === 'new' ? (
+          <View testID="co-inst-strip" style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs, backgroundColor: t.color.acceptSunk, borderRadius: t.radius.md, paddingHorizontal: t.space.sm, paddingVertical: t.space.xxs }}>
+            <Check color={t.color.accept} size={16} />
+            <AppText testID="co-inst-first" variant="bodySm" style={{ flexShrink: 1, color: t.color.accept, fontWeight: t.font.weight.bold }}>
+              {msg('co.inst.first', { count: w.installment.count, amount: shortBaht(w.installment.nextSatang[0] ?? 0) })}
+            </AppText>
+            {w.installment.nextSatang.some((x) => x !== w.installment!.nextSatang[0]) ? <AppText variant="bodySm" style={{ flexShrink: 1, color: t.color.accept }}>{msg('co.inst.firstTail')}</AppText> : null}
+          </View>
+        ) : null}
         {/* IP-9 / IP-10: no plan yet → "ผ่อนกี่งวด", each count with its instalment; the plan is written at "ยืนยันยอด" only */}
         {!running && active === 'total' && w.installmentChoices.length && w.totalSatang + w.debtLeftSatang > 0 && w.capSatang > 0 ? (
+          // E06-S10 DS-3/DS-4: the heading has its own line (the note at its right); the counts are equal boxes on the line below
           <View style={{ gap: t.space.xs }}>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.sm }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: t.space.sm }}>
               <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('co.inst.pick')}</AppText>
-              {w.installmentChoices.map((n) => (
-                <Choice key={n} basis={64} testID={`co-inst-pick-${n}`} selected={w.installment?.mode === 'new' && w.installment.count === n} onPress={() => pickCount(n)}>
-                  <CountChoice n={n} perSatang={installmentAmount(w.totalSatang + w.debtLeftSatang, n)} />
-                </Choice>
-              ))}
+              <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.inst.pickNote')}</AppText>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+              {w.installmentChoices.map((n) =>
+                box2(`co-inst-pick-${n}`, msg('co.inst.n', { n }), installmentAmount(w.totalSatang + w.debtLeftSatang, n) ? msg('co.inst.per', { amount: shortBaht(installmentAmount(w.totalSatang + w.debtLeftSatang, n)!) }) : '', () => pickCount(n), w.installment?.mode === 'new' && w.installment.count === n, 'radio'),
+              )}
             </View>
           </View>
         ) : null}
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: t.space.sm }}>
           {box('total', 'co-amount', totalView, w.invalid)}
-          {/* IP-10: beside the box, not a row of its own (the pad and ✓ stay on one screen, IP-16) */}
-          {!running && w.installment?.mode === 'new' ? (
-            <AppText testID="co-inst-first" variant="bodySm" style={{ flexGrow: 1, flexShrink: 1, flexBasis: 120, color: t.color.action, fontWeight: t.font.weight.bold }}>
-              {msg('co.inst.first', { count: w.installment.count, amount: shortBaht(w.installment.nextSatang[0] ?? 0) })}
-            </AppText>
-          ) : null}
           {running ? (
             <AppText testID="co-inst-typed-after" variant="bodySm" style={{ flexGrow: 1, flexShrink: 1, flexBasis: 120, color: t.color.inkSoft }}>
               {msg('co.inst.after', { name: w.name, cash: baht(w.cashSatang), left: baht(w.debtLeftSatang) })}
@@ -405,7 +426,7 @@ export function DeductSheet({ co, w: given, pieces: givenPieces, canNet, onClose
 
         {co.mixed?.has(w.id) ? <MergeWarn testID="co-merge-warn" /> : null}
 
-        <NumberPad variant="money" testID="co-pad" onKey={press} onDone={ok} doneDisabled={blocked} />
+        <NumberPad variant="money" compact testID="co-pad" onKey={press} onDone={ok} doneDisabled={blocked} />
         <CTA testID="co-deduct-ok" disabled={blocked} icon={(c) => <Check color={c} />} onPress={ok}>
           {running ? msg('co.inst.okTyped', { amount: shortBaht(w.totalSatang) }) : msg('co.deduct.ok')}
         </CTA>
@@ -431,7 +452,7 @@ export function MergeWarn({ testID, text }: { testID: string; text?: string }) {
 /** A label / figure row of the sheet's one info box, a step smaller than `Line` (A23 fits one screen). */
 function SmallLine({ label, value, testID, tone }: { label: string; value: string; testID?: string; tone?: string }) {
   const t = useTheme();
-  const st = { fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, lineHeight: Math.round(t.font.size.bodyMd * 1.5) } as const;
+  const st = { fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, lineHeight: Math.round(t.font.size.bodyMd * 1.35) } as const;
   return (
     <View testID={testID} style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: t.space.sm, flexWrap: 'wrap' }}>
       <Text style={{ ...st, flexShrink: 1, color: t.color.inkSoft }}>{label}</Text>

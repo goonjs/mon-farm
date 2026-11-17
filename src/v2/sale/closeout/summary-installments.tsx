@@ -11,7 +11,7 @@
  * the per-instalment amount on a re-split choice (`installmentAmount`, the same core rule).
  */
 
-import type { ReactNode } from 'react';
+import { Children, cloneElement, createContext, isValidElement, useContext, type ReactElement, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import type { CloseoutWorker } from '../../../core/finance/closeout';
@@ -117,7 +117,30 @@ export function BackToPlan({ onPress }: { onPress: () => void }) {
   );
 }
 
-/** A choice card ("3 งวด / งวดละ 4,267" or "รวมในงวดที่เหลือ"): a whole tap target, selected = outlined and tinted. */
+/** Whether the Choice around the reader is the picked one, so its words can turn white on the dark fill. */
+const ChoicePicked = createContext(false);
+
+/** The words inside a Choice: ink on a plain card, white on the dark picked one (mockup `.opt.on`). */
+export function ChoiceText({ children, small }: { children: ReactNode; small?: boolean }) {
+  const t = useTheme();
+  const picked = useContext(ChoicePicked);
+  return small ? (
+    <AppText variant="bodySm" style={{ color: picked ? t.color.inkInverse : t.color.inkSoft }}>{children}</AppText>
+  ) : (
+    <AppText style={{ fontWeight: t.font.weight.bold, color: picked ? t.color.inkInverse : t.color.ink }}>{children}</AppText>
+  );
+}
+
+/**
+ * The picked Choice is dark, so a caller's own words (a plain text with a set colour) must turn to the inverse ink
+ * here, in Choice, not in each caller: a text child's colour is replaced; a component child (CountChoice,
+ * ChoiceText) follows the context instead and ignores the extra style.
+ */
+function inverse(child: ReactElement<{ style?: unknown }>, color: string): ReactElement {
+  return cloneElement(child, { style: [child.props.style, { color }] });
+}
+
+/** A choice card ("3 งวด / งวดละ 4,267" or "รวมในงวดที่เหลือ"): a whole tap target, selected = dark with white words. */
 export function Choice({ testID, selected, onPress, children, basis = 90, grow = true }: { testID: string; selected: boolean; onPress: () => void; children: ReactNode; basis?: number; /** false: a fixed size, so a short last row is not stretched. */ grow?: boolean }) {
   const t = useTheme();
   return (
@@ -135,24 +158,23 @@ export function Choice({ testID, selected, onPress, children, basis = 90, grow =
         paddingHorizontal: t.space.sm,
         paddingVertical: t.space.xxs,
         borderRadius: t.radius.md,
-        borderWidth: selected ? t.border.thick : t.border.hair,
+        borderWidth: t.border.hair,
         borderColor: selected ? t.color.action : t.color.ruleStrong,
-        backgroundColor: selected ? t.color.actionSunk : t.color.surfaceRaised,
+        backgroundColor: selected ? t.color.action : t.color.surfaceRaised,
       }}
     >
-      {children}
+      <ChoicePicked.Provider value={selected}>{selected ? Children.map(children, (c) => (isValidElement(c) ? inverse(c as ReactElement<{ style?: unknown }>, t.color.inkInverse) : c)) : children}</ChoicePicked.Provider>
     </Pressable>
   );
 }
 
 /** "3 งวด" over "งวดละ 4,267". */
 export function CountChoice({ n, perSatang }: { n: number; perSatang: number | null }) {
-  const t = useTheme();
   const msg = useT();
   return (
     <>
-      <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('co.inst.n', { n })}</AppText>
-      {perSatang ? <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.inst.per', { amount: shortBaht(perSatang) })}</AppText> : null}
+      <ChoiceText>{msg('co.inst.n', { n })}</ChoiceText>
+      {perSatang ? <ChoiceText small>{msg('co.inst.per', { amount: shortBaht(perSatang) })}</ChoiceText> : null}
     </>
   );
 }
@@ -248,10 +270,10 @@ export function InstallmentPane({
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
             <Choice testID="co-inst-fold" selected={v.newDebt === 'fold'} onPress={() => onNewDebt('fold')}>
-              <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('co.inst.fold')}</AppText>
+              <ChoiceText>{msg('co.inst.fold')}</ChoiceText>
             </Choice>
             <Choice testID="co-inst-full" selected={v.newDebt === 'full'} onPress={() => onNewDebt('full')}>
-              <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.ink }}>{msg('co.inst.full')}</AppText>
+              <ChoiceText>{msg('co.inst.full')}</ChoiceText>
             </Choice>
           </View>
         </View>

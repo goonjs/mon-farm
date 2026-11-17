@@ -1,6 +1,7 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
+import { tokens } from '../../design/tokens';
 import { planPayload, seenSnapshot } from '../core/finance/installments';
 import { FARM_FUNDS, type FinancePayload } from '../core/finance/types';
 import { maxInstallments } from '../core/master';
@@ -112,6 +113,10 @@ describe('IP-19 · the plan sheet', () => {
     expect(text('debt-plan-count-3')).toHaveTextContent(/3 งวด.*งวดละ 2,845/);
     expect(text('debt-plan-save').props.accessibilityState).toMatchObject({ disabled: true });
     await press('debt-plan-count-3');
+    {
+      const ink = (word: string) => Object.assign({}, ...[within(text('debt-plan-count-3')).getByText(word).props.style].flat(Infinity).filter(Boolean)).color;
+      expect(ink('3 งวด')).toBe(tokens.color.light.inkInverse);
+    }
     expect(text('debt-plan-change')).toHaveTextContent('เดิม: อีก 2 งวด · ใหม่: อีก 3 งวด งวดละ 2,845.00');
     const before = (await plans()).length;
     await press('debt-plan-save');
@@ -161,6 +166,10 @@ describe('IP-21 · ตั้งค่า "ผ่อนหนี้ได้ส�
     expect(screen.queryByTestId('max-inst-1')).toBeNull();
     expect(text('max-inst-12')).toBeTruthy();
     await press('max-inst-6');
+    // E06-S10 review: the picked number is dark-filled, so its words must be the inverse ink — never dark on dark
+    const ink = (box: string, word: string) => Object.assign({}, ...[within(text(box)).getByText(word).props.style].flat(Infinity).filter(Boolean)).color;
+    expect(ink('max-inst-6', '6')).toBe(tokens.color.light.inkInverse);
+    expect(ink('max-inst-5', '5')).toBe(tokens.color.light.ink);
     await press('save-max-inst');
     expect(maxInstallments(await master().state())).toBe(6);
     expect(text('max-inst-value')).toHaveTextContent('6 งวด');

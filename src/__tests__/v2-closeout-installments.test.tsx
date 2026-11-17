@@ -1,6 +1,7 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactElement, ReactNode } from 'react';
 
+import { tokens } from '../../design/tokens';
 import { LogBuilder } from '../core/fixtures';
 import { FARM_FUNDS } from '../core/finance/types';
 import { financeStore } from '../store/finance';
@@ -122,6 +123,65 @@ const checkAll = async () => {
   await press('co-owed-ok');
 };
 
+const flat = (id: string) => Object.assign({}, ...[screen.getByTestId(id).props.style].flat(Infinity).filter(Boolean)) as Record<string, unknown>;
+const C = tokens.color.light;
+
+/**
+ * E06-S10 · the sheet back to its mockup (docs/ux/mockups/debt-installments.html A1; owner 2026-11-18 "ก · ก · ตกลง
+ * ทำตาม mockup ทุกจุด ทำต่อจาก E15-S02 (แนะนำ)"). Layout only: the numbers are E06-S09's (below). No pill for a choice
+ * (DS-1, DS-4), the "ผ่อนกี่งวด" heading never in the row of its boxes (DS-3), the status in a green strip (DS-2),
+ * the amount box on a line of its own (DS-5).
+ */
+describe('E06-S10 · the deduct sheet matches its mockup (DS-1…DS-5)', () => {
+  it('DS-1: หักเต็ม / ยังไม่หัก are two equal rounded boxes, the word over the figure — not pills', async () => {
+    await inSale(<CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.nat}`);
+    for (const id of ['co-quick-full', 'co-quick-none']) {
+      const st = flat(id);
+      expect(st.borderRadius).not.toBe(tokens.radius.pill);
+      expect(st.borderRadius).toBe(tokens.radius.md);
+      expect(st.flexBasis).toBe(88);
+    }
+    expect(text('co-quick-full')).toHaveTextContent(/หักเต็ม.*5,250/);
+    expect(within(text('co-quick-full')).getByText('หักเต็ม')).toBeTruthy();
+    expect(within(text('co-quick-full')).getByText('5,250')).toBeTruthy();
+    expect(within(text('co-quick-none')).getByText('ยังไม่หัก')).toBeTruthy();
+    expect(within(text('co-quick-none')).getByText('ขอติดไว้ก่อน')).toBeTruthy();
+  });
+
+  it('DS-2 / DS-5: "งวด 1 จาก 3 · …" is a green strip with ✓ — not beside the amount box; the box has its own line', async () => {
+    await inSale(<CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.nat}`);
+    await press('co-inst-pick-3');
+    expect(text('co-inst-first')).toHaveTextContent('งวด 1 จาก 3 · งวดต่อไปราว 2,783');
+    expect(flat('co-inst-strip').backgroundColor).toBe(C.acceptSunk);
+    expect(within(text('co-inst-strip')).getByTestId('co-inst-first')).toBeTruthy();
+    expect(within(text('co-amount').parent!).queryByTestId('co-inst-first')).toBeNull();
+    expect(flat('co-amount').flexBasis).toBe('100%');
+  });
+
+  it('DS-3: "ผ่อนกี่งวด" has a line of its own, with the note; the boxes are on the next line', async () => {
+    await inSale(<CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.nat}`);
+    expect(screen.getByText('เลือกแล้วจำไว้ใช้การขายหน้า')).toBeTruthy();
+    expect(within(text('co-inst-pick-2').parent!).queryByText('ผ่อนกี่งวด')).toBeNull();
+    expect(within(text('co-inst-pick-2').parent!).queryByText('เลือกแล้วจำไว้ใช้การขายหน้า')).toBeNull();
+  });
+
+  it('DS-4: 2 / 3 / 4 งวด are equal rounded boxes, the chosen one dark with white text', async () => {
+    await inSale(<CloseoutSummaryScreen />);
+    await press(`co-deduct-${farm.nat}`);
+    await press('co-inst-pick-3');
+    for (const n of [2, 3, 4]) {
+      const st = flat(`co-inst-pick-${n}`);
+      expect(st.borderRadius).toBe(tokens.radius.md);
+      expect(st.flexBasis).toBe(88);
+      expect(st.backgroundColor).toBe(n === 3 ? C.action : C.surfaceRaised);
+    }
+    expect(text('co-inst-pick-3').props.accessibilityState).toMatchObject({ selected: true });
+  });
+});
+
 describe('IP-9 / IP-10 · no plan yet: "ผ่อนกี่งวด" on the pad sheet, the plan written at ยืนยันยอด only', () => {
   it('offers 2, 3, 4 with their instalment; 3 → 2,784 now, "งวด 1 จาก 3 · งวดต่อไปราว 2,783"', async () => {
     await inSale(<CloseoutSummaryScreen />);
@@ -183,7 +243,12 @@ describe('IP-11 / IP-14 · a running plan opens on the plan view', () => {
     expect(disabled('co-deduct-ok')).toBe(true);
     expect(screen.queryByTestId('co-inst-split-3')).toBeNull();
     expect(text('co-inst-split-2')).toHaveTextContent(/2 งวด.*งวดละ 4,175/);
+    // E06-S10: a picked count is dark with white words (mockup .opt.on), the others plain — same as the pick row
+    expect(flat('co-inst-split-4').backgroundColor).toBe(C.surfaceRaised);
     await press('co-inst-split-4');
+    expect(flat('co-inst-split-4').backgroundColor).toBe(C.action);
+    expect(flat('co-inst-split-2').backgroundColor).toBe(C.surfaceRaised);
+    expect(Object.assign({}, ...[within(text('co-inst-split-4')).getByText('4 งวด').props.style].flat(Infinity).filter(Boolean)).color).toBe(C.inkInverse);
     expect(text('co-deduct-ok')).toHaveTextContent('แบ่ง 4 งวด · หัก 2,088');
     expect(text('co-inst-big')).toHaveTextContent(/หักวันนี้ · งวด 1 จาก 4/);
     await press('co-inst-back');
@@ -221,6 +286,8 @@ describe('IP-13 · new debt since the plan: no default, confirm gated until fold
     expect(disabled('co-deduct-ok')).toBe(true);
     expect(text('co-deduct-ok')).toHaveTextContent('เลือกวิธีจัดการหนี้ใหม่ก่อน');
     await press('co-inst-fold');
+    expect(flat('co-inst-fold').backgroundColor).toBe(C.action);
+    expect(flat('co-inst-full').backgroundColor).toBe(C.surfaceRaised);
     expect(text('co-deduct-ok')).toHaveTextContent('หักงวด 1 · 3,117');
     await press('co-inst-full');
     expect(text('co-deduct-ok')).toHaveTextContent('หักงวด 1 · 3,784');
