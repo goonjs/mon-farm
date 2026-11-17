@@ -24,6 +24,7 @@ export function BottomSheet({
   children,
   testID = 'sheet',
   closeLabel,
+  footer,
 }: {
   open: boolean;
   onClose: () => void;
@@ -34,6 +35,8 @@ export function BottomSheet({
   testID?: string;
   /** Optional ✕ at the top-right of the title row (a 48 target), spoken by this label. Off by default. */
   closeLabel?: string;
+  /** Buttons pinned under the scrolling body: a tall body (large text, a warning) never pushes them off the screen. */
+  footer?: React.ReactNode;
 }) {
   const t = useTheme();
   const msg = useT();
@@ -141,6 +144,11 @@ export function BottomSheet({
           >
             {children}
           </ScrollView>
+          {footer ? (
+            <View testID={`${testID}-footer`} style={{ paddingHorizontal: t.layout.screenPaddingX, paddingTop: t.space.sm, paddingBottom: t.space.lg }}>
+              {footer}
+            </View>
+          ) : null}
         </View>
       </View>
     </Modal>

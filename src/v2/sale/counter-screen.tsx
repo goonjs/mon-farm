@@ -355,7 +355,35 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
       }
       overlay={
         <>
-          <BottomSheet open={sheet === 'partial'} onClose={() => setSheet('none')} title={msg('v2s.shortOf', { n: filling && open ? open.basketNo : figs.currentNo })} testID="short-sheet">
+          <BottomSheet
+            open={sheet === 'partial'}
+            onClose={() => setSheet('none')}
+            title={msg('v2s.shortOf', { n: filling && open ? open.basketNo : figs.currentNo })}
+            testID="short-sheet"
+            // E01-S20 NP-9: the warning and ยกเลิก / บันทึก stay on screen at the largest text.
+            footer={
+              <View style={{ gap: t.space.sm }}>
+                {weighMode === 'type' && !typedEmpty && lackG < 0 ? (
+                  <Banner tone="warn" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg('v2s.over', { n: kgText(-lackG) })]} testID="short-over" />
+                ) : null}
+                {tooLow ? (
+                  <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg(typedEmpty ? 'v2s.typeNothing' : 'v2s.tooLow')]} testID="short-too-low" />
+                ) : null}
+                <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+                  <View style={{ flex: 1 }}>
+                    <Button testID="short-cancel" onPress={() => setSheet('none')}>
+                      {msg('common.cancel')}
+                    </Button>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Button testID="short-save" variant="primary" disabled={tooLow} onPress={saveShort}>
+                      {msg('common.save')}
+                    </Button>
+                  </View>
+                </View>
+              </View>
+            }
+          >
             <View style={{ gap: t.space.xxs }}>
               <IconLine strong icon={(c) => <PinIcon color={c} size={14} />}>{place}</IconLine>
               <IconLine icon={(c) => <TapperIcon color={c} size={14} />}>{msg('v2s.tapperIs', { name: tapperName })}</IconLine>
@@ -456,24 +484,6 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
                     )}
               </View>
             )}
-            {weighMode === 'type' && !typedEmpty && lackG < 0 ? (
-              <Banner tone="warn" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg('v2s.over', { n: kgText(-lackG) })]} testID="short-over" />
-            ) : null}
-            {tooLow ? (
-              <Banner tone="bad" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg(typedEmpty ? 'v2s.typeNothing' : 'v2s.tooLow')]} testID="short-too-low" />
-            ) : null}
-            <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-              <View style={{ flex: 1 }}>
-                <Button testID="short-cancel" onPress={() => setSheet('none')}>
-                  {msg('common.cancel')}
-                </Button>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button testID="short-save" variant="primary" disabled={tooLow} onPress={saveShort}>
-                  {msg('common.save')}
-                </Button>
-              </View>
-            </View>
           </BottomSheet>
 
           <BottomSheet open={sheet === 'menu'} onClose={() => setSheet('none')} title={msg('rec.menu')} testID="menu-sheet">
