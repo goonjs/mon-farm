@@ -33,7 +33,7 @@ export function PointScreen() {
   const t = useTheme();
   const msg = useT();
   const router = useRouter();
-  const params = useLocalSearchParams<{ pair?: string; mode?: string; farm?: string; tapper?: string }>();
+  const params = useLocalSearchParams<{ pair?: string; mode?: string; farm?: string; tapper?: string; ask?: string; fill?: string }>();
   const view = useSaleView();
   // A closed sale takes no more weighing (review #2).
   useLeaveIfClosed(view);
@@ -43,12 +43,14 @@ export function PointScreen() {
   const [tapperId, setTapperId] = useState<string | null>(params.tapper ?? null);
   const [ask, setAsk] = useState<{ pointId: string; open: OpenBasket } | null>(null);
   // E04-S21: the way chosen on the fill-up sheet; fill up first.
-  const [choice, setChoice] = useState<Fill>('full');
+  const [choice, setChoice] = useState<Fill>(params.fill === 'part' ? 'part' : 'full');
   const [menu, setMenu] = useState<'none' | 'menu' | OptionSheet>('none');
   const switching = params.mode === 'switch';
   const backfill = params.mode === 'backfill';
   const title = backfill ? msg('backfill.title') : switching ? msg('rec.switch') : msg('pick.title');
   const fallback = `/v2/sale/${saleId}/counter` as Href;
+  // E04-S24: "เปลี่ยนวิธีเติม ›" on the counter opens this sheet again for its point, with the way in use (`fill`).
+  const changing: { pointId: string; way: Fill } | null = params.ask && (params.fill === 'full' || params.fill === 'part') ? { pointId: params.ask, way: params.fill as Fill } : null;
 
   if (!view.ready || !master || !settings) return <FarmScreen title={title} subtitle={saleTitle} fallback={fallback} />;
 
@@ -61,6 +63,9 @@ export function PointScreen() {
   const status = (pointId: string) => (weighed(pointId) ? msg('v2s.weighedN', { n: weighed(pointId) }) : msg('v2s.notWeighed'));
   const allWeighed = master.points.filter((p) => !p.hidden).every((p) => weighed(p.id) > 0);
   const tone: TileTone = farm ? farmTone(master, farm.id) : 'category1';
+  // The sheet for a way change is worked out here, not stored: it closes by going back to the counter.
+  const changeOpen = changing ? planMove(events, state, master, day, changing.pointId, mode, settings.zeroCheck).ask : null;
+  const sheetFor = ask ?? (changing && changeOpen ? { pointId: changing.pointId, open: changeOpen } : null);
 
   /** Opens the counter (or backfill) at `pointId`, after writing what the move needs. */
   const go = (pointId: string, fill?: Fill) => {
@@ -114,7 +119,7 @@ export function PointScreen() {
       }
       overlay={
         <>
-          {ask ? fillSheet(ask) : null}
+          {sheetFor ? fillSheet(sheetFor) : null}
           <BottomSheet open={menu === 'menu'} onClose={() => setMenu('none')} title={msg('rec.menu')} testID="pick-menu-sheet">
             <SaleMenu view={view} pick={setMenu} close={() => setMenu('none')} backfill={group ? `/v2/sale/${saleId}/backfill?tapper=${group.tapperId}` : undefined} />
           </BottomSheet>
@@ -185,7 +190,12 @@ export function PointScreen() {
    */
   function fillSheet(a: { pointId: string; open: OpenBasket }) {
     const o = a.open;
-    const onClose = () => setAsk(null);
+    // Changing the way (E04-S24) goes back to the counter, writing nothing: nothing is written until the hold.
+    const backToCounter = (way: Fill) => {
+      if (router.canDismiss()) router.dismiss(1);
+      router.replace(`/v2/sale/${saleId}/counter?point=${a.pointId}&fill=${way}` as Href);
+    };
+    const onClose = () => (changing ? backToCounter(changing.way) : setAsk(null));
     const skew = saleSkewG(events);
     const from = master!.points.find((p) => p.id === o.pointId);
     const fromFarm = master!.properties.find((f) => f.id === from?.propertyId);
@@ -197,7 +207,8 @@ export function PointScreen() {
     const partKg = (o.missingG + o.tareG + skew) / 1000;
     const skewPart = skew ? ` + ${msg('v2s.eqSkew', { n: kgText(skew) })}` : '';
     const where = (farmName?: string, pointName?: string) => `${farmName ?? ''} ${pointName ?? ''}`.trim();
-    const confirm = () => go(a.pointId, choice);
+    const confirm = () => (changing ? backToCounter(choice) : go(a.pointId, choice));
+    const wayNo: Record<Fill, number> = { full: 1, part: 2, next: 3 };
     const ctaText = { fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, color: t.color.inkInverse } as const;
     const step = (n: number, body: React.ReactNode, em?: boolean) => (
       <View key={n} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: t.space.xs, paddingVertical: t.space.xxs, paddingHorizontal: t.space.xs, borderRadius: t.radius.sm, backgroundColor: em ? t.color.warnSunk : undefined }}>
@@ -224,12 +235,19 @@ export function PointScreen() {
           style={{ gap: t.space.sm, padding: t.space.md, minHeight: t.target.comfortable, borderRadius: t.radius.lg, borderWidth: on ? t.border.thick : t.border.hair, borderColor: on ? t.color.action : t.color.ruleStrong, backgroundColor: on ? t.color.actionSunk : t.color.surfaceRaised }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
-            <View aria-hidden style={{ width: 22, height: 22, borderRadius: 11, borderWidth: t.border.thick, borderColor: on ? t.color.action : t.color.inkSoft, alignItems: 'center', justifyContent: 'center' }}>
-              {on ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.color.action }} /> : null}
+            {/* FX-5: the ways are numbered 1 2 3; the chosen one's number is filled. */}
+            <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: t.border.thick, borderColor: on ? t.color.action : t.color.inkSoft, backgroundColor: on ? t.color.action : undefined, alignItems: 'center', justifyContent: 'center' }}>
+              <Text testID={`fill-${id}-num`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.black, color: on ? t.color.inkInverse : t.color.inkSoft }}>{wayNo[id]}</Text>
             </View>
             <View style={{ flex: 1, minWidth: 0, gap: t.space.xxs }}>
               <AppText style={{ fontWeight: t.font.weight.bold }}>{title}</AppText>
               {sub}
+              {changing?.way === id ? (
+                <AppText variant="bodySm" style={{ fontWeight: t.font.weight.bold, color: t.color.accept }}>
+                  {'✓ '}
+                  <AppText testID="fill-current" variant="bodySm" style={{ fontWeight: t.font.weight.bold, color: t.color.accept }}>{msg('v2s.fillCurrent')}</AppText>
+                </AppText>
+              ) : null}
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <AppText variant="caption">{msg('v2s.optScale')}</AppText>
@@ -316,7 +334,7 @@ export function PointScreen() {
             <Text style={ctaText}>{msg('v2s.fillGoNext', { n: o.basketNo + 1 })}</Text>
           ) : (
             <WrapLine>
-              <Text style={ctaText}>{choice === 'full' ? msg('v2s.fillGoFull', { n: o.basketNo }) : msg('v2s.fillGoPart')}</Text>
+              <Text style={ctaText}>{changing ? msg('v2s.fillGoWay', { n: wayNo[choice] }) : choice === 'full' ? msg('v2s.fillGoFull', { n: o.basketNo }) : msg('v2s.fillGoPart')}</Text>
               <ScaleNum kg={choice === 'full' ? fullKg : partKg} color={t.color.inkInverse} size="lg" />
             </WrapLine>
           )}
