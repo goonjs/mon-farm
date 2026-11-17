@@ -188,6 +188,12 @@ async function tour(page: Page, size: keyof typeof AT) {
   expect(await fontPx(page, 'reading-scale-value')).toBe(AT[size].reading);
   await expect(id('short-save')).toBeInViewport();
   await check('short-sheet');
+  // NP-9 (re-check 2026-11-17): a reading over a full basket adds a warning; ยกเลิก / บันทึก stay wholly on screen.
+  for (const k of '999.9') await id(`reading-pad-key-${k}`).click();
+  await expect(id('short-over')).toBeInViewport({ ratio: 1 });
+  await expect(id('short-save')).toBeInViewport({ ratio: 1 });
+  await expect(id('short-cancel')).toBeInViewport({ ratio: 1 });
+  await check('short-sheet-over');
   await open('/v2/sale/sale-ts/history?point=a1', 'history', 'history');
   // E05-S11: the close-out summary (A1) and its sheets, the payment, the buyer's page at 2,345,678.00 (CO-16, CO-20).
   // A size passed as a number prop (the sale totals) follows the setting too: 26 × 1.125.
