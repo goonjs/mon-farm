@@ -58,8 +58,11 @@ describe('clearingStarted — the records the clearing step writes for one sale'
 });
 
 const TODAY = '2026-11-18';
-const prep = (o: Partial<SalePrep> = {}): SalePrep => ({ buyerId: 'b1', buyerName: 'ก', date: '2026-11-20', time: null, priceSatangPerKg: 5250, updatedTs: 1000, ...o });
-const todaySale = (o: Partial<TileSale> = {}): TileSale => ({ id: 's1', ts: 2000, day: TODAY, phase: 'counting', unpaid: 0, ...o });
+/** 08:00 Bangkok on TODAY: the tests' times are offsets from it, so a prep written "now" is on TODAY. */
+const T0 = Date.UTC(2026, 10, 18, 1);
+const DAY = 86_400_000;
+const prep = (o: Partial<SalePrep> = {}): SalePrep => ({ buyerId: 'b1', buyerName: 'ก', date: '2026-11-20', time: null, priceSatangPerKg: 5250, updatedTs: T0 + 1000, ...o });
+const todaySale = (o: Partial<TileSale> = {}): TileSale => ({ id: 's1', ts: T0 + 2000, day: TODAY, phase: 'counting', unpaid: 0, ...o });
 const base = { prep: null, unsplit: 0, today: TODAY, sales: [] as TileSale[] };
 
 describe('homeTiles — the เตรียมขาย tile (PREP tile: P0 / P1 / P2)', () => {
@@ -80,8 +83,20 @@ describe('homeTiles — the เตรียมขาย tile (PREP tile: P0 / P1
     expect(homeTiles({ ...base, prep: prep({ date: '2026-11-25' }) }).prep).toEqual({ state: 'P2' });
   });
 
-  it('a prep with no day yet is kept', () => {
+  it('a prep with no day yet belongs to the day it was written: kept that day (P1) (HT-5)', () => {
     expect(homeTiles({ ...base, prep: prep({ date: null }) }).prep).toEqual({ state: 'P1', left: 1 });
+  });
+
+  it('an undated prep written on an earlier Bangkok day is cleared at midnight (HT-5)', () => {
+    expect(homeTiles({ ...base, prep: prep({ date: null, updatedTs: T0 - DAY + 1000 }) }).prep).toEqual({ state: 'P0' });
+    // 23:59 Bangkok yesterday is still yesterday; 00:01 today is today.
+    expect(homeTiles({ ...base, prep: prep({ date: null, updatedTs: Date.UTC(2026, 10, 17, 16, 59) }) }).prep).toEqual({ state: 'P0' });
+    expect(homeTiles({ ...base, prep: prep({ date: null, updatedTs: Date.UTC(2026, 10, 17, 17, 1) }) }).prep).toEqual({ state: 'P1', left: 1 });
+  });
+
+  it('an undated prep from an earlier day that a sale today used stays shown', () => {
+    const used = todaySale({ ts: T0 + 3000 });
+    expect(homeTiles({ ...base, prep: prep({ date: null, updatedTs: T0 - DAY + 1000 }), sales: [used] }).prep).toEqual({ state: 'P1', left: 1 });
   });
 
   it('a prep for a day that has passed and was never used is cleared (HT-5)', () => {
@@ -89,11 +104,11 @@ describe('homeTiles — the เตรียมขาย tile (PREP tile: P0 / P1
   });
 
   it('stays P2 through the sale started today after it was written', () => {
-    expect(homeTiles({ ...base, prep: prep(), sales: [todaySale({ ts: 2000, phase: 'closed', unpaid: 2 })] }).prep).toEqual({ state: 'P2' });
+    expect(homeTiles({ ...base, prep: prep(), sales: [todaySale({ ts: T0 + 2000, phase: 'closed', unpaid: 2 })] }).prep).toEqual({ state: 'P2' });
   });
 
   it('used by a sale on an earlier day: cleared (HT-5)', () => {
-    const yesterday = todaySale({ id: 'old', ts: 1500, day: '2026-11-17', phase: 'closed' });
+    const yesterday = todaySale({ id: 'old', ts: T0 + 1500, day: '2026-11-17', phase: 'closed' });
     expect(homeTiles({ ...base, prep: prep({ date: null }), sales: [yesterday] }).prep).toEqual({ state: 'P0' });
   });
 });
@@ -137,15 +152,15 @@ describe('homeTiles — the เริ่มการขาย tile (S0 … S5)',
   });
 
   it('with two sales today the newest decides', () => {
-    const t = homeTiles({ ...base, sales: [todaySale({ id: 'a', ts: 2000, phase: 'closed', unpaid: 0 }), todaySale({ id: 'b', ts: 3000, phase: 'counting' })] });
+    const t = homeTiles({ ...base, sales: [todaySale({ id: 'a', ts: T0 + 2000, phase: 'closed', unpaid: 0 }), todaySale({ id: 'b', ts: T0 + 3000, phase: 'counting' })] });
     expect(t.start).toEqual({ state: 'S2' });
   });
 });
 
 describe('homeTiles — across midnight (Bangkok), unfinished sales leave the tiles (HT-5, HT-6)', () => {
-  const yesterdayOpen = todaySale({ id: 'y1', ts: 1500, day: '2026-11-17', phase: 'counting' });
-  const yesterdayUnpaid = todaySale({ id: 'y2', ts: 1600, day: '2026-11-17', phase: 'closed', unpaid: 3 });
-  const yesterdayDone = todaySale({ id: 'y3', ts: 1700, day: '2026-11-17', phase: 'closed', unpaid: 0 });
+  const yesterdayOpen = todaySale({ id: 'y1', ts: T0 + 1500, day: '2026-11-17', phase: 'counting' });
+  const yesterdayUnpaid = todaySale({ id: 'y2', ts: T0 + 1600, day: '2026-11-17', phase: 'closed', unpaid: 3 });
+  const yesterdayDone = todaySale({ id: 'y3', ts: T0 + 1700, day: '2026-11-17', phase: 'closed', unpaid: 0 });
 
   it('both tiles go back to plain and the unfinished sales become rows to deal with', () => {
     const t = homeTiles({ ...base, sales: [yesterdayOpen, yesterdayUnpaid, yesterdayDone] });
@@ -159,13 +174,13 @@ describe('homeTiles — across midnight (Bangkok), unfinished sales leave the ti
   });
 
   it('a sale carried for several days stays until it is cleared', () => {
-    const old = todaySale({ id: 'old', ts: 10, day: '2026-11-01', phase: 'closed', unpaid: 1 });
+    const old = todaySale({ id: 'old', ts: T0 + 10, day: '2026-11-01', phase: 'closed', unpaid: 1 });
     expect(homeTiles({ ...base, sales: [old] }).carried.map((s) => s.id)).toEqual(['old']);
     expect(homeTiles({ ...base, sales: [{ ...old, unpaid: 0 }] }).carried).toEqual([]);
   });
 
   it('today a new prep and a carried sale live side by side: the tiles show today, the row shows the old sale', () => {
-    const t = homeTiles({ ...base, prep: prep({ date: TODAY, updatedTs: 5000 }), sales: [yesterdayUnpaid] });
+    const t = homeTiles({ ...base, prep: prep({ date: TODAY, updatedTs: T0 + 5000 }), sales: [yesterdayUnpaid] });
     expect(t.prep).toEqual({ state: 'P2' });
     expect(t.start).toEqual({ state: 'S1' });
     expect(t.carried.map((s) => s.id)).toEqual(['y2']);
