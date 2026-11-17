@@ -231,10 +231,14 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   // default); above M they wrap instead of being cut with "…" (E03-S08 TS-8). The money card's label is one line at
   // every size, kept short ("รวม (฿)") so it fits at 320 px L (owner merge-209, 2026-11-17).
   const oneLine = t.textScale > 1 ? undefined : 1;
-  // A long figure ("1.84 หมื่น") filled 98% of a 320 px phone's card at L and 92% at M on CI's wider fonts (PR 209), so on a
-  // narrow card (figure box under 90 px) it steps down a further 20%, at every text size; wider cards and short figures
-  // are unchanged.
-  const figFont = (value: string) => Math.round(figSize(value, t.font.size.headingXl) * (value.length > 9 && figBoxW !== undefined && figBoxW < 90 ? 0.8 : 1));
+  // A long figure ("1.84 หมื่น") filled 98% of a 320 px phone's card at L and 92% at M on CI's wider fonts (PR 209). It
+  // is sized to use at most about 80% of its box (a glyph is about 0.45 em wide), so it keeps room on CI's fonts and
+  // stays as big as it can: 13 px at 320, 14/15 px at 360 M/L, full size from 390. Until the box is measured it
+  // starts at the narrowest phone's size (73 px), so a narrow card does not paint full size and then shrink.
+  const figFont = (value: string) => {
+    const full = figSize(value, t.font.size.headingXl);
+    return value.length > 9 ? Math.min(full, Math.round((0.8 * (figBoxW ?? 73)) / (0.45 * value.length))) : full;
+  };
   const cardFigure = (value: string, testID: string) => (
     <Text testID={testID} onLayout={(e) => setFigBoxW(e.nativeEvent.layout.width)} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figFont(value), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
       {value}
