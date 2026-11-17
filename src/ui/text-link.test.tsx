@@ -28,4 +28,15 @@ describe('TextLink — the underlined word that replaces a round outlined button
     fireEvent.press(l);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  it('align: left by default; "center" for a link under a full-width button', () => {
+    wrap(
+      <>
+        <TextLink testID="a" onPress={() => undefined}>ก</TextLink>
+        <TextLink testID="b" align="center" onPress={() => undefined}>ข</TextLink>
+      </>,
+    );
+    expect(flat(screen.getByTestId('a').props.style).alignSelf).toBe('flex-start');
+    expect(flat(screen.getByTestId('b').props.style).alignSelf).toBe('center');
+  });
 });
