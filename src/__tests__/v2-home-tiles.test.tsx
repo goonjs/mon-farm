@@ -1,17 +1,13 @@
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
 
 import { LogBuilder, readyPile, setUpSale } from '../core/fixtures';
 import type { FinanceEvent } from '../core/finance/types';
 import type { SaleEvent } from '../core/types';
 import { financeStore as mockFinance } from '../store/finance';
-import { peopleStore as mockPeople } from '../store/people';
 import { store as mockStore } from '../store/store';
 import { wrap } from '../test/render';
-import { FarmMateArt } from '../ui';
 import { V2Home } from '../v2/home-screen';
-import { FARM_SECTIONS, sectionHref } from '../v2/routes';
 
 jest.mock('../store/finance', () => {
   const { MemoryFinanceStore } = jest.requireActual('../store/finance-memory');
@@ -49,20 +45,17 @@ jest.mock('../v2/home-cover', () => {
 });
 const { router: mockRouter } = jest.requireMock('expo-router') as { router: { push: jest.Mock } };
 
-/** The traced FarmMate originals drawn inside the element with this testID (E03-S11). */
-function art(testID: string): string[] {
-  return within(screen.getByTestId(testID)).UNSAFE_queryAllByType(FarmMateArt).map((a) => a.props.id as string);
-}
-
 async function flush() {
   await act(async () => {
     await new Promise((r) => setTimeout(r, 0));
   });
 }
 
-/** The fixtures start a sale at 1_770_000_000_000 (a Monday 2026-02-02, Bangkok). */
-const SALE_DAY_NOW = 1_770_000_600_000;
-const NEXT_DAY_NOW = SALE_DAY_NOW + 86_400_000;
+/** The fixtures start a sale at 1_770_000_000_000 (2026-02-02); this shifts every sale to 2026-11-10, after the day money piles are counted from. */
+const SHIFT = Date.UTC(2026, 10, 10, 3) - 1_770_000_000_000;
+const SALE_DAY_NOW = 1_770_000_600_000 + SHIFT;
+/** Four days on: the prep's day (2026-11-13) has passed unused, and every earlier sale is from another day. */
+const NEXT_DAY_NOW = SALE_DAY_NOW + 4 * 86_400_000;
 let now = SALE_DAY_NOW;
 beforeEach(() => {
   jest.spyOn(Date, 'now').mockImplementation(() => now);
@@ -73,12 +66,13 @@ afterEach(() => {
   now = SALE_DAY_NOW;
 });
 
-async function seedSale(id: string, finish?: (b: LogBuilder) => void) {
+/** Each sale starts `startsAfter` ms later than the fixtures' base, so "the newest sale" is not a tie. */
+async function seedSale(id: string, startsAfter: number, finish?: (b: LogBuilder) => void) {
   const b = setUpSale(new LogBuilder(id));
   readyPile(b, 'p1');
   b.accept('p1');
   finish?.(b);
-  for (const e of b.build() as SaleEvent[]) await mockStore.append(e);
+  for (const e of b.build() as SaleEvent[]) await mockStore.append({ ...e, ts: e.ts + SHIFT + startsAfter });
 }
 const finEvent = (id: string, targetId: string, payload: FinanceEvent['payload']): FinanceEvent => ({
   id,
@@ -111,7 +105,7 @@ describe('V2Home — เตรียมขาย and เริ่มการข
   });
 
   it('prep not complete: yellow tile with the number of rows left (P1)', async () => {
-    await prep('pp-1', { buyerId: 'b1', buyerName: 'คนรับซื้อยาง ก', date: '2026-02-05' });
+    await prep('pp-1', { buyerId: 'b1', buyerName: 'คนรับซื้อยาง ก', date: '2026-11-13' });
     wrap(<V2Home />);
     await flush();
     expect(badge('home-prepare')).toHaveTextContent('1');
@@ -128,7 +122,7 @@ describe('V2Home — เตรียมขาย and เริ่มการข
   });
 
   it('the sale started and counting: the start tile shows the scale (S2); the prep stays green', async () => {
-    await seedSale('s-now');
+    await seedSale('s-now', 0);
     wrap(<V2Home />);
     await flush();
     expect(badge('home-sale-start')?.props.accessibilityLabel).toBe('กำลังนับ');
@@ -136,7 +130,7 @@ describe('V2Home — เตรียมขาย and เริ่มการข
   });
 
   it('counting done and the clearing step has written its ticks: the calculator (S3)', async () => {
-    await seedSale('s-clear', (b) => b.sys({ t: 'pile_closed', pileId: 'p1', forced: false }));
+    await seedSale('s-clear', 10_000, (b) => b.sys({ t: 'pile_closed', pileId: 'p1', forced: false }));
     await tick('t-1', 's-clear', 'owner', false);
     wrap(<V2Home />);
     await flush();
@@ -145,7 +139,7 @@ describe('V2Home — เตรียมขาย and เริ่มการข
   });
 
   it('closed with money still to pay: the red number, and a tap goes to the payment page (S4)', async () => {
-    await seedSale('s-done', completed);
+    await seedSale('s-done', 20_000, completed);
     wrap(<V2Home />);
     await flush();
     expect(badge('home-sale-start')).toHaveTextContent('1');
@@ -163,7 +157,7 @@ describe('V2Home — เตรียมขาย and เริ่มการข
 
   it('after midnight the tiles go plain and the unfinished sales stay as rows (HT-5, HT-6)', async () => {
     now = NEXT_DAY_NOW;
-    await seedSale('s-old', completed);
+    await seedSale('s-old', 30_000, completed);
     wrap(<V2Home />);
     await flush();
     expect(badge('home-prepare')).toBeNull();

@@ -61,6 +61,8 @@ export interface HomeTilesInput {
 export interface HomeTiles {
   readonly prep: PrepTile;
   readonly start: StartTile;
+  /** The sale the start tile is about (today's newest), or null. */
+  readonly startSaleId: string | null;
   /** Sales from an earlier day not finished (not closed, or closed with money still to pay): rows to deal with. */
   readonly carried: readonly TileSale[];
 }
@@ -85,5 +87,5 @@ export function homeTiles({ prep, unsplit, today, sales }: HomeTilesInput): Home
   } else {
     start = prepTile.state === 'P2' ? { state: 'S1' } : { state: 'S0' };
   }
-  return { prep: prepTile, start, carried };
+  return { prep: prepTile, start, startSaleId: newest?.id ?? null, carried };
 }

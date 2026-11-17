@@ -49,8 +49,9 @@ for (const width of [320, 360]) {
       const shot = (name: string) => evidence(page, `${SHOTS}/${width}-${size}-${name}.png`);
 
       // PREP-1: nothing prepared yet.
-      await expect(id('home-prep')).toContainText('เตรียมการขายครั้งถัดไป');
-      await id('home-prep').click();
+      await expect(id('home-prep')).toHaveCount(0);
+      await expect(id('home-prepare-badge')).toHaveCount(0);
+      await id('home-prepare').click();
       await expect(id('prep')).toBeVisible();
       await fits(page, 'prep');
       await shot('1-empty');
@@ -88,9 +89,10 @@ for (const width of [320, 360]) {
 
       // เสร็จ goes back home; the tile says so and it stays after a reload.
       await id('prep-done').click();
-      await expect(id('home-prep')).toContainText('พร้อมขาย');
+      await expect(id('home-prepare-badge')).toHaveAttribute('aria-label', 'ครบแล้ว');
+      await expect(id('home-sale-start-badge')).toHaveAttribute('aria-label', 'รอเริ่มขาย');
       await page.reload();
-      await expect(id('home-prep')).toContainText('สหกรณ์บ้านนา');
+      await expect(id('home-prepare-badge')).toHaveAttribute('aria-label', 'ครบแล้ว');
       await fits(page);
       await shot('4-home');
       expect(errors).toEqual([]);
