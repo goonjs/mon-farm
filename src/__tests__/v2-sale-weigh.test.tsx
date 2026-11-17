@@ -616,6 +616,81 @@ describe('the fill-up sheet and guide (E04-S21, owner 2026-11-17 "ก · ก · 
   });
 });
 
+describe('E04-S24 change the fill way before the hold (owner 2026-11-17 e04-s24-ac "ก · โอเคทั้ง 3 ข้อ ทำตาม mockup (แนะนำ)")', () => {
+  /** แดง's basket 2 short at จุด 1, เปลี่ยนจุด to จุด 2, fill up chosen: the counter at จุด 2 in fill state. */
+  async function toFillCounter(way: 'full' | 'part' = 'full') {
+    await started();
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    await press('tool-short');
+    await press('short-save');
+    c.unmount();
+    const p = await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red });
+    await press(`pick-point-${farm.a[1]}`);
+    await chooseFill(way);
+    p.unmount();
+    await readyAt(farm.a[1]);
+    return counterAt(farm.a[1], { fill: way });
+  }
+  const selected = (id: string) => screen.getByTestId(id).props.accessibilityState?.selected;
+
+  it('FX-1: before the first hold the guide card has a whole-row "เปลี่ยนวิธีเติม ›"', async () => {
+    await toFillCounter();
+    const row = within(screen.getByTestId('fill-guide')).getByTestId('fill-change');
+    expect(row.props.accessibilityRole).toBe('button');
+    expect(row).toHaveTextContent(/เปลี่ยนวิธีเติม/);
+  });
+
+  it('FX-4: after the first hold the row is gone', async () => {
+    await toFillCounter();
+    await hold();
+    expect(screen.queryByTestId('fill-change')).toBeNull();
+  });
+
+  it('FX-6: the guide names the way: "วิธีที่ 1 · …" and "วิธีที่ 2 · …"', async () => {
+    const c = await toFillCounter('full');
+    expect(screen.getByTestId('fill-title')).toHaveTextContent(/^วิธีที่ 1 · เติมให้เต็มเข่ง 2/);
+    c.unmount();
+  });
+
+  it('FX-2: the row opens the same 3-way sheet for basket 2 with the way in use chosen and marked', async () => {
+    await toFillCounter('part');
+    router.push.mockClear();
+    router.replace.mockClear();
+    await press('fill-change');
+    const to = String((router.push.mock.calls[0] ?? router.replace.mock.calls[0])?.[0] ?? '');
+    expect(to).toMatch(/\/point\?/);
+    expect(to).toMatch(/mode=switch/);
+    expect(to).toContain(`ask=${farm.a[1]}`);
+    expect(to).toContain('fill=part');
+    await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red, ask: farm.a[1], fill: 'part' });
+    expect(screen.getByTestId('fill-sheet')).toBeTruthy();
+    expect(selected('fill-part')).toBe(true);
+    expect(within(screen.getByTestId('fill-part')).getByTestId('fill-current')).toHaveTextContent('ใช้อยู่ตอนนี้');
+    expect(screen.queryAllByTestId('fill-current')).toHaveLength(1);
+  });
+
+  it('FX-3: choosing another way goes back to the counter with it, and nothing is written before the hold', async () => {
+    await toFillCounter('full');
+    const before = (await store().load(saleId)).length;
+    await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red, ask: farm.a[1], fill: 'full' });
+    router.replace.mockClear();
+    await chooseFill('part');
+    expect(router.replace).toHaveBeenLastCalledWith(expect.stringMatching(new RegExp(`counter\\?point=${farm.a[1]}.*fill=part|fill=part.*point=${farm.a[1]}`)));
+    expect((await store().load(saleId)).length).toBe(before);
+  });
+
+  it('FX-5: the sheet says "เลือก 1 ใน 3 วิธี" and numbers the ways 1 2 3', async () => {
+    await toFillCounter('full');
+    await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red, ask: farm.a[1], fill: 'full' });
+    expect(screen.getByText('เข่ง 2 ยังไม่เต็ม — เลือก 1 ใน 3 วิธี')).toBeTruthy();
+    expect(screen.getByTestId('fill-full-num')).toHaveTextContent('1');
+    expect(screen.getByTestId('fill-part-num')).toHaveTextContent('2');
+    expect(screen.getByTestId('fill-next-num')).toHaveTextContent('3');
+  });
+});
+
 describe('catch up from the paper (E04-S19, mockup v4)', () => {
   /** Types `keys` on a whole-number field's pad and closes it. */
   const typeInt = async (field: string, keys: string) => {
