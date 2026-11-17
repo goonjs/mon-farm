@@ -154,8 +154,8 @@ describe('E06-S10 · the deduct sheet matches its mockup (DS-1…DS-5)', () => {
     await press(`co-deduct-${farm.nat}`);
     await press('co-inst-pick-3');
     expect(text('co-inst-first')).toHaveTextContent('งวด 1 จาก 3 · งวดต่อไปราว 2,783');
-    const strip = text('co-inst-first').parent!;
-    expect(Object.assign({}, ...[strip.props.style].flat(Infinity).filter(Boolean)).backgroundColor).toBe(C.acceptSunk);
+    expect(flat('co-inst-strip').backgroundColor).toBe(C.acceptSunk);
+    expect(within(text('co-inst-strip')).getByTestId('co-inst-first')).toBeTruthy();
     expect(within(text('co-amount').parent!).queryByTestId('co-inst-first')).toBeNull();
     expect(flat('co-amount').flexBasis).toBe('100%');
   });
