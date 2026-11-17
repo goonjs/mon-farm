@@ -26,7 +26,7 @@ import { statusCountsAsClosed } from '../../core/sale-status';
 import { useI18n, useT } from '../../i18n';
 import { useSale } from '../../store/SaleProvider';
 import { useTheme } from '../../theme';
-import { AlertIcon, AppText, Check, ChevronRight, IconTile, PinIcon, SwapIcon, TapperIcon, toneColours, type IconRender, type TileTone } from '../../ui';
+import { AlertIcon, AppText, Check, ChevronRight, IconTile, LeafIcon, PinIcon, ScaleIcon, SwapIcon, TapperIcon, toneColours, type IconRender, type TileTone } from '../../ui';
 import { categoryTone, useMaster } from '../farm/pieces';
 
 /** A figure's font size by its length, so a long number shrinks instead of being cut (E04-S18; `adjustsFontSizeToFit` does nothing on web). */
@@ -500,6 +500,80 @@ export function IconLine({ icon, children, testID, strong, oneLine, label }: { i
       <Text accessibilityLabel={label} numberOfLines={oneLine ? 1 : undefined} style={{ flexShrink: 1, fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: strong ? t.font.weight.bold : t.font.weight.regular, color: strong ? t.color.ink : t.color.inkSoft }}>
         {children}
       </Text>
+    </View>
+  );
+}
+
+// ── E04-S21: the fill-up sheet and guide (owner 2026-10-11 / 2026-11-17, mockup e04-s21-fill-sheet) ──
+
+/** Rubber weight, always the same way: a leaf and the accent colour before the kg. Sits in a wrapping line. */
+export function RubberKg({ g, testID }: { g: number; testID?: string }) {
+  const t = useTheme();
+  const msg = useT();
+  const px = t.font.size.bodySm;
+  return (
+    <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xxs }}>
+      <LeafIcon color={t.color.warn} size={px} />
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: px, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'], color: t.color.warn }}>{msg('v2f.kg', { n: kgText(g) })}</Text>
+    </View>
+  );
+}
+
+/** A scale reading, always with the scale icon before the number. */
+export function ScaleNum({ kg, size = 'sm', color, testID }: { kg: number; size?: 'sm' | 'lg' | 'xl'; color?: string; testID?: string }) {
+  const t = useTheme();
+  const px = size === 'xl' ? t.font.size.figure : size === 'lg' ? t.font.size.headingXl : t.font.size.bodySm;
+  const ink = color ?? t.color.ink;
+  return (
+    <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xxs }}>
+      <ScaleIcon color={ink} size={Math.round(px * 0.8)} />
+      <Text style={{ fontFamily: t.font.family.sans, fontSize: px, fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: ink }}>{kgText(Math.round(kg * 1000))}</Text>
+    </View>
+  );
+}
+
+/** Words and figures on one wrapping line. */
+export function WrapLine({ children, testID }: { children: ReactNode; testID?: string }) {
+  const t = useTheme();
+  return (
+    <View testID={testID} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: t.space.xs }}>
+      {children}
+    </View>
+  );
+}
+
+/** Words inside a WrapLine, in the body size. */
+export function Words({ children, strong, soft }: { children: ReactNode; strong?: boolean; soft?: boolean }) {
+  const t = useTheme();
+  return <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: strong ? t.font.weight.bold : t.font.weight.regular, color: soft ? t.color.inkSoft : t.color.ink }}>{children}</Text>;
+}
+
+/** The basket as a bar: what it holds, what is added, and where it is full. `held` greys what sits in another basket. */
+export function BasketBar({ haveG, addG, held, addLabel }: { haveG: number; addG: number; held?: string; addLabel: string }) {
+  const t = useTheme();
+  const msg = useT();
+  const stdG = haveG + addG;
+  const pct = (g: number) => `${Math.min(100, (g / stdG) * 100)}%` as const;
+  return (
+    <View testID="basket-bar" style={{ gap: t.space.xxs }}>
+      <View aria-hidden style={{ height: 16, borderRadius: t.radius.sm, backgroundColor: t.color.surfaceSunk, borderWidth: t.border.hair, borderColor: t.color.rule, flexDirection: 'row', overflow: 'hidden' }}>
+        <View style={{ width: pct(haveG), backgroundColor: held ? t.color.ruleStrong : t.color.action }} />
+        <View style={{ width: pct(addG), backgroundColor: t.color.warnSunk, borderLeftWidth: t.border.hair, borderColor: t.color.warn }} />
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', columnGap: t.space.sm }}>
+        <WrapLine>
+          <RubberKg g={haveG} />
+          <Words soft>{held ?? msg('v2s.barHave')}</Words>
+        </WrapLine>
+        <WrapLine>
+          <RubberKg g={addG} />
+          <Words soft>{addLabel}</Words>
+        </WrapLine>
+        <WrapLine>
+          <Words soft>{msg('v2s.barFull')}</Words>
+          <RubberKg g={stdG} />
+        </WrapLine>
+      </View>
     </View>
   );
 }
