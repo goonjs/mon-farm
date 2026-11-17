@@ -13,9 +13,9 @@ Status: Ready (waiting for the owner's yes · ข้อเสนอแนะไ�
 
 ## Acceptance criteria
 
-- [ ] **FC-1** ลบ key ที่ไม่มีที่ใช้แล้วออกจาก `src/i18n/messages.ts` ทั้ง th และ en: `v2s.fillTitle`, `fillHave`, `fillFrom`, `fillFull`, `fillPart`, `fillNext`, `fillMore`, `asBasket`, `wholeBasket`, `fullSumSkew`, `weighAdded`, `countAs`, `partSum`, `partSumSkew`, `nextFull`, `basketN`, `fillNote`, `fillStagePart`, `fullLine`, `fillSum` (ตรวจ 2026-11-17: ไม่มีที่อ้างนอก `messages.ts` และไม่มีการต่อชื่อ key แบบ `v2s.${…}` สำหรับกลุ่มนี้) · ตรวจซ้ำก่อนลบ
-- [ ] **FC-2** สามแถวตัวเลือกในแผ่นเติมเข่ง (`fill-full`, `fill-part`, `fill-next`) อยู่ใน View ที่มี `accessibilityRole="radiogroup"` และชื่อกลุ่ม (เช่น "เลือกวิธีเติมเข่ง N") · แถวยังเป็น `radio` + `accessibilityState.selected` เหมือนเดิม
-- [ ] **FC-3** หน้าตาและพฤติกรรมไม่เปลี่ยน: screenshot 12/13 เดิมไม่เปลี่ยน · เทสต์เดิมผ่านทั้งหมด
+- [x] **FC-1** ลบ key ที่ไม่มีที่ใช้แล้วออกจาก `src/i18n/messages.ts` ทั้ง th และ en: `v2s.fillTitle`, `fillHave`, `fillFrom`, `fillFull`, `fillPart`, `fillNext`, `fillMore`, `asBasket`, `wholeBasket`, `fullSumSkew`, `weighAdded`, `countAs`, `partSum`, `partSumSkew`, `nextFull`, `basketN`, `fillNote`, `fillStagePart`, `fullLine`, `fillSum` (ตรวจ 2026-11-17: ไม่มีที่อ้างนอก `messages.ts` และไม่มีการต่อชื่อ key แบบ `v2s.${…}` สำหรับกลุ่มนี้) · ตรวจซ้ำก่อนลบ
+- [x] **FC-2** สามแถวตัวเลือกในแผ่นเติมเข่ง (`fill-full`, `fill-part`, `fill-next`) อยู่ใน View ที่มี `accessibilityRole="radiogroup"` และชื่อกลุ่ม (เช่น "เลือกวิธีเติมเข่ง N") · แถวยังเป็น `radio` + `accessibilityState.selected` เหมือนเดิม
+- [x] **FC-3** หน้าตาและพฤติกรรมไม่เปลี่ยน: screenshot 12/13 เดิมไม่เปลี่ยน · เทสต์เดิมผ่านทั้งหมด
 
 ## Offline / sync behavior
 
@@ -34,8 +34,8 @@ Status: Ready (waiting for the owner's yes · ข้อเสนอแนะไ�
 
 ## Verification
 
-- [ ] Sandbox run performed:
-- [ ] Screenshots: (ไม่เปลี่ยน)
+- [x] Sandbox run performed: web build + Playwright `v2-sale` + `v2-text-size` (20 ผ่าน) · jest แผ่นเติมเข่งมี radiogroup ชื่อ "เลือกวิธีเติมเข่ง N" · key เก่า 20 ตัวไม่อยู่ในแคตตาล็อก
+- [x] Screenshots: ไม่เปลี่ยน (หน้าตาเหมือนเดิม)
 
 ## Code review
 

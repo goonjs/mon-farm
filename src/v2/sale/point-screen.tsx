@@ -256,54 +256,56 @@ export function PointScreen() {
         <IconLine icon={(c) => <TapperIcon color={c} size={14} />}>{msg('v2s.fillSame', { name: tapper })}</IconLine>
         {skew ? <SkewTag label={msg('v2s.skewTag', { skew: signed(kgText(skew)) })} /> : null}
         <BasketBar haveG={o.haveG} addG={o.missingG} addLabel={msg('v2s.barAdd')} />
-        {way(
-          'full',
-          msg('v2s.optFull'),
-          <WrapLine>
-            <Words soft>{msg('v2s.optFullRes', { n: o.basketNo })}</Words>
-            <RubberKg g={std} />
-          </WrapLine>,
-          fullKg,
-          <View testID="fill-steps" style={{ gap: t.space.xxs }}>
-            {step(1, (
-              <WrapLine>
-                <Words strong>{msg('v2s.stepPour')}</Words>
-                <RubberKg g={o.missingG} />
-                <Words strong>{msg('v2s.stepIntoOld', { n: o.basketNo })}</Words>
-              </WrapLine>
-            ), true)}
-            {step(2, readStep(fullKg, `(${kgText(std)} + ${msg('v2s.eqBasket', { n: kgText(o.tareG) })}${skewPart})`))}
-          </View>,
-        )}
-        {way(
-          'part',
-          msg('v2s.optPart'),
-          <WrapLine>
-            <Words soft>{msg('v2s.optPartSub')}</Words>
-            <RubberKg g={o.missingG} />
-          </WrapLine>,
-          partKg,
-          <View testID="fill-steps" style={{ gap: t.space.xxs }}>
-            {step(1, (
-              <WrapLine>
-                <Words strong>{msg('v2s.stepWeighIn')}</Words>
-                <RubberKg g={o.missingG} />
-                <Words strong>{msg('v2s.stepEmptyNew')}</Words>
-              </WrapLine>
-            ), true)}
-            {step(2, readStep(partKg, `(${kgText(o.missingG)} + ${msg('v2s.eqBasket', { n: kgText(o.tareG) })}${skewPart})`))}
-          </View>,
-        )}
-        {way(
-          'next',
-          msg('v2s.optNext'),
-          <WrapLine>
-            <Words soft>{msg('v2s.optNextSub', { n: o.basketNo })}</Words>
-            <RubberKg g={o.haveG} />
-            <Words soft>{msg('v2s.optNextThen', { n: o.basketNo + 1 })}</Words>
-          </WrapLine>,
-          null,
-        )}
+        <View testID="fill-ways" accessibilityRole="radiogroup" accessibilityLabel={msg('v2s.fillWays', { n: o.basketNo })} style={{ gap: t.space.md }}>
+          {way(
+            'full',
+            msg('v2s.optFull'),
+            <WrapLine>
+              <Words soft>{msg('v2s.optFullRes', { n: o.basketNo })}</Words>
+              <RubberKg g={std} />
+            </WrapLine>,
+            fullKg,
+            <View testID="fill-steps" style={{ gap: t.space.xxs }}>
+              {step(1, (
+                <WrapLine>
+                  <Words strong>{msg('v2s.stepPour')}</Words>
+                  <RubberKg g={o.missingG} />
+                  <Words strong>{msg('v2s.stepIntoOld', { n: o.basketNo })}</Words>
+                </WrapLine>
+              ), true)}
+              {step(2, readStep(fullKg, `(${kgText(std)} + ${msg('v2s.eqBasket', { n: kgText(o.tareG) })}${skewPart})`))}
+            </View>,
+          )}
+          {way(
+            'part',
+            msg('v2s.optPart'),
+            <WrapLine>
+              <Words soft>{msg('v2s.optPartSub')}</Words>
+              <RubberKg g={o.missingG} />
+            </WrapLine>,
+            partKg,
+            <View testID="fill-steps" style={{ gap: t.space.xxs }}>
+              {step(1, (
+                <WrapLine>
+                  <Words strong>{msg('v2s.stepWeighIn')}</Words>
+                  <RubberKg g={o.missingG} />
+                  <Words strong>{msg('v2s.stepEmptyNew')}</Words>
+                </WrapLine>
+              ), true)}
+              {step(2, readStep(partKg, `(${kgText(o.missingG)} + ${msg('v2s.eqBasket', { n: kgText(o.tareG) })}${skewPart})`))}
+            </View>,
+          )}
+          {way(
+            'next',
+            msg('v2s.optNext'),
+            <WrapLine>
+              <Words soft>{msg('v2s.optNextSub', { n: o.basketNo })}</Words>
+              <RubberKg g={o.haveG} />
+              <Words soft>{msg('v2s.optNextThen', { n: o.basketNo + 1 })}</Words>
+            </WrapLine>,
+            null,
+          )}
+        </View>
         <Pressable
           testID="fill-go"
           accessibilityRole="button"
