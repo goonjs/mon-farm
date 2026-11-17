@@ -89,6 +89,8 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const pointId = params.point ?? '';
   const [sheet, setSheet] = useState<Sheet>(initialSheet);
   const [readingKg, setReadingKg] = useState<number | null>(null);
+  // The counter cards' figure box width, for the narrow-card step in figFont.
+  const [figBoxW, setFigBoxW] = useState<number | undefined>(undefined);
   // How the short sheet is filled is the device's choice (E04-S16): typed, or the dial following scale or net.
   const [weighMode, setWeighMode] = useState<WeighMode>(readWeighMode);
   const [basis, setBasisState] = useState<WeighBasis>(readWeighBasis);
@@ -229,11 +231,12 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   // default); above M they wrap instead of being cut with "…" (E03-S08 TS-8). The money card's label is one line at
   // every size, kept short ("รวม (฿)") so it fits at 320 px L (owner merge-209, 2026-11-17).
   const oneLine = t.textScale > 1 ? undefined : 1;
-  // A long figure ("1.84 หมื่น") filled 98% of the 320 px card at L, and 92% at M on CI's wider fonts (PR 209), so it
-  // steps down a further 20% at every text size; short figures are unchanged.
-  const figFont = (value: string) => Math.round(figSize(value, t.font.size.headingXl) * (value.length > 9 ? 0.8 : 1));
+  // A long figure ("1.84 หมื่น") filled 98% of a 320 px phone's card at L and 92% at M on CI's wider fonts (PR 209), so on a
+  // narrow card (figure box under 90 px) it steps down a further 20%, at every text size; wider cards and short figures
+  // are unchanged.
+  const figFont = (value: string) => Math.round(figSize(value, t.font.size.headingXl) * (value.length > 9 && figBoxW !== undefined && figBoxW < 90 ? 0.8 : 1));
   const cardFigure = (value: string, testID: string) => (
-    <Text testID={testID} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figFont(value), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+    <Text testID={testID} onLayout={(e) => setFigBoxW(e.nativeEvent.layout.width)} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit style={{ fontFamily: t.font.family.sans, fontSize: figFont(value), fontWeight: t.font.weight.black, fontVariant: ['tabular-nums'], color: t.color.ink }}>
       {value}
     </Text>
   );
