@@ -327,7 +327,17 @@ question blocks the commit, and the commit is what a push is waiting on.
   short word ("แก้" …) in an outlined circle or near-circle pill at the end of
   a row or card. Make the row or card the tap target with `›`, or use an
   underlined text link. Picture and detail: `.claude/skills/phone-form-ux/SKILL.md`
-  rule 11.
+  rule 11. **Widened 2026-11-18:** this also covers near-round outlined pills
+  used as choices (owner, lead chat 2026-11-18 about 03:01: "ภาพม็อกอัพกับภาพที่ทำออกมาจริงไม่ตรงกันมากเกินไป UX ผิดไปเยอะรวมถึงละเมิดกฎที่เราจะไม่ใช้ปุ่มที่เกือบกลมๆให้เลือกด้วย … ที่ให้เลือกว่าปอนกี่งอนเนี่ยดันอยู่กับปุ่มที่ให้เลือกซึ่งมันทำให้หน้าจอมันดูไม่สวยไม่บาลานซ์"). Choices are
+  equal rounded-rectangle tiles, as in the mockup (lead's reading, from the
+  mockup).
+- **A label never shares a row with its choice buttons (owner, 2026-11-18,
+  same message).** Put the label on its own line above the buttons. Rule 13 in
+  `.claude/skills/phone-form-ux/SKILL.md`.
+- **Build matches the mockup** (lead's procedure; the aim is the owner's).
+  Before UI work is called done, put the build
+  screenshot next to the agreed mockup for every state; drift (shape, layout,
+  placement) is fixed before review. Reason, the owner in the same message: "ภาพม็อกอัพกับภาพที่ทำออกมาจริงไม่ตรงกันมากเกินไป".
 
 ## Discord
 
