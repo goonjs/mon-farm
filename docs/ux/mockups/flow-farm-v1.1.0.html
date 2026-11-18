@@ -219,10 +219,11 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .ch-plain { background: var(--color-surface-sunk); color: var(--color-ink-soft); }
 
 /* ---- segmented choices ---- */
-.seg { display: flex; gap: 6px; background: var(--color-surface-sunk); border-radius: var(--r-pill); padding: 4px; }
+/* E01-S25: style B — rounded rectangle, not a pill (owner 2026-11-18 round 2: filled pills count too) */
+.seg { display: flex; gap: 6px; background: var(--color-surface-sunk); border-radius: var(--r-md); padding: 4px; }
 .seg > span {
   flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center;
-  border-radius: var(--r-pill); font-size: 15px; font-weight: 600; color: var(--color-ink-soft); line-height: 1.2;
+  border-radius: 8px; font-size: 15px; font-weight: 600; color: var(--color-ink-soft); line-height: 1.2;
 }
 .seg > span small { display: block; font-size: 11px; font-weight: 400; }
 .seg > span.on { background: var(--color-action); color: var(--color-ink-inverse); }
@@ -509,10 +510,11 @@ figcaption li { display: flex; gap: 8px; align-items: flex-start; margin-top: 6p
 .inp.bad { border: 2px solid var(--color-reject); }
 .ferr { display: flex; gap: 4px; align-items: center; color: var(--color-reject); font-size: 13px; font-weight: 600; line-height: 1.3; }
 .ferr .ic { width: 15px; height: 15px; }
-.fcs { display: flex; flex-wrap: wrap; gap: 6px; }
+/* E01-S25: style A/I — equal rounded tiles, 3 to a row, not outlined pills (owner 2026-11-18) */
+.fcs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .fc {
-  display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 0 12px; border-radius: var(--r-pill);
-  border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised); color: var(--color-ink); font-size: 14px; font-weight: 600; white-space: nowrap;
+  display: flex; align-items: center; justify-content: center; text-align: center; gap: 4px; min-height: var(--target); padding: 4px 8px; border-radius: var(--r-md);
+  border: 1.5px solid var(--color-rule-strong); background: var(--color-surface-raised); color: var(--color-ink); font-size: 14px; font-weight: 600; line-height: 1.2;
 }
 .fc .ic { width: 16px; height: 16px; }
 .fc.on { background: var(--color-action-sunk); border: 2px solid var(--color-action); color: var(--color-action); }
@@ -782,8 +784,8 @@ svg .dot { fill: currentColor; stroke: none; }
 #sec7b .sheet.tall {top: 120px;}
 #sec7b .sheet .shh {display: flex; align-items: center; gap: 8px;}
 #sec7b .sheet .shh h4 {flex: 1;}
-#sec7b .fchips {display: flex; flex-wrap: wrap; gap: 8px;}
-#sec7b .fchips .fc {min-height: 44px;}
+#sec7b .fchips {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;}
+#sec7b .fchips .fc {min-height: var(--target);}
 #sec7b .flow.x {gap: 24px 6px; justify-content: flex-start;}
 #sec7b .flow.x .arrow {width: 86px; padding-bottom: 160px;}
 #sec7b figcaption .mv {display: block; margin-top: 6px; font-size: 13px; color: var(--pg-ink-soft);}
