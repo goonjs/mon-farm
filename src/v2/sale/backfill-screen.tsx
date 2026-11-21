@@ -467,7 +467,9 @@ function SummaryRow({ r, i, pointName }: { r: CatchUpRow; i: number; pointName: 
   } else if (r.status === 'open' && !r.topUps.length) {
     text = msg('cu.rowOpen', { n: r.basketNo });
   } else {
-    text = msg('cu.rowShort', { n: r.basketNo, kg: kgText(r.firstG) }) + r.topUps.map((u) => msg('cu.rowTop', { point: pointName(u.pointId), kg: kgText(u.g) })).join('') + (r.status === 'closed' ? msg('cu.rowClosed') : '');
+    // A basket counted live says so, so its live kg is not read as part of this entry (owner 2026-11-21).
+    const head = r.liveG !== undefined ? msg('cu.rowLive', { n: r.basketNo, kg: kgText(r.liveG) }) : msg('cu.rowShort', { n: r.basketNo, kg: kgText(r.firstG) });
+    text = head + r.topUps.map((u) => msg('cu.rowTop', { point: pointName(u.pointId), kg: kgText(u.g) })).join('') + (r.status === 'closed' ? msg('cu.rowClosed') : '');
   }
   const warn = r.kind === 'short';
   // A basket from the log shows what this catch-up adds to it; the Σ adds the same.
