@@ -293,7 +293,9 @@ test.describe('the story example at 390×844 (E05-S11)', () => {
     await expect(id('pay-tally')).toContainText('ยอดตรงกันแล้ว');
     await shot(page, 'co-09-payment');
     await tap('close-sale');
-    await expect(id('sales')).toBeVisible();
+    // E15-S07 HE-3: closing lands on the home; the list still says closed.
+    await expect(id('home-sale-start')).toBeVisible();
+    await page.goto('/v2/sales');
     await expect(id('sale-rows')).toContainText('ปิดแล้ว');
     test.info().annotations.push({ type: 'taps', description: `${toPay} to pay, ${taps} with close` });
     console.log(`E05-S11 story example: ${toPay} taps to the pay page (${taps} with close), summary ${height.toFixed(2)} screens`);
@@ -554,10 +556,10 @@ test('start → point → empty scale → count → short → switch and fill �
   await shot(page, '19-payment');
   await id('close-sale').click();
 
-  // ── การขายทั้งหมด (page 4) ──
-  await expect(id('sales')).toBeVisible();
-  await expect(id('sale-rows')).toContainText('450 กก.');
-  await expect(id('sale-rows')).toContainText('ปิดแล้ว');
+  // ── E15-S07 HE-3: closing lands on the home, even after a reload on the pay page ──
+  await expect(id('home-sale-start')).toBeVisible();
+  await expect(page).toHaveURL(/\/v2$/);
+  await expect(id('home-sale-start-badge')).toHaveAttribute('aria-label', 'เงินค้าง 1 กอง');
   // ── back after closing finds no live counter (review #2) ──
   // However far back the browser goes, every page of the closed sale is read-only.
   // (Online for this: going back past the earlier reload loads that document again.)
@@ -568,8 +570,11 @@ test('start → point → empty scale → count → short → switch and fill �
     await page.waitForTimeout(400);
     await expect(id('hold')).toHaveCount(0);
   }
+  // ── การขายทั้งหมด (page 4) ──
   await page.goto('/v2/sales');
   await expect(id('sales')).toBeVisible();
+  await expect(id('sale-rows')).toContainText('450 กก.');
+  await expect(id('sale-rows')).toContainText('ปิดแล้ว');
   await shot(page, '04-sales');
 
   expect(errors).toEqual([]);
@@ -822,3 +827,99 @@ for (const width of [320, 360, 390]) {
     });
   }
 }
+
+/**
+ * E15-S07: the sale day ends on the home (owner 2026-11-21 09:01 "ข · ข · ตกลง AC · ทั้งเขียวและเหลืองคงสีจนจบวัน").
+ * Walked from the home as a worker does, offline, with nothing seeded but the farm: no `pile_closed` is written by any
+ * page, so the calculator must not wait for one (HE-1). Closing lands on the home (HE-3), and back from there never
+ * reaches a live counter. The other HE-3 case, a reload on the pay page before closing, is the long sale test above.
+ */
+test('E15-S07 prep → start → count → summary → tick → close lands on home: scale, calculator, S4, then S5 (offline)', async ({ page, context }) => {
+  test.setTimeout(60_000);
+  const id = on(page);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seedMaster(page, FARM);
+  await page.evaluate(() => localStorage.setItem('mon-farm:hold-ms', '500'));
+  await page.goto('/v2');
+  await context.setOffline(true);
+  const homeShots = 'docs/ux/screenshots/v2/e15-s07';
+  /** The home as another tab sees it now, from the same local log (online only to load the page). */
+  const homeBadge = async (label: string, name: string) => {
+    await context.setOffline(false);
+    const home = await context.newPage();
+    await home.setViewportSize({ width: 412, height: 915 });
+    await home.goto('/v2');
+    await context.setOffline(true);
+    await expect(on(home)('home-sale-start-badge')).toHaveAttribute('aria-label', label);
+    await evidence(home, `${homeShots}/${name}.png`);
+    await home.close();
+  };
+
+  // ── เตรียมขาย: the buyer only, so the prep tile stays yellow all day (the owner kept it as it is) ──
+  await id('home-prepare').click();
+  await id('prep-buyer').click();
+  await id('prep-buyer-buyer-a').click();
+  await id('prep-done').click();
+  const prepBefore = await id('home-prepare-badge').getAttribute('aria-label');
+
+  // ── start → count two baskets ──
+  await id('home-sale-start').click();
+  await expect(id('start-buyer')).toContainText('คนรับซื้อยาง ก');
+  await id('start-next').click();
+  await id('pick-farm-fa').click();
+  await id('pick-point-a1').click();
+  await id('start-weigh').click();
+  await expect(id('counter')).toBeVisible();
+  await hold(page);
+  await hold(page);
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 3$/);
+
+  // ── check → summary: still the scale (nothing written for clearing yet) ──
+  await id('counter-menu').click();
+  await id('menu-finish').click();
+  await id('check-price').click();
+  await fieldPad(page, 'check-price', '50');
+  await id('check-price-done').click();
+  await id('check-price-save').click();
+  await id('check-match').click();
+  await id('to-settlement').click();
+  await expect(id('co-summary')).toBeVisible();
+  await homeBadge('กำลังนับ', '1-summary-scale');
+
+  // ── one tick: the calculator, though the pile is still "counting" (HE-1) ──
+  await id('co-debt-none').click();
+  await id('co-owed-none').click();
+  await id('co-confirm').click();
+  await expect(id('payment')).toBeVisible();
+  await id('tick-red').click();
+  await expect(id('tick-red')).toHaveAttribute('aria-checked', 'true');
+  await homeBadge('รอเคลียร์เงิน', '2-tick-calculator');
+
+  // ── close: straight to the home, red 1 = the owner's transfer not ticked (HE-3) ──
+  await id('close-sale').click();
+  await expect(id('home-sale-start')).toBeVisible();
+  await expect(page).toHaveURL(/\/v2$/);
+  await expect(id('home-sale-start-badge')).toHaveAttribute('aria-label', 'เงินค้าง 1 กอง');
+  expect(await id('home-prepare-badge').getAttribute('aria-label')).toBe(prepBefore);
+  await evidence(page, `${homeShots}/3-closed-s4.png`);
+
+  // ── back from the home never reaches a live counter (review #2) ──
+  await context.setOffline(false);
+  for (let i = 0; i < 6; i++) {
+    await page.goBack();
+    await page.waitForLoadState();
+    await page.waitForTimeout(400);
+    await expect(id('hold')).toHaveCount(0);
+  }
+
+  // ── S4 opens the pay page; ticking the rest makes it ✓ (S5) ──
+  await page.goto('/v2');
+  await context.setOffline(true);
+  await id('home-sale-start').click();
+  await expect(id('payment')).toBeVisible();
+  await id('tick-owner').click();
+  await expect(id('tick-owner')).toHaveAttribute('aria-checked', 'true');
+  await homeBadge('เคลียร์เงินครบแล้ว', '4-cleared-s5');
+  expect(errors).toEqual([]);
+});

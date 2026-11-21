@@ -21,6 +21,7 @@ import { HomeCover } from './home-cover';
 import { KnowRow, useSaleLineText } from './know-row';
 import { ORDER_NEW, orderHref } from './money/order-routes';
 import { loadHomeSaleLogs, type SaleLog } from './sale/open-sale';
+import { clearClosing } from './sale/pieces';
 import { useRepayHome, type OwesRow } from './home-repay';
 import { groupOrders } from '../core/finance/fert-order';
 import { salePrep } from '../core/finance/sale-prep';
@@ -419,6 +420,8 @@ function useHomeSales(): { sales: HomeSales; logs: readonly SaleLog[] } | null {
   }, []);
   useEffect(reload, [reload]);
   useFocusEffect(reload);
+  // E15-S07 HE-3: closing a sale lands here now, so the home ends the close as the sale list does.
+  useFocusEffect(useCallback(() => clearClosing(), []));
   return data;
 }
 

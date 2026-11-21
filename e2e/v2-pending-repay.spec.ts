@@ -110,7 +110,7 @@ test('closed without the transfer ticked → waiting on the ledger and home → 
   await expect(id('payment')).toBeVisible();
   await expect(id('tick-amt-owner')).toContainText('22,937');
   await id('close-sale').click();
-  await expect(id('sales')).toBeVisible();
+  await expect(id('home-sale-start')).toBeVisible();
 
   // ── H1: the home says the repayment money is not in yet ──
   await page.goto('/v2');

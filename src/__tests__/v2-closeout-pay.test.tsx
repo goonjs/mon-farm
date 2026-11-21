@@ -139,12 +139,13 @@ describe('CO-10 · story example (A9): โอนรวม + ให้คนก�
     expect(marks.map((e) => e.targetId)).toEqual([`payment-${S}-owner`]);
   });
 
-  it('SET-6: closing with unticked rows is allowed; it completes the sale and leaves for the list', async () => {
+  it('SET-6: closing with unticked rows is allowed; it completes the sale and leaves for the home', async () => {
     router.dismissTo.mockClear();
     await inSale(S, <CloseoutPayScreen />);
     expect(last('close-sale').props.accessibilityState).toMatchObject({ disabled: false });
     await press('close-sale');
-    expect(router.dismissTo).toHaveBeenCalledWith('/v2/sales');
+    // E15-S07 HE-3: closing lands on the home.
+    expect(router.dismissTo).toHaveBeenCalledWith('/v2');
   });
 
   it('ticks stay open after close; the close button is gone', async () => {
