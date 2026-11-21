@@ -10,6 +10,7 @@ import { SaleProvider } from '../store/SaleProvider';
 import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { tokens } from '../../design/tokens';
+import { expectSegment } from '../test/choice-shape';
 import { wrap } from '../test/render';
 import { FarmMateArt } from '../ui';
 import { clearDraft } from '../v2/sale/closeout/use-closeout';
@@ -445,6 +446,8 @@ describe('the owed sheet (A26, CO-26)', () => {
     expect(text(`co-owed-hold-${farm.nat}`).props.role).toBe('radio');
     expect(state(`co-owed-hold-${farm.nat}`)).toMatchObject({ checked: true });
     expect(state(`co-owed-net-${farm.nat}`)).toMatchObject({ checked: false });
+    // E01-S25 CT-5: ไว้ก่อน / หักกลบ is style B (r2-co-owed).
+    expectSegment(screen.getByTestId(`co-owed-net-${farm.nat}`));
     await press(`co-owed-net-${farm.nat}`);
     expect(state(`co-owed-net-${farm.nat}`)).toMatchObject({ checked: true });
     expect(state(`co-owed-hold-${farm.nat}`)).toMatchObject({ checked: false });

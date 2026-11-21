@@ -63,7 +63,7 @@ export function OwedSheet({ co, people, onAdd, onClose }: { co: Closeout; people
             accessibilityState={{ selected, checked: selected, disabled: waiting }}
             disabled={waiting}
             onPress={waiting ? undefined : onPress}
-            style={{ flex: 1, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center', paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: selected ? (waiting ? t.color.inkSoft : t.color.action) : 'transparent' }}
+            style={{ flex: 1, minHeight: t.target.min, alignItems: 'center', justifyContent: 'center', paddingHorizontal: t.space.sm, borderRadius: t.radius.sm, backgroundColor: selected ? (waiting ? t.color.inkSoft : t.color.action) : 'transparent' }}
           >
             <AppText style={{ textAlign: 'center', fontWeight: t.font.weight.bold, color: selected ? t.color.inkInverse : waiting ? t.color.inkFaint : t.color.ink }}>{label}</AppText>
           </Pressable>
@@ -85,7 +85,7 @@ export function OwedSheet({ co, people, onAdd, onClose }: { co: Closeout; people
             </View>
             {canNet && w ? (
               <>
-                <View testID={`co-owed-choice-${p.id}`} role="radiogroup" accessibilityRole="radiogroup" accessibilityLabel={p.name} style={{ flexDirection: 'row', gap: t.space.xs, backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.pill, padding: t.space.xs }}>
+                <View testID={`co-owed-choice-${p.id}`} role="radiogroup" accessibilityRole="radiogroup" accessibilityLabel={p.name} style={{ flexDirection: 'row', gap: t.space.xs, backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.md, padding: t.space.xs }}>
                   {option(`co-owed-hold-${p.id}`, msg('co.owed.hold'), !netted, () => co.update((d) => netOff(d, w)))}
                   {option(`co-owed-net-${p.id}`, `${MARK.out} ${msg('co.owed.netWith', { name: p.name })}`, netted, () => co.update((d) => netOn(d, w)))}
                 </View>
@@ -99,7 +99,7 @@ export function OwedSheet({ co, people, onAdd, onClose }: { co: Closeout; people
               </>
             ) : (
               <>
-                <View testID={`co-owed-choice-${p.id}`} role="radiogroup" accessibilityRole="radiogroup" accessibilityLabel={p.name} style={{ flexDirection: 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.pill, padding: t.space.xs }}>
+                <View testID={`co-owed-choice-${p.id}`} role="radiogroup" accessibilityRole="radiogroup" accessibilityLabel={p.name} style={{ flexDirection: 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.md, padding: t.space.xs }}>
                   {option(`co-owed-hold-${p.id}`, msg('co.owed.hold'), true, () => undefined)}
                 </View>
                 <AppText variant="bodySm" style={{ color: t.color.inkSoft }}>{msg('co.owed.noDebt', { name: p.name })}</AppText>
