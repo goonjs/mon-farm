@@ -1,6 +1,6 @@
 # Story E04-S23: บันทึกย้อนหลัง — เข่งเชื่อมเห็นชัด, คนกรีดคนที่สองกรอกได้, นับต่อไม่ถามตรวจตาชั่ง
 
-Status: Review (owner agreed AC 2026-11-17 21:43 Bangkok, dashboard answer e04-s23-ac, word for word: "ก · ตกลงตาม AC JB-1..3 (แนะนำ)")
+Status: Done (merged #214, 982285b, 2026-11-17) — เดิม: (owner agreed AC 2026-11-17 21:43 Bangkok, dashboard answer e04-s23-ac, word for word: "ก · ตกลงตาม AC JB-1..3 (แนะนำ)")
 เงื่อนไขไปขั้นถัดไป: เทสต์แดงก่อนแล้วแก้จนเขียว, CI เขียว, ส่งบรีฟให้ลีดเพื่อรีวิวอิสระ · ใคร: ทีม 2 · รอ: CI
 
 ## Context
