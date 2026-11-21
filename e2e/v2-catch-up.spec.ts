@@ -220,7 +220,7 @@ test('E04-S26 at 390 px: count 3 live (the last short), catch up one point, top 
   await id('menu-backfill').click();
   await expect(id('cu-blocked')).toHaveCount(0);
   await expect(id('cu-order')).toBeVisible();
-  await id('cu-order-a1').click();
+  // One point only: จุด 2.
   await id('cu-order-a2').click();
   await fits(page);
   await shot('1-order');
