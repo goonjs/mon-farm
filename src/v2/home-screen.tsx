@@ -142,6 +142,12 @@ export function V2Home() {
   const prepTile = tiles ? prepTileProps(tiles.prep, msg) : {};
   const startTile = tiles ? startTileProps(tiles.start, msg) : {};
   const carriedLatest = tiles?.carried.find((c) => c.id === sales?.latest?.id) ?? null;
+  // E15-S08 CL-1: the unclosed-sale row reads the start tile's phase, so it says กำลังเคลียร์เงิน with the calculator (S3).
+  const openClearing = useMemo(() => {
+    const id = sales?.open?.id;
+    const log = id ? homeData?.logs.find((l) => l.id === id) : undefined;
+    return !!(log && fin.events && salePhase(projectSale(log.events, log.id), clearingStarted(fin.events, log.id)) === 'clearing');
+  }, [sales?.open?.id, homeData, fin.events]);
 
   const saleLine = useSaleLineText();
 
@@ -154,7 +160,7 @@ export function V2Home() {
         icon={() => <FarmMateArt id="sale.sale" />}
         label={msg('home.openSale')}
         value={saleLine(sales.open)}
-        chip={<Chip tone="warn" label={msg(sales.open.weighing ? 'sales.weighing' : 'status.open')} />}
+        chip={<Chip tone="warn" label={msg(openClearing ? 'sales.clearing' : sales.open.weighing ? 'sales.weighing' : 'status.open')} />}
         why={msg(sales.open.weighing ? 'home.why.weighing' : 'home.why.notClosed')}
         to={saleHref(sales.open.id, { closed: false, point: sales.open.point })}
       />
