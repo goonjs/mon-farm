@@ -231,14 +231,14 @@ export function ChoiceTiles<T extends string>({
 }
 
 /** Style E: a filter value box that opens a sheet or page (the caller's `onPress`). */
-export function ValueBox({ label, value, set, onPress, testID }: { label: string; value: string; set?: boolean; onPress: () => void; testID?: string }) {
+export function ValueBox({ label, value, set, onPress, testID, a11yLabel }: { label?: string; value: string; set?: boolean; onPress: () => void; testID?: string; /** When the heading sits outside the box (a label line above it). */ a11yLabel?: string }) {
   const t = useTheme();
   const c = t.color;
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel={`${label}: ${value}`}
+      accessibilityLabel={`${label ?? a11yLabel ?? ''}: ${value}`}
       onPress={onPress}
       style={{
         flex: 1,
@@ -256,7 +256,7 @@ export function ValueBox({ label, value, set, onPress, testID }: { label: string
       }}
     >
       <View style={{ flex: 1 }}>
-        <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: c.inkSoft }}>{label}</Text>
+        {label ? <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: c.inkSoft }}>{label}</Text> : null}
         <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: c.ink }}>{value}</Text>
       </View>
       <View aria-hidden style={{ transform: [{ rotate: '90deg' }] }}>

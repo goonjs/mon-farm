@@ -19,7 +19,7 @@ import { BackfillScreen } from '../v2/sale/backfill-screen';
 import { countModel } from '../v2/sale/count';
 import { CounterScreen } from '../v2/sale/counter-screen';
 import { figSize, useSaleView } from '../v2/sale/pieces';
-import { HistoryScreen } from '../v2/sale/history-screen';
+import { HistoryScreen, historyFilterLayout } from '../v2/sale/history-screen';
 import { PointScreen } from '../v2/sale/point-screen';
 import { StartSaleScreen } from '../v2/sale/start-screen';
 import { ZeroTareScreen } from '../v2/sale/zero-tare-screen';
@@ -1210,6 +1210,11 @@ describe('v2 counter toolbar, hold-to-undo, history (E04-S15)', () => {
 
 describe('v2 basket history (page 8d, E04-S15)', () => {
   const rowsOf = () => screen.queryAllByTestId(/^hist-row-/).map((r) => r.props.testID as string);
+  /** E01-S26 PS26-9: the basket kind is an E box that opens rows; picking one closes it. */
+  const pickKind = async (k: string) => {
+    await press('hist-kind');
+    await press(`hist-kind-${k}`);
+  };
 
   it('newest first; each row has the number, the kind, the kg, the place, the tapper and the time to the second', async () => {
     await started();
@@ -1275,7 +1280,7 @@ describe('v2 basket history (page 8d, E04-S15)', () => {
     expect(row).toHaveTextContent(/เต็ม/);
     expect(row).toHaveTextContent(/เข่งเชื่อม/);
     expect(row).toHaveTextContent(/\(35 \+ 15\) กก\./);
-    await press('hist-kind-short');
+    await pickKind('short');
     expect(screen.getByTestId('hist-filter-empty')).toBeTruthy();
   });
 
@@ -1317,10 +1322,23 @@ describe('v2 basket history (page 8d, E04-S15)', () => {
     await hold();
     await inSale(<HistoryScreen />, { point: farm.a[0] });
     expect(rowsOf()).toHaveLength(2);
+    // E01-S26 PS26-9: a few tappers = a B bar (left) beside the E box for baskets (right), each with its label above.
+    expect(screen.getByTestId('hist-tapper').props.accessibilityRole).toBe('radiogroup');
+    expectSegment(screen.getByTestId(`hist-tapper-${farm.red}`));
+    expect(screen.getByTestId('hist-kind')).toHaveTextContent(/ทั้งหมด/);
+    expect(screen.getByText('เข่ง')).toBeTruthy();
+    expect(screen.getByText('คนกรีด')).toBeTruthy();
     await press(`hist-tapper-${farm.red}`);
     expect(rowsOf()).toHaveLength(1);
     await press('hist-tapper-all');
     expect(rowsOf()).toHaveLength(2);
+  });
+
+  it('B for tappers while it fits, else E for both (E01-S26 PS26-9)', () => {
+    expect(historyFilterLayout(2, false)).toBe('B+E');
+    expect(historyFilterLayout(3, false)).toBe('B+E');
+    expect(historyFilterLayout(4, false)).toBe('E+E');
+    expect(historyFilterLayout(3, true)).toBe('E+E');
   });
 
   it('the list starts with everyone; a tapper chip narrows it; the kind filter narrows further; clear resets', async () => {
@@ -1335,7 +1353,7 @@ describe('v2 basket history (page 8d, E04-S15)', () => {
     expect(rowsOf()).toHaveLength(2);
     await press(`hist-tapper-${farm.red}`);
     expect(rowsOf()).toHaveLength(1);
-    await press('hist-kind-short');
+    await pickKind('short');
     expect(rowsOf()).toHaveLength(0);
     expect(screen.getByTestId('hist-filter-empty')).toBeTruthy();
     await press('hist-filter-clear');
@@ -1356,7 +1374,7 @@ describe('v2 basket history (page 8d, E04-S15)', () => {
     await inSale(<HistoryScreen />, { point: farm.a[0] });
     expect(screen.getByTestId('hist-numbers-bad')).toHaveTextContent(/แดง: ขาด 2 · ซ้ำ 1/);
     expect(screen.queryByTestId('hist-numbers-ok')).toBeNull();
-    await press('hist-kind-short');
+    await pickKind('short');
     expect(screen.getByTestId('hist-numbers-bad')).toBeTruthy();
   });
 
@@ -1381,10 +1399,10 @@ describe('v2 basket history (page 8d, E04-S15)', () => {
     await inSale(<HistoryScreen />, { point: farm.a[0] });
     expect(screen.getByTestId('hist-equation')).toHaveTextContent('2 × 50 + 20 = 120 กก.');
     expect(screen.getByTestId('hist-summary')).toHaveTextContent(/รวม 120 กก\./);
-    await press('hist-kind-full');
+    await pickKind('full');
     expect(screen.getByTestId('hist-equation')).toHaveTextContent('2 × 50 = 100 กก.');
     expect(screen.getByTestId('hist-summary')).toHaveTextContent(/ไม่เต็ม 0 เข่ง/);
-    await press('hist-kind-all');
+    await pickKind('all');
     await press(`hist-tapper-${farm.nat}`);
     expect(screen.getByTestId('hist-equation')).toHaveTextContent('20 = 20 กก.');
     expect(rowsOf()).toHaveLength(1);

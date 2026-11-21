@@ -39,6 +39,15 @@ describe('form primitives (E01-S17 X6, v1.1.0 mockups)', () => {
     expect(onChange).toHaveBeenCalledWith('dark');
   });
 
+  it('segmented control tells its caller when a label wraps (E01-S26 PS26-9)', () => {
+    const onWrap = jest.fn();
+    wrap(<SegmentedControl testID="s" value="a" onChange={() => {}} onWrap={onWrap} options={[{ value: 'a', label: 'ทุกคน' }, { value: 'b', label: 'สมหวังผู้ช่วยกรีดยาง' }]} />);
+    fireEvent(screen.getByText('ทุกคน'), 'textLayout', { nativeEvent: { lines: [{}] } });
+    expect(onWrap).not.toHaveBeenCalled();
+    fireEvent(screen.getByText('สมหวังผู้ช่วยกรีดยาง'), 'textLayout', { nativeEvent: { lines: [{}, {}] } });
+    expect(onWrap).toHaveBeenCalled();
+  });
+
   it('radio card: selected = navy 2px edge on the selected wash; a ring that fills', () => {
     wrap(<RadioCard testID="r" selected title="นับต่อเนื่อง" detail="เข่ง 1 ถึง 20" onPress={() => {}} />);
     const card = screen.getByTestId('r');

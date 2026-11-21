@@ -14,11 +14,14 @@ export function SegmentedControl<T extends string>({
   options,
   value,
   onChange,
+  onWrap,
   testID,
 }: {
   options: readonly { value: T; label: string }[];
   value: T;
   onChange: (v: T) => void;
+  /** Called when a label needs a second line (E01-S26 PS26-9: the caller may switch to a value box). */
+  onWrap?: () => void;
   /** Each segment gets `${testID}-${value}`. */
   testID: string;
 }) {
@@ -58,6 +61,7 @@ export function SegmentedControl<T extends string>({
             }}
           >
             <Text
+              onTextLayout={onWrap ? (e) => { if (e.nativeEvent.lines.length > 1) onWrap(); } : undefined}
               style={{
                 fontFamily: t.font.family.sans,
                 fontSize: t.font.size.bodyMd,
