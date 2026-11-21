@@ -264,11 +264,12 @@ function PointForm({ pointId, propertyId }: { pointId: string | null; propertyId
             <AppText style={{ fontWeight: t.font.weight.semibold }}>{farm?.name ?? ''}</AppText>
           </View>
         ) : (
-          <ChipWrap>
+          // E01-S26 PS26-3: C rows, pick one (owner "C", 21 Nov 2026).
+          <View style={{ gap: t.space.sm }}>
             {farms.map((f) => (
-              <ToggleChip key={f.id} testID={`point-farm-${f.id}`} label={f.name} on={farmId === f.id} onPress={() => setFarmId(f.id)} />
+              <RadioCard key={f.id} testID={`point-farm-${f.id}`} title={f.name} selected={farmId === f.id} onPress={() => setFarmId(f.id)} />
             ))}
-          </ChipWrap>
+          </View>
         )}
       </View>
       <TextField
@@ -506,11 +507,11 @@ function PlanForm({ state, pointId, pointName, replacing, onClose, onSaved }: { 
         {mode === 'new' ? (
           <View style={{ gap: t.space.sm, paddingLeft: t.space.xl }}>
             <AppText variant="label">{msg('assign.pickTapper')}</AppText>
-            <ChipWrap>
+            <View style={{ gap: t.space.sm }}>
               {tappers.map((p) => (
-                <ToggleChip key={p.id} check testID={`plan-tapper-${p.id}`} label={p.name} on={tapperId === p.id} onPress={() => setTapperId(p.id)} />
+                <RadioCard key={p.id} testID={`plan-tapper-${p.id}`} title={p.name} selected={tapperId === p.id} onPress={() => setTapperId(p.id)} />
               ))}
-            </ChipWrap>
+            </View>
             {tried && !tapperId ? <FieldError>{msg('assign.pickTapper')}</FieldError> : null}
             <DateField
               testID="plan-from"
@@ -671,11 +672,11 @@ export function PointsWizardScreen() {
           {card(
             msg('wizard.farm'),
             <>
-              <ChipWrap>
+              <View style={{ gap: t.space.sm }}>
                 {farms.map((f) => (
-                  <ToggleChip key={f.id} testID={`wizard-farm-${f.id}`} label={f.name} on={farmId === f.id} onPress={() => setFarmId(f.id)} />
+                  <RadioCard key={f.id} testID={`wizard-farm-${f.id}`} title={f.name} selected={farmId === f.id} onPress={() => setFarmId(f.id)} />
                 ))}
-              </ChipWrap>
+              </View>
               <AppText variant="bodySm">{msg('wizard.farmHint')}</AppText>
               {existing.length > 0 ? (
                 <AppText variant="bodySm" testID="wizard-existing">

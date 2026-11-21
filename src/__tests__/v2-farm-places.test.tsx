@@ -12,6 +12,7 @@ import { newGroup } from '../core/group';
 import { userFromSignIn } from '../core/user';
 import { accountStore as mockAccounts } from '../store/account';
 import { pickDate } from '../test/pick-date';
+import { expectRadioRow } from '../test/choice-shape';
 import { wrap } from '../test/render';
 
 jest.mock('../store/people', () => {
@@ -282,7 +283,10 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     expect(within(timeline).getByText('ตอนนี้')).toBeTruthy();
 
     fireEvent.press(screen.getByTestId('plan-change'));
+    // E01-S26 PS26-3: the tapper is a C row (owner "C", 21 Nov), pick one.
+    expectRadioRow(screen.getByTestId(`plan-tapper-${nat.id}`));
     fireEvent.press(screen.getByTestId(`plan-tapper-${nat.id}`));
+    expect(screen.getByTestId(`plan-tapper-${nat.id}`).props.accessibilityState).toMatchObject({ checked: true });
     pickDate('plan-from', ahead(30));
     expect(screen.getByTestId('plan-preview')).toBeTruthy();
     await press('plan-save');
@@ -364,6 +368,19 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     pickDate('plan-to', ahead(5));
     await press('plan-save');
     expect((await m.state()).assignments).toHaveLength(before + 1);
+  });
+
+  it('a new point picks its farm from C rows (E01-S26 PS26-3)', async () => {
+    const m = master();
+    const a = await m.addProperty({ name: 'สวนบน', crop: 'rubber' });
+    const b = await m.addProperty({ name: 'สวนล่าง', crop: 'rubber' });
+    mockParams.current = { id: 'new' };
+    wrap(<PointScreen />);
+    await flush();
+    for (const f of [a, b]) expectRadioRow(screen.getByTestId(`point-farm-${f.id}`));
+    fireEvent.press(screen.getByTestId(`point-farm-${b.id}`));
+    expect(screen.getByTestId(`point-farm-${b.id}`).props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByTestId(`point-farm-${a.id}`).props.accessibilityState).toMatchObject({ checked: false });
   });
 
   it('renames and soft-deletes a point', async () => {
@@ -451,6 +468,8 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     const daeng = await m.create('แดง', ['tapper']);
     wrap(<PointsWizardScreen />);
     await flush();
+    // E01-S26 PS26-3: the farm is a C row.
+    expectRadioRow(screen.getByTestId(`wizard-farm-${farm.id}`));
     fireEvent.press(screen.getByTestId(`wizard-farm-${farm.id}`));
     fireEvent.press(screen.getByTestId(`wizard-tapper-${daeng.id}`));
     fireEvent.press(screen.getByTestId('wizard-next'));

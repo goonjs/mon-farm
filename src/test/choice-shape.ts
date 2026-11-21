@@ -27,3 +27,11 @@ export function expectChoiceTile(el: Node, kind: 'fill' | 'mark' | 'check' | 'ch
 export function expectSegment(el: Node) {
   expect(flat(el.props.style).borderRadius).toBe(tokens.radius.sm);
 }
+
+/** Style C (RadioCard): a full-width row with a ring, radius lg — never a pill. */
+export function expectRadioRow(el: Node) {
+  const s = flat(el.props.style);
+  expect(el.props.accessibilityRole).toBe('radio');
+  expect(s.borderRadius).toBe(tokens.radius.lg);
+  expect(s.minHeight ?? tokens.target.min).toBeGreaterThanOrEqual(tokens.target.min);
+}
