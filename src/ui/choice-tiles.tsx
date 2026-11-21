@@ -85,7 +85,9 @@ export function ChoiceTile({
     if (on && !isCheckbox && !clearable) return; // tapping the picked one keeps it
     onPress();
   };
-  const left = kind !== 'fill' && !dashed;
+  // I and F tiles (and a dashed add tile among them) sit left; only A is centred.
+  const left = kind !== 'fill';
+  const showMark = left && !dashed;
   const bg = disabled ? c.surfaceSunk : on ? (kind === 'fill' ? c.action : sunk) : c.surfaceRaised;
   const edge = on ? tc : dashed ? c.action : c.ruleStrong;
   const ink = disabled ? c.inkFaint : on ? (kind === 'fill' ? c.inkInverse : kind === 'mark' ? tc : c.action) : dashed ? c.action : c.ink;
@@ -117,7 +119,7 @@ export function ChoiceTile({
         backgroundColor: bg,
       }}
     >
-      {left ? (
+      {showMark ? (
         <View
           testID={testID ? `${testID}-mark` : undefined}
           aria-hidden

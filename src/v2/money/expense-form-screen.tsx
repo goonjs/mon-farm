@@ -487,7 +487,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
             </TileGrid>
             <SectionLabel>{msg('fin.form.manageCategories')}</SectionLabel>
             <TileGrid columns={2}>
-              <ChoiceTile dashed testID="expense-cat-add" label={msg('fin.form.addCategory')} onPress={() => { setAddingCat('add'); setCatName(''); }} />
+              <ChoiceTile dashed kind="check" testID="expense-cat-add" label={msg('fin.form.addCategory')} onPress={() => { setAddingCat('add'); setCatName(''); }} />
             </TileGrid>
             {/* Commands, not choices: underlined links (rule 11, E01-S25). */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: t.space.lg }}>

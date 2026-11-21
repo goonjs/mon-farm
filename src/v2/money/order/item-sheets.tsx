@@ -575,7 +575,7 @@ export function NewProductSheet({
       <View style={{ gap: t.space.xs }}>
         <SectionLabel>{msg('ordc.sackKg')}</SectionLabel>
         {/* Style A (E01-S25 CT-7); "+ ขนาดอื่น" is a dashed add tile that opens the number field below. */}
-        <TileGrid columns={3}>
+        <TileGrid columns={4}>
           {sizes.map((s) => (
             <ChoiceTile
               key={s}

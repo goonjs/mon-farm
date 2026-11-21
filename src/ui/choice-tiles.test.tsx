@@ -155,6 +155,18 @@ describe('choice tiles (E01-S25 CT-1..CT-4)', () => {
     expect(onPress).toHaveBeenCalled();
   });
 
+  it('a dashed add tile in an I grid sits left like the I tiles; in an A grid it is centred (mockup p1a, st-a)', () => {
+    wrap(
+      <>
+        <ChoiceTile dashed kind="mark" testID="add-i" label="+ คนอื่น" onPress={() => {}} />
+        <ChoiceTile dashed testID="add-a" label="+ ร้านใหม่" onPress={() => {}} />
+      </>,
+    );
+    expect(flat(screen.getByTestId('add-i').props.style).justifyContent).toBe('flex-start');
+    expect(flat(screen.getByTestId('add-a').props.style).justifyContent).toBe('center');
+    expect(screen.queryByTestId('add-i-mark', H)).toBeNull();
+  });
+
   it('grid: equal widths per row, a long label wraps instead of "…"', () => {
     wrap(
       <TileGrid columns={2} testID="g">

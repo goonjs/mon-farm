@@ -194,7 +194,7 @@ export function PayerPicker({
           <ChoiceTile key={p.id} kind="mark" testID={`${testID}-${p.id}`} label={p.name} selected={value?.id === p.id} onPress={() => onChange(p)} />
         ))}
         {allowNone ? <ChoiceTile kind="mark" testID={`${testID}-none`} label={msg('fin.form.payerLater')} selected={value === null} onPress={() => onChange(null)} /> : null}
-        {!adding ? <ChoiceTile dashed testID={`${testID}-add`} label={msg('fin.form.addPerson')} onPress={() => setAdding(true)} /> : null}
+        {!adding ? <ChoiceTile dashed kind="mark" testID={`${testID}-add`} label={msg('fin.form.addPerson')} onPress={() => setAdding(true)} /> : null}
       </TileGrid>
       {adding ? (
         <View style={{ gap: t.space.sm }}>
