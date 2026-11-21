@@ -98,6 +98,22 @@ beforeAll(async () => {
 });
 
 describe('v2 sale money (page 16; 17–19 are the close-out, v2-closeout-*)', () => {
+  // E05-S12 CK-1..CK-3 (owner 2026-11-20): each tapper's own money in the tapper card, on its own line under the kg.
+  it('E05-S12 check: each tapper card shows that tapper\'s money, full baht with 2 decimals, and they sum to the total', async () => {
+    await inSale(<CheckScreen />);
+    const red = screen.getByTestId(`check-tapper-money-${farm.red}`);
+    const nat = screen.getByTestId(`check-tapper-money-${farm.nat}`);
+    expect(red).toHaveTextContent(/^฿7,275\.00$/); // 150 kg × 48.50
+    expect(nat).toHaveTextContent(/^฿4,122\.50$/); // 85 kg × 48.50
+    // CK-2: its own line — not inside the kg text, and the card's kg text carries no money
+    expect(red).not.toHaveTextContent('กก.');
+    expect(screen.getByTestId(`check-tapper-kg-${farm.red}`)).toHaveTextContent(/^150 กก\.$/);
+    // CK-3: together they are the top card's total (7,275.00 + 4,122.50 = 11,397.50)
+    expect(screen.getByTestId('check-total')).toHaveTextContent(/11,397\.50/);
+    // CK-5: the top card is untouched
+    expect(screen.getByTestId('check-card')).toHaveTextContent(/235 กก\./);
+  });
+
   it('check: our figures, one tap "ตรงกันทั้งหมด" records it', async () => {
     await inSale(<CheckScreen />);
     expect(screen.getByTestId('check-weight')).toHaveTextContent(/235 กก\./);
@@ -122,6 +138,13 @@ describe('v2 sale money (page 16; 17–19 are the close-out, v2-closeout-*)', ()
     expect(fin.filter((e) => e.payload.t === 'buyer_check_set')).toHaveLength(1);
   });
 
+  it('E05-S12 CK-4: the tapper money stays after "ตรงกันทั้งหมด" was tapped', async () => {
+    await inSale(<CheckScreen />);
+    expect(screen.getByTestId('check-status')).toBeTruthy(); // the first test recorded the check
+    expect(screen.getByTestId(`check-tapper-money-${farm.red}`)).toHaveTextContent(/^฿7,275\.00$/);
+    expect(screen.getByTestId(`check-tapper-money-${farm.nat}`)).toHaveTextContent(/^฿4,122\.50$/);
+  });
+
   it('a closed sale is read-only: the check asks nothing (review #2)', async () => {
     const r = wrap(
       <SaleProvider saleId={CLOSED}>
@@ -131,6 +154,8 @@ describe('v2 sale money (page 16; 17–19 are the close-out, v2-closeout-*)', ()
     await flush();
     expect(screen.getByTestId('check-card')).toBeTruthy();
     expect(screen.queryByTestId('check-match')).toBeNull();
+    // E05-S12 CK-4: and its tapper money still shows (1 full basket 50 kg × 48.50)
+    expect(screen.getByTestId(`check-tapper-money-${farm.red}`)).toHaveTextContent(/^฿2,425\.00$/);
     r.unmount();
   });
 });
