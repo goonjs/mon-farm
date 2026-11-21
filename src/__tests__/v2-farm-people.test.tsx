@@ -5,6 +5,7 @@ import { BuyersScreen } from '../v2/farm/buyers-screen';
 import { FarmHubScreen } from '../v2/farm/farm-hub';
 import { PeopleScreen, PersonScreen } from '../v2/farm/people-screens';
 import type { MasterStore } from '../store/master-store';
+import { expectChoiceTile, expectRadioRow } from '../test/choice-shape';
 import { wrap } from '../test/render';
 
 jest.mock('../store/people', () => {
@@ -125,9 +126,16 @@ describe('คน — list, filter, deleted (farm mockup 4)', () => {
     expect(within(list).getByText('ผู้จัดการสวน')).toBeTruthy();
     // ผู้จ่าย is not a person role on screen any more (owner 2026-10-10); the data keeps it.
     expect(within(list).queryByText('ผู้จ่าย')).toBeNull();
+    // E01-S26 PS26-4: one E box "กลุ่มคน: ทุกคน ▾"; the groups open as rows in a sheet.
+    expect(screen.queryByTestId('filter-tapper')).toBeNull();
+    expect(screen.getByTestId('people-filter')).toHaveTextContent(/กลุ่มคน.*ทุกคน/);
+    fireEvent.press(screen.getByTestId('people-filter'));
     expect(screen.queryByTestId('filter-payer')).toBeNull();
-
+    expectRadioRow(screen.getByTestId('filter-tapper'));
     fireEvent.press(screen.getByTestId('filter-tapper'));
+    // Tapping a row picks it and closes the sheet.
+    expect(screen.queryByTestId('people-filter-sheet')).toBeNull();
+    expect(screen.getByTestId('people-filter')).toHaveTextContent(/คนกรีดยาง/);
     expect(screen.queryByText('อาจารย์สมหวัง')).toBeNull();
     expect(screen.getByText('แดง')).toBeTruthy();
 
@@ -136,6 +144,7 @@ describe('คน — list, filter, deleted (farm mockup 4)', () => {
     // Adding from a role filter starts the new person on that role.
     fireEvent.press(screen.getByTestId('add-person'));
     expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/person/new?role=tapper');
+    fireEvent.press(screen.getByTestId('people-filter'));
     fireEvent.press(screen.getByTestId('filter-all'));
     fireEvent.press(screen.getByTestId('add-person'));
     expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/person/new');
@@ -187,6 +196,7 @@ describe('คน — list, filter, deleted (farm mockup 4)', () => {
     await people().addBuyer('คนรับซื้อยาง ก');
     wrap(<PeopleScreen />);
     await flush();
+    fireEvent.press(screen.getByTestId('people-filter'));
     fireEvent.press(screen.getByTestId('filter-buyers'));
     expect(screen.getByText('คนรับซื้อยาง ก')).toBeTruthy();
   });
@@ -236,10 +246,17 @@ describe('คน — form (farm mockup 5)', () => {
     expect(screen.getByTestId('person-roles-error')).toBeTruthy();
 
     fireEvent.changeText(screen.getByTestId('person-name'), 'แดง');
+    // E01-S26 PS26-5: roles are F tick tiles, several at once; an added role is the same tile.
+    expectChoiceTile(screen.getByTestId('role-tapper'), 'checkbox');
     fireEvent.press(screen.getByTestId('role-tapper'));
+    fireEvent.press(screen.getByTestId('role-assistant'));
+    expect(screen.getByTestId('role-tapper').props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByTestId('role-assistant').props.accessibilityState).toMatchObject({ checked: true });
+    fireEvent.press(screen.getByTestId('role-assistant'));
+    expect(screen.getByTestId('role-assistant').props.accessibilityState).toMatchObject({ checked: false });
     fireEvent.changeText(screen.getByTestId('person-other-role'), 'ลูกคนงาน');
     fireEvent.press(screen.getByTestId('person-add-other-role'));
-    expect(screen.getByTestId('other-role-ลูกคนงาน')).toBeTruthy();
+    expectChoiceTile(screen.getByTestId('other-role-ลูกคนงาน'), 'checkbox');
     await act(async () => fireEvent.press(screen.getByTestId('person-save')));
     await flush();
 
