@@ -99,6 +99,20 @@ describe('DatePickerSheet', () => {
     }
   });
 
+  it('quick picks are text links on one line, not pills (E01-S25 CT-8, owner 2026-11-21)', () => {
+    setup();
+    for (const q of ['today', 'yesterday', 'twodays']) {
+      const s = StyleSheet.flatten(screen.getByTestId(`${ID}-${q}`).props.style);
+      expect(s.borderRadius ?? 0).not.toBe(tokens.radius.pill);
+      expect(s.borderWidth ?? 0).toBe(0);
+      expect(s.minHeight).toBe(tokens.target.min);
+    }
+    // The picked day (today, the value) carries a tick and no underline; the others are underlined links.
+    expect(screen.getByTestId(`${ID}-today-tick`, { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByTestId(`${ID}-today`).props.accessibilityState).toMatchObject({ selected: true });
+    expect(flat(screen.getByText('เมื่อวาน').props.style)).toMatchObject({ textDecorationLine: 'underline', color: tokens.color.light.action });
+  });
+
   it('quick picks set the draft and jump the calendar to that month', () => {
     const { onChange } = setup({ value: '2026-12-25' });
     expect(screen.getByTestId(`${ID}-month`).props.children.join('')).toBe('ธันวาคม 2569');

@@ -30,7 +30,8 @@ export function SegmentedControl<T extends string>({
       style={{
         flexDirection: 'row',
         backgroundColor: t.color.surfaceSunk,
-        borderRadius: t.radius.pill,
+        // E01-S25 CT-5: a rounded bar, never a pill (owner r2-segmented "B").
+        borderRadius: t.radius.md,
         padding: t.space.xs,
         gap: t.space.xs,
       }}
@@ -49,7 +50,7 @@ export function SegmentedControl<T extends string>({
             style={{
               flex: 1,
               minHeight: t.target.min,
-              borderRadius: t.radius.pill,
+              borderRadius: t.radius.sm,
               backgroundColor: on ? t.color.action : 'transparent',
               alignItems: 'center',
               justifyContent: 'center',
