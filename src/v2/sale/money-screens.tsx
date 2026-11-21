@@ -256,7 +256,16 @@ function CheckBody({ bump }: { bump: () => void }) {
                   <AppText style={{ fontWeight: t.font.weight.bold }}>{nameOf(z.personId)}</AppText>
                   <IconLine icon={(c) => <PinIcon color={c} size={12} />}>{msg('pick.points', { n: points.length })}</IconLine>
                 </View>
-                <Big value={msg('v2f.kg', { n: kgText(z.totals.netG) })} size={20} />
+                {/* E05-S12: kg, then this tapper's own money on its own line (full baht, 2 decimals — compared with the buyer's slip, so no k/m). */}
+                <View style={{ alignItems: 'flex-end', flexShrink: 0 }}>
+                  <Big testID={`check-tapper-kg-${z.personId}`} value={msg('v2f.kg', { n: kgText(z.totals.netG) })} size={20} />
+                  <Text
+                    testID={`check-tapper-money-${z.personId}`}
+                    style={{ fontFamily: t.font.family.sans, fontSize: Math.round(16 * t.textScale), fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'], color: t.color.ink }}
+                  >
+                    {msg('v2s.tapperMoney', { n: baht(z.grossSatang) })}
+                  </Text>
+                </View>
               </View>
               {points.map(([pid, tot]) => {
                 // Slip-style: point name + total kg, then indented rows "full N baskets … kg" and

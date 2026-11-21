@@ -514,6 +514,9 @@ test('start → point → empty scale → count → short → switch and fill �
   await id('check-price-save').click();
   await expect(id('check-total')).toContainText('21,825.00');
   await expect(id('check-weight')).toContainText('450 กก.');
+  // E05-S12: each tapper's own money, full baht with 2 decimals, in the tapper card
+  await expect(id('check-tapper-money-red')).toHaveText(/^฿[\d,]+\.\d{2}$/);
+  await expect(id('check-tapper-money-nat')).toHaveText(/^฿[\d,]+\.\d{2}$/);
   await shot(page, '16-check');
   await id('check-match').click();
   await expect(id('check-status')).toContainText('ตรงกัน');
