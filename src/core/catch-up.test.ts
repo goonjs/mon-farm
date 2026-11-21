@@ -251,6 +251,11 @@ describe('E04-S26 AT-3 — a short basket still open from counting live is asked
     expect(openBasketIn(events, master(), DAY, 'p2', 'per-tapper', stdNetOfLog(events))).toMatchObject({ basketNo: 3, haveG: 40 * KG });
   });
 
+  it('review note 3 — continuous: an open basket passed at a later point, with one already carried, gives no plan', () => {
+    const open = openOf(live().build(), 'p2', 'per-tapper');
+    expect(catchUpPlan([pt('p1', 5, 30 * KG), { ...pt('p2', 6, null, 20 * KG), open }], { ...O, firstNo: 4 })).toBeNull();
+  });
+
   it('a top-up past one and a half full baskets is refused', () => {
     const open = openOf(live().build(), 'p2', 'per-tapper');
     expect(catchUpPlan([{ ...pt('p2', 6, null, 46 * KG), open }], { ...O, firstNo: 4 })).toBeNull();

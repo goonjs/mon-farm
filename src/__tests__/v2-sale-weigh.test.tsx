@@ -1032,6 +1032,9 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     await press('cu-next');
     // Σ: only what this catch-up adds — 15 kg to basket 2, and 3–4 full.
     expect(screen.getByTestId('cu-total')).toHaveTextContent(/115 กก\./);
+    // Owner 2026-11-21 (pr239-summary-wording): the row says the 35 was counted live.
+    expect(screen.getByTestId('cu-row-0')).toHaveTextContent(/^เข่ง 2 \(นับเองไว้ 35\) \+ เติมที่จุด 2 อีก 15/);
+    expect(screen.getByTestId('cu-row-0')).not.toHaveTextContent(/ไม่เต็ม/);
     await press('cu-save');
     const ev = await kinds();
     const root = ev.find((e) => e.kind === 'short')!;
@@ -1056,6 +1059,7 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     await typeInt('cu-end', '3');
     await press('cu-full');
     await press('cu-next');
+    expect(screen.getByTestId('cu-row-0')).toHaveTextContent(/^เข่ง 2 \(นับเองไว้ 35\) · ปิดเข่ง/);
     await press('cu-save');
     const ev = await kinds();
     const root = ev.find((e) => e.kind === 'short')!;
