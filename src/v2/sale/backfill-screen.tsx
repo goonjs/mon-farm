@@ -11,17 +11,24 @@
  * The Σ bar sits on every page and only goes up (BF-10); the summary reads
  * like the paper and can be checked against its total (BF-6/7). Saving writes
  * ordinary baskets once (`catchUpPlan` → `writeCatchUp`); the last short one
- * stays open for live counting (BF-5). Only before live counting (BF-8).
+ * stays open for live counting (BF-5).
+ *
+ * E04-S26: at any time, one point at a time, even after counting live — the
+ * baskets number on from the last one of the sequence (AT-1/2), a short
+ * basket still open is asked about first (AT-3), and only clearing the money
+ * stops it (AT-4).
  */
 
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { catchUpAllowed, catchUpPlan, writeCatchUp, type CatchUpPlan, type CatchUpPoint, type CatchUpRow } from '../../core/catch-up';
+import { openBasketIn, stdNetOfLog } from '../../core/bridge';
+import { catchUpAllowed, catchUpPlan, writeCatchUp, type CatchUpOpen, type CatchUpPlan, type CatchUpPoint, type CatchUpRow } from '../../core/catch-up';
 import { pointsOf, tapperOn } from '../../core/master';
 import { pairForNewPoint } from '../../core/sale-move';
-import { pointSetupPayloads } from '../../core/sale-points';
+import { nextBasketNo, pointSetupPayloads } from '../../core/sale-points';
+import { useFinance } from '../../finance/use-finance';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
 import { AlertIcon, AppText, Button, cardStyle, Check, CTA, FarmMateArt, QuantityField, TextLink } from '../../ui';
@@ -50,6 +57,8 @@ export function BackfillScreen() {
   // Opened for a tapper, the tapper decides: a point in the same link is ignored (review N1).
   const pointParam = tapperParam ? '' : (params.point ?? '');
   const view = useSaleView();
+  // Clearing the money is in the finance log (review N3).
+  const fin = useFinance();
   // A closed sale takes no more weighing (review #2).
   useLeaveIfClosed(view);
   const { saleId, events, state, master, day, mode, settings, append, nameOf, saleTitle } = view;
@@ -65,7 +74,7 @@ export function BackfillScreen() {
   const base = `/v2/sale/${saleId}`;
 
   const loading = <FarmScreen title={msg('cu.title')} subtitle={saleTitle} fallback={`${base}/point` as Href} />;
-  if (!view.ready || !master || !settings) return loading;
+  if (!view.ready || !master || !settings || fin.events === null) return loading;
 
   const perPoint = mode === 'per-point';
   const tapper = tapperParam || (pointParam ? tapperOn(master, pointParam, day) : null);
@@ -85,8 +94,7 @@ export function BackfillScreen() {
   // The order page: the tapper's points in paper order. Per point, only when opened for the tapper.
   const choosing = tapperPoints.length > 1 && (!perPoint || !pointParam);
   const order = choosing ? picked : [pointId];
-  /** Per point, a point weighed live already cannot be caught up (BF-8); numbered on, the tapper's whole sequence. */
-  const allowed = (id: string) => catchUpAllowed(events, master, day, id, mode);
+  const tapperOf = (id: string) => tapperOn(master, id, day);
   const back = (pointParam ? `${base}/counter?point=${pointParam}` : `${base}/point`) as Href;
   /** Each point's basket pair: its pile's when it was set up already, else the one a new point gets (review B1). */
   const pairOf = (id: string) => {
@@ -96,17 +104,26 @@ export function BackfillScreen() {
     return { stdNetG: p.netG, tareG: p.basketG };
   };
   const pair = pairOf(pointId);
-  const opts = { mode, firstNo: 1, stdNetG: pair.stdNetG, tareG: pair.tareG };
+  // AT-2: numbered on from the last basket of the sequence, never inserted. Per point, each point its own.
+  const firstNoOf = (id: string) => nextBasketNo(events, id, mode, tapperOf);
+  const opts = { mode, firstNo: firstNoOf(order[0] ?? pointId), stdNetG: pair.stdNetG, tareG: pair.tareG };
+  const stdOfLog = stdNetOfLog(events);
+  /** AT-3: the short basket still open in this point's sequence, with its root pile's standard (review N2). */
+  const openAt = (id: string): CatchUpOpen | undefined => {
+    const o = openBasketIn(events, master, day, id, mode, stdOfLog);
+    return o ? { rootId: o.rootId, basketNo: o.basketNo, pointId: o.pointId, haveG: o.haveG, stdNetG: pairOf(o.pointId).stdNetG, tareG: o.tareG } : undefined;
+  };
+  /** Where an open basket from the log is asked: continuous, at the first point entered; per point, at its own point (review N4). */
+  const openFor = (i: number) => (perPoint || i === 0 ? openAt(order[i]) : undefined);
   const pointName = (id: string) => master.points.find((p) => p.id === id)?.name ?? '';
   const kg = (g: number) => kgText(g);
-  const who = tapper && !perPoint ? nameOf(tapper) : msg('cu.blockedPoint');
 
-  // BF-8: catching up comes before counting live.
-  if (!done && (choosing && perPoint ? !tapperPoints.some((p) => allowed(p.id)) : !allowed(pointId))) {
+  // AT-4: not once clearing the money has started; nothing to go on with until the ticks and debt lines are taken back.
+  if (!done && !catchUpAllowed(fin.events, saleId)) {
     return (
       <FarmScreen title={msg('cu.title')} subtitle={saleTitle} fallback={back} testID="catch-up">
         <View testID="cu-blocked">
-          <Banner tone="warn" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg('cu.blocked', { who })]} />
+          <Banner tone="warn" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg('cu.blockedClearing'), msg('cu.blockedClearingBody')]} />
         </View>
       </FarmScreen>
     );
@@ -121,7 +138,16 @@ export function BackfillScreen() {
   const inputs = (n: number): CatchUpPoint[] =>
     order.slice(0, n).map((id) => {
       const e = entry(id);
-      return { pointId: id, endNo: e.end ?? -1, lastShortG: e.full === false ? e.shortG : null, topUpG: e.fill === null ? null : e.fill ? e.fillG : 0, pair: pairOf(id) };
+      const i = order.indexOf(id);
+      return {
+        pointId: id,
+        endNo: e.end ?? -1,
+        lastShortG: e.full === false ? e.shortG : null,
+        topUpG: e.fill === null ? null : e.fill ? e.fillG : 0,
+        pair: pairOf(id),
+        ...(perPoint ? { firstNo: firstNoOf(id) } : {}),
+        ...(openFor(i) ? { open: openFor(i) } : {}),
+      };
     });
   const planOf = (n: number): CatchUpPlan | null => (n > 0 ? catchUpPlan(inputs(n), opts) : null);
   /** The Σ so far: every point answered up to here. */
@@ -132,14 +158,16 @@ export function BackfillScreen() {
     }
     return null;
   })();
-  /** The basket left short by the points before `i`, still open (asked at point i). */
-  const carriedBefore = (i: number) => {
+  /** The basket to ask about at point i: one open in the log (AT-3), or one the points before left short. */
+  const carriedBefore = (i: number): { readonly basketNo: number; readonly netG: number; readonly pointId: string } | null => {
+    const open = openFor(i);
+    if (open) return { basketNo: open.basketNo, netG: open.haveG, pointId: open.pointId };
     if (perPoint || i === 0) return null;
     const p = planOf(i);
     const last = p?.rows[p.rows.length - 1];
     return last && last.kind === 'short' && last.status === 'open' ? last : null;
   };
-  const startOf = (i: number) => (perPoint ? 1 : (planOf(i)?.lastNo ?? 0) + 1);
+  const startOf = (i: number) => (perPoint ? firstNoOf(order[i]) : i === 0 ? opts.firstNo : (planOf(i)?.lastNo ?? opts.firstNo - 1) + 1);
 
   const sumBar = (
     <View testID="cu-sum-bar" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: t.space.sm, paddingVertical: t.space.sm, paddingHorizontal: t.space.md, borderRadius: t.radius.lg, backgroundColor: t.color.acceptSunk }}>
@@ -179,7 +207,9 @@ export function BackfillScreen() {
       const own = pairOf(id);
       for (const payload of pointSetupPayloads(state, master, id, { pairId: '', netG: own.stdNetG, basketG: own.tareG })) append({ kind: 'sys', payload });
       // Counting goes on here at once, no scale check first (E04-S23 JB-3a); the check setting still applies to the next point.
-      if (state.piles.find((p) => p.id === id)?.status !== 'counting') append({ kind: 'sys', payload: { t: 'ready', pileId: id } });
+      // A pile closed already stays closed: no second ready (E04-S26).
+      const status = state.piles.find((p) => p.id === id)?.status;
+      if (status !== 'counting' && status !== 'closed') append({ kind: 'sys', payload: { t: 'ready', pileId: id } });
     }
     writeCatchUp(plan.drafts, (body) => append(body as Parameters<typeof append>[0]));
     const last = order[order.length - 1];
@@ -220,10 +250,8 @@ export function BackfillScreen() {
         <Label text={msg('cu.order')} hint={msg('cu.orderHint')} />
         {tapperPoints.map((p) => {
           const at = order.indexOf(p.id);
-          // Per point, a point already counted live is not offered (BF-8).
-          const off = perPoint && !allowed(p.id);
           return (
-            <Pressable key={p.id} testID={`cu-order-${p.id}`} accessibilityRole="button" accessibilityState={{ selected: at >= 0, disabled: off }} disabled={off} onPress={() => toggle(p.id)} style={{ ...cardStyle(t), opacity: off ? 0.5 : 1, flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md, minHeight: t.target.comfortable }}>
+            <Pressable key={p.id} testID={`cu-order-${p.id}`} accessibilityRole="button" accessibilityState={{ selected: at >= 0 }} onPress={() => toggle(p.id)} style={{ ...cardStyle(t), flexDirection: 'row', alignItems: 'center', gap: t.space.md, padding: t.space.md, minHeight: t.target.comfortable }}>
               <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: at >= 0 ? t.color.action : t.color.surfaceSunk }}>
                 <Text style={{ fontFamily: t.font.family.sans, fontWeight: t.font.weight.black, fontSize: t.font.size.bodyLg, color: at >= 0 ? t.color.inkInverse : t.color.inkSoft }}>{at >= 0 ? String(at + 1) : ''}</Text>
               </View>
@@ -280,7 +308,7 @@ export function BackfillScreen() {
     const e = entry(id);
     const own = pairOf(id);
     const start = startOf(now.i);
-    const topOnly = !perPoint && e.end === start - 1 && !!carriedBefore(now.i);
+    const topOnly = e.end === start - 1 && !!carriedBefore(now.i);
     const count = e.end !== null && e.end >= start ? e.end - start + 1 : 0;
     const shortOk = e.shortG !== null && e.shortG > 0 && e.shortG < own.stdNetG;
     const answered = topOnly || (count > 0 && (e.full === true || (e.full === false && shortOk)));
@@ -289,7 +317,7 @@ export function BackfillScreen() {
       tapper ? nameOf(tapper) : saleTitle,
       <View testID="cu-point" style={{ gap: t.space.sm }}>
         <PointHead name={pointName(id)} at={order.length > 1 ? msg('cu.pointOf', { i: now.i + 1, n: order.length }) : ''} />
-        {perPoint ? <Banner tone="warn" lines={[msg('cu.newPoint'), msg('cu.newPointBody')]} /> : null}
+        {perPoint && start === 1 ? <Banner tone="warn" lines={[msg('cu.newPoint'), msg('cu.newPointBody')]} /> : null}
         <Label text={msg('cu.end')} hint={msg('cu.endHint')} />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm, alignItems: 'stretch' }}>
           <View testID="cu-start" style={{ flexGrow: 1, flexBasis: 120, minHeight: t.target.comfortable, borderRadius: t.radius.lg, backgroundColor: t.color.surfaceSunk, padding: t.space.sm, justifyContent: 'center' }}>
@@ -439,13 +467,17 @@ function SummaryRow({ r, i, pointName }: { r: CatchUpRow; i: number; pointName: 
   } else if (r.status === 'open' && !r.topUps.length) {
     text = msg('cu.rowOpen', { n: r.basketNo });
   } else {
-    text = msg('cu.rowShort', { n: r.basketNo, kg: kgText(r.firstG) }) + r.topUps.map((u) => msg('cu.rowTop', { point: pointName(u.pointId), kg: kgText(u.g) })).join('') + (r.status === 'closed' ? msg('cu.rowClosed') : '');
+    // A basket counted live says so, so its live kg is not read as part of this entry (owner 2026-11-21).
+    const head = r.liveG !== undefined ? msg('cu.rowLive', { n: r.basketNo, kg: kgText(r.liveG) }) : msg('cu.rowShort', { n: r.basketNo, kg: kgText(r.firstG) });
+    text = head + r.topUps.map((u) => msg('cu.rowTop', { point: pointName(u.pointId), kg: kgText(u.g) })).join('') + (r.status === 'closed' ? msg('cu.rowClosed') : '');
   }
   const warn = r.kind === 'short';
+  // A basket from the log shows what this catch-up adds to it; the Σ adds the same.
+  const addedG = r.netG - (r.kind === 'short' ? (r.liveG ?? 0) : 0);
   return (
     <View testID={`cu-row-${i}`} style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.sm }}>
       <AppText style={{ flex: 1, minWidth: 0, color: warn ? t.color.warn : t.color.ink }}>{text}</AppText>
-      <AppText style={{ fontWeight: t.font.weight.bold, color: warn ? t.color.warn : t.color.ink, fontVariant: ['tabular-nums'] }}>{kgText(r.netG)}</AppText>
+      <AppText style={{ fontWeight: t.font.weight.bold, color: warn ? t.color.warn : t.color.ink, fontVariant: ['tabular-nums'] }}>{kgText(addedG)}</AppText>
     </View>
   );
 }
