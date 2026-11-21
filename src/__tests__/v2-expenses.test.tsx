@@ -13,6 +13,7 @@ import { financeStore as mockFinance } from '../store/finance';
 import { todayIso } from '../core/finance/money';
 import { dayAfter } from '../core/master';
 import { dayCell, pickDate } from '../test/pick-date';
+import { expectChoiceTile } from '../test/choice-shape';
 import { wrap } from '../test/render';
 
 jest.mock('../store/finance', () => {
@@ -104,6 +105,9 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     for (const id of ['fertilizer', 'labour', 'fuel', 'herbicide', 'travel', 'salary', 'worker-aid', 'repair', 'other']) {
       expect(screen.getByTestId(`expense-catall-cat-${id}`)).toBeTruthy();
     }
+    // E01-S25 CT-12: everything outside the order and the payer is style F (owner answer ข); "+ เพิ่มหมวด" is a dashed add tile.
+    for (const id of ['fertilizer', 'labour', 'other']) expectChoiceTile(screen.getByTestId(`expense-catall-cat-${id}`), 'check');
+    expectChoiceTile(screen.getByTestId('expense-cat-add'), 'add');
     fireEvent.press(screen.getByTestId('expense-cat-sheet-scrim'));
     // Typed on the app's pad (E01-S20); the card reads it back as money with "บาท" inside.
     typeOnPad('expense-amount', '640');
@@ -199,11 +203,44 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     fireEvent.press(screen.getByTestId('expense-stage-planned'));
     pickDate('expense-date', '2026-11-15');
     fireEvent.press(screen.getByTestId('expense-details-done'));
+    // "ยังไม่ทราบจำนวนเงิน" turns on and off: an F tick tile (CT-3).
+    expectChoiceTile(screen.getByTestId('expense-unknown'), 'checkbox');
     fireEvent.press(screen.getByTestId('expense-unknown'));
+    expect(screen.getByTestId('expense-unknown').props.accessibilityState).toMatchObject({ checked: true });
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
     await flush();
     const s = await state();
     expect(s.expenses.some((e) => e.stage === 'planned' && e.amountSatang === null && e.date === '2026-11-15')).toBe(true);
+  });
+
+  it('category sheet: tapping the category already picked closes the sheet again (review 6004800731 #1)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    fireEvent.press(screen.getByTestId('expense-catall-cat-repair'));
+    await flush();
+    expect(screen.queryByTestId('expense-cat-sheet')).toBeNull();
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    expect(screen.getByTestId('expense-catall-cat-repair').props.accessibilityState).toMatchObject({ selected: true });
+    fireEvent.press(screen.getByTestId('expense-catall-cat-repair'));
+    await flush();
+    expect(screen.queryByTestId('expense-cat-sheet')).toBeNull();
+    expect(screen.getByTestId('expense-cat-more')).toBeTruthy();
+  });
+
+  it('worker aid: the kind is F (pick one, switches at once), the worker is I (E01-S25 CT-6, CT-12)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    fireEvent.press(screen.getByTestId('expense-catall-cat-worker-aid'));
+    await flush();
+    for (const k of ['accident', 'general', 'food', 'other']) expectChoiceTile(screen.getByTestId(`aid-kind-${k}`), 'check');
+    fireEvent.press(screen.getByTestId('aid-kind-food'));
+    fireEvent.press(screen.getByTestId('aid-kind-other'));
+    expect(screen.getByTestId('aid-kind-other').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('aid-kind-food').props.accessibilityState).toMatchObject({ selected: false });
+    expectChoiceTile(screen.getByTestId(`aid-worker-${FARM_FUNDS}`), 'mark');
+    expectChoiceTile(screen.getByTestId('aid-worker-add'), 'add');
   });
 
   it('a payer other than farm funds previews what the farm will owe back', async () => {
@@ -213,6 +250,9 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     // "ใครจ่ายไปก่อน" is one row; the choice opens in a sheet.
     expect(screen.getByTestId('expense-payer-row')).toHaveTextContent(/ใครจ่ายไปก่อน/);
     fireEvent.press(screen.getByTestId('expense-payer-row'));
+    // E01-S25 CT-6: the payer is style I; "+ คนอื่น" is a dashed add tile.
+    expectChoiceTile(screen.getByTestId(`expense-payer-${FARM_FUNDS}`), 'mark');
+    expectChoiceTile(screen.getByTestId('expense-payer-add'), 'add');
     fireEvent.press(screen.getByTestId('expense-payer-add'));
     fireEvent.changeText(screen.getByTestId('expense-payer-name'), 'นัด');
     await act(async () => fireEvent.press(screen.getByTestId('expense-payer-add-save')));

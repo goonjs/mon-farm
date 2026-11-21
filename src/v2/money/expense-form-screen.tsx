@@ -33,10 +33,10 @@ import { useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, DateField, BottomSheet, Button, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, MoneyField, PersonIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TextField } from '../../ui';
+import { AppText, DateField, BottomSheet, Button, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, MoneyField, PersonIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TextField, TextLink, TileGrid, ChoiceTile } from '../../ui';
 import { useFarms } from './expenses-screen';
 import { ORDER_NEW, orderHref } from './order-routes';
-import { ChoiceChip, ChoiceRow, NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
+import { NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
 import { CategoryShareSheet, draftOf, shareOf, ShareSheet, type ShareDraft } from './share-sheet';
 
 const FERTILIZER = 'cat-fertilizer';
@@ -304,11 +304,14 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
         {conflicts.map((c) => (
           <Card key={c.field} testID={`conflict-${c.field}`} style={{ backgroundColor: t.color.rejectSunk }}>
             <AppText>{msg('fin.form.conflict', { field: fieldLabel(c.field) })}</AppText>
-            <ChoiceRow>
+            {/* Commands, not choices: underlined links (rule 11, E01-S25). */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: t.space.lg }}>
               {c.values.map((v, i) => (
-                <ChoiceChip key={i} testID={`conflict-${c.field}-${i}`} label={msg('fin.form.pick', { value: valueLabel(c.field, v) })} onPress={() => void pickConflict(c.field, v)} />
+                <TextLink key={i} testID={`conflict-${c.field}-${i}`} onPress={() => void pickConflict(c.field, v)}>
+                  {msg('fin.form.pick', { value: valueLabel(c.field, v) })}
+                </TextLink>
               ))}
-            </ChoiceRow>
+            </View>
           </Card>
         ))}
 
@@ -338,9 +341,9 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
               </View>
             )}
             {stage === 'planned' ? (
-              <ChoiceRow>
-                <ChoiceChip testID="expense-unknown" dashed label={msg('fin.form.amountUnknown')} on={unknown} onPress={() => setUnknown((u) => !u)} />
-              </ChoiceRow>
+              <TileGrid columns={1}>
+                <ChoiceTile kind="check" multi testID="expense-unknown" label={msg('fin.form.amountUnknown')} selected={unknown} onPress={() => setUnknown((u) => !u)} />
+              </TileGrid>
             ) : null}
           </View>
         )}
@@ -395,9 +398,9 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
                 <SectionLabel>{msg('aid.worker')}</SectionLabel>
                 <PayerPicker testID="aid-worker" role="worker" value={worker} onChange={setWorker} />
                 <SectionLabel>{msg('aid.kind')}</SectionLabel>
-                <ChoiceRow>
-                  {AID_KINDS.map((k) => <ChoiceChip key={k} testID={`aid-kind-${k}`} label={msg(`aid.kind.${k}`)} on={aidKind === k} onPress={() => setAidKind(k)} />)}
-                </ChoiceRow>
+                <TileGrid columns={2}>
+                  {AID_KINDS.map((k) => <ChoiceTile key={k} kind="check" testID={`aid-kind-${k}`} label={msg(`aid.kind.${k}`)} selected={aidKind === k} onPress={() => setAidKind(k)} />)}
+                </TileGrid>
                 <AppText variant="caption">{msg('aid.note')}</AppText>
               </Card>
             ) : null}
@@ -415,10 +418,10 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
                 ))}
                 {fromLines ? <AppText testID="trip-total">{msg('trip.total', { amount: formatSatang(amountSatang ?? 0) })}</AppText> : null}
                 {tripFarms.length ? (
-                  <ChoiceRow>
-                    <ChoiceChip testID="trip-unsplit" label={msg('trip.unsplit')} on={split === null} onPress={() => setSplit(null)} />
-                    <ChoiceChip testID="trip-split" label={msg('trip.split')} on={split !== null} onPress={() => setSplit(split ?? {})} />
-                  </ChoiceRow>
+                  <TileGrid columns={2}>
+                    <ChoiceTile kind="check" testID="trip-unsplit" label={msg('trip.unsplit')} selected={split === null} onPress={() => setSplit(null)} />
+                    <ChoiceTile kind="check" testID="trip-split" label={msg('trip.split')} selected={split !== null} onPress={() => setSplit(split ?? {})} />
+                  </TileGrid>
                 ) : null}
                 {split
                   ? tripFarms.map((f) => (
@@ -477,21 +480,28 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
       {catSheet ? (
         <BottomSheet open onClose={() => { setCatSheet(false); setAddingCat(null); }} testID="expense-cat-sheet" title={msg('fin.form.categoryQ')}>
           <View style={{ gap: t.space.md }}>
-            <ChoiceRow>
+            <TileGrid columns={2}>
               {state.categories.map((c) => (
-                <ChoiceChip key={c.id} testID={`expense-catall-${c.id}`} label={c.name} on={categoryId === c.id} onPress={() => { setCatSheet(false); pickCategory(c.id); }} />
+                <ChoiceTile key={c.id} kind="check" testID={`expense-catall-${c.id}`} label={c.name} selected={categoryId === c.id} onRepeat={() => setCatSheet(false)} onPress={() => { setCatSheet(false); pickCategory(c.id); }} />
               ))}
-            </ChoiceRow>
+            </TileGrid>
             <SectionLabel>{msg('fin.form.manageCategories')}</SectionLabel>
-            <ChoiceRow>
-              <ChoiceChip testID="expense-cat-add" label={msg('fin.form.addCategory')} onPress={() => { setAddingCat('add'); setCatName(''); }} />
+            <TileGrid columns={2}>
+              <ChoiceTile dashed kind="check" testID="expense-cat-add" label={msg('fin.form.addCategory')} onPress={() => { setAddingCat('add'); setCatName(''); }} />
+            </TileGrid>
+            {/* Commands, not choices: underlined links (rule 11, E01-S25). */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: t.space.lg }}>
               {categoryId ? (
-                <ChoiceChip testID="expense-cat-rename" label={msg('fin.form.renameCategory')} onPress={() => { setAddingCat('rename'); setCatName(state.categories.find((c) => c.id === categoryId)?.name ?? ''); }} />
+                <TextLink testID="expense-cat-rename" onPress={() => { setAddingCat('rename'); setCatName(state.categories.find((c) => c.id === categoryId)?.name ?? ''); }}>
+                  {msg('fin.form.renameCategory')}
+                </TextLink>
               ) : null}
               {categoryId && categoryId !== FERTILIZER ? (
-                <ChoiceChip testID="expense-cat-share" label={msg('xshare.catSettings')} onPress={() => { setCatSheet(false); setCatShareOpen(true); }} />
+                <TextLink testID="expense-cat-share" onPress={() => { setCatSheet(false); setCatShareOpen(true); }}>
+                  {msg('xshare.catSettings')}
+                </TextLink>
               ) : null}
-            </ChoiceRow>
+            </View>
             {addingCat ? (
               <View style={{ gap: t.space.sm }}>
                 <TextField testID="expense-cat-name" label={msg('fin.form.categoryPlaceholder')} value={catName} onChangeText={setCatName} />
@@ -539,10 +549,11 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
             ) : null}
             <View style={{ gap: t.space.xs }}>
               <SectionLabel hint={msg('v2m.optional')}>{msg('v2m.farm')}</SectionLabel>
-              <ChoiceRow>
-                {farmsList.map((f) => <ChoiceChip key={f.id} testID={`expense-farm-${f.id}`} label={f.name} on={propertyId === f.id} onPress={() => setPropertyId(propertyId === f.id ? null : f.id)} />)}
-                {propertyId === null ? <NotRecordedPill testID="expense-farm-none" /> : null}
-              </ChoiceRow>
+              {/* F, pick one; the farm is optional, so tapping the picked one clears it as before. */}
+              <TileGrid columns={2}>
+                {farmsList.map((f) => <ChoiceTile key={f.id} kind="check" clearable testID={`expense-farm-${f.id}`} label={f.name} selected={propertyId === f.id} onPress={() => setPropertyId(propertyId === f.id ? null : f.id)} />)}
+              </TileGrid>
+              {propertyId === null ? <NotRecordedPill testID="expense-farm-none" /> : null}
             </View>
             <TextField testID="expense-item" label={msg('fin.form.item')} value={item} onChangeText={setItem} placeholder={msg('fin.form.itemPlaceholder')} />
             <TextField testID="expense-note" label={msg('fin.form.note')} value={note} onChangeText={setNote} placeholder={msg('fin.form.notePlaceholder')} />

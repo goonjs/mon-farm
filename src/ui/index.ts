@@ -12,6 +12,7 @@ export { BottomSheet } from './bottom-sheet';
 export { Button, CTA, PinnedActions, type ButtonVariant } from './button';
 export { Card, CardLabel, cardStyle } from './card';
 export { Chip, type ChipTone } from './chip';
+export { ChoiceTile, ChoiceTiles, QuickLinks, TileGrid, ValueBox, type ChoiceKind, type ChoiceTone } from './choice-tiles';
 export { DateField, type DateFieldProps } from './date-field';
 export { DatePickerSheet, type DatePickerSheetProps } from './date-picker-sheet';
 export { DateText, type DateFormatter } from './date-text';

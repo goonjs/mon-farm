@@ -10,8 +10,8 @@ import { formatSatang } from '../../../core/finance/money';
 import { FARM_FUNDS, type Payer } from '../../../core/finance/types';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, CTA, FieldError, MoneyField, RadioCard, TextField } from '../../../ui';
-import { ChoiceChip, ChoiceRow, PayerPicker, SectionLabel } from '../pieces';
+import { AppText, BottomSheet, ChoiceTile, CTA, FieldError, MoneyField, RadioCard, TextField, TileGrid } from '../../../ui';
+import { PayerPicker, SectionLabel } from '../pieces';
 import { SoftLink } from './item-sheets';
 
 export function ShopSheet({
@@ -38,20 +38,21 @@ export function ShopSheet({
       {recentShops.length ? (
         <View style={{ gap: t.space.xs }}>
           <SectionLabel>{msg('ordc.shopRecent')}</SectionLabel>
-          <ChoiceRow>
+          {/* Style A (E01-S25 CT-7, "ใบซื้อใช้ A"). */}
+          <TileGrid columns={2}>
             {recentShops.map((s) => (
-              <ChoiceChip key={s} testID={`ordc-shop-opt-${s}`} label={s} on={same(s, shop)} onPress={() => onChange({ shop: s })} />
+              <ChoiceTile key={s} testID={`ordc-shop-opt-${s}`} label={s} selected={same(s, shop)} onPress={() => onChange({ shop: s })} />
             ))}
-          </ChoiceRow>
+          </TileGrid>
         </View>
       ) : null}
       <TextField testID="ordc-ordered-by" label={msg('ordc.orderedBy')} hint={msg('ordc.optional')} value={orderedBy} onChangeText={(v) => onChange({ orderedBy: v })} />
       {recentPeople.length ? (
-        <ChoiceRow>
+        <TileGrid columns={3}>
           {recentPeople.map((s) => (
-            <ChoiceChip key={s} testID={`ordc-by-opt-${s}`} label={s} on={same(s, orderedBy)} onPress={() => onChange({ orderedBy: s })} />
+            <ChoiceTile key={s} testID={`ordc-by-opt-${s}`} label={s} selected={same(s, orderedBy)} onPress={() => onChange({ orderedBy: s })} />
           ))}
-        </ChoiceRow>
+        </TileGrid>
       ) : null}
       <CTA testID="ordc-shop-done" onPress={onClose}>
         {msg('ordc.shopDone')}
@@ -103,9 +104,9 @@ export function PayerSheet({
           extra={choices}
         />
       ) : (
-        <ChoiceRow>
-          <ChoiceChip testID="ordc-payer-other" dashed label={msg('fin.form.addPerson')} onPress={() => setMore(true)} />
-        </ChoiceRow>
+        <TileGrid columns={2}>
+          <ChoiceTile testID="ordc-payer-other" dashed label={msg('fin.form.addPerson')} onPress={() => setMore(true)} />
+        </TileGrid>
       )}
       <CTA testID="ordc-payer-done" onPress={onClose}>
         {msg('ordc.payerDone')}

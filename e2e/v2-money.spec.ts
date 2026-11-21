@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './test';
 
-import { evidence, seedPeople } from './fixtures';
-import { textFit } from './text-fit';
+import { evidence, seedMaster, seedPeople } from './fixtures';
+import { smallTargets, textFit } from './text-fit';
 import { pickDate } from './pick-date';
 
 /**
@@ -296,3 +296,101 @@ for (const width of [320, 360]) {
   }
 }
 
+/**
+ * E01-S25 (choice tiles, round 2) on the real build: the shared tiles fit and
+ * keep ≥ 48 targets at 320/360 px with text M and L (CT-13), and the picks
+ * behave as the owner answered (CT-6: another payer switches at once; CT-8:
+ * date quick picks are links on one line).
+ *
+ * SHOT_DIR=<folder> also saves 390×844 pictures for the side-by-side with the
+ * mockup (evidence for the dashboard card; nothing is written to docs/).
+ */
+const LONG = { id: 'p-long', name: 'สมหวังผู้ช่วยกรีดยางแปลงหลังบ้านริมคลองใหญ่' };
+const shots = process.env.SHOT_DIR;
+const choiceShot = async (page: Page, name: string) => {
+  if (shots) await page.screenshot({ path: `${shots}/${name}.png` });
+};
+
+async function checkChoiceFit(page: Page) {
+  expect(await textFit(page)).toEqual([]);
+  expect(await smallTargets(page)).toEqual([]);
+}
+
+for (const width of [320, 360]) {
+  for (const size of ['m', 'l'] as const) {
+    test(`choice tiles fit at ${width} px text ${size.toUpperCase()} (E01-S25 CT-13)`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.addInitScript((s) => localStorage.setItem('mon-farm:text-size', s), size);
+      await seedPeople(page, [LONG, { id: 'p-nat', name: 'นัด' }]);
+      await page.goto('/v2/expense/new');
+      await page.getByTestId('expense-payer-row').click();
+      await expect(page.getByTestId(`expense-payer-${LONG.id}`)).toBeVisible();
+      await checkChoiceFit(page);
+      await page.getByTestId('expense-payer-done').click();
+      await page.getByTestId('expense-cat-more').click();
+      await expect(page.getByTestId('expense-catall-cat-fertilizer')).toBeVisible();
+      await checkChoiceFit(page);
+      // Picking a category closes the sheet (at 320 px text L it covers the backdrop).
+      await page.getByTestId('expense-catall-cat-other').click();
+      await page.getByTestId('expense-details').click();
+      await page.getByTestId('expense-date').click();
+      await expect(page.getByTestId('expense-date-picker-yesterday')).toBeVisible();
+      await checkChoiceFit(page);
+      await page.goto('/v2/order');
+      await page.getByTestId('ordc-add').click();
+      await page.getByTestId('ordc-pick-new').click();
+      await expect(page.getByTestId('ordc-kg-other')).toBeVisible();
+      await checkChoiceFit(page);
+    });
+  }
+}
+
+test('payer is style I: another person switches at once; date picks are links (E01-S25 CT-6, CT-8)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seedPeople(page, [{ id: 'p-nat', name: 'นัด' }, { id: 'p-daeng', name: 'แดง' }]);
+  await seedMaster(page, [
+    { t: 'property_added', propertyId: 'fa', name: 'จันทเขลม', crop: 'rubber' },
+    { t: 'property_added', propertyId: 'fb', name: 'บ้านบน', crop: 'rubber' },
+  ]);
+  await page.goto('/v2/expense/new');
+  await page.getByTestId('expense-payer-row').click();
+  const nat = page.getByTestId('expense-payer-p-nat');
+  const daeng = page.getByTestId('expense-payer-p-daeng');
+  const before = await nat.boundingBox();
+  await nat.click();
+  await expect(nat).toHaveAttribute('aria-selected', 'true');
+  await choiceShot(page, 'b25-payer-i');
+  await daeng.click();
+  await expect(daeng).toHaveAttribute('aria-selected', 'true');
+  await expect(nat).toHaveAttribute('aria-selected', 'false');
+  // Picking never changes a tile's size (owner r2-cc-form: "ขนาดปุ่มต้องไม่เปลี่ยน").
+  const after = await nat.boundingBox();
+  expect({ w: after!.width, h: after!.height }).toEqual({ w: before!.width, h: before!.height });
+  await page.getByTestId('expense-payer-done').click();
+
+  await page.getByTestId('expense-cat-more').click();
+  await choiceShot(page, 'b25-category-f');
+  await page.getByTestId('expense-catall-cat-other').click();
+
+  await page.getByTestId('expense-details').click();
+  await page.getByTestId('expense-stage-planned').click();
+  await page.getByTestId('expense-farm-fa').click();
+  await expect(page.getByTestId('expense-farm-fa')).toHaveAttribute('aria-selected', 'true');
+  await choiceShot(page, 'b25-details-f');
+  await page.getByTestId('expense-date').click();
+  const links = await Promise.all(['today', 'yesterday', 'twodays'].map((id) => page.getByTestId(`expense-date-picker-${id}`).boundingBox()));
+  // Several on one line (owner 2026-11-21).
+  expect(new Set(links.map((b) => Math.round(b!.y))).size).toBe(1);
+  await choiceShot(page, 'b25-date-links');
+});
+
+test('order: sack sizes are style A (E01-S25 CT-7)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/v2/order');
+  await page.getByTestId('ordc-add').click();
+  await page.getByTestId('ordc-pick-new').click();
+  await page.getByTestId('ordc-kg-25').click();
+  await expect(page.getByTestId('ordc-kg-25')).toHaveAttribute('aria-selected', 'true');
+  await choiceShot(page, 'b25-order-kg-a');
+  await checkChoiceFit(page);
+});

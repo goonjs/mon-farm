@@ -308,7 +308,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
           // Goods that have arrived cannot be dated in the future.
           if (value === 'actual' && date > todayIso()) setDate(todayIso());
         }}
-        style={{ flex: 1, minHeight: t.target.comfortable, borderRadius: t.radius.pill, backgroundColor: on ? t.color.action : 'transparent', alignItems: 'center', justifyContent: 'center', paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}
+        style={{ flex: 1, minHeight: t.target.comfortable, borderRadius: t.radius.sm, backgroundColor: on ? t.color.action : 'transparent', alignItems: 'center', justifyContent: 'center', paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}
       >
         <Text style={{ textAlign: 'center', fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, color: on ? t.color.inkInverse : t.color.inkSoft }}>{title}</Text>
         {hint ? <Text style={{ textAlign: 'center', fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: on ? t.color.inkInverse : t.color.inkSoft }}>{hint}</Text> : null}
@@ -369,7 +369,7 @@ function Order({ params, fin }: { params: Params; fin: ReturnType<typeof useFina
 
       {lines.length ? (
         <View style={[cardStyle(t), { padding: t.space.sm, gap: t.space.xs }]}>
-          <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.pill, padding: t.space.xs, gap: t.space.xs }}>
+          <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.md, padding: t.space.xs, gap: t.space.xs }}>
             {stageSeg('committed', msg('ordc.stage.committed'), msg('ordc.stage.committedHint'))}
             {stageSeg('actual', msg('ordc.stage.actual'))}
           </View>

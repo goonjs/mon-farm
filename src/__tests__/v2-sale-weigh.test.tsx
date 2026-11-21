@@ -9,6 +9,7 @@ import { SaleProvider } from '../store/SaleProvider';
 import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { LogBuilder } from '../core/fixtures';
+import { expectSegment } from '../test/choice-shape';
 import { wrap } from '../test/render';
 import { messages } from '../i18n/messages';
 import { FarmMateArt } from '../ui';
@@ -1531,6 +1532,8 @@ describe('short basket: how it is recorded (E04-S16)', () => {
     useDial('scale');
     await openSheet();
     expect(screen.getByTestId('reading')).toHaveTextContent(/^37/);
+    // E01-S25 CT-5: the basis bar is style B (r2-basis).
+    expectSegment(screen.getByTestId('basis-net'));
     await press('basis-net');
     expect(screen.getByTestId('reading')).toHaveTextContent(/^35/);
     expect(readWeighBasis()).toBe('net');
