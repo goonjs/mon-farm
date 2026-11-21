@@ -1738,3 +1738,25 @@ describe('FarmMate originals on the sale screens (E03-S11 FM-8)', () => {
     expect(art('cu-sum-bar')).toEqual(['sale.weigh']);
   });
 });
+
+describe('E04-S25 review B1: a point holding only a top-up part reads as weighed', () => {
+  /** แดง's basket 2 is short at จุด 1 and topped up to full at จุด 2; every other point has a full basket. */
+  async function seeded() {
+    const b = new LogBuilder(saleId);
+    b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+    for (const p of [...farm.a, farm.b1]) b.sys({ t: 'pile_added', pileId: p, zoneId: p === farm.b1 ? farm.farmB : farm.farmA, name: p, tareG: 2_000, stdNetG: 50_000 });
+    b.acceptAt(farm.a[0], 1).shortAt(farm.a[0], 2, 27_000);
+    b.partAt(b.build().at(-1)!.id, farm.a[1], 2, 25_000);
+    for (const p of [farm.a[2], farm.a[3], farm.a[4], farm.b1]) b.acceptAt(p, 1);
+    await seedSale(store(), b.build().map((e) => ({ ...e, ts: Date.now() })));
+  }
+
+  it('the picker shows จุด 2 as weighed, and the finish button shows', async () => {
+    await seeded();
+    await inSale(<PointScreen />, { mode: 'switch', farm: farm.farmA, tapper: farm.red });
+    expect(screen.getByTestId(`pick-point-${farm.a[1]}`)).not.toHaveTextContent(/ยังไม่ชั่ง/);
+    expect(screen.getByTestId(`pick-point-${farm.a[1]}`)).toHaveTextContent(/ชั่งแล้ว \(ส่วนเติม 25 กก\.\)/);
+    expect(screen.getByTestId(`pick-point-${farm.a[0]}`)).toHaveTextContent(/ชั่งแล้ว 2 เข่ง/);
+    expect(screen.getByTestId('pick-finish')).toBeTruthy();
+  });
+});
