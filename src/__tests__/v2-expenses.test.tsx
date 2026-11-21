@@ -273,6 +273,32 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
 });
 
 describe('expense list (F4, F7)', () => {
+  it('filters: four E boxes 2 by 2, two F ticks, clear is an underlined link (E01-S26 PS26-1)', async () => {
+    await seedExpense('f-1', { amountSatang: 200000, date: '2026-09-20', stage: 'planned' });
+    await seedExpense('f-2', { amountSatang: 150000, date: '2026-09-21' });
+    wrap(<ExpensesScreen />);
+    await flush();
+    const flat = (st: unknown) => Object.assign({}, ...[st].flat(Infinity).filter(Boolean));
+    for (const id of ['filter-stage', 'filter-category', 'filter-farm', 'filter-month']) {
+      const box = flat(screen.getByTestId(id).props.style);
+      expect(box.borderRadius).toBe(tokens.radius.md);
+      expect(box.borderWidth).toBe(tokens.border.thick);
+    }
+    expect(screen.getByTestId('filter-stage')).toHaveTextContent(/วงจร.*ทั้งหมด/);
+    for (const id of ['filter-payer-missing', 'filter-unrepaid']) expectChoiceTile(screen.getByTestId(id), 'checkbox');
+    expect(screen.queryByTestId('filter-clear')).toBeNull();
+    fireEvent.press(screen.getByTestId('filter-stage'));
+    expectChoiceTile(screen.getByTestId('stage-planned'), 'check');
+    fireEvent.press(screen.getByTestId('stage-planned'));
+    expect(screen.getByTestId('filter-stage')).toHaveTextContent(/วางแผน/);
+    expect(flat(screen.getByTestId('filter-stage').props.style).backgroundColor).toBe(tokens.color.light.actionSunk);
+    expect(screen.queryByTestId('expense-f-2')).toBeNull();
+    const clear = screen.getByTestId('filter-clear');
+    expect(flat(clear.props.style).borderWidth ?? 0).toBe(0);
+    fireEvent.press(clear);
+    expect(screen.getByTestId('expense-f-2')).toBeTruthy();
+  });
+
   it('bulk-sets the payer on expenses with none, and the farm then owes them', async () => {
     await seedExpense('bulk-1', { amountSatang: 200000, date: '2026-09-20' });
     await seedExpense('bulk-2', { amountSatang: 150000, date: '2026-09-20' });
