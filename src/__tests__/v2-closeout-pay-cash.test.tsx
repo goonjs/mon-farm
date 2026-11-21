@@ -11,6 +11,7 @@ import { SaleProvider } from '../store/SaleProvider';
 import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
 import { wrap } from '../test/render';
+import { tokens } from '../../design/tokens';
 import { BuyerViewScreen, FitAmount } from '../v2/sale/closeout/buyer-view-screen';
 import { CloseoutCashScreen } from '../v2/sale/closeout/cash-screen';
 import { updateDraft } from '../v2/sale/closeout/use-closeout';
@@ -143,6 +144,9 @@ describe('CO-19 · the cash step (A6): first time = โอนรวม + ให�
     await press('cop-round-none');
     await press(`cop-route-${farm.red}-cash-from-share`);
     expect(last(`cop-break-${farm.red}`)).toHaveTextContent(/ต้องแตกเงิน/);
+    // E01-S26 PS26-10: the person's whole row is the tap target; the warning is yellow text, not a pill.
+    expect(within(last(`cop-break-${farm.red}`)).getByTestId(`cop-who-${farm.red}`)).toBeTruthy();
+    expect(within(last(`cop-break-${farm.red}`)).getByTestId(`cop-break-${farm.red}-warn`).props.style).not.toMatchObject({ borderRadius: tokens.radius.pill });
     await press(`cop-break-${farm.red}`);
     const sheet = last('cop-break-sheet');
     expect(sheet).toHaveTextContent(/เงินของแดง ฿ 9,187\.50/);
@@ -254,7 +258,11 @@ describe('D-80 · เข้าบัญชีไหน on the cash step (E05-S07
   it('none yet: "ยังไม่ได้เลือก" under โอนเข้าบัญชีสวน, button เลือก', async () => {
     await inSale(ACCT, <CloseoutCashScreen />);
     expect(last('cop-account')).toHaveTextContent(/ยังไม่ได้เลือก/);
-    expect(last('cop-account-change')).toHaveTextContent('เลือก');
+    // E01-S26 PS26-10: the word left the screen with the pill; the row still says it to a screen reader.
+    expect(last('cop-account-change').props.accessibilityLabel).toMatch(/เลือก$/);
+    // E01-S26 PS26-10: the whole account row is the tap target, with › (no "เลือก ›" pill).
+    expect(last('cop-account-change')).toHaveTextContent(/ยังไม่ได้เลือก/);
+    expect(within(last('cop-account-change')).getByTestId('cop-account-chevron', { includeHiddenElements: true })).toBeTruthy();
   });
 
   it('the group default is shown and marked; the sheet lists live accounts, cash, a note and the settings link', async () => {
@@ -263,7 +271,8 @@ describe('D-80 · เข้าบัญชีไหน on the cash step (E05-S07
     await inSale(ACCT, <CloseoutCashScreen />);
     expect(last('cop-account')).toHaveTextContent(/กสิกรไทย ••7890/);
     expect(last('cop-account')).toHaveTextContent(/บัญชีค่าเริ่มต้น/);
-    expect(last('cop-account-change')).toHaveTextContent('เปลี่ยน');
+    // E01-S26 PS26-10: the word left the screen with the pill; the row still says it to a screen reader.
+    expect(last('cop-account-change').props.accessibilityLabel).toMatch(/เปลี่ยน$/);
     await press('cop-account-change');
     expect(last('acct-acc-1').props.accessibilityState).toMatchObject({ checked: true });
     expect(last('acct-cash').props.accessibilityState).toMatchObject({ checked: false });

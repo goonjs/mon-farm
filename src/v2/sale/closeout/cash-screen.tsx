@@ -18,7 +18,7 @@ import { cashNotes, needsChange, type RoundingMode } from '../../../core/finance
 import { formatSatang } from '../../../core/finance/money';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, BottomSheet, Button, cardStyle, Check, SegmentedControl } from '../../../ui';
+import { AppText, BottomSheet, Button, cardStyle, Check, ChevronRight, SegmentedControl } from '../../../ui';
 import { FarmScreen } from '../../farm/pieces';
 import { bahtText } from '../pieces';
 import { AccountRow } from './cash-account';
@@ -147,25 +147,26 @@ export function CloseoutCashScreen() {
                 const needs = needsBreak(w);
                 return (
                   <View key={w.id} style={{ gap: t.space.xs }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, flexWrap: 'wrap' }}>
+                    {/* E01-S26 PS26-10: when a note must be broken, the whole row opens the sheet; the warning is yellow text, not a pill. */}
+                    <Pressable
+                      testID={needs ? `cop-break-${w.id}` : undefined}
+                      disabled={!needs}
+                      accessibilityRole={needs ? 'button' : undefined}
+                      accessibilityLabel={needs ? `${w.name} · ${msg('cop.needBreak')}` : undefined}
+                      onPress={needs ? () => setBreakFor(w.id) : undefined}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, flexWrap: 'wrap', minHeight: needs ? t.target.min : undefined }}
+                    >
                       <Text testID={`cop-who-${w.id}`} style={{ flex: 1, minWidth: 140, ...line }}>
                         <Text style={{ fontWeight: t.font.weight.bold, color: t.color.ink }}>{w.name}</Text> {msg('cop.deducts', { amount: baht(w.routeSatang) })}
                       </Text>
                       {needs ? (
-                        <Pressable
-                          testID={`cop-break-${w.id}`}
-                          accessibilityRole="button"
-                          accessibilityLabel={msg('cop.needBreak')}
-                          onPress={() => setBreakFor(w.id)}
-                          style={{ minHeight: t.target.min, justifyContent: 'center' }}
-                        >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs, backgroundColor: t.color.warnSunk, borderRadius: t.radius.pill, paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
-                            <WarnMark color={t.color.warn} size={14} />
-                            <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('cop.needBreak')}</Text>
-                          </View>
-                        </Pressable>
+                        <View testID={`cop-break-${w.id}-warn`} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}>
+                          <WarnMark color={t.color.warn} size={14} />
+                          <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: t.color.warn }}>{msg('cop.needBreak')}</Text>
+                          <ChevronRight color={t.color.warn} />
+                        </View>
                       ) : null}
-                    </View>
+                    </Pressable>
                     {co.mixed?.has(w.id) ? <MergeWarn testID={`cop-merge-${w.id}`} /> : null}
                     <SegmentedControl
                       testID={`cop-route-${w.id}`}
