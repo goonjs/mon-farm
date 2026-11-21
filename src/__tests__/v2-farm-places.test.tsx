@@ -13,6 +13,7 @@ import { userFromSignIn } from '../core/user';
 import { accountStore as mockAccounts } from '../store/account';
 import { pickDate } from '../test/pick-date';
 import { expectRadioRow } from '../test/choice-shape';
+import { tokens } from '../../design/tokens';
 import { wrap } from '../test/render';
 
 jest.mock('../store/people', () => {
@@ -294,6 +295,14 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     const planned = (await m.state()).assignments.filter((a) => !a.deleted && a.tapperId === nat.id);
     expect(planned).toHaveLength(1);
     expect(within(screen.getByTestId('timeline')).getByText('ตามแผน ยังไม่ถึงวัน')).toBeTruthy();
+    // E01-S26 PS26-8: the plan row itself opens the plan (›); "ยกเลิกแผน" is a red underlined link, no pill buttons.
+    const id = planned[0].assignmentId;
+    const flat = (st: unknown) => Object.assign({}, ...[st].flat(Infinity).filter(Boolean));
+    const edit = screen.getByTestId(`edit-plan-${id}`);
+    expect(edit.props.accessibilityRole).toBe('button');
+    expect(within(edit).getByText('นัด')).toBeTruthy();
+    expect(within(edit).getByTestId(`edit-plan-${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
+    expect(flat(within(screen.getByTestId(`cancel-plan-${id}`)).getByText('ยกเลิกแผน').props.style)).toMatchObject({ textDecorationLine: 'underline', color: tokens.color.light.reject });
     await press(`cancel-plan-${planned[0].assignmentId}`);
     expect((await m.state()).assignments.find((a) => a.assignmentId === planned[0].assignmentId)?.deleted).toBe(true);
   });

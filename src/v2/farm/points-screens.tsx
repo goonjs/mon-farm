@@ -17,8 +17,8 @@
  */
 
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { BackHandler, TextInput, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { BackHandler, Pressable, TextInput, View } from 'react-native';
 
 import {
   activePoints,
@@ -48,6 +48,7 @@ import {
   BottomSheet,
   Button,
   CalendarIcon,
+  ChevronRight,
   Card,
   Check,
   Chip,
@@ -62,7 +63,6 @@ import {
   RadioCard,
   SwapIcon,
   TextField,
-  Undo,
   FarmMateArt,
   TextLink,
   DateField,
@@ -326,18 +326,29 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
     if (await write.run(() => peopleStore.restore(point.id))) reload();
   };
 
-  const planButtons = (assignmentId: string) => (
-    <View style={{ flexDirection: 'row', gap: t.space.sm, paddingBottom: t.space.sm }}>
-      <View style={{ flex: 1 }}>
-        <Button testID={`edit-plan-${assignmentId}`} onPress={() => setSheet({ kind: 'plan', replacing: assignmentId })}>
-          {msg('assign.editPlan')}
-        </Button>
-      </View>
-      <View style={{ flex: 1 }}>
-        <Button testID={`cancel-plan-${assignmentId}`} icon={(c) => <Undo color={c} size={12} />} onPress={() => void cancelPlan(assignmentId)}>
-          {msg('assign.cancelPlan')}
-        </Button>
-      </View>
+  // E01-S26 PS26-8: a planned row opens the plan itself (whole row + ›); "ยกเลิกแผน" is a red underlined link.
+  const PlanTap = ({ id, children }: { id: string | null; children: ReactNode }) =>
+    id ? (
+      <Pressable
+        testID={`edit-plan-${id}`}
+        accessibilityRole="button"
+        accessibilityLabel={msg('assign.editPlan')}
+        onPress={() => setSheet({ kind: 'plan', replacing: id })}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm, minHeight: t.target.min }}
+      >
+        {children}
+        <View testID={`edit-plan-${id}-chevron`} aria-hidden>
+          <ChevronRight color={t.color.inkFaint} />
+        </View>
+      </Pressable>
+    ) : (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>{children}</View>
+    );
+  const cancelLink = (assignmentId: string) => (
+    <View style={{ paddingBottom: t.space.sm }}>
+      <TextLink testID={`cancel-plan-${assignmentId}`} tone="reject" onPress={() => void cancelPlan(assignmentId)}>
+        {msg('assign.cancelPlan')}
+      </TextLink>
     </View>
   );
 
@@ -398,7 +409,7 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
           const isNow = (seg.from === null || seg.from <= today) && (seg.to === null || seg.to >= today);
           return (
             <View key={seg.assignmentId} testID={`assignment-${seg.assignmentId}`}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
+              <PlanTap id={planned ? seg.assignmentId : null}>
                 <IconTile tone={toneOf(seg.tapperId)} icon={() => <FarmMateArt id="people.tapper" />} />
                 <View style={{ flex: 1, gap: t.space.xxs }}>
                   <AppText style={{ fontWeight: t.font.weight.bold }}>{nameOf(seg.tapperId)}</AppText>
@@ -411,14 +422,14 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
                   ) : null}
                 </View>
                 {isNow ? <Chip tone="accept" label={msg('assign.now')} /> : null}
-              </View>
-              {planned ? planButtons(seg.assignmentId) : null}
+              </PlanTap>
+              {planned ? cancelLink(seg.assignmentId) : null}
             </View>
           );
         })}
         {vacancies.map((v) => (
           <View key={v.assignmentId} testID={`vacancy-${v.assignmentId}`}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
+            <PlanTap id={v.assignmentId}>
               <IconTile tone="neutral" icon={(c) => <PersonIcon color={c} size={20} />} />
               <View style={{ flex: 1, gap: t.space.xxs }}>
                 <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('assign.none')}</AppText>
@@ -427,8 +438,8 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
                   {msg('assign.plannedNotYet')}
                 </AppText>
               </View>
-            </View>
-            {planButtons(v.assignmentId)}
+            </PlanTap>
+            {cancelLink(v.assignmentId)}
           </View>
         ))}
       </RowCard>
