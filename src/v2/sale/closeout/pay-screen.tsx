@@ -59,6 +59,7 @@ import { AlertIcon, AppText, BankIcon, BottomSheet, Button, cardStyle, Check, Ch
 import { PickAmountSheet, ReceivedAmountSheet } from '../../money/received-sheet';
 import type { TapperMoney } from '../../money/sale/use-sale-money';
 import { FarmScreen } from '../../farm/pieces';
+import { V2_HOME } from '../../routes';
 import { Banner, IconLine, markClosing, useSaleView } from '../pieces';
 import { SourcesPill } from './summary-cards';
 import { SourcesSheet } from './summary-sources-sheet';
@@ -163,11 +164,12 @@ function PayBody({ bump }: { bump: () => void }) {
   const closed = view.closed;
   const closeSale = () => {
     if (!canClose) return;
-    // One navigation, no timing: the list is not in the sale's stack, so dismissTo pops
-    // the whole sale and back never reaches a live counter (review #2, N3).
+    // E15-S07 HE-3: home at once, where the start tile shows S4 or S5. One navigation, no timing:
+    // home is not in the sale's stack, so dismissTo pops the whole sale and back never reaches a
+    // live counter (review #2, N3).
     markClosing(saleId);
     if (canComplete(state)) append({ kind: 'sys', payload: { t: 'sale_status_set', status: 'completed' } });
-    router.dismissTo('/v2/sales' as Href);
+    router.dismissTo(V2_HOME);
   };
 
   const mark = async (id: string, amount: number, done: boolean) => {

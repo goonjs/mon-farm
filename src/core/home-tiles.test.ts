@@ -31,8 +31,11 @@ describe('salePhase — where one sale is', () => {
     expect(salePhase(sale({ piles: [pile('closed')] }), true)).toBe('clearing');
   });
 
-  it('a pile counted again takes the sale back to counting even after records exist (HT-4)', () => {
-    expect(salePhase(sale({ piles: [pile('closed'), pile('counting')] }), true)).toBe('counting');
+  // E15-S07 HE-1 (owner 2026-11-18 "ไม่ต้องรอ 'ชั่งเสร็จ'"): no page writes pile_closed, so clearing must not wait for it.
+  it('clearing has started: clearing, even while piles are still counting (E15-S07 HE-1)', () => {
+    expect(salePhase(sale({ piles: [pile('closed'), pile('counting')] }), true)).toBe('clearing');
+    expect(salePhase(sale({ piles: [pile('counting'), pile('counting')] }), true)).toBe('clearing');
+    expect(salePhase(sale({ piles: [pile('not-started')] }), true)).toBe('clearing');
   });
 
   it('completed, or the older sale_closed: closed', () => {
@@ -54,6 +57,29 @@ describe('clearingStarted — the records the clearing step writes for one sale'
     const debt = f({ t: 'debt_payment_recorded', fields: { saleId: 'a', workerId: 'w', amountSatang: 50 } as never });
     expect(clearingStarted([debt], 'a')).toBe(true);
     expect(clearingStarted([debt], 'b')).toBe(false);
+  });
+
+  // E15-S07 HE-2: un-ticking and deleting the debt lines takes the sale back to counting, from the data (HT-4).
+  it('only what is live counts: an un-ticked payee and a deleted debt line are nothing (E15-S07 HE-2)', () => {
+    const tick = f({ t: 'payment_mark_set', saleId: 'a', payee: 'w1', done: true, amountSatang: 100 });
+    const untick = { ...f({ t: 'payment_mark_set', saleId: 'a', payee: 'w1', done: false, amountSatang: 100 }), targetId: tick.targetId, baseEventId: tick.id };
+    expect(clearingStarted([tick], 'a')).toBe(true);
+    expect(clearingStarted([tick, untick], 'a')).toBe(false);
+    const line = f({ t: 'debt_payment_recorded', fields: { saleId: 'a', workerId: 'w', amountSatang: 50 } as never });
+    const gone = { ...f({ t: 'debt_payment_changed', patch: { deleted: true } }), targetId: line.targetId, baseEventId: line.id };
+    expect(clearingStarted([line], 'a')).toBe(true);
+    expect(clearingStarted([line, gone], 'a')).toBe(false);
+    expect(clearingStarted([tick, untick, line, gone], 'a')).toBe(false);
+    // One still live is enough.
+    expect(clearingStarted([tick, untick, line], 'a')).toBe(true);
+  });
+
+  it('with every tick and debt line removed the sale is counting again (E15-S07 HE-2)', () => {
+    const tick = f({ t: 'payment_mark_set', saleId: 'a', payee: 'w1', done: true, amountSatang: 100 });
+    const untick = { ...f({ t: 'payment_mark_set', saleId: 'a', payee: 'w1', done: false, amountSatang: 100 }), targetId: tick.targetId, baseEventId: tick.id };
+    const s = sale({ piles: [pile('counting')] });
+    expect(salePhase(s, clearingStarted([tick], 'a'))).toBe('clearing');
+    expect(salePhase(s, clearingStarted([tick, untick], 'a'))).toBe('counting');
   });
 });
 

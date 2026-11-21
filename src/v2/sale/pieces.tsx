@@ -91,7 +91,7 @@ export function useSaleView() {
  * Sales being closed right now. Closing pops the sale's whole stack in one
  * navigation; a screen still mounted under it must not answer the closed
  * status by sending the sale to /payment on the way out (re-review N3).
- * Cleared when the sale list shows.
+ * Cleared when the home or the sale list shows.
  */
 const closing = new Set<string>();
 export function markClosing(saleId: string): void {

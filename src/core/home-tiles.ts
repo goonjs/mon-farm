@@ -10,7 +10,8 @@
 import { prepLeft, type SalePrep } from './finance/sale-prep';
 import { todayIso as farmToday } from './master';
 import { statusCountsAsClosed } from './sale-status';
-import type { FinanceEvent } from './finance/types';
+import { foldRecordPublic, headsOf } from './finance/ledger';
+import type { DebtPaymentFields, FinanceEvent } from './finance/types';
 import type { SaleState } from './types';
 
 /** Where one sale is: counting baskets, every pile counted and at the clearing step, or closed. */
@@ -18,21 +19,39 @@ export type SalePhase = 'counting' | 'clearing' | 'closed';
 
 /**
  * A sale's phase; null for a deleted or cancelled one. The clearing step has no event of its own (it is a page),
- * so it is read from what that step writes: once the sale's debt deductions or payment ticks are recorded
- * (`clearingStarted`) and no pile is being counted, the sale is at clearing; counting again takes it back (HT-4).
+ * so it is read from what that step writes: once the sale has a live payment tick or debt line
+ * (`clearingStarted`) it is at clearing, whether or not a pile is still counting — no page writes
+ * `pile_closed`, so waiting for it kept the tile on the scale all day (E15-S07 HE-1). Removing every tick and
+ * line takes it back to counting (HE-2, HT-4).
  */
 export function salePhase(state: SaleState, clearing: boolean): SalePhase | null {
   if (state.deleted || state.saleStatus === 'cancelled') return null;
   if (statusCountsAsClosed(state)) return 'closed';
-  return clearing && !state.piles.some((p) => p.status === 'counting') ? 'clearing' : 'counting';
+  return clearing ? 'clearing' : 'counting';
 }
 
-/** Whether the clearing step has written anything for this sale: a debt payment line or a payment tick. */
+/**
+ * Whether the clearing step has anything live for this sale: a payee ticked (on any head, so a two-phone
+ * conflict still counts) or a debt line not deleted. An un-tick or a deleted line is nothing (E15-S07 HE-2).
+ */
 export function clearingStarted(fin: readonly FinanceEvent[], saleId: string): boolean {
-  return fin.some((e) => {
-    const p = e.payload;
-    return p.t === 'payment_mark_set' ? p.saleId === saleId : p.t === 'debt_payment_recorded' ? p.fields.saleId === saleId : false;
-  });
+  const byTarget = new Map<string, FinanceEvent[]>();
+  for (const e of fin) {
+    const list = byTarget.get(e.targetId);
+    if (list) list.push(e);
+    else byTarget.set(e.targetId, [e]);
+  }
+  for (const [target, evs] of byTarget) {
+    const p = (evs.find((e) => e.baseEventId === null) ?? evs[0]).payload;
+    if (p.t === 'payment_mark_set' && p.saleId === saleId) {
+      const heads = new Set(headsOf(evs, target));
+      if (evs.some((e) => heads.has(e.id) && e.payload.t === 'payment_mark_set' && e.payload.done)) return true;
+    } else if (p.t === 'debt_payment_recorded' && p.fields.saleId === saleId) {
+      const f = foldRecordPublic(evs, (c) => ({ ...(c.payload as { fields: DebtPaymentFields }).fields, deleted: false }), ['amountSatang', 'creditor', 'worker']);
+      if (f && !f.state.deleted) return true;
+    }
+  }
+  return false;
 }
 
 /** One sale as the tiles see it. `unpaid` = piles of money still to pay, only meaningful when closed. */

@@ -129,9 +129,10 @@ describe('V2Home — เตรียมขาย and เริ่มการข
     expect(badge('home-prepare')?.props.accessibilityLabel).toBe('ครบแล้ว');
   });
 
+  // E15-S07 HE-2: only a live tick counts — an un-tick (done: false) is nothing, so the tick here is a real one.
   it('counting done and the clearing step has written its ticks: the calculator (S3)', async () => {
     await seedSale('s-clear', 10_000, (b) => b.sys({ t: 'pile_closed', pileId: 'p1', forced: false }));
-    await tick('t-1', 's-clear', 'owner', false);
+    await tick('t-1', 's-clear', 'owner', true);
     wrap(<V2Home />);
     await flush();
     // The newest sale decides: s-clear started after s-now.

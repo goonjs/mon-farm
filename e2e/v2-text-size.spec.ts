@@ -224,7 +224,7 @@ async function tour(page: Page, size: keyof typeof AT) {
   await expect(id('payment')).toBeVisible();
   await check('a6-payment');
   await id('close-sale').click();
-  await expect(id('sales')).toBeVisible();
+  await expect(id('home-sale-start')).toBeVisible();
   // E06-S08: นัด's account with the transfer waiting, the sheet (M5) and "got less" on the pad (M7).
   await page.goto('/v2/debt/nat?name=%E0%B8%99%E0%B8%B1%E0%B8%94');
   await expect(id('rp-row-sale-ts-transfer')).toBeVisible();
