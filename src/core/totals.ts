@@ -15,42 +15,11 @@ import type {
   Totals,
   ZoneId,
 } from './types';
-import { compareEvents } from './order';
-import { deletedIds } from './soft-delete';
+import { basketGroups, stdNetOfLog } from './bridge';
+import { basketNetG, liveBaskets } from './live';
 import { ZERO_TOTALS } from './types';
 
-/**
- * The baskets that still count.
- *
- * A basket is live unless some `correction` event targets its id, or it (or
- * its pile, or its zone) is soft-deleted.
- * Corrections never mutate their target, so "was it voided?" is always a
- * question about the log, never about a flag someone remembered to set.
- */
-export function liveBaskets(
-  events: readonly SaleEvent[],
-  pileId?: PileId,
-): readonly BasketEvent[] {
-  const voided = new Set<string>();
-  const zoneOf = new Map<string, string>();
-  for (const e of events) {
-    if (e.kind === 'correction') voided.add(e.targetId);
-    if (e.kind === 'sys' && e.payload.t === 'pile_added') zoneOf.set(e.payload.pileId, e.payload.zoneId);
-  }
-  // Soft Delete (E01-S04): a deleted basket, or one in a deleted pile or
-  // zone, leaves the totals; restoring it puts it back exactly.
-  const deleted = deletedIds(events);
-
-  const out: BasketEvent[] = [];
-  for (const e of events) {
-    if (e.kind !== 'accept' && e.kind !== 'short') continue;
-    if (voided.has(e.id)) continue;
-    if (deleted.has(e.id) || deleted.has(e.pileId) || deleted.has(zoneOf.get(e.pileId) ?? '')) continue;
-    if (pileId !== undefined && e.pileId !== pileId) continue;
-    out.push(e);
-  }
-  return out.sort(compareEvents);
-}
+export { basketNetG, liveBaskets };
 
 /** The most recent live basket in a pile — what `undo-last` targets. */
 export function lastLiveBasket(
@@ -61,43 +30,49 @@ export function lastLiveBasket(
   return live.length ? live[live.length - 1] : null;
 }
 
-/** A short basket's net is derived, never stored: reading minus tare. */
-export function basketNetG(b: BasketEvent): number {
-  return b.kind === 'accept' ? b.netG : b.readingG - b.tareG - (b.skewG ?? 0);
-}
+/** Whether a live basket event counts on the full side. */
+export type FullOf = (b: BasketEvent) => boolean;
 
-function tally(baskets: readonly BasketEvent[]): Totals {
-  let standardBaskets = 0;
-  let shortBaskets = 0;
-  let standardNetG = 0;
-  let shortNetG = 0;
-
-  for (const b of baskets) {
-    // A later part of a bridged basket (E04-S06) adds its weight, never another basket.
-    const part = b.partOf !== undefined;
-    if (b.kind === 'accept') {
-      if (!part) standardBaskets++;
-      standardNetG += b.netG;
-    } else {
-      if (!part) shortBaskets++;
-      // Through basketNetG so an accepted skew is taken off here too —
-      // settlement must never disagree with the recorder (E04 skew).
-      shortNetG += basketNetG(b);
-    }
-  }
-
-  return {
-    baskets: standardBaskets + shortBaskets,
-    standardBaskets,
-    shortBaskets,
-    netG: standardNetG + shortNetG,
-    standardNetG,
-    shortNetG,
+/**
+ * Full or short, read the way the basket list reads it (E04-S25): a short
+ * basket topped up until full is one full basket, and every part of it counts
+ * on the full side; one that stays short keeps all its parts on the short
+ * side. A basket outside any bridge group goes by its own kind, as before.
+ */
+export function fullnessOf(events: readonly SaleEvent[]): FullOf {
+  const groups = basketGroups(events, stdNetOfLog(events));
+  return (b) => {
+    const g = groups.get(b.partOf ?? b.id);
+    return g ? g.status === 'full' : b.kind === 'accept';
   };
 }
 
+/**
+ * One basket event's share of any total. A later part of a bridged basket
+ * (E04-S06) adds its weight where it was weighed, never another basket: the
+ * basket is counted once, at its first part (E04-S25).
+ */
+export function basketTotals(b: BasketEvent, full: boolean): Totals {
+  // Through basketNetG so an accepted skew is taken off here too —
+  // settlement must never disagree with the recorder (E04 skew).
+  const netG = basketNetG(b);
+  const n = b.partOf === undefined ? 1 : 0;
+  return {
+    baskets: n,
+    standardBaskets: full ? n : 0,
+    shortBaskets: full ? 0 : n,
+    netG,
+    standardNetG: full ? netG : 0,
+    shortNetG: full ? 0 : netG,
+  };
+}
+
+function tally(baskets: readonly BasketEvent[], fullOf: FullOf): Totals {
+  return baskets.reduce((t, b) => addTotals(t, basketTotals(b, fullOf(b))), ZERO_TOTALS);
+}
+
 export function pileTotals(events: readonly SaleEvent[], pileId: PileId): Totals {
-  return tally(liveBaskets(events, pileId));
+  return tally(liveBaskets(events, pileId), fullnessOf(events));
 }
 
 export function zoneTotals(
@@ -106,11 +81,11 @@ export function zoneTotals(
   zoneId: ZoneId,
 ): Totals {
   const pileIds = new Set(state.piles.filter((p) => p.zoneId === zoneId).map((p) => p.id));
-  return tally(liveBaskets(events).filter((b) => pileIds.has(b.pileId)));
+  return tally(liveBaskets(events).filter((b) => pileIds.has(b.pileId)), fullnessOf(events));
 }
 
 export function saleTotals(events: readonly SaleEvent[]): Totals {
-  return tally(liveBaskets(events));
+  return tally(liveBaskets(events), fullnessOf(events));
 }
 
 /** FR-6.3 — an ad-hoc total over any chosen set of piles. */
@@ -119,7 +94,7 @@ export function subsetTotals(
   pileIds: readonly PileId[],
 ): Totals {
   const wanted = new Set(pileIds);
-  return tally(liveBaskets(events).filter((b) => wanted.has(b.pileId)));
+  return tally(liveBaskets(events).filter((b) => wanted.has(b.pileId)), fullnessOf(events));
 }
 
 export function addTotals(a: Totals, b: Totals): Totals {
