@@ -10,6 +10,7 @@ import { projectFinance } from '../core/finance/ledger';
 import type { ExpenseFields, FinanceEvent } from '../core/finance/types';
 import { financeStore as mockFinance } from '../store/finance';
 import { peopleStore as mockPeople } from '../store/people';
+import { expectChoiceTile } from '../test/choice-shape';
 import { wrap } from '../test/render';
 import { ExpenseFormScreen } from '../v2/money/expense-form-screen';
 import { FertilizerSettingsScreen } from '../v2/money/fertilizer-settings';
@@ -164,7 +165,11 @@ describe('rows 2–3 · trip lines and split per farm', () => {
   it('a split that adds up is saved per farm', async () => {
     await trip();
     enter('trip-line-fuel', '300');
+    // E01-S25 CT-12: "แบ่ง/ไม่แบ่ง" is F, pick one.
+    expectChoiceTile(screen.getByTestId('trip-unsplit'), 'check');
+    expectChoiceTile(screen.getByTestId('trip-split'), 'check');
     press('trip-split');
+    expect(screen.getByTestId('trip-split').props.accessibilityState).toMatchObject({ selected: true });
     enter('trip-split-สวนบน', '200.25');
     enter('trip-split-สวนล่าง', '99.75');
     await saveExpense();

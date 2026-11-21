@@ -52,6 +52,7 @@ export function ChoiceTile({
   kind = 'fill',
   tone = 'action',
   multi,
+  clearable,
   dashed,
   disabled,
   testID,
@@ -66,6 +67,8 @@ export function ChoiceTile({
   tone?: ChoiceTone;
   /** Style F only: a checkbox that toggles, instead of a pick-one. */
   multi?: boolean;
+  /** An optional pick-one (the farm): tapping the picked one clears it. */
+  clearable?: boolean;
   /** "+ คนอื่น": an add button drawn as a dashed tile, never a choice. */
   dashed?: boolean;
   disabled?: boolean;
@@ -79,7 +82,7 @@ export function ChoiceTile({
   const role = dashed ? 'button' : isCheckbox ? 'checkbox' : 'radio';
   const press = () => {
     if (disabled) return;
-    if (on && !isCheckbox) return; // tapping the picked one keeps it
+    if (on && !isCheckbox && !clearable) return; // tapping the picked one keeps it
     onPress();
   };
   const left = kind !== 'fill' && !dashed;

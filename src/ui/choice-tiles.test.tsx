@@ -137,6 +137,14 @@ describe('choice tiles (E01-S25 CT-1..CT-4)', () => {
     expect(onPress).not.toHaveBeenCalled();
   });
 
+  it('F single, clearable (an optional pick such as the farm): tapping the picked one clears it', () => {
+    const onPress = jest.fn();
+    wrap(<ChoiceTile kind="check" clearable testID="f" label="สวนบน" selected onPress={onPress} />);
+    expect(screen.getByTestId('f').props.accessibilityRole).toBe('radio');
+    fireEvent.press(screen.getByTestId('f'));
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
   it('dashed add tile is a button, not a choice', () => {
     const onPress = jest.fn();
     wrap(<ChoiceTile dashed testID="add" label="+ คนอื่น" onPress={onPress} />);

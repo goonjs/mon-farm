@@ -20,6 +20,7 @@ import {
   AppText,
   BottomSheet,
   cardStyle,
+  ChoiceTile,
   ChevronRight,
   CTA,
   FieldError,
@@ -28,11 +29,12 @@ import {
   QuantityField,
   SegmentedControl,
   TextField,
+  TileGrid,
   type TileTone,
   FarmMateArt,
   type FarmMateArtId,
 } from '../../../ui';
-import { ChoiceChip, ChoiceRow, SectionLabel, TickCard } from '../pieces';
+import { SectionLabel, TickCard } from '../pieces';
 import { SolidButton } from './solid-cta';
 import {
   moneyOk,
@@ -563,39 +565,40 @@ export function NewProductSheet({
       <View style={{ gap: t.space.xs }}>
         <TextField testID="ordc-brand" label={msg('ordc.brand')} hint={msg('ordc.optional')} placeholder={msg('ordc.brandPlaceholder')} value={v.brand} onChangeText={(brand) => setV({ ...v, brand })} />
         {brands.length ? (
-          <ChoiceRow>
+          <TileGrid columns={2}>
             {brands.map((o) => (
-              <ChoiceChip key={o.id} testID={`ordc-brand-opt-${o.name}`} label={o.name} on={o.name.trim().toLowerCase() === v.brand.trim().toLowerCase()} onPress={() => setV({ ...v, brand: o.name })} />
+              <ChoiceTile key={o.id} testID={`ordc-brand-opt-${o.name}`} label={o.name} selected={o.name.trim().toLowerCase() === v.brand.trim().toLowerCase()} onPress={() => setV({ ...v, brand: o.name })} />
             ))}
-          </ChoiceRow>
+          </TileGrid>
         ) : null}
       </View>
       <View style={{ gap: t.space.xs }}>
         <SectionLabel>{msg('ordc.sackKg')}</SectionLabel>
-        <ChoiceRow>
+        {/* Style A (E01-S25 CT-7); "+ ขนาดอื่น" is a dashed add tile that opens the number field below. */}
+        <TileGrid columns={3}>
           {sizes.map((s) => (
-            <ChoiceChip
+            <ChoiceTile
               key={s}
               testID={`ordc-kg-${s}`}
               label={msg('ordc.kg', { kg: s })}
-              on={!otherKg && v.sackKg === s}
+              selected={!otherKg && v.sackKg === s}
               onPress={() => {
                 setOtherKg(false);
                 setV({ ...v, sackKg: s });
               }}
             />
           ))}
-          <ChoiceChip testID="ordc-kg-other" dashed label={msg('ordc.kgOther')} on={otherKg} onPress={() => setOtherKg(true)} />
-          <ChoiceChip
+          <ChoiceTile
             testID="ordc-kg-unknown"
             label={msg('ordc.kgUnknown')}
-            on={!otherKg && v.sackKg === null}
+            selected={!otherKg && v.sackKg === null}
             onPress={() => {
               setOtherKg(false);
               setV({ ...v, sackKg: null });
             }}
           />
-        </ChoiceRow>
+          <ChoiceTile testID="ordc-kg-other" dashed label={msg('ordc.kgOther')} onPress={() => setOtherKg(true)} />
+        </TileGrid>
         {/* Up to 2 decimals (2.5 กก., owner 2026-11-04); the pad works in 0.01 กก. steps, the stored size stays plain kg. */}
         {otherKg ? <QuantityField testID="ordc-kg-value" label={msg('ordc.kgOtherLabel')} value={v.sackKg === null ? null : Math.round(v.sackKg * 100)} unit={msg('ordc.unit.kg')} min={1} maxDigits={3} decimals={2} onChange={(n) => setV({ ...v, sackKg: n / 100 })} /> : null}
       </View>

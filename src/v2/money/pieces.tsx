@@ -21,7 +21,7 @@ import type { BuiltinRole } from '../../core/types';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { useTheme, type Theme } from '../../theme';
-import { AppText, Button, CHIP_MIN_WIDTH, Check, DateText, TextField } from '../../ui';
+import { AppText, Button, CHIP_MIN_WIDTH, Check, ChoiceTile, DateText, TextField, TileGrid } from '../../ui';
 
 export function ChoiceChip({
   label,
@@ -188,13 +188,14 @@ export function PayerPicker({
 
   return (
     <View style={{ gap: t.space.sm }}>
-      <ChoiceRow>
+      {/* Style I (E01-S25 CT-6): pick one, tapping another switches at once; "+ คนอื่น" is a dashed add tile. */}
+      <TileGrid columns={2}>
         {all.map((p) => (
-          <ChoiceChip key={p.id} testID={`${testID}-${p.id}`} label={p.name} on={value?.id === p.id} onPress={() => onChange(p)} />
+          <ChoiceTile key={p.id} kind="mark" testID={`${testID}-${p.id}`} label={p.name} selected={value?.id === p.id} onPress={() => onChange(p)} />
         ))}
-        {allowNone ? <ChoiceChip testID={`${testID}-none`} label={msg('fin.form.payerLater')} on={value === null} onPress={() => onChange(null)} /> : null}
-        {!adding ? <ChoiceChip testID={`${testID}-add`} label={msg('fin.form.addPerson')} onPress={() => setAdding(true)} /> : null}
-      </ChoiceRow>
+        {allowNone ? <ChoiceTile kind="mark" testID={`${testID}-none`} label={msg('fin.form.payerLater')} selected={value === null} onPress={() => onChange(null)} /> : null}
+        {!adding ? <ChoiceTile dashed testID={`${testID}-add`} label={msg('fin.form.addPerson')} onPress={() => setAdding(true)} /> : null}
+      </TileGrid>
       {adding ? (
         <View style={{ gap: t.space.sm }}>
           <TextField testID={`${testID}-name`} label={msg('fin.form.personPlaceholder')} value={name} onChangeText={setName} />
