@@ -12,7 +12,7 @@ import type { CloseoutPlan, CloseoutWorker, RepayRoute, TallyBar as Tally } from
 import { compactMoneyParts } from '../../../core/compact-money';
 import { useT } from '../../../i18n';
 import { useTheme } from '../../../theme';
-import { AppText, Button, Check, cardStyle, ChevronRight, CompactMoney, FarmMateArt, Plus, toneColours, type TileTone } from '../../../ui';
+import { AppText, Check, cardStyle, ChevronRight, ChoiceTile, CompactMoney, FarmMateArt, TileGrid, toneColours, type TileTone } from '../../../ui';
 import { CardIcon, MARK, RoundButton, WarnMark, baht, minus, installmentLabel } from './summary-parts';
 
 /** Line height for card text: above `snug` for Thai marks, tight enough for one screen (CO-1). */
@@ -68,22 +68,21 @@ function BigCard({ testID, done, tone, children }: { testID: string; done: boole
   );
 }
 
-/** "ไม่มี" / "มี · จด…" — the asking card's two buttons (A0). */
+/**
+ * "ไม่มี" / "มี · จด…" — the asking card's two answers (A0), as equal F tiles
+ * (E01-S26 PS26-7, owner answer ข). "ไม่มี" ticks when answered; "+ มี" opens
+ * the add form, so it never shows a tick itself. Both always call back, as the
+ * buttons did.
+ */
 function AskButtons({ none, add, answered, idNone, idAdd }: { none: () => void; add: () => void; answered: boolean; idNone: string; idAdd: string }) {
   const t = useTheme();
   const msg = useT();
   return (
-    <View style={{ ...row, gap: t.space.sm, paddingRight: t.space.sm }}>
-      <View style={{ flex: 1 }}>
-        <Button testID={idNone} variant={answered ? 'primary' : 'ghost'} onPress={none}>
-          {msg('co.none')}
-        </Button>
-      </View>
-      <View style={{ flex: 1 }}>
-        <Button testID={idAdd} variant="primary" icon={(c) => <Plus color={c} />} onPress={add}>
-          {idAdd === 'co-debt-add-first' ? msg('co.debt.addFirst') : msg('co.owed.addFirst')}
-        </Button>
-      </View>
+    <View style={{ paddingRight: t.space.sm }}>
+      <TileGrid columns={2}>
+        <ChoiceTile kind="check" clearable testID={idNone} label={msg('co.none')} selected={answered} onPress={none} />
+        <ChoiceTile kind="check" testID={idAdd} label={`+ ${idAdd === 'co-debt-add-first' ? msg('co.debt.addFirst') : msg('co.owed.addFirst')}`} onPress={add} />
+      </TileGrid>
     </View>
   );
 }

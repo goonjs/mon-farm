@@ -7,6 +7,7 @@ import type { MasterStore } from '../store/master-store';
 import { SaleProvider } from '../store/SaleProvider';
 import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
+import { expectChoiceTile } from '../test/choice-shape';
 import { wrap } from '../test/render';
 import { clearDraft } from '../v2/sale/closeout/use-closeout';
 import { CloseoutSummaryScreen } from '../v2/sale/closeout/summary-screen';
@@ -104,7 +105,13 @@ describe('nothing recorded: the cards ask (CO-17, CO-26, A0)', () => {
 
   it('ไม่มี answers a card; the button then names the other one', async () => {
     await inSale(<CloseoutSummaryScreen />);
+    // E01-S26 PS26-7: the two answers are equal F tiles (owner answer ข); not answered yet = no tick.
+    for (const id of ['co-debt-none', 'co-debt-add-first', 'co-owed-none', 'co-owed-add-first']) expectChoiceTile(screen.getByTestId(id), 'check');
+    expect(screen.getByTestId('co-debt-none').props.accessibilityState).toMatchObject({ selected: false });
     await press('co-debt-none');
+    expect(screen.getByTestId('co-debt-none').props.accessibilityState).toMatchObject({ selected: true });
+    // "+ มี · จดหนี้" opens the debt form; it is never a ticked answer itself.
+    expect(screen.getByTestId('co-debt-add-first').props.accessibilityState).toMatchObject({ selected: false });
     expect(text('co-confirm')).toHaveTextContent('↑ ตอบการ์ดสวนค้างจ่ายก่อน');
     await press('co-owed-none');
     expect(text('co-confirm')).not.toHaveTextContent(/ตอบ/);
