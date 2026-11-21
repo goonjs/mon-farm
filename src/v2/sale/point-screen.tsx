@@ -19,7 +19,7 @@ import type { OpenBasket } from '../../core/bridge';
 import { areaOn, formatRai } from '../../core/master';
 import { saleSkewG } from '../../core/scale-check';
 import { planMove } from '../../core/sale-move';
-import { pointChoices, saleRollup } from '../../core/sale-points';
+import { pointChoices, pointWeighed, saleRollup } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
 import { AlertIcon, AppText, BottomSheet, DotsIcon, cardStyle, ChevronRight, CTA, IconTile, TapperIcon, TextLink, type TileTone, FarmMateArt } from '../../ui';
@@ -59,9 +59,13 @@ export function PointScreen() {
   const choices = farm ? pointChoices(master, farm.id, day) : { byTapper: [], unassigned: [] };
   const group = choices.byTapper.find((g) => g.tapperId === tapperId) ?? choices.byTapper[0] ?? null;
   const rollup = saleRollup(events, master, day);
-  const weighed = (pointId: string) => rollup.byPoint.get(pointId)?.baskets ?? 0;
-  const status = (pointId: string) => (weighed(pointId) ? msg('v2s.weighedN', { n: weighed(pointId) }) : msg('v2s.notWeighed'));
-  const allWeighed = master.points.filter((p) => !p.hidden).every((p) => weighed(p.id) > 0);
+  // E04-S25: a point holding only a top-up part has 0 baskets of its own but was weighed.
+  const status = (pointId: string) => {
+    const at = rollup.byPoint.get(pointId);
+    if (!at || !pointWeighed(rollup, pointId)) return msg('v2s.notWeighed');
+    return at.baskets ? msg('v2s.weighedN', { n: at.baskets }) : msg('v2s.weighedPart', { kg: kgText(at.netG) });
+  };
+  const allWeighed = master.points.filter((p) => !p.hidden).every((p) => pointWeighed(rollup, p.id));
   const tone: TileTone = farm ? farmTone(master, farm.id) : 'category1';
   // The sheet for a way change is worked out here, not stored: it closes by going back to the counter.
   const changeOpen = changing ? planMove(events, state, master, day, changing.pointId, mode, settings.zeroCheck).ask : null;

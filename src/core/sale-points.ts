@@ -12,7 +12,7 @@
 import { basketGroups, openBasketIn, stdNetOfLog } from './bridge';
 import { activePoints, tapperOn, type BasketPair, type MasterState, type PointRecord } from './master';
 import { compareEvents } from './order';
-import { ZERO_TOTALS, addTotals, basketNetG, liveBaskets } from './totals';
+import { ZERO_TOTALS, addTotals, basketNetG, basketTotals, fullnessOf, liveBaskets } from './totals';
 import type { BasketEvent, NumberingMode, PersonId, SaleEvent, SaleState, SysPayload, Totals } from './types';
 
 export type TapperOf = (pointId: string) => PersonId | null;
@@ -69,19 +69,6 @@ export interface SaleRollup {
   readonly sale: Totals;
 }
 
-function one(b: BasketEvent): Totals {
-  const netG = basketNetG(b);
-  const standard = b.kind === 'accept';
-  return {
-    baskets: 1,
-    standardBaskets: standard ? 1 : 0,
-    shortBaskets: standard ? 0 : 1,
-    netG,
-    standardNetG: standard ? netG : 0,
-    shortNetG: standard ? 0 : netG,
-  };
-}
-
 function bump(map: Map<string, Totals>, key: string, t: Totals) {
   map.set(key, addTotals(map.get(key) ?? ZERO_TOTALS, t));
 }
@@ -98,9 +85,11 @@ export function saleRollup(events: readonly SaleEvent[], master: MasterState, sa
   const byFarm = new Map<string, Totals>();
   let unassigned = ZERO_TOTALS;
   let sale = ZERO_TOTALS;
+  // Full/short as the basket list reads it; a basket counts once, at its first part's point (E04-S25).
+  const fullOf = fullnessOf(events);
   for (const b of liveBaskets(events)) {
     if (!b.pointId) continue;
-    const t = one(b);
+    const t = basketTotals(b, fullOf(b));
     bump(byPoint, b.pointId, t);
     const tapper = tapperOn(master, b.pointId, saleDay);
     if (tapper) bump(byTapper, tapper, t);
@@ -110,6 +99,15 @@ export function saleRollup(events: readonly SaleEvent[], master: MasterState, sa
     sale = addTotals(sale, t);
   }
   return { byPoint, byTapper, byFarm, unassigned, sale };
+}
+
+/**
+ * Whether anything still counts at `pointId` — "weighed" for the point picker
+ * and the counter. Not the basket count: a point holding only the top-up part
+ * of a basket begun elsewhere has 0 baskets but was weighed (E04-S25).
+ */
+export function pointWeighed(rollup: SaleRollup, pointId: string): boolean {
+  return rollup.byPoint.has(pointId);
 }
 
 export interface RecorderFigures {

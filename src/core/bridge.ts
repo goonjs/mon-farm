@@ -12,7 +12,7 @@
 
 import { tapperOn, type MasterState } from './master';
 import { compareEvents } from './order';
-import { basketNetG, liveBaskets } from './totals';
+import { basketNetG, liveBaskets } from './live';
 import type { BasketEvent, NumberingMode, SaleEvent } from './types';
 
 export interface BasketGroup {

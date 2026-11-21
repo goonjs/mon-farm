@@ -221,3 +221,37 @@ for (const width of [320, 360]) {
     });
   }
 }
+
+test.describe('E15-S08 · the unclosed-sale row while clearing', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('a payee ticked: the row says กำลังเคลียร์เงิน, with the calculator tile, offline (CL-1)', async ({ page, context }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    // Today's sale (Bangkok), a pile still counting: no page writes pile_closed (E15-S07 HE-1).
+    const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
+    await seedEvents(page, sale('e2e-clear', today, 3, false));
+    const tick: FinanceEvent = {
+      id: 'e2e-tick-1',
+      groupId: FIXTURE_GROUP_ID,
+      deviceSeq: 1,
+      ts: Date.now(),
+      actor: { userId: 'pre-login', deviceId: 'dev-seed' },
+      source: 'app',
+      targetId: 'payment-e2e-clear-owner',
+      baseEventId: null,
+      payload: { t: 'payment_mark_set', saleId: 'e2e-clear', payee: 'owner', done: true, amountSatang: 100 },
+    };
+    await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify([ev])), tick);
+    await context.setOffline(true);
+    await page.goto('/v2');
+    const row = page.getByTestId('home-open-sale').filter({ visible: true });
+    await expect(page.getByTestId('home-sale-start-badge').filter({ visible: true })).toHaveAttribute('aria-label', 'รอเคลียร์เงิน');
+    await row.scrollIntoViewIfNeeded();
+    // Taken before the label checks, so the same test shows the old build too (SHOT_NAME=before).
+    await evidence(page, `docs/ux/screenshots/v2/e15-s08/${process.env.SHOT_NAME ?? 'after'}-clearing.png`);
+    await expect(row).toContainText('กำลังเคลียร์เงิน');
+    await expect(row).not.toContainText('กำลังชั่ง');
+    expect(errors).toEqual([]);
+  });
+});

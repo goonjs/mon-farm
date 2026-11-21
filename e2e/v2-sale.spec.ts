@@ -926,3 +926,91 @@ test('E15-S07 prep → start → count → summary → tick → close lands on h
   await homeBadge('เคลียร์เงินครบแล้ว', '4-cleared-s5');
   expect(errors).toEqual([]);
 });
+
+// ── E04-S25: a topped-up basket is 1 full basket on the check page ──────────
+//
+// 390×844, offline: a short basket topped up until full is 1 full basket on
+// the check page (ตรวจยอด). The top card's basket count equals the tapper cards
+// added up, and "เข่งไม่เต็ม (N เข่ง)" has exactly N rows under it whose kg add
+// up to its kg (TB-4, TB-5).
+
+const TU_SHOTS = 'docs/ux/screenshots/e04-s25';
+
+test.describe('E04-S25', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+const TU_FARM: MasterPayload[] = [
+  { t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] },
+  { t: 'person_added', personId: 'nat', name: 'นัด', roles: ['tapper'], otherRoles: [] },
+  { t: 'property_added', propertyId: 'fa', name: 'จันทเขลม', crop: 'rubber' },
+  { t: 'point_added', pointId: 'a1', propertyId: 'fa', name: 'จุด 1' },
+  { t: 'point_added', pointId: 'a2', propertyId: 'fa', name: 'จุด 2' },
+  { t: 'point_added', pointId: 'a4', propertyId: 'fa', name: 'จุด 4' },
+  { t: 'tapper_assigned', assignmentId: 's1', pointId: 'a1', tapperId: 'red' },
+  { t: 'tapper_assigned', assignmentId: 's2', pointId: 'a2', tapperId: 'red' },
+  { t: 'tapper_assigned', assignmentId: 's4', pointId: 'a4', tapperId: 'nat' },
+];
+
+const tuReady = (b: LogBuilder, p: string) => {
+  b.sys({ t: 'pile_added', pileId: p, zoneId: 'fa', name: p, tareG: 2_000, stdNetG: 50_000 });
+  b.sys({ t: 'zero_check', pileId: p, ok: true, readingG: 0 });
+  b.sys({ t: 'tare_confirmed', pileId: p, tareG: 2_000 });
+  b.sys({ t: 'ready', pileId: p });
+};
+
+/** The owner's case, small: 2 short baskets topped up to full (one at another point), 2 really short. */
+function topUpSale() {
+  const b = new LogBuilder('sale-tu');
+  b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+  b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+  b.sys({ t: 'zone_added', zoneId: 'fa', name: 'จันทเขลม' });
+  for (const p of ['a1', 'a2', 'a4']) tuReady(b, p);
+  b.acceptAt('a1', 1).acceptAt('a1', 2);
+  b.shortAt('a1', 3, 22_000);
+  b.partAt(b.build().at(-1)!.id, 'a1', 3, 30_000);
+  b.shortAt('a1', 4, 27_000);
+  b.partAt(b.build().at(-1)!.id, 'a2', 4, 25_000);
+  b.shortAt('a1', 5, 14_000);
+  b.sys({ t: 'basket_closed', basketId: b.build().at(-1)!.id, reason: 'scrap' });
+  b.acceptAt('a4', 1);
+  b.shortAt('a4', 2, 22_000);
+  const nat2 = b.build().at(-1)!.id;
+  b.shortPartAt(nat2, 'a4', 2, 14_000);
+  b.sys({ t: 'basket_closed', basketId: nat2, reason: 'scrap' });
+  return b.build();
+}
+
+const tuNum = (s: string | null) => Number(/(\d[\d,]*(?:\.\d+)?)/.exec(s ?? '')?.[1].replace(/,/g, '') ?? NaN);
+
+async function tuTexts(page: Page, prefix: string) {
+  return page.locator(`[data-testid^="${prefix}"]`).filter({ visible: true }).allTextContents();
+}
+
+  test('E04-S25 check page: top card count = tapper cards, short line N = N rows, kg agree (offline)', async ({ page, context }) => {
+  await seedMaster(page, TU_FARM);
+  const now = Date.now();
+  await seedEvents(page, topUpSale().map((e) => ({ ...e, ts: now })));
+  await context.setOffline(true);
+  await page.goto('/v2/sale/sale-tu/check');
+  const id = (x: string) => page.getByTestId(x).filter({ visible: true });
+  await expect(id('check-card')).toBeVisible();
+
+  // Top card: 7 baskets (5 full + 2 short), short 2 baskets 44 kg; weight 294 kg unchanged.
+  await expect(id('check-baskets')).toContainText('7');
+  await expect(id('check-short')).toContainText('2');
+  await expect(id('check-short')).toContainText('44');
+  await expect(id('check-weight')).toContainText('294');
+  const rows = id('check-short-row');
+  await expect(rows).toHaveCount(2);
+  const rowKg = (await rows.allTextContents()).map((s) => tuNum(s.split('·').at(-1) ?? s)).reduce((a, b) => a + b, 0);
+  expect(rowKg).toBe(44);
+
+  // Tapper cards: full N + short N over every point adds up to the top card's count.
+  const full = (await tuTexts(page, 'check-full-')).map((s) => tuNum(s));
+  const short = (await tuTexts(page, 'check-short-a')).map((s) => tuNum(s));
+  expect(full.reduce((a, b) => a + b, 0) + short.reduce((a, b) => a + b, 0)).toBe(7);
+  expect(short.reduce((a, b) => a + b, 0)).toBe(2);
+
+  await evidence(page, `${TU_SHOTS}/check-after.png`, { fullPage: true });
+});
+});

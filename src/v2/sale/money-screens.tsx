@@ -112,9 +112,9 @@ function SaleFigures({ s, prefix, children }: { s: Settlement; prefix: string; c
       <Kv label={msg('v2s.weight')} value={msg('v2f.kg', { n: kgText(s.totals.netG) })} testID={`${prefix}-weight`} />
       <Kv label={msg('v2s.priceLabel')} value={msg('v2s.perKg', { price: baht(s.satangPerKg) })} />
       <Kv label={msg('v2s.basketCount')} value={msg('sales.baskets', { n: s.totals.baskets })} testID={`${prefix}-baskets`} />
-      <Kv label={msg('v2s.shortCount', { n: s.totals.shortBaskets })} value={msg('v2f.kg', { n: kgText(s.totals.shortNetG) })} />
+      <Kv label={msg('v2s.shortCount', { n: s.totals.shortBaskets })} value={msg('v2f.kg', { n: kgText(s.totals.shortNetG) })} testID={`${prefix}-short`} />
       {shorts.map((r) => (
-        <Kv key={r.id} indent tone="muted" label={ownerOf(r.pointId) ? msg('v2s.shortAtBy', { place: placeOf(r.pointId), n: r.basketNo, name: ownerOf(r.pointId) }) : msg('v2s.shortAt', { place: placeOf(r.pointId), n: r.basketNo })} value={msg('v2f.kg', { n: kgText(r.netG) })} />
+        <Kv key={r.id} testID={`${prefix}-short-row`} indent tone="muted" label={ownerOf(r.pointId) ? msg('v2s.shortAtBy', { place: placeOf(r.pointId), n: r.basketNo, name: ownerOf(r.pointId) }) : msg('v2s.shortAt', { place: placeOf(r.pointId), n: r.basketNo })} value={msg('v2f.kg', { n: kgText(r.netG) })} />
       ))}
       {children}
       <TotalRow label={msg('v2s.saleTotal')} value={baht(s.grossSatang)} unit={msg('v2s.bahtUnit')} testID={`${prefix}-total`} size={26} />
