@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { LogBuilder } from './fixtures';
 import { MASTER_SCOPE, projectMaster } from './master';
-import { basketList, saleRollup } from './sale-points';
+import { basketList, pointWeighed, saleRollup } from './sale-points';
 import { pileTotals, saleTotals, zoneTotals } from './totals';
 import { projectSale } from './project';
 import type { MasterPayload, SaleEvent, Totals } from './types';
@@ -90,6 +90,16 @@ describe('E04-S25 — a topped-up basket is 1 full basket everywhere', () => {
     expect(count(pileTotals(events, 'p2'))).toEqual(P2);
     expect(count(pileTotals(events, 'p3'))).toEqual(P3);
     expect(count(zoneTotals(events, projectSale(events, 'sale-x'), 'fA'))).toEqual(SALE);
+  });
+
+  it('S2: a point holding only a top-up part still reads as weighed (review B1)', () => {
+    const r = saleRollup(events, master(), DAY);
+    // p2 holds one 25 kg top-up part and no basket of its own.
+    expect(r.byPoint.get('p2')!.baskets).toBe(0);
+    expect(pointWeighed(r, 'p2')).toBe(true);
+    expect(pointWeighed(r, 'p1')).toBe(true);
+    // A point with nothing live is still not weighed.
+    expect(pointWeighed(r, 'p9')).toBe(false);
   });
 
   it('TB-3: a short basket nobody topped up stays short, as before', () => {

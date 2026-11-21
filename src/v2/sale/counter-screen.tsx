@@ -22,7 +22,7 @@ import { pointsOf, tapperOn } from '../../core/master';
 import { saleSkewG } from '../../core/scale-check';
 import { fieldKg, netFromReading, readingFromNet } from '../../core/short-reading';
 import { basketNetG } from '../../core/totals';
-import { basketList, saleRollup } from '../../core/sale-points';
+import { basketList, pointWeighed, saleRollup } from '../../core/sale-points';
 import { useT } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { readWeighBasis, readWeighMode, writeWeighBasis, type WeighBasis, type WeighMode } from '../../store/weigh-mode-preference';
@@ -126,7 +126,7 @@ export function CounterScreen({ initialSheet = 'none' }: { initialSheet?: Sheet 
   const skew = saleSkewG(events);
   const holdKey = countKey();
   const rollup = saleRollup(events, master, day);
-  const lastPoint = master.points.filter((p) => !p.hidden && p.id !== pointId).every((p) => (rollup.byPoint.get(p.id)?.baskets ?? 0) > 0);
+  const lastPoint = master.points.filter((p) => !p.hidden && p.id !== pointId).every((p) => pointWeighed(rollup, p.id));
   const std = pile.stdNetG;
   const tare = pile.tareG;
   const kg = (g: number) => msg('v2f.kg', { n: kgText(g) });

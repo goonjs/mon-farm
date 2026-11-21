@@ -101,6 +101,15 @@ export function saleRollup(events: readonly SaleEvent[], master: MasterState, sa
   return { byPoint, byTapper, byFarm, unassigned, sale };
 }
 
+/**
+ * Whether anything still counts at `pointId` — "weighed" for the point picker
+ * and the counter. Not the basket count: a point holding only the top-up part
+ * of a basket begun elsewhere has 0 baskets but was weighed (E04-S25).
+ */
+export function pointWeighed(rollup: SaleRollup, pointId: string): boolean {
+  return rollup.byPoint.has(pointId);
+}
+
 export interface RecorderFigures {
   /** Whose figures these are: the tapper's sequence (D-79) or the point's own (D-46). */
   readonly scope: { readonly tapperId: PersonId } | { readonly pointId: string };
