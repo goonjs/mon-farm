@@ -53,6 +53,7 @@ export function ChoiceTile({
   tone = 'action',
   multi,
   clearable,
+  onRepeat,
   dashed,
   disabled,
   testID,
@@ -69,6 +70,8 @@ export function ChoiceTile({
   multi?: boolean;
   /** An optional pick-one (the farm): tapping the picked one clears it. */
   clearable?: boolean;
+  /** A pick-one whose repeat tap does something else (the category sheet: close it). */
+  onRepeat?: () => void;
   /** "+ คนอื่น": an add button drawn as a dashed tile, never a choice. */
   dashed?: boolean;
   disabled?: boolean;
@@ -82,6 +85,7 @@ export function ChoiceTile({
   const role = dashed ? 'button' : isCheckbox ? 'checkbox' : 'radio';
   const press = () => {
     if (disabled) return;
+    if (on && !isCheckbox && onRepeat) return onRepeat();
     if (on && !isCheckbox && !clearable) return; // tapping the picked one keeps it
     onPress();
   };
@@ -89,7 +93,8 @@ export function ChoiceTile({
   const left = kind !== 'fill';
   const showMark = left && !dashed;
   const bg = disabled ? c.surfaceSunk : on ? (kind === 'fill' ? c.action : sunk) : c.surfaceRaised;
-  const edge = on ? tc : dashed ? c.action : c.ruleStrong;
+  // A dashed add tile keeps the grey edge of an unpicked tile (mockup p1a-after, p1d-after).
+  const edge = on ? tc : c.ruleStrong;
   const ink = disabled ? c.inkFaint : on ? (kind === 'fill' ? c.inkInverse : kind === 'mark' ? tc : c.action) : dashed ? c.action : c.ink;
 
   return (

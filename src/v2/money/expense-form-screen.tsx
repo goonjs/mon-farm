@@ -482,7 +482,7 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
           <View style={{ gap: t.space.md }}>
             <TileGrid columns={2}>
               {state.categories.map((c) => (
-                <ChoiceTile key={c.id} kind="check" testID={`expense-catall-${c.id}`} label={c.name} selected={categoryId === c.id} onPress={() => { setCatSheet(false); pickCategory(c.id); }} />
+                <ChoiceTile key={c.id} kind="check" testID={`expense-catall-${c.id}`} label={c.name} selected={categoryId === c.id} onRepeat={() => setCatSheet(false)} onPress={() => { setCatSheet(false); pickCategory(c.id); }} />
               ))}
             </TileGrid>
             <SectionLabel>{msg('fin.form.manageCategories')}</SectionLabel>

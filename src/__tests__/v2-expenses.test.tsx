@@ -213,6 +213,21 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     expect(s.expenses.some((e) => e.stage === 'planned' && e.amountSatang === null && e.date === '2026-11-15')).toBe(true);
   });
 
+  it('category sheet: tapping the category already picked closes the sheet again (review 6004800731 #1)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    fireEvent.press(screen.getByTestId('expense-catall-cat-repair'));
+    await flush();
+    expect(screen.queryByTestId('expense-cat-sheet')).toBeNull();
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    expect(screen.getByTestId('expense-catall-cat-repair').props.accessibilityState).toMatchObject({ selected: true });
+    fireEvent.press(screen.getByTestId('expense-catall-cat-repair'));
+    await flush();
+    expect(screen.queryByTestId('expense-cat-sheet')).toBeNull();
+    expect(screen.getByTestId('expense-cat-more')).toBeTruthy();
+  });
+
   it('worker aid: the kind is F (pick one, switches at once), the worker is I (E01-S25 CT-6, CT-12)', async () => {
     wrap(<ExpenseScreen />);
     await flush();

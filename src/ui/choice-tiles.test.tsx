@@ -145,6 +145,22 @@ describe('choice tiles (E01-S25 CT-1..CT-4)', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  it('F single with onRepeat (the category sheet): tapping the picked one calls onRepeat, not onPress', () => {
+    const onPress = jest.fn();
+    const onRepeat = jest.fn();
+    wrap(<ChoiceTile kind="check" testID="f" label="ค่าแรง" selected onPress={onPress} onRepeat={onRepeat} />);
+    fireEvent.press(screen.getByTestId('f'));
+    expect(onRepeat).toHaveBeenCalledTimes(1);
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('dashed add tile: grey dashed edge as in the mockup (p1a-after, p1d-after), navy text', () => {
+    wrap(<ChoiceTile dashed kind="check" testID="add" label="+ เพิ่มหมวด" onPress={() => {}} />);
+    const add = screen.getByTestId('add');
+    expect(flat(add.props.style).borderColor).toBe(tokens.color.light.ruleStrong);
+    expect(flat(add.props.style).borderColor).not.toBe(tokens.color.light.action);
+  });
+
   it('dashed add tile is a button, not a choice', () => {
     const onPress = jest.fn();
     wrap(<ChoiceTile dashed testID="add" label="+ คนอื่น" onPress={onPress} />);
