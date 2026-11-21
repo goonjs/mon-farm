@@ -478,11 +478,11 @@ test('start → point → empty scale → count → short → switch and fill �
   await id('public-exit').click();
   await expect(id('counter')).toBeVisible();
 
-  // ── บันทึกย้อนหลัง: only before counting live (E04-S19 BF-8). แดง has baskets, so the flow says why and offers nothing. ──
+  // ── บันทึกย้อนหลัง: open at any time (E04-S26 AT-1, was BF-8). แดง has baskets and still gets the flow. ──
   await id('counter-menu').click();
   await id('menu-backfill').click();
-  await expect(id('cu-blocked')).toContainText('นับเองไปแล้ว');
-  await expect(id('cu-next')).toHaveCount(0);
+  await expect(id('cu-blocked')).toHaveCount(0);
+  await expect(id('cu-order')).toBeVisible();
   await page.goBack();
   await expect(id('counter')).toBeVisible();
   // So แดง counts จุด 3 live instead: three full baskets.

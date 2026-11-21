@@ -181,3 +181,93 @@ for (const width of [320, 360]) {
     expect(errors).toEqual([]);
   });
 }
+
+async function hold(page: Page) {
+  const box = (await on(page)('hold').boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(1_000);
+  await page.mouse.up();
+}
+
+// E04-S26: catching up at any time, one point at a time, after counting live — numbered on, never inserted.
+test('E04-S26 at 390 px: count 3 live (the last short), catch up one point, top it up, count on, catch up another (offline)', async ({ page, context }) => {
+  test.setTimeout(60_000);
+  const id = on(page);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seedMaster(page, FARM);
+  await page.evaluate(() => localStorage.setItem('mon-farm:hold-ms', '500'));
+  await page.goto('/v2');
+  await context.setOffline(true);
+  const shot = (name: string) => evidence(page, `${SHOTS}/s26-390-${name}.png`);
+
+  // แดง counts จุด 1 live: 1–2 full, 3 short (35 kg, still open).
+  await id('home-sale-start').click();
+  await id('start-next').click();
+  await id('pick-farm-fa').click();
+  await id('pick-point-a1').click();
+  await id('start-weigh').click();
+  await hold(page);
+  await hold(page);
+  await id('tool-short').click();
+  await id('short-save').click();
+  await expect(id('open-card')).toContainText('เข่ง 3');
+
+  // AT-1: from the counter's ⋯ menu the catch-up opens — no "already counted live" stop.
+  await id('counter-menu').click();
+  await id('menu-backfill').click();
+  await expect(id('cu-blocked')).toHaveCount(0);
+  await expect(id('cu-order')).toBeVisible();
+  await id('cu-order-a1').click();
+  await id('cu-order-a2').click();
+  await fits(page);
+  await shot('1-order');
+  await id('cu-next').click();
+
+  // AT-3: basket 3 is asked about first, nothing chosen.
+  await expect(id('cu-topup')).toContainText('เข่ง 3 (35 กก.) เติมที่จุดนี้ไหม');
+  await expect(id('cu-next')).toBeDisabled();
+  await id('cu-fill').click();
+  await fits(page, false);
+  await shot('2-topup');
+  await id('cu-next').click();
+
+  // AT-2: จุด 2 starts after the last basket.
+  await expect(id('cu-start')).toContainText('4');
+  await intField(page, 'cu-end', '5');
+  await id('cu-full').click();
+  await id('cu-next').click();
+  await expect(id('cu-summary')).toContainText('เข่ง 3');
+  await expect(id('cu-summary')).toContainText('เข่ง 4–5');
+  // Σ: the 15 kg top-up and two full baskets — the 35 kg was counted live.
+  await expect(id('cu-total')).toContainText('115');
+  await fits(page);
+  await shot('3-summary');
+  await id('cu-save').click();
+
+  // Counting on at จุด 2: next is 6.
+  await expect(id('counter')).toBeVisible();
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 6$/);
+  await hold(page);
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 7$/);
+
+  // Again, one point: จุด 3 runs on from 7.
+  await id('counter-menu').click();
+  await id('menu-backfill').click();
+  await id('cu-order-a3').click();
+  await id('cu-next').click();
+  await expect(id('cu-start')).toContainText('7');
+  await intField(page, 'cu-end', '8');
+  await id('cu-full').click();
+  await id('cu-next').click();
+  await expect(id('cu-total')).toContainText('100');
+  await id('cu-save').click();
+  await expect(id('counter')).toBeVisible();
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 9$/);
+  await page.reload();
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 9$/);
+  await shot('4-count-on');
+  expect(errors).toEqual([]);
+});
