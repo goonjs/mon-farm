@@ -166,7 +166,8 @@ describe('v2 start a sale (page 5)', () => {
     await press('start-date');
     const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
     const tomorrow = new Date(Date.now() + 31 * 3_600_000).toISOString().slice(0, 10);
-    expect(screen.getByTestId('start-date-picker-today').props.accessibilityState).toMatchObject({ selected: true });
+    // The quick links hold no pick (owner rv245-11, 2026-11-23): today shows as the picked day on the calendar.
+    expect(screen.getByTestId(`start-date-picker-day-${today}`).props.accessibilityState).toMatchObject({ selected: true });
     const later = screen.queryByTestId(`start-date-picker-day-${tomorrow}`);
     if (later) expect(later.props.accessibilityState).toMatchObject({ disabled: true });
     await press('start-date-picker-yesterday');
@@ -186,7 +187,8 @@ describe('v2 start a sale (page 5)', () => {
     try {
       await inSale(<StartSaleScreen />);
       await press('start-date');
-      expect(screen.getByTestId('start-date-picker-today').props.accessibilityState).toMatchObject({ selected: true });
+      // The quick links hold no pick (owner rv245-11, 2026-11-23): the calendar shows 17 Nov as the picked day.
+      expect(screen.getByTestId('start-date-picker-day-2026-11-17').props.accessibilityState).toMatchObject({ selected: true });
       expect(screen.getByTestId('start-date-picker-day-2026-11-17').props.accessibilityState).not.toMatchObject({ disabled: true });
       await press('start-date-picker-done');
       await press('start-next');

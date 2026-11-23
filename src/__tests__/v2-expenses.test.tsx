@@ -213,6 +213,21 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     expect(s.expenses.some((e) => e.stage === 'planned' && e.amountSatang === null && e.date === '2026-11-15')).toBe(true);
   });
 
+  it('category sheet: tapping the category already picked closes the sheet again (review 6004800731 #1)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    fireEvent.press(screen.getByTestId('expense-catall-cat-repair'));
+    await flush();
+    expect(screen.queryByTestId('expense-cat-sheet')).toBeNull();
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    expect(screen.getByTestId('expense-catall-cat-repair').props.accessibilityState).toMatchObject({ selected: true });
+    fireEvent.press(screen.getByTestId('expense-catall-cat-repair'));
+    await flush();
+    expect(screen.queryByTestId('expense-cat-sheet')).toBeNull();
+    expect(screen.getByTestId('expense-cat-more')).toBeTruthy();
+  });
+
   it('worker aid: the kind is F (pick one, switches at once), the worker is I (E01-S25 CT-6, CT-12)', async () => {
     wrap(<ExpenseScreen />);
     await flush();
@@ -246,6 +261,31 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     expect(screen.getByText('400.00 บาท')).toBeTruthy();
     fireEvent.press(screen.getByTestId('expense-payer-done'));
     expect(screen.getByTestId('expense-payer-row')).toHaveTextContent(/นัด/);
+  });
+
+  it('"ใครจ่ายไปก่อน" opens as a full page, not a sheet; back keeps the pick (E01-S25 rv245-07, owner 2026-11-23)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    typeOnPad('expense-amount', '400');
+    fireEvent.press(screen.getByTestId('expense-payer-row'));
+    // A full page: its own header and back, the form underneath is gone (not dimmed behind a sheet).
+    expect(screen.getByTestId('expense-payer-page')).toBeTruthy();
+    expect(screen.queryByTestId('expense-payer-sheet')).toBeNull();
+    expect(screen.queryByTestId('expense-payer-row')).toBeNull();
+    expect(screen.queryByTestId('expense-amount')).toBeNull();
+    expect(screen.getByTestId('expense-payer-back')).toBeTruthy();
+    expect(screen.getAllByText('ใครจ่ายไปก่อน').length).toBeGreaterThan(0);
+    fireEvent.press(screen.getByTestId(`expense-payer-${FARM_FUNDS}`));
+    fireEvent.press(screen.getByTestId('expense-payer-none'));
+    fireEvent.press(screen.getByTestId('expense-payer-back'));
+    // Back returns to the form with the pick kept and the amount still there.
+    expect(screen.queryByTestId('expense-payer-page')).toBeNull();
+    expect(screen.getByTestId('expense-payer-row')).toHaveTextContent(/ใส่ทีหลัง/);
+    expect(screen.getByTestId('expense-amount')).toHaveTextContent(/400/);
+    // ตกลง also returns to the form.
+    fireEvent.press(screen.getByTestId('expense-payer-row'));
+    fireEvent.press(screen.getByTestId('expense-payer-done'));
+    expect(screen.getByTestId('expense-payer-row')).toBeTruthy();
   });
 
   it('a category picked under "อื่น ๆ" becomes a tile, ticked', async () => {

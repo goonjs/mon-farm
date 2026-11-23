@@ -299,8 +299,8 @@ for (const width of [320, 360]) {
 /**
  * E01-S25 (choice tiles, round 2) on the real build: the shared tiles fit and
  * keep ≥ 48 targets at 320/360 px with text M and L (CT-13), and the picks
- * behave as the owner answered (CT-6: another payer switches at once; CT-8:
- * date quick picks are links on one line).
+ * behave as the owner answered (CT-6: another payer switches at once, on a
+ * full page (CT-15); CT-8: date quick picks are plain links on one line).
  *
  * SHOT_DIR=<folder> also saves 390×844 pictures for the side-by-side with the
  * mockup (evidence for the dashboard card; nothing is written to docs/).
@@ -354,6 +354,9 @@ test('payer is style I: another person switches at once; date picks are links (E
   ]);
   await page.goto('/v2/expense/new');
   await page.getByTestId('expense-payer-row').click();
+  // A full page, not a sheet over the form (owner rv245-07, 2026-11-23).
+  await expect(page.getByTestId('expense-payer-page')).toBeVisible();
+  await expect(page.getByTestId('expense-amount')).toHaveCount(0);
   const nat = page.getByTestId('expense-payer-p-nat');
   const daeng = page.getByTestId('expense-payer-p-daeng');
   const before = await nat.boundingBox();
@@ -381,6 +384,12 @@ test('payer is style I: another person switches at once; date picks are links (E
   const links = await Promise.all(['today', 'yesterday', 'twodays'].map((id) => page.getByTestId(`expense-date-picker-${id}`).boundingBox()));
   // Several on one line (owner 2026-11-21).
   expect(new Set(links.map((b) => Math.round(b!.y))).size).toBe(1);
+  // No underline and no ✓: one-shot actions, nothing held (owner rv245-11, 2026-11-23).
+  for (const id of ['today', 'yesterday', 'twodays']) {
+    const link = page.getByTestId(`expense-date-picker-${id}`);
+    expect(await link.evaluate((el) => [el, ...el.querySelectorAll('*')].map((n) => getComputedStyle(n).textDecorationLine).filter((d) => d !== 'none'))).toEqual([]);
+    await expect(page.getByTestId(`expense-date-picker-${id}-tick`)).toHaveCount(0);
+  }
   await choiceShot(page, 'b25-date-links');
 });
 
