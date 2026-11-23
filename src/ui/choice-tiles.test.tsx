@@ -212,12 +212,11 @@ describe('choice tiles (E01-S25 CT-1..CT-4)', () => {
     expect(onPress).toHaveBeenCalled();
   });
 
-  it('quick links (CT-8): one wrapping line of underlined links; picked = ink, bold, ✓, no underline; beyond max = off', () => {
+  it('quick links (CT-8, owner rv245-11 2026-11-23): one wrapping line of plain action links, no underline, no ✓, no sticky pick; beyond max = off', () => {
     const onPick = jest.fn();
     wrap(
       <QuickLinks
         testID="q"
-        value="today"
         onPick={onPick}
         options={[
           { id: 'today', label: 'วันนี้' },
@@ -227,19 +226,27 @@ describe('choice tiles (E01-S25 CT-1..CT-4)', () => {
       />,
     );
     expect(flat(screen.getByTestId('q').props.style)).toMatchObject({ flexDirection: 'row', flexWrap: 'wrap' });
-    const on = screen.getByTestId('q-today');
-    expect(on.props.accessibilityRole).toBe('radio');
-    expect(on.props.accessibilityState).toMatchObject({ selected: true });
-    expect(flat(on.props.style).minHeight).toBe(tokens.target.min);
-    expect(flat(on.props.style).borderWidth ?? 0).toBe(0);
-    expect(screen.getByTestId('q-today-tick', H)).toBeTruthy();
-    expect(flat(screen.getByText('วันนี้').props.style)).toMatchObject({ color: tokens.color.light.ink, textDecorationLine: 'none' });
-    expect(flat(screen.getByText('เมื่อวาน').props.style)).toMatchObject({ color: tokens.color.light.action, textDecorationLine: 'underline' });
+    for (const id of ['today', 'yesterday']) {
+      const link = screen.getByTestId(`q-${id}`);
+      // A one-shot action, not a choice that stays picked.
+      expect(link.props.accessibilityRole).toBe('button');
+      expect(link.props.accessibilityState?.selected).toBeUndefined();
+      expect(flat(link.props.style).minHeight).toBe(tokens.target.min);
+      expect(flat(link.props.style).borderWidth ?? 0).toBe(0);
+      expect(screen.queryByTestId(`q-${id}-tick`, H)).toBeNull();
+    }
+    for (const label of ['วันนี้', 'เมื่อวาน']) {
+      expect(flat(screen.getByText(label).props.style)).toMatchObject({ color: tokens.color.light.action, textDecorationLine: 'none' });
+    }
+    expect(flat(screen.getByText('มะรืน').props.style)).toMatchObject({ color: tokens.color.light.inkFaint, textDecorationLine: 'none' });
     expect(screen.getByTestId('q-later').props.accessibilityState).toMatchObject({ disabled: true });
     fireEvent.press(screen.getByTestId('q-yesterday'));
     expect(onPick).toHaveBeenCalledWith('yesterday');
+    // Tapping the same link again acts again (nothing is held).
+    fireEvent.press(screen.getByTestId('q-yesterday'));
+    expect(onPick).toHaveBeenCalledTimes(2);
     onPick.mockClear();
-    fireEvent.press(on);
+    fireEvent.press(screen.getByTestId('q-later'));
     expect(onPick).not.toHaveBeenCalled();
   });
 });

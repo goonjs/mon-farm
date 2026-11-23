@@ -99,7 +99,7 @@ describe('DatePickerSheet', () => {
     }
   });
 
-  it('quick picks are text links on one line, not pills (E01-S25 CT-8, owner 2026-11-21)', () => {
+  it('quick picks are plain text links on one line, not pills (E01-S25 CT-8, owner 2026-11-21 and rv245-11 2026-11-23)', () => {
     setup();
     for (const q of ['today', 'yesterday', 'twodays']) {
       const s = StyleSheet.flatten(screen.getByTestId(`${ID}-${q}`).props.style);
@@ -107,10 +107,12 @@ describe('DatePickerSheet', () => {
       expect(s.borderWidth ?? 0).toBe(0);
       expect(s.minHeight).toBe(tokens.target.min);
     }
-    // The picked day (today, the value) carries a tick and no underline; the others are underlined links.
-    expect(screen.getByTestId(`${ID}-today-tick`, { includeHiddenElements: true })).toBeTruthy();
-    expect(screen.getByTestId(`${ID}-today`).props.accessibilityState).toMatchObject({ selected: true });
-    expect(flat(screen.getByText('เมื่อวาน').props.style)).toMatchObject({ textDecorationLine: 'underline', color: tokens.color.light.action });
+    // Owner rv245-11 (2026-11-23): no underline and no ✓ — a tap sets the day, nothing stays picked.
+    for (const [q, label] of [['today', 'วันนี้'], ['yesterday', 'เมื่อวาน'], ['twodays', '2 วันก่อน']] as const) {
+      expect(screen.queryByTestId(`${ID}-${q}-tick`, { includeHiddenElements: true })).toBeNull();
+      expect(screen.getByTestId(`${ID}-${q}`).props.accessibilityState?.selected).toBeUndefined();
+      expect(flat(screen.getByText(label).props.style)).toMatchObject({ textDecorationLine: 'none', color: tokens.color.light.action });
+    }
   });
 
   it('quick picks set the draft and jump the calendar to that month', () => {

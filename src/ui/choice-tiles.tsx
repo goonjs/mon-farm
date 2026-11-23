@@ -272,20 +272,19 @@ export function ValueBox({ label, value, set, onPress, testID }: { label: string
 }
 
 /**
- * Several picks as text links on one line (owner 2026-11-21: "เลือกวัน
- * ให่ใช้อันที่มีหลายอันในบรรทัดเดียวได้ เช่น text link"). Not picked =
- * underlined action link; picked = ink, bold, ✓ before it, no underline
- * (team detail, mockup p7-after). A link wraps to the next line whole.
+ * Several one-shot actions as text links on one line (owner 2026-11-21:
+ * "เลือกวัน ให่ใช้อันที่มีหลายอันในบรรทัดเดียวได้ เช่น text link"). Owner
+ * 2026-11-23 (rv245-11): no underline and no ✓ — a tap sets the value and
+ * nothing stays picked ("เป็นการกดให้ทำแล้วเปลี่ยนได้ไม่ผูกค้างไว้"). A link
+ * wraps to the next line whole; one that cannot act is faint and off.
  */
 export function QuickLinks<K extends string>({
   options,
-  value,
   onPick,
   testID,
   groupTestID = testID,
 }: {
   options: readonly { id: K; label: string; disabled?: boolean }[];
-  value: K | null;
   onPick: (id: K) => void;
   /** Each link is `${testID}-${id}`. */
   testID: string;
@@ -295,31 +294,28 @@ export function QuickLinks<K extends string>({
   const t = useTheme();
   const c = t.color;
   return (
-    <View testID={groupTestID} accessibilityRole="radiogroup" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: t.space.lg }}>
+    <View testID={groupTestID} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: t.space.lg }}>
       {options.map((o) => {
-        const on = value === o.id;
         const off = !!o.disabled;
         return (
           <Pressable
             key={o.id}
             testID={`${testID}-${o.id}`}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: on, disabled: off }}
-            aria-selected={on}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: off }}
             disabled={off}
             onPress={() => {
-              if (!on && !off) onPick(o.id);
+              if (!off) onPick(o.id);
             }}
-            style={{ minHeight: t.target.min, minWidth: CHIP_MIN_WIDTH, flexDirection: 'row', alignItems: 'center', gap: t.space.xs }}
+            style={{ minHeight: t.target.min, minWidth: CHIP_MIN_WIDTH, flexDirection: 'row', alignItems: 'center' }}
           >
-            {on ? <TickMark testID={`${testID}-${o.id}-tick`} color={c.action} /> : null}
             <Text
               style={{
                 fontFamily: t.font.family.sans,
                 fontSize: t.font.size.bodyMd,
-                fontWeight: on ? t.font.weight.bold : t.font.weight.semibold,
-                color: off ? c.inkFaint : on ? c.ink : c.action,
-                textDecorationLine: on || off ? 'none' : 'underline',
+                fontWeight: t.font.weight.semibold,
+                color: off ? c.inkFaint : c.action,
+                textDecorationLine: 'none',
               }}
             >
               {o.label}

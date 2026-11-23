@@ -155,7 +155,6 @@ function Body({ onClose, value, onChange, max, min, emptyLabel, today: todayProp
       <QuickLinks
         testID={tid}
         groupTestID={`${tid}-quick`}
-        value={quick.find((q) => q.iso === draft)?.id ?? null}
         onPick={(id) => {
           const q = quick.find((x) => x.id === id);
           if (q) pick(q.iso);
