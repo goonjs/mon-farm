@@ -36,6 +36,7 @@ import { useTheme } from '../../theme';
 import { AppText, DateField, BottomSheet, Button, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, MoneyField, PersonIcon, PinnedActions, Plus, ReceiptIcon, ScreenHeader, SegmentedControl, TagIcon, TextField, TextLink, TileGrid, ChoiceTile } from '../../ui';
 import { useFarms } from './expenses-screen';
 import { ORDER_NEW, orderHref } from './order-routes';
+import { PayerPage } from './payer-page';
 import { NotRecordedPill, PayerPicker, SectionLabel } from './pieces';
 import { CategoryShareSheet, draftOf, shareOf, ShareSheet, type ShareDraft } from './share-sheet';
 
@@ -290,6 +291,28 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
   const farmName = farmsList.find((f) => f.id === propertyId)?.name;
   const sameAsLast = !existing && !!lastPayer && !!payer && payer.id === lastPayer.id;
 
+  // "ใครจ่ายไปก่อน" is its own full page, not a sheet (owner rv245-07, 2026-11-23: "แอ็คชั่นนี้สเต็ปนี้ขอให้ขึ้นเต็มจอ").
+  if (payerSheet) {
+    return (
+      <PayerPage
+        onBack={() => setPayerSheet(false)}
+        hint={!existing ? msg('fin.form.payerHint') : undefined}
+        picker={<PayerPicker testID="expense-payer" value={payer} onChange={setPayer} extra={knownPayers} allowNone />}
+        owed={
+          owed ? (
+            <Card testID="owed-preview" style={{ backgroundColor: t.color.surfaceSunk }}>
+              <FactRow icon={(c) => <PersonIcon color={c} size={14} />}>{msg('v2m.owedTo', { name: payer!.name })}</FactRow>
+              <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>
+                {stage === 'actual' && amountSatang !== null ? `${formatSatang(amountSatang)} ${msg('v2m.baht')}` : msg('fin.form.owedLater', { name: payer!.name })}
+              </FactRow>
+              <AppText variant="caption">{msg('v2m.owedWhy', { name: payer!.name })}</AppText>
+            </Card>
+          ) : null
+        }
+      />
+    );
+  }
+
   return (
     <>
       {header()}
@@ -513,25 +536,6 @@ function Form({ existing, fin, header }: { existing: Expense | null; fin: Return
       ) : null}
       {catShareOpen && category ? (
         <CategoryShareSheet open onClose={() => setCatShareOpen(false)} name={category.name} pct={category.workerPct} onSave={saveCategoryShare} />
-      ) : null}
-
-      {payerSheet ? (
-        <BottomSheet open onClose={() => setPayerSheet(false)} testID="expense-payer-sheet" title={msg('fin.form.payerQ')}>
-          <View style={{ gap: t.space.md }}>
-            {!existing ? <AppText variant="caption">{msg('fin.form.payerHint')}</AppText> : null}
-            <PayerPicker testID="expense-payer" value={payer} onChange={setPayer} extra={knownPayers} allowNone />
-            {owed ? (
-              <Card testID="owed-preview" style={{ backgroundColor: t.color.surfaceSunk }}>
-                <FactRow icon={(c) => <PersonIcon color={c} size={14} />}>{msg('v2m.owedTo', { name: payer!.name })}</FactRow>
-                <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>
-                  {stage === 'actual' && amountSatang !== null ? `${formatSatang(amountSatang)} ${msg('v2m.baht')}` : msg('fin.form.owedLater', { name: payer!.name })}
-                </FactRow>
-                <AppText variant="caption">{msg('v2m.owedWhy', { name: payer!.name })}</AppText>
-              </Card>
-            ) : null}
-            <CTA testID="expense-payer-done" onPress={() => setPayerSheet(false)}>{msg('fert.done')}</CTA>
-          </View>
-        </BottomSheet>
       ) : null}
 
       {detailsSheet ? (
