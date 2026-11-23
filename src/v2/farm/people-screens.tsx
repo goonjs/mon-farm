@@ -346,7 +346,8 @@ function PersonForm({ personId, startRole }: { personId: string | null; startRol
                 onChangeText={setOtherDraft}
               />
             </View>
-            <Button testID="person-add-other-role" icon={(c) => <Plus color={c} size={14} />} onPress={addOther} disabled={!otherDraft.trim()}>
+            {/* E01-S26 review B1: a rounded rectangle as in mockup p6-after-open, not a pill (rule 11). */}
+            <Button testID="person-add-other-role" shape="rect" icon={(c) => <Plus color={c} size={14} />} onPress={addOther} disabled={!otherDraft.trim()}>
               {msg('v2f.add')}
             </Button>
           </View>

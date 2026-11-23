@@ -8,6 +8,7 @@ import { PeopleScreen, PersonScreen } from '../v2/farm/people-screens';
 import type { MasterStore } from '../store/master-store';
 import { expectChoiceTile, expectRadioRow } from '../test/choice-shape';
 import { wrap } from '../test/render';
+import { tokens } from '../../design/tokens';
 
 jest.mock('../store/people', () => {
   const { MemoryPeopleStore } = jest.requireActual('../store/people-memory');
@@ -297,6 +298,19 @@ describe('คน — form (farm mockup 5)', () => {
     expect(screen.getByTestId('other-role-คนขับรถ').props.accessibilityState).toMatchObject({ checked: true });
     expect(screen.queryByTestId('person-other-role')).toBeNull();
     expect(screen.getByTestId('person-other-role-open')).toBeTruthy();
+  });
+
+  it('"+ เพิ่ม" by the other-role field is a rounded rectangle, never a pill (E01-S26 review B1, rule 11, mockup p6-after-open)', async () => {
+    wrap(<PersonScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('person-other-role-open'));
+    const radius = () => StyleSheet.flatten(screen.getByTestId('person-add-other-role').props.style).borderRadius;
+    // Before typing (shut) and after typing (open), the same shape.
+    expect(radius()).not.toBe(tokens.radius.pill);
+    expect(radius()).toBe(tokens.radius.md);
+    fireEvent.changeText(screen.getByTestId('person-other-role'), 'คนขับรถ');
+    expect(radius()).not.toBe(tokens.radius.pill);
+    expect(radius()).toBe(tokens.radius.md);
   });
 
   it('offers no ผู้จ่าย role, and keeps it on save for someone who already has it', async () => {

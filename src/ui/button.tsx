@@ -19,6 +19,7 @@ export function Button({
   onPress,
   variant = 'ghost',
   size = 'regular',
+  shape = 'pill',
   icon,
   disabled,
   testID,
@@ -32,6 +33,11 @@ export function Button({
   variant?: ButtonVariant;
   /** `large`: the 56pt pinned call to action. */
   size?: 'regular' | 'large';
+  /**
+   * `rect`: a rounded rectangle (radius.md) for a short word at the end of a
+   * row, where a pill would be a round outlined word button (phone-form-ux rule 11).
+   */
+  shape?: 'pill' | 'rect';
   /** Leading icon from ui/icons, painted in the label colour. */
   icon?: (colour: string) => React.ReactNode;
   disabled?: boolean;
@@ -102,7 +108,7 @@ export function Button({
       style={{
         minHeight: size === 'large' ? t.target.comfortable : t.target.min,
         paddingHorizontal: size === 'large' ? t.space.xl : t.space.lg,
-        borderRadius: t.radius.pill,
+        borderRadius: shape === 'rect' ? t.radius.md : t.radius.pill,
         borderWidth: t.border.thick,
         borderStyle: disabled ? 'dashed' : 'solid',
         borderColor: tone.border,
