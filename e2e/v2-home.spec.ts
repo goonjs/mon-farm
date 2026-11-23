@@ -252,6 +252,9 @@ test.describe('E15-S08 · the unclosed-sale row while clearing', () => {
     await evidence(page, `docs/ux/screenshots/v2/e15-s08/${process.env.SHOT_NAME ?? 'after'}-clearing.png`);
     await expect(row).toContainText('กำลังเคลียร์เงิน');
     await expect(row).not.toContainText('กำลังชั่ง');
+    // Owner 2026-11-21 (`home-clearing-reason-line`): the reason line follows the clearing phase too.
+    await expect(row).toContainText('เคลียร์เงินอยู่ · จ่ายให้ครบแล้วกดปิดการขาย');
+    await expect(row).not.toContainText('ชั่งอยู่');
     expect(errors).toEqual([]);
   });
 });

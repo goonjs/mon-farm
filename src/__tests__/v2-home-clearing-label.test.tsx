@@ -87,6 +87,8 @@ const tick = (saleId: string, payee: string, done: boolean, base: string | null)
   mockFinance.append(e);
   return id;
 };
+const WEIGHING_WHY = 'ชั่งอยู่ · ชั่งเสร็จแล้วจ่ายเงินและกดปิดการขาย';
+const CLEARING_WHY = 'เคลียร์เงินอยู่ · จ่ายให้ครบแล้วกดปิดการขาย';
 const rowChip = () => within(screen.getByTestId('home-open-sale'));
 
 /**
@@ -101,6 +103,8 @@ describe('V2Home — the unclosed-sale row while clearing (E15-S08)', () => {
     await flush();
     expect(rowChip().getByText('กำลังชั่ง')).toBeTruthy();
     expect(rowChip().queryByText('กำลังเคลียร์เงิน')).toBeNull();
+    expect(rowChip().getByText(WEIGHING_WHY)).toBeTruthy();
+    expect(rowChip().queryByText(CLEARING_WHY)).toBeNull();
   });
 
   let first = '';
@@ -111,6 +115,9 @@ describe('V2Home — the unclosed-sale row while clearing (E15-S08)', () => {
     expect(rowChip().getByText('กำลังเคลียร์เงิน')).toBeTruthy();
     expect(rowChip().queryByText('กำลังชั่ง')).toBeNull();
     expect(screen.getByTestId('home-sale-start-badge').props.accessibilityLabel).toBe('รอเคลียร์เงิน');
+    // Owner 2026-11-21 (dashboard `home-clearing-reason-line`): the reason line follows the clearing phase too.
+    expect(rowChip().getByText(CLEARING_WHY)).toBeTruthy();
+    expect(rowChip().queryByText(WEIGHING_WHY)).toBeNull();
   });
 
   it('the tick taken back: the row goes back to กำลังชั่ง', async () => {
@@ -119,5 +126,7 @@ describe('V2Home — the unclosed-sale row while clearing (E15-S08)', () => {
     await flush();
     expect(rowChip().getByText('กำลังชั่ง')).toBeTruthy();
     expect(rowChip().queryByText('กำลังเคลียร์เงิน')).toBeNull();
+    expect(rowChip().getByText(WEIGHING_WHY)).toBeTruthy();
+    expect(rowChip().queryByText(CLEARING_WHY)).toBeNull();
   });
 });

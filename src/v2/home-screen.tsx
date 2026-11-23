@@ -142,7 +142,8 @@ export function V2Home() {
   const prepTile = tiles ? prepTileProps(tiles.prep, msg) : {};
   const startTile = tiles ? startTileProps(tiles.start, msg) : {};
   const carriedLatest = tiles?.carried.find((c) => c.id === sales?.latest?.id) ?? null;
-  // E15-S08 CL-1: the unclosed-sale row reads the start tile's phase, so it says กำลังเคลียร์เงิน with the calculator (S3).
+  // E15-S08 CL-1: the unclosed-sale row reads the start tile's phase, so it says กำลังเคลียร์เงิน with the calculator (S3);
+  // its reason line follows the same phase (owner 2026-11-21, `home-clearing-reason-line`).
   const openClearing = useMemo(() => {
     const id = sales?.open?.id;
     const log = id ? homeData?.logs.find((l) => l.id === id) : undefined;
@@ -161,7 +162,7 @@ export function V2Home() {
         label={msg('home.openSale')}
         value={saleLine(sales.open)}
         chip={<Chip tone="warn" label={msg(openClearing ? 'sales.clearing' : sales.open.weighing ? 'sales.weighing' : 'status.open')} />}
-        why={msg(sales.open.weighing ? 'home.why.weighing' : 'home.why.notClosed')}
+        why={msg(openClearing ? 'home.why.clearing' : sales.open.weighing ? 'home.why.weighing' : 'home.why.notClosed')}
         to={saleHref(sales.open.id, { closed: false, point: sales.open.point })}
       />
     ) : null,
