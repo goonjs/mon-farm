@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { useState, type ReactNode } from 'react';
 
@@ -254,6 +255,8 @@ describe('คน — form (farm mockup 5)', () => {
     expect(screen.getByTestId('role-assistant').props.accessibilityState).toMatchObject({ checked: true });
     fireEvent.press(screen.getByTestId('role-assistant'));
     expect(screen.getByTestId('role-assistant').props.accessibilityState).toMatchObject({ checked: false });
+    // Owner rvs26-06 (2026-11-23): the field opens from the "เพิ่มบทบาทอื่น" link first.
+    fireEvent.press(screen.getByTestId('person-other-role-open'));
     fireEvent.changeText(screen.getByTestId('person-other-role'), 'ลูกคนงาน');
     fireEvent.press(screen.getByTestId('person-add-other-role'));
     expectChoiceTile(screen.getByTestId('other-role-ลูกคนงาน'), 'checkbox');
@@ -263,6 +266,37 @@ describe('คน — form (farm mockup 5)', () => {
     const [p] = await people().list();
     expect(p).toMatchObject({ name: 'แดง', roles: ['tapper'], otherRoles: ['ลูกคนงาน'] });
     expect(mockRouter.back).toHaveBeenCalled();
+  });
+
+  it('"เพิ่มบทบาทอื่น" is a centred text link on its own line; tap to type, ยกเลิก closes it (E01-S26, owner rvs26-06 2026-11-23)', async () => {
+    wrap(<PersonScreen />);
+    await flush();
+    // Closed: only the link, no field and no add button.
+    const open = screen.getByTestId('person-other-role-open');
+    expect(open.props.accessibilityRole).toBe('button');
+    expect(open).toHaveTextContent(/เพิ่มบทบาทอื่น/);
+    const line = screen.getByTestId('person-other-role-line');
+    expect(StyleSheet.flatten(line.props.style)).toMatchObject({ alignSelf: 'stretch', alignItems: 'center' });
+    expect(screen.queryByTestId('person-other-role')).toBeNull();
+    expect(screen.queryByTestId('person-add-other-role')).toBeNull();
+    // Open: the field, เพิ่ม, and ยกเลิก; the link is gone.
+    fireEvent.press(open);
+    expect(screen.getByTestId('person-other-role')).toBeTruthy();
+    expect(screen.getByTestId('person-add-other-role')).toBeTruthy();
+    expect(screen.queryByTestId('person-other-role-open')).toBeNull();
+    fireEvent.changeText(screen.getByTestId('person-other-role'), 'คนขับรถ');
+    // ยกเลิก: closes and drops what was typed; nothing is added.
+    fireEvent.press(screen.getByTestId('person-other-role-cancel'));
+    expect(screen.queryByTestId('person-other-role')).toBeNull();
+    expect(screen.queryByTestId('other-role-คนขับรถ')).toBeNull();
+    fireEvent.press(screen.getByTestId('person-other-role-open'));
+    expect(screen.getByTestId('person-other-role').props.value).toBe('');
+    // เพิ่ม: the role becomes a ticked tile and the field closes again.
+    fireEvent.changeText(screen.getByTestId('person-other-role'), 'คนขับรถ');
+    fireEvent.press(screen.getByTestId('person-add-other-role'));
+    expect(screen.getByTestId('other-role-คนขับรถ').props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.queryByTestId('person-other-role')).toBeNull();
+    expect(screen.getByTestId('person-other-role-open')).toBeTruthy();
   });
 
   it('offers no ผู้จ่าย role, and keeps it on save for someone who already has it', async () => {

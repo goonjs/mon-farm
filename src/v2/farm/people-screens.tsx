@@ -248,6 +248,7 @@ function PersonForm({ personId, startRole }: { personId: string | null; startRol
   const [roles, setRoles] = useState<BuiltinRole[]>(startRole && !personId ? [startRole] : []);
   const [otherRoles, setOtherRoles] = useState<string[]>([]);
   const [otherDraft, setOtherDraft] = useState('');
+  const [otherOpen, setOtherOpen] = useState(false);
   const [tried, setTried] = useState(false);
   const [roleWarning, setRoleWarning] = useState(false);
   const write = useWrite();
@@ -269,6 +270,11 @@ function PersonForm({ personId, startRole }: { personId: string | null; startRol
     const v = otherDraft.trim();
     if (v && !otherRoles.includes(v)) setOtherRoles([...otherRoles, v]);
     setOtherDraft('');
+    setOtherOpen(false);
+  };
+  const cancelOther = () => {
+    setOtherDraft('');
+    setOtherOpen(false);
   };
 
   const save = async (confirmed = false) => {
@@ -326,21 +332,35 @@ function PersonForm({ personId, startRole }: { personId: string | null; startRol
         </TileGrid>
         {tried && errors.includes('roles') ? <FieldError testID="person-roles-error">{msg('personForm.needRole')}</FieldError> : null}
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: t.space.sm }}>
-        <View style={{ flex: 1 }}>
-          <TextField
-            testID="person-other-role"
-            label={msg('v2f.otherRoles')}
-            hint={msg('v2f.otherRolesHint')}
-            placeholder={msg('personForm.otherRolePlaceholder')}
-            value={otherDraft}
-            onChangeText={setOtherDraft}
-          />
+      {/* Owner rvs26-06 (2026-11-23): "เพิ่มบทบาทอื่นให้เป็น text link กลางบรรทัด กินทั้งบรรทัดถัดมา กดแล้วค่อยให้กรอก กดยกเลิกได้". */}
+      {otherOpen ? (
+        <View style={{ gap: t.space.xs }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: t.space.sm }}>
+            <View style={{ flex: 1 }}>
+              <TextField
+                testID="person-other-role"
+                label={msg('v2f.otherRoles')}
+                hint={msg('v2f.otherRolesHint')}
+                placeholder={msg('personForm.otherRolePlaceholder')}
+                value={otherDraft}
+                onChangeText={setOtherDraft}
+              />
+            </View>
+            <Button testID="person-add-other-role" icon={(c) => <Plus color={c} size={14} />} onPress={addOther} disabled={!otherDraft.trim()}>
+              {msg('v2f.add')}
+            </Button>
+          </View>
+          <TextLink testID="person-other-role-cancel" align="center" onPress={cancelOther}>
+            {msg('common.cancel')}
+          </TextLink>
         </View>
-        <Button testID="person-add-other-role" icon={(c) => <Plus color={c} size={14} />} onPress={addOther} disabled={!otherDraft.trim()}>
-          {msg('v2f.add')}
-        </Button>
-      </View>
+      ) : (
+        <View testID="person-other-role-line" style={{ alignSelf: 'stretch', alignItems: 'center' }}>
+          <TextLink testID="person-other-role-open" align="center" onPress={() => setOtherOpen(true)}>
+            {msg('personForm.addOtherRole')}
+          </TextLink>
+        </View>
+      )}
       <HelpNote lines={[msg('v2f.noAccount')]} />
       {roleWarning && existing ? (
         <Card testID="role-warning">
