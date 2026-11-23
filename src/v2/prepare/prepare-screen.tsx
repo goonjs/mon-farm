@@ -21,15 +21,15 @@ import { peopleStore } from '../../store/people';
 import { useI18n } from '../../i18n';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, cardStyle, Check, ChevronRight, CompactMoney, CTA, DatePickerSheet, MoneyField, ScreenHeader, TextLink } from '../../ui';
-import { CHIP_MIN_WIDTH } from '../../ui/chip-width';
+import { AppText, BottomSheet, cardStyle, Check, ChevronRight, ChoiceTile, CompactMoney, CTA, DatePickerSheet, MoneyField, ScreenHeader, TextLink, TileGrid } from '../../ui';
 import { useMaster } from '../farm/pieces';
 import { TickCard } from '../money/pieces';
 import { loadHomeSales } from '../sale/open-sale';
 import { PRICE_MAX_SATANG } from '../sale/sale-options';
+import { TimeWheelSheet } from './time-wheel';
 
-/** Times offered after the day: a buyer comes in the morning, sometimes after lunch. */
-const TIMES = ['06:00', '07:00', '08:00', '09:00', '10:00', '13:00'] as const;
+/** Times offered after the day: 08:00–13:00 every hour (owner 2026-11-20), anything else through "กำหนดเอง". */
+const TIMES = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00'] as const;
 
 /** The prep in force: a sale started after its last write has used it (PREP-8). */
 export function livePrep(events: readonly FinanceEvent[], lastSaleTs: number | null): SalePrep | null {
@@ -56,7 +56,7 @@ export interface PrepViewProps {
   readonly sync?: ReturnType<typeof useSyncStatus>;
 }
 
-type Sheet = 'none' | 'date' | 'time' | 'price';
+type Sheet = 'none' | 'date' | 'time' | 'custom' | 'price';
 
 export function PrepView({ events, today, lastSaleDay, lastSaleTs, onWrite, onBuyer, onFert, onBack, sync }: PrepViewProps) {
   const t = useTheme();
@@ -133,25 +133,42 @@ export function PrepView({ events, today, lastSaleDay, lastSaleTs, onWrite, onBu
         today={today}
         testID="prep-date-picker"
       />
+      {/* E01-S26 PS26-6: F tiles, 3 a row, one pick; "กำหนดเอง" is a dashed add tile, not a choice. Nothing is
+          ticked until a time is set, and closing writes nothing (owner prep-time-default 2026-11-22: "ต้องแตะเลือกเวลาก่อนเสมอ ปิดแผ่นเฉยๆ = ไม่บันทึก"). */}
       <BottomSheet open={sheet === 'time'} onClose={() => setSheet('none')} title={msg('prep.time')} testID="prep-time">
-        <AppText variant="bodySm">{msg('prep.timeHint')}</AppText>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
-          {[...TIMES, null].map((time) => (
-            <Pressable
-              key={time ?? 'none'}
-              testID={`prep-time-${time ?? 'none'}`}
-              accessibilityRole="button"
-              onPress={() => {
-                setSheet('none');
-                if (day) void onWrite({ time });
-              }}
-              style={{ minHeight: t.target.comfortable, minWidth: CHIP_MIN_WIDTH, paddingHorizontal: t.space.md, borderRadius: t.radius.pill, borderWidth: t.border.hair, borderColor: t.color.rule, backgroundColor: t.color.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <AppText style={{ fontWeight: t.font.weight.bold }}>{time ?? msg('prep.timeNone')}</AppText>
-            </Pressable>
-          ))}
+        <View style={{ gap: t.space.sm }}>
+          <TileGrid columns={3}>
+            {TIMES.map((time) => (
+              <ChoiceTile
+                key={time}
+                kind="check"
+                testID={`prep-time-${time}`}
+                label={time}
+                selected={prep?.time === time}
+                onPress={() => {
+                  setSheet('none');
+                  if (day ?? prep?.date) void onWrite({ time });
+                }}
+              />
+            ))}
+          </TileGrid>
+          <TileGrid columns={1}>
+            <ChoiceTile dashed kind="check" testID="prep-time-custom" label={msg('prep.timeCustom')} onPress={() => setSheet('custom')} />
+          </TileGrid>
         </View>
       </BottomSheet>
+      {sheet === 'custom' ? (
+        <TimeWheelSheet
+          open
+          initial={prep?.time}
+          onClose={() => setSheet('none')}
+          onDone={(time) => {
+            setSheet('none');
+            if (day ?? prep?.date) void onWrite({ time });
+          }}
+          testID="prep-time-wheel"
+        />
+      ) : null}
       <MoneyField
         testID="prep-price-input"
         label={msg('prep.price')}
