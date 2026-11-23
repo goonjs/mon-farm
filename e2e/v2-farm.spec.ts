@@ -1,6 +1,10 @@
 import { expect, test, type Page } from './test';
 
-import { evidence, splashEvidence, watchSplash } from './fixtures';
+import type { MasterPayload } from '../src/core/types';
+import { FIXTURE_GROUP_ID, LogBuilder } from '../src/core/fixtures';
+import type { FinanceEvent, FinancePayload } from '../src/core/finance/types';
+import { evidence, seedEvents, seedMaster, splashEvidence, watchSplash } from './fixtures';
+import { smallTargets, textFit } from './text-fit';
 
 /**
  * D-83: one working sandbox app on v2, in the real web build. `/` shows the
@@ -319,3 +323,157 @@ test('an old v1 link lands on the v2 home, not an unmatched-route page', async (
 
   expect(errors).toEqual([]);
 });
+
+/**
+ * E01-S26 (choice tiles per screen) on the real build, offline: at 320 px with
+ * text L nothing is cut, nothing sticks out and every target is ≥ 48 (PS26-12)
+ * on the screens this story changed, in the states the owner reviewed on
+ * 2026-11-23 (rvs26-06 role link, rvs26-07 ask tiles, the wizard tapper rows).
+ * The prep time sheet and its wheel are checked in v2-prepare.spec.ts.
+ *
+ * SHOT_DIR=<folder> also saves 390×844 pictures for the side-by-side with the
+ * mockup (evidence for the dashboard card; nothing is written to docs/).
+ */
+
+const onS26 = (page: Page) => (id: string) => page.getByTestId(id).filter({ visible: true });
+const s26Shots = process.env.SHOT_DIR;
+
+const S26_FARM: MasterPayload[] = [
+  { t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] },
+  { t: 'person_added', personId: 'nat', name: 'นัด', roles: ['tapper'], otherRoles: [] },
+  { t: 'person_added', personId: 'long', name: 'สมหวังผู้ช่วยกรีดยางแปลงหลังบ้านริมคลองใหญ่', roles: ['tapper'], otherRoles: [] },
+  { t: 'buyer_added', buyerId: 'buyer-a', name: 'คนรับซื้อยาง ก (ตัวอย่าง)' },
+  { t: 'property_added', propertyId: 'fa', name: 'จันทเขลม', crop: 'rubber' },
+  { t: 'area_recorded', propertyId: 'fa', entryId: 'ar1', centiRai: 12_500, effective: '2020-01-01' },
+  { t: 'point_added', pointId: 'a4', propertyId: 'fa', name: 'จุด 4' },
+  { t: 'tapper_assigned', assignmentId: 's4', pointId: 'a4', tapperId: 'nat' },
+];
+
+const s26Fin = (n: number, targetId: string, payload: FinancePayload): FinanceEvent => ({
+  id: `e2e-fin-${n}`,
+  groupId: FIXTURE_GROUP_ID,
+  deviceSeq: n,
+  ts: Date.now(),
+  actor: { userId: 'pre-login', deviceId: 'dev-seed' },
+  source: 'app',
+  targetId,
+  baseEventId: null,
+  payload,
+});
+const s26Loan = (amountSatang: number, date: string): FinancePayload => ({
+  t: 'debt_added',
+  fields: { worker: { id: 'nat', name: 'นัด' }, kind: 'loan', amountSatang, date, note: '', lender: { id: 'farm', name: 'เงินสวน' }, fertilizer: null, carriedForward: false },
+});
+
+async function s26Fits(page: Page, what: string) {
+  expect(await textFit(page), `${what}: nothing cut or sticking out`).toEqual([]);
+  expect(await smallTargets(page), `${what}: targets ≥ 48`).toEqual([]);
+}
+
+async function s26Snap(page: Page, name: string) {
+  if (!s26Shots) return;
+  const size = page.viewportSize()!;
+  if (size.width === 390) await page.screenshot({ path: `${s26Shots}/${name}.png` });
+}
+
+for (const [width, size] of [
+  [320, 'l'],
+  [390, 'm'],
+] as const) {
+  test.describe(`E01-S26 screens at ${width} px text ${size.toUpperCase()}`, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.addInitScript((s) => localStorage.setItem('mon-farm:text-size', s), size);
+      await seedMaster(page, S26_FARM);
+    });
+
+    test('add person: role tiles, the centred "เพิ่มบทบาทอื่น" link, then the field with ยกเลิก (rvs26-06)', async ({ page, context }) => {
+      const id = onS26(page);
+      await page.goto('/v2/person/new');
+      await context.setOffline(true);
+      await expect(id('person-other-role-open')).toBeVisible();
+      await expect(id('person-other-role')).toHaveCount(0);
+      await s26Fits(page, 'person form');
+      await s26Snap(page, 's26-person-link');
+      await id('person-other-role-open').click();
+      await expect(id('person-other-role')).toBeVisible();
+      await s26Fits(page, 'person form, field open');
+      await s26Snap(page, 's26-person-open');
+      await id('person-other-role-cancel').click();
+      await expect(id('person-other-role')).toHaveCount(0);
+    });
+
+    test('sale prep: the time sheet (08:00–13:00 + กำหนดเอง) and the wheel (prep-time-default)', async ({ page, context }) => {
+      const id = onS26(page);
+      await page.goto('/v2/prepare');
+      await context.setOffline(true);
+      await id('prep-date').click();
+      await id('prep-date-picker-tomorrow').click();
+      await id('prep-date-picker-done').click();
+      await expect(id('prep-time')).toBeVisible();
+      await expect(id('prep-time-none')).toHaveCount(0);
+      await s26Fits(page, 'prep time sheet');
+      await s26Snap(page, 's26-prep-time');
+      await id('prep-time-custom').click();
+      await expect(id('prep-time-wheel-done')).toContainText('10:00');
+      await s26Fits(page, 'prep time wheel');
+      await s26Snap(page, 's26-prep-wheel');
+    });
+
+    test('people list: the group box and its sheet', async ({ page }) => {
+      const id = onS26(page);
+      await page.goto('/v2/people');
+      await expect(id('people-filter')).toBeVisible();
+      await s26Fits(page, 'people list');
+      await id('people-filter').click();
+      await expect(id('people-filter-sheet')).toBeVisible();
+      await s26Fits(page, 'people group sheet');
+    });
+
+    test('points wizard: tappers are rows with tick boxes, several at once (wizard-tapper-pick)', async ({ page }) => {
+      const id = onS26(page);
+      await page.goto('/v2/points-wizard');
+      await id('wizard-farm-fa').click();
+      await id('wizard-tapper-red').click();
+      await id('wizard-tapper-nat').click();
+      await expect(id('wizard-tapper-red')).toHaveAttribute('aria-checked', 'true');
+      await expect(id('wizard-tapper-nat')).toHaveAttribute('aria-checked', 'true');
+      await expect(id('wizard-tapper-red')).toHaveAttribute('role', 'checkbox');
+      await s26Fits(page, 'points wizard');
+      await id('wizard-tapper-long').scrollIntoViewIfNeeded();
+      await s26Snap(page, 's26-wizard-tappers');
+    });
+
+    test('closeout summary: the two asks are style I tiles with no frame around them (rvs26-07)', async ({ page }) => {
+      const id = onS26(page);
+      const b = new LogBuilder('sale-s26');
+      b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+      b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+      b.sys({ t: 'pile_added', pileId: 'a4', zoneId: 'fa', name: 'a4', tareG: 2_000, stdNetG: 50_000 });
+      b.acceptAt('a4', 1).acceptAt('a4', 2);
+      await seedEvents(page, b.build().map((e) => ({ ...e, ts: Date.now() })));
+      await page.goto('/v2/sale/sale-s26/settlement');
+      await expect(id('co-summary')).toBeVisible();
+      await expect(id('co-debt-ask')).toBeVisible();
+      await expect(id('co-debt-none')).toHaveAttribute('role', 'radio');
+      await id('co-debt-none').click();
+      await expect(id('co-debt-none')).toHaveAttribute('aria-selected', 'true');
+      // No box in a box: the ask block draws no frame.
+      expect(await id('co-debt-ask').evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe('0px');
+      await s26Fits(page, 'closeout summary');
+      await s26Snap(page, 's26-closeout-ask');
+    });
+
+    test('expenses: the filter boxes; debt history: the kind tiles', async ({ page }) => {
+      const id = onS26(page);
+      await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [s26Fin(1, 'debt-nat', s26Loan(300_000, '2026-09-01'))]).catch(() => undefined);
+      await page.goto('/v2/expenses');
+      await expect(id('filter-stage')).toBeVisible();
+      await s26Fits(page, 'expenses filters');
+      await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [s26Fin(1, 'debt-nat', s26Loan(300_000, '2026-09-01'))]);
+      await page.goto('/v2/debt/nat?name=นัด');
+      await expect(id('debt-filter-all')).toBeVisible();
+      await s26Fits(page, 'debt history');
+    });
+  });
+}
