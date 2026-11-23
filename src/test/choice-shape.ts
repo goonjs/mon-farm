@@ -35,3 +35,11 @@ export function expectRadioRow(el: Node) {
   expect(s.borderRadius).toBe(tokens.radius.lg);
   expect(s.minHeight ?? tokens.target.min).toBeGreaterThanOrEqual(tokens.target.min);
 }
+
+/** Style C with a tick box (owner wizard-tapper-pick 2026-11-22): a full-width row, radius lg, a checkbox — several at once. */
+export function expectCheckRow(el: Node) {
+  const s = flat(el.props.style);
+  expect(el.props.accessibilityRole).toBe('checkbox');
+  expect(s.borderRadius).toBe(tokens.radius.lg);
+  expect(s.minHeight ?? tokens.target.min).toBeGreaterThanOrEqual(tokens.target.min);
+}

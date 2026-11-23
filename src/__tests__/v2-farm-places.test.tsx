@@ -12,7 +12,7 @@ import { newGroup } from '../core/group';
 import { userFromSignIn } from '../core/user';
 import { accountStore as mockAccounts } from '../store/account';
 import { pickDate } from '../test/pick-date';
-import { expectRadioRow } from '../test/choice-shape';
+import { expectCheckRow, expectRadioRow } from '../test/choice-shape';
 import { tokens } from '../../design/tokens';
 import { wrap } from '../test/render';
 
@@ -500,6 +500,27 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     // On page 1 the header back leaves the helper as before.
     fireEvent.press(screen.getByTestId('v2-back'));
     expect(mockRouter.back).toHaveBeenCalledTimes(1);
+  });
+
+  it('tappers are C rows with a tick box, several at once (E01-S26, owner wizard-tapper-pick 2026-11-22)', async () => {
+    const m = master();
+    await m.addProperty({ name: 'สวน', crop: 'rubber' });
+    const daeng = await m.create('แดง', ['tapper']);
+    const nat = await m.create('นัด', ['tapper']);
+    wrap(<PointsWizardScreen />);
+    await flush();
+    const row = (id: string) => screen.getByTestId(`wizard-tapper-${id}`);
+    expectCheckRow(row(daeng.id));
+    expectCheckRow(row(nat.id));
+    // The box is square, never a ring.
+    expect(StyleSheet.flatten(screen.getByTestId(`wizard-tapper-${daeng.id}-box`, { includeHiddenElements: true }).props.style).borderRadius).toBeLessThan(11);
+    fireEvent.press(row(daeng.id));
+    fireEvent.press(row(nat.id));
+    expect(row(daeng.id).props.accessibilityState).toMatchObject({ checked: true });
+    expect(row(nat.id).props.accessibilityState).toMatchObject({ checked: true });
+    fireEvent.press(row(daeng.id));
+    expect(row(daeng.id).props.accessibilityState).toMatchObject({ checked: false });
+    expect(row(nat.id).props.accessibilityState).toMatchObject({ checked: true });
   });
 
   it('farm → tappers → how many → names, then creates every point with its tapper at once', async () => {

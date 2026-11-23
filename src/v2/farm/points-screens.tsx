@@ -71,7 +71,6 @@ import { NotFound } from './people-screens';
 import {
   AddCTA,
   categoryTone,
-  ChipWrap,
   ConfirmSheet,
   DeletedLink,
   DeletedList,
@@ -80,7 +79,6 @@ import {
   HelpNote,
   RowCard,
   Stepper,
-  ToggleChip,
   useBack,
   useDay,
   useMaster,
@@ -700,11 +698,12 @@ export function PointsWizardScreen() {
             msg('wizard.tappers'),
             <>
               {state && tappers.length === 0 ? <AppText variant="bodySm">{msg('wizard.noTappers')}</AppText> : null}
-              <ChipWrap>
+              {/* Owner wizard-tapper-pick (2026-11-22): "ก · ก · คงเลือกได้หลายคน ใช้แถวแบบ C แต่เป็นกล่องติ๊กแทนวง". */}
+              <View style={{ gap: t.space.sm }}>
                 {tappers.map((p) => (
-                  <ToggleChip key={p.id} check testID={`wizard-tapper-${p.id}`} label={p.name} on={chosen.includes(p.id)} onPress={() => toggle(p.id)} />
+                  <RadioCard key={p.id} check testID={`wizard-tapper-${p.id}`} title={p.name} selected={chosen.includes(p.id)} onPress={() => toggle(p.id)} />
                 ))}
-              </ChipWrap>
+              </View>
               <AppText variant="bodySm">{msg('wizard.tappersHint')}</AppText>
             </>,
           )}
