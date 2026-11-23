@@ -69,20 +69,27 @@ function BigCard({ testID, done, tone, children }: { testID: string; done: boole
 }
 
 /**
- * "ไม่มี" / "มี · จด…" — the asking card's two answers (A0), as equal F tiles
- * (E01-S26 PS26-7, owner answer ข). "ไม่มี" ticks when answered; "+ มี" opens
- * the add form, so it never shows a tick itself. Both always call back, as the
- * buttons did.
+ * "ไม่มี" / "มี · จด…" — the asking block's two answers (A0), as equal style I
+ * tiles (owner rvs26-07 2026-11-23: "ใช้ปุ่มแบบ I และหาทางไม่ให้เป็นกรอบซ้อนกรอบดีไหม").
+ * "ไม่มี" ticks green (accept) when answered; "+ มี" opens the add form, so it
+ * never shows a tick itself. Both always call back, as the buttons did.
  */
 function AskButtons({ none, add, answered, idNone, idAdd }: { none: () => void; add: () => void; answered: boolean; idNone: string; idAdd: string }) {
-  const t = useTheme();
   const msg = useT();
   return (
-    <View style={{ paddingRight: t.space.sm }}>
-      <TileGrid columns={2}>
-        <ChoiceTile kind="check" clearable testID={idNone} label={msg('co.none')} selected={answered} onPress={none} />
-        <ChoiceTile kind="check" testID={idAdd} label={`+ ${idAdd === 'co-debt-add-first' ? msg('co.debt.addFirst') : msg('co.owed.addFirst')}`} onPress={add} />
-      </TileGrid>
+    <TileGrid columns={2}>
+      <ChoiceTile kind="mark" tone="accept" clearable testID={idNone} label={msg('co.none')} selected={answered} onPress={none} />
+      <ChoiceTile kind="mark" testID={idAdd} label={`+ ${idAdd === 'co-debt-add-first' ? msg('co.debt.addFirst') : msg('co.owed.addFirst')}`} onPress={add} />
+    </TileGrid>
+  );
+}
+
+/** The asking state of the debt / owed card: the question, then the tiles — no frame around them, so no box sits in a box. */
+function AskBlock({ testID, children }: { testID: string; children: ReactNode }) {
+  const t = useTheme();
+  return (
+    <View testID={testID} style={{ gap: t.space.xs, paddingVertical: t.space.xs }}>
+      {children}
     </View>
   );
 }
@@ -131,13 +138,13 @@ export function DebtCard({
   const msg = useT();
   if (!people.length) {
     return (
-      <BigCard testID="co-debt-ask" done={answered} tone="debt">
+      <AskBlock testID="co-debt-ask">
         <View style={{ ...row, gap: t.space.md }}>
           <CardIcon id="finance.otherCost" checked={answered} small />
           <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, fontSize: t.font.size.headingSm, lineHeight: lh(t.font.size.headingSm) }}>{msg('co.debt.ask')}</AppText>
         </View>
         <AskButtons none={onNone} add={onAdd} answered={answered} idNone="co-debt-none" idAdd="co-debt-add-first" />
-      </BigCard>
+      </AskBlock>
     );
   }
   const open = people.filter((p) => !p.checked).length;
@@ -220,13 +227,13 @@ export function OwedCard({
   const msg = useT();
   if (!people.length) {
     return (
-      <BigCard testID="co-owed-ask" done={answered} tone="owed">
+      <AskBlock testID="co-owed-ask">
         <View style={{ ...row, gap: t.space.md }}>
           <CardIcon id="finance.workerPay" tone="category5" checked={answered} small />
           <AppText style={{ flex: 1, fontWeight: t.font.weight.bold, lineHeight: lh(t.font.size.bodyLg) }}>{msg('co.owed.ask')}</AppText>
         </View>
         <AskButtons none={onNone} add={onAdd} answered={answered} idNone="co-owed-none" idAdd="co-owed-add-first" />
-      </BigCard>
+      </AskBlock>
     );
   }
   const open = people.filter((p) => !checked.has(p.id)).length;
