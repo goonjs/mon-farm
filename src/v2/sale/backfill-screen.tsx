@@ -7,7 +7,7 @@
  * Continuous per tapper: the tapper's points in paper order (BF-1), then one
  * page per point — "จบที่เข่งไหน" with the start filled in, then "เต็มไหม" with
  * nothing chosen (BF-2/3) — and, before a point that follows a short basket,
- * "เติมที่จุดนี้ไหม" (BF-4). Per point: the picked point only, starting at 1.
+ * "เติมที่จุดนี้ไหม" (BF-4), answered with one tap (owner 2026-11-23). Per point: the picked point only, starting at 1.
  * The Σ bar sits on every page and only goes up (BF-10); the summary reads
  * like the paper and can be checked against its total (BF-6/7). Saving writes
  * ordinary baskets once (`catchUpPlan` → `writeCatchUp`); the last short one
@@ -42,8 +42,10 @@ interface Entry {
   readonly shortG: number | null;
   readonly fill: boolean | null;
   readonly fillG: number | null;
+  /** "เติมไม่เท่านี้": the kg typed by hand instead of the gap (owner 2026-11-23). */
+  readonly fillOwn: boolean;
 }
-const EMPTY: Entry = { end: null, full: null, shortG: null, fill: null, fillG: null };
+const EMPTY: Entry = { end: null, full: null, shortG: null, fill: null, fillG: null, fillOwn: false };
 
 type Step = { readonly kind: 'order' } | { readonly kind: 'topup'; readonly i: number } | { readonly kind: 'point'; readonly i: number } | { readonly kind: 'summary' };
 
@@ -269,6 +271,9 @@ export function BackfillScreen() {
   }
 
   // ── BF-4: what happened to the basket the last point left short ──
+  // One tap answers and moves on: "เติมให้เต็ม (+gap)" or "ไม่เติม"; the rare other amount
+  // is typed after "เติมไม่เท่านี้" (owner 2026-11-23 topup-tap-only). The same page asks
+  // about a basket still open in the log (E04-S26 AT-3), continuous and per point.
   if (now.kind === 'topup') {
     const id = order[now.i];
     const carried = carriedBefore(now.i)!;
@@ -277,14 +282,24 @@ export function BackfillScreen() {
     const root = pairOf(carried.pointId);
     const missing = Math.max(0, root.stdNetG - carried.netG);
     const maxFill = Math.floor(root.stdNetG * 1.5) - carried.netG;
-    const fillOk = e.fill === false || (e.fill === true && e.fillG !== null && e.fillG > 0 && e.fillG <= maxFill);
+    const fillOk = e.fill === true && e.fillG !== null && e.fillG > 0 && e.fillG <= maxFill;
+    const answer = (p: Partial<Entry>) => {
+      patch(id, { fillOwn: false, ...p });
+      go(nextFrom(now));
+    };
+    const backOnly = prev ? (
+      <Button testID="cu-back" variant="ghost" size="large" onPress={() => go(prev)}>
+        {msg('cu.back')}
+      </Button>
+    ) : undefined;
     return screen(
       tapper ? nameOf(tapper) : saleTitle,
       <View testID="cu-topup" style={{ gap: t.space.sm }}>
         <PointHead name={pointName(id)} at={msg('cu.pointOf', { i: now.i + 1, n: order.length })} />
         <Label text={msg('cu.topup', { n: carried.basketNo, kg: kg(carried.netG) })} />
-        <Choice testID="cu-fill" on={e.fill === true} title={msg('cu.fill')} body={msg('cu.fillBody', { kg: kg(missing) })} onPress={() => patch(id, { fill: true, fillG: e.fillG ?? missing })} />
-        {e.fill === true ? (
+        <Choice testID="cu-fill" on={e.fill === true && !e.fillOwn} title={msg('cu.fill', { kg: kg(missing) })} body={msg('cu.fillBody', { n: carried.basketNo, kg: kg(carried.netG + missing) })} onPress={() => answer({ fill: true, fillG: missing })} />
+        <Choice testID="cu-nofill" on={e.fill === false} title={msg('cu.noFill')} body={msg('cu.noFillBody', { n: carried.basketNo, kg: kg(carried.netG), next: carried.basketNo + 1 })} onPress={() => answer({ fill: false })} />
+        {e.fillOwn ? (
           <QuantityField
             testID="cu-fill-kg"
             label={msg('cu.fillKg', { n: carried.basketNo })}
@@ -293,12 +308,23 @@ export function BackfillScreen() {
             unit={msg('common.kg')}
             decimals={3}
             maxDigits={2}
+            open={kgOpen}
+            onOpenChange={setKgOpen}
             validate={(g) => (g > 0 && g <= maxFill ? undefined : msg('cu.fillBad', { kg: kg(Math.floor(root.stdNetG * 1.5)) }))}
           />
-        ) : null}
-        <Choice testID="cu-nofill" on={e.fill === false} title={msg('cu.noFill')} body={msg('cu.noFillBody', { n: carried.basketNo, kg: kg(carried.netG), next: carried.basketNo + 1 })} onPress={() => patch(id, { fill: false })} />
+        ) : (
+          <TextLink
+            testID="cu-fill-own"
+            onPress={() => {
+              patch(id, { fill: true, fillOwn: true, fillG: null });
+              setKgOpen(true);
+            }}
+          >
+            {msg('cu.fillOwn')}
+          </TextLink>
+        )}
       </View>,
-      footer(fillOk),
+      e.fillOwn ? footer(fillOk) : backOnly,
     );
   }
 
