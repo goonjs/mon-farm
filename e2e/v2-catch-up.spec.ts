@@ -108,10 +108,17 @@ for (const width of [320, 360]) {
 
       // BF-4: basket 12 at จุด 3.
       await expect(id('cu-topup')).toContainText('เข่ง 12');
-      await id('cu-fill').click();
+      // Owner 2026-11-23 topup-tap-only: one tap answers and moves on; no next button.
+      await expect(id('cu-fill')).toContainText('เติมให้เต็ม (+20 กก.)');
+      await expect(id('cu-next')).toHaveCount(0);
       await fits(page, false);
       await shot('3-topup');
-      await id('cu-next').click();
+      // "เติมไม่เท่านี้" opens the kg field; it fits too. A tap on a choice still answers and moves on.
+      await id('cu-fill-own').click();
+      await kgField(page, 'cu-fill-kg', '20');
+      await expect(id('cu-next')).toBeEnabled();
+      await fits(page, false);
+      await id('cu-fill').click();
 
       await intField(page, 'cu-end', '21');
       await id('cu-short').click();
@@ -228,11 +235,10 @@ test('E04-S26 at 390 px: count 3 live (the last short), catch up one point, top 
 
   // AT-3: basket 3 is asked about first, nothing chosen.
   await expect(id('cu-topup')).toContainText('เข่ง 3 (35 กก.) เติมที่จุดนี้ไหม');
-  await expect(id('cu-next')).toBeDisabled();
-  await id('cu-fill').click();
+  await expect(id('cu-next')).toHaveCount(0);
   await fits(page, false);
   await shot('2-topup');
-  await id('cu-next').click();
+  await id('cu-fill').click();
 
   // AT-2: จุด 2 starts after the last basket.
   await expect(id('cu-start')).toContainText('4');
@@ -315,9 +321,17 @@ test('E04-S26 flow at 390 px: แดง counted 3 live (3 short 35), then backfi
   await id('cu-next').click();
 
   await expect(id('cu-topup')).toContainText('เข่ง 3 (35 กก.) เติมที่จุดนี้ไหม');
-  await id('cu-fill').click();
+  // Owner 2026-11-23 topup-tap-only: two choices, one tap moves on.
+  await expect(id('cu-fill')).toContainText('เติมให้เต็ม (+15 กก.)');
+  await expect(id('cu-next')).toHaveCount(0);
   await fits(page, false);
   await evidence(page, FLOW(3, 'topup'));
+  // The rare case: "เติมไม่เท่านี้" opens the kg pad; 15 typed by hand, then next.
+  await id('cu-fill-own').click();
+  await expect(id('cu-fill-kg-pad')).toBeVisible();
+  await kgField(page, 'cu-fill-kg', '15');
+  await fits(page, false);
+  await evidence(page, `${SHOTS}/s26-flow-3b-topup-own.png`);
   await id('cu-next').click();
 
   await expect(id('cu-point-name')).toContainText('จุด 2');
@@ -368,10 +382,10 @@ test('E04-S26 flow at 390 px, per point: จุด 1 counted 3 live (3 short 35)
 
   // Per point, basket 3 is asked about at its own point (review N4).
   await expect(id('cu-topup')).toContainText('เข่ง 3 (35 กก.) เติมที่จุดนี้ไหม');
-  await id('cu-fill').click();
+  await expect(id('cu-next')).toHaveCount(0);
   await fits(page, false);
   await evidence(page, FLOW(13, 'pp-topup'));
-  await id('cu-next').click();
+  await id('cu-fill').click();
 
   await expect(id('cu-point-name')).toContainText('จุด 1');
   await expect(id('cu-start')).toContainText('4');

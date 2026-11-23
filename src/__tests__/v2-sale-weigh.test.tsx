@@ -761,10 +761,10 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     await press('cu-next');
     // BF-4: what happened to basket 12 at จุด 3; nothing chosen, the gap offered.
     expect(screen.getByTestId('cu-topup')).toHaveTextContent(/เข่ง 12 \(30 กก\.\) เติมที่จุดนี้ไหม/);
-    expect(enabled('cu-next')).toBe(false);
+    // Owner 2026-11-23 topup-tap-only: one tap fills the 20 kg gap and moves on; no next button.
+    expect(screen.queryByTestId('cu-next')).toBeNull();
+    expect(screen.getByTestId('cu-fill')).toHaveTextContent(/\(\+20 กก\.\)/);
     await press('cu-fill');
-    expect(screen.getByTestId('cu-fill-kg')).toHaveTextContent(/20/);
-    await press('cu-next');
     expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
     await typeInt('cu-end', '21');
     expect(screen.getByTestId('cu-count')).toHaveTextContent(/= 9 เข่ง/);
@@ -922,7 +922,6 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     await typeKg('cu-short-kg', '30');
     await press('cu-next');
     await press('cu-nofill');
-    await press('cu-next');
     expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
     await typeInt('cu-end', '14');
     await press('cu-full');
@@ -1023,9 +1022,9 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     expect(screen.getByTestId('cu-point-name')).toHaveTextContent(/จุด 2/);
     expect(screen.getByTestId('cu-fill').props.accessibilityState).toMatchObject({ checked: false });
     expect(screen.getByTestId('cu-nofill').props.accessibilityState).toMatchObject({ checked: false });
-    expect(enabled('cu-next')).toBe(false);
+    // Owner 2026-11-23 topup-tap-only: one tap answers and moves on; no next button.
+    expect(screen.queryByTestId('cu-next')).toBeNull();
     await press('cu-fill');
-    await press('cu-next');
     expect(screen.getByTestId('cu-start')).toHaveTextContent(/3/);
     await typeInt('cu-end', '4');
     await press('cu-full');
@@ -1055,7 +1054,6 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     await press(`cu-order-${farm.a[1]}`);
     await press('cu-next');
     await press('cu-nofill');
-    await press('cu-next');
     await typeInt('cu-end', '3');
     await press('cu-full');
     await press('cu-next');
@@ -1064,6 +1062,118 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     const ev = await kinds();
     const root = ev.find((e) => e.kind === 'short')!;
     expect(ev.find((e) => e.kind === 'sys')).toMatchObject({ payload: { t: 'basket_closed', basketId: root.id } });
+  });
+
+  describe('the top-up page is tap only (owner 2026-11-23 13:33 topup-tap-only "ก · ก · 2 ตัวเลือก \'เติมให้เต็ม (+15 กก.)\' / \'ไม่เติม\' แตะแล้วไปต่อ · มีลิงก์เล็ก \'เติมไม่เท่านี้\' สำหรับกรณีหายากให้ใส่ กก. เอง (แนะนำ)")', () => {
+    /** The paper sample up to the top-up page at จุด 3: basket 12 left at 30 kg. */
+    const toTopup = async () => {
+      await started();
+      await inSale(<BackfillScreen />, { point: farm.a[0] });
+      await press(`cu-order-${farm.a[2]}`);
+      await press('cu-next');
+      await typeInt('cu-end', '12');
+      await press('cu-short');
+      await typeKg('cu-short-kg', '30');
+      await press('cu-next');
+      expect(screen.getByTestId('cu-topup')).toBeTruthy();
+    };
+
+    it('BF-4 continuous: two choices, "เติมให้เต็ม (+20 กก.)" and "ไม่เติม", no kg field and no next button', async () => {
+      await toTopup();
+      expect(screen.getByTestId('cu-fill')).toHaveTextContent(/^เติมให้เต็ม \(\+20 กก\.\)/);
+      expect(screen.getByTestId('cu-nofill')).toHaveTextContent(/^ไม่เติม/);
+      expect(screen.getByTestId('cu-fill').props.accessibilityState).toMatchObject({ checked: false });
+      expect(screen.queryByTestId('cu-fill-kg')).toBeNull();
+      expect(screen.queryByTestId('cu-next')).toBeNull();
+      expect(screen.getByTestId('cu-fill-own')).toHaveTextContent(/^เติมไม่เท่านี้$/);
+    });
+
+    it('BF-4 continuous: tapping "เติมให้เต็ม" moves straight on; basket 12 is filled with the 20 kg it lacked', async () => {
+      await toTopup();
+      await press('cu-fill');
+      expect(screen.queryByTestId('cu-topup')).toBeNull();
+      expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
+      await typeInt('cu-end', '13');
+      await press('cu-full');
+      await press('cu-next');
+      expect(screen.getByTestId('cu-summary')).toHaveTextContent(/เข่ง 12 ไม่เต็ม 30 \+ เติมที่จุด 3 อีก 20/);
+    });
+
+    it('BF-4 continuous: tapping "ไม่เติม" moves straight on; back shows what was chosen', async () => {
+      await toTopup();
+      await press('cu-nofill');
+      expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
+      await press('cu-back');
+      expect(screen.getByTestId('cu-nofill').props.accessibilityState).toMatchObject({ checked: true });
+      expect(screen.getByTestId('cu-fill').props.accessibilityState).toMatchObject({ checked: false });
+      // Tapping a choice again moves on again.
+      await press('cu-fill');
+      expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
+    });
+
+    it('"เติมไม่เท่านี้" opens the kg pad at once; up to 1.5× the standard; less than the gap stays short', async () => {
+      await toTopup();
+      await press('cu-fill-own');
+      expect(screen.getByTestId('cu-fill-kg-pad')).toBeTruthy();
+      expect(screen.getByTestId('cu-fill').props.accessibilityState).toMatchObject({ checked: false });
+      expect(enabled('cu-next')).toBe(false);
+      // 30 + 50 = 80 kg is past 1.5 × 50 = 75: refused, the pad stays open.
+      await padKeys('cu-fill-kg', '50');
+      await press('cu-fill-kg-done');
+      expect(screen.getByText(/ทั้งเข่งไม่เกิน 75 กก\./)).toBeTruthy();
+      expect(enabled('cu-next')).toBe(false);
+      await press('cu-fill-kg-pad-key-back');
+      await press('cu-fill-kg-pad-key-back');
+      await typeKg('cu-fill-kg', '10');
+      expect(enabled('cu-next')).toBe(true);
+      await press('cu-next');
+      // จุด 3 only topped basket 12 up: it ends at 12.
+      expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
+      await typeInt('cu-end', '12');
+      await press('cu-next');
+      // Topped up 10 of the 20 it lacked: basket 12 is still short, and stays open.
+      expect(screen.getByTestId('cu-summary')).toHaveTextContent(/เข่ง 12 ไม่เต็ม 30 \+ เติมที่จุด 3 อีก 10/);
+      expect(screen.getByTestId('cu-total')).toHaveTextContent(/590 กก\./);
+    });
+
+    it('E04-S26 AT-3 continuous: the open basket from the log reads "เติมให้เต็ม (+15 กก.)"; tapping it moves on', async () => {
+      useDial();
+      await started();
+      await readyAt(farm.a[0]);
+      const c = await counterAt(farm.a[0]);
+      await hold();
+      await press('tool-short');
+      await press('short-save');
+      c.unmount();
+      await inSale(<BackfillScreen />, { tapper: farm.red });
+      await press(`cu-order-${farm.a[1]}`);
+      await press('cu-next');
+      expect(screen.getByTestId('cu-fill')).toHaveTextContent(/^เติมให้เต็ม \(\+15 กก\.\)/);
+      expect(screen.queryByTestId('cu-next')).toBeNull();
+      await press('cu-fill');
+      expect(screen.getByTestId('cu-start')).toHaveTextContent(/3/);
+    });
+
+    it('E04-S26 AT-3 per point: the open basket is asked at its own point, tap only', async () => {
+      useDial();
+      await inSale(<StartSaleScreen />);
+      await press('start-numbering-per-point');
+      await press('start-next');
+      await readyAt(farm.a[0]);
+      const c = await counterAt(farm.a[0]);
+      await hold();
+      await press('tool-short');
+      await press('short-save');
+      c.unmount();
+      await inSale(<BackfillScreen />, { tapper: farm.red });
+      await press(`cu-order-${farm.a[0]}`);
+      await press('cu-next');
+      expect(screen.getByTestId('cu-topup')).toHaveTextContent(/เข่ง 2 \(35 กก\.\) เติมที่จุดนี้ไหม/);
+      expect(screen.getByTestId('cu-fill')).toHaveTextContent(/^เติมให้เต็ม \(\+15 กก\.\)/);
+      expect(screen.queryByTestId('cu-next')).toBeNull();
+      await press('cu-nofill');
+      expect(screen.getByTestId('cu-start')).toHaveTextContent(/3/);
+    });
   });
 
   it('E04-S26 AT-4: once clearing has started (a payment tick) the flow says why, with no way on; un-ticked, it opens again', async () => {
