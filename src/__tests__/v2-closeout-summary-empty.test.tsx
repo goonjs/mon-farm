@@ -110,6 +110,8 @@ describe('nothing recorded: the cards ask (CO-17, CO-26, A0)', () => {
     // E01-S26 PS26-7, owner rvs26-07 (2026-11-23 "ใช้ปุ่มแบบ I และหาทางไม่ให้เป็นกรอบซ้อนกรอบดีไหม"):
     // two equal style I tiles; not answered yet = no tick.
     for (const id of ['co-debt-none', 'co-debt-add-first', 'co-owed-none', 'co-owed-add-first']) expectChoiceTile(screen.getByTestId(id), 'mark');
+    // Both cards read "+ มี · จดหนี้", as PS26-7 and mockup p9-after (review N3).
+    for (const id of ['co-debt-add-first', 'co-owed-add-first']) expect(screen.getByTestId(id)).toHaveTextContent('+ มี · จดหนี้');
     // No box inside a box: the asking block has no frame of its own around the tiles.
     for (const id of ['co-debt-ask', 'co-owed-ask']) {
       const s = StyleSheet.flatten(screen.getByTestId(id).props.style) ?? {};

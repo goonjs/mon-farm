@@ -45,7 +45,7 @@ export const th = {
   // owed card + sheet (CO-26, A3, A24, A26)
   'co.owed.title': 'สวนค้างจ่ายคนกรีด',
   'co.owed.ask': 'สวนค้างจ่ายคนกรีดไหม',
-  'co.owed.addFirst': 'มี · จด',
+  'co.owed.addFirst': 'มี · จดหนี้',
   'co.owed.owes': 'ค้างจ่าย',
   'co.owed.hold': 'ไว้ก่อน',
   'co.owed.netted': 'หักกลบ',
