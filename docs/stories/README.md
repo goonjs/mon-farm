@@ -30,8 +30,8 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E01-S16: ลบเขตไม่ได้ถ้าคนกรีดของเขตยังมียอดหัก](e01-s16-zone-delete-guard.md) (Superseded โดย E06-S07)
 - [E01-S19: ค่าตั้งของเครื่องจำได้บน Android](e01-s19-device-settings-native.md) (Ready — ทำก่อน E05-S11)
 - [E01-S20: แป้นตัวเลขของแอปทุกช่องที่กรอกตัวเลข](e01-s20-app-number-pad.md) (Done 2026-11-17 — NP-9 แก้ใน #207; 5 หน้าคงปุ่ม − + ตามเจ้าของ e01-s24-ac, E01-S24 ถอน)
-- [E01-S27: เจ้าของทดสอบ sync บนฐานข้อมูลจริง ด้วยเบราว์เซอร์ 2–3 ตัว](e01-s27-owner-sync-test.md) (Draft)
-- [E01-S28: ย้าย log การเงินเข้า event log ที่ sync](e01-s28-finance-sync.md) (Draft — PR โค้ดเป็น critical)
+- [E01-S27: เจ้าของทดสอบ sync บนฐานข้อมูลจริง ด้วยเบราว์เซอร์ 2–3 ตัว](e01-s27-owner-sync-test.md) (Ready)
+- [E01-S28: ย้าย log การเงินเข้า event log ที่ sync](e01-s28-finance-sync.md) (Ready — PR โค้ดเป็น critical)
 
 ### E02 การเข้าใช้ & กลุ่มฟาร์ม — [epic](../epics/e02-access-farm-groups.md)
 

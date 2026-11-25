@@ -1,7 +1,7 @@
 # Story E01-S28: ย้าย log การเงินเข้า event log ที่ sync
 
-Status: Draft (waiting for the owner's AC agreement; S28-Q1 and S28-Q2 answered ก, owner answer, dashboard 24 พ.ย. 2569 17:44 เวลาไทย)
-เงื่อนไขไปขั้นถัดไป: เจ้าของตกลง AC → Ready · ใคร: เจ้าของ · รอ: เจ้าของ
+Status: Ready (owner agreed AC 2026-11-25 08:47 เวลาไทย, แดชบอร์ด e01-s27-s28-ac: "ก · ก · ตกลง AC ทั้งสองสตอรี่ เริ่มทำ S27 (คุณทดสอบ) และ S28 รอบแรกได้ (แนะนำ)")
+เงื่อนไขไปขั้นถัดไป: ทีมเขียนเทสต์ก่อนแล้วทำรอบแรก · ใคร: ทีม dev · รอ: ลีดเปิดทีม
 
 ## Context
 
@@ -95,13 +95,11 @@ story นี้ย้ายข้อมูลเงินเข้า `EventStor
   (ตรงกับ AC1 ที่ว่า payload ไม่เปลี่ยน); `alsoBasedOn` ระดับ envelope ไม่ใช้กับ event เงิน; round-trip test ตรึงข้อนี้
 - `toEnvelope`/`fromEnvelope` (`src/sync/firestore-remote.ts`) ส่ง `targetId`/`baseEventId` ของ event เงินตรง ๆ; round-trip ต้องเท่ากันแบบ canonical JSON (test ทุกชนิด `t`)
 - `listSales()` และ projection การขายต้องไม่เห็น scope เงินเป็นการขาย (แบบเดียวกับ `MASTER_SCOPE`)
-- **ทางเลือกทางเทคนิค (ข้อเสนอของผู้รีวิว 17, ให้ผู้รีวิวรอบนี้ตัดสิน ไม่ใช่คำถามเจ้าของ):** เขียน event เงินภายใต้ `saleId = MASTER_SCOPE` แทน scope ใหม่
-  รุ่นที่ deploy อยู่วันนี้จะมองข้ามทั้งหมด เพราะ `listSales` ข้าม `MASTER_SCOPE` อยู่แล้ว (`store.web.ts:231`, `memory-store.ts:65`, `store.native.ts:246`)
-  และ `projectMaster` เก็บเฉพาะ `kind === 'master'` (`src/core/master.ts:155`) — ผล AC12 (ข) จึงไม่เกิด
-  ราคา: log ของ `MASTER_SCOPE` โตตามข้อมูลเงิน ทุกการเขียนข้อมูลฟาร์มโหลด log นั้นทั้งก้อนเพื่อหา `seq` (`src/store/master-store.ts:373-379`)
-  และ `projectMaster` ต้องกรองผ่าน event เงินทุกครั้ง ถ้าเลือกทางนี้: แก้ AC1, AC12 (ข) และการแบ่ง 2 รอบ แล้วถามเจ้าของใหม่ (เจ้าของตอบ S28-Q2 ไว้บนทาง scope เงินแยก)
-  **เงื่อนไขบังคับถ้าเลือกทางนี้:** event เงินทุกตัวใน `MASTER_SCOPE` ต้องมี `seq` เป็นตัวเลข ไม่งั้นรุ่นวันนี้คำนวณ `Math.max(max, undefined)` = `NaN`
-  ใน `MasterStore.append` (`master-store.ts:373-379`) แล้วการเขียนข้อมูลฟาร์มบนแท็บค้างพังทั้งหมด (ผู้รีวิว 18 ข้อสังเกต 3: เลือกทางนี้เมื่อขั้นโหลดหน้าใหม่ของ S27 รอบสองไม่น่าเชื่อถือ)
+- ~~ทางเลือกเขียน event เงินภายใต้ `saleId = MASTER_SCOPE`~~ (ข้อเสนอของผู้รีวิว 17) **ไม่ใช้: เจ้าของตอบ S28-Q2 ก (scope เงินแยก + 2 รอบ) และตกลง AC 25 พ.ย.** — ใช้ scope เงินแยกตามข้างบนเท่านั้น
+- **เลขขั้นต่ำของกลุ่มอยู่ที่ไหน (ผู้รีวิว 20 N1):** เป็น event ใน log ของกลุ่มเอง ไม่ใช่เอกสารใหม่ — `kind: 'app_min'`, `saleId` = scope เงิน, `payload: { minApp: <เลขรุ่น> }`
+  (ไม่เพิ่มฟิลด์ envelope เพราะ `validEvent` ใช้ `keys().hasOnly(...)` · `firestore.rules:20-22` → AC10 ยังเป็นจริง, payload ของ event เงินไม่เปลี่ยนตาม AC1) ·
+  เลขรุ่นของแอปเป็นค่าคงที่ในโค้ด · ด่านใช้ค่า `minApp` สูงสุดที่มีใน store; ไม่มี event นี้ = ไม่กั้น (รอบแรกจึงไม่ต้องอ่านอะไรเพิ่ม) ·
+  รอบสองเขียน event นี้ครั้งเดียว ก่อน event เงินตัวแรก · projection เงินข้าม `kind: 'app_min'`
 - `FinanceStore` port คงอยู่เป็นตัวห่อบาง ๆ บน `EventStore` (แบบ `MasterStore`) เพื่อให้หน้าเงินไม่ต้องเปลี่ยน; `writeFinance` ไม่นับ `deviceSeq` เองอีก (store จัดให้)
 - IndexedDB / SQLite: ใช้ตาราง `events` เดิม — ถ้าต้องขึ้น version DB ให้เขียนใน Dev notes ก่อนทำ
 
@@ -159,6 +157,8 @@ owner answer, dashboard 24 พ.ย. 2569 17:44 เวลาไทย (`answers/e
   เพิ่มทางเลือก `MASTER_SCOPE` ในส่วน schema (ดู `src/core/master.ts:155`, `src/store/master-store.ts:373-379`)
 - 2026-11-24 (Dev 18): ใส่คำตอบ S28-Q1 ก / S28-Q2 ก จากแดชบอร์ด · การแบ่ง AC ลงรอบแรก/รอบสองเป็นการอ่านของทีมจากคำตอบ Q2
   ("รอบแรก … ยังไม่ส่งเงิน") จึงเลื่อนการเขียนเงินลง `EventStore` และการย้ายข้อมูลเดิมไปรอบสองด้วย ให้ผู้รีวิวตรวจ
+- 2026-11-25 (Dev 19): เจ้าของตกลง AC (แดชบอร์ด `answers/e01-s27-s28-ac`, 25 พ.ย. 08:47) → Ready · ทางเลือก `MASTER_SCOPE` ไม่ใช้ (เจ้าของตอบ S28-Q2 ก)
+  · ผู้รีวิว 20 N1: ระบุที่เก็บเลขขั้นต่ำเป็น event `kind: 'app_min'` ใน scope เงิน (การอ่านของทีม ให้ผู้รีวิวตรวจ) ไม่แก้ rules ไม่แก้ payload เงิน
 
 ## Code review
 
