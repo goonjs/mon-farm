@@ -108,10 +108,17 @@ for (const width of [320, 360]) {
 
       // BF-4: basket 12 at จุด 3.
       await expect(id('cu-topup')).toContainText('เข่ง 12');
-      await id('cu-fill').click();
+      // Owner 2026-11-23 topup-tap-only: one tap answers and moves on; no next button.
+      await expect(id('cu-fill')).toContainText('เติมให้เต็ม (+20 กก.)');
+      await expect(id('cu-next')).toHaveCount(0);
       await fits(page, false);
       await shot('3-topup');
-      await id('cu-next').click();
+      // "เติมไม่เท่านี้" opens the kg field; it fits too. A tap on a choice still answers and moves on.
+      await id('cu-fill-own').click();
+      await kgField(page, 'cu-fill-kg', '20');
+      await expect(id('cu-next')).toBeEnabled();
+      await fits(page, false);
+      await id('cu-fill').click();
 
       await intField(page, 'cu-end', '21');
       await id('cu-short').click();
@@ -181,3 +188,224 @@ for (const width of [320, 360]) {
     expect(errors).toEqual([]);
   });
 }
+
+async function hold(page: Page) {
+  const box = (await on(page)('hold').boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(1_000);
+  await page.mouse.up();
+}
+
+// E04-S26: catching up at any time, one point at a time, after counting live — numbered on, never inserted.
+test('E04-S26 at 390 px: count 3 live (the last short), catch up one point, top it up, count on, catch up another (offline)', async ({ page, context }) => {
+  test.setTimeout(60_000);
+  const id = on(page);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seedMaster(page, FARM);
+  await page.evaluate(() => localStorage.setItem('mon-farm:hold-ms', '500'));
+  await page.goto('/v2');
+  await context.setOffline(true);
+  const shot = (name: string) => evidence(page, `${SHOTS}/s26-390-${name}.png`);
+
+  // แดง counts จุด 1 live: 1–2 full, 3 short (35 kg, still open).
+  await id('home-sale-start').click();
+  await id('start-next').click();
+  await id('pick-farm-fa').click();
+  await id('pick-point-a1').click();
+  await id('start-weigh').click();
+  await hold(page);
+  await hold(page);
+  await id('tool-short').click();
+  await id('short-save').click();
+  await expect(id('open-card')).toContainText('เข่ง 3');
+
+  // AT-1: from the counter's ⋯ menu the catch-up opens — no "already counted live" stop.
+  await id('counter-menu').click();
+  await id('menu-backfill').click();
+  await expect(id('cu-blocked')).toHaveCount(0);
+  await expect(id('cu-order')).toBeVisible();
+  // One point only: จุด 2.
+  await id('cu-order-a2').click();
+  await fits(page);
+  await shot('1-order');
+  await id('cu-next').click();
+
+  // AT-3: basket 3 is asked about first, nothing chosen.
+  await expect(id('cu-topup')).toContainText('เข่ง 3 (35 กก.) เติมที่จุดนี้ไหม');
+  await expect(id('cu-next')).toHaveCount(0);
+  await fits(page, false);
+  await shot('2-topup');
+  await id('cu-fill').click();
+
+  // AT-2: จุด 2 starts after the last basket.
+  await expect(id('cu-start')).toContainText('4');
+  await intField(page, 'cu-end', '5');
+  await id('cu-full').click();
+  await id('cu-next').click();
+  await expect(id('cu-summary')).toContainText('เข่ง 3');
+  await expect(id('cu-summary')).toContainText('เข่ง 4–5');
+  // Σ: the 15 kg top-up and two full baskets — the 35 kg was counted live.
+  await expect(id('cu-total')).toContainText('115');
+  await fits(page);
+  await shot('3-summary');
+  await id('cu-save').click();
+
+  // Counting on at จุด 2: next is 6.
+  await expect(id('counter')).toBeVisible();
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 6$/);
+  await hold(page);
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 7$/);
+
+  // Again, one point: จุด 3 runs on from 7.
+  await id('counter-menu').click();
+  await id('menu-backfill').click();
+  await id('cu-order-a3').click();
+  await id('cu-next').click();
+  await expect(id('cu-start')).toContainText('7');
+  await intField(page, 'cu-end', '8');
+  await id('cu-full').click();
+  await id('cu-next').click();
+  await expect(id('cu-total')).toContainText('100');
+  await id('cu-save').click();
+  await expect(id('counter')).toBeVisible();
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 9$/);
+  await page.reload();
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 9$/);
+  await shot('4-count-on');
+  expect(errors).toEqual([]);
+});
+
+// E04-S26, for the owner (lead chat 2026-11-21): every screen of a backfill after counting live, in order.
+const FLOW = (n: number, name: string) => `${SHOTS}/s26-flow-${n}-${name}.png`;
+
+/** แดง counts จุด 1 live: 1–2 full, 3 short at 35 kg (still open). */
+async function countThreeLive(page: Page, perPoint: boolean) {
+  const id = on(page);
+  await id('home-sale-start').click();
+  if (perPoint) await id('start-numbering-per-point').click();
+  await id('start-next').click();
+  await id('pick-farm-fa').click();
+  await id('pick-point-a1').click();
+  await id('start-weigh').click();
+  await hold(page);
+  await hold(page);
+  await id('tool-short').click();
+  await id('short-save').click();
+  await expect(id('open-card')).toContainText('เข่ง 3');
+}
+
+test('E04-S26 flow at 390 px: แดง counted 3 live (3 short 35), then backfills จุด 2 only — every screen (offline)', async ({ page, context }) => {
+  test.setTimeout(60_000);
+  const id = on(page);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seedMaster(page, FARM);
+  await page.evaluate(() => localStorage.setItem('mon-farm:hold-ms', '500'));
+  await page.goto('/v2');
+  await context.setOffline(true);
+  await countThreeLive(page, false);
+
+  await id('counter-menu').click();
+  await expect(id('menu-backfill')).toBeVisible();
+  await evidence(page, FLOW(1, 'menu'));
+  await id('menu-backfill').click();
+
+  await expect(id('cu-order')).toBeVisible();
+  await id('cu-order-a2').click();
+  await fits(page);
+  await evidence(page, FLOW(2, 'order'));
+  await id('cu-next').click();
+
+  await expect(id('cu-topup')).toContainText('เข่ง 3 (35 กก.) เติมที่จุดนี้ไหม');
+  // Owner 2026-11-23 topup-tap-only: two choices, one tap moves on.
+  await expect(id('cu-fill')).toContainText('เติมให้เต็ม (+15 กก.)');
+  await expect(id('cu-next')).toHaveCount(0);
+  await fits(page, false);
+  await evidence(page, FLOW(3, 'topup'));
+  // The rare case: "เติมไม่เท่านี้" opens the kg pad; 15 typed by hand, then next.
+  await id('cu-fill-own').click();
+  await expect(id('cu-fill-kg-pad')).toBeVisible();
+  await kgField(page, 'cu-fill-kg', '15');
+  await fits(page, false);
+  await evidence(page, `${SHOTS}/s26-flow-3b-topup-own.png`);
+  await id('cu-next').click();
+
+  await expect(id('cu-point-name')).toContainText('จุด 2');
+  await expect(id('cu-start')).toContainText('4');
+  await fits(page, false);
+  await evidence(page, FLOW(4, 'point-end'));
+  await intField(page, 'cu-end', '5');
+  await expect(id('cu-full')).toBeVisible();
+  await expect(id('cu-short')).toBeVisible();
+  await fits(page, false);
+  await evidence(page, FLOW(5, 'full-short'));
+  await id('cu-full').click();
+  await id('cu-next').click();
+
+  await expect(id('cu-row-0')).toContainText('เข่ง 3 (นับเองไว้ 35) + เติมที่จุด 2 อีก 15');
+  await expect(id('cu-total')).toContainText('115');
+  await fits(page);
+  await evidence(page, FLOW(6, 'summary'));
+  await id('cu-save').click();
+
+  await expect(id('counter')).toBeVisible();
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 6$/);
+  await evidence(page, FLOW(7, 'counter'));
+  expect(errors).toEqual([]);
+});
+
+test('E04-S26 flow at 390 px, per point: จุด 1 counted 3 live (3 short 35), then backfilled at จุด 1 — every screen (offline)', async ({ page, context }) => {
+  test.setTimeout(60_000);
+  const id = on(page);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seedMaster(page, FARM);
+  await page.evaluate(() => localStorage.setItem('mon-farm:hold-ms', '500'));
+  await page.goto('/v2');
+  await context.setOffline(true);
+  await countThreeLive(page, true);
+
+  await id('counter-menu').click();
+  await expect(id('menu-backfill')).toBeVisible();
+  await evidence(page, FLOW(11, 'pp-menu'));
+  await id('menu-backfill').click();
+  await expect(id('cu-order')).toBeVisible();
+  await id('cu-order-a1').click();
+  await fits(page);
+  await evidence(page, FLOW(12, 'pp-order'));
+  await id('cu-next').click();
+
+  // Per point, basket 3 is asked about at its own point (review N4).
+  await expect(id('cu-topup')).toContainText('เข่ง 3 (35 กก.) เติมที่จุดนี้ไหม');
+  await expect(id('cu-next')).toHaveCount(0);
+  await fits(page, false);
+  await evidence(page, FLOW(13, 'pp-topup'));
+  await id('cu-fill').click();
+
+  await expect(id('cu-point-name')).toContainText('จุด 1');
+  await expect(id('cu-start')).toContainText('4');
+  await fits(page, false);
+  await evidence(page, FLOW(14, 'pp-point-end'));
+  await intField(page, 'cu-end', '5');
+  await expect(id('cu-full')).toBeVisible();
+  await fits(page, false);
+  await evidence(page, FLOW(15, 'pp-full-short'));
+  await id('cu-full').click();
+  await id('cu-next').click();
+
+  await expect(id('cu-row-0')).toContainText('เข่ง 3 (นับเองไว้ 35) + เติมที่จุด 1 อีก 15');
+  await expect(id('cu-total')).toContainText('115');
+  await fits(page);
+  await evidence(page, FLOW(16, 'pp-summary'));
+  await id('cu-save').click();
+
+  await expect(id('counter')).toBeVisible();
+  await expect(id('current-no')).toHaveText(/เข่งถัดไป 6$/);
+  await evidence(page, FLOW(17, 'pp-counter'));
+  expect(errors).toEqual([]);
+});
