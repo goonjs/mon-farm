@@ -16,9 +16,8 @@ import type { EventId } from '../../../core/types';
 import { useT } from '../../../i18n';
 import type { useSyncStatus } from '../../../sync/use-sync-status';
 import { useTheme } from '../../../theme';
-import { AppText, CTA, PinnedActions, Plus, ScreenHeader, TextField } from '../../../ui';
+import { AppText, ChoiceTile, CTA, PinnedActions, Plus, ScreenHeader, TextField, TileGrid } from '../../../ui';
 import { setFertOption } from '../../money/fert-options';
-import { ChoiceChip, ChoiceRow } from '../../money/pieces';
 import { ItemRow, RememberTick } from '../../money/order-detail/parts';
 
 export function WherePage({
@@ -77,17 +76,18 @@ export function WherePage({
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space.xl }}>
         <AppText variant="label">{msg('fz.zones')}</AppText>
         {allZones.length === 0 ? <AppText variant="bodySm">{msg('fz.zonesNone')}</AppText> : null}
-        <ChoiceRow>
+        {/* Several at once: F tick tiles (E01-S25 CT-7). */}
+        <TileGrid columns={2}>
           {allZones.map((z) => (
-            <ChoiceChip key={z.zoneId} testID={`fz-zone-${z.zoneId}`} label={z.zoneName} on={picked.some((p) => p.zoneId === z.zoneId)} onPress={() => toggleZone(z)} />
+            <ChoiceTile key={z.zoneId} kind="check" multi testID={`fz-zone-${z.zoneId}`} label={z.zoneName} selected={picked.some((p) => p.zoneId === z.zoneId)} onPress={() => toggleZone(z)} />
           ))}
-        </ChoiceRow>
+        </TileGrid>
         <AppText variant="label">{msg('fz.reasons')}</AppText>
-        <ChoiceRow>
+        <TileGrid columns={2}>
           {rows.map((r) => (
-            <ChoiceChip key={r.id} testID={`fz-reason-${r.id}`} label={r.name} on={reasons.includes(r.id)} onPress={() => toggleReason(r.id)} />
+            <ChoiceTile key={r.id} kind="check" multi testID={`fz-reason-${r.id}`} label={r.name} selected={reasons.includes(r.id)} onPress={() => toggleReason(r.id)} />
           ))}
-        </ChoiceRow>
+        </TileGrid>
         {adding ? (
           <View style={{ gap: t.space.sm }}>
             <TextField testID="fz-reason-text" label={msg('fz.reasonName')} value={name} onChangeText={setName} />

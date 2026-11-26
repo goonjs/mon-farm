@@ -23,6 +23,13 @@ describe('Button / CTA (v1.1.0 pill buttons)', () => {
     expect(onPress).toHaveBeenCalled();
   });
 
+  it('shape="rect": a rounded rectangle (radius.md), not a pill, shut or open (rule 11)', () => {
+    wrap(<Button testID="r" shape="rect">เพิ่ม</Button>);
+    expect(flat(screen.getByTestId('r').props.style).borderRadius).toBe(tokens.radius.md);
+    wrap(<Button testID="rd" shape="rect" disabled>เพิ่ม</Button>);
+    expect(flat(screen.getByTestId('rd').props.style).borderRadius).toBe(tokens.radius.md);
+  });
+
   it('ghost: raised fill, navy outline and label', () => {
     wrap(<Button testID="b">ตั้งค่า</Button>);
     expect(flat(screen.getByTestId('b').props.style)).toMatchObject({

@@ -62,6 +62,8 @@ test('empty sale, a filter that finds nothing, and numbers that repeat or skip',
   await shot(page, '8g-history-bad-numbers');
 
   await id('hist-tapper-nat').click();
+  // E01-S26 PS26-9: the basket kind is an E box that opens rows.
+  await id('hist-kind').click();
   await id('hist-kind-full').click();
   await expect(id('hist-filter-empty')).toBeVisible();
   await expect(id('hist-numbers-bad')).toBeVisible();

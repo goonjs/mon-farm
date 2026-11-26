@@ -45,7 +45,10 @@ export function AccountRow({ co }: { co: Closeout }) {
 
   return (
     <>
-      <View testID="cop-account" style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+      {/* E01-S26 PS26-10: the whole account row is the tap target, with › (no "เลือก ›" pill). */}
+      <View testID="cop-account">
+        {co.closed ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
         <BankIcon color={t.color.inkSoft} size={14} />
         <View style={{ flex: 1 }}>
           {account ? (
@@ -59,11 +62,30 @@ export function AccountRow({ co }: { co: Closeout }) {
             </AppText>
           )}
         </View>
-        {co.closed ? null : (
-          <Pressable testID="cop-account-change" accessibilityRole="button" accessibilityLabel={msg('v2s.intoAccount')} onPress={() => setOpen(true)} style={{ minHeight: t.target.min, justifyContent: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.xxs, backgroundColor: t.color.actionSunk, borderRadius: t.radius.pill, paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
-              <AppText style={{ fontWeight: t.font.weight.bold, color: t.color.action }}>{msg(choice ? 'v2s.change' : 'v2s.choose')}</AppText>
-              <ChevronRight color={t.color.action} size={7} />
+          </View>
+        ) : (
+          <Pressable
+            testID="cop-account-change"
+            accessibilityRole="button"
+            accessibilityLabel={`${msg('v2s.intoAccount')} · ${msg(choice ? 'v2s.change' : 'v2s.choose')}`}
+            onPress={() => setOpen(true)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.min }}
+          >
+        <BankIcon color={t.color.inkSoft} size={14} />
+        <View style={{ flex: 1 }}>
+          {account ? (
+            <>
+              <AppText variant="bodySm" style={{ ...small, color: t.color.ink, fontWeight: t.font.weight.bold }}>{`${bankName(account)} ••${account.accountNo.slice(-4)}`}</AppText>
+              {accounts.defaultId === account.id ? <AppText variant="bodySm" style={small}>{msg('v2s.defaultAccount')}</AppText> : null}
+            </>
+          ) : (
+            <AppText variant="bodySm" style={{ ...small, ...(choice ? { color: t.color.ink, fontWeight: t.font.weight.bold } : {}) }}>
+              {choice?.kind === 'cash' ? msg('v2s.cashFromBuyer') : choice?.kind === 'note' ? choice.note : msg('v2s.noneChosen')}
+            </AppText>
+          )}
+        </View>
+            <View testID="cop-account-chevron" aria-hidden>
+              <ChevronRight color={t.color.inkFaint} />
             </View>
           </Pressable>
         )}

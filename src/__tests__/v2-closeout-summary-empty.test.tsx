@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { ReactElement, ReactNode } from 'react';
 
@@ -7,6 +8,8 @@ import type { MasterStore } from '../store/master-store';
 import { SaleProvider } from '../store/SaleProvider';
 import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
+import { tokens } from '../../design/tokens';
+import { expectChoiceTile } from '../test/choice-shape';
 import { wrap } from '../test/render';
 import { clearDraft } from '../v2/sale/closeout/use-closeout';
 import { CloseoutSummaryScreen } from '../v2/sale/closeout/summary-screen';
@@ -104,7 +107,24 @@ describe('nothing recorded: the cards ask (CO-17, CO-26, A0)', () => {
 
   it('ไม่มี answers a card; the button then names the other one', async () => {
     await inSale(<CloseoutSummaryScreen />);
+    // E01-S26 PS26-7, owner rvs26-07 (2026-11-23 "ใช้ปุ่มแบบ I และหาทางไม่ให้เป็นกรอบซ้อนกรอบดีไหม"):
+    // two equal style I tiles; not answered yet = no tick.
+    for (const id of ['co-debt-none', 'co-debt-add-first', 'co-owed-none', 'co-owed-add-first']) expectChoiceTile(screen.getByTestId(id), 'mark');
+    // Both cards read "+ มี · จดหนี้", as PS26-7 and mockup p9-after (review N3).
+    for (const id of ['co-debt-add-first', 'co-owed-add-first']) expect(screen.getByTestId(id)).toHaveTextContent('+ มี · จดหนี้');
+    // No box inside a box: the asking block has no frame of its own around the tiles.
+    for (const id of ['co-debt-ask', 'co-owed-ask']) {
+      const s = StyleSheet.flatten(screen.getByTestId(id).props.style) ?? {};
+      expect(s.borderWidth ?? 0).toBe(0);
+      expect(s.backgroundColor ?? 'transparent').toBe('transparent');
+    }
+    expect(screen.getByTestId('co-debt-none').props.accessibilityState).toMatchObject({ selected: false });
     await press('co-debt-none');
+    expect(screen.getByTestId('co-debt-none').props.accessibilityState).toMatchObject({ selected: true });
+    // "ไม่มี" picked reads as settled: the accept (green) tone of style I.
+    expect(StyleSheet.flatten(screen.getByTestId('co-debt-none').props.style)).toMatchObject({ borderColor: tokens.color.light.accept });
+    // "+ มี · จดหนี้" opens the debt form; it is never a ticked answer itself.
+    expect(screen.getByTestId('co-debt-add-first').props.accessibilityState).toMatchObject({ selected: false });
     expect(text('co-confirm')).toHaveTextContent('↑ ตอบการ์ดสวนค้างจ่ายก่อน');
     await press('co-owed-none');
     expect(text('co-confirm')).not.toHaveTextContent(/ตอบ/);

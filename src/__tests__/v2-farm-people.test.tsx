@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { useState, type ReactNode } from 'react';
 
@@ -5,7 +6,9 @@ import { BuyersScreen } from '../v2/farm/buyers-screen';
 import { FarmHubScreen } from '../v2/farm/farm-hub';
 import { PeopleScreen, PersonScreen } from '../v2/farm/people-screens';
 import type { MasterStore } from '../store/master-store';
+import { expectChoiceTile, expectRadioRow } from '../test/choice-shape';
 import { wrap } from '../test/render';
+import { tokens } from '../../design/tokens';
 
 jest.mock('../store/people', () => {
   const { MemoryPeopleStore } = jest.requireActual('../store/people-memory');
@@ -125,9 +128,16 @@ describe('คน — list, filter, deleted (farm mockup 4)', () => {
     expect(within(list).getByText('ผู้จัดการสวน')).toBeTruthy();
     // ผู้จ่าย is not a person role on screen any more (owner 2026-10-10); the data keeps it.
     expect(within(list).queryByText('ผู้จ่าย')).toBeNull();
+    // E01-S26 PS26-4: one E box "กลุ่มคน: ทุกคน ▾"; the groups open as rows in a sheet.
+    expect(screen.queryByTestId('filter-tapper')).toBeNull();
+    expect(screen.getByTestId('people-filter')).toHaveTextContent(/กลุ่มคน.*ทุกคน/);
+    fireEvent.press(screen.getByTestId('people-filter'));
     expect(screen.queryByTestId('filter-payer')).toBeNull();
-
+    expectRadioRow(screen.getByTestId('filter-tapper'));
     fireEvent.press(screen.getByTestId('filter-tapper'));
+    // Tapping a row picks it and closes the sheet.
+    expect(screen.queryByTestId('people-filter-sheet')).toBeNull();
+    expect(screen.getByTestId('people-filter')).toHaveTextContent(/คนกรีดยาง/);
     expect(screen.queryByText('อาจารย์สมหวัง')).toBeNull();
     expect(screen.getByText('แดง')).toBeTruthy();
 
@@ -136,6 +146,7 @@ describe('คน — list, filter, deleted (farm mockup 4)', () => {
     // Adding from a role filter starts the new person on that role.
     fireEvent.press(screen.getByTestId('add-person'));
     expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/person/new?role=tapper');
+    fireEvent.press(screen.getByTestId('people-filter'));
     fireEvent.press(screen.getByTestId('filter-all'));
     fireEvent.press(screen.getByTestId('add-person'));
     expect(mockRouter.push).toHaveBeenLastCalledWith('/v2/person/new');
@@ -187,6 +198,7 @@ describe('คน — list, filter, deleted (farm mockup 4)', () => {
     await people().addBuyer('คนรับซื้อยาง ก');
     wrap(<PeopleScreen />);
     await flush();
+    fireEvent.press(screen.getByTestId('people-filter'));
     fireEvent.press(screen.getByTestId('filter-buyers'));
     expect(screen.getByText('คนรับซื้อยาง ก')).toBeTruthy();
   });
@@ -236,16 +248,69 @@ describe('คน — form (farm mockup 5)', () => {
     expect(screen.getByTestId('person-roles-error')).toBeTruthy();
 
     fireEvent.changeText(screen.getByTestId('person-name'), 'แดง');
+    // E01-S26 PS26-5: roles are F tick tiles, several at once; an added role is the same tile.
+    expectChoiceTile(screen.getByTestId('role-tapper'), 'checkbox');
     fireEvent.press(screen.getByTestId('role-tapper'));
+    fireEvent.press(screen.getByTestId('role-assistant'));
+    expect(screen.getByTestId('role-tapper').props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByTestId('role-assistant').props.accessibilityState).toMatchObject({ checked: true });
+    fireEvent.press(screen.getByTestId('role-assistant'));
+    expect(screen.getByTestId('role-assistant').props.accessibilityState).toMatchObject({ checked: false });
+    // Owner rvs26-06 (2026-11-23): the field opens from the "เพิ่มบทบาทอื่น" link first.
+    fireEvent.press(screen.getByTestId('person-other-role-open'));
     fireEvent.changeText(screen.getByTestId('person-other-role'), 'ลูกคนงาน');
     fireEvent.press(screen.getByTestId('person-add-other-role'));
-    expect(screen.getByTestId('other-role-ลูกคนงาน')).toBeTruthy();
+    expectChoiceTile(screen.getByTestId('other-role-ลูกคนงาน'), 'checkbox');
     await act(async () => fireEvent.press(screen.getByTestId('person-save')));
     await flush();
 
     const [p] = await people().list();
     expect(p).toMatchObject({ name: 'แดง', roles: ['tapper'], otherRoles: ['ลูกคนงาน'] });
     expect(mockRouter.back).toHaveBeenCalled();
+  });
+
+  it('"เพิ่มบทบาทอื่น" is a centred text link on its own line; tap to type, ยกเลิก closes it (E01-S26, owner rvs26-06 2026-11-23)', async () => {
+    wrap(<PersonScreen />);
+    await flush();
+    // Closed: only the link, no field and no add button.
+    const open = screen.getByTestId('person-other-role-open');
+    expect(open.props.accessibilityRole).toBe('button');
+    expect(open).toHaveTextContent(/เพิ่มบทบาทอื่น/);
+    const line = screen.getByTestId('person-other-role-line');
+    expect(StyleSheet.flatten(line.props.style)).toMatchObject({ alignSelf: 'stretch', alignItems: 'center' });
+    expect(screen.queryByTestId('person-other-role')).toBeNull();
+    expect(screen.queryByTestId('person-add-other-role')).toBeNull();
+    // Open: the field, เพิ่ม, and ยกเลิก; the link is gone.
+    fireEvent.press(open);
+    expect(screen.getByTestId('person-other-role')).toBeTruthy();
+    expect(screen.getByTestId('person-add-other-role')).toBeTruthy();
+    expect(screen.queryByTestId('person-other-role-open')).toBeNull();
+    fireEvent.changeText(screen.getByTestId('person-other-role'), 'คนขับรถ');
+    // ยกเลิก: closes and drops what was typed; nothing is added.
+    fireEvent.press(screen.getByTestId('person-other-role-cancel'));
+    expect(screen.queryByTestId('person-other-role')).toBeNull();
+    expect(screen.queryByTestId('other-role-คนขับรถ')).toBeNull();
+    fireEvent.press(screen.getByTestId('person-other-role-open'));
+    expect(screen.getByTestId('person-other-role').props.value).toBe('');
+    // เพิ่ม: the role becomes a ticked tile and the field closes again.
+    fireEvent.changeText(screen.getByTestId('person-other-role'), 'คนขับรถ');
+    fireEvent.press(screen.getByTestId('person-add-other-role'));
+    expect(screen.getByTestId('other-role-คนขับรถ').props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.queryByTestId('person-other-role')).toBeNull();
+    expect(screen.getByTestId('person-other-role-open')).toBeTruthy();
+  });
+
+  it('"+ เพิ่ม" by the other-role field is a rounded rectangle, never a pill (E01-S26 review B1, rule 11, mockup p6-after-open)', async () => {
+    wrap(<PersonScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('person-other-role-open'));
+    const radius = () => StyleSheet.flatten(screen.getByTestId('person-add-other-role').props.style).borderRadius;
+    // Before typing (shut) and after typing (open), the same shape.
+    expect(radius()).not.toBe(tokens.radius.pill);
+    expect(radius()).toBe(tokens.radius.md);
+    fireEvent.changeText(screen.getByTestId('person-other-role'), 'คนขับรถ');
+    expect(radius()).not.toBe(tokens.radius.pill);
+    expect(radius()).toBe(tokens.radius.md);
   });
 
   it('offers no ผู้จ่าย role, and keeps it on save for someone who already has it', async () => {

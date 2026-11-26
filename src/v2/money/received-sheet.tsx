@@ -110,7 +110,7 @@ export function ReceivedAmountSheet({
       accessibilityRole="button"
       accessibilityState={{ selected: on }}
       onPress={onPress}
-      style={{ flex: 1, minHeight: t.target.min, justifyContent: 'center', alignItems: 'center', paddingHorizontal: t.space.sm, borderRadius: t.radius.pill, backgroundColor: on ? t.color.action : 'transparent' }}
+      style={{ flex: 1, minHeight: t.target.min, justifyContent: 'center', alignItems: 'center', paddingHorizontal: t.space.sm, borderRadius: t.radius.sm, backgroundColor: on ? t.color.action : 'transparent' }}
     >
       <AppText style={{ textAlign: 'center', fontWeight: t.font.weight.bold, color: on ? t.color.inkInverse : t.color.inkSoft }}>{label}</AppText>
     </Pressable>
@@ -124,7 +124,7 @@ export function ReceivedAmountSheet({
             : msg(kind === 'transfer' ? 'rp.amt.subTransfer' : 'rp.amt.subCash', { name: name ?? '', date: dateText, amount: baht(expectedSatang) })}
         </AppText>
         {name !== null ? (
-          <View style={{ flexDirection: 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.pill, padding: t.space.xxs, gap: t.space.xxs }}>
+          <View style={{ flexDirection: 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.md, padding: t.space.xxs, gap: t.space.xxs }}>
             {seg(!withWorker, msg('rp.amt.withBuyer'), 'rp-amt-with-buyer', () => setWithWorker(false))}
             {seg(withWorker, msg('rp.amt.withWorker', { name }), 'rp-amt-with-worker', () => setWithWorker(true))}
           </View>

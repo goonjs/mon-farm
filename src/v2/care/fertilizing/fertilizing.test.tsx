@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import type { ExpenseFields, FertilizingFields, FinanceEvent, FinancePayload, Payer } from '../../../core/finance/types';
 import { FARM_FUNDS } from '../../../core/finance/types';
+import { expectChoiceTile } from '../../../test/choice-shape';
 import { wrap } from '../../../test/render';
 import { FertilizingView } from './fertilizing-screen';
 
@@ -221,11 +222,17 @@ describe('FertilizingView — zones and reasons (FZ-6)', () => {
     fireEvent.press(screen.getByTestId('fz-card-1'));
     fireEvent.press(screen.getByTestId('fz-apply'));
     fireEvent.press(screen.getByTestId('fz-where'));
+    // E01-S25 CT-7: zones are F tick tiles, several at once.
+    expectChoiceTile(screen.getByTestId('fz-zone-z1'), 'checkbox');
     fireEvent.press(screen.getByTestId('fz-zone-z1'));
+    expect(screen.getByTestId('fz-zone-z1').props.accessibilityState).toMatchObject({ checked: true });
     fireEvent.press(screen.getByTestId('fz-reason-new'));
     fireEvent.changeText(screen.getByTestId('fz-reason-text'), 'บำรุงต้น');
     fireEvent.press(screen.getByTestId('fz-reason-add'));
     await screen.findByTestId('fz-reason-new');
+    // Reasons are F tick tiles too.
+    const reason = screen.getAllByTestId(/^fz-reason-(?!new|text|add|remember)/)[0];
+    expectChoiceTile(reason, 'checkbox');
     fireEvent.press(screen.getByTestId('fz-where-done'));
     expect(screen.getByTestId('fz-where')).toHaveTextContent(/แปลงแดง/);
     fireEvent.press(screen.getByTestId('fz-save'));

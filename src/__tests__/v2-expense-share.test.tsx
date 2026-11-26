@@ -9,6 +9,7 @@ import { ExpenseFormScreen } from '../v2/money/expense-form-screen';
 import { shareOf } from '../v2/money/share-sheet';
 import { financeStore as mockFinance } from '../store/finance';
 import { peopleStore as mockPeople } from '../store/people';
+import { expectChoiceTile } from '../test/choice-shape';
 import { wrap } from '../test/render';
 
 jest.mock('../store/finance', () => {
@@ -127,7 +128,12 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     pickCat('cat-repair');
     fireEvent.press(screen.getByTestId('share-row'));
     await flush();
+    // E01-S25 CT-7: "แชร์กับใคร" is style I (owner reading iv), pick one.
+    expectChoiceTile(screen.getByTestId('share-worker-none'), 'mark');
+    expectChoiceTile(screen.getByTestId(`share-worker-${daengId}`), 'mark');
     fireEvent.press(screen.getByTestId(`share-worker-${daengId}`));
+    expect(screen.getByTestId(`share-worker-${daengId}`).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('share-worker-none').props.accessibilityState).toMatchObject({ selected: false });
     fireEvent.press(screen.getByTestId('share-settle-paid'));
     fireEvent.press(screen.getByTestId('share-done'));
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
@@ -144,7 +150,10 @@ describe('share an expense with a tapper (E11-S10 B)', () => {
     pickCat('cat-herbicide');
     fireEvent.press(screen.getByTestId('expense-cat-more'));
     fireEvent.press(screen.getByTestId('expense-cat-share'));
+    // E01-S25 CT-7: the on/off share switch is an F tick tile.
+    expectChoiceTile(screen.getByTestId('cat-share-switch'), 'checkbox');
     fireEvent.press(screen.getByTestId('cat-share-switch'));
+    expect(screen.getByTestId('cat-share-switch').props.accessibilityState).toMatchObject({ checked: true });
     typeOnPad('cat-share-pct', '30');
     await act(async () => fireEvent.press(screen.getByTestId('cat-share-save')));
     await flush();

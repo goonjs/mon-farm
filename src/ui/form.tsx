@@ -9,16 +9,20 @@ import { Pressable, Text, View } from 'react-native';
 
 import { useT } from '../i18n';
 import { useTheme } from '../theme';
+import { Check } from './icons';
 
 export function SegmentedControl<T extends string>({
   options,
   value,
   onChange,
+  onWrap,
   testID,
 }: {
   options: readonly { value: T; label: string }[];
   value: T;
   onChange: (v: T) => void;
+  /** Called when a label needs a second line (E01-S26 PS26-9: the caller may switch to a value box). */
+  onWrap?: () => void;
   /** Each segment gets `${testID}-${value}`. */
   testID: string;
 }) {
@@ -30,7 +34,8 @@ export function SegmentedControl<T extends string>({
       style={{
         flexDirection: 'row',
         backgroundColor: t.color.surfaceSunk,
-        borderRadius: t.radius.pill,
+        // E01-S25 CT-5: a rounded bar, never a pill (owner r2-segmented "B").
+        borderRadius: t.radius.md,
         padding: t.space.xs,
         gap: t.space.xs,
       }}
@@ -49,7 +54,7 @@ export function SegmentedControl<T extends string>({
             style={{
               flex: 1,
               minHeight: t.target.min,
-              borderRadius: t.radius.pill,
+              borderRadius: t.radius.sm,
               backgroundColor: on ? t.color.action : 'transparent',
               alignItems: 'center',
               justifyContent: 'center',
@@ -57,6 +62,7 @@ export function SegmentedControl<T extends string>({
             }}
           >
             <Text
+              onTextLayout={onWrap ? (e) => { if (e.nativeEvent.lines.length > 1) onWrap(); } : undefined}
               style={{
                 fontFamily: t.font.family.sans,
                 fontSize: t.font.size.bodyMd,
@@ -80,6 +86,7 @@ export function RadioCard({
   detail,
   onPress,
   disabled,
+  check,
   testID,
   children,
 }: {
@@ -89,6 +96,8 @@ export function RadioCard({
   onPress: () => void;
   disabled?: boolean;
   testID?: string;
+  /** Several at once: a tick box instead of the ring, read as a checkbox (owner wizard-tapper-pick 2026-11-22). */
+  check?: boolean;
   /** Extra content under the title (e.g. an example box). */
   children?: React.ReactNode;
 }) {
@@ -97,7 +106,7 @@ export function RadioCard({
   return (
     <Pressable
       testID={testID}
-      accessibilityRole="radio"
+      accessibilityRole={check ? 'checkbox' : 'radio'}
       accessibilityState={{ checked: selected, disabled: !!disabled }}
       aria-checked={selected}
       aria-disabled={!!disabled}
@@ -116,19 +125,21 @@ export function RadioCard({
       }}
     >
       <View
+        testID={check && testID ? `${testID}-box` : undefined}
         aria-hidden
         style={{
           width: 22,
           height: 22,
           marginTop: 2,
-          borderRadius: 11,
+          borderRadius: check ? 6 : 11,
           borderWidth: t.border.thick,
           borderColor: ring,
+          backgroundColor: check && selected ? ring : 'transparent',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        {selected ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: ring }} /> : null}
+        {selected ? check ? <Check color={t.color.inkInverse} size={14} /> : <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: ring }} /> : null}
       </View>
       <View style={{ flex: 1, gap: t.space.xxs }}>
         <Text

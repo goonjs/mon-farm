@@ -34,6 +34,7 @@ import {
   CardLabel,
   Check,
   ChevronRight,
+  ChoiceTile,
   CompactMoney,
   CTA,
   DebtIcon,
@@ -48,11 +49,12 @@ import {
   ReceiptIcon,
   ScreenHeader,
   TextLink,
+  TileGrid,
 } from '../../ui';
 import { V2_HOME } from '../routes';
 import { orderHref } from './order-routes';
 import { fertilizingHref } from '../care/fertilizing/routes';
-import { ChoiceChip, ChoiceRow, Day } from './pieces';
+import { Day } from './pieces';
 import { PlanBadge, PlanCard, PlanSheet } from './debt-plan';
 import { maxInstallments } from '../../core/master';
 import { accountPlan, DEFAULT_MAX_INSTALLMENTS } from '../../core/finance/installments';
@@ -314,9 +316,10 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
       </Card>
 
       <CardLabel>{msg('debt.history')}</CardLabel>
-      <ChoiceRow>
-        {FILTERS.map((f) => <ChoiceChip key={f} testID={`debt-filter-${f}`} on={filter === f} label={f === 'all' ? msg('debt.history.all') : msg(`debt.kind.${f}`)} onPress={() => setFilter(f)} />)}
-      </ChoiceRow>
+      {/* E01-S26 PS26-2: F, 2 a row, pick one (owner answer ข). */}
+      <TileGrid columns={2}>
+        {FILTERS.map((f) => <ChoiceTile key={f} kind="check" testID={`debt-filter-${f}`} selected={filter === f} label={f === 'all' ? msg('debt.history.all') : msg(`debt.kind.${f}`)} onPress={() => setFilter(f)} />)}
+      </TileGrid>
       {lines.length ? (
         <Card style={{ gap: 0, paddingVertical: t.space.xs }}>
           {lines.map((h, i) => (

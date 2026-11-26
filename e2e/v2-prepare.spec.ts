@@ -73,6 +73,19 @@ for (const width of [320, 360]) {
       await id('prep-date-picker-done').click();
       await expect(id('prep-time')).toBeVisible();
       await fits(page);
+      // E01-S26 PS26-6: 08:00–13:00 and "กำหนดเอง"; no "ไม่ระบุเวลา" (owner prep-time-default 2026-11-22).
+      await expect(id('prep-time-none')).toHaveCount(0);
+      await shot('2c-time');
+      await id('prep-time-custom').click();
+      await expect(id('prep-time-wheel')).toBeVisible();
+      await expect(id('prep-time-wheel-done')).toContainText('10:00');
+      await fits(page);
+      await shot('2d-time-wheel');
+      await id('prep-time-wheel-done').click();
+      await expect(id('prep-date')).toContainText('10:00');
+      await id('prep-date').click();
+      await id('prep-date-picker-done').click();
+      await expect(id('prep-time')).toBeVisible();
       await id('prep-time-08:00').click();
       await expect(id('prep-date')).toContainText('08:00');
 

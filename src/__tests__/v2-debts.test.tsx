@@ -10,6 +10,7 @@ import { financeStore as mockFinance } from '../store/finance';
 import { todayIso } from '../core/finance/money';
 import { dayAfter } from '../core/master';
 import { dayCell, pickDate } from '../test/pick-date';
+import { expectChoiceTile } from '../test/choice-shape';
 import { wrap } from '../test/render';
 
 jest.mock('../store/finance', () => {
@@ -118,7 +119,12 @@ describe('debt ledger (E06-S03)', () => {
     expect(screen.getByTestId('debt-summary-balance').props.children).toBe('−500.00');
     expect(screen.getByTestId('debt-flag')).toBeTruthy();
 
+    // E01-S26 PS26-2: the history filter is F, 2 a row, pick one; the label sits on its own line above.
+    for (const f of ['all', 'loan', 'fertilizer', 'other', 'deduction', 'payment']) expectChoiceTile(screen.getByTestId(`debt-filter-${f}`), 'check');
+    expect(screen.getByTestId('debt-filter-all').props.accessibilityState).toMatchObject({ selected: true });
     fireEvent.press(screen.getByTestId('debt-filter-payment'));
+    expect(screen.getByTestId('debt-filter-payment').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('debt-filter-all').props.accessibilityState).toMatchObject({ selected: false });
     const payment = screen.getAllByTestId(/^debt-line-/);
     expect(payment).toHaveLength(1);
     const id = payment[0].props.testID.replace('debt-line-', '');

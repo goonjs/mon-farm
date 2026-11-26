@@ -27,7 +27,7 @@ export function BasisToggle({ value, onChange }: { value: WeighBasis; onChange: 
   ];
   return (
     <View style={{ alignSelf: 'center', gap: t.space.xxs, alignItems: 'center' }}>
-      <View accessibilityRole="radiogroup" testID="basis" style={{ flexDirection: 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.pill, padding: t.space.xs, gap: t.space.xs }}>
+      <View accessibilityRole="radiogroup" testID="basis" style={{ flexDirection: 'row', backgroundColor: t.color.surfaceSunk, borderRadius: t.radius.md, padding: t.space.xs, gap: t.space.xs }}>
         {opts.map((o) => {
           const on = o.v === value;
           const fg = on ? t.color.inkInverse : t.color.inkSoft;
@@ -39,7 +39,7 @@ export function BasisToggle({ value, onChange }: { value: WeighBasis; onChange: 
               accessibilityState={{ checked: on }}
               aria-checked={on}
               onPress={() => onChange(o.v)}
-              style={{ minHeight: t.target.min, flexDirection: 'row', alignItems: 'center', gap: t.space.xs, paddingHorizontal: t.space.md, borderRadius: t.radius.pill, backgroundColor: on ? t.color.action : 'transparent' }}
+              style={{ minHeight: t.target.min, flexDirection: 'row', alignItems: 'center', gap: t.space.xs, paddingHorizontal: t.space.md, borderRadius: t.radius.sm, backgroundColor: on ? t.color.action : 'transparent' }}
             >
               {o.icon(fg)}
               <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyMd, fontWeight: t.font.weight.bold, color: fg }}>{o.label}</Text>
