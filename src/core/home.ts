@@ -7,6 +7,7 @@
  * across sales (E04-S11), so neither is shown.
  */
 
+import { isSaleScope } from './finance-scope';
 import { currentPoint } from './sale-list';
 import { projectSale } from './project';
 import { statusCountsAsClosed } from './sale-status';
@@ -58,6 +59,8 @@ export function homeSales(sales: readonly { id: string; events: readonly SaleEve
   let latest: SaleLine | null = null;
   const newer = (a: SaleLine, b: SaleLine | null) => !b || (a.ts ?? 0) > (b.ts ?? 0);
   for (const { id, events } of sales) {
+    // A reserved scope is not a sale, whatever the caller hands in (E01-S28).
+    if (!isSaleScope(id)) continue;
     const one = saleLineOf(id, events);
     if (!one) continue;
     if (one.closed) {

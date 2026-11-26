@@ -1,7 +1,7 @@
 # Story E01-S28: ย้าย log การเงินเข้า event log ที่ sync
 
-Status: Ready (owner agreed AC 2026-11-25 08:47 เวลาไทย, แดชบอร์ด e01-s27-s28-ac: "ก · ก · ตกลง AC ทั้งสองสตอรี่ เริ่มทำ S27 (คุณทดสอบ) และ S28 รอบแรกได้ (แนะนำ)")
-เงื่อนไขไปขั้นถัดไป: ทีมเขียนเทสต์ก่อนแล้วทำรอบแรก · ใคร: ทีม dev · รอ: ลีดเปิดทีม
+Status: In Progress — รอบแรกอยู่ใน review (owner agreed AC 2026-11-25 08:47 เวลาไทย, แดชบอร์ด e01-s27-s28-ac: "ก · ก · ตกลง AC ทั้งสองสตอรี่ เริ่มทำ S27 (คุณทดสอบ) และ S28 รอบแรกได้ (แนะนำ)")
+เงื่อนไขไปขั้นถัดไป: รอบแรกรีวิวผ่าน + CI เขียว + เจ้าของพูด merge (PR critical) · ใคร: ผู้รีวิวอิสระ แล้วเจ้าของ · รอ: ผู้รีวิว (รอบแรกเปิด PR แล้ว 2026-11-25)
 
 ## Context
 
@@ -144,9 +144,11 @@ owner answer, dashboard 24 พ.ย. 2569 17:44 เวลาไทย (`answers/e
 
 ## Verification
 
-- [ ] Sandbox run performed:
-- [ ] Screenshots (UI stories only) — golden path:
-- [ ] Screenshots (UI stories only) — edge cases:
+- [x] Sandbox run performed (รอบแรก): build เว็บจริง (`expo export`) + Playwright 390×844 ออฟไลน์, `e2e/v2-money.spec.ts` ทั้งไฟล์ 11/11 ผ่าน;
+  สอง test ใหม่ (`E01-S28 r1: …`) แดงบน build ของ `dev` `daeb3d1` (หน้าแรกขึ้นแถว "การขายที่ยังไม่ปิด" ของ scope เงิน, "เริ่มการขาย" พาเข้า scope เงิน) แล้วเขียวบน branch
+- [x] Screenshots — ไม่มี mockup ใน story นี้ (ข้อความเดียวตาม AC12 (ก)) · `docs/ux/screenshots/e01-s28/`:
+  ก่อน (dev): `before-home.png` (แถวการขายว่างที่ยังไม่ปิด), `before-start-redirect.png` (เริ่มการขาย → เลือกจุดชั่งของ scope เงิน), `before-money.png`;
+  หลัง: `after-home.png` (ไม่มีแถว), `after-money-gate.png` ("อัปเดตแอปก่อนใช้หน้าเงิน" เมื่อขั้นต่ำสูงกว่ารุ่นของแอป)
 
 ## Dev notes
 
@@ -159,6 +161,15 @@ owner answer, dashboard 24 พ.ย. 2569 17:44 เวลาไทย (`answers/e
   ("รอบแรก … ยังไม่ส่งเงิน") จึงเลื่อนการเขียนเงินลง `EventStore` และการย้ายข้อมูลเดิมไปรอบสองด้วย ให้ผู้รีวิวตรวจ
 - 2026-11-25 (Dev 19): เจ้าของตกลง AC (แดชบอร์ด `answers/e01-s27-s28-ac`, 25 พ.ย. 08:47) → Ready · ทางเลือก `MASTER_SCOPE` ไม่ใช้ (เจ้าของตอบ S28-Q2 ก)
   · ผู้รีวิว 20 N1: ระบุที่เก็บเลขขั้นต่ำเป็น event `kind: 'app_min'` ใน scope เงิน (การอ่านของทีม ให้ผู้รีวิวตรวจ) ไม่แก้ rules ไม่แก้ payload เงิน
+- 2026-11-25 (Dev 20, รอบแรก): `src/core/finance-scope.ts` — `FINANCE_SCOPE = 'farm-finance'`, `APP_RELEASE = 1` (เลขรุ่นจำนวนเต็มในโค้ด),
+  `isSaleScope`, `minAppOf`/`appBelowMin` (อ่าน `kind: 'app_min'` แบบป้องกันตัว ค่า `minApp` ต้องเป็นจำนวนเต็ม ≥ 1; ไม่มี = ไม่กั้น) ·
+  `listSales` ทั้งสาม adapter (memory, IndexedDB, SQLite `NOT IN (?, ?)`) และ `homeSales` ข้าม scope สงวน · ด่าน `moneyGated` ครอบ 11 route ของหน้าเงิน
+  (`expenses`, `expense/[id]`, `debts`, `debt/[workerId]`, `debt-add`, `debt-pay`, `owed`, `repay`, `order`, `order/[orderId]`, `fertilizer-settings`):
+  ยังไม่ mount หน้าจนอ่านขั้นต่ำเสร็จ (เฟรมแรกว่างสั้น ๆ ระหว่างอ่าน IndexedDB), อ่านไม่ได้ = ไม่กั้น ·
+  **ไม่แก้ union `SaleEvent`, ไม่แก้ `toEnvelope`/`fromEnvelope`, ไม่แก้ rules, ไม่มี event เงินเข้า `EventStore`, `writeFinance` ยังเขียน `financeStore` เดิม** (test ตรึง outbox ว่าง) ·
+  ข้อสังเกต: บน `dev` หน้า "การขายทั้งหมด" **ไม่**ขึ้นแถวของ scope เงิน (ตรวจบน build จริง — `saleListRows` ไม่ทำแถวให้ log ที่ไม่มี `sale_started`) ข้อ 5 ของ AC12 (ข) จึงไม่เกิดจริง แต่ test ตรึงไว้ ·
+  เปิดไว้ให้ผู้รีวิว: ด่านครอบเฉพาะหน้าในหมวดเงิน — แถวเงินบนหน้าแรก (ค้างใคร/คืนเงิน), หน้าเงินของการขาย (ปัดเศษ/จ่ายเงิน) และหน้าดูแลสวน ยังอ่าน `useFinance` ตรง ๆ;
+  รอบแรกไม่มี `app_min` จึงไม่มีผล แต่ถ้า "ไม่แสดงยอดเงิน" ต้องรวมหน้าเหล่านั้น ต้องตกลงก่อนรอบสอง · บรรทัดเลขรุ่นในหน้า "เครื่องนี้" (AC12 ข) **ยังไม่ทำ** — เสนอใน PR ให้เจ้าของเลือก
 
 ## Code review
 
@@ -167,3 +178,11 @@ owner answer, dashboard 24 พ.ย. 2569 17:44 เวลาไทย (`answers/e
 - Resolution:
 
 ## QA notes
+
+รอบแรก (Dev 20, 2026-11-25) — offline/sync checklist:
+- [x] ใช้ได้ไม่มีเน็ต: e2e ทั้งสองตัวรันแบบ `setOffline(true)` ที่ 390×844
+- [x] บันทึกตอนออฟไลน์: ค่าใช้จ่ายลง log เงินในเครื่อง (localStorage) — ไม่มีแถวใน `events` เลย (outbox ว่าง)
+- [–] sync ตอนเน็ตกลับ / ปุ่มลองใหม่ / Conflict: ไม่อยู่ในรอบแรก (ยังไม่ส่งเงิน)
+- [x] ข้อมูลที่ดึงมาใน scope เงินไม่ถูกแก้/ลบ แค่ไม่นับเป็นการขาย; ไม่มีข้อมูลหาย
+- [x] ป้ายสถานะ: ไม่เปลี่ยน (ยังนับเฉพาะ `store.pending()` — AC4 เป็นของรอบสอง)
+- ข้อความด่านพอดีจอ 390×844 ไม่มีอะไรถูกตัด (`textFit` ใน e2e)
