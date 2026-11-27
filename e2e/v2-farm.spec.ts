@@ -473,9 +473,10 @@ for (const [width, size] of [
       b.sys({ t: 'pile_added', pileId: 'a4', zoneId: 'fa', name: 'a4', tareG: 2_000, stdNetG: 50_000 });
       b.acceptAt('a4', 1);
       await seedEvents(page, b.build().map((e) => ({ ...e, ts: Date.now() })));
-      // B+E: ทุกคน + นัด is a B bar beside the เข่ง box.
+      // ทุกคน + นัด: a B bar beside the เข่ง box at 390 M. At 320 L ทุกคน may wrap, which switches to E+E (#257).
       await page.goto('/v2/sale/sale-s26-hist/history');
-      await expect(id('hist-tapper-all')).toBeVisible();
+      await expect(id('hist-kind')).toBeVisible();
+      if (width === 390) await expect(id('hist-tapper-all')).toBeVisible();
       const [tapperB, kindB] = await labelTops();
       await s26Snap(page, 'labelfix-hist-b-e');
       expect(Math.abs(tapperB - kindB), `B+E label tops ${tapperB} / ${kindB}`).toBeLessThanOrEqual(1);
