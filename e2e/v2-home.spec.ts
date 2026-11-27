@@ -97,8 +97,8 @@ test('/ → splash → home: as drawn, empty, then live rows from the local log,
   await expect(page.getByTestId('home-open-sale')).toContainText('กำลังชั่ง');
   await expect(page.getByTestId('home-latest-sale')).toContainText('18 ก.ย. 2569 · 2,100 กก.');
   await expect(page.getByTestId('home-latest-sale')).toContainText('ปิดแล้ว');
-  await expect(page.getByTestId('home-owed')).toContainText('฿\u00a01,200');
-  await expect(page.getByTestId('home-owed').getByLabel('1,200.00 บาท')).toBeVisible();
+  await expect(page.getByTestId('home-owed-amount')).toHaveText('฿\u00a01,200');
+  await expect(page.getByTestId('home-owed-amount')).toHaveAttribute('aria-label', '1,200.00 บาท');
   await expect(page.getByTestId('home-owed')).toContainText('อาจารย์สมหวัง');
   // E16-S05 HM-3: money owed back is its own row; the payables row counts the shop only.
   await expect(page.getByTestId('home-payables')).toHaveCount(0);

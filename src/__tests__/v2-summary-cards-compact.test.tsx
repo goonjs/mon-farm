@@ -9,6 +9,7 @@ import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import { tokens } from '../../design/tokens';
+import { messages } from '../i18n/messages';
 import { FARM_FUNDS, type FinanceEvent, type FinancePayload } from '../core/finance/types';
 import { PersonScreen } from '../v2/farm/people-screens';
 import { DebtAccountScreen, DebtsScreen } from '../v2/money/debts-screens';
@@ -201,4 +202,15 @@ describe("a person's page (people-screens)", () => {
     expect(within(item).getByLabelText('12,540.50 บาท')).toBeTruthy();
     expect(within(item).getByLabelText('4,267.50 บาท')).toBeTruthy();
   });
+});
+
+describe('messages a short figure is put into (review of PR 254 N4)', () => {
+  // withMoney puts the figure where {amount} is: a message without it would drop the figure without an error.
+  const ids = ['debt.list.owes', 'v2m.otherLender', 'v2f.debtFarm', 'v2f.debtPlan', 'debt.planValue', 'v2m.exact.line'] as const;
+  for (const locale of ['th', 'en'] as const) {
+    it.each(ids)(`${locale}: %s has {amount} exactly once`, (id) => {
+      const text: string = messages[locale][id] ?? messages.th[id];
+      expect(text.split('{amount}')).toHaveLength(2);
+    });
+  }
 });

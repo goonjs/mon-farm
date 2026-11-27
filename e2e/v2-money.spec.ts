@@ -266,20 +266,20 @@ for (const [width, size] of [[320, 'l'], [390, 'm']] as const) {
     await page.goto('/v2');
     await expect(id('home-owed')).toBeVisible();
     await shot('home');
-    await expect(id('home-owed')).toContainText('฿ 13.18k');
+    await expect(id('home-owed-amount')).toHaveText('฿\u00a013.18k');
+    await expect(id('home-owed-amount')).toHaveAttribute('aria-label', '13,180.50 บาท');
     await expect(id('home-owed')).not.toContainText('13,180.50');
-    await expect(id('home-owed').getByLabel('13,180.50 บาท')).toBeVisible();
-    await oneLineFig(id('home-owed').getByLabel('13,180.50 บาท'), 'home-owed figure');
+    await oneLineFig(id('home-owed-amount'), 'home-owed figure');
     expect(await textFit(page)).toEqual([]);
 
     // The owed page: the total card, its exact sheet, what is left per person.
     await page.goto('/v2/owed');
     await expect(id('owed-total')).toBeVisible();
     await shot('owed');
-    await expect(id('owed-total')).toHaveText('฿ 13.18k');
+    await expect(id('owed-total')).toHaveText('฿\u00a013.18k');
     await expect(id('owed-total')).toHaveAttribute('aria-label', '13,180.50 บาท');
-    await expect(id('owed-amount-som')).toHaveText('฿ 12.54k');
-    await expect(id('owed-amount-nat')).toHaveText('฿ 640.5');
+    await expect(id('owed-amount-som')).toHaveText('฿\u00a012.54k');
+    await expect(id('owed-amount-nat')).toHaveText('฿\u00a0640.5');
     await oneLineFig(id('owed-total'), 'owed-total');
     await oneLineFig(id('owed-amount-som'), 'owed-amount-som');
     expect(await textFit(page)).toEqual([]);
@@ -302,8 +302,8 @@ for (const [width, size] of [[320, 'l'], [390, 'm']] as const) {
     await page.goto('/v2/debts');
     await expect(id('debt-account-red')).toBeVisible();
     await shot('debts');
-    await expect(id('debt-account-red')).toContainText('หนี้ที่ติดสวน ฿ 12.54k');
-    await expect(id('debt-account-red')).toContainText('ยืม ป้าแก้ว ฿ 3,251');
+    await expect(id('debt-account-red')).toContainText('หนี้ที่ติดสวน ฿\u00a012.54k');
+    await expect(id('debt-account-red')).toContainText('ยืม ป้าแก้ว ฿\u00a03,251');
     await expect(id('debt-account-red').getByLabel('12,540.50 บาท')).toBeVisible();
     await expect(id('debt-account-red').getByLabel('3,250.50 บาท')).toBeVisible();
     expect(await textFit(page)).toEqual([]);
@@ -312,11 +312,11 @@ for (const [width, size] of [[320, 'l'], [390, 'm']] as const) {
     await id('debt-account-red').click();
     await expect(id('debt-balance')).toBeVisible();
     await shot('debt-account');
-    await expect(id('debt-balance')).toHaveText('฿ 12.54k');
+    await expect(id('debt-balance')).toHaveText('฿\u00a012.54k');
     await expect(id('debt-balance')).toHaveAttribute('aria-label', '12,540.50 บาท');
     await oneLineFig(id('debt-balance'), 'debt-balance');
-    await expect(id('debt-other-aunt-amount')).toHaveText('฿ 3,251');
-    await expect(id('debt-plan')).toContainText('฿ 4,268 / การขาย');
+    await expect(id('debt-other-aunt-amount')).toHaveText('฿\u00a03,251');
+    await expect(id('debt-plan')).toContainText('฿\u00a04,268 / การขาย');
     await expect(id('debt-summary-balance')).toHaveText('12,540.50');
     expect(await textFit(page)).toEqual([]);
     await id('debt-balance-card').click();
@@ -334,8 +334,8 @@ for (const [width, size] of [[320, 'l'], [390, 'm']] as const) {
     await page.goto('/v2/person/red');
     await expect(id('debt-summary')).toBeVisible();
     await shot('person');
-    await expect(id('debt-summary')).toContainText('หนี้ที่ติดสวน ฿ 12.54k');
-    await expect(id('debt-summary')).toContainText('ผ่อน ฿ 4,268 / การขาย');
+    await expect(id('debt-summary')).toContainText('หนี้ที่ติดสวน ฿\u00a012.54k');
+    await expect(id('debt-summary')).toContainText('ผ่อน ฿\u00a04,268 / การขาย');
     await expect(id('debt-summary').getByLabel('4,267.50 บาท')).toBeVisible();
     expect(await textFit(page)).toEqual([]);
   });
