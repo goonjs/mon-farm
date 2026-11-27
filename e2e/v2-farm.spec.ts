@@ -464,10 +464,19 @@ for (const [width, size] of [
       await s26Snap(page, 's26-closeout-ask');
     });
 
-    test('basket list: the "คนกรีด" and "เข่ง" labels share one top line, B+E and E+E (item 9, mockup p11)', async ({ page }) => {
+    test('basket list: the "คนกรีด" and "เข่ง" labels share a top line and the controls a bottom line (item 9, mockup p11)', async ({ page }) => {
       const id = onS26(page);
-      const labelTops = () =>
-        id('hist-filters').evaluate((row) => [...row.children].map((col) => col.firstElementChild!.getBoundingClientRect().top));
+      // Mockup p11: the two labels share a top line and the two controls share a bottom line.
+      const lineUp = async (what: string) => {
+        const layout = (await id('hist-tapper-all').count()) > 0 ? 'B+E' : 'E+E';
+        const cols = await id('hist-filters').evaluate((row) =>
+          [...row.children].map((col) => ({ top: col.firstElementChild!.getBoundingClientRect().top, bottom: col.lastElementChild!.getBoundingClientRect().bottom })),
+        );
+        const [tapper, kind] = cols;
+        expect(Math.abs(tapper.top - kind.top), `${what} (${layout}) label tops ${tapper.top} / ${kind.top}`).toBeLessThanOrEqual(1);
+        expect(Math.abs(tapper.bottom - kind.bottom), `${what} (${layout}) control bottoms ${tapper.bottom} / ${kind.bottom}`).toBeLessThanOrEqual(1);
+        return layout;
+      };
       const b = new LogBuilder('sale-s26-hist');
       b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
       b.sys({ t: 'pile_added', pileId: 'a4', zoneId: 'fa', name: 'a4', tareG: 2_000, stdNetG: 50_000 });
@@ -477,9 +486,9 @@ for (const [width, size] of [
       await page.goto('/v2/sale/sale-s26-hist/history');
       await expect(id('hist-kind')).toBeVisible();
       if (width === 390) await expect(id('hist-tapper-all')).toBeVisible();
-      const [tapperB, kindB] = await labelTops();
       await s26Snap(page, 'labelfix-hist-b-e');
-      expect(Math.abs(tapperB - kindB), `B+E label tops ${tapperB} / ${kindB}`).toBeLessThanOrEqual(1);
+      const twoSegments = await lineUp('ทุกคน + นัด');
+      if (width === 390) expect(twoSegments).toBe('B+E');
       // E+E: four segments (ทุกคน + three tappers), so both filters are E boxes.
       await seedMaster(page, [
         { t: 'point_added', pointId: 'a5', propertyId: 'fa', name: 'จุด 5' },
@@ -495,9 +504,8 @@ for (const [width, size] of [
       await page.goto('/v2/sale/sale-s26-hist-e/history');
       await expect(id('hist-kind')).toBeVisible();
       await expect(id('hist-tapper-all')).toHaveCount(0);
-      const [tapperE, kindE] = await labelTops();
       await s26Snap(page, 'labelfix-hist-e-e');
-      expect(Math.abs(tapperE - kindE), `E+E label tops ${tapperE} / ${kindE}`).toBeLessThanOrEqual(1);
+      expect(await lineUp('four segments')).toBe('E+E');
     });
 
     test('expenses: the filter boxes; debt history: the kind tiles', async ({ page }) => {
