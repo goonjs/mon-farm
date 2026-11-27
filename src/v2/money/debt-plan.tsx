@@ -25,6 +25,7 @@ import { useTheme } from '../../theme';
 import { AppText, BottomSheet, CalendarIcon, ChevronRight, CompactMoney, FactRow, FarmMateArt, IconTile, MoneyField, SegmentedControl } from '../../ui';
 import { Choice, CountChoice } from '../sale/closeout/summary-installments';
 import { WarnMark } from '../sale/closeout/summary-parts';
+import { MONEY_SLOT, withMoney } from './exact-sheet';
 
 const shortDate = (iso: string) => formatDate(iso).split(' ').slice(0, 2).join(' ');
 
@@ -92,7 +93,8 @@ export function PlanCard({ account, events, onOpen }: { account: DebtAccount | u
           {plan?.kind === 'installments'
             ? msg('debt.inst.card', { m: plan.count, n: plan.paid })
             : plan?.kind === 'perSale'
-              ? msg('debt.planValue', { amount: formatSatang(plan.perSaleSatang) })
+              ? // A summary line (owner rule 2026-10-31): short money; this card opens the plan sheet, which has the exact amount.
+                withMoney(msg('debt.planValue', { amount: MONEY_SLOT }), <CompactMoney satang={plan.perSaleSatang} pill />)
               : msg('debt.planNone')}
         </AppText>
         {plan?.kind === 'installments' ? (
