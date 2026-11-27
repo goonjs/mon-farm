@@ -30,7 +30,7 @@ export interface Scope {
   readonly groupId: GroupId;
 }
 
-type Scoped = { readonly groupId?: unknown; readonly actor: { readonly userId: unknown } };
+type Scoped = { readonly groupId?: unknown; readonly actor: { readonly userId: unknown }; readonly kind?: unknown };
 
 /**
  * Whether an event is this user's, in this group. Only those are ever sent: the
@@ -42,14 +42,21 @@ export function belongsTo(scope: Scope, event: Scoped): boolean {
   return hasGroup(event) && event.groupId === scope.groupId && event.actor.userId === scope.userId;
 }
 
-/** Events and group-creations this user still has to send for this group: the badge's number. */
+/**
+ * Events and group-creations this user still has to send for this group: the badge's number.
+ *
+ * The group's minimum app release (`kind: 'app_min'`, E01-S28) is sent like any event but is not something
+ * the farmer recorded, so it is left out of the number (review N8): one expense reads "รอส่ง 1". It still
+ * counts as waiting, as 1, when nothing else is, so the badge never says "ซิงก์แล้ว" while it is unsent.
+ */
 export function waitingCount(
   scope: Scope,
   pendingEvents: readonly Scoped[],
   pendingOps: readonly { readonly groupId: GroupId; readonly createdBy: UserId }[],
 ): number {
-  return (
-    pendingEvents.filter((e) => belongsTo(scope, e)).length +
-    pendingOps.filter((o) => o.groupId === scope.groupId && o.createdBy === scope.userId).length
-  );
+  const mine = pendingEvents.filter((e) => belongsTo(scope, e));
+  const recorded = mine.filter((e) => e.kind !== 'app_min').length;
+  const ops = pendingOps.filter((o) => o.groupId === scope.groupId && o.createdBy === scope.userId).length;
+  const minimumOnly = recorded + ops === 0 && mine.length > 0 ? 1 : 0;
+  return recorded + ops + minimumOnly;
 }

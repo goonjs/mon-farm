@@ -22,10 +22,12 @@
  */
 
 import { canonicalJson } from '../core/canonical';
+import { APP_RELEASE, FINANCE_SCOPE, minAppOf } from '../core/finance-scope';
 import type { CreateGroupOp } from '../core/group';
 import { belongsTo, waitingCount, type Scope } from '../core/scope';
 import type { EventId, GroupId, SaleEvent } from '../core/types';
 import type { AccountStore } from '../store/account';
+import { sameEvent } from '../store/append-rule';
 import { IntegrityError } from '../store/errors';
 import type { EventStore } from '../store/store';
 import { uploadMedia, type MediaQueue, type RemoteMedia } from './media';
@@ -119,7 +121,7 @@ export const storeCursor = (
   setCorrupt: (ids) => store.setSyncCorrupt(groupId, ids),
 });
 
-export type SyncStore = Pick<EventStore, 'pending' | 'markSynced' | 'insertPulled'>;
+export type SyncStore = Pick<EventStore, 'pending' | 'markSynced' | 'insertPulled' | 'load'>;
 
 export interface SyncDeps {
   readonly store: SyncStore;
@@ -136,6 +138,11 @@ export interface SyncDeps {
   readonly ackTimeoutMs?: number;
   /** Documents per pull page; tests make it small. */
   readonly pullPageSize?: number;
+  /**
+   * Runs before every push (E01-S28): the app writes the group's minimum (`app_min`) for money that has
+   * none yet. If it fails, that group's money is held (see `push`) and the run is retried; nothing else waits.
+   */
+  readonly beforePush?: () => Promise<unknown>;
   /** Files follow their `media.add` events, with the same retry rules (E01-S12). */
   readonly media?: { readonly queue: MediaQueue; readonly remote: RemoteMedia };
   readonly random?: () => number;
@@ -174,6 +181,8 @@ export class SyncEngine {
   /** Pulled ids the server holds with other content than ours; shown until a retry finds them fixed. */
   private corrupt = new Set<EventId>();
   private corruptLoaded = false;
+  /** The last push held this group's money back: no group minimum yet (E01-S28, review N3). */
+  private heldMoney = false;
 
   constructor(private readonly deps: SyncDeps) {
     this.ackMs = deps.ackTimeoutMs ?? ACK_TIMEOUT_MS;
@@ -340,6 +349,8 @@ export class SyncEngine {
         pushError = err.kind; // still pull: others' events are worth having
       }
       await this.pull();
+      // Money held for want of a group minimum is not sent and not "synced": try the whole run again soon.
+      if (this.heldMoney) throw new RemoteError('internal', 'Money waits for the group minimum.');
       this.attempt = 0;
       await this.settle(pushError ? { kind: pushError } : {});
     } catch (err) {
@@ -391,7 +402,16 @@ export class SyncEngine {
     // another account's or group's events could only be refused by the rules:
     // they stay on the device (E02-S02). Events the server already called invalid
     // wait for `retry()`.
-    const outbox = (await this.deps.store.pending()).filter((e) => this.mine(e) && !this.rejected.has(e.id) && !this.conflicting.has(e.id));
+    if (this.deps.beforePush) {
+      try {
+        await this.deps.beforePush();
+      } catch (err) {
+        // Not ignored: the money it was for is held below, and the run is retried.
+        console.warn('The group minimum could not be written; its money waits.', err);
+      }
+    }
+    const pending = (await this.deps.store.pending()).filter((e) => this.mine(e) && !this.rejected.has(e.id) && !this.conflicting.has(e.id));
+    const outbox = await this.minimumFirst(pending);
     let refused: Permanent | undefined;
     for (let i = 0; i < outbox.length; i += BATCH_SIZE) {
       if (this.stopped) return;
@@ -406,6 +426,20 @@ export class SyncEngine {
       }
     }
     if (refused) throw refused;
+  }
+
+  /**
+   * E01-S28 (review N3): a group's `app_min` goes up before any of its money, whatever the device numbers
+   * say (money copied while signed out, or from another device id, can sort first), and money is not sent at
+   * all while the group has no minimum at this release. Everything else keeps its device order.
+   */
+  private async minimumFirst(outbox: readonly SaleEvent[]): Promise<SaleEvent[]> {
+    this.heldMoney = false;
+    if (!outbox.some((e) => e.kind === 'finance')) return [...outbox];
+    const scope = (await this.deps.store.load(FINANCE_SCOPE)).filter((e) => e.groupId === this.deps.scope.groupId);
+    const ready = (minAppOf(scope) ?? 0) >= APP_RELEASE;
+    this.heldMoney = !ready;
+    return [...outbox.filter((e) => e.kind === 'app_min'), ...outbox.filter((e) => e.kind !== 'app_min' && (ready || e.kind !== 'finance'))];
   }
 
   /**
@@ -433,7 +467,8 @@ export class SyncEngine {
         }
       }
       const there = await withTimeout(this.deps.remote.fetch(e.id), this.ackMs);
-      if (there && canonicalJson(there) === canonicalJson(e)) {
+      // Money the server holds with only a different device number is the same money (review N4).
+      if (there && sameEvent(there, e)) {
         await this.deps.store.markSynced([e.id]);
       } else if (there) {
         this.conflicting.add(e.id);

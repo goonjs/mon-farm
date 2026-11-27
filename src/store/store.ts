@@ -65,11 +65,11 @@ export interface EventStore {
   /** Sale ids present in the store, newest first. */
   listSales(): Promise<string[]>;
   /**
-   * A one-way marker in the store's own meta (E01-S28: "the old finance log is copied"). False until
-   * `setMetaFlag`, then true for good on this install; no schema change, no version bump.
+   * A small value kept in the store's own meta (E01-S28: how much of the old finance log is copied). Null
+   * until set; a later set replaces it. No schema change, no version bump.
    */
-  metaFlag(key: string): Promise<boolean>;
-  setMetaFlag(key: string): Promise<void>;
+  metaValue(key: string): Promise<string | null>;
+  setMetaValue(key: string, value: string): Promise<void>;
   /**
    * The device id is minted once per install; `nextDeviceSeq` is above every
    * sequence number this device has stored, and is persisted in the same

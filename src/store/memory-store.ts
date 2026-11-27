@@ -15,7 +15,7 @@ export class MemoryStore implements EventStore {
   private synced = new Set<EventId>();
   private cursor: StoredCursor | null = null;
   private corrupt: StoredCorrupt | null = null;
-  private flags = new Set<string>();
+  private values = new Map<string, string>();
   private state: DeviceState = { deviceId: uuidv7(), nextDeviceSeq: 1 };
 
   async append(event: SaleEvent): Promise<void> {
@@ -69,12 +69,12 @@ export class MemoryStore implements EventStore {
     return [...firstTs.keys()].sort((a, b) => firstTs.get(b)! - firstTs.get(a)!);
   }
 
-  async metaFlag(key: string): Promise<boolean> {
-    return this.flags.has(key);
+  async metaValue(key: string): Promise<string | null> {
+    return this.values.get(key) ?? null;
   }
 
-  async setMetaFlag(key: string): Promise<void> {
-    this.flags.add(key);
+  async setMetaValue(key: string, value: string): Promise<void> {
+    this.values.set(key, value);
   }
 
   async device(): Promise<DeviceState> {

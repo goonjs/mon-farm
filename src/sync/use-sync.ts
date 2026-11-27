@@ -51,12 +51,9 @@ export function useSync(
     // Until we know, the points wizard waits (a first pull may be coming).
     setSyncMode('connecting');
     connect(userId, groupId)
-      .then(async (remote) => {
+      .then((remote) => {
         if (!live) return;
         if (!remote) return setSyncMode('off');
-        // E01-S28: money copied in while nobody was signed in gets the group minimum before anything is sent.
-        await ensureAppMinIfMoney(store, deviceClock, { userId, groupId }).catch((err) => console.warn('The app minimum could not be written.', err));
-        if (!live) return;
         handle = startSync({
           scope: { userId, groupId },
           store,
@@ -68,6 +65,9 @@ export function useSync(
           onChanged: emitSyncChanged,
           onForeground,
           isOnline,
+          // E01-S28: money with no group minimum (copied while signed out) gets one before each push; the
+          // engine sends it first and holds the money while it cannot be written (review N3).
+          beforePush: () => ensureAppMinIfMoney(store, deviceClock, { userId, groupId }),
         });
         handle.engine.subscribe(setEngineStatus);
         setSyncMode('on');

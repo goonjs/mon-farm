@@ -125,7 +125,7 @@ describe('review B1 · money pulled by a round-1 tab, then read by round 2', () 
     const a = await phone('user-a', server);
     const b = await phone('user-b', server);
     await a.write('x1', null, { t: 'expense_created', fields: { amountSatang: 65_000, date: '2026-11-20', stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าไฟ', note: '', payer: null } });
-    const acct = { id: nextId('user-a'), groupId: FIXTURE_GROUP_ID, deviceSeq: a.clock.take(), ts: Date.now(), actor: { userId: 'user-a', deviceId: a.deviceId }, source: 'app' as const, baseEventId: null, payload: { t: 'account_added', fields: { name: 'กสิกร', number: '0123456789', promptPay: null } } as unknown as FinancePayload };
+    const acct = { id: nextId('user-a'), groupId: FIXTURE_GROUP_ID, deviceSeq: a.clock.take(), ts: Date.now(), actor: { userId: 'user-a', deviceId: a.deviceId }, source: 'app' as const, baseEventId: null, payload: { t: 'account_added', fields: { label: 'กสิกร', bankCode: null, accountNo: '0123456789', accountName: 'สวนบ้านนา', promptPay: null } } as FinancePayload };
     await a.finance.append({ ...acct, targetId: acct.id });
     await a.engine.sync();
     // B's browser: a round-1 tab pulled both before it was reloaded to round 2.
@@ -133,7 +133,7 @@ describe('review B1 · money pulled by a round-1 tab, then read by round 2', () 
     await b.engine.sync();
     expect(b.engine.status().state).not.toBe('error');
     expect(projectFinance(await b.finance.load()).expenses.map((x) => [x.id, x.amountSatang])).toEqual([['x1', 65_000]]);
-    expect(projectAccounts(await b.finance.load()).accounts.map((x) => x.name)).toEqual(['กสิกร']);
+    expect(projectAccounts(await b.finance.load()).accounts.map((x) => x.label)).toEqual(['กสิกร']);
     expect(projectFinance(await a.finance.load()).expenses).toHaveLength(1);
   });
 });

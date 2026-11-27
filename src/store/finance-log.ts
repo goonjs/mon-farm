@@ -15,8 +15,10 @@
  * - The old device-only log (localStorage `mon-farm:finance-events` on web,
  *   the `finance_events` table on device) is copied in on first use (AC5):
  *   ids already in the store are skipped, so a copy cut short just runs again
- *   (AC6); a marker in the store's meta stops it reading the old log after
- *   that. The old log is kept as it is and never written again (AC7).
+ *   (AC6). A marker in the store's meta keeps how many old events were seen;
+ *   an old log that grew since (a round-1 tab still open in the same browser,
+ *   review N2) is copied again. The old log is kept as it is and never written
+ *   by this build (AC7). A malformed old row is skipped and logged (review N7).
  * - Before the first finance event of a group can be sent, the group gets one
  *   `kind: 'app_min'` event with `minApp: APP_RELEASE` (story schema section).
  *   It is appended first, so it has the lower `deviceSeq` and the outbox,
@@ -38,8 +40,8 @@ import { IntegrityError } from './errors';
 import type { FinanceStore } from './finance';
 import type { EventStore } from './store';
 
-/** The store-meta marker: the old finance log has been copied in (S28-AC6). */
-export const FINANCE_MIGRATED_FLAG = 'financeLogMigratedV1';
+/** The store-meta key of the copy marker (S28-AC6): `{"count": <old events seen>}`. */
+export const FINANCE_MIGRATED_FLAG = 'financeLogCopied';
 
 /** What is left of the old finance log: read once, never written (S28-AC7). */
 export interface LegacyFinanceLog {
@@ -48,10 +50,34 @@ export interface LegacyFinanceLog {
 
 const isFinance = (e: SaleEvent): e is FinanceLogEvent => e.kind === 'finance';
 
-/** The finance event the screens and projections know, without the envelope-only fields. */
+/**
+ * The finance event the screens and projections know, without the envelope-only fields. A round-1 tab's
+ * `fromEnvelope` stored a pulled create without `baseEventId: null` and without a `targetId` equal to its own
+ * id (review B1): read back, that is a create of its own record, never an edit of nothing.
+ */
 export function toFinanceEvent(e: FinanceLogEvent): FinanceEvent {
   const { id, groupId, deviceSeq, ts, actor, source, targetId, baseEventId, payload } = e;
-  return { id, groupId, deviceSeq, ts, actor, source, targetId, baseEventId, payload };
+  return { id, groupId, deviceSeq, ts, actor, source, targetId: targetId ?? id, baseEventId: baseEventId ?? null, payload };
+}
+
+/** An old-log row the copy can trust; anything else is skipped and logged, never copied (review N7). */
+function wellFormed(e: unknown): e is FinanceEvent {
+  const x = e as Record<string, unknown> | null;
+  if (!x || typeof x !== 'object') return false;
+  const actor = x.actor as Record<string, unknown> | null | undefined;
+  const payload = x.payload as Record<string, unknown> | null | undefined;
+  return (
+    typeof x.id === 'string' &&
+    x.id !== '' &&
+    typeof x.targetId === 'string' &&
+    typeof x.ts === 'number' &&
+    typeof x.deviceSeq === 'number' &&
+    !!actor &&
+    typeof actor.userId === 'string' &&
+    typeof actor.deviceId === 'string' &&
+    !!payload &&
+    typeof payload.t === 'string'
+  );
 }
 
 const nextSeq = (log: readonly SaleEvent[]) => log.reduce((max, e) => Math.max(max, e.seq), 0) + 1;
@@ -82,8 +108,8 @@ const sameFinance = (a: FinanceEvent, b: FinanceEvent) => canonicalJson({ ...a, 
  * Writes the group minimum for `scope` unless the group already has one at this release or higher
  * (from this phone or pulled from another). True when it wrote one.
  */
-export async function ensureAppMin(events: EventStore, clock: DeviceClock, scope: Scope): Promise<boolean> {
-  const log = await events.load(FINANCE_SCOPE);
+export async function ensureAppMin(events: EventStore, clock: DeviceClock, scope: Scope, read?: readonly SaleEvent[]): Promise<boolean> {
+  const log = read ?? (await events.load(FINANCE_SCOPE));
   if ((minAppOf(log.filter((e) => e.groupId === scope.groupId)) ?? 0) >= APP_RELEASE) return false;
   const deviceId = await clock.load();
   const event: AppMinEvent = {
@@ -117,8 +143,22 @@ export interface MigrationResult {
   readonly copied: number;
   /** Already in the store (an earlier run, or another tab). */
   readonly skipped: number;
-  /** Not copied and left in the old log: no group (before D-24), or an id the store holds with other content. */
+  /** Not copied and left in the old log: malformed, no group (before D-24), or an id the store holds with other content. */
   readonly refused: number;
+}
+
+interface CopyMarker {
+  readonly count: number;
+}
+
+function readMarker(raw: string | null): CopyMarker | null {
+  if (raw === null) return null;
+  try {
+    const m = JSON.parse(raw) as Partial<CopyMarker>;
+    return typeof m.count === 'number' ? { count: m.count } : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -133,7 +173,13 @@ export async function migrateFinanceLog(events: EventStore, legacy: LegacyFinanc
   let copied = 0;
   let skipped = 0;
   let refused = 0;
-  for (const e of old ?? (await legacy.load())) {
+  const rows = old ?? (await legacy.load());
+  for (const e of rows) {
+    if (!wellFormed(e)) {
+      console.warn('An old finance row is malformed; left in the old log, not copied.', e);
+      refused += 1;
+      continue;
+    }
     if (have.has(e.id)) {
       skipped += 1;
       continue;
@@ -155,12 +201,13 @@ export async function migrateFinanceLog(events: EventStore, legacy: LegacyFinanc
     have.add(e.id);
     copied += 1;
   }
-  await events.setMetaFlag(FINANCE_MIGRATED_FLAG);
+  await events.setMetaValue(FINANCE_MIGRATED_FLAG, JSON.stringify({ count: rows.length } satisfies CopyMarker));
   return { copied, skipped, refused };
 }
 
 export class EventFinanceStore implements FinanceStore {
-  private ready: Promise<void> | null = null;
+  /** The copy check in flight, shared by every caller that arrives meanwhile. */
+  private checking: Promise<void> | null = null;
   /** One write at a time: `seq` and "is there a minimum yet" are read, then written. */
   private queue: Promise<unknown> = Promise.resolve();
 
@@ -172,21 +219,30 @@ export class EventFinanceStore implements FinanceStore {
     private readonly scope: () => Scope | null,
   ) {}
 
-  /** The one-time copy; a failure is retried on the next use. */
+  /**
+   * The copy, on every use: cheap once done (the marker and the old log's length are compared), and run
+   * again when the old log has grown since (review N2). A failure is retried on the next use.
+   */
   private migrated(): Promise<void> {
-    this.ready ??= (async () => {
-      if (await this.events.metaFlag(FINANCE_MIGRATED_FLAG)) return;
+    this.checking ??= (async () => {
       const old = await this.legacy.load();
+      const marker = readMarker(await this.events.metaValue(FINANCE_MIGRATED_FLAG));
+      if (marker && marker.count >= old.length) return;
       const scope = this.scope();
-      // The minimum goes in before the copied money, so it is sent first.
-      if (scope && old.some((e) => belongsTo(scope, e))) await ensureAppMin(this.events, this.clock, scope);
+      // The minimum goes in before the copied money, so it has the lower device number.
+      if (scope && old.some((e) => wellFormed(e) && belongsTo(scope, e))) await ensureAppMin(this.events, this.clock, scope);
       const result = await migrateFinanceLog(this.events, this.legacy, this.clock, old);
       if (result.copied || result.refused) console.info('Old finance log copied into the event log.', result);
-    })().catch((err) => {
-      this.ready = null;
-      throw err;
+    })().finally(() => {
+      this.checking = null;
     });
-    return this.ready;
+    return this.checking;
+  }
+
+  /** The open group's money only (review N6); with nobody signed in, everything on the device. */
+  private mineOnly(events: readonly SaleEvent[]): FinanceEvent[] {
+    const scope = this.scope();
+    return events.filter(isFinance).filter((e) => !scope || e.groupId === scope.groupId).map(toFinanceEvent);
   }
 
   private serial<T>(task: () => Promise<T>): Promise<T> {
@@ -202,16 +258,17 @@ export class EventFinanceStore implements FinanceStore {
   append(event: FinanceEvent): Promise<void> {
     return this.serial(async () => {
       await this.migrated();
-      const existing = (await this.events.load(FINANCE_SCOPE)).find((e) => e.id === event.id);
+      // One read of the scope per save (review N11): the minimum check and the next seq use it too.
+      const log = await this.events.load(FINANCE_SCOPE);
+      const existing = log.find((e) => e.id === event.id);
       if (existing) {
         if (isFinance(existing) && sameFinance(toFinanceEvent(existing), event)) return;
         throw new IntegrityError(`Finance event ${event.id} already stored with different content.`);
       }
-      await ensureAppMin(this.events, this.clock, { userId: event.actor.userId, groupId: event.groupId });
-      const log = await this.events.load(FINANCE_SCOPE);
+      const wrote = await ensureAppMin(this.events, this.clock, { userId: event.actor.userId, groupId: event.groupId }, log);
       const deviceId = await this.clock.load();
       const deviceSeq = event.actor.deviceId === deviceId ? this.clock.take() : event.deviceSeq;
-      await this.events.append(toStored({ ...event, deviceSeq }, nextSeq(log), monoNow()));
+      await this.events.append(toStored({ ...event, deviceSeq }, nextSeq(log) + (wrote ? 1 : 0), monoNow()));
     });
   }
 
@@ -222,11 +279,12 @@ export class EventFinanceStore implements FinanceStore {
     } catch (err) {
       // Money must not look gone: show the old log's events beside what the store has, and copy next time.
       console.error('The old finance log could not be copied yet; showing it as well.', err);
-      const stored = (await this.events.load(FINANCE_SCOPE)).filter(isFinance).map(toFinanceEvent);
+      const stored = this.mineOnly(await this.events.load(FINANCE_SCOPE));
       const ids = new Set(stored.map((e) => e.id));
-      const old = await this.legacy.load().catch(() => []);
+      const scope = this.scope();
+      const old = (await this.legacy.load().catch(() => [])).filter((e) => wellFormed(e) && (!scope || e.groupId === scope.groupId));
       return [...stored, ...old.filter((e) => !ids.has(e.id))];
     }
-    return (await this.events.load(FINANCE_SCOPE)).filter(isFinance).map(toFinanceEvent);
+    return this.mineOnly(await this.events.load(FINANCE_SCOPE));
   }
 }

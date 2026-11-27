@@ -223,16 +223,17 @@ export class IndexedDbStore implements EventStore {
     await committed(tx);
   }
 
-  // `flag:<key>` in `meta`, like the cursor: no schema change, no version bump.
-  async metaFlag(key: string): Promise<boolean> {
+  // `value:<key>` in `meta`, like the cursor: no schema change, no version bump.
+  async metaValue(key: string): Promise<string | null> {
     const db = await this.open();
-    return (await request(db.transaction('meta', 'readonly').objectStore('meta').get(`flag:${key}`))) === true;
+    const v = await request(db.transaction('meta', 'readonly').objectStore('meta').get(`value:${key}`));
+    return typeof v === 'string' ? v : null;
   }
 
-  async setMetaFlag(key: string): Promise<void> {
+  async setMetaValue(key: string, value: string): Promise<void> {
     const db = await this.open();
     const tx = db.transaction('meta', 'readwrite');
-    tx.objectStore('meta').put(true, `flag:${key}`);
+    tx.objectStore('meta').put(value, `value:${key}`);
     await committed(tx);
   }
 
@@ -329,11 +330,11 @@ export class WebStore implements EventStore {
   async listSales() {
     return (await this.pick()).listSales();
   }
-  async metaFlag(key: string) {
-    return (await this.pick()).metaFlag(key);
+  async metaValue(key: string) {
+    return (await this.pick()).metaValue(key);
   }
-  async setMetaFlag(key: string) {
-    return (await this.pick()).setMetaFlag(key);
+  async setMetaValue(key: string, value: string) {
+    return (await this.pick()).setMetaValue(key, value);
   }
   async device() {
     return (await this.pick()).device();

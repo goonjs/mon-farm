@@ -21,8 +21,15 @@ const DB_NAME = 'mon-farm.db';
 
 /** The old native finance log, read-only. A database with no such table (a new install) reads as empty. */
 export class SqliteLegacyFinanceLog implements LegacyFinanceLog {
+  /** Opened once: the port checks the old log on every use (a log that grew is copied again). */
+  private db: Promise<SQLite.SQLiteDatabase> | null = null;
+
   async load(): Promise<FinanceEvent[]> {
-    const db = await SQLite.openDatabaseAsync(DB_NAME);
+    this.db ??= SQLite.openDatabaseAsync(DB_NAME).catch((err) => {
+      this.db = null;
+      throw err;
+    });
+    const db = await this.db;
     const table = await db.getFirstAsync<{ name: string }>(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'finance_events'`);
     if (!table) return [];
     const rows = await db.getAllAsync<{ body: string }>(`SELECT body FROM finance_events`);
