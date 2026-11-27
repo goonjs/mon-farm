@@ -350,7 +350,8 @@ export class SyncEngine {
       }
       await this.pull();
       // Money held for want of a group minimum is not sent and not "synced": try the whole run again soon.
-      if (this.heldMoney) throw new RemoteError('internal', 'Money waits for the group minimum.');
+      // A permanent error from this run wins (re-review N2): it is what the owner must see.
+      if (this.heldMoney && !pushError) throw new RemoteError('internal', 'Money waits for the group minimum.');
       this.attempt = 0;
       await this.settle(pushError ? { kind: pushError } : {});
     } catch (err) {
@@ -410,11 +411,27 @@ export class SyncEngine {
         console.warn('The group minimum could not be written; its money waits.', err);
       }
     }
-    const pending = (await this.deps.store.pending()).filter((e) => this.mine(e) && !this.rejected.has(e.id) && !this.conflicting.has(e.id));
-    const outbox = await this.minimumFirst(pending);
+    this.heldMoney = false;
+    const all = (await this.deps.store.pending()).filter(this.mine);
+    const pending = all.filter((e) => !this.rejected.has(e.id) && !this.conflicting.has(e.id));
+    // E01-S28 (review N3, re-review N1): this group's minimum goes up on its own first, whatever the device
+    // numbers say; money follows only once a minimum at this release is on the server.
+    let refused = await this.send(pending.filter((e) => e.kind === 'app_min'));
+    if (this.stopped) return;
+    const rest = pending.filter((e) => e.kind !== 'app_min');
+    const held = rest.some((e) => e.kind === 'finance') && !(await this.minimumSent());
+    this.heldMoney = held;
+    if (held) refused ??= this.minimumRefused(all);
+    const later = await this.send(held ? rest.filter((e) => e.kind !== 'finance') : rest);
+    refused ??= later;
+    if (refused) throw refused;
+  }
+
+  /** Sends in batches; a refused batch is checked event by event. The first refusal is returned, not thrown. */
+  private async send(outbox: readonly SaleEvent[]): Promise<Permanent | undefined> {
     let refused: Permanent | undefined;
     for (let i = 0; i < outbox.length; i += BATCH_SIZE) {
-      if (this.stopped) return;
+      if (this.stopped) return refused;
       const batch = outbox.slice(i, i + BATCH_SIZE);
       try {
         await withTimeout(this.deps.remote.push(batch), this.ackMs);
@@ -425,21 +442,25 @@ export class SyncEngine {
         refused ??= await this.checkEach(batch);
       }
     }
-    if (refused) throw refused;
+    return refused;
   }
 
   /**
-   * E01-S28 (review N3): a group's `app_min` goes up before any of its money, whatever the device numbers
-   * say (money copied while signed out, or from another device id, can sort first), and money is not sent at
-   * all while the group has no minimum at this release. Everything else keeps its device order.
+   * Re-review N1: only a minimum the server holds counts (sent or pulled, so no longer pending). Another
+   * user's unsent minimum on a shared phone, or this user's own the server refused, never goes up from here.
    */
-  private async minimumFirst(outbox: readonly SaleEvent[]): Promise<SaleEvent[]> {
-    this.heldMoney = false;
-    if (!outbox.some((e) => e.kind === 'finance')) return [...outbox];
-    const scope = (await this.deps.store.load(FINANCE_SCOPE)).filter((e) => e.groupId === this.deps.scope.groupId);
-    const ready = (minAppOf(scope) ?? 0) >= APP_RELEASE;
-    this.heldMoney = !ready;
-    return [...outbox.filter((e) => e.kind === 'app_min'), ...outbox.filter((e) => e.kind !== 'app_min' && (ready || e.kind !== 'finance'))];
+  private async minimumSent(): Promise<boolean> {
+    const waiting = new Set((await this.deps.store.pending()).map((e) => e.id));
+    const scope = (await this.deps.store.load(FINANCE_SCOPE)).filter((e) => e.groupId === this.deps.scope.groupId && !waiting.has(e.id));
+    return (minAppOf(scope) ?? 0) >= APP_RELEASE;
+  }
+
+  /** The money waits because the server refused this user's minimum: that is the error to show, not "retrying". */
+  private minimumRefused(mine: readonly SaleEvent[]): Permanent | undefined {
+    const mins = mine.filter((e) => e.kind === 'app_min' && (minAppOf([e]) ?? 0) >= APP_RELEASE);
+    if (mins.some((e) => this.conflicting.has(e.id))) return new Permanent('integrity');
+    if (mins.some((e) => this.rejected.has(e.id))) return new Permanent('invalid');
+    return undefined;
   }
 
   /**

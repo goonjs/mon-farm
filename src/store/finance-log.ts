@@ -105,12 +105,15 @@ function toStored(e: FinanceEvent, seq: number, mono: number): FinanceLogEvent {
 const sameFinance = (a: FinanceEvent, b: FinanceEvent) => canonicalJson({ ...a, deviceSeq: 0 }) === canonicalJson({ ...b, deviceSeq: 0 });
 
 /**
- * Writes the group minimum for `scope` unless the group already has one at this release or higher
- * (from this phone or pulled from another). True when it wrote one.
+ * Writes the group minimum for `scope` unless the group already has one at this release or higher that
+ * the server holds (sent or pulled) or that this user will send. Another user's unsent minimum on a shared
+ * phone does not count (re-review N1): this user's sync never sends it. True when it wrote one.
  */
 export async function ensureAppMin(events: EventStore, clock: DeviceClock, scope: Scope, read?: readonly SaleEvent[]): Promise<boolean> {
   const log = read ?? (await events.load(FINANCE_SCOPE));
-  if ((minAppOf(log.filter((e) => e.groupId === scope.groupId)) ?? 0) >= APP_RELEASE) return false;
+  const waiting = new Set((await events.pending()).map((e) => e.id));
+  const counted = log.filter((e) => e.groupId === scope.groupId && (!waiting.has(e.id) || belongsTo(scope, e)));
+  if ((minAppOf(counted) ?? 0) >= APP_RELEASE) return false;
   const deviceId = await clock.load();
   const event: AppMinEvent = {
     id: uuidv7(),
