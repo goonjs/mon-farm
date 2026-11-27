@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { basketGroups, openBasketIn, stdNetOfLog } from './bridge';
-import { catchUpAllowed, catchUpPlan, writeCatchUp, type CatchUpOptions, type CatchUpPoint } from './catch-up';
+import { catchUpAllowed, catchUpPlan, writeCatchUp, type CatchUpOpen, type CatchUpOptions, type CatchUpPoint } from './catch-up';
 import { LogBuilder } from './fixtures';
 import { MASTER_SCOPE, projectMaster } from './master';
-import { basketList, saleRollup } from './sale-points';
+import { basketList, nextBasketNo, saleRollup } from './sale-points';
 import { saleTotals } from './totals';
+import type { FinanceEvent, FinancePayload } from './finance/types';
 import type { MasterPayload, SaleEvent } from './types';
 
 /** แดง: p1, p2, p3 · นัด: p9. Standard net 50 kg, basket 2 kg. */
@@ -165,19 +166,147 @@ describe('E04-S19 — catch up from the paper, point by point (continuous per ta
   });
 });
 
-describe('E04-S19 BF-8 — only before live counting', () => {
-  it('continuous: allowed while the tapper has no basket; another tapper\'s baskets do not matter', () => {
-    const b = sale();
-    expect(catchUpAllowed(b.build(), master(), DAY, 'p1', 'per-tapper')).toBe(true);
-    b.acceptAt('p9', 1);
-    expect(catchUpAllowed(b.build(), master(), DAY, 'p1', 'per-tapper')).toBe(true);
-    b.acceptAt('p2', 1);
-    expect(catchUpAllowed(b.build(), master(), DAY, 'p1', 'per-tapper')).toBe(false);
+/** The open short basket of a log, as the screen hands it to the plan (from `openBasketIn` and its root pile). */
+function openOf(events: SaleEvent[], pointId: string, mode: 'per-tapper' | 'per-point'): CatchUpOpen {
+  const o = openBasketIn(events, master(), DAY, pointId, mode, stdNetOfLog(events));
+  if (!o) throw new Error('no open basket');
+  return { rootId: o.rootId, basketNo: o.basketNo, pointId: o.pointId, haveG: o.haveG, stdNetG: o.haveG + o.missingG, tareG: o.tareG };
+}
+const tapperOf = (id: string) => (id === 'p9' ? 'nat' : 'red');
+
+describe('E04-S26 AT-1/AT-2 — catch up at any time, numbered on from the last basket', () => {
+  it('continuous: after แดง counted 1–3 live at p1, a catch-up at p2 runs on from 4, never inserting', () => {
+    const b = sale().acceptAt('p1', 1).acceptAt('p1', 2).acceptAt('p1', 3);
+    const firstNo = nextBasketNo(b.build(), 'p2', 'per-tapper', tapperOf);
+    expect(firstNo).toBe(4);
+    const { plan, events } = written([pt('p2', 6, null)], { ...O, firstNo }, b);
+    expect(plan.rows).toEqual([{ kind: 'full', pointId: 'p2', from: 4, to: 6, count: 3, netG: 150 * KG }]);
+    expect(basketList(events).map((r) => r.basketNo)).toEqual([6, 5, 4, 3, 2, 1]);
   });
 
-  it('per point: only the point\'s own baskets block it', () => {
-    const b = sale().acceptAt('p2', 1);
-    expect(catchUpAllowed(b.build(), master(), DAY, 'p1', 'per-point')).toBe(true);
-    expect(catchUpAllowed(b.build(), master(), DAY, 'p2', 'per-point')).toBe(false);
+  it('two catch-ups one after the other: the numbers carry on each time', () => {
+    const b = sale().acceptAt('p1', 1);
+    written([pt('p2', 3, null)], { ...O, firstNo: nextBasketNo(b.build(), 'p2', 'per-tapper', tapperOf) }, b);
+    b.acceptAt('p2', 4);
+    const second = written([pt('p3', 7, null)], { ...O, firstNo: nextBasketNo(b.build(), 'p3', 'per-tapper', tapperOf) }, b);
+    expect(second.plan.rows[0]).toMatchObject({ from: 5, to: 7 });
+    expect(basketList(second.events).map((r) => r.basketNo)).toEqual([7, 6, 5, 4, 3, 2, 1]);
+  });
+
+  it('review N1 — per point: each point starts at its own next basket, not at 1 and not at the options\' firstNo', () => {
+    const b = sale().acceptAt('p1', 1).acceptAt('p1', 2);
+    const points: CatchUpPoint[] = [{ ...pt('p1', 4, null), firstNo: 3 }, { ...pt('p2', 2, null), firstNo: 1 }];
+    const { plan, events } = written(points, { ...O, mode: 'per-point', firstNo: 99 }, b);
+    expect(plan.rows).toEqual([
+      { kind: 'full', pointId: 'p1', from: 3, to: 4, count: 2, netG: 100 * KG },
+      { kind: 'full', pointId: 'p2', from: 1, to: 2, count: 2, netG: 100 * KG },
+    ]);
+    expect(plan.baskets).toBe(4);
+    expect(nextBasketNo(events, 'p1', 'per-point', tapperOf)).toBe(5);
+  });
+});
+
+describe('E04-S26 AT-3 — a short basket still open from counting live is asked about first', () => {
+  /** แดง counted 1–2 full and 3 short (30 kg) live at p1; basket 3 is open. */
+  const live = () => sale().acceptAt('p1', 1).acceptAt('p1', 2).shortAt('p1', 3, 32 * KG);
+
+  it('review N2 — topped up at the first point entered: the part names the basket already in the log, and it closes full', () => {
+    const b = live();
+    const open = openOf(b.build(), 'p2', 'per-tapper');
+    expect(open).toMatchObject({ basketNo: 3, haveG: 30 * KG, stdNetG: 50 * KG, tareG: 2 * KG });
+    const plan = catchUpPlan([{ ...pt('p2', 6, null, 20 * KG), open }], { ...O, firstNo: 4 });
+    expect(plan?.drafts[0]).toEqual({ kind: 'accept', pointId: 'p2', basketNo: 3, netG: 20 * KG, tareG: 2 * KG, partOf: open.rootId });
+    const { events } = written([{ ...pt('p2', 6, null, 20 * KG), open }], { ...O, firstNo: 4 }, b);
+    const g3 = [...basketGroups(events, stdNetOfLog(events)).values()].find((g) => g.basketNo === 3);
+    expect(g3).toMatchObject({ status: 'full', netG: 50 * KG, partsG: [30 * KG, 20 * KG] });
+    // The summary shows the basket; the Σ adds only what this catch-up adds (the 30 kg was counted live).
+    expect(plan?.rows[0]).toMatchObject({ kind: 'short', basketNo: 3, firstG: 30 * KG, liveG: 30 * KG, netG: 50 * KG, status: 'full' });
+    expect(plan?.totalG).toBe(20 * KG + 3 * 50 * KG);
+    expect(plan?.baskets).toBe(3);
+    expect(saleTotals(events).netG).toBe(130 * KG + plan!.totalG);
+  });
+
+  it('not topped up: it is closed short by name, never by moving past it silently', () => {
+    const b = live();
+    const open = openOf(b.build(), 'p2', 'per-tapper');
+    const { plan, events } = written([{ ...pt('p2', 5, null, 0), open }], { ...O, firstNo: 4 }, b);
+    expect(plan.drafts[0]).toEqual({ kind: 'close', root: open.rootId });
+    expect(plan.rows[0]).toMatchObject({ basketNo: 3, netG: 30 * KG, liveG: 30 * KG, status: 'closed' });
+    expect(plan.totalG).toBe(100 * KG);
+    const closes = events.filter((e) => e.kind === 'sys' && e.payload.t === 'basket_closed');
+    expect(closes.map((e) => (e as { payload: { basketId: string } }).payload.basketId)).toEqual([open.rootId]);
+  });
+
+  it('nothing chosen for you: unanswered, there is no plan', () => {
+    const open = openOf(live().build(), 'p2', 'per-tapper');
+    expect(catchUpPlan([{ ...pt('p2', 6, null, null), open }], { ...O, firstNo: 4 })).toBeNull();
+  });
+
+  it('a top-up that still falls short and no new basket here: the basket stays open, to fill live', () => {
+    const b = live();
+    const open = openOf(b.build(), 'p2', 'per-tapper');
+    const { plan, events } = written([{ ...pt('p2', 3, null, 10 * KG), open }], { ...O, firstNo: 4 }, b);
+    expect(plan.rows).toEqual([{ kind: 'short', pointId: 'p1', basketNo: 3, firstG: 30 * KG, liveG: 30 * KG, topUps: [{ pointId: 'p2', g: 10 * KG }], netG: 40 * KG, status: 'open' }]);
+    expect(plan.baskets).toBe(0);
+    expect(openBasketIn(events, master(), DAY, 'p2', 'per-tapper', stdNetOfLog(events))).toMatchObject({ basketNo: 3, haveG: 40 * KG });
+  });
+
+  it('review note 3 — continuous: an open basket passed at a later point, with one already carried, gives no plan', () => {
+    const open = openOf(live().build(), 'p2', 'per-tapper');
+    expect(catchUpPlan([pt('p1', 5, 30 * KG), { ...pt('p2', 6, null, 20 * KG), open }], { ...O, firstNo: 4 })).toBeNull();
+  });
+
+  it('a top-up past one and a half full baskets is refused', () => {
+    const open = openOf(live().build(), 'p2', 'per-tapper');
+    expect(catchUpPlan([{ ...pt('p2', 6, null, 46 * KG), open }], { ...O, firstNo: 4 })).toBeNull();
+  });
+
+  it('review N4 — per point: the open basket is asked at that same point, before its new baskets', () => {
+    const b = live();
+    const open = openOf(b.build(), 'p1', 'per-point');
+    const points: CatchUpPoint[] = [{ ...pt('p1', 5, null, 20 * KG), firstNo: 4, open }, { ...pt('p2', 2, null), firstNo: 1 }];
+    const { plan, events } = written(points, { ...O, mode: 'per-point' }, b);
+    expect(plan.rows).toEqual([
+      { kind: 'short', pointId: 'p1', basketNo: 3, firstG: 30 * KG, liveG: 30 * KG, topUps: [{ pointId: 'p1', g: 20 * KG }], netG: 50 * KG, status: 'full' },
+      { kind: 'full', pointId: 'p1', from: 4, to: 5, count: 2, netG: 100 * KG },
+      { kind: 'full', pointId: 'p2', from: 1, to: 2, count: 2, netG: 100 * KG },
+    ]);
+    expect([...basketGroups(events, stdNetOfLog(events)).values()].find((g) => g.basketNo === 3)?.status).toBe('full');
+    // Per point, a point with no open basket is not asked, and its top-up answer means nothing.
+    expect(catchUpPlan([{ ...pt('p1', 5, null, null), firstNo: 4, open }], { ...O, mode: 'per-point' })).toBeNull();
+    expect(catchUpPlan([{ ...pt('p2', 2, null, null), firstNo: 1 }], { ...O, mode: 'per-point' })).not.toBeNull();
+  });
+
+  it('per point, not topped up: closed by name at its own point', () => {
+    const b = live();
+    const open = openOf(b.build(), 'p1', 'per-point');
+    const { plan } = written([{ ...pt('p1', 4, null, 0), firstNo: 4, open }], { ...O, mode: 'per-point' }, b);
+    expect(plan.drafts[0]).toEqual({ kind: 'close', root: open.rootId });
+  });
+});
+
+describe('E04-S26 AT-4 — not once clearing the money has started (replaces E04-S19 BF-8)', () => {
+  let k = 0;
+  const f = (payload: FinancePayload): FinanceEvent => {
+    k += 1;
+    return { id: `f${k}`, groupId: 'g', deviceSeq: k, ts: k, actor: { userId: 'u', deviceId: 'd' }, source: 'app', targetId: `t${k}`, baseEventId: null, payload };
+  };
+
+  it('review N3 — allowed with baskets already counted; only a live payment tick or debt line of this sale blocks it', () => {
+    expect(catchUpAllowed([], 'sale-x')).toBe(true);
+    const tick = f({ t: 'payment_mark_set', saleId: 'sale-x', payee: 'red', done: true, amountSatang: 100 });
+    expect(catchUpAllowed([tick], 'sale-x')).toBe(false);
+    expect(catchUpAllowed([tick], 'sale-other')).toBe(true);
+    const line = f({ t: 'debt_payment_recorded', fields: { saleId: 'sale-x', workerId: 'red', amountSatang: 50 } as never });
+    expect(catchUpAllowed([line], 'sale-x')).toBe(false);
+  });
+
+  it('every tick and debt line taken back: allowed again', () => {
+    const tick = f({ t: 'payment_mark_set', saleId: 'sale-x', payee: 'red', done: true, amountSatang: 100 });
+    const untick = { ...f({ t: 'payment_mark_set', saleId: 'sale-x', payee: 'red', done: false, amountSatang: 100 }), targetId: tick.targetId, baseEventId: tick.id };
+    const line = f({ t: 'debt_payment_recorded', fields: { saleId: 'sale-x', workerId: 'red', amountSatang: 50 } as never });
+    const gone = { ...f({ t: 'debt_payment_changed', patch: { deleted: true } }), targetId: line.targetId, baseEventId: line.id };
+    expect(catchUpAllowed([tick, untick, line], 'sale-x')).toBe(false);
+    expect(catchUpAllowed([tick, untick, line, gone], 'sale-x')).toBe(true);
   });
 });

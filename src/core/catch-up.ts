@@ -2,12 +2,30 @@
  * Catching up from the paper (E04-S19): someone arrives late and enters the
  * baskets already weighed, point by point in weighing order, then counts
  * live. Every basket is an ordinary event, so totals, history and the
- * open-basket rules apply as if it had been counted live.
+ * open-basket rules apply as if it had been counted live. Since E04-S26 it
+ * can be done at any time, one point at a time, numbered on from the last
+ * basket; only clearing the money stops it.
  */
 
-import { tapperOn, type MasterState } from './master';
-import { nextBasketNo } from './sale-points';
-import type { NumberingMode, SaleEvent } from './types';
+import type { FinanceEvent } from './finance/types';
+import { clearingStarted } from './home-tiles';
+import type { NumberingMode } from './types';
+
+/**
+ * A short basket still open in the log (counted live, or left by an earlier
+ * catch-up), asked about before the point's new baskets (E04-S26 AT-3). It
+ * keeps its root pile's standard and its own basket weight (review N2).
+ */
+export interface CatchUpOpen {
+  readonly rootId: string;
+  readonly basketNo: number;
+  /** Where its first part was weighed. */
+  readonly pointId: string;
+  /** What it holds already, counted before this catch-up. */
+  readonly haveG: number;
+  readonly stdNetG: number;
+  readonly tareG: number;
+}
 
 export interface CatchUpPoint {
   readonly pointId: string;
@@ -19,12 +37,19 @@ export interface CatchUpPoint {
   readonly topUpG: number | null;
   /** This point's basket pair, when it differs from the options' (review B1): its pile's, as the fold reads it. */
   readonly pair?: { readonly stdNetG: number; readonly tareG: number };
+  /** Per point: this point's next basket number (E04-S26 AT-2, review N1); 1 when left out. */
+  readonly firstNo?: number;
+  /** An open short basket from the log to ask about here first: `topUpG` answers it (AT-3). */
+  readonly open?: CatchUpOpen;
 }
 
+/** A basket the plan names: a draft of this plan (its index), or an event already in the log (its id). */
+export type CatchUpRef = number | string;
+
 export type CatchUpDraft =
-  | { readonly kind: 'accept'; readonly pointId: string; readonly basketNo: number; readonly netG: number; readonly tareG: number; readonly partOf?: number }
+  | { readonly kind: 'accept'; readonly pointId: string; readonly basketNo: number; readonly netG: number; readonly tareG: number; readonly partOf?: CatchUpRef }
   | { readonly kind: 'short'; readonly pointId: string; readonly basketNo: number; readonly netG: number; readonly tareG: number }
-  | { readonly kind: 'close'; readonly root: number };
+  | { readonly kind: 'close'; readonly root: CatchUpRef };
 
 export type CatchUpRow =
   | { readonly kind: 'full'; readonly pointId: string; readonly from: number; readonly to: number; readonly count: number; readonly netG: number }
@@ -33,6 +58,8 @@ export type CatchUpRow =
       readonly pointId: string;
       readonly basketNo: number;
       readonly firstG: number;
+      /** Grams it held before this catch-up (an open basket from the log): shown, not added to the Σ. */
+      readonly liveG?: number;
       readonly topUps: readonly { readonly pointId: string; readonly g: number }[];
       readonly netG: number;
       readonly status: 'full' | 'closed' | 'open';
@@ -48,6 +75,7 @@ export interface CatchUpPlan {
 
 export interface CatchUpOptions {
   readonly mode: NumberingMode;
+  /** Continuous per tapper: the tapper's next basket number. Per point, each point's own `firstNo`. */
   readonly firstNo: number;
   readonly stdNetG: number;
   readonly tareG: number;
@@ -68,7 +96,10 @@ const MAX_FILL = 1.5;
  * not reach full carries on to the next point only when this point starts no
  * basket of its own (`endNo` = its start − 1); otherwise it closes short.
  * The last point's short basket stays open, to fill when counting live.
- * Per point: each point starts at 1 and keeps its own open short basket.
+ * Per point: each point starts at its own `firstNo` and keeps its own open
+ * short basket. A point's `open` basket (already in the log) is asked about
+ * there first, in both modes, exactly as a basket left short by the point
+ * before (E04-S26 AT-3).
  */
 export function catchUpPlan(points: readonly CatchUpPoint[], o: CatchUpOptions): CatchUpPlan | null {
   if (!points.length) return null;
@@ -77,7 +108,7 @@ export function catchUpPlan(points: readonly CatchUpPoint[], o: CatchUpOptions):
   const rows: CatchUpRow[] = [];
   let next = perPoint ? 1 : o.firstNo;
   // A carried basket keeps its first point's standard and tare: the fold judges it by its root pile (bridge.ts).
-  type Carried = { draft: number; row: number; haveG: number; stdNetG: number; tareG: number };
+  type Carried = { draft: CatchUpRef; row: number; haveG: number; stdNetG: number; tareG: number };
   let carried: Carried | null = null;
   let baskets = 0;
   let lastNo = next - 1;
@@ -86,11 +117,23 @@ export function catchUpPlan(points: readonly CatchUpPoint[], o: CatchUpOptions):
   };
 
   for (const p of points) {
-    if (perPoint) next = 1;
+    if (perPoint) {
+      next = p.firstNo ?? 1;
+      // Per point nothing carries from the point before (D-46).
+      carried = null;
+      lastNo = Math.max(lastNo, next - 1);
+    }
+    if (p.open) {
+      // Two baskets to answer at one point cannot be right.
+      if (carried) return null;
+      const r = p.open;
+      rows.push({ kind: 'short', pointId: r.pointId, basketNo: r.basketNo, firstG: r.haveG, liveG: r.haveG, topUps: [], netG: r.haveG, status: 'open' });
+      carried = { draft: r.rootId, row: rows.length - 1, haveG: r.haveG, stdNetG: r.stdNetG, tareG: r.tareG };
+    }
     const std = p.pair?.stdNetG ?? o.stdNetG;
     const tare = p.pair?.tareG ?? o.tareG;
     const start = next;
-    const topUpOnly = !perPoint && p.endNo === start - 1;
+    const topUpOnly = p.endNo === start - 1 && !!carried;
     if (p.endNo < start && !topUpOnly) return null;
     if (topUpOnly && !carried) return null;
 
@@ -134,7 +177,8 @@ export function catchUpPlan(points: readonly CatchUpPoint[], o: CatchUpOptions):
     next = p.endNo + 1;
   }
 
-  const totalG = rows.reduce((sum, r) => sum + r.netG, 0);
+  // What was counted before this catch-up is in the log already: the Σ is only what this one adds.
+  const totalG = rows.reduce((sum, r) => sum + r.netG - (r.kind === 'short' ? (r.liveG ?? 0) : 0), 0);
   return { drafts, rows, totalG, baskets, lastNo };
 }
 
@@ -144,23 +188,26 @@ export function catchUpPlan(points: readonly CatchUpPoint[], o: CatchUpOptions):
  */
 export function writeCatchUp(drafts: readonly CatchUpDraft[], append: (body: Record<string, unknown>) => string): void {
   const ids: string[] = [];
+  // A basket already in the log is named by its own id (review N2).
+  const id = (ref: CatchUpRef) => (typeof ref === 'string' ? ref : ids[ref]);
   for (const d of drafts) {
     if (d.kind === 'close') {
-      ids.push(append({ kind: 'sys', payload: { t: 'basket_closed', basketId: ids[d.root], reason: 'next' } }));
+      ids.push(append({ kind: 'sys', payload: { t: 'basket_closed', basketId: id(d.root), reason: 'next' } }));
     } else if (d.kind === 'short') {
       // Stored as a reading like any short basket (reading − basket = net).
       ids.push(append({ kind: 'short', pileId: d.pointId, pointId: d.pointId, basketNo: d.basketNo, readingG: d.netG + d.tareG, tareG: d.tareG, afterwards: true }));
     } else {
-      ids.push(append({ kind: 'accept', pileId: d.pointId, pointId: d.pointId, basketNo: d.basketNo, input: 'backfill', netG: d.netG, tareG: d.tareG, ...(d.partOf !== undefined ? { partOf: ids[d.partOf] } : {}) }));
+      ids.push(append({ kind: 'accept', pileId: d.pointId, pointId: d.pointId, basketNo: d.basketNo, input: 'backfill', netG: d.netG, tareG: d.tareG, ...(d.partOf !== undefined ? { partOf: id(d.partOf) } : {}) }));
     }
   }
 }
 
 /**
- * Catching up comes before counting live (owner 2026-11-16): allowed while
- * the point's number sequence — its tapper's, or the point's own — has no
- * basket yet.
+ * Catching up can be done at any time during the sale (E04-S26 AT-1, replaces
+ * E04-S19 BF-8), except once clearing the money has started — a live payment
+ * tick or debt line of this sale, read from the finance log (AT-4, review N3):
+ * the amounts already paid would change. Taking them all back allows it again.
  */
-export function catchUpAllowed(events: readonly SaleEvent[], master: MasterState, day: string, pointId: string, mode: NumberingMode): boolean {
-  return nextBasketNo(events, pointId, mode, (id) => tapperOn(master, id, day)) === 1;
+export function catchUpAllowed(finance: readonly FinanceEvent[], saleId: string): boolean {
+  return !clearingStarted(finance, saleId);
 }

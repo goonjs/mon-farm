@@ -764,10 +764,10 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     await press('cu-next');
     // BF-4: what happened to basket 12 at จุด 3; nothing chosen, the gap offered.
     expect(screen.getByTestId('cu-topup')).toHaveTextContent(/เข่ง 12 \(30 กก\.\) เติมที่จุดนี้ไหม/);
-    expect(enabled('cu-next')).toBe(false);
+    // Owner 2026-11-23 topup-tap-only: one tap fills the 20 kg gap and moves on; no next button.
+    expect(screen.queryByTestId('cu-next')).toBeNull();
+    expect(screen.getByTestId('cu-fill')).toHaveTextContent(/\(\+20 กก\.\)/);
     await press('cu-fill');
-    expect(screen.getByTestId('cu-fill-kg')).toHaveTextContent(/20/);
-    await press('cu-next');
     expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
     await typeInt('cu-end', '21');
     expect(screen.getByTestId('cu-count')).toHaveTextContent(/= 9 เข่ง/);
@@ -925,7 +925,6 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     await typeKg('cu-short-kg', '30');
     await press('cu-next');
     await press('cu-nofill');
-    await press('cu-next');
     expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
     await typeInt('cu-end', '14');
     await press('cu-full');
@@ -949,26 +948,34 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     expect(screen.getByTestId('cu-total')).toHaveTextContent(/350 กก\./);
   });
 
-  it('BF-8: only before counting live — a tapper with a basket already cannot catch up', async () => {
+  it('E04-S26 AT-1 (was BF-8): a tapper who counted live already can catch up; the baskets number on from the last one', async () => {
     await started();
     await readyAt(farm.a[0]);
     const c = await counterAt(farm.a[0]);
     await hold();
     c.unmount();
     await inSale(<BackfillScreen />, { point: farm.a[2] });
-    expect(screen.getByTestId('cu-blocked')).toHaveTextContent(/นับเองไปแล้ว/);
-    expect(screen.queryByTestId('cu-next')).toBeNull();
+    expect(screen.queryByTestId('cu-blocked')).toBeNull();
+    // The point in the link is picked already (BF-1).
+    await press('cu-next');
+    expect(screen.getByTestId('cu-start')).toHaveTextContent(/2/);
+    await typeInt('cu-end', '3');
+    await press('cu-full');
+    await press('cu-next');
+    await press('cu-save');
+    const nos = (await kinds()).map((e) => (e as { basketNo: number }).basketNo);
+    expect(nos).toEqual([1, 2, 3]);
   });
 
-  it('opened for a tapper, a point in the link is ignored: BF-8 still reads that tapper (review N1)', async () => {
+  it('opened for a tapper, a point in the link is ignored: the flow is that tapper\'s (review N1)', async () => {
     await started();
     await readyAt(farm.a[0]);
     const c = await counterAt(farm.a[0]);
     await hold();
     c.unmount();
     await inSale(<BackfillScreen />, { tapper: farm.red, point: farm.a[4] });
-    expect(screen.getByTestId('cu-blocked')).toHaveTextContent(/นับเองไปแล้ว/);
-    expect(screen.queryByTestId('cu-next')).toBeNull();
+    expect(screen.getByTestId('cu-order')).toBeTruthy();
+    expect(screen.getByTestId(`cu-order-${farm.a[0]}`)).toBeTruthy();
   });
 
   it('a tapper with no points that day says so, with no way to save (review N2)', async () => {
@@ -979,7 +986,7 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     expect(screen.queryByTestId('cu-save')).toBeNull();
   });
 
-  it('per point, opened for a tapper: a point already counted live cannot be picked (BF-8)', async () => {
+  it('E04-S26 AT-1 (was BF-8): per point, a point already counted live can be picked; it numbers on from its own last basket (review N1)', async () => {
     await inSale(<StartSaleScreen />);
     await press('start-numbering-per-point');
     await press('start-next');
@@ -988,11 +995,227 @@ describe('catch up from the paper (E04-S19, mockup v4)', () => {
     await hold();
     c.unmount();
     await inSale(<BackfillScreen />, { tapper: farm.red });
-    expect(screen.getByTestId(`cu-order-${farm.a[0]}`).props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByTestId(`cu-order-${farm.a[0]}`).props.accessibilityState).not.toMatchObject({ disabled: true });
     await press(`cu-order-${farm.a[0]}`);
-    expect(enabled('cu-next')).toBe(false);
     await press(`cu-order-${farm.a[1]}`);
     expect(enabled('cu-next')).toBe(true);
+    await press('cu-next');
+    expect(screen.getByTestId('cu-start')).toHaveTextContent(/2/);
+    expect(screen.queryByText('จุดใหม่ เริ่มเข่ง 1 ใหม่')).toBeNull();
+    await typeInt('cu-end', '3');
+    await press('cu-full');
+    await press('cu-next');
+    expect(screen.getByTestId('cu-start')).toHaveTextContent(/1/);
+  });
+
+  it('E04-S26 AT-3: a short basket still open is asked about first — เติม / ไม่เติม, nothing chosen — then the numbers go on after it', async () => {
+    useDial();
+    await started();
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    await press('tool-short');
+    await press('short-save');
+    c.unmount();
+    // Basket 2 at จุด 1 is open with 35 kg. Catching up จุด 2 asks about it there.
+    await inSale(<BackfillScreen />, { tapper: farm.red });
+    await press(`cu-order-${farm.a[1]}`);
+    await press('cu-next');
+    expect(screen.getByTestId('cu-topup')).toHaveTextContent(/เข่ง 2 \(35 กก\.\) เติมที่จุดนี้ไหม/);
+    expect(screen.getByTestId('cu-point-name')).toHaveTextContent(/จุด 2/);
+    expect(screen.getByTestId('cu-fill').props.accessibilityState).toMatchObject({ checked: false });
+    expect(screen.getByTestId('cu-nofill').props.accessibilityState).toMatchObject({ checked: false });
+    // Owner 2026-11-23 topup-tap-only: one tap answers and moves on; no next button.
+    expect(screen.queryByTestId('cu-next')).toBeNull();
+    await press('cu-fill');
+    expect(screen.getByTestId('cu-start')).toHaveTextContent(/3/);
+    await typeInt('cu-end', '4');
+    await press('cu-full');
+    await press('cu-next');
+    // Σ: only what this catch-up adds — 15 kg to basket 2, and 3–4 full.
+    expect(screen.getByTestId('cu-total')).toHaveTextContent(/115 กก\./);
+    // Owner 2026-11-21 (pr239-summary-wording): the row says the 35 was counted live.
+    expect(screen.getByTestId('cu-row-0')).toHaveTextContent(/^เข่ง 2 \(นับเองไว้ 35\) \+ เติมที่จุด 2 อีก 15/);
+    expect(screen.getByTestId('cu-row-0')).not.toHaveTextContent(/ไม่เต็ม/);
+    await press('cu-save');
+    const ev = await kinds();
+    const root = ev.find((e) => e.kind === 'short')!;
+    expect(ev.find((e) => e.kind === 'accept' && (e as { partOf?: string }).partOf)).toMatchObject({ partOf: root.id, basketNo: 2, netG: 15_000, pointId: farm.a[1] });
+    expect(ev.map((e) => (e as { basketNo?: number }).basketNo)).toEqual([1, 2, 2, 3, 4]);
+  });
+
+  it('E04-S26 AT-3, ไม่เติม: the open basket is closed by name before the new ones', async () => {
+    useDial();
+    await started();
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    await press('tool-short');
+    await press('short-save');
+    c.unmount();
+    await inSale(<BackfillScreen />, { tapper: farm.red });
+    await press(`cu-order-${farm.a[1]}`);
+    await press('cu-next');
+    await press('cu-nofill');
+    await typeInt('cu-end', '3');
+    await press('cu-full');
+    await press('cu-next');
+    expect(screen.getByTestId('cu-row-0')).toHaveTextContent(/^เข่ง 2 \(นับเองไว้ 35\) · ปิดเข่ง/);
+    await press('cu-save');
+    const ev = await kinds();
+    const root = ev.find((e) => e.kind === 'short')!;
+    expect(ev.find((e) => e.kind === 'sys')).toMatchObject({ payload: { t: 'basket_closed', basketId: root.id } });
+  });
+
+  describe('the top-up page is tap only (owner 2026-11-23 13:33 topup-tap-only "ก · ก · 2 ตัวเลือก \'เติมให้เต็ม (+15 กก.)\' / \'ไม่เติม\' แตะแล้วไปต่อ · มีลิงก์เล็ก \'เติมไม่เท่านี้\' สำหรับกรณีหายากให้ใส่ กก. เอง (แนะนำ)")', () => {
+    /** The paper sample up to the top-up page at จุด 3: basket 12 left at 30 kg. */
+    const toTopup = async () => {
+      await started();
+      await inSale(<BackfillScreen />, { point: farm.a[0] });
+      await press(`cu-order-${farm.a[2]}`);
+      await press('cu-next');
+      await typeInt('cu-end', '12');
+      await press('cu-short');
+      await typeKg('cu-short-kg', '30');
+      await press('cu-next');
+      expect(screen.getByTestId('cu-topup')).toBeTruthy();
+    };
+
+    it('BF-4 continuous: two choices, "เติมให้เต็ม (+20 กก.)" and "ไม่เติม", no kg field and no next button', async () => {
+      await toTopup();
+      expect(screen.getByTestId('cu-fill')).toHaveTextContent(/^เติมให้เต็ม \(\+20 กก\.\)/);
+      expect(screen.getByTestId('cu-nofill')).toHaveTextContent(/^ไม่เติม/);
+      expect(screen.getByTestId('cu-fill').props.accessibilityState).toMatchObject({ checked: false });
+      expect(screen.queryByTestId('cu-fill-kg')).toBeNull();
+      expect(screen.queryByTestId('cu-next')).toBeNull();
+      expect(screen.getByTestId('cu-fill-own')).toHaveTextContent(/^เติมไม่เท่านี้$/);
+    });
+
+    it('BF-4 continuous: tapping "เติมให้เต็ม" moves straight on; basket 12 is filled with the 20 kg it lacked', async () => {
+      await toTopup();
+      await press('cu-fill');
+      expect(screen.queryByTestId('cu-topup')).toBeNull();
+      expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
+      await typeInt('cu-end', '13');
+      await press('cu-full');
+      await press('cu-next');
+      expect(screen.getByTestId('cu-summary')).toHaveTextContent(/เข่ง 12 ไม่เต็ม 30 \+ เติมที่จุด 3 อีก 20/);
+    });
+
+    it('BF-4 continuous: tapping "ไม่เติม" moves straight on; back shows what was chosen', async () => {
+      await toTopup();
+      await press('cu-nofill');
+      expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
+      await press('cu-back');
+      expect(screen.getByTestId('cu-nofill').props.accessibilityState).toMatchObject({ checked: true });
+      expect(screen.getByTestId('cu-fill').props.accessibilityState).toMatchObject({ checked: false });
+      // Tapping a choice again moves on again.
+      await press('cu-fill');
+      expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
+    });
+
+    it('"เติมไม่เท่านี้" opens the kg pad at once; up to 1.5× the standard; less than the gap stays short', async () => {
+      await toTopup();
+      await press('cu-fill-own');
+      expect(screen.getByTestId('cu-fill-kg-pad')).toBeTruthy();
+      expect(screen.getByTestId('cu-fill').props.accessibilityState).toMatchObject({ checked: false });
+      expect(enabled('cu-next')).toBe(false);
+      // 30 + 50 = 80 kg is past 1.5 × 50 = 75: refused, the pad stays open.
+      await padKeys('cu-fill-kg', '50');
+      await press('cu-fill-kg-done');
+      expect(screen.getByText(/ทั้งเข่งไม่เกิน 75 กก\./)).toBeTruthy();
+      expect(enabled('cu-next')).toBe(false);
+      await press('cu-fill-kg-pad-key-back');
+      await press('cu-fill-kg-pad-key-back');
+      await typeKg('cu-fill-kg', '10');
+      expect(enabled('cu-next')).toBe(true);
+      await press('cu-next');
+      // จุด 3 only topped basket 12 up: it ends at 12.
+      expect(screen.getByTestId('cu-start')).toHaveTextContent(/13/);
+      await typeInt('cu-end', '12');
+      await press('cu-next');
+      // Topped up 10 of the 20 it lacked: basket 12 is still short, and stays open.
+      expect(screen.getByTestId('cu-summary')).toHaveTextContent(/เข่ง 12 ไม่เต็ม 30 \+ เติมที่จุด 3 อีก 10/);
+      expect(screen.getByTestId('cu-total')).toHaveTextContent(/590 กก\./);
+    });
+
+    it('E04-S26 AT-3 continuous: the open basket from the log reads "เติมให้เต็ม (+15 กก.)"; tapping it moves on', async () => {
+      useDial();
+      await started();
+      await readyAt(farm.a[0]);
+      const c = await counterAt(farm.a[0]);
+      await hold();
+      await press('tool-short');
+      await press('short-save');
+      c.unmount();
+      await inSale(<BackfillScreen />, { tapper: farm.red });
+      await press(`cu-order-${farm.a[1]}`);
+      await press('cu-next');
+      expect(screen.getByTestId('cu-fill')).toHaveTextContent(/^เติมให้เต็ม \(\+15 กก\.\)/);
+      expect(screen.queryByTestId('cu-next')).toBeNull();
+      await press('cu-fill');
+      expect(screen.getByTestId('cu-start')).toHaveTextContent(/3/);
+    });
+
+    it('E04-S26 AT-3 per point: the open basket is asked at its own point, tap only', async () => {
+      useDial();
+      await inSale(<StartSaleScreen />);
+      await press('start-numbering-per-point');
+      await press('start-next');
+      await readyAt(farm.a[0]);
+      const c = await counterAt(farm.a[0]);
+      await hold();
+      await press('tool-short');
+      await press('short-save');
+      c.unmount();
+      await inSale(<BackfillScreen />, { tapper: farm.red });
+      await press(`cu-order-${farm.a[0]}`);
+      await press('cu-next');
+      expect(screen.getByTestId('cu-topup')).toHaveTextContent(/เข่ง 2 \(35 กก\.\) เติมที่จุดนี้ไหม/);
+      expect(screen.getByTestId('cu-fill')).toHaveTextContent(/^เติมให้เต็ม \(\+15 กก\.\)/);
+      expect(screen.queryByTestId('cu-next')).toBeNull();
+      await press('cu-nofill');
+      expect(screen.getByTestId('cu-start')).toHaveTextContent(/3/);
+    });
+  });
+
+  it('E04-S26 AT-4: once clearing has started (a payment tick) the flow says why, with no way on; un-ticked, it opens again', async () => {
+    await started();
+    const { financeStore } = jest.requireMock('../store/finance') as { financeStore: { append: (e: unknown) => Promise<void> } };
+    const tick = { id: `tick-${saleId}`, groupId: 'group-1', deviceSeq: 1, ts: Date.now(), actor: { userId: 'u', deviceId: 'phone-B' }, source: 'app', targetId: `pm-${saleId}`, baseEventId: null, payload: { t: 'payment_mark_set', saleId, payee: farm.red, done: true, amountSatang: 100 } };
+    await financeStore.append(tick);
+    const r = await inSale(<BackfillScreen />, { tapper: farm.red });
+    expect(screen.getByTestId('cu-blocked')).toHaveTextContent(/ยกเลิกติ๊กจ่ายและหักหนี้ก่อน/);
+    expect(screen.queryByTestId('cu-next')).toBeNull();
+    expect(screen.queryByTestId('cu-save')).toBeNull();
+    r.unmount();
+    await financeStore.append({ ...tick, id: `untick-${saleId}`, deviceSeq: 2, baseEventId: tick.id, payload: { ...tick.payload, done: false } });
+    await inSale(<BackfillScreen />, { tapper: farm.red });
+    expect(screen.queryByTestId('cu-blocked')).toBeNull();
+    expect(screen.getByTestId('cu-order')).toBeTruthy();
+  });
+
+  it('E04-S26: a closed pile is not opened again by a catch-up (no second ready)', async () => {
+    await started();
+    await readyAt(farm.a[0]);
+    const c = await counterAt(farm.a[0]);
+    await hold();
+    c.unmount();
+    // The pile closed as another phone would write it (no screen here writes pile_closed).
+    const ev0 = await store().load(saleId);
+    const { id: _id, seq: _seq, deviceSeq: _ds, kind: _k, payload: _p, ...base } = ev0.find((e) => e.kind === 'sys')! as SaleEvent & { payload: unknown };
+    const closed = { ...base, id: `pc-${saleId}`, seq: ev0.length + 1, deviceSeq: 1, actor: { ...base.actor, deviceId: 'phone-B' }, ts: Date.now(), mono: 0, kind: 'sys', payload: { t: 'pile_closed', pileId: farm.a[0], forced: false } } as unknown as SaleEvent;
+    await store().append(closed);
+    expect((await store().load(saleId)).some((e) => e.id === closed.id)).toBe(true);
+    await inSale(<BackfillScreen />, { point: farm.a[0] });
+    await press('cu-next');
+    await typeInt('cu-end', '2');
+    await press('cu-full');
+    await press('cu-next');
+    await press('cu-save');
+    const ev = await store().load(saleId);
+    const after = ev.slice(ev.findIndex((e) => e.id === closed.id) + 1);
+    expect(sys(after, 'ready')).toEqual([]);
   });
 
   it('the end number pad takes whole numbers only', async () => {
