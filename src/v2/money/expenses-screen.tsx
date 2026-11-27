@@ -10,7 +10,7 @@
  */
 
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { groupOrders, type OrderView } from '../../core/finance/fert-order';
@@ -29,7 +29,9 @@ import {
   Button,
   CalendarIcon,
   Card,
+  cardStyle,
   Check,
+  ChevronRight,
   Chip,
   CTA,
   FactRow,
@@ -40,6 +42,7 @@ import {
   ReceiptIcon,
   ScreenHeader,
   ChoiceTile,
+  CompactMoney,
   TextLink,
   TileGrid,
   ValueBox,
@@ -61,6 +64,7 @@ export function ExpensesScreen() {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [bulkPayer, setBulkPayer] = useState<Payer | null>(null);
   const [failed, setFailed] = useState(false);
+  const [totalsOpen, setTotalsOpen] = useState(false);
   const farms = useFarms();
 
   const state = fin.state;
@@ -195,21 +199,33 @@ export function ExpensesScreen() {
           </TileGrid>
         ) : null}
 
-        <Card testID="totals">
-          <TotalLine testID="total-actual" label={totalLabel('actual')} satang={totals.actual} />
-          <TotalLine testID="total-committed" label={totalLabel('committed')} satang={totals.committed} />
-          <View testID="total-planned" style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
-            <AppText style={{ flex: 1 }}>{totalLabel('planned')}</AppText>
-            {totals.planned.unknownCount && !totals.planned.knownSatang ? (
-              <UnknownPill />
-            ) : (
-              <>
-                <Amount satang={totals.planned.knownSatang} />
-                {totals.planned.unknownCount ? <AppText variant="caption">{`+ ${msg('fin.total.unknown', { n: totals.planned.unknownCount })}`}</AppText> : null}
-              </>
-            )}
+        {/* A summary card: short money (owner rule 2026-10-31); the exact totals are one tap away (skill §1). */}
+        <Pressable
+          testID="totals"
+          accessibilityRole="button"
+          accessibilityHint={msg('fin.total.open')}
+          onPress={() => setTotalsOpen(true)}
+          style={{ ...cardStyle(t), padding: t.space.lg, flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.min }}
+        >
+          <View style={{ flex: 1, gap: t.space.sm }}>
+            <TotalLine testID="total-actual" label={totalLabel('actual')} satang={totals.actual} />
+            <TotalLine testID="total-committed" label={totalLabel('committed')} satang={totals.committed} />
+            <View testID="total-planned" style={{ gap: 2 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+                <AppText style={{ flex: 1 }}>{totalLabel('planned')}</AppText>
+                {totals.planned.unknownCount && !totals.planned.knownSatang ? (
+                  <UnknownPill />
+                ) : (
+                  <CompactMoney testID="total-planned-amount" satang={totals.planned.knownSatang} pill />
+                )}
+              </View>
+              {totals.planned.unknownCount && totals.planned.knownSatang ? (
+                <AppText variant="caption" style={{ textAlign: 'right' }}>{`+ ${msg('fin.total.unknown', { n: totals.planned.unknownCount })}`}</AppText>
+              ) : null}
+            </View>
           </View>
-        </Card>
+          <ChevronRight color={t.color.inkSoft} size={12} />
+        </Pressable>
 
         {selectingPayer || selectingRepay ? <AppText variant="bodySm" testID="expenses-count">{msg('v2m.pickHint', { n: rows.length })}</AppText> : null}
 
@@ -258,6 +274,16 @@ export function ExpensesScreen() {
         </PinnedActions>
       ) : null}
 
+      <TotalsSheet
+        open={totalsOpen}
+        onClose={() => setTotalsOpen(false)}
+        rows={[
+          { k: 'actual', label: totalLabel('actual'), satang: totals.actual },
+          { k: 'committed', label: totalLabel('committed'), satang: totals.committed },
+        ]}
+        planned={{ label: totalLabel('planned'), ...totals.planned }}
+      />
+
       <BottomSheet testID="bulk-payer" open={selectingPayer && chosen.length > 0} onClose={() => setSelected(new Set())} title={msg('fin.bulk.payerTitle', { n: chosen.length })}>
         <View style={{ gap: t.space.md }}>
           <PayerPicker testID="bulk-payer" value={bulkPayer} onChange={setBulkPayer} extra={unrepaidPayers} />
@@ -299,13 +325,48 @@ function Amount({ satang, testID }: { satang: number; testID?: string }) {
   );
 }
 
+/** A totals line is a summary line: short money, the unit stressed (owner rule 2026-10-31). */
 function TotalLine({ label, satang, testID }: { label: string; satang: number; testID: string }) {
   const t = useTheme();
   return (
     <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
       <AppText style={{ flex: 1 }}>{label}</AppText>
-      <Amount satang={satang} />
+      {/* pill: "฿" glued to the digits (no-break space), so it never wraps away at 320 px text L. */}
+      <CompactMoney testID={`${testID}-amount`} satang={satang} pill />
     </View>
+  );
+}
+
+/** The exact totals behind the short figures of the totals card (skill §1: one tap away). */
+function TotalsSheet({ open, onClose, rows, planned }: { open: boolean; onClose: () => void; rows: readonly { k: Stage; label: string; satang: number }[]; planned: { label: string; knownSatang: number; unknownCount: number } }) {
+  const t = useTheme();
+  const msg = useT();
+  const line = (testID: string, label: string, value: ReactNode, extra?: ReactNode) => (
+    <View testID={testID} style={{ gap: 2, paddingVertical: t.space.xs }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: t.space.md }}>
+        <AppText>{label}</AppText>
+        {value}
+      </View>
+      {extra}
+    </View>
+  );
+  const exact = (satang: number) => (
+    <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'], color: t.color.ink }}>
+      {`${formatSatang(satang)} ${msg('v2m.baht')}`}
+    </Text>
+  );
+  return (
+    <BottomSheet testID="totals-sheet" open={open} onClose={onClose} title={msg('fin.total.sheet')} closeLabel={msg('fin.total.close')}>
+      <View style={{ gap: t.space.xs, paddingBottom: t.space.lg }}>
+        {rows.map((r) => line(`totals-sheet-${r.k}`, r.label, exact(r.satang)))}
+        {line(
+          'totals-sheet-planned',
+          planned.label,
+          planned.unknownCount && !planned.knownSatang ? <UnknownPill testID="totals-sheet-planned-unknown" /> : exact(planned.knownSatang),
+          planned.unknownCount && planned.knownSatang ? <AppText variant="caption" style={{ textAlign: 'right' }}>{`+ ${msg('fin.total.unknown', { n: planned.unknownCount })}`}</AppText> : null,
+        )}
+      </View>
+    </BottomSheet>
   );
 }
 
