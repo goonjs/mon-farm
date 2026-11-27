@@ -13,6 +13,8 @@ import type { GroupId, UserId } from '../core/types';
 import type { AccountStore } from '../store/account';
 import { accountStore } from '../store/account';
 import { onAppended } from '../store/append-signal';
+import { ensureAppMinIfMoney } from '../store/finance-log';
+import { deviceClock } from '../store/record';
 import { store } from '../store/store';
 import { connectRemote, type SyncRemote } from './client';
 import { startSync, type SyncHandle } from './runtime';
@@ -63,6 +65,9 @@ export function useSync(
           onChanged: emitSyncChanged,
           onForeground,
           isOnline,
+          // E01-S28: money with no group minimum (copied while signed out) gets one before each push; the
+          // engine sends it first and holds the money while it cannot be written (review N3).
+          beforePush: () => ensureAppMinIfMoney(store, deviceClock, { userId, groupId }),
         });
         handle.engine.subscribe(setEngineStatus);
         setSyncMode('on');

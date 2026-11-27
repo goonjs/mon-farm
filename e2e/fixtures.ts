@@ -2,6 +2,8 @@ import { basename } from 'node:path';
 
 import { test, type Page } from '@playwright/test';
 
+import { FINANCE_SCOPE } from '../src/core/finance-scope';
+import type { FinanceEvent } from '../src/core/finance/types';
 import { FIXTURE_GROUP_ID } from '../src/core/fixtures';
 import { MASTER_SCOPE } from '../src/core/master';
 import type { MasterPayload, SaleEvent } from '../src/core/types';
@@ -66,6 +68,39 @@ export async function seedEvents(page: Page, events: readonly SaleEvent[]): Prom
         };
       }),
     events as SaleEvent[],
+  );
+}
+
+/**
+ * Seeds money (E01-S28 round 2): finance events go into the app's one event log under the finance scope, the
+ * way `EventFinanceStore` stores them, marked already synced (`pending: 0`) so the sync badge reads as it did
+ * when money had a log of its own. Adds to what is there (same id = replaced with the same event). Before
+ * round 2 this was localStorage `mon-farm:finance-events`, which the app now reads once, at first use, only.
+ */
+export async function seedFinance(page: Page, events: readonly FinanceEvent[]): Promise<void> {
+  if (page.url() === 'about:blank') {
+    await page.goto('/v2');
+    await page.getByTestId('sync-pill').first().waitFor();
+  }
+  const rows = events.map((e, i) => ({ ...e, saleId: FINANCE_SCOPE, seq: i + 1, mono: 0, kind: 'finance' }));
+  await page.evaluate(
+    (rows) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('mon-farm-v1');
+        open.onupgradeneeded = () => {
+          open.transaction?.abort();
+          reject(new Error('seedFinance: app has not created mon-farm-v1 yet'));
+        };
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const tx = db.transaction('events', 'readwrite');
+          for (const event of rows) tx.objectStore('events').put({ id: event.id, saleId: event.saleId, ts: event.ts, deviceSeq: event.deviceSeq, pending: 0, event });
+          tx.oncomplete = () => (db.close(), resolve());
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    rows,
   );
 }
 

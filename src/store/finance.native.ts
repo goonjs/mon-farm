@@ -1,53 +1,40 @@
 /**
- * Native finance log: expo-sqlite, same database file as people and the farm
- * profile, its own append-only table. Moves into `events` with the envelope
- * redesign (see `finance.ts`).
+ * Native binding of the finance log (E01-S28 round 2): `EventFinanceStore`
+ * over the expo-sqlite event store (`mon-farm-v1.db`, table `events`), so
+ * money is in the outbox and syncs once Android does (E01-S06).
+ *
+ * The old log, table `finance_events` in `mon-farm.db`, is copied in once on
+ * first use and then left in place, read-only: nothing writes it any more,
+ * and dropping it is a later story the owner approves (S28-AC7).
  */
 
 import * as SQLite from 'expo-sqlite';
 
 import type { FinanceEvent } from '../core/finance/types';
 import type { FinanceStore } from './finance';
-import { shouldInsert } from './finance-memory';
+import { EventFinanceStore, type LegacyFinanceLog } from './finance-log';
+import { deviceClock } from './record';
+import { sessionScope } from './session';
+import { store } from './store';
 
 const DB_NAME = 'mon-farm.db';
 
-const SCHEMA = `
-  CREATE TABLE IF NOT EXISTS finance_events (
-    id         TEXT PRIMARY KEY,
-    target_id  TEXT NOT NULL,
-    body       TEXT NOT NULL
-  );
-`;
-
-export class SqliteFinanceStore implements FinanceStore {
-  private db: SQLite.SQLiteDatabase | null = null;
-
-  private async open(): Promise<SQLite.SQLiteDatabase> {
-    if (!this.db) {
-      this.db = await SQLite.openDatabaseAsync(DB_NAME);
-      await this.db.execAsync(SCHEMA);
-    }
-    return this.db;
-  }
-
-  async append(event: FinanceEvent): Promise<void> {
-    const db = await this.open();
-    const row = await db.getFirstAsync<{ body: string }>(`SELECT body FROM finance_events WHERE id = ?`, event.id);
-    if (!shouldInsert(row ? (JSON.parse(row.body) as FinanceEvent) : undefined, event)) return;
-    await db.runAsync(
-      `INSERT INTO finance_events (id, target_id, body) VALUES (?, ?, ?)`,
-      event.id,
-      event.targetId,
-      JSON.stringify(event),
-    );
-  }
+/** The old native finance log, read-only. A database with no such table (a new install) reads as empty. */
+export class SqliteLegacyFinanceLog implements LegacyFinanceLog {
+  /** Opened once: the port checks the old log on every use (a log that grew is copied again). */
+  private db: Promise<SQLite.SQLiteDatabase> | null = null;
 
   async load(): Promise<FinanceEvent[]> {
-    const db = await this.open();
+    this.db ??= SQLite.openDatabaseAsync(DB_NAME).catch((err) => {
+      this.db = null;
+      throw err;
+    });
+    const db = await this.db;
+    const table = await db.getFirstAsync<{ name: string }>(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'finance_events'`);
+    if (!table) return [];
     const rows = await db.getAllAsync<{ body: string }>(`SELECT body FROM finance_events`);
     return rows.map((r) => JSON.parse(r.body) as FinanceEvent);
   }
 }
 
-export const financeStore: FinanceStore = new SqliteFinanceStore();
+export const financeStore: FinanceStore = new EventFinanceStore(store, deviceClock, new SqliteLegacyFinanceLog(), sessionScope);

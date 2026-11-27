@@ -3,7 +3,7 @@ import { expect, test, type Page } from './test';
 import type { MasterPayload } from '../src/core/types';
 import { FIXTURE_GROUP_ID, LogBuilder } from '../src/core/fixtures';
 import type { FinanceEvent, FinancePayload } from '../src/core/finance/types';
-import { evidence, seedEvents, seedMaster, splashEvidence, watchSplash } from './fixtures';
+import { evidence, seedEvents, seedFinance, seedMaster, splashEvidence, watchSplash } from './fixtures';
 import { smallTargets, textFit } from './text-fit';
 
 /**
@@ -466,11 +466,11 @@ for (const [width, size] of [
 
     test('expenses: the filter boxes; debt history: the kind tiles', async ({ page }) => {
       const id = onS26(page);
-      await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [s26Fin(1, 'debt-nat', s26Loan(300_000, '2026-09-01'))]).catch(() => undefined);
+      await seedFinance(page, [s26Fin(1, 'debt-nat', s26Loan(300_000, '2026-09-01'))]);
       await page.goto('/v2/expenses');
       await expect(id('filter-stage')).toBeVisible();
       await s26Fits(page, 'expenses filters');
-      await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [s26Fin(1, 'debt-nat', s26Loan(300_000, '2026-09-01'))]);
+      await seedFinance(page, [s26Fin(1, 'debt-nat', s26Loan(300_000, '2026-09-01'))]);
       await page.goto('/v2/debt/nat?name=นัด');
       await expect(id('debt-filter-all')).toBeVisible();
       await s26Fits(page, 'debt history');

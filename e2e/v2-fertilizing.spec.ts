@@ -2,7 +2,7 @@ import { expect, test, type Page } from './test';
 
 import { FIXTURE_GROUP_ID } from '../src/core/fixtures';
 import type { ExpenseFields, FinanceEvent, FinancePayload } from '../src/core/finance/types';
-import { evidence, seedPeople } from './fixtures';
+import { evidence, seedFinance, seedPeople } from './fixtures';
 import { textFit } from './text-fit';
 
 /**
@@ -50,7 +50,7 @@ const item = (o: { formula: string; sacks: number; perSack: number; shop: string
 
 async function seed(page: Page, size: 'm' | 'l', tappers = TAPPERS.slice(0, 3)) {
   await seedPeople(page, tappers);
-  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [
+  await seedFinance(page, [
     finEvent(1, 'ord-a-1', item({ formula: 'ดีเกลือ', sacks: 60, perSack: 300, shop: 'ร้าน ก.', date: '2026-10-02' })),
     finEvent(2, 'ord-b-1', item({ formula: 'ดีเกลือ', sacks: 20, perSack: 320, shop: 'ร้าน ข.', date: '2026-10-09' })),
     finEvent(3, 'ord-c-1', item({ formula: '46-0-0', sacks: 20, perSack: 780, shop: 'ร้าน ก.', date: '2026-10-09' })),
@@ -150,7 +150,7 @@ test('E16 seven tappers at the largest text size: two per line, the card grows a
 
 test('E16 empty stock says when fertilizer shows up and links to orders not yet received (offline)', async ({ page, context }) => {
   await seedPeople(page, TAPPERS.slice(0, 3));
-  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [
+  await seedFinance(page, [
     finEvent(1, 'ord-d-1', item({ formula: 'ขี้ไก่', sacks: 50, perSack: 100, shop: 'ร้าน ค.', date: '2026-11-01', stage: 'committed' })),
   ]);
   await page.goto('/v2/fertilizing');
@@ -165,10 +165,7 @@ test('E16 empty stock says when fertilizer shows up and links to orders not yet 
 for (const size of ['m', 'l'] as const) {
   test(`E16-S01 garden care list at text size ${size.toUpperCase()}: from home, newest first, badge, opens the fertilizing (offline)`, async ({ page, context }) => {
     await seed(page, size);
-    await page.evaluate((ev) => {
-      const all = JSON.parse(localStorage.getItem('mon-farm:finance-events') ?? '[]');
-      localStorage.setItem('mon-farm:finance-events', JSON.stringify([...all, ...ev]));
-    }, [
+    await seedFinance(page, [
       finEvent(10, 'fz-e2e-1', { t: 'fertilizing_recorded', fields: { date: '2026-10-20', lines: [{ sources: ['ord-a-1'], sacks: 20, takes: [{ worker: TAPPERS[0], sacks: 20, auto: false }], rest: null }, { sources: ['ord-c-1'], sacks: 5, takes: [{ worker: TAPPERS[0], sacks: 5, auto: false }], rest: null }], pct: { t1: 50 }, settle: {}, zones: [], reasons: [], note: '' } }),
       finEvent(11, 'fz-e2e-2', { t: 'fertilizing_recorded', fields: { date: '2026-11-05', lines: [{ sources: ['ord-c-1'], sacks: 10, takes: [], rest: null }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } }),
     ]);
@@ -192,10 +189,7 @@ for (const size of ['m', 'l'] as const) {
 for (const size of ['m', 'l'] as const) {
   test(`E16-S04 fertilizer left at text size ${size.toUpperCase()}: from home, what is left, over-use flag opens the fertilizing (offline)`, async ({ page, context }) => {
     await seed(page, size);
-    await page.evaluate((ev) => {
-      const all = JSON.parse(localStorage.getItem('mon-farm:finance-events') ?? '[]');
-      localStorage.setItem('mon-farm:finance-events', JSON.stringify([...all, ...ev]));
-    }, [
+    await seedFinance(page, [
       finEvent(20, 'fz-s04-1', { t: 'fertilizing_recorded', fields: { date: '2026-10-20', lines: [{ sources: ['ord-a-1'], sacks: 45, takes: [], rest: 'farm' }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } }),
       // Two devices offline used the same 20 sacks of 46-0-0: 15 + 10 = 25, five more than received.
       finEvent(21, 'fz-s04-2', { t: 'fertilizing_recorded', fields: { date: '2026-10-21', lines: [{ sources: ['ord-c-1'], sacks: 15, takes: [], rest: 'farm' }], pct: {}, settle: {}, zones: [], reasons: [], note: '' } }),

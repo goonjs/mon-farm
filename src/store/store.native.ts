@@ -250,6 +250,24 @@ export class SqliteStore implements EventStore {
     return rows.map((r) => r.sale_id);
   }
 
+  async metaValue(key: string): Promise<string | null> {
+    const db = await this.open();
+    const row = await db.getFirstAsync<{ value: string }>(`SELECT value FROM meta WHERE key = ?`, `value:${key}`);
+    return row ? row.value : null;
+  }
+
+  setMetaValue(key: string, value: string): Promise<void> {
+    return this.serial(async () => {
+      const db = await this.open();
+      await db.runAsync(
+        `INSERT INTO meta (key, value) VALUES (?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+        `value:${key}`,
+        value,
+      );
+    });
+  }
+
   async isDurable(): Promise<boolean> {
     return true;
   }

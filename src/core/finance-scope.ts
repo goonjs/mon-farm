@@ -22,12 +22,14 @@ export const FINANCE_SCOPE = 'farm-finance';
 
 /**
  * This build's release number: a whole number raised by hand when a release
- * must keep older builds off the money screens. Round 1 is 1; round 2 sets
- * the group minimum to it.
+ * must keep older builds off the money screens. Round 1 was 1. Round 2 is 2
+ * and writes the group minimum as 2 before the first finance event is sent:
+ * a round-1 tab reads money from its old local log only, so it would show
+ * totals without the synced money — it asks for an update instead.
  */
-export const APP_RELEASE = 1;
+export const APP_RELEASE = 2;
 
-/** The kind of the group-minimum event; round 1's event union does not carry it yet. */
+/** The kind of the group-minimum event (`AppMinEvent` in `types.ts`). */
 export const APP_MIN_KIND = 'app_min';
 
 /** False for the reserved scopes stored in place of a sale id. */

@@ -31,6 +31,8 @@ export interface SyncRuntimeDeps {
   readonly onChanged?: () => void;
   /** The app came to the foreground (web: the tab became visible); returns the unsubscribe. */
   readonly onForeground?: (listener: () => void) => () => void;
+  /** Before every push: the app writes the group minimum for money that has none (E01-S28). */
+  readonly beforePush?: () => Promise<unknown>;
   /** False while the device knows it has no network: an attempt would only wait out its timeout. */
   readonly isOnline: () => boolean;
 }
@@ -50,6 +52,7 @@ export function startSync(deps: SyncRuntimeDeps): SyncHandle {
     cursor: storeCursor(deps.store, deps.scope.groupId),
     onPulled: deps.onPulled,
     onChanged: deps.onChanged,
+    beforePush: deps.beforePush,
   });
   // A failed run has already scheduled its own retry; nothing to do with the rejection.
   const now = () => {

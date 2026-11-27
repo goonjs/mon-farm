@@ -1,13 +1,12 @@
 /**
- * The finance log port (E11): expenses, repayments, categories — an
- * append-only event log of its own, because none of it belongs to a sale.
+ * The finance log port (E11): expenses, repayments, categories, debts …
  *
- * Same port/adapter shape as `EventStore` (`store.ts`): `finance.native.ts`
- * (expo-sqlite) and `finance.web.ts` (localStorage, like `people.web.ts`)
- * implement it; `finance-memory.ts` backs the tests. When the envelope
- * redesign gives every event a `targetId` and a nullable `saleId`
- * (architecture §Schema), these rows move into the one `events` table and
- * join its outbox — the event shape is already that envelope.
+ * Since E01-S28 round 2 this is not a log of its own: every finance event is
+ * an event in the one `EventStore` under `FINANCE_SCOPE`, so it sits in the
+ * outbox and syncs (see `finance-log.ts`, `EventFinanceStore`). The port stays
+ * so the money screens do not change; `finance.web.ts` / `finance.native.ts`
+ * bind it to the platform store and copy the old device-only log in once.
+ * `finance-memory.ts` backs the component tests that need no sync.
  */
 
 import type { FinanceEvent } from '../core/finance/types';

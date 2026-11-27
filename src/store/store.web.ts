@@ -223,6 +223,20 @@ export class IndexedDbStore implements EventStore {
     await committed(tx);
   }
 
+  // `value:<key>` in `meta`, like the cursor: no schema change, no version bump.
+  async metaValue(key: string): Promise<string | null> {
+    const db = await this.open();
+    const v = await request(db.transaction('meta', 'readonly').objectStore('meta').get(`value:${key}`));
+    return typeof v === 'string' ? v : null;
+  }
+
+  async setMetaValue(key: string, value: string): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction('meta', 'readwrite');
+    tx.objectStore('meta').put(value, `value:${key}`);
+    await committed(tx);
+  }
+
   async listSales(): Promise<string[]> {
     const db = await this.open();
     const tx = db.transaction('events', 'readonly');
@@ -315,6 +329,12 @@ export class WebStore implements EventStore {
   }
   async listSales() {
     return (await this.pick()).listSales();
+  }
+  async metaValue(key: string) {
+    return (await this.pick()).metaValue(key);
+  }
+  async setMetaValue(key: string, value: string) {
+    return (await this.pick()).setMetaValue(key, value);
   }
   async device() {
     return (await this.pick()).device();

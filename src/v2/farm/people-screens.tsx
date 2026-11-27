@@ -35,6 +35,7 @@ import { useSaleCounts } from '../../finance/use-live-sales';
 import { useT, type Translate } from '../../i18n';
 import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
+import { MoneyUpdateNotice, useAppBelowMin } from '../money/money-gate';
 import {
   AppText,
   BottomSheet,
@@ -388,6 +389,8 @@ function PersonDetail({ personId }: { personId: string }) {
   const write = useWrite();
   const [today] = useState(() => todayIso(Date.now()));
   const debt = useMemo(() => projectDebts(fin.events ?? [], counts).get(personId), [fin.events, counts, personId]);
+  // E01-S28: below the group's minimum the debt line gives way to the update message (AC12 ก, round 2).
+  const moneyBelowMin = useAppBelowMin() === true;
 
   const person = state?.people.find((p) => p.id === personId);
   if (!state) return <FarmScreen title="" fallback={PEOPLE} />;
@@ -480,7 +483,11 @@ function PersonDetail({ personId }: { personId: string }) {
               {share.isDefault ? <FactRow icon={(c) => <Check color={c} size={10} />}>{msg('personDetail.shareDefault')}</FactRow> : null}
             </MenuItem>
           ) : null}
-          {debt ? (
+          {debt && moneyBelowMin ? (
+            <View style={{ minHeight: t.target.min, justifyContent: 'center', paddingHorizontal: t.space.md, paddingVertical: t.space.sm }}>
+              <MoneyUpdateNotice testID="debt-summary-update" />
+            </View>
+          ) : debt ? (
             <MenuItem
               testID="debt-summary"
               label={msg('v2.debts')}

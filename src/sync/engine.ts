@@ -22,10 +22,12 @@
  */
 
 import { canonicalJson } from '../core/canonical';
+import { APP_RELEASE, FINANCE_SCOPE, minAppOf } from '../core/finance-scope';
 import type { CreateGroupOp } from '../core/group';
 import { belongsTo, waitingCount, type Scope } from '../core/scope';
 import type { EventId, GroupId, SaleEvent } from '../core/types';
 import type { AccountStore } from '../store/account';
+import { sameEvent } from '../store/append-rule';
 import { IntegrityError } from '../store/errors';
 import type { EventStore } from '../store/store';
 import { uploadMedia, type MediaQueue, type RemoteMedia } from './media';
@@ -119,7 +121,7 @@ export const storeCursor = (
   setCorrupt: (ids) => store.setSyncCorrupt(groupId, ids),
 });
 
-export type SyncStore = Pick<EventStore, 'pending' | 'markSynced' | 'insertPulled'>;
+export type SyncStore = Pick<EventStore, 'pending' | 'markSynced' | 'insertPulled' | 'load'>;
 
 export interface SyncDeps {
   readonly store: SyncStore;
@@ -136,6 +138,11 @@ export interface SyncDeps {
   readonly ackTimeoutMs?: number;
   /** Documents per pull page; tests make it small. */
   readonly pullPageSize?: number;
+  /**
+   * Runs before every push (E01-S28): the app writes the group's minimum (`app_min`) for money that has
+   * none yet. If it fails, that group's money is held (see `push`) and the run is retried; nothing else waits.
+   */
+  readonly beforePush?: () => Promise<unknown>;
   /** Files follow their `media.add` events, with the same retry rules (E01-S12). */
   readonly media?: { readonly queue: MediaQueue; readonly remote: RemoteMedia };
   readonly random?: () => number;
@@ -174,6 +181,8 @@ export class SyncEngine {
   /** Pulled ids the server holds with other content than ours; shown until a retry finds them fixed. */
   private corrupt = new Set<EventId>();
   private corruptLoaded = false;
+  /** The last push held this group's money back: no group minimum yet (E01-S28, review N3). */
+  private heldMoney = false;
 
   constructor(private readonly deps: SyncDeps) {
     this.ackMs = deps.ackTimeoutMs ?? ACK_TIMEOUT_MS;
@@ -340,6 +349,9 @@ export class SyncEngine {
         pushError = err.kind; // still pull: others' events are worth having
       }
       await this.pull();
+      // Money held for want of a group minimum is not sent and not "synced": try the whole run again soon.
+      // A permanent error from this run wins (re-review N2): it is what the owner must see.
+      if (this.heldMoney && !pushError) throw new RemoteError('internal', 'Money waits for the group minimum.');
       this.attempt = 0;
       await this.settle(pushError ? { kind: pushError } : {});
     } catch (err) {
@@ -391,10 +403,35 @@ export class SyncEngine {
     // another account's or group's events could only be refused by the rules:
     // they stay on the device (E02-S02). Events the server already called invalid
     // wait for `retry()`.
-    const outbox = (await this.deps.store.pending()).filter((e) => this.mine(e) && !this.rejected.has(e.id) && !this.conflicting.has(e.id));
+    if (this.deps.beforePush) {
+      try {
+        await this.deps.beforePush();
+      } catch (err) {
+        // Not ignored: the money it was for is held below, and the run is retried.
+        console.warn('The group minimum could not be written; its money waits.', err);
+      }
+    }
+    this.heldMoney = false;
+    const all = (await this.deps.store.pending()).filter(this.mine);
+    const pending = all.filter((e) => !this.rejected.has(e.id) && !this.conflicting.has(e.id));
+    // E01-S28 (review N3, re-review N1): this group's minimum goes up on its own first, whatever the device
+    // numbers say; money follows only once a minimum at this release is on the server.
+    let refused = await this.send(pending.filter((e) => e.kind === 'app_min'));
+    if (this.stopped) return;
+    const rest = pending.filter((e) => e.kind !== 'app_min');
+    const held = rest.some((e) => e.kind === 'finance') && !(await this.minimumSent());
+    this.heldMoney = held;
+    if (held) refused ??= this.minimumRefused(all);
+    const later = await this.send(held ? rest.filter((e) => e.kind !== 'finance') : rest);
+    refused ??= later;
+    if (refused) throw refused;
+  }
+
+  /** Sends in batches; a refused batch is checked event by event. The first refusal is returned, not thrown. */
+  private async send(outbox: readonly SaleEvent[]): Promise<Permanent | undefined> {
     let refused: Permanent | undefined;
     for (let i = 0; i < outbox.length; i += BATCH_SIZE) {
-      if (this.stopped) return;
+      if (this.stopped) return refused;
       const batch = outbox.slice(i, i + BATCH_SIZE);
       try {
         await withTimeout(this.deps.remote.push(batch), this.ackMs);
@@ -405,7 +442,25 @@ export class SyncEngine {
         refused ??= await this.checkEach(batch);
       }
     }
-    if (refused) throw refused;
+    return refused;
+  }
+
+  /**
+   * Re-review N1: only a minimum the server holds counts (sent or pulled, so no longer pending). Another
+   * user's unsent minimum on a shared phone, or this user's own the server refused, never goes up from here.
+   */
+  private async minimumSent(): Promise<boolean> {
+    const waiting = new Set((await this.deps.store.pending()).map((e) => e.id));
+    const scope = (await this.deps.store.load(FINANCE_SCOPE)).filter((e) => e.groupId === this.deps.scope.groupId && !waiting.has(e.id));
+    return (minAppOf(scope) ?? 0) >= APP_RELEASE;
+  }
+
+  /** The money waits because the server refused this user's minimum: that is the error to show, not "retrying". */
+  private minimumRefused(mine: readonly SaleEvent[]): Permanent | undefined {
+    const mins = mine.filter((e) => e.kind === 'app_min' && (minAppOf([e]) ?? 0) >= APP_RELEASE);
+    if (mins.some((e) => this.conflicting.has(e.id))) return new Permanent('integrity');
+    if (mins.some((e) => this.rejected.has(e.id))) return new Permanent('invalid');
+    return undefined;
   }
 
   /**
@@ -433,7 +488,8 @@ export class SyncEngine {
         }
       }
       const there = await withTimeout(this.deps.remote.fetch(e.id), this.ackMs);
-      if (there && canonicalJson(there) === canonicalJson(e)) {
+      // Money the server holds with only a different device number is the same money (review N4).
+      if (there && sameEvent(there, e)) {
         await this.deps.store.markSynced([e.id]);
       } else if (there) {
         this.conflicting.add(e.id);

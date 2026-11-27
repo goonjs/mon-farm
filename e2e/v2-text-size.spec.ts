@@ -3,7 +3,7 @@ import { expect, test, type Page } from './test';
 import type { MasterPayload } from '../src/core/types';
 import { FIXTURE_GROUP_ID, LogBuilder } from '../src/core/fixtures';
 import type { FinanceEvent, FinancePayload } from '../src/core/finance/types';
-import { evidence, seedEvents, seedMaster } from './fixtures';
+import { evidence, seedEvents, seedFinance, seedMaster } from './fixtures';
 import { multiplyFonts, smallTargets, textFit } from './text-fit';
 
 /**
@@ -136,7 +136,7 @@ async function seed(page: Page, size: 's' | 'm' | 'l') {
   big.sys({ t: 'pile_added', pileId: 'a1', zoneId: 'fa', name: 'a1', tareG: 2_000, stdNetG: 50_000 });
   big.acceptAt('a1', 1);
   await seedEvents(page, [...b.build(), ...big.build()].map((e) => ({ ...e, ts: now })));
-  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [
+  await seedFinance(page, [
     finEvent(1, now, 'd-red', loan(RED, 1_579_000)),
     finEvent(2, now, 'd-nat', loan(NAT, 835_000)),
     finEvent(3, now, 'exp-nat', owesNat(64_000)),

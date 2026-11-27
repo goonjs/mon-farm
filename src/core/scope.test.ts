@@ -38,4 +38,17 @@ describe('belongsTo / waitingCount', () => {
     expect(waitingCount(scope, events, ops)).toBe(3);
     expect(waitingCount(scope, [], [])).toBe(0);
   });
+
+  // E01-S28 review N8 / UI N1: the group minimum is sent but is not something the farmer recorded.
+  it("leaves the group minimum ('app_min') out of the number, yet never reads as nothing waiting", () => {
+    const money = { ...event('u1', 'g1'), kind: 'finance' };
+    const min = { ...event('u1', 'g1'), kind: 'app_min' };
+    expect(waitingCount(scope, [min, money], [])).toBe(1);
+    expect(waitingCount(scope, [min, money, money], [])).toBe(2);
+    // Only the minimum left: still waiting, counted as one.
+    expect(waitingCount(scope, [min], [])).toBe(1);
+    expect(waitingCount(scope, [min, min], [])).toBe(1);
+    // Another group's minimum is not this user's to send.
+    expect(waitingCount(scope, [{ ...event('u1', 'g2'), kind: 'app_min' }], [])).toBe(0);
+  });
 });

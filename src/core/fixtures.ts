@@ -6,6 +6,7 @@
  * timestamps here are deliberately arbitrary.
  */
 
+import type { FinanceEvent, FinancePayload } from './finance/types';
 import { FINANCE_SCOPE } from './finance-scope';
 import type { SaleEvent, SysPayload } from './types';
 
@@ -322,4 +323,67 @@ export function scopeEvent(id: string, kind: string, payload: unknown, ts = 1): 
     kind,
     payload,
   } as unknown as SaleEvent;
+}
+
+/**
+ * One payload of every finance `t` (E01-S28 round 2), for round-trip tests: the envelope must carry each one
+ * whole. Keyed by `t`, so a new kind of finance event fails to compile here until it has a sample.
+ * Shapes are plausible, not checked by a projection.
+ */
+export function financeSamples(): Record<FinancePayload['t'], FinancePayload> {
+  const p = (x: Record<string, unknown>) => x as unknown as FinancePayload;
+  const worker = { kind: 'person', id: 'p-red' };
+  return {
+    expense_created: p({ t: 'expense_created', fields: { amountSatang: 65_000, date: '2026-11-20', stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าไฟ', note: '', payer: null } }),
+    expense_changed: p({ t: 'expense_changed', patch: { amountSatang: 70_000 }, alsoBasedOn: ['e-head-2'] }),
+    category_added: p({ t: 'category_added', name: 'ค่าไฟ' }),
+    category_renamed: p({ t: 'category_renamed', name: 'ค่าน้ำไฟ' }),
+    category_share_set: p({ t: 'category_share_set', workerPct: null }),
+    fert_option_set: p({ t: 'fert_option_set', kind: 'formula', name: '15-15-15', description: '', hidden: false }),
+    repayment_recorded: p({ t: 'repayment_recorded', fields: { from: { kind: 'farm' }, to: worker, amountSatang: 10_000, date: '2026-11-21', note: '', allocations: [{ expenseId: 'x1', amountSatang: 10_000 }], saleId: null } }),
+    repayment_changed: p({ t: 'repayment_changed', patch: { deleted: true } }),
+    debt_added: p({ t: 'debt_added', fields: { worker, kind: 'loan', amountSatang: 600_000, date: '2026-09-01', note: '', lender: { kind: 'farm' }, fertilizer: null, carriedForward: false } }),
+    debt_changed: p({ t: 'debt_changed', patch: { amountSatang: 500_000 }, alsoBasedOn: [] }),
+    debt_payment_recorded: p({ t: 'debt_payment_recorded', fields: { worker, creditor: { kind: 'farm' }, amountSatang: 100_000, date: '2026-11-22', note: '', method: 'cash', saleId: 'sale-1' } }),
+    debt_payment_changed: p({ t: 'debt_payment_changed', patch: { deleted: true } }),
+    debt_plan_set: p({ t: 'debt_plan_set', worker, perSaleSatang: 325_000, installments: { count: 4, fromSaleId: 'sale-1' } }),
+    sale_prep_set: p({ t: 'sale_prep_set', patch: { buyerId: 'b1', date: '2026-11-28', time: null, priceSatangPerKg: 5_250 } }),
+    account_added: p({ t: 'account_added', fields: { name: 'กสิกร', number: '0123456789', promptPay: null } }),
+    account_changed: p({ t: 'account_changed', patch: { deleted: true }, alsoBasedOn: ['a-2'] }),
+    account_default_set: p({ t: 'account_default_set', accountId: null }),
+    sale_account_set: p({ t: 'sale_account_set', saleId: 'sale-1', choice: null }),
+    sale_rounding_set: p({ t: 'sale_rounding_set', saleId: 'sale-1', mode: 'owner' }),
+    payment_mark_set: p({ t: 'payment_mark_set', saleId: 'sale-1', payee: 'owner', done: true, amountSatang: 1_234_500, receivedSatang: 0 }),
+    buyer_check_set: p({ t: 'buyer_check_set', saleId: 'sale-1', status: 'matched', basis: { netG: 1_000_000, grossSatang: 5_250_000 }, buyer: null, reason: '' }),
+    salary_set: p({ t: 'salary_set', rule: { worker, amountSatang: 900_000, fromMonth: '2026-11', payDay: 1 } }),
+    salary_amount_set: p({ t: 'salary_amount_set', fromMonth: '2026-12', amountSatang: 950_000 }),
+    salary_paid: p({ t: 'salary_paid', month: '2026-11', amountSatang: 900_000, date: '2026-11-30' }),
+    salary_unpaid: p({ t: 'salary_unpaid', month: '2026-11' }),
+    lease_added: p({ t: 'lease_added', fields: { tenant: worker, amountSatang: 2_000_000, from: '2026-01-01', note: '' } }),
+    lease_changed: p({ t: 'lease_changed', patch: { note: 'ปรับ' } }),
+    income_recorded: p({ t: 'income_recorded', fields: { amountSatang: 300_000, date: '2026-11-01', note: 'ขายขี้ยาง' } }),
+    income_changed: p({ t: 'income_changed', patch: { deleted: true } }),
+    reserve_set: p({ t: 'reserve_set', amountSatang: 5_000_000, assumption: '3 เดือน', source: 'owner' }),
+    fertilizing_recorded: p({ t: 'fertilizing_recorded', fields: { date: '2026-11-10', propertyId: 'farm-1', items: [] } }),
+    fertilizing_changed: p({ t: 'fertilizing_changed', patch: { deleted: true } }),
+  };
+}
+
+/** A finance event as the old finance log stored it (`FinanceEvent`), for migration and sync tests. */
+export function legacyFinance(
+  id: string,
+  payload: FinancePayload,
+  opts: { targetId?: string; base?: string | null; deviceSeq?: number; ts?: number; userId?: string; deviceId?: string; groupId?: string } = {},
+): FinanceEvent {
+  return {
+    id,
+    groupId: opts.groupId ?? FIXTURE_GROUP_ID,
+    deviceSeq: opts.deviceSeq ?? 1,
+    ts: opts.ts ?? 1_770_000_000_000,
+    actor: { userId: opts.userId ?? 'user-somchai', deviceId: opts.deviceId ?? 'dev-A' },
+    source: 'app',
+    targetId: opts.targetId ?? id,
+    baseEventId: opts.base ?? null,
+    payload,
+  };
 }

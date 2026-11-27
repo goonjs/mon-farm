@@ -3,7 +3,7 @@ import { expect, test, type Page } from './test';
 import type { MasterPayload } from '../src/core/types';
 import { FIXTURE_GROUP_ID, LogBuilder } from '../src/core/fixtures';
 import type { FinanceEvent, FinancePayload } from '../src/core/finance/types';
-import { evidence, seedEvents, seedMaster } from './fixtures';
+import { evidence, seedEvents, seedFinance, seedMaster } from './fixtures';
 import { smallTargets, textFit } from './text-fit';
 
 /**
@@ -67,7 +67,7 @@ test('one open sale: เริ่มการขาย goes back to it; the ⋯ 
   await expect(id('sale-start')).toBeVisible();
 });
 
-/** A finance event as the device stores it (localStorage `mon-farm:finance-events`). */
+/** A finance event as the finance port hands it out (seeded with `seedFinance`). */
 const finEvent = (n: number, ts: number, targetId: string, payload: FinancePayload): FinanceEvent => ({
   id: `e2e-fin-${n}`,
   groupId: FIXTURE_GROUP_ID,
@@ -88,7 +88,6 @@ const fert = (worker: typeof RED, amountSatang: number, date: string): FinancePa
   fields: { worker, kind: 'fertilizer', amountSatang, date, note: '', lender: null, fertilizer: { totalSatang: amountSatang * 2, workerPct: 50 }, carriedForward: false },
 });
 const owesNat = (amountSatang: number, date: string): FinancePayload => ({ t: 'expense_created', fields: { amountSatang, date, stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าปุ๋ย', note: '', payer: NAT } });
-const seedFinance = (page: Page, events: FinanceEvent[]) => page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), events);
 /** Keys on a field's app number pad (E01-S20): `<field>-pad-key-<k>`; the first key replaces the value. */
 async function fieldPad(page: Page, field: string, keys: string) {
   for (const k of keys) await on(page)(`${field}-pad-key-${k}`).click();

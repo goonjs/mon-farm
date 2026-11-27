@@ -38,6 +38,7 @@ import { useFinance } from '../finance/use-finance';
 import { useI18n, useT } from '../i18n';
 import type { MessageId } from '../i18n';
 import { useSyncStatus } from '../sync/use-sync-status';
+import { MoneyUpdateNotice, useAppBelowMin } from './money/money-gate';
 import { useTheme, type Theme } from '../theme';
 import {
   ActionTile,
@@ -96,6 +97,8 @@ export function V2Home() {
   const sales = homeData?.sales ?? null;
   const { state: master } = useMaster();
   const fin = useFinance();
+  // E01-S28: below the group's minimum the money rows give way to the update message (AC12 ก, round 2).
+  const moneyBelowMin = useAppBelowMin() === true;
   const owed = useMemo(() => (fin.state ? owedByPerson(fin.state).filter((o) => o.remainingSatang > 0) : []), [fin.state]);
   const owedTotal = owed.reduce((s, o) => s + o.remainingSatang, 0);
   // E16-S05 HM-3: committed buying not paid yet; money owed back to people has its own row.
@@ -152,6 +155,9 @@ export function V2Home() {
 
   const saleLine = useSaleLineText();
 
+  // A row that shows money amounts is built through `money(...)`: below the group minimum it is not built
+  // at all, and one update line stands in for all of them (E01-S28 AC12 ก, review UI N4).
+  const money = <T,>(row: T): T | null => (moneyBelowMin ? null : row);
   const knowRows = [
     sales?.open ? (
       <KnowRow
@@ -179,7 +185,7 @@ export function V2Home() {
         to={saleHref(sales.latest.id, { closed: true, point: sales.latest.point })}
       />
     ) : null,
-    owedTotal > 0 ? (
+    owedTotal > 0 ? money(
       <KnowRow
         key="owed"
         testID="home-owed"
@@ -196,15 +202,15 @@ export function V2Home() {
         <FactRow icon={(c) => <PersonIcon color={c} size={13} />}>
           {owed.length === 1 ? owed[0].payer.name : msg('v2m.people', { n: owed.length })}
         </FactRow>
-      </KnowRow>
+      </KnowRow>,
     ) : null,
-    shopOwed > 0 ? (
+    shopOwed > 0 ? money(
       // E16-S05 HM-3: what is still to pay, short money; the "ไปที่" tile is a way in only.
       <KnowRow key="payables" testID="home-payables" tone="cream" icon={() => <FarmMateArt id="finance.expense" />} label={msg('v2.payables')} why={msg('home.why.payables')} to={href('payables')}>
         <SumLine testID="home-payables-sum">
           <CompactMoney satang={shopOwed} />
         </SumLine>
-      </KnowRow>
+      </KnowRow>,
     ) : null,
     committedNewest ? (
       <KnowRow
@@ -217,7 +223,7 @@ export function V2Home() {
         to={orderHref(committedNewest.orderId)}
       />
     ) : null,
-    repay.waiting.length ? (
+    repay.waiting.length ? money(
       <KnowRow
         key="repay-wait"
         testID="home-repay-wait"
@@ -242,9 +248,14 @@ export function V2Home() {
           {`Σ ${msg('rp.home.sum')} `}
           <CompactMoney satang={repay.waitTotal} />
         </SumLine>
-      </KnowRow>
+      </KnowRow>,
     ) : null,
-    ...repay.owes.map((o) => <OwesKnowRow key={`owes-${o.saleId}`} o={o} />),
+    ...repay.owes.map((o) => money(<OwesKnowRow key={`owes-${o.saleId}`} o={o} />)),
+    moneyBelowMin ? (
+      <View key="money-update" style={{ minHeight: t.target.min, justifyContent: 'center', paddingVertical: t.space.sm }}>
+        <MoneyUpdateNotice testID="home-money-update" />
+      </View>
+    ) : null,
   ].filter((r) => r !== null);
 
   return (

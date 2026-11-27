@@ -69,12 +69,31 @@ export function checkAppend(
 }
 
 /**
+ * Whether two copies of one event id are the same event (E01-S28, review B1 and N4).
+ *
+ * Exact canonical JSON for every kind but money. A finance event is the same when its content is, read the
+ * way the finance port reads it: a round-1 tab's `fromEnvelope` stored it without `baseEventId: null` and
+ * without a `targetId` equal to its own id; and `deviceSeq` is only outbox order, renumbered when the old
+ * finance log is copied (a copy made again into a fresh store keeps the old number while the server holds
+ * the renumbered one).
+ */
+export function sameEvent(a: SaleEvent, b: SaleEvent): boolean {
+  if (a.kind === 'finance' && b.kind === 'finance') return canonicalJson(comparableFinance(a)) === canonicalJson(comparableFinance(b));
+  return canonicalJson(a) === canonicalJson(b);
+}
+
+function comparableFinance(e: SaleEvent): Record<string, unknown> {
+  const loose = e as unknown as Record<string, unknown>;
+  return { ...loose, targetId: loose.targetId ?? loose.id, baseEventId: loose.baseEventId ?? null, deviceSeq: 0 };
+}
+
+/**
  * The pull rule: true when the event must be inserted, false when the same
  * content is already stored. Pulled events are compared whole, deviceSeq
- * included — the server copy is the one this device sent or another wrote.
+ * included — the server copy is the one this device sent or another wrote. Money is compared by `sameEvent`.
  */
 export function checkPulled(event: SaleEvent, existing: SaleEvent | undefined): boolean {
   if (!existing) return true;
-  if (canonicalJson(existing) === canonicalJson(event)) return false;
+  if (sameEvent(existing, event)) return false;
   throw new IntegrityError(`Event ${event.id} already exists with different content.`);
 }
