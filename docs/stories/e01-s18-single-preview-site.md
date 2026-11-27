@@ -48,7 +48,7 @@ N/A: CI and hosting only, no app data.
 - [x] `scripts/ci-workflow.test.ts` style check on the new workflow: dispatch-only,
       `pr` input required, concurrency set, no `pull_request` trigger. — done as `scripts/preview-site-workflow.test.ts`
 - [x] Real run: after merge, dispatch with a green PR number and open
-      `mon-farm-preview.web.app` (owner or lead; the sandbox cannot reach it). — `Deploy Preview Site` runs succeeded, latest 45784870612 (workflow_dispatch, 2026-11-26); the owner tried bundle PR #249 on mon-farm-preview.web.app on 2026-11-27 (lead's report)
+      `mon-farm-preview.web.app` (owner or lead; the sandbox cannot reach it). — `Deploy Preview Site` runs succeeded, latest 45784870612 (workflow_dispatch, 2026-11-26); on 2026-11-27 the Rush Agent (an OpenBot agent acting for the owner) tested bundle PR #249 on mon-farm-preview.web.app in the owner's signed-in Chrome, saving no data
 
 ## Owner must do
 
