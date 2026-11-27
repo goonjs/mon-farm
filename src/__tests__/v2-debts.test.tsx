@@ -115,7 +115,9 @@ describe('debt ledger (E06-S03)', () => {
   it('account: reconciliation bottom line equals the balance; history filters by kind; void recomputes', async () => {
     wrap(<DebtAccountScreen />);
     await flush();
-    expect(screen.getByTestId('debt-balance').props.children).toBe('500.00');
+    // Summary card: short money, the exact amount spoken (owner rule 2026-10-31).
+    expect(screen.getByTestId('debt-balance')).toHaveTextContent(/^฿\s500$/);
+    expect(screen.getByTestId('debt-balance').props.accessibilityLabel).toBe('500.00 บาท');
     expect(screen.getByTestId('debt-summary-balance').props.children).toBe('−500.00');
     expect(screen.getByTestId('debt-flag')).toBeTruthy();
 
