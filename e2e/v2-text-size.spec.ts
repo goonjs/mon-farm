@@ -277,6 +277,76 @@ for (const size of ['m', 's'] as const) {
   });
 }
 
+// TS-8, the last two open screens (story note 2026-11-17): A9 = the payment page on the "คนซื้อแยกเงินสด" route
+// (mockup flow-sale-closeout-proposal A19: its own "รับเงินสดคืนหนี้แล้ว · แดง" tick), and M9 = the "got less"
+// sheet on the "โอนรวม" route asking where the money is (E06-S08 PR-19, mockup debt-pending-repay M9).
+test('the largest text size: A9 payment with buyer-split cash and M9 got-less on the transfer (TS-8)', async ({ page }) => {
+  test.setTimeout(120_000);
+  const id = on(page);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seed(page, 'l');
+  const problems: Record<string, string[]> = {};
+  const targets: Record<string, string[]> = {};
+  const check = async (name: string) => {
+    await page.waitForTimeout(300);
+    expect(await fontPx(page, 'screen-title'), `${name}: at l`).toBe(AT.l.title);
+    problems[name] = await textFit(page);
+    targets[name] = await smallTargets(page);
+    await shot(page, `l-${name}`);
+  };
+
+  // A9: แดง's repayment handed apart by the buyer, then the payment page.
+  await page.goto('/v2/sale/sale-ts/settlement');
+  await expect(id('co-summary')).toBeVisible();
+  await id('co-debt-open').click();
+  await id('co-debt-ok').click();
+  await id('co-owed-open').click();
+  await id('co-owed-ok').click();
+  await id('co-deduct-red').click();
+  await id('co-deduct-ok').click();
+  await id('co-cash-card').click();
+  await id('cop-route-red-buyer-split').click();
+  await expect(id('cop-split-red')).toBeVisible();
+  await check('a17-cash-buyer-split');
+  await id('cop-ok').click();
+  await id('co-confirm').click();
+  await expect(id('payment')).toBeVisible();
+  await expect(id('tick-debt-cash-red')).toBeVisible();
+  await check('a9-payment-buyer-split');
+  await id('close-sale').click();
+  await expect(id('home-sale-start')).toBeVisible();
+
+  // M9 on the transfer: นัด's repayment rides on the owner's transfer; nothing came, then "the buyer gave it to นัด".
+  await page.goto('/v2/debt/nat?name=%E0%B8%99%E0%B8%B1%E0%B8%94');
+  await id('rp-row-sale-ts-transfer').click();
+  await id('rp-sheet-less').click();
+  await expect(id('rp-amount-sheet')).toBeVisible();
+  await id('rp-amt-pad-key-0').click();
+  await expect(id('rp-amt-save')).toContainText('ไม่ได้รับ');
+  await check('m9-transfer-none');
+  await id('rp-amt-with-worker').click();
+  await expect(id('rp-amt-fix')).toBeVisible();
+  await check('m9-transfer-with-worker');
+
+  // The same question on the cash route (the mockup's M9 itself): แดง's buyer-split cash.
+  await page.goto('/v2/debt/red?name=%E0%B9%81%E0%B8%94%E0%B8%87');
+  await id('rp-row-sale-ts-cash').click();
+  await id('rp-sheet-less').click();
+  await expect(id('rp-amount-sheet')).toBeVisible();
+  await id('rp-amt-pad-key-0').click();
+  await check('m9-cash-none');
+  await id('rp-amt-with-worker').click();
+  await expect(id('rp-amt-fix')).toBeVisible();
+  await check('m9-cash-with-worker');
+
+  console.log(`E03-S08 A9/M9 at l: fit ${JSON.stringify(problems)} targets ${JSON.stringify(targets)}`);
+  const none = (r: Record<string, string[]>) => Object.fromEntries(Object.keys(r).map((k) => [k, []]));
+  expect(problems).toEqual(none(problems));
+  expect(targets, 'touch targets ≥ 48 at l (§12.10 #6)').toEqual(none(targets));
+  expect(errors).toEqual([]);
+});
+
 test('×1.3 on top of L: the header title and the Banner still fit (TS-6, TS-7)', async ({ page }) => {
   const id = on(page);
   await seed(page, 'l');
