@@ -203,7 +203,7 @@ export function ExpensesScreen() {
         <Pressable
           testID="totals"
           accessibilityRole="button"
-          accessibilityHint={msg('fin.total.sheet')}
+          accessibilityHint={msg('fin.total.open')}
           onPress={() => setTotalsOpen(true)}
           style={{ ...cardStyle(t), padding: t.space.lg, flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.min }}
         >
@@ -362,7 +362,7 @@ function TotalsSheet({ open, onClose, rows, planned }: { open: boolean; onClose:
         {line(
           'totals-sheet-planned',
           planned.label,
-          planned.unknownCount && !planned.knownSatang ? <UnknownPill /> : exact(planned.knownSatang),
+          planned.unknownCount && !planned.knownSatang ? <UnknownPill testID="totals-sheet-planned-unknown" /> : exact(planned.knownSatang),
           planned.unknownCount && planned.knownSatang ? <AppText variant="caption" style={{ textAlign: 'right' }}>{`+ ${msg('fin.total.unknown', { n: planned.unknownCount })}`}</AppText> : null,
         )}
       </View>

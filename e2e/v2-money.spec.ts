@@ -565,5 +565,10 @@ for (const [width, size] of [[320, 'l'], [390, 'm']] as const) {
     await evidence(page, `docs/ux/screenshots/expense-summary-compact/${width}-${size}-totals-sheet-after.png`);
     await page.getByTestId('totals-sheet-close').click();
     await expect(sheet).toBeHidden();
+    // Escape closes it too (the same onRequestClose path as Android back).
+    await page.getByTestId('totals').click();
+    await expect(sheet).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(sheet).toBeHidden();
   });
 }

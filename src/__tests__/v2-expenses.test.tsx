@@ -411,6 +411,8 @@ describe('expense list (F4, F7)', () => {
     expect(screen.queryByTestId('totals-sheet')).toBeNull();
     const card = screen.getByTestId('totals');
     expect(card.props.accessibilityRole).toBe('button');
+    // The hint says what the tap does (like co.sale.open), not just the sheet's title.
+    expect(card.props.accessibilityHint).toBe('ดูยอดรวมเต็ม');
     fireEvent.press(card);
     const sheet = screen.getByTestId('totals-sheet');
     expect(sheet.props.accessibilityLabel).toBe('ยอดรวมเต็ม');
@@ -428,8 +430,10 @@ describe('expense list (F4, F7)', () => {
     fireEvent.press(screen.getByTestId('filter-month'));
     fireEvent.press(screen.getByTestId('month-2025-06'));
     fireEvent.press(screen.getByTestId('totals'));
-    expect(screen.getByTestId('totals-sheet-planned')).toHaveTextContent(/ไม่ทราบ/);
-    expect(screen.getByTestId('totals-sheet-planned')).not.toHaveTextContent(/0\.00/);
+    const planned = screen.getByTestId('totals-sheet-planned');
+    // The row is the label and the ไม่ทราบ pill, nothing else: no 0 written any way.
+    expect(planned).toHaveTextContent(/^วางแผนไม่ทราบ$/);
+    expect(within(planned).getByTestId('totals-sheet-planned-unknown')).toHaveTextContent('ไม่ทราบ');
   });
 });
 
