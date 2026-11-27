@@ -195,6 +195,66 @@ describe("review N3 · a group's minimum goes up before any of its money, on eve
   });
 });
 
+describe('re-review N1 · money goes only after a minimum this phone has sent or is sending for this user', () => {
+  it("a shared phone: user X's unsent minimum does not let user Y's money reach the server without one", async () => {
+    const server = new FakeServer();
+    const store = new MemoryStore();
+    const clock = createDeviceClock(store);
+    const deviceId = await clock.load();
+    const scopeOf = (userId: string) => ({ userId, groupId: FIXTURE_GROUP_ID });
+    const money = (userId: string, id: string): FinanceEvent => ({ id, groupId: FIXTURE_GROUP_ID, deviceSeq: 0, ts: Date.now(), actor: { userId, deviceId }, source: 'app', targetId: id, baseEventId: null, payload: { t: 'category_added', name: id } });
+    // X records money offline and never syncs; then Y signs in on the same phone and records money.
+    await new EventFinanceStore(store, clock, new MemoryFinanceStore(), () => scopeOf('user-x')).append(money('user-x', 'finance:user-x'));
+    await new EventFinanceStore(store, clock, new MemoryFinanceStore(), () => scopeOf('user-y')).append(money('user-y', 'finance:user-y'));
+    const remote = new EnvelopeRemote(server);
+    const engine = new SyncEngine({ store, accounts: new MemoryAccountStore(), scope: scopeOf('user-y'), remote, cursor: new MemoryCursor(), random: () => 0, beforePush: () => ensureAppMinIfMoney(store, clock, scopeOf('user-y')) });
+    await engine.sync();
+    const sent = remote.batches.flat().filter((e) => e.kind === 'app_min' || e.kind === 'finance');
+    expect(sent.map((e) => e.kind)[0]).toBe('app_min');
+    expect(sent.find((e) => e.kind === 'app_min')?.actor.userId).toBe('user-y');
+    expect([...server.docs.values()].map((d) => d.event.kind).sort()).toEqual(['app_min', 'finance']);
+    expect(engine.status()).toMatchObject({ state: 'synced' });
+  });
+
+  it('the server refuses the minimum: the money stays on the phone and the error shows, this run and the next', async () => {
+    const server = new FakeServer();
+    const a = await phone('user-a', server);
+    await a.write('c1', null, { t: 'category_added', name: 'ค่าไฟ' });
+    const min = (await a.store.pending()).find((e) => e.kind === 'app_min');
+    expect(min).toBeDefined();
+    a.remote.invalidIds.add(min!.id);
+    await a.engine.sync();
+    expect([...server.docs.values()].some((d) => d.event.kind === 'finance')).toBe(false);
+    expect(a.engine.status()).toMatchObject({ state: 'error', error: 'invalid' });
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    await a.engine.sync();
+    expect([...server.docs.values()].some((d) => d.event.kind === 'finance')).toBe(false);
+    expect((await a.store.pending()).map((e) => e.kind)).toContain('finance');
+    expect(a.engine.status()).toMatchObject({ state: 'error', error: 'invalid' });
+  });
+});
+
+describe('re-review N2 · money waiting for its minimum does not hide a permanent error from the same run', () => {
+  it('the writes are refused (not a member) while money is held: the run shows "denied", not retrying', async () => {
+    const server = new FakeServer();
+    const store = new MemoryStore();
+    const clock = createDeviceClock(store);
+    const deviceId = await clock.load();
+    const scope = { userId: 'user-a', groupId: FIXTURE_GROUP_ID };
+    const remote = new EnvelopeRemote(server);
+    const failing = async () => {
+      throw new Error('disk full');
+    };
+    const engine = new SyncEngine({ store, accounts: new MemoryAccountStore(), scope, remote, cursor: new MemoryCursor(), random: () => 0, beforePush: failing });
+    await store.append({ id: 'm-1', groupId: FIXTURE_GROUP_ID, saleId: FINANCE_SCOPE, seq: 1, deviceSeq: 1, ts: 1, mono: 0, actor: { userId: 'user-a', deviceId }, source: 'app', kind: 'finance', targetId: 'c-1', baseEventId: null, payload: { t: 'category_added', name: 'ค่าไฟ' } } as SaleEvent);
+    for (const e of new LogBuilder('sale-8', deviceId).accept('p1').build()) await store.append({ ...e, actor: { userId: 'user-a', deviceId } });
+    remote.denied = true;
+    await engine.sync();
+    expect(engine.status()).toMatchObject({ state: 'error', error: 'denied' });
+  });
+});
+
 describe('two phones edit the same expense on the same base (S28-AC9, D-30)', () => {
   it('both show the conflict with the value from before; resolving on one clears it on both', async () => {
     const server = new FakeServer();
