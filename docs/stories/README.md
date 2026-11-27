@@ -28,8 +28,11 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - ~~[E01-S14: preview A/B รูปแบบ card — เงา+เส้น vs แบน+เส้น](e01-s14-card-style-ab-preview.md)~~ ยกเลิก (D-52)
 - [E01-S15: สถานะข้อมูลรายฟิลด์ 6 แบบ + ป้ายใช้ซ้ำ](e01-s15-field-data-states.md)
 - [E01-S16: ลบเขตไม่ได้ถ้าคนกรีดของเขตยังมียอดหัก](e01-s16-zone-delete-guard.md) (Superseded โดย E06-S07)
-- [E01-S19: ค่าตั้งของเครื่องจำได้บน Android](e01-s19-device-settings-native.md) (Ready — ทำก่อน E05-S11)
+- [E01-S19: ค่าตั้งของเครื่องจำได้บน Android](e01-s19-device-settings-native.md) (Review — merged #129 · รอทดสอบบน Android จริง DS-3)
 - [E01-S20: แป้นตัวเลขของแอปทุกช่องที่กรอกตัวเลข](e01-s20-app-number-pad.md) (Done 2026-11-17 — NP-9 แก้ใน #207; 5 หน้าคงปุ่ม − + ตามเจ้าของ e01-s24-ac, E01-S24 ถอน)
+- [E01-S23: ติดตั้งเว็บแอปบนโทรศัพท์ และเปิดได้ตอนไม่มีเน็ต (PWA)](e01-s23-pwa-install.md) (Review — merged #195 · รอเจ้าของติดตั้งจริงบน Android)
+- [E01-S25: ปุ่มเลือกทั้งแอป รอบ 2 — ส่วนประกอบที่ใช้ร่วม](e01-s25-choice-tiles.md) (Review — merged ผ่าน #246 · รอเจ้าของตอบ CT-15 และหลักฐาน CT-9..CT-14)
+- [E01-S26: ปุ่มเลือกทั้งแอป รอบ 2 — รายหน้า](e01-s26-choice-tiles-per-screen.md) (Review — merged #246 · รอถอด ChoiceChip/ToggleChip และภาพข้าง mockup)
 - [E01-S27: เจ้าของทดสอบ sync บนฐานข้อมูลจริง ด้วยเบราว์เซอร์ 2–3 ตัว](e01-s27-owner-sync-test.md) (Ready)
 - [E01-S28: ย้าย log การเงินเข้า event log ที่ sync](e01-s28-finance-sync.md) (In Progress — รอบแรกใน review · PR โค้ดเป็น critical)
 
@@ -50,7 +53,8 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E03-S05: มอบหมายคนกรีด ↔ จุดชั่ง แบบมีช่วงเวลา](e03-s05-tapper-assignments.md)
 - [E03-S06: ส่วนแบ่งรายคนกรีด + เลิกใช้สัญญาต่อโซนและ `basis`](e03-s06-tapper-share-retire-zone-contracts.md)
 - [E03-S07: ค่าตั้งต้นเข่ง และตั้งค่าวันขาย](e03-s07-basket-presets-and-sale-settings.md) ❓
-- [E03-S08: ขนาดตัวอักษร S / M / L](e03-s08-text-size-setting.md)
+- [E03-S08: ขนาดตัวอักษร S / M / L](e03-s08-text-size-setting.md) (Review — merged #142 · TS-8 เหลือ A9 / M9)
+- [E03-S09: ภาพปกหน้าแรก สวนยางตามเวลาจริง](e03-s09-home-cover-scene.md) (Review — merged #143 · รอวัดบน Android จริง)
 
 ### E04 การชั่งขาย — [epic](../epics/e04-sale-weighing.md)
 
@@ -69,6 +73,9 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E04-S13: รวมข้อมูลด้วย QR ตอนปิดการขาย](e04-s13-qr-merge-at-close.md)
 - [E04-S14: จับการนับซ้ำ 7–10 วินาที + ไทม์ไลน์รายเครื่อง](e04-s14-duplicate-detection-timeline.md) ❓
 - [E04-S15: ประวัติการบันทึกเข่ง + ย้อนกลับแบบกดค้าง](e04-s15-basket-history-and-hold-undo.md) ❓
+- [E04-S19: มาช้า กรอกย้อนหลังทีละจุด แล้วนับเองต่อ](e04-s19-backfill-catch-up.md) (Done 2026-11-27 — merged #198)
+- [E04-S25: นับเข่งที่เติมจนเต็มเป็น 1 เข่งเต็ม ทุกที่](e04-s25-topup-basket-count.md) (Done 2026-11-27 — merged #238)
+- [E04-S26: กรอกย้อนหลังได้ทุกเวลา ทีละจุด แม้นับเองไปแล้ว](e04-s26-backfill-any-time.md) (Done 2026-11-27 — merged #239)
 
 ### E05 กระทบยอด & สรุปเงิน — [epic](../epics/e05-reconciliation-settlement.md)
 

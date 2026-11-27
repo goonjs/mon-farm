@@ -1,6 +1,7 @@
 # Story E01-S19: ค่าตั้งของเครื่องจำได้บน Android
 
 Status: Review (code merged #129, 7a44e9a, 2026-11-01; missing: DS-3 ทดสอบบน Android จริง (รอ dev client E01-S06) · ภาพก่อน/หลังบน Android) — เดิม: (2026-10-31; DS-3 ยังไม่ได้ทดสอบบน Android จริง — เจ้าของให้ merge ได้ แล้วทดสอบบนเครื่องจริงตอน E01-S06 จึงเป็น Done) — เจ้าของตกลง AC 2026-10-31 "ตกลง เริ่มทำเลย"; ทำก่อน E05-S11 (CO-23 ขึ้นกับสตอรี่นี้)
+เงื่อนไขไปขั้นถัดไป: DS-3 ทดสอบบน Android จริง (force stop → เปิดใหม่ ค่ายังอยู่ ทั้ง 6 ค่า) พร้อมภาพก่อน/หลัง และ DS-4 ขนาดตัวอักษรเฟรมแรกบน Android → Done · ใคร: เจ้าของหรือทีม dev ที่มีเครื่อง Android กับ APK/dev client (E01-S06) · รอ: คนที่มีเครื่อง Android (ตรวจเอกสาร 2026-11-27: ไม่มีเครื่องในเซสชันนี้) · PR #129 ไม่มีรีวิวบน GitHub (รีวิวอิสระอยู่ในหัวข้อ Code review ด้านล่าง ทำในเซสชันทีม dev)
 
 ## Context
 
@@ -55,6 +56,7 @@ _Tests below are written to fail first (TDD), then implemented to green._
 ## Verification
 
 - [x] Sandbox run performed: เว็บ build จริง เปลี่ยนค่า → reload → ค่ายังอยู่
+- [x] ตรวจเอกสาร 2026-11-27 (worktree บน dev `a18db4e` หลัง `npm ci`): vitest 1559/1559 · jest 98 suites 1324/1324 · `build:web` + Playwright phone-portrait 157 ผ่าน 5 ข้าม (ชุด emulator) 0 ล้ม · `e2e/v2-device-settings.spec.ts:17` "device settings survive a reload under the same keys" และ `:45` ผ่าน · DS-3 (Android) ยังไม่ได้ทำ
 - [ ] Android: force stop → เปิดใหม่ (DS-3) — ต้องมี dev client (E01-S06) ถ้าทำไม่ได้ในเซสชันนี้ ต้องบอกเจ้าของตรงๆ และสตอรี่ไม่ถึง Done
 - [ ] Screenshots: ไม่มี UI ใหม่ — ภาพก่อน/หลังเปิดแอปใหม่บน Android เป็นหลักฐาน DS-3
 
