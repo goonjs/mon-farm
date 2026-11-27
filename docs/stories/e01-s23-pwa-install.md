@@ -1,6 +1,7 @@
 # Story E01-S23: ติดตั้งเว็บแอปบนโทรศัพท์ และเปิดได้ตอนไม่มีเน็ต (PWA)
 
 Status: Review (code merged #195, f75b6b6, 2026-11-16; missing: ติดตั้งจริงบน Android ตามเช็กลิสต์ใน QA notes (เจ้าของ)) — เดิม: (งานข้อ 6 ที่ลีดจัด 2026-11-16 คู่กับ E01-S06 · คำเจ้าของสำหรับงานนี้ ลีดบันทึกใน agreement จากแชตของเจ้าของ)
+เงื่อนไขไปขั้นถัดไป: เจ้าของติดตั้งจริงบน Android (Chrome) ตามเช็กลิสต์ 3 ข้อใน QA notes แล้วบอกผล → Done · ใคร: เจ้าของ · รอ: เจ้าของ (ตรวจเอกสาร 2026-11-27: โค้ด เทสต์ รีวิว ครบ · CI หลัง merge บน `f75b6b6` เขียว (verify, e2e))
 
 ## Context
 
@@ -14,7 +15,7 @@ Status: Review (code merged #195, f75b6b6, 2026-11-16; missing: ติดตั�
 
 ## Acceptance criteria
 
-- [x] **PW-1** มี web app manifest: ชื่อ mon-farm · เปิดที่หน้าแรก `/v2` · แสดงแบบแอป (standalone) แนวตั้ง · ไอคอน 192 และ 512 px (ภาพกรีดยาง พื้นขาว) · Chrome บน Android ขึ้น "ติดตั้งแอป" ได้
+- [~] **PW-1** มี web app manifest: ชื่อ mon-farm · เปิดที่หน้าแรก `/v2` · แสดงแบบแอป (standalone) แนวตั้ง · ไอคอน 192 และ 512 px (ภาพกรีดยาง พื้นขาว) · Chrome บน Android ขึ้น "ติดตั้งแอป" ได้ — ตรวจ 2026-11-28: manifest, ไอคอน และการเปิดซ้ำตอนออฟไลน์ผ่านเทสต์ (`e2e/pwa.spec.ts`, jest manifest) แต่ "Chrome บน Android ขึ้น 'ติดตั้งแอป' ได้" ยืนยันได้จากการติดตั้งจริงบน Android เท่านั้น (ดู Verification)
 - [x] **PW-2** เปิดแอปครั้งหนึ่งตอนมีเน็ตแล้ว ปิด แล้วเปิดใหม่ตอนไม่มีเน็ต หน้าแรกขึ้นพร้อมข้อมูลในเครื่อง
 - [x] **PW-3** มีเน็ตเมื่อไหร่ได้เวอร์ชันใหม่ล่าสุดเสมอ (ไม่ค้างเวอร์ชันเก่าจากแคช)
 - [x] **PW-4** ไม่ลง package ใหม่ · ไม่แตะข้อมูลหรือ event
@@ -34,7 +35,8 @@ _เขียนเทสต์ก่อน (ล้มก่อน) แล้ว
 ## Verification
 
 - [x] Sandbox run performed: 2026-11-16 build:web + Playwright ทุก project (exit 0) · `e2e/pwa.spec.ts` ซ้ำ 3 รอบ × 2 project ผ่าน: manifest โหลดได้ · service worker ควบคุมหน้า · แคชมี bundle · ตัดเน็ตแล้วโหลดใหม่ หน้าแรกขึ้น
-- [ ] ติดตั้งจริงบน Android (เจ้าของ ตามเช็กลิสต์ใน QA notes)
+- [x] ตรวจเอกสาร 2026-11-27 (worktree บน dev `a18db4e` หลัง `npm ci`): vitest 1559/1559 · jest 98 suites 1324/1324 · `build:web` + Playwright phone-portrait 157 ผ่าน 5 ข้าม (ชุด emulator) 0 ล้ม · vitest รวม `src/lib/sw.test.ts` · `npx playwright test e2e/pwa.spec.ts` (รันใน project phone-landscape และ phone-landscape-floor) 2/2 ผ่าน: "the web app is installable and opens again offline (E01-S23 PW-1, PW-2)"
+- [ ] ติดตั้งจริงบน Android (เจ้าของ ตามเช็กลิสต์ใน QA notes) — PW-1 ส่วน "Chrome บน Android ขึ้น 'ติดตั้งแอป' ได้" ยืนยันได้จากข้อนี้เท่านั้น
 
 ## Code review
 

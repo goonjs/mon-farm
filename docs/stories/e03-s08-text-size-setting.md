@@ -1,6 +1,7 @@
 # Story E03-S08: ขนาดตัวอักษร S / M / L
 
-Status: Review (code merged #142, b213b51, 2026-11-02; missing: TS-8 ยังไม่ครบ (A5 / A8 / A9 และแผ่นแป้นจำนวน)) — เดิม: (เจ้าของตกลง AC TS-1..TS-9 ผ่านลีด 2026-11-02 · merge #142 `b213b51` · ตรวจปิดสตอรี่ 2026-11-07: ยังไม่ Done — TS-8 ยังไม่ครบ ดูหัวข้อ "ตรวจปิดสตอรี่")
+Status: Review (code merged #142, b213b51, 2026-11-02; missing: TS-8 ยังไม่ครบ (A9 / M9 — A5, A8 และแผ่นแป้นจำนวนตรวจแล้ว 2026-11-17)) — เดิม: (เจ้าของตกลง AC TS-1..TS-9 ผ่านลีด 2026-11-02 · merge #142 `b213b51` · ตรวจปิดสตอรี่ 2026-11-07: ยังไม่ Done — TS-8 ยังไม่ครบ ดูหัวข้อ "ตรวจปิดสตอรี่")
+เงื่อนไขไปขั้นถัดไป: TS-8 ที่เหลือ: A9 (หน้าจ่ายเงินทางคนซื้อแยกเงินสด) และ M9 (แผ่นได้น้อยกว่า ทางโอนรวม) ที่ตัวอักษรใหญ่ 390×844 เพิ่มในทัวร์ `e2e/v2-text-size.spec.ts` → Done · Android จริง (TS-3, TS-6, ×1.3) บันทึกเป็นข้อเปิด · ใคร: ทีม dev · รอ: ทีม dev (ตรวจเอกสาร 2026-11-27: ทัวร์ปัจจุบันผ่าน 27 จุด แตะ < 48 = 0 แต่ไม่มี a9/m9)
 
 ## Context
 
@@ -75,6 +76,10 @@ _เขียน test ก่อน (TDD)_
 - [x] Screenshots — golden path: `docs/ux/screenshots/e03-s08/device-{s,m,l}.png`
 - [x] Screenshots — edge cases: `docs/ux/screenshots/e03-s08/l-*.png`, `x130-*.png`; เดิมที่ตอนนี้ขยายจริง:
   `ui-v2/sale/8k`, `8l`, `debt-pending-repay/build/l-m2-account`, `l-m9-less`
+
+## ตรวจเอกสาร 2026-11-27
+
+- ตรวจเอกสาร 2026-11-27 (worktree บน dev `a18db4e` หลัง `npm ci`): vitest 1559/1559 · jest 98 suites 1324/1324 · `build:web` + Playwright phone-portrait 157 ผ่าน 5 ข้าม (ชุด emulator) 0 ล้ม · `e2e/v2-text-size.spec.ts` ทุกข้อผ่าน · log จุดตรวจที่ใหญ่ (L): home, home-menu, device, counter, short-sheet, short-sheet-over, history, sale-check, a1, a4, a2, a26, a5, a8, a3, a6, m5, m7, a7-buyer-view-big, a1-summary-big, m1, m3, np-fields, np-money-pad, np-qty-pad, fert-order, fert-new-item — ไม่มี a9 / m9 · TS-8 จึงยังไม่ติ๊ก
 
 ## Dev notes
 

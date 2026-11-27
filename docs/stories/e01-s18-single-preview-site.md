@@ -1,6 +1,7 @@
 # Story E01-S18: One shared preview site, deployed by PR number
 
-Status: Review (built, PR #84 merged 2026-10-11; owner asked for it: "pick by PR number")
+Status: Review (built, PR #84 merged 2026-10-11; owner asked for it: "pick by PR number") · docs check 2026-11-27: every AC checked in the code and tests below; missing: an independent code review (PR #84 has no review on GitHub and this story has none)
+เงื่อนไขไปขั้นถัดไป: a separate session reviews `.github/workflows/preview-site.yml`, `scripts/deploy.sh preview-site` and the `preview` target with `docs/checklists/code-review-checklist.md` and writes it below → Done · ใคร: ผู้รีวิวอิสระ (ลีดเป็นคนสั่ง) · รอ: ลีด
 
 ## Context
 
@@ -21,19 +22,19 @@ PR CI and per-PR channels on `mon-farm-dev` are unchanged.
 
 ## Acceptance criteria
 
-- [ ] `.firebaserc` maps a `preview` hosting target to `mon-farm-preview`;
+- [x] `.firebaserc` maps a `preview` hosting target to `mon-farm-preview`;
       `firebase.json` has a `preview` entry that serves `dist/` like `dev` and
-      `prod` (same not-found fallback and cache headers).
-- [ ] `scripts/deploy.sh preview-site` deploys `hosting:preview` with the generated
+      `prod` (same not-found fallback and cache headers). — `.firebaserc:10` `"preview": ["mon-farm-preview"]`, `firebase.json:112` target `preview` (public `dist`, same headers and `/+not-found.html` rewrite as `dev`/`prod`, checked 2026-11-27); `scripts/deploy.test.ts:203`
+- [x] `scripts/deploy.sh preview-site` deploys `hosting:preview` with the generated
       dynamic-route config, and fails closed like the other modes (no `dist/`, no
-      CI credential, firebase error).
-- [ ] Workflow `Deploy Preview Site` runs only by `workflow_dispatch` with a
+      CI credential, firebase error). — `scripts/deploy.sh:70-71`; `scripts/deploy.test.ts:123-138` (deploys `hosting:preview`, fails with no `dist/`, fails in CI with no credential); a firebase error fails it through `set -euo pipefail` (`scripts/deploy.sh:18`) — no `preview-site` test with a firebase error yet (only `prod`, `deploy.test.ts:87`; a later code PR)
+- [x] Workflow `Deploy Preview Site` runs only by `workflow_dispatch` with a
       required `pr` number. It refuses a PR that is closed or comes from a fork,
       checks out that PR's head commit, builds web with the real public config
       (project `mon-farmmate`), authenticates keylessly, deploys, and writes the PR
-      number, commit and URL to the run summary.
-- [ ] Runs queue (concurrency group, no cancel) so two picks never deploy at once.
-- [ ] Nothing here touches the shared `verify`/`e2e` bundle, `dev` or `prod`.
+      number, commit and URL to the run summary. — `.github/workflows/preview-site.yml` (dispatch-only, `pr` required, refuses a closed or fork PR, checks out the PR head sha, public config for `mon-farmmate`, keyless auth, run summary); `scripts/preview-site-workflow.test.ts`
+- [x] Runs queue (concurrency group, no cancel) so two picks never deploy at once. — `preview-site.yml` `concurrency: group: preview-site, cancel-in-progress: false`; `preview-site-workflow.test.ts:15`
+- [x] Nothing here touches the shared `verify`/`e2e` bundle, `dev` or `prod`. — the workflow only builds its own checkout and runs `deploy.sh preview-site`; `ci.yml` and `deploy-dev.yml` do not call it
 
 ## Offline / sync behavior
 
@@ -41,13 +42,13 @@ N/A: CI and hosting only, no app data.
 
 ## Test plan (tests first)
 
-- [ ] `scripts/deploy.test.ts`: `preview-site` deploys `hosting:preview`; fails when
+- [x] `scripts/deploy.test.ts`: `preview-site` deploys `hosting:preview`; fails when
       `dist/` is missing; needs a credential in CI; the `preview` target maps to
       `mon-farm-preview` and serves like `dev`/`prod`.
-- [ ] `scripts/ci-workflow.test.ts` style check on the new workflow: dispatch-only,
-      `pr` input required, concurrency set, no `pull_request` trigger.
-- [ ] Real run: after merge, dispatch with a green PR number and open
-      `mon-farm-preview.web.app` (owner or lead; the sandbox cannot reach it).
+- [x] `scripts/ci-workflow.test.ts` style check on the new workflow: dispatch-only,
+      `pr` input required, concurrency set, no `pull_request` trigger. — done as `scripts/preview-site-workflow.test.ts`
+- [x] Real run: after merge, dispatch with a green PR number and open
+      `mon-farm-preview.web.app` (owner or lead; the sandbox cannot reach it). — `Deploy Preview Site` runs succeeded, latest 45784870612 (workflow_dispatch, 2026-11-26); on 2026-11-27 the Rush Agent (an OpenBot agent acting for the owner) tested bundle PR #249 on mon-farm-preview.web.app in the owner's signed-in Chrome, saving no data
 
 ## Owner must do
 
@@ -55,6 +56,8 @@ N/A: CI and hosting only, no app data.
   there). The deploy service account already has Hosting Admin on the project.
 
 ## Verification
+
+- [x] Docs check 2026-11-27 (worktree on dev `a18db4e` after `npm ci`): `npx vitest run` 1559/1559, including `scripts/deploy.test.ts` and `scripts/preview-site-workflow.test.ts`
 
 ## Dev notes
 

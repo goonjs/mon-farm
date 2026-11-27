@@ -1,6 +1,7 @@
 # Story E01-S17: CI ประหยัดนาทีรอบ 2 — deploy dev ผ่าน Cloud Build, e2e/preview ตามที่ขอ, ข้ามงานที่ไม่จำเป็น
 
-Status: Review
+Status: Review (code merged #103, 2026-10-14; ตรวจเอกสาร 2026-11-27: label `e2e`/`preview` มีแล้ว · workflow `PR extras` รันจริงแล้ว · missing: นาที CI ก่อน/หลัง (median 3 รอบ) · การตัดสินใจของเจ้าของเรื่อง e2e ย้ายไปหลัง merge ยังไม่มีคำเจ้าของในสตอรี่)
+เงื่อนไขไปขั้นถัดไป: (1) ทีม infra เก็บนาที CI ก่อน/หลังจาก run จริงใส่ Dev notes และดู run ที่ติด label `preview` (กับติดทั้งสอง) และ PR draft จริงหนึ่งครั้ง (2) เจ้าของยอมรับข้อแลกเปลี่ยน "e2e รันหลัง merge หรือเมื่อติด label" เป็นคำของเจ้าของ (ข้อในหัวข้อ "ต้องให้เจ้าของทำ/อนุมัติ") → Done · ใคร: ทีม infra, เจ้าของ · รอ: ทีม infra และเจ้าของ
 
 ## Context
 
@@ -36,7 +37,7 @@ Status: Review
 - [x] `pr-extras.yml`: label `e2e` รัน e2e, label `preview` deploy preview; ทั้งคู่ใช้ install+build ครั้งเดียว; ไม่รันกับ fork/draft; label อื่นไม่ทำอะไร
 - [x] `cloudbuild.yaml` + runbook `docs/runbooks/cloud-build-deploy-dev.md` เป็นทางเลือก (ไม่ใช้งานตอนนี้); `deploy-dev.yml` ยัง push-triggered
 - [~] Cloud Build trigger: ยกเลิกตอนนี้ (ตั้งไม่สำเร็จ, repo public)
-- [ ] **เจ้าของ:** สร้าง label `e2e` และ `preview` ใน GitHub (ไม่งั้นติดไม่ได้)
+- [x] **เจ้าของ:** สร้าง label `e2e` และ `preview` ใน GitHub (ไม่งั้นติดไม่ได้) — ตรวจ 2026-11-27 `gh label list`: `e2e` "Run e2e on this PR", `preview` "Deploy a preview for this PR"
 - [ ] บันทึกนาที CI ก่อน/หลังจาก run จริง (median 3 รอบ) ใน Dev notes — ทำได้หลัง merge
 
 ## Offline / sync behavior
@@ -47,10 +48,10 @@ Status: Review
 
 - [x] unit: `needsRulesTests` (ข้ามโค้ดแอป, รันเมื่อแตะ rules/dependency/workflow, รายการว่างปลอดภัย, ไม่จับ substring)
 - [x] parse YAML ทุกไฟล์ที่แก้ได้ (`yaml` ใน node_modules)
-- [ ] PR ทดสอบ: ไม่ติด label → เห็นแค่ `changes`+`verify` และไม่มี e2e/preview
-- [ ] PR ทดสอบ: ติด `e2e` → `PR extras` รัน e2e; ติด `preview` → ได้ URL; ติดทั้งสอง → build ครั้งเดียว
-- [ ] PR draft → ไม่มี run; กด Ready for review → เริ่ม
-- [ ] push เข้า dev → `Cloud Build` deploy สำเร็จ; GitHub ไม่มี `Deploy Dev` run
+- [x] PR ทดสอบ: ไม่ติด label → เห็นแค่ `changes`+`verify` และไม่มี e2e/preview — ตรวจ 2026-11-27: `PR extras` ของ #246 และ #239 (ไม่ติด label) เป็น skipped
+- [~] PR ทดสอบ: ติด `e2e` → `PR extras` รัน e2e; ติด `preview` → ได้ URL; ติดทั้งสอง → build ครั้งเดียว — ตรวจ 2026-11-28: label `e2e` รันจริง เช่น run 44867370089 (2026-11-21, build=success, e2e=success, preview=skipped) · ยังไม่ได้ดู run ที่ติด `preview` ผ่าน label หรือติดทั้งสอง
+- [~] PR draft → ไม่มี run; กด Ready for review → เริ่ม — ตรวจ 2026-11-28: มีในโค้ด (`ci.yml:46-47`, `pr-extras.yml:47`) แต่ยังไม่ได้เห็นจาก PR draft จริง
+- [~] push เข้า dev → `Cloud Build` deploy สำเร็จ; GitHub ไม่มี `Deploy Dev` run — ไม่ใช้แล้ว: ตัดสิน 2026-10-14 คง `deploy-dev.yml` (ตาราง "การตัดสินใจ") · `Deploy Dev` บน GitHub สำเร็จ เช่น run 46029737849
 
 ## ต้องให้เจ้าของทำ/อนุมัติ
 
@@ -71,7 +72,7 @@ test `ci-workflow.test.ts` ที่บังคับ `include-hidden-files` �
 ## Verification
 
 - [x] Sandbox run: `npx vitest run scripts/` เขียว, YAML parse ผ่าน (ci, pr-extras, deploy-dev, cloudbuild)
-- [ ] ยังไม่ได้รันบน GitHub / Cloud Build จริง (ต้อง push + ตั้ง trigger = ขั้นตอนเจ้าของ)
+- [~] ยังไม่ได้รันบน GitHub / Cloud Build จริง (ต้อง push + ตั้ง trigger = ขั้นตอนเจ้าของ) — ตรวจ 2026-11-28: รันบน GitHub จริงแล้ว (CI ของ push เข้า dev `changes → verify → e2e` เช่น run 46029737824 · `PR extras` เช่น run 44867370089) · Cloud Build ไม่ใช้แล้ว (2026-10-14)
 - [ ] Screenshots: N/A (ไม่มี UI)
 
 ## Dev notes
@@ -100,3 +101,5 @@ test `ci-workflow.test.ts` ที่บังคับ `include-hidden-files` �
 | nit | | `gcloud config set project` เปลี่ยนค่าเครื่อง | บันทึกใน runbook |
 
 ## QA notes
+
+- ตรวจเอกสาร 2026-11-27: `PR extras` สำเร็จจริงหลายครั้ง (เช่น 2026-11-21 "feat(e15-s07): sale day ends on the home") · push เข้า dev รัน CI `changes → verify → e2e` ครบ (เช่น `a18db4e` run 46029737824) · `Deploy Dev` ยังเป็น GitHub workflow ตามการตัดสิน 2026-10-14 (ข้อ Cloud Build ใน Test plan จึงไม่ใช้แล้ว) · vitest 1559/1559 (รวม `scripts/`)
