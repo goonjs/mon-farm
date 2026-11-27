@@ -412,10 +412,10 @@ describe('expense list (F4, F7)', () => {
     const card = screen.getByTestId('totals');
     expect(card.props.accessibilityRole).toBe('button');
     // The hint says what the tap does (like co.sale.open), not just the sheet's title.
-    expect(card.props.accessibilityHint).toBe('ดูยอดรวมเต็ม');
+    expect(card.props.accessibilityHint).toBe('ดูยอดเต็ม');
     fireEvent.press(card);
     const sheet = screen.getByTestId('totals-sheet');
-    expect(sheet.props.accessibilityLabel).toBe('ยอดรวมเต็ม');
+    expect(sheet.props.accessibilityLabel).toBe('ยอดเต็ม');
     expect(screen.getByTestId('totals-sheet-actual')).toHaveTextContent(/เกิดจริง พ\.ค\. 2568.*103,000\.00 บาท/);
     expect(screen.getByTestId('totals-sheet-committed')).toHaveTextContent(/ผูกพันแล้ว.*3,250\.50 บาท/);
     expect(screen.getByTestId('totals-sheet-planned')).toHaveTextContent(/วางแผน.*12,540\.00 บาท.*ไม่ทราบ 1 รายการ/);

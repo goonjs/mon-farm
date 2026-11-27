@@ -555,6 +555,8 @@ for (const [width, size] of [[320, 'l'], [390, 'm']] as const) {
     await page.getByTestId('totals').click();
     const sheet = page.getByTestId('totals-sheet');
     await expect(sheet).toBeVisible();
+    // D-76: one thing, one word — the exact-amount sheet is "ยอดเต็ม" everywhere (glossary row in PR 254).
+    await expect(sheet.getByRole('heading', { name: 'ยอดเต็ม', exact: true })).toBeVisible();
     await expect(page.getByTestId('totals-sheet-actual')).toContainText('103,000.00 บาท');
     await expect(page.getByTestId('totals-sheet-committed')).toContainText('3,250.00 บาท');
     await expect(page.getByTestId('totals-sheet-planned')).toContainText('12,540.00 บาท');
