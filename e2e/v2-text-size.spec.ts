@@ -314,6 +314,10 @@ test('the largest text size: A9 payment with buyer-split cash and M9 got-less on
   await expect(id('payment')).toBeVisible();
   await expect(id('tick-debt-cash-red')).toBeVisible();
   await check('a9-payment-buyer-split');
+  // A second picture with the owner's transfer card wholly in view (textFit above already covers the whole page).
+  await id('tick-owner').scrollIntoViewIfNeeded();
+  await expect(id('tick-owner')).toBeInViewport({ ratio: 1 });
+  await shot(page, 'l-a9-payment-buyer-split-end');
   await id('close-sale').click();
   await expect(id('home-sale-start')).toBeVisible();
 
@@ -335,6 +339,7 @@ test('the largest text size: A9 payment with buyer-split cash and M9 got-less on
   await id('rp-sheet-less').click();
   await expect(id('rp-amount-sheet')).toBeVisible();
   await id('rp-amt-pad-key-0').click();
+  await expect(id('rp-amt-save')).toContainText('ไม่ได้รับ');
   await check('m9-cash-none');
   await id('rp-amt-with-worker').click();
   await expect(id('rp-amt-fix')).toBeVisible();
