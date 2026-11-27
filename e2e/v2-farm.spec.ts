@@ -325,6 +325,75 @@ test('an old v1 link lands on the v2 home, not an unmatched-route page', async (
 });
 
 /**
+ * E01-S26 PS26-9 on the real web build: three segments (ทุกคน + two tappers) are
+ * within the B limit, but a long name needs a second line in the bar, so both
+ * filters must be E boxes. The wrap is only known after layout; on web there
+ * is no onTextLayout, so this is the check that the switch happens there.
+ */
+for (const [width, size] of [
+  [390, 'm'],
+  [320, 'l'],
+] as const) {
+  test(`basket list at ${width} px text ${size.toUpperCase()}: a tapper name that wraps in the bar turns both filters into boxes (PS26-9)`, async ({ page }) => {
+    const id = on(page);
+    await page.setViewportSize({ width, height: 844 });
+    await page.addInitScript((s) => localStorage.setItem('mon-farm:text-size', s), size);
+    await seedMaster(page, [
+      { t: 'person_added', personId: 'nat', name: 'นัด', roles: ['tapper'], otherRoles: [] },
+      { t: 'person_added', personId: 'long', name: 'สมหวังผู้ช่วยกรีดยางแปลงหลังบ้านริมคลองใหญ่', roles: ['tapper'], otherRoles: [] },
+      { t: 'property_added', propertyId: 'fa', name: 'จันทเขลม', crop: 'rubber' },
+      { t: 'point_added', pointId: 'a4', propertyId: 'fa', name: 'จุด 4' },
+      { t: 'point_added', pointId: 'a6', propertyId: 'fa', name: 'จุด 6' },
+      { t: 'tapper_assigned', assignmentId: 's4', pointId: 'a4', tapperId: 'nat' },
+      { t: 'tapper_assigned', assignmentId: 's6', pointId: 'a6', tapperId: 'long' },
+    ]);
+    const b = new LogBuilder('hist-wrap');
+    b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+    for (const p of ['a4', 'a6']) b.sys({ t: 'pile_added', pileId: p, zoneId: 'fa', name: p, tareG: 2_000, stdNetG: 50_000 });
+    b.acceptAt('a4', 1).acceptAt('a6', 1);
+    await seedEvents(page, b.build().map((e) => ({ ...e, ts: Date.now() })));
+    await page.goto('/v2/sale/hist-wrap/history?point=a4');
+    await expect(id('hist-kind')).toBeVisible();
+    // E+E: the tapper filter is a box that opens rows, not a bar of segments.
+    await expect(id('hist-tapper')).toHaveAttribute('role', 'button');
+    await expect(id('hist-tapper-all')).toHaveCount(0);
+    await evidence(page, `docs/ux/screenshots/v2/choice-tiles/wrapfix-after-${width}-${size}.png`);
+    await id('hist-tapper').click();
+    await page.getByTestId('hist-tapper-sheet').getByTestId('hist-tapper-long').click();
+    await expect(id('hist-tapper')).toContainText('สมหวัง');
+  });
+}
+
+// PS26-9, the other side: at 320 px text S, ทุกคน and two short names fit the bar on one line each, so it stays B.
+test('basket list at 320 px text S: short tapper names keep the B bar (PS26-9)', async ({ page }) => {
+  const id = on(page);
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.addInitScript(() => localStorage.setItem('mon-farm:text-size', 's'));
+  await seedMaster(page, [
+    { t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] },
+    { t: 'person_added', personId: 'nat', name: 'นัด', roles: ['tapper'], otherRoles: [] },
+    { t: 'property_added', propertyId: 'fa', name: 'จันทเขลม', crop: 'rubber' },
+    { t: 'point_added', pointId: 'a4', propertyId: 'fa', name: 'จุด 4' },
+    { t: 'point_added', pointId: 'a5', propertyId: 'fa', name: 'จุด 5' },
+    { t: 'tapper_assigned', assignmentId: 's4', pointId: 'a4', tapperId: 'nat' },
+    { t: 'tapper_assigned', assignmentId: 's5', pointId: 'a5', tapperId: 'red' },
+  ]);
+  const b = new LogBuilder('hist-short');
+  b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+  for (const p of ['a4', 'a5']) b.sys({ t: 'pile_added', pileId: p, zoneId: 'fa', name: p, tareG: 2_000, stdNetG: 50_000 });
+  b.acceptAt('a4', 1).acceptAt('a5', 1);
+  await seedEvents(page, b.build().map((e) => ({ ...e, ts: Date.now() })));
+  await page.goto('/v2/sale/hist-short/history?point=a4');
+  await expect(id('hist-kind')).toBeVisible();
+  await expect(id('hist-tapper')).toHaveAttribute('role', 'radiogroup');
+  // Laid out and still B: the bar did not report a wrap after layout.
+  await page.waitForTimeout(500);
+  await expect(id('hist-tapper-all')).toBeVisible();
+  await expect(id('hist-tapper-red')).toBeVisible();
+  await expect(id('hist-tapper-nat')).toBeVisible();
+});
+
+/**
  * E01-S26 (choice tiles per screen) on the real build, offline: at 320 px with
  * text L nothing is cut, nothing sticks out and every target is ≥ 48 (PS26-12)
  * on the screens this story changed, in the states the owner reviewed on
