@@ -13,6 +13,7 @@ import { financeStore as mockFinance } from '../store/finance';
 import { todayIso } from '../core/finance/money';
 import { dayAfter } from '../core/master';
 import { dayCell, pickDate } from '../test/pick-date';
+import { expectChoiceTile } from '../test/choice-shape';
 import { wrap } from '../test/render';
 
 jest.mock('../store/finance', () => {
@@ -104,6 +105,9 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     for (const id of ['fertilizer', 'labour', 'fuel', 'herbicide', 'travel', 'salary', 'worker-aid', 'repair', 'other']) {
       expect(screen.getByTestId(`expense-catall-cat-${id}`)).toBeTruthy();
     }
+    // E01-S25 CT-12: everything outside the order and the payer is style F (owner answer ข); "+ เพิ่มหมวด" is a dashed add tile.
+    for (const id of ['fertilizer', 'labour', 'other']) expectChoiceTile(screen.getByTestId(`expense-catall-cat-${id}`), 'check');
+    expectChoiceTile(screen.getByTestId('expense-cat-add'), 'add');
     fireEvent.press(screen.getByTestId('expense-cat-sheet-scrim'));
     // Typed on the app's pad (E01-S20); the card reads it back as money with "บาท" inside.
     typeOnPad('expense-amount', '640');
@@ -199,11 +203,44 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     fireEvent.press(screen.getByTestId('expense-stage-planned'));
     pickDate('expense-date', '2026-11-15');
     fireEvent.press(screen.getByTestId('expense-details-done'));
+    // "ยังไม่ทราบจำนวนเงิน" turns on and off: an F tick tile (CT-3).
+    expectChoiceTile(screen.getByTestId('expense-unknown'), 'checkbox');
     fireEvent.press(screen.getByTestId('expense-unknown'));
+    expect(screen.getByTestId('expense-unknown').props.accessibilityState).toMatchObject({ checked: true });
     await act(async () => fireEvent.press(screen.getByTestId('expense-save')));
     await flush();
     const s = await state();
     expect(s.expenses.some((e) => e.stage === 'planned' && e.amountSatang === null && e.date === '2026-11-15')).toBe(true);
+  });
+
+  it('category sheet: tapping the category already picked closes the sheet again (review 6004800731 #1)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    fireEvent.press(screen.getByTestId('expense-catall-cat-repair'));
+    await flush();
+    expect(screen.queryByTestId('expense-cat-sheet')).toBeNull();
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    expect(screen.getByTestId('expense-catall-cat-repair').props.accessibilityState).toMatchObject({ selected: true });
+    fireEvent.press(screen.getByTestId('expense-catall-cat-repair'));
+    await flush();
+    expect(screen.queryByTestId('expense-cat-sheet')).toBeNull();
+    expect(screen.getByTestId('expense-cat-more')).toBeTruthy();
+  });
+
+  it('worker aid: the kind is F (pick one, switches at once), the worker is I (E01-S25 CT-6, CT-12)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('expense-cat-more'));
+    fireEvent.press(screen.getByTestId('expense-catall-cat-worker-aid'));
+    await flush();
+    for (const k of ['accident', 'general', 'food', 'other']) expectChoiceTile(screen.getByTestId(`aid-kind-${k}`), 'check');
+    fireEvent.press(screen.getByTestId('aid-kind-food'));
+    fireEvent.press(screen.getByTestId('aid-kind-other'));
+    expect(screen.getByTestId('aid-kind-other').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('aid-kind-food').props.accessibilityState).toMatchObject({ selected: false });
+    expectChoiceTile(screen.getByTestId(`aid-worker-${FARM_FUNDS}`), 'mark');
+    expectChoiceTile(screen.getByTestId('aid-worker-add'), 'add');
   });
 
   it('a payer other than farm funds previews what the farm will owe back', async () => {
@@ -213,6 +250,9 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     // "ใครจ่ายไปก่อน" is one row; the choice opens in a sheet.
     expect(screen.getByTestId('expense-payer-row')).toHaveTextContent(/ใครจ่ายไปก่อน/);
     fireEvent.press(screen.getByTestId('expense-payer-row'));
+    // E01-S25 CT-6: the payer is style I; "+ คนอื่น" is a dashed add tile.
+    expectChoiceTile(screen.getByTestId(`expense-payer-${FARM_FUNDS}`), 'mark');
+    expectChoiceTile(screen.getByTestId('expense-payer-add'), 'add');
     fireEvent.press(screen.getByTestId('expense-payer-add'));
     fireEvent.changeText(screen.getByTestId('expense-payer-name'), 'นัด');
     await act(async () => fireEvent.press(screen.getByTestId('expense-payer-add-save')));
@@ -221,6 +261,31 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
     expect(screen.getByText('400.00 บาท')).toBeTruthy();
     fireEvent.press(screen.getByTestId('expense-payer-done'));
     expect(screen.getByTestId('expense-payer-row')).toHaveTextContent(/นัด/);
+  });
+
+  it('"ใครจ่ายไปก่อน" opens as a full page, not a sheet; back keeps the pick (E01-S25 rv245-07, owner 2026-11-23)', async () => {
+    wrap(<ExpenseScreen />);
+    await flush();
+    typeOnPad('expense-amount', '400');
+    fireEvent.press(screen.getByTestId('expense-payer-row'));
+    // A full page: its own header and back, the form underneath is gone (not dimmed behind a sheet).
+    expect(screen.getByTestId('expense-payer-page')).toBeTruthy();
+    expect(screen.queryByTestId('expense-payer-sheet')).toBeNull();
+    expect(screen.queryByTestId('expense-payer-row')).toBeNull();
+    expect(screen.queryByTestId('expense-amount')).toBeNull();
+    expect(screen.getByTestId('expense-payer-back')).toBeTruthy();
+    expect(screen.getAllByText('ใครจ่ายไปก่อน').length).toBeGreaterThan(0);
+    fireEvent.press(screen.getByTestId(`expense-payer-${FARM_FUNDS}`));
+    fireEvent.press(screen.getByTestId('expense-payer-none'));
+    fireEvent.press(screen.getByTestId('expense-payer-back'));
+    // Back returns to the form with the pick kept and the amount still there.
+    expect(screen.queryByTestId('expense-payer-page')).toBeNull();
+    expect(screen.getByTestId('expense-payer-row')).toHaveTextContent(/ใส่ทีหลัง/);
+    expect(screen.getByTestId('expense-amount')).toHaveTextContent(/400/);
+    // ตกลง also returns to the form.
+    fireEvent.press(screen.getByTestId('expense-payer-row'));
+    fireEvent.press(screen.getByTestId('expense-payer-done'));
+    expect(screen.getByTestId('expense-payer-row')).toBeTruthy();
   });
 
   it('a category picked under "อื่น ๆ" becomes a tile, ticked', async () => {
@@ -248,6 +313,32 @@ describe('v2 expense form (E11-S01, E11-S02 · D-82)', () => {
 });
 
 describe('expense list (F4, F7)', () => {
+  it('filters: four E boxes 2 by 2, two F ticks, clear is an underlined link (E01-S26 PS26-1)', async () => {
+    await seedExpense('f-1', { amountSatang: 200000, date: '2026-09-20', stage: 'planned' });
+    await seedExpense('f-2', { amountSatang: 150000, date: '2026-09-21' });
+    wrap(<ExpensesScreen />);
+    await flush();
+    const flat = (st: unknown) => Object.assign({}, ...[st].flat(Infinity).filter(Boolean));
+    for (const id of ['filter-stage', 'filter-category', 'filter-farm', 'filter-month']) {
+      const box = flat(screen.getByTestId(id).props.style);
+      expect(box.borderRadius).toBe(tokens.radius.md);
+      expect(box.borderWidth).toBe(tokens.border.thick);
+    }
+    expect(screen.getByTestId('filter-stage')).toHaveTextContent(/วงจร.*ทั้งหมด/);
+    for (const id of ['filter-payer-missing', 'filter-unrepaid']) expectChoiceTile(screen.getByTestId(id), 'checkbox');
+    expect(screen.queryByTestId('filter-clear')).toBeNull();
+    fireEvent.press(screen.getByTestId('filter-stage'));
+    expectChoiceTile(screen.getByTestId('stage-planned'), 'check');
+    fireEvent.press(screen.getByTestId('stage-planned'));
+    expect(screen.getByTestId('filter-stage')).toHaveTextContent(/วางแผน/);
+    expect(flat(screen.getByTestId('filter-stage').props.style).backgroundColor).toBe(tokens.color.light.actionSunk);
+    expect(screen.queryByTestId('expense-f-2')).toBeNull();
+    const clear = screen.getByTestId('filter-clear');
+    expect(flat(clear.props.style).borderWidth ?? 0).toBe(0);
+    fireEvent.press(clear);
+    expect(screen.getByTestId('expense-f-2')).toBeTruthy();
+  });
+
   it('bulk-sets the payer on expenses with none, and the farm then owes them', async () => {
     await seedExpense('bulk-1', { amountSatang: 200000, date: '2026-09-20' });
     await seedExpense('bulk-2', { amountSatang: 150000, date: '2026-09-20' });

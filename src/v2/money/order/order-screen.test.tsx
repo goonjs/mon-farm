@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { fertOptionId } from '../../../core/finance/ledger';
 import type { ExpenseFields, FinanceEvent } from '../../../core/finance/types';
 import { financeStore as mockFinance } from '../../../store/finance';
+import { expectChoiceTile, expectSegment } from '../../../test/choice-shape';
 import { wrap } from '../../../test/render';
 import { OrderScreen } from './order-screen';
 import { FarmMateArt } from '../../../ui';
@@ -329,6 +330,8 @@ describe('order capture screen (E11-S11)', () => {
     wrap(<OrderScreen />);
     await flush();
     await addNewFert('46-0-0', ['5'], ['9', '5', '0']);
+    // E01-S25 CT-5: the stage bar is style B (r2-order-stage).
+    expectSegment(screen.getByTestId('ordc-stage-actual'));
     press('ordc-stage-actual');
     expect(screen.getByTestId('ordc-stage-actual').props.accessibilityState.checked).toBe(true);
     expect(text('ordc-payer-title')).toContain('เงินสวน');
@@ -340,6 +343,11 @@ describe('order capture screen (E11-S11)', () => {
     expect(screen.getByTestId('ordc-payer')).not.toHaveTextContent(/แตะเพื่อเปลี่ยน/);
     press('ordc-payer');
     expect(screen.getByTestId('ordc-payer-sheet')).toBeTruthy();
+    // E01-S25 CT-6: "+ คนอื่น" opens the payer picker, style I.
+    expectChoiceTile(screen.getByTestId('ordc-payer-other'), 'add');
+    press('ordc-payer-other');
+    expectChoiceTile(screen.getByTestId('ordc-payer-more-add'), 'add');
+    for (const el of screen.getAllByTestId(/^ordc-payer-more-(?!add|name)/)) expectChoiceTile(el, 'mark');
     press('ordc-payer-done');
     press('ordc-save');
     await flush();
@@ -404,6 +412,9 @@ describe('order capture screen (E11-S11)', () => {
     press('ordc-add');
     press('ordc-pick-new');
     fireEvent.changeText(screen.getByTestId('ordc-formula'), 'ปุ๋ยเกล็ด');
+    // E01-S25 CT-7: sack sizes in the order are A tiles ("ใบซื้อใช้ A"); "+ ขนาดอื่น" is a dashed add tile.
+    for (const id of ['ordc-kg-25', 'ordc-kg-50', 'ordc-kg-unknown']) expectChoiceTile(screen.getByTestId(id), 'fill');
+    expectChoiceTile(screen.getByTestId('ordc-kg-other'), 'add');
     press('ordc-kg-other');
     press('ordc-kg-value');
     keys('ordc-kg-value-pad', '2', '.', '5');

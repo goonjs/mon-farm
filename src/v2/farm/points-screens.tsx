@@ -17,8 +17,8 @@
  */
 
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { BackHandler, TextInput, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { BackHandler, Pressable, TextInput, View } from 'react-native';
 
 import {
   activePoints,
@@ -48,6 +48,7 @@ import {
   BottomSheet,
   Button,
   CalendarIcon,
+  ChevronRight,
   Card,
   Check,
   Chip,
@@ -62,7 +63,6 @@ import {
   RadioCard,
   SwapIcon,
   TextField,
-  Undo,
   FarmMateArt,
   TextLink,
   DateField,
@@ -71,7 +71,6 @@ import { NotFound } from './people-screens';
 import {
   AddCTA,
   categoryTone,
-  ChipWrap,
   ConfirmSheet,
   DeletedLink,
   DeletedList,
@@ -80,7 +79,6 @@ import {
   HelpNote,
   RowCard,
   Stepper,
-  ToggleChip,
   useBack,
   useDay,
   useMaster,
@@ -264,11 +262,12 @@ function PointForm({ pointId, propertyId }: { pointId: string | null; propertyId
             <AppText style={{ fontWeight: t.font.weight.semibold }}>{farm?.name ?? ''}</AppText>
           </View>
         ) : (
-          <ChipWrap>
+          // E01-S26 PS26-3: C rows, pick one (owner "C", 21 Nov 2026).
+          <View style={{ gap: t.space.sm }}>
             {farms.map((f) => (
-              <ToggleChip key={f.id} testID={`point-farm-${f.id}`} label={f.name} on={farmId === f.id} onPress={() => setFarmId(f.id)} />
+              <RadioCard key={f.id} testID={`point-farm-${f.id}`} title={f.name} selected={farmId === f.id} onPress={() => setFarmId(f.id)} />
             ))}
-          </ChipWrap>
+          </View>
         )}
       </View>
       <TextField
@@ -325,18 +324,29 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
     if (await write.run(() => peopleStore.restore(point.id))) reload();
   };
 
-  const planButtons = (assignmentId: string) => (
-    <View style={{ flexDirection: 'row', gap: t.space.sm, paddingBottom: t.space.sm }}>
-      <View style={{ flex: 1 }}>
-        <Button testID={`edit-plan-${assignmentId}`} onPress={() => setSheet({ kind: 'plan', replacing: assignmentId })}>
-          {msg('assign.editPlan')}
-        </Button>
-      </View>
-      <View style={{ flex: 1 }}>
-        <Button testID={`cancel-plan-${assignmentId}`} icon={(c) => <Undo color={c} size={12} />} onPress={() => void cancelPlan(assignmentId)}>
-          {msg('assign.cancelPlan')}
-        </Button>
-      </View>
+  // E01-S26 PS26-8: a planned row opens the plan itself (whole row + ›); "ยกเลิกแผน" is a red underlined link.
+  const PlanTap = ({ id, children }: { id: string | null; children: ReactNode }) =>
+    id ? (
+      <Pressable
+        testID={`edit-plan-${id}`}
+        accessibilityRole="button"
+        accessibilityLabel={msg('assign.editPlan')}
+        onPress={() => setSheet({ kind: 'plan', replacing: id })}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm, minHeight: t.target.min }}
+      >
+        {children}
+        <View testID={`edit-plan-${id}-chevron`} aria-hidden>
+          <ChevronRight color={t.color.inkFaint} />
+        </View>
+      </Pressable>
+    ) : (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>{children}</View>
+    );
+  const cancelLink = (assignmentId: string) => (
+    <View style={{ paddingBottom: t.space.sm }}>
+      <TextLink testID={`cancel-plan-${assignmentId}`} tone="reject" onPress={() => void cancelPlan(assignmentId)}>
+        {msg('assign.cancelPlan')}
+      </TextLink>
     </View>
   );
 
@@ -397,7 +407,7 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
           const isNow = (seg.from === null || seg.from <= today) && (seg.to === null || seg.to >= today);
           return (
             <View key={seg.assignmentId} testID={`assignment-${seg.assignmentId}`}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
+              <PlanTap id={planned ? seg.assignmentId : null}>
                 <IconTile tone={toneOf(seg.tapperId)} icon={() => <FarmMateArt id="people.tapper" />} />
                 <View style={{ flex: 1, gap: t.space.xxs }}>
                   <AppText style={{ fontWeight: t.font.weight.bold }}>{nameOf(seg.tapperId)}</AppText>
@@ -410,14 +420,14 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
                   ) : null}
                 </View>
                 {isNow ? <Chip tone="accept" label={msg('assign.now')} /> : null}
-              </View>
-              {planned ? planButtons(seg.assignmentId) : null}
+              </PlanTap>
+              {planned ? cancelLink(seg.assignmentId) : null}
             </View>
           );
         })}
         {vacancies.map((v) => (
           <View key={v.assignmentId} testID={`vacancy-${v.assignmentId}`}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, paddingVertical: t.space.sm }}>
+            <PlanTap id={v.assignmentId}>
               <IconTile tone="neutral" icon={(c) => <PersonIcon color={c} size={20} />} />
               <View style={{ flex: 1, gap: t.space.xxs }}>
                 <AppText style={{ fontWeight: t.font.weight.bold }}>{msg('assign.none')}</AppText>
@@ -426,8 +436,8 @@ function PointDetail({ pointId, openPlan }: { pointId: string; openPlan: boolean
                   {msg('assign.plannedNotYet')}
                 </AppText>
               </View>
-            </View>
-            {planButtons(v.assignmentId)}
+            </PlanTap>
+            {cancelLink(v.assignmentId)}
           </View>
         ))}
       </RowCard>
@@ -506,11 +516,11 @@ function PlanForm({ state, pointId, pointName, replacing, onClose, onSaved }: { 
         {mode === 'new' ? (
           <View style={{ gap: t.space.sm, paddingLeft: t.space.xl }}>
             <AppText variant="label">{msg('assign.pickTapper')}</AppText>
-            <ChipWrap>
+            <View style={{ gap: t.space.sm }}>
               {tappers.map((p) => (
-                <ToggleChip key={p.id} check testID={`plan-tapper-${p.id}`} label={p.name} on={tapperId === p.id} onPress={() => setTapperId(p.id)} />
+                <RadioCard key={p.id} testID={`plan-tapper-${p.id}`} title={p.name} selected={tapperId === p.id} onPress={() => setTapperId(p.id)} />
               ))}
-            </ChipWrap>
+            </View>
             {tried && !tapperId ? <FieldError>{msg('assign.pickTapper')}</FieldError> : null}
             <DateField
               testID="plan-from"
@@ -671,11 +681,11 @@ export function PointsWizardScreen() {
           {card(
             msg('wizard.farm'),
             <>
-              <ChipWrap>
+              <View style={{ gap: t.space.sm }}>
                 {farms.map((f) => (
-                  <ToggleChip key={f.id} testID={`wizard-farm-${f.id}`} label={f.name} on={farmId === f.id} onPress={() => setFarmId(f.id)} />
+                  <RadioCard key={f.id} testID={`wizard-farm-${f.id}`} title={f.name} selected={farmId === f.id} onPress={() => setFarmId(f.id)} />
                 ))}
-              </ChipWrap>
+              </View>
               <AppText variant="bodySm">{msg('wizard.farmHint')}</AppText>
               {existing.length > 0 ? (
                 <AppText variant="bodySm" testID="wizard-existing">
@@ -688,11 +698,12 @@ export function PointsWizardScreen() {
             msg('wizard.tappers'),
             <>
               {state && tappers.length === 0 ? <AppText variant="bodySm">{msg('wizard.noTappers')}</AppText> : null}
-              <ChipWrap>
+              {/* Owner wizard-tapper-pick (2026-11-22): "ก · ก · คงเลือกได้หลายคน ใช้แถวแบบ C แต่เป็นกล่องติ๊กแทนวง". */}
+              <View style={{ gap: t.space.sm }}>
                 {tappers.map((p) => (
-                  <ToggleChip key={p.id} check testID={`wizard-tapper-${p.id}`} label={p.name} on={chosen.includes(p.id)} onPress={() => toggle(p.id)} />
+                  <RadioCard key={p.id} check testID={`wizard-tapper-${p.id}`} title={p.name} selected={chosen.includes(p.id)} onPress={() => toggle(p.id)} />
                 ))}
-              </ChipWrap>
+              </View>
               <AppText variant="bodySm">{msg('wizard.tappersHint')}</AppText>
             </>,
           )}

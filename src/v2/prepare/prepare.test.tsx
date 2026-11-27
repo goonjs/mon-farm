@@ -3,6 +3,7 @@ import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { FinanceEvent, FinancePayload, Payer, SalePrepPatch } from '../../core/finance/types';
 import { FARM_FUNDS } from '../../core/finance/types';
 import { SALE_PREP_TARGET } from '../../core/finance/sale-prep';
+import { expectChoiceTile } from '../../test/choice-shape';
 import { wrap } from '../../test/render';
 import { PrepBuyerView, PrepView } from './prepare-screen';
 
@@ -112,13 +113,79 @@ describe('PrepView — เตรียมการขาย (E15-S01)', () => {
     expect(onWrite).toHaveBeenLastCalledWith({ date: '2026-11-30' });
   });
 
-  it('the time can be left out', async () => {
-    const { onWrite } = setup([]);
+  // E01-S26 PS26-6 · owner prep-time-default 2026-11-22 23:37: "ข · ข · ต้องแตะเลือกเวลาก่อนเสมอ ปิดแผ่นเฉยๆ = ไม่บันทึก".
+  // Replaces "the time can be left out": "ไม่ระบุเวลา" is gone (owner 2026-11-20 "เปลี่ยนปุ่ม ไม่ระบุเวลา เป็นกำหนดเอง").
+  const openTime = async () => {
     await press('prep-date');
     await press('prep-date-picker-day-2026-11-21');
     await press('prep-date-picker-done');
-    await press('prep-time-none');
-    expect(onWrite).toHaveBeenLastCalledWith({ time: null });
+  };
+
+  it('the time sheet: 08:00–13:00 hourly as F tiles plus "กำหนดเอง", no "ไม่ระบุเวลา"; a tap writes that time (PS26-6)', async () => {
+    const { onWrite } = setup([]);
+    await openTime();
+    for (const h of ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00']) {
+      expectChoiceTile(screen.getByTestId(`prep-time-${h}`), 'check');
+      // Nothing is ticked before a tap: the owner wants a time always tapped.
+      expect(screen.getByTestId(`prep-time-${h}`).props.accessibilityState).toMatchObject({ selected: false });
+    }
+    expect(screen.queryByTestId('prep-time-06:00')).toBeNull();
+    expect(screen.queryByTestId('prep-time-07:00')).toBeNull();
+    expect(screen.queryByTestId('prep-time-none')).toBeNull();
+    expect(screen.queryByText('ไม่ระบุเวลา')).toBeNull();
+    expectChoiceTile(screen.getByTestId('prep-time-custom'), 'add');
+    await press('prep-time-11:00');
+    expect(onWrite).toHaveBeenLastCalledWith({ time: '11:00' });
+    expect(screen.queryByTestId('prep-time-11:00')).toBeNull();
+  });
+
+  it('closing the time sheet without a tap writes no time (owner ข); the day picked stays', async () => {
+    const { onWrite } = setup([]);
+    await openTime();
+    await press('prep-time-scrim');
+    expect(onWrite).toHaveBeenCalledTimes(1);
+    expect(onWrite).toHaveBeenLastCalledWith({ date: '2026-11-21' });
+  });
+
+  it('the set time is the ticked tile when the sheet opens again', async () => {
+    setup([prep({ date: '2026-11-21', time: '12:00' })]);
+    await press('prep-date');
+    await press('prep-date-picker-done');
+    expect(screen.getByTestId('prep-time-12:00').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('prep-time-10:00').props.accessibilityState).toMatchObject({ selected: false });
+  });
+
+  it('"กำหนดเอง" opens hour and minute wheels: minutes only 00 · 15 · 30 · 45, starting at 10:00; ตกลง writes (owner 2026-11-21)', async () => {
+    const { onWrite } = setup([]);
+    await openTime();
+    await press('prep-time-custom');
+    expect(screen.getByTestId('prep-time-wheel')).toBeTruthy();
+    expect(screen.getByTestId('prep-time-wheel-h-10').props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByTestId('prep-time-wheel-m-00').props.accessibilityState).toMatchObject({ selected: true });
+    for (const m of ['00', '15', '30', '45']) expect(screen.getByTestId(`prep-time-wheel-m-${m}`)).toBeTruthy();
+    for (const m of ['05', '10', '20', '50']) expect(screen.queryByTestId(`prep-time-wheel-m-${m}`)).toBeNull();
+    expect(screen.getByTestId('prep-time-wheel-done')).toHaveTextContent(/10:00/);
+    await press('prep-time-wheel-h-14');
+    await press('prep-time-wheel-m-45');
+    expect(screen.getByTestId('prep-time-wheel-done')).toHaveTextContent(/14:45/);
+    await press('prep-time-wheel-done');
+    expect(onWrite).toHaveBeenLastCalledWith({ time: '14:45' });
+  });
+
+  it('closing the wheel without ตกลง writes no time', async () => {
+    const { onWrite } = setup([]);
+    await openTime();
+    await press('prep-time-custom');
+    await press('prep-time-wheel-h-09');
+    await press('prep-time-wheel-scrim');
+    expect(onWrite).toHaveBeenCalledTimes(1);
+    expect(onWrite).toHaveBeenLastCalledWith({ date: '2026-11-21' });
+  });
+
+  it('a prep saved before with no time still shows the day alone (old data unchanged)', () => {
+    setup([prep({ date: '2026-11-21', time: null })]);
+    expect(checked('prep-date')).toBe(true);
+    expect(screen.getByTestId('prep-date')).not.toHaveTextContent(/:/);
   });
 
   it('the price row takes the agreed ฿/กก. on the app pad (PREP-5)', async () => {

@@ -11,8 +11,8 @@
  */
 
 import { useLocalSearchParams, type Href } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Text, View } from 'react-native';
 
 import { checkNumbers, filterHistory, historyEquation, historySummary, runningTotals, type HistoryKind } from '../../core/basket-history';
 import { tapperOn } from '../../core/master';
@@ -20,11 +20,21 @@ import { basketList, type BasketRow } from '../../core/sale-points';
 import { clockSeconds } from '../../core/thai-date';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AlertIcon, AppText, BasketIcon, cardStyle, Check, Chip, CHIP_MIN_WIDTH, ScaleIcon } from '../../ui';
+import { AlertIcon, AppText, BasketIcon, BottomSheet, cardStyle, Check, Chip, RadioCard, ScaleIcon, SegmentedControl, TextLink, ValueBox } from '../../ui';
 import { FarmScreen } from '../farm/pieces';
 import { Banner, IconLine, kgText, useSaleView } from './pieces';
 
 const KINDS: readonly HistoryKind[] = ['all', 'full', 'short'];
+
+/**
+ * E01-S26 PS26-9: the tapper filter is a B bar while it has at most 3
+ * segments (ทุกคน included) and none needs a second line; otherwise both
+ * filters are E boxes. "3" is the lead's default; the owner may change it.
+ */
+export const HISTORY_B_MAX = 3;
+export function historyFilterLayout(segments: number, wrapped: boolean): 'B+E' | 'E+E' {
+  return segments <= HISTORY_B_MAX && !wrapped ? 'B+E' : 'E+E';
+}
 
 export function HistoryScreen() {
   const t = useTheme();
@@ -35,6 +45,9 @@ export function HistoryScreen() {
   const [kind, setKind] = useState<HistoryKind>('all');
   // null = everyone.
   const [tapperId, setTapperId] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<'kind' | 'tapper' | null>(null);
+  // A tapper's name needed a second line in the bar at this text size → both filters become boxes.
+  const [wrapped, setWrapped] = useState(false);
   const fallback = `/v2/sale/${saleId}/counter?point=${point}` as Href;
   if (!view.ready || !master) return <FarmScreen title={msg('rec.list')} subtitle={saleTitle} fallback={fallback} />;
 
@@ -65,17 +78,31 @@ export function HistoryScreen() {
     return p && f ? msg('v2s.place', { farm: f.name, point: p.name }) : (p?.name ?? '');
   };
 
-  const chip = (label: string, on: boolean, onPress: () => void, testID: string) => (
-    <Pressable
-      key={testID}
-      testID={testID}
-      accessibilityRole="button"
-      accessibilityState={{ selected: on }}
-      onPress={onPress}
-      style={{ minHeight: t.target.min, minWidth: CHIP_MIN_WIDTH, alignItems: 'center', paddingHorizontal: t.space.md, justifyContent: 'center', borderRadius: t.radius.pill, backgroundColor: on ? t.color.action : t.color.surfaceSunk }}
-    >
-      <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, fontWeight: t.font.weight.semibold, color: on ? t.color.inkInverse : t.color.inkSoft }}>{label}</Text>
-    </Pressable>
+  // E01-S26 PS26-9 (owner r2-hist-filter): tappers first as a B bar, baskets after as an E box, one line;
+  // when the bar would not fit, both are E boxes. Each label sits on its own line above.
+  const tapperOpts = [{ value: 'all', label: msg('hist.everyone') }, ...tappers.map((id) => ({ value: id, label: nameOf(id) }))];
+  const layout = historyFilterLayout(tapperOpts.length, wrapped);
+  const pickRows = (rows: readonly { value: string; label: string }[], on: string, pick: (v: string) => void, id: string) => (
+    <BottomSheet open onClose={() => setSheet(null)} title={id === 'hist-kind' ? msg('hist.kindLabel') : msg('hist.tapperLabel')} testID={`${id}-sheet`}>
+      {rows.map((r) => (
+        <RadioCard
+          key={r.value}
+          testID={`${id}-${r.value}`}
+          title={r.label}
+          selected={on === r.value}
+          onPress={() => {
+            pick(r.value);
+            setSheet(null);
+          }}
+        />
+      ))}
+    </BottomSheet>
+  );
+  const labelled = (label: string, child: ReactNode, flex: number) => (
+    <View style={{ flex, gap: t.space.xxs }}>
+      <AppText variant="label">{label}</AppText>
+      {child}
+    </View>
   );
 
   return (
@@ -105,19 +132,28 @@ export function HistoryScreen() {
           ) : (
             <Banner testID="hist-numbers-bad" tone="warn" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg('hist.numbersBad', { detail: numbersBad })]} />
           )}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.xs }}>
-            {KINDS.map((k) => chip(msg(`hist.${k}`), kind === k, () => setKind(k), `hist-kind-${k}`))}
+          <View testID="hist-filters" style={{ flexDirection: 'row', gap: t.space.sm, alignItems: 'flex-end' }}>
+            {tappers.length > 0
+              ? labelled(
+                  msg('hist.tapperLabel'),
+                  layout === 'B+E' ? (
+                    <SegmentedControl testID="hist-tapper" value={tapperId ?? 'all'} onChange={(v) => setTapperId(v === 'all' ? null : v)} onWrap={() => setWrapped(true)} options={tapperOpts} />
+                  ) : (
+                    <ValueBox testID="hist-tapper" a11yLabel={msg('hist.tapperLabel')} value={tapperId ? nameOf(tapperId) : msg('hist.everyone')} set={tapperId !== null} onPress={() => setSheet('tapper')} />
+                  ),
+                  layout === 'B+E' ? 2 : 1,
+                )
+              : null}
+            {labelled(msg('hist.kindLabel'), <ValueBox testID="hist-kind" a11yLabel={msg('hist.kindLabel')} value={msg(`hist.${kind}`)} set={kind !== 'all'} onPress={() => setSheet('kind')} />, 1)}
           </View>
-          {tappers.length > 0 ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.xs }}>
-              {tappers.map((id) => chip(nameOf(id), tapperId === id, () => setTapperId(id), `hist-tapper-${id}`))}
-              {chip(msg('hist.everyone'), tapperId === null, () => setTapperId(null), 'hist-tapper-all')}
-            </View>
-          ) : null}
+          {sheet === 'kind' ? pickRows(KINDS.map((k) => ({ value: k, label: msg(`hist.${k}`) })), kind, (v) => setKind(v as HistoryKind), 'hist-kind') : null}
+          {sheet === 'tapper' ? pickRows(tapperOpts, tapperId ?? 'all', (v) => setTapperId(v === 'all' ? null : v), 'hist-tapper') : null}
           {shown.length === 0 ? (
             <View testID="hist-filter-empty" style={{ ...cardStyle(t), padding: t.space.lg, alignItems: 'center', gap: t.space.sm }}>
               <AppText>{msg('hist.noMatch')}</AppText>
-              {chip(msg('hist.clear'), false, clear, 'hist-filter-clear')}
+              <TextLink testID="hist-filter-clear" align="center" onPress={clear}>
+                {msg('hist.clear')}
+              </TextLink>
             </View>
           ) : (
             <View style={{ ...cardStyle(t), paddingHorizontal: t.space.md }}>
