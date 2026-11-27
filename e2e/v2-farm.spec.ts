@@ -464,6 +464,41 @@ for (const [width, size] of [
       await s26Snap(page, 's26-closeout-ask');
     });
 
+    test('basket list: the "คนกรีด" and "เข่ง" labels share one top line, B+E and E+E (item 9, mockup p11)', async ({ page }) => {
+      const id = onS26(page);
+      const labelTops = () =>
+        id('hist-filters').evaluate((row) => [...row.children].map((col) => col.firstElementChild!.getBoundingClientRect().top));
+      const b = new LogBuilder('sale-s26-hist');
+      b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+      b.sys({ t: 'pile_added', pileId: 'a4', zoneId: 'fa', name: 'a4', tareG: 2_000, stdNetG: 50_000 });
+      b.acceptAt('a4', 1);
+      await seedEvents(page, b.build().map((e) => ({ ...e, ts: Date.now() })));
+      // B+E: ทุกคน + นัด is a B bar beside the เข่ง box.
+      await page.goto('/v2/sale/sale-s26-hist/history');
+      await expect(id('hist-tapper-all')).toBeVisible();
+      const [tapperB, kindB] = await labelTops();
+      await s26Snap(page, 'labelfix-hist-b-e');
+      expect(Math.abs(tapperB - kindB), `B+E label tops ${tapperB} / ${kindB}`).toBeLessThanOrEqual(1);
+      // E+E: four segments (ทุกคน + three tappers), so both filters are E boxes.
+      await seedMaster(page, [
+        { t: 'point_added', pointId: 'a5', propertyId: 'fa', name: 'จุด 5' },
+        { t: 'point_added', pointId: 'a6', propertyId: 'fa', name: 'จุด 6' },
+        { t: 'tapper_assigned', assignmentId: 's5', pointId: 'a5', tapperId: 'red' },
+        { t: 'tapper_assigned', assignmentId: 's6', pointId: 'a6', tapperId: 'long' },
+      ]);
+      const e = new LogBuilder('sale-s26-hist-e');
+      e.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+      for (const p of ['a4', 'a5', 'a6']) e.sys({ t: 'pile_added', pileId: p, zoneId: 'fa', name: p, tareG: 2_000, stdNetG: 50_000 });
+      e.acceptAt('a4', 1).acceptAt('a5', 1).acceptAt('a6', 1);
+      await seedEvents(page, e.build().map((ev) => ({ ...ev, ts: Date.now() })));
+      await page.goto('/v2/sale/sale-s26-hist-e/history');
+      await expect(id('hist-kind')).toBeVisible();
+      await expect(id('hist-tapper-all')).toHaveCount(0);
+      const [tapperE, kindE] = await labelTops();
+      await s26Snap(page, 'labelfix-hist-e-e');
+      expect(Math.abs(tapperE - kindE), `E+E label tops ${tapperE} / ${kindE}`).toBeLessThanOrEqual(1);
+    });
+
     test('expenses: the filter boxes; debt history: the kind tiles', async ({ page }) => {
       const id = onS26(page);
       await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [s26Fin(1, 'debt-nat', s26Loan(300_000, '2026-09-01'))]).catch(() => undefined);
