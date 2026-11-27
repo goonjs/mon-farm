@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { canonicalJson } from '../core/canonical';
-import { FIXTURE_GROUP_ID, LogBuilder } from '../core/fixtures';
+import { FINANCE_SCOPE } from '../core/finance-scope';
+import { FIXTURE_GROUP_ID, LogBuilder, financeSamples } from '../core/fixtures';
 import { newGroup } from '../core/group';
 import type { SaleEvent } from '../core/types';
 import { userFromSignIn } from '../core/user';
@@ -147,6 +148,66 @@ describe('fromEnvelope (back from the server)', () => {
     expect(() => fromEnvelope({ id: 'x' })).toThrow(MalformedDocError);
     expect(() => fromEnvelope({ ...toEnvelope(sampleEvents()[0]), schema: 2 })).toThrow(MalformedDocError);
     expect(() => fromEnvelope({ ...toEnvelope(sampleEvents()[0]), payload: 'text' })).toThrow(MalformedDocError);
+  });
+});
+
+/** A finance event as the one log stores it (E01-S28 round 2). */
+function financeEvent(id: string, payload: unknown, targetId = `rec-${id}`, baseEventId: string | null = null): SaleEvent {
+  return {
+    id,
+    groupId: FIXTURE_GROUP_ID,
+    saleId: FINANCE_SCOPE,
+    seq: 3,
+    deviceSeq: 7,
+    ts: 1_770_000_000_000,
+    mono: 12,
+    actor: { userId: 'user-somchai', deviceId: 'dev-A' },
+    source: 'app',
+    kind: 'finance',
+    targetId,
+    baseEventId,
+    payload,
+  } as unknown as SaleEvent;
+}
+
+describe('finance events on the envelope (S28 round 2, story schema section)', () => {
+  it.each(Object.entries(financeSamples()))('a finance %s event round-trips exactly (canonical JSON), payload whole', (_t, payload) => {
+    for (const event of [financeEvent('f1', payload), financeEvent('f2', payload, 'x1', 'f0')]) {
+      const doc = toEnvelope(event);
+      for (const key of REQUIRED) expect(Object.keys(doc), key).toContain(key);
+      for (const key of Object.keys(doc)) expect(ALLOWED, key).toContain(key);
+      expect(doc.kind).toBe('finance');
+      expect(doc.saleId).toBe(FINANCE_SCOPE);
+      expect(doc.targetId).toBe((event as { targetId: string }).targetId);
+      expect(doc.baseEventId).toBe((event as { baseEventId: string | null }).baseEventId);
+      // The finance payload sits whole under the envelope payload, next to seq: nothing renamed.
+      expect(canonicalJson((doc.payload as { payload: unknown }).payload)).toBe(canonicalJson(payload));
+      expect(canonicalJson(fromEnvelope({ ...doc, receivedAt: 5 }))).toBe(canonicalJson(event));
+    }
+  });
+
+  it("a finance edit's alsoBasedOn stays inside the payload, never on the envelope", () => {
+    const event = financeEvent('f3', financeSamples().expense_changed, 'x1', 'f0');
+    const doc = toEnvelope(event);
+    expect(Object.keys(doc)).not.toContain('alsoBasedOn');
+    expect((doc.payload as { payload: { alsoBasedOn: string[] } }).payload.alsoBasedOn).toEqual(['e-head-2']);
+  });
+
+  it('keeps targetId and a null baseEventId even when the record id is the event id', () => {
+    const event = financeEvent('f4', financeSamples().category_added, 'f4', null);
+    const back = fromEnvelope({ ...toEnvelope(event), receivedAt: 5 }) as unknown as Record<string, unknown>;
+    expect(back.targetId).toBe('f4');
+    expect(back.baseEventId).toBeNull();
+    expect(canonicalJson(back)).toBe(canonicalJson(event));
+  });
+
+  it("the group minimum ('app_min') round-trips too", () => {
+    const event = { ...financeEvent('m1', { minApp: 2 }), kind: 'app_min' } as unknown as Record<string, unknown>;
+    delete event.targetId;
+    delete event.baseEventId;
+    const doc = toEnvelope(event as unknown as SaleEvent);
+    expect(doc.kind).toBe('app_min');
+    expect(canonicalJson(fromEnvelope({ ...doc, receivedAt: 5 }))).toBe(canonicalJson(event));
   });
 });
 

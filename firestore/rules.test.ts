@@ -36,7 +36,11 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 
+import { FINANCE_SCOPE } from '../src/core/finance-scope';
+import { financeSamples } from '../src/core/fixtures';
 import { createGroupWrites, newGroup } from '../src/core/group';
+import type { SaleEvent } from '../src/core/types';
+import { toEnvelope } from '../src/sync/firestore-remote';
 
 const GID = 'g1';
 const OTHER_GID = 'g2';
@@ -445,5 +449,61 @@ describe('users, invites and attempts', () => {
     await assertFails(setDoc(doc(db(MEMBER), 'invites/123456'), { gid: GID }));
     await assertFails(getDoc(doc(db(MEMBER), `inviteAttempts/${MEMBER}`)));
     await assertFails(setDoc(doc(db(MEMBER), `inviteAttempts/${MEMBER}`), { n: 1 }));
+  });
+});
+
+// E01-S28 round 2 (S28-AC10): finance events go up under the rules as they are — no rules change.
+// Built with the app's own `toEnvelope`, so this is the document the app really sends.
+describe('finance events (E01-S28 round 2, rules unchanged)', () => {
+  const finance = (n: number, overrides: Record<string, unknown> = {}) => {
+    const local = {
+      id: eventId(n),
+      groupId: GID,
+      saleId: FINANCE_SCOPE,
+      seq: n,
+      deviceSeq: n,
+      ts: 1_790_000_000_000,
+      mono: n,
+      actor: { userId: MEMBER, deviceId: '0192f0a0-0000-7000-8000-00000000d001' },
+      source: 'app',
+      kind: 'finance',
+      targetId: `x-${n}`,
+      baseEventId: n % 2 ? null : eventId(n - 1),
+      payload: financeSamples().expense_changed,
+    } as unknown as SaleEvent;
+    return { ...toEnvelope(local), receivedAt: serverTimestamp(), ...overrides };
+  };
+
+  it("a member creates a finance event and the group minimum ('app_min')", async () => {
+    await assertSucceeds(setDoc(eventRef(MEMBER, 700), finance(700)));
+    await assertSucceeds(setDoc(eventRef(MEMBER, 701), finance(701, { kind: 'app_min', targetId: eventId(701), baseEventId: null, payload: { minApp: 2 } })));
+    await assertSucceeds(getDoc(eventRef(MEMBER, 700)));
+  });
+
+  it('a finance event can never be updated or deleted', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `groups/${GID}/events/${eventId(710)}`), { ...finance(710), receivedAt: 0 });
+    });
+    await assertFails(updateDoc(eventRef(MEMBER, 710), { payload: { payload: { t: 'expense_changed', patch: { amountSatang: 1 } } } }));
+    await assertFails(deleteDoc(eventRef(MEMBER, 710)));
+  });
+
+  it('someone outside the group can neither read nor write finance events', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `groups/${GID}/events/${eventId(720)}`), { ...finance(720), receivedAt: 0 });
+    });
+    await assertFails(getDoc(eventRef(OUTSIDER, 720)));
+    await assertFails(setDoc(eventRef(OUTSIDER, 721), finance(721, { actor: { userId: OUTSIDER, deviceId: 'd' } })));
+  });
+
+  it("a finance event of another user (copied from the old log) is refused: the app must not send it", async () => {
+    await assertFails(setDoc(eventRef(MEMBER, 730), finance(730, { actor: { userId: 'bob', deviceId: 'd' } })));
+  });
+
+  it('a batch of 500 finance events stays under the rules limits', async () => {
+    const firestore = db(MEMBER);
+    const batch = writeBatch(firestore);
+    for (let n = 1_000; n < 1_500; n++) batch.set(doc(firestore, `groups/${GID}/events/${eventId(n)}`), finance(n));
+    await assertSucceeds(batch.commit());
   });
 });

@@ -389,7 +389,14 @@ test('E01-S28 r1: the finance scope is no sale, and a higher group minimum close
   await evidence(page, `${FIN_SHOTS}/after-money-gate.png`);
 });
 
-test('E01-S28 r1: with no group minimum a money write stays local — nothing enters the outbox (offline)', async ({ page, context }) => {
+/**
+ * E01-S28 round 2, same build and size, offline: a money write goes into the one event log's outbox (after the
+ * group minimum), the sync badge counts it, and the old finance log is copied in once and kept (S28-AC1, AC4–AC7).
+ */
+type Row = { id: string; saleId: string; pending: number; event: { kind: string; payload?: { minApp?: number } } };
+const allRows = (page: Page) => eventRows(page) as unknown as Promise<Row[]>;
+
+test('E01-S28 r2: a money write goes to the outbox after the group minimum, and the badge counts it (offline)', async ({ page, context }) => {
   await page.goto('/v2/expenses');
   await context.setOffline(true);
   await expect(page.getByTestId('expenses-empty')).toBeVisible();
@@ -398,9 +405,67 @@ test('E01-S28 r1: with no group minimum a money write stays local — nothing en
   await closePayer(page);
   await page.getByTestId('expense-save').click();
   await expect(page.getByTestId('expenses-empty')).toHaveCount(0);
-  expect(await eventRows(page)).toEqual([]);
-  const local = await page.evaluate(() => JSON.parse(localStorage.getItem('mon-farm:finance-events') ?? '[]') as unknown[]);
-  expect(local.length).toBeGreaterThan(0);
+  const rows = await allRows(page);
+  expect(rows.every((r) => r.saleId === 'farm-finance' && r.pending === 1)).toBe(true);
+  expect(rows.map((r) => r.event.kind).sort()).toEqual(['app_min', 'finance']);
+  expect(rows.find((r) => r.event.kind === 'app_min')?.event.payload?.minApp).toBe(2);
+  // Nothing new in the old log: it is read once, never written again (S28-AC7).
+  expect(await page.evaluate(() => localStorage.getItem('mon-farm:finance-events'))).toBeNull();
+  await expect(page.getByTestId('sync-pill').first()).toContainText('รอส่ง 2');
+  expect(await textFit(page)).toEqual([]);
+  await evidence(page, `${FIN_SHOTS}/after-r2-expenses-pending.png`);
+});
+
+test('E01-S28 r2: the old finance log is copied once into the event log, totals unchanged, and kept (offline)', async ({ page, context }) => {
+  const old = [1, 2, 3].map((n) => ({
+    id: `0192f0a0-0000-7000-8000-00000000f00${n}`,
+    groupId: 'group-1',
+    deviceSeq: n,
+    ts: Date.now() - n * 60_000,
+    actor: { userId: 'e2e-user', deviceId: 'dev-old' },
+    source: 'app',
+    targetId: `x-old-${n}`,
+    baseEventId: null,
+    payload: { t: 'expense_created', fields: { amountSatang: n * 100_000, date: '2026-11-20', stage: 'actual', categoryId: 'cat-fuel', propertyId: null, item: `น้ำมันเดิม ${n}`, note: '', payer: null } },
+  }));
+  await page.goto('/v2');
+  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), old);
+  await context.setOffline(true);
+  await page.goto('/v2/expenses');
+  for (const n of [1, 2, 3]) await expect(page.getByText(`น้ำมันเดิม ${n}`)).toBeVisible();
+  // ฿1,000 + ฿2,000 + ฿3,000, as before the move.
+  await expect(page.getByText(/6,000/).first()).toBeVisible();
+  const rows = await allRows(page);
+  expect(rows.filter((r) => r.event.kind === 'finance').map((r) => r.id).sort()).toEqual(old.map((e) => e.id).sort());
+  // Reload: copied once, not again.
+  await page.reload();
+  for (const n of [1, 2, 3]) await expect(page.getByText(`น้ำมันเดิม ${n}`)).toBeVisible();
+  expect((await allRows(page)).filter((r) => r.event.kind === 'finance')).toHaveLength(3);
+  // The old log is still there, as it was.
+  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('mon-farm:finance-events') ?? '[]') as unknown[]);
+  expect(kept).toEqual(old);
+  expect(await textFit(page)).toEqual([]);
+  await evidence(page, `${FIN_SHOTS}/after-r2-migrated.png`);
+});
+
+test('E01-S28 r2: above the group minimum home hides its money rows and says update first (offline)', async ({ page, context }) => {
+  await seedPulled(page, [
+    { ...scopeRow('fin-owed', 'finance', { t: 'expense_created', fields: { amountSatang: 98_700, date: '2026-11-20', stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าน้ำมัน', note: '', payer: { id: 'p-nat', name: 'นัด' } } }), targetId: 'x-owed', baseEventId: null },
+    scopeRow('min-99', 'app_min', { minApp: 99 }),
+  ]);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByTestId('home-money-update')).toBeVisible();
+  await expect(page.getByTestId('home-owed')).toHaveCount(0);
+  await expect(page.getByText(/987/)).toHaveCount(0);
+  for (const path of ['/v2/care', '/v2/stock', '/v2/prepare']) {
+    await page.goto(path);
+    await expect(page.getByTestId('money-update-app')).toBeVisible();
+  }
+  await page.goto('/v2');
+  await expect(page.getByTestId('home-money-update')).toBeVisible();
+  expect(await textFit(page)).toEqual([]);
+  await evidence(page, `${FIN_SHOTS}/after-r2-home-gate.png`);
 });
 
 /**

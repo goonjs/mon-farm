@@ -18,7 +18,12 @@ import { MASTER_SCOPE } from '../src/core/master';
 import type { AcceptEvent, GroupId, MasterEvent, SaleEvent } from '../src/core/types';
 import { userFromSignIn } from '../src/core/user';
 import { uuidv7 } from '../src/lib/id';
+import { APP_RELEASE, FINANCE_SCOPE, minAppOf } from '../src/core/finance-scope';
+import type { FinanceEvent } from '../src/core/finance/types';
 import { MemoryAccountStore } from '../src/store/account-memory';
+import { createDeviceClock } from '../src/store/device-clock';
+import { EventFinanceStore } from '../src/store/finance-log';
+import { MemoryFinanceStore } from '../src/store/finance-memory';
 import { MemoryStore } from '../src/store/memory-store';
 import { MemoryCursor, SyncEngine } from '../src/sync/engine';
 import { FirestoreMemberships, FirestoreRemote, type DocWrite, type FirestoreLayer } from '../src/sync/firestore-remote';
@@ -436,6 +441,48 @@ describe('what real documents look like (review A: coverage)', () => {
     await alice.engine.sync();
     await bob.engine.sync();
     expect(await bob.store.load(MASTER_SCOPE)).toEqual([person]);
+  });
+
+  it('E01-S28 r2: money recorded on each phone through the finance port is on both, with the group minimum, exactly', async () => {
+    await seedMember('alice');
+    await seedMember('bob');
+    const alice = await phone('alice');
+    const bob = await phone('bob');
+    const port = (p: Phone) => {
+      const clock = createDeviceClock(p.store);
+      return { clock, finance: new EventFinanceStore(p.store, clock, new MemoryFinanceStore(), () => ({ userId: p.uid, groupId: GID })) };
+    };
+    const fa = port(alice);
+    const fb = port(bob);
+    await fa.clock.load();
+    await fb.clock.load();
+    const money = (p: Phone, clock: { take(): number }, item: string, amountSatang: number): FinanceEvent => ({
+      id: uuidv7(),
+      groupId: GID,
+      deviceSeq: clock.take(),
+      ts: 1_790_000_000_000,
+      actor: { userId: p.uid, deviceId: p.deviceId },
+      source: 'app',
+      targetId: uuidv7(),
+      baseEventId: null,
+      payload: { t: 'expense_created', fields: { amountSatang, date: '2026-11-27', stage: 'actual', categoryId: null, propertyId: null, item, note: 'ทดสอบ 🌿', payer: null } },
+    });
+    const ea = money(alice, fa.clock, 'ค่าไฟ', 65_000);
+    const eb = money(bob, fb.clock, 'ปุ๋ย', 120_050);
+    await fa.finance.append(ea);
+    await fb.finance.append(eb);
+
+    await alice.engine.sync();
+    await bob.engine.sync();
+    await alice.engine.sync();
+
+    // The store numbers this device's events itself (deviceSeq); everything else comes back exactly.
+    const plain = (list: readonly FinanceEvent[]) => [...list].map((e) => ({ ...e, deviceSeq: 0 })).sort((x, y) => x.id.localeCompare(y.id));
+    for (const p of [fa, fb]) expect(plain(await p.finance.load())).toEqual(plain([ea, eb]));
+    expect(minAppOf(await bob.store.load(FINANCE_SCOPE))).toBe(APP_RELEASE);
+    expect(await alice.store.pending()).toEqual([]);
+    expect(await bob.store.pending()).toEqual([]);
+    expect(await alice.store.listSales()).toEqual([]);
   });
 
   it('a big outbox (60 events: more than the rules\' 20 access calls would allow if each needed a lookup) goes up and comes down in pages', async () => {

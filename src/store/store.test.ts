@@ -244,7 +244,30 @@ describe.each(adapters)('%s — corrupt document ids (follow-up 3)', (_name, mak
   });
 });
 
+describe.each(adapters)('%s — meta flags (E01-S28 round 2: the finance-log copy marker)', (_name, makeStore) => {
+  it('a flag is false until set, then true; other flags stay false', async () => {
+    const store = makeStore();
+    expect(await store.metaFlag('financeLogMigratedV1')).toBe(false);
+    await store.setMetaFlag('financeLogMigratedV1');
+    expect(await store.metaFlag('financeLogMigratedV1')).toBe(true);
+    expect(await store.metaFlag('other')).toBe(false);
+  });
+
+  it('a flag leaves the device and its sequence alone', async () => {
+    const store = makeStore();
+    const before = await store.device();
+    await store.setMetaFlag('financeLogMigratedV1');
+    expect(await store.device()).toEqual(before);
+  });
+});
+
 describe('IndexedDbStore — what only a persistent store must do', () => {
+  it('a meta flag survives a reopen', async () => {
+    const factory = new IDBFactory();
+    await new IndexedDbStore(factory).setMetaFlag('financeLogMigratedV1');
+    expect(await new IndexedDbStore(factory).metaFlag('financeLogMigratedV1')).toBe(true);
+  });
+
   it('corrupt ids survive a reopen', async () => {
     const factory = new IDBFactory();
     await new IndexedDbStore(factory).setSyncCorrupt('g1', ['x']);
