@@ -1,7 +1,7 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { ReactElement, ReactNode } from 'react';
 
-import { LogBuilder } from '../core/fixtures';
+import { LogBuilder, scopeEvent } from '../core/fixtures';
 import type { MasterStore } from '../store/master-store';
 import type { EventStore } from '../store/store';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
@@ -102,6 +102,16 @@ describe('one open sale at a time: เริ่มการขาย', () => {
     await seedAt('sale-cancelled', 300, (b) => b.sys({ t: 'sale_status_set', status: 'cancelled' }));
     await mount(<StartSaleGate />);
     expect(screen.getByTestId('sale-start')).toBeTruthy();
+  });
+
+  it('the finance scope is not an open sale (E01-S28 round 1): the start form, no redirect into it', async () => {
+    await seedSale(store(), [
+      scopeEvent('fin-1', 'finance', { t: 'category_added', name: 'ค่าไฟ' }, T + 900),
+      scopeEvent('min-1', 'app_min', { minApp: 2 }, T + 901),
+    ]);
+    await mount(<StartSaleGate />);
+    expect(screen.getByTestId('sale-start')).toBeTruthy();
+    expect(router.replace).not.toHaveBeenCalled();
   });
 
   it('an open sale with no point yet opens at the point picker', async () => {

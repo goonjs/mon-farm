@@ -6,6 +6,7 @@
  * timestamps here are deliberately arbitrary.
  */
 
+import { FINANCE_SCOPE } from './finance-scope';
 import type { SaleEvent, SysPayload } from './types';
 
 const DEFAULT_SALE_ID = 'sale-1';
@@ -304,4 +305,21 @@ export function workedExampleLog(saleId?: string): LogBuilder {
 
   b.sys({ t: 'sale_closed' });
   return b;
+}
+
+/** An event in the finance scope as a pull would store it: `kind` the round-1 union does not know. */
+export function scopeEvent(id: string, kind: string, payload: unknown, ts = 1): SaleEvent {
+  return {
+    id,
+    groupId: FIXTURE_GROUP_ID,
+    saleId: FINANCE_SCOPE,
+    seq: 1,
+    deviceSeq: 1,
+    ts,
+    mono: 1,
+    actor: { userId: 'user-other', deviceId: 'dev-other' },
+    source: 'app',
+    kind,
+    payload,
+  } as unknown as SaleEvent;
 }

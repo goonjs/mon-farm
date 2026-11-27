@@ -1,7 +1,9 @@
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 
-import { LogBuilder } from '../core/fixtures';
+import { LogBuilder, scopeEvent } from '../core/fixtures';
+import { FINANCE_SCOPE } from '../core/finance-scope';
+import { MASTER_SCOPE } from '../core/master';
 import type { AcceptEvent } from '../core/types';
 import { canonicalJson } from '../core/canonical';
 import { IntegrityError, MemoryStore, type EventStore } from './store';
@@ -120,6 +122,17 @@ describe.each(adapters)('%s — EventStore rules (E01-S02 AC2/AC3, E01-S03 AC2)'
     const newer = new LogBuilder('z-new').accept('p1').build().map((e) => ({ ...e, ts: e.ts + 86_400_000 }));
     for (const e of [...older, ...newer]) await store.append(e);
     expect(await store.listSales()).toEqual(['z-new', 'a-old']);
+  });
+
+  it('leaves the master and finance scopes out of the sales (E01-S28 round 1)', async () => {
+    const store = makeStore();
+    for (const e of new LogBuilder('sale-1').accept('p1').build()) await store.append(e);
+    // As a pull would store them: a finance event and the group minimum, newer than the sale.
+    await store.insertPulled(scopeEvent('f1', 'finance', { t: 'category_added', name: 'ค่าไฟ' }, Date.now() + 86_400_000));
+    await store.insertPulled(scopeEvent('m1', 'app_min', { minApp: 2 }, Date.now() + 86_400_000));
+    await store.insertPulled({ ...new LogBuilder(MASTER_SCOPE).accept('p1').build()[0], id: 'master-1' });
+    expect(await store.listSales()).toEqual(['sale-1']);
+    expect((await store.load(FINANCE_SCOPE)).map((e) => e.id)).toEqual(['f1', 'm1']);
   });
 
   it('drains the outbox in numeric device order, past 9 (not string order)', async () => {

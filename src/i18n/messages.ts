@@ -2023,6 +2023,9 @@ const th = {
   'v2s.noPromptPayHere': 'บัญชีนี้ไม่มีพร้อมเพย์',
   // ── sale options: price, info, delete (th) ──
   'start.checkFailed': 'อ่านการขายที่เปิดอยู่ไม่ได้ จึงยังไม่เริ่มการขายใหม่ (กันการขายซ้ำ) — ลองใหม่อีกครั้ง',
+  // E01-S28 round 1 · a build below the group's minimum (S28-AC12 ก).
+  'moneyGate.title': 'อัปเดตแอป',
+  'moneyGate.body': 'อัปเดตแอปก่อนใช้หน้าเงิน',
   'start.retry': 'ลองใหม่',
   'opt.noValue': '—',
   'opt.priceNone': 'ใส่ราคาที่ตกลง',
@@ -4064,6 +4067,8 @@ const en: Partial<Record<keyof typeof th, string>> = {
   'v2s.noPromptPayHere': 'this account has no PromptPay',
   // ── sale options: price, info, delete (en) ──
   'start.checkFailed': 'could not read the open sale, so no new sale was started (to avoid a duplicate) — try again',
+  'moneyGate.title': 'update the app',
+  'moneyGate.body': 'update the app before using the money screens',
   'start.retry': 'try again',
   'opt.noValue': '—',
   'opt.priceNone': 'add the agreed price',

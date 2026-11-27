@@ -296,3 +296,109 @@ for (const width of [320, 360]) {
   }
 }
 
+
+/**
+ * E01-S28 round 1, in the real web build at 390×844, offline. The finance scope arrives as a pull would
+ * store it (already synced, `kind` this build's event union does not carry): it is no sale, and a group
+ * minimum above this build closes the money screens with "อัปเดตแอปก่อนใช้หน้าเงิน". A money write stays
+ * in the local finance log: nothing enters the outbox (round 2 moves finance into the event log).
+ */
+const FIN_SHOTS = 'docs/ux/screenshots/e01-s28';
+
+/** Rows as a pull stores them (`pending: 0`), into the app's IndexedDB like `seedEvents`. */
+async function seedPulled(page: Page, rows: readonly Record<string, unknown>[]) {
+  await page.goto('/v2');
+  await expect(page.getByTestId('sync-pill').first()).toBeVisible();
+  await page.evaluate(
+    (rows) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('mon-farm-v1');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const tx = db.transaction('events', 'readwrite');
+          for (const event of rows) tx.objectStore('events').put({ id: event.id, saleId: event.saleId, ts: event.ts, deviceSeq: event.deviceSeq, pending: 0, event });
+          tx.oncomplete = () => (db.close(), resolve());
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    rows as Record<string, unknown>[],
+  );
+}
+
+/** Every row of the app's event log, with its outbox flag. */
+function eventRows(page: Page) {
+  return page.evaluate(
+    () =>
+      new Promise<{ saleId: string; pending: number }[]>((resolve, reject) => {
+        const open = indexedDB.open('mon-farm-v1');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const req = open.result.transaction('events', 'readonly').objectStore('events').getAll();
+          req.onsuccess = () => (open.result.close(), resolve(req.result as { saleId: string; pending: number }[]));
+          req.onerror = () => reject(req.error);
+        };
+      }),
+  );
+}
+
+const scopeRow = (id: string, kind: string, payload: unknown) => ({
+  id,
+  groupId: 'group-1',
+  saleId: 'farm-finance',
+  seq: 1,
+  deviceSeq: 1,
+  ts: Date.now() + 60_000,
+  mono: 1,
+  actor: { userId: 'user-other', deviceId: 'dev-other' },
+  source: 'app',
+  kind,
+  payload,
+});
+
+test('E01-S28 r1: the finance scope is no sale, and a higher group minimum closes the money screens (offline)', async ({ page, context }) => {
+  await seedPulled(page, [scopeRow('fin-1', 'finance', { t: 'category_added', name: 'ค่าไฟ' }), scopeRow('min-1', 'app_min', { minApp: 99 })]);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByTestId('v2-home')).toBeVisible();
+  // No "การขายที่ยังไม่ปิด" row for the finance scope (S28-AC12 ข 2). The home shows "nothing to know" while it
+  // still reads too, so give the read time to land (on dev the row is there by then); the start check below is exact.
+  await expect(page.getByTestId('home-to-know')).toContainText('ยังไม่มีเรื่องที่ต้องรู้หรือจัดการ');
+  await page.waitForTimeout(1_500);
+  await expect(page.getByTestId('home-open-sale')).toHaveCount(0);
+  await evidence(page, `${FIN_SHOTS}/after-home.png`);
+
+  // The sales list is empty, not one blank row (S28-AC12 ข 5).
+  await page.goto('/v2/sales');
+  await expect(page.getByTestId('sales-start')).toBeVisible();
+  await expect(page.getByTestId('sale-row-farm-finance')).toHaveCount(0);
+
+  await page.goto('/v2/sale/start');
+  await expect(page.getByTestId('sale-start')).toBeVisible();
+  expect(page.url()).toContain('/v2/sale/start');
+
+  for (const path of ['/v2/expenses', '/v2/debts', '/v2/owed', '/v2/expense/new']) {
+    await page.goto(path);
+    await expect(page.getByTestId('money-update-app')).toBeVisible();
+    await expect(page.getByText('อัปเดตแอปก่อนใช้หน้าเงิน')).toBeVisible();
+    await expect(page.getByTestId('expenses-empty')).toHaveCount(0);
+  }
+  await page.goto('/v2/expenses');
+  await expect(page.getByTestId('money-update-app')).toBeVisible();
+  expect(await textFit(page)).toEqual([]);
+  await evidence(page, `${FIN_SHOTS}/after-money-gate.png`);
+});
+
+test('E01-S28 r1: with no group minimum a money write stays local — nothing enters the outbox (offline)', async ({ page, context }) => {
+  await page.goto('/v2/expenses');
+  await context.setOffline(true);
+  await expect(page.getByTestId('expenses-empty')).toBeVisible();
+  await expect(page.getByTestId('money-update-app')).toHaveCount(0);
+  await addExpense(page, { amount: '250', date: '2026-11-20', cat: 'cat-fuel', payer: 'none' });
+  await closePayer(page);
+  await page.getByTestId('expense-save').click();
+  await expect(page.getByTestId('expenses-empty')).toHaveCount(0);
+  expect(await eventRows(page)).toEqual([]);
+  const local = await page.evaluate(() => JSON.parse(localStorage.getItem('mon-farm:finance-events') ?? '[]') as unknown[]);
+  expect(local.length).toBeGreaterThan(0);
+});

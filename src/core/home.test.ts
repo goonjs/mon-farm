@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { LogBuilder, readyPile, setUpSale } from './fixtures';
+import { LogBuilder, readyPile, scopeEvent, setUpSale } from './fixtures';
+import { FINANCE_SCOPE } from './finance-scope';
+import { MASTER_SCOPE } from './master';
 import { homeSales, saleLineOf } from './home';
 
 /** A sale with `n` standard baskets in กอง 1 (50 kg net each), started `later` seconds on. */
@@ -52,6 +54,19 @@ describe('homeSales — the home rows for sales (flow-v1 screen 3)', () => {
     const gone = sale('s1', 2).remove('s1').build();
     const cancelled = sale('s2', 2).sys({ t: 'sale_status_set', status: 'cancelled' }).build();
     expect(homeSales([{ id: 's1', events: gone }, { id: 's2', events: cancelled }])).toEqual({ open: null, latest: null });
+  });
+});
+
+describe('homeSales — the finance scope is not a sale (E01-S28 round 1, S28-AC12 ข)', () => {
+  it('a finance scope holding only finance events is never the open or latest sale', () => {
+    const finance = [scopeEvent('f1', 'finance', { t: 'category_added', name: 'ค่าไฟ' }, 9_000), scopeEvent('m1', 'app_min', { minApp: 2 }, 9_001)];
+    expect(homeSales([{ id: FINANCE_SCOPE, events: finance }])).toEqual({ open: null, latest: null });
+    const real = sale('s1', 2).build();
+    expect(homeSales([{ id: FINANCE_SCOPE, events: finance }, { id: 's1', events: real }]).open?.id).toBe('s1');
+  });
+
+  it('the master scope is not a sale either', () => {
+    expect(homeSales([{ id: MASTER_SCOPE, events: [] }])).toEqual({ open: null, latest: null });
   });
 });
 

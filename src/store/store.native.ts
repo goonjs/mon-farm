@@ -26,6 +26,7 @@ import * as SQLite from 'expo-sqlite';
 import { checkAppend, checkPulled, type DeviceState } from './append-rule';
 import { corruptFor, cursorFor } from './sync-cursor';
 import type { EventStore } from './store';
+import { FINANCE_SCOPE } from '../core/finance-scope';
 import { MASTER_SCOPE } from '../core/master';
 import type { EventId, GroupId, SaleEvent } from '../core/types';
 import { uuidv7 } from '../lib/id';
@@ -242,8 +243,9 @@ export class SqliteStore implements EventStore {
   async listSales(): Promise<string[]> {
     const db = await this.open();
     const rows = await db.getAllAsync<{ sale_id: string; started: number }>(
-      `SELECT sale_id, MIN(ts) AS started FROM events WHERE sale_id != ? GROUP BY sale_id ORDER BY started DESC`,
+      `SELECT sale_id, MIN(ts) AS started FROM events WHERE sale_id NOT IN (?, ?) GROUP BY sale_id ORDER BY started DESC`,
       MASTER_SCOPE,
+      FINANCE_SCOPE,
     );
     return rows.map((r) => r.sale_id);
   }
