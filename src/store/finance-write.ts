@@ -1,17 +1,16 @@
 /**
  * Writing to the finance log: stamps the envelope and appends.
  *
- * `deviceSeq` counts this device's FINANCE events (1, 2, 3 …), taken from the
- * log itself rather than the sale log's device clock: until the two logs
- * share one table (see `finance.ts`), a number from the sale counter is not
- * persisted on this side and could repeat after a restart.
+ * Since E01-S28 round 2 the finance log is the one event log, so `deviceSeq`
+ * is the app's one device clock — no count of its own; the store has the
+ * final word on this device's numbers (append-rule.ts).
  */
 
 import type { FinanceEvent, FinancePayload } from '../core/finance/types';
 import type { EventId } from '../core/types';
 import { uuidv7 } from '../lib/id';
 import { financeStore } from './finance';
-import { writerNow } from './record';
+import { deviceClock, writerNow } from './record';
 
 export async function writeFinance(
   targetId: string,
@@ -19,11 +18,10 @@ export async function writeFinance(
   payload: FinancePayload,
 ): Promise<FinanceEvent> {
   const { actor, groupId } = await writerNow();
-  const mine = (await financeStore.load()).filter((e) => e.actor.deviceId === actor.deviceId);
   const event: FinanceEvent = {
     id: uuidv7(),
     groupId,
-    deviceSeq: mine.reduce((max, e) => Math.max(max, e.deviceSeq), 0) + 1,
+    deviceSeq: deviceClock.take(),
     ts: Date.now(),
     actor,
     source: 'app',

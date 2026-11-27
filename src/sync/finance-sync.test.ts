@@ -182,7 +182,7 @@ describe('finance events that name a sale, in either order with the sale (S28-AC
 
     // The sale is deleted on A: the deduction made at it stops counting on B (D-67).
     const [del] = new LogBuilder('sale-1', a.deviceId).remove('sale-1').build();
-    await a.store.append({ ...del, seq: 99, actor: { userId: 'user-a', deviceId: a.deviceId } });
+    await a.store.append({ ...del, id: 'sale-1-delete', seq: 99, actor: { userId: 'user-a', deviceId: a.deviceId } });
     await a.engine.sync();
     await b.engine.sync();
     expect(projectDebts(await b.finance.load(), await counts()).get(RED.id)?.balanceSatang).toBe(600_000);

@@ -13,6 +13,8 @@ import type { GroupId, UserId } from '../core/types';
 import type { AccountStore } from '../store/account';
 import { accountStore } from '../store/account';
 import { onAppended } from '../store/append-signal';
+import { ensureAppMinIfMoney } from '../store/finance-log';
+import { deviceClock } from '../store/record';
 import { store } from '../store/store';
 import { connectRemote, type SyncRemote } from './client';
 import { startSync, type SyncHandle } from './runtime';
@@ -49,9 +51,12 @@ export function useSync(
     // Until we know, the points wizard waits (a first pull may be coming).
     setSyncMode('connecting');
     connect(userId, groupId)
-      .then((remote) => {
+      .then(async (remote) => {
         if (!live) return;
         if (!remote) return setSyncMode('off');
+        // E01-S28: money copied in while nobody was signed in gets the group minimum before anything is sent.
+        await ensureAppMinIfMoney(store, deviceClock, { userId, groupId }).catch((err) => console.warn('The app minimum could not be written.', err));
+        if (!live) return;
         handle = startSync({
           scope: { userId, groupId },
           store,

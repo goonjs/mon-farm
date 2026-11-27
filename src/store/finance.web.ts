@@ -1,42 +1,32 @@
 /**
- * Web finance log: localStorage, one JSON array — the same trade-off as
- * `people.web.ts` (small, read whole). Moves into IndexedDB `events` with the
- * envelope redesign (see `finance.ts`).
+ * Web binding of the finance log (E01-S28 round 2): `EventFinanceStore` over
+ * the IndexedDB event store, so money is in the outbox and syncs.
+ *
+ * The old log, localStorage `mon-farm:finance-events` (one JSON array, read
+ * whole), is copied in once on first use and then left in place, read-only:
+ * nothing writes it any more, and clearing it is a later story the owner
+ * approves (S28-AC7).
  */
 
 import type { FinanceEvent } from '../core/finance/types';
-import { markNotDurable } from './durability';
 import type { FinanceStore } from './finance';
-import { shouldInsert } from './finance-memory';
+import { EventFinanceStore, type LegacyFinanceLog } from './finance-log';
+import { deviceClock } from './record';
+import { sessionScope } from './session';
+import { store } from './store';
 
 const KEY = 'mon-farm:finance-events';
 
-function read(): FinanceEvent[] {
-  try {
-    const raw = globalThis.localStorage?.getItem(KEY);
-    return raw ? (JSON.parse(raw) as FinanceEvent[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-export class WebFinanceStore implements FinanceStore {
-  async append(event: FinanceEvent): Promise<void> {
-    const rows = read();
-    if (!shouldInsert(rows.find((e) => e.id === event.id), event)) return;
+/** The old web finance log, read-only. Unreadable storage reads as empty, as it always did. */
+export class WebLegacyFinanceLog implements LegacyFinanceLog {
+  async load(): Promise<FinanceEvent[]> {
     try {
-      globalThis.localStorage?.setItem(KEY, JSON.stringify([...rows, event]));
-    } catch (err) {
-      // Quota or blocked storage. Money must not vanish quietly: raise the
-      // app-wide storage warning AND fail this save so the form says so.
-      markNotDurable(err);
-      throw err;
+      const raw = globalThis.localStorage?.getItem(KEY);
+      return raw ? (JSON.parse(raw) as FinanceEvent[]) : [];
+    } catch {
+      return [];
     }
   }
-
-  async load(): Promise<FinanceEvent[]> {
-    return read();
-  }
 }
 
-export const financeStore: FinanceStore = new WebFinanceStore();
+export const financeStore: FinanceStore = new EventFinanceStore(store, deviceClock, new WebLegacyFinanceLog(), sessionScope);

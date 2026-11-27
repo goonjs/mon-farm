@@ -15,6 +15,8 @@
  * appear in a document either of them is asked to trust.
  */
 
+import type { FinancePayload } from './finance/types';
+
 export type SaleId = string;
 export type ZoneId = string;
 export type PileId = string;
@@ -37,7 +39,7 @@ export interface Actor {
   readonly deviceId: DeviceId;
 }
 
-export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys' | 'delete' | 'restore' | 'master';
+export type EventKind = 'accept' | 'short' | 'reject' | 'correction' | 'sys' | 'delete' | 'restore' | 'master' | 'finance' | 'app_min';
 
 /**
  * Any record an event can create or change: a sale, zone, pile —
@@ -505,8 +507,35 @@ export interface MasterEvent extends EventBase {
   readonly payload: MasterPayload;
 }
 
+/**
+ * A finance event in the one log (E01-S28 round 2): the old finance log's
+ * event (`FinanceEvent`, `core/finance/types.ts`) under `FINANCE_SCOPE`
+ * (`core/finance-scope.ts`), stored in place of a sale id like `MASTER_SCOPE`.
+ * `targetId`, `baseEventId` and `payload` are the finance event's own, unchanged
+ * (S28-AC1); a finance edit's `alsoBasedOn` stays inside `payload`, never on the
+ * envelope. `seq`/`mono` are stamped the way master events are.
+ */
+export interface FinanceLogEvent extends EventBase {
+  readonly kind: 'finance';
+  readonly targetId: string;
+  readonly baseEventId: EventId | null;
+  readonly payload: FinancePayload;
+}
+
+/**
+ * The group's minimum app release (E01-S28): written once, under
+ * `FINANCE_SCOPE`, before the first finance event is sent. A build whose
+ * `APP_RELEASE` is below the highest `minApp` shows no money.
+ */
+export interface AppMinEvent extends EventBase {
+  readonly kind: 'app_min';
+  readonly payload: { readonly minApp: number };
+}
+
 export type SaleEvent =
   | MasterEvent
+  | FinanceLogEvent
+  | AppMinEvent
   | AcceptEvent
   | ShortEvent
   | RejectEvent

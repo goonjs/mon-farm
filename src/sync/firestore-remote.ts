@@ -150,8 +150,15 @@ export function fromEnvelope(data: Readonly<Record<string, unknown>>): SaleEvent
   };
   if (saleId !== null && saleId !== undefined) event.saleId = saleId;
   if (mono !== undefined) event.mono = mono;
-  if (typeof targetId === 'string' && targetId !== id) event.targetId = targetId;
-  if (baseEventId !== null && baseEventId !== undefined) event.baseEventId = baseEventId;
+  if (data.kind === 'finance') {
+    // A finance event carries both itself (E01-S28): its record id may equal its own id, and a create's base
+    // is null, not absent. Dropping either would make the pulled copy differ from the one that was sent.
+    event.targetId = targetId;
+    event.baseEventId = baseEventId ?? null;
+  } else {
+    if (typeof targetId === 'string' && targetId !== id) event.targetId = targetId;
+    if (baseEventId !== null && baseEventId !== undefined) event.baseEventId = baseEventId;
+  }
   if (alsoBasedOn !== undefined) event.alsoBasedOn = alsoBasedOn;
   return event as unknown as SaleEvent;
 }

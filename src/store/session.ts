@@ -39,3 +39,8 @@ export function sessionGroupId(): GroupId {
   if (!group) throw new NoGroupError();
   return group;
 }
+
+/** The signed-in user in the open group, or null before both are set (E01-S28: who the group minimum is written for). */
+export function sessionScope(): { readonly userId: UserId; readonly groupId: GroupId } | null {
+  return current && group ? { userId: current, groupId: group } : null;
+}

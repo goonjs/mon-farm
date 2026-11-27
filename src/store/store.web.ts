@@ -223,6 +223,19 @@ export class IndexedDbStore implements EventStore {
     await committed(tx);
   }
 
+  // `flag:<key>` in `meta`, like the cursor: no schema change, no version bump.
+  async metaFlag(key: string): Promise<boolean> {
+    const db = await this.open();
+    return (await request(db.transaction('meta', 'readonly').objectStore('meta').get(`flag:${key}`))) === true;
+  }
+
+  async setMetaFlag(key: string): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction('meta', 'readwrite');
+    tx.objectStore('meta').put(true, `flag:${key}`);
+    await committed(tx);
+  }
+
   async listSales(): Promise<string[]> {
     const db = await this.open();
     const tx = db.transaction('events', 'readonly');
@@ -315,6 +328,12 @@ export class WebStore implements EventStore {
   }
   async listSales() {
     return (await this.pick()).listSales();
+  }
+  async metaFlag(key: string) {
+    return (await this.pick()).metaFlag(key);
+  }
+  async setMetaFlag(key: string) {
+    return (await this.pick()).setMetaFlag(key);
   }
   async device() {
     return (await this.pick()).device();
