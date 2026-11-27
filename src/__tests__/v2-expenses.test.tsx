@@ -392,7 +392,8 @@ describe('expense list (F4, F7)', () => {
     await flush();
     fireEvent.press(screen.getByTestId('filter-month'));
     fireEvent.press(screen.getByTestId('month-2025-04'));
-    expect(screen.getByTestId('total-planned-amount')).toHaveTextContent('฿\u00a0640.5', { normalizeWhitespace: false });
+    // The no-break space keeps ฿ on the digits' line.
+    expect([screen.getByTestId('total-planned-amount').props.children].flat()[0]).toBe('฿\u00a0640.5');
     expect(screen.getByTestId('total-planned')).toHaveTextContent(/ไม่ทราบ 1 รายการ/);
     const pill = Object.assign({}, ...[screen.getByTestId('total-actual-amount-unit').props.style].flat(Infinity).filter(Boolean));
     expect(pill.backgroundColor).toBe(tokens.color.light.actionSunk);
