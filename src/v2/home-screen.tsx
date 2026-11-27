@@ -28,7 +28,7 @@ import { salePrep } from '../core/finance/sale-prep';
 import { UNPAID_COUNTED_FROM, unpaidPiles } from '../core/finance/sale-unpaid';
 import { projectFertilizing, splitBadge } from '../core/finance/fertilizing';
 import { owedByPerson, shopPayableSatang } from '../core/finance/ledger';
-import { formatDate, formatSatang, todayIso } from '../core/finance/money';
+import { formatDate, todayIso } from '../core/finance/money';
 import type { HomeSales } from '../core/home';
 import { clearingStarted, homeTiles, salePhase, type HomeTiles, type TileSale } from '../core/home-tiles';
 import { projectSale } from '../core/project';
@@ -189,9 +189,9 @@ export function V2Home() {
         why={msg('home.why.owed')}
         to={'/v2/owed' as Href}
       >
+        {/* A summary card: short money (owner rule 2026-10-31); the tap opens the owed page, whose total opens the exact amounts. */}
         <FactRow icon={(c) => <CoinIcon color={c} size={13} />}>
-          <Text style={{ fontWeight: t.font.weight.semibold, color: t.color.ink, fontVariant: ['tabular-nums'] }}>{formatSatang(owedTotal)}</Text>{' '}
-          {msg('v2m.baht')}
+          <CompactMoney testID="home-owed-amount" satang={owedTotal} pill />
         </FactRow>
         <FactRow icon={(c) => <PersonIcon color={c} size={13} />}>
           {owed.length === 1 ? owed[0].payer.name : msg('v2m.people', { n: owed.length })}

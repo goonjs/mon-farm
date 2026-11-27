@@ -20,7 +20,7 @@ export function CompactMoney({
   pill,
 }: {
   satang: number;
-  size?: 'bodyLg' | 'lead' | 'title' | 'figure';
+  size?: 'bodyLg' | 'lead' | 'title' | 'displayXl' | 'figure';
   color?: string;
   testID?: string;
   /** Summary-line look (E05-S11): "฿" glued to the digits by a no-break space, the unit on a light pill. Off by default. */

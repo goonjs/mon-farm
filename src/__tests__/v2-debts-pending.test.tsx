@@ -117,7 +117,8 @@ describe('the debt list (M1 · PR-4, PR-12)', () => {
     expect(text(`rp-list-chip-${farm.red}`)).toHaveTextContent(/หนี้ลดแล้ว · รอเงิน.*฿ 3,250/);
     expect(text(`rp-list-chip-${farm.nat}`)).toHaveTextContent(/฿ 5,250/);
     // the balance is after the deduction (D-85)
-    expect(text(`debt-account-${farm.red}`)).toHaveTextContent(/12,540\.00/);
+    expect(text(`debt-account-${farm.red}`)).toHaveTextContent(/หนี้ที่ติดสวน ฿\s12\.54k/);
+    expect(within(text(`debt-account-${farm.red}`)).getByLabelText('12,540.00 บาท')).toBeTruthy();
   });
 
   it('เพิ่มหนี้ให้: each person is a full-width row with ›, not a chip (owner q1 = ค, 2026-11-08)', async () => {
@@ -150,7 +151,8 @@ describe('a worker\'s account (M2, M3, M5–M7, M9, P3 · PR-1, PR-2, PR-5–PR-
     params.current = { workerId: farm.red, name: 'แดง' };
     wrap(<DebtAccountScreen />);
     await flush();
-    expect(text('debt-balance')).toHaveTextContent('12,540.00');
+    expect(text('debt-balance')).toHaveTextContent(/^฿\s12\.54k$/);
+    expect(text('debt-balance').props.accessibilityLabel).toBe('12,540.00 บาท');
     expect(text('rp-card')).toHaveTextContent(/เงินคืนหนี้ ยังไม่ได้รับ.*หนี้ลดแล้ว · รอเงินเข้าสวน/);
     expect(text(`rp-row-${SALE}-cash`)).toHaveTextContent(/↘ คืนหนี้ 3,250\.00.*รอเงินสดจากคนซื้อ/);
     expect(screen.queryByTestId('rp-card-total')).toBeNull();
@@ -167,7 +169,8 @@ describe('a worker\'s account (M2, M3, M5–M7, M9, P3 · PR-1, PR-2, PR-5–PR-
     expect(screen.queryByTestId('rp-card')).toBeNull();
     expect(text('rp-undo')).toHaveTextContent(/บันทึกแล้ว · ได้ครบ 3,250\.00/);
     expect(screen.getByText('รับเงินแล้ว ›')).toBeTruthy();
-    expect(text('debt-balance')).toHaveTextContent('12,540.00');
+    expect(text('debt-balance')).toHaveTextContent(/^฿\s12\.54k$/);
+    expect(text('debt-balance').props.accessibilityLabel).toBe('12,540.00 บาท');
     await press('rp-undo-action');
     expect((await cashTick(farm.red)).done).toBe(false);
     expect(text('rp-card')).toBeTruthy();
@@ -216,7 +219,8 @@ describe('a worker\'s account (M2, M3, M5–M7, M9, P3 · PR-1, PR-2, PR-5–PR-
     expect(await cashTick(farm.red)).toMatchObject({ done: true, receivedSatang: 100_000, shortSatang: 225_000 });
     expect(screen.queryByTestId('rp-card')).toBeNull();
     expect(screen.getByText('คนซื้อค้างสวน 2,250.00 ›')).toBeTruthy();
-    expect(text('debt-balance')).toHaveTextContent('12,540.00');
+    expect(text('debt-balance')).toHaveTextContent(/^฿\s12\.54k$/);
+    expect(text('debt-balance').props.accessibilityLabel).toBe('12,540.00 บาท');
   });
 
   it('0 = not received at all; more than expected cannot be saved', async () => {

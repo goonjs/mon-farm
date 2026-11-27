@@ -467,7 +467,9 @@ describe('repayment (E11-S03)', () => {
   it('the owed page totals what is left per person', async () => {
     wrap(<OwedScreen />);
     await flush();
-    expect(screen.getByTestId(`owed-amount-${SOMWANG.id}`).props.children).toBe('200.00');
+    // A per-person summary line: short money, the exact amount spoken (owner rule 2026-10-31).
+    expect(screen.getByTestId(`owed-amount-${SOMWANG.id}`)).toHaveTextContent(/^฿\s200$/);
+    expect(screen.getByTestId(`owed-amount-${SOMWANG.id}`).props.accessibilityLabel).toBe('200.00 บาท');
   });
 
   it('"ลบการคืน" is a red underlined link under บันทึกการคืน, left-aligned, not a round button at the line end (owner 2026-11-07)', async () => {

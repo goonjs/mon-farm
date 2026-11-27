@@ -32,6 +32,7 @@ import {
   CalendarIcon,
   Card,
   CardLabel,
+  cardStyle,
   Check,
   ChevronRight,
   ChoiceTile,
@@ -54,6 +55,7 @@ import {
 import { V2_HOME } from '../routes';
 import { orderHref } from './order-routes';
 import { fertilizingHref } from '../care/fertilizing/routes';
+import { ExactSheet, MONEY_SLOT, withMoney, type ExactRow } from './exact-sheet';
 import { Day } from './pieces';
 import { PlanBadge, PlanCard, PlanSheet } from './debt-plan';
 import { maxInstallments } from '../../core/master';
@@ -102,13 +104,18 @@ export function DebtsScreen() {
                 <IconTile tone="category2" icon={() => <FarmMateArt id={personArt(master?.people.find((p) => p.id === a.worker.id)?.roles)} />} />
                 <View style={{ flex: 1, gap: 2 }}>
                   <AppText variant="heading" style={{ fontSize: t.font.size.bodyLg }}>{a.worker.name}</AppText>
+                  {/* A person's balance sums their account: a summary line (owner rule 2026-10-31). The account page opened by this row has the exact figure. */}
                   <FactRow icon={(c) => <DebtIcon color={c} size={14} />}>
-                    {a.balanceSatang < 0 ? `${msg('debt.farmOwes', { name: a.worker.name })} ${formatSatang(-a.balanceSatang)}` : msg('debt.list.owes', { amount: formatSatang(a.balanceSatang) })}
+                    {a.balanceSatang < 0
+                      ? withMoney(`${msg('debt.farmOwes', { name: a.worker.name })} ${MONEY_SLOT}`, <CompactMoney satang={-a.balanceSatang} pill />)
+                      : withMoney(msg('debt.list.owes', { amount: MONEY_SLOT }), <CompactMoney satang={a.balanceSatang} pill />)}
                   </FactRow>
                   {/* E06-S09 IP-17 */}
                   <PlanBadge account={a} events={fin.events ?? []} testID={`debt-plan-badge-${a.worker.id}`} />
                   {a.others.map((o) => (
-                    <FactRow key={o.lender.id} icon={(c) => <PersonIcon color={c} size={14} />}>{msg('v2m.otherLender', { name: o.lender.name, amount: formatSatang(o.balanceSatang) })}</FactRow>
+                    <FactRow key={o.lender.id} icon={(c) => <PersonIcon color={c} size={14} />}>
+                      {withMoney(msg('v2m.otherLender', { name: o.lender.name, amount: MONEY_SLOT }), <CompactMoney satang={o.balanceSatang} pill />)}
+                    </FactRow>
                   ))}
                   {a.overpaid ? <Text style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.reject }}>{msg('debt.flag')}</Text> : null}
                   <ListChip workerId={a.worker.id} lines={pending} />
@@ -180,6 +187,8 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
   const [filter, setFilter] = useState<Filter>('all');
   /** E06-S09 IP-19: the plan sheet (replaces the older inline per-sale editor). */
   const [planOpen, setPlanOpen] = useState(false);
+  /** The exact balance and other lenders behind the short figures (summary-lines skill §1). */
+  const [exactOpen, setExactOpen] = useState(false);
   const master = useMaster().state;
   const maxInst = master ? maxInstallments(master) : DEFAULT_MAX_INSTALLMENTS;
   // E06-S08: the repayment sheet and the undo bar (PR-5, PR-13).
@@ -205,6 +214,7 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
   };
   const planEvents = (fin.events ?? []).filter((e) => e.targetId === `plan-${worker.id}`);
   const balance = account?.balanceSatang ?? 0;
+  const balanceLabel = balance < 0 ? msg('debt.farmOwes', { name: worker.name }) : msg('debt.balance', { name: worker.name });
   const s = account?.summary;
 
   const savePlan = (payload: FinancePayload) =>
@@ -256,16 +266,21 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
     <>
     <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space[16] * 2 }}>
       <Card style={{ alignItems: 'stretch' }}>
-        <View style={{ alignItems: 'center', gap: 2 }}>
-          <AppText variant="bodySm">{balance < 0 ? msg('debt.farmOwes', { name: worker.name }) : msg('debt.balance', { name: worker.name })}</AppText>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.xs }}>
-            <Text testID="debt-balance" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayXl, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'], color: t.color.ink }}>
-              {formatSatang(Math.abs(balance))}
-            </Text>
-            <AppText>{msg('v2m.baht')}</AppText>
+        {/* A summary card: short money (owner rule 2026-10-31); the exact figures are one tap away (skill §1). */}
+        <Pressable
+          testID="debt-balance-card"
+          accessibilityRole="button"
+          accessibilityHint={msg('v2m.exact.open')}
+          onPress={() => setExactOpen(true)}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.min }}
+        >
+          <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+            <AppText variant="bodySm">{balanceLabel}</AppText>
+            <CompactMoney testID="debt-balance" satang={Math.abs(balance)} size="displayXl" pill />
+            {account?.overpaid ? <Text testID="debt-flag" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.reject }}>{msg('debt.flag')}</Text> : null}
           </View>
-          {account?.overpaid ? <Text testID="debt-flag" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.reject }}>{msg('debt.flag')}</Text> : null}
-        </View>
+          <ChevronRight color={t.color.inkSoft} size={12} />
+        </Pressable>
         {/* E06-S09 IP-18 / IP-20: the whole card opens the plan sheet (no round "แก้", rule 11) */}
         <PlanCard account={account} events={events} onOpen={() => setPlanOpen(true)} />
       </Card>
@@ -301,19 +316,32 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
         </Card>
       ) : null}
 
-      <Card>
-        <CardLabel>{msg('debt.others')}</CardLabel>
-        {account?.others.length ? (
-          account.others.map((o) => (
-            <View key={o.lender.id} testID={`debt-other-${o.lender.id}`} style={{ flexDirection: 'row' }}>
-              <AppText style={{ flex: 1 }}>{o.lender.name}</AppText>
-              <AppText style={{ fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{formatSatang(o.balanceSatang)}</AppText>
-            </View>
-          ))
-        ) : (
+      {account?.others.length ? (
+        // A summary card, one lender per line: short money; the tap opens the exact figures (skill §1).
+        <Pressable
+          testID="debt-others-card"
+          accessibilityRole="button"
+          accessibilityHint={msg('v2m.exact.open')}
+          onPress={() => setExactOpen(true)}
+          style={{ ...cardStyle(t), padding: t.space.lg, flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.min }}
+        >
+          <View style={{ flex: 1, gap: t.space.xs }}>
+            <CardLabel>{msg('debt.others')}</CardLabel>
+            {account.others.map((o) => (
+              <View key={o.lender.id} testID={`debt-other-${o.lender.id}`} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
+                <AppText style={{ flex: 1 }}>{o.lender.name}</AppText>
+                <CompactMoney testID={`debt-other-${o.lender.id}-amount`} satang={o.balanceSatang} pill />
+              </View>
+            ))}
+          </View>
+          <ChevronRight color={t.color.inkSoft} size={12} />
+        </Pressable>
+      ) : (
+        <Card>
+          <CardLabel>{msg('debt.others')}</CardLabel>
           <AppText variant="bodySm">{msg('v2m.noOthers', { name: worker.name })}</AppText>
-        )}
-      </Card>
+        </Card>
+      )}
 
       <CardLabel>{msg('debt.history')}</CardLabel>
       {/* E01-S26 PS26-2: F, 2 a row, pick one (owner answer ข). */}
@@ -397,6 +425,15 @@ function Account({ account, worker, fin }: { account: DebtAccount | undefined; w
       ) : null}
     </ScrollView>
     {undo ? <UndoBar undo={undo} events={events} write={fin.write} onGone={clearUndo} /> : null}
+    <ExactSheet
+      testID="debt-exact-sheet"
+      open={exactOpen}
+      onClose={() => setExactOpen(false)}
+      rows={[
+        { testID: 'debt-exact-balance', label: balanceLabel, satang: Math.abs(balance) },
+        ...(account?.others ?? []).map((o, i): ExactRow => ({ testID: `debt-exact-other-${o.lender.id}`, label: o.lender.name, satang: o.balanceSatang, section: i ? undefined : msg('debt.others') })),
+      ]}
+    />
     {planOpen ? <PlanSheet account={account ?? emptyAccount(worker)} events={events} max={maxInst} busy={inFlight.busy} onSave={(p) => void savePlan(p)} onClose={() => setPlanOpen(false)} /> : null}
     {repay ? (
       <RepaySheet

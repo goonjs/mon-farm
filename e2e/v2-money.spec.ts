@@ -1,5 +1,10 @@
+import type { Locator } from '@playwright/test';
+
 import { expect, test, type Page } from './test';
 
+import type { MasterPayload } from '../src/core/types';
+import { FIXTURE_GROUP_ID } from '../src/core/fixtures';
+import type { FinanceEvent, FinancePayload } from '../src/core/finance/types';
 import { evidence, seedMaster, seedPeople } from './fixtures';
 import { smallTargets, textFit } from './text-fit';
 import { pickDate } from './pick-date';
@@ -108,7 +113,8 @@ test('v2 expenses, owed and repay — offline, end to end', async ({ page, conte
   await context.setOffline(false);
   await page.goto('/v2/owed');
   await context.setOffline(true);
-  await expect(page.getByTestId('owed-total')).toContainText('1,840.00');
+  await expect(page.getByTestId('owed-total')).toHaveText('฿\u00a01,840');
+  await expect(page.getByTestId('owed-total')).toHaveAttribute('aria-label', '1,840.00 บาท');
   await evidence(page, `${SHOTS}/20-owed.png`, { fullPage: true });
   await page.locator('[data-testid^="owed-open-"]').filter({ hasText: 'อาจารย์สมหวัง' }).click();
   await page.locator('[data-testid^="owed-repay-"]').click();
@@ -117,7 +123,8 @@ test('v2 expenses, owed and repay — offline, end to end', async ({ page, conte
   await expect(page.getByTestId('repay-save')).toContainText('300.00');
   await evidence(page, `${SHOTS}/21-repay.png`, { fullPage: true });
   await page.getByTestId('repay-save').click();
-  await expect(page.getByTestId('owed-total')).toContainText('1,540.00');
+  await expect(page.getByTestId('owed-total')).toHaveText('฿\u00a01,540');
+  await expect(page.getByTestId('owed-total')).toHaveAttribute('aria-label', '1,540.00 บาท');
 });
 
 test('v2 worker debts — fertilizer via the shop order, account reconciliation, pay back outside a sale (offline)', async ({ page, context }) => {
@@ -164,13 +171,15 @@ test('v2 worker debts — fertilizer via the shop order, account reconciliation,
   // Back to the order, then the tapper's account (the order replaced the add form): one fertilizing lump is there.
   await expect(page.getByTestId('ordd-back')).toBeVisible();
   await page.getByTestId('ordd-back').click();
-  await expect(page.getByTestId('debt-balance')).toContainText('2,000.00');
+  await expect(page.getByTestId('debt-balance')).toHaveText('฿\u00a02,000');
+  await expect(page.getByTestId('debt-balance')).toHaveAttribute('aria-label', '2,000.00 บาท');
   // Reloaded (the web build has no offline page cache, so the network is back for the page load only),
   // the lump is still there: it was written offline to the local log (E16-S03 e2e).
   await context.setOffline(false);
   await page.reload();
   await context.setOffline(true);
-  await expect(page.getByTestId('debt-balance')).toContainText('2,000.00');
+  await expect(page.getByTestId('debt-balance')).toHaveText('฿\u00a02,000');
+  await expect(page.getByTestId('debt-balance')).toHaveAttribute('aria-label', '2,000.00 บาท');
   await expect(page.locator('[data-testid^="debt-line-fz-"]')).toContainText('ใส่ปุ๋ย');
 
   await page.getByTestId('debt-add').click();
@@ -179,7 +188,8 @@ test('v2 worker debts — fertilizer via the shop order, account reconciliation,
   await pickDate(page, 'debt-date', '2026-09-10');
   await page.getByTestId('debt-save').click();
 
-  await expect(page.getByTestId('debt-balance')).toContainText('5,000.00');
+  await expect(page.getByTestId('debt-balance')).toHaveText('฿\u00a05,000');
+  await expect(page.getByTestId('debt-balance')).toHaveAttribute('aria-label', '5,000.00 บาท');
   await expect(page.getByTestId('debt-summary-balance')).toContainText('5,000.00');
   await evidence(page, `${SHOTS}/22-debt-account.png`, { fullPage: true });
 
@@ -189,8 +199,147 @@ test('v2 worker debts — fertilizer via the shop order, account reconciliation,
   await expect(page.getByTestId('debt-pay-after')).toContainText('4,500.00');
   await evidence(page, `${SHOTS}/24-debt-pay.png`, { fullPage: true });
   await page.getByTestId('debt-pay-save').click();
-  await expect(page.getByTestId('debt-balance')).toContainText('4,500.00');
+  await expect(page.getByTestId('debt-balance')).toHaveText('฿\u00a04,500');
+  await expect(page.getByTestId('debt-balance')).toHaveAttribute('aria-label', '4,500.00 บาท');
 });
+
+/**
+ * Summary cards and lines (owner rule 2026-10-31, skill summary-lines §1) on
+ * the real web build, at 320 px text L and 390 px text M: short money with ฿
+ * on the digits' line, the exact amount spoken and one tap away, and nothing
+ * clipped. Follows PR 251 for the cards it listed as not covered.
+ * Screenshots: SHOT_TAG=before (run on dev) or after (default).
+ */
+
+const SC_DIR = 'docs/ux/screenshots/summary-cards-compact';
+const SC_TAG = process.env.SHOT_TAG ?? 'after';
+
+const SC_RED = { id: 'red', name: 'แดง' };
+const SC_FARM = { id: 'farm', name: 'เงินสวน' };
+const SC_AUNT = { id: 'aunt', name: 'ป้าแก้ว' };
+const SC_SOM = { id: 'som', name: 'อาจารย์สมหวัง' };
+const SC_NAT = { id: 'nat', name: 'นัด' };
+const SC_MASTER: MasterPayload[] = [
+  { t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] },
+  { t: 'person_added', personId: 'nat', name: 'นัด', roles: ['tapper'], otherRoles: [] },
+];
+const scFin = (n: number, targetId: string, payload: FinancePayload): FinanceEvent => ({
+  id: `e2e-sc-${n}`,
+  groupId: FIXTURE_GROUP_ID,
+  deviceSeq: n,
+  ts: Date.now(),
+  actor: { userId: 'pre-login', deviceId: 'dev-seed' },
+  source: 'app',
+  targetId,
+  baseEventId: null,
+  payload,
+});
+const scOwes = (amountSatang: number, payer: typeof SC_SOM): FinancePayload => ({ t: 'expense_created', fields: { amountSatang, date: '2026-10-25', stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าปุ๋ย', note: '', payer } });
+const scLoan = (amountSatang: number, lender: typeof SC_AUNT): FinancePayload => ({ t: 'debt_added', fields: { worker: SC_RED, kind: 'loan', amountSatang, date: '2026-10-01', note: '', lender, fertilizer: null, carriedForward: false } });
+
+async function seedSummary(page: Page, width: number, size: 'l' | 'm') {
+  await page.setViewportSize({ width, height: 844 });
+  await seedMaster(page, SC_MASTER);
+  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [
+    scFin(1, 'x-som', scOwes(1_254_000, SC_SOM)),
+    scFin(2, 'x-nat', scOwes(64_050, SC_NAT)),
+    scFin(3, 'd-red', scLoan(1_254_050, SC_FARM)),
+    scFin(4, 'd-red-aunt', scLoan(325_050, SC_AUNT)),
+    scFin(5, 'plan-red', { t: 'debt_plan_set', worker: SC_RED, perSaleSatang: 426_750 }),
+  ]);
+  await page.evaluate((s) => localStorage.setItem('mon-farm:text-size', s), size);
+}
+
+/** ฿ never wraps away from its digits: the short figure is one line. */
+async function oneLineFig(fig: Locator, what: string) {
+  const [box, fontSize] = await Promise.all([fig.boundingBox(), fig.evaluate((e) => parseFloat(getComputedStyle(e).fontSize))]);
+  expect(box!.height, `${what} is one line`).toBeLessThan(fontSize * 2);
+}
+
+for (const [width, size] of [[320, 'l'], [390, 'm']] as const) {
+  test(`summary cards: short money, exact one tap away, nothing clipped, at ${width} px text ${size.toUpperCase()}`, async ({ page }) => {
+    const id = (testID: string) => page.getByTestId(testID).filter({ visible: true });
+    const shot = (name: string) => evidence(page, `${SC_DIR}/${width}-${size}-${name}-${SC_TAG}.png`, { fullPage: true });
+    await seedSummary(page, width, size);
+
+    // Home: the "owed" card.
+    await page.goto('/v2');
+    await expect(id('home-owed')).toBeVisible();
+    await shot('home');
+    await expect(id('home-owed-amount')).toHaveText('฿\u00a013.18k');
+    await expect(id('home-owed-amount')).toHaveAttribute('aria-label', '13,180.50 บาท');
+    await expect(id('home-owed')).not.toContainText('13,180.50');
+    await oneLineFig(id('home-owed-amount'), 'home-owed figure');
+    expect(await textFit(page)).toEqual([]);
+
+    // The owed page: the total card, its exact sheet, what is left per person.
+    await page.goto('/v2/owed');
+    await expect(id('owed-total')).toBeVisible();
+    await shot('owed');
+    await expect(id('owed-total')).toHaveText('฿\u00a013.18k');
+    await expect(id('owed-total')).toHaveAttribute('aria-label', '13,180.50 บาท');
+    await expect(id('owed-amount-som')).toHaveText('฿\u00a012.54k');
+    await expect(id('owed-amount-nat')).toHaveText('฿\u00a0640.5');
+    await oneLineFig(id('owed-total'), 'owed-total');
+    await oneLineFig(id('owed-amount-som'), 'owed-amount-som');
+    expect(await textFit(page)).toEqual([]);
+    expect((await id('owed-total-card').boundingBox())!.height).toBeGreaterThanOrEqual(48);
+    await id('owed-total-card').click();
+    await expect(id('owed-exact-total')).toContainText('13,180.50 บาท');
+    await expect(id('owed-exact-som')).toContainText('12,540.00 บาท');
+    await expect(id('owed-exact-nat')).toContainText('640.50 บาท');
+    const close = (await id('owed-exact-sheet-close').boundingBox())!;
+    expect(Math.min(close.width, close.height)).toBeGreaterThanOrEqual(48);
+    expect(await textFit(page)).toEqual([]);
+    await shot('owed-sheet');
+    await page.keyboard.press('Escape');
+    await expect(id('owed-exact-sheet')).toBeHidden();
+    await id('owed-open-som').click();
+    await expect(id('owed-left-som')).toHaveText('ยอดเต็ม 12,540.00 บาท');
+    expect(await textFit(page)).toEqual([]);
+
+    // The debt list: the balance per worker and per other lender.
+    await page.goto('/v2/debts');
+    await expect(id('debt-account-red')).toBeVisible();
+    await shot('debts');
+    await expect(id('debt-account-red')).toContainText('หนี้ที่ติดสวน ฿\u00a012.54k');
+    await expect(id('debt-account-red')).toContainText('ยืม ป้าแก้ว ฿\u00a03,251');
+    await expect(id('debt-account-red').getByLabel('12,540.50 บาท')).toBeVisible();
+    await expect(id('debt-account-red').getByLabel('3,250.50 บาท')).toBeVisible();
+    expect(await textFit(page)).toEqual([]);
+
+    // The account: the balance card and its exact sheet, the other lenders, the per-sale plan.
+    await id('debt-account-red').click();
+    await expect(id('debt-balance')).toBeVisible();
+    await shot('debt-account');
+    await expect(id('debt-balance')).toHaveText('฿\u00a012.54k');
+    await expect(id('debt-balance')).toHaveAttribute('aria-label', '12,540.50 บาท');
+    await oneLineFig(id('debt-balance'), 'debt-balance');
+    await expect(id('debt-other-aunt-amount')).toHaveText('฿\u00a03,251');
+    await expect(id('debt-plan')).toContainText('฿\u00a04,268 / การขาย');
+    await expect(id('debt-summary-balance')).toHaveText('12,540.50');
+    expect(await textFit(page)).toEqual([]);
+    await id('debt-balance-card').click();
+    await expect(id('debt-exact-balance')).toContainText('12,540.50 บาท');
+    await expect(id('debt-exact-other-aunt')).toContainText('3,250.50 บาท');
+    expect(await textFit(page)).toEqual([]);
+    await shot('debt-sheet');
+    await id('debt-exact-sheet-close').click();
+    await expect(id('debt-exact-sheet')).toBeHidden();
+    await id('debt-others-card').click();
+    await expect(id('debt-exact-sheet')).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    // A person's page: the debt line and the plan line.
+    await page.goto('/v2/person/red');
+    await expect(id('debt-summary')).toBeVisible();
+    await shot('person');
+    await expect(id('debt-summary')).toContainText('หนี้ที่ติดสวน ฿\u00a012.54k');
+    await expect(id('debt-summary')).toContainText('ผ่อน ฿\u00a04,268 / การขาย');
+    await expect(id('debt-summary').getByLabel('4,267.50 บาท')).toBeVisible();
+    expect(await textFit(page)).toEqual([]);
+  });
+}
 
 test('a saved fertilizer never bought: picking it fills its name, one tap puts it on the order (offline)', async ({ page, context }) => {
   await page.goto('/v2/order');

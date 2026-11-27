@@ -19,10 +19,11 @@ import { useFinance } from '../../finance/use-finance';
 import { useT } from '../../i18n';
 import { useSyncStatus } from '../../sync/use-sync-status';
 import { useTheme } from '../../theme';
-import { AppText, Button, CalendarIcon, Card, Check, ChevronRight, CTA, FactRow, FarmMateArt, type FarmMateArtId, IconTile, PersonIcon, PinnedActions, personArt, ReceiptIcon, ScreenHeader, TextLink } from '../../ui';
+import { AppText, Button, CalendarIcon, Card, cardStyle, Check, ChevronRight, CompactMoney, CTA, FactRow, FarmMateArt, type FarmMateArtId, IconTile, PersonIcon, PinnedActions, personArt, ReceiptIcon, ScreenHeader, TextLink } from '../../ui';
 import { useMaster } from '../farm/pieces';
 import { V2_HOME } from '../routes';
 import { HalfDot } from './expenses-screen';
+import { ExactSheet } from './exact-sheet';
 import { Day } from './pieces';
 
 export function OwedScreen() {
@@ -36,6 +37,7 @@ export function OwedScreen() {
   const people = (owed ?? []).filter((o) => o.remainingSatang > 0).length;
   const items = (owed ?? []).reduce((s, o) => s + o.items.filter((i) => i.remainingSatang > 0).length, 0);
   const firstOwed = (owed ?? []).find((o) => o.remainingSatang > 0);
+  const [exactOpen, setExactOpen] = useState(false);
 
   const setDeleted = async (r: Repayment, deleted: boolean) => {
     await fin.write(r.id, r.headEventId, { t: 'repayment_changed', patch: { deleted } });
@@ -45,17 +47,22 @@ export function OwedScreen() {
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
       <ScreenHeader title={msg('fin.list.owed')} subtitle={msg('v2.owed')} back={{ label: msg('v2.back'), href: V2_HOME, testID: 'owed-back' }} sync={sync} />
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space[16] * 2 }}>
-        <Card style={{ alignItems: 'center' }}>
-          <AppText variant="bodySm">{msg('fin.owed.total')}</AppText>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.xs }}>
-            <Text testID="owed-total" style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.displayXl, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'], color: t.color.ink }}>
-              {formatSatang(total)}
-            </Text>
-            <AppText>{msg('v2m.baht')}</AppText>
+        {/* A summary card: short money (owner rule 2026-10-31); the exact amounts are one tap away (skill §1). */}
+        <Pressable
+          testID="owed-total-card"
+          accessibilityRole="button"
+          accessibilityHint={msg('v2m.exact.open')}
+          onPress={() => setExactOpen(true)}
+          style={{ ...cardStyle(t), padding: t.space.lg, flexDirection: 'row', alignItems: 'center', gap: t.space.sm, minHeight: t.target.min }}
+        >
+          <View style={{ flex: 1, alignItems: 'center', gap: t.space.xs }}>
+            <AppText variant="bodySm">{msg('fin.owed.total')}</AppText>
+            <CompactMoney testID="owed-total" satang={total} size="displayXl" pill />
+            <FactRow icon={(c) => <PersonIcon color={c} size={14} />}>{msg('v2m.people', { n: people })}</FactRow>
+            <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>{msg('fin.list.count', { n: items })}</FactRow>
           </View>
-          <FactRow icon={(c) => <PersonIcon color={c} size={14} />}>{msg('v2m.people', { n: people })}</FactRow>
-          <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>{msg('fin.list.count', { n: items })}</FactRow>
-        </Card>
+          <ChevronRight color={t.color.inkSoft} size={12} />
+        </Pressable>
 
         {owed === null ? (
           <AppText variant="bodySm">{msg('counter.loading')}</AppText>
@@ -92,6 +99,15 @@ export function OwedScreen() {
           <AppText variant="bodySm">{msg('fin.owed.loanNote')}</AppText>
         </Card>
       </ScrollView>
+      <ExactSheet
+        testID="owed-exact-sheet"
+        open={exactOpen}
+        onClose={() => setExactOpen(false)}
+        rows={[
+          { testID: 'owed-exact-total', label: msg('fin.owed.total'), satang: total },
+          ...(owed ?? []).filter((o) => o.remainingSatang > 0).map((o) => ({ testID: `owed-exact-${o.payer.id}`, label: o.payer.name, satang: o.remainingSatang })),
+        ]}
+      />
       <PinnedActions>
         <CTA
           testID="owed-repay"
@@ -148,14 +164,14 @@ function Person({
           {atSale ? <FactRow icon={(c) => <ReceiptIcon color={c} size={14} />}>{msg('v2m.nettedAtSale', { date: formatDate(atSale.date) })}</FactRow> : null}
           {flagged ? <Text testID={`owed-flag-${o.payer.id}`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodySm, color: t.color.reject }}>{msg('fin.status.overpaid')}</Text> : null}
         </View>
-        <Text testID={`owed-amount-${o.payer.id}`} style={{ fontFamily: t.font.family.sans, fontSize: t.font.size.bodyLg, fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'], color: t.color.ink }}>
-          {formatSatang(o.remainingSatang)}
-        </Text>
+        {/* What is left for this person sums their items: a summary line (owner rule 2026-10-31). The exact figure is in the opened row. */}
+        <CompactMoney testID={`owed-amount-${o.payer.id}`} satang={o.remainingSatang} pill />
         <ChevronRight color={t.color.inkSoft} />
       </Pressable>
 
       {open ? (
         <View style={{ gap: t.space.sm, paddingLeft: t.target.min + t.space.md }}>
+          <AppText testID={`owed-left-${o.payer.id}`} style={{ fontWeight: t.font.weight.bold, fontVariant: ['tabular-nums'] }}>{msg('v2m.exact.line', { amount: formatSatang(o.remainingSatang) })}</AppText>
           {o.items.map((r) => (
             <View key={r.expenseId} style={{ gap: 2 }}>
               <Pressable testID={`owed-item-${r.expenseId}`} accessibilityRole="button" onPress={() => router.push({ pathname: '/v2/expense/[id]', params: { id: r.expenseId } })}>

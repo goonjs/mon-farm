@@ -340,7 +340,10 @@ describe('V2Home — live rows from the local log', () => {
     expect(art('home-owed')).toEqual(['finance.workerPay']);
     const owed = screen.getByTestId('home-owed');
     expect(within(owed).getByText('เงินที่สวนต้องคืน')).toBeTruthy();
-    expect(within(owed).getByText('1,200.00')).toBeTruthy();
+    // Summary card: short money, the exact amount spoken (owner rule 2026-10-31).
+    expect(screen.getByTestId('home-owed-amount')).toHaveTextContent(/^฿\s1,200$/);
+    expect(screen.getByTestId('home-owed-amount').props.accessibilityLabel).toBe('1,200.00 บาท');
+    expect(owed).not.toHaveTextContent(/1,200\.00/);
     expect(within(owed).getByText('อาจารย์สมหวัง')).toBeTruthy();
     expect(screen.queryByText('ยังไม่มีเรื่องที่ต้องรู้หรือจัดการ')).toBeNull();
 

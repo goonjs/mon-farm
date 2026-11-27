@@ -123,13 +123,15 @@ test('closed without the transfer ticked → waiting on the ledger and home → 
   await page.goto('/v2/debts');
   await expect(id('rp-list-sum-total')).toContainText('฿ 8,500');
   await expect(id('rp-list-chip-red')).toContainText('฿ 3,250');
-  await expect(id('debt-account-red')).toContainText('12,540.00');
+  await expect(id('debt-account-red')).toContainText('หนี้ที่ติดสวน ฿\u00a012.54k');
+  await expect(id('debt-account-red').getByLabel('12,540.00 บาท')).toBeVisible();
   await shot(page, 'm1-list');
   await measure('m1-list');
 
   // ── M3: นัด's account, the transfer waits; M5 the sheet with the whole transfer ──
   await id('debt-account-nat').click();
-  await expect(id('debt-balance')).toHaveText('3,100.00');
+  await expect(id('debt-balance')).toHaveText('฿\u00a03,100');
+  await expect(id('debt-balance')).toHaveAttribute('aria-label', '3,100.00 บาท');
   await expect(id('rp-row-sale-rp-transfer')).toContainText('รอคนซื้อโอน');
   await shot(page, 'm3-account');
   await measure('m3-account');
@@ -150,7 +152,8 @@ test('closed without the transfer ticked → waiting on the ledger and home → 
   await id('rp-amt-save').click();
   await expect(id('rp-card')).toHaveCount(0);
   await expect(id('rp-undo')).toContainText('ได้ 20,000.00');
-  await expect(id('debt-balance')).toHaveText('3,100.00');
+  await expect(id('debt-balance')).toHaveText('฿\u00a03,100');
+  await expect(id('debt-balance')).toHaveAttribute('aria-label', '3,100.00 บาท');
   await shot(page, 'p3-undo');
   await context.setOffline(false);
 

@@ -16,7 +16,6 @@ import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { projectDebts } from '../../core/finance/debts';
-import { formatSatang } from '../../core/finance/money';
 import {
   BUILTIN_ROLES,
   filterPeople,
@@ -43,6 +42,7 @@ import {
   ChoiceTile,
   Card,
   Check,
+  CompactMoney,
   FactRow,
   FarmIcon,
   FieldError,
@@ -63,6 +63,7 @@ import {
   RadioCard,
   ValueBox,
 } from '../../ui';
+import { MONEY_SLOT, withMoney } from '../money/exact-sheet';
 import {
   AddCTA,
   categoryTone,
@@ -487,9 +488,14 @@ function PersonDetail({ personId }: { personId: string }) {
               onPress={() => router.push(`/v2/debt/${person.id}` as Href)}
               leading={<IconTile tone="cream" icon={() => <FarmMateArt id="finance.otherCost" />} />}
             >
-              <FactRow icon={(c) => <MoneyInIcon color={c} size={12} />}>{msg('v2f.debtFarm', { amount: formatSatang(Math.max(0, debt.balanceSatang)) })}</FactRow>
+              {/* Summary lines (owner rule 2026-10-31): short money; this item opens the debt account, which has the exact figures. */}
+              <FactRow icon={(c) => <MoneyInIcon color={c} size={12} />}>
+                {withMoney(msg('v2f.debtFarm', { amount: MONEY_SLOT }), <CompactMoney satang={Math.max(0, debt.balanceSatang)} pill />)}
+              </FactRow>
               {debt.planPerSaleSatang ? (
-                <FactRow icon={(c) => <CalendarIcon color={c} size={12} />}>{msg('v2f.debtPlan', { amount: formatSatang(debt.planPerSaleSatang) })}</FactRow>
+                <FactRow icon={(c) => <CalendarIcon color={c} size={12} />}>
+                  {withMoney(msg('v2f.debtPlan', { amount: MONEY_SLOT }), <CompactMoney satang={debt.planPerSaleSatang} pill />)}
+                </FactRow>
               ) : null}
             </MenuItem>
           ) : null}
