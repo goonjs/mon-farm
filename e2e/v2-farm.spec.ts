@@ -364,6 +364,35 @@ for (const [width, size] of [
   });
 }
 
+// PS26-9, the other side: at 320 px text S, ทุกคน and two short names fit the bar on one line each, so it stays B.
+test('basket list at 320 px text S: short tapper names keep the B bar (PS26-9)', async ({ page }) => {
+  const id = on(page);
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.addInitScript(() => localStorage.setItem('mon-farm:text-size', 's'));
+  await seedMaster(page, [
+    { t: 'person_added', personId: 'red', name: 'แดง', roles: ['tapper'], otherRoles: [] },
+    { t: 'person_added', personId: 'nat', name: 'นัด', roles: ['tapper'], otherRoles: [] },
+    { t: 'property_added', propertyId: 'fa', name: 'จันทเขลม', crop: 'rubber' },
+    { t: 'point_added', pointId: 'a4', propertyId: 'fa', name: 'จุด 4' },
+    { t: 'point_added', pointId: 'a5', propertyId: 'fa', name: 'จุด 5' },
+    { t: 'tapper_assigned', assignmentId: 's4', pointId: 'a4', tapperId: 'nat' },
+    { t: 'tapper_assigned', assignmentId: 's5', pointId: 'a5', tapperId: 'red' },
+  ]);
+  const b = new LogBuilder('hist-short');
+  b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+  for (const p of ['a4', 'a5']) b.sys({ t: 'pile_added', pileId: p, zoneId: 'fa', name: p, tareG: 2_000, stdNetG: 50_000 });
+  b.acceptAt('a4', 1).acceptAt('a5', 1);
+  await seedEvents(page, b.build().map((e) => ({ ...e, ts: Date.now() })));
+  await page.goto('/v2/sale/hist-short/history?point=a4');
+  await expect(id('hist-kind')).toBeVisible();
+  await expect(id('hist-tapper')).toHaveAttribute('role', 'radiogroup');
+  // Laid out and still B: the bar did not report a wrap after layout.
+  await page.waitForTimeout(500);
+  await expect(id('hist-tapper-all')).toBeVisible();
+  await expect(id('hist-tapper-red')).toBeVisible();
+  await expect(id('hist-tapper-nat')).toBeVisible();
+});
+
 /**
  * E01-S26 (choice tiles per screen) on the real build, offline: at 320 px with
  * text L nothing is cut, nothing sticks out and every target is ≥ 48 (PS26-12)

@@ -11,8 +11,9 @@ import { useT } from '../i18n';
 import { useTheme } from '../theme';
 import { Check } from './icons';
 
-/** Web only: how many lines a laid-out text element runs to (one client rect per line box). */
-function webLines(el: Element): number {
+/** Web only: how many lines a laid-out text element runs to (one client rect per line box); 0 when there is no element to read. */
+function webLines(el: unknown): number {
+  if (typeof Element === 'undefined' || !(el instanceof Element)) return 0;
   const range = document.createRange();
   range.selectNodeContents(el);
   return new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top))).size;
@@ -71,7 +72,7 @@ export function SegmentedControl<T extends string>({
             <Text
               onTextLayout={onWrap ? (e) => { if (e.nativeEvent.lines.length > 1) onWrap(); } : undefined}
               // react-native-web never calls onTextLayout; there the lines are counted from the DOM after layout.
-              onLayout={onWrap && Platform.OS === 'web' ? (e) => { if (webLines((e.nativeEvent as unknown as { target: Element }).target) > 1) onWrap(); } : undefined}
+              onLayout={onWrap && Platform.OS === 'web' ? (e) => { if (webLines((e.nativeEvent as { target?: unknown }).target) > 1) onWrap(); } : undefined}
               style={{
                 fontFamily: t.font.family.sans,
                 fontSize: t.font.size.bodyMd,
