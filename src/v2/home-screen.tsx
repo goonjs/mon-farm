@@ -155,6 +155,9 @@ export function V2Home() {
 
   const saleLine = useSaleLineText();
 
+  // A row that shows money amounts is built through `money(...)`: below the group minimum it is not built
+  // at all, and one update line stands in for all of them (E01-S28 AC12 ก, review UI N4).
+  const money = <T,>(row: T): T | null => (moneyBelowMin ? null : row);
   const knowRows = [
     sales?.open ? (
       <KnowRow
@@ -182,7 +185,7 @@ export function V2Home() {
         to={saleHref(sales.latest.id, { closed: true, point: sales.latest.point })}
       />
     ) : null,
-    owedTotal > 0 ? (
+    owedTotal > 0 ? money(
       <KnowRow
         key="owed"
         testID="home-owed"
@@ -199,15 +202,15 @@ export function V2Home() {
         <FactRow icon={(c) => <PersonIcon color={c} size={13} />}>
           {owed.length === 1 ? owed[0].payer.name : msg('v2m.people', { n: owed.length })}
         </FactRow>
-      </KnowRow>
+      </KnowRow>,
     ) : null,
-    shopOwed > 0 ? (
+    shopOwed > 0 ? money(
       // E16-S05 HM-3: what is still to pay, short money; the "ไปที่" tile is a way in only.
       <KnowRow key="payables" testID="home-payables" tone="cream" icon={() => <FarmMateArt id="finance.expense" />} label={msg('v2.payables')} why={msg('home.why.payables')} to={href('payables')}>
         <SumLine testID="home-payables-sum">
           <CompactMoney satang={shopOwed} />
         </SumLine>
-      </KnowRow>
+      </KnowRow>,
     ) : null,
     committedNewest ? (
       <KnowRow
@@ -220,7 +223,7 @@ export function V2Home() {
         to={orderHref(committedNewest.orderId)}
       />
     ) : null,
-    repay.waiting.length ? (
+    repay.waiting.length ? money(
       <KnowRow
         key="repay-wait"
         testID="home-repay-wait"
@@ -245,20 +248,15 @@ export function V2Home() {
           {`Σ ${msg('rp.home.sum')} `}
           <CompactMoney satang={repay.waitTotal} />
         </SumLine>
-      </KnowRow>
+      </KnowRow>,
     ) : null,
-    ...repay.owes.map((o) => <OwesKnowRow key={`owes-${o.saleId}`} o={o} />),
+    ...repay.owes.map((o) => money(<OwesKnowRow key={`owes-${o.saleId}`} o={o} />)),
+    moneyBelowMin ? (
+      <View key="money-update" style={{ minHeight: t.target.min, justifyContent: 'center', paddingVertical: t.space.sm }}>
+        <MoneyUpdateNotice testID="home-money-update" />
+      </View>
+    ) : null,
   ].filter((r) => r !== null);
-  // Which rows show money amounts: on a build below the group minimum they are replaced by one notice.
-  const MONEY_ROWS = new Set(['owed', 'payables', 'repay-wait']);
-  const shownRows = moneyBelowMin
-    ? [
-        ...knowRows.filter((r) => !MONEY_ROWS.has(String(r.key)) && !String(r.key).startsWith('owes-')),
-        <View key="money-update" style={{ minHeight: t.target.min, justifyContent: 'center', paddingVertical: t.space.sm }}>
-          <MoneyUpdateNotice testID="home-money-update" />
-        </View>,
-      ]
-    : knowRows;
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
@@ -308,10 +306,10 @@ export function V2Home() {
 
         <Heading hint={msg('home.importantFirst')}>{msg('v2.toKnow')}</Heading>
         <View testID="home-to-know" style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
-          {shownRows.length === 0 ? (
+          {knowRows.length === 0 ? (
             <Text style={{ ...body(t), color: t.color.inkSoft, paddingVertical: t.space.md }}>{msg('home.nothingToKnow')}</Text>
           ) : (
-            shownRows.map((row, i) => (
+            knowRows.map((row, i) => (
               <View key={i} style={i > 0 ? { borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint } : undefined}>
                 {row}
               </View>

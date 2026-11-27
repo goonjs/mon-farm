@@ -21,6 +21,7 @@ import { View } from 'react-native';
 
 import { appBelowMin, FINANCE_SCOPE } from '../../core/finance-scope';
 import { useT } from '../../i18n';
+import { sessionScope } from '../../store/session';
 import { store } from '../../store/store';
 import { onSyncChanged } from '../../sync/changed';
 import { AppText } from '../../ui';
@@ -33,7 +34,8 @@ export function useAppBelowMin(): boolean | null {
     let live = true;
     const read = () =>
       store.load(FINANCE_SCOPE).then(
-        (events) => live && setBelow(appBelowMin(events)),
+        // The open group's minimum only: another group's never closes this one's money (review N6).
+        (events) => live && setBelow(appBelowMin(events.filter((e) => e.groupId === (sessionScope()?.groupId ?? e.groupId)))),
         (err) => {
           console.error('The app minimum could not be read.', err);
           if (live) setBelow(false);
