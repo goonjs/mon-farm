@@ -2,6 +2,7 @@ import { expect, test, type Page } from './test';
 
 import { evidence, seedMaster, seedPeople } from './fixtures';
 import { smallTargets, textFit } from './text-fit';
+import { tileSpill } from './tile-spill';
 import { pickDate } from './pick-date';
 
 /**
@@ -464,12 +465,14 @@ for (const width of [320, 360, 390]) {
       await page.goto('/v2/expense/new');
       await expect(page.getByTestId('expense-details')).toBeVisible();
       await checkChoiceFit(page);
+      expect(await tileSpill(page), 'every tile holds its text').toEqual([]);
       await page.getByTestId('expense-details').click();
       await page.getByTestId('expense-stage-planned').click();
       await page.getByTestId('expense-farm-fb').click();
       await expect(page.getByTestId('expense-farm-fb')).toHaveAttribute('aria-selected', 'true');
       await expect(page.getByTestId('expense-stage')).toBeVisible();
       await checkChoiceFit(page);
+      expect(await tileSpill(page), 'every tile holds its text').toEqual([]);
     });
   }
 }
