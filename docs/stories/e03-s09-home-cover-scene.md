@@ -1,7 +1,7 @@
 # Story E03-S09: ภาพปกหน้าแรก สวนยางตามเวลาจริง
 
 Status: Review (code merged #143, b322fd8, 2026-11-02; missing: วัด frame rate และแบตบน Android จริง · ปัดแนวตั้งบนจอสัมผัสจริง) — เดิม: (เจ้าของเลือกทิศทางผ่านลีด 2026-11-02, ลีดรับ AC แล้ว)
-เงื่อนไขไปขั้นถัดไป: วัด frame rate และแบตบนโทรศัพท์ Android จริง และลองปัดแนวตั้งบนจอสัมผัสจริง (CS-3, CS-5) · CS-8 ตรวจที่ S/M/L บน build แล้วติ๊ก → Done · ใคร: เจ้าของหรือทีม dev ที่มีเครื่อง Android กับ APK (E01-S06) · รอ: คนที่มีเครื่อง Android · PR #143 ไม่มีรีวิวบน GitHub (รีวิวอิสระอยู่ในหัวข้อ Code review)
+เงื่อนไขไปขั้นถัดไป: (1) วัด frame rate และแบตบนโทรศัพท์ Android จริง และลองปัดแนวตั้งบนจอสัมผัสจริง (CS-3, CS-5) — ใคร: เจ้าของหรือทีม dev ที่มีเครื่อง Android กับ APK (E01-S06) (2) CS-8 ตรวจที่ S/M/L 390×844 บน build และข้อ Playwright 6 ช่วงเวลาใน Test plan — ใคร: ทีม dev (ไม่ต้องใช้เครื่อง Android) → Done · รอ: คนที่มีเครื่อง Android และทีม dev · PR #143 ไม่มีรีวิวบน GitHub (รีวิวอิสระอยู่ในหัวข้อ Code review)
 
 ## Context
 
@@ -91,6 +91,6 @@ N/A — ไม่มีข้อมูลหรือเครือข่าย
 
 ## QA notes
 
-- ตรวจเอกสาร 2026-11-27: ตรวจเอกสาร 2026-11-27 (worktree บน dev `a18db4e` หลัง `npm ci`): vitest 1559/1559 · jest 98 suites 1324/1324 · `build:web` + Playwright phone-portrait 157 ผ่าน 5 ข้าม (ชุด emulator) 0 ล้ม (รวม `src/core/cover-sky.test.ts`, `cover-scene.test.ts`, `src/v2/home-cover/home-cover.test.tsx`, `home-cover-fallback.test.tsx`, `src/__tests__/v2-home.test.tsx:109`)
+- ตรวจเอกสาร 2026-11-27 (worktree บน dev `a18db4e` หลัง `npm ci`): vitest 1559/1559 · jest 98 suites 1324/1324 · `build:web` + Playwright phone-portrait 157 ผ่าน 5 ข้าม (ชุด emulator) 0 ล้ม (รวม `src/core/cover-sky.test.ts`, `cover-scene.test.ts`, `src/v2/home-cover/home-cover.test.tsx`, `home-cover-fallback.test.tsx`, `src/__tests__/v2-home.test.tsx:109`)
 - ติ๊กจากเทสต์/โค้ด/ภาพที่ดูเอง: CS-1 `cover-scene.test.ts:8`, `home-cover.test.tsx:58` + ภาพ `cover-6-night.png` (ต้นยางมีรอยกรีดและถ้วย ลำธารคดเคี้ยว พระจันทร์ ดาว เมฆ) · CS-2 `cover-sky.test.ts:20/42/67`, `home-cover.test.tsx:51` · CS-4 `cover-sky.test.ts:104`, `home-cover.test.tsx:88` · CS-6 ไม่มี `http`/`require(`/`uri` ใน `src/v2/home-cover/` และ `src/core/cover-*.ts` (วาดด้วย svg ในโค้ด) · CS-7 `home-cover-fallback.test.tsx:13` · CS-9 `home-cover.test.tsx:58`, `:99`
 - ยังไม่ติ๊ก: CS-3 และ CS-5 (มีเทสต์ jest `home-cover.test.tsx:65/76/106/122/129/136/152` แต่ AC ขอการปัดแนวตั้งและการประหยัดแบตบนเครื่องจริง ซึ่งยังไม่ได้วัด) · CS-8 (มีภาพ `home-text-l.png` ที่ L แต่ไม่ได้ตรวจ S/M ในรอบนี้) · Playwright 6 ช่วงเวลาเป็นการรันมือของผู้ทำ ไม่อยู่ใน e2e

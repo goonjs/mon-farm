@@ -27,7 +27,7 @@ PR CI and per-PR channels on `mon-farm-dev` are unchanged.
       `prod` (same not-found fallback and cache headers). — `.firebaserc:10` `"preview": ["mon-farm-preview"]`, `firebase.json:112` target `preview` (public `dist`, same headers and `/+not-found.html` rewrite as `dev`/`prod`, checked 2026-11-27); `scripts/deploy.test.ts:203`
 - [x] `scripts/deploy.sh preview-site` deploys `hosting:preview` with the generated
       dynamic-route config, and fails closed like the other modes (no `dist/`, no
-      CI credential, firebase error). — `scripts/deploy.sh:70-71`; `scripts/deploy.test.ts:123-138` (deploys `hosting:preview`, fails with no `dist/`, fails in CI with no credential)
+      CI credential, firebase error). — `scripts/deploy.sh:70-71`; `scripts/deploy.test.ts:123-138` (deploys `hosting:preview`, fails with no `dist/`, fails in CI with no credential); a firebase error fails it through `set -euo pipefail` (`scripts/deploy.sh:18`) — no `preview-site` test with a firebase error yet (only `prod`, `deploy.test.ts:87`; a later code PR)
 - [x] Workflow `Deploy Preview Site` runs only by `workflow_dispatch` with a
       required `pr` number. It refuses a PR that is closed or comes from a fork,
       checks out that PR's head commit, builds web with the real public config
