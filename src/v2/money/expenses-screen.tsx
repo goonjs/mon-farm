@@ -40,6 +40,7 @@ import {
   ReceiptIcon,
   ScreenHeader,
   ChoiceTile,
+  CompactMoney,
   TextLink,
   TileGrid,
   ValueBox,
@@ -204,7 +205,7 @@ export function ExpensesScreen() {
               <UnknownPill />
             ) : (
               <>
-                <Amount satang={totals.planned.knownSatang} />
+                <CompactMoney satang={totals.planned.knownSatang} />
                 {totals.planned.unknownCount ? <AppText variant="caption">{`+ ${msg('fin.total.unknown', { n: totals.planned.unknownCount })}`}</AppText> : null}
               </>
             )}
@@ -299,12 +300,13 @@ function Amount({ satang, testID }: { satang: number; testID?: string }) {
   );
 }
 
+/** A totals line is a summary line: short money, the unit stressed (owner rule 2026-10-31). */
 function TotalLine({ label, satang, testID }: { label: string; satang: number; testID: string }) {
   const t = useTheme();
   return (
     <View testID={testID} style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.sm }}>
       <AppText style={{ flex: 1 }}>{label}</AppText>
-      <Amount satang={satang} />
+      <CompactMoney satang={satang} />
     </View>
   );
 }

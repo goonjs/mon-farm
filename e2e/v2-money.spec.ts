@@ -87,8 +87,10 @@ test('v2 expenses, owed and repay — offline, end to end', async ({ page, conte
   await closePayer(page);
   await page.getByTestId('expense-save').click();
 
-  await expect(page.getByTestId('total-actual')).toContainText('1,840.00');
-  await expect(page.getByTestId('total-committed')).toContainText('15,000.00');
+  // Summary lines are short money (owner rule 2026-10-31): 1,840 → ฿ 1,840, 15,000 → ฿ 15.00k.
+  await expect(page.getByTestId('total-actual')).toContainText('฿ 1,840');
+  await expect(page.getByTestId('total-actual')).not.toContainText('1,840.00');
+  await expect(page.getByTestId('total-committed')).toContainText('฿ 15.00k');
   await expect(page.getByTestId('total-planned')).toContainText('ไม่ทราบ');
   await evidence(page, `${SHOTS}/19-expense-list.png`, { fullPage: true });
 
