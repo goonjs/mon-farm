@@ -3,7 +3,7 @@ import { expect, test, type Page } from './test';
 import type { MasterPayload } from '../src/core/types';
 import { FIXTURE_GROUP_ID, LogBuilder } from '../src/core/fixtures';
 import type { FinanceEvent, FinancePayload } from '../src/core/finance/types';
-import { seedEvents, seedMaster } from './fixtures';
+import { seedEvents, seedFinance, seedMaster } from './fixtures';
 import { textFit } from './text-fit';
 
 /**
@@ -66,7 +66,7 @@ async function seed(page: Page) {
     finEvent(3, 'x-own', owes({ id: 'own', name: 'เจ้าของสวน' }, 80_000)),
     finEvent(4, 'd-red', { t: 'debt_added', fields: { worker: { id: 'red', name: 'แดง' }, kind: 'loan', amountSatang: 300_000, date: '2026-10-01', note: '', lender: null, fertilizer: null, carriedForward: false } }),
   ];
-  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), events);
+  await seedFinance(page, events);
 }
 
 interface ArtReading {

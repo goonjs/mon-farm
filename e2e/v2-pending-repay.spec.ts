@@ -3,7 +3,7 @@ import { expect, test, type Page } from './test';
 import type { MasterPayload } from '../src/core/types';
 import { FIXTURE_GROUP_ID, LogBuilder } from '../src/core/fixtures';
 import type { FinanceEvent, FinancePayload } from '../src/core/finance/types';
-import { evidence, seedEvents, seedMaster } from './fixtures';
+import { evidence, seedEvents, seedFinance, seedMaster } from './fixtures';
 
 /**
  * E06-S08 in the real web build, offline (mockup debt-pending-repay.html):
@@ -52,7 +52,6 @@ const RED = { id: 'red', name: 'แดง' };
 const NAT = { id: 'nat', name: 'นัด' };
 const loan = (worker: typeof RED, amountSatang: number, date: string): FinancePayload => ({ t: 'debt_added', fields: { worker, kind: 'loan', amountSatang, date, note: '', lender: FARM_PAYER, fertilizer: null, carriedForward: false } });
 const owesNat = (amountSatang: number, date: string): FinancePayload => ({ t: 'expense_created', fields: { amountSatang, date, stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าปุ๋ย', note: '', payer: NAT } });
-const seedFinance = (page: Page, events: FinanceEvent[]) => page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), events);
 
 /** The E05-S11 example farm (copied from v2-sale.spec.ts). */
 const FARM: MasterPayload[] = [

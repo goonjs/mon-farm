@@ -300,8 +300,8 @@ for (const width of [320, 360]) {
 /**
  * E01-S28 round 1, in the real web build at 390×844, offline. The finance scope arrives as a pull would
  * store it (already synced, `kind` this build's event union does not carry): it is no sale, and a group
- * minimum above this build closes the money screens with "อัปเดตแอปก่อนใช้หน้าเงิน". A money write stays
- * in the local finance log: nothing enters the outbox (round 2 moves finance into the event log).
+ * minimum above this build closes the money screens with "อัปเดตแอปก่อนใช้หน้าเงิน" (and, since round 2,
+ * the money rows on home too).
  */
 const FIN_SHOTS = 'docs/ux/screenshots/e01-s28';
 
@@ -363,10 +363,11 @@ test('E01-S28 r1: the finance scope is no sale, and a higher group minimum close
   await expect(page.getByTestId('v2-home')).toBeVisible();
   // No "การขายที่ยังไม่ปิด" row for the finance scope (S28-AC12 ข 2). The home shows "nothing to know" while it
   // still reads too, so give the read time to land (on dev the row is there by then); the start check below is exact.
-  await expect(page.getByTestId('home-to-know')).toContainText('ยังไม่มีเรื่องที่ต้องรู้หรือจัดการ');
+  // Round 2: above the group minimum the home's money rows give way to the update message, so it is not empty.
+  await expect(page.getByTestId('home-money-update')).toBeVisible();
   await page.waitForTimeout(1_500);
   await expect(page.getByTestId('home-open-sale')).toHaveCount(0);
-  await evidence(page, `${FIN_SHOTS}/after-home.png`);
+  await evidence(page, `${FIN_SHOTS}/after-r2-home-no-sale-row.png`);
 
   // The sales list is empty, not one blank row (S28-AC12 ข 5).
   await page.goto('/v2/sales');
@@ -386,7 +387,7 @@ test('E01-S28 r1: the finance scope is no sale, and a higher group minimum close
   await page.goto('/v2/expenses');
   await expect(page.getByTestId('money-update-app')).toBeVisible();
   expect(await textFit(page)).toEqual([]);
-  await evidence(page, `${FIN_SHOTS}/after-money-gate.png`);
+  await evidence(page, `${FIN_SHOTS}/after-r2-money-gate.png`);
 });
 
 /**
@@ -428,10 +429,10 @@ test('E01-S28 r2: the old finance log is copied once into the event log, totals 
     baseEventId: null,
     payload: { t: 'expense_created', fields: { amountSatang: n * 100_000, date: '2026-11-20', stage: 'actual', categoryId: 'cat-fuel', propertyId: null, item: `น้ำมันเดิม ${n}`, note: '', payer: null } },
   }));
-  await page.goto('/v2');
-  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), old);
-  await context.setOffline(true);
+  // In the old log before this build ever runs, as on a phone updating from round 1 (again on every load: unchanged).
+  await page.addInitScript((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), old);
   await page.goto('/v2/expenses');
+  await context.setOffline(true);
   for (const n of [1, 2, 3]) await expect(page.getByText(`น้ำมันเดิม ${n}`)).toBeVisible();
   // ฿1,000 + ฿2,000 + ฿3,000, as before the move.
   await expect(page.getByText(/6,000/).first()).toBeVisible();

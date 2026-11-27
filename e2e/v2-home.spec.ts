@@ -5,7 +5,7 @@ import { expect, test, type Page } from './test';
 import { FIXTURE_GROUP_ID, LogBuilder, readyPile, setUpSale } from '../src/core/fixtures';
 import type { FinanceEvent } from '../src/core/finance/types';
 import type { BuiltinRole, MasterPayload } from '../src/core/types';
-import { evidence, seedEvents, seedMaster, splashEvidence, watchSplash } from './fixtures';
+import { evidence, seedEvents, seedFinance, seedMaster, splashEvidence, watchSplash } from './fixtures';
 import { textFit } from './text-fit';
 
 /**
@@ -54,7 +54,7 @@ async function seedOwed(page: Page, name: string, satang: number) {
       fields: { amountSatang: satang, date: '2026-09-01', stage: 'actual', categoryId: null, propertyId: null, item: '', note: '', payer: { id: 'p-somwang', name } },
     },
   };
-  await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify([ev])), e);
+  await seedFinance(page, [e]);
 }
 
 test('/ → splash → home: as drawn, empty, then live rows from the local log, offline', async ({ page, context }) => {
@@ -242,7 +242,7 @@ test.describe('E15-S08 · the unclosed-sale row while clearing', () => {
       baseEventId: null,
       payload: { t: 'payment_mark_set', saleId: 'e2e-clear', payee: 'owner', done: true, amountSatang: 100 },
     };
-    await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify([ev])), tick);
+    await seedFinance(page, [tick]);
     await context.setOffline(true);
     await page.goto('/v2');
     const row = page.getByTestId('home-open-sale').filter({ visible: true });
