@@ -214,6 +214,35 @@ describe.each(adapters)('%s — insertPulled (E01-S09)', (_name, makeStore) => {
   });
 });
 
+describe.each(adapters)('%s — pulled finance events (E01-S28 review B1, N4)', (_name, makeStore) => {
+  const money = (over: Record<string, unknown> = {}) =>
+    ({ ...scopeEvent('f-1', 'finance', { t: 'category_added', name: 'ค่าไฟ' }), targetId: 'f-1', baseEventId: null, ...over }) as unknown as AcceptEvent;
+
+  it("a round-1 tab's copy (no baseEventId, no targetId) and the server copy are the same event: no IntegrityError", async () => {
+    const store = makeStore();
+    const roundOne = money() as unknown as Record<string, unknown>;
+    delete roundOne.baseEventId;
+    delete roundOne.targetId;
+    await store.insertPulled(roundOne as unknown as AcceptEvent);
+    await expect(store.insertPulled(money())).resolves.toBeUndefined();
+    expect(await store.load(FINANCE_SCOPE)).toHaveLength(1);
+  });
+
+  it('a copied money event that differs from the server copy only in deviceSeq is the same event, and leaves the outbox', async () => {
+    const store = makeStore();
+    await store.append(money({ deviceSeq: 1 }));
+    expect(await store.pending()).toHaveLength(1);
+    await store.insertPulled(money({ deviceSeq: 7 }));
+    expect(await store.pending()).toEqual([]);
+  });
+
+  it('real money differences are still refused', async () => {
+    const store = makeStore();
+    await store.insertPulled(money());
+    await expect(store.insertPulled(money({ payload: { t: 'category_added', name: 'อื่น' } }))).rejects.toBeInstanceOf(IntegrityError);
+  });
+});
+
 describe.each(adapters)('%s — sync cursor (E01-S09)', (_name, makeStore) => {
   it('starts at 0 and keeps what it is given', async () => {
     const store = makeStore();
@@ -244,28 +273,30 @@ describe.each(adapters)('%s — corrupt document ids (follow-up 3)', (_name, mak
   });
 });
 
-describe.each(adapters)('%s — meta flags (E01-S28 round 2: the finance-log copy marker)', (_name, makeStore) => {
-  it('a flag is false until set, then true; other flags stay false', async () => {
+describe.each(adapters)('%s — meta values (E01-S28 round 2: the finance-log copy marker)', (_name, makeStore) => {
+  it('a value is null until set, then what was set (replaced on the next set); other keys stay null', async () => {
     const store = makeStore();
-    expect(await store.metaFlag('financeLogMigratedV1')).toBe(false);
-    await store.setMetaFlag('financeLogMigratedV1');
-    expect(await store.metaFlag('financeLogMigratedV1')).toBe(true);
-    expect(await store.metaFlag('other')).toBe(false);
+    expect(await store.metaValue('financeLogCopied')).toBeNull();
+    await store.setMetaValue('financeLogCopied', '{"count":3}');
+    expect(await store.metaValue('financeLogCopied')).toBe('{"count":3}');
+    await store.setMetaValue('financeLogCopied', '{"count":5}');
+    expect(await store.metaValue('financeLogCopied')).toBe('{"count":5}');
+    expect(await store.metaValue('other')).toBeNull();
   });
 
-  it('a flag leaves the device and its sequence alone', async () => {
+  it('a value leaves the device and its sequence alone', async () => {
     const store = makeStore();
     const before = await store.device();
-    await store.setMetaFlag('financeLogMigratedV1');
+    await store.setMetaValue('financeLogCopied', '{"count":1}');
     expect(await store.device()).toEqual(before);
   });
 });
 
 describe('IndexedDbStore — what only a persistent store must do', () => {
-  it('a meta flag survives a reopen', async () => {
+  it('a meta value survives a reopen', async () => {
     const factory = new IDBFactory();
-    await new IndexedDbStore(factory).setMetaFlag('financeLogMigratedV1');
-    expect(await new IndexedDbStore(factory).metaFlag('financeLogMigratedV1')).toBe(true);
+    await new IndexedDbStore(factory).setMetaValue('financeLogCopied', '{"count":2}');
+    expect(await new IndexedDbStore(factory).metaValue('financeLogCopied')).toBe('{"count":2}');
   });
 
   it('corrupt ids survive a reopen', async () => {

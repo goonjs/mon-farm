@@ -450,3 +450,40 @@ describe('the person edit form waits for the record (e2e v2-farm flake, 2026-11-
     expect(screen.getByTestId('person-name').props.value).toBe('คุณพนม ครองแก้ว');
   });
 });
+
+// E01-S28 round 2 (review UI N2): below the group's minimum a person's debt line gives way to the update message.
+// Last in the file: the minimum it stores stays in the shared mock store.
+describe('คน — detail below the group minimum (E01-S28 AC12 ก)', () => {
+  it('shows the debt line with its amount, then, above the minimum, the update message and no amount', async () => {
+    const { financeStore } = jest.requireMock('../store/finance') as { financeStore: { append(e: unknown): Promise<void> } };
+    const { store } = jest.requireMock('../store/store') as { store: { insertPulled(e: unknown): Promise<void> } };
+    const red = await people().create('แดง', ['tapper']);
+    await financeStore.append({
+      id: 'debt-red-1',
+      groupId: 'group-1',
+      deviceSeq: 1,
+      ts: 1,
+      actor: { userId: 'test-user', deviceId: 'dev-1' },
+      source: 'app',
+      targetId: 'd-red',
+      baseEventId: null,
+      payload: { t: 'debt_added', fields: { worker: { id: red.id, name: 'แดง' }, kind: 'loan', amountSatang: 345_600, date: '2026-11-01', note: '', lender: null, fertilizer: null, carriedForward: false } },
+    });
+    mockParams.current = { id: red.id };
+    wrap(<PersonScreen />);
+    await flush();
+    await flush();
+    expect(screen.getByTestId('debt-summary')).toBeTruthy();
+    expect(screen.getByText(/3,456/)).toBeTruthy();
+    screen.unmount();
+
+    await store.insertPulled({ id: 'min-99', groupId: 'group-1', saleId: 'farm-finance', seq: 1, deviceSeq: 1, ts: 1, mono: 1, actor: { userId: 'user-other', deviceId: 'dev-other' }, source: 'app', kind: 'app_min', payload: { minApp: 99 } });
+    wrap(<PersonScreen />);
+    await flush();
+    await flush();
+    expect(screen.queryByTestId('debt-summary')).toBeNull();
+    expect(screen.getByTestId('debt-summary-update')).toBeTruthy();
+    expect(screen.getByText('อัปเดตแอปก่อนใช้หน้าเงิน')).toBeTruthy();
+    expect(screen.queryByText(/3,456/)).toBeNull();
+  });
+});

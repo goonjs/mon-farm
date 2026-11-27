@@ -5,7 +5,7 @@
  * "ไม่แสดงยอดเงิน", see the story's Dev notes): the sale's money pages, garden care, the sale prep, and
  * the money rows on home. Round 2 also sends money: a write goes to the one event log's outbox.
  */
-import { act, screen } from '@testing-library/react-native';
+import { act, screen, within } from '@testing-library/react-native';
 import type { ComponentType, ReactNode } from 'react';
 
 import DebtAddRoute from '../app/v2/debt-add';
@@ -179,11 +179,12 @@ describe('the group minimum is above this build: every money screen says update 
     expect(screen.queryByText(/4,321/)).toBeNull();
   });
 
-  it.each(MORE_ROUTES)('/v2/%s (round 2) shows "อัปเดตแอปก่อนใช้หน้าเงิน" and no money', async (_path, Route) => {
+  // The screen is not mounted at all behind the gate, so the update page is the whole proof (review UI N7).
+  it.each(MORE_ROUTES)('/v2/%s (round 2) shows only "อัปเดตแอปก่อนใช้หน้าเงิน"', async (_path, Route) => {
     wrap(<Route />);
     await flush();
     expect(screen.getByTestId('money-update-app')).toBeTruthy();
-    expect(screen.queryByText(/4,321/)).toBeNull();
+    expect(screen.getByText('อัปเดตแอปก่อนใช้หน้าเงิน')).toBeTruthy();
   });
 
   it('home hides its money rows and says update first, in their place (round 2)', async () => {
@@ -193,6 +194,9 @@ describe('the group minimum is above this build: every money screen says update 
     expect(screen.queryByText(/987/)).toBeNull();
     expect(screen.getByTestId('home-money-update')).toBeTruthy();
     expect(screen.getByText('อัปเดตแอปก่อนใช้หน้าเงิน')).toBeTruthy();
+    // Review UI N4: no amount anywhere in ควรรู้ below the minimum, whichever rows money would make.
+    const card = screen.getByTestId('home-to-know');
+    expect(within(card).queryAllByText(/฿|\d,\d{3}|\d\.\d{2}|บาท/)).toEqual([]);
   });
 
   it('the finance scope is still not a sale', async () => {

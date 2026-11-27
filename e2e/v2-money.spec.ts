@@ -367,6 +367,8 @@ test('E01-S28 r1: the finance scope is no sale, and a higher group minimum close
   await expect(page.getByTestId('home-money-update')).toBeVisible();
   await page.waitForTimeout(1_500);
   await expect(page.getByTestId('home-open-sale')).toHaveCount(0);
+  // The card holds the update line and nothing else: no row for the finance scope (review UI N3).
+  await expect(page.getByTestId('home-to-know')).toHaveText('อัปเดตแอปก่อนใช้หน้าเงิน');
   await evidence(page, `${FIN_SHOTS}/after-r2-home-no-sale-row.png`);
 
   // The sales list is empty, not one blank row (S28-AC12 ข 5).
@@ -412,7 +414,8 @@ test('E01-S28 r2: a money write goes to the outbox after the group minimum, and 
   expect(rows.find((r) => r.event.kind === 'app_min')?.event.payload?.minApp).toBe(2);
   // Nothing new in the old log: it is read once, never written again (S28-AC7).
   expect(await page.evaluate(() => localStorage.getItem('mon-farm:finance-events'))).toBeNull();
-  await expect(page.getByTestId('sync-pill').first()).toContainText('รอส่ง 2');
+  // One expense, one counted: the group minimum goes up with it but is not the farmer's (review N8 / UI N1).
+  await expect(page.getByTestId('sync-pill').first()).toContainText('รอส่ง 1');
   expect(await textFit(page)).toEqual([]);
   await evidence(page, `${FIN_SHOTS}/after-r2-expenses-pending.png`);
 });

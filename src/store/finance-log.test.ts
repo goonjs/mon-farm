@@ -168,9 +168,10 @@ describe('the one-time copy of the old finance log (S28-AC5, AC6, AC7)', () => {
     const log = oldLog('dev-old');
     const legacy = await legacyWith(log);
     const d = await device(legacy);
-    expect(await d.events.metaFlag(FINANCE_MIGRATED_FLAG)).toBe(false);
+    expect(await d.events.metaValue(FINANCE_MIGRATED_FLAG)).toBeNull();
     expect(await d.finance.load()).toHaveLength(log.length);
-    expect(await d.events.metaFlag(FINANCE_MIGRATED_FLAG)).toBe(true);
+    // The marker keeps how long the old log was, so a longer one is copied again (review N2).
+    expect(JSON.parse((await d.events.metaValue(FINANCE_MIGRATED_FLAG))!)).toEqual({ count: log.length });
   });
 
   it('stopped half-way and run again: ids already in the store are skipped, no repeat, no error', async () => {
@@ -187,23 +188,50 @@ describe('the one-time copy of the old finance log (S28-AC5, AC6, AC7)', () => {
     });
     await expect(migrateFinanceLog(d.events, legacy)).rejects.toThrow('closed');
     cut.mockRestore();
-    expect(await d.events.metaFlag(FINANCE_MIGRATED_FLAG)).toBe(false);
+    expect(await d.events.metaValue(FINANCE_MIGRATED_FLAG)).toBeNull();
     const again = await migrateFinanceLog(d.events, legacy);
     expect(again).toEqual({ copied: log.length - 3, skipped: 3, refused: 0 });
     const twice = await migrateFinanceLog(d.events, legacy);
     expect(twice).toEqual({ copied: 0, skipped: log.length, refused: 0 });
     expect((await d.events.load(FINANCE_SCOPE)).filter((e) => e.kind === 'finance')).toHaveLength(log.length);
-    expect(await d.events.metaFlag(FINANCE_MIGRATED_FLAG)).toBe(true);
+    expect(JSON.parse((await d.events.metaValue(FINANCE_MIGRATED_FLAG))!)).toEqual({ count: log.length });
   });
 
-  it('with the marker set it does not read the old log again', async () => {
+  it('with the marker set and the old log unchanged, nothing is copied again', async () => {
     const legacy = await legacyWith(oldLog('dev-A'));
     const d = await device(legacy);
     await d.finance.load();
-    const spy = vi.spyOn(legacy, 'load');
+    const spy = vi.spyOn(d.events, 'append');
     const d2 = new EventFinanceStore(d.events, d.clock, legacy, () => SCOPE);
     await d2.load();
+    await d.finance.load();
     expect(spy).not.toHaveBeenCalled();
+  });
+
+  // Review N2: a round-1 tab still open in the same browser keeps writing the old log after the copy.
+  it('an old log that grew after the copy is copied again, on the next read, without repeats', async () => {
+    const log = oldLog('dev-A');
+    const legacy = await legacyWith(log);
+    const d = await device(legacy);
+    expect(await d.finance.load()).toHaveLength(log.length);
+    await legacy.append(legacyFinance('late', financeSamples().category_added, { targetId: 'c-late', deviceId: 'dev-A' }));
+    const ids = (await d.finance.load()).map((e) => e.id);
+    expect(ids).toContain('late');
+    expect(ids).toHaveLength(log.length + 1);
+    expect(JSON.parse((await d.events.metaValue(FINANCE_MIGRATED_FLAG))!)).toEqual({ count: log.length + 1 });
+  });
+
+  // Review N7: one bad old row must not stop every money save.
+  it('a malformed old row is skipped and logged; the rest is copied and money can still be saved', async () => {
+    const legacy = new MemoryFinanceStore();
+    const bad = { id: 'broken', groupId: FIXTURE_GROUP_ID, payload: { t: 'category_added', name: 'x' } } as unknown as FinanceEvent;
+    vi.spyOn(legacy, 'load').mockResolvedValue([bad, legacyFinance('ok', financeSamples().category_added, { targetId: 'c9' })]);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const d = await device(legacy);
+    expect(await migrateFinanceLog(d.events, legacy)).toEqual({ copied: 1, skipped: 0, refused: 1 });
+    expect(warn).toHaveBeenCalled();
+    await d.finance.append(legacyFinance('new-1', financeSamples().category_added, { targetId: 'c10', deviceId: d.deviceId }));
+    expect((await d.finance.load()).map((e) => e.id).sort()).toEqual(['new-1', 'ok']);
   });
 
   it('keeps the old log as it was (never deleted)', async () => {
@@ -232,7 +260,7 @@ describe('the one-time copy of the old finance log (S28-AC5, AC6, AC7)', () => {
 });
 
 describe('scope of copied events (S28-AC8, rule of E01-S09)', () => {
-  it("another user's and another group's events are copied, but are not waiting to be sent", async () => {
+  it("another user's and another group's events are copied, but are not waiting to be sent, and only this group's count", async () => {
     const s = financeSamples();
     const legacy = await legacyWith([
       legacyFinance('mine', s.category_added, { targetId: 'c1' }),
@@ -240,11 +268,12 @@ describe('scope of copied events (S28-AC8, rule of E01-S09)', () => {
       legacyFinance('elsewhere', s.category_added, { targetId: 'c3', groupId: 'group-2' }),
     ]);
     const d = await device(legacy);
-    expect((await d.finance.load()).map((e) => e.id).sort()).toEqual(['elsewhere', 'mine', 'theirs']);
+    // Review N6: the money screens add up only the open group's money ('elsewhere' is group-2's).
+    expect((await d.finance.load()).map((e) => e.id).sort()).toEqual(['mine', 'theirs']);
     const pending = await d.events.pending();
     expect(pending.map((e) => e.id)).toEqual(expect.arrayContaining(['mine', 'theirs', 'elsewhere']));
-    // Only this user's events in this group count: the minimum and 'mine'.
-    expect(waitingCount(SCOPE, pending, [])).toBe(2);
+    // Only this user's money in this group waits to be sent (the minimum is not counted, review N8).
+    expect(waitingCount(SCOPE, pending, [])).toBe(1);
   });
 
   it('an old event with no groupId is left in the old log: not copied, not counted, not deleted', async () => {
@@ -260,6 +289,15 @@ describe('scope of copied events (S28-AC8, rule of E01-S09)', () => {
 });
 
 describe('toFinanceEvent', () => {
+  // Review B1: a round-1 tab's `fromEnvelope` dropped `baseEventId: null` and a `targetId` equal to the id.
+  it("reads a round-1 tab's copy (no baseEventId, no targetId) as a create of its own record", () => {
+    const e = legacyFinance('f9', financeSamples().category_added, { targetId: 'f9' });
+    const roundOne = { ...e, kind: 'finance', saleId: FINANCE_SCOPE, seq: 1, mono: 1 } as Record<string, unknown>;
+    delete roundOne.baseEventId;
+    delete roundOne.targetId;
+    expect(toFinanceEvent(roundOne as unknown as Parameters<typeof toFinanceEvent>[0])).toEqual(e);
+  });
+
   it('drops the envelope-only fields (saleId, seq, mono, kind)', () => {
     const e = legacyFinance('f1', financeSamples().category_added, { targetId: 'c1' });
     const stored = { ...e, kind: 'finance', saleId: FINANCE_SCOPE, seq: 4, mono: 9 } as unknown as Parameters<typeof toFinanceEvent>[0];

@@ -84,8 +84,8 @@ describe('S28-AC4 · the sync badge on a money screen counts money not sent yet'
     expect(outbox.some((e) => e.kind === 'finance')).toBe(true);
     wrap(<ExpensesRoute />);
     await flush();
-    // The group minimum and the expense: both still to send.
-    expect(screen.getByText('รอส่ง 2')).toBeTruthy();
+    // One expense recorded, one counted: the group minimum goes up too, but is not the farmer's (review N8 / UI N1).
+    expect(screen.getByText('รอส่ง 1')).toBeTruthy();
     expect(screen.queryByText('ซิงก์แล้ว')).toBeNull();
   });
 });

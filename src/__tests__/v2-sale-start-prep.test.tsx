@@ -215,3 +215,22 @@ describe('D · no prep, or one a sale used: the page is as it was (PS-7)', () =>
     expect(screen.queryByTestId('start-prep-ask')).toBeNull();
   });
 });
+
+// E01-S28 round 2 (review UI N2): below the group's minimum the prep (it carries the price) is not used. Last in the
+// file: the minimum it stores stays in the shared mock store.
+describe('E · below the group minimum the prep is not used (E01-S28 AC12 ก)', () => {
+  it('a prep for today fills nothing, and a later-day prep asks nothing: no prep price on the page', async () => {
+    await store().insertPulled({ id: 'min-99', groupId: 'group-1', saleId: 'farm-finance', seq: 1, deviceSeq: 1, ts: 1, mono: 1, actor: { userId: 'user-other', deviceId: 'dev-other' }, source: 'app', kind: 'app_min', payload: { minApp: 99 } } as unknown as SaleEvent);
+    await prep(standard());
+    await open();
+    expect(screen.getByTestId('start-buyer')).not.toHaveTextContent(/ที่นัดไว้/);
+    expect(screen.getByTestId('start-price-row')).not.toHaveTextContent(/52\.50/);
+    expect(screen.getByTestId('start-price-row')).not.toHaveTextContent(/ราคาที่ตกลงไว้/);
+    screen.unmount();
+    n += 1;
+    saleId = `sale-prep-${n}`;
+    await prep(standard({ date: LATER }));
+    await open();
+    expect(screen.queryByTestId('start-prep-ask')).toBeNull();
+  });
+});
