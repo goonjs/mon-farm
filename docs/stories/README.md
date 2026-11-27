@@ -32,7 +32,7 @@ story ที่มีหัวข้อ `คำถามเจ้าของ` �
 - [E01-S20: แป้นตัวเลขของแอปทุกช่องที่กรอกตัวเลข](e01-s20-app-number-pad.md) (Done 2026-11-17 — NP-9 แก้ใน #207; 5 หน้าคงปุ่ม − + ตามเจ้าของ e01-s24-ac, E01-S24 ถอน)
 - [E01-S27: เจ้าของทดสอบ sync บนฐานข้อมูลจริง ด้วยเบราว์เซอร์ 2–3 ตัว](e01-s27-owner-sync-test.md) (Ready)
 - [E01-S28: ย้าย log การเงินเข้า event log ที่ sync](e01-s28-finance-sync.md) (In Progress — รอบแรกใน review · PR โค้ดเป็น critical)
-- [E01-S29: สอนใช้แอป (tutorial)](e01-s29-tutorial.md) ❓ (Draft — คำถามเจ้าของ T-Q1…T-Q7)
+- [E01-S29: สอนใช้แอป (tutorial)](e01-s29-tutorial.md) ❓ (Draft — คำถามเจ้าของ T-Q1…T-Q8)
 
 ### E02 การเข้าใช้ & กลุ่มฟาร์ม — [epic](../epics/e02-access-farm-groups.md)
 
