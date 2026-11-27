@@ -132,7 +132,8 @@ export function HistoryScreen() {
           ) : (
             <Banner testID="hist-numbers-bad" tone="warn" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg('hist.numbersBad', { detail: numbersBad })]} />
           )}
-          <View testID="hist-filters" style={{ flexDirection: 'row', gap: t.space.sm, alignItems: 'flex-end' }}>
+          {/* Mockup p11: columns stretch to one height, so labels share a top line; ValueBox (flex 1) fills the rest. */}
+          <View testID="hist-filters" style={{ flexDirection: 'row', gap: t.space.sm }}>
             {tappers.length > 0
               ? labelled(
                   msg('hist.tapperLabel'),
