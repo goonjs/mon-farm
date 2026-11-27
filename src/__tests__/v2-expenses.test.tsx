@@ -361,6 +361,28 @@ describe('expense list (F4, F7)', () => {
     expect(owed.map((r) => r.originalSatang).sort()).toEqual([150000, 200000]);
     expect(owed.every((r) => r.to.name === 'เจ้าของสวน')).toBe(true);
   });
+
+  it('the totals card shows short money with the unit stressed; rows keep the full amount (owner rule 2026-10-31)', async () => {
+    await seedExpense('cm-a', { amountSatang: 10_300_000, date: '2025-03-05' });
+    await seedExpense('cm-c', { amountSatang: 325_000, date: '2025-03-06', stage: 'committed' });
+    await seedExpense('cm-p', { amountSatang: 1_254_000, date: '2025-03-07', stage: 'planned' });
+    wrap(<ExpensesScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('filter-month'));
+    fireEvent.press(screen.getByTestId('month-2025-03'));
+
+    const totals = screen.getByTestId('totals');
+    expect(totals).not.toHaveTextContent(/103,000\.00|3,250\.00|12,540\.00/);
+    expect(screen.getByTestId('total-actual')).toHaveTextContent(/฿ 103\.0k$/);
+    expect(screen.getByTestId('total-committed')).toHaveTextContent(/฿ 3,250$/);
+    expect(screen.getByTestId('total-planned')).toHaveTextContent(/฿ 12\.54k$/);
+    const unit = within(screen.getByTestId('total-actual')).getByText('k');
+    expect(Object.assign({}, ...[unit.props.style].flat(Infinity).filter(Boolean)).color).toBe(tokens.color.light.action);
+    // Screen readers still hear the exact figure.
+    expect(within(totals).getByLabelText('103,000.00 บาท')).toBeTruthy();
+    // A row is one item, not a summary: it keeps the full amount.
+    expect(screen.getByTestId('expense-amount-cm-a')).toHaveTextContent('103,000.00');
+  });
 });
 
 describe('expense list: shop orders (E11-S11 FO-12)', () => {
