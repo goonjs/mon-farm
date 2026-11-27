@@ -5,6 +5,7 @@ import { FIXTURE_GROUP_ID, LogBuilder } from '../src/core/fixtures';
 import type { FinanceEvent, FinancePayload } from '../src/core/finance/types';
 import { evidence, seedEvents, seedMaster, splashEvidence, watchSplash } from './fixtures';
 import { smallTargets, textFit } from './text-fit';
+import { tileSpill } from './tile-spill';
 
 /**
  * D-83: one working sandbox app on v2, in the real web build. `/` shows the
@@ -373,12 +374,41 @@ async function s26Fits(page: Page, what: string) {
 async function s26Snap(page: Page, name: string) {
   if (!s26Shots) return;
   const size = page.viewportSize()!;
-  if (size.width === 390) await page.screenshot({ path: `${s26Shots}/${name}.png` });
+  // Only the 390 px text M run writes (the matrix also runs 390 S and L, which would overwrite it; PR 255 review B5).
+  const text = await page.evaluate(() => localStorage.getItem('mon-farm:text-size') ?? 'm');
+  if (size.width === 390 && text === 'm') await page.screenshot({ path: `${s26Shots}/${name}.png` });
 }
 
+/** The new PR 255 tests: `s26Fits` plus no text spilling out of its own tile (review B1). */
+async function s26FitsTiles(page: Page, what: string) {
+  await s26Fits(page, what);
+  expect(await tileSpill(page), `${what}: every tile holds its text`).toEqual([]);
+}
+
+/** Which PS26-9 layout the basket list shows: B = the tapper filter is a radiogroup with `segments` radios; E = a box (button). */
+async function expectHistoryLayout(page: Page, layout: 'B+E' | 'E+E', segments?: number) {
+  const tapper = page.getByTestId('hist-tapper').filter({ visible: true });
+  if (layout === 'B+E') {
+    await expect(tapper).toHaveAttribute('role', 'radiogroup');
+    if (segments) await expect(tapper.getByRole('radio')).toHaveCount(segments);
+  } else {
+    await expect(tapper).toHaveAttribute('role', 'button');
+    await expect(page.getByTestId('hist-tapper-all')).toHaveCount(0);
+  }
+  await expect(page.getByTestId('hist-kind').filter({ visible: true })).toHaveAttribute('role', 'button');
+}
+
+// Widened 2026-11-28: PS26-12 names 320/360/390 × S/M/L; the first two pairs are the original ones, unchanged.
 for (const [width, size] of [
   [320, 'l'],
   [390, 'm'],
+  [320, 's'],
+  [320, 'm'],
+  [360, 's'],
+  [360, 'm'],
+  [360, 'l'],
+  [390, 's'],
+  [390, 'l'],
 ] as const) {
   test.describe(`E01-S26 screens at ${width} px text ${size.toUpperCase()}`, () => {
     test.beforeEach(async ({ page }) => {
@@ -474,6 +504,154 @@ for (const [width, size] of [
       await page.goto('/v2/debt/nat?name=นัด');
       await expect(id('debt-filter-all')).toBeVisible();
       await s26Fits(page, 'debt history');
+    });
+
+    // Added 2026-11-28 (PS26-12 "ทุกข้อ", PS26-14): the screens of items 3, 8, 9 and 10 that the loop above did not
+    // open, and pictures of the people sheet, the expense filters and the debt history for the side-by-side.
+    test('people sheet, expense filters and debt history: pictures for the side-by-side (PS26-14)', async ({ page }) => {
+      const id = onS26(page);
+      await page.goto('/v2/people');
+      await s26Snap(page, 's26-people-box');
+      await id('people-filter').click();
+      await expect(id('people-filter-sheet')).toBeVisible();
+      await s26FitsTiles(page, 'people group sheet');
+      await s26Snap(page, 's26-people-sheet');
+      await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [s26Fin(1, 'debt-nat', s26Loan(300_000, '2026-09-01'))]);
+      await page.goto('/v2/expenses');
+      await expect(id('filter-stage')).toBeVisible();
+      await s26Snap(page, 's26-expense-filters');
+      await page.goto('/v2/debt/nat?name=นัด');
+      await expect(id('debt-filter-all')).toBeVisible();
+      await id('debt-filter-all').scrollIntoViewIfNeeded();
+      await s26FitsTiles(page, 'debt history');
+      await s26Snap(page, 's26-debt-history');
+    });
+
+    test('new point: the farm is a C row; plan sheet: tappers are C rows (PS26-3)', async ({ page }) => {
+      const id = onS26(page);
+      await page.goto('/v2/point/new');
+      await id('point-farm-fa').click();
+      await expect(id('point-farm-fa')).toHaveAttribute('aria-checked', 'true');
+      await s26FitsTiles(page, 'new point');
+      await s26Snap(page, 's26-point-farm');
+      await page.goto('/v2/point/a4');
+      await id('plan-change').click();
+      await expect(id('plan-sheet')).toBeVisible();
+      await page.getByTestId('plan-sheet').locator('[data-testid^="plan-tapper-"]').filter({ hasText: 'แดง' }).click();
+      await s26FitsTiles(page, 'plan sheet');
+      await s26Snap(page, 's26-plan-tappers');
+    });
+
+    test('a planned change: the whole row opens the plan, ยกเลิกแผน is a link (PS26-8)', async ({ page }) => {
+      const later = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+      await seedMaster(page, [{ t: 'tapper_assigned', assignmentId: 's4-plan', pointId: 'a4', tapperId: 'red', from: later }]);
+      await page.goto('/v2/point/a4');
+      const row = page.locator('[data-testid^="edit-plan-"]:not([data-testid$="-chevron"])').filter({ visible: true }).first();
+      await expect(row).toBeVisible();
+      await expect(page.locator('[data-testid^="cancel-plan-"]').filter({ visible: true }).first()).toBeVisible();
+      await s26FitsTiles(page, 'point with a plan');
+      await s26Snap(page, 's26-plan-row');
+    });
+
+    test('basket list: tappers B + baskets E, and both E with three tappers (PS26-9)', async ({ page }) => {
+      const id = onS26(page);
+      const b = new LogBuilder('hist-s26');
+      b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+      b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+      b.sys({ t: 'pile_added', pileId: 'a4', zoneId: 'fa', name: 'a4', tareG: 2_000, stdNetG: 50_000 });
+      b.acceptAt('a4', 1).acceptAt('a4', 2);
+      await seedEvents(page, b.build().map((e) => ({ ...e, ts: Date.now() })));
+      await page.goto('/v2/sale/hist-s26/history?point=a4');
+      await expect(id('hist-kind')).toBeVisible();
+      // 2 segments (ทุกคน + นัด), short names: B for tappers, E for baskets (review B2).
+      await expectHistoryLayout(page, 'B+E', 2);
+      await s26FitsTiles(page, 'basket list, one tapper');
+      await s26Snap(page, 's26-history-b-e');
+      await id('hist-kind').click();
+      await expect(id('hist-kind-sheet')).toBeVisible();
+      await s26FitsTiles(page, 'basket kind sheet');
+
+      await seedMaster(page, [
+        { t: 'point_added', pointId: 'a5', propertyId: 'fa', name: 'จุด 5' },
+        { t: 'point_added', pointId: 'a6', propertyId: 'fa', name: 'จุด 6' },
+        { t: 'tapper_assigned', assignmentId: 's5', pointId: 'a5', tapperId: 'red' },
+        { t: 'tapper_assigned', assignmentId: 's6', pointId: 'a6', tapperId: 'long' },
+      ]);
+      const m = new LogBuilder('hist-s26-many');
+      m.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+      m.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+      for (const p of ['a4', 'a5', 'a6']) m.sys({ t: 'pile_added', pileId: p, zoneId: 'fa', name: p, tareG: 2_000, stdNetG: 50_000 });
+      m.acceptAt('a4', 1).acceptAt('a5', 1).acceptAt('a6', 1);
+      await seedEvents(page, m.build().map((e) => ({ ...e, ts: Date.now() })));
+      await page.goto('/v2/sale/hist-s26-many/history?point=a4');
+      await expect(id('hist-kind')).toBeVisible();
+      // 4 segments (ทุกคน + 3) is over the limit of 3: both are E boxes (review B2).
+      await expectHistoryLayout(page, 'E+E');
+      await s26FitsTiles(page, 'basket list, three tappers');
+      await s26Snap(page, 's26-history-e-e');
+    });
+
+    // PS26-9 boundary (review B3): 3 segments (ทุกคน + นัด + the long name) are within the limit, but the long
+    // name needs more than one line, so both filters must be E boxes. KNOWN BUG: on the web build the bar stays B
+    // and the name wraps over up to 6 lines at every width and text size — SegmentedControl's onTextLayout
+    // (src/ui/form.tsx:63) does not fire on react-native-web, so `wrapped` (history-screen.tsx:50) stays false.
+    // The app fix is a separate fix/ PR; drop .fixme when it lands.
+    test.fixme('basket list: 3 segments with a name that wraps → both E (PS26-9 boundary, known bug)', async ({ page }) => {
+      const id = onS26(page);
+      await seedMaster(page, [
+        { t: 'point_added', pointId: 'a6', propertyId: 'fa', name: 'จุด 6' },
+        { t: 'tapper_assigned', assignmentId: 's6', pointId: 'a6', tapperId: 'long' },
+      ]);
+      const m = new LogBuilder('hist-s26-wrap');
+      m.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+      m.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+      for (const p of ['a4', 'a6']) m.sys({ t: 'pile_added', pileId: p, zoneId: 'fa', name: p, tareG: 2_000, stdNetG: 50_000 });
+      m.acceptAt('a4', 1).acceptAt('a6', 1);
+      await seedEvents(page, m.build().map((e) => ({ ...e, ts: Date.now() })));
+      await page.goto('/v2/sale/hist-s26-wrap/history?point=a4');
+      await expect(id('hist-kind')).toBeVisible();
+      await expectHistoryLayout(page, 'E+E');
+      await s26FitsTiles(page, 'basket list, a name that wraps');
+    });
+
+    // E01-S25 CT-13 on a hand-made bar that became B (CT-5): the owed sheet of the close-out. Here because this
+    // describe already seeds the farm and its tapper.
+    test('E01-S25 B bar: the owed sheet (CT-5, CT-13)', async ({ page }) => {
+      const id = onS26(page);
+      const b = new LogBuilder('bars-s25');
+      b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+      b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+      b.sys({ t: 'pile_added', pileId: 'a4', zoneId: 'fa', name: 'a4', tareG: 2_000, stdNetG: 50_000 });
+      b.acceptAt('a4', 1).acceptAt('a4', 2);
+      await seedEvents(page, b.build().map((e) => ({ ...e, ts: Date.now() })));
+      const owes: FinancePayload = { t: 'expense_created', fields: { amountSatang: 64_000, date: '2026-09-28', stage: 'actual', categoryId: null, propertyId: null, item: 'ค่าปุ๋ย', note: '', payer: { id: 'nat', name: 'นัด' } } };
+      // นัด also owes the farm, so the bar has both segments: ไว้ก่อน and หักกลบกับหนี้ (review B4).
+      await page.evaluate((ev) => localStorage.setItem('mon-farm:finance-events', JSON.stringify(ev)), [s26Fin(1, 'exp-nat', owes), s26Fin(2, 'debt-nat', s26Loan(300_000, '2026-09-01'))]);
+      await page.goto('/v2/sale/bars-s25/settlement');
+      await id('co-owed-open').click();
+      await expect(id('co-owed-sheet')).toBeVisible();
+      await expect(id('co-owed-hold-nat')).toBeVisible();
+      await expect(id('co-owed-net-nat')).toBeVisible();
+      await s26FitsTiles(page, 'owed sheet');
+      await s26Snap(page, 'b25-owed-sheet-b');
+    });
+
+    test('cash with the buyer: the account row opens the sheet, no pill (PS26-10)', async ({ page }) => {
+      const id = onS26(page);
+      const b = new LogBuilder('cash-s26');
+      b.sys({ t: 'sale_started', farmName: '', buyer: 'คนรับซื้อยาง ก', manager: '', workerLead: '', where: 'farm' });
+      b.sys({ t: 'price_set', satangPerKg: 5250, indexRef: '' });
+      b.sys({ t: 'pile_added', pileId: 'a4', zoneId: 'fa', name: 'a4', tareG: 2_000, stdNetG: 50_000 });
+      b.acceptAt('a4', 1).acceptAt('a4', 2);
+      await seedEvents(page, b.build().map((e) => ({ ...e, ts: Date.now() })));
+      await page.goto('/v2/sale/cash-s26/settlement');
+      await expect(id('co-summary')).toBeVisible();
+      await id('co-debt-none').click();
+      await id('co-owed-none').click();
+      await id('co-cash-card').click();
+      await expect(id('cop-account')).toBeVisible();
+      await s26FitsTiles(page, 'cash page');
+      await s26Snap(page, 's26-cash-account');
     });
   });
 }

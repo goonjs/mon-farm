@@ -2,6 +2,7 @@ import { expect, test, type Page } from './test';
 
 import { evidence, seedMaster, seedPeople } from './fixtures';
 import { smallTargets, textFit } from './text-fit';
+import { tileSpill } from './tile-spill';
 import { pickDate } from './pick-date';
 
 /**
@@ -423,8 +424,9 @@ async function checkChoiceFit(page: Page) {
   expect(await smallTargets(page)).toEqual([]);
 }
 
-for (const width of [320, 360]) {
-  for (const size of ['m', 'l'] as const) {
+// 390 px and text S added 2026-11-28: CT-13 names 320/360/390 × S/M/L (the 320/360 × M/L cases are unchanged).
+for (const width of [320, 360, 390]) {
+  for (const size of ['s', 'm', 'l'] as const) {
     test(`choice tiles fit at ${width} px text ${size.toUpperCase()} (E01-S25 CT-13)`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
       await page.addInitScript((s) => localStorage.setItem('mon-farm:text-size', s), size);
@@ -448,6 +450,29 @@ for (const width of [320, 360]) {
       await page.getByTestId('ordc-pick-new').click();
       await expect(page.getByTestId('ordc-kg-other')).toBeVisible();
       await checkChoiceFit(page);
+    });
+
+    // CT-13 on the other callers of the shared pieces: the expense form and its details sheet (B stage, F farms
+    // with a long farm name).
+    test(`more choice callers fit at ${width} px text ${size.toUpperCase()} (E01-S25 CT-13)`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.addInitScript((s) => localStorage.setItem('mon-farm:text-size', s), size);
+      await seedPeople(page, [LONG, { id: 'p-nat', name: 'นัด' }]);
+      await seedMaster(page, [
+        { t: 'property_added', propertyId: 'fa', name: 'จันทเขลม', crop: 'rubber' },
+        { t: 'property_added', propertyId: 'fb', name: 'บ้านบนริมคลองใหญ่หลังวัด', crop: 'rubber' },
+      ]);
+      await page.goto('/v2/expense/new');
+      await expect(page.getByTestId('expense-details')).toBeVisible();
+      await checkChoiceFit(page);
+      expect(await tileSpill(page), 'every tile holds its text').toEqual([]);
+      await page.getByTestId('expense-details').click();
+      await page.getByTestId('expense-stage-planned').click();
+      await page.getByTestId('expense-farm-fb').click();
+      await expect(page.getByTestId('expense-farm-fb')).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByTestId('expense-stage')).toBeVisible();
+      await checkChoiceFit(page);
+      expect(await tileSpill(page), 'every tile holds its text').toEqual([]);
     });
   }
 }
