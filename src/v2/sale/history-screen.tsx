@@ -132,7 +132,8 @@ export function HistoryScreen() {
           ) : (
             <Banner testID="hist-numbers-bad" tone="warn" icon={(c) => <AlertIcon color={c} size={14} />} lines={[msg('hist.numbersBad', { detail: numbersBad })]} />
           )}
-          <View testID="hist-filters" style={{ flexDirection: 'row', gap: t.space.sm, alignItems: 'flex-end' }}>
+          {/* Top-aligned like mockup p11: the B bar is taller than the E box, so bottom-aligning pushed เข่ง down. */}
+          <View testID="hist-filters" style={{ flexDirection: 'row', gap: t.space.sm, alignItems: 'flex-start' }}>
             {tappers.length > 0
               ? labelled(
                   msg('hist.tapperLabel'),
