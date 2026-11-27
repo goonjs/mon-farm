@@ -12,6 +12,8 @@ import { newGroup } from '../core/group';
 import { userFromSignIn } from '../core/user';
 import { accountStore as mockAccounts } from '../store/account';
 import { pickDate } from '../test/pick-date';
+import { expectCheckRow, expectRadioRow } from '../test/choice-shape';
+import { tokens } from '../../design/tokens';
 import { wrap } from '../test/render';
 
 jest.mock('../store/people', () => {
@@ -282,7 +284,10 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     expect(within(timeline).getByText('ตอนนี้')).toBeTruthy();
 
     fireEvent.press(screen.getByTestId('plan-change'));
+    // E01-S26 PS26-3: the tapper is a C row (owner "C", 21 Nov), pick one.
+    expectRadioRow(screen.getByTestId(`plan-tapper-${nat.id}`));
     fireEvent.press(screen.getByTestId(`plan-tapper-${nat.id}`));
+    expect(screen.getByTestId(`plan-tapper-${nat.id}`).props.accessibilityState).toMatchObject({ checked: true });
     pickDate('plan-from', ahead(30));
     expect(screen.getByTestId('plan-preview')).toBeTruthy();
     await press('plan-save');
@@ -290,6 +295,14 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     const planned = (await m.state()).assignments.filter((a) => !a.deleted && a.tapperId === nat.id);
     expect(planned).toHaveLength(1);
     expect(within(screen.getByTestId('timeline')).getByText('ตามแผน ยังไม่ถึงวัน')).toBeTruthy();
+    // E01-S26 PS26-8: the plan row itself opens the plan (›); "ยกเลิกแผน" is a red underlined link, no pill buttons.
+    const id = planned[0].assignmentId;
+    const flat = (st: unknown) => Object.assign({}, ...[st].flat(Infinity).filter(Boolean));
+    const edit = screen.getByTestId(`edit-plan-${id}`);
+    expect(edit.props.accessibilityRole).toBe('button');
+    expect(within(edit).getByText('นัด')).toBeTruthy();
+    expect(within(edit).getByTestId(`edit-plan-${id}-chevron`, { includeHiddenElements: true })).toBeTruthy();
+    expect(flat(within(screen.getByTestId(`cancel-plan-${id}`)).getByText('ยกเลิกแผน').props.style)).toMatchObject({ textDecorationLine: 'underline', color: tokens.color.light.reject });
     await press(`cancel-plan-${planned[0].assignmentId}`);
     expect((await m.state()).assignments.find((a) => a.assignmentId === planned[0].assignmentId)?.deleted).toBe(true);
   });
@@ -364,6 +377,19 @@ describe('จุดชั่ง — add, offer to assign, detail, plan (farm moc
     pickDate('plan-to', ahead(5));
     await press('plan-save');
     expect((await m.state()).assignments).toHaveLength(before + 1);
+  });
+
+  it('a new point picks its farm from C rows (E01-S26 PS26-3)', async () => {
+    const m = master();
+    const a = await m.addProperty({ name: 'สวนบน', crop: 'rubber' });
+    const b = await m.addProperty({ name: 'สวนล่าง', crop: 'rubber' });
+    mockParams.current = { id: 'new' };
+    wrap(<PointScreen />);
+    await flush();
+    for (const f of [a, b]) expectRadioRow(screen.getByTestId(`point-farm-${f.id}`));
+    fireEvent.press(screen.getByTestId(`point-farm-${b.id}`));
+    expect(screen.getByTestId(`point-farm-${b.id}`).props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByTestId(`point-farm-${a.id}`).props.accessibilityState).toMatchObject({ checked: false });
   });
 
   it('renames and soft-deletes a point', async () => {
@@ -451,6 +477,8 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     const daeng = await m.create('แดง', ['tapper']);
     wrap(<PointsWizardScreen />);
     await flush();
+    // E01-S26 PS26-3: the farm is a C row.
+    expectRadioRow(screen.getByTestId(`wizard-farm-${farm.id}`));
     fireEvent.press(screen.getByTestId(`wizard-farm-${farm.id}`));
     fireEvent.press(screen.getByTestId(`wizard-tapper-${daeng.id}`));
     fireEvent.press(screen.getByTestId('wizard-next'));
@@ -472,6 +500,27 @@ describe('จุดชั่ง — all points and the set-up helper (farm mocku
     // On page 1 the header back leaves the helper as before.
     fireEvent.press(screen.getByTestId('v2-back'));
     expect(mockRouter.back).toHaveBeenCalledTimes(1);
+  });
+
+  it('tappers are C rows with a tick box, several at once (E01-S26, owner wizard-tapper-pick 2026-11-22)', async () => {
+    const m = master();
+    await m.addProperty({ name: 'สวน', crop: 'rubber' });
+    const daeng = await m.create('แดง', ['tapper']);
+    const nat = await m.create('นัด', ['tapper']);
+    wrap(<PointsWizardScreen />);
+    await flush();
+    const row = (id: string) => screen.getByTestId(`wizard-tapper-${id}`);
+    expectCheckRow(row(daeng.id));
+    expectCheckRow(row(nat.id));
+    // The box is square, never a ring.
+    expect(StyleSheet.flatten(screen.getByTestId(`wizard-tapper-${daeng.id}-box`, { includeHiddenElements: true }).props.style).borderRadius).toBeLessThan(11);
+    fireEvent.press(row(daeng.id));
+    fireEvent.press(row(nat.id));
+    expect(row(daeng.id).props.accessibilityState).toMatchObject({ checked: true });
+    expect(row(nat.id).props.accessibilityState).toMatchObject({ checked: true });
+    fireEvent.press(row(daeng.id));
+    expect(row(daeng.id).props.accessibilityState).toMatchObject({ checked: false });
+    expect(row(nat.id).props.accessibilityState).toMatchObject({ checked: true });
   });
 
   it('farm → tappers → how many → names, then creates every point with its tapper at once', async () => {

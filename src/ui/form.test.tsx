@@ -8,7 +8,7 @@ const flat = (style: unknown) => Object.assign({}, ...[style].flat(Infinity).fil
 const c = tokens.color.light;
 
 describe('form primitives (E01-S17 X6, v1.1.0 mockups)', () => {
-  it('segmented control: sunk pill track, selected segment navy, 48pt, reports the choice', () => {
+  it('segmented control: sunk rounded track (not a pill), selected segment navy, 48pt, reports the choice', () => {
     const onChange = jest.fn();
     wrap(
       <SegmentedControl
@@ -23,8 +23,10 @@ describe('form primitives (E01-S17 X6, v1.1.0 mockups)', () => {
     );
     expect(flat(screen.getByTestId('theme').props.style)).toMatchObject({
       backgroundColor: c.surfaceSunk,
-      borderRadius: tokens.radius.pill,
+      // E01-S25 CT-5 (owner r2-segmented "B"): track radius md, segments radius sm — never a pill.
+      borderRadius: tokens.radius.md,
     });
+    expect(flat(screen.getByTestId('theme-light').props.style).borderRadius).toBe(tokens.radius.sm);
     const on = screen.getByTestId('theme-light');
     expect(on.props.accessibilityRole).toBe('radio');
     expect(on.props.accessibilityState).toMatchObject({ checked: true });
@@ -35,6 +37,15 @@ describe('form primitives (E01-S17 X6, v1.1.0 mockups)', () => {
     expect(flat(screen.getByText('มืด').props.style).color).toBe(c.inkSoft);
     fireEvent.press(screen.getByTestId('theme-dark'));
     expect(onChange).toHaveBeenCalledWith('dark');
+  });
+
+  it('segmented control tells its caller when a label wraps (E01-S26 PS26-9)', () => {
+    const onWrap = jest.fn();
+    wrap(<SegmentedControl testID="s" value="a" onChange={() => {}} onWrap={onWrap} options={[{ value: 'a', label: 'ทุกคน' }, { value: 'b', label: 'สมหวังผู้ช่วยกรีดยาง' }]} />);
+    fireEvent(screen.getByText('ทุกคน'), 'textLayout', { nativeEvent: { lines: [{}] } });
+    expect(onWrap).not.toHaveBeenCalled();
+    fireEvent(screen.getByText('สมหวังผู้ช่วยกรีดยาง'), 'textLayout', { nativeEvent: { lines: [{}, {}] } });
+    expect(onWrap).toHaveBeenCalled();
   });
 
   it('radio card: selected = navy 2px edge on the selected wash; a ring that fills', () => {

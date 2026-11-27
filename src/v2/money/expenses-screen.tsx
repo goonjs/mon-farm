@@ -39,10 +39,14 @@ import {
   Plus,
   ReceiptIcon,
   ScreenHeader,
+  ChoiceTile,
+  TextLink,
+  TileGrid,
+  ValueBox,
 } from '../../ui';
 import { V2_HOME } from '../routes';
 import { orderHref } from './order-routes';
-import { ChoiceChip, ChoiceRow, Day, NotRecordedPill, PayerPicker, stageCard, UnknownPill } from './pieces';
+import { Day, NotRecordedPill, PayerPicker, stageCard, UnknownPill } from './pieces';
 
 const STAGES: readonly Stage[] = ['actual', 'committed', 'planned'];
 
@@ -138,46 +142,57 @@ export function ExpensesScreen() {
         sync={sync}
       />
       <ScrollView contentContainerStyle={{ padding: t.layout.screenPaddingX, gap: t.space.md, paddingBottom: t.space[16] * 2 }}>
-        <ChoiceRow>
-          <ChoiceChip testID="filter-stage" on={!!filter.stage || open === 'stage'} label={filter.stage ? msg(`fin.stage.${filter.stage}`) : `${msg('fin.filter.stage')} ▾`} onPress={() => setOpen(open === 'stage' ? null : 'stage')} />
-          <ChoiceChip testID="filter-category" on={!!filter.categoryId || open === 'category'} label={filter.categoryId ? catName(filter.categoryId) : `${msg('fin.filter.category')} ▾`} onPress={() => setOpen(open === 'category' ? null : 'category')} />
-          <ChoiceChip testID="filter-farm" on={!!filter.propertyId || open === 'farm'} label={filter.propertyId ? (farms.find((f) => f.id === filter.propertyId)?.name ?? '') : `${msg('v2m.farm')} ▾`} onPress={() => setOpen(open === 'farm' ? null : 'farm')} />
-          <ChoiceChip testID="filter-month" on={!!filter.month || open === 'month'} label={filter.month ? formatMonth(filter.month) : `${msg('fin.filter.month')} ▾`} onPress={() => setOpen(open === 'month' ? null : 'month')} />
-          <ChoiceChip testID="filter-payer-missing" on={!!filter.payerMissing} label={msg('fin.filter.payerMissing')} onPress={() => set({ payerMissing: !filter.payerMissing, unrepaid: undefined, payerId: undefined })} />
-          <ChoiceChip testID="filter-unrepaid" on={!!filter.unrepaid} label={msg('fin.filter.unrepaid')} onPress={() => set({ unrepaid: !filter.unrepaid, payerId: undefined, payerMissing: undefined })} />
-          {filterCount ? <ChoiceChip testID="filter-clear" label={`${msg('fin.filter.clear')} ✕`} onPress={() => { setFilter({}); setSelected(new Set()); }} /> : null}
-        </ChoiceRow>
+        {/* E01-S26 PS26-1: four E boxes 2 by 2 (heading + value ▾), two F ticks, and "ล้างตัวกรอง" as an underlined link. */}
+        <View style={{ gap: t.space.sm }}>
+          <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+            <ValueBox testID="filter-stage" label={msg('fin.filter.stage')} value={filter.stage ? msg(`fin.stage.${filter.stage}`) : msg('fin.filter.all')} set={!!filter.stage} onPress={() => setOpen(open === 'stage' ? null : 'stage')} />
+            <ValueBox testID="filter-category" label={msg('fin.filter.category')} value={filter.categoryId ? catName(filter.categoryId) : msg('fin.filter.all')} set={!!filter.categoryId} onPress={() => setOpen(open === 'category' ? null : 'category')} />
+          </View>
+          <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+            <ValueBox testID="filter-farm" label={msg('v2m.farm')} value={filter.propertyId ? (farms.find((f) => f.id === filter.propertyId)?.name ?? '') : msg('fin.filter.all')} set={!!filter.propertyId} onPress={() => setOpen(open === 'farm' ? null : 'farm')} />
+            <ValueBox testID="filter-month" label={msg('fin.filter.month')} value={filter.month ? formatMonth(filter.month) : msg('fin.filter.all')} set={!!filter.month} onPress={() => setOpen(open === 'month' ? null : 'month')} />
+          </View>
+          <TileGrid columns={2}>
+            <ChoiceTile kind="check" multi testID="filter-payer-missing" selected={!!filter.payerMissing} label={msg('fin.filter.payerMissing')} onPress={() => set({ payerMissing: !filter.payerMissing, unrepaid: undefined, payerId: undefined })} />
+            <ChoiceTile kind="check" multi testID="filter-unrepaid" selected={!!filter.unrepaid} label={msg('fin.filter.unrepaid')} onPress={() => set({ unrepaid: !filter.unrepaid, payerId: undefined, payerMissing: undefined })} />
+          </TileGrid>
+          {filterCount ? (
+            <TextLink testID="filter-clear" onPress={() => { setFilter({}); setSelected(new Set()); }}>
+              {msg('fin.filter.clear')}
+            </TextLink>
+          ) : null}
+        </View>
 
         {open === 'stage' ? (
-          <ChoiceRow>
-            <ChoiceChip testID="stage-all" label={msg('fin.filter.all')} on={!filter.stage} onPress={() => set({ stage: undefined })} />
-            {STAGES.map((s) => <ChoiceChip key={s} testID={`stage-${s}`} label={msg(`fin.stage.${s}`)} on={filter.stage === s} onPress={() => set({ stage: s })} />)}
-          </ChoiceRow>
+          <TileGrid columns={2}>
+            <ChoiceTile kind="check" testID="stage-all" label={msg('fin.filter.all')} selected={!filter.stage} onPress={() => set({ stage: undefined })} />
+            {STAGES.map((s) => <ChoiceTile key={s} kind="check" testID={`stage-${s}`} label={msg(`fin.stage.${s}`)} selected={filter.stage === s} onPress={() => set({ stage: s })} />)}
+          </TileGrid>
         ) : null}
         {open === 'category' ? (
-          <ChoiceRow>
-            <ChoiceChip testID="cat-all" label={msg('fin.filter.all')} on={!filter.categoryId} onPress={() => set({ categoryId: undefined })} />
-            {state?.categories.map((c) => <ChoiceChip key={c.id} testID={`cat-${c.id}`} label={c.name} on={filter.categoryId === c.id} onPress={() => set({ categoryId: c.id })} />)}
-          </ChoiceRow>
+          <TileGrid columns={2}>
+            <ChoiceTile kind="check" testID="cat-all" label={msg('fin.filter.all')} selected={!filter.categoryId} onPress={() => set({ categoryId: undefined })} />
+            {(state?.categories ?? []).map((c) => <ChoiceTile key={c.id} kind="check" testID={`cat-${c.id}`} label={c.name} selected={filter.categoryId === c.id} onPress={() => set({ categoryId: c.id })} />)}
+          </TileGrid>
         ) : null}
         {open === 'farm' ? (
-          <ChoiceRow>
-            <ChoiceChip testID="farm-all" label={msg('fin.filter.all')} on={!filter.propertyId} onPress={() => set({ propertyId: undefined })} />
-            {farms.map((f) => <ChoiceChip key={f.id} testID={`farm-${f.id}`} label={f.name} on={filter.propertyId === f.id} onPress={() => set({ propertyId: f.id })} />)}
-          </ChoiceRow>
+          <TileGrid columns={2}>
+            <ChoiceTile kind="check" testID="farm-all" label={msg('fin.filter.all')} selected={!filter.propertyId} onPress={() => set({ propertyId: undefined })} />
+            {farms.map((f) => <ChoiceTile key={f.id} kind="check" testID={`farm-${f.id}`} label={f.name} selected={filter.propertyId === f.id} onPress={() => set({ propertyId: f.id })} />)}
+          </TileGrid>
         ) : null}
         {open === 'month' ? (
-          <ChoiceRow>
-            <ChoiceChip testID="month-all" label={msg('fin.filter.all')} on={!filter.month} onPress={() => set({ month: undefined })} />
-            {months.map((m) => <ChoiceChip key={m} testID={`month-${m}`} label={formatMonth(m)} on={filter.month === m} onPress={() => set({ month: m })} />)}
-          </ChoiceRow>
+          <TileGrid columns={2}>
+            <ChoiceTile kind="check" testID="month-all" label={msg('fin.filter.all')} selected={!filter.month} onPress={() => set({ month: undefined })} />
+            {months.map((m) => <ChoiceTile key={m} kind="check" testID={`month-${m}`} label={formatMonth(m)} selected={filter.month === m} onPress={() => set({ month: m })} />)}
+          </TileGrid>
         ) : null}
         {filter.unrepaid ? (
-          <ChoiceRow>
+          <TileGrid columns={2}>
             {unrepaidPayers.map((p) => (
-              <ChoiceChip key={p.id} testID={`filter-payer-${p.id}`} label={msg('fin.filter.payer', { name: p.name })} on={filter.payerId === p.id} onPress={() => set({ payerId: filter.payerId === p.id ? undefined : p.id })} />
+              <ChoiceTile key={p.id} kind="check" clearable testID={`filter-payer-${p.id}`} label={msg('fin.filter.payer', { name: p.name })} selected={filter.payerId === p.id} onPress={() => set({ payerId: filter.payerId === p.id ? undefined : p.id })} />
             ))}
-          </ChoiceRow>
+          </TileGrid>
         ) : null}
 
         <Card testID="totals">

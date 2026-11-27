@@ -10,6 +10,7 @@ import type { MasterStore } from '../store/master-store';
 import type { EventStore } from '../store/store';
 import { LogBuilder } from '../core/fixtures';
 import { seedMockFarm, seedSale, type MockFarm } from '../test/sale-fixture';
+import { expectSegment } from '../test/choice-shape';
 import { wrap } from '../test/render';
 
 // Whole screens with a sale's money inside the sheet: slow on CI runners.
@@ -236,6 +237,8 @@ describe('a worker\'s account (M2, M3, M5–M7, M9, P3 · PR-1, PR-2, PR-5–PR-
     await flush();
     await press(`rp-row-${SALE}-cash`);
     await press('rp-sheet-less');
+    // E01-S25 CT-5: the received bar is style B (r2-rp-received).
+    expectSegment(screen.getByTestId('rp-amt-with-worker'));
     await press('rp-amt-with-worker');
     expect(text('rp-amt-worker-holds')).toHaveTextContent('เงินอยู่กับแดง หนี้ยังไม่ได้จ่าย');
     await press('rp-amt-fix');

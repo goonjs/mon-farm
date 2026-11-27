@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { BottomSheet } from './bottom-sheet';
-import { CHIP_MIN_WIDTH } from './chip-width';
+import { QuickLinks } from './choice-tiles';
 import { CTA } from './button';
 import { Check, ChevronLeft, ChevronRight } from './icons';
 import { TextLink } from './text-link';
@@ -152,44 +152,15 @@ function Body({ onClose, value, onChange, max, min, emptyLabel, today: todayProp
 
   return (
     <>
-      <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-        {quick.map((q) => {
-          const sel = draft === q.iso;
-          const off = beyond(q.iso);
-          return (
-            <Pressable
-              key={q.id}
-              testID={`${tid}-${q.id}`}
-              accessibilityRole="button"
-              accessibilityState={{ selected: sel, disabled: off }}
-              disabled={off}
-              onPress={() => pick(q.iso)}
-              style={{
-                minHeight: t.target.min,
-                minWidth: CHIP_MIN_WIDTH,
-                paddingHorizontal: t.space.md,
-                borderRadius: t.radius.pill,
-                borderWidth: t.border.thick,
-                borderColor: off ? t.color.rule : sel ? t.color.action : t.color.ruleStrong,
-                backgroundColor: sel ? t.color.action : t.color.surfaceRaised,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text
-                style={{
-                  ...text,
-                  fontSize: t.font.size.bodyMd,
-                  fontWeight: t.font.weight.bold,
-                  color: off ? t.color.inkFaint : sel ? t.color.inkInverse : t.color.ink,
-                }}
-              >
-                {q.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <QuickLinks
+        testID={tid}
+        groupTestID={`${tid}-quick`}
+        onPick={(id) => {
+          const q = quick.find((x) => x.id === id);
+          if (q) pick(q.iso);
+        }}
+        options={quick.map((q) => ({ id: q.id, label: q.label, disabled: beyond(q.iso) }))}
+      />
 
       <View
         style={{

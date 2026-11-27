@@ -37,8 +37,10 @@ import { peopleStore } from '../../store/people';
 import { useTheme } from '../../theme';
 import {
   AppText,
+  BottomSheet,
   Button,
   CalendarIcon,
+  ChoiceTile,
   Card,
   Check,
   FactRow,
@@ -57,11 +59,13 @@ import {
   FarmMateArt,
   personArt,
   TextLink,
+  TileGrid,
+  RadioCard,
+  ValueBox,
 } from '../../ui';
 import {
   AddCTA,
   categoryTone,
-  ChipWrap,
   ConfirmSheet,
   DeletedLink,
   DeletedList,
@@ -69,7 +73,6 @@ import {
   TapRow,
   HelpNote,
   RowCard,
-  ToggleChip,
   useBack,
   useDay,
   useMaster,
@@ -108,6 +111,7 @@ export function PeopleScreen() {
   // `?filter=tapper` — the home card ข้อมูลคนงาน opens the list on its tappers (v1.1.0 screen 26).
   const params = useLocalSearchParams<{ filter?: string }>();
   const [filter, setFilter] = useState<Filter>('all');
+  const [picking, setPicking] = useState(false);
   // Follow the param whenever it changes, not only on the first render: the
   // static page hydrates without search params and gets them a render later.
   const asked = FILTERS.find((f) => f === params.filter) ?? null;
@@ -146,11 +150,26 @@ export function PeopleScreen() {
         </>
       ) : (
         <>
-          <ChipWrap testID="people-filters">
-            {FILTERS.map((f) => (
-              <ToggleChip key={f} testID={`filter-${f}`} label={label(f)} on={filter === f} onPress={() => setFilter(f)} />
-            ))}
-          </ChipWrap>
+          {/* E01-S26 PS26-4: one E box; the groups are rows in a sheet (rule 12: a fixed short list). */}
+          <View testID="people-filters" style={{ flexDirection: 'row' }}>
+            <ValueBox testID="people-filter" label={msg('peopleList.group')} value={label(filter)} set={filter !== 'all'} onPress={() => setPicking(true)} />
+          </View>
+          {picking ? (
+            <BottomSheet open onClose={() => setPicking(false)} title={msg('peopleList.group')} testID="people-filter-sheet">
+              {FILTERS.map((f) => (
+                <RadioCard
+                  key={f}
+                  testID={`filter-${f}`}
+                  title={label(f)}
+                  selected={filter === f}
+                  onPress={() => {
+                    setFilter(f);
+                    setPicking(false);
+                  }}
+                />
+              ))}
+            </BottomSheet>
+          ) : null}
           {state ? <PeopleRows state={state} filter={filter} today={today} tappers={tappers} /> : null}
           <DeletedLink n={deleted.length} onPress={() => setShowDeleted(true)} />
         </>
@@ -229,6 +248,7 @@ function PersonForm({ personId, startRole }: { personId: string | null; startRol
   const [roles, setRoles] = useState<BuiltinRole[]>(startRole && !personId ? [startRole] : []);
   const [otherRoles, setOtherRoles] = useState<string[]>([]);
   const [otherDraft, setOtherDraft] = useState('');
+  const [otherOpen, setOtherOpen] = useState(false);
   const [tried, setTried] = useState(false);
   const [roleWarning, setRoleWarning] = useState(false);
   const write = useWrite();
@@ -250,6 +270,11 @@ function PersonForm({ personId, startRole }: { personId: string | null; startRol
     const v = otherDraft.trim();
     if (v && !otherRoles.includes(v)) setOtherRoles([...otherRoles, v]);
     setOtherDraft('');
+    setOtherOpen(false);
+  };
+  const cancelOther = () => {
+    setOtherDraft('');
+    setOtherOpen(false);
   };
 
   const save = async (confirmed = false) => {
@@ -296,31 +321,47 @@ function PersonForm({ personId, startRole }: { personId: string | null; startRol
           </AppText>
           <AppText variant="caption">{msg('v2f.rolesHint')}</AppText>
         </View>
-        <ChipWrap>
+        {/* E01-S26 PS26-5: F tick tiles, 2 a row, several at once; an added role is the same tile. */}
+        <TileGrid columns={2}>
           {SHOWN_ROLES.map((r) => (
-            <ToggleChip key={r} check testID={`role-${r}`} label={msg(`role.${r}`)} on={roles.includes(r)} onPress={() => toggle(r)} />
+            <ChoiceTile key={r} kind="check" multi testID={`role-${r}`} label={msg(`role.${r}`)} selected={roles.includes(r)} onPress={() => toggle(r)} />
           ))}
           {otherRoles.map((r) => (
-            <ToggleChip key={r} check testID={`other-role-${r}`} label={r} on onPress={() => setOtherRoles(otherRoles.filter((x) => x !== r))} />
+            <ChoiceTile key={r} kind="check" multi testID={`other-role-${r}`} label={r} selected onPress={() => setOtherRoles(otherRoles.filter((x) => x !== r))} />
           ))}
-        </ChipWrap>
+        </TileGrid>
         {tried && errors.includes('roles') ? <FieldError testID="person-roles-error">{msg('personForm.needRole')}</FieldError> : null}
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: t.space.sm }}>
-        <View style={{ flex: 1 }}>
-          <TextField
-            testID="person-other-role"
-            label={msg('v2f.otherRoles')}
-            hint={msg('v2f.otherRolesHint')}
-            placeholder={msg('personForm.otherRolePlaceholder')}
-            value={otherDraft}
-            onChangeText={setOtherDraft}
-          />
+      {/* Owner rvs26-06 (2026-11-23): "เพิ่มบทบาทอื่นให้เป็น text link กลางบรรทัด กินทั้งบรรทัดถัดมา กดแล้วค่อยให้กรอก กดยกเลิกได้". */}
+      {otherOpen ? (
+        <View style={{ gap: t.space.xs }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: t.space.sm }}>
+            <View style={{ flex: 1 }}>
+              <TextField
+                testID="person-other-role"
+                label={msg('v2f.otherRoles')}
+                hint={msg('v2f.otherRolesHint')}
+                placeholder={msg('personForm.otherRolePlaceholder')}
+                value={otherDraft}
+                onChangeText={setOtherDraft}
+              />
+            </View>
+            {/* E01-S26 review B1: a rounded rectangle as in mockup p6-after-open, not a pill (rule 11). */}
+            <Button testID="person-add-other-role" shape="rect" icon={(c) => <Plus color={c} size={14} />} onPress={addOther} disabled={!otherDraft.trim()}>
+              {msg('v2f.add')}
+            </Button>
+          </View>
+          <TextLink testID="person-other-role-cancel" align="center" onPress={cancelOther}>
+            {msg('common.cancel')}
+          </TextLink>
         </View>
-        <Button testID="person-add-other-role" icon={(c) => <Plus color={c} size={14} />} onPress={addOther} disabled={!otherDraft.trim()}>
-          {msg('v2f.add')}
-        </Button>
-      </View>
+      ) : (
+        <View testID="person-other-role-line" style={{ alignSelf: 'stretch', alignItems: 'center' }}>
+          <TextLink testID="person-other-role-open" align="center" onPress={() => setOtherOpen(true)}>
+            {msg('personForm.addOtherRole')}
+          </TextLink>
+        </View>
+      )}
       <HelpNote lines={[msg('v2f.noAccount')]} />
       {roleWarning && existing ? (
         <Card testID="role-warning">

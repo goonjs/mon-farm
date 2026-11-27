@@ -20,9 +20,9 @@ import type { ExpenseShare, Payer, ShareSettle, Stage } from '../../core/finance
 import { filterPeople } from '../../core/master';
 import { useT } from '../../i18n';
 import { useTheme } from '../../theme';
-import { AppText, BottomSheet, CTA, MoneyField, QuantityField, SegmentedControl } from '../../ui';
+import { AppText, BottomSheet, ChoiceTile, CTA, MoneyField, QuantityField, SegmentedControl, TileGrid } from '../../ui';
 import { useMaster } from '../farm/pieces';
-import { ChoiceChip, ChoiceRow, SectionLabel, SwitchRow } from './pieces';
+import { SectionLabel, SwitchRow } from './pieces';
 
 export interface ShareDraft {
   readonly discount: string;
@@ -128,12 +128,13 @@ export function ShareSheet({
 
         <View style={{ gap: t.space.sm }}>
           <SectionLabel>{msg('xshare.withWhom')}</SectionLabel>
-          <ChoiceRow>
-            <ChoiceChip testID="share-worker-none" label={msg('xshare.none')} on={!draft.worker} onPress={() => set({ worker: null })} />
+          {/* Style I, pick one like "ใครจ่ายไปก่อน" (E01-S25 CT-7, owner reading iv). */}
+          <TileGrid columns={2}>
+            <ChoiceTile kind="mark" testID="share-worker-none" label={msg('xshare.none')} selected={!draft.worker} onPress={() => set({ worker: null })} />
             {tappers.map((p) => (
-              <ChoiceChip key={p.id} testID={`share-worker-${p.id}`} label={p.name} on={draft.worker?.id === p.id} onPress={() => set({ worker: p })} />
+              <ChoiceTile key={p.id} kind="mark" testID={`share-worker-${p.id}`} label={p.name} selected={draft.worker?.id === p.id} onPress={() => set({ worker: p })} />
             ))}
-          </ChoiceRow>
+          </TileGrid>
         </View>
 
         {draft.worker ? (
@@ -171,9 +172,10 @@ export function CategoryShareSheet({ open, onClose, name, pct, onSave }: { open:
   return (
     <BottomSheet open={open} onClose={onClose} title={msg('xshare.catTitle', { name })} testID="cat-share-sheet" action={{ label: msg('common.save'), testID: 'cat-share-save', disabled: !valid, onPress: () => void onSave(on ? n : null) }}>
       <View style={{ gap: t.space.lg }}>
-        <ChoiceRow>
-          <ChoiceChip testID="cat-share-switch" label={msg(on ? 'xshare.catOn' : 'xshare.catOff')} on={on} onPress={() => setOn(!on)} />
-        </ChoiceRow>
+        {/* One on/off switch: an F tick tile (E01-S25 CT-7). */}
+        <TileGrid columns={1}>
+          <ChoiceTile kind="check" multi testID="cat-share-switch" label={msg(on ? 'xshare.catOn' : 'xshare.catOff')} selected={on} onPress={() => setOn(!on)} />
+        </TileGrid>
         {on ? (
           <>
             <QuantityField testID="cat-share-pct" label={msg('xshare.pct')} unit="%" value={valid ? n : null} min={0} max={100} maxDigits={3} onChange={(v) => setValue(String(v))} />
