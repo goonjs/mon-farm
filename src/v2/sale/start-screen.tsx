@@ -28,6 +28,7 @@ import type { NumberingMode } from '../../core/types';
 import { useI18n, useT } from '../../i18n';
 import { newId } from '../../lib/id';
 import { financeStore } from '../../store/finance';
+import { useAppBelowMin } from '../money/money-gate';
 import { peopleStore } from '../../store/people';
 import { SaleProvider } from '../../store/SaleProvider';
 import { useTheme } from '../../theme';
@@ -120,6 +121,8 @@ export function StartSaleScreen() {
   const [price, setPrice] = useState<number | null | undefined>(undefined);
   // The prep waiting for this sale (E15-S02): undefined while it is read, null when there is none.
   const [prep, setPrep] = useState<SalePrep | null | undefined>(undefined);
+  // E01-S28: below the group's minimum the prep (it carries the price) is not used (AC12 ก, round 2).
+  const moneyBelowMin = useAppBelowMin() === true;
   const [prepChoice, setPrepChoice] = useState<'ask' | 'use' | 'skip'>('ask');
   const [note, setNote] = useState('');
   // The sale day (E04-S19 BF-9): today unless an earlier day is picked; never later.
@@ -155,7 +158,7 @@ export function StartSaleScreen() {
 
   const latest = defaultBuyer(master, latestId);
   const buyers = master.buyers.filter((b) => !b.deleted);
-  const fill = prepFill(prep, todayIso(now), buyers.map((b) => b.id));
+  const fill = prepFill(moneyBelowMin ? null : prep, todayIso(now), buyers.map((b) => b.id));
   /** What the prep gives this page: at once, or after "ใช้ที่เตรียมไว้" when it is for a later day. */
   const given = fill && (!fill.ask || prepChoice === 'use') ? fill : null;
   const buyer = buyers.find((b) => b.id === (buyerId ?? given?.buyerId ?? latest?.id)) ?? null;

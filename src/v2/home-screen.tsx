@@ -38,6 +38,7 @@ import { useFinance } from '../finance/use-finance';
 import { useI18n, useT } from '../i18n';
 import type { MessageId } from '../i18n';
 import { useSyncStatus } from '../sync/use-sync-status';
+import { MoneyUpdateNotice, useAppBelowMin } from './money/money-gate';
 import { useTheme, type Theme } from '../theme';
 import {
   ActionTile,
@@ -96,6 +97,8 @@ export function V2Home() {
   const sales = homeData?.sales ?? null;
   const { state: master } = useMaster();
   const fin = useFinance();
+  // E01-S28: below the group's minimum the money rows give way to the update message (AC12 ก, round 2).
+  const moneyBelowMin = useAppBelowMin() === true;
   const owed = useMemo(() => (fin.state ? owedByPerson(fin.state).filter((o) => o.remainingSatang > 0) : []), [fin.state]);
   const owedTotal = owed.reduce((s, o) => s + o.remainingSatang, 0);
   // E16-S05 HM-3: committed buying not paid yet; money owed back to people has its own row.
@@ -246,6 +249,16 @@ export function V2Home() {
     ) : null,
     ...repay.owes.map((o) => <OwesKnowRow key={`owes-${o.saleId}`} o={o} />),
   ].filter((r) => r !== null);
+  // Which rows show money amounts: on a build below the group minimum they are replaced by one notice.
+  const MONEY_ROWS = new Set(['owed', 'payables', 'repay-wait']);
+  const shownRows = moneyBelowMin
+    ? [
+        ...knowRows.filter((r) => !MONEY_ROWS.has(String(r.key)) && !String(r.key).startsWith('owes-')),
+        <View key="money-update" style={{ minHeight: t.target.min, justifyContent: 'center', paddingVertical: t.space.sm }}>
+          <MoneyUpdateNotice testID="home-money-update" />
+        </View>,
+      ]
+    : knowRows;
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.surface }}>
@@ -295,10 +308,10 @@ export function V2Home() {
 
         <Heading hint={msg('home.importantFirst')}>{msg('v2.toKnow')}</Heading>
         <View testID="home-to-know" style={{ ...cardStyle(t), paddingHorizontal: t.space.md, paddingVertical: t.space.xs }}>
-          {knowRows.length === 0 ? (
+          {shownRows.length === 0 ? (
             <Text style={{ ...body(t), color: t.color.inkSoft, paddingVertical: t.space.md }}>{msg('home.nothingToKnow')}</Text>
           ) : (
-            knowRows.map((row, i) => (
+            shownRows.map((row, i) => (
               <View key={i} style={i > 0 ? { borderTopWidth: t.border.hair, borderTopColor: t.color.ruleFaint } : undefined}>
                 {row}
               </View>
