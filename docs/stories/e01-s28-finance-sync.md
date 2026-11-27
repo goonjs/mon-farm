@@ -57,7 +57,7 @@ story นี้ย้ายข้อมูลเงินเข้า `EventStor
 - [x] **S28-AC6** การย้ายทนการปิดกลางทาง: id ที่มีใน `EventStore` แล้วข้ามไป (ไม่เทียบเนื้อหา เพราะ `deviceSeq` ถูกจัดใหม่) ทำซ้ำกี่ครั้งก็ได้ผลเดียวกัน
   และมีเครื่องหมาย "ย้ายเสร็จ" ใน meta ของ store ระหว่างย้ายแอปยังใช้ได้ หรือรอสั้น ๆ พร้อมข้อความไทย ไม่ขึ้นหน้าว่าง
 - [x] **S28-AC7** log เงินเดิม **ไม่ถูกลบ** ใน story นี้ (เก็บเป็นสำรองอ่านอย่างเดียว); หลังย้ายแล้วไม่มีโค้ดใดเขียนลงที่เดิมอีก; การลบที่เดิมเป็น story ภายหลังที่เจ้าของอนุมัติ
-- [x] **S28-AC8 (S28-Q1 = ก)** ข้อมูลเงินเดิมของ **ทุกเครื่อง** ที่เป็นของผู้ใช้และกลุ่มที่ login อยู่ ส่งขึ้นกลุ่มหลังย้าย (AC5) — ไม่มีการเลือกเครื่องหลัก
+- [ ] **S28-AC8 (S28-Q1 = ก)** ข้อมูลเงินเดิมของ **ทุกเครื่อง** ที่เป็นของผู้ใช้และกลุ่มที่ login อยู่ ส่งขึ้นกลุ่มหลังย้าย (AC5) — ไม่มีการเลือกเครื่องหลัก
   และไม่ตัดรายการซ้ำเอง: ถ้าเคยบันทึกรายการเดียวกันในสองเครื่อง กลุ่มเห็นสองรายการ แล้วผู้ใช้ลบอันซ้ำเองด้วยการลบที่มีอยู่; event ของผู้ใช้อื่น/กลุ่มอื่น/ไม่มี `groupId` ย้ายเข้า store แต่ไม่ส่ง ไม่นับ ไม่ลบ (กฎ scope เดียวกับ E01-S09)
 - [x] **S28-AC9 (ข้อมูลขัดกัน)** สองเครื่องแก้ record เงินเดียวกันบน base เดียวกันขณะออฟไลน์: ฟิลด์เงิน/จำนวน/สถานะ → Conflict ทั้งสองเครื่องหลัง sync (D-30, ไม่มี last-write-wins);
   ระหว่างยังไม่ตัดสิน ยอดใช้ค่าก่อนแก้ (NFR-3) และหน้าเงินแสดงข้อความขัดกันที่มีอยู่; ตัดสินบนเครื่องหนึ่ง (บันทึกใหม่ที่อ้างทุก head) แล้ว sync → หายทุกเครื่อง
@@ -88,18 +88,23 @@ story นี้ย้ายข้อมูลเงินเข้า `EventStor
     และยังไม่มีหน้าไหนบอกเลขรุ่น เจ้าของจึงยืนยันรุ่นจากหน้าจอไม่ได้ — รอบแรกควรมีสิ่งที่ดูได้ เช่นบรรทัดเลขรุ่นในหน้า "เครื่องนี้" (ทีมเสนอใน PR รอบแรก)
 - [x] **S28-AC13** อยู่ใน free tier: ไม่มีบริการใหม่ ไม่มี listener สดเพิ่ม (pull ตาม trigger เดิม); บันทึกปริมาณ read/write ต่อวันโดยประมาณใน Dev notes
 
-**หลักฐานรอบสอง (branch `feature/e01-s28-r2-finance-sync`, test แดงก่อนใน commit `537960c`):**
+**หลักฐานรอบสอง (branch `feature/e01-s28-r2-finance-sync`):**
+
+- แดงก่อน (รีวิว UI N6 แก้ถ้อยคำ): ที่ `537960c` ชุด jest ทั้งสองล้มเพราะ **หา module `finance-log` ไม่พบ** (ไม่มี test ไหนได้รัน) — ไม่ใช่ล้มเพราะพฤติกรรม ·
+  เหตุผลที่ถูกของด่านรอบสองดูที่ `69ddea2` (logic อยู่แล้ว ยังไม่มีด่าน): `v2-money-gate.test.tsx` ล้ม **12** ข้อ ทุกข้อ `Unable to find an element with testID: money-update-app` / `home-money-update` ·
+  ชุดแก้หลังรีวิว (`14c2b95`) ล้มด้วยพฤติกรรมจริงทุกข้อ (ไม่มี module หาย) เช่น B1: เครื่อง B `state: error`, ค่าใช้จ่าย 0 รายการ ขณะ A มี 1
 
 - AC1: `src/store/finance-log.test.ts` "writes go to the EventStore" (kind `finance`, `FINANCE_SCOPE`, `targetId`/`baseEventId`/`payload` เท่าเดิม, อยู่ใน `pending()`, ไม่ใช่การขาย); e2e `E01-S28 r2: a money write goes to the outbox…` ออฟไลน์ 390×844
 - AC2: `src/sync/finance-sync.test.ts` "money is sent on its own…" (ออฟไลน์ → online → outbox ว่าง; ack หาย → server มีชุดเดียว) ผ่าน fake server ที่ส่งทุกเอกสารผ่าน envelope จริง; emulator `firestore/sync.test.ts` "E01-S28 r2: money recorded on each phone…"
 - AC3: `useFinance` อ่านใหม่เมื่อ `onSyncChanged`; jest `v2-finance-sync.test.tsx` "an open money screen shows what a pull brought"
-- AC4: jest `v2-finance-sync.test.tsx` ป้ายบนหน้าเงินขึ้น "รอส่ง 2" (เลขขั้นต่ำ + ค่าใช้จ่าย) ไม่ใช่ "ซิงก์แล้ว"; screenshot `after-r2-expenses-pending.png`
+- AC4: jest `v2-finance-sync.test.tsx` ป้ายบนหน้าเงินขึ้น "รอส่ง 1" (ค่าใช้จ่าย 1 รายการ; เลขขั้นต่ำส่งไปด้วยแต่ไม่นับ และถ้าเหลือแค่มันยังขึ้น "รอส่ง 1" ไม่ใช่ "ซิงก์แล้ว" — รีวิว N8/UI N1, `core/scope.test.ts`); screenshot `after-r2-expenses-pending.png`
 - AC5/AC6/AC7: `finance-log.test.ts` "the one-time copy…" (N → N, projection เท่ากันแบบ canonical JSON, ตัดกลางทางแล้วรันซ้ำ → ข้าม id ที่มี, เครื่องหมาย `financeLogMigratedV1` ใน meta, log เดิมไม่ถูกเขียน/ลบ); `store.test.ts` meta flag ทั้ง Memory และ IndexedDB (อยู่รอดการเปิดใหม่); e2e `E01-S28 r2: the old finance log is copied once…` (เว็บจริง: 3 รายการเดิม ยอด 6,000 เท่าเดิม, reload ไม่ซ้ำ, localStorage เดิมยังอยู่) · `after-r2-migrated.png`
-- AC8: `finance-log.test.ts` "scope of copied events" — ของผู้ใช้อื่น/กลุ่มอื่นย้ายเข้า store แต่ `waitingCount` ไม่นับ (engine ไม่ส่งตามกฎ E01-S09); rules emulator ปฏิเสธ event เงินของผู้ใช้อื่น · event ที่ไม่มี `groupId`: ดู Dev notes (ไม่ย้าย ทิ้งไว้ใน log เดิม)
-- AC9: `finance-sync.test.ts` "two phones edit the same expense…" — Conflict ทั้งสองเครื่อง ยอดใช้ค่าก่อนแก้ ตัดสินบนเครื่อง A (อ้างทุก head) → หายทั้งสองเครื่อง
+- AC8 (**ยังไม่ติ๊ก — รอเจ้าของตัดสินถ้อยคำ**, รีวิว N1): `finance-log.test.ts` "scope of copied events" — ของผู้ใช้อื่น/กลุ่มอื่นย้ายเข้า store ไม่ส่ง ไม่นับในป้าย และ (รีวิว N6) หน้าเงินรวมเฉพาะเงินของกลุ่มที่เปิดอยู่; rules emulator ปฏิเสธ event เงินของผู้ใช้อื่น ·
+  ข้อที่ต่างจาก AC: event ที่ไม่มี `groupId` **ไม่ย้าย** (กฎ D-24 ของ store ปฏิเสธ) ทิ้งไว้ใน log เดิม ไม่ส่ง ไม่นับ ไม่ลบ — และหลังย้ายแล้วไม่แสดงบนหน้าจอ · ทีมแนะนำให้แก้ถ้อยคำ AC เพราะหลัง #92 (2026-10-11) log เดิมไม่รับ event แบบนี้แล้ว จึงไม่น่ามีจริง
+- AC9: `finance-sync.test.ts` "two phones edit the same expense…" — Conflict ทั้งสองเครื่อง ยอดใช้ค่าก่อนแก้ ตัดสินบนเครื่อง A (อ้างทุก head) → หายทั้งสองเครื่อง; และสถานะการจ่าย (`payment_mark_set` ติ๊กออกบนเครื่องหนึ่ง / รับขาดบนอีกเครื่อง) Conflict แล้วหายหลังตัดสิน (รีวิว N9)
 - AC10: `firestore.rules` ไม่แก้; `firestore/rules.test.ts` "finance events (E01-S28 round 2, rules unchanged)" — สร้างได้ (รวม `app_min`), update/delete ไม่ได้, คนนอกอ่าน/เขียนไม่ได้, batch 500 ผ่าน
-- AC11: `finance-sync.test.ts` "finance events that name a sale…" — เงินมาก่อนการขาย / การขายมาก่อนเงิน, การขายถูกลบทีหลัง → ยอดหนี้ตามถูก, scope เงินไม่เป็นการขาย
-- AC12 (ก) ส่วนรอบสอง: jest `v2-money-gate.test.tsx` (route เพิ่ม 11 หน้า + แถวเงินหน้าแรก); e2e `E01-S28 r2: above the group minimum home hides its money rows…` · `after-r2-home-gate.png`, `after-r2-money-gate.png`
+- AC11: `finance-sync.test.ts` "finance events that name a sale…" — ครบ 5 ชนิดที่ AC ระบุ (`sale_rounding_set`, `sale_account_set`, `payment_mark_set`, `sale_prep_set`, `buyer_check_set`) + `debt_payment_recorded`: เงินมาก่อนการขาย / การขายมาก่อนเงิน, การขายถูกลบทีหลัง → ยอดหนี้ตามถูก, scope เงินไม่เป็นการขาย
+- AC12 (ก) ส่วนรอบสอง: jest `v2-money-gate.test.tsx` (route เพิ่ม 11 หน้า + แถวเงินหน้าแรก ไม่มียอดเงินในการ์ดควรรู้), `v2-farm-people.test.tsx` (บรรทัดหนี้ในหน้าคน), `v2-sale-start-prep.test.tsx` E (เริ่มการขายไม่ใช้ข้อมูลเตรียมขาย); e2e `E01-S28 r2: above the group minimum home hides its money rows…` · `after-r2-home-gate.png`, `after-r2-money-gate.png`
 - AC12 (ข) เงื่อนไขก่อนส่ง: (1) รอบแรกอยู่บน `dev` (PR #248) (2) เจ้าของโหลดหน้าใหม่แล้ว — ดู Dev notes 2026-11-27
 - AC13: ไม่มีบริการใหม่ ไม่มี listener สดเพิ่ม (อ่านใหม่ตาม `onSyncChanged` ของ engine เดิม) · ประมาณ read/write ใน Dev notes
 
@@ -163,7 +168,7 @@ owner answer, dashboard 24 พ.ย. 2569 17:44 เวลาไทย (`answers/e
 - [x] Sandbox run performed (รอบแรก): build เว็บจริง (`expo export`) + Playwright 390×844 ออฟไลน์, `e2e/v2-money.spec.ts` ทั้งไฟล์ 11/11 ผ่าน;
   สอง test ใหม่ (`E01-S28 r1: …`) แดงบน build ของ `dev` `daeb3d1` (หน้าแรกขึ้นแถว "การขายที่ยังไม่ปิด" ของ scope เงิน, "เริ่มการขาย" พาเข้า scope เงิน) แล้วเขียวบน branch
 - [x] Sandbox run (รอบสอง): build เว็บจริง + Playwright phone-portrait ทั้งชุด 159 ผ่าน / 5 ข้าม (รันด้วย `CI=1`); `npm run test:rules` 86/86 และ `npm run test:e2e:sync` 3/3 บน emulator
-- [x] Screenshots รอบสอง (390×844): `after-r2-expenses-pending.png` (รอส่ง 2), `after-r2-migrated.png` (ย้ายแล้วยอดเท่าเดิม), `after-r2-home-gate.png` (แถวเงินหน้าแรกกลายเป็นข้อความอัปเดต),
+- [x] Screenshots รอบสอง (390×844): `after-r2-expenses-pending.png` (รอส่ง 1), `after-r2-migrated.png` (ย้ายแล้วยอดเท่าเดิม), `after-r2-home-gate.png` (แถวเงินหน้าแรกกลายเป็นข้อความอัปเดต),
   `after-r2-home-no-sale-row.png`, `after-r2-money-gate.png` · ภาพรอบแรกไม่แก้
 - [x] Screenshots — ไม่มี mockup ใน story นี้ (ข้อความเดียวตาม AC12 (ก)) · `docs/ux/screenshots/e01-s28/`:
   ก่อน (dev): `before-home.png` (แถวการขายว่างที่ยังไม่ปิด), `before-start-redirect.png` (เริ่มการขาย → เลือกจุดชั่งของ scope เงิน), `before-money.png`;
@@ -216,13 +221,33 @@ owner answer, dashboard 24 พ.ย. 2569 17:44 เวลาไทย (`answers/e
     → ≤ 100 writes/วัน; read = เอกสารใหม่ × จำนวนเครื่องที่ดึง (2–4) + ส่วนอ่านซ้ำย้อน 2 นาทีต่อการดึง → ≤ ~1,000 reads/วัน · ครั้งเดียวตอนย้าย: N event เดิมต่อเครื่อง (คาด < 2,000)
     = N writes ครั้งเดียว + N × เครื่องอื่น reads · ไม่มี listener สด ไม่มี Cloud Function ไม่มีบริการใหม่ — ห่างจากเพดานมาก
   - **Emulator:** `firebase-tools` ใน devDependencies ดาวน์โหลด `cloud-firestore-emulator-v1.22.0.jar` ลง `~/.cache/firebase` เองตอนรันครั้งแรก (ไม่ได้ติดตั้ง package ใหม่)
+  - 2026-11-28 (หลังรีวิว): port `EventStore` เปลี่ยนจาก `metaFlag` เป็น `metaValue`/`setMetaValue` (key `value:<key>` ใน `meta`, ไม่ขึ้น version DB) เพื่อเก็บจำนวน event เดิมที่ย้ายแล้ว ·
+    การย้ายตรวจทุกครั้งที่ใช้ port (อ่าน log เดิม + เครื่องหมาย; ย้ายซ้ำเมื่อ log เดิมยาวขึ้น) · `SyncDeps.store` ต้องมี `load` (อ่าน scope เงินตอนจัดลำดับส่ง) ·
+    ในโหมดหน่วยความจำ (ไม่มี IndexedDB) ทุกครั้งที่โหลดหน้าใหม่ยังเขียน `app_min` ใหม่ 1 ตัว (ไม่เสียหาย เสีย 1 write) ·
+    ตัวนับยอดในหน้านับเข่ง ("ยอดของ… รวม (฿)") ไม่ถูกด่านโดยตั้งใจ: มาจาก log การขาย ซึ่งรุ่นเก่านับเหมือนกัน (รีวิว UI N4)
   - e2e: log เงินเดิมถูกอ่านครั้งเดียว จึงย้ายการ seed เงินใน e2e จาก localStorage ไปเขียน IndexedDB (`seedFinance` ใน `e2e/fixtures.ts`, `pending: 0`)
 
 ## Code review
 
-- Reviewer (separate agent/session):
-- Findings:
-- Resolution:
+- Reviewer (separate agent/session): รีวิวอิสระสองชุดบน head `857c195` —
+  ข้อมูล/sync/การย้าย https://github.com/goonjs/mon-farm/pull/253#pullrequestreview-6091567824 (1 B, 12 N) ·
+  UI/ด่าน/e2e (rev253b) https://github.com/goonjs/mon-farm/pull/253#pullrequestreview-6091564206 (0 B, 7 N) · ทั้งคู่: PR นี้ critical
+- Findings และการแก้ (test แดงก่อนใน `14c2b95`, แก้ใน `e78c0c9` และ `109a32e`):
+  - **B1** แท็บรุ่นรอบแรกเก็บเงินที่ดึงมาโดยไม่มี `baseEventId`/`targetId` → หลังโหลดเป็นรอบสอง ยอดหาย + IntegrityError ถาวร → แก้: `toFinanceEvent` อ่าน base ที่ไม่มีเป็น `null` และ target ที่ไม่มีเป็น id ของตัวเอง; `sameEvent` (`append-rule.ts`) เทียบเงินแบบเดียวกันตอนดึง/ตอนเทียบกับ server
+  - **N1** AC8 กับ event ไม่มี `groupId` → ไม่แก้โค้ด; untick AC8 รอเจ้าของตัดสินถ้อยคำ (ทีมแนะนำแก้ AC)
+  - **N2** log เดิมที่โตหลังย้าย → เครื่องหมายเก็บจำนวน event เดิม (`{"count":N}` ใน meta) ย้ายซ้ำเมื่อ log เดิมยาวกว่า (ข้าม id ที่มี)
+  - **N3** `app_min` มาก่อนเงินทุกทาง → `push()` ส่ง `app_min` ก่อน และกันเงินของกลุ่มที่ยังไม่มีขั้นต่ำไว้ แล้วลองใหม่; `beforePush` เขียนขั้นต่ำทุกรอบ ไม่ทิ้งความล้มเหลว
+  - **N4** ย้ายซ้ำเข้า store ใหม่ชน server → `sameEvent` ไม่นับ `deviceSeq` สำหรับเงิน: สำเนาที่ server มีแล้วนับว่าส่งแล้ว ไม่เป็น integrity ถาวร
+  - **N5** เว็บไม่มี IndexedDB เงินใหม่หายเมื่อโหลดหน้า → ไม่แก้โค้ด; ให้เจ้าของเลือก (ดู PR "Owner decisions needed")
+  - **N6** หน้าเงินรวมทุกกลุ่ม → port และด่านกรองเฉพาะกลุ่มที่เปิดอยู่
+  - **N7** แถวเดิมเสียทำให้บันทึกเงินไม่ได้ → ข้ามแถวที่รูปไม่ถูก นับเป็น `refused` และ log
+  - **N8 / UI N1** "รอส่ง 2" → ป้ายไม่นับ `app_min` แต่ไม่ขึ้น "ซิงก์แล้ว" ขณะยังรอส่ง
+  - **N9 / N10** test เพิ่ม: AC11 ครบ 5 ชนิด, AC9 สถานะการจ่าย, SQLite (`finance.native.test.ts`: meta value + log เดิมอ่านอย่างเดียว)
+  - **N11** อ่าน scope เงินครั้งเดียวต่อการบันทึก; เปิดฐาน SQLite เดิมครั้งเดียว
+  - **N12** ขั้นโหลดหน้าใหม่เป็นคำที่ lead ส่งต่อ → ไม่แก้โค้ด; ให้เจ้าของยืนยันเองและโหลดใหม่อีกครั้งหลังรอบสอง deploy
+  - **UI N2** test บรรทัดหนี้หน้าคน และหน้าเริ่มการขาย · **UI N3** e2e การ์ดควรรู้ต้องมีแค่ข้อความอัปเดต · **UI N4** แถวเงินหน้าแรกสร้างผ่าน `money(...)` + jest ไม่มียอดเงินในการ์ด ·
+    **UI N5** ปุ่มโหลดหน้าใหม่ → งานถัดไป ให้เจ้าของเลือก · **UI N6** แก้หลักฐานแดงก่อน (ข้างบน) · **UI N7** ตัดคำ "and no money" ที่ไม่ได้พิสูจน์ออก
+- Resolution: แก้ครบทุกข้อที่ต้องแก้; ข้อ N1, N5, N12, UI N5 รอเจ้าของ (ไม่แก้โค้ด)
 
 ## QA notes
 
