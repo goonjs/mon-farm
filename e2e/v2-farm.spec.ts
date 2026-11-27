@@ -488,6 +488,7 @@ for (const [width, size] of [
       if (width === 390) await expect(id('hist-tapper-all')).toBeVisible();
       await s26Snap(page, 'labelfix-hist-b-e');
       const twoSegments = await lineUp('ทุกคน + นัด');
+      test.info().annotations.push({ type: 'two-segment layout', description: twoSegments });
       if (width === 390) expect(twoSegments).toBe('B+E');
       // E+E: four segments (ทุกคน + three tappers), so both filters are E boxes.
       await seedMaster(page, [
