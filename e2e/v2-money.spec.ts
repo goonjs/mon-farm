@@ -88,9 +88,12 @@ test('v2 expenses, owed and repay — offline, end to end', async ({ page, conte
   await page.getByTestId('expense-save').click();
 
   // Summary lines are short money (owner rule 2026-10-31): 1,840 → ฿ 1,840, 15,000 → ฿ 15.00k.
-  await expect(page.getByTestId('total-actual')).toContainText('฿ 1,840');
+  await expect(page.getByTestId('total-actual')).toContainText('฿\u00a01,840');
   await expect(page.getByTestId('total-actual')).not.toContainText('1,840.00');
-  await expect(page.getByTestId('total-committed')).toContainText('฿ 15.00k');
+  await expect(page.getByTestId('total-committed')).toContainText('฿\u00a015.00k');
+  // The short figure is rounded; the exact one is still there for screen readers (review of PR 251 N1).
+  await expect(page.getByTestId('total-actual').getByLabel('1,840.00 บาท')).toBeVisible();
+  await expect(page.getByTestId('total-committed').getByLabel('15,000.00 บาท')).toBeVisible();
   await expect(page.getByTestId('total-planned')).toContainText('ไม่ทราบ');
   await evidence(page, `${SHOTS}/19-expense-list.png`, { fullPage: true });
 
@@ -512,3 +515,55 @@ test('order: sack sizes are style A (E01-S25 CT-7)', async ({ page }) => {
   await choiceShot(page, 'b25-order-kg-a');
   await checkChoiceFit(page);
 });
+
+/**
+ * The expense totals card (owner rule 2026-10-31, review of PR 251 B1, B2):
+ * short money with ฿ kept on the digits' line even at 320 px text L next to
+ * the "+ ไม่ทราบ" caption, and one tap opens the exact totals.
+ */
+for (const [width, size] of [[320, 'l'], [390, 'm']] as const) {
+  test(`expense totals: one-line figures, exact totals one tap away, at ${width} px text ${size.toUpperCase()}`, async ({ page, context }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.addInitScript((s) => localStorage.setItem('mon-farm:text-size', s), size);
+    await page.goto('/v2/expenses');
+    await context.setOffline(true);
+    await expect(page.getByTestId('expenses-empty')).toBeVisible();
+    await addExpense(page, { amount: '103000', date: '2026-09-28', cat: 'cat-fuel', payer: 'farm' });
+    await closePayer(page);
+    await page.getByTestId('expense-save').click();
+    await addExpense(page, { amount: '3250', date: '2026-10-31', stage: 'committed', cat: 'cat-salary', payer: 'farm' });
+    await closePayer(page);
+    await page.getByTestId('expense-save').click();
+    await addExpense(page, { amount: '12540', date: '2026-11-14', stage: 'planned', cat: 'cat-repair', payer: 'farm' });
+    await closePayer(page);
+    await page.getByTestId('expense-save').click();
+    await addExpense(page, { stage: 'planned', unknown: true, date: '2026-11-15', cat: 'cat-labour', payer: 'farm' });
+    await closePayer(page);
+    await page.getByTestId('expense-save').click();
+
+    await expect(page.getByTestId('total-planned')).toContainText('ไม่ทราบ 1 รายการ');
+    // Each figure sits on one line: ฿ never wraps away from its digits.
+    for (const k of ['actual', 'committed', 'planned']) {
+      const fig = page.getByTestId(`total-${k}`).getByLabel(/ บาท$/);
+      const [box, fontSize] = await Promise.all([fig.boundingBox(), fig.evaluate((e) => parseFloat(getComputedStyle(e).fontSize))]);
+      expect(box!.height, `total-${k}-amount is one line`).toBeLessThan(fontSize * 2);
+    }
+    expect(await textFit(page)).toEqual([]);
+    expect((await page.getByTestId('totals').boundingBox())!.height).toBeGreaterThanOrEqual(48);
+    await evidence(page, `docs/ux/screenshots/expense-summary-compact/${width}-${size}-totals-unknown-after.png`);
+
+    await page.getByTestId('totals').click();
+    const sheet = page.getByTestId('totals-sheet');
+    await expect(sheet).toBeVisible();
+    await expect(page.getByTestId('totals-sheet-actual')).toContainText('103,000.00 บาท');
+    await expect(page.getByTestId('totals-sheet-committed')).toContainText('3,250.00 บาท');
+    await expect(page.getByTestId('totals-sheet-planned')).toContainText('12,540.00 บาท');
+    await expect(page.getByTestId('totals-sheet-planned')).toContainText('ไม่ทราบ 1 รายการ');
+    const close = (await page.getByTestId('totals-sheet-close').boundingBox())!;
+    expect(Math.min(close.width, close.height)).toBeGreaterThanOrEqual(48);
+    expect(await textFit(page)).toEqual([]);
+    await evidence(page, `docs/ux/screenshots/expense-summary-compact/${width}-${size}-totals-sheet-after.png`);
+    await page.getByTestId('totals-sheet-close').click();
+    await expect(sheet).toBeHidden();
+  });
+}

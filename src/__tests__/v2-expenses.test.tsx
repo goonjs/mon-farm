@@ -373,15 +373,62 @@ describe('expense list (F4, F7)', () => {
 
     const totals = screen.getByTestId('totals');
     expect(totals).not.toHaveTextContent(/103,000\.00|3,250\.00|12,540\.00/);
-    expect(screen.getByTestId('total-actual')).toHaveTextContent(/฿ 103\.0k$/);
-    expect(screen.getByTestId('total-committed')).toHaveTextContent(/฿ 3,250$/);
-    expect(screen.getByTestId('total-planned')).toHaveTextContent(/฿ 12\.54k$/);
+    expect(screen.getByTestId('total-actual')).toHaveTextContent(/฿\s103\.0k$/);
+    expect(screen.getByTestId('total-committed')).toHaveTextContent(/฿\s3,250$/);
+    expect(screen.getByTestId('total-planned')).toHaveTextContent(/฿\s12\.54k$/);
     const unit = within(screen.getByTestId('total-actual')).getByText('k');
     expect(Object.assign({}, ...[unit.props.style].flat(Infinity).filter(Boolean)).color).toBe(tokens.color.light.action);
     // Screen readers still hear the exact figure.
     expect(within(totals).getByLabelText('103,000.00 บาท')).toBeTruthy();
     // A row is one item, not a summary: it keeps the full amount.
     expect(screen.getByTestId('expense-amount-cm-a')).toHaveTextContent('103,000.00');
+  });
+
+  it('the totals card keeps ฿ with its digits: no-break space, the unit on a pill (review of PR 251 B1)', async () => {
+    await seedExpense('cmb-p', { amountSatang: 64_050, date: '2025-04-07', stage: 'planned' });
+    await seedExpense('cmb-u', { amountSatang: null, date: '2025-04-08', stage: 'planned' });
+    await seedExpense('cmb-a', { amountSatang: 1_254_000, date: '2025-04-05' });
+    wrap(<ExpensesScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('filter-month'));
+    fireEvent.press(screen.getByTestId('month-2025-04'));
+    expect(screen.getByTestId('total-planned-amount')).toHaveTextContent('฿\u00a0640.5', { normalizeWhitespace: false });
+    expect(screen.getByTestId('total-planned')).toHaveTextContent(/ไม่ทราบ 1 รายการ/);
+    const pill = Object.assign({}, ...[screen.getByTestId('total-actual-amount-unit').props.style].flat(Infinity).filter(Boolean));
+    expect(pill.backgroundColor).toBe(tokens.color.light.actionSunk);
+  });
+
+  it('tapping the totals card opens a sheet with the exact totals; ✕ closes it (review of PR 251 B2, skill §1)', async () => {
+    await seedExpense('cms-a', { amountSatang: 10_300_000, date: '2025-05-05' });
+    await seedExpense('cms-c', { amountSatang: 325_050, date: '2025-05-06', stage: 'committed' });
+    await seedExpense('cms-p', { amountSatang: 1_254_000, date: '2025-05-07', stage: 'planned' });
+    await seedExpense('cms-u', { amountSatang: null, date: '2025-05-08', stage: 'planned' });
+    wrap(<ExpensesScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('filter-month'));
+    fireEvent.press(screen.getByTestId('month-2025-05'));
+    expect(screen.queryByTestId('totals-sheet')).toBeNull();
+    const card = screen.getByTestId('totals');
+    expect(card.props.accessibilityRole).toBe('button');
+    fireEvent.press(card);
+    const sheet = screen.getByTestId('totals-sheet');
+    expect(sheet.props.accessibilityLabel).toBe('ยอดรวมเต็ม');
+    expect(screen.getByTestId('totals-sheet-actual')).toHaveTextContent(/เกิดจริง พ\.ค\. 2568.*103,000\.00 บาท/);
+    expect(screen.getByTestId('totals-sheet-committed')).toHaveTextContent(/ผูกพันแล้ว.*3,250\.50 บาท/);
+    expect(screen.getByTestId('totals-sheet-planned')).toHaveTextContent(/วางแผน.*12,540\.00 บาท.*ไม่ทราบ 1 รายการ/);
+    fireEvent.press(screen.getByTestId('totals-sheet-close'));
+    expect(screen.queryByTestId('totals-sheet')).toBeNull();
+  });
+
+  it('the sheet shows ไม่ทราบ, never 0, when every planned amount is unknown', async () => {
+    await seedExpense('cmz-u', { amountSatang: null, date: '2025-06-08', stage: 'planned' });
+    wrap(<ExpensesScreen />);
+    await flush();
+    fireEvent.press(screen.getByTestId('filter-month'));
+    fireEvent.press(screen.getByTestId('month-2025-06'));
+    fireEvent.press(screen.getByTestId('totals'));
+    expect(screen.getByTestId('totals-sheet-planned')).toHaveTextContent(/ไม่ทราบ/);
+    expect(screen.getByTestId('totals-sheet-planned')).not.toHaveTextContent(/0\.00/);
   });
 });
 
